@@ -22,7 +22,7 @@ Kurallar:
 - Sonuna tek satir cikma yolu ekle: "Mesaj almak istemiyorsaniz YAZMAYIN yazin."
 - En fazla 2 emoji kullan, satir basina birden fazla koyma.
 - BUYUK HARFLE BAGIRMA, unlem yigma.
-- Kisi adini kullanacaksan tam olarak {{isim}} yaz, baska bir bicim kullanma.
+- Kisi adini kullanacaksan tam olarak {{ad}} yaz, baska bir bicim kullanma.
 - Yalnizca mesaj metnini dondur. Aciklama, baslik, tirnak veya madde imi ekleme.`
 
 export async function POST(request: Request) {

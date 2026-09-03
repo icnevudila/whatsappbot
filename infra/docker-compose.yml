@@ -1,0 +1,69 @@
+# WhatsApp servisi -- Oracle Cloud Always Free (Ampere A1, arm64) icin.
+#
+# Bu dosya repo KOKUNDEN calistirilir, infra/ icinden degil:
+#
+#   docker compose -f infra/docker-compose.yml up -d --build
+#
+# Derleme baglami repo koku olmak zorunda cunku Dockerfile monorepo
+# manifestlerini (package-lock.json, packages/shared) kopyaliyor.
+
+services:
+  wa-service:
+    build:
+      context: ..
+      dockerfile: apps/wa-service/Dockerfile
+    image: wa-service:local
+    container_name: wa-service
+
+    # Disari HICBIR port acilmiyor. Panel ile servis birbirini HTTP uzerinden
+    # cagirmiyor; haberlesme Postgres'teki is kuyrugu uzerinden. Bu yuzden
+    # Oracle guvenlik listesinde delik acmaya gerek yok ve saglik ucu yalnizca
+    # makinenin kendisinden erisilebilir kaliyor.
+    ports:
+      - '127.0.0.1:8080:8080'
+
+    env_file:
+      - ../apps/wa-service/.env
+
+    environment:
+      NODE_ENV: production
+      # Kira sahibi kimligi konteyner adiyla sabitleniyor. Ayni kimlikle iki
+      # process acilirsa ikisi de ayni hesabi sahiplenir ve WhatsApp tarafinda
+      # 440 (connectionReplaced) dongusu baslar.
+      WORKER_ID: oracle-1
+
+    # unless-stopped, always'ten farkli: elle durdurulmus konteyner makine
+    # yeniden basladiginda kendiliginden kalkmaz. Bakim icin bilincli
+    # durdurdugumuzda geri gelmesini istemiyoruz.
+    restart: unless-stopped
+
+    # Baileys'in oturum basina ~60 MB'i var. Always Free ARM'da 24 GB RAM
+    # oldugu icin 50 oturum rahat siger; siniri yine de koyuyoruz ki kacak
+    # bir bellek artisi makinenin tamamini ve SSH'i bogmasin.
+    mem_limit: 6g
+
+    # SIGTERM'in Node'a ulasmasi kapanis sirasi icin sart (creds yazimi ->
+    # sock.end -> kira birakma). Varsayilan 10 saniye bu is icin kisa.
+    stop_grace_period: 45s
+
+    # Konteyner icinde PID 1 Node olacak; zombi process toplayicisi yok.
+    # tsx alt process acmiyor ama init ucuz bir sigorta.
+    init: true
+
+    healthcheck:
+      # Alpine imajinda curl yok, wget var.
+      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://127.0.0.1:8080/health']
+      interval: 30s
+      timeout: 10s
+      # Baileys oturumlarini geri yuklemek dakikalar surebiliyor; bu sure
+      # boyunca saglik hatasi sayilmasin.
+      start_period: 120s
+      retries: 3
+
+    logging:
+      driver: json-file
+      options:
+        # Pino satir satir JSON yaziyor; 50 oturumla gunluk yuzlerce MB
+        # olabiliyor. Always Free'de 50 GB disk var, dolmasina izin vermiyoruz.
+        max-size: '20m'
+        max-file: '5'

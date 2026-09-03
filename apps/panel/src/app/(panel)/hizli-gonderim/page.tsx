@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { EmptyState, PageHeader } from '@/components/ui'
+import { hasTextProvider } from '@/lib/ai/text'
 import { remainingToday } from '@/lib/capacity'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { QuickSendForm, type SenderOption } from './quick-send-form'
@@ -15,15 +16,18 @@ export default async function QuickSendPage() {
   } = await supabase.auth.getUser()
   if (!user) redirect('/giris')
 
-  const { data: accounts } = await supabase
-    .from('accounts')
-    .select(
-      'id, label, phone_e164, daily_send_limit, sent_today, sent_today_on, warmup_started_at, new_chat_quota_total, new_chat_quota_used',
-    )
-    .eq('status', 'connected')
-    .eq('enabled', true)
-    .eq('is_locked', false)
-    .order('created_at')
+  const [{ data: accounts }, brandResult] = await Promise.all([
+    supabase
+      .from('accounts')
+      .select(
+        'id, label, phone_e164, daily_send_limit, sent_today, sent_today_on, warmup_started_at, new_chat_quota_total, new_chat_quota_used',
+      )
+      .eq('status', 'connected')
+      .eq('enabled', true)
+      .eq('is_locked', false)
+      .order('created_at'),
+    supabase.from('brand_kits').select('name').limit(1).maybeSingle(),
+  ])
 
   const senders: SenderOption[] = (accounts ?? []).map((account) => ({
     id: account.id,
@@ -55,7 +59,12 @@ export default async function QuickSendPage() {
           />
         </div>
       ) : (
-        <QuickSendForm senders={senders} userId={user.id} />
+        <QuickSendForm
+          senders={senders}
+          userId={user.id}
+          aiEnabled={hasTextProvider()}
+          brandName={brandResult.data?.name ?? undefined}
+        />
       )}
     </>
   )

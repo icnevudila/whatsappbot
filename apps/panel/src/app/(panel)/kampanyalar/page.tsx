@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Card, CardHeader, EmptyState, Meter, PageHeader, StatusPill } from '@/components/ui'
+import { hasTextProvider } from '@/lib/ai/text'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { NewCampaignForm } from './new-campaign-form'
 
@@ -13,7 +14,7 @@ export default async function CampaignsPage() {
   } = await supabase.auth.getUser()
   if (!user) redirect('/giris')
 
-  const [campaignsResult, listsResult, accountsResult] = await Promise.all([
+  const [campaignsResult, listsResult, accountsResult, brandResult] = await Promise.all([
     supabase
       .from('campaigns')
       .select(
@@ -25,6 +26,9 @@ export default async function CampaignsPage() {
       .select('id, name, contact_count')
       .order('created_at', { ascending: false }),
     supabase.from('accounts').select('id, label, status, is_locked').order('created_at'),
+    // Marka adi varsa AI metnin basina koysun; kim oldugunu belirtmeyen
+    // toplu mesaj sikayet oranini belirgin sekilde yukseltiyor.
+    supabase.from('brand_kits').select('name').limit(1).maybeSingle(),
   ])
 
   const campaigns = campaignsResult.data ?? []
@@ -114,7 +118,13 @@ export default async function CampaignsPage() {
           )}
         </Card>
 
-        <NewCampaignForm lists={listOptions} accounts={accountOptions} userId={user.id} />
+        <NewCampaignForm
+          lists={listOptions}
+          accounts={accountOptions}
+          userId={user.id}
+          aiEnabled={hasTextProvider()}
+          brandName={brandResult.data?.name ?? undefined}
+        />
       </div>
     </>
   )

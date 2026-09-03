@@ -2,6 +2,7 @@
 
 import { useActionState, useMemo, useState } from 'react'
 import { parsePhoneList } from '@wa/shared'
+import { AiWriter } from '@/components/ai-writer'
 import { Button, Card, CardHeader, Notice, Textarea } from '@/components/ui'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { quickSend, type QuickSendState } from './actions'
@@ -18,9 +19,13 @@ const nf = new Intl.NumberFormat('tr-TR')
 export function QuickSendForm({
   senders,
   userId,
+  aiEnabled,
+  brandName,
 }: {
   senders: SenderOption[]
   userId: string
+  aiEnabled: boolean
+  brandName?: string
 }) {
   const [state, formAction, pending] = useActionState<QuickSendState, FormData>(
     quickSend,
@@ -115,7 +120,7 @@ export function QuickSendForm({
         </div>
 
         {/* 2 — Mesaj */}
-        <div>
+        <div className="space-y-2.5">
           <span className="mb-1.5 block text-[12px] font-medium text-ink-muted">Mesaj</span>
           <Textarea
             name="body"
@@ -124,6 +129,7 @@ export function QuickSendForm({
             onChange={(event) => setBody(event.target.value)}
             placeholder={'Merhaba {{ad}}, bu ay gecerli %20 indirimimizden haberdar etmek istedik.'}
           />
+          <AiWriter enabled={aiEnabled} brand={brandName} onApply={setBody} />
         </div>
 
         {/* 3 — Gorsel */}

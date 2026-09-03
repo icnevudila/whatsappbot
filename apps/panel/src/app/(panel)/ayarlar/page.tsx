@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { Card, CardHeader, Meter, PageHeader } from '@/components/ui'
+import { activeImageProviders } from '@/lib/ai/image'
+import { activeTextProviders } from '@/lib/ai/text'
 import { capToday } from '@/lib/capacity'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/giris/actions'
@@ -123,6 +125,8 @@ export default async function SettingsPage() {
             </div>
           </Card>
 
+          <AiProvidersCard />
+
           <Card>
             <CardHeader title="Oturum" />
             <div className="flex items-center justify-between gap-4 p-4">
@@ -142,6 +146,89 @@ export default async function SettingsPage() {
         </div>
       </div>
     </>
+  )
+}
+
+/**
+ * Hangi yapay zeka saglayicilarinin acik oldugunu gosterir.
+ *
+ * Anahtarlar sunucu tarafinda, cevre degiskeninde tutuluyor; buradan
+ * duzenlenmiyor. Amac "gorsel neden uretilmiyor" ya da "metin yazdirma
+ * dugmesi nerede" sorusuna bakilacak tek bir yer olmasi -- yoksa cevap
+ * sunucu gunluklerine gomulu kaliyor.
+ */
+function AiProvidersCard() {
+  const image = activeImageProviders()
+  const text = activeTextProviders()
+
+  return (
+    <Card>
+      <CardHeader
+        title="Yapay zeka"
+        subtitle="Anahtarlar sunucuda tutulur, buradan degistirilmez."
+      />
+
+      <div className="space-y-3.5 p-4">
+        <ProviderRow
+          label="Gorsel uretimi"
+          providers={image.map((provider) => provider.label)}
+          // Pollinations anahtar istemedigi icin bu liste hicbir zaman bos
+          // kalmiyor; gorsel uretimi her kurulumda calisir durumda.
+          fallback="Kapali"
+        />
+
+        <ProviderRow
+          label="Metin yazdirma"
+          providers={text.map((provider) => provider.label)}
+          fallback="Kapali — OPENAI_API_KEY veya GEMINI_API_KEY ekleyin"
+        />
+
+        <p className="border-t border-hairline pt-3 text-[11.5px] leading-relaxed text-ink-faint">
+          Sagdaki isimler deneme sirasina gore listelenir: ilki cevap vermezse
+          sonraki devreye girer. Anahtar eklemek icin sunucunun ortam
+          degiskenlerini guncelleyip yeniden baslatmak yeterli.
+        </p>
+      </div>
+    </Card>
+  )
+}
+
+function ProviderRow({
+  label,
+  providers,
+  fallback,
+}: {
+  label: string
+  providers: string[]
+  fallback: string
+}) {
+  const active = providers.length > 0
+
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <span className="text-[12.5px]">{label}</span>
+
+      {active ? (
+        <span className="flex flex-wrap justify-end gap-1.5">
+          {providers.map((name, index) => (
+            <span
+              key={name}
+              className={`rounded-full border px-2 py-0.5 text-[11.5px] font-medium ${
+                index === 0
+                  ? 'border-accent/35 bg-accent/10 text-accent'
+                  : 'border-hairline-strong bg-surface-raised text-ink-muted'
+              }`}
+            >
+              {name}
+            </span>
+          ))}
+        </span>
+      ) : (
+        <span className="max-w-[220px] text-right text-[11.5px] text-ink-faint">
+          {fallback}
+        </span>
+      )}
+    </div>
   )
 }
 

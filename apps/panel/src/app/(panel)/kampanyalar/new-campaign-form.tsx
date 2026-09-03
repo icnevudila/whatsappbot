@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState, useState } from 'react'
+import { AiWriter } from '@/components/ai-writer'
 import { Button, Card, CardHeader, Field, Input, Notice, Textarea } from '@/components/ui'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { createCampaign, type CampaignState } from './actions'
@@ -11,10 +12,14 @@ export function NewCampaignForm({
   lists,
   accounts,
   userId,
+  aiEnabled,
+  brandName,
 }: {
   lists: Option[]
   accounts: Option[]
   userId: string
+  aiEnabled: boolean
+  brandName?: string
 }) {
   const [state, formAction, pending] = useActionState<CampaignState, FormData>(
     createCampaign,
@@ -84,6 +89,8 @@ export function NewCampaignForm({
             placeholder={'Merhaba {{ad}}, bu ay gecerli %20 indirimimizden haberdar etmek istedik.'}
           />
         </Field>
+
+        <AiWriter enabled={aiEnabled} brand={brandName} onApply={setBody} />
 
         {body ? (
           // Onizleme, degisken yazim hatalarini gonderimden once yakalatiyor.
