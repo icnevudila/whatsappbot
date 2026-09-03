@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import Link from 'next/link'
 import type { Tables } from '@wa/shared'
 import { Card, CardHeader, EmptyState, Meter, StatusPill } from '@/components/ui'
-import { capToday, remainingToday } from '@/lib/capacity'
+import { capToday } from '@/lib/capacity'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
+import { useServerSyncedState } from '@/lib/use-server-synced-state'
 
 export type LineView = Pick<
   Tables<'accounts'>,
@@ -49,11 +50,8 @@ export function StatusBoard({
   initialCampaigns: CampaignView[]
   userId: string
 }) {
-  const [lines, setLines] = useState(initialLines)
-  const [campaigns, setCampaigns] = useState(initialCampaigns)
-
-  useEffect(() => setLines(initialLines), [initialLines])
-  useEffect(() => setCampaigns(initialCampaigns), [initialCampaigns])
+  const [lines, setLines] = useServerSyncedState(initialLines)
+  const [campaigns, setCampaigns] = useServerSyncedState(initialCampaigns)
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient()
@@ -99,7 +97,7 @@ export function StatusBoard({
     return () => {
       void supabase.removeChannel(channel)
     }
-  }, [userId])
+  }, [userId, setLines, setCampaigns])
 
   const connected = lines.filter((line) => line.status === 'connected' && !line.is_locked)
   const usedToday = connected.reduce((total, line) => {

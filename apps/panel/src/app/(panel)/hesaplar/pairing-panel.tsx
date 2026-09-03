@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useCountdown } from '@/lib/use-countdown'
 
 /**
  * QR okutamayan kullanicilar icin telefon numarasiyla eslesme.
@@ -16,24 +17,8 @@ export function PairingPanel({
   code: string
   expiresAt: string | null
 }) {
-  const [secondsLeft, setSecondsLeft] = useState<number | null>(null)
+  const secondsLeft = useCountdown(expiresAt)
   const [copied, setCopied] = useState(false)
-
-  useEffect(() => {
-    if (!expiresAt) {
-      setSecondsLeft(null)
-      return
-    }
-
-    const update = () => {
-      const remaining = Math.round((new Date(expiresAt).getTime() - Date.now()) / 1000)
-      setSecondsLeft(Math.max(0, remaining))
-    }
-
-    update()
-    const timer = setInterval(update, 1_000)
-    return () => clearInterval(timer)
-  }, [expiresAt])
 
   const copy = async () => {
     try {

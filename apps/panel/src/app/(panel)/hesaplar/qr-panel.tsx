@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
+import { useCountdown } from '@/lib/use-countdown'
 
 /**
  * Baileys QR'i 60 saniyede bir yeniliyor.
@@ -16,7 +17,7 @@ export function QrPanel({
   expiresAt: string | null
 }) {
   const [dataUrl, setDataUrl] = useState<string | null>(null)
-  const [secondsLeft, setSecondsLeft] = useState<number | null>(null)
+  const secondsLeft = useCountdown(expiresAt)
 
   useEffect(() => {
     let cancelled = false
@@ -34,22 +35,6 @@ export function QrPanel({
       cancelled = true
     }
   }, [qr])
-
-  useEffect(() => {
-    if (!expiresAt) {
-      setSecondsLeft(null)
-      return
-    }
-
-    const update = () => {
-      const remaining = Math.round((new Date(expiresAt).getTime() - Date.now()) / 1000)
-      setSecondsLeft(Math.max(0, remaining))
-    }
-
-    update()
-    const timer = setInterval(update, 1_000)
-    return () => clearInterval(timer)
-  }, [expiresAt])
 
   return (
     <div className="flex flex-col items-center gap-3 rounded-md border border-hairline bg-canvas p-4 sm:flex-row sm:items-start">

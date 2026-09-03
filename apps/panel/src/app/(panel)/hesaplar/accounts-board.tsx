@@ -4,6 +4,7 @@ import { useActionState, useEffect, useState, useTransition } from 'react'
 import type { Tables } from '@wa/shared'
 import { Button, Card, Field, Input, Meter, Notice, StatusPill } from '@/components/ui'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
+import { useServerSyncedState } from '@/lib/use-server-synced-state'
 import {
   connectAccount,
   createAccount,
@@ -45,12 +46,8 @@ export function AccountsBoard({
   initial: AccountView[]
   userId: string
 }) {
-  const [accounts, setAccounts] = useState(initial)
-
-  // Sunucu revalidate ettiginde tazelensin.
-  useEffect(() => {
-    setAccounts(initial)
-  }, [initial])
+  // Sunucu revalidate ettiginde tazelensin, Realtime olaylari da uzerine yazsin.
+  const [accounts, setAccounts] = useServerSyncedState(initial)
 
   /**
    * Realtime olmadan QR kodu icin sayfayi elle yenilemek gerekiyordu.
@@ -98,7 +95,7 @@ export function AccountsBoard({
     return () => {
       void supabase.removeChannel(channel)
     }
-  }, [userId])
+  }, [userId, setAccounts])
 
   /**
    * Realtime'a tek basina guvenmiyoruz.
@@ -145,7 +142,7 @@ export function AccountsBoard({
       cancelled = true
       clearInterval(timer)
     }
-  }, [waiting])
+  }, [waiting, setAccounts])
 
   return (
     <div className="space-y-4">

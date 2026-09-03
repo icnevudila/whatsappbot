@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { Card, CardHeader, EmptyState } from '@/components/ui'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
+import { useServerSyncedState } from '@/lib/use-server-synced-state'
 
 export type EventView = {
   id: number
@@ -55,9 +56,7 @@ export function EventFeed({
   labels: Record<string, string>
   userId: string
 }) {
-  const [events, setEvents] = useState(initial)
-
-  useEffect(() => setEvents(initial), [initial])
+  const [events, setEvents] = useServerSyncedState(initial)
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient()
@@ -84,7 +83,7 @@ export function EventFeed({
     return () => {
       void supabase.removeChannel(channel)
     }
-  }, [userId])
+  }, [userId, setEvents])
 
   const today = new Date().toDateString()
 
