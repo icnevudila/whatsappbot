@@ -31,7 +31,7 @@ export async function signIn(_previous: AuthState, formData: FormData): Promise<
     }
   }
 
-  redirect('/hesaplar')
+  redirect('/durum')
 }
 
 export async function signUp(_previous: AuthState, formData: FormData): Promise<AuthState> {
@@ -52,11 +52,13 @@ export async function signUp(_previous: AuthState, formData: FormData): Promise<
     }
   }
 
-  redirect('/hesaplar')
+  // Yeni kullanici dogrudan panele degil kuruluma gider: bagli hat yokken
+  // genel durum ekrani bos ve ne yapmasi gerektigi belirsiz.
+  redirect('/kurulum')
 }
 
 export async function signOut(): Promise<void> {
   const supabase = await createSupabaseServerClient()
   await supabase.auth.signOut()
-  redirect('/giris')
+  redirect('/')
 }

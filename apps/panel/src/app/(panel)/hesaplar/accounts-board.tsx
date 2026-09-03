@@ -10,8 +10,10 @@ import {
   disconnectAccount,
   logoutAccount,
   removeAccount,
+  requestPairingCode,
   type ActionState,
 } from './actions'
+import { PairingPanel } from './pairing-panel'
 import { QrPanel } from './qr-panel'
 
 export type AccountView = Pick<
@@ -26,6 +28,8 @@ export type AccountView = Pick<
   | 'lock_reason'
   | 'qr_code'
   | 'qr_expires_at'
+  | 'pairing_code'
+  | 'pairing_expires_at'
   | 'daily_send_limit'
   | 'sent_today'
   | 'sent_today_on'
@@ -83,12 +87,65 @@ export function AccountsBoard({
           })
         },
       )
-      .subscribe()
+      .subscribe((status, error) => {
+        // Sessiz basarisizlik en kotusu: QR gelmedigi zaman nedenini
+        // bilmeden bakiyorduk. Abonelik durumu artik konsola yaziliyor.
+        if (status !== 'SUBSCRIBED') {
+          console.warn('[accounts-live] realtime durumu:', status, error ?? '')
+        }
+      })
 
     return () => {
       void supabase.removeChannel(channel)
     }
   }, [userId])
+
+  /**
+   * Realtime'a tek basina guvenmiyoruz.
+   *
+   * QR yalnizca 60 saniye, eslestirme kodu 3 dakika gecerli. Realtime soketi
+   * kurulamadiginda (proxy, sekme uyanmasi, token tazeleme) kullanici bos bir
+   * kart gorup "calismiyor" diyor. Bu yuzden hat gecis durumundayken kisa
+   * arayla dogrudan sorguluyoruz. Bagli/kapali duruma gelince yoklama duruyor,
+   * yani surekli bir yuk olusturmuyor.
+   */
+  /**
+   * Kosul bilerek "qr_pending" degil "connected degil": durumu yalnizca
+   * qr_pending iken yoklarsak, o duruma gectigini ogrenmek icin de yoklama
+   * gerekir ve akis kilitlenir. Hat baglanmadigi surece yokluyoruz.
+   */
+  const waiting = accounts.some((account) => account.status !== 'connected')
+
+  useEffect(() => {
+    if (!waiting) return
+
+    const supabase = getSupabaseBrowserClient()
+    let cancelled = false
+
+    const poll = async () => {
+      const { data } = await supabase
+        .from('accounts')
+        .select(
+          'id, label, phone_e164, status, status_detail, enabled, is_locked, lock_reason, qr_code, qr_expires_at, pairing_code, pairing_expires_at, daily_send_limit, sent_today, sent_today_on, new_chat_quota_total, new_chat_quota_used, reachout_locked_until',
+        )
+        .order('created_at')
+
+      if (!cancelled && data) setAccounts(data as AccountView[])
+    }
+
+    // Sekme arkada iken yoklamiyoruz: QR'i kimse gormuyor, bosa istek olur.
+    const tick = () => {
+      if (document.visibilityState === 'visible') void poll()
+    }
+
+    const timer = setInterval(tick, 2_500)
+    tick()
+
+    return () => {
+      cancelled = true
+      clearInterval(timer)
+    }
+  }, [waiting])
 
   return (
     <div className="space-y-4">
@@ -218,8 +275,8 @@ function AccountCard({ account }: { account: AccountView }) {
           </Notice>
         ) : null}
 
-        {account.qr_code && !account.is_locked ? (
-          <QrPanel qr={account.qr_code} expiresAt={account.qr_expires_at} />
+        {account.status !== 'connected' && !account.is_locked ? (
+          <PairingSection account={account} />
         ) : null}
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -275,5 +332,100 @@ function AccountCard({ account }: { account: AccountView }) {
         {message ? <Notice tone="danger">{message}</Notice> : null}
       </div>
     </Card>
+  )
+}
+
+/**
+ * Iki baglanma yolu: QR okutmak veya telefona kod istemek.
+ *
+ * Kod yolu, bilgisayar ekranini telefonla goremeyen kullanicilar icin
+ * (uzaktan kurulum, tek cihazda calisma) tek pratik secenek. Servis kod
+ * uretildiginde qr_code'u temizliyor, bu yuzden hangi kutunun gosterilecegi
+ * dogrudan veriden okunuyor.
+ */
+function PairingSection({ account }: { account: AccountView }) {
+  const [mode, setMode] = useState<'qr' | 'code'>(account.pairing_code ? 'code' : 'qr')
+  const [phone, setPhone] = useState(account.phone_e164 ?? '')
+  const [pending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+
+  const ask = () => {
+    setError(null)
+    startTransition(async () => {
+      const result = await requestPairingCode(account.id, phone)
+      if (result?.error) setError(result.error)
+    })
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-1 rounded-md border border-hairline bg-canvas p-0.5">
+        {(
+          [
+            ['qr', 'QR ile bagla'],
+            ['code', 'Telefon numarasiyla bagla'],
+          ] as const
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setMode(key)}
+            className={`flex-1 rounded px-3 py-1.5 text-[12px] font-medium transition-colors ${
+              mode === key
+                ? 'bg-surface text-ink'
+                : 'text-ink-muted hover:text-ink'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {mode === 'qr' ? (
+        account.qr_code ? (
+          <QrPanel qr={account.qr_code} expiresAt={account.qr_expires_at} />
+        ) : (
+          <p className="rounded-md border border-hairline bg-canvas px-4 py-6 text-center text-[12.5px] text-ink-muted">
+            {account.status === 'qr_pending' || account.status === 'connecting'
+              ? 'QR kodu hazirlaniyor...'
+              : 'QR kodu icin "Bagla" dugmesine basin.'}
+          </p>
+        )
+      ) : account.pairing_code ? (
+        <PairingPanel
+          code={account.pairing_code}
+          expiresAt={account.pairing_expires_at}
+        />
+      ) : (
+        <div className="rounded-md border border-hairline bg-canvas p-4">
+          <Field
+            label="Baglanacak WhatsApp numarasi"
+            hint="Ulke koduyla yazin. Ornek: +90 532 123 45 67"
+          >
+            <Input
+              value={phone}
+              onChange={(event) => setPhone(event.target.value)}
+              placeholder="+90 532 123 45 67"
+              inputMode="tel"
+            />
+          </Field>
+
+          <Button
+            variant="accent"
+            onClick={ask}
+            disabled={pending || phone.trim().length < 10}
+            className="mt-3"
+          >
+            {pending ? 'Kod isteniyor...' : 'Kod al'}
+          </Button>
+
+          {error ? (
+            <div className="mt-3">
+              <Notice tone="danger">{error}</Notice>
+            </div>
+          ) : null}
+        </div>
+      )}
+    </div>
   )
 }

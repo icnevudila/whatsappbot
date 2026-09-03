@@ -13,6 +13,7 @@
   "scripts": {
     "dev:panel": "npm run dev --workspace @wa/panel",
     "dev:service": "npm run dev --workspace @wa/service",
+    "db:check": "npm run db:check --workspace @wa/service",
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",

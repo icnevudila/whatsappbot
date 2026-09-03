@@ -101,6 +101,24 @@ export class SessionManager {
     }
   }
 
+  /**
+   * Kod ile eslesme. Oturum acik degilse once aciyoruz: kod ancak canli bir
+   * soket uzerinden istenebiliyor, panel tek tikta hallolsun.
+   */
+  async requestPairingCode(accountId: string, phone: string): Promise<string> {
+    if (!this.sessions.has(accountId)) {
+      const result = await this.connect(accountId)
+      if (!result.ok && result.reason !== 'already-active') {
+        throw new Error(`Oturum acilamadi: ${result.reason}`)
+      }
+    }
+
+    const session = this.sessions.get(accountId)
+    if (!session) throw new Error('Oturum bulunamadi')
+
+    return session.requestPairingCode(phone)
+  }
+
   async disconnect(accountId: string): Promise<boolean> {
     const session = this.sessions.get(accountId)
     if (!session) {

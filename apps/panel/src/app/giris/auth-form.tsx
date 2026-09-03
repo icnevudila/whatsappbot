@@ -1,11 +1,17 @@
 'use client'
 
 import { useActionState, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Button, Field, Input, Notice } from '@/components/ui'
 import { signIn, signUp, type AuthState } from './actions'
 
 export function AuthForm() {
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin')
+  // Landing'deki "Ucretsiz dene" butonlari ?mod=kayit ile geliyor. Bunu
+  // okumazsak birincil cagri kayit yerine giris formuna dusuyor.
+  const searchParams = useSearchParams()
+  const [mode, setMode] = useState<'signin' | 'signup'>(
+    searchParams.get('mod') === 'kayit' ? 'signup' : 'signin',
+  )
   const action = mode === 'signin' ? signIn : signUp
 
   const [state, formAction, pending] = useActionState<AuthState, FormData>(action, null)

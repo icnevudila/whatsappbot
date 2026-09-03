@@ -100,9 +100,12 @@ async function handle(job: JobRow): Promise<unknown> {
     }
 
     case 'account.request_pairing_code': {
-      // MVP'de QR akisi kullaniliyor. Eslestirme kodu icin socket'in QR
-      // beklerken acik olmasi ve numaranin verilmesi gerekiyor.
-      throw new Error('Eslestirme kodu MVP kapsaminda degil, QR ile baglanin')
+      const accountId = requireAccountId(job)
+      const payload = job.payload as JobPayloadMap['account.request_pairing_code']
+      if (!payload?.phone_e164) throw new Error('phone_e164 zorunlu')
+
+      const code = await sessionManager.requestPairingCode(accountId, payload.phone_e164)
+      return { code }
     }
 
     case 'message.send': {

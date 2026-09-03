@@ -91,6 +91,19 @@ export class WhatsAppSession {
 
   private onClosed: ((outcome: SessionOutcome) => void) | undefined
 
+  /**
+   * requestPairingCode ancak soket WhatsApp ile el sikismasini bitirdikten
+   * sonra calisiyor; daha erken cagrilirsa sessizce hata veriyor. Ilk 'qr'
+   * olayi bunun gozlenebilir tek isareti: sunucu ref gonderdi demek.
+   * Her openSocket'te yenileniyor, cunku yeniden baglanmada el sikisma bastan
+   * yapiliyor.
+   */
+  private pairingReady: Promise<void> = Promise.resolve()
+  private markPairingReady: (() => void) | undefined
+
+  /** Kod isteyen numara; 515 restart sonrasi kodu tekrar istemek icin. */
+  private pairingPhone: string | undefined
+
   constructor(account: Pick<AccountRow, 'id' | 'owner_id'>, epoch: number) {
     this.accountId = account.id
     this.ownerId = account.owner_id
@@ -125,6 +138,10 @@ export class WhatsAppSession {
 
     const version = await resolveWaVersion()
     await this.setStatus('connecting')
+
+    this.pairingReady = new Promise<void>((resolve) => {
+      this.markPairingReady = resolve
+    })
 
     this.sock = makeWASocket({
       ...(version ? { version } : {}),
@@ -178,11 +195,23 @@ export class WhatsAppSession {
       this.qrAttempts += 1
       this.log.info({ attempt: this.qrAttempts }, 'QR uretildi')
 
+      // Soket artik eslestirme kodu isteyebilecek durumda.
+      this.markPairingReady?.()
+
+      // Kod ile eslesme secildiyse QR yazmiyoruz: ikisini birden gostermek
+      // kullaniciyi bolerdi ve kod hala gecerliyken QR onu ezerdi.
+      if (this.pairingPhone) {
+        this.status = 'qr_pending'
+        return
+      }
+
       await patchAccount(this.accountId, {
         status: 'qr_pending',
         qr_code: qr,
         // Baileys QR'i 60 saniyede bir yeniler.
         qr_expires_at: new Date(Date.now() + 60_000).toISOString(),
+        pairing_code: null,
+        pairing_expires_at: null,
         status_detail: `QR bekleniyor (${this.qrAttempts}/${MAX_QR_ATTEMPTS})`,
       })
       this.status = 'qr_pending'
@@ -197,6 +226,7 @@ export class WhatsAppSession {
     if (connection === 'open') {
       this.qrAttempts = 0
       this.reconnectAttempts = 0
+      this.pairingPhone = undefined
 
       const jid = this.sock?.user?.id
       const normalized = jid ? jidNormalizedUser(jid) : null
@@ -208,6 +238,7 @@ export class WhatsAppSession {
         qr_code: null,
         qr_expires_at: null,
         pairing_code: null,
+        pairing_expires_at: null,
         wa_jid: normalized,
         wa_lid: this.sock?.user?.lid ?? null,
         phone_e164: phone,
@@ -390,6 +421,63 @@ export class WhatsAppSession {
     await this.finish('locked')
   }
 
+  /**
+   * QR yerine telefona 8 haneli kod gonderir.
+   *
+   * WhatsApp bu kodu yalnizca hic eslesmemis bir soket icin veriyor ve
+   * numaranin ulke kodu dahil, isaret ve bosluk olmadan verilmesi gerekiyor.
+   * Kod ~3 dakika gecerli; kullanici telefonda
+   * Baglantili cihazlar -> Cihaz bagla -> Telefon numarasiyla bagla
+   * yolunu izleyip giriyor.
+   */
+  async requestPairingCode(phone: string): Promise<string> {
+    if (this.shuttingDown || this.disposed) {
+      throw new Error('Oturum kapaniyor, kod istenemez')
+    }
+
+    const digits = phone.replace(/\D/g, '')
+    if (digits.length < 10 || digits.length > 15) {
+      throw new Error('Telefon numarasi ulke koduyla birlikte verilmeli')
+    }
+
+    if (this.auth?.state.creds.registered) {
+      throw new Error('Bu hat zaten eslesmis, once cikis yapin')
+    }
+
+    // Numarayi onceden isaretliyoruz: bundan sonra gelen qr olaylari
+    // ekrandaki kodu ezmesin.
+    this.pairingPhone = digits
+
+    await withTimeout(this.pairingReady, 40_000, 'soket eslestirmeye hazirlanma')
+
+    const sock = this.sock
+    if (!sock) throw new Error('Soket yok')
+
+    const code = await withTimeout(
+      sock.requestPairingCode(digits),
+      30_000,
+      'requestPairingCode',
+    )
+
+    const expiresAt = new Date(Date.now() + 180_000).toISOString()
+
+    await patchAccount(this.accountId, {
+      status: 'qr_pending',
+      pairing_code: code,
+      pairing_expires_at: expiresAt,
+      // QR'i temizliyoruz ki panel kodu gostersin.
+      qr_code: null,
+      qr_expires_at: null,
+      status_detail: 'Eslestirme kodu telefona girilmeyi bekliyor',
+    })
+    this.status = 'qr_pending'
+
+    this.log.info({ phone: digits }, 'Eslestirme kodu uretildi')
+    await logAccountEvent(this, 'info', 'account.pairing_code', { phone: digits })
+
+    return code
+  }
+
   private async giveUpOnPairing(): Promise<void> {
     // QR denemeleri tukendi: auth silinecek diger durum.
     // Yalnizca hic eslesmemis hesaplarda; eslesmis bir hesabin kimligini
@@ -398,11 +486,15 @@ export class WhatsAppSession {
       await this.auth.clear()
     }
 
+    this.pairingPhone = undefined
+
     await patchAccount(this.accountId, {
       status: 'disconnected',
       status_detail: 'QR okutulmadi, tekrar deneyin',
       qr_code: null,
       qr_expires_at: null,
+      pairing_code: null,
+      pairing_expires_at: null,
     })
     this.status = 'disconnected'
     await logAccountEvent(this, 'warn', 'account.qr_expired', {})

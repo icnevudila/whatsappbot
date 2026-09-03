@@ -1,7 +1,11 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PUBLIC_PATHS = ['/giris']
+/** Oturum acmis kullaniciyi panele geri gonderdigimiz tek yer. */
+const AUTH_PATHS = ['/giris']
+
+/** Herkese acik pazarlama yollari. Tam eslesme: '/' prefix olarak her seyi tutar. */
+const MARKETING_PATHS = new Set(['/', '/kvkk', '/kosullar'])
 
 /**
  * Her istekte Supabase oturumunu tazeler ve korumali yollari kapatir.
@@ -37,7 +41,8 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const path = request.nextUrl.pathname
-  const isPublic = PUBLIC_PATHS.some((publicPath) => path.startsWith(publicPath))
+  const isAuthPath = AUTH_PATHS.some((authPath) => path.startsWith(authPath))
+  const isPublic = isAuthPath || MARKETING_PATHS.has(path)
 
   if (!user && !isPublic) {
     const target = request.nextUrl.clone()
@@ -46,9 +51,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(target)
   }
 
-  if (user && isPublic) {
+  // Landing oturum acikken de gezilebilir olmali; yalnizca giris ekranindan
+  // panele geri gonderiyoruz.
+  if (user && isAuthPath) {
     const target = request.nextUrl.clone()
-    target.pathname = '/hesaplar'
+    target.pathname = '/durum'
     target.search = ''
     return NextResponse.redirect(target)
   }

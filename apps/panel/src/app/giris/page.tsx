@@ -1,3 +1,6 @@
+import { Suspense } from 'react'
+import Link from 'next/link'
+import { Wordmark } from '@/components/brand'
 import { AuthForm } from './auth-form'
 
 export default function LoginPage() {
@@ -5,29 +8,30 @@ export default function LoginPage() {
     <main className="grid min-h-dvh place-items-center px-4 py-12">
       <div className="w-full max-w-[340px]">
         <div className="mb-7">
-          {/* Yesil yalnizca isaret noktasinda: marka aksani, zemin degil. */}
-          <div className="mb-4 flex items-center gap-2">
-            <span className="size-2 rounded-full bg-accent" />
-            <span className="text-[12px] font-medium tracking-wide text-ink-muted uppercase">
-              Toplu Gonderim
-            </span>
-          </div>
+          <Link href="/" className="mb-4 inline-flex">
+            <Wordmark />
+          </Link>
           <h1 className="text-[22px] font-semibold tracking-[-0.02em]">
-            WhatsApp kampanya paneli
+            Kampanya paneli
           </h1>
           <p className="mt-1.5 text-[12.5px] text-ink-muted">
-            Coklu hesap baglayin, kisi listelerinizi dogrulayin, kampanyayi sunucu
+            Coklu hat baglayin, kisi listelerinizi dogrulayin, kampanyayi sunucu
             tarafinda 7/24 calistirin.
           </p>
         </div>
 
         <div className="rounded-[10px] border border-hairline bg-surface p-4">
-          <AuthForm />
+          {/* useSearchParams istemci tarafinda okunuyor; Suspense olmadan
+              sayfanin tamami istemci render'ina dusuyor. */}
+          <Suspense fallback={<div className="h-[232px]" />}>
+            <AuthForm />
+          </Suspense>
         </div>
 
         <p className="mt-4 text-[11.5px] leading-relaxed text-ink-faint">
-          Gonderim yalnizca WhatsApp&apos;ta kayitli numaralara yapilir ve hesap basina
-          gunluk kota uygulanir. Bu sinirlar hesabinizin kisitlanmasini onlemek icindir.
+          Gonderim yalnizca WhatsApp&apos;ta kayitli numaralara yapilir ve hat basina
+          gunluk kota uygulanir. Bu sinirlar hattinizin kisitlanmasini onlemek
+          icindir.
         </p>
       </div>
     </main>

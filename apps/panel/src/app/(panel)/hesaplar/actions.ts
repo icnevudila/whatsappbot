@@ -68,6 +68,44 @@ export async function logoutAccount(accountId: string): Promise<ActionState> {
   return enqueueForAccount(accountId, 'account.logout')
 }
 
+/**
+ * QR yerine telefona 8 haneli kod gonderir.
+ *
+ * Numarayi burada da normalize ediyoruz: kullanici 0532..., +90 532...,
+ * bosluklu gibi cok farkli bicimlerde yaziyor, WhatsApp ise yalnizca ulke
+ * kodlu duz rakam kabul ediyor.
+ */
+export async function requestPairingCode(
+  accountId: string,
+  rawPhone: string,
+): Promise<ActionState> {
+  const digits = rawPhone.replace(/\D/g, '')
+
+  // Turkiye icin en sik iki yanlis giris: bastaki 0 ve ulke kodu eksikligi.
+  let normalized = digits
+  if (normalized.startsWith('00')) normalized = normalized.slice(2)
+  if (normalized.length === 11 && normalized.startsWith('0')) {
+    normalized = `90${normalized.slice(1)}`
+  } else if (normalized.length === 10 && normalized.startsWith('5')) {
+    normalized = `90${normalized}`
+  }
+
+  if (normalized.length < 10 || normalized.length > 15) {
+    return { error: 'Numarayi ulke koduyla yazin. Ornek: +90 532 123 45 67' }
+  }
+
+  const { error } = await enqueueJob({
+    type: 'account.request_pairing_code',
+    accountId,
+    priority: 10,
+    payload: { phone_e164: `+${normalized}` },
+  })
+  if (error) return { error }
+
+  revalidatePath('/hesaplar')
+  return { ok: 'Kod isteniyor, birkaç saniye içinde görünecek.' }
+}
+
 export async function removeAccount(accountId: string): Promise<ActionState> {
   const supabase = await createSupabaseServerClient()
 

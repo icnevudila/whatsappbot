@@ -1,4 +1,6 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { Wordmark } from '@/components/brand'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { signOut } from '@/app/giris/actions'
 import { Nav } from './nav'
@@ -16,10 +18,9 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     <div className="flex min-h-dvh">
       <aside className="hidden w-[196px] shrink-0 flex-col justify-between border-r border-hairline px-3 py-4 md:flex">
         <div>
-          <div className="mb-6 flex items-center gap-2 px-2.5">
-            <span className="size-2 rounded-full bg-accent" />
-            <span className="text-[12.5px] font-semibold">Toplu Gonderim</span>
-          </div>
+          <Link href="/" className="mb-6 flex items-center px-2.5">
+            <Wordmark />
+          </Link>
           <Nav />
         </div>
 

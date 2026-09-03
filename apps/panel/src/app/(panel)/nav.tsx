@@ -4,9 +4,13 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const ITEMS = [
+  { href: '/durum', label: 'Genel durum' },
+  { href: '/hizli-gonderim', label: 'Hizli gonderim' },
   { href: '/hesaplar', label: 'Hesaplar' },
   { href: '/kisiler', label: 'Kisiler' },
   { href: '/kampanyalar', label: 'Kampanyalar' },
+  { href: '/marka-kiti', label: 'Marka kiti' },
+  { href: '/ayarlar', label: 'Ayarlar' },
 ] as const
 
 export function Nav() {
