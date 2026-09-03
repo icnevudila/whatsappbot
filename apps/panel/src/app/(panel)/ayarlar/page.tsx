@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { Card, CardHeader, Meter, PageHeader } from '@/components/ui'
+import { Badge, Card, CardHeader, Meter, PageHeader } from '@/components/ui'
 import { activeImageProviders } from '@/lib/ai/image'
 import { activeTextProviders } from '@/lib/ai/text'
 import { capToday } from '@/lib/capacity'
@@ -89,11 +89,7 @@ export default async function SettingsPage() {
           <Card>
             <CardHeader
               title="Paket"
-              action={
-                <span className="rounded-full border border-accent/35 bg-accent/10 px-2 py-0.5 text-[11.5px] font-medium text-accent">
-                  {PLAN_LABELS[plan] ?? plan}
-                </span>
-              }
+              action={<Badge tone="accent">{PLAN_LABELS[plan] ?? plan}</Badge>}
             />
 
             <div className="space-y-4 p-4">

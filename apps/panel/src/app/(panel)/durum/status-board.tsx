@@ -107,11 +107,25 @@ export function StatusBoard({
   const capacityToday = connected.reduce((total, line) => total + capToday(line), 0)
   const activeCampaigns = campaigns.filter((campaign) => ACTIVE.has(campaign.status))
 
+  const now = Date.now()
+  const lockedCount = lines.filter((line) => line.is_locked).length
+  const reachoutCount = lines.filter((line) => {
+    if (!line.reachout_locked_until) return false
+    return new Date(line.reachout_locked_until).getTime() > now
+  }).length
+  const quotaTightCount = connected.filter((line) => {
+    const total = line.new_chat_quota_total
+    const used = line.new_chat_quota_used
+    if (typeof total !== 'number' || typeof used !== 'number' || total <= 0) return false
+    return used / total > 0.8
+  }).length
+  const atRisk = lockedCount + reachoutCount + quotaTightCount
+
   return (
     <div className="flex flex-col gap-4">
       {/* Gunun ozeti */}
       <Card>
-        <div className="grid divide-y divide-hairline sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        <div className="grid divide-y divide-hairline sm:grid-cols-4 sm:divide-x sm:divide-y-0">
           <Summary
             value={`${connected.length}`}
             label="Bagli hat"
@@ -137,10 +151,26 @@ export function StatusBoard({
             label="Aktif kampanya"
             detail={
               activeCampaigns.length > 0
-                ? activeCampaigns[0].name
+                ? activeCampaigns[0]?.name ?? 'Gonderim var'
                 : 'Su an gonderim yok'
             }
             tone={activeCampaigns.length > 0 ? 'accent' : 'muted'}
+          />
+          <Summary
+            value={`${atRisk}`}
+            label="Riskteki hat"
+            detail={
+              atRisk === 0
+                ? 'Kilit, time-lock veya kotasi dolu hat yok'
+                : [
+                    lockedCount > 0 ? `${lockedCount} kilitli` : null,
+                    reachoutCount > 0 ? `${reachoutCount} time-lock` : null,
+                    quotaTightCount > 0 ? `${quotaTightCount} kota >%80` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')
+            }
+            tone={atRisk > 0 ? 'warn' : 'muted'}
           />
         </div>
       </Card>
@@ -171,6 +201,15 @@ export function StatusBoard({
                 const cap = capToday(line)
                 const today = new Date().toISOString().slice(0, 10)
                 const sent = line.sent_today_on === today ? line.sent_today : 0
+                const quotaTotal = line.new_chat_quota_total
+                const quotaUsed = line.new_chat_quota_used
+                const quotaKnown =
+                  typeof quotaTotal === 'number' && typeof quotaUsed === 'number'
+                const reachoutUntil = line.reachout_locked_until
+                  ? new Date(line.reachout_locked_until)
+                  : null
+                const reachoutActive =
+                  reachoutUntil !== null && reachoutUntil.getTime() > Date.now()
 
                 return (
                   <div key={line.id} className="px-4 py-3">
@@ -187,15 +226,35 @@ export function StatusBoard({
                     </div>
 
                     {line.status === 'connected' && !line.is_locked ? (
-                      <div className="mt-2.5 flex items-center gap-2.5">
-                        <Meter
-                          value={sent}
-                          max={cap}
-                          tone={sent >= cap ? 'warn' : 'accent'}
-                        />
-                        <span className="tabular shrink-0 text-[11px] text-ink-faint">
-                          {sent}/{cap}
-                        </span>
+                      <div className="mt-2.5 space-y-1.5">
+                        <div className="flex items-center gap-2.5">
+                          <Meter
+                            value={sent}
+                            max={cap}
+                            tone={sent >= cap ? 'warn' : 'accent'}
+                          />
+                          <span className="tabular shrink-0 text-[11px] text-ink-faint">
+                            {sent}/{cap}
+                          </span>
+                        </div>
+                        {quotaKnown ? (
+                          <p className="text-[11px] text-ink-faint tabular">
+                            Yeni sohbet {quotaUsed}/{quotaTotal}
+                            {quotaUsed / Math.max(1, quotaTotal) > 0.8
+                              ? ' · kota dolmak uzere'
+                              : ''}
+                          </p>
+                        ) : null}
+                        {reachoutActive ? (
+                          <p className="text-[11px] text-warn">
+                            Time-lock{' '}
+                            {reachoutUntil!.toLocaleTimeString('tr-TR', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                            &apos;a kadar
+                          </p>
+                        ) : null}
                       </div>
                     ) : line.lock_reason ? (
                       <p className="mt-1.5 text-[11.5px] text-danger">{line.lock_reason}</p>
@@ -224,7 +283,15 @@ export function StatusBoard({
           {campaigns.length === 0 ? (
             <EmptyState
               title="Kampanya yok"
-              description="Hizli gonderim ekranindan numaralari yapistirip hemen baslayabilirsiniz."
+              description="Kampanyalar sekmesinden liste secerek veya Hizli gonderim ile numaralari yapistirarak baslayabilirsiniz."
+              action={
+                <Link
+                  href="/kampanyalar"
+                  className="text-[12.5px] font-medium text-accent underline underline-offset-2"
+                >
+                  Kampanyalara git
+                </Link>
+              }
             />
           ) : (
             <div className="divide-y divide-hairline">
@@ -276,16 +343,22 @@ function Summary({
   value: string
   label: string
   detail: string
-  tone?: 'default' | 'accent' | 'muted'
+  tone?: 'default' | 'accent' | 'muted' | 'warn'
   meter?: { value: number; max: number }
 }) {
   const valueTone =
-    tone === 'accent' ? 'text-accent' : tone === 'muted' ? 'text-ink-muted' : 'text-ink'
+    tone === 'accent'
+      ? 'text-accent'
+      : tone === 'muted'
+        ? 'text-ink-muted'
+        : tone === 'warn'
+          ? 'text-warn'
+          : 'text-ink'
 
   return (
     <div className="px-4 py-3.5">
       <p className="text-[11.5px] text-ink-muted">{label}</p>
-      <p className={`tabular mt-1 text-[20px] font-semibold leading-none ${valueTone}`}>
+      <p className={`tabular mt-1 text-[19px] font-semibold leading-none ${valueTone}`}>
         {value}
       </p>
       {meter ? (

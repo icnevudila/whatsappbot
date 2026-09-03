@@ -14,6 +14,23 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   // Middleware zaten koruyor; burasi ikinci kapi (dogrudan render edilirse).
   if (!user) redirect('/giris')
 
+  // Kurulum nav'da yalnizca henuz bitmemisse gorunur. Uc adimin hepsi
+  // tamamlandiktan sonra kalabaliklastirmamak icin gizleniyor.
+  const [{ count: connectedCount }, { count: contactCount }, { count: campaignCount }] =
+    await Promise.all([
+      supabase
+        .from('accounts')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'connected'),
+      supabase.from('contacts').select('id', { count: 'exact', head: true }),
+      supabase.from('campaigns').select('id', { count: 'exact', head: true }),
+    ])
+
+  const showSetup =
+    (connectedCount ?? 0) === 0 ||
+    (contactCount ?? 0) === 0 ||
+    (campaignCount ?? 0) === 0
+
   return (
     <div className="flex min-h-dvh">
       <aside className="hidden w-[196px] shrink-0 flex-col justify-between border-r border-hairline px-3 py-4 md:flex">
@@ -21,7 +38,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
           <Link href="/" className="mb-6 flex items-center px-2.5">
             <Wordmark />
           </Link>
-          <Nav />
+          <Nav showSetup={showSetup} />
         </div>
 
         <div className="px-2.5">
@@ -39,10 +56,13 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         </div>
       </aside>
 
-      {/* Mobilde ustte yatay gezinme. */}
+      {/* Mobilde ustte yatay kaydirmali gezinme -- dikey link yigini
+          icerigi asagi itiyordu ve dokunma hedeflerini sikistiriyordu. */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex items-center gap-1 border-b border-hairline px-3 py-2 md:hidden">
-          <Nav />
+        <div className="border-b border-hairline px-3 py-2 md:hidden">
+          <div className="overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <Nav showSetup={showSetup} orientation="horizontal" />
+          </div>
         </div>
 
         <main className="min-w-0 flex-1 px-4 py-6 md:px-8 md:py-8">

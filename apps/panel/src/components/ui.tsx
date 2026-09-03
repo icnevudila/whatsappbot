@@ -201,6 +201,61 @@ export function Notice({
   )
 }
 
+/** Tek satirlik ozet rakam. Uc ekranda uc farkli boyutta kopyalanmisti. */
+export function Stat({
+  value,
+  label,
+  tone = 'default',
+}: {
+  value: ReactNode
+  label: string
+  tone?: 'default' | 'accent' | 'muted' | 'danger' | 'warn'
+}) {
+  const valueTone = {
+    default: 'text-ink',
+    accent: 'text-accent',
+    muted: 'text-ink-muted',
+    danger: 'text-danger',
+    warn: 'text-warn',
+  }[tone]
+
+  return (
+    <div>
+      <p className="text-[11.5px] text-ink-muted">{label}</p>
+      <p className={cx('tabular mt-1 text-[19px] font-semibold leading-none', valueTone)}>
+        {value}
+      </p>
+    </div>
+  )
+}
+
+/** Plan / etiket rozeti. Accent yalnizca "aktif" anlaminda kullanilir. */
+export function Badge({
+  children,
+  tone = 'neutral',
+}: {
+  children: ReactNode
+  tone?: 'neutral' | 'accent' | 'warn' | 'danger'
+}) {
+  const styles = {
+    neutral: 'border-hairline-strong bg-surface-raised text-ink-muted',
+    accent: 'border-accent/35 bg-accent/10 text-accent',
+    warn: 'border-warn/35 bg-warn/10 text-warn',
+    danger: 'border-danger/35 bg-danger/10 text-danger',
+  }[tone]
+
+  return (
+    <span
+      className={cx(
+        'inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[11.5px] font-medium',
+        styles,
+      )}
+    >
+      {children}
+    </span>
+  )
+}
+
 export function PageHeader({
   title,
   description,

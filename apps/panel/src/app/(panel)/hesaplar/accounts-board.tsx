@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useState, useTransition } from 'react'
 import type { Tables } from '@wa/shared'
 import { Button, Card, Field, Input, Meter, Notice, StatusPill } from '@/components/ui'
+import { capToday } from '@/lib/capacity'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { useServerSyncedState } from '@/lib/use-server-synced-state'
 import {
@@ -34,6 +35,7 @@ export type AccountView = Pick<
   | 'daily_send_limit'
   | 'sent_today'
   | 'sent_today_on'
+  | 'warmup_started_at'
   | 'new_chat_quota_total'
   | 'new_chat_quota_used'
   | 'reachout_locked_until'
@@ -123,7 +125,7 @@ export function AccountsBoard({
       const { data } = await supabase
         .from('accounts')
         .select(
-          'id, label, phone_e164, status, status_detail, enabled, is_locked, lock_reason, qr_code, qr_expires_at, pairing_code, pairing_expires_at, daily_send_limit, sent_today, sent_today_on, new_chat_quota_total, new_chat_quota_used, reachout_locked_until',
+          'id, label, phone_e164, status, status_detail, enabled, is_locked, lock_reason, qr_code, qr_expires_at, pairing_code, pairing_expires_at, daily_send_limit, sent_today, sent_today_on, warmup_started_at, new_chat_quota_total, new_chat_quota_used, reachout_locked_until',
         )
         .order('created_at')
 
@@ -211,11 +213,19 @@ function AccountCard({ account }: { account: AccountView }) {
 
   const today = new Date().toISOString().slice(0, 10)
   const sentToday = account.sent_today_on === today ? account.sent_today : 0
+  // Gunluk tavan isinma egrisini hesaba katar; ham daily_send_limit
+  // gostermek "neden 100'e cikmiyor" kafa karisikligi yaratirdi.
+  const dayCap = Math.max(1, capToday(account))
 
   const quotaTotal = account.new_chat_quota_total
   const quotaUsed = account.new_chat_quota_used
   const quotaKnown = quotaTotal !== null && quotaUsed !== null
   const quotaTight = quotaKnown && quotaUsed / Math.max(1, quotaTotal) > 0.8
+
+  const lockedUntil = account.reachout_locked_until
+    ? new Date(account.reachout_locked_until)
+    : null
+  const reachoutActive = lockedUntil !== null && lockedUntil.getTime() > Date.now()
 
   return (
     <Card>
@@ -281,14 +291,19 @@ function AccountCard({ account }: { account: AccountView }) {
             <div className="mb-1.5 flex items-baseline justify-between">
               <span className="text-[11.5px] text-ink-muted">Bugun gonderilen</span>
               <span className="text-[11.5px] text-ink tabular">
-                {sentToday} / {account.daily_send_limit}
+                {sentToday} / {dayCap}
               </span>
             </div>
             <Meter
               value={sentToday}
-              max={account.daily_send_limit}
-              tone={sentToday >= account.daily_send_limit ? 'warn' : 'accent'}
+              max={dayCap}
+              tone={sentToday >= dayCap ? 'warn' : 'accent'}
             />
+            {dayCap < account.daily_send_limit ? (
+              <p className="mt-1 text-[11px] text-ink-faint">
+                Isinma: paket limiti {account.daily_send_limit}, bugunku tavan {dayCap}.
+              </p>
+            ) : null}
           </div>
 
           {/*
@@ -317,6 +332,21 @@ function AccountCard({ account }: { account: AccountView }) {
             ) : null}
           </div>
         </div>
+
+        {reachoutActive ? (
+          <Notice tone="warn">
+            Yeni sohbet kilidi{' '}
+            <span className="tabular">
+              {lockedUntil!.toLocaleString('tr-TR', {
+                day: 'numeric',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </span>
+            &apos;a kadar aktif. Bu surede yalnizca onceki sohbetlere yazilabilir.
+          </Notice>
+        ) : null}
 
         {account.reachout_locked_until &&
         new Date(account.reachout_locked_until) > new Date() ? (
