@@ -1,0 +1,88 @@
+@import 'tailwindcss';
+
+/*
+  Yon: yogun koyu operasyon konsolu. Neredeyse siyah kanvas, kilcal cizgiler,
+  sikisik tipografi, golge yok.
+
+  Rol kurallari (bunlari bozmak tasarimi dagitir):
+  - accent (WhatsApp yesili) YALNIZCA "bagli" durumu ve birincil gonder
+    aksiyonu icin. Zemin olarak, dekoratif gradyan olarak kullanilmaz.
+  - warn: QR bekleniyor / baglaniyor / kota uyarisi.
+  - danger: kilitli, banlandi, basarisiz.
+  - ink-faint: yalnizca ikincil ustveri; govde metni icin kullanilmaz.
+*/
+@theme {
+  --color-canvas: #08090b;
+  --color-surface: #0f1113;
+  --color-surface-raised: #15181b;
+  --color-hairline: #22262a;
+  --color-hairline-strong: #2f343a;
+
+  --color-ink: #e9ebee;
+  --color-ink-muted: #9ba1a8;
+  --color-ink-faint: #6a7076;
+
+  --color-accent: #25d366;
+  --color-accent-dim: #1a9e4b;
+  --color-accent-ink: #04140a;
+
+  --color-warn: #f5a524;
+  --color-danger: #f0483e;
+
+  --radius-card: 10px;
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+* {
+  border-color: var(--color-hairline);
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-size: 13.5px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Sayaclar hizali kalsin: canli ilerleme rakamlari surekli degisiyor. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+  letter-spacing: -0.011em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--color-accent-dim);
+  color: white;
+}
+
+/* Ince kaydirma cubugu: yogun tablolarda kalin cubuk duzeni boluyor. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-hairline-strong);
+  border-radius: 99px;
+  border: 3px solid var(--color-canvas);
+}

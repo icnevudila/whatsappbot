@@ -1,0 +1,62 @@
+# Bagimliliklar
+node_modules/
+.npm/
+
+# Ortam degiskenleri
+# Repo public. Buraya sizan bir secret key butun veritabanina erisim demektir.
+.env
+.env.*
+!.env.example
+
+# WhatsApp / Baileys kimlik bilgileri
+# Bu dosyalar Signal ozel anahtarlarini icerir; sizmasi ilgili WhatsApp
+# hesabinin tam kontrolu demektir. Uretimde Supabase'in wa semasinda
+# tutuluyor, ama yerel denemelerde diske dusen her sey burada engellenir.
+auth_info*/
+auth_info*.json
+baileys_store*.json
+wa-sessions/
+*.session
+
+# Sertifikalar ve anahtarlar
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Derleme cikislari
+dist/
+build/
+out/
+.next/
+.turbo/
+*.tsbuildinfo
+
+# Test ve arac ciktilari
+coverage/
+.nyc_output/
+.eslintcache
+
+# Loglar
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Isletim sistemi
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Vercel
+.vercel
+
+# Yerel kreatif ciktilari
+tmp/
+*.local

@@ -1,0 +1,21 @@
+{
+  "name": "whatsappbot",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Coklu oturumlu WhatsApp servisi ve yonetim paneli",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:panel": "npm run dev --workspace @wa/panel",
+    "dev:service": "npm run dev --workspace @wa/service",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "db:types": "npx --yes supabase@latest gen types typescript --project-id rnkrjmblgcdqlyslbhob --schema public > packages/shared/src/database.types.ts"
+  }
+}

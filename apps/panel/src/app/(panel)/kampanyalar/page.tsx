@@ -1,0 +1,121 @@
+import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import { Card, CardHeader, EmptyState, Meter, PageHeader, StatusPill } from '@/components/ui'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { NewCampaignForm } from './new-campaign-form'
+
+export const dynamic = 'force-dynamic'
+
+export default async function CampaignsPage() {
+  const supabase = await createSupabaseServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) redirect('/giris')
+
+  const [campaignsResult, listsResult, accountsResult] = await Promise.all([
+    supabase
+      .from('campaigns')
+      .select(
+        'id, name, status, total_targets, sent_count, failed_count, skipped_count, stop_reason, created_at',
+      )
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('contact_lists')
+      .select('id, name, contact_count')
+      .order('created_at', { ascending: false }),
+    supabase.from('accounts').select('id, label, status, is_locked').order('created_at'),
+  ])
+
+  const campaigns = campaignsResult.data ?? []
+
+  const listOptions = (listsResult.data ?? []).map((list) => ({
+    id: list.id,
+    label: list.name,
+    detail: `${list.contact_count} numara`,
+  }))
+
+  const accountOptions = (accountsResult.data ?? []).map((account) => ({
+    id: account.id,
+    label: account.label,
+    detail: account.is_locked
+      ? 'kilitli'
+      : account.status === 'connected'
+        ? 'bagli'
+        : 'bagli degil',
+    // Bagli olmayan hesap secilirse kampanya bosa donuyor; en basta engelliyoruz.
+    disabled: account.is_locked || account.status !== 'connected',
+  }))
+
+  return (
+    <>
+      <PageHeader
+        title="Kampanyalar"
+        description="Gonderim WhatsApp servisinde kuyruk halinde islenir. Duraklatabilir, durdurabilir veya kaldigi yerden devam ettirebilirsiniz."
+      />
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_400px]">
+        <Card>
+          <CardHeader title="Gecmis" subtitle={`${campaigns.length} kampanya`} />
+
+          {campaigns.length === 0 ? (
+            <EmptyState
+              title="Henuz kampanya yok"
+              description="Sag taraftaki formu doldurarak ilk kampanyanizi olusturun."
+            />
+          ) : (
+            <ul className="divide-y divide-hairline">
+              {campaigns.map((campaign) => {
+                const done =
+                  campaign.sent_count + campaign.failed_count + campaign.skipped_count
+
+                return (
+                  <li key={campaign.id}>
+                    <Link
+                      href={`/kampanyalar/${campaign.id}`}
+                      className="block px-4 py-3 transition-colors hover:bg-surface-raised"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="min-w-0 truncate text-[13px] font-medium">
+                          {campaign.name}
+                        </p>
+                        <StatusPill status={campaign.status} />
+                      </div>
+
+                      <div className="mt-2">
+                        <Meter
+                          value={done}
+                          max={Math.max(1, campaign.total_targets)}
+                          tone={campaign.status === 'stopped' ? 'danger' : 'accent'}
+                        />
+                      </div>
+
+                      <p className="mt-1.5 text-[11.5px] text-ink-muted tabular">
+                        {campaign.sent_count} gonderildi
+                        {campaign.skipped_count > 0
+                          ? ` · ${campaign.skipped_count} atlandi`
+                          : ''}
+                        {campaign.failed_count > 0
+                          ? ` · ${campaign.failed_count} basarisiz`
+                          : ''}
+                        {campaign.total_targets > 0 ? ` · ${campaign.total_targets} hedef` : ''}
+                      </p>
+
+                      {campaign.stop_reason ? (
+                        <p className="mt-1 text-[11.5px] text-danger">
+                          {campaign.stop_reason}
+                        </p>
+                      ) : null}
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </Card>
+
+        <NewCampaignForm lists={listOptions} accounts={accountOptions} userId={user.id} />
+      </div>
+    </>
+  )
+}
