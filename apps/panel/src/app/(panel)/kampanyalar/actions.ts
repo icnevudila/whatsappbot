@@ -23,8 +23,8 @@ export async function createCampaign(
 
   if (!name) return { error: 'Kampanyaya bir ad verin.' }
   if (!body && !mediaUrl) return { error: 'Mesaj metni veya bir gorsel gerekli.' }
-  if (listIds.length === 0) return { error: 'En az bir kisi listesi secin.' }
-  if (accountIds.length === 0) return { error: 'En az bir gonderen hesap secin.' }
+  if (listIds.length === 0) return { error: 'En az bir kişi listesi seçin.' }
+  if (accountIds.length === 0) return { error: 'En az bir gönderen hesap seçin.' }
   if (minDelay > maxDelay) {
     return { error: 'En kisa bekleme, en uzun beklemeden buyuk olamaz.' }
   }

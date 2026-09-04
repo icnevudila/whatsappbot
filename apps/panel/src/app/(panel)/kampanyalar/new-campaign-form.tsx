@@ -55,7 +55,7 @@ export function NewCampaignForm({
       const { data } = supabase.storage.from('creatives').getPublicUrl(path)
       setMediaUrl(data.publicUrl)
     } catch (error) {
-      setUploadError(error instanceof Error ? error.message : 'Gorsel yuklenemedi.')
+      setUploadError(error instanceof Error ? error.message : 'Görsel yüklenemedi.')
     } finally {
       setUploading(false)
     }

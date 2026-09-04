@@ -4,11 +4,8 @@ import { useState } from 'react'
 import { useCountdown } from '@/lib/use-countdown'
 
 /**
- * QR okutamayan kullanicilar icin telefon numarasiyla eslesme.
- *
- * WhatsApp kodu 8 karakter veriyor ve genelde ortadan tireli gosteriyor;
- * kullanici telefonda gordugu bicimle birebir eslesmesini bekliyor, o yuzden
- * biz de dortlu iki gruba ayirip harf araligini aciyoruz.
+ * QR okutamayan kullanıcılar için telefon numarasıyla eşleşme.
+ * WhatsApp 8 karakter verir; telefonda görünen 4-4 biçimiyle gösteriyoruz.
  */
 export function PairingPanel({
   code,
@@ -26,7 +23,7 @@ export function PairingPanel({
       setCopied(true)
       setTimeout(() => setCopied(false), 2_000)
     } catch {
-      // Pano izni yoksa kod ekranda okunabilir durumda, sessiz geciyoruz.
+      // Pano izni yoksa kod ekranda okunabilir.
     }
   }
 
@@ -39,27 +36,27 @@ export function PairingPanel({
           <button
             type="button"
             onClick={() => void copy()}
-            title="Kopyalamak icin tiklayin"
+            title="Kopyalamak için tıklayın"
             className="rounded-md border border-hairline-strong bg-surface px-4 py-3 font-mono text-[26px] font-semibold tracking-[0.18em] text-accent transition-colors hover:border-accent/60"
           >
             {pretty}
           </button>
           <p className="mt-1.5 text-center text-[11px] text-ink-faint">
-            {copied ? 'Kopyalandi' : 'Kopyalamak icin tiklayin'}
+            {copied ? 'Kopyalandı' : 'Kopyalamak için tıklayın'}
           </p>
         </div>
 
         <div className="min-w-0 flex-1">
           <p className="text-[13px] font-medium">Bu kodu telefonunuza girin</p>
           <ol className="mt-2 space-y-1 text-[12.5px] text-ink-muted">
-            <li>1. WhatsApp &gt; Ayarlar &gt; Bagli cihazlar</li>
-            <li>2. &quot;Cihaz bagla&quot;ya dokunun</li>
+            <li>1. WhatsApp → Ayarlar → Bağlı cihazlar</li>
+            <li>2. “Cihaz bağla”ya dokunun</li>
             <li>
               3. Alttaki{' '}
-              <span className="text-ink">&quot;Telefon numarasiyla bagla&quot;</span>{' '}
-              secenegini kullanin
+              <span className="text-ink">“Telefon numarasıyla bağla”</span>{' '}
+              seçeneğini kullanın
             </li>
-            <li>4. Yukaridaki kodu girin</li>
+            <li>4. Yukarıdaki kodu girin</li>
           </ol>
 
           {secondsLeft !== null ? (
@@ -67,11 +64,11 @@ export function PairingPanel({
               {secondsLeft > 0 ? (
                 <span className="text-ink-faint">
                   Kod {Math.floor(secondsLeft / 60)}:
-                  {String(secondsLeft % 60).padStart(2, '0')} sonra gecersiz olacak
+                  {String(secondsLeft % 60).padStart(2, '0')} sonra geçersiz olacak
                 </span>
               ) : (
                 <span className="text-danger">
-                  Kodun suresi doldu, yeniden isteyin
+                  Kodun süresi doldu, yeniden isteyin
                 </span>
               )}
             </p>

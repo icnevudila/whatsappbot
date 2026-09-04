@@ -27,4 +27,4 @@ export function Wordmark({ className = '' }: { className?: string }) {
 
 /** Tek yerden isim: degistirmek istendiginde yalnizca burasi degisir. */
 export const BRAND_NAME = 'Filo'
-export const BRAND_TAGLINE = 'Coklu WhatsApp hattindan toplu kampanya gonderimi'
+export const BRAND_TAGLINE = 'Çoklu WhatsApp hattından toplu kampanya gönderimi'

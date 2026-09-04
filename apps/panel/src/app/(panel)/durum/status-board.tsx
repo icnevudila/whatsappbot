@@ -129,22 +129,22 @@ export function StatusBoard({
           <Stat
             className="px-4 py-3.5"
             value={`${connected.length}`}
-            label="Bagli hat"
+            label="Bağlı hat"
             detail={
               lines.length > connected.length
-                ? `${lines.length - connected.length} hat kapali veya kilitli`
-                : 'Hepsi calisiyor'
+                ? `${lines.length - connected.length} hat kapalı veya kilitli`
+                : 'Hepsi çalışıyor'
             }
             tone={connected.length > 0 ? 'accent' : 'muted'}
           />
           <Stat
             className="px-4 py-3.5"
             value={`${nf.format(usedToday)} / ${nf.format(capacityToday)}`}
-            label="Bugunku gonderim"
+            label="Bugünkü gönderim"
             detail={
               capacityToday > 0
-                ? `${nf.format(Math.max(0, capacityToday - usedToday))} mesaj hakki kaldi`
-                : 'Bagli hat yok'
+                ? `${nf.format(Math.max(0, capacityToday - usedToday))} mesaj hakkı kaldı`
+                : 'Bağlı hat yok'
             }
             meter={{ value: usedToday, max: capacityToday }}
           />
@@ -154,8 +154,8 @@ export function StatusBoard({
             label="Aktif kampanya"
             detail={
               activeCampaigns.length > 0
-                ? activeCampaigns[0]?.name ?? 'Gonderim var'
-                : 'Su an gonderim yok'
+                ? activeCampaigns[0]?.name ?? 'Gönderim var'
+                : 'Şu an gönderim yok'
             }
             tone={activeCampaigns.length > 0 ? 'accent' : 'muted'}
           />
@@ -189,7 +189,7 @@ export function StatusBoard({
                 href="/hesaplar"
                 className="text-[12px] text-ink-muted transition-colors hover:text-ink"
               >
-                Yonet
+                Yönet
               </Link>
             }
           />
@@ -197,7 +197,7 @@ export function StatusBoard({
           {lines.length === 0 ? (
             <EmptyState
               title="Hat yok"
-              description="Hesaplar sekmesinden QR ile ilk hattinizi baglayin."
+              description="Hesaplar sekmesinden QR ile ilk hattınızı bağlayın."
             />
           ) : (
             <div className="divide-y divide-hairline">
@@ -245,13 +245,13 @@ export function StatusBoard({
                           <p className="text-[11px] text-ink-faint tabular">
                             Yeni sohbet {quotaUsed}/{quotaTotal}
                             {quotaUsed / Math.max(1, quotaTotal) > 0.8
-                              ? ' · kota dolmak uzere'
+                              ? ' · kota dolmak üzere'
                               : ''}
                           </p>
                         ) : null}
                         {reachoutActive ? (
                           <p className="text-[11px] text-warn">
-                            Time-lock{' '}
+                            Yeni sohbet kilidi{' '}
                             {reachoutUntil!.toLocaleTimeString('tr-TR', {
                               hour: '2-digit',
                               minute: '2-digit',
@@ -279,7 +279,7 @@ export function StatusBoard({
                 href="/kampanyalar"
                 className="text-[12px] text-ink-muted transition-colors hover:text-ink"
               >
-                Tumu
+                Tümü
               </Link>
             }
           />
@@ -287,7 +287,7 @@ export function StatusBoard({
           {campaigns.length === 0 ? (
             <EmptyState
               title="Kampanya yok"
-              description="Kampanyalar sekmesinden liste secerek veya Hizli gonderim ile numaralari yapistirarak baslayabilirsiniz."
+              description="Kampanyalar sekmesinden liste seçerek veya Hızlı gönderim ile numaraları yapıştırarak başlayabilirsiniz."
               action={
                 <AccentLink href="/kampanyalar">Kampanyalara git</AccentLink>
               }

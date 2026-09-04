@@ -7,9 +7,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 export const metadata: Metadata = { title: 'Kurulum' }
 
 /**
- * Adimlar kullanicinin isaretlemesiyle degil, gercek veriyle tamamlaniyor.
- * "Tamamlandi" kutucugu tiklanabilir olsaydi, hicbir hat bagli olmadan
- * kurulumu bitirmis gorunmek mumkun olurdu.
+ * Adımlar kullanıcının işaretlemesiyle değil, gerçek veriyle tamamlanıyor.
  */
 export default async function SetupPage() {
   const supabase = await createSupabaseServerClient()
@@ -35,30 +33,30 @@ export default async function SetupPage() {
   const steps = [
     {
       done: hasLine,
-      title: 'Bir WhatsApp hatti baglayin',
+      title: 'Bir WhatsApp hattı bağlayın',
       body: hasLine
-        ? `${connectedCount} hat bagli. Daha fazla hat eklemek gunluk kapasitenizi artirir.`
-        : 'Hesaplar sekmesinde hat olusturun. QR okutun veya telefon numarasiyla 8 haneli kod alin. Baglanti sunucuda kalir; paneli kapatabilirsiniz (WhatsApp servisi acik olmali).',
+        ? `${connectedCount} hat bağlı. Daha fazla hat eklemek günlük kapasitenizi artırır.`
+        : 'Hesaplar’da hat oluşturun. QR okutun veya telefonla 8 haneli kod alın. Bağlantı sunucuda kalır; paneli kapatabilirsiniz.',
       href: '/hesaplar',
-      cta: hasLine ? 'Hat ekle' : 'Hat bagla',
+      cta: hasLine ? 'Hat ekle' : 'Hat bağla',
     },
     {
-      done: hasContacts,
-      title: 'Numaralarinizi ekleyin',
+      done: hasContacts || hasCampaign,
+      title: 'Numaralarınızı ekleyin',
       body: hasContacts
-        ? `${contactCount} kisi kayitli.`
-        : 'CSV yukleyin ya da numaralari dogrudan yapistirin. Hepsi otomatik olarak uluslararasi formata cevrilir ve WhatsApp kaydi dogrulanir.',
-      href: '/kisiler',
-      cta: hasContacts ? 'Listeleri gor' : 'Kisi ekle',
+        ? `${contactCount} kişi kayıtlı. Tek seferlik gönderim için Hızlı gönderim de yeterli.`
+        : 'CSV yükleyin, yapıştırın veya Hızlı gönderim ile doğrudan numaraları girin. WhatsApp kaydı gönderim öncesi kontrol edilir.',
+      href: hasContacts ? '/kisiler' : '/hizli-gonderim',
+      cta: hasContacts ? 'Listeleri gör' : 'Hızlı gönderime git',
     },
     {
       done: hasCampaign,
-      title: 'Ilk gonderiminizi yapin',
+      title: 'İlk gönderiminizi yapın',
       body: hasCampaign
-        ? 'Kampanyalarinizi genel durum ekranindan canli takip edebilirsiniz.'
-        : 'Hizli gonderim ekraninda numaralari yapistirip mesaji yazmaniz yeterli. Gonderim hizi otomatik olarak hattinizi koruyacak sekilde ayarlanir.',
+        ? 'Kampanyalarınızı Durum ekranından canlı takip edebilirsiniz.'
+        : 'Hızlı gönderimde numaraları yapıştırıp mesajı yazmanız yeterli. Hız otomatik olarak hattınızı koruyacak şekilde ayarlanır.',
       href: '/hizli-gonderim',
-      cta: hasCampaign ? 'Yeni gonderim' : 'Gonderime basla',
+      cta: hasCampaign ? 'Yeni gönderim' : 'Gönderime başla',
     },
   ]
 
@@ -68,7 +66,7 @@ export default async function SetupPage() {
     <>
       <PageHeader
         title="Kurulum"
-        description="Uc adim. Her biri tamamlandiginda burada otomatik olarak isaretlenir."
+        description="Üç adım. Her biri tamamlandığında burada otomatik işaretlenir."
         action={
           <span className="tabular text-[12.5px] text-ink-muted">
             {completed} / {steps.length} tamam
@@ -114,11 +112,11 @@ export default async function SetupPage() {
       {completed === steps.length ? (
         <div className="mt-4 rounded-md border border-accent/30 bg-accent/8 px-3.5 py-3">
           <p className="text-[12.5px] text-accent">
-            Kurulum tamam. Bundan sonra gunluk isinizi{' '}
+            Kurulum tamam. Günlük işinizi{' '}
             <Link href="/durum" className="underline underline-offset-2">
-              genel durum
+              Durum
             </Link>{' '}
-            ekranindan takip edebilirsiniz.
+            ekranından izleyebilirsiniz.
           </p>
         </div>
       ) : null}

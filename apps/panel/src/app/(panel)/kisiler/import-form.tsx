@@ -30,25 +30,25 @@ export function ImportForm() {
   return (
     <Card>
       <CardHeader
-        title="Liste olustur"
-        subtitle="Kampanyalarda tekrar sececeginiz numaralar icin. Tek seferlik mesaj → Hizli gonderim."
+        title="Liste oluştur"
+        subtitle="Kampanyalarda tekrar seçeceğiniz numaralar için. Tek seferlik mesaj → Hızlı gönderim."
       />
 
       <form action={formAction} className="space-y-3.5 p-4">
-        <Field label="Liste adi">
-          <Input name="name" placeholder="Ocak kampanyasi - Istanbul" required />
+        <Field label="Liste adı">
+          <Input name="name" placeholder="Ocak kampanyası - İstanbul" required />
         </Field>
 
         <Field
           label="Numaralar"
-          hint="Basinda + olmayan numaralar Turkiye kodu ile yorumlanir. Tekrar edenler otomatik atlanir."
+          hint="Başında + olmayan numaralar Türkiye kodu ile yorumlanır. Tekrar edenler otomatik atlanır."
         >
           <Textarea
             ref={textareaRef}
             name="numbers"
             rows={9}
             required
-            placeholder={'0532 123 45 67, Ahmet Yilmaz\n+90 533 987 65 43, Ayse Demir\n5445556677'}
+            placeholder={'0532 123 45 67, Ahmet Yılmaz\n+90 533 987 65 43, Ayşe Demir\n5445556677'}
           />
         </Field>
 
@@ -63,7 +63,7 @@ export function ImportForm() {
                 if (file) void readFile(file)
               }}
             />
-            CSV veya TXT dosyasi ekle
+            CSV veya TXT dosyası ekle
           </label>
 
           {fileName ? (
@@ -71,7 +71,7 @@ export function ImportForm() {
           ) : null}
 
           <Button type="submit" variant="accent" disabled={pending} className="ml-auto">
-            {pending ? 'Aktariliyor...' : 'Listeyi olustur'}
+            {pending ? 'Aktarılıyor...' : 'Listeyi oluştur'}
           </Button>
         </div>
 
@@ -81,7 +81,7 @@ export function ImportForm() {
         {state?.invalidSamples && state.invalidSamples.length > 0 ? (
           <div className="rounded-md border border-hairline bg-canvas px-3 py-2">
             <p className="text-[11.5px] font-medium text-ink-muted">
-              Okunamayan satirlardan ornekler
+              Okunamayan satırlardan örnekler
             </p>
             <ul className="mt-1 space-y-0.5 font-mono text-[11.5px] text-ink-faint">
               {state.invalidSamples.map((sample, index) => (

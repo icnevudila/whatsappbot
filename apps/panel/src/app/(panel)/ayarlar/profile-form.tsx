@@ -20,23 +20,23 @@ export function ProfileForm({
 
   return (
     <form action={formAction} className="space-y-4 p-4">
-      <Field label="E-posta" hint="Giris adresiniz. Degistirmek icin destege yazin.">
+      <Field label="E-posta" hint="Giriş adresiniz. Değiştirmek için desteğe yazın.">
         <Input value={email} disabled readOnly />
       </Field>
 
       <Field label="Ad soyad">
-        <Input name="full_name" defaultValue={fullName} placeholder="Adiniz" />
+        <Input name="full_name" defaultValue={fullName} placeholder="Adınız" />
       </Field>
 
       <Field label="Firma">
-        <Input name="company" defaultValue={company} placeholder="Firma adi" />
+        <Input name="company" defaultValue={company} placeholder="Firma adı" />
       </Field>
 
       {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
       {state?.ok ? <Notice tone="accent">{state.ok}</Notice> : null}
 
       <Button type="submit" variant="quiet" disabled={pending}>
-        {pending ? 'Kaydediliyor...' : 'Kaydet'}
+        {pending ? 'Kaydediliyor…' : 'Kaydet'}
       </Button>
     </form>
   )

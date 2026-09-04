@@ -3,8 +3,8 @@ import { BRAND_NAME, LogoMark, Wordmark } from '@/components/brand'
 
 const SECTIONS = [
   { href: '#kapasite', label: 'Kapasite' },
-  { href: '#nasil', label: 'Nasil calisir' },
-  { href: '#guvenlik', label: 'Ban onleme' },
+  { href: '#nasil', label: 'Nasıl çalışır' },
+  { href: '#guvenlik', label: 'Ban önleme' },
   { href: '#fiyatlar', label: 'Fiyatlar' },
   { href: '#sss', label: 'SSS' },
 ]
@@ -35,13 +35,13 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
               href="/giris"
               className="rounded-md px-2.5 py-1.5 text-[12.5px] text-ink-muted transition-colors hover:text-ink"
             >
-              Giris yap
+              Giriş yap
             </Link>
             <Link
               href="/giris?mod=kayit"
               className="inline-flex h-8 items-center rounded-md bg-accent px-3 text-[12.5px] font-medium text-accent-ink transition-colors hover:bg-accent-dim"
             >
-              Ucretsiz dene
+              Ücretsiz dene
             </Link>
           </div>
         </div>
@@ -54,14 +54,14 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           <div className="max-w-xs">
             <Wordmark />
             <p className="mt-2 text-[12.5px] text-ink-muted">
-              Kendi WhatsApp hatlarinizdan, hatti yakmayan hizda toplu kampanya
-              gonderimi.
+              Kendi WhatsApp hatlarınızdan, hattı yakmayan hızda toplu kampanya
+              gönderimi.
             </p>
           </div>
 
           <div className="flex gap-12">
             <div className="flex flex-col gap-1.5">
-              <p className="mb-1 text-[11.5px] font-medium text-ink-faint">Urun</p>
+              <p className="mb-1 text-[11.5px] font-medium text-ink-faint">Ürün</p>
               {SECTIONS.map((section) => (
                 <a
                   key={section.href}
@@ -76,10 +76,10 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             <div className="flex flex-col gap-1.5">
               <p className="mb-1 text-[11.5px] font-medium text-ink-faint">Yasal</p>
               <Link href="/kvkk" className="text-[12.5px] text-ink-muted hover:text-ink">
-                KVKK aydinlatma metni
+                KVKK aydınlatma metni
               </Link>
               <Link href="/kosullar" className="text-[12.5px] text-ink-muted hover:text-ink">
-                Kullanim kosullari
+                Kullanım koşulları
               </Link>
             </div>
           </div>
@@ -90,7 +90,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             <LogoMark className="size-3 text-ink-faint" />
             <p className="text-[11.5px] text-ink-faint">
               {BRAND_NAME} &middot; {new Date().getFullYear()} &middot; WhatsApp, Meta
-              Platforms Inc. markasidir; bu urun Meta ile baglantili degildir.
+              Platforms Inc. markasıdır; bu ürün Meta ile bağlantılı değildir.
             </p>
           </div>
         </div>

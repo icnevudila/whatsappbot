@@ -37,11 +37,11 @@ export default async function BrandKitPage() {
     <>
       <PageHeader
         title="Marka kiti"
-        description="Renklerinizi ve logonuzu bir kez tanimlayin, kampanya gorsellerini tek tikla uretin."
+        description="Renklerinizi ve logonuzu bir kez tanımlayın, kampanya görsellerini tek tıkla üretin."
       />
 
       <BrandStudio
-        initialName={kit?.name ?? 'Varsayilan'}
+        initialName={kit?.name ?? 'Varsayılan'}
         initialColors={colors}
         initialLogoUrl={kit?.logo_path ?? null}
         brandKitId={kit?.id ?? null}
@@ -51,8 +51,8 @@ export default async function BrandKitPage() {
       <div className="mt-4">
         <Card>
           <CardHeader
-            title="Uretilen gorseller"
-            subtitle="Hizli gonderim ve kampanya ekranlarinda bu gorselleri kullanabilirsiniz."
+            title="Üretilen görseller"
+            subtitle="Hızlı gönderim ve kampanya ekranlarında bu görselleri kullanabilirsiniz."
           />
           {creatives && creatives.length > 0 ? (
             <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-4">
@@ -75,8 +75,8 @@ export default async function BrandKitPage() {
             </div>
           ) : (
             <EmptyState
-              title="Henuz gorsel yok"
-              description="Yukaridaki studio ile bir kampanya gorseli uretin; burada listelenir."
+              title="Henüz görsel yok"
+              description="Yukarıdaki stüdyo ile bir kampanya görseli üretin; burada listelenir."
             />
           )}
         </Card>

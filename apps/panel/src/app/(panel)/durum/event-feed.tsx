@@ -15,22 +15,22 @@ export type EventView = {
 }
 
 /**
- * Servis olay adlarini makine formatinda yaziyor (account.reachout_timelock).
- * Panelde ham hali gostermek, en cok bakilacak ekranda en az okunur seyi
- * gostermek olurdu.
+ * Servis olay adlarını makine formatında yazıyor (account.reachout_timelock).
+ * Panelde ham hali göstermek, en çok bakılacak ekranda en az okunur şeyi
+ * göstermek olurdu.
  */
 const LABELS: Record<string, string> = {
-  'account.connected': 'Hat baglandi',
-  'account.logged_out': 'Telefondan cikis yapildi',
+  'account.connected': 'Hat bağlandı',
+  'account.logged_out': 'Telefondan çıkış yapıldı',
   'account.locked': 'Hat kilitlendi',
-  'account.auth_cleared': 'Oturum sifirlandi',
-  'account.version_mismatch': 'WhatsApp surumu uyumsuz',
-  'account.bad_session': 'Oturum bozuldu, yeniden baglaniyor',
-  'account.connection_replaced': 'Baglanti baska bir cihaza gecti',
-  'account.qr_expired': 'QR kodunun suresi doldu',
+  'account.auth_cleared': 'Oturum sıfırlandı',
+  'account.version_mismatch': 'WhatsApp sürümü uyumsuz',
+  'account.bad_session': 'Oturum bozuldu, yeniden bağlanıyor',
+  'account.connection_replaced': 'Bağlantı başka bir cihaza geçti',
+  'account.qr_expired': 'QR kodunun süresi doldu',
   'account.reachout_timelock': 'Yeni sohbet kilidi uygulandı',
-  'account.logout_requested': 'Cikis istendi',
-  'account.new_chat_quota_exhausted': 'Yeni sohbet kotasi doldu',
+  'account.logout_requested': 'Çıkış istendi',
+  'account.new_chat_quota_exhausted': 'Yeni sohbet kotası doldu',
 }
 
 const LEVEL_TONE: Record<string, string> = {
@@ -73,8 +73,8 @@ export function EventFeed({
         },
         (payload) => {
           const next = payload.new as EventView
-          // Liste basa ekleniyor ve kirpiliyor: bu ekran acik kalabilir,
-          // sinirsiz buyumesi tarayiciyi yorar.
+          // Liste başa ekleniyor ve kırpılıyor: bu ekran açık kalabilir,
+          // sınırsız büyümesi tarayıcıyı yorar.
           setEvents((current) => [next, ...current].slice(0, 50))
         },
       )
@@ -90,14 +90,14 @@ export function EventFeed({
   return (
     <Card>
       <CardHeader
-        title="Canli olay akisi"
-        subtitle="Servis ne yaptigini buraya yaziyor. Panel kapaliyken olanlar da burada."
+        title="Canlı olay akışı"
+        subtitle="Servis ne yaptığını buraya yazıyor. Panel kapalıyken olanlar da burada."
       />
 
       {events.length === 0 ? (
         <EmptyState
-          title="Henuz olay yok"
-          description="Bir hat baglandiginda veya kampanya calistiginda olaylar burada anlik olarak gorunur."
+          title="Henüz olay yok"
+          description="Bir hat bağlandığında veya kampanya çalıştığında olaylar burada anlık olarak görünür."
         />
       ) : (
         <div className="max-h-[420px] divide-y divide-hairline overflow-y-auto">

@@ -6,8 +6,7 @@ import { Button, Field, Input, Notice } from '@/components/ui'
 import { signIn, signUp, type AuthState } from './actions'
 
 export function AuthForm() {
-  // Landing'deki "Ucretsiz dene" butonlari ?mod=kayit ile geliyor. Bunu
-  // okumazsak birincil cagri kayit yerine giris formuna dusuyor.
+  // Landing'deki "Ücretsiz dene" butonları ?mod=kayit ile geliyor.
   const searchParams = useSearchParams()
   const [mode, setMode] = useState<'signin' | 'signup'>(
     searchParams.get('mod') === 'kayit' ? 'signup' : 'signin',
@@ -29,7 +28,7 @@ export function AuthForm() {
       </Field>
 
       <Field
-        label="Sifre"
+        label="Şifre"
         hint={mode === 'signup' ? 'En az 8 karakter.' : undefined}
       >
         <Input
@@ -44,7 +43,7 @@ export function AuthForm() {
       {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
 
       <Button type="submit" variant="accent" disabled={pending} className="w-full">
-        {pending ? 'Bekleyin...' : mode === 'signin' ? 'Giris yap' : 'Hesap olustur'}
+        {pending ? 'Bekleyin…' : mode === 'signin' ? 'Giriş yap' : 'Hesap oluştur'}
       </Button>
 
       <button
@@ -53,8 +52,8 @@ export function AuthForm() {
         className="w-full text-[12.5px] text-ink-muted transition-colors hover:text-ink"
       >
         {mode === 'signin'
-          ? 'Hesabiniz yok mu? Kayit olun'
-          : 'Hesabiniz var mi? Giris yapin'}
+          ? 'Hesabınız yok mu? Kayıt olun'
+          : 'Hesabınız var mı? Giriş yapın'}
       </button>
     </form>
   )

@@ -35,7 +35,7 @@ export async function quickSend(
 
   if (!raw.trim()) return { error: 'En az bir numara girin.' }
   if (!body && !mediaUrl) return { error: 'Mesaj metni veya bir gorsel gerekli.' }
-  if (accountIds.length === 0) return { error: 'En az bir gonderen hat secin.' }
+  if (accountIds.length === 0) return { error: 'En az bir gönderen hat seçin.' }
 
   const parsed = parsePhoneList(raw)
   if (parsed.valid.length === 0) {
@@ -57,7 +57,7 @@ export async function quickSend(
     dateStyle: 'short',
     timeStyle: 'medium',
   }).format(new Date())
-  const campaignName = `Hizli gonderim · ${stamp}`
+  const campaignName = `Hızlı gönderim · ${stamp}`
 
   const { data: list, error: listError } = await supabase
     .from('contact_lists')
@@ -65,7 +65,7 @@ export async function quickSend(
       owner_id: user.id,
       name: campaignName,
       source: 'quick_send',
-      description: 'Hizli gonderim ara kaydi — Kisiler listesinde gosterilmez.',
+      description: 'Hızlı gönderim ara kaydı — Kişiler listesinde gösterilmez.',
     })
     .select('id')
     .single()

@@ -13,12 +13,12 @@ export type TargetView = Pick<
 type Filter = 'all' | 'sent' | 'queued' | 'skipped' | 'failed' | 'sending'
 
 const FILTERS: { key: Filter; label: string }[] = [
-  { key: 'all', label: 'Tumu' },
-  { key: 'sent', label: 'Gonderildi' },
+  { key: 'all', label: 'Tümü' },
+  { key: 'sent', label: 'Gönderildi' },
   { key: 'queued', label: 'Kuyruk' },
-  { key: 'sending', label: 'Gonderiliyor' },
-  { key: 'skipped', label: 'Atlandi' },
-  { key: 'failed', label: 'Basarisiz' },
+  { key: 'sending', label: 'Gönderiliyor' },
+  { key: 'skipped', label: 'Atlandı' },
+  { key: 'failed', label: 'Başarısız' },
 ]
 
 /**
@@ -113,7 +113,7 @@ export function TargetFeed({
     <Card>
       <CardHeader
         title="Numaralar"
-        subtitle={`${counts.sent} gonderildi · ${counts.skipped} atlandi · ${counts.failed} basarisiz · ${counts.queued + counts.sending} bekliyor`}
+        subtitle={`${counts.sent} gönderildi · ${counts.skipped} atlandı · ${counts.failed} başarısız · ${counts.queued + counts.sending} bekliyor`}
       />
 
       <div className="flex flex-wrap gap-1 border-b border-hairline px-4 py-2">
@@ -141,8 +141,8 @@ export function TargetFeed({
 
       {visible.length === 0 ? (
         <EmptyState
-          title="Henuz hedef yok"
-          description="Kampanya basladiginda numaralar burada listelenir."
+          title="Henüz hedef yok"
+          description="Kampanya başladığında numaralar burada listelenir."
         />
       ) : (
         <ul className="divide-y divide-hairline">

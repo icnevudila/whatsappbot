@@ -6,53 +6,53 @@ import { HeroPanel } from './hero-panel'
 
 export const metadata: Metadata = {
   // absolute: kok layout'taki "%s · Filo" sablonu burada isim tekrarina yol aciyor.
-  title: { absolute: `${BRAND_NAME} — Coklu WhatsApp hattindan toplu kampanya gonderimi` },
+  title: { absolute: `${BRAND_NAME} — Çoklu WhatsApp hattından toplu kampanya gönderimi` },
   description:
-    'Kendi WhatsApp hatlarinizi baglayin, kisi listenizi yukleyin, hatti yakmayan hizda toplu kampanya gonderin. Numara dogrulama, isindirma ve otomatik durdurma dahil.',
+    'Kendi WhatsApp hatlarınızı bağlayın, kişi listenizi yükleyin, hattı yakmayan hızda toplu kampanya gönderin. Numara doğrulama, ısındırma ve otomatik durdurma dahil.',
 }
 
 const STEPS = [
   {
     n: '01',
-    title: 'Hatlarinizi baglayin',
-    body: 'Panelde QR kodu cikar, telefonunuzdan okutursunuz. Ayni anda kac hat isterseniz. Oturumlar sunucuda tutulur, panel kapaliyken de bagli kalir.',
+    title: 'Hatlarınızı bağlayın',
+    body: 'Panelde QR kodu çıkar, telefonunuzdan okutursunuz. Aynı anda kaç hat isterseniz. Oturumlar sunucuda tutulur, panel kapalıyken de bağlı kalır.',
   },
   {
     n: '02',
-    title: 'Kisileri yukleyin',
+    title: 'Kişileri yükleyin',
     body: 'CSV yükleyin ya da numaraları doğrudan yapıştırın. Ülke koduna çevrilir ve WhatsApp’ta kayıtlı olup olmadığı kontrol edilir.',
   },
   {
     n: '03',
-    title: 'Kampanyayi baslatin',
-    body: 'Mesaji yazin, gorseli ekleyin, hatlari secin. Gerisi arka planda calisir; siz paneli kapatsaniz da gonderim surer.',
+    title: 'Kampanyayı başlatın',
+    body: 'Mesajı yazın, görseli ekleyin, hatları seçin. Gerisi arka planda çalışır; siz paneli kapatsanız da gönderim sürer.',
   },
 ]
 
 const SAFETY = [
   {
-    title: 'Numara dogrulama kapisi',
+    title: 'Numara doğrulama kapısı',
     body: 'Gönderimden önce her numara WhatsApp’ta kayıtlı mı diye kontrol edilir. Kayıtsız numaraya denemek kısıt almanın en hızlı yolu.',
   },
   {
-    title: 'Gercek kotanin okunmasi',
+    title: 'Gerçek kotanın okunması',
     body: 'WhatsApp’ın hesabınıza tanıdığı yeni sohbet kotasını ve varsa geçici kilidi doğrudan kaynaktan okuyup panelde gösteriyoruz. Tahmin yok.',
   },
   {
-    title: 'Isindirma egrisi',
-    body: 'Yeni hat ilk gun 10, birinci hafta 120, ikinci haftadan sonra gunde 250 mesaja cikar. Bu tavan panelden asilamaz.',
+    title: 'Isındırma eğrisi',
+    body: 'Yeni hat ilk gün 10, birinci hafta 120, ikinci haftadan sonra günde 250 mesaja çıkar. Bu tavan panelden aşılamaz.',
   },
   {
-    title: 'Insani gonderim araligi',
-    body: 'Mesajlar arasinda rastgele bekleme var. Sabit araliklarla atilan mesaj, otomasyonun en kolay yakalanan imzasi.',
+    title: 'İnsani gönderim aralığı',
+    body: 'Mesajlar arasında rastgele bekleme var. Sabit aralıklarla atılan mesaj, otomasyonun en kolay yakalanan imzası.',
   },
   {
     title: 'Otomatik durdurma',
-    body: 'Hat kisit sinyali verdigi anda kampanya o hattan durur, digerlerinden devam eder. Kampanyanin tamami cokmez.',
+    body: 'Hat kısıt sinyali verdiği anda kampanya o hattan durur, diğerlerinden devam eder. Kampanyanın tamamı çökmez.',
   },
   {
     title: 'Kara liste',
-    body: 'Cikmak isteyen ya da elle isaretlenen numaralar bir daha hicbir kampanyaya dahil edilmez.',
+    body: 'Çıkmak isteyen ya da elle işaretlenen numaralar bir daha hiçbir kampanyaya dahil edilmez.',
   },
 ]
 
@@ -60,63 +60,63 @@ const PLANS = [
   {
     name: 'Deneme',
     price: '0 TL',
-    note: '7 gun',
+    note: '7 gün',
     lines: '1 hat',
-    daily: 'Gunde 50 mesaj',
-    features: ['Kredi karti istenmez', 'Tum ozellikler acik', 'Istediginiz an biter'],
-    cta: 'Ucretsiz basla',
+    daily: 'Günde 50 mesaj',
+    features: ['Kredi kartı istenmez', 'Tüm özellikler açık', 'İstediğiniz an biter'],
+    cta: 'Ücretsiz başla',
     featured: false,
   },
   {
-    name: 'Buyume',
+    name: 'Büyüme',
     price: '1.290 TL',
-    note: 'aylik',
+    note: 'aylık',
     lines: '3 hat',
-    daily: 'Gunde 750 mesaj',
+    daily: 'Günde 750 mesaj',
     features: [
-      'Gorsel uretici dahil',
-      'Sinirsiz kisi listesi',
-      'Canli kampanya takibi',
-      'Oncelikli destek',
+      'Görsel üretici dahil',
+      'Sınırsız kişi listesi',
+      'Canlı kampanya takibi',
+      'Öncelikli destek',
     ],
-    cta: 'Baslayalim',
+    cta: 'Başlayalım',
     featured: true,
   },
   {
     name: 'Ajans',
     price: '3.490 TL',
-    note: 'aylik',
+    note: 'aylık',
     lines: '10 hat',
-    daily: 'Gunde 2.500 mesaj',
-    features: ['Coklu musteri yonetimi', 'Marka kiti basina sablon', 'Detayli raporlama'],
-    cta: 'Iletisime gec',
+    daily: 'Günde 2.500 mesaj',
+    features: ['Çoklu müşteri yönetimi', 'Marka kiti başına şablon', 'Detaylı raporlama'],
+    cta: 'İletişime geç',
     featured: false,
   },
 ]
 
 const FAQ = [
   {
-    q: 'Hesabim banlanir mi?',
-    a: 'Risk sifir degil ve bunu gizlemiyoruz. Resmi WhatsApp Business API kullanmadigimiz icin gonderim sizin kendi hattinizdan cikiyor. Yaptigimiz sey riski yonetmek: numaralari onceden dogruluyoruz, WhatsApp\u2019in tanidigi kotayi okuyoruz, yeni hatti kademeli isitiyoruz, gonderim araliklarini rastgeleleştiriyoruz ve ilk kisit sinyalinde duruyoruz. Kotayi zorlayan, alakasiz listeye pazarlama yapan hesap yine de engellenebilir.',
+    q: 'Hesabım banlanır mı?',
+    a: 'Risk sıfır değil ve bunu gizlemiyoruz. Resmi WhatsApp Business API kullanmadığımız için gönderim sizin kendi hattınızdan çıkıyor. Yaptığımız şey riski yönetmek: numaraları önceden doğruluyoruz, WhatsApp\u2019ın tanıdığı kotayı okuyoruz, yeni hattı kademeli ısıtıyoruz, gönderim aralıklarını rastgeleleştiriyoruz ve ilk kısıt sinyalinde duruyoruz. Kotayı zorlayan, alakasız listeye pazarlama yapan hesap yine de engellenebilir.',
   },
   {
-    q: 'Gercekten sinirsiz numara gonderebilir miyim?',
-    a: 'Liste tarafinda evet, kac numara yuklerseniz yukleyin tasiriz. Gonderim hizinda hayir: bir hat gunde en fazla 250 mesaj atar ve bu bizim degil WhatsApp\u2019in koydugu bir sinir. 10.000 kisiye ulasmak 3 hatla yaklasik iki hafta, 40 hatla bir gun surer. "Sinirsiz gonderim" vaat eden her panel ya bunu bilmiyordur ya da hattinizi yakmayi goze almistir.',
+    q: 'Gerçekten sınırsız numara gönderebilir miyim?',
+    a: 'Liste tarafında evet, kaç numara yüklerseniz yükleyin taşırız. Gönderim hızında hayır: bir hat günde en fazla 250 mesaj atar ve bu bizim değil WhatsApp\u2019ın koyduğu bir sınır. 10.000 kişiye ulaşmak 3 hatla yaklaşık iki hafta, 40 hatla bir gün sürer. "Sınırsız gönderim" vaat eden her panel ya bunu bilmiyordur ya da hattınızı yakmayı göze almıştır.',
   },
   {
-    q: 'Resmi WhatsApp Business API\u2019den farki ne?',
-    a: 'Resmi API\u2019de her pazarlama konusmasi icin Meta\u2019ya ucret odersiniz (Turkiye icin yaklasik 0,087 dolar) ve gonderdiginiz her sablonun onceden onaylanmasi gerekir; karsiliginda hesap guvendedir. Bizde mesaj basina ucret ve sablon onayi yok, maliyet sabit; karsiliginda risk sizin hattinizda. Aylik hacminiz yuksekse ve marka riskiniz buyukse resmi API daha dogru tercih.',
+    q: 'Resmi WhatsApp Business API\u2019den farkı ne?',
+    a: 'Resmi API\u2019de her pazarlama konuşması için Meta\u2019ya ücret ödersiniz (Türkiye için yaklaşık 0,087 dolar) ve gönderdiğiniz her şablonun önceden onaylanması gerekir; karşılığında hesap güvendedir. Bizde mesaj başına ücret ve şablon onayı yok, maliyet sabit; karşılığında risk sizin hattınızda. Aylık hacminiz yüksekse ve marka riskiniz büyükse resmi API daha doğru tercih.',
   },
   {
-    q: 'KVKK acisindan durum ne?',
-    a: 'Onay vermemis kisilere ticari elektronik ileti gondermek Turkiye\u2019de yasal risk tasir ve bu sorumluluk gonderen tarafa, yani size ait. Panel size cikma taleplerini isaretleyebileceginiz kara liste ve kayit tutma imkani veriyor, ama izinli liste kullanmak sizin sorumlulugunuzda.',
+    q: 'KVKK açısından durum ne?',
+    a: 'Onay vermemiş kişilere ticari elektronik ileti göndermek Türkiye\u2019de yasal risk taşır ve bu sorumluluk gönderen tarafa, yani size ait. Panel size çıkma taleplerini işaretleyebileceğiniz kara liste ve kayıt tutma imkanı veriyor, ama izinli liste kullanmak sizin sorumluluğunuzda.',
   },
   {
-    q: 'Bilgisayarimi kapatirsam gonderim durur mu?',
-    a: 'Hayir. WhatsApp oturumlari ve kampanya motoru sunucuda calisir, paneli yalnizca izlemek ve yonetmek icin acarsiniz. Paneli kapatsaniz da gonderim kaldigi yerden devam eder; tekrar actiginizda anlik durumu gorursunuz.',
+    q: 'Bilgisayarımı kapatırsam gönderim durur mu?',
+    a: 'Hayır. WhatsApp oturumları ve kampanya motoru sunucuda çalışır, paneli yalnızca izlemek ve yönetmek için açarsınız. Paneli kapatsanız da gönderim kaldığı yerden devam eder; tekrar açtığınızda anlık durumu görürsünüz.',
   },
   {
-    q: 'Hat kisit alirsa ne oluyor?',
+    q: 'Hat kısıt alırsa ne oluyor?',
     a: 'O hat otomatik olarak duraklatılır ve panelde kilit sebebiyle gösterilir. Kampanya varsa diğer hatlardan devam eder. Kilit geçiciyse süresi bitince hat kendiliğinden geri döner.',
   },
 ]
@@ -130,17 +130,17 @@ export default function Landing() {
           <div>
             <span className="inline-flex items-center gap-2 rounded-full border border-hairline-strong bg-surface px-2.5 py-1 text-[11.5px] text-ink-muted">
               <span className="size-1.5 rounded-full bg-accent" />
-              Kendi hatlarinizdan, kendi sunucunuzda
+              Kendi hatlarınızdan, kendi sunucunuzda
             </span>
 
             <h1 className="mt-5 text-[38px] font-semibold leading-[1.08] tracking-[-0.03em] md:text-[52px]">
-              Toplu WhatsApp kampanyasi, hatti yakmadan.
+              Toplu WhatsApp kampanyası, hattı yakmadan.
             </h1>
 
             <p className="mt-5 max-w-lg text-[15px] leading-relaxed text-ink-muted">
-              Hatlarinizi QR ile baglayin, listenizi yukleyin, mesaji ve gorseli
-              hazirlayin. {BRAND_NAME} gonderimi WhatsApp&apos;in gercek limitleri
-              icinde, arka planda yurutur.
+              Hatlarınızı QR ile bağlayın, listenizi yükleyin, mesajı ve görseli
+              hazırlayın. {BRAND_NAME} gönderimi WhatsApp&apos;ın gerçek limitleri
+              içinde, arka planda yürütür.
             </p>
 
             <div className="mt-7 flex flex-wrap items-center gap-2.5">
@@ -148,18 +148,18 @@ export default function Landing() {
                 href="/giris?mod=kayit"
                 className="inline-flex h-9 items-center rounded-md bg-accent px-4 text-[13px] font-medium text-accent-ink transition-colors hover:bg-accent-dim"
               >
-                7 gun ucretsiz dene
+                7 gün ücretsiz dene
               </Link>
               <a
                 href="#nasil"
                 className="inline-flex h-9 items-center rounded-md border border-hairline-strong bg-surface-raised px-4 text-[13px] font-medium transition-colors hover:border-ink-faint"
               >
-                Nasil calisir
+                Nasıl çalışır
               </a>
             </div>
 
             <p className="mt-3 text-[11.5px] text-ink-faint">
-              Kredi karti gerekmez &middot; Kurulum yok &middot; Istediginiz an biter
+              Kredi kartı gerekmez &middot; Kurulum yok &middot; İstediğiniz an biter
             </p>
           </div>
 
@@ -172,11 +172,11 @@ export default function Landing() {
         <div className="mx-auto max-w-6xl px-5 py-16">
           <div className="mb-7 max-w-2xl">
             <h2 className="text-[26px] font-semibold tracking-[-0.02em]">
-              Once su soruyu netlestirelim: kac mesaj atabilirsiniz?
+              Önce şu soruyu netleştirelim: kaç mesaj atabilirsiniz?
             </h2>
             <p className="mt-3 text-[14px] leading-relaxed text-ink-muted">
-              Cogu panel bunu satis sonrasina saklar. Biz basa koyuyoruz, cunku
-              beklentiyi dogru kurmak hem sizin hem hatlarinizin lehine.
+              Çoğu panel bunu satış sonrasına saklar. Biz başa koyuyoruz, çünkü
+              beklentiyi doğru kurmak hem sizin hem hatlarınızın lehine.
             </p>
           </div>
 
@@ -184,11 +184,11 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* 3 — Nasil calisir */}
+      {/* 3 — Nasıl çalışır */}
       <section id="nasil" className="scroll-mt-16 border-b border-hairline">
         <div className="mx-auto max-w-6xl px-5 py-16">
           <h2 className="text-[26px] font-semibold tracking-[-0.02em]">
-            Uc adimda yayindasiniz
+            Üç adımda yayındasınız
           </h2>
 
           <div className="mt-8 grid gap-px overflow-hidden rounded-[10px] border border-hairline bg-hairline md:grid-cols-3">
@@ -207,17 +207,17 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* 4 — Ban onleme */}
+      {/* 4 — Ban önleme */}
       <section id="guvenlik" className="scroll-mt-16 border-b border-hairline">
         <div className="mx-auto max-w-6xl px-5 py-16">
           <div className="max-w-2xl">
             <h2 className="text-[26px] font-semibold tracking-[-0.02em]">
-              Asil is, mesaji gondermek degil, hatti ayakta tutmak
+              Asıl iş, mesajı göndermek değil, hattı ayakta tutmak
             </h2>
             <p className="mt-3 text-[14px] leading-relaxed text-ink-muted">
-              Toplu mesaj gondermek teknik olarak kolay. Zor olan, ucuncu
-              kampanyadan sonra hattin hala calisiyor olmasi. {BRAND_NAME}&apos;nun
-              yaptigi is buyuk olcude bu.
+              Toplu mesaj göndermek teknik olarak kolay. Zor olan, üçüncü
+              kampanyadan sonra hattın hala çalışıyor olması. {BRAND_NAME}&apos;nun
+              yaptığı iş büyük ölçüde bu.
             </p>
           </div>
 
@@ -234,25 +234,25 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* 5 — Coklu hat */}
+      {/* 5 — Çoklu hat */}
       <section className="border-b border-hairline">
         <div className="mx-auto grid max-w-6xl gap-10 px-5 py-16 md:grid-cols-2 md:items-center">
           <div>
             <h2 className="text-[26px] font-semibold tracking-[-0.02em]">
-              Kapasiteyi hat sayisiyla buyutursunuz
+              Kapasiteyi hat sayısıyla büyütürsünüz
             </h2>
             <p className="mt-3 text-[14px] leading-relaxed text-ink-muted">
-              Tek hattan daha hizli gondermeye calismak calismaz. Bunun yerine
-              birden fazla hat baglarsiniz; {BRAND_NAME} kampanyayi hatlar arasinda
-              dagitir, her hattin kendi kotasini ayri takip eder ve biri kisit
-              alirsa digerlerinden devam eder.
+              Tek hattan daha hızlı göndermeye çalışmak çalışmaz. Bunun yerine
+              birden fazla hat bağlarsınız; {BRAND_NAME} kampanyayı hatlar arasında
+              dağıtır, her hattın kendi kotasını ayrı takip eder ve biri kısıt
+              alırsa diğerlerinden devam eder.
             </p>
             <ul className="mt-5 flex flex-col gap-2.5">
               {[
-                'Tek panelden istediginiz kadar hat',
-                'Hat basina ayri gunluk kota ve canli durum',
-                'Bir hat dusunce kampanya durmaz',
-                'Oturumlar sunucuda; panel kapaliyken de bagli',
+                'Tek panelden istediğiniz kadar hat',
+                'Hat başına ayrı günlük kota ve canlı durum',
+                'Bir hat düşünce kampanya durmaz',
+                'Oturumlar sunucuda; panel kapalıyken de bağlı',
               ].map((item) => (
                 <li key={item} className="flex items-start gap-2.5 text-[13px]">
                   <span className="mt-[7px] size-1.5 shrink-0 rounded-full bg-accent" />
@@ -264,13 +264,13 @@ export default function Landing() {
 
           <div className="rounded-[10px] border border-hairline bg-surface p-6">
             <p className="text-[12px] font-medium text-ink-muted">
-              3 hatli bir kampanyanin dagilimi
+              3 hatlı bir kampanyanın dağılımı
             </p>
             <div className="mt-4 flex flex-col gap-3.5">
               {[
-                { name: 'Satis hatti', sent: 250, tone: 'bg-accent' },
-                { name: 'Destek hatti', sent: 250, tone: 'bg-accent' },
-                { name: 'Kampanya hatti', sent: 120, tone: 'bg-warn' },
+                { name: 'Satış hattı', sent: 250, tone: 'bg-accent' },
+                { name: 'Destek hattı', sent: 250, tone: 'bg-accent' },
+                { name: 'Kampanya hattı', sent: 120, tone: 'bg-warn' },
               ].map((line) => (
                 <div key={line.name}>
                   <div className="mb-1.5 flex items-baseline justify-between">
@@ -289,8 +289,8 @@ export default function Landing() {
               ))}
             </div>
             <p className="mt-5 border-t border-hairline pt-4 text-[11.5px] text-ink-faint">
-              Ucuncu hat henuz isinma doneminde, o yuzden tavani dusuk. Kampanya
-              yine de gunde 620 mesajla ilerliyor.
+              Üçüncü hat henüz ısınma döneminde, o yüzden tavanı düşük. Kampanya
+              yine de günde 620 mesajla ilerliyor.
             </p>
           </div>
         </div>
@@ -301,13 +301,13 @@ export default function Landing() {
         <div className="mx-auto max-w-6xl px-5 py-16">
           <div className="max-w-2xl">
             <h2 className="text-[26px] font-semibold tracking-[-0.02em]">
-              Mesaj basina ucret yok
+              Mesaj başına ücret yok
             </h2>
             <p className="mt-3 text-[14px] leading-relaxed text-ink-muted">
-              Resmi API uzerinden calisan panellerde her pazarlama mesaji ayrica
-              faturalanir. Biz kendi hattinizi kullandigimiz icin sabit ucret
-              disinda bir maliyet cikmiyor. Paketleri ayiran tek sey hat sayisi ve
-              gunluk kapasite.
+              Resmi API üzerinden çalışan panellerde her pazarlama mesajı ayrıca
+              faturalanır. Biz kendi hattınızı kullandığımız için sabit ücret
+              dışında bir maliyet çıkmıyor. Paketleri ayıran tek şey hat sayısı ve
+              günlük kapasite.
             </p>
           </div>
 
@@ -323,7 +323,7 @@ export default function Landing() {
                   <h3 className="text-[13.5px] font-semibold">{plan.name}</h3>
                   {plan.featured ? (
                     <span className="rounded-full border border-accent/35 bg-accent/10 px-2 py-0.5 text-[10.5px] font-medium text-accent">
-                      En cok secilen
+                      En çok seçilen
                     </span>
                   ) : null}
                 </div>
@@ -371,7 +371,7 @@ export default function Landing() {
       <section id="sss" className="scroll-mt-16 border-b border-hairline">
         <div className="mx-auto max-w-3xl px-5 py-16">
           <h2 className="text-[26px] font-semibold tracking-[-0.02em]">
-            Sik sorulanlar
+            Sık sorulanlar
           </h2>
 
           <div className="mt-7 flex flex-col">
@@ -392,21 +392,21 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* 8 — Kapanis */}
+      {/* 8 — Kapanış */}
       <section>
         <div className="mx-auto max-w-6xl px-5 py-20 text-center">
           <h2 className="text-[28px] font-semibold tracking-[-0.025em]">
-            Ilk hattinizi bes dakikada baglayin
+            İlk hattınızı beş dakikada bağlayın
           </h2>
           <p className="mx-auto mt-3 max-w-md text-[14px] text-ink-muted">
-            Deneme surumu tam ozellikli. Kredi karti istemiyoruz, otomatik
+            Deneme sürümü tam özellikli. Kredi kartı istemiyoruz, otomatik
             yenileme yok.
           </p>
           <Link
             href="/giris?mod=kayit"
             className="mt-7 inline-flex h-9 items-center rounded-md bg-accent px-5 text-[13px] font-medium text-accent-ink transition-colors hover:bg-accent-dim"
           >
-            Ucretsiz basla
+            Ücretsiz başla
           </Link>
         </div>
       </section>

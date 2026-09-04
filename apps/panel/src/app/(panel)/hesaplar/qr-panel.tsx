@@ -5,9 +5,8 @@ import QRCode from 'qrcode'
 import { useCountdown } from '@/lib/use-countdown'
 
 /**
- * Baileys QR'i 60 saniyede bir yeniliyor.
- * Kalan sureyi gostermek onemli: kullanici suresi gecmis bir kodu okutmaya
- * calisip "calismiyor" diye dusunuyor.
+ * Baileys QR'ı ~60 saniyede bir yenilenir.
+ * Kalan süre gösterilmezse kullanıcı süresi geçmiş kodu okutup "çalışmıyor" der.
  */
 export function QrPanel({
   qr,
@@ -44,7 +43,7 @@ export function QrPanel({
           <img src={dataUrl} alt="WhatsApp QR kodu" className="size-full" />
         ) : (
           <div className="grid size-full place-items-center text-[11.5px] text-ink-faint">
-            Hazirlaniyor...
+            Hazırlanıyor…
           </div>
         )}
       </div>
@@ -52,8 +51,8 @@ export function QrPanel({
       <div className="min-w-0 flex-1">
         <p className="text-[13px] font-medium">Telefonunuzdan okutun</p>
         <ol className="mt-2 space-y-1 text-[12.5px] text-ink-muted">
-          <li>1. WhatsApp &gt; Ayarlar &gt; Bagli cihazlar</li>
-          <li>2. &quot;Cihaz bagla&quot;ya dokunun</li>
+          <li>1. WhatsApp → Ayarlar → Bağlı cihazlar</li>
+          <li>2. “Cihaz bağla”ya dokunun</li>
           <li>3. Bu kodu okutun</li>
         </ol>
 
@@ -61,7 +60,7 @@ export function QrPanel({
           <p className="mt-3 text-[11.5px] text-ink-faint tabular">
             {secondsLeft > 0
               ? `Kod ${secondsLeft} saniye sonra yenilenecek`
-              : 'Yeni kod bekleniyor...'}
+              : 'Yeni kod bekleniyor…'}
           </p>
         ) : null}
       </div>

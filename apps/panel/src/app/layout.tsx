@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     template: `%s · ${BRAND_NAME}`,
   },
   description:
-    'Kendi WhatsApp hatlarinizi baglayin, kisi listenizi yukleyin, hatti yakmayan hizda toplu kampanya gonderin.',
+    'Kendi WhatsApp hatlarınızı bağlayın, kişi listenizi yükleyin, hattı yakmayan hızda toplu kampanya gönderin.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

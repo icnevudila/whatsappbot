@@ -10,7 +10,7 @@ function readCredentials(formData: FormData): { email: string; password: string 
   const password = String(formData.get('password') ?? '')
 
   if (!email) return 'E-posta adresi gerekli.'
-  if (password.length < 8) return 'Sifre en az 8 karakter olmali.'
+  if (password.length < 8) return 'Şifre en az 8 karakter olmalı.'
 
   return { email, password }
 }
@@ -58,7 +58,7 @@ export async function signUp(_previous: AuthState, formData: FormData): Promise<
   if (!data.session) {
     return {
       error:
-        'Kayit alindi. E-posta adresinize gonderilen dogrulama baglantisina tiklayip tekrar giris yapin.',
+        'Kayıt alındı. E-posta adresinize gönderilen doğrulama bağlantısına tıklayıp tekrar giriş yapın.',
     }
   }
 

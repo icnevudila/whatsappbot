@@ -296,7 +296,7 @@ export function FileUploadButton({
   accept = 'image/*',
   uploading = false,
   label,
-  uploadingLabel = 'Yukleniyor...',
+  uploadingLabel = 'Yükleniyor…',
   onFile,
 }: {
   accept?: string

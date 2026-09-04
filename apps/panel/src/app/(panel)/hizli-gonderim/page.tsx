@@ -38,7 +38,7 @@ export default async function QuickSendPage({
     supabase
       .from('campaigns')
       .select('id, name, status, total_targets, sent_count, created_at')
-      .like('name', 'Hizli gonderim%')
+      .or('name.like.Hızlı gönderim%,name.like.Hizli gonderim%')
       .order('created_at', { ascending: false })
       .limit(8),
   ])

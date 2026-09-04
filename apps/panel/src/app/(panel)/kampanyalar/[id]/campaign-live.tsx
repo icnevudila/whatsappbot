@@ -106,8 +106,8 @@ export function CampaignLive({ initial }: { initial: CampaignView }) {
           title={campaign.name}
           subtitle={
             campaign.started_at
-              ? `Baslama: ${new Date(campaign.started_at).toLocaleString('tr-TR')}`
-              : 'Henuz baslatilmadi'
+              ? `Başlama: ${new Date(campaign.started_at).toLocaleString('tr-TR')}`
+              : 'Henüz başlatılmadı'
           }
           action={<StatusPill status={campaign.status} />}
         />
@@ -115,7 +115,7 @@ export function CampaignLive({ initial }: { initial: CampaignView }) {
         <div className="space-y-4 p-4">
           <div>
             <div className="mb-2 flex items-baseline justify-between text-[12px]">
-              <span className="text-ink-muted">Ilerleme</span>
+              <span className="text-ink-muted">İlerleme</span>
               <span className="text-ink tabular">
                 {processed} / {campaign.total_targets}
               </span>
@@ -128,15 +128,15 @@ export function CampaignLive({ initial }: { initial: CampaignView }) {
           </div>
 
           <dl className="grid grid-cols-2 gap-4 border-t border-hairline pt-4 sm:grid-cols-4">
-            <Stat label="Gonderildi" value={campaign.sent_count} tone="accent" />
-            <Stat label="Atlandi" value={campaign.skipped_count} tone="muted" />
-            <Stat label="Basarisiz" value={campaign.failed_count} tone="danger" />
+            <Stat label="Gönderildi" value={campaign.sent_count} tone="accent" />
+            <Stat label="Atlandı" value={campaign.skipped_count} tone="muted" />
+            <Stat label="Başarısız" value={campaign.failed_count} tone="danger" />
             <Stat label="Kalan" value={remaining} />
           </dl>
 
           {campaign.status === 'running' && remaining > 0 ? (
             <p className="text-[11.5px] text-ink-faint tabular">
-              Mevcut hizla tahmini kalan sure: yaklasik {etaMinutes} dakika
+              Mevcut hızla tahmini kalan süre: yaklaşık {etaMinutes} dakika
             </p>
           ) : null}
 
@@ -155,13 +155,13 @@ export function CampaignLive({ initial }: { initial: CampaignView }) {
                 disabled={pending}
                 onClick={() => run(() => startCampaign(campaign.id))}
               >
-                {pending ? 'Baslatiliyor...' : 'Gonderimi baslat'}
+                {pending ? 'Başlatılıyor…' : 'Gönderimi başlat'}
               </Button>
             ) : null}
 
             {campaign.status === 'running' ? (
               <Button disabled={pending} onClick={() => run(() => pauseCampaign(campaign.id))}>
-                {pending ? 'Duraklatiliyor...' : 'Duraklat'}
+                {pending ? 'Duraklatılıyor…' : 'Duraklat'}
               </Button>
             ) : null}
 
@@ -171,7 +171,7 @@ export function CampaignLive({ initial }: { initial: CampaignView }) {
                 disabled={pending}
                 onClick={() => run(() => resumeCampaign(campaign.id))}
               >
-                {pending ? 'Devam ediliyor...' : 'Devam et'}
+                {pending ? 'Devam ediliyor…' : 'Devam et'}
               </Button>
             ) : null}
 
@@ -191,14 +191,14 @@ export function CampaignLive({ initial }: { initial: CampaignView }) {
       <Card>
         <CardHeader
           title="Mesaj"
-          subtitle={`Bekleme ${campaign.min_delay_seconds}-${campaign.max_delay_seconds} sn · hesap basina gunluk ${campaign.daily_cap_per_account}`}
+          subtitle={`Bekleme ${campaign.min_delay_seconds}-${campaign.max_delay_seconds} sn · hesap başına günlük ${campaign.daily_cap_per_account}`}
         />
         <div className="space-y-3 p-4">
           {campaign.media_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={campaign.media_url}
-              alt="Kampanya gorseli"
+              alt="Kampanya görseli"
               className="max-h-56 rounded-md border border-hairline object-contain"
             />
           ) : null}
@@ -206,7 +206,7 @@ export function CampaignLive({ initial }: { initial: CampaignView }) {
           {campaign.body ? (
             <p className="text-[12.5px] whitespace-pre-wrap text-ink">{campaign.body}</p>
           ) : (
-            <p className="text-[12.5px] text-ink-faint">Yalnizca gorsel gonderiliyor.</p>
+            <p className="text-[12.5px] text-ink-faint">Yalnızca görsel gönderiliyor.</p>
           )}
         </div>
       </Card>

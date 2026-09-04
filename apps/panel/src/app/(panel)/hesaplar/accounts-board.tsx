@@ -168,7 +168,7 @@ export function AccountsBoard({
               </span>
             </p>
             <p className="mt-1 text-[12px] text-ink-muted">
-              {connected} bagli · {remaining} ekleme hakki · her hat ayri WhatsApp
+              {connected} bağlı · {remaining} ekleme hakkı · her hat ayrı WhatsApp
               oturumu
             </p>
             <div className="mt-3 max-w-md">
@@ -180,8 +180,8 @@ export function AccountsBoard({
             </div>
           </div>
           <p className="max-w-xs text-[11.5px] leading-relaxed text-ink-faint sm:text-right">
-            Kampanya ve hizli gonderimde birden fazla hatti birlikte secerseniz
-            yuk hatlar arasinda paylasilir.
+            Kampanya ve hızlı gönderimde birden fazla hattı birlikte seçerseniz
+            yük hatlar arasında paylaşılır.
           </p>
         </div>
       </Card>
@@ -191,8 +191,8 @@ export function AccountsBoard({
       {accounts.length === 0 ? (
         <Card>
           <EmptyState
-            title="Henuz hat yok"
-            description="Yukaridan ilk hatti ekleyin. QR veya eslestirme kodu bu ekranda kendiliginden gelir; okuttugunuzda baglanti kurulur."
+            title="Henüz hat yok"
+            description="Yukarıdan ilk hattı ekleyin. QR veya eşleştirme kodu bu ekranda kendiliğinden gelir; okuttuğunuzda bağlantı kurulur."
           />
         </Card>
       ) : (
@@ -220,20 +220,20 @@ function NewAccountForm({ remaining, atCap }: { remaining: number; atCap: boolea
             label="Yeni hat ekle"
             hint={
               atCap
-                ? 'Kota dolu. Yer acmak icin asagidan kullanilmayan bir hatti silin.'
-                : `Ornek: Satis 2, Destek. Kalan hak: ${remaining}`
+                ? 'Kota dolu. Yer açmak için aşağıdan kullanılmayan bir hattı silin.'
+                : `Örnek: Satış 2, Destek. Kalan hak: ${remaining}`
             }
           >
             <Input
               name="label"
-              placeholder="Satis hatti 2"
+              placeholder="Satış hattı 2"
               required
               disabled={atCap || pending}
             />
           </Field>
         </div>
         <Button type="submit" variant="accent" disabled={pending || atCap}>
-          {pending ? 'Olusturuluyor...' : atCap ? 'Kota dolu' : 'Hat ekle'}
+          {pending ? 'Oluşturuluyor…' : atCap ? 'Kota dolu' : 'Hat ekle'}
         </Button>
 
         {state?.error ? (
@@ -288,7 +288,7 @@ function AccountCard({ account }: { account: AccountView }) {
             <StatusPill status={account.is_locked ? 'banned' : account.status} />
           </div>
           <p className="mt-0.5 text-[12px] text-ink-muted tabular">
-            {account.phone_e164 ?? 'Numara henuz bilinmiyor'}
+            {account.phone_e164 ?? 'Numara henüz bilinmiyor'}
             {account.status_detail ? ` · ${account.status_detail}` : ''}
           </p>
         </div>
@@ -354,7 +354,7 @@ function AccountCard({ account }: { account: AccountView }) {
           <Notice tone="danger">
             <span className="font-medium">Hesap kilitli.</span> {account.lock_reason}
             <br />
-            Bu hesapla gonderim yapilmiyor ve bagli kampanyalar durduruldu.
+            Bu hesapla gönderim yapılmıyor ve bağlı kampanyalar durduruldu.
           </Notice>
         ) : null}
 
@@ -379,7 +379,7 @@ function AccountCard({ account }: { account: AccountView }) {
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <div className="mb-1.5 flex items-baseline justify-between">
-              <span className="text-[11.5px] text-ink-muted">Bugun gonderilen</span>
+              <span className="text-[11.5px] text-ink-muted">Bugün gönderilen</span>
               <span className="text-[11.5px] text-ink tabular">
                 {sentToday} / {dayCap}
               </span>
@@ -391,7 +391,7 @@ function AccountCard({ account }: { account: AccountView }) {
             />
             {dayCap < account.daily_send_limit ? (
               <p className="mt-1 text-[11px] text-ink-faint">
-                Isinma: paket limiti {account.daily_send_limit}, bugunku tavan {dayCap}.
+                Isınma: paket limiti {account.daily_send_limit}, bugünkü tavan {dayCap}.
               </p>
             ) : null}
           </div>
@@ -404,7 +404,7 @@ function AccountCard({ account }: { account: AccountView }) {
           <div>
             <div className="mb-1.5 flex items-baseline justify-between">
               <span className="text-[11.5px] text-ink-muted">
-                WhatsApp yeni sohbet kotasi
+                WhatsApp yeni sohbet kotası
               </span>
               <span className="text-[11.5px] text-ink tabular">
                 {quotaKnown ? `${quotaUsed} / ${quotaTotal}` : 'Bilinmiyor'}
@@ -417,7 +417,7 @@ function AccountCard({ account }: { account: AccountView }) {
             />
             {!quotaKnown ? (
               <p className="mt-1 text-[11px] text-ink-faint">
-                Hesap baglandiginda WhatsApp&apos;tan okunur.
+                Hesap bağlandığında WhatsApp&apos;tan okunur.
               </p>
             ) : null}
           </div>
@@ -541,13 +541,13 @@ function PairingSection({ account }: { account: AccountView }) {
             disabled={pending || waitingCode || phone.trim().length < 10}
             className="mt-3"
           >
-            {pending || waitingCode ? 'Kod hazirlaniyor...' : 'Kod al'}
+            {pending || waitingCode ? 'Kod hazırlanıyor…' : 'Kod al'}
           </Button>
 
           {waitingCode && !error ? (
             <p className="mt-3 text-[12.5px] text-ink-muted">
-              Servis kodu uretiyor. Birkaç saniye icinde burada buyuk harflerle
-              gorunecek; WhatsApp → Bagli cihazlar → Telefon numarasiyla bagla.
+              Servis kodu üretiyor. Birkaç saniye içinde burada büyük harflerle
+              görünecek; WhatsApp → Bağlı cihazlar → Telefon numarasıyla bağla.
             </p>
           ) : null}
 

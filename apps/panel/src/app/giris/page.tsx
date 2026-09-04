@@ -15,23 +15,21 @@ export default function LoginPage() {
             Kampanya paneli
           </h1>
           <p className="mt-1.5 text-[12.5px] text-ink-muted">
-            Coklu hat baglayin, kisi listelerinizi dogrulayin, kampanyayi sunucu
-            tarafinda 7/24 calistirin.
+            Çoklu hat bağlayın, listelerinizi doğrulayın, kampanyayı sunucuda
+            7/24 çalıştırın.
           </p>
         </div>
 
         <div className="rounded-[10px] border border-hairline bg-surface p-4 shadow-[var(--shadow-card)]">
-          {/* useSearchParams istemci tarafinda okunuyor; Suspense olmadan
-              sayfanin tamami istemci render'ina dusuyor. */}
           <Suspense fallback={<div className="h-[232px]" />}>
             <AuthForm />
           </Suspense>
         </div>
 
         <p className="mt-4 text-[11.5px] leading-relaxed text-ink-faint">
-          Gonderim yalnizca WhatsApp&apos;ta kayitli numaralara yapilir ve hat basina
-          gunluk kota uygulanir. Bu sinirlar hattinizin kisitlanmasini onlemek
-          icindir.
+          Gönderim yalnızca WhatsApp’ta kayıtlı numaralara yapılır ve hat başına
+          günlük kota uygulanır. Bu sınırlar hattınızın kısıtlanmasını önlemek
+          içindir.
         </p>
       </div>
     </main>

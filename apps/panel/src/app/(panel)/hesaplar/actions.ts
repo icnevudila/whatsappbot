@@ -18,7 +18,7 @@ export async function createAccount(
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { error: 'Oturum bulunamadi.' }
+  if (!user) return { error: 'Oturum bulunamadı.' }
 
   // Kota kontrolu: profiles.accounts_quota kullanicinin acabilecegi hesap sayisi.
   const [{ count }, { data: profile }] = await Promise.all([
@@ -50,12 +50,12 @@ export async function createAccount(
   if (jobError) {
     revalidatePath('/hesaplar')
     return {
-      error: `Hesap olusturuldu ama baglanti kuyruga yazilamadi: ${jobError}`,
+      error: `Hesap oluşturuldu ama bağlantı kuyruğa yazılamadı: ${jobError}`,
     }
   }
 
   revalidatePath('/hesaplar')
-  return { ok: 'Hesap olusturuldu, QR kodu hazirlaniyor.' }
+  return { ok: 'Hesap oluşturuldu, QR kodu hazırlanıyor.' }
 }
 
 async function enqueueForAccount(
@@ -66,7 +66,7 @@ async function enqueueForAccount(
   if (error) return { error }
 
   revalidatePath('/hesaplar')
-  return { ok: 'Komut kuyruga alindi.' }
+  return { ok: 'Komut kuyruğa alındı.' }
 }
 
 export async function connectAccount(accountId: string): Promise<ActionState> {

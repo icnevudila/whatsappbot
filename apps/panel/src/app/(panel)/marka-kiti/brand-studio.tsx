@@ -19,10 +19,10 @@ import { CreativePreview } from './creative-preview'
 
 const COLOR_FIELDS: { key: keyof BrandColors; label: string; hint: string }[] = [
   { key: 'primary', label: 'Ana renk', hint: 'Dolu zeminler' },
-  { key: 'accent', label: 'Vurgu', hint: 'Rozet, cerceve, alt baslik' },
-  { key: 'background', label: 'Zemin', hint: 'Acik alanlar ve metin ustu' },
-  { key: 'text', label: 'Metin', hint: 'Acik zeminde baslik' },
-  { key: 'secondary', label: 'Ikincil metin', hint: 'Alt baslik' },
+  { key: 'accent', label: 'Vurgu', hint: 'Rozet, çerçeve, alt başlık' },
+  { key: 'background', label: 'Zemin', hint: 'Açık alanlar ve metin üstü' },
+  { key: 'text', label: 'Metin', hint: 'Açık zeminde başlık' },
+  { key: 'secondary', label: 'İkincil metin', hint: 'Alt başlık' },
 ]
 
 export function BrandStudio({
@@ -49,8 +49,8 @@ export function BrandStudio({
 
   const [template, setTemplate] = useState<TemplateKey>('bold')
   const [format, setFormat] = useState<FormatKey>('square')
-  const [headline, setHeadline] = useState('Bahar indirimi basladi')
-  const [subline, setSubline] = useState('Tum urunlerde 30 Nisan\u2019a kadar gecerli')
+  const [headline, setHeadline] = useState('Bahar indirimi başladı')
+  const [subline, setSubline] = useState('Tüm ürünlerde 30 Nisan\u2019a kadar geçerli')
   const [badge, setBadge] = useState('%20 indirim')
   const [backgroundPrompt, setBackgroundPrompt] = useState('')
 
@@ -75,7 +75,7 @@ export function BrandStudio({
       const { data } = supabase.storage.from('creatives').getPublicUrl(path)
       setLogoUrl(data.publicUrl)
     } catch (uploadError) {
-      setError(uploadError instanceof Error ? uploadError.message : 'Logo yuklenemedi.')
+      setError(uploadError instanceof Error ? uploadError.message : 'Logo yüklenemedi.')
     } finally {
       setUploading(false)
     }
@@ -110,12 +110,12 @@ export function BrandStudio({
       })
 
       const data = (await response.json()) as { url?: string; error?: string }
-      if (!response.ok || !data.url) throw new Error(data.error ?? 'Gorsel uretilemedi.')
+      if (!response.ok || !data.url) throw new Error(data.error ?? 'Görsel üretilemedi.')
 
       setResult(data.url)
     } catch (generateError) {
       setError(
-        generateError instanceof Error ? generateError.message : 'Gorsel uretilemedi.',
+        generateError instanceof Error ? generateError.message : 'Görsel üretilemedi.',
       )
     } finally {
       setGenerating(false)
@@ -129,7 +129,7 @@ export function BrandStudio({
         <Card>
           <CardHeader
             title="Marka kiti"
-            subtitle="Renkler ve logo tum sablonlarda kullanilir."
+            subtitle="Renkler ve logo tüm şablonlarda kullanılır."
           />
 
           <form action={formAction} className="space-y-4 p-4">
@@ -143,8 +143,8 @@ export function BrandStudio({
               />
             ))}
 
-            <Field label="Kit adi">
-              <Input name="name" defaultValue={initialName} placeholder="Varsayilan" />
+            <Field label="Kit adı">
+              <Input name="name" defaultValue={initialName} placeholder="Varsayılan" />
             </Field>
 
             <div>
@@ -183,7 +183,7 @@ export function BrandStudio({
                 onClick={() => setColors(DEFAULT_COLORS)}
                 className="mt-1.5 text-[11.5px] text-ink-faint underline underline-offset-2 hover:text-ink-muted"
               >
-                Varsayilanlara don
+                Varsayılanlara dön
               </button>
             </div>
 
@@ -195,7 +195,7 @@ export function BrandStudio({
                 <FileUploadButton
                   accept="image/png,image/jpeg,image/webp"
                   uploading={uploading}
-                  label={logoUrl ? 'Degistir' : 'Logo sec'}
+                  label={logoUrl ? 'Değiştir' : 'Logo seç'}
                   onFile={(file) => void uploadLogo(file)}
                 />
 
@@ -212,7 +212,7 @@ export function BrandStudio({
                       onClick={() => setLogoUrl(null)}
                       className="underline underline-offset-2 hover:text-danger"
                     >
-                      kaldir
+                      kaldır
                     </button>
                   </span>
                 ) : null}
@@ -234,14 +234,14 @@ export function BrandStudio({
         {/* Kreatif */}
         <Card>
           <CardHeader
-            title="Kampanya gorseli"
-            subtitle="Metni yazin, sablonu secin; gorsel sunucuda uretilir."
+            title="Kampanya görseli"
+            subtitle="Metni yazın, şablonu seçin; görsel sunucuda üretilir."
           />
 
           <div className="space-y-4 p-4">
             <div>
               <span className="mb-1.5 block text-[12px] font-medium text-ink-muted">
-                Sablon
+                Şablon
               </span>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {(Object.keys(TEMPLATES) as TemplateKey[]).map((key) => (
@@ -268,7 +268,7 @@ export function BrandStudio({
 
             <div>
               <span className="mb-1.5 block text-[12px] font-medium text-ink-muted">
-                Olcu
+                Ölçü
               </span>
               <div className="flex flex-wrap gap-1.5">
                 {(Object.keys(FORMATS) as FormatKey[]).map((key) => (
@@ -288,23 +288,23 @@ export function BrandStudio({
               </div>
             </div>
 
-            <Field label="Baslik">
+            <Field label="Başlık">
               <Input
                 value={headline}
                 onChange={(event) => setHeadline(event.target.value)}
-                placeholder="Bahar indirimi basladi"
+                placeholder="Bahar indirimi başladı"
               />
             </Field>
 
-            <Field label="Alt baslik">
+            <Field label="Alt başlık">
               <Input
                 value={subline}
                 onChange={(event) => setSubline(event.target.value)}
-                placeholder="Tum urunlerde gecerli"
+                placeholder="Tüm ürünlerde geçerli"
               />
             </Field>
 
-            <Field label="Rozet" hint="Kisa tutun: iki-uc kelime.">
+            <Field label="Rozet" hint="Kısa tutun: iki-üç kelime.">
               <Input
                 value={badge}
                 onChange={(event) => setBadge(event.target.value)}
@@ -316,7 +316,7 @@ export function BrandStudio({
               <div className="rounded-md border border-hairline bg-canvas p-3">
                 <Field
                   label="AI arka plan istemi"
-                  hint="Bos birakirsaniz basliktan otomatik uretilir. Ingilizce yazmak daha iyi sonuc veriyor."
+                  hint="Boş bırakırsanız başlıktan otomatik üretilir. İngilizce yazmak daha iyi sonuç veriyor."
                 >
                   <Input
                     value={backgroundPrompt}
@@ -325,11 +325,11 @@ export function BrandStudio({
                   />
                 </Field>
                 <p className="mt-2 text-[11.5px] leading-relaxed text-ink-faint">
-                  Arka plan Pollinations.ai ile ucretsiz uretiliyor; anahtar veya
-                  kart gerekmiyor. Baslik ve logo AI&apos;a yazdirilmiyor, uzerine
-                  ayrica biniyor: uretilen yazi ozellikle Turkce karakterlerde
-                  bozuk cikiyor. Uretim 10-40 saniye surebilir ve anonim
-                  kullanimda 15 saniyede bir istek siniri var.
+                  Arka plan Pollinations.ai ile ücretsiz üretiliyor; anahtar veya
+                  kart gerekmiyor. Başlık ve logo AI&apos;a yazdırılmıyor, üzerine
+                  ayrıca biniyor: üretilen yazı özellikle Türkçe karakterlerde
+                  bozuk çıkıyor. Üretim 10-40 saniye sürebilir ve anonim
+                  kullanımda 15 saniyede bir istek sınırı var.
                 </p>
               </div>
             ) : null}
@@ -345,11 +345,11 @@ export function BrandStudio({
               >
                 {generating
                   ? template === 'photo'
-                    ? 'AI gorseli uretiliyor...'
-                    : 'Uretiliyor...'
+                    ? 'AI görseli üretiliyor...'
+                    : 'Üretiliyor...'
                   : template === 'photo'
-                    ? 'AI ile uret'
-                    : 'Gorseli uret'}
+                    ? 'AI ile üret'
+                    : 'Görseli üret'}
               </Button>
 
               {result ? (
@@ -358,7 +358,7 @@ export function BrandStudio({
                     href={`/hizli-gonderim?media=${encodeURIComponent(result)}`}
                     className="text-[12.5px] text-accent underline underline-offset-2"
                   >
-                    Hizli gonderime tasi
+                    Hızlı gönderime taşı
                   </Link>
                   <a
                     href={result}
@@ -366,7 +366,7 @@ export function BrandStudio({
                     rel="noreferrer"
                     className="text-[12.5px] text-ink-muted underline underline-offset-2 hover:text-ink"
                   >
-                    Tam boyut ac
+                    Tam boyut aç
                   </a>
                 </>
               ) : null}
@@ -379,7 +379,7 @@ export function BrandStudio({
       <div className="lg:sticky lg:top-6 lg:self-start">
         <Card>
           <CardHeader
-            title="Onizleme"
+            title="Önizleme"
             action={
               <span className="text-[11.5px] text-ink-faint">
                 {FORMATS[format].width}&times;{FORMATS[format].height}
@@ -392,19 +392,19 @@ export function BrandStudio({
             {result ? (
               <div className="w-full border-t border-hairline pt-3">
                 <p className="mb-2 text-[11.5px] font-medium text-accent">
-                  Uretilen gorsel
+                  Üretilen görsel
                 </p>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={result}
-                  alt="Uretilen kampanya gorseli"
+                  alt="Üretilen kampanya görseli"
                   className="w-full rounded border border-hairline"
                 />
               </div>
             ) : (
               <p className="text-center text-[11.5px] text-ink-faint">
-                Onizleme sunucudaki sablonla ayni olculeri kullaniyor; uretilen
-                gorsel bunun yuksek cozunurluklu hali olur.
+                Önizleme sunucudaki şablonla aynı ölçüleri kullanıyor; üretilen
+                görsel bunun yüksek çözünürlüklü hali olur.
               </p>
             )}
           </div>

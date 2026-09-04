@@ -6,26 +6,20 @@ import { Button, Field, Input, Notice, Select } from '@/components/ui'
 const TONES = [
   { value: 'samimi', label: 'Samimi' },
   { value: 'resmi', label: 'Resmi' },
-  { value: 'kisa ve net', label: 'Kisa ve net' },
-  { value: 'heyecanli kampanya dili', label: 'Heyecanli' },
+  { value: 'kısa ve net', label: 'Kısa ve net' },
+  { value: 'heyecanlı kampanya dili', label: 'Heyecanlı' },
 ] as const
 
 /**
- * Kampanya metnini yapay zekaya yazdirma paneli.
- *
- * Uretilen metni dogrudan forma YAZMIYOR, once onizleme olarak gosteriyor.
- * Nedeni: bu metin binlerce kisiye gidiyor ve modelin urettigi her cikti
- * gonderilebilir kalitede olmuyor. Kullanicinin okuyup onaylamasi ya da
- * tekrar uretmesi gereken bir adim olmali.
+ * Kampanya metnini yapay zekaya yazdırma paneli.
+ * Üretilen metni doğrudan forma yazmıyor; önce önizleme gösteriyor.
  */
 export function AiWriter({
   enabled,
   brand,
   onApply,
 }: {
-  /** Sunucuda OPENAI_API_KEY veya GEMINI_API_KEY var mi? */
   enabled: boolean
-  /** Marka adi varsa modele veriliyor, metnin basina koysun diye. */
   brand?: string
   onApply: (text: string) => void
 }) {
@@ -52,7 +46,7 @@ export function AiWriter({
 
       setDraft(json.text ?? '')
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Metin uretilemedi.')
+      setError(cause instanceof Error ? cause.message : 'Metin üretilemedi.')
     } finally {
       setBusy(false)
     }
@@ -61,7 +55,7 @@ export function AiWriter({
   if (!enabled) {
     return (
       <p className="text-[11.5px] leading-relaxed text-ink-faint">
-        Yapay zeka ile metin yazdirmak icin sunucuya{' '}
+        Yapay zeka ile metin yazdırmak için sunucuya{' '}
         <code className="text-ink-muted">OPENAI_API_KEY</code> veya{' '}
         <code className="text-ink-muted">GEMINI_API_KEY</code> ekleyin.
       </p>
@@ -75,7 +69,7 @@ export function AiWriter({
         onClick={() => setOpen(true)}
         className="text-[12px] font-medium text-accent underline underline-offset-2 hover:text-accent-dim"
       >
-        Yapay zeka ile yazdir
+        Yapay zeka ile yazdır
       </button>
     )
   }
@@ -83,7 +77,7 @@ export function AiWriter({
   return (
     <div className="space-y-3 rounded-md border border-hairline bg-canvas p-3">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[12px] font-medium text-ink">Yapay zeka ile yazdir</p>
+        <p className="text-[12px] font-medium text-ink">Yapay zeka ile yazdır</p>
         <button
           type="button"
           onClick={() => setOpen(false)}
@@ -95,12 +89,12 @@ export function AiWriter({
 
       <Field
         label="Ne duyurmak istiyorsunuz?"
-        hint="Tek cumle yeterli. Indirim orani, tarih, urun gibi somut bilgileri yazin."
+        hint="Tek cümle yeterli. İndirim oranı, tarih, ürün gibi somut bilgileri yazın."
       >
         <Input
           value={brief}
           onChange={(event) => setBrief(event.target.value)}
-          placeholder="Ocak sonuna kadar tum kis montlarinda yuzde 30 indirim"
+          placeholder="Ocak sonuna kadar tüm kış montlarında yüzde 30 indirim"
         />
       </Field>
 
@@ -122,7 +116,7 @@ export function AiWriter({
           onClick={() => void write()}
           disabled={busy || brief.trim().length < 8}
         >
-          {busy ? 'Yaziliyor...' : draft ? 'Tekrar yaz' : 'Yaz'}
+          {busy ? 'Yazılıyor…' : draft ? 'Tekrar yaz' : 'Yaz'}
         </Button>
       </div>
 
@@ -130,7 +124,7 @@ export function AiWriter({
 
       {draft ? (
         <div className="space-y-2">
-          <p className="text-[11.5px] font-medium text-ink-faint">Oneri</p>
+          <p className="text-[11.5px] font-medium text-ink-faint">Öneri</p>
           <p className="rounded-md border border-hairline bg-surface p-3 text-[12.5px] leading-relaxed whitespace-pre-wrap text-ink">
             {draft}
           </p>
@@ -147,13 +141,13 @@ export function AiWriter({
               Bunu kullan
             </Button>
             <Button type="button" onClick={() => void write()} disabled={busy}>
-              Baska bir tane
+              Başka bir tane
             </Button>
           </div>
 
           <p className="text-[11.5px] leading-relaxed text-ink-faint">
-            Gondermeden once okuyun. Metin binlerce kisiye gidiyor; sikayet orani
-            dogrudan hattin kilitlenmesine yol aciyor.
+            Göndermeden önce okuyun. Metin binlerce kişiye gidiyor; şikayet oranı
+            doğrudan hattın kilitlenmesine yol açıyor.
           </p>
         </div>
       ) : null}

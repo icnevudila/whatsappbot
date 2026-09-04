@@ -12,8 +12,8 @@ export const metadata: Metadata = { title: 'Ayarlar' }
 
 const PLAN_LABELS: Record<string, string> = {
   free: 'Deneme',
-  starter: 'Baslangic',
-  pro: 'Buyume',
+  starter: 'Başlangıç',
+  pro: 'Büyüme',
   enterprise: 'Ajans',
 }
 
@@ -53,7 +53,7 @@ export default async function SettingsPage() {
   const usedAccounts = accounts?.length ?? 0
   const usedMessages = sentThisMonth ?? 0
 
-  // Gunluk teorik tavan: paketin degil, bagli hatlarin gercek toplami.
+  // Günlük teorik tavan: paketin değil, bağlı hatların gerçek toplamı.
   const dailyCeiling = (accounts ?? [])
     .filter((account) => account.status === 'connected')
     .reduce(
@@ -72,7 +72,7 @@ export default async function SettingsPage() {
     <>
       <PageHeader
         title="Ayarlar"
-        description="Profil bilgileri, paketiniz ve kota kullaniminiz."
+        description="Profil bilgileri, paketiniz ve kota kullanımınız."
       />
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -103,19 +103,19 @@ export default async function SettingsPage() {
                 label="Bu ayki mesaj"
                 used={usedMessages}
                 total={messageQuota}
-                detail="Her ayin 1'inde sifirlanir"
+                detail="Her ayın 1'inde sıfırlanır"
               />
 
               <div className="border-t border-hairline pt-3.5">
                 <p className="text-[12px] text-ink-muted">
-                  Bagli hatlarin bugunku toplam tavani
+                  Bağlı hatların bugünkü toplam tavanı
                 </p>
                 <p className="tabular mt-1 text-[18px] font-semibold text-accent">
                   {nf.format(dailyCeiling)} mesaj
                 </p>
                 <p className="mt-1 text-[11.5px] text-ink-faint">
-                  Bu sayi paketinizden degil, hatlarinizin yasindan geliyor. Yeni
-                  baglanan hat iki hafta boyunca kademeli olarak acilir.
+                  Bu sayı paketinizden değil, hatlarınızın yaşından geliyor. Yeni
+                  bağlanan hat iki hafta boyunca kademeli olarak açılır.
                 </p>
               </div>
             </div>
@@ -125,19 +125,17 @@ export default async function SettingsPage() {
 
           <Card>
             <CardHeader
-              title="Gonderim servisi"
-              subtitle="Panel komut yazar; gercek WhatsApp baglantisi wa-service uzerinden gider."
+              title="Gönderim servisi"
+              subtitle="Panel komut yazar; gerçek WhatsApp bağlantısı arka planda çalışır."
             />
             <div className="space-y-2 p-4 text-[12.5px] leading-relaxed text-ink-muted">
               <p>
-                Eslestirme kodu, QR ve otomatik mesaj gondermek icin WhatsApp
-                servisinin ayakta olmasi gerekir. Servis kapaliyken isler
+                Eşleştirme kodu, QR ve otomatik mesaj göndermek için WhatsApp
+                servisinin ayakta olması gerekir. Servis kapalıyken işler
                 kuyrukta bekler.
               </p>
               <p className="text-[11.5px] text-ink-faint">
-                Yerel: <code className="text-ink">npm run dev:service</code>
-                {' · '}
-                Canli izleme: Genel durum sayfasindaki kuyruk uyarisi.
+                Canlı izleme: Durum sayfasındaki kuyruk ve hat özeti.
               </p>
             </div>
           </Card>
@@ -146,14 +144,14 @@ export default async function SettingsPage() {
             <CardHeader title="Oturum" />
             <div className="flex items-center justify-between gap-4 p-4">
               <p className="text-[12.5px] text-ink-muted">
-                Cikis yapmak bagli hatlari etkilemez; gonderim sunucuda devam eder.
+                Çıkış yapmak bağlı hatları etkilemez; gönderim sunucuda devam eder.
               </p>
               <form action={signOut}>
                 <button
                   type="submit"
                   className="inline-flex h-8 shrink-0 items-center rounded-md border border-danger/40 px-3 text-[12.5px] font-medium text-danger transition-colors hover:bg-danger/10"
                 >
-                  Cikis yap
+                  Çıkış yap
                 </button>
               </form>
             </div>
@@ -165,12 +163,11 @@ export default async function SettingsPage() {
 }
 
 /**
- * Hangi yapay zeka saglayicilarinin acik oldugunu gosterir.
+ * Hangi yapay zeka sağlayıcılarının açık olduğunu gösterir.
  *
- * Anahtarlar sunucu tarafinda, cevre degiskeninde tutuluyor; buradan
- * duzenlenmiyor. Amac "gorsel neden uretilmiyor" ya da "metin yazdirma
- * dugmesi nerede" sorusuna bakilacak tek bir yer olmasi -- yoksa cevap
- * sunucu gunluklerine gomulu kaliyor.
+ * Anahtarlar sunucu tarafında, çevre değişkeninde tutuluyor; buradan
+ * düzenlenmiyor. Amaç "görsel neden üretilmiyor" ya da "metin yazdırma
+ * düğmesi nerede" sorusuna bakılacak tek bir yer olması.
  */
 function AiProvidersCard() {
   const image = activeImageProviders()
@@ -180,28 +177,26 @@ function AiProvidersCard() {
     <Card>
       <CardHeader
         title="Yapay zeka"
-        subtitle="Anahtarlar sunucuda tutulur, buradan degistirilmez."
+        subtitle="Anahtarlar sunucuda tutulur, buradan değiştirilmez."
       />
 
       <div className="space-y-3.5 p-4">
         <ProviderRow
-          label="Gorsel uretimi"
+          label="Görsel üretimi"
           providers={image.map((provider) => provider.label)}
-          // Pollinations anahtar istemedigi icin bu liste hicbir zaman bos
-          // kalmiyor; gorsel uretimi her kurulumda calisir durumda.
-          fallback="Kapali"
+          fallback="Kapalı"
         />
 
         <ProviderRow
-          label="Metin yazdirma"
+          label="Metin yazdırma"
           providers={text.map((provider) => provider.label)}
-          fallback="Kapali — OPENAI_API_KEY veya GEMINI_API_KEY ekleyin"
+          fallback="Kapalı — OPENAI_API_KEY veya GEMINI_API_KEY ekleyin"
         />
 
         <p className="border-t border-hairline pt-3 text-[11.5px] leading-relaxed text-ink-faint">
-          Sagdaki isimler deneme sirasina gore listelenir: ilki cevap vermezse
-          sonraki devreye girer. Anahtar eklemek icin sunucunun ortam
-          degiskenlerini guncelleyip yeniden baslatmak yeterli.
+          Sağdaki isimler deneme sırasına göre listelenir: ilki cevap vermezse
+          sonraki devreye girer. Anahtar eklemek için sunucunun ortam
+          değişkenlerini güncelleyip yeniden başlatmak yeterli.
         </p>
       </div>
     </Card>

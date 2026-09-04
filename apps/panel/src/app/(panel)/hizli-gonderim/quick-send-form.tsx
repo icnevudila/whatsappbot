@@ -41,8 +41,8 @@ export function QuickSendForm({
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
 
-  // Yapistirilan metni anlik ayristiriyoruz: kac numaranin gecerli oldugunu
-  // gonderime basmadan once gormek, en sik yapilan format hatasini yakaliyor.
+  // Yapıştırılan metni anlık ayrıştırıyoruz: kaç numaranın geçerli olduğunu
+  // gönderime basmadan önce görmek, en sık yapılan format hatasını yakalıyor.
   const parsed = useMemo(() => (numbers.trim() ? parsePhoneList(numbers) : null), [numbers])
 
   const validCount = parsed?.valid.length ?? 0
@@ -70,7 +70,7 @@ export function QuickSendForm({
       const { data } = supabase.storage.from('creatives').getPublicUrl(path)
       setMediaUrl(data.publicUrl)
     } catch (error) {
-      setUploadError(error instanceof Error ? error.message : 'Gorsel yuklenemedi.')
+      setUploadError(error instanceof Error ? error.message : 'Görsel yüklenemedi.')
     } finally {
       setUploading(false)
     }
@@ -81,22 +81,21 @@ export function QuickSendForm({
   return (
     <Card>
       <CardHeader
-        title="Tek seferlik gonderim"
-        subtitle="Listeye kaydetmez. Gonderim Kampanyalar'da izlenir; Kisiler sayfasina yeni liste eklenmez."
+        title="Tek seferlik gönderim"
+        subtitle="Listeye kaydetmez. Gönderim Kampanyalar’da izlenir; Kişiler sayfasına yeni liste eklenmez."
       />
 
       <form action={formAction} className="space-y-5 p-4">
         <input type="hidden" name="media_url" value={mediaUrl} />
 
-        {/* 1 — Numaralar */}
         <div>
           <div className="mb-1.5 flex items-baseline justify-between gap-3">
             <span className="text-[12px] font-medium text-ink-muted">Numaralar</span>
             {parsed ? (
               <span className="tabular text-[11.5px] text-ink-faint">
-                <span className="text-accent">{nf.format(validCount)} gecerli</span>
+                <span className="text-accent">{nf.format(validCount)} geçerli</span>
                 {parsed.duplicates > 0 ? ` · ${parsed.duplicates} tekrar` : ''}
-                {parsed.invalid.length > 0 ? ` · ${parsed.invalid.length} hatali` : ''}
+                {parsed.invalid.length > 0 ? ` · ${parsed.invalid.length} hatalı` : ''}
               </span>
             ) : null}
           </div>
@@ -106,22 +105,21 @@ export function QuickSendForm({
             rows={6}
             value={numbers}
             onChange={(event) => setNumbers(event.target.value)}
-            placeholder={'0532 123 45 67\n0533 234 56 78, Ayse\n+90 534 345 67 89'}
+            placeholder={'0532 123 45 67\n0533 234 56 78, Ayşe\n+90 534 345 67 89'}
           />
           <p className="mt-1 text-[11.5px] text-ink-faint">
-            Her satira bir numara. Virgulden sonra isim yazarsaniz mesajda{' '}
-            <code className="text-ink-muted">{'{{ad}}'}</code> yerine gecer. Bosluk,
+            Her satıra bir numara. Virgülden sonra isim yazarsanız mesajda{' '}
+            <code className="text-ink-muted">{'{{ad}}'}</code> yerine geçer. Boşluk,
             tire, parantez fark etmez.
           </p>
 
           {parsed && parsed.invalid.length > 0 ? (
             <p className="mt-1.5 text-[11.5px] text-warn">
-              Okunamayan ornekler: {parsed.invalid.slice(0, 3).join(', ')}
+              Okunamayan örnekler: {parsed.invalid.slice(0, 3).join(', ')}
             </p>
           ) : null}
         </div>
 
-        {/* 2 — Mesaj */}
         <div className="space-y-2.5">
           <span className="mb-1.5 block text-[12px] font-medium text-ink-muted">Mesaj</span>
           <Textarea
@@ -129,21 +127,20 @@ export function QuickSendForm({
             rows={4}
             value={body}
             onChange={(event) => setBody(event.target.value)}
-            placeholder={'Merhaba {{ad}}, bu ay gecerli %20 indirimimizden haberdar etmek istedik.'}
+            placeholder={'Merhaba {{ad}}, bu ay geçerli %20 indirimimizden haberdar etmek istedik.'}
           />
           <AiWriter enabled={aiEnabled} brand={brandName} onApply={setBody} />
         </div>
 
-        {/* 3 — Gorsel */}
         <div>
           <span className="mb-1.5 block text-[12px] font-medium text-ink-muted">
-            Gorsel (istege bagli)
+            Görsel (isteğe bağlı)
           </span>
 
           <div className="flex flex-wrap items-center gap-3">
             <FileUploadButton
               uploading={uploading}
-              label="Gorsel sec"
+              label="Görsel seç"
               onFile={(file) => void upload(file)}
             />
 
@@ -152,16 +149,16 @@ export function QuickSendForm({
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={mediaUrl}
-                  alt="Kampanya gorseli"
+                  alt="Kampanya görseli"
                   className="size-9 rounded border border-hairline object-cover"
                 />
-                Gorsel hazir
+                Görsel hazır
                 <button
                   type="button"
                   onClick={() => setMediaUrl('')}
                   className="text-ink-muted underline underline-offset-2 hover:text-danger"
                 >
-                  kaldir
+                  kaldır
                 </button>
               </span>
             ) : null}
@@ -174,18 +171,16 @@ export function QuickSendForm({
           ) : null}
         </div>
 
-        {/* Onizleme */}
         <MessagePreview body={preview || undefined} mediaUrl={mediaUrl || null} />
 
-        {/* 4 — Hatlar */}
         <div>
           <span className="mb-1.5 block text-[12px] font-medium text-ink-muted">
-            Gonderen hatlar
+            Gönderen hatlar
           </span>
 
           {senders.length === 0 ? (
             <p className="rounded-md border border-hairline bg-canvas px-3 py-2 text-[12.5px] text-ink-faint">
-              Bagli hat yok. Once Hesaplar sekmesinden bir hat baglayin.
+              Bağlı hat yok. Önce Hesaplar sekmesinden bir hat bağlayın.
             </p>
           ) : (
             <div className="divide-y divide-hairline rounded-md border border-hairline">
@@ -217,7 +212,7 @@ export function QuickSendForm({
                     ) : null}
                   </span>
                   <span className="tabular shrink-0 text-[11.5px] text-ink-faint">
-                    bugun {nf.format(sender.remainingToday)} hak
+                    bugün {nf.format(sender.remainingToday)} hak
                   </span>
                 </label>
               ))}
@@ -225,18 +220,17 @@ export function QuickSendForm({
           )}
         </div>
 
-        {/* Kapasite uyarisi — gonderimden once beklenti kuruyor */}
         {validCount > 0 && selected.length > 0 ? (
           overflow > 0 ? (
             <Notice tone="warn">
-              Bugun {nf.format(capacityToday)} mesaj gonderilebilir. Kalan{' '}
-              {nf.format(overflow)} kisi kuyrukta bekler ve kota yenilendikce
-              yarin otomatik olarak devam eder. Daha hizli bitirmek icin hat
+              Bugün {nf.format(capacityToday)} mesaj gönderilebilir. Kalan{' '}
+              {nf.format(overflow)} kişi kuyrukta bekler ve kota yenilendikçe
+              yarın otomatik olarak devam eder. Daha hızlı bitirmek için hat
               eklemeniz gerekir.
             </Notice>
           ) : (
             <Notice tone="accent">
-              {nf.format(validCount)} kisinin tamami bugunku kapasiteye siginiyor.
+              {nf.format(validCount)} kişinin tamamı bugünkü kapasiteye sığınıyor.
             </Notice>
           )
         ) : null}
@@ -250,13 +244,13 @@ export function QuickSendForm({
             disabled={pending || senders.length === 0 || validCount === 0}
           >
             {pending
-              ? 'Baslatiliyor...'
+              ? 'Başlatılıyor…'
               : validCount > 0
-                ? `${nf.format(validCount)} kisiye gonder`
-                : 'Gonder'}
+                ? `${nf.format(validCount)} kişiye gönder`
+                : 'Gönder'}
           </Button>
           <p className="text-[11.5px] text-ink-faint">
-            Gonderim sunucuda calisir; bu sekmeyi kapatabilirsiniz.
+            Gönderim sunucuda çalışır; bu sekmeyi kapatabilirsiniz.
           </p>
         </div>
       </form>
