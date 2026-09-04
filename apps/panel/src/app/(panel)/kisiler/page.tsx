@@ -1,4 +1,4 @@
-import { Card, CardHeader, EmptyState, Meter, PageHeader } from '@/components/ui'
+import { Card, CardHeader, EmptyState, Meter, PageHeader, Stat } from '@/components/ui'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { ImportForm } from './import-form'
 import { ListActions } from './list-actions'
@@ -89,9 +89,9 @@ export default async function ContactsPage() {
                 </div>
 
                 <dl className="grid grid-cols-3 gap-3 border-t border-hairline pt-3">
-                  <Stat label="Gecerli" value={valid} tone="text-accent" />
-                  <Stat label="WhatsApp'ta yok" value={invalid} tone="text-danger" />
-                  <Stat label="Bekliyor" value={pendingCheck} tone="text-ink-muted" />
+                  <Stat label="Gecerli" value={valid} tone="accent" />
+                  <Stat label="WhatsApp'ta yok" value={invalid} tone="danger" />
+                  <Stat label="Bekliyor" value={pendingCheck} tone="muted" />
                 </dl>
 
                 {pendingCheck > 0 ? (
@@ -108,14 +108,5 @@ export default async function ContactsPage() {
         <ImportForm />
       </div>
     </>
-  )
-}
-
-function Stat({ label, value, tone }: { label: string; value: number; tone: string }) {
-  return (
-    <div>
-      <dd className={`text-[17px] font-semibold tabular ${tone}`}>{value}</dd>
-      <dt className="text-[11.5px] text-ink-muted">{label}</dt>
-    </div>
   )
 }

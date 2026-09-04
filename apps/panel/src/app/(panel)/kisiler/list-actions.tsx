@@ -20,25 +20,32 @@ export function ListActions({ listId }: { listId: string }) {
   }
 
   return (
-    <div className="flex items-center gap-1.5">
-      {error ? <Notice tone="danger">{error}</Notice> : null}
+    <>
+      <div className="flex items-center gap-1.5">
+        <Button
+          onClick={() => run('verify', () => verifyList(listId))}
+          disabled={pending}
+        >
+          {busy === 'verify' ? 'Dogrulaniyor...' : 'Dogrula'}
+        </Button>
+        <Button
+          variant="danger"
+          onClick={() => {
+            if (!window.confirm('Bu listeyi silmek istiyor musunuz?')) return
+            run('delete', () => deleteList(listId))
+          }}
+          disabled={pending}
+        >
+          {busy === 'delete' ? 'Siliniyor...' : 'Sil'}
+        </Button>
+      </div>
 
-      <Button
-        onClick={() => run('verify', () => verifyList(listId))}
-        disabled={pending}
-      >
-        {busy === 'verify' ? 'Dogrulaniyor...' : 'Dogrula'}
-      </Button>
-      <Button
-        variant="danger"
-        onClick={() => {
-          if (!window.confirm('Bu listeyi silmek istiyor musunuz?')) return
-          run('delete', () => deleteList(listId))
-        }}
-        disabled={pending}
-      >
-        {busy === 'delete' ? 'Siliniyor...' : 'Sil'}
-      </Button>
-    </div>
+      {/* basis-full: ust flex-wrap satirinda Notice tam genislik alta duser */}
+      {error ? (
+        <div className="basis-full">
+          <Notice tone="danger">{error}</Notice>
+        </div>
+      ) : null}
+    </>
   )
 }

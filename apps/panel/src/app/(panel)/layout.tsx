@@ -33,7 +33,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
 
   return (
     <div className="flex min-h-dvh">
-      <aside className="hidden w-[196px] shrink-0 flex-col justify-between border-r border-hairline px-3 py-4 md:flex">
+      <aside className="hidden w-[212px] shrink-0 flex-col justify-between border-r border-hairline bg-surface px-3 py-4 md:flex">
         <div>
           <Link href="/" className="mb-6 flex items-center px-2.5">
             <Wordmark />
@@ -59,7 +59,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       {/* Mobilde ustte yatay kaydirmali gezinme -- dikey link yigini
           icerigi asagi itiyordu ve dokunma hedeflerini sikistiriyordu. */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="border-b border-hairline px-3 py-2 md:hidden">
+        <div className="border-b border-hairline bg-surface px-3 py-2 md:hidden">
           <div className="overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <Nav showSetup={showSetup} orientation="horizontal" />
           </div>

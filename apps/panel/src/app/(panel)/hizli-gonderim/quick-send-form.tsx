@@ -3,7 +3,7 @@
 import { useActionState, useMemo, useState } from 'react'
 import { parsePhoneList } from '@wa/shared'
 import { AiWriter } from '@/components/ai-writer'
-import { Button, Card, CardHeader, Notice, Textarea } from '@/components/ui'
+import { Button, Card, CardHeader, FileUploadButton, MessagePreview, Notice, Textarea } from '@/components/ui'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { quickSend, type QuickSendState } from './actions'
 
@@ -21,11 +21,13 @@ export function QuickSendForm({
   userId,
   aiEnabled,
   brandName,
+  initialMediaUrl = '',
 }: {
   senders: SenderOption[]
   userId: string
   aiEnabled: boolean
   brandName?: string
+  initialMediaUrl?: string
 }) {
   const [state, formAction, pending] = useActionState<QuickSendState, FormData>(
     quickSend,
@@ -34,7 +36,7 @@ export function QuickSendForm({
 
   const [numbers, setNumbers] = useState('')
   const [body, setBody] = useState('')
-  const [mediaUrl, setMediaUrl] = useState('')
+  const [mediaUrl, setMediaUrl] = useState(initialMediaUrl)
   const [selected, setSelected] = useState<string[]>(() => senders.map((s) => s.id))
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -139,18 +141,11 @@ export function QuickSendForm({
           </span>
 
           <div className="flex flex-wrap items-center gap-3">
-            <label className="cursor-pointer rounded-md border border-hairline-strong bg-surface-raised px-3 py-1.5 text-[12.5px] transition-colors hover:border-ink-faint">
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(event) => {
-                  const file = event.target.files?.[0]
-                  if (file) void upload(file)
-                }}
-              />
-              {uploading ? 'Yukleniyor...' : 'Gorsel sec'}
-            </label>
+            <FileUploadButton
+              uploading={uploading}
+              label="Gorsel sec"
+              onFile={(file) => void upload(file)}
+            />
 
             {mediaUrl ? (
               <span className="flex items-center gap-2 text-[11.5px] text-accent">
@@ -180,26 +175,7 @@ export function QuickSendForm({
         </div>
 
         {/* Onizleme */}
-        {body || mediaUrl ? (
-          <div className="rounded-md border border-hairline bg-canvas p-3">
-            <p className="mb-2 text-[11.5px] font-medium text-ink-faint">
-              Alicinin gorecegi
-            </p>
-            <div className="max-w-xs rounded-lg rounded-tl-sm border border-hairline bg-surface-raised p-2">
-              {mediaUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={mediaUrl}
-                  alt=""
-                  className="mb-1.5 w-full rounded border border-hairline object-cover"
-                />
-              ) : null}
-              <p className="whitespace-pre-wrap text-[12.5px] text-ink">
-                {preview || <span className="text-ink-faint">(yalnizca gorsel)</span>}
-              </p>
-            </div>
-          </div>
-        ) : null}
+        <MessagePreview body={preview || undefined} mediaUrl={mediaUrl || null} />
 
         {/* 4 — Hatlar */}
         <div>

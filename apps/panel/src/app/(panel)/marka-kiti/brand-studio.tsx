@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from 'react'
 import Link from 'next/link'
-import { Button, Card, CardHeader, Field, Input, Notice } from '@/components/ui'
+import { Button, Card, CardHeader, Field, FileUploadButton, Input, Notice } from '@/components/ui'
 import {
   DEFAULT_COLORS,
   FORMATS,
@@ -192,18 +192,12 @@ export function BrandStudio({
                 Logo
               </span>
               <div className="flex flex-wrap items-center gap-3">
-                <label className="cursor-pointer rounded-md border border-hairline-strong bg-surface-raised px-3 py-1.5 text-[12.5px] transition-colors hover:border-ink-faint">
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    className="hidden"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0]
-                      if (file) void uploadLogo(file)
-                    }}
-                  />
-                  {uploading ? 'Yukleniyor...' : logoUrl ? 'Degistir' : 'Logo sec'}
-                </label>
+                <FileUploadButton
+                  accept="image/png,image/jpeg,image/webp"
+                  uploading={uploading}
+                  label={logoUrl ? 'Degistir' : 'Logo sec'}
+                  onFile={(file) => void uploadLogo(file)}
+                />
 
                 {logoUrl ? (
                   <span className="flex items-center gap-2 text-[11.5px] text-ink-muted">
@@ -361,10 +355,10 @@ export function BrandStudio({
               {result ? (
                 <>
                   <Link
-                    href="/hizli-gonderim"
+                    href={`/hizli-gonderim?media=${encodeURIComponent(result)}`}
                     className="text-[12.5px] text-accent underline underline-offset-2"
                   >
-                    Hizli gonderimde kullan
+                    Hizli gonderime tasi
                   </Link>
                   <a
                     href={result}

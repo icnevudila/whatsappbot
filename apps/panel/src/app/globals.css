@@ -1,38 +1,45 @@
 @import 'tailwindcss';
 
 /*
-  Yon: yogun koyu operasyon konsolu. Neredeyse siyah kanvas, kilcal cizgiler,
-  sikisik tipografi, golge yok.
+  Tasarim kilidi: pilot-ui / Messora Cobalt (acik kagit).
+  Kaynak: C:/Users/TP2/Documents/chatbot/pilot-ui/app/(marketing)/tokens.css
+          + app/globals.css + app/app/product.css
 
-  Rol kurallari (bunlari bozmak tasarimi dagitir):
-  - accent (WhatsApp yesili) YALNIZCA "bagli" durumu ve birincil gonder
-    aksiyonu icin. Zemin olarak, dekoratif gradyan olarak kullanilmaz.
-  - warn: QR bekleniyor / baglaniyor / kota uyarisi.
-  - danger: kilitli, banlandi, basarisiz.
-  - ink-faint: yalnizca ikincil ustveri; govde metni icin kullanilmaz.
+  - canvas = paper (#f3f5f9), surface = beyaz panel
+  - accent = kobalt (#2f5bff): birincil CTA ve odak
+  - ok/wa = WhatsApp yesili: yalnizca "bagli" durumu
+  - warn / danger: uyari ve hata
+  - Golge hafif; dekoratif gradyan yok
 */
 @theme {
-  --color-canvas: #08090b;
-  --color-surface: #0f1113;
-  --color-surface-raised: #15181b;
-  --color-hairline: #22262a;
-  --color-hairline-strong: #2f343a;
+  --color-canvas: #f3f5f9;
+  --color-surface: #ffffff;
+  --color-surface-raised: #eef1f7;
+  --color-hairline: #d5dae6;
+  --color-hairline-strong: #b8bfd0;
 
-  --color-ink: #e9ebee;
-  --color-ink-muted: #9ba1a8;
-  --color-ink-faint: #6a7076;
+  --color-ink: #161925;
+  --color-ink-muted: #646b7c;
+  --color-ink-faint: #8b92a3;
 
-  --color-accent: #25d366;
-  --color-accent-dim: #1a9e4b;
-  --color-accent-ink: #04140a;
+  --color-accent: #2f5bff;
+  --color-accent-dim: #1e3fcc;
+  --color-accent-ink: #ffffff;
+  --color-accent-soft: #e8edff;
 
-  --color-warn: #f5a524;
-  --color-danger: #f0483e;
+  --color-ok: #25d366;
+  --color-ok-dim: #1a9e4b;
+  --color-ok-soft: #d9fdd3;
+
+  --color-warn: #a15c00;
+  --color-danger: #b42318;
 
   --radius-card: 10px;
 
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+
+  --shadow-card: 0 1px 2px rgba(22, 25, 37, 0.06);
 }
 
 * {
@@ -40,7 +47,7 @@
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
@@ -51,7 +58,6 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Sayaclar hizali kalsin: canli ilerleme rakamlari surekli degisiyor. */
 .tabular {
   font-variant-numeric: tabular-nums;
 }
@@ -60,7 +66,7 @@ h1,
 h2,
 h3 {
   text-wrap: balance;
-  letter-spacing: -0.011em;
+  letter-spacing: -0.02em;
 }
 
 :focus-visible {
@@ -69,11 +75,10 @@ h3 {
 }
 
 ::selection {
-  background: var(--color-accent-dim);
-  color: white;
+  background: var(--color-accent-soft);
+  color: var(--color-ink);
 }
 
-/* Ince kaydirma cubugu: yogun tablolarda kalin cubuk duzeni boluyor. */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;

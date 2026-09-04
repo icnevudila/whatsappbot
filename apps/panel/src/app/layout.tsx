@@ -1,10 +1,19 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { JetBrains_Mono, Outfit } from 'next/font/google'
 import { BRAND_NAME, BRAND_TAGLINE } from '@/components/brand'
 import './globals.css'
 
-const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
-const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] })
+const outfit = Outfit({
+  variable: '--font-outfit',
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+})
+
+const jetbrains = JetBrains_Mono({
+  variable: '--font-jetbrains',
+  subsets: ['latin'],
+  weight: ['400', '500'],
+})
 
 export const metadata: Metadata = {
   title: {
@@ -18,7 +27,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="tr">
-      <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
+      <body className={`${outfit.variable} ${jetbrains.variable} font-sans antialiased`}>
         {children}
       </body>
     </html>

@@ -51,8 +51,8 @@ export function Nav({
             aria-current={active ? 'page' : undefined}
             className={`whitespace-nowrap rounded-md px-2.5 py-1.5 text-[13px] transition-colors ${
               active
-                ? 'bg-surface-raised font-medium text-ink'
-                : 'text-ink-muted hover:bg-surface hover:text-ink'
+                ? 'bg-accent-soft font-medium text-accent'
+                : 'text-ink-muted hover:bg-surface-raised hover:text-ink'
             }`}
           >
             {item.label}

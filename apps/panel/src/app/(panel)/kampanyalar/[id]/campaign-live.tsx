@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react'
 import type { Tables } from '@wa/shared'
-import { Button, Card, CardHeader, Meter, Notice, StatusPill } from '@/components/ui'
+import { Button, Card, CardHeader, Meter, Notice, Stat, StatusPill } from '@/components/ui'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import {
   pauseCampaign,
@@ -108,10 +108,10 @@ export function CampaignLive({ initial }: { initial: CampaignView }) {
           </div>
 
           <dl className="grid grid-cols-2 gap-4 border-t border-hairline pt-4 sm:grid-cols-4">
-            <Stat label="Gonderildi" value={campaign.sent_count} tone="text-accent" />
-            <Stat label="Atlandi" value={campaign.skipped_count} tone="text-ink-muted" />
-            <Stat label="Basarisiz" value={campaign.failed_count} tone="text-danger" />
-            <Stat label="Kalan" value={remaining} tone="text-ink" />
+            <Stat label="Gonderildi" value={campaign.sent_count} tone="accent" />
+            <Stat label="Atlandi" value={campaign.skipped_count} tone="muted" />
+            <Stat label="Basarisiz" value={campaign.failed_count} tone="danger" />
+            <Stat label="Kalan" value={remaining} />
           </dl>
 
           {campaign.status === 'running' && remaining > 0 ? (
@@ -190,15 +190,6 @@ export function CampaignLive({ initial }: { initial: CampaignView }) {
           )}
         </div>
       </Card>
-    </div>
-  )
-}
-
-function Stat({ label, value, tone }: { label: string; value: number; tone: string }) {
-  return (
-    <div>
-      <dd className={`text-[19px] font-semibold tabular ${tone}`}>{value}</dd>
-      <dt className="text-[11.5px] text-ink-muted">{label}</dt>
     </div>
   )
 }

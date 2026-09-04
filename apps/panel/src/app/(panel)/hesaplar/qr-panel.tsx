@@ -26,7 +26,7 @@ export function QrPanel({
       errorCorrectionLevel: 'L',
       margin: 2,
       scale: 6,
-      color: { dark: '#e9ebee', light: '#08090b' },
+      color: { dark: '#161925', light: '#ffffff' },
     }).then((url) => {
       if (!cancelled) setDataUrl(url)
     })

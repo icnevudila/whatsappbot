@@ -2,11 +2,8 @@
  * Filo marka isareti.
  *
  * Bicim: giderek kisalan uc yatay cubuk (bosalan gonderim kuyrugu) ve
- * ustunde tek dolu nokta (aktif hat). Tek renk, gorsel dosyasi yok; ayni
- * SVG favicon olarak da kullaniliyor, boylece her boyutta net kaliyor.
- *
- * Nokta bilerek accent renginde: markanin tamaminda yesil "canli hat"
- * anlamini tasiyor, dekoratif kullanilmiyor.
+ * ustunde tek dolu nokta (aktif hat). Nokta kobalt accent: pilot-ui / Messora
+ * marka aksaniyla ayni dil.
  */
 export function LogoMark({ className = 'size-4' }: { className?: string }) {
   return (

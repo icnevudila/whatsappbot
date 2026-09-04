@@ -20,7 +20,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <div className="rounded-[10px] border border-hairline bg-surface p-4">
+        <div className="rounded-[10px] border border-hairline bg-surface p-4 shadow-[var(--shadow-card)]">
           {/* useSearchParams istemci tarafinda okunuyor; Suspense olmadan
               sayfanin tamami istemci render'ina dusuyor. */}
           <Suspense fallback={<div className="h-[232px]" />}>

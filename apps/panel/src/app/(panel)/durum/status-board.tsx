@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import type { Tables } from '@wa/shared'
-import { Card, CardHeader, EmptyState, Meter, StatusPill } from '@/components/ui'
+import { AccentLink, Card, CardHeader, EmptyState, Meter, Stat, StatusPill } from '@/components/ui'
 import { capToday } from '@/lib/capacity'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { useServerSyncedState } from '@/lib/use-server-synced-state'
@@ -126,7 +126,8 @@ export function StatusBoard({
       {/* Gunun ozeti */}
       <Card>
         <div className="grid divide-y divide-hairline sm:grid-cols-4 sm:divide-x sm:divide-y-0">
-          <Summary
+          <Stat
+            className="px-4 py-3.5"
             value={`${connected.length}`}
             label="Bagli hat"
             detail={
@@ -136,7 +137,8 @@ export function StatusBoard({
             }
             tone={connected.length > 0 ? 'accent' : 'muted'}
           />
-          <Summary
+          <Stat
+            className="px-4 py-3.5"
             value={`${nf.format(usedToday)} / ${nf.format(capacityToday)}`}
             label="Bugunku gonderim"
             detail={
@@ -146,7 +148,8 @@ export function StatusBoard({
             }
             meter={{ value: usedToday, max: capacityToday }}
           />
-          <Summary
+          <Stat
+            className="px-4 py-3.5"
             value={`${activeCampaigns.length}`}
             label="Aktif kampanya"
             detail={
@@ -156,7 +159,8 @@ export function StatusBoard({
             }
             tone={activeCampaigns.length > 0 ? 'accent' : 'muted'}
           />
-          <Summary
+          <Stat
+            className="px-4 py-3.5"
             value={`${atRisk}`}
             label="Riskteki hat"
             detail={
@@ -285,12 +289,7 @@ export function StatusBoard({
               title="Kampanya yok"
               description="Kampanyalar sekmesinden liste secerek veya Hizli gonderim ile numaralari yapistirarak baslayabilirsiniz."
               action={
-                <Link
-                  href="/kampanyalar"
-                  className="text-[12.5px] font-medium text-accent underline underline-offset-2"
-                >
-                  Kampanyalara git
-                </Link>
+                <AccentLink href="/kampanyalar">Kampanyalara git</AccentLink>
               }
             />
           ) : (
@@ -329,48 +328,6 @@ export function StatusBoard({
           )}
         </Card>
       </div>
-    </div>
-  )
-}
-
-function Summary({
-  value,
-  label,
-  detail,
-  tone = 'default',
-  meter,
-}: {
-  value: string
-  label: string
-  detail: string
-  tone?: 'default' | 'accent' | 'muted' | 'warn'
-  meter?: { value: number; max: number }
-}) {
-  const valueTone =
-    tone === 'accent'
-      ? 'text-accent'
-      : tone === 'muted'
-        ? 'text-ink-muted'
-        : tone === 'warn'
-          ? 'text-warn'
-          : 'text-ink'
-
-  return (
-    <div className="px-4 py-3.5">
-      <p className="text-[11.5px] text-ink-muted">{label}</p>
-      <p className={`tabular mt-1 text-[19px] font-semibold leading-none ${valueTone}`}>
-        {value}
-      </p>
-      {meter ? (
-        <div className="mt-2.5">
-          <Meter
-            value={meter.value}
-            max={meter.max}
-            tone={meter.max > 0 && meter.value / meter.max > 0.85 ? 'warn' : 'accent'}
-          />
-        </div>
-      ) : null}
-      <p className="mt-1.5 truncate text-[11.5px] text-ink-faint">{detail}</p>
     </div>
   )
 }

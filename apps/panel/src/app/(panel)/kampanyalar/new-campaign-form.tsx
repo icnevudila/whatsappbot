@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from 'react'
 import { AiWriter } from '@/components/ai-writer'
-import { Button, Card, CardHeader, Field, Input, Notice, Textarea } from '@/components/ui'
+import { Button, Card, CardHeader, Field, FileUploadButton, Input, MessagePreview, Notice, Textarea } from '@/components/ui'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { createCampaign, type CampaignState } from './actions'
 
@@ -92,15 +92,7 @@ export function NewCampaignForm({
 
         <AiWriter enabled={aiEnabled} brand={brandName} onApply={setBody} />
 
-        {body ? (
-          // Onizleme, degisken yazim hatalarini gonderimden once yakalatiyor.
-          <div className="rounded-md border border-hairline bg-canvas p-3">
-            <p className="mb-1.5 text-[11.5px] font-medium text-ink-faint">
-              Alicinin gorecegi
-            </p>
-            <p className="text-[12.5px] whitespace-pre-wrap text-ink">{preview}</p>
-          </div>
-        ) : null}
+        <MessagePreview body={preview || undefined} mediaUrl={mediaUrl || null} />
 
         <div>
           <span className="mb-1.5 block text-[12px] font-medium text-ink-muted">
@@ -108,18 +100,11 @@ export function NewCampaignForm({
           </span>
 
           <div className="flex flex-wrap items-center gap-3">
-            <label className="cursor-pointer rounded-md border border-hairline-strong bg-surface-raised px-3 py-1.5 text-[12.5px] transition-colors hover:border-ink-faint">
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(event) => {
-                  const file = event.target.files?.[0]
-                  if (file) void upload(file)
-                }}
-              />
-              {uploading ? 'Yukleniyor...' : 'Gorsel sec'}
-            </label>
+            <FileUploadButton
+              uploading={uploading}
+              label="Gorsel sec"
+              onFile={(file) => void upload(file)}
+            />
 
             {mediaUrl ? (
               <span className="flex items-center gap-2 text-[11.5px] text-accent">

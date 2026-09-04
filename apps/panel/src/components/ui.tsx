@@ -9,17 +9,18 @@ const buttonBase =
   'inline-flex h-8 items-center justify-center gap-1.5 rounded-md px-3 text-[13px] font-medium transition-colors disabled:cursor-not-allowed'
 
 const buttonVariants = {
+  // Kobalt birincil aksiyon (pilot-ui / Messora). Yesil yalnizca "bagli" durumu.
   accent:
-    'bg-accent text-accent-ink hover:bg-accent-dim disabled:bg-hairline-strong disabled:text-ink-faint',
+    'bg-accent text-accent-ink shadow-sm hover:bg-accent-dim disabled:bg-hairline disabled:text-ink-faint disabled:shadow-none',
   quiet:
-    'bg-surface-raised text-ink border border-hairline-strong hover:border-ink-faint disabled:text-ink-faint',
+    'bg-surface text-ink border border-hairline-strong hover:bg-surface-raised disabled:text-ink-faint',
   danger:
-    'bg-transparent text-danger border border-danger/40 hover:bg-danger/10 disabled:text-ink-faint',
+    'bg-transparent text-danger border border-danger/35 hover:bg-danger/8 disabled:text-ink-faint',
 } as const
 
 /**
- * accent varyanti rol kuralina tabi: yalnizca birincil gonderim/onay
- * aksiyonlarinda. Ikincil her sey "quiet" olmali, yoksa yesil anlamini yitirir.
+ * accent (kobalt) varyanti: birincil gonder / onay.
+ * WhatsApp yesili StatusPill "bagli" icin ayri --color-ok token'inda.
  */
 export function Button({
   variant = 'quiet',
@@ -78,7 +79,7 @@ export function Card({
   return (
     <div
       className={cx(
-        'rounded-[10px] border border-hairline bg-surface',
+        'rounded-[10px] border border-hairline bg-surface shadow-[var(--shadow-card)]',
         className,
       )}
     >
@@ -143,7 +144,7 @@ export function Select({ className, ...props }: ComponentProps<'select'>) {
 }
 
 const STATUS_STYLES: Record<string, { label: string; tone: string }> = {
-  connected: { label: 'Bagli', tone: 'text-accent border-accent/35 bg-accent/10' },
+  connected: { label: 'Bagli', tone: 'text-ok-dim border-ok/40 bg-ok-soft' },
   connecting: { label: 'Baglaniyor', tone: 'text-warn border-warn/35 bg-warn/10' },
   qr_pending: { label: 'QR bekleniyor', tone: 'text-warn border-warn/35 bg-warn/10' },
   pairing_pending: { label: 'Kod bekleniyor', tone: 'text-warn border-warn/35 bg-warn/10' },
@@ -154,17 +155,17 @@ const STATUS_STYLES: Record<string, { label: string; tone: string }> = {
 
   draft: { label: 'Taslak', tone: 'text-ink-muted border-hairline-strong bg-surface-raised' },
   scheduled: { label: 'Planlandi', tone: 'text-warn border-warn/35 bg-warn/10' },
-  running: { label: 'Gonderiliyor', tone: 'text-accent border-accent/35 bg-accent/10' },
+  running: { label: 'Gonderiliyor', tone: 'text-accent border-accent/35 bg-accent-soft' },
   paused: { label: 'Duraklatildi', tone: 'text-warn border-warn/35 bg-warn/10' },
-  completed: { label: 'Tamamlandi', tone: 'text-accent border-accent/35 bg-accent/10' },
+  completed: { label: 'Tamamlandi', tone: 'text-ok-dim border-ok/40 bg-ok-soft' },
   stopped: { label: 'Durduruldu', tone: 'text-danger border-danger/35 bg-danger/10' },
   failed: { label: 'Basarisiz', tone: 'text-danger border-danger/35 bg-danger/10' },
 
   // message_log
   pending: { label: 'Bekliyor', tone: 'text-ink-muted border-hairline-strong bg-surface-raised' },
-  sent: { label: 'Gonderildi', tone: 'text-accent border-accent/35 bg-accent/10' },
-  delivered: { label: 'Teslim', tone: 'text-accent border-accent/35 bg-accent/10' },
-  read: { label: 'Okundu', tone: 'text-accent border-accent/35 bg-accent/10' },
+  sent: { label: 'Gonderildi', tone: 'text-ok-dim border-ok/40 bg-ok-soft' },
+  delivered: { label: 'Teslim', tone: 'text-ok-dim border-ok/40 bg-ok-soft' },
+  read: { label: 'Okundu', tone: 'text-accent border-accent/35 bg-accent-soft' },
 }
 
 export function StatusPill({ status }: { status: string }) {
@@ -241,15 +242,21 @@ export function Notice({
   )
 }
 
-/** Tek satirlik ozet rakam. Uc ekranda uc farkli boyutta kopyalanmisti. */
+/** Tek satirlik ozet rakam. meter/detail opsiyonu Summary icin. */
 export function Stat({
   value,
   label,
   tone = 'default',
+  detail,
+  meter,
+  className,
 }: {
   value: ReactNode
   label: string
   tone?: 'default' | 'accent' | 'muted' | 'danger' | 'warn'
+  detail?: ReactNode
+  meter?: { value: number; max: number; tone?: 'accent' | 'warn' | 'danger' }
+  className?: string
 }) {
   const valueTone = {
     default: 'text-ink',
@@ -259,12 +266,118 @@ export function Stat({
     warn: 'text-warn',
   }[tone]
 
+  const meterTone =
+    meter?.tone ??
+    (meter && meter.max > 0 && meter.value / meter.max > 0.85 ? 'warn' : 'accent')
+
   return (
-    <div>
+    <div className={className}>
       <p className="text-[11.5px] text-ink-muted">{label}</p>
       <p className={cx('tabular mt-1 text-[19px] font-semibold leading-none', valueTone)}>
         {value}
       </p>
+      {meter ? (
+        <div className="mt-2.5">
+          <Meter value={meter.value} max={meter.max} tone={meterTone} />
+        </div>
+      ) : null}
+      {detail ? (
+        <p className="mt-1.5 truncate text-[11.5px] text-ink-faint">{detail}</p>
+      ) : null}
+    </div>
+  )
+}
+
+/** Gizli file input + quiet stil etiket. */
+export function FileUploadButton({
+  accept = 'image/*',
+  uploading = false,
+  label,
+  uploadingLabel = 'Yukleniyor...',
+  onFile,
+}: {
+  accept?: string
+  uploading?: boolean
+  label: string
+  uploadingLabel?: string
+  onFile: (file: File) => void
+}) {
+  return (
+    <label className="cursor-pointer rounded-md border border-hairline-strong bg-surface-raised px-3 py-1.5 text-[12.5px] transition-colors hover:border-ink-faint">
+      <input
+        type="file"
+        accept={accept}
+        className="hidden"
+        disabled={uploading}
+        onChange={(event) => {
+          const file = event.target.files?.[0]
+          if (file) onFile(file)
+          // Ayni dosyayi tekrar secebilmek icin degeri sifirla.
+          event.target.value = ''
+        }}
+      />
+      {uploading ? uploadingLabel : label}
+    </label>
+  )
+}
+
+/** WhatsApp balonu stili mesaj onizlemesi. */
+export function MessagePreview({
+  body,
+  mediaUrl,
+}: {
+  body?: string
+  mediaUrl?: string | null
+}) {
+  if (!body && !mediaUrl) return null
+
+  return (
+    <div className="rounded-md border border-hairline bg-canvas p-3">
+      <p className="mb-2 text-[11.5px] font-medium text-ink-faint">Alicinin gorecegi</p>
+      <div className="max-w-xs rounded-lg rounded-tl-sm border border-hairline bg-surface-raised p-2">
+        {mediaUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={mediaUrl}
+            alt=""
+            className="mb-1.5 w-full rounded border border-hairline object-cover"
+          />
+        ) : null}
+        <p className="whitespace-pre-wrap text-[12.5px] text-ink">
+          {body || <span className="text-ink-faint">(yalnizca gorsel)</span>}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+/** Son 24 saatlik saatlik gonderim cubuklari. Bos veri = 0 cubuklar. */
+export function HourlyBars({
+  counts,
+  title = 'Son 24 saat',
+}: {
+  counts: number[]
+  title?: string
+}) {
+  const max = Math.max(1, ...counts)
+  const total = counts.reduce((sum, n) => sum + n, 0)
+
+  return (
+    <div>
+      <div className="mb-2 flex items-baseline justify-between gap-3">
+        <p className="text-[11.5px] font-medium text-ink-muted">{title}</p>
+        <p className="tabular text-[11.5px] text-ink-faint">{total} giden</p>
+      </div>
+      <div className="flex h-10 items-end gap-px" role="img" aria-label={`${total} giden mesaj, son 24 saat`}>
+        {counts.map((count, index) => (
+          <div
+            key={index}
+            className="min-h-px flex-1 rounded-sm bg-accent/70"
+            style={{ height: `${Math.max(count > 0 ? 8 : 2, Math.round((count / max) * 100))}%` }}
+            title={`${count}`}
+          />
+        ))}
+      </div>
     </div>
   )
 }
