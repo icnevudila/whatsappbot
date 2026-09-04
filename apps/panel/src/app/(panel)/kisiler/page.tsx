@@ -2,8 +2,11 @@ import { AccentLink, Card, CardHeader, EmptyState, Meter, PageHeader, Stat } fro
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { ImportForm } from './import-form'
 import { ListActions } from './list-actions'
+import { ScrapeForm } from './scrape-form'
 
 export const dynamic = 'force-dynamic'
+/** Web tarayıcı sunucu aksiyonu için Vercel süre limiti */
+export const maxDuration = 60
 
 export default async function ContactsPage() {
   const supabase = await createSupabaseServerClient()
@@ -66,6 +69,7 @@ export default async function ContactsPage() {
                         <p className="mt-0.5 text-[11.5px] text-ink-muted tabular">
                           {list.contact_count} numara ·{' '}
                           {new Date(list.created_at).toLocaleDateString('tr-TR')}
+                          {list.source === 'scraper' ? ' · web' : ''}
                           {' · '}
                           <span className="text-ink-faint">detay</span>
                         </p>
@@ -113,7 +117,8 @@ export default async function ContactsPage() {
           ) : null}
         </div>
 
-        <div className="order-1 lg:order-2" id="liste-olustur">
+        <div className="order-1 space-y-4 lg:order-2" id="liste-olustur">
+          <ScrapeForm />
           <ImportForm />
         </div>
       </div>

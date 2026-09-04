@@ -35,6 +35,59 @@ export function toE164(
   return null
 }
 
+/**
+ * Web scraper için: yüksek güven (tel:/schema) çok ülkeli deneme;
+ * metin adayları yalnızca TR mobil veya açık uluslararası biçim.
+ */
+export function toE164Scraped(
+  raw: string,
+  confidence: 'high' | 'medium' = 'high',
+): string | null {
+  const trimmed = raw.trim().replace(/^tel:/i, '')
+  if (!trimmed) return null
+
+  const compact = trimmed.replace(/\s+/g, '')
+  if (compact.startsWith('+') || compact.startsWith('00')) {
+    const normalized = compact.startsWith('00')
+      ? `+${compact.slice(2).replace(/\D/g, '')}`
+      : trimmed
+    return toE164(normalized)
+  }
+
+  const digits = trimmed.replace(/\D/g, '')
+
+  if (confidence === 'medium') {
+    if (/^0?5\d{9}$/.test(digits)) return toE164(digits)
+    if (/^905\d{9}$/.test(digits)) return toE164(`+${digits}`)
+    return null
+  }
+
+  // NANP (ABD/CA): 10 hane 2-9… — TR varsayılanı 408… gibi numaraları yanlış +90 yapmasın.
+  if (/^1?[2-9]\d{9}$/.test(digits)) {
+    const nanp = parsePhoneNumberFromString(trimmed, 'US')
+    if (nanp?.isValid()) return nanp.number
+  }
+
+  // TR ulusal: 5xxxxxxxxx mobil veya alan kodlu sabit.
+  if (/^0?[2-5]\d{9}$/.test(digits) || /^90[2-5]\d{9}$/.test(digits)) {
+    const tr = toE164(trimmed)
+    if (tr) return tr
+  }
+
+  const countries: CountryCode[] = ['GB', 'DE', 'FR', 'NL', 'TR', 'US']
+  for (const country of countries) {
+    const parsed = parsePhoneNumberFromString(trimmed, country)
+    if (parsed?.isValid()) return parsed.number
+  }
+
+  if (digits.length >= 10 && digits.length <= 15) {
+    const intl = parsePhoneNumberFromString(`+${digits}`)
+    if (intl?.isValid()) return intl.number
+  }
+
+  return toE164(trimmed)
+}
+
 /** WhatsApp JID'inden E.164 uretir. LID'ler telefon numarasi tasimadigi icin atlanir. */
 export function jidToE164(jid: string): string | null {
   const user = jid.split('@')[0]?.split(':')[0]
