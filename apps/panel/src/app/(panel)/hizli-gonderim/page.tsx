@@ -8,12 +8,20 @@ import { QuickSendForm, type SenderOption } from './quick-send-form'
 
 export const metadata: Metadata = { title: 'Hizli gonderim' }
 
-export default async function QuickSendPage() {
+export default async function QuickSendPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ media?: string | string[] }>
+}) {
   const supabase = await createSupabaseServerClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) redirect('/giris')
+
+  const params = await searchParams
+  const mediaParam = params.media
+  const initialMediaUrl = Array.isArray(mediaParam) ? mediaParam[0] ?? '' : mediaParam ?? ''
 
   const [{ data: accounts }, brandResult] = await Promise.all([
     supabase
@@ -56,6 +64,7 @@ export default async function QuickSendPage() {
           userId={user.id}
           aiEnabled={hasTextProvider()}
           brandName={brandResult.data?.name ?? undefined}
+          initialMediaUrl={initialMediaUrl}
         />
       )}
     </>

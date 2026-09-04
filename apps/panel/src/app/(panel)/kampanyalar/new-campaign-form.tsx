@@ -92,8 +92,6 @@ export function NewCampaignForm({
 
         <AiWriter enabled={aiEnabled} brand={brandName} onApply={setBody} />
 
-        <MessagePreview body={preview || undefined} mediaUrl={mediaUrl || null} />
-
         <div>
           <span className="mb-1.5 block text-[12px] font-medium text-ink-muted">
             Gorsel (istege bagli)
@@ -132,6 +130,9 @@ export function NewCampaignForm({
             </div>
           ) : null}
         </div>
+
+        {/* Onizleme, degisken yazim hatalarini gonderimden once yakalatiyor. */}
+        <MessagePreview body={preview || undefined} mediaUrl={mediaUrl || null} />
 
         <CheckboxGroup
           name="lists"
