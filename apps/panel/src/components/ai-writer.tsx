@@ -55,9 +55,8 @@ export function AiWriter({
   if (!enabled) {
     return (
       <p className="text-[11.5px] leading-relaxed text-ink-faint">
-        Yapay zeka ile metin yazdırmak için sunucuya{' '}
-        <code className="text-ink-muted">OPENAI_API_KEY</code> veya{' '}
-        <code className="text-ink-muted">GEMINI_API_KEY</code> ekleyin.
+        Yapay zeka ile metin yazdırma bu hesapta kapalı. Açılması için destekle
+        iletişime geçin.
       </p>
     )
   }

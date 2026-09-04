@@ -143,32 +143,67 @@ export function Select({ className, ...props }: ComponentProps<'select'>) {
   return <select {...props} className={cx(inputBase, className)} />
 }
 
-const STATUS_STYLES: Record<string, { label: string; tone: string }> = {
-  connected: { label: 'Bağlı', tone: 'text-ok-dim border-ok/40 bg-ok-soft' },
-  connecting: { label: 'Bağlanıyor', tone: 'text-warn border-warn/35 bg-warn/10' },
-  qr_pending: { label: 'QR bekleniyor', tone: 'text-warn border-warn/35 bg-warn/10' },
-  pairing_pending: { label: 'Kod bekleniyor', tone: 'text-warn border-warn/35 bg-warn/10' },
-  disconnected: { label: 'Kapalı', tone: 'text-ink-muted border-hairline-strong bg-surface-raised' },
-  logged_out: { label: 'Çıkış yapıldı', tone: 'text-ink-muted border-hairline-strong bg-surface-raised' },
-  banned: { label: 'Kısıtlandı', tone: 'text-danger border-danger/35 bg-danger/10' },
-  error: { label: 'Hata', tone: 'text-danger border-danger/35 bg-danger/10' },
+const STATUS_STYLES: Record<string, { label: string; tone: string; hint?: string }> = {
+  connected: {
+    label: 'Bağlı',
+    tone: 'text-ok-dim border-ok/40 bg-ok-soft',
+    hint: 'Hat hazır; gönderim yapılabilir',
+  },
+  connecting: {
+    label: 'Bağlanıyor',
+    tone: 'text-warn border-warn/35 bg-warn/10',
+    hint: 'WhatsApp oturumu kuruluyor',
+  },
+  qr_pending: {
+    label: 'QR bekleniyor',
+    tone: 'text-warn border-warn/35 bg-warn/10',
+    hint: 'Telefondan QR kodunu okutun',
+  },
+  pairing_pending: {
+    label: 'Kod bekleniyor',
+    tone: 'text-warn border-warn/35 bg-warn/10',
+    hint: 'WhatsApp’ta telefon numarasıyla bağla kodunu girin',
+  },
+  disconnected: {
+    label: 'Kapalı',
+    tone: 'text-ink-muted border-hairline-strong bg-surface-raised',
+    hint: 'Yeniden bağla ile QR veya kod alın',
+  },
+  logged_out: {
+    label: 'Çıkış yapıldı',
+    tone: 'text-ink-muted border-hairline-strong bg-surface-raised',
+    hint: 'Telefondan oturum silindi; yeniden bağlayın',
+  },
+  banned: {
+    label: 'Kısıtlandı',
+    tone: 'text-danger border-danger/35 bg-danger/10',
+    hint: 'WhatsApp bu hattan gönderimi kısıtladı',
+  },
+  error: {
+    label: 'Hata',
+    tone: 'text-danger border-danger/35 bg-danger/10',
+    hint: 'Bağlantı hatası; yeniden bağlayın',
+  },
 
-  draft: { label: 'Taslak', tone: 'text-ink-muted border-hairline-strong bg-surface-raised' },
-  scheduled: { label: 'Planlandı', tone: 'text-warn border-warn/35 bg-warn/10' },
-  running: { label: 'Gönderiliyor', tone: 'text-accent border-accent/35 bg-accent-soft' },
-  paused: { label: 'Duraklatıldı', tone: 'text-warn border-warn/35 bg-warn/10' },
-  completed: { label: 'Tamamlandı', tone: 'text-ok-dim border-ok/40 bg-ok-soft' },
-  stopped: { label: 'Durduruldu', tone: 'text-danger border-danger/35 bg-danger/10' },
-  failed: { label: 'Başarısız', tone: 'text-danger border-danger/35 bg-danger/10' },
+  draft: { label: 'Taslak', tone: 'text-ink-muted border-hairline-strong bg-surface-raised', hint: 'Henüz başlatılmadı' },
+  scheduled: { label: 'Planlandı', tone: 'text-warn border-warn/35 bg-warn/10', hint: 'Zamanı gelince başlar' },
+  running: { label: 'Gönderiliyor', tone: 'text-accent border-accent/35 bg-accent-soft', hint: 'Arka planda devam ediyor' },
+  paused: { label: 'Duraklatıldı', tone: 'text-warn border-warn/35 bg-warn/10', hint: 'Devam et ile sürer' },
+  completed: { label: 'Tamamlandı', tone: 'text-ok-dim border-ok/40 bg-ok-soft', hint: 'Tüm hedefler işlendi' },
+  stopped: { label: 'Durduruldu', tone: 'text-danger border-danger/35 bg-danger/10', hint: 'Elle veya kısıt nedeniyle durdu' },
+  failed: { label: 'Başarısız', tone: 'text-danger border-danger/35 bg-danger/10', hint: 'Gönderilemedi; ayrıntı satırda' },
 
-  // message_log + campaign_targets
-  pending: { label: 'Bekliyor', tone: 'text-ink-muted border-hairline-strong bg-surface-raised' },
-  queued: { label: 'Kuyrukta', tone: 'text-ink-muted border-hairline-strong bg-surface-raised' },
-  sending: { label: 'Gönderiliyor', tone: 'text-accent border-accent/35 bg-accent-soft' },
-  sent: { label: 'Gönderildi', tone: 'text-ok-dim border-ok/40 bg-ok-soft' },
-  skipped: { label: 'Atlandı', tone: 'text-warn border-warn/35 bg-warn/10' },
-  delivered: { label: 'Teslim', tone: 'text-ok-dim border-ok/40 bg-ok-soft' },
-  read: { label: 'Okundu', tone: 'text-accent border-accent/35 bg-accent-soft' },
+  pending: { label: 'Bekliyor', tone: 'text-ink-muted border-hairline-strong bg-surface-raised', hint: 'Sırada' },
+  queued: { label: 'Kuyrukta', tone: 'text-ink-muted border-hairline-strong bg-surface-raised', hint: 'Gönderim sırasını bekliyor' },
+  sending: { label: 'Gönderiliyor', tone: 'text-accent border-accent/35 bg-accent-soft', hint: 'Şu an işleniyor' },
+  sent: { label: 'Gönderildi', tone: 'text-ok-dim border-ok/40 bg-ok-soft', hint: 'WhatsApp’a iletildi' },
+  skipped: {
+    label: 'Atlandı',
+    tone: 'text-warn border-warn/35 bg-warn/10',
+    hint: 'WhatsApp’ta yok, kota veya geçici kilit nedeniyle atlandı',
+  },
+  delivered: { label: 'Teslim', tone: 'text-ok-dim border-ok/40 bg-ok-soft', hint: 'Cihaza ulaştı' },
+  read: { label: 'Okundu', tone: 'text-accent border-accent/35 bg-accent-soft', hint: 'Alıcı okudu' },
 }
 
 export function StatusPill({ status }: { status: string }) {
@@ -179,6 +214,7 @@ export function StatusPill({ status }: { status: string }) {
 
   return (
     <span
+      title={entry.hint}
       className={cx(
         'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11.5px] font-medium',
         entry.tone,
@@ -336,7 +372,7 @@ export function MessagePreview({
 
   return (
     <div className="rounded-md border border-hairline bg-canvas p-3">
-      <p className="mb-2 text-[11.5px] font-medium text-ink-faint">Alicinin gorecegi</p>
+      <p className="mb-2 text-[11.5px] font-medium text-ink-faint">Alıcının göreceği</p>
       <div className="max-w-xs rounded-lg rounded-tl-sm border border-hairline bg-surface-raised p-2">
         {mediaUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -347,7 +383,7 @@ export function MessagePreview({
           />
         ) : null}
         <p className="whitespace-pre-wrap text-[12.5px] text-ink">
-          {body || <span className="text-ink-faint">(yalnizca gorsel)</span>}
+          {body || <span className="text-ink-faint">(yalnızca görsel)</span>}
         </p>
       </div>
     </div>
@@ -369,18 +405,26 @@ export function HourlyBars({
     <div>
       <div className="mb-2 flex items-baseline justify-between gap-3">
         <p className="text-[11.5px] font-medium text-ink-muted">{title}</p>
-        <p className="tabular text-[11.5px] text-ink-faint">{total} giden</p>
+        <p className="tabular text-[11.5px] text-ink-faint">
+          {total === 0 ? 'Henüz giden yok' : `${total} giden`}
+        </p>
       </div>
-      <div className="flex h-10 items-end gap-px" role="img" aria-label={`${total} giden mesaj, son 24 saat`}>
-        {counts.map((count, index) => (
-          <div
-            key={index}
-            className="min-h-px flex-1 rounded-sm bg-accent/70"
-            style={{ height: `${Math.max(count > 0 ? 8 : 2, Math.round((count / max) * 100))}%` }}
-            title={`${count}`}
-          />
-        ))}
-      </div>
+      {total === 0 ? (
+        <p className="rounded-md border border-dashed border-hairline px-3 py-4 text-center text-[12px] text-ink-faint">
+          İlk mesaj gidince burada saatlik dağılım görünür. Başlamak için Hızlı gönderim kullanın.
+        </p>
+      ) : (
+        <div className="flex h-10 items-end gap-px" role="img" aria-label={`${total} giden mesaj, son 24 saat`}>
+          {counts.map((count, index) => (
+            <div
+              key={index}
+              className="min-h-px flex-1 rounded-sm bg-accent/70"
+              style={{ height: `${Math.max(count > 0 ? 8 : 2, Math.round((count / max) * 100))}%` }}
+              title={`${count}`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

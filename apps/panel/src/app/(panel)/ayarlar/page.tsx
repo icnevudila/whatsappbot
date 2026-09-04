@@ -190,13 +190,13 @@ function AiProvidersCard() {
         <ProviderRow
           label="Metin yazdırma"
           providers={text.map((provider) => provider.label)}
-          fallback="Kapalı — OPENAI_API_KEY veya GEMINI_API_KEY ekleyin"
+          fallback="Kapalı — destekten açtırmanız gerekir"
         />
 
         <p className="border-t border-hairline pt-3 text-[11.5px] leading-relaxed text-ink-faint">
           Sağdaki isimler deneme sırasına göre listelenir: ilki cevap vermezse
-          sonraki devreye girer. Anahtar eklemek için sunucunun ortam
-          değişkenlerini güncelleyip yeniden başlatmak yeterli.
+          sonraki devreye girer. Metin yazdırma ve görsel üretimi hesabınıza
+          tanındığında burada görünür.
         </p>
       </div>
     </Card>

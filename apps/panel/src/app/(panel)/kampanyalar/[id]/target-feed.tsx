@@ -116,6 +116,13 @@ export function TargetFeed({
         subtitle={`${counts.sent} gönderildi · ${counts.skipped} atlandı · ${counts.failed} başarısız · ${counts.queued + counts.sending} bekliyor`}
       />
 
+      <p className="border-b border-hairline px-4 py-2 text-[11.5px] leading-relaxed text-ink-faint">
+        <span className="font-medium text-ink-muted">Atlandı</span> = WhatsApp’ta yok,
+        kota veya geçici kilit. <span className="font-medium text-ink-muted">Başarısız</span>{' '}
+        = iletilemedi (satırdaki hata metnine bakın). Durum rozetinin üzerine gelince
+        kısa açıklama çıkar.
+      </p>
+
       <div className="flex flex-wrap gap-1 border-b border-hairline px-4 py-2">
         {FILTERS.map((item) => {
           const count = counts[item.key]

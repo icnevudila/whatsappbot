@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useState, type ReactNode } from 'react'
 import { AiWriter } from '@/components/ai-writer'
 import { Button, Card, CardHeader, Field, FileUploadButton, Input, MessagePreview, Notice, Textarea } from '@/components/ui'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
@@ -138,14 +138,34 @@ export function NewCampaignForm({
           name="lists"
           label="Kişi listeleri"
           options={lists}
-          empty="Önce Kişiler sekmesinden bir liste oluşturun."
+          empty={
+            <>
+              Önce{' '}
+              <a href="/kisiler" className="font-medium underline underline-offset-2">
+                Kişiler
+              </a>{' '}
+              sekmesinden bir liste oluşturun. Tek seferlik için{' '}
+              <a href="/hizli-gonderim" className="font-medium underline underline-offset-2">
+                Hızlı gönderim
+              </a>{' '}
+              daha uygun.
+            </>
+          }
         />
 
         <CheckboxGroup
           name="accounts"
           label="Gönderen hatlar"
           options={accounts}
-          empty="Önce bir WhatsApp hattı bağlayın."
+          empty={
+            <>
+              Önce{' '}
+              <a href="/hesaplar" className="font-medium underline underline-offset-2">
+                Hesaplar
+              </a>{' '}
+              üzerinden bir WhatsApp hattı bağlayın.
+            </>
+          }
           hint="Birden fazla hat seçerseniz gönderim aralarında paylaşılır; hat başına günlük kota ayrı işler."
         />
 
@@ -172,12 +192,18 @@ export function NewCampaignForm({
 
         {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
 
+        {lists.length === 0 || accounts.length === 0 ? (
+          <p className="text-[11.5px] text-ink-faint">
+            Gönderim için en az bir kişi listesi ve bir bağlı hat gerekir.
+          </p>
+        ) : null}
+
         <Button
           type="submit"
           variant="accent"
           disabled={pending || lists.length === 0 || accounts.length === 0}
         >
-          {pending ? 'Başlatılıyor...' : 'Oluştur ve gönder'}
+          {pending ? 'Başlatılıyor…' : 'Oluştur ve gönder'}
         </Button>
       </form>
     </Card>
@@ -194,7 +220,7 @@ function CheckboxGroup({
   name: string
   label: string
   options: Option[]
-  empty: string
+  empty: ReactNode
   hint?: string
 }) {
   return (

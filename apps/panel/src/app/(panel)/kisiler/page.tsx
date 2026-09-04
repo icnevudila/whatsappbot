@@ -1,4 +1,4 @@
-import { Card, CardHeader, EmptyState, Meter, PageHeader, Stat } from '@/components/ui'
+import { AccentLink, Card, CardHeader, EmptyState, Meter, PageHeader, Stat } from '@/components/ui'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { ImportForm } from './import-form'
 import { ListActions } from './list-actions'
@@ -12,7 +12,6 @@ export default async function ContactsPage() {
     supabase
       .from('contact_lists')
       .select('id, name, contact_count, created_at, source')
-      // Hizli gonderim ara listeleri burada gorunmez; onlar Kampanyalar'da izlenir.
       .neq('source', 'quick_send')
       .order('created_at', { ascending: false }),
     supabase.from('contacts').select('id', { count: 'exact', head: true }),
@@ -37,6 +36,7 @@ export default async function ContactsPage() {
       <PageHeader
         title="Kişiler"
         description="Tekrar kullanılacak numaraları listeler halinde tutun. Tek seferlik gönderimler için Hızlı gönderim kullanın — o gönderimler burada liste oluşturmaz."
+        action={<AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>}
       />
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -50,7 +50,8 @@ export default async function ContactsPage() {
             {lists.length === 0 ? (
               <EmptyState
                 title="Henüz liste yok"
-                description="Kampanyalarda tekrar kullanacağınız numaraları sağdaki formdan listeleyin. Tek seferlik mesaj için Hızlı gönderim yeterli."
+                description="Kampanyalarda tekrar kullanacağınız numaraları sağdaki (mobilde üstteki) formdan ekleyin. Tek seferlik mesaj için Hızlı gönderim yeterli."
+                action={<AccentLink href="/hizli-gonderim">Hızlı gönderime git</AccentLink>}
               />
             ) : (
               <ul className="divide-y divide-hairline">
@@ -76,13 +77,13 @@ export default async function ContactsPage() {
           {total > 0 ? (
             <Card>
               <CardHeader
-                title="WhatsApp dogrulama durumu"
-                subtitle="Gonderim yalnizca dogrulanmis numaralara yapilir."
+                title="WhatsApp doğrulama durumu"
+                subtitle="Gönderim yalnızca doğrulanmış veya gönderim anında kontrol edilen numaralara yapılır. Kayıtsız numaraya denemek kısıt riskini artırır."
               />
               <div className="space-y-3 p-4">
                 <div>
                   <div className="mb-1.5 flex items-baseline justify-between text-[11.5px]">
-                    <span className="text-ink-muted">Dogrulanmis</span>
+                    <span className="text-ink-muted">Doğrulanmış</span>
                     <span className="text-ink tabular">
                       {valid} / {total}
                     </span>
@@ -91,15 +92,16 @@ export default async function ContactsPage() {
                 </div>
 
                 <dl className="grid grid-cols-3 gap-3 border-t border-hairline pt-3">
-                  <Stat label="Gecerli" value={valid} tone="accent" />
-                  <Stat label="WhatsApp'ta yok" value={invalid} tone="danger" />
+                  <Stat label="Geçerli" value={valid} tone="accent" />
+                  <Stat label="WhatsApp’ta yok" value={invalid} tone="danger" />
                   <Stat label="Bekliyor" value={pendingCheck} tone="muted" />
                 </dl>
 
                 {pendingCheck > 0 ? (
                   <p className="text-[11.5px] text-ink-faint">
-                    Dogrulama icin bagli bir WhatsApp hesabi gerekiyor. Hesap bagliysa
-                    kontrol arka planda ilerler.
+                    Doğrulama için bağlı bir WhatsApp hattı gerekir. Hat bağlıysa
+                    kontrol arka planda ilerler; büyük listelerde birkaç dakika
+                    sürebilir.
                   </p>
                 ) : null}
               </div>
@@ -107,7 +109,7 @@ export default async function ContactsPage() {
           ) : null}
         </div>
 
-        <div className="order-1 lg:order-2">
+        <div className="order-1 lg:order-2" id="liste-olustur">
           <ImportForm />
         </div>
       </div>

@@ -92,7 +92,7 @@ export default async function StatusPage() {
     <>
       <PageHeader
         title="Durum"
-        description="Hatlar, kapasite ve çalışan kampanyalar. Gönderim arka planda sürer; bu sayfa izleme içindir."
+        description="Hatlar, kapasite ve çalışan kampanyalar. Gönderim arka planda sürer; bu sayfa izleme içindir. Özet kartlarındaki değerler anlık güncellenir."
         action={<AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>}
       />
 
@@ -117,8 +117,17 @@ export default async function StatusPage() {
         ) : null}
 
         <Card>
-          <div className="px-4 py-3.5">
+          <div className="space-y-3 px-4 py-3.5">
             <HourlyBars counts={hourlyCounts} />
+            <p className="border-t border-hairline pt-3 text-[11.5px] leading-relaxed text-ink-faint">
+              <span className="font-medium text-ink-muted">Bugünkü gönderim</span> =
+              bağlı hatların bugün attığı / günlük tavanı.{' '}
+              <span className="font-medium text-ink-muted">Dikkat gereken</span> =
+              kilitli hat, yeni sohbet kilidi veya kota %80 üzeri.{' '}
+              <span className="font-medium text-ink-muted">Yeni sohbet kotası</span> =
+              WhatsApp’ın tanıdığı “ilk kez yazılan numara” bütçesi; dolunca yeni
+              numaralara yazılamaz.
+            </p>
           </div>
         </Card>
 

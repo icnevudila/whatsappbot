@@ -197,7 +197,8 @@ export function StatusBoard({
           {lines.length === 0 ? (
             <EmptyState
               title="Hat yok"
-              description="Hesaplar sekmesinden QR ile ilk hattınızı bağlayın."
+              description="Hesaplar sekmesinden QR veya telefon koduyla ilk hattınızı bağlayın. Bağlantı sunucuda kalır."
+              action={<AccentLink href="/hesaplar">Hesaplara git</AccentLink>}
             />
           ) : (
             <div className="divide-y divide-hairline">

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Card, CardHeader, EmptyState, PageHeader } from '@/components/ui'
 import { DEFAULT_COLORS, type BrandColors } from '@/lib/creative-templates'
@@ -37,7 +38,7 @@ export default async function BrandKitPage() {
     <>
       <PageHeader
         title="Marka kiti"
-        description="Renklerinizi ve logonuzu bir kez tanımlayın, kampanya görsellerini tek tıkla üretin."
+        description="Renklerinizi ve logonuzu bir kez tanımlayın, kampanya görsellerini tek tıkla üretin. Üretilen görseli Hızlı gönderime taşıyabilirsiniz."
       />
 
       <BrandStudio
@@ -52,31 +53,43 @@ export default async function BrandKitPage() {
         <Card>
           <CardHeader
             title="Üretilen görseller"
-            subtitle="Hızlı gönderim ve kampanya ekranlarında bu görselleri kullanabilirsiniz."
+            subtitle="Bir görsele tıklayınca açılır; “Gönderimde kullan” Hızlı gönderime taşır."
           />
           {creatives && creatives.length > 0 ? (
             <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-4">
               {creatives.map((creative) => (
-                <a
+                <div
                   key={creative.id}
-                  href={creative.public_url ?? '#'}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="group block overflow-hidden rounded-md border border-hairline transition-colors hover:border-hairline-strong"
+                  className="overflow-hidden rounded-md border border-hairline"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={creative.public_url ?? ''}
-                    alt=""
-                    className="aspect-square w-full object-cover"
-                  />
-                </a>
+                  <a
+                    href={creative.public_url ?? '#'}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block transition-opacity hover:opacity-90"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={creative.public_url ?? ''}
+                      alt=""
+                      className="aspect-square w-full object-cover"
+                    />
+                  </a>
+                  {creative.public_url ? (
+                    <Link
+                      href={`/hizli-gonderim?media=${encodeURIComponent(creative.public_url)}`}
+                      className="block border-t border-hairline px-2 py-1.5 text-center text-[11.5px] font-medium text-accent hover:bg-surface-raised"
+                    >
+                      Gönderimde kullan
+                    </Link>
+                  ) : null}
+                </div>
               ))}
             </div>
           ) : (
             <EmptyState
               title="Henüz görsel yok"
-              description="Yukarıdaki stüdyo ile bir kampanya görseli üretin; burada listelenir."
+              description="Yukarıdaki stüdyoda başlık ve metin girip görsel üretin. Sonuç burada listelenir; ardından Hızlı gönderime taşıyabilirsiniz."
             />
           )}
         </Card>

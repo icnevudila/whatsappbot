@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Card, CardHeader, EmptyState, Meter, PageHeader, StatusPill } from '@/components/ui'
+import { AccentLink, Card, CardHeader, EmptyState, Meter, PageHeader, StatusPill } from '@/components/ui'
 import { hasTextProvider } from '@/lib/ai/text'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { NewCampaignForm } from './new-campaign-form'
@@ -56,7 +56,8 @@ export default async function CampaignsPage() {
     <>
       <PageHeader
         title="Kampanyalar"
-        description="Listeden seçip gönderin. Oluşturunca hemen başlar; duraklatabilir veya durdurabilirsiniz."
+        description="Listeden seçip gönderin. Oluşturunca hemen başlar; duraklatabilir veya durdurabilirsiniz. Canlı ilerleme ve numara satırları kampanya detayında."
+        action={<AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>}
       />
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_400px]">
@@ -67,7 +68,8 @@ export default async function CampaignsPage() {
           {campaigns.length === 0 ? (
             <EmptyState
               title="Henüz kampanya yok"
-              description="Sağdaki (mobilde alttaki) formu doldurarak ilk kampanyanızı oluşturun. Tek seferlik için Hızlı gönderim de yeterli."
+              description="Sağdaki formu doldurun: liste + mesaj + hat seçimi. Tek seferlik için numaraları yapıştırmak yeterliyse Hızlı gönderim daha hızlıdır."
+              action={<AccentLink href="/hizli-gonderim">Hızlı gönderime git</AccentLink>}
             />
           ) : (
             <ul className="divide-y divide-hairline">

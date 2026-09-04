@@ -68,8 +68,12 @@ function Onboarding({
   if (connected && hasContacts && hasCampaign) return null
 
   const steps = [
-    { done: connected, label: 'En az bir WhatsApp hattı bağla', href: '/hesaplar' as string | null },
-    { done: hasContacts, label: 'Kişi listesi veya hızlı gönderim', href: '/hizli-gonderim' },
+    { done: connected, label: 'WhatsApp hattı bağla', href: '/hesaplar' as string | null },
+    {
+      done: hasContacts || hasCampaign,
+      label: 'Liste ekle veya hızlı gönder',
+      href: hasContacts ? '/hizli-gonderim' : '/kisiler',
+    },
     { done: hasCampaign, label: 'İlk gönderimi yap', href: '/hizli-gonderim' },
   ]
 
