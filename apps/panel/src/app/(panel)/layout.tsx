@@ -1,29 +1,42 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Wordmark } from '@/components/brand'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { listUserOrgs, requireActiveOrg } from '@/lib/org'
 import { signOut } from '@/app/giris/actions'
 import { Nav } from './nav'
+import { OrgSwitcher } from './org-switcher'
 
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createSupabaseServerClient()
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  try {
+    ;({ org, supabase } = await requireActiveOrg())
+  } catch {
+    redirect('/giris')
+  }
+
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Middleware zaten koruyor; burasi ikinci kapi (dogrudan render edilirse).
-  if (!user) redirect('/giris')
-
   // Kurulum nav'da yalnizca henuz bitmemisse gorunur. Uc adimin hepsi
   // tamamlandiktan sonra kalabaliklastirmamak icin gizleniyor.
-  const [{ count: connectedCount }, { count: contactCount }, { count: campaignCount }] =
+  const [{ count: connectedCount }, { count: contactCount }, { count: campaignCount }, orgs] =
     await Promise.all([
       supabase
         .from('accounts')
         .select('id', { count: 'exact', head: true })
+        .eq('org_id', org.id)
         .eq('status', 'connected'),
-      supabase.from('contacts').select('id', { count: 'exact', head: true }),
-      supabase.from('campaigns').select('id', { count: 'exact', head: true }),
+      supabase
+        .from('contacts')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', org.id),
+      supabase
+        .from('campaigns')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', org.id),
+      listUserOrgs(),
     ])
 
   const showSetup =
@@ -42,8 +55,9 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         </div>
 
         <div className="px-2.5">
-          <p className="mb-2 truncate text-[11.5px] text-ink-faint" title={user.email ?? ''}>
-            {user.email}
+          <OrgSwitcher orgs={orgs} activeOrgId={org.id} />
+          <p className="mb-2 truncate text-[11.5px] text-ink-faint" title={user?.email ?? ''}>
+            {user?.email}
           </p>
           <form action={signOut}>
             <button
@@ -71,6 +85,9 @@ export default async function PanelLayout({ children }: { children: React.ReactN
                 Çıkış
               </button>
             </form>
+          </div>
+          <div className="mb-2">
+            <OrgSwitcher orgs={orgs} activeOrgId={org.id} />
           </div>
           <div className="overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <Nav showSetup={showSetup} orientation="horizontal" />

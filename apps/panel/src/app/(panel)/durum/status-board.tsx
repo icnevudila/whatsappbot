@@ -44,11 +44,11 @@ const ACTIVE = new Set(['running', 'paused', 'scheduled'])
 export function StatusBoard({
   initialLines,
   initialCampaigns,
-  userId,
+  orgId,
 }: {
   initialLines: LineView[]
   initialCampaigns: CampaignView[]
-  userId: string
+  orgId: string
 }) {
   const [lines, setLines] = useServerSyncedState(initialLines)
   const [campaigns, setCampaigns] = useServerSyncedState(initialCampaigns)
@@ -60,7 +60,7 @@ export function StatusBoard({
       .channel('durum-live')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'accounts', filter: `owner_id=eq.${userId}` },
+        { event: '*', schema: 'public', table: 'accounts', filter: `org_id=eq.${orgId}` },
         (payload) => {
           setLines((current) => {
             if (payload.eventType === 'DELETE') {
@@ -76,7 +76,7 @@ export function StatusBoard({
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'campaigns', filter: `owner_id=eq.${userId}` },
+        { event: '*', schema: 'public', table: 'campaigns', filter: `org_id=eq.${orgId}` },
         (payload) => {
           setCampaigns((current) => {
             if (payload.eventType === 'DELETE') {
@@ -97,7 +97,7 @@ export function StatusBoard({
     return () => {
       void supabase.removeChannel(channel)
     }
-  }, [userId, setLines, setCampaigns])
+  }, [orgId, setLines, setCampaigns])
 
   const connected = lines.filter((line) => line.status === 'connected' && !line.is_locked)
   const usedToday = connected.reduce((total, line) => {

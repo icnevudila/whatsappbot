@@ -10,7 +10,8 @@ const log = logger.child({ scope: 'jobs' })
 
 type JobRow = {
   id: string
-  owner_id: string | null
+  org_id: string | null
+  created_by: string | null
   account_id: string | null
   campaign_id: string | null
   type: string
@@ -120,6 +121,9 @@ async function handle(job: JobRow): Promise<unknown> {
       if (!session?.isLive) throw new Error('Hesap bagli degil')
 
       if (!payload.phone_e164) throw new Error('phone_e164 zorunlu')
+      if (!job.org_id || !job.created_by) {
+        throw new Error('message.send isi org_id ve created_by olmadan gelemez')
+      }
 
       // Dogrulama kapisi tek mesajda da gecerli.
       const verdict = await session.verifyNumbers([payload.phone_e164])
@@ -138,10 +142,11 @@ async function handle(job: JobRow): Promise<unknown> {
 
       await query(
         `insert into public.message_log
-           (owner_id, account_id, direction, remote_jid, phone_e164, message_type, body, media_url, wa_message_id, status)
-         values ($1, $2, 'out', $3, $4, $5, $6, $7, $8, 'sent')`,
+           (org_id, created_by, account_id, direction, remote_jid, phone_e164, message_type, body, media_url, wa_message_id, status)
+         values ($1, $2, $3, 'out', $4, $5, $6, $7, $8, $9, 'sent')`,
         [
-          job.owner_id,
+          job.org_id,
+          job.created_by,
           accountId,
           jid,
           payload.phone_e164,
@@ -157,8 +162,8 @@ async function handle(job: JobRow): Promise<unknown> {
 
     case 'contacts.verify': {
       const payload = job.payload as JobPayloadMap['contacts.verify']
-      if (!job.owner_id) throw new Error('contacts.verify isi owner_id olmadan gelemez')
-      return verifyContacts(job.owner_id, payload)
+      if (!job.org_id) throw new Error('contacts.verify isi org_id olmadan gelemez')
+      return verifyContacts(job.org_id, payload)
     }
 
     case 'campaign.start': {

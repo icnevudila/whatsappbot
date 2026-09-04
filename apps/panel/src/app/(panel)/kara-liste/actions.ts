@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { parsePhoneList } from '@wa/shared'
+import { requireActiveOrg } from '@/lib/org'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export type BlacklistState = { error?: string; ok?: string } | null
@@ -22,19 +23,23 @@ export async function addToBlacklist(
     }
   }
 
-  const supabase = await createSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Oturum bulunamadı.' }
+  let userId: string
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  try {
+    ;({ userId, org, supabase } = await requireActiveOrg())
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
+  }
 
   const { error } = await supabase.from('blacklist').upsert(
     parsed.valid.map((row) => ({
-      owner_id: user.id,
+      org_id: org.id,
+      created_by: userId,
       phone_e164: row.phone_e164,
       reason,
     })),
-    { onConflict: 'owner_id,phone_e164', ignoreDuplicates: false },
+    { onConflict: 'org_id,phone_e164', ignoreDuplicates: false },
   )
 
   if (error) return { error: error.message }
@@ -62,19 +67,23 @@ export async function blacklistPhone(
   phoneE164: string,
   reason?: string,
 ): Promise<{ error?: string }> {
-  const supabase = await createSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Oturum bulunamadı.' }
+  let userId: string
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  try {
+    ;({ userId, org, supabase } = await requireActiveOrg())
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
+  }
 
   const { error } = await supabase.from('blacklist').upsert(
     {
-      owner_id: user.id,
+      org_id: org.id,
+      created_by: userId,
       phone_e164: phoneE164,
       reason: reason ?? 'Elle eklendi',
     },
-    { onConflict: 'owner_id,phone_e164' },
+    { onConflict: 'org_id,phone_e164' },
   )
 
   if (error) return { error: error.message }

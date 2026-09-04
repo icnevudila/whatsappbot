@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { enqueueJob } from '@/lib/jobs'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { requireActiveOrg } from '@/lib/org'
 
 export type CampaignState = { error: string } | null
 
@@ -33,16 +33,20 @@ export async function createCampaign(
     return { error: 'Guvenlik icin en kisa bekleme 3 saniyeden az olamaz.' }
   }
 
-  const supabase = await createSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Oturum bulunamadi.' }
+  let userId: string
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  try {
+    ;({ userId, org, supabase } = await requireActiveOrg())
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadi.' }
+  }
 
   const { data: campaign, error } = await supabase
     .from('campaigns')
     .insert({
-      owner_id: user.id,
+      org_id: org.id,
+      created_by: userId,
       name,
       body: body || null,
       media_url: mediaUrl || null,
@@ -60,7 +64,8 @@ export async function createCampaign(
 
   const { error: linkError } = await supabase.from('campaign_accounts').insert(
     accountIds.map((accountId) => ({
-      owner_id: user.id,
+      org_id: org.id,
+      created_by: userId,
       campaign_id: campaign.id,
       account_id: accountId,
     })),

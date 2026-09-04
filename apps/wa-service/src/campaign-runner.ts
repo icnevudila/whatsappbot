@@ -34,7 +34,8 @@ function warmupCap(warmupStartedAt: string | null): number {
 
 type CampaignRow = {
   id: string
-  owner_id: string
+  org_id: string
+  created_by: string
   name: string
   message_type: string
   body: string | null
@@ -47,7 +48,8 @@ type CampaignRow = {
 
 type CampaignAccountRow = {
   account_id: string
-  owner_id: string
+  org_id: string
+  created_by: string
   daily_send_limit: number
   /** SQL: bugunku sent_today (gun donduyse 0). */
   sent_today_effective: number
@@ -85,7 +87,7 @@ export async function materializeTargets(
   campaignId: string,
 ): Promise<{ inserted: number; total: number }> {
   const campaign = await one<CampaignRow>(
-    `select id, owner_id, name, message_type, body, media_url,
+    `select id, org_id, created_by, name, message_type, body, media_url,
             min_delay_seconds, max_delay_seconds, daily_cap_per_account, source_list_ids
        from public.campaigns where id = $1`,
     [campaignId],
@@ -105,19 +107,19 @@ export async function materializeTargets(
   }
 
   const inserted = await query<{ id: string }>(
-    `insert into public.campaign_targets (campaign_id, owner_id, contact_id, phone_e164)
-     select distinct $1::uuid, $2::uuid, c.id, c.phone_e164
+    `insert into public.campaign_targets (campaign_id, org_id, created_by, contact_id, phone_e164)
+     select distinct $1::uuid, $2::uuid, $3::uuid, c.id, c.phone_e164
        from public.contacts c
        join public.contact_list_members m on m.contact_id = c.id
-      where c.owner_id = $2::uuid
-        and m.list_id = any($3::uuid[])
+      where c.org_id = $2::uuid
+        and m.list_id = any($4::uuid[])
         and not exists (
           select 1 from public.blacklist b
-           where b.owner_id = $2::uuid and b.phone_e164 = c.phone_e164
+           where b.org_id = $2::uuid and b.phone_e164 = c.phone_e164
         )
      on conflict (campaign_id, phone_e164) do nothing
      returning id`,
-    [campaignId, campaign.owner_id, campaign.source_list_ids],
+    [campaignId, campaign.org_id, campaign.created_by, campaign.source_list_ids],
   )
 
   const total = await one<{ count: string }>(
@@ -152,7 +154,8 @@ export async function stopCampaign(campaignId: string, reason: string): Promise<
 async function eligibleAccounts(campaignId: string): Promise<CampaignAccountRow[]> {
   return query<CampaignAccountRow>(
     `select ca.account_id,
-            ca.owner_id,
+            a.org_id,
+            a.created_by,
             a.daily_send_limit,
             case
               when a.sent_today_on = current_date then a.sent_today
@@ -368,10 +371,11 @@ async function sendToTarget(
 
   await query(
     `insert into public.message_log
-       (owner_id, account_id, campaign_id, direction, remote_jid, phone_e164, message_type, body, media_url, wa_message_id, status)
-     values ($1::uuid, $2::uuid, $3::uuid, 'out', $4, $5, $6, $7, $8, $9, 'sent')`,
+       (org_id, created_by, account_id, campaign_id, direction, remote_jid, phone_e164, message_type, body, media_url, wa_message_id, status)
+     values ($1::uuid, $2::uuid, $3::uuid, $4::uuid, 'out', $5, $6, $7, $8, $9, $10, 'sent')`,
     [
-      campaign.owner_id,
+      campaign.org_id,
+      campaign.created_by,
       account.account_id,
       campaign.id,
       jid,
@@ -403,7 +407,10 @@ async function handleSendFailure(
           ? '403 forbidden: hesap WhatsApp tarafindan kisitlandi'
           : 'device_removed: cihaz telefondan kaldirildi'
 
-    await lockAccount({ id: account.account_id, owner_id: account.owner_id }, reason)
+    await lockAccount(
+      { id: account.account_id, org_id: account.org_id, created_by: account.created_by },
+      reason,
+    )
 
     await query(
       `update public.campaign_targets
@@ -478,7 +485,7 @@ async function runCampaign(campaign: CampaignRow): Promise<void> {
     if (!account.enabled) continue
     if (newChatQuotaExhausted(account)) {
       await logAccountEvent(
-        { id: account.account_id, owner_id: account.owner_id },
+        { id: account.account_id, org_id: account.org_id, created_by: account.created_by },
         'warn',
         'account.new_chat_quota_exhausted',
         {
@@ -535,7 +542,7 @@ async function tick(): Promise<void> {
     await reclaimStaleSending()
 
     const campaigns = await query<CampaignRow>(
-      `select id, owner_id, name, message_type, body, media_url,
+      `select id, org_id, created_by, name, message_type, body, media_url,
               min_delay_seconds, max_delay_seconds, daily_cap_per_account, source_list_ids
          from public.campaigns
         where status = 'running'

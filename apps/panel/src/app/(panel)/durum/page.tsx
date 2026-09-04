@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { AccentLink, Card, HourlyBars, Notice, PageHeader } from '@/components/ui'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { requireActiveOrg } from '@/lib/org'
 import { EventFeed, type EventView } from './event-feed'
 import { StatusBoard, type CampaignView, type LineView } from './status-board'
 
@@ -24,11 +24,13 @@ function bucketLast24Hours(timestamps: string[]): number[] {
 }
 
 export default async function StatusPage() {
-  const supabase = await createSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) redirect('/giris')
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  try {
+    ;({ org, supabase } = await requireActiveOrg())
+  } catch {
+    redirect('/giris')
+  }
 
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 
@@ -46,29 +48,35 @@ export default async function StatusPage() {
         .select(
           'id, label, phone_e164, status, enabled, is_locked, lock_reason, daily_send_limit, sent_today, sent_today_on, warmup_started_at, new_chat_quota_total, new_chat_quota_used, reachout_locked_until',
         )
+        .eq('org_id', org.id)
         .order('created_at'),
       supabase
         .from('campaigns')
         .select('id, name, status, total_targets, sent_count, failed_count, skipped_count')
+        .eq('org_id', org.id)
         .order('created_at', { ascending: false })
         .limit(10),
       supabase
         .from('account_events')
         .select('id, account_id, level, event, detail, created_at')
+        .eq('org_id', org.id)
         .order('id', { ascending: false })
         .limit(50),
       supabase
         .from('message_log')
         .select('created_at')
+        .eq('org_id', org.id)
         .eq('direction', 'out')
         .gte('created_at', since),
       supabase
         .from('jobs')
         .select('id', { count: 'exact', head: true })
+        .eq('org_id', org.id)
         .eq('status', 'pending'),
       supabase
         .from('jobs')
         .select('created_at')
+        .eq('org_id', org.id)
         .eq('status', 'pending')
         .order('created_at', { ascending: true })
         .limit(1)
@@ -76,6 +84,7 @@ export default async function StatusPage() {
       supabase
         .from('message_log')
         .select('id', { count: 'exact', head: true })
+        .eq('org_id', org.id)
         .eq('direction', 'in')
         .gte('created_at', new Date(new Date().setHours(0, 0, 0, 0)).toISOString()),
     ])
@@ -155,13 +164,13 @@ export default async function StatusPage() {
         <StatusBoard
           initialLines={(accounts ?? []) as LineView[]}
           initialCampaigns={(campaigns ?? []) as CampaignView[]}
-          userId={user.id}
+          orgId={org.id}
         />
 
         <EventFeed
           initial={(events ?? []) as EventView[]}
           labels={labels}
-          userId={user.id}
+          orgId={org.id}
         />
       </div>
     </>

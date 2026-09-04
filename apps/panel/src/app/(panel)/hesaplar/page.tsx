@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { PageHeader } from '@/components/ui'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { requireActiveOrg } from '@/lib/org'
 import { AccountsBoard, type AccountView } from './accounts-board'
 
 export const dynamic = 'force-dynamic'
@@ -13,22 +13,32 @@ const ACCOUNT_FIELDS =
   'id, label, phone_e164, status, status_detail, enabled, is_locked, lock_reason, qr_code, qr_expires_at, pairing_code, pairing_expires_at, daily_send_limit, sent_today, sent_today_on, warmup_started_at, new_chat_quota_total, new_chat_quota_used, reachout_locked_until'
 
 export default async function AccountsPage() {
-  const supabase = await createSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) redirect('/giris')
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  try {
+    ;({ org, supabase } = await requireActiveOrg())
+  } catch {
+    redirect('/giris')
+  }
 
-  const [accountsResult, contactsResult, campaignsResult, profileResult] = await Promise.all([
-    supabase.from('accounts').select(ACCOUNT_FIELDS).order('created_at'),
-    supabase.from('contacts').select('id', { count: 'exact', head: true }),
-    supabase.from('campaigns').select('id', { count: 'exact', head: true }),
-    supabase.from('profiles').select('accounts_quota').eq('id', user.id).single(),
+  const [accountsResult, contactsResult, campaignsResult] = await Promise.all([
+    supabase
+      .from('accounts')
+      .select(ACCOUNT_FIELDS)
+      .eq('org_id', org.id)
+      .order('created_at'),
+    supabase
+      .from('contacts')
+      .select('id', { count: 'exact', head: true })
+      .eq('org_id', org.id),
+    supabase
+      .from('campaigns')
+      .select('id', { count: 'exact', head: true })
+      .eq('org_id', org.id),
   ])
 
   const accounts = (accountsResult.data ?? []) as AccountView[]
   const hasConnected = accounts.some((account) => account.status === 'connected')
-  const accountsQuota = profileResult.data?.accounts_quota ?? 40
 
   return (
     <>
@@ -45,8 +55,8 @@ export default async function AccountsPage() {
 
       <AccountsBoard
         initial={accounts}
-        userId={user.id}
-        accountsQuota={accountsQuota}
+        orgId={org.id}
+        accountsQuota={org.accounts_quota}
       />
     </>
   )

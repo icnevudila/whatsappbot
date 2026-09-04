@@ -1,5 +1,6 @@
 import { AccentLink, Card, CardHeader, EmptyState, Meter, PageHeader, Stat } from '@/components/ui'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import { requireActiveOrg } from '@/lib/org'
 import { ImportForm } from './import-form'
 import { ListActions } from './list-actions'
 import { ScrapeForm } from './scrape-form'
@@ -9,22 +10,31 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 export default async function ContactsPage() {
-  const supabase = await createSupabaseServerClient()
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  try {
+    ;({ org, supabase } = await requireActiveOrg())
+  } catch {
+    redirect('/giris')
+  }
 
   const [listsResult, totalResult, validResult, invalidResult] = await Promise.all([
     supabase
       .from('contact_lists')
       .select('id, name, contact_count, created_at, source')
+      .eq('org_id', org.id)
       .neq('source', 'quick_send')
       .order('created_at', { ascending: false }),
-    supabase.from('contacts').select('id', { count: 'exact', head: true }),
+    supabase.from('contacts').select('id', { count: 'exact', head: true }).eq('org_id', org.id),
     supabase
       .from('contacts')
       .select('id', { count: 'exact', head: true })
+      .eq('org_id', org.id)
       .eq('wa_status', 'valid'),
     supabase
       .from('contacts')
       .select('id', { count: 'exact', head: true })
+      .eq('org_id', org.id)
       .eq('wa_status', 'invalid'),
   ])
 

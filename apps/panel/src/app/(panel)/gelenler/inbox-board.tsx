@@ -37,14 +37,14 @@ const timeFormat = new Intl.DateTimeFormat('tr-TR', {
 })
 
 export function InboxBoard({
-  userId,
+  orgId,
   previews,
   selectedPhone,
   thread,
   accountLabels,
   initialInbound,
 }: {
-  userId: string
+  orgId: string
   previews: ThreadPreview[]
   selectedPhone: string | null
   thread: InboxMessage[]
@@ -72,7 +72,7 @@ export function InboxBoard({
           event: 'INSERT',
           schema: 'public',
           table: 'message_log',
-          filter: `owner_id=eq.${userId}`,
+          filter: `org_id=eq.${orgId}`,
         },
         (payload) => {
           const row = payload.new as InboxMessage
@@ -85,7 +85,7 @@ export function InboxBoard({
     return () => {
       void supabase.removeChannel(channel)
     }
-  }, [userId, router])
+  }, [orgId, router])
 
   const selectedPreview = useMemo(
     () => list.find((item) => item.phone === selectedPhone) ?? null,

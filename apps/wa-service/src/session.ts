@@ -74,7 +74,8 @@ async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): P
 
 export class WhatsAppSession {
   readonly accountId: string
-  readonly ownerId: string
+  readonly orgId: string
+  readonly createdBy: string
 
   private readonly log
   private readonly epoch: number
@@ -121,9 +122,10 @@ export class WhatsAppSession {
   /** Kod isteyen numara; 515 restart sonrasi kodu tekrar istemek icin. */
   private pairingPhone: string | undefined
 
-  constructor(account: Pick<AccountRow, 'id' | 'owner_id'>, epoch: number) {
+  constructor(account: Pick<AccountRow, 'id' | 'org_id' | 'created_by'>, epoch: number) {
     this.accountId = account.id
-    this.ownerId = account.owner_id
+    this.orgId = account.org_id
+    this.createdBy = account.created_by
     this.epoch = epoch
     this.log = logger.child({ accountId: account.id, scope: 'session' })
   }
@@ -222,7 +224,8 @@ export class WhatsAppSession {
     const { persistInboundMessage } = await import('./inbound.js')
     for (const message of messages) {
       await persistInboundMessage({
-        ownerId: this.ownerId,
+        orgId: this.orgId,
+        createdBy: this.createdBy,
         accountId: this.accountId,
         message,
       })
@@ -857,13 +860,17 @@ export class WhatsAppSession {
     await patchAccount(this.accountId, { status })
   }
 
-  /** logAccountEvent'in bekledigi sekil. */
+  /** logAccountEvent / lockAccount'in bekledigi sekil. */
   get id(): string {
     return this.accountId
   }
 
-  get owner_id(): string {
-    return this.ownerId
+  get org_id(): string {
+    return this.orgId
+  }
+
+  get created_by(): string {
+    return this.createdBy
   }
 }
 

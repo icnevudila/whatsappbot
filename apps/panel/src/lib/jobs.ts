@@ -1,5 +1,5 @@
 import type { JobPayloadMap, JobType } from '@wa/shared'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { requireActiveOrg } from '@/lib/org'
 
 /**
  * Panel WhatsApp servisine dogrudan konusmuyor.
@@ -14,21 +14,21 @@ export async function enqueueJob<T extends JobType>(options: {
   campaignId?: string
   priority?: number
 }): Promise<{ error: string | null }> {
-  const supabase = await createSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  try {
+    const { userId, org, supabase } = await requireActiveOrg()
 
-  if (!user) return { error: 'Oturum bulunamadi.' }
+    const { error } = await supabase.from('jobs').insert({
+      org_id: org.id,
+      created_by: userId,
+      type: options.type,
+      payload: (options.payload ?? {}) as never,
+      account_id: options.accountId ?? null,
+      campaign_id: options.campaignId ?? null,
+      priority: options.priority ?? 100,
+    })
 
-  const { error } = await supabase.from('jobs').insert({
-    owner_id: user.id,
-    type: options.type,
-    payload: (options.payload ?? {}) as never,
-    account_id: options.accountId ?? null,
-    campaign_id: options.campaignId ?? null,
-    priority: options.priority ?? 100,
-  })
-
-  return { error: error?.message ?? null }
+    return { error: error?.message ?? null }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
+  }
 }

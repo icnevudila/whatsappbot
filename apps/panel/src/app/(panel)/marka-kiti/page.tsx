@@ -3,27 +3,32 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Card, CardHeader, EmptyState, PageHeader } from '@/components/ui'
 import { DEFAULT_COLORS, type BrandColors } from '@/lib/creative-templates'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { requireActiveOrg } from '@/lib/org'
 import { BrandStudio } from './brand-studio'
 
 export const metadata: Metadata = { title: 'Marka kiti' }
 
 export default async function BrandKitPage() {
-  const supabase = await createSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) redirect('/giris')
+  let userId: string
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  try {
+    ;({ userId, org, supabase } = await requireActiveOrg())
+  } catch {
+    redirect('/giris')
+  }
 
   const [{ data: kit }, { data: creatives }] = await Promise.all([
     supabase
       .from('brand_kits')
       .select('id, name, colors, logo_path')
+      .eq('org_id', org.id)
       .eq('is_default', true)
       .maybeSingle(),
     supabase
       .from('creatives')
       .select('id, public_url, template, format, created_at')
+      .eq('org_id', org.id)
       .eq('status', 'ready')
       .order('created_at', { ascending: false })
       .limit(8),
@@ -46,7 +51,7 @@ export default async function BrandKitPage() {
         initialColors={colors}
         initialLogoUrl={kit?.logo_path ?? null}
         brandKitId={kit?.id ?? null}
-        userId={user.id}
+        userId={userId}
       />
 
       <div className="mt-4">

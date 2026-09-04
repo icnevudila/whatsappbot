@@ -2,17 +2,20 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { AccentLink, Card, CardHeader, EmptyState, Meter, PageHeader, StatusPill } from '@/components/ui'
 import { hasTextProvider } from '@/lib/ai/text'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { requireActiveOrg } from '@/lib/org'
 import { NewCampaignForm } from './new-campaign-form'
 
 export const dynamic = 'force-dynamic'
 
 export default async function CampaignsPage() {
-  const supabase = await createSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) redirect('/giris')
+  let userId: string
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  try {
+    ;({ userId, org, supabase } = await requireActiveOrg())
+  } catch {
+    redirect('/giris')
+  }
 
   const [campaignsResult, listsResult, accountsResult, brandResult] = await Promise.all([
     supabase
@@ -20,16 +23,22 @@ export default async function CampaignsPage() {
       .select(
         'id, name, status, total_targets, sent_count, failed_count, skipped_count, stop_reason, created_at',
       )
+      .eq('org_id', org.id)
       .order('created_at', { ascending: false }),
     supabase
       .from('contact_lists')
       .select('id, name, contact_count')
+      .eq('org_id', org.id)
       .neq('source', 'quick_send')
       .order('created_at', { ascending: false }),
-    supabase.from('accounts').select('id, label, status, is_locked').order('created_at'),
+    supabase
+      .from('accounts')
+      .select('id, label, status, is_locked')
+      .eq('org_id', org.id)
+      .order('created_at'),
     // Marka adi varsa AI metnin basina koysun; kim oldugunu belirtmeyen
     // toplu mesaj sikayet oranini belirgin sekilde yukseltiyor.
-    supabase.from('brand_kits').select('name').limit(1).maybeSingle(),
+    supabase.from('brand_kits').select('name').eq('org_id', org.id).limit(1).maybeSingle(),
   ])
 
   const campaigns = campaignsResult.data ?? []
@@ -127,7 +136,7 @@ export default async function CampaignsPage() {
         <NewCampaignForm
           lists={listOptions}
           accounts={accountOptions}
-          userId={user.id}
+          userId={userId}
           aiEnabled={hasTextProvider()}
           brandName={brandResult.data?.name ?? undefined}
         />

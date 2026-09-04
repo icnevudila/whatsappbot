@@ -2,13 +2,12 @@
 
 import { revalidatePath } from 'next/cache'
 import { enqueueJob } from '@/lib/jobs'
+import { requireActiveOrg } from '@/lib/org'
 import {
   scrapeContactsFromUrl,
   type ScrapedContact,
   type ScrapeResult,
 } from '@/lib/scraper/contacts'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
-
 export type ScrapePreviewState = {
   error?: string
   result?: ScrapeResult
@@ -75,16 +74,20 @@ export async function importScrapedContacts(
     return { error: 'En az bir telefon seçin.' }
   }
 
-  const supabase = await createSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Oturum bulunamadı.' }
+  let userId: string
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  try {
+    ;({ userId, org, supabase } = await requireActiveOrg())
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
+  }
 
   const { data: list, error: listError } = await supabase
     .from('contact_lists')
     .insert({
-      owner_id: user.id,
+      org_id: org.id,
+      created_by: userId,
       name,
       source: 'scraper',
     })
@@ -105,7 +108,8 @@ export async function importScrapedContacts(
 
     const { error: contactError } = await supabase.from('contacts').upsert(
       chunk.map((row) => ({
-        owner_id: user.id,
+        org_id: org.id,
+        created_by: userId,
         phone_e164: row.phone_e164,
         name: row.name,
         source: 'scraper' as const,
@@ -116,7 +120,7 @@ export async function importScrapedContacts(
           confidence: row.confidence,
         },
       })),
-      { onConflict: 'owner_id,phone_e164' },
+      { onConflict: 'org_id,phone_e164' },
     )
 
     if (contactError) return { error: contactError.message }
@@ -125,6 +129,7 @@ export async function importScrapedContacts(
     const { data: resolved, error: resolveError } = await supabase
       .from('contacts')
       .select('id')
+      .eq('org_id', org.id)
       .in('phone_e164', phones)
 
     if (resolveError) return { error: resolveError.message }
@@ -133,7 +138,8 @@ export async function importScrapedContacts(
 
     const { error: memberError } = await supabase.from('contact_list_members').upsert(
       contactIds.map((contactId) => ({
-        owner_id: user.id,
+        org_id: org.id,
+        created_by: userId,
         list_id: list.id,
         contact_id: contactId,
       })),

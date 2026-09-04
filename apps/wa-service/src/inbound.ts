@@ -43,11 +43,12 @@ function extractBody(message: WAMessage): { type: string; body: string | null } 
  * Cift kayit: ayni wa_message_id hesabinda bir kez tutulur.
  */
 export async function persistInboundMessage(options: {
-  ownerId: string
+  orgId: string
+  createdBy: string
   accountId: string
   message: WAMessage
 }): Promise<void> {
-  const { ownerId, accountId, message } = options
+  const { orgId, createdBy, accountId, message } = options
   const key = message.key
   if (!key?.remoteJid || key.fromMe) return
   if (isJidGroup(key.remoteJid)) return
@@ -73,19 +74,19 @@ export async function persistInboundMessage(options: {
 
   await query(
     `insert into public.message_log
-       (owner_id, account_id, direction, remote_jid, phone_e164, message_type, body, wa_message_id, status)
-     values ($1, $2, 'in', $3, $4, $5, $6, $7, 'delivered')`,
-    [ownerId, accountId, key.remoteJid, phone, type, body, waMessageId],
+       (org_id, created_by, account_id, direction, remote_jid, phone_e164, message_type, body, wa_message_id, status)
+     values ($1, $2, $3, 'in', $4, $5, $6, $7, $8, 'delivered')`,
+    [orgId, createdBy, accountId, key.remoteJid, phone, type, body, waMessageId],
   )
 
   // Opt-out: gelen metin cikma istegi gibiyse kara listeye al.
   if (phone && body && OPT_OUT.test(body)) {
     await query(
-      `insert into public.blacklist (owner_id, phone_e164, reason)
-       values ($1, $2, $3)
-       on conflict (owner_id, phone_e164) do update
+      `insert into public.blacklist (org_id, created_by, phone_e164, reason)
+       values ($1, $2, $3, $4)
+       on conflict (org_id, phone_e164) do update
          set reason = coalesce(excluded.reason, public.blacklist.reason)`,
-      [ownerId, phone, `Otomatik: gelen yanıt — ${body.slice(0, 80)}`],
+      [orgId, createdBy, phone, `Otomatik: gelen yanıt — ${body.slice(0, 80)}`],
     )
     logger.info({ accountId, phone }, 'Opt-out: kara listeye eklendi')
   }

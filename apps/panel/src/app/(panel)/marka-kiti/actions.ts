@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { requireActiveOrg } from '@/lib/org'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { DEFAULT_COLORS } from '@/lib/creative-templates'
 
@@ -26,15 +27,19 @@ export async function saveBrandKit(
     text: readColor(formData, 'text', DEFAULT_COLORS.text),
   }
 
-  const supabase = await createSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Oturum bulunamadi.' }
+  let userId: string
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  try {
+    ;({ userId, org, supabase } = await requireActiveOrg())
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadi.' }
+  }
 
   const { data: existing } = await supabase
     .from('brand_kits')
     .select('id')
+    .eq('org_id', org.id)
     .eq('is_default', true)
     .maybeSingle()
 
@@ -42,7 +47,8 @@ export async function saveBrandKit(
   // calisiyor ve logoyu HTTP uzerinden cekiyor, imzali URL her renderda
   // yenilenmesi gereken bir adim daha eklerdi.
   const payload = {
-    owner_id: user.id,
+    org_id: org.id,
+    created_by: userId,
     name,
     colors,
     logo_path: logoUrl || null,

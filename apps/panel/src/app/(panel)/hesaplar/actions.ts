@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { toE164 } from '@wa/shared'
 import { enqueueJob } from '@/lib/jobs'
+import { requireActiveOrg } from '@/lib/org'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export type ActionState = { error?: string; ok?: string } | null
@@ -14,19 +15,22 @@ export async function createAccount(
   const label = String(formData.get('label') ?? '').trim()
   if (!label) return { error: 'Hesaba bir ad verin.' }
 
-  const supabase = await createSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Oturum bulunamadı.' }
+  let userId: string
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  try {
+    ;({ userId, org, supabase } = await requireActiveOrg())
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
+  }
 
-  // Kota kontrolu: profiles.accounts_quota kullanicinin acabilecegi hesap sayisi.
-  const [{ count }, { data: profile }] = await Promise.all([
-    supabase.from('accounts').select('id', { count: 'exact', head: true }),
-    supabase.from('profiles').select('accounts_quota').eq('id', user.id).single(),
-  ])
+  // Kota kontrolu: isletmenin accounts_quota degeri.
+  const { count } = await supabase
+    .from('accounts')
+    .select('id', { count: 'exact', head: true })
+    .eq('org_id', org.id)
 
-  const quota = profile?.accounts_quota ?? 40
+  const quota = org.accounts_quota
   if ((count ?? 0) >= quota) {
     return {
       error: `Hat kotasi dolu (${count}/${quota}). Yeni hat icin Ayarlar'dan paketi kontrol edin veya kullanilmayan bir hatti silin.`,
@@ -35,7 +39,7 @@ export async function createAccount(
 
   const { data: account, error } = await supabase
     .from('accounts')
-    .insert({ owner_id: user.id, label })
+    .insert({ org_id: org.id, created_by: userId, label })
     .select('id')
     .single()
 

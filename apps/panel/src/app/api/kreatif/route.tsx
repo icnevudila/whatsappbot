@@ -10,7 +10,7 @@ import {
   type FormatKey,
   type TemplateKey,
 } from '@/lib/creative-templates'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { requireActiveOrg } from '@/lib/org'
 
 export const runtime = 'nodejs'
 
@@ -452,11 +452,12 @@ function render(
 }
 
 export async function POST(request: Request) {
-  const supabase = await createSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) {
+  let userId: string
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  try {
+    ;({ userId, org, supabase } = await requireActiveOrg())
+  } catch {
     return NextResponse.json({ error: 'Oturum bulunamadi.' }, { status: 401 })
   }
 
@@ -516,7 +517,7 @@ export async function POST(request: Request) {
 
     // Her uretim yeni yol aliyor: Baileys mediaCache anahtari yalnizca URL,
     // ayni yolun uzerine yazmak eski gorselin gonderilmesine yol acar.
-    const path = `${user.id}/${crypto.randomUUID()}.png`
+    const path = `${org.id}/${crypto.randomUUID()}.png`
 
     const { error: uploadError } = await supabase.storage
       .from('creatives')
@@ -531,7 +532,8 @@ export async function POST(request: Request) {
     const { data: creative, error: insertError } = await supabase
       .from('creatives')
       .insert({
-        owner_id: user.id,
+        org_id: org.id,
+        created_by: userId,
         brand_kit_id: body.brandKitId ?? null,
         template,
         format,

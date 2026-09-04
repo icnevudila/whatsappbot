@@ -50,11 +50,11 @@ const dayFormat = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'sho
 export function EventFeed({
   initial,
   labels,
-  userId,
+  orgId,
 }: {
   initial: EventView[]
   labels: Record<string, string>
-  userId: string
+  orgId: string
 }) {
   const [events, setEvents] = useServerSyncedState(initial)
 
@@ -69,7 +69,7 @@ export function EventFeed({
           event: 'INSERT',
           schema: 'public',
           table: 'account_events',
-          filter: `owner_id=eq.${userId}`,
+          filter: `org_id=eq.${orgId}`,
         },
         (payload) => {
           const next = payload.new as EventView
@@ -83,7 +83,7 @@ export function EventFeed({
     return () => {
       void supabase.removeChannel(channel)
     }
-  }, [userId, setEvents])
+  }, [orgId, setEvents])
 
   const today = new Date().toDateString()
 

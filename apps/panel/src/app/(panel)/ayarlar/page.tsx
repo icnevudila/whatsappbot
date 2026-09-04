@@ -4,8 +4,9 @@ import { Badge, Card, CardHeader, Meter, PageHeader } from '@/components/ui'
 import { activeImageProviders } from '@/lib/ai/image'
 import { activeTextProviders } from '@/lib/ai/text'
 import { capToday } from '@/lib/capacity'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { requireActiveOrg } from '@/lib/org'
 import { signOut } from '@/app/giris/actions'
+import { MembersPanel, OrgSettingsForm } from './org-forms'
 import { ProfileForm } from './profile-form'
 
 export const metadata: Metadata = { title: 'Ayarlar' }
@@ -20,7 +21,15 @@ const PLAN_LABELS: Record<string, string> = {
 const nf = new Intl.NumberFormat('tr-TR')
 
 export default async function SettingsPage() {
-  const supabase = await createSupabaseServerClient()
+  let userId: string
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  try {
+    ;({ userId, org, supabase } = await requireActiveOrg())
+  } catch {
+    redirect('/giris')
+  }
+
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -30,28 +39,44 @@ export default async function SettingsPage() {
   monthStart.setDate(1)
   monthStart.setHours(0, 0, 0, 0)
 
-  const [{ data: profile }, { data: accounts }, { count: sentThisMonth }] =
+  const canManage = org.role === 'owner' || org.role === 'admin'
+
+  const [{ data: profile }, { data: accounts }, { count: sentThisMonth }, { data: memberRows }] =
     await Promise.all([
       supabase
         .from('profiles')
-        .select('full_name, company, plan, accounts_quota, monthly_message_quota')
-        .eq('id', user.id)
+        .select('full_name, company')
+        .eq('id', userId)
         .single(),
       supabase
         .from('accounts')
-        .select('id, status, daily_send_limit, warmup_started_at'),
+        .select('id, status, daily_send_limit, warmup_started_at')
+        .eq('org_id', org.id),
       supabase
         .from('message_log')
         .select('id', { count: 'exact', head: true })
+        .eq('org_id', org.id)
         .eq('direction', 'out')
         .gte('created_at', monthStart.toISOString()),
+      supabase
+        .from('organization_members')
+        .select('user_id, role')
+        .eq('org_id', org.id)
+        .order('created_at', { ascending: true }),
     ])
 
-  const plan = profile?.plan ?? 'free'
-  const accountsQuota = profile?.accounts_quota ?? 40
-  const messageQuota = profile?.monthly_message_quota ?? 100_000
+  const plan = org.plan
+  const accountsQuota = org.accounts_quota
+  const messageQuota = org.monthly_message_quota
   const usedAccounts = accounts?.length ?? 0
   const usedMessages = sentThisMonth ?? 0
+
+  const members = (memberRows ?? []).map((row) => ({
+    userId: row.user_id,
+    email: row.user_id === userId ? (user.email ?? null) : null,
+    fullName: row.user_id === userId ? (profile?.full_name ?? null) : null,
+    role: row.role,
+  }))
 
   // Günlük teorik tavan: paketin değil, bağlı hatların gerçek toplamı.
   const dailyCeiling = (accounts ?? [])
@@ -72,18 +97,30 @@ export default async function SettingsPage() {
     <>
       <PageHeader
         title="Ayarlar"
-        description="Profil bilgileri, paketiniz ve kota kullanımınız."
+        description="İşletme, ekip, profil ve kota kullanımınız."
       />
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader title="Profil" />
-          <ProfileForm
-            fullName={profile?.full_name ?? ''}
-            company={profile?.company ?? ''}
-            email={user.email ?? ''}
-          />
-        </Card>
+        <div className="flex flex-col gap-4">
+          <Card>
+            <CardHeader title="İşletme" subtitle={org.slug} />
+            <OrgSettingsForm orgName={org.name} canEdit={canManage} />
+          </Card>
+
+          <Card>
+            <CardHeader title="Ekip" subtitle={`${members.length} üye`} />
+            <MembersPanel members={members} canManage={canManage} />
+          </Card>
+
+          <Card>
+            <CardHeader title="Profil" />
+            <ProfileForm
+              fullName={profile?.full_name ?? ''}
+              company={profile?.company ?? ''}
+              email={user.email ?? ''}
+            />
+          </Card>
+        </div>
 
         <div className="flex flex-col gap-4">
           <Card>

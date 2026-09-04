@@ -43,11 +43,11 @@ export type AccountView = Pick<
 
 export function AccountsBoard({
   initial,
-  userId,
+  orgId,
   accountsQuota,
 }: {
   initial: AccountView[]
-  userId: string
+  orgId: string
   accountsQuota: number
 }) {
   // Sunucu revalidate ettiginde tazelensin, Realtime olaylari da uzerine yazsin.
@@ -68,7 +68,7 @@ export function AccountsBoard({
           event: '*',
           schema: 'public',
           table: 'accounts',
-          filter: `owner_id=eq.${userId}`,
+          filter: `org_id=eq.${orgId}`,
         },
         (payload) => {
           setAccounts((current) => {
@@ -99,7 +99,7 @@ export function AccountsBoard({
     return () => {
       void supabase.removeChannel(channel)
     }
-  }, [userId, setAccounts])
+  }, [orgId, setAccounts])
 
   /**
    * Realtime'a tek basina guvenmiyoruz.
@@ -129,6 +129,7 @@ export function AccountsBoard({
         .select(
           'id, label, phone_e164, status, status_detail, enabled, is_locked, lock_reason, qr_code, qr_expires_at, pairing_code, pairing_expires_at, daily_send_limit, sent_today, sent_today_on, warmup_started_at, new_chat_quota_total, new_chat_quota_used, reachout_locked_until',
         )
+        .eq('org_id', orgId)
         .order('created_at')
 
       if (!cancelled && data) setAccounts(data as AccountView[])
@@ -146,7 +147,7 @@ export function AccountsBoard({
       cancelled = true
       clearInterval(timer)
     }
-  }, [waiting, setAccounts])
+  }, [waiting, orgId, setAccounts])
 
   const connected = accounts.filter((account) => account.status === 'connected').length
   const remaining = Math.max(0, accountsQuota - accounts.length)

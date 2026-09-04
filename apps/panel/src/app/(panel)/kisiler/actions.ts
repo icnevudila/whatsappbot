@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { parsePhoneList } from '@wa/shared'
 import { enqueueJob } from '@/lib/jobs'
+import { requireActiveOrg } from '@/lib/org'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export type ImportState = {
@@ -33,15 +34,18 @@ export async function importContacts(
     }
   }
 
-  const supabase = await createSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Oturum bulunamadı.' }
+  let userId: string
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  try {
+    ;({ userId, org, supabase } = await requireActiveOrg())
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
+  }
 
   const { data: list, error: listError } = await supabase
     .from('contact_lists')
-    .insert({ owner_id: user.id, name, source: 'manual' })
+    .insert({ org_id: org.id, created_by: userId, name, source: 'manual' })
     .select('id')
     .single()
 
@@ -55,12 +59,13 @@ export async function importContacts(
     // Ayni numara daha once eklendiyse adi guncellenmez, kayit korunur.
     const { error: contactError } = await supabase.from('contacts').upsert(
       chunk.map((row) => ({
-        owner_id: user.id,
+        org_id: org.id,
+        created_by: userId,
         phone_e164: row.phone_e164,
         name: row.name,
         source: 'manual' as const,
       })),
-      { onConflict: 'owner_id,phone_e164', ignoreDuplicates: true },
+      { onConflict: 'org_id,phone_e164', ignoreDuplicates: true },
     )
 
     if (contactError) return { error: contactError.message }
@@ -69,6 +74,7 @@ export async function importContacts(
     const { data: resolved, error: resolveError } = await supabase
       .from('contacts')
       .select('id')
+      .eq('org_id', org.id)
       .in('phone_e164', phones)
 
     if (resolveError) return { error: resolveError.message }
@@ -77,7 +83,8 @@ export async function importContacts(
 
     const { error: memberError } = await supabase.from('contact_list_members').upsert(
       contactIds.map((contactId) => ({
-        owner_id: user.id,
+        org_id: org.id,
+        created_by: userId,
         list_id: list.id,
         contact_id: contactId,
       })),

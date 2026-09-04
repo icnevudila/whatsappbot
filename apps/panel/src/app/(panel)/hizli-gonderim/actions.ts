@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { parsePhoneList } from '@wa/shared'
 import { enqueueJob } from '@/lib/jobs'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { requireActiveOrg } from '@/lib/org'
 
 export type QuickSendState = {
   error?: string
@@ -45,11 +45,14 @@ export async function quickSend(
     }
   }
 
-  const supabase = await createSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Oturum bulunamadi.' }
+  let userId: string
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  try {
+    ;({ userId, org, supabase } = await requireActiveOrg())
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadi.' }
+  }
 
   // Kampanya motoru hedefleri listelerden uretir; bu ara liste Kisiler'de
   // source=quick_send ile gizlenir. Kullaniciya ayri "liste olustur" adimi yok.
@@ -62,7 +65,8 @@ export async function quickSend(
   const { data: list, error: listError } = await supabase
     .from('contact_lists')
     .insert({
-      owner_id: user.id,
+      org_id: org.id,
+      created_by: userId,
       name: campaignName,
       source: 'quick_send',
       description: 'Hızlı gönderim ara kaydı — Kişiler listesinde gösterilmez.',
@@ -81,13 +85,14 @@ export async function quickSend(
       .from('contacts')
       .upsert(
         chunk.map((row) => ({
-          owner_id: user.id,
+          org_id: org.id,
+          created_by: userId,
           phone_e164: row.phone_e164,
           name: row.name,
           source: 'manual' as const,
         })),
         {
-          onConflict: 'owner_id,phone_e164',
+          onConflict: 'org_id,phone_e164',
           // Cakisan satirlarda guncelleme yok: INSERT yetkisi yeter, UPDATE kolon
           // haklarina bagimli kalmadan ayni numarayi tekrar kullanabiliyoruz.
           ignoreDuplicates: true,
@@ -103,6 +108,7 @@ export async function quickSend(
     const { data: resolved, error: resolveError } = await supabase
       .from('contacts')
       .select('id')
+      .eq('org_id', org.id)
       .in('phone_e164', phones)
 
     if (resolveError) return { error: resolveError.message }
@@ -111,7 +117,8 @@ export async function quickSend(
 
     const { error: memberError } = await supabase.from('contact_list_members').upsert(
       contactIds.map((contactId) => ({
-        owner_id: user.id,
+        org_id: org.id,
+        created_by: userId,
         list_id: list.id,
         contact_id: contactId,
       })),
@@ -127,7 +134,8 @@ export async function quickSend(
   const { data: campaign, error: campaignError } = await supabase
     .from('campaigns')
     .insert({
-      owner_id: user.id,
+      org_id: org.id,
+      created_by: userId,
       name: campaignName,
       body: body || null,
       media_url: mediaUrl || null,
@@ -145,7 +153,8 @@ export async function quickSend(
 
   const { error: linkError } = await supabase.from('campaign_accounts').insert(
     accountIds.map((accountId) => ({
-      owner_id: user.id,
+      org_id: org.id,
+      created_by: userId,
       campaign_id: campaign.id,
       account_id: accountId,
     })),

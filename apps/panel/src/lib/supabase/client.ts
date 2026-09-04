@@ -22,7 +22,7 @@ export function getSupabaseBrowserClient() {
    * Realtime, RLS kontrolunu HTTP baslugundan degil soket uzerindeki
    * token'dan yapiyor. Yeni sb_publishable_* anahtarlari (eski anon
    * anahtarinin yerini alan bicim) JWT degil; kullanici token'i elle
-   * verilmezse soket "anon" rolunde baglaniyor ve owner_id kapsamli RLS
+   * verilmezse soket "anon" rolunde baglaniyor ve org_id kapsamli RLS
    * politikalari her satiri eliyor.
    *
    * Bunun kotu tarafi sessiz olmasi: kanal SUBSCRIBED donuyor, hicbir hata

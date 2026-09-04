@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { AccentLink, PageHeader } from '@/components/ui'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { requireActiveOrg } from '@/lib/org'
 import { InboxBoard, type InboxMessage, type ThreadPreview } from './inbox-board'
 
 export const metadata: Metadata = { title: 'Gelenler' }
@@ -12,11 +12,13 @@ export default async function InboxPage({
 }: {
   searchParams: Promise<{ tel?: string | string[] }>
 }) {
-  const supabase = await createSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) redirect('/giris')
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  try {
+    ;({ org, supabase } = await requireActiveOrg())
+  } catch {
+    redirect('/giris')
+  }
 
   const params = await searchParams
   const telRaw = params.tel
@@ -28,13 +30,15 @@ export default async function InboxPage({
       .select(
         'id, account_id, direction, phone_e164, remote_jid, message_type, body, status, created_at, campaign_id',
       )
+      .eq('org_id', org.id)
       .eq('direction', 'in')
       .order('id', { ascending: false })
       .limit(200),
-    supabase.from('accounts').select('id, label, phone_e164'),
+    supabase.from('accounts').select('id, label, phone_e164').eq('org_id', org.id),
     supabase
       .from('message_log')
       .select('id', { count: 'exact', head: true })
+      .eq('org_id', org.id)
       .eq('direction', 'in')
       .gte('created_at', new Date(new Date().setHours(0, 0, 0, 0)).toISOString()),
   ])
@@ -65,6 +69,7 @@ export default async function InboxPage({
       .select(
         'id, account_id, direction, phone_e164, remote_jid, message_type, body, status, created_at, campaign_id',
       )
+      .eq('org_id', org.id)
       .order('id', { ascending: true })
       .limit(200)
 
@@ -92,7 +97,7 @@ export default async function InboxPage({
       />
 
       <InboxBoard
-        userId={user.id}
+        orgId={org.id}
         previews={[...previews.values()]}
         selectedPhone={selectedPhone ?? null}
         thread={thread}

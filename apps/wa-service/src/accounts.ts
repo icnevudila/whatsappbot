@@ -4,7 +4,8 @@ import { logger } from './logger.js'
 
 export type AccountRow = {
   id: string
-  owner_id: string
+  org_id: string
+  created_by: string
   label: string
   phone_e164: string | null
   wa_jid: string | null
@@ -20,7 +21,7 @@ export type AccountRow = {
   reachout_locked_until: string | null
 }
 
-const ACCOUNT_COLUMNS = `id, owner_id, label, phone_e164, wa_jid, status, enabled, is_locked,
+const ACCOUNT_COLUMNS = `id, org_id, created_by, label, phone_e164, wa_jid, status, enabled, is_locked,
   daily_send_limit, sent_today, sent_today_on, warmup_started_at,
   new_chat_quota_total, new_chat_quota_used, reachout_locked_until`
 
@@ -103,16 +104,16 @@ export async function patchAccount(accountId: string, patch: AccountPatch): Prom
 }
 
 export async function logAccountEvent(
-  account: Pick<AccountRow, 'id' | 'owner_id'>,
+  account: Pick<AccountRow, 'id' | 'org_id' | 'created_by'>,
   level: EventLevel,
   event: string,
   detail: Record<string, unknown> = {},
 ): Promise<void> {
   try {
     await query(
-      `insert into public.account_events (owner_id, account_id, level, event, detail)
-       values ($1, $2, $3, $4, $5::jsonb)`,
-      [account.owner_id, account.id, level, event, JSON.stringify(detail)],
+      `insert into public.account_events (org_id, account_id, created_by, level, event, detail)
+       values ($1, $2, $3, $4, $5, $6::jsonb)`,
+      [account.org_id, account.id, account.created_by, level, event, JSON.stringify(detail)],
     )
   } catch (error) {
     // Olay kaydi yazilamadi diye oturumu dusurmeyelim.
@@ -125,7 +126,7 @@ export async function logAccountEvent(
  * 403, device_removed ve surekli 440 gibi geri donusu olmayan durumlarda.
  */
 export async function lockAccount(
-  account: Pick<AccountRow, 'id' | 'owner_id'>,
+  account: Pick<AccountRow, 'id' | 'org_id' | 'created_by'>,
   reason: string,
 ): Promise<void> {
   // enabled'a dokunulmuyor: kilit servisin karari, hesabi kapatmak kullanicinin.

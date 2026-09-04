@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { AccentLink, EmptyState, PageHeader, StatusPill } from '@/components/ui'
 import { hasTextProvider } from '@/lib/ai/text'
 import { remainingToday } from '@/lib/capacity'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { requireActiveOrg } from '@/lib/org'
 import { QuickSendForm, type SenderOption } from './quick-send-form'
 
 export const metadata: Metadata = { title: 'Hızlı gönderim' }
@@ -14,11 +14,14 @@ export default async function QuickSendPage({
 }: {
   searchParams: Promise<{ media?: string | string[] }>
 }) {
-  const supabase = await createSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) redirect('/giris')
+  let userId: string
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  try {
+    ;({ userId, org, supabase } = await requireActiveOrg())
+  } catch {
+    redirect('/giris')
+  }
 
   const params = await searchParams
   const mediaParam = params.media
@@ -30,14 +33,16 @@ export default async function QuickSendPage({
       .select(
         'id, label, phone_e164, daily_send_limit, sent_today, sent_today_on, warmup_started_at, new_chat_quota_total, new_chat_quota_used',
       )
+      .eq('org_id', org.id)
       .eq('status', 'connected')
       .eq('enabled', true)
       .eq('is_locked', false)
       .order('created_at'),
-    supabase.from('brand_kits').select('name').limit(1).maybeSingle(),
+    supabase.from('brand_kits').select('name').eq('org_id', org.id).limit(1).maybeSingle(),
     supabase
       .from('campaigns')
       .select('id, name, status, total_targets, sent_count, created_at')
+      .eq('org_id', org.id)
       .or('name.like.Hızlı gönderim%,name.like.Hizli gonderim%')
       .order('created_at', { ascending: false })
       .limit(8),
@@ -71,7 +76,7 @@ export default async function QuickSendPage({
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
           <QuickSendForm
             senders={senders}
-            userId={user.id}
+            userId={userId}
             aiEnabled={hasTextProvider()}
             brandName={brandResult.data?.name ?? undefined}
             initialMediaUrl={initialMediaUrl}
