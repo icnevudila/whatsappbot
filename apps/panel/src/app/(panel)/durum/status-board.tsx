@@ -162,13 +162,13 @@ export function StatusBoard({
           <Stat
             className="px-4 py-3.5"
             value={`${atRisk}`}
-            label="Riskteki hat"
+            label="Dikkat gereken"
             detail={
               atRisk === 0
-                ? 'Kilit, time-lock veya kotasi dolu hat yok'
+                ? 'Kilitli veya yeni sohbet kotası dolu hat yok'
                 : [
                     lockedCount > 0 ? `${lockedCount} kilitli` : null,
-                    reachoutCount > 0 ? `${reachoutCount} time-lock` : null,
+                    reachoutCount > 0 ? `${reachoutCount} yeni sohbet kilidi` : null,
                     quotaTightCount > 0 ? `${quotaTightCount} kota >%80` : null,
                   ]
                     .filter(Boolean)

@@ -1,13 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { AccentLink, EmptyState, PageHeader } from '@/components/ui'
+import { AccentLink, EmptyState, PageHeader, StatusPill } from '@/components/ui'
 import { hasTextProvider } from '@/lib/ai/text'
 import { remainingToday } from '@/lib/capacity'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { QuickSendForm, type SenderOption } from './quick-send-form'
 
-export const metadata: Metadata = { title: 'Hizli gonderim' }
+export const metadata: Metadata = { title: 'Hızlı gönderim' }
 
 export default async function QuickSendPage({
   searchParams,
@@ -55,15 +55,15 @@ export default async function QuickSendPage({
   return (
     <>
       <PageHeader
-        title="Hizli gonderim"
-        description="Numaralari yapistirip hemen gonderin. Bu ekran liste olusturmaz; takip Kampanyalar'da olur. Tekrar kullanacaginiz numaralar icin Kisiler'e liste ekleyin."
+        title="Hızlı gönderim"
+        description="Numaraları yapıştırıp hemen gönderin. Liste oluşturmaz; takip Kampanyalar’da olur. Tekrar kullanacağınız numaralar için Kişiler’e liste ekleyin."
       />
 
       {senders.length === 0 ? (
         <div className="rounded-[10px] border border-hairline bg-surface">
           <EmptyState
-            title="Once bir hat baglayin"
-            description="Hizli gonderim icin en az bir bagli WhatsApp hatti gerekiyor. Hesaplar sekmesinden QR okutun veya telefon numarasiyla eslestirme kodu alin."
+            title="Önce bir hat bağlayın"
+            description="Hızlı gönderim için en az bir bağlı WhatsApp hattı gerekiyor. Hesaplar sekmesinden QR okutun veya telefon numarasıyla eşleştirme kodu alın."
             action={<AccentLink href="/hesaplar">Hesaplara git</AccentLink>}
           />
         </div>
@@ -79,43 +79,46 @@ export default async function QuickSendPage({
 
           <aside className="space-y-4">
             <div className="rounded-[10px] border border-hairline bg-surface p-4">
-              <h2 className="text-[13px] font-medium">Ne zaman ne kullanilir?</h2>
+              <h2 className="text-[13px] font-medium">Ne zaman ne kullanılır?</h2>
               <ul className="mt-3 space-y-2.5 text-[12px] leading-relaxed text-ink-muted">
                 <li>
-                  <span className="font-medium text-ink">Hizli gonderim</span> — tek sefer,
-                  yapistir ve gonder. Sonuc Kampanyalar'da.
+                  <span className="font-medium text-ink">Hızlı gönderim</span> — tek sefer,
+                  yapıştır ve gönder. Sonuç Kampanyalar’da.
                 </li>
                 <li>
-                  <span className="font-medium text-ink">Kisiler</span> — tekrar
-                  kullanilacak listeler (bolge, musteri grubu).
+                  <span className="font-medium text-ink">Kişiler</span> — tekrar
+                  kullanılacak listeler (bölge, müşteri grubu).
                 </li>
                 <li>
-                  <span className="font-medium text-ink">Kampanyalar</span> — listeden secip
-                  planli / cok hatli gonderim.
+                  <span className="font-medium text-ink">Kampanyalar</span> — listeden seçip
+                  planlı / çok hatlı gönderim.
                 </li>
               </ul>
             </div>
 
             <div className="rounded-[10px] border border-hairline bg-surface">
               <div className="border-b border-hairline px-4 py-3">
-                <h2 className="text-[13px] font-medium">Son hizli gonderimler</h2>
+                <h2 className="text-[13px] font-medium">Son hızlı gönderimler</h2>
                 <p className="mt-0.5 text-[11.5px] text-ink-faint">
-                  Detay ve numaralar icin kampanya sayfasina gidin.
+                  Detay ve numaralar için kampanya sayfasına gidin.
                 </p>
               </div>
               {recent.length === 0 ? (
-                <p className="px-4 py-6 text-[12px] text-ink-faint">Henuz gonderim yok.</p>
+                <p className="px-4 py-6 text-[12px] text-ink-faint">Henüz gönderim yok.</p>
               ) : (
                 <ul className="divide-y divide-hairline">
                   {recent.map((item) => (
                     <li key={item.id}>
                       <Link
                         href={`/kampanyalar/${item.id}`}
-                        className="flex flex-col gap-0.5 px-4 py-3 transition-colors hover:bg-surface-raised"
+                        className="flex flex-col gap-1 px-4 py-3 transition-colors hover:bg-surface-raised"
                       >
-                        <span className="truncate text-[12.5px] text-ink">{item.name}</span>
+                        <span className="flex items-center justify-between gap-2">
+                          <span className="truncate text-[12.5px] text-ink">{item.name}</span>
+                          <StatusPill status={item.status} />
+                        </span>
                         <span className="tabular text-[11px] text-ink-faint">
-                          {item.sent_count}/{item.total_targets} gitti · {item.status} ·{' '}
+                          {item.sent_count}/{item.total_targets} gitti ·{' '}
                           {new Date(item.created_at).toLocaleString('tr-TR', {
                             dateStyle: 'short',
                             timeStyle: 'short',

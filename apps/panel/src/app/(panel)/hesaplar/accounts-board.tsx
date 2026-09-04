@@ -298,21 +298,36 @@ function AccountCard({ account }: { account: AccountView }) {
             <Button
               onClick={() => run(() => disconnectAccount(account.id))}
               disabled={pending}
+              title="Oturumu bu sunucuda kapatır; WhatsApp'tan cihaz silinmez"
             >
-              Kapat
+              Bağlantıyı kes
             </Button>
           ) : (
             <Button
               variant="accent"
               onClick={() => run(() => connectAccount(account.id))}
               disabled={pending || account.is_locked}
+              title="QR veya eşleştirme kodunu yeniler"
             >
-              Bagla
+              Yeniden bağla
             </Button>
           )}
 
-          <Button onClick={() => run(() => logoutAccount(account.id))} disabled={pending}>
-            Cikis
+          <Button
+            onClick={() => {
+              if (
+                !window.confirm(
+                  'WhatsApp’tan bu cihazı kaldırıp oturumu silecek. Yeni QR gerekir. Devam?',
+                )
+              ) {
+                return
+              }
+              run(() => logoutAccount(account.id))
+            }}
+            disabled={pending}
+            title="Telefondaki bağlı cihazlardan kaldırır"
+          >
+            WhatsApp’tan çıkar
           </Button>
 
           <Button
@@ -320,7 +335,7 @@ function AccountCard({ account }: { account: AccountView }) {
             onClick={() => {
               if (
                 !window.confirm(
-                  'Bu hesabi silmek istiyor musunuz? Baglanti da kopar.',
+                  'Bu hattı panelden silmek istiyor musunuz? Bağlantı da kopar.',
                 )
               ) {
                 return
@@ -345,6 +360,20 @@ function AccountCard({ account }: { account: AccountView }) {
 
         {account.status !== 'connected' && !account.is_locked ? (
           <PairingSection account={account} />
+        ) : null}
+
+        {account.status === 'connected' && !account.is_locked ? (
+          <Notice tone="accent">
+            Hat bağlı. Sıradaki adım:{' '}
+            <a href="/hizli-gonderim" className="font-medium underline underline-offset-2">
+              Hızlı gönderim
+            </a>{' '}
+            veya{' '}
+            <a href="/kampanyalar" className="font-medium underline underline-offset-2">
+              Kampanya
+            </a>
+            .
+          </Notice>
         ) : null}
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -405,15 +434,8 @@ function AccountCard({ account }: { account: AccountView }) {
                 minute: '2-digit',
               })}
             </span>
-            &apos;a kadar aktif. Bu surede yalnizca onceki sohbetlere yazilabilir.
-          </Notice>
-        ) : null}
-
-        {account.reachout_locked_until &&
-        new Date(account.reachout_locked_until) > new Date() ? (
-          <Notice tone="danger">
-            Reach-out time-lock aktif. {new Date(account.reachout_locked_until).toLocaleString('tr-TR')}{' '}
-            tarihine kadar tanimadigi kisilere gonderim yapilamaz.
+            ’a kadar aktif. Bu sürede yalnızca önceki sohbetlere yazılabilir; yeni
+            numaralara gönderim durur.
           </Notice>
         ) : null}
 
@@ -465,8 +487,8 @@ function PairingSection({ account }: { account: AccountView }) {
       <div className="flex gap-1 rounded-md border border-hairline bg-canvas p-0.5">
         {(
           [
-            ['qr', 'QR ile bagla'],
-            ['code', 'Telefon numarasiyla bagla'],
+            ['qr', 'QR ile bağla'],
+            ['code', 'Telefon numarasıyla bağla'],
           ] as const
         ).map(([key, label]) => (
           <button
@@ -490,8 +512,8 @@ function PairingSection({ account }: { account: AccountView }) {
         ) : (
           <p className="rounded-md border border-hairline bg-canvas px-4 py-6 text-center text-[12.5px] text-ink-muted">
             {account.status === 'qr_pending' || account.status === 'connecting'
-              ? 'QR kodu hazirlaniyor...'
-              : 'QR kodu icin "Bagla" dugmesine basin.'}
+              ? 'QR kodu hazırlanıyor… birkaç saniye bekleyin.'
+              : 'Hat eklendiğinde QR otomatik gelir. Gelmezse yukarıdan “Yeniden bağla”ya basın.'}
           </p>
         )
       ) : account.pairing_code ? (
@@ -502,8 +524,8 @@ function PairingSection({ account }: { account: AccountView }) {
       ) : (
         <div className="rounded-md border border-hairline bg-canvas p-4">
           <Field
-            label="Baglanacak WhatsApp numarasi"
-            hint="Ulke koduyla, fazla rakam olmadan. Ornek: +90 545 365 13 19"
+            label="Bağlanacak WhatsApp numarası"
+            hint="Ülke koduyla, fazla rakam olmadan. Örnek: +90 545 365 13 19"
           >
             <Input
               value={phone}

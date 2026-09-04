@@ -34,7 +34,7 @@ export default async function AccountsPage() {
     <>
       <PageHeader
         title="Hesaplar"
-        description="Her satir ayri bir WhatsApp numarasi. Birden fazla hat baglayip kampanyada ve hizli gonderimde birlikte kullanabilirsiniz; baglanti sunucuda kalir."
+        description="Her satır ayrı bir WhatsApp numarası. Birden fazla hat bağlayıp kampanya ve hızlı gönderimde birlikte kullanabilirsiniz."
       />
 
       <Onboarding
@@ -68,9 +68,9 @@ function Onboarding({
   if (connected && hasContacts && hasCampaign) return null
 
   const steps = [
-    { done: connected, label: 'En az bir WhatsApp hatti bagla', href: null },
-    { done: hasContacts, label: 'Kisi listesi olustur (veya Hizli gonderim)', href: '/kisiler' },
-    { done: hasCampaign, label: 'Ilk gonderimi yap', href: '/hizli-gonderim' },
+    { done: connected, label: 'En az bir WhatsApp hattı bağla', href: '/hesaplar' as string | null },
+    { done: hasContacts, label: 'Kişi listesi veya hızlı gönderim', href: '/hizli-gonderim' },
+    { done: hasCampaign, label: 'İlk gönderimi yap', href: '/hizli-gonderim' },
   ]
 
   return (

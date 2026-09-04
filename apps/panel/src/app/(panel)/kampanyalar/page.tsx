@@ -46,8 +46,8 @@ export default async function CampaignsPage() {
     detail: account.is_locked
       ? 'kilitli'
       : account.status === 'connected'
-        ? 'bagli'
-        : 'bagli degil',
+        ? 'bağlı'
+        : 'bağlı değil',
     // Bagli olmayan hesap secilirse kampanya bosa donuyor; en basta engelliyoruz.
     disabled: account.is_locked || account.status !== 'connected',
   }))
@@ -56,17 +56,18 @@ export default async function CampaignsPage() {
     <>
       <PageHeader
         title="Kampanyalar"
-        description="Gonderim WhatsApp servisinde kuyruk halinde islenir. Duraklatabilir, durdurabilir veya kaldigi yerden devam ettirebilirsiniz."
+        description="Listeden seçip gönderin. Oluşturunca hemen başlar; duraklatabilir veya durdurabilirsiniz."
       />
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_400px]">
+        <div className="order-2 lg:order-1">
         <Card>
-          <CardHeader title="Gecmis" subtitle={`${campaigns.length} kampanya`} />
+          <CardHeader title="Geçmiş" subtitle={`${campaigns.length} kampanya`} />
 
           {campaigns.length === 0 ? (
             <EmptyState
-              title="Henuz kampanya yok"
-              description="Sag taraftaki formu doldurarak ilk kampanyanizi olusturun."
+              title="Henüz kampanya yok"
+              description="Sağdaki (mobilde alttaki) formu doldurarak ilk kampanyanızı oluşturun. Tek seferlik için Hızlı gönderim de yeterli."
             />
           ) : (
             <ul className="divide-y divide-hairline">
@@ -96,12 +97,12 @@ export default async function CampaignsPage() {
                       </div>
 
                       <p className="mt-1.5 text-[11.5px] text-ink-muted tabular">
-                        {campaign.sent_count} gonderildi
+                        {campaign.sent_count} gönderildi
                         {campaign.skipped_count > 0
-                          ? ` · ${campaign.skipped_count} atlandi`
+                          ? ` · ${campaign.skipped_count} atlandı`
                           : ''}
                         {campaign.failed_count > 0
-                          ? ` · ${campaign.failed_count} basarisiz`
+                          ? ` · ${campaign.failed_count} başarısız`
                           : ''}
                         {campaign.total_targets > 0 ? ` · ${campaign.total_targets} hedef` : ''}
                       </p>
@@ -118,7 +119,9 @@ export default async function CampaignsPage() {
             </ul>
           )}
         </Card>
+        </div>
 
+        <div className="order-1 lg:order-2">
         <NewCampaignForm
           lists={listOptions}
           accounts={accountOptions}
@@ -126,6 +129,7 @@ export default async function CampaignsPage() {
           aiEnabled={hasTextProvider()}
           brandName={brandResult.data?.name ?? undefined}
         />
+        </div>
       </div>
     </>
   )

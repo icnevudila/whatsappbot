@@ -50,16 +50,28 @@ export default async function PanelLayout({ children }: { children: React.ReactN
               type="submit"
               className="text-[12px] text-ink-muted transition-colors hover:text-danger"
             >
-              Cikis yap
+              Çıkış yap
             </button>
           </form>
         </div>
       </aside>
 
-      {/* Mobilde ustte yatay kaydirmali gezinme -- dikey link yigini
-          icerigi asagi itiyordu ve dokunma hedeflerini sikistiriyordu. */}
+      {/* Mobilde ustte marka + yatay gezinme */}
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="border-b border-hairline bg-surface px-3 py-2 md:hidden">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <Link href="/" className="flex items-center">
+              <Wordmark />
+            </Link>
+            <form action={signOut}>
+              <button
+                type="submit"
+                className="text-[11.5px] text-ink-muted transition-colors hover:text-danger"
+              >
+                Çıkış
+              </button>
+            </form>
+          </div>
           <div className="overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <Nav showSetup={showSetup} orientation="horizontal" />
           </div>

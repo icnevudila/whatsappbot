@@ -68,6 +68,15 @@ export async function createCampaign(
 
   if (linkError) return { error: linkError.message }
 
+  // Hizli gonderim ile ayni zihin modeli: olustur = hemen baslat.
+  const { error: jobError } = await enqueueJob({
+    type: 'campaign.start',
+    campaignId: campaign.id,
+    priority: 10,
+  })
+  if (jobError) return { error: jobError }
+
+  revalidatePath('/kampanyalar')
   redirect(`/kampanyalar/${campaign.id}`)
 }
 

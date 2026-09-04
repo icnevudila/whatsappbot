@@ -35,12 +35,12 @@ export default async function ContactsPage() {
   return (
     <>
       <PageHeader
-        title="Kisiler"
-        description="Tekrar kullanilacak numaralari listeler halinde tutun. Tek seferlik gonderimler icin Hizli gonderim kullanin — o gonderimler burada liste olusturmaz."
+        title="Kişiler"
+        description="Tekrar kullanılacak numaraları listeler halinde tutun. Tek seferlik gönderimler için Hızlı gönderim kullanın — o gönderimler burada liste oluşturmaz."
       />
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="space-y-4">
+        <div className="order-2 space-y-4 lg:order-1">
           <Card>
             <CardHeader
               title="Listeler"
@@ -49,8 +49,8 @@ export default async function ContactsPage() {
 
             {lists.length === 0 ? (
               <EmptyState
-                title="Henuz liste yok"
-                description="Kampanyalarda tekrar kullanacaginiz numaralari sagdaki formdan listeleyin. Tek seferlik mesaj icin Hizli gonderim yeterli."
+                title="Henüz liste yok"
+                description="Kampanyalarda tekrar kullanacağınız numaraları sağdaki formdan listeleyin. Tek seferlik mesaj için Hızlı gönderim yeterli."
               />
             ) : (
               <ul className="divide-y divide-hairline">
@@ -107,7 +107,9 @@ export default async function ContactsPage() {
           ) : null}
         </div>
 
-        <ImportForm />
+        <div className="order-1 lg:order-2">
+          <ImportForm />
+        </div>
       </div>
     </>
   )

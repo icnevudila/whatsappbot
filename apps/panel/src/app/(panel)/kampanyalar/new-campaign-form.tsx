@@ -67,26 +67,26 @@ export function NewCampaignForm({
     <Card>
       <CardHeader
         title="Yeni kampanya"
-        subtitle="Gonderim sunucuda calisir; bu sekmeyi kapatabilirsiniz."
+        subtitle="Oluşturunca gönderim hemen başlar. Sekmeyi kapatabilirsiniz."
       />
 
       <form action={formAction} className="space-y-4 p-4">
         <input type="hidden" name="media_url" value={mediaUrl} />
 
-        <Field label="Kampanya adi">
+        <Field label="Kampanya adı">
           <Input name="name" placeholder="Ocak indirimi duyurusu" required />
         </Field>
 
         <Field
           label="Mesaj"
-          hint="{{ad}} yazdiginiz yere kisinin adi gelir. Ismi olmayan kisilerde bos kalir."
+          hint="{{ad}} yazdığınız yere kişinin adı gelir. İsmi olmayan kişilerde boş kalır."
         >
           <Textarea
             name="body"
             rows={5}
             value={body}
             onChange={(event) => setBody(event.target.value)}
-            placeholder={'Merhaba {{ad}}, bu ay gecerli %20 indirimimizden haberdar etmek istedik.'}
+            placeholder={'Merhaba {{ad}}, bu ay geçerli %20 indirimimizden haberdar etmek istedik.'}
           />
         </Field>
 
@@ -94,13 +94,13 @@ export function NewCampaignForm({
 
         <div>
           <span className="mb-1.5 block text-[12px] font-medium text-ink-muted">
-            Gorsel (istege bagli)
+            Görsel (isteğe bağlı)
           </span>
 
           <div className="flex flex-wrap items-center gap-3">
             <FileUploadButton
               uploading={uploading}
-              label="Gorsel sec"
+              label="Görsel seç"
               onFile={(file) => void upload(file)}
             />
 
@@ -109,16 +109,16 @@ export function NewCampaignForm({
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={mediaUrl}
-                  alt="Kampanya gorseli"
+                  alt="Kampanya görseli"
                   className="size-9 rounded border border-hairline object-cover"
                 />
-                Gorsel hazir
+                Görsel hazır
                 <button
                   type="button"
                   onClick={() => setMediaUrl('')}
                   className="text-ink-muted underline underline-offset-2 hover:text-danger"
                 >
-                  kaldir
+                  kaldır
                 </button>
               </span>
             ) : null}
@@ -136,36 +136,39 @@ export function NewCampaignForm({
 
         <CheckboxGroup
           name="lists"
-          label="Kisi listeleri"
+          label="Kişi listeleri"
           options={lists}
-          empty="Once Kisiler sekmesinden bir liste olusturun."
+          empty="Önce Kişiler sekmesinden bir liste oluşturun."
         />
 
         <CheckboxGroup
           name="accounts"
-          label="Gonderen hesaplar"
+          label="Gönderen hatlar"
           options={accounts}
-          empty="Once bir WhatsApp hesabi baglayin."
-          hint="Birden fazla hesap secerseniz gonderim aralarinda paylasilir, hesap basina gunluk kota ayri isler."
+          empty="Önce bir WhatsApp hattı bağlayın."
+          hint="Birden fazla hat seçerseniz gönderim aralarında paylaşılır; hat başına günlük kota ayrı işler."
         />
 
-        <div className="grid grid-cols-3 gap-3">
-          <Field label="En kisa bekleme">
-            <Input name="min_delay" type="number" min={3} max={600} defaultValue={8} />
-          </Field>
-          <Field label="En uzun bekleme">
-            <Input name="max_delay" type="number" min={3} max={900} defaultValue={25} />
-          </Field>
-          <Field label="Hesap/gun">
-            <Input name="daily_cap" type="number" min={1} max={1000} defaultValue={100} />
-          </Field>
-        </div>
-
-        <p className="text-[11.5px] leading-relaxed text-ink-faint">
-          Mesajlar arasindaki bekleme bu iki deger arasinda rastgele secilir. Sabit aralik
-          toplu gonderimi belirgin hale getirdigi icin bu aralik onemli. Yeni baglanmis
-          hesaplarda gunluk kota, hesap yaslanana kadar otomatik olarak daha dusuk tutulur.
-        </p>
+        <details className="rounded-md border border-hairline px-3 py-2">
+          <summary className="cursor-pointer text-[12px] font-medium text-ink-muted">
+            Gelişmiş: bekleme ve günlük tavan
+          </summary>
+          <div className="mt-3 grid grid-cols-3 gap-3">
+            <Field label="En kısa (sn)">
+              <Input name="min_delay" type="number" min={3} max={600} defaultValue={8} />
+            </Field>
+            <Field label="En uzun (sn)">
+              <Input name="max_delay" type="number" min={3} max={900} defaultValue={25} />
+            </Field>
+            <Field label="Hat / gün">
+              <Input name="daily_cap" type="number" min={1} max={1000} defaultValue={100} />
+            </Field>
+          </div>
+          <p className="mt-2 text-[11.5px] leading-relaxed text-ink-faint">
+            Mesajlar arasında bekleme bu iki değer arasında rastgele seçilir. Çok kısa
+            aralık hattı riske atar; yeni hatlarda günlük tavan otomatik düşük tutulur.
+          </p>
+        </details>
 
         {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
 
@@ -174,7 +177,7 @@ export function NewCampaignForm({
           variant="accent"
           disabled={pending || lists.length === 0 || accounts.length === 0}
         >
-          {pending ? 'Olusturuluyor...' : 'Kampanyayi olustur'}
+          {pending ? 'Başlatılıyor...' : 'Oluştur ve gönder'}
         </Button>
       </form>
     </Card>

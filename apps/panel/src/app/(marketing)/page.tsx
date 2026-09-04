@@ -20,7 +20,7 @@ const STEPS = [
   {
     n: '02',
     title: 'Kisileri yukleyin',
-    body: 'CSV yukleyin ya da numaralari dogrudan yapistirin. Hepsi E.164 formatina cevrilir ve WhatsApp\u2019ta kayitli olup olmadigi tek tek dogrulanir.',
+    body: 'CSV yükleyin ya da numaraları doğrudan yapıştırın. Ülke koduna çevrilir ve WhatsApp’ta kayıtlı olup olmadığı kontrol edilir.',
   },
   {
     n: '03',
@@ -32,11 +32,11 @@ const STEPS = [
 const SAFETY = [
   {
     title: 'Numara dogrulama kapisi',
-    body: 'Gonderimden once her numara onWhatsApp ile kontrol edilir. WhatsApp\u2019ta olmayan numaraya mesaj denemek, kisit almanin en hizli yolu.',
+    body: 'Gönderimden önce her numara WhatsApp’ta kayıtlı mı diye kontrol edilir. Kayıtsız numaraya denemek kısıt almanın en hızlı yolu.',
   },
   {
     title: 'Gercek kotanin okunmasi',
-    body: 'WhatsApp\u2019in hesabiniza tanidigi yeni sohbet kotasini ve varsa reach-out kilidini dogrudan kaynaktan okuyup panelde gosteriyoruz. Tahmin yok.',
+    body: 'WhatsApp’ın hesabınıza tanıdığı yeni sohbet kotasını ve varsa geçici kilidi doğrudan kaynaktan okuyup panelde gösteriyoruz. Tahmin yok.',
   },
   {
     title: 'Isindirma egrisi',
@@ -117,7 +117,7 @@ const FAQ = [
   },
   {
     q: 'Hat kisit alirsa ne oluyor?',
-    a: 'O hat otomatik olarak duraklatilir ve panelde kilit sebebi ile birlikte gosterilir. Kampanya varsa diger hatlardan devam eder. Kilit gecici bir reach-out time-lock ise suresi bitince hat kendiliginden geri doner.',
+    a: 'O hat otomatik olarak duraklatılır ve panelde kilit sebebiyle gösterilir. Kampanya varsa diğer hatlardan devam eder. Kilit geçiciyse süresi bitince hat kendiliğinden geri döner.',
   },
 ]
 

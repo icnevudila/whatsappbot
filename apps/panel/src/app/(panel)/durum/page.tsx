@@ -5,7 +5,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { EventFeed, type EventView } from './event-feed'
 import { StatusBoard, type CampaignView, type LineView } from './status-board'
 
-export const metadata: Metadata = { title: 'Genel durum' }
+export const metadata: Metadata = { title: 'Durum' }
 
 /** Son 24 saati saat bucket'larina ayir; veri yoksa sessizce 0. */
 function bucketLast24Hours(timestamps: string[]): number[] {
@@ -91,25 +91,28 @@ export default async function StatusPage() {
   return (
     <>
       <PageHeader
-        title="Genel durum"
-        description="Hatlarin, kapasitenin ve calisan kampanyalarin anlik hali. Servis arka planda calisiyor; bu sayfa yalnizca izleme icin."
-        action={<AccentLink href="/hizli-gonderim">Hizli gonderim</AccentLink>}
+        title="Durum"
+        description="Hatlar, kapasite ve çalışan kampanyalar. Gönderim arka planda sürer; bu sayfa izleme içindir."
+        action={<AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>}
       />
 
       <div className="flex flex-col gap-4">
         {queueStalled ? (
           <Notice tone="danger">
-            Kuyrukta {pendingJobs} is bekliyor ve ilerleme yok. WhatsApp servisi
-            (wa-service) kapali veya baglantisi kopmus olabilir — gonderim ve
-            eslestirme kodu uretilmez. Yerelde <code className="text-[12px]">npm run
-            dev:service</code> ile baslatin.
+            Kuyrukta {pendingJobs} iş bekliyor ve ilerleme yok. WhatsApp bağlantı
+            servisi kapalı veya yanıt vermiyor olabilir — gönderim ve eşleştirme
+            kodu üretilmez. Hesaplar sayfasından hattı yeniden bağlayın; sorun
+            sürerse destek ile iletişime geçin.
           </Notice>
         ) : null}
 
         {connectedCount === 0 && (accounts?.length ?? 0) > 0 ? (
           <Notice tone="warn">
-            Bagli hat yok. Kampanya ve hizli gonderim calismaz. Hesaplar
-            sekmesinden QR veya telefon koduyla yeniden baglayin.
+            Bağlı hat yok. Kampanya ve hızlı gönderim çalışmaz.{' '}
+            <a href="/hesaplar" className="font-medium underline underline-offset-2">
+              Hesaplar
+            </a>{' '}
+            üzerinden QR veya telefon koduyla yeniden bağlayın.
           </Notice>
         ) : null}
 

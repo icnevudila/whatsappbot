@@ -4,17 +4,15 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 /**
- * Sira kasitli: once hat bagla, sonra kisi yukle, sonra gonder, sonra izle.
- * Hizli gonderim ve marka kiti gunluk isin kisayollari, sona kondu.
- * Kurulum yalnizca henuz tamamlanmamis kullanicilarda ustte gosterilir;
- * aksi halde nav'i kalabaliklastirmamak icin gizlenir.
+ * Sira demo hikayesine gore: hat → hizli gonder → liste/kampanya → izle.
+ * Marka kiti ve ayarlar gunluk isin disinda, sonda.
  */
 const CORE = [
   { href: '/hesaplar', label: 'Hesaplar' },
-  { href: '/kisiler', label: 'Kisiler' },
+  { href: '/hizli-gonderim', label: 'Hızlı gönderim' },
+  { href: '/kisiler', label: 'Kişiler' },
   { href: '/kampanyalar', label: 'Kampanyalar' },
-  { href: '/durum', label: 'Genel durum' },
-  { href: '/hizli-gonderim', label: 'Hizli gonderim' },
+  { href: '/durum', label: 'Durum' },
   { href: '/marka-kiti', label: 'Marka kiti' },
   { href: '/ayarlar', label: 'Ayarlar' },
 ] as const
@@ -39,7 +37,7 @@ export function Nav({
           ? 'flex w-max flex-row gap-0.5'
           : 'flex flex-col gap-0.5'
       }
-      aria-label="Ana menu"
+      aria-label="Ana menü"
     >
       {items.map((item) => {
         const active = pathname === item.href || pathname.startsWith(`${item.href}/`)

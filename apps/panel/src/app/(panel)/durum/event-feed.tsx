@@ -28,7 +28,7 @@ const LABELS: Record<string, string> = {
   'account.bad_session': 'Oturum bozuldu, yeniden baglaniyor',
   'account.connection_replaced': 'Baglanti baska bir cihaza gecti',
   'account.qr_expired': 'QR kodunun suresi doldu',
-  'account.reachout_timelock': 'Gonderim kisiti (463) uygulandi',
+  'account.reachout_timelock': 'Yeni sohbet kilidi uygulandı',
   'account.logout_requested': 'Cikis istendi',
   'account.new_chat_quota_exhausted': 'Yeni sohbet kotasi doldu',
 }

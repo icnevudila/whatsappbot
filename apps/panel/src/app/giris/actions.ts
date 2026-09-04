@@ -26,9 +26,19 @@ export async function signIn(_previous: AuthState, formData: FormData): Promise<
     return {
       error:
         error.message === 'Invalid login credentials'
-          ? 'E-posta veya sifre hatali.'
+          ? 'E-posta veya şifre hatalı.'
           : error.message,
     }
+  }
+
+  // Hat yoksa dogrudan kuruluma; dolu hesapta izleme paneline.
+  const { count: connectedCount } = await supabase
+    .from('accounts')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'connected')
+
+  if ((connectedCount ?? 0) === 0) {
+    redirect('/kurulum')
   }
 
   redirect('/durum')

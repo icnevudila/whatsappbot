@@ -144,29 +144,29 @@ export function Select({ className, ...props }: ComponentProps<'select'>) {
 }
 
 const STATUS_STYLES: Record<string, { label: string; tone: string }> = {
-  connected: { label: 'Bagli', tone: 'text-ok-dim border-ok/40 bg-ok-soft' },
-  connecting: { label: 'Baglaniyor', tone: 'text-warn border-warn/35 bg-warn/10' },
+  connected: { label: 'Bağlı', tone: 'text-ok-dim border-ok/40 bg-ok-soft' },
+  connecting: { label: 'Bağlanıyor', tone: 'text-warn border-warn/35 bg-warn/10' },
   qr_pending: { label: 'QR bekleniyor', tone: 'text-warn border-warn/35 bg-warn/10' },
   pairing_pending: { label: 'Kod bekleniyor', tone: 'text-warn border-warn/35 bg-warn/10' },
-  disconnected: { label: 'Kapali', tone: 'text-ink-muted border-hairline-strong bg-surface-raised' },
-  logged_out: { label: 'Cikis yapildi', tone: 'text-ink-muted border-hairline-strong bg-surface-raised' },
-  banned: { label: 'Kisitlandi', tone: 'text-danger border-danger/35 bg-danger/10' },
+  disconnected: { label: 'Kapalı', tone: 'text-ink-muted border-hairline-strong bg-surface-raised' },
+  logged_out: { label: 'Çıkış yapıldı', tone: 'text-ink-muted border-hairline-strong bg-surface-raised' },
+  banned: { label: 'Kısıtlandı', tone: 'text-danger border-danger/35 bg-danger/10' },
   error: { label: 'Hata', tone: 'text-danger border-danger/35 bg-danger/10' },
 
   draft: { label: 'Taslak', tone: 'text-ink-muted border-hairline-strong bg-surface-raised' },
-  scheduled: { label: 'Planlandi', tone: 'text-warn border-warn/35 bg-warn/10' },
-  running: { label: 'Gonderiliyor', tone: 'text-accent border-accent/35 bg-accent-soft' },
-  paused: { label: 'Duraklatildi', tone: 'text-warn border-warn/35 bg-warn/10' },
-  completed: { label: 'Tamamlandi', tone: 'text-ok-dim border-ok/40 bg-ok-soft' },
+  scheduled: { label: 'Planlandı', tone: 'text-warn border-warn/35 bg-warn/10' },
+  running: { label: 'Gönderiliyor', tone: 'text-accent border-accent/35 bg-accent-soft' },
+  paused: { label: 'Duraklatıldı', tone: 'text-warn border-warn/35 bg-warn/10' },
+  completed: { label: 'Tamamlandı', tone: 'text-ok-dim border-ok/40 bg-ok-soft' },
   stopped: { label: 'Durduruldu', tone: 'text-danger border-danger/35 bg-danger/10' },
-  failed: { label: 'Basarisiz', tone: 'text-danger border-danger/35 bg-danger/10' },
+  failed: { label: 'Başarısız', tone: 'text-danger border-danger/35 bg-danger/10' },
 
   // message_log + campaign_targets
   pending: { label: 'Bekliyor', tone: 'text-ink-muted border-hairline-strong bg-surface-raised' },
   queued: { label: 'Kuyrukta', tone: 'text-ink-muted border-hairline-strong bg-surface-raised' },
-  sending: { label: 'Gonderiliyor', tone: 'text-accent border-accent/35 bg-accent-soft' },
-  sent: { label: 'Gonderildi', tone: 'text-ok-dim border-ok/40 bg-ok-soft' },
-  skipped: { label: 'Atlandi', tone: 'text-warn border-warn/35 bg-warn/10' },
+  sending: { label: 'Gönderiliyor', tone: 'text-accent border-accent/35 bg-accent-soft' },
+  sent: { label: 'Gönderildi', tone: 'text-ok-dim border-ok/40 bg-ok-soft' },
+  skipped: { label: 'Atlandı', tone: 'text-warn border-warn/35 bg-warn/10' },
   delivered: { label: 'Teslim', tone: 'text-ok-dim border-ok/40 bg-ok-soft' },
   read: { label: 'Okundu', tone: 'text-accent border-accent/35 bg-accent-soft' },
 }
