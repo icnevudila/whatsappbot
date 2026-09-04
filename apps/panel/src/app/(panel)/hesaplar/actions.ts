@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { toE164 } from '@wa/shared'
 import { enqueueJob } from '@/lib/jobs'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
@@ -39,7 +40,17 @@ export async function createAccount(
   if (error) return { error: error.message }
 
   // Hesap olusur olusmaz baglanti isi kuyruga girer, QR hemen gelsin.
-  await enqueueJob({ type: 'account.connect', accountId: account.id, priority: 10 })
+  const { error: jobError } = await enqueueJob({
+    type: 'account.connect',
+    accountId: account.id,
+    priority: 10,
+  })
+  if (jobError) {
+    revalidatePath('/hesaplar')
+    return {
+      error: `Hesap olusturuldu ama baglanti kuyruga yazilamadi: ${jobError}`,
+    }
+  }
 
   revalidatePath('/hesaplar')
   return { ok: 'Hesap olusturuldu, QR kodu hazirlaniyor.' }
@@ -71,34 +82,26 @@ export async function logoutAccount(accountId: string): Promise<ActionState> {
 /**
  * QR yerine telefona 8 haneli kod gonderir.
  *
- * Numarayi burada da normalize ediyoruz: kullanici 0532..., +90 532...,
- * bosluklu gibi cok farkli bicimlerde yaziyor, WhatsApp ise yalnizca ulke
- * kodlu duz rakam kabul ediyor.
+ * Numara libphonenumber ile dogrulanir: yanlis uzunluk / fazla rakam
+ * WhatsApp'ta "telefon bulunamadi" hatasina yol aciyor.
  */
 export async function requestPairingCode(
   accountId: string,
   rawPhone: string,
 ): Promise<ActionState> {
-  const digits = rawPhone.replace(/\D/g, '')
-
-  // Turkiye icin en sik iki yanlis giris: bastaki 0 ve ulke kodu eksikligi.
-  let normalized = digits
-  if (normalized.startsWith('00')) normalized = normalized.slice(2)
-  if (normalized.length === 11 && normalized.startsWith('0')) {
-    normalized = `90${normalized.slice(1)}`
-  } else if (normalized.length === 10 && normalized.startsWith('5')) {
-    normalized = `90${normalized}`
-  }
-
-  if (normalized.length < 10 || normalized.length > 15) {
-    return { error: 'Numarayi ulke koduyla yazin. Ornek: +90 532 123 45 67' }
+  const e164 = toE164(rawPhone)
+  if (!e164) {
+    return {
+      error:
+        'Gecerli bir WhatsApp numarasi degil. Ornek: +90 545 365 13 19 (ulke koduyla, fazla rakam olmadan)',
+    }
   }
 
   const { error } = await enqueueJob({
     type: 'account.request_pairing_code',
     accountId,
     priority: 10,
-    payload: { phone_e164: `+${normalized}` },
+    payload: { phone_e164: e164 },
   })
   if (error) return { error }
 

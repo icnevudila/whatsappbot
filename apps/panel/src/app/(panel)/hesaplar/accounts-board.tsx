@@ -381,12 +381,27 @@ function PairingSection({ account }: { account: AccountView }) {
   const [phone, setPhone] = useState(account.phone_e164 ?? '')
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [waitingCode, setWaitingCode] = useState(false)
+
+  // Kod veritabanina dustugunde sekmeyi otomatik ac: kullanici "Kod al"
+  // basip QR sekmesinde kalirsa kodu hic gormuyor.
+  useEffect(() => {
+    if (account.pairing_code) {
+      setMode('code')
+      setWaitingCode(false)
+    }
+  }, [account.pairing_code])
 
   const ask = () => {
     setError(null)
+    setWaitingCode(true)
+    setMode('code')
     startTransition(async () => {
       const result = await requestPairingCode(account.id, phone)
-      if (result?.error) setError(result.error)
+      if (result?.error) {
+        setError(result.error)
+        setWaitingCode(false)
+      }
     })
   }
 
@@ -433,7 +448,7 @@ function PairingSection({ account }: { account: AccountView }) {
         <div className="rounded-md border border-hairline bg-canvas p-4">
           <Field
             label="Baglanacak WhatsApp numarasi"
-            hint="Ulke koduyla yazin. Ornek: +90 532 123 45 67"
+            hint="Ulke koduyla, fazla rakam olmadan. Ornek: +90 545 365 13 19"
           >
             <Input
               value={phone}
@@ -446,11 +461,18 @@ function PairingSection({ account }: { account: AccountView }) {
           <Button
             variant="accent"
             onClick={ask}
-            disabled={pending || phone.trim().length < 10}
+            disabled={pending || waitingCode || phone.trim().length < 10}
             className="mt-3"
           >
-            {pending ? 'Kod isteniyor...' : 'Kod al'}
+            {pending || waitingCode ? 'Kod hazirlaniyor...' : 'Kod al'}
           </Button>
+
+          {waitingCode && !error ? (
+            <p className="mt-3 text-[12.5px] text-ink-muted">
+              Servis kodu uretiyor. Birkaç saniye icinde burada buyuk harflerle
+              gorunecek; WhatsApp → Bagli cihazlar → Telefon numarasiyla bagla.
+            </p>
+          ) : null}
 
           {error ? (
             <div className="mt-3">

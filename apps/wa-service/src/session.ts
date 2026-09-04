@@ -11,7 +11,7 @@ import {
   type WASocket,
 } from '@whiskeysockets/baileys'
 import NodeCache from 'node-cache'
-import { jidToE164, type AccountStatus } from '@wa/shared'
+import { jidToE164, toE164, type AccountStatus } from '@wa/shared'
 import { createAuthHandle, type AuthHandle } from './auth-store.js'
 import { logAccountEvent, patchAccount, type AccountRow } from './accounts.js'
 import { env } from './env.js'
@@ -23,10 +23,27 @@ import { resolveWaVersion } from './wa-version.js'
 /** Undocumented: enum'da yok ama geliyor. Tanimadigi kisilere gonderim kisiti. */
 const REACH_OUT_TIME_LOCK = 463
 
-const MAX_QR_ATTEMPTS = 5
+const MAX_QR_ATTEMPTS = 30
 const REPLACED_WINDOW_MS = 30_000
 const REPLACED_LIMIT = 5
 const REPLACED_COOLDOWN_MS = 30_000
+
+/**
+ * Baileys 7'de gelen kota / time-lock API'leri 6.7'de yok.
+ * QR baglantisi rc14'te 401 verdigi icin 6.7'deyiz; bu cagrilar varsa kullanilir.
+ */
+type ExtendedWaSocket = WASocket & {
+  fetchNewChatMessageCap?: () => Promise<{
+    total_quota?: number
+    used_quota?: number
+    cycle_end_timestamp?: string
+  } | null>
+  fetchAccountReachoutTimelock?: () => Promise<{
+    isActive?: boolean
+    timeEnforcementEnds?: number | string
+    enforcementType?: string
+  } | null>
+}
 
 export type SessionOutcome = 'closed' | 'handed-over' | 'locked' | 'logged-out'
 
@@ -62,7 +79,7 @@ export class WhatsAppSession {
   private readonly log
   private readonly epoch: number
 
-  private sock: WASocket | undefined
+  private sock: ExtendedWaSocket | undefined
   private auth: AuthHandle | undefined
   private heartbeat: Timer | undefined
 
@@ -175,10 +192,19 @@ export class WhatsAppSession {
       })
     })
 
-    // WhatsApp'in gercek "yeni sohbet mesaj kotasi". Kampanya motorunun
-    // tahmin yerine sunucudan okudugu tek guvenilir butce sinyali.
-    this.sock.ev.on('message-capping.update', (info) => {
-      void this.persistQuota(info).catch((error) => {
+    // WhatsApp'in gercek "yeni sohbet mesaj kotasi" (Baileys 7+).
+    // 6.7'de olay yok; dinleyiciyi yalnizca destekleniyorsa bagliyoruz.
+    const events = this.sock.ev as unknown as {
+      on: (event: string, listener: (info: unknown) => void) => void
+    }
+    events.on('message-capping.update', (info) => {
+      void this.persistQuota(
+        (info ?? {}) as {
+          total_quota?: number
+          used_quota?: number
+          cycle_end_timestamp?: string
+        },
+      ).catch((error) => {
         this.log.warn({ err: error }, 'Kota bilgisi yazilamadi')
       })
     })
@@ -240,7 +266,7 @@ export class WhatsAppSession {
         pairing_code: null,
         pairing_expires_at: null,
         wa_jid: normalized,
-        wa_lid: this.sock?.user?.lid ?? null,
+        wa_lid: (this.sock?.user as { lid?: string } | undefined)?.lid ?? null,
         phone_e164: phone,
         connected_at: new Date().toISOString(),
         last_seen_at: new Date().toISOString(),
@@ -435,10 +461,11 @@ export class WhatsAppSession {
       throw new Error('Oturum kapaniyor, kod istenemez')
     }
 
-    const digits = phone.replace(/\D/g, '')
-    if (digits.length < 10 || digits.length > 15) {
-      throw new Error('Telefon numarasi ulke koduyla birlikte verilmeli')
+    const e164 = toE164(phone)
+    if (!e164) {
+      throw new Error('Gecerli telefon numarasi degil (ulke koduyla yazin)')
     }
+    const digits = e164.replace(/\D/g, '')
 
     if (this.auth?.state.creds.registered) {
       throw new Error('Bu hat zaten eslesmis, once cikis yapin')
@@ -563,11 +590,17 @@ export class WhatsAppSession {
     const sock = this.sock
     if (!sock) return
 
-    try {
-      const cap = await withTimeout(sock.fetchNewChatMessageCap(), 15_000, 'Kota sorgusu')
-      await this.persistQuota(cap ?? {})
-    } catch (error) {
-      this.log.debug({ err: error }, 'Kota sorgusu basarisiz')
+    if (typeof sock.fetchNewChatMessageCap === 'function') {
+      try {
+        const cap = await withTimeout(
+          sock.fetchNewChatMessageCap(),
+          15_000,
+          'Kota sorgusu',
+        )
+        await this.persistQuota(cap ?? {})
+      } catch (error) {
+        this.log.debug({ err: error }, 'Kota sorgusu basarisiz')
+      }
     }
 
     await this.captureReachoutTimelock()
@@ -575,7 +608,7 @@ export class WhatsAppSession {
 
   private async captureReachoutTimelock(): Promise<void> {
     const sock = this.sock
-    if (!sock) return
+    if (!sock || typeof sock.fetchAccountReachoutTimelock !== 'function') return
 
     try {
       const lock = await withTimeout(

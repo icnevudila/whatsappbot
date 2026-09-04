@@ -124,6 +124,25 @@ export default async function SettingsPage() {
           <AiProvidersCard />
 
           <Card>
+            <CardHeader
+              title="Gonderim servisi"
+              subtitle="Panel komut yazar; gercek WhatsApp baglantisi wa-service uzerinden gider."
+            />
+            <div className="space-y-2 p-4 text-[12.5px] leading-relaxed text-ink-muted">
+              <p>
+                Eslestirme kodu, QR ve otomatik mesaj gondermek icin WhatsApp
+                servisinin ayakta olmasi gerekir. Servis kapaliyken isler
+                kuyrukta bekler.
+              </p>
+              <p className="text-[11.5px] text-ink-faint">
+                Yerel: <code className="text-ink">npm run dev:service</code>
+                {' · '}
+                Canli izleme: Genel durum sayfasindaki kuyruk uyarisi.
+              </p>
+            </div>
+          </Card>
+
+          <Card>
             <CardHeader title="Oturum" />
             <div className="flex items-center justify-between gap-4 p-4">
               <p className="text-[12.5px] text-ink-muted">

@@ -1,8 +1,8 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Card, CardHeader, StatusPill } from '@/components/ui'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { CampaignLive, type CampaignView } from './campaign-live'
+import { TargetFeed, type TargetView } from './target-feed'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,19 +17,17 @@ export default async function CampaignDetailPage({
   const { id } = await params
   const supabase = await createSupabaseServerClient()
 
-  const [campaignResult, logResult] = await Promise.all([
+  const [campaignResult, targetsResult] = await Promise.all([
     supabase.from('campaigns').select(FIELDS).eq('id', id).single(),
     supabase
-      .from('message_log')
-      .select('id, phone_e164, status, error, created_at')
+      .from('campaign_targets')
+      .select('id, phone_e164, status, error, sent_at, wa_message_id, updated_at')
       .eq('campaign_id', id)
-      .order('created_at', { ascending: false })
-      .limit(25),
+      .order('id', { ascending: false })
+      .limit(200),
   ])
 
   if (campaignResult.error || !campaignResult.data) notFound()
-
-  const logs = logResult.data ?? []
 
   return (
     <>
@@ -42,38 +40,12 @@ export default async function CampaignDetailPage({
 
       <CampaignLive initial={campaignResult.data as CampaignView} />
 
-      {logs.length > 0 ? (
-        <div className="mt-4">
-          <Card>
-            <CardHeader title="Son gonderimler" subtitle="En yeni 25 kayit" />
-            <ul className="divide-y divide-hairline">
-              {logs.map((log) => (
-                <li
-                  key={log.id}
-                  className="flex items-start justify-between gap-3 px-4 py-2"
-                >
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono text-[12px] text-ink tabular">
-                        {log.phone_e164}
-                      </span>
-                      <StatusPill status={log.status} />
-                    </div>
-                    {log.error ? (
-                      <p className="mt-0.5 truncate text-[11.5px] text-danger">
-                        {log.error}
-                      </p>
-                    ) : null}
-                  </div>
-                  <span className="shrink-0 text-[11.5px] text-ink-faint tabular">
-                    {new Date(log.created_at).toLocaleTimeString('tr-TR')}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </Card>
-        </div>
-      ) : null}
+      <div className="mt-4">
+        <TargetFeed
+          campaignId={id}
+          initial={(targetsResult.data ?? []) as TargetView[]}
+        />
+      </div>
     </>
   )
 }

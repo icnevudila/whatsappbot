@@ -38,7 +38,7 @@ export default async function SetupPage() {
       title: 'Bir WhatsApp hatti baglayin',
       body: hasLine
         ? `${connectedCount} hat bagli. Daha fazla hat eklemek gunluk kapasitenizi artirir.`
-        : 'Hesaplar sekmesinde hat olusturun, QR kodu telefonunuzdan okutun. Baglanti sunucuda kalir; bilgisayarinizi kapatabilirsiniz.',
+        : 'Hesaplar sekmesinde hat olusturun. QR okutun veya telefon numarasiyla 8 haneli kod alin. Baglanti sunucuda kalir; paneli kapatabilirsiniz (WhatsApp servisi acik olmali).',
       href: '/hesaplar',
       cta: hasLine ? 'Hat ekle' : 'Hat bagla',
     },

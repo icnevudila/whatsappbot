@@ -14,17 +14,23 @@ export function toE164(
   const trimmed = raw.trim()
   if (!trimmed) return null
 
-  // Excel'den gelen "905321234567" gibi degerler + olmadan geliyor.
-  // Basinda + yoksa ve uzunluk uluslararasi bir numaraya benziyorsa once
-  // uluslararasi olarak denenir, sonra ulke varsayilaniyla.
-  const candidates = trimmed.startsWith('+')
-    ? [trimmed]
-    : [`+${trimmed.replace(/\D/g, '')}`, trimmed]
-
-  for (const candidate of candidates) {
-    const parsed = parsePhoneNumberFromString(candidate, defaultCountry)
-    if (parsed?.isValid()) return parsed.number
+  // Acik ulke kodu (+90...) varsa oldugu gibi dene.
+  if (trimmed.startsWith('+')) {
+    const parsed = parsePhoneNumberFromString(trimmed)
+    return parsed?.isValid() ? parsed.number : null
   }
+
+  // Ulke kodsuz giris: ONCE varsayilan ulke (TR).
+  // Aksi halde "5344272751" once +5344... diye okunup Kuba (+53) saniliyor.
+  const asNational = parsePhoneNumberFromString(trimmed, defaultCountry)
+  if (asNational?.isValid()) return asNational.number
+
+  const digits = trimmed.replace(/\D/g, '')
+  if (!digits) return null
+
+  // "905344272751" gibi +suz ama ulke kodlu yazim.
+  const asIntl = parsePhoneNumberFromString(`+${digits}`)
+  if (asIntl?.isValid()) return asIntl.number
 
   return null
 }

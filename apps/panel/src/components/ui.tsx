@@ -161,9 +161,12 @@ const STATUS_STYLES: Record<string, { label: string; tone: string }> = {
   stopped: { label: 'Durduruldu', tone: 'text-danger border-danger/35 bg-danger/10' },
   failed: { label: 'Basarisiz', tone: 'text-danger border-danger/35 bg-danger/10' },
 
-  // message_log
+  // message_log + campaign_targets
   pending: { label: 'Bekliyor', tone: 'text-ink-muted border-hairline-strong bg-surface-raised' },
+  queued: { label: 'Kuyrukta', tone: 'text-ink-muted border-hairline-strong bg-surface-raised' },
+  sending: { label: 'Gonderiliyor', tone: 'text-accent border-accent/35 bg-accent-soft' },
   sent: { label: 'Gonderildi', tone: 'text-ok-dim border-ok/40 bg-ok-soft' },
+  skipped: { label: 'Atlandi', tone: 'text-warn border-warn/35 bg-warn/10' },
   delivered: { label: 'Teslim', tone: 'text-ok-dim border-ok/40 bg-ok-soft' },
   read: { label: 'Okundu', tone: 'text-accent border-accent/35 bg-accent-soft' },
 }

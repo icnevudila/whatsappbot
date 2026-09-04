@@ -23,10 +23,10 @@ export function QrPanel({
     let cancelled = false
 
     void QRCode.toDataURL(qr, {
-      errorCorrectionLevel: 'L',
+      errorCorrectionLevel: 'M',
       margin: 2,
-      scale: 6,
-      color: { dark: '#161925', light: '#ffffff' },
+      scale: 8,
+      color: { dark: '#000000', light: '#ffffff' },
     }).then((url) => {
       if (!cancelled) setDataUrl(url)
     })
@@ -38,7 +38,7 @@ export function QrPanel({
 
   return (
     <div className="flex flex-col items-center gap-3 rounded-md border border-hairline bg-canvas p-4 sm:flex-row sm:items-start">
-      <div className="size-[164px] shrink-0 overflow-hidden rounded-md border border-hairline-strong bg-canvas">
+      <div className="size-[196px] shrink-0 overflow-hidden rounded-md border border-hairline-strong bg-white p-2">
         {dataUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={dataUrl} alt="WhatsApp QR kodu" className="size-full" />

@@ -54,7 +54,7 @@ export default async function QuickSendPage({
         <div className="rounded-[10px] border border-hairline bg-surface">
           <EmptyState
             title="Once bir hat baglayin"
-            description="Hizli gonderim icin en az bir bagli WhatsApp hatti gerekiyor. Hesaplar sekmesinden QR ile baglayabilirsiniz."
+            description="Hizli gonderim icin en az bir bagli WhatsApp hatti gerekiyor. Hesaplar sekmesinden QR okutun veya telefon numarasiyla eslestirme kodu alin."
             action={<AccentLink href="/hesaplar">Hesaplara git</AccentLink>}
           />
         </div>

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { AccentLink, Card, HourlyBars, PageHeader } from '@/components/ui'
+import { AccentLink, Card, HourlyBars, Notice, PageHeader } from '@/components/ui'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { EventFeed, type EventView } from './event-feed'
 import { StatusBoard, type CampaignView, type LineView } from './status-board'
@@ -32,8 +32,14 @@ export default async function StatusPage() {
 
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 
-  const [{ data: accounts }, { data: campaigns }, { data: events }, { data: outLog }] =
-    await Promise.all([
+  const [
+    { data: accounts },
+    { data: campaigns },
+    { data: events },
+    { data: outLog },
+    { count: pendingJobs },
+    { data: oldestPending },
+  ] = await Promise.all([
       supabase
         .from('accounts')
         .select(
@@ -55,7 +61,25 @@ export default async function StatusPage() {
         .select('created_at')
         .eq('direction', 'out')
         .gte('created_at', since),
+      supabase
+        .from('jobs')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'pending'),
+      supabase
+        .from('jobs')
+        .select('created_at')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle(),
     ])
+
+  const pendingAgeMs = oldestPending?.created_at
+    ? Date.now() - new Date(oldestPending.created_at).getTime()
+    : 0
+  // 30 sn'den eski bekleyen is = servis muhtemelen kapali veya takili.
+  const queueStalled = (pendingJobs ?? 0) > 0 && pendingAgeMs > 30_000
+  const connectedCount = (accounts ?? []).filter((a) => a.status === 'connected').length
 
   // Olay akisinda hangi hattin olayi oldugunu gostermek icin ad esleme.
   const labels = Object.fromEntries(
@@ -73,6 +97,22 @@ export default async function StatusPage() {
       />
 
       <div className="flex flex-col gap-4">
+        {queueStalled ? (
+          <Notice tone="danger">
+            Kuyrukta {pendingJobs} is bekliyor ve ilerleme yok. WhatsApp servisi
+            (wa-service) kapali veya baglantisi kopmus olabilir — gonderim ve
+            eslestirme kodu uretilmez. Yerelde <code className="text-[12px]">npm run
+            dev:service</code> ile baslatin.
+          </Notice>
+        ) : null}
+
+        {connectedCount === 0 && (accounts?.length ?? 0) > 0 ? (
+          <Notice tone="warn">
+            Bagli hat yok. Kampanya ve hizli gonderim calismaz. Hesaplar
+            sekmesinden QR veya telefon koduyla yeniden baglayin.
+          </Notice>
+        ) : null}
+
         <Card>
           <div className="px-4 py-3.5">
             <HourlyBars counts={hourlyCounts} />

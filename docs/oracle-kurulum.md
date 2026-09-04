@@ -12,6 +12,32 @@ icin fazlasiyla yeterli (oturum basina ~60 MB).
 
 ---
 
+## Windows'ta gecici 24/7 (Oracle VM hazir olana kadar)
+
+PC acik kaldigi surece:
+
+```powershell
+# Docker Desktop ACIKSA (oneri):
+powershell -File infra/start-wa-service.ps1
+
+# Docker kapaliysa npm arka plan:
+powershell -File infra/run-wa-service-windows.ps1
+```
+
+Gorev Zamanlayici: `run-wa-service-windows.ps1` veya `start-wa-service.ps1`
+icin "Oturum acildiginda" tetikleyicisi ekleyin.
+
+Oracle VM hazir olunca yerel process'i **kapatin**, uzak deploy yapin:
+
+```powershell
+$env:ORACLE_HOST = 'X.X.X.X'
+$env:ORACLE_KEY  = "$HOME\Downloads\ssh-key.key"
+powershell -File infra/oracle-remote-deploy.ps1
+docker compose -f infra/docker-compose.yml down   # yereli durdur
+```
+
+---
+
 ## 1. Hesap ac
 
 <https://www.oracle.com/cloud/free/> -> "Start for free"

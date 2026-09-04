@@ -80,23 +80,40 @@ export async function quickSend(
           name: row.name,
           source: 'manual' as const,
         })),
-        { onConflict: 'owner_id,phone_e164', ignoreDuplicates: false },
+        {
+          onConflict: 'owner_id,phone_e164',
+          // Cakisan satirlarda guncelleme yok: INSERT yetkisi yeter, UPDATE kolon
+          // haklarina bagimli kalmadan ayni numarayi tekrar kullanabiliyoruz.
+          ignoreDuplicates: true,
+        },
       )
-      .select('id')
+      .select('id, phone_e164')
 
     if (contactError) return { error: contactError.message }
 
+    // ignoreDuplicates seciliyken cakisan satirlar donmeyebilir; id'leri
+    // numaradan tekrar cekiyoruz ki liste uyeligi eksik kalmasin.
+    const phones = chunk.map((row) => row.phone_e164)
+    const { data: resolved, error: resolveError } = await supabase
+      .from('contacts')
+      .select('id')
+      .in('phone_e164', phones)
+
+    if (resolveError) return { error: resolveError.message }
+
+    const contactIds = (resolved ?? contacts ?? []).map((contact) => contact.id)
+
     const { error: memberError } = await supabase.from('contact_list_members').upsert(
-      (contacts ?? []).map((contact) => ({
+      contactIds.map((contactId) => ({
         owner_id: user.id,
         list_id: list.id,
-        contact_id: contact.id,
+        contact_id: contactId,
       })),
       { onConflict: 'list_id,contact_id', ignoreDuplicates: true },
     )
 
     if (memberError) return { error: memberError.message }
-    linked += contacts?.length ?? 0
+    linked += contactIds.length
   }
 
   await supabase.from('contact_lists').update({ contact_count: linked }).eq('id', list.id)

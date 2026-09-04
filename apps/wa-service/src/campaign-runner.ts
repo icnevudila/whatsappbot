@@ -10,6 +10,8 @@ const log = logger.child({ scope: 'campaign' })
 
 const MAX_TARGET_ATTEMPTS = 3
 const REACH_OUT_TIME_LOCK = 463
+/** Gonderim yarida kalirsa (timeout / restart) hedef 'sending'de kilitlenmesin. */
+const STALE_SENDING_MS = 90_000
 
 /**
  * Isindirma egrisi. Yeni bir hesap ilk gunden yuz mesaj atmaya kalkarsa
@@ -97,14 +99,14 @@ export async function materializeTargets(
 
   const inserted = await query<{ id: string }>(
     `insert into public.campaign_targets (campaign_id, owner_id, contact_id, phone_e164)
-     select distinct $1, $2, c.id, c.phone_e164
+     select distinct $1::uuid, $2::uuid, c.id, c.phone_e164
        from public.contacts c
        join public.contact_list_members m on m.contact_id = c.id
-      where c.owner_id = $2
+      where c.owner_id = $2::uuid
         and m.list_id = any($3::uuid[])
         and not exists (
           select 1 from public.blacklist b
-           where b.owner_id = $2 and b.phone_e164 = c.phone_e164
+           where b.owner_id = $2::uuid and b.phone_e164 = c.phone_e164
         )
      on conflict (campaign_id, phone_e164) do nothing
      returning id`,
@@ -112,7 +114,7 @@ export async function materializeTargets(
   )
 
   const total = await one<{ count: string }>(
-    'select count(*)::text as count from public.campaign_targets where campaign_id = $1',
+    'select count(*)::text as count from public.campaign_targets where campaign_id = $1::uuid',
     [campaignId],
   )
 
@@ -121,10 +123,10 @@ export async function materializeTargets(
     throw new Error('Secilen listelerde gonderilecek numara yok')
   }
 
-  await query('update public.campaigns set total_targets = $2, updated_at = now() where id = $1', [
-    campaignId,
-    totalCount,
-  ])
+  await query(
+    'update public.campaigns set total_targets = $2::int, updated_at = now() where id = $1::uuid',
+    [campaignId, totalCount],
+  )
 
   log.info({ campaignId, inserted: inserted.length, total: totalCount }, 'Hedefler hazirlandi')
   return { inserted: inserted.length, total: totalCount }
@@ -170,13 +172,54 @@ async function nextTarget(campaignId: string): Promise<TargetRow | null> {
             c.wa_jid
        from public.campaign_targets t
        left join public.contacts c on c.id = t.contact_id
-      where t.campaign_id = $1
+      where t.campaign_id = $1::uuid
         and t.status = 'queued'
         and (t.scheduled_for is null or t.scheduled_for <= now())
       order by t.id
       limit 1`,
     [campaignId],
   )
+}
+
+/**
+ * Panel sayaclari hedef durumlarindan turetilir.
+ * Artirim kacsa bile (restart / timeout) bir sonraki tick dogrular.
+ */
+async function reconcileCampaignCounts(campaignId: string): Promise<void> {
+  await query(
+    `update public.campaigns c
+        set sent_count = coalesce(s.sent, 0),
+            failed_count = coalesce(s.failed, 0),
+            skipped_count = coalesce(s.skipped, 0),
+            updated_at = now()
+       from (
+         select count(*) filter (where status = 'sent') as sent,
+                count(*) filter (where status = 'failed') as failed,
+                count(*) filter (where status = 'skipped') as skipped
+           from public.campaign_targets
+          where campaign_id = $1::uuid
+       ) s
+      where c.id = $1::uuid`,
+    [campaignId],
+  )
+}
+
+/** Yarida kalan 'sending' hedefleri kuyruga geri al. */
+async function reclaimStaleSending(): Promise<void> {
+  const rows = await query<{ id: string; campaign_id: string }>(
+    `update public.campaign_targets
+        set status = 'queued',
+            error = coalesce(error, 'Gonderim yarida kaldi, yeniden denenecek'),
+            updated_at = now()
+      where status = 'sending'
+        and updated_at < now() - ($1::int * interval '1 millisecond')
+      returning id, campaign_id`,
+    [STALE_SENDING_MS],
+  )
+
+  if (rows.length > 0) {
+    log.warn({ count: rows.length }, 'Takili sending hedefleri kuyruga alindi')
+  }
 }
 
 function personalize(body: string | null, name: string | null): string {
@@ -247,13 +290,10 @@ async function sendToTarget(
       await query(
         `update public.campaign_targets
             set status = 'skipped', error = 'Numara WhatsApp''ta kayitli degil', updated_at = now()
-          where id = $1`,
+          where id = $1::uuid`,
         [target.id],
       )
-      await query(
-        'update public.campaigns set skipped_count = skipped_count + 1, updated_at = now() where id = $1',
-        [campaign.id],
-      )
+      await reconcileCampaignCounts(campaign.id)
       return
     }
 
@@ -274,28 +314,25 @@ async function sendToTarget(
   await query(
     `update public.campaign_targets
         set status = 'sent', wa_message_id = $2, sent_at = now(), error = null, updated_at = now()
-      where id = $1`,
+      where id = $1::uuid`,
     [target.id, message.key?.id ?? null],
-  )
-
-  await query(
-    `update public.campaigns set sent_count = sent_count + 1, updated_at = now() where id = $1`,
-    [campaign.id],
   )
 
   await query(
     `update public.campaign_accounts
         set sent_count = sent_count + 1
-      where campaign_id = $1 and account_id = $2`,
+      where campaign_id = $1::uuid and account_id = $2::uuid`,
     [campaign.id, account.account_id],
   )
+
+  await reconcileCampaignCounts(campaign.id)
 
   await incrementSentToday(account.account_id)
 
   await query(
     `insert into public.message_log
        (owner_id, account_id, campaign_id, direction, remote_jid, phone_e164, message_type, body, media_url, wa_message_id, status)
-     values ($1, $2, $3, 'out', $4, $5, $6, $7, $8, $9, 'sent')`,
+     values ($1::uuid, $2::uuid, $3::uuid, 'out', $4, $5, $6, $7, $8, $9, 'sent')`,
     [
       campaign.owner_id,
       account.account_id,
@@ -350,29 +387,28 @@ async function handleSendFailure(
     await query(
       `update public.campaign_targets
           set status = 'failed', error = $2, updated_at = now()
-        where id = $1`,
+        where id = $1::uuid`,
       [target.id, message],
     )
-    await query(
-      'update public.campaigns set failed_count = failed_count + 1, updated_at = now() where id = $1',
-      [campaign.id],
-    )
+    await reconcileCampaignCounts(campaign.id)
     return
   }
 
   await query(
     `update public.campaign_targets
         set status = 'queued', error = $2, scheduled_for = now() + interval '2 minutes', updated_at = now()
-      where id = $1`,
+      where id = $1::uuid`,
     [target.id, message],
   )
 }
 
 async function completeIfDone(campaignId: string): Promise<boolean> {
+  await reconcileCampaignCounts(campaignId)
+
   const row = await one<{ count: string }>(
     `select count(*)::text as count
        from public.campaign_targets
-      where campaign_id = $1 and status in ('queued', 'sending')`,
+      where campaign_id = $1::uuid and status in ('queued', 'sending')`,
     [campaignId],
   )
 
@@ -381,7 +417,7 @@ async function completeIfDone(campaignId: string): Promise<boolean> {
   await query(
     `update public.campaigns
         set status = 'completed', completed_at = now(), updated_at = now()
-      where id = $1 and status = 'running'`,
+      where id = $1::uuid and status = 'running'`,
     [campaignId],
   )
   log.info({ campaignId }, 'Kampanya tamamlandi')
@@ -459,6 +495,8 @@ let running = false
 let timer: ReturnType<typeof setTimeout> | undefined
 
 async function tick(): Promise<void> {
+  await reclaimStaleSending()
+
   const campaigns = await query<CampaignRow>(
     `select id, owner_id, name, message_type, body, media_url,
             min_delay_seconds, max_delay_seconds, daily_cap_per_account, source_list_ids
@@ -470,6 +508,7 @@ async function tick(): Promise<void> {
   for (const campaign of campaigns) {
     try {
       await runCampaign(campaign)
+      await completeIfDone(campaign.id)
     } catch (error) {
       log.error({ err: error, campaignId: campaign.id }, 'Kampanya isletilirken hata')
     }

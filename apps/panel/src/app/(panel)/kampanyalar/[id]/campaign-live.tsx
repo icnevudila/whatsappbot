@@ -39,6 +39,8 @@ export function CampaignLive({ initial }: { initial: CampaignView }) {
    * Ilerleme kampanya satirinin kendisinde tutuluyor (sent_count vb.),
    * bu yuzden tek satir aboneligi canli ilerleme icin yeterli:
    * her mesaj icin ayri olay dinlemek gerekmiyor.
+   *
+   * Realtime kopsa bile polling yedegi var: gonderildi 0'da takili kalmasin.
    */
   useEffect(() => {
     const supabase = getSupabaseBrowserClient()
@@ -59,7 +61,25 @@ export function CampaignLive({ initial }: { initial: CampaignView }) {
       )
       .subscribe()
 
+    const poll = async () => {
+      if (document.visibilityState !== 'visible') return
+      const { data } = await supabase
+        .from('campaigns')
+        .select(
+          'id, name, status, body, media_url, total_targets, sent_count, failed_count, skipped_count, stop_reason, min_delay_seconds, max_delay_seconds, daily_cap_per_account, started_at, completed_at',
+        )
+        .eq('id', initial.id)
+        .maybeSingle()
+      if (data) setCampaign(data as CampaignView)
+    }
+
+    const timer = setInterval(() => {
+      void poll()
+    }, 3_000)
+    void poll()
+
     return () => {
+      clearInterval(timer)
       void supabase.removeChannel(channel)
     }
   }, [initial.id])

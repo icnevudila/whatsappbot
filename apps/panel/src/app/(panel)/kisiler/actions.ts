@@ -56,32 +56,39 @@ export async function importContacts(
     const chunk = parsed.valid.slice(index, index + CHUNK)
 
     // Ayni numara daha once eklendiyse adi guncellenmez, kayit korunur.
-    const { data: contacts, error: contactError } = await supabase
-      .from('contacts')
-      .upsert(
-        chunk.map((row) => ({
-          owner_id: user.id,
-          phone_e164: row.phone_e164,
-          name: row.name,
-          source: 'manual' as const,
-        })),
-        { onConflict: 'owner_id,phone_e164', ignoreDuplicates: false },
-      )
-      .select('id')
+    const { error: contactError } = await supabase.from('contacts').upsert(
+      chunk.map((row) => ({
+        owner_id: user.id,
+        phone_e164: row.phone_e164,
+        name: row.name,
+        source: 'manual' as const,
+      })),
+      { onConflict: 'owner_id,phone_e164', ignoreDuplicates: true },
+    )
 
     if (contactError) return { error: contactError.message }
 
+    const phones = chunk.map((row) => row.phone_e164)
+    const { data: resolved, error: resolveError } = await supabase
+      .from('contacts')
+      .select('id')
+      .in('phone_e164', phones)
+
+    if (resolveError) return { error: resolveError.message }
+
+    const contactIds = (resolved ?? []).map((contact) => contact.id)
+
     const { error: memberError } = await supabase.from('contact_list_members').upsert(
-      (contacts ?? []).map((contact) => ({
+      contactIds.map((contactId) => ({
         owner_id: user.id,
         list_id: list.id,
-        contact_id: contact.id,
+        contact_id: contactId,
       })),
       { onConflict: 'list_id,contact_id', ignoreDuplicates: true },
     )
 
     if (memberError) return { error: memberError.message }
-    linked += contacts?.length ?? 0
+    linked += contactIds.length
   }
 
   await supabase.from('contact_lists').update({ contact_count: linked }).eq('id', list.id)
