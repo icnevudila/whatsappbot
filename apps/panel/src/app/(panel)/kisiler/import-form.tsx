@@ -31,7 +31,7 @@ export function ImportForm() {
     <Card>
       <CardHeader
         title="Liste olustur"
-        subtitle="Her satira bir numara. Isim eklemek icin: numara, isim"
+        subtitle="Kampanyalarda tekrar sececeginiz numaralar icin. Tek seferlik mesaj → Hizli gonderim."
       />
 
       <form action={formAction} className="space-y-3.5 p-4">

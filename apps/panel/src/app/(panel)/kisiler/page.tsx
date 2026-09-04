@@ -11,7 +11,9 @@ export default async function ContactsPage() {
   const [listsResult, totalResult, validResult, invalidResult] = await Promise.all([
     supabase
       .from('contact_lists')
-      .select('id, name, contact_count, created_at')
+      .select('id, name, contact_count, created_at, source')
+      // Hizli gonderim ara listeleri burada gorunmez; onlar Kampanyalar'da izlenir.
+      .neq('source', 'quick_send')
       .order('created_at', { ascending: false }),
     supabase.from('contacts').select('id', { count: 'exact', head: true }),
     supabase
@@ -34,7 +36,7 @@ export default async function ContactsPage() {
     <>
       <PageHeader
         title="Kisiler"
-        description="Numaralar E.164 bicimine cevrilir ve gonderim oncesi WhatsApp'ta kayitli olup olmadiklari kontrol edilir."
+        description="Tekrar kullanilacak numaralari listeler halinde tutun. Tek seferlik gonderimler icin Hizli gonderim kullanin — o gonderimler burada liste olusturmaz."
       />
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -42,13 +44,13 @@ export default async function ContactsPage() {
           <Card>
             <CardHeader
               title="Listeler"
-              subtitle={`${lists.length} liste · ${total} tekil numara`}
+              subtitle={`${lists.length} liste · ${total} tekil numara defteri`}
             />
 
             {lists.length === 0 ? (
               <EmptyState
                 title="Henuz liste yok"
-                description="Sag taraftaki formdan numaralarinizi yapistirarak ilk listenizi olusturun."
+                description="Kampanyalarda tekrar kullanacaginiz numaralari sagdaki formdan listeleyin. Tek seferlik mesaj icin Hizli gonderim yeterli."
               />
             ) : (
               <ul className="divide-y divide-hairline">

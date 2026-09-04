@@ -24,6 +24,7 @@ export default async function CampaignsPage() {
     supabase
       .from('contact_lists')
       .select('id, name, contact_count')
+      .neq('source', 'quick_send')
       .order('created_at', { ascending: false }),
     supabase.from('accounts').select('id, label, status, is_locked').order('created_at'),
     // Marka adi varsa AI metnin basina koysun; kim oldugunu belirtmeyen

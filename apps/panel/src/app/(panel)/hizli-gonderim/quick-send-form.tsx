@@ -81,8 +81,8 @@ export function QuickSendForm({
   return (
     <Card>
       <CardHeader
-        title="Hizli gonderim"
-        subtitle="Numaralari yapistirin, mesaji yazin, gonderin. Liste olusturmaniza gerek yok."
+        title="Tek seferlik gonderim"
+        subtitle="Listeye kaydetmez. Gonderim Kampanyalar'da izlenir; Kisiler sayfasina yeni liste eklenmez."
       />
 
       <form action={formAction} className="space-y-5 p-4">

@@ -51,16 +51,22 @@ export async function quickSend(
   } = await supabase.auth.getUser()
   if (!user) return { error: 'Oturum bulunamadi.' }
 
-  // Liste adi (owner_id, name) uzerinde tekil; saniye iceren damga yeterli.
+  // Kampanya motoru hedefleri listelerden uretir; bu ara liste Kisiler'de
+  // source=quick_send ile gizlenir. Kullaniciya ayri "liste olustur" adimi yok.
   const stamp = new Intl.DateTimeFormat('tr-TR', {
     dateStyle: 'short',
     timeStyle: 'medium',
   }).format(new Date())
-  const listName = `Hizli gonderim ${stamp}`
+  const campaignName = `Hizli gonderim · ${stamp}`
 
   const { data: list, error: listError } = await supabase
     .from('contact_lists')
-    .insert({ owner_id: user.id, name: listName, source: 'manual' })
+    .insert({
+      owner_id: user.id,
+      name: campaignName,
+      source: 'quick_send',
+      description: 'Hizli gonderim ara kaydi — Kisiler listesinde gosterilmez.',
+    })
     .select('id')
     .single()
 
@@ -122,7 +128,7 @@ export async function quickSend(
     .from('campaigns')
     .insert({
       owner_id: user.id,
-      name: listName,
+      name: campaignName,
       body: body || null,
       media_url: mediaUrl || null,
       message_type: mediaUrl ? 'image' : 'text',
@@ -156,6 +162,6 @@ export async function quickSend(
   if (jobError) return { error: jobError }
 
   revalidatePath('/kampanyalar')
-  revalidatePath('/kisiler')
+  revalidatePath('/hizli-gonderim')
   redirect(`/kampanyalar/${campaign.id}`)
 }
