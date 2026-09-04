@@ -48,13 +48,13 @@ export async function POST(request: Request) {
   try {
     body = await request.json()
   } catch {
-    return NextResponse.json({ error: 'Gecersiz istek.' }, { status: 400 })
+    return NextResponse.json({ error: 'Geçersiz istek.' }, { status: 400 })
   }
 
   const brief = String(body.brief ?? '').trim()
   if (!brief) {
     return NextResponse.json(
-      { error: 'Ne gondermek istediginizi bir cumleyle yazin.' },
+      { error: 'Ne göndermek istediğinizi bir cümleyle yazın.' },
       { status: 400 },
     )
   }
@@ -64,8 +64,8 @@ export async function POST(request: Request) {
 
   const prompt = [
     `Kampanya: ${brief}`,
-    brand ? `Marka adi: ${brand}` : null,
-    tone ? `Istenen ton: ${tone}` : null,
+    brand ? `Marka adı: ${brand}` : null,
+    tone ? `İstenen ton: ${tone}` : null,
   ]
     .filter(Boolean)
     .join('\n')
@@ -73,14 +73,14 @@ export async function POST(request: Request) {
   try {
     const text = await completeText(SYSTEM, prompt)
 
-    // Model bazen metni tirnak icine aliyor; kullaniciya oyle gostermek
-    // mesaja tirnak kopyalamasina yol aciyor.
+    // Model bazen metni tırnak içine alıyor; kullanıcıya öyle göstermek
+    // mesaja tırnak kopyalamasına yol açıyor.
     const cleaned = text.replace(/^["'`\s]+|["'`\s]+$/g, '')
 
     return NextResponse.json({ text: cleaned })
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Metin uretilemedi.' },
+      { error: error instanceof Error ? error.message : 'Metin üretilemedi.' },
       { status: 502 },
     )
   }

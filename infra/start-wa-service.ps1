@@ -17,6 +17,41 @@ if (-not (Test-Path $envFile)) {
   Write-Error "apps/wa-service/.env yok. Ornekten kopyalayin: copy apps\wa-service\.env.example apps\wa-service\.env"
 }
 
+function Ensure-DockerDesktop {
+  try {
+    docker info 1>$null 2>$null
+    if ($LASTEXITCODE -eq 0) { return }
+  } catch {}
+
+  $dd = @(
+    "$env:ProgramFiles\Docker\Docker\Docker Desktop.exe",
+    "$env:LocalAppData\Docker\Docker Desktop.exe"
+  ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+  if (-not $dd) {
+    Write-Error 'Docker Desktop bulunamadi. Kurulum: https://www.docker.com/products/docker-desktop/'
+  }
+
+  Write-Host "Docker Desktop baslatiliyor: $dd" -ForegroundColor Yellow
+  Start-Process $dd | Out-Null
+
+  for ($i = 0; $i -lt 60; $i++) {
+    Start-Sleep -Seconds 5
+    try {
+      docker info 1>$null 2>$null
+      if ($LASTEXITCODE -eq 0) {
+        Write-Host 'Docker hazir.' -ForegroundColor Green
+        return
+      }
+    } catch {}
+    Write-Host "  Docker bekleniyor ($($i + 1)/60)..."
+  }
+
+  Write-Error 'Docker Desktop 5 dakikada hazir olmadi.'
+}
+
+Ensure-DockerDesktop
+
 Write-Host 'Eski npm/tsx watch process varsa durduruluyor (tek worker).' -ForegroundColor Yellow
 Get-CimInstance Win32_Process -Filter "Name='node.exe'" |
   Where-Object { $_.CommandLine -match 'wa-service|@wa/service|tsx.*src[/\\]index' } |
@@ -36,7 +71,7 @@ for ($i = 0; $i -lt 40; $i++) {
   try {
     $health = Invoke-RestMethod -Uri 'http://127.0.0.1:8080/health' -TimeoutSec 5
     Write-Host ($health | ConvertTo-Json -Compress)
-    if ($null -ne $health.healthy) {
+    if ($health.healthy -eq $true) {
       $ok = $true
       break
     }
@@ -55,5 +90,3 @@ Write-Host ''
 Write-Host 'wa-service Docker ile ayakta (restart: unless-stopped).' -ForegroundColor Green
 Write-Host 'Log: docker logs -f wa-service'
 Write-Host 'Durdur: docker compose -f infra/docker-compose.yml down'
-Write-Host ''
-Write-Host 'Oracle Always Free icin: docs/oracle-kurulum.md'

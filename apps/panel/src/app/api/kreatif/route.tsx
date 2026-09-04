@@ -57,7 +57,7 @@ async function loadFonts() {
       // Bicim degisirse hangi cevabi aldigimizi bilmek sart: onceki surumde
       // sadece "indirilemedi" yaziyordu ve nedeni gorunmuyordu.
       throw new Error(
-        `Yazi tipi baglantisi bulunamadi. Google Fonts cevabi: ${css.slice(0, 200)}`,
+        `Yazı tipi bağlantısı bulunamadı. Google Fonts cevabı: ${css.slice(0, 200)}`,
       )
     }
 
@@ -65,7 +65,7 @@ async function loadFonts() {
     const buffers = await Promise.all(
       urls.slice(0, 2).map(async (url) => {
         const font = await fetch(url)
-        if (!font.ok) throw new Error(`Yazi tipi indirilemedi (HTTP ${font.status})`)
+        if (!font.ok) throw new Error(`Yazı tipi indirilemedi (HTTP ${font.status})`)
         return font.arrayBuffer()
       }),
     )
@@ -561,7 +561,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ id: creative.id, url: creative.public_url })
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Gorsel uretilemedi.' },
+      { error: error instanceof Error ? error.message : 'Görsel üretilemedi.' },
       { status: 500 },
     )
   }

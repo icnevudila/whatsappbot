@@ -3,10 +3,8 @@
 import { useState } from 'react'
 
 /**
- * Kampanya motorundaki isindirma egrisinin birebir kopyasi
- * (apps/wa-service/src/campaign-runner.ts). Burada pazarlama amacli
- * "iyimser" bir rakam gostermek, kullanicinin ilk gun panelde gordugu
- * sayiyla celisirdi; o yuzden ayni degerler.
+ * Kampanya motorundaki ısındırma eğrisinin birebir kopyası
+ * (apps/wa-service/src/campaign-runner.ts).
  */
 function warmupCap(dayIndex: number): number {
   if (dayIndex < 1) return 10
@@ -27,8 +25,6 @@ export function CapacityCalculator() {
 
   const matureDaily = lines * 250
 
-  // Isinma sirasinda gunluk tavan dusuk; hedefe ulasma suresini gercekci
-  // hesaplamak icin gun gun birikim aliyoruz.
   let remaining = target
   let days = 0
   while (remaining > 0 && days < 3650) {
@@ -41,13 +37,13 @@ export function CapacityCalculator() {
     <div className="rounded-[10px] border border-hairline bg-surface">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-hairline px-5 py-3.5">
         <div>
-          <h3 className="text-[13px] font-semibold">Kapasite hesabi</h3>
+          <h3 className="text-[13px] font-semibold">Kapasite hesabı</h3>
           <p className="mt-0.5 text-[12px] text-ink-muted">
-            Panelde gorecegimiz gercek limitlerle hesaplanir.
+            Panelde göreceğiniz gerçek limitlerle hesaplanır.
           </p>
         </div>
         <span className="rounded-full border border-hairline-strong bg-surface-raised px-2 py-0.5 text-[11.5px] text-ink-muted">
-          Hat basina gunde en fazla 250
+          Hat başına günde en fazla 250
         </span>
       </div>
 
@@ -55,7 +51,7 @@ export function CapacityCalculator() {
         <div className="flex flex-col gap-5">
           <div>
             <span className="mb-2 block text-[12px] font-medium text-ink-muted">
-              Kac hat baglayacaksiniz?
+              Kaç hat bağlayacaksınız?
             </span>
             <div className="flex flex-wrap gap-1.5">
               {LINE_OPTIONS.map((option) => (
@@ -77,7 +73,7 @@ export function CapacityCalculator() {
 
           <label className="block">
             <span className="mb-1.5 block text-[12px] font-medium text-ink-muted">
-              Kac kisiye ulasmak istiyorsunuz?
+              Kaç kişiye ulaşmak istiyorsunuz?
             </span>
             <input
               type="number"
@@ -97,7 +93,7 @@ export function CapacityCalculator() {
                 {nf.format(matureDaily)}
               </p>
               <p className="mt-1.5 text-[11.5px] text-ink-muted">
-                Gunluk tavan (isinma sonrasi)
+                Günlük tavan (ısınma sonrası)
               </p>
             </div>
             <div>
@@ -105,7 +101,7 @@ export function CapacityCalculator() {
                 {reachable ? nf.format(days) : '—'}
               </p>
               <p className="mt-1.5 text-[11.5px] text-ink-muted">
-                {reachable ? 'Gunde tamamlanir' : 'Makul surede bitmez'}
+                {reachable ? 'Günde tamamlanır' : 'Makul sürede bitmez'}
               </p>
             </div>
           </div>
@@ -114,11 +110,11 @@ export function CapacityCalculator() {
         <div className="flex flex-col justify-between gap-4 rounded-md border border-hairline bg-canvas p-4">
           <div>
             <p className="text-[12px] font-medium text-ink-muted">
-              Hat basina gunluk tavanin gelisimi
+              Hat başına günlük tavanın gelişimi
             </p>
             <p className="mt-0.5 text-[11.5px] text-ink-faint">
-              Yeni hat ilk gunden tam hizda gonderemez; ani hacim kisit almanin
-              en yaygin sebebi.
+              Yeni hat ilk günden tam hızda gönderemez; ani hacim kısıt almanın
+              en yaygın sebebi.
             </p>
           </div>
 
@@ -130,7 +126,7 @@ export function CapacityCalculator() {
               return (
                 <div key={day} className="flex items-center gap-3">
                   <span className="w-16 shrink-0 text-[11.5px] text-ink-faint">
-                    {day === 14 ? '14. gun +' : `${day}. gun`}
+                    {day === 14 ? '14. gün +' : `${day}. gün`}
                   </span>
                   <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-hairline">
                     <div
@@ -147,8 +143,8 @@ export function CapacityCalculator() {
           </div>
 
           <p className="border-t border-hairline pt-3 text-[11.5px] text-ink-faint">
-            Daha hizli gondermenin tek yolu daha fazla hat. Tek hattan gunluk
-            tavani zorlamak once gecici kisit, sonra kalici engel getiriyor.
+            Daha hızlı göndermenin tek yolu daha fazla hat. Tek hattan günlük
+            tavanı zorlamak önce geçici kısıt, sonra kalıcı engel getiriyor.
           </p>
         </div>
       </div>
