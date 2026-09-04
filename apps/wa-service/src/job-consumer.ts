@@ -125,6 +125,16 @@ async function handle(job: JobRow): Promise<unknown> {
         throw new Error('message.send isi org_id ve created_by olmadan gelemez')
       }
 
+      const blocked = await one<{ id: string }>(
+        `select id::text from public.blacklist
+          where org_id = $1 and phone_e164 = $2
+          limit 1`,
+        [job.org_id, payload.phone_e164],
+      )
+      if (blocked) {
+        throw new Error('Numara kara listede, gonderim yapilmadi')
+      }
+
       // Dogrulama kapisi tek mesajda da gecerli.
       const verdict = await session.verifyNumbers([payload.phone_e164])
       const entry = verdict.get(payload.phone_e164)
@@ -164,6 +174,42 @@ async function handle(job: JobRow): Promise<unknown> {
       const payload = job.payload as JobPayloadMap['contacts.verify']
       if (!job.org_id) throw new Error('contacts.verify isi org_id olmadan gelemez')
       return verifyContacts(job.org_id, payload)
+    }
+
+    case 'contacts.scrape': {
+      const payload = job.payload as JobPayloadMap['contacts.scrape']
+      if (!payload?.url) throw new Error('url zorunlu')
+      const started = Date.now()
+      const { crawlContacts } = await import('./scraper/crawl.js')
+      const result = await crawlContacts(payload.url, {
+        maxPages: payload.max_pages,
+        mode: payload.mode,
+      })
+      return {
+        ...result,
+        durationMs: Date.now() - started,
+      }
+    }
+
+    case 'contacts.discover': {
+      const payload = job.payload as JobPayloadMap['contacts.discover']
+      if (!payload?.query?.trim()) throw new Error('query zorunlu')
+      const { env: serviceEnv } = await import('./env.js')
+      const usePlaces =
+        serviceEnv.discoverEngine === 'places' ||
+        (serviceEnv.discoverEngine === 'auto' && Boolean(serviceEnv.googleMapsApiKey))
+
+      if (usePlaces) {
+        const { discoverWithPlacesApi } = await import('./scraper/places-discover.js')
+        return discoverWithPlacesApi(payload.query, {
+          maxResults: payload.max_results,
+        })
+      }
+
+      const { discoverLocalBusinesses } = await import('./scraper/maps-discover.js')
+      return discoverLocalBusinesses(payload.query, {
+        maxResults: payload.max_results,
+      })
     }
 
     case 'campaign.start': {
@@ -245,6 +291,19 @@ async function tick(): Promise<void> {
 
     for (const job of jobs) {
       inFlightJobs += 1
+      const heartbeat =
+        job.type === 'contacts.scrape' || job.type === 'contacts.discover'
+          ? setInterval(() => {
+              void query(
+                `update public.jobs
+                    set claimed_at = now(), updated_at = now()
+                  where id = $1::bigint and status = 'running'`,
+                [job.id],
+              ).catch((error) => {
+                log.warn({ err: error, jobId: job.id }, 'Job heartbeat basarisiz')
+              })
+            }, 60_000)
+          : null
       try {
         await query(
           `update public.jobs set status = 'running', updated_at = now() where id = $1::bigint`,
@@ -255,6 +314,7 @@ async function tick(): Promise<void> {
       } catch (error) {
         await markFailed(job, error)
       } finally {
+        if (heartbeat) clearInterval(heartbeat)
         inFlightJobs -= 1
       }
     }

@@ -1,54 +1,74 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import type { ContactsScrapeJobResult, JobStatus, ScrapedContact } from '@wa/shared'
 import { enqueueJob } from '@/lib/jobs'
 import { requireActiveOrg } from '@/lib/org'
-import {
-  scrapeContactsFromUrl,
-  type ScrapedContact,
-  type ScrapeResult,
-} from '@/lib/scraper/contacts'
-export type ScrapePreviewState = {
-  error?: string
-  result?: ScrapeResult
-} | null
 
 export type ScrapeImportState = {
   error?: string
   ok?: string
 } | null
 
+export type ScrapeJobSnapshot = {
+  id: string
+  status: JobStatus
+  error: string | null
+  result: ContactsScrapeJobResult | null
+}
+
 const CHUNK = 500
 
-export async function previewScrape(
-  _previous: ScrapePreviewState,
-  formData: FormData,
-): Promise<ScrapePreviewState> {
-  const url = String(formData.get('url') ?? '').trim()
-  if (!url) return { error: 'Bir web adresi girin.' }
+export async function startScrape(url: string): Promise<{ jobId?: string; error?: string }> {
+  const trimmed = url.trim()
+  if (!trimmed) return { error: 'Bir web adresi girin.' }
 
+  const { id, error } = await enqueueJob({
+    type: 'contacts.scrape',
+    payload: { url: trimmed, max_pages: 15, mode: 'auto' },
+    priority: 40,
+  })
+
+  if (error || !id) return { error: error ?? 'İş kuyruğa alınamadı.' }
+  return { jobId: id }
+}
+
+export async function getScrapeJob(jobId: string): Promise<{
+  job?: ScrapeJobSnapshot
+  error?: string
+}> {
+  const id = jobId.trim()
+  if (!id) return { error: 'İş kimliği eksik.' }
+
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
   try {
-    const result = await scrapeContactsFromUrl(url, { maxPages: 10, timeoutMs: 12_000 })
-
-    if (result.errors.length > 0 && result.contacts.length === 0 && result.emailsOnly.length === 0) {
-      return {
-        error: result.errors[0] ?? 'Sayfa okunamadı.',
-        result,
-      }
-    }
-
-    if (result.contacts.length === 0 && result.emailsOnly.length === 0) {
-      return {
-        error:
-          'Telefon veya e-posta bulunamadı. İletişim sayfası URL’sini deneyin veya site JavaScript ile yükleniyor olabilir.',
-        result,
-      }
-    }
-
-    return { result }
+    ;({ supabase, org } = await requireActiveOrg())
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Tarama başarısız'
-    return { error: message }
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
+  }
+
+  const numericId = Number(id)
+  if (!Number.isFinite(numericId)) return { error: 'Geçersiz iş kimliği.' }
+
+  const { data, error } = await supabase
+    .from('jobs')
+    .select('id, status, error, result')
+    .eq('id', numericId)
+    .eq('org_id', org.id)
+    .eq('type', 'contacts.scrape')
+    .maybeSingle()
+
+  if (error) return { error: error.message }
+  if (!data) return { error: 'Tarama işi bulunamadı.' }
+
+  return {
+    job: {
+      id: String(data.id),
+      status: data.status as JobStatus,
+      error: data.error,
+      result: (data.result as ContactsScrapeJobResult | null) ?? null,
+    },
   }
 }
 
@@ -57,6 +77,8 @@ export async function importScrapedContacts(
   formData: FormData,
 ): Promise<ScrapeImportState> {
   const name = String(formData.get('name') ?? '').trim()
+  const sourceRaw = String(formData.get('source') ?? 'scraper').trim()
+  const source = sourceRaw === 'maps' ? 'maps' : 'scraper'
   const seedUrl = String(formData.get('seedUrl') ?? '').trim()
   const payloadRaw = String(formData.get('contactsJson') ?? '')
 
@@ -89,7 +111,7 @@ export async function importScrapedContacts(
       org_id: org.id,
       created_by: userId,
       name,
-      source: 'scraper',
+      source,
     })
     .select('id')
     .single()
@@ -112,7 +134,7 @@ export async function importScrapedContacts(
         created_by: userId,
         phone_e164: row.phone_e164,
         name: row.name,
-        source: 'scraper' as const,
+        source,
         extra: {
           ...(row.email ? { email: row.email } : {}),
           scraped_from: row.sourceUrl,

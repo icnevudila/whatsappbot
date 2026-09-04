@@ -202,7 +202,9 @@ export class SessionManager {
     }
 
     return {
-      healthy: stale.length === 0,
+      // Tek stale oturum tüm worker'ı unhealthy göstermesin; revive path halleder.
+      // Yalnızca hiç live yokken ve tracked > 0 ise unhealthy (tamamen ölü).
+      healthy: stale.length === 0 || this.liveSessions().length > 0,
       tracked: this.sessions.size,
       live: this.liveSessions().length,
       stale,

@@ -42,6 +42,9 @@ services:
     # bir bellek artisi makinenin tamamini ve SSH'i bogmasin.
     mem_limit: 6g
 
+    # Chromium / Playwright paylaşımlı bellek; aksi halde Maps/scrape sessizce çöker.
+    shm_size: '1gb'
+
     # SIGTERM'in Node'a ulasmasi kapanis sirasi icin sart (creds yazimi ->
     # sock.end -> kira birakma). Varsayilan 10 saniye bu is icin kisa.
     stop_grace_period: 45s
@@ -51,8 +54,8 @@ services:
     init: true
 
     healthcheck:
-      # Alpine imajinda curl yok, wget var.
-      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://127.0.0.1:8080/health']
+      # Playwright (Ubuntu) imajinda wget yok; curl var.
+      test: ['CMD', 'curl', '-fsS', 'http://127.0.0.1:8080/health']
       interval: 30s
       timeout: 10s
       # Baileys oturumlarini geri yuklemek dakikalar surebiliyor; bu sure

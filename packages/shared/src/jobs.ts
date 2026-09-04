@@ -9,6 +9,8 @@ export const JOB_TYPES = [
   'account.request_pairing_code',
   'message.send',
   'contacts.verify',
+  'contacts.scrape',
+  'contacts.discover',
   'creative.render',
   'campaign.start',
   'campaign.pause',
@@ -59,7 +61,7 @@ export type MessageType = 'text' | 'image' | 'video' | 'document'
 /** onWhatsApp() dogrulama sonucu. Gonderim yalnizca 'valid' hedeflere gider. */
 export type WaCheckStatus = 'unknown' | 'valid' | 'invalid'
 
-export type ContactSource = 'manual' | 'csv' | 'xlsx' | 'scraper' | 'api'
+export type ContactSource = 'manual' | 'csv' | 'xlsx' | 'scraper' | 'api' | 'quick_send' | 'maps'
 
 export type EventLevel = 'debug' | 'info' | 'warn' | 'error'
 
@@ -76,6 +78,15 @@ export type JobPayloadMap = {
     message_type?: MessageType
   }
   'contacts.verify': { list_id?: string; contact_ids?: string[] }
+  'contacts.scrape': {
+    url: string
+    max_pages?: number
+    mode?: 'auto' | 'static' | 'browser'
+  }
+  'contacts.discover': {
+    query: string
+    max_results?: number
+  }
   'creative.render': { creative_id: string }
   'campaign.start': Record<string, never>
   'campaign.pause': Record<string, never>

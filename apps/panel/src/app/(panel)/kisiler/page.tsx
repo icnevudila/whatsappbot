@@ -1,8 +1,10 @@
+import Link from 'next/link'
 import { AccentLink, Card, CardHeader, EmptyState, Meter, PageHeader, Stat } from '@/components/ui'
 import { redirect } from 'next/navigation'
 import { requireActiveOrg } from '@/lib/org'
 import { ImportForm } from './import-form'
 import { ListActions } from './list-actions'
+import { DiscoverForm } from './discover-form'
 import { ScrapeForm } from './scrape-form'
 
 export const dynamic = 'force-dynamic'
@@ -71,7 +73,7 @@ export default async function ContactsPage() {
                 {lists.map((list) => (
                   <li key={list.id}>
                     <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-                      <a
+                      <Link
                         href={`/kisiler/${list.id}`}
                         className="min-w-0 flex-1 transition-colors hover:text-accent"
                       >
@@ -80,10 +82,11 @@ export default async function ContactsPage() {
                           {list.contact_count} numara ·{' '}
                           {new Date(list.created_at).toLocaleDateString('tr-TR')}
                           {list.source === 'scraper' ? ' · web' : ''}
+                          {list.source === 'maps' ? ' · yerel' : ''}
                           {' · '}
                           <span className="text-ink-faint">detay</span>
                         </p>
-                      </a>
+                      </Link>
                       <ListActions listId={list.id} />
                     </div>
                   </li>
@@ -128,6 +131,7 @@ export default async function ContactsPage() {
         </div>
 
         <div className="order-1 space-y-4 lg:order-2" id="liste-olustur">
+          <DiscoverForm />
           <ScrapeForm />
           <ImportForm />
         </div>

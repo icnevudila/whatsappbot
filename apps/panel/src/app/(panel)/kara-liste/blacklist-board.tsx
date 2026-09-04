@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Button, Card, CardHeader, Field, Input, Notice, Textarea } from '@/components/ui'
+import { Button, Card, CardHeader, EmptyState, Field, Input, Notice, Textarea } from '@/components/ui'
 import { addToBlacklist, removeFromBlacklist, type BlacklistState } from './actions'
 
 export type BlacklistRow = {
@@ -54,13 +54,10 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
         />
 
         {rows.length === 0 ? (
-          <div className="px-6 py-14 text-center">
-            <p className="text-[13px] font-medium">Kara liste boş</p>
-            <p className="mx-auto mt-1 max-w-sm text-[12.5px] text-ink-muted">
-              Çıkmak isteyen veya elle engellediğiniz numaraları sağdaki formdan
-              ekleyin. Servis bu numaralara mesaj atmaz.
-            </p>
-          </div>
+          <EmptyState
+            title="Kara liste boş"
+            description="Çıkmak isteyen veya elle engellediğiniz numaraları sağdaki formdan ekleyin. Servis bu numaralara mesaj atmaz."
+          />
         ) : (
           <ul className="divide-y divide-hairline">
             {rows.map((row) => (

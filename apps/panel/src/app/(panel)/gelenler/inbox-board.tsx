@@ -27,6 +27,7 @@ export type ThreadPreview = {
   messageType: string
   accountId: string | null
   accountLabel: string | null
+  related?: boolean
 }
 
 const timeFormat = new Intl.DateTimeFormat('tr-TR', {
@@ -36,8 +37,24 @@ const timeFormat = new Intl.DateTimeFormat('tr-TR', {
   minute: '2-digit',
 })
 
+function hrefFor(opts: {
+  tel?: string | null
+  tab: 'ilgili' | 'diger'
+  threadMode: 'gelen' | 'tam'
+}) {
+  const params = new URLSearchParams()
+  params.set('sekme', opts.tab)
+  params.set('konusma', opts.threadMode)
+  if (opts.tel) params.set('tel', opts.tel)
+  return `/gelenler?${params.toString()}`
+}
+
 export function InboxBoard({
   orgId,
+  tab,
+  threadMode,
+  relatedCount,
+  otherCount,
   previews,
   selectedPhone,
   thread,
@@ -45,6 +62,10 @@ export function InboxBoard({
   initialInbound,
 }: {
   orgId: string
+  tab: 'ilgili' | 'diger'
+  threadMode: 'gelen' | 'tam'
+  relatedCount: number
+  otherCount: number
   previews: ThreadPreview[]
   selectedPhone: string | null
   thread: InboxMessage[]
@@ -61,7 +82,6 @@ export function InboxBoard({
     setList(previews)
   }, [previews])
 
-  // Canli: yeni gelen mesaj olunca listeyi yenile.
   useEffect(() => {
     const supabase = getSupabaseBrowserClient()
     const channel = supabase
@@ -109,11 +129,41 @@ export function InboxBoard({
   return (
     <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
       <Card>
-        <CardHeader title="Sohbetler" subtitle={`${list.length} kişi`} />
+        <CardHeader
+          title="Sohbetler"
+          subtitle={`${list.length} kişi`}
+          action={
+            <div className="flex gap-1 text-[11.5px]">
+              <Link
+                href={hrefFor({ tel: selectedPhone, tab: 'ilgili', threadMode })}
+                className={
+                  tab === 'ilgili'
+                    ? 'font-medium text-accent'
+                    : 'text-ink-muted hover:text-ink'
+                }
+              >
+                İlgili ({relatedCount})
+              </Link>
+              <span className="text-ink-faint">·</span>
+              <Link
+                href={hrefFor({ tel: selectedPhone, tab: 'diger', threadMode })}
+                className={
+                  tab === 'diger' ? 'font-medium text-accent' : 'text-ink-muted hover:text-ink'
+                }
+              >
+                Diğer ({otherCount})
+              </Link>
+            </div>
+          }
+        />
         {list.length === 0 ? (
           <EmptyState
-            title="Henüz gelen yok"
-            description="Birisi hattınıza yazınca burada görünür. Kampanya yanıtlarını da buradan takip edin."
+            title={tab === 'ilgili' ? 'İlgili gelen yok' : 'Diğer gelen yok'}
+            description={
+              tab === 'ilgili'
+                ? 'Sizin yazdığınız numaralardan yanıt gelince burada görünür.'
+                : 'Kampanya dışı / kişisel gelenler burada listelenir.'
+            }
           />
         ) : (
           <ul className="max-h-[70vh] divide-y divide-hairline overflow-y-auto">
@@ -122,7 +172,7 @@ export function InboxBoard({
               return (
                 <li key={item.phone}>
                   <Link
-                    href={`/gelenler?tel=${encodeURIComponent(item.phone)}`}
+                    href={hrefFor({ tel: item.phone, tab, threadMode })}
                     className={`block px-4 py-3 transition-colors hover:bg-surface-raised ${
                       active ? 'bg-accent-soft' : ''
                     }`}
@@ -154,15 +204,27 @@ export function InboxBoard({
               title={selectedPhone}
               subtitle={
                 selectedPreview?.accountLabel
-                  ? `Hat: ${selectedPreview.accountLabel}`
-                  : 'Giden + gelen mesajlar'
+                  ? `Hat: ${selectedPreview.accountLabel} · salt okuma`
+                  : 'Salt okuma gelen kutusu'
               }
               action={
-                selectedPhone.startsWith('+') ? (
-                  <Button disabled={pending} onClick={block}>
-                    {pending ? 'Ekleniyor…' : 'Kara listeye al'}
-                  </Button>
-                ) : null
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link
+                    href={hrefFor({
+                      tel: selectedPhone,
+                      tab,
+                      threadMode: threadMode === 'gelen' ? 'tam' : 'gelen',
+                    })}
+                    className="text-[11.5px] text-ink-muted underline decoration-hairline-strong underline-offset-2 hover:text-ink"
+                  >
+                    {threadMode === 'gelen' ? 'Tam konuşma' : 'Sadece gelen'}
+                  </Link>
+                  {selectedPhone.startsWith('+') ? (
+                    <Button disabled={pending} onClick={block}>
+                      {pending ? 'Ekleniyor…' : 'Kara listeye al'}
+                    </Button>
+                  ) : null}
+                </div>
               }
             />
 
@@ -216,12 +278,11 @@ export function InboxBoard({
         ) : (
           <EmptyState
             title="Bir sohbet seçin"
-            description="Soldan bir numaraya tıklayın. Giden kampanya mesajları ve gelen yanıtlar aynı akışta görünür."
+            description="Soldan bir numaraya tıklayın. Varsayılan olarak yalnız gelen mesajlar gösterilir."
           />
         )}
       </Card>
 
-      {/* initialInbound referansi: realtime refresh icin sunucu state senkronu */}
       <span className="hidden" aria-hidden>
         {initialInbound.length}
       </span>

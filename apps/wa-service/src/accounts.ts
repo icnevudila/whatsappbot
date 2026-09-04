@@ -122,8 +122,8 @@ export async function logAccountEvent(
 }
 
 /**
- * Hesabi kilitler ve o hesaptan giden kampanyalari durdurur.
- * 403, device_removed ve surekli 440 gibi geri donusu olmayan durumlarda.
+ * Hesabi kilitler. Yalnızca bu hesabın tek hat olduğu kampanyaları durdurur;
+ * çok hesaplı kampanyalarda diğer hatlar devam eder (bu hesap kampanyadan çıkarılır).
  */
 export async function lockAccount(
   account: Pick<AccountRow, 'id' | 'org_id' | 'created_by'>,
@@ -136,6 +136,7 @@ export async function lockAccount(
     locked_at: new Date().toISOString(),
   })
 
+  // Tek hesaplı kampanyalar → stopped
   await query(
     `update public.campaigns c
         set status = 'stopped',
@@ -145,8 +146,26 @@ export async function lockAccount(
         and exists (
           select 1 from public.campaign_accounts ca
            where ca.campaign_id = c.id and ca.account_id = $1
-        )`,
+        )
+        and (
+          select count(*)::int from public.campaign_accounts ca2
+           where ca2.campaign_id = c.id
+        ) = 1`,
     [account.id, `Hesap kilitlendi: ${reason}`],
+  )
+
+  // Çok hesaplı: bu hesabı kampanyadan çıkar (diğerleri devam)
+  await query(
+    `delete from public.campaign_accounts ca
+      using public.campaigns c
+      where ca.campaign_id = c.id
+        and ca.account_id = $1
+        and c.status in ('running', 'scheduled', 'paused')
+        and (
+          select count(*)::int from public.campaign_accounts ca2
+           where ca2.campaign_id = c.id
+        ) > 1`,
+    [account.id],
   )
 
   await logAccountEvent(account, 'error', 'account.locked', { reason })

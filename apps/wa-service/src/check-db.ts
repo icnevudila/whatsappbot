@@ -83,11 +83,35 @@ async function main(): Promise<void> {
   const checks: { label: string; sql: string }[] = [
     { label: 'public.accounts', sql: 'select count(*) from public.accounts' },
     { label: 'public.jobs', sql: 'select count(*) from public.jobs' },
+    { label: 'public.campaigns', sql: 'select count(*) from public.campaigns' },
+    { label: 'public.message_log', sql: 'select count(*) from public.message_log' },
+    { label: 'public.blacklist', sql: 'select count(*) from public.blacklist' },
     { label: 'wa.creds', sql: 'select count(*) from wa.creds' },
     { label: 'wa.session_lease', sql: 'select count(*) from wa.session_lease' },
+    { label: 'wa.sent_messages', sql: 'select count(*) from wa.sent_messages' },
     {
       label: 'wa.claim_jobs()',
       sql: "select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'wa' and p.proname = 'claim_jobs'",
+    },
+    {
+      label: 'wa.reclaim_stale_jobs()',
+      sql: "select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'wa' and p.proname = 'reclaim_stale_jobs'",
+    },
+    {
+      label: 'wa.claim_campaign_target()',
+      sql: "select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'wa' and p.proname = 'claim_campaign_target'",
+    },
+    {
+      label: 'wa.acquire_lease()',
+      sql: "select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'wa' and p.proname = 'acquire_lease'",
+    },
+    {
+      label: 'wa.renew_lease()',
+      sql: "select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'wa' and p.proname = 'renew_lease'",
+    },
+    {
+      label: 'wa.release_lease()',
+      sql: "select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'wa' and p.proname = 'release_lease'",
     },
     {
       label: 'accounts.new_chat_quota_total',

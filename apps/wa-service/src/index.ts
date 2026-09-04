@@ -38,13 +38,14 @@ async function buildHealthPayload(): Promise<{ status: number; body: unknown }> 
   const pending = await pendingJobCount().catch(() => -1)
   const staleClaimed = await staleClaimedJobCount().catch(() => -1)
 
-  const healthy = dbOk && report.healthy
+  const healthy = dbOk
 
   return {
     status: healthy ? 200 : 503,
     body: {
       worker: env.workerId,
       healthy,
+      degraded: report.stale.length > 0,
       db: dbOk,
       sessions: { tracked: report.tracked, live: report.live, stale: report.stale },
       jobs: { pending, staleClaimed },

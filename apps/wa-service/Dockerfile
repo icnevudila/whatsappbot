@@ -1,5 +1,6 @@
-# WhatsApp servisi. Kalici process gerektiriyor, bu yuzden VPS'te calisir.
-FROM node:22-alpine
+# WhatsApp servisi + Playwright Chromium (iletişim scraper).
+# Playwright image: tarayıcı + sistem bağımlılıkları hazır.
+FROM mcr.microsoft.com/playwright:v1.49.1-jammy
 
 WORKDIR /app
 
@@ -15,6 +16,7 @@ COPY apps/wa-service ./apps/wa-service
 
 ENV NODE_ENV=production
 ENV PORT=8080
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 EXPOSE 8080
 
 # tsx dev bagimliligi oldugu icin uretimde de gerekli: kaynak TypeScript

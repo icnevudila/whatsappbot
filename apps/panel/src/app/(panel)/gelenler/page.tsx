@@ -7,10 +7,17 @@ import { InboxBoard, type InboxMessage, type ThreadPreview } from './inbox-board
 export const metadata: Metadata = { title: 'Gelenler' }
 export const dynamic = 'force-dynamic'
 
+type InboxTab = 'ilgili' | 'diger'
+type ThreadMode = 'gelen' | 'tam'
+
 export default async function InboxPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tel?: string | string[] }>
+  searchParams: Promise<{
+    tel?: string | string[]
+    sekme?: string | string[]
+    konusma?: string | string[]
+  }>
 }) {
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
   let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
@@ -23,44 +30,67 @@ export default async function InboxPage({
   const params = await searchParams
   const telRaw = params.tel
   const selectedPhone = Array.isArray(telRaw) ? telRaw[0] : telRaw
+  const sekmeRaw = Array.isArray(params.sekme) ? params.sekme[0] : params.sekme
+  const tab: InboxTab = sekmeRaw === 'diger' ? 'diger' : 'ilgili'
+  const konusmaRaw = Array.isArray(params.konusma) ? params.konusma[0] : params.konusma
+  const threadMode: ThreadMode = konusmaRaw === 'tam' ? 'tam' : 'gelen'
 
-  const [{ data: inbound }, { data: accounts }, { count: inboundToday }] = await Promise.all([
-    supabase
-      .from('message_log')
-      .select(
-        'id, account_id, direction, phone_e164, remote_jid, message_type, body, status, created_at, campaign_id',
-      )
-      .eq('org_id', org.id)
-      .eq('direction', 'in')
-      .order('id', { ascending: false })
-      .limit(200),
-    supabase.from('accounts').select('id, label, phone_e164').eq('org_id', org.id),
-    supabase
-      .from('message_log')
-      .select('id', { count: 'exact', head: true })
-      .eq('org_id', org.id)
-      .eq('direction', 'in')
-      .gte('created_at', new Date(new Date().setHours(0, 0, 0, 0)).toISOString()),
-  ])
+  const [{ data: inbound }, { data: outboundPhones }, { data: accounts }, { count: inboundToday }] =
+    await Promise.all([
+      supabase
+        .from('message_log')
+        .select(
+          'id, account_id, direction, phone_e164, remote_jid, message_type, body, status, created_at, campaign_id',
+        )
+        .eq('org_id', org.id)
+        .eq('direction', 'in')
+        .order('id', { ascending: false })
+        .limit(200),
+      supabase
+        .from('message_log')
+        .select('phone_e164')
+        .eq('org_id', org.id)
+        .eq('direction', 'out')
+        .not('phone_e164', 'is', null)
+        .limit(2000),
+      supabase.from('accounts').select('id, label, phone_e164').eq('org_id', org.id),
+      supabase
+        .from('message_log')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', org.id)
+        .eq('direction', 'in')
+        .gte('created_at', new Date(new Date().setHours(0, 0, 0, 0)).toISOString()),
+    ])
+
+  const relatedPhones = new Set(
+    (outboundPhones ?? [])
+      .map((row) => row.phone_e164)
+      .filter((phone): phone is string => Boolean(phone)),
+  )
 
   const accountLabels = Object.fromEntries(
     (accounts ?? []).map((account) => [account.id, account.label]),
   )
 
-  // Telefon bazinda son gelen mesaj = sohbet onizlemesi
-  const previews = new Map<string, ThreadPreview>()
+  const allPreviews = new Map<string, ThreadPreview>()
   for (const row of inbound ?? []) {
     const phone = row.phone_e164 ?? row.remote_jid ?? `id-${row.id}`
-    if (previews.has(phone)) continue
-    previews.set(phone, {
+    if (allPreviews.has(phone)) continue
+    const related = Boolean(row.phone_e164 && relatedPhones.has(row.phone_e164))
+    allPreviews.set(phone, {
       phone,
       lastBody: row.body,
       lastAt: row.created_at,
       messageType: row.message_type,
       accountId: row.account_id,
       accountLabel: row.account_id ? accountLabels[row.account_id] ?? null : null,
+      related,
     })
   }
+
+  const relatedList = [...allPreviews.values()].filter((p) => p.related)
+  const otherList = [...allPreviews.values()].filter((p) => !p.related)
+  const previews = tab === 'ilgili' ? relatedList : otherList
 
   let thread: InboxMessage[] = []
   if (selectedPhone) {
@@ -72,6 +102,10 @@ export default async function InboxPage({
       .eq('org_id', org.id)
       .order('id', { ascending: true })
       .limit(200)
+
+    if (threadMode === 'gelen') {
+      threadQuery = threadQuery.eq('direction', 'in')
+    }
 
     threadQuery = selectedPhone.startsWith('+')
       ? threadQuery.eq('phone_e164', selectedPhone)
@@ -85,7 +119,7 @@ export default async function InboxPage({
     <>
       <PageHeader
         title="Gelenler"
-        description="Bağlı hatlara gelen yanıtlar. “dur / yazma / stop” içeren cevaplar otomatik kara listeye alınır."
+        description="Salt okuma: bağlı hatlara gelen mesajlar. “dur / yazma / stop” otomatik kara listeye alınır. İlgili = sizin yazdığınız numaralar."
         action={
           <div className="flex flex-wrap items-center gap-3">
             <span className="tabular text-[12.5px] text-ink-muted">
@@ -98,7 +132,11 @@ export default async function InboxPage({
 
       <InboxBoard
         orgId={org.id}
-        previews={[...previews.values()]}
+        tab={tab}
+        threadMode={threadMode}
+        relatedCount={relatedList.length}
+        otherCount={otherList.length}
+        previews={previews}
         selectedPhone={selectedPhone ?? null}
         thread={thread}
         accountLabels={accountLabels}

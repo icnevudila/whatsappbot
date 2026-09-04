@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "cheerio": "^1.1.2",
     "libphonenumber-js": "1.13.12"
   },
   "devDependencies": {

@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: 'Hızlı gönderim' }
 export default async function QuickSendPage({
   searchParams,
 }: {
-  searchParams: Promise<{ media?: string | string[] }>
+  searchParams: Promise<{ media?: string | string[]; tel?: string | string[] }>
 }) {
   let userId: string
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
@@ -26,6 +26,12 @@ export default async function QuickSendPage({
   const params = await searchParams
   const mediaParam = params.media
   const initialMediaUrl = Array.isArray(mediaParam) ? mediaParam[0] ?? '' : mediaParam ?? ''
+  const telParam = params.tel
+  const initialNumbers = Array.isArray(telParam)
+    ? telParam.filter(Boolean).join('\n')
+    : telParam
+      ? telParam.split(',').map((p) => p.trim()).filter(Boolean).join('\n')
+      : ''
 
   const [{ data: accounts }, brandResult, recentResult] = await Promise.all([
     supabase
@@ -80,6 +86,7 @@ export default async function QuickSendPage({
             aiEnabled={hasTextProvider()}
             brandName={brandResult.data?.name ?? undefined}
             initialMediaUrl={initialMediaUrl}
+            initialNumbers={initialNumbers}
           />
 
           <aside className="space-y-4">

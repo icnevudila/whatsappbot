@@ -311,6 +311,23 @@ async function sendToTarget(
 ): Promise<void> {
   // Hedef zaten claim_campaign_target ile 'sending'; burada tekrar claim yok.
 
+  const blocked = await one<{ id: string }>(
+    `select id::text from public.blacklist
+      where org_id = $1 and phone_e164 = $2
+      limit 1`,
+    [campaign.org_id, target.phone_e164],
+  )
+  if (blocked) {
+    await query(
+      `update public.campaign_targets
+          set status = 'skipped', error = 'Kara listede', updated_at = now()
+        where id = $1::bigint`,
+      [target.id],
+    )
+    await reconcileCampaignCounts(campaign.id)
+    return
+  }
+
   // Zorunlu dogrulama kapisi: kayitli olmayan numaraya gonderim denemesi
   // hesap seviyesinde kisit tetikliyor. Sonuc contacts'ta onbellege alinir.
   let jid = target.wa_status === 'valid' ? target.wa_jid : null

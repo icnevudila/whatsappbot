@@ -22,19 +22,21 @@ export function QuickSendForm({
   aiEnabled,
   brandName,
   initialMediaUrl = '',
+  initialNumbers = '',
 }: {
   senders: SenderOption[]
   userId: string
   aiEnabled: boolean
   brandName?: string
   initialMediaUrl?: string
+  initialNumbers?: string
 }) {
   const [state, formAction, pending] = useActionState<QuickSendState, FormData>(
     quickSend,
     null,
   )
 
-  const [numbers, setNumbers] = useState('')
+  const [numbers, setNumbers] = useState(initialNumbers)
   const [body, setBody] = useState('')
   const [mediaUrl, setMediaUrl] = useState(initialMediaUrl)
   const [selected, setSelected] = useState<string[]>(() => senders.map((s) => s.id))

@@ -55,8 +55,8 @@ export const env = {
   jobPollIntervalMs: int('JOB_POLL_INTERVAL_MS', 2_000),
   jobBatchSize: int('JOB_BATCH_SIZE', 10),
 
-  /** Stuck claimed/running isler icin reclaim esigi (saniye). */
-  staleJobSeconds: int('STALE_JOB_SECONDS', 300),
+  /** Stuck claimed/running isler icin reclaim esigi (saniye). Scrape/discover uzun sürebilir. */
+  staleJobSeconds: int('STALE_JOB_SECONDS', 900),
 
   campaignTickMs: int('CAMPAIGN_TICK_MS', 5_000),
 
@@ -76,6 +76,24 @@ export const env = {
   healthPort: int('PORT', 8080),
   logLevel: process.env.LOG_LEVEL?.trim() || 'info',
   nodeEnv: process.env.NODE_ENV?.trim() || 'development',
+
+  /**
+   * Google Places API (New) — yerel işletme keşfi.
+   * Yoksa contacts.discover Playwright Maps’e düşer (DISCOVER_ENGINE=playwright zorlar).
+   */
+  googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY?.trim() || null,
+
+  /** places | playwright | auto (varsayılan: key varsa places) */
+  discoverEngine: (process.env.DISCOVER_ENGINE?.trim().toLowerCase() || 'auto') as
+    | 'auto'
+    | 'places'
+    | 'playwright',
+
+  /**
+   * Places Text Search üst sınırı (tek arama = tek API isteği, sayfalama yok).
+   * Ücretsiz kotayı korumak için varsayılan 20, tavan 20.
+   */
+  discoverMaxResults: Math.min(20, Math.max(5, int('DISCOVER_MAX_RESULTS', 20))),
 } as const
 
 export const isProduction = env.nodeEnv === 'production'

@@ -154,9 +154,13 @@ dongusu baslar.
 
 ## MVP kapsami disinda kalanlar
 
-- Marka kiti + `satori`/`resvg` ile sunucu tarafinda kreatif uretimi
-  (su an gorsel yukleniyor)
-- Lead toplama scraper'i
-- Eslestirme kodu ile baglanma (QR var)
-- Gelen mesaj otomasyonu
-- Paket satin alma / faturalandirma
+- Gelen mesaja otomatik yanıt botu (Gelenler salt okuma + kara liste var)
+- Paket satin alma / faturalandirma (Stripe)
+
+## Sonradan eklenenler (MVP sonrasi)
+
+- Yerel isletme kesfi: Google Places (`contacts.discover`) + panel Kişiler
+- Web lead scraper (`contacts.scrape`)
+- Eslestirme kodu (`pairing_pending`)
+- Marka kiti (panel satori; `creative.render` job kullanilmiyor)
+- Gelenler: Ilgili / Diger ayirma

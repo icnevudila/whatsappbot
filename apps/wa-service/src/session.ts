@@ -49,6 +49,8 @@ export type SessionOutcome = 'closed' | 'handed-over' | 'locked' | 'logged-out'
 
 type Timer = ReturnType<typeof setInterval>
 
+const MAX_RECONNECT_ATTEMPTS = 25
+
 function backoffMs(attempt: number): number {
   const base = Math.min(30_000, 2 ** Math.min(attempt, 5) * 1_000)
   return base + Math.floor(Math.random() * 1_000)
@@ -249,7 +251,7 @@ export class WhatsAppSession {
       // Kod ile eslesme secildiyse QR yazmiyoruz: ikisini birden gostermek
       // kullaniciyi bolerdi ve kod hala gecerliyken QR onu ezerdi.
       if (this.pairingPhone) {
-        this.status = 'qr_pending'
+        this.status = 'pairing_pending'
         return
       }
 
@@ -380,12 +382,12 @@ export class WhatsAppSession {
 
       case DisconnectReason.badSession: {
         await logAccountEvent(this, 'warn', 'account.bad_session', { code })
-        await this.reopen(backoffMs(this.reconnectAttempts++))
+        await this.tryReconnect()
         return
       }
 
       case DisconnectReason.unavailableService: {
-        await this.reopen(Math.max(15_000, backoffMs(this.reconnectAttempts++)))
+        await this.tryReconnect(15_000)
         return
       }
 
@@ -394,7 +396,7 @@ export class WhatsAppSession {
       case DisconnectReason.connectionClosed:
       default: {
         // Enum'da olmayan kodlar geliyor, bu yuzden default dali sart.
-        await this.reopen(backoffMs(this.reconnectAttempts++))
+        await this.tryReconnect()
         return
       }
     }
@@ -444,7 +446,25 @@ export class WhatsAppSession {
       return
     }
 
-    await this.reopen(backoffMs(this.reconnectAttempts++))
+    await this.tryReconnect()
+  }
+
+  private async tryReconnect(minDelayMs = 0): Promise<void> {
+    if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      this.log.error({ attempts: this.reconnectAttempts }, 'Reconnect üst sınırı aşıldı')
+      await patchAccount(this.accountId, {
+        status: 'error',
+        status_detail: `Yeniden bağlanma üst sınırı (${MAX_RECONNECT_ATTEMPTS}) aşıldı`,
+      })
+      this.status = 'error'
+      await logAccountEvent(this, 'error', 'account.reconnect_exhausted', {
+        attempts: this.reconnectAttempts,
+      })
+      await this.finish('closed')
+      return
+    }
+    const delay = Math.max(minDelayMs, backoffMs(this.reconnectAttempts++))
+    await this.reopen(delay)
   }
 
   private async reopen(delayMs: number): Promise<void> {
@@ -473,7 +493,7 @@ export class WhatsAppSession {
           }
         } catch (error) {
           this.log.error({ err: error }, 'Yeniden baglanma basarisiz')
-          void this.reopen(backoffMs(this.reconnectAttempts++))
+          void this.tryReconnect()
         }
       })()
     }, delayMs)
@@ -550,7 +570,7 @@ export class WhatsAppSession {
     const expiresAt = new Date(Date.now() + 180_000).toISOString()
 
     await patchAccount(this.accountId, {
-      status: 'qr_pending',
+      status: 'pairing_pending',
       pairing_code: code,
       pairing_expires_at: expiresAt,
       // QR'i temizliyoruz ki panel kodu gostersin.
@@ -558,7 +578,7 @@ export class WhatsAppSession {
       qr_expires_at: null,
       status_detail: 'Eslestirme kodu telefona girilmeyi bekliyor',
     })
-    this.status = 'qr_pending'
+    this.status = 'pairing_pending'
 
     this.log.info({ phone: digits }, 'Eslestirme kodu uretildi')
     await logAccountEvent(this, 'info', 'account.pairing_code', { phone: digits })
