@@ -27,14 +27,16 @@ powershell -File infra/run-wa-service-windows.ps1
 Gorev Zamanlayici: `run-wa-service-windows.ps1` veya `start-wa-service.ps1`
 icin "Oturum acildiginda" tetikleyicisi ekleyin.
 
-Oracle VM hazir olunca yerel process'i **kapatin**, uzak deploy yapin:
+Oracle VM hazir olunca **tek komut** (yerel `.env` DATABASE_URL otomatik gider, yerel Docker kapanir):
 
 ```powershell
 $env:ORACLE_HOST = 'X.X.X.X'
 $env:ORACLE_KEY  = "$HOME\Downloads\ssh-key.key"
 powershell -File infra/oracle-remote-deploy.ps1
-docker compose -f infra/docker-compose.yml down   # yereli durdur
 ```
+
+Ilk seferde script uzak makinede Docker + repo kurulumunu da yapar
+(`oracle-setup.sh`). Sonraki calistirmalarda sadece `git pull` + rebuild.
 
 ---
 
