@@ -209,7 +209,10 @@ async function handle(job: JobRow): Promise<unknown> {
     }
 
     case 'creative.render': {
-      throw new Error('Kreatif uretimi MVP kapsaminda degil, gorseli yukleyerek kullanin')
+      // Panel /api/kreatif ile uretir; bu job tipi eski sozlesme.
+      throw new Error(
+        'Kreatif uretimi panel uzerinden yapilir (/marka-kiti). Bu is tipi kullanilmiyor.',
+      )
     }
 
     default: {
