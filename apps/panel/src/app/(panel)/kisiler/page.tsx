@@ -7,6 +7,8 @@ import { ImportForm } from './import-form'
 import { ListActions } from './list-actions'
 import { DiscoverForm } from './discover-form'
 import { ScrapeForm } from './scrape-form'
+import { VerifyAllButton } from './verify-all-button'
+import { WaCheckForm } from './wa-check-form'
 
 export const metadata: Metadata = { title: 'Kişiler' }
 export const dynamic = 'force-dynamic'
@@ -52,7 +54,7 @@ export default async function ContactsPage() {
     <>
       <PageHeader
         title="Kişiler"
-        description="Tekrar kullanılacak numaraları listeler halinde tutun. Tek seferlik gönderimler için Hızlı gönderim kullanın — o gönderimler burada liste oluşturmaz."
+        description="Numaralar defterde tutulur; WhatsApp’ta var/yok durumu ✓ / × ile işaretlenir. Tek seferlik mesaj için Hızlı gönderim."
         action={<AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>}
       />
 
@@ -101,7 +103,7 @@ export default async function ContactsPage() {
             <Card>
               <CardHeader
                 title="WhatsApp doğrulama durumu"
-                subtitle="Gönderim yalnızca doğrulanmış veya gönderim anında kontrol edilen numaralara yapılır. Kayıtsız numaraya denemek kısıt riskini artırır."
+                subtitle="Proje geneli: her numara ✓ (var), × (yok) veya ? (bekliyor). Gönderim kayıtsız numaraya denemez."
               />
               <div className="space-y-3 p-4">
                 <div>
@@ -115,16 +117,18 @@ export default async function ContactsPage() {
                 </div>
 
                 <dl className="grid grid-cols-3 gap-3 border-t border-hairline pt-3">
-                  <Stat label="Geçerli" value={valid} tone="accent" />
-                  <Stat label="WhatsApp’ta yok" value={invalid} tone="danger" />
-                  <Stat label="Bekliyor" value={pendingCheck} tone="muted" />
+                  <Stat label="✓ Var" value={valid} tone="accent" />
+                  <Stat label="× Yok" value={invalid} tone="danger" />
+                  <Stat label="? Bekliyor" value={pendingCheck} tone="muted" />
                 </dl>
+
+                <VerifyAllButton />
 
                 {pendingCheck > 0 ? (
                   <p className="text-[11.5px] text-ink-faint">
-                    Doğrulama için bağlı bir WhatsApp hattı gerekir. Hat bağlıysa
-                    kontrol arka planda ilerler; büyük listelerde birkaç dakika
-                    sürebilir.
+                    Doğrulama için bağlı bir WhatsApp hattı gerekir. Büyük
+                    defterlerde birkaç dakika sürebilir; sonuç listelerde ✓ / ×
+                    görünür.
                   </p>
                 ) : null}
               </div>
@@ -133,6 +137,7 @@ export default async function ContactsPage() {
         </div>
 
         <div className="order-1 space-y-4 lg:order-2" id="liste-olustur">
+          <WaCheckForm />
           <DiscoverForm />
           <ScrapeForm />
           <ImportForm />

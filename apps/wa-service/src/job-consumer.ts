@@ -223,6 +223,44 @@ async function handle(job: JobRow): Promise<unknown> {
       return verifyContacts(job.org_id, payload)
     }
 
+    case 'contacts.check_phone': {
+      const payload = job.payload as JobPayloadMap['contacts.check_phone']
+      if (!job.org_id) throw new Error('contacts.check_phone isi org_id olmadan gelemez')
+      const phone = payload?.phone_e164?.trim()
+      if (!phone) throw new Error('phone_e164 zorunlu')
+
+      const { findLiveSessionForOrg } = await import('./verify.js')
+      const session = findLiveSessionForOrg(job.org_id)
+      if (!session?.isLive) {
+        throw new Error('Kontrol icin bagli bir WhatsApp hesabi gerekiyor')
+      }
+
+      const verdicts = await session.verifyNumbers([phone])
+      const verdict = verdicts.get(phone)
+      if (!verdict) {
+        throw new Error('Dogrulama sonucu alinamadi (oturum dusmus olabilir)')
+      }
+
+      const exists = verdict.exists === true
+
+      // Defterde varsa wa_status guncelle (Yoksa yeni kisi zorlamayiz).
+      await query(
+        `update public.contacts
+            set wa_status = $3,
+                wa_jid = $4,
+                wa_checked_at = now(),
+                updated_at = now()
+          where org_id = $1::uuid and phone_e164 = $2`,
+        [job.org_id, phone, exists ? 'valid' : 'invalid', verdict.jid ?? null],
+      )
+
+      return {
+        phone_e164: phone,
+        exists,
+        jid: verdict.jid,
+      }
+    }
+
     case 'contacts.scrape': {
       const payload = job.payload as JobPayloadMap['contacts.scrape']
       if (!payload?.url) throw new Error('url zorunlu')

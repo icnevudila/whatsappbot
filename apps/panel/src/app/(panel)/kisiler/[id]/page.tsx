@@ -86,9 +86,9 @@ export default async function ContactListDetailPage({
       />
 
       <div className="mb-4 grid grid-cols-3 gap-3">
-        <StatBox label="Geçerli" value={valid} />
-        <StatBox label="WhatsApp’ta yok" value={invalid} />
-        <StatBox label="Bekliyor" value={pending} />
+        <StatBox label="✓ WhatsApp’ta var" value={valid} />
+        <StatBox label="× WhatsApp’ta yok" value={invalid} />
+        <StatBox label="? Bekliyor" value={pending} />
       </div>
 
       <Card>

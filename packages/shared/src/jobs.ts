@@ -9,6 +9,7 @@ export const JOB_TYPES = [
   'account.request_pairing_code',
   'message.send',
   'contacts.verify',
+  'contacts.check_phone',
   'contacts.scrape',
   'contacts.discover',
   'creative.render',
@@ -78,6 +79,8 @@ export type JobPayloadMap = {
     message_type?: MessageType
   }
   'contacts.verify': { list_id?: string; contact_ids?: string[] }
+  /** Tek numara anlik onWhatsApp kontrolu. */
+  'contacts.check_phone': { phone_e164: string }
   'contacts.scrape': {
     url: string
     max_pages?: number

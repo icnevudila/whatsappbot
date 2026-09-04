@@ -28,7 +28,7 @@ export function ListActions({ listId }: { listId: string }) {
             disabled={pending}
             title="Bağlı hat gerekir; kayıtlı olmayan numaralar işaretlenir"
           >
-            {busy === 'verify' ? 'Doğrulanıyor…' : 'Doğrula'}
+            {busy === 'verify' ? 'Doğrulanıyor…' : '✓ × Doğrula'}
           </Button>
           <Button
             variant="danger"

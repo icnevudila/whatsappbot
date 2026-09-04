@@ -12,6 +12,7 @@
   ],
   "scripts": {
     "dev:panel": "npm run dev --workspace @wa/panel",
+    "dev:dashboard": "npm run dev --workspace @wa/dashboard",
     "dev:service": "npm run dev --workspace @wa/service",
     "db:check": "npm run db:check --workspace @wa/service",
     "build": "npm run build --workspaces --if-present",

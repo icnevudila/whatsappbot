@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, EmptyState, Notice } from '@/components/ui'
+import { WaMark } from '@/components/wa-mark'
 import { blacklistPhone } from '../../kara-liste/actions'
 import { removeMember } from '../actions'
 
@@ -12,20 +13,6 @@ export type MemberRow = {
   name: string | null
   wa_status: string
   wa_checked_at: string | null
-}
-
-const WA_TONE: Record<string, string> = {
-  valid: 'border-ok/35 bg-ok-soft text-ok',
-  invalid: 'border-danger/35 bg-danger/10 text-danger',
-  unknown: 'border-hairline bg-canvas text-ink-muted',
-  pending: 'border-hairline bg-canvas text-ink-muted',
-}
-
-const WA_LABEL: Record<string, string> = {
-  valid: 'WhatsApp’ta var',
-  invalid: 'WhatsApp’ta yok',
-  unknown: 'Bekliyor',
-  pending: 'Bekliyor',
 }
 
 export function MemberActions({
@@ -76,14 +63,8 @@ export function MemberActions({
           >
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
+                <WaMark status={member.wa_status} showLabel />
                 <span className="font-mono text-[12.5px] tabular">{member.phone_e164}</span>
-                <span
-                  className={`rounded-full border px-2 py-0.5 text-[10.5px] font-medium ${
-                    WA_TONE[member.wa_status] ?? WA_TONE.unknown
-                  }`}
-                >
-                  {WA_LABEL[member.wa_status] ?? member.wa_status}
-                </span>
               </div>
               {member.name ? (
                 <p className="mt-0.5 text-[11.5px] text-ink-muted">{member.name}</p>
