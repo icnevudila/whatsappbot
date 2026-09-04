@@ -164,7 +164,7 @@ export function DiscoverForm() {
         <form onSubmit={onSubmit} className="space-y-3">
           <Field
             label="Ne arıyorsunuz?"
-            hint="Şehir + meslek / kategori. Sonuçlar genelde birkaç saniyede gelir."
+            hint="Şehir + meslek / kategori. Sonuçlar genelde birkaç saniyede gelir. Günlük en fazla 15 arama (kota koruması)."
           >
             <Input
               value={query}
