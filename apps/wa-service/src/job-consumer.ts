@@ -27,23 +27,39 @@ async function claim(): Promise<JobRow[]> {
   ])
 }
 
-async function markDone(jobId: string, result: unknown): Promise<void> {
-  await query(
+async function markDone(jobId: string, result: unknown): Promise<boolean> {
+  const rows = await query<{ id: string }>(
     `update public.jobs
         set status = 'done', result = $2::jsonb, error = null, finished_at = now(), updated_at = now()
-      where id = $1`,
-    [jobId, JSON.stringify(result ?? {})],
+      where id = $1::bigint
+        and claimed_by = $3
+        and status in ('claimed', 'running')
+      returning id::text`,
+    [jobId, JSON.stringify(result ?? {}), env.workerId],
   )
+  if (rows.length === 0) {
+    log.warn({ jobId }, 'markDone atlandi: sahiplik kaybedildi')
+    return false
+  }
+  return true
+}
+
+/** Retry edilmemesi gereken islem sonrasi hatalar (WA zaten gitti / kara liste). */
+class NonRetryableJobError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'NonRetryableJobError'
+  }
 }
 
 async function markFailed(job: JobRow, error: unknown): Promise<void> {
   const message = error instanceof Error ? error.message : String(error)
-  const canRetry = job.attempts < job.max_attempts
+  const nonRetryable = error instanceof NonRetryableJobError
+  const canRetry = !nonRetryable && job.attempts < job.max_attempts
 
   if (canRetry) {
-    // Artan gecikmeyle tekrar kuyruga koy.
     const delaySeconds = Math.min(300, 5 * 2 ** job.attempts)
-    await query(
+    const rows = await query<{ id: string }>(
       `update public.jobs
           set status = 'pending',
               error = $2,
@@ -51,14 +67,21 @@ async function markFailed(job: JobRow, error: unknown): Promise<void> {
               claimed_by = null,
               claimed_at = null,
               updated_at = now()
-        where id = $1`,
-      [job.id, message, delaySeconds],
+        where id = $1::bigint
+          and claimed_by = $4
+          and status in ('claimed', 'running')
+        returning id::text`,
+      [job.id, message, delaySeconds, env.workerId],
     )
+    if (rows.length === 0) {
+      log.warn({ jobId: job.id }, 'markFailed(retry) atlandi: sahiplik kaybedildi')
+      return
+    }
     log.warn({ jobId: job.id, type: job.type, delaySeconds }, 'Is yeniden kuyruga alindi')
     return
   }
 
-  await query(
+  const rows = await query<{ id: string }>(
     `update public.jobs
         set status = 'failed',
             error = $2,
@@ -66,9 +89,16 @@ async function markFailed(job: JobRow, error: unknown): Promise<void> {
             claimed_by = null,
             claimed_at = null,
             updated_at = now()
-      where id = $1`,
-    [job.id, message],
+      where id = $1::bigint
+        and claimed_by = $3
+        and status in ('claimed', 'running')
+      returning id::text`,
+    [job.id, message, env.workerId],
   )
+  if (rows.length === 0) {
+    log.warn({ jobId: job.id }, 'markFailed(final) atlandi: sahiplik kaybedildi')
+    return
+  }
   log.error({ jobId: job.id, type: job.type, err: message }, 'Is kalici olarak basarisiz')
 }
 
@@ -132,42 +162,59 @@ async function handle(job: JobRow): Promise<unknown> {
         [job.org_id, payload.phone_e164],
       )
       if (blocked) {
-        throw new Error('Numara kara listede, gonderim yapilmadi')
+        return { skipped: true, reason: 'blacklist' }
       }
 
       // Dogrulama kapisi tek mesajda da gecerli.
       const verdict = await session.verifyNumbers([payload.phone_e164])
       const entry = verdict.get(payload.phone_e164)
-      if (!entry?.exists) {
-        throw new Error("Numara WhatsApp'ta kayitli degil, gonderim yapilmadi")
+      if (!entry) {
+        throw new Error('Dogrulama sonucu alinamadi (oturum dusmus olabilir)')
+      }
+      if (!entry.exists) {
+        return { skipped: true, reason: 'not_on_whatsapp' }
       }
 
       const jid = entry.jid ?? e164ToJid(payload.phone_e164)
-      const message = payload.media_url
-        ? await session.sendMessage(jid, {
-            image: { url: payload.media_url },
-            caption: payload.body ?? undefined,
-          })
-        : await session.sendMessage(jid, { text: payload.body ?? '' })
+      let messageId: string | null = null
+      try {
+        const message = payload.media_url
+          ? await session.sendMessage(jid, {
+              image: { url: payload.media_url },
+              caption: payload.body ?? undefined,
+            })
+          : await session.sendMessage(jid, { text: payload.body ?? '' })
+        messageId = message.key?.id ?? null
+      } catch (error) {
+        throw error
+      }
 
-      await query(
-        `insert into public.message_log
-           (org_id, created_by, account_id, direction, remote_jid, phone_e164, message_type, body, media_url, wa_message_id, status)
-         values ($1, $2, $3, 'out', $4, $5, $6, $7, $8, $9, 'sent')`,
-        [
-          job.org_id,
-          job.created_by,
-          accountId,
-          jid,
-          payload.phone_e164,
-          payload.media_url ? 'image' : 'text',
-          payload.body ?? null,
-          payload.media_url ?? null,
-          message.key?.id ?? null,
-        ],
-      )
+      // WA gitti: DB hatasi retry = cift mesaj. Non-retryable bitir.
+      try {
+        await query(
+          `insert into public.message_log
+             (org_id, created_by, account_id, direction, remote_jid, phone_e164, message_type, body, media_url, wa_message_id, status)
+           values ($1, $2, $3, 'out', $4, $5, $6, $7, $8, $9, 'sent')`,
+          [
+            job.org_id,
+            job.created_by,
+            accountId,
+            jid,
+            payload.phone_e164,
+            payload.media_url ? 'image' : 'text',
+            payload.body ?? null,
+            payload.media_url ?? null,
+            messageId,
+          ],
+        )
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error)
+        throw new NonRetryableJobError(
+          `Mesaj gonderildi ama kayit yazilamadi (retry yok): ${detail}`,
+        )
+      }
 
-      return { messageId: message.key?.id }
+      return { messageId }
     }
 
     case 'contacts.verify': {
@@ -200,10 +247,17 @@ async function handle(job: JobRow): Promise<unknown> {
         (serviceEnv.discoverEngine === 'auto' && Boolean(serviceEnv.googleMapsApiKey))
 
       if (usePlaces) {
+        if (!serviceEnv.googleMapsApiKey) {
+          throw new Error('DISCOVER_ENGINE=places ama GOOGLE_MAPS_API_KEY yok')
+        }
         const { discoverWithPlacesApi } = await import('./scraper/places-discover.js')
-        return discoverWithPlacesApi(payload.query, {
+        const result = await discoverWithPlacesApi(payload.query, {
           maxResults: payload.max_results,
         })
+        if (result.contacts.length === 0 && result.errors.length > 0) {
+          throw new Error(result.errors[0] ?? 'Places kesfi basarisiz')
+        }
+        return result
       }
 
       const { discoverLocalBusinesses } = await import('./scraper/maps-discover.js')
@@ -284,37 +338,49 @@ export function jobInFlightCount(): number {
 async function tick(): Promise<void> {
   tickActive = true
   try {
-    const jobs = await claim()
+    // Tek is: batch icinde bekleyen claimed islerin reclaim ile cift calismasini onler.
+    const jobs = await query<JobRow>('select * from wa.claim_jobs($1, $2)', [
+      env.workerId,
+      1,
+    ])
     if (jobs.length === 0) return
 
-    log.info({ count: jobs.length }, 'Is alindi')
+    log.info({ count: jobs.length, type: jobs[0]?.type }, 'Is alindi')
 
     for (const job of jobs) {
       inFlightJobs += 1
-      const heartbeat =
-        job.type === 'contacts.scrape' || job.type === 'contacts.discover'
-          ? setInterval(() => {
-              void query(
-                `update public.jobs
-                    set claimed_at = now(), updated_at = now()
-                  where id = $1::bigint and status = 'running'`,
-                [job.id],
-              ).catch((error) => {
-                log.warn({ err: error, jobId: job.id }, 'Job heartbeat basarisiz')
-              })
-            }, 60_000)
-          : null
+      const heartbeat = setInterval(() => {
+        void query(
+          `update public.jobs
+              set claimed_at = now(), updated_at = now()
+            where id = $1::bigint
+              and claimed_by = $2
+              and status = 'running'`,
+          [job.id, env.workerId],
+        ).catch((error) => {
+          log.warn({ err: error, jobId: job.id }, 'Job heartbeat basarisiz')
+        })
+      }, 45_000)
       try {
-        await query(
-          `update public.jobs set status = 'running', updated_at = now() where id = $1::bigint`,
-          [job.id],
+        const claimed = await query<{ id: string }>(
+          `update public.jobs
+              set status = 'running', claimed_at = now(), updated_at = now()
+            where id = $1::bigint
+              and claimed_by = $2
+              and status = 'claimed'
+            returning id::text`,
+          [job.id, env.workerId],
         )
+        if (claimed.length === 0) {
+          log.warn({ jobId: job.id }, 'running gecisi atlandi: sahiplik kaybedildi')
+          continue
+        }
         const result = await handle(job)
         await markDone(job.id, result)
       } catch (error) {
         await markFailed(job, error)
       } finally {
-        if (heartbeat) clearInterval(heartbeat)
+        clearInterval(heartbeat)
         inFlightJobs -= 1
       }
     }

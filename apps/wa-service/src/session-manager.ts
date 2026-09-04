@@ -1,5 +1,5 @@
 import { loadAccount, loadResumableAccounts, logAccountEvent, patchAccount } from './accounts.js'
-import { acquireLease } from './lease.js'
+import { acquireLease, releaseLease } from './lease.js'
 import { env } from './env.js'
 import { logger } from './logger.js'
 import { WhatsAppSession } from './session.js'
@@ -88,6 +88,9 @@ export class SessionManager {
         await session.start()
       } catch (error) {
         this.sessions.delete(accountId)
+        await releaseLease(accountId, lease.epoch).catch((leaseError) => {
+          log.warn({ err: leaseError, accountId }, 'Basarisiz connect sonrasi kira birakilamadi')
+        })
         await patchAccount(accountId, {
           status: 'error',
           status_detail: error instanceof Error ? error.message : 'Baglanti kurulamadi',

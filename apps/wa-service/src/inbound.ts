@@ -1,4 +1,4 @@
-import { isJidGroup, type WAMessage } from '@whiskeysockets/baileys'
+import { isJidGroup, isLidUser, type WAMessage } from '@whiskeysockets/baileys'
 import { jidToE164 } from '@wa/shared'
 import { query } from './db.js'
 import { logger } from './logger.js'
@@ -39,16 +39,50 @@ function extractBody(message: WAMessage): { type: string; body: string | null } 
 }
 
 /**
+ * LID (@lid) rakamlari telefon degildir. Once senderPn / participantPn,
+ * sonra PN remoteJid, son olarak opsiyonel mapping resolver.
+ */
+export async function resolveInboundPhone(
+  message: WAMessage,
+  resolveLidPn?: (lidJid: string) => Promise<string | null>,
+): Promise<string | null> {
+  const key = message.key
+  if (!key?.remoteJid) return null
+
+  const fromPnHint =
+    jidToE164(key.senderPn ?? '') ??
+    jidToE164(key.participantPn ?? '') ??
+    null
+  if (fromPnHint) return fromPnHint
+
+  if (!isLidUser(key.remoteJid)) {
+    return jidToE164(key.remoteJid)
+  }
+
+  if (resolveLidPn) {
+    try {
+      const mapped = await resolveLidPn(key.remoteJid)
+      if (mapped) return jidToE164(mapped) ?? (mapped.startsWith('+') ? mapped : null)
+    } catch {
+      // Mapping yoksa phone null kalir; Gelenler "Yeni" sekmesine duser.
+    }
+  }
+
+  return null
+}
+
+/**
  * Gelen mesajlari message_log'a yazar; panel Gelenler sayfasinda izlenir.
- * Cift kayit: ayni wa_message_id hesabinda bir kez tutulur.
+ * Cift kayit: partial unique index + select guard.
  */
 export async function persistInboundMessage(options: {
   orgId: string
   createdBy: string
   accountId: string
   message: WAMessage
+  resolveLidPn?: (lidJid: string) => Promise<string | null>
 }): Promise<void> {
-  const { orgId, createdBy, accountId, message } = options
+  const { orgId, createdBy, accountId, message, resolveLidPn } = options
   const key = message.key
   if (!key?.remoteJid || key.fromMe) return
   if (isJidGroup(key.remoteJid)) return
@@ -70,16 +104,23 @@ export async function persistInboundMessage(options: {
     if (!body) return
   }
 
-  const phone = jidToE164(key.remoteJid)
+  const phone = await resolveInboundPhone(message, resolveLidPn)
 
-  await query(
-    `insert into public.message_log
-       (org_id, created_by, account_id, direction, remote_jid, phone_e164, message_type, body, wa_message_id, status)
-     values ($1, $2, $3, 'in', $4, $5, $6, $7, $8, 'delivered')`,
-    [orgId, createdBy, accountId, key.remoteJid, phone, type, body, waMessageId],
-  )
+  try {
+    await query(
+      `insert into public.message_log
+         (org_id, created_by, account_id, direction, remote_jid, phone_e164, message_type, body, wa_message_id, status)
+       values ($1, $2, $3, 'in', $4, $5, $6, $7, $8, 'delivered')`,
+      [orgId, createdBy, accountId, key.remoteJid, phone, type, body, waMessageId],
+    )
+  } catch (error) {
+    // Yarıs: ayni wa_message_id baska worker/event ile yazildi.
+    const code = (error as { code?: string } | null)?.code
+    if (code === '23505') return
+    throw error
+  }
 
-  // Opt-out: gelen metin cikma istegi gibiyse kara listeye al.
+  // Opt-out: yalnizca gercek telefon biliniyorsa kara listeye al.
   if (phone && body && OPT_OUT.test(body)) {
     await query(
       `insert into public.blacklist (org_id, created_by, phone_e164, reason)

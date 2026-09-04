@@ -123,6 +123,8 @@ export class WhatsAppSession {
 
   /** Kod isteyen numara; 515 restart sonrasi kodu tekrar istemek icin. */
   private pairingPhone: string | undefined
+  private pairingIssuedAt = 0
+  private refreshingPairing = false
 
   constructor(account: Pick<AccountRow, 'id' | 'org_id' | 'created_by'>, epoch: number) {
     this.accountId = account.id
@@ -224,12 +226,30 @@ export class WhatsAppSession {
 
   private async handleInboundMessages(messages: WAMessage[]): Promise<void> {
     const { persistInboundMessage } = await import('./inbound.js')
+    const resolveLidPn = async (lidJid: string): Promise<string | null> => {
+      // Baileys 6.7'de resmi API yok; 7.x mapping varsa kullan.
+      const sock = this.sock as
+        | {
+            signalRepository?: {
+              lidMapping?: {
+                getPNForLID?: (lid: string) => Promise<string | null | undefined>
+              }
+            }
+          }
+        | null
+      const getPn = sock?.signalRepository?.lidMapping?.getPNForLID
+      if (!getPn) return null
+      const mapped = await getPn.call(sock.signalRepository!.lidMapping!, lidJid)
+      return mapped ?? null
+    }
+
     for (const message of messages) {
       await persistInboundMessage({
         orgId: this.orgId,
         createdBy: this.createdBy,
         accountId: this.accountId,
         message,
+        resolveLidPn,
       })
     }
   }
@@ -252,6 +272,19 @@ export class WhatsAppSession {
       // kullaniciyi bolerdi ve kod hala gecerliyken QR onu ezerdi.
       if (this.pairingPhone) {
         this.status = 'pairing_pending'
+        // Kod ~3 dk gecerli; QR yenilenirken suresi dolmussa yeni kod iste.
+        const stale = Date.now() - this.pairingIssuedAt > 150_000
+        if (stale && !this.refreshingPairing && this.sock && !this.shuttingDown) {
+          this.refreshingPairing = true
+          const phone = this.pairingPhone
+          void this.refreshPairingCode(phone)
+            .catch((error) => {
+              this.log.warn({ err: error }, 'Eslestirme kodu yenilenemedi')
+            })
+            .finally(() => {
+              this.refreshingPairing = false
+            })
+        }
         return
       }
 
@@ -568,6 +601,7 @@ export class WhatsAppSession {
     )
 
     const expiresAt = new Date(Date.now() + 180_000).toISOString()
+    this.pairingIssuedAt = Date.now()
 
     await patchAccount(this.accountId, {
       status: 'pairing_pending',
@@ -584,6 +618,31 @@ export class WhatsAppSession {
     await logAccountEvent(this, 'info', 'account.pairing_code', { phone: digits })
 
     return code
+  }
+
+  /** QR dongusu devam ederken suresi dolmus pairing kodunu yeniler. */
+  private async refreshPairingCode(digits: string): Promise<void> {
+    const sock = this.sock
+    if (!sock || this.shuttingDown || this.disposed) return
+    if (this.auth?.state.creds.registered) return
+
+    const code = await withTimeout(
+      sock.requestPairingCode(digits),
+      30_000,
+      'refreshPairingCode',
+    )
+    this.pairingIssuedAt = Date.now()
+    const expiresAt = new Date(Date.now() + 180_000).toISOString()
+
+    await patchAccount(this.accountId, {
+      status: 'pairing_pending',
+      pairing_code: code,
+      pairing_expires_at: expiresAt,
+      qr_code: null,
+      qr_expires_at: null,
+      status_detail: 'Eslestirme kodu yenilendi',
+    })
+    this.log.info({ phone: digits }, 'Eslestirme kodu yenilendi')
   }
 
   private async giveUpOnPairing(): Promise<void> {

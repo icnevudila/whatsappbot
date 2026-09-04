@@ -38,14 +38,19 @@ async function buildHealthPayload(): Promise<{ status: number; body: unknown }> 
   const pending = await pendingJobCount().catch(() => -1)
   const staleClaimed = await staleClaimedJobCount().catch(() => -1)
 
+  // Liveness: DB ayakta olsun yeter (oturum reconnect sirasinda restart etmeyelim).
   const healthy = dbOk
+  // Readiness: en az bir canli oturum VEYA henuz oturum yuklenmedi (boot).
+  const ready =
+    dbOk && (report.tracked === 0 || report.live > 0) && report.stale.length === 0
 
   return {
     status: healthy ? 200 : 503,
     body: {
       worker: env.workerId,
       healthy,
-      degraded: report.stale.length > 0,
+      ready,
+      degraded: report.stale.length > 0 || (report.tracked > 0 && report.live === 0),
       db: dbOk,
       sessions: { tracked: report.tracked, live: report.live, stale: report.stale },
       jobs: { pending, staleClaimed },
@@ -56,10 +61,13 @@ async function buildHealthPayload(): Promise<{ status: number; body: unknown }> 
 
 function startHealthServer(): http.Server {
   const server = http.createServer((request, response) => {
-    if (request.url === '/health' || request.url === '/') {
+    if (request.url === '/health' || request.url === '/' || request.url === '/ready') {
       void buildHealthPayload()
         .then(({ status, body }) => {
-          response.writeHead(status, { 'content-type': 'application/json' })
+          const readyOnly = request.url === '/ready'
+          const payload = body as { ready?: boolean }
+          const code = readyOnly ? (payload.ready ? 200 : 503) : status
+          response.writeHead(code, { 'content-type': 'application/json' })
           response.end(JSON.stringify(body, null, 2))
         })
         .catch((error) => {

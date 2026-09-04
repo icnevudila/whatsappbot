@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto'
 import process from 'node:process'
 
 function required(name: string): string {
@@ -53,7 +52,8 @@ export const env = {
   leaseTtlSeconds: int('LEASE_TTL_SECONDS', 60),
 
   jobPollIntervalMs: int('JOB_POLL_INTERVAL_MS', 2_000),
-  jobBatchSize: int('JOB_BATCH_SIZE', 10),
+  /** Cift islem riskini azaltmak icin varsayilan 1. */
+  jobBatchSize: Math.max(1, int('JOB_BATCH_SIZE', 1)),
 
   /** Stuck claimed/running isler icin reclaim esigi (saniye). Scrape/discover uzun sürebilir. */
   staleJobSeconds: int('STALE_JOB_SECONDS', 900),
@@ -84,10 +84,7 @@ export const env = {
   googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY?.trim() || null,
 
   /** places | playwright | auto (varsayılan: key varsa places) */
-  discoverEngine: (process.env.DISCOVER_ENGINE?.trim().toLowerCase() || 'auto') as
-    | 'auto'
-    | 'places'
-    | 'playwright',
+  discoverEngine: resolveDiscoverEngine(),
 
   /**
    * Places Text Search üst sınırı (tek arama = tek API isteği, sayfalama yok).
@@ -95,5 +92,18 @@ export const env = {
    */
   discoverMaxResults: Math.min(20, Math.max(5, int('DISCOVER_MAX_RESULTS', 20))),
 } as const
+
+function resolveDiscoverEngine(): 'auto' | 'places' | 'playwright' {
+  const raw = process.env.DISCOVER_ENGINE?.trim().toLowerCase() || 'auto'
+  if (raw !== 'auto' && raw !== 'places' && raw !== 'playwright') {
+    throw new Error(
+      `DISCOVER_ENGINE gecersiz: "${raw}". Izin verilen: auto | places | playwright`,
+    )
+  }
+  if (raw === 'places' && !(process.env.GOOGLE_MAPS_API_KEY?.trim())) {
+    throw new Error('DISCOVER_ENGINE=places icin GOOGLE_MAPS_API_KEY zorunlu')
+  }
+  return raw
+}
 
 export const isProduction = env.nodeEnv === 'production'

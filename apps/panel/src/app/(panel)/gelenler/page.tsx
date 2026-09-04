@@ -7,8 +7,15 @@ import { InboxBoard, type InboxMessage, type ThreadPreview } from './inbox-board
 export const metadata: Metadata = { title: 'Gelenler' }
 export const dynamic = 'force-dynamic'
 
-type InboxTab = 'ilgili' | 'diger'
+type InboxTab = 'tum' | 'yanitlar' | 'yeni'
 type ThreadMode = 'gelen' | 'tam'
+
+function resolveTab(raw: string | undefined): InboxTab {
+  // Eski URL'ler: ilgili→yanitlar, diger→yeni
+  if (raw === 'yanitlar' || raw === 'ilgili') return 'yanitlar'
+  if (raw === 'yeni' || raw === 'diger') return 'yeni'
+  return 'tum'
+}
 
 export default async function InboxPage({
   searchParams,
@@ -31,7 +38,7 @@ export default async function InboxPage({
   const telRaw = params.tel
   const selectedPhone = Array.isArray(telRaw) ? telRaw[0] : telRaw
   const sekmeRaw = Array.isArray(params.sekme) ? params.sekme[0] : params.sekme
-  const tab: InboxTab = sekmeRaw === 'diger' ? 'diger' : 'ilgili'
+  const tab = resolveTab(sekmeRaw)
   const konusmaRaw = Array.isArray(params.konusma) ? params.konusma[0] : params.konusma
   const threadMode: ThreadMode = konusmaRaw === 'tam' ? 'tam' : 'gelen'
 
@@ -76,7 +83,8 @@ export default async function InboxPage({
   for (const row of inbound ?? []) {
     const phone = row.phone_e164 ?? row.remote_jid ?? `id-${row.id}`
     if (allPreviews.has(phone)) continue
-    const related = Boolean(row.phone_e164 && relatedPhones.has(row.phone_e164))
+    const hasPhone = Boolean(row.phone_e164)
+    const isReply = Boolean(row.phone_e164 && relatedPhones.has(row.phone_e164))
     allPreviews.set(phone, {
       phone,
       lastBody: row.body,
@@ -84,13 +92,16 @@ export default async function InboxPage({
       messageType: row.message_type,
       accountId: row.account_id,
       accountLabel: row.account_id ? accountLabels[row.account_id] ?? null : null,
-      related,
+      isReply,
+      missingPhone: !hasPhone,
     })
   }
 
-  const relatedList = [...allPreviews.values()].filter((p) => p.related)
-  const otherList = [...allPreviews.values()].filter((p) => !p.related)
-  const previews = tab === 'ilgili' ? relatedList : otherList
+  const allList = [...allPreviews.values()]
+  const replyList = allList.filter((p) => p.isReply)
+  const newList = allList.filter((p) => !p.isReply)
+  const previews =
+    tab === 'yanitlar' ? replyList : tab === 'yeni' ? newList : allList
 
   let thread: InboxMessage[] = []
   if (selectedPhone) {
@@ -119,7 +130,7 @@ export default async function InboxPage({
     <>
       <PageHeader
         title="Gelenler"
-        description="Salt okuma: bağlı hatlara gelen mesajlar. “dur / yazma / stop” otomatik kara listeye alınır. İlgili = sizin yazdığınız numaralar."
+        description="Salt okuma: bağlı hatlara gelen mesajlar. “dur / yazma / stop” otomatik kara listeye alınır. Yanıtlar = sizin yazdığınız numaralardan gelenler."
         action={
           <div className="flex flex-wrap items-center gap-3">
             <span className="tabular text-[12.5px] text-ink-muted">
@@ -134,8 +145,9 @@ export default async function InboxPage({
         orgId={org.id}
         tab={tab}
         threadMode={threadMode}
-        relatedCount={relatedList.length}
-        otherCount={otherList.length}
+        allCount={allList.length}
+        replyCount={replyList.length}
+        newCount={newList.length}
         previews={previews}
         selectedPhone={selectedPhone ?? null}
         thread={thread}

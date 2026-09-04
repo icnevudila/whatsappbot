@@ -60,7 +60,7 @@ services:
       timeout: 10s
       # Baileys oturumlarini geri yuklemek dakikalar surebiliyor; bu sure
       # boyunca saglik hatasi sayilmasin.
-      start_period: 120s
+      start_period: 180s
       retries: 3
 
     logging:

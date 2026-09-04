@@ -103,9 +103,14 @@ export function toE164Scraped(
   return toE164(trimmed)
 }
 
-/** WhatsApp JID'inden E.164 uretir. LID'ler telefon numarasi tasimadigi icin atlanir. */
+/** WhatsApp JID'inden E.164 uretir. LID (@lid) telefon degildir — atlanir. */
 export function jidToE164(jid: string): string | null {
-  const user = jid.split('@')[0]?.split(':')[0]
+  const trimmed = jid.trim()
+  if (!trimmed || trimmed.endsWith('@lid')) return null
+  // Yalnizca telefon JID'leri (@s.whatsapp.net / bare digit user).
+  const host = trimmed.includes('@') ? trimmed.split('@')[1] : 's.whatsapp.net'
+  if (host && host !== 's.whatsapp.net') return null
+  const user = trimmed.split('@')[0]?.split(':')[0]
   if (!user || !/^\d+$/.test(user)) return null
   return toE164(`+${user}`)
 }

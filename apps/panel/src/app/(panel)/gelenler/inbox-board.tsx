@@ -27,8 +27,11 @@ export type ThreadPreview = {
   messageType: string
   accountId: string | null
   accountLabel: string | null
-  related?: boolean
+  isReply?: boolean
+  missingPhone?: boolean
 }
+
+export type InboxTab = 'tum' | 'yanitlar' | 'yeni'
 
 const timeFormat = new Intl.DateTimeFormat('tr-TR', {
   day: 'numeric',
@@ -39,7 +42,7 @@ const timeFormat = new Intl.DateTimeFormat('tr-TR', {
 
 function hrefFor(opts: {
   tel?: string | null
-  tab: 'ilgili' | 'diger'
+  tab: InboxTab
   threadMode: 'gelen' | 'tam'
 }) {
   const params = new URLSearchParams()
@@ -53,8 +56,9 @@ export function InboxBoard({
   orgId,
   tab,
   threadMode,
-  relatedCount,
-  otherCount,
+  allCount,
+  replyCount,
+  newCount,
   previews,
   selectedPhone,
   thread,
@@ -62,10 +66,11 @@ export function InboxBoard({
   initialInbound,
 }: {
   orgId: string
-  tab: 'ilgili' | 'diger'
+  tab: InboxTab
   threadMode: 'gelen' | 'tam'
-  relatedCount: number
-  otherCount: number
+  allCount: number
+  replyCount: number
+  newCount: number
   previews: ThreadPreview[]
   selectedPhone: string | null
   thread: InboxMessage[]
@@ -126,6 +131,23 @@ export function InboxBoard({
     })
   }
 
+  const emptyCopy =
+    tab === 'yanitlar'
+      ? {
+          title: 'Yanıt yok',
+          description: 'Sizin yazdığınız numaralardan yanıt gelince burada görünür.',
+        }
+      : tab === 'yeni'
+        ? {
+            title: 'Yeni gelen yok',
+            description:
+              'Henüz yazmadığınız numaralar veya telefonu çözülememiş (LID) sohbetler burada listelenir.',
+          }
+        : {
+            title: 'Gelen yok',
+            description: 'Bağlı hatlara mesaj gelince burada görünür.',
+          }
+
   return (
     <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
       <Card>
@@ -133,38 +155,40 @@ export function InboxBoard({
           title="Sohbetler"
           subtitle={`${list.length} kişi`}
           action={
-            <div className="flex gap-1 text-[11.5px]">
+            <div className="flex flex-wrap gap-1 text-[11.5px]">
               <Link
-                href={hrefFor({ tel: selectedPhone, tab: 'ilgili', threadMode })}
+                href={hrefFor({ tel: selectedPhone, tab: 'tum', threadMode })}
                 className={
-                  tab === 'ilgili'
+                  tab === 'tum' ? 'font-medium text-accent' : 'text-ink-muted hover:text-ink'
+                }
+              >
+                Tümü ({allCount})
+              </Link>
+              <span className="text-ink-faint">·</span>
+              <Link
+                href={hrefFor({ tel: selectedPhone, tab: 'yanitlar', threadMode })}
+                className={
+                  tab === 'yanitlar'
                     ? 'font-medium text-accent'
                     : 'text-ink-muted hover:text-ink'
                 }
               >
-                İlgili ({relatedCount})
+                Yanıtlar ({replyCount})
               </Link>
               <span className="text-ink-faint">·</span>
               <Link
-                href={hrefFor({ tel: selectedPhone, tab: 'diger', threadMode })}
+                href={hrefFor({ tel: selectedPhone, tab: 'yeni', threadMode })}
                 className={
-                  tab === 'diger' ? 'font-medium text-accent' : 'text-ink-muted hover:text-ink'
+                  tab === 'yeni' ? 'font-medium text-accent' : 'text-ink-muted hover:text-ink'
                 }
               >
-                Diğer ({otherCount})
+                Yeni ({newCount})
               </Link>
             </div>
           }
         />
         {list.length === 0 ? (
-          <EmptyState
-            title={tab === 'ilgili' ? 'İlgili gelen yok' : 'Diğer gelen yok'}
-            description={
-              tab === 'ilgili'
-                ? 'Sizin yazdığınız numaralardan yanıt gelince burada görünür.'
-                : 'Kampanya dışı / kişisel gelenler burada listelenir.'
-            }
-          />
+          <EmptyState title={emptyCopy.title} description={emptyCopy.description} />
         ) : (
           <ul className="max-h-[70vh] divide-y divide-hairline overflow-y-auto">
             {list.map((item) => {
@@ -178,7 +202,9 @@ export function InboxBoard({
                     }`}
                   >
                     <div className="flex items-baseline justify-between gap-2">
-                      <p className="truncate font-mono text-[12.5px] tabular">{item.phone}</p>
+                      <p className="truncate font-mono text-[12.5px] tabular">
+                        {item.missingPhone ? item.phone.replace(/@lid$/, '') : item.phone}
+                      </p>
                       <span className="shrink-0 text-[10.5px] text-ink-faint">
                         {timeFormat.format(new Date(item.lastAt))}
                       </span>
@@ -186,9 +212,17 @@ export function InboxBoard({
                     <p className="mt-0.5 truncate text-[12px] text-ink-muted">
                       {item.lastBody ?? `(${item.messageType})`}
                     </p>
-                    {item.accountLabel ? (
-                      <p className="mt-0.5 text-[11px] text-ink-faint">{item.accountLabel}</p>
-                    ) : null}
+                    <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-ink-faint">
+                      {item.accountLabel ? <span>{item.accountLabel}</span> : null}
+                      {item.missingPhone ? (
+                        <span className="rounded-sm border border-hairline px-1 py-px text-[10px]">
+                          numara yok
+                        </span>
+                      ) : null}
+                      {item.isReply ? (
+                        <span className="text-[10px] text-accent">yanıt</span>
+                      ) : null}
+                    </div>
                   </Link>
                 </li>
               )
@@ -201,11 +235,17 @@ export function InboxBoard({
         {selectedPhone ? (
           <>
             <CardHeader
-              title={selectedPhone}
+              title={
+                selectedPreview?.missingPhone
+                  ? selectedPhone.replace(/@lid$/, '')
+                  : selectedPhone
+              }
               subtitle={
-                selectedPreview?.accountLabel
-                  ? `Hat: ${selectedPreview.accountLabel} · salt okuma`
-                  : 'Salt okuma gelen kutusu'
+                selectedPreview?.missingPhone
+                  ? 'Telefon çözülemedi (LID) · salt okuma'
+                  : selectedPreview?.accountLabel
+                    ? `Hat: ${selectedPreview.accountLabel} · salt okuma`
+                    : 'Salt okuma gelen kutusu'
               }
               action={
                 <div className="flex flex-wrap items-center gap-2">

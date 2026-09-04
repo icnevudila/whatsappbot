@@ -7,6 +7,9 @@ const { Pool } = pg
 export const pool = new Pool({
   connectionString: env.databaseUrl,
   max: env.dbPoolMax,
+  // Baglanti kurulamazsa sonsuza kadar bekleme; worker ayakta kalsin.
+  connectionTimeoutMillis: 15_000,
+  idleTimeoutMillis: 30_000,
   // Supabase her zaman TLS istiyor. Havuz sertifikasi zincirini Node'un kok
   // deposunda tasimadigi icin dogrulama kapatiliyor; baglanti yine sifreli.
   ssl: { rejectUnauthorized: false },

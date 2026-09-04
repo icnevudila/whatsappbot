@@ -321,7 +321,7 @@ async function sendToTarget(
     await query(
       `update public.campaign_targets
           set status = 'skipped', error = 'Kara listede', updated_at = now()
-        where id = $1::bigint`,
+        where id = $1::bigint and status = 'sending'`,
       [target.id],
     )
     await reconcileCampaignCounts(campaign.id)
@@ -333,23 +333,50 @@ async function sendToTarget(
   let jid = target.wa_status === 'valid' ? target.wa_jid : null
 
   if (!jid) {
+    if (!session.isLive) {
+      await query(
+        `update public.campaign_targets
+            set status = 'queued',
+                error = 'Oturum dusuk, yeniden denenecek',
+                scheduled_for = now() + interval '30 seconds',
+                updated_at = now()
+          where id = $1::bigint and status = 'sending'`,
+        [target.id],
+      )
+      return
+    }
+
     const verdicts = await session.verifyNumbers([target.phone_e164])
     const verdict = verdicts.get(target.phone_e164)
+
+    // Bos map = dogrulama yapilamadi; skip etme, kisa sure sonra tekrar dene.
+    if (!verdict) {
+      await query(
+        `update public.campaign_targets
+            set status = 'queued',
+                error = 'Dogrulama sonucu yok',
+                scheduled_for = now() + interval '45 seconds',
+                updated_at = now()
+          where id = $1::bigint and status = 'sending'`,
+        [target.id],
+      )
+      return
+    }
 
     if (target.contact_id) {
       await query(
         `update public.contacts
             set wa_status = $2, wa_jid = $3, wa_checked_at = now(), updated_at = now()
           where id = $1`,
-        [target.contact_id, verdict?.exists ? 'valid' : 'invalid', verdict?.jid ?? null],
+        [target.contact_id, verdict.exists ? 'valid' : 'invalid', verdict.jid ?? null],
       )
     }
 
-    if (!verdict?.exists) {
+    if (!verdict.exists) {
       await query(
         `update public.campaign_targets
             set status = 'skipped', error = 'Numara WhatsApp''ta kayitli degil', updated_at = now()
-          where id = $1::bigint`,
+          where id = $1::bigint and status = 'sending'`,
         [target.id],
       )
       await reconcileCampaignCounts(campaign.id)
@@ -363,12 +390,19 @@ async function sendToTarget(
   const content = buildContent(campaign, body) as AnyMessageContent
   const message = await session.sendMessage(jid, content)
 
-  await query(
+  const updated = await query<{ id: string }>(
     `update public.campaign_targets
         set status = 'sent', wa_message_id = $2, sent_at = now(), error = null, updated_at = now()
-      where id = $1::bigint`,
+      where id = $1::bigint and status = 'sending'
+      returning id::text`,
     [target.id, message.key?.id ?? null],
   )
+
+  // Baska worker reclaim edip gondermis olabilir — cift kayit yazma.
+  if (updated.length === 0) {
+    log.warn({ targetId: target.id, campaignId: campaign.id }, 'sent guncellemesi atlandi (status degismis)')
+    return
+  }
 
   await query(
     `update public.campaign_accounts
@@ -386,23 +420,28 @@ async function sendToTarget(
       ? 'text'
       : campaign.message_type
 
-  await query(
-    `insert into public.message_log
-       (org_id, created_by, account_id, campaign_id, direction, remote_jid, phone_e164, message_type, body, media_url, wa_message_id, status)
-     values ($1::uuid, $2::uuid, $3::uuid, $4::uuid, 'out', $5, $6, $7, $8, $9, $10, 'sent')`,
-    [
-      campaign.org_id,
-      campaign.created_by,
-      account.account_id,
-      campaign.id,
-      jid,
-      target.phone_e164,
-      messageType,
-      body || null,
-      campaign.media_url,
-      message.key?.id ?? null,
-    ],
-  )
+  try {
+    await query(
+      `insert into public.message_log
+         (org_id, created_by, account_id, campaign_id, direction, remote_jid, phone_e164, message_type, body, media_url, wa_message_id, status)
+       values ($1::uuid, $2::uuid, $3::uuid, $4::uuid, 'out', $5, $6, $7, $8, $9, $10, 'sent')`,
+      [
+        campaign.org_id,
+        campaign.created_by,
+        account.account_id,
+        campaign.id,
+        jid,
+        target.phone_e164,
+        messageType,
+        body || null,
+        campaign.media_url,
+        message.key?.id ?? null,
+      ],
+    )
+  } catch (error) {
+    // Mesaj gitti; log yazilamadi — retry etme (cift mesaj riski).
+    log.error({ err: error, targetId: target.id }, 'message_log yazilamadi (mesaj gonderildi)')
+  }
 }
 
 async function handleSendFailure(
@@ -432,7 +471,7 @@ async function handleSendFailure(
     await query(
       `update public.campaign_targets
           set status = 'queued', error = $2, updated_at = now()
-        where id = $1::bigint`,
+        where id = $1::bigint and status = 'sending'`,
       [target.id, message],
     )
     return
@@ -448,7 +487,7 @@ async function handleSendFailure(
     await query(
       `update public.campaign_targets
           set status = 'failed', error = $2, updated_at = now()
-        where id = $1::bigint`,
+        where id = $1::bigint and status = 'sending'`,
       [target.id, message],
     )
     await reconcileCampaignCounts(campaign.id)
@@ -458,7 +497,7 @@ async function handleSendFailure(
   await query(
     `update public.campaign_targets
         set status = 'queued', error = $2, scheduled_for = now() + interval '2 minutes', updated_at = now()
-      where id = $1::bigint`,
+      where id = $1::bigint and status = 'sending'`,
     [target.id, message],
   )
 }
@@ -485,8 +524,15 @@ async function completeIfDone(campaignId: string): Promise<boolean> {
   return true
 }
 
+function accountPermanentlyUnusable(account: CampaignAccountRow): boolean {
+  if (!account.enabled || account.is_locked) return true
+  if (newChatQuotaExhausted(account)) return true
+  return false
+}
+
 async function runCampaign(campaign: CampaignRow): Promise<void> {
   const accounts = await eligibleAccounts(campaign.id)
+  let claimedAny = false
 
   for (const account of accounts) {
     // Tek kilitli/reachout hesabi kampanyayi durdurmaz; o hesabi atla.
@@ -527,6 +573,8 @@ async function runCampaign(campaign: CampaignRow): Promise<void> {
       return
     }
 
+    claimedAny = true
+
     // Gecikme gonderimden ONCE ayarlaniyor: gonderim uzun surerse bile
     // ayni hesap icin ikinci bir gonderim ayni tick'te baslamaz.
     const jitter =
@@ -545,6 +593,32 @@ async function runCampaign(campaign: CampaignRow): Promise<void> {
       await handleSendFailure(campaign, account, target, error)
     } finally {
       inFlight -= 1
+    }
+  }
+
+  // Hicbir hesap kalici olarak uygun degilse kampanya sonsuza kadar takilmasin.
+  if (!claimedAny && accounts.length > 0 && accounts.every(accountPermanentlyUnusable)) {
+    const queued = await one<{ count: string }>(
+      `select count(*)::text as count
+         from public.campaign_targets
+        where campaign_id = $1::uuid and status in ('queued', 'sending')`,
+      [campaign.id],
+    )
+    if (Number(queued?.count ?? 0) > 0) {
+      await stopCampaign(
+        campaign.id,
+        'Gonderim icin uygun hesap kalmadi (kilitli, kapali veya yeni sohbet kotasi tukendi)',
+      )
+    }
+  } else if (!claimedAny && accounts.length === 0) {
+    const queued = await one<{ count: string }>(
+      `select count(*)::text as count
+         from public.campaign_targets
+        where campaign_id = $1::uuid and status in ('queued', 'sending')`,
+      [campaign.id],
+    )
+    if (Number(queued?.count ?? 0) > 0) {
+      await stopCampaign(campaign.id, 'Kampanyaya bagli hesap yok')
     }
   }
 }
