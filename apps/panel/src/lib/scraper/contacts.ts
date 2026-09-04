@@ -19,7 +19,7 @@ export type ScrapeResult = {
 }
 
 const EMAIL_RE =
-  /[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+/gi
+  /(?:^|[^a-z0-9._%+-])([a-z0-9._%+-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+)/gi
 
 /** Düz metinden aday telefon parçaları (Crawlee social yaklaşımı + TR). */
 const PHONE_CANDIDATE_RE =
@@ -31,7 +31,7 @@ const CONTACT_PATH_HINT =
 const SKIP_EXT = /\.(pdf|jpg|jpeg|png|gif|webp|svg|css|js|mjs|map|woff2?|ttf|ico|mp4|zip|rar)(\?|$)/i
 
 const DEFAULT_UA =
-  'Mozilla/5.0 (compatible; FiloContactBot/1.0; +https://filo.dev; business-contact-discovery)'
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 FiloContactBot/1.0'
 
 type Options = {
   maxPages?: number
@@ -75,11 +75,27 @@ function sameHost(a: string, b: string): boolean {
 }
 
 function extractEmails(text: string): string[] {
-  const found = text.match(EMAIL_RE) ?? []
-  const cleaned = found
-    .map((email) => email.toLowerCase().replace(/^mailto:/i, ''))
-    .filter((email) => !email.endsWith('.png') && !email.endsWith('.jpg'))
-  return [...new Set(cleaned)]
+  const cleaned: string[] = []
+  for (const match of text.matchAll(EMAIL_RE)) {
+    const email = (match[1] ?? '').toLowerCase()
+    if (!email || email.endsWith('.png') || email.endsWith('.jpg')) continue
+    const local = email.split('@')[0] ?? ''
+    if (local.length < 2 || local.length > 40) continue
+    if (/(.)\1{5,}/.test(local)) continue
+    cleaned.push(email)
+  }
+
+  // Birleşik isim+mail (mandalhmandal@): kısa local, uzun local'in sonekiyse uzunu at.
+  const unique = [...new Set(cleaned)]
+  return unique.filter((email) => {
+    const [local, domain] = email.split('@')
+    if (!local || !domain) return false
+    return !unique.some((other) => {
+      if (other === email) return false
+      const [oLocal, oDomain] = other.split('@')
+      return oDomain === domain && oLocal && local.length > oLocal.length && local.endsWith(oLocal)
+    })
+  })
 }
 
 function extractPhonesFromText(text: string): { phone: string; confidence: 'high' | 'medium' }[] {
@@ -133,6 +149,9 @@ async function fetchHtml(
     }
 
     const html = await response.text()
+    if (!html || html.trim().length < 32) {
+      return { error: `${url} → boş veya çok kısa yanıt (bot koruması / JS sayfa olabilir)` }
+    }
     return { html, finalUrl: response.url || url }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'istek başarısız'
@@ -195,36 +214,7 @@ export async function scrapeContactsFromUrl(
     const { html, finalUrl } = fetched
     const $ = cheerio.load(html)
 
-    // Gürültü azalt: script/style/nav tekrarları.
-    $('script, style, noscript, svg, iframe').remove()
-
-    const pageText = $('body').text().replace(/\s+/g, ' ')
-
-    // Schema.org / microdata telefon
-    $('[itemprop="telephone"], [itemprop="email"]').each((_, el) => {
-      const prop = ($(el).attr('itemprop') ?? '').toLowerCase()
-      const value = ($(el).attr('content') || $(el).text() || '').trim()
-      if (!value) return
-      if (prop === 'telephone') {
-        const e164 = toE164Scraped(value, 'high')
-        if (e164) {
-          phoneMap.set(e164, {
-            phone_e164: e164,
-            email: phoneMap.get(e164)?.email ?? null,
-            name: phoneMap.get(e164)?.name ?? null,
-            sourceUrl: finalUrl,
-            confidence: 'high',
-          })
-        }
-      }
-      if (prop === 'email' && value.includes('@')) {
-        emailOnly.set(value.toLowerCase().replace(/^mailto:/i, ''), {
-          email: value.toLowerCase().replace(/^mailto:/i, ''),
-          sourceUrl: finalUrl,
-        })
-      }
-    })
-
+    // JSON-LD, script silinmeden önce okunmalı.
     $('script[type="application/ld+json"]').each((_, el) => {
       const raw = $(el).text()
       if (!raw) return
@@ -255,6 +245,36 @@ export async function scrapeContactsFromUrl(
         }
       } catch {
         /* bozuk JSON-LD */
+      }
+    })
+
+    // Gürültü azalt: script/style (JSON-LD alındıktan sonra).
+    $('script, style, noscript, svg, iframe').remove()
+
+    const pageText = $('body').text().replace(/\s+/g, ' ')
+
+    // Schema.org / microdata telefon
+    $('[itemprop="telephone"], [itemprop="email"]').each((_, el) => {
+      const prop = ($(el).attr('itemprop') ?? '').toLowerCase()
+      const value = ($(el).attr('content') || $(el).text() || '').trim()
+      if (!value) return
+      if (prop === 'telephone') {
+        const e164 = toE164Scraped(value, 'high')
+        if (e164) {
+          phoneMap.set(e164, {
+            phone_e164: e164,
+            email: phoneMap.get(e164)?.email ?? null,
+            name: phoneMap.get(e164)?.name ?? null,
+            sourceUrl: finalUrl,
+            confidence: 'high',
+          })
+        }
+      }
+      if (prop === 'email' && value.includes('@')) {
+        emailOnly.set(value.toLowerCase().replace(/^mailto:/i, ''), {
+          email: value.toLowerCase().replace(/^mailto:/i, ''),
+          sourceUrl: finalUrl,
+        })
       }
     })
 
@@ -313,6 +333,19 @@ export async function scrapeContactsFromUrl(
   }
 
   if (queue.some((item) => !seen.has(item.url))) truncated = true
+
+  // Sayfalar arası birleşik e-posta temizliği (mandalhmandal vs hmandal).
+  const allEmails = [...emailOnly.keys()]
+  for (const email of allEmails) {
+    const [local, domain] = email.split('@')
+    if (!local || !domain) continue
+    const isConcat = allEmails.some((other) => {
+      if (other === email) return false
+      const [oLocal, oDomain] = other.split('@')
+      return oDomain === domain && oLocal && local.length > oLocal.length && local.endsWith(oLocal)
+    })
+    if (isConcat) emailOnly.delete(email)
+  }
 
   // E-postaları telefona yakıştır: aynı sayfadan gelen ilk e-posta.
   const emailsByPage = new Map<string, string[]>()

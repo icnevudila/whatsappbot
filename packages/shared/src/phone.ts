@@ -51,7 +51,13 @@ export function toE164Scraped(
     const normalized = compact.startsWith('00')
       ? `+${compact.slice(2).replace(/\D/g, '')}`
       : trimmed
-    return toE164(normalized)
+    const e164 = toE164(normalized)
+    // Metin adayları: açık + olsa bile yalnız TR mobil (WhatsApp listesi).
+    if (confidence === 'medium') {
+      if (e164 && /^905\d{9}$/.test(e164.replace(/\D/g, ''))) return e164
+      return null
+    }
+    return e164
   }
 
   const digits = trimmed.replace(/\D/g, '')
@@ -62,16 +68,25 @@ export function toE164Scraped(
     return null
   }
 
-  // NANP (ABD/CA): 10 hane 2-9… — TR varsayılanı 408… gibi numaraları yanlış +90 yapmasın.
+  // TR ulusal (0 ile) veya mobil (5…) veya 90… — çıplak 408… gibi ABD kodlarından önce.
+  if (/^0[2-5]\d{9}$/.test(digits) || /^5\d{9}$/.test(digits) || /^90[2-5]\d{9}$/.test(digits)) {
+    const tr = toE164(trimmed.startsWith('90') && !trimmed.startsWith('+') ? `+${digits}` : trimmed)
+    if (tr) return tr
+  }
+
+  // TR sabit hat (0'suz alan kodu). libphonenumber 408'i yanlis TR sayabildigi icin
+  // yalnizca gercek TR alan kodlarini kabul et; aksi NANP'e dusun.
+  const TR_AREA =
+    /^(212|216|222|224|226|228|232|236|242|246|248|252|256|258|262|264|266|272|274|276|282|284|286|288|312|318|322|324|326|328|332|338|342|344|346|348|352|354|356|358|362|364|366|368|370|372|374|376|378|380|382|384|386|388|392|412|414|416|422|424|426|428|432|434|436|438|442|446|452|454|456|458|462|464|466|472|474|476|478|482|484|486|488)/
+  if (/^[2-4]\d{9}$/.test(digits) && TR_AREA.test(digits)) {
+    const tr = parsePhoneNumberFromString(trimmed, 'TR')
+    if (tr?.isValid()) return tr.number
+  }
+
+  // NANP (ABD/CA): 10 hane 2-9…
   if (/^1?[2-9]\d{9}$/.test(digits)) {
     const nanp = parsePhoneNumberFromString(trimmed, 'US')
     if (nanp?.isValid()) return nanp.number
-  }
-
-  // TR ulusal: 5xxxxxxxxx mobil veya alan kodlu sabit.
-  if (/^0?[2-5]\d{9}$/.test(digits) || /^90[2-5]\d{9}$/.test(digits)) {
-    const tr = toE164(trimmed)
-    if (tr) return tr
   }
 
   const countries: CountryCode[] = ['GB', 'DE', 'FR', 'NL', 'TR', 'US']
