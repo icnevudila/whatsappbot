@@ -31,7 +31,14 @@ export async function signIn(_previous: AuthState, formData: FormData): Promise<
     }
   }
 
-  // Hat yoksa dogrudan kuruluma; dolu hesapta izleme paneline.
+  // Deep-link: proxy ?devam=/kampanyalar/... bırakır; güvenli iç yola dön.
+  const devam = String(formData.get('devam') ?? '').trim()
+  const safeNext =
+    devam.startsWith('/') && !devam.startsWith('//') && !devam.includes('\\')
+      ? devam
+      : null
+
+  // Hat yoksa doğrudan kuruluma; dolu hesapta istenen sayfa veya durum.
   const { count: connectedCount } = await supabase
     .from('accounts')
     .select('id', { count: 'exact', head: true })
@@ -41,7 +48,7 @@ export async function signIn(_previous: AuthState, formData: FormData): Promise<
     redirect('/kurulum')
   }
 
-  redirect('/durum')
+  redirect(safeNext ?? '/durum')
 }
 
 export async function signUp(_previous: AuthState, formData: FormData): Promise<AuthState> {

@@ -56,18 +56,22 @@ export default async function ContactsPage() {
             ) : (
               <ul className="divide-y divide-hairline">
                 {lists.map((list) => (
-                  <li
-                    key={list.id}
-                    className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-[13px] font-medium">{list.name}</p>
-                      <p className="mt-0.5 text-[11.5px] text-ink-muted tabular">
-                        {list.contact_count} numara ·{' '}
-                        {new Date(list.created_at).toLocaleDateString('tr-TR')}
-                      </p>
+                  <li key={list.id}>
+                    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                      <a
+                        href={`/kisiler/${list.id}`}
+                        className="min-w-0 flex-1 transition-colors hover:text-accent"
+                      >
+                        <p className="truncate text-[13px] font-medium">{list.name}</p>
+                        <p className="mt-0.5 text-[11.5px] text-ink-muted tabular">
+                          {list.contact_count} numara ·{' '}
+                          {new Date(list.created_at).toLocaleDateString('tr-TR')}
+                          {' · '}
+                          <span className="text-ink-faint">detay</span>
+                        </p>
+                      </a>
+                      <ListActions listId={list.id} />
                     </div>
-                    <ListActions listId={list.id} />
                   </li>
                 ))}
               </ul>

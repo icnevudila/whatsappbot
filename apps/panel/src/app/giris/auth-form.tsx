@@ -17,6 +17,10 @@ export function AuthForm() {
 
   return (
     <form action={formAction} className="space-y-3.5">
+      {searchParams.get('devam') ? (
+        <input type="hidden" name="devam" value={searchParams.get('devam') ?? ''} />
+      ) : null}
+
       <Field label="E-posta">
         <Input
           name="email"

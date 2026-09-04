@@ -24,14 +24,11 @@ export async function importContacts(
   if (!name) return { error: 'Listeye bir ad verin.' }
   if (!raw.trim()) return { error: 'En az bir numara girin.' }
 
-  // E.164 normalizasyonu ve tekilleme panelde yapiliyor: veritabanindaki
-  // CHECK kisiti E.164 disi bir numarayi zaten reddeder, kullaniciya
-  // anlasilir bir ozet vermek daha iyi.
   const parsed = parsePhoneList(raw)
 
   if (parsed.valid.length === 0) {
     return {
-      error: 'Gecerli numara bulunamadi. Ornek: 0532 123 45 67 veya +905321234567',
+      error: 'Geçerli numara bulunamadı. Örnek: 0532 123 45 67 veya +905321234567',
       invalidSamples: parsed.invalid.slice(0, 5),
     }
   }
@@ -40,7 +37,7 @@ export async function importContacts(
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { error: 'Oturum bulunamadi.' }
+  if (!user) return { error: 'Oturum bulunamadı.' }
 
   const { data: list, error: listError } = await supabase
     .from('contact_lists')
@@ -104,11 +101,11 @@ export async function importContacts(
   revalidatePath('/kisiler')
 
   const parts = [`${linked} numara eklendi`]
-  if (parsed.duplicates > 0) parts.push(`${parsed.duplicates} tekrar atlandi`)
-  if (parsed.invalid.length > 0) parts.push(`${parsed.invalid.length} gecersiz`)
+  if (parsed.duplicates > 0) parts.push(`${parsed.duplicates} tekrar atlandı`)
+  if (parsed.invalid.length > 0) parts.push(`${parsed.invalid.length} geçersiz`)
 
   return {
-    ok: `${parts.join(', ')}. WhatsApp dogrulamasi kuyruga alindi.`,
+    ok: `${parts.join(', ')}. WhatsApp doğrulaması kuyruğa alındı.`,
     invalidSamples: parsed.invalid.slice(0, 5),
   }
 }
@@ -128,11 +125,40 @@ export async function verifyList(listId: string): Promise<{ error?: string }> {
 export async function deleteList(listId: string): Promise<{ error?: string }> {
   const supabase = await createSupabaseServerClient()
 
-  // Kisiler silinmiyor, yalnizca liste ve uyelikleri.
-  // Ayni numaralar baska listelerde kullanilmis olabilir.
+  // Kişiler silinmiyor, yalnızca liste ve üyelikleri.
+  // Aynı numaralar başka listelerde kullanılmış olabilir.
   const { error } = await supabase.from('contact_lists').delete().eq('id', listId)
   if (error) return { error: error.message }
 
+  revalidatePath('/kisiler')
+  return {}
+}
+
+export async function removeMember(
+  listId: string,
+  contactId: string,
+): Promise<{ error?: string }> {
+  const supabase = await createSupabaseServerClient()
+
+  const { error } = await supabase
+    .from('contact_list_members')
+    .delete()
+    .eq('list_id', listId)
+    .eq('contact_id', contactId)
+
+  if (error) return { error: error.message }
+
+  const { count } = await supabase
+    .from('contact_list_members')
+    .select('contact_id', { count: 'exact', head: true })
+    .eq('list_id', listId)
+
+  await supabase
+    .from('contact_lists')
+    .update({ contact_count: count ?? 0 })
+    .eq('id', listId)
+
+  revalidatePath(`/kisiler/${listId}`)
   revalidatePath('/kisiler')
   return {}
 }

@@ -13,6 +13,7 @@ const CORE = [
   { href: '/kisiler', label: 'Kişiler' },
   { href: '/kampanyalar', label: 'Kampanyalar' },
   { href: '/durum', label: 'Durum' },
+  { href: '/kara-liste', label: 'Kara liste' },
   { href: '/marka-kiti', label: 'Marka kiti' },
   { href: '/ayarlar', label: 'Ayarlar' },
 ] as const
