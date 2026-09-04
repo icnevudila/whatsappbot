@@ -31,14 +31,16 @@ export async function loadAccount(accountId: string): Promise<AccountRow | null>
   )
 }
 
-/** Yeniden acilista devam ettirilecek hesaplar: kapatilmamis ve kilitlenmemis olanlar. */
+/** Yeniden acilista devam ettirilecek hesaplar.
+ * Bilincli disconnect (disconnected) / logged_out resume edilmez.
+ */
 export async function loadResumableAccounts(limit: number): Promise<AccountRow[]> {
   return query<AccountRow>(
     `select ${ACCOUNT_COLUMNS}
        from public.accounts
       where enabled
         and not is_locked
-        and status <> 'logged_out'
+        and status in ('connected', 'connecting', 'qr_pending', 'pairing_pending')
       order by connected_at desc nulls last, created_at
       limit $1`,
     [limit],
@@ -86,6 +88,8 @@ export async function patchAccount(accountId: string, patch: AccountPatch): Prom
 
   for (const [key, value] of Object.entries(patch)) {
     if (!PATCHABLE.includes(key as (typeof PATCHABLE)[number])) continue
+    // undefined = "bu alana dokunma". null bilincli temizleme.
+    if (value === undefined) continue
     values.push(value)
     columns.push(`${key} = $${values.length}`)
   }
@@ -147,23 +151,42 @@ export async function lockAccount(
   await logAccountEvent(account, 'error', 'account.locked', { reason })
 }
 
-/** Gunluk sayac gun donduyse sifirlanir. Kalan gonderim hakkini doner. */
+/** Gunluk sayac gun donduyse sifirlanir. Kalan gonderim hakkini doner.
+ * Karşılaştırma SQL current_date ile: node-pg date → Date nesnesi UTC kayması yaratıyor.
+ */
 export async function remainingDailyQuota(account: AccountRow): Promise<number> {
-  const today = new Date().toISOString().slice(0, 10)
+  const row = await one<{ sent_today: number; on_today: boolean }>(
+    `select
+        case when sent_today_on = current_date then sent_today else 0 end as sent_today,
+        (sent_today_on = current_date) as on_today
+       from public.accounts
+      where id = $1`,
+    [account.id],
+  )
 
-  if (account.sent_today_on !== today) {
-    await patchAccount(account.id, { sent_today: 0, sent_today_on: today })
+  const sentToday = row?.sent_today ?? 0
+  if (!row?.on_today) {
+    await query(
+      `update public.accounts
+          set sent_today = 0, sent_today_on = current_date, updated_at = now()
+        where id = $1 and (sent_today_on is distinct from current_date)`,
+      [account.id],
+    )
     account.sent_today = 0
-    account.sent_today_on = today
+  } else {
+    account.sent_today = sentToday
   }
 
-  return Math.max(0, account.daily_send_limit - account.sent_today)
+  return Math.max(0, account.daily_send_limit - sentToday)
 }
 
 export async function incrementSentToday(accountId: string): Promise<void> {
   await query(
     `update public.accounts
-        set sent_today = sent_today + 1,
+        set sent_today = case
+              when sent_today_on = current_date then sent_today + 1
+              else 1
+            end,
             sent_today_on = current_date,
             updated_at = now()
       where id = $1`,

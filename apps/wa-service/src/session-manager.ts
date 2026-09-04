@@ -126,11 +126,12 @@ export class SessionManager {
         status: 'disconnected',
         status_detail: 'Baglanti kapatildi',
         qr_code: null,
+        pairing_code: null,
       })
       return false
     }
 
-    await session.shutdown()
+    await session.shutdown({ userRequested: true })
     this.sessions.delete(accountId)
     return true
   }

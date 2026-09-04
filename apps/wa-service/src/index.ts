@@ -1,11 +1,18 @@
 import http from 'node:http'
 import process from 'node:process'
-import { startCampaignRunner, stopCampaignRunner } from './campaign-runner.js'
+import {
+  drainCampaignRunner,
+  startCampaignRunner,
+  stopCampaignRunner,
+} from './campaign-runner.js'
 import { closePool, pool } from './db.js'
 import { env } from './env.js'
 import {
+  drainJobConsumer,
   pendingJobCount,
+  reclaimStaleJobs,
   requeueOwnJobs,
+  staleClaimedJobCount,
   startJobConsumer,
   stopJobConsumer,
 } from './job-consumer.js'
@@ -14,22 +21,33 @@ import { logger } from './logger.js'
 import { sessionManager } from './session-manager.js'
 
 const HEALTH_CHECK_INTERVAL_MS = 60_000
+const STALE_JOB_RECLAIM_INTERVAL_MS = 60_000
 
 let shuttingDown = false
 
 async function buildHealthPayload(): Promise<{ status: number; body: unknown }> {
+  let dbOk = false
+  try {
+    await pool.query('select 1')
+    dbOk = true
+  } catch {
+    dbOk = false
+  }
+
   const report = await sessionManager.healthReport()
   const pending = await pendingJobCount().catch(() => -1)
+  const staleClaimed = await staleClaimedJobCount().catch(() => -1)
+
+  const healthy = dbOk && report.healthy
 
   return {
-    // "Servis ayakta mi" degil: beklenen canli oturum ile gercek canli socket
-    // sayisi uyusmuyorsa saglikli sayilmiyoruz.
-    status: report.healthy ? 200 : 503,
+    status: healthy ? 200 : 503,
     body: {
       worker: env.workerId,
-      healthy: report.healthy,
+      healthy,
+      db: dbOk,
       sessions: { tracked: report.tracked, live: report.live, stale: report.stale },
-      jobs: { pending },
+      jobs: { pending, staleClaimed },
       uptimeSeconds: Math.round(process.uptime()),
     },
   }
@@ -67,11 +85,15 @@ async function main(): Promise<void> {
   await pool.query('select 1')
   logger.info('Postgres baglantisi tamam')
 
-  // Onceki cokusten kalan izler temizlenir.
+  // Onceki cokusten kalan izler temizlenir (own + global stale).
   const requeued = await requeueOwnJobs()
+  const staleReclaimed = await reclaimStaleJobs()
   const releasedLeases = await releaseOwnStaleLeases()
-  if (requeued > 0 || releasedLeases > 0) {
-    logger.info({ requeued, releasedLeases }, 'Onceki calisma kalintilari temizlendi')
+  if (requeued > 0 || staleReclaimed > 0 || releasedLeases > 0) {
+    logger.info(
+      { requeued, staleReclaimed, releasedLeases },
+      'Onceki calisma kalintilari temizlendi',
+    )
   }
 
   await sessionManager.resumeAll()
@@ -87,6 +109,16 @@ async function main(): Promise<void> {
     })
   }, HEALTH_CHECK_INTERVAL_MS)
 
+  const reclaimTimer = setInterval(() => {
+    void reclaimStaleJobs()
+      .then((n) => {
+        if (n > 0) logger.warn({ count: n }, 'Stale isler kuyruga alindi')
+      })
+      .catch((error) => {
+        logger.error({ err: error }, 'Stale job reclaim basarisiz')
+      })
+  }, STALE_JOB_RECLAIM_INTERVAL_MS)
+
   const shutdown = async (signal: string): Promise<void> => {
     if (shuttingDown) return
     shuttingDown = true
@@ -97,12 +129,19 @@ async function main(): Promise<void> {
     stopJobConsumer()
     stopCampaignRunner()
     clearInterval(healthTimer)
+    clearInterval(reclaimTimer)
 
-    // 2) Oturumlar: creds flush -> sock.end() -> kira birak (bu sirayla).
+    // 2) In-flight drain (timeout'lu).
+    await Promise.all([
+      drainJobConsumer(env.shutdownDrainMs),
+      drainCampaignRunner(env.shutdownDrainMs),
+    ])
+
+    // 3) Oturumlar: creds flush -> sock.end() -> kira birak (bu sirayla).
     //    sock.logout() cagrilmiyor; cagrilirsa her deploy tum hesaplari unlink eder.
     await sessionManager.shutdownAll()
 
-    // 3) Yarim kalan isler bir sonraki process icin kuyruga geri doner.
+    // 4) Yarim kalan isler bir sonraki process icin kuyruga geri doner.
     await requeueOwnJobs().catch((error) => {
       logger.warn({ err: error }, 'Isler kuyruga geri konamadi')
     })

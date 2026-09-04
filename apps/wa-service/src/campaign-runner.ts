@@ -1,4 +1,5 @@
 import { e164ToJid } from '@wa/shared'
+import type { AnyMessageContent } from '@whiskeysockets/baileys'
 import { incrementSentToday, lockAccount, logAccountEvent } from './accounts.js'
 import { one, query } from './db.js'
 import { env } from './env.js'
@@ -10,8 +11,8 @@ const log = logger.child({ scope: 'campaign' })
 
 const MAX_TARGET_ATTEMPTS = 3
 const REACH_OUT_TIME_LOCK = 463
-/** Gonderim yarida kalirsa (timeout / restart) hedef 'sending'de kilitlenmesin. */
-const STALE_SENDING_MS = 90_000
+/** Gonderim timeout'undan sonra ek pay; reclaim aktif gonderimi kesmesin. */
+const STALE_SENDING_MS = env.sendTimeoutMs + 60_000
 
 /**
  * Isindirma egrisi. Yeni bir hesap ilk gunden yuz mesaj atmaya kalkarsa
@@ -48,8 +49,8 @@ type CampaignAccountRow = {
   account_id: string
   owner_id: string
   daily_send_limit: number
-  sent_today: number
-  sent_today_on: string | null
+  /** SQL: bugunku sent_today (gun donduyse 0). */
+  sent_today_effective: number
   warmup_started_at: string | null
   is_locked: boolean
   enabled: boolean
@@ -69,6 +70,12 @@ type TargetRow = {
 
 /** Hesap basina bir sonraki gonderimin en erken zamani (rastgele gecikme). */
 const nextSendAt = new Map<string, number>()
+
+let inFlight = 0
+
+export function campaignInFlightCount(): number {
+  return inFlight
+}
 
 /**
  * Kampanya hedeflerini listelerden uretir.
@@ -147,9 +154,11 @@ async function eligibleAccounts(campaignId: string): Promise<CampaignAccountRow[
     `select ca.account_id,
             ca.owner_id,
             a.daily_send_limit,
-            a.sent_today,
-            a.sent_today_on,
-            a.warmup_started_at,
+            case
+              when a.sent_today_on = current_date then a.sent_today
+              else 0
+            end as sent_today_effective,
+            a.warmup_started_at::text as warmup_started_at,
             a.is_locked,
             a.enabled,
             a.reachout_locked_until,
@@ -162,22 +171,23 @@ async function eligibleAccounts(campaignId: string): Promise<CampaignAccountRow[
   )
 }
 
-async function nextTarget(campaignId: string): Promise<TargetRow | null> {
+/**
+ * Atomik claim: FOR UPDATE SKIP LOCKED ile queued -> sending.
+ * Multi-worker cift gonderimi engeller; attempts claim aninda artar.
+ */
+async function claimTarget(
+  campaignId: string,
+  accountId: string,
+): Promise<TargetRow | null> {
   return one<TargetRow>(
-    `select t.id,
-            t.phone_e164,
-            t.contact_id,
-            c.name as contact_name,
-            c.wa_status,
-            c.wa_jid
-       from public.campaign_targets t
-       left join public.contacts c on c.id = t.contact_id
-      where t.campaign_id = $1::uuid
-        and t.status = 'queued'
-        and (t.scheduled_for is null or t.scheduled_for <= now())
-      order by t.id
-      limit 1`,
-    [campaignId],
+    `select id::text as id,
+            phone_e164,
+            contact_id,
+            contact_name,
+            wa_status,
+            wa_jid
+       from wa.claim_campaign_target($1::uuid, $2::uuid)`,
+    [campaignId, accountId],
   )
 }
 
@@ -232,16 +242,13 @@ function personalize(body: string | null, name: string | null): string {
 }
 
 function remainingDaily(account: CampaignAccountRow, campaign: CampaignRow): number {
-  const today = new Date().toISOString().slice(0, 10)
-  const sentToday = account.sent_today_on === today ? account.sent_today : 0
-
   const cap = Math.min(
     account.daily_send_limit,
     warmupCap(account.warmup_started_at),
     campaign.daily_cap_per_account,
   )
 
-  return Math.max(0, cap - sentToday)
+  return Math.max(0, cap - account.sent_today_effective)
 }
 
 /**
@@ -256,18 +263,50 @@ function newChatQuotaExhausted(account: CampaignAccountRow): boolean {
   return used >= total
 }
 
+type SendContent =
+  | { text: string }
+  | { image: { url: string }; caption?: string }
+  | { video: { url: string }; caption?: string }
+  | { document: { url: string }; caption?: string; fileName?: string }
+
+function buildContent(
+  campaign: CampaignRow,
+  body: string,
+): SendContent {
+  const type = campaign.message_type
+  const media = campaign.media_url
+
+  if (!media || type === 'text') {
+    return { text: body }
+  }
+
+  if (type === 'image') {
+    return { image: { url: media }, caption: body || undefined }
+  }
+
+  if (type === 'video') {
+    return { video: { url: media }, caption: body || undefined }
+  }
+
+  if (type === 'document') {
+    return {
+      document: { url: media },
+      caption: body || undefined,
+      fileName: 'dosya',
+    }
+  }
+
+  // Bilinmeyen tip: gorsel sanma, acik hata.
+  throw new Error(`Desteklenmeyen mesaj tipi: ${type}`)
+}
+
 async function sendToTarget(
   campaign: CampaignRow,
   account: CampaignAccountRow,
   session: WhatsAppSession,
   target: TargetRow,
 ): Promise<void> {
-  await query(
-    `update public.campaign_targets
-        set status = 'sending', account_id = $2, attempts = attempts + 1, updated_at = now()
-      where id = $1`,
-    [target.id, account.account_id],
-  )
+  // Hedef zaten claim_campaign_target ile 'sending'; burada tekrar claim yok.
 
   // Zorunlu dogrulama kapisi: kayitli olmayan numaraya gonderim denemesi
   // hesap seviyesinde kisit tetikliyor. Sonuc contacts'ta onbellege alinir.
@@ -301,14 +340,7 @@ async function sendToTarget(
   }
 
   const body = personalize(campaign.body, target.contact_name)
-
-  // Medya { url } biciminde veriliyor: mediaCache anahtari ancak boyle olusuyor,
-  // yani ayni gorsel her alici icin yeniden yuklenmiyor.
-  const content =
-    campaign.media_url && campaign.message_type !== 'text'
-      ? { image: { url: campaign.media_url }, caption: body || undefined }
-      : { text: body }
-
+  const content = buildContent(campaign, body) as AnyMessageContent
   const message = await session.sendMessage(jid, content)
 
   await query(
@@ -329,6 +361,11 @@ async function sendToTarget(
 
   await incrementSentToday(account.account_id)
 
+  const messageType =
+    !campaign.media_url || campaign.message_type === 'text'
+      ? 'text'
+      : campaign.message_type
+
   await query(
     `insert into public.message_log
        (owner_id, account_id, campaign_id, direction, remote_jid, phone_e164, message_type, body, media_url, wa_message_id, status)
@@ -339,7 +376,7 @@ async function sendToTarget(
       campaign.id,
       jid,
       target.phone_e164,
-      campaign.media_url && campaign.message_type !== 'text' ? 'image' : 'text',
+      messageType,
       body || null,
       campaign.media_url,
       message.key?.id ?? null,
@@ -356,7 +393,8 @@ async function handleSendFailure(
   const message = error instanceof Error ? error.message : String(error)
   const code = extractStatusCode(error)
 
-  // Geri donusu olmayan durumlar: hesabi kilitle ve kampanyalari durdur.
+  // Geri donusu olmayan durumlar: hesabi kilitle.
+  // Kampanyayi tumden durdurma: baska canli hesap varsa devam etsin.
   if (code === 403 || code === REACH_OUT_TIME_LOCK || /device_removed/i.test(message)) {
     const reason =
       code === REACH_OUT_TIME_LOCK
@@ -366,19 +404,18 @@ async function handleSendFailure(
           : 'device_removed: cihaz telefondan kaldirildi'
 
     await lockAccount({ id: account.account_id, owner_id: account.owner_id }, reason)
-    await stopCampaign(campaign.id, reason)
 
     await query(
       `update public.campaign_targets
           set status = 'queued', error = $2, updated_at = now()
-        where id = $1`,
+        where id = $1::bigint`,
       [target.id, message],
     )
     return
   }
 
   const row = await one<{ attempts: number }>(
-    'select attempts from public.campaign_targets where id = $1',
+    'select attempts from public.campaign_targets where id = $1::bigint',
     [target.id],
   )
   const attempts = row?.attempts ?? MAX_TARGET_ATTEMPTS
@@ -428,20 +465,14 @@ async function runCampaign(campaign: CampaignRow): Promise<void> {
   const accounts = await eligibleAccounts(campaign.id)
 
   for (const account of accounts) {
-    if (account.is_locked) {
-      await stopCampaign(campaign.id, 'Gonderen hesap kilitli')
-      return
-    }
+    // Tek kilitli/reachout hesabi kampanyayi durdurmaz; o hesabi atla.
+    if (account.is_locked) continue
 
     if (
       account.reachout_locked_until &&
       new Date(account.reachout_locked_until).getTime() > Date.now()
     ) {
-      await stopCampaign(
-        campaign.id,
-        '463 reach-out time-lock aktif, gonderim guvenli degil',
-      )
-      return
+      continue
     }
 
     if (!account.enabled) continue
@@ -466,7 +497,7 @@ async function runCampaign(campaign: CampaignRow): Promise<void> {
     const readyAt = nextSendAt.get(account.account_id) ?? 0
     if (readyAt > Date.now()) continue
 
-    const target = await nextTarget(campaign.id)
+    const target = await claimTarget(campaign.id, account.account_id)
     if (!target) {
       await completeIfDone(campaign.id)
       return
@@ -479,6 +510,7 @@ async function runCampaign(campaign: CampaignRow): Promise<void> {
       Math.random() * Math.max(0, campaign.max_delay_seconds - campaign.min_delay_seconds)
     nextSendAt.set(account.account_id, Date.now() + jitter * 1_000)
 
+    inFlight += 1
     try {
       await sendToTarget(campaign, account, session, target)
     } catch (error) {
@@ -487,31 +519,39 @@ async function runCampaign(campaign: CampaignRow): Promise<void> {
         'Gonderim basarisiz',
       )
       await handleSendFailure(campaign, account, target, error)
+    } finally {
+      inFlight -= 1
     }
   }
 }
 
 let running = false
 let timer: ReturnType<typeof setTimeout> | undefined
+let tickActive = false
 
 async function tick(): Promise<void> {
-  await reclaimStaleSending()
+  tickActive = true
+  try {
+    await reclaimStaleSending()
 
-  const campaigns = await query<CampaignRow>(
-    `select id, owner_id, name, message_type, body, media_url,
-            min_delay_seconds, max_delay_seconds, daily_cap_per_account, source_list_ids
-       from public.campaigns
-      where status = 'running'
-      order by started_at nulls first`,
-  )
+    const campaigns = await query<CampaignRow>(
+      `select id, owner_id, name, message_type, body, media_url,
+              min_delay_seconds, max_delay_seconds, daily_cap_per_account, source_list_ids
+         from public.campaigns
+        where status = 'running'
+        order by started_at nulls first`,
+    )
 
-  for (const campaign of campaigns) {
-    try {
-      await runCampaign(campaign)
-      await completeIfDone(campaign.id)
-    } catch (error) {
-      log.error({ err: error, campaignId: campaign.id }, 'Kampanya isletilirken hata')
+    for (const campaign of campaigns) {
+      try {
+        await runCampaign(campaign)
+        await completeIfDone(campaign.id)
+      } catch (error) {
+        log.error({ err: error, campaignId: campaign.id }, 'Kampanya isletilirken hata')
+      }
     }
+  } finally {
+    tickActive = false
   }
 }
 
@@ -534,12 +574,26 @@ export function startCampaignRunner(): void {
   }
 
   void loop()
-  log.info({ tickMs: env.campaignTickMs }, 'Kampanya motoru basladi')
+  log.info(
+    { tickMs: env.campaignTickMs, staleSendingMs: STALE_SENDING_MS },
+    'Kampanya motoru basladi',
+  )
 }
 
 export function stopCampaignRunner(): void {
   running = false
   if (timer) clearTimeout(timer)
+}
+
+/** Kapanis oncesi aktif tick/gonderimin bitmesini bekler. */
+export async function drainCampaignRunner(timeoutMs: number): Promise<void> {
+  const deadline = Date.now() + timeoutMs
+  while ((tickActive || inFlight > 0) && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 200))
+  }
+  if (tickActive || inFlight > 0) {
+    log.warn({ inFlight, tickActive }, 'Kampanya drain zaman asimina ugradi')
+  }
 }
 
 function extractStatusCode(error: unknown): number | undefined {

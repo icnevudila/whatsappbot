@@ -271,14 +271,14 @@ export class WhatsAppSession {
         connected_at: new Date().toISOString(),
         last_seen_at: new Date().toISOString(),
         last_disconnect_code: null,
-        // Isindirma saati ilk baglanmada baslar.
-        warmup_started_at: undefined,
       })
       this.status = 'connected'
 
       await this.ensureWarmupStarted()
       await this.refreshQuota()
 
+      // 515 restart sonrasi pairingPhone korunuyordu; open'da sifirlandi.
+      // Baglanti tamamlandiysa kod gerekmez.
       await logAccountEvent(this, 'info', 'account.connected', { jid: normalized, phone })
       this.log.info({ jid: normalized, phone }, 'Hesap bagli')
       return
@@ -349,7 +349,8 @@ export class WhatsAppSession {
       }
 
       case DisconnectReason.restartRequired: {
-        // QR sonrasi normal akis: derhal yeniden ac.
+        // QR / pairing sonrasi normal akis: derhal yeniden ac.
+        // pairingPhone korunur; reopen sonrasi kod yenilenir.
         this.log.info('515 restart required, socket yeniden aciliyor')
         await this.reopen(0)
         return
@@ -430,13 +431,50 @@ export class WhatsAppSession {
     await patchAccount(this.accountId, { status: 'connecting' })
     this.status = 'connecting'
 
+    const savedPairingPhone = this.pairingPhone
+
     setTimeout(() => {
       if (this.shuttingDown || this.disposed) return
-      void this.openSocket().catch((error) => {
-        this.log.error({ err: error }, 'Yeniden baglanma basarisiz')
-        void this.reopen(backoffMs(this.reconnectAttempts++))
-      })
+      void (async () => {
+        try {
+          await this.closeSocketQuietly()
+          await this.openSocket()
+
+          // 515 sonrasi pairing kodu yenilenmezse panelde bayat kod kalir.
+          if (savedPairingPhone && !this.auth?.state.creds.registered) {
+            this.pairingPhone = savedPairingPhone
+            try {
+              await this.requestPairingCode(`+${savedPairingPhone}`)
+            } catch (error) {
+              this.log.warn({ err: error }, 'Pairing kodu yenilenemedi')
+            }
+          }
+        } catch (error) {
+          this.log.error({ err: error }, 'Yeniden baglanma basarisiz')
+          void this.reopen(backoffMs(this.reconnectAttempts++))
+        }
+      })()
     }, delayMs)
+  }
+
+  /** Eski socket listener birikimini onlemek icin sessiz kapatma. */
+  private async closeSocketQuietly(): Promise<void> {
+    const sock = this.sock
+    this.sock = undefined
+    if (!sock) return
+
+    try {
+      sock.ev.removeAllListeners('connection.update')
+      sock.ev.removeAllListeners('creds.update')
+    } catch {
+      // ignore
+    }
+
+    try {
+      sock.end(undefined)
+    } catch {
+      // ignore
+    }
   }
 
   private async lockAndFinish(reason: string): Promise<void> {
@@ -716,8 +754,11 @@ export class WhatsAppSession {
    *
    * sock.logout() ASLA cagrilmaz: WhatsApp'a remove-companion-device gonderip
    * cihazi kalici olarak siler, yani her deploy tum hesaplari unlink eder.
+   *
+   * userRequested=true → bilincli "Kapat"; resume edilmez.
+   * userRequested=false (deploy) → connecting birakilir; sonraki process resumeAll ile acar.
    */
-  async shutdown(): Promise<void> {
+  async shutdown(options?: { userRequested?: boolean }): Promise<void> {
     if (this.shuttingDown) return
     this.shuttingDown = true
     this.stopHeartbeat()
@@ -734,10 +775,22 @@ export class WhatsAppSession {
       this.log.debug({ err: error }, 'sock.end sirasinda hata')
     }
 
-    await patchAccount(this.accountId, {
-      status: 'disconnected',
-      status_detail: 'Servis yeniden baslatiliyor',
-    })
+    if (options?.userRequested) {
+      await patchAccount(this.accountId, {
+        status: 'disconnected',
+        status_detail: 'Baglanti kapatildi',
+        qr_code: null,
+        pairing_code: null,
+      })
+      this.status = 'disconnected'
+    } else {
+      await patchAccount(this.accountId, {
+        status: 'connecting',
+        status_detail: 'Servis yeniden baslatiliyor',
+        qr_code: null,
+      })
+      this.status = 'connecting'
+    }
 
     await this.releaseLeaseSafely()
     this.disposed = true

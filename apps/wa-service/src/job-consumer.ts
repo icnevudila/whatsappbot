@@ -59,7 +59,12 @@ async function markFailed(job: JobRow, error: unknown): Promise<void> {
 
   await query(
     `update public.jobs
-        set status = 'failed', error = $2, finished_at = now(), updated_at = now()
+        set status = 'failed',
+            error = $2,
+            finished_at = now(),
+            claimed_by = null,
+            claimed_at = null,
+            updated_at = now()
       where id = $1`,
     [job.id, message],
   )
@@ -215,24 +220,38 @@ async function handle(job: JobRow): Promise<unknown> {
 
 let running = false
 let timer: ReturnType<typeof setTimeout> | undefined
+let tickActive = false
+let inFlightJobs = 0
+
+export function jobInFlightCount(): number {
+  return inFlightJobs
+}
 
 async function tick(): Promise<void> {
-  const jobs = await claim()
-  if (jobs.length === 0) return
+  tickActive = true
+  try {
+    const jobs = await claim()
+    if (jobs.length === 0) return
 
-  log.info({ count: jobs.length }, 'Is alindi')
+    log.info({ count: jobs.length }, 'Is alindi')
 
-  for (const job of jobs) {
-    try {
-      await query(
-        `update public.jobs set status = 'running', updated_at = now() where id = $1`,
-        [job.id],
-      )
-      const result = await handle(job)
-      await markDone(job.id, result)
-    } catch (error) {
-      await markFailed(job, error)
+    for (const job of jobs) {
+      inFlightJobs += 1
+      try {
+        await query(
+          `update public.jobs set status = 'running', updated_at = now() where id = $1::bigint`,
+          [job.id],
+        )
+        const result = await handle(job)
+        await markDone(job.id, result)
+      } catch (error) {
+        await markFailed(job, error)
+      } finally {
+        inFlightJobs -= 1
+      }
     }
+  } finally {
+    tickActive = false
   }
 }
 
@@ -263,6 +282,17 @@ export function stopJobConsumer(): void {
   if (timer) clearTimeout(timer)
 }
 
+/** Kapanis oncesi aktif islerin bitmesini bekler. */
+export async function drainJobConsumer(timeoutMs: number): Promise<void> {
+  const deadline = Date.now() + timeoutMs
+  while ((tickActive || inFlightJobs > 0) && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 200))
+  }
+  if (tickActive || inFlightJobs > 0) {
+    log.warn({ inFlightJobs, tickActive }, 'Job drain zaman asimina ugradi')
+  }
+}
+
 /** Bu process'in yarim biraktigi isleri kuyruga geri koyar. */
 export async function requeueOwnJobs(): Promise<number> {
   const rows = await query<{ id: string }>(
@@ -276,9 +306,29 @@ export async function requeueOwnJobs(): Promise<number> {
   return rows.length
 }
 
+/** Herhangi bir worker'da takili kalan isleri global reclaim. */
+export async function reclaimStaleJobs(): Promise<number> {
+  const row = await one<{ n: number }>(
+    'select wa.reclaim_stale_jobs($1)::int as n',
+    [env.staleJobSeconds],
+  )
+  return row?.n ?? 0
+}
+
 export async function pendingJobCount(): Promise<number> {
   const row = await one<{ count: string }>(
     `select count(*)::text as count from public.jobs where status = 'pending'`,
+  )
+  return Number(row?.count ?? 0)
+}
+
+export async function staleClaimedJobCount(): Promise<number> {
+  const row = await one<{ count: string }>(
+    `select count(*)::text as count
+       from public.jobs
+      where status in ('claimed', 'running')
+        and claimed_at < now() - make_interval(secs => $1)`,
+    [env.staleJobSeconds],
   )
   return Number(row?.count ?? 0)
 }
