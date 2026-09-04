@@ -19,20 +19,22 @@ export default async function AccountsPage() {
   } = await supabase.auth.getUser()
   if (!user) redirect('/giris')
 
-  const [accountsResult, contactsResult, campaignsResult] = await Promise.all([
+  const [accountsResult, contactsResult, campaignsResult, profileResult] = await Promise.all([
     supabase.from('accounts').select(ACCOUNT_FIELDS).order('created_at'),
     supabase.from('contacts').select('id', { count: 'exact', head: true }),
     supabase.from('campaigns').select('id', { count: 'exact', head: true }),
+    supabase.from('profiles').select('accounts_quota').eq('id', user.id).single(),
   ])
 
   const accounts = (accountsResult.data ?? []) as AccountView[]
   const hasConnected = accounts.some((account) => account.status === 'connected')
+  const accountsQuota = profileResult.data?.accounts_quota ?? 40
 
   return (
     <>
       <PageHeader
         title="Hesaplar"
-        description="Her hesap ayri bir WhatsApp numarasi. Baglanti sunucuda tutuluyor, bu sekmeyi kapatsaniz da gonderim devam eder."
+        description="Her satir ayri bir WhatsApp numarasi. Birden fazla hat baglayip kampanyada ve hizli gonderimde birlikte kullanabilirsiniz; baglanti sunucuda kalir."
       />
 
       <Onboarding
@@ -41,7 +43,11 @@ export default async function AccountsPage() {
         hasCampaign={(campaignsResult.count ?? 0) > 0}
       />
 
-      <AccountsBoard initial={accounts} userId={user.id} />
+      <AccountsBoard
+        initial={accounts}
+        userId={user.id}
+        accountsQuota={accountsQuota}
+      />
     </>
   )
 }
@@ -62,9 +68,9 @@ function Onboarding({
   if (connected && hasContacts && hasCampaign) return null
 
   const steps = [
-    { done: connected, label: 'WhatsApp hesabi bagla', href: null },
-    { done: hasContacts, label: 'Kisi listesi olustur', href: '/kisiler' },
-    { done: hasCampaign, label: 'Kampanya gonder', href: '/kampanyalar' },
+    { done: connected, label: 'En az bir WhatsApp hatti bagla', href: null },
+    { done: hasContacts, label: 'Kisi listesi olustur (veya Hizli gonderim)', href: '/kisiler' },
+    { done: hasCampaign, label: 'Ilk gonderimi yap', href: '/hizli-gonderim' },
   ]
 
   return (

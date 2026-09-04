@@ -44,9 +44,11 @@ export type AccountView = Pick<
 export function AccountsBoard({
   initial,
   userId,
+  accountsQuota,
 }: {
   initial: AccountView[]
   userId: string
+  accountsQuota: number
 }) {
   // Sunucu revalidate ettiginde tazelensin, Realtime olaylari da uzerine yazsin.
   const [accounts, setAccounts] = useServerSyncedState(initial)
@@ -146,15 +148,51 @@ export function AccountsBoard({
     }
   }, [waiting, setAccounts])
 
+  const connected = accounts.filter((account) => account.status === 'connected').length
+  const remaining = Math.max(0, accountsQuota - accounts.length)
+  const atCap = remaining === 0
+
   return (
     <div className="space-y-4">
-      <NewAccountForm />
+      <Card>
+        <div className="grid gap-4 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+          <div>
+            <p className="text-[11.5px] font-medium tracking-wide text-ink-faint uppercase">
+              Hat kapasitesi
+            </p>
+            <p className="mt-1 tabular text-[22px] font-semibold tracking-tight text-ink">
+              {accounts.length}
+              <span className="text-[15px] font-medium text-ink-muted">
+                {' '}
+                / {accountsQuota}
+              </span>
+            </p>
+            <p className="mt-1 text-[12px] text-ink-muted">
+              {connected} bagli · {remaining} ekleme hakki · her hat ayri WhatsApp
+              oturumu
+            </p>
+            <div className="mt-3 max-w-md">
+              <Meter
+                value={accounts.length}
+                max={accountsQuota}
+                tone={atCap ? 'warn' : 'accent'}
+              />
+            </div>
+          </div>
+          <p className="max-w-xs text-[11.5px] leading-relaxed text-ink-faint sm:text-right">
+            Kampanya ve hizli gonderimde birden fazla hatti birlikte secerseniz
+            yuk hatlar arasinda paylasilir.
+          </p>
+        </div>
+      </Card>
+
+      <NewAccountForm remaining={remaining} atCap={atCap} />
 
       {accounts.length === 0 ? (
         <Card>
           <EmptyState
-            title="Henuz hesap yok"
-            description="Yukaridan bir hesap olusturun. QR kodu bu ekranda kendiliginden gorunur, telefonunuzdan okuttugunuzda baglanti kurulur."
+            title="Henuz hat yok"
+            description="Yukaridan ilk hatti ekleyin. QR veya eslestirme kodu bu ekranda kendiliginden gelir; okuttugunuzda baglanti kurulur."
           />
         </Card>
       ) : (
@@ -168,7 +206,7 @@ export function AccountsBoard({
   )
 }
 
-function NewAccountForm() {
+function NewAccountForm({ remaining, atCap }: { remaining: number; atCap: boolean }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
     createAccount,
     null,
@@ -178,17 +216,34 @@ function NewAccountForm() {
     <Card>
       <form action={formAction} className="flex flex-wrap items-end gap-3 p-4">
         <div className="min-w-[220px] flex-1">
-          <Field label="Yeni hesap" hint="Hangi numara oldugunu hatirlatacak bir ad.">
-            <Input name="label" placeholder="Satis hatti 1" required />
+          <Field
+            label="Yeni hat ekle"
+            hint={
+              atCap
+                ? 'Kota dolu. Yer acmak icin asagidan kullanilmayan bir hatti silin.'
+                : `Ornek: Satis 2, Destek. Kalan hak: ${remaining}`
+            }
+          >
+            <Input
+              name="label"
+              placeholder="Satis hatti 2"
+              required
+              disabled={atCap || pending}
+            />
           </Field>
         </div>
-        <Button type="submit" variant="accent" disabled={pending}>
-          {pending ? 'Olusturuluyor...' : 'Hesap ekle'}
+        <Button type="submit" variant="accent" disabled={pending || atCap}>
+          {pending ? 'Olusturuluyor...' : atCap ? 'Kota dolu' : 'Hat ekle'}
         </Button>
 
         {state?.error ? (
           <div className="w-full">
             <Notice tone="danger">{state.error}</Notice>
+          </div>
+        ) : null}
+        {state?.ok ? (
+          <div className="w-full">
+            <Notice tone="accent">{state.ok}</Notice>
           </div>
         ) : null}
       </form>

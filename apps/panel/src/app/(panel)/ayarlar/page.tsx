@@ -48,8 +48,8 @@ export default async function SettingsPage() {
     ])
 
   const plan = profile?.plan ?? 'free'
-  const accountsQuota = profile?.accounts_quota ?? 1
-  const messageQuota = profile?.monthly_message_quota ?? 1_000
+  const accountsQuota = profile?.accounts_quota ?? 40
+  const messageQuota = profile?.monthly_message_quota ?? 100_000
   const usedAccounts = accounts?.length ?? 0
   const usedMessages = sentThisMonth ?? 0
 

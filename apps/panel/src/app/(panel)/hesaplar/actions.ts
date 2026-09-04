@@ -26,9 +26,11 @@ export async function createAccount(
     supabase.from('profiles').select('accounts_quota').eq('id', user.id).single(),
   ])
 
-  const quota = profile?.accounts_quota ?? 1
+  const quota = profile?.accounts_quota ?? 40
   if ((count ?? 0) >= quota) {
-    return { error: `Hesap kotaniz dolu (${quota}). Yeni hesap icin paketinizi yukseltin.` }
+    return {
+      error: `Hat kotasi dolu (${count}/${quota}). Yeni hat icin Ayarlar'dan paketi kontrol edin veya kullanilmayan bir hatti silin.`,
+    }
   }
 
   const { data: account, error } = await supabase
