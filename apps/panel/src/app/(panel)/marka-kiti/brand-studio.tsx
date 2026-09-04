@@ -251,7 +251,7 @@ export function BrandStudio({
                     onClick={() => setTemplate(key)}
                     className={`rounded-md border px-3 py-2 text-left transition-colors ${
                       template === key
-                        ? 'border-hairline-strong bg-surface-raised'
+                        ? 'border-accent/40 bg-accent-soft'
                         : 'border-hairline bg-canvas hover:border-hairline-strong'
                     }`}
                   >

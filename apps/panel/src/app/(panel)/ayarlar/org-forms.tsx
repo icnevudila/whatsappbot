@@ -79,10 +79,10 @@ export function MembersPanel({
               </p>
               {member.email ? (
                 <p className="mt-0.5 truncate text-[11.5px] text-ink-muted">{member.email}</p>
+              ) : member.fullName ? (
+                <p className="mt-0.5 text-[11.5px] text-ink-faint">E-posta gizli</p>
               ) : (
-                <p className="mt-0.5 truncate text-[11.5px] text-ink-faint font-mono">
-                  {member.userId.slice(0, 8)}…
-                </p>
+                <p className="mt-0.5 text-[11.5px] text-ink-faint">Profil henüz doldurulmamış</p>
               )}
             </div>
             <span className="shrink-0 rounded-full border border-hairline px-2 py-0.5 text-[11px] text-ink-muted">
@@ -95,7 +95,7 @@ export function MembersPanel({
       {canManage ? (
         <form action={formAction} className="space-y-3 border-t border-hairline p-4">
           <Field label="Üye ekle" hint="Kullanıcı daha önce Filo’ya kayıt olmuş olmalı.">
-            <Input name="email" type="email" placeholder="ornek@firma.com" required />
+            <Input name="email" type="email" placeholder="örnek@firma.com" required />
           </Field>
           <Field label="Rol">
             <Select name="role" defaultValue="member">

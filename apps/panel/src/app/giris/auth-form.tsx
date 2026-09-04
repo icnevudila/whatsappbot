@@ -27,7 +27,7 @@ export function AuthForm() {
           type="email"
           autoComplete="email"
           required
-          placeholder="siz@sirketiniz.com"
+          placeholder="siz@şirketiniz.com"
         />
       </Field>
 

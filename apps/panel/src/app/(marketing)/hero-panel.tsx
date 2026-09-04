@@ -1,34 +1,29 @@
 import { LogoMark } from '@/components/brand'
 
 /**
- * Hero gorseli: panelin kendi arayuzu, ekran goruntusu yerine ayni
- * token'larla yeniden cizilmis hali. Ekran goruntusu kullanmamanin sebebi
- * pratik: her tasarim degisiminde bayatlayan bir PNG bakimi cikmiyor ve
- * her ekran yogunlugunda net kaliyor.
- *
- * Rakamlar temsili ve gercek limitlerle tutarli (hat basina gunde 250).
+ * Hero görseli: panelin kendi arayüzü, ekran görüntüsü yerine aynı
+ * token'larla yeniden çizilmiş hali.
  */
 
 const LINES = [
-  { label: 'Satis hatti', phone: '+90 532 000 00 01', status: 'connected', sent: 184, cap: 250 },
-  { label: 'Destek hatti', phone: '+90 532 000 00 02', status: 'connected', sent: 96, cap: 250 },
+  { label: 'Satış hattı', phone: '+90 532 000 00 01', status: 'connected', sent: 184, cap: 250 },
+  { label: 'Destek hattı', phone: '+90 532 000 00 02', status: 'connected', sent: 96, cap: 250 },
   { label: 'Kampanya 3', phone: null, status: 'qr_pending', sent: 0, cap: 250 },
 ] as const
 
 const STATUS = {
-  connected: { label: 'Bagli', tone: 'text-accent border-accent/35 bg-accent/10' },
+  connected: { label: 'Bağlı', tone: 'text-ok border-ok/35 bg-ok-soft' },
   qr_pending: { label: 'QR bekleniyor', tone: 'text-warn border-warn/35 bg-warn/10' },
 } as const
 
 export function HeroPanel() {
   return (
-    <div className="overflow-hidden rounded-[10px] border border-hairline bg-surface">
-      {/* Pencere serigi */}
+    <div className="filo-fade-in overflow-hidden rounded-[10px] border border-hairline bg-surface">
       <div className="flex items-center gap-2 border-b border-hairline px-3 py-2">
         <LogoMark className="size-3.5" />
         <span className="text-[11.5px] font-medium text-ink-muted">Hesaplar</span>
-        <span className="ml-auto rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 text-[10.5px] font-medium text-accent">
-          Canli
+        <span className="ml-auto rounded-full border border-ok/30 bg-ok-soft px-2 py-0.5 text-[10.5px] font-medium text-ok">
+          Canlı
         </span>
       </div>
 
@@ -64,7 +59,7 @@ export function HeroPanel() {
                   />
                 </div>
                 <span className="tabular shrink-0 text-[10.5px] text-ink-faint">
-                  {line.sent}/{line.cap} bugun
+                  {line.sent}/{line.cap} bugün
                 </span>
               </div>
             </div>
@@ -73,7 +68,7 @@ export function HeroPanel() {
 
         <div className="mt-1 flex items-center justify-between rounded-md border border-hairline bg-canvas px-3 py-2.5">
           <div>
-            <p className="text-[11.5px] text-ink-muted">Bugunku toplam kapasite</p>
+            <p className="text-[11.5px] text-ink-muted">Bugünkü toplam kapasite</p>
             <p className="tabular mt-0.5 text-[15px] font-semibold text-accent">
               280 / 750
             </p>

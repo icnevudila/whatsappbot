@@ -1,6 +1,7 @@
+import Link from 'next/link'
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { AccentLink, Card, HourlyBars, Notice, PageHeader } from '@/components/ui'
+import { AccentLink, Card, HourlyBars, Notice, PageHeader, QuietLink } from '@/components/ui'
 import { requireActiveOrg } from '@/lib/org'
 import { EventFeed, type EventView } from './event-feed'
 import { StatusBoard, type CampaignView, type LineView } from './status-board'
@@ -111,7 +112,7 @@ export default async function StatusPage() {
         action={
           <div className="flex flex-wrap gap-2">
             <AccentLink href="/gelenler">Gelenler</AccentLink>
-            <AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>
+            <QuietLink href="/hizli-gonderim">Hızlı gönderim</QuietLink>
           </div>
         }
       />
@@ -129,9 +130,9 @@ export default async function StatusPage() {
         {connectedCount === 0 && (accounts?.length ?? 0) > 0 ? (
           <Notice tone="warn">
             Bağlı hat yok. Kampanya ve hızlı gönderim çalışmaz.{' '}
-            <a href="/hesaplar" className="font-medium underline underline-offset-2">
+            <Link href="/hesaplar" className="font-medium underline underline-offset-2">
               Hesaplar
-            </a>{' '}
+            </Link>{' '}
             üzerinden QR veya telefon koduyla yeniden bağlayın.
           </Notice>
         ) : null}
@@ -139,9 +140,9 @@ export default async function StatusPage() {
         {(inboundToday ?? 0) > 0 ? (
           <Notice tone="accent">
             Bugün {inboundToday} gelen yanıt var.{' '}
-            <a href="/gelenler" className="font-medium underline underline-offset-2">
+            <Link href="/gelenler" className="font-medium underline underline-offset-2">
               Gelenler
-            </a>{' '}
+            </Link>{' '}
             sayfasından sohbetleri ve kara listeye alma işlemini yönetin.
           </Notice>
         ) : null}

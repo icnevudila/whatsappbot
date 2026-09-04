@@ -116,7 +116,10 @@ export default async function QuickSendPage({
                 </p>
               </div>
               {recent.length === 0 ? (
-                <p className="px-4 py-6 text-[12px] text-ink-faint">Henüz gönderim yok.</p>
+                <EmptyState
+                  title="Henüz gönderim yok"
+                  description="İlk hızlı gönderiminiz burada listelenir; detay Kampanyalar’da açılır."
+                />
               ) : (
                 <ul className="divide-y divide-hairline">
                   {recent.map((item) => (

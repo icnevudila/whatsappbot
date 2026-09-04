@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { Badge, Card, CardHeader, Meter, PageHeader } from '@/components/ui'
+import { Badge, Button, Card, CardHeader, Meter, PageHeader } from '@/components/ui'
 import { activeImageProviders } from '@/lib/ai/image'
 import { activeTextProviders } from '@/lib/ai/text'
 import { capToday } from '@/lib/capacity'
@@ -71,10 +71,23 @@ export default async function SettingsPage() {
   const usedAccounts = accounts?.length ?? 0
   const usedMessages = sentThisMonth ?? 0
 
+  const memberIds = (memberRows ?? []).map((row) => row.user_id)
+  const { data: memberProfiles } =
+    memberIds.length > 0
+      ? await supabase.from('profiles').select('id, full_name').in('id', memberIds)
+      : { data: [] as { id: string; full_name: string | null }[] }
+
+  const profileById = Object.fromEntries(
+    (memberProfiles ?? []).map((row) => [row.id, row]),
+  )
+
   const members = (memberRows ?? []).map((row) => ({
     userId: row.user_id,
     email: row.user_id === userId ? (user.email ?? null) : null,
-    fullName: row.user_id === userId ? (profile?.full_name ?? null) : null,
+    fullName:
+      row.user_id === userId
+        ? (profile?.full_name ?? null)
+        : (profileById[row.user_id]?.full_name ?? null),
     role: row.role,
   }))
 
@@ -184,12 +197,9 @@ export default async function SettingsPage() {
                 Çıkış yapmak bağlı hatları etkilemez; gönderim sunucuda devam eder.
               </p>
               <form action={signOut}>
-                <button
-                  type="submit"
-                  className="inline-flex h-8 shrink-0 items-center rounded-md border border-danger/40 px-3 text-[12.5px] font-medium text-danger transition-colors hover:bg-danger/10"
-                >
+                <Button type="submit" variant="danger">
                   Çıkış yap
-                </button>
+                </Button>
               </form>
             </div>
           </Card>

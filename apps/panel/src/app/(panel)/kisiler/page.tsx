@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { AccentLink, Card, CardHeader, EmptyState, Meter, PageHeader, Stat } from '@/components/ui'
 import { redirect } from 'next/navigation'
@@ -7,6 +8,7 @@ import { ListActions } from './list-actions'
 import { DiscoverForm } from './discover-form'
 import { ScrapeForm } from './scrape-form'
 
+export const metadata: Metadata = { title: 'Kişiler' }
 export const dynamic = 'force-dynamic'
 /** Web tarayıcı sunucu aksiyonu için Vercel süre limiti */
 export const maxDuration = 60

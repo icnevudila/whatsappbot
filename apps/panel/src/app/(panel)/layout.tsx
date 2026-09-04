@@ -95,7 +95,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         </div>
 
         <main className="min-w-0 flex-1 px-4 py-6 md:px-8 md:py-8">
-          <div className="mx-auto max-w-5xl">{children}</div>
+          <div className="filo-fade-in mx-auto max-w-5xl">{children}</div>
         </main>
       </div>
     </div>

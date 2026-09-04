@@ -89,7 +89,7 @@ const PLANS = [
     lines: '10 hat',
     daily: 'Günde 2.500 mesaj',
     features: ['Çoklu müşteri yönetimi', 'Marka kiti başına şablon', 'Detaylı raporlama'],
-    cta: 'İletişime geç',
+    cta: 'Ücretsiz dene',
     featured: false,
   },
 ]

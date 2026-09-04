@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { QuietLink } from '@/components/ui'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { CampaignLive, type CampaignView } from './campaign-live'
 import { TargetFeed, type TargetView } from './target-feed'
@@ -31,12 +32,9 @@ export default async function CampaignDetailPage({
 
   return (
     <>
-      <Link
-        href="/kampanyalar"
-        className="mb-4 inline-block text-[12.5px] text-ink-muted transition-colors hover:text-ink"
-      >
+      <QuietLink href="/kampanyalar" className="mb-4 inline-block">
         ← Kampanyalar
-      </Link>
+      </QuietLink>
 
       <CampaignLive initial={campaignResult.data as CampaignView} />
 

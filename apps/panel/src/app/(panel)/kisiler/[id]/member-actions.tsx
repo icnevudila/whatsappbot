@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Button, Notice, StatusPill } from '@/components/ui'
+import { Button, EmptyState, Notice } from '@/components/ui'
 import { blacklistPhone } from '../../kara-liste/actions'
 import { removeMember } from '../actions'
 
@@ -14,8 +14,15 @@ export type MemberRow = {
   wa_checked_at: string | null
 }
 
+const WA_TONE: Record<string, string> = {
+  valid: 'border-ok/35 bg-ok-soft text-ok',
+  invalid: 'border-danger/35 bg-danger/10 text-danger',
+  unknown: 'border-hairline bg-canvas text-ink-muted',
+  pending: 'border-hairline bg-canvas text-ink-muted',
+}
+
 const WA_LABEL: Record<string, string> = {
-  valid: 'Geçerli',
+  valid: 'WhatsApp’ta var',
   invalid: 'WhatsApp’ta yok',
   unknown: 'Bekliyor',
   pending: 'Bekliyor',
@@ -46,9 +53,10 @@ export function MemberActions({
 
   if (members.length === 0) {
     return (
-      <p className="px-6 py-10 text-center text-[12.5px] text-ink-muted">
-        Bu listede numara yok.
-      </p>
+      <EmptyState
+        title="Bu listede numara yok"
+        description="İçe aktarma veya yerel keşiften numara ekleyin; ardından kampanyada kullanın."
+      />
     )
   }
 
@@ -69,8 +77,11 @@ export function MemberActions({
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-mono text-[12.5px] tabular">{member.phone_e164}</span>
-                <StatusPill status={member.wa_status === 'valid' ? 'sent' : member.wa_status === 'invalid' ? 'failed' : 'pending'} />
-                <span className="text-[11px] text-ink-faint">
+                <span
+                  className={`rounded-full border px-2 py-0.5 text-[10.5px] font-medium ${
+                    WA_TONE[member.wa_status] ?? WA_TONE.unknown
+                  }`}
+                >
                   {WA_LABEL[member.wa_status] ?? member.wa_status}
                 </span>
               </div>
@@ -87,7 +98,7 @@ export function MemberActions({
                     blacklistPhone(member.phone_e164, 'Liste detayından eklendi'),
                   )
                 }
-                title="Bu numaraya bir daha mesaj gitmez"
+                title="Bu numaraya bir daha mesaj gönderilmez"
               >
                 Kara liste
               </Button>

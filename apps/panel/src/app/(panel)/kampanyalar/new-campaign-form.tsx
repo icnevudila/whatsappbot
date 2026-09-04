@@ -1,4 +1,5 @@
 'use client'
+import Link from 'next/link'
 
 import { useActionState, useState, type ReactNode } from 'react'
 import { AiWriter } from '@/components/ai-writer'
@@ -141,13 +142,13 @@ export function NewCampaignForm({
           empty={
             <>
               Önce{' '}
-              <a href="/kisiler" className="font-medium underline underline-offset-2">
+              <Link href="/kisiler" className="font-medium underline underline-offset-2">
                 Kişiler
-              </a>{' '}
+              </Link>{' '}
               sekmesinden bir liste oluşturun. Tek seferlik için{' '}
-              <a href="/hizli-gonderim" className="font-medium underline underline-offset-2">
+              <Link href="/hizli-gonderim" className="font-medium underline underline-offset-2">
                 Hızlı gönderim
-              </a>{' '}
+              </Link>{' '}
               daha uygun.
             </>
           }
@@ -160,9 +161,9 @@ export function NewCampaignForm({
           empty={
             <>
               Önce{' '}
-              <a href="/hesaplar" className="font-medium underline underline-offset-2">
+              <Link href="/hesaplar" className="font-medium underline underline-offset-2">
                 Hesaplar
-              </a>{' '}
+              </Link>{' '}
               üzerinden bir WhatsApp hattı bağlayın.
             </>
           }

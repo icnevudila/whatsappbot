@@ -2,6 +2,14 @@ import Link from 'next/link'
 import { BRAND_NAME, LogoMark, Wordmark } from '@/components/brand'
 
 const SECTIONS = [
+  { href: '/#kapasite', label: 'Kapasite' },
+  { href: '/#nasil', label: 'Nasıl çalışır' },
+  { href: '/#guvenlik', label: 'Ban önleme' },
+  { href: '/#fiyatlar', label: 'Fiyatlar' },
+  { href: '/#sss', label: 'SSS' },
+]
+
+const NAV_SECTIONS = [
   { href: '#kapasite', label: 'Kapasite' },
   { href: '#nasil', label: 'Nasıl çalışır' },
   { href: '#guvenlik', label: 'Ban önleme' },
@@ -19,7 +27,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           </Link>
 
           <nav className="hidden flex-1 items-center gap-5 md:flex">
-            {SECTIONS.map((section) => (
+            {NAV_SECTIONS.map((section) => (
               <a
                 key={section.href}
                 href={section.href}

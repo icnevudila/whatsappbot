@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { AccentLink, Card, CardHeader, EmptyState, Meter, PageHeader, StatusPill } from '@/components/ui'
@@ -5,6 +6,7 @@ import { hasTextProvider } from '@/lib/ai/text'
 import { requireActiveOrg } from '@/lib/org'
 import { NewCampaignForm } from './new-campaign-form'
 
+export const metadata: Metadata = { title: 'Kampanyalar' }
 export const dynamic = 'force-dynamic'
 
 export default async function CampaignsPage() {

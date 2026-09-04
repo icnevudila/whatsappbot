@@ -1,4 +1,5 @@
 'use client'
+import Link from 'next/link'
 
 import { useActionState, useEffect, useState, useTransition } from 'react'
 import type { Tables } from '@wa/shared'
@@ -366,13 +367,13 @@ function AccountCard({ account }: { account: AccountView }) {
         {account.status === 'connected' && !account.is_locked ? (
           <Notice tone="accent">
             Hat bağlı. Sıradaki adım:{' '}
-            <a href="/hizli-gonderim" className="font-medium underline underline-offset-2">
+            <Link href="/hizli-gonderim" className="font-medium underline underline-offset-2">
               Hızlı gönderim
-            </a>{' '}
+            </Link>{' '}
             veya{' '}
-            <a href="/kampanyalar" className="font-medium underline underline-offset-2">
+            <Link href="/kampanyalar" className="font-medium underline underline-offset-2">
               Kampanya
-            </a>
+            </Link>
             .
           </Notice>
         ) : null}

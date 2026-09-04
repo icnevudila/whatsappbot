@@ -26,7 +26,7 @@ export default async function BlacklistPage() {
     <>
       <PageHeader
         title="Kara liste"
-        description="Bu numaralara hiçbir kampanya veya hızlı gönderim mesaj gitmez. Servis hedefleri oluştururken bunları otomatik atlar."
+        description="Bu numaralara hiçbir kampanya veya hızlı gönderim mesajı gönderilmez. Servis hedefleri oluştururken bunları otomatik atlar."
       />
       <BlacklistBoard initial={data ?? []} />
     </>

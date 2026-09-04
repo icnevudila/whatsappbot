@@ -1,12 +1,15 @@
+import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { Wordmark } from '@/components/brand'
 import { AuthForm } from './auth-form'
 
+export const metadata: Metadata = { title: 'Giriş' }
+
 export default function LoginPage() {
   return (
     <main className="grid min-h-dvh place-items-center px-4 py-12">
-      <div className="w-full max-w-[340px]">
+      <div className="filo-fade-in w-full max-w-[340px]">
         <div className="mb-7">
           <Link href="/" className="mb-4 inline-flex">
             <Wordmark />
