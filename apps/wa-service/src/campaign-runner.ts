@@ -290,7 +290,7 @@ async function sendToTarget(
       await query(
         `update public.campaign_targets
             set status = 'skipped', error = 'Numara WhatsApp''ta kayitli degil', updated_at = now()
-          where id = $1::uuid`,
+          where id = $1::bigint`,
         [target.id],
       )
       await reconcileCampaignCounts(campaign.id)
@@ -314,7 +314,7 @@ async function sendToTarget(
   await query(
     `update public.campaign_targets
         set status = 'sent', wa_message_id = $2, sent_at = now(), error = null, updated_at = now()
-      where id = $1::uuid`,
+      where id = $1::bigint`,
     [target.id, message.key?.id ?? null],
   )
 
@@ -387,7 +387,7 @@ async function handleSendFailure(
     await query(
       `update public.campaign_targets
           set status = 'failed', error = $2, updated_at = now()
-        where id = $1::uuid`,
+        where id = $1::bigint`,
       [target.id, message],
     )
     await reconcileCampaignCounts(campaign.id)
@@ -397,7 +397,7 @@ async function handleSendFailure(
   await query(
     `update public.campaign_targets
         set status = 'queued', error = $2, scheduled_for = now() + interval '2 minutes', updated_at = now()
-      where id = $1::uuid`,
+      where id = $1::bigint`,
     [target.id, message],
   )
 }
