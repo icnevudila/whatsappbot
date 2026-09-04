@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { PageHeader } from '@/components/ui'
+import { AccentLink, PageHeader } from '@/components/ui'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { EventFeed, type EventView } from './event-feed'
 import { StatusBoard, type CampaignView, type LineView } from './status-board'
@@ -44,14 +43,7 @@ export default async function StatusPage() {
       <PageHeader
         title="Genel durum"
         description="Hatlarin, kapasitenin ve calisan kampanyalarin anlik hali. Servis arka planda calisiyor; bu sayfa yalnizca izleme icin."
-        action={
-          <Link
-            href="/hizli-gonderim"
-            className="inline-flex h-8 items-center rounded-md bg-accent px-3 text-[13px] font-medium text-accent-ink transition-colors hover:bg-accent-dim"
-          >
-            Hizli gonderim
-          </Link>
-        }
+        action={<AccentLink href="/hizli-gonderim">Hizli gonderim</AccentLink>}
       />
 
       <div className="flex flex-col gap-4">

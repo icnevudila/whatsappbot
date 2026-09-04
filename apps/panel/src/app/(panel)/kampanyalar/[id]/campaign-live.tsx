@@ -141,7 +141,7 @@ export function CampaignLive({ initial }: { initial: CampaignView }) {
 
             {campaign.status === 'running' ? (
               <Button disabled={pending} onClick={() => run(() => pauseCampaign(campaign.id))}>
-                Duraklat
+                {pending ? 'Duraklatiliyor...' : 'Duraklat'}
               </Button>
             ) : null}
 
@@ -151,7 +151,7 @@ export function CampaignLive({ initial }: { initial: CampaignView }) {
                 disabled={pending}
                 onClick={() => run(() => resumeCampaign(campaign.id))}
               >
-                Devam et
+                {pending ? 'Devam ediliyor...' : 'Devam et'}
               </Button>
             ) : null}
 

@@ -257,15 +257,11 @@ export function BrandStudio({
                     onClick={() => setTemplate(key)}
                     className={`rounded-md border px-3 py-2 text-left transition-colors ${
                       template === key
-                        ? 'border-accent/40 bg-accent/10'
-                        : 'border-hairline-strong bg-surface-raised hover:border-ink-faint'
+                        ? 'border-hairline-strong bg-surface-raised'
+                        : 'border-hairline bg-canvas hover:border-hairline-strong'
                     }`}
                   >
-                    <span
-                      className={`block text-[12.5px] font-medium ${
-                        template === key ? 'text-accent' : 'text-ink'
-                      }`}
-                    >
+                    <span className="block text-[12.5px] font-medium text-ink">
                       {TEMPLATES[key].label}
                     </span>
                     <span className="mt-0.5 block text-[11px] text-ink-faint">

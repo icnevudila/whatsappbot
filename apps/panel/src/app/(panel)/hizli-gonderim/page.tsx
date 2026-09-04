@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { EmptyState, PageHeader } from '@/components/ui'
+import { AccentLink, EmptyState, PageHeader } from '@/components/ui'
 import { hasTextProvider } from '@/lib/ai/text'
 import { remainingToday } from '@/lib/capacity'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
@@ -48,14 +47,7 @@ export default async function QuickSendPage() {
           <EmptyState
             title="Once bir hat baglayin"
             description="Hizli gonderim icin en az bir bagli WhatsApp hatti gerekiyor. Hesaplar sekmesinden QR ile baglayabilirsiniz."
-            action={
-              <Link
-                href="/hesaplar"
-                className="inline-flex h-8 items-center rounded-md bg-accent px-3 text-[13px] font-medium text-accent-ink transition-colors hover:bg-accent-dim"
-              >
-                Hesaplara git
-              </Link>
-            }
+            action={<AccentLink href="/hesaplar">Hesaplara git</AccentLink>}
           />
         </div>
       ) : (

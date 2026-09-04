@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Card, CardHeader } from '@/components/ui'
+import { Card, CardHeader, StatusPill } from '@/components/ui'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { CampaignLive, type CampaignView } from './campaign-live'
 
@@ -50,12 +50,22 @@ export default async function CampaignDetailPage({
               {logs.map((log) => (
                 <li
                   key={log.id}
-                  className="flex items-center justify-between gap-3 px-4 py-2"
+                  className="flex items-start justify-between gap-3 px-4 py-2"
                 >
-                  <span className="font-mono text-[12px] text-ink tabular">
-                    {log.phone_e164}
-                  </span>
-                  <span className="text-[11.5px] text-ink-faint tabular">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono text-[12px] text-ink tabular">
+                        {log.phone_e164}
+                      </span>
+                      <StatusPill status={log.status} />
+                    </div>
+                    {log.error ? (
+                      <p className="mt-0.5 truncate text-[11.5px] text-danger">
+                        {log.error}
+                      </p>
+                    ) : null}
+                  </div>
+                  <span className="shrink-0 text-[11.5px] text-ink-faint tabular">
                     {new Date(log.created_at).toLocaleTimeString('tr-TR')}
                   </span>
                 </li>

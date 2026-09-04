@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useState, useTransition } from 'react'
 import type { Tables } from '@wa/shared'
-import { Button, Card, Field, Input, Meter, Notice, StatusPill } from '@/components/ui'
+import { Button, Card, EmptyState, Field, Input, Meter, Notice, StatusPill } from '@/components/ui'
 import { capToday } from '@/lib/capacity'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { useServerSyncedState } from '@/lib/use-server-synced-state'
@@ -152,13 +152,10 @@ export function AccountsBoard({
 
       {accounts.length === 0 ? (
         <Card>
-          <div className="px-6 py-12 text-center">
-            <p className="text-[13px] font-medium">Henuz hesap yok</p>
-            <p className="mx-auto mt-1 max-w-sm text-[12.5px] text-ink-muted">
-              Yukaridan bir hesap olusturun. QR kodu bu ekranda kendiliginden gorunur,
-              telefonunuzdan okuttugunuzda baglanti kurulur.
-            </p>
-          </div>
+          <EmptyState
+            title="Henuz hesap yok"
+            description="Yukaridan bir hesap olusturun. QR kodu bu ekranda kendiliginden gorunur, telefonunuzdan okuttugunuzda baglanti kurulur."
+          />
         </Card>
       ) : (
         <div className="space-y-3">
@@ -265,7 +262,16 @@ function AccountCard({ account }: { account: AccountView }) {
 
           <Button
             variant="danger"
-            onClick={() => run(() => removeAccount(account.id))}
+            onClick={() => {
+              if (
+                !window.confirm(
+                  'Bu hesabi silmek istiyor musunuz? Baglanti da kopar.',
+                )
+              ) {
+                return
+              }
+              run(() => removeAccount(account.id))
+            }}
             disabled={pending}
           >
             Sil

@@ -60,3 +60,6 @@ desktop.ini
 # Yerel kreatif ciktilari
 tmp/
 *.local
+
+.vercel
+.env*.local

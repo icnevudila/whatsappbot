@@ -6,13 +6,16 @@ import { deleteList, verifyList } from './actions'
 
 export function ListActions({ listId }: { listId: string }) {
   const [pending, startTransition] = useTransition()
+  const [busy, setBusy] = useState<'verify' | 'delete' | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const run = (action: () => Promise<{ error?: string }>) => {
+  const run = (kind: 'verify' | 'delete', action: () => Promise<{ error?: string }>) => {
     setError(null)
+    setBusy(kind)
     startTransition(async () => {
       const result = await action()
       if (result.error) setError(result.error)
+      setBusy(null)
     })
   }
 
@@ -20,15 +23,21 @@ export function ListActions({ listId }: { listId: string }) {
     <div className="flex items-center gap-1.5">
       {error ? <Notice tone="danger">{error}</Notice> : null}
 
-      <Button onClick={() => run(() => verifyList(listId))} disabled={pending}>
-        Dogrula
+      <Button
+        onClick={() => run('verify', () => verifyList(listId))}
+        disabled={pending}
+      >
+        {busy === 'verify' ? 'Dogrulaniyor...' : 'Dogrula'}
       </Button>
       <Button
         variant="danger"
-        onClick={() => run(() => deleteList(listId))}
+        onClick={() => {
+          if (!window.confirm('Bu listeyi silmek istiyor musunuz?')) return
+          run('delete', () => deleteList(listId))
+        }}
         disabled={pending}
       >
-        Sil
+        {busy === 'delete' ? 'Siliniyor...' : 'Sil'}
       </Button>
     </div>
   )

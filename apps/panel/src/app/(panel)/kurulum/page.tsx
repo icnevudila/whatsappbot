@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Card, PageHeader } from '@/components/ui'
+import { AccentLink, Card, PageHeader, QuietLink } from '@/components/ui'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export const metadata: Metadata = { title: 'Kurulum' }
@@ -97,16 +97,15 @@ export default async function SetupPage() {
                 </p>
               </div>
 
-              <Link
-                href={step.href}
-                className={`inline-flex h-8 shrink-0 items-center rounded-md px-3 text-[12.5px] font-medium transition-colors ${
-                  step.done
-                    ? 'border border-hairline-strong bg-surface-raised hover:border-ink-faint'
-                    : 'bg-accent text-accent-ink hover:bg-accent-dim'
-                }`}
-              >
-                {step.cta}
-              </Link>
+              {step.done ? (
+                <QuietLink href={step.href} className="shrink-0 text-[12.5px]">
+                  {step.cta}
+                </QuietLink>
+              ) : (
+                <AccentLink href={step.href} className="shrink-0 text-[12.5px]">
+                  {step.cta}
+                </AccentLink>
+              )}
             </div>
           </Card>
         ))}

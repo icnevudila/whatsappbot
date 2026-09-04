@@ -1,8 +1,21 @@
 import type { ComponentProps, ReactNode } from 'react'
+import Link from 'next/link'
 
 function cx(...parts: (string | false | null | undefined)[]): string {
   return parts.filter(Boolean).join(' ')
 }
+
+const buttonBase =
+  'inline-flex h-8 items-center justify-center gap-1.5 rounded-md px-3 text-[13px] font-medium transition-colors disabled:cursor-not-allowed'
+
+const buttonVariants = {
+  accent:
+    'bg-accent text-accent-ink hover:bg-accent-dim disabled:bg-hairline-strong disabled:text-ink-faint',
+  quiet:
+    'bg-surface-raised text-ink border border-hairline-strong hover:border-ink-faint disabled:text-ink-faint',
+  danger:
+    'bg-transparent text-danger border border-danger/40 hover:bg-danger/10 disabled:text-ink-faint',
+} as const
 
 /**
  * accent varyanti rol kuralina tabi: yalnizca birincil gonderim/onay
@@ -12,25 +25,46 @@ export function Button({
   variant = 'quiet',
   className,
   ...props
-}: ComponentProps<'button'> & { variant?: 'accent' | 'quiet' | 'danger' }) {
-  const styles = {
-    accent:
-      'bg-accent text-accent-ink hover:bg-accent-dim disabled:bg-hairline-strong disabled:text-ink-faint',
-    quiet:
-      'bg-surface-raised text-ink border border-hairline-strong hover:border-ink-faint disabled:text-ink-faint',
-    danger:
-      'bg-transparent text-danger border border-danger/40 hover:bg-danger/10 disabled:text-ink-faint',
-  }[variant]
-
+}: ComponentProps<'button'> & { variant?: keyof typeof buttonVariants }) {
   return (
     <button
       {...props}
-      className={cx(
-        'inline-flex h-8 items-center justify-center gap-1.5 rounded-md px-3 text-[13px] font-medium transition-colors disabled:cursor-not-allowed',
-        styles,
-        className,
-      )}
+      className={cx(buttonBase, buttonVariants[variant], className)}
     />
+  )
+}
+
+/** Accent gorunumlu Next.js Link — button icinde Link sarmalamadan. */
+export function AccentLink({
+  href,
+  children,
+  className,
+}: {
+  href: string
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <Link href={href} className={cx(buttonBase, buttonVariants.accent, className)}>
+      {children}
+    </Link>
+  )
+}
+
+/** Quiet gorunumlu Link — kurulum gibi ikincil CTA'lar icin. */
+export function QuietLink({
+  href,
+  children,
+  className,
+}: {
+  href: string
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <Link href={href} className={cx(buttonBase, buttonVariants.quiet, className)}>
+      {children}
+    </Link>
   )
 }
 
@@ -125,6 +159,12 @@ const STATUS_STYLES: Record<string, { label: string; tone: string }> = {
   completed: { label: 'Tamamlandi', tone: 'text-accent border-accent/35 bg-accent/10' },
   stopped: { label: 'Durduruldu', tone: 'text-danger border-danger/35 bg-danger/10' },
   failed: { label: 'Basarisiz', tone: 'text-danger border-danger/35 bg-danger/10' },
+
+  // message_log
+  pending: { label: 'Bekliyor', tone: 'text-ink-muted border-hairline-strong bg-surface-raised' },
+  sent: { label: 'Gonderildi', tone: 'text-accent border-accent/35 bg-accent/10' },
+  delivered: { label: 'Teslim', tone: 'text-accent border-accent/35 bg-accent/10' },
+  read: { label: 'Okundu', tone: 'text-accent border-accent/35 bg-accent/10' },
 }
 
 export function StatusPill({ status }: { status: string }) {

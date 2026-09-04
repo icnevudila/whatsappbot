@@ -221,7 +221,7 @@ function CheckboxGroup({
           {options.map((option) => (
             <label
               key={option.id}
-              className={`flex items-center gap-2.5 px-3 py-2 ${
+              className={`flex min-h-11 items-center gap-2.5 px-3 py-2 ${
                 option.disabled ? 'opacity-45' : 'cursor-pointer'
               }`}
             >
@@ -230,7 +230,7 @@ function CheckboxGroup({
                 name={name}
                 value={option.id}
                 disabled={option.disabled}
-                className="size-3.5 accent-[var(--color-accent)]"
+                className="size-4 accent-[var(--color-accent)]"
               />
               <span className="min-w-0 flex-1 truncate text-[12.5px]">{option.label}</span>
               {option.detail ? (

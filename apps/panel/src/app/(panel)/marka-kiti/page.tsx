@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { Card, CardHeader, PageHeader } from '@/components/ui'
+import { Card, CardHeader, EmptyState, PageHeader } from '@/components/ui'
 import { DEFAULT_COLORS, type BrandColors } from '@/lib/creative-templates'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { BrandStudio } from './brand-studio'
@@ -48,13 +48,13 @@ export default async function BrandKitPage() {
         userId={user.id}
       />
 
-      {creatives && creatives.length > 0 ? (
-        <div className="mt-4">
-          <Card>
-            <CardHeader
-              title="Uretilen gorseller"
-              subtitle="Hizli gonderim ve kampanya ekranlarinda bu gorselleri kullanabilirsiniz."
-            />
+      <div className="mt-4">
+        <Card>
+          <CardHeader
+            title="Uretilen gorseller"
+            subtitle="Hizli gonderim ve kampanya ekranlarinda bu gorselleri kullanabilirsiniz."
+          />
+          {creatives && creatives.length > 0 ? (
             <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-4">
               {creatives.map((creative) => (
                 <a
@@ -73,9 +73,14 @@ export default async function BrandKitPage() {
                 </a>
               ))}
             </div>
-          </Card>
-        </div>
-      ) : null}
+          ) : (
+            <EmptyState
+              title="Henuz gorsel yok"
+              description="Yukaridaki studio ile bir kampanya gorseli uretin; burada listelenir."
+            />
+          )}
+        </Card>
+      </div>
     </>
   )
 }
