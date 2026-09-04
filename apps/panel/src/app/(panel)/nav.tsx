@@ -12,6 +12,7 @@ const CORE = [
   { href: '/hizli-gonderim', label: 'Hızlı gönderim' },
   { href: '/kisiler', label: 'Kişiler' },
   { href: '/kampanyalar', label: 'Kampanyalar' },
+  { href: '/gelenler', label: 'Gelenler' },
   { href: '/durum', label: 'Durum' },
   { href: '/kara-liste', label: 'Kara liste' },
   { href: '/marka-kiti', label: 'Marka kiti' },

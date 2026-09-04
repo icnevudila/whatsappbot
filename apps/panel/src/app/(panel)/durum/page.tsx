@@ -39,6 +39,7 @@ export default async function StatusPage() {
     { data: outLog },
     { count: pendingJobs },
     { data: oldestPending },
+    { count: inboundToday },
   ] = await Promise.all([
       supabase
         .from('accounts')
@@ -72,6 +73,11 @@ export default async function StatusPage() {
         .order('created_at', { ascending: true })
         .limit(1)
         .maybeSingle(),
+      supabase
+        .from('message_log')
+        .select('id', { count: 'exact', head: true })
+        .eq('direction', 'in')
+        .gte('created_at', new Date(new Date().setHours(0, 0, 0, 0)).toISOString()),
     ])
 
   const pendingAgeMs = oldestPending?.created_at
@@ -93,7 +99,12 @@ export default async function StatusPage() {
       <PageHeader
         title="Durum"
         description="Hatlar, kapasite ve çalışan kampanyalar. Gönderim arka planda sürer; bu sayfa izleme içindir. Özet kartlarındaki değerler anlık güncellenir."
-        action={<AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>}
+        action={
+          <div className="flex flex-wrap gap-2">
+            <AccentLink href="/gelenler">Gelenler</AccentLink>
+            <AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>
+          </div>
+        }
       />
 
       <div className="flex flex-col gap-4">
@@ -113,6 +124,16 @@ export default async function StatusPage() {
               Hesaplar
             </a>{' '}
             üzerinden QR veya telefon koduyla yeniden bağlayın.
+          </Notice>
+        ) : null}
+
+        {(inboundToday ?? 0) > 0 ? (
+          <Notice tone="accent">
+            Bugün {inboundToday} gelen yanıt var.{' '}
+            <a href="/gelenler" className="font-medium underline underline-offset-2">
+              Gelenler
+            </a>{' '}
+            sayfasından sohbetleri ve kara listeye alma işlemini yönetin.
           </Notice>
         ) : null}
 

@@ -192,6 +192,14 @@ export class WhatsAppSession {
       })
     })
 
+    this.sock.ev.on('messages.upsert', ({ messages, type }) => {
+      // notify = canli gelen; append = gecmis senkron (syncFullHistory kapali ama yine filtre).
+      if (type !== 'notify' && type !== 'append') return
+      void this.handleInboundMessages(messages).catch((error) => {
+        this.log.warn({ err: error }, 'Gelen mesaj islenerken hata')
+      })
+    })
+
     // WhatsApp'in gercek "yeni sohbet mesaj kotasi" (Baileys 7+).
     // 6.7'de olay yok; dinleyiciyi yalnizca destekleniyorsa bagliyoruz.
     const events = this.sock.ev as unknown as {
@@ -208,6 +216,17 @@ export class WhatsAppSession {
         this.log.warn({ err: error }, 'Kota bilgisi yazilamadi')
       })
     })
+  }
+
+  private async handleInboundMessages(messages: WAMessage[]): Promise<void> {
+    const { persistInboundMessage } = await import('./inbound.js')
+    for (const message of messages) {
+      await persistInboundMessage({
+        ownerId: this.ownerId,
+        accountId: this.accountId,
+        message,
+      })
+    }
   }
 
   private async handleConnectionUpdate(update: {
@@ -466,6 +485,7 @@ export class WhatsAppSession {
     try {
       sock.ev.removeAllListeners('connection.update')
       sock.ev.removeAllListeners('creds.update')
+      sock.ev.removeAllListeners('messages.upsert')
     } catch {
       // ignore
     }
