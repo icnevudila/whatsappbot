@@ -5,7 +5,6 @@ import { redirect } from 'next/navigation'
 import { requireActiveOrg } from '@/lib/org'
 import { ImportForm } from './import-form'
 import { ListActions } from './list-actions'
-import { DiscoverForm } from './discover-form'
 import { ScrapeForm } from './scrape-form'
 import { VerifyAllButton } from './verify-all-button'
 import { WaCheckForm } from './wa-check-form'
@@ -130,7 +129,6 @@ export default async function ContactsPage() {
 
         <div className="order-1 space-y-4 lg:order-2" id="liste-olustur">
           <WaCheckForm />
-          <DiscoverForm />
           <ScrapeForm />
           <ImportForm />
         </div>
