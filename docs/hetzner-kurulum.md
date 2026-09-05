@@ -8,7 +8,7 @@ Komut kanalı Postgres `jobs` + `session_lease`. Public 8080 / LB yok.
 
 ## Go-live checklist
 
-1. Ubuntu + Docker + 2G swap + UFW (22; ops için 9090)
+1. Ubuntu + Docker + 2G swap + UFW (22 + 9443)
 2. Repo: `/opt/whatsappbot` → `origin/main`
 3. `apps/wa-service/.env`:
    - `DATABASE_URL` = Supabase **session pooler :5432**
@@ -55,4 +55,5 @@ Sonra: `docker compose -f infra/docker-compose.yml --profile small up -d --force
 
 ## Sertleştirme
 
-UFW SSH-only (+9090), fail2ban, unattended-upgrades, root şifre rotasyonu.
+UFW SSH + HTTPS ops (9443), fail2ban, unattended-upgrades, root şifre rotasyonu.  
+Cloud Firewall: [hetzner-firewall.md](./hetzner-firewall.md).
