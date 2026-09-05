@@ -1,61 +1,68 @@
 import type { Metadata } from 'next'
 import { BRAND_NAME } from '@/components/brand'
 
-export const metadata: Metadata = { title: 'Kullanım koşulları' }
+export const metadata: Metadata = {
+  title: 'Kullanım koşulları',
+  description: `${BRAND_NAME} hizmet kullanım koşulları.`,
+}
+
+const UPDATED_AT = '5 Eylül 2026'
+const CONTACT_EMAIL = 'destek@filo.app'
+const OPERATOR_PLACEHOLDER = '[şirket ünvanı — güncelleyin]'
 
 export default function TermsPage() {
   return (
     <article className="mx-auto max-w-2xl px-5 py-16 filo-fade-in">
-      <h1 className="text-[28px] font-semibold tracking-[-0.025em]">
-        Kullanım koşulları
-      </h1>
-      <p className="mt-2 text-[12.5px] text-ink-faint">
-        Son güncelleme: {new Date().toLocaleDateString('tr-TR')}
-      </p>
+      <h1 className="text-[28px] font-semibold tracking-[-0.025em]">Kullanım koşulları</h1>
+      <p className="mt-2 text-[12.5px] text-ink-faint">Son güncelleme: {UPDATED_AT}</p>
 
       <div className="mt-8 flex flex-col gap-7 text-[13.5px] leading-relaxed text-ink-muted">
+        <Section title="Hizmet sağlayıcı">
+          <p>
+            Bu koşullar {BRAND_NAME} hizmetini sunan {OPERATOR_PLACEHOLDER} ile kullanıcı arasında
+            geçerlidir. İletişim: {CONTACT_EMAIL}.
+          </p>
+        </Section>
+
         <Section title="Hizmetin kapsamı">
           <p>
-            {BRAND_NAME}, kendi WhatsApp hesabınızı bir sunucuya bağlayarak toplu
-            mesaj göndermenizi sağlayan bir araçtır. Hizmet, WhatsApp&apos;ın resmi
-            Business API&apos;si üzerinden çalışmaz; mesajlar doğrudan sizin
-            hattınızdan çıkar.
+            {BRAND_NAME}, kendi WhatsApp hesabınızı bir sunucuya bağlayarak toplu mesaj göndermenizi
+            sağlayan bir araçtır. Hizmet, WhatsApp&apos;ın resmi Business API&apos;si üzerinden
+            çalışmaz; mesajlar doğrudan sizin hattınızdan çıkar.
           </p>
         </Section>
 
         <Section title="Hesap riski">
           <p>
-            WhatsApp, toplu gönderim yapan hesaplara geçici veya kalıcı kısıt
-            uygulayabilir. {BRAND_NAME} bu riski azaltmak için numara doğrulama,
-            ısındırma eğrisi, rastgele gönderim aralıkları ve otomatik durdurma
-            uygular; ancak hiçbir hesabın kısıtlanmayacağı garanti edilemez.
-            Hattınızın kısıtlanmasından doğan zararlardan {BRAND_NAME} sorumlu
-            tutulamaz.
+            WhatsApp, toplu gönderim yapan hesaplara geçici veya kalıcı kısıt uygulayabilir.{' '}
+            {BRAND_NAME} bu riski azaltmak için numara doğrulama, ısındırma eğrisi, rastgele gönderim
+            aralıkları ve otomatik durdurma uygular; ancak hiçbir hesabın kısıtlanmayacağı garanti
+            edilemez. Hattınızın kısıtlanmasından doğan zararlardan {BRAND_NAME} sorumlu tutulamaz.
           </p>
         </Section>
 
         <Section title="Kabul edilmeyen kullanım">
           <p>
-            İzinsiz elde edilmiş numara listelerine gönderim, yanıltıcı veya
-            dolandırıcılık amaçlı içerik, nefret söylemi ve yasa dışı ürün
-            tanıtımı yasaktır. Bu tür kullanımın tespiti halinde hesap bildirimsiz
-            olarak kapatılır.
+            İzinsiz elde edilmiş numara listelerine gönderim, yanıltıcı veya dolandırıcılık amaçlı
+            içerik, nefret söylemi ve yasa dışı ürün tanıtımı yasaktır. Bu tür kullanımın tespiti
+            halinde hesap bildirimsiz olarak kapatılır.
           </p>
         </Section>
 
         <Section title="Ödeme ve iptal">
           <p>
-            Deneme sürümü yedi gün süreyle ücretsizdir ve kredi kartı gerektirmez;
-            süre sonunda otomatik ücretlendirme yapılmaz. Ücretli paketler aylık
-            olarak faturalanır ve istediğiniz zaman iptal edilebilir. İptal
-            durumunda kalan süre sonuna kadar hizmet devam eder.
+            Deneme sürümü yedi gün süreyle ücretsizdir ve kredi kartı gerektirmez; süre sonunda
+            otomatik ücretlendirme yapılmaz. Ücretli paketler aylık olarak faturalanır ve istediğiniz
+            zaman iptal edilebilir. İptal durumunda kalan süre sonuna kadar hizmet devam eder.
+            Ödeme altyapısı yapılandırılmamış ortamlarda yükseltme kapalıdır; fiyatlar bilgilendirme
+            amaçlıdır.
           </p>
         </Section>
 
         <Section title="Hizmetin sürekliliği">
           <p>
-            Sunucu bakımı veya WhatsApp tarafındaki değişiklikler nedeniyle
-            hizmette geçici kesintiler olabilir. Planlı bakımlar önceden duyurulur.
+            Sunucu bakımı veya WhatsApp tarafındaki değişiklikler nedeniyle hizmette geçici
+            kesintiler olabilir. Planlı bakımlar önceden duyurulur.
           </p>
         </Section>
       </div>

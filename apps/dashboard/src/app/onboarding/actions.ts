@@ -17,11 +17,11 @@ export type StepState = {
 
 const CHUNK = 500
 const DEFAULT_COLORS = {
-  primary: '#111418',
-  secondary: '#6a7076',
-  accent: '#25d366',
+  primary: '#2f5bff',
+  secondary: '#646b7c',
+  accent: '#2f5bff',
   background: '#ffffff',
-  text: '#111418',
+  text: '#161925',
 }
 
 async function setOnboardingStep(step: string, done = false) {
@@ -285,27 +285,41 @@ export async function verifyOnboardingList(
   })
   if (jobError) return { error: jobError }
 
-  // Kısa bekleme sonrası sayım (worker async; UI'ya anlık sayım opsiyonel).
-  await new Promise((r) => setTimeout(r, 2500))
-
-  const { count: validCount } = await supabase
-    .from('contacts')
-    .select('id', { count: 'exact', head: true })
-    .eq('org_id', org.id)
-    .eq('wa_status', 'valid')
-
-  const { count: invalidCount } = await supabase
-    .from('contacts')
-    .select('id', { count: 'exact', head: true })
-    .eq('org_id', org.id)
-    .eq('wa_status', 'invalid')
+  // Worker async: sabit 2.5s'e güvenme. Kısa poll ile wa_status güncellenmesini izle.
+  let validCount = 0
+  let invalidCount = 0
+  for (let attempt = 0; attempt < 8; attempt++) {
+    await new Promise((r) => setTimeout(r, 400))
+    const [{ count: valid }, { count: invalid }, { count: pending }] = await Promise.all([
+      supabase
+        .from('contacts')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', org.id)
+        .eq('wa_status', 'valid'),
+      supabase
+        .from('contacts')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', org.id)
+        .eq('wa_status', 'invalid'),
+      supabase
+        .from('jobs')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', org.id)
+        .eq('type', 'contacts.verify')
+        .in('status', ['pending', 'claimed', 'running']),
+    ])
+    validCount = valid ?? 0
+    invalidCount = invalid ?? 0
+    if ((validCount > 0 || invalidCount > 0) && (pending ?? 0) === 0) break
+    if (attempt >= 3 && (validCount > 0 || invalidCount > 0)) break
+  }
 
   await setOnboardingStep('ilk-mesaj')
   return {
     ok: 'Doğrulama kuyruğa alındı.',
     listId: targetListId,
-    validCount: validCount ?? 0,
-    invalidCount: invalidCount ?? 0,
+    validCount,
+    invalidCount,
   }
 }
 
@@ -354,7 +368,12 @@ export async function firstSendStep(
       .limit(1)
       .maybeSingle()
 
-    if (!list) return { error: 'Gönderilecek numara yok.' }
+    if (!list) {
+      return {
+        error:
+          'Gönderilecek numara yok. Önceki adımda liste atlandıysa bu ekranda en az bir numara yapıştırın veya panele geçip listeden devam edin.',
+      }
+    }
 
     const stamp = new Intl.DateTimeFormat('tr-TR', {
       dateStyle: 'short',

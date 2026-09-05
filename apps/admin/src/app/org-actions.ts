@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { requirePlatformAdmin } from '@/lib/platform'
 
 export type OrgEditState = { error?: string; ok?: string } | null
+export type UnlockState = { error?: string; ok?: string } | null
 
 export async function updateOrganizationQuotas(
   _prev: OrgEditState,
@@ -29,6 +30,30 @@ export async function updateOrganizationQuotas(
     revalidatePath('/')
     const row = data as { name?: string } | null
     return { ok: `${row?.name ?? 'İşletme'} güncellendi` }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Yetki yok' }
+  }
+}
+
+export async function unlockAccount(
+  _prev: UnlockState,
+  formData: FormData,
+): Promise<UnlockState> {
+  const accountId = String(formData.get('account_id') ?? '').trim()
+  if (!accountId) return { error: 'account_id gerekli' }
+
+  try {
+    const { supabase } = await requirePlatformAdmin()
+    const { data, error } = await supabase.rpc('admin_unlock_account' as never, {
+      p_account_id: accountId,
+    } as never)
+
+    if (error) return { error: error.message }
+    revalidatePath('/')
+    const row = data as { label?: string | null; job_id?: number } | null
+    return {
+      ok: `${row?.label || 'Hat'} kilidi açıldı · connect #${row?.job_id ?? '—'}`,
+    }
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Yetki yok' }
   }

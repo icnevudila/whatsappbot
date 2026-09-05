@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Wordmark } from '@/components/brand'
 import { listUserOrgs, requireActiveOrg } from '@/lib/org'
+import { getSetupProgress } from '@/lib/setup-progress'
 import { signOut } from '@/app/giris/actions'
 import { Nav } from './nav'
 import { OrgSwitcher } from './org-switcher'
@@ -19,36 +20,16 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Kurulum nav'da yalnizca henuz bitmemisse gorunur. Uc adimin hepsi
-  // tamamlandiktan sonra kalabaliklastirmamak icin gizleniyor.
-  const [{ count: connectedCount }, { count: contactCount }, { count: campaignCount }, orgs] =
-    await Promise.all([
-      supabase
-        .from('accounts')
-        .select('id', { count: 'exact', head: true })
-        .eq('org_id', org.id)
-        .eq('status', 'connected'),
-      supabase
-        .from('contacts')
-        .select('id', { count: 'exact', head: true })
-        .eq('org_id', org.id),
-      supabase
-        .from('campaigns')
-        .select('id', { count: 'exact', head: true })
-        .eq('org_id', org.id),
-      listUserOrgs(),
-    ])
-
-  const showSetup =
-    (connectedCount ?? 0) === 0 ||
-    (contactCount ?? 0) === 0 ||
-    (campaignCount ?? 0) === 0
+  const [{ showSetup }, orgs] = await Promise.all([
+    getSetupProgress(supabase, org.id),
+    listUserOrgs(),
+  ])
 
   return (
     <div className="flex min-h-dvh">
       <aside className="hidden w-[248px] shrink-0 flex-col justify-between border-r border-hairline bg-surface px-3 py-4 md:flex">
         <div>
-          <Link href="/" className="mb-6 flex items-center px-2.5">
+          <Link href="/ozet" className="mb-6 flex items-center px-2.5">
             <Wordmark />
           </Link>
           <Nav showSetup={showSetup} />
@@ -74,7 +55,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="border-b border-hairline bg-surface px-3 py-2 md:hidden">
           <div className="mb-2 flex items-center justify-between gap-3">
-            <Link href="/" className="flex items-center">
+            <Link href="/ozet" className="flex items-center">
               <Wordmark />
             </Link>
             <form action={signOut}>

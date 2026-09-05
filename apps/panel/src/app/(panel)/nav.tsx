@@ -2,24 +2,53 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState } from 'react'
 
 /**
- * Sıra: hat → hızlı gönder → liste/kampanya → gelen/giden → izle.
- * Marka kiti ve ayarlar günlük işin dışında, sonda.
+ * Çekirdek: günlük iş. Diğer: daha seyrek kullanılan sayfalar.
+ * Mobilde "Diğer" gruplanır; masaüstünde hepsi görünür.
  */
 const CORE = [
+  { href: '/ozet', label: 'Özet' },
   { href: '/hesaplar', label: 'Hesaplar' },
   { href: '/hizli-gonderim', label: 'Hızlı gönderim' },
   { href: '/kisiler', label: 'Kişiler' },
   { href: '/kampanyalar', label: 'Kampanyalar' },
+  { href: '/durum', label: 'Durum' },
+  { href: '/ayarlar', label: 'Ayarlar' },
+] as const
+
+const MORE = [
   { href: '/gelenler', label: 'Gelenler' },
   { href: '/gidenler', label: 'Gidenler' },
   { href: '/raporlar', label: 'Raporlar' },
-  { href: '/durum', label: 'Durum' },
   { href: '/kara-liste', label: 'Kara liste' },
   { href: '/marka-kiti', label: 'Marka kiti' },
-  { href: '/ayarlar', label: 'Ayarlar' },
 ] as const
+
+function NavLink({
+  href,
+  label,
+  active,
+}: {
+  href: string
+  label: string
+  active: boolean
+}) {
+  return (
+    <Link
+      href={href}
+      aria-current={active ? 'page' : undefined}
+      className={`whitespace-nowrap rounded-md px-2.5 py-1.5 text-[13px] transition-colors ${
+        active
+          ? 'bg-accent-soft font-medium text-accent'
+          : 'text-ink-muted hover:bg-surface-raised hover:text-ink'
+      }`}
+    >
+      {label}
+    </Link>
+  )
+}
 
 export function Nav({
   showSetup = false,
@@ -29,38 +58,100 @@ export function Nav({
   orientation?: 'vertical' | 'horizontal'
 }) {
   const pathname = usePathname()
+  const [moreOpen, setMoreOpen] = useState(false)
 
-  const items = showSetup
-    ? ([{ href: '/kurulum', label: 'Kurulum' }, ...CORE] as const)
-    : CORE
+  const setupItem = showSetup
+    ? ({ href: '/kurulum', label: 'Kurulum' } as const)
+    : null
 
-  return (
-    <nav
-      className={
-        orientation === 'horizontal'
-          ? 'flex w-max flex-row gap-0.5'
-          : 'flex flex-col gap-0.5'
-      }
-      aria-label="Ana menü"
-    >
-      {items.map((item) => {
-        const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
+  const isActive = (href: string) =>
+    pathname === href || pathname.startsWith(`${href}/`)
 
-        return (
-          <Link
+  const moreActive = MORE.some((item) => isActive(item.href))
+
+  if (orientation === 'horizontal') {
+    return (
+      <nav className="flex w-max flex-row items-center gap-0.5" aria-label="Ana menü">
+        {setupItem ? (
+          <NavLink
+            href={setupItem.href}
+            label={setupItem.label}
+            active={isActive(setupItem.href)}
+          />
+        ) : null}
+        {CORE.map((item) => (
+          <NavLink
             key={item.href}
             href={item.href}
-            aria-current={active ? 'page' : undefined}
+            label={item.label}
+            active={isActive(item.href)}
+          />
+        ))}
+        <div className="relative">
+          <button
+            type="button"
+            aria-expanded={moreOpen}
+            onClick={() => setMoreOpen((v) => !v)}
             className={`whitespace-nowrap rounded-md px-2.5 py-1.5 text-[13px] transition-colors ${
-              active
+              moreActive || moreOpen
                 ? 'bg-accent-soft font-medium text-accent'
                 : 'text-ink-muted hover:bg-surface-raised hover:text-ink'
             }`}
           >
-            {item.label}
-          </Link>
-        )
-      })}
+            Diğer
+          </button>
+          {moreOpen ? (
+            <div className="absolute left-0 top-full z-30 mt-1 min-w-[160px] rounded-md border border-hairline bg-surface p-1 shadow-[var(--shadow-md)]">
+              {MORE.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMoreOpen(false)}
+                  aria-current={isActive(item.href) ? 'page' : undefined}
+                  className={`block rounded-md px-2.5 py-1.5 text-[13px] ${
+                    isActive(item.href)
+                      ? 'bg-accent-soft font-medium text-accent'
+                      : 'text-ink-muted hover:bg-surface-raised hover:text-ink'
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </nav>
+    )
+  }
+
+  return (
+    <nav className="flex flex-col gap-0.5" aria-label="Ana menü">
+      {setupItem ? (
+        <NavLink
+          href={setupItem.href}
+          label={setupItem.label}
+          active={isActive(setupItem.href)}
+        />
+      ) : null}
+      {CORE.map((item) => (
+        <NavLink
+          key={item.href}
+          href={item.href}
+          label={item.label}
+          active={isActive(item.href)}
+        />
+      ))}
+      <p className="mb-0.5 mt-3 px-2.5 text-[10.5px] font-medium uppercase tracking-wide text-ink-faint">
+        Diğer
+      </p>
+      {MORE.map((item) => (
+        <NavLink
+          key={item.href}
+          href={item.href}
+          label={item.label}
+          active={isActive(item.href)}
+        />
+      ))}
     </nav>
   )
 }

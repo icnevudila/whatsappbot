@@ -3,6 +3,7 @@ import { Button, Card, CardHeader, Notice } from '@/components/ui'
 import { requirePlatformAdmin } from '@/lib/platform'
 import { signOut } from '@/app/giris/actions'
 import { OrgQuotaForm } from './org-quota-form'
+import { UnlockAccountButton } from './unlock-account-button'
 
 export const metadata: Metadata = { title: 'Genel bakış' }
 
@@ -125,7 +126,9 @@ export default async function AdminOverviewPage() {
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
           <div>
             <p className="text-[13.5px] font-semibold tracking-[-0.02em]">Filo Admin</p>
-            <p className="text-[12px] text-ink-muted">Platform genel bakış · salt okuma</p>
+            <p className="text-[12px] text-ink-muted">
+              Platform genel bakış · kota düzenleme ve kilit açma
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <span className="hidden text-[12px] text-ink-muted sm:inline">{user.email}</span>
@@ -341,12 +344,13 @@ export default async function AdminOverviewPage() {
                   <th className="px-4 py-2 font-medium">Durum</th>
                   <th className="px-4 py-2 font-medium">Worker</th>
                   <th className="px-4 py-2 font-medium">Kilit nedeni</th>
+                  <th className="px-4 py-2 font-medium">İşlem</th>
                 </tr>
               </thead>
               <tbody>
                 {lockedAccounts.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-6 text-ink-muted">
+                    <td colSpan={7} className="px-4 py-6 text-ink-muted">
                       Kilitli hesap bulunmuyor.
                     </td>
                   </tr>
@@ -371,6 +375,9 @@ export default async function AdminOverviewPage() {
                       </td>
                       <td className="px-4 py-2.5 text-danger">
                         {account.lock_reason || '—'}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <UnlockAccountButton accountId={account.id} />
                       </td>
                     </tr>
                   ))

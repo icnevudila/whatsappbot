@@ -175,7 +175,10 @@ export function OnboardingChecklist({
         fd.set('listId', draft.listId)
         applyResult(await verifyOnboardingList(null, fd), advance)
       } else if (current.id === 'ilk-mesaj') {
-        fd.set('numbers', draft.numbers)
+        // Formdaki numbers (skip sonrası) draft ile birleştir.
+        const formNumbers = String(fd.get('numbers') ?? '').trim()
+        if (formNumbers) fd.set('numbers', formNumbers)
+        else fd.set('numbers', draft.numbers)
         applyResult(await firstSendStep(null, fd))
       }
     })
@@ -406,19 +409,41 @@ export function OnboardingChecklist({
                       ) : null}
 
                       {step.id === 'ilk-mesaj' ? (
-                        <label className="flex flex-col gap-1.5">
-                          <span className="text-[12px] font-medium text-ink-muted">
-                            Mesaj metni
-                          </span>
-                          <textarea
-                            name="message"
-                            required
-                            defaultValue={draft.message}
-                            rows={4}
-                            className={`${field} resize-y`}
-                            placeholder="Merhaba, size özel bir notumuz var…"
-                          />
-                        </label>
+                        <div className="flex flex-col gap-3">
+                          <label className="flex flex-col gap-1.5">
+                            <span className="text-[12px] font-medium text-ink-muted">
+                              Mesaj metni
+                            </span>
+                            <textarea
+                              name="message"
+                              required
+                              defaultValue={draft.message}
+                              rows={4}
+                              className={`${field} resize-y`}
+                              placeholder="Merhaba, size özel bir notumuz var…"
+                            />
+                          </label>
+                          {!draft.listId ? (
+                            <label className="flex flex-col gap-1.5">
+                              <span className="text-[12px] font-medium text-ink-muted">
+                                Alıcı numaraları
+                              </span>
+                              <textarea
+                                name="numbers"
+                                value={draft.numbers}
+                                onChange={(e) =>
+                                  setDraft((d) => ({ ...d, numbers: e.target.value }))
+                                }
+                                rows={3}
+                                className={`${field} resize-y font-mono text-[12.5px]`}
+                                placeholder={'905xxxxxxxxx\n905yyyyyyyyy'}
+                              />
+                              <span className="text-[11.5px] text-ink-faint">
+                                Liste adımı atlandıysa burada en az bir numara girin.
+                              </span>
+                            </label>
+                          ) : null}
+                        </div>
                       ) : null}
 
                       <div className="flex flex-wrap items-center gap-3 pt-0.5">

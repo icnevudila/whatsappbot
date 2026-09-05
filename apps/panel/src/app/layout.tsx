@@ -22,6 +22,14 @@ export const metadata: Metadata = {
   },
   description:
     'Kendi WhatsApp hatlarınızı bağlayın, kişi listenizi yükleyin, hattı yakmayan hızda toplu kampanya gönderin.',
+  openGraph: {
+    title: `${BRAND_NAME} — ${BRAND_TAGLINE}`,
+    description:
+      'Kendi WhatsApp hatlarınızı bağlayın, kişi listenizi yükleyin, hattı yakmayan hızda toplu kampanya gönderin.',
+    locale: 'tr_TR',
+    type: 'website',
+    siteName: BRAND_NAME,
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

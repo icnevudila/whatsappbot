@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { isPlanId } from '@wa/shared'
 import { requireActiveOrg } from '@/lib/org'
 
 export const runtime = 'nodejs'
@@ -44,10 +45,17 @@ export async function POST(request: Request) {
 
   const priceId = body.priceId?.trim() || process.env.STRIPE_PRICE_ID?.trim()
   if (!priceId) {
-    return NextResponse.json({ error: 'priceId gerekli.' }, { status: 400 })
+    return NextResponse.json(
+      {
+        error: 'Faturalama henüz yapılandırılmadı (STRIPE_PRICE_ID).',
+        status: 'not_configured',
+      },
+      { status: 503 },
+    )
   }
 
-  const plan = (body.plan?.trim() || 'starter').toLowerCase()
+  const rawPlan = (body.plan?.trim() || 'starter').toLowerCase()
+  const plan = isPlanId(rawPlan) && rawPlan !== 'free' ? rawPlan : 'starter'
   const successUrl =
     body.successUrl?.trim() ||
     process.env.STRIPE_SUCCESS_URL?.trim() ||

@@ -18,17 +18,11 @@ import { requireActiveOrg } from '@/lib/org'
 import { signOut } from '@/app/giris/actions'
 import { MembersPanel, OrgSettingsForm, WebhookSettingsForm } from './org-forms'
 import { ProfileForm } from './profile-form'
+import { planLabel } from '@wa/shared'
 import { BillingCheckoutButton } from './billing-checkout-button'
 import { ApiKeyForm } from './api-key-form'
 
 export const metadata: Metadata = { title: 'Ayarlar' }
-
-const PLAN_LABELS: Record<string, string> = {
-  free: 'Deneme',
-  starter: 'Başlangıç',
-  pro: 'Büyüme',
-  enterprise: 'Ajans',
-}
 
 const ROLE_HINT: Record<string, string> = {
   owner: 'Sahip',
@@ -270,7 +264,7 @@ export default async function SettingsPage() {
           <Card>
             <CardHeader
               title="Paket"
-              action={<Badge tone="accent">{PLAN_LABELS[plan] ?? plan}</Badge>}
+              action={<Badge tone="accent">{planLabel(plan)}</Badge>}
             />
 
             <div className="space-y-4 p-4">

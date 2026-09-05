@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createHmac, timingSafeEqual } from 'node:crypto'
+import { PLAN_QUOTAS, isPlanId, type PlanId } from '@wa/shared'
 
 export const runtime = 'nodejs'
 
@@ -19,19 +20,9 @@ type StripeEvent = {
   }
 }
 
-const PLAN_QUOTAS: Record<
-  string,
-  { plan: 'free' | 'starter' | 'pro' | 'enterprise'; accounts: number; messages: number }
-> = {
-  free: { plan: 'free', accounts: 1, messages: 1000 },
-  starter: { plan: 'starter', accounts: 3, messages: 10_000 },
-  pro: { plan: 'pro', accounts: 10, messages: 50_000 },
-  enterprise: { plan: 'enterprise', accounts: 50, messages: 500_000 },
-}
-
-function resolvePlan(meta: Record<string, string> | undefined): keyof typeof PLAN_QUOTAS {
+function resolvePlan(meta: Record<string, string> | undefined): PlanId {
   const raw = (meta?.filo_plan || meta?.plan || 'starter').toLowerCase()
-  return raw in PLAN_QUOTAS ? (raw as keyof typeof PLAN_QUOTAS) : 'starter'
+  return isPlanId(raw) ? raw : 'starter'
 }
 
 export async function POST(request: Request) {
@@ -81,7 +72,7 @@ export async function POST(request: Request) {
 
     const { error } = await admin.rpc('apply_stripe_subscription', {
       p_org_id: orgId,
-      p_plan: quotas.plan,
+      p_plan: planKey,
       p_accounts_quota: quotas.accounts,
       p_monthly_message_quota: quotas.messages,
       p_stripe_customer_id: obj?.customer ?? null,

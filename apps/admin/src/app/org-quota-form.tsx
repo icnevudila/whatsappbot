@@ -1,5 +1,6 @@
 'use client'
 
+import { PLAN_IDS, PLAN_LABELS } from '@wa/shared'
 import { useActionState } from 'react'
 import { Button, Input, Select } from '@/components/ui'
 import { updateOrganizationQuotas, type OrgEditState } from './org-actions'
@@ -23,11 +24,12 @@ export function OrgQuotaForm({
   return (
     <form action={action} className="flex flex-wrap items-end gap-2 py-1">
       <input type="hidden" name="org_id" value={orgId} />
-      <Select name="plan" defaultValue={plan} className="w-[110px]">
-        <option value="free">free</option>
-        <option value="starter">starter</option>
-        <option value="pro">pro</option>
-        <option value="enterprise">enterprise</option>
+      <Select name="plan" defaultValue={plan} className="w-[130px]" title="Plan">
+        {PLAN_IDS.map((id) => (
+          <option key={id} value={id}>
+            {PLAN_LABELS[id]}
+          </option>
+        ))}
       </Select>
       <Input
         name="accounts_quota"

@@ -3,12 +3,13 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { AccentLink, Card, Meter, PageHeader, QuietLink } from '@/components/ui'
 import { requireActiveOrg } from '@/lib/org'
+import { getSetupProgress } from '@/lib/setup-progress'
 
 export const metadata: Metadata = { title: 'Kurulum' }
 export const dynamic = 'force-dynamic'
 
 /**
- * Gerçek veriye dayalı 5 adım — özet ekranı ile aynı dil.
+ * Gerçek veriye dayalı 5 adım — layout showSetup ile aynı kriterler.
  */
 export default async function SetupPage() {
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
@@ -19,87 +20,58 @@ export default async function SetupPage() {
     redirect('/giris')
   }
 
-  const [
-    { count: connectedCount },
-    { count: contactCount },
-    { count: brandCount },
-    { count: validWa },
-    { count: outCount },
-  ] = await Promise.all([
-    supabase
-      .from('accounts')
-      .select('id', { count: 'exact', head: true })
-      .eq('org_id', org.id)
-      .eq('status', 'connected'),
-    supabase.from('contacts').select('id', { count: 'exact', head: true }).eq('org_id', org.id),
-    supabase.from('brand_kits').select('id', { count: 'exact', head: true }).eq('org_id', org.id),
-    supabase
-      .from('contacts')
-      .select('id', { count: 'exact', head: true })
-      .eq('org_id', org.id)
-      .eq('wa_status', 'valid'),
-    supabase
-      .from('message_log')
-      .select('id', { count: 'exact', head: true })
-      .eq('org_id', org.id)
-      .eq('direction', 'out'),
-  ])
+  const { counts, allDone, doneCount } = await getSetupProgress(supabase, org.id)
+  const { brandCount, contactCount, connectedCount, validWa, outCount } = counts
 
   const steps = [
     {
-      done: (brandCount ?? 0) > 0,
+      done: brandCount > 0,
       title: 'Marka',
       body:
-        (brandCount ?? 0) > 0
+        brandCount > 0
           ? 'Marka kiti hazır. Renk ve logo kampanya önizlemesinde kullanılır.'
           : 'Gönderimlerde görünecek ad, renk ve logo.',
       href: '/marka-kiti',
-      cta: (brandCount ?? 0) > 0 ? 'Markayı düzenle' : 'Marka kitini aç',
+      cta: brandCount > 0 ? 'Markayı düzenle' : 'Marka kitini aç',
     },
     {
-      done: (contactCount ?? 0) > 0,
+      done: contactCount > 0,
       title: 'Kişi listesi',
-      body:
-        (contactCount ?? 0) > 0
-          ? `${contactCount} kişi defterde.`
-          : 'CSV veya yapıştırarak numaraları içeri al.',
+      body: contactCount > 0 ? `${contactCount} kişi defterde.` : 'CSV veya yapıştırarak numaraları içeri al.',
       href: '/kisiler#liste-olustur',
-      cta: (contactCount ?? 0) > 0 ? 'Listeleri gör' : 'Liste oluştur',
+      cta: contactCount > 0 ? 'Listeleri gör' : 'Liste oluştur',
     },
     {
-      done: (connectedCount ?? 0) > 0,
+      done: connectedCount > 0,
       title: 'WhatsApp hattı',
       body:
-        (connectedCount ?? 0) > 0
+        connectedCount > 0
           ? `${connectedCount} hat bağlı.`
           : 'QR veya telefon koduyla hattı bağla.',
       href: '/hesaplar',
-      cta: (connectedCount ?? 0) > 0 ? 'Hat ekle' : 'Hat bağla',
+      cta: connectedCount > 0 ? 'Hat ekle' : 'Hat bağla',
     },
     {
-      done: (validWa ?? 0) > 0,
+      done: validWa > 0,
       title: 'Numara kontrolü',
       body:
-        (validWa ?? 0) > 0
+        validWa > 0
           ? `${validWa} numara WhatsApp’ta ✓.`
           : 'Tek numara veya tüm defter — WA var mı yok mu.',
       href: '/kisiler',
       cta: 'Kontrol et',
     },
     {
-      done: (outCount ?? 0) > 0,
+      done: outCount > 0,
       title: 'İlk mesaj',
       body:
-        (outCount ?? 0) > 0
+        outCount > 0
           ? 'En az bir giden mesaj kaydı var.'
           : 'Hızlı gönderimle test mesajı at.',
       href: '/hizli-gonderim',
-      cta: (outCount ?? 0) > 0 ? 'Yeni gönderim' : 'İlk mesajı gönder',
+      cta: outCount > 0 ? 'Yeni gönderim' : 'İlk mesajı gönder',
     },
   ]
-
-  const completed = steps.filter((s) => s.done).length
-  const allDone = completed === steps.length
 
   return (
     <>
@@ -108,13 +80,13 @@ export default async function SetupPage() {
         description="Beş adım. Veri oluştukça burada otomatik işaretlenir."
         action={
           <span className="tabular text-[12.5px] text-ink-muted">
-            {completed} / {steps.length}
+            {doneCount} / {steps.length}
           </span>
         }
       />
 
       <div className="mb-4">
-        <Meter value={completed} max={steps.length} />
+        <Meter value={doneCount} max={steps.length} />
       </div>
 
       <div className="flex flex-col gap-2.5">
@@ -123,9 +95,7 @@ export default async function SetupPage() {
             <div className="flex items-start gap-3.5 p-4">
               <span
                 className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold ${
-                  step.done
-                    ? 'bg-ok text-white'
-                    : 'bg-surface-raised text-ink-muted'
+                  step.done ? 'bg-ok text-white' : 'bg-surface-raised text-ink-muted'
                 }`}
               >
                 {step.done ? '✓' : index + 1}
@@ -155,6 +125,10 @@ export default async function SetupPage() {
           <p className="text-[13px] font-medium text-ok-dim">Hazırsın</p>
           <p className="mt-1 text-[12.5px] text-ink-muted">
             Özetten devam et veya{' '}
+            <Link href="/ozet" className="font-medium text-accent underline-offset-2 hover:underline">
+              Özet
+            </Link>{' '}
+            /{' '}
             <Link href="/durum" className="font-medium text-accent underline-offset-2 hover:underline">
               Durum
             </Link>{' '}

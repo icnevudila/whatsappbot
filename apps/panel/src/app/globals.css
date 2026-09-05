@@ -106,6 +106,17 @@ h3 {
   }
 }
 
+@keyframes filo-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @keyframes filo-pulse-slide {
   0% {
     transform: translateX(-100%);
@@ -115,8 +126,44 @@ h3 {
   }
 }
 
+@keyframes filo-bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
 .filo-fade-in {
   animation: filo-fade-in 0.35s var(--ease-out) both;
+}
+
+.filo-fade-up {
+  animation: filo-fade-up 0.55s var(--ease-out) both;
+}
+
+.filo-fade-up-delay {
+  animation: filo-fade-up 0.55s var(--ease-out) 0.12s both;
+}
+
+.filo-fade-up-delay-2 {
+  animation: filo-fade-up 0.55s var(--ease-out) 0.24s both;
+}
+
+.filo-bar-stagger {
+  transform-origin: left center;
+  animation: filo-bar-grow 0.7s var(--ease-out) both;
+}
+
+.filo-bar-stagger-1 {
+  animation-delay: 0.28s;
+}
+.filo-bar-stagger-2 {
+  animation-delay: 0.4s;
+}
+.filo-bar-stagger-3 {
+  animation-delay: 0.52s;
 }
 
 .filo-pulse > div {
@@ -125,6 +172,10 @@ h3 {
 
 @media (prefers-reduced-motion: reduce) {
   .filo-fade-in,
+  .filo-fade-up,
+  .filo-fade-up-delay,
+  .filo-fade-up-delay-2,
+  .filo-bar-stagger,
   .filo-pulse > div {
     animation: none !important;
   }

@@ -8,5 +8,6 @@ export type {
 
 export * from './jobs'
 export * from './phone'
+export * from './plans'
 export * from './scrape'
 export * from './spintax'
