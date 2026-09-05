@@ -73,7 +73,7 @@ Tam kolonlar ve RLS: `supabase/migrations/` sırasıyla.
 
 | Fonksiyon | Amaç |
 |-----------|------|
-| `wa.claim_jobs(worker_id, limit)` | Pending job’ları `FOR UPDATE SKIP LOCKED` ile `claimed` yapar |
+| `wa.claim_jobs(worker_id, limit)` | Pending job’ları `FOR UPDATE SKIP LOCKED` ile `claimed` yapar. **Affinity:** `account_id` doluysa yalnızca `session_lease.holder_id = worker_id` (veya kirasızken yalnızca `account.connect|disconnect|logout|request_pairing_code`) |
 | `wa.claim_campaign_target(campaign_id, account_id)` | Sıradaki `queued` hedefi atomik `sending` yapar |
 | `wa.acquire_lease` / `renew_lease` / `release_lease` | Oturum kirası yaşam döngüsü |
 | `wa.cleanup_expired` | Eski sent_messages, lease, bitmiş job, event temizliği |

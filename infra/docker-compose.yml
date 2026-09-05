@@ -1,72 +1,120 @@
-# WhatsApp servisi -- Oracle Cloud Always Free (Ampere A1, arm64) icin.
+# WhatsApp servisi -- Oracle / VPS / Coolify
 #
-# Bu dosya repo KOKUNDEN calistirilir, infra/ icinden degil:
-#
+# Repo KOKUNDEN:
 #   docker compose -f infra/docker-compose.yml up -d --build
 #
-# Derleme baglami repo koku olmak zorunda cunku Dockerfile monorepo
-# manifestlerini (package-lock.json, packages/shared) kopyaliyor.
+# Tek worker (varsayilan): wa-service, WORKER_ID=oracle-1, port 8080
+# Coklu worker (300 hat olcegi):
+#   docker compose -f infra/docker-compose.yml --profile scale up -d --build
+#   → worker-1..worker-6, MAX_SESSIONS=50, benzersiz WORKER_ID
+#
+# Derleme baglami repo koku (monorepo package-lock + packages/shared).
+
+x-wa-worker: &wa-worker
+  build:
+    context: ..
+    dockerfile: apps/wa-service/Dockerfile
+  image: wa-service:local
+  env_file:
+    - ../apps/wa-service/.env
+  environment:
+    NODE_ENV: production
+    MAX_SESSIONS: '50'
+  restart: unless-stopped
+  mem_limit: 6g
+  shm_size: '1gb'
+  stop_grace_period: 45s
+  init: true
+  healthcheck:
+    test: ['CMD', 'curl', '-fsS', 'http://127.0.0.1:8080/health']
+    interval: 30s
+    timeout: 10s
+    start_period: 180s
+    retries: 3
+  logging:
+    driver: json-file
+    options:
+      max-size: '20m'
+      max-file: '5'
 
 services:
+  # --- Tek node (gelistirme / kucuk kurulum) ---
+  # Olcek icin once: docker compose -f infra/docker-compose.yml stop wa-service
+  # sonra: docker compose -f infra/docker-compose.yml --profile scale up -d
   wa-service:
-    build:
-      context: ..
-      dockerfile: apps/wa-service/Dockerfile
-    image: wa-service:local
+    <<: *wa-worker
     container_name: wa-service
-
-    # Disari HICBIR port acilmiyor. Panel ile servis birbirini HTTP uzerinden
-    # cagirmiyor; haberlesme Postgres'teki is kuyrugu uzerinden. Bu yuzden
-    # Oracle guvenlik listesinde delik acmaya gerek yok ve saglik ucu yalnizca
-    # makinenin kendisinden erisilebilir kaliyor.
     ports:
       - '127.0.0.1:8080:8080'
-
-    env_file:
-      - ../apps/wa-service/.env
-
     environment:
       NODE_ENV: production
-      # Kira sahibi kimligi konteyner adiyla sabitleniyor. Ayni kimlikle iki
-      # process acilirsa ikisi de ayni hesabi sahiplenir ve WhatsApp tarafinda
-      # 440 (connectionReplaced) dongusu baslar.
+      MAX_SESSIONS: '50'
       WORKER_ID: oracle-1
 
-    # unless-stopped, always'ten farkli: elle durdurulmus konteyner makine
-    # yeniden basladiginda kendiliginden kalkmaz. Bakim icin bilincli
-    # durdurdugumuzda geri gelmesini istemiyoruz.
-    restart: unless-stopped
+  # --- Olcek profili: 6 x 50 = 300 oturum kapasitesi ---
+  # Her instance benzersiz WORKER_ID; ayni id ile iki process acma.
+  wa-worker-1:
+    <<: *wa-worker
+    container_name: wa-worker-1
+    profiles: ['scale']
+    ports:
+      - '127.0.0.1:8081:8080'
+    environment:
+      NODE_ENV: production
+      MAX_SESSIONS: '50'
+      WORKER_ID: worker-1
 
-    # Baileys'in oturum basina ~60 MB'i var. Always Free ARM'da 24 GB RAM
-    # oldugu icin 50 oturum rahat siger; siniri yine de koyuyoruz ki kacak
-    # bir bellek artisi makinenin tamamini ve SSH'i bogmasin.
-    mem_limit: 6g
+  wa-worker-2:
+    <<: *wa-worker
+    container_name: wa-worker-2
+    profiles: ['scale']
+    ports:
+      - '127.0.0.1:8082:8080'
+    environment:
+      NODE_ENV: production
+      MAX_SESSIONS: '50'
+      WORKER_ID: worker-2
 
-    # Chromium / Playwright paylaşımlı bellek; aksi halde Maps/scrape sessizce çöker.
-    shm_size: '1gb'
+  wa-worker-3:
+    <<: *wa-worker
+    container_name: wa-worker-3
+    profiles: ['scale']
+    ports:
+      - '127.0.0.1:8083:8080'
+    environment:
+      NODE_ENV: production
+      MAX_SESSIONS: '50'
+      WORKER_ID: worker-3
 
-    # SIGTERM'in Node'a ulasmasi kapanis sirasi icin sart (creds yazimi ->
-    # sock.end -> kira birakma). Varsayilan 10 saniye bu is icin kisa.
-    stop_grace_period: 45s
+  wa-worker-4:
+    <<: *wa-worker
+    container_name: wa-worker-4
+    profiles: ['scale']
+    ports:
+      - '127.0.0.1:8084:8080'
+    environment:
+      NODE_ENV: production
+      MAX_SESSIONS: '50'
+      WORKER_ID: worker-4
 
-    # Konteyner icinde PID 1 Node olacak; zombi process toplayicisi yok.
-    # tsx alt process acmiyor ama init ucuz bir sigorta.
-    init: true
+  wa-worker-5:
+    <<: *wa-worker
+    container_name: wa-worker-5
+    profiles: ['scale']
+    ports:
+      - '127.0.0.1:8085:8080'
+    environment:
+      NODE_ENV: production
+      MAX_SESSIONS: '50'
+      WORKER_ID: worker-5
 
-    healthcheck:
-      # Playwright (Ubuntu) imajinda wget yok; curl var.
-      test: ['CMD', 'curl', '-fsS', 'http://127.0.0.1:8080/health']
-      interval: 30s
-      timeout: 10s
-      # Baileys oturumlarini geri yuklemek dakikalar surebiliyor; bu sure
-      # boyunca saglik hatasi sayilmasin.
-      start_period: 180s
-      retries: 3
-
-    logging:
-      driver: json-file
-      options:
-        # Pino satir satir JSON yaziyor; 50 oturumla gunluk yuzlerce MB
-        # olabiliyor. Always Free'de 50 GB disk var, dolmasina izin vermiyoruz.
-        max-size: '20m'
-        max-file: '5'
+  wa-worker-6:
+    <<: *wa-worker
+    container_name: wa-worker-6
+    profiles: ['scale']
+    ports:
+      - '127.0.0.1:8086:8080'
+    environment:
+      NODE_ENV: production
+      MAX_SESSIONS: '50'
+      WORKER_ID: worker-6

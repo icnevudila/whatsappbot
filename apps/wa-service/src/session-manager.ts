@@ -169,7 +169,7 @@ export class SessionManager {
 
   /** Servis yeniden acildiginda daha once bagli olan hesaplari geri getirir. */
   async resumeAll(): Promise<void> {
-    const accounts = await loadResumableAccounts(env.maxSessions)
+    const accounts = await loadResumableAccounts(env.maxSessions, env.workerId)
     if (accounts.length === 0) {
       log.info('Devam ettirilecek hesap yok')
       return

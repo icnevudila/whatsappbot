@@ -34,17 +34,33 @@ export async function loadAccount(accountId: string): Promise<AccountRow | null>
 
 /** Yeniden acilista devam ettirilecek hesaplar.
  * Bilincli disconnect (disconnected) / logged_out resume edilmez.
+ * Coklu worker: yalnizca bu worker'in kiraladigi VEYA kirasiz/suresi dolmus hesaplar.
+ * Boylece tum process'ler ayni "ilk N" listeye humum etmez.
  */
-export async function loadResumableAccounts(limit: number): Promise<AccountRow[]> {
+export async function loadResumableAccounts(
+  limit: number,
+  workerId: string,
+): Promise<AccountRow[]> {
   return query<AccountRow>(
-    `select ${ACCOUNT_COLUMNS}
-       from public.accounts
-      where enabled
-        and not is_locked
-        and status in ('connected', 'connecting', 'qr_pending', 'pairing_pending')
-      order by connected_at desc nulls last, created_at
+    `select a.id, a.org_id, a.created_by, a.label, a.phone_e164, a.wa_jid, a.status, a.enabled, a.is_locked,
+            a.daily_send_limit, a.sent_today, a.sent_today_on, a.warmup_started_at,
+            a.new_chat_quota_total, a.new_chat_quota_used, a.reachout_locked_until
+       from public.accounts a
+       left join wa.session_lease sl on sl.account_id = a.id
+      where a.enabled
+        and not a.is_locked
+        and a.status in ('connected', 'connecting', 'qr_pending', 'pairing_pending')
+        and (
+          sl.holder_id is null
+          or sl.expires_at < now()
+          or sl.holder_id = $2
+        )
+      order by
+        case when sl.holder_id = $2 and sl.expires_at >= now() then 0 else 1 end,
+        a.connected_at desc nulls last,
+        a.created_at
       limit $1`,
-    [limit],
+    [limit, workerId],
   )
 }
 

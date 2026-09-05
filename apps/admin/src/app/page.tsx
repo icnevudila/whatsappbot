@@ -23,6 +23,8 @@ type OverviewAccount = {
   is_locked: boolean
   lock_reason: string | null
   enabled: boolean
+  lease_holder?: string | null
+  lease_expires_at?: string | null
 }
 
 type OverviewJob = {
@@ -35,9 +37,16 @@ type OverviewJob = {
   updated_at: string
 }
 
+type OverviewWorker = {
+  worker_id: string
+  leased_accounts: number
+  soonest_expiry: string
+}
+
 type AdminOverview = {
   organizations: OverviewOrg[]
   accounts: OverviewAccount[]
+  workers?: OverviewWorker[]
   jobs: OverviewJob[]
 }
 
@@ -56,6 +65,7 @@ async function loadOverview(
     data: {
       organizations: raw?.organizations ?? [],
       accounts: raw?.accounts ?? [],
+      workers: raw?.workers ?? [],
       jobs: raw?.jobs ?? [],
     },
     error: null,
@@ -79,12 +89,14 @@ export default async function AdminOverviewPage() {
 
   const orgs = data?.organizations ?? []
   const accounts = data?.accounts ?? []
+  const workers = data?.workers ?? []
   const jobs = data?.jobs ?? []
 
   const lockedAccounts = accounts.filter((a) => a.is_locked)
   const attentionJobs = jobs.filter((j) => j.status === 'failed' || j.status === 'pending')
 
   const orgNameById = new Map(orgs.map((o) => [o.id, o.name]))
+  const leasedTotal = workers.reduce((sum, w) => sum + (w.leased_accounts ?? 0), 0)
 
   return (
     <div className="min-h-dvh">
@@ -113,7 +125,7 @@ export default async function AdminOverviewPage() {
           </Notice>
         ) : null}
 
-        <section className="grid gap-3 sm:grid-cols-3">
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-[10px] border border-hairline bg-surface px-4 py-3 shadow-[var(--shadow-card)]">
             <p className="text-[11.5px] text-ink-muted">İşletmeler</p>
             <p className="mt-1 text-[22px] font-semibold tabular tracking-[-0.02em]">
@@ -121,26 +133,73 @@ export default async function AdminOverviewPage() {
             </p>
           </div>
           <div className="rounded-[10px] border border-hairline bg-surface px-4 py-3 shadow-[var(--shadow-card)]">
-            <p className="text-[11.5px] text-ink-muted">Kilitli hatlar</p>
-            <p
-              className={`mt-1 text-[22px] font-semibold tabular tracking-[-0.02em] ${
-                lockedAccounts.length > 0 ? 'text-danger' : ''
-              }`}
-            >
-              {lockedAccounts.length}
+            <p className="text-[11.5px] text-ink-muted">Worker’lar</p>
+            <p className="mt-1 text-[22px] font-semibold tabular tracking-[-0.02em]">
+              {workers.length}
             </p>
           </div>
           <div className="rounded-[10px] border border-hairline bg-surface px-4 py-3 shadow-[var(--shadow-card)]">
-            <p className="text-[11.5px] text-ink-muted">Dikkat gereken işler</p>
+            <p className="text-[11.5px] text-ink-muted">Kiralanmış hat</p>
+            <p className="mt-1 text-[22px] font-semibold tabular tracking-[-0.02em]">
+              {leasedTotal}
+            </p>
+          </div>
+          <div className="rounded-[10px] border border-hairline bg-surface px-4 py-3 shadow-[var(--shadow-card)]">
+            <p className="text-[11.5px] text-ink-muted">Kilitli / dikkat iş</p>
             <p
               className={`mt-1 text-[22px] font-semibold tabular tracking-[-0.02em] ${
-                attentionJobs.length > 0 ? 'text-warn' : ''
+                lockedAccounts.length > 0 || attentionJobs.length > 0 ? 'text-danger' : ''
               }`}
             >
-              {attentionJobs.length}
+              {lockedAccounts.length}
+              <span className="text-[14px] font-medium text-ink-muted">
+                {' '}
+                / {attentionJobs.length}
+              </span>
             </p>
           </div>
         </section>
+
+        <Card>
+          <CardHeader
+            title="Worker dağılımı"
+            subtitle={
+              workers.length === 0
+                ? 'Aktif lease yok — worker ayakta değil veya henüz hat yok'
+                : `${workers.length} worker · ${leasedTotal} kiralanmış oturum`
+            }
+          />
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[480px] text-left text-[12.5px]">
+              <thead>
+                <tr className="border-b border-hairline text-[11.5px] text-ink-muted">
+                  <th className="px-4 py-2 font-medium">WORKER_ID</th>
+                  <th className="px-4 py-2 font-medium">Kiralanmış hat</th>
+                  <th className="px-4 py-2 font-medium">En yakın kira bitişi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {workers.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="px-4 py-6 text-ink-muted">
+                      Henüz lease yok.
+                    </td>
+                  </tr>
+                ) : (
+                  workers.map((worker) => (
+                    <tr key={worker.worker_id} className="border-b border-hairline last:border-0">
+                      <td className="px-4 py-2.5 font-mono text-[12px]">{worker.worker_id}</td>
+                      <td className="px-4 py-2.5 tabular">{worker.leased_accounts}</td>
+                      <td className="px-4 py-2.5 tabular text-ink-muted">
+                        {formatDate(worker.soonest_expiry)}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
 
         <Card>
           <CardHeader
@@ -200,13 +259,14 @@ export default async function AdminOverviewPage() {
                   <th className="px-4 py-2 font-medium">Telefon</th>
                   <th className="px-4 py-2 font-medium">İşletme</th>
                   <th className="px-4 py-2 font-medium">Durum</th>
+                  <th className="px-4 py-2 font-medium">Worker</th>
                   <th className="px-4 py-2 font-medium">Kilit nedeni</th>
                 </tr>
               </thead>
               <tbody>
                 {lockedAccounts.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-6 text-ink-muted">
+                    <td colSpan={6} className="px-4 py-6 text-ink-muted">
                       Kilitli hesap bulunmuyor.
                     </td>
                   </tr>
@@ -226,6 +286,9 @@ export default async function AdminOverviewPage() {
                         {orgNameById.get(account.org_id) ?? account.org_id.slice(0, 8)}
                       </td>
                       <td className="px-4 py-2.5">{account.status}</td>
+                      <td className="px-4 py-2.5 font-mono text-[12px] text-ink-muted">
+                        {account.lease_holder || '—'}
+                      </td>
                       <td className="px-4 py-2.5 text-danger">
                         {account.lock_reason || '—'}
                       </td>
