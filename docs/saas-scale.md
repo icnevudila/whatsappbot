@@ -45,4 +45,4 @@ flowchart TB
 3. Paket: org `accounts_quota` (50/100/… ne satıyorsanız).  
 4. İzleme: admin Autoscale + heartbeat + her instance `/health`.
 
-Detay deploy: [scale-300.md](./scale-300.md). Autoscale: [autoscale.md](./autoscale.md). Harici VT kiti: [packages/wa-worker-kit](../packages/wa-worker-kit/README.md). Sözleşme: [worker-contract.md](./worker-contract.md).
+Detay deploy: [scale-300.md](./scale-300.md). Autoscale: [autoscale.md](./autoscale.md). Hetzner (küçük→büyük): [hetzner-kurulum.md](./hetzner-kurulum.md). Harici VT kiti: [packages/wa-worker-kit](../packages/wa-worker-kit/README.md). Sözleşme: [worker-contract.md](./worker-contract.md). CRM API: [public-api.md](./public-api.md).

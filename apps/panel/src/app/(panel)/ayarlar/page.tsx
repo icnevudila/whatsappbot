@@ -59,29 +59,50 @@ export default async function SettingsPage() {
 
   const canManage = org.role === 'owner' || org.role === 'admin'
 
-  const [{ data: profile }, { data: accounts }, { count: sentThisMonth }, { data: memberRows }] =
-    await Promise.all([
-      supabase
-        .from('profiles')
-        .select('full_name, company')
-        .eq('id', userId)
-        .single(),
-      supabase
-        .from('accounts')
-        .select('id, status, daily_send_limit, warmup_started_at')
-        .eq('org_id', org.id),
-      supabase
-        .from('message_log')
-        .select('id', { count: 'exact', head: true })
-        .eq('org_id', org.id)
-        .eq('direction', 'out')
-        .gte('created_at', monthStart.toISOString()),
-      supabase
-        .from('organization_members')
-        .select('user_id, role')
-        .eq('org_id', org.id)
-        .order('created_at', { ascending: true }),
-    ])
+  const [
+    { data: profile },
+    { data: accounts },
+    { count: sentThisMonth },
+    { data: memberRows },
+    { data: apiKeyRows },
+  ] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('full_name, company')
+      .eq('id', userId)
+      .single(),
+    supabase
+      .from('accounts')
+      .select('id, status, daily_send_limit, warmup_started_at')
+      .eq('org_id', org.id),
+    supabase
+      .from('message_log')
+      .select('id', { count: 'exact', head: true })
+      .eq('org_id', org.id)
+      .eq('direction', 'out')
+      .gte('created_at', monthStart.toISOString()),
+    supabase
+      .from('organization_members')
+      .select('user_id, role')
+      .eq('org_id', org.id)
+      .order('created_at', { ascending: true }),
+    canManage
+      ? supabase
+          .from('org_api_keys' as never)
+          .select('id, name, key_prefix, last_used_at, created_at' as never)
+          .eq('org_id' as never, org.id as never)
+          .is('revoked_at' as never, null)
+          .order('created_at' as never, { ascending: false })
+      : Promise.resolve({
+          data: [] as {
+            id: string
+            name: string
+            key_prefix: string
+            last_used_at: string | null
+            created_at: string
+          }[],
+        }),
+  ])
 
   const plan = org.plan
   const accountsQuota = org.accounts_quota
@@ -206,7 +227,16 @@ export default async function SettingsPage() {
               <QuietLink href="/raporlar">Raporlar / CSV</QuietLink>
               {canManage ? <BillingCheckoutButton /> : null}
             </div>
-            <ApiKeyForm canEdit={canManage} />
+            <ApiKeyForm
+              canEdit={canManage}
+              keys={(apiKeyRows ?? []) as {
+                id: string
+                name: string
+                key_prefix: string
+                last_used_at: string | null
+                created_at: string
+              }[]}
+            />
           </Card>
 
           <Card>

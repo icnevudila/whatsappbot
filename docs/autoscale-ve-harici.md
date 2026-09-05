@@ -36,7 +36,7 @@ desired = clamp( ceil(demand / capacity), MIN_WORKERS, MAX_WORKERS )
 
 ```bash
 # Solo worker ile çakışmasın
-docker compose -f infra/docker-compose.yml stop wa-service
+docker compose -f infra/docker-compose.yml --profile solo down
 
 # Scaler + scale edilebilir wa-worker (varsayılan actuator=noop)
 docker compose -f infra/docker-compose.yml --profile autoscale up -d --build
@@ -118,7 +118,7 @@ psql "$DATABASE_URL" -f packages/wa-worker-kit/dist/worker-schema.bundle.sql
 
 # 3) Worker
 # apps/wa-service/.env → DATABASE_URL + WORKER_ID=...
-docker compose -f infra/docker-compose.yml up -d --build
+docker compose -f infra/docker-compose.yml --profile solo up -d --build
 
 # veya kit örneği:
 docker compose -f packages/wa-worker-kit/docker-compose.example.yml up -d --build

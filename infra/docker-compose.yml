@@ -1,11 +1,10 @@
-# WhatsApp servisi -- solo / elle scale / autoscale
+# WhatsApp servisi -- solo / elle scale / autoscale / kucuk VPS
 #
-# Repo KOKUNDEN:
-#   docker compose -f infra/docker-compose.yml up -d --build
-#
-# Solo: wa-service (WORKER_ID=oracle-1)
-# Elle 6 dilim: --profile scale
-# Autoscale: --profile autoscale  (scaler + scale edilebilir wa-worker)
+# Repo KOKUNDEN (bir profil secin):
+#   docker compose -f infra/docker-compose.yml --profile small up -d --build   # 2–4 GB
+#   docker compose -f infra/docker-compose.yml --profile solo up -d --build    # orta VPS
+#   docker compose -f infra/docker-compose.yml --profile scale up -d --build   # ~32 GB / 300
+#   docker compose -f infra/docker-compose.yml --profile autoscale up -d --build
 #
 # Autoscale actuator=docker icin scaler'a docker.sock mount gerekir;
 # varsayilan SCALE_ACTUATOR=noop (yalnizca DB desired yazar).
@@ -20,7 +19,7 @@ x-wa-common: &wa-common
     - ../apps/wa-service/.env
   restart: unless-stopped
   mem_limit: 6g
-  shm_size: '1gb'
+  shm_size: '256mb'
   stop_grace_period: 45s
   init: true
   healthcheck:
@@ -32,12 +31,14 @@ x-wa-common: &wa-common
   logging:
     driver: json-file
     options:
-      max-size: '20m'
-      max-file: '5'
+      max-size: '10m'
+      max-file: '3'
 
 services:
+  # Orta/buyuk VPS solo worker — acik: --profile solo
   wa-service:
     <<: *wa-common
+    profiles: ['solo']
     container_name: wa-service
     ports:
       - '127.0.0.1:8080:8080'
@@ -46,6 +47,26 @@ services:
       ROLE: worker
       MAX_SESSIONS: '50'
       WORKER_ID: oracle-1
+
+  # Dusuk RAM VPS (CPX22 / ~4 GB): tek worker, dar kapasite
+  wa-service-small:
+    <<: *wa-common
+    profiles: ['small']
+    container_name: wa-service
+    mem_limit: 2.5g
+    shm_size: '64mb'
+    ports:
+      - '127.0.0.1:8080:8080'
+    environment:
+      NODE_ENV: production
+      ROLE: worker
+      WORKER_ID: hetzner-1
+      MAX_SESSIONS: '10'
+      DB_POOL_MAX: '2'
+      JOB_BATCH_SIZE: '1'
+      JOB_POLL_INTERVAL_MS: '3000'
+      CAMPAIGN_TICK_MS: '8000'
+      NODE_OPTIONS: '--max-old-space-size=1536'
 
   # Sabit 6 dilim (manuel)
   wa-worker-1:

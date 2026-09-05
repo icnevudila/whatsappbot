@@ -36,3 +36,21 @@ export async function createOrgApiKey(
     return { error: error instanceof Error ? error.message : 'Oturum yok' }
   }
 }
+
+export async function revokeOrgApiKey(formData: FormData): Promise<void> {
+  const id = String(formData.get('id') ?? '').trim()
+  if (!id) return
+  try {
+    const { org, supabase } = await requireActiveOrg()
+    if (org.role !== 'owner' && org.role !== 'admin') return
+    await supabase
+      .from('org_api_keys' as never)
+      .update({ revoked_at: new Date().toISOString() } as never)
+      .eq('id' as never, id as never)
+      .eq('org_id' as never, org.id as never)
+      .is('revoked_at' as never, null)
+    revalidatePath('/ayarlar')
+  } catch {
+    /* ignore */
+  }
+}

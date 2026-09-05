@@ -141,7 +141,7 @@ Docker healthcheck örneği: `curl -fsS http://127.0.0.1:8080/health`.
 4. **Docker (Filo mono):**
 
 ```bash
-docker compose -f infra/docker-compose.yml up -d --build
+docker compose -f infra/docker-compose.yml --profile solo up -d --build
 ```
 
 - Panel ile worker arasında HTTP yok; aynı Postgres yeterli.
@@ -170,3 +170,8 @@ Panel komut yazar → `jobs` → worker `wa.claim_jobs` ile alır. Auth/kira `wa
 | 10 | messages | `message_log` in/out + delivered/read | Gelenler / Gidenler |
 
 Media asset CDN bilinçli dışarıda.
+
+## 9. Harici CRM API
+
+Org API anahtarları ile `POST/GET /api/v1/jobs` — bkz. [public-api.md](./public-api.md).
+Worker yolu değişmez: satır yine `jobs` → `wa.claim_jobs`.

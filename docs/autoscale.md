@@ -25,7 +25,8 @@ desired = clamp( ceil(demand / capacity), MIN_WORKERS, MAX_WORKERS )
 
 ```bash
 # Solo worker ile çakışmasın
-docker compose -f infra/docker-compose.yml stop wa-service
+docker compose -f infra/docker-compose.yml --profile solo stop
+docker compose -f infra/docker-compose.yml --profile solo down
 
 # Scaler + scale edilebilir wa-worker (varsayılan actuator=noop)
 docker compose -f infra/docker-compose.yml --profile autoscale up -d --build

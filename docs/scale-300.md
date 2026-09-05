@@ -33,11 +33,15 @@ Aynı hesabı iki process açmak WhatsApp’ta `connectionReplaced` (440) üreti
 Repo kökünden:
 
 ```bash
-# Tek worker (varsayılan)
-docker compose -f infra/docker-compose.yml up -d --build
+# Tek worker (orta VPS)
+docker compose -f infra/docker-compose.yml --profile solo up -d --build
 
-# 6 worker (scale profili) — once tekil wa-service'i durdur (WORKER_ID carpismasin)
-docker compose -f infra/docker-compose.yml stop wa-service
+# Kucuk VPS (2–4 GB)
+docker compose -f infra/docker-compose.yml --profile small up -d --build
+
+# 6 worker (scale profili) — once diger profilleri durdur
+docker compose -f infra/docker-compose.yml --profile solo down
+docker compose -f infra/docker-compose.yml --profile small down
 docker compose -f infra/docker-compose.yml --profile scale up -d --build
 # Health: 127.0.0.1:8081 .. 8086
 ```
@@ -66,7 +70,7 @@ Gerekli env (`apps/wa-service/.env` / Coolify secrets):
 2. Repo clone + `.env`.
 3. Tek makine ~50–100 hat: tek `wa-service` veya 2 worker.
 4. 300 hat: 2–3 VPS × birkaç worker **veya** bir büyük VPS + `--profile scale`.
-5. Detay: [oracle-kurulum.md](./oracle-kurulum.md).
+5. Detay: [oracle-kurulum.md](./oracle-kurulum.md). Hetzner: [hetzner-kurulum.md](./hetzner-kurulum.md).
 
 ## Çift worker smoke (doğrulama)
 
