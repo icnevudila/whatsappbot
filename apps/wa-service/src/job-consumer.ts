@@ -366,8 +366,8 @@ async function handle(job: JobRow): Promise<unknown> {
     }
 
     case 'creative.render': {
-      // Panel /api/kreatif ile uretir; bu job tipi eski sozlesme.
-      throw new Error(
+      // Panel /api/kreatif ile uretir; kuyruga dusen eski satirlar kalici fail olmasin.
+      throw new NonRetryableJobError(
         'Kreatif uretimi panel uzerinden yapilir (/marka-kiti). Bu is tipi kullanilmiyor.',
       )
     }
@@ -390,10 +390,10 @@ export function jobInFlightCount(): number {
 async function tick(): Promise<void> {
   tickActive = true
   try {
-    // Tek is: batch icinde bekleyen claimed islerin reclaim ile cift calismasini onler.
+    // Batch: env.JOB_BATCH_SIZE (varsayilan 1). Ayni tick icinde sirayla islenir.
     const jobs = await query<JobRow>('select * from wa.claim_jobs($1, $2)', [
       env.workerId,
-      1,
+      env.jobBatchSize,
     ])
     if (jobs.length === 0) return
 

@@ -371,6 +371,26 @@ export function NewCampaignForm({
           </p>
         </details>
 
+        <fieldset className="space-y-2 rounded-md border border-hairline px-3 py-3">
+          <legend className="px-1 text-[12px] font-medium text-ink-muted">Başlangıç</legend>
+          <label className="flex items-center gap-2 text-[13px]">
+            <input type="radio" name="start_mode" value="now" defaultChecked className="accent-accent" />
+            Hemen gönder
+          </label>
+          <label className="flex flex-wrap items-center gap-2 text-[13px]">
+            <input type="radio" name="start_mode" value="schedule" className="accent-accent" />
+            Zamanla
+            <Input
+              name="scheduled_at"
+              type="datetime-local"
+              className="max-w-[220px]"
+            />
+          </label>
+          <p className="text-[11.5px] text-ink-faint">
+            Zamanlanmış kampanya worker tarafından `scheduled_at` gelince otomatik başlar.
+          </p>
+        </fieldset>
+
         {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
 
         {lists.length === 0 || accounts.length === 0 ? (
@@ -384,7 +404,7 @@ export function NewCampaignForm({
           variant="accent"
           disabled={pending || lists.length === 0 || accounts.length === 0}
         >
-          {pending ? 'Başlatılıyor…' : 'Oluştur ve gönder'}
+          {pending ? 'Kaydediliyor…' : 'Oluştur'}
         </Button>
       </form>
     </Card>

@@ -11,6 +11,7 @@ import {
   type TemplateKey,
 } from '@/lib/creative-templates'
 import { requireActiveOrg } from '@/lib/org'
+import { rateLimit } from '@/lib/rate-limit'
 
 export const runtime = 'nodejs'
 
@@ -459,6 +460,14 @@ export async function POST(request: Request) {
     ;({ userId, org, supabase } = await requireActiveOrg())
   } catch {
     return NextResponse.json({ error: 'Oturum bulunamadi.' }, { status: 401 })
+  }
+
+  const limited = rateLimit(`ai:kreatif:${userId}`, { limit: 10, windowMs: 60_000 })
+  if (!limited.ok) {
+    return NextResponse.json(
+      { error: 'Cok fazla istek. Biraz bekleyin.' },
+      { status: 429, headers: { 'retry-after': String(limited.retryAfterSec) } },
+    )
   }
 
   let body: Partial<CreativeInput> & { brandKitId?: string | null }

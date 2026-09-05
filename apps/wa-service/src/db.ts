@@ -4,15 +4,22 @@ import { logger } from './logger.js'
 
 const { Pool } = pg
 
+function resolveSsl(): boolean | { rejectUnauthorized: boolean } {
+  // PG_SSL=false → TLS kapali (nadir local). Varsayilan: TLS acik.
+  const mode = (process.env.PG_SSL ?? 'require').trim().toLowerCase()
+  if (mode === 'false' || mode === 'disable' || mode === 'off') return false
+  // PG_SSL_REJECT_UNAUTHORIZED=true → sertifika dogrula (uretim / ozel CA).
+  const rejectUnauthorized =
+    (process.env.PG_SSL_REJECT_UNAUTHORIZED ?? 'false').trim().toLowerCase() === 'true'
+  return { rejectUnauthorized }
+}
+
 export const pool = new Pool({
   connectionString: env.databaseUrl,
   max: env.dbPoolMax,
-  // Baglanti kurulamazsa sonsuza kadar bekleme; worker ayakta kalsin.
   connectionTimeoutMillis: 15_000,
   idleTimeoutMillis: 30_000,
-  // Supabase her zaman TLS istiyor. Havuz sertifikasi zincirini Node'un kok
-  // deposunda tasimadigi icin dogrulama kapatiliyor; baglanti yine sifreli.
-  ssl: { rejectUnauthorized: false },
+  ssl: resolveSsl(),
   application_name: `wa-service/${env.workerId}`,
 })
 

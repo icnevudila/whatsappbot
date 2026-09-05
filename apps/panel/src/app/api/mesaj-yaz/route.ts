@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { completeText, hasTextProvider } from '@/lib/ai/text'
+import { rateLimit } from '@/lib/rate-limit'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export const runtime = 'nodejs'
@@ -32,6 +33,14 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser()
   if (!user) {
     return NextResponse.json({ error: 'Oturum bulunamadi.' }, { status: 401 })
+  }
+
+  const limited = rateLimit(`ai:mesaj:${user.id}`, { limit: 20, windowMs: 60_000 })
+  if (!limited.ok) {
+    return NextResponse.json(
+      { error: 'Çok fazla istek. Biraz bekleyin.' },
+      { status: 429, headers: { 'retry-after': String(limited.retryAfterSec) } },
+    )
   }
 
   if (!hasTextProvider()) {

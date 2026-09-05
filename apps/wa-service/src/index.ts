@@ -21,6 +21,9 @@ import { releaseOwnStaleLeases } from './lease.js'
 import { logger } from './logger.js'
 import { startScaler, stopScaler } from './scaler.js'
 import { sessionManager } from './session-manager.js'
+import { initMonitoring, captureException } from './monitoring.js'
+
+initMonitoring()
 
 const HEALTH_CHECK_INTERVAL_MS = 60_000
 const STALE_JOB_RECLAIM_INTERVAL_MS = 60_000
@@ -85,9 +88,11 @@ async function buildHealthPayload(): Promise<{ status: number; body: unknown }> 
         dbPoolMax: env.dbPoolMax,
         note:
           'Filo kapasitesi = tum worker MAX_SESSIONS toplami. Autoscale: docs/autoscale.md',
+        sentry: Boolean(process.env.SENTRY_DSN?.trim()),
       },
       jobs: { pending, staleClaimed },
       uptimeSeconds: Math.round(process.uptime()),
+      version: process.env.npm_package_version ?? '0.0.0',
     },
   }
 }
@@ -193,9 +198,11 @@ async function mainWorker(): Promise<void> {
   process.on('SIGTERM', () => void shutdown('SIGTERM'))
   process.on('SIGINT', () => void shutdown('SIGINT'))
   process.on('unhandledRejection', (reason) => {
+    captureException(reason, { kind: 'unhandledRejection' })
     logger.error({ err: reason }, 'Yakalanmamis promise reddi')
   })
   process.on('uncaughtException', (error) => {
+    captureException(error, { kind: 'uncaughtException' })
     logger.fatal({ err: error }, 'Yakalanmamis istisna, kapaniliyor')
     void shutdown('uncaughtException')
   })

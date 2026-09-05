@@ -536,7 +536,75 @@ function accountPermanentlyUnusable(account: CampaignAccountRow): boolean {
   return false
 }
 
+async function orgMonthlyOutboundCount(orgId: string): Promise<number> {
+  const row = await one<{ n: string }>(
+    `select count(*)::text as n
+       from public.message_log
+      where org_id = $1::uuid
+        and direction = 'outbound'
+        and status in ('sent', 'delivered', 'read')
+        and created_at >= date_trunc('month', timezone('utc', now()))`,
+    [orgId],
+  )
+  return Number(row?.n ?? 0)
+}
+
+async function orgMonthlyQuota(orgId: string): Promise<number> {
+  const row = await one<{ q: number }>(
+    `select monthly_message_quota as q from public.organizations where id = $1::uuid`,
+    [orgId],
+  )
+  return row?.q ?? 0
+}
+
+/** Zamanı gelmiş scheduled kampanyaları materialize edip running yap. */
+async function promoteScheduledCampaigns(): Promise<void> {
+  const due = await query<{ id: string }>(
+    `select id::text as id
+       from public.campaigns
+      where status = 'scheduled'
+        and scheduled_at is not null
+        and scheduled_at <= now()
+      order by scheduled_at
+      limit 5`,
+  )
+
+  for (const row of due) {
+    try {
+      await materializeTargets(row.id)
+      const updated = await query<{ id: string }>(
+        `update public.campaigns
+            set status = 'running',
+                started_at = coalesce(started_at, now()),
+                paused_at = null,
+                stop_reason = null,
+                updated_at = now()
+          where id = $1::uuid and status = 'scheduled'
+          returning id::text`,
+        [row.id],
+      )
+      if (updated.length > 0) {
+        log.info({ campaignId: row.id }, 'Zamanlanmis kampanya baslatildi')
+      }
+    } catch (error) {
+      log.error({ err: error, campaignId: row.id }, 'Zamanlanmis kampanya baslatilamadi')
+    }
+  }
+}
+
 async function runCampaign(campaign: CampaignRow): Promise<void> {
+  const monthlyQuota = await orgMonthlyQuota(campaign.org_id)
+  if (monthlyQuota > 0) {
+    const used = await orgMonthlyOutboundCount(campaign.org_id)
+    if (used >= monthlyQuota) {
+      await stopCampaign(
+        campaign.id,
+        `Aylik mesaj kotasi doldu (${used}/${monthlyQuota})`,
+      )
+      return
+    }
+  }
+
   const accounts = await eligibleAccounts(campaign.id)
   let claimedAny = false
 
@@ -637,6 +705,7 @@ async function tick(): Promise<void> {
   tickActive = true
   try {
     await reclaimStaleSending()
+    await promoteScheduledCampaigns()
 
     const campaigns = await query<CampaignRow>(
       `select id, org_id, created_by, name, message_type, body, media_url,

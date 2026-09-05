@@ -54,6 +54,10 @@ export function Input({ className, ...props }: ComponentProps<'input'>) {
   return <input {...props} className={cx(inputBase, className)} />
 }
 
+export function Select({ className, ...props }: ComponentProps<'select'>) {
+  return <select {...props} className={cx(inputBase, className)} />
+}
+
 export function Notice({
   tone = 'warn',
   children,

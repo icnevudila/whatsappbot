@@ -9,6 +9,7 @@
 #
 # Autoscale actuator=docker icin scaler'a docker.sock mount gerekir;
 # varsayilan SCALE_ACTUATOR=noop (yalnizca DB desired yazar).
+# Docker CLI: build-arg INSTALL_DOCKER_CLI=true
 
 x-wa-common: &wa-common
   build:
@@ -140,6 +141,12 @@ services:
     <<: *wa-common
     container_name: wa-scaler
     profiles: ['autoscale']
+    build:
+      context: ..
+      dockerfile: apps/wa-service/Dockerfile
+      args:
+        INSTALL_DOCKER_CLI: 'true'
+    image: wa-service:local
     ports:
       - '127.0.0.1:8090:8080'
     working_dir: /app
@@ -159,5 +166,4 @@ services:
       SCALE_COMPOSE_FILE: /app/infra/docker-compose.yml
       SCALE_COMPOSE_SERVICE: wa-worker
       SCALE_COMPOSE_PROJECT: filo-wa
-      # Docker CLI scaler imajinda yok; actuator=docker kullanirken host'ta
-      # ROLE=scaler calistirin veya imaja docker-cli ekleyin.
+      # SCALE_ACTUATOR=docker icin CLI build-arg ile kurulur; varsayilan noop.

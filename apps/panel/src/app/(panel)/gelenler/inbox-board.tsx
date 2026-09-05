@@ -16,6 +16,7 @@ import {
 import { WaMark } from '@/components/wa-mark'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { blacklistPhone } from '../kara-liste/actions'
+import { InboxReplyForm } from './inbox-reply-form'
 
 export type InboxMessage = {
   id: number
@@ -376,17 +377,16 @@ export function InboxBoard({
                 </>
               ) : (
                 <>
-                  Tam konuşma · gelen ve giden mesajlar. Yanıt yazmak bu ekrandan yapılamaz; yeni
-                  gönderim için{' '}
-                  <Link
-                    href="/hizli-gonderim"
-                    className="font-medium text-ink underline decoration-hairline-strong underline-offset-2"
-                  >
-                    Hızlı gönderim
-                  </Link>
-                  .
+                  Tam konuşma · gelen ve giden. Aşağıdan yanıt yazabilirsiniz.
                 </>
               )}
+            </div>
+
+            <div className="border-b border-hairline px-4 py-3">
+              <InboxReplyForm
+                phone={selectedPhone}
+                accountId={selectedPreview?.accountId ?? null}
+              />
             </div>
 
             {(notice || error) && (

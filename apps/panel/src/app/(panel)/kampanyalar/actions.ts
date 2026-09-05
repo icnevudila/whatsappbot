@@ -21,6 +21,8 @@ export async function createCampaign(
   const minDelay = Number(formData.get('min_delay') ?? 8)
   const maxDelay = Number(formData.get('max_delay') ?? 25)
   const dailyCap = Number(formData.get('daily_cap') ?? 100)
+  const startMode = String(formData.get('start_mode') ?? 'now').trim()
+  const scheduledRaw = String(formData.get('scheduled_at') ?? '').trim()
 
   const MEDIA_TYPES = new Set(['image', 'video', 'document'])
   let messageType: 'text' | 'image' | 'video' | 'document' = 'text'
@@ -58,6 +60,17 @@ export async function createCampaign(
     return { error: 'Güvenlik için en kısa bekleme 3 saniyeden az olamaz.' }
   }
 
+  let scheduledAt: string | null = null
+  if (startMode === 'schedule') {
+    if (!scheduledRaw) return { error: 'Zamanlanmış başlangıç için tarih/saat seçin.' }
+    const when = new Date(scheduledRaw)
+    if (Number.isNaN(when.getTime())) return { error: 'Geçersiz zamanlama.' }
+    if (when.getTime() < Date.now() + 60_000) {
+      return { error: 'Zamanlama en az 1 dakika sonrası olmalı.' }
+    }
+    scheduledAt = when.toISOString()
+  }
+
   let userId: string
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
   let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
@@ -80,7 +93,8 @@ export async function createCampaign(
       min_delay_seconds: minDelay,
       max_delay_seconds: maxDelay,
       daily_cap_per_account: dailyCap,
-      status: 'draft',
+      status: scheduledAt ? 'scheduled' : 'draft',
+      scheduled_at: scheduledAt,
     })
     .select('id')
     .single()
@@ -98,13 +112,14 @@ export async function createCampaign(
 
   if (linkError) return { error: linkError.message }
 
-  // Hizli gonderim ile ayni zihin modeli: olustur = hemen baslat.
-  const { error: jobError } = await enqueueJob({
-    type: 'campaign.start',
-    campaignId: campaign.id,
-    priority: 10,
-  })
-  if (jobError) return { error: jobError }
+  if (!scheduledAt) {
+    const { error: jobError } = await enqueueJob({
+      type: 'campaign.start',
+      campaignId: campaign.id,
+      priority: 10,
+    })
+    if (jobError) return { error: jobError }
+  }
 
   revalidatePath('/kampanyalar')
   redirect(`/kampanyalar/${campaign.id}`)

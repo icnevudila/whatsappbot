@@ -19,7 +19,8 @@
     "20260904200000_message_log_inbound_wa_unique.sql",
     "20260905010000_message_log_outbound_wa_idx.sql",
     "20260905130000_claim_jobs_worker_affinity.sql",
-    "20260905140000_worker_scaler.sql"
+    "20260905140000_worker_scaler.sql",
+    "20260905150000_jobs_cancel_admin_org.sql"
   ],
   "recommended": [
     "20260903183747_foreign_key_indexes.sql"

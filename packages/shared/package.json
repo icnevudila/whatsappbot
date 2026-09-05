@@ -9,13 +9,15 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test src/**/*.test.ts"
   },
   "dependencies": {
     "cheerio": "^1.1.2",
     "libphonenumber-js": "1.13.12"
   },
   "devDependencies": {
+    "tsx": "^4.23.13",
     "typescript": "^5"
   }
 }

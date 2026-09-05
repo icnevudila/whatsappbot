@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Button, Card, CardHeader, Notice } from '@/components/ui'
 import { requirePlatformAdmin } from '@/lib/platform'
 import { signOut } from '@/app/giris/actions'
+import { OrgQuotaForm } from './org-quota-form'
 
 export const metadata: Metadata = { title: 'Genel bakış' }
 
@@ -11,6 +12,7 @@ type OverviewOrg = {
   slug: string
   plan: string
   accounts_quota: number
+  monthly_message_quota?: number
   member_count: number
 }
 
@@ -285,15 +287,14 @@ export default async function AdminOverviewPage() {
                 <tr className="border-b border-hairline text-[11.5px] text-ink-muted">
                   <th className="px-4 py-2 font-medium">Ad</th>
                   <th className="px-4 py-2 font-medium">Slug</th>
-                  <th className="px-4 py-2 font-medium">Plan</th>
                   <th className="px-4 py-2 font-medium">Üye</th>
-                  <th className="px-4 py-2 font-medium">Hat kotası</th>
+                  <th className="px-4 py-2 font-medium">Plan / kota</th>
                 </tr>
               </thead>
               <tbody>
                 {orgs.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-6 text-ink-muted">
+                    <td colSpan={4} className="px-4 py-6 text-ink-muted">
                       Henüz işletme yok.
                     </td>
                   </tr>
@@ -304,9 +305,15 @@ export default async function AdminOverviewPage() {
                       <td className="px-4 py-2.5 font-mono text-[12px] text-ink-muted">
                         {org.slug}
                       </td>
-                      <td className="px-4 py-2.5">{org.plan}</td>
                       <td className="px-4 py-2.5 tabular">{org.member_count}</td>
-                      <td className="px-4 py-2.5 tabular">{org.accounts_quota}</td>
+                      <td className="px-4 py-2.5">
+                        <OrgQuotaForm
+                          orgId={org.id}
+                          plan={org.plan}
+                          accountsQuota={org.accounts_quota}
+                          messageQuota={org.monthly_message_quota}
+                        />
+                      </td>
                     </tr>
                   ))
                 )}

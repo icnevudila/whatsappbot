@@ -5,6 +5,7 @@ import { AccentLink, Card, HourlyBars, Notice, PageHeader, QuietLink } from '@/c
 import { requireActiveOrg } from '@/lib/org'
 import { EventFeed, type EventView } from './event-feed'
 import { StatusBoard, type CampaignView, type LineView } from './status-board'
+import { CancelPendingButton } from './cancel-pending-button'
 
 export const metadata: Metadata = { title: 'Durum' }
 
@@ -111,6 +112,7 @@ export default async function StatusPage() {
         description="Hatlar, günlük kapasite ve aktif kampanyalar. Gönderim arka planda sürer; bu sayfa izleme içindir."
         action={
           <div className="flex flex-wrap gap-2">
+            <CancelPendingButton count={pendingJobs ?? 0} />
             <AccentLink href="/hesaplar">Hesaplar</AccentLink>
             <QuietLink href="/gelenler">Gelenler</QuietLink>
             <QuietLink href="/hizli-gonderim">Hızlı gönderim</QuietLink>
