@@ -61,7 +61,7 @@ export const env = {
   campaignTickMs: int('CAMPAIGN_TICK_MS', 5_000),
   sendTimeoutMs: int('SEND_TIMEOUT_MS', 60_000),
   maxSessions: int('MAX_SESSIONS', 50),
-  shutdownDrainMs: int('SHUTDOWN_DRAIN_MS', 20_000),
+  shutdownDrainMs: int('SHUTDOWN_DRAIN_MS', 90_000),
   healthPort: int('PORT', 8080),
   logLevel: process.env.LOG_LEVEL?.trim() || 'info',
   nodeEnv: process.env.NODE_ENV?.trim() || 'development',

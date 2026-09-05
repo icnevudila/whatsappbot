@@ -21,7 +21,7 @@ import { releaseOwnStaleLeases } from './lease.js'
 import { logger } from './logger.js'
 import { startScaler, stopScaler } from './scaler.js'
 import { sessionManager } from './session-manager.js'
-import { initMonitoring, captureException } from './monitoring.js'
+import { initMonitoring, captureException, flushMonitoring } from './monitoring.js'
 
 initMonitoring().catch(() => undefined)
 
@@ -191,11 +191,27 @@ async function mainWorker(): Promise<void> {
       logger.warn({ err: error }, 'Isler kuyruga geri konamadi')
     })
 
+    // Bu worker'in kirasindaki sending hedefleri tekrar queued olsun.
+    await pool
+      .query(
+        `update public.campaign_targets t
+            set status = 'queued', error = null, updated_at = now()
+           from wa.session_lease sl
+          where t.account_id = sl.account_id
+            and sl.holder_id = $1
+            and t.status = 'sending'`,
+        [env.workerId],
+      )
+      .catch((error) => {
+        logger.warn({ err: error }, 'Sending hedefleri reclaim edilemedi')
+      })
+
     await new Promise<void>((resolve) => server.close(() => resolve()))
     await closePool().catch(() => undefined)
+    await flushMonitoring()
 
     logger.info('Kapanis tamam')
-    process.exit(0)
+    process.exit(signal === 'uncaughtException' ? 1 : 0)
   }
 
   process.on('SIGTERM', () => void shutdown('SIGTERM'))
@@ -233,11 +249,21 @@ async function mainScaler(): Promise<void> {
     stopScaler()
     await new Promise<void>((resolve) => server.close(() => resolve()))
     await closePool().catch(() => undefined)
+    await flushMonitoring()
     process.exit(0)
   }
 
   process.on('SIGTERM', () => void shutdown('SIGTERM'))
   process.on('SIGINT', () => void shutdown('SIGINT'))
+  process.on('unhandledRejection', (reason) => {
+    captureException(reason, { kind: 'unhandledRejection' })
+    logger.error({ err: reason }, 'Scaler yakalanmamis promise')
+  })
+  process.on('uncaughtException', (error) => {
+    captureException(error, { kind: 'uncaughtException' })
+    logger.fatal({ err: error }, 'Scaler yakalanmamis istisna')
+    void shutdown('uncaughtException')
+  })
 }
 
 async function main(): Promise<void> {

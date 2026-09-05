@@ -214,14 +214,21 @@ export class SessionManager {
     }
   }
 
-  /** Sessizce olmus socket'leri kapatip yeniden acar. */
+  /** Sessizce olmus socket'leri soft kapatip yeniden acar (status disconnected yazmaz). */
   async reviveStale(): Promise<void> {
     const { stale } = await this.healthReport()
 
     for (const accountId of stale) {
       log.warn({ accountId }, 'Sessiz olmus socket tespit edildi, yeniden aciliyor')
-      await this.disconnect(accountId)
-      await this.connect(accountId)
+      const session = this.sessions.get(accountId)
+      if (session) {
+        await session.shutdown({ userRequested: false })
+        this.sessions.delete(accountId)
+      }
+      const result = await this.connect(accountId)
+      if (!result.ok) {
+        log.warn({ accountId, reason: result.reason }, 'Stale revive connect basarisiz')
+      }
     }
   }
 

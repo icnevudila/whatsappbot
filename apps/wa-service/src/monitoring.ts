@@ -13,6 +13,7 @@ export async function initMonitoring(): Promise<void> {
       dsn,
       tracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE ?? 0.05),
       environment: process.env.NODE_ENV ?? 'production',
+      serverName: process.env.WORKER_ID?.trim() || undefined,
     })
     sentryReady = true
     console.info('[monitoring] Sentry init OK')
@@ -30,4 +31,15 @@ export function captureException(error: unknown, context?: Record<string, unknow
     .catch(() => {
       console.error('[monitoring]', error, context ?? {})
     })
+}
+
+export async function flushMonitoring(timeoutMs = 2000): Promise<void> {
+  if (!sentryReady || !process.env.SENTRY_DSN?.trim()) return
+  try {
+    const Sentry = await import('@sentry/node')
+    await Sentry.flush(timeoutMs)
+    await Sentry.close(timeoutMs)
+  } catch {
+    /* ignore */
+  }
 }

@@ -7,7 +7,8 @@
     "dev": "node --env-file-if-exists=.env --import tsx --watch src/index.ts",
     "start": "node --env-file-if-exists=.env --import tsx src/index.ts",
     "db:check": "node --env-file-if-exists=.env --import tsx src/check-db.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test src/**/*.test.ts"
   },
   "dependencies": {
     "@sentry/node": "^10.73.0",

@@ -155,6 +155,23 @@ export async function stopCampaign(campaignId: string, reason: string): Promise<
   log.warn({ campaignId, reason }, 'Kampanya durduruldu')
 }
 
+async function pauseCampaign(campaignId: string, reason: string): Promise<void> {
+  await query(
+    `update public.campaigns
+        set status = 'paused',
+            paused_at = now(),
+            stop_reason = $2,
+            updated_at = now()
+      where id = $1 and status = 'running'`,
+    [campaignId, reason],
+  )
+  log.warn({ campaignId, reason }, 'Kampanya duraklatildi (canli oturum yok)')
+}
+
+/** Ardışık tick'lerde hiç claim yok + live session yok → pause. */
+const idleNoSessionTicks = new Map<string, number>()
+const IDLE_PAUSE_TICKS = 6
+
 async function eligibleAccounts(campaignId: string): Promise<CampaignAccountRow[]> {
   return query<CampaignAccountRow>(
     `select ca.account_id,
@@ -562,7 +579,7 @@ async function orgMonthlyOutboundCount(orgId: string): Promise<number> {
     `select count(*)::text as n
        from public.message_log
       where org_id = $1::uuid
-        and direction = 'outbound'
+        and direction = 'out'
         and status in ('sent', 'delivered', 'read')
         and created_at >= date_trunc('month', timezone('utc', now()))`,
     [orgId],
@@ -693,6 +710,7 @@ async function runCampaign(campaign: CampaignRow): Promise<void> {
 
   // Hicbir hesap kalici olarak uygun degilse kampanya sonsuza kadar takilmasin.
   if (!claimedAny && accounts.length > 0 && accounts.every(accountPermanentlyUnusable)) {
+    idleNoSessionTicks.delete(campaign.id)
     const queued = await one<{ count: string }>(
       `select count(*)::text as count
          from public.campaign_targets
@@ -705,7 +723,31 @@ async function runCampaign(campaign: CampaignRow): Promise<void> {
         'Gonderim icin uygun hesap kalmadi (kilitli, kapali veya yeni sohbet kotasi tukendi)',
       )
     }
+  } else if (!claimedAny && accounts.length > 0) {
+    const anyLive = accounts.some((a) => sessionManager.get(a.account_id)?.isLive)
+    if (!anyLive) {
+      const queued = await one<{ count: string }>(
+        `select count(*)::text as count
+           from public.campaign_targets
+          where campaign_id = $1::uuid and status in ('queued', 'sending')`,
+        [campaign.id],
+      )
+      if (Number(queued?.count ?? 0) > 0) {
+        const n = (idleNoSessionTicks.get(campaign.id) ?? 0) + 1
+        idleNoSessionTicks.set(campaign.id, n)
+        if (n >= IDLE_PAUSE_TICKS) {
+          idleNoSessionTicks.delete(campaign.id)
+          await pauseCampaign(
+            campaign.id,
+            'Canli WhatsApp oturumu yok — hat baglantisini kontrol edin, sonra Devam et',
+          )
+        }
+      }
+    } else {
+      idleNoSessionTicks.delete(campaign.id)
+    }
   } else if (!claimedAny && accounts.length === 0) {
+    idleNoSessionTicks.delete(campaign.id)
     const queued = await one<{ count: string }>(
       `select count(*)::text as count
          from public.campaign_targets
@@ -715,6 +757,8 @@ async function runCampaign(campaign: CampaignRow): Promise<void> {
     if (Number(queued?.count ?? 0) > 0) {
       await stopCampaign(campaign.id, 'Kampanyaya bagli hesap yok')
     }
+  } else if (claimedAny) {
+    idleNoSessionTicks.delete(campaign.id)
   }
 }
 
