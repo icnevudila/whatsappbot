@@ -17,79 +17,75 @@ function int(name: string, fallback: number): number {
   return Number.isFinite(parsed) ? parsed : fallback
 }
 
-/**
- * WORKER_ID zorunlu: yoksa her boot random id uretir ve crash sonrasi
- * requeueOwnJobs eski isleri bulamaz (orphan claimed/running).
- */
-function requireWorkerId(): string {
-  const value = process.env.WORKER_ID?.trim()
-  if (!value) {
-    throw new Error(
-      'WORKER_ID zorunlu. Ornek: WORKER_ID=oracle-1 (her process icin benzersiz sabit deger).',
-    )
-  }
-  return value
+export type ServiceRole = 'worker' | 'scaler'
+
+function resolveRole(): ServiceRole {
+  const raw = (process.env.ROLE ?? 'worker').trim().toLowerCase()
+  if (raw === 'scaler') return 'scaler'
+  if (raw === 'worker' || raw === '') return 'worker'
+  throw new Error(`ROLE gecersiz: "${raw}". Izin verilen: worker | scaler`)
 }
 
+/**
+ * Worker icin zorunlu. Scaler icin varsayilan scaler-1.
+ * Docker scale: entrypoint WORKER_ID yoksa hostname'den turetir.
+ */
+function resolveWorkerId(role: ServiceRole): string {
+  const value = process.env.WORKER_ID?.trim()
+  if (value) return value
+  if (role === 'scaler') return 'scaler-1'
+  throw new Error(
+    'WORKER_ID zorunlu (worker). Ornek: WORKER_ID=oracle-1 veya entrypoint ile otomatik.',
+  )
+}
+
+function resolveActuator(): 'noop' | 'docker' | 'webhook' {
+  const raw = (process.env.SCALE_ACTUATOR ?? 'noop').trim().toLowerCase()
+  if (raw === 'noop' || raw === 'docker' || raw === 'webhook') return raw
+  throw new Error(`SCALE_ACTUATOR gecersiz: "${raw}". Izin: noop | docker | webhook`)
+}
+
+const role = resolveRole()
+
 export const env = {
-  /**
-   * Supabase Postgres baglanti dizesi.
-   * Servis Data API yerine dogrudan Postgres'e baglaniyor: wa semasi bilincli
-   * olarak Data API'ye kapali ve is kuyrugu FOR UPDATE SKIP LOCKED ile gercek
-   * bir transaction icinde calismali.
-   */
+  role,
   databaseUrl: required('DATABASE_URL'),
+  workerId: resolveWorkerId(role),
 
-  /**
-   * Bu process'in kimligi. Oturum kirasinin sahibi bu deger olur, bu yuzden
-   * her process icin farkli olmak zorunda.
-   */
-  workerId: requireWorkerId(),
+  dbPoolMax: int('DB_POOL_MAX', role === 'scaler' ? 2 : 10),
 
-  dbPoolMax: int('DB_POOL_MAX', 10),
-
-  /** Kira suresi ve yenileme araligi. Yenileme TTL'in ucte biri kadar sik. */
   leaseTtlSeconds: int('LEASE_TTL_SECONDS', 60),
-
   jobPollIntervalMs: int('JOB_POLL_INTERVAL_MS', 2_000),
-  /** Cift islem riskini azaltmak icin varsayilan 1. */
   jobBatchSize: Math.max(1, int('JOB_BATCH_SIZE', 1)),
-
-  /** Stuck claimed/running isler icin reclaim esigi (saniye). Scrape/discover uzun sürebilir. */
   staleJobSeconds: int('STALE_JOB_SECONDS', 900),
-
   campaignTickMs: int('CAMPAIGN_TICK_MS', 5_000),
-
-  /**
-   * Baileys icinde bazi operasyonlar zaman asimi olmayan tek bir mutex uzerinde
-   * serilesiyor; park etmis bir gonderim o hesaptaki her seyi susturabiliyor.
-   * Bu yuzden her gonderime ust sinir koyuyoruz.
-   */
   sendTimeoutMs: int('SEND_TIMEOUT_MS', 60_000),
-
-  /** Tek process'te acilacak azami oturum. */
   maxSessions: int('MAX_SESSIONS', 50),
-
-  /** Graceful shutdown'da in-flight drain suresi. */
   shutdownDrainMs: int('SHUTDOWN_DRAIN_MS', 20_000),
-
   healthPort: int('PORT', 8080),
   logLevel: process.env.LOG_LEVEL?.trim() || 'info',
   nodeEnv: process.env.NODE_ENV?.trim() || 'development',
 
+  heartbeatIntervalMs: int('HEARTBEAT_INTERVAL_MS', 20_000),
+
+  /** Scaler */
+  scalerIntervalMs: int('SCALER_INTERVAL_MS', 20_000),
+  scalerMinWorkers: Math.max(0, int('SCALER_MIN_WORKERS', 1)),
+  scalerMaxWorkers: Math.max(1, int('SCALER_MAX_WORKERS', 40)),
+  scalerCapacityPerWorker: int('SCALER_CAPACITY_PER_WORKER', 0) || int('MAX_SESSIONS', 50),
+  scalerAliveStaleSeconds: int('SCALER_ALIVE_STALE_SECONDS', 90),
+  scaleActuator: resolveActuator(),
+  scaleWebhookUrl: process.env.SCALE_WEBHOOK_URL?.trim() || null,
   /**
-   * Google Places API (New) — yerel işletme keşfi.
-   * Yoksa contacts.discover Playwright Maps’e düşer (DISCOVER_ENGINE=playwright zorlar).
+   * Docker actuator: compose dosyasi (repo kokune gore).
+   * Ornek: infra/docker-compose.yml — servis adi wa-worker.
    */
+  scaleComposeFile: process.env.SCALE_COMPOSE_FILE?.trim() || 'infra/docker-compose.yml',
+  scaleComposeService: process.env.SCALE_COMPOSE_SERVICE?.trim() || 'wa-worker',
+  scaleComposeProject: process.env.SCALE_COMPOSE_PROJECT?.trim() || 'filo-wa',
+
   googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY?.trim() || null,
-
-  /** places | playwright | auto (varsayılan: key varsa places) */
   discoverEngine: resolveDiscoverEngine(),
-
-  /**
-   * Places Text Search üst sınırı (tek arama = tek API isteği, sayfalama yok).
-   * Ücretsiz kotayı korumak için varsayılan 20, tavan 20.
-   */
   discoverMaxResults: Math.min(20, Math.max(5, int('DISCOVER_MAX_RESULTS', 20))),
 } as const
 

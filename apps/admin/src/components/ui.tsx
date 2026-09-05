@@ -5,7 +5,7 @@ function cx(...parts: (string | false | null | undefined)[]): string {
 }
 
 const buttonBase =
-  'inline-flex h-8 items-center justify-center gap-1.5 rounded-md px-3 text-[13px] font-medium transition-colors disabled:cursor-not-allowed'
+  'inline-flex h-8 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] px-3 text-[13px] font-medium transition-[color,background-color,box-shadow] duration-180 ease-[var(--ease-out)] disabled:cursor-not-allowed'
 
 const buttonVariants = {
   accent:
@@ -82,7 +82,7 @@ export function Card({
   return (
     <div
       className={cx(
-        'rounded-[10px] border border-hairline bg-surface shadow-[var(--shadow-card)]',
+        'rounded-[var(--radius-card)] border border-hairline bg-surface shadow-[var(--shadow-card)]',
         className,
       )}
     >

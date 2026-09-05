@@ -1,25 +1,22 @@
-# WhatsApp servisi -- Oracle / VPS / Coolify
+# WhatsApp servisi -- solo / elle scale / autoscale
 #
 # Repo KOKUNDEN:
 #   docker compose -f infra/docker-compose.yml up -d --build
 #
-# Tek worker (varsayilan): wa-service, WORKER_ID=oracle-1, port 8080
-# Coklu worker (300 hat olcegi):
-#   docker compose -f infra/docker-compose.yml --profile scale up -d --build
-#   → worker-1..worker-6, MAX_SESSIONS=50, benzersiz WORKER_ID
+# Solo: wa-service (WORKER_ID=oracle-1)
+# Elle 6 dilim: --profile scale
+# Autoscale: --profile autoscale  (scaler + scale edilebilir wa-worker)
 #
-# Derleme baglami repo koku (monorepo package-lock + packages/shared).
+# Autoscale actuator=docker icin scaler'a docker.sock mount gerekir;
+# varsayilan SCALE_ACTUATOR=noop (yalnizca DB desired yazar).
 
-x-wa-worker: &wa-worker
+x-wa-common: &wa-common
   build:
     context: ..
     dockerfile: apps/wa-service/Dockerfile
   image: wa-service:local
   env_file:
     - ../apps/wa-service/.env
-  environment:
-    NODE_ENV: production
-    MAX_SESSIONS: '50'
   restart: unless-stopped
   mem_limit: 6g
   shm_size: '1gb'
@@ -38,83 +35,129 @@ x-wa-worker: &wa-worker
       max-file: '5'
 
 services:
-  # --- Tek node (gelistirme / kucuk kurulum) ---
-  # Olcek icin once: docker compose -f infra/docker-compose.yml stop wa-service
-  # sonra: docker compose -f infra/docker-compose.yml --profile scale up -d
   wa-service:
-    <<: *wa-worker
+    <<: *wa-common
     container_name: wa-service
     ports:
       - '127.0.0.1:8080:8080'
     environment:
       NODE_ENV: production
+      ROLE: worker
       MAX_SESSIONS: '50'
       WORKER_ID: oracle-1
 
-  # --- Olcek profili: 6 x 50 = 300 oturum kapasitesi ---
-  # Her instance benzersiz WORKER_ID; ayni id ile iki process acma.
+  # Sabit 6 dilim (manuel)
   wa-worker-1:
-    <<: *wa-worker
+    <<: *wa-common
     container_name: wa-worker-1
     profiles: ['scale']
     ports:
       - '127.0.0.1:8081:8080'
     environment:
       NODE_ENV: production
+      ROLE: worker
       MAX_SESSIONS: '50'
       WORKER_ID: worker-1
+      DB_POOL_MAX: '2'
 
   wa-worker-2:
-    <<: *wa-worker
+    <<: *wa-common
     container_name: wa-worker-2
     profiles: ['scale']
     ports:
       - '127.0.0.1:8082:8080'
     environment:
       NODE_ENV: production
+      ROLE: worker
       MAX_SESSIONS: '50'
       WORKER_ID: worker-2
+      DB_POOL_MAX: '2'
 
   wa-worker-3:
-    <<: *wa-worker
+    <<: *wa-common
     container_name: wa-worker-3
     profiles: ['scale']
     ports:
       - '127.0.0.1:8083:8080'
     environment:
       NODE_ENV: production
+      ROLE: worker
       MAX_SESSIONS: '50'
       WORKER_ID: worker-3
+      DB_POOL_MAX: '2'
 
   wa-worker-4:
-    <<: *wa-worker
+    <<: *wa-common
     container_name: wa-worker-4
     profiles: ['scale']
     ports:
       - '127.0.0.1:8084:8080'
     environment:
       NODE_ENV: production
+      ROLE: worker
       MAX_SESSIONS: '50'
       WORKER_ID: worker-4
+      DB_POOL_MAX: '2'
 
   wa-worker-5:
-    <<: *wa-worker
+    <<: *wa-common
     container_name: wa-worker-5
     profiles: ['scale']
     ports:
       - '127.0.0.1:8085:8080'
     environment:
       NODE_ENV: production
+      ROLE: worker
       MAX_SESSIONS: '50'
       WORKER_ID: worker-5
+      DB_POOL_MAX: '2'
 
   wa-worker-6:
-    <<: *wa-worker
+    <<: *wa-common
     container_name: wa-worker-6
     profiles: ['scale']
     ports:
       - '127.0.0.1:8086:8080'
     environment:
       NODE_ENV: production
+      ROLE: worker
       MAX_SESSIONS: '50'
       WORKER_ID: worker-6
+      DB_POOL_MAX: '2'
+
+  # --- Autoscale: scale edilebilir worker (container_name YOK) ---
+  wa-worker:
+    <<: *wa-common
+    profiles: ['autoscale']
+    environment:
+      NODE_ENV: production
+      ROLE: worker
+      MAX_SESSIONS: '50'
+      WORKER_ID: auto
+      DB_POOL_MAX: '2'
+
+  wa-scaler:
+    <<: *wa-common
+    container_name: wa-scaler
+    profiles: ['autoscale']
+    ports:
+      - '127.0.0.1:8090:8080'
+    working_dir: /app
+    volumes:
+      # docker actuator icin (SCALE_ACTUATOR=docker)
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./docker-compose.yml:/app/infra/docker-compose.yml:ro
+    environment:
+      NODE_ENV: production
+      ROLE: scaler
+      WORKER_ID: scaler-1
+      DB_POOL_MAX: '2'
+      SCALE_ACTUATOR: noop
+      SCALER_MIN_WORKERS: '1'
+      SCALER_MAX_WORKERS: '40'
+      SCALER_CAPACITY_PER_WORKER: '50'
+      SCALE_COMPOSE_FILE: /app/infra/docker-compose.yml
+      SCALE_COMPOSE_SERVICE: wa-worker
+      SCALE_COMPOSE_PROJECT: filo-wa
+      # Docker CLI scaler imajinda yok; actuator=docker kullanirken host'ta
+      # ROLE=scaler calistirin veya imaja docker-cli ekleyin.

@@ -48,6 +48,7 @@ Gerekli env (`apps/wa-service/.env` / Coolify secrets):
 
 - `DATABASE_URL` (Supabase session pooler, port 5432)
 - `WORKER_ID` (instance başına unique; compose environment override eder)
+- Scale worker’larda `DB_POOL_MAX=2` (Supabase session pooler ~15 client; 6×2=12)
 - İsteğe bağlı: `MAX_SESSIONS`, `GOOGLE_MAPS_API_KEY`, `PORT`
 
 ## Coolify
@@ -84,4 +85,19 @@ Beklenen:
 3. Admin → Worker dağılımı’nda `smoke-a` / `smoke-b` sayıları görünür (lease varken).
 
 Compose ile: `stop wa-service` sonra `--profile scale` (bkz. yukarı).
+
+## Autoscale (hat → desired worker)
+
+Elle 6 dilim yerine DB kontrol düzlemi: [autoscale.md](./autoscale.md).
+
+```bash
+docker compose -f infra/docker-compose.yml stop wa-service
+docker compose -f infra/docker-compose.yml --profile autoscale up -d --build
+# Scaler health: 127.0.0.1:8090/health  (SCALE_ACTUATOR=noop → yalnız desired yazar)
+```
+
+## SaaS (çok müşteri / binlerce–on binlerce hat)
+
+Sabit “20 kişi × 100” yok — formül: [saas-scale.md](./saas-scale.md).  
+Örnek tavan: **20 000 hat ≈ 400 worker × 50** + ~TB RAM + büyük Postgres pool.
 

@@ -40,13 +40,29 @@ type OverviewJob = {
 type OverviewWorker = {
   worker_id: string
   leased_accounts: number
-  soonest_expiry: string
+  max_sessions?: number
+  tracked?: number
+  live?: number
+  seen_at?: string
+  alive?: boolean
+  soonest_expiry?: string
+}
+
+type OverviewScaler = {
+  desired_workers?: number
+  demand?: number
+  alive_workers?: number
+  alive_workers_reported?: number
+  capacity_per_worker?: number
+  reason?: string | null
+  updated_at?: string
 }
 
 type AdminOverview = {
   organizations: OverviewOrg[]
   accounts: OverviewAccount[]
   workers?: OverviewWorker[]
+  scaler?: OverviewScaler
   jobs: OverviewJob[]
 }
 
@@ -66,6 +82,7 @@ async function loadOverview(
       organizations: raw?.organizations ?? [],
       accounts: raw?.accounts ?? [],
       workers: raw?.workers ?? [],
+      scaler: raw?.scaler ?? {},
       jobs: raw?.jobs ?? [],
     },
     error: null,
@@ -90,6 +107,7 @@ export default async function AdminOverviewPage() {
   const orgs = data?.organizations ?? []
   const accounts = data?.accounts ?? []
   const workers = data?.workers ?? []
+  const scaler = data?.scaler ?? {}
   const jobs = data?.jobs ?? []
 
   const lockedAccounts = accounts.filter((a) => a.is_locked)
@@ -97,6 +115,7 @@ export default async function AdminOverviewPage() {
 
   const orgNameById = new Map(orgs.map((o) => [o.id, o.name]))
   const leasedTotal = workers.reduce((sum, w) => sum + (w.leased_accounts ?? 0), 0)
+  const aliveWorkers = workers.filter((w) => w.alive).length
 
   return (
     <div className="min-h-dvh">
@@ -127,15 +146,23 @@ export default async function AdminOverviewPage() {
 
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-[10px] border border-hairline bg-surface px-4 py-3 shadow-[var(--shadow-card)]">
-            <p className="text-[11.5px] text-ink-muted">İşletmeler</p>
+            <p className="text-[11.5px] text-ink-muted">Scaler demand → desired</p>
             <p className="mt-1 text-[22px] font-semibold tabular tracking-[-0.02em]">
-              {orgs.length}
+              {scaler.demand ?? 0}
+              <span className="text-[14px] font-medium text-ink-muted">
+                {' '}
+                → {scaler.desired_workers ?? '—'}
+              </span>
             </p>
           </div>
           <div className="rounded-[10px] border border-hairline bg-surface px-4 py-3 shadow-[var(--shadow-card)]">
-            <p className="text-[11.5px] text-ink-muted">Worker’lar</p>
+            <p className="text-[11.5px] text-ink-muted">Worker canlı / heartbeat</p>
             <p className="mt-1 text-[22px] font-semibold tabular tracking-[-0.02em]">
-              {workers.length}
+              {aliveWorkers}
+              <span className="text-[14px] font-medium text-ink-muted">
+                {' '}
+                / {workers.length}
+              </span>
             </p>
           </div>
           <div className="rounded-[10px] border border-hairline bg-surface px-4 py-3 shadow-[var(--shadow-card)]">
@@ -162,36 +189,82 @@ export default async function AdminOverviewPage() {
 
         <Card>
           <CardHeader
+            title="Autoscale"
+            subtitle={
+              scaler.reason ||
+              'wa.scaler_state — hat talebine göre desired worker (actuator: noop/docker/webhook)'
+            }
+          />
+          <div className="grid gap-3 px-4 pb-4 text-[12.5px] sm:grid-cols-4">
+            <div>
+              <p className="text-ink-muted">Demand</p>
+              <p className="mt-0.5 font-semibold tabular">{scaler.demand ?? '—'}</p>
+            </div>
+            <div>
+              <p className="text-ink-muted">Desired</p>
+              <p className="mt-0.5 font-semibold tabular">{scaler.desired_workers ?? '—'}</p>
+            </div>
+            <div>
+              <p className="text-ink-muted">Kapasite / worker</p>
+              <p className="mt-0.5 font-semibold tabular">
+                {scaler.capacity_per_worker ?? '—'}
+              </p>
+            </div>
+            <div>
+              <p className="text-ink-muted">Güncelleme</p>
+              <p className="mt-0.5 tabular text-ink-muted">
+                {scaler.updated_at ? formatDate(scaler.updated_at) : '—'}
+              </p>
+            </div>
+          </div>
+        </Card>
+
+        <Card>
+          <CardHeader
             title="Worker dağılımı"
             subtitle={
               workers.length === 0
-                ? 'Aktif lease yok — worker ayakta değil veya henüz hat yok'
-                : `${workers.length} worker · ${leasedTotal} kiralanmış oturum`
+                ? 'Heartbeat yok — worker ayakta değil'
+                : `${aliveWorkers} canlı · ${leasedTotal} kiralanmış oturum`
             }
           />
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[480px] text-left text-[12.5px]">
+            <table className="w-full min-w-[560px] text-left text-[12.5px]">
               <thead>
                 <tr className="border-b border-hairline text-[11.5px] text-ink-muted">
                   <th className="px-4 py-2 font-medium">WORKER_ID</th>
-                  <th className="px-4 py-2 font-medium">Kiralanmış hat</th>
-                  <th className="px-4 py-2 font-medium">En yakın kira bitişi</th>
+                  <th className="px-4 py-2 font-medium">Canlı</th>
+                  <th className="px-4 py-2 font-medium">Lease</th>
+                  <th className="px-4 py-2 font-medium">Tracked/Live</th>
+                  <th className="px-4 py-2 font-medium">Max</th>
+                  <th className="px-4 py-2 font-medium">Seen</th>
                 </tr>
               </thead>
               <tbody>
                 {workers.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="px-4 py-6 text-ink-muted">
-                      Henüz lease yok.
+                    <td colSpan={6} className="px-4 py-6 text-ink-muted">
+                      Henüz heartbeat yok.
                     </td>
                   </tr>
                 ) : (
                   workers.map((worker) => (
                     <tr key={worker.worker_id} className="border-b border-hairline last:border-0">
                       <td className="px-4 py-2.5 font-mono text-[12px]">{worker.worker_id}</td>
+                      <td className="px-4 py-2.5">
+                        {worker.alive ? (
+                          <span className="text-ok-dim">evet</span>
+                        ) : (
+                          <span className="text-ink-faint">hayır</span>
+                        )}
+                      </td>
                       <td className="px-4 py-2.5 tabular">{worker.leased_accounts}</td>
                       <td className="px-4 py-2.5 tabular text-ink-muted">
-                        {formatDate(worker.soonest_expiry)}
+                        {worker.tracked ?? '—'} / {worker.live ?? '—'}
+                      </td>
+                      <td className="px-4 py-2.5 tabular">{worker.max_sessions ?? '—'}</td>
+                      <td className="px-4 py-2.5 tabular text-ink-muted">
+                        {worker.seen_at ? formatDate(worker.seen_at) : '—'}
                       </td>
                     </tr>
                   ))

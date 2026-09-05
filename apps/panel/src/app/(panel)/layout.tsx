@@ -46,7 +46,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
 
   return (
     <div className="flex min-h-dvh">
-      <aside className="hidden w-[212px] shrink-0 flex-col justify-between border-r border-hairline bg-surface px-3 py-4 md:flex">
+      <aside className="hidden w-[248px] shrink-0 flex-col justify-between border-r border-hairline bg-surface px-3 py-4 md:flex">
         <div>
           <Link href="/" className="mb-6 flex items-center px-2.5">
             <Wordmark />

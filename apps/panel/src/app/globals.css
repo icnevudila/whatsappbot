@@ -1,24 +1,19 @@
 @import 'tailwindcss';
 
 /*
-  Tasarim kilidi: pilot-ui / Messora Cobalt (acik kagit).
-  Kaynak: C:/Users/TP2/Documents/chatbot/pilot-ui/app/(marketing)/tokens.css
-          + app/globals.css + app/app/product.css
-
-  - canvas = paper (#f3f5f9), surface = beyaz panel
-  - accent = kobalt (#2f5bff): birincil CTA ve odak
-  - ok/wa = WhatsApp yesili: yalnizca "bagli" durumu
-  - warn / danger: uyari ve hata
-  - Golge hafif; dekoratif gradyan yok
+  Tasarim kilidi: Messora Cobalt — docs/design/DESIGN-LANGUAGE.md
+  Kaynak: pilot-ui tokens (dil), Filo urun yuzeyi.
 */
 @theme {
   --color-canvas: #f3f5f9;
+  --color-canvas-alt: #e8ecf3;
   --color-surface: #ffffff;
   --color-surface-raised: #eef1f7;
   --color-hairline: #d5dae6;
   --color-hairline-strong: #b8bfd0;
 
   --color-ink: #161925;
+  --color-ink-soft: #2f3444;
   --color-ink-muted: #646b7c;
   --color-ink-faint: #8b92a3;
 
@@ -27,19 +22,27 @@
   --color-accent-ink: #ffffff;
   --color-accent-soft: #e8edff;
 
+  /* WA kanal / bagli */
   --color-ok: #25d366;
   --color-ok-dim: #1a9e4b;
   --color-ok-soft: #d9fdd3;
+
+  /* Semantik basari (WA yesilinden ayri) */
+  --color-success: #127a52;
+  --color-success-soft: #e6f6ef;
 
   --color-warn: #a15c00;
   --color-danger: #b42318;
 
   --radius-card: 10px;
+  --radius-sm: 6px;
 
   --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 
   --shadow-card: 0 1px 2px rgba(22, 25, 37, 0.06);
+  --shadow-md: 0 4px 24px -2px rgba(22, 25, 37, 0.06), 0 1px 4px rgba(22, 25, 37, 0.03);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 * {
@@ -113,10 +116,16 @@ h3 {
 }
 
 .filo-fade-in {
-  animation: filo-fade-in 0.35s ease-out both;
+  animation: filo-fade-in 0.35s var(--ease-out) both;
 }
 
 .filo-pulse > div {
   animation: filo-pulse-slide 1.1s ease-in-out infinite;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .filo-fade-in,
+  .filo-pulse > div {
+    animation: none !important;
+  }
+}

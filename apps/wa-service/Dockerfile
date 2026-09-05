@@ -26,6 +26,8 @@ RUN npm install --no-save tsx@4.23.13
 # SIGTERM'in Node'a ulasmasi sart: kapanis sirasi (creds flush -> sock.end ->
 # kira birak) buna bagli. Shell formu kullanilmiyor ki sinyal yutulmasin.
 WORKDIR /app/apps/wa-service
+RUN chmod +x scripts/entrypoint.sh
 # --env-file-if-exists: konteynerde .env olmayabilir, degiskenler docker
 # tarafindan veriliyor olabilir. Dosya yoksa hata vermeden devam eder.
-CMD ["node", "--env-file-if-exists=.env", "--import", "tsx", "src/index.ts"]
+# WORKER_ID=auto / bos ise entrypoint hostname'den uretir (compose --scale).
+CMD ["./scripts/entrypoint.sh"]

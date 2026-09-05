@@ -6,7 +6,7 @@ function cx(...parts: (string | false | null | undefined)[]): string {
 }
 
 const buttonBase =
-  'inline-flex h-8 items-center justify-center gap-1.5 rounded-md px-3 text-[13px] font-medium transition-colors disabled:cursor-not-allowed'
+  'inline-flex h-8 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] px-3 text-[13px] font-medium transition-[color,background-color,box-shadow,transform] duration-180 ease-[var(--ease-out)] disabled:cursor-not-allowed'
 
 const buttonVariants = {
   // Kobalt birincil aksiyon (pilot-ui / Messora). Yesil yalnizca "bagli" durumu.
@@ -79,7 +79,7 @@ export function Card({
   return (
     <div
       className={cx(
-        'rounded-[10px] border border-hairline bg-surface shadow-[var(--shadow-card)]',
+        'rounded-[var(--radius-card)] border border-hairline bg-surface shadow-[var(--shadow-card)]',
         className,
       )}
     >
@@ -189,7 +189,7 @@ const STATUS_STYLES: Record<string, { label: string; tone: string; hint?: string
   scheduled: { label: 'Planlandı', tone: 'text-warn border-warn/35 bg-warn/10', hint: 'Zamanı gelince başlar' },
   running: { label: 'Gönderiliyor', tone: 'text-accent border-accent/35 bg-accent-soft', hint: 'Arka planda devam ediyor' },
   paused: { label: 'Duraklatıldı', tone: 'text-warn border-warn/35 bg-warn/10', hint: 'Devam et ile sürer' },
-  completed: { label: 'Tamamlandı', tone: 'text-ok-dim border-ok/40 bg-ok-soft', hint: 'Tüm hedefler işlendi' },
+  completed: { label: 'Tamamlandı', tone: 'text-success border-success/35 bg-success-soft', hint: 'Tüm hedefler işlendi' },
   stopped: { label: 'Durduruldu', tone: 'text-danger border-danger/35 bg-danger/10', hint: 'Elle veya kısıt nedeniyle durdu' },
   failed: { label: 'Başarısız', tone: 'text-danger border-danger/35 bg-danger/10', hint: 'Gönderilemedi; ayrıntı satırda' },
 

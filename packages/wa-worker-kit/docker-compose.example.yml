@@ -1,0 +1,33 @@
+# Ornek: yalnizca wa-service (harici DATABASE_URL)
+# Repo kokunden:
+#   docker compose -f packages/wa-worker-kit/docker-compose.example.yml up -d --build
+#
+# Once schema bundle uygulayin (README).
+
+services:
+  wa-worker:
+    build:
+      context: ../..
+      dockerfile: apps/wa-service/Dockerfile
+    image: wa-service:kit
+    env_file:
+      - ../../apps/wa-service/.env
+    environment:
+      NODE_ENV: production
+      ROLE: worker
+      WORKER_ID: kit-1
+      MAX_SESSIONS: '50'
+      DB_POOL_MAX: '5'
+    ports:
+      - '127.0.0.1:8080:8080'
+    restart: unless-stopped
+    mem_limit: 6g
+    shm_size: '1gb'
+    stop_grace_period: 45s
+    init: true
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://127.0.0.1:8080/health']
+      interval: 30s
+      timeout: 10s
+      start_period: 180s
+      retries: 3

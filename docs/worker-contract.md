@@ -25,11 +25,12 @@ Kaynak doğruluk: `packages/shared/src/jobs.ts`, `supabase/migrations/`, `apps/w
 | Değişken | Zorunlu | Açıklama |
 |----------|---------|----------|
 | `DATABASE_URL` | Evet | Postgres bağlantı dizesi (Supabase Session pooler, port **5432** önerilir) |
-| `WORKER_ID` | Evet | Sabit, process başına benzersiz kimlik (kira + job claim). Örn. `oracle-1` |
+| `WORKER_ID` | Worker’da evet | Sabit, process başına benzersiz kimlik (kira + job claim). Örn. `oracle-1`. Autoscale: `auto` → hostname |
+| `ROLE` | Hayır | `worker` (varsayılan) veya `scaler` — bkz. [autoscale.md](./autoscale.md) |
 | `PORT` | Hayır | Sağlık sunucusu (varsayılan `8080`) |
 | `GOOGLE_MAPS_API_KEY` | Hayır | `contacts.discover` / Places keşfi için |
 
-Diğer isteğe bağlı ayarlar (`MAX_SESSIONS`, `STALE_JOB_SECONDS`, …) için: `apps/wa-service/.env.example`.
+Diğer isteğe bağlı ayarlar (`MAX_SESSIONS`, `STALE_JOB_SECONDS`, scaler/heartbeat, …) için: `apps/wa-service/.env.example`.
 
 ---
 
@@ -68,6 +69,8 @@ Tam kolonlar ve RLS: `supabase/migrations/` sırasıyla.
 | `wa.auth_state` | SignalKeyStore anahtarları |
 | `wa.session_lease` | Oturum kirası + epoch; aynı hesabın iki process’te açılmasını engeller |
 | `wa.sent_messages` | `getMessage` deposu (ack / “message taking a while” önlemi) |
+| `wa.worker_heartbeat` | Worker canlılık (autoscale alive sayımı) |
+| `wa.scaler_state` | Tek satır desired/demand — [autoscale.md](./autoscale.md) |
 
 ### Fonksiyonlar
 
@@ -121,32 +124,36 @@ Docker healthcheck örneği: `curl -fsS http://127.0.0.1:8080/health`.
 
 ---
 
-## 7. Başka bir Supabase’e bağlama
+## 7. Başka bir Supabase’e / harici projeye bağlama
 
-1. **Migration’ları sırayla uygula**  
-   `supabase/migrations/` altındaki dosyalar zaman damgası sırasıyla (extensions → core → contacts → campaigns → jobs → wa private → RLS → … → `contacts.check_phone` dahil sonraki job tipi migration’ları).
+**Hazır kit:** [`packages/wa-worker-kit`](../packages/wa-worker-kit/README.md) — worker SQL demeti + job tipleri. Filo panel/RLS dahil değil.
+
+1. **Schema bundle**  
+   `node packages/wa-worker-kit/scripts/bundle-sql.mjs` → `psql $DATABASE_URL -f …/worker-schema.bundle.sql`  
+   veya Filo tam ürün için `supabase/migrations/` tamamını sırayla uygula.
 
 2. **`DATABASE_URL` ayarla**  
-   Project Settings → Database → Session pooler.  
-   Kullanıcı: `postgres.<project-ref>`, port **5432** (transaction pooler 6543 değil).
+   Session pooler, kullanıcı `postgres.<ref>`, port **5432**.
 
 3. **Worker env**  
-   `apps/wa-service/.env`: en az `DATABASE_URL` + `WORKER_ID`. İsteğe bağlı `GOOGLE_MAPS_API_KEY`, `PORT`.
+   `DATABASE_URL` + `WORKER_ID` (+ isteğe bağlı scaler). Örnek: kit `docker-compose.example.yml`.
 
-4. **Docker Compose** (repo kökünden):
+4. **Docker (Filo mono):**
 
 ```bash
 docker compose -f infra/docker-compose.yml up -d --build
 ```
 
-- Sağlık portu varsayılan: `127.0.0.1:8080` (dışarı açık değil).
-- Panel ile worker arasında HTTP komut yolu yok; aynı Postgres yeterli.
+- Panel ile worker arasında HTTP yok; aynı Postgres yeterli.
+- Autoscale: [autoscale.md](./autoscale.md). Tasarım dili: [design/DESIGN-LANGUAGE.md](./design/DESIGN-LANGUAGE.md).
 
 ---
 
 ## Özet
 
 Panel komut yazar → `jobs` → worker `wa.claim_jobs` ile alır. Auth/kira `wa.*` içinde kalır. Yeni ortam = migration sırası + `DATABASE_URL` + `WORKER_ID` + compose.
+
+Çok müşteri / binlerce hat: [saas-scale.md](./saas-scale.md), [scale-300.md](./scale-300.md).
 
 ---
 
