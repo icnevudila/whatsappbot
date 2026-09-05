@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
-export type AuthState = { error: string } | null
+export type AuthState = { error?: string; ok?: string } | null
 
 function readCredentials(formData: FormData): { email: string; password: string } | string {
   const email = String(formData.get('email') ?? '').trim()
@@ -31,14 +31,12 @@ export async function signIn(_previous: AuthState, formData: FormData): Promise<
     }
   }
 
-  // Deep-link: proxy ?devam=/kampanyalar/... bırakır; güvenli iç yola dön.
   const devam = String(formData.get('devam') ?? '').trim()
   const safeNext =
     devam.startsWith('/') && !devam.startsWith('//') && !devam.includes('\\')
       ? devam
       : null
 
-  // Hat yoksa doğrudan kuruluma; dolu hesapta istenen sayfa veya durum.
   const { count: connectedCount } = await supabase
     .from('accounts')
     .select('id', { count: 'exact', head: true })
@@ -48,7 +46,7 @@ export async function signIn(_previous: AuthState, formData: FormData): Promise<
     redirect('/kurulum')
   }
 
-  redirect(safeNext ?? '/durum')
+  redirect(safeNext ?? '/ozet')
 }
 
 export async function signUp(_previous: AuthState, formData: FormData): Promise<AuthState> {
@@ -60,17 +58,12 @@ export async function signUp(_previous: AuthState, formData: FormData): Promise<
 
   if (error) return { error: error.message }
 
-  // E-posta dogrulamasi acikken oturum donmez; kullaniciya bunu soylemek sart,
-  // yoksa "kayit oldum ama giremiyorum" durumunda kalir.
   if (!data.session) {
     return {
-      error:
-        'Kayıt alındı. E-posta adresinize gönderilen doğrulama bağlantısına tıklayıp tekrar giriş yapın.',
+      ok: 'Kayıt alındı. E-posta adresinize gelen doğrulama bağlantısına tıklayıp tekrar giriş yapın.',
     }
   }
 
-  // Yeni kullanici dogrudan panele degil kuruluma gider: bagli hat yokken
-  // genel durum ekrani bos ve ne yapmasi gerektigi belirsiz.
   redirect('/kurulum')
 }
 

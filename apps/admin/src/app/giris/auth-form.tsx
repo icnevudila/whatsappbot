@@ -10,7 +10,7 @@ export function AuthForm() {
   const [state, formAction, pending] = useActionState<AuthState, FormData>(signIn, null)
 
   return (
-    <form action={formAction} className="space-y-3.5">
+    <form action={formAction} className="space-y-4">
       {searchParams.get('devam') ? (
         <input type="hidden" name="devam" value={searchParams.get('devam') ?? ''} />
       ) : null}
@@ -19,7 +19,7 @@ export function AuthForm() {
         <Input
           name="email"
           type="email"
-          autoComplete="email"
+          autoComplete="username"
           required
           placeholder="admin@filo.app"
         />

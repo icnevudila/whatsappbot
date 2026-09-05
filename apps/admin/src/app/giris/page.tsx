@@ -2,27 +2,52 @@ import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import { AuthForm } from './auth-form'
 
-export const metadata: Metadata = { title: 'Giriş' }
+export const metadata: Metadata = {
+  title: 'Giriş',
+  description: 'Filo platform yönetimi girişi.',
+}
+
+function LogoMark({ className = 'size-7' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" aria-hidden className={className}>
+      <circle cx="2.6" cy="2.6" r="2.2" className="fill-accent" />
+      <rect x="0" y="6.6" width="16" height="1.7" rx="0.85" fill="currentColor" />
+      <rect x="0" y="10" width="11" height="1.7" rx="0.85" fill="currentColor" opacity="0.72" />
+      <rect x="0" y="13.4" width="6" height="1.7" rx="0.85" fill="currentColor" opacity="0.44" />
+    </svg>
+  )
+}
 
 export default function LoginPage() {
   return (
-    <main className="grid min-h-dvh place-items-center px-4 py-12">
-      <div className="filo-fade-in w-full max-w-[340px]">
-        <div className="mb-7">
-          <p className="mb-3 text-[13.5px] font-semibold tracking-[-0.02em]">Filo Admin</p>
-          <h1 className="text-[22px] font-semibold tracking-[-0.02em]">
-            Platform girişi
-          </h1>
-          <p className="mt-1.5 text-[12.5px] text-ink-muted">
-            Yalnızca <code className="font-mono text-[12px]">platform_admin</code> yetkili
-            hesaplar girebilir.
-          </p>
-        </div>
+    <main className="relative flex min-h-dvh flex-col bg-canvas">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,var(--color-canvas)_0%,var(--color-canvas-alt)_100%)]"
+      />
 
-        <div className="rounded-[10px] border border-hairline bg-surface p-4 shadow-[var(--shadow-card)]">
-          <Suspense fallback={<div className="h-[180px]" />}>
-            <AuthForm />
-          </Suspense>
+      <div className="relative z-10 flex flex-1 items-center justify-center px-5 py-12">
+        <div className="filo-fade-in w-full max-w-[380px]">
+          <div className="mb-6">
+            <div className="mb-3 inline-flex items-center gap-2">
+              <LogoMark className="size-6" />
+              <span className="text-[15px] font-semibold tracking-[-0.02em]">Filo Admin</span>
+            </div>
+            <h1 className="text-[22px] font-semibold tracking-[-0.02em]">Platform girişi</h1>
+            <p className="mt-1 text-[12.5px] text-ink-muted">
+              Yalnızca platform yöneticisi hesapları girebilir.
+            </p>
+          </div>
+
+          <div className="border border-hairline bg-surface p-5 shadow-[var(--shadow-card)]">
+            <Suspense fallback={<div className="h-[180px]" aria-hidden />}>
+              <AuthForm />
+            </Suspense>
+          </div>
+
+          <p className="mt-5 text-[11.5px] leading-relaxed text-ink-faint">
+            Bu ekran müşteri paneli değildir. Yetkisiz hesaplar reddedilir.
+          </p>
         </div>
       </div>
     </main>

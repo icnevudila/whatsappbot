@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
-export type AuthState = { error: string } | null
+export type AuthState = { error?: string; ok?: string } | null
 
 function readCredentials(formData: FormData): { email: string; password: string } | string {
   const email = String(formData.get('email') ?? '').trim()
@@ -47,8 +47,7 @@ export async function signUp(_previous: AuthState, formData: FormData): Promise<
 
   if (!data.session) {
     return {
-      error:
-        'Kayıt alındı. E-posta doğrulama bağlantısına tıklayıp tekrar giriş yapın.',
+      ok: 'Kayıt alındı. E-posta doğrulama bağlantısına tıklayıp tekrar giriş yapın.',
     }
   }
 
