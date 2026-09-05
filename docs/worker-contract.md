@@ -147,3 +147,19 @@ docker compose -f infra/docker-compose.yml up -d --build
 ## Özet
 
 Panel komut yazar → `jobs` → worker `wa.claim_jobs` ile alır. Auth/kira `wa.*` içinde kalır. Yeni ortam = migration sırası + `DATABASE_URL` + `WORKER_ID` + compose.
+
+---
+
+## 8. Ürün checklist eşlemesi (Wp worker)
+
+| # | Madde | Worker / DB | UI |
+|---|--------|-------------|-----|
+| 1 | accounts | `accounts`, lease, QR/pairing | Panel Hesaplar; dashboard onboarding WA hat |
+| 2 | timeline | `account_events` | Panel Durum; Admin özet |
+| 3 | kampanya mesaj-url | `campaigns.message_type` + `media_url`; send image/video/document | Panel kampanya formu |
+| 7 | WA matches | `contacts.verify`, `contacts.check_phone`, `wa_status` | Kişiler WaMark / tek numara kontrol |
+| 8 | blacklist | `blacklist` + skip | Panel Kara liste |
+| 9 | paylaşılanlar | `campaign_targets` + receipts | Kampanya hedef feed |
+| 10 | messages | `message_log` in/out + delivered/read | Gelenler / Gidenler |
+
+Media asset CDN bilinçli dışarıda.
