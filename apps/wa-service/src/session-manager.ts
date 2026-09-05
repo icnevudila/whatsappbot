@@ -88,6 +88,9 @@ export class SessionManager {
         await session.start()
       } catch (error) {
         this.sessions.delete(accountId)
+        await session.shutdown().catch(shutdownError => {
+          log.warn({ err: shutdownError, accountId }, 'Basarisiz oturum temizligi')
+        })
         await releaseLease(accountId, lease.epoch).catch((leaseError) => {
           log.warn({ err: leaseError, accountId }, 'Basarisiz connect sonrasi kira birakilamadi')
         })
@@ -178,9 +181,11 @@ export class SessionManager {
     log.info({ count: accounts.length }, 'Hesaplar geri getiriliyor')
 
     for (const account of accounts) {
-      const result = await this.connect(account.id)
-      if (!result.ok) {
-        log.info({ accountId: account.id, reason: result.reason }, 'Hesap atlandi')
+      try {
+        const result = await this.connect(account.id)
+        if (!result.ok) log.info({ accountId: account.id, reason: result.reason }, 'Hesap atlandi')
+      } catch (error) {
+        log.error({ err: error, accountId: account.id }, 'Hesap geri getirilemedi; diger hesaplara devam ediliyor')
       }
     }
   }

@@ -267,17 +267,23 @@ export function Notice({
   tone = 'warn',
   children,
 }: {
-  tone?: 'warn' | 'danger' | 'accent'
+  tone?: 'warn' | 'danger' | 'accent' | 'success'
   children: ReactNode
 }) {
   const styles = {
     warn: 'border-warn/30 bg-warn/8 text-warn',
     danger: 'border-danger/30 bg-danger/8 text-danger',
     accent: 'border-accent/30 bg-accent/8 text-accent',
+    success: 'border-success/30 bg-success/8 text-success',
   }[tone]
 
   return (
-    <div className={cx('rounded-md border px-3 py-2 text-[12.5px]', styles)}>{children}</div>
+    <div
+      role={tone === 'danger' ? 'alert' : tone === 'success' || tone === 'accent' ? 'status' : undefined}
+      className={cx('rounded-md border px-3 py-2 text-[12.5px]', styles)}
+    >
+      {children}
+    </div>
   )
 }
 

@@ -88,6 +88,14 @@ export function AuthForm() {
         />
       </Field>
 
+      {mode === 'signin' ? (
+        <p className="-mt-2 text-right text-[12px]">
+          <a href="/sifremi-unuttum" className="text-ink-muted underline-offset-2 hover:text-ink hover:underline">
+            Şifremi unuttum
+          </a>
+        </p>
+      ) : null}
+
       {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
       {state?.ok ? <Notice tone="accent">{state.ok}</Notice> : null}
 

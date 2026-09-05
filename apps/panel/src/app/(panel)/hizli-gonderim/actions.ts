@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { parsePhoneList } from '@wa/shared'
 import { enqueueJob } from '@/lib/jobs'
 import { requireActiveOrg } from '@/lib/org'
+import { validateMediaUrl } from '@/lib/campaign-validation'
 
 export type QuickSendState = {
   error?: string
@@ -31,37 +32,19 @@ export async function quickSend(
   const raw = String(formData.get('numbers') ?? '')
   const body = String(formData.get('body') ?? '').trim()
   const mediaUrl = String(formData.get('media_url') ?? '').trim()
-  const rawType = String(formData.get('message_type') ?? '').trim()
-  const accountIds = formData.getAll('accounts').map(String).filter(Boolean)
-
-  const MEDIA_TYPES = new Set(['image', 'video'])
-  let messageType: 'text' | 'image' | 'video' = 'text'
-  if (!mediaUrl) {
-    messageType = 'text'
-  } else if (MEDIA_TYPES.has(rawType)) {
-    messageType = rawType as 'image' | 'video'
-  } else {
-    messageType = 'image'
-  }
+  const accountIds = [...new Set(formData.getAll('accounts').map(String).filter(Boolean))]
+  const mediaError = validateMediaUrl(mediaUrl)
+  if (mediaError) return { error: mediaError }
+  if (body.length > 4096) return { error: 'Mesaj 4096 karakteri aşamaz.' }
 
   if (!raw.trim()) return { error: 'En az bir numara girin.' }
-  if (!body && !mediaUrl) return { error: 'Mesaj metni veya bir medya dosyası gerekli.' }
+  if (!body && !mediaUrl) return { error: 'Mesaj metni veya bir gorsel gerekli.' }
   if (accountIds.length === 0) return { error: 'En az bir gönderen hat seçin.' }
-  if (mediaUrl) {
-    try {
-      const url = new URL(mediaUrl)
-      if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-        return { error: 'Medya adresi http:// veya https:// ile başlamalı.' }
-      }
-    } catch {
-      return { error: 'Medya adresi geçerli bir URL olmalı.' }
-    }
-  }
 
   const parsed = parsePhoneList(raw)
   if (parsed.valid.length === 0) {
     return {
-      error: 'Geçerli numara bulunamadı. Örnek: 0532 123 45 67 veya +905321234567',
+      error: 'Gecerli numara bulunamadi. Ornek: 0532 123 45 67 veya +905321234567',
       invalidSamples: parsed.invalid.slice(0, 5),
     }
   }
@@ -72,8 +55,11 @@ export async function quickSend(
   try {
     ;({ userId, org, supabase } = await requireActiveOrg())
   } catch (error) {
-    return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadi.' }
   }
+
+  const { data: selectedAccounts, error: selectionError } = await supabase.from('accounts').select('id').eq('org_id', org.id).in('id', accountIds).eq('enabled', true).eq('is_locked', false)
+  if (selectionError || selectedAccounts?.length !== accountIds.length) return { error: 'Seçilen hatlardan biri gönderime açık değil. Hat seçimini kontrol edin.' }
 
   // Kampanya motoru hedefleri listelerden uretir; bu ara liste Kisiler'de
   // source=quick_send ile gizlenir. Kullaniciya ayri "liste olustur" adimi yok.
@@ -160,7 +146,7 @@ export async function quickSend(
       name: campaignName,
       body: body || null,
       media_url: mediaUrl || null,
-      message_type: messageType,
+      message_type: mediaUrl ? 'image' : 'text',
       source_list_ids: [list.id],
       min_delay_seconds: 8,
       max_delay_seconds: 25,
@@ -189,7 +175,10 @@ export async function quickSend(
     priority: 10,
   })
 
-  if (jobError) return { error: jobError }
+  if (jobError) {
+    revalidatePath('/kampanyalar')
+    redirect(`/kampanyalar/${campaign.id}?uyari=baslatilamadi`)
+  }
 
   revalidatePath('/kampanyalar')
   revalidatePath('/hizli-gonderim')

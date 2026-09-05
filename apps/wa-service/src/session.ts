@@ -11,9 +11,10 @@ import {
   type WASocket,
 } from '@whiskeysockets/baileys'
 import NodeCache from 'node-cache'
-import { jidToE164, toE164, type AccountStatus } from '@wa/shared'
+import { jidToE164, toE164, warmupCap, type AccountStatus } from '@wa/shared'
 import { createAuthHandle, type AuthHandle } from './auth-store.js'
-import { logAccountEvent, patchAccount, type AccountRow } from './accounts.js'
+import { incrementSentToday, loadAccount, remainingDailyQuota, logAccountEvent, patchAccount, type AccountRow } from './accounts.js'
+import { awaitDelivery } from './delivery.js'
 import { env } from './env.js'
 import { logger } from './logger.js'
 import { readLeaseHolder, releaseLease, renewLease } from './lease.js'
@@ -95,6 +96,7 @@ export class WhatsAppSession {
   /** Kapanis baslamissa yeni is kabul edilmez ve yeniden baglanma denenmez. */
   private shuttingDown = false
   private disposed = false
+  private sending = false
 
   /**
    * startSock disinda tutuluyor ki restart'i assin. Icine tasinirsa her
@@ -827,16 +829,28 @@ export class WhatsAppSession {
       throw new Error(`Hesap bagli degil (durum: ${this.status})`)
     }
 
-    const message = await withTimeout(
-      sock.sendMessage(jid, content),
-      env.sendTimeoutMs,
-      'sendMessage',
-    )
-
-    if (!message) throw new Error('WhatsApp mesaj kimligi dondurmedi')
-
-    await rememberSentMessage(this.accountId, message)
-    return message
+    if (this.shuttingDown || this.disposed) throw new Error('Oturum kapanıyor')
+    if (this.sending) throw new Error('Bu hatta başka bir gönderim sürüyor')
+    this.sending = true
+    try {
+      const account = await loadAccount(this.accountId)
+      if (!account || !account.enabled || account.is_locked) throw new Error('Hat gönderime kapalı')
+      const remaining = await remainingDailyQuota(account)
+      if (remaining <= 0 || account.sent_today >= warmupCap(account.warmup_started_at)) throw new Error('Günlük gönderim sınırına ulaşıldı')
+      if (account.reachout_locked_until && Date.parse(account.reachout_locked_until) > Date.now()) throw new Error('Yeni sohbet kısıtı devam ediyor')
+      if (account.new_chat_quota_total !== null && account.new_chat_quota_used !== null && account.new_chat_quota_used >= account.new_chat_quota_total) throw new Error('Yeni sohbet kotası doldu')
+      if (await readLeaseHolder(this.accountId) !== env.workerId) throw new Error('Oturum sahipliği doğrulanamadı')
+      if (this.shuttingDown || !this.isLive) throw new Error('Oturum gönderimden önce kapandı')
+      const message = await awaitDelivery(sock.sendMessage(jid, content), env.sendTimeoutMs)
+      // Delivery has happened: accounting errors must not cause another send.
+      await incrementSentToday(this.accountId).catch(error => {
+        this.log.error({ err: error }, 'Gönderildi; günlük sayaç kaydedilemedi')
+      })
+      await rememberSentMessage(this.accountId, message)
+      return message
+    } finally {
+      this.sending = false
+    }
   }
 
   /** Kullanicinin acik logout istegi. sock.logout() yalnizca burada cagrilir. */

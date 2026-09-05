@@ -1,4 +1,4 @@
-export type {
+﻿export type {
   Database,
   Json,
   Tables,
@@ -6,6 +6,7 @@ export type {
   TablesUpdate,
 } from './database.types'
 
+export * from './capacity'
 export * from './jobs'
 export * from './phone'
 export * from './plans'

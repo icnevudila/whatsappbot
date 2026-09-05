@@ -17,6 +17,12 @@ export async function enqueueJob<T extends JobType>(options: {
   try {
     const { userId, org, supabase } = await requireActiveOrg()
 
+    for (const [table, id] of [['accounts', options.accountId], ['campaigns', options.campaignId]] as const) {
+      if (!id) continue
+      const { data: resource, error } = await supabase.from(table).select('id').eq('id', id).eq('org_id', org.id).maybeSingle()
+      if (error || !resource) return { id: null, error: 'İşlem bu çalışma alanına ait bir kayıt için yapılmalı.' }
+    }
+
     const { data, error } = await supabase
       .from('jobs')
       .insert({

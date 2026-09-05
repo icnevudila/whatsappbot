@@ -63,3 +63,5 @@ tmp/
 
 .vercel
 .env*.local
+
+test-results/

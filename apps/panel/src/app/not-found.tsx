@@ -1,0 +1,2 @@
+import { AccentLink, QuietLink } from '@/components/ui'
+export default function NotFound() { return <main className="mx-auto flex min-h-[65vh] max-w-lg flex-col justify-center gap-4 px-6 py-16"><p className="font-mono text-xs text-accent">404 · SAYFA BULUNAMADI</p><h1 className="text-3xl font-semibold">Aradığınız sayfa burada değil.</h1><p className="text-sm text-ink-muted">Bağlantı değişmiş veya bu kayıt kaldırılmış olabilir.</p><div className="flex gap-2"><AccentLink href="/durum">Çalışma alanına dön</AccentLink><QuietLink href="/">Ana sayfa</QuietLink></div></main> }

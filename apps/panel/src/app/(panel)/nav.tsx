@@ -24,6 +24,7 @@ const MORE = [
   { href: '/raporlar', label: 'Raporlar' },
   { href: '/kara-liste', label: 'Kara liste' },
   { href: '/marka-kiti', label: 'Marka kiti' },
+  { href: '/yardim', label: 'Yardım' },
 ] as const
 
 function NavLink({

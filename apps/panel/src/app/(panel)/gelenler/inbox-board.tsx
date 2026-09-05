@@ -1,22 +1,12 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import {
-  AccentLink,
-  Button,
-  Card,
-  CardHeader,
-  EmptyState,
-  Notice,
-  QuietLink,
-  StatusPill,
-} from '@/components/ui'
-import { WaMark } from '@/components/wa-mark'
+import { Button, Card, CardHeader, EmptyState, Input, Notice, StatusPill } from '@/components/ui'
+import { ReplyForm } from './reply-form'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { blacklistPhone } from '../kara-liste/actions'
-import { InboxReplyForm } from './inbox-reply-form'
 
 export type InboxMessage = {
   id: number
@@ -40,7 +30,6 @@ export type ThreadPreview = {
   accountLabel: string | null
   isReply?: boolean
   missingPhone?: boolean
-  waStatus?: string | null
 }
 
 export type InboxTab = 'tum' | 'yanitlar' | 'yeni'
@@ -64,25 +53,6 @@ function hrefFor(opts: {
   return `/gelenler?${params.toString()}`
 }
 
-function messageTypeLabel(type: string): string {
-  switch (type) {
-    case 'text':
-      return 'metin'
-    case 'image':
-      return 'görsel'
-    case 'video':
-      return 'video'
-    case 'document':
-      return 'belge'
-    case 'audio':
-      return 'ses'
-    case 'sticker':
-      return 'çıkartma'
-    default:
-      return type || 'mesaj'
-  }
-}
-
 export function InboxBoard({
   orgId,
   tab,
@@ -92,10 +62,9 @@ export function InboxBoard({
   newCount,
   previews,
   selectedPhone,
-  selectedPreview,
-  selectedBlacklisted,
   thread,
   accountLabels,
+  initialInbound,
 }: {
   orgId: string
   tab: InboxTab
@@ -105,27 +74,21 @@ export function InboxBoard({
   newCount: number
   previews: ThreadPreview[]
   selectedPhone: string | null
-  selectedPreview: ThreadPreview | null
-  selectedBlacklisted: boolean
   thread: InboxMessage[]
   accountLabels: Record<string, string>
+  initialInbound: InboxMessage[]
 }) {
   const router = useRouter()
   const [list, setList] = useState(previews)
   const [pending, startTransition] = useTransition()
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [blacklisted, setBlacklisted] = useState(selectedBlacklisted)
+  const [search, setSearch] = useState('')
+  const visibleList = list.filter(item => `${item.phone} ${item.lastBody ?? ''} ${item.accountLabel ?? ''}`.toLocaleLowerCase('tr-TR').includes(search.toLocaleLowerCase('tr-TR')))
 
   useEffect(() => {
     setList(previews)
   }, [previews])
-
-  useEffect(() => {
-    setBlacklisted(selectedBlacklisted)
-    setNotice(null)
-    setError(null)
-  }, [selectedPhone, selectedBlacklisted])
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient()
@@ -141,10 +104,8 @@ export function InboxBoard({
         },
         (payload) => {
           const row = payload.new as InboxMessage
-          // Gelenlerde canlı yenile; tam konuşmada gidenleri de yakala.
-          if (row.direction === 'in' || threadMode === 'tam') {
-            router.refresh()
-          }
+          if (row.direction !== 'in' && row.direction !== 'out') return
+          router.refresh()
         },
       )
       .subscribe()
@@ -152,11 +113,16 @@ export function InboxBoard({
     return () => {
       void supabase.removeChannel(channel)
     }
-  }, [orgId, router, threadMode])
+  }, [orgId, router])
+
+  const selectedPreview = useMemo(
+    () => list.find((item) => item.phone === selectedPhone) ?? null,
+    [list, selectedPhone],
+  )
 
   const block = () => {
     if (!selectedPhone || !selectedPhone.startsWith('+')) {
-      setError('Bu konuşmada geçerli telefon numarası yok; kara listeye eklenemedi.')
+      setError('Bu konuşmada E.164 numara yok; kara listeye eklenemedi.')
       return
     }
     setError(null)
@@ -164,62 +130,33 @@ export function InboxBoard({
     startTransition(async () => {
       const result = await blacklistPhone(selectedPhone, 'Gelenler’den eklendi')
       if (result.error) setError(result.error)
-      else {
-        setBlacklisted(true)
-        setNotice('Kara listeye eklendi. Bundan sonra kampanya ve hızlı gönderim bu numarayı atlar.')
-        router.refresh()
-      }
+      else setNotice('Kara listeye eklendi. Bundan sonra kampanya bu numarayı atlar.')
     })
   }
 
   const emptyCopy =
     tab === 'yanitlar'
       ? {
-          title: 'Henüz yanıt yok',
-          description: 'Sizin yazdığınız numaralardan cevap gelince burada toplanır.',
-          action: <AccentLink href="/hizli-gonderim">Hızlı gönderime git</AccentLink>,
+          title: 'Yanıt yok',
+          description: 'Sizin yazdığınız numaralardan yanıt gelince burada görünür.',
         }
       : tab === 'yeni'
         ? {
-            title: 'Henüz yeni gelen yok',
+            title: 'Yeni gelen yok',
             description:
-              'Henüz yazmadığınız numaralar veya telefonu bilinmeyen sohbetler burada listelenir.',
-            action: <QuietLink href="/durum">Durum paneline bak</QuietLink>,
+              'Henüz yazmadığınız numaralar veya telefonu çözülememiş (LID) sohbetler burada listelenir.',
           }
         : {
-            title: 'Henüz gelen yok',
-            description: 'Bağlı hatlara mesaj gelince sohbetler burada görünür.',
-            action: (
-              <div className="flex flex-wrap justify-center gap-2">
-                <AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>
-                <QuietLink href="/durum">Durum</QuietLink>
-              </div>
-            ),
+            title: 'Gelen yok',
+            description: 'Bağlı hatlara mesaj gelince burada görünür.',
           }
-
-  const threadSubtitle = (() => {
-    const parts: string[] = []
-    if (selectedPreview?.missingPhone) parts.push('Telefon çözülemedi')
-    else if (selectedPreview?.accountLabel) parts.push(`Hat: ${selectedPreview.accountLabel}`)
-    parts.push('salt okuma')
-    if (threadMode === 'tam') parts.push('gidenler dahil')
-    else parts.push('yalnız gelen')
-    if (blacklisted) parts.push('kara listede')
-    return parts.join(' · ')
-  })()
 
   return (
     <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-      <Card>
+      <Card className={selectedPhone ? 'hidden lg:block' : ''}>
         <CardHeader
           title="Sohbetler"
-          subtitle={
-            tab === 'yanitlar'
-              ? `${list.length} yanıt · sizin yazdıklarınız`
-              : tab === 'yeni'
-                ? `${list.length} yeni · henüz yazılmamış`
-                : `${list.length} sohbet`
-          }
+          subtitle={`${list.length} kişi`}
           action={
             <div className="flex flex-wrap gap-1 text-[11.5px]">
               <Link
@@ -238,7 +175,6 @@ export function InboxBoard({
                     ? 'font-medium text-accent'
                     : 'text-ink-muted hover:text-ink'
                 }
-                title="Daha önce mesaj attığınız numaralardan gelenler"
               >
                 Yanıtlar ({replyCount})
               </Link>
@@ -248,22 +184,18 @@ export function InboxBoard({
                 className={
                   tab === 'yeni' ? 'font-medium text-accent' : 'text-ink-muted hover:text-ink'
                 }
-                title="Henüz yazmadığınız numaralar veya çözülememiş sohbetler"
               >
                 Yeni ({newCount})
               </Link>
             </div>
           }
         />
-        {list.length === 0 ? (
-          <EmptyState
-            title={emptyCopy.title}
-            description={emptyCopy.description}
-            action={emptyCopy.action}
-          />
+        <div className="border-b border-hairline p-3"><Input aria-label="Sohbetlerde ara" type="search" placeholder="Numara veya mesaj ara…" value={search} onChange={event => setSearch(event.target.value)} /></div>
+        {visibleList.length === 0 ? (
+          <EmptyState title={search ? 'Sohbet bulunamadı' : emptyCopy.title} description={search ? 'Başka bir numara veya kelimeyle arayın.' : emptyCopy.description} />
         ) : (
           <ul className="max-h-[70vh] divide-y divide-hairline overflow-y-auto">
-            {list.map((item) => {
+            {visibleList.map((item) => {
               const active = item.phone === selectedPhone
               return (
                 <li key={item.phone}>
@@ -274,20 +206,15 @@ export function InboxBoard({
                     }`}
                   >
                     <div className="flex items-baseline justify-between gap-2">
-                      <div className="flex min-w-0 items-center gap-1.5">
-                        {!item.missingPhone && item.waStatus ? (
-                          <WaMark status={item.waStatus} className="shrink-0" />
-                        ) : null}
-                        <p className="truncate font-mono text-[12.5px] tabular">
-                          {item.missingPhone ? item.phone.replace(/@lid$/, '') : item.phone}
-                        </p>
-                      </div>
+                      <p className="truncate font-mono text-[12.5px] tabular">
+                        {item.missingPhone ? item.phone.replace(/@lid$/, '') : item.phone}
+                      </p>
                       <span className="shrink-0 text-[10.5px] text-ink-faint">
                         {timeFormat.format(new Date(item.lastAt))}
                       </span>
                     </div>
                     <p className="mt-0.5 truncate text-[12px] text-ink-muted">
-                      {item.lastBody ?? `(${messageTypeLabel(item.messageType)})`}
+                      {item.lastBody ?? `(${item.messageType})`}
                     </p>
                     <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-ink-faint">
                       {item.accountLabel ? <span>{item.accountLabel}</span> : null}
@@ -297,14 +224,8 @@ export function InboxBoard({
                         </span>
                       ) : null}
                       {item.isReply ? (
-                        <span className="rounded-sm border border-accent/30 bg-accent/8 px-1 py-px text-[10px] text-accent">
-                          yanıt
-                        </span>
-                      ) : (
-                        <span className="rounded-sm border border-hairline px-1 py-px text-[10px]">
-                          yeni
-                        </span>
-                      )}
+                        <span className="text-[10px] text-accent">yanıt</span>
+                      ) : null}
                     </div>
                   </Link>
                 </li>
@@ -314,9 +235,10 @@ export function InboxBoard({
         )}
       </Card>
 
-      <Card>
+      <Card className={selectedPhone ? 'flex min-w-0 flex-col' : 'hidden lg:block'}>
         {selectedPhone ? (
           <>
+            <Link href={hrefFor({ tab, threadMode })} className="border-b border-hairline px-4 py-3 text-sm text-accent lg:hidden">← Tüm sohbetler</Link>
             <CardHeader
               title={
                 selectedPreview?.missingPhone
@@ -324,12 +246,11 @@ export function InboxBoard({
                   : selectedPhone
               }
               subtitle={
-                <span className="inline-flex flex-wrap items-center gap-2">
-                  {!selectedPreview?.missingPhone && selectedPreview?.waStatus ? (
-                    <WaMark status={selectedPreview.waStatus} showLabel />
-                  ) : null}
-                  <span>{threadSubtitle}</span>
-                </span>
+                selectedPreview?.missingPhone
+                  ? 'Telefon çözülemedi (LID) · salt okuma'
+                  : selectedPreview?.accountLabel
+                    ? `Hat: ${selectedPreview.accountLabel}`
+                    : 'Konuşma geçmişi'
               }
               action={
                 <div className="flex flex-wrap items-center gap-2">
@@ -340,54 +261,17 @@ export function InboxBoard({
                       threadMode: threadMode === 'gelen' ? 'tam' : 'gelen',
                     })}
                     className="text-[11.5px] text-ink-muted underline decoration-hairline-strong underline-offset-2 hover:text-ink"
-                    title={
-                      threadMode === 'gelen'
-                        ? 'Giden mesajları da göster'
-                        : 'Yalnızca gelen mesajları göster'
-                    }
                   >
-                    {threadMode === 'gelen' ? 'Tam konuşma (gidenler dahil)' : 'Sadece gelen'}
+                    {threadMode === 'gelen' ? 'Tam konuşma' : 'Sadece gelen'}
                   </Link>
                   {selectedPhone.startsWith('+') ? (
-                    blacklisted ? (
-                      <QuietLink href="/kara-liste" className="text-[12px]">
-                        Kara listede
-                      </QuietLink>
-                    ) : (
-                      <Button disabled={pending} onClick={block}>
-                        {pending ? 'Ekleniyor…' : 'Kara listeye al'}
-                      </Button>
-                    )
+                    <Button disabled={pending} onClick={block}>
+                      {pending ? 'Ekleniyor…' : 'Kara listeye al'}
+                    </Button>
                   ) : null}
                 </div>
               }
             />
-
-            <div className="border-b border-hairline px-4 py-2 text-[11.5px] text-ink-muted">
-              {threadMode === 'gelen' ? (
-                <>
-                  Salt okuma · yalnızca gelenler. Giden mesajlarınızı görmek için{' '}
-                  <Link
-                    href={hrefFor({ tel: selectedPhone, tab, threadMode: 'tam' })}
-                    className="font-medium text-ink underline decoration-hairline-strong underline-offset-2"
-                  >
-                    Tam konuşma
-                  </Link>
-                  ’ya geçin.
-                </>
-              ) : (
-                <>
-                  Tam konuşma · gelen ve giden. Aşağıdan yanıt yazabilirsiniz.
-                </>
-              )}
-            </div>
-
-            <div className="border-b border-hairline px-4 py-3">
-              <InboxReplyForm
-                phone={selectedPhone}
-                accountId={selectedPreview?.accountId ?? null}
-              />
-            </div>
 
             {(notice || error) && (
               <div className="space-y-2 border-b border-hairline px-4 py-3">
@@ -398,26 +282,11 @@ export function InboxBoard({
 
             {thread.length === 0 ? (
               <EmptyState
-                title="Henüz mesaj yok"
-                description={
-                  threadMode === 'tam'
-                    ? 'Bu numara için gelen veya giden kayıt bulunamadı.'
-                    : 'Bu numara için henüz gelen mesaj yok. Gidenler için Tam konuşma’ya geçin.'
-                }
-                action={
-                  threadMode === 'gelen' ? (
-                    <QuietLink
-                      href={hrefFor({ tel: selectedPhone, tab, threadMode: 'tam' })}
-                    >
-                      Tam konuşmayı aç
-                    </QuietLink>
-                  ) : (
-                    <QuietLink href="/hizli-gonderim">Hızlı gönderim</QuietLink>
-                  )
-                }
+                title="Konuşma boş"
+                description="Bu numara için henüz kayıtlı mesaj yok."
               />
             ) : (
-              <div className="flex max-h-[70vh] flex-col gap-2 overflow-y-auto p-4">
+              <div className="flex max-h-[55vh] min-h-48 flex-col gap-3 overflow-y-auto bg-canvas/50 p-5">
                 {thread.map((row) => {
                   const outgoing = row.direction === 'out'
                   return (
@@ -432,8 +301,8 @@ export function InboxBoard({
                             : 'border-hairline bg-canvas'
                         }`}
                       >
-                        <p className="whitespace-pre-wrap text-[12.5px] text-ink">
-                          {row.body ?? `(${messageTypeLabel(row.message_type)})`}
+                        <p className="whitespace-pre-wrap break-words text-[13px] leading-relaxed text-ink">
+                          {row.body ?? `(${row.message_type})`}
                         </p>
                         <p className="mt-1 text-[10.5px] text-ink-faint">
                           {outgoing ? 'Giden' : 'Gelen'}
@@ -443,34 +312,27 @@ export function InboxBoard({
                           {' · '}
                           {timeFormat.format(new Date(row.created_at))}
                           {row.campaign_id ? ' · kampanya' : ''}
-                          {outgoing && row.status ? (
-                            <>
-                              {' · '}
-                              <StatusPill status={row.status} />
-                            </>
-                          ) : null}
                         </p>
+                        {outgoing && <div className="mt-1.5"><StatusPill status={row.status} /></div>}
                       </div>
                     </div>
                   )
                 })}
               </div>
             )}
+            {selectedPhone.startsWith('+') && (selectedPreview?.accountId || thread.at(-1)?.account_id) ? <ReplyForm key={selectedPhone} phone={selectedPhone} accountId={(selectedPreview?.accountId || thread.at(-1)?.account_id)!} /> : <p className="border-t border-hairline p-4 text-xs text-ink-muted">Yanıt verebilmek için bu konuşmanın telefon numarası ve hattı belirlenmiş olmalı.</p>}
           </>
         ) : (
           <EmptyState
             title="Bir sohbet seçin"
-            description="Soldan bir numaraya tıklayın. Varsayılan: yalnız gelenler; Tam konuşma’da gidenler de görünür."
-            action={
-              <div className="flex flex-wrap justify-center gap-2">
-                <QuietLink href="/durum">Durum</QuietLink>
-                <QuietLink href="/kara-liste">Kara liste</QuietLink>
-                <QuietLink href="/hizli-gonderim">Hızlı gönderim</QuietLink>
-              </div>
-            }
+            description="Soldan bir sohbet seçerek geçmişi okuyun ve yanıt verin."
           />
         )}
       </Card>
+
+      <span className="hidden" aria-hidden>
+        {initialInbound.length}
+      </span>
     </div>
   )
 }

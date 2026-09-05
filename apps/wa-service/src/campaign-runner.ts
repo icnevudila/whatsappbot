@@ -1,6 +1,7 @@
-import { e164ToJid } from '@wa/shared'
+import { e164ToJid, warmupCap } from '@wa/shared'
 import type { AnyMessageContent } from '@whiskeysockets/baileys'
-import { incrementSentToday, lockAccount, logAccountEvent } from './accounts.js'
+import { lockAccount, logAccountEvent } from './accounts.js'
+import { DeliveryUncertainError } from './delivery.js'
 import { one, query } from './db.js'
 import { env } from './env.js'
 import { logger } from './logger.js'
@@ -20,19 +21,6 @@ const STALE_SENDING_MS = env.sendTimeoutMs + 60_000
  * Isindirma egrisi. Yeni bir hesap ilk gunden yuz mesaj atmaya kalkarsa
  * kisitlanma olasiligi cok yuksek; kota hesabin yasina gore aciliyor.
  */
-function warmupCap(warmupStartedAt: string | null): number {
-  if (!warmupStartedAt) return 10
-
-  const days = Math.floor(
-    (Date.now() - new Date(warmupStartedAt).getTime()) / (24 * 60 * 60 * 1_000),
-  )
-
-  if (days < 1) return 10
-  if (days < 3) return 25
-  if (days < 7) return 60
-  if (days < 14) return 120
-  return 250
-}
 
 type CampaignRow = {
   id: string
@@ -242,8 +230,8 @@ async function reconcileCampaignCounts(campaignId: string): Promise<void> {
 async function reclaimStaleSending(): Promise<void> {
   const rows = await query<{ id: string; campaign_id: string }>(
     `update public.campaign_targets
-        set status = 'queued',
-            error = coalesce(error, 'Gonderim yarida kaldi, yeniden denenecek'),
+        set status = 'failed',
+            error = 'Gönderim yarıda kaldı; sonuç belirsiz. Çift mesajı önlemek için otomatik tekrar yapılmadı.',
             updated_at = now()
       where status = 'sending'
         and updated_at < now() - ($1::int * interval '1 millisecond')
@@ -252,7 +240,7 @@ async function reclaimStaleSending(): Promise<void> {
   )
 
   if (rows.length > 0) {
-    log.warn({ count: rows.length }, 'Takili sending hedefleri kuyruga alindi')
+    log.warn({ count: rows.length }, 'Belirsiz gonderimler inceleme icin sonlandirildi')
   }
 }
 
@@ -430,7 +418,9 @@ async function sendToTarget(
       where id = $1::bigint and status = 'sending'
       returning id::text`,
     [target.id, message.key?.id ?? null],
-  )
+  ).catch(error => {
+    throw new DeliveryUncertainError('WhatsApp mesajı kabul etti fakat sonuç kaydedilemedi. Otomatik tekrar yapılmadı.', { cause: error })
+  })
 
   // Baska worker reclaim edip gondermis olabilir — cift kayit yazma.
   if (updated.length === 0) {
@@ -447,7 +437,6 @@ async function sendToTarget(
 
   await reconcileCampaignCounts(campaign.id)
 
-  await incrementSentToday(account.account_id)
 
   const messageType =
     !campaign.media_url || campaign.message_type === 'text'
@@ -486,6 +475,12 @@ async function handleSendFailure(
 ): Promise<void> {
   const message = error instanceof Error ? error.message : String(error)
   const code = extractStatusCode(error)
+
+  if (error instanceof DeliveryUncertainError) {
+    await query(`update public.campaign_targets set status = 'failed', error = $2, updated_at = now() where id = $1::bigint and status = 'sending'`, [target.id, message])
+    await reconcileCampaignCounts(campaign.id)
+    return
+  }
 
   // Geri donusu olmayan durumlar: hesabi kilitle.
   // Kampanyayi tumden durdurma: baska canli hesap varsa devam etsin.
@@ -647,6 +642,7 @@ async function runCampaign(campaign: CampaignRow): Promise<void> {
   let claimedAny = false
 
   for (const account of accounts) {
+    if (!running) return
     // Tek kilitli/reachout hesabi kampanyayi durdurmaz; o hesabi atla.
     if (account.is_locked) continue
 
@@ -686,6 +682,12 @@ async function runCampaign(campaign: CampaignRow): Promise<void> {
     }
 
     claimedAny = true
+
+    const currentCampaign = await one<{ status: string }>('select status from public.campaigns where id = $1', [campaign.id])
+    if (!running || currentCampaign?.status !== 'running') {
+      await query(`update public.campaign_targets set status = 'queued', attempts = greatest(0, attempts - 1), updated_at = now() where id = $1::bigint and status = 'sending'`, [target.id])
+      return
+    }
 
     // Gecikme gonderimden ONCE ayarlaniyor: gonderim uzun surerse bile
     // ayni hesap icin ikinci bir gonderim ayni tick'te baslamaz.
@@ -781,6 +783,7 @@ async function tick(): Promise<void> {
     )
 
     for (const campaign of campaigns) {
+      if (!running) break
       try {
         await runCampaign(campaign)
         await completeIfDone(campaign.id)

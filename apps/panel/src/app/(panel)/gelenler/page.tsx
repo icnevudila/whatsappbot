@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { AccentLink, PageHeader, QuietLink } from '@/components/ui'
+import { AccentLink, PageHeader } from '@/components/ui'
 import { requireActiveOrg } from '@/lib/org'
 import { InboxBoard, type InboxMessage, type ThreadPreview } from './inbox-board'
 
@@ -40,7 +40,7 @@ export default async function InboxPage({
   const sekmeRaw = Array.isArray(params.sekme) ? params.sekme[0] : params.sekme
   const tab = resolveTab(sekmeRaw)
   const konusmaRaw = Array.isArray(params.konusma) ? params.konusma[0] : params.konusma
-  const threadMode: ThreadMode = konusmaRaw === 'tam' ? 'tam' : 'gelen'
+  const threadMode: ThreadMode = konusmaRaw === 'gelen' ? 'gelen' : 'tam'
 
   const [{ data: inbound }, { data: outboundPhones }, { data: accounts }, { count: inboundToday }] =
     await Promise.all([
@@ -94,22 +94,7 @@ export default async function InboxPage({
       accountLabel: row.account_id ? accountLabels[row.account_id] ?? null : null,
       isReply,
       missingPhone: !hasPhone,
-      waStatus: null,
     })
-  }
-
-  const e164Phones = [...allPreviews.keys()].filter((phone) => phone.startsWith('+')).slice(0, 200)
-  if (e164Phones.length > 0) {
-    const { data: contactRows } = await supabase
-      .from('contacts')
-      .select('phone_e164, wa_status')
-      .eq('org_id', org.id)
-      .in('phone_e164', e164Phones)
-
-    for (const contact of contactRows ?? []) {
-      const preview = allPreviews.get(contact.phone_e164)
-      if (preview) preview.waStatus = contact.wa_status ?? null
-    }
   }
 
   const allList = [...allPreviews.values()]
@@ -117,11 +102,8 @@ export default async function InboxPage({
   const newList = allList.filter((p) => !p.isReply)
   const previews =
     tab === 'yanitlar' ? replyList : tab === 'yeni' ? newList : allList
-  const selectedPreview =
-    (selectedPhone ? allPreviews.get(selectedPhone) : null) ?? null
 
   let thread: InboxMessage[] = []
-  let selectedBlacklisted = false
   if (selectedPhone) {
     let threadQuery = supabase
       .from('message_log')
@@ -129,7 +111,7 @@ export default async function InboxPage({
         'id, account_id, direction, phone_e164, remote_jid, message_type, body, status, created_at, campaign_id',
       )
       .eq('org_id', org.id)
-      .order('id', { ascending: true })
+      .order('id', { ascending: false })
       .limit(200)
 
     if (threadMode === 'gelen') {
@@ -140,34 +122,21 @@ export default async function InboxPage({
       ? threadQuery.eq('phone_e164', selectedPhone)
       : threadQuery.eq('remote_jid', selectedPhone)
 
-    const [{ data: threadRows }, blacklistResult] = await Promise.all([
-      threadQuery,
-      selectedPhone.startsWith('+')
-        ? supabase
-            .from('blacklist')
-            .select('id')
-            .eq('org_id', org.id)
-            .eq('phone_e164', selectedPhone)
-            .maybeSingle()
-        : Promise.resolve({ data: null }),
-    ])
-    thread = (threadRows ?? []) as InboxMessage[]
-    selectedBlacklisted = Boolean(blacklistResult.data)
+    const { data: threadRows } = await threadQuery
+    thread = [...(threadRows ?? [])].reverse() as InboxMessage[]
   }
 
   return (
     <>
       <PageHeader
         title="Gelenler"
-        description="Salt okuma: bağlı hatlara gelen mesajlar. Gidenler “Tam konuşma”da görünür. “dur”, “yazma” veya “stop” yanıtları kara listeye alınır."
+        description="Konuşmaları okuyun, bağlı hattınızdan yanıtlayın ve çıkış taleplerini yönetin. Son 200 gelen mesajdan oluşan güncel sohbetler gösterilir."
         action={
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="mr-1 tabular text-[12.5px] text-ink-muted">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="tabular text-[12.5px] text-ink-muted">
               Bugün {inboundToday ?? 0} gelen
             </span>
-            <AccentLink href="/durum">Durum</AccentLink>
-            <QuietLink href="/kara-liste">Kara liste</QuietLink>
-            <QuietLink href="/hizli-gonderim">Hızlı gönderim</QuietLink>
+            <AccentLink href="/kara-liste">Kara liste</AccentLink>
           </div>
         }
       />
@@ -181,10 +150,9 @@ export default async function InboxPage({
         newCount={newList.length}
         previews={previews}
         selectedPhone={selectedPhone ?? null}
-        selectedPreview={selectedPreview}
-        selectedBlacklisted={selectedBlacklisted}
         thread={thread}
         accountLabels={accountLabels}
+        initialInbound={(inbound ?? []) as InboxMessage[]}
       />
     </>
   )

@@ -5,19 +5,8 @@
  * olmali. Panel daha iyimser bir sayi gosterirse kullanici gonderimin neden
  * durdugunu anlayamaz; ikisinin ayrilmasi en sinsi hata sinifi.
  */
-export function warmupCap(warmupStartedAt: string | null): number {
-  if (!warmupStartedAt) return 10
-
-  const days = Math.floor(
-    (Date.now() - new Date(warmupStartedAt).getTime()) / (24 * 60 * 60 * 1_000),
-  )
-
-  if (days < 1) return 10
-  if (days < 3) return 25
-  if (days < 7) return 60
-  if (days < 14) return 120
-  return 250
-}
+import { warmupCap } from '@wa/shared'
+export { warmupCap } from '@wa/shared'
 
 export type CapacityInput = {
   daily_send_limit: number

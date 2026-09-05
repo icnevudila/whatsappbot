@@ -5,6 +5,7 @@ import { logger } from './logger.js'
 import { sessionManager } from './session-manager.js'
 import { materializeTargets, stopCampaign } from './campaign-runner.js'
 import { verifyContacts } from './verify.js'
+import { DeliveryUncertainError } from './delivery.js'
 
 const log = logger.child({ scope: 'jobs' })
 
@@ -18,6 +19,7 @@ type JobRow = {
   payload: Record<string, unknown>
   attempts: number
   max_attempts: number
+  result: Record<string, unknown> | null
 }
 
 async function claim(): Promise<JobRow[]> {
@@ -54,7 +56,7 @@ class NonRetryableJobError extends Error {
 
 async function markFailed(job: JobRow, error: unknown): Promise<void> {
   const message = error instanceof Error ? error.message : String(error)
-  const nonRetryable = error instanceof NonRetryableJobError
+  const nonRetryable = error instanceof NonRetryableJobError || error instanceof DeliveryUncertainError
   const canRetry = !nonRetryable && job.attempts < job.max_attempts
 
   if (canRetry) {
@@ -145,6 +147,7 @@ async function handle(job: JobRow): Promise<unknown> {
     }
 
     case 'message.send': {
+      if (job.result?.delivery_attempted) throw new NonRetryableJobError('Önceki gönderimin sonucu belirsiz. Çift mesajı önlemek için yeniden gönderilmedi.')
       const accountId = requireAccountId(job)
       const payload = job.payload as JobPayloadMap['message.send']
 
@@ -203,6 +206,8 @@ async function handle(job: JobRow): Promise<unknown> {
       }
 
       const jid = entry.jid ?? e164ToJid(payload.phone_e164)
+      const marked = await query<{ id: string }>(`update public.jobs set result = '{"delivery_attempted":true}'::jsonb, updated_at = now() where id = $1::bigint and claimed_by = $2 and status = 'running' returning id::text`, [job.id, env.workerId])
+      if (marked.length === 0) throw new NonRetryableJobError('İş sahipliği kaybedildi; gönderilmedi.')
       let messageId: string | null = null
       const mediaUrl = payload.media_url
       const messageType = payload.message_type ?? (mediaUrl ? 'image' : 'text')
@@ -455,7 +460,12 @@ async function tick(): Promise<void> {
           continue
         }
         const result = await handle(job)
-        await markDone(job.id, result)
+        try {
+          await markDone(job.id, result)
+        } catch (error) {
+          if (job.type === 'message.send') throw new NonRetryableJobError('Gönderim işlendi fakat sonuç kaydedilemedi. Otomatik tekrar yapılmadı.')
+          throw error
+        }
       } catch (error) {
         await markFailed(job, error)
       } finally {

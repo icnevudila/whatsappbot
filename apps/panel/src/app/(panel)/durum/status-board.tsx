@@ -99,8 +99,8 @@ export function StatusBoard({
     }
   }, [orgId, setLines, setCampaigns])
 
-  const connected = lines.filter((line) => line.status === 'connected' && !line.is_locked)
-  const usedToday = connected.reduce((total, line) => {
+  const connected = lines.filter((line) => line.status === 'connected' && line.enabled && !line.is_locked)
+  const usedToday = lines.reduce((total, line) => {
     const today = new Date().toISOString().slice(0, 10)
     return total + (line.sent_today_on === today ? line.sent_today : 0)
   }, 0)
@@ -119,7 +119,7 @@ export function StatusBoard({
     if (typeof total !== 'number' || typeof used !== 'number' || total <= 0) return false
     return used / total > 0.8
   }).length
-  const atRisk = lockedCount + reachoutCount + quotaTightCount
+  const atRisk = lines.filter(line => line.is_locked || (line.reachout_locked_until && Date.parse(line.reachout_locked_until) > now) || (typeof line.new_chat_quota_total === 'number' && typeof line.new_chat_quota_used === 'number' && line.new_chat_quota_total > 0 && line.new_chat_quota_used / line.new_chat_quota_total > 0.8)).length
 
   return (
     <div className="flex flex-col gap-4">
@@ -133,7 +133,7 @@ export function StatusBoard({
             detail={
               lines.length > connected.length
                 ? `${lines.length - connected.length} hat kapalı veya kilitli`
-                : 'Hepsi çalışıyor'
+                : lines.length === 0 ? 'İlk WhatsApp hattınızı bağlayın' : 'Hepsi çalışıyor'
             }
             tone={connected.length > 0 ? 'accent' : 'muted'}
           />
