@@ -89,6 +89,49 @@ export async function updateOrgName(
   return { ok: 'İşletme adı güncellendi.' }
 }
 
+export async function updateOrgWebhook(
+  _previous: OrgActionState,
+  formData: FormData,
+): Promise<OrgActionState> {
+  const webhookUrl = String(formData.get('webhook_url') ?? '').trim()
+  const webhookSecret = String(formData.get('webhook_secret') ?? '').trim()
+
+  if (webhookUrl) {
+    try {
+      const u = new URL(webhookUrl)
+      if (u.protocol !== 'https:' && u.protocol !== 'http:') {
+        return { error: 'Webhook http(s) olmalı.' }
+      }
+    } catch {
+      return { error: 'Geçersiz webhook URL.' }
+    }
+  }
+
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  try {
+    ;({ org, supabase } = await requireActiveOrg())
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
+  }
+
+  if (org.role !== 'owner' && org.role !== 'admin') {
+    return { error: 'Yalnızca yönetici webhook ayarlayabilir.' }
+  }
+
+  const { error } = await supabase
+    .from('organizations')
+    .update({
+      webhook_url: webhookUrl || null,
+      webhook_secret: webhookSecret || null,
+    } as never)
+    .eq('id', org.id)
+
+  if (error) return { error: error.message }
+  revalidatePath('/ayarlar')
+  return { ok: 'Webhook kaydedildi.' }
+}
+
 export async function addOrgMember(
   _previous: OrgActionState,
   formData: FormData,

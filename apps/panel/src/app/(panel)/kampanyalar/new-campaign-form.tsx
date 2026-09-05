@@ -371,6 +371,16 @@ export function NewCampaignForm({
           </p>
         </details>
 
+        <Field
+          label="Mesaj B (A/B, isteğe bağlı)"
+          hint="Spintax: {Merhaba|Selam} {{ad}}. A/B yüzdesi > 0 ise hedeflerin bir kısmı B alır."
+        >
+          <Textarea name="body_b" rows={3} placeholder="{Merhaba|Selam} {{ad}}, kampanyamız başladı…" />
+        </Field>
+        <Field label="A/B — B yüzdesi (0–100)">
+          <Input name="ab_percent" type="number" min={0} max={100} defaultValue={0} />
+        </Field>
+
         <fieldset className="space-y-2 rounded-md border border-hairline px-3 py-3">
           <legend className="px-1 text-[12px] font-medium text-ink-muted">Başlangıç</legend>
           <label className="flex items-center gap-2 text-[13px]">

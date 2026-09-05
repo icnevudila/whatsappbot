@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@sentry/node": "^10.73.0",
     "@wa/shared": "*",
     "@whiskeysockets/baileys": "6.7.24",
     "cheerio": "^1.1.2",

@@ -5,6 +5,7 @@ import { Button, EmptyState, Field, Input, Notice, Select } from '@/components/u
 import {
   addOrgMember,
   updateOrgName,
+  updateOrgWebhook,
   type OrgActionState,
 } from '../org-actions'
 
@@ -53,6 +54,52 @@ export function OrgSettingsForm({
       {canEdit ? (
         <Button type="submit" variant="accent" disabled={pending}>
           {pending ? 'Kaydediliyor…' : 'İşletmeyi kaydet'}
+        </Button>
+      ) : null}
+    </form>
+  )
+}
+
+export function WebhookSettingsForm({
+  webhookUrl,
+  canEdit,
+}: {
+  webhookUrl: string | null
+  canEdit: boolean
+}) {
+  const [state, formAction, pending] = useActionState<OrgActionState, FormData>(
+    updateOrgWebhook,
+    null,
+  )
+
+  return (
+    <form action={formAction} className="space-y-4 p-4">
+      <Field
+        label="CRM webhook URL"
+        hint="message.inbound ve campaign.completed olayları POST edilir."
+      >
+        <Input
+          name="webhook_url"
+          type="url"
+          defaultValue={webhookUrl ?? ''}
+          disabled={!canEdit}
+          placeholder="https://example.com/hooks/filo"
+        />
+      </Field>
+      <Field label="Webhook secret (opsiyonel)" hint="İstek başlığı: x-filo-secret">
+        <Input
+          name="webhook_secret"
+          type="password"
+          disabled={!canEdit}
+          placeholder="••••••••"
+          autoComplete="off"
+        />
+      </Field>
+      {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
+      {state?.ok ? <Notice tone="accent">{state.ok}</Notice> : null}
+      {canEdit ? (
+        <Button type="submit" variant="accent" disabled={pending}>
+          {pending ? 'Kaydediliyor…' : 'Webhook kaydet'}
         </Button>
       ) : null}
     </form>

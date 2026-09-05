@@ -5,6 +5,8 @@ import { one, query } from './db.js'
 import { env } from './env.js'
 import { logger } from './logger.js'
 import { sessionManager } from './session-manager.js'
+import { expandSpintax, pickAbVariant } from './spintax.js'
+import { emitOrgWebhook } from './org-hooks.js'
 import type { WhatsAppSession } from './session.js'
 
 const log = logger.child({ scope: 'campaign' })
@@ -39,6 +41,8 @@ type CampaignRow = {
   name: string
   message_type: string
   body: string | null
+  body_b: string | null
+  ab_percent: number
   media_url: string | null
   min_delay_seconds: number
   max_delay_seconds: number
@@ -87,7 +91,7 @@ export async function materializeTargets(
   campaignId: string,
 ): Promise<{ inserted: number; total: number }> {
   const campaign = await one<CampaignRow>(
-    `select id, org_id, created_by, name, message_type, body, media_url,
+    `select id, org_id, created_by, name, message_type, body, body_b, ab_percent, media_url,
             min_delay_seconds, max_delay_seconds, daily_cap_per_account, source_list_ids
        from public.campaigns where id = $1`,
     [campaignId],
@@ -392,7 +396,14 @@ async function sendToTarget(
     jid = verdict.jid ?? e164ToJid(target.phone_e164)
   }
 
-  const body = personalize(campaign.body, target.contact_name)
+  const variant = pickAbVariant({
+    bodyA: campaign.body,
+    bodyB: campaign.body_b,
+    abPercent: campaign.ab_percent,
+    targetId: target.id,
+  })
+  const rawBody = variant === 'b' ? campaign.body_b : campaign.body
+  const body = expandSpintax(personalize(rawBody, target.contact_name))
   const content = buildContent(campaign, body) as AnyMessageContent
   const message = await session.sendMessage(jid, content)
 
@@ -527,6 +538,16 @@ async function completeIfDone(campaignId: string): Promise<boolean> {
     [campaignId],
   )
   log.info({ campaignId }, 'Kampanya tamamlandi')
+  const camp = await one<{ org_id: string; name: string }>(
+    `select org_id::text, name from public.campaigns where id = $1`,
+    [campaignId],
+  )
+  if (camp) {
+    void emitOrgWebhook(camp.org_id, 'campaign.completed', {
+      campaign_id: campaignId,
+      name: camp.name,
+    })
+  }
   return true
 }
 
@@ -708,7 +729,7 @@ async function tick(): Promise<void> {
     await promoteScheduledCampaigns()
 
     const campaigns = await query<CampaignRow>(
-      `select id, org_id, created_by, name, message_type, body, media_url,
+      `select id, org_id, created_by, name, message_type, body, body_b, ab_percent, media_url,
               min_delay_seconds, max_delay_seconds, daily_cap_per_account, source_list_ids
          from public.campaigns
         where status = 'running'

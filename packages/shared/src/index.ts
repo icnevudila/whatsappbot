@@ -9,3 +9,4 @@ export type {
 export * from './jobs'
 export * from './phone'
 export * from './scrape'
+export * from './spintax'

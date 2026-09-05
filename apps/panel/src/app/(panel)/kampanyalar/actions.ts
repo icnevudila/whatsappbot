@@ -14,6 +14,8 @@ export async function createCampaign(
   const name = String(formData.get('name') ?? '').trim()
   const body = String(formData.get('body') ?? '').trim()
   const mediaUrl = String(formData.get('media_url') ?? '').trim()
+  const bodyB = String(formData.get('body_b') ?? '').trim()
+  const abPercent = Number(formData.get('ab_percent') ?? 0)
   const rawType = String(formData.get('message_type') ?? '').trim()
   const listIds = formData.getAll('lists').map(String).filter(Boolean)
   const accountIds = formData.getAll('accounts').map(String).filter(Boolean)
@@ -87,6 +89,8 @@ export async function createCampaign(
       created_by: userId,
       name,
       body: body || null,
+      body_b: bodyB || null,
+      ab_percent: Number.isFinite(abPercent) ? Math.max(0, Math.min(100, abPercent)) : 0,
       media_url: mediaUrl || null,
       message_type: messageType,
       source_list_ids: listIds,
@@ -95,7 +99,7 @@ export async function createCampaign(
       daily_cap_per_account: dailyCap,
       status: scheduledAt ? 'scheduled' : 'draft',
       scheduled_at: scheduledAt,
-    })
+    } as never)
     .select('id')
     .single()
 

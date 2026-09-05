@@ -16,8 +16,9 @@ import { activeTextProviders } from '@/lib/ai/text'
 import { capToday } from '@/lib/capacity'
 import { requireActiveOrg } from '@/lib/org'
 import { signOut } from '@/app/giris/actions'
-import { MembersPanel, OrgSettingsForm } from './org-forms'
+import { MembersPanel, OrgSettingsForm, WebhookSettingsForm } from './org-forms'
 import { ProfileForm } from './profile-form'
+import { BillingCheckoutButton } from './billing-checkout-button'
 
 export const metadata: Metadata = { title: 'Ayarlar' }
 
@@ -188,6 +189,22 @@ export default async function SettingsPage() {
               }
             />
             <OrgSettingsForm orgName={org.name} canEdit={canManage} />
+          </Card>
+
+          <Card>
+            <CardHeader
+              title="Entegrasyonlar"
+              subtitle="CRM webhook · otomatik yanıt · faturalama"
+            />
+            <WebhookSettingsForm
+              webhookUrl={org.webhook_url ?? null}
+              canEdit={canManage}
+            />
+            <div className="flex flex-wrap gap-2 border-t border-hairline px-4 py-3">
+              <QuietLink href="/ayarlar/otomatik-yanit">Otomatik yanıt kuralları</QuietLink>
+              <QuietLink href="/raporlar">Raporlar / CSV</QuietLink>
+              {canManage ? <BillingCheckoutButton /> : null}
+            </div>
           </Card>
 
           <Card>

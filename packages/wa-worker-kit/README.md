@@ -45,7 +45,7 @@ Notlar:
 - `brand_kits` / `creatives` worker sorgulamaz ama FK zinciri için zorunlu.
 - `organizations_tenancy` `org_id` ekler — worker buna bağlı.
 - Autoscale tabloları (`worker_heartbeat`, `scaler_state`) demette; bkz. [docs/autoscale.md](../../docs/autoscale.md).
-
+- Saf Postgres: önce [`schema/standalone-auth-stub.sql`](./schema/standalone-auth-stub.sql), sonra SQL bundle.
 ## Env (minimum)
 
 | Değişken | Açıklama |

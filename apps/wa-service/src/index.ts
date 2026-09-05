@@ -23,7 +23,7 @@ import { startScaler, stopScaler } from './scaler.js'
 import { sessionManager } from './session-manager.js'
 import { initMonitoring, captureException } from './monitoring.js'
 
-initMonitoring()
+initMonitoring().catch(() => undefined)
 
 const HEALTH_CHECK_INTERVAL_MS = 60_000
 const STALE_JOB_RECLAIM_INTERVAL_MS = 60_000
@@ -49,6 +49,9 @@ async function buildHealthPayload(): Promise<{ status: number; body: unknown }> 
         ready: dbOk,
         db: dbOk,
         actuator: env.scaleActuator,
+        wabaConfigured: Boolean(
+          process.env.WABA_ACCESS_TOKEN?.trim() && process.env.WABA_PHONE_NUMBER_ID?.trim(),
+        ),
         limits: {
           min: env.scalerMinWorkers,
           max: env.scalerMaxWorkers,

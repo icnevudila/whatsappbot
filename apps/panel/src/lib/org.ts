@@ -8,6 +8,7 @@ export type ActiveOrg = {
   accounts_quota: number
   monthly_message_quota: number
   role: string
+  webhook_url?: string | null
 }
 
 /**
@@ -82,6 +83,7 @@ export async function requireActiveOrg(): Promise<{
       accounts_quota: org.accounts_quota,
       monthly_message_quota: org.monthly_message_quota,
       role: member.role,
+      webhook_url: (org as { webhook_url?: string | null }).webhook_url ?? null,
     },
     supabase,
   }

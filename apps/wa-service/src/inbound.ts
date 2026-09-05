@@ -2,6 +2,11 @@ import { isJidGroup, isLidUser, type WAMessage } from '@whiskeysockets/baileys'
 import { jidToE164 } from '@wa/shared'
 import { query } from './db.js'
 import { logger } from './logger.js'
+import {
+  emitOrgWebhook,
+  findMatchingAutoReply,
+  recentOutboundExists,
+} from './org-hooks.js'
 
 const OPT_OUT =
   /\b(dur|yazma|yazmayın|yazmayin|çıkar|cikar|çıkarın|cikarin|stop|unsubscribe|iptal)\b/i
@@ -130,5 +135,43 @@ export async function persistInboundMessage(options: {
       [orgId, createdBy, phone, `Otomatik: gelen yanıt — ${body.slice(0, 80)}`],
     )
     logger.info({ accountId, phone }, 'Opt-out: kara listeye eklendi')
+  }
+
+  void emitOrgWebhook(orgId, 'message.inbound', {
+    account_id: accountId,
+    phone_e164: phone,
+    message_type: type,
+    body: body?.slice(0, 500) ?? null,
+    wa_message_id: waMessageId,
+  })
+
+  // Otomatik yanit: job kuyruguna message.send
+  if (phone && !OPT_OUT.test(body ?? '')) {
+    try {
+      const rule = await findMatchingAutoReply(orgId, body)
+      if (rule) {
+        const cooling = await recentOutboundExists(orgId, phone, rule.cooldown_seconds)
+        if (!cooling) {
+          await query(
+            `insert into public.jobs
+               (org_id, created_by, account_id, type, payload, priority, status)
+             values ($1, $2, $3, 'message.send', $4::jsonb, 50, 'pending')`,
+            [
+              orgId,
+              createdBy,
+              accountId,
+              JSON.stringify({
+                phone_e164: phone,
+                body: rule.reply_body,
+                message_type: 'text',
+              }),
+            ],
+          )
+          logger.info({ accountId, phone, ruleId: rule.id }, 'Auto-reply kuyruga alindi')
+        }
+      }
+    } catch (error) {
+      logger.warn({ err: error, accountId }, 'Auto-reply basarisiz')
+    }
   }
 }

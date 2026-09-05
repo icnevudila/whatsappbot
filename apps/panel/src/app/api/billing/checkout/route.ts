@@ -1,20 +1,22 @@
 import { NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { requireActiveOrg } from '@/lib/org'
 
 export const runtime = 'nodejs'
 
 /**
- * Stripe faturalama iskeleti.
- * STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET set edilince webhook dogrulanir.
- * Su an: checkout oturumu olusturma icin env yoksa 503.
+ * Stripe Checkout — metadata.org_id + filo_plan ile webhook org gunceller.
  */
 export async function POST(request: Request) {
-  const supabase = await createSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) {
+  let userId: string
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  try {
+    ;({ userId, org } = await requireActiveOrg())
+  } catch {
     return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 })
+  }
+
+  if (org.role !== 'owner' && org.role !== 'admin') {
+    return NextResponse.json({ error: 'Yalnızca admin yükseltebilir.' }, { status: 403 })
   }
 
   const secret = process.env.STRIPE_SECRET_KEY?.trim()
@@ -28,7 +30,12 @@ export async function POST(request: Request) {
     )
   }
 
-  let body: { priceId?: string; successUrl?: string; cancelUrl?: string }
+  let body: {
+    priceId?: string
+    plan?: string
+    successUrl?: string
+    cancelUrl?: string
+  }
   try {
     body = await request.json()
   } catch {
@@ -40,6 +47,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'priceId gerekli.' }, { status: 400 })
   }
 
+  const plan = (body.plan?.trim() || 'starter').toLowerCase()
   const successUrl =
     body.successUrl?.trim() ||
     process.env.STRIPE_SUCCESS_URL?.trim() ||
@@ -55,8 +63,17 @@ export async function POST(request: Request) {
   params.set('cancel_url', cancelUrl)
   params.set('line_items[0][price]', priceId)
   params.set('line_items[0][quantity]', '1')
-  params.set('client_reference_id', user.id)
-  params.set('customer_email', user.email ?? '')
+  params.set('client_reference_id', org.id)
+  params.set('metadata[org_id]', org.id)
+  params.set('metadata[filo_plan]', plan)
+  params.set('metadata[user_id]', userId)
+
+  const { data: userData } = await (
+    await import('@/lib/supabase/server')
+  ).createSupabaseServerClient().then((s) => s.auth.getUser())
+  if (userData.user?.email) {
+    params.set('customer_email', userData.user.email)
+  }
 
   const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
     method: 'POST',
@@ -67,7 +84,11 @@ export async function POST(request: Request) {
     body: params,
   })
 
-  const data = (await response.json()) as { id?: string; url?: string; error?: { message?: string } }
+  const data = (await response.json()) as {
+    id?: string
+    url?: string
+    error?: { message?: string }
+  }
   if (!response.ok) {
     return NextResponse.json(
       { error: data.error?.message ?? 'Stripe hata' },
