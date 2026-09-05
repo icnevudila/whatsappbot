@@ -3,26 +3,23 @@
  * Baileys ile paralel kanal: WABA_ACCESS_TOKEN + WABA_PHONE_NUMBER_ID set ise
  * sendTextCloudApi kullanilabilir. Varsayilan yol hâlâ Baileys.
  */
-import { env } from './env.js'
 import { logger } from './logger.js'
+import { isWabaConfigured } from './waba-config.js'
+
+export { isWabaConfigured } from './waba-config.js'
 
 const log = logger.child({ scope: 'waba' })
-
-export function isWabaConfigured(): boolean {
-  return Boolean(
-    process.env.WABA_ACCESS_TOKEN?.trim() && process.env.WABA_PHONE_NUMBER_ID?.trim(),
-  )
-}
 
 export async function sendTextCloudApi(options: {
   toE164: string
   body: string
 }): Promise<{ messageId: string | null }> {
-  const token = process.env.WABA_ACCESS_TOKEN?.trim()
-  const phoneId = process.env.WABA_PHONE_NUMBER_ID?.trim()
-  if (!token || !phoneId) {
+  if (!isWabaConfigured()) {
     throw new Error('WABA yapilandirilmadi')
   }
+
+  const token = process.env.WABA_ACCESS_TOKEN!.trim()
+  const phoneId = process.env.WABA_PHONE_NUMBER_ID!.trim()
 
   const to = options.toE164.replace(/^\+/, '')
   const res = await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
@@ -45,7 +42,7 @@ export async function sendTextCloudApi(options: {
   }
 
   if (!res.ok) {
-    log.error({ err: data.error, worker: env.workerId }, 'WABA send failed')
+    log.error({ err: data.error }, 'WABA send failed')
     throw new Error(data.error?.message ?? `WABA ${res.status}`)
   }
 

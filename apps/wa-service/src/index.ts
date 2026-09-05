@@ -21,6 +21,7 @@ import { releaseOwnStaleLeases } from './lease.js'
 import { logger } from './logger.js'
 import { startScaler, stopScaler } from './scaler.js'
 import { sessionManager } from './session-manager.js'
+import { computeWorkerReady } from './health-ready.js'
 import { initMonitoring, captureException, flushMonitoring } from './monitoring.js'
 
 initMonitoring().catch(() => undefined)
@@ -66,9 +67,12 @@ async function buildHealthPayload(): Promise<{ status: number; body: unknown }> 
   const pending = await pendingJobCount().catch(() => -1)
   const staleClaimed = await staleClaimedJobCount().catch(() => -1)
 
-  const healthy = dbOk
-  const ready =
-    dbOk && (report.tracked === 0 || report.live > 0) && report.stale.length === 0
+  const { healthy, ready, degraded } = computeWorkerReady({
+    dbOk,
+    tracked: report.tracked,
+    live: report.live,
+    staleCount: report.stale.length,
+  })
 
   return {
     status: healthy ? 200 : 503,
@@ -77,7 +81,7 @@ async function buildHealthPayload(): Promise<{ status: number; body: unknown }> 
       worker: env.workerId,
       healthy,
       ready,
-      degraded: report.stale.length > 0 || (report.tracked > 0 && report.live === 0),
+      degraded,
       db: dbOk,
       sessions: {
         tracked: report.tracked,

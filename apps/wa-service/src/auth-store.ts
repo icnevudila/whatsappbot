@@ -12,13 +12,15 @@ import type { PoolClient } from 'pg'
 import { one, query, tx } from './db.js'
 import { logger } from './logger.js'
 import { env } from './env.js'
+import { AUTH_SCHEMA_VERSION } from './auth-schema.js'
+
+export { AUTH_SCHEMA_VERSION } from './auth-schema.js'
 
 /**
  * wa.auth_state / wa.creds icindeki formatin surumu.
  * Baileys v8 auth formatini degistiriyor ve migrate edilmemis hesaplar v8'de
  * hic baglanmiyor; bu kolon toplu migrasyonu bastan mumkun kiliyor.
  */
-export const AUTH_SCHEMA_VERSION = 7
 
 /**
  * jsonb'ye yazarken Buffer'lar BufferJSON.replacer ile
