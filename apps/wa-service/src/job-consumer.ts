@@ -177,13 +177,27 @@ async function handle(job: JobRow): Promise<unknown> {
 
       const jid = entry.jid ?? e164ToJid(payload.phone_e164)
       let messageId: string | null = null
+      const mediaUrl = payload.media_url
+      const messageType = payload.message_type ?? (mediaUrl ? 'image' : 'text')
       try {
-        const message = payload.media_url
-          ? await session.sendMessage(jid, {
-              image: { url: payload.media_url },
-              caption: payload.body ?? undefined,
-            })
-          : await session.sendMessage(jid, { text: payload.body ?? '' })
+        let content: Parameters<typeof session.sendMessage>[1]
+        if (!mediaUrl || messageType === 'text') {
+          content = { text: payload.body ?? '' }
+        } else if (messageType === 'image') {
+          content = { image: { url: mediaUrl }, caption: payload.body ?? undefined }
+        } else if (messageType === 'video') {
+          content = { video: { url: mediaUrl }, caption: payload.body ?? undefined }
+        } else if (messageType === 'document') {
+          content = {
+            document: { url: mediaUrl },
+            mimetype: 'application/octet-stream',
+            caption: payload.body ?? undefined,
+            fileName: 'dosya',
+          }
+        } else {
+          throw new Error(`Desteklenmeyen mesaj tipi: ${messageType}`)
+        }
+        const message = await session.sendMessage(jid, content)
         messageId = message.key?.id ?? null
       } catch (error) {
         throw error
@@ -201,9 +215,9 @@ async function handle(job: JobRow): Promise<unknown> {
             accountId,
             jid,
             payload.phone_e164,
-            payload.media_url ? 'image' : 'text',
+            messageType,
             payload.body ?? null,
-            payload.media_url ?? null,
+            mediaUrl ?? null,
             messageId,
           ],
         )

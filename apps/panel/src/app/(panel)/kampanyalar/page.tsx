@@ -9,6 +9,36 @@ import { NewCampaignForm } from './new-campaign-form'
 export const metadata: Metadata = { title: 'Kampanyalar' }
 export const dynamic = 'force-dynamic'
 
+function meterTone(
+  status: string,
+  failedCount: number,
+): 'accent' | 'warn' | 'danger' {
+  if (status === 'stopped' || status === 'failed') return 'danger'
+  if (failedCount > 0) return 'warn'
+  return 'accent'
+}
+
+function statusHint(status: string): string | null {
+  switch (status) {
+    case 'draft':
+      return 'Henüz başlamadı'
+    case 'scheduled':
+      return 'Zamanı bekliyor'
+    case 'running':
+      return 'Canlı gönderim'
+    case 'paused':
+      return 'Duraklatıldı'
+    case 'completed':
+      return 'Bitti'
+    case 'stopped':
+      return 'Durduruldu'
+    case 'failed':
+      return 'Hata ile bitti'
+    default:
+      return null
+  }
+}
+
 export default async function CampaignsPage() {
   let userId: string
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
@@ -63,85 +93,121 @@ export default async function CampaignsPage() {
     disabled: account.is_locked || account.status !== 'connected',
   }))
 
+  const connectedCount = accountOptions.filter((a) => !a.disabled).length
+
   return (
     <>
       <PageHeader
         title="Kampanyalar"
-        description="Listeden seçip gönderin. Oluşturunca hemen başlar; duraklatabilir veya durdurabilirsiniz. Canlı ilerleme ve numara satırları kampanya detayında."
+        description="Listeden seçip gönderin. Oluşturunca hemen başlar; detayda canlı ilerleme ve numaralar görünür."
         action={<AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>}
       />
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_400px]">
         <div className="order-2 lg:order-1">
-        <Card>
-          <CardHeader title="Geçmiş" subtitle={`${campaigns.length} kampanya`} />
-
-          {campaigns.length === 0 ? (
-            <EmptyState
-              title="Henüz kampanya yok"
-              description="Sağdaki formu doldurun: liste + mesaj + hat seçimi. Tek seferlik için numaraları yapıştırmak yeterliyse Hızlı gönderim daha hızlıdır."
-              action={<AccentLink href="/hizli-gonderim">Hızlı gönderime git</AccentLink>}
+          <Card>
+            <CardHeader
+              title="Geçmiş"
+              subtitle={
+                campaigns.length === 0
+                  ? 'Henüz kayıt yok'
+                  : `${campaigns.length} kampanya · tıklayınca paylaşılan numaralar`
+              }
             />
-          ) : (
-            <ul className="divide-y divide-hairline">
-              {campaigns.map((campaign) => {
-                const done =
-                  campaign.sent_count + campaign.failed_count + campaign.skipped_count
 
-                return (
-                  <li key={campaign.id}>
-                    <Link
-                      href={`/kampanyalar/${campaign.id}`}
-                      className="block px-4 py-3 transition-colors hover:bg-surface-raised"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="min-w-0 truncate text-[13px] font-medium">
-                          {campaign.name}
+            {campaigns.length === 0 ? (
+              <EmptyState
+                title="Henüz kampanya yok"
+                description={
+                  listOptions.length === 0
+                    ? 'Önce Kişiler’de bir liste oluşturun, sonra buradan kampanya başlatın. Tek seferlik için Hızlı gönderim yeterli.'
+                    : connectedCount === 0
+                      ? 'Liste hazır; gönderim için en az bir bağlı WhatsApp hattı gerekir. Hesaplar’dan QR veya eşleştirme kodu alın.'
+                      : 'Sağdaki formdan liste, mesaj ve hat seçerek oluşturun. Tek seferlik için Hızlı gönderim yeterli.'
+                }
+                action={
+                  listOptions.length === 0 ? (
+                    <AccentLink href="/kisiler">Kişilere git</AccentLink>
+                  ) : connectedCount === 0 ? (
+                    <AccentLink href="/hesaplar">Hesaplara git</AccentLink>
+                  ) : (
+                    <AccentLink href="/hizli-gonderim">Hızlı gönderime git</AccentLink>
+                  )
+                }
+              />
+            ) : (
+              <ul className="divide-y divide-hairline">
+                {campaigns.map((campaign) => {
+                  const done =
+                    campaign.sent_count + campaign.failed_count + campaign.skipped_count
+                  const total = Math.max(0, campaign.total_targets)
+                  const hint = statusHint(campaign.status)
+
+                  return (
+                    <li key={campaign.id}>
+                      <Link
+                        href={`/kampanyalar/${campaign.id}#paylasilanlar`}
+                        className="block px-4 py-3 transition-colors hover:bg-surface-raised"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-[13px] font-medium">{campaign.name}</p>
+                            {hint ? (
+                              <p className="mt-0.5 text-[11px] text-ink-faint">{hint}</p>
+                            ) : null}
+                          </div>
+                          <StatusPill status={campaign.status} />
+                        </div>
+
+                        <div className="mt-2 flex items-center gap-2.5">
+                          <Meter
+                            value={done}
+                            max={Math.max(1, total)}
+                            tone={meterTone(campaign.status, campaign.failed_count)}
+                          />
+                          <span className="shrink-0 tabular text-[11px] text-ink-faint">
+                            {done}/{total || '—'}
+                          </span>
+                        </div>
+
+                        <p className="mt-1.5 text-[11.5px] text-ink-muted tabular">
+                          {campaign.sent_count} gönderildi
+                          {campaign.skipped_count > 0
+                            ? ` · ${campaign.skipped_count} atlandı`
+                            : ''}
+                          {campaign.failed_count > 0
+                            ? ` · ${campaign.failed_count} başarısız`
+                            : ''}
+                          {total > 0 ? ` · ${total} hedef` : ''}
+                          <span className="text-ink-faint"> · paylaşılanlar →</span>
                         </p>
-                        <StatusPill status={campaign.status} />
-                      </div>
 
-                      <div className="mt-2">
-                        <Meter
-                          value={done}
-                          max={Math.max(1, campaign.total_targets)}
-                          tone={campaign.status === 'stopped' ? 'danger' : 'accent'}
-                        />
-                      </div>
-
-                      <p className="mt-1.5 text-[11.5px] text-ink-muted tabular">
-                        {campaign.sent_count} gönderildi
-                        {campaign.skipped_count > 0
-                          ? ` · ${campaign.skipped_count} atlandı`
-                          : ''}
-                        {campaign.failed_count > 0
-                          ? ` · ${campaign.failed_count} başarısız`
-                          : ''}
-                        {campaign.total_targets > 0 ? ` · ${campaign.total_targets} hedef` : ''}
-                      </p>
-
-                      {campaign.stop_reason ? (
-                        <p className="mt-1 text-[11.5px] text-danger">
-                          {campaign.stop_reason}
-                        </p>
-                      ) : null}
-                    </Link>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </Card>
+                        {campaign.stop_reason ? (
+                          <p
+                            className="mt-1.5 line-clamp-2 rounded-md border border-danger/25 bg-danger/8 px-2 py-1 text-[11.5px] text-danger"
+                            title={campaign.stop_reason}
+                          >
+                            <span className="font-medium">Durdurma nedeni:</span>{' '}
+                            {campaign.stop_reason}
+                          </p>
+                        ) : null}
+                      </Link>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </Card>
         </div>
 
         <div className="order-1 lg:order-2">
-        <NewCampaignForm
-          lists={listOptions}
-          accounts={accountOptions}
-          userId={userId}
-          aiEnabled={hasTextProvider()}
-          brandName={brandResult.data?.name ?? undefined}
-        />
+          <NewCampaignForm
+            lists={listOptions}
+            accounts={accountOptions}
+            userId={userId}
+            aiEnabled={hasTextProvider()}
+            brandName={brandResult.data?.name ?? undefined}
+          />
         </div>
       </div>
     </>

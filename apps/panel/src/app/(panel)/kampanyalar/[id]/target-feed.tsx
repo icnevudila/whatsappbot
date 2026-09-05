@@ -1,8 +1,9 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import type { Tables } from '@wa/shared'
-import { Card, CardHeader, EmptyState, StatusPill } from '@/components/ui'
+import { Card, CardHeader, EmptyState, QuietLink, StatusPill } from '@/components/ui'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 
 export type TargetView = Pick<
@@ -10,11 +11,13 @@ export type TargetView = Pick<
   'id' | 'phone_e164' | 'status' | 'error' | 'sent_at' | 'wa_message_id' | 'updated_at'
 >
 
-type Filter = 'all' | 'sent' | 'queued' | 'skipped' | 'failed' | 'sending'
+type Filter = 'all' | 'sent' | 'queued' | 'skipped' | 'failed' | 'sending' | 'delivered' | 'read'
 
 const FILTERS: { key: Filter; label: string }[] = [
   { key: 'all', label: 'Tümü' },
   { key: 'sent', label: 'Gönderildi' },
+  { key: 'delivered', label: 'Teslim' },
+  { key: 'read', label: 'Okundu' },
   { key: 'queued', label: 'Kuyruk' },
   { key: 'sending', label: 'Gönderiliyor' },
   { key: 'skipped', label: 'Atlandı' },
@@ -22,7 +25,7 @@ const FILTERS: { key: Filter; label: string }[] = [
 ]
 
 /**
- * Kampanya hedefleri — giden numaralarin gercek kaynagi.
+ * Kampanya hedefleri — giden numaralarin gercek kaynagi (paylasilanlar).
  *
  * message_log bazen yazilmadan kalabiliyor (timeout / restart); campaign_targets
  * her zaman guncelleniyor. Bu yuzden listeyi buradan okuyoruz.
@@ -30,9 +33,11 @@ const FILTERS: { key: Filter; label: string }[] = [
 export function TargetFeed({
   campaignId,
   initial,
+  campaignStatus,
 }: {
   campaignId: string
   initial: TargetView[]
+  campaignStatus?: string
 }) {
   const [targets, setTargets] = useState(initial)
   const [filter, setFilter] = useState<Filter>('all')
@@ -100,6 +105,8 @@ export function TargetFeed({
       sending: 0,
       skipped: 0,
       failed: 0,
+      delivered: 0,
+      read: 0,
     }
     for (const row of targets) {
       if (row.status in base) base[row.status as Filter] += 1
@@ -109,18 +116,33 @@ export function TargetFeed({
 
   const visible = filter === 'all' ? targets : targets.filter((row) => row.status === filter)
 
+  const emptyTitle =
+    targets.length === 0
+      ? campaignStatus === 'draft'
+        ? 'Henüz numara yok'
+        : 'Paylaşılan numara yok'
+      : 'Bu filtrede satır yok'
+
+  const emptyDescription =
+    targets.length === 0
+      ? campaignStatus === 'draft'
+        ? 'Kampanya başlayınca numaralar burada listelenir.'
+        : 'Bu kampanya için henüz numara satırı oluşmamış. Liste boşsa Kişiler’e bakın.'
+      : 'Başka bir durum filtresi seçin veya Tümü’ne dönün.'
+
   return (
     <Card>
       <CardHeader
-        title="Numaralar"
-        subtitle={`${counts.sent} gönderildi · ${counts.skipped} atlandı · ${counts.failed} başarısız · ${counts.queued + counts.sending} bekliyor`}
+        title="Paylaşılanlar"
+        subtitle={`${counts.sent + counts.delivered + counts.read} iletildi · ${counts.skipped} atlandı · ${counts.failed} başarısız · ${counts.queued + counts.sending} bekliyor`}
       />
 
       <p className="border-b border-hairline px-4 py-2 text-[11.5px] leading-relaxed text-ink-faint">
-        <span className="font-medium text-ink-muted">Atlandı</span> = WhatsApp’ta yok,
-        kota veya geçici kilit. <span className="font-medium text-ink-muted">Başarısız</span>{' '}
-        = iletilemedi (satırdaki hata metnine bakın). Durum rozetinin üzerine gelince
-        kısa açıklama çıkar.
+        Kampanyanın gittiği numaralar. Numaraya tıklayınca Gelenler’de tam konuşmayı açar.{' '}
+        <span className="font-medium text-ink-muted">Atlandı:</span> WhatsApp’ta yok, kota
+        veya geçici kilit.{' '}
+        <span className="font-medium text-ink-muted">Başarısız:</span> iletilemedi
+        (satırdaki hata metnine bakın).
       </p>
 
       <div className="flex flex-wrap gap-1 border-b border-hairline px-4 py-2">
@@ -148,8 +170,21 @@ export function TargetFeed({
 
       {visible.length === 0 ? (
         <EmptyState
-          title="Henüz hedef yok"
-          description="Kampanya başladığında numaralar burada listelenir."
+          title={emptyTitle}
+          description={emptyDescription}
+          action={
+            targets.length === 0 ? (
+              <QuietLink href="/kisiler">Kişilere git</QuietLink>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setFilter('all')}
+                className="text-[12.5px] font-medium text-accent underline underline-offset-2"
+              >
+                Tümünü göster
+              </button>
+            )
+          }
         />
       ) : (
         <ul className="divide-y divide-hairline">
@@ -160,13 +195,22 @@ export function TargetFeed({
             >
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-mono text-[12.5px] tabular text-ink">
+                  <Link
+                    href={`/gelenler?tel=${encodeURIComponent(row.phone_e164)}&konusma=tam`}
+                    className="font-mono text-[12.5px] tabular text-ink underline-offset-2 hover:text-accent hover:underline"
+                    title="Gelenler’de konuşmayı aç"
+                  >
                     {row.phone_e164}
-                  </span>
+                  </Link>
                   <StatusPill status={row.status} />
                 </div>
                 {row.error ? (
-                  <p className="mt-0.5 truncate text-[11.5px] text-danger">{row.error}</p>
+                  <p
+                    className="mt-0.5 truncate text-[11.5px] text-danger"
+                    title={row.error}
+                  >
+                    {row.error}
+                  </p>
                 ) : null}
               </div>
               <span className="shrink-0 text-[11.5px] tabular text-ink-faint">

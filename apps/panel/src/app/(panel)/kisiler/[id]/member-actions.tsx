@@ -42,7 +42,7 @@ export function MemberActions({
     return (
       <EmptyState
         title="Bu listede numara yok"
-        description="İçe aktarma veya yerel keşiften numara ekleyin; ardından kampanyada kullanın."
+        description="Listeye numara ekleyin; ardından kampanyada kullanın."
       />
     )
   }

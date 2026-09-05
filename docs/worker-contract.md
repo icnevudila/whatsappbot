@@ -48,7 +48,7 @@ Worker’ın beklediği çekirdek şema (amaç özeti):
 | `campaigns` | Kampanya tanımı; status/sayaçları worker yazar. |
 | `campaign_accounts` | Kampanyaya bağlı gönderen hesaplar. |
 | `campaign_targets` | Materyalize hedefler; claim ile `sending`. |
-| `message_log` | Gönderim / inbound kayıt. |
+| `message_log` | Gönderim / inbound kayıt. Worker outbound'ta `status` ilerletir: `sent` → `delivered` → `read` (`messages.update`). |
 | `blacklist` | Engelli numaralar. |
 | `organizations` | Kiracı (işletme); kota/plan. |
 

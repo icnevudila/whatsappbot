@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { PageHeader } from '@/components/ui'
+import { AccentLink, PageHeader, QuietLink } from '@/components/ui'
 import { requireActiveOrg } from '@/lib/org'
 import { BlacklistBoard } from './blacklist-board'
 
@@ -26,7 +26,13 @@ export default async function BlacklistPage() {
     <>
       <PageHeader
         title="Kara liste"
-        description="Bu numaralara hiçbir kampanya veya hızlı gönderim mesajı gönderilmez. Servis hedefleri oluştururken bunları otomatik atlar."
+        description="Bu numaralara kampanya veya hızlı gönderim mesajı gitmez. Gelenler’den de tek tıkla eklenebilir."
+        action={
+          <div className="flex flex-wrap gap-2">
+            <AccentLink href="/gelenler">Gelenler</AccentLink>
+            <QuietLink href="/kisiler">Kişiler</QuietLink>
+          </div>
+        }
       />
       <BlacklistBoard initial={data ?? []} />
     </>

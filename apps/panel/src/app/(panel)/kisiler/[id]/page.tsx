@@ -14,7 +14,9 @@ export async function generateMetadata({
   params: Promise<{ id: string }>
 }): Promise<Metadata> {
   const { id } = await params
-  return { title: `Liste · ${id.slice(0, 8)}` }
+  const supabase = await createSupabaseServerClient()
+  const { data } = await supabase.from('contact_lists').select('name').eq('id', id).maybeSingle()
+  return { title: data?.name ? `Liste · ${data.name}` : 'Liste' }
 }
 
 export default async function ContactListDetailPage({

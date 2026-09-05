@@ -16,7 +16,7 @@ export async function saveBrandKit(
   _previous: BrandKitState,
   formData: FormData,
 ): Promise<BrandKitState> {
-  const name = String(formData.get('name') ?? '').trim() || 'Varsayilan'
+  const name = String(formData.get('name') ?? '').trim() || 'Varsayılan'
   const logoUrl = String(formData.get('logo_url') ?? '').trim()
 
   const colors = {
@@ -33,7 +33,7 @@ export async function saveBrandKit(
   try {
     ;({ userId, org, supabase } = await requireActiveOrg())
   } catch (error) {
-    return { error: error instanceof Error ? error.message : 'Oturum bulunamadi.' }
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
   }
 
   const { data: existing } = await supabase

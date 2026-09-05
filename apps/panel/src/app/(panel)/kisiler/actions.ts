@@ -132,6 +132,27 @@ export async function verifyList(listId: string): Promise<{ error?: string }> {
 
 /** Org defterindeki kontrol edilmemis / bayat numaralari dogrular (liste bagimsiz). */
 export async function verifyAllContacts(): Promise<{ error?: string; ok?: string }> {
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  try {
+    ;({ org, supabase } = await requireActiveOrg())
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
+  }
+
+  const { count: liveCount, error: liveError } = await supabase
+    .from('accounts')
+    .select('id', { count: 'exact', head: true })
+    .eq('org_id', org.id)
+    .eq('status', 'connected')
+
+  if (liveError) return { error: liveError.message }
+  if (!liveCount) {
+    return {
+      error: 'Defter doğrulaması için bağlı bir WhatsApp hattı gerekli. Hesaplar’dan bir hat bağlayın.',
+    }
+  }
+
   const { error } = await enqueueJob({
     type: 'contacts.verify',
     payload: {},
@@ -140,7 +161,9 @@ export async function verifyAllContacts(): Promise<{ error?: string; ok?: string
   if (error) return { error }
 
   revalidatePath('/kisiler')
-  return { ok: 'WhatsApp doğrulaması kuyruğa alındı. Bağlı hat gerekir; sonuçlar listelerde ✓ / × olarak görünür.' }
+  return {
+    ok: 'Doğrulama kuyruğa alındı. Sonuçlar listelerde ✓ (var) / × (yok) olarak güncellenir; büyük defterlerde birkaç dakika sürebilir.',
+  }
 }
 
 export async function deleteList(listId: string): Promise<{ error?: string }> {
@@ -186,8 +209,23 @@ export async function removeMember(
 
 export type PhoneCheckResult = {
   error?: string
+  /** Bağlı hat yoksa UI Hesaplar’a yönlendirebilir. */
+  code?: 'no_line' | 'invalid_phone' | 'timeout' | 'failed'
   phone_e164?: string
   exists?: boolean
+}
+
+function friendlyCheckError(raw: string | null | undefined): string {
+  const text = (raw ?? '').trim()
+  if (!text) return 'Kontrol başarısız. Bağlı hattı ve servisi kontrol edip tekrar deneyin.'
+  const lower = text.toLocaleLowerCase('tr-TR')
+  if (lower.includes('bagli') || lower.includes('bağlı') || lower.includes('hesabi') || lower.includes('hesabı')) {
+    return 'Kontrol için bağlı bir WhatsApp hattı gerekli. Hesaplar’dan oturumu açın.'
+  }
+  if (lower.includes('dogrulama') || lower.includes('doğrulama') || lower.includes('oturum')) {
+    return 'Doğrulama sonucu alınamadı. Hat bağlantısı düşmüş olabilir; tekrar deneyin.'
+  }
+  return text
 }
 
 /**
@@ -195,9 +233,20 @@ export type PhoneCheckResult = {
  * Listeye zorla eklemez; defterde varsa wa_status guncellenir.
  */
 export async function checkWhatsAppPhone(rawPhone: string): Promise<PhoneCheckResult> {
-  const phone = toE164(rawPhone.trim())
+  const trimmed = rawPhone.trim()
+  if (!trimmed) {
+    return {
+      error: 'Numara girin. Örnek: 0532 123 45 67 veya +905321234567',
+      code: 'invalid_phone',
+    }
+  }
+
+  const phone = toE164(trimmed)
   if (!phone) {
-    return { error: 'Geçerli numara girin. Örnek: 0532 123 45 67 veya +905321234567' }
+    return {
+      error: 'Geçerli numara girin. Örnek: 0532 123 45 67 veya +905321234567',
+      code: 'invalid_phone',
+    }
   }
 
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
@@ -208,14 +257,22 @@ export async function checkWhatsAppPhone(rawPhone: string): Promise<PhoneCheckRe
     return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
   }
 
-  const { count: liveCount } = await supabase
+  const { count: liveCount, error: liveError } = await supabase
     .from('accounts')
     .select('id', { count: 'exact', head: true })
     .eq('org_id', org.id)
     .eq('status', 'connected')
 
+  if (liveError) {
+    return { error: liveError.message, code: 'failed' }
+  }
+
   if (!liveCount) {
-    return { error: 'Kontrol için bağlı bir WhatsApp hattı gerekli.' }
+    return {
+      error: 'Kontrol için bağlı bir WhatsApp hattı gerekli. Hesaplar’dan bir hat bağlayın.',
+      code: 'no_line',
+      phone_e164: phone,
+    }
   }
 
   const { id, error } = await enqueueJob({
@@ -224,37 +281,60 @@ export async function checkWhatsAppPhone(rawPhone: string): Promise<PhoneCheckRe
     priority: 10,
   })
   if (error || !id) {
-    return { error: error ?? 'Kontrol işi oluşturulamadı.' }
+    return { error: error ?? 'Kontrol işi oluşturulamadı.', code: 'failed', phone_e164: phone }
+  }
+
+  const numericId = Number(id)
+  if (!Number.isFinite(numericId)) {
+    return { error: 'Kontrol işi oluşturulamadı.', code: 'failed', phone_e164: phone }
   }
 
   const deadline = Date.now() + 25_000
   while (Date.now() < deadline) {
     await new Promise((resolve) => setTimeout(resolve, 400))
 
-    const { data: job } = await supabase
+    const { data: job, error: pollError } = await supabase
       .from('jobs')
       .select('status, result, error')
-      .eq('id', Number(id))
+      .eq('id', numericId)
+      .eq('org_id', org.id)
+      .eq('type', 'contacts.check_phone')
       .maybeSingle()
+
+    if (pollError) {
+      return { error: pollError.message, code: 'failed', phone_e164: phone }
+    }
 
     if (!job) continue
 
     if (job.status === 'failed' || job.status === 'cancelled') {
-      return { error: job.error ?? 'Kontrol başarısız.', phone_e164: phone }
+      return {
+        error: friendlyCheckError(job.error),
+        code: 'failed',
+        phone_e164: phone,
+      }
     }
 
     if (job.status === 'done') {
       const result = (job.result ?? {}) as { exists?: boolean; phone_e164?: string }
+      if (typeof result.exists !== 'boolean') {
+        return {
+          error: 'Kontrol sonucu okunamadı. Birkaç saniye sonra tekrar deneyin.',
+          code: 'failed',
+          phone_e164: phone,
+        }
+      }
       revalidatePath('/kisiler')
       return {
         phone_e164: result.phone_e164 ?? phone,
-        exists: result.exists === true,
+        exists: result.exists,
       }
     }
   }
 
   return {
-    error: 'Kontrol zaman aşımına uğradı. Birkaç saniye sonra tekrar deneyin.',
+    error: 'Kontrol zaman aşımına uğradı. Servis yoğun olabilir; birkaç saniye sonra tekrar deneyin.',
+    code: 'timeout',
     phone_e164: phone,
   }
 }

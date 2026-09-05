@@ -16,7 +16,7 @@ export async function updateProfile(
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { error: 'Oturum bulunamadi.' }
+  if (!user) return { error: 'Oturum bulunamadı.' }
 
   // plan ve kota alanlari bilincli olarak disarida: bunlari kullanici
   // degistirebilseydi paket siniri anlamsiz olurdu.
@@ -28,5 +28,5 @@ export async function updateProfile(
   if (error) return { error: error.message }
 
   revalidatePath('/ayarlar')
-  return { ok: 'Kaydedildi.' }
+  return { ok: 'Profil kaydedildi.' }
 }

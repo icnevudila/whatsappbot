@@ -1,9 +1,18 @@
 'use client'
-import Link from 'next/link'
-
 import { useActionState, useEffect, useState, useTransition } from 'react'
 import type { Tables } from '@wa/shared'
-import { Button, Card, EmptyState, Field, Input, Meter, Notice, StatusPill } from '@/components/ui'
+import {
+  AccentLink,
+  Button,
+  Card,
+  EmptyState,
+  Field,
+  Input,
+  Meter,
+  Notice,
+  QuietLink,
+  StatusPill,
+} from '@/components/ui'
 import { capToday } from '@/lib/capacity'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { useServerSyncedState } from '@/lib/use-server-synced-state'
@@ -170,8 +179,8 @@ export function AccountsBoard({
               </span>
             </p>
             <p className="mt-1 text-[12px] text-ink-muted">
-              {connected} bağlı · {remaining} ekleme hakkı · her hat ayrı WhatsApp
-              oturumu
+              {connected} bağlı · {remaining} ekleme hakkı · her hat ayrı bir
+              WhatsApp oturumudur
             </p>
             <div className="mt-3 max-w-md">
               <Meter
@@ -182,8 +191,8 @@ export function AccountsBoard({
             </div>
           </div>
           <p className="max-w-xs text-[11.5px] leading-relaxed text-ink-faint sm:text-right">
-            Kampanya ve hızlı gönderimde birden fazla hattı birlikte seçerseniz
-            yük hatlar arasında paylaşılır.
+            Kampanya veya hızlı gönderimde birden fazla hat seçerseniz mesajlar
+            hatlar arasında paylaşılır. Anlık kapasite için Durum sayfasına bakın.
           </p>
         </div>
       </Card>
@@ -194,7 +203,8 @@ export function AccountsBoard({
         <Card>
           <EmptyState
             title="Henüz hat yok"
-            description="Yukarıdan ilk hattı ekleyin. QR veya eşleştirme kodu bu ekranda kendiliğinden gelir; okuttuğunuzda bağlantı kurulur."
+            description="Yukarıdan bir etiket verip hat ekleyin. QR veya telefon eşleştirme kodu bu ekranda otomatik gelir; okuttuğunuzda bağlantı kurulur."
+            action={<QuietLink href="/durum">Bağlantı durumunu izle</QuietLink>}
           />
         </Card>
       ) : (
@@ -223,7 +233,7 @@ function NewAccountForm({ remaining, atCap }: { remaining: number; atCap: boolea
             hint={
               atCap
                 ? 'Kota dolu. Yer açmak için aşağıdan kullanılmayan bir hattı silin.'
-                : `Örnek: Satış 2, Destek. Kalan hak: ${remaining}`
+                : `Hat için kısa bir ad verin (ör. Satış 2, Destek). Kalan hak: ${remaining}`
             }
           >
             <Input
@@ -365,17 +375,16 @@ function AccountCard({ account }: { account: AccountView }) {
         ) : null}
 
         {account.status === 'connected' && !account.is_locked ? (
-          <Notice tone="accent">
-            Hat bağlı. Sıradaki adım:{' '}
-            <Link href="/hizli-gonderim" className="font-medium underline underline-offset-2">
-              Hızlı gönderim
-            </Link>{' '}
-            veya{' '}
-            <Link href="/kampanyalar" className="font-medium underline underline-offset-2">
-              Kampanya
-            </Link>
-            .
-          </Notice>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <Notice tone="accent">
+              Hat bağlı ve gönderime hazır. Tek seferlik mesaj için hızlı gönderim;
+              listeden planlı gönderim için kampanya kullanın.
+            </Notice>
+            <div className="flex shrink-0 flex-wrap gap-2">
+              <AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>
+              <QuietLink href="/kampanyalar">Kampanya</QuietLink>
+            </div>
+          </div>
         ) : null}
 
         <div className="grid gap-4 sm:grid-cols-2">

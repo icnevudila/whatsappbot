@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { PageHeader } from '@/components/ui'
+import { AccentLink, PageHeader, QuietLink } from '@/components/ui'
 import { requireActiveOrg } from '@/lib/org'
 import { AccountsBoard, type AccountView } from './accounts-board'
 
@@ -44,7 +44,13 @@ export default async function AccountsPage() {
     <>
       <PageHeader
         title="Hesaplar"
-        description="Her satır ayrı bir WhatsApp numarası. Birden fazla hat bağlayıp kampanya ve hızlı gönderimde birlikte kullanabilirsiniz."
+        description="Her satır ayrı bir WhatsApp numarasıdır. QR veya telefon koduyla bağlayın; birden fazla hattı kampanya ve hızlı gönderimde birlikte kullanabilirsiniz."
+        action={
+          <div className="flex flex-wrap gap-2">
+            <AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>
+            <QuietLink href="/durum">Durum</QuietLink>
+          </div>
+        }
       />
 
       <Onboarding
@@ -78,13 +84,13 @@ function Onboarding({
   if (connected && hasContacts && hasCampaign) return null
 
   const steps = [
-    { done: connected, label: 'WhatsApp hattı bağla', href: '/hesaplar' as string | null },
+    { done: connected, label: 'WhatsApp hattını bağla', href: null as string | null },
     {
       done: hasContacts || hasCampaign,
-      label: 'Liste ekle veya hızlı gönder',
+      label: hasContacts ? 'Hızlı gönderim veya kampanya' : 'Kişi listesi ekle',
       href: hasContacts ? '/hizli-gonderim' : '/kisiler',
     },
-    { done: hasCampaign, label: 'İlk gönderimi yap', href: '/hizli-gonderim' },
+    { done: hasCampaign, label: 'İlk mesajı gönder', href: '/hizli-gonderim' },
   ]
 
   return (

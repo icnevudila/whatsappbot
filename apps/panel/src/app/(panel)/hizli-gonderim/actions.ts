@@ -31,16 +31,37 @@ export async function quickSend(
   const raw = String(formData.get('numbers') ?? '')
   const body = String(formData.get('body') ?? '').trim()
   const mediaUrl = String(formData.get('media_url') ?? '').trim()
+  const rawType = String(formData.get('message_type') ?? '').trim()
   const accountIds = formData.getAll('accounts').map(String).filter(Boolean)
 
+  const MEDIA_TYPES = new Set(['image', 'video'])
+  let messageType: 'text' | 'image' | 'video' = 'text'
+  if (!mediaUrl) {
+    messageType = 'text'
+  } else if (MEDIA_TYPES.has(rawType)) {
+    messageType = rawType as 'image' | 'video'
+  } else {
+    messageType = 'image'
+  }
+
   if (!raw.trim()) return { error: 'En az bir numara girin.' }
-  if (!body && !mediaUrl) return { error: 'Mesaj metni veya bir gorsel gerekli.' }
+  if (!body && !mediaUrl) return { error: 'Mesaj metni veya bir medya dosyası gerekli.' }
   if (accountIds.length === 0) return { error: 'En az bir gönderen hat seçin.' }
+  if (mediaUrl) {
+    try {
+      const url = new URL(mediaUrl)
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+        return { error: 'Medya adresi http:// veya https:// ile başlamalı.' }
+      }
+    } catch {
+      return { error: 'Medya adresi geçerli bir URL olmalı.' }
+    }
+  }
 
   const parsed = parsePhoneList(raw)
   if (parsed.valid.length === 0) {
     return {
-      error: 'Gecerli numara bulunamadi. Ornek: 0532 123 45 67 veya +905321234567',
+      error: 'Geçerli numara bulunamadı. Örnek: 0532 123 45 67 veya +905321234567',
       invalidSamples: parsed.invalid.slice(0, 5),
     }
   }
@@ -51,7 +72,7 @@ export async function quickSend(
   try {
     ;({ userId, org, supabase } = await requireActiveOrg())
   } catch (error) {
-    return { error: error instanceof Error ? error.message : 'Oturum bulunamadi.' }
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
   }
 
   // Kampanya motoru hedefleri listelerden uretir; bu ara liste Kisiler'de
@@ -139,7 +160,7 @@ export async function quickSend(
       name: campaignName,
       body: body || null,
       media_url: mediaUrl || null,
-      message_type: mediaUrl ? 'image' : 'text',
+      message_type: messageType,
       source_list_ids: [list.id],
       min_delay_seconds: 8,
       max_delay_seconds: 25,

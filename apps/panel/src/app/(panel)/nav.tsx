@@ -4,8 +4,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 /**
- * Sira demo hikayesine gore: hat → hizli gonder → liste/kampanya → izle.
- * Marka kiti ve ayarlar gunluk isin disinda, sonda.
+ * Sıra: hat → hızlı gönder → liste/kampanya → gelen/giden → izle.
+ * Marka kiti ve ayarlar günlük işin dışında, sonda.
  */
 const CORE = [
   { href: '/hesaplar', label: 'Hesaplar' },
@@ -13,6 +13,7 @@ const CORE = [
   { href: '/kisiler', label: 'Kişiler' },
   { href: '/kampanyalar', label: 'Kampanyalar' },
   { href: '/gelenler', label: 'Gelenler' },
+  { href: '/gidenler', label: 'Gidenler' },
   { href: '/durum', label: 'Durum' },
   { href: '/kara-liste', label: 'Kara liste' },
   { href: '/marka-kiti', label: 'Marka kiti' },

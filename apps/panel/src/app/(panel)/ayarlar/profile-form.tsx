@@ -20,23 +20,36 @@ export function ProfileForm({
 
   return (
     <form action={formAction} className="space-y-4 p-4">
-      <Field label="E-posta" hint="Giriş adresiniz. Değiştirmek için desteğe yazın.">
+      <Field
+        label="E-posta"
+        hint="Giriş adresiniz. Değiştirmek için desteğe yazın."
+      >
         <Input value={email} disabled readOnly />
       </Field>
 
-      <Field label="Ad soyad">
-        <Input name="full_name" defaultValue={fullName} placeholder="Adınız" />
+      <Field label="Ad soyad" hint="Ekip listesinde ve bildirimlerde görünür.">
+        <Input
+          name="full_name"
+          defaultValue={fullName}
+          placeholder="Örn. Ayşe Yılmaz"
+          autoComplete="name"
+        />
       </Field>
 
-      <Field label="Firma">
-        <Input name="company" defaultValue={company} placeholder="Firma adı" />
+      <Field label="Firma" hint="İsteğe bağlı.">
+        <Input
+          name="company"
+          defaultValue={company}
+          placeholder="Örn. Filo Ticaret"
+          autoComplete="organization"
+        />
       </Field>
 
       {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
       {state?.ok ? <Notice tone="accent">{state.ok}</Notice> : null}
 
-      <Button type="submit" variant="quiet" disabled={pending}>
-        {pending ? 'Kaydediliyor…' : 'Kaydet'}
+      <Button type="submit" variant="accent" disabled={pending}>
+        {pending ? 'Kaydediliyor…' : 'Profili kaydet'}
       </Button>
     </form>
   )

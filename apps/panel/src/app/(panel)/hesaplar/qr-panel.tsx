@@ -49,11 +49,11 @@ export function QrPanel({
       </div>
 
       <div className="min-w-0 flex-1">
-        <p className="text-[13px] font-medium">Telefonunuzdan okutun</p>
+        <p className="text-[13px] font-medium">Telefonunuzdan QR kodunu okutun</p>
         <ol className="mt-2 space-y-1 text-[12.5px] text-ink-muted">
           <li>1. WhatsApp → Ayarlar → Bağlı cihazlar</li>
           <li>2. “Cihaz bağla”ya dokunun</li>
-          <li>3. Bu kodu okutun</li>
+          <li>3. Bu QR kodunu telefonunuzla okutun</li>
         </ol>
 
         {secondsLeft !== null ? (

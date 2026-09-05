@@ -54,7 +54,7 @@ export default async function ContactsPage() {
     <>
       <PageHeader
         title="Kişiler"
-        description="Numaralar defterde tutulur; WhatsApp’ta var/yok durumu ✓ / × ile işaretlenir. Tek seferlik mesaj için Hızlı gönderim."
+        description="Numaralar listelerde tutulur; WhatsApp’ta var/yok ✓ / × ile işaretlenir. Tek seferlik için Hızlı gönderim."
         action={<AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>}
       />
 
@@ -63,13 +63,13 @@ export default async function ContactsPage() {
           <Card>
             <CardHeader
               title="Listeler"
-              subtitle={`${lists.length} liste · ${total} tekil numara defteri`}
+              subtitle={`${lists.length} liste · ${total} tekil numara`}
             />
 
             {lists.length === 0 ? (
               <EmptyState
                 title="Henüz liste yok"
-                description="Kampanyalarda tekrar kullanacağınız numaraları sağdaki (mobilde üstteki) formdan ekleyin. Tek seferlik mesaj için Hızlı gönderim yeterli."
+                description="Kampanyalarda tekrar kullanacağınız numaraları formdan liste olarak ekleyin. Tek seferlik için Hızlı gönderim yeterli."
                 action={<AccentLink href="/hizli-gonderim">Hızlı gönderime git</AccentLink>}
               />
             ) : (
@@ -103,7 +103,7 @@ export default async function ContactsPage() {
             <Card>
               <CardHeader
                 title="WhatsApp doğrulama durumu"
-                subtitle="Proje geneli: her numara ✓ (var), × (yok) veya ? (bekliyor). Gönderim kayıtsız numaraya denemez."
+                subtitle="Defter geneli: ✓ var · × yok · ? bekliyor. Kayıtsız numaraya mesaj denemez."
               />
               <div className="space-y-3 p-4">
                 <div>
@@ -123,14 +123,6 @@ export default async function ContactsPage() {
                 </dl>
 
                 <VerifyAllButton />
-
-                {pendingCheck > 0 ? (
-                  <p className="text-[11.5px] text-ink-faint">
-                    Doğrulama için bağlı bir WhatsApp hattı gerekir. Büyük
-                    defterlerde birkaç dakika sürebilir; sonuç listelerde ✓ / ×
-                    görünür.
-                  </p>
-                ) : null}
               </div>
             </Card>
           ) : null}

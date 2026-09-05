@@ -270,7 +270,12 @@ type SendContent =
   | { text: string }
   | { image: { url: string }; caption?: string }
   | { video: { url: string }; caption?: string }
-  | { document: { url: string }; caption?: string; fileName?: string }
+  | {
+      document: { url: string }
+      mimetype: string
+      caption?: string
+      fileName?: string
+    }
 
 function buildContent(
   campaign: CampaignRow,
@@ -294,6 +299,7 @@ function buildContent(
   if (type === 'document') {
     return {
       document: { url: media },
+      mimetype: 'application/octet-stream',
       caption: body || undefined,
       fileName: 'dosya',
     }

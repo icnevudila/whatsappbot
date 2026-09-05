@@ -21,8 +21,11 @@ export function CreativePreview({
   const format = FORMATS[input.format]
   const height = Math.round((format.height / format.width) * width)
   const pad = width * 0.085
-  const titleSize = headlineSize(input.headline, width)
-  const { colors, headline, subline, badge, logoUrl } = input
+  const displayHeadline = input.headline.trim() || 'Kampanya başlığı'
+  const titleSize = headlineSize(displayHeadline, width)
+  const { colors, subline, badge, logoUrl } = input
+  const headlineEmpty = !input.headline.trim()
+  const headlineOpacity = headlineEmpty ? 0.45 : 1
 
   const logo = logoUrl ? (
     // eslint-disable-next-line @next/next/no-img-element
@@ -115,9 +118,10 @@ export function CreativePreview({
               fontWeight: 700,
               lineHeight: 1.05,
               letterSpacing: -0.9,
+              opacity: headlineOpacity,
             }}
           >
-            {headline}
+            {displayHeadline}
           </span>
 
           {subline ? (
@@ -181,9 +185,10 @@ export function CreativePreview({
               fontWeight: 700,
               lineHeight: 1.08,
               letterSpacing: -0.6,
+              opacity: headlineOpacity,
             }}
           >
-            {headline}
+            {displayHeadline}
           </span>
           {subline ? (
             <span
@@ -233,9 +238,10 @@ export function CreativePreview({
               fontWeight: 700,
               lineHeight: 1.1,
               letterSpacing: -0.6,
+              opacity: headlineOpacity,
             }}
           >
-            {headline}
+            {displayHeadline}
           </span>
           {subline ? (
             <span
@@ -307,9 +313,10 @@ export function CreativePreview({
             fontWeight: 700,
             lineHeight: 1.05,
             letterSpacing: -0.9,
+            opacity: headlineOpacity,
           }}
         >
-          {headline}
+          {displayHeadline}
         </span>
 
         {subline ? (

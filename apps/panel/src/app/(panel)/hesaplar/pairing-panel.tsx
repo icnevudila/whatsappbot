@@ -54,7 +54,7 @@ export function PairingPanel({
             <li>
               3. Alttaki{' '}
               <span className="text-ink">“Telefon numarasıyla bağla”</span>{' '}
-              seçeneğini kullanın
+              seçeneğini seçin
             </li>
             <li>4. Yukarıdaki kodu girin</li>
           </ol>

@@ -17,6 +17,7 @@ import { logAccountEvent, patchAccount, type AccountRow } from './accounts.js'
 import { env } from './env.js'
 import { logger } from './logger.js'
 import { readLeaseHolder, releaseLease, renewLease } from './lease.js'
+import { applyMessageReceipts } from './receipts.js'
 import { lookupSentMessage, rememberSentMessage } from './sent-messages.js'
 import { resolveWaVersion } from './wa-version.js'
 
@@ -206,6 +207,13 @@ export class WhatsAppSession {
       })
     })
 
+    // Teslim / okundu: message_log.status guncelle (kampanya + hizli gonderim).
+    this.sock.ev.on('messages.update', (updates) => {
+      void this.handleMessageReceipts(updates).catch((error) => {
+        this.log.warn({ err: error }, 'Mesaj receipt islenirken hata')
+      })
+    })
+
     // WhatsApp'in gercek "yeni sohbet mesaj kotasi" (Baileys 7+).
     // 6.7'de olay yok; dinleyiciyi yalnizca destekleniyorsa bagliyoruz.
     const events = this.sock.ev as unknown as {
@@ -222,6 +230,12 @@ export class WhatsAppSession {
         this.log.warn({ err: error }, 'Kota bilgisi yazilamadi')
       })
     })
+  }
+
+  private async handleMessageReceipts(
+    updates: Array<{ key: WAMessage['key']; update: Partial<WAMessage> }>,
+  ): Promise<void> {
+    await applyMessageReceipts(this.accountId, updates)
   }
 
   private async handleInboundMessages(messages: WAMessage[]): Promise<void> {

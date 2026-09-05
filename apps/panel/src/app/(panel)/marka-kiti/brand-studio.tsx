@@ -1,8 +1,17 @@
 'use client'
 
 import { useActionState, useState } from 'react'
-import Link from 'next/link'
-import { Button, Card, CardHeader, Field, FileUploadButton, Input, Notice } from '@/components/ui'
+import {
+  AccentLink,
+  Button,
+  Card,
+  CardHeader,
+  Field,
+  FileUploadButton,
+  Input,
+  Notice,
+  QuietLink,
+} from '@/components/ui'
 import {
   DEFAULT_COLORS,
   FORMATS,
@@ -18,12 +27,20 @@ import { saveBrandKit, type BrandKitState } from './actions'
 import { CreativePreview } from './creative-preview'
 
 const COLOR_FIELDS: { key: keyof BrandColors; label: string; hint: string }[] = [
-  { key: 'primary', label: 'Ana renk', hint: 'Dolu zeminler' },
+  { key: 'primary', label: 'Ana renk', hint: 'Dolu zeminler ve güçlü alanlar' },
   { key: 'accent', label: 'Vurgu', hint: 'Rozet, çerçeve, alt başlık' },
-  { key: 'background', label: 'Zemin', hint: 'Açık alanlar ve metin üstü' },
+  { key: 'background', label: 'Zemin', hint: 'Açık alanlar' },
   { key: 'text', label: 'Metin', hint: 'Açık zeminde başlık' },
-  { key: 'secondary', label: 'İkincil metin', hint: 'Alt başlık' },
+  { key: 'secondary', label: 'İkincil metin', hint: 'Alt başlık ve yardımcı satır' },
 ]
+
+/** Şablon etiketleri — creative-templates ASCII; burada düzgün Türkçe. */
+const TEMPLATE_COPY: Record<TemplateKey, { label: string; hint: string }> = {
+  bold: { label: 'Tam zemin', hint: 'Marka renginde dolu zemin, büyük başlık' },
+  split: { label: 'Bölünmüş', hint: 'Solda renk bloğu, sağda metin' },
+  frame: { label: 'Çerçeve', hint: 'İnce çerçeve, ortalanmış metin' },
+  photo: { label: 'AI arka plan', hint: 'Yapay zeka görseli üzerine marka metni' },
+}
 
 export function BrandStudio({
   initialName,
@@ -31,12 +48,14 @@ export function BrandStudio({
   initialLogoUrl,
   brandKitId,
   userId,
+  hasSavedKit = false,
 }: {
   initialName: string
   initialColors: BrandColors
   initialLogoUrl: string | null
   brandKitId: string | null
   userId: string
+  hasSavedKit?: boolean
 }) {
   const [state, formAction, saving] = useActionState<BrandKitState, FormData>(
     saveBrandKit,
@@ -49,9 +68,9 @@ export function BrandStudio({
 
   const [template, setTemplate] = useState<TemplateKey>('bold')
   const [format, setFormat] = useState<FormatKey>('square')
-  const [headline, setHeadline] = useState('Bahar indirimi başladı')
-  const [subline, setSubline] = useState('Tüm ürünlerde 30 Nisan\u2019a kadar geçerli')
-  const [badge, setBadge] = useState('%20 indirim')
+  const [headline, setHeadline] = useState('')
+  const [subline, setSubline] = useState('')
+  const [badge, setBadge] = useState('')
   const [backgroundPrompt, setBackgroundPrompt] = useState('')
 
   const [generating, setGenerating] = useState(false)
@@ -125,11 +144,14 @@ export function BrandStudio({
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,340px)]">
       <div className="flex flex-col gap-4">
-        {/* Marka kiti */}
         <Card>
           <CardHeader
-            title="Marka kiti"
-            subtitle="Renkler ve logo tüm şablonlarda kullanılır."
+            title="Renkler ve logo"
+            subtitle={
+              hasSavedKit
+                ? 'Kayıtlı kit tüm şablonlarda kullanılır.'
+                : 'Kaydetmeden de önizleyebilirsiniz; kalıcı olması için kaydedin.'
+            }
           />
 
           <form action={formAction} className="space-y-4 p-4">
@@ -143,8 +165,8 @@ export function BrandStudio({
               />
             ))}
 
-            <Field label="Kit adı">
-              <Input name="name" defaultValue={initialName} placeholder="Varsayılan" />
+            <Field label="Kit adı" hint="Kampanya metinlerinde marka adı olarak geçebilir.">
+              <Input name="name" defaultValue={initialName} placeholder="Örn. Filo" />
             </Field>
 
             <div>
@@ -191,15 +213,14 @@ export function BrandStudio({
               <span className="mb-1.5 block text-[12px] font-medium text-ink-muted">
                 Logo
               </span>
-              <div className="flex flex-wrap items-center gap-3">
-                <FileUploadButton
-                  accept="image/png,image/jpeg,image/webp"
-                  uploading={uploading}
-                  label={logoUrl ? 'Değiştir' : 'Logo seç'}
-                  onFile={(file) => void uploadLogo(file)}
-                />
-
-                {logoUrl ? (
+              {logoUrl ? (
+                <div className="flex flex-wrap items-center gap-3">
+                  <FileUploadButton
+                    accept="image/png,image/jpeg,image/webp"
+                    uploading={uploading}
+                    label="Değiştir"
+                    onFile={(file) => void uploadLogo(file)}
+                  />
                   <span className="flex items-center gap-2 text-[11.5px] text-ink-muted">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
@@ -212,31 +233,46 @@ export function BrandStudio({
                       onClick={() => setLogoUrl(null)}
                       className="underline underline-offset-2 hover:text-danger"
                     >
-                      kaldır
+                      Kaldır
                     </button>
                   </span>
-                ) : null}
-              </div>
-              <p className="mt-1 text-[11.5px] text-ink-faint">
-                Saydam zeminli PNG en iyi sonucu verir.
-              </p>
+                </div>
+              ) : (
+                <div className="rounded-md border border-dashed border-hairline bg-canvas px-3 py-4">
+                  <p className="text-[12.5px] text-ink-muted">
+                    Logo yok — şablonlar yalnızca renk ve metinle çizilir.
+                  </p>
+                  <div className="mt-2.5">
+                    <FileUploadButton
+                      accept="image/png,image/jpeg,image/webp"
+                      uploading={uploading}
+                      label="Logo seç"
+                      onFile={(file) => void uploadLogo(file)}
+                    />
+                  </div>
+                  <p className="mt-2 text-[11.5px] text-ink-faint">
+                    Saydam zeminli PNG en iyi sonucu verir.
+                  </p>
+                </div>
+              )}
             </div>
 
             {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
             {state?.ok ? <Notice tone="accent">{state.ok}</Notice> : null}
 
-            <Button type="submit" variant="quiet" disabled={saving}>
-              {saving ? 'Kaydediliyor...' : 'Marka kitini kaydet'}
+            <Button type="submit" variant="accent" disabled={saving}>
+              {saving ? 'Kaydediliyor…' : 'Marka kitini kaydet'}
             </Button>
           </form>
         </Card>
 
-        {/* Kreatif */}
         <Card>
-          <CardHeader
-            title="Kampanya görseli"
-            subtitle="Metni yazın, şablonu seçin; görsel sunucuda üretilir."
-          />
+          <div id="kampanya-gorseli" className="scroll-mt-6">
+            <CardHeader
+              title="Kampanya görseli"
+              subtitle="Metni yazın, şablonu seçin; sunucu yüksek çözünürlüklü PNG üretir."
+            />
+          </div>
 
           <div className="space-y-4 p-4">
             <div>
@@ -244,25 +280,28 @@ export function BrandStudio({
                 Şablon
               </span>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {(Object.keys(TEMPLATES) as TemplateKey[]).map((key) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setTemplate(key)}
-                    className={`rounded-md border px-3 py-2 text-left transition-colors ${
-                      template === key
-                        ? 'border-accent/40 bg-accent-soft'
-                        : 'border-hairline bg-canvas hover:border-hairline-strong'
-                    }`}
-                  >
-                    <span className="block text-[12.5px] font-medium text-ink">
-                      {TEMPLATES[key].label}
-                    </span>
-                    <span className="mt-0.5 block text-[11px] text-ink-faint">
-                      {TEMPLATES[key].hint}
-                    </span>
-                  </button>
-                ))}
+                {(Object.keys(TEMPLATES) as TemplateKey[]).map((key) => {
+                  const copy = TEMPLATE_COPY[key]
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setTemplate(key)}
+                      className={`rounded-md border px-3 py-2 text-left transition-colors ${
+                        template === key
+                          ? 'border-accent/40 bg-accent-soft'
+                          : 'border-hairline bg-canvas hover:border-hairline-strong'
+                      }`}
+                    >
+                      <span className="block text-[12.5px] font-medium text-ink">
+                        {copy.label}
+                      </span>
+                      <span className="mt-0.5 block text-[11px] text-ink-faint">
+                        {copy.hint}
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
@@ -288,27 +327,27 @@ export function BrandStudio({
               </div>
             </div>
 
-            <Field label="Başlık">
+            <Field label="Başlık" hint="Görseldeki ana satır. Kısa tutun.">
               <Input
                 value={headline}
                 onChange={(event) => setHeadline(event.target.value)}
-                placeholder="Bahar indirimi başladı"
+                placeholder="Örn. Bahar indirimi başladı"
               />
             </Field>
 
-            <Field label="Alt başlık">
+            <Field label="Alt başlık" hint="İsteğe bağlı.">
               <Input
                 value={subline}
                 onChange={(event) => setSubline(event.target.value)}
-                placeholder="Tüm ürünlerde geçerli"
+                placeholder="Örn. Tüm ürünlerde geçerli"
               />
             </Field>
 
-            <Field label="Rozet" hint="Kısa tutun: iki-üç kelime.">
+            <Field label="Rozet" hint="İsteğe bağlı · iki-üç kelime.">
               <Input
                 value={badge}
                 onChange={(event) => setBadge(event.target.value)}
-                placeholder="%20 indirim"
+                placeholder="Örn. %20 indirim"
               />
             </Field>
 
@@ -316,20 +355,23 @@ export function BrandStudio({
               <div className="rounded-md border border-hairline bg-canvas p-3">
                 <Field
                   label="AI arka plan istemi"
-                  hint="Boş bırakırsanız başlıktan otomatik üretilir. İngilizce yazmak daha iyi sonuç veriyor."
+                  hint="Boş bırakırsanız başlıktan otomatik üretilir. İngilizce yazmak daha iyi sonuç verir."
                 >
                   <Input
                     value={backgroundPrompt}
                     onChange={(event) => setBackgroundPrompt(event.target.value)}
-                    placeholder={suggestBackgroundPrompt(headline).slice(0, 60)}
+                    placeholder={
+                      headline.trim()
+                        ? suggestBackgroundPrompt(headline).slice(0, 56) + '…'
+                        : 'Örn. soft studio product photography…'
+                    }
                   />
                 </Field>
                 <p className="mt-2 text-[11.5px] leading-relaxed text-ink-faint">
-                  Arka plan Pollinations.ai ile ücretsiz üretiliyor; anahtar veya
-                  kart gerekmiyor. Başlık ve logo AI&apos;a yazdırılmıyor, üzerine
-                  ayrıca biniyor: üretilen yazı özellikle Türkçe karakterlerde
-                  bozuk çıkıyor. Üretim 10-40 saniye sürebilir ve anonim
-                  kullanımda 15 saniyede bir istek sınırı var.
+                  Arka plan ücretsiz üretilir; anahtar gerekmez. Başlık ve logo AI’a
+                  yazdırılmaz, üzerine ayrıca biner — Türkçe karakterler bozulmaz.
+                  Üretim 10–40 saniye sürebilir; anonim kullanımda yaklaşık 15
+                  saniyede bir istek sınırı vardır.
                 </p>
               </div>
             ) : null}
@@ -345,8 +387,8 @@ export function BrandStudio({
               >
                 {generating
                   ? template === 'photo'
-                    ? 'AI görseli üretiliyor...'
-                    : 'Üretiliyor...'
+                    ? 'AI görseli üretiliyor…'
+                    : 'Üretiliyor…'
                   : template === 'photo'
                     ? 'AI ile üret'
                     : 'Görseli üret'}
@@ -354,12 +396,11 @@ export function BrandStudio({
 
               {result ? (
                 <>
-                  <Link
+                  <AccentLink
                     href={`/hizli-gonderim?media=${encodeURIComponent(result)}`}
-                    className="text-[12.5px] text-accent underline underline-offset-2"
                   >
                     Hızlı gönderime taşı
-                  </Link>
+                  </AccentLink>
                   <a
                     href={result}
                     target="_blank"
@@ -369,19 +410,24 @@ export function BrandStudio({
                     Tam boyut aç
                   </a>
                 </>
-              ) : null}
+              ) : (
+                <p className="text-[11.5px] text-ink-faint">
+                  {headline.trim()
+                    ? 'Üretim sağdaki önizlemeyle aynı yerleşimi kullanır.'
+                    : 'Başlık girince üret düğmesi açılır.'}
+                </p>
+              )}
             </div>
           </div>
         </Card>
       </div>
 
-      {/* Onizleme */}
       <div className="lg:sticky lg:top-6 lg:self-start">
         <Card>
           <CardHeader
             title="Önizleme"
             action={
-              <span className="text-[11.5px] text-ink-faint">
+              <span className="tabular text-[11.5px] text-ink-faint">
                 {FORMATS[format].width}&times;{FORMATS[format].height}
               </span>
             }
@@ -400,11 +446,22 @@ export function BrandStudio({
                   alt="Üretilen kampanya görseli"
                   className="w-full rounded border border-hairline"
                 />
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <AccentLink
+                    href={`/hizli-gonderim?media=${encodeURIComponent(result)}`}
+                    className="text-[12.5px]"
+                  >
+                    Gönderimde kullan
+                  </AccentLink>
+                  <QuietLink href="/kampanyalar" className="text-[12.5px]">
+                    Kampanyalara git
+                  </QuietLink>
+                </div>
               </div>
             ) : (
-              <p className="text-center text-[11.5px] text-ink-faint">
-                Önizleme sunucudaki şablonla aynı ölçüleri kullanıyor; üretilen
-                görsel bunun yüksek çözünürlüklü hali olur.
+              <p className="text-center text-[11.5px] leading-relaxed text-ink-faint">
+                Canlı yerleşim önizlemesi. Üretilen PNG aynı ölçülerin yüksek
+                çözünürlüklü halidir.
               </p>
             )}
           </div>

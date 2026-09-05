@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import type { Tables } from '@wa/shared'
-import { AccentLink, Card, CardHeader, EmptyState, Meter, Stat, StatusPill } from '@/components/ui'
+import { AccentLink, Card, CardHeader, EmptyState, Meter, QuietLink, Stat, StatusPill } from '@/components/ui'
 import { capToday } from '@/lib/capacity'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { useServerSyncedState } from '@/lib/use-server-synced-state'
@@ -165,7 +165,7 @@ export function StatusBoard({
             label="Dikkat gereken"
             detail={
               atRisk === 0
-                ? 'Kilitli veya yeni sohbet kotası dolu hat yok'
+                ? 'Kilit veya kota sorunu yok'
                 : [
                     lockedCount > 0 ? `${lockedCount} kilitli` : null,
                     reachoutCount > 0 ? `${reachoutCount} yeni sohbet kilidi` : null,
@@ -187,7 +187,7 @@ export function StatusBoard({
             action={
               <Link
                 href="/hesaplar"
-                className="text-[12px] text-ink-muted transition-colors hover:text-ink"
+                className="text-[12px] text-ink-muted transition-colors hover:text-accent"
               >
                 Yönet
               </Link>
@@ -196,8 +196,8 @@ export function StatusBoard({
 
           {lines.length === 0 ? (
             <EmptyState
-              title="Hat yok"
-              description="Hesaplar sekmesinden QR veya telefon koduyla ilk hattınızı bağlayın. Bağlantı sunucuda kalır."
+              title="Henüz hat yok"
+              description="Hesaplar’dan QR veya telefon koduyla ilk hattı bağlayın. Bağlantı sunucuda kalır."
               action={<AccentLink href="/hesaplar">Hesaplara git</AccentLink>}
             />
           ) : (
@@ -278,7 +278,7 @@ export function StatusBoard({
             action={
               <Link
                 href="/kampanyalar"
-                className="text-[12px] text-ink-muted transition-colors hover:text-ink"
+                className="text-[12px] text-ink-muted transition-colors hover:text-accent"
               >
                 Tümü
               </Link>
@@ -287,10 +287,13 @@ export function StatusBoard({
 
           {campaigns.length === 0 ? (
             <EmptyState
-              title="Kampanya yok"
-              description="Kampanyalar sekmesinden liste seçerek veya Hızlı gönderim ile numaraları yapıştırarak başlayabilirsiniz."
+              title="Henüz kampanya yok"
+              description="Kampanyalar’dan liste seçin veya Hızlı gönderim ile numaraları yapıştırın."
               action={
-                <AccentLink href="/kampanyalar">Kampanyalara git</AccentLink>
+                <div className="flex flex-wrap justify-center gap-2">
+                  <AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>
+                  <QuietLink href="/kampanyalar">Kampanya oluştur</QuietLink>
+                </div>
               }
             />
           ) : (

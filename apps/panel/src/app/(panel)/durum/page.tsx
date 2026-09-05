@@ -108,10 +108,11 @@ export default async function StatusPage() {
     <>
       <PageHeader
         title="Durum"
-        description="Hatlar, kapasite ve çalışan kampanyalar. Gönderim arka planda sürer; bu sayfa izleme içindir. Özet kartlarındaki değerler anlık güncellenir."
+        description="Hatlar, günlük kapasite ve aktif kampanyalar. Gönderim arka planda sürer; bu sayfa izleme içindir."
         action={
           <div className="flex flex-wrap gap-2">
-            <AccentLink href="/gelenler">Gelenler</AccentLink>
+            <AccentLink href="/hesaplar">Hesaplar</AccentLink>
+            <QuietLink href="/gelenler">Gelenler</QuietLink>
             <QuietLink href="/hizli-gonderim">Hızlı gönderim</QuietLink>
           </div>
         }
@@ -122,8 +123,12 @@ export default async function StatusPage() {
           <Notice tone="danger">
             Kuyrukta {pendingJobs} iş bekliyor ve ilerleme yok. WhatsApp bağlantı
             servisi kapalı veya yanıt vermiyor olabilir — gönderim ve eşleştirme
-            kodu üretilmez. Hesaplar sayfasından hattı yeniden bağlayın; sorun
-            sürerse destek ile iletişime geçin.
+            kodu üretilmez.{' '}
+            <Link href="/hesaplar" className="font-medium underline underline-offset-2">
+              Hesaplar
+            </Link>{' '}
+            üzerinden hattı yeniden bağlayın; sorun sürerse destek ile iletişime
+            geçin.
           </Notice>
         ) : null}
 
@@ -133,7 +138,17 @@ export default async function StatusPage() {
             <Link href="/hesaplar" className="font-medium underline underline-offset-2">
               Hesaplar
             </Link>{' '}
-            üzerinden QR veya telefon koduyla yeniden bağlayın.
+            sayfasından QR veya telefon koduyla yeniden bağlayın.
+          </Notice>
+        ) : null}
+
+        {connectedCount === 0 && (accounts?.length ?? 0) === 0 ? (
+          <Notice tone="warn">
+            Henüz hat eklenmemiş. Gönderim için önce bir WhatsApp numarası
+            bağlamanız gerekir.{' '}
+            <Link href="/hesaplar" className="font-medium underline underline-offset-2">
+              Hesaplara git
+            </Link>
           </Notice>
         ) : null}
 
@@ -143,7 +158,8 @@ export default async function StatusPage() {
             <Link href="/gelenler" className="font-medium underline underline-offset-2">
               Gelenler
             </Link>{' '}
-            sayfasından sohbetleri ve kara listeye alma işlemini yönetin.
+            sayfasından sohbetleri inceleyin; istenmeyen numaraları kara listeye
+            alabilirsiniz.
           </Notice>
         ) : null}
 
@@ -151,12 +167,15 @@ export default async function StatusPage() {
           <div className="space-y-3 px-4 py-3.5">
             <HourlyBars counts={hourlyCounts} />
             <p className="border-t border-hairline pt-3 text-[11.5px] leading-relaxed text-ink-faint">
-              <span className="font-medium text-ink-muted">Bugünkü gönderim</span> =
-              bağlı hatların bugün attığı / günlük tavanı.{' '}
-              <span className="font-medium text-ink-muted">Dikkat gereken</span> =
-              kilitli hat, yeni sohbet kilidi veya kota %80 üzeri.{' '}
-              <span className="font-medium text-ink-muted">Yeni sohbet kotası</span> =
-              WhatsApp’ın tanıdığı “ilk kez yazılan numara” bütçesi; dolunca yeni
+              <span className="font-medium text-ink-muted">Bugünkü gönderim</span>
+              {' '}
+              bağlı hatların bugün attığı mesaj / günlük tavandır.{' '}
+              <span className="font-medium text-ink-muted">Dikkat gereken</span>
+              {' '}
+              kilitli hat, yeni sohbet kilidi veya kota %80 üzeri anlamına gelir.{' '}
+              <span className="font-medium text-ink-muted">Yeni sohbet kotası</span>
+              {' '}
+              WhatsApp’ın “ilk kez yazılan numara” bütçesidir; dolunca yeni
               numaralara yazılamaz.
             </p>
           </div>

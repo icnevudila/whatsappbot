@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { AccentLink, PageHeader } from '@/components/ui'
+import { AccentLink, PageHeader, QuietLink } from '@/components/ui'
 import { requireActiveOrg } from '@/lib/org'
 import { InboxBoard, type InboxMessage, type ThreadPreview } from './inbox-board'
 
@@ -94,7 +94,22 @@ export default async function InboxPage({
       accountLabel: row.account_id ? accountLabels[row.account_id] ?? null : null,
       isReply,
       missingPhone: !hasPhone,
+      waStatus: null,
     })
+  }
+
+  const e164Phones = [...allPreviews.keys()].filter((phone) => phone.startsWith('+')).slice(0, 200)
+  if (e164Phones.length > 0) {
+    const { data: contactRows } = await supabase
+      .from('contacts')
+      .select('phone_e164, wa_status')
+      .eq('org_id', org.id)
+      .in('phone_e164', e164Phones)
+
+    for (const contact of contactRows ?? []) {
+      const preview = allPreviews.get(contact.phone_e164)
+      if (preview) preview.waStatus = contact.wa_status ?? null
+    }
   }
 
   const allList = [...allPreviews.values()]
@@ -102,8 +117,11 @@ export default async function InboxPage({
   const newList = allList.filter((p) => !p.isReply)
   const previews =
     tab === 'yanitlar' ? replyList : tab === 'yeni' ? newList : allList
+  const selectedPreview =
+    (selectedPhone ? allPreviews.get(selectedPhone) : null) ?? null
 
   let thread: InboxMessage[] = []
+  let selectedBlacklisted = false
   if (selectedPhone) {
     let threadQuery = supabase
       .from('message_log')
@@ -122,21 +140,34 @@ export default async function InboxPage({
       ? threadQuery.eq('phone_e164', selectedPhone)
       : threadQuery.eq('remote_jid', selectedPhone)
 
-    const { data: threadRows } = await threadQuery
+    const [{ data: threadRows }, blacklistResult] = await Promise.all([
+      threadQuery,
+      selectedPhone.startsWith('+')
+        ? supabase
+            .from('blacklist')
+            .select('id')
+            .eq('org_id', org.id)
+            .eq('phone_e164', selectedPhone)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+    ])
     thread = (threadRows ?? []) as InboxMessage[]
+    selectedBlacklisted = Boolean(blacklistResult.data)
   }
 
   return (
     <>
       <PageHeader
         title="Gelenler"
-        description="Salt okuma: bağlı hatlara gelen mesajlar. “dur / yazma / stop” otomatik kara listeye alınır. Yanıtlar = sizin yazdığınız numaralardan gelenler."
+        description="Salt okuma: bağlı hatlara gelen mesajlar. Gidenler “Tam konuşma”da görünür. “dur”, “yazma” veya “stop” yanıtları kara listeye alınır."
         action={
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="tabular text-[12.5px] text-ink-muted">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="mr-1 tabular text-[12.5px] text-ink-muted">
               Bugün {inboundToday ?? 0} gelen
             </span>
-            <AccentLink href="/kara-liste">Kara liste</AccentLink>
+            <AccentLink href="/durum">Durum</AccentLink>
+            <QuietLink href="/kara-liste">Kara liste</QuietLink>
+            <QuietLink href="/hizli-gonderim">Hızlı gönderim</QuietLink>
           </div>
         }
       />
@@ -150,9 +181,10 @@ export default async function InboxPage({
         newCount={newList.length}
         previews={previews}
         selectedPhone={selectedPhone ?? null}
+        selectedPreview={selectedPreview}
+        selectedBlacklisted={selectedBlacklisted}
         thread={thread}
         accountLabels={accountLabels}
-        initialInbound={(inbound ?? []) as InboxMessage[]}
       />
     </>
   )

@@ -1,6 +1,16 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Badge, Button, Card, CardHeader, Meter, PageHeader } from '@/components/ui'
+import {
+  AccentLink,
+  Badge,
+  Button,
+  Card,
+  CardHeader,
+  Meter,
+  PageHeader,
+  QuietLink,
+} from '@/components/ui'
 import { activeImageProviders } from '@/lib/ai/image'
 import { activeTextProviders } from '@/lib/ai/text'
 import { capToday } from '@/lib/capacity'
@@ -16,6 +26,12 @@ const PLAN_LABELS: Record<string, string> = {
   starter: 'Başlangıç',
   pro: 'Büyüme',
   enterprise: 'Ajans',
+}
+
+const ROLE_HINT: Record<string, string> = {
+  owner: 'Sahip',
+  admin: 'Yönetici',
+  member: 'Üye',
 }
 
 const nf = new Intl.NumberFormat('tr-TR')
@@ -70,6 +86,7 @@ export default async function SettingsPage() {
   const messageQuota = org.monthly_message_quota
   const usedAccounts = accounts?.length ?? 0
   const usedMessages = sentThisMonth ?? 0
+  const connectedCount = (accounts ?? []).filter((a) => a.status === 'connected').length
 
   const memberIds = (memberRows ?? []).map((row) => row.user_id)
   const { data: memberProfiles } =
@@ -106,33 +123,98 @@ export default async function SettingsPage() {
       0,
     )
 
+  const profileIncomplete = !profile?.full_name?.trim()
+
   return (
-    <>
+    <div className="filo-fade-in">
       <PageHeader
         title="Ayarlar"
-        description="İşletme, ekip, profil ve kota kullanımınız."
+        description="İşletme adı, ekip, profil ve kota. Gönderim hatları Hesaplar’da; kuyruk Durum’da."
+        action={
+          <span className="text-[12px] text-ink-muted">
+            Rolünüz: {ROLE_HINT[org.role] ?? org.role}
+          </span>
+        }
       />
+
+      {profileIncomplete || connectedCount === 0 ? (
+        <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-[10px] border border-hairline bg-surface px-4 py-3">
+          <span className="text-[11.5px] font-medium tracking-wide text-ink-faint uppercase">
+            Kurulum
+          </span>
+          {connectedCount === 0 ? (
+            <Link
+              href="/hesaplar"
+              className="text-[12.5px] text-ink-muted underline decoration-hairline-strong underline-offset-2 hover:text-ink"
+            >
+              WhatsApp hattı bağla
+            </Link>
+          ) : (
+            <span className="text-[12.5px] text-ink-faint line-through">
+              WhatsApp hattı bağla
+            </span>
+          )}
+          {profileIncomplete ? (
+            <a
+              href="#profil"
+              className="text-[12.5px] text-ink-muted underline decoration-hairline-strong underline-offset-2 hover:text-ink"
+            >
+              Profili tamamla
+            </a>
+          ) : (
+            <span className="text-[12.5px] text-ink-faint line-through">
+              Profili tamamla
+            </span>
+          )}
+          <Link
+            href="/marka-kiti"
+            className="text-[12.5px] text-ink-muted underline decoration-hairline-strong underline-offset-2 hover:text-ink"
+          >
+            Marka kitini ayarla
+          </Link>
+        </div>
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="flex flex-col gap-4">
           <Card>
-            <CardHeader title="İşletme" subtitle={org.slug} />
+            <CardHeader
+              title="İşletme"
+              subtitle={org.slug}
+              action={
+                canManage ? null : (
+                  <span className="text-[11.5px] text-ink-faint">Salt okunur</span>
+                )
+              }
+            />
             <OrgSettingsForm orgName={org.name} canEdit={canManage} />
           </Card>
 
           <Card>
-            <CardHeader title="Ekip" subtitle={`${members.length} üye`} />
+            <CardHeader
+              title="Ekip"
+              subtitle={
+                members.length === 1
+                  ? '1 üye · yalnızca siz'
+                  : `${members.length} üye`
+              }
+            />
             <MembersPanel members={members} canManage={canManage} />
           </Card>
 
-          <Card>
-            <CardHeader title="Profil" />
-            <ProfileForm
-              fullName={profile?.full_name ?? ''}
-              company={profile?.company ?? ''}
-              email={user.email ?? ''}
-            />
-          </Card>
+          <div id="profil" className="scroll-mt-6">
+            <Card>
+              <CardHeader
+                title="Profil"
+                subtitle="Panelde görünen adınız ve firma bilginiz."
+              />
+              <ProfileForm
+                fullName={profile?.full_name ?? ''}
+                company={profile?.company ?? ''}
+                email={user.email ?? ''}
+              />
+            </Card>
+          </div>
         </div>
 
         <div className="flex flex-col gap-4">
@@ -147,26 +229,43 @@ export default async function SettingsPage() {
                 label="Hat"
                 used={usedAccounts}
                 total={accountsQuota}
-                detail={`Paketiniz ${accountsQuota} hatta izin veriyor`}
+                detail={
+                  connectedCount === 0
+                    ? 'Henüz bağlı hat yok — Hesaplar’dan bağlayın'
+                    : `${connectedCount} bağlı · paket ${accountsQuota} hatta izin veriyor`
+                }
               />
               <QuotaRow
                 label="Bu ayki mesaj"
                 used={usedMessages}
                 total={messageQuota}
-                detail="Her ayın 1'inde sıfırlanır"
+                detail="Her ayın 1’inde sıfırlanır"
               />
 
               <div className="border-t border-hairline pt-3.5">
                 <p className="text-[12px] text-ink-muted">
                   Bağlı hatların bugünkü toplam tavanı
                 </p>
-                <p className="tabular mt-1 text-[18px] font-semibold text-accent">
-                  {nf.format(dailyCeiling)} mesaj
-                </p>
-                <p className="mt-1 text-[11.5px] text-ink-faint">
-                  Bu sayı paketinizden değil, hatlarınızın yaşından geliyor. Yeni
-                  bağlanan hat iki hafta boyunca kademeli olarak açılır.
-                </p>
+                {connectedCount === 0 ? (
+                  <div className="mt-2">
+                    <p className="text-[13px] text-ink-faint">Hat bağlanınca hesaplanır</p>
+                    <div className="mt-2.5">
+                      <AccentLink href="/hesaplar" className="text-[12.5px]">
+                        Hesaplara git
+                      </AccentLink>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <p className="tabular mt-1 text-[18px] font-semibold text-accent">
+                      {nf.format(dailyCeiling)} mesaj
+                    </p>
+                    <p className="mt-1 text-[11.5px] leading-relaxed text-ink-faint">
+                      Bu sayı paketinizden değil, hatlarınızın yaşından gelir. Yeni
+                      bağlanan hat iki hafta boyunca kademeli açılır.
+                    </p>
+                  </>
+                )}
               </div>
             </div>
           </Card>
@@ -178,22 +277,21 @@ export default async function SettingsPage() {
               title="Gönderim servisi"
               subtitle="Panel komut yazar; gerçek WhatsApp bağlantısı arka planda çalışır."
             />
-            <div className="space-y-2 p-4 text-[12.5px] leading-relaxed text-ink-muted">
+            <div className="space-y-3 p-4 text-[12.5px] leading-relaxed text-ink-muted">
               <p>
-                Eşleştirme kodu, QR ve otomatik mesaj göndermek için WhatsApp
-                servisinin ayakta olması gerekir. Servis kapalıyken işler
-                kuyrukta bekler.
+                Eşleştirme kodu, QR ve otomatik mesaj için WhatsApp servisinin ayakta
+                olması gerekir. Servis kapalıyken işler kuyrukta bekler.
               </p>
-              <p className="text-[11.5px] text-ink-faint">
-                Canlı izleme: Durum sayfasındaki kuyruk ve hat özeti.
-              </p>
+              <QuietLink href="/durum" className="text-[12.5px]">
+                Durum’da kuyruğu izle
+              </QuietLink>
             </div>
           </Card>
 
           <Card>
-            <CardHeader title="Oturum" />
-            <div className="flex items-center justify-between gap-4 p-4">
-              <p className="text-[12.5px] text-ink-muted">
+            <CardHeader title="Oturum" subtitle={user.email ?? undefined} />
+            <div className="flex flex-wrap items-center justify-between gap-4 p-4">
+              <p className="max-w-sm text-[12.5px] leading-relaxed text-ink-muted">
                 Çıkış yapmak bağlı hatları etkilemez; gönderim sunucuda devam eder.
               </p>
               <form action={signOut}>
@@ -205,7 +303,7 @@ export default async function SettingsPage() {
           </Card>
         </div>
       </div>
-    </>
+    </div>
   )
 }
 
@@ -224,14 +322,14 @@ function AiProvidersCard() {
     <Card>
       <CardHeader
         title="Yapay zeka"
-        subtitle="Anahtarlar sunucuda tutulur, buradan değiştirilmez."
+        subtitle="Anahtarlar sunucuda tutulur; buradan değiştirilmez."
       />
 
       <div className="space-y-3.5 p-4">
         <ProviderRow
           label="Görsel üretimi"
           providers={image.map((provider) => provider.label)}
-          fallback="Kapalı"
+          fallback="Kapalı — Marka kiti AI arka planı kullanılamaz"
         />
 
         <ProviderRow
@@ -241,9 +339,8 @@ function AiProvidersCard() {
         />
 
         <p className="border-t border-hairline pt-3 text-[11.5px] leading-relaxed text-ink-faint">
-          Sağdaki isimler deneme sırasına göre listelenir: ilki cevap vermezse
-          sonraki devreye girer. Metin yazdırma ve görsel üretimi hesabınıza
-          tanındığında burada görünür.
+          Sağdaki isimler deneme sırasına göredir: ilki cevap vermezse sonraki
+          devreye girer. Hesabınıza tanındığında burada görünür.
         </p>
       </div>
     </Card>
@@ -281,7 +378,7 @@ function ProviderRow({
           ))}
         </span>
       ) : (
-        <span className="max-w-[220px] text-right text-[11.5px] text-ink-faint">
+        <span className="max-w-[240px] text-right text-[11.5px] leading-snug text-ink-faint">
           {fallback}
         </span>
       )}

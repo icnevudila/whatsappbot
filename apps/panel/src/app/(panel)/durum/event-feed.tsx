@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { Card, CardHeader, EmptyState } from '@/components/ui'
+import { AccentLink, Card, CardHeader, EmptyState } from '@/components/ui'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { useServerSyncedState } from '@/lib/use-server-synced-state'
 
@@ -91,13 +91,14 @@ export function EventFeed({
     <Card>
       <CardHeader
         title="Canlı olay akışı"
-        subtitle="Servis ne yaptığını buraya yazıyor. Panel kapalıyken olanlar da burada."
+        subtitle="Bağlantı, kilit ve kota olayları burada listelenir. Panel kapalıyken olanlar da kayda geçer."
       />
 
       {events.length === 0 ? (
         <EmptyState
           title="Henüz olay yok"
-          description="Bir hat bağlandığında veya kampanya çalıştığında olaylar burada anlık olarak görünür."
+          description="Bir hat bağlandığında, oturum değiştiğinde veya kota dolduğunda olaylar burada anlık görünür."
+          action={<AccentLink href="/hesaplar">Hesaplara git</AccentLink>}
         />
       ) : (
         <div className="max-h-[420px] divide-y divide-hairline overflow-y-auto">
