@@ -19,6 +19,7 @@ import { signOut } from '@/app/giris/actions'
 import { MembersPanel, OrgSettingsForm, WebhookSettingsForm } from './org-forms'
 import { ProfileForm } from './profile-form'
 import { BillingCheckoutButton } from './billing-checkout-button'
+import { ApiKeyForm } from './api-key-form'
 
 export const metadata: Metadata = { title: 'Ayarlar' }
 
@@ -205,6 +206,7 @@ export default async function SettingsPage() {
               <QuietLink href="/raporlar">Raporlar / CSV</QuietLink>
               {canManage ? <BillingCheckoutButton /> : null}
             </div>
+            <ApiKeyForm canEdit={canManage} />
           </Card>
 
           <Card>
