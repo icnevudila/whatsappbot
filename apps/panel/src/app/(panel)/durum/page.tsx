@@ -6,6 +6,7 @@ import { requireActiveOrg } from '@/lib/org'
 import { EventFeed, type EventView } from './event-feed'
 import { StatusBoard, type CampaignView, type LineView } from './status-board'
 import { CancelPendingButton } from './cancel-pending-button'
+import { WorkerFleetCard } from './worker-fleet-card'
 
 export const metadata: Metadata = { title: 'Durum' }
 
@@ -44,6 +45,7 @@ export default async function StatusPage() {
     { count: pendingJobs },
     { data: oldestPending },
     { count: inboundToday },
+    { data: fleetRaw },
   ] = await Promise.all([
       supabase
         .from('accounts')
@@ -89,8 +91,29 @@ export default async function StatusPage() {
         .eq('org_id', org.id)
         .eq('direction', 'in')
         .gte('created_at', new Date(new Date().setHours(0, 0, 0, 0)).toISOString()),
+      supabase.rpc('worker_fleet_status' as never),
     ])
 
+  const fleet = (fleetRaw ?? { workers: [], leases: [] }) as {
+    workers: {
+      worker_id: string
+      max_sessions: number
+      tracked: number
+      live: number
+      db_pool_max: number
+      seen_at: string
+      alive: boolean
+      meta?: { uptimeSeconds?: number; stale?: number } | null
+    }[]
+    leases: {
+      account_id: string
+      label: string | null
+      phone_e164: string | null
+      status: string
+      holder_id: string | null
+      lease_active: boolean
+    }[]
+  }
   const pendingAgeMs = oldestPending?.created_at
     ? Date.now() - new Date(oldestPending.created_at).getTime()
     : 0
@@ -164,6 +187,8 @@ export default async function StatusPage() {
             alabilirsiniz.
           </Notice>
         ) : null}
+
+        <WorkerFleetCard workers={fleet.workers ?? []} leases={fleet.leases ?? []} />
 
         <Card>
           <div className="space-y-3 px-4 py-3.5">
