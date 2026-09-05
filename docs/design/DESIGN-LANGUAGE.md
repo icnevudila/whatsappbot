@@ -31,6 +31,7 @@ Shopify/katalog kopyalanmaz.
 2. Auth: AuthShell split.
 3. Panel: grouped rail + PageHeader strip + denser Cards; inbox SplitPane.
 4. Empty: dashed panel.
+5. Motion: snappy page enter (~180ms), route progress bar, shimmer loading, nav active rail; `prefers-reduced-motion` respected.
 
 ## Anti-pattern
 

@@ -1,12 +1,14 @@
-import type { createSupabaseServerClient } from '@/lib/supabase/server'
-
-type Supabase = Awaited<ReturnType<typeof createSupabaseServerClient>>
+import { cache } from 'react'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 /**
  * Panel kurulum checklist ile aynı kriterler.
  * showSetup / kurulum sayfası bu sayımlara dayanır.
+ * orgId bazında istek icinde tek sefer.
  */
-export async function getSetupProgress(supabase: Supabase, orgId: string) {
+export const getSetupProgress = cache(async (orgId: string) => {
+  const supabase = await createSupabaseServerClient()
+
   const [
     { count: connectedCount },
     { count: contactCount },
@@ -53,4 +55,4 @@ export async function getSetupProgress(supabase: Supabase, orgId: string) {
   const allDone = doneCount === Object.keys(steps).length
 
   return { steps, counts, doneCount, allDone, showSetup: !allDone }
-}
+})

@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Notice, QuietLink } from '@/components/ui'
+import { waitForJob } from '@/lib/wait-for-job'
 import { verifyAllContacts } from './actions'
 
 export function VerifyAllButton() {
@@ -30,12 +31,32 @@ export function VerifyAllButton() {
               setNeedsLine(lower.includes('bağlı') || lower.includes('bagli'))
               return
             }
-            setOk(result.ok ?? 'Doğrulama kuyruğa alındı.')
-            router.refresh()
+
+            setOk(result.ok ?? 'Doğrulama kuyruğa alındı…')
+
+            if (result.jobId) {
+              const outcome = await waitForJob(result.jobId)
+              if (outcome.status === 'done') {
+                setOk('Doğrulama bitti. Alttaki özet güncellendi.')
+                router.refresh()
+              } else if (outcome.status === 'timeout') {
+                setOk(
+                  'Doğrulama hâlâ sürüyor olabilir. Biraz sonra sayfayı yenileyin; özet o zaman güncellenir.',
+                )
+                router.refresh()
+              } else {
+                setOk(null)
+                setError(outcome.error)
+                const lower = outcome.error.toLocaleLowerCase('tr-TR')
+                setNeedsLine(lower.includes('bağlı') || lower.includes('bagli'))
+              }
+            } else {
+              router.refresh()
+            }
           })
         }}
       >
-        {pending ? 'Kuyruğa alınıyor…' : 'Tüm defteri doğrula'}
+        {pending ? 'Doğrulanıyor…' : 'Tüm defteri doğrula'}
       </Button>
 
       {error ? (

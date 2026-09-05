@@ -72,14 +72,18 @@ export function QuietLink({
 export function Card({
   className,
   children,
+  lift = false,
 }: {
   className?: string
   children: ReactNode
+  /** Hover’da hafif yükselme — KPI / özet kartları için. */
+  lift?: boolean
 }) {
   return (
     <div
       className={cx(
-        'rounded-[var(--radius-card)] border border-hairline bg-surface shadow-[var(--shadow-card)]',
+        'wb-card rounded-[var(--radius-card)] border border-hairline bg-surface shadow-[var(--shadow-card)]',
+        lift && 'wb-card-lift',
         className,
       )}
     >
@@ -240,7 +244,10 @@ export function Meter({
 
   return (
     <div className="h-1 w-full overflow-hidden rounded-full bg-hairline">
-      <div className={cx('h-full rounded-full transition-[width] duration-500', fill)} style={{ width: `${pct}%` }} />
+      <div
+        className={cx('filo-bar-stagger h-full rounded-full', fill)}
+        style={{ width: `${pct}%` }}
+      />
     </div>
   )
 }

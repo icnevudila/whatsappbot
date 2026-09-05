@@ -13,14 +13,13 @@ export const dynamic = 'force-dynamic'
  */
 export default async function SetupPage() {
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
-  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
   try {
-    ;({ org, supabase } = await requireActiveOrg())
+    ;({ org } = await requireActiveOrg())
   } catch {
     redirect('/giris')
   }
 
-  const { counts, allDone, doneCount } = await getSetupProgress(supabase, org.id)
+  const { counts, allDone, doneCount } = await getSetupProgress(org.id)
   const { brandCount, contactCount, connectedCount, validWa, outCount } = counts
 
   const steps = [

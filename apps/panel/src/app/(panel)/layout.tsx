@@ -1,6 +1,8 @@
 import Link from 'next/link'
+import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { Wordmark } from '@/components/brand'
+import { RouteProgress } from '@/components/route-progress'
 import { listUserOrgs, requireActiveOrg } from '@/lib/org'
 import { getSetupProgress } from '@/lib/setup-progress'
 import { signOut } from '@/app/giris/actions'
@@ -9,27 +11,27 @@ import { OrgSwitcher } from './org-switcher'
 
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
-  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  let email: string | null
   try {
-    ;({ org, supabase } = await requireActiveOrg())
+    ;({ org, email } = await requireActiveOrg())
   } catch {
     redirect('/giris')
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
   const [{ showSetup }, orgs] = await Promise.all([
-    getSetupProgress(supabase, org.id),
+    getSetupProgress(org.id),
     listUserOrgs(),
   ])
 
   return (
     <div className="flex min-h-dvh bg-canvas">
-      <aside className="hidden w-[248px] shrink-0 flex-col border-r border-hairline bg-surface md:flex">
+      <Suspense fallback={null}>
+        <RouteProgress />
+      </Suspense>
+
+      <aside className="wb-rail hidden w-[248px] shrink-0 flex-col border-r border-hairline bg-surface md:flex">
         <div className="border-b border-hairline px-3 py-3">
-          <Link href="/ozet" className="flex items-center px-1.5">
+          <Link href="/ozet" className="flex items-center px-1.5 transition-opacity hover:opacity-80">
             <Wordmark />
           </Link>
           <div className="mt-3">
@@ -42,8 +44,8 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         </div>
 
         <div className="border-t border-hairline px-3 py-3">
-          <p className="mb-1.5 truncate text-[11px] text-ink-faint" title={user?.email ?? ''}>
-            {user?.email}
+          <p className="mb-1.5 truncate text-[11px] text-ink-faint" title={email ?? ''}>
+            {email}
           </p>
           <form action={signOut}>
             <button
@@ -79,13 +81,13 @@ export default async function PanelLayout({ children }: { children: React.ReactN
           </div>
         </div>
 
-        <header className="hidden h-[52px] shrink-0 items-center justify-between border-b border-hairline bg-surface px-5 md:flex">
+        <header className="wb-topbar hidden h-[52px] shrink-0 items-center justify-between border-b border-hairline bg-surface px-5 md:flex">
           <p className="truncate text-[12.5px] font-medium text-ink-soft">{org.name}</p>
           <p className="text-[11.5px] text-ink-faint">WhatsApp workbench</p>
         </header>
 
         <main className="min-w-0 flex-1 overflow-x-hidden px-3 py-4 md:px-5 md:py-5">
-          <div className="filo-fade-in mx-auto w-full max-w-[1280px]">{children}</div>
+          <div className="mx-auto w-full max-w-[1280px]">{children}</div>
         </main>
       </div>
     </div>

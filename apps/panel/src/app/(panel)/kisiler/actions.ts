@@ -117,21 +117,51 @@ export async function importContacts(
   }
 }
 
-export async function verifyList(listId: string): Promise<{ error?: string }> {
-  const { error } = await enqueueJob({
+export async function verifyList(
+  listId: string,
+): Promise<{ error?: string; ok?: string; jobId?: string }> {
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  try {
+    ;({ org, supabase } = await requireActiveOrg())
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
+  }
+
+  const { count: liveCount, error: liveError } = await supabase
+    .from('accounts')
+    .select('id', { count: 'exact', head: true })
+    .eq('org_id', org.id)
+    .eq('status', 'connected')
+
+  if (liveError) return { error: liveError.message }
+  if (!liveCount) {
+    return {
+      error: 'Liste doğrulaması için bağlı bir WhatsApp hattı gerekli. Hesaplar’dan bir hat bağlayın.',
+    }
+  }
+
+  const { id, error } = await enqueueJob({
     type: 'contacts.verify',
     payload: { list_id: listId },
     priority: 50,
   })
-  if (error) return { error }
+  if (error || !id) return { error: error ?? 'Doğrulama işi oluşturulamadı.' }
 
   revalidatePath('/kisiler')
   revalidatePath(`/kisiler/${listId}`)
-  return {}
+  return {
+    jobId: id,
+    ok: 'Doğrulama kuyruğa alındı. İş bitince alttaki özet güncellenir.',
+  }
 }
 
 /** Org defterindeki kontrol edilmemis / bayat numaralari dogrular (liste bagimsiz). */
-export async function verifyAllContacts(): Promise<{ error?: string; ok?: string }> {
+export async function verifyAllContacts(): Promise<{
+  error?: string
+  ok?: string
+  jobId?: string
+}> {
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
   let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
   try {
@@ -153,16 +183,17 @@ export async function verifyAllContacts(): Promise<{ error?: string; ok?: string
     }
   }
 
-  const { error } = await enqueueJob({
+  const { id, error } = await enqueueJob({
     type: 'contacts.verify',
     payload: {},
     priority: 40,
   })
-  if (error) return { error }
+  if (error || !id) return { error: error ?? 'Doğrulama işi oluşturulamadı.' }
 
   revalidatePath('/kisiler')
   return {
-    ok: 'Doğrulama kuyruğa alındı. Sonuçlar listelerde ✓ (var) / × (yok) olarak güncellenir; büyük defterlerde birkaç dakika sürebilir.',
+    jobId: id,
+    ok: 'Doğrulama kuyruğa alındı. Sonuçlar listelerde ✓ / × olarak güncellenir; büyük defterlerde birkaç dakika sürebilir.',
   }
 }
 

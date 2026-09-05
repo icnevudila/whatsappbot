@@ -65,10 +65,11 @@ function NavLink({
   return (
     <Link
       href={href}
+      prefetch
       aria-current={active ? 'page' : undefined}
-      className={className ?? 'wb-rail-link'}
+      className={className ?? `wb-rail-link${active ? ' is-active' : ''}`}
     >
-      {label}
+      <span className="wb-rail-link-label">{label}</span>
     </Link>
   )
 }
@@ -118,8 +119,8 @@ export function Nav({
             href={setupItem.href}
             label={setupItem.label}
             active={isActive(pathname, setupItem.href)}
-            className={`wb-rail-link whitespace-nowrap ${
-              isActive(pathname, setupItem.href) ? '' : ''
+            className={`wb-rail-link whitespace-nowrap${
+              isActive(pathname, setupItem.href) ? ' is-active' : ''
             }`}
           />
         ) : null}
@@ -129,7 +130,9 @@ export function Nav({
             href={item.href}
             label={item.label}
             active={isActive(pathname, item.href)}
-            className="wb-rail-link whitespace-nowrap"
+            className={`wb-rail-link whitespace-nowrap${
+              isActive(pathname, item.href) ? ' is-active' : ''
+            }`}
           />
         ))}
         <div className="relative" ref={moreRef}>
@@ -137,24 +140,27 @@ export function Nav({
             type="button"
             aria-expanded={moreOpen}
             onClick={() => setMoreOpen((v) => !v)}
-            className={`wb-rail-link whitespace-nowrap ${
-              moreActive || moreOpen ? 'font-semibold' : ''
+            className={`wb-rail-link whitespace-nowrap${
+              moreActive || moreOpen ? ' is-active' : ''
             }`}
             aria-current={moreActive ? 'page' : undefined}
           >
-            Diğer
+            <span className="wb-rail-link-label">Diğer</span>
           </button>
           {moreOpen ? (
-            <div className="absolute left-0 top-full z-30 mt-1 min-w-[168px] border border-hairline bg-surface p-1 shadow-[var(--shadow-md)]">
+            <div className="wb-rail-more absolute left-0 top-full z-30 mt-1 min-w-[168px] border border-hairline bg-surface p-1 shadow-[var(--shadow-md)]">
               {moreH.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
+                  prefetch
                   onClick={() => setMoreOpen(false)}
                   aria-current={isActive(pathname, item.href) ? 'page' : undefined}
-                  className="wb-rail-link block"
+                  className={`wb-rail-link block${
+                    isActive(pathname, item.href) ? ' is-active' : ''
+                  }`}
                 >
-                  {item.label}
+                  <span className="wb-rail-link-label">{item.label}</span>
                 </Link>
               ))}
             </div>

@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export type ActiveOrg = {
@@ -14,12 +15,14 @@ export type ActiveOrg = {
 /**
  * Aktif işletme: profiles.active_org_id, yoksa kullanıcının ilk üyeliği.
  * Panel sorguları ve insert'ler bu org_id ile scoped olmalı.
+ * Ayni RSC isteginde layout + sayfa tek sefer ceker (React cache).
  */
-export async function requireActiveOrg(): Promise<{
+export const requireActiveOrg = cache(async (): Promise<{
   userId: string
+  email: string | null
   org: ActiveOrg
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
-}> {
+}> => {
   const supabase = await createSupabaseServerClient()
   const {
     data: { user },
@@ -75,6 +78,7 @@ export async function requireActiveOrg(): Promise<{
 
   return {
     userId: user.id,
+    email: user.email ?? null,
     org: {
       id: org.id,
       name: org.name,
@@ -87,11 +91,11 @@ export async function requireActiveOrg(): Promise<{
     },
     supabase,
   }
-}
+})
 
-export async function listUserOrgs(): Promise<
+export const listUserOrgs = cache(async (): Promise<
   { id: string; name: string; slug: string; role: string }[]
-> {
+> => {
   const supabase = await createSupabaseServerClient()
   const {
     data: { user },
@@ -114,4 +118,4 @@ export async function listUserOrgs(): Promise<
       return { id: org.id, name: org.name, slug: org.slug, role: row.role }
     })
     .filter((row): row is NonNullable<typeof row> => row !== null)
-}
+})

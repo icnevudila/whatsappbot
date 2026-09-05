@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import type { Database } from '@wa/shared'
@@ -7,8 +8,9 @@ import { publicEnv } from '@/lib/env'
  * Sunucu tarafi Supabase istemcisi.
  * Yalnizca publishable key kullanir; butun yetki kontrolu RLS'te.
  * Panelin secret / service_role anahtarina hic ihtiyaci yok.
+ * Ayni istek icinde tekrar kullanilir (React cache).
  */
-export async function createSupabaseServerClient() {
+export const createSupabaseServerClient = cache(async () => {
   const cookieStore = await cookies()
 
   return createServerClient<Database>(
@@ -32,7 +34,7 @@ export async function createSupabaseServerClient() {
       },
     },
   )
-}
+})
 
 /** Oturum yoksa null doner. Korumali sayfalar bunu kullanip yonlendirir. */
 export async function getSessionUser() {

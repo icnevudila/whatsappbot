@@ -28,7 +28,7 @@ export default async function AccountsPage() {
       .select(ACCOUNT_FIELDS)
       .eq('org_id', org.id)
       .order('created_at'),
-    getSetupProgress(supabase, org.id),
+    getSetupProgress(org.id),
   ])
 
   const accounts = (accountsResult.data ?? []) as AccountView[]

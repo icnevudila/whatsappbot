@@ -106,6 +106,7 @@ h3 {
 
 /* Workbench shell helpers */
 .wb-rail-link {
+  position: relative;
   display: block;
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
@@ -113,19 +114,37 @@ h3 {
   font-size: 13px;
   line-height: 1.25;
   color: var(--color-ink-muted);
-  transition: background-color 120ms var(--ease-out), border-color 120ms var(--ease-out),
-    color 120ms var(--ease-out), box-shadow 120ms var(--ease-out);
+  transition:
+    background-color 140ms var(--ease-out),
+    border-color 140ms var(--ease-out),
+    color 140ms var(--ease-out),
+    transform 140ms var(--ease-out),
+    box-shadow 140ms var(--ease-out);
 }
 .wb-rail-link:hover {
   background: var(--color-surface-raised);
   color: var(--color-ink);
 }
-.wb-rail-link[aria-current='page'] {
+.wb-rail-link:active {
+  transform: scale(0.985);
+}
+.wb-rail-link[aria-current='page'],
+.wb-rail-link.is-active {
   background: var(--color-accent-soft);
-  border-color: rgba(47, 91, 255, 0.2);
+  border-color: rgba(47, 91, 255, 0.18);
   color: var(--color-accent-dim);
   font-weight: 600;
-  box-shadow: none;
+  box-shadow: inset 3px 0 0 var(--color-accent);
+}
+.wb-rail-link.whitespace-nowrap[aria-current='page'],
+.wb-rail-link.whitespace-nowrap.is-active {
+  box-shadow: inset 0 -2px 0 var(--color-accent);
+}
+.wb-rail-link-label {
+  display: block;
+}
+.wb-rail-more {
+  animation: filo-pop 140ms var(--ease-out) both;
 }
 .wb-rail-group {
   margin: 14px 10px 6px;
@@ -207,6 +226,107 @@ h3 {
   border-radius: var(--radius-sm);
 }
 
+/* Cards */
+.wb-card {
+  transition:
+    border-color 160ms var(--ease-out),
+    box-shadow 160ms var(--ease-out);
+}
+.wb-card-lift:hover {
+  border-color: var(--color-hairline-strong);
+  box-shadow: var(--shadow-md);
+}
+
+/* Route progress (Pilot-style top rail) */
+.wb-route-progress {
+  pointer-events: none;
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 80;
+  height: 2px;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 120ms var(--ease-out);
+}
+.wb-route-progress.is-active {
+  opacity: 1;
+}
+.wb-route-progress span {
+  display: block;
+  height: 100%;
+  width: 35%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, transparent, var(--color-accent), var(--color-accent-dim));
+  transform: translateX(-120%);
+}
+.wb-route-progress.is-active span {
+  animation: filo-route-slide 1s var(--ease-out) infinite;
+}
+
+/* Page enter — short, not sluggish */
+.wb-page-enter {
+  animation: filo-page-enter 180ms var(--ease-out) both;
+}
+
+/* Loading skeleton (pilot product.css shimmer) */
+.wb-skeleton {
+  display: grid;
+  gap: 14px;
+}
+.wb-skeleton-head {
+  display: grid;
+  gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-hairline);
+}
+.wb-skeleton-kpis {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (min-width: 1024px) {
+  .wb-skeleton-kpis {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+.wb-skeleton-main {
+  display: grid;
+  gap: 10px;
+}
+@media (min-width: 1024px) {
+  .wb-skeleton-main {
+    grid-template-columns: 1.4fr 1fr;
+  }
+}
+.wb-skel {
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-hairline);
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-raised) 0%,
+    #f7f8fb 45%,
+    var(--color-surface-raised) 100%
+  );
+  background-size: 200% 100%;
+  animation: filo-shimmer 1.15s ease-in-out infinite;
+}
+.wb-skel-title {
+  height: 28px;
+  width: min(220px, 55%);
+}
+.wb-skel-desc {
+  height: 12px;
+  width: min(420px, 80%);
+}
+.wb-skel-card {
+  height: 88px;
+  border-radius: var(--radius-card);
+}
+.wb-skel-panel {
+  height: 220px;
+  border-radius: var(--radius-card);
+}
+
 @keyframes filo-fade-in {
   from {
     opacity: 0;
@@ -215,6 +335,46 @@ h3 {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes filo-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes filo-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes filo-route-slide {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+@keyframes filo-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
   }
 }
 
@@ -248,34 +408,34 @@ h3 {
 }
 
 .filo-fade-in {
-  animation: filo-fade-in 0.35s var(--ease-out) both;
+  animation: filo-fade-in 0.2s var(--ease-out) both;
 }
 
 .filo-fade-up {
-  animation: filo-fade-up 0.55s var(--ease-out) both;
+  animation: filo-fade-up 0.45s var(--ease-out) both;
 }
 
 .filo-fade-up-delay {
-  animation: filo-fade-up 0.55s var(--ease-out) 0.12s both;
+  animation: filo-fade-up 0.45s var(--ease-out) 0.08s both;
 }
 
 .filo-fade-up-delay-2 {
-  animation: filo-fade-up 0.55s var(--ease-out) 0.24s both;
+  animation: filo-fade-up 0.45s var(--ease-out) 0.16s both;
 }
 
 .filo-bar-stagger {
   transform-origin: left center;
-  animation: filo-bar-grow 0.7s var(--ease-out) both;
+  animation: filo-bar-grow 0.55s var(--ease-out) both;
 }
 
 .filo-bar-stagger-1 {
-  animation-delay: 0.28s;
+  animation-delay: 0.16s;
 }
 .filo-bar-stagger-2 {
-  animation-delay: 0.4s;
+  animation-delay: 0.24s;
 }
 .filo-bar-stagger-3 {
-  animation-delay: 0.52s;
+  animation-delay: 0.32s;
 }
 
 .filo-pulse > div {
@@ -288,7 +448,18 @@ h3 {
   .filo-fade-up-delay,
   .filo-fade-up-delay-2,
   .filo-bar-stagger,
-  .filo-pulse > div {
+  .filo-pulse > div,
+  .wb-page-enter,
+  .wb-rail-more,
+  .wb-skel,
+  .wb-route-progress.is-active span {
     animation: none !important;
+  }
+  .wb-rail-link:active,
+  .wb-card-lift:hover {
+    transform: none;
+  }
+  .wb-route-progress.is-active {
+    opacity: 0;
   }
 }
