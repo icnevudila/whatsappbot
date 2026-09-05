@@ -2,10 +2,13 @@
 
 Panel/dashboard Vercel’de kalır. Bu VPS yalnızca WhatsApp worker’ı çalıştırır.
 
-## Küçük VPS şimdi (2–4 GB, ör. CPX22)
+## Küçük / başlangıç VPS (`--profile small`)
 
-Gerçekçi tavan: **~8–10 canlı hat**. 300 hat için sonra RAM büyütülür.
-Places / harita araması yok — yalnızca WhatsApp oturum + kampanya.
+Tek worker, **`MAX_SESSIONS=50`**. Places yok — yalnızca oturum + kampanya.
+
+- **4 GB RAM:** 50 hat teorik tavan; dolunca OOM riski yüksek — yavaş doldur, `free -h` izle.
+- **8 GB+:** 50 hat daha gerçekçi.
+- **300 hat:** sonra plan büyüt → `--profile scale`.
 
 ```bash
 # Ubuntu
@@ -26,12 +29,12 @@ curl -fsS http://127.0.0.1:8080/health
 curl -fsS http://127.0.0.1:8080/ready
 ```
 
-Önerilen `.env` (küçük):
+Önerilen `.env` (small / 50 hat):
 
 ```
 ROLE=worker
 WORKER_ID=hetzner-1
-MAX_SESSIONS=10
+MAX_SESSIONS=50
 DB_POOL_MAX=2
 JOB_BATCH_SIZE=1
 LOG_LEVEL=info
