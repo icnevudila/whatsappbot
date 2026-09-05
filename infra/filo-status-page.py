@@ -1,109 +1,331 @@
 #!/usr/bin/env python3
-"""Minimal public status page for Filo worker (token in URL path)."""
+"""
+Filo ops status — şifreli giriş + hat/telefon mesaj özeti.
+URL: http://IP:9090/s/<TOKEN>/
+"""
 from __future__ import annotations
 
+import hashlib
+import hmac
 import html
 import json
 import os
+import secrets
+import time
+import urllib.parse
 import urllib.request
+from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 
 TOKEN = os.environ.get("FILO_STATUS_TOKEN", "").strip()
+USER = os.environ.get("FILO_STATUS_USER", "filo").strip() or "filo"
+PASSWORD = os.environ.get("FILO_STATUS_PASSWORD", "").strip()
+SECRET = os.environ.get("FILO_STATUS_SECRET", "").strip() or PASSWORD or "change-me"
 HEALTH = "http://127.0.0.1:8080/health"
 PORT = int(os.environ.get("FILO_STATUS_PORT", "9090"))
+ENV_FILE = os.environ.get(
+    "FILO_ENV_FILE",
+    "/opt/whatsappbot/apps/wa-service/.env",
+)
+SESSION_TTL = 12 * 3600
 
 
-def fetch_health() -> tuple[int, dict | str]:
+def load_database_url() -> str | None:
+    override = os.environ.get("DATABASE_URL", "").strip()
+    if override:
+        return override
+    path = Path(ENV_FILE)
+    if not path.is_file():
+        return None
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        line = line.strip()
+        if line.startswith("DATABASE_URL="):
+            return line.split("=", 1)[1].strip().strip('"').strip("'")
+    return None
+
+
+def fetch_health() -> dict:
     try:
         with urllib.request.urlopen(HEALTH, timeout=3) as r:
-            body = r.read().decode()
-            return r.status, json.loads(body)
+            return json.loads(r.read().decode())
     except Exception as e:  # noqa: BLE001
-        return 503, {"error": str(e), "healthy": False}
+        return {"healthy": False, "error": str(e)}
+
+
+def sign_session(exp: int) -> str:
+    payload = f"{USER}:{exp}"
+    sig = hmac.new(SECRET.encode(), payload.encode(), hashlib.sha256).hexdigest()
+    return f"{payload}:{sig}"
+
+
+def valid_session(raw: str | None) -> bool:
+    if not raw:
+        return False
+    parts = raw.split(":")
+    if len(parts) != 3:
+        return False
+    user, exp_s, sig = parts
+    try:
+        exp = int(exp_s)
+    except ValueError:
+        return False
+    if user != USER or exp < int(time.time()):
+        return False
+    expect = hmac.new(
+        SECRET.encode(),
+        f"{user}:{exp}".encode(),
+        hashlib.sha256,
+    ).hexdigest()
+    return hmac.compare_digest(expect, sig)
+
+
+def query_messages(limit: int = 40) -> tuple[list[dict], str | None]:
+    url = load_database_url()
+    if not url:
+        return [], "DATABASE_URL yok"
+    try:
+        import psycopg  # type: ignore
+    except ImportError:
+        try:
+            import psycopg2 as psycopg  # type: ignore
+        except ImportError:
+            return [], "psycopg kurulu değil"
+
+    sql = """
+      select
+        m.created_at,
+        m.direction,
+        m.status,
+        m.message_type,
+        m.phone_e164,
+        left(coalesce(m.body, ''), 120) as body,
+        case when m.media_url is not null then true else false end as has_media,
+        a.label as account_label,
+        a.phone_e164 as account_phone,
+        sl.holder_id as worker_id
+      from public.message_log m
+      left join public.accounts a on a.id = m.account_id
+      left join wa.session_lease sl on sl.account_id = m.account_id
+      order by m.created_at desc
+      limit %s
+    """
+    try:
+        # psycopg3
+        if hasattr(psycopg, "connect"):
+            with psycopg.connect(url, connect_timeout=8) as conn:
+                with conn.cursor() as cur:
+                    cur.execute(sql, (limit,))
+                    cols = [d[0] for d in cur.description]
+                    rows = [dict(zip(cols, row)) for row in cur.fetchall()]
+                    return rows, None
+        return [], "psycopg API bilinmiyor"
+    except Exception as e:  # noqa: BLE001
+        return [], str(e)
+
+
+CSS = """
+body{font-family:ui-sans-serif,system-ui,sans-serif;background:#0f1419;color:#e7ecf1;margin:0;padding:1.25rem}
+.wrap{max-width:920px;margin:0 auto}
+.card{border:1px solid #2a3340;border-radius:12px;padding:1.1rem 1.25rem;background:#161d26;margin-bottom:1rem}
+.ok{color:#3dd68c}.bad{color:#ff6b6b}.muted{color:#8b98a8}
+h1{font-size:1.15rem;margin:0 0 .5rem}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.65rem}
+@media(max-width:720px){.grid{grid-template-columns:1fr 1fr}}
+.k{font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;color:#8b98a8}
+.v{font-size:.95rem;font-weight:600;margin-top:.12rem}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th,td{text-align:left;padding:.45rem .35rem;border-bottom:1px solid #2a3340;vertical-align:top}
+th{color:#8b98a8;font-weight:500;font-size:.7rem;text-transform:uppercase}
+input{width:100%;box-sizing:border-box;padding:.65rem .75rem;border-radius:8px;border:1px solid #2a3340;background:#0f1419;color:#e7ecf1;margin:.35rem 0 0}
+button{margin-top:.85rem;width:100%;padding:.7rem;border:0;border-radius:8px;background:#3b82f6;color:#fff;font-weight:600;cursor:pointer}
+.tag{display:inline-block;padding:.1rem .4rem;border-radius:6px;font-size:.7rem;border:1px solid #2a3340}
+.in{color:#60a5fa}.out{color:#3dd68c}
+a{color:#93c5fd}
+"""
+
+
+def login_page(err: str = "") -> bytes:
+    msg = f'<p class="bad">{html.escape(err)}</p>' if err else ""
+    page = f"""<!doctype html><html lang="tr"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Filo ops giriş</title><style>{CSS}</style></head><body><div class="wrap">
+<div class="card" style="max-width:380px;margin:3rem auto">
+<h1>Filo ops</h1>
+<p class="muted">Şifreli izleme — hat / telefon / mesaj özeti</p>
+{msg}
+<form method="post" action="">
+<label class="k">Kullanıcı</label>
+<input name="user" autocomplete="username" required value="{html.escape(USER)}"/>
+<label class="k">Şifre</label>
+<input name="password" type="password" autocomplete="current-password" required/>
+<button type="submit">Giriş</button>
+</form>
+</div></div></body></html>"""
+    return page.encode()
+
+
+def dashboard_page(health: dict, rows: list[dict], db_err: str | None) -> bytes:
+    healthy = health.get("healthy") is True
+    worker = html.escape(str(health.get("worker", "?")))
+    sessions = health.get("sessions") if isinstance(health.get("sessions"), dict) else {}
+    jobs = health.get("jobs") if isinstance(health.get("jobs"), dict) else {}
+
+    trs = []
+    for r in rows:
+        direction = r.get("direction") or "?"
+        dir_cls = "in" if direction == "in" else "out"
+        dir_label = "Gelen" if direction == "in" else "Giden"
+        when = r.get("created_at")
+        when_s = when.strftime("%d.%m %H:%M:%S") if hasattr(when, "strftime") else str(when)[:19]
+        acc = html.escape(str(r.get("account_label") or r.get("account_phone") or "—"))
+        phone = html.escape(str(r.get("phone_e164") or "—"))
+        body = html.escape(str(r.get("body") or ""))
+        if r.get("has_media"):
+            body = (body + " ").strip() + "📎"
+        status = html.escape(str(r.get("status") or ""))
+        mtype = html.escape(str(r.get("message_type") or ""))
+        wid = html.escape(str(r.get("worker_id") or "—"))
+        trs.append(
+            f"<tr><td>{html.escape(when_s)}</td>"
+            f'<td class="{dir_cls}">{dir_label}</td>'
+            f"<td>{acc}<div class='muted' style='font-size:.72rem'>{wid}</div></td>"
+            f"<td><code>{phone}</code></td>"
+            f"<td>{mtype} · {status}</td>"
+            f"<td>{body}</td></tr>"
+        )
+    table = (
+        "<table><thead><tr>"
+        "<th>Zaman</th><th>Yön</th><th>Hat</th><th>Telefon</th><th>Durum</th><th>Özet</th>"
+        "</tr></thead><tbody>"
+        + ("".join(trs) if trs else "<tr><td colspan='6' class='muted'>Kayıt yok</td></tr>")
+        + "</tbody></table>"
+    )
+    err_html = f'<p class="bad">DB: {html.escape(db_err)}</p>' if db_err else ""
+
+    page = f"""<!doctype html><html lang="tr"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta http-equiv="refresh" content="20"/>
+<title>Filo ops · {worker}</title><style>{CSS}</style></head><body><div class="wrap">
+<div class="card">
+<div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:center">
+<div>
+<h1>Filo ops</h1>
+<p class="{'ok' if healthy else 'bad'}">{'● Çalışıyor' if healthy else '● Kapalı'}</p>
+<p class="muted">Worker <code>{worker}</code></p>
+</div>
+<form method="post" action="?logout=1"><button type="submit" style="width:auto;background:#2a3340">Çıkış</button></form>
+</div>
+<div class="grid" style="margin-top:1rem">
+<div><div class="k">Canlı oturum</div><div class="v">{sessions.get('live','?')} / {sessions.get('max','?')}</div></div>
+<div><div class="k">Bekleyen job</div><div class="v">{jobs.get('pending','?')}</div></div>
+<div><div class="k">DB</div><div class="v">{'ok' if health.get('db') else 'yok'}</div></div>
+<div><div class="k">Uptime</div><div class="v">{health.get('uptimeSeconds','?')}s</div></div>
+</div>
+</div>
+<div class="card">
+<div class="k" style="margin-bottom:.65rem">Son mesajlar — hangi hat · nereye/kimden</div>
+{err_html}
+{table}
+<p class="muted" style="font-size:.75rem;margin-top:.75rem">20 sn yenilenir · şifreli oturum · HTTP (ileride HTTPS eklenir)</p>
+</div>
+</div></body></html>"""
+    return page.encode()
 
 
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt: str, *args) -> None:  # noqa: A003
         return
 
-    def do_GET(self) -> None:  # noqa: N802
-        path = self.path.split("?", 1)[0].rstrip("/") or "/"
-        if not TOKEN or path != f"/s/{TOKEN}":
-            self.send_response(404)
-            self.end_headers()
-            self.wfile.write(b"not found")
-            return
+    def _base(self) -> str:
+        return f"/s/{TOKEN}"
 
-        code, data = fetch_health()
-        if not isinstance(data, dict):
-            data = {"error": str(data), "healthy": False}
+    def _read_body(self) -> bytes:
+        n = int(self.headers.get("Content-Length") or 0)
+        return self.rfile.read(n) if n > 0 else b""
 
-        healthy = data.get("healthy") is True
-        ready = data.get("ready") is True
-        worker = html.escape(str(data.get("worker", "?")))
-        role = html.escape(str(data.get("role", "?")))
-        sessions = data.get("sessions") if isinstance(data.get("sessions"), dict) else {}
-        capacity = data.get("capacity") if isinstance(data.get("capacity"), dict) else {}
-        jobs = data.get("jobs") if isinstance(data.get("jobs"), dict) else {}
-        uptime = data.get("uptimeSeconds", "?")
-        live = sessions.get("live", "?")
-        tracked = sessions.get("tracked", "?")
-        vmax = sessions.get("max", "?")
-        free = sessions.get("free", "?")
-        pending = jobs.get("pending", "?")
-        stale = jobs.get("staleClaimed", "?")
-        db = data.get("db")
-        degraded = data.get("degraded")
-        raw = html.escape(json.dumps(data, ensure_ascii=False, indent=2))
+    def _cookie_session(self) -> str | None:
+        raw = self.headers.get("Cookie")
+        if not raw:
+            return None
+        jar = SimpleCookie()
+        jar.load(raw)
+        morsel = jar.get("filo_ops")
+        return morsel.value if morsel else None
 
-        page = f"""<!doctype html>
-<html lang="tr"><head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<meta http-equiv="refresh" content="10"/>
-<title>Filo · {worker}</title>
-<style>
-body{{font-family:ui-sans-serif,system-ui,sans-serif;background:#0f1419;color:#e7ecf1;margin:0;padding:1.5rem}}
-.wrap{{max-width:560px;margin:0 auto}}
-.card{{border:1px solid #2a3340;border-radius:12px;padding:1.25rem 1.4rem;background:#161d26;margin-bottom:1rem}}
-.ok{{color:#3dd68c}}.bad{{color:#ff6b6b}}.muted{{color:#8b98a8}}
-h1{{font-size:1.15rem;margin:0 0 .5rem}}
-.grid{{display:grid;grid-template-columns:1fr 1fr;gap:.65rem .9rem;margin-top:.85rem}}
-.k{{font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:#8b98a8}}
-.v{{font-size:.98rem;font-weight:600;margin-top:.15rem}}
-code,pre{{font-family:ui-monospace,Menlo,Consolas,monospace}}
-pre{{font-size:.72rem;overflow:auto;background:#0f1419;border:1px solid #2a3340;border-radius:8px;padding:.75rem;color:#a8b3c0}}
-</style></head><body><div class="wrap">
-<div class="card">
-<h1>Filo gönderim sunucusu</h1>
-<p class="{'ok' if healthy else 'bad'}">{'● Çalışıyor' if healthy else '● Kapalı / hata'}</p>
-<p class="muted" style="font-size:.9rem">Worker <code>{worker}</code> · rol {role}</p>
-<div class="grid">
-<div><div class="k">Hazır</div><div class="v {'ok' if ready else 'bad'}">{'evet' if ready else 'hayır'}</div></div>
-<div><div class="k">DB</div><div class="v">{'ok' if db else 'yok'}</div></div>
-<div><div class="k">Canlı oturum</div><div class="v">{live} / {vmax}</div></div>
-<div><div class="k">Takip / boş</div><div class="v">{tracked} · {free} boş</div></div>
-<div><div class="k">Bekleyen job</div><div class="v">{pending}</div></div>
-<div><div class="k">Stale claimed</div><div class="v">{stale}</div></div>
-<div><div class="k">Uptime</div><div class="v">{uptime}s</div></div>
-<div><div class="k">Degraded</div><div class="v">{'evet' if degraded else 'hayır'}</div></div>
-</div>
-</div>
-<div class="card">
-<div class="k" style="margin-bottom:.5rem">Ham health JSON</div>
-<pre>{raw}</pre>
-<p class="muted" style="font-size:.75rem;margin:.6rem 0 0">10 sn’de yenilenir · sadece durum; mesaj içeriği burada yok (panel Gidenler)</p>
-</div>
-</div></body></html>"""
-        body = page.encode()
-        self.send_response(200 if healthy else 503)
+    def _send(self, code: int, body: bytes, headers: list[tuple[str, str]] | None = None) -> None:
+        self.send_response(code)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        if headers:
+            for k, v in headers:
+                self.send_header(k, v)
         self.end_headers()
         self.wfile.write(body)
 
+    def _path(self) -> str:
+        return urllib.parse.urlparse(self.path).path.rstrip("/") or "/"
+
+    def do_GET(self) -> None:  # noqa: N802
+        if not TOKEN or not PASSWORD:
+            self._send(503, b"status page not configured")
+            return
+        path = self._path()
+        base = self._base()
+        if path != base and not path.startswith(base + "/"):
+            self._send(404, b"not found")
+            return
+
+        if not valid_session(self._cookie_session()):
+            self._send(200, login_page())
+            return
+
+        health = fetch_health()
+        rows, err = query_messages()
+        self._send(200, dashboard_page(health, rows, err))
+
+    def do_POST(self) -> None:  # noqa: N802
+        if not TOKEN or not PASSWORD:
+            self._send(503, b"status page not configured")
+            return
+        path = self._path()
+        base = self._base()
+        if path != base and not path.startswith(base + "/"):
+            self._send(404, b"not found")
+            return
+
+        qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+        if qs.get("logout"):
+            self._send(
+                302,
+                b"",
+                [
+                    ("Location", base),
+                    ("Set-Cookie", "filo_ops=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict"),
+                ],
+            )
+            return
+
+        form = urllib.parse.parse_qs(self._read_body().decode("utf-8", errors="replace"))
+        user = (form.get("user") or [""])[0]
+        password = (form.get("password") or [""])[0]
+        if not (
+            secrets.compare_digest(user, USER)
+            and secrets.compare_digest(password, PASSWORD)
+        ):
+            self._send(401, login_page("Kullanıcı veya şifre hatalı"))
+            return
+
+        exp = int(time.time()) + SESSION_TTL
+        cookie = (
+            f"filo_ops={sign_session(exp)}; Path=/; Max-Age={SESSION_TTL}; "
+            "HttpOnly; SameSite=Strict"
+        )
+        self._send(302, b"", [("Location", base), ("Set-Cookie", cookie)])
+
 
 if __name__ == "__main__":
-    if not TOKEN:
-        raise SystemExit("FILO_STATUS_TOKEN gerekli")
+    if not TOKEN or not PASSWORD:
+        raise SystemExit("FILO_STATUS_TOKEN ve FILO_STATUS_PASSWORD gerekli")
     ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
