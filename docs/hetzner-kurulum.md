@@ -35,15 +35,23 @@ Komut kanalı Postgres `jobs` + `session_lease`. Public 8080 / LB yok.
 3. Hetzner small profil; gerekirse `account.connect` job
 4. Auth zaten Postgres’te — QR gerekmez (logout olmadıysa)
 
-## Ops sayfası (şifreli)
+## Ops sayfası (şifreli + HTTPS)
 
-`http://IP:9090/s/<TOKEN>/` — kullanıcı/şifre systemd env’de.  
-Hat · telefon · gelen/giden log. Günlük kullanım için panel tercih et.
+- HTTPS: `https://SUNUCU_IP:9443/s/<TOKEN>/` (self-signed — tarayıcıda Advanced/Proceed)
+- Kullanıcı/şifre: systemd `filo-status` env
+- HTTP 9090 dışarı kapalı (UFW); yalnızca localhost → HTTPS proxy
 
-## Büyütünce (300 hat)
+## Sentry
 
-Rescale ≥32 GB → `--profile small down` → `--profile scale up`.  
-Bkz. [scale-300.md](./scale-300.md).
+`apps/wa-service/.env` içine:
+```
+SENTRY_DSN=https://...@o....ingest.sentry.io/...
+```
+Sonra: `docker compose -f infra/docker-compose.yml --profile small up -d --force-recreate`
+
+## 300 hat
+
+4 GB’de scale **yok**. Bkz. [hetzner-scale-300.md](./hetzner-scale-300.md).
 
 ## Sertleştirme
 

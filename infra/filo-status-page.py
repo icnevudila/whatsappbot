@@ -328,4 +328,4 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     if not TOKEN or not PASSWORD:
         raise SystemExit("FILO_STATUS_TOKEN ve FILO_STATUS_PASSWORD gerekli")
-    ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
+    ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
