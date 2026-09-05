@@ -176,7 +176,7 @@ export function ScrapeForm() {
         subtitle="Siteyi dolaşıp tel: / mailto: ve metindeki numaraları çıkarır. Önce önizleyin, sonra listeye alın."
       />
 
-      <div className="space-y-3.5 p-4">
+      <div className="space-y-2.5 p-3.5">
         <form onSubmit={onSubmit} className="space-y-3">
           <Field
             label="Web adresi"

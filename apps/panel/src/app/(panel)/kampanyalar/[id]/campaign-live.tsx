@@ -142,7 +142,7 @@ export function CampaignLive({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2.5">
       <Card>
         <CardHeader
           title="İlerleme"
@@ -150,7 +150,7 @@ export function CampaignLive({
           action={<StatusPill status={campaign.status} />}
         />
 
-        <div className="space-y-4 p-4">
+        <div className="space-y-2.5 p-3.5">
           <div>
             <div className="mb-2 flex items-baseline justify-between text-[12px]">
               <span className="text-ink-muted">İlerleme</span>
@@ -171,7 +171,7 @@ export function CampaignLive({
             />
           </div>
 
-          <dl className="grid grid-cols-2 gap-4 border-t border-hairline pt-4 sm:grid-cols-4">
+          <dl className="grid grid-cols-2 gap-2.5 border-t border-hairline pt-2.5 sm:grid-cols-4">
             <Stat label="Gönderildi" value={campaign.sent_count} tone="accent" />
             <Stat label="Atlandı" value={campaign.skipped_count} tone="muted" />
             <Stat label="Başarısız" value={campaign.failed_count} tone="danger" />
@@ -189,7 +189,7 @@ export function CampaignLive({
           </p>
 
           {(sourceLists.length > 0 || accounts.length > 0) && (
-            <div className="space-y-1.5 border-t border-hairline pt-4 text-[12px] text-ink-muted">
+            <div className="space-y-1.5 border-t border-hairline pt-2.5 text-[12px] text-ink-muted">
               {sourceLists.length > 0 ? (
                 <p>
                   <span className="text-ink-faint">Kaynak listeler: </span>
@@ -252,7 +252,7 @@ export function CampaignLive({
 
           {error ? <Notice tone="danger">{error}</Notice> : null}
 
-          <div className="flex flex-wrap gap-1.5 border-t border-hairline pt-4">
+          <div className="flex flex-wrap gap-1.5 border-t border-hairline pt-2.5">
             {campaign.status === 'draft' ? (
               <Button
                 variant="accent"
@@ -297,7 +297,7 @@ export function CampaignLive({
           title="Mesaj"
           subtitle={`Tip: ${MESSAGE_TYPE_LABELS[campaign.message_type] ?? campaign.message_type} · Bekleme ${campaign.min_delay_seconds}-${campaign.max_delay_seconds} sn · hesap başına günlük ${campaign.daily_cap_per_account}`}
         />
-        <div className="space-y-3 p-4">
+        <div className="space-y-2.5 p-3.5">
           {campaign.media_url && campaign.message_type === 'image' ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img

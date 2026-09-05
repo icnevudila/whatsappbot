@@ -137,7 +137,7 @@ export function TargetFeed({
         subtitle={`${counts.sent + counts.delivered + counts.read} iletildi · ${counts.skipped} atlandı · ${counts.failed} başarısız · ${counts.queued + counts.sending} bekliyor`}
       />
 
-      <p className="border-b border-hairline px-4 py-2 text-[11.5px] leading-relaxed text-ink-faint">
+      <p className="border-b border-hairline px-3.5 py-2 text-[11.5px] leading-relaxed text-ink-faint">
         Kampanyanın gittiği numaralar. Numaraya tıklayınca Gelenler’de tam konuşmayı açar.{' '}
         <span className="font-medium text-ink-muted">Atlandı:</span> WhatsApp’ta yok, kota
         veya geçici kilit.{' '}
@@ -145,7 +145,7 @@ export function TargetFeed({
         (satırdaki hata metnine bakın).
       </p>
 
-      <div className="flex flex-wrap gap-1 border-b border-hairline px-4 py-2">
+      <div className="flex flex-wrap gap-1 border-b border-hairline px-3.5 py-2">
         {FILTERS.map((item) => {
           const count = counts[item.key]
           if (item.key !== 'all' && count === 0) return null
@@ -191,7 +191,7 @@ export function TargetFeed({
           {visible.map((row) => (
             <li
               key={row.id}
-              className="flex items-start justify-between gap-3 px-4 py-2.5"
+              className="flex items-start justify-between gap-2.5 px-3.5 py-2.5"
             >
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">

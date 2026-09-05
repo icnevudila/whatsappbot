@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AccentLink, Card, CardHeader, EmptyState, QuietLink, StatusPill } from '@/components/ui'
+import { AccentLink, CardHeader, EmptyState, QuietLink, SplitPane, StatusPill } from '@/components/ui'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 
 export type OutboundMessage = {
@@ -103,131 +103,141 @@ export function OutboundBoard({
   const selected = rows.find((row) => row.id === selectedId) ?? null
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
-      <Card>
-        <CardHeader
-          title="Giden mesajlar"
-          subtitle={
-            rows.length === 0
-              ? 'Son 200 kayıt'
-              : `${rows.length} kayıt · en yeni üstte`
-          }
-        />
-
-        {rows.length === 0 ? (
-          <EmptyState
-            title="Henüz giden yok"
-            description="Kampanya veya hızlı gönderimle mesaj atınca kayıtlar burada listelenir."
-            action={
-              <div className="flex flex-wrap justify-center gap-2">
-                <AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>
-                <QuietLink href="/kampanyalar">Kampanyalar</QuietLink>
-              </div>
+    <SplitPane
+      list={
+        <div className={selected ? 'hidden lg:flex lg:min-h-0 lg:flex-col' : 'flex min-h-0 flex-col'}>
+          <CardHeader
+            title="Giden mesajlar"
+            subtitle={
+              rows.length === 0
+                ? 'Son 200 kayıt'
+                : `${rows.length} kayıt · en yeni üstte`
             }
           />
-        ) : (
-          <ul className="max-h-[70vh] divide-y divide-hairline overflow-y-auto">
-            {rows.map((row) => {
-              const active = row.id === selectedId
-              const phone = displayPhone(row)
-              const accountLabel = row.account_id
-                ? accountLabels[row.account_id] ?? null
-                : null
-              const campaignLabel = row.campaign_id
-                ? campaignNames[row.campaign_id] ?? 'Kampanya'
-                : null
 
-              return (
-                <li key={row.id}>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedId(active ? null : row.id)}
-                    className={`block w-full px-4 py-3 text-left transition-colors hover:bg-surface-raised ${
-                      active ? 'bg-accent-soft' : ''
-                    }`}
-                  >
-                    <div className="flex items-baseline justify-between gap-2">
-                      <p className="truncate font-mono text-[12.5px] tabular">{phone}</p>
-                      <span className="shrink-0 text-[10.5px] text-ink-faint">
-                        {timeFormat.format(new Date(row.created_at))}
-                      </span>
-                    </div>
-                    <p className="mt-0.5 truncate text-[12px] text-ink-muted">
-                      {previewBody(row.body, row.message_type)}
-                    </p>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-ink-faint">
-                      {accountLabel ? <span>{accountLabel}</span> : null}
-                      {campaignLabel ? (
-                        <span className="rounded-sm border border-accent/30 bg-accent/8 px-1 py-px text-[10px] text-accent">
-                          {campaignLabel}
-                        </span>
-                      ) : (
-                        <span className="rounded-sm border border-hairline px-1 py-px text-[10px]">
-                          Hızlı gönderim
-                        </span>
-                      )}
-                      {row.status ? <StatusPill status={row.status} /> : null}
-                    </div>
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-        )}
-      </Card>
-
-      <Card>
-        {selected ? (
-          <>
-            <CardHeader
-              title={displayPhone(selected)}
-              subtitle={[
-                selected.account_id && accountLabels[selected.account_id]
-                  ? `Hat: ${accountLabels[selected.account_id]}`
-                  : null,
-                'salt okuma',
-              ]
-                .filter(Boolean)
-                .join(' · ')}
-              action={selected.status ? <StatusPill status={selected.status} /> : undefined}
+          {rows.length === 0 ? (
+            <EmptyState
+              title="Henüz giden yok"
+              description="Kampanya veya hızlı gönderimle mesaj atınca kayıtlar burada listelenir."
+              action={
+                <div className="flex flex-wrap justify-center gap-2">
+                  <AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>
+                  <QuietLink href="/kampanyalar">Kampanyalar</QuietLink>
+                </div>
+              }
             />
-            <div className="space-y-3 p-4">
-              <p className="whitespace-pre-wrap text-[13px] text-ink">
-                {selected.body?.trim()
-                  ? selected.body
-                  : `(${messageTypeLabel(selected.message_type)})`}
-              </p>
-              <p className="text-[11.5px] text-ink-faint">
-                {timeFormat.format(new Date(selected.created_at))}
-                {selected.campaign_id ? (
-                  <>
-                    {' · '}
-                    <Link
-                      href={`/kampanyalar/${selected.campaign_id}`}
-                      className="text-accent underline decoration-hairline-strong underline-offset-2"
+          ) : (
+            <ul className="min-h-0 flex-1 divide-y divide-hairline overflow-y-auto">
+              {rows.map((row) => {
+                const active = row.id === selectedId
+                const phone = displayPhone(row)
+                const accountLabel = row.account_id
+                  ? accountLabels[row.account_id] ?? null
+                  : null
+                const campaignLabel = row.campaign_id
+                  ? campaignNames[row.campaign_id] ?? 'Kampanya'
+                  : null
+
+                return (
+                  <li key={row.id}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedId(active ? null : row.id)}
+                      className={`block w-full px-3.5 py-2.5 text-left transition-colors hover:bg-surface-raised ${
+                        active ? 'wb-row-active' : ''
+                      }`}
                     >
-                      {campaignNames[selected.campaign_id] ?? 'Kampanya'}
-                    </Link>
-                  </>
-                ) : (
-                  ' · hızlı gönderim'
-                )}
-              </p>
-              {selected.phone_e164 ? (
-                <AccentLink href={`/gelenler?tel=${encodeURIComponent(selected.phone_e164)}`}>
-                  Gelenlerde aç
-                </AccentLink>
-              ) : null}
-            </div>
-          </>
-        ) : (
-          <EmptyState
-            title="Bir kayıt seçin"
-            description="Soldan bir giden mesaja tıklayın. Tam metin burada görünür."
-            action={<AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>}
-          />
-        )}
-      </Card>
-    </div>
+                      <div className="flex items-baseline justify-between gap-2">
+                        <p className="truncate font-mono text-[12.5px] tabular">{phone}</p>
+                        <span className="shrink-0 text-[10.5px] text-ink-faint">
+                          {timeFormat.format(new Date(row.created_at))}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 truncate text-[12px] text-ink-muted">
+                        {previewBody(row.body, row.message_type)}
+                      </p>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-ink-faint">
+                        {accountLabel ? <span>{accountLabel}</span> : null}
+                        {campaignLabel ? (
+                          <span className="rounded-sm border border-accent/30 bg-accent/8 px-1 py-px text-[10px] text-accent">
+                            {campaignLabel}
+                          </span>
+                        ) : (
+                          <span className="rounded-sm border border-hairline px-1 py-px text-[10px]">
+                            Hızlı gönderim
+                          </span>
+                        )}
+                        {row.status ? <StatusPill status={row.status} /> : null}
+                      </div>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </div>
+      }
+      detail={
+        <div className={`flex min-h-0 flex-col ${selected ? '' : 'hidden lg:flex'}`}>
+          {selected ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setSelectedId(null)}
+                className="border-b border-hairline px-3.5 py-2.5 text-left text-[12.5px] font-medium text-accent lg:hidden"
+              >
+                ← Tüm kayıtlar
+              </button>
+              <CardHeader
+                title={displayPhone(selected)}
+                subtitle={[
+                  selected.account_id && accountLabels[selected.account_id]
+                    ? `Hat: ${accountLabels[selected.account_id]}`
+                    : null,
+                  'salt okuma',
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+                action={selected.status ? <StatusPill status={selected.status} /> : undefined}
+              />
+              <div className="space-y-2.5 p-3.5">
+                <p className="whitespace-pre-wrap text-[13px] text-ink">
+                  {selected.body?.trim()
+                    ? selected.body
+                    : `(${messageTypeLabel(selected.message_type)})`}
+                </p>
+                <p className="text-[11.5px] text-ink-faint">
+                  {timeFormat.format(new Date(selected.created_at))}
+                  {selected.campaign_id ? (
+                    <>
+                      {' · '}
+                      <Link
+                        href={`/kampanyalar/${selected.campaign_id}`}
+                        className="text-accent underline decoration-hairline-strong underline-offset-2"
+                      >
+                        {campaignNames[selected.campaign_id] ?? 'Kampanya'}
+                      </Link>
+                    </>
+                  ) : (
+                    ' · hızlı gönderim'
+                  )}
+                </p>
+                {selected.phone_e164 ? (
+                  <AccentLink href={`/gelenler?tel=${encodeURIComponent(selected.phone_e164)}`}>
+                    Gelenlerde aç
+                  </AccentLink>
+                ) : null}
+              </div>
+            </>
+          ) : (
+            <EmptyState
+              title="Bir kayıt seçin"
+              description="Soldan bir giden mesaja tıklayın. Tam metin burada görünür."
+              action={<AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>}
+            />
+          )}
+        </div>
+      }
+    />
   )
 }

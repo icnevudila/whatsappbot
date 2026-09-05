@@ -90,7 +90,7 @@ export default async function QuickSendPage({
           />
         </Card>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="grid gap-2.5 lg:grid-cols-[minmax(0,1fr)_320px]">
           <QuickSendForm
             senders={senders}
             userId={userId}
@@ -100,11 +100,11 @@ export default async function QuickSendPage({
             initialNumbers={initialNumbers}
           />
 
-          <aside className="space-y-4">
+          <aside className="space-y-2.5">
             <Card>
-              <div className="p-4">
+              <div className="p-3.5">
                 <h2 className="text-[13px] font-semibold text-ink">Ne zaman ne kullanılır?</h2>
-                <ul className="mt-3 space-y-3 text-[12px] leading-relaxed text-ink-muted">
+                <ul className="mt-2 space-y-2 text-[12px] leading-relaxed text-ink-muted">
                   <li>
                     <span className="font-medium text-ink">Hızlı gönderim</span> — tek seferlik;
                     numarayı yapıştırıp gönderin. Sonuç Kampanyalar’da görünür.
@@ -150,7 +150,7 @@ export default async function QuickSendPage({
                     <li key={item.id}>
                       <Link
                         href={`/kampanyalar/${item.id}`}
-                        className="flex flex-col gap-1 px-4 py-3 transition-colors hover:bg-surface-raised"
+                        className="flex flex-col gap-1 px-3.5 py-2.5 transition-colors hover:bg-surface-raised"
                       >
                         <span className="flex items-center justify-between gap-2">
                           <span className="truncate text-[12.5px] text-ink">{item.name}</span>

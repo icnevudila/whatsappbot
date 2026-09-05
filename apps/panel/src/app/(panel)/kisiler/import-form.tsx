@@ -56,7 +56,7 @@ export function ImportForm() {
         subtitle="Kampanyalarda tekrar seçeceğiniz numaralar için. Tek seferlik mesaj → Hızlı gönderim."
       />
 
-      <form action={formAction} className="space-y-3.5 p-4">
+      <form action={formAction} className="space-y-2.5 p-3.5">
         <Field label="Liste adı">
           <Input name="name" placeholder="Ocak kampanyası - İstanbul" required />
         </Field>

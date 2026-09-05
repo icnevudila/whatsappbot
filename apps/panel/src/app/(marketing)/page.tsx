@@ -145,27 +145,28 @@ const FAQ = [
 export default function Landing() {
   return (
     <>
-      {/* 1 — Hero: brand-first, full-bleed paper */}
-      <section className="relative overflow-hidden border-b border-hairline bg-canvas">
+      {/* 1 — Hero: Pilot graphite first viewport */}
+      <section className="relative overflow-hidden bg-[var(--color-hero)] text-white">
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_55%_at_18%_0%,var(--color-accent-soft),transparent_58%),linear-gradient(180deg,var(--color-canvas)_0%,var(--color-canvas-alt)_100%)]"
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_20%_0%,rgba(47,91,255,0.22),transparent_55%)]"
         />
 
-        <div className="relative mx-auto grid max-w-6xl md:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] md:items-stretch">
+        <div className="relative mx-auto grid min-h-[calc(100dvh-64px)] max-w-6xl md:min-h-[690px] md:grid-cols-[0.92fr_1.08fr] md:items-stretch">
           <div className="flex flex-col justify-center px-5 py-14 md:py-20 md:pr-10">
             <div className="filo-fade-up inline-flex items-center gap-3">
-              <LogoMark className="size-9 md:size-11" />
+              <LogoMark className="size-9 text-white md:size-11" />
               <span className="text-[36px] font-semibold tracking-[-0.04em] md:text-[48px]">
                 {BRAND_NAME}
               </span>
             </div>
 
-            <h1 className="filo-fade-up-delay mt-6 max-w-md text-[26px] font-semibold leading-[1.15] tracking-[-0.03em] text-ink-soft md:text-[34px]">
-              Toplu WhatsApp kampanyası, hattı yakmadan.
+            <h1 className="filo-fade-up-delay mt-6 max-w-md text-[26px] font-semibold leading-[1.15] tracking-[-0.03em] text-white md:text-[34px]">
+              Toplu WhatsApp kampanyası,{' '}
+              <span className="text-[#9db8f5]">hattı yakmadan.</span>
             </h1>
 
-            <p className="filo-fade-up-delay mt-4 max-w-md text-[15px] leading-relaxed text-ink-muted">
+            <p className="filo-fade-up-delay mt-4 max-w-md text-[15px] leading-relaxed text-white/75">
               Hatlarınızı QR ile bağlayın, listenizi yükleyin, mesajı hazırlayın. Gönderim
               WhatsApp&apos;ın gerçek limitleri içinde arka planda yürür.
             </p>
@@ -173,19 +174,19 @@ export default function Landing() {
             <div className="filo-fade-up-delay-2 mt-7 flex flex-wrap items-center gap-2.5">
               <Link
                 href="/giris?mod=kayit"
-                className="inline-flex h-10 items-center rounded-md bg-accent px-4 text-[13px] font-medium text-accent-ink transition-colors hover:bg-accent-dim"
+                className="inline-flex h-11 items-center rounded-[var(--radius-sm)] bg-accent px-4 text-[13px] font-medium text-accent-ink transition-colors hover:bg-accent-dim"
               >
                 7 gün ücretsiz dene
               </Link>
               <a
                 href="#nasil"
-                className="inline-flex h-10 items-center rounded-md border border-hairline-strong bg-surface px-4 text-[13px] font-medium transition-colors hover:border-ink-faint"
+                className="inline-flex h-11 items-center rounded-[var(--radius-sm)] border border-white/20 bg-white/5 px-4 text-[13px] font-medium text-white transition-colors hover:bg-white/10"
               >
                 Nasıl çalışır
               </a>
             </div>
 
-            <p className="filo-fade-up-delay-2 mt-3 text-[11.5px] text-ink-faint">
+            <p className="filo-fade-up-delay-2 mt-3 text-[11.5px] text-white/45">
               Kredi kartı gerekmez · Kurulum yok · İstediğiniz an biter
             </p>
           </div>
@@ -195,13 +196,16 @@ export default function Landing() {
       </section>
 
       {/* 2 — Kapasite */}
-      <section id="kapasite" className="scroll-mt-16 border-b border-hairline">
-        <div className="mx-auto max-w-6xl px-5 py-14">
+      <section id="kapasite" className="scroll-mt-16 border-b border-hairline bg-canvas">
+        <div className="mx-auto max-w-6xl px-5 py-[clamp(4.5rem,10vw,7.5rem)]">
           <div className="mb-7 max-w-2xl">
+            <p className="mb-2 font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-ink-faint">
+              Kapasite
+            </p>
             <h2 className="text-[24px] font-semibold tracking-[-0.02em]">
               Önce şu soruyu netleştirelim: kaç mesaj atabilirsiniz?
             </h2>
-            <p className="mt-3 text-[14px] leading-relaxed text-ink-muted">
+            <p className="mt-3 max-w-[40rem] text-[14px] leading-relaxed text-ink-muted">
               Çoğu panel bunu satış sonrasına saklar. Biz başa koyuyoruz, çünkü beklentiyi doğru
               kurmak hem sizin hem hatlarınızın lehine.
             </p>
@@ -211,8 +215,11 @@ export default function Landing() {
       </section>
 
       {/* 3 — Nasıl çalışır */}
-      <section id="nasil" className="scroll-mt-16 border-b border-hairline">
-        <div className="mx-auto max-w-6xl px-5 py-14">
+      <section id="nasil" className="scroll-mt-16 border-b border-hairline bg-surface">
+        <div className="mx-auto max-w-6xl px-5 py-[clamp(4.5rem,10vw,7.5rem)]">
+          <p className="mb-2 font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-ink-faint">
+            Akış
+          </p>
           <h2 className="text-[24px] font-semibold tracking-[-0.02em]">Üç adımda yayındasınız</h2>
           <div className="mt-8 grid gap-px overflow-hidden border border-hairline bg-hairline md:grid-cols-3">
             {STEPS.map((step) => (
@@ -227,13 +234,16 @@ export default function Landing() {
       </section>
 
       {/* 4 — Güvenlik */}
-      <section id="guvenlik" className="scroll-mt-16 border-b border-hairline">
-        <div className="mx-auto max-w-6xl px-5 py-14">
+      <section id="guvenlik" className="scroll-mt-16 border-b border-hairline bg-accent-soft/40">
+        <div className="mx-auto max-w-6xl px-5 py-[clamp(4.5rem,10vw,7.5rem)]">
           <div className="max-w-2xl">
+            <p className="mb-2 font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-ink-faint">
+              Ban önleme
+            </p>
             <h2 className="text-[24px] font-semibold tracking-[-0.02em]">
               Asıl iş, mesajı göndermek değil, hattı ayakta tutmak
             </h2>
-            <p className="mt-3 text-[14px] leading-relaxed text-ink-muted">
+            <p className="mt-3 max-w-[40rem] text-[14px] leading-relaxed text-ink-muted">
               Toplu mesaj göndermek teknik olarak kolay. Zor olan, üçüncü kampanyadan sonra hattın
               hala çalışıyor olması. {BRAND_NAME}&apos;nun yaptığı iş büyük ölçüde bu.
             </p>

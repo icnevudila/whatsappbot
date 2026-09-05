@@ -57,8 +57,8 @@ export default async function ContactsPage() {
         action={<AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>}
       />
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="order-2 space-y-4 lg:order-1">
+      <div className="grid gap-2.5 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="order-2 space-y-2.5 lg:order-1">
           <Card>
             <CardHeader
               title="Listeler"
@@ -80,7 +80,7 @@ export default async function ContactsPage() {
               <ul className="divide-y divide-hairline">
                 {lists.map((list) => (
                   <li key={list.id}>
-                    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2.5 px-3.5 py-2.5">
                       <Link
                         href={`/kisiler/${list.id}`}
                         className="min-w-0 flex-1 transition-colors hover:text-accent"
@@ -109,7 +109,7 @@ export default async function ContactsPage() {
                 title="WhatsApp doğrulama durumu"
                 subtitle="Defter geneli: ✓ var · × yok · ? bekliyor. Kayıtsız numaraya mesaj denemez."
               />
-              <div className="space-y-3 p-4">
+              <div className="space-y-2.5 p-3.5">
                 <div>
                   <div className="mb-1.5 flex items-baseline justify-between text-[11.5px]">
                     <span className="text-ink-muted">Doğrulanmış</span>
@@ -120,7 +120,7 @@ export default async function ContactsPage() {
                   <Meter value={valid} max={total} />
                 </div>
 
-                <dl className="grid grid-cols-3 gap-3 border-t border-hairline pt-3">
+                <dl className="grid grid-cols-3 gap-2.5 border-t border-hairline pt-2.5">
                   <Stat label="✓ Var" value={valid} tone="accent" />
                   <Stat label="× Yok" value={invalid} tone="danger" />
                   <Stat label="? Bekliyor" value={pendingCheck} tone="muted" />
@@ -132,7 +132,7 @@ export default async function ContactsPage() {
           ) : null}
         </div>
 
-        <div className="order-1 space-y-4 lg:order-2" id="liste-olustur">
+        <div className="order-1 space-y-2.5 lg:order-2" id="liste-olustur">
           <WaCheckForm />
           <ScrapeForm />
           <ImportForm />

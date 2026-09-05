@@ -59,7 +59,7 @@ export function MemberActions({
         {members.map((member) => (
           <li
             key={member.contact_id}
-            className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5"
+            className="flex flex-wrap items-center justify-between gap-2.5 px-3.5 py-2.5"
           >
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">

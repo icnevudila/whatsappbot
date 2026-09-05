@@ -26,7 +26,7 @@ export function AutoReplyManager({ rules, canEdit }: { rules: Rule[]; canEdit: b
   const [deleting, startDelete] = useTransition()
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2.5">
       <Card>
         <CardHeader
           title="Kurallar"
@@ -34,10 +34,10 @@ export function AutoReplyManager({ rules, canEdit }: { rules: Rule[]; canEdit: b
         />
         <ul className="divide-y divide-hairline">
           {rules.length === 0 ? (
-            <li className="px-4 py-6 text-[12.5px] text-ink-muted">Henüz kural yok.</li>
+            <li className="px-3.5 py-4 text-[12.5px] text-ink-muted">Henüz kural yok.</li>
           ) : (
             rules.map((rule) => (
-              <li key={rule.id} className="flex items-start justify-between gap-3 px-4 py-3">
+              <li key={rule.id} className="flex items-start justify-between gap-2.5 px-3.5 py-2.5">
                 <div className="min-w-0">
                   <p className="text-[13px] font-medium">{rule.name}</p>
                   <p className="text-[11.5px] text-ink-muted">
@@ -64,7 +64,7 @@ export function AutoReplyManager({ rules, canEdit }: { rules: Rule[]; canEdit: b
       {canEdit ? (
         <Card>
           <CardHeader title="Yeni kural" />
-          <form action={formAction} className="space-y-3 p-4">
+          <form action={formAction} className="space-y-2.5 p-3.5">
             <Field label="Ad">
               <Input name="name" defaultValue="Karşılama" required />
             </Field>

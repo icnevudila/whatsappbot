@@ -40,7 +40,7 @@ export function WorkerFleetCard({
             : `${alive.length} canlı worker · hatlar bu sunucuda çalışır`
         }
       />
-      <div className="space-y-3 px-4 pb-4">
+      <div className="space-y-2.5 px-3.5 pb-3.5">
         {hetzner ? (
           <div className="flex flex-wrap items-center gap-2 rounded-md border border-ok/30 bg-ok-soft/40 px-3 py-2.5">
             <Badge tone="accent">Canlı</Badge>

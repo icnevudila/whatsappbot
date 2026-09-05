@@ -164,9 +164,9 @@ export function AccountsBoard({
   const atCap = remaining === 0
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2.5">
       <Card>
-        <div className="grid gap-4 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+        <div className="grid gap-2.5 p-3.5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
           <div>
             <p className="text-[11.5px] font-medium tracking-wide text-ink-faint uppercase">
               Hat kapasitesi
@@ -208,7 +208,7 @@ export function AccountsBoard({
           />
         </Card>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {accounts.map((account) => (
             <AccountCard key={account.id} account={account} />
           ))}
@@ -226,7 +226,7 @@ function NewAccountForm({ remaining, atCap }: { remaining: number; atCap: boolea
 
   return (
     <Card>
-      <form id="yeni-hat" action={formAction} className="flex flex-wrap items-end gap-3 p-4 scroll-mt-6">
+      <form id="yeni-hat" action={formAction} className="flex flex-wrap items-end gap-2.5 p-3.5 scroll-mt-6">
         <div className="min-w-[220px] flex-1">
           <Field
             label="Yeni hat ekle"
@@ -293,7 +293,7 @@ function AccountCard({ account }: { account: AccountView }) {
 
   return (
     <Card>
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-hairline px-4 py-3">
+      <div className="flex flex-wrap items-start justify-between gap-2.5 border-b border-hairline px-3.5 py-2.5">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <h3 className="truncate text-[13.5px] font-semibold">{account.label}</h3>
@@ -361,7 +361,7 @@ function AccountCard({ account }: { account: AccountView }) {
         </div>
       </div>
 
-      <div className="space-y-3 p-4">
+      <div className="space-y-2.5 p-3.5">
         {account.is_locked && account.lock_reason ? (
           <Notice tone="danger">
             <span className="font-medium">Hesap kilitli.</span> {account.lock_reason}
@@ -387,7 +387,7 @@ function AccountCard({ account }: { account: AccountView }) {
           </div>
         ) : null}
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-2.5 sm:grid-cols-2">
           <div>
             <div className="mb-1.5 flex items-baseline justify-between">
               <span className="text-[11.5px] text-ink-muted">Bugün gönderilen</span>
@@ -494,7 +494,7 @@ function PairingSection({ account }: { account: AccountView }) {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2.5">
       <div className="flex gap-1 rounded-md border border-hairline bg-canvas p-0.5">
         {(
           [
@@ -521,7 +521,7 @@ function PairingSection({ account }: { account: AccountView }) {
         account.qr_code ? (
           <QrPanel qr={account.qr_code} expiresAt={account.qr_expires_at} />
         ) : (
-          <p className="rounded-md border border-hairline bg-canvas px-4 py-6 text-center text-[12.5px] text-ink-muted">
+          <p className="rounded-md border border-hairline bg-canvas px-3.5 py-5 text-center text-[12.5px] text-ink-muted">
             {account.status === 'qr_pending' || account.status === 'connecting'
               ? 'QR kodu hazırlanıyor… birkaç saniye bekleyin.'
               : 'Hat eklendiğinde QR otomatik gelir. Gelmezse yukarıdan “Yeniden bağla”ya basın.'}
@@ -533,7 +533,7 @@ function PairingSection({ account }: { account: AccountView }) {
           expiresAt={account.pairing_expires_at}
         />
       ) : (
-        <div className="rounded-md border border-hairline bg-canvas p-4">
+        <div className="rounded-md border border-hairline bg-canvas p-3.5">
           <Field
             label="Bağlanacak WhatsApp numarası"
             hint="Ülke koduyla, fazla rakam olmadan. Örnek: +90 545 365 13 19"

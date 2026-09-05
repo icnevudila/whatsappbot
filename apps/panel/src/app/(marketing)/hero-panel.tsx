@@ -15,7 +15,7 @@ const STATUS = {
 
 export function HeroPanel() {
   return (
-    <div className="filo-fade-up-delay-2 relative h-full min-h-[320px] border-t border-hairline bg-surface md:min-h-[420px] md:border-l md:border-t-0">
+    <div className="filo-fade-up-delay-2 relative h-full min-h-[320px] border-t border-white/10 bg-surface text-ink md:min-h-full md:border-l md:border-t-0">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[linear-gradient(160deg,var(--color-canvas-alt)_0%,transparent_42%)]"

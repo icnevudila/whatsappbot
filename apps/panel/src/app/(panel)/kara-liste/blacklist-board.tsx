@@ -65,8 +65,8 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-      <div className="order-2 space-y-4 lg:order-1">
+    <div className="grid gap-2.5 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="order-2 space-y-2.5 lg:order-1">
         <Card>
           <CardHeader
             title="Engellenen numaralar"
@@ -93,7 +93,7 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
               {rows.map((row) => (
                 <li
                   key={row.id}
-                  className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+                  className="flex flex-wrap items-center justify-between gap-2.5 px-3.5 py-2.5"
                 >
                   <div className="min-w-0">
                     <p className="font-mono text-[13px] tabular">{row.phone_e164}</p>
@@ -116,7 +116,7 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
           )}
 
           {error ? (
-            <div className="border-t border-hairline p-4">
+            <div className="border-t border-hairline p-3.5">
               <Notice tone="danger">{error}</Notice>
             </div>
           ) : null}
@@ -129,7 +129,7 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
             title="Numara ekle"
             subtitle="Bir veya birden fazla satır yapıştırın. Sebep isteğe bağlıdır."
           />
-          <form key={formKey} ref={formRef} action={formAction} className="space-y-3.5 p-4">
+          <form key={formKey} ref={formRef} action={formAction} className="space-y-2.5 p-3.5">
             <Field
               label="Numaralar"
               hint="Her satıra bir numara. Ülke kodu yoksa Türkiye (+90) kabul edilir."

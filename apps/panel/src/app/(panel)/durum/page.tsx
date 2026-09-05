@@ -143,7 +143,7 @@ export default async function StatusPage() {
         }
       />
 
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2.5">
         {queueStalled ? (
           <Notice tone="danger">
             Kuyrukta {pendingJobs} iş bekliyor ve ilerleme yok. WhatsApp bağlantı
@@ -191,9 +191,9 @@ export default async function StatusPage() {
         <WorkerFleetCard workers={fleet.workers ?? []} leases={fleet.leases ?? []} />
 
         <Card>
-          <div className="space-y-3 px-4 py-3.5">
+          <div className="space-y-2.5 px-3.5 py-3">
             <HourlyBars counts={hourlyCounts} />
-            <p className="border-t border-hairline pt-3 text-[11.5px] leading-relaxed text-ink-faint">
+            <p className="border-t border-hairline pt-2.5 text-[11.5px] leading-relaxed text-ink-faint">
               <span className="font-medium text-ink-muted">Bugünkü gönderim</span>
               {' '}
               bağlı hatların bugün attığı mesaj / günlük tavandır.{' '}

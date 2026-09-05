@@ -93,24 +93,24 @@ export default async function ReportsPage() {
         }
       />
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-4 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <div className="p-4">
+          <div className="p-3.5">
             <Stat label="Gönderilen" value={sent ?? 0} tone="accent" />
           </div>
         </Card>
         <Card>
-          <div className="p-4">
+          <div className="p-3.5">
             <Stat label="Teslim" value={delivered ?? 0} tone="muted" />
           </div>
         </Card>
         <Card>
-          <div className="p-4">
+          <div className="p-3.5">
             <Stat label="Okundu" value={read ?? 0} tone="muted" />
           </div>
         </Card>
         <Card>
-          <div className="p-4">
+          <div className="p-3.5">
             <Stat
               label="Başarısız"
               value={failed ?? 0}
@@ -133,17 +133,17 @@ export default async function ReportsPage() {
             <table className="w-full min-w-[640px] text-left text-[12.5px]">
               <thead>
                 <tr className="border-b border-hairline text-[11.5px] text-ink-muted">
-                  <th className="px-4 py-2 font-medium">Ad</th>
-                  <th className="px-4 py-2 font-medium">Durum</th>
-                  <th className="px-4 py-2 font-medium">Hedef</th>
-                  <th className="px-4 py-2 font-medium">Gönderilen</th>
-                  <th className="px-4 py-2 font-medium">Fail / Skip</th>
+                  <th className="px-3.5 py-2 font-medium">Ad</th>
+                  <th className="px-3.5 py-2 font-medium">Durum</th>
+                  <th className="px-3.5 py-2 font-medium">Hedef</th>
+                  <th className="px-3.5 py-2 font-medium">Gönderilen</th>
+                  <th className="px-3.5 py-2 font-medium">Fail / Skip</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((c) => (
                   <tr key={c.id} className="border-b border-hairline last:border-0">
-                    <td className="px-4 py-2.5">
+                    <td className="px-3.5 py-2">
                       <Link
                         href={`/kampanyalar/${c.id}`}
                         className="font-medium text-ink underline-offset-2 hover:text-accent hover:underline"
@@ -151,12 +151,12 @@ export default async function ReportsPage() {
                         {c.name}
                       </Link>
                     </td>
-                    <td className="px-4 py-2.5">
+                    <td className="px-3.5 py-2">
                       <StatusPill status={c.status} />
                     </td>
-                    <td className="px-4 py-2.5 tabular">{c.total_targets}</td>
-                    <td className="px-4 py-2.5 tabular">{c.sent_count}</td>
-                    <td className="px-4 py-2.5 tabular text-ink-muted">
+                    <td className="px-3.5 py-2 tabular">{c.total_targets}</td>
+                    <td className="px-3.5 py-2 tabular">{c.sent_count}</td>
+                    <td className="px-3.5 py-2 tabular text-ink-muted">
                       {c.failed_count}/{c.skipped_count}
                     </td>
                   </tr>

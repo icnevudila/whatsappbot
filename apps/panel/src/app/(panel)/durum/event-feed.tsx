@@ -107,7 +107,7 @@ export function EventFeed({
             const isToday = at.toDateString() === today
 
             return (
-              <div key={event.id} className="flex items-start gap-2.5 px-4 py-2.5">
+              <div key={event.id} className="flex items-start gap-2.5 px-3.5 py-2.5">
                 <span
                   className={`mt-[6px] size-1.5 shrink-0 rounded-full ${
                     LEVEL_TONE[event.level] ?? 'bg-hairline-strong'

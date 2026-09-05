@@ -142,8 +142,8 @@ export function BrandStudio({
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,340px)]">
-      <div className="flex flex-col gap-4">
+    <div className="grid gap-2.5 lg:grid-cols-[minmax(0,1fr)_minmax(0,340px)]">
+      <div className="flex flex-col gap-2.5">
         <Card>
           <CardHeader
             title="Renkler ve logo"
@@ -154,7 +154,7 @@ export function BrandStudio({
             }
           />
 
-          <form action={formAction} className="space-y-4 p-4">
+          <form action={formAction} className="space-y-2.5 p-3.5">
             <input type="hidden" name="logo_url" value={logoUrl ?? ''} />
             {COLOR_FIELDS.map((field) => (
               <input
@@ -274,7 +274,7 @@ export function BrandStudio({
             />
           </div>
 
-          <div className="space-y-4 p-4">
+          <div className="space-y-2.5 p-3.5">
             <div>
               <span className="mb-1.5 block text-[12px] font-medium text-ink-muted">
                 Şablon
@@ -432,7 +432,7 @@ export function BrandStudio({
               </span>
             }
           />
-          <div className="flex flex-col items-center gap-3 p-4">
+          <div className="flex flex-col items-center gap-2.5 p-3.5">
             <CreativePreview input={input} />
 
             {result ? (

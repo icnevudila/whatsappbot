@@ -155,7 +155,7 @@ export default async function SettingsPage() {
       />
 
       {profileIncomplete || connectedCount === 0 ? (
-        <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-[10px] border border-hairline bg-surface px-4 py-3">
+        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[var(--radius-card)] border border-hairline bg-surface px-3.5 py-2.5">
           <span className="text-[11.5px] font-medium tracking-wide text-ink-faint uppercase">
             Kurulum
           </span>
@@ -192,8 +192,8 @@ export default async function SettingsPage() {
         </div>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="flex flex-col gap-4">
+      <div className="grid gap-2.5 lg:grid-cols-2">
+        <div className="flex flex-col gap-2.5">
           <Card>
             <CardHeader
               title="İşletme"
@@ -216,7 +216,7 @@ export default async function SettingsPage() {
               webhookUrl={org.webhook_url ?? null}
               canEdit={canManage}
             />
-            <div className="flex flex-wrap gap-2 border-t border-hairline px-4 py-3">
+            <div className="flex flex-wrap gap-2 border-t border-hairline px-3.5 py-2.5">
               <QuietLink href="/ayarlar/otomatik-yanit">Otomatik yanıt kuralları</QuietLink>
               <QuietLink href="/raporlar">Raporlar / CSV</QuietLink>
               {canManage ? <BillingCheckoutButton /> : null}
@@ -260,14 +260,14 @@ export default async function SettingsPage() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2.5">
           <Card>
             <CardHeader
               title="Paket"
               action={<Badge tone="accent">{planLabel(plan)}</Badge>}
             />
 
-            <div className="space-y-4 p-4">
+            <div className="space-y-2.5 p-3.5">
               <QuotaRow
                 label="Hat"
                 used={usedAccounts}
@@ -285,7 +285,7 @@ export default async function SettingsPage() {
                 detail="Her ayın 1’inde sıfırlanır"
               />
 
-              <div className="border-t border-hairline pt-3.5">
+              <div className="border-t border-hairline pt-2.5">
                 <p className="text-[12px] text-ink-muted">
                   Bağlı hatların bugünkü toplam tavanı
                 </p>
@@ -320,7 +320,7 @@ export default async function SettingsPage() {
               title="Gönderim servisi"
               subtitle="Panel komut yazar; gerçek WhatsApp bağlantısı arka planda çalışır."
             />
-            <div className="space-y-3 p-4 text-[12.5px] leading-relaxed text-ink-muted">
+            <div className="space-y-2.5 p-3.5 text-[12.5px] leading-relaxed text-ink-muted">
               <p>
                 Eşleştirme kodu, QR ve otomatik mesaj için WhatsApp servisinin ayakta
                 olması gerekir. Servis kapalıyken işler kuyrukta bekler.
@@ -333,7 +333,7 @@ export default async function SettingsPage() {
 
           <Card>
             <CardHeader title="Oturum" subtitle={user.email ?? undefined} />
-            <div className="flex flex-wrap items-center justify-between gap-4 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2.5 p-3.5">
               <p className="max-w-sm text-[12.5px] leading-relaxed text-ink-muted">
                 Çıkış yapmak bağlı hatları etkilemez; gönderim sunucuda devam eder.
               </p>
@@ -368,7 +368,7 @@ function AiProvidersCard() {
         subtitle="Anahtarlar sunucuda tutulur; buradan değiştirilmez."
       />
 
-      <div className="space-y-3.5 p-4">
+      <div className="space-y-2.5 p-3.5">
         <ProviderRow
           label="Görsel üretimi"
           providers={image.map((provider) => provider.label)}
@@ -381,7 +381,7 @@ function AiProvidersCard() {
           fallback="Kapalı — destekten açtırmanız gerekir"
         />
 
-        <p className="border-t border-hairline pt-3 text-[11.5px] leading-relaxed text-ink-faint">
+        <p className="border-t border-hairline pt-2.5 text-[11.5px] leading-relaxed text-ink-faint">
           Sağdaki isimler deneme sırasına göredir: ilki cevap vermezse sonraki
           devreye girer. Hesabınıza tanındığında burada görünür.
         </p>
@@ -402,7 +402,7 @@ function ProviderRow({
   const active = providers.length > 0
 
   return (
-    <div className="flex items-start justify-between gap-4">
+    <div className="flex items-start justify-between gap-2.5">
       <span className="text-[12.5px]">{label}</span>
 
       {active ? (

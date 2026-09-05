@@ -27,7 +27,7 @@ export function ApiKeyForm({
   if (!canEdit) return null
 
   return (
-    <div className="space-y-3 border-t border-hairline p-4">
+    <div className="space-y-2.5 border-t border-hairline p-3.5">
       {keys.length > 0 ? (
         <ul className="space-y-2">
           {keys.map((row) => (

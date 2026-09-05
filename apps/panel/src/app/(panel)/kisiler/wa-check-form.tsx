@@ -46,7 +46,7 @@ export function WaCheckForm() {
         title="WhatsApp kontrol"
         subtitle="Tek numara — listede var mı yok mu hemen görün. Deftere eklemez."
       />
-      <form onSubmit={submit} className="space-y-3.5 p-4">
+      <form onSubmit={submit} className="space-y-2.5 p-3.5">
         <Field label="Numara" hint="Ülke kodu yoksa Türkiye (+90) kabul edilir.">
           <Input
             value={phone}

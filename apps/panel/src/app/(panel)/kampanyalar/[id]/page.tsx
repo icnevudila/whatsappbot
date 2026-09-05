@@ -82,7 +82,7 @@ export default async function CampaignDetailPage({
 
       <CampaignLive initial={campaign} sourceLists={sourceLists} accounts={accounts} />
 
-      <div className="mt-4" id="paylasilanlar">
+      <div id="paylasilanlar" className="mt-2.5">
         <TargetFeed
           campaignId={id}
           initial={(targetsResult.data ?? []) as TargetView[]}

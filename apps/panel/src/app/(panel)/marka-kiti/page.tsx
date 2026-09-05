@@ -70,7 +70,7 @@ export default async function BrandKitPage() {
       />
 
       {!hasSavedKit ? (
-        <div className="mb-4 rounded-[10px] border border-accent/30 bg-accent/8 px-4 py-3">
+        <div className="mb-4 rounded-[var(--radius-card)] border border-accent/30 bg-accent/8 px-3.5 py-2.5">
           <p className="text-[12.5px] leading-relaxed text-accent">
             İlk adım: renkleri seçin, isteğe bağlı logo ekleyin ve{' '}
             <span className="font-medium">Marka kitini kaydet</span> deyin. Sonra
@@ -88,7 +88,7 @@ export default async function BrandKitPage() {
         hasSavedKit={hasSavedKit}
       />
 
-      <div className="mt-4">
+      <div className="mt-2.5">
         <Card>
           <CardHeader
             title="Üretilen görseller"
@@ -99,7 +99,7 @@ export default async function BrandKitPage() {
             }
           />
           {creatives && creatives.length > 0 ? (
-            <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2.5 p-3.5 sm:grid-cols-4">
               {creatives.map((creative) => {
                 const templateKey = creative.template as TemplateKey
                 const formatKey = creative.format as FormatKey

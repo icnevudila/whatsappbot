@@ -29,7 +29,7 @@ export function OrgSettingsForm({
   )
 
   return (
-    <form action={formAction} className="space-y-4 p-4">
+    <form action={formAction} className="space-y-2.5 p-3.5">
       <Field
         label="İşletme adı"
         hint={
@@ -74,7 +74,7 @@ export function WebhookSettingsForm({
   )
 
   return (
-    <form action={formAction} className="space-y-4 p-4">
+    <form action={formAction} className="space-y-2.5 p-3.5">
       <Field
         label="CRM webhook URL"
         hint="message.inbound ve campaign.completed olayları POST edilir."
@@ -132,7 +132,7 @@ export function MembersPanel({
           {members.map((member) => (
             <li
               key={member.userId}
-              className="flex items-center justify-between gap-3 px-4 py-3"
+              className="flex items-center justify-between gap-2.5 px-3.5 py-2.5"
             >
               <div className="min-w-0">
                 <p className="truncate text-[13px] font-medium">
@@ -175,7 +175,7 @@ export function MembersPanel({
       )}
 
       {canManage ? (
-        <form action={formAction} className="space-y-3 border-t border-hairline p-4">
+        <form action={formAction} className="space-y-2.5 border-t border-hairline p-3.5">
           <Field
             label="Üye ekle"
             hint="Kullanıcı daha önce Filo’ya kayıt olmuş olmalı. E-posta tam eşleşir."
@@ -201,7 +201,7 @@ export function MembersPanel({
           </Button>
         </form>
       ) : (
-        <p className="border-t border-hairline px-4 py-3 text-[11.5px] text-ink-faint">
+        <p className="border-t border-hairline px-3.5 py-2.5 text-[11.5px] text-ink-faint">
           Üye eklemek için yönetici veya sahip olmanız gerekir.
         </p>
       )}

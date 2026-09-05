@@ -19,7 +19,7 @@ export function ProfileForm({
   )
 
   return (
-    <form action={formAction} className="space-y-4 p-4">
+    <form action={formAction} className="space-y-2.5 p-3.5">
       <Field
         label="E-posta"
         hint="Giriş adresiniz. Değiştirmek için desteğe yazın."

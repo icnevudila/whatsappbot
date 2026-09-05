@@ -122,12 +122,12 @@ export function StatusBoard({
   const atRisk = lines.filter(line => line.is_locked || (line.reachout_locked_until && Date.parse(line.reachout_locked_until) > now) || (typeof line.new_chat_quota_total === 'number' && typeof line.new_chat_quota_used === 'number' && line.new_chat_quota_total > 0 && line.new_chat_quota_used / line.new_chat_quota_total > 0.8)).length
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-2.5">
       {/* Gunun ozeti */}
       <Card>
         <div className="grid divide-y divide-hairline sm:grid-cols-4 sm:divide-x sm:divide-y-0">
           <Stat
-            className="px-4 py-3.5"
+            className="px-3.5 py-3"
             value={`${connected.length}`}
             label="Bağlı hat"
             detail={
@@ -138,7 +138,7 @@ export function StatusBoard({
             tone={connected.length > 0 ? 'accent' : 'muted'}
           />
           <Stat
-            className="px-4 py-3.5"
+            className="px-3.5 py-3"
             value={`${nf.format(usedToday)} / ${nf.format(capacityToday)}`}
             label="Bugünkü gönderim"
             detail={
@@ -149,7 +149,7 @@ export function StatusBoard({
             meter={{ value: usedToday, max: capacityToday }}
           />
           <Stat
-            className="px-4 py-3.5"
+            className="px-3.5 py-3"
             value={`${activeCampaigns.length}`}
             label="Aktif kampanya"
             detail={
@@ -160,7 +160,7 @@ export function StatusBoard({
             tone={activeCampaigns.length > 0 ? 'accent' : 'muted'}
           />
           <Stat
-            className="px-4 py-3.5"
+            className="px-3.5 py-3"
             value={`${atRisk}`}
             label="Dikkat gereken"
             detail={
@@ -179,7 +179,7 @@ export function StatusBoard({
         </div>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-2.5 lg:grid-cols-2">
         {/* Hatlar */}
         <Card>
           <CardHeader
@@ -217,7 +217,7 @@ export function StatusBoard({
                   reachoutUntil !== null && reachoutUntil.getTime() > Date.now()
 
                 return (
-                  <div key={line.id} className="px-4 py-3">
+                  <div key={line.id} className="px-3.5 py-2.5">
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0">
                         <p className="truncate text-[12.5px] font-medium">{line.label}</p>
@@ -306,7 +306,7 @@ export function StatusBoard({
                   <Link
                     key={campaign.id}
                     href={`/kampanyalar/${campaign.id}`}
-                    className="block px-4 py-3 transition-colors hover:bg-surface-raised"
+                    className="block px-3.5 py-2.5 transition-colors hover:bg-surface-raised"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <p className="min-w-0 truncate text-[12.5px] font-medium">

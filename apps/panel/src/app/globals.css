@@ -39,16 +39,19 @@
   --color-warn: #a15c00;
   --color-danger: #b42318;
 
-  --radius-card: 6px;
-  --radius-sm: 4px;
+  --radius-card: 8px;
+  --radius-sm: 6px;
 
   --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 
-  /* Pilot hard-offset; soft SaaS glow yok */
-  --shadow-card: 2px 2px 0 rgba(22, 25, 37, 0.12);
-  --shadow-md: 3px 3px 0 rgba(22, 25, 37, 0.14);
+  /* Pilot Cobalt product override: soft paper chrome */
+  --shadow-card: 0 2px 8px rgba(22, 25, 37, 0.035);
+  --shadow-md: 0 8px 24px rgba(22, 25, 37, 0.06);
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --color-hero: #0c0e16;
+  --color-hero-signal: #ff8c42;
 }
 
 * {
@@ -118,11 +121,11 @@ h3 {
   color: var(--color-ink);
 }
 .wb-rail-link[aria-current='page'] {
-  background: var(--color-nav-active);
-  border-color: rgba(22, 25, 37, 0.18);
-  color: var(--color-ink);
+  background: var(--color-accent-soft);
+  border-color: rgba(47, 91, 255, 0.2);
+  color: var(--color-accent-dim);
   font-weight: 600;
-  box-shadow: 1px 1px 0 rgba(22, 25, 37, 0.1);
+  box-shadow: none;
 }
 .wb-rail-group {
   margin: 14px 10px 6px;
@@ -194,8 +197,8 @@ h3 {
   }
 }
 .wb-row-active {
-  background: var(--color-surface-raised);
-  box-shadow: inset 3px 0 0 var(--color-ink);
+  background: var(--color-accent-soft);
+  box-shadow: inset 3px 0 0 var(--color-accent-dim);
 }
 .wb-empty {
   margin: 12px;

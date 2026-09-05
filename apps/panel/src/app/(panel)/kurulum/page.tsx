@@ -92,7 +92,7 @@ export default async function SetupPage() {
       <div className="flex flex-col gap-2.5">
         {steps.map((step, index) => (
           <Card key={step.title}>
-            <div className="flex items-start gap-3.5 p-4">
+            <div className="flex items-start gap-2.5 p-3.5">
               <span
                 className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold ${
                   step.done ? 'bg-ok text-white' : 'bg-surface-raised text-ink-muted'
@@ -121,7 +121,7 @@ export default async function SetupPage() {
       </div>
 
       {allDone ? (
-        <div className="mt-4 rounded-[var(--radius-card)] border border-ok/30 bg-ok-soft px-4 py-3">
+        <div className="mt-2.5 rounded-[var(--radius-card)] border border-ok/30 bg-ok-soft px-3.5 py-2.5">
           <p className="text-[13px] font-medium text-ok-dim">Hazırsın</p>
           <p className="mt-1 text-[12.5px] text-ink-muted">
             <Link href="/ozet" className="font-medium text-accent underline-offset-2 hover:underline">

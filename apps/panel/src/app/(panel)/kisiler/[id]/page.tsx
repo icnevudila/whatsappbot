@@ -87,19 +87,19 @@ export default async function ContactListDetailPage({
         }
       />
 
-      <div className="mb-4 grid grid-cols-3 gap-3">
+      <div className="mb-2.5 grid grid-cols-3 gap-2.5">
         <Card>
-          <div className="p-4">
+          <div className="p-3.5">
             <Stat label="WhatsApp’ta kayıtlı" value={valid} tone="accent" />
           </div>
         </Card>
         <Card>
-          <div className="p-4">
+          <div className="p-3.5">
             <Stat label="WhatsApp’ta yok" value={invalid} tone="muted" />
           </div>
         </Card>
         <Card>
-          <div className="p-4">
+          <div className="p-3.5">
             <Stat label="Bekliyor" value={pending} tone="muted" />
           </div>
         </Card>

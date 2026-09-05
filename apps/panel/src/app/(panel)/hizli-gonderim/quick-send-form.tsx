@@ -133,7 +133,7 @@ export function QuickSendForm({
         subtitle="Listeye kaydetmez. Gönderim Kampanyalar’da izlenir; Kişiler defterine numara eklenmez."
       />
 
-      <form action={formAction} className="space-y-5 p-4">
+      <form action={formAction} className="space-y-2.5 p-3.5">
         <input type="hidden" name="media_url" value={mediaUrl} />
         <input type="hidden" name="message_type" value={messageType} />
 
@@ -181,7 +181,7 @@ export function QuickSendForm({
           <AiWriter enabled={aiEnabled} brand={brandName} onApply={setBody} />
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           <span className="mb-1.5 block text-[12px] font-medium text-ink-muted">
             Medya (isteğe bağlı)
           </span>
