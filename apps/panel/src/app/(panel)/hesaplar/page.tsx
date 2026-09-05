@@ -1,8 +1,9 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { AccentLink, PageHeader, QuietLink } from '@/components/ui'
 import { requireActiveOrg } from '@/lib/org'
+import { getSetupProgress } from '@/lib/setup-progress'
+import { SetupBanner } from '../setup-banner'
 import { AccountsBoard, type AccountView } from './accounts-board'
 
 export const dynamic = 'force-dynamic'
@@ -21,24 +22,16 @@ export default async function AccountsPage() {
     redirect('/giris')
   }
 
-  const [accountsResult, contactsResult, campaignsResult] = await Promise.all([
+  const [accountsResult, setup] = await Promise.all([
     supabase
       .from('accounts')
       .select(ACCOUNT_FIELDS)
       .eq('org_id', org.id)
       .order('created_at'),
-    supabase
-      .from('contacts')
-      .select('id', { count: 'exact', head: true })
-      .eq('org_id', org.id),
-    supabase
-      .from('campaigns')
-      .select('id', { count: 'exact', head: true })
-      .eq('org_id', org.id),
+    getSetupProgress(supabase, org.id),
   ])
 
   const accounts = (accountsResult.data ?? []) as AccountView[]
-  const hasConnected = accounts.some((account) => account.status === 'connected')
 
   return (
     <>
@@ -53,11 +46,7 @@ export default async function AccountsPage() {
         }
       />
 
-      <Onboarding
-        connected={hasConnected}
-        hasContacts={(contactsResult.count ?? 0) > 0}
-        hasCampaign={(campaignsResult.count ?? 0) > 0}
-      />
+      <SetupBanner progress={setup} />
 
       <AccountsBoard
         initial={accounts}
@@ -65,68 +54,5 @@ export default async function AccountsPage() {
         accountsQuota={org.accounts_quota}
       />
     </>
-  )
-}
-
-/**
- * Kurulum seridi. Uc adim da tamamlaninca kayboluyor:
- * kalici bir kontrol listesi bir sure sonra gorsel gurultuye donusuyor.
- */
-function Onboarding({
-  connected,
-  hasContacts,
-  hasCampaign,
-}: {
-  connected: boolean
-  hasContacts: boolean
-  hasCampaign: boolean
-}) {
-  if (connected && hasContacts && hasCampaign) return null
-
-  const steps = [
-    { done: connected, label: 'WhatsApp hattını bağla', href: null as string | null },
-    {
-      done: hasContacts || hasCampaign,
-      label: hasContacts ? 'Hızlı gönderim veya kampanya' : 'Kişi listesi ekle',
-      href: hasContacts ? '/hizli-gonderim' : '/kisiler',
-    },
-    { done: hasCampaign, label: 'İlk mesajı gönder', href: '/hizli-gonderim' },
-  ]
-
-  return (
-    <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-[10px] border border-hairline bg-surface px-4 py-3">
-      <span className="text-[11.5px] font-medium tracking-wide text-ink-faint uppercase">
-        Kurulum
-      </span>
-
-      {steps.map((step, index) => (
-        <div key={step.label} className="flex items-center gap-2">
-          <span
-            className={`grid size-4 shrink-0 place-items-center rounded-full border text-[9px] ${
-              step.done
-                ? 'border-accent/40 bg-accent/15 text-accent'
-                : 'border-hairline-strong text-ink-faint'
-            }`}
-          >
-            {step.done ? '✓' : index + 1}
-          </span>
-
-          {step.href && !step.done ? (
-            <Link
-              href={step.href}
-              className="text-[12.5px] text-ink-muted underline decoration-hairline-strong underline-offset-2 transition-colors hover:text-ink"
-            >
-              {step.label}
-            </Link>
-          ) : (
-            <span
-              className={`text-[12.5px] ${step.done ? 'text-ink-faint line-through' : 'text-ink'}`}
-            >
-              {step.label}
-            </span>
-          )}
-        </div>
-      ))}
-    </div>
   )
 }

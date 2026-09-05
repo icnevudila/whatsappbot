@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 /**
  * Çekirdek: günlük iş. Diğer: daha seyrek kullanılan sayfalar.
@@ -59,6 +59,7 @@ export function Nav({
 }) {
   const pathname = usePathname()
   const [moreOpen, setMoreOpen] = useState(false)
+  const moreRef = useRef<HTMLDivElement>(null)
 
   const setupItem = showSetup
     ? ({ href: '/kurulum', label: 'Kurulum' } as const)
@@ -68,6 +69,26 @@ export function Nav({
     pathname === href || pathname.startsWith(`${href}/`)
 
   const moreActive = MORE.some((item) => isActive(item.href))
+
+  useEffect(() => {
+    if (!moreOpen) return
+    const onPointer = (event: MouseEvent) => {
+      if (!moreRef.current?.contains(event.target as Node)) setMoreOpen(false)
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMoreOpen(false)
+    }
+    document.addEventListener('mousedown', onPointer)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onPointer)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [moreOpen])
+
+  useEffect(() => {
+    setMoreOpen(false)
+  }, [pathname])
 
   if (orientation === 'horizontal') {
     return (
@@ -87,7 +108,7 @@ export function Nav({
             active={isActive(item.href)}
           />
         ))}
-        <div className="relative">
+        <div className="relative" ref={moreRef}>
           <button
             type="button"
             aria-expanded={moreOpen}

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { QuietLink } from '@/components/ui'
+import { PageHeader, QuietLink, StatusPill } from '@/components/ui'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { CampaignLive, type CampaignView } from './campaign-live'
 import { TargetFeed, type TargetView } from './target-feed'
@@ -68,16 +68,19 @@ export default async function CampaignDetailPage({
 
   return (
     <>
-      <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1">
-        <QuietLink href="/kampanyalar">← Kampanyalar</QuietLink>
-        <QuietLink href="#paylasilanlar">Paylaşılan numaralar</QuietLink>
-      </div>
-
-      <CampaignLive
-        initial={campaign}
-        sourceLists={sourceLists}
-        accounts={accounts}
+      <PageHeader
+        title={campaign.name}
+        description="Canlı ilerleme, hatlar ve hedef numaralar."
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusPill status={campaign.status} />
+            <QuietLink href="/kampanyalar">← Kampanyalar</QuietLink>
+            <QuietLink href="#paylasilanlar">Hedef numaralar</QuietLink>
+          </div>
+        }
       />
+
+      <CampaignLive initial={campaign} sourceLists={sourceLists} accounts={accounts} />
 
       <div className="mt-4" id="paylasilanlar">
         <TargetFeed

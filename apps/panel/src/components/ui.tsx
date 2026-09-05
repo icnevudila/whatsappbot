@@ -136,7 +136,7 @@ export function Input({ className, ...props }: ComponentProps<'input'>) {
 }
 
 export function Textarea({ className, ...props }: ComponentProps<'textarea'>) {
-  return <textarea {...props} className={cx(inputBase, 'resize-y font-mono', className)} />
+  return <textarea {...props} className={cx(inputBase, 'resize-y', className)} />
 }
 
 export function Select({ className, ...props }: ComponentProps<'select'>) {

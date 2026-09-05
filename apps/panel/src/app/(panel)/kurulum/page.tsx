@@ -56,8 +56,8 @@ export default async function SetupPage() {
       title: 'Numara kontrolü',
       body:
         validWa > 0
-          ? `${validWa} numara WhatsApp’ta ✓.`
-          : 'Tek numara veya tüm defter — WA var mı yok mu.',
+          ? `${validWa} numara WhatsApp’ta kayıtlı.`
+          : 'Tek numara veya tüm defter — WhatsApp’ta kayıtlı mı?',
       href: '/kisiler',
       cta: 'Kontrol et',
     },
@@ -124,15 +124,14 @@ export default async function SetupPage() {
         <div className="mt-4 rounded-[var(--radius-card)] border border-ok/30 bg-ok-soft px-4 py-3">
           <p className="text-[13px] font-medium text-ok-dim">Hazırsın</p>
           <p className="mt-1 text-[12.5px] text-ink-muted">
-            Özetten devam et veya{' '}
             <Link href="/ozet" className="font-medium text-accent underline-offset-2 hover:underline">
               Özet
-            </Link>{' '}
-            /{' '}
+            </Link>
+            {' · '}
             <Link href="/durum" className="font-medium text-accent underline-offset-2 hover:underline">
               Durum
             </Link>{' '}
-            ekranından izle.
+            ekranından devam edin.
           </p>
         </div>
       ) : null}

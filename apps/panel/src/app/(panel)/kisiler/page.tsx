@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { AccentLink, Card, CardHeader, EmptyState, Meter, PageHeader, Stat } from '@/components/ui'
+import { AccentLink, Card, CardHeader, EmptyState, Meter, PageHeader, QuietLink, Stat } from '@/components/ui'
 import { redirect } from 'next/navigation'
 import { requireActiveOrg } from '@/lib/org'
 import { ImportForm } from './import-form'
@@ -53,7 +53,7 @@ export default async function ContactsPage() {
     <>
       <PageHeader
         title="Kişiler"
-        description="Numaralar listelerde tutulur; WhatsApp’ta var/yok ✓ / × ile işaretlenir. Tek seferlik için Hızlı gönderim."
+        description="Numaralar listelerde tutulur; WhatsApp’ta kayıtlı olup olmadığı işaretlenir. Tek seferlik için Hızlı gönderim."
         action={<AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>}
       />
 
@@ -69,7 +69,12 @@ export default async function ContactsPage() {
               <EmptyState
                 title="Henüz liste yok"
                 description="Kampanyalarda tekrar kullanacağınız numaraları formdan liste olarak ekleyin. Tek seferlik için Hızlı gönderim yeterli."
-                action={<AccentLink href="/hizli-gonderim">Hızlı gönderime git</AccentLink>}
+                action={
+                  <div className="flex flex-wrap items-center justify-center gap-3">
+                    <AccentLink href="#liste-olustur">Liste oluştur</AccentLink>
+                    <QuietLink href="/hizli-gonderim">Hızlı gönderim</QuietLink>
+                  </div>
+                }
               />
             ) : (
               <ul className="divide-y divide-hairline">

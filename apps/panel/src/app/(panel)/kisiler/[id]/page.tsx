@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
-import { AccentLink, Card, CardHeader, PageHeader, QuietLink } from '@/components/ui'
+import { AccentLink, Card, CardHeader, PageHeader, QuietLink, Stat } from '@/components/ui'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { ListActions } from '../list-actions'
 import { MemberActions, type MemberRow } from './member-actions'
@@ -88,9 +88,21 @@ export default async function ContactListDetailPage({
       />
 
       <div className="mb-4 grid grid-cols-3 gap-3">
-        <StatBox label="✓ WhatsApp’ta var" value={valid} />
-        <StatBox label="× WhatsApp’ta yok" value={invalid} />
-        <StatBox label="? Bekliyor" value={pending} />
+        <Card>
+          <div className="p-4">
+            <Stat label="WhatsApp’ta kayıtlı" value={valid} tone="accent" />
+          </div>
+        </Card>
+        <Card>
+          <div className="p-4">
+            <Stat label="WhatsApp’ta yok" value={invalid} tone="muted" />
+          </div>
+        </Card>
+        <Card>
+          <div className="p-4">
+            <Stat label="Bekliyor" value={pending} tone="muted" />
+          </div>
+        </Card>
       </div>
 
       <Card>
@@ -109,14 +121,5 @@ export default async function ContactListDetailPage({
         ’ye toplu ekleme de yapabilirsiniz.
       </p>
     </>
-  )
-}
-
-function StatBox({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-[10px] border border-hairline bg-surface px-4 py-3">
-      <p className="tabular text-[18px] font-semibold">{value}</p>
-      <p className="mt-0.5 text-[11.5px] text-ink-muted">{label}</p>
-    </div>
   )
 }

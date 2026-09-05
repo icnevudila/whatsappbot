@@ -515,5 +515,5 @@ export async function firstSendStep(
 
 export async function finishToPanel(): Promise<StepState> {
   await setOnboardingStep('done', true)
-  return { panelUrl: `${publicEnv.panelUrl}/durum` }
+  return { panelUrl: `${publicEnv.panelUrl}/ozet` }
 }

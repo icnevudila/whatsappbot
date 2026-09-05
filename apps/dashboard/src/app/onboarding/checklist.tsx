@@ -42,14 +42,14 @@ const STEPS: StepDef[] = [
   },
   {
     id: 'wa-hat',
-    title: 'WA hat',
+    title: 'WhatsApp hattı',
     summary: 'WhatsApp hattınızı QR ile bağlayın.',
     primaryCta: 'Bağla',
     allowSkip: true,
   },
   {
     id: 'wa-kontrol',
-    title: 'WA kontrol',
+    title: 'Numara kontrolü',
     summary: 'Numaraların WhatsApp kaydını doğrulayın.',
     primaryCta: 'Doğrula',
     allowSkip: true,
@@ -196,19 +196,21 @@ export function OnboardingChecklist({
     'w-full rounded-[var(--radius-card)] border border-hairline bg-surface px-3 py-2.5 text-[13.5px] text-ink shadow-[var(--shadow-card)] outline-none transition-colors placeholder:text-ink-faint focus:border-accent'
 
   return (
-    <div className="relative min-h-dvh overflow-hidden">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            'radial-gradient(ellipse 80% 50% at 50% -10%, var(--color-accent-soft), transparent 55%), linear-gradient(180deg, var(--color-canvas) 0%, #e8ecf4 100%)',
-        }}
-      />
-
+    <div className="relative min-h-dvh bg-canvas">
       <div className="relative mx-auto flex w-full max-w-lg flex-col gap-8 px-4 py-10 sm:py-16">
         <header className="flex flex-col gap-3">
-          <p className="text-[28px] font-semibold tracking-tight text-ink sm:text-[32px]">
+          <p className="inline-flex items-center gap-2 text-[28px] font-semibold tracking-tight text-ink sm:text-[32px]">
+            <span
+              aria-hidden
+              className="inline-flex size-7 items-center justify-center"
+            >
+              <svg viewBox="0 0 16 16" fill="none" className="size-6">
+                <circle cx="2.6" cy="2.6" r="2.2" className="fill-accent" />
+                <rect x="0" y="6.6" width="16" height="1.7" rx="0.85" fill="currentColor" />
+                <rect x="0" y="10" width="11" height="1.7" rx="0.85" fill="currentColor" opacity="0.72" />
+                <rect x="0" y="13.4" width="6" height="1.7" rx="0.85" fill="currentColor" opacity="0.44" />
+              </svg>
+            </span>
             Filo
           </p>
           <h1 className="max-w-md text-[18px] font-medium leading-snug text-ink sm:text-[20px]">
@@ -251,7 +253,7 @@ export function OnboardingChecklist({
               Panele geçip gönderimleri canlı izleyebilirsiniz.
             </p>
             <a
-              href={`${panelUrl}/durum`}
+              href={`${panelUrl}/ozet`}
               className="inline-flex h-10 w-fit items-center justify-center rounded-[var(--radius-card)] bg-accent px-4 text-[13.5px] font-medium text-accent-ink hover:bg-accent-dim"
             >
               Panele git

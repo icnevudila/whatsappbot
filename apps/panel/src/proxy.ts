@@ -55,7 +55,7 @@ export async function proxy(request: NextRequest) {
   // panele geri gonderiyoruz.
   if (user && isAuthPath) {
     const target = request.nextUrl.clone()
-    target.pathname = '/durum'
+    target.pathname = '/ozet'
     target.search = ''
     return NextResponse.redirect(target)
   }

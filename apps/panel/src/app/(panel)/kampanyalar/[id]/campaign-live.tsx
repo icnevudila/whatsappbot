@@ -145,7 +145,7 @@ export function CampaignLive({
     <div className="space-y-4">
       <Card>
         <CardHeader
-          title={campaign.name}
+          title="İlerleme"
           subtitle={subtitleParts.join(' · ')}
           action={<StatusPill status={campaign.status} />}
         />
@@ -184,7 +184,7 @@ export function CampaignLive({
               href="#paylasilanlar"
               className="font-medium text-accent underline underline-offset-2"
             >
-              Paylaşılanlara git
+              Hedef numaralara git
             </a>
           </p>
 

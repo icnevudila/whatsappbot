@@ -204,7 +204,7 @@ export function AccountsBoard({
           <EmptyState
             title="Henüz hat yok"
             description="Yukarıdan bir etiket verip hat ekleyin. QR veya telefon eşleştirme kodu bu ekranda otomatik gelir; okuttuğunuzda bağlantı kurulur."
-            action={<QuietLink href="/durum">Bağlantı durumunu izle</QuietLink>}
+            action={<AccentLink href="#yeni-hat">Yukarıdan hat ekle</AccentLink>}
           />
         </Card>
       ) : (
@@ -226,7 +226,7 @@ function NewAccountForm({ remaining, atCap }: { remaining: number; atCap: boolea
 
   return (
     <Card>
-      <form action={formAction} className="flex flex-wrap items-end gap-3 p-4">
+      <form id="yeni-hat" action={formAction} className="flex flex-wrap items-end gap-3 p-4 scroll-mt-6">
         <div className="min-w-[220px] flex-1">
           <Field
             label="Yeni hat ekle"
