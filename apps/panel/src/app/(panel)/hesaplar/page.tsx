@@ -37,7 +37,7 @@ export default async function AccountsPage() {
     <>
       <PageHeader
         title="Hesaplar"
-        description="Her satır ayrı bir WhatsApp numarasıdır. QR veya telefon koduyla bağlayın; birden fazla hattı kampanya ve hızlı gönderimde birlikte kullanabilirsiniz."
+        description="Her satır ayrı WhatsApp hattı. QR veya telefon koduyla bağlayın."
         action={
           <div className="flex flex-wrap gap-2">
             <AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>

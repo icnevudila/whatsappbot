@@ -1,13 +1,15 @@
-# Filo tasarım dili (Messora Cobalt)
+# Filo tasarım dili (Pilot workbench × Cobalt)
 
 Status: active  
-Kaynak: `pilot-ui` Messora Cobalt — ekran kopyası değil, **tasarım dili**.  
-Referans: `C:/Users/TP2/Documents/chatbot/pilot-ui/docs/design/DESIGN-LANGUAGE.md` + `tokens.css`
+Kaynak: `pilot-ui` product shell + Messora Cobalt tokens.  
+**Ekran klonu değil:** Shopify/katalog/omnichannel yok. Filo domain: hat, kampanya, gelen/giden.
+
+Referans: `C:/Users/TP2/Documents/chatbot/pilot-ui/app/app/product.css` + `docs/design/DESIGN-LANGUAGE.md`
 
 ## Kavram
 
-**Soğuk mühendislik kağıdı + tek elektrik kobalt aksan.**  
-Filo WhatsApp hat / kampanya workbench’i: yoğun ürün yüzeyi, sakin sınırlar, kobalt birincil aksiyon. WhatsApp yeşili yalnızca “bağlı / WA kanal” anlamında.
+**Pilot workbench layout + Filo Cobalt brand.**  
+Dense rail, grouped nav, full-bleed worksurface, hard-offset shadows, lime active nav. Primary CTA stays cobalt (`#2f5bff`). WhatsApp green only for “bağlı / sent”.
 
 ## Tokenlar (ürün)
 
@@ -16,32 +18,32 @@ Filo WhatsApp hat / kampanya workbench’i: yoğun ürün yüzeyi, sakin sınır
 | Paper | `--color-canvas` | `#f3f5f9` |
 | Paper 2 | `--color-canvas-alt` | `#e8ecf3` |
 | Surface | `--color-surface` | `#ffffff` |
-| Raised | `--color-surface-raised` | `#eef1f7` |
 | Ink | `--color-ink` | `#161925` |
-| Ink soft | `--color-ink-soft` | `#2f3444` |
 | Muted | `--color-ink-muted` | `#646b7c` |
 | Line | `--color-hairline` | `#d5dae6` |
-| Accent | `--color-accent` | `#2f5bff` |
-| Accent dim | `--color-accent-dim` | `#1e3fcc` |
-| Accent soft | `--color-accent-soft` | `#e8edff` |
+| Accent CTA | `--color-accent` | `#2f5bff` |
+| Nav active | `--color-nav-active` | `#c5d0f5` |
 | WA / bağlı | `--color-ok` | `#25d366` |
-| Semantic success | `--color-success` | `#127a52` |
-| Warn | `--color-warn` | `#a15c00` |
-| Danger | `--color-danger` | `#b42318` |
-| Radius | `--radius-card` / sm | `10px` / `6px` |
-| Ease | `--ease-out` | `cubic-bezier(0.22, 1, 0.36, 1)` |
+| Success | `--color-success` | `#127a52` |
+| Radius | card / sm | `6px` / `4px` |
+| Shadow | hard offset | `2px 2px 0` ink |
 | Font | Outfit + JetBrains Mono | |
 
-## Ürün UI kuralları
+## Ürün kabuğu
 
-1. Birincil CTA = kobalt (`accent`); WA yeşili CTA değil.
-2. Yoğun worksurface; kart gölgesi hafif; dekoratif gradyan yok.
-3. Empty / loading / error durumları kritik listelerde zorunlu.
-4. Motion: kısa fade/slide; `prefers-reduced-motion` saygı.
-5. Anti-pattern: mor/indigo glow, teal kimlik, krem+terracotta serif, broadsheet yoğunluk.
+1. Rail 248px, grouped: Operasyon / Gelen-giden / İzleme / Sistem.
+2. Topbar 52px; main max ~1280, no `max-w-5xl` marketing column.
+3. `PageHeader` = border-bottom title strip (`.wb-page-head`).
+4. Inbox = `SplitPane` list+detail; active row inset ink bar.
+5. Empty = dashed panel (`.wb-empty`), not illustration.
+6. Filter chips: ink fill when on (not soft accent pill).
 
-## Uygulama
+## Anti-pattern
 
-- Tokenlar: `apps/{panel,dashboard,admin}/src/app/globals.css`
-- Primitives: `apps/*/src/components/ui.tsx`
-- Bu dosya token/tez değişince aynı PR’da güncellenir.
+- Soft multi-layer SaaS shadows, purple glow, cream+serif
+- Cobalt-only paint without layout change
+- Copying Pilot Shopify/catalog IA into Filo
+
+## Change control
+
+Token or shell thesis changes update this file in the same PR.

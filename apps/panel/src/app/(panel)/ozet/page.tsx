@@ -95,8 +95,8 @@ export default async function PanelHomePage() {
   return (
     <>
       <PageHeader
-        title={org.name}
-        description="Günün özeti. Hat, gönderim ve izleme ekranlarına soldaki menüden geçin."
+        title="Özet"
+        description={`${org.name} · günün operasyon görünümü.`}
         action={
           ready ? (
             <AccentLink href="/hizli-gonderim">Mesaj gönder</AccentLink>
@@ -108,9 +108,9 @@ export default async function PanelHomePage() {
 
       <SetupBanner progress={setup} />
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-4 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <div className="p-4">
+          <div className="p-3.5">
             <Stat
               label="Bağlı hat"
               value={connectedCount}
@@ -125,7 +125,7 @@ export default async function PanelHomePage() {
           </div>
         </Card>
         <Card>
-          <div className="p-4">
+          <div className="p-3.5">
             <Stat label="Kişiler" value={contactCount} tone="muted" />
             <p className="mt-1 text-[11px] text-ink-faint tabular">
               {validWa} WhatsApp’ta kayıtlı · {lists ?? 0} liste
@@ -139,7 +139,7 @@ export default async function PanelHomePage() {
           </div>
         </Card>
         <Card>
-          <div className="p-4">
+          <div className="p-3.5">
             <Stat label="Bugün giden" value={outToday ?? 0} tone="accent" />
             <Link
               href="/gidenler"
@@ -150,7 +150,7 @@ export default async function PanelHomePage() {
           </div>
         </Card>
         <Card>
-          <div className="p-4">
+          <div className="p-3.5">
             <Stat label="Bugün gelen" value={inToday ?? 0} tone="muted" />
             <Link
               href="/gelenler"
@@ -162,7 +162,7 @@ export default async function PanelHomePage() {
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-2.5 lg:grid-cols-2">
         <Card>
           <CardHeader title="Kısayollar" subtitle="Sık kullanılan işler" />
           <ul className="divide-y divide-hairline">
@@ -170,9 +170,9 @@ export default async function PanelHomePage() {
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  className="block px-4 py-3 transition-colors hover:bg-surface-raised"
+                  className="block px-3.5 py-2.5 transition-colors hover:bg-surface-raised"
                 >
-                  <p className="text-[13px] font-medium text-ink">{item.title}</p>
+                  <p className="text-[13px] font-semibold text-ink">{item.title}</p>
                   <p className="mt-0.5 text-[12px] text-ink-muted">{item.body}</p>
                 </Link>
               </li>
@@ -182,7 +182,7 @@ export default async function PanelHomePage() {
 
         <Card>
           <CardHeader title="Durum" subtitle="Canlı izleme" />
-          <div className="space-y-3 p-4 text-[12.5px] text-ink-muted">
+          <div className="space-y-2.5 p-3.5 text-[12.5px] text-ink-muted">
             <p>
               Çalışan kampanya:{' '}
               <span className="font-medium tabular text-ink">{campaignsRunning ?? 0}</span>
@@ -196,7 +196,7 @@ export default async function PanelHomePage() {
                 {connectedCount} / {accountsTotal ?? 0}
               </span>
             </p>
-            <div className="flex flex-wrap gap-3 pt-1">
+            <div className="flex flex-wrap gap-2 pt-1">
               <AccentLink href="/durum">Durum paneli</AccentLink>
               <QuietLink href="/kampanyalar">Kampanyalar</QuietLink>
               <QuietLink href="/kara-liste">Kara liste</QuietLink>

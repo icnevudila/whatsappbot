@@ -1,8 +1,10 @@
 @import 'tailwindcss';
 
 /*
-  Tasarim kilidi: Messora Cobalt — docs/design/DESIGN-LANGUAGE.md
-  Kaynak: pilot-ui tokens (dil), Filo urun yuzeyi.
+  Filo product shell — Pilot workbench layout + Cobalt Filo brand.
+  Layout/density/chrome: pilot-ui product.css
+  CTA: kobalt (Filo). WA yesili yalnizca "bagli".
+  docs/design/DESIGN-LANGUAGE.md
 */
 @theme {
   --color-canvas: #f3f5f9;
@@ -22,6 +24,9 @@
   --color-accent-ink: #ffffff;
   --color-accent-soft: #e8edff;
 
+  /* Pilot aktif nav / soft soft */
+  --color-nav-active: #c5d0f5;
+
   /* WA kanal / bagli */
   --color-ok: #25d366;
   --color-ok-dim: #1a9e4b;
@@ -34,14 +39,15 @@
   --color-warn: #a15c00;
   --color-danger: #b42318;
 
-  --radius-card: 10px;
-  --radius-sm: 6px;
+  --radius-card: 6px;
+  --radius-sm: 4px;
 
   --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 
-  --shadow-card: 0 1px 2px rgba(22, 25, 37, 0.06);
-  --shadow-md: 0 4px 24px -2px rgba(22, 25, 37, 0.06), 0 1px 4px rgba(22, 25, 37, 0.03);
+  /* Pilot hard-offset; soft SaaS glow yok */
+  --shadow-card: 2px 2px 0 rgba(22, 25, 37, 0.12);
+  --shadow-md: 3px 3px 0 rgba(22, 25, 37, 0.14);
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -73,7 +79,7 @@ h3 {
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--color-nav-active);
   outline-offset: 2px;
 }
 
@@ -93,6 +99,109 @@ h3 {
   background: var(--color-hairline-strong);
   border-radius: 99px;
   border: 3px solid var(--color-canvas);
+}
+
+/* Workbench shell helpers */
+.wb-rail-link {
+  display: block;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  font-size: 13px;
+  line-height: 1.25;
+  color: var(--color-ink-muted);
+  transition: background-color 120ms var(--ease-out), border-color 120ms var(--ease-out),
+    color 120ms var(--ease-out), box-shadow 120ms var(--ease-out);
+}
+.wb-rail-link:hover {
+  background: var(--color-surface-raised);
+  color: var(--color-ink);
+}
+.wb-rail-link[aria-current='page'] {
+  background: var(--color-nav-active);
+  border-color: rgba(22, 25, 37, 0.18);
+  color: var(--color-ink);
+  font-weight: 600;
+  box-shadow: 1px 1px 0 rgba(22, 25, 37, 0.1);
+}
+.wb-rail-group {
+  margin: 14px 10px 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-ink-faint);
+}
+.wb-page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-hairline);
+}
+.wb-page-title {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: var(--color-ink);
+}
+.wb-page-desc {
+  margin-top: 4px;
+  max-width: 62ch;
+  font-size: 12.5px;
+  color: var(--color-ink-muted);
+}
+.wb-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.wb-split {
+  display: grid;
+  gap: 0;
+  min-height: 0;
+  border: 1px solid var(--color-hairline);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+@media (min-width: 1024px) {
+  .wb-split {
+    grid-template-columns: 300px minmax(0, 1fr);
+    min-height: calc(100dvh - 120px);
+  }
+}
+.wb-split-pane {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.wb-split-pane + .wb-split-pane {
+  border-top: 1px solid var(--color-hairline);
+}
+@media (min-width: 1024px) {
+  .wb-split-pane + .wb-split-pane {
+    border-top: 0;
+    border-left: 1px solid var(--color-hairline);
+  }
+}
+.wb-row-active {
+  background: var(--color-surface-raised);
+  box-shadow: inset 3px 0 0 var(--color-ink);
+}
+.wb-empty {
+  margin: 12px;
+  border: 1px dashed var(--color-hairline-strong);
+  background: var(--color-canvas);
+  border-radius: var(--radius-sm);
 }
 
 @keyframes filo-fade-in {

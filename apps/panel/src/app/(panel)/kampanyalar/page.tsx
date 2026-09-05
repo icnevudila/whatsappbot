@@ -99,11 +99,11 @@ export default async function CampaignsPage() {
     <>
       <PageHeader
         title="Kampanyalar"
-        description="Listeden seçip gönderin. Oluşturunca hemen başlar; detayda canlı ilerleme ve numaralar görünür."
+        description="Liste + hat seç, başlat. Detayda canlı ilerleme."
         action={<AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>}
       />
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_400px]">
+      <div className="grid gap-2.5 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="order-2 lg:order-1">
           <Card>
             <CardHeader
@@ -147,11 +147,11 @@ export default async function CampaignsPage() {
                     <li key={campaign.id}>
                       <Link
                         href={`/kampanyalar/${campaign.id}#paylasilanlar`}
-                        className="block px-4 py-3 transition-colors hover:bg-surface-raised"
+                        className="block px-3.5 py-2.5 transition-colors hover:bg-surface-raised"
                       >
                         <div className="flex items-center justify-between gap-3">
                           <div className="min-w-0">
-                            <p className="truncate text-[13px] font-medium">{campaign.name}</p>
+                            <p className="truncate text-[13px] font-semibold">{campaign.name}</p>
                             {hint ? (
                               <p className="mt-0.5 text-[11px] text-ink-faint">{hint}</p>
                             ) : null}
@@ -184,7 +184,7 @@ export default async function CampaignsPage() {
 
                         {campaign.stop_reason ? (
                           <p
-                            className="mt-1.5 line-clamp-2 rounded-md border border-danger/25 bg-danger/8 px-2 py-1 text-[11.5px] text-danger"
+                            className="mt-1.5 line-clamp-2 border border-danger/25 bg-danger/8 px-2 py-1 text-[11.5px] text-danger"
                             title={campaign.stop_reason}
                           >
                             <span className="font-medium">Durdurma nedeni:</span>{' '}

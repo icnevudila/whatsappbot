@@ -4,47 +4,69 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
-/**
- * Çekirdek: günlük iş. Diğer: daha seyrek kullanılan sayfalar.
- * Mobilde "Diğer" gruplanır; masaüstünde hepsi görünür.
- */
-const CORE = [
-  { href: '/ozet', label: 'Özet' },
-  { href: '/hesaplar', label: 'Hesaplar' },
-  { href: '/hizli-gonderim', label: 'Hızlı gönderim' },
-  { href: '/kisiler', label: 'Kişiler' },
-  { href: '/kampanyalar', label: 'Kampanyalar' },
-  { href: '/durum', label: 'Durum' },
-  { href: '/ayarlar', label: 'Ayarlar' },
-] as const
+type NavItem = { href: string; label: string }
 
-const MORE = [
-  { href: '/gelenler', label: 'Gelenler' },
-  { href: '/gidenler', label: 'Gidenler' },
-  { href: '/raporlar', label: 'Raporlar' },
-  { href: '/kara-liste', label: 'Kara liste' },
-  { href: '/marka-kiti', label: 'Marka kiti' },
-  { href: '/yardim', label: 'Yardım' },
-] as const
+/** Pilot tarzı gruplu rail — Filo domain (Shopify yok). */
+const GROUPS: { id: string; label: string; items: readonly NavItem[] }[] = [
+  {
+    id: 'ops',
+    label: 'Operasyon',
+    items: [
+      { href: '/ozet', label: 'Özet' },
+      { href: '/hesaplar', label: 'Hesaplar' },
+      { href: '/hizli-gonderim', label: 'Hızlı gönderim' },
+      { href: '/kisiler', label: 'Kişiler' },
+      { href: '/kampanyalar', label: 'Kampanyalar' },
+    ],
+  },
+  {
+    id: 'inbox',
+    label: 'Gelen / giden',
+    items: [
+      { href: '/gelenler', label: 'Gelenler' },
+      { href: '/gidenler', label: 'Gidenler' },
+      { href: '/kara-liste', label: 'Kara liste' },
+    ],
+  },
+  {
+    id: 'watch',
+    label: 'İzleme',
+    items: [
+      { href: '/durum', label: 'Durum' },
+      { href: '/raporlar', label: 'Raporlar' },
+    ],
+  },
+  {
+    id: 'system',
+    label: 'Sistem',
+    items: [
+      { href: '/marka-kiti', label: 'Marka kiti' },
+      { href: '/ayarlar', label: 'Ayarlar' },
+      { href: '/yardim', label: 'Yardım' },
+    ],
+  },
+]
+
+function isActive(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(`${href}/`)
+}
 
 function NavLink({
   href,
   label,
   active,
+  className,
 }: {
   href: string
   label: string
   active: boolean
+  className?: string
 }) {
   return (
     <Link
       href={href}
       aria-current={active ? 'page' : undefined}
-      className={`whitespace-nowrap rounded-md px-2.5 py-1.5 text-[13px] transition-colors ${
-        active
-          ? 'bg-accent-soft font-medium text-accent'
-          : 'text-ink-muted hover:bg-surface-raised hover:text-ink'
-      }`}
+      className={className ?? 'wb-rail-link'}
     >
       {label}
     </Link>
@@ -62,14 +84,11 @@ export function Nav({
   const [moreOpen, setMoreOpen] = useState(false)
   const moreRef = useRef<HTMLDivElement>(null)
 
-  const setupItem = showSetup
-    ? ({ href: '/kurulum', label: 'Kurulum' } as const)
-    : null
-
-  const isActive = (href: string) =>
-    pathname === href || pathname.startsWith(`${href}/`)
-
-  const moreActive = MORE.some((item) => isActive(item.href))
+  const setupItem = showSetup ? ({ href: '/kurulum', label: 'Kurulum' } as const) : null
+  const flat = GROUPS.flatMap((g) => g.items)
+  const primaryH = flat.slice(0, 6)
+  const moreH = flat.slice(6)
+  const moreActive = moreH.some((item) => isActive(pathname, item.href))
 
   useEffect(() => {
     if (!moreOpen) return
@@ -98,15 +117,19 @@ export function Nav({
           <NavLink
             href={setupItem.href}
             label={setupItem.label}
-            active={isActive(setupItem.href)}
+            active={isActive(pathname, setupItem.href)}
+            className={`wb-rail-link whitespace-nowrap ${
+              isActive(pathname, setupItem.href) ? '' : ''
+            }`}
           />
         ) : null}
-        {CORE.map((item) => (
+        {primaryH.map((item) => (
           <NavLink
             key={item.href}
             href={item.href}
             label={item.label}
-            active={isActive(item.href)}
+            active={isActive(pathname, item.href)}
+            className="wb-rail-link whitespace-nowrap"
           />
         ))}
         <div className="relative" ref={moreRef}>
@@ -114,27 +137,22 @@ export function Nav({
             type="button"
             aria-expanded={moreOpen}
             onClick={() => setMoreOpen((v) => !v)}
-            className={`whitespace-nowrap rounded-md px-2.5 py-1.5 text-[13px] transition-colors ${
-              moreActive || moreOpen
-                ? 'bg-accent-soft font-medium text-accent'
-                : 'text-ink-muted hover:bg-surface-raised hover:text-ink'
+            className={`wb-rail-link whitespace-nowrap ${
+              moreActive || moreOpen ? 'font-semibold' : ''
             }`}
+            aria-current={moreActive ? 'page' : undefined}
           >
             Diğer
           </button>
           {moreOpen ? (
-            <div className="absolute left-0 top-full z-30 mt-1 min-w-[160px] rounded-md border border-hairline bg-surface p-1 shadow-[var(--shadow-md)]">
-              {MORE.map((item) => (
+            <div className="absolute left-0 top-full z-30 mt-1 min-w-[168px] border border-hairline bg-surface p-1 shadow-[var(--shadow-md)]">
+              {moreH.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
                   onClick={() => setMoreOpen(false)}
-                  aria-current={isActive(item.href) ? 'page' : undefined}
-                  className={`block rounded-md px-2.5 py-1.5 text-[13px] ${
-                    isActive(item.href)
-                      ? 'bg-accent-soft font-medium text-accent'
-                      : 'text-ink-muted hover:bg-surface-raised hover:text-ink'
-                  }`}
+                  aria-current={isActive(pathname, item.href) ? 'page' : undefined}
+                  className="wb-rail-link block"
                 >
                   {item.label}
                 </Link>
@@ -147,32 +165,31 @@ export function Nav({
   }
 
   return (
-    <nav className="flex flex-col gap-0.5" aria-label="Ana menü">
+    <nav className="flex flex-col gap-px" aria-label="Ana menü">
       {setupItem ? (
-        <NavLink
-          href={setupItem.href}
-          label={setupItem.label}
-          active={isActive(setupItem.href)}
-        />
+        <>
+          <p className="wb-rail-group">Kurulum</p>
+          <NavLink
+            href={setupItem.href}
+            label={setupItem.label}
+            active={isActive(pathname, setupItem.href)}
+          />
+        </>
       ) : null}
-      {CORE.map((item) => (
-        <NavLink
-          key={item.href}
-          href={item.href}
-          label={item.label}
-          active={isActive(item.href)}
-        />
-      ))}
-      <p className="mb-0.5 mt-3 px-2.5 text-[10.5px] font-medium uppercase tracking-wide text-ink-faint">
-        Diğer
-      </p>
-      {MORE.map((item) => (
-        <NavLink
-          key={item.href}
-          href={item.href}
-          label={item.label}
-          active={isActive(item.href)}
-        />
+      {GROUPS.map((group) => (
+        <div key={group.id}>
+          <p className="wb-rail-group">{group.label}</p>
+          <div className="flex flex-col gap-px">
+            {group.items.map((item) => (
+              <NavLink
+                key={item.href}
+                href={item.href}
+                label={item.label}
+                active={isActive(pathname, item.href)}
+              />
+            ))}
+          </div>
+        </div>
       ))}
     </nav>
   )
