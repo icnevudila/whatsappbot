@@ -1,9 +1,10 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useTransition } from 'react'
 import { Button, EmptyState, Field, Input, Notice, Select } from '@/components/ui'
 import {
   addOrgMember,
+  removeOrgMember,
   updateOrgName,
   updateOrgWebhook,
   type OrgActionState,
@@ -117,6 +118,7 @@ export function MembersPanel({
     addOrgMember,
     null,
   )
+  const [removing, startRemove] = useTransition()
 
   return (
     <div>
@@ -150,9 +152,23 @@ export function MembersPanel({
                   </p>
                 )}
               </div>
-              <span className="shrink-0 rounded-full border border-hairline px-2 py-0.5 text-[11px] text-ink-muted">
-                {ROLE_LABELS[member.role] ?? member.role}
-              </span>
+              <div className="flex shrink-0 items-center gap-2">
+                <span className="rounded-full border border-hairline px-2 py-0.5 text-[11px] text-ink-muted">
+                  {ROLE_LABELS[member.role] ?? member.role}
+                </span>
+                {canManage && member.role !== 'owner' ? (
+                  <Button
+                    type="button"
+                    variant="danger"
+                    disabled={removing}
+                    onClick={() =>
+                      startRemove(() => void removeOrgMember(member.userId))
+                    }
+                  >
+                    Çıkar
+                  </Button>
+                ) : null}
+              </div>
             </li>
           ))}
         </ul>

@@ -172,3 +172,26 @@ export async function addOrgMember(
   revalidatePath('/ayarlar')
   return { ok: 'Üye eklendi.' }
 }
+
+export async function removeOrgMember(userId: string): Promise<OrgActionState> {
+  try {
+    const { userId: me, org, supabase } = await requireActiveOrg()
+    if (org.role !== 'owner' && org.role !== 'admin') {
+      return { error: 'Yetki yok.' }
+    }
+    if (userId === me) return { error: 'Kendinizi çıkaramazsınız.' }
+
+    const { error } = await supabase
+      .from('organization_members')
+      .delete()
+      .eq('org_id', org.id)
+      .eq('user_id', userId)
+      .neq('role', 'owner')
+
+    if (error) return { error: error.message }
+    revalidatePath('/ayarlar')
+    return { ok: 'Üye çıkarıldı.' }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum yok' }
+  }
+}

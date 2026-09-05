@@ -147,8 +147,6 @@ async function handle(job: JobRow): Promise<unknown> {
     case 'message.send': {
       const accountId = requireAccountId(job)
       const payload = job.payload as JobPayloadMap['message.send']
-      const session = sessionManager.get(accountId)
-      if (!session?.isLive) throw new Error('Hesap bagli degil')
 
       if (!payload.phone_e164) throw new Error('phone_e164 zorunlu')
       if (!job.org_id || !job.created_by) {
@@ -164,6 +162,35 @@ async function handle(job: JobRow): Promise<unknown> {
       if (blocked) {
         return { skipped: true, reason: 'blacklist' }
       }
+
+      const useWaba =
+        (process.env.SEND_CHANNEL ?? '').trim().toLowerCase() === 'waba' &&
+        Boolean(process.env.WABA_ACCESS_TOKEN?.trim())
+
+      if (useWaba && (!payload.media_url || (payload.message_type ?? 'text') === 'text')) {
+        const { sendTextCloudApi } = await import('./waba.js')
+        const result = await sendTextCloudApi({
+          toE164: payload.phone_e164,
+          body: payload.body ?? '',
+        })
+        await query(
+          `insert into public.message_log
+             (org_id, created_by, account_id, direction, phone_e164, message_type, body, wa_message_id, status)
+           values ($1, $2, $3, 'out', $4, 'text', $5, $6, 'sent')`,
+          [
+            job.org_id,
+            job.created_by,
+            accountId,
+            payload.phone_e164,
+            payload.body ?? '',
+            result.messageId,
+          ],
+        )
+        return { sent: true, channel: 'waba', messageId: result.messageId }
+      }
+
+      const session = sessionManager.get(accountId)
+      if (!session?.isLive) throw new Error('Hesap bagli degil')
 
       // Dogrulama kapisi tek mesajda da gecerli.
       const verdict = await session.verifyNumbers([payload.phone_e164])
