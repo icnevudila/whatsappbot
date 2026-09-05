@@ -5,6 +5,8 @@ import { mkdir } from 'node:fs/promises'
 const base = 'http://localhost:3100'
 const output = new URL('../test-results/', import.meta.url)
 await mkdir(output, { recursive: true })
+// Önceki koşudan kalan empty fixture durumunu temizle
+await fetch('http://127.0.0.1:54329/__fixture?empty=false', { method: 'POST' })
 const browser = await chromium.launch({ headless: true, channel: 'msedge' })
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } })
 const errors = []
