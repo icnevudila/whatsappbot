@@ -10,7 +10,7 @@ import { RouteProgress } from '@/components/route-progress'
 import { createT } from '@/lib/i18n'
 import { getDictionary } from '@/lib/i18n/server'
 import { listUserOrgs, requireActiveOrg } from '@/lib/org'
-import { getSetupProgress, isOnboardingAllowedPath } from '@/lib/setup-progress'
+import { getSetupProgress } from '@/lib/setup-progress'
 import { signOut } from '@/app/giris/actions'
 import { Nav } from './nav'
 import { OrgSwitcher } from './org-switcher'
@@ -37,21 +37,12 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   const t = createT(messages)
 
   const pathname = (await headers()).get('x-filo-pathname') ?? ''
+  const homeHref = isPlatformAdmin ? '/admin' : '/ozet'
+  // Müşteri: soft checklist (banner) — menü/yol kilidi yok.
+  // Platform admin: kurulum UI tamamen kapalı.
+  const customerNeedsSetup = !isPlatformAdmin && showSetup
 
-  // Zorunlu onboarding: hazır değilse yalnızca kurulum yolları.
-  // Platform admin (Filo) müşteri kurulumuna kilitlenmez — /admin vb. açık kalır.
-  // Pathname yoksa (proxy header eksik) bilinen yolu engelleyemeyiz; boşken
-  // /kurulum'a redirect etmek sonsuz döngü yapar. Proxy her istekte set eder.
-  if (
-    showSetup &&
-    pathname &&
-    !isOnboardingAllowedPath(pathname) &&
-    !isPlatformAdmin
-  ) {
-    redirect('/kurulum')
-  }
-
-  // Kurulum bittiyse checklist sayfasından kampanyaya yönlendir (yeniden girerse).
+  // Kurulum sayfası tamamlandıysa kampanyaya yönlendir.
   if (allDone && pathname === '/kurulum') {
     redirect('/kampanyalar?hazir=1')
   }
@@ -81,7 +72,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         <aside className="wb-rail hidden w-[248px] shrink-0 flex-col border-r border-hairline bg-surface md:flex">
           <div className="border-b border-hairline px-3 py-3">
             <Link
-              href={showSetup ? '/kurulum' : '/ozet'}
+              href={homeHref}
               className="flex items-center px-1.5 transition-opacity hover:opacity-80"
             >
               <Wordmark />
@@ -93,8 +84,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
 
           <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
             <Nav
-              showSetup={showSetup}
-              onboardingLock={showSetup && !isPlatformAdmin}
+              showSetup={customerNeedsSetup}
               isPlatformAdmin={isPlatformAdmin}
             />
           </div>
@@ -120,7 +110,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="border-b border-hairline bg-surface px-3 py-2 md:hidden">
             <div className="mb-2 flex items-center justify-between gap-3">
-              <Link href={showSetup ? '/kurulum' : '/ozet'} className="flex items-center">
+              <Link href={homeHref} className="flex items-center">
                 <Wordmark />
               </Link>
               <div className="flex items-center gap-2">
@@ -139,18 +129,28 @@ export default async function PanelLayout({ children }: { children: React.ReactN
               <OrgSwitcher orgs={orgs} activeOrgId={org.id} />
             </div>
             <Nav
-              showSetup={showSetup}
-              onboardingLock={showSetup && !isPlatformAdmin}
+              showSetup={customerNeedsSetup}
               orientation="horizontal"
               isPlatformAdmin={isPlatformAdmin}
             />
           </div>
 
           <header className="wb-topbar hidden h-[52px] shrink-0 items-center justify-between border-b border-hairline bg-surface px-5 md:flex">
-            <p className="truncate text-[12.5px] font-medium text-ink-soft">{org.name}</p>
+            <div className="flex min-w-0 items-center gap-2">
+              <p className="truncate text-[12.5px] font-medium text-ink-soft">{org.name}</p>
+              {isPlatformAdmin ? (
+                <span className="shrink-0 rounded-sm border border-accent/30 bg-accent-soft px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-accent uppercase">
+                  Filo admin
+                </span>
+              ) : null}
+            </div>
             <div className="flex items-center gap-3">
               <p className="text-[11.5px] text-ink-faint">
-                {showSetup ? t('common.setupLocked') : t('common.workbench')}
+                {isPlatformAdmin
+                  ? 'Platform konsolu'
+                  : customerNeedsSetup
+                    ? t('common.setupHintSoft')
+                    : t('common.workbench')}
               </p>
               <LocaleSwitcher compact />
             </div>

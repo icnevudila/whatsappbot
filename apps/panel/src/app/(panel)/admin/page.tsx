@@ -5,9 +5,9 @@ import {
   CardHeader,
   Notice,
   PageHeader,
-  StatusPill,
 } from '@/components/ui'
 import { requirePlatformAdmin } from '@/lib/org'
+import { AdminOrgList, type AdminOrgRow } from './admin-org-list'
 
 export const metadata = { title: 'Admin' }
 export const dynamic = 'force-dynamic'
@@ -23,11 +23,18 @@ type OverviewOrg = {
   member_count?: number
 }
 
+type OverviewAccount = {
+  id: string
+  org_id: string
+  status: string
+  is_locked: boolean
+}
+
 type Overview = {
   organizations?: OverviewOrg[]
-  accounts?: { id: string; org_id: string; status: string; is_locked: boolean }[]
+  accounts?: OverviewAccount[]
   workers?: { worker_id: string; alive?: boolean; live?: number }[]
-  jobs?: { id: number; status: string; type: string }[]
+  jobs?: { id: number; status: string; type: string; org_id?: string }[]
 }
 
 export default async function AdminHomePage() {
@@ -59,19 +66,48 @@ export default async function AdminHomePage() {
   const jobs = overview.jobs ?? []
   const connected = accounts.filter((a) => a.status === 'connected').length
   const locked = accounts.filter((a) => a.is_locked).length
+  const members = orgs.reduce((sum, org) => sum + (org.member_count ?? 0), 0)
+  const suspended = orgs.filter((o) => o.suspended_at).length
+
+  const orgRows: AdminOrgRow[] = orgs.map((org) => {
+    const orgAccounts = accounts.filter((a) => a.org_id === org.id)
+    return {
+      ...org,
+      connected: orgAccounts.filter((a) => a.status === 'connected').length,
+      accountsTotal: orgAccounts.length,
+      locked: orgAccounts.filter((a) => a.is_locked).length,
+    }
+  })
 
   return (
     <>
       <PageHeader
         title="Süper admin"
-        description="Tüm işletmeler, üyeler, kota ve hatlar. Müşteri paneli sade kalsın — burası senin."
+        description="Tüm işletmeler, üyeler, kota ve hatlar. Kurulum kilidi yok."
+        action={
+          <Link
+            href="/ozet"
+            className="text-[13px] text-accent underline-offset-2 hover:underline"
+          >
+            Aktif işletme paneli →
+          </Link>
+        }
       />
 
-      <div className="mb-3 grid gap-2.5 sm:grid-cols-4">
+      <div className="mb-3 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
         <Card>
           <div className="p-3.5">
             <p className="text-[11.5px] text-ink-faint">İşletme</p>
             <p className="mt-1 text-[22px] font-extrabold tabular">{orgs.length}</p>
+            {suspended > 0 ? (
+              <p className="mt-0.5 text-[11px] text-danger">{suspended} askıda</p>
+            ) : null}
+          </div>
+        </Card>
+        <Card>
+          <div className="p-3.5">
+            <p className="text-[11.5px] text-ink-faint">Üye (toplam)</p>
+            <p className="mt-1 text-[22px] font-extrabold tabular">{members}</p>
           </div>
         </Card>
         <Card>
@@ -96,51 +132,27 @@ export default async function AdminHomePage() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader title="İşletmeler" subtitle={`${orgs.length} kayıt · detay için tıkla`} />
-        {orgs.length === 0 ? (
-          <p className="p-3.5 text-[13px] text-ink-muted">Henüz işletme yok.</p>
-        ) : (
-          <ul className="divide-y divide-hairline">
-            {orgs.map((org) => (
-              <li key={org.id}>
-                <Link
-                  href={`/admin/${org.id}`}
-                  className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-3 transition-colors hover:bg-surface-raised"
-                >
-                  <span className="min-w-0">
-                    <span className="block truncate text-[14px] font-semibold text-ink">
-                      {org.name}
-                    </span>
-                    <span className="mt-0.5 block text-[11.5px] text-ink-faint">
-                      {org.slug} · {org.member_count ?? 0} üye · hat kotası{' '}
-                      {org.accounts_quota}
-                      {org.monthly_message_quota != null
-                        ? ` · aylık ${org.monthly_message_quota}`
-                        : ''}
-                    </span>
-                  </span>
-                  <span className="flex items-center gap-2">
-                    {org.suspended_at ? <StatusPill status="stopped" /> : null}
-                    <span className="rounded-sm border border-hairline px-2 py-0.5 text-[11px] font-semibold uppercase text-ink-muted">
-                      {org.plan}
-                    </span>
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+      <AdminOrgList orgs={orgRows} />
 
       {jobs.length > 0 ? (
         <Card className="mt-2.5">
           <CardHeader title="Son işler" subtitle="Kuyruk (özet)" />
           <ul className="divide-y divide-hairline text-[12px]">
-            {jobs.slice(0, 12).map((job) => (
+            {jobs.slice(0, 16).map((job) => (
               <li key={job.id} className="flex justify-between gap-2 px-3.5 py-2 text-ink-muted">
                 <span className="truncate">
                   #{job.id} · {job.type}
+                  {job.org_id ? (
+                    <>
+                      {' · '}
+                      <Link
+                        href={`/admin/${job.org_id}`}
+                        className="text-accent underline-offset-2 hover:underline"
+                      >
+                        org
+                      </Link>
+                    </>
+                  ) : null}
                 </span>
                 <span className="tabular">{job.status}</span>
               </li>

@@ -101,7 +101,7 @@ export async function proxy(request: NextRequest) {
     return withSessionCookies(NextResponse.redirect(target))
   }
 
-  // RSC layout gate icin pathname (zorunlu onboarding).
+  // RSC layout için pathname (admin gate / soft kurulum).
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set('x-filo-pathname', path)
   const next = NextResponse.next({

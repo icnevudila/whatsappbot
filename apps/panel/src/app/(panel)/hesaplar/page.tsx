@@ -18,8 +18,9 @@ const ACCOUNT_FIELDS =
 export default async function AccountsPage() {
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
   let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  let isPlatformAdmin = false
   try {
-    ;({ org, supabase } = await requireActiveOrg())
+    ;({ org, supabase, isPlatformAdmin } = await requireActiveOrg())
   } catch (error) {
     if (error instanceof Error && error.message === 'NO_ORGANIZATION') {
       redirect('/erisim-yok')
@@ -48,12 +49,14 @@ export default async function AccountsPage() {
         action={
           <div className="flex flex-wrap gap-2">
             <AccentLink href="/hizli-gonderim">{t('nav.hizli')}</AccentLink>
-            <QuietLink href="/durum">{t('nav.durum')}</QuietLink>
+            {isPlatformAdmin ? (
+              <QuietLink href="/durum">{t('nav.durum')}</QuietLink>
+            ) : null}
           </div>
         }
       />
 
-      <SetupBanner progress={setup} />
+      {isPlatformAdmin ? null : <SetupBanner progress={setup} />}
 
       <AccountsBoard
         initial={accounts}

@@ -8,8 +8,7 @@ import type { getSetupProgress } from '@/lib/setup-progress'
 type Progress = Awaited<ReturnType<typeof getSetupProgress>>
 
 /**
- * Kurulum bitmeden gösterilen şerit — zorunlu wizard’a yönlendirir.
- * Kurulum bitip henüz giden yoksa yumuşak ilk-test CTA gösterir (zorunlu kapı değil).
+ * Soft checklist — menüyü kilitlemez; eksikleri hatırlatır.
  */
 export function SetupBanner({ progress }: { progress: Progress }) {
   const t = useT()
@@ -32,8 +31,8 @@ export function SetupBanner({ progress }: { progress: Progress }) {
   if (progress.allDone) return null
 
   const steps: { key: keyof Progress['steps']; label: string; href: string }[] = [
-    { key: 'brand', label: t('setup.brandTitle'), href: '/kurulum' },
-    { key: 'contacts', label: t('setup.contactsTitle'), href: '/kurulum' },
+    { key: 'brand', label: t('setup.brandTitle'), href: '/marka-kiti' },
+    { key: 'contacts', label: t('setup.contactsTitle'), href: '/kisiler' },
     { key: 'connected', label: t('setup.lineTitle'), href: '/hesaplar' },
   ]
 
@@ -80,10 +79,6 @@ export function SetupBanner({ progress }: { progress: Progress }) {
             )
           })}
         </ul>
-
-        <div>
-          <AccentLink href="/kurulum">{t('setup.bannerCta')}</AccentLink>
-        </div>
       </div>
     </Card>
   )

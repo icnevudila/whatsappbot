@@ -90,8 +90,9 @@ function MiniStep({
 export default async function PanelHomePage() {
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
   let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  let isPlatformAdmin = false
   try {
-    ;({ org, supabase } = await requireActiveOrg())
+    ;({ org, supabase, isPlatformAdmin } = await requireActiveOrg())
   } catch (error) {
     if (error instanceof Error && error.message === 'NO_ORGANIZATION') {
       redirect('/erisim-yok')
@@ -191,7 +192,7 @@ export default async function PanelHomePage() {
         action={<AccentLink href={next.href}>{next.cta}</AccentLink>}
       />
 
-      <SetupBanner progress={setup} />
+      {isPlatformAdmin ? null : <SetupBanner progress={setup} />}
 
       <NextStepHero {...next} />
 

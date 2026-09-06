@@ -7,7 +7,7 @@ import { safeInternalPath } from '@/lib/auth-redirect'
  */
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams
-  const next = safeInternalPath(params.get('devam'), '/kurulum')
+  const next = safeInternalPath(params.get('devam'), '/ozet')
   const supabase = await createSupabaseServerClient()
 
   const code = params.get('code')

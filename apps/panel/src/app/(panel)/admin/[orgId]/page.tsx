@@ -139,8 +139,8 @@ export default async function AdminOrgPage({
           <CardHeader title="İşletmeye geç" subtitle="Müşteri paneline admin olarak gir" />
           <div className="space-y-3 p-3.5">
             <p className="text-[12.5px] leading-relaxed text-ink-muted">
-              Üye olursun (admin), aktif org bu işletme olur. Liste yükleme, kampanya düzeltme
-              vs. oradan yapılır.
+              Üye olursun (admin), aktif org bu işletme olur. Kurulum banner’ı / kilidi
+              platform admin için kapalı kalır.
             </p>
             <form action={enterOrganization}>
               <input type="hidden" name="org_id" value={org.id} />

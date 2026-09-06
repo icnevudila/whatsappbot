@@ -2,8 +2,8 @@ import { cache } from 'react'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 /**
- * Zorunlu onboarding: marka + kişi grubu + bağlı hat.
- * Numara doğrulama arka planda (kampanya/verify job); müşteriye ayrı adım değil.
+ * Soft onboarding checklist: marka + kişi + bağlı hat.
+ * Numara doğrulama arka planda; menü/yol kilidi yok.
  */
 export const SETUP_STEP_KEYS = ['brand', 'contacts', 'connected'] as const
 export type SetupStepKey = (typeof SETUP_STEP_KEYS)[number]

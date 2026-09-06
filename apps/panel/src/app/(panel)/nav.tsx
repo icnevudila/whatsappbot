@@ -47,12 +47,10 @@ function NavLink({
 
 export function Nav({
   showSetup = false,
-  onboardingLock = false,
   orientation = 'vertical',
   isPlatformAdmin = false,
 }: {
   showSetup?: boolean
-  onboardingLock?: boolean
   orientation?: 'vertical' | 'horizontal'
   /** Süper admin: Durum / Raporlar / Admin. */
   isPlatformAdmin?: boolean
@@ -63,24 +61,27 @@ export function Nav({
   const activeRef = useRef<HTMLAnchorElement | null>(null)
 
   const groups = useMemo(() => {
-    if (onboardingLock) {
+    if (isPlatformAdmin) {
       return [
         {
-          id: 'setup',
-          label: t('nav.groupSetup'),
+          id: 'ops',
+          label: 'Filo ops',
           items: [
-            { href: '/kurulum', label: t('nav.steps'), icon: 'steps' as const },
-            { href: '/marka-kiti', label: t('nav.markaShort'), icon: 'brand' as const },
-            { href: '/kisiler', label: t('nav.kisiler'), icon: 'people' as const },
-            { href: '/hesaplar', label: t('nav.hesaplar'), icon: 'phone' as const },
+            { href: '/admin', label: 'İşletmeler', icon: 'settings' as const },
+            { href: '/durum', label: t('nav.durum'), icon: 'activity' as const },
+            { href: '/raporlar', label: t('nav.raporlar'), icon: 'chart' as const },
           ] as NavItem[],
         },
         {
-          id: 'system',
-          label: t('nav.groupSystem'),
+          id: 'tenant',
+          label: 'Aktif işletme',
           items: [
+            { href: '/ozet', label: t('nav.ozet'), icon: 'overview' as const },
+            { href: '/kampanyalar', label: t('nav.kampanyalar'), icon: 'campaign' as const },
+            { href: '/kisiler', label: t('nav.kisiler'), icon: 'people' as const },
+            { href: '/hesaplar', label: t('nav.hesaplar'), icon: 'phone' as const },
+            { href: '/mesajlar', label: t('nav.mesajlar'), icon: 'inbox' as const },
             { href: '/ayarlar', label: t('nav.ayarlar'), icon: 'settings' as const },
-            { href: '/yardim', label: t('nav.yardim'), icon: 'help' as const },
           ] as NavItem[],
         },
       ]
@@ -102,28 +103,29 @@ export function Nav({
       { href: '/yardim', label: t('nav.yardim'), icon: 'help' },
     ]
 
-    if (isPlatformAdmin) {
-      more.unshift(
-        { href: '/admin', label: 'Admin', icon: 'settings' },
-        { href: '/durum', label: t('nav.durum'), icon: 'activity' },
-        { href: '/raporlar', label: t('nav.raporlar'), icon: 'chart' },
-      )
-    }
-
     return [
       { id: 'main', label: 'İşler', items: main },
       { id: 'more', label: t('nav.groupMore'), items: more },
     ]
-  }, [onboardingLock, isPlatformAdmin, t])
+  }, [isPlatformAdmin, t])
 
   const setupItem =
-    showSetup && !onboardingLock
+    showSetup && !isPlatformAdmin
       ? ({ href: '/kurulum', label: t('nav.kurulum'), icon: 'steps' as const } as const)
       : null
 
-  /** Mobil: yalnız ana işler + ayarlar — 3dk yol. */
+  /** Mobil: yalnız ana işler + ayarlar. */
   const flat = useMemo(() => {
-    if (orientation === 'horizontal' && !onboardingLock) {
+    if (orientation === 'horizontal') {
+      if (isPlatformAdmin) {
+        return [
+          { href: '/admin', label: 'Admin', icon: 'settings' as const },
+          { href: '/ozet', label: t('nav.ozet'), icon: 'overview' as const },
+          { href: '/kampanyalar', label: t('nav.kampanyalar'), icon: 'campaign' as const },
+          { href: '/hesaplar', label: t('nav.hesaplar'), icon: 'phone' as const },
+          { href: '/kisiler', label: t('nav.kisiler'), icon: 'people' as const },
+        ] as NavItem[]
+      }
       const main = groups.find((g) => g.id === 'main')?.items ?? []
       return [
         ...main,
@@ -131,7 +133,7 @@ export function Nav({
       ] as NavItem[]
     }
     return groups.flatMap((g) => g.items)
-  }, [groups, onboardingLock, orientation, t])
+  }, [groups, isPlatformAdmin, orientation, t])
 
   useEffect(() => {
     if (orientation !== 'horizontal') return
@@ -187,9 +189,6 @@ export function Nav({
 
   return (
     <nav className="flex flex-col gap-px" aria-label={t('nav.aria')}>
-      {onboardingLock ? (
-        <p className="mb-2 px-2.5 text-[11.5px] leading-snug text-ink-faint">{t('nav.setupHint')}</p>
-      ) : null}
       {setupItem ? (
         <>
           <p className="wb-rail-group">{t('nav.groupSetup')}</p>

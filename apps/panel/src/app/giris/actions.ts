@@ -57,7 +57,6 @@ export async function signIn(_previous: AuthState, formData: FormData): Promise<
     data: { user },
   } = await supabase.auth.getUser()
 
-  let needsSetup = true
   if (user) {
     const { data: profile } = await supabase
       .from('profiles')
@@ -76,36 +75,10 @@ export async function signIn(_previous: AuthState, formData: FormData): Promise<
     const isPlatformAdmin =
       Boolean(jwtAdmin) || Boolean(profile?.is_platform_admin) || emailAdmin
 
-    // Filo admin müşteri kurulumuna zorlanmaz.
+    // Filo admin → platform konsolu. Müşteri → panel (zorunlu kurulum kilidi yok).
     if (isPlatformAdmin) {
-      needsSetup = false
-    } else if (profile?.active_org_id) {
-      const orgId = profile.active_org_id
-      const [brand, contacts, connected] = await Promise.all([
-        supabase
-          .from('brand_kits')
-          .select('id', { count: 'exact', head: true })
-          .eq('org_id', orgId),
-        supabase
-          .from('contacts')
-          .select('id', { count: 'exact', head: true })
-          .eq('org_id', orgId),
-        supabase
-          .from('accounts')
-          .select('id', { count: 'exact', head: true })
-          .eq('org_id', orgId)
-          .eq('status', 'connected'),
-      ])
-      needsSetup = !(
-        (brand.count ?? 0) > 0 &&
-        (contacts.count ?? 0) > 0 &&
-        (connected.count ?? 0) > 0
-      )
+      redirect(safeNext || '/admin')
     }
-  }
-
-  if (needsSetup) {
-    redirect('/kurulum')
   }
 
   redirect(safeNext || '/ozet')

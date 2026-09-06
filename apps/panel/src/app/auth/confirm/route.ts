@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   if (token_hash && (type === 'email' || type === 'signup' || type === 'recovery' || type === 'invite')) {
     const supabase = await createSupabaseServerClient()
     const { error } = await supabase.auth.verifyOtp({ token_hash, type })
-    if (!error) return NextResponse.redirect(new URL(type === 'recovery' ? '/sifre-yenile' : safeInternalPath(params.get('devam'), '/kurulum'), request.url))
+    if (!error) return NextResponse.redirect(new URL(type === 'recovery' ? '/sifre-yenile' : safeInternalPath(params.get('devam'), '/ozet'), request.url))
   }
   return NextResponse.redirect(new URL('/giris?hata=baglanti', request.url))
 }
