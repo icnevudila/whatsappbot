@@ -10,6 +10,7 @@ import {
   addContactsToList,
   deleteContacts,
   deleteContactsBySource,
+  removeContactsFromList,
 } from './actions'
 
 export type ContactRow = {
@@ -21,6 +22,13 @@ export type ContactRow = {
 }
 
 export type GroupOption = { id: string; name: string }
+
+function sourceLabel(source: string) {
+  if (source === 'whatsapp') return 'WhatsApp'
+  if (source === 'csv' || source === 'manual') return 'Excel / manuel'
+  if (source === 'scraper' || source === 'maps') return 'Liste'
+  return source
+}
 
 export function ContactsBoard({
   contacts,
@@ -105,7 +113,7 @@ export function ContactsBoard({
         </span>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 rounded-md border border-hairline bg-canvas px-2.5 py-2">
         <Button type="button" onClick={toggleAll} disabled={filtered.length === 0 || pending}>
           {allFilteredSelected ? 'Seçimi kaldır' : 'Sayfadakileri seç'}
         </Button>
@@ -113,11 +121,12 @@ export function ContactsBoard({
         <select
           value={targetList}
           onChange={(e) => setTargetList(e.target.value)}
-          className="h-9 rounded-md border border-hairline bg-surface px-2 text-[12.5px]"
+          className="h-9 min-w-[140px] flex-1 rounded-md border border-hairline bg-surface px-2 text-[12.5px]"
           disabled={groups.length === 0 || pending}
+          aria-label="Hedef grup"
         >
           {groups.length === 0 ? (
-            <option value="">Önce grup oluştur</option>
+            <option value="">Önce grup oluştur →</option>
           ) : (
             groups.map((g) => (
               <option key={g.id} value={g.id}>
@@ -138,6 +147,14 @@ export function ContactsBoard({
 
         <Button
           type="button"
+          disabled={selected.size === 0 || !targetList || pending}
+          onClick={() => run(() => removeContactsFromList(targetList, [...selected]))}
+        >
+          Gruptan çıkar
+        </Button>
+
+        <Button
+          type="button"
           variant="danger"
           disabled={selected.size === 0 || pending}
           onClick={() => {
@@ -154,7 +171,7 @@ export function ContactsBoard({
             })()
           }}
         >
-          Seçilenleri sil
+          Defterden sil
         </Button>
 
         {whatsappCount > 0 ? (
@@ -177,7 +194,7 @@ export function ContactsBoard({
               })()
             }}
           >
-            WhatsApp import’u sil ({whatsappCount})
+            WA import sil ({whatsappCount})
           </Button>
         ) : null}
       </div>
@@ -187,7 +204,7 @@ export function ContactsBoard({
       {filtered.length === 0 ? (
         <p className="py-6 text-center text-[13px] text-ink-muted">
           {contacts.length === 0
-            ? 'Henüz kişi yok. Gruplar sekmesinden Excel yükleyin.'
+            ? 'Henüz kişi yok. Sağdan Excel yükle veya boş grup açıp sonra ekle.'
             : 'Aramayla eşleşen kişi yok.'}
         </p>
       ) : (
@@ -221,13 +238,4 @@ export function ContactsBoard({
       )}
     </div>
   )
-}
-
-function sourceLabel(source: string) {
-  if (source === 'whatsapp') return 'WhatsApp'
-  if (source === 'manual') return 'manuel'
-  if (source === 'csv') return 'csv'
-  if (source === 'scraper') return 'web'
-  if (source === 'maps') return 'yerel'
-  return source
 }

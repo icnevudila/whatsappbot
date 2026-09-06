@@ -500,6 +500,111 @@ export async function addContactsToList(
   return { ok: `${ids.length} kişi gruba eklendi.` }
 }
 
+export async function removeContactsFromList(
+  listId: string,
+  contactIds: string[],
+): Promise<{ error?: string; ok?: string }> {
+  const ids = [...new Set(contactIds.filter(Boolean))]
+  if (!listId) return { error: 'Grup seçin.' }
+  if (ids.length === 0) return { error: 'Kişi seçin.' }
+
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  try {
+    ;({ org, supabase } = await requireActiveOrg())
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
+  }
+
+  const { data: list } = await supabase
+    .from('contact_lists')
+    .select('id')
+    .eq('id', listId)
+    .eq('org_id', org.id)
+    .maybeSingle()
+  if (!list) return { error: 'Grup bulunamadı.' }
+
+  const { error } = await supabase
+    .from('contact_list_members')
+    .delete()
+    .eq('list_id', listId)
+    .eq('org_id', org.id)
+    .in('contact_id', ids)
+
+  if (error) return { error: error.message }
+
+  const { count } = await supabase
+    .from('contact_list_members')
+    .select('contact_id', { count: 'exact', head: true })
+    .eq('list_id', listId)
+    .eq('org_id', org.id)
+
+  await supabase
+    .from('contact_lists')
+    .update({ contact_count: count ?? 0 })
+    .eq('id', listId)
+    .eq('org_id', org.id)
+
+  revalidatePath('/kisiler')
+  revalidatePath(`/kisiler/${listId}`)
+  return { ok: `${ids.length} kişi gruptan çıkarıldı.` }
+}
+
+export async function renameList(
+  listId: string,
+  name: string,
+): Promise<{ error?: string; ok?: string }> {
+  const trimmed = name.trim()
+  if (!listId) return { error: 'Grup bulunamadı.' }
+  if (trimmed.length < 2) return { error: 'Grup adı en az 2 karakter.' }
+
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  try {
+    ;({ org, supabase } = await requireActiveOrg())
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
+  }
+
+  const { error } = await supabase
+    .from('contact_lists')
+    .update({ name: trimmed.slice(0, 120) })
+    .eq('id', listId)
+    .eq('org_id', org.id)
+
+  if (error) return { error: error.message }
+  revalidatePath('/kisiler')
+  revalidatePath(`/kisiler/${listId}`)
+  return { ok: 'Grup adı güncellendi.' }
+}
+
+export async function createEmptyList(
+  name: string,
+): Promise<{ error?: string; ok?: string; listId?: string }> {
+  const trimmed = name.trim()
+  if (trimmed.length < 2) return { error: 'Grup adı en az 2 karakter.' }
+
+  try {
+    const { userId, org, supabase } = await requireActiveOrg()
+    const { data: list, error } = await supabase
+      .from('contact_lists')
+      .insert({
+        org_id: org.id,
+        created_by: userId,
+        name: trimmed.slice(0, 120),
+        source: 'manual',
+        contact_count: 0,
+      })
+      .select('id')
+      .single()
+    if (error) return { error: error.message }
+    revalidatePath('/kisiler')
+    return { ok: 'Boş grup oluşturuldu. Defterden kişi ekleyebilirsin.', listId: list.id }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
+  }
+}
+
 export async function removeMember(
   listId: string,
   contactId: string,

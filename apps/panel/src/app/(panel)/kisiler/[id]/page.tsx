@@ -1,7 +1,15 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { AccentLink, Card, CardHeader, PageHeader, Pagination, QuietLink, Stat } from '@/components/ui'
+import {
+  AccentLink,
+  Card,
+  CardHeader,
+  Notice,
+  PageHeader,
+  Pagination,
+  QuietLink,
+} from '@/components/ui'
 import { requireActiveOrg } from '@/lib/org'
 import {
   PAGE_SIZES,
@@ -30,9 +38,9 @@ export async function generateMetadata({
       .eq('id', id)
       .eq('org_id', org.id)
       .maybeSingle()
-    return { title: data?.name ? `Liste · ${data.name}` : 'Liste' }
+    return { title: data?.name ? `Grup · ${data.name}` : 'Grup' }
   } catch {
-    return { title: 'Liste' }
+    return { title: 'Grup' }
   }
 }
 
@@ -62,20 +70,13 @@ export default async function ContactListDetailPage({
   const page = clampPage(parsePage(query.sayfa), pages)
   const { from, to } = rangeForPage(page, pageSize)
 
-  const [{ data: memberships }, { data: statusRows }] = await Promise.all([
-    supabase
-      .from('contact_list_members')
-      .select('contact_id, contacts(id, phone_e164, name, wa_status, wa_checked_at)')
-      .eq('list_id', id)
-      .eq('org_id', org.id)
-      .order('added_at', { ascending: false })
-      .range(from, to),
-    supabase
-      .from('contact_list_members')
-      .select('contacts(wa_status)')
-      .eq('list_id', id)
-      .eq('org_id', org.id),
-  ])
+  const { data: memberships } = await supabase
+    .from('contact_list_members')
+    .select('contact_id, contacts(id, phone_e164, name, wa_status, wa_checked_at)')
+    .eq('list_id', id)
+    .eq('org_id', org.id)
+    .order('added_at', { ascending: false })
+    .range(from, to)
 
   const members: MemberRow[] = (memberships ?? [])
     .map((row) => {
@@ -99,55 +100,37 @@ export default async function ContactListDetailPage({
     })
     .filter((row): row is MemberRow => row !== null)
 
-  let valid = 0
-  let invalid = 0
-  for (const row of statusRows ?? []) {
-    const status = (row.contacts as { wa_status?: string } | null)?.wa_status
-    if (status === 'valid') valid += 1
-    else if (status === 'invalid') invalid += 1
-  }
-  const pending = Math.max(0, memberTotal - valid - invalid)
-
   return (
     <>
-      <QuietLink href="/kisiler">← Kişiler</QuietLink>
+      <QuietLink href="/kisiler">← Tüm kişiler & gruplar</QuietLink>
 
       <PageHeader
         title={list.name}
-        description={`${list.contact_count} numara · ${new Date(list.created_at).toLocaleString('tr-TR')}${list.description ? ` · ${list.description}` : ''}`}
+        description={`${list.contact_count} numara · gruptan çıkar / ad değiştir / sil`}
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <ListActions listId={list.id} />
-            <AccentLink href="/kampanyalar">Kampanyada kullan</AccentLink>
+            <ListActions listId={list.id} currentName={list.name} />
+            <AccentLink href="/kisiler">Defterden ekle</AccentLink>
+            <AccentLink href="/kampanyalar#yeni-kampanya">Kampanyada kullan</AccentLink>
           </div>
         }
       />
 
-      <div className="mb-2.5 grid grid-cols-3 gap-2.5">
-        <Card>
-          <div className="p-3.5">
-            <Stat label="WhatsApp’ta kayıtlı" value={valid} tone="accent" />
-          </div>
-        </Card>
-        <Card>
-          <div className="p-3.5">
-            <Stat label="WhatsApp’ta yok" value={invalid} tone="muted" />
-          </div>
-        </Card>
-        <Card>
-          <div className="p-3.5">
-            <Stat label="Bekliyor" value={pending} tone="muted" />
-          </div>
-        </Card>
-      </div>
+      <Notice tone="accent">
+        Kişi eklemek için{' '}
+        <Link href="/kisiler" className="font-semibold underline underline-offset-2">
+          Kişiler
+        </Link>
+        ’e git → numaraları seç → bu grubu seç → “Gruba ekle”.
+      </Notice>
 
-      <Card>
+      <Card className="mt-3">
         <CardHeader
-          title="Numaralar"
+          title="Gruptaki numaralar"
           subtitle={
             memberTotal === 0
-              ? 'Doğrulama bağlı hat ister. Kara listeye eklenen numaralara gönderim yapılmaz.'
-              : `Sayfa ${page}/${pages} · doğrulama bağlı hat ister`
+              ? 'Henüz üye yok'
+              : `Sayfa ${page}/${pages} · seçip gruptan çıkarabilirsin`
           }
         />
         <MemberActions listId={list.id} members={members} totalCount={memberTotal} />
@@ -158,13 +141,6 @@ export default async function ContactListDetailPage({
           hrefForPage={(p) => buildPageHref(`/kisiler/${list.id}`, p)}
         />
       </Card>
-
-      <p className="mt-3 text-[11.5px] text-ink-faint">
-        <Link href="/kara-liste" className="underline underline-offset-2">
-          Kara liste
-        </Link>
-        ’ye toplu ekleme de yapabilirsiniz.
-      </p>
     </>
   )
 }

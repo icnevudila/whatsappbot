@@ -162,7 +162,7 @@ export default async function PanelHomePage() {
     }
   } else if (!hasGroup) {
     next = {
-      href: '/kisiler?sekme=gruplar',
+      href: '/kisiler#gruplar',
       title: 'Kişi grubu ekle',
       body: 'Excel yükle veya numaraları yapıştır. Kampanyada bu grubu seçeceksin.',
       cta: 'Grup oluştur',
@@ -204,7 +204,7 @@ export default async function PanelHomePage() {
           body={hasLine ? `${connectedCount} bağlı` : 'QR ile bağla'}
         />
         <MiniStep
-          href="/kisiler?sekme=gruplar"
+          href="/kisiler#gruplar"
           n={2}
           title="Kişiler"
           done={hasGroup}
