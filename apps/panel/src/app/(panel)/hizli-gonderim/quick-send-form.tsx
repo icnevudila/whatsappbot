@@ -1,9 +1,11 @@
 'use client'
 
-import { useActionState, useMemo, useState } from 'react'
+import { useActionState, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { parsePhoneList } from '@wa/shared'
 import { AiWriter } from '@/components/ai-writer'
+import { useSyncBusy } from '@/components/busy'
+import { useToast } from '@/components/toast'
 import {
   Button,
   Card,
@@ -63,6 +65,11 @@ export function QuickSendForm({
     quickSend,
     null,
   )
+  const toast = useToast()
+
+  useEffect(() => {
+    if (state?.error) toast(state.error, 'danger')
+  }, [state?.error, toast])
 
   const [numbers, setNumbers] = useState(initialNumbers)
   const [body, setBody] = useState('')
@@ -84,6 +91,13 @@ export function QuickSendForm({
     .reduce((total, sender) => total + sender.remainingToday, 0)
 
   const overflow = Math.max(0, validCount - capacityToday)
+
+  useSyncBusy(
+    pending,
+    'Gönderim başlatılıyor…',
+    validCount > 0 ? `${nf.format(validCount)} kişi kuyruğa alınıyor` : undefined,
+  )
+  useSyncBusy(uploading, 'Medya yükleniyor…', 'Dosya depolamaya aktarılıyor')
 
   const clearMedia = () => {
     setMediaUrl('')

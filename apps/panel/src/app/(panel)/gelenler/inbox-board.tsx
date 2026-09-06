@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button, CardHeader, EmptyState, FilterChip, Input, Notice, SplitPane, StatusPill, Toolbar } from '@/components/ui'
+import { useSyncBusy } from '@/components/busy'
+import { useToast } from '@/components/toast'
 import { ReplyForm } from './reply-form'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { blacklistPhone } from '../kara-liste/actions'
@@ -79,11 +81,13 @@ export function InboxBoard({
   initialInbound: InboxMessage[]
 }) {
   const router = useRouter()
+  const toast = useToast()
   const [list, setList] = useState(previews)
   const [pending, startTransition] = useTransition()
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  useSyncBusy(pending, 'Kara listeye ekleniyor…')
   const visibleList = list.filter(item => `${item.phone} ${item.lastBody ?? ''} ${item.accountLabel ?? ''}`.toLocaleLowerCase('tr-TR').includes(search.toLocaleLowerCase('tr-TR')))
 
   useEffect(() => {
@@ -123,14 +127,20 @@ export function InboxBoard({
   const block = () => {
     if (!selectedPhone || !selectedPhone.startsWith('+')) {
       setError('Bu konuşmada E.164 numara yok; kara listeye eklenemedi.')
+      toast('Kara listeye eklenemedi — numara yok.', 'danger')
       return
     }
     setError(null)
     setNotice(null)
     startTransition(async () => {
       const result = await blacklistPhone(selectedPhone, 'Gelenler’den eklendi')
-      if (result.error) setError(result.error)
-      else setNotice('Kara listeye eklendi. Bundan sonra kampanya bu numarayı atlar.')
+      if (result.error) {
+        setError(result.error)
+        toast(result.error, 'danger')
+      } else {
+        setNotice('Kara listeye eklendi. Bundan sonra kampanya bu numarayı atlar.')
+        toast('Kara listeye eklendi.', 'success')
+      }
     })
   }
 

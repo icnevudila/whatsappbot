@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { AccentLink, Button, Card, CardHeader, Field, Input, Notice, QuietLink } from '@/components/ui'
+import { useSyncBusy } from '@/components/busy'
 import { WaMark } from '@/components/wa-mark'
 import { checkWhatsAppPhone, type PhoneCheckResult } from './actions'
 
@@ -11,6 +12,7 @@ export function WaCheckForm() {
   const [error, setError] = useState<string | null>(null)
   const [errorCode, setErrorCode] = useState<PhoneCheckResult['code']>(undefined)
   const [result, setResult] = useState<{ phone: string; exists: boolean } | null>(null)
+  useSyncBusy(pending, 'WhatsApp kontrolü…', phone.trim() || undefined)
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault()

@@ -1,7 +1,9 @@
 'use client'
 
-import { useActionState, useRef, useState } from 'react'
+import { useActionState, useEffect, useRef, useState } from 'react'
 import { Button, Card, CardHeader, Field, Input, Notice, Textarea } from '@/components/ui'
+import { useSyncBusy } from '@/components/busy'
+import { useToast } from '@/components/toast'
 import { importContacts, type ImportState } from './actions'
 
 export function ImportForm() {
@@ -9,6 +11,12 @@ export function ImportForm() {
     importContacts,
     null,
   )
+  const toast = useToast()
+  useSyncBusy(pending, 'Liste oluşturuluyor…', 'Numaralar deftere yazılıyor')
+  useEffect(() => {
+    if (state?.error) toast(state.error, 'danger')
+    if (state?.ok) toast(state.ok, 'success')
+  }, [state?.error, state?.ok, toast])
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [fileName, setFileName] = useState<string | null>(null)
 

@@ -1,8 +1,10 @@
 'use client'
 import Link from 'next/link'
 
-import { useActionState, useState, type ReactNode } from 'react'
+import { useActionState, useEffect, useState, type ReactNode } from 'react'
 import { AiWriter } from '@/components/ai-writer'
+import { useSyncBusy } from '@/components/busy'
+import { useToast } from '@/components/toast'
 import {
   Button,
   Card,
@@ -60,6 +62,11 @@ export function NewCampaignForm({
     createCampaign,
     null,
   )
+  const toast = useToast()
+  useSyncBusy(pending, 'Kampanya kaydediliyor…', 'Liste ve hatlar bağlanıyor')
+  useEffect(() => {
+    if (state?.error) toast(state.error, 'danger')
+  }, [state?.error, toast])
 
   const [body, setBody] = useState('')
   const [mediaUrl, setMediaUrl] = useState('')
@@ -67,6 +74,7 @@ export function NewCampaignForm({
   const [documentUrlDraft, setDocumentUrlDraft] = useState('')
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  useSyncBusy(uploading, 'Medya yükleniyor…')
 
   /**
    * Medya doğrudan tarayıcıdan Supabase Storage'a yükleniyor.

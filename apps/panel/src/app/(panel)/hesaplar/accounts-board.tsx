@@ -1,4 +1,5 @@
 'use client'
+
 import { useActionState, useEffect, useState, useTransition } from 'react'
 import type { Tables } from '@wa/shared'
 import {
@@ -13,6 +14,9 @@ import {
   QuietLink,
   StatusPill,
 } from '@/components/ui'
+import { useConfirm } from '@/components/confirm-dialog'
+import { useSyncBusy } from '@/components/busy'
+import { useToast } from '@/components/toast'
 import { capToday } from '@/lib/capacity'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { useServerSyncedState } from '@/lib/use-server-synced-state'
@@ -223,6 +227,12 @@ function NewAccountForm({ remaining, atCap }: { remaining: number; atCap: boolea
     createAccount,
     null,
   )
+  const toast = useToast()
+  useSyncBusy(pending, 'Hat ekleniyor…')
+  useEffect(() => {
+    if (state?.error) toast(state.error, 'danger')
+    if (state?.ok) toast(state.ok, 'success')
+  }, [state?.error, state?.ok, toast])
 
   return (
     <Card>
@@ -264,14 +274,22 @@ function NewAccountForm({ remaining, atCap }: { remaining: number; atCap: boolea
 }
 
 function AccountCard({ account }: { account: AccountView }) {
+  const confirm = useConfirm()
+  const toast = useToast()
   const [pending, startTransition] = useTransition()
   const [message, setMessage] = useState<string | null>(null)
+  useSyncBusy(pending, 'Hat işlemi…', account.label)
 
-  const run = (action: () => Promise<ActionState>) => {
+  const run = (action: () => Promise<ActionState>, okToast?: string) => {
     setMessage(null)
     startTransition(async () => {
       const result = await action()
-      if (result?.error) setMessage(result.error)
+      if (result?.error) {
+        setMessage(result.error)
+        toast(result.error, 'danger')
+        return
+      }
+      if (okToast) toast(okToast, 'success')
     })
   }
 
@@ -327,14 +345,18 @@ function AccountCard({ account }: { account: AccountView }) {
 
           <Button
             onClick={() => {
-              if (
-                !window.confirm(
-                  'WhatsApp’tan bu cihazı kaldırıp oturumu silecek. Yeni QR gerekir. Devam?',
-                )
-              ) {
-                return
-              }
-              run(() => logoutAccount(account.id))
+              void (async () => {
+                const ok = await confirm({
+                  title: 'WhatsApp’tan çıkarılsın mı?',
+                  description:
+                    'Bu cihaz WhatsApp’tan kaldırılır ve oturum silinir. Yeniden bağlanmak için yeni QR gerekir.',
+                  confirmLabel: 'WhatsApp’tan çıkar',
+                  cancelLabel: 'Vazgeç',
+                  tone: 'danger',
+                })
+                if (!ok) return
+                run(() => logoutAccount(account.id), 'WhatsApp oturumu kapatıldı.')
+              })()
             }}
             disabled={pending}
             title="Telefondaki bağlı cihazlardan kaldırır"
@@ -345,14 +367,18 @@ function AccountCard({ account }: { account: AccountView }) {
           <Button
             variant="danger"
             onClick={() => {
-              if (
-                !window.confirm(
-                  'Bu hattı panelden silmek istiyor musunuz? Bağlantı da kopar.',
-                )
-              ) {
-                return
-              }
-              run(() => removeAccount(account.id))
+              void (async () => {
+                const ok = await confirm({
+                  title: 'Hat silinsin mi?',
+                  description:
+                    'Bu hat panelden kaldırılır ve bağlantı kopar. Bu işlem geri alınamaz.',
+                  confirmLabel: 'Hattı sil',
+                  cancelLabel: 'Vazgeç',
+                  tone: 'danger',
+                })
+                if (!ok) return
+                run(() => removeAccount(account.id), 'Hat silindi.')
+              })()
             }}
             disabled={pending}
           >
@@ -470,6 +496,7 @@ function PairingSection({ account }: { account: AccountView }) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [waitingCode, setWaitingCode] = useState(false)
+  useSyncBusy(pending || waitingCode, 'Eşleştirme kodu hazırlanıyor…', account.label)
 
   // Kod veritabanina dustugunde sekmeyi otomatik ac: kullanici "Kod al"
   // basip QR sekmesinde kalirsa kodu hic gormuyor.

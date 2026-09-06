@@ -3,15 +3,24 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Notice } from '@/components/ui'
+import { useConfirm } from '@/components/confirm-dialog'
+import { useSyncBusy } from '@/components/busy'
+import { useToast } from '@/components/toast'
 import { waitForJob } from '@/lib/wait-for-job'
 import { deleteList, verifyList } from './actions'
 
 export function ListActions({ listId }: { listId: string }) {
   const router = useRouter()
+  const confirm = useConfirm()
+  const toast = useToast()
   const [pending, startTransition] = useTransition()
   const [busy, setBusy] = useState<'verify' | 'delete' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [ok, setOk] = useState<string | null>(null)
+  useSyncBusy(
+    pending,
+    busy === 'delete' ? 'Liste siliniyor…' : 'Liste doğrulanıyor…',
+  )
 
   const runDelete = () => {
     setError(null)
@@ -19,7 +28,12 @@ export function ListActions({ listId }: { listId: string }) {
     setBusy('delete')
     startTransition(async () => {
       const result = await deleteList(listId)
-      if (result.error) setError(result.error)
+      if (result.error) {
+        setError(result.error)
+        toast(result.error, 'danger')
+      } else {
+        toast('Liste silindi.', 'success')
+      }
       setBusy(null)
     })
   }
@@ -42,6 +56,7 @@ export function ListActions({ listId }: { listId: string }) {
         const outcome = await waitForJob(result.jobId)
         if (outcome.status === 'done') {
           setOk('Doğrulama bitti. Alttaki özet güncellendi.')
+          toast('Liste doğrulaması bitti.', 'success')
           router.refresh()
         } else if (outcome.status === 'timeout') {
           setOk(
@@ -74,8 +89,17 @@ export function ListActions({ listId }: { listId: string }) {
           <Button
             variant="danger"
             onClick={() => {
-              if (!window.confirm('Bu listeyi silmek istiyor musunuz?')) return
-              runDelete()
+              void (async () => {
+                const okDelete = await confirm({
+                  title: 'Liste silinsin mi?',
+                  description: 'Liste kaldırılır; kişiler defterde kalır.',
+                  confirmLabel: 'Listeyi sil',
+                  cancelLabel: 'Vazgeç',
+                  tone: 'danger',
+                })
+                if (!okDelete) return
+                runDelete()
+              })()
             }}
             disabled={pending}
           >

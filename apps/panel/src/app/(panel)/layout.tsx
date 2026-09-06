@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { Wordmark } from '@/components/brand'
+import { FeedbackProviders } from '@/components/feedback-providers'
 import { RouteProgress } from '@/components/route-progress'
 import { listUserOrgs, requireActiveOrg } from '@/lib/org'
 import { getSetupProgress } from '@/lib/setup-progress'
@@ -24,6 +25,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   ])
 
   return (
+    <FeedbackProviders>
     <div className="flex min-h-dvh bg-canvas">
       <Suspense fallback={null}>
         <RouteProgress />
@@ -91,5 +93,6 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         </main>
       </div>
     </div>
+    </FeedbackProviders>
   )
 }

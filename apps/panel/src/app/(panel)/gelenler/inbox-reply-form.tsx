@@ -1,6 +1,8 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useEffect } from 'react'
+import { useSyncBusy } from '@/components/busy'
+import { useToast } from '@/components/toast'
 import { Button, Notice, Textarea } from '@/components/ui'
 import { replyToInbox, type ReplyState } from './reply-actions'
 
@@ -12,6 +14,13 @@ export function InboxReplyForm({
   accountId: string | null
 }) {
   const [state, action, pending] = useActionState<ReplyState, FormData>(replyToInbox, null)
+  const toast = useToast()
+  useSyncBusy(pending, 'Yanıt gönderiliyor…', phone)
+
+  useEffect(() => {
+    if (state?.error) toast(state.error, 'danger')
+    if (state?.ok) toast(state.ok, 'success')
+  }, [state?.error, state?.ok, toast])
 
   if (!accountId || !phone.startsWith('+')) {
     return (
@@ -22,7 +31,7 @@ export function InboxReplyForm({
   }
 
   return (
-    <form action={action} className="space-y-2">
+    <form action={action} className="space-y-2" aria-busy={pending}>
       <input type="hidden" name="phone_e164" value={phone} />
       <input type="hidden" name="account_id" value={accountId} />
       <Textarea
@@ -31,6 +40,7 @@ export function InboxReplyForm({
         required
         placeholder="Yanıt yazın…"
         className="font-sans"
+        disabled={pending}
       />
       <div className="flex items-center justify-between gap-2">
         <Button type="submit" variant="accent" disabled={pending}>

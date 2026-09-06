@@ -2,16 +2,20 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSyncBusy } from '@/components/busy'
+import { useToast } from '@/components/toast'
 import { Button, Notice, QuietLink } from '@/components/ui'
 import { waitForJob } from '@/lib/wait-for-job'
 import { verifyAllContacts } from './actions'
 
 export function VerifyAllButton() {
   const router = useRouter()
+  const toast = useToast()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [needsLine, setNeedsLine] = useState(false)
   const [ok, setOk] = useState<string | null>(null)
+  useSyncBusy(pending, 'Defter doğrulanıyor…', 'WhatsApp kayıt kontrolü')
 
   return (
     <div className="space-y-2">
@@ -27,17 +31,20 @@ export function VerifyAllButton() {
             const result = await verifyAllContacts()
             if (result.error) {
               setError(result.error)
+              toast(result.error, 'danger')
               const lower = result.error.toLocaleLowerCase('tr-TR')
               setNeedsLine(lower.includes('bağlı') || lower.includes('bagli'))
               return
             }
 
             setOk(result.ok ?? 'Doğrulama kuyruğa alındı…')
+            toast('Doğrulama kuyruğa alındı…', 'accent')
 
             if (result.jobId) {
               const outcome = await waitForJob(result.jobId)
               if (outcome.status === 'done') {
                 setOk('Doğrulama bitti. Alttaki özet güncellendi.')
+                toast('Defter doğrulaması bitti.', 'success')
                 router.refresh()
               } else if (outcome.status === 'timeout') {
                 setOk(
@@ -47,6 +54,7 @@ export function VerifyAllButton() {
               } else {
                 setOk(null)
                 setError(outcome.error)
+                toast(outcome.error, 'danger')
                 const lower = outcome.error.toLocaleLowerCase('tr-TR')
                 setNeedsLine(lower.includes('bağlı') || lower.includes('bagli'))
               }

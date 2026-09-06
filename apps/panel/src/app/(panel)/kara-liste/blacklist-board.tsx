@@ -14,6 +14,9 @@ import {
   QuietLink,
   Textarea,
 } from '@/components/ui'
+import { useConfirm } from '@/components/confirm-dialog'
+import { useSyncBusy } from '@/components/busy'
+import { useToast } from '@/components/toast'
 import { addToBlacklist, removeFromBlacklist, type BlacklistState } from './actions'
 
 export type BlacklistRow = {
@@ -25,6 +28,8 @@ export type BlacklistRow = {
 
 export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
   const router = useRouter()
+  const confirm = useConfirm()
+  const toast = useToast()
   const formRef = useRef<HTMLFormElement>(null)
   const [rows, setRows] = useState(initial)
   const [formKey, setFormKey] = useState(0)
@@ -35,6 +40,8 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [, startTransition] = useTransition()
+  useSyncBusy(pending, 'Kara listeye ekleniyor…')
+  useSyncBusy(busyId != null, 'Kara listeden kaldırılıyor…')
 
   useEffect(() => {
     setRows(initial)
@@ -45,23 +52,36 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
       formRef.current?.reset()
       setFormKey((key) => key + 1)
       setError(null)
+      toast(state.ok, 'success')
       router.refresh()
     }
-  }, [state?.ok, router])
+  }, [state?.ok, router, toast])
 
   const remove = (id: string, phone: string) => {
-    if (!window.confirm(`${phone} kara listeden kaldırılsın mı?`)) return
-    setError(null)
-    setBusyId(id)
-    startTransition(async () => {
-      const result = await removeFromBlacklist(id)
-      if (result.error) {
-        setError(result.error)
-      } else {
-        setRows((current) => current.filter((row) => row.id !== id))
-      }
-      setBusyId(null)
-    })
+    void (async () => {
+      const ok = await confirm({
+        title: 'Kara listeden kaldırılsın mı?',
+        description: `${phone} engeli kalkar; kampanya ve hızlı gönderimde tekrar hedeflenebilir.`,
+        confirmLabel: 'Kaldır',
+        cancelLabel: 'Vazgeç',
+        tone: 'danger',
+      })
+      if (!ok) return
+
+      setError(null)
+      setBusyId(id)
+      startTransition(async () => {
+        const result = await removeFromBlacklist(id)
+        if (result.error) {
+          setError(result.error)
+          toast(result.error, 'danger')
+        } else {
+          setRows((current) => current.filter((row) => row.id !== id))
+          toast('Kara listeden kaldırıldı.', 'success')
+        }
+        setBusyId(null)
+      })
+    })()
   }
 
   return (

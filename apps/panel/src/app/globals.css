@@ -452,7 +452,13 @@ h3 {
   .wb-page-enter,
   .wb-rail-more,
   .wb-skel,
-  .wb-route-progress.is-active span {
+  .wb-route-progress.is-active span,
+  .wb-modal-backdrop,
+  .wb-modal-panel,
+  .wb-toast,
+  .wb-busy-pill,
+  .wb-busy-bar,
+  .wb-busy-dot {
     animation: none !important;
   }
   .wb-rail-link:active,
@@ -461,5 +467,193 @@ h3 {
   }
   .wb-route-progress.is-active {
     opacity: 0;
+  }
+}
+
+/* Confirm modal + toast */
+.wb-modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+.wb-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  cursor: pointer;
+  background: rgba(12, 14, 22, 0.45);
+  animation: filo-fade-in 140ms var(--ease-out) both;
+}
+.wb-modal-panel {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 400px);
+  border-radius: var(--radius-card);
+  border: 1px solid var(--color-hairline);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  padding: 18px 18px 14px;
+  animation: filo-pop 160ms var(--ease-out) both;
+}
+.wb-modal-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+.wb-modal-desc {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--color-ink-muted);
+}
+.wb-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.wb-toast-stack {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 95;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 8px;
+  width: min(360px, calc(100vw - 32px));
+  pointer-events: none;
+}
+.wb-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-hairline);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  animation: filo-pop 160ms var(--ease-out) both;
+}
+.wb-toast p {
+  margin: 0;
+  flex: 1;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--color-ink);
+  line-height: 1.4;
+}
+.wb-toast-close {
+  border: 0;
+  background: transparent;
+  color: var(--color-ink-faint);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+.wb-toast-close:hover {
+  color: var(--color-ink);
+}
+.wb-toast--accent {
+  border-color: rgba(47, 91, 255, 0.28);
+  background: #f5f7ff;
+}
+.wb-toast--success {
+  border-color: rgba(18, 122, 82, 0.28);
+  background: var(--color-success-soft);
+}
+.wb-toast--danger {
+  border-color: rgba(180, 35, 24, 0.28);
+  background: #fdf2f1;
+}
+.wb-toast--warn {
+  border-color: rgba(161, 92, 0, 0.28);
+  background: #fff8eb;
+}
+
+/* Global işlem progress (gönder / ekle / sil) */
+.wb-busy-pill {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  z-index: 92;
+  width: min(360px, calc(100vw - 32px));
+  transform: translateX(-50%);
+  border-radius: 12px;
+  border: 1px solid rgba(47, 91, 255, 0.22);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+  animation: filo-pop 160ms var(--ease-out) both;
+  pointer-events: none;
+}
+.wb-busy-track {
+  height: 3px;
+  background: var(--color-accent-soft);
+  overflow: hidden;
+}
+.wb-busy-bar {
+  display: block;
+  height: 100%;
+  width: 40%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--color-accent), var(--color-accent-dim));
+  animation: filo-busy-slide 1.05s var(--ease-out) infinite;
+}
+.wb-busy-copy {
+  padding: 10px 14px 11px;
+}
+.wb-busy-label {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--color-ink);
+}
+.wb-busy-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 99px;
+  background: var(--color-accent);
+  box-shadow: 0 0 0 0 rgba(47, 91, 255, 0.45);
+  animation: filo-busy-pulse 1.2s ease-out infinite;
+}
+.wb-busy-detail {
+  margin: 4px 0 0 15px;
+  font-size: 11.5px;
+  color: var(--color-ink-muted);
+  line-height: 1.35;
+}
+
+@keyframes filo-busy-slide {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+@keyframes filo-busy-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(47, 91, 255, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(47, 91, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(47, 91, 255, 0);
   }
 }
