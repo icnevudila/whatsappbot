@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: `${BRAND_NAME} — ${BRAND_TAGLINE}`,
     description:
-      'Kendi WhatsApp hatlarınızı bağlayın, kişi listenizi yükleyin, hattı yakmayan hızda toplu kampanya gönderin.',
+      'Kendi hatlarınızı bağlayın, kişi listenizi yükleyin, hattı koruyan hızda toplu kampanya gönderin.',
     locale: 'tr_TR',
     type: 'website',
     siteName: BRAND_NAME,
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     card: 'summary',
     title: `${BRAND_NAME} — ${BRAND_TAGLINE}`,
     description:
-      'Kendi WhatsApp hatlarınızı bağlayın, kişi listenizi yükleyin, hattı yakmayan hızda toplu kampanya gönderin.',
+      'Kendi hatlarınızı bağlayın, kişi listenizi yükleyin, hattı koruyan hızda toplu kampanya gönderin.',
   },
 }
 
