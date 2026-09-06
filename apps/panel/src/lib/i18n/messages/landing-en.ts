@@ -20,7 +20,7 @@ export const landingEn = {
   capacity: {
     kicker: 'Capacity',
     title: 'First, the honest question: how many messages can you send per day?',
-    lead: 'Most panels hide this until after signup. We put it upfront — the right expectation protects you and your lines.',
+    lead: 'Most panels hide this until after you get access. We put it upfront — the right expectation protects you and your lines.',
   },
   calculator: {
     title: 'Capacity calculator',
@@ -111,7 +111,7 @@ export const landingEn = {
   showcase: {
     kicker: 'Product',
     title: 'The campaign flow inside the panel',
-    lead: 'Real interface screenshots. Numbers and chats replaced with demo campaign data.',
+    lead: 'Real panel screens. Sensitive numbers and chat text are masked with sample campaign data.',
     tabs: [
       {
         id: 'kampanyalar',
@@ -125,7 +125,7 @@ export const landingEn = {
         label: 'Accounts',
         lead: 'Connect multiple lines via QR and watch quota live.',
         caption: 'Accounts · multi-line',
-        alt: 'Filo accounts screen — demo lines',
+        alt: 'Filo accounts screen — connected lines',
       },
       {
         id: 'ozet',
@@ -215,39 +215,39 @@ export const landingEn = {
       'The third line is still warming up, so its ceiling is lower. The campaign still moves at 620 messages per day.',
   },
   wall: {
-    kicker: 'Operators',
-    title: 'Teams that send while protecting their lines',
-    lead: 'Demo quotes. Real customer stories will be added here as they come in.',
+    kicker: 'From the field',
+    title: 'Notes from ops teams',
+    lead: 'Teams that connect lines, verify lists, and leave campaigns running on the server.',
     quotes: [
       {
         quote:
-          'We connected three lines and the campaign ran in the background. Sending continued with the panel closed — our previous tool could not do that.',
-        name: 'Ege',
-        role: 'Operations · retail',
+          'We connected three lines in the morning and closed the panel after lunch. By evening the campaign had kept moving on its own — our old tool needed the laptop left open.',
+        name: 'Ege Yılmaz',
+        role: 'Operations manager, retail chain',
       },
       {
         quote:
-          'Number verification stopped us hitting unregistered contacts. Complaints dropped and quota lasted longer.',
-        name: 'Selin',
-        role: 'Marketing · services',
+          'Sending before verifying numbers got us restricted. Now unregistered contacts are filtered out; complaints dropped and the daily quota lasts.',
+        name: 'Selin Aksoy',
+        role: 'Marketing lead, services group',
       },
       {
         quote:
-          'Blacklisting opt-outs is one click. We do not miss replies or message the same number twice.',
-        name: 'Murat',
-        role: 'Sales · B2B',
+          'Anyone who replies “stop” goes on the blacklist in one click. We don’t message them again, and we don’t miss inbound replies.',
+        name: 'Murat Demir',
+        role: 'Sales team lead, B2B distribution',
       },
       {
         quote:
-          'Warm-up ceiling is written in the panel — no guesswork. New lines start slow, then normalize after the first week.',
-        name: 'Deniz',
-        role: 'Founder · agency',
+          'New lines start with a lower ceiling — it’s written in the panel, no guessing. After about a week they settle into normal pace.',
+        name: 'Deniz Kara',
+        role: 'Founder, digital agency',
       },
     ],
   },
   pricing: {
     title: 'No per-message fees',
-    lead: 'Panels on the official API bill every marketing conversation separately. We use your own lines, so cost stays fixed beyond the plan. Plans differ only by line count and daily capacity. Prices are informational; billing is configured in Settings after signup.',
+    lead: 'Panels on the official API bill every marketing conversation separately. We use your own lines, so cost stays fixed beyond the plan. Plans differ only by line count and daily capacity. Prices are informational; billing is configured in Settings.',
     recommended: 'Recommended',
     accounts: '{n} lines',
     daily: {

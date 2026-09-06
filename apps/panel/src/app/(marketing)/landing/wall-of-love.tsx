@@ -39,7 +39,7 @@ export function WallOfLove() {
                 </blockquote>
                 <figcaption className="mt-4 border-t border-hairline pt-3">
                   <p className="text-[13px] font-semibold text-ink">{item.name}</p>
-                  <p className="mt-0.5 text-[11.5px] text-ink-faint">{item.role}</p>
+                  <p className="mt-0.5 text-[12px] leading-snug text-ink-muted">{item.role}</p>
                 </figcaption>
               </figure>
             ))}

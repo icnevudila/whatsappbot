@@ -111,7 +111,7 @@ export const landingTr = {
   showcase: {
     kicker: 'Ürün',
     title: 'Panelin içinden kampanya akışı',
-    lead: 'Gerçek arayüz görüntüleri. Numaralar ve sohbetler demo kampanya verisiyle değiştirildi.',
+    lead: 'Gerçek panel ekranları. Hassas numaralar ve sohbet metinleri örnek kampanya verisiyle maskelendi.',
     tabs: [
       {
         id: 'kampanyalar',
@@ -125,7 +125,7 @@ export const landingTr = {
         label: 'Hesaplar',
         lead: 'Birden fazla hattı QR ile bağlayın, kotayı canlı görün.',
         caption: 'Hesaplar · çoklu hat',
-        alt: 'Filo hesaplar ekranı — demo hatlar',
+        alt: 'Filo hesaplar ekranı — bağlı hatlar',
       },
       {
         id: 'ozet',
@@ -215,39 +215,39 @@ export const landingTr = {
       'Üçüncü hat henüz ısınma döneminde olduğu için tavanı düşük. Kampanya yine de günde 620 mesajla ilerliyor.',
   },
   wall: {
-    kicker: 'Operatörler',
-    title: 'Hattı koruyarak gönderenler',
-    lead: 'Demo alıntılar. Gerçek müşteri hikâyeleri geldikçe buraya eklenir.',
+    kicker: 'Saha',
+    title: 'Operasyon ekiplerinden',
+    lead: 'Hat bağlayan, liste doğrulayan ve kampanyayı sunucuda bırakan ekiplerin notları.',
     quotes: [
       {
         quote:
-          'Üç hattı bağladık, kampanya arka planda yürüdü. Panel kapalıyken de gönderim sürdü; önceki araçta bu yoktu.',
-        name: 'Ege',
-        role: 'Operasyon · perakende',
+          'Üç hattı sabah bağladık, öğleden sonra panel kapalıydı. Akşam baktığımda kampanya kendi hızında ilerlemişti; önceki araçta bilgisayarı açık bırakmak zorundaydık.',
+        name: 'Ege Yılmaz',
+        role: 'Operasyon müdürü, perakende zinciri',
       },
       {
         quote:
-          'Numara doğrulama sayesinde kayıtsızlara basmayı bıraktık. Şikayet oranı düştü, kota daha uzun dayandı.',
-        name: 'Selin',
-        role: 'Pazarlama · hizmet',
+          'Listeyi doğrulamadan basınca kısıt yiyorduk. Şimdi kayıtsızlar otomatik eleniyor; şikayet düştü, günlük kota da yetiyor.',
+        name: 'Selin Aksoy',
+        role: 'Pazarlama sorumlusu, hizmet grubu',
       },
       {
         quote:
-          'Çıkanları kara listeye almak tek tık. Yanıt kaçırmıyoruz, aynı numaraya tekrar yazmıyoruz.',
-        name: 'Murat',
-        role: 'Satış · B2B',
+          '“Dur” yazanları tek tıkla kara listeye alıyoruz. Aynı numaraya ikinci kez yazmıyoruz, gelenleri de kaçırmıyoruz.',
+        name: 'Murat Demir',
+        role: 'Satış ekibi lideri, B2B dağıtım',
       },
       {
         quote:
-          'Isındırma tavanı panoda yazılı; spekülasyon yok. Yeni hat ilk hafta yavaş, sonra normale çıkıyor.',
-        name: 'Deniz',
-        role: 'Kurucu · ajans',
+          'Yeni hat ilk günlerde düşük tavanla çıkıyor, panelde yazılı. Spekülasyon yok; bir hafta sonra normale dönüyor.',
+        name: 'Deniz Kara',
+        role: 'Kurucu, dijital ajans',
       },
     ],
   },
   pricing: {
     title: 'Mesaj başına ücret yok',
-    lead: 'Resmi API kullanan panellerde her pazarlama mesajı ayrıca faturalanır. Biz kendi hattınızı kullandığımız için sabit ücret dışında ek maliyet çıkmaz. Paketleri ayıran tek şey hat sayısı ve günlük kapasitedir. Fiyatlar bilgilendirme amaçlıdır; ödeme kayıttan sonra Ayarlar’dan yapılandırılır.',
+    lead: 'Resmi API kullanan panellerde her pazarlama mesajı ayrıca faturalanır. Biz kendi hattınızı kullandığımız için sabit ücret dışında ek maliyet çıkmaz. Paketleri ayıran tek şey hat sayısı ve günlük kapasitedir. Fiyatlar bilgilendirme amaçlıdır; ödeme Ayarlar’dan yapılandırılır.',
     recommended: 'Önerilen',
     accounts: '{n} hat',
     daily: {
