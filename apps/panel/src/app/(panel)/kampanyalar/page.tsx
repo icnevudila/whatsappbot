@@ -150,7 +150,7 @@ export default async function CampaignsPage({
                   ) : connectedCount === 0 ? (
                     <AccentLink href="/hesaplar">Hesaplara git</AccentLink>
                   ) : (
-                    <AccentLink href="/hizli-gonderim">Hızlı gönderime git</AccentLink>
+                    <AccentLink href="#yeni-kampanya">Kampanya oluştur</AccentLink>
                   )
                 }
               />

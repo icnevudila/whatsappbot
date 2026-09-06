@@ -1,17 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { PLAN_LABELS, type PlanId } from '@wa/shared'
 import { Button, Notice } from '@/components/ui'
+import { CONTACT_EMAIL, contactMailto } from '@/lib/contact'
 
-const UPGRADE_PLANS: PlanId[] = ['starter', 'pro', 'enterprise']
-
-export function BillingCheckoutButton({
-  defaultPlan = 'starter',
-}: {
-  defaultPlan?: PlanId
-}) {
-  const [plan, setPlan] = useState<PlanId>(defaultPlan)
+export function BillingCheckoutButton() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notConfigured, setNotConfigured] = useState(false)
@@ -24,7 +17,7 @@ export function BillingCheckoutButton({
       const res = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({}),
       })
       const data = (await res.json()) as {
         url?: string
@@ -33,10 +26,7 @@ export function BillingCheckoutButton({
       }
       if (res.status === 503 || data.status === 'not_configured') {
         setNotConfigured(true)
-        setError(
-          data.error ??
-            'Faturalama henüz yapılandırılmadı. Stripe anahtarları eklenince paket yükseltme açılır.',
-        )
+        setError(null)
         return
       }
       if (!res.ok || !data.url) {
@@ -54,31 +44,25 @@ export function BillingCheckoutButton({
   return (
     <div className="flex w-full flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
-        <select
-          value={plan}
-          onChange={(e) => setPlan(e.target.value as PlanId)}
-          className="h-8 rounded-md border border-hairline bg-surface px-2 text-[12.5px]"
-          aria-label="Paket"
-        >
-          {UPGRADE_PLANS.map((id) => (
-            <option key={id} value={id}>
-              {PLAN_LABELS[id]}
-            </option>
-          ))}
-        </select>
         <Button type="button" variant="accent" disabled={loading} onClick={() => void start()}>
           {loading ? 'Stripe…' : 'Paketi yükselt'}
         </Button>
+        <span className="text-[11.5px] text-ink-faint">
+          Tek abonelik planı — Stripe Checkout
+        </span>
       </div>
       {notConfigured ? (
         <Notice tone="warn">
-          Ödeme altyapısı yapılandırılmadı. Şimdilik deneme planıyla devam edebilirsiniz; Stripe
-          bağlanınca yükseltme burada açılır.
+          Faturalama henüz etkin değil. Paket yükseltme için Filo ile iletişime geçin:{' '}
+          <a
+            href={contactMailto('Faturalama / paket yükseltme')}
+            className="font-medium underline underline-offset-2"
+          >
+            {CONTACT_EMAIL}
+          </a>
         </Notice>
       ) : null}
-      {error && !notConfigured ? (
-        <span className="text-[11px] text-danger">{error}</span>
-      ) : null}
+      {error ? <span className="text-[11px] text-danger">{error}</span> : null}
     </div>
   )
 }

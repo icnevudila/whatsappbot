@@ -4,7 +4,12 @@ import { revalidatePath } from 'next/cache'
 import { requireActiveOrg } from '@/lib/org'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
-export type OrgActionState = { error?: string; ok?: string } | null
+export type OrgActionState = {
+  error?: string
+  ok?: string
+  /** Üye ekleme: Auth’ta kullanıcı yok — Filo iletişimi göster */
+  contactSupport?: boolean
+} | null
 
 export async function switchOrg(orgId: string): Promise<OrgActionState> {
   const supabase = await createSupabaseServerClient()
@@ -143,7 +148,11 @@ export async function addOrgMember(
 
   if (error) {
     if (error.message.includes('user not found')) {
-      return { error: 'Bu e-posta ile kayıtlı kullanıcı bulunamadı.' }
+      return {
+        error:
+          'Bu e-posta ile Filo hesabı yok. Hesaplar yalnızca Filo tarafından açılır; kendi kendine kayıt yoktur.',
+        contactSupport: true,
+      }
     }
     if (error.message.includes('not org admin')) {
       return { error: 'Üye eklemek için yönetici olmalısınız.' }

@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 
-import { useActionState, useEffect, useState, type ReactNode } from 'react'
+import { useActionState, useEffect, useRef, useState, type ReactNode } from 'react'
 import { AiWriter } from '@/components/ai-writer'
 import { useSyncBusy } from '@/components/busy'
 import { useToast } from '@/components/toast'
@@ -63,10 +63,22 @@ export function NewCampaignForm({
     null,
   )
   const toast = useToast()
+  const nameInputRef = useRef<HTMLInputElement>(null)
   useSyncBusy(pending, 'Kampanya kaydediliyor…', 'Liste ve hatlar bağlanıyor')
   useEffect(() => {
     if (state?.error) toast(state.error, 'danger')
   }, [state?.error, toast])
+
+  useEffect(() => {
+    const focusForm = () => {
+      if (window.location.hash !== '#yeni-kampanya') return
+      document.getElementById('yeni-kampanya')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      nameInputRef.current?.focus()
+    }
+    focusForm()
+    window.addEventListener('hashchange', focusForm)
+    return () => window.removeEventListener('hashchange', focusForm)
+  }, [])
 
   const [body, setBody] = useState('')
   const [mediaUrl, setMediaUrl] = useState('')
@@ -150,6 +162,7 @@ export function NewCampaignForm({
   const previewMediaForBubble = messageType === 'image' ? mediaUrl || null : null
 
   return (
+    <div id="yeni-kampanya" className="scroll-mt-6">
     <Card>
       <CardHeader
         title="Yeni kampanya"
@@ -161,7 +174,12 @@ export function NewCampaignForm({
         <input type="hidden" name="message_type" value={messageType} />
 
         <Field label="Kampanya adı">
-          <Input name="name" placeholder="Ocak indirimi duyurusu" required />
+          <Input
+            ref={nameInputRef}
+            name="name"
+            placeholder="Ocak indirimi duyurusu"
+            required
+          />
         </Field>
 
         <Field
@@ -426,6 +444,7 @@ export function NewCampaignForm({
         </Button>
       </form>
     </Card>
+    </div>
   )
 }
 

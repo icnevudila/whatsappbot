@@ -87,7 +87,13 @@ export const en: typeof tr = {
     kicker: 'Required setup',
     stepOf: 'Step {current} / {total}',
     completedCount: '{count} done',
-    finishHint: 'When these steps are done you can create campaigns right away.',
+    finishHint:
+      'When these steps are done you can create campaigns. A first test message is optional.',
+    firstSendTitle: 'Optional: first test',
+    firstSendSub: 'Setup complete · send yourself a short test',
+    firstSendCta: 'Send first test message',
+    firstSendHint:
+      'Not required. When ready, send yourself a quick test from Quick send.',
     brandTitle: 'Brand',
     brandLead: 'Business name and primary color shown on sends.',
     brandName: 'Brand / business name',
@@ -128,7 +134,7 @@ export const en: typeof tr = {
     kampanyalarTitle: 'Campaigns',
     kampanyalarDesc: 'Pick list + lines, start. Live progress on the detail page.',
     kampanyalarReady:
-      'Setup complete. Brand, list, line and number check are ready — create a campaign and write your message.',
+      'Setup complete. Brand, list, line and number check are ready — create a campaign on the right. You can also send a short test from Quick send.',
     kisilerTitle: 'Contacts',
     kisilerDesc:
       'Numbers live in lists; WhatsApp registration is marked. Use Quick send for one-offs.',
@@ -240,5 +246,8 @@ export const en: typeof tr = {
     unblacklistBody:
       '{phone} will no longer be blocked and can be targeted again in campaigns and quick send.',
     unblacklistConfirm: 'Remove',
+    deleteCreativeTitle: 'Delete this creative?',
+    deleteCreativeBody: 'This creative is removed from the gallery and storage. This cannot be undone.',
+    deleteCreativeOk: 'Creative deleted.',
   },
 }

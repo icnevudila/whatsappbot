@@ -164,7 +164,6 @@ export default async function InboxPage({
         selectedPhone={selectedPhone ?? null}
         thread={thread}
         accountLabels={accountLabels}
-        initialInbound={(inbound ?? []) as InboxMessage[]}
       />
     </>
   )

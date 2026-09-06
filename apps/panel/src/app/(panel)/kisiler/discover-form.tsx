@@ -1,5 +1,4 @@
 'use client'
-// Dead: DiscoverForm is unused (no imports); scrape UI lives elsewhere.
 
 import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'

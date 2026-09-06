@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { createT } from '@/lib/i18n'
 import { getDictionary } from '@/lib/i18n/server'
 import { requireActiveOrg } from '@/lib/org'
+import { DiscoverForm } from './discover-form'
 import { ImportForm } from './import-form'
 import { ListActions } from './list-actions'
 import { ScrapeForm } from './scrape-form'
@@ -141,6 +142,7 @@ export default async function ContactsPage() {
 
         <div className="order-1 space-y-2.5 lg:order-2" id="liste-olustur">
           <WaCheckForm />
+          <DiscoverForm />
           <ScrapeForm />
           <ImportForm />
         </div>

@@ -182,6 +182,11 @@ export function OnboardingWizard({ progress }: { progress: Progress }) {
               <Button type="button" onClick={refresh}>
                 {t('setup.verifyRefresh')}
               </Button>
+              {progress.counts.outCount === 0 ? (
+                <p className="text-[12px] leading-relaxed text-ink-faint">
+                  {t('setup.firstSendHint')}
+                </p>
+              ) : null}
             </div>
           ) : null}
         </div>

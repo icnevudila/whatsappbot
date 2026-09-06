@@ -66,7 +66,6 @@ export function InboxBoard({
   selectedPhone,
   thread,
   accountLabels,
-  initialInbound,
 }: {
   orgId: string
   tab: InboxTab
@@ -78,7 +77,6 @@ export function InboxBoard({
   selectedPhone: string | null
   thread: InboxMessage[]
   accountLabels: Record<string, string>
-  initialInbound: InboxMessage[]
 }) {
   const router = useRouter()
   const toast = useToast()
@@ -94,8 +92,20 @@ export function InboxBoard({
     setList(previews)
   }, [previews])
 
+  /**
+   * Gelen/giden message_log satirlari sunucu props ile geliyor; Realtime'da
+   * router.refresh() ile yeniliyoruz. INSERT yeni mesaj, UPDATE ise ACK/status.
+   * Realtime kopsa bile hafif poll yedegi (sekme gorunurken) ayni yenilemeyi yapar.
+   */
   useEffect(() => {
     const supabase = getSupabaseBrowserClient()
+
+    const onMessageChange = (payload: { new: Record<string, unknown> }) => {
+      const row = payload.new as InboxMessage
+      if (row.direction !== 'in' && row.direction !== 'out') return
+      router.refresh()
+    }
+
     const channel = supabase
       .channel('gelenler-live')
       .on(
@@ -106,15 +116,31 @@ export function InboxBoard({
           table: 'message_log',
           filter: `org_id=eq.${orgId}`,
         },
-        (payload) => {
-          const row = payload.new as InboxMessage
-          if (row.direction !== 'in' && row.direction !== 'out') return
-          router.refresh()
-        },
+        onMessageChange,
       )
-      .subscribe()
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'message_log',
+          filter: `org_id=eq.${orgId}`,
+        },
+        onMessageChange,
+      )
+      .subscribe((status, err) => {
+        if (status !== 'SUBSCRIBED') {
+          console.warn('[gelenler-live] realtime durumu:', status, err ?? '')
+        }
+      })
+
+    const tick = () => {
+      if (document.visibilityState === 'visible') router.refresh()
+    }
+    const timer = setInterval(tick, 18_000)
 
     return () => {
+      clearInterval(timer)
       void supabase.removeChannel(channel)
     }
   }, [orgId, router])
@@ -354,9 +380,6 @@ export function InboxBoard({
               description="Soldan bir sohbet seçerek geçmişi okuyun ve yanıt verin."
             />
           )}
-          <span className="hidden" aria-hidden>
-            {initialInbound.length}
-          </span>
         </div>
       }
     />

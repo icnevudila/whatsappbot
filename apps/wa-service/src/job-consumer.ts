@@ -7,6 +7,7 @@ import { materializeTargets, stopCampaign } from './campaign-runner.js'
 import { verifyContacts } from './verify.js'
 import { DeliveryUncertainError } from './delivery.js'
 import { messageSendSkipped } from './message-send-result.js'
+import { resolveWabaMessageSend } from './waba-config.js'
 
 const log = logger.child({ scope: 'jobs' })
 
@@ -170,29 +171,43 @@ async function handle(job: JobRow): Promise<unknown> {
         return messageSendSkipped('blacklist')
       }
 
-      const useWaba =
-        (process.env.SEND_CHANNEL ?? '').trim().toLowerCase() === 'waba' &&
-        Boolean(process.env.WABA_ACCESS_TOKEN?.trim())
+      const wabaDecision = resolveWabaMessageSend(payload)
+      if (wabaDecision.channel === 'fail') {
+        throw new NonRetryableJobError(wabaDecision.reason)
+      }
 
-      if (useWaba && (!payload.media_url || (payload.message_type ?? 'text') === 'text')) {
+      if (wabaDecision.channel === 'waba') {
+        const marked = await query<{ id: string }>(
+          `update public.jobs set result = '{"delivery_attempted":true}'::jsonb, updated_at = now() where id = $1::bigint and claimed_by = $2 and status = 'running' returning id::text`,
+          [job.id, env.workerId],
+        )
+        if (marked.length === 0) throw new NonRetryableJobError('İş sahipliği kaybedildi; gönderilmedi.')
+
         const { sendTextCloudApi } = await import('./waba.js')
         const result = await sendTextCloudApi({
           toE164: payload.phone_e164,
           body: payload.body ?? '',
         })
-        await query(
-          `insert into public.message_log
-             (org_id, created_by, account_id, direction, phone_e164, message_type, body, wa_message_id, status)
-           values ($1, $2, $3, 'out', $4, 'text', $5, $6, 'sent')`,
-          [
-            job.org_id,
-            job.created_by,
-            accountId,
-            payload.phone_e164,
-            payload.body ?? '',
-            result.messageId,
-          ],
-        )
+        try {
+          await query(
+            `insert into public.message_log
+               (org_id, created_by, account_id, direction, phone_e164, message_type, body, wa_message_id, status)
+             values ($1, $2, $3, 'out', $4, 'text', $5, $6, 'sent')`,
+            [
+              job.org_id,
+              job.created_by,
+              accountId,
+              payload.phone_e164,
+              payload.body ?? '',
+              result.messageId,
+            ],
+          )
+        } catch (error) {
+          const detail = error instanceof Error ? error.message : String(error)
+          throw new NonRetryableJobError(
+            `Mesaj gonderildi ama kayit yazilamadi (retry yok): ${detail}`,
+          )
+        }
         return { sent: true, channel: 'waba', messageId: result.messageId }
       }
 

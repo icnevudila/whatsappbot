@@ -1,7 +1,9 @@
 'use client'
 
-import { useActionState, useTransition } from 'react'
+import { useActionState, useState, useTransition } from 'react'
+import { useToast } from '@/components/toast'
 import { Button, EmptyState, Field, Input, Notice, Select } from '@/components/ui'
+import { CONTACT_EMAIL, contactMailto } from '@/lib/contact'
 import {
   addOrgMember,
   removeOrgMember,
@@ -114,11 +116,29 @@ export function MembersPanel({
   members: { userId: string; email: string | null; fullName: string | null; role: string }[]
   canManage: boolean
 }) {
+  const toast = useToast()
   const [state, formAction, pending] = useActionState<OrgActionState, FormData>(
     addOrgMember,
     null,
   )
   const [removing, startRemove] = useTransition()
+  const [removeError, setRemoveError] = useState<string | null>(null)
+  const [removeOk, setRemoveOk] = useState<string | null>(null)
+
+  const runRemove = (userId: string) => {
+    setRemoveError(null)
+    setRemoveOk(null)
+    startRemove(async () => {
+      const result = await removeOrgMember(userId)
+      if (result?.error) {
+        setRemoveError(result.error)
+        toast(result.error, 'danger')
+      } else if (result?.ok) {
+        setRemoveOk(result.ok)
+        toast(result.ok, 'success')
+      }
+    })
+  }
 
   return (
     <div>
@@ -161,9 +181,7 @@ export function MembersPanel({
                     type="button"
                     variant="danger"
                     disabled={removing}
-                    onClick={() =>
-                      startRemove(() => void removeOrgMember(member.userId))
-                    }
+                    onClick={() => runRemove(member.userId)}
                   >
                     Çıkar
                   </Button>
@@ -173,6 +191,17 @@ export function MembersPanel({
           ))}
         </ul>
       )}
+
+      {removeError ? (
+        <div className="border-t border-hairline px-3.5 py-2.5">
+          <Notice tone="danger">{removeError}</Notice>
+        </div>
+      ) : null}
+      {removeOk ? (
+        <div className="border-t border-hairline px-3.5 py-2.5">
+          <Notice tone="accent">{removeOk}</Notice>
+        </div>
+      ) : null}
 
       {canManage ? (
         <form action={formAction} className="space-y-2.5 border-t border-hairline p-3.5">
@@ -194,7 +223,23 @@ export function MembersPanel({
               <option value="admin">Yönetici — ekip ve işletme</option>
             </Select>
           </Field>
-          {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
+          {state?.error ? (
+            <Notice tone="danger">
+              {state.error}
+              {state.contactSupport ? (
+                <>
+                  {' '}
+                  Yazın:{' '}
+                  <a
+                    href={contactMailto('Filo hesap açma talebi')}
+                    className="font-medium underline underline-offset-2"
+                  >
+                    {CONTACT_EMAIL}
+                  </a>
+                </>
+              ) : null}
+            </Notice>
+          ) : null}
           {state?.ok ? <Notice tone="accent">{state.ok}</Notice> : null}
           <Button type="submit" variant="accent" disabled={pending}>
             {pending ? 'Ekleniyor…' : 'Üye ekle'}

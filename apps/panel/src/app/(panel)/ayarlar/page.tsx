@@ -8,6 +8,7 @@ import {
   Card,
   CardHeader,
   Meter,
+  Notice,
   PageHeader,
   QuietLink,
 } from '@/components/ui'
@@ -34,7 +35,11 @@ const ROLE_HINT: Record<string, string> = {
 
 const nf = new Intl.NumberFormat('tr-TR')
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ billing?: string | string[] }>
+}) {
   let userId: string
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
   let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
@@ -51,6 +56,15 @@ export default async function SettingsPage() {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) redirect('/giris')
+
+  const params = await searchParams
+  const billingRaw = params.billing
+  const billing =
+    typeof billingRaw === 'string'
+      ? billingRaw
+      : Array.isArray(billingRaw)
+        ? billingRaw[0]
+        : undefined
 
   const monthStart = new Date()
   monthStart.setDate(1)
@@ -115,22 +129,27 @@ export default async function SettingsPage() {
   const memberIds = (memberRows ?? []).map((row) => row.user_id)
   const { data: memberProfiles } =
     memberIds.length > 0
-      ? await supabase.from('profiles').select('id, full_name').in('id', memberIds)
-      : { data: [] as { id: string; full_name: string | null }[] }
+      ? await supabase
+          .from('profiles')
+          .select('id, full_name, email')
+          .in('id', memberIds)
+      : { data: [] as { id: string; full_name: string | null; email: string | null }[] }
 
   const profileById = Object.fromEntries(
     (memberProfiles ?? []).map((row) => [row.id, row]),
   )
 
-  const members = (memberRows ?? []).map((row) => ({
-    userId: row.user_id,
-    email: row.user_id === userId ? (user.email ?? null) : null,
-    fullName:
-      row.user_id === userId
-        ? (profile?.full_name ?? null)
-        : (profileById[row.user_id]?.full_name ?? null),
-    role: row.role,
-  }))
+  const members = (memberRows ?? []).map((row) => {
+    const memberProfile = profileById[row.user_id]
+    const isSelf = row.user_id === userId
+    return {
+      userId: row.user_id,
+      email: memberProfile?.email ?? (isSelf ? (user.email ?? null) : null),
+      fullName:
+        memberProfile?.full_name ?? (isSelf ? (profile?.full_name ?? null) : null),
+      role: row.role,
+    }
+  })
 
   // Günlük teorik tavan: paketin değil, bağlı hatların gerçek toplamı.
   const dailyCeiling = (accounts ?? [])
@@ -160,6 +179,19 @@ export default async function SettingsPage() {
           </span>
         }
       />
+
+      {billing === 'ok' ? (
+        <div className="mb-4">
+          <Notice tone="success">
+            Ödeme tamamlandı. Paketiniz kısa süre içinde güncellenir.
+          </Notice>
+        </div>
+      ) : null}
+      {billing === 'cancel' ? (
+        <div className="mb-4">
+          <Notice tone="warn">Ödeme iptal edildi. Paketiniz değişmedi.</Notice>
+        </div>
+      ) : null}
 
       {profileIncomplete || connectedCount === 0 ? (
         <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[var(--radius-card)] border border-hairline bg-surface px-3.5 py-2.5">

@@ -320,6 +320,7 @@ export type Database = {
           contact_id: string | null
           created_at: string
           created_by: string
+          delivery_attempted: boolean
           error: string | null
           id: number
           org_id: string
@@ -338,6 +339,7 @@ export type Database = {
           contact_id?: string | null
           created_at?: string
           created_by: string
+          delivery_attempted?: boolean
           error?: string | null
           id?: never
           org_id: string
@@ -356,6 +358,7 @@ export type Database = {
           contact_id?: string | null
           created_at?: string
           created_by?: string
+          delivery_attempted?: boolean
           error?: string | null
           id?: never
           org_id?: string

@@ -24,6 +24,7 @@ import { startScaler, stopScaler } from './scaler.js'
 import { sessionManager } from './session-manager.js'
 import { computeWorkerReady } from './health-ready.js'
 import { initMonitoring, captureException, flushMonitoring } from './monitoring.js'
+import { isWabaConfigured } from './waba-config.js'
 
 initMonitoring().catch(() => undefined)
 
@@ -51,9 +52,7 @@ async function buildHealthPayload(): Promise<{ status: number; body: unknown }> 
         ready: dbOk,
         db: dbOk,
         actuator: env.scaleActuator,
-        wabaConfigured: Boolean(
-          process.env.WABA_ACCESS_TOKEN?.trim() && process.env.WABA_PHONE_NUMBER_ID?.trim(),
-        ),
+        wabaConfigured: isWabaConfigured(),
         limits: {
           min: env.scalerMinWorkers,
           max: env.scalerMaxWorkers,

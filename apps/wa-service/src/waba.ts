@@ -1,12 +1,12 @@
 /**
- * Meta WhatsApp Cloud API (WABA) iskeleti.
- * Baileys ile paralel kanal: WABA_ACCESS_TOKEN + WABA_PHONE_NUMBER_ID set ise
- * sendTextCloudApi kullanilabilir. Varsayilan yol hâlâ Baileys.
+ * Meta WhatsApp Cloud API (WABA) text gönderimi.
+ * Kanal seçimi: SEND_CHANNEL=waba + isWabaConfigured().
+ * Medya / eksik config sessizce Baileys'e düşmez — job-consumer resolveWabaMessageSend ile fail eder.
  */
 import { logger } from './logger.js'
 import { isWabaConfigured } from './waba-config.js'
 
-export { isWabaConfigured } from './waba-config.js'
+export { isWabaConfigured, isWabaSendChannel, resolveWabaMessageSend } from './waba-config.js'
 
 const log = logger.child({ scope: 'waba' })
 

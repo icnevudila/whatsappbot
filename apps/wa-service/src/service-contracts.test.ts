@@ -6,7 +6,7 @@ import test from 'node:test'
 import { JOB_TYPES } from '@wa/shared'
 import { AUTH_SCHEMA_VERSION } from './auth-schema.js'
 import { computeWorkerReady } from './health-ready.js'
-import { isWabaConfigured } from './waba-config.js'
+import { isWabaConfigured, resolveWabaMessageSend } from './waba-config.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const src = (name: string) => readFileSync(join(root, 'src', name), 'utf8')
@@ -96,6 +96,70 @@ test('isWabaConfigured token+phoneId ister', () => {
   else process.env.WABA_PHONE_NUMBER_ID = prevP
 })
 
+test('resolveWabaMessageSend: SEND_CHANNEL=waba eksik config fail (Baileys yedegi yok)', () => {
+  const prevC = process.env.SEND_CHANNEL
+  const prevT = process.env.WABA_ACCESS_TOKEN
+  const prevP = process.env.WABA_PHONE_NUMBER_ID
+  process.env.SEND_CHANNEL = 'waba'
+  delete process.env.WABA_ACCESS_TOKEN
+  delete process.env.WABA_PHONE_NUMBER_ID
+  const d = resolveWabaMessageSend({ message_type: 'text' })
+  assert.equal(d.channel, 'fail')
+  if (d.channel === 'fail') assert.match(d.reason, /WABA_ACCESS_TOKEN/)
+  process.env.WABA_ACCESS_TOKEN = 'tok'
+  delete process.env.WABA_PHONE_NUMBER_ID
+  const d2 = resolveWabaMessageSend({})
+  assert.equal(d2.channel, 'fail')
+  if (prevC === undefined) delete process.env.SEND_CHANNEL
+  else process.env.SEND_CHANNEL = prevC
+  if (prevT === undefined) delete process.env.WABA_ACCESS_TOKEN
+  else process.env.WABA_ACCESS_TOKEN = prevT
+  if (prevP === undefined) delete process.env.WABA_PHONE_NUMBER_ID
+  else process.env.WABA_PHONE_NUMBER_ID = prevP
+})
+
+test('resolveWabaMessageSend: WABA medya fail (Baileys yedegi yok)', () => {
+  const prevC = process.env.SEND_CHANNEL
+  const prevT = process.env.WABA_ACCESS_TOKEN
+  const prevP = process.env.WABA_PHONE_NUMBER_ID
+  process.env.SEND_CHANNEL = 'waba'
+  process.env.WABA_ACCESS_TOKEN = 'tok'
+  process.env.WABA_PHONE_NUMBER_ID = 'pid'
+  assert.deepEqual(resolveWabaMessageSend({ message_type: 'text' }), { channel: 'waba' })
+  const media = resolveWabaMessageSend({ media_url: 'https://x/a.jpg', message_type: 'image' })
+  assert.equal(media.channel, 'fail')
+  if (media.channel === 'fail') assert.match(media.reason, /medya/)
+  if (prevC === undefined) delete process.env.SEND_CHANNEL
+  else process.env.SEND_CHANNEL = prevC
+  if (prevT === undefined) delete process.env.WABA_ACCESS_TOKEN
+  else process.env.WABA_ACCESS_TOKEN = prevT
+  if (prevP === undefined) delete process.env.WABA_PHONE_NUMBER_ID
+  else process.env.WABA_PHONE_NUMBER_ID = prevP
+})
+
+test('resolveWabaMessageSend: SEND_CHANNEL yoksa baileys', () => {
+  const prevC = process.env.SEND_CHANNEL
+  delete process.env.SEND_CHANNEL
+  assert.deepEqual(resolveWabaMessageSend({ media_url: 'https://x' }), { channel: 'baileys' })
+  if (prevC === undefined) delete process.env.SEND_CHANNEL
+  else process.env.SEND_CHANNEL = prevC
+})
+
+test('job-consumer WABA: delivery_attempted + resolveWabaMessageSend + NonRetryable fail', () => {
+  const file = src('job-consumer.ts')
+  const sendCase = file.slice(file.indexOf("case 'message.send'"))
+  assert.match(sendCase, /resolveWabaMessageSend/)
+  assert.match(sendCase, /channel === 'fail'[\s\S]*NonRetryableJobError/)
+  assert.match(
+    sendCase,
+    /channel === 'waba'[\s\S]*delivery_attempted[\s\S]*sendTextCloudApi/,
+  )
+  assert.doesNotMatch(
+    sendCase.slice(0, sendCase.indexOf("case 'contacts.verify'")),
+    /SEND_CHANNEL[\s\S]*WABA_ACCESS_TOKEN\?\.trim\(\)/,
+  )
+})
+
 test('docker compose healthcheck /ready kullanir', () => {
   const compose = readFileSync(join(root, '../../infra/docker-compose.yml'), 'utf8')
   assert.match(compose, /8080\/ready/)
@@ -121,7 +185,32 @@ test('shutdown in-flight sending failed yapar (queued degil; cift gonderim yok)'
   const runner = src('campaign-runner.ts')
   assert.match(
     runner,
-    /reclaimStaleSending[\s\S]*status = 'failed'[\s\S]*Çift mesajı önlemek için otomatik tekrar yapılmadı/,
+    /DELIVERY_UNCERTAIN_ERROR[\s\S]*Çift mesajı önlemek için otomatik tekrar yapılmadı[\s\S]*reclaimStaleSending[\s\S]*status = 'failed'/,
+  )
+})
+
+test('campaign target delivery_attempted sendMessage oncesi isaretlenir', () => {
+  const runner = src('campaign-runner.ts')
+  assert.match(
+    runner,
+    /delivery_attempted = true[\s\S]*session\.sendMessage/,
+  )
+  assert.match(
+    runner,
+    /delivery_attempted = false[\s\S]*returning id::text/,
+  )
+  assert.match(
+    runner,
+    /reclaimStaleSending[\s\S]*status = 'queued'[\s\S]*delivery_attempted = true/,
+  )
+  assert.match(
+    runner,
+    /handleSendFailure[\s\S]*delivery_attempted[\s\S]*status = 'failed'/,
+  )
+  // Retry kuyrugu bayrakli satirlari almamali
+  assert.match(
+    runner,
+    /status = 'queued'[\s\S]*delivery_attempted = false/,
   )
 })
 

@@ -56,14 +56,20 @@ export async function POST(request: Request) {
 
   const rawPlan = (body.plan?.trim() || 'starter').toLowerCase()
   const plan = isPlanId(rawPlan) && rawPlan !== 'free' ? rawPlan : 'starter'
+  const siteOrigin = (
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '') ||
+    new URL(request.url).origin
+  ).replace(/\/$/, '')
   const successUrl =
     body.successUrl?.trim() ||
     process.env.STRIPE_SUCCESS_URL?.trim() ||
-    'http://localhost:3000/ayarlar?billing=ok'
+    `${siteOrigin}/ayarlar?billing=ok`
   const cancelUrl =
     body.cancelUrl?.trim() ||
     process.env.STRIPE_CANCEL_URL?.trim() ||
-    'http://localhost:3000/ayarlar?billing=cancel'
+    `${siteOrigin}/ayarlar?billing=cancel`
 
   const params = new URLSearchParams()
   params.set('mode', 'subscription')

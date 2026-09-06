@@ -86,7 +86,12 @@ export const tr = {
     kicker: 'Zorunlu kurulum',
     stepOf: 'Adım {current} / {total}',
     completedCount: '{count} tamamlandı',
-    finishHint: 'Bu adımlar bitince doğrudan kampanya oluşturursunuz.',
+    finishHint: 'Bu adımlar bitince kampanya oluşturabilirsiniz. İlk test mesajı zorunlu değildir.',
+    firstSendTitle: 'İsteğe bağlı: ilk test',
+    firstSendSub: 'Kurulum tamam · kendi numaranıza kısa bir test gönderin',
+    firstSendCta: 'İlk test mesajını gönder',
+    firstSendHint:
+      'Zorunlu değil. Hazırsanız Hızlı gönderimden kendinize bir test yazabilirsiniz.',
     brandTitle: 'Marka',
     brandLead: 'Gönderimlerde görünecek işletme adı ve ana renk.',
     brandName: 'Marka / işletme adı',
@@ -128,7 +133,7 @@ export const tr = {
     kampanyalarTitle: 'Kampanyalar',
     kampanyalarDesc: 'Liste + hat seç, başlat. Detayda canlı ilerleme.',
     kampanyalarReady:
-      'Kurulum tamam. Marka, liste, hat ve numara kontrolü hazır — sağdan kampanya oluşturup mesajınızı yazmanız yeterli.',
+      'Kurulum tamam. Marka, liste, hat ve numara kontrolü hazır — sağdan kampanya oluşturun. İsterseniz Hızlı gönderimden kısa bir test de atabilirsiniz.',
     kisilerTitle: 'Kişiler',
     kisilerDesc:
       'Numaralar listelerde tutulur; WhatsApp’ta kayıtlı olup olmadığı işaretlenir. Tek seferlik için Hızlı gönderim.',
@@ -240,5 +245,8 @@ export const tr = {
     unblacklistBody:
       '{phone} engeli kalkar; kampanya ve hızlı gönderimde tekrar hedeflenebilir.',
     unblacklistConfirm: 'Kaldır',
+    deleteCreativeTitle: 'Görsel silinsin mi?',
+    deleteCreativeBody: 'Bu kreatif galeriden ve depodan kaldırılır. Bu işlem geri alınamaz.',
+    deleteCreativeOk: 'Görsel silindi.',
   },
 }

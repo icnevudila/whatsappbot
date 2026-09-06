@@ -9,9 +9,25 @@ type Progress = Awaited<ReturnType<typeof getSetupProgress>>
 
 /**
  * Kurulum bitmeden gösterilen şerit — zorunlu wizard’a yönlendirir.
+ * Kurulum bitip henüz giden yoksa yumuşak ilk-test CTA gösterir (zorunlu kapı değil).
  */
 export function SetupBanner({ progress }: { progress: Progress }) {
   const t = useT()
+  const needsFirstSend = progress.allDone && progress.counts.outCount === 0
+
+  if (needsFirstSend) {
+    return (
+      <Card className="mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 p-4">
+          <div>
+            <p className="text-[13px] font-semibold text-ink">{t('setup.firstSendTitle')}</p>
+            <p className="mt-0.5 text-[12px] text-ink-muted">{t('setup.firstSendSub')}</p>
+          </div>
+          <AccentLink href="/hizli-gonderim">{t('setup.firstSendCta')}</AccentLink>
+        </div>
+      </Card>
+    )
+  }
 
   if (progress.allDone) return null
 

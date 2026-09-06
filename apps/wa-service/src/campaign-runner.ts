@@ -206,21 +206,37 @@ async function claimTarget(
   )
 }
 
-/** Yarida kalan 'sending' hedefleri kuyruga geri al. */
+const DELIVERY_UNCERTAIN_ERROR =
+  'Gönderim yarıda kaldı; sonuç belirsiz. Çift mesajı önlemek için otomatik tekrar yapılmadı.'
+
+/** Yarida kalan / daha once gonderim denenmis hedefleri failed yap; asla yeniden kuyruga alma. */
 async function reclaimStaleSending(): Promise<void> {
-  const rows = await query<{ id: string; campaign_id: string }>(
+  const stale = await query<{ id: string; campaign_id: string }>(
     `update public.campaign_targets
         set status = 'failed',
-            error = 'Gönderim yarıda kaldı; sonuç belirsiz. Çift mesajı önlemek için otomatik tekrar yapılmadı.',
+            error = $2,
             updated_at = now()
       where status = 'sending'
         and updated_at < now() - ($1::int * interval '1 millisecond')
       returning id, campaign_id`,
-    [STALE_SENDING_MS],
+    [STALE_SENDING_MS, DELIVERY_UNCERTAIN_ERROR],
   )
 
-  if (rows.length > 0) {
-    log.warn({ count: rows.length }, 'Belirsiz gonderimler inceleme icin sonlandirildi')
+  // Yanlislikla queued'e dusmus delivery_attempted satirlari (retry/cift gonderim yok).
+  const leaked = await query<{ id: string; campaign_id: string }>(
+    `update public.campaign_targets
+        set status = 'failed',
+            error = $1,
+            updated_at = now()
+      where status = 'queued'
+        and delivery_attempted = true
+      returning id, campaign_id`,
+    [DELIVERY_UNCERTAIN_ERROR],
+  )
+
+  const count = stale.length + leaked.length
+  if (count > 0) {
+    log.warn({ count, stale: stale.length, leaked: leaked.length }, 'Belirsiz gonderimler inceleme icin sonlandirildi')
   }
 }
 
@@ -390,6 +406,23 @@ async function sendToTarget(
   const rawBody = variant === 'b' ? campaign.body_b : campaign.body
   const body = expandSpintax(personalize(rawBody, target.contact_name))
   const content = buildContent(campaign, body) as AnyMessageContent
+
+  // message.send ile ayni: sendMessage ONCESI isaretle; reclaim/retry cift gondermesin.
+  const marked = await query<{ id: string }>(
+    `update public.campaign_targets
+        set delivery_attempted = true, updated_at = now()
+      where id = $1::bigint
+        and status = 'sending'
+        and delivery_attempted = false
+      returning id::text`,
+    [target.id],
+  )
+  if (marked.length === 0) {
+    throw new DeliveryUncertainError(
+      'Önceki gönderimin sonucu belirsiz. Çift mesajı önlemek için yeniden gönderilmedi.',
+    )
+  }
+
   const message = await session.sendMessage(jid, content)
 
   const updated = await query<{ id: string }>(
@@ -456,8 +489,19 @@ async function handleSendFailure(
   const message = error instanceof Error ? error.message : String(error)
   const code = extractStatusCode(error)
 
-  if (error instanceof DeliveryUncertainError) {
-    await query(`update public.campaign_targets set status = 'failed', error = $2, updated_at = now() where id = $1::bigint and status = 'sending'`, [target.id, message])
+  const row = await one<{ attempts: number; delivery_attempted: boolean }>(
+    'select attempts, delivery_attempted from public.campaign_targets where id = $1::bigint',
+    [target.id],
+  )
+
+  // sendMessage cagrildiktan sonra asla yeniden kuyruga alma.
+  if (error instanceof DeliveryUncertainError || row?.delivery_attempted) {
+    await query(
+      `update public.campaign_targets
+          set status = 'failed', error = $2, updated_at = now()
+        where id = $1::bigint and status = 'sending'`,
+      [target.id, message],
+    )
     await reconcileCampaignCounts(campaign.id)
     return
   }
@@ -480,16 +524,12 @@ async function handleSendFailure(
     await query(
       `update public.campaign_targets
           set status = 'queued', error = $2, updated_at = now()
-        where id = $1::bigint and status = 'sending'`,
+        where id = $1::bigint and status = 'sending' and delivery_attempted = false`,
       [target.id, message],
     )
     return
   }
 
-  const row = await one<{ attempts: number }>(
-    'select attempts from public.campaign_targets where id = $1::bigint',
-    [target.id],
-  )
   const attempts = row?.attempts ?? MAX_TARGET_ATTEMPTS
 
   if (attempts >= MAX_TARGET_ATTEMPTS) {
@@ -506,7 +546,7 @@ async function handleSendFailure(
   await query(
     `update public.campaign_targets
         set status = 'queued', error = $2, scheduled_for = now() + interval '2 minutes', updated_at = now()
-      where id = $1::bigint and status = 'sending'`,
+      where id = $1::bigint and status = 'sending' and delivery_attempted = false`,
     [target.id, message],
   )
 }
@@ -665,7 +705,19 @@ async function runCampaign(campaign: CampaignRow): Promise<void> {
 
     const currentCampaign = await one<{ status: string }>('select status from public.campaigns where id = $1', [campaign.id])
     if (!running || currentCampaign?.status !== 'running') {
-      await query(`update public.campaign_targets set status = 'queued', attempts = greatest(0, attempts - 1), updated_at = now() where id = $1::bigint and status = 'sending'`, [target.id])
+      // delivery_attempted ise queued'e alma — cift gonderim riski.
+      await query(
+        `update public.campaign_targets
+            set status = case when delivery_attempted then 'failed' else 'queued' end,
+                attempts = case when delivery_attempted then attempts else greatest(0, attempts - 1) end,
+                error = case
+                  when delivery_attempted then $2
+                  else error
+                end,
+                updated_at = now()
+          where id = $1::bigint and status = 'sending'`,
+        [target.id, DELIVERY_UNCERTAIN_ERROR],
+      )
       return
     }
 

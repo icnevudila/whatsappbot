@@ -181,8 +181,9 @@ export default async function PanelHomePage() {
   ] = rest
 
   const t = createT(dict.messages)
-  const { connectedCount, contactCount, validWa } = setup.counts
+  const { connectedCount, contactCount, validWa, outCount } = setup.counts
   const ready = setup.allDone
+  const suggestFirstSend = ready && outCount === 0
   const unknownWa = Math.max(0, contactCount - validWa - (invalidWa ?? 0))
 
   const todayOutStamps = (todayLogs ?? [])
@@ -270,7 +271,9 @@ export default async function PanelHomePage() {
         title={t('pages.ozetTitle')}
         description={t('pages.ozetDesc', { org: org.name })}
         action={
-          ready ? (
+          suggestFirstSend ? (
+            <AccentLink href="/hizli-gonderim">{t('setup.firstSendCta')}</AccentLink>
+          ) : ready ? (
             <AccentLink href="/hizli-gonderim">{t('pages.sendMessage')}</AccentLink>
           ) : (
             <AccentLink href="/kurulum">{t('pages.finishSetup')}</AccentLink>

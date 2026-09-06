@@ -40,6 +40,28 @@ export async function createAutoReplyRule(
   }
 }
 
+export async function setAutoReplyRuleEnabled(
+  id: string,
+  enabled: boolean,
+): Promise<AutoReplyState> {
+  try {
+    const { org, supabase } = await requireActiveOrg()
+    if (org.role !== 'owner' && org.role !== 'admin') {
+      return { error: 'Yetki yok.' }
+    }
+    const { error } = await supabase
+      .from('auto_reply_rules' as never)
+      .update({ enabled } as never)
+      .eq('id' as never, id as never)
+      .eq('org_id' as never, org.id as never)
+    if (error) return { error: error.message }
+    revalidatePath('/ayarlar/otomatik-yanit')
+    return { ok: enabled ? 'Kural açıldı.' : 'Kural kapatıldı.' }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum yok' }
+  }
+}
+
 export async function deleteAutoReplyRule(id: string): Promise<AutoReplyState> {
   try {
     const { org, supabase } = await requireActiveOrg()
