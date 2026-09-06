@@ -146,10 +146,21 @@ export async function removeAccount(accountId: string): Promise<ActionState> {
 }
 
 export async function syncAccountContactsAction(
-  _accountId: string,
-  _listName?: string,
+  accountId: string,
+  listName?: string,
 ): Promise<ActionState> {
-  // Panel UI kaldirildi — ileride super-admin / destek kanalina tasinacak.
-  return { error: 'Rehber içe aktarma panelden kaldırıldı. Destek ile iletişime geçin.' }
+  const { error } = await enqueueJob({
+    type: 'account.sync_contacts',
+    accountId,
+    priority: 30,
+    payload: listName ? { list_name: listName } : {},
+  })
+  if (error) return { error }
+
+  revalidateAccounts()
+  revalidatePath('/kisiler')
+  return {
+    ok: 'Rehber içe aktarma kuyruğa alındı. WhatsApp senkronu ~1 dk sürebilir; sonra Kişiler’de listede görünür.',
+  }
 }
 

@@ -30,6 +30,7 @@ import {
   logoutAccount,
   removeAccount,
   requestPairingCode,
+  syncAccountContactsAction,
   type ActionState,
 } from './actions'
 import { PairingPanel } from './pairing-panel'
@@ -442,13 +443,28 @@ function AccountCard({
 
         <div className="flex flex-wrap gap-1.5">
           {account.status === 'connected' ? (
-            <Button
-              onClick={() => run(() => disconnectAccount(account.id))}
-              disabled={pending}
-              title="Oturumu bu sunucuda kapatır; WhatsApp'tan cihaz silinmez"
-            >
-              Bağlantıyı kes
-            </Button>
+            <>
+              <Button
+                variant="accent"
+                onClick={() => {
+                  run(
+                    () => syncAccountContactsAction(account.id),
+                    'Rehber içe aktarma kuyruğa alındı. WhatsApp senkronu ~1 dk sürebilir; sonra Kişiler’de görünür.',
+                  )
+                }}
+                disabled={pending}
+                title="Hatta kayıtlı WhatsApp rehberini ve sohbet kişilerini yeni bir liste olarak aktarır"
+              >
+                Rehberi içe aktar
+              </Button>
+              <Button
+                onClick={() => run(() => disconnectAccount(account.id))}
+                disabled={pending}
+                title="Oturumu bu sunucuda kapatır; WhatsApp'tan cihaz silinmez"
+              >
+                Bağlantıyı kes
+              </Button>
+            </>
           ) : (
             <Button
               variant="accent"

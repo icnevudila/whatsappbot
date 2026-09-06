@@ -1,9 +1,21 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { AccentLink, Card, CardHeader, EmptyState, Meter, PageHeader, Pagination, QuietLink, Stat } from '@/components/ui'
+import {
+  AccentLink,
+  Card,
+  CardHeader,
+  EmptyState,
+  Meter,
+  Notice,
+  PageHeader,
+  Pagination,
+  QuietLink,
+  Stat,
+} from '@/components/ui'
 import { redirect } from 'next/navigation'
 import { createT } from '@/lib/i18n'
 import { getDictionary } from '@/lib/i18n/server'
+import { CONTACT_EMAIL, contactMailto } from '@/lib/contact'
 import { requireActiveOrg } from '@/lib/org'
 import {
   PAGE_SIZES,
@@ -13,10 +25,8 @@ import {
   rangeForPage,
   totalPages,
 } from '@/lib/pagination'
-import { DiscoverForm } from './discover-form'
 import { ImportForm } from './import-form'
 import { ListActions } from './list-actions'
-import { ScrapeForm } from './scrape-form'
 import { VerifyAllButton } from './verify-all-button'
 import { WaCheckForm } from './wa-check-form'
 
@@ -189,8 +199,24 @@ export default async function ContactsPage({
 
         <div className="order-1 space-y-2.5 lg:order-2" id="liste-olustur">
           <WaCheckForm />
-          <DiscoverForm />
-          <ScrapeForm />
+          <Card>
+            <CardHeader
+              title="Yerel / web kişi arama"
+              subtitle="Places ve site kazıma panelden kaldırıldı."
+            />
+            <div className="space-y-2 p-3.5">
+              <Notice tone="warn">
+                İşletme / mahalle araması veya siteden numara toplama için bizimle iletişime geçin —
+                sizin hesabınızda hazır liste olarak açılır.
+              </Notice>
+              <a
+                href={contactMailto('Kişi listesi / arama talebi')}
+                className="inline-flex text-[13px] font-semibold text-accent underline-offset-2 hover:underline"
+              >
+                {CONTACT_EMAIL}
+              </a>
+            </div>
+          </Card>
           <ImportForm />
         </div>
       </div>
