@@ -9,13 +9,21 @@ import {
   Card,
   CardHeader,
   Field,
+  FileUploadButton,
   Input,
   Notice,
   Textarea,
 } from '@/components/ui'
+import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { updateCampaign, type CampaignState } from '../actions'
 
-type Option = { id: string; label: string; detail?: string; disabled?: boolean }
+type Option = {
+  id: string
+  label: string
+  detail?: string
+  disabled?: boolean
+  contactCount?: number
+}
 
 export type EditableCampaign = {
   id: string
@@ -32,16 +40,24 @@ export type EditableCampaign = {
   source_list_ids: string[]
 }
 
+function typeFromMime(mime: string): 'image' | 'video' | null {
+  if (mime.startsWith('image/')) return 'image'
+  if (mime.startsWith('video/')) return 'video'
+  return null
+}
+
 export function EditCampaignForm({
   campaign,
   lists,
   accounts,
   selectedAccountIds,
+  orgId,
 }: {
   campaign: EditableCampaign
   lists: Option[]
   accounts: Option[]
   selectedAccountIds: string[]
+  orgId: string
 }) {
   const editable = ['draft', 'paused', 'scheduled', 'running', 'stopped'].includes(
     campaign.status,
@@ -54,7 +70,11 @@ export function EditCampaignForm({
   const toast = useToast()
   const router = useRouter()
   const [mediaUrl, setMediaUrl] = useState(campaign.media_url ?? '')
+  const [messageType, setMessageType] = useState(campaign.message_type || 'text')
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   useSyncBusy(pending, 'Kampanya kaydediliyor…')
+  useSyncBusy(uploading, 'Medya yükleniyor…')
 
   useEffect(() => {
     if (state?.error) toast(state.error, 'danger')
@@ -63,6 +83,34 @@ export function EditCampaignForm({
       router.refresh()
     }
   }, [state?.error, state?.ok, toast, router])
+
+  const upload = async (file: File) => {
+    setUploading(true)
+    setUploadError(null)
+    const detected = typeFromMime(file.type)
+    if (!detected) {
+      setUploading(false)
+      setUploadError('Yalnızca görsel veya video yükleyin.')
+      return
+    }
+    try {
+      const supabase = getSupabaseBrowserClient()
+      const extension = file.name.split('.').pop() ?? 'bin'
+      const path = `${orgId}/${crypto.randomUUID()}.${extension}`
+      const { error } = await supabase.storage.from('creatives').upload(path, file, {
+        contentType: file.type,
+        upsert: false,
+      })
+      if (error) throw error
+      const { data } = supabase.storage.from('creatives').getPublicUrl(path)
+      setMediaUrl(data.publicUrl)
+      setMessageType(detected)
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : 'Dosya yüklenemedi.')
+    } finally {
+      setUploading(false)
+    }
+  }
 
   if (!editable) {
     return (
@@ -91,14 +139,20 @@ export function EditCampaignForm({
         title="Kampanyayı düzenle"
         subtitle={
           structureLocked
-            ? 'Mesaj ve hız kalan kuyruğu etkiler. Liste/hat için önce Duraklat.'
-            : 'Gönderilmiş numaralara dokunulmaz. Liste değişince yeni numaralar eklenir; çıkan queued’lar atlanır.'
+            ? 'Mesajı değiştirebilirsiniz. Grup/hat için önce Duraklat.’
+            : 'Gönderilmiş numaralara dokunulmaz. Grup değişince yeni numaralar eklenir.'
         }
       />
 
       <form action={formAction} className="space-y-3.5 p-3.5">
         <input type="hidden" name="campaign_id" value={campaign.id} />
         <input type="hidden" name="media_url" value={mediaUrl} />
+        <input type="hidden" name="message_type" value={messageType} />
+        <input type="hidden" name="min_delay" value={campaign.min_delay_seconds} />
+        <input type="hidden" name="max_delay" value={campaign.max_delay_seconds} />
+        <input type="hidden" name="daily_cap" value={campaign.daily_cap_per_account} />
+        <input type="hidden" name="ab_percent" value={campaign.ab_percent ?? 0} />
+        <input type="hidden" name="body_b" value={campaign.body_b ?? ''} />
 
         <Field label="Kampanya adı">
           <Input name="name" defaultValue={campaign.name} required />
@@ -106,63 +160,53 @@ export function EditCampaignForm({
 
         <Field
           label="Mesaj"
-          hint="Kalan hedeflere yeni metin gider. Alıcı YAZMAYIN / istemiyorum yazarsa otomatik kara listeye alınır."
+          hint="Kalan hedeflere yeni metin gider. İstemiyorum / YAZMAYIN → gruptan çıkar."
         >
           <Textarea name="body" rows={5} defaultValue={campaign.body ?? ''} />
         </Field>
 
-        <Field label="Medya URL (isteğe bağlı)">
-          <Input
-            value={mediaUrl}
-            onChange={(event) => setMediaUrl(event.target.value)}
-            placeholder="https://…"
-          />
-        </Field>
-
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Field label="Min bekleme (sn)">
-            <Input
-              name="min_delay"
-              type="number"
-              min={3}
-              defaultValue={campaign.min_delay_seconds}
+        <div className="space-y-2">
+          <span className="mb-1.5 block text-[12px] font-medium text-ink-muted">
+            Görsel veya video (isteğe bağlı)
+          </span>
+          <div className="flex flex-wrap items-center gap-3">
+            <FileUploadButton
+              accept="image/*,video/*"
+              uploading={uploading}
+              label="Dosya seç"
+              onFile={(file) => void upload(file)}
             />
-          </Field>
-          <Field label="Max bekleme (sn)">
-            <Input
-              name="max_delay"
-              type="number"
-              min={3}
-              defaultValue={campaign.max_delay_seconds}
-            />
-          </Field>
-          <Field label="Günlük hat limiti">
-            <Input
-              name="daily_cap"
-              type="number"
-              min={1}
-              defaultValue={campaign.daily_cap_per_account}
-            />
-          </Field>
+            {mediaUrl ? (
+              <span className="flex items-center gap-2 text-[11.5px] text-accent">
+                {messageType === 'image' ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={mediaUrl}
+                    alt=""
+                    className="size-9 rounded border border-hairline object-cover"
+                  />
+                ) : null}
+                Eklendi
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMediaUrl('')
+                    setMessageType('text')
+                  }}
+                  className="text-ink-muted underline underline-offset-2 hover:text-danger"
+                >
+                  kaldır
+                </button>
+              </span>
+            ) : null}
+          </div>
+          {uploadError ? <Notice tone="danger">{uploadError}</Notice> : null}
         </div>
-
-        <Field label="A/B % (0 = kapalı)">
-          <Input
-            name="ab_percent"
-            type="number"
-            min={0}
-            max={100}
-            defaultValue={campaign.ab_percent ?? 0}
-          />
-        </Field>
-        <Field label="Mesaj B (A/B)">
-          <Textarea name="body_b" rows={3} defaultValue={campaign.body_b ?? ''} />
-        </Field>
 
         <div>
           <span className="mb-1.5 block text-[12px] font-medium text-ink-muted">
-            Kişi listeleri
-            {structureLocked ? ' (kilitli — önce duraklat)' : ''}
+            Kişi grupları
+            {structureLocked ? ' (duraklatınca değişir)' : ''}
           </span>
           {structureLocked
             ? campaign.source_list_ids.map((id) => (
@@ -195,16 +239,33 @@ export function EditCampaignForm({
                     className="size-4 accent-[var(--color-accent)]"
                   />
                 )}
-                <span className="truncate text-[12.5px]">{option.label}</span>
+                <span className="truncate text-[12.5px]">
+                  {option.label}
+                  {option.contactCount != null
+                    ? ` · ${option.contactCount.toLocaleString('tr-TR')}`
+                    : option.detail
+                      ? ` · ${option.detail}`
+                      : ''}
+                </span>
               </label>
             ))}
           </div>
+          {lists.some((l) => campaign.source_list_ids.includes(l.id) && (l.contactCount ?? 0) > 0) ? (
+            <Notice tone="warn">
+              Seçili gruplar ~{' '}
+              {lists
+                .filter((l) => campaign.source_list_ids.includes(l.id))
+                .reduce((s, l) => s + (l.contactCount ?? 0), 0)
+                .toLocaleString('tr-TR')}{' '}
+              numara. Yeniden başlatınca bu kadar kuyruk satırı materyalize edilir.
+            </Notice>
+          ) : null}
         </div>
 
         <div>
           <span className="mb-1.5 block text-[12px] font-medium text-ink-muted">
-            Gönderen hatlar
-            {structureLocked ? ' (kilitli — önce duraklat)' : ''}
+            Gönderen hat
+            {structureLocked ? ' (duraklatınca değişir)' : ''}
           </span>
           {structureLocked
             ? selectedAccountIds.map((id) => (
@@ -250,8 +311,8 @@ export function EditCampaignForm({
           <label className="flex items-start gap-2 text-[12.5px] text-ink-muted">
             <input type="checkbox" name="cancel_remaining" value="1" className="mt-0.5 size-4" />
             <span>
-              Kalan kuyruğu iptal et (queued → atlandı), sonra seçili listelerden yeniden doldur.
-              Gönderilmiş numaralara dokunulmaz. Yanlış listedeysen bunu işaretle.
+              Kalan gönderimleri iptal et ve seçili gruplardan yeniden doldur. Gönderilmişlere
+              dokunulmaz.
             </span>
           </label>
         ) : null}
@@ -271,7 +332,7 @@ export function EditCampaignForm({
         {state?.ok ? <Notice tone="accent">{state.ok}</Notice> : null}
 
         <Button type="submit" variant="accent" disabled={pending}>
-          {pending ? 'Kaydediliyor…' : 'Değişiklikleri kaydet'}
+          {pending ? 'Kaydediliyor…' : 'Kaydet'}
         </Button>
       </form>
     </Card>

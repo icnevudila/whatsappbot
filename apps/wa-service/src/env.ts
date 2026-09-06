@@ -88,6 +88,12 @@ export const env = {
   discoverEngine: resolveDiscoverEngine(),
   /** Places sayfa başı max 20; üst sınır sayfalama ile. */
   discoverMaxResults: Math.min(100, Math.max(5, int('DISCOVER_MAX_RESULTS', 60))),
+
+  /**
+   * Master switch. false (varsayilan) iken org.auto_reply_enabled true olsa bile
+   * otomatik yanit gonderilmez. Acmak icin AUTO_REPLY_ENABLED=true + org flag.
+   */
+  autoReplyEnabled: (process.env.AUTO_REPLY_ENABLED ?? '').trim().toLowerCase() === 'true',
 } as const
 
 function resolveDiscoverEngine(): 'auto' | 'places' | 'playwright' {

@@ -131,41 +131,143 @@ export type ImportResult = {
   duplicates: number
 }
 
+const PHONE_HEADER_RE =
+  /^(tel|telefon|phone|mobile|gsm|cep|numara|number|msisdn|whatsapp|wa)$/i
+
 /**
- * Metin blogunu (yapistirilmis liste veya CSV kolonu) numaralara cevirir.
- * Ayni numara birden fazla gecerse bir kez tutulur.
+ * Satır hücrelerinden ilk geçerli telefonu ve varsa ismi çıkarır.
+ * Telefon hangi sütunda olursa olsun yakalanır.
  */
-export function parsePhoneList(
-  input: string,
+export function extractPhoneFromCells(
+  cells: unknown[],
   defaultCountry: CountryCode = DEFAULT_COUNTRY,
+): ImportedRow | null {
+  const parts = cells.map((cell) => String(cell ?? '').trim()).filter(Boolean)
+  if (parts.length === 0) return null
+
+  let phone: string | null = null
+  let phoneIdx = -1
+
+  for (let i = 0; i < parts.length; i += 1) {
+    const candidate =
+      toE164(parts[i]!, defaultCountry) ?? toE164Scraped(parts[i]!, 'medium')
+    if (candidate) {
+      phone = candidate
+      phoneIdx = i
+      break
+    }
+  }
+
+  if (!phone) return null
+
+  const name =
+    parts.find((part, idx) => {
+      if (idx === phoneIdx) return false
+      if (/^\d[\d\s+\-().]{6,}$/.test(part)) return false
+      return /[A-Za-zÀ-ÿĞğÜüŞşİıÖöÇç]/.test(part)
+    }) ?? null
+
+  return { phone_e164: phone, name: name?.slice(0, 120) ?? null }
+}
+
+/** Başlık satırında telefon sütunu index'i (yoksa null). */
+export function detectPhoneColumnIndex(headerCells: unknown[]): number | null {
+  for (let i = 0; i < headerCells.length; i += 1) {
+    const label = String(headerCells[i] ?? '')
+      .trim()
+      .replace(/\s+/g, '')
+    if (PHONE_HEADER_RE.test(label)) return i
+  }
+  return null
+}
+
+/**
+ * Satır dizisini (Excel/CSV hücreleri) numaralara çevirir.
+ * preferredPhoneCol verilirse o sütun önce denenir; başarısızsa tüm hücreler taranır.
+ */
+export function parsePhoneRows(
+  rows: unknown[][],
+  options?: {
+    defaultCountry?: CountryCode
+    /** İlk satır başlık olabilir. */
+    hasHeader?: boolean
+    preferredPhoneCol?: number | null
+  },
 ): ImportResult {
+  const defaultCountry = options?.defaultCountry ?? DEFAULT_COUNTRY
+  let start = 0
+  let preferred = options?.preferredPhoneCol ?? null
+
+  if (options?.hasHeader && rows.length > 0) {
+    const detected = detectPhoneColumnIndex(rows[0] ?? [])
+    if (detected != null) preferred = detected
+    start = 1
+  } else if (rows.length > 0 && preferred == null) {
+    const maybeHeader = detectPhoneColumnIndex(rows[0] ?? [])
+    if (maybeHeader != null) {
+      preferred = maybeHeader
+      start = 1
+    }
+  }
+
   const seen = new Set<string>()
   const valid: ImportedRow[] = []
   const invalid: string[] = []
   let duplicates = 0
 
-  for (const line of input.split(/\r?\n/)) {
-    const row = line.trim()
-    if (!row) continue
+  for (let r = start; r < rows.length; r += 1) {
+    const row = rows[r] ?? []
+    const cells = row.map((cell) => String(cell ?? '').trim())
+    if (cells.every((c) => !c)) continue
 
-    // "numara,isim" veya "numara;isim" veya sadece numara
-    const [rawPhone, ...rest] = row.split(/[,;\t]/)
-    if (!rawPhone) continue
+    let extracted: ImportedRow | null = null
+    if (preferred != null && preferred < cells.length && cells[preferred]) {
+      const phone =
+        toE164(cells[preferred]!, defaultCountry) ??
+        toE164Scraped(cells[preferred]!, 'medium')
+      if (phone) {
+        const nameCell = cells.find((c, idx) => idx !== preferred && /[A-Za-zÀ-ÿĞğÜüŞşİıÖöÇç]/.test(c))
+        extracted = { phone_e164: phone, name: nameCell?.slice(0, 120) ?? null }
+      }
+    }
+    if (!extracted) extracted = extractPhoneFromCells(cells, defaultCountry)
 
-    const phone = toE164(rawPhone, defaultCountry)
-    if (!phone) {
-      invalid.push(row)
+    if (!extracted) {
+      invalid.push(cells.join(' | ').slice(0, 120))
       continue
     }
 
-    if (seen.has(phone)) {
+    if (seen.has(extracted.phone_e164)) {
       duplicates += 1
       continue
     }
 
-    seen.add(phone)
-    valid.push({ phone_e164: phone, name: rest.join(' ').trim() || null })
+    seen.add(extracted.phone_e164)
+    valid.push(extracted)
   }
 
   return { valid, invalid, duplicates }
 }
+
+/**
+ * Metin blogunu (yapistirilmis liste veya CSV) numaralara cevirir.
+ * Once klasik "numara,isim"; olmazsa satirdaki tum alanlar taranir.
+ */
+export function parsePhoneList(
+  input: string,
+  defaultCountry: CountryCode = DEFAULT_COUNTRY,
+): ImportResult {
+  const rows: string[][] = []
+  for (const line of input.split(/\r?\n/)) {
+    const row = line.trim()
+    if (!row) continue
+    rows.push(row.split(/[,;\t|]/).map((part) => part.trim()))
+  }
+  return parsePhoneRows(rows, { defaultCountry })
+}
+
+/** Tek seferlik import ust siniri (sunucu + client). */
+export const IMPORT_HARD_LIMIT = 100_000
+export const IMPORT_CHUNK_SIZE = 2_000
+export const IMPORT_WARN_LIMIT = 50_000
+

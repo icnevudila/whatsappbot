@@ -146,6 +146,7 @@ export default async function CampaignsPage({
     id: list.id,
     label: list.name,
     detail: `${list.contact_count} numara`,
+    contactCount: Number(list.contact_count ?? 0),
   }))
 
   const brandKits = (brandResult.data ?? []).map((kit) => ({
@@ -199,10 +200,10 @@ export default async function CampaignsPage({
                 title="Henüz kampanya yok"
                 description={
                   listOptions.length === 0
-                    ? 'Önce Kişiler’de bir liste oluşturun, sonra buradan kampanya başlatın.'
+                    ? 'Önce Kişiler’de bir grup oluşturun, sonra buradan kampanya başlatın.'
                     : connectedCount === 0
-                      ? 'Liste hazır; en az bir bağlı hat gerekir.'
-                      : 'Formdan oluşturun. Tek seferlik için Hızlı gönderim yeterli.'
+                      ? 'Grup hazır; en az bir bağlı hat gerekir.'
+                      : 'Sağdan oluşturun. Tek seferlik için Hızlı gönderim yeterli.'
                 }
                 action={
                   listOptions.length === 0 ? (

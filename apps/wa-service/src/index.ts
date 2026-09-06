@@ -25,6 +25,7 @@ import { sessionManager } from './session-manager.js'
 import { computeWorkerReady } from './health-ready.js'
 import { initMonitoring, captureException, flushMonitoring } from './monitoring.js'
 import { isWabaConfigured } from './waba-config.js'
+import { runRetentionCleanup } from './retention.js'
 
 initMonitoring().catch(() => undefined)
 
@@ -138,6 +139,11 @@ async function mainWorker(): Promise<void> {
 
   await pool.query('select 1')
   logger.info('Postgres baglantisi tamam')
+
+  // Cron da çağırır; boot'ta best-effort (iskelet).
+  void runRetentionCleanup().catch((error) => {
+    logger.warn({ err: error }, 'Retention cleanup atlandi')
+  })
 
   const requeued = await requeueOwnJobs()
   const staleReclaimed = await reclaimStaleJobs()

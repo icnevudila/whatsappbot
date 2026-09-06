@@ -237,7 +237,13 @@ export default async function SettingsPage({
             href="/marka-kiti"
             className="text-[12.5px] text-ink-muted underline decoration-hairline-strong underline-offset-2 hover:text-ink"
           >
-            Marka kitini ayarla
+            Markayı ayarla
+          </Link>
+          <Link
+            href="/ayarlar/otomatik-yanit"
+            className="text-[12.5px] text-ink-muted underline decoration-hairline-strong underline-offset-2 hover:text-ink"
+          >
+            Otomatik yanıt (kapalı)
           </Link>
         </div>
       ) : null}

@@ -15,43 +15,33 @@ import {
   Input,
   MessagePreview,
   Notice,
-  Select,
   Textarea,
 } from '@/components/ui'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { appendOptOutFooter, OPT_OUT_FOOTER } from '@/lib/opt-out-footer'
 import { createCampaign, type CampaignState } from './actions'
 
-type Option = { id: string; label: string; detail?: string; disabled?: boolean }
-type MessageType = 'text' | 'image' | 'video' | 'document'
+type Option = {
+  id: string
+  label: string
+  detail?: string
+  disabled?: boolean
+  /** Tahmini numara sayısı (kampanya başında kuyruk satırı). */
+  contactCount?: number
+}
+type MessageType = 'text' | 'image' | 'video'
 
 const STEPS = [
   { id: 1, label: 'Ad' },
   { id: 2, label: 'Mesaj' },
-  { id: 3, label: 'Hedef' },
+  { id: 3, label: 'Kime' },
   { id: 4, label: 'Gönder' },
 ] as const
-
-const MESSAGE_TYPE_LABELS: Record<MessageType, string> = {
-  text: 'Metin',
-  image: 'Görsel',
-  video: 'Video',
-  document: 'Belge',
-}
 
 function typeFromMime(mime: string): 'image' | 'video' | null {
   if (mime.startsWith('image/')) return 'image'
   if (mime.startsWith('video/')) return 'video'
   return null
-}
-
-function looksLikeUrl(value: string): boolean {
-  try {
-    const url = new URL(value)
-    return url.protocol === 'http:' || url.protocol === 'https:'
-  } catch {
-    return false
-  }
 }
 
 export function NewCampaignForm({
@@ -84,10 +74,14 @@ export function NewCampaignForm({
   const [startMode, setStartMode] = useState<'draft' | 'now' | 'schedule'>('draft')
   const [scheduledAt, setScheduledAt] = useState('')
   const [stepHint, setStepHint] = useState<string | null>(null)
-  /** Sunucu hatası — adım değişince temizlenir (Enter ile erken submit kalıntısı vb.). */
   const [formError, setFormError] = useState<string | null>(null)
 
-  useSyncBusy(pending, 'Kampanya kaydediliyor…', 'Liste ve hatlar bağlanıyor')
+  const estimatedTargets = selectedLists.reduce((sum, id) => {
+    const list = lists.find((item) => item.id === id)
+    return sum + (list?.contactCount ?? 0)
+  }, 0)
+
+  useSyncBusy(pending, 'Kampanya kaydediliyor…')
   useEffect(() => {
     if (state?.error) {
       setFormError(state.error)
@@ -110,7 +104,6 @@ export function NewCampaignForm({
   const [body, setBody] = useState('')
   const [mediaUrl, setMediaUrl] = useState('')
   const [messageType, setMessageType] = useState<MessageType>('text')
-  const [documentUrlDraft, setDocumentUrlDraft] = useState('')
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   useSyncBusy(uploading, 'Medya yükleniyor…')
@@ -122,9 +115,7 @@ export function NewCampaignForm({
     const detected = typeFromMime(file.type)
     if (!detected) {
       setUploading(false)
-      setUploadError(
-        'Yükleme yalnızca görsel veya video kabul eder. PDF vb. için aşağıya belge URL’si yapıştırın.',
-      )
+      setUploadError('Yalnızca görsel veya video yükleyin.')
       return
     }
 
@@ -141,7 +132,6 @@ export function NewCampaignForm({
       if (error) throw error
 
       const { data } = supabase.storage.from('creatives').getPublicUrl(path)
-      setDocumentUrlDraft('')
       setMediaUrl(data.publicUrl)
       setMessageType(detected)
     } catch (error) {
@@ -153,31 +143,8 @@ export function NewCampaignForm({
 
   const clearMedia = () => {
     setMediaUrl('')
-    setDocumentUrlDraft('')
     setMessageType('text')
     setUploadError(null)
-  }
-
-  const applyDocumentUrl = (raw: string) => {
-    const next = raw.trim()
-    setDocumentUrlDraft(raw)
-    setUploadError(null)
-
-    if (!next) {
-      setMediaUrl('')
-      setMessageType('text')
-      return
-    }
-
-    if (!looksLikeUrl(next)) {
-      setUploadError('Belge adresi http:// veya https:// ile başlamalı.')
-      setMediaUrl('')
-      setMessageType('text')
-      return
-    }
-
-    setMediaUrl(next)
-    setMessageType('document')
   }
 
   const preview = body.replaceAll('{{ad}}', 'Ahmet').replaceAll('{{name}}', 'Ahmet')
@@ -190,19 +157,19 @@ export function NewCampaignForm({
     }
     if (step === 2) {
       if (!body.trim() && !mediaUrl) {
-        return { ok: false, hint: 'Mesaj metni veya bir medya ekleyin.' }
+        return { ok: false, hint: 'Mesaj yazın veya görsel ekleyin.' }
       }
       return { ok: true }
     }
     if (step === 3) {
       if (lists.length === 0) {
-        return { ok: false, hint: 'Önce Kişiler’den bir liste oluşturun.' }
+        return { ok: false, hint: 'Önce Kişiler’den bir grup oluşturun.' }
       }
       if (accounts.length === 0) {
         return { ok: false, hint: 'Önce Hesaplar’dan bir hat bağlayın.' }
       }
-      if (selectedLists.length === 0) return { ok: false, hint: 'En az bir kişi listesi seçin.' }
-      if (selectedAccounts.length === 0) return { ok: false, hint: 'En az bir gönderen hat seçin.' }
+      if (selectedLists.length === 0) return { ok: false, hint: 'En az bir kişi grubu seçin.' }
+      if (selectedAccounts.length === 0) return { ok: false, hint: 'En az bir hat seçin.' }
       return { ok: true }
     }
     if (step === 4 && startMode === 'schedule' && !scheduledAt) {
@@ -241,7 +208,7 @@ export function NewCampaignForm({
       <Card className="overflow-visible rounded-none border-0 shadow-none">
         <CardHeader
           title="Yeni kampanya"
-          subtitle="Adım adım hazırlayın. Varsayılan: taslak — istediğinizde başlatırsınız."
+          subtitle="Dört adım: ad → mesaj → kime → gönder. Varsayılan taslak olarak kaydedilir."
         />
 
         <nav aria-label="Kampanya adımları" className="border-b border-hairline px-4 py-3">
@@ -281,7 +248,6 @@ export function NewCampaignForm({
           action={formAction}
           className="flex flex-col"
           onSubmit={(event) => {
-            // Mobil klavye Enter/Go ve tek input’lu form: adım 4’ten önce submit etme.
             if (step < 4) {
               event.preventDefault()
               goNext()
@@ -290,6 +256,11 @@ export function NewCampaignForm({
         >
           <input type="hidden" name="media_url" value={mediaUrl} />
           <input type="hidden" name="message_type" value={messageType} />
+          <input type="hidden" name="min_delay" value="8" />
+          <input type="hidden" name="max_delay" value="25" />
+          <input type="hidden" name="daily_cap" value="100" />
+          <input type="hidden" name="ab_percent" value="0" />
+          <input type="hidden" name="body_b" value="" />
           {selectedLists.map((id) => (
             <input key={`list-${id}`} type="hidden" name="lists" value={id} />
           ))}
@@ -301,7 +272,7 @@ export function NewCampaignForm({
             {step === 1 ? (
               <div className="space-y-3">
                 <p className="text-[12.5px] leading-relaxed text-ink-muted">
-                  Kampanyayı listede tanımak için kısa bir ad verin.
+                  Bu kampanyayı listede tanımak için kısa bir ad yazın.
                 </p>
                 <Field label="Kampanya adı">
                   <Input
@@ -317,7 +288,7 @@ export function NewCampaignForm({
                       event.preventDefault()
                       goNext()
                     }}
-                    placeholder="Ocak indirimi duyurusu"
+                    placeholder="Örn. Ocak indirimi"
                     required
                     autoComplete="off"
                   />
@@ -329,52 +300,16 @@ export function NewCampaignForm({
 
             {step === 2 ? (
               <div className="space-y-4">
-                <p className="text-[12.5px] leading-relaxed text-ink-muted">
-                  Alıcıya gidecek metni ve isteğe bağlı medyayı hazırlayın.
-                </p>
-
-                <Field
-                  label="Mesaj tipi"
-                  hint={
-                    mediaUrl
-                      ? 'Yüklenen dosya veya belge URL’sine göre seçilir.'
-                      : 'Görsel/video yükleyin veya belge URL’si ekleyin.'
-                  }
-                >
-                  <Select
-                    value={messageType}
-                    onChange={(event) => {
-                      const next = event.target.value as MessageType
-                      if (!mediaUrl && next !== 'text') return
-                      if (mediaUrl && next === 'text') return
-                      setMessageType(next)
-                    }}
-                  >
-                    <option value="text" disabled={Boolean(mediaUrl)}>
-                      Metin
-                    </option>
-                    <option value="image" disabled={!mediaUrl}>
-                      Görsel
-                    </option>
-                    <option value="video" disabled={!mediaUrl}>
-                      Video
-                    </option>
-                    <option value="document" disabled={!mediaUrl}>
-                      Belge
-                    </option>
-                  </Select>
-                </Field>
-
                 <Field
                   label="Mesaj"
-                  hint="{{ad}} → kişi adı. Alıcı YAZMAYIN / istemiyorum yazarsa otomatik kara listeye alınır."
+                  hint="{{ad}} kişi adıyla değişir. İstemiyorum / YAZMAYIN → gruptan çıkar."
                 >
                   <Textarea
                     name="body"
                     rows={5}
                     value={body}
                     onChange={(event) => setBody(event.target.value)}
-                    placeholder={`Merhaba {{ad}}, bu ay geçerli %20 indirimimizden haberdar etmek istedik.\n\n${OPT_OUT_FOOTER}`}
+                    placeholder={`Merhaba {{ad}}, bu ay %20 indirimimiz var.\n\n${OPT_OUT_FOOTER}`}
                   />
                 </Field>
 
@@ -383,31 +318,31 @@ export function NewCampaignForm({
                   onClick={() => setBody((current) => appendOptOutFooter(current))}
                   className="text-[12px] font-medium text-accent underline underline-offset-2"
                 >
-                  Çıkış satırı ekle (YAZMAYIN)
+                  Çıkış satırı ekle
                 </button>
 
                 <AiWriter enabled={aiEnabled} brand={brandName} onApply={setBody} />
 
                 <div className="space-y-3">
                   <span className="mb-1.5 block text-[12px] font-medium text-ink-muted">
-                    Medya (isteğe bağlı)
+                    Görsel veya video (isteğe bağlı)
                   </span>
 
                   <div className="flex flex-wrap items-center gap-3">
                     <FileUploadButton
                       accept="image/*,video/*"
                       uploading={uploading}
-                      label="Görsel / video seç"
+                      label="Dosya seç"
                       onFile={(file) => void upload(file)}
                     />
 
-                    {mediaUrl && messageType !== 'document' ? (
+                    {mediaUrl ? (
                       <span className="flex items-center gap-2 text-[11.5px] text-accent">
                         {messageType === 'image' ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={mediaUrl}
-                            alt="Kampanya medyası"
+                            alt=""
                             className="size-9 rounded border border-hairline object-cover"
                           />
                         ) : null}
@@ -420,7 +355,7 @@ export function NewCampaignForm({
                             preload="metadata"
                           />
                         ) : null}
-                        {MESSAGE_TYPE_LABELS[messageType]} hazır
+                        Eklendi
                         <button
                           type="button"
                           onClick={clearMedia}
@@ -437,43 +372,18 @@ export function NewCampaignForm({
                     brand={brandName}
                     brandKits={brandKits}
                     onApply={(url) => {
-                      setDocumentUrlDraft('')
                       setMediaUrl(url)
                       setMessageType('image')
                       setUploadError(null)
                     }}
                   />
 
-                  <Field
-                    label="Belge URL’si"
-                    hint="PDF vb. için herkese açık bağlantı. Yükleme yalnızca görsel/video."
-                  >
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Input
-                        value={documentUrlDraft}
-                        onChange={(event) => applyDocumentUrl(event.target.value)}
-                        placeholder="https://…/katalog.pdf"
-                        inputMode="url"
-                        autoComplete="off"
-                      />
-                      {documentUrlDraft ? (
-                        <button
-                          type="button"
-                          onClick={clearMedia}
-                          className="shrink-0 text-[11.5px] text-ink-muted underline underline-offset-2 hover:text-danger"
-                        >
-                          kaldır
-                        </button>
-                      ) : null}
-                    </div>
-                  </Field>
-
                   {uploadError ? <Notice tone="danger">{uploadError}</Notice> : null}
                 </div>
 
                 {messageType === 'video' && mediaUrl ? (
                   <div className="rounded-md border border-hairline bg-canvas p-3">
-                    <p className="mb-2 text-[11.5px] font-medium text-ink-faint">Alıcının göreceği</p>
+                    <p className="mb-2 text-[11.5px] font-medium text-ink-faint">Önizleme</p>
                     <video
                       src={mediaUrl}
                       controls
@@ -484,36 +394,11 @@ export function NewCampaignForm({
                       <p className="mt-2 max-w-xs whitespace-pre-wrap text-[12.5px] text-ink">
                         {preview}
                       </p>
-                    ) : (
-                      <p className="mt-2 text-[12.5px] text-ink-faint">(yalnızca video)</p>
-                    )}
+                    ) : null}
                   </div>
-                ) : null}
-
-                {messageType === 'document' && mediaUrl ? (
-                  <div className="rounded-md border border-hairline bg-canvas p-3">
-                    <p className="mb-2 text-[11.5px] font-medium text-ink-faint">Alıcının göreceği</p>
-                    <a
-                      href={mediaUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="block max-w-xs truncate text-[12.5px] text-accent underline underline-offset-2"
-                    >
-                      Belge: {mediaUrl}
-                    </a>
-                    {preview ? (
-                      <p className="mt-2 max-w-xs whitespace-pre-wrap text-[12.5px] text-ink">
-                        {preview}
-                      </p>
-                    ) : (
-                      <p className="mt-2 text-[12.5px] text-ink-faint">(yalnızca belge)</p>
-                    )}
-                  </div>
-                ) : null}
-
-                {messageType === 'text' || messageType === 'image' ? (
+                ) : (
                   <MessagePreview body={preview || undefined} mediaUrl={previewMediaForBubble} />
-                ) : null}
+                )}
               </div>
             ) : (
               <input type="hidden" name="body" value={body} />
@@ -522,11 +407,11 @@ export function NewCampaignForm({
             {step === 3 ? (
               <div className="space-y-4">
                 <p className="text-[12.5px] leading-relaxed text-ink-muted">
-                  Kimlere gideceğini ve hangi hatlardan gönderileceğini seçin.
+                  Kimlere gidecek ve hangi WhatsApp hattından gidecek?
                 </p>
 
                 <CheckboxGroup
-                  label="Kişi listeleri"
+                  label="Kişi grupları"
                   options={lists}
                   selected={selectedLists}
                   onToggle={(id) => toggleId(id, selectedLists, setSelectedLists)}
@@ -535,21 +420,14 @@ export function NewCampaignForm({
                       Önce{' '}
                       <Link href="/kisiler" className="font-medium underline underline-offset-2">
                         Kişiler
-                      </Link>{' '}
-                      sekmesinden bir liste oluşturun. Tek seferlik için{' '}
-                      <Link
-                        href="/hizli-gonderim"
-                        className="font-medium underline underline-offset-2"
-                      >
-                        Hızlı gönderim
-                      </Link>{' '}
-                      daha uygun.
+                      </Link>
+                      ’den bir grup oluşturun (Excel veya numaraları yapıştırın).
                     </>
                   }
                 />
 
                 <CheckboxGroup
-                  label="Gönderen hatlar"
+                  label="Gönderen hat"
                   options={accounts}
                   selected={selectedAccounts}
                   onToggle={(id) => toggleId(id, selectedAccounts, setSelectedAccounts)}
@@ -558,12 +436,20 @@ export function NewCampaignForm({
                       Önce{' '}
                       <Link href="/hesaplar" className="font-medium underline underline-offset-2">
                         Hesaplar
-                      </Link>{' '}
-                      üzerinden bir WhatsApp hattı bağlayın.
+                      </Link>
+                      ’dan WhatsApp hattı bağlayın.
                     </>
                   }
-                  hint="Birden fazla hat seçerseniz gönderim aralarında paylaşılır."
+                  hint="Birden fazla hat seçerseniz gönderim paylaşılır."
                 />
+
+                {selectedLists.length > 0 && estimatedTargets > 0 ? (
+                  <Notice tone="warn">
+                    Bu gruplar ~{estimatedTargets.toLocaleString('tr-TR')} numara. Kampanya
+                    başlayınca aynı sayıda kuyruk satırı oluşur (önce hepsi hazırlanır, sonra
+                    sırayla gönderilir). Aynı kişi deftere tekrar yazılmaz.
+                  </Notice>
+                ) : null}
               </div>
             ) : null}
 
@@ -573,50 +459,26 @@ export function NewCampaignForm({
                   <p>
                     <span className="font-medium text-ink">{name || 'Adsız'}</span>
                     {' · '}
-                    {selectedLists.length} liste · {selectedAccounts.length} hat
-                    {mediaUrl ? ` · ${MESSAGE_TYPE_LABELS[messageType]}` : ''}
+                    {selectedLists.length} grup · {selectedAccounts.length} hat
+                    {estimatedTargets > 0
+                      ? ` · ~${estimatedTargets.toLocaleString('tr-TR')} hedef`
+                      : ''}
+                    {mediaUrl ? ' · medya var' : ''}
                   </p>
                   {body ? (
                     <p className="mt-1 line-clamp-2 whitespace-pre-wrap text-ink-faint">{body}</p>
                   ) : null}
                 </div>
 
-                <details className="rounded-md border border-hairline px-3 py-2">
-                  <summary className="cursor-pointer text-[12px] font-medium text-ink-muted">
-                    Gelişmiş: bekleme ve günlük tavan
-                  </summary>
-                  <div className="mt-3 grid grid-cols-3 gap-3">
-                    <Field label="En kısa (sn)">
-                      <Input name="min_delay" type="number" min={3} max={600} defaultValue={8} />
-                    </Field>
-                    <Field label="En uzun (sn)">
-                      <Input name="max_delay" type="number" min={3} max={900} defaultValue={25} />
-                    </Field>
-                    <Field label="Hat / gün">
-                      <Input name="daily_cap" type="number" min={1} max={1000} defaultValue={100} />
-                    </Field>
-                  </div>
-                  <p className="mt-2 text-[11.5px] leading-relaxed text-ink-faint">
-                    Mesajlar arasında bekleme bu iki değer arasında rastgele seçilir.
-                  </p>
-                </details>
-
-                <Field
-                  label="Mesaj B (A/B, isteğe bağlı)"
-                  hint="A/B yüzdesi > 0 ise hedeflerin bir kısmı B alır."
-                >
-                  <Textarea
-                    name="body_b"
-                    rows={3}
-                    placeholder="{Merhaba|Selam} {{ad}}, kampanyamız başladı…"
-                  />
-                </Field>
-                <Field label="A/B — B yüzdesi (0–100)">
-                  <Input name="ab_percent" type="number" min={0} max={100} defaultValue={0} />
-                </Field>
+                {estimatedTargets > 0 ? (
+                  <Notice tone="warn">
+                    Başlatınca ~{estimatedTargets.toLocaleString('tr-TR')} satır kuyruk
+                    materyalize edilir. Büyük listelerde ilk hazırlık birkaç saniye sürebilir.
+                  </Notice>
+                ) : null}
 
                 <fieldset className="space-y-2 rounded-md border border-hairline px-3 py-3">
-                  <legend className="px-1 text-[12px] font-medium text-ink-muted">Başlangıç</legend>
+                  <legend className="px-1 text-[12px] font-medium text-ink-muted">Ne zaman?</legend>
                   <label className="flex items-center gap-2 text-[13px]">
                     <input
                       type="radio"
@@ -626,7 +488,7 @@ export function NewCampaignForm({
                       onChange={() => setStartMode('draft')}
                       className="accent-accent"
                     />
-                    Taslak kaydet — sonra detaydan başlat
+                    Taslak kaydet — sonra başlatırım
                   </label>
                   <label className="flex items-center gap-2 text-[13px]">
                     <input
@@ -662,10 +524,6 @@ export function NewCampaignForm({
               </div>
             ) : (
               <>
-                <input type="hidden" name="min_delay" value="8" />
-                <input type="hidden" name="max_delay" value="25" />
-                <input type="hidden" name="daily_cap" value="100" />
-                <input type="hidden" name="ab_percent" value="0" />
                 <input type="hidden" name="start_mode" value={startMode} />
                 {scheduledAt ? (
                   <input type="hidden" name="scheduled_at" value={scheduledAt} />

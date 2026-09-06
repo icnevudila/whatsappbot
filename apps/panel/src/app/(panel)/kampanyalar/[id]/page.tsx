@@ -108,6 +108,7 @@ export default async function CampaignDetailPage({
     id: list.id,
     label: list.name,
     detail: `${list.contact_count} numara`,
+    contactCount: Number(list.contact_count ?? 0),
   }))
 
   const accountOptions = (allAccountsResult.data ?? []).map((account) => {

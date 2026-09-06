@@ -21,6 +21,13 @@ export async function createCampaign(
   const body = String(formData.get('body') ?? '').trim()
   const bodyB = String(formData.get('body_b') ?? '').trim()
   const mediaUrl = String(formData.get('media_url') ?? '').trim()
+  const messageTypeRaw = String(formData.get('message_type') ?? '').trim()
+  const messageType =
+    mediaUrl && (messageTypeRaw === 'video' || messageTypeRaw === 'image')
+      ? messageTypeRaw
+      : mediaUrl
+        ? 'image'
+        : 'text'
   const listIds = [...new Set(formData.getAll('lists').map(String).filter(Boolean))]
   const accountIds = [...new Set(formData.getAll('accounts').map(String).filter(Boolean))]
   const startMode = String(formData.get('start_mode') ?? 'now').trim() || 'now'
@@ -41,9 +48,9 @@ export async function createCampaign(
   if (name.length > 160 || body.length > 4096) return { error: 'Kampanya adı 160, mesaj 4096 karakteri aşamaz.' }
 
   if (!name) return { error: 'Kampanyaya bir ad verin.' }
-  if (!body && !mediaUrl) return { error: 'Mesaj metni veya bir gorsel gerekli.' }
-  if (listIds.length === 0) return { error: 'En az bir kişi listesi seçin.' }
-  if (accountIds.length === 0) return { error: 'En az bir gönderen hesap seçin.' }
+  if (!body && !mediaUrl) return { error: 'Mesaj metni veya bir görsel gerekli.' }
+  if (listIds.length === 0) return { error: 'En az bir kişi grubu seçin.' }
+  if (accountIds.length === 0) return { error: 'En az bir gönderen hat seçin.' }
   if (minDelay > maxDelay) {
     return { error: 'En kisa bekleme, en uzun beklemeden buyuk olamaz.' }
   }
@@ -66,7 +73,7 @@ export async function createCampaign(
     supabase.from('accounts').select('id').eq('org_id', org.id).in('id', accountIds).eq('enabled', true).eq('is_locked', false),
   ])
   if (lists.error || accounts.error || lists.data?.length !== listIds.length || accounts.data?.length !== accountIds.length) {
-    return { error: 'Seçilen listeleri ve gönderime açık hatları kontrol edin.' }
+    return { error: 'Seçilen grupları ve gönderime açık hatları kontrol edin.' }
   }
 
   const schedule = startMode === 'schedule'
@@ -82,7 +89,7 @@ export async function createCampaign(
       body_b: abPercent > 0 ? bodyB || null : null,
       ab_percent: abPercent > 0 ? abPercent : 0,
       media_url: mediaUrl || null,
-      message_type: mediaUrl ? 'image' : 'text',
+      message_type: messageType,
       source_list_ids: listIds,
       min_delay_seconds: minDelay,
       max_delay_seconds: maxDelay,
@@ -188,6 +195,13 @@ export async function updateCampaign(
   const body = String(formData.get('body') ?? '').trim()
   const bodyB = String(formData.get('body_b') ?? '').trim()
   const mediaUrl = String(formData.get('media_url') ?? '').trim()
+  const messageTypeRaw = String(formData.get('message_type') ?? '').trim()
+  const messageType =
+    mediaUrl && (messageTypeRaw === 'video' || messageTypeRaw === 'image')
+      ? messageTypeRaw
+      : mediaUrl
+        ? 'image'
+        : 'text'
   const listIds = [...new Set(formData.getAll('lists').map(String).filter(Boolean))]
   const accountIds = [...new Set(formData.getAll('accounts').map(String).filter(Boolean))]
   const minDelay = Number(formData.get('min_delay') ?? 8)
@@ -208,8 +222,8 @@ export async function updateCampaign(
     return { error: 'Kampanya adı 160, mesaj 4096 karakteri aşamaz.' }
   }
   if (!body && !mediaUrl) return { error: 'Mesaj metni veya bir görsel gerekli.' }
-  if (listIds.length === 0) return { error: 'En az bir kişi listesi seçin.' }
-  if (accountIds.length === 0) return { error: 'En az bir gönderen hesap seçin.' }
+  if (listIds.length === 0) return { error: 'En az bir kişi grubu seçin.' }
+  if (accountIds.length === 0) return { error: 'En az bir gönderen hat seçin.' }
 
   let userId: string
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
@@ -246,7 +260,7 @@ export async function updateCampaign(
   if (existing.status === 'running' && (listsChanged || accountsChanged || cancelRemaining)) {
     return {
       error:
-        'Çalışırken liste / hat değişmez veya kuyruk iptal edilemez. Önce Duraklat’a basın.',
+        'Çalışırken grup / hat değişmez veya kalan gönderimler iptal edilemez. Önce Duraklat’a basın.',
     }
   }
 
@@ -255,7 +269,7 @@ export async function updateCampaign(
     supabase.from('accounts').select('id, enabled, is_locked').eq('org_id', org.id).in('id', accountIds),
   ])
   if (lists.error || accounts.error || lists.data?.length !== listIds.length) {
-    return { error: 'Seçilen listeleri kontrol edin.' }
+    return { error: 'Seçilen grupları kontrol edin.' }
   }
   if (!accounts.data || accounts.data.length !== accountIds.length) {
     return { error: 'Seçilen hatları kontrol edin.' }
@@ -276,7 +290,7 @@ export async function updateCampaign(
       body_b: abPercent > 0 ? bodyB || null : null,
       ab_percent: abPercent > 0 ? abPercent : 0,
       media_url: mediaUrl || null,
-      message_type: mediaUrl ? 'image' : 'text',
+      message_type: messageType,
       source_list_ids: listIds,
       min_delay_seconds: minDelay,
       max_delay_seconds: maxDelay,

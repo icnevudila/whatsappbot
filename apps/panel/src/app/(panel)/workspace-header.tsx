@@ -7,7 +7,7 @@ import { Button } from '@/components/ui'
 const labels: Record<string, string> = {
   ozet: 'Özet',
   durum: 'Durum',
-  hesaplar: 'WhatsApp hatları',
+  hesaplar: 'Hatlar',
   kisiler: 'Kişiler',
   kampanyalar: 'Kampanyalar',
   gelenler: 'Mesajlar',
@@ -16,8 +16,8 @@ const labels: Record<string, string> = {
   raporlar: 'Raporlar',
   ayarlar: 'Ayarlar',
   'hizli-gonderim': 'Hızlı gönderim',
-  'kara-liste': 'Kara liste',
-  'marka-kiti': 'Marka kiti',
+  'kara-liste': 'İstemeyenler',
+  'marka-kiti': 'Marka',
   kurulum: 'Kurulum',
   yardim: 'Yardım',
 }

@@ -20,15 +20,34 @@ export function isOrgAdminRole(role: string | null | undefined): boolean {
   return role === 'owner' || role === 'admin'
 }
 
-/**
- * Aktif işletme: profiles.active_org_id, yoksa kullanıcının ilk üyeliği.
- * Panel sorguları ve insert'ler bu org_id ile scoped olmalı.
- * Ayni RSC isteginde layout + sayfa tek sefer ceker (React cache).
- */
+function platformAdminEmails(): Set<string> {
+  const raw = process.env.PLATFORM_ADMIN_EMAILS ?? ''
+  return new Set(
+    raw
+      .split(',')
+      .map((part) => part.trim().toLowerCase())
+      .filter(Boolean),
+  )
+}
+
+/** JWT app_metadata.platform_admin, profiles.is_platform_admin veya PLATFORM_ADMIN_EMAILS. */
+export function resolveIsPlatformAdmin(options: {
+  email: string | null | undefined
+  jwtPlatformAdmin?: boolean
+  profileFlag?: boolean | null
+}): boolean {
+  if (options.jwtPlatformAdmin) return true
+  if (options.profileFlag) return true
+  const email = options.email?.trim().toLowerCase()
+  if (email && platformAdminEmails().has(email)) return true
+  return false
+}
+
 export const requireActiveOrg = cache(async (): Promise<{
   userId: string
   email: string | null
   org: ActiveOrg
+  isPlatformAdmin: boolean
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
 }> => {
   const supabase = await createSupabaseServerClient()
@@ -40,7 +59,7 @@ export const requireActiveOrg = cache(async (): Promise<{
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('active_org_id')
+    .select('active_org_id, is_platform_admin')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -81,9 +100,21 @@ export const requireActiveOrg = cache(async (): Promise<{
     throw new Error(orgError?.message ?? 'İşletme erişimi yok.')
   }
 
+  const jwtFlag =
+    user.app_metadata?.platform_admin === true ||
+    user.app_metadata?.platform_admin === 'true' ||
+    user.app_metadata?.platform_admin === '1'
+
+  const isPlatformAdmin = resolveIsPlatformAdmin({
+    email: user.email,
+    jwtPlatformAdmin: Boolean(jwtFlag),
+    profileFlag: (profile as { is_platform_admin?: boolean } | null)?.is_platform_admin,
+  })
+
   return {
     userId: user.id,
     email: user.email ?? null,
+    isPlatformAdmin,
     org: {
       id: org.id,
       name: org.name,
@@ -103,6 +134,12 @@ export const requireActiveOrg = cache(async (): Promise<{
     supabase,
   }
 })
+
+export async function requirePlatformAdmin() {
+  const ctx = await requireActiveOrg()
+  if (!ctx.isPlatformAdmin) throw new Error('FORBIDDEN_PLATFORM_ADMIN')
+  return ctx
+}
 
 /** Owner veya admin; aksi halde hata. */
 export async function requireOrgAdmin() {

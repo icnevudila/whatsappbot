@@ -150,4 +150,19 @@ export async function persistInboundMessage(options: {
     body: preview,
     path: phone ? `/mesajlar?tel=${encodeURIComponent(phone)}` : '/mesajlar',
   })
+
+  // Varsayilan kapali (AUTO_REPLY_ENABLED + org.auto_reply_enabled).
+  void import('./auto-reply.js')
+    .then(({ maybeEnqueueAutoReply }) =>
+      maybeEnqueueAutoReply({
+        orgId,
+        createdBy,
+        accountId,
+        phoneE164: phone,
+        body,
+      }),
+    )
+    .catch((error) => {
+      logger.warn({ err: error, accountId }, 'auto-reply: degerlendirilemedi')
+    })
 }

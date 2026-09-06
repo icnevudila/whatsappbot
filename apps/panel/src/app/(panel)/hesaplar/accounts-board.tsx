@@ -447,13 +447,32 @@ function AccountCard({
               <Button
                 variant="accent"
                 onClick={() => {
-                  run(
-                    () => syncAccountContactsAction(account.id),
-                    'Rehber içe aktarma kuyruğa alındı. WhatsApp senkronu ~1 dk sürebilir; sonra Kişiler’de görünür.',
-                  )
+                  void (async () => {
+                    const password = window.prompt(
+                      'WhatsApp rehberini çekmek için şifre girin.\n(Kişisel rehberiniz panele kopyalanır — emin değilseniz iptal edin.)',
+                    )
+                    if (password == null) return
+                    if (!password.trim()) {
+                      toast('Şifre gerekli.', 'danger')
+                      return
+                    }
+                    const ok = await confirm({
+                      title: 'Rehber içe aktarılsın mı?',
+                      description:
+                        'Bu hattın WhatsApp rehberi ve sohbet kişileri panele kopyalanır. Yanlışlıkla kişisel rehberi doldurmamak için şifre zorunludur.',
+                      confirmLabel: 'İçe aktar',
+                      cancelLabel: t('common.cancel'),
+                      tone: 'danger',
+                    })
+                    if (!ok) return
+                    run(
+                      () => syncAccountContactsAction(account.id, password),
+                      'Rehber içe aktarma kuyruğa alındı. WhatsApp senkronu ~1 dk sürebilir; sonra Kişiler’de görünür.',
+                    )
+                  })()
                 }}
                 disabled={pending}
-                title="Hatta kayıtlı WhatsApp rehberini ve sohbet kişilerini yeni bir liste olarak aktarır"
+                title="Şifre ister — WhatsApp rehberini ve sohbet kişilerini panele aktarır"
               >
                 Rehberi içe aktar
               </Button>

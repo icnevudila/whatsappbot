@@ -64,7 +64,13 @@ export function CampaignLive({
   initial: CampaignView
   sourceLists?: { id: string; name: string }[]
   accounts?: { id: string; label: string }[]
-  listOptions?: { id: string; label: string; detail?: string; disabled?: boolean }[]
+  listOptions?: {
+    id: string
+    label: string
+    detail?: string
+    disabled?: boolean
+    contactCount?: number
+  }[]
   accountOptions?: { id: string; label: string; detail?: string; disabled?: boolean }[]
   orgId: string
 }) {
@@ -72,6 +78,13 @@ export function CampaignLive({
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+
+  const estimatedFromLists = campaign.source_list_ids.reduce((sum, id) => {
+    const list = listOptions.find((item) => item.id === id)
+    return sum + (list?.contactCount ?? 0)
+  }, 0)
+  const queueHint =
+    campaign.total_targets > 0 ? campaign.total_targets : estimatedFromLists
 
   /**
    * Ilerleme kampanya satirinin kendisinde tutuluyor (sent_count vb.),
@@ -199,7 +212,7 @@ export function CampaignLive({
             <div className="space-y-1.5 border-t border-hairline pt-2.5 text-[12px] text-ink-muted">
               {sourceLists.length > 0 ? (
                 <p>
-                  <span className="text-ink-faint">Kaynak listeler: </span>
+                  <span className="text-ink-faint">Gruplar: </span>
                   {sourceLists.map((list, index) => (
                     <span key={list.id}>
                       {index > 0 ? ', ' : null}
@@ -261,31 +274,41 @@ export function CampaignLive({
 
           {campaign.status === 'running' ? (
             <Notice tone="warn">
-              Liste veya hat değiştirmek için önce <strong>Duraklat</strong>. Mesaj / hız
-              değişikliği kalan kuyruğu etkiler; gönderilmiş numaralar değişmez.
+              Grup veya hat değiştirmek için önce <strong>Duraklat</strong>. Mesaj
+              değişikliği kalan gönderimleri etkiler; gidenler değişmez.
             </Notice>
           ) : null}
 
           {campaign.status === 'paused' || campaign.status === 'stopped' ? (
             <Notice tone="accent">
-              Aşağıdan mesaj, liste ve hatları düzenleyebilirsiniz. Yanlış listedeyseniz
-              “Kalan kuyruğu iptal et”i işaretleyin.
+              Aşağıdan mesaj, grup ve hatları düzenleyebilirsiniz. Yanlış gruptaysanız
+              “Kalan gönderimleri iptal et”i işaretleyin.
             </Notice>
           ) : null}
 
           <div className="flex flex-wrap gap-1.5 border-t border-hairline pt-2.5">
             {campaign.status === 'draft' || campaign.status === 'stopped' ? (
-              <Button
-                variant="accent"
-                disabled={pending}
-                onClick={() => run(() => startCampaign(campaign.id))}
-              >
-                {pending
-                  ? 'Başlatılıyor…'
-                  : campaign.status === 'stopped'
-                    ? 'Yeniden başlat'
-                    : 'Gönderimi başlat'}
-              </Button>
+              <>
+                {queueHint > 0 ? (
+                  <div className="mb-1 w-full basis-full">
+                    <Notice tone="warn">
+                      Başlatınca ~{queueHint.toLocaleString('tr-TR')} hedef satırı kuyruğa
+                      yazılır; sonra sırayla gönderilir.
+                    </Notice>
+                  </div>
+                ) : null}
+                <Button
+                  variant="accent"
+                  disabled={pending}
+                  onClick={() => run(() => startCampaign(campaign.id))}
+                >
+                  {pending
+                    ? 'Başlatılıyor…'
+                    : campaign.status === 'stopped'
+                      ? 'Yeniden başlat'
+                      : 'Gönderimi başlat'}
+                </Button>
+              </>
             ) : null}
 
             {campaign.status === 'running' ? (

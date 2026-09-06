@@ -24,17 +24,17 @@ export function ListActions({ listId }: { listId: string }) {
     busy === 'delete' ? 'Liste siliniyor…' : 'Liste doğrulanıyor…',
   )
 
-  const runDelete = () => {
+  const runDelete = (deleteContactsToo: boolean) => {
     setError(null)
     setOk(null)
     setBusy('delete')
     startTransition(async () => {
-      const result = await deleteList(listId)
+      const result = await deleteList(listId, { deleteContactsToo })
       if (result.error) {
         setError(result.error)
         toast(result.error, 'danger')
       } else {
-        toast('Liste silindi.', 'success')
+        toast(result.ok ?? 'Grup silindi.', 'success')
       }
       setBusy(null)
     })
@@ -92,15 +92,25 @@ export function ListActions({ listId }: { listId: string }) {
             variant="danger"
             onClick={() => {
               void (async () => {
-                const okDelete = await confirm({
+                const onlyGroup = await confirm({
                   title: t('confirm.deleteListTitle'),
-                  description: t('confirm.deleteListBody'),
-                  confirmLabel: t('confirm.deleteListConfirm'),
+                  description:
+                    'Yalnız grubu siler; numaralar defterde kalır. Kişileri de silmek için sonraki soruda onaylayın.',
+                  confirmLabel: 'Yalnız grubu sil',
                   cancelLabel: t('common.cancel'),
                   tone: 'danger',
                 })
-                if (!okDelete) return
-                runDelete()
+                if (!onlyGroup) return
+
+                const withPeople = await confirm({
+                  title: 'Gruptaki kişiler de silinsin mi?',
+                  description:
+                    'Evet derseniz bu gruptaki numaralar defterden de silinir. Hayır = yalnız grup kalkar.',
+                  confirmLabel: 'Grup + kişiler',
+                  cancelLabel: 'Yalnız grup',
+                  tone: 'danger',
+                })
+                runDelete(Boolean(withPeople))
               })()
             }}
             disabled={pending}

@@ -49,11 +49,13 @@ export function Nav({
   showSetup = false,
   onboardingLock = false,
   orientation = 'vertical',
+  isPlatformAdmin = false,
 }: {
   showSetup?: boolean
-  /** true iken menü yalnız kurulum yollarını gösterir. */
   onboardingLock?: boolean
   orientation?: 'vertical' | 'horizontal'
+  /** Süper admin: Durum / Raporlar / Admin. */
+  isPlatformAdmin?: boolean
 }) {
   const pathname = usePathname()
   const t = useT()
@@ -83,51 +85,53 @@ export function Nav({
         },
       ]
     }
-    return [
-      {
-        id: 'ops',
-        label: t('nav.groupOps'),
-        items: [
-          { href: '/ozet', label: t('nav.ozet'), icon: 'overview' as const },
-          { href: '/hesaplar', label: t('nav.hesaplar'), icon: 'phone' as const },
-          { href: '/hizli-gonderim', label: t('nav.hizli'), icon: 'send' as const },
-          { href: '/kisiler', label: t('nav.kisiler'), icon: 'people' as const },
-          { href: '/kampanyalar', label: t('nav.kampanyalar'), icon: 'campaign' as const },
-        ] as NavItem[],
-      },
-      {
-        id: 'inbox',
-        label: t('nav.groupInbox'),
-        items: [
-          { href: '/mesajlar', label: t('nav.mesajlar'), icon: 'inbox' as const },
-          { href: '/kara-liste', label: t('nav.karaListe'), icon: 'shield' as const },
-        ] as NavItem[],
-      },
-      {
-        id: 'watch',
-        label: t('nav.groupWatch'),
-        items: [
-          { href: '/durum', label: t('nav.durum'), icon: 'activity' as const },
-          { href: '/raporlar', label: t('nav.raporlar'), icon: 'chart' as const },
-        ] as NavItem[],
-      },
-      {
-        id: 'system',
-        label: t('nav.groupSystem'),
-        items: [
-          { href: '/marka-kiti', label: t('nav.marka'), icon: 'brand' as const },
-          { href: '/ayarlar', label: t('nav.ayarlar'), icon: 'settings' as const },
-          { href: '/yardim', label: t('nav.yardim'), icon: 'help' as const },
-        ] as NavItem[],
-      },
+
+    const main: NavItem[] = [
+      { href: '/ozet', label: t('nav.ozet'), icon: 'overview' },
+      { href: '/kampanyalar', label: t('nav.kampanyalar'), icon: 'campaign' },
+      { href: '/kisiler', label: t('nav.kisiler'), icon: 'people' },
+      { href: '/hesaplar', label: t('nav.hesaplar'), icon: 'phone' },
+      { href: '/mesajlar', label: t('nav.mesajlar'), icon: 'inbox' },
+      { href: '/marka-kiti', label: t('nav.markaShort'), icon: 'brand' },
     ]
-  }, [onboardingLock, t])
+
+    const more: NavItem[] = [
+      { href: '/hizli-gonderim', label: t('nav.hizli'), icon: 'send' },
+      { href: '/kara-liste', label: t('nav.karaListe'), icon: 'shield' },
+      { href: '/ayarlar', label: t('nav.ayarlar'), icon: 'settings' },
+      { href: '/yardim', label: t('nav.yardim'), icon: 'help' },
+    ]
+
+    if (isPlatformAdmin) {
+      more.unshift(
+        { href: '/admin', label: 'Admin', icon: 'settings' },
+        { href: '/durum', label: t('nav.durum'), icon: 'activity' },
+        { href: '/raporlar', label: t('nav.raporlar'), icon: 'chart' },
+      )
+    }
+
+    return [
+      { id: 'main', label: 'İşler', items: main },
+      { id: 'more', label: t('nav.groupMore'), items: more },
+    ]
+  }, [onboardingLock, isPlatformAdmin, t])
 
   const setupItem =
     showSetup && !onboardingLock
       ? ({ href: '/kurulum', label: t('nav.kurulum'), icon: 'steps' as const } as const)
       : null
-  const flat = groups.flatMap((g) => g.items)
+
+  /** Mobil: yalnız ana işler + ayarlar — 3dk yol. */
+  const flat = useMemo(() => {
+    if (orientation === 'horizontal' && !onboardingLock) {
+      const main = groups.find((g) => g.id === 'main')?.items ?? []
+      return [
+        ...main,
+        { href: '/ayarlar', label: t('nav.ayarlar'), icon: 'settings' as const },
+      ] as NavItem[]
+    }
+    return groups.flatMap((g) => g.items)
+  }, [groups, onboardingLock, orientation, t])
 
   useEffect(() => {
     if (orientation !== 'horizontal') return

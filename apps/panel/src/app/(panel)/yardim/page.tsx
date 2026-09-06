@@ -1,10 +1,8 @@
 import Link from 'next/link'
 import { Card, CardHeader, PageHeader, QuietLink } from '@/components/ui'
 import { Icon, type IconName } from '@/components/icon'
-import { createT } from '@/lib/i18n'
-import { getDictionary } from '@/lib/i18n/server'
 
-export const metadata = { title: 'Yardım merkezi' }
+export const metadata = { title: 'Yardım' }
 
 const guides: {
   icon: IconName
@@ -15,130 +13,117 @@ const guides: {
 }[] = [
   {
     icon: 'phone',
-    title: 'WhatsApp hattını bağlama',
+    title: '1. WhatsApp hattını bağla',
     href: '/hesaplar',
     tint: 'bg-ok-soft/45',
     steps: [
-      'WhatsApp hatları ekranında yeni bir hat oluşturun.',
-      'QR kodunu telefonunuzdaki Bağlı cihazlar bölümünden okutun veya telefon koduyla eşleştirin.',
-      'Durum “Bağlı” olduğunda hattınızı gönderim için seçebilirsiniz. Süresi dolan QR için yeniden bağlanın.',
+      'Hatlar’da yeni hat ekle.',
+      'Telefondaki WhatsApp → Bağlı cihazlar → QR okut.',
+      'Durum “Bağlı” olunca gönderime hazırsın.',
     ],
   },
   {
     icon: 'people',
-    title: 'Kişileri hazırlama',
+    title: '2. Kişi grubu ekle',
     href: '/kisiler',
     tint: 'bg-accent-soft/55',
     steps: [
-      'CSV yükleyin veya numaraları satır satır yapıştırın. İsim eklemek için numaradan sonra virgül kullanabilirsiniz.',
-      'Ülke kodu olmayan Türkiye numaraları +90 ile düzenlenir. Tekrarlanan numaralar ayıklanır.',
-      'Doğrulama için bağlı hat gerekir. WhatsApp kaydı iletişim izni yerine geçmez.',
+      'Excel / CSV yükle veya numaraları yapıştır.',
+      'Gruba bir ad ver (ör. Mahalle müşterileri).',
+      'Kampanyada bu grubu seçeceksin.',
     ],
   },
   {
     icon: 'campaign',
-    title: 'Kampanya gönderme',
+    title: '3. Kampanya gönder',
     href: '/kampanyalar',
     tint: 'bg-accent-soft/40',
     steps: [
-      'Kampanya adını ve mesajı yazın; gerekirse görsel yükleyin.',
-      'Kişi listelerini ve gönderici hatları seçin. {{ad}} ifadesi kişi adıyla doldurulur.',
-      'Başlattıktan sonra gönderildi, atlandı ve başarısız sonuçlarını kampanya ayrıntısından izleyin. Duraklatma sürmekte olan tek mesajı geri almaz.',
+      'Mesajı yaz; istersen görsel ekle.',
+      'Kişi grubunu ve hattı seç.',
+      'Hemen gönder veya taslak kaydet. İlerlemeyi kampanya sayfasından izle.',
     ],
   },
   {
     icon: 'inbox',
-    title: 'Yanıtları yönetme',
+    title: 'Cevapları oku',
     href: '/mesajlar',
     tint: 'bg-ok-soft/55',
     steps: [
-      'Gelen kutusunda bir konuşma seçin; tam geçmişi veya yalnız gelen mesajları görün.',
-      'Yanıtınızı yazıp gönderin. İşlem sıraya alınır; sonucu konuşmanın altında gösterilir.',
-      'İletişim istemeyen kişiyi kara listeye alın. Bu numara sonraki gönderimlerden çıkarılır.',
+      'Mesajlar’da gelen cevapları aç.',
+      'İstersen oradan yanıtla.',
+      'İstemiyorum / YAZMAYIN yazanları İstemeyenler’e al — bir daha gitmez.',
     ],
   },
 ]
 
 const faqs: [string, string][] = [
   [
-    'Gönderim kuyrukta bekliyor',
-    'Bağlı ve gönderime açık bir hat olduğunu kontrol edin. Günlük kota dolmuş, bekleme aralığı sürüyor veya servis geçici olarak yanıt vermiyor olabilir. Genel bakıştaki hat ve kuyruk durumuna bakın.',
+    'Mesaj gitmiyor',
+    'Hat “Bağlı” mı bak. Günlük limit dolmuş olabilir. Kampanyayı açıp hata satırına bak.',
   ],
   [
-    'Gönderim sonucu belirsiz',
-    'Bağlantı gönderim sırasında kesilmiş olabilir. Çift mesajı önlemek için otomatik tekrar yapılmaz. Yeniden göndermeden önce telefonunuzdaki konuşmayı kontrol edin.',
+    'Çift mesaj korkusu',
+    'Bağlantı kopunca otomatik tekrar yok. Telefondan konuşmayı kontrol et, gerekirse yeniden gönder.',
   ],
   [
     'Şifremi unuttum',
-    'Giriş ekranındaki “Şifremi unuttum” bağlantısıyla e-posta isteyin. Bağlantıyı aynı tarayıcıda açın. Spam klasörünü kontrol edin; eski bağlantı yerine en son gönderileni kullanın.',
-  ],
-  [
-    'Görsel veya metin üretimi açık değil',
-    'Yapay zekâ özellikleri sunucu yapılandırmasına bağlıdır. Ayarlar’dan kullanılabilir özellikleri kontrol edin. Marka şablonları ve kendi görselinizi yükleme ayrı seçeneklerdir.',
+    'Girişteki “Şifremi unuttum” ile e-posta iste. Spam’i de kontrol et.',
   ],
 ]
 
-export default async function HelpPage() {
-  const { messages } = await getDictionary()
-  const t = createT(messages)
-
+export default function YardimPage() {
   return (
     <>
       <PageHeader
-        title={t('pages.yardimTitle')}
-        description="İlk bağlantıdan günlük kullanıma, ihtiyacınız olan adımlar."
+        title="Nasıl yapılır?"
+        description="Dönerci de bu üç adımı izler: hat → kişiler → gönder."
       />
 
-      <div className="grid gap-2.5 lg:grid-cols-2">
+      <div className="grid gap-2.5 sm:grid-cols-2">
         {guides.map((guide) => (
-          <Card key={guide.title} className={guide.tint}>
+          <Card key={guide.href}>
             <CardHeader
               title={
-                <span className="flex items-center gap-2.5">
-                  <span className="flex size-8 items-center justify-center rounded-[var(--radius-sm)] border border-hairline bg-surface text-accent">
+                <span className="flex items-center gap-2">
+                  <span
+                    className={`inline-flex size-8 items-center justify-center rounded-md ${guide.tint}`}
+                  >
                     <Icon name={guide.icon} className="size-4" />
                   </span>
                   {guide.title}
                 </span>
               }
+              action={<QuietLink href={guide.href}>Aç →</QuietLink>}
             />
-            <ol className="space-y-2.5 p-3.5">
-              {guide.steps.map((step, i) => (
-                <li key={step} className="flex gap-2.5 text-[12.5px] leading-relaxed text-ink-muted">
-                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-surface font-mono text-[11px] text-accent">
-                    {i + 1}
-                  </span>
-                  <span>{step}</span>
-                </li>
+            <ol className="list-decimal space-y-1.5 px-3.5 pb-3.5 pl-8 text-[12.5px] leading-snug text-ink-muted">
+              {guide.steps.map((step) => (
+                <li key={step}>{step}</li>
               ))}
             </ol>
-            <div className="px-3.5 pb-3.5">
-              <QuietLink href={guide.href}>İlgili ekrana git →</QuietLink>
-            </div>
           </Card>
         ))}
       </div>
 
-      <div className="mt-4">
-        <h2 className="mb-2.5 text-[15px] font-semibold">Bir şey beklediğiniz gibi çalışmıyor mu?</h2>
-        {faqs.map(([q, a]) => (
-          <details key={q} className="border-b border-hairline">
-            <summary className="cursor-pointer py-2.5 text-[13px] font-medium">{q}</summary>
-            <p className="max-w-3xl pb-3.5 text-[12.5px] leading-relaxed text-ink-muted">{a}</p>
-          </details>
-        ))}
-        <p className="mt-4 text-[12.5px] text-ink-muted">
-          Sorun sürerse{' '}
-          <a href="mailto:destek@filo.app" className="font-medium text-accent underline">
-            destek@filo.app
-          </a>{' '}
-          adresine yazın veya{' '}
-          <Link href="/durum" className="text-accent underline">
-            genel bakışı açın
-          </Link>
-          .
-        </p>
-      </div>
+      <Card className="mt-2.5">
+        <CardHeader title="Sık sorulanlar" />
+        <dl className="divide-y divide-hairline">
+          {faqs.map(([q, a]) => (
+            <div key={q} className="px-3.5 py-3">
+              <dt className="text-[13px] font-semibold text-ink">{q}</dt>
+              <dd className="mt-1 text-[12.5px] leading-relaxed text-ink-muted">{a}</dd>
+            </div>
+          ))}
+        </dl>
+      </Card>
+
+      <p className="mt-3 text-center text-[12px] text-ink-faint">
+        Takılırsan{' '}
+        <Link href="/ayarlar" className="underline underline-offset-2">
+          Ayarlar
+        </Link>
+        ’dan bize yaz.
+      </p>
     </>
   )
 }

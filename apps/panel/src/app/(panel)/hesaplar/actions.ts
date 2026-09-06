@@ -145,10 +145,21 @@ export async function removeAccount(accountId: string): Promise<ActionState> {
   }
 }
 
+/** WhatsApp rehberinden çekme — yanlışlıkla kişisel rehberi boşaltmamak için şifre. */
+function expectedRehberPassword(): string {
+  return (process.env.REHBER_SYNC_PASSWORD ?? 'filo-rehber').trim()
+}
+
 export async function syncAccountContactsAction(
   accountId: string,
+  password: string,
   listName?: string,
 ): Promise<ActionState> {
+  const expected = expectedRehberPassword()
+  if (!password.trim() || password.trim() !== expected) {
+    return { error: 'Rehber şifresi hatalı. İçe aktarma iptal edildi.' }
+  }
+
   const { error } = await enqueueJob({
     type: 'account.sync_contacts',
     accountId,
@@ -160,7 +171,7 @@ export async function syncAccountContactsAction(
   revalidateAccounts()
   revalidatePath('/kisiler')
   return {
-    ok: 'Rehber içe aktarma kuyruğa alındı. WhatsApp senkronu ~1 dk sürebilir; sonra Kişiler’de listede görünür.',
+    ok: 'Rehber içe aktarma kuyruğa alındı. WhatsApp senkronu ~1 dk sürebilir; sonra Kişiler’de görünür.',
   }
 }
 
