@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { Icon, iconForHref, type IconName } from '@/components/icon'
 import { useT } from '@/lib/i18n/provider'
 
@@ -19,6 +19,7 @@ function NavLink({
   active,
   className,
   onNavigate,
+  linkRef,
 }: {
   href: string
   label: string
@@ -26,10 +27,12 @@ function NavLink({
   active: boolean
   className?: string
   onNavigate?: () => void
+  linkRef?: (el: HTMLAnchorElement | null) => void
 }) {
   const iconName = icon ?? iconForHref(href)
   return (
     <Link
+      ref={linkRef}
       href={href}
       prefetch
       aria-current={active ? 'page' : undefined}
@@ -54,6 +57,8 @@ export function Nav({
 }) {
   const pathname = usePathname()
   const t = useT()
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const activeRef = useRef<HTMLAnchorElement | null>(null)
 
   const groups = useMemo(() => {
     if (onboardingLock) {
@@ -125,9 +130,19 @@ export function Nav({
       : null
   const flat = groups.flatMap((g) => g.items)
 
+  useEffect(() => {
+    if (orientation !== 'horizontal') return
+    const el = activeRef.current
+    if (!el) return
+    el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+  }, [pathname, orientation])
+
   if (orientation === 'horizontal') {
     return (
-      <div className="min-w-0 w-full overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div
+        ref={scrollRef}
+        className="min-w-0 w-full overflow-x-auto scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
         <nav
           className="flex w-max flex-row items-center gap-0.5 pr-1"
           aria-label={t('nav.aria')}
@@ -138,23 +153,30 @@ export function Nav({
               label={setupItem.label}
               icon={setupItem.icon}
               active={isActive(pathname, setupItem.href)}
+              linkRef={(node) => {
+                if (isActive(pathname, setupItem.href)) activeRef.current = node
+              }}
               className={`wb-rail-link whitespace-nowrap${
                 isActive(pathname, setupItem.href) ? ' is-active' : ''
               }`}
             />
           ) : null}
-          {flat.map((item) => (
-            <NavLink
-              key={item.href}
-              href={item.href}
-              label={item.label}
-              icon={item.icon}
-              active={isActive(pathname, item.href)}
-              className={`wb-rail-link whitespace-nowrap${
-                isActive(pathname, item.href) ? ' is-active' : ''
-              }`}
-            />
-          ))}
+          {flat.map((item) => {
+            const active = isActive(pathname, item.href)
+            return (
+              <NavLink
+                key={item.href}
+                href={item.href}
+                label={item.label}
+                icon={item.icon}
+                active={active}
+                linkRef={(node) => {
+                  if (active) activeRef.current = node
+                }}
+                className={`wb-rail-link whitespace-nowrap${active ? ' is-active' : ''}`}
+              />
+            )
+          })}
         </nav>
       </div>
     )

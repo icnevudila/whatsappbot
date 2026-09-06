@@ -30,7 +30,13 @@ export type GalleryCreative = {
   format: string | null
 }
 
-export function CreativeGallery({ creatives }: { creatives: GalleryCreative[] }) {
+export function CreativeGallery({
+  creatives,
+  canDelete = true,
+}: {
+  creatives: GalleryCreative[]
+  canDelete?: boolean
+}) {
   const router = useRouter()
   const confirm = useConfirm()
   const toast = useToast()
@@ -105,15 +111,17 @@ export function CreativeGallery({ creatives }: { creatives: GalleryCreative[] })
                     Gönderimde kullan
                   </Link>
                 ) : null}
-                <Button
-                  type="button"
-                  variant="danger"
-                  className="h-7 w-full text-[11.5px]"
-                  disabled={deleting}
-                  onClick={() => remove(creative.id)}
-                >
-                  {deleting ? 'Siliniyor…' : t('common.delete')}
-                </Button>
+                {canDelete ? (
+                  <Button
+                    type="button"
+                    variant="danger"
+                    className="h-7 w-full text-[11.5px]"
+                    disabled={deleting}
+                    onClick={() => remove(creative.id)}
+                  >
+                    {deleting ? 'Siliniyor…' : t('common.delete')}
+                  </Button>
+                ) : null}
               </div>
             </div>
           </div>

@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { toE164 } from '@wa/shared'
 import { enqueueJob } from '@/lib/jobs'
-import { requireActiveOrg } from '@/lib/org'
+import { isOrgAdminRole, requireActiveOrg } from '@/lib/org'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export type ActionState = { error?: string; ok?: string } | null
@@ -123,6 +123,9 @@ export async function requestPairingCode(
 export async function removeAccount(accountId: string): Promise<ActionState> {
   try {
     const { org, supabase } = await requireActiveOrg()
+    if (!isOrgAdminRole(org.role)) {
+      return { error: 'Hattı yalnızca sahip veya yönetici silebilir.' }
+    }
 
     // Once servise cikis komutu birakiliyor: satir silinince cascade ile
     // wa.creds de gider, ama WhatsApp tarafinda cihaz bagli kalirdi.

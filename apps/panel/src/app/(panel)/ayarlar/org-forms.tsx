@@ -310,7 +310,13 @@ export function MembersPanel({
   )
 }
 
-export function DeleteOrganizationForm({ orgName }: { orgName: string }) {
+export function DeleteOrganizationForm({
+  orgName,
+  hasStripeSubscription,
+}: {
+  orgName: string
+  hasStripeSubscription?: boolean
+}) {
   const [state, formAction, pending] = useActionState<OrgActionState, FormData>(
     deleteOrganization,
     null,
@@ -320,7 +326,9 @@ export function DeleteOrganizationForm({ orgName }: { orgName: string }) {
     <form action={formAction} className="space-y-2.5 p-3.5">
       <p className="text-[12.5px] leading-relaxed text-ink-muted">
         Bu işlem geri alınamaz: hatlar, kişiler, kampanyalar ve mesaj kayıtları silinir.
-        Aktif Stripe aboneliğiniz varsa önce Ayarlar’daki müşteri portalından iptal edin.
+        {hasStripeSubscription
+          ? ' Aktif Stripe aboneliğiniz varsa silmeden önce otomatik iptal denenir; başarısız olursa Stripe Portal’dan kontrol edin.'
+          : ' Ücretli aboneliğiniz varsa önce müşteri portalından iptal etmeniz önerilir.'}
       </p>
       <Field
         label="Onay"

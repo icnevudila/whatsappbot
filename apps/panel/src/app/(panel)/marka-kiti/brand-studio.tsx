@@ -49,6 +49,7 @@ export function BrandStudio({
   brandKitId,
   orgId,
   hasSavedKit = false,
+  canEdit = true,
 }: {
   initialName: string
   initialColors: BrandColors
@@ -56,6 +57,7 @@ export function BrandStudio({
   brandKitId: string | null
   orgId: string
   hasSavedKit?: boolean
+  canEdit?: boolean
 }) {
   const [state, formAction, saving] = useActionState<BrandKitState, FormData>(
     saveBrandKit,
@@ -260,9 +262,15 @@ export function BrandStudio({
             {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
             {state?.ok ? <Notice tone="accent">{state.ok}</Notice> : null}
 
-            <Button type="submit" variant="accent" disabled={saving}>
-              {saving ? 'Kaydediliyor…' : 'Marka kitini kaydet'}
-            </Button>
+            {canEdit ? (
+              <Button type="submit" variant="accent" disabled={saving}>
+                {saving ? 'Kaydediliyor…' : 'Marka kitini kaydet'}
+              </Button>
+            ) : (
+              <Notice tone="warn">
+                Marka kitini kaydetmek için sahip veya yönetici olmanız gerekir.
+              </Notice>
+            )}
           </form>
         </Card>
 

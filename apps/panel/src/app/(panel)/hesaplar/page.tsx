@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { AccentLink, PageHeader, QuietLink } from '@/components/ui'
 import { createT } from '@/lib/i18n'
 import { getDictionary } from '@/lib/i18n/server'
-import { requireActiveOrg } from '@/lib/org'
+import { requireActiveOrg, isOrgAdminRole } from '@/lib/org'
 import { getSetupProgress } from '@/lib/setup-progress'
 import { SetupBanner } from '../setup-banner'
 import { AccountsBoard, type AccountView } from './accounts-board'
@@ -59,6 +59,7 @@ export default async function AccountsPage() {
         initial={accounts}
         orgId={org.id}
         accountsQuota={org.accounts_quota}
+        canManage={isOrgAdminRole(org.role)}
       />
     </>
   )

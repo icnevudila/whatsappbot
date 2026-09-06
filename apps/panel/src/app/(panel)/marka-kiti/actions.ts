@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { requireActiveOrg } from '@/lib/org'
+import { isOrgAdminRole, requireActiveOrg } from '@/lib/org'
 import { DEFAULT_COLORS } from '@/lib/creative-templates'
 
 export type BrandKitState = { error?: string; ok?: string } | null
@@ -33,6 +33,10 @@ export async function saveBrandKit(
     ;({ userId, org, supabase } = await requireActiveOrg())
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
+  }
+
+  if (!isOrgAdminRole(org.role)) {
+    return { error: 'Marka kitini yalnızca sahip veya yönetici kaydedebilir.' }
   }
 
   const { data: existing } = await supabase
@@ -77,6 +81,10 @@ export async function deleteCreative(id: string): Promise<{ error?: string }> {
     ;({ org, supabase } = await requireActiveOrg())
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
+  }
+
+  if (!isOrgAdminRole(org.role)) {
+    return { error: 'Görseli yalnızca sahip veya yönetici silebilir.' }
   }
 
   const { data: creative } = await supabase

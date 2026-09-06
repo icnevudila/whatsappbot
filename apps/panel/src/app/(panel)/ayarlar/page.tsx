@@ -301,7 +301,10 @@ export default async function SettingsPage({
                 title="Tehlikeli bölge"
                 subtitle="İşletmeyi kalıcı olarak siler — geri alınamaz."
               />
-              <DeleteOrganizationForm orgName={org.name} />
+              <DeleteOrganizationForm
+                orgName={org.name}
+                hasStripeSubscription={Boolean(org.stripe_subscription_id)}
+              />
             </Card>
           ) : null}
 

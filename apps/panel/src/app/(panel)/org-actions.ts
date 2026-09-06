@@ -5,10 +5,8 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { requireActiveOrg } from '@/lib/org'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
-import {
-  createSupabaseServiceClient,
-  siteOriginFromEnv,
-} from '@/lib/supabase/service'
+import { createSupabaseServiceClient, siteOriginFromEnv } from '@/lib/supabase/service'
+import { cancelStripeSubscription } from '@/lib/stripe-cancel'
 
 export type OrgActionState = {
   error?: string
@@ -344,6 +342,14 @@ export async function deleteOrganization(
     const { org, supabase } = await requireActiveOrg()
     if (org.role !== 'owner') {
       return { error: 'Yalnızca sahip işletmeyi silebilir.' }
+    }
+
+    const subId = org.stripe_subscription_id?.trim()
+    if (subId) {
+      const cancelled = await cancelStripeSubscription(subId)
+      if (!cancelled.ok) {
+        console.warn('[deleteOrganization] stripe cancel failed', cancelled.error)
+      }
     }
 
     const { error } = await supabase.rpc('delete_organization', {

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { BRAND_NAME } from '@/components/brand'
+import { LEGAL_CONTACT, legalEntityName } from '@/lib/legal'
 
 export const metadata: Metadata = {
   title: 'KVKK aydınlatma metni',
@@ -7,11 +8,10 @@ export const metadata: Metadata = {
 }
 
 const UPDATED_AT = '6 Eylül 2026'
-const CONTACT_EMAIL = 'kvkk@filo.app'
-/** Yasal ünvan go-live’da güncellenir — docs/SELLABLE-GO-LIVE.md */
-const CONTROLLER_PLACEHOLDER = 'Filo Platform İşletmecisi (ünvan güncellenecek)'
 
 export default function KvkkPage() {
+  const controller = legalEntityName()
+
   return (
     <article className="mx-auto max-w-2xl px-5 py-16 filo-fade-in">
       <h1 className="text-[28px] font-semibold tracking-[-0.025em]">KVKK aydınlatma metni</h1>
@@ -21,10 +21,8 @@ export default function KvkkPage() {
         <Section title="Veri sorumlusu">
           <p>
             Platform işletmecisi bakımından veri sorumlusu:{' '}
-            <strong className="font-medium text-ink">
-              Veri sorumlusu: {CONTROLLER_PLACEHOLDER}
-            </strong>
-            . Başvurular için: {CONTACT_EMAIL}.
+            <strong className="font-medium text-ink">{controller}</strong>. Başvurular için:{' '}
+            {LEGAL_CONTACT.kvkk}.
           </p>
           <p>
             Panele yüklediğiniz alıcı listeleri bakımından{' '}
@@ -66,14 +64,15 @@ export default function KvkkPage() {
             Veriler hesabınız ve bağlı işletmeniz aktif olduğu sürece saklanır. Panelden tek tek
             kişi listesi veya kampanya silebilirsiniz. İşletme veya hesabınız kapatıldığında bağlı
             kişi listeleri, kampanya kayıtları, mesaj logları ve WhatsApp oturum anahtarları kalıcı
-            olarak silinir veya erişilemez hale getirilir.
+            olarak silinir veya erişilemez hale getirilir. Aktif bir ücretli abonelik varsa işletme
+            silinmeden önce mümkünse Stripe aboneliği iptal edilir.
           </p>
         </Section>
 
         <Section title="Haklarınız">
           <p>
-            KVKK 11. madde kapsamındaki haklarınızı kullanmak için {CONTACT_EMAIL} adresine yazın.
-            Talepleriniz en geç otuz gün içinde sonuçlandırılır.
+            KVKK 11. madde kapsamındaki haklarınızı kullanmak için {LEGAL_CONTACT.kvkk} adresine
+            yazın. Talepleriniz en geç otuz gün içinde sonuçlandırılır.
           </p>
         </Section>
       </div>

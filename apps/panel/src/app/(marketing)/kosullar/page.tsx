@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { BRAND_NAME } from '@/components/brand'
+import { LEGAL_CONTACT, legalEntityName } from '@/lib/legal'
 
 export const metadata: Metadata = {
   title: 'Kullanım koşulları',
@@ -7,11 +8,10 @@ export const metadata: Metadata = {
 }
 
 const UPDATED_AT = '6 Eylül 2026'
-const CONTACT_EMAIL = 'destek@filo.app'
-/** Yasal ünvan go-live’da güncellenir — docs/SELLABLE-GO-LIVE.md */
-const OPERATOR_PLACEHOLDER = 'Filo Platform İşletmecisi (ünvan güncellenecek)'
 
 export default function TermsPage() {
+  const operator = legalEntityName()
+
   return (
     <article className="mx-auto max-w-2xl px-5 py-16 filo-fade-in">
       <h1 className="text-[28px] font-semibold tracking-[-0.025em]">Kullanım koşulları</h1>
@@ -20,8 +20,8 @@ export default function TermsPage() {
       <div className="mt-8 flex flex-col gap-7 text-[13.5px] leading-relaxed text-ink-muted">
         <Section title="Hizmet sağlayıcı">
           <p>
-            Bu koşullar {BRAND_NAME} hizmetini sunan {OPERATOR_PLACEHOLDER} ile kullanıcı arasında
-            geçerlidir. İletişim: {CONTACT_EMAIL}.
+            Bu koşullar {BRAND_NAME} hizmetini sunan {operator} ile kullanıcı arasında geçerlidir.
+            İletişim: {LEGAL_CONTACT.support}.
           </p>
         </Section>
 
@@ -52,11 +52,10 @@ export default function TermsPage() {
 
         <Section title="Ödeme ve iptal">
           <p>
-            Deneme sürümü yedi gün süreyle ücretsizdir ve kredi kartı gerektirmez; süre sonunda
-            otomatik ücretlendirme yapılmaz. Ücretli paketler aylık olarak faturalanır ve istediğiniz
-            zaman iptal edilebilir. İptal durumunda kalan süre sonuna kadar hizmet devam eder.
-            Ödeme altyapısı yapılandırılmamış ortamlarda yükseltme kapalıdır; fiyatlar bilgilendirme
-            amaçlıdır.
+            Ücretsiz paket sınırlı kota ile sunulur. Ücretli paketler Stripe üzerinden aylık
+            faturalanır; Ayarlar’daki müşteri portalından veya işletme silme sırasında abonelik
+            iptal edilebilir. İptal durumunda dönem sonuna kadar hizmet devam edebilir. Ödeme
+            altyapısı yapılandırılmamış ortamlarda yükseltme kapalıdır.
           </p>
         </Section>
 

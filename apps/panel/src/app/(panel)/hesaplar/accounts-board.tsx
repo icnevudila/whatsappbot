@@ -60,10 +60,13 @@ export function AccountsBoard({
   initial,
   orgId,
   accountsQuota,
+  canManage = true,
 }: {
   initial: AccountView[]
   orgId: string
   accountsQuota: number
+  /** false ise hat silme gizli (üye). */
+  canManage?: boolean
 }) {
   // Sunucu revalidate ettiginde tazelensin, Realtime olaylari da uzerine yazsin.
   const [accounts, setAccounts] = useServerSyncedState(initial)
@@ -222,7 +225,7 @@ export function AccountsBoard({
       ) : (
         <div className="space-y-2.5">
           {accounts.map((account) => (
-            <AccountCard key={account.id} account={account} />
+            <AccountCard key={account.id} account={account} canManage={canManage} />
           ))}
         </div>
       )}
@@ -281,7 +284,13 @@ function NewAccountForm({ remaining, atCap }: { remaining: number; atCap: boolea
   )
 }
 
-function AccountCard({ account }: { account: AccountView }) {
+function AccountCard({
+  account,
+  canManage = true,
+}: {
+  account: AccountView
+  canManage?: boolean
+}) {
   const confirm = useConfirm()
   const toast = useToast()
   const t = useT()
@@ -393,25 +402,27 @@ function AccountCard({ account }: { account: AccountView }) {
             WhatsApp’tan çıkar
           </Button>
 
-          <Button
-            variant="danger"
-            onClick={() => {
-              void (async () => {
-                const ok = await confirm({
-                  title: t('confirm.deleteLineTitle'),
-                  description: t('confirm.deleteLineBody'),
-                  confirmLabel: t('confirm.deleteLineConfirm'),
-                  cancelLabel: t('common.cancel'),
-                  tone: 'danger',
-                })
-                if (!ok) return
-                run(() => removeAccount(account.id), 'Hat silindi.')
-              })()
-            }}
-            disabled={pending}
-          >
-            {t('common.delete')}
-          </Button>
+          {canManage ? (
+            <Button
+              variant="danger"
+              onClick={() => {
+                void (async () => {
+                  const ok = await confirm({
+                    title: t('confirm.deleteLineTitle'),
+                    description: t('confirm.deleteLineBody'),
+                    confirmLabel: t('confirm.deleteLineConfirm'),
+                    cancelLabel: t('common.cancel'),
+                    tone: 'danger',
+                  })
+                  if (!ok) return
+                  run(() => removeAccount(account.id), 'Hat silindi.')
+                })()
+              }}
+              disabled={pending}
+            >
+              {t('common.delete')}
+            </Button>
+          ) : null}
         </div>
       </div>
 

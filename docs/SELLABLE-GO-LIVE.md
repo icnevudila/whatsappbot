@@ -49,7 +49,8 @@ Worker (Hetzner):
 
 ## 4) Yasal
 
-- [ ] [`/kvkk`](apps/panel/src/app/(marketing)/kvkk/page.tsx) ve [`/kosullar`](apps/panel/src/app/(marketing)/kosullar/page.tsx) şirket ünvanı güncel
+- [ ] `NEXT_PUBLIC_LEGAL_ENTITY_NAME` Vercel’de gerçek şirket ünvanı
+- [ ] [`/kvkk`](apps/panel/src/app/(marketing)/kvkk/page.tsx) ve [`/kosullar`](apps/panel/src/app/(marketing)/kosullar/page.tsx) ünvanı env’den okur
 - [ ] Destek: `destek@filo.app` (Yardım + footer)
 
 ## 5) Bilinçli sınırlar (sonraki sprint)
@@ -57,23 +58,27 @@ Worker (Hetzner):
 - MFA / SSO
 - Dağıtık rate limit (Upstash)
 - Audit log
-- `member` RBAC yazma kısıtı (şu an admin/owner yazma; member salt okuma çoğu yerde UI’da)
-- DPA / şirket ünvanı metni
+- DPA metni
 
 ## 6) VT güçlendirme (uygulandı)
 
 - `worker_fleet_status` yalnız org lease worker’ları
 - `created_by` / `active_org_id` FK index’leri
 - `jobs.org_id NOT NULL`
-- `campaign_targets` / `creatives` / `message_log` / `jobs` org tutarlılık trigger’ları
-- outbound `message_log` unique
-- profiles + auto_reply SELECT birleştirme
-- retention: jobs 30g · events 90g · message_log 180g
-- Owner `delete_organization` + Ayarlar tehlikeli bölge
+- org tutarlılık trigger’ları + outbound unique + retention
+- Owner `delete_organization` (+ Stripe abonelik iptal denemesi)
+
+## 7) RBAC (uygulandı)
+
+- Marka kiti yazma + hesap silme: owner/admin (RLS + action)
+- Üye: kampanya/kişi/gönderim/kara liste/bağlama
 
 ## Referans migration’lar
 
-- `20260906160000_saas_sellable_hardening.sql` — suspend, kota kapısı, storage org, invite
+- `20260906160000_saas_sellable_hardening.sql`
 - `20260906170000_stripe_apply_clear_subscription.sql`
 - `20260906180000_admin_overview_suspended.sql`
-- `20260906190000_vt_schema_hardening.sql` — fleet scope, indexes, triggers, retention, org delete
+- `20260906190000_vt_schema_hardening.sql`
+- `20260906195000_member_rbac_admin_writes.sql`
+
+Canlı smoke: [`docs/SMOKE.md`](SMOKE.md)

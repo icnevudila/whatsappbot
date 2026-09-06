@@ -13,6 +13,11 @@ export type ActiveOrg = {
   suspended_at?: string | null
   suspend_reason?: string | null
   stripe_customer_id?: string | null
+  stripe_subscription_id?: string | null
+}
+
+export function isOrgAdminRole(role: string | null | undefined): boolean {
+  return role === 'owner' || role === 'admin'
 }
 
 /**
@@ -92,10 +97,21 @@ export const requireActiveOrg = cache(async (): Promise<{
       suspend_reason: (org as { suspend_reason?: string | null }).suspend_reason ?? null,
       stripe_customer_id:
         (org as { stripe_customer_id?: string | null }).stripe_customer_id ?? null,
+      stripe_subscription_id:
+        (org as { stripe_subscription_id?: string | null }).stripe_subscription_id ?? null,
     },
     supabase,
   }
 })
+
+/** Owner veya admin; aksi halde hata. */
+export async function requireOrgAdmin() {
+  const ctx = await requireActiveOrg()
+  if (!isOrgAdminRole(ctx.org.role)) {
+    throw new Error('FORBIDDEN_ORG_ADMIN')
+  }
+  return ctx
+}
 
 export const listUserOrgs = cache(async (): Promise<
   { id: string; name: string; slug: string; role: string }[]
