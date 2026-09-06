@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { completeText, hasTextProvider } from '@/lib/ai/text'
+import { loadOrgAiKeys, rowToBag } from '@/lib/ai/org-keys'
 import { rateLimit } from '@/lib/rate-limit'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { requireActiveOrg } from '@/lib/org'
 
 export const runtime = 'nodejs'
 
@@ -27,15 +28,20 @@ Kurallar:
 - Yalnizca mesaj metnini dondur. Aciklama, baslik, tirnak veya madde imi ekleme.`
 
 export async function POST(request: Request) {
-  const supabase = await createSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) {
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  let userId: string
+  try {
+    ;({ userId, org, supabase } = await requireActiveOrg())
+  } catch {
     return NextResponse.json({ error: 'Oturum bulunamadi.' }, { status: 401 })
   }
 
-  const limited = rateLimit(`ai:mesaj:${user.id}`, { limit: 20, windowMs: 60_000 })
+  if (org.suspended_at) {
+    return NextResponse.json({ error: 'İşletme askıda.' }, { status: 403 })
+  }
+
+  const limited = rateLimit(`ai:mesaj:${userId}`, { limit: 20, windowMs: 60_000 })
   if (!limited.ok) {
     return NextResponse.json(
       { error: 'Çok fazla istek. Biraz bekleyin.' },
@@ -43,11 +49,13 @@ export async function POST(request: Request) {
     )
   }
 
-  if (!hasTextProvider()) {
+  const aiBag = rowToBag(await loadOrgAiKeys(supabase, org.id))
+
+  if (!hasTextProvider(aiBag)) {
     return NextResponse.json(
       {
         error:
-          'Metin uretimi kapali. Sunucuya OPENAI_API_KEY veya GEMINI_API_KEY ekleyin.',
+          'Metin üretimi kapalı. Ayarlar → Yapay zeka’dan OpenAI veya Gemini anahtarı girin.',
       },
       { status: 503 },
     )
@@ -80,12 +88,8 @@ export async function POST(request: Request) {
     .join('\n')
 
   try {
-    const text = await completeText(SYSTEM, prompt)
-
-    // Model bazen metni tırnak içine alıyor; kullanıcıya öyle göstermek
-    // mesaja tırnak kopyalamasına yol açıyor.
+    const text = await completeText(SYSTEM, prompt, aiBag)
     const cleaned = text.replace(/^["'`\s]+|["'`\s]+$/g, '')
-
     return NextResponse.json({ text: cleaned })
   } catch (error) {
     return NextResponse.json(

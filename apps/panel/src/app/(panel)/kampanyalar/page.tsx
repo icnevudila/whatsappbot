@@ -13,6 +13,7 @@ import {
 } from '@/components/ui'
 import { hasImageProvider } from '@/lib/ai/image'
 import { hasTextProvider } from '@/lib/ai/text'
+import { loadOrgAiKeys, rowToBag } from '@/lib/ai/org-keys'
 import { createT } from '@/lib/i18n'
 import { getDictionary } from '@/lib/i18n/server'
 import { requireActiveOrg } from '@/lib/org'
@@ -88,7 +89,7 @@ export default async function CampaignsPage({
   const params = await searchParams
   const justReady = (Array.isArray(params.hazir) ? params.hazir[0] : params.hazir) === '1'
 
-  const [campaignsResult, listsResult, accountsResult, brandResult, { messages }] =
+  const [campaignsResult, listsResult, accountsResult, brandResult, aiKeyRow, { messages }] =
     await Promise.all([
       supabase
         .from('campaigns')
@@ -114,10 +115,12 @@ export default async function CampaignsPage({
         .eq('org_id', org.id)
         .order('is_default', { ascending: false })
         .order('created_at'),
+      loadOrgAiKeys(supabase, org.id),
       getDictionary(),
     ])
 
   const t = createT(messages)
+  const aiBag = rowToBag(aiKeyRow)
   const campaigns = campaignsResult.data ?? []
 
   const listOptions = (listsResult.data ?? []).map((list) => ({
@@ -241,8 +244,8 @@ export default async function CampaignsPage({
             lists={listOptions}
             accounts={accountOptions}
             orgId={org.id}
-            aiEnabled={hasTextProvider()}
-            imageAiEnabled={hasImageProvider()}
+            aiEnabled={hasTextProvider(aiBag)}
+            imageAiEnabled={hasImageProvider(aiBag)}
             brandName={brandName}
             brandKits={brandKits}
           />

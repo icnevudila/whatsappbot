@@ -14,6 +14,7 @@ import {
 } from '@/components/ui'
 import { activeImageProviders } from '@/lib/ai/image'
 import { activeTextProviders } from '@/lib/ai/text'
+import { loadOrgAiKeys, rowToBag, rowToMasks } from '@/lib/ai/org-keys'
 import { capToday } from '@/lib/capacity'
 import { createT } from '@/lib/i18n'
 import { getDictionary } from '@/lib/i18n/server'
@@ -24,6 +25,7 @@ import { ProfileForm } from './profile-form'
 import { planLabel } from '@wa/shared'
 import { BillingCheckoutButton } from './billing-checkout-button'
 import { ApiKeyForm } from './api-key-form'
+import { AiKeysForm } from './ai-keys-form'
 import { CONTACT_EMAIL } from '@/lib/contact'
 
 export const metadata: Metadata = { title: 'Ayarlar' }
@@ -80,6 +82,7 @@ export default async function SettingsPage({
     { count: sentThisMonth },
     { data: memberRows },
     { data: apiKeyRows },
+    aiKeyRow,
   ] = await Promise.all([
     supabase
       .from('profiles')
@@ -117,7 +120,11 @@ export default async function SettingsPage({
             created_at: string
           }[],
         }),
+    loadOrgAiKeys(supabase, org.id),
   ])
+
+  const aiBag = rowToBag(aiKeyRow)
+  const aiMasks = rowToMasks(aiKeyRow)
 
   const t = createT(messages)
   const plan = org.plan
@@ -376,7 +383,7 @@ export default async function SettingsPage({
             </div>
           </Card>
 
-          <AiProvidersCard />
+          <AiProvidersCard canEdit={canManage} bag={aiBag} masks={aiMasks} />
 
           <Card>
             <CardHeader
@@ -414,41 +421,48 @@ export default async function SettingsPage({
 }
 
 /**
- * Hangi yapay zeka sağlayıcılarının açık olduğunu gösterir.
- *
- * Anahtarlar sunucu tarafında, çevre değişkeninde tutuluyor; buradan
- * düzenlenmiyor. Amaç "görsel neden üretilmiyor" ya da "metin yazdırma
- * düğmesi nerede" sorusuna bakılacak tek bir yer olması.
+ * Yapay zeka durumu + org anahtar formu.
+ * Org anahtarları env üzerine yazar; Pollinations anahtarsız yedek kalır.
  */
-function AiProvidersCard() {
-  const image = activeImageProviders()
-  const text = activeTextProviders()
+function AiProvidersCard({
+  canEdit,
+  bag,
+  masks,
+}: {
+  canEdit: boolean
+  bag: ReturnType<typeof rowToBag>
+  masks: ReturnType<typeof rowToMasks>
+}) {
+  const image = activeImageProviders(bag)
+  const text = activeTextProviders(bag)
 
   return (
     <Card>
       <CardHeader
         title="Yapay zeka"
-        subtitle="Anahtarlar sunucuda tutulur; buradan değiştirilmez."
+        subtitle="Metin ve görsel üretimi — OpenAI / Gemini / Cloudflare anahtarları."
       />
 
       <div className="space-y-2.5 p-3.5">
         <ProviderRow
           label="Görsel üretimi"
           providers={image.map((provider) => provider.label)}
-          fallback="Kapalı — Marka kiti AI arka planı kullanılamaz"
+          fallback="Yalnızca Pollinations (anahtarsız yedek) — daha iyi sonuç için anahtar ekleyin"
         />
 
         <ProviderRow
           label="Metin yazdırma"
           providers={text.map((provider) => provider.label)}
-          fallback="Kapalı — destekten açtırmanız gerekir"
+          fallback="Kapalı — aşağıya OpenAI veya Gemini anahtarı girin"
         />
 
         <p className="border-t border-hairline pt-2.5 text-[11.5px] leading-relaxed text-ink-faint">
           Sağdaki isimler deneme sırasına göredir: ilki cevap vermezse sonraki
-          devreye girer. Hesabınıza tanındığında burada görünür.
+          devreye girer.
         </p>
       </div>
+
+      <AiKeysForm canEdit={canEdit} masks={masks} />
     </Card>
   )
 }

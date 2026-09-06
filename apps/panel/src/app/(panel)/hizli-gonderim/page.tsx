@@ -12,6 +12,7 @@ import {
 } from '@/components/ui'
 import { hasImageProvider } from '@/lib/ai/image'
 import { hasTextProvider } from '@/lib/ai/text'
+import { loadOrgAiKeys, rowToBag } from '@/lib/ai/org-keys'
 import { remainingToday } from '@/lib/capacity'
 import { createT } from '@/lib/i18n'
 import { getDictionary } from '@/lib/i18n/server'
@@ -67,7 +68,8 @@ export default async function QuickSendPage({
       ? telParam.split(',').map((p) => p.trim()).filter(Boolean).join('\n')
       : ''
 
-  const [{ data: accounts }, brandResult, recentResult, { messages }] = await Promise.all([
+  const [{ data: accounts }, brandResult, recentResult, aiKeyRow, { messages }] =
+    await Promise.all([
     supabase
       .from('accounts')
       .select(
@@ -91,10 +93,12 @@ export default async function QuickSendPage({
       .or('name.like.Hızlı gönderim%,name.like.Hizli gonderim%')
       .order('created_at', { ascending: false })
       .limit(8),
+    loadOrgAiKeys(supabase, org.id),
     getDictionary(),
   ])
 
   const t = createT(messages)
+  const aiBag = rowToBag(aiKeyRow)
   const senders: SenderOption[] = (accounts ?? []).map((account) => ({
     id: account.id,
     label: account.label,
@@ -190,8 +194,8 @@ export default async function QuickSendPage({
             <QuickSendForm
               senders={senders}
               orgId={org.id}
-              aiEnabled={hasTextProvider()}
-              imageAiEnabled={hasImageProvider()}
+              aiEnabled={hasTextProvider(aiBag)}
+              imageAiEnabled={hasImageProvider(aiBag)}
               brandName={brandName}
               brandKits={brandKits}
               initialMediaUrl={initialMediaUrl}

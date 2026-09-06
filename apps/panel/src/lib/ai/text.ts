@@ -1,13 +1,14 @@
 /**
- * Metin ureten saglayicilar: kampanya mesaji yazdirmak icin.
- *
- * Gorsel tarafiyla ayni desen: sirali zincir, yapilandirilmamis saglayici
- * atlanir, ilk basarili cevap kazanir. Farki, anahtarsiz bir son care
- * olmamasi; metin ureten ucretsiz ve guvenilir bir anahtarsiz uc yok, bu
- * yuzden anahtar girilmeden bu ozellik kapali kaliyor ve arayuz bunu
- * kullaniciya soyluyor.
+ * Metin ureten saglayicilar. Org anahtarlari env uzerine yazar.
  */
-import { AI_TIMEOUT_MS, aiConfig, textProviderOrder, type AiProviderId } from './config'
+import {
+  AI_TIMEOUT_MS,
+  resolveAiConfig,
+  textProviderOrder,
+  type AiKeyBag,
+  type AiProviderId,
+  type ResolvedAiConfig,
+} from './config'
 
 type TextProvider = {
   id: AiProviderId
@@ -20,103 +21,110 @@ function timeout(): AbortSignal {
   return AbortSignal.timeout(AI_TIMEOUT_MS)
 }
 
-const gemini: TextProvider = {
-  id: 'gemini',
-  label: 'Google Gemini',
-  isConfigured: () => Boolean(aiConfig.gemini.apiKey),
+function buildProviders(config: ResolvedAiConfig): Partial<Record<AiProviderId, TextProvider>> {
+  return {
+    gemini: {
+      id: 'gemini',
+      label: 'Google Gemini',
+      isConfigured: () => Boolean(config.gemini.apiKey),
+      async complete(system, user) {
+        const model = config.gemini.textModel
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+          {
+            method: 'POST',
+            signal: timeout(),
+            headers: {
+              'Content-Type': 'application/json',
+              'x-goog-api-key': config.gemini.apiKey,
+            },
+            body: JSON.stringify({
+              systemInstruction: { parts: [{ text: system }] },
+              contents: [{ role: 'user', parts: [{ text: user }] }],
+              generationConfig: { temperature: 0.8, maxOutputTokens: 800 },
+            }),
+          },
+        )
 
-  async complete(system, user) {
-    const model = aiConfig.gemini.textModel
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-      {
-        method: 'POST',
-        signal: timeout(),
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': aiConfig.gemini.apiKey,
-        },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: system }] },
-          contents: [{ role: 'user', parts: [{ text: user }] }],
-          generationConfig: { temperature: 0.8, maxOutputTokens: 800 },
-        }),
+        if (!response.ok) {
+          throw new Error(`Gemini ${response.status}: ${(await response.text()).slice(0, 300)}`)
+        }
+
+        const json = (await response.json()) as {
+          candidates?: { content?: { parts?: { text?: string }[] } }[]
+        }
+
+        const text = (json.candidates?.[0]?.content?.parts ?? [])
+          .map((part) => part.text ?? '')
+          .join('')
+          .trim()
+
+        if (!text) throw new Error('Gemini metin dondurmedi')
+        return text
       },
-    )
+    },
+    openai: {
+      id: 'openai',
+      label: 'OpenAI',
+      isConfigured: () => Boolean(config.openai.apiKey),
+      async complete(system, user) {
+        const response = await fetch(`${config.openai.baseUrl}/chat/completions`, {
+          method: 'POST',
+          signal: timeout(),
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${config.openai.apiKey}`,
+          },
+          body: JSON.stringify({
+            model: config.openai.textModel,
+            messages: [
+              { role: 'system', content: system },
+              { role: 'user', content: user },
+            ],
+            temperature: 0.8,
+          }),
+        })
 
-    if (!response.ok) {
-      throw new Error(`Gemini ${response.status}: ${(await response.text()).slice(0, 300)}`)
-    }
+        if (!response.ok) {
+          throw new Error(`OpenAI ${response.status}: ${(await response.text()).slice(0, 300)}`)
+        }
 
-    const json = (await response.json()) as {
-      candidates?: { content?: { parts?: { text?: string }[] } }[]
-    }
+        const json = (await response.json()) as {
+          choices?: { message?: { content?: string } }[]
+        }
 
-    const text = (json.candidates?.[0]?.content?.parts ?? [])
-      .map((part) => part.text ?? '')
-      .join('')
-      .trim()
-
-    if (!text) throw new Error('Gemini metin dondurmedi')
-    return text
-  },
+        const text = json.choices?.[0]?.message?.content?.trim()
+        if (!text) throw new Error('OpenAI metin dondurmedi')
+        return text
+      },
+    },
+  }
 }
 
-const openai: TextProvider = {
-  id: 'openai',
-  label: 'OpenAI',
-  isConfigured: () => Boolean(aiConfig.openai.apiKey),
-
-  async complete(system, user) {
-    const response = await fetch(`${aiConfig.openai.baseUrl}/chat/completions`, {
-      method: 'POST',
-      signal: timeout(),
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${aiConfig.openai.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: aiConfig.openai.textModel,
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: user },
-        ],
-        temperature: 0.8,
-      }),
-    })
-
-    if (!response.ok) {
-      throw new Error(`OpenAI ${response.status}: ${(await response.text()).slice(0, 300)}`)
-    }
-
-    const json = (await response.json()) as {
-      choices?: { message?: { content?: string } }[]
-    }
-
-    const text = json.choices?.[0]?.message?.content?.trim()
-    if (!text) throw new Error('OpenAI metin dondurmedi')
-    return text
-  },
-}
-
-const REGISTRY: Partial<Record<AiProviderId, TextProvider>> = { gemini, openai }
-
-export function activeTextProviders(): { id: AiProviderId; label: string }[] {
+export function activeTextProviders(
+  bag?: AiKeyBag | null,
+): { id: AiProviderId; label: string }[] {
+  const registry = buildProviders(resolveAiConfig(bag))
   return textProviderOrder
-    .map((id) => REGISTRY[id])
+    .map((id) => registry[id])
     .filter((provider): provider is TextProvider => Boolean(provider?.isConfigured()))
     .map(({ id, label }) => ({ id, label }))
 }
 
-export function hasTextProvider(): boolean {
-  return activeTextProviders().length > 0
+export function hasTextProvider(bag?: AiKeyBag | null): boolean {
+  return activeTextProviders(bag).length > 0
 }
 
-export async function completeText(system: string, user: string): Promise<string> {
+export async function completeText(
+  system: string,
+  user: string,
+  bag?: AiKeyBag | null,
+): Promise<string> {
+  const registry = buildProviders(resolveAiConfig(bag))
   const attempts: string[] = []
 
   for (const id of textProviderOrder) {
-    const provider = REGISTRY[id]
+    const provider = registry[id]
     if (!provider?.isConfigured()) continue
 
     try {
@@ -131,6 +139,6 @@ export async function completeText(system: string, user: string): Promise<string
   throw new Error(
     attempts.length > 0
       ? `Hicbir metin saglayici sonuc vermedi. ${attempts.join(' | ')}`
-      : 'Metin uretimi icin OPENAI_API_KEY veya GEMINI_API_KEY gerekiyor.',
+      : 'Metin uretimi icin OpenAI veya Gemini anahtari gerekir (Ayarlar veya sunucu env).',
   )
 }
