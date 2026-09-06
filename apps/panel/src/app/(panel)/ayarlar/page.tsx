@@ -19,11 +19,12 @@ import { createT } from '@/lib/i18n'
 import { getDictionary } from '@/lib/i18n/server'
 import { requireActiveOrg } from '@/lib/org'
 import { signOut } from '@/app/giris/actions'
-import { MembersPanel, OrgSettingsForm, WebhookSettingsForm } from './org-forms'
+import { MembersPanel, OrgSettingsForm, WebhookSettingsForm, DeleteOrganizationForm } from './org-forms'
 import { ProfileForm } from './profile-form'
 import { planLabel } from '@wa/shared'
 import { BillingCheckoutButton } from './billing-checkout-button'
 import { ApiKeyForm } from './api-key-form'
+import { CONTACT_EMAIL } from '@/lib/contact'
 
 export const metadata: Metadata = { title: 'Ayarlar' }
 
@@ -193,6 +194,16 @@ export default async function SettingsPage({
         </div>
       ) : null}
 
+      {org.suspended_at ? (
+        <div className="mb-4">
+          <Notice tone="danger">
+            İşletme askıya alındı
+            {org.suspend_reason ? `: ${org.suspend_reason}` : ''}. Gönderim ve job kuyruğu kapalı.
+            Destek için {CONTACT_EMAIL}.
+          </Notice>
+        </div>
+      ) : null}
+
       {profileIncomplete || connectedCount === 0 ? (
         <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[var(--radius-card)] border border-hairline bg-surface px-3.5 py-2.5">
           <span className="text-[11.5px] font-medium tracking-wide text-ink-faint uppercase">
@@ -283,6 +294,16 @@ export default async function SettingsPage({
             />
             <MembersPanel members={members} canManage={canManage} />
           </Card>
+
+          {org.role === 'owner' ? (
+            <Card className="border-danger/25">
+              <CardHeader
+                title="Tehlikeli bölge"
+                subtitle="İşletmeyi kalıcı olarak siler — geri alınamaz."
+              />
+              <DeleteOrganizationForm orgName={org.name} />
+            </Card>
+          ) : null}
 
           <div id="profil" className="scroll-mt-6">
             <Card>

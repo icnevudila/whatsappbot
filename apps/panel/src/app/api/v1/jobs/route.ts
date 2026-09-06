@@ -111,6 +111,33 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'org owner missing' }, { status: 500 })
   }
 
+  const { data: orgRow } = await admin
+    .from('organizations')
+    .select('suspended_at')
+    .eq('id', orgId)
+    .maybeSingle()
+  if (orgRow?.suspended_at) {
+    return NextResponse.json({ error: 'suspended' }, { status: 403 })
+  }
+
+  const needsQuota =
+    type === 'message.send' || type === 'campaign.start' || type === 'campaign.resume'
+  if (needsQuota) {
+    const { data: gate } = await admin.rpc('org_send_gate', { p_org_id: orgId })
+    const gateObj = gate as { ok?: boolean; reason?: string; used?: number; quota?: number } | null
+    if (gateObj && gateObj.ok === false) {
+      const status = gateObj.reason === 'suspended' ? 403 : 429
+      return NextResponse.json(
+        {
+          error: gateObj.reason ?? 'send_blocked',
+          used: gateObj.used,
+          quota: gateObj.quota,
+        },
+        { status },
+      )
+    }
+  }
+
   if (body.accountId) {
     const { data: account } = await admin
       .from('accounts')

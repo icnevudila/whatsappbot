@@ -1,16 +1,23 @@
 import Link from 'next/link'
 import { Card, CardHeader, PageHeader, QuietLink } from '@/components/ui'
-import { Icon } from '@/components/icon'
+import { Icon, type IconName } from '@/components/icon'
 import { createT } from '@/lib/i18n'
 import { getDictionary } from '@/lib/i18n/server'
 
 export const metadata = { title: 'Yardım merkezi' }
 
-const guides = [
+const guides: {
+  icon: IconName
+  title: string
+  href: string
+  tint: string
+  steps: string[]
+}[] = [
   {
-    icon: 'phone' as const,
+    icon: 'phone',
     title: 'WhatsApp hattını bağlama',
     href: '/hesaplar',
+    tint: 'bg-ok-soft/45',
     steps: [
       'WhatsApp hatları ekranında yeni bir hat oluşturun.',
       'QR kodunu telefonunuzdaki Bağlı cihazlar bölümünden okutun veya telefon koduyla eşleştirin.',
@@ -18,9 +25,10 @@ const guides = [
     ],
   },
   {
-    icon: 'people' as const,
+    icon: 'people',
     title: 'Kişileri hazırlama',
     href: '/kisiler',
+    tint: 'bg-accent-soft/55',
     steps: [
       'CSV yükleyin veya numaraları satır satır yapıştırın. İsim eklemek için numaradan sonra virgül kullanabilirsiniz.',
       'Ülke kodu olmayan Türkiye numaraları +90 ile düzenlenir. Tekrarlanan numaralar ayıklanır.',
@@ -28,9 +36,10 @@ const guides = [
     ],
   },
   {
-    icon: 'campaign' as const,
+    icon: 'campaign',
     title: 'Kampanya gönderme',
     href: '/kampanyalar',
+    tint: 'bg-accent-soft/40',
     steps: [
       'Kampanya adını ve mesajı yazın; gerekirse görsel yükleyin.',
       'Kişi listelerini ve gönderici hatları seçin. {{ad}} ifadesi kişi adıyla doldurulur.',
@@ -38,9 +47,10 @@ const guides = [
     ],
   },
   {
-    icon: 'inbox' as const,
+    icon: 'inbox',
     title: 'Yanıtları yönetme',
     href: '/gelenler',
+    tint: 'bg-ok-soft/55',
     steps: [
       'Gelen kutusunda bir konuşma seçin; tam geçmişi veya yalnız gelen mesajları görün.',
       'Yanıtınızı yazıp gönderin. İşlem sıraya alınır; sonucu konuşmanın altında gösterilir.',
@@ -81,11 +91,13 @@ export default async function HelpPage() {
 
       <div className="grid gap-2.5 lg:grid-cols-2">
         {guides.map((guide) => (
-          <Card key={guide.title}>
+          <Card key={guide.title} className={guide.tint}>
             <CardHeader
               title={
                 <span className="flex items-center gap-2.5">
-                  <Icon name={guide.icon} className="text-accent" />
+                  <span className="flex size-8 items-center justify-center rounded-[var(--radius-sm)] border border-hairline bg-surface text-accent">
+                    <Icon name={guide.icon} className="size-4" />
+                  </span>
                   {guide.title}
                 </span>
               }
@@ -93,7 +105,7 @@ export default async function HelpPage() {
             <ol className="space-y-2.5 p-3.5">
               {guide.steps.map((step, i) => (
                 <li key={step} className="flex gap-2.5 text-[12.5px] leading-relaxed text-ink-muted">
-                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-canvas font-mono text-[11px] text-accent">
+                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-surface font-mono text-[11px] text-accent">
                     {i + 1}
                   </span>
                   <span>{step}</span>
@@ -116,11 +128,15 @@ export default async function HelpPage() {
           </details>
         ))}
         <p className="mt-4 text-[12.5px] text-ink-muted">
-          Sorun sürerse işletmenizin destek sorumlusuna ilgili ekranı, işlem zamanını ve varsa
-          hata kodunu iletin.{' '}
+          Sorun sürerse{' '}
+          <a href="mailto:destek@filo.app" className="font-medium text-accent underline">
+            destek@filo.app
+          </a>{' '}
+          adresine yazın veya{' '}
           <Link href="/durum" className="text-accent underline">
-            Genel bakışı açın.
+            genel bakışı açın
           </Link>
+          .
         </p>
       </div>
     </>

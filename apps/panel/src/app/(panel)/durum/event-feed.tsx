@@ -96,6 +96,7 @@ export function EventFeed({
 
       {events.length === 0 ? (
         <EmptyState
+          tone="events"
           title="Henüz olay yok"
           description="Bir hat bağlandığında, oturum değiştiğinde veya kota dolduğunda olaylar burada anlık görünür."
           action={<AccentLink href="/hesaplar">Hesaplara git</AccentLink>}

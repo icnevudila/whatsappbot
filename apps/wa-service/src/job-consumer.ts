@@ -8,6 +8,7 @@ import { verifyContacts } from './verify.js'
 import { DeliveryUncertainError } from './delivery.js'
 import { messageSendSkipped } from './message-send-result.js'
 import { resolveWabaMessageSend } from './waba-config.js'
+import { checkOrgSendGate, orgSendGateMessage } from './org-send-gate.js'
 
 const log = logger.child({ scope: 'jobs' })
 
@@ -159,6 +160,11 @@ async function handle(job: JobRow): Promise<unknown> {
       if (!payload.phone_e164) throw new Error('phone_e164 zorunlu')
       if (!job.org_id || !job.created_by) {
         throw new Error('message.send isi org_id ve created_by olmadan gelemez')
+      }
+
+      const gate = await checkOrgSendGate(job.org_id)
+      if (!gate.ok) {
+        throw new NonRetryableJobError(orgSendGateMessage(gate))
       }
 
       const blocked = await one<{ id: string }>(

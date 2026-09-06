@@ -48,14 +48,14 @@ const nf = new Intl.NumberFormat('tr-TR')
 
 export function QuickSendForm({
   senders,
-  userId,
+  orgId,
   aiEnabled,
   brandName,
   initialMediaUrl = '',
   initialNumbers = '',
 }: {
   senders: SenderOption[]
-  userId: string
+  orgId: string
   aiEnabled: boolean
   brandName?: string
   initialMediaUrl?: string
@@ -119,7 +119,7 @@ export function QuickSendForm({
     try {
       const supabase = getSupabaseBrowserClient()
       const extension = file.name.split('.').pop() ?? 'bin'
-      const path = `${userId}/${crypto.randomUUID()}.${extension}`
+      const path = `${orgId}/${crypto.randomUUID()}.${extension}`
 
       const { error } = await supabase.storage.from('creatives').upload(path, file, {
         contentType: file.type,

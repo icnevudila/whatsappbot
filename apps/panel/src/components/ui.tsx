@@ -1,12 +1,13 @@
 import type { ComponentProps, ReactNode } from 'react'
 import Link from 'next/link'
+import { EmptyIllustration, type EmptyTone } from '@/components/empty-illustrations'
 
 function cx(...parts: (string | false | null | undefined)[]): string {
   return parts.filter(Boolean).join(' ')
 }
 
 const buttonBase =
-  'inline-flex h-8 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] px-3 text-[13px] font-medium transition-[color,background-color,box-shadow,transform] duration-180 ease-[var(--ease-out)] disabled:cursor-not-allowed'
+  'inline-flex h-9 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] px-3.5 text-[14px] font-semibold transition-[color,background-color,box-shadow,transform] duration-180 ease-[var(--ease-out)] disabled:cursor-not-allowed'
 
 const buttonVariants = {
   // Kobalt birincil aksiyon (pilot-ui / Messora). Yesil yalnizca "bagli" durumu.
@@ -104,9 +105,9 @@ export function CardHeader({
   return (
     <div className="flex items-start justify-between gap-4 border-b border-hairline px-3.5 py-2.5">
       <div className="min-w-0">
-        <h2 className="text-[12.5px] font-semibold text-ink">{title}</h2>
+        <h2 className="text-[14.5px] font-bold text-ink">{title}</h2>
         {subtitle ? (
-          <p className="mt-0.5 text-[11.5px] text-ink-muted">{subtitle}</p>
+          <p className="mt-0.5 text-[13px] text-ink-muted">{subtitle}</p>
         ) : null}
       </div>
       {action}
@@ -125,15 +126,15 @@ export function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[12px] font-medium text-ink-muted">{label}</span>
+      <span className="mb-1.5 block text-[13px] font-semibold text-ink-muted">{label}</span>
       {children}
-      {hint ? <span className="mt-1 block text-[11.5px] text-ink-faint">{hint}</span> : null}
+      {hint ? <span className="mt-1 block text-[12.5px] text-ink-faint">{hint}</span> : null}
     </label>
   )
 }
 
 const inputBase =
-  'w-full rounded-md border border-hairline-strong bg-canvas px-2.5 py-1.5 text-[13px] text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none'
+  'w-full rounded-md border border-hairline-strong bg-canvas px-3 py-2 text-[14px] text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none'
 
 export function Input({ className, ...props }: ComponentProps<'input'>) {
   return <input {...props} className={cx(inputBase, className)} />
@@ -220,7 +221,7 @@ export function StatusPill({ status }: { status: string }) {
     <span
       title={entry.hint}
       className={cx(
-        'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11.5px] font-medium',
+        'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12.5px] font-semibold',
         entry.tone,
       )}
     >
@@ -256,15 +257,19 @@ export function EmptyState({
   title,
   description,
   action,
+  tone = 'generic',
 }: {
   title: string
   description: string
   action?: ReactNode
+  /** Boş ekran illüstrasyonu — varsayılan generic. */
+  tone?: EmptyTone
 }) {
   return (
     <div className="wb-empty flex flex-col items-center gap-2 px-6 py-12 text-center">
-      <p className="text-[13px] font-semibold text-ink">{title}</p>
-      <p className="max-w-sm text-[12.5px] text-ink-muted">{description}</p>
+      <EmptyIllustration tone={tone} />
+      <p className="text-[15px] font-bold text-ink">{title}</p>
+      <p className="max-w-sm text-[13.5px] text-ink-muted">{description}</p>
       {action ? <div className="mt-2">{action}</div> : null}
     </div>
   )
@@ -306,7 +311,7 @@ export function FilterChip({
     <Link
       href={href}
       className={cx(
-        'inline-flex h-7 items-center rounded-[var(--radius-sm)] border px-2.5 text-[12px] font-medium transition-colors',
+        'inline-flex h-8 items-center rounded-[var(--radius-sm)] border px-3 text-[13px] font-semibold transition-colors',
         active
           ? 'border-ink bg-ink text-accent-ink'
           : 'border-hairline-strong bg-surface text-ink-muted hover:border-ink-faint hover:text-ink',
@@ -334,7 +339,7 @@ export function Notice({
   return (
     <div
       role={tone === 'danger' ? 'alert' : tone === 'success' || tone === 'accent' ? 'status' : undefined}
-      className={cx('rounded-md border px-3 py-2 text-[12.5px]', styles)}
+      className={cx('rounded-md border px-3.5 py-2.5 text-[13.5px]', styles)}
     >
       {children}
     </div>
@@ -371,8 +376,8 @@ export function Stat({
 
   return (
     <div className={className}>
-      <p className="text-[11.5px] text-ink-muted">{label}</p>
-      <p className={cx('tabular mt-1 text-[22px] font-extrabold leading-none tracking-[-0.03em]', valueTone)}>
+      <p className="text-[12.5px] font-medium text-ink-muted">{label}</p>
+      <p className={cx('tabular mt-1 text-[26px] font-extrabold leading-none tracking-[-0.03em]', valueTone)}>
         {value}
       </p>
       {meter ? (
@@ -381,7 +386,7 @@ export function Stat({
         </div>
       ) : null}
       {detail ? (
-        <p className="mt-1.5 truncate text-[11.5px] text-ink-faint">{detail}</p>
+        <p className="mt-1.5 truncate text-[12.5px] text-ink-faint">{detail}</p>
       ) : null}
     </div>
   )
@@ -402,7 +407,7 @@ export function FileUploadButton({
   onFile: (file: File) => void
 }) {
   return (
-    <label className="cursor-pointer rounded-md border border-hairline-strong bg-surface-raised px-3 py-1.5 text-[12.5px] transition-colors hover:border-ink-faint">
+    <label className="cursor-pointer rounded-md border border-hairline-strong bg-surface-raised px-3 py-2 text-[13.5px] font-medium transition-colors hover:border-ink-faint">
       <input
         type="file"
         accept={accept}
@@ -432,8 +437,8 @@ export function MessagePreview({
 
   return (
     <div className="rounded-md border border-hairline bg-canvas p-3">
-      <p className="mb-2 text-[11.5px] font-medium text-ink-faint">Alıcının göreceği</p>
-      <div className="max-w-xs rounded-lg rounded-tl-sm border border-hairline bg-surface-raised p-2">
+      <p className="mb-2 text-[12.5px] font-semibold text-ink-faint">Alıcının göreceği</p>
+      <div className="max-w-xs rounded-lg rounded-tl-sm border border-hairline bg-surface-raised p-2.5">
         {mediaUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -442,7 +447,7 @@ export function MessagePreview({
             className="mb-1.5 w-full rounded border border-hairline object-cover"
           />
         ) : null}
-        <p className="whitespace-pre-wrap text-[12.5px] text-ink">
+        <p className="whitespace-pre-wrap text-[14px] text-ink">
           {body || <span className="text-ink-faint">(yalnızca görsel)</span>}
         </p>
       </div>
@@ -464,13 +469,13 @@ export function HourlyBars({
   return (
     <div>
       <div className="mb-2 flex items-baseline justify-between gap-3">
-        <p className="text-[11.5px] font-medium text-ink-muted">{title}</p>
-        <p className="tabular text-[11.5px] text-ink-faint">
+        <p className="text-[13px] font-semibold text-ink-muted">{title}</p>
+        <p className="tabular text-[12.5px] text-ink-faint">
           {total === 0 ? 'Henüz giden yok' : `${total} giden`}
         </p>
       </div>
       {total === 0 ? (
-        <p className="rounded-md border border-dashed border-hairline px-3 py-4 text-center text-[12px] text-ink-faint">
+        <p className="rounded-md border border-dashed border-hairline px-3 py-4 text-center text-[13px] text-ink-faint">
           İlk mesaj gidince burada saatlik dağılım görünür. Başlamak için Hızlı gönderim kullanın.
         </p>
       ) : (
@@ -507,7 +512,7 @@ export function Badge({
   return (
     <span
       className={cx(
-        'inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[11.5px] font-medium',
+        'inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[12.5px] font-semibold',
         styles,
       )}
     >

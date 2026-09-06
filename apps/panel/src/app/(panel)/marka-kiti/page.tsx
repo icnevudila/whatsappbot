@@ -78,7 +78,7 @@ export default async function BrandKitPage() {
         initialColors={colors}
         initialLogoUrl={kit?.logo_path ?? null}
         brandKitId={kit?.id ?? null}
-        userId={userId}
+        orgId={org.id}
         hasSavedKit={hasSavedKit}
       />
 
@@ -96,6 +96,7 @@ export default async function BrandKitPage() {
             <CreativeGallery creatives={creatives} />
           ) : (
             <EmptyState
+              tone="brand"
               title="Henüz görsel yok"
               description="Stüdyoda başlık yazıp görsel üretin. Sonuç burada kalır; ardından Hızlı gönderime veya kampanyaya taşıyabilirsiniz."
               action={<AccentLink href="#kampanya-gorseli">Görsel üretmeye başla</AccentLink>}

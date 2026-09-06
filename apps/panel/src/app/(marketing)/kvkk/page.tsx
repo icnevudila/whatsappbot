@@ -6,9 +6,10 @@ export const metadata: Metadata = {
   description: `${BRAND_NAME} kişisel verilerin işlenmesi hakkında aydınlatma metni.`,
 }
 
-const UPDATED_AT = '5 Eylül 2026'
+const UPDATED_AT = '6 Eylül 2026'
 const CONTACT_EMAIL = 'kvkk@filo.app'
-const CONTROLLER_PLACEHOLDER = '[şirket ünvanı — güncelleyin]'
+/** Yasal ünvan go-live’da güncellenir — docs/SELLABLE-GO-LIVE.md */
+const CONTROLLER_PLACEHOLDER = 'Filo Platform İşletmecisi (ünvan güncellenecek)'
 
 export default function KvkkPage() {
   return (

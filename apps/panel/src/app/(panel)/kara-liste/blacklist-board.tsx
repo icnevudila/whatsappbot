@@ -14,6 +14,7 @@ import {
   QuietLink,
   Textarea,
 } from '@/components/ui'
+import { Icon } from '@/components/icon'
 import { useConfirm } from '@/components/confirm-dialog'
 import { useSyncBusy } from '@/components/busy'
 import { useToast } from '@/components/toast'
@@ -101,6 +102,7 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
 
           {rows.length === 0 ? (
             <EmptyState
+              tone="shield"
               title="Kara liste boş"
               description="Çıkmak isteyen, şikayet eden veya elle engellediğiniz numaraları formdan ekleyin. Servis bu numaralara mesaj göndermez."
               action={
@@ -117,12 +119,20 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
                   key={row.id}
                   className="flex flex-wrap items-center justify-between gap-2.5 px-3.5 py-2.5"
                 >
-                  <div className="min-w-0">
-                    <p className="font-mono text-[13px] tabular">{row.phone_e164}</p>
-                    <p className="mt-0.5 text-[11.5px] text-ink-faint">
-                      {row.reason?.trim() ? row.reason.trim() : 'Sebep belirtilmedi'} ·{' '}
-                      {new Date(row.created_at).toLocaleDateString('tr-TR')}
-                    </p>
+                  <div className="flex min-w-0 items-start gap-2.5">
+                    <span
+                      className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full border border-danger/25 bg-[#fff5f4] text-danger"
+                      aria-hidden
+                    >
+                      <Icon name="shield" className="size-3.5" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="font-mono text-[13px] tabular">{row.phone_e164}</p>
+                      <p className="mt-0.5 text-[11.5px] text-ink-faint">
+                        {row.reason?.trim() ? row.reason.trim() : 'Sebep belirtilmedi'} ·{' '}
+                        {new Date(row.created_at).toLocaleDateString('tr-TR')}
+                      </p>
+                    </div>
                   </div>
                   <Button
                     variant="danger"

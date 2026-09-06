@@ -75,6 +75,7 @@ export default async function ContactsPage() {
 
             {lists.length === 0 ? (
               <EmptyState
+                tone="people"
                 title="Henüz liste yok"
                 description="Kampanyalarda tekrar kullanacağınız numaraları formdan liste olarak ekleyin. Tek seferlik için Hızlı gönderim yeterli."
                 action={
@@ -93,12 +94,13 @@ export default async function ContactsPage() {
                         href={`/kisiler/${list.id}`}
                         className="min-w-0 flex-1 transition-colors hover:text-accent"
                       >
-                        <p className="truncate text-[13px] font-medium">{list.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="truncate text-[13px] font-medium">{list.name}</p>
+                          <SourceChip source={list.source} />
+                        </div>
                         <p className="mt-0.5 text-[11.5px] text-ink-muted tabular">
                           {list.contact_count} numara ·{' '}
                           {new Date(list.created_at).toLocaleDateString('tr-TR')}
-                          {list.source === 'scraper' ? ' · web' : ''}
-                          {list.source === 'maps' ? ' · yerel' : ''}
                           {' · '}
                           <span className="text-ink-faint">detay</span>
                         </p>
@@ -148,5 +150,22 @@ export default async function ContactsPage() {
         </div>
       </div>
     </>
+  )
+}
+
+function SourceChip({ source }: { source: string | null }) {
+  const meta =
+    source === 'scraper'
+      ? { label: 'web', className: 'border-accent/30 bg-accent-soft text-accent-dim' }
+      : source === 'maps'
+        ? { label: 'yerel', className: 'border-ok/30 bg-ok-soft text-ok-dim' }
+        : { label: 'csv', className: 'border-hairline bg-surface-raised text-ink-muted' }
+
+  return (
+    <span
+      className={`inline-flex shrink-0 rounded-sm border px-1.5 py-px text-[10.5px] font-semibold uppercase tracking-wide ${meta.className}`}
+    >
+      {meta.label}
+    </span>
   )
 }

@@ -6,6 +6,57 @@ import { useRouter } from 'next/navigation'
 import { AccentLink, CardHeader, EmptyState, QuietLink, SplitPane, StatusPill } from '@/components/ui'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 
+function statusRail(status: string): string {
+  switch (status) {
+    case 'sent':
+    case 'sending':
+    case 'queued':
+    case 'pending':
+      return 'border-l-[3px] border-l-accent'
+    case 'delivered':
+    case 'read':
+      return 'border-l-[3px] border-l-ok'
+    case 'failed':
+    case 'skipped':
+      return 'border-l-[3px] border-l-danger'
+    default:
+      return 'border-l-[3px] border-l-hairline-strong'
+  }
+}
+
+function statusRowTint(status: string, active: boolean): string {
+  if (active) {
+    return 'bg-accent-soft ring-1 ring-accent/20'
+  }
+  switch (status) {
+    case 'sent':
+    case 'sending':
+      return 'bg-accent-soft/35'
+    case 'delivered':
+    case 'read':
+      return 'bg-ok-soft/40'
+    case 'failed':
+      return 'bg-[#fff5f4]'
+    default:
+      return ''
+  }
+}
+
+function detailShell(status: string): string {
+  switch (status) {
+    case 'delivered':
+    case 'read':
+      return 'border-ok/30 bg-ok-soft/40'
+    case 'failed':
+      return 'border-danger/30 bg-[#fff5f4]'
+    case 'sent':
+    case 'sending':
+      return 'border-accent/25 bg-accent-soft/50'
+    default:
+      return 'border-hairline bg-surface-raised/50'
+  }
+}
+
 export type OutboundMessage = {
   id: number
   account_id: string | null
@@ -117,6 +168,7 @@ export function OutboundBoard({
 
           {rows.length === 0 ? (
             <EmptyState
+              tone="outbound"
               title="Henüz giden yok"
               description="Kampanya veya hızlı gönderimle mesaj atınca kayıtlar burada listelenir."
               action={
@@ -127,7 +179,7 @@ export function OutboundBoard({
               }
             />
           ) : (
-            <ul className="min-h-0 flex-1 divide-y divide-hairline overflow-y-auto">
+            <ul className="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-1.5">
               {rows.map((row) => {
                 const active = row.id === selectedId
                 const phone = displayPhone(row)
@@ -143,27 +195,25 @@ export function OutboundBoard({
                     <button
                       type="button"
                       onClick={() => setSelectedId(active ? null : row.id)}
-                      className={`block w-full px-3.5 py-2.5 text-left transition-colors hover:bg-surface-raised ${
-                        active ? 'wb-row-active' : ''
-                      }`}
+                      className={`block w-full rounded-[var(--radius-sm)] border border-transparent px-3.5 py-2.5 text-left transition-colors hover:border-hairline ${statusRail(row.status)} ${statusRowTint(row.status, active)}`}
                     >
                       <div className="flex items-baseline justify-between gap-2">
-                        <p className="truncate font-mono text-[12.5px] tabular">{phone}</p>
-                        <span className="shrink-0 text-[10.5px] text-ink-faint">
+                        <p className="truncate font-mono text-[13px] font-medium tabular">{phone}</p>
+                        <span className="shrink-0 text-[11px] text-ink-faint">
                           {timeFormat.format(new Date(row.created_at))}
                         </span>
                       </div>
-                      <p className="mt-0.5 truncate text-[12px] text-ink-muted">
+                      <p className="mt-0.5 truncate text-[12.5px] text-ink-muted">
                         {previewBody(row.body, row.message_type)}
                       </p>
-                      <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-ink-faint">
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11.5px] text-ink-faint">
                         {accountLabel ? <span>{accountLabel}</span> : null}
                         {campaignLabel ? (
-                          <span className="rounded-sm border border-accent/30 bg-accent/8 px-1 py-px text-[10px] text-accent">
+                          <span className="rounded-sm border border-accent/30 bg-accent-soft px-1.5 py-px text-[10.5px] font-medium text-accent">
                             {campaignLabel}
                           </span>
                         ) : (
-                          <span className="rounded-sm border border-hairline px-1 py-px text-[10px]">
+                          <span className="rounded-sm border border-hairline bg-surface-raised px-1.5 py-px text-[10.5px]">
                             Hızlı gönderim
                           </span>
                         )}
@@ -200,37 +250,42 @@ export function OutboundBoard({
                   .join(' · ')}
                 action={selected.status ? <StatusPill status={selected.status} /> : undefined}
               />
-              <div className="space-y-2.5 p-3.5">
-                <p className="whitespace-pre-wrap text-[13px] text-ink">
-                  {selected.body?.trim()
-                    ? selected.body
-                    : `(${messageTypeLabel(selected.message_type)})`}
-                </p>
-                <p className="text-[11.5px] text-ink-faint">
-                  {timeFormat.format(new Date(selected.created_at))}
-                  {selected.campaign_id ? (
-                    <>
-                      {' · '}
-                      <Link
-                        href={`/kampanyalar/${selected.campaign_id}`}
-                        className="text-accent underline decoration-hairline-strong underline-offset-2"
-                      >
-                        {campaignNames[selected.campaign_id] ?? 'Kampanya'}
-                      </Link>
-                    </>
-                  ) : (
-                    ' · hızlı gönderim'
-                  )}
-                </p>
-                {selected.phone_e164 ? (
-                  <AccentLink href={`/gelenler?tel=${encodeURIComponent(selected.phone_e164)}`}>
-                    Gelenlerde aç
-                  </AccentLink>
-                ) : null}
+              <div className="p-3.5">
+                <div
+                  className={`space-y-2.5 rounded-[var(--radius-card)] border p-3.5 shadow-[var(--shadow-card)] ${detailShell(selected.status)}`}
+                >
+                  <p className="whitespace-pre-wrap text-[13.5px] leading-relaxed text-ink">
+                    {selected.body?.trim()
+                      ? selected.body
+                      : `(${messageTypeLabel(selected.message_type)})`}
+                  </p>
+                  <p className="text-[12px] text-ink-muted">
+                    {timeFormat.format(new Date(selected.created_at))}
+                    {selected.campaign_id ? (
+                      <>
+                        {' · '}
+                        <Link
+                          href={`/kampanyalar/${selected.campaign_id}`}
+                          className="font-medium text-accent underline decoration-hairline-strong underline-offset-2"
+                        >
+                          {campaignNames[selected.campaign_id] ?? 'Kampanya'}
+                        </Link>
+                      </>
+                    ) : (
+                      ' · hızlı gönderim'
+                    )}
+                  </p>
+                  {selected.phone_e164 ? (
+                    <AccentLink href={`/gelenler?tel=${encodeURIComponent(selected.phone_e164)}`}>
+                      Gelenlerde aç
+                    </AccentLink>
+                  ) : null}
+                </div>
               </div>
             </>
           ) : (
             <EmptyState
+              tone="outbound"
               title="Bir kayıt seçin"
               description="Soldan bir giden mesaja tıklayın. Tam metin burada görünür."
               action={<AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>}

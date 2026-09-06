@@ -33,14 +33,14 @@ export function BillingCheckoutButton() {
     }
   }, [])
 
-  const start = async () => {
+  const start = async (plan: 'starter' | 'pro' = 'starter') => {
     setLoading(true)
     setError(null)
     try {
       const res = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ plan: 'starter' }),
+        body: JSON.stringify({ plan }),
       })
       const data = (await res.json()) as {
         url?: string
@@ -51,12 +51,32 @@ export function BillingCheckoutButton() {
         setStatus((prev) => ({
           ...(prev ?? {}),
           checkoutReady: false,
-          missing: prev?.missing?.length ? prev.missing : ['STRIPE_SECRET_KEY', 'STRIPE_PRICE_ID'],
+          missing: prev?.missing?.length
+            ? prev.missing
+            : ['STRIPE_SECRET_KEY', 'STRIPE_PRICE_STARTER veya STRIPE_PRICE_ID'],
         }))
         return
       }
       if (!res.ok || !data.url) {
         setError(data.error ?? 'Checkout açılamadı')
+        return
+      }
+      window.location.href = data.url
+    } catch {
+      setError('Ağ hatası')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const openPortal = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/billing/portal', { method: 'POST' })
+      const data = (await res.json()) as { url?: string; error?: string }
+      if (!res.ok || !data.url) {
+        setError(data.error ?? 'Portal açılamadı')
         return
       }
       window.location.href = data.url
@@ -108,11 +128,21 @@ export function BillingCheckoutButton() {
           type="button"
           variant="accent"
           disabled={loading || (known && !checkoutReady)}
-          onClick={() => void start()}
+          onClick={() => void start('starter')}
         >
-          {loading ? 'Stripe…' : 'Paketi yükselt'}
+          {loading ? 'Stripe…' : 'Başlangıç’a yükselt'}
         </Button>
-        <span className="text-[11.5px] text-ink-faint">Başlangıç planı — Stripe abonelik</span>
+        <Button
+          type="button"
+          variant="quiet"
+          disabled={loading || (known && !checkoutReady)}
+          onClick={() => void start('pro')}
+        >
+          Büyüme
+        </Button>
+        <Button type="button" variant="quiet" disabled={loading} onClick={() => void openPortal()}>
+          Kart / iptal (Portal)
+        </Button>
       </div>
       {error ? <span className="text-[11px] text-danger">{error}</span> : null}
     </div>

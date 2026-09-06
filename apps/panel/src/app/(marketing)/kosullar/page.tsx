@@ -6,9 +6,10 @@ export const metadata: Metadata = {
   description: `${BRAND_NAME} hizmet kullanım koşulları.`,
 }
 
-const UPDATED_AT = '5 Eylül 2026'
+const UPDATED_AT = '6 Eylül 2026'
 const CONTACT_EMAIL = 'destek@filo.app'
-const OPERATOR_PLACEHOLDER = '[şirket ünvanı — güncelleyin]'
+/** Yasal ünvan go-live’da güncellenir — docs/SELLABLE-GO-LIVE.md */
+const OPERATOR_PLACEHOLDER = 'Filo Platform İşletmecisi (ünvan güncellenecek)'
 
 export default function TermsPage() {
   return (

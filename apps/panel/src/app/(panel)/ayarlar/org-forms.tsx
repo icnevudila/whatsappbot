@@ -6,6 +6,7 @@ import { Button, EmptyState, Field, Input, Notice, Select } from '@/components/u
 import { CONTACT_EMAIL, contactMailto } from '@/lib/contact'
 import {
   addOrgMember,
+  deleteOrganization,
   removeOrgMember,
   updateOrgMemberRole,
   updateOrgName,
@@ -90,15 +91,21 @@ export function WebhookSettingsForm({
           placeholder="https://example.com/hooks/filo"
         />
       </Field>
-      <Field label="Webhook secret (opsiyonel)" hint="İstek başlığı: x-filo-secret">
+      <Field label="Webhook secret (opsiyonel)" hint="Boş bırakırsanız mevcut secret değişmez. İstek başlığı: x-filo-secret">
         <Input
           name="webhook_secret"
           type="password"
           disabled={!canEdit}
-          placeholder="••••••••"
+          placeholder="Yeni secret (isteğe bağlı)"
           autoComplete="off"
         />
       </Field>
+      {canEdit ? (
+        <label className="flex items-center gap-2 text-[12.5px] text-ink-muted">
+          <input type="checkbox" name="clear_secret" value="1" className="rounded border-hairline" />
+          Mevcut secret’i temizle
+        </label>
+      ) : null}
       {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
       {state?.ok ? <Notice tone="accent">{state.ok}</Notice> : null}
       {canEdit ? (
@@ -160,6 +167,7 @@ export function MembersPanel({
     <div>
       {members.length === 0 ? (
         <EmptyState
+          tone="people"
           title="Henüz üye yok"
           description="İşletmeye kayıtlı üye bulunamadı. Yeniden giriş yapmayı deneyin."
         />
@@ -236,7 +244,7 @@ export function MembersPanel({
         <form action={formAction} className="space-y-2.5 border-t border-hairline p-3.5">
           <Field
             label="Üye ekle / davet et"
-            hint="Hesap varsa hemen eklenir. Yoksa davet e-postası gider (self-signup kapalı)."
+            hint="Hesap varsa hemen eklenir. Yoksa org_invites + e-posta daveti (7 gün)."
           >
             <Input
               name="email"
@@ -299,5 +307,36 @@ export function MembersPanel({
         </p>
       )}
     </div>
+  )
+}
+
+export function DeleteOrganizationForm({ orgName }: { orgName: string }) {
+  const [state, formAction, pending] = useActionState<OrgActionState, FormData>(
+    deleteOrganization,
+    null,
+  )
+
+  return (
+    <form action={formAction} className="space-y-2.5 p-3.5">
+      <p className="text-[12.5px] leading-relaxed text-ink-muted">
+        Bu işlem geri alınamaz: hatlar, kişiler, kampanyalar ve mesaj kayıtları silinir.
+        Aktif Stripe aboneliğiniz varsa önce Ayarlar’daki müşteri portalından iptal edin.
+      </p>
+      <Field
+        label="Onay"
+        hint={`Silmek için işletme adını yazın: ${orgName}`}
+      >
+        <Input
+          name="confirmName"
+          required
+          autoComplete="off"
+          placeholder={orgName}
+        />
+      </Field>
+      {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
+      <Button type="submit" variant="danger" disabled={pending}>
+        {pending ? 'Siliniyor…' : 'İşletmeyi kalıcı sil'}
+      </Button>
+    </form>
   )
 }

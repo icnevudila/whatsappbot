@@ -170,6 +170,7 @@ export function TargetFeed({
 
       {visible.length === 0 ? (
         <EmptyState
+          tone="campaign"
           title={emptyTitle}
           description={emptyDescription}
           action={

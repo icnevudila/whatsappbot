@@ -41,6 +41,25 @@ function statusHint(status: string): string | null {
   }
 }
 
+/** Sol ray + soft zemin — durum renkleri /ozet kart diliyle uyumlu. */
+function campaignShell(status: string): string {
+  switch (status) {
+    case 'running':
+      return 'border-accent/30 bg-accent-soft/70 shadow-[inset_3px_0_0_var(--color-accent)]'
+    case 'completed':
+      return 'border-ok/30 bg-ok-soft/50 shadow-[inset_3px_0_0_var(--color-ok)]'
+    case 'failed':
+    case 'stopped':
+      return 'border-danger/30 bg-[#fff5f4] shadow-[inset_3px_0_0_var(--color-danger)]'
+    case 'paused':
+    case 'scheduled':
+      return 'border-warn/30 bg-[#fff8e8] shadow-[inset_3px_0_0_var(--color-warn)]'
+    case 'draft':
+    default:
+      return 'border-hairline bg-surface-raised/60 shadow-[inset_3px_0_0_var(--color-hairline-strong)]'
+  }
+}
+
 export default async function CampaignsPage({
   searchParams,
 }: {
@@ -122,7 +141,7 @@ export default async function CampaignsPage({
         <Notice tone="success">{t('pages.kampanyalarReady')}</Notice>
       ) : null}
 
-      <div className={`grid gap-2.5 lg:grid-cols-[minmax(0,1fr)_380px]${justReady ? ' mt-3' : ''}`}>
+      <div className={`grid gap-2.5 lg:grid-cols-[minmax(0,1fr)_380px]${justReady ? ' mt-0' : ''}`}>
         <div className="order-2 lg:order-1">
           <Card>
             <CardHeader
@@ -136,6 +155,7 @@ export default async function CampaignsPage({
 
             {campaigns.length === 0 ? (
               <EmptyState
+                tone="campaign"
                 title="Henüz kampanya yok"
                 description={
                   listOptions.length === 0
@@ -155,7 +175,7 @@ export default async function CampaignsPage({
                 }
               />
             ) : (
-              <ul className="divide-y divide-hairline">
+              <ul className="space-y-2 p-2.5">
                 {campaigns.map((campaign) => {
                   const done =
                     campaign.sent_count + campaign.failed_count + campaign.skipped_count
@@ -166,30 +186,32 @@ export default async function CampaignsPage({
                     <li key={campaign.id}>
                       <Link
                         href={`/kampanyalar/${campaign.id}#paylasilanlar`}
-                        className="block px-3.5 py-2.5 transition-colors hover:bg-surface-raised"
+                        className={`wb-card-lift block rounded-[var(--radius-sm)] border px-3.5 py-3 transition-[box-shadow,border-color] ${campaignShell(campaign.status)}`}
                       >
                         <div className="flex items-center justify-between gap-3">
                           <div className="min-w-0">
-                            <p className="truncate text-[13px] font-semibold">{campaign.name}</p>
+                            <p className="truncate text-[15px] font-bold tracking-[-0.02em] text-ink">
+                              {campaign.name}
+                            </p>
                             {hint ? (
-                              <p className="mt-0.5 text-[11px] text-ink-faint">{hint}</p>
+                              <p className="mt-0.5 text-[11.5px] text-ink-muted">{hint}</p>
                             ) : null}
                           </div>
                           <StatusPill status={campaign.status} />
                         </div>
 
-                        <div className="mt-2 flex items-center gap-2.5">
+                        <div className="mt-2.5 flex items-center gap-2.5">
                           <Meter
                             value={done}
                             max={Math.max(1, total)}
                             tone={meterTone(campaign.status, campaign.failed_count)}
                           />
-                          <span className="shrink-0 tabular text-[11px] text-ink-faint">
+                          <span className="shrink-0 tabular text-[11.5px] font-medium text-ink-muted">
                             {done}/{total || '—'}
                           </span>
                         </div>
 
-                        <p className="mt-1.5 text-[11.5px] text-ink-muted tabular">
+                        <p className="mt-1.5 text-[12px] text-ink-muted tabular">
                           {campaign.sent_count} gönderildi
                           {campaign.skipped_count > 0
                             ? ` · ${campaign.skipped_count} atlandı`
@@ -203,7 +225,7 @@ export default async function CampaignsPage({
 
                         {campaign.stop_reason ? (
                           <p
-                            className="mt-1.5 line-clamp-2 border border-danger/25 bg-danger/8 px-2 py-1 text-[11.5px] text-danger"
+                            className="mt-2 line-clamp-2 rounded-sm border border-danger/25 bg-danger/10 px-2 py-1 text-[11.5px] text-danger"
                             title={campaign.stop_reason}
                           >
                             <span className="font-medium">Durdurma nedeni:</span>{' '}
@@ -223,7 +245,7 @@ export default async function CampaignsPage({
           <NewCampaignForm
             lists={listOptions}
             accounts={accountOptions}
-            userId={userId}
+            orgId={org.id}
             aiEnabled={hasTextProvider()}
             brandName={brandResult.data?.name ?? undefined}
           />

@@ -167,46 +167,53 @@ export function AccountsBoard({
   const connected = accounts.filter((account) => account.status === 'connected').length
   const remaining = Math.max(0, accountsQuota - accounts.length)
   const atCap = remaining === 0
+  const sentTodayTotal = accounts.reduce((sum, account) => {
+    const today = new Date().toISOString().slice(0, 10)
+    return sum + (account.sent_today_on === today ? account.sent_today : 0)
+  }, 0)
 
   return (
     <div className="space-y-2.5">
-      <Card>
-        <div className="grid gap-2.5 p-3.5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-          <div>
-            <p className="text-[11.5px] font-medium tracking-wide text-ink-faint uppercase">
-              Hat kapasitesi
+      <div className="grid gap-2.5 sm:grid-cols-3">
+        <Card lift className="border-ok/30 bg-ok-soft/50">
+          <div className="p-3.5">
+            <p className="text-[11.5px] font-medium text-ok-dim">Bağlı hat</p>
+            <p className="mt-1 tabular text-[28px] font-extrabold tracking-[-0.03em] text-ok-dim">
+              {connected}
             </p>
-            <p className="mt-1 tabular text-[22px] font-semibold tracking-tight text-ink">
-              {accounts.length}
-              <span className="text-[15px] font-medium text-ink-muted">
-                {' '}
-                / {accountsQuota}
-              </span>
-            </p>
-            <p className="mt-1 text-[12px] text-ink-muted">
-              {connected} bağlı · {remaining} ekleme hakkı · her hat ayrı bir
-              WhatsApp oturumudur
-            </p>
-            <div className="mt-3 max-w-md">
-              <Meter
-                value={accounts.length}
-                max={accountsQuota}
-                tone={atCap ? 'warn' : 'accent'}
-              />
-            </div>
+            <p className="mt-1 text-[11.5px] text-ink-muted">{accounts.length} toplam kayıt</p>
           </div>
-          <p className="max-w-xs text-[11.5px] leading-relaxed text-ink-faint sm:text-right">
-            Kampanya veya hızlı gönderimde birden fazla hat seçerseniz mesajlar
-            hatlar arasında paylaşılır. Anlık kapasite için Durum sayfasına bakın.
-          </p>
-        </div>
-      </Card>
+        </Card>
+        <Card lift className="border-accent/25 bg-accent-soft/70">
+          <div className="p-3.5">
+            <p className="text-[11.5px] font-medium text-accent-dim">Bugün gönderilen</p>
+            <p className="mt-1 tabular text-[28px] font-extrabold tracking-[-0.03em] text-accent">
+              {sentTodayTotal}
+            </p>
+            <p className="mt-1 text-[11.5px] text-ink-muted">Tüm hatlar toplamı</p>
+          </div>
+        </Card>
+        <Card lift className={atCap ? 'border-warn/35 bg-[#fff6e8]' : 'border-hairline bg-surface'}>
+          <div className="p-3.5">
+            <p className="text-[11.5px] font-medium text-ink-muted">Kota</p>
+            <p className="mt-1 tabular text-[28px] font-extrabold tracking-[-0.03em] text-ink">
+              {accounts.length}
+              <span className="text-[16px] font-semibold text-ink-muted"> / {accountsQuota}</span>
+            </p>
+            <div className="mt-2.5">
+              <Meter value={accounts.length} max={accountsQuota} tone={atCap ? 'warn' : 'accent'} />
+            </div>
+            <p className="mt-1.5 text-[11.5px] text-ink-faint">{remaining} ekleme hakkı</p>
+          </div>
+        </Card>
+      </div>
 
       <NewAccountForm remaining={remaining} atCap={atCap} />
 
       {accounts.length === 0 ? (
-        <Card>
+        <Card lift className="border-accent/20 bg-accent-soft/40">
           <EmptyState
+            tone="phone"
             title="Henüz hat yok"
             description="Yukarıdan bir etiket verip hat ekleyin. QR veya telefon eşleştirme kodu bu ekranda otomatik gelir; okuttuğunuzda bağlantı kurulur."
             action={<AccentLink href="#yeni-hat">Yukarıdan hat ekle</AccentLink>}
@@ -311,15 +318,36 @@ function AccountCard({ account }: { account: AccountView }) {
     : null
   const reachoutActive = lockedUntil !== null && lockedUntil.getTime() > Date.now()
 
+  const shell =
+    account.is_locked
+      ? 'border-danger/35 bg-[#fff5f4] shadow-[0_8px_24px_rgba(180,35,24,0.06)]'
+      : account.status === 'connected'
+        ? 'border-ok/40 bg-ok-soft/35 shadow-[0_8px_24px_rgba(37,211,102,0.08)]'
+        : account.status === 'qr' || account.status === 'connecting'
+          ? 'border-[#e8a317]/45 bg-[#fff8e8] shadow-[0_8px_24px_rgba(161,92,0,0.06)]'
+          : 'border-hairline bg-surface'
+
   return (
-    <Card>
-      <div className="flex flex-wrap items-start justify-between gap-2.5 border-b border-hairline px-3.5 py-2.5">
+    <Card lift className={shell}>
+      <div className="flex flex-wrap items-start justify-between gap-2.5 border-b border-hairline/80 px-3.5 py-3">
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <h3 className="truncate text-[13.5px] font-semibold">{account.label}</h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`inline-flex size-2.5 shrink-0 rounded-full ${
+                account.is_locked
+                  ? 'bg-danger'
+                  : account.status === 'connected'
+                    ? 'bg-ok'
+                    : account.status === 'qr' || account.status === 'connecting'
+                      ? 'bg-warn'
+                      : 'bg-ink-faint'
+              }`}
+              aria-hidden
+            />
+            <h3 className="truncate text-[15px] font-bold tracking-[-0.02em]">{account.label}</h3>
             <StatusPill status={account.is_locked ? 'banned' : account.status} />
           </div>
-          <p className="mt-0.5 text-[12px] text-ink-muted tabular">
+          <p className="mt-1 text-[12.5px] text-ink-muted tabular">
             {account.phone_e164 ?? 'Numara henüz bilinmiyor'}
             {account.status_detail ? ` · ${account.status_detail}` : ''}
           </p>

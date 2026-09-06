@@ -196,6 +196,7 @@ export function StatusBoard({
 
           {lines.length === 0 ? (
             <EmptyState
+              tone="phone"
               title="Henüz hat yok"
               description="Hesaplar’dan QR veya telefon koduyla ilk hattı bağlayın. Bağlantı sunucuda kalır."
               action={<AccentLink href="/hesaplar">Hesaplara git</AccentLink>}
@@ -287,6 +288,7 @@ export function StatusBoard({
 
           {campaigns.length === 0 ? (
             <EmptyState
+              tone="campaign"
               title="Henüz kampanya yok"
               description="Kampanyalar’dan liste seçin veya Hızlı gönderim ile numaraları yapıştırın."
               action={

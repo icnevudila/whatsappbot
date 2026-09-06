@@ -731,7 +731,7 @@ export type Database = {
           finished_at: string | null
           id: number
           max_attempts: number
-          org_id: string | null
+          org_id: string
           payload: Json
           priority: number
           result: Json | null
@@ -752,7 +752,7 @@ export type Database = {
           finished_at?: string | null
           id?: never
           max_attempts?: number
-          org_id?: string | null
+          org_id: string
           payload?: Json
           priority?: number
           result?: Json | null
@@ -773,7 +773,7 @@ export type Database = {
           finished_at?: string | null
           id?: never
           max_attempts?: number
-          org_id?: string | null
+          org_id?: string
           payload?: Json
           priority?: number
           result?: Json | null
@@ -920,7 +920,13 @@ export type Database = {
           name: string
           plan: string
           slug: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          suspend_reason: string | null
+          suspended_at: string | null
           updated_at: string
+          webhook_secret: string | null
+          webhook_url: string | null
         }
         Insert: {
           accounts_quota?: number
@@ -930,7 +936,13 @@ export type Database = {
           name: string
           plan?: string
           slug: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          suspend_reason?: string | null
+          suspended_at?: string | null
           updated_at?: string
+          webhook_secret?: string | null
+          webhook_url?: string | null
         }
         Update: {
           accounts_quota?: number
@@ -940,9 +952,59 @@ export type Database = {
           name?: string
           plan?: string
           slug?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          suspend_reason?: string | null
+          suspended_at?: string | null
           updated_at?: string
+          webhook_secret?: string | null
+          webhook_url?: string | null
         }
         Relationships: []
+      }
+      org_invites: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          org_id: string
+          role: string
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email: string
+          expires_at: string
+          id?: string
+          invited_by: string
+          org_id: string
+          role?: string
+          token: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          org_id?: string
+          role?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_invites_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -1002,17 +1064,48 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_org_invite: { Args: { p_token: string }; Returns: string }
       add_organization_member: {
         Args: { p_email: string; p_org_id: string; p_role?: string }
         Returns: undefined
+      }
+      admin_set_org_suspended: {
+        Args: { p_org_id: string; p_reason?: string; p_suspend: boolean }
+        Returns: Json
+      }
+      apply_stripe_subscription: {
+        Args: {
+          p_accounts_quota: number
+          p_monthly_message_quota: number
+          p_org_id: string
+          p_plan: string
+          p_stripe_customer_id?: string | null
+          p_stripe_subscription_id?: string | null
+        }
+        Returns: Json
       }
       set_organization_member_role: {
         Args: { p_org_id: string; p_role: string; p_user_id: string }
         Returns: undefined
       }
+      set_organization_webhook: {
+        Args: {
+          p_clear_secret?: boolean
+          p_org_id: string
+          p_webhook_secret?: string | null
+          p_webhook_url: string
+        }
+        Returns: undefined
+      }
       create_organization: { Args: { p_name: string }; Returns: string }
+      delete_organization: {
+        Args: { p_confirm_name: string; p_org_id: string }
+        Returns: undefined
+      }
       is_org_admin: { Args: { p_org_id: string }; Returns: boolean }
       is_org_member: { Args: { p_org_id: string }; Returns: boolean }
+      org_send_gate: { Args: { p_org_id: string }; Returns: Json }
+      org_send_gate_member: { Args: { p_org_id: string }; Returns: Json }
       slugify: { Args: { p_text: string }; Returns: string }
       user_org_ids: { Args: never; Returns: string[] }
     }

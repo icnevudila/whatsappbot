@@ -3,9 +3,10 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
+import { Icon, iconForHref, type IconName } from '@/components/icon'
 import { useT } from '@/lib/i18n/provider'
 
-type NavItem = { href: string; label: string }
+type NavItem = { href: string; label: string; icon?: IconName }
 
 function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
@@ -14,16 +15,19 @@ function isActive(pathname: string, href: string) {
 function NavLink({
   href,
   label,
+  icon,
   active,
   className,
   onNavigate,
 }: {
   href: string
   label: string
+  icon?: IconName
   active: boolean
   className?: string
   onNavigate?: () => void
 }) {
+  const iconName = icon ?? iconForHref(href)
   return (
     <Link
       href={href}
@@ -32,6 +36,7 @@ function NavLink({
       onClick={onNavigate}
       className={className ?? `wb-rail-link${active ? ' is-active' : ''}`}
     >
+      <Icon name={iconName} className="wb-rail-link-icon size-[16px]" />
       <span className="wb-rail-link-label">{label}</span>
     </Link>
   )
@@ -58,18 +63,18 @@ export function Nav({
           id: 'setup',
           label: t('nav.groupSetup'),
           items: [
-            { href: '/kurulum', label: t('nav.steps') },
-            { href: '/marka-kiti', label: t('nav.markaShort') },
-            { href: '/kisiler', label: t('nav.kisiler') },
-            { href: '/hesaplar', label: t('nav.hesaplar') },
+            { href: '/kurulum', label: t('nav.steps'), icon: 'steps' as const },
+            { href: '/marka-kiti', label: t('nav.markaShort'), icon: 'brand' as const },
+            { href: '/kisiler', label: t('nav.kisiler'), icon: 'people' as const },
+            { href: '/hesaplar', label: t('nav.hesaplar'), icon: 'phone' as const },
           ] as NavItem[],
         },
         {
           id: 'system',
           label: t('nav.groupSystem'),
           items: [
-            { href: '/ayarlar', label: t('nav.ayarlar') },
-            { href: '/yardim', label: t('nav.yardim') },
+            { href: '/ayarlar', label: t('nav.ayarlar'), icon: 'settings' as const },
+            { href: '/yardim', label: t('nav.yardim'), icon: 'help' as const },
           ] as NavItem[],
         },
       ]
@@ -79,37 +84,37 @@ export function Nav({
         id: 'ops',
         label: t('nav.groupOps'),
         items: [
-          { href: '/ozet', label: t('nav.ozet') },
-          { href: '/hesaplar', label: t('nav.hesaplar') },
-          { href: '/hizli-gonderim', label: t('nav.hizli') },
-          { href: '/kisiler', label: t('nav.kisiler') },
-          { href: '/kampanyalar', label: t('nav.kampanyalar') },
+          { href: '/ozet', label: t('nav.ozet'), icon: 'overview' as const },
+          { href: '/hesaplar', label: t('nav.hesaplar'), icon: 'phone' as const },
+          { href: '/hizli-gonderim', label: t('nav.hizli'), icon: 'send' as const },
+          { href: '/kisiler', label: t('nav.kisiler'), icon: 'people' as const },
+          { href: '/kampanyalar', label: t('nav.kampanyalar'), icon: 'campaign' as const },
         ] as NavItem[],
       },
       {
         id: 'inbox',
         label: t('nav.groupInbox'),
         items: [
-          { href: '/gelenler', label: t('nav.gelenler') },
-          { href: '/gidenler', label: t('nav.gidenler') },
-          { href: '/kara-liste', label: t('nav.karaListe') },
+          { href: '/gelenler', label: t('nav.gelenler'), icon: 'inbox' as const },
+          { href: '/gidenler', label: t('nav.gidenler'), icon: 'outbound' as const },
+          { href: '/kara-liste', label: t('nav.karaListe'), icon: 'shield' as const },
         ] as NavItem[],
       },
       {
         id: 'watch',
         label: t('nav.groupWatch'),
         items: [
-          { href: '/durum', label: t('nav.durum') },
-          { href: '/raporlar', label: t('nav.raporlar') },
+          { href: '/durum', label: t('nav.durum'), icon: 'activity' as const },
+          { href: '/raporlar', label: t('nav.raporlar'), icon: 'chart' as const },
         ] as NavItem[],
       },
       {
         id: 'system',
         label: t('nav.groupSystem'),
         items: [
-          { href: '/marka-kiti', label: t('nav.marka') },
-          { href: '/ayarlar', label: t('nav.ayarlar') },
-          { href: '/yardim', label: t('nav.yardim') },
+          { href: '/marka-kiti', label: t('nav.marka'), icon: 'brand' as const },
+          { href: '/ayarlar', label: t('nav.ayarlar'), icon: 'settings' as const },
+          { href: '/yardim', label: t('nav.yardim'), icon: 'help' as const },
         ] as NavItem[],
       },
     ]
@@ -117,7 +122,7 @@ export function Nav({
 
   const setupItem =
     showSetup && !onboardingLock
-      ? ({ href: '/kurulum', label: t('nav.kurulum') } as const)
+      ? ({ href: '/kurulum', label: t('nav.kurulum'), icon: 'steps' as const } as const)
       : null
   const flat = groups.flatMap((g) => g.items)
   const primaryH = flat.slice(0, onboardingLock ? 8 : 6)
@@ -154,6 +159,7 @@ export function Nav({
               <NavLink
                 href={setupItem.href}
                 label={setupItem.label}
+                icon={setupItem.icon}
                 active={isActive(pathname, setupItem.href)}
                 className={`wb-rail-link whitespace-nowrap${
                   isActive(pathname, setupItem.href) ? ' is-active' : ''
@@ -165,6 +171,7 @@ export function Nav({
                 key={item.href}
                 href={item.href}
                 label={item.label}
+                icon={item.icon}
                 active={isActive(pathname, item.href)}
                 className={`wb-rail-link whitespace-nowrap${
                   isActive(pathname, item.href) ? ' is-active' : ''
@@ -185,6 +192,7 @@ export function Nav({
                 moreActive || moreOpen ? ' is-active' : ''
               }`}
             >
+              <Icon name="more" className="wb-rail-link-icon size-[16px]" />
               <span className="wb-rail-link-label">{t('nav.more')}</span>
             </button>
 
@@ -223,10 +231,14 @@ export function Nav({
                             prefetch
                             aria-current={active ? 'page' : undefined}
                             onClick={() => setMoreOpen(false)}
-                            className={`wb-rail-link block px-3 py-3 text-[14px]${
+                            className={`wb-rail-link px-3 py-3 text-[14px]${
                               active ? ' is-active' : ''
                             }`}
                           >
+                            <Icon
+                              name={item.icon ?? iconForHref(item.href)}
+                              className="wb-rail-link-icon size-[16px]"
+                            />
                             <span className="wb-rail-link-label">{item.label}</span>
                           </Link>
                         </li>
@@ -253,6 +265,7 @@ export function Nav({
           <NavLink
             href={setupItem.href}
             label={setupItem.label}
+            icon={setupItem.icon}
             active={isActive(pathname, setupItem.href)}
           />
         </>
@@ -266,6 +279,7 @@ export function Nav({
                 key={item.href}
                 href={item.href}
                 label={item.label}
+                icon={item.icon}
                 active={isActive(pathname, item.href)}
               />
             ))}

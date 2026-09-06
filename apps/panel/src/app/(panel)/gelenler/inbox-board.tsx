@@ -55,6 +55,13 @@ function hrefFor(opts: {
   return `/gelenler?${params.toString()}`
 }
 
+/** Liste satırı için son 2 hane — soft avatar mark. */
+function phoneMark(phone: string) {
+  const digits = phone.replace(/\D/g, '')
+  if (digits.length >= 2) return digits.slice(-2)
+  return phone.replace(/@lid$/, '').slice(0, 2).toUpperCase() || '?'
+}
+
 export function InboxBoard({
   orgId,
   tab,
@@ -217,42 +224,65 @@ export function InboxBoard({
           </div>
           {visibleList.length === 0 ? (
             <EmptyState
+              tone="inbox"
               title={search ? 'Sohbet bulunamadı' : emptyCopy.title}
               description={search ? 'Başka bir numara veya kelimeyle arayın.' : emptyCopy.description}
             />
           ) : (
-            <ul className="min-h-0 flex-1 divide-y divide-hairline overflow-y-auto">
+            <ul className="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-1.5">
               {visibleList.map((item) => {
                 const active = item.phone === selectedPhone
                 return (
                   <li key={item.phone}>
                     <Link
                       href={hrefFor({ tel: item.phone, tab, threadMode })}
-                      className={`block px-3.5 py-2.5 transition-colors hover:bg-surface-raised ${
-                        active ? 'wb-row-active' : ''
+                      className={`block rounded-[var(--radius-sm)] px-3.5 py-2.5 transition-colors hover:bg-surface-raised ${
+                        active
+                          ? 'border border-accent/25 bg-accent-soft shadow-[inset_3px_0_0_var(--color-accent)]'
+                          : 'border border-transparent'
                       }`}
                     >
-                      <div className="flex items-baseline justify-between gap-2">
-                        <p className="truncate font-mono text-[12.5px] tabular">
-                          {item.missingPhone ? item.phone.replace(/@lid$/, '') : item.phone}
-                        </p>
-                        <span className="shrink-0 text-[10.5px] text-ink-faint">
-                          {timeFormat.format(new Date(item.lastAt))}
+                      <div className="flex items-start gap-2.5">
+                        <span
+                          className={`mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border font-mono text-[11px] font-semibold tabular ${
+                            item.isReply
+                              ? 'border-accent/25 bg-accent-soft text-accent-dim'
+                              : 'border-ok/30 bg-ok-soft text-ok-dim'
+                          }`}
+                          aria-hidden
+                        >
+                          {phoneMark(item.phone)}
                         </span>
-                      </div>
-                      <p className="mt-0.5 truncate text-[12px] text-ink-muted">
-                        {item.lastBody ?? `(${item.messageType})`}
-                      </p>
-                      <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-ink-faint">
-                        {item.accountLabel ? <span>{item.accountLabel}</span> : null}
-                        {item.missingPhone ? (
-                          <span className="rounded-sm border border-hairline px-1 py-px text-[10px]">
-                            numara yok
-                          </span>
-                        ) : null}
-                        {item.isReply ? (
-                          <span className="text-[10px] font-medium text-accent">yanıt</span>
-                        ) : null}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-baseline justify-between gap-2">
+                            <p className="truncate font-mono text-[13px] font-medium tabular">
+                              {item.missingPhone ? item.phone.replace(/@lid$/, '') : item.phone}
+                            </p>
+                            <span className="shrink-0 text-[11px] text-ink-faint">
+                              {timeFormat.format(new Date(item.lastAt))}
+                            </span>
+                          </div>
+                          <p className="mt-0.5 truncate text-[12.5px] text-ink-muted">
+                            {item.lastBody ?? `(${item.messageType})`}
+                          </p>
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11.5px] text-ink-faint">
+                            {item.accountLabel ? <span>{item.accountLabel}</span> : null}
+                            {item.missingPhone ? (
+                              <span className="rounded-sm border border-hairline bg-surface-raised px-1.5 py-px text-[10.5px]">
+                                numara yok
+                              </span>
+                            ) : null}
+                            {item.isReply ? (
+                              <span className="rounded-sm border border-accent/30 bg-accent-soft px-1.5 py-px text-[10.5px] font-semibold text-accent">
+                                yanıt
+                              </span>
+                            ) : (
+                              <span className="rounded-sm border border-warn/30 bg-[#fff8e8] px-1.5 py-px text-[10.5px] font-semibold text-warn">
+                                yeni
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </Link>
                   </li>
@@ -315,11 +345,12 @@ export function InboxBoard({
 
               {thread.length === 0 ? (
                 <EmptyState
+                  tone="inbox"
                   title="Konuşma boş"
                   description="Bu numara için henüz kayıtlı mesaj yok."
                 />
               ) : (
-                <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto bg-canvas/60 p-4">
+                <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto bg-canvas/50 p-4">
                   {thread.map((row) => {
                     const outgoing = row.direction === 'out'
                     return (
@@ -328,20 +359,16 @@ export function InboxBoard({
                         className={`flex ${outgoing ? 'justify-end' : 'justify-start'}`}
                       >
                         <div
-                          className={`max-w-[85%] border px-3 py-2 ${
+                          className={`max-w-[85%] rounded-[var(--radius-sm)] border px-3.5 py-2.5 shadow-[var(--shadow-card)] ${
                             outgoing
-                              ? 'border-ink bg-ink text-accent-ink'
-                              : 'border-hairline bg-surface text-ink'
+                              ? 'border-accent/30 bg-accent-soft text-ink'
+                              : 'border-ok/35 bg-ok-soft text-ink'
                           }`}
                         >
-                          <p className="whitespace-pre-wrap break-words text-[13px] leading-relaxed">
+                          <p className="whitespace-pre-wrap break-words text-[13.5px] leading-relaxed">
                             {row.body ?? `(${row.message_type})`}
                           </p>
-                          <p
-                            className={`mt-1 text-[10.5px] ${
-                              outgoing ? 'text-accent-ink/70' : 'text-ink-faint'
-                            }`}
-                          >
+                          <p className="mt-1.5 text-[11px] text-ink-muted">
                             {outgoing ? 'Giden' : 'Gelen'}
                             {row.account_id && accountLabels[row.account_id]
                               ? ` · ${accountLabels[row.account_id]}`
@@ -376,6 +403,7 @@ export function InboxBoard({
             </>
           ) : (
             <EmptyState
+              tone="inbox"
               title="Bir sohbet seçin"
               description="Soldan bir sohbet seçerek geçmişi okuyun ve yanıt verin."
             />

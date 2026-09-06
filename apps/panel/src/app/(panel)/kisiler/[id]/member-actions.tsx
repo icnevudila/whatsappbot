@@ -41,6 +41,7 @@ export function MemberActions({
   if (members.length === 0) {
     return (
       <EmptyState
+        tone="people"
         title="Bu listede numara yok"
         description="Listeye numara ekleyin; ardından kampanyada kullanın."
       />

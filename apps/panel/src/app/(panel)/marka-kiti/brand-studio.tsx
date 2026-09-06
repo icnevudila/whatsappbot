@@ -47,14 +47,14 @@ export function BrandStudio({
   initialColors,
   initialLogoUrl,
   brandKitId,
-  userId,
+  orgId,
   hasSavedKit = false,
 }: {
   initialName: string
   initialColors: BrandColors
   initialLogoUrl: string | null
   brandKitId: string | null
-  userId: string
+  orgId: string
   hasSavedKit?: boolean
 }) {
   const [state, formAction, saving] = useActionState<BrandKitState, FormData>(
@@ -84,7 +84,7 @@ export function BrandStudio({
     try {
       const supabase = getSupabaseBrowserClient()
       const extension = file.name.split('.').pop() ?? 'png'
-      const path = `${userId}/logo-${crypto.randomUUID()}.${extension}`
+      const path = `${orgId}/logo-${crypto.randomUUID()}.${extension}`
 
       const { error: uploadError } = await supabase.storage
         .from('creatives')

@@ -48,13 +48,13 @@ function looksLikeUrl(value: string): boolean {
 export function NewCampaignForm({
   lists,
   accounts,
-  userId,
+  orgId,
   aiEnabled,
   brandName,
 }: {
   lists: Option[]
   accounts: Option[]
-  userId: string
+  orgId: string
   aiEnabled: boolean
   brandName?: string
 }) {
@@ -109,7 +109,7 @@ export function NewCampaignForm({
     try {
       const supabase = getSupabaseBrowserClient()
       const extension = file.name.split('.').pop() ?? 'bin'
-      const path = `${userId}/${crypto.randomUUID()}.${extension}`
+      const path = `${orgId}/${crypto.randomUUID()}.${extension}`
 
       const { error } = await supabase.storage.from('creatives').upload(path, file, {
         contentType: file.type,

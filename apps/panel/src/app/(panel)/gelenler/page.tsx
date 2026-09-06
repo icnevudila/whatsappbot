@@ -51,7 +51,6 @@ export default async function InboxPage({
     { data: inbound },
     { data: outboundPhones },
     { data: accounts },
-    { count: inboundToday },
     { messages },
   ] = await Promise.all([
       supabase
@@ -71,12 +70,6 @@ export default async function InboxPage({
         .not('phone_e164', 'is', null)
         .limit(2000),
       supabase.from('accounts').select('id, label, phone_e164').eq('org_id', org.id),
-      supabase
-        .from('message_log')
-        .select('id', { count: 'exact', head: true })
-        .eq('org_id', org.id)
-        .eq('direction', 'in')
-        .gte('created_at', new Date(new Date().setHours(0, 0, 0, 0)).toISOString()),
     getDictionary(),
   ])
 
@@ -143,14 +136,7 @@ export default async function InboxPage({
       <PageHeader
         title={t('pages.gelenlerTitle')}
         description="Konuşmaları okuyun, bağlı hattınızdan yanıtlayın ve çıkış taleplerini yönetin. Son 200 gelen mesajdan oluşan güncel sohbetler gösterilir."
-        action={
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="tabular text-[12.5px] text-ink-muted">
-              Bugün {inboundToday ?? 0} gelen
-            </span>
-            <AccentLink href="/kara-liste">{t('nav.karaListe')}</AccentLink>
-          </div>
-        }
+        action={<AccentLink href="/kara-liste">{t('nav.karaListe')}</AccentLink>}
       />
 
       <InboxBoard

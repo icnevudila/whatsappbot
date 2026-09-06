@@ -74,6 +74,7 @@ export function AutoReplyManager({ rules, canEdit }: { rules: Rule[]; canEdit: b
         />
         {rules.length === 0 ? (
           <EmptyState
+            tone="inbox"
             title="Henüz kural yok"
             description="Gelen mesajlara otomatik yanıt vermek için bir kural ekleyin. Eşleşme + yanıt metni yeterli."
             action={

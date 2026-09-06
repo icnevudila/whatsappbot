@@ -312,6 +312,7 @@ export default async function ReportsPage({
         <CardHeader title={t('reports.table')} subtitle="En fazla 40 kayıt · CSV ile tam dışa aktarım" />
         {report.campaigns.length === 0 ? (
           <EmptyState
+            tone="campaign"
             title="Henüz kampanya yok"
             description="İlk toplu gönderimi oluşturunca buraya düşer. Hızlı gönderim de kampanya olarak görünür."
             action={<AccentLink href="/kampanyalar">Kampanyalara git</AccentLink>}

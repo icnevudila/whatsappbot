@@ -11,6 +11,27 @@ import { QuickSendForm, type SenderOption } from './quick-send-form'
 
 export const metadata: Metadata = { title: 'Hızlı gönderim' }
 
+function recentShell(status: string): string {
+  switch (status) {
+    case 'running':
+    case 'sending':
+      return 'border-l-[3px] border-l-accent bg-accent-soft/40'
+    case 'completed':
+    case 'sent':
+    case 'delivered':
+    case 'read':
+      return 'border-l-[3px] border-l-ok bg-ok-soft/35'
+    case 'failed':
+    case 'stopped':
+      return 'border-l-[3px] border-l-danger bg-[#fff5f4]'
+    case 'paused':
+    case 'scheduled':
+      return 'border-l-[3px] border-l-warn bg-[#fff8e8]'
+    default:
+      return 'border-l-[3px] border-l-hairline-strong bg-surface-raised/50'
+  }
+}
+
 export default async function QuickSendPage({
   searchParams,
 }: {
@@ -69,6 +90,7 @@ export default async function QuickSendPage({
   }))
 
   const recent = recentResult.data ?? []
+  const remainingTotal = senders.reduce((sum, s) => sum + Math.max(0, s.remainingToday), 0)
 
   return (
     <>
@@ -84,8 +106,9 @@ export default async function QuickSendPage({
       />
 
       {senders.length === 0 ? (
-        <Card>
+        <Card lift className="border-accent/25 bg-accent-soft/50">
           <EmptyState
+            tone="phone"
             title="Önce bir hat bağlayın"
             description="En az bir bağlı WhatsApp hattı gerekir. Hesaplar’dan QR okutun veya telefonla eşleştirme kodu alın."
             action={
@@ -98,26 +121,47 @@ export default async function QuickSendPage({
         </Card>
       ) : (
         <div className="grid gap-2.5 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <QuickSendForm
-            senders={senders}
-            userId={userId}
-            aiEnabled={hasTextProvider()}
-            brandName={brandResult.data?.name ?? undefined}
-            initialMediaUrl={initialMediaUrl}
-            initialNumbers={initialNumbers}
-          />
+          <div className="space-y-2.5">
+            <div className="flex flex-wrap gap-1.5">
+              <span className="inline-flex items-center gap-1.5 rounded-md border border-accent/30 bg-accent-soft px-2 py-1 text-[11.5px] font-medium text-accent-dim">
+                <span className="tabular text-[13px] font-bold text-accent">{senders.length}</span>
+                hazır hat
+              </span>
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11.5px] font-medium ${
+                  remainingTotal > 0
+                    ? 'border-ok/35 bg-ok-soft text-ok-dim'
+                    : 'border-warn/35 bg-[#fff8e8] text-warn'
+                }`}
+              >
+                <span className="tabular text-[13px] font-bold">{remainingTotal}</span>
+                kalan kota (bugün)
+              </span>
+            </div>
+
+            <QuickSendForm
+              senders={senders}
+              orgId={org.id}
+              aiEnabled={hasTextProvider()}
+              brandName={brandResult.data?.name ?? undefined}
+              initialMediaUrl={initialMediaUrl}
+              initialNumbers={initialNumbers}
+            />
+          </div>
 
           <aside className="space-y-2.5">
-            <Card>
+            <Card lift className="border-accent/25 bg-accent-soft/55">
               <div className="p-3.5">
-                <h2 className="text-[13px] font-semibold text-ink">Ne zaman ne kullanılır?</h2>
-                <ul className="mt-2 space-y-2 text-[12px] leading-relaxed text-ink-muted">
+                <h2 className="text-[13.5px] font-bold tracking-[-0.02em] text-accent-dim">
+                  Ne zaman ne kullanılır?
+                </h2>
+                <ul className="mt-2.5 space-y-2.5 text-[12.5px] leading-relaxed text-ink-muted">
                   <li>
-                    <span className="font-medium text-ink">Hızlı gönderim</span> — tek seferlik;
+                    <span className="font-semibold text-ink">Hızlı gönderim</span> — tek seferlik;
                     numarayı yapıştırıp gönderin. Sonuç Kampanyalar’da görünür.
                   </li>
                   <li>
-                    <span className="font-medium text-ink">Kişiler</span> — tekrar kullanılacak
+                    <span className="font-semibold text-ink">Kişiler</span> — tekrar kullanılacak
                     listeler (bölge, müşteri grubu).{' '}
                     <Link
                       href="/kisiler"
@@ -127,7 +171,7 @@ export default async function QuickSendPage({
                     </Link>
                   </li>
                   <li>
-                    <span className="font-medium text-ink">Kampanyalar</span> — listeden seçip
+                    <span className="font-semibold text-ink">Kampanyalar</span> — listeden seçip
                     planlı veya çok hatlı gönderim.{' '}
                     <Link
                       href="/kampanyalar"
@@ -140,30 +184,33 @@ export default async function QuickSendPage({
               </div>
             </Card>
 
-            <Card>
+            <Card lift className="border-ok/25 bg-ok-soft/30">
               <CardHeader
                 title="Son hızlı gönderimler"
                 subtitle="Detay, hatalar ve numara satırları için kampanya sayfasını açın."
               />
               {recent.length === 0 ? (
                 <EmptyState
+                  tone="outbound"
                   title="Henüz gönderim yok"
                   description="İlk hızlı gönderiminiz burada listelenir. Detay Kampanyalar’da."
                   action={<QuietLink href="/kampanyalar">Kampanyalara bak</QuietLink>}
                 />
               ) : (
-                <ul className="divide-y divide-hairline">
+                <ul className="space-y-1.5 p-2">
                   {recent.map((item) => (
                     <li key={item.id}>
                       <Link
                         href={`/kampanyalar/${item.id}`}
-                        className="flex flex-col gap-1 px-3.5 py-2.5 transition-colors hover:bg-surface-raised"
+                        className={`flex flex-col gap-1 rounded-[var(--radius-sm)] border border-transparent px-3 py-2.5 transition-colors hover:border-hairline ${recentShell(item.status)}`}
                       >
                         <span className="flex items-center justify-between gap-2">
-                          <span className="truncate text-[12.5px] text-ink">{item.name}</span>
+                          <span className="truncate text-[13px] font-semibold text-ink">
+                            {item.name}
+                          </span>
                           <StatusPill status={item.status} />
                         </span>
-                        <span className="tabular text-[11px] text-ink-faint">
+                        <span className="tabular text-[11.5px] text-ink-muted">
                           {item.sent_count}/{item.total_targets} gitti ·{' '}
                           {new Date(item.created_at).toLocaleString('tr-TR', {
                             dateStyle: 'short',

@@ -3,6 +3,7 @@ import { Button, Card, CardHeader, Notice } from '@/components/ui'
 import { requirePlatformAdmin } from '@/lib/platform'
 import { signOut } from '@/app/giris/actions'
 import { OrgQuotaForm } from './org-quota-form'
+import { OrgSuspendForm } from './org-suspend-form'
 import { UnlockAccountButton } from './unlock-account-button'
 import { ProvisionCustomerForm } from './provision-customer-form'
 
@@ -16,6 +17,8 @@ type OverviewOrg = {
   accounts_quota: number
   monthly_message_quota?: number
   member_count: number
+  suspended_at?: string | null
+  suspend_reason?: string | null
 }
 
 type OverviewAccount = {
@@ -301,19 +304,25 @@ export default async function AdminOverviewPage() {
                   <th className="px-4 py-2 font-medium">Slug</th>
                   <th className="px-4 py-2 font-medium">Üye</th>
                   <th className="px-4 py-2 font-medium">Plan / kota</th>
+                  <th className="px-4 py-2 font-medium">Askı</th>
                 </tr>
               </thead>
               <tbody>
                 {orgs.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-6 text-ink-muted">
+                    <td colSpan={5} className="px-4 py-6 text-ink-muted">
                       Henüz işletme yok.
                     </td>
                   </tr>
                 ) : (
                   orgs.map((org) => (
                     <tr key={org.id} className="border-b border-hairline last:border-0">
-                      <td className="px-4 py-2.5 font-medium">{org.name}</td>
+                      <td className="px-4 py-2.5 font-medium">
+                        {org.name}
+                        {org.suspended_at ? (
+                          <span className="ml-2 text-[11px] font-semibold text-danger">ASKIDA</span>
+                        ) : null}
+                      </td>
                       <td className="px-4 py-2.5 font-mono text-[12px] text-ink-muted">
                         {org.slug}
                       </td>
@@ -324,6 +333,12 @@ export default async function AdminOverviewPage() {
                           plan={org.plan}
                           accountsQuota={org.accounts_quota}
                           messageQuota={org.monthly_message_quota}
+                        />
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <OrgSuspendForm
+                          orgId={org.id}
+                          suspendedAt={org.suspended_at ?? null}
                         />
                       </td>
                     </tr>

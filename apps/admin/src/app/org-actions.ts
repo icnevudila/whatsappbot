@@ -12,6 +12,38 @@ import {
 export type OrgEditState = { error?: string; ok?: string } | null
 export type UnlockState = { error?: string; ok?: string } | null
 export type ProvisionState = { error?: string; ok?: string } | null
+export type SuspendState = { error?: string; ok?: string } | null
+
+export async function setOrgSuspended(
+  _prev: SuspendState,
+  formData: FormData,
+): Promise<SuspendState> {
+  const orgId = String(formData.get('org_id') ?? '').trim()
+  const suspend = String(formData.get('suspend') ?? '') === '1'
+  const reason = String(formData.get('reason') ?? '').trim()
+
+  if (!orgId) return { error: 'org_id gerekli' }
+
+  try {
+    const { supabase } = await requirePlatformAdmin()
+    const { data, error } = await supabase.rpc('admin_set_org_suspended' as never, {
+      p_org_id: orgId,
+      p_suspend: suspend,
+      p_reason: reason || null,
+    } as never)
+
+    if (error) return { error: error.message }
+    revalidatePath('/')
+    const row = data as { name?: string } | null
+    return {
+      ok: suspend
+        ? `${row?.name ?? 'İşletme'} askıya alındı`
+        : `${row?.name ?? 'İşletme'} askı kaldırıldı`,
+    }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Yetki yok' }
+  }
+}
 
 export async function updateOrganizationQuotas(
   _prev: OrgEditState,

@@ -12,6 +12,7 @@ import {
   Notice,
   QuietLink,
 } from '@/components/ui'
+import { Icon, type IconName } from '@/components/icon'
 import { useToast } from '@/components/toast'
 import { useT } from '@/lib/i18n/provider'
 import { DEFAULT_COLORS } from '@/lib/creative-templates'
@@ -70,21 +71,29 @@ export function OnboardingWizard({ progress }: { progress: Progress }) {
   const stepMeta = useMemo(
     () =>
       [
-        { key: 'brand' as SetupStepKey, title: t('setup.brandTitle'), lead: t('setup.brandLead') },
+        {
+          key: 'brand' as SetupStepKey,
+          title: t('setup.brandTitle'),
+          lead: t('setup.brandLead'),
+          icon: 'brand' as IconName,
+        },
         {
           key: 'contacts' as SetupStepKey,
           title: t('setup.contactsTitle'),
           lead: t('setup.contactsLead'),
+          icon: 'people' as IconName,
         },
         {
           key: 'connected' as SetupStepKey,
           title: t('setup.lineTitle'),
           lead: t('setup.lineLead'),
+          icon: 'phone' as IconName,
         },
         {
           key: 'verified' as SetupStepKey,
           title: t('setup.verifyTitle'),
           lead: t('setup.verifyLead'),
+          icon: 'check' as IconName,
         },
       ] as const,
     [t],
@@ -134,7 +143,8 @@ export function OnboardingWizard({ progress }: { progress: Progress }) {
                     : 'border-hairline text-ink-faint'
               }`}
             >
-              <span className="tabular">{done ? '✓' : index + 1}</span>
+              <Icon name={done ? 'check' : step.icon} className="size-3.5 shrink-0" />
+              {done ? null : <span className="tabular">{index + 1}</span>}
               {step.title}
             </li>
           )

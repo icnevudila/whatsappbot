@@ -58,6 +58,21 @@ export async function quickSend(
     return { error: error instanceof Error ? error.message : 'Oturum bulunamadi.' }
   }
 
+  if (org.suspended_at) {
+    return { error: 'İşletme askıya alındı; gönderim kapalı.' }
+  }
+
+  const { data: gate } = await supabase.rpc('org_send_gate_member', { p_org_id: org.id })
+  const gateObj = gate as { ok?: boolean; reason?: string; used?: number; quota?: number } | null
+  if (gateObj && gateObj.ok === false) {
+    if (gateObj.reason === 'monthly_quota') {
+      return {
+        error: `Aylık mesaj kotası doldu (${gateObj.used ?? '?'}/${gateObj.quota ?? '?'}).`,
+      }
+    }
+    return { error: 'Gönderim şu an kapalı.' }
+  }
+
   const { data: selectedAccounts, error: selectionError } = await supabase.from('accounts').select('id').eq('org_id', org.id).in('id', accountIds).eq('enabled', true).eq('is_locked', false)
   if (selectionError || selectedAccounts?.length !== accountIds.length) return { error: 'Seçilen hatlardan biri gönderime açık değil. Hat seçimini kontrol edin.' }
 

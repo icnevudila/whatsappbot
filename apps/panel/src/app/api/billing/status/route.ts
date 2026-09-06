@@ -15,7 +15,11 @@ export async function GET() {
   }
 
   const stripeSecret = Boolean(process.env.STRIPE_SECRET_KEY?.trim())
-  const stripePrice = Boolean(process.env.STRIPE_PRICE_ID?.trim())
+  const stripePrice = Boolean(
+    process.env.STRIPE_PRICE_ID?.trim() ||
+      process.env.STRIPE_PRICE_STARTER?.trim() ||
+      process.env.STRIPE_PRICE_PRO?.trim(),
+  )
   const stripeWebhook = Boolean(process.env.STRIPE_WEBHOOK_SECRET?.trim())
   const serviceRole = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim())
   const siteUrl = Boolean(
@@ -34,7 +38,7 @@ export async function GET() {
     inviteReady,
     missing: [
       !stripeSecret ? 'STRIPE_SECRET_KEY' : null,
-      !stripePrice ? 'STRIPE_PRICE_ID' : null,
+      !stripePrice ? 'STRIPE_PRICE_STARTER veya STRIPE_PRICE_ID' : null,
       !stripeWebhook ? 'STRIPE_WEBHOOK_SECRET' : null,
       !serviceRole ? 'SUPABASE_SERVICE_ROLE_KEY' : null,
       !siteUrl ? 'NEXT_PUBLIC_SITE_URL' : null,

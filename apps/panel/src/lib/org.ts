@@ -10,6 +10,9 @@ export type ActiveOrg = {
   monthly_message_quota: number
   role: string
   webhook_url?: string | null
+  suspended_at?: string | null
+  suspend_reason?: string | null
+  stripe_customer_id?: string | null
 }
 
 /**
@@ -54,7 +57,7 @@ export const requireActiveOrg = cache(async (): Promise<{
     }
   }
 
-  // Self-provision yok: işletme ve üyelik yalnızca yönetici / VT tarafından açılır.
+  // Self-provision: create_organization RPC (max 3 owner org). Yoksa /erisim-yok.
   if (!orgId) {
     throw new Error('NO_ORGANIZATION')
   }
@@ -85,6 +88,10 @@ export const requireActiveOrg = cache(async (): Promise<{
       monthly_message_quota: org.monthly_message_quota,
       role: member.role,
       webhook_url: (org as { webhook_url?: string | null }).webhook_url ?? null,
+      suspended_at: (org as { suspended_at?: string | null }).suspended_at ?? null,
+      suspend_reason: (org as { suspend_reason?: string | null }).suspend_reason ?? null,
+      stripe_customer_id:
+        (org as { stripe_customer_id?: string | null }).stripe_customer_id ?? null,
     },
     supabase,
   }

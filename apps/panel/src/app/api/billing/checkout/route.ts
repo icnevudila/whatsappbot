@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
-import { isPlanId } from '@wa/shared'
 import { requireActiveOrg } from '@/lib/org'
+import { resolveCheckoutPlan, stripePriceIdForPlan } from '@/lib/stripe-prices'
 
 export const runtime = 'nodejs'
 
 /**
  * Stripe Checkout — metadata.org_id + filo_plan ile webhook org gunceller.
+ * Price: STRIPE_PRICE_{STARTER|PRO|ENTERPRISE} veya STRIPE_PRICE_ID (starter).
  */
 export async function POST(request: Request) {
   let userId: string
@@ -18,6 +19,10 @@ export async function POST(request: Request) {
 
   if (org.role !== 'owner' && org.role !== 'admin') {
     return NextResponse.json({ error: 'Yalnızca admin yükseltebilir.' }, { status: 403 })
+  }
+
+  if (org.suspended_at) {
+    return NextResponse.json({ error: 'İşletme askıda; faturalama kapalı.' }, { status: 403 })
   }
 
   const secret = process.env.STRIPE_SECRET_KEY?.trim()
@@ -43,19 +48,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Geçersiz istek.' }, { status: 400 })
   }
 
-  const priceId = body.priceId?.trim() || process.env.STRIPE_PRICE_ID?.trim()
+  const plan = resolveCheckoutPlan(body.plan)
+  const priceId = body.priceId?.trim() || stripePriceIdForPlan(plan)
   if (!priceId) {
     return NextResponse.json(
       {
-        error: 'Faturalama henüz yapılandırılmadı (STRIPE_PRICE_ID).',
+        error: `Faturalama henüz yapılandırılmadı (STRIPE_PRICE_${plan.toUpperCase()} / STRIPE_PRICE_ID).`,
         status: 'not_configured',
       },
       { status: 503 },
     )
   }
 
-  const rawPlan = (body.plan?.trim() || 'starter').toLowerCase()
-  const plan = isPlanId(rawPlan) && rawPlan !== 'free' ? rawPlan : 'starter'
   const siteOrigin = (
     process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
     process.env.NEXT_PUBLIC_APP_URL?.trim() ||
@@ -81,12 +85,18 @@ export async function POST(request: Request) {
   params.set('metadata[org_id]', org.id)
   params.set('metadata[filo_plan]', plan)
   params.set('metadata[user_id]', userId)
+  params.set('subscription_data[metadata][org_id]', org.id)
+  params.set('subscription_data[metadata][filo_plan]', plan)
 
-  const { data: userData } = await (
-    await import('@/lib/supabase/server')
-  ).createSupabaseServerClient().then((s) => s.auth.getUser())
-  if (userData.user?.email) {
-    params.set('customer_email', userData.user.email)
+  if (org.stripe_customer_id) {
+    params.set('customer', org.stripe_customer_id)
+  } else {
+    const { data: userData } = await (
+      await import('@/lib/supabase/server')
+    ).createSupabaseServerClient().then((s) => s.auth.getUser())
+    if (userData.user?.email) {
+      params.set('customer_email', userData.user.email)
+    }
   }
 
   const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {

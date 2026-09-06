@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
+import { redirect } from 'next/navigation'
 import { requireActiveOrg } from '@/lib/org'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import {
@@ -43,11 +44,32 @@ export async function switchOrg(orgId: string): Promise<OrgActionState> {
   return { ok: 'İşletme değiştirildi.' }
 }
 
-export async function createOrg(): Promise<OrgActionState> {
-  return {
-    error:
-      'İşletme oluşturma kapalı. Yeni işletme ve kullanıcılar yalnızca Filo tarafından açılır.',
+export async function createOrg(
+  _previous: OrgActionState,
+  formData: FormData,
+): Promise<OrgActionState> {
+  const name = String(formData.get('name') ?? '').trim()
+  if (name.length < 2) return { error: 'İşletme adı en az 2 karakter olmalı.' }
+
+  const supabase = await createSupabaseServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Oturum bulunamadı.' }
+
+  const { data: orgId, error } = await supabase.rpc('create_organization', {
+    p_name: name,
+  })
+
+  if (error) {
+    if (error.message.includes('org limit reached')) {
+      return { error: 'En fazla 3 işletme sahibi olabilirsiniz.' }
+    }
+    return { error: error.message }
   }
+
+  revalidatePath('/', 'layout')
+  return { ok: `İşletme oluşturuldu (${String(orgId).slice(0, 8)}…).` }
 }
 
 export async function updateOrgName(
@@ -111,13 +133,13 @@ export async function updateOrgWebhook(
     return { error: 'Yalnızca yönetici webhook ayarlayabilir.' }
   }
 
-  const { error } = await supabase
-    .from('organizations')
-    .update({
-      webhook_url: webhookUrl || null,
-      webhook_secret: webhookSecret || null,
-    } as never)
-    .eq('id', org.id)
+  const clearSecret = String(formData.get('clear_secret') ?? '') === '1'
+  const { error } = await supabase.rpc('set_organization_webhook', {
+    p_org_id: org.id,
+    p_webhook_url: webhookUrl,
+    p_webhook_secret: webhookSecret || null,
+    p_clear_secret: clearSecret,
+  })
 
   if (error) return { error: error.message }
   revalidatePath('/ayarlar')
@@ -130,20 +152,26 @@ function normalizeMemberRole(raw: string): 'admin' | 'member' | null {
   return null
 }
 
-async function resolveInviteRedirect(): Promise<string> {
+async function resolveInviteRedirect(devamPath: string): Promise<string> {
   const h = await headers()
   const host = h.get('x-forwarded-host') ?? h.get('host')
   const proto = h.get('x-forwarded-proto') ?? 'https'
   const fromRequest = host ? `${proto}://${host}` : undefined
   const origin = siteOriginFromEnv(fromRequest)
-  return `${origin || 'https://filo.app'}/auth/confirm?devam=${encodeURIComponent('/kurulum')}`
+  return `${origin || 'https://filo.app'}/auth/confirm?devam=${encodeURIComponent(devamPath)}`
+}
+
+function newInviteToken(): string {
+  const bytes = new Uint8Array(24)
+  crypto.getRandomValues(bytes)
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
 }
 
 export async function addOrgMember(
   _previous: OrgActionState,
   formData: FormData,
 ): Promise<OrgActionState> {
-  const email = String(formData.get('email') ?? '').trim()
+  const email = String(formData.get('email') ?? '').trim().toLowerCase()
   const role = normalizeMemberRole(String(formData.get('role') ?? 'member'))
   const wantInvite = String(formData.get('invite_if_missing') ?? '') === '1'
 
@@ -152,8 +180,9 @@ export async function addOrgMember(
 
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
   let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  let userId: string
   try {
-    ;({ org, supabase } = await requireActiveOrg())
+    ;({ org, supabase, userId } = await requireActiveOrg())
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
   }
@@ -180,7 +209,6 @@ export async function addOrgMember(
     return { error: error.message }
   }
 
-  // Auth’ta yok: davet (service role) veya iletişim CTA.
   if (!wantInvite) {
     return {
       error:
@@ -198,11 +226,25 @@ export async function addOrgMember(
     }
   }
 
-  const redirectTo = await resolveInviteRedirect()
-  const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(
+  const token = newInviteToken()
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+  const { error: inviteRowError } = await supabase.from('org_invites').insert({
+    org_id: org.id,
     email,
-    { redirectTo },
-  )
+    role,
+    token,
+    invited_by: userId,
+    expires_at: expiresAt,
+  } as never)
+
+  if (inviteRowError) {
+    return { error: `Davet kaydı oluşturulamadı: ${inviteRowError.message}` }
+  }
+
+  const redirectTo = await resolveInviteRedirect(`/davet/${token}`)
+  const { error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
+    redirectTo,
+  })
 
   if (inviteError) {
     const msg = inviteError.message.toLowerCase()
@@ -214,7 +256,11 @@ export async function addOrgMember(
       })
       if (!retry) {
         revalidatePath('/ayarlar')
-        return { ok: 'Üye eklendi.' }
+        return { ok: 'Üye eklendi (hesap zaten vardı).' }
+      }
+      revalidatePath('/ayarlar')
+      return {
+        ok: `Davet kaydı oluşturuldu. Kullanıcı giriş yapıp davet linkini açmalı (${email}).`,
       }
     }
     return {
@@ -222,31 +268,6 @@ export async function addOrgMember(
       contactSupport: true,
     }
   }
-
-  const userId = invited.user?.id
-  if (!userId) {
-    return { error: 'Davet oluşturuldu ama kullanıcı kimliği alınamadı.', contactSupport: true }
-  }
-
-  const { error: memberError } = await admin.from('organization_members').upsert(
-    {
-      org_id: org.id,
-      user_id: userId,
-      role,
-    },
-    { onConflict: 'org_id,user_id' },
-  )
-
-  if (memberError) {
-    return {
-      error: `Davet gitti ama işletmeye eklenemedi: ${memberError.message}`,
-      contactSupport: true,
-    }
-  }
-
-  await admin
-    .from('profiles')
-    .upsert({ id: userId, email: email.toLowerCase() } as never, { onConflict: 'id' })
 
   revalidatePath('/ayarlar')
   return { ok: `Davet e-postası gönderildi: ${email}` }
@@ -308,6 +329,50 @@ export async function removeOrgMember(userId: string): Promise<OrgActionState> {
     revalidatePath('/ayarlar')
     return { ok: 'Üye çıkarıldı.' }
   } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum yok' }
+  }
+}
+
+export async function deleteOrganization(
+  _previous: OrgActionState,
+  formData: FormData,
+): Promise<OrgActionState> {
+  const confirmName = String(formData.get('confirmName') ?? '').trim()
+  if (!confirmName) return { error: 'İşletme adını yazarak onaylayın.' }
+
+  try {
+    const { org, supabase } = await requireActiveOrg()
+    if (org.role !== 'owner') {
+      return { error: 'Yalnızca sahip işletmeyi silebilir.' }
+    }
+
+    const { error } = await supabase.rpc('delete_organization', {
+      p_org_id: org.id,
+      p_confirm_name: confirmName,
+    })
+
+    if (error) {
+      if (error.message.includes('confirm name mismatch')) {
+        return { error: 'Onay adı işletme adıyla birebir aynı olmalı.' }
+      }
+      if (error.message.includes('only owner')) {
+        return { error: 'Yalnızca sahip işletmeyi silebilir.' }
+      }
+      return { error: error.message }
+    }
+
+    revalidatePath('/', 'layout')
+    redirect('/erisim-yok')
+  } catch (error) {
+    if (
+      error &&
+      typeof error === 'object' &&
+      'digest' in error &&
+      typeof (error as { digest?: string }).digest === 'string' &&
+      (error as { digest: string }).digest.startsWith('NEXT_REDIRECT')
+    ) {
+      throw error
+    }
     return { error: error instanceof Error ? error.message : 'Oturum yok' }
   }
 }
