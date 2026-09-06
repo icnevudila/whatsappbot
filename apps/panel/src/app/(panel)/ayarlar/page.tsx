@@ -268,14 +268,13 @@ export default async function SettingsPage({
           <Card>
             <CardHeader
               title="Entegrasyonlar"
-              subtitle="CRM webhook · otomatik yanıt · faturalama"
+              subtitle="CRM webhook · faturalama · API anahtarı"
             />
             <WebhookSettingsForm
               webhookUrl={org.webhook_url ?? null}
               canEdit={canManage}
             />
             <div className="flex flex-wrap gap-2 border-t border-hairline px-3.5 py-2.5">
-              <QuietLink href="/ayarlar/otomatik-yanit">Otomatik yanıt kuralları</QuietLink>
               <QuietLink href="/raporlar">Raporlar / CSV</QuietLink>
               {canManage ? <BillingCheckoutButton /> : null}
             </div>

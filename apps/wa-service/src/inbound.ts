@@ -2,11 +2,7 @@ import { isJidGroup, isLidUser, type WAMessage } from '@whiskeysockets/baileys'
 import { jidToE164 } from '@wa/shared'
 import { query } from './db.js'
 import { logger } from './logger.js'
-import {
-  emitOrgWebhook,
-  findMatchingAutoReply,
-  recentOutboundExists,
-} from './org-hooks.js'
+import { emitOrgWebhook } from './org-hooks.js'
 import { isOptOutMessage } from './opt-out.js'
 
 function extractBody(message: WAMessage): { type: string; body: string | null } {
@@ -144,34 +140,4 @@ export async function persistInboundMessage(options: {
     body: body?.slice(0, 500) ?? null,
     wa_message_id: waMessageId,
   })
-
-  // Otomatik yanit: job kuyruguna message.send
-  if (phone && !isOptOutMessage(body)) {
-    try {
-      const rule = await findMatchingAutoReply(orgId, body)
-      if (rule) {
-        const cooling = await recentOutboundExists(orgId, phone, rule.cooldown_seconds)
-        if (!cooling) {
-          await query(
-            `insert into public.jobs
-               (org_id, created_by, account_id, type, payload, priority, status)
-             values ($1, $2, $3, 'message.send', $4::jsonb, 50, 'pending')`,
-            [
-              orgId,
-              createdBy,
-              accountId,
-              JSON.stringify({
-                phone_e164: phone,
-                body: rule.reply_body,
-                message_type: 'text',
-              }),
-            ],
-          )
-          logger.info({ accountId, phone, ruleId: rule.id }, 'Auto-reply kuyruga alindi')
-        }
-      }
-    } catch (error) {
-      logger.warn({ err: error, accountId }, 'Auto-reply basarisiz')
-    }
-  }
 }
