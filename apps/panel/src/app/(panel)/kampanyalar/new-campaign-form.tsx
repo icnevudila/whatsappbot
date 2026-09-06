@@ -19,6 +19,7 @@ import {
   Textarea,
 } from '@/components/ui'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
+import { appendOptOutFooter, OPT_OUT_FOOTER } from '@/lib/opt-out-footer'
 import { createCampaign, type CampaignState } from './actions'
 
 type Option = { id: string; label: string; detail?: string; disabled?: boolean }
@@ -339,18 +340,24 @@ export function NewCampaignForm({
 
                 <Field
                   label="Mesaj"
-                  hint="{{ad}} yazdığınız yere kişinin adı gelir. Medyada başlık (caption) olarak gider."
+                  hint="{{ad}} → kişi adı. Alıcı YAZMAYIN / istemiyorum yazarsa otomatik kara listeye alınır."
                 >
                   <Textarea
                     name="body"
                     rows={5}
                     value={body}
                     onChange={(event) => setBody(event.target.value)}
-                    placeholder={
-                      'Merhaba {{ad}}, bu ay geçerli %20 indirimimizden haberdar etmek istedik.'
-                    }
+                    placeholder={`Merhaba {{ad}}, bu ay geçerli %20 indirimimizden haberdar etmek istedik.\n\n${OPT_OUT_FOOTER}`}
                   />
                 </Field>
+
+                <button
+                  type="button"
+                  onClick={() => setBody((current) => appendOptOutFooter(current))}
+                  className="text-[12px] font-medium text-accent underline underline-offset-2"
+                >
+                  Çıkış satırı ekle (YAZMAYIN)
+                </button>
 
                 <AiWriter enabled={aiEnabled} brand={brandName} onApply={setBody} />
 

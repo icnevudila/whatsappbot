@@ -17,6 +17,7 @@ import {
   Textarea,
 } from '@/components/ui'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
+import { appendOptOutFooter, OPT_OUT_FOOTER } from '@/lib/opt-out-footer'
 import { quickSend, type QuickSendState } from './actions'
 
 export type SenderOption = {

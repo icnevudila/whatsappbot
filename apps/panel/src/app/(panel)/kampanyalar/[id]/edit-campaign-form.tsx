@@ -104,7 +104,10 @@ export function EditCampaignForm({
           <Input name="name" defaultValue={campaign.name} required />
         </Field>
 
-        <Field label="Mesaj" hint="Kalan hedeflere yeni metin gider; gönderilmişler değişmez.">
+        <Field
+          label="Mesaj"
+          hint="Kalan hedeflere yeni metin gider. Alıcı YAZMAYIN / istemiyorum yazarsa otomatik kara listeye alınır."
+        >
           <Textarea name="body" rows={5} defaultValue={campaign.body ?? ''} />
         </Field>
 
