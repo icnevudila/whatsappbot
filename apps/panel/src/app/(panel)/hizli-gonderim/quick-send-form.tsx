@@ -205,8 +205,18 @@ export function QuickSendForm({
             rows={4}
             value={body}
             onChange={(event) => setBody(event.target.value)}
-            placeholder={'Merhaba {{ad}}, bu ay geçerli %20 indirimimizden haberdar etmek istedik.'}
+            placeholder={`Merhaba {{ad}}, bu ay geçerli %20 indirimimizden haberdar etmek istedik.\n\n${OPT_OUT_FOOTER}`}
           />
+          <button
+            type="button"
+            onClick={() => setBody((current) => appendOptOutFooter(current))}
+            className="text-[12px] font-medium text-accent underline underline-offset-2"
+          >
+            Çıkış satırı ekle (YAZMAYIN)
+          </button>
+          <p className="text-[11.5px] text-ink-faint">
+            Alıcı YAZMAYIN / istemiyorum yazarsa otomatik kara listeye alınır.
+          </p>
           <AiWriter enabled={aiEnabled} brand={brandName} onApply={setBody} />
         </div>
 
