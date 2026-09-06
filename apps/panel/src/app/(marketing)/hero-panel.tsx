@@ -7,7 +7,7 @@ import { LandingVideo } from './landing/landing-video'
  */
 export function HeroPanel() {
   return (
-    <div className="filo-fade-up-delay-2 relative flex h-full flex-col border-t border-white/10 md:border-l md:border-t-0">
+    <div className="filo-fade-in relative flex h-full flex-col border-t border-white/10 md:border-l md:border-t-0">
       <div className="relative flex flex-1 flex-col overflow-hidden bg-ink p-2 sm:p-2.5">
         <div className="mb-1.5 flex items-center gap-1.5 px-1" aria-hidden>
           <span className="size-2.5 rounded-full bg-[#ff5f57]" />

@@ -87,7 +87,7 @@ export function LandingVideo({
         muted
         loop
         playsInline
-        preload="metadata"
+        preload="auto"
         disablePictureInPicture
         aria-label={label}
         className={`h-full w-full object-cover object-top ${className}`}
