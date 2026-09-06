@@ -1,8 +1,9 @@
 'use client'
 
-import { useActionState, useEffect, useMemo, useState } from 'react'
+import { useActionState, useEffect, useMemo, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { parsePhoneList } from '@wa/shared'
+import { AiImage } from '@/components/ai-image'
 import { AiWriter } from '@/components/ai-writer'
 import { useSyncBusy } from '@/components/busy'
 import { useToast } from '@/components/toast'
@@ -50,16 +51,21 @@ export function QuickSendForm({
   senders,
   orgId,
   aiEnabled,
+  imageAiEnabled,
   brandName,
   initialMediaUrl = '',
   initialNumbers = '',
+  statusSlot,
 }: {
   senders: SenderOption[]
   orgId: string
   aiEnabled: boolean
+  imageAiEnabled: boolean
   brandName?: string
   initialMediaUrl?: string
   initialNumbers?: string
+  /** Kota / hat özeti — kaydırınca kaybolmasın diye üstte sabit. */
+  statusSlot?: ReactNode
 }) {
   const [state, formAction, pending] = useActionState<QuickSendState, FormData>(
     quickSend,
@@ -141,16 +147,22 @@ export function QuickSendForm({
   const previewMediaForBubble = messageType === 'image' ? mediaUrl || null : null
 
   return (
-    <Card>
+    <Card className="overflow-visible rounded-none border-0 shadow-none">
+      {statusSlot ? (
+        <div className="flex flex-wrap gap-1.5 border-b border-hairline px-3.5 py-2.5">
+          {statusSlot}
+        </div>
+      ) : null}
       <CardHeader
         title="Tek seferlik gönderim"
         subtitle="Listeye kaydetmez. Gönderim Kampanyalar’da izlenir; Kişiler defterine numara eklenmez."
       />
 
-      <form action={formAction} className="space-y-2.5 p-3.5">
+      <form action={formAction} className="flex flex-col">
         <input type="hidden" name="media_url" value={mediaUrl} />
         <input type="hidden" name="message_type" value={messageType} />
 
+        <div className="space-y-2.5 p-3.5">
         <div>
           <div className="mb-1.5 flex items-baseline justify-between gap-3">
             <span className="text-[12px] font-medium text-ink-muted">Numaralar</span>
@@ -239,6 +251,16 @@ export function QuickSendForm({
             ) : null}
           </div>
 
+          <AiImage
+            enabled={imageAiEnabled}
+            brand={brandName}
+            onApply={(url) => {
+              setMediaUrl(url)
+              setMessageType('image')
+              setUploadError(null)
+            }}
+          />
+
           {uploadError ? <Notice tone="danger">{uploadError}</Notice> : null}
         </div>
 
@@ -312,49 +334,53 @@ export function QuickSendForm({
           )}
         </div>
 
-        {validCount > 0 && selected.length > 0 ? (
-          overflow > 0 ? (
-            <Notice tone="warn">
-              Bugün {nf.format(capacityToday)} mesaj gönderilebilir. Kalan{' '}
-              {nf.format(overflow)} kişi kuyrukta bekler; kota yenilendikçe otomatik
-              devam eder. Daha hızlı bitirmek için{' '}
-              <Link href="/hesaplar" className="font-medium underline underline-offset-2">
-                ek hat bağlayın
-              </Link>
-              .
-            </Notice>
-          ) : (
-            <Notice tone="accent">
-              {nf.format(validCount)} kişinin tamamı bugünkü kapasiteye sığıyor.
-            </Notice>
-          )
-        ) : null}
+        </div>
 
-        {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
+        <div className="sticky bottom-0 z-[1] space-y-2.5 border-t border-hairline bg-surface/95 px-3.5 py-3 backdrop-blur-sm">
+          {validCount > 0 && selected.length > 0 ? (
+            overflow > 0 ? (
+              <Notice tone="warn">
+                Bugün {nf.format(capacityToday)} mesaj gönderilebilir. Kalan{' '}
+                {nf.format(overflow)} kişi kuyrukta bekler; kota yenilendikçe otomatik
+                devam eder. Daha hızlı bitirmek için{' '}
+                <Link href="/hesaplar" className="font-medium underline underline-offset-2">
+                  ek hat bağlayın
+                </Link>
+                .
+              </Notice>
+            ) : (
+              <Notice tone="accent">
+                {nf.format(validCount)} kişinin tamamı bugünkü kapasiteye sığıyor.
+              </Notice>
+            )
+          ) : null}
 
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            type="submit"
-            variant="accent"
-            disabled={pending || senders.length === 0 || validCount === 0}
-          >
-            {pending
-              ? 'Başlatılıyor…'
-              : validCount > 0
-                ? `${nf.format(validCount)} kişiye gönder`
-                : 'Gönder'}
-          </Button>
-          <p className="text-[11.5px] text-ink-faint">
-            Gönderim sunucuda çalışır; bu sekmeyi kapatabilirsiniz. İlerlemeyi{' '}
-            <Link href="/kampanyalar" className="underline underline-offset-2 hover:text-ink">
-              Kampanyalar
-            </Link>{' '}
-            veya{' '}
-            <Link href="/durum" className="underline underline-offset-2 hover:text-ink">
-              Durum
-            </Link>{' '}
-            sayfasından izleyin.
-          </p>
+          {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
+
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              type="submit"
+              variant="accent"
+              disabled={pending || senders.length === 0 || validCount === 0}
+            >
+              {pending
+                ? 'Başlatılıyor…'
+                : validCount > 0
+                  ? `${nf.format(validCount)} kişiye gönder`
+                  : 'Gönder'}
+            </Button>
+            <p className="text-[11.5px] text-ink-faint">
+              Gönderim sunucuda çalışır; bu sekmeyi kapatabilirsiniz. İlerlemeyi{' '}
+              <Link href="/kampanyalar" className="underline underline-offset-2 hover:text-ink">
+                Kampanyalar
+              </Link>{' '}
+              veya{' '}
+              <Link href="/durum" className="underline underline-offset-2 hover:text-ink">
+                Durum
+              </Link>{' '}
+              sayfasından izleyin.
+            </p>
+          </div>
         </div>
       </form>
     </Card>

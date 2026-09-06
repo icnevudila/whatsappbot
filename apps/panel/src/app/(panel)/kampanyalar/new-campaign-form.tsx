@@ -2,6 +2,7 @@
 import Link from 'next/link'
 
 import { useActionState, useEffect, useRef, useState, type ReactNode } from 'react'
+import { AiImage } from '@/components/ai-image'
 import { AiWriter } from '@/components/ai-writer'
 import { useSyncBusy } from '@/components/busy'
 import { useToast } from '@/components/toast'
@@ -50,12 +51,14 @@ export function NewCampaignForm({
   accounts,
   orgId,
   aiEnabled,
+  imageAiEnabled,
   brandName,
 }: {
   lists: Option[]
   accounts: Option[]
   orgId: string
   aiEnabled: boolean
+  imageAiEnabled: boolean
   brandName?: string
 }) {
   const [state, formAction, pending] = useActionState<CampaignState, FormData>(
@@ -163,16 +166,17 @@ export function NewCampaignForm({
 
   return (
     <div id="yeni-kampanya" className="scroll-mt-6">
-    <Card>
+    <Card className="overflow-visible rounded-none border-0 shadow-none">
       <CardHeader
         title="Yeni kampanya"
         subtitle="Oluşturunca gönderim hemen başlar. Sekmeyi kapatabilirsiniz."
       />
 
-      <form action={formAction} className="space-y-4 p-4">
+      <form action={formAction} className="flex flex-col">
         <input type="hidden" name="media_url" value={mediaUrl} />
         <input type="hidden" name="message_type" value={messageType} />
 
+        <div className="space-y-4 p-4">
         <Field label="Kampanya adı">
           <Input
             ref={nameInputRef}
@@ -272,6 +276,17 @@ export function NewCampaignForm({
               </span>
             ) : null}
           </div>
+
+          <AiImage
+            enabled={imageAiEnabled}
+            brand={brandName}
+            onApply={(url) => {
+              setDocumentUrlDraft('')
+              setMediaUrl(url)
+              setMessageType('image')
+              setUploadError(null)
+            }}
+          />
 
           <Field
             label="Belge URL’si"
@@ -427,21 +442,25 @@ export function NewCampaignForm({
           </p>
         </fieldset>
 
-        {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
+        </div>
 
-        {lists.length === 0 || accounts.length === 0 ? (
-          <p className="text-[11.5px] text-ink-faint">
-            Gönderim için en az bir kişi listesi ve bir bağlı hat gerekir.
-          </p>
-        ) : null}
+        <div className="sticky bottom-0 z-[1] space-y-2.5 border-t border-hairline bg-surface/95 px-4 py-3 backdrop-blur-sm">
+          {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
 
-        <Button
-          type="submit"
-          variant="accent"
-          disabled={pending || lists.length === 0 || accounts.length === 0}
-        >
-          {pending ? 'Kaydediliyor…' : 'Oluştur'}
-        </Button>
+          {lists.length === 0 || accounts.length === 0 ? (
+            <p className="text-[11.5px] text-ink-faint">
+              Gönderim için en az bir kişi listesi ve bir bağlı hat gerekir.
+            </p>
+          ) : null}
+
+          <Button
+            type="submit"
+            variant="accent"
+            disabled={pending || lists.length === 0 || accounts.length === 0}
+          >
+            {pending ? 'Kaydediliyor…' : 'Oluştur'}
+          </Button>
+        </div>
       </form>
     </Card>
     </div>

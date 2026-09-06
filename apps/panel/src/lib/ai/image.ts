@@ -235,6 +235,10 @@ export function activeImageProviders(): { id: AiProviderId; label: string }[] {
     .map(({ id, label }) => ({ id, label }))
 }
 
+export function hasImageProvider(): boolean {
+  return activeImageProviders().length > 0
+}
+
 /**
  * Zinciri sirayla dener. Bir saglayici kotasi dolmus, anahtari gecersiz veya
  * gecici olarak erisilemez olabilir; tek bir saglayiciya bagli kalmak

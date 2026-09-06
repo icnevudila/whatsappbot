@@ -285,11 +285,23 @@ export function SplitPane({
   list,
   detail,
   className,
+  variant = 'inbox',
 }: {
   list: ReactNode
   detail: ReactNode
   className?: string
+  /** `form`: form önce, tek sayfa kaydırma; geçmiş yan/altta ikincil. */
+  variant?: 'inbox' | 'form'
 }) {
+  if (variant === 'form') {
+    return (
+      <div className={cx('wb-split', 'wb-split--form', className)}>
+        <div className="wb-split-pane wb-split-pane--form">{detail}</div>
+        <div className="wb-split-pane wb-split-pane--aside">{list}</div>
+      </div>
+    )
+  }
+
   return (
     <div className={cx('wb-split', className)}>
       <div className="wb-split-pane">{list}</div>

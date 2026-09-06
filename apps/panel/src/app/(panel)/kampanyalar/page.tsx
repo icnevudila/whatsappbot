@@ -11,6 +11,7 @@ import {
   SplitPane,
   StatusPill,
 } from '@/components/ui'
+import { hasImageProvider } from '@/lib/ai/image'
 import { hasTextProvider } from '@/lib/ai/text'
 import { createT } from '@/lib/i18n'
 import { getDictionary } from '@/lib/i18n/server'
@@ -145,6 +146,7 @@ export default async function CampaignsPage({
 
       <div className={justReady ? 'mt-2.5' : undefined}>
       <SplitPane
+        variant="form"
         list={
           <div className="flex min-h-0 flex-col">
             <CardHeader
@@ -222,15 +224,14 @@ export default async function CampaignsPage({
           </div>
         }
         detail={
-          <div className="min-h-0 flex-1 overflow-y-auto" id="yeni-kampanya">
-            <NewCampaignForm
-              lists={listOptions}
-              accounts={accountOptions}
-              orgId={org.id}
-              aiEnabled={hasTextProvider()}
-              brandName={brandResult.data?.name ?? undefined}
-            />
-          </div>
+          <NewCampaignForm
+            lists={listOptions}
+            accounts={accountOptions}
+            orgId={org.id}
+            aiEnabled={hasTextProvider()}
+            imageAiEnabled={hasImageProvider()}
+            brandName={brandResult.data?.name ?? undefined}
+          />
         }
       />
       </div>

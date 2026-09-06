@@ -18,13 +18,14 @@ Kod (bu repoda uygulandı):
 Ops (sen / Dashboard):
 
 - [ ] Vercel Production: Stripe `STRIPE_SECRET_KEY` + `STRIPE_PRICE_STARTER` (+ Pro) + `STRIPE_WEBHOOK_SECRET`
-- [ ] Stripe webhook → `https://PANEL/api/billing/webhook` (3 event) + Customer Portal açık
-- [ ] `NEXT_PUBLIC_SITE_URL` = panel kanonik URL; Auth Redirect Allow List’te `/auth/callback`
-- [ ] Supabase Auth: Confirm email + Leaked password + (Pro) PITR
-- [ ] `NEXT_PUBLIC_LEGAL_ENTITY_NAME` = gerçek şirket ünvanı
+- [ ] Stripe webhook → `https://whatsappbot-ten-omega.vercel.app/api/billing/webhook` (3 event) + Customer Portal açık
+- [x] `NEXT_PUBLIC_SITE_URL` = `https://whatsappbot-ten-omega.vercel.app` (Vercel Production/Preview/Development)
+- [ ] Supabase Auth: Confirm email + Leaked password + Redirect Allow List `/auth/callback` (+ Pro PITR)
+- [x] `NEXT_PUBLIC_LEGAL_ENTITY_NAME` = `Filo Yazılım A.Ş.` (Vercel; şirket ünvanı farklıysa söyle)
 - [ ] `SUPABASE_SERVICE_ROLE_KEY` panel + admin
 - [ ] Admin kullanıcı `app_metadata.platform_admin=true`
 - [ ] Hetzner worker ayakta (`/durum` → Bağlı)
+- Self-signup: **kapalı kalsın** (admin provision modeli) — açma
 
 ## 1) Ortam (Vercel panel Production)
 
@@ -87,9 +88,9 @@ Detay: [`docs/SMOKE.md`](SMOKE.md)
 
 ## 4) Yasal
 
-- [ ] `NEXT_PUBLIC_LEGAL_ENTITY_NAME` Vercel’de gerçek şirket ünvanı
-- [ ] `/kvkk` ve `/kosullar` ünvanı env’den
-- [ ] Destek: `destek@filo.app`
+- [x] `NEXT_PUBLIC_LEGAL_ENTITY_NAME` = `Filo Yazılım A.Ş.` (Vercel’e yazıldı; resmi ünvan farklıysa güncelle)
+- [x] `/kvkk` ve `/kosullar` ünvanı env’den
+- [ ] Destek: `destek@filo.app` (posta kutusu canlı mı doğrula)
 
 ## 5) Bilinçli sınırlar (sonraki sprint)
 

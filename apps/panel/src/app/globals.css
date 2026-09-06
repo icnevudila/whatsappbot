@@ -231,6 +231,54 @@ h3 {
   overflow: hidden;
 }
 
+/*
+ * Form sayfaları (hızlı gönderim / kampanyalar):
+ * Sabit viewport kutusu yok → main tek kaydırır.
+ * Form geniş; geçmiş mobilde üstte kısa, masaüstünde yapışkan yan şerit.
+ */
+.wb-split--form {
+  height: auto;
+  max-height: none;
+  min-height: 0;
+  overflow: visible;
+  grid-template-columns: 1fr;
+}
+.wb-split--form .wb-split-pane {
+  height: auto;
+  max-height: none;
+  overflow: visible;
+}
+.wb-split--form .wb-split-pane--aside {
+  max-height: 13.5rem;
+  overflow: hidden;
+  order: -1; /* mobilde geçmiş üstte, form hemen altında */
+  border-bottom: 1px solid var(--color-hairline);
+}
+.wb-split--form .wb-split-pane--form {
+  order: 0;
+}
+.wb-split--form .wb-split-pane + .wb-split-pane {
+  border-top: 0;
+}
+@media (min-width: 1024px) {
+  .wb-split--form {
+    grid-template-columns: minmax(0, 1fr) 280px;
+    align-items: start;
+  }
+  .wb-split--form .wb-split-pane--aside {
+    order: 0;
+    max-height: min(70vh, 40rem);
+    position: sticky;
+    top: 0.75rem;
+    align-self: start;
+    border-bottom: 0;
+    border-left: 1px solid var(--color-hairline);
+  }
+  .wb-split--form .wb-split-pane--form {
+    order: 0;
+  }
+}
+
 /* WhatsApp tarzı konuşma yüzeyi */
 .wb-chat-thread {
   display: flex;

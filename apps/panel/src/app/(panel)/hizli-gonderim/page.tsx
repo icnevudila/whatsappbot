@@ -10,6 +10,7 @@ import {
   SplitPane,
   StatusPill,
 } from '@/components/ui'
+import { hasImageProvider } from '@/lib/ai/image'
 import { hasTextProvider } from '@/lib/ai/text'
 import { remainingToday } from '@/lib/capacity'
 import { createT } from '@/lib/i18n'
@@ -126,6 +127,7 @@ export default async function QuickSendPage({
         />
       ) : (
         <SplitPane
+          variant="form"
           list={
             <div className="flex min-h-0 flex-col">
               <CardHeader
@@ -172,34 +174,35 @@ export default async function QuickSendPage({
             </div>
           }
           detail={
-            <div className="flex min-h-0 flex-col overflow-y-auto">
-              <div className="flex shrink-0 flex-wrap gap-1.5 border-b border-hairline px-3.5 py-2.5">
-                <span className="inline-flex items-center gap-1.5 rounded-md border border-accent/30 bg-accent-soft px-2 py-1 text-[11.5px] font-medium text-accent-dim">
-                  <span className="tabular text-[13px] font-bold text-accent">{senders.length}</span>
-                  hazır hat
-                </span>
-                <span
-                  className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11.5px] font-medium ${
-                    remainingTotal > 0
-                      ? 'border-ok/35 bg-ok-soft text-ok-dim'
-                      : 'border-warn/35 bg-[#fff8e8] text-warn'
-                  }`}
-                >
-                  <span className="tabular text-[13px] font-bold">{remainingTotal}</span>
-                  kalan kota
-                </span>
-              </div>
-              <div className="min-h-0 flex-1 overflow-y-auto">
-                <QuickSendForm
-                  senders={senders}
-                  orgId={org.id}
-                  aiEnabled={hasTextProvider()}
-                  brandName={brandResult.data?.name ?? undefined}
-                  initialMediaUrl={initialMediaUrl}
-                  initialNumbers={initialNumbers}
-                />
-              </div>
-            </div>
+            <QuickSendForm
+              senders={senders}
+              orgId={org.id}
+              aiEnabled={hasTextProvider()}
+              imageAiEnabled={hasImageProvider()}
+              brandName={brandResult.data?.name ?? undefined}
+              initialMediaUrl={initialMediaUrl}
+              initialNumbers={initialNumbers}
+              statusSlot={
+                <>
+                  <span className="inline-flex items-center gap-1.5 rounded-md border border-accent/30 bg-accent-soft px-2 py-1 text-[11.5px] font-medium text-accent-dim">
+                    <span className="tabular text-[13px] font-bold text-accent">
+                      {senders.length}
+                    </span>
+                    hazır hat
+                  </span>
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11.5px] font-medium ${
+                      remainingTotal > 0
+                        ? 'border-ok/35 bg-ok-soft text-ok-dim'
+                        : 'border-warn/35 bg-[#fff8e8] text-warn'
+                    }`}
+                  >
+                    <span className="tabular text-[13px] font-bold">{remainingTotal}</span>
+                    kalan kota
+                  </span>
+                </>
+              }
+            />
           }
         />
       )}
