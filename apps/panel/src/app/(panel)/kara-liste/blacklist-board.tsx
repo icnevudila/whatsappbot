@@ -137,7 +137,7 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
               description="Çıkmak isteyen veya engellemek istediğiniz numaraları sağdan ekleyin."
               action={
                 <div className="flex flex-wrap justify-center gap-2">
-                  <AccentLink href="/gelenler">Gelenlere bak</AccentLink>
+                  <AccentLink href="/mesajlar">Mesajlara bak</AccentLink>
                   <QuietLink href="/kisiler">Kişilere git</QuietLink>
                 </div>
               }

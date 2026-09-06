@@ -254,7 +254,7 @@ export default async function PanelHomePage() {
       body: t('ozet.scCampBody'),
     },
     {
-      href: '/gelenler',
+      href: '/mesajlar',
       title: t('ozet.scIn'),
       body: t('ozet.scInBody'),
     },
@@ -342,7 +342,7 @@ export default async function PanelHomePage() {
               }
             />
             <Link
-              href="/gidenler"
+              href="/mesajlar?sekme=giden"
               className="mt-2 inline-block text-[12px] font-medium text-accent underline-offset-2 hover:underline"
             >
               {t('ozet.outLink')}
@@ -358,7 +358,7 @@ export default async function PanelHomePage() {
               detail={t('ozet.inbox')}
             />
             <Link
-              href="/gelenler"
+              href="/mesajlar?sekme=gelen"
               className="mt-2 inline-block text-[12px] font-medium text-accent underline-offset-2 hover:underline"
             >
               {t('ozet.inLink')}

@@ -49,7 +49,7 @@ const guides: {
   {
     icon: 'inbox',
     title: 'Yanıtları yönetme',
-    href: '/gelenler',
+    href: '/mesajlar',
     tint: 'bg-ok-soft/55',
     steps: [
       'Gelen kutusunda bir konuşma seçin; tam geçmişi veya yalnız gelen mesajları görün.',

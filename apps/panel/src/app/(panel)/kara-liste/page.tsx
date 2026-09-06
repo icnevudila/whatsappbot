@@ -39,7 +39,7 @@ export default async function BlacklistPage() {
         description="Bu numaralara kampanya veya hızlı gönderim mesajı gitmez. Gelenler’den de tek tıkla eklenebilir."
         action={
           <div className="flex flex-wrap gap-2">
-            <AccentLink href="/gelenler">{t('nav.gelenler')}</AccentLink>
+            <AccentLink href="/mesajlar">{t('nav.mesajlar')}</AccentLink>
             <QuietLink href="/kisiler">{t('nav.kisiler')}</QuietLink>
           </div>
         }

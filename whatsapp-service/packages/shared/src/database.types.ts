@@ -820,6 +820,7 @@ export type Database = {
           message_type: string
           org_id: string
           phone_e164: string | null
+          push_name: string | null
           remote_jid: string | null
           status: string
           wa_message_id: string | null
@@ -837,6 +838,7 @@ export type Database = {
           message_type?: string
           org_id: string
           phone_e164?: string | null
+          push_name?: string | null
           remote_jid?: string | null
           status?: string
           wa_message_id?: string | null
@@ -854,6 +856,7 @@ export type Database = {
           message_type?: string
           org_id?: string
           phone_e164?: string | null
+          push_name?: string | null
           remote_jid?: string | null
           status?: string
           wa_message_id?: string | null

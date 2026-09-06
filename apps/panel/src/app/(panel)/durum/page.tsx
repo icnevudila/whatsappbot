@@ -145,7 +145,7 @@ export default async function StatusPage() {
           <div className="flex flex-wrap gap-2">
             <CancelPendingButton count={pendingJobs ?? 0} />
             <AccentLink href="/hesaplar">{t('nav.hesaplar')}</AccentLink>
-            <QuietLink href="/gelenler">{t('nav.gelenler')}</QuietLink>
+            <QuietLink href="/mesajlar">{t('nav.mesajlar')}</QuietLink>
             <QuietLink href="/hizli-gonderim">{t('nav.hizli')}</QuietLink>
           </div>
         }
@@ -188,8 +188,8 @@ export default async function StatusPage() {
         {(inboundToday ?? 0) > 0 ? (
           <Notice tone="accent">
             Bugün {inboundToday} gelen yanıt var.{' '}
-            <Link href="/gelenler" className="font-medium underline underline-offset-2">
-              Gelenler
+            <Link href="/mesajlar" className="font-medium underline underline-offset-2">
+              Mesajlar
             </Link>{' '}
             sayfasından sohbetleri inceleyin; istenmeyen numaraları kara listeye
             alabilirsiniz.

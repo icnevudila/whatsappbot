@@ -7,7 +7,8 @@ import { importScrapedContacts, type ScrapeImportState } from './scrape-actions'
 
 /** Org başına günlük keşif üst sınırı — Places kotasını korur. */
 const DISCOVER_DAILY_CAP = 15
-const DISCOVER_MAX_RESULTS = 20
+/** Places sayfa başı 20; worker sayfalayarak bu kadar toplar. */
+const DISCOVER_MAX_RESULTS = 60
 
 export type DiscoverJobSnapshot = {
   id: string

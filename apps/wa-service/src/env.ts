@@ -86,7 +86,8 @@ export const env = {
 
   googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY?.trim() || null,
   discoverEngine: resolveDiscoverEngine(),
-  discoverMaxResults: Math.min(20, Math.max(5, int('DISCOVER_MAX_RESULTS', 20))),
+  /** Places sayfa başı max 20; üst sınır sayfalama ile. */
+  discoverMaxResults: Math.min(100, Math.max(5, int('DISCOVER_MAX_RESULTS', 60))),
 } as const
 
 function resolveDiscoverEngine(): 'auto' | 'places' | 'playwright' {

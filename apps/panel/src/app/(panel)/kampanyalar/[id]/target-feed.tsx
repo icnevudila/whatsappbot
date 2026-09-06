@@ -158,7 +158,7 @@ export function TargetFeed({
       />
 
       <p className="shrink-0 border-b border-hairline px-3.5 py-2 text-[11.5px] leading-relaxed text-ink-faint">
-        Numaraya tıklayınca Gelenler’de konuşmayı açar.{' '}
+        Numaraya tıklayınca Mesajlar’da konuşmayı açar.{' '}
         <span className="font-medium text-ink-muted">Atlandı:</span> WhatsApp’ta yok / kota.{' '}
         <span className="font-medium text-ink-muted">Başarısız:</span> iletilemedi.
       </p>
@@ -222,9 +222,9 @@ export function TargetFeed({
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <Link
-                      href={`/gelenler?tel=${encodeURIComponent(row.phone_e164)}&konusma=tam`}
+                      href={`/mesajlar?tel=${encodeURIComponent(row.phone_e164)}`}
                       className="font-mono text-[12.5px] tabular text-ink underline-offset-2 hover:text-accent hover:underline"
-                      title="Gelenler’de konuşmayı aç"
+                      title="Mesajlar’da konuşmayı aç"
                     >
                       {row.phone_e164}
                     </Link>

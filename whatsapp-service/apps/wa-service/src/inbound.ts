@@ -108,13 +108,14 @@ export async function persistInboundMessage(options: {
   }
 
   const phone = await resolveInboundPhone(message, resolveLidPn)
+  const pushName = message.pushName?.trim() || null
 
   try {
     await query(
       `insert into public.message_log
-         (org_id, created_by, account_id, direction, remote_jid, phone_e164, message_type, body, wa_message_id, status)
-       values ($1, $2, $3, 'in', $4, $5, $6, $7, $8, 'delivered')`,
-      [orgId, createdBy, accountId, key.remoteJid, phone, type, body, waMessageId],
+         (org_id, created_by, account_id, direction, remote_jid, phone_e164, message_type, body, wa_message_id, status, push_name)
+       values ($1, $2, $3, 'in', $4, $5, $6, $7, $8, 'delivered', $9)`,
+      [orgId, createdBy, accountId, key.remoteJid, phone, type, body, waMessageId, pushName],
     )
   } catch (error) {
     // Yarıs: ayni wa_message_id baska worker/event ile yazildi.
@@ -138,6 +139,7 @@ export async function persistInboundMessage(options: {
   void emitOrgWebhook(orgId, 'message.inbound', {
     account_id: accountId,
     phone_e164: phone,
+    push_name: pushName,
     message_type: type,
     body: body?.slice(0, 500) ?? null,
     wa_message_id: waMessageId,

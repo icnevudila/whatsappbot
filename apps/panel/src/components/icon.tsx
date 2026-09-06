@@ -52,7 +52,7 @@ export function iconForHref(href: string): IconName {
   if (href.startsWith('/hizli-gonderim')) return 'send'
   if (href.startsWith('/kisiler')) return 'people'
   if (href.startsWith('/kampanyalar')) return 'campaign'
-  if (href.startsWith('/gelenler')) return 'inbox'
+  if (href.startsWith('/mesajlar') || href.startsWith('/gelenler')) return 'inbox'
   if (href.startsWith('/gidenler')) return 'outbound'
   if (href.startsWith('/kara-liste')) return 'shield'
   if (href.startsWith('/durum')) return 'activity'

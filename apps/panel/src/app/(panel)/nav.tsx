@@ -99,8 +99,7 @@ export function Nav({
         id: 'inbox',
         label: t('nav.groupInbox'),
         items: [
-          { href: '/gelenler', label: t('nav.gelenler'), icon: 'inbox' as const },
-          { href: '/gidenler', label: t('nav.gidenler'), icon: 'outbound' as const },
+          { href: '/mesajlar', label: t('nav.mesajlar'), icon: 'inbox' as const },
           { href: '/kara-liste', label: t('nav.karaListe'), icon: 'shield' as const },
         ] as NavItem[],
       },

@@ -97,7 +97,8 @@ async function searchTextPage(
 }
 
 /**
- * Google Places API (New) Text Search — kota güvenli: tek HTTP isteği, max 20 sonuç.
+ * Google Places API (New) Text Search.
+ * Sayfa başı en fazla 20; maxResults için nextPageToken ile devam eder.
  */
 export async function discoverWithPlacesApi(
   queryInput: string,
@@ -134,18 +135,41 @@ export async function discoverWithPlacesApi(
 
   const collected: DiscoveredPlace[] = []
   let truncated = false
+  let pageToken: string | undefined
+  let pages = 0
+  const maxPages = Math.ceil(maxResults / 20)
 
   try {
-    // Sayfalama YOK — her kullanıcı araması = 1 Places isteği (kota kilidi).
-    log.info({ query, maxResults, pages: 1 }, 'Places Text Search (tek istek)')
-    const page = await searchTextPage(apiKey, query, maxResults)
-    const batch = page.places ?? []
-    for (const raw of batch) {
-      const mapped = mapPlace(raw)
-      if (mapped) collected.push(mapped)
-      if (collected.length >= maxResults) break
+    log.info({ query, maxResults, maxPages }, 'Places Text Search')
+    do {
+      pages += 1
+      const pageSize = Math.min(20, maxResults - collected.length)
+      if (pageSize <= 0) break
+
+      // Places nextPageToken kısa gecikme ister; ilk sayfada gerekmez.
+      if (pageToken) {
+        await new Promise((resolve) => setTimeout(resolve, 2_100))
+      }
+
+      const page = await searchTextPage(apiKey, query, pageSize, pageToken)
+      const batch = page.places ?? []
+      for (const raw of batch) {
+        const mapped = mapPlace(raw)
+        if (mapped) collected.push(mapped)
+        if (collected.length >= maxResults) break
+      }
+
+      pageToken = page.nextPageToken
+      if (collected.length >= maxResults) {
+        truncated = Boolean(pageToken) || batch.length >= pageSize
+        break
+      }
+      if (!pageToken || batch.length === 0) break
+    } while (pages < maxPages)
+
+    if (pageToken && collected.length < maxResults) {
+      truncated = true
     }
-    truncated = Boolean(page.nextPageToken) || batch.length >= maxResults
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Places araması başarısız'
     errors.push(message)
@@ -177,6 +201,7 @@ export async function discoverWithPlacesApi(
       query,
       places: uniquePlaces.length,
       withPhone: contacts.length,
+      pages,
       ms: Date.now() - started,
     },
     'Places Text Search bitti',
