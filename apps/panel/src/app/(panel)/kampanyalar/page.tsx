@@ -202,7 +202,7 @@ export default async function CampaignsPage({
                     ? 'Önce Kişiler’de bir liste oluşturun, sonra buradan kampanya başlatın.'
                     : connectedCount === 0
                       ? 'Liste hazır; en az bir bağlı hat gerekir.'
-                      : 'Sağdaki formdan oluşturun. Tek seferlik için Hızlı gönderim yeterli.'
+                      : 'Formdan oluşturun. Tek seferlik için Hızlı gönderim yeterli.'
                 }
                 action={
                   listOptions.length === 0 ? (
