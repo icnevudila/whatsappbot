@@ -175,18 +175,22 @@ export default async function CampaignsPage({
                 }
               />
             ) : (
-              <ul className="space-y-2 p-2.5">
-                {campaigns.map((campaign) => {
+              <ul className="wb-list-scroll space-y-2 p-2.5">
+                {campaigns.map((campaign, index) => {
                   const done =
                     campaign.sent_count + campaign.failed_count + campaign.skipped_count
                   const total = Math.max(0, campaign.total_targets)
                   const hint = statusHint(campaign.status)
 
                   return (
-                    <li key={campaign.id}>
+                    <li
+                      key={campaign.id}
+                      className="wb-row-enter"
+                      style={{ animationDelay: `${Math.min(index, 12) * 28}ms` }}
+                    >
                       <Link
                         href={`/kampanyalar/${campaign.id}#paylasilanlar`}
-                        className={`wb-card-lift block rounded-[var(--radius-sm)] border px-3.5 py-3 transition-[box-shadow,border-color] ${campaignShell(campaign.status)}`}
+                        className={`wb-card-lift wb-list-row block rounded-[var(--radius-sm)] border px-3.5 py-3 transition-[box-shadow,border-color] ${campaignShell(campaign.status)}`}
                       >
                         <div className="flex items-center justify-between gap-3">
                           <div className="min-w-0">

@@ -196,7 +196,7 @@ export default async function StatusPage() {
           </Notice>
         ) : null}
 
-        <WorkerFleetCard workers={fleet.workers ?? []} leases={fleet.leases ?? []} />
+        <WorkerFleetCard workers={fleet.workers ?? []} />
 
         <Card>
           <div className="space-y-2.5 px-3.5 py-3">

@@ -113,11 +113,12 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
               }
             />
           ) : (
-            <ul className="divide-y divide-hairline">
-              {rows.map((row) => (
+            <ul className="wb-list-scroll divide-y divide-hairline">
+              {rows.map((row, index) => (
                 <li
                   key={row.id}
-                  className="flex flex-wrap items-center justify-between gap-2.5 px-3.5 py-2.5"
+                  className="wb-list-row wb-row-enter flex flex-wrap items-center justify-between gap-2.5 px-3.5 py-2.5"
+                  style={{ animationDelay: `${Math.min(index, 12) * 28}ms` }}
                 >
                   <div className="flex min-w-0 items-start gap-2.5">
                     <span

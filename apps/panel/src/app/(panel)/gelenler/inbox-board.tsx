@@ -235,13 +235,17 @@ export function InboxBoard({
             />
           ) : (
             <ul className="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-1.5">
-              {visibleList.map((item) => {
+              {visibleList.map((item, index) => {
                 const active = item.phone === selectedPhone
                 return (
-                  <li key={item.phone}>
+                  <li
+                    key={item.phone}
+                    className="wb-row-enter"
+                    style={{ animationDelay: `${Math.min(index, 10) * 24}ms` }}
+                  >
                     <Link
                       href={hrefFor({ tel: item.phone, tab, threadMode })}
-                      className={`block rounded-[var(--radius-sm)] px-3.5 py-2.5 transition-colors hover:bg-surface-raised ${
+                      className={`wb-list-row block rounded-[var(--radius-sm)] px-3.5 py-2.5 transition-colors hover:bg-surface-raised ${
                         active
                           ? 'border border-accent/25 bg-accent-soft shadow-[inset_3px_0_0_var(--color-accent)]'
                           : 'border border-transparent'

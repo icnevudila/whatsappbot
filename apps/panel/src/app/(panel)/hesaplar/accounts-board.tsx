@@ -224,8 +224,14 @@ export function AccountsBoard({
         </Card>
       ) : (
         <div className="space-y-2.5">
-          {accounts.map((account) => (
-            <AccountCard key={account.id} account={account} canManage={canManage} />
+          {accounts.map((account, index) => (
+            <div
+              key={account.id}
+              className="wb-row-enter"
+              style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
+            >
+              <AccountCard account={account} canManage={canManage} />
+            </div>
           ))}
         </div>
       )}
@@ -346,7 +352,7 @@ function AccountCard({
                 account.is_locked
                   ? 'bg-danger'
                   : account.status === 'connected'
-                    ? 'bg-ok'
+                    ? 'wb-live-dot bg-ok'
                     : account.status === 'qr' || account.status === 'connecting'
                       ? 'bg-warn'
                       : 'bg-ink-faint'

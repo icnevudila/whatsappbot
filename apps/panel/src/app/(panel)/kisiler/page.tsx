@@ -86,9 +86,13 @@ export default async function ContactsPage() {
                 }
               />
             ) : (
-              <ul className="divide-y divide-hairline">
-                {lists.map((list) => (
-                  <li key={list.id}>
+              <ul className="wb-list-scroll divide-y divide-hairline">
+                {lists.map((list, index) => (
+                  <li
+                    key={list.id}
+                    className="wb-list-row wb-row-enter"
+                    style={{ animationDelay: `${Math.min(index, 12) * 28}ms` }}
+                  >
                     <div className="flex flex-wrap items-center justify-between gap-2.5 px-3.5 py-2.5">
                       <Link
                         href={`/kisiler/${list.id}`}

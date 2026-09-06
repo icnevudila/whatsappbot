@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { AccentLink, Card, CardHeader, EmptyState } from '@/components/ui'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { useServerSyncedState } from '@/lib/use-server-synced-state'
@@ -57,6 +57,7 @@ export function EventFeed({
   orgId: string
 }) {
   const [events, setEvents] = useServerSyncedState(initial)
+  const flashIds = useRef(new Set<number>())
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient()
@@ -73,6 +74,7 @@ export function EventFeed({
         },
         (payload) => {
           const next = payload.new as EventView
+          flashIds.current.add(next.id)
           // Liste başa ekleniyor ve kırpılıyor: bu ekran açık kalabilir,
           // sınırsız büyümesi tarayıcıyı yorar.
           setEvents((current) => [next, ...current].slice(0, 50))
@@ -102,13 +104,22 @@ export function EventFeed({
           action={<AccentLink href="/hesaplar">Hesaplara git</AccentLink>}
         />
       ) : (
-        <div className="max-h-[420px] divide-y divide-hairline overflow-y-auto">
+        <div className="wb-list-scroll divide-y divide-hairline">
           {events.map((event) => {
             const at = new Date(event.created_at)
             const isToday = at.toDateString() === today
+            const flash = flashIds.current.has(event.id)
 
             return (
-              <div key={event.id} className="flex items-start gap-2.5 px-3.5 py-2.5">
+              <div
+                key={event.id}
+                className={`wb-list-row flex items-start gap-2.5 px-3.5 py-2.5 ${
+                  flash ? 'wb-row-flash' : ''
+                }`}
+                onAnimationEnd={() => {
+                  if (flash) flashIds.current.delete(event.id)
+                }}
+              >
                 <span
                   className={`mt-[6px] size-1.5 shrink-0 rounded-full ${
                     LEVEL_TONE[event.level] ?? 'bg-hairline-strong'

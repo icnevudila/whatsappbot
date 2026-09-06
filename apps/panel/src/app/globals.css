@@ -284,6 +284,55 @@ h3 {
   border-top: 1px solid var(--color-hairline);
   background: var(--color-surface);
 }
+
+/* Kompakt kaydırılabilir listeler (kampanya / kişiler / kara liste / olay) */
+.wb-list-scroll {
+  max-height: min(28rem, calc(100dvh - 18rem));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.wb-list-row {
+  transition:
+    background-color 140ms var(--ease-out),
+    box-shadow 140ms var(--ease-out),
+    border-color 140ms var(--ease-out);
+}
+.wb-list-row:hover {
+  background: var(--color-surface-raised);
+}
+.wb-row-enter {
+  animation: filo-fade-in 180ms var(--ease-out) both;
+}
+.wb-row-flash {
+  animation: filo-row-flash 1.05s var(--ease-out) both;
+}
+.wb-live-dot {
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-ok) 50%, transparent);
+  animation: filo-live-ping 1.8s ease-out infinite;
+}
+
+@keyframes filo-row-flash {
+  0% {
+    background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+@keyframes filo-live-ping {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-ok) 45%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 8px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
 .wb-split-pane + .wb-split-pane {
   border-top: 1px solid var(--color-hairline);
 }
@@ -528,6 +577,9 @@ h3 {
   .filo-bar-stagger,
   .filo-pulse > div,
   .wb-page-enter,
+  .wb-row-enter,
+  .wb-row-flash,
+  .wb-live-dot,
   .wb-skel,
   .wb-route-progress.is-active span,
   .wb-modal-backdrop,
