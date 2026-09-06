@@ -61,11 +61,25 @@ export async function signIn(_previous: AuthState, formData: FormData): Promise<
   if (user) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('active_org_id')
+      .select('active_org_id, is_platform_admin')
       .eq('id', user.id)
       .maybeSingle()
 
-    if (profile?.active_org_id) {
+    const jwtAdmin =
+      user.app_metadata?.platform_admin === true ||
+      user.app_metadata?.platform_admin === 'true' ||
+      user.app_metadata?.platform_admin === '1'
+    const emailAdmin = (process.env.PLATFORM_ADMIN_EMAILS ?? '')
+      .split(',')
+      .map((part) => part.trim().toLowerCase())
+      .includes((user.email ?? '').trim().toLowerCase())
+    const isPlatformAdmin =
+      Boolean(jwtAdmin) || Boolean(profile?.is_platform_admin) || emailAdmin
+
+    // Filo admin müşteri kurulumuna zorlanmaz.
+    if (isPlatformAdmin) {
+      needsSetup = false
+    } else if (profile?.active_org_id) {
       const orgId = profile.active_org_id
       const [brand, contacts, connected, valid] = await Promise.all([
         supabase
