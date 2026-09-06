@@ -2,7 +2,7 @@
 import Link from 'next/link'
 
 import { useActionState, useEffect, useRef, useState, type ReactNode } from 'react'
-import { AiImage } from '@/components/ai-image'
+import { AiImage, type BrandKitOption } from '@/components/ai-image'
 import { AiWriter } from '@/components/ai-writer'
 import { useSyncBusy } from '@/components/busy'
 import { useToast } from '@/components/toast'
@@ -53,6 +53,7 @@ export function NewCampaignForm({
   aiEnabled,
   imageAiEnabled,
   brandName,
+  brandKits = [],
 }: {
   lists: Option[]
   accounts: Option[]
@@ -60,6 +61,7 @@ export function NewCampaignForm({
   aiEnabled: boolean
   imageAiEnabled: boolean
   brandName?: string
+  brandKits?: BrandKitOption[]
 }) {
   const [state, formAction, pending] = useActionState<CampaignState, FormData>(
     createCampaign,
@@ -280,6 +282,7 @@ export function NewCampaignForm({
           <AiImage
             enabled={imageAiEnabled}
             brand={brandName}
+            brandKits={brandKits}
             onApply={(url) => {
               setDocumentUrlDraft('')
               setMediaUrl(url)

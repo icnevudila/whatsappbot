@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 import { Button, Field, Input, Notice, Select } from '@/components/ui'
 
@@ -10,25 +11,41 @@ const STYLES = [
   { value: 'fotograf', label: 'Gerçekçi foto' },
 ] as const
 
+export type BrandKitOption = {
+  id: string
+  name: string
+  isDefault: boolean
+}
+
+function pickDefaultKitId(kits: BrandKitOption[]): string {
+  return kits.find((kit) => kit.isDefault)?.id ?? kits[0]?.id ?? ''
+}
+
 /**
  * Kampanya / hızlı gönderim için AI görsel üretimi.
- * Üretilen URL forma yazılır; kullanıcı önizleyip kaldırabilir.
+ * Varsa marka kiti renk/ton/ad ile üretir; birden fazla kitte seçim sunar.
  */
 export function AiImage({
   enabled,
+  brandKits = [],
   brand,
   onApply,
 }: {
   enabled: boolean
+  brandKits?: BrandKitOption[]
+  /** Kit yoksa yedek marka adı. */
   brand?: string
   onApply: (url: string) => void
 }) {
   const [open, setOpen] = useState(false)
   const [brief, setBrief] = useState('')
   const [style, setStyle] = useState<string>('duyuru')
+  const [brandKitId, setBrandKitId] = useState(() => pickDefaultKitId(brandKits))
   const [preview, setPreview] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const selectedKit = brandKits.find((kit) => kit.id === brandKitId)
 
   const generate = async () => {
     setBusy(true)
@@ -38,7 +55,12 @@ export function AiImage({
       const response = await fetch('/api/gorsel-uret', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ brief, brand, style }),
+        body: JSON.stringify({
+          brief,
+          style,
+          brandKitId: brandKitId || null,
+          brand: brandKitId ? undefined : brand,
+        }),
       })
 
       const json = (await response.json()) as { url?: string; error?: string }
@@ -69,6 +91,7 @@ export function AiImage({
         className="text-[12px] font-medium text-accent underline underline-offset-2 hover:text-accent-dim"
       >
         Yapay zeka ile görsel üret
+        {selectedKit ? ` · ${selectedKit.name}` : ''}
       </button>
     )
   }
@@ -85,6 +108,37 @@ export function AiImage({
           kapat
         </button>
       </div>
+
+      {brandKits.length > 0 ? (
+        <Field
+          label="Marka kiti"
+          hint={
+            brandKits.length === 1
+              ? 'Kayıtlı kitiniz renk ve ton için kullanılacak.'
+              : 'Varsayılan kit seçili; isterseniz başka kit seçin.'
+          }
+        >
+          <Select
+            value={brandKitId}
+            onChange={(event) => setBrandKitId(event.target.value)}
+          >
+            {brandKits.map((kit) => (
+              <option key={kit.id} value={kit.id}>
+                {kit.name}
+                {kit.isDefault ? ' (varsayılan)' : ''}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      ) : (
+        <p className="text-[11.5px] leading-relaxed text-ink-faint">
+          Marka kiti yok — genel üretim yapılır.{' '}
+          <Link href="/marka-kiti" className="font-medium text-accent underline underline-offset-2">
+            Marka kiti oluştur
+          </Link>
+          {brand ? ` · şimdilik “${brand}” adı kullanılıyor` : null}
+        </p>
+      )}
 
       <Field
         label="Ne çizilsin?"

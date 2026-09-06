@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useMemo, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { parsePhoneList } from '@wa/shared'
-import { AiImage } from '@/components/ai-image'
+import { AiImage, type BrandKitOption } from '@/components/ai-image'
 import { AiWriter } from '@/components/ai-writer'
 import { useSyncBusy } from '@/components/busy'
 import { useToast } from '@/components/toast'
@@ -53,6 +53,7 @@ export function QuickSendForm({
   aiEnabled,
   imageAiEnabled,
   brandName,
+  brandKits = [],
   initialMediaUrl = '',
   initialNumbers = '',
   statusSlot,
@@ -62,6 +63,7 @@ export function QuickSendForm({
   aiEnabled: boolean
   imageAiEnabled: boolean
   brandName?: string
+  brandKits?: BrandKitOption[]
   initialMediaUrl?: string
   initialNumbers?: string
   /** Kota / hat özeti — kaydırınca kaybolmasın diye üstte sabit. */
@@ -254,6 +256,7 @@ export function QuickSendForm({
           <AiImage
             enabled={imageAiEnabled}
             brand={brandName}
+            brandKits={brandKits}
             onApply={(url) => {
               setMediaUrl(url)
               setMessageType('image')

@@ -108,7 +108,12 @@ export default async function CampaignsPage({
         .select('id, label, status, is_locked')
         .eq('org_id', org.id)
         .order('created_at'),
-      supabase.from('brand_kits').select('name').eq('org_id', org.id).limit(1).maybeSingle(),
+      supabase
+        .from('brand_kits')
+        .select('id, name, is_default')
+        .eq('org_id', org.id)
+        .order('is_default', { ascending: false })
+        .order('created_at'),
       getDictionary(),
     ])
 
@@ -120,6 +125,14 @@ export default async function CampaignsPage({
     label: list.name,
     detail: `${list.contact_count} numara`,
   }))
+
+  const brandKits = (brandResult.data ?? []).map((kit) => ({
+    id: kit.id,
+    name: kit.name,
+    isDefault: kit.is_default,
+  }))
+  const brandName =
+    brandKits.find((kit) => kit.isDefault)?.name ?? brandKits[0]?.name ?? undefined
 
   const accountOptions = (accountsResult.data ?? []).map((account) => ({
     id: account.id,
@@ -230,7 +243,8 @@ export default async function CampaignsPage({
             orgId={org.id}
             aiEnabled={hasTextProvider()}
             imageAiEnabled={hasImageProvider()}
-            brandName={brandResult.data?.name ?? undefined}
+            brandName={brandName}
+            brandKits={brandKits}
           />
         }
       />

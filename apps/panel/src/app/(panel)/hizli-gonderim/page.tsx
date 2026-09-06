@@ -78,7 +78,12 @@ export default async function QuickSendPage({
       .eq('enabled', true)
       .eq('is_locked', false)
       .order('created_at'),
-    supabase.from('brand_kits').select('name').eq('org_id', org.id).limit(1).maybeSingle(),
+    supabase
+      .from('brand_kits')
+      .select('id, name, is_default')
+      .eq('org_id', org.id)
+      .order('is_default', { ascending: false })
+      .order('created_at'),
     supabase
       .from('campaigns')
       .select('id, name, status, total_targets, sent_count, created_at')
@@ -96,6 +101,14 @@ export default async function QuickSendPage({
     phone: account.phone_e164,
     remainingToday: remainingToday(account),
   }))
+
+  const brandKits = (brandResult.data ?? []).map((kit) => ({
+    id: kit.id,
+    name: kit.name,
+    isDefault: kit.is_default,
+  }))
+  const brandName =
+    brandKits.find((kit) => kit.isDefault)?.name ?? brandKits[0]?.name ?? undefined
 
   const recent = recentResult.data ?? []
   const remainingTotal = senders.reduce((sum, s) => sum + Math.max(0, s.remainingToday), 0)
@@ -179,7 +192,8 @@ export default async function QuickSendPage({
               orgId={org.id}
               aiEnabled={hasTextProvider()}
               imageAiEnabled={hasImageProvider()}
-              brandName={brandResult.data?.name ?? undefined}
+              brandName={brandName}
+              brandKits={brandKits}
               initialMediaUrl={initialMediaUrl}
               initialNumbers={initialNumbers}
               statusSlot={

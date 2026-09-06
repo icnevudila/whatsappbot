@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { generateImage, hasImageProvider } from '@/lib/ai/image'
+import { DEFAULT_COLORS, type BrandColors } from '@/lib/creative-templates'
 import { rateLimit } from '@/lib/rate-limit'
 import { requireActiveOrg } from '@/lib/org'
 
@@ -13,9 +14,19 @@ const STYLE_HINT: Record<string, string> = {
   fotograf: 'realistic lifestyle photograph, natural lighting, candid feel',
 }
 
+function colorsPrompt(colors: BrandColors): string {
+  return [
+    `primary ${colors.primary}`,
+    `secondary ${colors.secondary}`,
+    `accent ${colors.accent}`,
+    `background ${colors.background}`,
+    `text ${colors.text}`,
+  ].join(', ')
+}
+
 /**
  * Hızlı gönderim / kampanya için kare WhatsApp görseli.
- * Marka kiti şablonu değil — düz AI görsel + Storage public URL.
+ * Marka kiti varsa renk + ton + ad prompta işlenir.
  */
 export async function POST(request: Request) {
   let userId: string
@@ -49,7 +60,7 @@ export async function POST(request: Request) {
     )
   }
 
-  let body: { brief?: string; brand?: string; style?: string }
+  let body: { brief?: string; brand?: string; style?: string; brandKitId?: string | null }
   try {
     body = await request.json()
   } catch {
@@ -64,15 +75,57 @@ export async function POST(request: Request) {
     )
   }
 
-  const brand = String(body.brand ?? '').trim()
+  const requestedKitId = String(body.brandKitId ?? '').trim() || null
+  let kit: {
+    id: string
+    name: string
+    colors: unknown
+    tone: string | null
+  } | null = null
+
+  if (requestedKitId) {
+    const { data } = await supabase
+      .from('brand_kits')
+      .select('id, name, colors, tone')
+      .eq('org_id', org.id)
+      .eq('id', requestedKitId)
+      .maybeSingle()
+    kit = data
+    if (!kit) {
+      return NextResponse.json({ error: 'Marka kiti bulunamadı.' }, { status: 404 })
+    }
+  } else {
+    const { data } = await supabase
+      .from('brand_kits')
+      .select('id, name, colors, tone')
+      .eq('org_id', org.id)
+      .eq('is_default', true)
+      .maybeSingle()
+    kit = data
+  }
+
+  const fallbackBrand = String(body.brand ?? '').trim()
   const styleKey = String(body.style ?? 'duyuru').trim()
   const style = STYLE_HINT[styleKey] ?? STYLE_HINT.duyuru
+
+  const colors: BrandColors = {
+    ...DEFAULT_COLORS,
+    ...((kit?.colors as Partial<BrandColors> | null) ?? {}),
+  }
+
+  const brandName = kit?.name?.trim() || fallbackBrand
+  const tone = kit?.tone?.trim() || null
 
   const prompt = [
     'WhatsApp marketing image, square 1:1, high quality, Turkish audience, no watermarks.',
     'Do not fill the image with long readable paragraphs; at most a short slogan if any.',
     style,
-    brand ? `Brand context: ${brand}.` : null,
+    brandName ? `Brand name / business: ${brandName}.` : null,
+    tone ? `Brand tone of voice / mood: ${tone}.` : null,
+    kit
+      ? `Follow this brand color palette closely in backgrounds, props and accents: ${colorsPrompt(colors)}.`
+      : null,
+    kit ? 'Keep visual identity consistent with an existing brand kit (colors and mood).' : null,
     `Subject: ${brief}`,
   ]
     .filter(Boolean)
@@ -93,17 +146,17 @@ export async function POST(request: Request) {
 
     const { data: publicUrl } = supabase.storage.from('creatives').getPublicUrl(path)
 
-    // Galeri kaydı başarısız olsa da URL kullanılabilir olsun.
     void supabase.from('creatives').insert({
       org_id: org.id,
       created_by: userId,
-      brand_kit_id: null,
+      brand_kit_id: kit?.id ?? null,
       template: 'ai_send',
       format: 'square',
       payload: {
         brief,
-        brand: brand || null,
+        brand: brandName || null,
         style: styleKey,
+        brand_kit_id: kit?.id ?? null,
         provider: image.provider,
         attempts: attempts.length ? attempts : null,
       },
@@ -117,6 +170,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       url: publicUrl.publicUrl,
       provider: image.provider,
+      brandKitId: kit?.id ?? null,
     })
   } catch (error) {
     return NextResponse.json(
