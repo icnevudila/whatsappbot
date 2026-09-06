@@ -7,6 +7,7 @@ import { CONTACT_EMAIL, contactMailto } from '@/lib/contact'
 import {
   addOrgMember,
   removeOrgMember,
+  updateOrgMemberRole,
   updateOrgName,
   updateOrgWebhook,
   type OrgActionState,
@@ -121,20 +122,35 @@ export function MembersPanel({
     addOrgMember,
     null,
   )
-  const [removing, startRemove] = useTransition()
-  const [removeError, setRemoveError] = useState<string | null>(null)
-  const [removeOk, setRemoveOk] = useState<string | null>(null)
+  const [busy, startBusy] = useTransition()
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [actionOk, setActionOk] = useState<string | null>(null)
 
   const runRemove = (userId: string) => {
-    setRemoveError(null)
-    setRemoveOk(null)
-    startRemove(async () => {
+    setActionError(null)
+    setActionOk(null)
+    startBusy(async () => {
       const result = await removeOrgMember(userId)
       if (result?.error) {
-        setRemoveError(result.error)
+        setActionError(result.error)
         toast(result.error, 'danger')
       } else if (result?.ok) {
-        setRemoveOk(result.ok)
+        setActionOk(result.ok)
+        toast(result.ok, 'success')
+      }
+    })
+  }
+
+  const runRoleChange = (userId: string, role: string) => {
+    setActionError(null)
+    setActionOk(null)
+    startBusy(async () => {
+      const result = await updateOrgMemberRole(userId, role)
+      if (result?.error) {
+        setActionError(result.error)
+        toast(result.error, 'danger')
+      } else if (result?.ok) {
+        setActionOk(result.ok)
         toast(result.ok, 'success')
       }
     })
@@ -173,14 +189,27 @@ export function MembersPanel({
                 )}
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <span className="rounded-full border border-hairline px-2 py-0.5 text-[11px] text-ink-muted">
-                  {ROLE_LABELS[member.role] ?? member.role}
-                </span>
+                {canManage && member.role !== 'owner' ? (
+                  <Select
+                    aria-label="Üye rolü"
+                    value={member.role === 'admin' ? 'admin' : 'member'}
+                    disabled={busy}
+                    onChange={(event) => runRoleChange(member.userId, event.target.value)}
+                    className="min-w-[7.5rem]"
+                  >
+                    <option value="member">Üye</option>
+                    <option value="admin">Yönetici</option>
+                  </Select>
+                ) : (
+                  <span className="rounded-full border border-hairline px-2 py-0.5 text-[11px] text-ink-muted">
+                    {ROLE_LABELS[member.role] ?? member.role}
+                  </span>
+                )}
                 {canManage && member.role !== 'owner' ? (
                   <Button
                     type="button"
                     variant="danger"
-                    disabled={removing}
+                    disabled={busy}
                     onClick={() => runRemove(member.userId)}
                   >
                     Çıkar
@@ -192,22 +221,22 @@ export function MembersPanel({
         </ul>
       )}
 
-      {removeError ? (
+      {actionError ? (
         <div className="border-t border-hairline px-3.5 py-2.5">
-          <Notice tone="danger">{removeError}</Notice>
+          <Notice tone="danger">{actionError}</Notice>
         </div>
       ) : null}
-      {removeOk ? (
+      {actionOk ? (
         <div className="border-t border-hairline px-3.5 py-2.5">
-          <Notice tone="accent">{removeOk}</Notice>
+          <Notice tone="accent">{actionOk}</Notice>
         </div>
       ) : null}
 
       {canManage ? (
         <form action={formAction} className="space-y-2.5 border-t border-hairline p-3.5">
           <Field
-            label="Üye ekle"
-            hint="Kullanıcı daha önce Filo’ya kayıt olmuş olmalı. E-posta tam eşleşir."
+            label="Üye ekle / davet et"
+            hint="Hesap varsa hemen eklenir. Yoksa davet e-postası gider (self-signup kapalı)."
           >
             <Input
               name="email"
@@ -223,6 +252,25 @@ export function MembersPanel({
               <option value="admin">Yönetici — ekip ve işletme</option>
             </Select>
           </Field>
+          <label className="flex items-start gap-2 text-[12.5px] text-ink-muted">
+            <input
+              type="checkbox"
+              name="invite_if_missing"
+              value="1"
+              defaultChecked
+              className="mt-0.5 accent-accent"
+            />
+            <span>
+              Hesap yoksa e-posta daveti gönder. Olmazsa{' '}
+              <a
+                href={contactMailto('Filo hesap açma talebi')}
+                className="font-medium text-ink underline underline-offset-2"
+              >
+                {CONTACT_EMAIL}
+              </a>
+              .
+            </span>
+          </label>
           {state?.error ? (
             <Notice tone="danger">
               {state.error}
@@ -242,7 +290,7 @@ export function MembersPanel({
           ) : null}
           {state?.ok ? <Notice tone="accent">{state.ok}</Notice> : null}
           <Button type="submit" variant="accent" disabled={pending}>
-            {pending ? 'Ekleniyor…' : 'Üye ekle'}
+            {pending ? 'İşleniyor…' : 'Ekle / davet et'}
           </Button>
         </form>
       ) : (

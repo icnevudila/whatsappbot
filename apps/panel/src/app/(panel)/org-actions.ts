@@ -1,8 +1,13 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { headers } from 'next/headers'
 import { requireActiveOrg } from '@/lib/org'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import {
+  createSupabaseServiceClient,
+  siteOriginFromEnv,
+} from '@/lib/supabase/service'
 
 export type OrgActionState = {
   error?: string
@@ -119,14 +124,31 @@ export async function updateOrgWebhook(
   return { ok: 'Webhook kaydedildi.' }
 }
 
+function normalizeMemberRole(raw: string): 'admin' | 'member' | null {
+  const role = raw.trim().toLowerCase() || 'member'
+  if (role === 'admin' || role === 'member') return role
+  return null
+}
+
+async function resolveInviteRedirect(): Promise<string> {
+  const h = await headers()
+  const host = h.get('x-forwarded-host') ?? h.get('host')
+  const proto = h.get('x-forwarded-proto') ?? 'https'
+  const fromRequest = host ? `${proto}://${host}` : undefined
+  const origin = siteOriginFromEnv(fromRequest)
+  return `${origin || 'https://filo.app'}/auth/confirm?devam=${encodeURIComponent('/kurulum')}`
+}
+
 export async function addOrgMember(
   _previous: OrgActionState,
   formData: FormData,
 ): Promise<OrgActionState> {
   const email = String(formData.get('email') ?? '').trim()
-  const role = String(formData.get('role') ?? 'member').trim() || 'member'
+  const role = normalizeMemberRole(String(formData.get('role') ?? 'member'))
+  const wantInvite = String(formData.get('invite_if_missing') ?? '') === '1'
 
   if (!email) return { error: 'E-posta girin.' }
+  if (!role) return { error: 'Geçersiz rol.' }
 
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
   let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
@@ -146,22 +168,125 @@ export async function addOrgMember(
     p_role: role,
   })
 
-  if (error) {
-    if (error.message.includes('user not found')) {
-      return {
-        error:
-          'Bu e-posta ile Filo hesabı yok. Hesaplar yalnızca Filo tarafından açılır; kendi kendine kayıt yoktur.',
-        contactSupport: true,
-      }
-    }
+  if (!error) {
+    revalidatePath('/ayarlar')
+    return { ok: 'Üye eklendi.' }
+  }
+
+  if (!error.message.includes('user not found')) {
     if (error.message.includes('not org admin')) {
       return { error: 'Üye eklemek için yönetici olmalısınız.' }
     }
     return { error: error.message }
   }
 
+  // Auth’ta yok: davet (service role) veya iletişim CTA.
+  if (!wantInvite) {
+    return {
+      error:
+        'Bu e-posta ile Filo hesabı yok. Davet gönderin veya Filo’dan hesap açılmasını isteyin.',
+      contactSupport: true,
+    }
+  }
+
+  const admin = createSupabaseServiceClient()
+  if (!admin) {
+    return {
+      error:
+        'Davet şu an sunucuda yapılandırılmamış. Hesap açılması için Filo’ya yazın.',
+      contactSupport: true,
+    }
+  }
+
+  const redirectTo = await resolveInviteRedirect()
+  const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(
+    email,
+    { redirectTo },
+  )
+
+  if (inviteError) {
+    const msg = inviteError.message.toLowerCase()
+    if (msg.includes('already') || msg.includes('registered')) {
+      const { error: retry } = await supabase.rpc('add_organization_member', {
+        p_org_id: org.id,
+        p_email: email,
+        p_role: role,
+      })
+      if (!retry) {
+        revalidatePath('/ayarlar')
+        return { ok: 'Üye eklendi.' }
+      }
+    }
+    return {
+      error: `Davet gönderilemedi: ${inviteError.message}`,
+      contactSupport: true,
+    }
+  }
+
+  const userId = invited.user?.id
+  if (!userId) {
+    return { error: 'Davet oluşturuldu ama kullanıcı kimliği alınamadı.', contactSupport: true }
+  }
+
+  const { error: memberError } = await admin.from('organization_members').upsert(
+    {
+      org_id: org.id,
+      user_id: userId,
+      role,
+    },
+    { onConflict: 'org_id,user_id' },
+  )
+
+  if (memberError) {
+    return {
+      error: `Davet gitti ama işletmeye eklenemedi: ${memberError.message}`,
+      contactSupport: true,
+    }
+  }
+
+  await admin
+    .from('profiles')
+    .upsert({ id: userId, email: email.toLowerCase() } as never, { onConflict: 'id' })
+
   revalidatePath('/ayarlar')
-  return { ok: 'Üye eklendi.' }
+  return { ok: `Davet e-postası gönderildi: ${email}` }
+}
+
+export async function updateOrgMemberRole(
+  userId: string,
+  role: string,
+): Promise<OrgActionState> {
+  const normalized = normalizeMemberRole(role)
+  if (!normalized) return { error: 'Geçersiz rol.' }
+
+  try {
+    const { userId: me, org, supabase } = await requireActiveOrg()
+    if (org.role !== 'owner' && org.role !== 'admin') {
+      return { error: 'Yetki yok.' }
+    }
+    if (userId === me) return { error: 'Kendi rolünüzü değiştiremezsiniz.' }
+
+    const { error } = await supabase.rpc('set_organization_member_role' as never, {
+      p_org_id: org.id,
+      p_user_id: userId,
+      p_role: normalized,
+    } as never)
+
+    if (error) {
+      if (error.message.includes('cannot change owner')) {
+        return { error: 'Sahip rolü değiştirilemez.' }
+      }
+      if (error.message.includes('not org admin')) {
+        return { error: 'Yetki yok.' }
+      }
+      return { error: error.message }
+    }
+
+    revalidatePath('/ayarlar')
+    return { ok: 'Rol güncellendi.' }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum yok' }
+  }
 }
 
 export async function removeOrgMember(userId: string): Promise<OrgActionState> {
