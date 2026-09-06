@@ -62,6 +62,8 @@ export async function saveBrandKit(
   if (error) return { error: error.message }
 
   revalidatePath('/marka-kiti')
+  revalidatePath('/kurulum')
+  revalidatePath('/ozet')
   return { ok: 'Marka kiti kaydedildi.' }
 }
 

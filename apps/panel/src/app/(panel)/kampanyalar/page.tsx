@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { AccentLink, Card, CardHeader, EmptyState, Meter, PageHeader, StatusPill } from '@/components/ui'
+import { AccentLink, Card, CardHeader, EmptyState, Meter, Notice, PageHeader, StatusPill } from '@/components/ui'
 import { hasTextProvider } from '@/lib/ai/text'
 import { requireActiveOrg } from '@/lib/org'
 import { NewCampaignForm } from './new-campaign-form'
@@ -39,7 +39,11 @@ function statusHint(status: string): string | null {
   }
 }
 
-export default async function CampaignsPage() {
+export default async function CampaignsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ hazir?: string | string[] }>
+}) {
   let userId: string
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
   let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
@@ -48,6 +52,9 @@ export default async function CampaignsPage() {
   } catch {
     redirect('/giris')
   }
+
+  const params = await searchParams
+  const justReady = (Array.isArray(params.hazir) ? params.hazir[0] : params.hazir) === '1'
 
   const [campaignsResult, listsResult, accountsResult, brandResult] = await Promise.all([
     supabase
@@ -103,7 +110,14 @@ export default async function CampaignsPage() {
         action={<AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>}
       />
 
-      <div className="grid gap-2.5 lg:grid-cols-[minmax(0,1fr)_380px]">
+      {justReady ? (
+        <Notice tone="success">
+          Kurulum tamam. Marka, liste, hat ve numara kontrolü hazır — sağdan kampanya
+          oluşturup mesajınızı yazmanız yeterli.
+        </Notice>
+      ) : null}
+
+      <div className={`grid gap-2.5 lg:grid-cols-[minmax(0,1fr)_380px]${justReady ? ' mt-3' : ''}`}>
         <div className="order-2 lg:order-1">
           <Card>
             <CardHeader

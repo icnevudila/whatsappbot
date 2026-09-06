@@ -5,15 +5,14 @@ import type { getSetupProgress } from '@/lib/setup-progress'
 type Progress = Awaited<ReturnType<typeof getSetupProgress>>
 
 const STEP_COPY: { key: keyof Progress['steps']; label: string; href: string }[] = [
-  { key: 'brand', label: 'Marka', href: '/marka-kiti' },
-  { key: 'contacts', label: 'Kişi listesi', href: '/kisiler#liste-olustur' },
+  { key: 'brand', label: 'Marka', href: '/kurulum' },
+  { key: 'contacts', label: 'Kişi listesi', href: '/kurulum' },
   { key: 'connected', label: 'WhatsApp hattı', href: '/hesaplar' },
   { key: 'verified', label: 'Numara kontrolü', href: '/kisiler' },
-  { key: 'firstOut', label: 'İlk mesaj', href: '/hizli-gonderim' },
 ]
 
 /**
- * Kurulum sayfası ile aynı 5 adım — Özet / Hesaplar vb. tek şerit.
+ * Kurulum bitmeden gösterilen şerit — zorunlu wizard’a yönlendirir.
  */
 export function SetupBanner({ progress }: { progress: Progress }) {
   if (progress.allDone) return null
@@ -25,13 +24,7 @@ export function SetupBanner({ progress }: { progress: Progress }) {
           <div>
             <p className="text-[13px] font-semibold text-ink">Kurulumu tamamla</p>
             <p className="mt-0.5 text-[12px] text-ink-muted">
-              Beş adım ·{' '}
-              <Link
-                href="/kurulum"
-                className="font-medium text-accent underline-offset-2 hover:underline"
-              >
-                ayrıntılı checklist
-              </Link>
+              Dört zorunlu adım · bitmeden kampanya açılamaz
             </p>
           </div>
           <span className="tabular text-[12px] text-ink-muted">
@@ -71,7 +64,7 @@ export function SetupBanner({ progress }: { progress: Progress }) {
         </ul>
 
         <div>
-          <AccentLink href="/kurulum">Kuruluma git</AccentLink>
+          <AccentLink href="/kurulum">Kuruluma devam et</AccentLink>
         </div>
       </div>
     </Card>

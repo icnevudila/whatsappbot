@@ -2,10 +2,12 @@ import { cache } from 'react'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 /**
- * Panel kurulum checklist ile aynı kriterler.
- * showSetup / kurulum sayfası bu sayımlara dayanır.
- * orgId bazında istek icinde tek sefer.
+ * Zorunlu onboarding: marka + liste + bağlı hat + en az bir WA-doğrulanmış numara.
+ * Bunlar tamamsa müşteri kampanya / gönderime hazırdır (ilk test mesajı şart değil).
  */
+export const SETUP_STEP_KEYS = ['brand', 'contacts', 'connected', 'verified'] as const
+export type SetupStepKey = (typeof SETUP_STEP_KEYS)[number]
+
 export const getSetupProgress = cache(async (orgId: string) => {
   const supabase = await createSupabaseServerClient()
 
@@ -40,7 +42,6 @@ export const getSetupProgress = cache(async (orgId: string) => {
     contacts: (contactCount ?? 0) > 0,
     connected: (connectedCount ?? 0) > 0,
     verified: (validWa ?? 0) > 0,
-    firstOut: (outCount ?? 0) > 0,
   }
 
   const counts = {
@@ -51,8 +52,20 @@ export const getSetupProgress = cache(async (orgId: string) => {
     outCount: outCount ?? 0,
   }
 
-  const doneCount = Object.values(steps).filter(Boolean).length
-  const allDone = doneCount === Object.keys(steps).length
+  const doneCount = SETUP_STEP_KEYS.filter((key) => steps[key]).length
+  const allDone = doneCount === SETUP_STEP_KEYS.length
+  const nextStep = SETUP_STEP_KEYS.find((key) => !steps[key]) ?? null
 
-  return { steps, counts, doneCount, allDone, showSetup: !allDone }
+  return { steps, counts, doneCount, allDone, showSetup: !allDone, nextStep }
 })
+
+/** Onboarding sırasında erişilebilir paneller (gate allowlist). */
+export function isOnboardingAllowedPath(pathname: string): boolean {
+  if (pathname === '/kurulum') return true
+  if (pathname === '/marka-kiti') return true
+  if (pathname === '/hesaplar') return true
+  if (pathname === '/kisiler' || pathname.startsWith('/kisiler/')) return true
+  if (pathname === '/ayarlar' || pathname.startsWith('/ayarlar/')) return true
+  if (pathname === '/yardim') return true
+  return false
+}

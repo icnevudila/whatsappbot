@@ -8,6 +8,11 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export type ActionState = { error?: string; ok?: string } | null
 
+function revalidateAccounts() {
+  revalidatePath('/hesaplar')
+  revalidatePath('/kurulum')
+}
+
 export async function createAccount(
   _previous: ActionState,
   formData: FormData,
@@ -52,13 +57,13 @@ export async function createAccount(
     priority: 10,
   })
   if (jobError) {
-    revalidatePath('/hesaplar')
+    revalidateAccounts()
     return {
       error: `Hesap oluşturuldu ama bağlantı kuyruğa yazılamadı: ${jobError}`,
     }
   }
 
-  revalidatePath('/hesaplar')
+  revalidateAccounts()
   return { ok: 'Hesap oluşturuldu, QR kodu hazırlanıyor.' }
 }
 
@@ -69,7 +74,7 @@ async function enqueueForAccount(
   const { error } = await enqueueJob({ type, accountId, priority: 10 })
   if (error) return { error }
 
-  revalidatePath('/hesaplar')
+  revalidateAccounts()
   return { ok: 'Komut kuyruğa alındı.' }
 }
 
@@ -111,7 +116,7 @@ export async function requestPairingCode(
   })
   if (error) return { error }
 
-  revalidatePath('/hesaplar')
+  revalidateAccounts()
   return { ok: 'Kod isteniyor, birkaç saniye içinde görünecek.' }
 }
 
@@ -125,6 +130,6 @@ export async function removeAccount(accountId: string): Promise<ActionState> {
   const { error } = await supabase.from('accounts').delete().eq('id', accountId)
   if (error) return { error: error.message }
 
-  revalidatePath('/hesaplar')
+  revalidateAccounts()
   return { ok: 'Hesap silindi.' }
 }

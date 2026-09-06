@@ -47,6 +47,28 @@ const GROUPS: { id: string; label: string; items: readonly NavItem[] }[] = [
   },
 ]
 
+/** Zorunlu onboarding sırasında yalnızca bu yollar. */
+const ONBOARDING_GROUPS: { id: string; label: string; items: readonly NavItem[] }[] = [
+  {
+    id: 'setup',
+    label: 'Kurulum',
+    items: [
+      { href: '/kurulum', label: 'Adımlar' },
+      { href: '/marka-kiti', label: 'Marka' },
+      { href: '/kisiler', label: 'Kişiler' },
+      { href: '/hesaplar', label: 'Hesaplar' },
+    ],
+  },
+  {
+    id: 'system',
+    label: 'Sistem',
+    items: [
+      { href: '/ayarlar', label: 'Ayarlar' },
+      { href: '/yardim', label: 'Yardım' },
+    ],
+  },
+]
+
 function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
@@ -76,19 +98,24 @@ function NavLink({
 
 export function Nav({
   showSetup = false,
+  onboardingLock = false,
   orientation = 'vertical',
 }: {
   showSetup?: boolean
+  /** true iken menü yalnız kurulum yollarını gösterir. */
+  onboardingLock?: boolean
   orientation?: 'vertical' | 'horizontal'
 }) {
   const pathname = usePathname()
   const [moreOpen, setMoreOpen] = useState(false)
   const moreRef = useRef<HTMLDivElement>(null)
 
-  const setupItem = showSetup ? ({ href: '/kurulum', label: 'Kurulum' } as const) : null
-  const flat = GROUPS.flatMap((g) => g.items)
-  const primaryH = flat.slice(0, 6)
-  const moreH = flat.slice(6)
+  const groups = onboardingLock ? ONBOARDING_GROUPS : GROUPS
+  const setupItem =
+    showSetup && !onboardingLock ? ({ href: '/kurulum', label: 'Kurulum' } as const) : null
+  const flat = groups.flatMap((g) => g.items)
+  const primaryH = flat.slice(0, onboardingLock ? 8 : 6)
+  const moreH = onboardingLock ? [] : flat.slice(6)
   const moreActive = moreH.some((item) => isActive(pathname, item.href))
 
   useEffect(() => {
@@ -135,43 +162,50 @@ export function Nav({
             }`}
           />
         ))}
-        <div className="relative" ref={moreRef}>
-          <button
-            type="button"
-            aria-expanded={moreOpen}
-            onClick={() => setMoreOpen((v) => !v)}
-            className={`wb-rail-link whitespace-nowrap${
-              moreActive || moreOpen ? ' is-active' : ''
-            }`}
-            aria-current={moreActive ? 'page' : undefined}
-          >
-            <span className="wb-rail-link-label">Diğer</span>
-          </button>
-          {moreOpen ? (
-            <div className="wb-rail-more absolute left-0 top-full z-30 mt-1 min-w-[168px] border border-hairline bg-surface p-1 shadow-[var(--shadow-md)]">
-              {moreH.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  prefetch
-                  onClick={() => setMoreOpen(false)}
-                  aria-current={isActive(pathname, item.href) ? 'page' : undefined}
-                  className={`wb-rail-link block${
-                    isActive(pathname, item.href) ? ' is-active' : ''
-                  }`}
-                >
-                  <span className="wb-rail-link-label">{item.label}</span>
-                </Link>
-              ))}
-            </div>
-          ) : null}
-        </div>
+        {moreH.length > 0 ? (
+          <div className="relative" ref={moreRef}>
+            <button
+              type="button"
+              aria-expanded={moreOpen}
+              onClick={() => setMoreOpen((v) => !v)}
+              className={`wb-rail-link whitespace-nowrap${
+                moreActive || moreOpen ? ' is-active' : ''
+              }`}
+              aria-current={moreActive ? 'page' : undefined}
+            >
+              <span className="wb-rail-link-label">Diğer</span>
+            </button>
+            {moreOpen ? (
+              <div className="wb-rail-more absolute left-0 top-full z-30 mt-1 min-w-[168px] border border-hairline bg-surface p-1 shadow-[var(--shadow-md)]">
+                {moreH.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    prefetch
+                    onClick={() => setMoreOpen(false)}
+                    aria-current={isActive(pathname, item.href) ? 'page' : undefined}
+                    className={`wb-rail-link block${
+                      isActive(pathname, item.href) ? ' is-active' : ''
+                    }`}
+                  >
+                    <span className="wb-rail-link-label">{item.label}</span>
+                  </Link>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </nav>
     )
   }
 
   return (
     <nav className="flex flex-col gap-px" aria-label="Ana menü">
+      {onboardingLock ? (
+        <p className="mb-2 px-2.5 text-[11.5px] leading-snug text-ink-faint">
+          Dört adımı bitirmeden panele geçilemez.
+        </p>
+      ) : null}
       {setupItem ? (
         <>
           <p className="wb-rail-group">Kurulum</p>
@@ -182,7 +216,7 @@ export function Nav({
           />
         </>
       ) : null}
-      {GROUPS.map((group) => (
+      {groups.map((group) => (
         <div key={group.id}>
           <p className="wb-rail-group">{group.label}</p>
           <div className="flex flex-col gap-px">

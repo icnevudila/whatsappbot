@@ -53,12 +53,50 @@ export async function signIn(_previous: AuthState, formData: FormData): Promise<
 
   const safeNext = safeInternalPath(String(formData.get('devam') ?? '').trim(), '')
 
-  const { count: connectedCount } = await supabase
-    .from('accounts')
-    .select('id', { count: 'exact', head: true })
-    .eq('status', 'connected')
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  if ((connectedCount ?? 0) === 0) {
+  let needsSetup = true
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('active_org_id')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (profile?.active_org_id) {
+      const orgId = profile.active_org_id
+      const [brand, contacts, connected, valid] = await Promise.all([
+        supabase
+          .from('brand_kits')
+          .select('id', { count: 'exact', head: true })
+          .eq('org_id', orgId),
+        supabase
+          .from('contacts')
+          .select('id', { count: 'exact', head: true })
+          .eq('org_id', orgId),
+        supabase
+          .from('accounts')
+          .select('id', { count: 'exact', head: true })
+          .eq('org_id', orgId)
+          .eq('status', 'connected'),
+        supabase
+          .from('contacts')
+          .select('id', { count: 'exact', head: true })
+          .eq('org_id', orgId)
+          .eq('wa_status', 'valid'),
+      ])
+      needsSetup = !(
+        (brand.count ?? 0) > 0 &&
+        (contacts.count ?? 0) > 0 &&
+        (connected.count ?? 0) > 0 &&
+        (valid.count ?? 0) > 0
+      )
+    }
+  }
+
+  if (needsSetup) {
     redirect('/kurulum')
   }
 

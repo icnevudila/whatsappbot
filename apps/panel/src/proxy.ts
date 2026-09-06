@@ -74,7 +74,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // Landing oturum acikken de gezilebilir olmali; yalnizca giris ekranindan
-  // panele geri gonderiyoruz.
+  // panele geri gonderiyoruz. Layout setup tamam degilse /kurulum'a cevirir.
   if (user && isAuthPath) {
     const target = request.nextUrl.clone()
     target.pathname = '/ozet'
@@ -82,7 +82,15 @@ export async function proxy(request: NextRequest) {
     return withSessionCookies(NextResponse.redirect(target))
   }
 
-  return withSessionCookies(response)
+  // RSC layout gate icin pathname (zorunlu onboarding).
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set('x-filo-pathname', path)
+  const next = NextResponse.next({
+    request: { headers: requestHeaders },
+  })
+  for (const cookie of response.cookies.getAll()) next.cookies.set(cookie)
+  next.headers.set('Cache-Control', 'private, no-store')
+  return next
 }
 
 export const config = {
