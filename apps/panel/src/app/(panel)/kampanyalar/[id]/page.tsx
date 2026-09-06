@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { PageHeader, QuietLink, StatusPill } from '@/components/ui'
+import { Notice, PageHeader, QuietLink, StatusPill } from '@/components/ui'
 import { requireActiveOrg } from '@/lib/org'
 import { CampaignLive, type CampaignView } from './campaign-live'
 import { TargetFeed, type TargetView } from './target-feed'
@@ -32,10 +32,21 @@ const FIELDS =
 
 export default async function CampaignDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ taslak?: string | string[]; zamanlandi?: string | string[]; uyari?: string | string[] }>
 }) {
   const { id } = await params
+  const qs = await searchParams
+  const flash =
+    (Array.isArray(qs.taslak) ? qs.taslak[0] : qs.taslak) === '1'
+      ? ('taslak' as const)
+      : (Array.isArray(qs.zamanlandi) ? qs.zamanlandi[0] : qs.zamanlandi) === '1'
+        ? ('zamanlandi' as const)
+        : (Array.isArray(qs.uyari) ? qs.uyari[0] : qs.uyari) === 'baslatilamadi'
+          ? ('baslatilamadi' as const)
+          : null
   const { org, supabase } = await requireActiveOrg()
 
   const [campaignResult, targetsResult, accountsResult, listsResult, allAccountsResult] =

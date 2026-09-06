@@ -81,7 +81,7 @@ export function NewCampaignForm({
   const [name, setName] = useState('')
   const [selectedLists, setSelectedLists] = useState<string[]>([])
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>([])
-  const [startMode, setStartMode] = useState<'now' | 'schedule'>('now')
+  const [startMode, setStartMode] = useState<'draft' | 'now' | 'schedule'>('draft')
   const [scheduledAt, setScheduledAt] = useState('')
   const [stepHint, setStepHint] = useState<string | null>(null)
 
@@ -234,7 +234,7 @@ export function NewCampaignForm({
       <Card className="overflow-visible rounded-none border-0 shadow-none">
         <CardHeader
           title="Yeni kampanya"
-          subtitle="Adım adım: ad → mesaj → hedef → gönder."
+          subtitle="Adım adım hazırlayın. Varsayılan: taslak — istediğinizde başlatırsınız."
         />
 
         <nav aria-label="Kampanya adımları" className="border-b border-hairline px-4 py-3">
@@ -594,6 +594,17 @@ export function NewCampaignForm({
                     <input
                       type="radio"
                       name="start_mode"
+                      value="draft"
+                      checked={startMode === 'draft'}
+                      onChange={() => setStartMode('draft')}
+                      className="accent-accent"
+                    />
+                    Taslak kaydet — sonra detaydan başlat
+                  </label>
+                  <label className="flex items-center gap-2 text-[13px]">
+                    <input
+                      type="radio"
+                      name="start_mode"
                       value="now"
                       checked={startMode === 'now'}
                       onChange={() => setStartMode('now')}
@@ -664,7 +675,13 @@ export function NewCampaignForm({
                     (startMode === 'schedule' && !scheduledAt)
                   }
                 >
-                  {pending ? 'Kaydediliyor…' : 'Oluştur ve gönder'}
+                  {pending
+                    ? 'Kaydediliyor…'
+                    : startMode === 'draft'
+                      ? 'Taslak kaydet'
+                      : startMode === 'schedule'
+                        ? 'Zamanla kaydet'
+                        : 'Oluştur ve gönder'}
                 </Button>
               )}
             </div>

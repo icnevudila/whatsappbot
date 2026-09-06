@@ -114,13 +114,18 @@ export async function createCampaign(
     redirect(`/kampanyalar/${campaign.id}?zamanlandi=1`)
   }
 
-  // Hemen baslat: olustur = campaign.start.
+  // Taslak: job yok; detay sayfasından "Gönderimi başlat".
+  if (startMode === 'draft') {
+    revalidatePath('/kampanyalar')
+    redirect(`/kampanyalar/${campaign.id}?taslak=1`)
+  }
+
+  // Hemen baslat.
   const { error: jobError } = await enqueueJob({
     type: 'campaign.start',
     campaignId: campaign.id,
     priority: 10,
   })
-  // Preserve a reviewable draft if queueing fails, rather than creating a duplicate on resubmit.
   if (jobError) {
     revalidatePath('/kampanyalar')
     redirect(`/kampanyalar/${campaign.id}?uyari=baslatilamadi`)
