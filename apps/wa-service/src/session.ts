@@ -98,6 +98,11 @@ export class WhatsAppSession {
   private disposed = false
   private sending = false
 
+  /** Rehber senkronu: persist promise'lerini bekle, event sayacini izle. */
+  private contactPersistChain: Promise<void> = Promise.resolve()
+  private contactEventsSinceSync = 0
+  private lastContactEventAt = 0
+
   /**
    * startSock disinda tutuluyor ki restart'i assin. Icine tasinirsa her
    * yeniden baglanmada tekrar sifirlanir ve retry sayaci ise yaramaz.
@@ -152,6 +157,8 @@ export class WhatsAppSession {
 
   async resyncContacts(): Promise<void> {
     if (!this.sock) return
+    this.contactEventsSinceSync = 0
+    this.lastContactEventAt = Date.now()
     try {
       this.log.info('Manuel rehber senkronizasyonu (resyncAppState) baslatiliyor...')
       await this.sock.resyncAppState(
@@ -162,6 +169,66 @@ export class WhatsAppSession {
     } catch (error) {
       this.log.warn({ err: error }, 'resyncAppState sirasinda hata')
     }
+
+    // Event'ler async akar; sessiz kalana veya ust sinira kadar bekle.
+    const started = Date.now()
+    const maxWaitMs = 45_000
+    const quietMs = 2_500
+    while (Date.now() - started < maxWaitMs) {
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      const quietFor = Date.now() - this.lastContactEventAt
+      if (quietFor >= quietMs && this.contactEventsSinceSync > 0) break
+      // Hic event yoksa en az 8sn bekle (gec gelen upsert)
+      if (this.contactEventsSinceSync === 0 && Date.now() - started < 8_000) continue
+      if (this.contactEventsSinceSync === 0 && quietFor >= 8_000) break
+    }
+
+    await this.contactPersistChain
+    this.log.info(
+      { events: this.contactEventsSinceSync, waitedMs: Date.now() - started },
+      'Rehber event bekleme bitti',
+    )
+  }
+
+  private resolveLidPn = async (lidJid: string): Promise<string | null> => {
+    const sock = this.sock as
+      | {
+          signalRepository?: {
+            lidMapping?: {
+              getPNForLID?: (lid: string) => Promise<string | null | undefined>
+            }
+          }
+        }
+      | undefined
+    const getPn = sock?.signalRepository?.lidMapping?.getPNForLID
+    if (!getPn) return null
+    try {
+      const mapped = await getPn.call(sock!.signalRepository!.lidMapping!, lidJid)
+      return mapped ?? null
+    } catch {
+      return null
+    }
+  }
+
+  private enqueueContactPersist(contacts: Array<{
+    id: string
+    jid?: string | null
+    lid?: string | null
+    name?: string | null
+    notify?: string | null
+    verifiedName?: string | null
+  }>): void {
+    if (!contacts.length) return
+    this.contactEventsSinceSync += 1
+    this.lastContactEventAt = Date.now()
+    this.contactPersistChain = this.contactPersistChain
+      .then(async () => {
+        const { persistAccountContacts } = await import('./account-contacts.js')
+        await persistAccountContacts(this.orgId, this.accountId, contacts, this.resolveLidPn)
+      })
+      .catch((error) => {
+        this.log.warn({ err: error }, 'contacts persist zinciri hata')
+      })
   }
 
   async start(): Promise<void> {
@@ -241,42 +308,61 @@ export class WhatsAppSession {
       })
     })
 
-    // Rehber & Sohbet Kisileri (contacts.upsert, messaging-history.set, chats.upsert)
+    // Rehber & Sohbet Kisileri (contacts.upsert/update, messaging-history.set, chats.upsert)
     this.sock.ev.on('contacts.upsert', (contacts) => {
       this.log.info({ count: contacts.length }, 'contacts.upsert alindi')
-      void import('./account-contacts.js').then(({ persistAccountContacts }) => {
-        return persistAccountContacts(this.orgId, this.accountId, contacts)
-      }).catch((error) => {
-        this.log.warn({ err: error }, 'contacts.upsert islenirken hata')
-      })
+      this.enqueueContactPersist(contacts)
+    })
+
+    this.sock.ev.on('contacts.update', (updates) => {
+      const contacts = updates
+        .filter((u): u is typeof u & { id: string } => Boolean(u.id))
+        .map((u) => ({
+          id: u.id,
+          jid: u.jid,
+          lid: u.lid,
+          name: u.name,
+          notify: u.notify,
+          verifiedName: u.verifiedName,
+        }))
+      if (contacts.length === 0) return
+      this.log.info({ count: contacts.length }, 'contacts.update alindi')
+      this.enqueueContactPersist(contacts)
     })
 
     this.sock.ev.on('messaging-history.set', ({ contacts, chats }) => {
-      this.log.info({ contactsCount: contacts?.length ?? 0, chatsCount: chats?.length ?? 0 }, 'messaging-history.set alindi')
-      const all: Array<{ id: string; name?: string | null; notify?: string | null }> = []
+      this.log.info(
+        { contactsCount: contacts?.length ?? 0, chatsCount: chats?.length ?? 0 },
+        'messaging-history.set alindi',
+      )
+      const all: Array<{
+        id: string
+        jid?: string | null
+        lid?: string | null
+        name?: string | null
+        notify?: string | null
+      }> = []
       if (contacts?.length) all.push(...contacts)
       if (chats?.length) {
         for (const chat of chats) {
-          if (chat.id) all.push({ id: chat.id, name: chat.name ?? null })
+          if (chat.id) {
+            all.push({
+              id: chat.id,
+              // bazi surumlerde chat uzerinde pn jid yok; id PN olabilir
+              name: chat.name ?? null,
+            })
+          }
         }
       }
-      if (all.length > 0) {
-        void import('./account-contacts.js').then(({ persistAccountContacts }) => {
-          return persistAccountContacts(this.orgId, this.accountId, all)
-        }).catch((error) => {
-          this.log.warn({ err: error }, 'messaging-history contacts islenirken hata')
-        })
-      }
+      if (all.length > 0) this.enqueueContactPersist(all)
     })
 
     this.sock.ev.on('chats.upsert', (chats) => {
       this.log.info({ count: chats.length }, 'chats.upsert alindi')
-      const all = chats.map((c) => ({ id: c.id, name: c.name ?? null }))
-      void import('./account-contacts.js').then(({ persistAccountContacts }) => {
-        return persistAccountContacts(this.orgId, this.accountId, all)
-      }).catch((error) => {
-        this.log.warn({ err: error }, 'chats.upsert islenirken hata')
-      })
+      const all = chats
+        .filter((c) => Boolean(c.id))
+        .map((c) => ({ id: c.id!, name: c.name ?? null }))
+      this.enqueueContactPersist(all)
     })
 
     // WhatsApp'in gercek "yeni sohbet mesaj kotasi" (Baileys 7+).

@@ -146,21 +146,10 @@ export async function removeAccount(accountId: string): Promise<ActionState> {
 }
 
 export async function syncAccountContactsAction(
-  accountId: string,
-  listName?: string,
+  _accountId: string,
+  _listName?: string,
 ): Promise<ActionState> {
-  const { error } = await enqueueJob({
-    type: 'account.sync_contacts',
-    accountId,
-    priority: 30,
-    payload: listName ? { list_name: listName } : {},
-  })
-  if (error) return { error }
-
-  revalidateAccounts()
-  revalidatePath('/kisiler')
-  return {
-    ok: 'Rehber içe aktarma kuyruğa alındı. Birkaç saniye içinde Kişiler sekmesinde yeni liste olarak görünecektir.',
-  }
+  // Panel UI kaldirildi — ileride super-admin / destek kanalina tasinacak.
+  return { error: 'Rehber içe aktarma panelden kaldırıldı. Destek ile iletişime geçin.' }
 }
 
