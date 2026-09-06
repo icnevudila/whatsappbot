@@ -36,7 +36,7 @@ export default async function BlacklistPage() {
     <>
       <PageHeader
         title={t('pages.karaListeTitle')}
-        description="Bu numaralara kampanya veya hızlı gönderim mesajı gitmez. Gelenler’den de tek tıkla eklenebilir."
+        description="Bu numaralara kampanya veya hızlı gönderim gitmez. Alıcı YAZMAYIN / istemiyorum / STOP yazınca otomatik eklenir; Mesajlar’dan da elle eklenebilir."
         action={
           <div className="flex flex-wrap gap-2">
             <AccentLink href="/mesajlar">{t('nav.mesajlar')}</AccentLink>

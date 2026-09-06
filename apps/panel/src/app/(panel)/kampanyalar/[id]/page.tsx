@@ -139,6 +139,30 @@ export default async function CampaignDetailPage({
         }
       />
 
+      {flash === 'taslak' ? (
+        <div className="mb-2.5">
+          <Notice tone="accent">
+            Taslak kaydedildi. Gönderim başlamadı — hazır olunca{' '}
+            <strong>Gönderimi başlat</strong>’a basın.
+          </Notice>
+        </div>
+      ) : null}
+      {flash === 'zamanlandi' ? (
+        <div className="mb-2.5">
+          <Notice tone="accent">
+            Kampanya zamanlandı. Seçilen saatte otomatik başlar.
+          </Notice>
+        </div>
+      ) : null}
+      {flash === 'baslatilamadi' ? (
+        <div className="mb-2.5">
+          <Notice tone="warn">
+            Kampanya kaydedildi ama başlatma kuyruğa alınamadı. Biraz sonra tekrar
+            “Gönderimi başlat” deneyin.
+          </Notice>
+        </div>
+      ) : null}
+
       <CampaignLive
         initial={campaign}
         sourceLists={sourceLists}
