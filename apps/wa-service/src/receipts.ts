@@ -1,23 +1,12 @@
 import { proto, type WAMessage } from '@whiskeysockets/baileys'
+import { statusFromAck, type OutboundStatus } from './ack-status.js'
+import { reconcileCampaignCounts } from './campaign-counts.js'
 import { query } from './db.js'
 import { logger } from './logger.js'
 
+export { statusFromAck } from './ack-status.js'
+
 const log = logger.child({ scope: 'receipts' })
-
-type OutboundStatus = 'sent' | 'delivered' | 'read'
-
-function statusFromAck(status: number | null | undefined): OutboundStatus | null {
-  if (status == null) return null
-  if (
-    status === proto.WebMessageInfo.Status.READ ||
-    status === proto.WebMessageInfo.Status.PLAYED
-  ) {
-    return 'read'
-  }
-  if (status === proto.WebMessageInfo.Status.DELIVERY_ACK) return 'delivered'
-  if (status === proto.WebMessageInfo.Status.SERVER_ACK) return 'sent'
-  return null
-}
 
 async function advanceOutboundStatus(
   accountId: string,
@@ -34,12 +23,13 @@ async function advanceOutboundStatus(
           ($3 = 'delivered' and status in ('sent', 'pending'))
           or ($3 = 'read' and status in ('sent', 'delivered', 'pending'))
           or ($3 = 'sent' and status = 'pending')
+          or ($3 = 'failed' and status in ('pending', 'sent', 'delivered'))
         )
       returning id::text`,
     [accountId, waMessageId, next],
   )
 
-  // Kampanya hedefleri: aynı WA id ile ilerlet (sent → delivered → read).
+  // Kampanya hedefleri: aynı WA id ile ilerlet (sent → delivered → read) veya failed.
   if (next === 'delivered' || next === 'read') {
     await query(
       `update public.campaign_targets
@@ -53,6 +43,25 @@ async function advanceOutboundStatus(
           )`,
       [accountId, waMessageId, next],
     )
+  } else if (next === 'failed') {
+    // Campaign tamamlanmissa runner tick'i gelmez; failed sonrasi sayaclari burada dogrula.
+    const failedTargets = await query<{ campaign_id: string }>(
+      `update public.campaign_targets
+          set status = 'failed',
+              error = coalesce(nullif(error, ''), 'WhatsApp gonderim hatasi (ERROR ack)'),
+              updated_at = now()
+        where account_id = $1::uuid
+          and wa_message_id = $2
+          and status in ('sending', 'sent', 'delivered')
+        returning campaign_id::text`,
+      [accountId, waMessageId],
+    )
+    const seen = new Set<string>()
+    for (const row of failedTargets) {
+      if (seen.has(row.campaign_id)) continue
+      seen.add(row.campaign_id)
+      await reconcileCampaignCounts(row.campaign_id)
+    }
   }
 
   if (logRows.length > 0) {

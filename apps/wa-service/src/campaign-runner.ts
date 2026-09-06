@@ -1,6 +1,7 @@
 import { e164ToJid, warmupCap } from '@wa/shared'
 import type { AnyMessageContent } from '@whiskeysockets/baileys'
 import { lockAccount, logAccountEvent } from './accounts.js'
+import { reconcileCampaignCounts } from './campaign-counts.js'
 import { DeliveryUncertainError } from './delivery.js'
 import { one, query } from './db.js'
 import { env } from './env.js'
@@ -9,6 +10,8 @@ import { sessionManager } from './session-manager.js'
 import { expandSpintax, pickAbVariant } from './spintax.js'
 import { emitOrgWebhook } from './org-hooks.js'
 import type { WhatsAppSession } from './session.js'
+
+export { countCampaignStatusBuckets, CAMPAIGN_SENT_STATUSES, reconcileCampaignCounts } from './campaign-counts.js'
 
 const log = logger.child({ scope: 'campaign' })
 
@@ -200,29 +203,6 @@ async function claimTarget(
             wa_jid
        from wa.claim_campaign_target($1::uuid, $2::uuid)`,
     [campaignId, accountId],
-  )
-}
-
-/**
- * Panel sayaclari hedef durumlarindan turetilir.
- * Artirim kacsa bile (restart / timeout) bir sonraki tick dogrular.
- */
-async function reconcileCampaignCounts(campaignId: string): Promise<void> {
-  await query(
-    `update public.campaigns c
-        set sent_count = coalesce(s.sent, 0),
-            failed_count = coalesce(s.failed, 0),
-            skipped_count = coalesce(s.skipped, 0),
-            updated_at = now()
-       from (
-         select count(*) filter (where status = 'sent') as sent,
-                count(*) filter (where status = 'failed') as failed,
-                count(*) filter (where status = 'skipped') as skipped
-           from public.campaign_targets
-          where campaign_id = $1::uuid
-       ) s
-      where c.id = $1::uuid`,
-    [campaignId],
   )
 }
 

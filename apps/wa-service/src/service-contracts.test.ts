@@ -107,3 +107,9 @@ test('shutdown sending reclaim SQL session_lease holder kullanir', () => {
   assert.match(file, /campaign_targets[\s\S]*session_lease[\s\S]*sending/)
   assert.match(file, /flushMonitoring/)
 })
+
+test('ERROR receipt sonrasi campaign sayaclari reconcile edilir', () => {
+  const file = src('receipts.ts')
+  assert.match(file, /reconcileCampaignCounts/)
+  assert.match(file, /returning campaign_id/)
+})

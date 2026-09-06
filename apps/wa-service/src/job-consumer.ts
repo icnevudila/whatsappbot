@@ -6,8 +6,12 @@ import { sessionManager } from './session-manager.js'
 import { materializeTargets, stopCampaign } from './campaign-runner.js'
 import { verifyContacts } from './verify.js'
 import { DeliveryUncertainError } from './delivery.js'
+import { messageSendSkipped } from './message-send-result.js'
 
 const log = logger.child({ scope: 'jobs' })
+
+export { messageSendSkipped } from './message-send-result.js'
+export type { MessageSendSkipReason } from './message-send-result.js'
 
 type JobRow = {
   id: string
@@ -163,7 +167,7 @@ async function handle(job: JobRow): Promise<unknown> {
         [job.org_id, payload.phone_e164],
       )
       if (blocked) {
-        return { skipped: true, reason: 'blacklist' }
+        return messageSendSkipped('blacklist')
       }
 
       const useWaba =
@@ -202,7 +206,7 @@ async function handle(job: JobRow): Promise<unknown> {
         throw new Error('Dogrulama sonucu alinamadi (oturum dusmus olabilir)')
       }
       if (!entry.exists) {
-        return { skipped: true, reason: 'not_on_whatsapp' }
+        return messageSendSkipped('not_on_whatsapp')
       }
 
       const jid = entry.jid ?? e164ToJid(payload.phone_e164)

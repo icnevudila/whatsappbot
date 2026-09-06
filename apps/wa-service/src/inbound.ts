@@ -7,9 +7,7 @@ import {
   findMatchingAutoReply,
   recentOutboundExists,
 } from './org-hooks.js'
-
-const OPT_OUT =
-  /\b(dur|yazma|yazmayın|yazmayin|çıkar|cikar|çıkarın|cikarin|stop|unsubscribe|iptal)\b/i
+import { isOptOutMessage } from './opt-out.js'
 
 function extractBody(message: WAMessage): { type: string; body: string | null } {
   const content = message.message
@@ -126,7 +124,7 @@ export async function persistInboundMessage(options: {
   }
 
   // Opt-out: yalnizca gercek telefon biliniyorsa kara listeye al.
-  if (phone && body && OPT_OUT.test(body)) {
+  if (phone && body && isOptOutMessage(body)) {
     await query(
       `insert into public.blacklist (org_id, created_by, phone_e164, reason)
        values ($1, $2, $3, $4)
@@ -146,7 +144,7 @@ export async function persistInboundMessage(options: {
   })
 
   // Otomatik yanit: job kuyruguna message.send
-  if (phone && !OPT_OUT.test(body ?? '')) {
+  if (phone && !isOptOutMessage(body)) {
     try {
       const rule = await findMatchingAutoReply(orgId, body)
       if (rule) {

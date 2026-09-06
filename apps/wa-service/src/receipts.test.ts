@@ -1,30 +1,19 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { proto } from '@whiskeysockets/baileys'
+import { statusFromAck } from './ack-status.js'
 
-/**
- * statusFromAck mapping — receipts.ts ile ayni kurallar.
- * (DB bagimsiz birim test; export edilmeyen helper icin lokal kopya.)
- */
-function statusFromAck(status: number | null | undefined): 'sent' | 'delivered' | 'read' | null {
-  if (status == null) return null
-  if (
-    status === proto.WebMessageInfo.Status.READ ||
-    status === proto.WebMessageInfo.Status.PLAYED
-  ) {
-    return 'read'
-  }
-  if (status === proto.WebMessageInfo.Status.DELIVERY_ACK) return 'delivered'
-  if (status === proto.WebMessageInfo.Status.SERVER_ACK) return 'sent'
-  return null
-}
-
-test('ack mapping: delivery + read', () => {
+test('statusFromAck: delivery + read + server', () => {
   assert.equal(statusFromAck(proto.WebMessageInfo.Status.DELIVERY_ACK), 'delivered')
   assert.equal(statusFromAck(proto.WebMessageInfo.Status.READ), 'read')
   assert.equal(statusFromAck(proto.WebMessageInfo.Status.PLAYED), 'read')
   assert.equal(statusFromAck(proto.WebMessageInfo.Status.SERVER_ACK), 'sent')
+})
+
+test('statusFromAck: ERROR maps to failed', () => {
+  assert.equal(statusFromAck(proto.WebMessageInfo.Status.ERROR), 'failed')
   assert.equal(statusFromAck(undefined), null)
+  assert.equal(statusFromAck(null), null)
 })
 
 test('fromMe false receipt should still be processable (id-only gate)', () => {
