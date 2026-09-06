@@ -181,8 +181,8 @@ export class WhatsAppSession {
       browser: Browsers.macOS('Chrome'),
       // Telefonda bildirim kalsin; "online" isaretlemek bildirimleri yutuyor.
       markOnlineOnConnect: false,
-      // Rehber ve kisi listesinin senkronizasyonu icin true olmali
-      syncFullHistory: true,
+      // Mevcut bagli oturumlarda 428 hatasini onlemek icin false olmali
+      syncFullHistory: false,
       msgRetryCounterCache: this.msgRetryCounterCache,
       mediaCache: this.mediaCache,
       getMessage: (key) => lookupSentMessage(this.accountId, key),
