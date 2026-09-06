@@ -3,7 +3,7 @@ import { one, query } from './db.js'
 import { env } from './env.js'
 import { logger } from './logger.js'
 import { sessionManager } from './session-manager.js'
-import { materializeTargets, stopCampaign } from './campaign-runner.js'
+import { materializeTargets, reconcileCampaignTargets, stopCampaign } from './campaign-runner.js'
 import { verifyContacts } from './verify.js'
 import { DeliveryUncertainError } from './delivery.js'
 import { messageSendSkipped } from './message-send-result.js'
@@ -377,6 +377,16 @@ async function handle(job: JobRow): Promise<unknown> {
 
     case 'campaign.start': {
       const campaignId = requireCampaignId(job)
+      const allowed = await one<{ status: string }>(
+        `select status from public.campaigns where id = $1`,
+        [campaignId],
+      )
+      if (!allowed || !['draft', 'scheduled', 'paused', 'stopped'].includes(allowed.status)) {
+        throw new NonRetryableJobError(
+          `Kampanya başlatılamaz (status=${allowed?.status ?? 'yok'}).`,
+        )
+      }
+
       const summary = await materializeTargets(campaignId)
 
       await query(
@@ -385,8 +395,10 @@ async function handle(job: JobRow): Promise<unknown> {
                 started_at = coalesce(started_at, now()),
                 paused_at = null,
                 stop_reason = null,
+                completed_at = null,
                 updated_at = now()
-          where id = $1`,
+          where id = $1
+            and status in ('draft', 'scheduled', 'paused', 'stopped')`,
         [campaignId],
       )
 
@@ -408,7 +420,10 @@ async function handle(job: JobRow): Promise<unknown> {
       const campaignId = requireCampaignId(job)
       await query(
         `update public.campaigns
-            set status = 'running', paused_at = null, updated_at = now()
+            set status = 'running',
+                paused_at = null,
+                stop_reason = null,
+                updated_at = now()
           where id = $1 and status = 'paused'`,
         [campaignId],
       )
@@ -420,6 +435,23 @@ async function handle(job: JobRow): Promise<unknown> {
       const payload = job.payload as JobPayloadMap['campaign.stop']
       await stopCampaign(campaignId, payload.reason ?? 'Panelden durduruldu')
       return { stopped: true }
+    }
+
+    case 'campaign.refresh_targets': {
+      const campaignId = requireCampaignId(job)
+      const payload = job.payload as JobPayloadMap['campaign.refresh_targets']
+      const row = await one<{ status: string }>(
+        `select status from public.campaigns where id = $1`,
+        [campaignId],
+      )
+      if (!row || !['draft', 'paused', 'scheduled', 'running', 'stopped'].includes(row.status)) {
+        throw new NonRetryableJobError(
+          `Hedef yenilenemez (status=${row?.status ?? 'yok'}).`,
+        )
+      }
+      return reconcileCampaignTargets(campaignId, {
+        cancelRemaining: Boolean(payload.cancel_remaining),
+      })
     }
 
     case 'creative.render': {

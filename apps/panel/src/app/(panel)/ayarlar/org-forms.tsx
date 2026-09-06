@@ -243,8 +243,8 @@ export function MembersPanel({
       {canManage ? (
         <form action={formAction} className="space-y-2.5 border-t border-hairline p-3.5">
           <Field
-            label="Üye ekle / davet et"
-            hint="Hesap varsa hemen eklenir. Yoksa org_invites + e-posta daveti (7 gün)."
+            label="Üye ekle"
+            hint="Filo hesabı olan e-posta eklenir. Davetler şu an kapalı."
           >
             <Input
               name="email"
@@ -260,25 +260,6 @@ export function MembersPanel({
               <option value="admin">Yönetici — ekip ve işletme</option>
             </Select>
           </Field>
-          <label className="flex items-start gap-2 text-[12.5px] text-ink-muted">
-            <input
-              type="checkbox"
-              name="invite_if_missing"
-              value="1"
-              defaultChecked
-              className="mt-0.5 accent-accent"
-            />
-            <span>
-              Hesap yoksa e-posta daveti gönder. Olmazsa{' '}
-              <a
-                href={contactMailto('Filo hesap açma talebi')}
-                className="font-medium text-ink underline underline-offset-2"
-              >
-                {CONTACT_EMAIL}
-              </a>
-              .
-            </span>
-          </label>
           {state?.error ? (
             <Notice tone="danger">
               {state.error}
@@ -298,7 +279,7 @@ export function MembersPanel({
           ) : null}
           {state?.ok ? <Notice tone="accent">{state.ok}</Notice> : null}
           <Button type="submit" variant="accent" disabled={pending}>
-            {pending ? 'İşleniyor…' : 'Ekle / davet et'}
+            {pending ? 'İşleniyor…' : 'Üye ekle'}
           </Button>
         </form>
       ) : (

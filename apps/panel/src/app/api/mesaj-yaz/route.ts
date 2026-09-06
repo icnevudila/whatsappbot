@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { completeText, hasTextProvider } from '@/lib/ai/text'
-import { loadOrgAiKeys, rowToBag } from '@/lib/ai/org-keys'
 import { rateLimit } from '@/lib/rate-limit'
 import { requireActiveOrg } from '@/lib/org'
 
@@ -29,10 +28,9 @@ Kurallar:
 
 export async function POST(request: Request) {
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
-  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
   let userId: string
   try {
-    ;({ userId, org, supabase } = await requireActiveOrg())
+    ;({ userId, org } = await requireActiveOrg())
   } catch {
     return NextResponse.json({ error: 'Oturum bulunamadi.' }, { status: 401 })
   }
@@ -49,13 +47,11 @@ export async function POST(request: Request) {
     )
   }
 
-  const aiBag = rowToBag(await loadOrgAiKeys(supabase, org.id))
-
-  if (!hasTextProvider(aiBag)) {
+  if (!hasTextProvider()) {
     return NextResponse.json(
       {
         error:
-          'Metin üretimi kapalı. Ayarlar → Yapay zeka’dan OpenAI veya Gemini anahtarı girin.',
+          'Metin üretimi kapalı. Sunucu ortamında OpenAI veya Gemini anahtarı tanımlı değil.',
       },
       { status: 503 },
     )
@@ -88,7 +84,7 @@ export async function POST(request: Request) {
     .join('\n')
 
   try {
-    const text = await completeText(SYSTEM, prompt, aiBag)
+    const text = await completeText(SYSTEM, prompt)
     const cleaned = text.replace(/^["'`\s]+|["'`\s]+$/g, '')
     return NextResponse.json({ text: cleaned })
   } catch (error) {

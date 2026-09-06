@@ -37,7 +37,7 @@ export default async function NoAccessPage() {
         </h1>
         <p className="mt-2 text-[13.5px] leading-relaxed text-ink-muted">
           <span className="font-medium text-ink">{user.email}</span> ile giriş yaptınız. Kendi
-          işletmenizi ücretsiz oluşturabilir veya size gelen davet linkini kullanabilirsiniz.
+          işletmenizi ücretsiz oluşturabilir veya erişim için Filo’ya yazabilirsiniz.
         </p>
         <CreateOrgForm />
         <p className="mt-4 text-[12.5px] text-ink-muted">

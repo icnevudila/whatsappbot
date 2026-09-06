@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { generateImage, hasImageProvider } from '@/lib/ai/image'
-import { loadOrgAiKeys, rowToBag } from '@/lib/ai/org-keys'
 import { DEFAULT_COLORS, type BrandColors } from '@/lib/creative-templates'
 import { rateLimit } from '@/lib/rate-limit'
 import { requireActiveOrg } from '@/lib/org'
@@ -51,13 +50,11 @@ export async function POST(request: Request) {
     )
   }
 
-  const aiBag = rowToBag(await loadOrgAiKeys(supabase, org.id))
-
-  if (!hasImageProvider(aiBag)) {
+  if (!hasImageProvider()) {
     return NextResponse.json(
       {
         error:
-          'Görsel üretimi kapalı. Ayarlar → Yapay zeka’dan OpenAI / Gemini anahtarı girin (veya Pollinations yedek).',
+          'Görsel üretimi kapalı. Sunucu ortamında görsel sağlayıcı anahtarı tanımlı değil.',
       },
       { status: 503 },
     )
@@ -135,7 +132,7 @@ export async function POST(request: Request) {
     .join(' ')
 
   try {
-    const { image, attempts } = await generateImage(prompt, '1:1', aiBag)
+    const { image, attempts } = await generateImage(prompt, '1:1')
     const path = `${org.id}/${crypto.randomUUID()}.png`
 
     const { error: uploadError } = await supabase.storage.from('creatives').upload(path, image.data, {

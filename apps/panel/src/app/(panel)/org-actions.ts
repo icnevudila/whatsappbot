@@ -1,11 +1,9 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { requireActiveOrg } from '@/lib/org'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
-import { createSupabaseServiceClient, siteOriginFromEnv } from '@/lib/supabase/service'
 import { cancelStripeSubscription } from '@/lib/stripe-cancel'
 
 export type OrgActionState = {
@@ -150,37 +148,20 @@ function normalizeMemberRole(raw: string): 'admin' | 'member' | null {
   return null
 }
 
-async function resolveInviteRedirect(devamPath: string): Promise<string> {
-  const h = await headers()
-  const host = h.get('x-forwarded-host') ?? h.get('host')
-  const proto = h.get('x-forwarded-proto') ?? 'https'
-  const fromRequest = host ? `${proto}://${host}` : undefined
-  const origin = siteOriginFromEnv(fromRequest)
-  return `${origin || 'https://filo.app'}/auth/callback?devam=${encodeURIComponent(devamPath)}`
-}
-
-function newInviteToken(): string {
-  const bytes = new Uint8Array(24)
-  crypto.getRandomValues(bytes)
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
-}
-
 export async function addOrgMember(
   _previous: OrgActionState,
   formData: FormData,
 ): Promise<OrgActionState> {
   const email = String(formData.get('email') ?? '').trim().toLowerCase()
   const role = normalizeMemberRole(String(formData.get('role') ?? 'member'))
-  const wantInvite = String(formData.get('invite_if_missing') ?? '') === '1'
 
   if (!email) return { error: 'E-posta girin.' }
   if (!role) return { error: 'Geçersiz rol.' }
 
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
   let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
-  let userId: string
   try {
-    ;({ org, supabase, userId } = await requireActiveOrg())
+    ;({ org, supabase } = await requireActiveOrg())
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
   }
@@ -200,75 +181,18 @@ export async function addOrgMember(
     return { ok: 'Üye eklendi.' }
   }
 
-  if (!error.message.includes('user not found')) {
-    if (error.message.includes('not org admin')) {
-      return { error: 'Üye eklemek için yönetici olmalısınız.' }
-    }
-    return { error: error.message }
-  }
-
-  if (!wantInvite) {
+  if (error.message.includes('user not found')) {
     return {
       error:
-        'Bu e-posta ile Filo hesabı yok. Davet gönderin veya Filo’dan hesap açılmasını isteyin.',
+        'Bu e-posta ile Filo hesabı yok. Davetler şu an kapalı — hesabın açılması için Filo’ya yazın.',
       contactSupport: true,
     }
   }
 
-  const admin = createSupabaseServiceClient()
-  if (!admin) {
-    return {
-      error:
-        'Davet şu an sunucuda yapılandırılmamış. Hesap açılması için Filo’ya yazın.',
-      contactSupport: true,
-    }
+  if (error.message.includes('not org admin')) {
+    return { error: 'Üye eklemek için yönetici olmalısınız.' }
   }
-
-  const token = newInviteToken()
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-  const { error: inviteRowError } = await supabase.from('org_invites').insert({
-    org_id: org.id,
-    email,
-    role,
-    token,
-    invited_by: userId,
-    expires_at: expiresAt,
-  } as never)
-
-  if (inviteRowError) {
-    return { error: `Davet kaydı oluşturulamadı: ${inviteRowError.message}` }
-  }
-
-  const redirectTo = await resolveInviteRedirect(`/davet/${token}`)
-  const { error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
-    redirectTo,
-  })
-
-  if (inviteError) {
-    const msg = inviteError.message.toLowerCase()
-    if (msg.includes('already') || msg.includes('registered')) {
-      const { error: retry } = await supabase.rpc('add_organization_member', {
-        p_org_id: org.id,
-        p_email: email,
-        p_role: role,
-      })
-      if (!retry) {
-        revalidatePath('/ayarlar')
-        return { ok: 'Üye eklendi (hesap zaten vardı).' }
-      }
-      revalidatePath('/ayarlar')
-      return {
-        ok: `Davet kaydı oluşturuldu. Kullanıcı giriş yapıp davet linkini açmalı (${email}).`,
-      }
-    }
-    return {
-      error: `Davet gönderilemedi: ${inviteError.message}`,
-      contactSupport: true,
-    }
-  }
-
-  revalidatePath('/ayarlar')
-  return { ok: `Davet e-postası gönderildi: ${email}` }
+  return { error: error.message }
 }
 
 export async function updateOrgMemberRole(

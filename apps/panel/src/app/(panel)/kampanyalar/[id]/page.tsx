@@ -28,7 +28,7 @@ export async function generateMetadata({
 }
 
 const FIELDS =
-  'id, name, status, body, media_url, message_type, total_targets, sent_count, failed_count, skipped_count, stop_reason, min_delay_seconds, max_delay_seconds, daily_cap_per_account, started_at, completed_at, source_list_ids'
+  'id, name, status, body, body_b, ab_percent, media_url, message_type, total_targets, sent_count, failed_count, skipped_count, stop_reason, min_delay_seconds, max_delay_seconds, daily_cap_per_account, started_at, completed_at, source_list_ids'
 
 export default async function CampaignDetailPage({
   params,
@@ -38,28 +38,40 @@ export default async function CampaignDetailPage({
   const { id } = await params
   const { org, supabase } = await requireActiveOrg()
 
-  const [campaignResult, targetsResult, accountsResult] = await Promise.all([
-    supabase.from('campaigns').select(FIELDS).eq('id', id).eq('org_id', org.id).single(),
-    supabase
-      .from('campaign_targets')
-      .select('id, phone_e164, status, error, sent_at, wa_message_id, updated_at')
-      .eq('campaign_id', id)
-      .eq('org_id', org.id)
-      .order('id', { ascending: false })
-      .limit(200),
-    supabase
-      .from('campaign_accounts')
-      .select('account_id, accounts(id, label)')
-      .eq('campaign_id', id)
-      .eq('org_id', org.id),
-  ])
+  const [campaignResult, targetsResult, accountsResult, listsResult, allAccountsResult] =
+    await Promise.all([
+      supabase.from('campaigns').select(FIELDS).eq('id', id).eq('org_id', org.id).single(),
+      supabase
+        .from('campaign_targets')
+        .select('id, phone_e164, status, error, sent_at, wa_message_id, updated_at')
+        .eq('campaign_id', id)
+        .eq('org_id', org.id)
+        .order('id', { ascending: false })
+        .limit(200),
+      supabase
+        .from('campaign_accounts')
+        .select('account_id, accounts(id, label)')
+        .eq('campaign_id', id)
+        .eq('org_id', org.id),
+      supabase
+        .from('contact_lists')
+        .select('id, name, contact_count')
+        .eq('org_id', org.id)
+        .neq('source', 'quick_send')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('accounts')
+        .select('id, label, status, is_locked')
+        .eq('org_id', org.id)
+        .order('created_at'),
+    ])
 
   if (campaignResult.error || !campaignResult.data) notFound()
 
-  const campaign = campaignResult.data as CampaignView & { source_list_ids: string[] }
+  const campaign = campaignResult.data as CampaignView
   const sourceListIds = campaign.source_list_ids ?? []
 
-  const listsResult =
+  const linkedListNames =
     sourceListIds.length > 0
       ? await supabase
           .from('contact_lists')
@@ -68,7 +80,7 @@ export default async function CampaignDetailPage({
           .in('id', sourceListIds)
       : { data: [] as { id: string; name: string }[] }
 
-  const sourceLists = (listsResult.data ?? []).map((list) => ({
+  const sourceLists = (linkedListNames.data ?? []).map((list) => ({
     id: list.id,
     name: list.name,
   }))
@@ -81,11 +93,32 @@ export default async function CampaignDetailPage({
     })
     .filter((row): row is { id: string; label: string } => Boolean(row))
 
+  const listOptions = (listsResult.data ?? []).map((list) => ({
+    id: list.id,
+    label: list.name,
+    detail: `${list.contact_count} numara`,
+  }))
+
+  const accountOptions = (allAccountsResult.data ?? []).map((account) => {
+    const selected = accounts.some((row) => row.id === account.id)
+    return {
+      id: account.id,
+      label: account.label,
+      detail: account.is_locked
+        ? 'kilitli'
+        : account.status === 'connected'
+          ? 'bağlı'
+          : 'bağlı değil',
+      // Seçili hatlar kilitli olsa da formda kalsın; yeni eklenenler bağlı olmalı.
+      disabled: selected ? false : account.is_locked || account.status !== 'connected',
+    }
+  })
+
   return (
     <>
       <PageHeader
         title={campaign.name}
-        description="Canlı ilerleme, hatlar ve hedef numaralar."
+        description="Canlı ilerleme, düzenleme, hatlar ve hedef numaralar. Gönderilmiş kayıtlar korunur."
         action={
           <div className="flex flex-wrap items-center gap-2">
             <StatusPill status={campaign.status} />
@@ -95,7 +128,14 @@ export default async function CampaignDetailPage({
         }
       />
 
-      <CampaignLive initial={campaign} sourceLists={sourceLists} accounts={accounts} orgId={org.id} />
+      <CampaignLive
+        initial={campaign}
+        sourceLists={sourceLists}
+        accounts={accounts}
+        listOptions={listOptions}
+        accountOptions={accountOptions}
+        orgId={org.id}
+      />
 
       <div id="paylasilanlar" className="mt-2.5">
         <TargetFeed

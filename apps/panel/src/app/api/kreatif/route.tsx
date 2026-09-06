@@ -1,8 +1,6 @@
 import { ImageResponse } from 'next/og'
 import { NextResponse } from 'next/server'
 import { generateImage, type AspectRatio } from '@/lib/ai/image'
-import { loadOrgAiKeys, rowToBag } from '@/lib/ai/org-keys'
-import type { AiKeyBag } from '@/lib/ai/config'
 import {
   DEFAULT_COLORS,
   FORMATS,
@@ -103,10 +101,9 @@ const ASPECT: Record<FormatKey, AspectRatio> = {
 async function fetchBackground(
   prompt: string,
   format: FormatKey,
-  aiBag?: AiKeyBag | null,
 ): Promise<{ dataUri: string; provider: string } | null> {
   try {
-    const { image } = await generateImage(prompt, ASPECT[format], aiBag)
+    const { image } = await generateImage(prompt, ASPECT[format])
     return {
       dataUri: `data:${image.mimeType};base64,${image.data.toString('base64')}`,
       provider: image.provider,
@@ -502,14 +499,11 @@ export async function POST(request: Request) {
 
   try {
     const fonts = await loadFonts()
-    const aiBag = rowToBag(await loadOrgAiKeys(supabase, org.id))
-
     const background =
       template === 'photo'
         ? await fetchBackground(
             input.backgroundPrompt || suggestBackgroundPrompt(headline),
             format,
-            aiBag,
           )
         : null
 

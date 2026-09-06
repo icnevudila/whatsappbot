@@ -137,6 +137,88 @@ export async function materializeTargets(
   return { inserted: inserted.length, total: totalCount }
 }
 
+/**
+ * Kaynak listelerde olmayan queued hedefleri skip eder (gönderilmişlere dokunmaz).
+ * cancelRemaining=true ise tüm queued’ları skip eder (yanlış liste / vazgeçme).
+ */
+export async function reconcileCampaignTargets(
+  campaignId: string,
+  options: { cancelRemaining?: boolean } = {},
+): Promise<{ inserted: number; pruned: number; total: number }> {
+  const campaign = await one<{
+    id: string
+    org_id: string
+    source_list_ids: string[]
+  }>(`select id, org_id, source_list_ids from public.campaigns where id = $1`, [campaignId])
+
+  if (!campaign) throw new Error('Kampanya bulunamadi')
+
+  let pruned = 0
+  if (options.cancelRemaining) {
+    const rows = await query<{ id: string }>(
+      `update public.campaign_targets
+          set status = 'skipped',
+              error = 'Kampanya düzenlendi: kalan kuyruk iptal edildi',
+              updated_at = now()
+        where campaign_id = $1::uuid
+          and status = 'queued'
+      returning id`,
+      [campaignId],
+    )
+    pruned = rows.length
+  }
+
+  const { inserted, total: afterInsert } = await materializeTargets(campaignId)
+
+  if (!options.cancelRemaining && campaign.source_list_ids.length > 0) {
+    const rows = await query<{ id: string }>(
+      `update public.campaign_targets t
+          set status = 'skipped',
+              error = 'Kampanya düzenlendi: listeden çıkarıldı',
+              updated_at = now()
+        where t.campaign_id = $1::uuid
+          and t.status = 'queued'
+          and not exists (
+            select 1
+              from public.contacts c
+              join public.contact_list_members m on m.contact_id = c.id
+             where c.org_id = $2::uuid
+               and c.phone_e164 = t.phone_e164
+               and m.list_id = any($3::uuid[])
+          )
+      returning t.id`,
+      [campaignId, campaign.org_id, campaign.source_list_ids],
+    )
+    pruned += rows.length
+  }
+
+  const counts = await one<{
+    total: string
+    skipped: string
+  }>(
+    `select count(*)::text as total,
+            count(*) filter (where status = 'skipped')::text as skipped
+       from public.campaign_targets
+      where campaign_id = $1::uuid`,
+    [campaignId],
+  )
+
+  const total = Number(counts?.total ?? afterInsert)
+  const skippedCount = Number(counts?.skipped ?? 0)
+
+  await query(
+    `update public.campaigns
+        set total_targets = $2::int,
+            skipped_count = $3::int,
+            updated_at = now()
+      where id = $1::uuid`,
+    [campaignId, total, skippedCount],
+  )
+
+  log.info({ campaignId, inserted, pruned, total }, 'Hedefler yenilendi')
+  return { inserted, pruned, total }
+}
+
 export async function stopCampaign(campaignId: string, reason: string): Promise<void> {
   await query(
     `update public.campaigns

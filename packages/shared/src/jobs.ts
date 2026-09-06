@@ -17,6 +17,7 @@ export const JOB_TYPES = [
   'campaign.pause',
   'campaign.resume',
   'campaign.stop',
+  'campaign.refresh_targets',
 ] as const
 
 export type JobType = (typeof JOB_TYPES)[number]
@@ -95,6 +96,8 @@ export type JobPayloadMap = {
   'campaign.pause': Record<string, never>
   'campaign.resume': Record<string, never>
   'campaign.stop': { reason?: string }
+  /** Liste değişince: yeni numaraları ekle, listeden çıkan queued’ları skip et. */
+  'campaign.refresh_targets': { cancel_remaining?: boolean }
 }
 
 export type JobPayload<T extends JobType = JobType> = JobPayloadMap[T]

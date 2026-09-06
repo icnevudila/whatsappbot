@@ -1,16 +1,19 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useEffect, useState, useTransition } from 'react'
 import type { Tables } from '@wa/shared'
 import { Button, Card, CardHeader, Meter, Notice, Stat, StatusPill } from '@/components/ui'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import {
+  duplicateCampaign,
   pauseCampaign,
   resumeCampaign,
   startCampaign,
   stopCampaign,
 } from '../actions'
+import { EditCampaignForm } from './edit-campaign-form'
 
 export type CampaignView = Pick<
   Tables<'campaigns'>,
@@ -18,6 +21,8 @@ export type CampaignView = Pick<
   | 'name'
   | 'status'
   | 'body'
+  | 'body_b'
+  | 'ab_percent'
   | 'media_url'
   | 'message_type'
   | 'total_targets'
@@ -30,14 +35,8 @@ export type CampaignView = Pick<
   | 'daily_cap_per_account'
   | 'started_at'
   | 'completed_at'
+  | 'source_list_ids'
 >
-
-const MESSAGE_TYPE_LABELS: Record<string, string> = {
-  text: 'Metin',
-  image: 'Görsel',
-  video: 'Video',
-  document: 'Belge',
-}
 
 function meterTone(
   status: string,
@@ -58,16 +57,21 @@ export function CampaignLive({
   initial,
   sourceLists = [],
   accounts = [],
+  listOptions = [],
+  accountOptions = [],
   orgId,
 }: {
   initial: CampaignView
   sourceLists?: { id: string; name: string }[]
   accounts?: { id: string; label: string }[]
+  listOptions?: { id: string; label: string; detail?: string; disabled?: boolean }[]
+  accountOptions?: { id: string; label: string; detail?: string; disabled?: boolean }[]
   orgId: string
 }) {
   const [campaign, setCampaign] = useState(initial)
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
 
   /**
    * Ilerleme kampanya satirinin kendisinde tutuluyor (sent_count vb.),
@@ -100,7 +104,7 @@ export function CampaignLive({
       const { data } = await supabase
         .from('campaigns')
         .select(
-          'id, name, status, body, media_url, message_type, total_targets, sent_count, failed_count, skipped_count, stop_reason, min_delay_seconds, max_delay_seconds, daily_cap_per_account, started_at, completed_at',
+          'id, name, status, body, body_b, ab_percent, media_url, message_type, total_targets, sent_count, failed_count, skipped_count, stop_reason, min_delay_seconds, max_delay_seconds, daily_cap_per_account, started_at, completed_at, source_list_ids',
         )
         .eq('id', initial.id)
         .eq('org_id', orgId)
@@ -255,20 +259,38 @@ export function CampaignLive({
 
           {error ? <Notice tone="danger">{error}</Notice> : null}
 
+          {campaign.status === 'running' ? (
+            <Notice tone="warn">
+              Liste veya hat değiştirmek için önce <strong>Duraklat</strong>. Mesaj / hız
+              değişikliği kalan kuyruğu etkiler; gönderilmiş numaralar değişmez.
+            </Notice>
+          ) : null}
+
+          {campaign.status === 'paused' || campaign.status === 'stopped' ? (
+            <Notice tone="accent">
+              Aşağıdan mesaj, liste ve hatları düzenleyebilirsiniz. Yanlış listedeyseniz
+              “Kalan kuyruğu iptal et”i işaretleyin.
+            </Notice>
+          ) : null}
+
           <div className="flex flex-wrap gap-1.5 border-t border-hairline pt-2.5">
-            {campaign.status === 'draft' ? (
+            {campaign.status === 'draft' || campaign.status === 'stopped' ? (
               <Button
                 variant="accent"
                 disabled={pending}
                 onClick={() => run(() => startCampaign(campaign.id))}
               >
-                {pending ? 'Başlatılıyor…' : 'Gönderimi başlat'}
+                {pending
+                  ? 'Başlatılıyor…'
+                  : campaign.status === 'stopped'
+                    ? 'Yeniden başlat'
+                    : 'Gönderimi başlat'}
               </Button>
             ) : null}
 
             {campaign.status === 'running' ? (
               <Button disabled={pending} onClick={() => run(() => pauseCampaign(campaign.id))}>
-                {pending ? 'Duraklatılıyor…' : 'Duraklat'}
+                {pending ? 'Duraklatılıyor…' : 'Duraklat (düzenle)'}
               </Button>
             ) : null}
 
@@ -291,68 +313,43 @@ export function CampaignLive({
                 Durdur
               </Button>
             ) : null}
+
+            <Button
+              disabled={pending}
+              onClick={() =>
+                run(async () => {
+                  const result = await duplicateCampaign(campaign.id)
+                  if (result.error) return { error: result.error }
+                  if (result.id) router.push(`/kampanyalar/${result.id}`)
+                  return {}
+                })
+              }
+            >
+              {pending ? 'Kopyalanıyor…' : 'Kampanyayı kopyala'}
+            </Button>
           </div>
         </div>
       </Card>
 
-      <Card>
-        <CardHeader
-          title="Mesaj"
-          subtitle={`Tip: ${MESSAGE_TYPE_LABELS[campaign.message_type] ?? campaign.message_type} · Bekleme ${campaign.min_delay_seconds}-${campaign.max_delay_seconds} sn · hesap başına günlük ${campaign.daily_cap_per_account}`}
-        />
-        <div className="space-y-2.5 p-3.5">
-          {campaign.media_url && campaign.message_type === 'image' ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={campaign.media_url}
-              alt="Kampanya görseli"
-              className="max-h-56 rounded-md border border-hairline object-contain"
-            />
-          ) : null}
-
-          {campaign.media_url && campaign.message_type === 'video' ? (
-            <video
-              src={campaign.media_url}
-              controls
-              className="max-h-56 w-full max-w-md rounded-md border border-hairline"
-              preload="metadata"
-            />
-          ) : null}
-
-          {campaign.media_url && campaign.message_type === 'document' ? (
-            <a
-              href={campaign.media_url}
-              target="_blank"
-              rel="noreferrer"
-              className="block max-w-md truncate text-[12.5px] text-accent underline underline-offset-2"
-            >
-              Belgeyi aç
-            </a>
-          ) : null}
-
-          {campaign.media_url &&
-          !['image', 'video', 'document'].includes(campaign.message_type) ? (
-            <a
-              href={campaign.media_url}
-              target="_blank"
-              rel="noreferrer"
-              className="block truncate text-[12.5px] text-accent underline underline-offset-2"
-            >
-              Medya dosyasını aç
-            </a>
-          ) : null}
-
-          {campaign.body ? (
-            <p className="text-[12.5px] whitespace-pre-wrap text-ink">{campaign.body}</p>
-          ) : (
-            <p className="text-[12.5px] text-ink-faint">
-              {campaign.message_type === 'text'
-                ? 'Metin yok.'
-                : 'Yalnızca medya gönderiliyor.'}
-            </p>
-          )}
-        </div>
-      </Card>
+      <EditCampaignForm
+        campaign={{
+          id: campaign.id,
+          name: campaign.name,
+          status: campaign.status,
+          body: campaign.body,
+          body_b: campaign.body_b,
+          ab_percent: campaign.ab_percent,
+          media_url: campaign.media_url,
+          message_type: campaign.message_type,
+          min_delay_seconds: campaign.min_delay_seconds,
+          max_delay_seconds: campaign.max_delay_seconds,
+          daily_cap_per_account: campaign.daily_cap_per_account,
+          source_list_ids: campaign.source_list_ids ?? [],
+        }}
+        lists={listOptions}
+        accounts={accountOptions}
+        selectedAccountIds={accounts.map((account) => account.id)}
+      />
     </div>
   )
 }

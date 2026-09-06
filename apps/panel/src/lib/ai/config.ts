@@ -1,7 +1,7 @@
 /**
  * Yapay zeka saglayicilarinin ortak yapilandirmasi.
  *
- * Platform env anahtarlari varsayilan; org_ai_keys tablosu varsa onlar once gelir.
+ * Anahtarlar ve varsayilan modeller platform env’den gelir.
  * Hicbir anahtar zorunlu degil — yapilandirilmayan saglayici atlanir.
  */
 
