@@ -125,6 +125,17 @@ export default async function PanelLayout({ children }: { children: React.ReactN
             </div>
           </header>
 
+          {org.suspended_at ? (
+            <div
+              role="alert"
+              className="shrink-0 border-b border-danger/30 bg-[#fff5f4] px-3 py-2.5 text-[13px] text-danger md:px-5"
+            >
+              Bu işletme askıda
+              {org.suspend_reason ? ` (${org.suspend_reason})` : ''}. Gönderim ve kampanyalar
+              kapalı. Destek: destek@filo.app
+            </div>
+          ) : null}
+
           <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-3 py-4 md:px-5 md:py-5">
             <div className="mx-auto flex w-full max-w-[1280px] min-h-0 flex-1 flex-col">{children}</div>
           </main>

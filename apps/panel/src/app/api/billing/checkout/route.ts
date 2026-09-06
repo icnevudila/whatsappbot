@@ -49,7 +49,8 @@ export async function POST(request: Request) {
   }
 
   const plan = resolveCheckoutPlan(body.plan)
-  const priceId = body.priceId?.trim() || stripePriceIdForPlan(plan)
+  // İstemci priceId göndermesin — plan→env price eşlemesi zorunlu (ücret/plan uyumsuzluğu engeli).
+  const priceId = stripePriceIdForPlan(plan)
   if (!priceId) {
     return NextResponse.json(
       {

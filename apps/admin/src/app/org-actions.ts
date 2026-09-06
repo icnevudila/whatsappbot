@@ -130,7 +130,7 @@ export async function provisionCustomer(
       process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, '') ||
       origin ||
       'https://filo.app'
-    const redirectTo = `${panelOrigin}/auth/confirm?devam=${encodeURIComponent('/kurulum')}`
+    const redirectTo = `${panelOrigin}/auth/callback?devam=${encodeURIComponent('/kurulum')}`
 
     let ownerId: string | null = null
 

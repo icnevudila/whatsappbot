@@ -1,34 +1,31 @@
 # Filo canlı smoke checklist
 
-Kod hazır; bu adımlar production/staging’de elle veya yarı otomatik doğrulanır.
+**Cuma müşteri yolu = Admin provision** (panel self-signup kapalı).
 
 ## Önkoşul
 
-- [ ] Vercel Production env: Supabase + `NEXT_PUBLIC_SITE_URL` + Stripe Price/Webhook
-- [ ] `NEXT_PUBLIC_LEGAL_ENTITY_NAME` gerçek ünvan
-- [ ] Auth e-posta confirm + leaked password protection
-- [ ] Hetzner worker ayakta (`/durum` fleet)
+- [ ] Vercel: Supabase + `NEXT_PUBLIC_SITE_URL` + Stripe Price/Webhook + `NEXT_PUBLIC_LEGAL_ENTITY_NAME`
+- [ ] Auth: e-posta confirm + leaked password + Redirect Allow List `/auth/callback`
+- [ ] Worker ayakta (`/durum` → Bağlı)
+- [ ] Admin: `platform_admin` + `NEXT_PUBLIC_PANEL_URL`
 
 ## Akış
 
-1. **Kayıt** — yeni e-posta → confirm → `/kurulum` veya `/erisim-yok`
-2. **Org** — ücretsiz işletme oluştur (1 hat / 1000 msg)
-3. **Hat** — `/hesaplar` QR veya pairing → Bağlı
-4. **Gönderim** — `/hizli-gonderim` kısa test mesajı → `/gidenler` / kampanya detay
-5. **Kota** — (test) `monthly_message_quota` düşük bas → gate `quota` / 429
-6. **Upgrade** — Stripe Checkout starter → webhook plan/kota
-7. **Suspend** — admin askıya al → job claim + gönderim kesilir
+1. **Provision** — Admin’den müşteri e-posta + işletme → invite mail
+2. **Giriş** — `/auth/callback` → `/kurulum` → marka + hat bağla
+3. **Gönderim** — `/hizli-gonderim` → toast + `/gidenler` / kampanya detay
+4. **Gelen** — test yanıtı → `/gelenler` canlı + toast
+5. **Kota** — (test) kota düşük → gate hata
+6. **Upgrade** — Stripe Checkout → webhook plan/kota; askı kalkar
+7. **past_due** — (test) unpaid → askı banner + gönderim kesilir
 8. **Davet** — üye e-posta → `/davet/{token}` kabul
-9. **Org sil** — sahip Tehlikeli bölge → Stripe iptal denemesi + `/erisim-yok`
+9. **Suspend** — admin askı → claim/gönderim yok
 
 ## Hızlı HTTP (oturumsuz)
 
 ```bash
-# Marketing + health
 curl -sI https://YOUR-DOMAIN/ | head -1
 curl -sI https://YOUR-DOMAIN/kvkk | head -1
 curl -sI https://YOUR-DOMAIN/kosullar | head -1
 curl -sI https://YOUR-DOMAIN/giris | head -1
 ```
-
-Oturumlu smoke için panel UI veya Playwright tercih edilir.

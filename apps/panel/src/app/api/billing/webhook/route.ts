@@ -142,7 +142,35 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json({ received: true, plan: planKey, orgId })
+  // Ödeme gecikmesi / unpaid → askı (gönderim + claim kesilir).
+  // İptal / silme → free kota, askıyı kaldır (bilinçli iptal).
+  // Active/trialing → askıyı temizle.
+  const status = obj?.status ?? ''
+  if (upgrade) {
+    await admin
+      .from('organizations')
+      .update({ suspended_at: null, suspend_reason: null })
+      .eq('id', orgId)
+  } else if (status === 'past_due' || status === 'unpaid') {
+    await admin
+      .from('organizations')
+      .update({
+        suspended_at: new Date().toISOString(),
+        suspend_reason: 'stripe_past_due',
+      })
+      .eq('id', orgId)
+  } else if (
+    type === 'customer.subscription.deleted' ||
+    status === 'canceled' ||
+    status === 'incomplete_expired'
+  ) {
+    await admin
+      .from('organizations')
+      .update({ suspended_at: null, suspend_reason: null })
+      .eq('id', orgId)
+  }
+
+  return NextResponse.json({ received: true, plan: planKey, orgId, status })
 }
 
 function verifyStripeSignature(

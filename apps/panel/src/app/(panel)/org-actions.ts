@@ -156,7 +156,7 @@ async function resolveInviteRedirect(devamPath: string): Promise<string> {
   const proto = h.get('x-forwarded-proto') ?? 'https'
   const fromRequest = host ? `${proto}://${host}` : undefined
   const origin = siteOriginFromEnv(fromRequest)
-  return `${origin || 'https://filo.app'}/auth/confirm?devam=${encodeURIComponent(devamPath)}`
+  return `${origin || 'https://filo.app'}/auth/callback?devam=${encodeURIComponent(devamPath)}`
 }
 
 function newInviteToken(): string {

@@ -1,6 +1,30 @@
 # Filo satışa hazırlık (SELLABLE GO-LIVE)
 
-Checklist: self-serve org + kota + Stripe + davet + yasal + worker.
+**Cuma müşteri satışı:** kod + migration’lar hazır. Aşağıdaki **ops** maddeleri prod’da elle doğrulanmalı.
+
+Satış modeli (şu anki kod): **Admin provision** (müşteri hesabı Filo açar) + isteğe bağlı org daveti. Panel self-signup kapalı (`destek@filo.app`).
+
+## 0) Cuma öncesi zorunlu (P0)
+
+Kod (bu repoda uygulandı):
+
+- [x] Davet / admin provision → `/auth/callback` (PKCE)
+- [x] `message_log` Realtime publication
+- [x] Checkout yalnız env price (istemci `priceId` yok)
+- [x] `past_due` / `unpaid` → org askı; ödeme gelince askı kalkar
+- [x] `enqueueJob` kota/askı gate (`message.send`, `campaign.start|resume`)
+- [x] Askı bandı panel layout
+
+Ops (sen / Dashboard):
+
+- [ ] Vercel Production: Stripe `STRIPE_SECRET_KEY` + `STRIPE_PRICE_STARTER` (+ Pro) + `STRIPE_WEBHOOK_SECRET`
+- [ ] Stripe webhook → `https://PANEL/api/billing/webhook` (3 event) + Customer Portal açık
+- [ ] `NEXT_PUBLIC_SITE_URL` = panel kanonik URL; Auth Redirect Allow List’te `/auth/callback`
+- [ ] Supabase Auth: Confirm email + Leaked password + (Pro) PITR
+- [ ] `NEXT_PUBLIC_LEGAL_ENTITY_NAME` = gerçek şirket ünvanı
+- [ ] `SUPABASE_SERVICE_ROLE_KEY` panel + admin
+- [ ] Admin kullanıcı `app_metadata.platform_admin=true`
+- [ ] Hetzner worker ayakta (`/durum` → Bağlı)
 
 ## 1) Ortam (Vercel panel Production)
 
@@ -10,6 +34,7 @@ Zorunlu:
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 - `NEXT_PUBLIC_SITE_URL` (panel kanonik URL; davet + Stripe return)
 - `SUPABASE_SERVICE_ROLE_KEY` (davet + Stripe webhook)
+- `NEXT_PUBLIC_LEGAL_ENTITY_NAME`
 
 Stripe:
 
@@ -24,8 +49,8 @@ Stripe:
 
 Admin:
 
-- `apps/admin` → kullanıcı `app_metadata.platform_admin=true`
-- İsteğe bağlı: `NEXT_PUBLIC_PANEL_URL`
+- `apps/admin` → `NEXT_PUBLIC_PANEL_URL` + service role
+- kullanıcı `app_metadata.platform_admin=true`
 
 Worker (Hetzner):
 
@@ -38,10 +63,9 @@ Proje: [Auth settings](https://supabase.com/dashboard/project/rnkrjmblgcdqlyslbh
 - [ ] **Confirm email** açık (`mailer_autoconfirm` kapalı)
 - [ ] **Leaked password protection** (HaveIBeenPwned) açık
 - [ ] **PITR / backups**: Database → Backups (Pro plan gerekir)
+- [ ] Redirect URLs: `https://YOUR-PANEL/auth/callback`
 
-Yerel `supabase/config.toml`: `enable_confirmations = true`, `secure_password_change = true`, min şifre 8.
-
-Opsiyonel Management API (PAT `auth_config_write`):
+Yerel `supabase/config.toml`: `enable_confirmations = true`, min şifre 8.
 
 ```bash
 curl -X PATCH "https://api.supabase.com/v1/projects/rnkrjmblgcdqlyslbhob/config/auth" \
@@ -50,41 +74,29 @@ curl -X PATCH "https://api.supabase.com/v1/projects/rnkrjmblgcdqlyslbhob/config/
   -d '{"mailer_autoconfirm":false,"password_hibp_enabled":true}'
 ```
 
-## 3) Ürün smoke
+## 3) Cuma smoke (müşteri yolu)
 
-1. Yeni kullanıcı kayıt → `/erisim-yok` → ücretsiz org (1 hat / 1000 msg)
-2. Kurulum → hat bağla → hızlı gönderim
-3. Aylık kota dolunca `message.send` / kampanya durur (`org_send_gate`)
-4. Stripe Checkout starter → webhook plan/kota günceller
-5. Abonelik sil / past_due → free kota
-6. Admin: işletmeyi askıya al → job claim + gönderim kesilir
-7. Üye daveti → e-posta → `/davet/{token}` kabul
+1. Admin → müşteri e-posta + işletme provision → invite mail
+2. Müşteri `/auth/callback` → `/kurulum` → hat bağla
+3. Hızlı gönderim → `/gidenler` + toast
+4. (Opsiyonel) Stripe Checkout starter → kota yükselir
+5. Davet ikinci üye → kabul
+6. Admin askıya al → gönderim kesilir; banner görünür
+
+Detay: [`docs/SMOKE.md`](SMOKE.md)
 
 ## 4) Yasal
 
 - [ ] `NEXT_PUBLIC_LEGAL_ENTITY_NAME` Vercel’de gerçek şirket ünvanı
-- [ ] [`/kvkk`](apps/panel/src/app/(marketing)/kvkk/page.tsx) ve [`/kosullar`](apps/panel/src/app/(marketing)/kosullar/page.tsx) ünvanı env’den okur
-- [ ] Destek: `destek@filo.app` (Yardım + footer)
+- [ ] `/kvkk` ve `/kosullar` ünvanı env’den
+- [ ] Destek: `destek@filo.app`
 
 ## 5) Bilinçli sınırlar (sonraki sprint)
 
+- Self-serve panel signup (şu an kapalı — bilerek)
 - MFA / SSO
-- Dağıtık rate limit (Upstash)
-- Audit log
-- DPA metni
-
-## 6) VT güçlendirme (uygulandı)
-
-- `worker_fleet_status` yalnız org lease worker’ları
-- `created_by` / `active_org_id` FK index’leri
-- `jobs.org_id NOT NULL`
-- org tutarlılık trigger’ları + outbound unique + retention
-- Owner `delete_organization` (+ Stripe abonelik iptal denemesi)
-
-## 7) RBAC (uygulandı)
-
-- Marka kiti yazma + hesap silme: owner/admin (RLS + action)
-- Üye: kampanya/kişi/gönderim/kara liste/bağlama
+- Dağıtık rate limit
+- Audit log / DPA
 
 ## Referans migration’lar
 
@@ -93,5 +105,4 @@ curl -X PATCH "https://api.supabase.com/v1/projects/rnkrjmblgcdqlyslbhob/config/
 - `20260906180000_admin_overview_suspended.sql`
 - `20260906190000_vt_schema_hardening.sql`
 - `20260906195000_member_rbac_admin_writes.sql`
-
-Canlı smoke: [`docs/SMOKE.md`](SMOKE.md)
+- `20260906200000_message_log_realtime.sql`
