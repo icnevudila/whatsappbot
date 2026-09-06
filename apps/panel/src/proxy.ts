@@ -4,6 +4,9 @@ import { NextResponse, type NextRequest } from 'next/server'
 /** Oturum acmis kullaniciyi panele geri gonderdigimiz tek yer. */
 const AUTH_PATHS = new Set(['/giris'])
 
+/** Oturumlu ama isletmesi olmayan kullanici. */
+const NO_ORG_PATHS = new Set(['/erisim-yok'])
+
 /** Herkese acik pazarlama yollari. Tam eslesme: '/' prefix olarak her seyi tutar. */
 const MARKETING_PATHS = new Set([
   '/',
@@ -54,7 +57,8 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const isAuthPath = AUTH_PATHS.has(path)
-  const isPublic = isAuthPath || MARKETING_PATHS.has(path)
+  const isNoOrgPath = NO_ORG_PATHS.has(path)
+  const isPublic = isAuthPath || isNoOrgPath || MARKETING_PATHS.has(path)
 
   function withSessionCookies(next: NextResponse) {
     for (const cookie of response.cookies.getAll()) next.cookies.set(cookie)
@@ -75,9 +79,17 @@ export async function proxy(request: NextRequest) {
 
   // Landing oturum acikken de gezilebilir olmali; yalnizca giris ekranindan
   // panele geri gonderiyoruz. Layout setup tamam degilse /kurulum'a cevirir.
+  // Org'suz kullanici /erisim-yok'ta kalir.
   if (user && isAuthPath) {
     const target = request.nextUrl.clone()
     target.pathname = '/ozet'
+    target.search = ''
+    return withSessionCookies(NextResponse.redirect(target))
+  }
+
+  if (!user && isNoOrgPath) {
+    const target = request.nextUrl.clone()
+    target.pathname = '/giris'
     target.search = ''
     return withSessionCookies(NextResponse.redirect(target))
   }

@@ -103,25 +103,11 @@ export async function signIn(_previous: AuthState, formData: FormData): Promise<
   redirect(safeNext || '/ozet')
 }
 
-export async function signUp(_previous: AuthState, formData: FormData): Promise<AuthState> {
-  const credentials = readCredentials(formData)
-  if (typeof credentials === 'string') return { error: credentials }
-
-  const supabase = await createSupabaseServerClient()
-  const { data, error } = await supabase.auth.signUp({
-    ...credentials,
-    options: { emailRedirectTo: await callbackUrl('/kurulum') },
-  })
-
-  if (error) return { error: authError(error.code) || error.message }
-
-  if (!data.session) {
-    return {
-      ok: 'Kayıt alındı. E-posta adresinize gelen doğrulama bağlantısına tıklayıp tekrar giriş yapın.',
-    }
+/** Self-signup kapalı — hesaplar yalnızca yönetici / VT üzerinden açılır. */
+export async function signUp(): Promise<AuthState> {
+  return {
+    error: 'Kayıt kapalı. Erişim için iletişime geçin: destek@filo.app',
   }
-
-  redirect('/kurulum')
 }
 
 export async function signOut(): Promise<void> {

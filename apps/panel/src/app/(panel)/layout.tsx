@@ -19,7 +19,10 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   let email: string | null
   try {
     ;({ org, email } = await requireActiveOrg())
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === 'NO_ORGANIZATION') {
+      redirect('/erisim-yok')
+    }
     redirect('/giris')
   }
 

@@ -24,12 +24,12 @@ export function FinalCta() {
           </h2>
           <p className="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-ink-muted">{L.lead}</p>
           <div className="mt-8 flex flex-col items-center justify-center gap-2.5 sm:flex-row">
-            <Link
-              href="/giris?mod=kayit"
+            <a
+              href="mailto:destek@filo.app?subject=Filo%20eri%C5%9Fim%20talebi"
               className="inline-flex h-11 items-center rounded-[var(--radius-sm)] bg-accent px-5 text-[13px] font-medium text-accent-ink transition-colors hover:bg-accent-dim"
             >
               {L.ctaPrimary}
-            </Link>
+            </a>
             <a
               href="#urun"
               className="inline-flex h-11 items-center rounded-[var(--radius-sm)] border border-hairline-strong bg-canvas px-5 text-[13px] font-medium text-ink transition-colors hover:bg-surface-raised"

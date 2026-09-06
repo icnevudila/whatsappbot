@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useLocale } from '@/lib/i18n/provider'
 
@@ -45,12 +44,12 @@ export function StickyCta() {
       }`}
       aria-hidden={!visible}
     >
-      <Link
-        href="/giris?mod=kayit"
+      <a
+        href="mailto:destek@filo.app?subject=Filo%20eri%C5%9Fim%20talebi"
         className="flex h-11 w-full items-center justify-center rounded-[var(--radius-sm)] bg-accent text-[13px] font-medium text-accent-ink"
       >
         {messages.landing.stickyCta}
-      </Link>
+      </a>
     </div>
   )
 }

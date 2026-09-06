@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { notFound, redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import { AccentLink, Card, CardHeader, PageHeader, QuietLink, Stat } from '@/components/ui'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { requireActiveOrg } from '@/lib/org'
 import { ListActions } from '../list-actions'
 import { MemberActions, type MemberRow } from './member-actions'
 
@@ -14,9 +14,18 @@ export async function generateMetadata({
   params: Promise<{ id: string }>
 }): Promise<Metadata> {
   const { id } = await params
-  const supabase = await createSupabaseServerClient()
-  const { data } = await supabase.from('contact_lists').select('name').eq('id', id).maybeSingle()
-  return { title: data?.name ? `Liste · ${data.name}` : 'Liste' }
+  try {
+    const { org, supabase } = await requireActiveOrg()
+    const { data } = await supabase
+      .from('contact_lists')
+      .select('name')
+      .eq('id', id)
+      .eq('org_id', org.id)
+      .maybeSingle()
+    return { title: data?.name ? `Liste · ${data.name}` : 'Liste' }
+  } catch {
+    return { title: 'Liste' }
+  }
 }
 
 export default async function ContactListDetailPage({
@@ -25,16 +34,13 @@ export default async function ContactListDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const supabase = await createSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) redirect('/giris')
+  const { org, supabase } = await requireActiveOrg()
 
   const { data: list } = await supabase
     .from('contact_lists')
     .select('id, name, contact_count, created_at, source, description')
     .eq('id', id)
+    .eq('org_id', org.id)
     .maybeSingle()
 
   if (!list || list.source === 'quick_send') notFound()
@@ -43,6 +49,7 @@ export default async function ContactListDetailPage({
     .from('contact_list_members')
     .select('contact_id, contacts(id, phone_e164, name, wa_status, wa_checked_at)')
     .eq('list_id', id)
+    .eq('org_id', org.id)
     .order('added_at', { ascending: false })
     .limit(500)
 

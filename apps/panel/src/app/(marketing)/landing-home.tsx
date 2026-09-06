@@ -45,12 +45,12 @@ export function LandingHome() {
               </p>
 
               <div className="filo-fade-up-delay-2 flex w-full max-w-md flex-col gap-2.5 sm:max-w-none sm:flex-row sm:justify-center lg:justify-start">
-                <Link
-                  href="/giris?mod=kayit"
+                <a
+                  href="mailto:destek@filo.app?subject=Filo%20eri%C5%9Fim%20talebi"
                   className="inline-flex h-11 w-full items-center justify-center rounded-[var(--radius-sm)] bg-accent px-5 text-[13px] font-medium text-accent-ink transition-colors hover:bg-accent-dim sm:w-auto"
                 >
                   {L.hero.ctaPrimary}
-                </Link>
+                </a>
                 <a
                   href="#urun"
                   className="inline-flex h-11 w-full items-center justify-center rounded-[var(--radius-sm)] border border-hairline-strong bg-surface px-5 text-[13px] font-medium text-ink transition-colors hover:bg-surface-raised sm:w-auto"
@@ -231,8 +231,8 @@ export function LandingHome() {
                     ))}
                   </ul>
 
-                  <Link
-                    href="/giris?mod=kayit"
+                  <a
+                    href="mailto:destek@filo.app?subject=Filo%20eri%C5%9Fim%20talebi"
                     className={`mt-5 inline-flex h-9 items-center justify-center rounded-md text-[13px] font-medium transition-colors ${
                       featured
                         ? 'bg-accent text-accent-ink hover:bg-accent-dim'
@@ -240,7 +240,7 @@ export function LandingHome() {
                     }`}
                   >
                     {L.pricing.cta}
-                  </Link>
+                  </a>
                 </div>
               )
             })}

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { PageHeader, QuietLink, StatusPill } from '@/components/ui'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { requireActiveOrg } from '@/lib/org'
 import { CampaignLive, type CampaignView } from './campaign-live'
 import { TargetFeed, type TargetView } from './target-feed'
 
@@ -13,9 +13,18 @@ export async function generateMetadata({
   params: Promise<{ id: string }>
 }): Promise<Metadata> {
   const { id } = await params
-  const supabase = await createSupabaseServerClient()
-  const { data } = await supabase.from('campaigns').select('name').eq('id', id).maybeSingle()
-  return { title: data?.name ? `Kampanya · ${data.name}` : 'Kampanya' }
+  try {
+    const { org, supabase } = await requireActiveOrg()
+    const { data } = await supabase
+      .from('campaigns')
+      .select('name')
+      .eq('id', id)
+      .eq('org_id', org.id)
+      .maybeSingle()
+    return { title: data?.name ? `Kampanya · ${data.name}` : 'Kampanya' }
+  } catch {
+    return { title: 'Kampanya' }
+  }
 }
 
 const FIELDS =
@@ -27,20 +36,22 @@ export default async function CampaignDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const supabase = await createSupabaseServerClient()
+  const { org, supabase } = await requireActiveOrg()
 
   const [campaignResult, targetsResult, accountsResult] = await Promise.all([
-    supabase.from('campaigns').select(FIELDS).eq('id', id).single(),
+    supabase.from('campaigns').select(FIELDS).eq('id', id).eq('org_id', org.id).single(),
     supabase
       .from('campaign_targets')
       .select('id, phone_e164, status, error, sent_at, wa_message_id, updated_at')
       .eq('campaign_id', id)
+      .eq('org_id', org.id)
       .order('id', { ascending: false })
       .limit(200),
     supabase
       .from('campaign_accounts')
       .select('account_id, accounts(id, label)')
-      .eq('campaign_id', id),
+      .eq('campaign_id', id)
+      .eq('org_id', org.id),
   ])
 
   if (campaignResult.error || !campaignResult.data) notFound()
@@ -50,7 +61,11 @@ export default async function CampaignDetailPage({
 
   const listsResult =
     sourceListIds.length > 0
-      ? await supabase.from('contact_lists').select('id, name').in('id', sourceListIds)
+      ? await supabase
+          .from('contact_lists')
+          .select('id, name')
+          .eq('org_id', org.id)
+          .in('id', sourceListIds)
       : { data: [] as { id: string; name: string }[] }
 
   const sourceLists = (listsResult.data ?? []).map((list) => ({
@@ -80,7 +95,7 @@ export default async function CampaignDetailPage({
         }
       />
 
-      <CampaignLive initial={campaign} sourceLists={sourceLists} accounts={accounts} />
+      <CampaignLive initial={campaign} sourceLists={sourceLists} accounts={accounts} orgId={org.id} />
 
       <div id="paylasilanlar" className="mt-2.5">
         <TargetFeed

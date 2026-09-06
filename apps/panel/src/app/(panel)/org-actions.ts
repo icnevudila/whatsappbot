@@ -33,29 +33,11 @@ export async function switchOrg(orgId: string): Promise<OrgActionState> {
   return { ok: 'İşletme değiştirildi.' }
 }
 
-export async function createOrg(
-  _previous: OrgActionState,
-  formData: FormData,
-): Promise<OrgActionState> {
-  const name = String(formData.get('name') ?? '').trim()
-  if (name.length < 2) return { error: 'İşletme adı en az 2 karakter olmalı.' }
-
-  const supabase = await createSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Oturum bulunamadı.' }
-
-  const { data: orgId, error } = await supabase.rpc('create_organization', {
-    p_name: name,
-  })
-
-  if (error || !orgId) {
-    return { error: error?.message ?? 'İşletme oluşturulamadı.' }
+export async function createOrg(): Promise<OrgActionState> {
+  return {
+    error:
+      'İşletme oluşturma kapalı. Yeni işletme ve kullanıcılar yalnızca Filo tarafından açılır.',
   }
-
-  revalidatePath('/', 'layout')
-  return { ok: 'İşletme oluşturuldu.' }
 }
 
 export async function updateOrgName(

@@ -52,7 +52,7 @@ export const en: typeof tr = {
   },
   auth: {
     signIn: 'Sign in',
-    signUp: 'Try free',
+    contact: 'Contact us',
     email: 'Email',
     password: 'Password',
     forgot: 'Forgot password',

@@ -51,7 +51,7 @@ export const tr = {
   },
   auth: {
     signIn: 'Giriş yap',
-    signUp: 'Ücretsiz dene',
+    contact: 'İletişime geç',
     email: 'E-posta',
     password: 'Şifre',
     forgot: 'Şifremi unuttum',

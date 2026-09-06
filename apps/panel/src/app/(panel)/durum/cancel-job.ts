@@ -6,7 +6,7 @@ import { requireActiveOrg } from '@/lib/org'
 /** Pending/claimed job iptali (RLS: jobs_cancel_member). */
 export async function cancelJob(jobId: number): Promise<{ error?: string }> {
   try {
-    const { supabase } = await requireActiveOrg()
+    const { org, supabase } = await requireActiveOrg()
     const { error, count } = await supabase
       .from('jobs')
       .update({
@@ -15,6 +15,7 @@ export async function cancelJob(jobId: number): Promise<{ error?: string }> {
         finished_at: new Date().toISOString(),
       })
       .eq('id', jobId)
+      .eq('org_id', org.id)
       .in('status', ['pending', 'claimed'])
 
     if (error) return { error: error.message }

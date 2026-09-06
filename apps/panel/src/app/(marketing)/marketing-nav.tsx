@@ -88,12 +88,12 @@ export function MarketingNav() {
             >
               {t('auth.signIn')}
             </Link>
-            <Link
-              href="/giris?mod=kayit"
+            <a
+              href="mailto:destek@filo.app?subject=Filo%20eri%C5%9Fim%20talebi"
               className="hidden h-8 items-center rounded-md bg-accent px-3 text-[12.5px] font-medium text-accent-ink transition-colors hover:bg-accent-dim sm:inline-flex"
             >
-              {t('auth.signUp')}
-            </Link>
+              {t('auth.contact')}
+            </a>
             <button
               type="button"
               className="inline-flex size-9 items-center justify-center rounded-[var(--radius-sm)] text-ink-muted transition-colors hover:bg-surface-raised hover:text-ink lg:hidden"
@@ -166,13 +166,13 @@ export function MarketingNav() {
               >
                 {t('auth.signIn')}
               </Link>
-              <Link
-                href="/giris?mod=kayit"
+              <a
+                href="mailto:destek@filo.app?subject=Filo%20eri%C5%9Fim%20talebi"
                 onClick={close}
                 className="inline-flex h-10 items-center justify-center rounded-[var(--radius-sm)] bg-accent text-[13px] font-medium text-accent-ink hover:bg-accent-dim"
               >
-                {t('auth.signUp')}
-              </Link>
+                {t('auth.contact')}
+              </a>
             </div>
           </nav>
         </aside>

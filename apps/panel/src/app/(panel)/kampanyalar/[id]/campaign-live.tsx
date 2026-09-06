@@ -58,10 +58,12 @@ export function CampaignLive({
   initial,
   sourceLists = [],
   accounts = [],
+  orgId,
 }: {
   initial: CampaignView
   sourceLists?: { id: string; name: string }[]
   accounts?: { id: string; label: string }[]
+  orgId: string
 }) {
   const [campaign, setCampaign] = useState(initial)
   const [pending, startTransition] = useTransition()
@@ -101,6 +103,7 @@ export function CampaignLive({
           'id, name, status, body, media_url, message_type, total_targets, sent_count, failed_count, skipped_count, stop_reason, min_delay_seconds, max_delay_seconds, daily_cap_per_account, started_at, completed_at',
         )
         .eq('id', initial.id)
+        .eq('org_id', orgId)
         .maybeSingle()
       if (data) setCampaign(data as CampaignView)
     }
@@ -114,7 +117,7 @@ export function CampaignLive({
       clearInterval(timer)
       void supabase.removeChannel(channel)
     }
-  }, [initial.id])
+  }, [initial.id, orgId])
 
   const run = (action: () => Promise<{ error?: string }>) => {
     setError(null)

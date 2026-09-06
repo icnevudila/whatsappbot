@@ -121,15 +121,23 @@ export async function requestPairingCode(
 }
 
 export async function removeAccount(accountId: string): Promise<ActionState> {
-  const supabase = await createSupabaseServerClient()
+  try {
+    const { org, supabase } = await requireActiveOrg()
 
-  // Once servise cikis komutu birakiliyor: satir silinince cascade ile
-  // wa.creds de gider, ama WhatsApp tarafinda cihaz bagli kalirdi.
-  await enqueueJob({ type: 'account.logout', accountId, priority: 5 })
+    // Once servise cikis komutu birakiliyor: satir silinince cascade ile
+    // wa.creds de gider, ama WhatsApp tarafinda cihaz bagli kalirdi.
+    await enqueueJob({ type: 'account.logout', accountId, priority: 5 })
 
-  const { error } = await supabase.from('accounts').delete().eq('id', accountId)
-  if (error) return { error: error.message }
+    const { error } = await supabase
+      .from('accounts')
+      .delete()
+      .eq('id', accountId)
+      .eq('org_id', org.id)
+    if (error) return { error: error.message }
 
-  revalidateAccounts()
-  return { ok: 'Hesap silindi.' }
+    revalidateAccounts()
+    return { ok: 'Hesap silindi.' }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum yok' }
+  }
 }

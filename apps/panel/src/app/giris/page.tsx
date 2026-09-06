@@ -8,7 +8,7 @@ import { AuthModeCopy } from './auth-mode-copy'
 
 export const metadata: Metadata = {
   title: 'Giriş',
-  description: 'Filo paneline giriş yapın veya ücretsiz hesap oluşturun.',
+  description: 'Filo paneline giriş yapın. Hesaplar yalnızca Filo tarafından açılır.',
 }
 
 export default async function LoginPage() {
@@ -29,7 +29,7 @@ export default async function LoginPage() {
           <span className="text-[#9db8f5]">gönderimi yönet.</span>
         </>
       }
-      asideLead="Hesabınızla hatları, listeleri ve kampanyaları tek yerden yönetin. Deneme sürümü kredi kartı istemez."
+      asideLead="Hesabınızla hatları, listeleri ve kampanyaları tek yerden yönetin. Yeni hesap için iletişime geçin."
     >
       <Suspense
         fallback={

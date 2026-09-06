@@ -37,21 +37,8 @@ export async function signIn(_previous: AuthState, formData: FormData): Promise<
   redirect(safeNext)
 }
 
-export async function signUp(_previous: AuthState, formData: FormData): Promise<AuthState> {
-  const credentials = readCredentials(formData)
-  if (typeof credentials === 'string') return { error: credentials }
-
-  const supabase = await createSupabaseServerClient()
-  const { data, error } = await supabase.auth.signUp(credentials)
-  if (error) return { error: error.message }
-
-  if (!data.session) {
-    return {
-      ok: 'Kayıt alındı. E-posta doğrulama bağlantısına tıklayıp tekrar giriş yapın.',
-    }
-  }
-
-  redirect('/onboarding')
+export async function signUp(): Promise<AuthState> {
+  return { error: 'Kayıt kapalı. Erişim için iletişime geçin.' }
 }
 
 export async function signOut(): Promise<void> {
