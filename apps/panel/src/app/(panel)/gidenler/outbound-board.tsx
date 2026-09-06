@@ -144,6 +144,19 @@ export function OutboundBoard({
           if (row.direction === 'out') router.refresh()
         },
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'message_log',
+          filter: `org_id=eq.${orgId}`,
+        },
+        (payload) => {
+          const row = payload.new as OutboundMessage
+          if (row.direction === 'out') router.refresh()
+        },
+      )
       .subscribe()
 
     return () => {
@@ -250,36 +263,39 @@ export function OutboundBoard({
                   .join(' · ')}
                 action={selected.status ? <StatusPill status={selected.status} /> : undefined}
               />
-              <div className="p-3.5">
-                <div
-                  className={`space-y-2.5 rounded-[var(--radius-card)] border p-3.5 shadow-[var(--shadow-card)] ${detailShell(selected.status)}`}
-                >
-                  <p className="whitespace-pre-wrap text-[13.5px] leading-relaxed text-ink">
-                    {selected.body?.trim()
-                      ? selected.body
-                      : `(${messageTypeLabel(selected.message_type)})`}
-                  </p>
-                  <p className="text-[12px] text-ink-muted">
-                    {timeFormat.format(new Date(selected.created_at))}
-                    {selected.campaign_id ? (
-                      <>
-                        {' · '}
-                        <Link
-                          href={`/kampanyalar/${selected.campaign_id}`}
-                          className="font-medium text-accent underline decoration-hairline-strong underline-offset-2"
-                        >
-                          {campaignNames[selected.campaign_id] ?? 'Kampanya'}
-                        </Link>
-                      </>
-                    ) : (
-                      ' · hızlı gönderim'
-                    )}
-                  </p>
-                  {selected.phone_e164 ? (
-                    <AccentLink href={`/gelenler?tel=${encodeURIComponent(selected.phone_e164)}`}>
-                      Gelenlerde aç
-                    </AccentLink>
-                  ) : null}
+              <div className="wb-chat-thread">
+                <div className="flex justify-end">
+                  <div
+                    className={`wb-chat-bubble wb-chat-bubble--out space-y-2 ${detailShell(selected.status)}`}
+                  >
+                    <p className="wb-chat-bubble-body">
+                      {selected.body?.trim()
+                        ? selected.body
+                        : `(${messageTypeLabel(selected.message_type)})`}
+                    </p>
+                    <p className="wb-chat-bubble-meta">
+                      {timeFormat.format(new Date(selected.created_at))}
+                      {selected.campaign_id ? (
+                        <>
+                          {' · '}
+                          <Link
+                            href={`/kampanyalar/${selected.campaign_id}`}
+                            className="font-medium text-accent underline decoration-hairline-strong underline-offset-2"
+                          >
+                            {campaignNames[selected.campaign_id] ?? 'Kampanya'}
+                          </Link>
+                        </>
+                      ) : (
+                        ' · hızlı gönderim'
+                      )}
+                    </p>
+                    {selected.status ? <StatusPill status={selected.status} /> : null}
+                    {selected.phone_e164 ? (
+                      <AccentLink href={`/gelenler?tel=${encodeURIComponent(selected.phone_e164)}`}>
+                        Gelenlerde aç
+                      </AccentLink>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             </>

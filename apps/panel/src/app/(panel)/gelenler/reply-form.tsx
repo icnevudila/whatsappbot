@@ -78,7 +78,7 @@ export function ReplyForm({ phone, accountId }: { phone: string; accountId: stri
     <form
       ref={form}
       action={action}
-      className="space-y-3 border-t border-hairline bg-surface p-4"
+      className="space-y-2.5 p-3"
       aria-busy={pending || waiting}
     >
       <input type="hidden" name="phone" value={phone} />

@@ -169,9 +169,10 @@ h3 {
   align-items: flex-end;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
   padding-bottom: 14px;
   border-bottom: 1px solid var(--color-hairline);
+  flex-shrink: 0;
 }
 .wb-page-title {
   font-size: 26px;
@@ -197,24 +198,91 @@ h3 {
 .wb-split {
   display: grid;
   gap: 0;
-  min-height: 0;
+  /* Sayfa uzamasın: sohbet/liste viewport içinde kayar (WhatsApp paneli). */
+  height: calc(100dvh - 12.5rem);
+  max-height: calc(100dvh - 12.5rem);
+  min-height: 22rem;
   border: 1px solid var(--color-hairline);
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
   border-radius: var(--radius-card);
   overflow: hidden;
 }
+@media (min-width: 768px) {
+  .wb-split {
+    height: calc(100dvh - 10.5rem);
+    max-height: calc(100dvh - 10.5rem);
+  }
+}
 @media (min-width: 1024px) {
   .wb-split {
     grid-template-columns: 300px minmax(0, 1fr);
-    min-height: calc(100dvh - 120px);
+    height: calc(100dvh - 9.25rem);
+    max-height: calc(100dvh - 9.25rem);
   }
 }
 .wb-split-pane {
   min-width: 0;
   min-height: 0;
+  height: 100%;
+  max-height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+}
+
+/* WhatsApp tarzı konuşma yüzeyi */
+.wb-chat-thread {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background:
+    radial-gradient(ellipse at 20% 0%, color-mix(in srgb, var(--color-accent) 6%, transparent), transparent 55%),
+    radial-gradient(ellipse at 80% 100%, color-mix(in srgb, var(--color-ok) 7%, transparent), transparent 50%),
+    var(--color-canvas);
+  padding: 14px 12px 16px;
+  scroll-behavior: smooth;
+}
+.wb-chat-bubble {
+  max-width: min(85%, 28rem);
+  border-radius: 14px;
+  border: 1px solid var(--color-hairline);
+  padding: 8px 11px 6px;
+  box-shadow: var(--shadow-card);
+}
+.wb-chat-bubble--in {
+  border-color: color-mix(in srgb, var(--color-ok) 35%, var(--color-hairline));
+  background: var(--color-ok-soft);
+  border-bottom-left-radius: 4px;
+}
+.wb-chat-bubble--out {
+  border-color: color-mix(in srgb, var(--color-accent) 30%, var(--color-hairline));
+  background: var(--color-accent-soft);
+  border-bottom-right-radius: 4px;
+}
+.wb-chat-bubble-body {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--color-ink);
+}
+.wb-chat-bubble-meta {
+  margin: 5px 0 0;
+  font-size: 10.5px;
+  line-height: 1.3;
+  color: var(--color-ink-muted);
+}
+.wb-chat-composer {
+  flex-shrink: 0;
+  border-top: 1px solid var(--color-hairline);
+  background: var(--color-surface);
 }
 .wb-split-pane + .wb-split-pane {
   border-top: 1px solid var(--color-hairline);

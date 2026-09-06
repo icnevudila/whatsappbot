@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button, CardHeader, EmptyState, FilterChip, Input, Notice, SplitPane, StatusPill, Toolbar } from '@/components/ui'
@@ -92,12 +92,17 @@ export function InboxBoard({
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const threadEndRef = useRef<HTMLDivElement>(null)
   useSyncBusy(pending, 'Kara listeye ekleniyor…')
   const visibleList = list.filter(item => `${item.phone} ${item.lastBody ?? ''} ${item.accountLabel ?? ''}`.toLocaleLowerCase('tr-TR').includes(search.toLocaleLowerCase('tr-TR')))
 
   useEffect(() => {
     setList(previews)
   }, [previews])
+
+  useEffect(() => {
+    threadEndRef.current?.scrollIntoView({ block: 'end' })
+  }, [selectedPhone, thread.length, thread.at(-1)?.id])
 
   /**
    * Gelen/giden message_log satirlari sunucu props ile geliyor; Realtime'da
@@ -350,7 +355,7 @@ export function InboxBoard({
                   description="Bu numara için henüz kayıtlı mesaj yok."
                 />
               ) : (
-                <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto bg-canvas/50 p-4">
+                <div className="wb-chat-thread" role="log" aria-live="polite" aria-relevant="additions">
                   {thread.map((row) => {
                     const outgoing = row.direction === 'out'
                     return (
@@ -359,16 +364,14 @@ export function InboxBoard({
                         className={`flex ${outgoing ? 'justify-end' : 'justify-start'}`}
                       >
                         <div
-                          className={`max-w-[85%] rounded-[var(--radius-sm)] border px-3.5 py-2.5 shadow-[var(--shadow-card)] ${
-                            outgoing
-                              ? 'border-accent/30 bg-accent-soft text-ink'
-                              : 'border-ok/35 bg-ok-soft text-ink'
+                          className={`wb-chat-bubble ${
+                            outgoing ? 'wb-chat-bubble--out' : 'wb-chat-bubble--in'
                           }`}
                         >
-                          <p className="whitespace-pre-wrap break-words text-[13.5px] leading-relaxed">
+                          <p className="wb-chat-bubble-body">
                             {row.body ?? `(${row.message_type})`}
                           </p>
-                          <p className="mt-1.5 text-[11px] text-ink-muted">
+                          <p className="wb-chat-bubble-meta">
                             {outgoing ? 'Giden' : 'Gelen'}
                             {row.account_id && accountLabels[row.account_id]
                               ? ` · ${accountLabels[row.account_id]}`
@@ -377,26 +380,29 @@ export function InboxBoard({
                             {timeFormat.format(new Date(row.created_at))}
                             {row.campaign_id ? ' · kampanya' : ''}
                           </p>
-                          {outgoing && (
-                            <div className="mt-1.5">
+                          {outgoing ? (
+                            <div className="mt-1">
                               <StatusPill status={row.status} />
                             </div>
-                          )}
+                          ) : null}
                         </div>
                       </div>
                     )
                   })}
+                  <div ref={threadEndRef} aria-hidden className="h-px shrink-0" />
                 </div>
               )}
               {selectedPhone.startsWith('+') &&
               (selectedPreview?.accountId || thread.at(-1)?.account_id) ? (
-                <ReplyForm
-                  key={selectedPhone}
-                  phone={selectedPhone}
-                  accountId={(selectedPreview?.accountId || thread.at(-1)?.account_id)!}
-                />
+                <div className="wb-chat-composer">
+                  <ReplyForm
+                    key={selectedPhone}
+                    phone={selectedPhone}
+                    accountId={(selectedPreview?.accountId || thread.at(-1)?.account_id)!}
+                  />
+                </div>
               ) : (
-                <p className="border-t border-hairline p-3.5 text-[12px] text-ink-muted">
+                <p className="wb-chat-composer p-3.5 text-[12px] text-ink-muted">
                   Yanıt verebilmek için bu konuşmanın telefon numarası ve hattı belirlenmiş olmalı.
                 </p>
               )}

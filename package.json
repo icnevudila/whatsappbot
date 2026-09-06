@@ -20,7 +20,8 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "test": "node --import tsx --test tests/*.test.ts",
-    "db:types": "npx --yes supabase@latest gen types typescript --project-id rnkrjmblgcdqlyslbhob --schema public > packages/shared/src/database.types.ts"
+    "db:types": "npx --yes supabase@latest gen types typescript --project-id rnkrjmblgcdqlyslbhob --schema public > packages/shared/src/database.types.ts",
+    "pack:whatsapp-service": "node whatsapp-service/scripts/pack-from-monorepo.mjs"
   },
   "devDependencies": {
     "tsx": "^4.23.13"

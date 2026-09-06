@@ -1,0 +1,32 @@
+# Taşınabilir WhatsApp worker.
+# 1) Schema: psql "$DATABASE_URL" -f schema/standalone-auth-stub.sql  # saf Postgres
+#            psql "$DATABASE_URL" -f schema/worker-schema.bundle.sql
+# 2) cp .env.example .env  → DATABASE_URL + WORKER_ID
+# 3) docker compose up -d --build
+
+services:
+  wa-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: filo-whatsapp-service:local
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      ROLE: worker
+      MAX_SESSIONS: '50'
+      DB_POOL_MAX: '5'
+    ports:
+      - '127.0.0.1:8080:8080'
+    restart: unless-stopped
+    mem_limit: 6g
+    shm_size: '1gb'
+    stop_grace_period: 45s
+    init: true
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://127.0.0.1:8080/health']
+      interval: 30s
+      timeout: 10s
+      start_period: 180s
+      retries: 3

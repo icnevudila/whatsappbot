@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-06T10:39:59.559Z",
+  "sourceRepo": "whatsapp (Filo)",
+  "sources": {
+    "service": "apps/wa-service",
+    "shared": "packages/shared",
+    "schema": "packages/wa-worker-kit + supabase/migrations"
+  }
+}

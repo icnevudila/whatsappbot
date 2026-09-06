@@ -6,6 +6,8 @@ Filo **panel/admin aynı kalır**. Bu paket yalnızca:
 2. **Job tipleri** (`@wa/shared` re-export)
 3. Harici Postgres’e bağlama talimatı
 
+**Taşınabilir tam servis paketi** (Baileys runtime + schema + Docker): repo kökünde [`whatsapp-service/`](../../whatsapp-service/README.md). Başka projeye kopyalamak için onu kullanın; güncelleme: `npm run pack:whatsapp-service`.
+
 Runtime process yine [`apps/wa-service`](../../apps/wa-service) — Docker imajı veya `ROLE=worker|scaler`.
 
 ```

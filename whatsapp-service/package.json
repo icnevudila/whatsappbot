@@ -1,0 +1,23 @@
+{
+  "name": "@filo/whatsapp-service",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Taşınabilir WhatsApp worker (Baileys): job kuyruğu + oturum. Panel bağımsız harici servis.",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @wa/service",
+    "start": "npm run start --workspace @wa/service",
+    "db:check": "npm run db:check --workspace @wa/service",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "pack:refresh": "node ./scripts/pack-from-monorepo.mjs"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.13"
+  }
+}

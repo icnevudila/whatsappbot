@@ -1,0 +1,50 @@
+{
+  "name": "filo-wa-worker-schema",
+  "description": "wa-service icin zorunlu migration sirasi (Filo panel RLS/admin/storage HARIC). Kaynak: repo kokunde supabase/migrations/.",
+  "sourceRoot": "../../supabase/migrations",
+  "files": [
+    "20260903183049_extensions_and_helpers.sql",
+    "20260903183118_core_profiles_accounts.sql",
+    "20260903183136_contacts.sql",
+    "20260903183154_brand_kits_creatives.sql",
+    "20260903183218_campaigns.sql",
+    "20260903183233_jobs_command_bus.sql",
+    "20260903183405_wa_private_schema.sql",
+    "20260903184500_account_reachout_quota.sql",
+    "20260904160000_organizations_tenancy.sql",
+    "20260904170000_jobs_contacts_scrape.sql",
+    "20260904180000_jobs_contacts_discover.sql",
+    "20260904110000_worker_hardening.sql",
+    "20260904220000_jobs_contacts_check_phone.sql",
+    "20260904200000_message_log_inbound_wa_unique.sql",
+    "20260905010000_message_log_outbound_wa_idx.sql",
+    "20260905130000_claim_jobs_worker_affinity.sql",
+    "20260905140000_worker_scaler.sql",
+    "20260905150000_jobs_cancel_admin_org.sql"
+  ],
+  "recommended": [
+    "20260903183747_foreign_key_indexes.sql"
+  ],
+  "excludedPanelOnly": [
+    "20260903183436_rls_policies.sql",
+    "20260903183450_data_api_grants.sql",
+    "20260903183509_storage_buckets.sql",
+    "20260903183520_realtime_and_cron.sql",
+    "20260903183654_default_privileges_lockdown.sql",
+    "20260904085000_fix_authenticated_column_grants.sql",
+    "20260904101500_contact_lists_quick_send_source.sql",
+    "20260904102000_raise_accounts_quota.sql",
+    "20260904150000_message_log_inbound_index.sql",
+    "20260904190000_contact_source_maps.sql",
+    "20260904210000_message_log_clear_lid_fake_phones.sql",
+    "20260905120000_platform_admin_overview.sql",
+    "20260905131000_admin_overview_workers.sql",
+    "20260905141000_admin_overview_scaler.sql"
+  ],
+  "notes": [
+    "brand_kits/creatives worker sorgulamaz ama campaigns.creative_id FK ve tenancy ALTER icin zincirde zorunlu.",
+    "organizations_tenancy org_id kolonlarini ekler — worker SQL buna baglidir.",
+    "Supabase rolleri (anon/authenticated/auth.users) varsayilir. Saf Postgres icin once auth stub veya migration uyarlamasi gerekir.",
+    "Filo panel icin tum supabase/migrations/ sirasini uygulayin; bu kit yalnizca worker motoru."
+  ]
+}

@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { Wordmark } from '@/components/brand'
 import { FeedbackProviders } from '@/components/feedback-providers'
 import { LocaleSwitcher } from '@/components/locale-switcher'
+import { MessageLiveToast } from '@/components/message-live-toast'
 import { RouteProgress } from '@/components/route-progress'
 import { createT } from '@/lib/i18n'
 import { getDictionary } from '@/lib/i18n/server'
@@ -49,6 +50,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
 
   return (
     <FeedbackProviders>
+      <MessageLiveToast orgId={org.id} />
       <div className="flex min-h-dvh bg-canvas">
         <Suspense fallback={null}>
           <RouteProgress />
@@ -123,8 +125,8 @@ export default async function PanelLayout({ children }: { children: React.ReactN
             </div>
           </header>
 
-          <main className="min-w-0 flex-1 overflow-x-hidden px-3 py-4 md:px-5 md:py-5">
-            <div className="mx-auto w-full max-w-[1280px]">{children}</div>
+          <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-3 py-4 md:px-5 md:py-5">
+            <div className="mx-auto flex w-full max-w-[1280px] min-h-0 flex-1 flex-col">{children}</div>
           </main>
         </div>
       </div>
