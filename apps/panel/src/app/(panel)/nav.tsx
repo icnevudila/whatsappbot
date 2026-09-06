@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Icon, iconForHref, type IconName } from '@/components/icon'
 import { useT } from '@/lib/i18n/provider'
 
@@ -54,7 +54,6 @@ export function Nav({
 }) {
   const pathname = usePathname()
   const t = useT()
-  const [moreOpen, setMoreOpen] = useState(false)
 
   const groups = useMemo(() => {
     if (onboardingLock) {
@@ -125,131 +124,38 @@ export function Nav({
       ? ({ href: '/kurulum', label: t('nav.kurulum'), icon: 'steps' as const } as const)
       : null
   const flat = groups.flatMap((g) => g.items)
-  const primaryH = flat.slice(0, onboardingLock ? 8 : 6)
-  const moreH = onboardingLock ? [] : flat.slice(6)
-  const moreActive = moreH.some((item) => isActive(pathname, item.href))
-
-  useEffect(() => {
-    setMoreOpen(false)
-  }, [pathname])
-
-  useEffect(() => {
-    if (!moreOpen) return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setMoreOpen(false)
-    }
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.body.style.overflow = prev
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [moreOpen])
 
   if (orientation === 'horizontal') {
     return (
-      <div className="flex w-full items-center gap-1">
-        <div className="min-w-0 flex-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <nav
-            className="flex w-max flex-row items-center gap-0.5"
-            aria-label={t('nav.aria')}
-          >
-            {setupItem ? (
-              <NavLink
-                href={setupItem.href}
-                label={setupItem.label}
-                icon={setupItem.icon}
-                active={isActive(pathname, setupItem.href)}
-                className={`wb-rail-link whitespace-nowrap${
-                  isActive(pathname, setupItem.href) ? ' is-active' : ''
-                }`}
-              />
-            ) : null}
-            {primaryH.map((item) => (
-              <NavLink
-                key={item.href}
-                href={item.href}
-                label={item.label}
-                icon={item.icon}
-                active={isActive(pathname, item.href)}
-                className={`wb-rail-link whitespace-nowrap${
-                  isActive(pathname, item.href) ? ' is-active' : ''
-                }`}
-              />
-            ))}
-          </nav>
-        </div>
-
-        {moreH.length > 0 ? (
-          <>
-            <button
-              type="button"
-              aria-expanded={moreOpen}
-              aria-controls="mobile-nav-more"
-              onClick={() => setMoreOpen((v) => !v)}
-              className={`wb-rail-link shrink-0 whitespace-nowrap${
-                moreActive || moreOpen ? ' is-active' : ''
+      <div className="min-w-0 w-full overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <nav
+          className="flex w-max flex-row items-center gap-0.5 pr-1"
+          aria-label={t('nav.aria')}
+        >
+          {setupItem ? (
+            <NavLink
+              href={setupItem.href}
+              label={setupItem.label}
+              icon={setupItem.icon}
+              active={isActive(pathname, setupItem.href)}
+              className={`wb-rail-link whitespace-nowrap${
+                isActive(pathname, setupItem.href) ? ' is-active' : ''
               }`}
-            >
-              <Icon name="more" className="wb-rail-link-icon size-[16px]" />
-              <span className="wb-rail-link-label">{t('nav.more')}</span>
-            </button>
-
-            {moreOpen ? (
-              <div className="fixed inset-0 z-[60]" role="presentation">
-                <button
-                  type="button"
-                  className="absolute inset-0 bg-ink/35"
-                  aria-label={t('common.cancel')}
-                  onClick={() => setMoreOpen(false)}
-                />
-                <div
-                  id="mobile-nav-more"
-                  role="dialog"
-                  aria-modal="true"
-                  aria-label={t('nav.more')}
-                  className="wb-rail-more absolute inset-x-0 bottom-0 max-h-[75dvh] overflow-y-auto rounded-t-[16px] border border-hairline bg-surface px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-[var(--shadow-md)]"
-                >
-                  <div className="mb-3 flex items-center justify-between gap-3 px-1">
-                    <p className="text-[12px] font-semibold text-ink">{t('nav.more')}</p>
-                    <button
-                      type="button"
-                      className="text-[12px] font-medium text-ink-muted"
-                      onClick={() => setMoreOpen(false)}
-                    >
-                      {t('common.cancel')}
-                    </button>
-                  </div>
-                  <ul className="grid gap-0.5 pb-2">
-                    {moreH.map((item) => {
-                      const active = isActive(pathname, item.href)
-                      return (
-                        <li key={item.href}>
-                          <Link
-                            href={item.href}
-                            prefetch
-                            aria-current={active ? 'page' : undefined}
-                            onClick={() => setMoreOpen(false)}
-                            className={`wb-rail-link px-3 py-3 text-[14px]${
-                              active ? ' is-active' : ''
-                            }`}
-                          >
-                            <Icon
-                              name={item.icon ?? iconForHref(item.href)}
-                              className="wb-rail-link-icon size-[16px]"
-                            />
-                            <span className="wb-rail-link-label">{item.label}</span>
-                          </Link>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                </div>
-              </div>
-            ) : null}
-          </>
-        ) : null}
+            />
+          ) : null}
+          {flat.map((item) => (
+            <NavLink
+              key={item.href}
+              href={item.href}
+              label={item.label}
+              icon={item.icon}
+              active={isActive(pathname, item.href)}
+              className={`wb-rail-link whitespace-nowrap${
+                isActive(pathname, item.href) ? ' is-active' : ''
+              }`}
+            />
+          ))}
+        </nav>
       </div>
     )
   }
