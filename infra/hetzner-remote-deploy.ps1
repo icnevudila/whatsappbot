@@ -85,6 +85,11 @@ stdin, stdout, stderr = client.exec_command(REMOTE, get_pty=True, timeout=900)
 out = stdout.read().decode(errors="replace")
 err = stderr.read().decode(errors="replace")
 code = stdout.channel.recv_exit_status()
+try:
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+except Exception:
+    pass
 print(out[-8000:] if out else "")
 if err.strip():
     print("STDERR:", err[-2000:])

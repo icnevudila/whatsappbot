@@ -181,8 +181,8 @@ export class WhatsAppSession {
       browser: Browsers.macOS('Chrome'),
       // Telefonda bildirim kalsin; "online" isaretlemek bildirimleri yutuyor.
       markOnlineOnConnect: false,
-      // 100 oturumda tam gecmis senkronu RAM'i patlatir.
-      syncFullHistory: false,
+      // Rehber ve kisi listesinin senkronizasyonu icin true olmali
+      syncFullHistory: true,
       msgRetryCounterCache: this.msgRetryCounterCache,
       mediaCache: this.mediaCache,
       getMessage: (key) => lookupSentMessage(this.accountId, key),
@@ -229,14 +229,16 @@ export class WhatsAppSession {
 
     // Rehber & Sohbet Kisileri (contacts.upsert, messaging-history.set, chats.upsert)
     this.sock.ev.on('contacts.upsert', (contacts) => {
+      this.log.info({ count: contacts.length }, 'contacts.upsert alindi')
       void import('./account-contacts.js').then(({ persistAccountContacts }) => {
         return persistAccountContacts(this.orgId, this.accountId, contacts)
       }).catch((error) => {
-        this.log.debug({ err: error }, 'contacts.upsert islenirken hata')
+        this.log.warn({ err: error }, 'contacts.upsert islenirken hata')
       })
     })
 
     this.sock.ev.on('messaging-history.set', ({ contacts, chats }) => {
+      this.log.info({ contactsCount: contacts?.length ?? 0, chatsCount: chats?.length ?? 0 }, 'messaging-history.set alindi')
       const all: Array<{ id: string; name?: string | null; notify?: string | null }> = []
       if (contacts?.length) all.push(...contacts)
       if (chats?.length) {
@@ -248,17 +250,18 @@ export class WhatsAppSession {
         void import('./account-contacts.js').then(({ persistAccountContacts }) => {
           return persistAccountContacts(this.orgId, this.accountId, all)
         }).catch((error) => {
-          this.log.debug({ err: error }, 'messaging-history contacts islenirken hata')
+          this.log.warn({ err: error }, 'messaging-history contacts islenirken hata')
         })
       }
     })
 
     this.sock.ev.on('chats.upsert', (chats) => {
+      this.log.info({ count: chats.length }, 'chats.upsert alindi')
       const all = chats.map((c) => ({ id: c.id, name: c.name ?? null }))
       void import('./account-contacts.js').then(({ persistAccountContacts }) => {
         return persistAccountContacts(this.orgId, this.accountId, all)
       }).catch((error) => {
-        this.log.debug({ err: error }, 'chats.upsert islenirken hata')
+        this.log.warn({ err: error }, 'chats.upsert islenirken hata')
       })
     })
 
