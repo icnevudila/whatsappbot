@@ -152,6 +152,19 @@ async function handle(job: JobRow): Promise<unknown> {
       return { code }
     }
 
+    case 'account.sync_contacts': {
+      const accountId = requireAccountId(job)
+      if (!job.org_id) throw new Error('account.sync_contacts isi org_id olmadan gelemez')
+      const payload = (job.payload ?? {}) as JobPayloadMap['account.sync_contacts']
+      const { importAccountContactsToList } = await import('./account-contacts.js')
+      return importAccountContactsToList({
+        orgId: job.org_id,
+        createdBy: job.created_by,
+        accountId,
+        listName: payload.list_name,
+      })
+    }
+
     case 'message.send': {
       if (job.result?.delivery_attempted) throw new NonRetryableJobError('Önceki gönderimin sonucu belirsiz. Çift mesajı önlemek için yeniden gönderilmedi.')
       const accountId = requireAccountId(job)

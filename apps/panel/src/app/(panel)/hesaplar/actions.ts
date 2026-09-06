@@ -144,3 +144,23 @@ export async function removeAccount(accountId: string): Promise<ActionState> {
     return { error: error instanceof Error ? error.message : 'Oturum yok' }
   }
 }
+
+export async function syncAccountContactsAction(
+  accountId: string,
+  listName?: string,
+): Promise<ActionState> {
+  const { error } = await enqueueJob({
+    type: 'account.sync_contacts',
+    accountId,
+    priority: 30,
+    payload: listName ? { list_name: listName } : {},
+  })
+  if (error) return { error }
+
+  revalidateAccounts()
+  revalidatePath('/kisiler')
+  return {
+    ok: 'Rehber içe aktarma kuyruğa alındı. Birkaç saniye içinde Kişiler sekmesinde yeni liste olarak görünecektir.',
+  }
+}
+

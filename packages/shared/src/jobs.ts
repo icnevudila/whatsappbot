@@ -7,6 +7,7 @@ export const JOB_TYPES = [
   'account.disconnect',
   'account.logout',
   'account.request_pairing_code',
+  'account.sync_contacts',
   'message.send',
   'contacts.verify',
   'contacts.check_phone',
@@ -63,7 +64,7 @@ export type MessageType = 'text' | 'image' | 'video' | 'document'
 /** onWhatsApp() dogrulama sonucu. Gonderim yalnizca 'valid' hedeflere gider. */
 export type WaCheckStatus = 'unknown' | 'valid' | 'invalid'
 
-export type ContactSource = 'manual' | 'csv' | 'xlsx' | 'scraper' | 'api' | 'quick_send' | 'maps'
+export type ContactSource = 'manual' | 'csv' | 'xlsx' | 'scraper' | 'api' | 'quick_send' | 'maps' | 'whatsapp'
 
 export type EventLevel = 'debug' | 'info' | 'warn' | 'error'
 
@@ -73,6 +74,7 @@ export type JobPayloadMap = {
   'account.disconnect': Record<string, never>
   'account.logout': Record<string, never>
   'account.request_pairing_code': { phone_e164: string }
+  'account.sync_contacts': { list_name?: string }
   'message.send': {
     phone_e164: string
     body?: string

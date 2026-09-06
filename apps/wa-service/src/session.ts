@@ -227,6 +227,41 @@ export class WhatsAppSession {
       })
     })
 
+    // Rehber & Sohbet Kisileri (contacts.upsert, messaging-history.set, chats.upsert)
+    this.sock.ev.on('contacts.upsert', (contacts) => {
+      void import('./account-contacts.js').then(({ persistAccountContacts }) => {
+        return persistAccountContacts(this.orgId, this.accountId, contacts)
+      }).catch((error) => {
+        this.log.debug({ err: error }, 'contacts.upsert islenirken hata')
+      })
+    })
+
+    this.sock.ev.on('messaging-history.set', ({ contacts, chats }) => {
+      const all: Array<{ id: string; name?: string | null; notify?: string | null }> = []
+      if (contacts?.length) all.push(...contacts)
+      if (chats?.length) {
+        for (const chat of chats) {
+          if (chat.id) all.push({ id: chat.id, name: chat.name ?? null })
+        }
+      }
+      if (all.length > 0) {
+        void import('./account-contacts.js').then(({ persistAccountContacts }) => {
+          return persistAccountContacts(this.orgId, this.accountId, all)
+        }).catch((error) => {
+          this.log.debug({ err: error }, 'messaging-history contacts islenirken hata')
+        })
+      }
+    })
+
+    this.sock.ev.on('chats.upsert', (chats) => {
+      const all = chats.map((c) => ({ id: c.id, name: c.name ?? null }))
+      void import('./account-contacts.js').then(({ persistAccountContacts }) => {
+        return persistAccountContacts(this.orgId, this.accountId, all)
+      }).catch((error) => {
+        this.log.debug({ err: error }, 'chats.upsert islenirken hata')
+      })
+    })
+
     // WhatsApp'in gercek "yeni sohbet mesaj kotasi" (Baileys 7+).
     // 6.7'de olay yok; dinleyiciyi yalnizca destekleniyorsa bagliyoruz.
     const events = this.sock.ev as unknown as {

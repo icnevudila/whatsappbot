@@ -1,5 +1,5 @@
 -- Filo wa-worker-kit schema bundle
--- Generated: 2026-09-06T10:39:59.493Z
+-- Generated: 2026-09-06T19:12:46.982Z
 -- Files: 18
 
 -- ========== 20260903183049_extensions_and_helpers.sql ==========

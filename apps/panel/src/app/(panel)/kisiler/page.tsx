@@ -200,11 +200,13 @@ export default async function ContactsPage({
 
 function SourceChip({ source }: { source: string | null }) {
   const meta =
-    source === 'scraper'
-      ? { label: 'web', className: 'border-accent/30 bg-accent-soft text-accent-dim' }
-      : source === 'maps'
-        ? { label: 'yerel', className: 'border-ok/30 bg-ok-soft text-ok-dim' }
-        : { label: 'csv', className: 'border-hairline bg-surface-raised text-ink-muted' }
+    source === 'whatsapp'
+      ? { label: 'WhatsApp', className: 'border-ok/30 bg-ok-soft text-ok' }
+      : source === 'scraper'
+        ? { label: 'web', className: 'border-accent/30 bg-accent-soft text-accent-dim' }
+        : source === 'maps'
+          ? { label: 'yerel', className: 'border-ok/30 bg-ok-soft text-ok-dim' }
+          : { label: 'csv', className: 'border-hairline bg-surface-raised text-ink-muted' }
 
   return (
     <span
