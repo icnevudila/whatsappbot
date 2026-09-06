@@ -9,6 +9,7 @@ export const landingTr = {
     ctaPrimary: '7 gün ücretsiz dene',
     ctaSecondary: 'Ürünü gör',
     trust: 'Kredi kartı gerekmez · Kurulum yok · İstediğiniz an biter',
+    caption: 'Canlı panel turu — özet, hatlar, gönderim',
   },
   proof: [
     { label: 'Hat başına günlük tavan', detail: 'Platform kotasına uygun gönderim' },

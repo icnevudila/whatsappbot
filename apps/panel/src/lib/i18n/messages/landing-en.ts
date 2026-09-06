@@ -9,6 +9,7 @@ export const landingEn = {
     ctaPrimary: 'Try free for 7 days',
     ctaSecondary: 'See the product',
     trust: 'No credit card · No setup fee · Cancel anytime',
+    caption: 'Live panel tour — summary, lines, sending',
   },
   proof: [
     { label: 'Daily cap per line', detail: 'Sending aligned with platform quotas' },

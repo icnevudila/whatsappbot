@@ -3,31 +3,31 @@
 import { LandingVideo } from './landing/landing-video'
 
 /**
- * Hero sağ sütun: kenara yapışık, yüksekliği dolduran video düzlemi.
+ * Dişçi hero ile aynı dil: yuvarlatılmış browser chrome + sabit 16:10 video.
+ * Transform animasyonu yok (iOS’ta video bozulmasın).
  */
-export function HeroPanel() {
+export function HeroPanel({ caption }: { caption: string }) {
   return (
-    <div className="filo-fade-in relative h-full min-h-[300px] w-full border-t border-white/10 md:min-h-full md:border-l md:border-t-0">
-      <div className="absolute inset-0 overflow-hidden bg-[#07090f]">
-        <div
-          className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center gap-1.5 bg-gradient-to-b from-black/55 to-transparent px-3 pb-8 pt-3"
-          aria-hidden
-        >
+    <div className="mx-auto w-full max-w-xl lg:max-w-none">
+      <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-[#0a0c14] p-1.5 shadow-[0_28px_56px_-18px_rgba(0,0,0,0.55)] sm:p-2">
+        <div className="mb-1.5 flex items-center gap-1.5 px-1" aria-hidden>
           <span className="size-2.5 rounded-full bg-[#ff5f57]" />
           <span className="size-2.5 rounded-full bg-[#febc2e]" />
           <span className="size-2.5 rounded-full bg-[#28c840]" />
-          <span className="ml-2 h-5 min-w-0 flex-1 rounded-md bg-white/10 px-2 font-mono text-[10px] leading-5 text-white/50">
+          <span className="ml-2 h-5 min-w-0 flex-1 rounded-md bg-white/10 px-2 font-mono text-[10px] leading-5 text-white/45">
             app.filo.dev
           </span>
         </div>
-
-        <LandingVideo
-          src="/landing/demo.mp4"
-          poster="/landing/ozet.png"
-          label="Filo panel demo videosu"
-          className="object-cover object-top"
-        />
+        <div className="relative aspect-[16/10] w-full overflow-hidden rounded-[10px] bg-canvas ring-1 ring-black/5">
+          <LandingVideo
+            src="/landing/demo.mp4"
+            poster="/landing/ozet.png"
+            label={caption}
+            className="object-cover object-top"
+          />
+        </div>
       </div>
+      <p className="mt-3 text-center text-[12.5px] font-medium text-white/55">{caption}</p>
     </div>
   )
 }

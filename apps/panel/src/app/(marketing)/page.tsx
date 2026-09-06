@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { PLAN_QUOTAS, type PlanId } from '@wa/shared'
-import { BRAND_NAME, LogoMark } from '@/components/brand'
 import { getDictionary } from '@/lib/i18n/server'
 import { CapacityCalculator } from './capacity-calculator'
 import { HeroPanel } from './hero-panel'
@@ -46,43 +45,40 @@ export default async function Landing() {
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_20%_0%,rgba(47,91,255,0.22),transparent_55%)]"
         />
 
-        <div className="relative mx-auto grid min-h-[calc(100dvh-64px)] max-w-6xl md:min-h-[720px] md:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)] md:items-stretch">
-          <div className="flex flex-col justify-center px-5 py-14 md:py-20 md:pr-8">
-            <div className="filo-fade-up inline-flex items-center gap-3">
-              <LogoMark className="size-9 text-white md:size-11" />
-              <span className="text-[36px] font-semibold tracking-[-0.04em] md:text-[48px]">
-                {BRAND_NAME}
-              </span>
+        <div className="relative mx-auto max-w-6xl px-5 pb-12 pt-10 sm:pb-14 sm:pt-12 md:pb-16 md:pt-14 lg:pb-20 lg:pt-16">
+          <div className="grid grid-cols-1 items-center gap-8 md:gap-10 lg:grid-cols-12 lg:gap-12">
+            <div className="z-10 flex flex-col items-center space-y-5 text-center lg:col-span-5 lg:items-start lg:space-y-6 lg:text-left">
+              <h1 className="filo-fade-up max-w-lg text-[28px] font-semibold leading-[1.12] tracking-[-0.03em] text-white sm:text-[32px] lg:text-[36px]">
+                <span className="block">{L.hero.titleBefore}</span>
+                <span className="mt-1 block text-[#9db8f5]">{L.hero.titleAccent}</span>
+              </h1>
+
+              <p className="filo-fade-up-delay max-w-md text-[15px] leading-relaxed text-white/75">
+                {L.hero.lead}
+              </p>
+
+              <div className="filo-fade-up-delay-2 flex w-full max-w-md flex-col gap-2.5 sm:max-w-none sm:flex-row sm:justify-center lg:justify-start">
+                <Link
+                  href="/giris?mod=kayit"
+                  className="inline-flex h-11 w-full items-center justify-center rounded-[var(--radius-sm)] bg-accent px-5 text-[13px] font-medium text-accent-ink transition-colors hover:bg-accent-dim sm:w-auto"
+                >
+                  {L.hero.ctaPrimary}
+                </Link>
+                <a
+                  href="#urun"
+                  className="inline-flex h-11 w-full items-center justify-center rounded-[var(--radius-sm)] border border-white/20 bg-white/5 px-5 text-[13px] font-medium text-white transition-colors hover:bg-white/10 sm:w-auto"
+                >
+                  {L.hero.ctaSecondary}
+                </a>
+              </div>
+
+              <p className="filo-fade-up-delay-2 text-[11.5px] text-white/45">{L.hero.trust}</p>
             </div>
 
-            <h1 className="filo-fade-up-delay mt-6 max-w-md text-[26px] font-semibold leading-[1.15] tracking-[-0.03em] text-white md:text-[34px]">
-              {L.hero.titleBefore}{' '}
-              <span className="text-[#9db8f5]">{L.hero.titleAccent}</span>
-            </h1>
-
-            <p className="filo-fade-up-delay mt-4 max-w-md text-[15px] leading-relaxed text-white/75">
-              {L.hero.lead}
-            </p>
-
-            <div className="filo-fade-up-delay-2 mt-7 flex flex-wrap items-center gap-2.5">
-              <Link
-                href="/giris?mod=kayit"
-                className="inline-flex h-11 items-center rounded-[var(--radius-sm)] bg-accent px-4 text-[13px] font-medium text-accent-ink transition-colors hover:bg-accent-dim"
-              >
-                {L.hero.ctaPrimary}
-              </Link>
-              <a
-                href="#urun"
-                className="inline-flex h-11 items-center rounded-[var(--radius-sm)] border border-white/20 bg-white/5 px-4 text-[13px] font-medium text-white transition-colors hover:bg-white/10"
-              >
-                {L.hero.ctaSecondary}
-              </a>
+            <div className="min-w-0 lg:col-span-7">
+              <HeroPanel caption={L.hero.caption} />
             </div>
-
-            <p className="filo-fade-up-delay-2 mt-3 text-[11.5px] text-white/45">{L.hero.trust}</p>
           </div>
-
-          <HeroPanel />
         </div>
       </section>
 
