@@ -1,53 +1,30 @@
+'use client'
+
 import Image from 'next/image'
+import { useLocale } from '@/lib/i18n/provider'
 import { ScrollReveal } from './scroll-reveal'
 
-const STEPS = [
-  {
-    time: '09:00',
-    title: 'Hatları kontrol edin',
-    body: 'Bağlı hatlar, günlük kota ve ısınma tavanı özetten görünür. QR bekleyen hat varsa Hesaplar’dan bağlanır.',
-    image: '/landing/ozet.png',
-  },
-  {
-    time: '10:30',
-    title: 'Listeyi doğrulayın',
-    body: 'Kampanya listesindeki numaralar kayıtlı mı diye işaretlenir. Kayıtsızlar otomatik elenir.',
-    image: '/landing/kisiler.png',
-  },
-  {
-    time: '11:15',
-    title: 'Kampanyayı başlatın',
-    body: 'Mesaj, görsel ve hatları seçin. Gönderim sunucuda yürür; panel kapalı olsa da devam eder.',
-    image: '/landing/hizli-gonderim.png',
-  },
-  {
-    time: '14:00',
-    title: 'Yanıtları yönetin',
-    body: 'Gelen cevapları okuyun. Kara listeye alınan numaraya bir daha mesaj gitmez.',
-    image: '/landing/gelenler.png',
-  },
-  {
-    time: '17:30',
-    title: 'Teslim ve okundu bakın',
-    body: 'Gidenler ve Raporlar’da gönderildi → teslim → okundu hunisi. Ertesi gün için kota netleşir.',
-    image: '/landing/gidenler.png',
-  },
+const STEP_IMAGES = [
+  '/landing/ozet.png',
+  '/landing/kisiler.png',
+  '/landing/hizli-gonderim.png',
+  '/landing/gelenler.png',
+  '/landing/gidenler.png',
 ] as const
 
 export function DayInOps() {
+  const { messages } = useLocale()
+  const L = messages.landing.day
+
   return (
     <section id="gun" className="scroll-mt-16 border-b border-hairline bg-surface">
       <div className="mx-auto max-w-6xl px-5 py-[clamp(4.5rem,10vw,7.5rem)]">
         <ScrollReveal className="mx-auto mb-12 max-w-2xl text-center">
           <p className="mb-2 font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-ink-faint">
-            Bir gün
+            {L.kicker}
           </p>
-          <h2 className="text-[24px] font-semibold tracking-[-0.02em]">
-            Operasyon günü nasıl akar?
-          </h2>
-          <p className="mt-3 text-[14px] leading-relaxed text-ink-muted">
-            Sabah kontrolden akşam rapora kadar kampanya döngüsü tek panelde.
-          </p>
+          <h2 className="text-[24px] font-semibold tracking-[-0.02em]">{L.title}</h2>
+          <p className="mt-3 text-[14px] leading-relaxed text-ink-muted">{L.lead}</p>
         </ScrollReveal>
 
         <div className="relative mx-auto max-w-5xl">
@@ -56,7 +33,7 @@ export function DayInOps() {
             className="absolute bottom-0 left-[19px] top-0 w-px bg-hairline-strong md:left-1/2 md:-translate-x-1/2"
           />
           <div className="space-y-10 md:space-y-14">
-            {STEPS.map((step, index) => {
+            {L.steps.map((step, index) => {
               const flip = index % 2 === 1
               return (
                 <div
@@ -77,7 +54,7 @@ export function DayInOps() {
                         <p className="mt-2 text-[12.5px] leading-relaxed text-ink-muted">{step.body}</p>
                         <div className="relative mt-4 aspect-[16/10] overflow-hidden rounded-[10px] border border-hairline bg-surface">
                           <Image
-                            src={step.image}
+                            src={STEP_IMAGES[index]!}
                             alt={step.title}
                             fill
                             className="object-cover object-top"

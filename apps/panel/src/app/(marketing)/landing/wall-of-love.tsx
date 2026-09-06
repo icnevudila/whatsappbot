@@ -1,48 +1,22 @@
+'use client'
+
+import { useLocale } from '@/lib/i18n/provider'
 import { ScrollReveal } from './scroll-reveal'
 
-const QUOTES = [
-  {
-    quote:
-      'Üç hattı bağladık, kampanya arka planda yürüdü. Panel kapalıyken de gönderim sürdü; önceki araçta bu yoktu.',
-    name: 'Ege',
-    role: 'Operasyon · perakende',
-  },
-  {
-    quote:
-      'Numara doğrulama sayesinde kayıtsızlara basmayı bıraktık. Şikayet oranı düştü, kota daha uzun dayandı.',
-    name: 'Selin',
-    role: 'Pazarlama · hizmet',
-  },
-  {
-    quote:
-      'Çıkanları kara listeye almak tek tık. Yanıt kaçırmıyoruz, aynı numaraya tekrar yazmıyoruz.',
-    name: 'Murat',
-    role: 'Satış · B2B',
-  },
-  {
-    quote:
-      'Isındırma tavanı panoda yazılı; spekülasyon yok. Yeni hat ilk hafta yavaş, sonra normale çıkıyor.',
-    name: 'Deniz',
-    role: 'Kurucu · ajans',
-  },
-] as const
-
 export function WallOfLove() {
-  const loop = [...QUOTES, ...QUOTES]
+  const { messages } = useLocale()
+  const L = messages.landing.wall
+  const loop = [...L.quotes, ...L.quotes]
 
   return (
     <section id="yorumlar" className="scroll-mt-16 overflow-hidden border-b border-hairline bg-canvas">
       <div className="mx-auto max-w-6xl px-5 py-[clamp(4rem,9vw,6.5rem)]">
         <ScrollReveal className="mx-auto mb-10 max-w-2xl text-center">
           <p className="mb-2 font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-ink-faint">
-            Operatörler
+            {L.kicker}
           </p>
-          <h2 className="text-[24px] font-semibold tracking-[-0.02em]">
-            Hattı koruyarak gönderenler
-          </h2>
-          <p className="mt-3 text-[14px] text-ink-muted">
-            Demo alıntılar. Gerçek müşteri hikâyeleri geldikçe buraya eklenir.
-          </p>
+          <h2 className="text-[24px] font-semibold tracking-[-0.02em]">{L.title}</h2>
+          <p className="mt-3 text-[14px] text-ink-muted">{L.lead}</p>
         </ScrollReveal>
 
         <div className="landing-marquee relative">

@@ -1,3 +1,5 @@
+import { landingTr } from './landing-tr'
+
 export const tr = {
   common: {
     save: 'Kaydet',
@@ -79,6 +81,7 @@ export const tr = {
     disclaimer:
       'WhatsApp, Meta Platforms Inc. markasıdır; bu ürün Meta ile bağlantılı değildir.',
   },
+  landing: landingTr,
   setup: {
     kicker: 'Zorunlu kurulum',
     stepOf: 'Adım {current} / {total}',

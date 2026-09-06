@@ -1,8 +1,11 @@
 import Link from 'next/link'
-import { BRAND_NAME } from '@/components/brand'
+import { getDictionary } from '@/lib/i18n/server'
 import { ScrollReveal } from './scroll-reveal'
 
-export function FinalCta() {
+export async function FinalCta() {
+  const { messages } = await getDictionary()
+  const L = messages.landing.final
+
   return (
     <section
       data-landing-conversion-zone
@@ -14,30 +17,26 @@ export function FinalCta() {
       />
       <div className="relative z-10 mx-auto max-w-3xl px-5 text-center">
         <ScrollReveal>
-          <h2 className="text-[28px] font-semibold tracking-[-0.03em] sm:text-[34px]">
-            İlk hattınızı beş dakikada bağlayın
-          </h2>
-          <p className="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-white/75">
-            {BRAND_NAME} denemesi tam özellikli. Kredi kartı istemiyoruz, otomatik yenileme yok.
-          </p>
+          <h2 className="text-[28px] font-semibold tracking-[-0.03em] sm:text-[34px]">{L.title}</h2>
+          <p className="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-white/75">{L.lead}</p>
           <div className="mt-8 flex flex-col items-center justify-center gap-2.5 sm:flex-row">
             <Link
               href="/giris?mod=kayit"
               className="inline-flex h-11 items-center rounded-[var(--radius-sm)] bg-accent px-5 text-[13px] font-medium text-accent-ink transition-colors hover:bg-accent-dim"
             >
-              7 gün ücretsiz dene
+              {L.ctaPrimary}
             </Link>
             <a
               href="#urun"
               className="inline-flex h-11 items-center rounded-[var(--radius-sm)] border border-white/20 bg-white/5 px-5 text-[13px] font-medium text-white transition-colors hover:bg-white/10"
             >
-              Ürünü gör
+              {L.ctaSecondary}
             </a>
           </div>
           <p className="mt-5 text-[12px] text-white/45">
-            Hesabın var mı?{' '}
+            {L.hasAccount}{' '}
             <Link href="/giris" className="text-white/80 underline-offset-2 hover:underline">
-              Giriş yap
+              {L.signIn}
             </Link>
           </p>
         </ScrollReveal>

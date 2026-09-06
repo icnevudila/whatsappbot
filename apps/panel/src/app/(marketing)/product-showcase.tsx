@@ -2,60 +2,35 @@
 
 import Image from 'next/image'
 import { useState } from 'react'
+import { useLocale } from '@/lib/i18n/provider'
 import { ProductFrame } from './product-frame'
 
-const TABS = [
-  {
-    id: 'kampanyalar',
-    label: 'Kampanyalar',
-    lead: 'Listeyi ve hatları seçin, mesajı yazın. Gönderim arka planda sürer.',
-    src: '/landing/raporlar.png',
-    alt: 'Filo raporlar ve kampanya özeti ekranı',
-    caption: 'Raporlar · kampanya performansı',
-  },
-  {
-    id: 'hesaplar',
-    label: 'Hesaplar',
-    lead: 'Birden fazla hattı QR ile bağlayın, kotayı canlı görün.',
-    src: '/landing/hesaplar.png',
-    alt: 'Filo hesaplar ekranı — demo hatlar',
-    caption: 'Hesaplar · çoklu hat',
-  },
-  {
-    id: 'ozet',
-    label: 'Özet',
-    lead: 'Günün operasyon görünümü: hatlar, defter, trafik ve kısayollar.',
-    src: '/landing/ozet.png',
-    alt: 'Filo özet paneli',
-    caption: 'Özet · workbench',
-  },
+const TAB_SRC = ['/landing/raporlar.png', '/landing/hesaplar.png', '/landing/ozet.png'] as const
+const CARD_SRC = [
+  '/landing/hizli-gonderim.png',
+  '/landing/kisiler.png',
+  '/landing/durum.png',
 ] as const
 
-/**
- * Dişçi landing FeaturesShowcase kalıbı + sanitize edilmiş panel screenshot’ları.
- * Demo video hero’da (ilk viewport).
- */
 export function ProductShowcase() {
+  const { messages } = useLocale()
+  const L = messages.landing.showcase
   const [active, setActive] = useState(0)
-  const tab = TABS[active]!
+  const tab = L.tabs[active]!
 
   return (
     <section id="urun" className="scroll-mt-16 border-b border-hairline bg-canvas">
       <div className="mx-auto max-w-6xl px-5 py-[clamp(4.5rem,10vw,7.5rem)]">
         <div className="mb-8 max-w-2xl">
           <p className="mb-2 font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-ink-faint">
-            Ürün
+            {L.kicker}
           </p>
-          <h2 className="text-[24px] font-semibold tracking-[-0.02em]">
-            Panelin içinden kampanya akışı
-          </h2>
-          <p className="mt-3 max-w-[40rem] text-[14px] leading-relaxed text-ink-muted">
-            Gerçek arayüz görüntüleri. Numaralar ve sohbetler demo kampanya verisiyle değiştirildi.
-          </p>
+          <h2 className="text-[24px] font-semibold tracking-[-0.02em]">{L.title}</h2>
+          <p className="mt-3 max-w-[40rem] text-[14px] leading-relaxed text-ink-muted">{L.lead}</p>
         </div>
 
         <div className="flex flex-wrap gap-1.5">
-          {TABS.map((item, index) => {
+          {L.tabs.map((item, index) => {
             const on = index === active
             return (
               <button
@@ -80,7 +55,7 @@ export function ProductShowcase() {
           <ProductFrame caption={tab.caption}>
             <div className="relative aspect-[16/10] w-full overflow-hidden bg-canvas">
               <Image
-                src={tab.src}
+                src={TAB_SRC[active]!}
                 alt={tab.alt}
                 fill
                 className="object-cover object-top"
@@ -92,19 +67,15 @@ export function ProductShowcase() {
         </div>
 
         <div className="mt-8 grid gap-3 sm:grid-cols-3">
-          {[
-            { src: '/landing/hizli-gonderim.png', label: 'Hızlı gönderim' },
-            { src: '/landing/kisiler.png', label: 'Kişiler' },
-            { src: '/landing/durum.png', label: 'Durum' },
-          ].map((card) => (
+          {L.cards.map((card, index) => (
             <div
-              key={card.src}
+              key={card.label}
               className="overflow-hidden rounded-[12px] border border-hairline bg-surface shadow-[var(--shadow-card)]"
             >
               <div className="relative aspect-[16/11]">
                 <Image
-                  src={card.src}
-                  alt={`Filo ${card.label}`}
+                  src={CARD_SRC[index]!}
+                  alt={card.label}
                   fill
                   className="object-cover object-top"
                   sizes="(max-width: 640px) 100vw, 320px"

@@ -2,10 +2,12 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { useLocale } from '@/lib/i18n/provider'
 
 const SHOW_AT = 380
 
 export function StickyCta() {
+  const { messages } = useLocale()
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
@@ -47,7 +49,7 @@ export function StickyCta() {
         href="/giris?mod=kayit"
         className="flex h-11 w-full items-center justify-center rounded-[var(--radius-sm)] bg-accent text-[13px] font-medium text-accent-ink"
       >
-        7 gün ücretsiz dene
+        {messages.landing.stickyCta}
       </Link>
     </div>
   )

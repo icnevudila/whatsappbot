@@ -1,4 +1,5 @@
 import type { tr } from './tr'
+import { landingEn } from './landing-en'
 
 export const en: typeof tr = {
   common: {
@@ -81,6 +82,7 @@ export const en: typeof tr = {
     disclaimer:
       'WhatsApp is a trademark of Meta Platforms Inc.; this product is not affiliated with Meta.',
   },
+  landing: landingEn,
   setup: {
     kicker: 'Required setup',
     stepOf: 'Step {current} / {total}',
