@@ -58,7 +58,7 @@ export function Notice({
   tone = 'danger',
   children,
 }: {
-  tone?: 'danger' | 'ok'
+  tone?: 'danger' | 'ok' | 'accent' | 'warning'
   children: ReactNode
 }) {
   return (
@@ -67,10 +67,15 @@ export function Notice({
         'rounded-md border px-3 py-2 text-[12.5px]',
         tone === 'danger'
           ? 'border-danger/30 bg-danger/5 text-danger'
-          : 'border-ok/30 bg-ok-soft text-ok-dim',
+          : tone === 'ok'
+            ? 'border-ok/30 bg-ok-soft text-ok-dim'
+            : tone === 'accent'
+              ? 'border-accent/30 bg-accent/5 text-accent'
+              : 'border-hairline bg-surface-raised text-ink-muted',
       )}
     >
       {children}
     </p>
   )
 }
+

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no"
+    />
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#f3f5f9" />
+    <title>Filo</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #f3f5f9;
+        color: #161925;
+        font: 14.5px/1.55 system-ui, sans-serif;
+        display: grid;
+        place-items: center;
+      }
+      .boot {
+        opacity: 0.55;
+        letter-spacing: -0.02em;
+      }
+    </style>
+  </head>
+  <body>
+    <!--
+      Capacitor server.url loads the live panel; this file is only a cold-boot fallback
+      if server.url is unset. Keep it minimal so it never becomes a second “app UI”.
+    -->
+    <p class="boot">Filo açılıyor…</p>
+    <script>
+      // Safety: if somehow served without server.url, bounce to panel.
+      if (!window.Capacitor || !window.Capacitor.isNativePlatform?.()) {
+        location.replace('https://whatsappbot-ten-omega.vercel.app')
+      }
+    </script>
+  </body>
+</html>

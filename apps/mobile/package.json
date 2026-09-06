@@ -1,0 +1,25 @@
+{
+  "name": "@wa/mobile",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Filo Android shell — Capacitor WebView over the live panel (same UI as mobile web).",
+  "scripts": {
+    "cap:sync": "npx cap sync android",
+    "cap:open": "npx cap open android",
+    "android:sync": "npx cap sync android",
+    "build:apk": "cd android && .\\gradlew.bat assembleDebug",
+    "build:apk:release": "cd android && .\\gradlew.bat assembleRelease"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.4.3",
+    "@capacitor/app": "^7.1.0",
+    "@capacitor/core": "^7.4.3",
+    "@capacitor/push-notifications": "^7.0.3",
+    "@capacitor/splash-screen": "^7.0.3",
+    "@capacitor/status-bar": "^7.0.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.4.3",
+    "typescript": "^5.9.2"
+  }
+}

@@ -1,6 +1,7 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { JetBrains_Mono, Outfit } from 'next/font/google'
 import { BRAND_NAME, BRAND_TAGLINE } from '@/components/brand'
+import { NativeShell } from '@/components/native-shell'
 import { LocaleProvider } from '@/lib/i18n/provider'
 import { getDictionary } from '@/lib/i18n/server'
 import './globals.css'
@@ -32,6 +33,26 @@ export const metadata: Metadata = {
     type: 'website',
     siteName: BRAND_NAME,
   },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: BRAND_NAME,
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  other: {
+    'mobile-web-app-capable': 'yes',
+  },
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+  themeColor: '#f3f5f9',
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -41,6 +62,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang={locale}>
       <body className={`${outfit.variable} ${jetbrains.variable} font-sans antialiased`}>
         <LocaleProvider locale={locale} messages={messages}>
+          <NativeShell />
           {children}
         </LocaleProvider>
       </body>

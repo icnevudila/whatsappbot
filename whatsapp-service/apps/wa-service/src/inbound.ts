@@ -4,6 +4,7 @@ import { query } from './db.js'
 import { logger } from './logger.js'
 import { emitOrgWebhook } from './org-hooks.js'
 import { isOptOutMessage } from './opt-out.js'
+import { dispatchPush } from './push-dispatch.js'
 
 function extractBody(message: WAMessage): { type: string; body: string | null } {
   const content = message.message
@@ -139,5 +140,14 @@ export async function persistInboundMessage(options: {
     message_type: type,
     body: body?.slice(0, 500) ?? null,
     wa_message_id: waMessageId,
+  })
+
+  const preview = (body ?? `(${type})`).slice(0, 120)
+  const who = pushName || phone || 'Yeni mesaj'
+  void dispatchPush({
+    orgId,
+    title: who,
+    body: preview,
+    path: phone ? `/mesajlar?tel=${encodeURIComponent(phone)}` : '/mesajlar',
   })
 }

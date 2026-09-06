@@ -68,6 +68,25 @@ body {
   font-size: 14.5px;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Capacitor: StatusBar overlaysWebView=false → WebView zaten status bar altında.
+   Safe-area yalnızca notch / home indicator için; üstte çift boşluk olmasın. */
+html.filo-native body {
+  padding-top: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+@media (max-width: 1023px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important; /* Android/iOS focus zoom engeli */
+  }
 }
 
 .tabular {

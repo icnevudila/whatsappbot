@@ -1,0 +1,14 @@
+# Capacitor / Android local
+android/.gradle/
+android/**/build/
+android/local.properties
+android/app/google-services.json
+*.keystore
+*.jks
+.idea/
+
+.secrets/
+google-services.json
+local.properties
+dist/
+

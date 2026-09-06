@@ -14,6 +14,7 @@ import { getSetupProgress, isOnboardingAllowedPath } from '@/lib/setup-progress'
 import { signOut } from '@/app/giris/actions'
 import { Nav } from './nav'
 import { OrgSwitcher } from './org-switcher'
+import { PushRegistrar } from '@/components/push-registrar'
 
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
@@ -50,6 +51,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
 
   return (
     <FeedbackProviders>
+      <PushRegistrar enabled />
       <MessageLiveToast orgId={org.id} />
       <div className="flex min-h-dvh bg-canvas">
         <Suspense fallback={null}>

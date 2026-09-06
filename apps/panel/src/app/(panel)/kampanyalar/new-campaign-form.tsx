@@ -84,10 +84,15 @@ export function NewCampaignForm({
   const [startMode, setStartMode] = useState<'draft' | 'now' | 'schedule'>('draft')
   const [scheduledAt, setScheduledAt] = useState('')
   const [stepHint, setStepHint] = useState<string | null>(null)
+  /** Sunucu hatası — adım değişince temizlenir (Enter ile erken submit kalıntısı vb.). */
+  const [formError, setFormError] = useState<string | null>(null)
 
   useSyncBusy(pending, 'Kampanya kaydediliyor…', 'Liste ve hatlar bağlanıyor')
   useEffect(() => {
-    if (state?.error) toast(state.error, 'danger')
+    if (state?.error) {
+      setFormError(state.error)
+      toast(state.error, 'danger')
+    }
   }, [state?.error, toast])
 
   useEffect(() => {
@@ -213,11 +218,13 @@ export function NewCampaignForm({
       return
     }
     setStepHint(null)
+    setFormError(null)
     setStep((s) => Math.min(4, s + 1))
   }
 
   const goBack = () => {
     setStepHint(null)
+    setFormError(null)
     setStep((s) => Math.max(1, s - 1))
   }
 
@@ -249,6 +256,7 @@ export function NewCampaignForm({
                     onClick={() => {
                       if (item.id < step) {
                         setStepHint(null)
+                        setFormError(null)
                         setStep(item.id)
                       }
                     }}
@@ -269,7 +277,17 @@ export function NewCampaignForm({
           </ol>
         </nav>
 
-        <form action={formAction} className="flex flex-col">
+        <form
+          action={formAction}
+          className="flex flex-col"
+          onSubmit={(event) => {
+            // Mobil klavye Enter/Go ve tek input’lu form: adım 4’ten önce submit etme.
+            if (step < 4) {
+              event.preventDefault()
+              goNext()
+            }
+          }}
+        >
           <input type="hidden" name="media_url" value={mediaUrl} />
           <input type="hidden" name="message_type" value={messageType} />
           {selectedLists.map((id) => (
@@ -290,9 +308,18 @@ export function NewCampaignForm({
                     ref={nameInputRef}
                     name="name"
                     value={name}
-                    onChange={(event) => setName(event.target.value)}
+                    onChange={(event) => {
+                      setName(event.target.value)
+                      setFormError(null)
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key !== 'Enter') return
+                      event.preventDefault()
+                      goNext()
+                    }}
                     placeholder="Ocak indirimi duyurusu"
                     required
+                    autoComplete="off"
                   />
                 </Field>
               </div>
@@ -648,7 +675,7 @@ export function NewCampaignForm({
           </div>
 
           <div className="sticky bottom-0 z-[1] space-y-2.5 border-t border-hairline bg-surface/95 px-4 py-3 backdrop-blur-sm">
-            {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
+            {formError ? <Notice tone="danger">{formError}</Notice> : null}
             {stepHint ? <Notice tone="warn">{stepHint}</Notice> : null}
 
             <div className="flex flex-wrap gap-2">

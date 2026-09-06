@@ -662,6 +662,14 @@ async function completeIfDone(campaignId: string): Promise<boolean> {
       campaign_id: campaignId,
       name: camp.name,
     })
+    void import('./push-dispatch.js').then(({ dispatchPush }) =>
+      dispatchPush({
+        orgId: camp.org_id,
+        title: 'Kampanya bitti',
+        body: camp.name,
+        path: `/kampanyalar/${campaignId}`,
+      }),
+    )
   }
   return true
 }
