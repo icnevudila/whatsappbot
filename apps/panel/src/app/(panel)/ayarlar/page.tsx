@@ -14,7 +14,7 @@ import {
 } from '@/components/ui'
 import { activeImageProviders } from '@/lib/ai/image'
 import { activeTextProviders } from '@/lib/ai/text'
-import { loadOrgAiKeys, rowToBag, rowToMasks } from '@/lib/ai/org-keys'
+import { loadOrgAiKeys, rowToBag, rowToMasks, rowToModelPrefs } from '@/lib/ai/org-keys'
 import { capToday } from '@/lib/capacity'
 import { createT } from '@/lib/i18n'
 import { getDictionary } from '@/lib/i18n/server'
@@ -125,6 +125,7 @@ export default async function SettingsPage({
 
   const aiBag = rowToBag(aiKeyRow)
   const aiMasks = rowToMasks(aiKeyRow)
+  const aiPrefs = rowToModelPrefs(aiKeyRow)
 
   const t = createT(messages)
   const plan = org.plan
@@ -383,7 +384,7 @@ export default async function SettingsPage({
             </div>
           </Card>
 
-          <AiProvidersCard canEdit={canManage} bag={aiBag} masks={aiMasks} />
+          <AiProvidersCard canEdit={canManage} bag={aiBag} masks={aiMasks} prefs={aiPrefs} />
 
           <Card>
             <CardHeader
@@ -428,10 +429,12 @@ function AiProvidersCard({
   canEdit,
   bag,
   masks,
+  prefs,
 }: {
   canEdit: boolean
   bag: ReturnType<typeof rowToBag>
   masks: ReturnType<typeof rowToMasks>
+  prefs: ReturnType<typeof rowToModelPrefs>
 }) {
   const image = activeImageProviders(bag)
   const text = activeTextProviders(bag)
@@ -458,11 +461,11 @@ function AiProvidersCard({
 
         <p className="border-t border-hairline pt-2.5 text-[11.5px] leading-relaxed text-ink-faint">
           Sağdaki isimler deneme sırasına göredir: ilki cevap vermezse sonraki
-          devreye girer.
+          devreye girer. Model seçiminde görsel başına yaklaşık maliyet yazar.
         </p>
       </div>
 
-      <AiKeysForm canEdit={canEdit} masks={masks} />
+      <AiKeysForm canEdit={canEdit} masks={masks} prefs={prefs} />
     </Card>
   )
 }

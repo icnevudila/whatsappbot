@@ -334,6 +334,121 @@ export function FilterChip({
   )
 }
 
+/** Sayfa numaraları: ‹ 1 2 3 … 8 › — Link veya onClick. */
+export function Pagination({
+  page,
+  totalPages,
+  hrefForPage,
+  onPageChange,
+  className,
+  label,
+}: {
+  page: number
+  totalPages: number
+  hrefForPage?: (page: number) => string
+  onPageChange?: (page: number) => void
+  className?: string
+  /** Erişilebilirlik / alt bilgi — örn. "240 kayıt" */
+  label?: string
+}) {
+  if (totalPages <= 1) return null
+
+  const items = (() => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1 as number | null)
+    const set = new Set<number>([1, totalPages])
+    for (let p = page - 1; p <= page + 1; p += 1) {
+      if (p >= 1 && p <= totalPages) set.add(p)
+    }
+    const sorted = [...set].sort((a, b) => a - b)
+    const out: (number | null)[] = []
+    for (let i = 0; i < sorted.length; i += 1) {
+      const n = sorted[i]!
+      if (i > 0 && n - sorted[i - 1]! > 1) out.push(null)
+      out.push(n)
+    }
+    return out
+  })()
+
+  const go = (next: number) => {
+    if (next < 1 || next > totalPages || next === page) return
+    onPageChange?.(next)
+  }
+
+  const cell = (next: number, content: ReactNode, active?: boolean) => {
+    const classNameCell = cx(
+      'inline-flex h-8 min-w-8 items-center justify-center rounded-[var(--radius-sm)] border px-2 text-[12.5px] font-semibold tabular transition-colors',
+      active
+        ? 'border-accent bg-accent text-accent-ink'
+        : 'border-hairline bg-surface text-ink-muted hover:border-ink-faint hover:text-ink',
+    )
+
+    if (hrefForPage) {
+      return (
+        <Link
+          href={hrefForPage(next)}
+          aria-current={active ? 'page' : undefined}
+          className={classNameCell}
+          scroll={false}
+        >
+          {content}
+        </Link>
+      )
+    }
+
+    return (
+      <button
+        type="button"
+        aria-current={active ? 'page' : undefined}
+        disabled={active}
+        onClick={() => go(next)}
+        className={classNameCell}
+      >
+        {content}
+      </button>
+    )
+  }
+
+  return (
+    <nav
+      aria-label="Sayfalama"
+      className={cx(
+        'flex flex-wrap items-center justify-between gap-2 border-t border-hairline px-3 py-2',
+        className,
+      )}
+    >
+      {label ? <p className="text-[11.5px] text-ink-faint">{label}</p> : <span />}
+      <div className="flex flex-wrap items-center gap-1">
+        {page > 1
+          ? cell(page - 1, '‹')
+          : (
+              <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-[var(--radius-sm)] border border-hairline px-2 text-[12.5px] text-ink-faint opacity-40">
+                ‹
+              </span>
+            )}
+        {items.map((item, index) =>
+          item === null ? (
+            <span
+              key={`gap-${index}`}
+              className="inline-flex h-8 min-w-6 items-center justify-center text-[12px] text-ink-faint"
+            >
+              …
+            </span>
+          ) : (
+            <span key={item}>{cell(item, item, item === page)}</span>
+          ),
+        )}
+        {page < totalPages
+          ? cell(page + 1, '›')
+          : (
+              <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-[var(--radius-sm)] border border-hairline px-2 text-[12.5px] text-ink-faint opacity-40">
+                ›
+              </span>
+            )}
+      </div>
+    </nav>
+  )
+}
+
 export function Notice({
   tone = 'warn',
   children,

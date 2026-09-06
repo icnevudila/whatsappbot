@@ -1,10 +1,18 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { AccentLink, Card, CardHeader, EmptyState, Meter, PageHeader, QuietLink, Stat } from '@/components/ui'
+import { AccentLink, Card, CardHeader, EmptyState, Meter, PageHeader, Pagination, QuietLink, Stat } from '@/components/ui'
 import { redirect } from 'next/navigation'
 import { createT } from '@/lib/i18n'
 import { getDictionary } from '@/lib/i18n/server'
 import { requireActiveOrg } from '@/lib/org'
+import {
+  PAGE_SIZES,
+  buildPageHref,
+  clampPage,
+  parsePage,
+  rangeForPage,
+  totalPages,
+} from '@/lib/pagination'
 import { DiscoverForm } from './discover-form'
 import { ImportForm } from './import-form'
 import { ListActions } from './list-actions'
@@ -17,7 +25,11 @@ export const dynamic = 'force-dynamic'
 /** Web tarayıcı sunucu aksiyonu için Vercel süre limiti */
 export const maxDuration = 60
 
-export default async function ContactsPage() {
+export default async function ContactsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ sayfa?: string | string[] }>
+}) {
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
   let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
   try {
@@ -29,29 +41,46 @@ export default async function ContactsPage() {
     redirect('/giris')
   }
 
-  const [listsResult, totalResult, validResult, invalidResult, { messages }] = await Promise.all([
-    supabase
-      .from('contact_lists')
-      .select('id, name, contact_count, created_at, source')
-      .eq('org_id', org.id)
-      .neq('source', 'quick_send')
-      .order('created_at', { ascending: false }),
-    supabase.from('contacts').select('id', { count: 'exact', head: true }).eq('org_id', org.id),
-    supabase
-      .from('contacts')
-      .select('id', { count: 'exact', head: true })
-      .eq('org_id', org.id)
-      .eq('wa_status', 'valid'),
-    supabase
-      .from('contacts')
-      .select('id', { count: 'exact', head: true })
-      .eq('org_id', org.id)
-      .eq('wa_status', 'invalid'),
-    getDictionary(),
-  ])
+  const params = await searchParams
+  const pageSize = PAGE_SIZES.lists
+  const requestedPage = parsePage(params.sayfa)
+
+  const [listsCountResult, totalResult, validResult, invalidResult, { messages }] =
+    await Promise.all([
+      supabase
+        .from('contact_lists')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', org.id)
+        .neq('source', 'quick_send'),
+      supabase.from('contacts').select('id', { count: 'exact', head: true }).eq('org_id', org.id),
+      supabase
+        .from('contacts')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', org.id)
+        .eq('wa_status', 'valid'),
+      supabase
+        .from('contacts')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', org.id)
+        .eq('wa_status', 'invalid'),
+      getDictionary(),
+    ])
+
+  const listTotal = listsCountResult.count ?? 0
+  const pages = totalPages(listTotal, pageSize)
+  const page = clampPage(requestedPage, pages)
+  const { from, to } = rangeForPage(page, pageSize)
+
+  const { data: listRows } = await supabase
+    .from('contact_lists')
+    .select('id, name, contact_count, created_at, source')
+    .eq('org_id', org.id)
+    .neq('source', 'quick_send')
+    .order('created_at', { ascending: false })
+    .range(from, to)
 
   const t = createT(messages)
-  const lists = listsResult.data ?? []
+  const lists = listRows ?? []
   const total = totalResult.count ?? 0
   const valid = validResult.count ?? 0
   const invalid = invalidResult.count ?? 0
@@ -70,10 +99,14 @@ export default async function ContactsPage() {
           <Card>
             <CardHeader
               title="Listeler"
-              subtitle={`${lists.length} liste · ${total} tekil numara`}
+              subtitle={
+                listTotal === 0
+                  ? `${total} tekil numara`
+                  : `${listTotal} liste · ${total} tekil numara · sayfa ${page}/${pages}`
+              }
             />
 
-            {lists.length === 0 ? (
+            {listTotal === 0 ? (
               <EmptyState
                 tone="people"
                 title="Henüz liste yok"
@@ -86,6 +119,7 @@ export default async function ContactsPage() {
                 }
               />
             ) : (
+              <>
               <ul className="wb-list-scroll divide-y divide-hairline">
                 {lists.map((list, index) => (
                   <li
@@ -114,6 +148,13 @@ export default async function ContactsPage() {
                   </li>
                 ))}
               </ul>
+              <Pagination
+                page={page}
+                totalPages={pages}
+                label={`${listTotal} liste`}
+                hrefForPage={(p) => buildPageHref('/kisiler', p)}
+              />
+              </>
             )}
           </Card>
 

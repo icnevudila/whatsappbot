@@ -18,9 +18,11 @@ export type MemberRow = {
 export function MemberActions({
   listId,
   members,
+  totalCount = 0,
 }: {
   listId: string
   members: MemberRow[]
+  totalCount?: number
 }) {
   const router = useRouter()
   const [busy, setBusy] = useState<string | null>(null)
@@ -39,6 +41,11 @@ export function MemberActions({
   }
 
   if (members.length === 0) {
+    if (totalCount > 0) {
+      return (
+        <p className="px-3.5 py-4 text-[12.5px] text-ink-faint">Bu sayfada numara yok.</p>
+      )
+    }
     return (
       <EmptyState
         tone="people"

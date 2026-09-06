@@ -10,6 +10,7 @@ import {
   Field,
   Input,
   Notice,
+  Pagination,
   QuietLink,
   SplitPane,
   Textarea,
@@ -19,6 +20,7 @@ import { useConfirm } from '@/components/confirm-dialog'
 import { useSyncBusy } from '@/components/busy'
 import { useToast } from '@/components/toast'
 import { useT } from '@/lib/i18n/provider'
+import { PAGE_SIZES, clampPage, totalPages } from '@/lib/pagination'
 import { addToBlacklist, removeFromBlacklist, type BlacklistState } from './actions'
 
 export type BlacklistRow = {
@@ -43,6 +45,7 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
   const [, startTransition] = useTransition()
   useSyncBusy(pending, 'Kara listeye ekleniyor…')
   useSyncBusy(busyId != null, 'Kara listeden kaldırılıyor…')
@@ -50,6 +53,10 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
   useEffect(() => {
     setRows(initial)
   }, [initial])
+
+  useEffect(() => {
+    setPage(1)
+  }, [search])
 
   useEffect(() => {
     if (state?.ok) {
@@ -66,6 +73,11 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
       .toLocaleLowerCase('tr-TR')
       .includes(search.toLocaleLowerCase('tr-TR')),
   )
+
+  const pageSize = PAGE_SIZES.blacklist
+  const pages = totalPages(visible.length, pageSize)
+  const safePage = clampPage(page, pages)
+  const pageRows = visible.slice((safePage - 1) * pageSize, safePage * pageSize)
 
   const remove = (id: string, phone: string) => {
     void (async () => {
@@ -137,8 +149,9 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
               description="Başka bir numara veya sebep deneyin."
             />
           ) : (
+            <>
             <ul className="min-h-0 flex-1 divide-y divide-hairline overflow-y-auto">
-              {visible.map((row, index) => (
+              {pageRows.map((row, index) => (
                 <li
                   key={row.id}
                   className="wb-list-row wb-row-enter flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5"
@@ -170,6 +183,13 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
                 </li>
               ))}
             </ul>
+            <Pagination
+              page={safePage}
+              totalPages={pages}
+              label={`${visible.length} numara`}
+              onPageChange={setPage}
+            />
+            </>
           )}
 
           {error ? (

@@ -8,6 +8,7 @@ import {
   Meter,
   Notice,
   PageHeader,
+  Pagination,
   SplitPane,
   StatusPill,
 } from '@/components/ui'
@@ -17,6 +18,14 @@ import { loadOrgAiKeys, rowToBag } from '@/lib/ai/org-keys'
 import { createT } from '@/lib/i18n'
 import { getDictionary } from '@/lib/i18n/server'
 import { requireActiveOrg } from '@/lib/org'
+import {
+  PAGE_SIZES,
+  buildPageHref,
+  clampPage,
+  parsePage,
+  rangeForPage,
+  totalPages,
+} from '@/lib/pagination'
 import { NewCampaignForm } from './new-campaign-form'
 
 export const metadata: Metadata = { title: 'Kampanyalar' }
@@ -73,7 +82,7 @@ function campaignShell(status: string): string {
 export default async function CampaignsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ hazir?: string | string[] }>
+  searchParams: Promise<{ hazir?: string | string[]; sayfa?: string | string[] }>
 }) {
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
   let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
@@ -88,16 +97,15 @@ export default async function CampaignsPage({
 
   const params = await searchParams
   const justReady = (Array.isArray(params.hazir) ? params.hazir[0] : params.hazir) === '1'
+  const pageSize = PAGE_SIZES.campaigns
+  const requestedPage = parsePage(params.sayfa)
 
-  const [campaignsResult, listsResult, accountsResult, brandResult, aiKeyRow, { messages }] =
+  const [campaignsCountResult, listsResult, accountsResult, brandResult, aiKeyRow, { messages }] =
     await Promise.all([
       supabase
         .from('campaigns')
-        .select(
-          'id, name, status, total_targets, sent_count, failed_count, skipped_count, stop_reason, created_at',
-        )
-        .eq('org_id', org.id)
-        .order('created_at', { ascending: false }),
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', org.id),
       supabase
         .from('contact_lists')
         .select('id, name, contact_count')
@@ -119,9 +127,23 @@ export default async function CampaignsPage({
       getDictionary(),
     ])
 
+  const campaignTotal = campaignsCountResult.count ?? 0
+  const pages = totalPages(campaignTotal, pageSize)
+  const page = clampPage(requestedPage, pages)
+  const { from, to } = rangeForPage(page, pageSize)
+
+  const { data: campaignRows } = await supabase
+    .from('campaigns')
+    .select(
+      'id, name, status, total_targets, sent_count, failed_count, skipped_count, stop_reason, created_at',
+    )
+    .eq('org_id', org.id)
+    .order('created_at', { ascending: false })
+    .range(from, to)
+
   const t = createT(messages)
   const aiBag = rowToBag(aiKeyRow)
-  const campaigns = campaignsResult.data ?? []
+  const campaigns = campaignRows ?? []
 
   const listOptions = (listsResult.data ?? []).map((list) => ({
     id: list.id,
@@ -149,6 +171,7 @@ export default async function CampaignsPage({
   }))
 
   const connectedCount = accountOptions.filter((a) => !a.disabled).length
+  const hazirQs = justReady ? '1' : undefined
 
   return (
     <>
@@ -168,12 +191,12 @@ export default async function CampaignsPage({
             <CardHeader
               title="Geçmiş"
               subtitle={
-                campaigns.length === 0
+                campaignTotal === 0
                   ? 'Henüz kayıt yok'
-                  : `${campaigns.length} kampanya · tıklayınca detay`
+                  : `${campaignTotal} kampanya · sayfa ${page}/${pages}`
               }
             />
-            {campaigns.length === 0 ? (
+            {campaignTotal === 0 ? (
               <EmptyState
                 tone="campaign"
                 title="Henüz kampanya yok"
@@ -195,6 +218,7 @@ export default async function CampaignsPage({
                 }
               />
             ) : (
+              <>
               <ul className="min-h-0 flex-1 space-y-1.5 overflow-y-auto p-2">
                 {campaigns.map((campaign, index) => {
                   const done =
@@ -236,6 +260,15 @@ export default async function CampaignsPage({
                   )
                 })}
               </ul>
+              <Pagination
+                page={page}
+                totalPages={pages}
+                label={`${campaignTotal} kayıt`}
+                hrefForPage={(p) =>
+                  buildPageHref('/kampanyalar', p, { hazir: hazirQs })
+                }
+              />
+              </>
             )}
           </div>
         }

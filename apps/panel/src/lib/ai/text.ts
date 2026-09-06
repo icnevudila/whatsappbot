@@ -4,7 +4,7 @@
 import {
   AI_TIMEOUT_MS,
   resolveAiConfig,
-  textProviderOrder,
+  resolveTextProviderOrder,
   type AiKeyBag,
   type AiProviderId,
   type ResolvedAiConfig,
@@ -105,7 +105,7 @@ export function activeTextProviders(
   bag?: AiKeyBag | null,
 ): { id: AiProviderId; label: string }[] {
   const registry = buildProviders(resolveAiConfig(bag))
-  return textProviderOrder
+  return resolveTextProviderOrder(bag)
     .map((id) => registry[id])
     .filter((provider): provider is TextProvider => Boolean(provider?.isConfigured()))
     .map(({ id, label }) => ({ id, label }))
@@ -123,7 +123,7 @@ export async function completeText(
   const registry = buildProviders(resolveAiConfig(bag))
   const attempts: string[] = []
 
-  for (const id of textProviderOrder) {
+  for (const id of resolveTextProviderOrder(bag)) {
     const provider = registry[id]
     if (!provider?.isConfigured()) continue
 

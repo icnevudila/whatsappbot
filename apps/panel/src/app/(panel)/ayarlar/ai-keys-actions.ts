@@ -2,6 +2,15 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireActiveOrg, isOrgAdminRole } from '@/lib/org'
+import {
+  GEMINI_IMAGE_MODELS,
+  GEMINI_TEXT_MODELS,
+  IMAGE_PROVIDER_CHOICES,
+  OPENAI_IMAGE_MODELS,
+  OPENAI_TEXT_MODELS,
+  TEXT_PROVIDER_CHOICES,
+  isAllowedModel,
+} from '@/lib/ai/models'
 
 export type AiKeysState = { error?: string; ok?: string } | null
 
@@ -11,6 +20,17 @@ function readOptionalKey(formData: FormData, name: string): string | undefined {
   if (raw === '__clear__') return ''
   if (!raw.trim()) return undefined
   return raw.trim()
+}
+
+function readChoice(
+  formData: FormData,
+  name: string,
+  allowed: { value: string }[],
+  fallback: string,
+): string {
+  const raw = String(formData.get(name) ?? '').trim()
+  if (isAllowedModel(allowed, raw)) return raw
+  return fallback
 }
 
 export async function saveOrgAiKeys(
@@ -34,6 +54,43 @@ export async function saveOrgAiKeys(
   const gemini = readOptionalKey(formData, 'gemini_api_key')
   const cfAccount = readOptionalKey(formData, 'cloudflare_account_id')
   const cfToken = readOptionalKey(formData, 'cloudflare_api_token')
+
+  const openaiImageModel = readChoice(
+    formData,
+    'openai_image_model',
+    OPENAI_IMAGE_MODELS,
+    'dall-e-2',
+  )
+  const openaiTextModel = readChoice(
+    formData,
+    'openai_text_model',
+    OPENAI_TEXT_MODELS,
+    'gpt-4o-mini',
+  )
+  const geminiImageModel = readChoice(
+    formData,
+    'gemini_image_model',
+    GEMINI_IMAGE_MODELS,
+    'gemini-3.1-flash-image-preview',
+  )
+  const geminiTextModel = readChoice(
+    formData,
+    'gemini_text_model',
+    GEMINI_TEXT_MODELS,
+    'gemini-2.5-flash',
+  )
+  const preferredImageProvider = readChoice(
+    formData,
+    'preferred_image_provider',
+    IMAGE_PROVIDER_CHOICES,
+    'auto',
+  )
+  const preferredTextProvider = readChoice(
+    formData,
+    'preferred_text_provider',
+    TEXT_PROVIDER_CHOICES,
+    'auto',
+  )
 
   const { data: existing } = await supabase
     .from('org_ai_keys' as never)
@@ -59,6 +116,12 @@ export async function saveOrgAiKeys(
       cfAccount !== undefined ? cfAccount || null : (prev?.cloudflare_account_id ?? null),
     cloudflare_api_token:
       cfToken !== undefined ? cfToken || null : (prev?.cloudflare_api_token ?? null),
+    openai_image_model: openaiImageModel,
+    openai_text_model: openaiTextModel,
+    gemini_image_model: geminiImageModel,
+    gemini_text_model: geminiTextModel,
+    preferred_image_provider: preferredImageProvider,
+    preferred_text_provider: preferredTextProvider,
   }
 
   const { error } = await supabase.from('org_ai_keys' as never).upsert(next as never, {
@@ -71,5 +134,5 @@ export async function saveOrgAiKeys(
   revalidatePath('/kampanyalar')
   revalidatePath('/marka-kiti')
 
-  return { ok: 'Yapay zeka anahtarları kaydedildi.' }
+  return { ok: 'Yapay zeka ayarları kaydedildi.' }
 }

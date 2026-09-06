@@ -4,8 +4,8 @@
  */
 import {
   AI_TIMEOUT_MS,
-  imageProviderOrder,
   resolveAiConfig,
+  resolveImageProviderOrder,
   type AiKeyBag,
   type AiProviderId,
   type ResolvedAiConfig,
@@ -193,7 +193,7 @@ export function activeImageProviders(
   bag?: AiKeyBag | null,
 ): { id: AiProviderId; label: string }[] {
   const registry = buildProviders(resolveAiConfig(bag))
-  return imageProviderOrder
+  return resolveImageProviderOrder(bag)
     .map((id) => registry[id])
     .filter((provider) => provider.isConfigured())
     .map(({ id, label }) => ({ id, label }))
@@ -211,7 +211,7 @@ export async function generateImage(
   const registry = buildProviders(resolveAiConfig(bag))
   const attempts: string[] = []
 
-  for (const id of imageProviderOrder) {
+  for (const id of resolveImageProviderOrder(bag)) {
     const provider = registry[id]
     if (!provider.isConfigured()) continue
 
