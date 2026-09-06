@@ -213,12 +213,13 @@ export function MessagesBoard({
       : tab === 'gelen'
         ? {
             title: 'Gelen yok',
-            description: 'Son etkinliği gelen olan sohbetler burada listelenir.',
+            description: 'Karşı tarafın son yazdığı sohbetler burada.',
           }
         : tab === 'giden'
           ? {
-              title: 'Giden yok',
-              description: 'Son etkinliği sizin gönderiminiz olan sohbetler burada listelenir.',
+              title: 'Cevapsız yok',
+              description:
+                'Sizin yazıp henüz dönüş almadığınız numaralar burada (kampanya / hızlı gönderim).',
             }
           : {
               title: 'Mesaj yok',
@@ -239,7 +240,7 @@ export function MessagesBoard({
                 Gelen ({inboundCount})
               </FilterChip>
               <FilterChip href={hrefFor({ tel: selectedPhone, tab: 'giden' })} active={tab === 'giden'}>
-                Giden ({outboundCount})
+                Cevapsız ({outboundCount})
               </FilterChip>
               <FilterChip
                 href={hrefFor({ tel: selectedPhone, tab: 'yanitlar' })}

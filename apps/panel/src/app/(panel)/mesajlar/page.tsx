@@ -137,7 +137,8 @@ export default async function MessagesPage({
   }
 
   const inboundList = allList.filter((p) => p.lastDirection === 'in')
-  const outboundList = allList.filter((p) => p.lastDirection === 'out')
+  // Giden sekmesi: kampanya/hızlı gönderim sonrası cevap beklenenler (gelen yok).
+  const outboundList = allList.filter((p) => p.outboundOnly)
   const replyList = allList.filter((p) => p.isReply)
   const previews =
     tab === 'gelen'
@@ -172,7 +173,7 @@ export default async function MessagesPage({
     <>
       <PageHeader
         title={t('pages.mesajlarTitle')}
-        description="Gelen ve giden mesajlar aynı sohbetlerde. Yanıtlayın, kara listeye alın; son 400 kayıt üzerinden güncel konuşmalar."
+        description="Sohbetlerde gelen ve giden birlikte. Gelen = son mesaj onlardan · Cevapsız = yazdınız, henüz dönüş yok · Yanıtlar = iki yönlü."
         action={<AccentLink href="/kara-liste">{t('nav.karaListe')}</AccentLink>}
       />
 
