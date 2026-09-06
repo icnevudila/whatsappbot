@@ -1006,6 +1006,10 @@ export type Database = {
         Args: { p_email: string; p_org_id: string; p_role?: string }
         Returns: undefined
       }
+      set_organization_member_role: {
+        Args: { p_org_id: string; p_role: string; p_user_id: string }
+        Returns: undefined
+      }
       create_organization: { Args: { p_name: string }; Returns: string }
       is_org_admin: { Args: { p_org_id: string }; Returns: boolean }
       is_org_member: { Args: { p_org_id: string }; Returns: boolean }
