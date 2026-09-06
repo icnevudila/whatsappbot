@@ -8,46 +8,46 @@ import { ScrollReveal } from './scroll-reveal'
 const PROBLEMS = [
   {
     title: 'Hattı yakan hız',
-    body: 'Sabit aralıkla binlerce mesaj atmak hesabı kısıtlatır. “Sınırsız gönderim” vaadi çoğu zaman ban demektir.',
+    body: 'Sabit tempoda binlerce mesaj atmak hesabı kısıtlatır. “Sınırsız gönderim” vaadi çoğu zaman ban demektir.',
   },
   {
     title: 'Kayıtsız numaraya deneme',
-    body: 'WhatsApp’ta olmayan numaraya basmak hem kota yakar hem şikayet riskini artırır.',
+    body: 'Kayıtlı olmayan numaraya basmak hem kotayı hem şikayet riskini yükseltir.',
   },
   {
     title: 'Panel kapanınca duran gönderim',
-    body: 'Bilgisayarınız kapalıysa kampanya da duruyorsa operasyon ölçeklenmez.',
+    body: 'Bilgisayarınız kapalıysa kampanya da duruyorsa operasyon ölçeklenemez.',
   },
   {
     title: 'Yanıtları kaçırmak',
-    body: 'Toplu mesajdan gelen “ilgileniyorum / çık” cevapları dağılırsa hem satış hem KVKK riski büyür.',
+    body: 'Kampanyadan gelen “ilgileniyorum” veya “çık” cevapları dağılırsa satış ve KVKK riski büyür.',
   },
 ] as const
 
 const SOLUTIONS = [
   {
-    title: 'Isındırma + rastgele aralık',
-    body: 'Yeni hat kademeli tavanla açılır; mesajlar arasında insanî bekleme vardır. Kota panoda canlı okunur.',
+    title: 'Isındırma ve rastgele aralık',
+    body: 'Yeni hat kademeli tavanla açılır. Mesajlar arasında insanî bekleme vardır; kota panoda canlı görünür.',
     image: '/landing/hesaplar.png',
     frame: 'Hesaplar · hat kotası',
   },
   {
     title: 'Gönderimden önce doğrula',
-    body: 'Defterdeki numaralar WhatsApp’ta var mı diye işaretlenir. Kayıtsızlara kampanya gitmez.',
+    body: 'Listedeki numaralar kayıtlı mı diye işaretlenir. Kayıtsızlara kampanya gitmez.',
     image: '/landing/kisiler.png',
-    frame: 'Kişiler · WA doğrulama',
+    frame: 'Kişiler · numara doğrulama',
   },
   {
     title: 'Sunucuda çalışan motor',
-    body: 'Oturum ve kampanya arka planda sürer. Paneli kapatmanız gönderimi durdurmaz.',
+    body: 'Oturum ve kampanya arka planda sürer. Paneli kapatsanız da gönderim devam eder.',
     image: '/landing/durum.png',
     frame: 'Durum · canlı izleme',
   },
   {
-    title: 'Gelenler + kara liste',
-    body: 'Yanıtları tek yerden okuyun; çıkmak isteyeni bir tıkla kara listeye alın.',
-    image: '/landing/gelenler.png',
-    frame: 'Gelenler · kampanya yanıtları',
+    title: 'Yanıtlar ve kara liste',
+    body: 'Gelen cevapları tek yerden okuyun. Çıkmak isteyeni bir tıkla kara listeye alın.',
+    image: '/landing/kara-liste.png',
+    frame: 'Kara liste · çıkış talepleri',
   },
 ] as const
 
@@ -80,10 +80,10 @@ export function ProblemSection() {
             Sorun → çözüm
           </p>
           <h2 className="max-w-xl text-[24px] font-semibold tracking-[-0.02em]">
-            Toplu mesaj panellerinin batırdığı yerler
+            Toplu mesaj panellerinin takıldığı yerler
           </h2>
           <p className="mt-3 max-w-[40rem] text-[14px] leading-relaxed text-ink-muted">
-            Filo, gönderimi hızlandırmaktan çok hattı ayakta tutmaya odaklanır. Kaydırdıkça her
+            Filo gönderimi hızlandırmaktan çok hattı ayakta tutmaya odaklanır. Kaydırdıkça her
             probleme karşılık gelen ekranı görün.
           </p>
         </ScrollReveal>

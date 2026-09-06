@@ -1,7 +1,6 @@
 /**
  * Landing screenshot sanitizer — kişisel numara/mesaj/org adını kampanya demo ile kapatır.
- * Çalıştır: node --import tsx scripts/sanitize-landing-shots.mjs
- * (veya: node scripts/sanitize-landing-shots.mjs)
+ * Çalıştır: node apps/panel/scripts/sanitize-landing-shots.mjs
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -11,7 +10,7 @@ import sharp from 'sharp'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, '../public/landing')
 
-/** @typedef {{ x: number, y: number, w: number, h: number, fill?: string, text?: string, textX?: number, textY?: number, size?: number, color?: string, weight?: string }} Overlay */
+/** @typedef {{ x: number, y: number, w: number, h: number, fill?: string, text?: string, textX?: number, textY?: number, size?: number, color?: string, weight?: string, rx?: number }} Overlay */
 
 /**
  * @param {number} width
@@ -25,10 +24,11 @@ function svgOverlay(width, height, overlays) {
     const w = Math.round(o.w * width)
     const h = Math.round(o.h * height)
     const fill = o.fill ?? '#ffffff'
-    let s = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="${fill}"/>`
+    const rx = o.rx ?? 4
+    let s = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${fill}"/>`
     if (o.text) {
       const tx = Math.round((o.textX ?? o.x + 0.008) * width)
-      const ty = Math.round((o.textY ?? o.y + o.h * 0.62) * height)
+      const ty = Math.round((o.textY ?? o.y + o.h * 0.65) * height)
       const size = o.size ?? Math.max(11, Math.round(height * 0.011))
       const color = o.color ?? '#1c2434'
       const weight = o.weight ?? '600'
@@ -45,33 +45,268 @@ function svgOverlay(width, height, overlays) {
   )
 }
 
-/** Ortak: org adı + e-posta + topbar */
 /** @returns {Overlay[]} */
 function chromeMasks() {
   return [
-    // Sidebar işletme adı
-    { x: 0.02, y: 0.055, w: 0.11, h: 0.028, text: 'Demo İşletme', size: 12 },
-    // Topbar sol org
-    { x: 0.145, y: 0.012, w: 0.12, h: 0.028, text: 'Demo İşletme', size: 12 },
-    // Sidebar email
-    { x: 0.015, y: 0.955, w: 0.12, h: 0.025, text: 'demo@filo.dev', size: 10, color: '#94a3b8', weight: '500' },
+    { x: 0.018, y: 0.048, w: 0.12, h: 0.032, fill: '#f4f5f7', text: 'Demo İşletme', size: 12 },
+    { x: 0.145, y: 0.01, w: 0.14, h: 0.032, fill: '#ffffff', text: 'Demo İşletme', size: 12 },
+    { x: 0.012, y: 0.94, w: 0.13, h: 0.045, fill: '#f4f5f7', text: 'demo@filo.dev', size: 10, color: '#94a3b8', weight: '500' },
   ]
 }
 
-/** @type {Record<string, { src: string, out: string, overlays: (w: number, h: number) => Overlay[] }>} */
+/** Ana içerik alanı (sidebar sağındaki panel) — tamamen kapat. */
+function wipeMain(fill = '#f7f8fb') {
+  return { x: 0.138, y: 0.055, w: 0.862, h: 0.945, fill, rx: 0 }
+}
+
+/** @returns {Overlay[]} */
+function pageTitle(title, subtitle) {
+  return [
+    { x: 0.155, y: 0.07, w: 0.55, h: 0.035, fill: '#f7f8fb', text: title, size: 22, weight: '700' },
+    {
+      x: 0.155,
+      y: 0.105,
+      w: 0.55,
+      h: 0.025,
+      fill: '#f7f8fb',
+      text: subtitle,
+      size: 12,
+      color: '#64748b',
+      weight: '500',
+    },
+  ]
+}
+
+/** @returns {Overlay[]} */
+function demoInboxOverlays() {
+  const rows = [
+    ['+90 532 ··· ·· 14', 'İlgileniyorum, randevu alabilir miyim?', '09:42'],
+    ['+90 533 ··· ·· 28', 'Fiyat listesini paylaşır mısınız?', '09:18'],
+    ['+90 544 ··· ·· 51', 'Kampanyadan çıkmak istiyorum', '08:55'],
+    ['+90 555 ··· ·· 03', 'Teşekkürler, yarın görüşürüz.', 'Dün'],
+  ]
+  /** @type {Overlay[]} */
+  const list = [
+    wipeMain('#f7f8fb'),
+    ...pageTitle('Gelenler', 'Kampanya yanıtları · demo veri — kişisel numara yok'),
+    { x: 0.155, y: 0.145, w: 0.32, h: 0.78, fill: '#ffffff', rx: 10 },
+    { x: 0.495, y: 0.145, w: 0.48, h: 0.78, fill: '#ffffff', rx: 10 },
+    { x: 0.165, y: 0.16, w: 0.12, h: 0.028, fill: '#0c0e16', text: 'Tümü (4)', size: 11, color: '#ffffff', weight: '600' },
+    { x: 0.3, y: 0.16, w: 0.12, h: 0.028, fill: '#f1f5f9', text: 'Yanıtlar', size: 11, color: '#64748b', weight: '500' },
+  ]
+  rows.forEach(([phone, preview, time], i) => {
+    const y = 0.21 + i * 0.12
+    const active = i === 0
+    list.push(
+      {
+        x: 0.165,
+        y,
+        w: 0.3,
+        h: 0.1,
+        fill: active ? '#eef2ff' : '#ffffff',
+        rx: 6,
+      },
+      { x: 0.175, y: y + 0.015, w: 0.2, h: 0.025, fill: active ? '#eef2ff' : '#ffffff', text: phone, size: 12 },
+      {
+        x: 0.38,
+        y: y + 0.015,
+        w: 0.07,
+        h: 0.022,
+        fill: active ? '#eef2ff' : '#ffffff',
+        text: time,
+        size: 10,
+        color: '#94a3b8',
+        weight: '500',
+      },
+      {
+        x: 0.175,
+        y: y + 0.045,
+        w: 0.27,
+        h: 0.035,
+        fill: active ? '#eef2ff' : '#ffffff',
+        text: preview,
+        size: 11,
+        color: '#64748b',
+        weight: '500',
+      },
+    )
+  })
+  list.push(
+    { x: 0.51, y: 0.16, w: 0.3, h: 0.03, fill: '#ffffff', text: '+90 532 ··· ·· 14', size: 14 },
+    {
+      x: 0.51,
+      y: 0.19,
+      w: 0.35,
+      h: 0.022,
+      fill: '#ffffff',
+      text: 'Bahar kampanyası · yanıt',
+      size: 11,
+      color: '#64748b',
+      weight: '500',
+    },
+    { x: 0.58, y: 0.28, w: 0.36, h: 0.09, fill: '#2f5bff', rx: 12 },
+    {
+      x: 0.595,
+      y: 0.31,
+      w: 0.33,
+      h: 0.05,
+      fill: '#2f5bff',
+      text: 'Merhaba, bahar paketimizde %20 indirim…',
+      size: 12,
+      color: '#ffffff',
+      weight: '500',
+    },
+    { x: 0.52, y: 0.42, w: 0.32, h: 0.08, fill: '#eef1f6', rx: 12 },
+    {
+      x: 0.535,
+      y: 0.45,
+      w: 0.29,
+      h: 0.04,
+      fill: '#eef1f6',
+      text: 'İlgileniyorum, randevu alabilir miyim?',
+      size: 12,
+      color: '#1c2434',
+      weight: '500',
+    },
+    { x: 0.58, y: 0.55, w: 0.36, h: 0.08, fill: '#2f5bff', rx: 12 },
+    {
+      x: 0.595,
+      y: 0.575,
+      w: 0.33,
+      h: 0.04,
+      fill: '#2f5bff',
+      text: 'Harika — uygun günü yazmanız yeterli.',
+      size: 12,
+      color: '#ffffff',
+      weight: '500',
+    },
+    { x: 0.51, y: 0.78, w: 0.35, h: 0.08, fill: '#f8fafc', rx: 8 },
+    {
+      x: 0.52,
+      y: 0.81,
+      w: 0.25,
+      h: 0.03,
+      fill: '#f8fafc',
+      text: 'Mesajınızı yazın…',
+      size: 12,
+      color: '#94a3b8',
+      weight: '500',
+    },
+    { x: 0.82, y: 0.79, w: 0.12, h: 0.06, fill: '#2f5bff', rx: 8, text: 'Yanıt gönder', size: 11, color: '#ffffff', weight: '600' },
+  )
+  return list
+}
+
+/** @returns {Overlay[]} */
+function demoOutboxOverlays() {
+  const rows = [
+    ['+90 532 ··· ·· 14', 'Bahar kampanyası · Merhaba Ayşe…', 'Okundu'],
+    ['+90 533 ··· ·· 28', 'Bahar kampanyası · Merhaba Mehmet…', 'Okundu'],
+    ['+90 544 ··· ·· 51', 'Randevu hatırlatma · yarın 14:00', 'Teslim'],
+    ['+90 555 ··· ·· 03', 'Karşılama · hoş geldiniz', 'Okundu'],
+    ['+90 505 ··· ·· 77', 'Bahar kampanyası · paket detayı', 'Okundu'],
+  ]
+  /** @type {Overlay[]} */
+  const list = [
+    wipeMain('#f7f8fb'),
+    ...pageTitle('Gidenler', 'Kampanya gönderimleri · demo veri — kişisel numara yok'),
+    { x: 0.155, y: 0.15, w: 0.38, h: 0.78, fill: '#ffffff', rx: 10 },
+    { x: 0.555, y: 0.15, w: 0.42, h: 0.78, fill: '#ffffff', rx: 10 },
+    {
+      x: 0.17,
+      y: 0.17,
+      w: 0.3,
+      h: 0.025,
+      fill: '#ffffff',
+      text: 'Giden mesajlar · 5 kayıt',
+      size: 12,
+      color: '#64748b',
+      weight: '600',
+    },
+  ]
+  rows.forEach(([phone, body, status], i) => {
+    const y = 0.22 + i * 0.12
+    list.push(
+      { x: 0.17, y, w: 0.35, h: 0.1, fill: '#ffffff', rx: 6 },
+      { x: 0.18, y: y + 0.015, w: 0.25, h: 0.025, fill: '#ffffff', text: phone, size: 12 },
+      {
+        x: 0.18,
+        y: y + 0.042,
+        w: 0.32,
+        h: 0.03,
+        fill: '#ffffff',
+        text: body,
+        size: 11,
+        color: '#64748b',
+        weight: '500',
+      },
+      {
+        x: 0.18,
+        y: y + 0.07,
+        w: 0.12,
+        h: 0.02,
+        fill: '#ffffff',
+        text: status,
+        size: 11,
+        color: '#2f5bff',
+        weight: '600',
+      },
+    )
+  })
+  list.push(
+    {
+      x: 0.6,
+      y: 0.4,
+      w: 0.3,
+      h: 0.03,
+      fill: '#ffffff',
+      text: 'Bir kayıt seçin',
+      size: 14,
+      color: '#64748b',
+      weight: '600',
+    },
+    {
+      x: 0.58,
+      y: 0.45,
+      w: 0.35,
+      h: 0.04,
+      fill: '#ffffff',
+      text: 'Soldan kampanya mesajına tıklayın',
+      size: 12,
+      color: '#94a3b8',
+      weight: '500',
+    },
+  )
+  return list
+}
+
+/** @type {Record<string, { src: string, out: string, cropTop?: boolean, overlays: (w: number, h: number) => Overlay[] }>} */
 const jobs = {
   ozet: {
     src: 'shot-1.png',
     out: 'ozet.png',
     overlays: () => [
       ...chromeMasks(),
-      { x: 0.15, y: 0.72, w: 0.28, h: 0.12, fill: '#ffffff' },
-      { x: 0.16, y: 0.74, w: 0.2, h: 0.025, text: 'Satış hattı · 184 / 250', size: 12 },
-      { x: 0.16, y: 0.78, w: 0.2, h: 0.025, text: 'Destek hattı · 96 / 250', size: 12 },
-      { x: 0.16, y: 0.82, w: 0.22, h: 0.025, text: 'Kampanya yedek · QR bekliyor', size: 12 },
-      { x: 0.48, y: 0.78, w: 0.22, h: 0.08, fill: '#ffffff' },
-      { x: 0.49, y: 0.8, w: 0.2, h: 0.025, text: 'Bahar kampanyası', size: 12 },
-      { x: 0.49, y: 0.835, w: 0.2, h: 0.025, text: 'Randevu hatırlatma', size: 12 },
+      // "Ali Test" alt başlık
+      {
+        x: 0.155,
+        y: 0.1,
+        w: 0.45,
+        h: 0.03,
+        fill: '#f7f8fb',
+        text: 'Demo İşletme · günün operasyon görünümü',
+        size: 13,
+        color: '#64748b',
+        weight: '500',
+      },
+      // alt durum / isimler
+      { x: 0.15, y: 0.7, w: 0.55, h: 0.22, fill: '#ffffff' },
+      { x: 0.16, y: 0.72, w: 0.22, h: 0.025, text: 'Satış hattı · 184 / 250', size: 12 },
+      { x: 0.16, y: 0.755, w: 0.22, h: 0.025, text: 'Destek hattı · 96 / 250', size: 12 },
+      { x: 0.16, y: 0.79, w: 0.24, h: 0.025, text: 'Kampanya yedek · QR bekliyor', size: 12 },
+      { x: 0.42, y: 0.72, w: 0.25, h: 0.025, text: 'Bahar kampanyası · tamam', size: 12 },
+      { x: 0.42, y: 0.755, w: 0.25, h: 0.025, text: 'Randevu hatırlatma · aktif', size: 12 },
+      { x: 0.42, y: 0.79, w: 0.25, h: 0.025, text: 'Karşılama · taslak', size: 12 },
     ],
   },
   hesaplar: {
@@ -79,7 +314,6 @@ const jobs = {
     out: 'hesaplar.png',
     overlays: () => [
       ...chromeMasks(),
-      // Tüm hat listesini kapat — kişisel isim/numara kalmasın
       { x: 0.14, y: 0.24, w: 0.84, h: 0.72, fill: '#f4f5f7' },
       { x: 0.15, y: 0.26, w: 0.82, h: 0.2, fill: '#ffffff' },
       { x: 0.17, y: 0.29, w: 0.4, h: 0.03, text: 'Satış hattı', size: 15 },
@@ -105,9 +339,10 @@ const jobs = {
     out: 'hizli-gonderim.png',
     overlays: () => [
       ...chromeMasks(),
-      { x: 0.15, y: 0.52, w: 0.45, h: 0.12, fill: '#ffffff' },
-      { x: 0.17, y: 0.55, w: 0.4, h: 0.025, text: '☑  Satış hattı', size: 13 },
-      { x: 0.17, y: 0.585, w: 0.4, h: 0.022, text: '+90 532 ··· ·· 01  ·  bugün 184 / 250 hak', size: 12, color: '#64748b', weight: '500' },
+      { x: 0.15, y: 0.48, w: 0.5, h: 0.2, fill: '#ffffff' },
+      { x: 0.17, y: 0.52, w: 0.4, h: 0.025, text: '☑  Satış hattı', size: 13 },
+      { x: 0.17, y: 0.555, w: 0.42, h: 0.022, text: '+90 532 ··· ·· 01  ·  bugün 184 / 250 hak', size: 12, color: '#64748b', weight: '500' },
+      { x: 0.17, y: 0.6, w: 0.4, h: 0.022, text: '☐  Destek hattı', size: 13, color: '#64748b', weight: '500' },
     ],
   },
   kisiler: {
@@ -115,8 +350,14 @@ const jobs = {
     out: 'kisiler.png',
     overlays: () => [
       ...chromeMasks(),
-      { x: 0.16, y: 0.22, w: 0.35, h: 0.05, fill: '#ffffff' },
-      { x: 0.17, y: 0.235, w: 0.3, h: 0.025, text: 'Bahar 2026 · İstanbul', size: 13 },
+      { x: 0.15, y: 0.2, w: 0.82, h: 0.55, fill: '#f7f8fb' },
+      { x: 0.16, y: 0.22, w: 0.8, h: 0.5, fill: '#ffffff', rx: 10 },
+      { x: 0.18, y: 0.26, w: 0.4, h: 0.03, text: 'Bahar 2026 · İstanbul', size: 15 },
+      { x: 0.18, y: 0.3, w: 0.5, h: 0.025, text: '1.840 kişi · 1.620 WA kayıtlı · 220 yok', size: 12, color: '#64748b', weight: '500' },
+      { x: 0.18, y: 0.38, w: 0.55, h: 0.025, text: '+90 532 ··· ·· 14  ·  Ayşe  ·  WA ✓', size: 12 },
+      { x: 0.18, y: 0.43, w: 0.55, h: 0.025, text: '+90 533 ··· ·· 28  ·  Mehmet  ·  WA ✓', size: 12 },
+      { x: 0.18, y: 0.48, w: 0.55, h: 0.025, text: '+90 544 ··· ·· 51  ·  Zeynep  ·  WA ✓', size: 12 },
+      { x: 0.18, y: 0.53, w: 0.55, h: 0.025, text: '+90 555 ··· ·· 03  ·  Deniz  ·  kayıt yok', size: 12, color: '#94a3b8', weight: '500' },
     ],
   },
   karaListe: {
@@ -124,9 +365,12 @@ const jobs = {
     out: 'kara-liste.png',
     overlays: () => [
       ...chromeMasks(),
-      { x: 0.16, y: 0.28, w: 0.35, h: 0.06, fill: '#ffffff' },
-      { x: 0.17, y: 0.295, w: 0.28, h: 0.022, text: '+90 544 ··· ·· 51', size: 13 },
-      { x: 0.17, y: 0.32, w: 0.3, h: 0.02, text: 'Çıkmak istedi · kampanya STOP', size: 11, color: '#64748b', weight: '500' },
+      { x: 0.15, y: 0.22, w: 0.82, h: 0.4, fill: '#f7f8fb' },
+      { x: 0.16, y: 0.26, w: 0.8, h: 0.2, fill: '#ffffff', rx: 10 },
+      { x: 0.18, y: 0.3, w: 0.35, h: 0.03, text: '+90 544 ··· ·· 51', size: 14 },
+      { x: 0.18, y: 0.34, w: 0.5, h: 0.025, text: 'Çıkmak istedi · kampanya STOP', size: 12, color: '#64748b', weight: '500' },
+      { x: 0.18, y: 0.4, w: 0.35, h: 0.03, text: '+90 505 ··· ·· 77', size: 14 },
+      { x: 0.18, y: 0.44, w: 0.5, h: 0.025, text: 'Elle eklendi · şikayet riski', size: 12, color: '#64748b', weight: '500' },
     ],
   },
   durum: {
@@ -134,19 +378,19 @@ const jobs = {
     out: 'durum.png',
     overlays: () => [
       ...chromeMasks(),
-      { x: 0.15, y: 0.55, w: 0.38, h: 0.18, fill: '#ffffff' },
-      { x: 0.17, y: 0.58, w: 0.34, h: 0.025, text: 'Satış hattı  ·  +90 532 ··· ·· 01  ·  Bağlı', size: 12 },
-      { x: 0.17, y: 0.62, w: 0.34, h: 0.025, text: 'Destek hattı  ·  +90 532 ··· ·· 02  ·  Bağlı', size: 12 },
-      { x: 0.17, y: 0.66, w: 0.34, h: 0.025, text: 'Kampanya yedek  ·  QR bekleniyor', size: 12 },
-      { x: 0.54, y: 0.55, w: 0.4, h: 0.18, fill: '#ffffff' },
-      { x: 0.56, y: 0.58, w: 0.35, h: 0.025, text: 'Bahar kampanyası  ·  Tamamlandı', size: 12 },
-      { x: 0.56, y: 0.62, w: 0.35, h: 0.025, text: 'Randevu hatırlatma  ·  Çalışıyor', size: 12 },
-      { x: 0.56, y: 0.66, w: 0.35, h: 0.025, text: 'Yeni müşteri karşılama  ·  Taslak', size: 12 },
-      // canlı olay — isimleri kapat
-      { x: 0.15, y: 0.78, w: 0.78, h: 0.16, fill: '#ffffff' },
-      { x: 0.17, y: 0.81, w: 0.5, h: 0.022, text: 'Satış hattı bağlandı · 08:37', size: 12, color: '#64748b', weight: '500' },
-      { x: 0.17, y: 0.85, w: 0.55, h: 0.022, text: 'Bahar kampanyası tamamlandı · 09:12', size: 12, color: '#64748b', weight: '500' },
-      { x: 0.17, y: 0.89, w: 0.55, h: 0.022, text: 'Destek hattı kota yenilendi · 10:01', size: 12, color: '#64748b', weight: '500' },
+      { x: 0.15, y: 0.5, w: 0.82, h: 0.42, fill: '#f7f8fb' },
+      { x: 0.16, y: 0.53, w: 0.38, h: 0.22, fill: '#ffffff', rx: 10 },
+      { x: 0.18, y: 0.56, w: 0.34, h: 0.025, text: 'Satış hattı  ·  +90 532 ··· ·· 01  ·  Bağlı', size: 12 },
+      { x: 0.18, y: 0.6, w: 0.34, h: 0.025, text: 'Destek hattı  ·  +90 532 ··· ·· 02  ·  Bağlı', size: 12 },
+      { x: 0.18, y: 0.64, w: 0.34, h: 0.025, text: 'Kampanya yedek  ·  QR bekleniyor', size: 12 },
+      { x: 0.56, y: 0.53, w: 0.4, h: 0.22, fill: '#ffffff', rx: 10 },
+      { x: 0.58, y: 0.56, w: 0.35, h: 0.025, text: 'Bahar kampanyası  ·  Tamamlandı', size: 12 },
+      { x: 0.58, y: 0.6, w: 0.35, h: 0.025, text: 'Randevu hatırlatma  ·  Çalışıyor', size: 12 },
+      { x: 0.58, y: 0.64, w: 0.35, h: 0.025, text: 'Yeni müşteri karşılama  ·  Taslak', size: 12 },
+      { x: 0.16, y: 0.78, w: 0.8, h: 0.14, fill: '#ffffff', rx: 10 },
+      { x: 0.18, y: 0.81, w: 0.5, h: 0.022, text: 'Satış hattı bağlandı · 08:37', size: 12, color: '#64748b', weight: '500' },
+      { x: 0.18, y: 0.85, w: 0.55, h: 0.022, text: 'Bahar kampanyası tamamlandı · 09:12', size: 12, color: '#64748b', weight: '500' },
+      { x: 0.18, y: 0.89, w: 0.55, h: 0.022, text: 'Destek hattı kota yenilendi · 10:01', size: 12, color: '#64748b', weight: '500' },
     ],
   },
   raporlar: {
@@ -154,70 +398,38 @@ const jobs = {
     out: 'raporlar.png',
     overlays: () => [
       ...chromeMasks(),
-      { x: 0.16, y: 0.55, w: 0.35, h: 0.12, fill: '#ffffff' },
-      { x: 0.17, y: 0.57, w: 0.3, h: 0.022, text: 'Bahar kampanyası · 1.840 giden', size: 12 },
-      { x: 0.17, y: 0.605, w: 0.3, h: 0.022, text: 'Randevu hatırlatma · 420 giden', size: 12 },
-      { x: 0.17, y: 0.64, w: 0.3, h: 0.022, text: 'Karşılama · 210 giden', size: 12 },
-      { x: 0.55, y: 0.55, w: 0.3, h: 0.1, fill: '#ffffff' },
-      { x: 0.56, y: 0.57, w: 0.25, h: 0.022, text: 'Satış hattı · 1.120', size: 12 },
-      { x: 0.56, y: 0.605, w: 0.25, h: 0.022, text: 'Destek hattı · 640', size: 12 },
+      {
+        x: 0.155,
+        y: 0.1,
+        w: 0.5,
+        h: 0.03,
+        fill: '#f7f8fb',
+        text: 'Demo İşletme · kampanya performansı',
+        size: 13,
+        color: '#64748b',
+        weight: '500',
+      },
+      { x: 0.15, y: 0.5, w: 0.82, h: 0.35, fill: '#f7f8fb' },
+      { x: 0.16, y: 0.53, w: 0.38, h: 0.28, fill: '#ffffff', rx: 10 },
+      { x: 0.18, y: 0.57, w: 0.3, h: 0.022, text: 'Bahar kampanyası · 1.840 giden', size: 12 },
+      { x: 0.18, y: 0.61, w: 0.3, h: 0.022, text: 'Randevu hatırlatma · 420 giden', size: 12 },
+      { x: 0.18, y: 0.65, w: 0.3, h: 0.022, text: 'Karşılama · 210 giden', size: 12 },
+      { x: 0.56, y: 0.53, w: 0.38, h: 0.28, fill: '#ffffff', rx: 10 },
+      { x: 0.58, y: 0.57, w: 0.3, h: 0.022, text: 'Satış hattı · 1.120', size: 12 },
+      { x: 0.58, y: 0.61, w: 0.3, h: 0.022, text: 'Destek hattı · 640', size: 12 },
+      { x: 0.58, y: 0.65, w: 0.3, h: 0.022, text: 'Teslim %92 · okundu %61', size: 12 },
     ],
   },
   gelenler: {
     src: 'gelenler-raw.png',
     out: 'gelenler.png',
-    overlays: (_w, h) => {
-      // Uzun sayfa — oranlar yüksekliğe göre
-      const isTall = h > 2000
-      return [
-        ...chromeMasks().map((o) =>
-          isTall
-            ? { ...o, y: o.y * 0.35, h: Math.min(o.h, 0.012) }
-            : o,
-        ),
-        // sohbet listesi numaraları + önizleme
-        { x: 0.145, y: isTall ? 0.18 : 0.22, w: 0.28, h: isTall ? 0.12 : 0.28, fill: '#ffffff' },
-        { x: 0.155, y: isTall ? 0.19 : 0.24, w: 0.24, h: 0.018, text: '+90 532 ··· ·· 14', size: 12 },
-        { x: 0.155, y: isTall ? 0.205 : 0.265, w: 0.25, h: 0.016, text: 'İlgileniyorum, randevu alabilir miyim?', size: 11, color: '#64748b', weight: '500' },
-        { x: 0.155, y: isTall ? 0.23 : 0.3, w: 0.24, h: 0.018, text: '+90 533 ··· ·· 28', size: 12 },
-        { x: 0.155, y: isTall ? 0.245 : 0.325, w: 0.25, h: 0.016, text: 'Fiyat listesini paylaşır mısınız?', size: 11, color: '#64748b', weight: '500' },
-        { x: 0.155, y: isTall ? 0.27 : 0.36, w: 0.24, h: 0.018, text: '+90 544 ··· ·· 51', size: 12 },
-        { x: 0.155, y: isTall ? 0.285 : 0.385, w: 0.25, h: 0.016, text: 'Kampanyadan çıkmak istiyorum', size: 11, color: '#64748b', weight: '500' },
-        // thread alanı
-        { x: 0.45, y: isTall ? 0.18 : 0.2, w: 0.5, h: isTall ? 0.35 : 0.55, fill: '#f7f8fb' },
-        { x: 0.46, y: isTall ? 0.19 : 0.22, w: 0.3, h: 0.02, text: '+90 532 ··· ·· 14', size: 13 },
-        { x: 0.46, y: isTall ? 0.21 : 0.25, w: 0.4, h: 0.018, text: 'Bahar kampanyası · yanıt', size: 11, color: '#64748b', weight: '500' },
-        { x: 0.52, y: isTall ? 0.25 : 0.32, w: 0.4, h: 0.06, fill: '#2f5bff', text: '', size: 11 },
-        { x: 0.53, y: isTall ? 0.27 : 0.345, w: 0.38, h: 0.04, text: 'Merhaba, bahar paketimizde %20 indirim…', size: 11, color: '#ffffff', weight: '500' },
-        { x: 0.46, y: isTall ? 0.33 : 0.42, w: 0.35, h: 0.05, fill: '#eef1f6' },
-        { x: 0.47, y: isTall ? 0.35 : 0.445, w: 0.32, h: 0.03, text: 'İlgileniyorum, randevu alabilir miyim?', size: 11, color: '#1c2434', weight: '500' },
-      ]
-    },
+    cropTop: true,
+    overlays: () => [...chromeMasks(), ...demoInboxOverlays()],
   },
   gidenler: {
     src: 'gidenler-raw.png',
     out: 'gidenler.png',
-    overlays: () => [
-      ...chromeMasks(),
-      // sol liste tamamen kapla demo satırlarla
-      { x: 0.145, y: 0.2, w: 0.38, h: 0.72, fill: '#ffffff' },
-      { x: 0.155, y: 0.22, w: 0.2, h: 0.02, text: 'Giden mesajlar', size: 12, color: '#64748b', weight: '600' },
-      ...[
-        ['+90 532 ··· ·· 14', 'Bahar kampanyası · Merhaba Ayşe…', 'Okundu', 0.26],
-        ['+90 533 ··· ·· 28', 'Bahar kampanyası · Merhaba Mehmet…', 'Okundu', 0.38],
-        ['+90 544 ··· ·· 51', 'Randevu hatırlatma · yarın 14:00', 'Teslim', 0.5],
-        ['+90 555 ··· ·· 03', 'Karşılama · hoş geldiniz', 'Okundu', 0.62],
-        ['+90 505 ··· ·· 77', 'Bahar kampanyası · paket detayı', 'Okundu', 0.74],
-      ].flatMap(([phone, body, status, y]) => [
-        { x: 0.155, y, w: 0.35, h: 0.1, fill: '#ffffff' },
-        { x: 0.16, y: y + 0.01, w: 0.25, h: 0.02, text: phone, size: 12 },
-        { x: 0.16, y: y + 0.035, w: 0.34, h: 0.025, text: body, size: 11, color: '#64748b', weight: '500' },
-        { x: 0.16, y: y + 0.065, w: 0.12, h: 0.02, text: status, size: 10, color: '#2f5bff', weight: '600' },
-      ]),
-      { x: 0.55, y: 0.35, w: 0.38, h: 0.2, fill: '#ffffff' },
-      { x: 0.57, y: 0.4, w: 0.3, h: 0.025, text: 'Bir kayıt seçin', size: 14, color: '#64748b', weight: '600' },
-      { x: 0.57, y: 0.44, w: 0.32, h: 0.04, text: 'Soldan kampanya mesajına tıklayın', size: 12, color: '#94a3b8', weight: '500' },
-    ],
+    overlays: () => [...chromeMasks(), ...demoOutboxOverlays()],
   },
 }
 
@@ -229,17 +441,25 @@ async function run() {
       console.warn('skip missing', key, job.src)
       continue
     }
-    const base = sharp(srcPath)
-    const meta = await base.metadata()
-    const width = meta.width ?? 1800
-    const height = meta.height ?? 1200
+
+    let pipeline = sharp(srcPath)
+    const meta = await pipeline.metadata()
+    let width = meta.width ?? 1800
+    let height = meta.height ?? 1200
+
+    // Showcase 16:10 — uzun sayfalarda yalnızca üst viewport’u al
+    if (job.cropTop && height > Math.round(width * 0.72)) {
+      height = Math.round(width * (10 / 16))
+      pipeline = sharp(srcPath).extract({ left: 0, top: 0, width, height })
+    }
+
     const overlays = job.overlays(width, height)
     const svg = svgOverlay(width, height, overlays)
-    await sharp(srcPath)
+    await pipeline
       .composite([{ input: svg, top: 0, left: 0 }])
       .png({ quality: 90 })
       .toFile(outPath)
-    console.log('ok', key, '->', job.out)
+    console.log('ok', key, '->', job.out, `${width}x${height}`)
   }
 }
 

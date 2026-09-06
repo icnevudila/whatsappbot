@@ -1,10 +1,10 @@
 import { ScrollReveal } from './scroll-reveal'
 
 const HIGHLIGHTS = [
-  { label: 'Hat başına günlük tavan', detail: 'WhatsApp kotasına sadık' },
-  { label: 'Sunucuda oturum', detail: 'Panel kapalıyken de bağlı' },
-  { label: 'Numara doğrulama', detail: 'Kayıtsıza deneme yok' },
-  { label: '7 gün deneme', detail: 'Kredi kartı istemez' },
+  { label: 'Hat başına günlük tavan', detail: 'Platform kotasına uygun gönderim' },
+  { label: 'Sunucuda oturum', detail: 'Panel kapalıyken de bağlı kalır' },
+  { label: 'Numara doğrulama', detail: 'Kayıtsız numaraya deneme yok' },
+  { label: '7 gün deneme', detail: 'Kredi kartı istemiyoruz' },
 ] as const
 
 export function SocialProofStrip() {

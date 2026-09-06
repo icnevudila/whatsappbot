@@ -3,19 +3,19 @@ import { ScrollReveal } from './scroll-reveal'
 const QUOTES = [
   {
     quote:
-      'Üç hattı bağladık, kampanya arka planda yürüdü. Panel kapalıyken de gönderim sürdü — önceki araçta bu yoktu.',
+      'Üç hattı bağladık, kampanya arka planda yürüdü. Panel kapalıyken de gönderim sürdü; önceki araçta bu yoktu.',
     name: 'Ege',
     role: 'Operasyon · perakende',
   },
   {
     quote:
-      'Numara doğrulama kapısı sayesinde kayıtsızlara basmayı bıraktık. Şikayet oranı düştü, kota daha uzun dayandı.',
+      'Numara doğrulama sayesinde kayıtsızlara basmayı bıraktık. Şikayet oranı düştü, kota daha uzun dayandı.',
     name: 'Selin',
     role: 'Pazarlama · hizmet',
   },
   {
     quote:
-      'Gelenler’den çıkanları kara listeye almak tek tık. Yanıt kaçırmıyoruz, aynı numaraya tekrar gitmiyoruz.',
+      'Çıkanları kara listeye almak tek tık. Yanıt kaçırmıyoruz, aynı numaraya tekrar yazmıyoruz.',
     name: 'Murat',
     role: 'Satış · B2B',
   },
@@ -38,10 +38,10 @@ export function WallOfLove() {
             Operatörler
           </p>
           <h2 className="text-[24px] font-semibold tracking-[-0.02em]">
-            “Hattı yakmadan gönderdik” diyenler
+            Hattı koruyarak gönderenler
           </h2>
           <p className="mt-3 text-[14px] text-ink-muted">
-            Demo alıntılar — gerçek müşteri hikâyeleri yayınlandıkça buraya eklenir.
+            Demo alıntılar. Gerçek müşteri hikâyeleri geldikçe buraya eklenir.
           </p>
         </ScrollReveal>
 

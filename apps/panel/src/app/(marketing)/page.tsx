@@ -15,13 +15,13 @@ import { ProductShowcase } from './product-showcase'
 import './landing/landing.css'
 
 export const metadata: Metadata = {
-  title: { absolute: `${BRAND_NAME} — Çoklu WhatsApp hattından toplu kampanya gönderimi` },
+  title: { absolute: `${BRAND_NAME} — Çoklu hattan toplu kampanya gönderimi` },
   description:
-    'Kendi WhatsApp hatlarınızı bağlayın, kişi listenizi yükleyin, hattı yakmayan hızda toplu kampanya gönderin. Numara doğrulama, ısındırma ve otomatik durdurma dahil.',
+    'Kendi hatlarınızı bağlayın, kişi listenizi yükleyin, hattı koruyan hızda toplu kampanya gönderin. Numara doğrulama, ısındırma ve otomatik durdurma dahil.',
   openGraph: {
-    title: `${BRAND_NAME} — Çoklu WhatsApp hattından toplu kampanya gönderimi`,
+    title: `${BRAND_NAME} — Çoklu hattan toplu kampanya gönderimi`,
     description:
-      'Kendi WhatsApp hatlarınızı bağlayın, kişi listenizi yükleyin, hattı yakmayan hızda toplu kampanya gönderin.',
+      'Kendi hatlarınızı bağlayın, kişi listenizi yükleyin, hattı koruyan hızda toplu kampanya gönderin.',
   },
 }
 
@@ -29,44 +29,44 @@ const STEPS = [
   {
     n: '01',
     title: 'Hatlarınızı bağlayın',
-    body: 'Panelde QR kodu çıkar, telefonunuzdan okutursunuz. Aynı anda kaç hat isterseniz. Oturumlar sunucuda tutulur, panel kapalıyken de bağlı kalır.',
+    body: 'Panelde QR kodu açılır, telefonunuzdan okutursunuz. İstediğiniz kadar hat ekleyebilirsiniz. Oturumlar sunucuda tutulur; panel kapalıyken de bağlı kalır.',
   },
   {
     n: '02',
     title: 'Kişileri yükleyin',
-    body: 'CSV yükleyin ya da numaraları doğrudan yapıştırın. Ülke koduna çevrilir ve WhatsApp’ta kayıtlı olup olmadığı kontrol edilir.',
+    body: 'CSV yükleyin veya numaraları yapıştırın. Ülke koduna çevrilir ve kayıtlı olup olmadığı kontrol edilir.',
   },
   {
     n: '03',
     title: 'Kampanyayı başlatın',
-    body: 'Mesajı yazın, görseli ekleyin, hatları seçin. Gerisi arka planda çalışır; siz paneli kapatsanız da gönderim sürer.',
+    body: 'Mesajı yazın, görseli ekleyin, hatları seçin. Gönderim arka planda sürer; paneli kapatsanız da devam eder.',
   },
 ]
 
 const SAFETY = [
   {
-    title: 'Numara doğrulama kapısı',
-    body: 'Gönderimden önce her numara WhatsApp’ta kayıtlı mı diye kontrol edilir. Kayıtsız numaraya denemek kısıt almanın en hızlı yolu.',
+    title: 'Numara doğrulama',
+    body: 'Gönderimden önce her numara kayıtlı mı diye kontrol edilir. Kayıtsız numaraya denemek kısıt almanın en hızlı yoludur.',
   },
   {
-    title: 'Gerçek kotanın okunması',
-    body: 'WhatsApp’ın hesabınıza tanıdığı yeni sohbet kotasını ve varsa geçici kilidi doğrudan kaynaktan okuyup panelde gösteriyoruz. Tahmin yok.',
+    title: 'Gerçek kota okuması',
+    body: 'Hesabınıza tanınan yeni sohbet kotasını ve varsa geçici kilidi kaynaktan okuyup panelde gösteririz. Tahmin yok.',
   },
   {
     title: 'Isındırma eğrisi',
     body: 'Yeni hat ilk gün 10, birinci hafta 120, ikinci haftadan sonra günde 250 mesaja çıkar. Bu tavan panelden aşılamaz.',
   },
   {
-    title: 'İnsani gönderim aralığı',
-    body: 'Mesajlar arasında rastgele bekleme var. Sabit aralıklarla atılan mesaj, otomasyonun en kolay yakalanan imzası.',
+    title: 'İnsanî gönderim aralığı',
+    body: 'Mesajlar arasında rastgele bekleme vardır. Sabit aralıkla atılan mesaj, otomasyonun en kolay yakalanan imzasıdır.',
   },
   {
     title: 'Otomatik durdurma',
-    body: 'Hat kısıt sinyali verdiği anda kampanya o hattan durur, diğerlerinden devam eder. Kampanyanın tamamı çökmez.',
+    body: 'Hat kısıt sinyali verdiğinde kampanya o hattan durur, diğerlerinden devam eder. Tüm kampanya çökmez.',
   },
   {
     title: 'Kara liste',
-    body: 'Çıkmak isteyen ya da elle işaretlenen numaralar bir daha hiçbir kampanyaya dahil edilmez.',
+    body: 'Çıkmak isteyen veya elle işaretlenen numaralar bir daha hiçbir kampanyaya dahil edilmez.',
   },
 ]
 
@@ -127,27 +127,27 @@ const PLANS: LandingPlan[] = [
 const FAQ = [
   {
     q: 'Hesabım banlanır mı?',
-    a: 'Risk sıfır değil ve bunu gizlemiyoruz. Resmi WhatsApp Business API kullanmadığımız için gönderim sizin kendi hattınızdan çıkıyor. Yaptığımız şey riski yönetmek: numaraları önceden doğruluyoruz, WhatsApp\u2019ın tanıdığı kotayı okuyoruz, yeni hattı kademeli ısıtıyoruz, gönderim aralıklarını rastgeleleştiriyoruz ve ilk kısıt sinyalinde duruyoruz. Kotayı zorlayan, alakasız listeye pazarlama yapan hesap yine de engellenebilir.',
+    a: 'Risk sıfır değil; bunu gizlemiyoruz. Gönderim sizin kendi hattınızdan çıkar. Biz riski yönetiriz: numaraları önceden doğrularız, tanıdığınız kotayı okuruz, yeni hattı kademeli ısıtırız, aralıkları rastgeleleştiririz ve ilk kısıt sinyalinde dururuz. Kotayı zorlayan veya alakasız listeye yazan hesap yine de engellenebilir.',
   },
   {
     q: 'Gerçekten sınırsız numara gönderebilir miyim?',
-    a: 'Liste tarafında evet, kaç numara yüklerseniz yükleyin taşırız. Gönderim hızında hayır: bir hat günde en fazla 250 mesaj atar ve bu bizim değil WhatsApp\u2019ın koyduğu bir sınır. 10.000 kişiye ulaşmak 3 hatla yaklaşık iki hafta, 40 hatla bir gün sürer. "Sınırsız gönderim" vaat eden her panel ya bunu bilmiyordur ya da hattınızı yakmayı göze almıştır.',
+    a: 'Liste tarafında evet; kaç numara yüklerseniz yükleyin taşırız. Gönderim hızında hayır: bir hat günde en fazla 250 mesaj atar. Bu bizim değil platformun sınırı. 10.000 kişiye ulaşmak 3 hatla yaklaşık iki hafta, 40 hatla bir gün sürer. “Sınırsız gönderim” vaat eden her panel ya bunu bilmiyordur ya da hattınızı yakmayı göze almıştır.',
   },
   {
-    q: 'Resmi WhatsApp Business API\u2019den farkı ne?',
-    a: 'Resmi API\u2019de her pazarlama konuşması için Meta\u2019ya ücret ödersiniz (Türkiye için yaklaşık 0,087 dolar) ve gönderdiğiniz her şablonun önceden onaylanması gerekir; karşılığında hesap güvendedir. Bizde mesaj başına ücret ve şablon onayı yok, maliyet sabit; karşılığında risk sizin hattınızda. Aylık hacminiz yüksekse ve marka riskiniz büyükse resmi API daha doğru tercih.',
+    q: 'Resmi API ile farkı ne?',
+    a: 'Resmi API’de her pazarlama konuşması için Meta’ya ücret ödersiniz ve şablonların önceden onaylanması gerekir; karşılığında hesap daha güvendedir. Bizde mesaj başına ücret ve şablon onayı yok, maliyet sabittir; risk sizin hattınızdadır. Hacminiz çok yüksekse ve marka riskiniz büyükse resmi API daha doğru tercih olabilir.',
   },
   {
     q: 'KVKK açısından durum ne?',
-    a: 'Onay vermemiş kişilere ticari elektronik ileti göndermek Türkiye\u2019de yasal risk taşır ve bu sorumluluk gönderen tarafa, yani size ait. Panel size çıkma taleplerini işaretleyebileceğiniz kara liste ve kayıt tutma imkanı veriyor, ama izinli liste kullanmak sizin sorumluluğunuzda.',
+    a: 'Onay vermemiş kişilere ticari elektronik ileti göndermek Türkiye’de yasal risk taşır; sorumluluk gönderene aittir. Panel çıkma taleplerini işaretleyebileceğiniz kara liste ve kayıt tutma imkânı verir, ama izinli liste kullanmak sizin sorumluluğunuzdadır.',
   },
   {
     q: 'Bilgisayarımı kapatırsam gönderim durur mu?',
-    a: 'Hayır. WhatsApp oturumları ve kampanya motoru sunucuda çalışır, paneli yalnızca izlemek ve yönetmek için açarsınız. Paneli kapatsanız da gönderim kaldığı yerden devam eder; tekrar açtığınızda anlık durumu görürsünüz.',
+    a: 'Hayır. Oturumlar ve kampanya motoru sunucuda çalışır. Paneli yalnızca izlemek ve yönetmek için açarsınız. Kapatsanız da gönderim kaldığı yerden devam eder; tekrar açtığınızda güncel durumu görürsünüz.',
   },
   {
-    q: 'Hat kısıt alırsa ne oluyor?',
-    a: 'O hat otomatik olarak duraklatılır ve panelde kilit sebebiyle gösterilir. Kampanya varsa diğer hatlardan devam eder. Kilit geçiciyse süresi bitince hat kendiliğinden geri döner.',
+    q: 'Hat kısıt alırsa ne olur?',
+    a: 'O hat otomatik duraklatılır ve panelde kilit sebebiyle gösterilir. Kampanya varsa diğer hatlardan devam eder. Kilit geçiciyse süresi bitince hat kendiliğinden geri döner.',
   },
 ]
 
@@ -164,8 +164,8 @@ export default function Landing() {
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_20%_0%,rgba(47,91,255,0.22),transparent_55%)]"
         />
 
-        <div className="relative mx-auto grid min-h-[calc(100dvh-64px)] max-w-6xl md:min-h-[690px] md:grid-cols-[0.92fr_1.08fr] md:items-stretch">
-          <div className="flex flex-col justify-center px-5 py-14 md:py-20 md:pr-10">
+        <div className="relative mx-auto grid min-h-[calc(100dvh-64px)] max-w-6xl md:min-h-[720px] md:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)] md:items-stretch">
+          <div className="flex flex-col justify-center px-5 py-14 md:py-20 md:pr-8">
             <div className="filo-fade-up inline-flex items-center gap-3">
               <LogoMark className="size-9 text-white md:size-11" />
               <span className="text-[36px] font-semibold tracking-[-0.04em] md:text-[48px]">
@@ -174,13 +174,13 @@ export default function Landing() {
             </div>
 
             <h1 className="filo-fade-up-delay mt-6 max-w-md text-[26px] font-semibold leading-[1.15] tracking-[-0.03em] text-white md:text-[34px]">
-              Toplu WhatsApp kampanyası,{' '}
-              <span className="text-[#9db8f5]">hattı yakmadan.</span>
+              Toplu kampanya gönderin,{' '}
+              <span className="text-[#9db8f5]">hattınızı koruyun.</span>
             </h1>
 
             <p className="filo-fade-up-delay mt-4 max-w-md text-[15px] leading-relaxed text-white/75">
-              Hatlarınızı QR ile bağlayın, listenizi yükleyin, mesajı hazırlayın. Gönderim
-              WhatsApp&apos;ın gerçek limitleri içinde arka planda yürür.
+              Hatlarınızı QR ile bağlayın, listenizi yükleyin, mesajı hazırlayın. Gönderim gerçek
+              limitler içinde, arka planda yürür.
             </p>
 
             <div className="filo-fade-up-delay-2 mt-7 flex flex-wrap items-center gap-2.5">
@@ -217,11 +217,11 @@ export default function Landing() {
               Kapasite
             </p>
             <h2 className="text-[24px] font-semibold tracking-[-0.02em]">
-              Önce şu soruyu netleştirelim: kaç mesaj atabilirsiniz?
+              Önce netleştirelim: günde kaç mesaj gönderebilirsiniz?
             </h2>
             <p className="mt-3 max-w-[40rem] text-[14px] leading-relaxed text-ink-muted">
-              Çoğu panel bunu satış sonrasına saklar. Biz başa koyuyoruz, çünkü beklentiyi doğru
-              kurmak hem sizin hem hatlarınızın lehine.
+              Çoğu panel bunu satış sonrasına saklar. Biz başa koyuyoruz; doğru beklenti hem sizin
+              hem hatlarınızın lehine.
             </p>
           </div>
           <CapacityCalculator />
@@ -236,7 +236,7 @@ export default function Landing() {
           <p className="mb-2 font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-ink-faint">
             Akış
           </p>
-          <h2 className="text-[24px] font-semibold tracking-[-0.02em]">Üç adımda yayındasınız</h2>
+          <h2 className="text-[24px] font-semibold tracking-[-0.02em]">Üç adımda yayına alırsınız</h2>
           <div className="mt-8 grid gap-px overflow-hidden border border-hairline bg-hairline md:grid-cols-3">
             {STEPS.map((step) => (
               <div key={step.n} className="bg-surface p-6">
@@ -261,11 +261,11 @@ export default function Landing() {
               Ban önleme
             </p>
             <h2 className="text-[24px] font-semibold tracking-[-0.02em]">
-              Asıl iş, mesajı göndermek değil, hattı ayakta tutmak
+              Asıl iş mesaj atmak değil, hattı ayakta tutmak
             </h2>
             <p className="mt-3 max-w-[40rem] text-[14px] leading-relaxed text-ink-muted">
-              Toplu mesaj göndermek teknik olarak kolay. Zor olan, üçüncü kampanyadan sonra hattın
-              hala çalışıyor olması. {BRAND_NAME}&apos;nun yaptığı iş büyük ölçüde bu.
+              Toplu mesaj göndermek teknik olarak kolaydır. Zor olan, üçüncü kampanyadan sonra hattın
+              hâlâ çalışıyor olmasıdır. {BRAND_NAME} büyük ölçüde bunu yapar.
             </p>
           </div>
           <div className="mt-8 grid gap-x-10 gap-y-7 sm:grid-cols-2 lg:grid-cols-3">
@@ -284,12 +284,12 @@ export default function Landing() {
         <div className="mx-auto grid max-w-6xl gap-10 px-5 py-14 md:grid-cols-2 md:items-center">
           <div>
             <h2 className="text-[24px] font-semibold tracking-[-0.02em]">
-              Kapasiteyi hat sayısıyla büyütürsünüz
+              Kapasiteyi hat sayısıyla büyütün
             </h2>
             <p className="mt-3 text-[14px] leading-relaxed text-ink-muted">
-              Tek hattan daha hızlı göndermeye çalışmak çalışmaz. Bunun yerine birden fazla hat
-              bağlarsınız; {BRAND_NAME} kampanyayı hatlar arasında dağıtır, her hattın kendi kotasını
-              ayrı takip eder ve biri kısıt alırsa diğerlerinden devam eder.
+              Tek hattı zorlamak işe yaramaz. Bunun yerine birden fazla hat bağlarsınız; {BRAND_NAME}{' '}
+              kampanyayı hatlar arasında dağıtır, her hattın kotasını ayrı takip eder ve biri kısıt
+              alırsa diğerlerinden devam eder.
             </p>
             <ul className="mt-5 flex flex-col gap-2.5">
               {[
@@ -329,7 +329,7 @@ export default function Landing() {
               ))}
             </div>
             <p className="mt-5 border-t border-hairline pt-4 text-[11.5px] text-ink-faint">
-              Üçüncü hat henüz ısınma döneminde, o yüzden tavanı düşük. Kampanya yine de günde 620
+              Üçüncü hat henüz ısınma döneminde olduğu için tavanı düşük. Kampanya yine de günde 620
               mesajla ilerliyor.
             </p>
           </div>
@@ -344,10 +344,10 @@ export default function Landing() {
           <div className="max-w-2xl">
             <h2 className="text-[24px] font-semibold tracking-[-0.02em]">Mesaj başına ücret yok</h2>
             <p className="mt-3 text-[14px] leading-relaxed text-ink-muted">
-              Resmi API üzerinden çalışan panellerde her pazarlama mesajı ayrıca faturalanır. Biz
-              kendi hattınızı kullandığımız için sabit ücret dışında bir maliyet çıkmıyor. Paketleri
-              ayıran tek şey hat sayısı ve günlük kapasite. Fiyatlar bilgilendirme amaçlıdır; ödeme
-              kayıttan sonra Ayarlar üzerinden yapılandırılır.
+              Resmi API kullanan panellerde her pazarlama mesajı ayrıca faturalanır. Biz kendi
+              hattınızı kullandığımız için sabit ücret dışında ek maliyet çıkmaz. Paketleri ayıran tek
+              şey hat sayısı ve günlük kapasitedir. Fiyatlar bilgilendirme amaçlıdır; ödeme kayıttan
+              sonra Ayarlar’dan yapılandırılır.
             </p>
           </div>
 

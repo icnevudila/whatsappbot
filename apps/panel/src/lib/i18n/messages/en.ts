@@ -77,7 +77,7 @@ export const en: typeof tr = {
     legal: 'Legal',
     kvkk: 'Privacy notice',
     terms: 'Terms of use',
-    blurb: 'Bulk campaigns from your own WhatsApp lines, at a pace that keeps lines healthy.',
+    blurb: 'Bulk campaigns from your own lines, at a pace that keeps them healthy.',
     disclaimer:
       'WhatsApp is a trademark of Meta Platforms Inc.; this product is not affiliated with Meta.',
   },

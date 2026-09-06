@@ -3,32 +3,31 @@
 import { LandingVideo } from './landing/landing-video'
 
 /**
- * Hero ürün düzlemi: dişçi landing gibi kenara yapışık, içinde demo video.
+ * Hero sağ sütun: kenara yapışık, yüksekliği dolduran video düzlemi.
  */
 export function HeroPanel() {
   return (
-    <div className="filo-fade-in relative flex h-full flex-col border-t border-white/10 md:border-l md:border-t-0">
-      <div className="relative flex flex-1 flex-col overflow-hidden bg-ink p-2 sm:p-2.5">
-        <div className="mb-1.5 flex items-center gap-1.5 px-1" aria-hidden>
+    <div className="filo-fade-in relative h-full min-h-[300px] w-full border-t border-white/10 md:min-h-full md:border-l md:border-t-0">
+      <div className="absolute inset-0 overflow-hidden bg-[#07090f]">
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center gap-1.5 bg-gradient-to-b from-black/55 to-transparent px-3 pb-8 pt-3"
+          aria-hidden
+        >
           <span className="size-2.5 rounded-full bg-[#ff5f57]" />
           <span className="size-2.5 rounded-full bg-[#febc2e]" />
           <span className="size-2.5 rounded-full bg-[#28c840]" />
-          <span className="ml-2 h-5 flex-1 rounded-md bg-white/10 px-2 font-mono text-[10px] leading-5 text-white/45">
+          <span className="ml-2 h-5 min-w-0 flex-1 rounded-md bg-white/10 px-2 font-mono text-[10px] leading-5 text-white/50">
             app.filo.dev
           </span>
         </div>
-        <div className="relative aspect-[16/10] w-full overflow-hidden rounded-[10px] bg-canvas ring-1 ring-black/5 md:aspect-auto md:min-h-0 md:flex-1">
-          <LandingVideo
-            src="/landing/demo.mp4"
-            poster="/landing/ozet.png"
-            label="Filo panel demo videosu"
-            className="object-center md:object-top"
-          />
-        </div>
+
+        <LandingVideo
+          src="/landing/demo.mp4"
+          poster="/landing/ozet.png"
+          label="Filo panel demo videosu"
+          className="object-cover object-top"
+        />
       </div>
-      <p className="border-t border-white/10 bg-[var(--color-hero)] px-4 py-2.5 text-center text-[12px] font-medium text-white/55">
-        Canlı panel turu — özet, hatlar, gönderim
-      </p>
     </div>
   )
 }

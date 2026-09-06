@@ -4,31 +4,31 @@ import { ScrollReveal } from './scroll-reveal'
 const STEPS = [
   {
     time: '09:00',
-    title: 'Hatları kontrol et',
+    title: 'Hatları kontrol edin',
     body: 'Bağlı hatlar, günlük kota ve ısınma tavanı özetten görünür. QR bekleyen hat varsa Hesaplar’dan bağlanır.',
     image: '/landing/ozet.png',
   },
   {
     time: '10:30',
-    title: 'Listeyi doğrula',
-    body: 'Kampanya listesindeki numaralar WhatsApp’ta kayıtlı mı diye işaretlenir. Kayıtsızlar otomatik elenir.',
+    title: 'Listeyi doğrulayın',
+    body: 'Kampanya listesindeki numaralar kayıtlı mı diye işaretlenir. Kayıtsızlar otomatik elenir.',
     image: '/landing/kisiler.png',
   },
   {
     time: '11:15',
-    title: 'Kampanyayı başlat',
-    body: 'Mesaj + görsel + hat seçimi. Gönderim sunucuda yürür; panel kapalı olsa da devam eder.',
+    title: 'Kampanyayı başlatın',
+    body: 'Mesaj, görsel ve hatları seçin. Gönderim sunucuda yürür; panel kapalı olsa da devam eder.',
     image: '/landing/hizli-gonderim.png',
   },
   {
     time: '14:00',
-    title: 'Yanıtları yönet',
-    body: 'Gelenler’de “ilgileniyorum” ve “çık” cevapları. Kara listeye alınan numaraya bir daha gitmez.',
+    title: 'Yanıtları yönetin',
+    body: 'Gelen cevapları okuyun. Kara listeye alınan numaraya bir daha mesaj gitmez.',
     image: '/landing/gelenler.png',
   },
   {
     time: '17:30',
-    title: 'Teslim / okundu bak',
+    title: 'Teslim ve okundu bakın',
     body: 'Gidenler ve Raporlar’da gönderildi → teslim → okundu hunisi. Ertesi gün için kota netleşir.',
     image: '/landing/gidenler.png',
   },
@@ -43,10 +43,10 @@ export function DayInOps() {
             Bir gün
           </p>
           <h2 className="text-[24px] font-semibold tracking-[-0.02em]">
-            Operasyon günü Filo’da nasıl akar?
+            Operasyon günü nasıl akar?
           </h2>
           <p className="mt-3 text-[14px] leading-relaxed text-ink-muted">
-            Sabah kontrolden akşam rapora — tek panelde kampanya döngüsü.
+            Sabah kontrolden akşam rapora kadar kampanya döngüsü tek panelde.
           </p>
         </ScrollReveal>
 

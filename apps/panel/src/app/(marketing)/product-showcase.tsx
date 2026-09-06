@@ -8,31 +8,15 @@ const TABS = [
   {
     id: 'kampanyalar',
     label: 'Kampanyalar',
-    lead: 'Liste ve hat seçin, mesajı yazın; gönderim arka planda sürer.',
+    lead: 'Listeyi ve hatları seçin, mesajı yazın. Gönderim arka planda sürer.',
     src: '/landing/raporlar.png',
     alt: 'Filo raporlar ve kampanya özeti ekranı',
     caption: 'Raporlar · kampanya performansı',
   },
   {
-    id: 'gelenler',
-    label: 'Gelenler',
-    lead: 'Kampanya yanıtlarını okuyun, tek tıkla cevaplayın veya kara listeye alın.',
-    src: '/landing/gelenler.png',
-    alt: 'Filo gelenler ekranı — kampanya yanıtları (demo numaralar)',
-    caption: 'Gelenler · kampanya yanıtları',
-  },
-  {
-    id: 'gidenler',
-    label: 'Gidenler',
-    lead: 'Gönderildi → teslim → okundu takibi; kampanya satırına bağlı kayıtlar.',
-    src: '/landing/gidenler.png',
-    alt: 'Filo gidenler ekranı — kampanya gönderimleri (demo numaralar)',
-    caption: 'Gidenler · okundu / teslim',
-  },
-  {
     id: 'hesaplar',
     label: 'Hesaplar',
-    lead: 'Birden fazla WhatsApp hattını QR ile bağlayın, kotayı canlı görün.',
+    lead: 'Birden fazla hattı QR ile bağlayın, kotayı canlı görün.',
     src: '/landing/hesaplar.png',
     alt: 'Filo hesaplar ekranı — demo hatlar',
     caption: 'Hesaplar · çoklu hat',
@@ -40,7 +24,7 @@ const TABS = [
   {
     id: 'ozet',
     label: 'Özet',
-    lead: 'Günün operasyon görünümü: hat, defter, trafik ve kısayollar.',
+    lead: 'Günün operasyon görünümü: hatlar, defter, trafik ve kısayollar.',
     src: '/landing/ozet.png',
     alt: 'Filo özet paneli',
     caption: 'Özet · workbench',
@@ -63,11 +47,10 @@ export function ProductShowcase() {
             Ürün
           </p>
           <h2 className="text-[24px] font-semibold tracking-[-0.02em]">
-            Panelin içinden, kampanya akışı
+            Panelin içinden kampanya akışı
           </h2>
           <p className="mt-3 max-w-[40rem] text-[14px] leading-relaxed text-ink-muted">
-            Gerçek arayüz görüntüleri — numaralar ve sohbetler demo kampanya verisiyle
-            değiştirildi; kişisel bilgi yok.
+            Gerçek arayüz görüntüleri. Numaralar ve sohbetler demo kampanya verisiyle değiştirildi.
           </p>
         </div>
 

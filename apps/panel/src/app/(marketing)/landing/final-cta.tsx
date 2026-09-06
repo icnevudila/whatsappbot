@@ -18,7 +18,7 @@ export function FinalCta() {
             İlk hattınızı beş dakikada bağlayın
           </h2>
           <p className="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-white/75">
-            {BRAND_NAME} denemesi tam özellikli. Kredi kartı yok, otomatik yenileme yok.
+            {BRAND_NAME} denemesi tam özellikli. Kredi kartı istemiyoruz, otomatik yenileme yok.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-2.5 sm:flex-row">
             <Link

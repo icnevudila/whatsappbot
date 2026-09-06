@@ -75,7 +75,7 @@ export const tr = {
     legal: 'Yasal',
     kvkk: 'KVKK aydınlatma metni',
     terms: 'Kullanım koşulları',
-    blurb: 'Kendi WhatsApp hatlarınızdan, hattı yakmayan hızda toplu kampanya gönderimi.',
+    blurb: 'Kendi hatlarınızdan, hattı koruyan hızda toplu kampanya gönderimi.',
     disclaimer:
       'WhatsApp, Meta Platforms Inc. markasıdır; bu ürün Meta ile bağlantılı değildir.',
   },
