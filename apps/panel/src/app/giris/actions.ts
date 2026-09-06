@@ -81,7 +81,7 @@ export async function signIn(_previous: AuthState, formData: FormData): Promise<
       needsSetup = false
     } else if (profile?.active_org_id) {
       const orgId = profile.active_org_id
-      const [brand, contacts, connected, valid] = await Promise.all([
+      const [brand, contacts, connected] = await Promise.all([
         supabase
           .from('brand_kits')
           .select('id', { count: 'exact', head: true })
@@ -95,17 +95,11 @@ export async function signIn(_previous: AuthState, formData: FormData): Promise<
           .select('id', { count: 'exact', head: true })
           .eq('org_id', orgId)
           .eq('status', 'connected'),
-        supabase
-          .from('contacts')
-          .select('id', { count: 'exact', head: true })
-          .eq('org_id', orgId)
-          .eq('wa_status', 'valid'),
       ])
       needsSetup = !(
         (brand.count ?? 0) > 0 &&
         (contacts.count ?? 0) > 0 &&
-        (connected.count ?? 0) > 0 &&
-        (valid.count ?? 0) > 0
+        (connected.count ?? 0) > 0
       )
     }
   }

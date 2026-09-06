@@ -2,10 +2,10 @@ import { cache } from 'react'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 /**
- * Zorunlu onboarding: marka + liste + bağlı hat + en az bir WA-doğrulanmış numara.
- * Bunlar tamamsa müşteri kampanya / gönderime hazırdır (ilk test mesajı şart değil).
+ * Zorunlu onboarding: marka + kişi grubu + bağlı hat.
+ * Numara doğrulama arka planda (kampanya/verify job); müşteriye ayrı adım değil.
  */
-export const SETUP_STEP_KEYS = ['brand', 'contacts', 'connected', 'verified'] as const
+export const SETUP_STEP_KEYS = ['brand', 'contacts', 'connected'] as const
 export type SetupStepKey = (typeof SETUP_STEP_KEYS)[number]
 
 export const getSetupProgress = cache(async (orgId: string) => {
@@ -15,7 +15,6 @@ export const getSetupProgress = cache(async (orgId: string) => {
     { count: connectedCount },
     { count: contactCount },
     { count: brandCount },
-    { count: validWa },
     { count: outCount },
   ] = await Promise.all([
     supabase
@@ -25,11 +24,6 @@ export const getSetupProgress = cache(async (orgId: string) => {
       .eq('status', 'connected'),
     supabase.from('contacts').select('id', { count: 'exact', head: true }).eq('org_id', orgId),
     supabase.from('brand_kits').select('id', { count: 'exact', head: true }).eq('org_id', orgId),
-    supabase
-      .from('contacts')
-      .select('id', { count: 'exact', head: true })
-      .eq('org_id', orgId)
-      .eq('wa_status', 'valid'),
     supabase
       .from('message_log')
       .select('id', { count: 'exact', head: true })
@@ -41,14 +35,12 @@ export const getSetupProgress = cache(async (orgId: string) => {
     brand: (brandCount ?? 0) > 0,
     contacts: (contactCount ?? 0) > 0,
     connected: (connectedCount ?? 0) > 0,
-    verified: (validWa ?? 0) > 0,
   }
 
   const counts = {
     connectedCount: connectedCount ?? 0,
     contactCount: contactCount ?? 0,
     brandCount: brandCount ?? 0,
-    validWa: validWa ?? 0,
     outCount: outCount ?? 0,
   }
 

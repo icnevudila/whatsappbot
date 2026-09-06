@@ -28,5 +28,5 @@ export default async function SetupPage() {
     redirect('/kampanyalar?hazir=1')
   }
 
-  return <OnboardingWizard progress={progress} />
+  return <OnboardingWizard progress={progress} orgId={org.id} orgName={org.name} />
 }

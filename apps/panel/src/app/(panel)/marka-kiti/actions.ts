@@ -55,6 +55,7 @@ export async function saveBrandKit(
     name,
     colors,
     logo_path: logoUrl || null,
+    tone: String(formData.get('tone') ?? '').trim().slice(0, 160) || null,
     is_default: true,
   }
 

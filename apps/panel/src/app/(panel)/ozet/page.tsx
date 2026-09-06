@@ -7,7 +7,6 @@ import {
   CardHeader,
   PageHeader,
   QuietLink,
-  Stat,
   StatusPill,
 } from '@/components/ui'
 import { requireActiveOrg } from '@/lib/org'
@@ -224,44 +223,6 @@ export default async function PanelHomePage() {
         />
       </div>
 
-      <div className="mb-3 grid gap-2.5 sm:grid-cols-3">
-        <Card>
-          <div className="p-3.5">
-            <Stat
-              label="Bugün giden"
-              value={outToday ?? 0}
-              tone="accent"
-              detail={
-                (campaignsRunning ?? 0) > 0
-                  ? `${campaignsRunning} kampanya çalışıyor`
-                  : ' '
-              }
-            />
-          </div>
-        </Card>
-        <Card>
-          <div className="p-3.5">
-            <Stat label="Bugün gelen" value={inToday ?? 0} tone="muted" detail="Cevaplar" />
-            <Link
-              href="/mesajlar"
-              className="mt-2 inline-block text-[12px] font-medium text-accent underline-offset-2 hover:underline"
-            >
-              Mesajları aç →
-            </Link>
-          </div>
-        </Card>
-        <Card>
-          <div className="p-3.5">
-            <Stat
-              label="Bağlı hat"
-              value={connectedCount}
-              tone={hasLine ? 'accent' : 'muted'}
-              detail={hasLine ? 'Hazır' : 'Yok'}
-            />
-          </div>
-        </Card>
-      </div>
-
       <Card>
         <CardHeader
           title="Son kampanyalar"
@@ -302,14 +263,22 @@ export default async function PanelHomePage() {
         )}
       </Card>
 
+      {(outToday ?? 0) + (inToday ?? 0) > 0 ? (
+        <p className="mt-3 text-center text-[12.5px] text-ink-muted">
+          Bugün {outToday ?? 0} giden · {inToday ?? 0} gelen.{' '}
+          <Link href="/mesajlar" className="font-medium text-accent underline-offset-2 hover:underline">
+            Mesajlar
+          </Link>
+          {(campaignsRunning ?? 0) > 0
+            ? ` · ${campaignsRunning} kampanya çalışıyor`
+            : ''}
+        </p>
+      ) : null}
+
       <p className="mt-3 text-center text-[12px] text-ink-faint">
         Takıldın mı?{' '}
         <Link href="/yardim" className="underline underline-offset-2">
           Yardım
-        </Link>
-        {' · '}
-        <Link href="/ayarlar" className="underline underline-offset-2">
-          Ayarlar
         </Link>
       </p>
     </>

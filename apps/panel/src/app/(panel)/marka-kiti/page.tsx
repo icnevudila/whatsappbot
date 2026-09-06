@@ -56,8 +56,8 @@ export default async function BrandKitPage() {
         title={t('pages.markaTitle')}
         description={
           canManage
-            ? 'Renk ve logoyu bir kez kaydedin; kampanya görselleri aynı kimlikle üretilir. Hazır görseli Hızlı gönderime taşıyabilirsiniz.'
-            : 'Marka kitini görüntüleyebilirsiniz. Kaydetme ve silme için sahip veya yönetici olmanız gerekir.'
+            ? 'İşletme adın, renklerin ve logon. İstersen aşağıdan kampanya görseli de üretirsin — zorunlu değil.'
+            : 'Marka kitini görüntüleyebilirsiniz.'
         }
         action={
           hasSavedKit ? (
@@ -71,9 +71,8 @@ export default async function BrandKitPage() {
       {!hasSavedKit && canManage ? (
         <div className="mb-4 rounded-[var(--radius-card)] border border-accent/30 bg-accent/8 px-3.5 py-2.5">
           <p className="text-[12.5px] leading-relaxed text-accent">
-            İlk adım: renkleri seçin, isteğe bağlı logo ekleyin ve{' '}
-            <span className="font-medium">Marka kitini kaydet</span> deyin. Sonra
-            aşağıda kampanya görseli üretebilirsiniz.
+            Ad + ana renk yeterli. Logo ve slogan isteğe bağlı. Kaydettikten sonra mesaj
+            göndermeye geçebilirsin.
           </p>
         </div>
       ) : null}

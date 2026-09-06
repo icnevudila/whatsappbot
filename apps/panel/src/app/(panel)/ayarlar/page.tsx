@@ -10,10 +10,7 @@ import {
   Meter,
   Notice,
   PageHeader,
-  QuietLink,
 } from '@/components/ui'
-import { activeImageProviders } from '@/lib/ai/image'
-import { activeTextProviders } from '@/lib/ai/text'
 import { capToday } from '@/lib/capacity'
 import { createT } from '@/lib/i18n'
 import { getDictionary } from '@/lib/i18n/server'
@@ -173,7 +170,7 @@ export default async function SettingsPage({
     <div className="filo-fade-in">
       <PageHeader
         title={t('pages.ayarlarTitle')}
-        description="İşletme adı, ekip, profil ve kota. Gönderim hatları Hesaplar’da; kuyruk Durum’da."
+        description="İşletme adı, ekip ve paket. Gönderim hatları Hesaplar’da."
         action={
           <span className="text-[12px] text-ink-muted">
             Rolünüz: {ROLE_HINT[org.role] ?? org.role}
@@ -239,12 +236,6 @@ export default async function SettingsPage({
           >
             Markayı ayarla
           </Link>
-          <Link
-            href="/ayarlar/otomatik-yanit"
-            className="text-[12.5px] text-ink-muted underline decoration-hairline-strong underline-offset-2 hover:text-ink"
-          >
-            Otomatik yanıt (kapalı)
-          </Link>
         </div>
       ) : null}
 
@@ -265,31 +256,6 @@ export default async function SettingsPage({
 
           <Card>
             <CardHeader
-              title="Entegrasyonlar"
-              subtitle="CRM webhook · faturalama · API anahtarı"
-            />
-            <WebhookSettingsForm
-              webhookUrl={org.webhook_url ?? null}
-              canEdit={canManage}
-            />
-            <div className="flex flex-wrap gap-2 border-t border-hairline px-3.5 py-2.5">
-              <QuietLink href="/raporlar">Raporlar / CSV</QuietLink>
-              {canManage ? <BillingCheckoutButton /> : null}
-            </div>
-            <ApiKeyForm
-              canEdit={canManage}
-              keys={(apiKeyRows ?? []) as {
-                id: string
-                name: string
-                key_prefix: string
-                last_used_at: string | null
-                created_at: string
-              }[]}
-            />
-          </Card>
-
-          <Card>
-            <CardHeader
               title="Ekip"
               subtitle={
                 members.length === 1
@@ -300,24 +266,11 @@ export default async function SettingsPage({
             <MembersPanel members={members} canManage={canManage} />
           </Card>
 
-          {org.role === 'owner' ? (
-            <Card className="border-danger/25">
-              <CardHeader
-                title="Tehlikeli bölge"
-                subtitle="İşletmeyi kalıcı olarak siler — geri alınamaz."
-              />
-              <DeleteOrganizationForm
-                orgName={org.name}
-                hasStripeSubscription={Boolean(org.stripe_subscription_id)}
-              />
-            </Card>
-          ) : null}
-
           <div id="profil" className="scroll-mt-6">
             <Card>
               <CardHeader
                 title="Profil"
-                subtitle="Panelde görünen adınız ve firma bilginiz."
+                subtitle="Panelde görünen adınız."
               />
               <ProfileForm
                 fullName={profile?.full_name ?? ''}
@@ -326,6 +279,51 @@ export default async function SettingsPage({
               />
             </Card>
           </div>
+
+          <details className="group rounded-[var(--radius-md)] border border-hairline bg-surface">
+            <summary className="cursor-pointer list-none px-3.5 py-3 text-[13px] font-semibold text-ink-muted marker:content-none [&::-webkit-details-marker]:hidden">
+              <span className="flex items-center justify-between gap-2">
+                Gelişmiş (webhook, API, faturalama)
+                <span className="text-[11.5px] font-normal text-ink-faint group-open:hidden">
+                  Aç
+                </span>
+                <span className="hidden text-[11.5px] font-normal text-ink-faint group-open:inline">
+                  Kapat
+                </span>
+              </span>
+            </summary>
+            <div className="space-y-2.5 border-t border-hairline p-3.5">
+              <p className="text-[12px] text-ink-faint">
+                Çoğu işletme bunlara ihtiyaç duymaz. CRM veya geliştirici entegrasyonu için.
+              </p>
+              <WebhookSettingsForm
+                webhookUrl={org.webhook_url ?? null}
+                canEdit={canManage}
+              />
+              <div className="flex flex-wrap gap-2 border-t border-hairline pt-2.5">
+                {canManage ? <BillingCheckoutButton /> : null}
+              </div>
+              <ApiKeyForm
+                canEdit={canManage}
+                keys={(apiKeyRows ?? []) as {
+                  id: string
+                  name: string
+                  key_prefix: string
+                  last_used_at: string | null
+                  created_at: string
+                }[]}
+              />
+              {org.role === 'owner' ? (
+                <div className="border-t border-danger/20 pt-2.5">
+                  <p className="mb-2 text-[12px] font-medium text-danger">Tehlikeli bölge</p>
+                  <DeleteOrganizationForm
+                    orgName={org.name}
+                    hasStripeSubscription={Boolean(org.stripe_subscription_id)}
+                  />
+                </div>
+              ) : null}
+            </div>
+          </details>
         </div>
 
         <div className="flex flex-col gap-2.5">
@@ -381,24 +379,6 @@ export default async function SettingsPage({
             </div>
           </Card>
 
-          <AiProvidersCard />
-
-          <Card>
-            <CardHeader
-              title="Gönderim servisi"
-              subtitle="Panel komut yazar; gerçek WhatsApp bağlantısı arka planda çalışır."
-            />
-            <div className="space-y-2.5 p-3.5 text-[12.5px] leading-relaxed text-ink-muted">
-              <p>
-                Eşleştirme kodu, QR ve otomatik mesaj için WhatsApp servisinin ayakta
-                olması gerekir. Servis kapalıyken işler kuyrukta bekler.
-              </p>
-              <QuietLink href="/durum" className="text-[12.5px]">
-                Durum’da kuyruğu izle
-              </QuietLink>
-            </div>
-          </Card>
-
           <Card>
             <CardHeader title="Oturum" subtitle={user.email ?? undefined} />
             <div className="flex flex-wrap items-center justify-between gap-2.5 p-3.5">
@@ -414,81 +394,6 @@ export default async function SettingsPage({
           </Card>
         </div>
       </div>
-    </div>
-  )
-}
-
-/**
- * Yapay zeka durumu — anahtarlar platform env’den gelir.
- */
-function AiProvidersCard() {
-  const image = activeImageProviders()
-  const text = activeTextProviders()
-
-  return (
-    <Card>
-      <CardHeader
-        title="Yapay zeka"
-        subtitle="Metin ve görsel üretimi platform tarafından yapılandırılır."
-      />
-
-      <div className="space-y-2.5 p-3.5">
-        <ProviderRow
-          label="Görsel üretimi"
-          providers={image.map((provider) => provider.label)}
-          fallback="Kapalı — sunucu ortamında görsel sağlayıcı yok (Pollinations yedek olabilir)"
-        />
-
-        <ProviderRow
-          label="Metin yazdırma"
-          providers={text.map((provider) => provider.label)}
-          fallback="Kapalı — sunucu ortamında OpenAI / Gemini anahtarı yok"
-        />
-
-        <p className="border-t border-hairline pt-2.5 text-[11.5px] leading-relaxed text-ink-faint">
-          Sağdaki isimler deneme sırasına göredir: ilki cevap vermezse sonraki
-          devreye girer.
-        </p>
-      </div>
-    </Card>
-  )
-}
-
-function ProviderRow({
-  label,
-  providers,
-  fallback,
-}: {
-  label: string
-  providers: string[]
-  fallback: string
-}) {
-  const active = providers.length > 0
-
-  return (
-    <div className="flex items-start justify-between gap-2.5">
-      <span className="text-[12.5px]">{label}</span>
-
-      {active ? (
-        <span className="flex flex-wrap justify-end gap-1.5">
-          {providers.map((name, index) => (
-            <span
-              key={name}
-              className={`rounded-full border px-2 py-0.5 text-[11.5px] font-medium ${
-                index === 0
-                  ? 'border-accent/35 bg-accent/10 text-accent'
-                  : 'border-hairline-strong bg-surface-raised text-ink-muted'
-              }`}
-            >
-              {name}
-            </span>
-          ))}
-        </span>
-      ) : (
-        <span className="max-w-[240px] text-right text-[11.5px] leading-snug text-ink-faint">
-          {fallback}
-        </span>
-      )}
     </div>
   )
 }

@@ -35,7 +35,6 @@ export function SetupBanner({ progress }: { progress: Progress }) {
     { key: 'brand', label: t('setup.brandTitle'), href: '/kurulum' },
     { key: 'contacts', label: t('setup.contactsTitle'), href: '/kurulum' },
     { key: 'connected', label: t('setup.lineTitle'), href: '/hesaplar' },
-    { key: 'verified', label: t('setup.verifyTitle'), href: '/kisiler' },
   ]
 
   return (
