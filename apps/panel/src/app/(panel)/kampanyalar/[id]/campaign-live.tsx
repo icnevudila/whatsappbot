@@ -372,6 +372,7 @@ export function CampaignLive({
         lists={listOptions}
         accounts={accountOptions}
         selectedAccountIds={accounts.map((account) => account.id)}
+        orgId={orgId}
       />
     </div>
   )

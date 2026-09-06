@@ -133,7 +133,7 @@ export async function updateOrgWebhook(
   const { error } = await supabase.rpc('set_organization_webhook', {
     p_org_id: org.id,
     p_webhook_url: webhookUrl,
-    p_webhook_secret: webhookSecret || null,
+    p_webhook_secret: webhookSecret || undefined,
     p_clear_secret: clearSecret,
   })
 

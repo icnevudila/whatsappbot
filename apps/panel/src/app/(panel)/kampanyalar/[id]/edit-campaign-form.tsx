@@ -139,7 +139,7 @@ export function EditCampaignForm({
         title="Kampanyayı düzenle"
         subtitle={
           structureLocked
-            ? 'Mesajı değiştirebilirsiniz. Grup/hat için önce Duraklat.’
+            ? 'Mesajı değiştirebilirsiniz. Grup/hat için önce Duraklat.'
             : 'Gönderilmiş numaralara dokunulmaz. Grup değişince yeni numaralar eklenir.'
         }
       />

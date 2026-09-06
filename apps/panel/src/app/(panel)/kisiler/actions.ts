@@ -215,11 +215,18 @@ export async function importContactChunk(options: {
     const { userId, org, supabase } = await requireActiveOrg()
     const { data: list } = await supabase
       .from('contact_lists')
-      .select('id')
+      .select('id, contact_count')
       .eq('id', listId)
       .eq('org_id', org.id)
       .maybeSingle()
     if (!list) return { error: 'Grup bulunamadı.' }
+
+    const currentCount = Number(list.contact_count ?? 0)
+    if (currentCount + cleaned.length > IMPORT_HARD_LIMIT) {
+      return {
+        error: `Bu grupta en fazla ${IMPORT_HARD_LIMIT.toLocaleString('tr-TR')} numara olabilir (şu an ${currentCount.toLocaleString('tr-TR')}).`,
+      }
+    }
 
     let linked = 0
     for (let index = 0; index < cleaned.length; index += DB_CHUNK) {
@@ -403,8 +410,8 @@ export async function deleteContacts(
   }
 
   let deleted = 0
-  for (let i = 0; i < ids.length; i += CHUNK) {
-    const chunk = ids.slice(i, i + CHUNK)
+  for (let i = 0; i < ids.length; i += DB_CHUNK) {
+    const chunk = ids.slice(i, i + DB_CHUNK)
     const { error, count } = await supabase
       .from('contacts')
       .delete({ count: 'exact' })

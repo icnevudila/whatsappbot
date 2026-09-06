@@ -21,9 +21,9 @@ export async function updateOrgQuotas(
 
     const { error } = await supabase.rpc('admin_update_organization', {
       p_org_id: orgId,
-      p_plan: plan,
-      p_accounts_quota: Number.isFinite(accountsQuota) ? accountsQuota : null,
-      p_monthly_message_quota: Number.isFinite(monthlyQuota) ? monthlyQuota : null,
+      p_plan: plan ?? undefined,
+      p_accounts_quota: Number.isFinite(accountsQuota) ? accountsQuota : undefined,
+      p_monthly_message_quota: Number.isFinite(monthlyQuota) ? monthlyQuota : undefined,
     })
     if (error) return { error: error.message }
 
