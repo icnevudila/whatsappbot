@@ -4,6 +4,7 @@ import { requirePlatformAdmin } from '@/lib/platform'
 import { signOut } from '@/app/giris/actions'
 import { OrgQuotaForm } from './org-quota-form'
 import { UnlockAccountButton } from './unlock-account-button'
+import { ProvisionCustomerForm } from './provision-customer-form'
 
 export const metadata: Metadata = { title: 'Genel bakış' }
 
@@ -127,7 +128,7 @@ export default async function AdminOverviewPage() {
           <div>
             <p className="text-[13.5px] font-semibold tracking-[-0.02em]">Filo Admin</p>
             <p className="text-[12px] text-ink-muted">
-              Platform genel bakış · kota düzenleme ve kilit açma
+              Müşteri aç · kota · kilit · worker
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -191,6 +192,14 @@ export default async function AdminOverviewPage() {
             </p>
           </div>
         </section>
+
+        <Card>
+          <CardHeader
+            title="Yeni müşteri"
+            subtitle="İşletme + sahip daveti (self-signup kapalı). Admin env: SUPABASE_SERVICE_ROLE_KEY + NEXT_PUBLIC_PANEL_URL"
+          />
+          <ProvisionCustomerForm />
+        </Card>
 
         <Card>
           <CardHeader

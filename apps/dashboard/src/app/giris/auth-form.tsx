@@ -8,11 +8,22 @@ import { signIn, type AuthState } from './actions'
 export function AuthForm() {
   const searchParams = useSearchParams()
   const [state, formAction, pending] = useActionState<AuthState, FormData>(signIn, null)
+  const noOrg = searchParams.get('hata') === 'uye'
 
   return (
     <form action={formAction} className="space-y-4">
       {searchParams.get('devam') ? (
         <input type="hidden" name="devam" value={searchParams.get('devam') ?? ''} />
+      ) : null}
+
+      {noOrg ? (
+        <Notice tone="danger">
+          Hesabınız henüz bir işletmeye atanmamış. Erişim için{' '}
+          <a href="mailto:destek@filo.app" className="underline underline-offset-2">
+            iletişime geçin
+          </a>
+          .
+        </Notice>
       ) : null}
 
       <Field label="E-posta">

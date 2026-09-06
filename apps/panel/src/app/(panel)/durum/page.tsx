@@ -65,7 +65,7 @@ export default async function StatusPage() {
         .select('id, name, status, total_targets, sent_count, failed_count, skipped_count')
         .eq('org_id', org.id)
         .order('created_at', { ascending: false })
-        .limit(10),
+        .limit(50),
       supabase
         .from('account_events')
         .select('id, account_id, level, event, detail, created_at')

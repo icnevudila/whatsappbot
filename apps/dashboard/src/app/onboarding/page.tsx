@@ -14,7 +14,10 @@ export default async function OnboardingPage() {
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
   try {
     ;({ org } = await requireActiveOrg())
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === 'NO_ORGANIZATION') {
+      redirect('/giris?hata=uye')
+    }
     redirect('/giris')
   }
 

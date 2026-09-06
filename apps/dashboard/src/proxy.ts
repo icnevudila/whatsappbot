@@ -41,11 +41,22 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(target)
   }
 
+  // Org'suz oturumlu kullanıcı /giris?hata=uye'de kalsın; aksi halde onboarding
+  // ↔ giris döngüsü oluşur (create_organization artık authenticated'a kapalı).
   if (user && isAuthPath) {
-    const target = request.nextUrl.clone()
-    target.pathname = '/onboarding'
-    target.search = ''
-    return NextResponse.redirect(target)
+    const { data: membership } = await supabase
+      .from('organization_members')
+      .select('org_id')
+      .eq('user_id', user.id)
+      .limit(1)
+      .maybeSingle()
+
+    if (membership) {
+      const target = request.nextUrl.clone()
+      target.pathname = '/onboarding'
+      target.search = ''
+      return NextResponse.redirect(target)
+    }
   }
 
   return response

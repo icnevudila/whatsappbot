@@ -46,12 +46,9 @@ export async function requireActiveOrg(): Promise<{
     }
   }
 
+  // Self-provision yok: işletme ve üyelik yalnızca yönetici / VT tarafından açılır.
   if (!orgId) {
-    const { data: created, error } = await supabase.rpc('create_organization', {
-      p_name: user.email?.split('@')[0] || 'İşletme',
-    })
-    if (error || !created) throw new Error(error?.message ?? 'İşletme oluşturulamadı.')
-    orgId = created
+    throw new Error('NO_ORGANIZATION')
   }
 
   const [{ data: org, error: orgError }, { data: member }] = await Promise.all([

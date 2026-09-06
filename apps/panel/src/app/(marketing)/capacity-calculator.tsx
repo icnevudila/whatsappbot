@@ -1,18 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import { warmupCap } from '@wa/shared'
 import { useLocale } from '@/lib/i18n/provider'
 
-/**
- * Kampanya motorundaki ısındırma eğrisinin birebir kopyası
- * (apps/wa-service/src/campaign-runner.ts).
- */
-function warmupCap(dayIndex: number): number {
-  if (dayIndex < 1) return 10
-  if (dayIndex < 3) return 25
-  if (dayIndex < 7) return 60
-  if (dayIndex < 14) return 120
-  return 250
+/** Day-index UI → shared policy: startedAt = now − day×86400000. */
+function warmupCapAtDay(dayIndex: number, now = Date.now()): number {
+  return warmupCap(new Date(now - dayIndex * 86_400_000).toISOString(), now)
 }
 
 const LINE_OPTIONS = [1, 2, 3, 5, 10, 20]
@@ -30,7 +24,7 @@ export function CapacityCalculator() {
   let remaining = target
   let days = 0
   while (remaining > 0 && days < 3650) {
-    remaining -= warmupCap(days) * lines
+    remaining -= warmupCapAtDay(days) * lines
     days += 1
   }
   const reachable = remaining <= 0
@@ -109,8 +103,8 @@ export function CapacityCalculator() {
 
           <div className="flex flex-col gap-2">
             {CURVE_DAYS.map((day) => {
-              const value = warmupCap(day) * lines
-              const pct = (warmupCap(day) / 250) * 100
+              const value = warmupCapAtDay(day) * lines
+              const pct = (warmupCapAtDay(day) / 250) * 100
               const label =
                 day === 14
                   ? t('landing.calculator.dayPlus', { n: 14 })
