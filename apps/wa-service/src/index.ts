@@ -5,6 +5,7 @@ import {
   startCampaignRunner,
   stopCampaignRunner,
 } from './campaign-runner.js'
+import { reconcileCampaignCounts } from './campaign-counts.js'
 import { closePool, pool } from './db.js'
 import { env } from './env.js'
 import { startHeartbeat, stopHeartbeat } from './heartbeat.js'
@@ -195,17 +196,31 @@ async function mainWorker(): Promise<void> {
       logger.warn({ err: error }, 'Isler kuyruga geri konamadi')
     })
 
-    // Bu worker'in kirasindaki sending hedefleri tekrar queued olsun.
+    // Bu worker'in kirasindaki sending hedefleri: WA kabul etmis olabilir → queued'e
+    // geri alma cift gonderim riski. reclaimStaleSending ile ayni: failed + tekrar yok.
     await pool
       .query(
         `update public.campaign_targets t
-            set status = 'queued', error = null, updated_at = now()
+            set status = 'failed',
+                error = 'Gönderim yarıda kaldı; sonuç belirsiz. Çift mesajı önlemek için otomatik tekrar yapılmadı.',
+                updated_at = now()
            from wa.session_lease sl
           where t.account_id = sl.account_id
             and sl.holder_id = $1
-            and t.status = 'sending'`,
+            and t.status = 'sending'
+        returning t.campaign_id`,
         [env.workerId],
       )
+      .then(async (result) => {
+        const campaignIds = [
+          ...new Set(
+            (result.rows as { campaign_id: string }[]).map((r) => r.campaign_id),
+          ),
+        ]
+        for (const campaignId of campaignIds) {
+          await reconcileCampaignCounts(campaignId)
+        }
+      })
       .catch((error) => {
         logger.warn({ err: error }, 'Sending hedefleri reclaim edilemedi')
       })

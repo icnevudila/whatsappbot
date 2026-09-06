@@ -42,7 +42,10 @@ export default async function ReportsPage({
   let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
   try {
     ;({ org, supabase } = await requireActiveOrg())
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === 'NO_ORGANIZATION') {
+      redirect('/erisim-yok')
+    }
     redirect('/giris')
   }
 

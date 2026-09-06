@@ -400,7 +400,9 @@ export type Database = {
       }
       campaigns: {
         Row: {
+          ab_percent: number
           body: string | null
+          body_b: string | null
           completed_at: string | null
           created_at: string
           created_by: string
@@ -427,7 +429,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ab_percent?: number
           body?: string | null
+          body_b?: string | null
           completed_at?: string | null
           created_at?: string
           created_by: string
@@ -454,7 +458,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ab_percent?: number
           body?: string | null
+          body_b?: string | null
           completed_at?: string | null
           created_at?: string
           created_by?: string

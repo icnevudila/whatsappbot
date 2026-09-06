@@ -2,7 +2,6 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireActiveOrg } from '@/lib/org'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { DEFAULT_COLORS } from '@/lib/creative-templates'
 
 export type BrandKitState = { error?: string; ok?: string } | null
@@ -56,7 +55,11 @@ export async function saveBrandKit(
   }
 
   const { error } = existing
-    ? await supabase.from('brand_kits').update(payload).eq('id', existing.id)
+    ? await supabase
+        .from('brand_kits')
+        .update(payload)
+        .eq('id', existing.id)
+        .eq('org_id', org.id)
     : await supabase.from('brand_kits').insert(payload)
 
   if (error) return { error: error.message }
@@ -68,19 +71,30 @@ export async function saveBrandKit(
 }
 
 export async function deleteCreative(id: string): Promise<{ error?: string }> {
-  const supabase = await createSupabaseServerClient()
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  try {
+    ;({ org, supabase } = await requireActiveOrg())
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
+  }
 
   const { data: creative } = await supabase
     .from('creatives')
     .select('storage_path')
     .eq('id', id)
+    .eq('org_id', org.id)
     .maybeSingle()
 
   if (creative?.storage_path) {
     await supabase.storage.from('creatives').remove([creative.storage_path])
   }
 
-  const { error } = await supabase.from('creatives').delete().eq('id', id)
+  const { error } = await supabase
+    .from('creatives')
+    .delete()
+    .eq('id', id)
+    .eq('org_id', org.id)
   if (error) return { error: error.message }
 
   revalidatePath('/marka-kiti')

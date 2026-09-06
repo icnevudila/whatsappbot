@@ -19,10 +19,6 @@ ENV PORT=8080
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 EXPOSE 8080
 
-# tsx dev bagimliligi oldugu icin uretimde de gerekli: kaynak TypeScript
-# dogrudan calistiriliyor, ayri bir derleme adimi yok.
-RUN npm install --no-save tsx@4.23.13
-
 # Opsiyonel: scaler icin docker CLI (build-arg INSTALL_DOCKER_CLI=true)
 ARG INSTALL_DOCKER_CLI=false
 RUN if [ "$INSTALL_DOCKER_CLI" = "true" ]; then \

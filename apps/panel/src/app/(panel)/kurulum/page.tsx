@@ -15,7 +15,10 @@ export default async function SetupPage() {
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
   try {
     ;({ org } = await requireActiveOrg())
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === 'NO_ORGANIZATION') {
+      redirect('/erisim-yok')
+    }
     redirect('/giris')
   }
 

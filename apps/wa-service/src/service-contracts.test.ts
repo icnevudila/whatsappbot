@@ -108,6 +108,23 @@ test('shutdown sending reclaim SQL session_lease holder kullanir', () => {
   assert.match(file, /flushMonitoring/)
 })
 
+test('shutdown in-flight sending failed yapar (queued degil; cift gonderim yok)', () => {
+  const file = src('index.ts')
+  // session_lease holder kapsami korunur; reclaimStaleSending ile ayni failed + hata
+  assert.match(file, /campaign_targets[\s\S]*status = 'failed'[\s\S]*session_lease[\s\S]*holder_id/)
+  assert.match(
+    file,
+    /Çift mesajı önlemek için otomatik tekrar yapılmadı[\s\S]*returning t\.campaign_id/,
+  )
+  assert.match(file, /reconcileCampaignCounts/)
+  assert.doesNotMatch(file, /status = 'queued',\s*error = null/)
+  const runner = src('campaign-runner.ts')
+  assert.match(
+    runner,
+    /reclaimStaleSending[\s\S]*status = 'failed'[\s\S]*Çift mesajı önlemek için otomatik tekrar yapılmadı/,
+  )
+})
+
 test('ERROR receipt sonrasi campaign sayaclari reconcile edilir', () => {
   const file = src('receipts.ts')
   assert.match(file, /reconcileCampaignCounts/)

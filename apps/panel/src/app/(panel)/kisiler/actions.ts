@@ -4,7 +4,6 @@ import { revalidatePath } from 'next/cache'
 import { parsePhoneList, toE164 } from '@wa/shared'
 import { enqueueJob } from '@/lib/jobs'
 import { requireActiveOrg } from '@/lib/org'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export type ImportState = {
   error?: string
@@ -95,7 +94,11 @@ export async function importContacts(
     linked += contactIds.length
   }
 
-  await supabase.from('contact_lists').update({ contact_count: linked }).eq('id', list.id)
+  await supabase
+    .from('contact_lists')
+    .update({ contact_count: linked })
+    .eq('id', list.id)
+    .eq('org_id', org.id)
 
   // Dogrulama kuyruga alinir: gonderim oncesi onWhatsApp kontrolu zorunlu,
   // kayitli olmayan numaraya mesaj denemek hesap kisitlanmasina yol aciyor.
@@ -201,11 +204,21 @@ export async function verifyAllContacts(): Promise<{
 }
 
 export async function deleteList(listId: string): Promise<{ error?: string }> {
-  const supabase = await createSupabaseServerClient()
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  try {
+    ;({ org, supabase } = await requireActiveOrg())
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
+  }
 
   // Kişiler silinmiyor, yalnızca liste ve üyelikleri.
   // Aynı numaralar başka listelerde kullanılmış olabilir.
-  const { error } = await supabase.from('contact_lists').delete().eq('id', listId)
+  const { error } = await supabase
+    .from('contact_lists')
+    .delete()
+    .eq('id', listId)
+    .eq('org_id', org.id)
   if (error) return { error: error.message }
 
   revalidatePath('/kisiler')
@@ -216,13 +229,29 @@ export async function removeMember(
   listId: string,
   contactId: string,
 ): Promise<{ error?: string }> {
-  const supabase = await createSupabaseServerClient()
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  try {
+    ;({ org, supabase } = await requireActiveOrg())
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
+  }
+
+  const { data: list } = await supabase
+    .from('contact_lists')
+    .select('id')
+    .eq('id', listId)
+    .eq('org_id', org.id)
+    .maybeSingle()
+
+  if (!list) return { error: 'Liste bulunamadı.' }
 
   const { error } = await supabase
     .from('contact_list_members')
     .delete()
     .eq('list_id', listId)
     .eq('contact_id', contactId)
+    .eq('org_id', org.id)
 
   if (error) return { error: error.message }
 
@@ -230,11 +259,13 @@ export async function removeMember(
     .from('contact_list_members')
     .select('contact_id', { count: 'exact', head: true })
     .eq('list_id', listId)
+    .eq('org_id', org.id)
 
   await supabase
     .from('contact_lists')
     .update({ contact_count: count ?? 0 })
     .eq('id', listId)
+    .eq('org_id', org.id)
 
   revalidatePath(`/kisiler/${listId}`)
   revalidatePath('/kisiler')

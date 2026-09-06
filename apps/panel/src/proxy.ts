@@ -79,10 +79,17 @@ export async function proxy(request: NextRequest) {
 
   // Landing oturum acikken de gezilebilir olmali; yalnizca giris ekranindan
   // panele geri gonderiyoruz. Layout setup tamam degilse /kurulum'a cevirir.
-  // Org'suz kullanici /erisim-yok'ta kalir.
+  // Org'suz kullanici /erisim-yok'a gider ( /ozet -> /giris sekmesi olmasin ).
   if (user && isAuthPath) {
+    const { data: membership } = await supabase
+      .from('organization_members')
+      .select('org_id')
+      .eq('user_id', user.id)
+      .limit(1)
+      .maybeSingle()
+
     const target = request.nextUrl.clone()
-    target.pathname = '/ozet'
+    target.pathname = membership ? '/ozet' : '/erisim-yok'
     target.search = ''
     return withSessionCookies(NextResponse.redirect(target))
   }

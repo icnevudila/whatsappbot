@@ -36,6 +36,8 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   const pathname = (await headers()).get('x-filo-pathname') ?? ''
 
   // Zorunlu onboarding: hazır değilse yalnızca kurulum yolları.
+  // Pathname yoksa (proxy header eksik) bilinen yolu engelleyemeyiz; boşken
+  // /kurulum'a redirect etmek sonsuz döngü yapar. Proxy her istekte set eder.
   if (showSetup && pathname && !isOnboardingAllowedPath(pathname)) {
     redirect('/kurulum')
   }

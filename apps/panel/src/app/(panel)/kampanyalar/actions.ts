@@ -4,7 +4,12 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { enqueueJob } from '@/lib/jobs'
 import { requireActiveOrg } from '@/lib/org'
-import { validateCampaignSettings, validateMediaUrl } from '@/lib/campaign-validation'
+import {
+  validateAbSettings,
+  validateCampaignSettings,
+  validateMediaUrl,
+  validateSchedule,
+} from '@/lib/campaign-validation'
 
 export type CampaignState = { error: string } | null
 
@@ -14,14 +19,24 @@ export async function createCampaign(
 ): Promise<CampaignState> {
   const name = String(formData.get('name') ?? '').trim()
   const body = String(formData.get('body') ?? '').trim()
+  const bodyB = String(formData.get('body_b') ?? '').trim()
   const mediaUrl = String(formData.get('media_url') ?? '').trim()
   const listIds = [...new Set(formData.getAll('lists').map(String).filter(Boolean))]
   const accountIds = [...new Set(formData.getAll('accounts').map(String).filter(Boolean))]
+  const startMode = String(formData.get('start_mode') ?? 'now').trim() || 'now'
+  const scheduledAtRaw = String(formData.get('scheduled_at') ?? '').trim()
 
   const minDelay = Number(formData.get('min_delay') ?? 8)
   const maxDelay = Number(formData.get('max_delay') ?? 25)
   const dailyCap = Number(formData.get('daily_cap') ?? 100)
-  const validationError = validateCampaignSettings(minDelay, maxDelay, dailyCap) || validateMediaUrl(mediaUrl)
+  const abPercentRaw = formData.get('ab_percent')
+  const abPercent = abPercentRaw === null || abPercentRaw === '' ? 0 : Number(abPercentRaw)
+
+  const validationError =
+    validateCampaignSettings(minDelay, maxDelay, dailyCap) ||
+    validateMediaUrl(mediaUrl) ||
+    validateAbSettings(abPercent, bodyB) ||
+    validateSchedule(startMode, scheduledAtRaw)
   if (validationError) return { error: validationError }
   if (name.length > 160 || body.length > 4096) return { error: 'Kampanya adı 160, mesaj 4096 karakteri aşamaz.' }
 
@@ -50,7 +65,12 @@ export async function createCampaign(
     supabase.from('contact_lists').select('id').eq('org_id', org.id).in('id', listIds),
     supabase.from('accounts').select('id').eq('org_id', org.id).in('id', accountIds).eq('enabled', true).eq('is_locked', false),
   ])
-  if (lists.error || accounts.error || lists.data?.length !== listIds.length || accounts.data?.length !== accountIds.length) return { error: 'Seçilen listeleri ve gönderime açık hatları kontrol edin.' }
+  if (lists.error || accounts.error || lists.data?.length !== listIds.length || accounts.data?.length !== accountIds.length) {
+    return { error: 'Seçilen listeleri ve gönderime açık hatları kontrol edin.' }
+  }
+
+  const schedule = startMode === 'schedule'
+  const scheduledAt = schedule ? new Date(scheduledAtRaw).toISOString() : null
 
   const { data: campaign, error } = await supabase
     .from('campaigns')
@@ -59,13 +79,16 @@ export async function createCampaign(
       created_by: userId,
       name,
       body: body || null,
+      body_b: abPercent > 0 ? bodyB || null : null,
+      ab_percent: abPercent > 0 ? abPercent : 0,
       media_url: mediaUrl || null,
       message_type: mediaUrl ? 'image' : 'text',
       source_list_ids: listIds,
       min_delay_seconds: minDelay,
       max_delay_seconds: maxDelay,
       daily_cap_per_account: dailyCap,
-      status: 'draft',
+      scheduled_at: scheduledAt,
+      status: schedule ? 'scheduled' : 'draft',
     })
     .select('id')
     .single()
@@ -82,11 +105,16 @@ export async function createCampaign(
   )
 
   if (linkError) {
-    await supabase.from('campaigns').delete().eq('id', campaign.id).eq('org_id', org.id).eq('status', 'draft')
+    await supabase.from('campaigns').delete().eq('id', campaign.id).eq('org_id', org.id).eq('status', schedule ? 'scheduled' : 'draft')
     return { error: 'Gönderen hatlar bağlanamadı. Tekrar deneyin.' }
   }
 
-  // Hizli gonderim ile ayni zihin modeli: olustur = hemen baslat.
+  if (schedule) {
+    revalidatePath('/kampanyalar')
+    redirect(`/kampanyalar/${campaign.id}?zamanlandi=1`)
+  }
+
+  // Hemen baslat: olustur = campaign.start.
   const { error: jobError } = await enqueueJob({
     type: 'campaign.start',
     campaignId: campaign.id,
