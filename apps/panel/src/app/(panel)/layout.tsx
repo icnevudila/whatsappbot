@@ -140,7 +140,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
             </div>
             <Nav
               showSetup={showSetup}
-              onboardingLock={showSetup}
+              onboardingLock={showSetup && !isPlatformAdmin}
               orientation="horizontal"
               isPlatformAdmin={isPlatformAdmin}
             />
