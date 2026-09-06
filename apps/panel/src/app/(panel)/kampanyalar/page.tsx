@@ -1,7 +1,16 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { AccentLink, Card, CardHeader, EmptyState, Meter, Notice, PageHeader, StatusPill } from '@/components/ui'
+import {
+  AccentLink,
+  CardHeader,
+  EmptyState,
+  Meter,
+  Notice,
+  PageHeader,
+  SplitPane,
+  StatusPill,
+} from '@/components/ui'
 import { hasTextProvider } from '@/lib/ai/text'
 import { createT } from '@/lib/i18n'
 import { getDictionary } from '@/lib/i18n/server'
@@ -41,7 +50,6 @@ function statusHint(status: string): string | null {
   }
 }
 
-/** Sol ray + soft zemin — durum renkleri /ozet kart diliyle uyumlu. */
 function campaignShell(status: string): string {
   switch (status) {
     case 'running':
@@ -65,11 +73,10 @@ export default async function CampaignsPage({
 }: {
   searchParams: Promise<{ hazir?: string | string[] }>
 }) {
-  let userId: string
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
   let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
   try {
-    ;({ userId, org, supabase } = await requireActiveOrg())
+    ;({ org, supabase } = await requireActiveOrg())
   } catch (error) {
     if (error instanceof Error && error.message === 'NO_ORGANIZATION') {
       redirect('/erisim-yok')
@@ -82,29 +89,27 @@ export default async function CampaignsPage({
 
   const [campaignsResult, listsResult, accountsResult, brandResult, { messages }] =
     await Promise.all([
-    supabase
-      .from('campaigns')
-      .select(
-        'id, name, status, total_targets, sent_count, failed_count, skipped_count, stop_reason, created_at',
-      )
-      .eq('org_id', org.id)
-      .order('created_at', { ascending: false }),
-    supabase
-      .from('contact_lists')
-      .select('id, name, contact_count')
-      .eq('org_id', org.id)
-      .neq('source', 'quick_send')
-      .order('created_at', { ascending: false }),
-    supabase
-      .from('accounts')
-      .select('id, label, status, is_locked')
-      .eq('org_id', org.id)
-      .order('created_at'),
-    // Marka adi varsa AI metnin basina koysun; kim oldugunu belirtmeyen
-    // toplu mesaj sikayet oranini belirgin sekilde yukseltiyor.
-    supabase.from('brand_kits').select('name').eq('org_id', org.id).limit(1).maybeSingle(),
-    getDictionary(),
-  ])
+      supabase
+        .from('campaigns')
+        .select(
+          'id, name, status, total_targets, sent_count, failed_count, skipped_count, stop_reason, created_at',
+        )
+        .eq('org_id', org.id)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('contact_lists')
+        .select('id, name, contact_count')
+        .eq('org_id', org.id)
+        .neq('source', 'quick_send')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('accounts')
+        .select('id, label, status, is_locked')
+        .eq('org_id', org.id)
+        .order('created_at'),
+      supabase.from('brand_kits').select('name').eq('org_id', org.id).limit(1).maybeSingle(),
+      getDictionary(),
+    ])
 
   const t = createT(messages)
   const campaigns = campaignsResult.data ?? []
@@ -123,7 +128,6 @@ export default async function CampaignsPage({
       : account.status === 'connected'
         ? 'bağlı'
         : 'bağlı değil',
-    // Bagli olmayan hesap secilirse kampanya bosa donuyor; en basta engelliyoruz.
     disabled: account.is_locked || account.status !== 'connected',
   }))
 
@@ -137,32 +141,30 @@ export default async function CampaignsPage({
         action={<AccentLink href="/hizli-gonderim">{t('nav.hizli')}</AccentLink>}
       />
 
-      {justReady ? (
-        <Notice tone="success">{t('pages.kampanyalarReady')}</Notice>
-      ) : null}
+      {justReady ? <Notice tone="success">{t('pages.kampanyalarReady')}</Notice> : null}
 
-      <div className={`grid gap-2.5 lg:grid-cols-[minmax(0,1fr)_380px]${justReady ? ' mt-0' : ''}`}>
-        <div className="order-2 lg:order-1">
-          <Card>
+      <div className={justReady ? 'mt-2.5' : undefined}>
+      <SplitPane
+        list={
+          <div className="flex min-h-0 flex-col">
             <CardHeader
               title="Geçmiş"
               subtitle={
                 campaigns.length === 0
                   ? 'Henüz kayıt yok'
-                  : `${campaigns.length} kampanya · tıklayınca paylaşılan numaralar`
+                  : `${campaigns.length} kampanya · tıklayınca detay`
               }
             />
-
             {campaigns.length === 0 ? (
               <EmptyState
                 tone="campaign"
                 title="Henüz kampanya yok"
                 description={
                   listOptions.length === 0
-                    ? 'Önce Kişiler’de bir liste oluşturun, sonra buradan kampanya başlatın. Tek seferlik için Hızlı gönderim yeterli.'
+                    ? 'Önce Kişiler’de bir liste oluşturun, sonra buradan kampanya başlatın.'
                     : connectedCount === 0
-                      ? 'Liste hazır; gönderim için en az bir bağlı WhatsApp hattı gerekir. Hesaplar’dan QR veya eşleştirme kodu alın.'
-                      : 'Sağdaki formdan liste, mesaj ve hat seçerek oluşturun. Tek seferlik için Hızlı gönderim yeterli.'
+                      ? 'Liste hazır; en az bir bağlı hat gerekir.'
+                      : 'Sağdaki formdan oluşturun. Tek seferlik için Hızlı gönderim yeterli.'
                 }
                 action={
                   listOptions.length === 0 ? (
@@ -175,7 +177,7 @@ export default async function CampaignsPage({
                 }
               />
             ) : (
-              <ul className="wb-list-scroll space-y-2 p-2.5">
+              <ul className="min-h-0 flex-1 space-y-1.5 overflow-y-auto p-2">
                 {campaigns.map((campaign, index) => {
                   const done =
                     campaign.sent_count + campaign.failed_count + campaign.skipped_count
@@ -190,70 +192,47 @@ export default async function CampaignsPage({
                     >
                       <Link
                         href={`/kampanyalar/${campaign.id}#paylasilanlar`}
-                        className={`wb-card-lift wb-list-row block rounded-[var(--radius-sm)] border px-3.5 py-3 transition-[box-shadow,border-color] ${campaignShell(campaign.status)}`}
+                        className={`wb-card-lift wb-list-row block rounded-[var(--radius-sm)] border px-3 py-2.5 ${campaignShell(campaign.status)}`}
                       >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="truncate text-[15px] font-bold tracking-[-0.02em] text-ink">
-                              {campaign.name}
-                            </p>
-                            {hint ? (
-                              <p className="mt-0.5 text-[11.5px] text-ink-muted">{hint}</p>
-                            ) : null}
-                          </div>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="min-w-0 truncate text-[13.5px] font-bold tracking-[-0.02em] text-ink">
+                            {campaign.name}
+                          </p>
                           <StatusPill status={campaign.status} />
                         </div>
-
-                        <div className="mt-2.5 flex items-center gap-2.5">
+                        {hint ? (
+                          <p className="mt-0.5 text-[11px] text-ink-muted">{hint}</p>
+                        ) : null}
+                        <div className="mt-2 flex items-center gap-2">
                           <Meter
                             value={done}
                             max={Math.max(1, total)}
                             tone={meterTone(campaign.status, campaign.failed_count)}
                           />
-                          <span className="shrink-0 tabular text-[11.5px] font-medium text-ink-muted">
+                          <span className="shrink-0 tabular text-[11px] font-medium text-ink-muted">
                             {done}/{total || '—'}
                           </span>
                         </div>
-
-                        <p className="mt-1.5 text-[12px] text-ink-muted tabular">
-                          {campaign.sent_count} gönderildi
-                          {campaign.skipped_count > 0
-                            ? ` · ${campaign.skipped_count} atlandı`
-                            : ''}
-                          {campaign.failed_count > 0
-                            ? ` · ${campaign.failed_count} başarısız`
-                            : ''}
-                          {total > 0 ? ` · ${total} hedef` : ''}
-                          <span className="text-ink-faint"> · paylaşılanlar →</span>
-                        </p>
-
-                        {campaign.stop_reason ? (
-                          <p
-                            className="mt-2 line-clamp-2 rounded-sm border border-danger/25 bg-danger/10 px-2 py-1 text-[11.5px] text-danger"
-                            title={campaign.stop_reason}
-                          >
-                            <span className="font-medium">Durdurma nedeni:</span>{' '}
-                            {campaign.stop_reason}
-                          </p>
-                        ) : null}
                       </Link>
                     </li>
                   )
                 })}
               </ul>
             )}
-          </Card>
-        </div>
-
-        <div className="order-1 lg:order-2">
-          <NewCampaignForm
-            lists={listOptions}
-            accounts={accountOptions}
-            orgId={org.id}
-            aiEnabled={hasTextProvider()}
-            brandName={brandResult.data?.name ?? undefined}
-          />
-        </div>
+          </div>
+        }
+        detail={
+          <div className="min-h-0 flex-1 overflow-y-auto" id="yeni-kampanya">
+            <NewCampaignForm
+              lists={listOptions}
+              accounts={accountOptions}
+              orgId={org.id}
+              aiEnabled={hasTextProvider()}
+              brandName={brandResult.data?.name ?? undefined}
+            />
+          </div>
+        }
+      />
       </div>
     </>
   )

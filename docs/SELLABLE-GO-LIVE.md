@@ -31,11 +31,24 @@ Worker (Hetzner):
 
 - `DATABASE_URL`, `WORKER_ID`, `MAX_SESSIONS`, … (`apps/wa-service/.env.example`)
 
-## 2) Auth / güvenlik
+## 2) Auth / güvenlik (Dashboard — MCP ile açılamaz)
 
-- [ ] Supabase Auth: e-posta confirm açık
-- [ ] [Leaked password protection](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection) açık
-- [ ] PITR / günlük backup açık (Pro plan)
+Proje: [Auth settings](https://supabase.com/dashboard/project/rnkrjmblgcdqlyslbhob/auth/providers)
+
+- [ ] **Confirm email** açık (`mailer_autoconfirm` kapalı)
+- [ ] **Leaked password protection** (HaveIBeenPwned) açık
+- [ ] **PITR / backups**: Database → Backups (Pro plan gerekir)
+
+Yerel `supabase/config.toml`: `enable_confirmations = true`, `secure_password_change = true`, min şifre 8.
+
+Opsiyonel Management API (PAT `auth_config_write`):
+
+```bash
+curl -X PATCH "https://api.supabase.com/v1/projects/rnkrjmblgcdqlyslbhob/config/auth" \
+  -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"mailer_autoconfirm":false,"password_hibp_enabled":true}'
+```
 
 ## 3) Ürün smoke
 

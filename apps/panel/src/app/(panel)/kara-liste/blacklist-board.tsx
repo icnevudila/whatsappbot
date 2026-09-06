@@ -5,13 +5,13 @@ import { useRouter } from 'next/navigation'
 import {
   AccentLink,
   Button,
-  Card,
   CardHeader,
   EmptyState,
   Field,
   Input,
   Notice,
   QuietLink,
+  SplitPane,
   Textarea,
 } from '@/components/ui'
 import { Icon } from '@/components/icon'
@@ -42,6 +42,7 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
   )
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
   const [, startTransition] = useTransition()
   useSyncBusy(pending, 'Kara listeye ekleniyor…')
   useSyncBusy(busyId != null, 'Kara listeden kaldırılıyor…')
@@ -59,6 +60,12 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
       router.refresh()
     }
   }, [state?.ok, router, toast])
+
+  const visible = rows.filter((row) =>
+    `${row.phone_e164} ${row.reason ?? ''}`
+      .toLocaleLowerCase('tr-TR')
+      .includes(search.toLocaleLowerCase('tr-TR')),
+  )
 
   const remove = (id: string, phone: string) => {
     void (async () => {
@@ -88,23 +95,34 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
   }
 
   return (
-    <div className="grid gap-2.5 lg:grid-cols-[minmax(0,1fr)_360px]">
-      <div className="order-2 space-y-2.5 lg:order-1">
-        <Card>
+    <SplitPane
+      list={
+        <div className="flex min-h-0 flex-col">
           <CardHeader
             title="Engellenen numaralar"
             subtitle={
               rows.length === 0
-                ? 'Kampanya ve hızlı gönderim bu numaraları otomatik atlar'
+                ? 'Kampanya ve hızlı gönderim bu numaraları atlar'
                 : `${rows.length} numara · kampanya ve hızlı gönderimde atlanır`
             }
           />
+          {rows.length > 0 ? (
+            <div className="border-b border-hairline px-3 py-2">
+              <Input
+                aria-label="Kara listede ara"
+                type="search"
+                placeholder="Numara veya sebep ara…"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+            </div>
+          ) : null}
 
           {rows.length === 0 ? (
             <EmptyState
               tone="shield"
               title="Kara liste boş"
-              description="Çıkmak isteyen, şikayet eden veya elle engellediğiniz numaraları formdan ekleyin. Servis bu numaralara mesaj göndermez."
+              description="Çıkmak isteyen veya engellemek istediğiniz numaraları sağdan ekleyin."
               action={
                 <div className="flex flex-wrap justify-center gap-2">
                   <AccentLink href="/gelenler">Gelenlere bak</AccentLink>
@@ -112,12 +130,18 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
                 </div>
               }
             />
+          ) : visible.length === 0 ? (
+            <EmptyState
+              tone="shield"
+              title="Sonuç yok"
+              description="Başka bir numara veya sebep deneyin."
+            />
           ) : (
-            <ul className="wb-list-scroll divide-y divide-hairline">
-              {rows.map((row, index) => (
+            <ul className="min-h-0 flex-1 divide-y divide-hairline overflow-y-auto">
+              {visible.map((row, index) => (
                 <li
                   key={row.id}
-                  className="wb-list-row wb-row-enter flex flex-wrap items-center justify-between gap-2.5 px-3.5 py-2.5"
+                  className="wb-list-row wb-row-enter flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5"
                   style={{ animationDelay: `${Math.min(index, 12) * 28}ms` }}
                 >
                   <div className="flex min-w-0 items-start gap-2.5">
@@ -149,15 +173,14 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
           )}
 
           {error ? (
-            <div className="border-t border-hairline p-3.5">
+            <div className="border-t border-hairline p-3">
               <Notice tone="danger">{error}</Notice>
             </div>
           ) : null}
-        </Card>
-      </div>
-
-      <div className="order-1 lg:order-2">
-        <Card>
+        </div>
+      }
+      detail={
+        <div className="flex min-h-0 flex-col overflow-y-auto">
           <CardHeader
             title="Numara ekle"
             subtitle="Bir veya birden fazla satır yapıştırın. Sebep isteğe bağlıdır."
@@ -174,10 +197,7 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
                 placeholder={'0532 123 45 67\n+90 533 234 56 78'}
               />
             </Field>
-            <Field
-              label="Sebep"
-              hint="İsteğe bağlı — çıkış, şikayet veya dahili not."
-            >
+            <Field label="Sebep" hint="İsteğe bağlı — çıkış, şikayet veya dahili not.">
               <Input name="reason" placeholder="Çıkmak istedi / şikayet" />
             </Field>
 
@@ -190,13 +210,12 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
 
             {!state?.error && !state?.ok ? (
               <p className="text-[11.5px] leading-snug text-ink-faint">
-                Aynı numara yeniden eklenirse sebep güncellenir. Liste detayından da tek tıkla
-                eklenebilir.
+                Aynı numara yeniden eklenirse sebep güncellenir.
               </p>
             ) : null}
           </form>
-        </Card>
-      </div>
-    </div>
+        </div>
+      }
+    />
   )
 }

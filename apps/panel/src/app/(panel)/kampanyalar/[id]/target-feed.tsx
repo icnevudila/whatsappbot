@@ -1,9 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Tables } from '@wa/shared'
-import { Card, CardHeader, EmptyState, QuietLink, StatusPill } from '@/components/ui'
+import { CardHeader, EmptyState, QuietLink, StatusPill } from '@/components/ui'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 
 export type TargetView = Pick<
@@ -24,11 +24,25 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: 'failed', label: 'Başarısız' },
 ]
 
+function statusRail(status: string): string {
+  switch (status) {
+    case 'sent':
+    case 'sending':
+      return 'border-l-[3px] border-l-accent'
+    case 'delivered':
+    case 'read':
+      return 'border-l-[3px] border-l-ok'
+    case 'failed':
+      return 'border-l-[3px] border-l-danger'
+    case 'skipped':
+      return 'border-l-[3px] border-l-warn'
+    default:
+      return 'border-l-[3px] border-l-hairline-strong'
+  }
+}
+
 /**
  * Kampanya hedefleri — giden numaralarin gercek kaynagi (paylasilanlar).
- *
- * message_log bazen yazilmadan kalabiliyor (timeout / restart); campaign_targets
- * her zaman guncelleniyor. Bu yuzden listeyi buradan okuyoruz.
  */
 export function TargetFeed({
   campaignId,
@@ -41,6 +55,11 @@ export function TargetFeed({
 }) {
   const [targets, setTargets] = useState(initial)
   const [filter, setFilter] = useState<Filter>('all')
+  const flashIds = useRef(new Set<number>())
+
+  useEffect(() => {
+    setTargets(initial)
+  }, [initial])
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient()
@@ -63,6 +82,7 @@ export function TargetFeed({
             }
 
             const next = payload.new as TargetView
+            flashIds.current.add(next.id)
             const exists = current.some((row) => row.id === next.id)
             const merged = exists
               ? current.map((row) => (row.id === next.id ? { ...row, ...next } : row))
@@ -127,25 +147,23 @@ export function TargetFeed({
     targets.length === 0
       ? campaignStatus === 'draft'
         ? 'Kampanya başlayınca numaralar burada listelenir.'
-        : 'Bu kampanya için henüz numara satırı oluşmamış. Liste boşsa Kişiler’e bakın.'
+        : 'Bu kampanya için henüz numara satırı oluşmamış.'
       : 'Başka bir durum filtresi seçin veya Tümü’ne dönün.'
 
   return (
-    <Card>
+    <div className="flex max-h-[min(32rem,calc(100dvh-14rem))] min-h-[18rem] flex-col overflow-hidden rounded-[var(--radius-card)] border border-hairline bg-surface shadow-[var(--shadow-card)]">
       <CardHeader
         title="Paylaşılanlar"
         subtitle={`${counts.sent + counts.delivered + counts.read} iletildi · ${counts.skipped} atlandı · ${counts.failed} başarısız · ${counts.queued + counts.sending} bekliyor`}
       />
 
-      <p className="border-b border-hairline px-3.5 py-2 text-[11.5px] leading-relaxed text-ink-faint">
-        Kampanyanın gittiği numaralar. Numaraya tıklayınca Gelenler’de tam konuşmayı açar.{' '}
-        <span className="font-medium text-ink-muted">Atlandı:</span> WhatsApp’ta yok, kota
-        veya geçici kilit.{' '}
-        <span className="font-medium text-ink-muted">Başarısız:</span> iletilemedi
-        (satırdaki hata metnine bakın).
+      <p className="shrink-0 border-b border-hairline px-3.5 py-2 text-[11.5px] leading-relaxed text-ink-faint">
+        Numaraya tıklayınca Gelenler’de konuşmayı açar.{' '}
+        <span className="font-medium text-ink-muted">Atlandı:</span> WhatsApp’ta yok / kota.{' '}
+        <span className="font-medium text-ink-muted">Başarısız:</span> iletilemedi.
       </p>
 
-      <div className="flex flex-wrap gap-1 border-b border-hairline px-3.5 py-2">
+      <div className="flex shrink-0 flex-wrap gap-1 border-b border-hairline px-3.5 py-2">
         {FILTERS.map((item) => {
           const count = counts[item.key]
           if (item.key !== 'all' && count === 0) return null
@@ -188,41 +206,46 @@ export function TargetFeed({
           }
         />
       ) : (
-        <ul className="divide-y divide-hairline">
-          {visible.map((row) => (
-            <li
-              key={row.id}
-              className="flex items-start justify-between gap-2.5 px-3.5 py-2.5"
-            >
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Link
-                    href={`/gelenler?tel=${encodeURIComponent(row.phone_e164)}&konusma=tam`}
-                    className="font-mono text-[12.5px] tabular text-ink underline-offset-2 hover:text-accent hover:underline"
-                    title="Gelenler’de konuşmayı aç"
-                  >
-                    {row.phone_e164}
-                  </Link>
-                  <StatusPill status={row.status} />
+        <ul className="min-h-0 flex-1 divide-y divide-hairline overflow-y-auto">
+          {visible.map((row) => {
+            const flash = flashIds.current.has(row.id)
+            return (
+              <li
+                key={row.id}
+                className={`wb-list-row flex items-start justify-between gap-2.5 px-3.5 py-2.5 ${statusRail(row.status)} ${
+                  flash ? 'wb-row-flash' : ''
+                }`}
+                onAnimationEnd={() => {
+                  if (flash) flashIds.current.delete(row.id)
+                }}
+              >
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Link
+                      href={`/gelenler?tel=${encodeURIComponent(row.phone_e164)}&konusma=tam`}
+                      className="font-mono text-[12.5px] tabular text-ink underline-offset-2 hover:text-accent hover:underline"
+                      title="Gelenler’de konuşmayı aç"
+                    >
+                      {row.phone_e164}
+                    </Link>
+                    <StatusPill status={row.status} />
+                  </div>
+                  {row.error ? (
+                    <p className="mt-0.5 truncate text-[11.5px] text-danger" title={row.error}>
+                      {row.error}
+                    </p>
+                  ) : null}
                 </div>
-                {row.error ? (
-                  <p
-                    className="mt-0.5 truncate text-[11.5px] text-danger"
-                    title={row.error}
-                  >
-                    {row.error}
-                  </p>
-                ) : null}
-              </div>
-              <span className="shrink-0 text-[11.5px] tabular text-ink-faint">
-                {row.sent_at
-                  ? new Date(row.sent_at).toLocaleTimeString('tr-TR')
-                  : new Date(row.updated_at).toLocaleTimeString('tr-TR')}
-              </span>
-            </li>
-          ))}
+                <span className="shrink-0 text-[11.5px] tabular text-ink-faint">
+                  {row.sent_at
+                    ? new Date(row.sent_at).toLocaleTimeString('tr-TR')
+                    : new Date(row.updated_at).toLocaleTimeString('tr-TR')}
+                </span>
+              </li>
+            )
+          })}
         </ul>
       )}
-    </Card>
+    </div>
   )
 }

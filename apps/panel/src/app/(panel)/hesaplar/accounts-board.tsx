@@ -6,12 +6,14 @@ import {
   AccentLink,
   Button,
   Card,
+  CardHeader,
   EmptyState,
   Field,
   Input,
   Meter,
   Notice,
   QuietLink,
+  SplitPane,
   StatusPill,
 } from '@/components/ui'
 import { useConfirm } from '@/components/confirm-dialog'
@@ -175,6 +177,20 @@ export function AccountsBoard({
     return sum + (account.sent_today_on === today ? account.sent_today : 0)
   }, 0)
 
+  const [selectedId, setSelectedId] = useState<string | null>(initial[0]?.id ?? null)
+
+  useEffect(() => {
+    if (accounts.length === 0) {
+      setSelectedId(null)
+      return
+    }
+    if (!selectedId || !accounts.some((account) => account.id === selectedId)) {
+      setSelectedId(accounts[0]!.id)
+    }
+  }, [accounts, selectedId])
+
+  const selected = accounts.find((account) => account.id === selectedId) ?? null
+
   return (
     <div className="space-y-2.5">
       <div className="grid gap-2.5 sm:grid-cols-3">
@@ -223,17 +239,73 @@ export function AccountsBoard({
           />
         </Card>
       ) : (
-        <div className="space-y-2.5">
-          {accounts.map((account, index) => (
-            <div
-              key={account.id}
-              className="wb-row-enter"
-              style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
-            >
-              <AccountCard account={account} canManage={canManage} />
+        <SplitPane
+          list={
+            <div className="flex min-h-0 flex-col">
+              <CardHeader
+                title="Hatlar"
+                subtitle={`${accounts.length} kayıt · seçince QR / işlemler`}
+              />
+              <ul className="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-1.5">
+                {accounts.map((account, index) => {
+                  const active = account.id === selectedId
+                  return (
+                    <li
+                      key={account.id}
+                      className="wb-row-enter"
+                      style={{ animationDelay: `${Math.min(index, 8) * 28}ms` }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setSelectedId(account.id)}
+                        className={`wb-list-row flex w-full items-start gap-2.5 rounded-[var(--radius-sm)] border px-3 py-2.5 text-left transition-colors ${
+                          active
+                            ? 'border-accent/25 bg-accent-soft shadow-[inset_3px_0_0_var(--color-accent)]'
+                            : 'border-transparent hover:bg-surface-raised'
+                        }`}
+                      >
+                        <span
+                          className={`mt-1.5 inline-flex size-2 shrink-0 rounded-full ${
+                            account.is_locked
+                              ? 'bg-danger'
+                              : account.status === 'connected'
+                                ? 'wb-live-dot bg-ok'
+                                : account.status === 'qr' || account.status === 'connecting'
+                                  ? 'bg-warn'
+                                  : 'bg-ink-faint'
+                          }`}
+                          aria-hidden
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[13px] font-semibold text-ink">{account.label}</p>
+                          <p className="mt-0.5 truncate font-mono text-[11.5px] text-ink-muted tabular">
+                            {account.phone_e164 ?? 'Numara yok'}
+                          </p>
+                          <div className="mt-1">
+                            <StatusPill status={account.is_locked ? 'banned' : account.status} />
+                          </div>
+                        </div>
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
             </div>
-          ))}
-        </div>
+          }
+          detail={
+            <div className="min-h-0 flex-1 overflow-y-auto p-2">
+              {selected ? (
+                <AccountCard key={selected.id} account={selected} canManage={canManage} />
+              ) : (
+                <EmptyState
+                  tone="phone"
+                  title="Hat seçin"
+                  description="Soldan bir hat seçerek QR, kota ve işlemleri görün."
+                />
+              )}
+            </div>
+          }
+        />
       )}
     </div>
   )
