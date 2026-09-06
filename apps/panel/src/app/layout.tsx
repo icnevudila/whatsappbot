@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { JetBrains_Mono, Outfit } from 'next/font/google'
 import { BRAND_NAME, BRAND_TAGLINE } from '@/components/brand'
+import { LocaleProvider } from '@/lib/i18n/provider'
+import { getDictionary } from '@/lib/i18n/server'
 import './globals.css'
 
 const outfit = Outfit({
@@ -32,11 +34,15 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const { locale, messages } = await getDictionary()
+
   return (
-    <html lang="tr">
+    <html lang={locale}>
       <body className={`${outfit.variable} ${jetbrains.variable} font-sans antialiased`}>
-        {children}
+        <LocaleProvider locale={locale} messages={messages}>
+          {children}
+        </LocaleProvider>
       </body>
     </html>
   )

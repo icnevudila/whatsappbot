@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { Card, CardHeader, PageHeader, QuietLink } from '@/components/ui'
 import { Icon } from '@/components/icon'
+import { createT } from '@/lib/i18n'
+import { getDictionary } from '@/lib/i18n/server'
 
 export const metadata = { title: 'Yardım merkezi' }
 
@@ -66,11 +68,14 @@ const faqs: [string, string][] = [
   ],
 ]
 
-export default function HelpPage() {
+export default async function HelpPage() {
+  const { messages } = await getDictionary()
+  const t = createT(messages)
+
   return (
     <>
       <PageHeader
-        title="Yardım merkezi"
+        title={t('pages.yardimTitle')}
         description="İlk bağlantıdan günlük kullanıma, ihtiyacınız olan adımlar."
       />
 

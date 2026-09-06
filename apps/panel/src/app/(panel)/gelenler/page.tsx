@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { AccentLink, PageHeader } from '@/components/ui'
+import { createT } from '@/lib/i18n'
+import { getDictionary } from '@/lib/i18n/server'
 import { requireActiveOrg } from '@/lib/org'
 import { InboxBoard, type InboxMessage, type ThreadPreview } from './inbox-board'
 
@@ -42,8 +44,13 @@ export default async function InboxPage({
   const konusmaRaw = Array.isArray(params.konusma) ? params.konusma[0] : params.konusma
   const threadMode: ThreadMode = konusmaRaw === 'gelen' ? 'gelen' : 'tam'
 
-  const [{ data: inbound }, { data: outboundPhones }, { data: accounts }, { count: inboundToday }] =
-    await Promise.all([
+  const [
+    { data: inbound },
+    { data: outboundPhones },
+    { data: accounts },
+    { count: inboundToday },
+    { messages },
+  ] = await Promise.all([
       supabase
         .from('message_log')
         .select(
@@ -67,8 +74,10 @@ export default async function InboxPage({
         .eq('org_id', org.id)
         .eq('direction', 'in')
         .gte('created_at', new Date(new Date().setHours(0, 0, 0, 0)).toISOString()),
-    ])
+    getDictionary(),
+  ])
 
+  const t = createT(messages)
   const relatedPhones = new Set(
     (outboundPhones ?? [])
       .map((row) => row.phone_e164)
@@ -129,14 +138,14 @@ export default async function InboxPage({
   return (
     <>
       <PageHeader
-        title="Gelenler"
+        title={t('pages.gelenlerTitle')}
         description="Konuşmaları okuyun, bağlı hattınızdan yanıtlayın ve çıkış taleplerini yönetin. Son 200 gelen mesajdan oluşan güncel sohbetler gösterilir."
         action={
           <div className="flex flex-wrap items-center gap-3">
             <span className="tabular text-[12.5px] text-ink-muted">
               Bugün {inboundToday ?? 0} gelen
             </span>
-            <AccentLink href="/kara-liste">Kara liste</AccentLink>
+            <AccentLink href="/kara-liste">{t('nav.karaListe')}</AccentLink>
           </div>
         }
       />

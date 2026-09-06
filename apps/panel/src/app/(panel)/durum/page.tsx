@@ -2,6 +2,8 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { AccentLink, Card, HourlyBars, Notice, PageHeader, QuietLink } from '@/components/ui'
+import { createT } from '@/lib/i18n'
+import { getDictionary } from '@/lib/i18n/server'
 import { requireActiveOrg } from '@/lib/org'
 import { EventFeed, type EventView } from './event-feed'
 import { StatusBoard, type CampaignView, type LineView } from './status-board'
@@ -46,6 +48,7 @@ export default async function StatusPage() {
     { data: oldestPending },
     { count: inboundToday },
     { data: fleetRaw },
+    { messages },
   ] = await Promise.all([
       supabase
         .from('accounts')
@@ -92,8 +95,10 @@ export default async function StatusPage() {
         .eq('direction', 'in')
         .gte('created_at', new Date(new Date().setHours(0, 0, 0, 0)).toISOString()),
       supabase.rpc('worker_fleet_status' as never),
+      getDictionary(),
     ])
 
+  const t = createT(messages)
   const fleet = (fleetRaw ?? { workers: [], leases: [] }) as {
     workers: {
       worker_id: string
@@ -131,14 +136,14 @@ export default async function StatusPage() {
   return (
     <>
       <PageHeader
-        title="Durum"
+        title={t('pages.durumTitle')}
         description="Hatlar, günlük kapasite ve aktif kampanyalar. Gönderim arka planda sürer; bu sayfa izleme içindir."
         action={
           <div className="flex flex-wrap gap-2">
             <CancelPendingButton count={pendingJobs ?? 0} />
-            <AccentLink href="/hesaplar">Hesaplar</AccentLink>
-            <QuietLink href="/gelenler">Gelenler</QuietLink>
-            <QuietLink href="/hizli-gonderim">Hızlı gönderim</QuietLink>
+            <AccentLink href="/hesaplar">{t('nav.hesaplar')}</AccentLink>
+            <QuietLink href="/gelenler">{t('nav.gelenler')}</QuietLink>
+            <QuietLink href="/hizli-gonderim">{t('nav.hizli')}</QuietLink>
           </div>
         }
       />

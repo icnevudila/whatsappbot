@@ -25,6 +25,10 @@ export function rangeStartIso(key: RangeKey): string {
 
 function dayKey(iso: string): string {
   const d = new Date(iso)
+  return localDayKey(d)
+}
+
+function localDayKey(d: Date): string {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
@@ -38,7 +42,7 @@ function eachDayKeys(key: RangeKey): string[] {
   cursor.setHours(0, 0, 0, 0)
   cursor.setDate(cursor.getDate() - (days - 1))
   for (let i = 0; i < days; i += 1) {
-    keys.push(dayKey(cursor.toISOString()))
+    keys.push(localDayKey(cursor))
     cursor.setDate(cursor.getDate() + 1)
   }
   return keys

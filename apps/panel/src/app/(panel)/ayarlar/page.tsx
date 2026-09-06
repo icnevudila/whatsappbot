@@ -14,6 +14,8 @@ import {
 import { activeImageProviders } from '@/lib/ai/image'
 import { activeTextProviders } from '@/lib/ai/text'
 import { capToday } from '@/lib/capacity'
+import { createT } from '@/lib/i18n'
+import { getDictionary } from '@/lib/i18n/server'
 import { requireActiveOrg } from '@/lib/org'
 import { signOut } from '@/app/giris/actions'
 import { MembersPanel, OrgSettingsForm, WebhookSettingsForm } from './org-forms'
@@ -52,6 +54,7 @@ export default async function SettingsPage() {
   monthStart.setHours(0, 0, 0, 0)
 
   const canManage = org.role === 'owner' || org.role === 'admin'
+  const { messages } = await getDictionary()
 
   const [
     { data: profile },
@@ -98,6 +101,7 @@ export default async function SettingsPage() {
         }),
   ])
 
+  const t = createT(messages)
   const plan = org.plan
   const accountsQuota = org.accounts_quota
   const messageQuota = org.monthly_message_quota
@@ -145,7 +149,7 @@ export default async function SettingsPage() {
   return (
     <div className="filo-fade-in">
       <PageHeader
-        title="Ayarlar"
+        title={t('pages.ayarlarTitle')}
         description="İşletme adı, ekip, profil ve kota. Gönderim hatları Hesaplar’da; kuyruk Durum’da."
         action={
           <span className="text-[12px] text-ink-muted">

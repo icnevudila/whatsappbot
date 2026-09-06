@@ -13,6 +13,11 @@ const TONE_FILL: Record<string, string> = {
   soft: '#c5d0f5',
 }
 
+function barPct(value: number, max: number): number {
+  if (value <= 0) return 0
+  return Math.max(6, Math.round((value / max) * 100))
+}
+
 /** Bugünün saatlik giden / gelen dağılımı (0–23). */
 export function HourlyDualChart({
   outbound,
@@ -49,39 +54,28 @@ export function HourlyDualChart({
         </span>
       </div>
       <div
-        className="flex h-40 items-end gap-0.5"
+        className="flex h-44 gap-px"
         role="img"
         aria-label={`Bugün ${totalOut} giden, ${totalIn} gelen mesaj`}
       >
         {out.map((outCount, hour) => {
           const inCount = inn[hour] ?? 0
-          const pairMax = Math.max(outCount, inCount)
-          const h = Math.max(pairMax > 0 ? 8 : 2, Math.round((pairMax / max) * 100))
           return (
             <div
               key={hour}
-              className="flex min-w-0 flex-1 items-end justify-center gap-px"
-              style={{ height: `${h}%` }}
+              className="flex min-w-0 flex-1 flex-col"
               title={`${String(hour).padStart(2, '0')}:00 · ${outCount} giden · ${inCount} gelen`}
             >
-              <div
-                className="w-[45%] rounded-t-[2px] bg-accent/85"
-                style={{
-                  height:
-                    pairMax > 0
-                      ? `${Math.max(outCount > 0 ? 12 : 0, Math.round((outCount / pairMax) * 100))}%`
-                      : '2px',
-                }}
-              />
-              <div
-                className="w-[45%] rounded-t-[2px] bg-[var(--color-ok,#25d366)]/85"
-                style={{
-                  height:
-                    pairMax > 0
-                      ? `${Math.max(inCount > 0 ? 12 : 0, Math.round((inCount / pairMax) * 100))}%`
-                      : '2px',
-                }}
-              />
+              <div className="flex min-h-0 flex-1 items-end justify-center gap-px">
+                <div
+                  className="w-[45%] rounded-t-[2px] bg-accent/90"
+                  style={{ height: outCount > 0 ? `${barPct(outCount, max)}%` : '2px', opacity: outCount > 0 ? 1 : 0.25 }}
+                />
+                <div
+                  className="w-[45%] rounded-t-[2px] bg-[var(--color-ok,#25d366)]/90"
+                  style={{ height: inCount > 0 ? `${barPct(inCount, max)}%` : '2px', opacity: inCount > 0 ? 1 : 0.25 }}
+                />
+              </div>
             </div>
           )
         })}
@@ -95,15 +89,20 @@ export function HourlyDualChart({
   )
 }
 
-/** Günlük giden / gelen / fail çubukları. */
+/** Günlük giden / gelen yan yana; fail üstte nokta. */
 export function DailyVolumeChart({
   days,
+  dense = false,
 }: {
   days: { day?: string; label: string; out: number; inbound: number; failed: number }[]
+  /** 7 gün gibi kısa aralıklarda her gün etiketi. */
+  dense?: boolean
 }) {
-  const max = Math.max(1, ...days.map((d) => d.out + d.inbound))
+  const max = Math.max(1, ...days.map((d) => Math.max(d.out, d.inbound)))
   const totalOut = days.reduce((s, d) => s + d.out, 0)
   const totalIn = days.reduce((s, d) => s + d.inbound, 0)
+  const totalFail = days.reduce((s, d) => s + d.failed, 0)
+  const showEveryLabel = dense || days.length <= 10
 
   if (totalOut + totalIn === 0) {
     return (
@@ -122,59 +121,62 @@ export function DailyVolumeChart({
         <span className="inline-flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-sm bg-[var(--color-ok,#25d366)]" /> Gelen ({totalIn})
         </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-sm bg-danger/70" /> Fail çubuğu
-        </span>
+        {totalFail > 0 ? (
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-danger/80" /> Fail ({totalFail})
+          </span>
+        ) : null}
       </div>
       <div
-        className="flex h-36 items-end gap-px sm:gap-0.5"
+        className="flex h-44 gap-1 sm:gap-1.5"
         role="img"
         aria-label={`Günlük hacim: ${totalOut} giden, ${totalIn} gelen`}
       >
-        {days.map((d) => {
-          const stack = d.out + d.inbound
-          const h = Math.max(stack > 0 ? 6 : 2, Math.round((stack / max) * 100))
-          const outH = stack > 0 ? Math.round((d.out / stack) * h) : 0
-          const inH = Math.max(0, h - outH)
-          return (
-            <div
-              key={d.day ?? d.label}
-              className="group relative flex min-w-0 flex-1 flex-col justify-end"
-              title={`${d.label}: ${d.out} giden · ${d.inbound} gelen · ${d.failed} fail`}
-            >
-              <div className="flex w-full flex-col justify-end" style={{ height: `${h}%` }}>
-                {inH > 0 ? (
-                  <div
-                    className="w-full rounded-t-[2px] bg-[var(--color-ok,#25d366)]/80"
-                    style={{ height: `${(inH / h) * 100}%` }}
-                  />
-                ) : null}
-                {outH > 0 ? (
-                  <div
-                    className="w-full bg-accent/80"
-                    style={{ height: `${(outH / h) * 100}%` }}
-                  />
-                ) : null}
-              </div>
+        {days.map((d) => (
+          <div
+            key={d.day ?? d.label}
+            className="flex min-w-0 flex-1 flex-col"
+            title={`${d.label}: ${d.out} giden · ${d.inbound} gelen · ${d.failed} fail`}
+          >
+            <div className="relative flex min-h-0 flex-1 items-end justify-center gap-0.5">
               {d.failed > 0 ? (
-                <div
-                  className="absolute bottom-0 left-0 right-0 bg-danger/50"
-                  style={{
-                    height: `${Math.max(2, Math.round((d.failed / max) * 100))}%`,
-                  }}
+                <span
+                  className="absolute left-1/2 top-0 z-10 size-1.5 -translate-x-1/2 rounded-full bg-danger"
+                  aria-hidden
                 />
               ) : null}
+              <div
+                className="w-[42%] max-w-5 rounded-t-[3px] bg-accent transition-[height] duration-300"
+                style={{
+                  height: d.out > 0 ? `${barPct(d.out, max)}%` : '3px',
+                  opacity: d.out > 0 ? 1 : 0.2,
+                }}
+              />
+              <div
+                className="w-[42%] max-w-5 rounded-t-[3px] bg-[var(--color-ok,#25d366)] transition-[height] duration-300"
+                style={{
+                  height: d.inbound > 0 ? `${barPct(d.inbound, max)}%` : '3px',
+                  opacity: d.inbound > 0 ? 1 : 0.2,
+                }}
+              />
             </div>
-          )
-        })}
+            {showEveryLabel ? (
+              <span className="mt-1.5 block truncate text-center text-[10px] tabular leading-none text-ink-faint">
+                {d.label}
+              </span>
+            ) : null}
+          </div>
+        ))}
       </div>
-      <div className="mt-1.5 flex justify-between text-[10.5px] tabular text-ink-faint">
-        <span>{days[0]?.label}</span>
-        {days.length > 2 ? (
-          <span>{days[Math.floor(days.length / 2)]?.label}</span>
-        ) : null}
-        <span>{days[days.length - 1]?.label}</span>
-      </div>
+      {!showEveryLabel ? (
+        <div className="mt-1.5 flex justify-between text-[10.5px] tabular text-ink-faint">
+          <span>{days[0]?.label}</span>
+          {days.length > 2 ? (
+            <span>{days[Math.floor(days.length / 2)]?.label}</span>
+          ) : null}
+          <span>{days[days.length - 1]?.label}</span>
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -226,9 +228,9 @@ export function RankBars({
                 ) : null}
               </span>
             </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-hairline">
+            <div className="h-2.5 overflow-hidden rounded-full bg-hairline">
               <div
-                className="h-full rounded-full bg-accent/80 transition-[width] duration-500"
+                className="h-full rounded-full bg-accent/85 transition-[width] duration-500"
                 style={{ width: `${width}%` }}
               />
             </div>
@@ -239,7 +241,7 @@ export function RankBars({
   )
 }
 
-/** Huni basamakları. */
+/** Huni basamakları — geniş görsel çubuklar. */
 export function FunnelSteps({
   steps,
 }: {
@@ -255,23 +257,32 @@ export function FunnelSteps({
   }
 
   return (
-    <ul className="space-y-2">
-      {steps.map((step) => {
-        const width = Math.max(8, Math.round((step.value / max) * 100))
+    <ul className="space-y-3">
+      {steps.map((step, index) => {
+        const width = Math.max(step.value > 0 ? 10 : 0, Math.round((step.value / max) * 100))
         const fill = {
           accent: 'bg-accent',
           ok: 'bg-[var(--color-ok,#25d366)]',
-          muted: 'bg-ink-faint/50',
+          muted: 'bg-ink-faint/45',
           danger: 'bg-danger',
         }[step.tone]
+        const rate = max > 0 && index > 0 ? Math.round((step.value / max) * 100) : null
         return (
           <li key={step.label}>
-            <div className="mb-1 flex justify-between text-[12px]">
-              <span className="text-ink-muted">{step.label}</span>
-              <span className="tabular font-medium text-ink">{step.value}</span>
+            <div className="mb-1.5 flex items-baseline justify-between gap-2 text-[12.5px]">
+              <span className="font-medium text-ink">{step.label}</span>
+              <span className="tabular text-ink-muted">
+                <span className="font-semibold text-ink">{step.value}</span>
+                {rate != null && steps[0]!.value > 0 ? (
+                  <span className="ml-1.5 text-[11px] text-ink-faint">%{rate}</span>
+                ) : null}
+              </span>
             </div>
-            <div className="h-2.5 overflow-hidden rounded-md bg-hairline">
-              <div className={cx('h-full rounded-md', fill)} style={{ width: `${width}%` }} />
+            <div className="h-3.5 overflow-hidden rounded-md bg-hairline">
+              <div
+                className={cx('h-full rounded-md transition-[width] duration-500', fill)}
+                style={{ width: `${width}%` }}
+              />
             </div>
           </li>
         )

@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { AccentLink, PageHeader, QuietLink } from '@/components/ui'
+import { createT } from '@/lib/i18n'
+import { getDictionary } from '@/lib/i18n/server'
 import { requireActiveOrg } from '@/lib/org'
 import { OutboundBoard, type OutboundMessage } from './outbound-board'
 
@@ -16,7 +18,7 @@ export default async function OutboundPage() {
     redirect('/giris')
   }
 
-  const [{ data: outbound }, { data: accounts }] = await Promise.all([
+  const [{ data: outbound }, { data: accounts }, { messages: i18nMessages }] = await Promise.all([
     supabase
       .from('message_log')
       .select(
@@ -27,8 +29,10 @@ export default async function OutboundPage() {
       .order('id', { ascending: false })
       .limit(200),
     supabase.from('accounts').select('id, label, phone_e164').eq('org_id', org.id),
+    getDictionary(),
   ])
 
+  const t = createT(i18nMessages)
   const accountLabels = Object.fromEntries(
     (accounts ?? []).map((account) => [account.id, account.label]),
   )
@@ -58,12 +62,12 @@ export default async function OutboundPage() {
   return (
     <>
       <PageHeader
-        title="Gidenler"
+        title={t('pages.gidenlerTitle')}
         description="Kampanya ve hızlı gönderimden çıkan mesaj kayıtları (salt okuma). Yanıtlar Gelenler’de."
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <AccentLink href="/gelenler">Gelenler</AccentLink>
-            <QuietLink href="/hizli-gonderim">Hızlı gönderim</QuietLink>
+            <AccentLink href="/gelenler">{t('nav.gelenler')}</AccentLink>
+            <QuietLink href="/hizli-gonderim">{t('nav.hizli')}</QuietLink>
           </div>
         }
       />

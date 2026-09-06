@@ -17,6 +17,7 @@ import {
 import { useConfirm } from '@/components/confirm-dialog'
 import { useSyncBusy } from '@/components/busy'
 import { useToast } from '@/components/toast'
+import { useT } from '@/lib/i18n/provider'
 import { capToday } from '@/lib/capacity'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { useServerSyncedState } from '@/lib/use-server-synced-state'
@@ -276,6 +277,7 @@ function NewAccountForm({ remaining, atCap }: { remaining: number; atCap: boolea
 function AccountCard({ account }: { account: AccountView }) {
   const confirm = useConfirm()
   const toast = useToast()
+  const t = useT()
   const [pending, startTransition] = useTransition()
   const [message, setMessage] = useState<string | null>(null)
   useSyncBusy(pending, 'Hat işlemi…', account.label)
@@ -347,11 +349,10 @@ function AccountCard({ account }: { account: AccountView }) {
             onClick={() => {
               void (async () => {
                 const ok = await confirm({
-                  title: 'WhatsApp’tan çıkarılsın mı?',
-                  description:
-                    'Bu cihaz WhatsApp’tan kaldırılır ve oturum silinir. Yeniden bağlanmak için yeni QR gerekir.',
-                  confirmLabel: 'WhatsApp’tan çıkar',
-                  cancelLabel: 'Vazgeç',
+                  title: t('confirm.waLogoutTitle'),
+                  description: t('confirm.waLogoutBody'),
+                  confirmLabel: t('confirm.waLogoutConfirm'),
+                  cancelLabel: t('common.cancel'),
                   tone: 'danger',
                 })
                 if (!ok) return
@@ -369,11 +370,10 @@ function AccountCard({ account }: { account: AccountView }) {
             onClick={() => {
               void (async () => {
                 const ok = await confirm({
-                  title: 'Hat silinsin mi?',
-                  description:
-                    'Bu hat panelden kaldırılır ve bağlantı kopar. Bu işlem geri alınamaz.',
-                  confirmLabel: 'Hattı sil',
-                  cancelLabel: 'Vazgeç',
+                  title: t('confirm.deleteLineTitle'),
+                  description: t('confirm.deleteLineBody'),
+                  confirmLabel: t('confirm.deleteLineConfirm'),
+                  cancelLabel: t('common.cancel'),
                   tone: 'danger',
                 })
                 if (!ok) return
@@ -382,7 +382,7 @@ function AccountCard({ account }: { account: AccountView }) {
             }}
             disabled={pending}
           >
-            Sil
+            {t('common.delete')}
           </Button>
         </div>
       </div>

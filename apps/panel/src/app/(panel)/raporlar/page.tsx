@@ -14,6 +14,8 @@ import {
   Toolbar,
 } from '@/components/ui'
 import { requireActiveOrg } from '@/lib/org'
+import { createT } from '@/lib/i18n'
+import { getDictionary } from '@/lib/i18n/server'
 import {
   DailyVolumeChart,
   DonutChart,
@@ -46,24 +48,33 @@ export default async function ReportsPage({
 
   const params = await searchParams
   const range = parseRange(params.gun)
-  const report = await loadReportBundle(supabase, org.id, range, org.monthly_message_quota)
+  const [{ messages }, report] = await Promise.all([
+    getDictionary(),
+    loadReportBundle(supabase, org.id, range, org.monthly_message_quota),
+  ])
+  const t = createT(messages)
 
-  const rangeLabel = RANGE_OPTIONS.find((o) => o.key === range)?.label ?? '30 gün'
+  const rangeLabels: Record<string, string> = {
+    '7': t('reports.range7'),
+    '30': t('reports.range30'),
+    '90': t('reports.range90'),
+  }
+  const rangeLabel = rangeLabels[range] ?? t('reports.range30')
 
   return (
     <>
       <PageHeader
-        title="Raporlar"
-        description={`${rangeLabel} gönderim, teslim, hat ve defter özeti. CSV ile kampanya dışa aktarımı.`}
+        title={t('pages.raporlarTitle')}
+        description={t('pages.raporlarDesc', { range: rangeLabel })}
         action={
           <div className="flex flex-wrap gap-2">
             <a
               href="/api/raporlar/csv"
               className="inline-flex h-8 items-center justify-center rounded-[var(--radius-sm)] bg-accent px-3 text-[13px] font-medium text-accent-ink shadow-sm hover:bg-accent-dim"
             >
-              CSV indir
+              {t('pages.csv')}
             </a>
-            <QuietLink href="/kampanyalar">Kampanyalar</QuietLink>
+            <QuietLink href="/kampanyalar">{t('nav.kampanyalar')}</QuietLink>
           </div>
         }
       />
@@ -72,7 +83,7 @@ export default async function ReportsPage({
         <div className="flex flex-wrap items-center gap-1.5">
           {RANGE_OPTIONS.map((opt) => (
             <FilterChip key={opt.key} href={`/raporlar?gun=${opt.key}`} active={range === opt.key}>
-              {opt.label}
+              {rangeLabels[opt.key] ?? opt.label}
             </FilterChip>
           ))}
         </div>
@@ -138,46 +149,61 @@ export default async function ReportsPage({
         </Card>
       </div>
 
-      <div className="mb-3 grid gap-2.5 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+      <div className="mb-3 grid gap-2.5 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         <Card>
-          <CardHeader title="Günlük hacim" subtitle="Giden + gelen; kırmızı fail katmanı" />
+          <CardHeader title={t('reports.dailyVolume')} subtitle="Mavi giden · yeşil gelen · kırmızı fail" />
           <div className="px-3.5 pb-3.5">
-            <DailyVolumeChart days={report.daily} />
+            <DailyVolumeChart days={report.daily} dense={range === '7'} />
           </div>
         </Card>
         <Card>
-          <CardHeader title="Teslim hunisi" subtitle="Giden → teslim → okundu" />
+          <CardHeader title={t('reports.funnel')} subtitle="Giden → teslim → okundu" />
           <div className="px-3.5 pb-3.5">
             <FunnelSteps steps={report.funnel} />
           </div>
         </Card>
       </div>
 
-      <div className="mb-3 grid gap-2.5 lg:grid-cols-3">
+      <div className="mb-3 grid gap-2.5 lg:grid-cols-2">
         <Card>
-          <CardHeader title="Kampanya durumları" subtitle="Son kampanyalar" />
+          <CardHeader title={t('reports.topCampaigns')} subtitle="Gönderim sayısına göre" />
           <div className="px-3.5 pb-3.5">
-            <DonutChart
-              empty="Henüz kampanya yok."
-              segments={report.campaignStatus.map((s, i) => ({
-                label: s.label,
-                value: s.value,
-                tone: (['accent', 'ok', 'muted', 'warn', 'danger', 'soft'] as const)[i % 6],
+            <RankBars
+              empty="Kampanya gönderimi yok."
+              items={report.topCampaigns.map((c) => ({
+                label: c.name,
+                value: c.sent,
+                detail:
+                  c.successRate != null
+                    ? `· %${c.successRate} başarı · ${c.failed} fail`
+                    : `· ${c.failed} fail`,
+                href: `/kampanyalar/${c.id}`,
               }))}
-              center={
-                <>
-                  <p className="tabular text-[18px] font-extrabold leading-none text-ink">
-                    {report.campaigns.length}
-                  </p>
-                  <p className="mt-1 text-[10.5px] text-ink-faint">kampanya</p>
-                </>
-              }
             />
           </div>
         </Card>
 
         <Card>
-          <CardHeader title="Defter sağlığı" subtitle="WhatsApp kayıt durumu" />
+          <CardHeader title={t('reports.perLine')} subtitle={`${rangeLabel}`} />
+          <div className="px-3.5 pb-3.5">
+            <RankBars
+              empty="Bu dönemde hat üzerinden giden yok."
+              items={[...report.accounts]
+                .sort((a, b) => b.periodOut - a.periodOut)
+                .map((a) => ({
+                  label: a.label,
+                  value: a.periodOut,
+                  detail: `bugün ${a.sentToday}/${a.dailyLimit}`,
+                  href: '/hesaplar',
+                }))}
+            />
+          </div>
+        </Card>
+      </div>
+
+      <div className="mb-3 grid gap-2.5 lg:grid-cols-3">
+        <Card>
+          <CardHeader title={t('reports.bookHealth')} subtitle="WhatsApp kayıt durumu" />
           <div className="px-3.5 pb-3.5">
             <DonutChart
               empty="Defterde numara yok."
@@ -202,7 +228,7 @@ export default async function ReportsPage({
         </Card>
 
         <Card>
-          <CardHeader title="Kota & hatlar" subtitle="Bu ay / hat durumu" />
+          <CardHeader title={t('reports.quotaLines')} subtitle="Bu ay / hat durumu" />
           <div className="space-y-4 px-3.5 pb-3.5">
             <QuotaMeter
               used={report.quota.monthSent}
@@ -234,51 +260,12 @@ export default async function ReportsPage({
             />
           </div>
         </Card>
-      </div>
-
-      <div className="mb-3 grid gap-2.5 lg:grid-cols-2">
-        <Card>
-          <CardHeader title="En çok gönderen kampanyalar" subtitle="Gönderim sayısına göre" />
-          <div className="px-3.5 pb-3.5">
-            <RankBars
-              empty="Kampanya gönderimi yok."
-              items={report.topCampaigns.map((c) => ({
-                label: c.name,
-                value: c.sent,
-                detail:
-                  c.successRate != null
-                    ? `· %${c.successRate} başarı · ${c.failed} fail`
-                    : `· ${c.failed} fail`,
-                href: `/kampanyalar/${c.id}`,
-              }))}
-            />
-          </div>
-        </Card>
 
         <Card>
-          <CardHeader title="Hat başına giden" subtitle={`${rangeLabel} · örneklem`} />
+          <CardHeader title={t('reports.failReasons')} subtitle="Örneklemdeki fail mesajları" />
           <div className="px-3.5 pb-3.5">
             <RankBars
-              empty="Bu dönemde hat üzerinden giden yok."
-              items={[...report.accounts]
-                .sort((a, b) => b.periodOut - a.periodOut)
-                .map((a) => ({
-                  label: a.label,
-                  value: a.periodOut,
-                  detail: `bugün ${a.sentToday}/${a.dailyLimit}`,
-                  href: '/hesaplar',
-                }))}
-            />
-          </div>
-        </Card>
-      </div>
-
-      <div className="mb-3 grid gap-2.5 lg:grid-cols-2">
-        <Card>
-          <CardHeader title="Başarısız nedenler" subtitle="Örneklemdeki fail mesajları" />
-          <div className="px-3.5 pb-3.5">
-            <RankBars
-              empty="Bu dönemde başarısız gönderim yok — iyi."
+              empty="Bu dönemde başarısız kayıt yok."
               items={report.errorTop.map((e) => ({
                 label: e.label,
                 value: e.value,
@@ -286,9 +273,24 @@ export default async function ReportsPage({
             />
           </div>
         </Card>
+      </div>
+
+      <div className="mb-3 grid gap-2.5 lg:grid-cols-2">
+        <Card>
+          <CardHeader title={t('reports.campaignStatus')} subtitle="Son kampanyalar" />
+          <div className="px-3.5 pb-3.5">
+            <RankBars
+              empty="Henüz kampanya yok."
+              items={report.campaignStatus.map((s) => ({
+                label: s.label,
+                value: s.value,
+              }))}
+            />
+          </div>
+        </Card>
 
         <Card>
-          <CardHeader title="En büyük listeler" subtitle="Defter listeleri" />
+          <CardHeader title={t('reports.topLists')} subtitle="Defter listeleri" />
           <div className="px-3.5 pb-3.5">
             <RankBars
               empty="Liste yok. Kişiler’den ekleyin."
@@ -304,7 +306,7 @@ export default async function ReportsPage({
       </div>
 
       <Card>
-        <CardHeader title="Kampanya tablosu" subtitle="En fazla 40 kayıt · CSV ile tam dışa aktarım" />
+        <CardHeader title={t('reports.table')} subtitle="En fazla 40 kayıt · CSV ile tam dışa aktarım" />
         {report.campaigns.length === 0 ? (
           <EmptyState
             title="Henüz kampanya yok"

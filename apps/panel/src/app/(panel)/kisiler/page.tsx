@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { AccentLink, Card, CardHeader, EmptyState, Meter, PageHeader, QuietLink, Stat } from '@/components/ui'
 import { redirect } from 'next/navigation'
+import { createT } from '@/lib/i18n'
+import { getDictionary } from '@/lib/i18n/server'
 import { requireActiveOrg } from '@/lib/org'
 import { ImportForm } from './import-form'
 import { ListActions } from './list-actions'
@@ -23,7 +25,7 @@ export default async function ContactsPage() {
     redirect('/giris')
   }
 
-  const [listsResult, totalResult, validResult, invalidResult] = await Promise.all([
+  const [listsResult, totalResult, validResult, invalidResult, { messages }] = await Promise.all([
     supabase
       .from('contact_lists')
       .select('id, name, contact_count, created_at, source')
@@ -41,8 +43,10 @@ export default async function ContactsPage() {
       .select('id', { count: 'exact', head: true })
       .eq('org_id', org.id)
       .eq('wa_status', 'invalid'),
+    getDictionary(),
   ])
 
+  const t = createT(messages)
   const lists = listsResult.data ?? []
   const total = totalResult.count ?? 0
   const valid = validResult.count ?? 0
@@ -52,9 +56,9 @@ export default async function ContactsPage() {
   return (
     <>
       <PageHeader
-        title="Kişiler"
-        description="Numaralar listelerde tutulur; WhatsApp’ta kayıtlı olup olmadığı işaretlenir. Tek seferlik için Hızlı gönderim."
-        action={<AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>}
+        title={t('pages.kisilerTitle')}
+        description={t('pages.kisilerDesc')}
+        action={<AccentLink href="/hizli-gonderim">{t('nav.hizli')}</AccentLink>}
       />
 
       <div className="grid gap-2.5 lg:grid-cols-[minmax(0,1fr)_360px]">

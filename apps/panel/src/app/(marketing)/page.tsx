@@ -4,6 +4,15 @@ import { PLAN_LABELS, PLAN_QUOTAS, type PlanId } from '@wa/shared'
 import { BRAND_NAME, LogoMark } from '@/components/brand'
 import { CapacityCalculator } from './capacity-calculator'
 import { HeroPanel } from './hero-panel'
+import { DayInOps } from './landing/day-in-ops'
+import { FinalCta } from './landing/final-cta'
+import { ProblemSection } from './landing/problem-section'
+import { LandingScrollTop } from './landing/scroll-top'
+import { SocialProofStrip } from './landing/social-proof'
+import { StickyCta } from './landing/sticky-cta'
+import { WallOfLove } from './landing/wall-of-love'
+import { ProductShowcase } from './product-showcase'
+import './landing/landing.css'
 
 export const metadata: Metadata = {
   title: { absolute: `${BRAND_NAME} — Çoklu WhatsApp hattından toplu kampanya gönderimi` },
@@ -145,8 +154,11 @@ const FAQ = [
 export default function Landing() {
   return (
     <>
-      {/* 1 — Hero: Pilot graphite first viewport */}
-      <section className="relative overflow-hidden bg-[var(--color-hero)] text-white">
+      {/* 1 — Hero */}
+      <section
+        data-landing-conversion-zone
+        className="relative overflow-hidden bg-[var(--color-hero)] text-white"
+      >
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_20%_0%,rgba(47,91,255,0.22),transparent_55%)]"
@@ -179,10 +191,10 @@ export default function Landing() {
                 7 gün ücretsiz dene
               </Link>
               <a
-                href="#nasil"
+                href="#urun"
                 className="inline-flex h-11 items-center rounded-[var(--radius-sm)] border border-white/20 bg-white/5 px-4 text-[13px] font-medium text-white transition-colors hover:bg-white/10"
               >
-                Nasıl çalışır
+                Ürünü gör
               </a>
             </div>
 
@@ -195,7 +207,9 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* 2 — Kapasite */}
+      <SocialProofStrip />
+
+      {/* Kapasite */}
       <section id="kapasite" className="scroll-mt-16 border-b border-hairline bg-canvas">
         <div className="mx-auto max-w-6xl px-5 py-[clamp(4.5rem,10vw,7.5rem)]">
           <div className="mb-7 max-w-2xl">
@@ -214,7 +228,9 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* 3 — Nasıl çalışır */}
+      <ProblemSection />
+
+      {/* Nasıl çalışır */}
       <section id="nasil" className="scroll-mt-16 border-b border-hairline bg-surface">
         <div className="mx-auto max-w-6xl px-5 py-[clamp(4.5rem,10vw,7.5rem)]">
           <p className="mb-2 font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-ink-faint">
@@ -233,7 +249,11 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* 4 — Güvenlik */}
+      <ProductShowcase />
+
+      <DayInOps />
+
+      {/* Güvenlik */}
       <section id="guvenlik" className="scroll-mt-16 border-b border-hairline bg-accent-soft/40">
         <div className="mx-auto max-w-6xl px-5 py-[clamp(4.5rem,10vw,7.5rem)]">
           <div className="max-w-2xl">
@@ -259,7 +279,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* 5 — Çoklu hat */}
+      {/* Çoklu hat */}
       <section className="border-b border-hairline">
         <div className="mx-auto grid max-w-6xl gap-10 px-5 py-14 md:grid-cols-2 md:items-center">
           <div>
@@ -316,7 +336,9 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* 6 — Fiyatlar */}
+      <WallOfLove />
+
+      {/* Fiyatlar */}
       <section id="fiyatlar" className="scroll-mt-16 border-b border-hairline">
         <div className="mx-auto max-w-6xl px-5 py-14">
           <div className="max-w-2xl">
@@ -387,7 +409,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* 7 — SSS */}
+      {/* SSS */}
       <section id="sss" className="scroll-mt-16 border-b border-hairline">
         <div className="mx-auto max-w-3xl px-5 py-14">
           <h2 className="text-[24px] font-semibold tracking-[-0.02em]">Sık sorulanlar</h2>
@@ -407,23 +429,9 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* 8 — Kapanış */}
-      <section>
-        <div className="mx-auto max-w-6xl px-5 py-16 text-center">
-          <h2 className="text-[26px] font-semibold tracking-[-0.025em]">
-            İlk hattınızı beş dakikada bağlayın
-          </h2>
-          <p className="mx-auto mt-3 max-w-md text-[14px] text-ink-muted">
-            Deneme sürümü tam özellikli. Kredi kartı istemiyoruz, otomatik yenileme yok.
-          </p>
-          <Link
-            href="/giris?mod=kayit"
-            className="mt-7 inline-flex h-9 items-center rounded-md bg-accent px-5 text-[13px] font-medium text-accent-ink transition-colors hover:bg-accent-dim"
-          >
-            Ücretsiz dene
-          </Link>
-        </div>
-      </section>
+      <FinalCta />
+      <StickyCta />
+      <LandingScrollTop />
     </>
   )
 }

@@ -6,6 +6,7 @@ import { Button, Notice } from '@/components/ui'
 import { useConfirm } from '@/components/confirm-dialog'
 import { useSyncBusy } from '@/components/busy'
 import { useToast } from '@/components/toast'
+import { useT } from '@/lib/i18n/provider'
 import { waitForJob } from '@/lib/wait-for-job'
 import { deleteList, verifyList } from './actions'
 
@@ -13,6 +14,7 @@ export function ListActions({ listId }: { listId: string }) {
   const router = useRouter()
   const confirm = useConfirm()
   const toast = useToast()
+  const t = useT()
   const [pending, startTransition] = useTransition()
   const [busy, setBusy] = useState<'verify' | 'delete' | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -91,10 +93,10 @@ export function ListActions({ listId }: { listId: string }) {
             onClick={() => {
               void (async () => {
                 const okDelete = await confirm({
-                  title: 'Liste silinsin mi?',
-                  description: 'Liste kaldırılır; kişiler defterde kalır.',
-                  confirmLabel: 'Listeyi sil',
-                  cancelLabel: 'Vazgeç',
+                  title: t('confirm.deleteListTitle'),
+                  description: t('confirm.deleteListBody'),
+                  confirmLabel: t('confirm.deleteListConfirm'),
+                  cancelLabel: t('common.cancel'),
                   tone: 'danger',
                 })
                 if (!okDelete) return
@@ -103,7 +105,7 @@ export function ListActions({ listId }: { listId: string }) {
             }}
             disabled={pending}
           >
-            {busy === 'delete' ? 'Siliniyor…' : 'Sil'}
+            {busy === 'delete' ? 'Siliniyor…' : t('common.delete')}
           </Button>
         </div>
         <p className="max-w-[200px] text-right text-[10.5px] leading-snug text-ink-faint">

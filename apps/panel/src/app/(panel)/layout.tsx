@@ -4,7 +4,10 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { Wordmark } from '@/components/brand'
 import { FeedbackProviders } from '@/components/feedback-providers'
+import { LocaleSwitcher } from '@/components/locale-switcher'
 import { RouteProgress } from '@/components/route-progress'
+import { createT } from '@/lib/i18n'
+import { getDictionary } from '@/lib/i18n/server'
 import { listUserOrgs, requireActiveOrg } from '@/lib/org'
 import { getSetupProgress, isOnboardingAllowedPath } from '@/lib/setup-progress'
 import { signOut } from '@/app/giris/actions'
@@ -20,10 +23,12 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     redirect('/giris')
   }
 
-  const [{ showSetup, allDone }, orgs] = await Promise.all([
+  const [{ showSetup, allDone }, orgs, { messages }] = await Promise.all([
     getSetupProgress(org.id),
     listUserOrgs(),
+    getDictionary(),
   ])
+  const t = createT(messages)
 
   const pathname = (await headers()).get('x-filo-pathname') ?? ''
 
@@ -62,6 +67,9 @@ export default async function PanelLayout({ children }: { children: React.ReactN
           </div>
 
           <div className="border-t border-hairline px-3 py-3">
+            <div className="mb-2">
+              <LocaleSwitcher compact />
+            </div>
             <p className="mb-1.5 truncate text-[11px] text-ink-faint" title={email ?? ''}>
               {email}
             </p>
@@ -70,7 +78,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
                 type="submit"
                 className="text-[12px] font-medium text-ink-muted transition-colors hover:text-danger"
               >
-                Çıkış yap
+                {t('common.signOut')}
               </button>
             </form>
           </div>
@@ -82,28 +90,32 @@ export default async function PanelLayout({ children }: { children: React.ReactN
               <Link href={showSetup ? '/kurulum' : '/ozet'} className="flex items-center">
                 <Wordmark />
               </Link>
-              <form action={signOut}>
-                <button
-                  type="submit"
-                  className="text-[11.5px] text-ink-muted transition-colors hover:text-danger"
-                >
-                  Çıkış
-                </button>
-              </form>
+              <div className="flex items-center gap-2">
+                <LocaleSwitcher compact />
+                <form action={signOut}>
+                  <button
+                    type="submit"
+                    className="text-[11.5px] text-ink-muted transition-colors hover:text-danger"
+                  >
+                    {t('common.signOutShort')}
+                  </button>
+                </form>
+              </div>
             </div>
             <div className="mb-2">
               <OrgSwitcher orgs={orgs} activeOrgId={org.id} />
             </div>
-            <div className="overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <Nav showSetup={showSetup} onboardingLock={showSetup} orientation="horizontal" />
-            </div>
+            <Nav showSetup={showSetup} onboardingLock={showSetup} orientation="horizontal" />
           </div>
 
           <header className="wb-topbar hidden h-[52px] shrink-0 items-center justify-between border-b border-hairline bg-surface px-5 md:flex">
             <p className="truncate text-[12.5px] font-medium text-ink-soft">{org.name}</p>
-            <p className="text-[11.5px] text-ink-faint">
-              {showSetup ? 'Kurulum · zorunlu adımlar' : 'WhatsApp workbench'}
-            </p>
+            <div className="flex items-center gap-3">
+              <p className="text-[11.5px] text-ink-faint">
+                {showSetup ? t('common.setupLocked') : t('common.workbench')}
+              </p>
+              <LocaleSwitcher compact />
+            </div>
           </header>
 
           <main className="min-w-0 flex-1 overflow-x-hidden px-3 py-4 md:px-5 md:py-5">

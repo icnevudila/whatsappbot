@@ -17,6 +17,8 @@ import {
   QuotaMeter,
   RankBars,
 } from '@/components/charts'
+import { createT } from '@/lib/i18n'
+import { getDictionary } from '@/lib/i18n/server'
 import { requireActiveOrg } from '@/lib/org'
 import { getSetupProgress } from '@/lib/setup-progress'
 import { SetupBanner } from '../setup-banner'
@@ -26,6 +28,10 @@ export const dynamic = 'force-dynamic'
 
 function dayKey(iso: string): string {
   const d = new Date(iso)
+  return localDayKey(d)
+}
+
+function localDayKey(d: Date): string {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
@@ -64,8 +70,9 @@ export default async function PanelHomePage() {
   const monthStart = new Date(todayStart)
   monthStart.setDate(1)
 
-  const [setup, rest] = await Promise.all([
+  const [setup, dict, rest] = await Promise.all([
     getSetupProgress(org.id),
+    getDictionary(),
     Promise.all([
       supabase.from('accounts').select('id', { count: 'exact', head: true }).eq('org_id', org.id),
       supabase
@@ -170,6 +177,7 @@ export default async function PanelHomePage() {
     { data: recentCampaigns },
   ] = rest
 
+  const t = createT(dict.messages)
   const { connectedCount, contactCount, validWa } = setup.counts
   const ready = setup.allDone
   const unknownWa = Math.max(0, contactCount - validWa - (invalidWa ?? 0))
@@ -187,7 +195,7 @@ export default async function PanelHomePage() {
   const weekKeys: string[] = []
   const weekCursor = new Date(weekStart)
   for (let i = 0; i < 7; i += 1) {
-    weekKeys.push(dayKey(weekCursor.toISOString()))
+    weekKeys.push(localDayKey(weekCursor))
     weekCursor.setDate(weekCursor.getDate() + 1)
   }
   const weekMap = new Map(weekKeys.map((k) => [k, { out: 0, inbound: 0, failed: 0 }]))
@@ -213,12 +221,12 @@ export default async function PanelHomePage() {
     accountStatusMap.set(a.status, (accountStatusMap.get(a.status) ?? 0) + 1)
   }
   const accountStatusLabel: Record<string, string> = {
-    connected: 'Bağlı',
-    connecting: 'Bağlanıyor',
-    qr: 'QR',
-    disconnected: 'Kopuk',
-    logged_out: 'Çıkış',
-    banned: 'Kısıtlı',
+    connected: t('ozet.statusConnected'),
+    connecting: t('ozet.statusConnecting'),
+    qr: t('ozet.statusQr'),
+    disconnected: t('ozet.statusDisconnected'),
+    logged_out: t('ozet.statusLoggedOut'),
+    banned: t('ozet.statusBanned'),
   }
 
   const accountBars = [...(accounts ?? [])]
@@ -233,36 +241,36 @@ export default async function PanelHomePage() {
   const shortcuts = [
     {
       href: '/hizli-gonderim',
-      title: 'Hızlı gönderim',
-      body: 'Tek seferlik mesaj',
+      title: t('ozet.scQuick'),
+      body: t('ozet.scQuickBody'),
     },
     {
       href: '/kampanyalar',
-      title: 'Kampanyalar',
-      body: 'Toplu gönderim',
+      title: t('ozet.scCamp'),
+      body: t('ozet.scCampBody'),
     },
     {
       href: '/gelenler',
-      title: 'Gelenler',
-      body: 'Yanıtlar',
+      title: t('ozet.scIn'),
+      body: t('ozet.scInBody'),
     },
     {
       href: '/raporlar',
-      title: 'Raporlar',
-      body: '7–90 gün özet',
+      title: t('ozet.scReports'),
+      body: t('ozet.scReportsBody'),
     },
   ]
 
   return (
     <>
       <PageHeader
-        title="Özet"
-        description={`${org.name} · günün operasyon görünümü.`}
+        title={t('pages.ozetTitle')}
+        description={t('pages.ozetDesc', { org: org.name })}
         action={
           ready ? (
-            <AccentLink href="/hizli-gonderim">Mesaj gönder</AccentLink>
+            <AccentLink href="/hizli-gonderim">{t('pages.sendMessage')}</AccentLink>
           ) : (
-            <AccentLink href="/kurulum">Kurulumu tamamla</AccentLink>
+            <AccentLink href="/kurulum">{t('pages.finishSetup')}</AccentLink>
           )
         }
       />
@@ -273,7 +281,7 @@ export default async function PanelHomePage() {
         <Card lift>
           <div className="p-3.5">
             <Stat
-              label="Bağlı hat"
+              label={t('ozet.connectedLine')}
               value={connectedCount}
               tone={connectedCount > 0 ? 'accent' : 'muted'}
               meter={{
@@ -281,20 +289,23 @@ export default async function PanelHomePage() {
                 max: Math.max(1, accountsTotal ?? 0),
                 tone: connectedCount > 0 ? 'accent' : 'warn',
               }}
-              detail={`${connectedCount} / ${accountsTotal ?? 0} hat`}
+              detail={t('ozet.lineCount', {
+                connected: connectedCount,
+                total: accountsTotal ?? 0,
+              })}
             />
             <Link
               href="/hesaplar"
               className="mt-2 inline-block text-[12px] font-medium text-accent underline-offset-2 hover:underline"
             >
-              Hesaplar →
+              {t('ozet.accountsLink')}
             </Link>
           </div>
         </Card>
         <Card lift>
           <div className="p-3.5">
             <Stat
-              label="Kişiler"
+              label={t('ozet.contacts')}
               value={contactCount}
               tone="muted"
               meter={{
@@ -302,110 +313,122 @@ export default async function PanelHomePage() {
                 max: Math.max(1, contactCount),
                 tone: 'accent',
               }}
-              detail={`${validWa} WA kayıtlı · ${lists ?? 0} liste`}
+              detail={t('ozet.waRegistered', { valid: validWa, lists: lists ?? 0 })}
             />
             <Link
               href="/kisiler"
               className="mt-2 inline-block text-[12px] font-medium text-accent underline-offset-2 hover:underline"
             >
-              Kişiler →
+              {t('ozet.contactsLink')}
             </Link>
           </div>
         </Card>
         <Card lift>
           <div className="p-3.5">
             <Stat
-              label="Bugün giden"
+              label={t('ozet.outToday')}
               value={outToday ?? 0}
               tone="accent"
-              detail={(failedToday ?? 0) > 0 ? `${failedToday} fail` : 'fail yok'}
+              detail={
+                (failedToday ?? 0) > 0
+                  ? t('ozet.failCount', { count: failedToday ?? 0 })
+                  : t('ozet.failNone')
+              }
             />
             <Link
               href="/gidenler"
               className="mt-2 inline-block text-[12px] font-medium text-accent underline-offset-2 hover:underline"
             >
-              Gidenler →
+              {t('ozet.outLink')}
             </Link>
           </div>
         </Card>
         <Card lift>
           <div className="p-3.5">
-            <Stat label="Bugün gelen" value={inToday ?? 0} tone="muted" detail="inbox" />
+            <Stat
+              label={t('ozet.inToday')}
+              value={inToday ?? 0}
+              tone="muted"
+              detail={t('ozet.inbox')}
+            />
             <Link
               href="/gelenler"
               className="mt-2 inline-block text-[12px] font-medium text-accent underline-offset-2 hover:underline"
             >
-              Gelenler →
+              {t('ozet.inLink')}
             </Link>
+          </div>
+        </Card>
+      </div>
+
+      <div className="mb-3 grid gap-2.5 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+        <Card>
+          <CardHeader title={t('ozet.weekTitle')} subtitle={t('ozet.weekSub')} />
+          <div className="px-3.5 pb-3.5">
+            <DailyVolumeChart days={weekDays} dense />
+            <div className="mt-3">
+              <QuietLink href="/raporlar?gun=7">{t('ozet.openReports')}</QuietLink>
+            </div>
+          </div>
+        </Card>
+
+        <Card>
+          <CardHeader title={t('ozet.funnelTitle')} subtitle={t('ozet.funnelSub')} />
+          <div className="px-3.5 pb-3.5">
+            <FunnelSteps
+              steps={[
+                { label: t('reports.outbound'), value: outToday ?? 0, tone: 'accent' },
+                { label: t('ozet.delivered'), value: deliveredToday ?? 0, tone: 'ok' },
+                { label: t('ozet.read'), value: readToday ?? 0, tone: 'muted' },
+                { label: t('reports.failed'), value: failedToday ?? 0, tone: 'danger' },
+              ]}
+            />
           </div>
         </Card>
       </div>
 
       <div className="mb-3 grid gap-2.5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <Card>
-          <CardHeader title="Bugün saatlik trafik" subtitle="Giden (mavi) · gelen (yeşil)" />
+          <CardHeader title={t('ozet.hourlyTitle')} subtitle={t('ozet.hourlySub')} />
           <div className="px-3.5 pb-3.5">
             <HourlyDualChart outbound={hourlyOut} inbound={hourlyIn} />
           </div>
         </Card>
-        <Card>
-          <CardHeader title="Bugün teslim" subtitle="Giden → teslim → okundu" />
-          <div className="px-3.5 pb-3.5">
-            <FunnelSteps
-              steps={[
-                { label: 'Giden', value: outToday ?? 0, tone: 'accent' },
-                { label: 'Teslim', value: deliveredToday ?? 0, tone: 'ok' },
-                { label: 'Okundu', value: readToday ?? 0, tone: 'muted' },
-                { label: 'Başarısız', value: failedToday ?? 0, tone: 'danger' },
-              ]}
-            />
-          </div>
-        </Card>
-      </div>
-
-      <div className="mb-3 grid gap-2.5 lg:grid-cols-3">
-        <Card>
-          <CardHeader title="Son 7 gün" subtitle="Günlük hacim" />
-          <div className="px-3.5 pb-3.5">
-            <DailyVolumeChart days={weekDays} />
-            <div className="mt-3">
-              <QuietLink href="/raporlar?gun=7">Raporlarda aç</QuietLink>
-            </div>
-          </div>
-        </Card>
 
         <Card>
-          <CardHeader title="Defter" subtitle="WhatsApp kayıt durumu" />
+          <CardHeader title={t('ozet.bookTitle')} subtitle={t('ozet.bookSub')} />
           <div className="px-3.5 pb-3.5">
             <DonutChart
-              empty="Defter boş — Kişiler’den ekleyin."
+              empty={t('ozet.bookEmpty')}
               segments={[
-                { label: 'Var (✓)', value: validWa, tone: 'ok' },
-                { label: 'Yok (×)', value: invalidWa ?? 0, tone: 'danger' },
-                { label: 'Bekliyor', value: unknownWa, tone: 'muted' },
+                { label: t('ozet.waYes'), value: validWa, tone: 'ok' },
+                { label: t('ozet.waNo'), value: invalidWa ?? 0, tone: 'danger' },
+                { label: t('ozet.waPending'), value: unknownWa, tone: 'muted' },
               ]}
               center={
                 <>
                   <p className="tabular text-[18px] font-extrabold leading-none text-ink">
                     {contactCount}
                   </p>
-                  <p className="mt-1 text-[10.5px] text-ink-faint">numara</p>
+                  <p className="mt-1 text-[10.5px] text-ink-faint">{t('ozet.numbers')}</p>
                 </>
               }
             />
           </div>
         </Card>
+      </div>
 
+      <div className="mb-3 grid gap-2.5 lg:grid-cols-2">
         <Card>
-          <CardHeader title="Hatlar" subtitle="Bağlantı durumu" />
+          <CardHeader title={t('ozet.linesTitle')} subtitle={t('ozet.linesSub')} />
           <div className="space-y-4 px-3.5 pb-3.5">
             <QuotaMeter
               used={monthSent ?? 0}
               limit={org.monthly_message_quota}
-              label="Aylık kota"
+              label={t('ozet.monthlyQuota')}
             />
             <DonutChart
-              empty="Hat yok — Hesaplar’dan ekleyin."
+              empty={t('ozet.linesEmpty')}
               segments={[...(accountStatusMap.entries())].map(([key, value]) => ({
                 label: accountStatusLabel[key] ?? key,
                 value,
@@ -423,35 +446,35 @@ export default async function PanelHomePage() {
                   <p className="tabular text-[18px] font-extrabold leading-none text-ink">
                     {connectedCount}
                   </p>
-                  <p className="mt-1 text-[10.5px] text-ink-faint">bağlı</p>
+                  <p className="mt-1 text-[10.5px] text-ink-faint">{t('ozet.connectedShort')}</p>
                 </>
               }
             />
           </div>
         </Card>
-      </div>
 
-      <div className="mb-3 grid gap-2.5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.9fr)]">
         <Card>
-          <CardHeader title="Hat kotası (bugün)" subtitle="Gönderilen / günlük limit" />
+          <CardHeader title={t('ozet.lineQuotaTitle')} subtitle={t('ozet.lineQuotaSub')} />
           <div className="px-3.5 pb-3.5">
-            <RankBars empty="Hat eklenmemiş." items={accountBars} />
+            <RankBars empty={t('ozet.noLines')} items={accountBars} />
           </div>
         </Card>
+      </div>
 
+      <div className="mb-3 grid gap-2.5 lg:grid-cols-2">
         <Card>
-          <CardHeader title="Durum" subtitle="Canlı izleme" />
+          <CardHeader title={t('ozet.statusTitle')} subtitle={t('ozet.statusSub')} />
           <div className="space-y-3 p-3.5 text-[12.5px] text-ink-muted">
             <div className="flex items-center justify-between gap-2">
-              <span>Çalışan kampanya</span>
+              <span>{t('ozet.runningCampaigns')}</span>
               <span className="tabular font-semibold text-ink">{campaignsRunning ?? 0}</span>
             </div>
             <div className="flex items-center justify-between gap-2">
-              <span>Kara liste</span>
+              <span>{t('ozet.blacklist')}</span>
               <span className="tabular font-semibold text-ink">{blacklist ?? 0}</span>
             </div>
             <div className="flex items-center justify-between gap-2">
-              <span>Hat / toplam</span>
+              <span>{t('ozet.lineTotal')}</span>
               <span className="tabular font-semibold text-ink">
                 {connectedCount} / {accountsTotal ?? 0}
               </span>
@@ -474,14 +497,14 @@ export default async function PanelHomePage() {
               </ul>
             ) : null}
             <div className="flex flex-wrap gap-2 pt-1">
-              <AccentLink href="/durum">Durum paneli</AccentLink>
-              <QuietLink href="/kampanyalar">Kampanyalar</QuietLink>
+              <AccentLink href="/durum">{t('ozet.statusPanel')}</AccentLink>
+              <QuietLink href="/kampanyalar">{t('nav.kampanyalar')}</QuietLink>
             </div>
           </div>
         </Card>
 
         <Card>
-          <CardHeader title="Kısayollar" subtitle="Sık işler" />
+          <CardHeader title={t('ozet.shortcutsTitle')} subtitle={t('ozet.shortcutsSub')} />
           <ul className="divide-y divide-hairline">
             {shortcuts.map((item) => (
               <li key={item.href}>

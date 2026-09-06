@@ -1,41 +1,44 @@
+'use client'
+
 import Link from 'next/link'
 import { AccentLink, Card, Meter } from '@/components/ui'
+import { useT } from '@/lib/i18n/provider'
 import type { getSetupProgress } from '@/lib/setup-progress'
 
 type Progress = Awaited<ReturnType<typeof getSetupProgress>>
-
-const STEP_COPY: { key: keyof Progress['steps']; label: string; href: string }[] = [
-  { key: 'brand', label: 'Marka', href: '/kurulum' },
-  { key: 'contacts', label: 'Kişi listesi', href: '/kurulum' },
-  { key: 'connected', label: 'WhatsApp hattı', href: '/hesaplar' },
-  { key: 'verified', label: 'Numara kontrolü', href: '/kisiler' },
-]
 
 /**
  * Kurulum bitmeden gösterilen şerit — zorunlu wizard’a yönlendirir.
  */
 export function SetupBanner({ progress }: { progress: Progress }) {
+  const t = useT()
+
   if (progress.allDone) return null
+
+  const steps: { key: keyof Progress['steps']; label: string; href: string }[] = [
+    { key: 'brand', label: t('setup.brandTitle'), href: '/kurulum' },
+    { key: 'contacts', label: t('setup.contactsTitle'), href: '/kurulum' },
+    { key: 'connected', label: t('setup.lineTitle'), href: '/hesaplar' },
+    { key: 'verified', label: t('setup.verifyTitle'), href: '/kisiler' },
+  ]
 
   return (
     <Card className="mb-4">
       <div className="space-y-3 p-4">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <div>
-            <p className="text-[13px] font-semibold text-ink">Kurulumu tamamla</p>
-            <p className="mt-0.5 text-[12px] text-ink-muted">
-              Dört zorunlu adım · bitmeden kampanya açılamaz
-            </p>
+            <p className="text-[13px] font-semibold text-ink">{t('setup.bannerTitle')}</p>
+            <p className="mt-0.5 text-[12px] text-ink-muted">{t('setup.bannerSub')}</p>
           </div>
           <span className="tabular text-[12px] text-ink-muted">
-            {progress.doneCount}/{STEP_COPY.length}
+            {progress.doneCount}/{steps.length}
           </span>
         </div>
 
-        <Meter value={progress.doneCount} max={STEP_COPY.length} />
+        <Meter value={progress.doneCount} max={steps.length} />
 
         <ul className="flex flex-wrap gap-x-4 gap-y-2">
-          {STEP_COPY.map((step, index) => {
+          {steps.map((step, index) => {
             const done = progress.steps[step.key]
             return (
               <li key={step.key} className="flex items-center gap-1.5 text-[12.5px]">
@@ -64,7 +67,7 @@ export function SetupBanner({ progress }: { progress: Progress }) {
         </ul>
 
         <div>
-          <AccentLink href="/kurulum">Kuruluma devam et</AccentLink>
+          <AccentLink href="/kurulum">{t('setup.bannerCta')}</AccentLink>
         </div>
       </div>
     </Card>

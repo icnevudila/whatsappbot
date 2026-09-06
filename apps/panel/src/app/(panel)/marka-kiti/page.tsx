@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { AccentLink, Badge, Card, CardHeader, EmptyState, PageHeader } from '@/components/ui'
 import { DEFAULT_COLORS, FORMATS, type BrandColors, type FormatKey, type TemplateKey } from '@/lib/creative-templates'
+import { createT } from '@/lib/i18n'
+import { getDictionary } from '@/lib/i18n/server'
 import { requireActiveOrg } from '@/lib/org'
 import { BrandStudio } from './brand-studio'
 
@@ -31,7 +33,7 @@ export default async function BrandKitPage() {
     redirect('/giris')
   }
 
-  const [{ data: kit }, { data: creatives }] = await Promise.all([
+  const [{ data: kit }, { data: creatives }, { messages }] = await Promise.all([
     supabase
       .from('brand_kits')
       .select('id, name, colors, logo_path')
@@ -45,8 +47,10 @@ export default async function BrandKitPage() {
       .eq('status', 'ready')
       .order('created_at', { ascending: false })
       .limit(8),
+    getDictionary(),
   ])
 
+  const t = createT(messages)
   const colors: BrandColors = {
     ...DEFAULT_COLORS,
     ...((kit?.colors as Partial<BrandColors> | null) ?? {}),
@@ -58,7 +62,7 @@ export default async function BrandKitPage() {
   return (
     <div className="filo-fade-in">
       <PageHeader
-        title="Marka kiti"
+        title={t('pages.markaTitle')}
         description="Renk ve logoyu bir kez kaydedin; kampanya görselleri aynı kimlikle üretilir. Hazır görseli Hızlı gönderime taşıyabilirsiniz."
         action={
           hasSavedKit ? (

@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { AccentLink, Card, CardHeader, EmptyState, Meter, Notice, PageHeader, StatusPill } from '@/components/ui'
 import { hasTextProvider } from '@/lib/ai/text'
+import { createT } from '@/lib/i18n'
+import { getDictionary } from '@/lib/i18n/server'
 import { requireActiveOrg } from '@/lib/org'
 import { NewCampaignForm } from './new-campaign-form'
 
@@ -56,7 +58,8 @@ export default async function CampaignsPage({
   const params = await searchParams
   const justReady = (Array.isArray(params.hazir) ? params.hazir[0] : params.hazir) === '1'
 
-  const [campaignsResult, listsResult, accountsResult, brandResult] = await Promise.all([
+  const [campaignsResult, listsResult, accountsResult, brandResult, { messages }] =
+    await Promise.all([
     supabase
       .from('campaigns')
       .select(
@@ -78,8 +81,10 @@ export default async function CampaignsPage({
     // Marka adi varsa AI metnin basina koysun; kim oldugunu belirtmeyen
     // toplu mesaj sikayet oranini belirgin sekilde yukseltiyor.
     supabase.from('brand_kits').select('name').eq('org_id', org.id).limit(1).maybeSingle(),
+    getDictionary(),
   ])
 
+  const t = createT(messages)
   const campaigns = campaignsResult.data ?? []
 
   const listOptions = (listsResult.data ?? []).map((list) => ({
@@ -105,16 +110,13 @@ export default async function CampaignsPage({
   return (
     <>
       <PageHeader
-        title="Kampanyalar"
-        description="Liste + hat seç, başlat. Detayda canlı ilerleme."
-        action={<AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>}
+        title={t('pages.kampanyalarTitle')}
+        description={t('pages.kampanyalarDesc')}
+        action={<AccentLink href="/hizli-gonderim">{t('nav.hizli')}</AccentLink>}
       />
 
       {justReady ? (
-        <Notice tone="success">
-          Kurulum tamam. Marka, liste, hat ve numara kontrolü hazır — sağdan kampanya
-          oluşturup mesajınızı yazmanız yeterli.
-        </Notice>
+        <Notice tone="success">{t('pages.kampanyalarReady')}</Notice>
       ) : null}
 
       <div className={`grid gap-2.5 lg:grid-cols-[minmax(0,1fr)_380px]${justReady ? ' mt-3' : ''}`}>

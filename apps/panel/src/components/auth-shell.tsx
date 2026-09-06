@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
+import { LocaleSwitcher } from '@/components/locale-switcher'
 import { LogoMark, Wordmark } from './brand'
 
 /**
@@ -18,12 +19,18 @@ export function AuthShell({
   asideLead = 'QR veya eşleştirme koduyla WhatsApp hatlarını bağlayın. Gönderim sunucuda sürer; panel kapalıyken de devam eder.',
   backHref = '/giris',
   backLabel = '← Giriş',
+  footerLabel = 'Filo · WhatsApp toplu gönderim workbench',
+  privacyLabel = 'Gizlilik',
+  termsLabel = 'Kullanım koşulları',
 }: {
   children: ReactNode
   asideTitle?: ReactNode
   asideLead?: string
   backHref?: string
   backLabel?: string
+  footerLabel?: string
+  privacyLabel?: string
+  termsLabel?: string
 }) {
   return (
     <div className="grid min-h-dvh bg-canvas md:grid-cols-2">
@@ -44,17 +51,16 @@ export function AuthShell({
           </h2>
           <p className="mt-4 max-w-[36ch] text-[15px] leading-relaxed text-white/80">{asideLead}</p>
         </div>
-        <p className="relative z-10 text-[12px] font-semibold text-white/55">
-          Filo · WhatsApp toplu gönderim workbench
-        </p>
+        <p className="relative z-10 text-[12px] font-semibold text-white/55">{footerLabel}</p>
       </aside>
 
       <main className="relative flex min-h-dvh flex-col">
-        <header className="flex items-center justify-between px-5 py-5 md:px-8">
+        <header className="flex items-center justify-between gap-3 px-5 py-5 md:px-8">
           <Link href="/" className="inline-flex md:hidden">
             <Wordmark />
           </Link>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-3">
+            <LocaleSwitcher compact />
             <Link
               href={backHref}
               className="text-[12.5px] text-ink-muted transition-colors hover:text-ink"
@@ -75,10 +81,10 @@ export function AuthShell({
             </div>
             <div className="mt-5 flex justify-center gap-5 text-[11.5px] text-ink-faint">
               <Link href="/kvkk" className="hover:text-ink-muted">
-                Gizlilik
+                {privacyLabel}
               </Link>
               <Link href="/kosullar" className="hover:text-ink-muted">
-                Kullanım koşulları
+                {termsLabel}
               </Link>
             </div>
           </div>

@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { AccentLink, PageHeader, QuietLink } from '@/components/ui'
+import { createT } from '@/lib/i18n'
+import { getDictionary } from '@/lib/i18n/server'
 import { requireActiveOrg } from '@/lib/org'
 import { getSetupProgress } from '@/lib/setup-progress'
 import { SetupBanner } from '../setup-banner'
@@ -22,26 +24,28 @@ export default async function AccountsPage() {
     redirect('/giris')
   }
 
-  const [accountsResult, setup] = await Promise.all([
+  const [accountsResult, setup, { messages }] = await Promise.all([
     supabase
       .from('accounts')
       .select(ACCOUNT_FIELDS)
       .eq('org_id', org.id)
       .order('created_at'),
     getSetupProgress(org.id),
+    getDictionary(),
   ])
+  const t = createT(messages)
 
   const accounts = (accountsResult.data ?? []) as AccountView[]
 
   return (
     <>
       <PageHeader
-        title="Hesaplar"
-        description="Her satır ayrı WhatsApp hattı. QR veya telefon koduyla bağlayın."
+        title={t('pages.hesaplarTitle')}
+        description={t('pages.hesaplarDesc')}
         action={
           <div className="flex flex-wrap gap-2">
-            <AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>
-            <QuietLink href="/durum">Durum</QuietLink>
+            <AccentLink href="/hizli-gonderim">{t('nav.hizli')}</AccentLink>
+            <QuietLink href="/durum">{t('nav.durum')}</QuietLink>
           </div>
         }
       />

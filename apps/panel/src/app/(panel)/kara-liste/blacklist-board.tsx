@@ -17,6 +17,7 @@ import {
 import { useConfirm } from '@/components/confirm-dialog'
 import { useSyncBusy } from '@/components/busy'
 import { useToast } from '@/components/toast'
+import { useT } from '@/lib/i18n/provider'
 import { addToBlacklist, removeFromBlacklist, type BlacklistState } from './actions'
 
 export type BlacklistRow = {
@@ -30,6 +31,7 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
   const router = useRouter()
   const confirm = useConfirm()
   const toast = useToast()
+  const t = useT()
   const formRef = useRef<HTMLFormElement>(null)
   const [rows, setRows] = useState(initial)
   const [formKey, setFormKey] = useState(0)
@@ -60,10 +62,10 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
   const remove = (id: string, phone: string) => {
     void (async () => {
       const ok = await confirm({
-        title: 'Kara listeden kaldırılsın mı?',
-        description: `${phone} engeli kalkar; kampanya ve hızlı gönderimde tekrar hedeflenebilir.`,
-        confirmLabel: 'Kaldır',
-        cancelLabel: 'Vazgeç',
+        title: t('confirm.unblacklistTitle'),
+        description: t('confirm.unblacklistBody', { phone }),
+        confirmLabel: t('confirm.unblacklistConfirm'),
+        cancelLabel: t('common.cancel'),
         tone: 'danger',
       })
       if (!ok) return

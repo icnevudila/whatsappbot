@@ -65,3 +65,11 @@ tmp/
 .env*.local
 
 test-results/
+
+# Landing: ham screenshot'lar kişisel veri içerir; sanitize çıktıları commit edilir
+apps/panel/public/landing/_raw/
+apps/panel/public/landing/*-raw.png
+apps/panel/public/landing/*-raw.mp4
+apps/panel/public/landing/shot-*.png
+apps/panel/public/landing/demo-raw.mp4
+whatsapp görsel/

@@ -4,6 +4,8 @@ import { redirect } from 'next/navigation'
 import { AccentLink, Card, CardHeader, EmptyState, PageHeader, QuietLink, StatusPill } from '@/components/ui'
 import { hasTextProvider } from '@/lib/ai/text'
 import { remainingToday } from '@/lib/capacity'
+import { createT } from '@/lib/i18n'
+import { getDictionary } from '@/lib/i18n/server'
 import { requireActiveOrg } from '@/lib/org'
 import { QuickSendForm, type SenderOption } from './quick-send-form'
 
@@ -33,7 +35,7 @@ export default async function QuickSendPage({
       ? telParam.split(',').map((p) => p.trim()).filter(Boolean).join('\n')
       : ''
 
-  const [{ data: accounts }, brandResult, recentResult] = await Promise.all([
+  const [{ data: accounts }, brandResult, recentResult, { messages }] = await Promise.all([
     supabase
       .from('accounts')
       .select(
@@ -52,8 +54,10 @@ export default async function QuickSendPage({
       .or('name.like.Hızlı gönderim%,name.like.Hizli gonderim%')
       .order('created_at', { ascending: false })
       .limit(8),
+    getDictionary(),
   ])
 
+  const t = createT(messages)
   const senders: SenderOption[] = (accounts ?? []).map((account) => ({
     id: account.id,
     label: account.label,
@@ -66,12 +70,12 @@ export default async function QuickSendPage({
   return (
     <>
       <PageHeader
-        title="Hızlı gönderim"
+        title={t('pages.hizliTitle')}
         description="Numaraları yapıştırıp hemen gönderin. Liste oluşturmaz; takip Kampanyalar’da. Tekrar için Kişiler’e liste ekleyin."
         action={
           <div className="flex flex-wrap gap-2">
-            <AccentLink href="/kampanyalar">Kampanyalar</AccentLink>
-            <QuietLink href="/kisiler">Kişiler</QuietLink>
+            <AccentLink href="/kampanyalar">{t('nav.kampanyalar')}</AccentLink>
+            <QuietLink href="/kisiler">{t('nav.kisiler')}</QuietLink>
           </div>
         }
       />

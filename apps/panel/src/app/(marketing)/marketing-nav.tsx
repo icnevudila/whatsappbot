@@ -3,17 +3,23 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { Wordmark } from '@/components/brand'
-
-const NAV_SECTIONS = [
-  { href: '#kapasite', label: 'Kapasite' },
-  { href: '#nasil', label: 'Nasıl çalışır' },
-  { href: '#guvenlik', label: 'Ban önleme' },
-  { href: '#fiyatlar', label: 'Fiyatlar' },
-  { href: '#sss', label: 'SSS' },
-] as const
+import { LocaleSwitcher } from '@/components/locale-switcher'
+import { useT } from '@/lib/i18n/provider'
 
 export function MarketingNav() {
   const [open, setOpen] = useState(false)
+  const t = useT()
+
+  const sections = [
+    { href: '#kapasite', label: t('marketing.capacity') },
+    { href: '#sorun', label: t('marketing.problem') },
+    { href: '#nasil', label: t('marketing.how') },
+    { href: '#urun', label: t('marketing.productNav') },
+    { href: '#gun', label: t('marketing.day') },
+    { href: '#guvenlik', label: t('marketing.security') },
+    { href: '#fiyatlar', label: t('marketing.pricing') },
+    { href: '#sss', label: t('marketing.faq') },
+  ] as const
 
   return (
     <header className="sticky top-0 z-40 border-b border-hairline bg-surface/90 backdrop-blur">
@@ -22,39 +28,40 @@ export function MarketingNav() {
           <Wordmark />
         </Link>
 
-        <nav className="hidden flex-1 items-center gap-5 md:flex" aria-label="Bölümler">
-          {NAV_SECTIONS.map((section) => (
+        <nav className="hidden flex-1 items-center gap-3 lg:flex lg:gap-4 xl:gap-5" aria-label={t('marketing.sections')}>
+          {sections.map((section) => (
             <a
               key={section.href}
               href={section.href}
-              className="text-[12.5px] text-ink-muted transition-colors hover:text-ink"
+              className="whitespace-nowrap text-[12px] text-ink-muted transition-colors hover:text-ink xl:text-[12.5px]"
             >
               {section.label}
             </a>
           ))}
         </nav>
 
-        <div className="ml-auto flex items-center gap-2 md:ml-0">
+        <div className="ml-auto flex items-center gap-2 lg:ml-0">
+          <LocaleSwitcher compact />
           <button
             type="button"
-            className="inline-flex h-8 items-center rounded-md border border-hairline-strong px-2.5 text-[12px] text-ink-muted md:hidden"
+            className="inline-flex h-8 items-center rounded-md border border-hairline-strong px-2.5 text-[12px] text-ink-muted lg:hidden"
             aria-expanded={open}
             aria-controls="marketing-mobile-nav"
             onClick={() => setOpen((v) => !v)}
           >
-            {open ? 'Kapat' : 'Menü'}
+            {open ? t('marketing.close') : t('marketing.menu')}
           </button>
           <Link
             href="/giris"
             className="rounded-md px-2.5 py-1.5 text-[12.5px] text-ink-muted transition-colors hover:text-ink"
           >
-            Giriş yap
+            {t('auth.signIn')}
           </Link>
           <Link
             href="/giris?mod=kayit"
             className="inline-flex h-8 items-center rounded-md bg-accent px-3 text-[12.5px] font-medium text-accent-ink transition-colors hover:bg-accent-dim"
           >
-            Ücretsiz dene
+            {t('auth.signUp')}
           </Link>
         </div>
       </div>
@@ -62,11 +69,11 @@ export function MarketingNav() {
       {open ? (
         <nav
           id="marketing-mobile-nav"
-          className="border-t border-hairline bg-surface px-5 py-3 md:hidden"
-          aria-label="Mobil bölümler"
+          className="border-t border-hairline bg-surface px-5 py-3 lg:hidden"
+          aria-label={t('marketing.mobileSections')}
         >
           <ul className="flex flex-col gap-1">
-            {NAV_SECTIONS.map((section) => (
+            {sections.map((section) => (
               <li key={section.href}>
                 <a
                   href={section.href}

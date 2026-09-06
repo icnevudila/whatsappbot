@@ -18,7 +18,7 @@ import { awaitDelivery } from './delivery.js'
 import { env } from './env.js'
 import { logger } from './logger.js'
 import { readLeaseHolder, releaseLease, renewLease } from './lease.js'
-import { applyMessageReceipts } from './receipts.js'
+import { applyMessageReceipts, applyOutboundMessageStatuses } from './receipts.js'
 import { lookupSentMessage, rememberSentMessage } from './sent-messages.js'
 import { resolveWaVersion } from './wa-version.js'
 
@@ -207,12 +207,23 @@ export class WhatsAppSession {
       void this.handleInboundMessages(messages).catch((error) => {
         this.log.warn({ err: error }, 'Gelen mesaj islenerken hata')
       })
+      // Yeniden baglaninca fromMe mesajlarinin status'u upsert ile gelebilir.
+      void applyOutboundMessageStatuses(this.accountId, messages).catch((error) => {
+        this.log.warn({ err: error }, 'Outbound upsert status islenirken hata')
+      })
     })
 
     // Teslim / okundu: message_log.status guncelle (kampanya + hizli gonderim).
     this.sock.ev.on('messages.update', (updates) => {
       void this.handleMessageReceipts(updates).catch((error) => {
         this.log.warn({ err: error }, 'Mesaj receipt islenirken hata')
+      })
+    })
+
+    // Grup / status@broadcast receipt'leri ayri event'te gelir.
+    this.sock.ev.on('message-receipt.update', (updates) => {
+      void this.handleGroupReceipts(updates).catch((error) => {
+        this.log.warn({ err: error }, 'Grup receipt islenirken hata')
       })
     })
 
@@ -238,6 +249,16 @@ export class WhatsAppSession {
     updates: Array<{ key: WAMessage['key']; update: Partial<WAMessage> }>,
   ): Promise<void> {
     await applyMessageReceipts(this.accountId, updates)
+  }
+
+  private async handleGroupReceipts(
+    updates: Array<{
+      key: WAMessage['key']
+      receipt: { receiptTimestamp?: unknown; readTimestamp?: unknown }
+    }>,
+  ): Promise<void> {
+    const { applyGroupReceipts } = await import('./receipts.js')
+    await applyGroupReceipts(this.accountId, updates)
   }
 
   private async handleInboundMessages(messages: WAMessage[]): Promise<void> {
