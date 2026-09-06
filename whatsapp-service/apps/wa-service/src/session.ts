@@ -150,6 +150,20 @@ export class WhatsAppSession {
     this.onClosed = handler
   }
 
+  async resyncContacts(): Promise<void> {
+    if (!this.sock) return
+    try {
+      this.log.info('Manuel rehber senkronizasyonu (resyncAppState) baslatiliyor...')
+      await this.sock.resyncAppState(
+        ['critical_block', 'critical_unblock_low', 'regular_high', 'regular_low', 'regular'],
+        true,
+      )
+      this.log.info('Manuel rehber senkronizasyonu tamamlandi')
+    } catch (error) {
+      this.log.warn({ err: error }, 'resyncAppState sirasinda hata')
+    }
+  }
+
   async start(): Promise<void> {
     if (this.disposed) throw new Error('Kapatilmis oturum yeniden baslatilamaz')
 
@@ -181,8 +195,8 @@ export class WhatsAppSession {
       browser: Browsers.macOS('Chrome'),
       // Telefonda bildirim kalsin; "online" isaretlemek bildirimleri yutuyor.
       markOnlineOnConnect: false,
-      // Rehber ve kisi listesinin senkronizasyonu icin true olmali
-      syncFullHistory: true,
+      // Mevcut bagli oturumlarda 428 hatasini onlemek icin false olmali
+      syncFullHistory: false,
       msgRetryCounterCache: this.msgRetryCounterCache,
       mediaCache: this.mediaCache,
       getMessage: (key) => lookupSentMessage(this.accountId, key),

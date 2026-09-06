@@ -156,6 +156,15 @@ async function handle(job: JobRow): Promise<unknown> {
       const accountId = requireAccountId(job)
       if (!job.org_id) throw new Error('account.sync_contacts isi org_id olmadan gelemez')
       const payload = (job.payload ?? {}) as JobPayloadMap['account.sync_contacts']
+
+      // Oturum canliysa WhatsApp sunucularindan appState resync tetikle
+      const session = sessionManager.get(accountId)
+      if (session?.isLive) {
+        await session.resyncContacts()
+        // WhatsApp'tan event'lerin DB'ye akmasi icin kisa bekleme
+        await new Promise((resolve) => setTimeout(resolve, 3000))
+      }
+
       const { importAccountContactsToList } = await import('./account-contacts.js')
       return importAccountContactsToList({
         orgId: job.org_id,

@@ -150,6 +150,20 @@ export class WhatsAppSession {
     this.onClosed = handler
   }
 
+  async resyncContacts(): Promise<void> {
+    if (!this.sock) return
+    try {
+      this.log.info('Manuel rehber senkronizasyonu (resyncAppState) baslatiliyor...')
+      await this.sock.resyncAppState(
+        ['critical_block', 'critical_unblock_low', 'regular_high', 'regular_low', 'regular'],
+        true,
+      )
+      this.log.info('Manuel rehber senkronizasyonu tamamlandi')
+    } catch (error) {
+      this.log.warn({ err: error }, 'resyncAppState sirasinda hata')
+    }
+  }
+
   async start(): Promise<void> {
     if (this.disposed) throw new Error('Kapatilmis oturum yeniden baslatilamaz')
 
