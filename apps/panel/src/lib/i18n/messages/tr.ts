@@ -38,7 +38,7 @@ export const tr = {
     steps: 'Adımlar',
     ozet: 'Özet',
     hesaplar: 'Hatlar',
-    hizli: 'Hızlı gönderim',
+    hizli: 'Tek numara / test',
     kisiler: 'Kişiler',
     kampanyalar: 'Kampanyalar',
     mesajlar: 'Mesajlar',
