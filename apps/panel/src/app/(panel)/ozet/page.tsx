@@ -47,46 +47,6 @@ function NextStepHero({
   )
 }
 
-function MiniStep({
-  href,
-  n,
-  title,
-  done,
-  body,
-}: {
-  href: string
-  n: number
-  title: string
-  done: boolean
-  body: string
-}) {
-  return (
-    <Link
-      href={href}
-      className={`flex gap-3 rounded-[var(--radius-md)] border p-3.5 transition-colors ${
-        done
-          ? 'border-hairline bg-surface opacity-80'
-          : 'border-hairline bg-surface hover:bg-surface-raised'
-      }`}
-    >
-      <span
-        className={`flex size-8 shrink-0 items-center justify-center rounded-md text-[13px] font-bold ${
-          done ? 'bg-ok-soft text-ok' : 'bg-surface-raised text-ink-muted'
-        }`}
-      >
-        {done ? '✓' : n}
-      </span>
-      <span className="min-w-0">
-        <span className="flex items-center gap-2">
-          <span className="text-[14px] font-bold text-ink">{title}</span>
-          {done ? <StatusPill status="completed" /> : null}
-        </span>
-        <span className="mt-0.5 block text-[12px] text-ink-muted">{body}</span>
-      </span>
-    </Link>
-  )
-}
-
 export default async function PanelHomePage() {
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
   let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
@@ -152,7 +112,6 @@ export default async function PanelHomePage() {
   const ready = setup.allDone
   const suggestFirstSend = ready && outCount === 0
 
-  // Tek net sonraki adım — menüde kaybolmasın.
   let next: { href: string; title: string; body: string; cta: string }
   if (!hasLine) {
     next = {
@@ -188,7 +147,11 @@ export default async function PanelHomePage() {
     <>
       <PageHeader
         title={org.name}
-        description="Üç adım: hat bağla → kişi ekle → mesaj gönder. Hedef: ~3 dakika."
+        description={
+          ready
+            ? 'Hat · kişiler · gönder — bugünün özeti.'
+            : 'Önerilen: hat bağla → kişi ekle → mesaj gönder.'
+        }
         action={<AccentLink href={next.href}>{next.cta}</AccentLink>}
       />
 
@@ -197,31 +160,37 @@ export default async function PanelHomePage() {
       <NextStepHero {...next} />
 
       <div className="mb-3 grid gap-2 sm:grid-cols-3">
-        <MiniStep
-          href="/hesaplar"
-          n={1}
-          title="Hat"
-          done={hasLine}
-          body={hasLine ? `${connectedCount} bağlı` : 'QR ile bağla'}
-        />
-        <MiniStep
-          href="/kisiler#gruplar"
-          n={2}
-          title="Kişiler"
-          done={hasGroup}
-          body={
-            hasGroup
-              ? `${contactCount} numara · ${lists ?? 0} grup`
-              : 'Excel veya yapıştır'
-          }
-        />
-        <MiniStep
-          href="/kampanyalar#yeni-kampanya"
-          n={3}
-          title="Gönder"
-          done={!suggestFirstSend && ready && hasGroup && hasLine}
-          body="Mesaj + grup + hat"
-        />
+        <Card>
+          <div className="p-3.5">
+            <p className="text-[11.5px] text-ink-faint">Hat</p>
+            <p className="mt-1 text-[18px] font-extrabold tabular">
+              {hasLine ? connectedCount : 0}
+            </p>
+            <QuietLink href="/hesaplar" className="mt-1 inline-block text-[12px]">
+              {hasLine ? 'Hatlar' : 'Hat bağla'}
+            </QuietLink>
+          </div>
+        </Card>
+        <Card>
+          <div className="p-3.5">
+            <p className="text-[11.5px] text-ink-faint">Kişiler</p>
+            <p className="mt-1 text-[18px] font-extrabold tabular">{contactCount}</p>
+            <QuietLink href="/kisiler" className="mt-1 inline-block text-[12px]">
+              {hasGroup ? `${lists ?? 0} grup` : 'Grup ekle'}
+            </QuietLink>
+          </div>
+        </Card>
+        <Card>
+          <div className="p-3.5">
+            <p className="text-[11.5px] text-ink-faint">Bugün</p>
+            <p className="mt-1 text-[18px] font-extrabold tabular">
+              {(outToday ?? 0) + (inToday ?? 0)}
+            </p>
+            <QuietLink href="/mesajlar" className="mt-1 inline-block text-[12px]">
+              {(outToday ?? 0)} giden · {(inToday ?? 0)} gelen
+            </QuietLink>
+          </div>
+        </Card>
       </div>
 
       <Card>
@@ -232,7 +201,7 @@ export default async function PanelHomePage() {
         />
         {(recentCampaigns ?? []).length === 0 ? (
           <div className="space-y-2 p-3.5 text-[13px] text-ink-muted">
-            <p>Henüz kampanya yok — yukarıdaki yeşil adımdan başla.</p>
+            <p>Henüz kampanya yok — yukarıdaki adımdan başla.</p>
             <AccentLink href="/kampanyalar#yeni-kampanya">Kampanya oluştur</AccentLink>
           </div>
         ) : (
@@ -264,15 +233,9 @@ export default async function PanelHomePage() {
         )}
       </Card>
 
-      {(outToday ?? 0) + (inToday ?? 0) > 0 ? (
+      {(campaignsRunning ?? 0) > 0 ? (
         <p className="mt-3 text-center text-[12.5px] text-ink-muted">
-          Bugün {outToday ?? 0} giden · {inToday ?? 0} gelen.{' '}
-          <Link href="/mesajlar" className="font-medium text-accent underline-offset-2 hover:underline">
-            Mesajlar
-          </Link>
-          {(campaignsRunning ?? 0) > 0
-            ? ` · ${campaignsRunning} kampanya çalışıyor`
-            : ''}
+          {campaignsRunning} kampanya çalışıyor.
         </p>
       ) : null}
 
