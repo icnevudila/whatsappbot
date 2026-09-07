@@ -36,12 +36,13 @@ let shuttingDown = false
 
 async function buildHealthPayload(): Promise<{ status: number; body: unknown }> {
   if (shuttingDown) {
+    // Liveness (/health) drain sırasında ayakta kalsın; readiness (/ready) 503.
     return {
-      status: 503,
+      status: 200,
       body: {
         role: env.role,
         worker: env.workerId,
-        healthy: false,
+        healthy: true,
         ready: false,
         draining: true,
         uptimeSeconds: Math.round(process.uptime()),

@@ -40,13 +40,11 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   const homeHref = isPlatformAdmin ? '/admin' : '/ozet'
   const customerNeedsSetup = !isPlatformAdmin && showSetup
 
-  // Ops / admin yolları yalnız platform admin.
+  // Ops yolları yalnız platform admin (Raporlar müşteriye açık).
   if (
     !isPlatformAdmin &&
     (pathname === '/durum' ||
       pathname.startsWith('/durum/') ||
-      pathname === '/raporlar' ||
-      pathname.startsWith('/raporlar/') ||
       pathname === '/admin' ||
       pathname.startsWith('/admin/'))
   ) {

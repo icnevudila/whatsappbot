@@ -186,7 +186,7 @@ export function OutboundBoard({
               description="Kampanya veya hızlı gönderimle mesaj atınca kayıtlar burada listelenir."
               action={
                 <div className="flex flex-wrap justify-center gap-2">
-                  <AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>
+                  <AccentLink href="/kampanyalar#hizli">Tek numara / test</AccentLink>
                   <QuietLink href="/kampanyalar">Kampanyalar</QuietLink>
                 </div>
               }
@@ -304,7 +304,7 @@ export function OutboundBoard({
               tone="outbound"
               title="Bir kayıt seçin"
               description="Soldan bir giden mesaja tıklayın. Tam metin burada görünür."
-              action={<AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>}
+              action={<AccentLink href="/kampanyalar#hizli">Tek numara / test</AccentLink>}
             />
           )}
         </div>

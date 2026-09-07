@@ -405,7 +405,7 @@ export function BrandStudio({
               {result ? (
                 <>
                   <AccentLink
-                    href={`/hizli-gonderim?media=${encodeURIComponent(result)}`}
+                    href={`/kampanyalar?media=${encodeURIComponent(result)}#hizli`}
                   >
                     Hızlı gönderime taşı
                   </AccentLink>
@@ -456,7 +456,7 @@ export function BrandStudio({
                 />
                 <div className="mt-3 flex flex-wrap gap-2">
                   <AccentLink
-                    href={`/hizli-gonderim?media=${encodeURIComponent(result)}`}
+                    href={`/kampanyalar?media=${encodeURIComponent(result)}#hizli`}
                     className="text-[12.5px]"
                   >
                     Gönderimde kullan

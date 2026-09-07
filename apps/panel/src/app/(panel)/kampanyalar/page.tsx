@@ -14,6 +14,7 @@ import {
 } from '@/components/ui'
 import { hasImageProvider } from '@/lib/ai/image'
 import { hasTextProvider } from '@/lib/ai/text'
+import { remainingToday } from '@/lib/capacity'
 import { createT } from '@/lib/i18n'
 import { getDictionary } from '@/lib/i18n/server'
 import { requireActiveOrg } from '@/lib/org'
@@ -25,6 +26,10 @@ import {
   rangeForPage,
   totalPages,
 } from '@/lib/pagination'
+import {
+  QuickSendForm,
+  type SenderOption,
+} from '../hizli-gonderim/quick-send-form'
 import { NewCampaignForm } from './new-campaign-form'
 
 export const metadata: Metadata = { title: 'Kampanyalar' }
@@ -81,7 +86,12 @@ function campaignShell(status: string): string {
 export default async function CampaignsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ hazir?: string | string[]; sayfa?: string | string[] }>
+  searchParams: Promise<{
+    hazir?: string | string[]
+    sayfa?: string | string[]
+    media?: string | string[]
+    tel?: string | string[]
+  }>
 }) {
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
   let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
@@ -98,32 +108,57 @@ export default async function CampaignsPage({
   const justReady = (Array.isArray(params.hazir) ? params.hazir[0] : params.hazir) === '1'
   const pageSize = PAGE_SIZES.campaigns
   const requestedPage = parsePage(params.sayfa)
+  const mediaParam = params.media
+  const initialMediaUrl = Array.isArray(mediaParam) ? mediaParam[0] ?? '' : mediaParam ?? ''
+  const telParam = params.tel
+  const initialNumbers = Array.isArray(telParam)
+    ? telParam.filter(Boolean).join('\n')
+    : telParam
+      ? telParam.split(',').map((p) => p.trim()).filter(Boolean).join('\n')
+      : ''
+  const openQuick = Boolean(initialMediaUrl || initialNumbers)
 
-  const [campaignsCountResult, listsResult, accountsResult, brandResult, { messages }] =
-    await Promise.all([
-      supabase
-        .from('campaigns')
-        .select('id', { count: 'exact', head: true })
-        .eq('org_id', org.id),
-      supabase
-        .from('contact_lists')
-        .select('id, name, contact_count')
-        .eq('org_id', org.id)
-        .neq('source', 'quick_send')
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('accounts')
-        .select('id, label, status, is_locked')
-        .eq('org_id', org.id)
-        .order('created_at'),
-      supabase
-        .from('brand_kits')
-        .select('id, name, is_default')
-        .eq('org_id', org.id)
-        .order('is_default', { ascending: false })
-        .order('created_at'),
-      getDictionary(),
-    ])
+  const [
+    campaignsCountResult,
+    listsResult,
+    accountsResult,
+    brandResult,
+    quickAccountsResult,
+    { messages },
+  ] = await Promise.all([
+    supabase
+      .from('campaigns')
+      .select('id', { count: 'exact', head: true })
+      .eq('org_id', org.id),
+    supabase
+      .from('contact_lists')
+      .select('id, name, contact_count')
+      .eq('org_id', org.id)
+      .neq('source', 'quick_send')
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('accounts')
+      .select('id, label, status, is_locked')
+      .eq('org_id', org.id)
+      .order('created_at'),
+    supabase
+      .from('brand_kits')
+      .select('id, name, is_default')
+      .eq('org_id', org.id)
+      .order('is_default', { ascending: false })
+      .order('created_at'),
+    supabase
+      .from('accounts')
+      .select(
+        'id, label, phone_e164, daily_send_limit, sent_today, sent_today_on, warmup_started_at, new_chat_quota_total, new_chat_quota_used',
+      )
+      .eq('org_id', org.id)
+      .eq('status', 'connected')
+      .eq('enabled', true)
+      .eq('is_locked', false)
+      .order('created_at'),
+    getDictionary(),
+  ])
 
   const campaignTotal = campaignsCountResult.count ?? 0
   const pages = totalPages(campaignTotal, pageSize)
@@ -171,117 +206,179 @@ export default async function CampaignsPage({
   const connectedCount = accountOptions.filter((a) => !a.disabled).length
   const hazirQs = justReady ? '1' : undefined
 
+  const senders: SenderOption[] = (quickAccountsResult.data ?? []).map((account) => ({
+    id: account.id,
+    label: account.label,
+    phone: account.phone_e164,
+    remainingToday: remainingToday(account),
+  }))
+  const remainingTotal = senders.reduce((sum, s) => sum + Math.max(0, s.remainingToday), 0)
+
   return (
     <>
       <PageHeader
         title={t('pages.kampanyalarTitle')}
         description={t('pages.kampanyalarDesc')}
-        action={<AccentLink href="/hizli-gonderim">{t('nav.hizli')}</AccentLink>}
+        action={<AccentLink href="#hizli">Tek numara / test</AccentLink>}
       />
 
       {justReady ? <Notice tone="success">{t('pages.kampanyalarReady')}</Notice> : null}
 
-      <div className={justReady ? 'mt-2.5' : undefined}>
-      <SplitPane
-        variant="form"
-        list={
-          <div className="flex min-h-0 flex-col">
-            <CardHeader
-              title="Geçmiş"
-              subtitle={
-                campaignTotal === 0
-                  ? 'Henüz kayıt yok'
-                  : `${campaignTotal} kampanya · sayfa ${page}/${pages}`
+      <details
+        id="hizli"
+        open={openQuick}
+        className="mb-3 scroll-mt-20 rounded-md border border-hairline bg-surface"
+      >
+        <summary className="cursor-pointer list-none px-3.5 py-3 text-[13px] font-semibold text-ink marker:content-none [&::-webkit-details-marker]:hidden">
+          Tek numara / test
+          <span className="ml-2 font-normal text-ink-faint">
+            Liste oluşturmaz · kampanya olarak izlenir
+          </span>
+        </summary>
+        <div className="border-t border-hairline p-3.5">
+          {senders.length === 0 ? (
+            <EmptyState
+              tone="phone"
+              title="Önce bir hat bağlayın"
+              description="Test gönderimi için en az bir bağlı hat gerekir."
+              action={<AccentLink href="/hesaplar">Hatlar’a git</AccentLink>}
+            />
+          ) : (
+            <QuickSendForm
+              senders={senders}
+              orgId={org.id}
+              aiEnabled={hasTextProvider()}
+              imageAiEnabled={hasImageProvider()}
+              brandName={brandName}
+              brandKits={brandKits}
+              initialMediaUrl={initialMediaUrl}
+              initialNumbers={initialNumbers}
+              statusSlot={
+                <>
+                  <span className="inline-flex items-center gap-1.5 rounded-md border border-accent/30 bg-accent-soft px-2 py-1 text-[11.5px] font-medium text-accent-dim">
+                    <span className="tabular text-[13px] font-bold text-accent">
+                      {senders.length}
+                    </span>
+                    hazır hat
+                  </span>
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11.5px] font-medium ${
+                      remainingTotal > 0
+                        ? 'border-ok/35 bg-ok-soft text-ok-dim'
+                        : 'border-warn/35 bg-[#fff8e8] text-warn'
+                    }`}
+                  >
+                    <span className="tabular text-[13px] font-bold">{remainingTotal}</span>
+                    kalan kota
+                  </span>
+                </>
               }
             />
-            {campaignTotal === 0 ? (
-              <EmptyState
-                tone="campaign"
-                title="Henüz kampanya yok"
-                description={
-                  listOptions.length === 0
-                    ? 'Önce Kişiler’de bir grup oluşturun, sonra buradan kampanya başlatın.'
-                    : connectedCount === 0
-                      ? 'Grup hazır; en az bir bağlı hat gerekir.'
-                      : 'Sağdan oluşturun. Tek seferlik için Hızlı gönderim yeterli.'
-                }
-                action={
-                  listOptions.length === 0 ? (
-                    <AccentLink href="/kisiler">Kişilere git</AccentLink>
-                  ) : connectedCount === 0 ? (
-                    <AccentLink href="/hesaplar">Hatlar’a git</AccentLink>
-                  ) : (
-                    <AccentLink href="#yeni-kampanya">Kampanya oluştur</AccentLink>
-                  )
-                }
-              />
-            ) : (
-              <>
-              <ul className="min-h-0 flex-1 space-y-1.5 overflow-y-auto p-2">
-                {campaigns.map((campaign, index) => {
-                  const done =
-                    campaign.sent_count + campaign.failed_count + campaign.skipped_count
-                  const total = Math.max(0, campaign.total_targets)
-                  const hint = statusHint(campaign.status)
+          )}
+        </div>
+      </details>
 
-                  return (
-                    <li
-                      key={campaign.id}
-                      className="wb-row-enter"
-                      style={{ animationDelay: `${Math.min(index, 12) * 28}ms` }}
-                    >
-                      <Link
-                        href={`/kampanyalar/${campaign.id}#paylasilanlar`}
-                        className={`wb-card-lift wb-list-row block rounded-[var(--radius-sm)] border px-3 py-2.5 ${campaignShell(campaign.status)}`}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="min-w-0 truncate text-[13.5px] font-bold tracking-[-0.02em] text-ink">
-                            {campaign.name}
-                          </p>
-                          <StatusPill status={campaign.status} />
-                        </div>
-                        {hint ? (
-                          <p className="mt-0.5 text-[11px] text-ink-muted">{hint}</p>
-                        ) : null}
-                        <div className="mt-2 flex items-center gap-2">
-                          <Meter
-                            value={done}
-                            max={Math.max(1, total)}
-                            tone={meterTone(campaign.status, campaign.failed_count)}
-                          />
-                          <span className="shrink-0 tabular text-[11px] font-medium text-ink-muted">
-                            {done}/{total || '—'}
-                          </span>
-                        </div>
-                      </Link>
-                    </li>
-                  )
-                })}
-              </ul>
-              <Pagination
-                page={page}
-                totalPages={pages}
-                label={`${campaignTotal} kayıt`}
-                hrefForPage={(p) =>
-                  buildPageHref('/kampanyalar', p, { hazir: hazirQs })
+      <div className={justReady ? 'mt-2.5' : undefined}>
+        <SplitPane
+          variant="form"
+          list={
+            <div className="flex min-h-0 flex-col">
+              <CardHeader
+                title="Geçmiş"
+                subtitle={
+                  campaignTotal === 0
+                    ? 'Henüz kayıt yok'
+                    : `${campaignTotal} kampanya · sayfa ${page}/${pages}`
                 }
               />
-              </>
-            )}
-          </div>
-        }
-        detail={
-          <NewCampaignForm
-            lists={listOptions}
-            accounts={accountOptions}
-            orgId={org.id}
-            aiEnabled={hasTextProvider()}
-            imageAiEnabled={hasImageProvider()}
-            brandName={brandName}
-            brandKits={brandKits}
-          />
-        }
-      />
+              {campaignTotal === 0 ? (
+                <EmptyState
+                  tone="campaign"
+                  title="Henüz kampanya yok"
+                  description={
+                    listOptions.length === 0
+                      ? 'Önce Kişiler’de bir grup oluşturun, sonra buradan kampanya başlatın.'
+                      : connectedCount === 0
+                        ? 'Grup hazır; en az bir bağlı hat gerekir.'
+                        : 'Sağdan oluşturun veya üstten tek numara test edin.'
+                  }
+                  action={
+                    listOptions.length === 0 ? (
+                      <AccentLink href="/kisiler">Kişilere git</AccentLink>
+                    ) : connectedCount === 0 ? (
+                      <AccentLink href="/hesaplar">Hatlar’a git</AccentLink>
+                    ) : (
+                      <AccentLink href="#yeni-kampanya">Kampanya oluştur</AccentLink>
+                    )
+                  }
+                />
+              ) : (
+                <>
+                  <ul className="min-h-0 flex-1 space-y-1.5 overflow-y-auto p-2">
+                    {campaigns.map((campaign, index) => {
+                      const done =
+                        campaign.sent_count + campaign.failed_count + campaign.skipped_count
+                      const total = Math.max(0, campaign.total_targets)
+                      const hint = statusHint(campaign.status)
+
+                      return (
+                        <li
+                          key={campaign.id}
+                          className="wb-row-enter"
+                          style={{ animationDelay: `${Math.min(index, 12) * 28}ms` }}
+                        >
+                          <Link
+                            href={`/kampanyalar/${campaign.id}#paylasilanlar`}
+                            className={`wb-card-lift wb-list-row block rounded-[var(--radius-sm)] border px-3 py-2.5 ${campaignShell(campaign.status)}`}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="min-w-0 truncate text-[13.5px] font-bold tracking-[-0.02em] text-ink">
+                                {campaign.name}
+                              </p>
+                              <StatusPill status={campaign.status} />
+                            </div>
+                            {hint ? (
+                              <p className="mt-0.5 text-[11px] text-ink-muted">{hint}</p>
+                            ) : null}
+                            <div className="mt-2 flex items-center gap-2">
+                              <Meter
+                                value={done}
+                                max={Math.max(1, total)}
+                                tone={meterTone(campaign.status, campaign.failed_count)}
+                              />
+                              <span className="shrink-0 tabular text-[11px] font-medium text-ink-muted">
+                                {done}/{total || '—'}
+                              </span>
+                            </div>
+                          </Link>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                  <Pagination
+                    page={page}
+                    totalPages={pages}
+                    label={`${campaignTotal} kayıt`}
+                    hrefForPage={(p) =>
+                      buildPageHref('/kampanyalar', p, { hazir: hazirQs })
+                    }
+                  />
+                </>
+              )}
+            </div>
+          }
+          detail={
+            <NewCampaignForm
+              lists={listOptions}
+              accounts={accountOptions}
+              orgId={org.id}
+              aiEnabled={hasTextProvider()}
+              imageAiEnabled={hasImageProvider()}
+              brandName={brandName}
+              brandKits={brandKits}
+            />
+          }
+        />
       </div>
     </>
   )

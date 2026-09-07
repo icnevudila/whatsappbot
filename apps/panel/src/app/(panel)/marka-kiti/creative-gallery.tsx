@@ -105,7 +105,7 @@ export function CreativeGallery({
               <div className="mt-1.5 flex flex-col gap-1">
                 {creative.public_url ? (
                   <Link
-                    href={`/hizli-gonderim?media=${encodeURIComponent(creative.public_url)}`}
+                    href={`/kampanyalar?media=${encodeURIComponent(creative.public_url)}#hizli`}
                     className="block text-center text-[11.5px] font-medium text-accent hover:underline"
                   >
                     Gönderimde kullan

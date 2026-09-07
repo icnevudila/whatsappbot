@@ -134,7 +134,9 @@ gunlugu basar -- yani bozuk bir dagitim sessizce "basarili" gorunmez.
 ```bash
 docker logs -f wa-service          # gunlukleri izle
 docker ps                          # durum (healthy olmali)
-curl -s localhost:8080/health      # saglik ucu
+curl -s localhost:8080/health      # liveness
+curl -s localhost:8080/ready       # readiness (compose healthcheck)
+bash infra/wa-health.sh            # ozet
 ```
 
 Panelden bir hat baglamayi deneyin: Hesaplar -> Bagla. Birkac saniye icinde
@@ -147,9 +149,9 @@ QR veya eslestirme kodu gelmelidir. Gelmiyorsa gunlukte sebep yazar.
 ```bash
 cd ~/whatsappbot
 
-bash infra/deploy.sh                                   # guncelle + yeniden baslat
-docker compose -f infra/docker-compose.yml restart      # sadece yeniden baslat
-docker compose -f infra/docker-compose.yml down         # durdur
+bash infra/deploy.sh                                   # guncelle + yeniden baslat (COMPOSE_PROFILE=small)
+docker compose -f infra/docker-compose.yml --profile small restart
+docker compose -f infra/docker-compose.yml --profile small down
 docker logs --tail 200 wa-service                       # son gunlukler
 docker stats wa-service                                 # bellek/CPU
 ```
@@ -165,11 +167,12 @@ normalde asiliyor; yine de makineyi bos bekletmeyin.
 yeniden baslarsa konteyner kendiliginden kalkar. Oturumlar veritabaninda
 tutuldugu icin QR'i tekrar okutmaniz gerekmez.
 
-**Kapanis sirasi onemli.** `stop_grace_period: 45s` bilincli: servis SIGTERM
-alinca kimlik bilgilerini yazip soketi `logout` YAPMADAN kapatiyor ve oturum
-kirasini birakiyor. Bu sure kisa olursa process zorla oldurulur, kira uzerinde
-kalir ve yeni process 60 saniye bosa bekler.
+**Kapanis sirasi onemli.** `stop_grace_period: 120s` ve `SHUTDOWN_DRAIN_MS=90000`
+bilincli: servis SIGTERM alinca kimlik bilgilerini yazip soketi `logout`
+YAPMADAN kapatiyor ve oturum kirasini birakiyor. Bu sure kisa olursa process
+zorla oldurulur, kira uzerinde kalir ve yeni process 60 saniye bosa bekler.
+Drain sirasinda `/ready` 503 (`draining`), `/health` liveness olarak ayakta kalir.
 
 **Tek process kurali.** Ayni `WORKER_ID` ile iki process acmayin. Ikisi de ayni
 hatti sahiplenmeye calisir ve WhatsApp tarafinda 440 (connectionReplaced)
-dongusu baslar. Compose dosyasi kimligi `oracle-1` olarak sabitliyor.
+dongusu baslar. Compose dosyasi kimligi profilde sabitler (`hetzner-1` / `oracle-1`).

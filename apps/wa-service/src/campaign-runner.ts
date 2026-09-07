@@ -350,7 +350,8 @@ function remainingDaily(account: CampaignAccountRow, campaign: CampaignRow): num
 function newChatQuotaExhausted(account: CampaignAccountRow): boolean {
   const total = account.new_chat_quota_total
   const used = account.new_chat_quota_used
-  if (total === null || used === null) return false
+  // Kota henüz gelmemişse varsayılan serbest; REQUIRE_QUOTA_KNOWN=true ile claim atlanır.
+  if (total === null || used === null) return env.requireQuotaKnown
   return used >= total
 }
 

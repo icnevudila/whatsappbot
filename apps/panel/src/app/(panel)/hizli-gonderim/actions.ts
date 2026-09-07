@@ -196,6 +196,5 @@ export async function quickSend(
   }
 
   revalidatePath('/kampanyalar')
-  revalidatePath('/hizli-gonderim')
   redirect(`/kampanyalar/${campaign.id}`)
 }

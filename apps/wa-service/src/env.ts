@@ -13,9 +13,26 @@ function required(name: string): string {
 function int(name: string, fallback: number): number {
   const raw = process.env[name]?.trim()
   if (!raw) return fallback
+  if (!/^-?\d+$/.test(raw)) {
+    throw new Error(`${name} gecersiz sayi: "${raw}"`)
+  }
   const parsed = Number.parseInt(raw, 10)
-  return Number.isFinite(parsed) ? parsed : fallback
+  if (!Number.isFinite(parsed)) {
+    throw new Error(`${name} gecersiz sayi: "${raw}"`)
+  }
+  return parsed
 }
+
+/** SEND_CHANNEL: bos | baileys | waba — modul yuklenirken dogrulanir. */
+function assertSendChannel(): void {
+  const raw = (process.env.SEND_CHANNEL ?? '').trim().toLowerCase()
+  if (raw === '' || raw === 'baileys' || raw === 'waba') return
+  throw new Error(
+    `SEND_CHANNEL gecersiz: "${raw}". Izin verilen: baileys | waba | (bos)`,
+  )
+}
+
+assertSendChannel()
 
 export type ServiceRole = 'worker' | 'scaler'
 
@@ -65,6 +82,13 @@ export const env = {
   healthPort: int('PORT', 8080),
   logLevel: process.env.LOG_LEVEL?.trim() || 'info',
   nodeEnv: process.env.NODE_ENV?.trim() || 'development',
+
+  /**
+   * true iken new_chat_quota_* null olan hesaplarda kampanya claim atlanir
+   * (null = serbest gonderim yerine "kota bilinmiyor, gonderme").
+   */
+  requireQuotaKnown:
+    (process.env.REQUIRE_QUOTA_KNOWN ?? '').trim().toLowerCase() === 'true',
 
   heartbeatIntervalMs: int('HEARTBEAT_INTERVAL_MS', 20_000),
 

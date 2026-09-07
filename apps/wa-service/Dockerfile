@@ -19,13 +19,13 @@ ENV PORT=8080
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 EXPOSE 8080
 
-# Opsiyonel: scaler icin docker CLI (build-arg INSTALL_DOCKER_CLI=true)
+# compose healthcheck curl kullanir; scaler icin opsiyonel docker CLI
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl \
+  && rm -rf /var/lib/apt/lists/*
 ARG INSTALL_DOCKER_CLI=false
 RUN if [ "$INSTALL_DOCKER_CLI" = "true" ]; then \
-      apt-get update && apt-get install -y --no-install-recommends ca-certificates curl \
-      && curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-27.1.1.tgz \
-        | tar -xz -C /usr/local/bin --strip-components=1 docker/docker \
-      && rm -rf /var/lib/apt/lists/*; \
+      curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-27.1.1.tgz \
+        | tar -xz -C /usr/local/bin --strip-components=1 docker/docker; \
     fi
 
 # SIGTERM'in Node'a ulasmasi sart: kapanis sirasi (creds flush -> sock.end ->

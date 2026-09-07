@@ -138,7 +138,7 @@ export const en: typeof tr = {
     kampanyalarTitle: 'Campaigns',
     kampanyalarDesc: 'Pick list + lines, start. Live progress on the detail page.',
     kampanyalarReady:
-      'Ready. Create a campaign on the right. You can also send a short test from Quick send.',
+      'Ready. Create a campaign on the right. One-off tests: “Single number / test” above.',
     kisilerTitle: 'Contacts',
     kisilerDesc:
       'Numbers live in lists; WhatsApp registration is marked. Use Quick send for one-offs.',

@@ -102,7 +102,7 @@ export default async function BrandKitPage() {
               title="Henüz görsel yok"
               description={
                 canManage
-                  ? 'Stüdyoda başlık yazıp görsel üretin. Sonuç burada kalır; ardından Hızlı gönderime veya kampanyaya taşıyabilirsiniz.'
+                  ? 'Stüdyoda başlık yazıp görsel üretin. Sonuç burada kalır; ardından kampanyaya veya tek numara testine taşıyabilirsiniz.'
                   : 'Henüz üretilmiş görsel yok. Yönetici marka kitinden üretim yapabilir.'
               }
               action={

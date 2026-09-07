@@ -296,12 +296,12 @@ export function DiscoverForm() {
               </Button>
               {selectedContacts.length > 0 ? (
                 <Link
-                  href={`/hizli-gonderim?tel=${encodeURIComponent(
+                  href={`/kampanyalar?tel=${encodeURIComponent(
                     selectedContacts.map((c) => c.phone_e164).join(','),
-                  )}`}
+                  )}#hizli`}
                   className="text-[12.5px] text-ink-muted underline decoration-hairline-strong underline-offset-2 hover:text-ink"
                 >
-                  Hızlı gönderime al
+                  Tek numaraya al
                 </Link>
               ) : null}
             </div>

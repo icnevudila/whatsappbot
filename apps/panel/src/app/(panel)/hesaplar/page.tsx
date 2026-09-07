@@ -48,7 +48,7 @@ export default async function AccountsPage() {
         description={t('pages.hesaplarDesc')}
         action={
           <div className="flex flex-wrap gap-2">
-            <AccentLink href="/hizli-gonderim">{t('nav.hizli')}</AccentLink>
+            <AccentLink href="/kampanyalar#hizli">{t('nav.hizli')}</AccentLink>
             {isPlatformAdmin ? (
               <QuietLink href="/durum">{t('nav.durum')}</QuietLink>
             ) : null}

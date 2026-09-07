@@ -13,7 +13,7 @@ export function SetupBanner({ progress }: { progress: Progress }) {
 
   if (needsFirstSend) {
     return (
-      <InlineHint href="/hizli-gonderim" cta="Test gönder">
+      <InlineHint href="/kampanyalar#hizli" cta="Test gönder">
         İsteğe bağlı: kendine kısa bir test mesajı
       </InlineHint>
     )

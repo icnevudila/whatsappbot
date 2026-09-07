@@ -108,7 +108,7 @@ export function WaCheckForm() {
             </div>
             {result.exists ? (
               <AccentLink
-                href={`/hizli-gonderim?tel=${encodeURIComponent(result.phone)}`}
+                href={`/kampanyalar?tel=${encodeURIComponent(result.phone)}#hizli`}
                 className="w-full"
               >
                 Hızlı gönderime taşı

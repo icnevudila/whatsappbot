@@ -114,13 +114,17 @@ Worker yalnızca sağlık için HTTP dinler (`PORT`, varsayılan `8080`). Dışa
 
 | Uç | Anlam | HTTP |
 |----|--------|------|
-| `GET /health` | Liveness: Postgres erişilebilir mi | 200 / 503 |
-| `GET /ready` | Readiness: DB + oturumlar sağlıklı (stale yok) | 200 / 503 |
-| `GET /` | `/health` ile aynı | 200 / 503 |
+| `GET /health` | **Liveness:** process ayakta + (worker) Postgres erişilebilir; drain sırasında da 200 | 200 / 503 |
+| `GET /ready` | **Readiness:** DB OK ve (tracked=0 **veya** live>0 **veya** connecting>0); `shuttingDown` → 503 + `draining` | 200 / 503 |
+| `GET /` | `/health` ile aynı (liveness) | 200 / 503 |
 
-JSON özet alanları: `worker`, `healthy`, `ready`, `db`, `sessions`, `jobs`, `uptimeSeconds`.
+JSON özet alanları: `worker`, `healthy`, `ready`, `degraded`, `draining`, `db`, `sessions` (`tracked` / `live` / `connecting` / `stale`), `jobs`, `uptimeSeconds`.
 
-Docker healthcheck örneği: `curl -fsS http://127.0.0.1:8080/health`.
+- Tek stale oturum tüm worker’ı `ready=false` yapmaz; `live>0` iken `ready=true` + `degraded=true`.
+- Boot’ta `connecting>0` iken de `ready=true` (compose `start_period` sonrası fail olmasın).
+
+Docker healthcheck (readiness): `curl -fsS http://127.0.0.1:8080/ready`.  
+Liveness ayrı izlenirse: `GET /health`.
 
 ---
 

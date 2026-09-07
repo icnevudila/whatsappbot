@@ -538,10 +538,10 @@ function AccountCard({
         {account.status === 'connected' && !account.is_locked ? (
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <Notice tone="accent">
-              Hat bağlı. Test → Hızlı gönderim · Toplu → Kampanya.
+              Hat bağlı. Test → Tek numara · Toplu → Kampanya.
             </Notice>
             <div className="flex shrink-0 flex-wrap gap-2">
-              <AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>
+              <AccentLink href="/kampanyalar#hizli">Tek numara / test</AccentLink>
               <QuietLink href="/kampanyalar">Kampanya</QuietLink>
             </div>
           </div>

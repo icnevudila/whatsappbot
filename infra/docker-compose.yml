@@ -48,7 +48,7 @@ services:
       MAX_SESSIONS: '50'
       WORKER_ID: oracle-1
 
-  # Dusuk/orta VPS: tek worker, MAX_SESSIONS=50 (4 GB'de riskli; 8 GB+ daha saglikli)
+  # ~4 GB VPS: tek worker, MAX_SESSIONS=15 (~3.5g mem_limit). 8 GB icin 25 dusunun.
   wa-service-small:
     <<: *wa-common
     profiles: ['small']
@@ -61,7 +61,7 @@ services:
       NODE_ENV: production
       ROLE: worker
       WORKER_ID: hetzner-1
-      MAX_SESSIONS: '50'
+      MAX_SESSIONS: '15'
       DB_POOL_MAX: '2'
       JOB_BATCH_SIZE: '1'
       JOB_POLL_INTERVAL_MS: '3000'

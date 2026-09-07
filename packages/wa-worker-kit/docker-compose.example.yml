@@ -3,6 +3,7 @@
 #   docker compose -f packages/wa-worker-kit/docker-compose.example.yml up -d --build
 #
 # Once schema bundle uygulayin (README).
+# Liveness: GET /health — Readiness (compose healthcheck): GET /ready
 
 services:
   wa-worker:
@@ -18,16 +19,17 @@ services:
       WORKER_ID: kit-1
       MAX_SESSIONS: '50'
       DB_POOL_MAX: '5'
+      SHUTDOWN_DRAIN_MS: '90000'
     ports:
       - '127.0.0.1:8080:8080'
     restart: unless-stopped
     mem_limit: 6g
     shm_size: '1gb'
-    stop_grace_period: 45s
+    stop_grace_period: 120s
     init: true
     healthcheck:
-      test: ['CMD', 'curl', '-fsS', 'http://127.0.0.1:8080/health']
+      test: ['CMD', 'curl', '-fsS', 'http://127.0.0.1:8080/ready']
       interval: 30s
       timeout: 10s
-      start_period: 180s
       retries: 3
+      start_period: 180s

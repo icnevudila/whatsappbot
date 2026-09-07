@@ -88,6 +88,7 @@ export function Nav({
     const main: NavItem[] = [
       { href: '/ozet', label: t('nav.ozet'), icon: 'overview' },
       { href: '/kampanyalar', label: t('nav.kampanyalar'), icon: 'campaign' },
+      { href: '/raporlar', label: t('nav.raporlar'), icon: 'chart' },
       { href: '/kisiler', label: t('nav.kisiler'), icon: 'people' },
       { href: '/hesaplar', label: t('nav.hesaplar'), icon: 'phone' },
       { href: '/mesajlar', label: t('nav.mesajlar'), icon: 'inbox' },
@@ -95,7 +96,6 @@ export function Nav({
     ]
 
     const more: NavItem[] = [
-      { href: '/hizli-gonderim', label: t('nav.hizli'), icon: 'send' },
       { href: '/kara-liste', label: t('nav.karaListe'), icon: 'shield' },
       { href: '/ayarlar', label: t('nav.ayarlar'), icon: 'settings' },
       { href: '/yardim', label: t('nav.yardim'), icon: 'help' },
@@ -107,7 +107,7 @@ export function Nav({
     ]
   }, [isPlatformAdmin, t])
 
-  /** Mobil: ana işler + hızlı gönderim + ayarlar (veya admin ops). */
+  /** Mobil: ana işler + ayarlar (veya admin ops). */
   const flat = useMemo(() => {
     if (orientation === 'horizontal') {
       if (isPlatformAdmin) {
@@ -125,7 +125,6 @@ export function Nav({
       const main = groups.find((g) => g.id === 'main')?.items ?? []
       return [
         ...main,
-        { href: '/hizli-gonderim', label: t('nav.hizli'), icon: 'send' as const },
         { href: '/ayarlar', label: t('nav.ayarlar'), icon: 'settings' as const },
       ] as NavItem[]
     }

@@ -58,6 +58,7 @@ test('computeWorkerReady matrisi', () => {
     computeWorkerReady({ dbOk: true, tracked: 2, live: 0, staleCount: 0 }),
     { healthy: true, ready: false, degraded: true },
   )
+  // live:1 + stale:1 → ready (tek stale tum worker'i dusurmez) + degraded
   assert.deepEqual(
     computeWorkerReady({ dbOk: true, tracked: 2, live: 1, staleCount: 1 }),
     { healthy: true, ready: true, degraded: true },
@@ -73,9 +74,65 @@ test('computeWorkerReady matrisi', () => {
     { healthy: true, ready: true, degraded: false },
   )
   assert.deepEqual(
+    computeWorkerReady({
+      dbOk: true,
+      tracked: 3,
+      live: 0,
+      staleCount: 1,
+      connectingCount: 1,
+    }),
+    { healthy: true, ready: true, degraded: true },
+  )
+  assert.deepEqual(
     computeWorkerReady({ dbOk: false, tracked: 0, live: 0, staleCount: 0 }),
     { healthy: false, ready: false, degraded: false },
   )
+})
+
+test('/ready connectingCount healthReport.connecting aktarir', () => {
+  const file = src('index.ts')
+  assert.match(
+    file,
+    /computeWorkerReady\(\{[\s\S]*connectingCount:\s*report\.connecting/,
+  )
+  assert.match(src('session-manager.ts'), /connecting:\s*number/)
+  assert.match(src('session-manager.ts'), /connecting \+= 1/)
+})
+
+test('shuttingDown /ready 503 draining; /health liveness 200', () => {
+  const file = src('index.ts')
+  const drain = file.slice(file.indexOf('if (shuttingDown)'), file.indexOf('let dbOk'))
+  assert.match(drain, /ready:\s*false/)
+  assert.match(drain, /draining:\s*true/)
+  assert.match(drain, /healthy:\s*true/)
+  assert.match(drain, /status:\s*200/)
+  assert.match(file, /readyOnly[\s\S]*payload\.ready \? 200 : 503/)
+})
+
+test('REQUIRE_QUOTA_KNOWN null kotada claim atlar', () => {
+  const runner = src('campaign-runner.ts')
+  assert.match(runner, /requireQuotaKnown/)
+  assert.match(src('env.ts'), /REQUIRE_QUOTA_KNOWN/)
+})
+
+test('env int gecersiz sayida throw; SEND_CHANNEL whitelisti', () => {
+  const file = src('env.ts')
+  assert.match(file, /gecersiz sayi/)
+  assert.match(file, /assertSendChannel/)
+  assert.match(file, /baileys \| waba/)
+})
+
+test('kit compose /ready + stop_grace 120s; small MAX_SESSIONS=15', () => {
+  const kit = readFileSync(
+    join(root, '../../packages/wa-worker-kit/docker-compose.example.yml'),
+    'utf8',
+  )
+  assert.match(kit, /8080\/ready/)
+  assert.match(kit, /stop_grace_period:\s*120s/)
+  assert.doesNotMatch(kit, /healthcheck:[\s\S]{0,200}8080\/health/)
+  const compose = readFileSync(join(root, '../../infra/docker-compose.yml'), 'utf8')
+  assert.match(compose, /wa-service-small:[\s\S]*?MAX_SESSIONS:\s*'15'/)
+  assert.match(compose, /stop_grace_period:\s*120s/)
 })
 
 test('job-consumer tum JOB_TYPES case kapsar', () => {

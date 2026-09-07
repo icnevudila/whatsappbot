@@ -128,7 +128,7 @@ export default async function PanelHomePage() {
           {
             label: '7 gün giden',
             value: out7d ?? 0,
-            href: '/mesajlar?sekme=giden',
+            href: '/raporlar?gun=7',
           },
         ]}
       />

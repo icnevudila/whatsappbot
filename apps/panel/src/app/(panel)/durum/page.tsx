@@ -147,7 +147,7 @@ export default async function StatusPage() {
             <CancelPendingButton count={pendingJobs ?? 0} />
             <AccentLink href="/hesaplar">{t('nav.hesaplar')}</AccentLink>
             <QuietLink href="/mesajlar">{t('nav.mesajlar')}</QuietLink>
-            <QuietLink href="/hizli-gonderim">{t('nav.hizli')}</QuietLink>
+            <QuietLink href="/kampanyalar#hizli">{t('nav.hizli')}</QuietLink>
           </div>
         }
       />

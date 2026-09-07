@@ -293,7 +293,7 @@ export function StatusBoard({
               description="Kampanyalar’dan liste seçin veya Hızlı gönderim ile numaraları yapıştırın."
               action={
                 <div className="flex flex-wrap justify-center gap-2">
-                  <AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>
+                  <AccentLink href="/kampanyalar#hizli">Tek numara / test</AccentLink>
                   <QuietLink href="/kampanyalar">Kampanya oluştur</QuietLink>
                 </div>
               }

@@ -9,7 +9,7 @@ import {
   FilterChip,
   PageHeader,
   QuietLink,
-  Stat,
+  StatStrip,
   StatusPill,
   Toolbar,
 } from '@/components/ui'
@@ -99,58 +99,23 @@ export default async function ReportsPage({
         </p>
       ) : null}
 
-      <div className="mb-3 grid gap-2.5 sm:grid-cols-2 xl:grid-cols-5">
-        <Card>
-          <div className="p-3.5">
-            <Stat
-              label="Giden"
-              value={report.kpis.out}
-              tone="accent"
-              detail={`${rangeLabel} · tüm durumlar`}
-            />
-          </div>
-        </Card>
-        <Card>
-          <div className="p-3.5">
-            <Stat
-              label="Teslim oranı"
-              value={formatRate(report.kpis.deliveryRate)}
-              tone="muted"
-              detail={`${report.kpis.delivered} teslim`}
-            />
-          </div>
-        </Card>
-        <Card>
-          <div className="p-3.5">
-            <Stat
-              label="Okunma oranı"
-              value={formatRate(report.kpis.readRate)}
-              tone="muted"
-              detail={`${report.kpis.read} okundu`}
-            />
-          </div>
-        </Card>
-        <Card>
-          <div className="p-3.5">
-            <Stat
-              label="Başarısız"
-              value={report.kpis.failed}
-              tone={report.kpis.failed > 0 ? 'danger' : 'muted'}
-              detail={formatRate(report.kpis.failRate)}
-            />
-          </div>
-        </Card>
-        <Card>
-          <div className="p-3.5">
-            <Stat
-              label="Gelen"
-              value={report.kpis.inbound}
-              tone="muted"
-              detail="Yanıt / inbox"
-            />
-          </div>
-        </Card>
-      </div>
+      <StatStrip
+        items={[
+          { label: 'Giden', value: report.kpis.out, tone: 'default' },
+          {
+            label: 'Teslim',
+            value: formatRate(report.kpis.deliveryRate),
+            tone: 'ok',
+          },
+          { label: 'Okundu', value: formatRate(report.kpis.readRate) },
+          {
+            label: 'Başarısız',
+            value: report.kpis.failed,
+            tone: report.kpis.failed > 0 ? 'danger' : 'default',
+          },
+          { label: 'Gelen', value: report.kpis.inbound, href: '/mesajlar' },
+        ]}
+      />
 
       <div className="mb-3 grid gap-2.5 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         <Card>
@@ -167,154 +132,13 @@ export default async function ReportsPage({
         </Card>
       </div>
 
-      <div className="mb-3 grid gap-2.5 lg:grid-cols-2">
-        <Card>
-          <CardHeader title={t('reports.topCampaigns')} subtitle="Gönderim sayısına göre" />
-          <div className="px-3.5 pb-3.5">
-            <RankBars
-              empty="Kampanya gönderimi yok."
-              items={report.topCampaigns.map((c) => ({
-                label: c.name,
-                value: c.sent,
-                detail:
-                  c.successRate != null
-                    ? `· %${c.successRate} başarı · ${c.failed} fail`
-                    : `· ${c.failed} fail`,
-                href: `/kampanyalar/${c.id}`,
-              }))}
-            />
-          </div>
-        </Card>
-
-        <Card>
-          <CardHeader title={t('reports.perLine')} subtitle={`${rangeLabel}`} />
-          <div className="px-3.5 pb-3.5">
-            <RankBars
-              empty="Bu dönemde hat üzerinden giden yok."
-              items={[...report.accounts]
-                .sort((a, b) => b.periodOut - a.periodOut)
-                .map((a) => ({
-                  label: a.label,
-                  value: a.periodOut,
-                  detail: `bugün ${a.sentToday}/${a.dailyLimit}`,
-                  href: '/hesaplar',
-                }))}
-            />
-          </div>
-        </Card>
-      </div>
-
-      <div className="mb-3 grid gap-2.5 lg:grid-cols-3">
-        <Card>
-          <CardHeader title={t('reports.bookHealth')} subtitle="WhatsApp kayıt durumu" />
-          <div className="px-3.5 pb-3.5">
-            <DonutChart
-              empty="Defterde numara yok."
-              segments={[
-                { label: 'Var (✓)', value: report.contacts.valid, tone: 'ok' },
-                { label: 'Yok (×)', value: report.contacts.invalid, tone: 'danger' },
-                { label: 'Bekliyor', value: report.contacts.unknown, tone: 'muted' },
-              ]}
-              center={
-                <>
-                  <p className="tabular text-[18px] font-extrabold leading-none text-ink">
-                    {report.contacts.total}
-                  </p>
-                  <p className="mt-1 text-[10.5px] text-ink-faint">numara</p>
-                </>
-              }
-            />
-            <div className="mt-3">
-              <QuietLink href="/kisiler">Kişilere git</QuietLink>
-            </div>
-          </div>
-        </Card>
-
-        <Card>
-          <CardHeader title={t('reports.quotaLines')} subtitle="Bu ay / hat durumu" />
-          <div className="space-y-4 px-3.5 pb-3.5">
-            <QuotaMeter
-              used={report.quota.monthSent}
-              limit={report.quota.monthlyLimit}
-              label="Aylık gönderim kotası"
-            />
-            <DonutChart
-              empty="Hat eklenmemiş."
-              segments={report.accountStatus.map((s) => ({
-                label: s.label,
-                value: s.value,
-                tone:
-                  s.key === 'connected'
-                    ? 'ok'
-                    : s.key === 'banned'
-                      ? 'danger'
-                      : s.key === 'connecting' || s.key === 'qr'
-                        ? 'warn'
-                        : 'muted',
-              }))}
-              center={
-                <>
-                  <p className="tabular text-[18px] font-extrabold leading-none text-ink">
-                    {report.accounts.length}
-                  </p>
-                  <p className="mt-1 text-[10.5px] text-ink-faint">hat</p>
-                </>
-              }
-            />
-          </div>
-        </Card>
-
-        <Card>
-          <CardHeader title={t('reports.failReasons')} subtitle="Örneklemdeki fail mesajları" />
-          <div className="px-3.5 pb-3.5">
-            <RankBars
-              empty="Bu dönemde başarısız kayıt yok."
-              items={report.errorTop.map((e) => ({
-                label: e.label,
-                value: e.value,
-              }))}
-            />
-          </div>
-        </Card>
-      </div>
-
-      <div className="mb-3 grid gap-2.5 lg:grid-cols-2">
-        <Card>
-          <CardHeader title={t('reports.campaignStatus')} subtitle="Son kampanyalar" />
-          <div className="px-3.5 pb-3.5">
-            <RankBars
-              empty="Henüz kampanya yok."
-              items={report.campaignStatus.map((s) => ({
-                label: s.label,
-                value: s.value,
-              }))}
-            />
-          </div>
-        </Card>
-
-        <Card>
-          <CardHeader title={t('reports.topLists')} subtitle="Defter listeleri" />
-          <div className="px-3.5 pb-3.5">
-            <RankBars
-              empty="Liste yok. Kişiler’den ekleyin."
-              valueSuffix=" no"
-              items={report.topLists.map((l) => ({
-                label: l.name,
-                value: l.count,
-                href: `/kisiler/${l.id}`,
-              }))}
-            />
-          </div>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader title={t('reports.table')} subtitle="En fazla 40 kayıt · CSV ile tam dışa aktarım" />
+      <Card className="mb-3">
+        <CardHeader title={t('reports.table')} subtitle="Kampanyalar · CSV ile tam dışa aktarım" />
         {report.campaigns.length === 0 ? (
           <EmptyState
             tone="campaign"
             title="Henüz kampanya yok"
-            description="İlk toplu gönderimi oluşturunca buraya düşer. Hızlı gönderim de kampanya olarak görünür."
+            description="İlk gönderim burada görünür."
             action={<AccentLink href="/kampanyalar">Kampanyalara git</AccentLink>}
           />
         ) : (
@@ -368,6 +192,141 @@ export default async function ReportsPage({
           </div>
         )}
       </Card>
+
+      <div className="mb-3 grid gap-2.5 lg:grid-cols-2">
+        <Card>
+          <CardHeader title={t('reports.topCampaigns')} subtitle="Gönderim sayısına göre" />
+          <div className="px-3.5 pb-3.5">
+            <RankBars
+              empty="Kampanya gönderimi yok."
+              items={report.topCampaigns.map((c) => ({
+                label: c.name,
+                value: c.sent,
+                detail:
+                  c.successRate != null
+                    ? `· %${c.successRate} başarı · ${c.failed} fail`
+                    : `· ${c.failed} fail`,
+                href: `/kampanyalar/${c.id}`,
+              }))}
+            />
+          </div>
+        </Card>
+
+        <Card>
+          <CardHeader title={t('reports.perLine')} subtitle={rangeLabel} />
+          <div className="px-3.5 pb-3.5">
+            <QuotaMeter
+              used={report.quota.monthSent}
+              limit={report.quota.monthlyLimit}
+              label="Aylık gönderim kotası"
+            />
+            <div className="mt-4">
+              <RankBars
+                empty="Bu dönemde hat üzerinden giden yok."
+                items={[...report.accounts]
+                  .sort((a, b) => b.periodOut - a.periodOut)
+                  .map((a) => ({
+                    label: a.label,
+                    value: a.periodOut,
+                    detail: `bugün ${a.sentToday}/${a.dailyLimit}`,
+                    href: '/hesaplar',
+                  }))}
+              />
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      <details className="mb-3 rounded-md border border-hairline bg-surface open:pb-0">
+        <summary className="cursor-pointer list-none px-3.5 py-3 text-[13px] font-semibold text-ink marker:content-none [&::-webkit-details-marker]:hidden">
+          Defter, hatalar ve listeler
+          <span className="ml-2 font-normal text-ink-faint">WhatsApp kayıt · fail · gruplar</span>
+        </summary>
+        <div className="grid gap-2.5 border-t border-hairline p-3 lg:grid-cols-3">
+          <div>
+            <p className="mb-2 text-[11.5px] font-medium text-ink-muted">{t('reports.bookHealth')}</p>
+            <DonutChart
+              empty="Defterde numara yok."
+              segments={[
+                { label: 'Var (✓)', value: report.contacts.valid, tone: 'ok' },
+                { label: 'Yok (×)', value: report.contacts.invalid, tone: 'danger' },
+                { label: 'Bekliyor', value: report.contacts.unknown, tone: 'muted' },
+              ]}
+              center={
+                <>
+                  <p className="tabular text-[18px] font-extrabold leading-none text-ink">
+                    {report.contacts.total}
+                  </p>
+                  <p className="mt-1 text-[10.5px] text-ink-faint">numara</p>
+                </>
+              }
+            />
+            <div className="mt-3">
+              <QuietLink href="/kisiler">Kişilere git</QuietLink>
+            </div>
+          </div>
+          <div>
+            <p className="mb-2 text-[11.5px] font-medium text-ink-muted">{t('reports.failReasons')}</p>
+            <RankBars
+              empty="Bu dönemde başarısız kayıt yok."
+              items={report.errorTop.map((e) => ({
+                label: e.label,
+                value: e.value,
+              }))}
+            />
+          </div>
+          <div>
+            <p className="mb-2 text-[11.5px] font-medium text-ink-muted">{t('reports.topLists')}</p>
+            <RankBars
+              empty="Liste yok. Kişiler’den ekleyin."
+              valueSuffix=" no"
+              items={report.topLists.map((l) => ({
+                label: l.name,
+                value: l.count,
+                href: `/kisiler/${l.id}`,
+              }))}
+            />
+            <div className="mt-4">
+              <p className="mb-2 text-[11.5px] font-medium text-ink-muted">
+                {t('reports.campaignStatus')}
+              </p>
+              <RankBars
+                empty="Henüz kampanya yok."
+                items={report.campaignStatus.map((s) => ({
+                  label: s.label,
+                  value: s.value,
+                }))}
+              />
+            </div>
+            <div className="mt-4">
+              <p className="mb-2 text-[11.5px] font-medium text-ink-muted">{t('reports.quotaLines')}</p>
+              <DonutChart
+                empty="Hat eklenmemiş."
+                segments={report.accountStatus.map((s) => ({
+                  label: s.label,
+                  value: s.value,
+                  tone:
+                    s.key === 'connected'
+                      ? 'ok'
+                      : s.key === 'banned'
+                        ? 'danger'
+                        : s.key === 'connecting' || s.key === 'qr'
+                          ? 'warn'
+                          : 'muted',
+                }))}
+                center={
+                  <>
+                    <p className="tabular text-[18px] font-extrabold leading-none text-ink">
+                      {report.accounts.length}
+                    </p>
+                    <p className="mt-1 text-[10.5px] text-ink-faint">hat</p>
+                  </>
+                }
+              />
+            </div>
+          </div>
+        </div>
+      </details>
     </>
   )
 }

@@ -95,7 +95,7 @@ export const tr = {
     firstSendSub: 'Hazır · kendi numaranıza kısa bir test gönderin',
     firstSendCta: 'İlk test mesajını gönder',
     firstSendHint:
-      'Zorunlu değil. Hazırsanız Hızlı gönderimden kendinize bir test yazabilirsiniz.',
+      'Zorunlu değil. Hazırsanız Kampanyalar’dan kendinize bir test yazabilirsiniz.',
     brandTitle: 'Marka',
     brandLead: 'Gönderimlerde görünecek işletme adı ve ana renk.',
     brandName: 'Marka / işletme adı',
@@ -137,7 +137,7 @@ export const tr = {
     kampanyalarTitle: 'Kampanyalar',
     kampanyalarDesc: 'Mesaj yaz, grup ve hat seç, gönder.',
     kampanyalarReady:
-      'Hazır. Sağdan yeni kampanya oluşturun. Tek seferlik test için Hızlı gönderim.',
+      'Hazır. Sağdan yeni kampanya oluşturun. Tek seferlik test için üstteki “Tek numara / test”.',
     kisilerTitle: 'Kişiler',
     kisilerDesc:
       'Numaraları gruplarda tutun. Kampanyada hangi grubu seçeceğinizi buradan yönetirsiniz.',

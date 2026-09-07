@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
-import { requirePlatformAdmin } from '@/lib/org'
+import { requireActiveOrg } from '@/lib/org'
 
 export const runtime = 'nodejs'
 
 export async function GET() {
   try {
-    const { org, supabase } = await requirePlatformAdmin()
+    const { org, supabase } = await requireActiveOrg()
     const { data, error } = await supabase
       .from('campaigns')
       .select(
