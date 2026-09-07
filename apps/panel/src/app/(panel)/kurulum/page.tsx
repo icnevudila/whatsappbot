@@ -37,8 +37,6 @@ export default async function SetupPage() {
       redirect('/hesaplar')
     case 'contacts':
       redirect('/kisiler')
-    case 'brand':
-      redirect('/marka-kiti')
     default:
       redirect('/ozet')
   }

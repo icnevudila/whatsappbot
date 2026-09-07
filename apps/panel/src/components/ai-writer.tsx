@@ -17,15 +17,24 @@ const TONES = [
 export function AiWriter({
   enabled,
   brand,
+  defaultTone,
   onApply,
 }: {
   enabled: boolean
   brand?: string
+  /** Marka kitinden gelen yazım tonu — Select varsayılanı. */
+  defaultTone?: string | null
   onApply: (text: string) => void
 }) {
   const [open, setOpen] = useState(false)
   const [brief, setBrief] = useState('')
-  const [tone, setTone] = useState<string>('samimi')
+  const initialTone =
+    defaultTone && TONES.some((t) => t.value === defaultTone)
+      ? defaultTone
+      : defaultTone?.trim()
+        ? defaultTone.trim()
+        : 'samimi'
+  const [tone, setTone] = useState<string>(initialTone)
   const [draft, setDraft] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -106,6 +115,9 @@ export function AiWriter({
                   {option.label}
                 </option>
               ))}
+              {defaultTone && !TONES.some((t) => t.value === defaultTone) ? (
+                <option value={defaultTone.trim()}>{defaultTone.trim()}</option>
+              ) : null}
             </Select>
           </Field>
         </div>

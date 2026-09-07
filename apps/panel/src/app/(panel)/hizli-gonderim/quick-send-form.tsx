@@ -54,6 +54,7 @@ export function QuickSendForm({
   aiEnabled,
   imageAiEnabled,
   brandName,
+  brandTone,
   brandKits = [],
   initialMediaUrl = '',
   initialNumbers = '',
@@ -64,6 +65,7 @@ export function QuickSendForm({
   aiEnabled: boolean
   imageAiEnabled: boolean
   brandName?: string
+  brandTone?: string
   brandKits?: BrandKitOption[]
   initialMediaUrl?: string
   initialNumbers?: string
@@ -217,7 +219,12 @@ export function QuickSendForm({
           <p className="text-[11.5px] text-ink-faint">
             Alıcı YAZMAYIN / istemiyorum yazarsa otomatik kara listeye alınır.
           </p>
-          <AiWriter enabled={aiEnabled} brand={brandName} onApply={setBody} />
+          <AiWriter
+            enabled={aiEnabled}
+            brand={brandName}
+            defaultTone={brandTone}
+            onApply={setBody}
+          />
         </div>
 
         <div className="space-y-2.5">

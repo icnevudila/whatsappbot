@@ -2,10 +2,11 @@ import { cache } from 'react'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 /**
- * Soft checklist: marka + kişi + bağlı hat.
+ * Soft checklist: bağlı hat + kişi grubu zorunlu his; marka isteğe bağlı.
  * Ayrı /kurulum wizard yok — Özet/Hesaplar InlineHint + gerçek sayfalar.
  */
-export const SETUP_STEP_KEYS = ['brand', 'contacts', 'connected'] as const
+export const SETUP_REQUIRED_KEYS = ['connected', 'contacts'] as const
+export const SETUP_STEP_KEYS = ['connected', 'contacts', 'brand'] as const
 export type SetupStepKey = (typeof SETUP_STEP_KEYS)[number]
 
 export const getSetupProgress = cache(async (orgId: string) => {
@@ -44,9 +45,19 @@ export const getSetupProgress = cache(async (orgId: string) => {
     outCount: outCount ?? 0,
   }
 
-  const doneCount = SETUP_STEP_KEYS.filter((key) => steps[key]).length
-  const allDone = doneCount === SETUP_STEP_KEYS.length
-  const nextStep = SETUP_STEP_KEYS.find((key) => !steps[key]) ?? null
+  const requiredDone = SETUP_REQUIRED_KEYS.every((key) => steps[key])
+  const doneCount = SETUP_REQUIRED_KEYS.filter((key) => steps[key]).length
+  const allDone = requiredDone
+  const nextStep = SETUP_REQUIRED_KEYS.find((key) => !steps[key]) ?? null
 
-  return { steps, counts, doneCount, allDone, showSetup: !allDone, nextStep }
+  return {
+    steps,
+    counts,
+    doneCount,
+    allDone,
+    showSetup: !allDone,
+    nextStep,
+    /** İsteğe bağlı: hat+grup varken marka yoksa soft nudge. */
+    suggestBrand: requiredDone && !steps.brand,
+  }
 })

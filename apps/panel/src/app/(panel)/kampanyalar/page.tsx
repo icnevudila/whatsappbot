@@ -143,7 +143,7 @@ export default async function CampaignsPage({
       .order('created_at'),
     supabase
       .from('brand_kits')
-      .select('id, name, is_default')
+      .select('id, name, is_default, tone')
       .eq('org_id', org.id)
       .order('is_default', { ascending: false })
       .order('created_at'),
@@ -189,8 +189,10 @@ export default async function CampaignsPage({
     name: kit.name,
     isDefault: kit.is_default,
   }))
-  const brandName =
-    brandKits.find((kit) => kit.isDefault)?.name ?? brandKits[0]?.name ?? undefined
+  const defaultKit =
+    (brandResult.data ?? []).find((kit) => kit.is_default) ?? (brandResult.data ?? [])[0]
+  const brandName = defaultKit?.name ?? undefined
+  const brandTone = defaultKit?.tone ?? undefined
 
   const accountOptions = (accountsResult.data ?? []).map((account) => ({
     id: account.id,
@@ -250,6 +252,7 @@ export default async function CampaignsPage({
               aiEnabled={hasTextProvider()}
               imageAiEnabled={hasImageProvider()}
               brandName={brandName}
+              brandTone={brandTone}
               brandKits={brandKits}
               initialMediaUrl={initialMediaUrl}
               initialNumbers={initialNumbers}
@@ -375,6 +378,7 @@ export default async function CampaignsPage({
               aiEnabled={hasTextProvider()}
               imageAiEnabled={hasImageProvider()}
               brandName={brandName}
+              brandTone={brandTone}
               brandKits={brandKits}
             />
           }

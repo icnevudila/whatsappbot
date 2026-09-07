@@ -8,14 +8,13 @@ import { requireActiveOrg, isOrgAdminRole } from '@/lib/org'
 import { BrandStudio } from './brand-studio'
 import { CreativeGallery } from './creative-gallery'
 
-export const metadata: Metadata = { title: 'Marka kiti' }
+export const metadata: Metadata = { title: 'Marka' }
 
 export default async function BrandKitPage() {
-  let userId: string
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
   let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
   try {
-    ;({ userId, org, supabase } = await requireActiveOrg())
+    ;({ org, supabase } = await requireActiveOrg())
   } catch (error) {
     if (error instanceof Error && error.message === 'NO_ORGANIZATION') {
       redirect('/erisim-yok')
@@ -26,7 +25,7 @@ export default async function BrandKitPage() {
   const [{ data: kit }, { data: creatives }, { messages }] = await Promise.all([
     supabase
       .from('brand_kits')
-      .select('id, name, colors, logo_path')
+      .select('id, name, colors, logo_path, tone')
       .eq('org_id', org.id)
       .eq('is_default', true)
       .maybeSingle(),
@@ -36,7 +35,7 @@ export default async function BrandKitPage() {
       .eq('org_id', org.id)
       .eq('status', 'ready')
       .order('created_at', { ascending: false })
-      .limit(8),
+      .limit(16),
     getDictionary(),
   ])
 
@@ -56,28 +55,23 @@ export default async function BrandKitPage() {
         title={t('pages.markaTitle')}
         description={
           canManage
-            ? 'Ad, renk, logo — kampanya görseli isteğe bağlı.'
-            : 'Marka kitini görüntüleyebilirsiniz.'
+            ? t('pages.markaDesc')
+            : 'Marka kimliğini görüntüleyebilirsiniz. Düzenleme için yönetici gerekir.'
         }
         action={
           hasSavedKit ? (
             <Badge tone="accent">{kit?.name ?? 'Kayıtlı'}</Badge>
           ) : (
-            <Badge>Henüz kaydedilmedi</Badge>
+            <Badge>Kayıt yok</Badge>
           )
         }
       />
 
-      {!hasSavedKit && canManage ? (
-        <p className="mb-3 text-[12.5px] text-ink-muted">
-          Ad + ana renk yeterli. Kaydet → gönderime geç.
-        </p>
-      ) : null}
-
       <BrandStudio
-        initialName={kit?.name ?? 'Varsayılan'}
+        initialName={kit?.name ?? org.name}
         initialColors={colors}
         initialLogoUrl={kit?.logo_path ?? null}
+        initialTone={kit?.tone ?? ''}
         brandKitId={kit?.id ?? null}
         orgId={org.id}
         hasSavedKit={hasSavedKit}
@@ -91,7 +85,7 @@ export default async function BrandKitPage() {
             subtitle={
               creativeCount > 0
                 ? `${creativeCount} hazır · tıklayınca açılır`
-                : 'Üretimden sonra burada listelenir'
+                : 'Stüdyodan üretilen PNG’ler burada listelenir'
             }
           />
           {creatives && creatives.length > 0 ? (
@@ -102,12 +96,12 @@ export default async function BrandKitPage() {
               title="Henüz görsel yok"
               description={
                 canManage
-                  ? 'Stüdyoda başlık yazıp görsel üretin. Sonuç burada kalır; ardından kampanyaya veya tek numara testine taşıyabilirsiniz.'
-                  : 'Henüz üretilmiş görsel yok. Yönetici marka kitinden üretim yapabilir.'
+                  ? 'Yukarıdaki stüdyoda başlık yazıp üretin. Sonuç burada kalır.'
+                  : 'Henüz üretilmiş görsel yok.'
               }
               action={
                 canManage ? (
-                  <AccentLink href="#kampanya-gorseli">Görsel üretmeye başla</AccentLink>
+                  <AccentLink href="#kampanya-gorseli">Stüdyoya git</AccentLink>
                 ) : undefined
               }
             />

@@ -7,20 +7,9 @@ type Progress = Awaited<ReturnType<typeof getSetupProgress>>
 
 /**
  * Soft tek satır — menüyü kilitlemez, ayrı kurulum sayfasına göndermez.
+ * Marka zorunlu değil; hat + grup sonrası isteğe bağlı öneri.
  */
 export function SetupBanner({ progress }: { progress: Progress }) {
-  const needsFirstSend = progress.allDone && progress.counts.outCount === 0
-
-  if (needsFirstSend) {
-    return (
-      <InlineHint href="/kampanyalar#hizli" cta="Test gönder">
-        İsteğe bağlı: kendine kısa bir test mesajı
-      </InlineHint>
-    )
-  }
-
-  if (progress.allDone) return null
-
   if (!progress.steps.connected) {
     return (
       <InlineHint href="/hesaplar" cta="Bağla">
@@ -37,17 +26,21 @@ export function SetupBanner({ progress }: { progress: Progress }) {
     )
   }
 
-  if (!progress.steps.brand) {
+  if (progress.counts.outCount === 0) {
     return (
-      <InlineHint href="/marka-kiti" cta="Aç">
-        Marka adı eksik
+      <InlineHint href="/kampanyalar#hizli" cta="Test gönder">
+        İsteğe bağlı: kendine kısa bir test mesajı
       </InlineHint>
     )
   }
 
-  return (
-    <InlineHint href="/ozet" cta="Özet">
-      Hazırlık eksik ({progress.doneCount}/3)
-    </InlineHint>
-  )
+  if (progress.suggestBrand) {
+    return (
+      <InlineHint href="/marka-kiti" cta="Düzenle">
+        İsteğe bağlı: marka adı ve renkler AI metin/görselde kullanılır
+      </InlineHint>
+    )
+  }
+
+  return null
 }

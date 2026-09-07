@@ -150,6 +150,8 @@ export const tr = {
     ayarlarTitle: 'Ayarlar',
     yardimTitle: 'Yardım',
     markaTitle: 'Marka',
+    markaDesc:
+      'Ad, renk, logo ve yazım tonu. Kampanya AI’sında kullanılır. Zorunlu değil.',
     hizliTitle: 'Hızlı gönderim',
     karaListeTitle: 'İstemeyenler',
   },

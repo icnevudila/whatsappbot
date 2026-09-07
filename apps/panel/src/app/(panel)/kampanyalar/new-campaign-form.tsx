@@ -51,6 +51,7 @@ export function NewCampaignForm({
   aiEnabled,
   imageAiEnabled,
   brandName,
+  brandTone,
   brandKits = [],
 }: {
   lists: Option[]
@@ -59,6 +60,7 @@ export function NewCampaignForm({
   aiEnabled: boolean
   imageAiEnabled: boolean
   brandName?: string
+  brandTone?: string
   brandKits?: BrandKitOption[]
 }) {
   const [state, formAction, pending] = useActionState<CampaignState, FormData>(
@@ -318,7 +320,12 @@ export function NewCampaignForm({
                   Çıkış satırı ekle
                 </button>
 
-                <AiWriter enabled={aiEnabled} brand={brandName} onApply={setBody} />
+                <AiWriter
+                  enabled={aiEnabled}
+                  brand={brandName}
+                  defaultTone={brandTone}
+                  onApply={setBody}
+                />
 
                 <div className="space-y-3">
                   <span className="mb-1.5 block text-[12px] font-medium text-ink-muted">
