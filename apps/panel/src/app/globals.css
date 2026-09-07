@@ -626,9 +626,31 @@ h3 {
   animation: filo-fade-up 0.45s var(--ease-out) 0.16s both;
 }
 
+/* Canlı Meter: width transition (poll/realtime); ilk mount’ta soft grow. */
+.wb-meter-fill {
+  transform-origin: left center;
+  transition: width 480ms var(--ease-out);
+  animation: filo-bar-grow 0.55s var(--ease-out) both;
+}
+
 .filo-bar-stagger {
   transform-origin: left center;
   animation: filo-bar-grow 0.55s var(--ease-out) both;
+}
+
+/* Canlı Stat sayısı tick */
+@keyframes filo-stat-tick {
+  0% {
+    opacity: 0.4;
+    transform: translateY(3px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+.wb-stat-tick .tabular {
+  animation: filo-stat-tick 380ms var(--ease-out) both;
 }
 
 .filo-bar-stagger-1 {
@@ -651,6 +673,8 @@ h3 {
   .filo-fade-up-delay,
   .filo-fade-up-delay-2,
   .filo-bar-stagger,
+  .wb-meter-fill,
+  .wb-stat-tick .tabular,
   .filo-pulse > div,
   .wb-page-enter,
   .wb-row-enter,
@@ -665,6 +689,9 @@ h3 {
   .wb-busy-bar,
   .wb-busy-dot {
     animation: none !important;
+  }
+  .wb-meter-fill {
+    transition: none !important;
   }
   .wb-rail-link:active,
   .wb-card-lift:hover {

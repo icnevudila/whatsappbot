@@ -5,6 +5,7 @@ import {
   AccentLink,
   Card,
   CardHeader,
+  Meter,
   PageHeader,
   QuietLink,
   StatStrip,
@@ -62,7 +63,7 @@ export default async function PanelHomePage() {
         .gte('created_at', sinceToday),
       supabase
         .from('campaigns')
-        .select('id, name, sent_count, failed_count, status, total_targets')
+        .select('id, name, sent_count, failed_count, skipped_count, status, total_targets')
         .eq('org_id', org.id)
         .order('updated_at', { ascending: false })
         .limit(5),
@@ -146,15 +147,20 @@ export default async function PanelHomePage() {
           </div>
         ) : (
           <ul className="divide-y divide-hairline">
-            {(recentCampaigns ?? []).map((c) => {
+            {(recentCampaigns ?? []).map((c, index) => {
               const total = Math.max(0, c.total_targets ?? 0)
+              const done = (c.sent_count ?? 0) + (c.failed_count ?? 0) + (c.skipped_count ?? 0)
               return (
-                <li key={c.id}>
+                <li
+                  key={c.id}
+                  className="wb-row-enter"
+                  style={{ animationDelay: `${Math.min(index, 8) * 28}ms` }}
+                >
                   <Link
                     href={`/kampanyalar/${c.id}`}
-                    className="flex items-center justify-between gap-3 px-3.5 py-2.5 transition-colors hover:bg-surface-raised"
+                    className="wb-list-row flex items-center justify-between gap-3 px-3.5 py-2.5"
                   >
-                    <span className="min-w-0">
+                    <span className="min-w-0 flex-1">
                       <span className="block truncate text-[13.5px] font-semibold text-ink">
                         {c.name}
                       </span>
@@ -163,6 +169,19 @@ export default async function PanelHomePage() {
                         {total > 0 ? ` / ${total}` : ''}
                         {(c.failed_count ?? 0) > 0 ? ` · ${c.failed_count} hata` : ''}
                       </span>
+                      {total > 0 && (c.status === 'running' || c.status === 'paused') ? (
+                        <div className="mt-1.5 max-w-[220px]">
+                          <Meter
+                            value={done}
+                            max={total}
+                            tone={
+                              c.status === 'paused' || (c.failed_count ?? 0) > 0
+                                ? 'warn'
+                                : 'accent'
+                            }
+                          />
+                        </div>
+                      ) : null}
                     </span>
                     <StatusPill status={c.status} />
                   </Link>

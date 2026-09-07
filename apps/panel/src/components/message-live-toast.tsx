@@ -20,12 +20,6 @@ function phoneLabel(row: LiveRow): string {
   return 'bilinmeyen'
 }
 
-function preview(row: LiveRow): string {
-  const text = row.body?.trim()
-  if (text) return text.length > 72 ? `${text.slice(0, 69)}…` : text
-  return `(${row.message_type || 'mesaj'})`
-}
-
 /**
  * Panel genelinde gelen/giden INSERT (+ anlamlı ACK) için anlık toast.
  * Sayfa yenilemesi board'larda kalır; burada sadece "tak" bildirimi.
@@ -59,11 +53,10 @@ export function MessageLiveToast({ orgId }: { orgId: string }) {
           }
 
           const who = phoneLabel(row)
-          const text = preview(row)
           if (row.direction === 'in') {
-            toast(`Yeni gelen · ${who}: ${text}`, 'success')
+            toast(`Gelen · ${who}`, 'success')
           } else {
-            toast(`Giden sırada · ${who}: ${text}`, 'accent')
+            toast(`Giden · ${who}`, 'accent')
           }
           lastStatus.set(row.id, row.status)
         },

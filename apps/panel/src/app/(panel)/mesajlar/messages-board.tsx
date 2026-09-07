@@ -119,6 +119,8 @@ export function MessagesBoard({
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const threadEndRef = useRef<HTMLDivElement>(null)
+  const [flashPhone, setFlashPhone] = useState<string | null>(null)
+  const topPhoneRef = useRef<string | null>(previews[0]?.phone ?? null)
   useSyncBusy(pending, 'İstemeyenlere ekleniyor…')
 
   const visibleList = list.filter((item) =>
@@ -128,6 +130,14 @@ export function MessagesBoard({
   )
 
   useEffect(() => {
+    const top = previews[0]?.phone ?? null
+    if (top && top !== topPhoneRef.current) {
+      topPhoneRef.current = top
+      setFlashPhone(top)
+      const t = window.setTimeout(() => setFlashPhone(null), 1050)
+      setList(previews)
+      return () => window.clearTimeout(t)
+    }
     setList(previews)
   }, [previews])
 
@@ -271,7 +281,7 @@ export function MessagesBoard({
                 return (
                   <li
                     key={item.phone}
-                    className="wb-row-enter"
+                    className={`wb-row-enter${flashPhone === item.phone ? ' wb-row-flash' : ''}`}
                     style={{ animationDelay: `${Math.min(index, 10) * 24}ms` }}
                   >
                     <Link

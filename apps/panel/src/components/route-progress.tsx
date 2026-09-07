@@ -6,6 +6,7 @@ import { usePathname, useSearchParams } from 'next/navigation'
 /**
  * Sayfa gecislerinde ustte ince kobalt cubuk — Pilot workbench hissi.
  * Link tiklamasinda baslar, pathname/search degisince biter.
+ * Ayrica soft `router.refresh` / geri-ileri icin kisa nabız.
  */
 export function RouteProgress() {
   const pathname = usePathname()
@@ -13,10 +14,15 @@ export function RouteProgress() {
   const [active, setActive] = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const routeKey = `${pathname}?${searchParams?.toString() ?? ''}`
+  const prevRoute = useRef(routeKey)
 
   useEffect(() => {
-    setActive(false)
-    if (timer.current) clearTimeout(timer.current)
+    if (prevRoute.current !== routeKey) {
+      prevRoute.current = routeKey
+      // Navigasyon bitti — çubuğu kapat (tiklama zaten açmıştı)
+      setActive(false)
+      if (timer.current) clearTimeout(timer.current)
+    }
   }, [routeKey])
 
   useEffect(() => {
@@ -48,9 +54,20 @@ export function RouteProgress() {
       timer.current = setTimeout(() => setActive(false), 8_000)
     }
 
+    const onSubmit = (event: Event) => {
+      const form = event.target as HTMLFormElement | null
+      if (!form || form.method?.toLowerCase() === 'dialog') return
+      // Aynı sayfa server action — kısa nabız
+      setActive(true)
+      if (timer.current) clearTimeout(timer.current)
+      timer.current = setTimeout(() => setActive(false), 1_600)
+    }
+
     document.addEventListener('click', onClick, true)
+    document.addEventListener('submit', onSubmit, true)
     return () => {
       document.removeEventListener('click', onClick, true)
+      document.removeEventListener('submit', onSubmit, true)
       if (timer.current) clearTimeout(timer.current)
     }
   }, [pathname])

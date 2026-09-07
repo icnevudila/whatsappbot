@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect, useState, useTransition } from 'react'
+import { useActionState, useEffect, useRef, useState, useTransition } from 'react'
 import type { Tables } from '@wa/shared'
 import {
   AccentLink,
@@ -74,6 +74,29 @@ export function AccountsBoard({
 }) {
   // Sunucu revalidate ettiginde tazelensin, Realtime olaylari da uzerine yazsin.
   const [accounts, setAccounts] = useServerSyncedState(initial)
+  const [flashIds, setFlashIds] = useState<Set<string>>(() => new Set())
+  const toast = useToast()
+  const knownStatus = useRef(new Map(initial.map((a) => [a.id, a.status])))
+
+  const noteStatusChange = (next: AccountView) => {
+    const prev = knownStatus.current.get(next.id)
+    knownStatus.current.set(next.id, next.status)
+    if (prev && prev !== 'connected' && next.status === 'connected') {
+      toast(`${next.label} bağlandı.`, 'success')
+      setFlashIds((cur) => {
+        const copy = new Set(cur)
+        copy.add(next.id)
+        return copy
+      })
+      window.setTimeout(() => {
+        setFlashIds((cur) => {
+          const copy = new Set(cur)
+          copy.delete(next.id)
+          return copy
+        })
+      }, 1100)
+    }
+  }
 
   /**
    * Realtime olmadan QR kodu icin sayfayi elle yenilemek gerekiyordu.
@@ -96,10 +119,12 @@ export function AccountsBoard({
           setAccounts((current) => {
             if (payload.eventType === 'DELETE') {
               const removedId = (payload.old as { id?: string }).id
+              if (removedId) knownStatus.current.delete(removedId)
               return current.filter((account) => account.id !== removedId)
             }
 
             const next = payload.new as AccountView
+            noteStatusChange(next)
             const exists = current.some((account) => account.id === next.id)
 
             return exists
@@ -121,6 +146,8 @@ export function AccountsBoard({
     return () => {
       void supabase.removeChannel(channel)
     }
+    // toast/noteStatusChange stable enough via refs; orgId drives channel
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId, setAccounts])
 
   /**
@@ -154,7 +181,11 @@ export function AccountsBoard({
         .eq('org_id', orgId)
         .order('created_at')
 
-      if (!cancelled && data) setAccounts(data as AccountView[])
+      if (!cancelled && data) {
+        const rows = data as AccountView[]
+        for (const row of rows) noteStatusChange(row)
+        setAccounts(rows)
+      }
     }
 
     // Sekme arkada iken yoklamiyoruz: QR'i kimse gormuyor, bosa istek olur.
@@ -236,7 +267,7 @@ export function AccountsBoard({
                   return (
                     <li
                       key={account.id}
-                      className="wb-row-enter"
+                      className={`wb-row-enter${flashIds.has(account.id) ? ' wb-row-flash' : ''}`}
                       style={{ animationDelay: `${Math.min(index, 8) * 28}ms` }}
                     >
                       <button

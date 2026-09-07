@@ -2,9 +2,11 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import type { Tables } from '@wa/shared'
-import { Button, Card, CardHeader, Meter, Notice, Stat, StatusPill } from '@/components/ui'
+import { Button, Card, CardHeader, Meter, Notice, StatusPill } from '@/components/ui'
+import { LiveStat } from '@/components/live-stat'
+import { useToast } from '@/components/toast'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import {
   duplicateCampaign,
@@ -78,6 +80,8 @@ export function CampaignLive({
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+  const toast = useToast()
+  const prevStatus = useRef(initial.status)
 
   const estimatedFromLists = campaign.source_list_ids.reduce((sum, id) => {
     const list = listOptions.find((item) => item.id === id)
@@ -136,6 +140,19 @@ export function CampaignLive({
     }
   }, [initial.id, orgId])
 
+  useEffect(() => {
+    const prev = prevStatus.current
+    const next = campaign.status
+    if (prev === next) return
+    prevStatus.current = next
+    if (next === 'completed') toast('Kampanya tamamlandı.', 'success')
+    else if (next === 'failed') toast('Kampanya hata ile bitti.', 'danger')
+    else if (next === 'paused' && prev === 'running') toast('Kampanya duraklatıldı.', 'warn')
+    else if (next === 'running' && (prev === 'paused' || prev === 'draft')) {
+      toast('Kampanya çalışıyor.', 'accent')
+    }
+  }, [campaign.status, toast])
+
   const run = (action: () => Promise<{ error?: string }>) => {
     setError(null)
     startTransition(async () => {
@@ -192,10 +209,10 @@ export function CampaignLive({
           </div>
 
           <dl className="grid grid-cols-2 gap-2.5 border-t border-hairline pt-2.5 sm:grid-cols-4">
-            <Stat label="Gönderildi" value={campaign.sent_count} tone="accent" />
-            <Stat label="Atlandı" value={campaign.skipped_count} tone="muted" />
-            <Stat label="Başarısız" value={campaign.failed_count} tone="danger" />
-            <Stat label="Kalan" value={remaining} />
+            <LiveStat label="Gönderildi" value={campaign.sent_count} tone="accent" />
+            <LiveStat label="Atlandı" value={campaign.skipped_count} tone="muted" />
+            <LiveStat label="Başarısız" value={campaign.failed_count} tone="danger" />
+            <LiveStat label="Kalan" value={remaining} />
           </dl>
 
           <p className="text-[12px] text-ink-muted">

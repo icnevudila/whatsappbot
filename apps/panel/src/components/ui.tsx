@@ -246,7 +246,7 @@ export function Meter({
   return (
     <div className="h-1 w-full overflow-hidden rounded-full bg-hairline">
       <div
-        className={cx('filo-bar-stagger h-full rounded-full', fill)}
+        className={cx('wb-meter-fill h-full rounded-full', fill)}
         style={{ width: `${pct}%` }}
       />
     </div>
@@ -266,7 +266,7 @@ export function EmptyState({
   tone?: EmptyTone
 }) {
   return (
-    <div className="wb-empty flex flex-col items-center gap-2 px-4 py-6 text-center md:px-6 md:py-10">
+    <div className="wb-empty filo-fade-in flex flex-col items-center gap-2 px-4 py-6 text-center md:px-6 md:py-10">
       <div className="hidden sm:block">
         <EmptyIllustration tone={tone} />
       </div>
@@ -691,12 +691,12 @@ export function StatStrip({
   return (
     <div
       className={cx(
-        'mb-3 flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:overflow-visible',
+        'filo-fade-in mb-3 flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:overflow-visible',
         items.length <= 3 ? 'sm:grid-cols-3' : items.length <= 4 ? 'sm:grid-cols-4' : 'sm:grid-cols-5',
         className,
       )}
     >
-      {items.map((item) => {
+      {items.map((item, index) => {
         const toneClass =
           item.tone === 'ok'
             ? 'text-ok-dim'
@@ -714,13 +714,19 @@ export function StatStrip({
           </>
         )
         const boxClass =
-          'min-w-[108px] shrink-0 rounded-md border border-hairline bg-surface px-3 py-2 sm:min-w-0'
+          'wb-row-enter wb-card-lift min-w-[108px] shrink-0 rounded-md border border-hairline bg-surface px-3 py-2 sm:min-w-0'
+        const style = { animationDelay: `${Math.min(index, 6) * 40}ms` }
         return item.href ? (
-          <Link key={item.label} href={item.href} className={cx(boxClass, 'transition-colors hover:bg-surface-raised')}>
+          <Link
+            key={item.label}
+            href={item.href}
+            className={cx(boxClass, 'transition-colors hover:bg-surface-raised')}
+            style={style}
+          >
             {inner}
           </Link>
         ) : (
-          <div key={item.label} className={boxClass}>
+          <div key={item.label} className={boxClass} style={style}>
             {inner}
           </div>
         )
@@ -744,7 +750,7 @@ export function InlineHint({
   return (
     <div
       className={cx(
-        'mb-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-hairline bg-surface px-3 py-2 text-[12.5px] text-ink-muted',
+        'filo-fade-in mb-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-hairline bg-surface px-3 py-2 text-[12.5px] text-ink-muted',
         className,
       )}
     >
@@ -752,7 +758,7 @@ export function InlineHint({
       {href && cta ? (
         <Link
           href={href}
-          className="shrink-0 font-semibold text-accent underline-offset-2 hover:underline"
+          className="shrink-0 font-semibold text-accent underline-offset-2 transition-colors hover:text-accent-dim hover:underline"
         >
           {cta}
         </Link>
