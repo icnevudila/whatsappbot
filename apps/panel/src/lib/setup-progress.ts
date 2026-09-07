@@ -2,8 +2,8 @@ import { cache } from 'react'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 /**
- * Soft onboarding checklist: marka + kişi + bağlı hat.
- * Numara doğrulama arka planda; menü/yol kilidi yok.
+ * Soft checklist: marka + kişi + bağlı hat.
+ * Ayrı /kurulum wizard yok — Özet/Hesaplar InlineHint + gerçek sayfalar.
  */
 export const SETUP_STEP_KEYS = ['brand', 'contacts', 'connected'] as const
 export type SetupStepKey = (typeof SETUP_STEP_KEYS)[number]
@@ -50,14 +50,3 @@ export const getSetupProgress = cache(async (orgId: string) => {
 
   return { steps, counts, doneCount, allDone, showSetup: !allDone, nextStep }
 })
-
-/** Onboarding sırasında erişilebilir paneller (gate allowlist). */
-export function isOnboardingAllowedPath(pathname: string): boolean {
-  if (pathname === '/kurulum') return true
-  if (pathname === '/marka-kiti') return true
-  if (pathname === '/hesaplar') return true
-  if (pathname === '/kisiler' || pathname.startsWith('/kisiler/')) return true
-  if (pathname === '/ayarlar' || pathname.startsWith('/ayarlar/')) return true
-  if (pathname === '/yardim') return true
-  return false
-}

@@ -18,7 +18,7 @@ export const tr = {
     turkish: 'Türkçe',
     english: 'English',
     workbench: 'WhatsApp workbench',
-    setupLocked: 'Kurulum · önerilen adımlar',
+    setupLocked: 'Önerilen: hat · kişiler · gönder',
     setupHintSoft: 'Önerilen: hat · kişiler · gönder',
     done: 'Tamam',
     error: 'Bir hata oluştu',
@@ -27,8 +27,8 @@ export const tr = {
   nav: {
     aria: 'Ana menü',
     more: 'Diğer',
-    setupHint: 'Önerilen üç adım: marka, kişiler, hat.',
-    groupSetup: 'Kurulum',
+    setupHint: 'Önerilen: hat, kişiler, marka.',
+    groupSetup: 'Başlangıç',
     groupMain: 'Ana',
     groupMore: 'Diğer',
     groupOps: 'Ana',
@@ -92,7 +92,7 @@ export const tr = {
     completedCount: '{count} tamamlandı',
     finishHint: 'Bu adımlar gönderimi kolaylaştırır. Panel açık; hat bağlayınca mesaj atabilirsiniz.',
     firstSendTitle: 'İsteğe bağlı: ilk test',
-    firstSendSub: 'Kurulum tamam · kendi numaranıza kısa bir test gönderin',
+    firstSendSub: 'Hazır · kendi numaranıza kısa bir test gönderin',
     firstSendCta: 'İlk test mesajını gönder',
     firstSendHint:
       'Zorunlu değil. Hazırsanız Hızlı gönderimden kendinize bir test yazabilirsiniz.',
@@ -122,14 +122,14 @@ export const tr = {
     verifyRefresh: 'Doğruladım — yenile',
     bannerTitle: 'Hızlı başlangıç',
     bannerSub: 'Üç önerilen adım · hat bağlayınca gönderebilirsin',
-    bannerCta: 'Kuruluma bak',
+    bannerCta: 'Hatlar’a git',
     connectedLabel: 'Bağlı',
   },
   pages: {
     ozetTitle: 'Özet',
     ozetDesc: '{org} · bugünün özeti.',
     sendMessage: 'Mesaj gönder',
-    finishSetup: 'Kurulumu tamamla',
+    finishSetup: 'Eksikleri tamamla',
     raporlarTitle: 'Raporlar',
     raporlarDesc:
       '{range} gönderim, teslim, hat ve kişi özeti. CSV ile dışa aktarım.',
@@ -137,7 +137,7 @@ export const tr = {
     kampanyalarTitle: 'Kampanyalar',
     kampanyalarDesc: 'Mesaj yaz, grup ve hat seç, gönder.',
     kampanyalarReady:
-      'Kurulum tamam. Sağdan yeni kampanya oluşturun. Tek seferlik test için Hızlı gönderim.',
+      'Hazır. Sağdan yeni kampanya oluşturun. Tek seferlik test için Hızlı gönderim.',
     kisilerTitle: 'Kişiler',
     kisilerDesc:
       'Numaraları gruplarda tutun. Kampanyada hangi grubu seçeceğinizi buradan yönetirsiniz.',

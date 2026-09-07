@@ -46,11 +46,9 @@ function NavLink({
 }
 
 export function Nav({
-  showSetup = false,
   orientation = 'vertical',
   isPlatformAdmin = false,
 }: {
-  showSetup?: boolean
   orientation?: 'vertical' | 'horizontal'
   /** Süper admin: Durum / Raporlar / Admin. */
   isPlatformAdmin?: boolean
@@ -109,11 +107,6 @@ export function Nav({
     ]
   }, [isPlatformAdmin, t])
 
-  const setupItem =
-    showSetup && !isPlatformAdmin
-      ? ({ href: '/kurulum', label: t('nav.kurulum'), icon: 'steps' as const } as const)
-      : null
-
   /** Mobil: yalnız ana işler + ayarlar. */
   const flat = useMemo(() => {
     if (orientation === 'horizontal') {
@@ -152,20 +145,6 @@ export function Nav({
           className="flex w-max flex-row items-center gap-0.5 pr-1"
           aria-label={t('nav.aria')}
         >
-          {setupItem ? (
-            <NavLink
-              href={setupItem.href}
-              label={setupItem.label}
-              icon={setupItem.icon}
-              active={isActive(pathname, setupItem.href)}
-              linkRef={(node) => {
-                if (isActive(pathname, setupItem.href)) activeRef.current = node
-              }}
-              className={`wb-rail-link whitespace-nowrap${
-                isActive(pathname, setupItem.href) ? ' is-active' : ''
-              }`}
-            />
-          ) : null}
           {flat.map((item) => {
             const active = isActive(pathname, item.href)
             return (
@@ -189,17 +168,6 @@ export function Nav({
 
   return (
     <nav className="flex flex-col gap-px" aria-label={t('nav.aria')}>
-      {setupItem ? (
-        <>
-          <p className="wb-rail-group">{t('nav.groupSetup')}</p>
-          <NavLink
-            href={setupItem.href}
-            label={setupItem.label}
-            icon={setupItem.icon}
-            active={isActive(pathname, setupItem.href)}
-          />
-        </>
-      ) : null}
       {groups.map((group) => (
         <div key={group.id}>
           <p className="wb-rail-group">{group.label}</p>

@@ -1,23 +1,20 @@
 'use client'
 
-import Link from 'next/link'
 import { InlineHint } from '@/components/ui'
-import { useT } from '@/lib/i18n/provider'
 import type { getSetupProgress } from '@/lib/setup-progress'
 
 type Progress = Awaited<ReturnType<typeof getSetupProgress>>
 
 /**
- * Soft tek satır — menüyü kilitlemez, büyük checklist kartı yok.
+ * Soft tek satır — menüyü kilitlemez, ayrı kurulum sayfasına göndermez.
  */
 export function SetupBanner({ progress }: { progress: Progress }) {
-  const t = useT()
   const needsFirstSend = progress.allDone && progress.counts.outCount === 0
 
   if (needsFirstSend) {
     return (
-      <InlineHint href="/hizli-gonderim" cta={t('setup.firstSendCta')}>
-        {t('setup.firstSendSub')}
+      <InlineHint href="/hizli-gonderim" cta="Test gönder">
+        İsteğe bağlı: kendine kısa bir test mesajı
       </InlineHint>
     )
   }
@@ -34,7 +31,7 @@ export function SetupBanner({ progress }: { progress: Progress }) {
 
   if (!progress.steps.contacts) {
     return (
-      <InlineHint href="/kisiler" cta="Ekle">
+      <InlineHint href="/kisiler" cta="Grup ekle">
         Kampanya grubu yok
       </InlineHint>
     )
@@ -49,10 +46,8 @@ export function SetupBanner({ progress }: { progress: Progress }) {
   }
 
   return (
-    <InlineHint href="/kurulum" cta={t('setup.bannerCta')}>
-      <Link href="/kurulum" className="text-ink-muted">
-        Kurulum eksik ({progress.doneCount}/3)
-      </Link>
+    <InlineHint href="/ozet" cta="Özet">
+      Hazırlık eksik ({progress.doneCount}/3)
     </InlineHint>
   )
 }

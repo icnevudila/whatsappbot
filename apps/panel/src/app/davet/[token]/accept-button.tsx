@@ -24,7 +24,7 @@ export function AcceptInviteButton({ token }: { token: string }) {
               setError(result.error)
               return
             }
-            router.push('/kurulum')
+            router.push('/ozet')
             router.refresh()
           })
         }}

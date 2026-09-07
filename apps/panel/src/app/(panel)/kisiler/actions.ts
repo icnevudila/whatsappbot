@@ -140,7 +140,6 @@ export async function importContacts(
   })
 
   revalidatePath('/kisiler')
-  revalidatePath('/kurulum')
 
   const parts = [`${linked} numara eklendi`]
   if (parsed.duplicates > 0) parts.push(`${parsed.duplicates} tekrar atlandı`)
@@ -262,7 +261,6 @@ export async function importContactChunk(options: {
       })
 
       revalidatePath('/kisiler')
-      revalidatePath('/kurulum')
       return {
         linked,
         ok: `İçe aktarma bitti · grupta ${count ?? linked} numara. Doğrulama kuyruğa alındı.`,
@@ -308,7 +306,6 @@ export async function verifyList(
 
   revalidatePath('/kisiler')
   revalidatePath(`/kisiler/${listId}`)
-  revalidatePath('/kurulum')
   return {
     jobId: id,
     ok: 'Doğrulama kuyruğa alındı. İş bitince alttaki özet güncellenir.',
@@ -350,7 +347,6 @@ export async function verifyAllContacts(): Promise<{
   if (error || !id) return { error: error ?? 'Doğrulama işi oluşturulamadı.' }
 
   revalidatePath('/kisiler')
-  revalidatePath('/kurulum')
   return {
     jobId: id,
     ok: 'Doğrulama kuyruğa alındı. Sonuçlar listelerde ✓ / × olarak güncellenir; büyük defterlerde birkaç dakika sürebilir.',
@@ -770,7 +766,6 @@ export async function checkWhatsAppPhone(rawPhone: string): Promise<PhoneCheckRe
         }
       }
       revalidatePath('/kisiler')
-      revalidatePath('/kurulum')
       return {
         phone_e164: result.phone_e164 ?? phone,
         exists: result.exists,

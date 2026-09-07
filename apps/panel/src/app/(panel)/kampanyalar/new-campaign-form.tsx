@@ -208,7 +208,7 @@ export function NewCampaignForm({
       <Card className="overflow-visible rounded-none border-0 shadow-none">
         <CardHeader
           title="Yeni kampanya"
-          subtitle="Dört adım: ad → mesaj → kime → gönder. Varsayılan taslak olarak kaydedilir."
+          subtitle="Ad → mesaj → kime → gönder. Varsayılan: taslak."
         />
 
         <nav aria-label="Kampanya adımları" className="border-b border-hairline px-4 py-3">
@@ -271,9 +271,6 @@ export function NewCampaignForm({
           <div className="space-y-4 p-4">
             {step === 1 ? (
               <div className="space-y-3">
-                <p className="text-[12.5px] leading-relaxed text-ink-muted">
-                  Bu kampanyayı listede tanımak için kısa bir ad yazın.
-                </p>
                 <Field label="Kampanya adı">
                   <Input
                     ref={nameInputRef}

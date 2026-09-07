@@ -19,7 +19,7 @@ export const en: typeof tr = {
     turkish: 'Türkçe',
     english: 'English',
     workbench: 'WhatsApp workbench',
-    setupLocked: 'Setup · suggested steps',
+    setupLocked: 'Suggested: line · contacts · send',
     setupHintSoft: 'Suggested: line · contacts · send',
     done: 'Done',
     error: 'Something went wrong',
@@ -28,8 +28,8 @@ export const en: typeof tr = {
   nav: {
     aria: 'Main menu',
     more: 'More',
-    setupHint: 'Three suggested steps: brand, contacts, line.',
-    groupSetup: 'Setup',
+    setupHint: 'Suggested: line, contacts, brand.',
+    groupSetup: 'Getting started',
     groupMain: 'Main',
     groupMore: 'More',
     groupOps: 'Main',
@@ -94,7 +94,7 @@ export const en: typeof tr = {
     finishHint:
       'These steps make sending easier. The panel stays open; connect a line to send.',
     firstSendTitle: 'Optional: first test',
-    firstSendSub: 'Setup complete · send yourself a short test',
+    firstSendSub: 'Ready · send yourself a short test',
     firstSendCta: 'Send first test message',
     firstSendHint:
       'Not required. When ready, send yourself a quick test from Quick send.',
@@ -123,14 +123,14 @@ export const en: typeof tr = {
     verifyRefresh: 'Verified — refresh',
     bannerTitle: 'Quick start',
     bannerSub: 'Three suggested steps · connect a line to send',
-    bannerCta: 'View setup',
+    bannerCta: 'Go to Lines',
     connectedLabel: 'Connected',
   },
   pages: {
     ozetTitle: 'Overview',
     ozetDesc: '{org} · today’s operations view.',
     sendMessage: 'Send message',
-    finishSetup: 'Finish setup',
+    finishSetup: 'Finish remaining steps',
     raporlarTitle: 'Reports',
     raporlarDesc:
       '{range} send, delivery, line and book summary. Export campaigns as CSV.',
@@ -138,7 +138,7 @@ export const en: typeof tr = {
     kampanyalarTitle: 'Campaigns',
     kampanyalarDesc: 'Pick list + lines, start. Live progress on the detail page.',
     kampanyalarReady:
-      'Setup complete. Brand, list, line and number check are ready — create a campaign on the right. You can also send a short test from Quick send.',
+      'Ready. Create a campaign on the right. You can also send a short test from Quick send.',
     kisilerTitle: 'Contacts',
     kisilerDesc:
       'Numbers live in lists; WhatsApp registration is marked. Use Quick send for one-offs.',

@@ -10,7 +10,6 @@ export type ActionState = { error?: string; ok?: string } | null
 
 function revalidateAccounts() {
   revalidatePath('/hesaplar')
-  revalidatePath('/kurulum')
 }
 
 export async function createAccount(

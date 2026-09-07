@@ -2,13 +2,13 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { requireActiveOrg } from '@/lib/org'
 import { getSetupProgress } from '@/lib/setup-progress'
-import { OnboardingWizard } from './onboarding-wizard'
 
 export const metadata: Metadata = { title: 'Kurulum' }
 export const dynamic = 'force-dynamic'
 
 /**
- * Opsiyonel hızlı kurulum wizard’ı. Menüyü kilitlemez.
+ * Eski /kurulum bookmark ve davet linkleri için ince yönlendirici.
+ * Ayrı wizard yok — iş Hatlar / Kişiler / Marka’da.
  */
 export default async function SetupPage() {
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
@@ -29,8 +29,17 @@ export default async function SetupPage() {
   const progress = await getSetupProgress(org.id)
 
   if (progress.allDone) {
-    redirect('/kampanyalar?hazir=1')
+    redirect('/ozet')
   }
 
-  return <OnboardingWizard progress={progress} orgId={org.id} orgName={org.name} />
+  switch (progress.nextStep) {
+    case 'connected':
+      redirect('/hesaplar')
+    case 'contacts':
+      redirect('/kisiler')
+    case 'brand':
+      redirect('/marka-kiti')
+    default:
+      redirect('/ozet')
+  }
 }

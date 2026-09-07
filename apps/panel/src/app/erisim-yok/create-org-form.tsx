@@ -12,7 +12,7 @@ export function CreateOrgForm() {
 
   useEffect(() => {
     if (state?.ok) {
-      router.push('/kurulum')
+      router.push('/ozet')
       router.refresh()
     }
   }, [state?.ok, router])

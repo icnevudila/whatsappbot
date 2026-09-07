@@ -29,7 +29,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     redirect('/giris')
   }
 
-  const [{ showSetup, allDone }, orgs, { messages }] = await Promise.all([
+  const [{ showSetup }, orgs, { messages }] = await Promise.all([
     getSetupProgress(org.id),
     listUserOrgs(),
     getDictionary(),
@@ -38,14 +38,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
 
   const pathname = (await headers()).get('x-filo-pathname') ?? ''
   const homeHref = isPlatformAdmin ? '/admin' : '/ozet'
-  // Müşteri: soft checklist (banner) — menü/yol kilidi yok.
-  // Platform admin: kurulum UI tamamen kapalı.
   const customerNeedsSetup = !isPlatformAdmin && showSetup
-
-  // Kurulum sayfası tamamlandıysa kampanyaya yönlendir.
-  if (allDone && pathname === '/kurulum') {
-    redirect('/kampanyalar?hazir=1')
-  }
 
   // Ops / admin yolları yalnız platform admin.
   if (
@@ -83,10 +76,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
-            <Nav
-              showSetup={customerNeedsSetup}
-              isPlatformAdmin={isPlatformAdmin}
-            />
+            <Nav isPlatformAdmin={isPlatformAdmin} />
           </div>
 
           <div className="border-t border-hairline px-3 py-3">
@@ -128,11 +118,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
             <div className="mb-2">
               <OrgSwitcher orgs={orgs} activeOrgId={org.id} />
             </div>
-            <Nav
-              showSetup={customerNeedsSetup}
-              orientation="horizontal"
-              isPlatformAdmin={isPlatformAdmin}
-            />
+            <Nav orientation="horizontal" isPlatformAdmin={isPlatformAdmin} />
           </div>
 
           <header className="wb-topbar hidden h-[52px] shrink-0 items-center justify-between border-b border-hairline bg-surface px-5 md:flex">

@@ -69,12 +69,9 @@ export default async function BrandKitPage() {
       />
 
       {!hasSavedKit && canManage ? (
-        <div className="mb-4 rounded-[var(--radius-card)] border border-accent/30 bg-accent/8 px-3.5 py-2.5">
-          <p className="text-[12.5px] leading-relaxed text-accent">
-            Ad + ana renk yeterli. Logo ve slogan isteğe bağlı. Kaydettikten sonra mesaj
-            göndermeye geçebilirsin.
-          </p>
-        </div>
+        <p className="mb-3 text-[12.5px] text-ink-muted">
+          Ad + ana renk yeterli. Kaydet → gönderime geç.
+        </p>
       ) : null}
 
       <BrandStudio

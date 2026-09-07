@@ -78,8 +78,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // Landing oturum acikken de gezilebilir olmali; yalnizca giris ekranindan
-  // panele geri gonderiyoruz. Layout setup tamam degilse /kurulum'a cevirir.
-  // Org'suz kullanici /erisim-yok'a gider ( /ozet -> /giris sekmesi olmasin ).
+  // panele geri gonderiyoruz. Org'suz kullanici /erisim-yok'a gider.
   if (user && isAuthPath) {
     const { data: membership } = await supabase
       .from('organization_members')
@@ -101,7 +100,7 @@ export async function proxy(request: NextRequest) {
     return withSessionCookies(NextResponse.redirect(target))
   }
 
-  // RSC layout için pathname (admin gate / soft kurulum).
+  // RSC layout için pathname (admin gate).
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set('x-filo-pathname', path)
   const next = NextResponse.next({
