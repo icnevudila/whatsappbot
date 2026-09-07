@@ -39,7 +39,7 @@ export const en: typeof tr = {
     steps: 'Steps',
     ozet: 'Overview',
     hesaplar: 'Lines',
-    hizli: 'Quick send',
+    hizli: 'Single number / test',
     kisiler: 'Contacts',
     kampanyalar: 'Campaigns',
     mesajlar: 'Messages',
