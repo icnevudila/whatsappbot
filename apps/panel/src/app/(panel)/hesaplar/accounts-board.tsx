@@ -525,9 +525,9 @@ function AccountCard({
       <div className="space-y-2.5 p-3.5">
         {account.is_locked && account.lock_reason ? (
           <Notice tone="danger">
-            <span className="font-medium">Hesap kilitli.</span> {account.lock_reason}
+            <span className="font-medium">Hat kilitli.</span> {account.lock_reason}
             <br />
-            Bu hesapla gönderim yapılmıyor ve bağlı kampanyalar durduruldu.
+            Bu hatla gönderim yapılmıyor ve bağlı kampanyalar durduruldu.
           </Notice>
         ) : null}
 
@@ -538,8 +538,7 @@ function AccountCard({
         {account.status === 'connected' && !account.is_locked ? (
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <Notice tone="accent">
-              Hat bağlı ve gönderime hazır. Tek seferlik mesaj için hızlı gönderim;
-              listeden planlı gönderim için kampanya kullanın.
+              Hat bağlı. Test → Hızlı gönderim · Toplu → Kampanya.
             </Notice>
             <div className="flex shrink-0 flex-wrap gap-2">
               <AccentLink href="/hizli-gonderim">Hızlı gönderim</AccentLink>
@@ -589,7 +588,7 @@ function AccountCard({
             />
             {!quotaKnown ? (
               <p className="mt-1 text-[11px] text-ink-faint">
-                Hesap bağlandığında WhatsApp&apos;tan okunur.
+                Hat bağlandığında WhatsApp&apos;tan okunur.
               </p>
             ) : null}
           </div>

@@ -33,6 +33,7 @@ export default async function PanelHomePage() {
   const todayStart = new Date()
   todayStart.setHours(0, 0, 0, 0)
   const sinceToday = todayStart.toISOString()
+  const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
 
   const [setup, rest] = await Promise.all([
     getSetupProgress(org.id),
@@ -65,6 +66,12 @@ export default async function PanelHomePage() {
         .eq('org_id', org.id)
         .order('updated_at', { ascending: false })
         .limit(5),
+      supabase
+        .from('message_log')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', org.id)
+        .eq('direction', 'out')
+        .gte('created_at', since7d),
     ]),
   ])
 
@@ -74,6 +81,7 @@ export default async function PanelHomePage() {
     { count: outToday },
     { count: inToday },
     { data: recentCampaigns },
+    { count: out7d },
   ] = rest
 
   const { connectedCount, contactCount } = setup.counts
@@ -116,6 +124,11 @@ export default async function PanelHomePage() {
             label: 'Bugün',
             value: (outToday ?? 0) + (inToday ?? 0),
             href: '/mesajlar',
+          },
+          {
+            label: '7 gün giden',
+            value: out7d ?? 0,
+            href: '/mesajlar?sekme=giden',
           },
         ]}
       />

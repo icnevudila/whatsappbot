@@ -49,7 +49,7 @@ export async function createAccount(
 
   if (error) return { error: error.message }
 
-  // Hesap olusur olusmaz baglanti isi kuyruga girer, QR hemen gelsin.
+  // Hat oluşur oluşmaz bağlantı işi kuyruğa girer, QR hemen gelsin.
   const { error: jobError } = await enqueueJob({
     type: 'account.connect',
     accountId: account.id,
