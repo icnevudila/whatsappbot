@@ -403,10 +403,6 @@ export function NewCampaignForm({
 
             {step === 3 ? (
               <div className="space-y-4">
-                <p className="text-[12.5px] leading-relaxed text-ink-muted">
-                  Kimlere gidecek ve hangi WhatsApp hattından gidecek?
-                </p>
-
                 <CheckboxGroup
                   label="Kişi grupları"
                   options={lists}
@@ -418,7 +414,7 @@ export function NewCampaignForm({
                       <Link href="/kisiler" className="font-medium underline underline-offset-2">
                         Kişiler
                       </Link>
-                      ’den bir grup oluşturun (Excel veya numaraları yapıştırın).
+                      ’den bir grup oluşturun.
                     </>
                   }
                 />
@@ -432,20 +428,19 @@ export function NewCampaignForm({
                     <>
                       Önce{' '}
                       <Link href="/hesaplar" className="font-medium underline underline-offset-2">
-                        Hesaplar
+                        Hatlar
                       </Link>
                       ’dan WhatsApp hattı bağlayın.
                     </>
                   }
-                  hint="Birden fazla hat seçerseniz gönderim paylaşılır."
+                  hint="Birden fazla hat → gönderim paylaşılır."
                 />
 
                 {selectedLists.length > 0 && estimatedTargets > 0 ? (
-                  <Notice tone="warn">
-                    Bu gruplar ~{estimatedTargets.toLocaleString('tr-TR')} numara. Kampanya
-                    başlayınca aynı sayıda kuyruk satırı oluşur (önce hepsi hazırlanır, sonra
-                    sırayla gönderilir). Aynı kişi deftere tekrar yazılmaz.
-                  </Notice>
+                  <p className="text-[12px] text-ink-faint">
+                    ~{estimatedTargets.toLocaleString('tr-TR')} hedef · başlayınca kuyruk
+                    oluşur
+                  </p>
                 ) : null}
               </div>
             ) : null}
@@ -468,10 +463,10 @@ export function NewCampaignForm({
                 </div>
 
                 {estimatedTargets > 0 ? (
-                  <Notice tone="warn">
+                  <p className="text-[12px] text-ink-faint">
                     Başlatınca ~{estimatedTargets.toLocaleString('tr-TR')} satır kuyruk
-                    materyalize edilir. Büyük listelerde ilk hazırlık birkaç saniye sürebilir.
-                  </Notice>
+                    hazırlanır.
+                  </p>
                 ) : null}
 
                 <fieldset className="space-y-2 rounded-md border border-hairline px-3 py-3">

@@ -31,8 +31,9 @@ function bucketLast24Hours(timestamps: string[]): number[] {
 export default async function StatusPage() {
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
   let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  let isPlatformAdmin = false
   try {
-    ;({ org, supabase } = await requireActiveOrg())
+    ;({ org, supabase, isPlatformAdmin } = await requireActiveOrg())
   } catch (error) {
     if (error instanceof Error && error.message === 'NO_ORGANIZATION') {
       redirect('/erisim-yok')
@@ -196,7 +197,11 @@ export default async function StatusPage() {
           </Notice>
         ) : null}
 
-        <WorkerFleetCard workers={fleet.workers ?? []} />
+        <WorkerFleetCard
+          workers={fleet.workers ?? []}
+          leases={fleet.leases ?? []}
+          detailed={isPlatformAdmin}
+        />
 
         <Card>
           <div className="space-y-2.5 px-3.5 py-3">
