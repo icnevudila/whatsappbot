@@ -217,7 +217,7 @@ export function QuickSendForm({
             Çıkış satırı ekle (YAZMAYIN)
           </button>
           <p className="text-[11.5px] text-ink-faint">
-            Alıcı YAZMAYIN / istemiyorum yazarsa otomatik kara listeye alınır.
+            Alıcı YAZMAYIN / istemiyorum yazarsa otomatik İstemeyenler’e alınır.
           </p>
           <AiWriter
             enabled={aiEnabled}

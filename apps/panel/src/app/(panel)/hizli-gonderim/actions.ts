@@ -44,7 +44,7 @@ export async function quickSend(
   const parsed = parsePhoneList(raw)
   if (parsed.valid.length === 0) {
     return {
-      error: 'Gecerli numara bulunamadi. Ornek: 0532 123 45 67 veya +905321234567',
+      error: 'Geçerli numara bulunamadı. Örnek: 0532 123 45 67 veya +905321234567',
       invalidSamples: parsed.invalid.slice(0, 5),
     }
   }

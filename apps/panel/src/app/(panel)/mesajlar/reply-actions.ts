@@ -49,7 +49,7 @@ export async function replyToConversation(
     if (blocked === null || messages === null) {
       return { error: 'Konuşma bilgileri kontrol edilemedi. Tekrar deneyin.' }
     }
-    if (blocked > 0) return { error: 'Bu numara kara listede. Yanıt gönderilemez.' }
+    if (blocked > 0) return { error: 'Bu numara İstemeyenler’de. Yanıt gönderilemez.' }
     if (messages === 0) return { error: 'Bu hatta ait konuşma bulunamadı.' }
 
     const queued = await enqueueJob({

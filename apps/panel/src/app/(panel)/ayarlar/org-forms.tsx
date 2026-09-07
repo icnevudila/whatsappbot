@@ -74,7 +74,7 @@ export function WebhookSettingsForm({
     <form action={formAction} className="space-y-2.5 p-3.5">
       <Field
         label="CRM webhook URL"
-        hint="message.inbound ve campaign.completed olayları POST edilir."
+        hint="Gelen mesaj ve kampanya bitişinde bu adrese bildirim gider."
       >
         <Input
           name="webhook_url"
@@ -84,7 +84,10 @@ export function WebhookSettingsForm({
           placeholder="https://example.com/hooks/filo"
         />
       </Field>
-      <Field label="Webhook secret (opsiyonel)" hint="Boş bırakırsanız mevcut secret değişmez. İstek başlığı: x-filo-secret">
+      <Field
+        label="Webhook secret (opsiyonel)"
+        hint="Boş bırakırsanız mevcut secret değişmez. İsteğe özel güvenlik anahtarı."
+      >
         <Input
           name="webhook_secret"
           type="password"

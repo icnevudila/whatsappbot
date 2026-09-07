@@ -58,7 +58,7 @@ export function ApiKeyForm({
       <form action={action} className="space-y-3">
         <Field
           label="API anahtarı adı"
-          hint="POST /api/v1/jobs — Authorization: Bearer filo_…"
+          hint="Kendi yazılımınızdan kampanya göndermek için. Anahtarı bir kez gösteririz — kaydedin."
         >
           <Input name="name" defaultValue="crm" />
         </Field>

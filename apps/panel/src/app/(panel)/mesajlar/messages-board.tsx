@@ -196,7 +196,7 @@ export function MessagesBoard({
 
   const block = () => {
     if (!selectedPhone || !selectedPhone.startsWith('+')) {
-      setError('Bu konuşmada E.164 numara yok; kara listeye eklenemedi.')
+      setError('Bu sohbette telefon numarası yok; İstemeyenler’e eklenemedi.')
       toast('İstemeyenlere eklenemedi — numara yok.', 'danger')
       return
     }
@@ -388,7 +388,7 @@ export function MessagesBoard({
                 }
                 subtitle={
                   selectedPreview?.missingPhone
-                    ? 'Telefon çözülemedi (LID) · salt okuma'
+                    ? 'Numara okunamadı — yalnızca görüntüleme'
                     : [
                         threadDisplayName(selectedPreview ?? {}) ? selectedPhone : null,
                         selectedPreview?.accountLabel

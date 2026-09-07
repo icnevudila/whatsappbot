@@ -111,7 +111,7 @@ export function WaCheckForm() {
                 href={`/kampanyalar?tel=${encodeURIComponent(result.phone)}#hizli`}
                 className="w-full"
               >
-                Hızlı gönderime taşı
+                Tek numaraya gönder
               </AccentLink>
             ) : null}
           </div>

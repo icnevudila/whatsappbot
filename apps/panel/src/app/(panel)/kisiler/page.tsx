@@ -25,6 +25,7 @@ import { ContactsBoard } from './contacts-board'
 import { ListActions } from './list-actions'
 import { NewGroupForm } from './new-group-form'
 import { VerifyAllButton } from './verify-all-button'
+import { WaCheckForm } from './wa-check-form'
 
 export const metadata: Metadata = { title: 'Kişiler' }
 export const dynamic = 'force-dynamic'
@@ -172,28 +173,31 @@ export default async function ContactsPage({
           </Card>
         </div>
       ) : (
-        <Card>
-          <CardHeader
-            title="Defter"
-            subtitle={`${total} numara · seçip gruba taşı`}
-          />
-          {total > 0 ? (
-            <div className="border-b border-hairline px-3.5 py-2.5">
-              <VerifyAllButton />
-            </div>
-          ) : null}
-          <ContactsBoard
-            contacts={contacts}
-            groups={groups}
-            whatsappCount={whatsappCount}
-          />
-          <Pagination
-            page={page}
-            totalPages={pages}
-            label={`${total} kişi`}
-            hrefForPage={(p) => buildPageHref('/kisiler', p, { gorunum: 'defter' })}
-          />
-        </Card>
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.85fr)]">
+          <Card>
+            <CardHeader
+              title="Defter"
+              subtitle={`${total} numara · seçip gruba taşı`}
+            />
+            {total > 0 ? (
+              <div className="border-b border-hairline px-3.5 py-2.5">
+                <VerifyAllButton />
+              </div>
+            ) : null}
+            <ContactsBoard
+              contacts={contacts}
+              groups={groups}
+              whatsappCount={whatsappCount}
+            />
+            <Pagination
+              page={page}
+              totalPages={pages}
+              label={`${total} kişi`}
+              hrefForPage={(p) => buildPageHref('/kisiler', p, { gorunum: 'defter' })}
+            />
+          </Card>
+          <WaCheckForm />
+        </div>
       )}
     </>
   )

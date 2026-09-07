@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Card, CardHeader, PageHeader, QuietLink } from '@/components/ui'
 import { Icon, type IconName } from '@/components/icon'
+import { CONTACT_EMAIL, contactMailto } from '@/lib/contact'
 
 export const metadata = { title: 'Yardım' }
 
@@ -35,13 +36,13 @@ const guides: {
   },
   {
     icon: 'campaign',
-    title: '3. Kampanya gönder',
+    title: '3. Kampanya veya tek numara',
     href: '/kampanyalar',
     tint: 'bg-accent-soft/40',
     steps: [
-      'Mesajı yaz; istersen görsel ekle.',
-      'Kişi grubunu ve hattı seç.',
-      'Hemen gönder veya taslak kaydet. İlerlemeyi kampanya sayfasından izle.',
+      'Toplu için: mesaj + grup + hat seç, gönder.',
+      'Tek numara / test için: Kampanyalar’da üstteki bölümü aç.',
+      'İlerlemeyi kampanya sayfasından izle.',
     ],
   },
   {
@@ -67,6 +68,10 @@ const faqs: [string, string][] = [
     'Bağlantı kopunca otomatik tekrar yok. Telefondan konuşmayı kontrol et, gerekirse yeniden gönder.',
   ],
   [
+    'Raporlar nerede?',
+    'Soldaki Raporlar’da 7–90 gün özet ve CSV var. Özet’teki “7 gün giden” de oraya gider.',
+  ],
+  [
     'Şifremi unuttum',
     'Girişteki “Şifremi unuttum” ile e-posta iste. Spam’i de kontrol et.',
   ],
@@ -77,12 +82,12 @@ export default function YardimPage() {
     <>
       <PageHeader
         title="Nasıl yapılır?"
-        description="Hat bağla → kişi grubu → kampanya. Takılınca SSS’ye bak."
+        description="Hat bağla → kişi grubu → kampanya. Takılınca SSS veya destek."
       />
 
       <div className="grid gap-2.5 sm:grid-cols-2">
         {guides.map((guide) => (
-          <Card key={guide.href}>
+          <Card key={guide.href + guide.title}>
             <CardHeader
               title={
                 <span className="flex items-center gap-2">
@@ -119,10 +124,16 @@ export default function YardimPage() {
 
       <p className="mt-3 text-center text-[12px] text-ink-faint">
         Takılırsan{' '}
-        <Link href="/ayarlar" className="underline underline-offset-2">
-          Ayarlar
+        <a
+          href={contactMailto('Filo yardım')}
+          className="font-medium text-accent underline underline-offset-2"
+        >
+          {CONTACT_EMAIL}
+        </a>
+        {' · '}
+        <Link href="/marka-kiti" className="underline underline-offset-2">
+          Marka
         </Link>
-        ’dan bize yaz.
       </p>
     </>
   )

@@ -48,7 +48,7 @@ export function ReplyForm({ phone, accountId }: { phone: string; accountId: stri
           if (payload?.skipped) {
             const msg =
               payload.reason === 'blacklist'
-                ? 'Numara kara listede; gönderilmedi.'
+                ? 'Numara İstemeyenler’de; gönderilmedi.'
                 : 'Numara WhatsApp’ta doğrulanamadı; gönderilmedi.'
             setResult({ id, error: msg })
             toast(msg, 'warn')
