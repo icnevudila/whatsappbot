@@ -2,7 +2,15 @@
 
 import { useActionState } from 'react'
 import { Button, Field, Input } from '@/components/ui'
-import { provisionCustomer, setOrgSuspended, unlockAccount, type AdminActionState } from './actions'
+import {
+  adminEnqueueAccountJob,
+  cancelOrgPendingJobs,
+  provisionCustomer,
+  setAccountEnabled,
+  setOrgSuspended,
+  unlockAccount,
+  type AdminActionState,
+} from './actions'
 
 export function OrgSuspendForm({
   orgId,
@@ -44,6 +52,72 @@ export function UnlockAccountButton({ accountId }: { accountId: string }) {
       </Button>
       {state?.error ? <span className="text-[10.5px] text-danger">{state.error}</span> : null}
       {state?.ok ? <span className="text-[10.5px] text-ok-dim">{state.ok}</span> : null}
+    </form>
+  )
+}
+
+export function AccountEnableForm({
+  accountId,
+  enabled,
+}: {
+  accountId: string
+  enabled: boolean
+}) {
+  const [state, action, pending] = useActionState<AdminActionState, FormData>(
+    setAccountEnabled,
+    null,
+  )
+  return (
+    <form action={action} className="inline-flex items-center gap-1">
+      <input type="hidden" name="account_id" value={accountId} />
+      <input type="hidden" name="enabled" value={enabled ? '0' : '1'} />
+      <Button type="submit" disabled={pending} className="text-[11.5px]">
+        {pending ? '…' : enabled ? 'Devre dışı' : 'Etkinleştir'}
+      </Button>
+      {state?.error ? <span className="text-[10px] text-danger">{state.error}</span> : null}
+    </form>
+  )
+}
+
+export function AccountJobButton({
+  accountId,
+  type,
+  label,
+}: {
+  accountId: string
+  type: 'account.connect' | 'account.disconnect' | 'account.logout'
+  label: string
+}) {
+  const [state, action, pending] = useActionState<AdminActionState, FormData>(
+    adminEnqueueAccountJob,
+    null,
+  )
+  return (
+    <form action={action} className="inline-flex flex-col items-start gap-0.5">
+      <input type="hidden" name="account_id" value={accountId} />
+      <input type="hidden" name="type" value={type} />
+      <Button type="submit" disabled={pending} className="text-[11.5px]">
+        {pending ? '…' : label}
+      </Button>
+      {state?.error ? <span className="text-[10px] text-danger">{state.error}</span> : null}
+      {state?.ok ? <span className="text-[10px] text-ok-dim">{state.ok}</span> : null}
+    </form>
+  )
+}
+
+export function CancelOrgJobsForm({ orgId }: { orgId: string }) {
+  const [state, action, pending] = useActionState<AdminActionState, FormData>(
+    cancelOrgPendingJobs,
+    null,
+  )
+  return (
+    <form action={action} className="flex flex-wrap items-center gap-1.5">
+      <input type="hidden" name="org_id" value={orgId} />
+      <Button type="submit" variant="danger" disabled={pending}>
+        {pending ? '…' : 'Bekleyen işleri iptal'}
+      </Button>
+      {state?.error ? <span className="text-[11px] text-danger">{state.error}</span> : null}
+      {state?.ok ? <span className="text-[11px] text-ok-dim">{state.ok}</span> : null}
     </form>
   )
 }

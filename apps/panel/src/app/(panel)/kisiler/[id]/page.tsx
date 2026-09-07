@@ -5,7 +5,6 @@ import {
   AccentLink,
   Card,
   CardHeader,
-  Notice,
   PageHeader,
   Pagination,
   QuietLink,
@@ -20,6 +19,7 @@ import {
   totalPages,
 } from '@/lib/pagination'
 import { ListActions } from '../list-actions'
+import { AddToGroupForm } from './add-to-group-form'
 import { MemberActions, type MemberRow } from './member-actions'
 
 export const dynamic = 'force-dynamic'
@@ -102,7 +102,7 @@ export default async function ContactListDetailPage({
 
   return (
     <>
-      <QuietLink href="/kisiler">← Tüm kişiler & gruplar</QuietLink>
+      <QuietLink href="/kisiler">← Gruplar</QuietLink>
 
       <PageHeader
         title={list.name}
@@ -110,33 +110,36 @@ export default async function ContactListDetailPage({
         action={
           <div className="flex flex-wrap items-center gap-2">
             <ListActions listId={list.id} currentName={list.name} />
-            <AccentLink href="/kisiler?gorunum=defter">Defterden ekle</AccentLink>
+            <AccentLink href="/kisiler?gorunum=defter">Defter</AccentLink>
             <AccentLink href="/kampanyalar#yeni-kampanya">Kampanya</AccentLink>
           </div>
         }
       />
 
-      <Notice tone="accent">
-        Numara eklemek: Defter’den seç → bu grubu seç → Gruba taşı. Veya Kişiler’de yeni grup Excel ile.
-      </Notice>
+      <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.85fr)]">
+        <Card>
+          <CardHeader
+            title="Üyeler"
+            subtitle={
+              memberTotal === 0
+                ? 'Henüz yok'
+                : `Sayfa ${page}/${pages}`
+            }
+          />
+          <MemberActions listId={list.id} members={members} totalCount={memberTotal} />
+          <Pagination
+            page={page}
+            totalPages={pages}
+            label={`${memberTotal} numara`}
+            hrefForPage={(p) => buildPageHref(`/kisiler/${list.id}`, p)}
+          />
+        </Card>
 
-      <Card className="mt-3">
-        <CardHeader
-          title="Gruptaki numaralar"
-          subtitle={
-            memberTotal === 0
-              ? 'Henüz üye yok'
-              : `Sayfa ${page}/${pages} · seçip gruptan çıkarabilirsin`
-          }
-        />
-        <MemberActions listId={list.id} members={members} totalCount={memberTotal} />
-        <Pagination
-          page={page}
-          totalPages={pages}
-          label={`${memberTotal} numara`}
-          hrefForPage={(p) => buildPageHref(`/kisiler/${list.id}`, p)}
-        />
-      </Card>
+        <Card>
+          <CardHeader title="Numara ekle" subtitle="Excel veya yapıştır" />
+          <AddToGroupForm listId={list.id} />
+        </Card>
+      </div>
     </>
   )
 }

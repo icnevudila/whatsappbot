@@ -11,7 +11,13 @@ import {
 } from '@/components/ui'
 import { requirePlatformAdmin } from '@/lib/org'
 import { enterOrganization, setOrgAutoReply } from '../actions'
-import { OrgSuspendForm, UnlockAccountButton } from '../admin-ops-forms'
+import {
+  AccountEnableForm,
+  AccountJobButton,
+  CancelOrgJobsForm,
+  OrgSuspendForm,
+  UnlockAccountButton,
+} from '../admin-ops-forms'
 import { OrgQuotaForm } from './org-quota-form'
 
 export const dynamic = 'force-dynamic'
@@ -119,7 +125,18 @@ export default async function AdminOrgPage({
 
       <div className="mb-2.5 flex flex-wrap items-center gap-2">
         <OrgSuspendForm orgId={org.id} suspendedAt={org.suspended_at} />
+        <CancelOrgJobsForm orgId={org.id} />
       </div>
+
+      {(org.stripe_customer_id || org.stripe_subscription_id) ? (
+        <Card className="mb-2.5">
+          <CardHeader title="Stripe" subtitle="Billing kimlikleri" />
+          <div className="space-y-1 px-3.5 py-2.5 font-mono text-[11.5px] text-ink-muted">
+            <p>customer: {org.stripe_customer_id ?? '—'}</p>
+            <p>subscription: {org.stripe_subscription_id ?? '—'}</p>
+          </div>
+        </Card>
+      ) : null}
 
       <div className="grid gap-2.5 lg:grid-cols-2">
         <Card>
@@ -203,9 +220,25 @@ export default async function AdminOrgPage({
                     {a.phone_e164 ?? '—'} · bugün {a.sent_today}/{a.daily_send_limit}
                   </span>
                 </span>
-                <span className="flex items-center gap-2">
+                <span className="flex max-w-full flex-wrap items-center justify-end gap-1.5">
                   <StatusPill status={a.is_locked ? 'banned' : a.status} />
+                  <AccountEnableForm accountId={a.id} enabled={a.enabled} />
                   {a.is_locked ? <UnlockAccountButton accountId={a.id} /> : null}
+                  <AccountJobButton
+                    accountId={a.id}
+                    type="account.connect"
+                    label="Bağla"
+                  />
+                  <AccountJobButton
+                    accountId={a.id}
+                    type="account.disconnect"
+                    label="Kes"
+                  />
+                  <AccountJobButton
+                    accountId={a.id}
+                    type="account.logout"
+                    label="Logout"
+                  />
                 </span>
               </li>
             ))}

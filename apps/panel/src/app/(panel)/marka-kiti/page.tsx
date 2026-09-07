@@ -56,7 +56,7 @@ export default async function BrandKitPage() {
         title={t('pages.markaTitle')}
         description={
           canManage
-            ? 'İşletme adın, renklerin ve logon. İstersen aşağıdan kampanya görseli de üretirsin — zorunlu değil.'
+            ? 'Ad, renk, logo — kampanya görseli isteğe bağlı.'
             : 'Marka kitini görüntüleyebilirsiniz.'
         }
         action={

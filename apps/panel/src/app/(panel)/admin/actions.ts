@@ -211,3 +211,120 @@ export async function setOrgAutoReply(formData: FormData) {
 
   revalidatePath(`/admin/${orgId}`)
 }
+
+export async function setAccountEnabled(
+  _prev: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const accountId = String(formData.get('account_id') ?? '').trim()
+  const enabled = String(formData.get('enabled') ?? '') === '1'
+  if (!accountId) return { error: 'Hat gerekli.' }
+
+  try {
+    const { supabase } = await requirePlatformAdmin()
+    const { data: account, error: findError } = await supabase
+      .from('accounts')
+      .select('id, org_id, label')
+      .eq('id', accountId)
+      .maybeSingle()
+    if (findError) return { error: findError.message }
+    if (!account) return { error: 'Hat bulunamadı.' }
+
+    const service = createSupabaseServiceClient()
+    const db = service ?? supabase
+    const { error } = await db
+      .from('accounts')
+      .update({ enabled })
+      .eq('id', accountId)
+    if (error) return { error: error.message }
+
+    revalidatePath('/admin')
+    revalidatePath(`/admin/${account.org_id}`)
+    return {
+      ok: `${account.label || 'Hat'} ${enabled ? 'açıldı' : 'kapatıldı'}.`,
+    }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Yetki yok.' }
+  }
+}
+
+export async function adminEnqueueAccountJob(
+  _prev: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const accountId = String(formData.get('account_id') ?? '').trim()
+  const type = String(formData.get('type') ?? '').trim() as
+    | 'account.connect'
+    | 'account.disconnect'
+    | 'account.logout'
+  if (!accountId) return { error: 'Hat gerekli.' }
+  if (!['account.connect', 'account.disconnect', 'account.logout'].includes(type)) {
+    return { error: 'Geçersiz komut.' }
+  }
+
+  try {
+    const { userId, supabase } = await requirePlatformAdmin()
+    const { data: account, error: findError } = await supabase
+      .from('accounts')
+      .select('id, org_id, label')
+      .eq('id', accountId)
+      .maybeSingle()
+    if (findError) return { error: findError.message }
+    if (!account) return { error: 'Hat bulunamadı.' }
+
+    const service = createSupabaseServiceClient()
+    const db = service ?? supabase
+    const { error } = await db.from('jobs').insert({
+      org_id: account.org_id,
+      created_by: userId,
+      type,
+      account_id: accountId,
+      status: 'pending',
+      priority: 10,
+      payload: {},
+    })
+    if (error) {
+      return {
+        error: service
+          ? error.message
+          : `${error.message} (service role yoksa önce işletmeye gir)`,
+      }
+    }
+
+    revalidatePath(`/admin/${account.org_id}`)
+    return { ok: `${account.label || 'Hat'} · ${type} kuyruğa alındı.` }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Yetki yok.' }
+  }
+}
+
+export async function cancelOrgPendingJobs(
+  _prev: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const orgId = String(formData.get('org_id') ?? '').trim()
+  if (!orgId) return { error: 'Org gerekli.' }
+
+  try {
+    const { supabase } = await requirePlatformAdmin()
+    const service = createSupabaseServiceClient()
+    const db = service ?? supabase
+    const { data, error } = await db
+      .from('jobs')
+      .update({
+        status: 'cancelled',
+        error: 'Admin iptal',
+        finished_at: new Date().toISOString(),
+      })
+      .eq('org_id', orgId)
+      .eq('status', 'pending')
+      .select('id')
+
+    if (error) return { error: error.message }
+    revalidatePath(`/admin/${orgId}`)
+    revalidatePath('/admin')
+    return { ok: `${data?.length ?? 0} bekleyen iş iptal edildi.` }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Yetki yok.' }
+  }
+}
