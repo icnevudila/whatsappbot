@@ -115,7 +115,7 @@ export function EditCampaignForm({
   if (!editable) {
     return (
       <Card>
-        <CardHeader title="Düzenle" subtitle="Tamamlanmış kampanya düzenlenemez — kopyalayın." />
+        <CardHeader title="Düzenle" subtitle="Tamamlanmış — kopyalayın." />
         <div className="space-y-2.5 p-3.5">
           {campaign.media_url && campaign.message_type === 'image' ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -139,8 +139,8 @@ export function EditCampaignForm({
         title="Kampanyayı düzenle"
         subtitle={
           structureLocked
-            ? 'Mesajı değiştirebilirsiniz. Grup/hat için önce Duraklat.'
-            : 'Gönderilmiş numaralara dokunulmaz. Grup değişince yeni numaralar eklenir.'
+            ? 'Mesajı değiştirebilirsiniz. Grup/hat için Duraklat.'
+            : 'Gönderilmişlere dokunulmaz. Grup değişince yeni numaralar eklenir.'
         }
       />
 
@@ -160,7 +160,7 @@ export function EditCampaignForm({
 
         <Field
           label="Mesaj"
-          hint="Kalan hedeflere yeni metin gider. İstemiyorum / YAZMAYIN → gruptan çıkar."
+          hint="Kalanlara yeni metin gider. İstemiyorum / YAZMAYIN → gruptan çıkar."
         >
           <Textarea name="body" rows={5} defaultValue={campaign.body ?? ''} />
         </Field>
@@ -206,7 +206,7 @@ export function EditCampaignForm({
         <div>
           <span className="mb-1.5 block text-[12px] font-medium text-ink-muted">
             Kişi grupları
-            {structureLocked ? ' (duraklatınca değişir)' : ''}
+            {structureLocked ? ' (önce duraklat)' : ''}
           </span>
           {structureLocked
             ? campaign.source_list_ids.map((id) => (
@@ -257,15 +257,15 @@ export function EditCampaignForm({
                 .filter((l) => campaign.source_list_ids.includes(l.id))
                 .reduce((s, l) => s + (l.contactCount ?? 0), 0)
                 .toLocaleString('tr-TR')}{' '}
-              numara. Yeniden başlatınca bu kadar kuyruk satırı materyalize edilir.
+              numara. Yeniden başlatınca kuyruğa yazılır.
             </Notice>
           ) : null}
         </div>
 
         <div>
           <span className="mb-1.5 block text-[12px] font-medium text-ink-muted">
-            Gönderen hat
-            {structureLocked ? ' (duraklatınca değişir)' : ''}
+            Gönderen hatlar
+            {structureLocked ? ' (önce duraklat)' : ''}
           </span>
           {structureLocked
             ? selectedAccountIds.map((id) => (
@@ -311,8 +311,7 @@ export function EditCampaignForm({
           <label className="flex items-start gap-2 text-[12.5px] text-ink-muted">
             <input type="checkbox" name="cancel_remaining" value="1" className="mt-0.5 size-4" />
             <span>
-              Kalan gönderimleri iptal et ve seçili gruplardan yeniden doldur. Gönderilmişlere
-              dokunulmaz.
+              Kalan gönderimleri iptal et; seçili gruplardan yeniden doldur.
             </span>
           </label>
         ) : null}
@@ -331,7 +330,12 @@ export function EditCampaignForm({
         {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
         {state?.ok ? <Notice tone="accent">{state.ok}</Notice> : null}
 
-        <Button type="submit" variant="accent" disabled={pending}>
+        <Button
+          type="submit"
+          variant="accent"
+          className="min-h-11 w-full touch-manipulation sm:min-h-9 sm:w-auto"
+          disabled={pending}
+        >
           {pending ? 'Kaydediliyor…' : 'Kaydet'}
         </Button>
       </form>

@@ -81,8 +81,9 @@ export async function unlockAccount(
       p_account_id: accountId,
     } as never)
     if (error) return { error: error.message }
-    const row = data as { label?: string | null; job_id?: number } | null
+    const row = data as { label?: string | null; job_id?: number; org_id?: string } | null
     revalidatePath('/admin')
+    if (row?.org_id) revalidatePath(`/admin/${row.org_id}`)
     return {
       ok: `${row?.label || 'Hat'} kilidi açıldı · job #${row?.job_id ?? '—'}`,
     }
@@ -324,6 +325,81 @@ export async function cancelOrgPendingJobs(
     revalidatePath(`/admin/${orgId}`)
     revalidatePath('/admin')
     return { ok: `${data?.length ?? 0} bekleyen iş iptal edildi.` }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Yetki yok.' }
+  }
+}
+
+export async function lockAccount(
+  _prev: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const accountId = String(formData.get('account_id') ?? '').trim()
+  const reason = String(formData.get('reason') ?? '').trim() || 'Admin kilidi'
+  if (!accountId) return { error: 'Hat gerekli.' }
+
+  try {
+    const { supabase } = await requirePlatformAdmin()
+    const { data: account, error: findError } = await supabase
+      .from('accounts')
+      .select('id, org_id, label')
+      .eq('id', accountId)
+      .maybeSingle()
+    if (findError) return { error: findError.message }
+    if (!account) return { error: 'Hat bulunamadı.' }
+
+    const service = createSupabaseServiceClient()
+    const db = service ?? supabase
+    const { error } = await db
+      .from('accounts')
+      .update({
+        is_locked: true,
+        lock_reason: reason.slice(0, 200),
+        locked_at: new Date().toISOString(),
+        enabled: false,
+      })
+      .eq('id', accountId)
+    if (error) return { error: error.message }
+
+    revalidatePath('/admin')
+    revalidatePath(`/admin/${account.org_id}`)
+    return { ok: `${account.label || 'Hat'} kilitlendi.` }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Yetki yok.' }
+  }
+}
+
+export async function setAccountDailyLimit(
+  _prev: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const accountId = String(formData.get('account_id') ?? '').trim()
+  const limit = Number(formData.get('daily_send_limit'))
+  if (!accountId) return { error: 'Hat gerekli.' }
+  if (!Number.isFinite(limit) || limit < 0 || limit > 50_000) {
+    return { error: 'Günlük limit 0–50000 olmalı.' }
+  }
+
+  try {
+    const { supabase } = await requirePlatformAdmin()
+    const { data: account, error: findError } = await supabase
+      .from('accounts')
+      .select('id, org_id, label')
+      .eq('id', accountId)
+      .maybeSingle()
+    if (findError) return { error: findError.message }
+    if (!account) return { error: 'Hat bulunamadı.' }
+
+    const service = createSupabaseServiceClient()
+    const db = service ?? supabase
+    const { error } = await db
+      .from('accounts')
+      .update({ daily_send_limit: Math.floor(limit) })
+      .eq('id', accountId)
+    if (error) return { error: error.message }
+
+    revalidatePath(`/admin/${account.org_id}`)
+    return { ok: `${account.label || 'Hat'} günlük limit → ${Math.floor(limit)}` }
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Yetki yok.' }
   }

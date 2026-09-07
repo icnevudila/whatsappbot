@@ -5,7 +5,9 @@ import { Button, Field, Input } from '@/components/ui'
 import {
   adminEnqueueAccountJob,
   cancelOrgPendingJobs,
+  lockAccount,
   provisionCustomer,
+  setAccountDailyLimit,
   setAccountEnabled,
   setOrgSuspended,
   unlockAccount,
@@ -52,6 +54,52 @@ export function UnlockAccountButton({ accountId }: { accountId: string }) {
       </Button>
       {state?.error ? <span className="text-[10.5px] text-danger">{state.error}</span> : null}
       {state?.ok ? <span className="text-[10.5px] text-ok-dim">{state.ok}</span> : null}
+    </form>
+  )
+}
+
+export function AccountLockForm({ accountId }: { accountId: string }) {
+  const [state, action, pending] = useActionState<AdminActionState, FormData>(lockAccount, null)
+  return (
+    <form action={action} className="inline-flex flex-wrap items-center gap-1">
+      <input type="hidden" name="account_id" value={accountId} />
+      <Input name="reason" placeholder="Kilit nedeni" className="w-[120px]" maxLength={120} />
+      <Button type="submit" variant="danger" disabled={pending} className="text-[11.5px]">
+        {pending ? '…' : 'Kilitle'}
+      </Button>
+      {state?.error ? <span className="text-[10px] text-danger">{state.error}</span> : null}
+    </form>
+  )
+}
+
+export function AccountDailyLimitForm({
+  accountId,
+  dailyLimit,
+}: {
+  accountId: string
+  dailyLimit: number
+}) {
+  const [state, action, pending] = useActionState<AdminActionState, FormData>(
+    setAccountDailyLimit,
+    null,
+  )
+  return (
+    <form action={action} className="flex flex-wrap items-center gap-1.5 text-[12px]">
+      <input type="hidden" name="account_id" value={accountId} />
+      <span className="text-ink-faint">Günlük limit</span>
+      <Input
+        name="daily_send_limit"
+        type="number"
+        min={0}
+        max={50000}
+        defaultValue={dailyLimit}
+        className="w-[88px]"
+      />
+      <Button type="submit" disabled={pending} className="text-[11.5px]">
+        {pending ? '…' : 'Kaydet'}
+      </Button>
+      {state?.error ? <span className="text-[10px] text-danger">{state.error}</span> : null}
+      {state?.ok ? <span className="text-[10px] text-ok-dim">{state.ok}</span> : null}
     </form>
   )
 }
@@ -142,8 +190,8 @@ export function ProvisionCustomerForm() {
           defaultValue="starter"
           className="h-9 w-full rounded-md border border-hairline bg-surface px-2 text-[13px]"
         >
+          <option value="free">free</option>
           <option value="starter">starter</option>
-          <option value="growth">growth</option>
           <option value="pro">pro</option>
           <option value="enterprise">enterprise</option>
         </select>

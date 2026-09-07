@@ -8,10 +8,12 @@ export function ProfileForm({
   fullName,
   company,
   email,
+  compact = false,
 }: {
   fullName: string
   company: string
   email: string
+  compact?: boolean
 }) {
   const [state, formAction, pending] = useActionState<ProfileState, FormData>(
     updateProfile,
@@ -20,14 +22,13 @@ export function ProfileForm({
 
   return (
     <form action={formAction} className="space-y-2.5 p-3.5">
-      <Field
-        label="E-posta"
-        hint="Giriş adresiniz. Değiştirmek için desteğe yazın."
-      >
-        <Input value={email} disabled readOnly />
-      </Field>
+      {!compact ? (
+        <Field label="E-posta" hint="Değiştirmek için desteğe yazın.">
+          <Input value={email} disabled readOnly />
+        </Field>
+      ) : null}
 
-      <Field label="Ad soyad" hint="Ekip listesinde ve bildirimlerde görünür.">
+      <Field label="Ad soyad">
         <Input
           name="full_name"
           defaultValue={fullName}
@@ -36,20 +37,34 @@ export function ProfileForm({
         />
       </Field>
 
-      <Field label="Firma" hint="İsteğe bağlı.">
-        <Input
-          name="company"
-          defaultValue={company}
-          placeholder="Örn. Filo Ticaret"
-          autoComplete="organization"
-        />
-      </Field>
+      {compact ? (
+        <details className="text-[12.5px]">
+          <summary className="cursor-pointer text-ink-muted">Firma (isteğe bağlı)</summary>
+          <div className="mt-2">
+            <Input
+              name="company"
+              defaultValue={company}
+              placeholder="Örn. Filo Ticaret"
+              autoComplete="organization"
+            />
+          </div>
+        </details>
+      ) : (
+        <Field label="Firma" hint="İsteğe bağlı.">
+          <Input
+            name="company"
+            defaultValue={company}
+            placeholder="Örn. Filo Ticaret"
+            autoComplete="organization"
+          />
+        </Field>
+      )}
 
       {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
       {state?.ok ? <Notice tone="accent">{state.ok}</Notice> : null}
 
       <Button type="submit" variant="accent" disabled={pending}>
-        {pending ? 'Kaydediliyor…' : 'Profili kaydet'}
+        {pending ? 'Kaydediliyor…' : 'Kaydet'}
       </Button>
     </form>
   )

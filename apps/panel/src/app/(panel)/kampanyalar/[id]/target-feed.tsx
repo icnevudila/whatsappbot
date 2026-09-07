@@ -41,9 +41,7 @@ function statusRail(status: string): string {
   }
 }
 
-/**
- * Kampanya hedefleri — giden numaralarin gercek kaynagi (paylasilanlar).
- */
+/** Kampanya hedefleri — giden numaraların gerçek kaynağı (paylaşılanlar). */
 export function TargetFeed({
   campaignId,
   initial,
@@ -140,15 +138,15 @@ export function TargetFeed({
     targets.length === 0
       ? campaignStatus === 'draft'
         ? 'Henüz numara yok'
-        : 'Paylaşılan numara yok'
+        : 'Numara yok'
       : 'Bu filtrede satır yok'
 
   const emptyDescription =
     targets.length === 0
       ? campaignStatus === 'draft'
-        ? 'Kampanya başlayınca numaralar burada listelenir.'
-        : 'Bu kampanya için henüz numara satırı oluşmamış.'
-      : 'Başka bir durum filtresi seçin veya Tümü’ne dönün.'
+        ? 'Başlayınca numaralar burada görünür.'
+        : 'Henüz numara satırı oluşmamış.'
+      : 'Başka bir filtre seçin veya Tümü’ne dönün.'
 
   return (
     <div className="flex max-h-[min(32rem,calc(100dvh-14rem))] min-h-[18rem] flex-col overflow-hidden rounded-[var(--radius-card)] border border-hairline bg-surface shadow-[var(--shadow-card)]">
@@ -158,8 +156,8 @@ export function TargetFeed({
       />
 
       <p className="shrink-0 border-b border-hairline px-3.5 py-2 text-[11.5px] leading-relaxed text-ink-faint">
-        Numaraya tıklayınca Mesajlar’da konuşmayı açar.{' '}
-        <span className="font-medium text-ink-muted">Atlandı:</span> WhatsApp’ta yok / kota.{' '}
+        Numara → Mesajlar’da sohbet.{' '}
+        <span className="font-medium text-ink-muted">Atlandı:</span> yok / kota.{' '}
         <span className="font-medium text-ink-muted">Başarısız:</span> iletilemedi.
       </p>
 

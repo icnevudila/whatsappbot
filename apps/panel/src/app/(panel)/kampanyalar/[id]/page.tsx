@@ -130,12 +130,12 @@ export default async function CampaignDetailPage({
     <>
       <PageHeader
         title={campaign.name}
-        description="Canlı ilerleme, düzenleme, hatlar ve hedef numaralar. Gönderilmiş kayıtlar korunur."
+        description="İlerleme, düzenleme ve hedef numaralar."
         action={
           <div className="flex flex-wrap items-center gap-2">
             <StatusPill status={campaign.status} />
             <QuietLink href="/kampanyalar">← Kampanyalar</QuietLink>
-            <QuietLink href="#paylasilanlar">Hedef numaralar</QuietLink>
+            <QuietLink href="#paylasilanlar">Numaralar</QuietLink>
           </div>
         }
       />
@@ -143,23 +143,20 @@ export default async function CampaignDetailPage({
       {flash === 'taslak' ? (
         <div className="mb-2.5">
           <Notice tone="accent">
-            Taslak kaydedildi. Gönderim başlamadı — hazır olunca{' '}
-            <strong>Gönderimi başlat</strong>’a basın.
+            Taslak kaydedildi. Hazır olunca <strong>Başlat</strong>’a basın.
           </Notice>
         </div>
       ) : null}
       {flash === 'zamanlandi' ? (
         <div className="mb-2.5">
-          <Notice tone="accent">
-            Kampanya zamanlandı. Seçilen saatte otomatik başlar.
-          </Notice>
+          <Notice tone="accent">Zamanlandı — seçilen saatte başlar.</Notice>
         </div>
       ) : null}
       {flash === 'baslatilamadi' ? (
         <div className="mb-2.5">
           <Notice tone="warn">
-            Kampanya kaydedildi ama başlatma kuyruğa alınamadı. Biraz sonra tekrar
-            “Gönderimi başlat” deneyin.
+            Kaydedildi; başlatma kuyruğa alınamadı. Biraz sonra <strong>Başlat</strong>’ı
+            deneyin.
           </Notice>
         </div>
       ) : null}

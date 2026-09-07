@@ -199,12 +199,12 @@ export function CampaignLive({
           </dl>
 
           <p className="text-[12px] text-ink-muted">
-            Paylaşılan numaraların satır satır durumu aşağıda.{' '}
+            Numara durumları aşağıda.{' '}
             <a
               href="#paylasilanlar"
               className="font-medium text-accent underline underline-offset-2"
             >
-              Hedef numaralara git
+              Numaralara git
             </a>
           </p>
 
@@ -228,7 +228,7 @@ export function CampaignLive({
               ) : null}
               {accounts.length > 0 ? (
                 <p>
-                  <span className="text-ink-faint">Gönderen hatlar: </span>
+                  <span className="text-ink-faint">Hatlar: </span>
                   {accounts.map((account, index) => (
                     <span key={account.id}>
                       {index > 0 ? ', ' : null}
@@ -247,15 +247,12 @@ export function CampaignLive({
 
           {campaign.status === 'running' && remaining > 0 ? (
             <p className="text-[11.5px] text-ink-faint tabular">
-              Mevcut hızla tahmini kalan süre: yaklaşık {etaMinutes} dakika
+              Tahmini kalan: ~{etaMinutes} dk
             </p>
           ) : null}
 
           {campaign.status === 'completed' && !campaign.stop_reason ? (
-            <Notice tone="accent">
-              Kampanya tamamlandı. Tüm hedefler işlendi; paylaşılan numaraları aşağıdan
-              inceleyebilirsiniz.
-            </Notice>
+            <Notice tone="accent">Kampanya tamamlandı. Numaralar aşağıda.</Notice>
           ) : null}
 
           {campaign.stop_reason ? (
@@ -264,41 +261,43 @@ export function CampaignLive({
               {campaign.stop_reason}
             </Notice>
           ) : campaign.status === 'stopped' ? (
-            <Notice tone="danger">
-              Kampanya durduruldu. Ayrıntılı neden kaydı yok; paylaşılan satırlardaki hatalara
-              bakın.
-            </Notice>
+            <Notice tone="danger">Kampanya durduruldu. Satır hatalarına bakın.</Notice>
           ) : null}
 
           {error ? <Notice tone="danger">{error}</Notice> : null}
 
           {campaign.status === 'running' ? (
             <Notice tone="warn">
-              Grup veya hat değiştirmek için önce <strong>Duraklat</strong>. Mesaj
-              değişikliği kalan gönderimleri etkiler; gidenler değişmez.
+              Grup/hat için önce <strong>Duraklat</strong>. Mesaj değişikliği kalanları
+              etkiler.
             </Notice>
           ) : null}
 
           {campaign.status === 'paused' || campaign.status === 'stopped' ? (
             <Notice tone="accent">
-              Aşağıdan mesaj, grup ve hatları düzenleyebilirsiniz. Yanlış gruptaysanız
-              “Kalan gönderimleri iptal et”i işaretleyin.
+              Mesaj, grup ve hatları aşağıdan düzenleyin. Yanlış gruptaysanız kalanları
+              iptal edin.
             </Notice>
           ) : null}
 
-          <div className="flex flex-wrap gap-1.5 border-t border-hairline pt-2.5">
-            {campaign.status === 'draft' || campaign.status === 'stopped' ? (
-              <>
-                {queueHint > 0 ? (
-                  <div className="mb-1 w-full basis-full">
-                    <Notice tone="warn">
-                      Başlatınca ~{queueHint.toLocaleString('tr-TR')} hedef satırı kuyruğa
-                      yazılır; sonra sırayla gönderilir.
-                    </Notice>
-                  </div>
-                ) : null}
+          <div className="space-y-2 border-t border-hairline pt-2.5">
+            <div className="flex items-center justify-between gap-2 sm:hidden">
+              <span className="text-[12px] font-medium text-ink-muted">Durum</span>
+              <StatusPill status={campaign.status} />
+            </div>
+
+            {queueHint > 0 &&
+            (campaign.status === 'draft' || campaign.status === 'stopped') ? (
+              <Notice tone="warn">
+                Başlatınca ~{queueHint.toLocaleString('tr-TR')} hedef kuyruğa yazılır.
+              </Notice>
+            ) : null}
+
+            <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap">
+              {campaign.status === 'draft' || campaign.status === 'stopped' ? (
                 <Button
                   variant="accent"
+                  className="min-h-11 w-full touch-manipulation sm:min-h-9 sm:w-auto"
                   disabled={pending}
                   onClick={() => run(() => startCampaign(campaign.id))}
                 >
@@ -306,50 +305,57 @@ export function CampaignLive({
                     ? 'Başlatılıyor…'
                     : campaign.status === 'stopped'
                       ? 'Yeniden başlat'
-                      : 'Gönderimi başlat'}
+                      : 'Başlat'}
                 </Button>
-              </>
-            ) : null}
+              ) : null}
 
-            {campaign.status === 'running' ? (
-              <Button disabled={pending} onClick={() => run(() => pauseCampaign(campaign.id))}>
-                {pending ? 'Duraklatılıyor…' : 'Duraklat (düzenle)'}
-              </Button>
-            ) : null}
+              {campaign.status === 'running' ? (
+                <Button
+                  className="min-h-11 w-full touch-manipulation sm:min-h-9 sm:w-auto"
+                  disabled={pending}
+                  onClick={() => run(() => pauseCampaign(campaign.id))}
+                >
+                  {pending ? 'Duraklatılıyor…' : 'Duraklat'}
+                </Button>
+              ) : null}
 
-            {campaign.status === 'paused' ? (
+              {campaign.status === 'paused' ? (
+                <Button
+                  variant="accent"
+                  className="min-h-11 w-full touch-manipulation sm:min-h-9 sm:w-auto"
+                  disabled={pending}
+                  onClick={() => run(() => resumeCampaign(campaign.id))}
+                >
+                  {pending ? 'Devam ediliyor…' : 'Devam et'}
+                </Button>
+              ) : null}
+
+              {['running', 'paused', 'scheduled'].includes(campaign.status) ? (
+                <Button
+                  variant="danger"
+                  className="min-h-11 w-full touch-manipulation sm:min-h-9 sm:w-auto"
+                  disabled={pending}
+                  onClick={() => run(() => stopCampaign(campaign.id))}
+                >
+                  Durdur
+                </Button>
+              ) : null}
+
               <Button
-                variant="accent"
+                className="min-h-11 w-full touch-manipulation sm:min-h-9 sm:w-auto"
                 disabled={pending}
-                onClick={() => run(() => resumeCampaign(campaign.id))}
+                onClick={() =>
+                  run(async () => {
+                    const result = await duplicateCampaign(campaign.id)
+                    if (result.error) return { error: result.error }
+                    if (result.id) router.push(`/kampanyalar/${result.id}`)
+                    return {}
+                  })
+                }
               >
-                {pending ? 'Devam ediliyor…' : 'Devam et'}
+                {pending ? 'Kopyalanıyor…' : 'Kopyala'}
               </Button>
-            ) : null}
-
-            {['running', 'paused', 'scheduled'].includes(campaign.status) ? (
-              <Button
-                variant="danger"
-                disabled={pending}
-                onClick={() => run(() => stopCampaign(campaign.id))}
-              >
-                Durdur
-              </Button>
-            ) : null}
-
-            <Button
-              disabled={pending}
-              onClick={() =>
-                run(async () => {
-                  const result = await duplicateCampaign(campaign.id)
-                  if (result.error) return { error: result.error }
-                  if (result.id) router.push(`/kampanyalar/${result.id}`)
-                  return {}
-                })
-              }
-            >
-              {pending ? 'Kopyalanıyor…' : 'Kampanyayı kopyala'}
-            </Button>
+            </div>
           </div>
         </div>
       </Card>

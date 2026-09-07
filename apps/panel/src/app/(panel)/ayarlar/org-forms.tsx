@@ -34,14 +34,7 @@ export function OrgSettingsForm({
 
   return (
     <form action={formAction} className="space-y-2.5 p-3.5">
-      <Field
-        label="İşletme adı"
-        hint={
-          canEdit
-            ? 'Kampanya ve hesaplarda görünen ad.'
-            : 'Yalnızca sahip veya yönetici değiştirebilir.'
-        }
-      >
+      <Field label="İşletme adı">
         <Input
           name="name"
           defaultValue={orgName}
@@ -58,7 +51,7 @@ export function OrgSettingsForm({
 
       {canEdit ? (
         <Button type="submit" variant="accent" disabled={pending}>
-          {pending ? 'Kaydediliyor…' : 'İşletmeyi kaydet'}
+          {pending ? 'Kaydediliyor…' : 'Kaydet'}
         </Button>
       ) : null}
     </form>
@@ -242,10 +235,7 @@ export function MembersPanel({
 
       {canManage ? (
         <form action={formAction} className="space-y-2.5 border-t border-hairline p-3.5">
-          <Field
-            label="Üye ekle"
-            hint="Filo hesabı olan e-posta eklenir. Davetler şu an kapalı."
-          >
+          <Field label="Üye ekle" hint="Mevcut Filo hesabı e-postası.">
             <Input
               name="email"
               type="email"
@@ -256,8 +246,8 @@ export function MembersPanel({
           </Field>
           <Field label="Rol">
             <Select name="role" defaultValue="member">
-              <option value="member">Üye — gönderim ve listeler</option>
-              <option value="admin">Yönetici — ekip ve işletme</option>
+              <option value="member">Üye</option>
+              <option value="admin">Yönetici</option>
             </Select>
           </Field>
           {state?.error ? (

@@ -8,7 +8,8 @@
     "start": "node --env-file-if-exists=.env --import tsx src/index.ts",
     "db:check": "node --env-file-if-exists=.env --import tsx src/check-db.ts",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test src/**/*.test.ts"
+    "test": "node --import tsx --test src/**/*.test.ts",
+    "health": "node -e \"fetch('http://127.0.0.1:'+(process.env.HEALTH_PORT||8080)+'/ready').then(async r=>{const j=await r.json();console.log(r.status,JSON.stringify(j));process.exit(j.ready?0:1)}).catch(e=>{console.error(e);process.exit(1)})\""
   },
   "dependencies": {
     "@sentry/node": "^10.73.0",

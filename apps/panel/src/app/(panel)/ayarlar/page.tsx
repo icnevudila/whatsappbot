@@ -1,4 +1,5 @@
 ﻿import type { Metadata } from 'next'
+import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import {
@@ -11,7 +12,6 @@ import {
   Notice,
   PageHeader,
 } from '@/components/ui'
-import { capToday } from '@/lib/capacity'
 import { createT } from '@/lib/i18n'
 import { getDictionary } from '@/lib/i18n/server'
 import { requireActiveOrg } from '@/lib/org'
@@ -69,6 +69,7 @@ export default async function SettingsPage({
   monthStart.setHours(0, 0, 0, 0)
 
   const canManage = org.role === 'owner' || org.role === 'admin'
+  const isOwner = org.role === 'owner'
   const { messages } = await getDictionary()
 
   const [
@@ -78,26 +79,21 @@ export default async function SettingsPage({
     { data: memberRows },
     { data: apiKeyRows },
   ] = await Promise.all([
-    supabase
-      .from('profiles')
-      .select('full_name, company')
-      .eq('id', userId)
-      .single(),
-    supabase
-      .from('accounts')
-      .select('id, status, daily_send_limit, warmup_started_at')
-      .eq('org_id', org.id),
+    supabase.from('profiles').select('full_name, company').eq('id', userId).single(),
+    supabase.from('accounts').select('id, status').eq('org_id', org.id),
     supabase
       .from('message_log')
       .select('id', { count: 'exact', head: true })
       .eq('org_id', org.id)
       .eq('direction', 'out')
       .gte('created_at', monthStart.toISOString()),
-    supabase
-      .from('organization_members')
-      .select('user_id, role')
-      .eq('org_id', org.id)
-      .order('created_at', { ascending: true }),
+    canManage
+      ? supabase
+          .from('organization_members')
+          .select('user_id, role')
+          .eq('org_id', org.id)
+          .order('created_at', { ascending: true })
+      : Promise.resolve({ data: [] as { user_id: string; role: string }[] }),
     canManage
       ? supabase
           .from('org_api_keys' as never)
@@ -117,9 +113,6 @@ export default async function SettingsPage({
   ])
 
   const t = createT(messages)
-  const plan = org.plan
-  const accountsQuota = org.accounts_quota
-  const messageQuota = org.monthly_message_quota
   const usedAccounts = accounts?.length ?? 0
   const usedMessages = sentThisMonth ?? 0
   const connectedCount = (accounts ?? []).filter((a) => a.status === 'connected').length
@@ -127,273 +120,161 @@ export default async function SettingsPage({
   const memberIds = (memberRows ?? []).map((row) => row.user_id)
   const { data: memberProfiles } =
     memberIds.length > 0
-      ? await supabase
-          .from('profiles')
-          .select('id, full_name, email')
-          .in('id', memberIds)
+      ? await supabase.from('profiles').select('id, full_name, email').in('id', memberIds)
       : { data: [] as { id: string; full_name: string | null; email: string | null }[] }
 
-  const profileById = Object.fromEntries(
-    (memberProfiles ?? []).map((row) => [row.id, row]),
-  )
-
+  const profileById = Object.fromEntries((memberProfiles ?? []).map((row) => [row.id, row]))
   const members = (memberRows ?? []).map((row) => {
     const memberProfile = profileById[row.user_id]
     const isSelf = row.user_id === userId
     return {
       userId: row.user_id,
       email: memberProfile?.email ?? (isSelf ? (user.email ?? null) : null),
-      fullName:
-        memberProfile?.full_name ?? (isSelf ? (profile?.full_name ?? null) : null),
+      fullName: memberProfile?.full_name ?? (isSelf ? (profile?.full_name ?? null) : null),
       role: row.role,
     }
   })
 
-  // Günlük teorik tavan: paketin değil, bağlı hatların gerçek toplamı.
-  const dailyCeiling = (accounts ?? [])
-    .filter((account) => account.status === 'connected')
-    .reduce(
-      (total, account) =>
-        total +
-        capToday({
-          daily_send_limit: account.daily_send_limit,
-          sent_today: 0,
-          sent_today_on: null,
-          warmup_started_at: account.warmup_started_at,
-        }),
-      0,
-    )
-
-  const profileIncomplete = !profile?.full_name?.trim()
-
   return (
-    <div className="filo-fade-in">
+    <div className="filo-fade-in mx-auto w-full max-w-xl space-y-2.5">
       <PageHeader
         title={t('pages.ayarlarTitle')}
-        description="İşletme adı, ekip ve paket. Gönderim hatları Hatlar’da."
-        action={
-          <span className="text-[12px] text-ink-muted">
-            Rolünüz: {ROLE_HINT[org.role] ?? org.role}
-          </span>
-        }
+        description={`${org.name} · ${ROLE_HINT[org.role] ?? org.role}`}
       />
 
       {billing === 'ok' ? (
-        <div className="mb-4">
-          <Notice tone="success">
-            Ödeme tamamlandı. Paketiniz kısa süre içinde güncellenir.
-          </Notice>
-        </div>
+        <Notice tone="success">Ödeme alındı. Paket kısa süre içinde güncellenir.</Notice>
       ) : null}
       {billing === 'cancel' ? (
-        <div className="mb-4">
-          <Notice tone="warn">Ödeme iptal edildi. Paketiniz değişmedi.</Notice>
-        </div>
+        <Notice tone="warn">Ödeme iptal edildi.</Notice>
       ) : null}
 
       {org.suspended_at ? (
-        <div className="mb-4">
-          <Notice tone="danger">
-            İşletme askıya alındı
-            {org.suspend_reason ? `: ${org.suspend_reason}` : ''}. Gönderim ve job kuyruğu kapalı.
-            Destek için {CONTACT_EMAIL}.
-          </Notice>
-        </div>
+        <Notice tone="danger">
+          İşletme askıda{org.suspend_reason ? `: ${org.suspend_reason}` : ''}. Destek:{' '}
+          {CONTACT_EMAIL}
+        </Notice>
       ) : null}
 
-      {profileIncomplete || connectedCount === 0 ? (
-        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[var(--radius-card)] border border-hairline bg-surface px-3.5 py-2.5">
-          <span className="text-[11.5px] font-medium tracking-wide text-ink-faint uppercase">
-            Eksikler
-          </span>
-          {connectedCount === 0 ? (
-            <Link
-              href="/hesaplar"
-              className="text-[12.5px] text-ink-muted underline decoration-hairline-strong underline-offset-2 hover:text-ink"
-            >
-              WhatsApp hattı bağla
-            </Link>
-          ) : (
-            <span className="text-[12.5px] text-ink-faint line-through">
-              WhatsApp hattı bağla
-            </span>
-          )}
-          {profileIncomplete ? (
-            <a
-              href="#profil"
-              className="text-[12.5px] text-ink-muted underline decoration-hairline-strong underline-offset-2 hover:text-ink"
-            >
-              Profili tamamla
-            </a>
-          ) : (
-            <span className="text-[12.5px] text-ink-faint line-through">
-              Profili tamamla
-            </span>
-          )}
-          <Link
-            href="/marka-kiti"
-            className="text-[12.5px] text-ink-muted underline decoration-hairline-strong underline-offset-2 hover:text-ink"
-          >
-            Markayı ayarla
-          </Link>
+      <Card>
+        <CardHeader
+          title="Paket"
+          action={<Badge tone="accent">{planLabel(org.plan)}</Badge>}
+        />
+        <div className="space-y-2.5 p-3.5">
+          <QuotaRow
+            label="Hat"
+            used={usedAccounts}
+            total={org.accounts_quota}
+            hint={
+              connectedCount === 0 ? (
+                <AccentLink href="/hesaplar" className="text-[12px]">
+                  Hat bağla →
+                </AccentLink>
+              ) : (
+                `${connectedCount} bağlı`
+              )
+            }
+          />
+          <QuotaRow
+            label="Bu ay mesaj"
+            used={usedMessages}
+            total={org.monthly_message_quota}
+            hint="Her ayın 1’inde sıfırlanır"
+          />
         </div>
+      </Card>
+
+      <Card>
+        <CardHeader title="Profil" subtitle={user.email ?? undefined} />
+        <ProfileForm
+          fullName={profile?.full_name ?? ''}
+          company={profile?.company ?? ''}
+          email={user.email ?? ''}
+          compact
+        />
+      </Card>
+
+      {canManage ? (
+        <Card>
+          <CardHeader title="İşletme" />
+          <OrgSettingsForm orgName={org.name} canEdit />
+        </Card>
       ) : null}
 
-      <div className="grid gap-2.5 lg:grid-cols-2">
-        <div className="order-2 flex flex-col gap-2.5 lg:order-1">
-          <Card>
-            <CardHeader
-              title="İşletme"
-              subtitle={org.slug}
-              action={
-                canManage ? null : (
-                  <span className="text-[11.5px] text-ink-faint">Salt okunur</span>
-                )
-              }
-            />
-            <OrgSettingsForm orgName={org.name} canEdit={canManage} />
-          </Card>
+      {canManage ? (
+        <Card>
+          <CardHeader
+            title="Ekip"
+            subtitle={members.length <= 1 ? 'Yalnız siz' : `${members.length} üye`}
+          />
+          <MembersPanel members={members} canManage />
+        </Card>
+      ) : null}
 
-          <Card>
-            <CardHeader
-              title="Ekip"
-              subtitle={
-                members.length === 1
-                  ? '1 üye · yalnızca siz'
-                  : `${members.length} üye`
-              }
-            />
-            <MembersPanel members={members} canManage={canManage} />
-          </Card>
+      <Card>
+        <CardHeader title="Oturum" />
+        <div className="flex flex-wrap items-center justify-between gap-2 p-3.5">
+          <p className="text-[12.5px] text-ink-muted">
+            Çıkış hatları kesmez; gönderim sunucuda sürer.
+          </p>
+          <form action={signOut}>
+            <Button type="submit" variant="danger">
+              Çıkış yap
+            </Button>
+          </form>
+        </div>
+      </Card>
 
-          <div id="profil" className="scroll-mt-6">
-            <Card>
-              <CardHeader
-                title="Profil"
-                subtitle="Panelde görünen adınız."
-              />
-              <ProfileForm
-                fullName={profile?.full_name ?? ''}
-                company={profile?.company ?? ''}
-                email={user.email ?? ''}
-              />
-            </Card>
-          </div>
-
-          <details className="group rounded-[var(--radius-md)] border border-hairline bg-surface">
-            <summary className="cursor-pointer list-none px-3.5 py-3 text-[13px] font-semibold text-ink-muted marker:content-none [&::-webkit-details-marker]:hidden">
-              <span className="flex items-center justify-between gap-2">
-                Gelişmiş (webhook, API, faturalama)
-                <span className="text-[11.5px] font-normal text-ink-faint group-open:hidden">
-                  Aç
-                </span>
-                <span className="hidden text-[11.5px] font-normal text-ink-faint group-open:inline">
-                  Kapat
-                </span>
+      {canManage ? (
+        <details className="group rounded-[var(--radius-md)] border border-hairline bg-surface">
+          <summary className="cursor-pointer list-none px-3.5 py-3 text-[13px] font-semibold text-ink-muted marker:content-none [&::-webkit-details-marker]:hidden">
+            <span className="flex items-center justify-between gap-2">
+              Gelişmiş
+              <span className="text-[11.5px] font-normal text-ink-faint group-open:hidden">
+                Aç
               </span>
-            </summary>
-            <div className="space-y-2.5 border-t border-hairline p-3.5">
-              <p className="text-[12px] text-ink-faint">
-                Çoğu işletme bunlara ihtiyaç duymaz. CRM veya geliştirici entegrasyonu için.
-              </p>
-              <WebhookSettingsForm
-                webhookUrl={org.webhook_url ?? null}
-                canEdit={canManage}
-              />
-              <div className="flex flex-wrap gap-2 border-t border-hairline pt-2.5">
-                {canManage ? <BillingCheckoutButton /> : null}
-              </div>
-              <ApiKeyForm
-                canEdit={canManage}
-                keys={(apiKeyRows ?? []) as {
-                  id: string
-                  name: string
-                  key_prefix: string
-                  last_used_at: string | null
-                  created_at: string
-                }[]}
-              />
-              {org.role === 'owner' ? (
-                <div className="border-t border-danger/20 pt-2.5">
-                  <p className="mb-2 text-[12px] font-medium text-danger">Tehlikeli bölge</p>
-                  <DeleteOrganizationForm
-                    orgName={org.name}
-                    hasStripeSubscription={Boolean(org.stripe_subscription_id)}
-                  />
-                </div>
-              ) : null}
+              <span className="hidden text-[11.5px] font-normal text-ink-faint group-open:inline">
+                Kapat
+              </span>
+            </span>
+          </summary>
+          <div className="space-y-3 border-t border-hairline p-3.5">
+            <p className="text-[12px] text-ink-faint">
+              Webhook, API anahtarı ve faturalama — çoğu işletme için gerekmez.
+            </p>
+            <WebhookSettingsForm webhookUrl={org.webhook_url ?? null} canEdit />
+            <div className="flex flex-wrap gap-2 border-t border-hairline pt-2.5">
+              <BillingCheckoutButton />
+              <Link
+                href="/marka-kiti"
+                className="text-[12.5px] text-ink-muted underline underline-offset-2"
+              >
+                Marka kiti
+              </Link>
             </div>
-          </details>
-        </div>
-
-        <div className="order-1 flex flex-col gap-2.5 lg:order-2">
-          <Card>
-            <CardHeader
-              title="Paket"
-              action={<Badge tone="accent">{planLabel(plan)}</Badge>}
+            <ApiKeyForm
+              canEdit
+              keys={(apiKeyRows ?? []) as {
+                id: string
+                name: string
+                key_prefix: string
+                last_used_at: string | null
+                created_at: string
+              }[]}
             />
-
-            <div className="space-y-2.5 p-3.5">
-              <QuotaRow
-                label="Hat"
-                used={usedAccounts}
-                total={accountsQuota}
-                detail={
-                  connectedCount === 0
-                    ? 'Henüz bağlı hat yok — Hatlar’dan bağlayın'
-                    : `${connectedCount} bağlı · paket ${accountsQuota} hatta izin veriyor`
-                }
-              />
-              <QuotaRow
-                label="Bu ayki mesaj"
-                used={usedMessages}
-                total={messageQuota}
-                detail="Her ayın 1’inde sıfırlanır"
-              />
-
-              <div className="border-t border-hairline pt-2.5">
-                <p className="text-[12px] text-ink-muted">
-                  Bağlı hatların bugünkü toplam tavanı
-                </p>
-                {connectedCount === 0 ? (
-                  <div className="mt-2">
-                    <p className="text-[13px] text-ink-faint">Hat bağlanınca hesaplanır</p>
-                    <div className="mt-2.5">
-                      <AccentLink href="/hesaplar" className="text-[12.5px]">
-                        Hatlar’a git
-                      </AccentLink>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <p className="tabular mt-1 text-[18px] font-semibold text-accent">
-                      {nf.format(dailyCeiling)} mesaj
-                    </p>
-                    <p className="mt-1 text-[11.5px] leading-relaxed text-ink-faint">
-                      Bu sayı paketinizden değil, hatlarınızın yaşından gelir. Yeni
-                      bağlanan hat iki hafta boyunca kademeli açılır.
-                    </p>
-                  </>
-                )}
+            {isOwner ? (
+              <div className="border-t border-danger/20 pt-2.5">
+                <p className="mb-2 text-[12px] font-medium text-danger">Tehlikeli bölge</p>
+                <DeleteOrganizationForm
+                  orgName={org.name}
+                  hasStripeSubscription={Boolean(org.stripe_subscription_id)}
+                />
               </div>
-            </div>
-          </Card>
-
-          <Card>
-            <CardHeader title="Oturum" subtitle={user.email ?? undefined} />
-            <div className="flex flex-wrap items-center justify-between gap-2.5 p-3.5">
-              <p className="max-w-sm text-[12.5px] leading-relaxed text-ink-muted">
-                Çıkış yapmak bağlı hatları etkilemez; gönderim sunucuda devam eder.
-              </p>
-              <form action={signOut}>
-                <Button type="submit" variant="danger">
-                  Çıkış yap
-                </Button>
-              </form>
-            </div>
-          </Card>
-        </div>
-      </div>
+            ) : null}
+          </div>
+        </details>
+      ) : null}
     </div>
   )
 }
@@ -402,15 +283,14 @@ function QuotaRow({
   label,
   used,
   total,
-  detail,
+  hint,
 }: {
   label: string
   used: number
   total: number
-  detail: string
+  hint?: ReactNode
 }) {
   const ratio = total > 0 ? used / total : 0
-
   return (
     <div>
       <div className="mb-1.5 flex items-baseline justify-between gap-3">
@@ -420,7 +300,7 @@ function QuotaRow({
         </span>
       </div>
       <Meter value={used} max={total} tone={ratio > 0.9 ? 'warn' : 'accent'} />
-      <p className="mt-1 text-[11.5px] text-ink-faint">{detail}</p>
+      {hint ? <div className="mt-1 text-[11.5px] text-ink-faint">{hint}</div> : null}
     </div>
   )
 }
