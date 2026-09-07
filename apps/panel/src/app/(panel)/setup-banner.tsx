@@ -1,14 +1,14 @@
 'use client'
 
 import Link from 'next/link'
-import { AccentLink, Card, Meter } from '@/components/ui'
+import { InlineHint } from '@/components/ui'
 import { useT } from '@/lib/i18n/provider'
 import type { getSetupProgress } from '@/lib/setup-progress'
 
 type Progress = Awaited<ReturnType<typeof getSetupProgress>>
 
 /**
- * Soft checklist — menüyü kilitlemez; eksikleri hatırlatır.
+ * Soft tek satır — menüyü kilitlemez, büyük checklist kartı yok.
  */
 export function SetupBanner({ progress }: { progress: Progress }) {
   const t = useT()
@@ -16,70 +16,43 @@ export function SetupBanner({ progress }: { progress: Progress }) {
 
   if (needsFirstSend) {
     return (
-      <Card className="mb-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 p-4">
-          <div>
-            <p className="text-[13px] font-semibold text-ink">{t('setup.firstSendTitle')}</p>
-            <p className="mt-0.5 text-[12px] text-ink-muted">{t('setup.firstSendSub')}</p>
-          </div>
-          <AccentLink href="/hizli-gonderim">{t('setup.firstSendCta')}</AccentLink>
-        </div>
-      </Card>
+      <InlineHint href="/hizli-gonderim" cta={t('setup.firstSendCta')}>
+        {t('setup.firstSendSub')}
+      </InlineHint>
     )
   }
 
   if (progress.allDone) return null
 
-  const steps: { key: keyof Progress['steps']; label: string; href: string }[] = [
-    { key: 'brand', label: t('setup.brandTitle'), href: '/marka-kiti' },
-    { key: 'contacts', label: t('setup.contactsTitle'), href: '/kisiler' },
-    { key: 'connected', label: t('setup.lineTitle'), href: '/hesaplar' },
-  ]
+  if (!progress.steps.connected) {
+    return (
+      <InlineHint href="/hesaplar" cta="Bağla">
+        Hat bağlı değil
+      </InlineHint>
+    )
+  }
+
+  if (!progress.steps.contacts) {
+    return (
+      <InlineHint href="/kisiler" cta="Ekle">
+        Kampanya grubu yok
+      </InlineHint>
+    )
+  }
+
+  if (!progress.steps.brand) {
+    return (
+      <InlineHint href="/marka-kiti" cta="Aç">
+        Marka adı eksik
+      </InlineHint>
+    )
+  }
 
   return (
-    <Card className="mb-4">
-      <div className="space-y-3 p-4">
-        <div className="flex flex-wrap items-baseline justify-between gap-3">
-          <div>
-            <p className="text-[13px] font-semibold text-ink">{t('setup.bannerTitle')}</p>
-            <p className="mt-0.5 text-[12px] text-ink-muted">{t('setup.bannerSub')}</p>
-          </div>
-          <span className="tabular text-[12px] text-ink-muted">
-            {progress.doneCount}/{steps.length}
-          </span>
-        </div>
-
-        <Meter value={progress.doneCount} max={steps.length} />
-
-        <ul className="flex flex-wrap gap-x-4 gap-y-2">
-          {steps.map((step, index) => {
-            const done = progress.steps[step.key]
-            return (
-              <li key={step.key} className="flex items-center gap-1.5 text-[12.5px]">
-                <span
-                  className={`grid size-4 shrink-0 place-items-center rounded-full border text-[9px] ${
-                    done
-                      ? 'border-accent/40 bg-accent/15 text-accent'
-                      : 'border-hairline-strong text-ink-faint'
-                  }`}
-                >
-                  {done ? '✓' : index + 1}
-                </span>
-                {done ? (
-                  <span className="text-ink-faint line-through">{step.label}</span>
-                ) : (
-                  <Link
-                    href={step.href}
-                    className="text-ink-muted underline decoration-hairline-strong underline-offset-2 hover:text-ink"
-                  >
-                    {step.label}
-                  </Link>
-                )}
-              </li>
-            )
-          })}
-        </ul>
-      </div>
-    </Card>
+    <InlineHint href="/kurulum" cta={t('setup.bannerCta')}>
+      <Link href="/kurulum" className="text-ink-muted">
+        Kurulum eksik ({progress.doneCount}/3)
+      </Link>
+    </InlineHint>
   )
 }

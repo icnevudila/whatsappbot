@@ -11,10 +11,16 @@ import { isWabaConfigured, resolveWabaMessageSend } from './waba-config.js'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const src = (name: string) => readFileSync(join(root, 'src', name), 'utf8')
 
-test('aylik kota sayimi message_log.direction=out kullanir (outbound degil)', () => {
-  const file = src('campaign-runner.ts')
-  assert.match(file, /orgMonthlyOutboundCount[\s\S]*direction = 'out'/)
-  assert.doesNotMatch(file, /orgMonthlyOutboundCount[\s\S]*direction = 'outbound'/)
+test('aylik kota org_send_gate RPC kullanir (message_log direction=out SQL tarafinda)', () => {
+  assert.match(src('org-send-gate.ts'), /public\.org_send_gate/)
+  assert.match(src('org-send-gate.ts'), /monthly_quota/)
+  const mig = readFileSync(
+    join(root, '../../supabase/migrations/20260906160000_saas_sellable_hardening.sql'),
+    'utf8',
+  )
+  const fn = mig.slice(mig.indexOf('create or replace function public.org_send_gate'))
+  assert.match(fn, /direction = 'out'/)
+  assert.doesNotMatch(fn.slice(0, 2500), /direction = 'outbound'/)
 })
 
 test('reviveStale soft reopen kullanir (userRequested disconnect yok)', () => {

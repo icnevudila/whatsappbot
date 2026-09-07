@@ -7,6 +7,7 @@ import {
   CardHeader,
   PageHeader,
   QuietLink,
+  StatStrip,
   StatusPill,
 } from '@/components/ui'
 import { requireActiveOrg } from '@/lib/org'
@@ -15,37 +16,6 @@ import { SetupBanner } from '../setup-banner'
 
 export const metadata: Metadata = { title: 'Özet' }
 export const dynamic = 'force-dynamic'
-
-/** Tek büyük sonraki adım — kullanıcı düşünmesin. */
-function NextStepHero({
-  href,
-  title,
-  body,
-  cta,
-}: {
-  href: string
-  title: string
-  body: string
-  cta: string
-}) {
-  return (
-    <Link
-      href={href}
-      className="wb-card-lift mb-3 block rounded-[var(--radius-md)] border border-accent/40 bg-accent-soft/70 p-5 shadow-[inset_4px_0_0_var(--color-accent)] transition-colors hover:bg-accent-soft"
-    >
-      <p className="text-[11.5px] font-semibold tracking-wide text-accent uppercase">
-        Şimdi yap
-      </p>
-      <h2 className="mt-1.5 text-[22px] font-extrabold tracking-[-0.03em] text-ink sm:text-[26px]">
-        {title}
-      </h2>
-      <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-ink-muted">{body}</p>
-      <span className="mt-4 inline-flex min-h-11 items-center rounded-md bg-accent px-4 text-[14px] font-bold text-white">
-        {cta} →
-      </span>
-    </Link>
-  )
-}
 
 export default async function PanelHomePage() {
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
@@ -94,7 +64,7 @@ export default async function PanelHomePage() {
         .select('id, name, sent_count, failed_count, status, total_targets')
         .eq('org_id', org.id)
         .order('updated_at', { ascending: false })
-        .limit(3),
+        .limit(5),
     ]),
   ])
 
@@ -106,103 +76,60 @@ export default async function PanelHomePage() {
     { data: recentCampaigns },
   ] = rest
 
-  const { connectedCount, contactCount, outCount } = setup.counts
+  const { connectedCount, contactCount } = setup.counts
   const hasLine = connectedCount > 0
-  const hasGroup = (lists ?? 0) > 0 || contactCount > 0
-  const ready = setup.allDone
-  const suggestFirstSend = ready && outCount === 0
-
-  let next: { href: string; title: string; body: string; cta: string }
-  if (!hasLine) {
-    next = {
-      href: '/hesaplar',
-      title: 'WhatsApp hattını bağla',
-      body: 'Telefondaki WhatsApp → Bağlı cihazlar → QR okut. Bu 1 dakikalık iş.',
-      cta: 'Hattı bağla',
-    }
-  } else if (!hasGroup) {
-    next = {
-      href: '/kisiler#gruplar',
-      title: 'Kişi grubu ekle',
-      body: 'Excel yükle veya numaraları yapıştır. Kampanyada bu grubu seçeceksin.',
-      cta: 'Grup oluştur',
-    }
-  } else if (suggestFirstSend) {
-    next = {
-      href: '/kampanyalar#yeni-kampanya',
-      title: 'İlk mesajını gönder',
-      body: 'Mesajı yaz, grubu ve hattı seç, başlat. Başka ayar yok.',
-      cta: 'Kampanya oluştur',
-    }
-  } else {
-    next = {
-      href: '/kampanyalar#yeni-kampanya',
-      title: 'Yeni kampanya gönder',
-      body: 'Aynı akış: mesaj → grup → hat → gönder.',
-      cta: 'Kampanya oluştur',
-    }
-  }
+  const primaryHref = !hasLine
+    ? '/hesaplar'
+    : (lists ?? 0) === 0 && contactCount === 0
+      ? '/kisiler'
+      : '/kampanyalar#yeni-kampanya'
+  const primaryCta = !hasLine
+    ? 'Hat bağla'
+    : (lists ?? 0) === 0 && contactCount === 0
+      ? 'Grup ekle'
+      : 'Kampanya'
 
   return (
     <>
       <PageHeader
         title={org.name}
-        description={
-          ready
-            ? 'Hat · kişiler · gönder — bugünün özeti.'
-            : 'Önerilen: hat bağla → kişi ekle → mesaj gönder.'
-        }
-        action={<AccentLink href={next.href}>{next.cta}</AccentLink>}
+        description={`${connectedCount} hat · ${contactCount} kişi · bugün ${(outToday ?? 0) + (inToday ?? 0)} mesaj`}
+        action={<AccentLink href={primaryHref}>{primaryCta}</AccentLink>}
       />
 
       {isPlatformAdmin ? null : <SetupBanner progress={setup} />}
 
-      <NextStepHero {...next} />
-
-      <div className="mb-3 grid gap-2 sm:grid-cols-3">
-        <Card>
-          <div className="p-3.5">
-            <p className="text-[11.5px] text-ink-faint">Hat</p>
-            <p className="mt-1 text-[18px] font-extrabold tabular">
-              {hasLine ? connectedCount : 0}
-            </p>
-            <QuietLink href="/hesaplar" className="mt-1 inline-block text-[12px]">
-              {hasLine ? 'Hatlar' : 'Hat bağla'}
-            </QuietLink>
-          </div>
-        </Card>
-        <Card>
-          <div className="p-3.5">
-            <p className="text-[11.5px] text-ink-faint">Kişiler</p>
-            <p className="mt-1 text-[18px] font-extrabold tabular">{contactCount}</p>
-            <QuietLink href="/kisiler" className="mt-1 inline-block text-[12px]">
-              {hasGroup ? `${lists ?? 0} grup` : 'Grup ekle'}
-            </QuietLink>
-          </div>
-        </Card>
-        <Card>
-          <div className="p-3.5">
-            <p className="text-[11.5px] text-ink-faint">Bugün</p>
-            <p className="mt-1 text-[18px] font-extrabold tabular">
-              {(outToday ?? 0) + (inToday ?? 0)}
-            </p>
-            <QuietLink href="/mesajlar" className="mt-1 inline-block text-[12px]">
-              {(outToday ?? 0)} giden · {(inToday ?? 0)} gelen
-            </QuietLink>
-          </div>
-        </Card>
-      </div>
+      <StatStrip
+        items={[
+          {
+            label: 'Hat',
+            value: connectedCount,
+            href: '/hesaplar',
+            tone: hasLine ? 'ok' : 'default',
+          },
+          {
+            label: 'Grup',
+            value: lists ?? 0,
+            href: '/kisiler',
+          },
+          {
+            label: 'Bugün',
+            value: (outToday ?? 0) + (inToday ?? 0),
+            href: '/mesajlar',
+          },
+        ]}
+      />
 
       <Card>
         <CardHeader
-          title="Son kampanyalar"
-          subtitle="Durum için dokun."
+          title="Kampanyalar"
+          subtitle={(campaignsRunning ?? 0) > 0 ? `${campaignsRunning} çalışıyor` : 'Son kayıtlar'}
           action={<QuietLink href="/kampanyalar">Tümü</QuietLink>}
         />
         {(recentCampaigns ?? []).length === 0 ? (
-          <div className="space-y-2 p-3.5 text-[13px] text-ink-muted">
-            <p>Henüz kampanya yok — yukarıdaki adımdan başla.</p>
-            <AccentLink href="/kampanyalar#yeni-kampanya">Kampanya oluştur</AccentLink>
+          <div className="flex flex-wrap items-center justify-between gap-2 p-3.5 text-[13px] text-ink-muted">
+            <span>Henüz kampanya yok.</span>
+            <AccentLink href="/kampanyalar#yeni-kampanya">Oluştur</AccentLink>
           </div>
         ) : (
           <ul className="divide-y divide-hairline">
@@ -212,7 +139,7 @@ export default async function PanelHomePage() {
                 <li key={c.id}>
                   <Link
                     href={`/kampanyalar/${c.id}`}
-                    className="flex items-center justify-between gap-3 px-3.5 py-3 transition-colors hover:bg-surface-raised"
+                    className="flex items-center justify-between gap-3 px-3.5 py-2.5 transition-colors hover:bg-surface-raised"
                   >
                     <span className="min-w-0">
                       <span className="block truncate text-[13.5px] font-semibold text-ink">
@@ -220,7 +147,7 @@ export default async function PanelHomePage() {
                       </span>
                       <span className="mt-0.5 block text-[11.5px] text-ink-faint tabular">
                         {c.sent_count}
-                        {total > 0 ? ` / ${total}` : ''} gitti
+                        {total > 0 ? ` / ${total}` : ''}
                         {(c.failed_count ?? 0) > 0 ? ` · ${c.failed_count} hata` : ''}
                       </span>
                     </span>
@@ -232,19 +159,6 @@ export default async function PanelHomePage() {
           </ul>
         )}
       </Card>
-
-      {(campaignsRunning ?? 0) > 0 ? (
-        <p className="mt-3 text-center text-[12.5px] text-ink-muted">
-          {campaignsRunning} kampanya çalışıyor.
-        </p>
-      ) : null}
-
-      <p className="mt-3 text-center text-[12px] text-ink-faint">
-        Takıldın mı?{' '}
-        <Link href="/yardim" className="underline underline-offset-2">
-          Yardım
-        </Link>
-      </p>
     </>
   )
 }

@@ -6,10 +6,12 @@ import {
   CardHeader,
   Notice,
   PageHeader,
+  StatStrip,
   StatusPill,
 } from '@/components/ui'
 import { requirePlatformAdmin } from '@/lib/org'
 import { enterOrganization, setOrgAutoReply } from '../actions'
+import { OrgSuspendForm, UnlockAccountButton } from '../admin-ops-forms'
 import { OrgQuotaForm } from './org-quota-form'
 
 export const dynamic = 'force-dynamic'
@@ -88,10 +90,10 @@ export default async function AdminOrgPage({
     <>
       <PageHeader
         title={org.name}
-        description={`${org.slug} · ${org.plan}`}
+        description={`${org.slug} · ${org.plan} · kota ${org.accounts_quota} hat / ${org.monthly_message_quota} msg`}
         action={
           <Link href="/admin" className="text-[13px] text-accent underline-offset-2 hover:underline">
-            ← Tüm işletmeler
+            ← İşletmeler
           </Link>
         }
       />
@@ -104,27 +106,24 @@ export default async function AdminOrgPage({
         </Notice>
       ) : null}
 
-      <div className="mb-3 grid gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
-        {[
-          ['Kişi', detail.counts.contacts],
-          ['Grup', detail.counts.lists],
-          ['Kampanya', detail.counts.campaigns],
-          ['Çalışan', detail.counts.campaigns_running],
-          ['Bugün giden', detail.counts.out_today],
-          ['İstemeyen', detail.counts.blacklist],
-        ].map(([label, value]) => (
-          <Card key={String(label)}>
-            <div className="p-3">
-              <p className="text-[11px] text-ink-faint">{label}</p>
-              <p className="mt-0.5 text-[18px] font-extrabold tabular">{value}</p>
-            </div>
-          </Card>
-        ))}
+      <StatStrip
+        items={[
+          { label: 'Kişi', value: detail.counts.contacts },
+          { label: 'Grup', value: detail.counts.lists },
+          { label: 'Kampanya', value: detail.counts.campaigns },
+          { label: 'Çalışan', value: detail.counts.campaigns_running },
+          { label: 'Bugün', value: detail.counts.out_today },
+          { label: 'Opt-out', value: detail.counts.blacklist },
+        ]}
+      />
+
+      <div className="mb-2.5 flex flex-wrap items-center gap-2">
+        <OrgSuspendForm orgId={org.id} suspendedAt={org.suspended_at} />
       </div>
 
       <div className="grid gap-2.5 lg:grid-cols-2">
         <Card>
-          <CardHeader title="Paket / kota" subtitle="Anlaşma ve ücrete göre sen ayarlarsın" />
+          <CardHeader title="Paket / kota" />
           <div className="p-3.5">
             <OrgQuotaForm
               orgId={org.id}
@@ -136,19 +135,18 @@ export default async function AdminOrgPage({
         </Card>
 
         <Card>
-          <CardHeader title="İşletmeye geç" subtitle="Müşteri paneline admin olarak gir" />
+          <CardHeader title="Kontrol" subtitle="Panele gir · otomatik yanıt" />
           <div className="space-y-3 p-3.5">
-            <p className="text-[12.5px] leading-relaxed text-ink-muted">
-              Üye olursun (admin), aktif org bu işletme olur. Kurulum banner’ı / kilidi
-              platform admin için kapalı kalır.
-            </p>
             <form action={enterOrganization}>
               <input type="hidden" name="org_id" value={org.id} />
               <Button type="submit" variant="accent">
-                Bu işletmenin paneline gir →
+                İşletme paneline gir →
               </Button>
             </form>
-            <form action={setOrgAutoReply} className="flex flex-wrap items-center gap-2 border-t border-hairline pt-3">
+            <form
+              action={setOrgAutoReply}
+              className="flex flex-wrap items-center gap-2 border-t border-hairline pt-3"
+            >
               <input type="hidden" name="org_id" value={org.id} />
               <input
                 type="hidden"
@@ -159,7 +157,7 @@ export default async function AdminOrgPage({
                 Otomatik yanıt: {org.auto_reply_enabled ? 'açık' : 'kapalı'}
               </span>
               <Button type="submit" className="text-[12px]">
-                {org.auto_reply_enabled ? 'Kapat' : 'Aç (worker env de true olmalı)'}
+                {org.auto_reply_enabled ? 'Kapat' : 'Aç'}
               </Button>
             </form>
           </div>
@@ -167,7 +165,7 @@ export default async function AdminOrgPage({
       </div>
 
       <Card className="mt-2.5">
-        <CardHeader title="Üyeler" subtitle={`${detail.members.length} kullanıcı`} />
+        <CardHeader title="Üyeler" subtitle={`${detail.members.length}`} />
         <ul className="divide-y divide-hairline">
           {detail.members.map((m) => (
             <li
@@ -189,7 +187,7 @@ export default async function AdminOrgPage({
       </Card>
 
       <Card className="mt-2.5">
-        <CardHeader title="Hatlar" subtitle={`${detail.accounts.length} hat`} />
+        <CardHeader title="Hatlar" subtitle={`${detail.accounts.length}`} />
         {detail.accounts.length === 0 ? (
           <p className="p-3.5 text-[13px] text-ink-muted">Hat yok.</p>
         ) : (
@@ -205,7 +203,10 @@ export default async function AdminOrgPage({
                     {a.phone_e164 ?? '—'} · bugün {a.sent_today}/{a.daily_send_limit}
                   </span>
                 </span>
-                <StatusPill status={a.is_locked ? 'banned' : a.status} />
+                <span className="flex items-center gap-2">
+                  <StatusPill status={a.is_locked ? 'banned' : a.status} />
+                  {a.is_locked ? <UnlockAccountButton accountId={a.id} /> : null}
+                </span>
               </li>
             ))}
           </ul>

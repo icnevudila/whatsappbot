@@ -268,8 +268,8 @@ h3 {
   overflow: visible;
 }
 .wb-split--form .wb-split-pane--aside {
-  max-height: 18rem;
-  overflow: hidden;
+  max-height: 12rem;
+  overflow: auto;
   border-top: 1px solid var(--color-hairline);
 }
 .wb-split--form .wb-split-pane--form {
@@ -277,6 +277,15 @@ h3 {
 }
 .wb-split--form .wb-split-pane + .wb-split-pane {
   border-top: 0;
+}
+/* Mobilde geçmiş varsayılan kapalı — form önce görünsün */
+@media (max-width: 1023px) {
+  .wb-split--form .wb-split-pane--aside {
+    max-height: none;
+  }
+  .wb-split--form .wb-split-pane--aside .wb-aside-collapsible {
+    display: block;
+  }
 }
 @media (min-width: 1024px) {
   .wb-split--form {

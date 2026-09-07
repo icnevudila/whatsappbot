@@ -1,18 +1,17 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import type { ReactNode } from 'react'
 import {
   AccentLink,
   Card,
   CardHeader,
   EmptyState,
-  Notice,
   PageHeader,
   Pagination,
 } from '@/components/ui'
 import { redirect } from 'next/navigation'
 import { createT } from '@/lib/i18n'
 import { getDictionary } from '@/lib/i18n/server'
-import { CONTACT_EMAIL, contactMailto } from '@/lib/contact'
 import { requireActiveOrg } from '@/lib/org'
 import {
   PAGE_SIZES,
@@ -23,18 +22,38 @@ import {
   totalPages,
 } from '@/lib/pagination'
 import { ContactsBoard } from './contacts-board'
-import { CreateGroupForm } from './create-group-form'
-import { ImportForm } from './import-form'
 import { ListActions } from './list-actions'
+import { NewGroupForm } from './new-group-form'
 
 export const metadata: Metadata = { title: 'Kişiler' }
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
+function SegmentLink({
+  href,
+  active,
+  children,
+}: {
+  href: string
+  active: boolean
+  children: ReactNode
+}) {
+  return (
+    <Link
+      href={href}
+      className={`rounded-[5px] px-3 py-1.5 text-[12.5px] font-semibold ${
+        active ? 'bg-surface text-ink shadow-sm' : 'text-ink-muted'
+      }`}
+    >
+      {children}
+    </Link>
+  )
+}
+
 export default async function ContactsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sayfa?: string | string[] }>
+  searchParams: Promise<{ sayfa?: string | string[]; gorunum?: string | string[] }>
 }) {
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
   let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
@@ -48,6 +67,8 @@ export default async function ContactsPage({
   }
 
   const params = await searchParams
+  const viewRaw = Array.isArray(params.gorunum) ? params.gorunum[0] : params.gorunum
+  const view = viewRaw === 'defter' ? 'defter' : 'gruplar'
   const pageSize = PAGE_SIZES.members
   const requestedPage = parsePage(params.sayfa)
 
@@ -77,12 +98,15 @@ export default async function ContactsPage({
   const page = clampPage(requestedPage, pages)
   const { from, to } = rangeForPage(page, pageSize)
 
-  const { data: contactRows } = await supabase
-    .from('contacts')
-    .select('id, phone_e164, name, source, wa_status')
-    .eq('org_id', org.id)
-    .order('created_at', { ascending: false })
-    .range(from, to)
+  const { data: contactRows } =
+    view === 'defter'
+      ? await supabase
+          .from('contacts')
+          .select('id, phone_e164, name, source, wa_status')
+          .eq('org_id', org.id)
+          .order('created_at', { ascending: false })
+          .range(from, to)
+      : { data: [] as never[] }
 
   const contacts = contactRows ?? []
   const groups = lists.map((list) => ({ id: list.id, name: list.name }))
@@ -91,44 +115,31 @@ export default async function ContactsPage({
     <>
       <PageHeader
         title={t('pages.kisilerTitle')}
-        description="Defterdeki tüm numaralar ve kampanya grupları. Seç → gruba ekle / çıkar / sil."
-        action={<AccentLink href="/kampanyalar#yeni-kampanya">Kampanya oluştur</AccentLink>}
+        description={`${listTotal} grup · ${total} numara — kampanyada grup seçilir`}
+        action={<AccentLink href="/kampanyalar#yeni-kampanya">Kampanya</AccentLink>}
       />
 
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)]">
-        <Card>
-          <CardHeader
-            title="Tüm kişiler"
-            subtitle={`${total} numara · sayfa ${page}/${pages}`}
-          />
-          <ContactsBoard
-            contacts={contacts}
-            groups={groups}
-            whatsappCount={whatsappCount}
-          />
-          <Pagination
-            page={page}
-            totalPages={pages}
-            label={`${total} kişi`}
-            hrefForPage={(p) => buildPageHref('/kisiler', p)}
-          />
-        </Card>
+      <div className="mb-3 inline-flex rounded-md border border-hairline bg-canvas p-0.5">
+        <SegmentLink href="/kisiler" active={view === 'gruplar'}>
+          Gruplar
+        </SegmentLink>
+        <SegmentLink href="/kisiler?gorunum=defter" active={view === 'defter'}>
+          Defter
+        </SegmentLink>
+      </div>
 
-        <div className="space-y-3" id="gruplar">
+      {view === 'gruplar' ? (
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.85fr)]">
           <Card>
             <CardHeader
-              title="Gruplar"
-              subtitle={
-                listTotal === 0
-                  ? 'Kampanyada seçeceğin numaralar'
-                  : `${listTotal} grup · düzenlemek için tıkla`
-              }
+              title="Kampanya grupları"
+              subtitle={listTotal === 0 ? 'Önce grup oluştur' : `${listTotal} grup`}
             />
             {listTotal === 0 ? (
               <EmptyState
                 tone="people"
-                title="Henüz grup yok"
-                description="Aşağıdan boş grup aç veya Excel ile oluştur."
+                title="Grup yok"
+                description="Sağdan Excel ile doldur veya boş aç."
               />
             ) : (
               <ul className="divide-y divide-hairline">
@@ -143,7 +154,7 @@ export default async function ContactsPage({
                           {list.name}
                         </p>
                         <p className="mt-0.5 text-[11.5px] text-ink-muted tabular">
-                          {list.contact_count} numara · düzenle / çıkar / sil
+                          {list.contact_count} numara
                         </p>
                       </Link>
                       <ListActions listId={list.id} compact />
@@ -155,26 +166,29 @@ export default async function ContactsPage({
           </Card>
 
           <Card>
-            <CardHeader title="Yeni grup" subtitle="Boş aç veya Excel ile doldur" />
-            <div className="space-y-3 p-3.5">
-              <CreateGroupForm />
-              <div className="border-t border-hairline pt-3">
-                <ImportForm embedded />
-              </div>
-            </div>
+            <CardHeader title="Yeni grup" subtitle="Excel / yapıştır veya boş" />
+            <NewGroupForm embedded />
           </Card>
-
-          <Notice tone="accent">
-            Hazır mahalle listesi / scrape için{' '}
-            <a
-              href={contactMailto('Kişi grubu talebi')}
-              className="font-semibold underline underline-offset-2"
-            >
-              {CONTACT_EMAIL}
-            </a>
-          </Notice>
         </div>
-      </div>
+      ) : (
+        <Card>
+          <CardHeader
+            title="Defter"
+            subtitle={`${total} numara · seçip gruba taşı`}
+          />
+          <ContactsBoard
+            contacts={contacts}
+            groups={groups}
+            whatsappCount={whatsappCount}
+          />
+          <Pagination
+            page={page}
+            totalPages={pages}
+            label={`${total} kişi`}
+            hrefForPage={(p) => buildPageHref('/kisiler', p, { gorunum: 'defter' })}
+          />
+        </Card>
+      )}
     </>
   )
 }

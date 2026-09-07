@@ -266,11 +266,13 @@ export function EmptyState({
   tone?: EmptyTone
 }) {
   return (
-    <div className="wb-empty flex flex-col items-center gap-2 px-6 py-12 text-center">
-      <EmptyIllustration tone={tone} />
-      <p className="text-[15px] font-bold text-ink">{title}</p>
-      <p className="max-w-sm text-[13.5px] text-ink-muted">{description}</p>
-      {action ? <div className="mt-2">{action}</div> : null}
+    <div className="wb-empty flex flex-col items-center gap-2 px-4 py-6 text-center md:px-6 md:py-10">
+      <div className="hidden sm:block">
+        <EmptyIllustration tone={tone} />
+      </div>
+      <p className="text-[14.5px] font-bold text-ink md:text-[15px]">{title}</p>
+      <p className="max-w-sm text-[13px] text-ink-muted">{description}</p>
+      {action ? <div className="mt-1.5">{action}</div> : null}
     </div>
   )
 }
@@ -297,7 +299,15 @@ export function SplitPane({
     return (
       <div className={cx('wb-split', 'wb-split--form', className)}>
         <div className="wb-split-pane wb-split-pane--form">{detail}</div>
-        <div className="wb-split-pane wb-split-pane--aside">{list}</div>
+        <div className="wb-split-pane wb-split-pane--aside">
+          <details className="lg:hidden">
+            <summary className="cursor-pointer px-3.5 py-2.5 text-[12.5px] font-semibold text-ink-muted">
+              Geçmiş
+            </summary>
+            <div className="max-h-[12rem] overflow-auto border-t border-hairline">{list}</div>
+          </details>
+          <div className="hidden h-full lg:block">{list}</div>
+        </div>
       </div>
     )
   }
@@ -661,9 +671,92 @@ export function PageHeader({
     <header className="wb-page-head">
       <div className="min-w-0">
         <h1 className="wb-page-title">{title}</h1>
-        {description ? <p className="wb-page-desc">{description}</p> : null}
+        {description ? (
+          <p className="wb-page-desc line-clamp-2 md:line-clamp-none">{description}</p>
+        ) : null}
       </div>
       {action ? <div className="flex shrink-0 flex-wrap items-center gap-2">{action}</div> : null}
     </header>
+  )
+}
+
+/** Mobilde tek satır KPI — dikey büyük kart merdiveni yerine. */
+export function StatStrip({
+  items,
+  className,
+}: {
+  items: { label: string; value: ReactNode; href?: string; tone?: 'default' | 'ok' | 'danger' }[]
+  className?: string
+}) {
+  return (
+    <div
+      className={cx(
+        'mb-3 flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:overflow-visible',
+        items.length <= 3 ? 'sm:grid-cols-3' : items.length <= 4 ? 'sm:grid-cols-4' : 'sm:grid-cols-5',
+        className,
+      )}
+    >
+      {items.map((item) => {
+        const toneClass =
+          item.tone === 'ok'
+            ? 'text-ok-dim'
+            : item.tone === 'danger'
+              ? 'text-danger'
+              : 'text-ink'
+        const inner = (
+          <>
+            <p className="text-[10.5px] font-medium tracking-wide text-ink-faint uppercase">
+              {item.label}
+            </p>
+            <p className={cx('mt-0.5 text-[16px] font-extrabold tabular sm:text-[18px]', toneClass)}>
+              {item.value}
+            </p>
+          </>
+        )
+        const boxClass =
+          'min-w-[108px] shrink-0 rounded-md border border-hairline bg-surface px-3 py-2 sm:min-w-0'
+        return item.href ? (
+          <Link key={item.label} href={item.href} className={cx(boxClass, 'transition-colors hover:bg-surface-raised')}>
+            {inner}
+          </Link>
+        ) : (
+          <div key={item.label} className={boxClass}>
+            {inner}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+/** Tek satır soft uyarı — büyük SetupBanner yerine. */
+export function InlineHint({
+  children,
+  href,
+  cta,
+  className,
+}: {
+  children: ReactNode
+  href?: string
+  cta?: string
+  className?: string
+}) {
+  return (
+    <div
+      className={cx(
+        'mb-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-hairline bg-surface px-3 py-2 text-[12.5px] text-ink-muted',
+        className,
+      )}
+    >
+      <span className="min-w-0">{children}</span>
+      {href && cta ? (
+        <Link
+          href={href}
+          className="shrink-0 font-semibold text-accent underline-offset-2 hover:underline"
+        >
+          {cta}
+        </Link>
+      ) : null}
+    </div>
   )
 }

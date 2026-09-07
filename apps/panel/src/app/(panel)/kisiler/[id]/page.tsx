@@ -106,22 +106,18 @@ export default async function ContactListDetailPage({
 
       <PageHeader
         title={list.name}
-        description={`${list.contact_count} numara · gruptan çıkar / ad değiştir / sil`}
+        description={`${list.contact_count} numara`}
         action={
           <div className="flex flex-wrap items-center gap-2">
             <ListActions listId={list.id} currentName={list.name} />
-            <AccentLink href="/kisiler">Defterden ekle</AccentLink>
-            <AccentLink href="/kampanyalar#yeni-kampanya">Kampanyada kullan</AccentLink>
+            <AccentLink href="/kisiler?gorunum=defter">Defterden ekle</AccentLink>
+            <AccentLink href="/kampanyalar#yeni-kampanya">Kampanya</AccentLink>
           </div>
         }
       />
 
       <Notice tone="accent">
-        Kişi eklemek için{' '}
-        <Link href="/kisiler" className="font-semibold underline underline-offset-2">
-          Kişiler
-        </Link>
-        ’e git → numaraları seç → bu grubu seç → “Gruba ekle”.
+        Numara eklemek: Defter’den seç → bu grubu seç → Gruba taşı. Veya Kişiler’de yeni grup Excel ile.
       </Notice>
 
       <Card className="mt-3">

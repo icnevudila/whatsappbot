@@ -5,9 +5,11 @@ import {
   CardHeader,
   Notice,
   PageHeader,
+  StatStrip,
 } from '@/components/ui'
 import { requirePlatformAdmin } from '@/lib/org'
 import { AdminOrgList, type AdminOrgRow } from './admin-org-list'
+import { ProvisionCustomerForm } from './admin-ops-forms'
 
 export const metadata = { title: 'Admin' }
 export const dynamic = 'force-dynamic'
@@ -83,60 +85,53 @@ export default async function AdminHomePage() {
     <>
       <PageHeader
         title="Süper admin"
-        description="Tüm işletmeler, üyeler, kota ve hatlar. Kurulum kilidi yok."
+        description={`${orgs.length} işletme · ${connected} bağlı hat · kontrol burada`}
         action={
           <Link
             href="/ozet"
             className="text-[13px] text-accent underline-offset-2 hover:underline"
           >
-            Aktif işletme paneli →
+            Aktif işletme →
           </Link>
         }
       />
 
-      <div className="mb-3 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
+      <StatStrip
+        items={[
+          { label: 'İşletme', value: orgs.length },
+          { label: 'Üye', value: members },
+          {
+            label: 'Hat',
+            value: `${connected}/${accounts.length}`,
+            tone: connected > 0 ? 'ok' : 'default',
+          },
+          {
+            label: 'Kilit',
+            value: locked,
+            tone: locked > 0 ? 'danger' : 'default',
+          },
+          {
+            label: 'Askı',
+            value: suspended,
+            tone: suspended > 0 ? 'danger' : 'default',
+          },
+          { label: 'Worker', value: workers.length },
+        ]}
+      />
+
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.75fr)]">
+        <AdminOrgList orgs={orgRows} />
         <Card>
+          <CardHeader title="Yeni müşteri" subtitle="Davet + işletme + kota" />
           <div className="p-3.5">
-            <p className="text-[11.5px] text-ink-faint">İşletme</p>
-            <p className="mt-1 text-[22px] font-extrabold tabular">{orgs.length}</p>
-            {suspended > 0 ? (
-              <p className="mt-0.5 text-[11px] text-danger">{suspended} askıda</p>
-            ) : null}
-          </div>
-        </Card>
-        <Card>
-          <div className="p-3.5">
-            <p className="text-[11.5px] text-ink-faint">Üye (toplam)</p>
-            <p className="mt-1 text-[22px] font-extrabold tabular">{members}</p>
-          </div>
-        </Card>
-        <Card>
-          <div className="p-3.5">
-            <p className="text-[11.5px] text-ink-faint">Hat (bağlı)</p>
-            <p className="mt-1 text-[22px] font-extrabold tabular">
-              {connected}/{accounts.length}
-            </p>
-          </div>
-        </Card>
-        <Card>
-          <div className="p-3.5">
-            <p className="text-[11.5px] text-ink-faint">Kilitli hat</p>
-            <p className="mt-1 text-[22px] font-extrabold tabular text-danger">{locked}</p>
-          </div>
-        </Card>
-        <Card>
-          <div className="p-3.5">
-            <p className="text-[11.5px] text-ink-faint">Worker</p>
-            <p className="mt-1 text-[22px] font-extrabold tabular">{workers.length}</p>
+            <ProvisionCustomerForm />
           </div>
         </Card>
       </div>
 
-      <AdminOrgList orgs={orgRows} />
-
       {jobs.length > 0 ? (
         <Card className="mt-2.5">
-          <CardHeader title="Son işler" subtitle="Kuyruk (özet)" />
+          <CardHeader title="Son işler" subtitle="Kuyruk" />
           <ul className="divide-y divide-hairline text-[12px]">
             {jobs.slice(0, 16).map((job) => (
               <li key={job.id} className="flex justify-between gap-2 px-3.5 py-2 text-ink-muted">

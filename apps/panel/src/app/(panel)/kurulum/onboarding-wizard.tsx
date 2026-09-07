@@ -21,7 +21,7 @@ import { DEFAULT_COLORS } from '@/lib/creative-templates'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import type { getSetupProgress, SetupStepKey } from '@/lib/setup-progress'
 import { saveBrandKit, type BrandKitState } from '../marka-kiti/actions'
-import { ImportForm } from '../kisiler/import-form'
+import { NewGroupForm } from '../kisiler/new-group-form'
 
 type Progress = Awaited<ReturnType<typeof getSetupProgress>>
 
@@ -341,7 +341,7 @@ export function OnboardingWizard({
                   '“Grubu oluştur”a bas. Bu sayfa yenilenince adım tamamlanır.',
                 ]}
               />
-              <ImportForm />
+              <NewGroupForm />
               <Button type="button" onClick={refresh}>
                 {t('setup.contactsRefresh')}
               </Button>

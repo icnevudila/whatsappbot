@@ -14,6 +14,7 @@ import {
   Notice,
   QuietLink,
   SplitPane,
+  StatStrip,
   StatusPill,
 } from '@/components/ui'
 import { useConfirm } from '@/components/confirm-dialog'
@@ -194,39 +195,21 @@ export function AccountsBoard({
 
   return (
     <div className="space-y-2.5">
-      <div className="grid gap-2.5 sm:grid-cols-3">
-        <Card lift className="border-ok/30 bg-ok-soft/50">
-          <div className="p-3.5">
-            <p className="text-[11.5px] font-medium text-ok-dim">Bağlı hat</p>
-            <p className="mt-1 tabular text-[28px] font-extrabold tracking-[-0.03em] text-ok-dim">
-              {connected}
-            </p>
-            <p className="mt-1 text-[11.5px] text-ink-muted">{accounts.length} toplam kayıt</p>
-          </div>
-        </Card>
-        <Card lift className="border-accent/25 bg-accent-soft/70">
-          <div className="p-3.5">
-            <p className="text-[11.5px] font-medium text-accent-dim">Bugün gönderilen</p>
-            <p className="mt-1 tabular text-[28px] font-extrabold tracking-[-0.03em] text-accent">
-              {sentTodayTotal}
-            </p>
-            <p className="mt-1 text-[11.5px] text-ink-muted">Tüm hatlar toplamı</p>
-          </div>
-        </Card>
-        <Card lift className={atCap ? 'border-warn/35 bg-[#fff6e8]' : 'border-hairline bg-surface'}>
-          <div className="p-3.5">
-            <p className="text-[11.5px] font-medium text-ink-muted">Kota</p>
-            <p className="mt-1 tabular text-[28px] font-extrabold tracking-[-0.03em] text-ink">
-              {accounts.length}
-              <span className="text-[16px] font-semibold text-ink-muted"> / {accountsQuota}</span>
-            </p>
-            <div className="mt-2.5">
-              <Meter value={accounts.length} max={accountsQuota} tone={atCap ? 'warn' : 'accent'} />
-            </div>
-            <p className="mt-1.5 text-[11.5px] text-ink-faint">{remaining} ekleme hakkı</p>
-          </div>
-        </Card>
-      </div>
+      <StatStrip
+        items={[
+          {
+            label: 'Bağlı',
+            value: connected,
+            tone: connected > 0 ? 'ok' : 'default',
+          },
+          { label: 'Bugün', value: sentTodayTotal },
+          {
+            label: 'Kota',
+            value: `${accounts.length}/${accountsQuota}`,
+            tone: atCap ? 'danger' : 'default',
+          },
+        ]}
+      />
 
       <NewAccountForm remaining={remaining} atCap={atCap} />
 

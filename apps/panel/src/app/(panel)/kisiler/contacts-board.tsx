@@ -10,7 +10,6 @@ import {
   addContactsToList,
   deleteContacts,
   deleteContactsBySource,
-  removeContactsFromList,
 } from './actions'
 
 export type ContactRow = {
@@ -30,6 +29,7 @@ function sourceLabel(source: string) {
   return source
 }
 
+/** Defter: seç → gruba taşı / sil. Gruptan çıkar burada yok. */
 export function ContactsBoard({
   contacts,
   groups,
@@ -105,76 +105,42 @@ export function ContactsBoard({
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Ara: ad veya numara"
-          className="min-w-[180px] flex-1"
+          placeholder="Ara"
+          className="min-w-[140px] flex-1"
         />
-        <span className="text-[11.5px] text-ink-faint tabular">
-          {selected.size} seçili · {filtered.length} görünen
-        </span>
+        <Button type="button" onClick={toggleAll} disabled={filtered.length === 0 || pending}>
+          {allFilteredSelected ? 'Seçimi kaldır' : 'Sayfayı seç'}
+        </Button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 rounded-md border border-hairline bg-canvas px-2.5 py-2">
-        <Button type="button" onClick={toggleAll} disabled={filtered.length === 0 || pending}>
-          {allFilteredSelected ? 'Seçimi kaldır' : 'Sayfadakileri seç'}
-        </Button>
-
-        <select
-          value={targetList}
-          onChange={(e) => setTargetList(e.target.value)}
-          className="h-9 min-w-[140px] flex-1 rounded-md border border-hairline bg-surface px-2 text-[12.5px]"
-          disabled={groups.length === 0 || pending}
-          aria-label="Hedef grup"
-        >
-          {groups.length === 0 ? (
-            <option value="">Önce grup oluştur →</option>
-          ) : (
-            groups.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.name}
-              </option>
-            ))
-          )}
-        </select>
-
-        <Button
-          type="button"
-          variant="accent"
-          disabled={selected.size === 0 || !targetList || pending}
-          onClick={() => run(() => addContactsToList(targetList, [...selected]))}
-        >
-          Gruba ekle
-        </Button>
-
-        <Button
-          type="button"
-          disabled={selected.size === 0 || !targetList || pending}
-          onClick={() => run(() => removeContactsFromList(targetList, [...selected]))}
-        >
-          Gruptan çıkar
-        </Button>
-
-        <Button
-          type="button"
-          variant="danger"
-          disabled={selected.size === 0 || pending}
-          onClick={() => {
-            void (async () => {
-              const ok = await confirm({
-                title: `${selected.size} kişi silinsin mi?`,
-                description: 'Defterden kalıcı silinir. Bu işlem geri alınamaz.',
-                confirmLabel: 'Sil',
-                cancelLabel: 'Vazgeç',
-                tone: 'danger',
-              })
-              if (!ok) return
-              run(() => deleteContacts([...selected]))
-            })()
-          }}
-        >
-          Defterden sil
-        </Button>
-
-        {whatsappCount > 0 ? (
+      {selected.size > 0 ? (
+        <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 rounded-md border border-accent/30 bg-accent-soft/80 px-2.5 py-2 backdrop-blur-sm">
+          <span className="text-[12px] font-semibold text-ink tabular">{selected.size} seçili</span>
+          <select
+            value={targetList}
+            onChange={(e) => setTargetList(e.target.value)}
+            className="h-9 min-w-[120px] flex-1 rounded-md border border-hairline bg-surface px-2 text-[12.5px]"
+            disabled={groups.length === 0 || pending}
+            aria-label="Hedef grup"
+          >
+            {groups.length === 0 ? (
+              <option value="">Önce grup oluştur</option>
+            ) : (
+              groups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))
+            )}
+          </select>
+          <Button
+            type="button"
+            variant="accent"
+            disabled={!targetList || pending}
+            onClick={() => run(() => addContactsToList(targetList, [...selected]))}
+          >
+            Gruba taşı
+          </Button>
           <Button
             type="button"
             variant="danger"
@@ -182,31 +148,26 @@ export function ContactsBoard({
             onClick={() => {
               void (async () => {
                 const ok = await confirm({
-                  title: `WhatsApp rehberinden gelen ${whatsappCount} kişi silinsin mi?`,
-                  description:
-                    'Yalnızca WhatsApp içe aktarma kaynaklı kayıtlar silinir. Excel / manuel kalır.',
-                  confirmLabel: 'WhatsApp kişilerini sil',
+                  title: `${selected.size} kişi silinsin mi?`,
+                  description: 'Defterden kalıcı silinir.',
+                  confirmLabel: 'Sil',
                   cancelLabel: 'Vazgeç',
                   tone: 'danger',
                 })
                 if (!ok) return
-                run(() => deleteContactsBySource('whatsapp'))
+                run(() => deleteContacts([...selected]))
               })()
             }}
           >
-            WA import sil ({whatsappCount})
+            Sil
           </Button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       {message ? <Notice tone="danger">{message}</Notice> : null}
 
       {filtered.length === 0 ? (
-        <p className="py-6 text-center text-[13px] text-ink-muted">
-          {contacts.length === 0
-            ? 'Henüz kişi yok. Sağdan Excel yükle veya boş grup açıp sonra ekle.'
-            : 'Aramayla eşleşen kişi yok.'}
-        </p>
+        <p className="py-6 text-center text-[13px] text-ink-muted">Numara yok.</p>
       ) : (
         <ul className="divide-y divide-hairline rounded-md border border-hairline">
           {filtered.map((row) => (
@@ -219,23 +180,46 @@ export function ContactsBoard({
                 aria-label={row.phone_e164}
               />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[13px] font-medium text-ink">
-                  {row.name?.trim() || row.phone_e164}
+                <p className="truncate font-mono text-[12.5px] tabular text-ink">
+                  {row.name || row.phone_e164}
                 </p>
-                <p className="text-[11.5px] text-ink-muted tabular">
+                <p className="mt-0.5 truncate text-[11px] text-ink-faint">
                   {row.phone_e164}
                   {row.source ? ` · ${sourceLabel(row.source)}` : ''}
-                  {row.wa_status === 'valid'
-                    ? ' · ✓'
-                    : row.wa_status === 'invalid'
-                      ? ' · ×'
-                      : ''}
+                  {row.wa_status === 'valid' ? ' · ✓' : ''}
                 </p>
               </div>
             </li>
           ))}
         </ul>
       )}
+
+      {whatsappCount > 0 ? (
+        <details className="text-[12px] text-ink-muted">
+          <summary className="cursor-pointer font-medium">Gelişmiş</summary>
+          <Button
+            type="button"
+            variant="danger"
+            className="mt-2"
+            disabled={pending}
+            onClick={() => {
+              void (async () => {
+                const ok = await confirm({
+                  title: 'WhatsApp kaynaklı kişiler silinsin mi?',
+                  description: `${whatsappCount} kayıt defterden silinir.`,
+                  confirmLabel: 'Sil',
+                  cancelLabel: 'Vazgeç',
+                  tone: 'danger',
+                })
+                if (!ok) return
+                run(() => deleteContactsBySource('whatsapp'))
+              })()
+            }}
+          >
+            WA rehber kişilerini sil ({whatsappCount})
+          </Button>
+        </details>
+      ) : null}
     </div>
   )
 }
