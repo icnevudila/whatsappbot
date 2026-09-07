@@ -29,6 +29,7 @@ export async function upsertWorkerHeartbeat(): Promise<void> {
       env.dbPoolMax,
       JSON.stringify({
         stale: report.stale.length,
+        connecting: report.connecting,
         pid: process.pid,
         uptimeSeconds: Math.round(process.uptime()),
       }),
