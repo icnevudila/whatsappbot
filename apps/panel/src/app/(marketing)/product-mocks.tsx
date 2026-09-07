@@ -12,7 +12,7 @@ function ShellChrome({ title, children }: { title: string; children: React.React
           <p className="mt-1 truncate text-[10px] text-ink-faint">Demo İşletme</p>
         </div>
         <nav className="flex flex-1 flex-col gap-0.5 p-1.5 text-[11px] text-ink-muted">
-          {['Özet', 'Hesaplar', 'Kampanyalar', 'Gelenler', 'Gidenler', 'Raporlar'].map((label) => (
+          {['Özet', 'Hatlar', 'Kampanyalar', 'Gelenler', 'Gidenler', 'Raporlar'].map((label) => (
             <span
               key={label}
               className={`rounded-[5px] px-2 py-1.5 ${
@@ -292,9 +292,9 @@ export function MockCampaigns() {
 
 export function MockAccounts() {
   return (
-    <ShellChrome title="Hesaplar">
+    <ShellChrome title="Hatlar">
       <div className="mb-3">
-        <h3 className="text-[15px] font-semibold tracking-[-0.02em]">Hesaplar</h3>
+        <h3 className="text-[15px] font-semibold tracking-[-0.02em]">Hatlar</h3>
         <p className="mt-0.5 text-[11px] text-ink-muted">Her satır ayrı WhatsApp hattı · demo</p>
       </div>
       <div className="mb-2 rounded-[10px] border border-hairline bg-surface px-3 py-2.5">

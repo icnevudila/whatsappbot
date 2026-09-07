@@ -107,21 +107,25 @@ export function Nav({
     ]
   }, [isPlatformAdmin, t])
 
-  /** Mobil: yalnız ana işler + ayarlar. */
+  /** Mobil: ana işler + hızlı gönderim + ayarlar (veya admin ops). */
   const flat = useMemo(() => {
     if (orientation === 'horizontal') {
       if (isPlatformAdmin) {
         return [
           { href: '/admin', label: 'Admin', icon: 'settings' as const },
+          { href: '/durum', label: t('nav.durum'), icon: 'activity' as const },
+          { href: '/raporlar', label: t('nav.raporlar'), icon: 'chart' as const },
           { href: '/ozet', label: t('nav.ozet'), icon: 'overview' as const },
           { href: '/kampanyalar', label: t('nav.kampanyalar'), icon: 'campaign' as const },
           { href: '/hesaplar', label: t('nav.hesaplar'), icon: 'phone' as const },
           { href: '/kisiler', label: t('nav.kisiler'), icon: 'people' as const },
+          { href: '/mesajlar', label: t('nav.mesajlar'), icon: 'inbox' as const },
         ] as NavItem[]
       }
       const main = groups.find((g) => g.id === 'main')?.items ?? []
       return [
         ...main,
+        { href: '/hizli-gonderim', label: t('nav.hizli'), icon: 'send' as const },
         { href: '/ayarlar', label: t('nav.ayarlar'), icon: 'settings' as const },
       ] as NavItem[]
     }

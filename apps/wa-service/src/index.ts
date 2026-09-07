@@ -35,6 +35,20 @@ const STALE_JOB_RECLAIM_INTERVAL_MS = 60_000
 let shuttingDown = false
 
 async function buildHealthPayload(): Promise<{ status: number; body: unknown }> {
+  if (shuttingDown) {
+    return {
+      status: 503,
+      body: {
+        role: env.role,
+        worker: env.workerId,
+        healthy: false,
+        ready: false,
+        draining: true,
+        uptimeSeconds: Math.round(process.uptime()),
+      },
+    }
+  }
+
   let dbOk = false
   try {
     await pool.query('select 1')
@@ -73,6 +87,7 @@ async function buildHealthPayload(): Promise<{ status: number; body: unknown }> 
     tracked: report.tracked,
     live: report.live,
     staleCount: report.stale.length,
+    connectingCount: report.connecting,
   })
 
   return {
@@ -83,10 +98,12 @@ async function buildHealthPayload(): Promise<{ status: number; body: unknown }> 
       healthy,
       ready,
       degraded,
+      draining: false,
       db: dbOk,
       sessions: {
         tracked: report.tracked,
         live: report.live,
+        connecting: report.connecting,
         stale: report.stale,
         max: env.maxSessions,
         free: Math.max(0, env.maxSessions - report.tracked),

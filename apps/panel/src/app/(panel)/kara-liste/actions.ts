@@ -46,7 +46,7 @@ export async function addToBlacklist(
   revalidatePath('/kara-liste')
   revalidatePath('/kisiler')
 
-  const parts = [`${parsed.valid.length} numara kara listeye eklendi`]
+  const parts = [`${parsed.valid.length} numara istemeyenlere eklendi`]
   if (parsed.duplicates > 0) parts.push(`${parsed.duplicates} tekrar atlandı`)
   if (parsed.invalid.length > 0) parts.push(`${parsed.invalid.length} geçersiz`)
 

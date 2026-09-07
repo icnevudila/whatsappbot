@@ -227,7 +227,7 @@ export async function generateImage(
 
   throw new Error(
     attempts.length > 0
-      ? `Hicbir gorsel saglayici sonuc vermedi. ${attempts.join(' | ')}`
+      ? `Hiçbir görsel sağlayıcı sonuç vermedi. ${attempts.join(' | ')}`
       : 'Yapilandirilmis gorsel saglayici yok.',
   )
 }

@@ -133,7 +133,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
             <div className="flex items-center gap-3">
               <p className="text-[11.5px] text-ink-faint">
                 {isPlatformAdmin
-                  ? 'Platform konsolu'
+                  ? `Destek görünümü · ${org.name}`
                   : customerNeedsSetup
                     ? t('common.setupHintSoft')
                     : t('common.workbench')}

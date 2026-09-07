@@ -1,4 +1,4 @@
-'use server'
+﻿'use server'
 
 import { revalidatePath } from 'next/cache'
 import {
@@ -293,7 +293,7 @@ export async function verifyList(
   if (liveError) return { error: liveError.message }
   if (!liveCount) {
     return {
-      error: 'Liste doğrulaması için bağlı bir WhatsApp hattı gerekli. Hesaplar’dan bir hat bağlayın.',
+      error: 'Liste doğrulaması için bağlı bir WhatsApp hattı gerekli. Hatlar’dan bir hat bağlayın.',
     }
   }
 
@@ -335,7 +335,7 @@ export async function verifyAllContacts(): Promise<{
   if (liveError) return { error: liveError.message }
   if (!liveCount) {
     return {
-      error: 'Defter doğrulaması için bağlı bir WhatsApp hattı gerekli. Hesaplar’dan bir hat bağlayın.',
+      error: 'Defter doğrulaması için bağlı bir WhatsApp hattı gerekli. Hatlar’dan bir hat bağlayın.',
     }
   }
 
@@ -650,7 +650,7 @@ export async function removeMember(
 
 export type PhoneCheckResult = {
   error?: string
-  /** Bağlı hat yoksa UI Hesaplar’a yönlendirebilir. */
+  /** Bağlı hat yoksa UI Hatlar’a yönlendirebilir. */
   code?: 'no_line' | 'invalid_phone' | 'timeout' | 'failed'
   phone_e164?: string
   exists?: boolean
@@ -661,7 +661,7 @@ function friendlyCheckError(raw: string | null | undefined): string {
   if (!text) return 'Kontrol başarısız. Bağlı hattı ve servisi kontrol edip tekrar deneyin.'
   const lower = text.toLocaleLowerCase('tr-TR')
   if (lower.includes('bagli') || lower.includes('bağlı') || lower.includes('hesabi') || lower.includes('hesabı')) {
-    return 'Kontrol için bağlı bir WhatsApp hattı gerekli. Hesaplar’dan oturumu açın.'
+    return 'Kontrol için bağlı bir WhatsApp hattı gerekli. Hatlar’dan oturumu açın.'
   }
   if (lower.includes('dogrulama') || lower.includes('doğrulama') || lower.includes('oturum')) {
     return 'Doğrulama sonucu alınamadı. Hat bağlantısı düşmüş olabilir; tekrar deneyin.'
@@ -710,7 +710,7 @@ export async function checkWhatsAppPhone(rawPhone: string): Promise<PhoneCheckRe
 
   if (!liveCount) {
     return {
-      error: 'Kontrol için bağlı bir WhatsApp hattı gerekli. Hesaplar’dan bir hat bağlayın.',
+      error: 'Kontrol için bağlı bir WhatsApp hattı gerekli. Hatlar’dan bir hat bağlayın.',
       code: 'no_line',
       phone_e164: phone,
     }

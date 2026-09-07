@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useRef } from 'react'
 import { AccentLink, Card, CardHeader, EmptyState } from '@/components/ui'
@@ -101,7 +101,7 @@ export function EventFeed({
           tone="events"
           title="Henüz olay yok"
           description="Bir hat bağlandığında, oturum değiştiğinde veya kota dolduğunda olaylar burada anlık görünür."
-          action={<AccentLink href="/hesaplar">Hesaplara git</AccentLink>}
+          action={<AccentLink href="/hesaplar">Hatlar’a git</AccentLink>}
         />
       ) : (
         <div className="wb-list-scroll divide-y divide-hairline">

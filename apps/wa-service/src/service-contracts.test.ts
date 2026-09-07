@@ -60,7 +60,17 @@ test('computeWorkerReady matrisi', () => {
   )
   assert.deepEqual(
     computeWorkerReady({ dbOk: true, tracked: 2, live: 1, staleCount: 1 }),
-    { healthy: true, ready: false, degraded: true },
+    { healthy: true, ready: true, degraded: true },
+  )
+  assert.deepEqual(
+    computeWorkerReady({
+      dbOk: true,
+      tracked: 2,
+      live: 0,
+      staleCount: 0,
+      connectingCount: 2,
+    }),
+    { healthy: true, ready: true, degraded: false },
   )
   assert.deepEqual(
     computeWorkerReady({ dbOk: false, tracked: 0, live: 0, staleCount: 0 }),

@@ -17,7 +17,7 @@ export async function createAccount(
   formData: FormData,
 ): Promise<ActionState> {
   const label = String(formData.get('label') ?? '').trim()
-  if (!label) return { error: 'Hesaba bir ad verin.' }
+  if (!label) return { error: 'Bu hat için bir ad yazın.' }
 
   let userId: string
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
@@ -37,7 +37,7 @@ export async function createAccount(
   const quota = org.accounts_quota
   if ((count ?? 0) >= quota) {
     return {
-      error: `Hat kotasi dolu (${count}/${quota}). Yeni hat icin Ayarlar'dan paketi kontrol edin veya kullanilmayan bir hatti silin.`,
+      error: `Hat kotası dolu (${count}/${quota}). Yeni hat için Ayarlar’dan paketi kontrol edin veya kullanılmayan bir hattı silin.`,
     }
   }
 
@@ -58,12 +58,12 @@ export async function createAccount(
   if (jobError) {
     revalidateAccounts()
     return {
-      error: `Hesap oluşturuldu ama bağlantı kuyruğa yazılamadı: ${jobError}`,
+      error: `Hat oluşturuldu ama bağlantı kuyruğa yazılamadı: ${jobError}`,
     }
   }
 
   revalidateAccounts()
-  return { ok: 'Hesap oluşturuldu, QR kodu hazırlanıyor.' }
+  return { ok: 'Hat oluşturuldu, QR kodu hazırlanıyor.' }
 }
 
 async function enqueueForAccount(
@@ -103,7 +103,7 @@ export async function requestPairingCode(
   if (!e164) {
     return {
       error:
-        'Gecerli bir WhatsApp numarasi degil. Ornek: +90 545 365 13 19 (ulke koduyla, fazla rakam olmadan)',
+        'Geçerli bir WhatsApp numarası değil. Örnek: +90 545 365 13 19 (ülke koduyla)',
     }
   }
 
@@ -138,7 +138,7 @@ export async function removeAccount(accountId: string): Promise<ActionState> {
     if (error) return { error: error.message }
 
     revalidateAccounts()
-    return { ok: 'Hesap silindi.' }
+    return { ok: 'Hat silindi.' }
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Oturum yok' }
   }

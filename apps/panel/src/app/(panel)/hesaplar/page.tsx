@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+﻿import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { AccentLink, PageHeader, QuietLink } from '@/components/ui'
 import { createT } from '@/lib/i18n'
@@ -10,7 +10,7 @@ import { AccountsBoard, type AccountView } from './accounts-board'
 
 export const dynamic = 'force-dynamic'
 
-export const metadata: Metadata = { title: 'Hesaplar' }
+export const metadata: Metadata = { title: 'Hatlar' }
 
 const ACCOUNT_FIELDS =
   'id, label, phone_e164, status, status_detail, enabled, is_locked, lock_reason, qr_code, qr_expires_at, pairing_code, pairing_expires_at, daily_send_limit, sent_today, sent_today_on, warmup_started_at, new_chat_quota_total, new_chat_quota_used, reachout_locked_until'

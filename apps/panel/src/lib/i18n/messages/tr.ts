@@ -1,4 +1,4 @@
-import { landingTr } from './landing-tr'
+﻿import { landingTr } from './landing-tr'
 
 export const tr = {
   common: {
@@ -205,7 +205,7 @@ export const tr = {
     waPending: 'Bekliyor',
     numbers: 'numara',
     connectedShort: 'bağlı',
-    linesEmpty: 'Hat yok — Hesaplar’dan ekleyin.',
+    linesEmpty: 'Hat yok — Hatlar’dan ekleyin.',
     noLines: 'Hat eklenmemiş.',
     statusConnected: 'Bağlı',
     statusConnecting: 'Bağlanıyor',

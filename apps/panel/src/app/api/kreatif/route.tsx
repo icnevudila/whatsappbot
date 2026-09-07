@@ -459,7 +459,7 @@ export async function POST(request: Request) {
   try {
     ;({ userId, org, supabase } = await requireActiveOrg())
   } catch {
-    return NextResponse.json({ error: 'Oturum bulunamadi.' }, { status: 401 })
+    return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 })
   }
 
   const limited = rateLimit(`ai:kreatif:${userId}`, { limit: 10, windowMs: 60_000 })

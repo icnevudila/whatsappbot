@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useTransition } from 'react'
 import { AccentLink, Button, Card, CardHeader, Field, Input, Notice, QuietLink } from '@/components/ui'
@@ -88,7 +88,7 @@ export function WaCheckForm() {
           <div className="space-y-2">
             <Notice tone="danger">{error}</Notice>
             {errorCode === 'no_line' ? (
-              <QuietLink href="/hesaplar">Hesaplara git</QuietLink>
+              <QuietLink href="/hesaplar">Hatlar’a git</QuietLink>
             ) : null}
           </div>
         ) : null}

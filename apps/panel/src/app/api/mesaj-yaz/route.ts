@@ -32,7 +32,7 @@ export async function POST(request: Request) {
   try {
     ;({ userId, org } = await requireActiveOrg())
   } catch {
-    return NextResponse.json({ error: 'Oturum bulunamadi.' }, { status: 401 })
+    return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 })
   }
 
   if (org.suspended_at) {

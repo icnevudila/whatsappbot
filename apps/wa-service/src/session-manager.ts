@@ -199,13 +199,22 @@ export class SessionManager {
     healthy: boolean
     tracked: number
     live: number
+    connecting: number
     stale: string[]
   }> {
     const stale: string[] = []
+    let connecting = 0
 
     for (const [accountId, session] of this.sessions) {
       if (session.currentStatus === 'connected' && !session.isLive) {
         stale.push(accountId)
+      }
+      if (
+        session.currentStatus === 'connecting' ||
+        session.currentStatus === 'qr_pending' ||
+        session.currentStatus === 'pairing_pending'
+      ) {
+        connecting += 1
       }
     }
 
@@ -215,6 +224,7 @@ export class SessionManager {
       healthy: stale.length === 0 || this.liveSessions().length > 0,
       tracked: this.sessions.size,
       live: this.liveSessions().length,
+      connecting,
       stale,
     }
   }

@@ -138,7 +138,7 @@ export async function completeText(
 
   throw new Error(
     attempts.length > 0
-      ? `Hicbir metin saglayici sonuc vermedi. ${attempts.join(' | ')}`
-      : 'Metin uretimi icin OpenAI veya Gemini anahtari gerekir (Ayarlar veya sunucu env).',
+      ? `Hiçbir metin sağlayıcı sonuç vermedi. ${attempts.join(' | ')}`
+      : 'Metin üretimi için OpenAI veya Gemini anahtarı gerekir (Ayarlar veya sunucu env).',
   )
 }

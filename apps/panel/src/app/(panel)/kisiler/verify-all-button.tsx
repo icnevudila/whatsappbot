@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
@@ -70,7 +70,7 @@ export function VerifyAllButton() {
       {error ? (
         <div className="space-y-2">
           <Notice tone="danger">{error}</Notice>
-          {needsLine ? <QuietLink href="/hesaplar">Hesaplara git</QuietLink> : null}
+          {needsLine ? <QuietLink href="/hesaplar">Hatlar’a git</QuietLink> : null}
         </div>
       ) : null}
 

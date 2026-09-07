@@ -52,11 +52,11 @@ export async function createCampaign(
   if (listIds.length === 0) return { error: 'En az bir kişi grubu seçin.' }
   if (accountIds.length === 0) return { error: 'En az bir gönderen hat seçin.' }
   if (minDelay > maxDelay) {
-    return { error: 'En kisa bekleme, en uzun beklemeden buyuk olamaz.' }
+    return { error: 'En kısa bekleme, en uzun beklemeden büyük olamaz.' }
   }
   if (minDelay < 3) {
-    // Sabit veya cok kisa aralik toplu gonderimi makine gibi gosteriyor.
-    return { error: 'Guvenlik icin en kisa bekleme 3 saniyeden az olamaz.' }
+    // Sabit veya çok kısa aralık toplu gönderimi makine gibi gösteriyor.
+    return { error: 'Güvenlik için en kısa bekleme 3 saniyeden az olamaz.' }
   }
 
   let userId: string
@@ -65,7 +65,7 @@ export async function createCampaign(
   try {
     ;({ userId, org, supabase } = await requireActiveOrg())
   } catch (error) {
-    return { error: error instanceof Error ? error.message : 'Oturum bulunamadi.' }
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
   }
 
   const [lists, accounts] = await Promise.all([

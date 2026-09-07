@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+﻿import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import {
@@ -131,10 +131,10 @@ export default async function QuickSendPage({
         <EmptyState
           tone="phone"
           title="Önce bir hat bağlayın"
-          description="En az bir bağlı WhatsApp hattı gerekir. Hesaplar’dan QR okutun veya eşleştirme kodu alın."
+          description="En az bir bağlı WhatsApp hattı gerekir. Hatlar’dan QR okutun veya eşleştirme kodu alın."
           action={
             <div className="flex flex-wrap justify-center gap-2">
-              <AccentLink href="/hesaplar">Hesaplara git</AccentLink>
+              <AccentLink href="/hesaplar">Hatlar’a git</AccentLink>
               <QuietLink href="/durum">Durumu kontrol et</QuietLink>
             </div>
           }

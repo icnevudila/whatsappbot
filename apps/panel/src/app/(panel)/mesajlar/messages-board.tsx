@@ -119,7 +119,7 @@ export function MessagesBoard({
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const threadEndRef = useRef<HTMLDivElement>(null)
-  useSyncBusy(pending, 'Kara listeye ekleniyor…')
+  useSyncBusy(pending, 'İstemeyenlere ekleniyor…')
 
   const visibleList = list.filter((item) =>
     `${item.contactName ?? ''} ${item.pushName ?? ''} ${item.phone} ${item.lastBody ?? ''} ${item.accountLabel ?? ''}`
@@ -187,7 +187,7 @@ export function MessagesBoard({
   const block = () => {
     if (!selectedPhone || !selectedPhone.startsWith('+')) {
       setError('Bu konuşmada E.164 numara yok; kara listeye eklenemedi.')
-      toast('Kara listeye eklenemedi — numara yok.', 'danger')
+      toast('İstemeyenlere eklenemedi — numara yok.', 'danger')
       return
     }
     setError(null)
@@ -198,8 +198,8 @@ export function MessagesBoard({
         setError(result.error)
         toast(result.error, 'danger')
       } else {
-        setNotice('Kara listeye eklendi. Bundan sonra kampanya bu numarayı atlar.')
-        toast('Kara listeye eklendi.', 'success')
+        setNotice('İstemeyenlere eklendi. Bundan sonra kampanya bu numarayı atlar.')
+        toast('İstemeyenlere eklendi.', 'success')
       }
     })
   }
@@ -391,7 +391,7 @@ export function MessagesBoard({
                 action={
                   selectedPhone.startsWith('+') ? (
                     <Button disabled={pending} onClick={block}>
-                      {pending ? 'Ekleniyor…' : 'Kara listeye al'}
+                      {pending ? 'Ekleniyor…' : 'İstemeyenlere al'}
                     </Button>
                   ) : null
                 }

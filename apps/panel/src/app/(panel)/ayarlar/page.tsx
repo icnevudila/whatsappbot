@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+﻿import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import {
@@ -170,7 +170,7 @@ export default async function SettingsPage({
     <div className="filo-fade-in">
       <PageHeader
         title={t('pages.ayarlarTitle')}
-        description="İşletme adı, ekip ve paket. Gönderim hatları Hesaplar’da."
+        description="İşletme adı, ekip ve paket. Gönderim hatları Hatlar’da."
         action={
           <span className="text-[12px] text-ink-muted">
             Rolünüz: {ROLE_HINT[org.role] ?? org.role}
@@ -340,7 +340,7 @@ export default async function SettingsPage({
                 total={accountsQuota}
                 detail={
                   connectedCount === 0
-                    ? 'Henüz bağlı hat yok — Hesaplar’dan bağlayın'
+                    ? 'Henüz bağlı hat yok — Hatlar’dan bağlayın'
                     : `${connectedCount} bağlı · paket ${accountsQuota} hatta izin veriyor`
                 }
               />
@@ -360,7 +360,7 @@ export default async function SettingsPage({
                     <p className="text-[13px] text-ink-faint">Hat bağlanınca hesaplanır</p>
                     <div className="mt-2.5">
                       <AccentLink href="/hesaplar" className="text-[12.5px]">
-                        Hesaplara git
+                        Hatlar’a git
                       </AccentLink>
                     </div>
                   </div>

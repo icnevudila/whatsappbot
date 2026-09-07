@@ -1,4 +1,4 @@
-import Link from 'next/link'
+﻿import Link from 'next/link'
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { AccentLink, Card, HourlyBars, Notice, PageHeader, QuietLink } from '@/components/ui'
@@ -159,7 +159,7 @@ export default async function StatusPage() {
             servisi kapalı veya yanıt vermiyor olabilir — gönderim ve eşleştirme
             kodu üretilmez.{' '}
             <Link href="/hesaplar" className="font-medium underline underline-offset-2">
-              Hesaplar
+              Hatlar
             </Link>{' '}
             üzerinden hattı yeniden bağlayın; sorun sürerse destek ile iletişime
             geçin.
@@ -170,7 +170,7 @@ export default async function StatusPage() {
           <Notice tone="warn">
             Bağlı hat yok. Kampanya ve hızlı gönderim çalışmaz.{' '}
             <Link href="/hesaplar" className="font-medium underline underline-offset-2">
-              Hesaplar
+              Hatlar
             </Link>{' '}
             sayfasından QR veya telefon koduyla yeniden bağlayın.
           </Notice>
@@ -181,7 +181,7 @@ export default async function StatusPage() {
             Henüz hat eklenmemiş. Gönderim için önce bir WhatsApp numarası
             bağlamanız gerekir.{' '}
             <Link href="/hesaplar" className="font-medium underline underline-offset-2">
-              Hesaplara git
+              Hatlar’a git
             </Link>
           </Notice>
         ) : null}
@@ -192,7 +192,7 @@ export default async function StatusPage() {
             <Link href="/mesajlar" className="font-medium underline underline-offset-2">
               Mesajlar
             </Link>{' '}
-            sayfasından sohbetleri inceleyin; istenmeyen numaraları kara listeye
+            sayfasından sohbetleri inceleyin; istenmeyen numaraları İstemeyenler’e
             alabilirsiniz.
           </Notice>
         ) : null}

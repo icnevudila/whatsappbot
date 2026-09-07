@@ -47,8 +47,8 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [, startTransition] = useTransition()
-  useSyncBusy(pending, 'Kara listeye ekleniyor…')
-  useSyncBusy(busyId != null, 'Kara listeden kaldırılıyor…')
+  useSyncBusy(pending, 'İstemeyenlere ekleniyor…')
+  useSyncBusy(busyId != null, 'İstemeyenlerden kaldırılıyor…')
 
   useEffect(() => {
     setRows(initial)
@@ -99,7 +99,7 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
           toast(result.error, 'danger')
         } else {
           setRows((current) => current.filter((row) => row.id !== id))
-          toast('Kara listeden kaldırıldı.', 'success')
+          toast('İstemeyenlerden kaldırıldı.', 'success')
         }
         setBusyId(null)
       })
@@ -121,7 +121,7 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
           {rows.length > 0 ? (
             <div className="border-b border-hairline px-3 py-2">
               <Input
-                aria-label="Kara listede ara"
+                aria-label="İstemeyenlerde ara"
                 type="search"
                 placeholder="Numara veya sebep ara…"
                 value={search}
@@ -133,7 +133,7 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
           {rows.length === 0 ? (
             <EmptyState
               tone="shield"
-              title="Kara liste boş"
+              title="İstemeyenler boş"
               description="Çıkmak isteyen veya engellemek istediğiniz numaraları sağdan ekleyin."
               action={
                 <div className="flex flex-wrap justify-center gap-2">
@@ -225,7 +225,7 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
             {state?.ok ? <Notice tone="accent">{state.ok}</Notice> : null}
 
             <Button type="submit" variant="accent" disabled={pending} className="w-full">
-              {pending ? 'Ekleniyor…' : 'Kara listeye ekle'}
+              {pending ? 'Ekleniyor…' : 'İstemeyenlere ekle'}
             </Button>
 
             {!state?.error && !state?.ok ? (

@@ -77,7 +77,7 @@ export default function YardimPage() {
     <>
       <PageHeader
         title="Nasıl yapılır?"
-        description="Dönerci de bu üç adımı izler: hat → kişiler → gönder."
+        description="Hat bağla → kişi grubu → kampanya. Takılınca SSS’ye bak."
       />
 
       <div className="grid gap-2.5 sm:grid-cols-2">

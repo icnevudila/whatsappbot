@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import Link from 'next/link'
 
 import { useActionState, useEffect, useRef, useState, type ReactNode } from 'react'
@@ -166,7 +166,7 @@ export function NewCampaignForm({
         return { ok: false, hint: 'Önce Kişiler’den bir grup oluşturun.' }
       }
       if (accounts.length === 0) {
-        return { ok: false, hint: 'Önce Hesaplar’dan bir hat bağlayın.' }
+        return { ok: false, hint: 'Önce Hatlar’dan bir hat bağlayın.' }
       }
       if (selectedLists.length === 0) return { ok: false, hint: 'En az bir kişi grubu seçin.' }
       if (selectedAccounts.length === 0) return { ok: false, hint: 'En az bir hat seçin.' }

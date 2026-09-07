@@ -31,13 +31,15 @@ git reset --hard --quiet origin/main
 log "Surum: $(git log --oneline -1)"
 
 log "Imaj kuruluyor"
-docker compose -f "$COMPOSE_FILE" build
+PROFILE="${COMPOSE_PROFILE:-small}"
+docker compose -f "$COMPOSE_FILE" --profile "$PROFILE" build
 
 # up -d, degisen imajda konteyneri degistirir. stop_grace_period sayesinde
 # eski process kapanis sirasini tamamlar (creds yazimi, kira birakma), yani
 # yeni process kirayi devralirken 440 dongusune girmez.
 log "Konteyner degistiriliyor"
-docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
+log "Compose profil: $PROFILE"
+docker compose -f "$COMPOSE_FILE" --profile "$PROFILE" up -d --remove-orphans
 
 # --- Dogrulama -------------------------------------------------------------
 #
@@ -46,27 +48,29 @@ docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
 
 log "Saglik kontrolu (en fazla 180 saniye)"
 
+CONTAINER_NAME="${COMPOSE_CONTAINER:-wa-service}"
+
 for _ in $(seq 1 60); do
-  state="$(docker inspect -f '{{.State.Health.Status}}' wa-service 2>/dev/null || echo missing)"
+  state="$(docker inspect -f '{{.State.Health.Status}}' "$CONTAINER_NAME" 2>/dev/null || echo missing)"
 
   case "$state" in
     healthy)
       log "Servis ayakta ve sagliki"
-      docker compose -f "$COMPOSE_FILE" ps
+      docker compose -f "$COMPOSE_FILE" --profile "$PROFILE" ps
       exit 0
       ;;
     unhealthy)
-      docker logs --tail 60 wa-service
+      docker logs --tail 60 "$CONTAINER_NAME"
       fail "Servis sagliksiz durumda. Yukaridaki gunluge bakin."
       ;;
     missing)
-      docker logs --tail 60 wa-service 2>/dev/null || true
-      fail "Konteyner bulunamadi, baslatilamamis olabilir."
+      docker logs --tail 60 "$CONTAINER_NAME" 2>/dev/null || true
+      fail "Konteyner bulunamadi ($CONTAINER_NAME), baslatilamamis olabilir."
       ;;
   esac
 
   sleep 3
 done
 
-docker logs --tail 60 wa-service
+docker logs --tail 60 "$CONTAINER_NAME"
 fail "Saglik kontrolu 180 saniyede gecmedi. Gunluge bakin."

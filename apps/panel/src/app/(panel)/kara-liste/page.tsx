@@ -6,7 +6,7 @@ import { getDictionary } from '@/lib/i18n/server'
 import { requireActiveOrg } from '@/lib/org'
 import { BlacklistBoard } from './blacklist-board'
 
-export const metadata: Metadata = { title: 'Kara liste' }
+export const metadata: Metadata = { title: 'İstemeyenler' }
 export const dynamic = 'force-dynamic'
 
 export default async function BlacklistPage() {
@@ -36,7 +36,7 @@ export default async function BlacklistPage() {
     <>
       <PageHeader
         title={t('pages.karaListeTitle')}
-        description="Bu numaralara kampanya veya hızlı gönderim gitmez. Alıcı YAZMAYIN / istemiyorum / STOP yazınca otomatik eklenir; Mesajlar’dan da elle eklenebilir."
+        description="Kampanya ve hızlı gönderim bu numaralara gitmez. Alıcı YAZMAYIN / istemiyorum yazınca otomatik eklenir."
         action={
           <div className="flex flex-wrap gap-2">
             <AccentLink href="/mesajlar">{t('nav.mesajlar')}</AccentLink>

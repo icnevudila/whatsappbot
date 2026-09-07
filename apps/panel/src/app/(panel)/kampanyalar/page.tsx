@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+﻿import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import {
@@ -209,7 +209,7 @@ export default async function CampaignsPage({
                   listOptions.length === 0 ? (
                     <AccentLink href="/kisiler">Kişilere git</AccentLink>
                   ) : connectedCount === 0 ? (
-                    <AccentLink href="/hesaplar">Hesaplara git</AccentLink>
+                    <AccentLink href="/hesaplar">Hatlar’a git</AccentLink>
                   ) : (
                     <AccentLink href="#yeni-kampanya">Kampanya oluştur</AccentLink>
                   )

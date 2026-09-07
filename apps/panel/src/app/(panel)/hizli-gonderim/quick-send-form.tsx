@@ -306,7 +306,7 @@ export function QuickSendForm({
             <p className="rounded-md border border-hairline bg-canvas px-3 py-2 text-[12.5px] text-ink-faint">
               Bağlı hat yok. Önce{' '}
               <Link href="/hesaplar" className="font-medium text-ink underline underline-offset-2">
-                Hesaplar
+                Hatlar
               </Link>{' '}
               üzerinden bir WhatsApp hattı bağlayın.
             </p>

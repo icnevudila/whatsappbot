@@ -24,6 +24,7 @@ import {
 import { ContactsBoard } from './contacts-board'
 import { ListActions } from './list-actions'
 import { NewGroupForm } from './new-group-form'
+import { VerifyAllButton } from './verify-all-button'
 
 export const metadata: Metadata = { title: 'Kişiler' }
 export const dynamic = 'force-dynamic'
@@ -176,6 +177,11 @@ export default async function ContactsPage({
             title="Defter"
             subtitle={`${total} numara · seçip gruba taşı`}
           />
+          {total > 0 ? (
+            <div className="border-b border-hairline px-3.5 py-2.5">
+              <VerifyAllButton />
+            </div>
+          ) : null}
           <ContactsBoard
             contacts={contacts}
             groups={groups}

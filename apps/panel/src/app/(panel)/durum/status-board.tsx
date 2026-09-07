@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect } from 'react'
 import Link from 'next/link'
@@ -198,8 +198,8 @@ export function StatusBoard({
             <EmptyState
               tone="phone"
               title="Henüz hat yok"
-              description="Hesaplar’dan QR veya telefon koduyla ilk hattı bağlayın. Bağlantı sunucuda kalır."
-              action={<AccentLink href="/hesaplar">Hesaplara git</AccentLink>}
+              description="Hatlar’dan QR veya telefon koduyla ilk hattı bağlayın. Bağlantı sunucuda kalır."
+              action={<AccentLink href="/hesaplar">Hatlar’a git</AccentLink>}
             />
           ) : (
             <div className="divide-y divide-hairline">

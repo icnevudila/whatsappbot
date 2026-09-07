@@ -38,7 +38,7 @@ export async function quickSend(
   if (body.length > 4096) return { error: 'Mesaj 4096 karakteri aşamaz.' }
 
   if (!raw.trim()) return { error: 'En az bir numara girin.' }
-  if (!body && !mediaUrl) return { error: 'Mesaj metni veya bir gorsel gerekli.' }
+  if (!body && !mediaUrl) return { error: 'Mesaj metni veya bir görsel gerekli.' }
   if (accountIds.length === 0) return { error: 'En az bir gönderen hat seçin.' }
 
   const parsed = parsePhoneList(raw)
@@ -55,7 +55,7 @@ export async function quickSend(
   try {
     ;({ userId, org, supabase } = await requireActiveOrg())
   } catch (error) {
-    return { error: error instanceof Error ? error.message : 'Oturum bulunamadi.' }
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
   }
 
   if (org.suspended_at) {
