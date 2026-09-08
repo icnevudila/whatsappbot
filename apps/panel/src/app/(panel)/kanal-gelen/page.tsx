@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { Card, PageHeader } from '@/components/ui'
 import { requireActiveOrg } from '@/lib/org'
+import { ReplyForm } from './reply-form'
 
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = { title: 'Kanal gelen kutusu' }
@@ -13,6 +14,7 @@ type MsgRow = {
   text: string | null
   sender_id: string | null
   external_thread_id: string
+  channel_account_id: string
   occurred_at: string
 }
 
@@ -30,7 +32,9 @@ export default async function KanalGelenPage() {
 
   const { data } = await supabase
     .from('channel_messages' as 'message_log')
-    .select('id, channel, direction, text, sender_id, external_thread_id, occurred_at')
+    .select(
+      'id, channel, direction, text, sender_id, external_thread_id, channel_account_id, occurred_at',
+    )
     .eq('org_id', org.id)
     .order('occurred_at', { ascending: false })
     .limit(100)
@@ -57,6 +61,13 @@ export default async function KanalGelenPage() {
                   <span>{new Date(row.occurred_at).toLocaleString('tr-TR')}</span>
                 </div>
                 <p className="mt-1 text-sm text-ink">{row.text || '—'}</p>
+                {row.direction === 'inbound' ? (
+                  <ReplyForm
+                    channelAccountId={row.channel_account_id}
+                    threadId={row.external_thread_id}
+                    channel={row.channel}
+                  />
+                ) : null}
               </li>
             ))}
           </ul>

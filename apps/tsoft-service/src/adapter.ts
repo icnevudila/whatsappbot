@@ -1,61 +1,44 @@
 import type { CommerceLookupResult } from '@wa/channels'
-import { env, CHANNEL } from './env.js'
+import { env } from './env.js'
 
-const primary = Array.isArray(CHANNEL) ? CHANNEL[0] : CHANNEL
+export function tsoftOrderPath(orderId: string): string {
+  return `/RestApi/Order/GetOrderById?OrderId=${encodeURIComponent(orderId)}`
+}
 
 export async function lookupOrder(orderId: string): Promise<CommerceLookupResult> {
   if (env.mockMode || !env.liveEnabled || !env.token) {
     return {
       ok: true,
       mock: true,
-      data: {
-        channel: primary,
-        orderId,
-        status: 'processing',
-        total: 199.9,
-        currency: 'TRY',
-      },
+      data: { channel: 'tsoft', orderId, Durum: 'Hazirlaniyor', Toplam: 450 },
     }
   }
-
+  const base = (env.apiBase || '').replace(/\/$/, '')
+  if (!base) return { ok: false, error: 'missing_api_base' }
   try {
-    const base = env.apiBase || 'https://example.invalid'
-    const res = await fetch(`${base}/orders/${encodeURIComponent(orderId)}`, {
-      headers: { authorization: `Bearer ${env.token}` },
+    const res = await fetch(`${base}${tsoftOrderPath(orderId)}`, {
+      headers: { Authorization: `Bearer ${env.token}` },
     })
-    if (!res.ok) return { ok: false, error: `http_${res.status}`, mock: false }
-    const data = (await res.json()) as Record<string, unknown>
-    return { ok: true, data, mock: false }
+    if (!res.ok) return { ok: false, error: `http_${res.status}` }
+    return { ok: true, data: (await res.json()) as Record<string, unknown>, mock: false }
   } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : String(error),
-      mock: false,
-    }
+    return { ok: false, error: error instanceof Error ? error.message : String(error) }
   }
 }
 
 export async function lookupStock(sku: string): Promise<CommerceLookupResult> {
   if (env.mockMode || !env.liveEnabled || !env.token) {
-    return {
-      ok: true,
-      mock: true,
-      data: { channel: primary, sku, available: 12 },
-    }
+    return { ok: true, mock: true, data: { channel: 'tsoft', sku, Stok: 22 } }
   }
+  const base = (env.apiBase || '').replace(/\/$/, '')
+  if (!base) return { ok: false, error: 'missing_api_base' }
   try {
-    const base = env.apiBase || 'https://example.invalid'
-    const res = await fetch(`${base}/stock/${encodeURIComponent(sku)}`, {
-      headers: { authorization: `Bearer ${env.token}` },
+    const res = await fetch(`${base}/RestApi/Product/GetProductByCode?ProductCode=${encodeURIComponent(sku)}`, {
+      headers: { Authorization: `Bearer ${env.token}` },
     })
-    if (!res.ok) return { ok: false, error: `http_${res.status}`, mock: false }
-    const data = (await res.json()) as Record<string, unknown>
-    return { ok: true, data, mock: false }
+    if (!res.ok) return { ok: false, error: `http_${res.status}` }
+    return { ok: true, data: (await res.json()) as Record<string, unknown>, mock: false }
   } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : String(error),
-      mock: false,
-    }
+    return { ok: false, error: error instanceof Error ? error.message : String(error) }
   }
 }
