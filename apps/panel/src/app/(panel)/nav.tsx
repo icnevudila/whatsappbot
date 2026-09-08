@@ -100,6 +100,7 @@ export function Nav({
       { href: '/raporlar', label: t('nav.raporlar'), icon: 'chart' },
       { href: '/kisiler', label: t('nav.kisiler'), icon: 'people' },
       { href: '/hesaplar', label: t('nav.hesaplar'), icon: 'phone' },
+      { href: '/kanallar', label: 'Kanallar', icon: 'settings' },
       { href: '/mesajlar', label: t('nav.mesajlar'), icon: 'inbox' },
       { href: '/marka-kiti', label: t('nav.markaShort'), icon: 'brand' },
     ]

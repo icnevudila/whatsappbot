@@ -1,0 +1,22 @@
+{
+  "name": "@wa/erp-service",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --env-file-if-exists=.env --import tsx --watch src/index.ts",
+    "start": "node --env-file-if-exists=.env --import tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test src/**/*.test.ts"
+  },
+  "dependencies": {
+    "@wa/channels": "*",
+    "@wa/channel-runtime": "*",
+    "pino": "10.3.1",
+    "tsx": "4.23.13"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "typescript": "^5"
+  }
+}
