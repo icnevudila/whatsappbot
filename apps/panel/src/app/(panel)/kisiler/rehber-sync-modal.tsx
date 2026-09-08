@@ -340,7 +340,7 @@ export function RehberSyncModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="wb-modal-panel max-w-[480px]"
+        className="wb-modal-panel wb-modal-panel--wide"
       >
         <h2 id={titleId} className="wb-modal-title">
           WhatsApp rehberinden çek
@@ -415,7 +415,7 @@ export function RehberSyncModal({
 
               <div
                 ref={feedRef}
-                className="max-h-[260px] overflow-y-auto rounded-md border border-hairline bg-surface"
+                className="wb-modal-scroll max-h-[260px] overflow-y-auto rounded-md border border-hairline bg-surface"
               >
                 {items.length === 0 ? (
                   <div className="flex flex-col items-center gap-2 px-3 py-10 text-center">

@@ -569,7 +569,7 @@ h3 {
 @keyframes filo-pop {
   from {
     opacity: 0;
-    transform: translateY(-4px) scale(0.98);
+    transform: translateY(8px) scale(0.98);
   }
   to {
     opacity: 1;
@@ -717,33 +717,57 @@ h3 {
   }
 }
 
-/* Confirm modal + toast */
+/* Confirm + rehber vb. modallar — mobilde alta yapışmasın, ortada kalsın */
 .wb-modal-root {
   position: fixed;
   inset: 0;
   z-index: 90;
-  display: grid;
-  place-items: center;
-  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: max(16px, env(safe-area-inset-top, 0px)) 16px
+    max(16px, env(safe-area-inset-bottom, 0px));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 .wb-modal-backdrop {
-  position: absolute;
+  position: fixed;
   inset: 0;
   border: 0;
   cursor: pointer;
-  background: rgba(12, 14, 22, 0.45);
+  background: rgba(12, 14, 22, 0.5);
   animation: filo-fade-in 140ms var(--ease-out) both;
 }
 .wb-modal-panel {
   position: relative;
   z-index: 1;
-  width: min(100%, 400px);
+  width: min(100%, 440px);
+  max-width: 100%;
+  /* Kısa içerik: dikey ortala; uzun içerik: root kaydırır, üst kesilmez */
+  margin-top: auto;
+  margin-bottom: auto;
+  flex-shrink: 0;
   border-radius: var(--radius-card);
   border: 1px solid var(--color-hairline);
   background: var(--color-surface);
   box-shadow: var(--shadow-md);
   padding: 18px 18px 14px;
   animation: filo-pop 160ms var(--ease-out) both;
+}
+.wb-modal-panel--wide {
+  width: min(100%, 480px);
+}
+@media (max-width: 639px) {
+  .wb-modal-root {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .wb-modal-panel .wb-modal-scroll {
+    max-height: min(42dvh, 280px);
+  }
 }
 .wb-modal-title {
   margin: 0;
