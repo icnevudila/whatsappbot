@@ -5,6 +5,44 @@ import { isOrgAdminRole, requireActiveOrg } from '@/lib/org'
 
 export type ReplyState = { error?: string; ok?: string } | null
 
+const MESSAGING = new Set([
+  'telegram',
+  'instagram',
+  'facebook',
+  'rcs',
+  'line',
+  'wechat',
+  'webchat',
+])
+
+const QNA = new Set(['crm', 'hubspot', 'zendesk'])
+
+function jobForChannel(channel: string, threadId: string, text: string, accountId: string) {
+  if (MESSAGING.has(channel)) {
+    return {
+      type: 'channel.send',
+      payload: { threadId, text, accountId, source: 'panel_reply' },
+      okMessage: 'Yanıt kuyruğa alındı; kanal worker gönderiyor.',
+    }
+  }
+  if (QNA.has(channel)) {
+    return {
+      type: 'channel.qna.answer',
+      payload: { question: text, threadId, accountId, source: 'panel_reply' },
+      okMessage: 'Soru kuyruğa alındı; CRM worker yanıtlıyor.',
+    }
+  }
+  // Commerce / marketplace / ERP → lookup (metin = sipariş no veya SKU)
+  const looksLikeSku = /^[A-Za-z0-9_-]{2,64}$/.test(text) && !/\s/.test(text) && /[A-Za-z]/.test(text)
+  return {
+    type: 'channel.lookup',
+    payload: looksLikeSku
+      ? { sku: text, threadId, accountId, source: 'panel_reply' }
+      : { orderId: text, threadId, accountId, source: 'panel_reply' },
+    okMessage: 'Lookup kuyruğa alındı; kanal worker sorguluyor.',
+  }
+}
+
 export async function replyChannelMessage(
   _prev: ReplyState,
   formData: FormData,
@@ -37,31 +75,28 @@ export async function replyChannelMessage(
 
   if (!account) return { error: 'Kanal hesabı bulunamadı.' }
 
+  const accountChannel = String((account as { channel?: string }).channel ?? channel)
+  const job = jobForChannel(accountChannel, threadId, text, channelAccountId)
+
   const { error } = await supabase.from('channel_messages' as 'message_log').insert({
     org_id: org.id,
     channel_account_id: channelAccountId,
-    channel,
+    channel: accountChannel,
     direction: 'outbound',
     external_thread_id: threadId,
     sender_id: 'panel',
     text,
-    payload: { source: 'panel_reply' },
+    payload: { source: 'panel_reply', job_type: job.type },
   } as never)
 
   if (error) return { error: error.message }
 
-  // Worker kuyruğuna gönder — channel-*-service job loop alır.
   const { error: jobError } = await supabase.from('channel_jobs' as 'message_log').insert({
     org_id: org.id,
     channel_account_id: channelAccountId,
-    channel,
-    type: 'channel.send',
-    payload: {
-      threadId,
-      text,
-      accountId: channelAccountId,
-      source: 'panel_reply',
-    },
+    channel: accountChannel,
+    type: job.type,
+    payload: job.payload,
   } as never)
 
   if (jobError) {
@@ -72,5 +107,5 @@ export async function replyChannelMessage(
   }
 
   revalidatePath('/kanal-gelen')
-  return { ok: 'Yanıt kuyruğa alındı; kanal worker gönderiyor.' }
+  return { ok: job.okMessage }
 }

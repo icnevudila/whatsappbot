@@ -14,9 +14,11 @@ x-channel: &channel
     - ../packages/channel-runtime/SAMPLE_CREDENTIALS.env
   environment:
     NODE_ENV: production
-    MOCK_MODE: 'true'
-    LIVE_ENABLED: 'false'
+    MOCK_MODE: ${CHANNELS_MOCK_MODE:-true}
+    LIVE_ENABLED: ${CHANNELS_LIVE_ENABLED:-false}
     ROLE: worker
+    # Job claim için service_role / postgres URL gerekir (Supabase pooler veya local).
+    DATABASE_URL: ${CHANNELS_DATABASE_URL:-}
   logging:
     driver: json-file
     options:

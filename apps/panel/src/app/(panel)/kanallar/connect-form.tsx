@@ -61,8 +61,26 @@ export function ConnectChannelForm({ canManage }: { canManage: boolean }) {
       <Field label="API base (opsiyonel)">
         <Input name="api_base" placeholder="https://..." />
       </Field>
+      <Field label="Meta page ID (IG/FB)">
+        <Input name="page_id" placeholder="sample-page-id" autoComplete="off" />
+      </Field>
+      <Field label="Verify token (webhook)">
+        <Input name="verify_token" placeholder="dev-verify" autoComplete="off" />
+      </Field>
+      <Field label="LINE channel secret">
+        <Input name="channel_secret" type="password" autoComplete="off" />
+      </Field>
+      <Field label="Seller ID (Trendyol vb.)">
+        <Input name="seller_id" placeholder="123456" autoComplete="off" />
+      </Field>
+      <Field label="API key (pazaryeri)">
+        <Input name="api_key" autoComplete="off" />
+      </Field>
+      <Field label="API secret (pazaryeri)">
+        <Input name="api_secret" type="password" autoComplete="off" />
+      </Field>
       <div className="sm:col-span-2">
-        <Field label="Token / API key">
+        <Field label="Token / access token">
           <Input name="token" type="password" placeholder="Bot token veya access token" autoComplete="off" />
         </Field>
       </div>
