@@ -240,11 +240,24 @@ async function handle(job: JobRow): Promise<unknown> {
         listName: payload.list_name,
       })
 
-      // Ilk import 0 ise ve hat canliysa bir tur daha bekle / tekrar aktar
-      if (imported.imported === 0 && live && session) {
-        log.info({ accountId }, 'account.sync_contacts: ilk aktarim 0 — ek bekleme')
-        await session.resyncContacts({ maxWaitMs: 45_000 })
-        await new Promise((resolve) => setTimeout(resolve, 5_000))
+      // Ilk import 0 ise: gecikmeli rehber icin bekle (iPhone / yeni bagli cihaz sik)
+      if (imported.imported === 0) {
+        log.info({ accountId, live }, 'account.sync_contacts: ilk aktarim 0 — gecikme beklemesi')
+        const lateStarted = Date.now()
+        while (Date.now() - lateStarted < 60_000) {
+          if (live && session && Date.now() - lateStarted < 5_000) {
+            await session.resyncContacts({ maxWaitMs: 30_000 })
+          }
+          await new Promise((resolve) => setTimeout(resolve, 2_000))
+          const next = await countAccountContacts(accountId)
+          await writeProgress({
+            phase: 'pulling',
+            live,
+            seen: next,
+            samples: await sampleAccountContacts(accountId, 40),
+          })
+          if (next > 0) break
+        }
         imported = await importAccountContactsToList({
           orgId: job.org_id,
           createdBy: job.created_by,

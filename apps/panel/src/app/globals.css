@@ -383,6 +383,20 @@ h3 {
 .wb-row-flash {
   animation: filo-row-flash 1.05s var(--ease-out) both;
 }
+/* Rehber çekim — yeni satır kısa kayarak gelsin */
+.wb-rehber-drip {
+  animation: filo-rehber-drip 220ms var(--ease-out) both;
+}
+@keyframes filo-rehber-drip {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 .wb-live-dot {
   box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-ok) 50%, transparent);
   animation: filo-live-ping 1.8s ease-out infinite;
@@ -679,6 +693,7 @@ h3 {
   .wb-page-enter,
   .wb-row-enter,
   .wb-row-flash,
+  .wb-rehber-drip,
   .wb-live-dot,
   .wb-skel,
   .wb-route-progress.is-active span,

@@ -22,6 +22,17 @@ export type RehberAccountOption = {
 
 type Phase = 'pick' | 'running' | 'done' | 'error'
 
+/**
+ * Canlı akış: bir anda dump yok, tek tek de değil —
+ * küçük paketler halinde (WhatsApp’tan geliyormuş gibi).
+ */
+function streamBurst(queueLen: number): { size: number; delayMs: number } {
+  if (queueLen > 100) return { size: 12, delayMs: 40 }
+  if (queueLen > 40) return { size: 8, delayMs: 55 }
+  if (queueLen > 12) return { size: 5, delayMs: 70 }
+  return { size: 3, delayMs: 90 }
+}
+
 export function RehberSyncButton({
   accounts,
   className,
@@ -72,6 +83,12 @@ export function RehberSyncModal({
   const [pending, startTransition] = useTransition()
   const startedRef = useRef(false)
 
+  /** Sunucudan gelen ama henüz UI’da gösterilmeyen kişiler */
+  const pendingQueueRef = useRef<RehberPreviewItem[]>([])
+  const knownPhonesRef = useRef<Set<string>>(new Set())
+  const dripTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const flushAllRef = useRef(false)
+
   const connected = accounts.filter((a) => a.status === 'connected')
   const defaultId =
     initialAccountId && connected.some((a) => a.id === initialAccountId)
@@ -83,12 +100,73 @@ export function RehberSyncModal({
   const [statusLine, setStatusLine] = useState('WhatsApp’tan kişiler çekiliyor…')
   const [error, setError] = useState<string | null>(null)
   const [items, setItems] = useState<RehberPreviewItem[]>([])
-  const [seen, setSeen] = useState(0)
+  const [displayCount, setDisplayCount] = useState(0)
+  const [serverTotal, setServerTotal] = useState(0)
   const [flashPhone, setFlashPhone] = useState<string | null>(null)
   const [result, setResult] = useState<RehberSyncJobResult | null>(null)
   const [jobId, setJobId] = useState<string | null>(null)
 
   useSyncBusy(pending || phase === 'running', 'WhatsApp rehberi çekiliyor…')
+
+  const clearDrip = () => {
+    if (dripTimerRef.current) {
+      clearTimeout(dripTimerRef.current)
+      dripTimerRef.current = null
+    }
+  }
+
+  const resetDrip = () => {
+    clearDrip()
+    pendingQueueRef.current = []
+    knownPhonesRef.current = new Set()
+    flushAllRef.current = false
+  }
+
+  const scheduleStream = () => {
+    if (dripTimerRef.current) return
+
+    const tick = () => {
+      dripTimerRef.current = null
+      const queue = pendingQueueRef.current
+      if (queue.length === 0) return
+
+      const { size, delayMs } = flushAllRef.current
+        ? { size: Math.min(20, queue.length), delayMs: 30 }
+        : streamBurst(queue.length)
+
+      const nextBatch = queue.splice(0, size)
+      const newest = nextBatch[0]
+
+      setItems((prev) => [...nextBatch, ...prev].slice(0, 150))
+      setDisplayCount((n) => n + nextBatch.length)
+      if (newest) {
+        setFlashPhone(newest.phone)
+        window.setTimeout(
+          () => setFlashPhone((cur) => (cur === newest.phone ? null : cur)),
+          380,
+        )
+      }
+
+      if (queue.length > 0) {
+        dripTimerRef.current = setTimeout(tick, delayMs)
+      }
+    }
+
+    const first = streamBurst(pendingQueueRef.current.length)
+    dripTimerRef.current = setTimeout(tick, first.delayMs)
+  }
+
+  /** Yeni gelenleri kuyruğa al — UI küçük paketlerle akar */
+  const enqueueIncoming = (incoming: RehberPreviewItem[]) => {
+    let added = 0
+    for (const row of incoming) {
+      if (!row.phone || knownPhonesRef.current.has(row.phone)) continue
+      knownPhonesRef.current.add(row.phone)
+      pendingQueueRef.current.push(row)
+      added += 1
+    }
+    if (added > 0) scheduleStream()
+  }
 
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null
@@ -107,24 +185,9 @@ export function RehberSyncModal({
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = prevOverflow
       previous?.focus?.()
+      clearDrip()
     }
   }, [onClose, phase])
-
-  const mergeItems = (next: RehberPreviewItem[]) => {
-    setItems((prev) => {
-      const map = new Map<string, RehberPreviewItem>()
-      for (const row of [...next, ...prev]) {
-        if (!map.has(row.phone)) map.set(row.phone, row)
-      }
-      const merged = [...map.values()]
-      const newest = next[0]?.phone
-      if (newest && newest !== prev[0]?.phone) {
-        setFlashPhone(newest)
-        window.setTimeout(() => setFlashPhone((cur) => (cur === newest ? null : cur)), 900)
-      }
-      return merged.slice(0, 120)
-    })
-  }
 
   const runPull = (targetAccountId: string) => {
     if (!targetAccountId || startedRef.current) return
@@ -132,8 +195,10 @@ export function RehberSyncModal({
     setError(null)
     setPhase('running')
     setStatusLine('WhatsApp’tan kişiler çekiliyor…')
+    resetDrip()
     setItems([])
-    setSeen(0)
+    setDisplayCount(0)
+    setServerTotal(0)
     setResult(null)
 
     startTransition(async () => {
@@ -147,13 +212,15 @@ export function RehberSyncModal({
       }
 
       setJobId(outcome.jobId)
-      const deadline = Date.now() + 3 * 60_000
+      let activeJobId = outcome.jobId
+      let lateRetryDone = false
+      const deadline = Date.now() + 4 * 60_000
 
       while (Date.now() < deadline) {
         await new Promise((r) => setTimeout(r, 800))
 
         const [job, preview] = await Promise.all([
-          readRehberSyncJob(outcome.jobId),
+          readRehberSyncJob(activeJobId),
           listRehberPreview(targetAccountId),
         ])
 
@@ -168,8 +235,8 @@ export function RehberSyncModal({
           ? job.progress.samples
           : preview.items ?? []
         const count = Math.max(job.progress?.seen ?? 0, preview.total ?? 0, samples.length)
-        setSeen(count)
-        if (samples.length) mergeItems(samples)
+        setServerTotal(count)
+        if (samples.length) enqueueIncoming(samples)
 
         const phaseLabel = job.progress?.phase
         if (phaseLabel === 'importing') {
@@ -188,19 +255,48 @@ export function RehberSyncModal({
           const finalSamples = job.result.samples?.length
             ? job.result.samples
             : preview.items ?? []
-          if (finalSamples.length) mergeItems(finalSamples)
-          setSeen(Math.max(count, job.result.imported, job.result.seen ?? 0))
+          if (finalSamples.length) enqueueIncoming(finalSamples)
+          const latestCount = Math.max(
+            count,
+            job.result.imported,
+            job.result.seen ?? 0,
+            preview.total ?? 0,
+          )
+          setServerTotal(latestCount)
+
+          if (job.result.imported === 0 && latestCount > 0 && !lateRetryDone) {
+            lateRetryDone = true
+            setStatusLine(`${latestCount} kişi geldi — gruba aktarılıyor…`)
+            const again = await syncAccountContactsAction(targetAccountId)
+            if (again?.jobId) {
+              activeJobId = again.jobId
+              setJobId(again.jobId)
+              continue
+            }
+          }
+
+          if (job.result.imported === 0 && latestCount === 0 && Date.now() < deadline - 15_000) {
+            setStatusLine('WhatsApp gecikmeli gönderiyor — bekleniyor…')
+            continue
+          }
+
+          // Kalan kuyruğu biraz hızlandırıp bitsin
+          flushAllRef.current = true
+          if (pendingQueueRef.current.length > 0) scheduleStream()
+
           setResult(job.result)
           setPhase('done')
           setStatusLine(
             job.result.imported > 0
               ? `${job.result.imported} kişi gruba aktarıldı`
-              : 'Bu turda numara gelmedi',
+              : latestCount > 0
+                ? `${latestCount} kişi çekildi ama gruba yazılamadı — tekrar dene`
+                : 'Bu turda numara gelmedi',
           )
           toast(
             job.result.imported > 0
               ? `${job.result.imported} kişi aktarıldı.`
-              : 'Numara gelmedi — hat bağlı mı kontrol et.',
+              : 'Numara gelmedi veya geç geldi — tekrar dene.',
             job.result.imported > 0 ? 'success' : 'accent',
           )
           router.refresh()
@@ -221,13 +317,12 @@ export function RehberSyncModal({
     })
   }
 
-  // Tek hat: modal açılınca tek tıkla çek (otomatik çift job riski yok)
-  // Çok hat: seçip başlat
-
   useEffect(() => {
-    if (phase !== 'running' || !feedRef.current) return
+    if ((phase !== 'running' && phase !== 'done') || !feedRef.current) return
     feedRef.current.scrollTop = 0
-  }, [items, phase])
+  }, [items[0]?.phone, phase])
+
+  const shownCount = Math.max(displayCount, phase === 'done' ? serverTotal : displayCount)
 
   return (
     <div className="wb-modal-root" role="presentation">
@@ -255,8 +350,8 @@ export function RehberSyncModal({
           {phase === 'pick' ? (
             <>
               <p className="text-[12.5px] leading-snug text-ink-muted">
-                Başlatınca numaralar burada anlık akar; bitince gruba yazılır. Telefon
-                sistem rehberi değil — WhatsApp kişi / sohbet numaraları.
+                Başlatınca isimler canlı akar (bir anda dump yok); bitince gruba yazılır.
+                Telefon sistem rehberi değil — WhatsApp kişi / sohbet numaraları.
               </p>
               {connected.length === 0 ? (
                 <Notice tone="accent">
@@ -299,10 +394,10 @@ export function RehberSyncModal({
                     phase === 'running' ? 'text-accent' : 'text-ink'
                   }`}
                 >
-                  {seen}
+                  {shownCount}
                 </p>
                 <p className="mt-1 text-[12.5px] font-medium text-ink-muted">
-                  {phase === 'running' ? 'kişi çekiliyor' : 'kişi'}
+                  {phase === 'running' ? 'kişi geliyor' : 'kişi'}
                 </p>
                 <p
                   className={`mt-2 text-[12.5px] ${
@@ -311,6 +406,11 @@ export function RehberSyncModal({
                 >
                   {statusLine}
                 </p>
+                {phase === 'running' && serverTotal > displayCount + 5 ? (
+                  <p className="mt-1 text-[11px] tabular text-ink-faint">
+                    +{serverTotal - displayCount} yolda
+                  </p>
+                ) : null}
               </div>
 
               <div
@@ -321,7 +421,7 @@ export function RehberSyncModal({
                   <div className="flex flex-col items-center gap-2 px-3 py-10 text-center">
                     <span className="wb-live-dot inline-block size-2 rounded-full bg-accent" />
                     <p className="text-[12.5px] text-ink-muted">
-                      İsimler buraya anlık düşecek…
+                      İsimler burada akacak…
                     </p>
                   </div>
                 ) : (
@@ -329,7 +429,7 @@ export function RehberSyncModal({
                     {items.map((item) => (
                       <li
                         key={item.phone}
-                        className={`flex items-baseline justify-between gap-2 px-3 py-1.5 text-[12.5px] ${
+                        className={`wb-rehber-drip flex items-baseline justify-between gap-2 px-3 py-1.5 text-[12.5px] ${
                           flashPhone === item.phone ? 'bg-accent-soft/70' : ''
                         }`}
                       >
