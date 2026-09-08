@@ -1,30 +1,42 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { createMockHttp, SAMPLE_CREDENTIALS } from '@wa/channel-runtime'
-import { lookupOrder, lookupStock, parseWooAuthHeader } from './adapter.js'
+import { lookupOrder, lookupStock, parseWooAuthHeader, wooOrderPath } from './adapter.js'
 
 test('woo auth header', () => {
   assert.match(parseWooAuthHeader('ck:cs'), /^Basic /)
   assert.equal(parseWooAuthHeader('plain-token'), 'Bearer plain-token')
+  assert.equal(
+    parseWooAuthHeader(SAMPLE_CREDENTIALS.wooKeySecret),
+    `Basic ${Buffer.from(SAMPLE_CREDENTIALS.wooKeySecret).toString('base64')}`,
+  )
 })
 
 test('woo mock order stock', async () => {
   const order = await lookupOrder('55')
   assert.equal(order.ok, true)
-  assert.equal((order.data?.billing as { email: string }).email, 'musteri@ornek.com')
+  assert.equal(order.mock, true)
+  assert.equal(order.data?.billing && (order.data.billing as { email: string }).email, 'musteri@ornek.com')
   assert.equal((await lookupStock('SKU')).ok, true)
 })
 
-test('woo LIVE order with sample ck:cs credentials', async () => {
+test('woo LIVE order lookup with sample credentials against mock API', async () => {
   const mock = createMockHttp()
-  const auth = parseWooAuthHeader(SAMPLE_CREDENTIALS.wooKeySecret)
-  mock.on('GET', '/wp-json/wc/v3/orders/55', (req) => {
-    assert.equal(req.headers.authorization, auth)
-    return { json: { id: 55, status: 'completed', total: '100.00' } }
+  mock.on('GET', wooOrderPath('1'), (req) => {
+    assert.equal(req.headers.authorization, parseWooAuthHeader(SAMPLE_CREDENTIALS.wooKeySecret))
+    return {
+      json: {
+        id: 1,
+        status: 'processing',
+        total: '249.00',
+        currency: 'TRY',
+        billing: { email: 'live@ornek.com' },
+      },
+    }
   })
   const { base, close } = await mock.listen()
   try {
-    const result = await lookupOrder('55', {
+    const result = await lookupOrder('1', {
       mockMode: false,
       liveEnabled: true,
       token: SAMPLE_CREDENTIALS.wooKeySecret,
@@ -32,7 +44,8 @@ test('woo LIVE order with sample ck:cs credentials', async () => {
     })
     assert.equal(result.ok, true)
     assert.equal(result.mock, false)
-    assert.equal(result.data?.id, 55)
+    assert.equal((result.data as { billing?: { email: string } })?.billing?.email, 'live@ornek.com')
+    assert.equal(mock.calls.length, 1)
   } finally {
     await close()
   }

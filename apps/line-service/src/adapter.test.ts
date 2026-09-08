@@ -2,11 +2,11 @@ import assert from 'node:assert/strict'
 import crypto from 'node:crypto'
 import { test } from 'node:test'
 import { createMockHttp, SAMPLE_CREDENTIALS } from '@wa/channel-runtime'
-import { parseInbound, sendMessage, verifyLineSignature } from './adapter.js'
+import { lineSendPath, lineSendUrl, parseInbound, sendMessage, verifyLineSignature } from './adapter.js'
 
 test('line signature hmac', () => {
   const body = '{"events":[]}'
-  const secret = SAMPLE_CREDENTIALS.lineChannelSecret
+  const secret = 'secret'
   const sig = crypto.createHmac('sha256', secret).update(body).digest('base64')
   assert.equal(verifyLineSignature(body, sig, secret), true)
   assert.equal(verifyLineSignature(body, 'nope', secret), false)
@@ -24,7 +24,10 @@ test('line parse webhook + mock send', async () => {
     ],
   })
   assert.ok(event)
+  assert.equal(event.channel, 'line')
   assert.equal(event.text, 'merhaba')
+  assert.equal(event.externalThreadId, 'U1')
+
   const result = await sendMessage({
     orgId: 'o',
     accountId: 'a',
@@ -34,26 +37,28 @@ test('line parse webhook + mock send', async () => {
     metadata: { replyToken: 'r1' },
   })
   assert.equal(result.ok, true)
+  if (result.ok) assert.equal(result.mock, true)
 })
 
-test('line LIVE reply with sample channel token', async () => {
+test('line LIVE reply path with sample credentials', async () => {
   const mock = createMockHttp()
-  mock.on('POST', '/v2/bot/message/reply', (req) => {
-    assert.equal(req.headers.authorization, `Bearer ${SAMPLE_CREDENTIALS.lineChannelToken}`)
+  mock.on('POST', lineSendPath('r-live'), (req) => {
+    assert.match(req.headers.authorization ?? '', new RegExp(SAMPLE_CREDENTIALS.lineChannelToken))
     const body = JSON.parse(req.body) as { replyToken: string; messages: Array<{ text: string }> }
     assert.equal(body.replyToken, 'r-live')
-    assert.equal(body.messages[0]?.text, 'canli')
-    return { status: 200, json: {} }
+    assert.equal(body.messages[0]?.text, 'canli yanit')
+    return { json: {} }
   })
   const { base, close } = await mock.listen()
   try {
+    assert.equal(lineSendUrl(base, 'r-live'), `${base}/v2/bot/message/reply`)
     const result = await sendMessage(
       {
         orgId: 'o',
         accountId: 'a',
         channel: 'line',
         threadId: 'U1',
-        text: 'canli',
+        text: 'canli yanit',
         metadata: { replyToken: 'r-live' },
       },
       {
@@ -64,7 +69,42 @@ test('line LIVE reply with sample channel token', async () => {
       },
     )
     assert.equal(result.ok, true)
-    assert.equal(result.mock, false)
+    if (result.ok) assert.equal(result.mock, false)
+    assert.equal(mock.calls.length, 1)
+  } finally {
+    await close()
+  }
+})
+
+test('line LIVE push path with sample credentials', async () => {
+  const mock = createMockHttp()
+  mock.on('POST', lineSendPath(), (req) => {
+    assert.match(req.headers.authorization ?? '', new RegExp(SAMPLE_CREDENTIALS.lineChannelToken))
+    const body = JSON.parse(req.body) as { to: string; messages: Array<{ text: string }> }
+    assert.equal(body.to, 'U-push')
+    assert.equal(body.messages[0]?.text, 'push mesaj')
+    return { json: {} }
+  })
+  const { base, close } = await mock.listen()
+  try {
+    const result = await sendMessage(
+      {
+        orgId: 'o',
+        accountId: 'a',
+        channel: 'line',
+        threadId: 'U-push',
+        text: 'push mesaj',
+      },
+      {
+        mockMode: false,
+        liveEnabled: true,
+        token: SAMPLE_CREDENTIALS.lineChannelToken,
+        apiBase: base,
+      },
+    )
+    assert.equal(result.ok, true)
+    if (result.ok) assert.equal(result.mock, false)
+    assert.equal(mock.calls.length, 1)
   } finally {
     await close()
   }

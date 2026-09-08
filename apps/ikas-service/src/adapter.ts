@@ -1,7 +1,11 @@
 import type { CommerceLookupResult } from '@wa/channels'
-import { env, CHANNEL } from './env.js'
+import { loadIkasConfig, type IkasConfig, CHANNEL } from './env.js'
 
 const primary = Array.isArray(CHANNEL) ? CHANNEL[0] : CHANNEL
+
+function cfg(overrides?: Partial<IkasConfig>): IkasConfig {
+  return loadIkasConfig(overrides)
+}
 
 export function buildIkasOrderQuery(orderId: string) {
   return {
@@ -33,13 +37,21 @@ export function buildIkasStockQuery(sku: string) {
   }
 }
 
-function ikasGraphqlUrl(): string {
-  const base = env.apiBase.replace(/\/$/, '')
-  return `${base}/api/v1/admin/graphql`
+export function ikasGraphqlPath(): string {
+  return '/api/v1/admin/graphql'
 }
 
-export async function lookupOrder(orderId: string): Promise<CommerceLookupResult> {
-  if (env.mockMode || !env.liveEnabled || !env.token) {
+export function ikasGraphqlUrl(apiBase: string): string {
+  return `${apiBase.replace(/\/$/, '')}${ikasGraphqlPath()}`
+}
+
+export async function lookupOrder(
+  orderId: string,
+  config?: Partial<IkasConfig>,
+): Promise<CommerceLookupResult> {
+  const c = cfg(config)
+
+  if (c.mockMode || !c.liveEnabled || !c.token) {
     return {
       ok: true,
       mock: true,
@@ -56,11 +68,11 @@ export async function lookupOrder(orderId: string): Promise<CommerceLookupResult
   }
 
   try {
-    const res = await fetch(ikasGraphqlUrl(), {
+    const res = await fetch(ikasGraphqlUrl(c.apiBase), {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        authorization: `Bearer ${env.token}`,
+        authorization: `Bearer ${c.token}`,
       },
       body: JSON.stringify(buildIkasOrderQuery(orderId)),
     })
@@ -84,8 +96,13 @@ export async function lookupOrder(orderId: string): Promise<CommerceLookupResult
   }
 }
 
-export async function lookupStock(sku: string): Promise<CommerceLookupResult> {
-  if (env.mockMode || !env.liveEnabled || !env.token) {
+export async function lookupStock(
+  sku: string,
+  config?: Partial<IkasConfig>,
+): Promise<CommerceLookupResult> {
+  const c = cfg(config)
+
+  if (c.mockMode || !c.liveEnabled || !c.token) {
     return {
       ok: true,
       mock: true,
@@ -94,11 +111,11 @@ export async function lookupStock(sku: string): Promise<CommerceLookupResult> {
   }
 
   try {
-    const res = await fetch(ikasGraphqlUrl(), {
+    const res = await fetch(ikasGraphqlUrl(c.apiBase), {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        authorization: `Bearer ${env.token}`,
+        authorization: `Bearer ${c.token}`,
       },
       body: JSON.stringify(buildIkasStockQuery(sku)),
     })

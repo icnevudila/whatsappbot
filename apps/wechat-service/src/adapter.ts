@@ -4,9 +4,22 @@ import {
   type SendMessageInput,
   type SendMessageResult,
 } from '@wa/channels'
-import { env } from './env.js'
+import { loadWechatConfig, type WechatConfig } from './env.js'
 
-export function parseInbound(raw: unknown): ChannelEvent | null {
+function cfg(overrides?: Partial<WechatConfig>): WechatConfig {
+  return loadWechatConfig(overrides)
+}
+
+export function wechatSendPath(): string {
+  return '/cgi-bin/message/custom/send'
+}
+
+export function wechatSendUrl(apiBase: string): string {
+  return `${apiBase.replace(/\/$/, '')}${wechatSendPath()}`
+}
+
+export function parseInbound(raw: unknown, config?: Partial<WechatConfig>): ChannelEvent | null {
+  const c = cfg(config)
   if (!raw || typeof raw !== 'object') return null
   const body = raw as Record<string, unknown>
 
@@ -14,8 +27,8 @@ export function parseInbound(raw: unknown): ChannelEvent | null {
     const threadId = String(body.FromUserName ?? body.fromUserName ?? 'unknown')
     return buildChannelEvent({
       channel: 'wechat',
-      orgId: env.orgId,
-      accountId: env.accountId,
+      orgId: c.orgId,
+      accountId: c.accountId,
       direction: 'inbound',
       externalThreadId: threadId,
       externalMessageId: String(body.MsgId ?? body.msgId ?? ''),
@@ -29,8 +42,8 @@ export function parseInbound(raw: unknown): ChannelEvent | null {
   const threadId = String(body.threadId ?? body.senderId ?? 'unknown')
   return buildChannelEvent({
     channel: 'wechat',
-    orgId: env.orgId,
-    accountId: env.accountId,
+    orgId: c.orgId,
+    accountId: c.accountId,
     direction: 'inbound',
     externalThreadId: threadId,
     senderId: String(body.senderId ?? threadId),
@@ -39,18 +52,22 @@ export function parseInbound(raw: unknown): ChannelEvent | null {
   })
 }
 
-export async function sendMessage(input: SendMessageInput): Promise<SendMessageResult> {
-  if (env.mockMode || !env.liveEnabled || !env.token) {
+export async function sendMessage(
+  input: SendMessageInput,
+  config?: Partial<WechatConfig>,
+): Promise<SendMessageResult> {
+  const c = cfg(config)
+
+  if (c.mockMode || !c.liveEnabled || !c.token) {
     return { ok: true, externalMessageId: `mock-wechat-${Date.now()}`, mock: true }
   }
 
-  const base = (env.apiBase || '').replace(/\/$/, '')
   try {
-    const res = await fetch(`${base}/cgi-bin/message/custom/send`, {
+    const res = await fetch(wechatSendUrl(c.apiBase), {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        authorization: `Bearer ${env.token}`,
+        authorization: `Bearer ${c.token}`,
       },
       body: JSON.stringify({
         touser: input.threadId,

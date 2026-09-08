@@ -4,12 +4,25 @@ import {
   type SendMessageInput,
   type SendMessageResult,
 } from '@wa/channels'
-import { env } from './env.js'
+import { loadWebchatConfig, type WebchatConfig } from './env.js'
 import { append, clearThreads, getThread } from './store.js'
 
 export { getThread, append, clearThreads }
 
-export function parseInbound(raw: unknown): ChannelEvent | null {
+function cfg(overrides?: Partial<WebchatConfig>): WebchatConfig {
+  return loadWebchatConfig(overrides)
+}
+
+export function webchatSendPath(): string {
+  return '/send'
+}
+
+export function webchatSendUrl(apiBase: string): string {
+  return `${apiBase.replace(/\/$/, '')}${webchatSendPath()}`
+}
+
+export function parseInbound(raw: unknown, config?: Partial<WebchatConfig>): ChannelEvent | null {
+  const c = cfg(config)
   if (!raw || typeof raw !== 'object') return null
   const body = raw as Record<string, unknown>
   const text = typeof body.text === 'string' ? body.text : undefined
@@ -18,8 +31,8 @@ export function parseInbound(raw: unknown): ChannelEvent | null {
   const senderId = String(body.senderId ?? threadId)
   const event = buildChannelEvent({
     channel: 'webchat',
-    orgId: env.orgId,
-    accountId: env.accountId,
+    orgId: c.orgId,
+    accountId: c.accountId,
     direction: 'inbound',
     externalThreadId: threadId,
     externalMessageId: typeof body.messageId === 'string' ? body.messageId : undefined,
@@ -37,10 +50,13 @@ export function parseInbound(raw: unknown): ChannelEvent | null {
   return event
 }
 
-export async function sendMessage(input: SendMessageInput): Promise<SendMessageResult> {
-  const id = env.mockMode || !env.liveEnabled || !env.token
-    ? `mock-webchat-${Date.now()}`
-    : `webchat-${Date.now()}`
+export async function sendMessage(
+  input: SendMessageInput,
+  config?: Partial<WebchatConfig>,
+): Promise<SendMessageResult> {
+  const c = cfg(config)
+  const id =
+    c.mockMode || !c.liveEnabled || !c.token ? `mock-webchat-${Date.now()}` : `webchat-${Date.now()}`
 
   append(input.threadId, {
     id,
@@ -50,17 +66,16 @@ export async function sendMessage(input: SendMessageInput): Promise<SendMessageR
     at: new Date().toISOString(),
   })
 
-  if (env.mockMode || !env.liveEnabled || !env.token) {
+  if (c.mockMode || !c.liveEnabled || !c.token) {
     return { ok: true, externalMessageId: id, mock: true }
   }
 
-  const base = (env.apiBase || '').replace(/\/$/, '')
   try {
-    const res = await fetch(`${base}/send`, {
+    const res = await fetch(webchatSendUrl(c.apiBase), {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        authorization: `Bearer ${env.token}`,
+        authorization: `Bearer ${c.token}`,
       },
       body: JSON.stringify({ threadId: input.threadId, text: input.text }),
     })

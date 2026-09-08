@@ -1,27 +1,11 @@
 import type { CommerceLookupResult } from '@wa/channels'
-import { boolEnv, isMockMode, requiredEnv } from '@wa/channel-runtime'
+import { loadWooConfig, type WooConfig } from './env.js'
 
-export type WooConfig = {
-  mockMode: boolean
-  liveEnabled: boolean
-  token: string
-  apiBase: string
-  orgId: string
-  accountId: string
+function cfg(overrides?: Partial<WooConfig>): WooConfig {
+  return loadWooConfig(overrides)
 }
 
-export function loadWooConfig(overrides: Partial<WooConfig> = {}): WooConfig {
-  return {
-    mockMode: isMockMode(true),
-    liveEnabled: boolEnv('LIVE_ENABLED', false),
-    token: process.env.CHANNEL_TOKEN?.trim() || '',
-    apiBase: process.env.API_BASE?.trim() || '',
-    orgId: requiredEnv('DEFAULT_ORG_ID', '00000000-0000-0000-0000-000000000001'),
-    accountId: requiredEnv('DEFAULT_ACCOUNT_ID', '00000000-0000-0000-0000-000000000002'),
-    ...overrides,
-  }
-}
-
+/** token "key:secret" → Basic header */
 export function parseWooAuthHeader(token: string): string {
   if (token.includes(':')) {
     return `Basic ${Buffer.from(token).toString('base64')}`
@@ -29,11 +13,20 @@ export function parseWooAuthHeader(token: string): string {
   return `Bearer ${token}`
 }
 
+export function wooOrderPath(orderId: string): string {
+  return `/wp-json/wc/v3/orders/${encodeURIComponent(orderId)}`
+}
+
+export function wooStockPath(sku: string): string {
+  return `/wp-json/wc/v3/products?sku=${encodeURIComponent(sku)}`
+}
+
 export async function lookupOrder(
   orderId: string,
   config?: Partial<WooConfig>,
 ): Promise<CommerceLookupResult> {
-  const c = loadWooConfig(config)
+  const c = cfg(config)
+
   if (c.mockMode || !c.liveEnabled || !c.token) {
     return {
       ok: true,
@@ -48,15 +41,17 @@ export async function lookupOrder(
       },
     }
   }
+
   const base = c.apiBase.replace(/\/$/, '')
   if (!base) return { ok: false, error: 'missing_api_base' }
 
   try {
-    const res = await fetch(`${base}/wp-json/wc/v3/orders/${encodeURIComponent(orderId)}`, {
+    const res = await fetch(`${base}${wooOrderPath(orderId)}`, {
       headers: { Authorization: parseWooAuthHeader(c.token) },
     })
     if (!res.ok) return { ok: false, error: `http_${res.status}`, mock: false }
-    return { ok: true, data: (await res.json()) as Record<string, unknown>, mock: false }
+    const data = (await res.json()) as Record<string, unknown>
+    return { ok: true, data, mock: false }
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error), mock: false }
   }
@@ -66,18 +61,22 @@ export async function lookupStock(
   sku: string,
   config?: Partial<WooConfig>,
 ): Promise<CommerceLookupResult> {
-  const c = loadWooConfig(config)
+  const c = cfg(config)
+
   if (c.mockMode || !c.liveEnabled || !c.token) {
     return { ok: true, mock: true, data: { channel: 'woocommerce', sku, stock_quantity: 8 } }
   }
+
   const base = c.apiBase.replace(/\/$/, '')
   if (!base) return { ok: false, error: 'missing_api_base' }
+
   try {
-    const res = await fetch(`${base}/wp-json/wc/v3/products?sku=${encodeURIComponent(sku)}`, {
+    const res = await fetch(`${base}${wooStockPath(sku)}`, {
       headers: { Authorization: parseWooAuthHeader(c.token) },
     })
     if (!res.ok) return { ok: false, error: `http_${res.status}`, mock: false }
-    return { ok: true, data: { items: await res.json() }, mock: false }
+    const data = (await res.json()) as unknown
+    return { ok: true, data: { items: data }, mock: false }
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error), mock: false }
   }

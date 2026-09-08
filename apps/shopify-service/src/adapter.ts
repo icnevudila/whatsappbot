@@ -1,27 +1,8 @@
 import type { CommerceLookupResult } from '@wa/channels'
-import { boolEnv, isMockMode, requiredEnv } from '@wa/channel-runtime'
+import { loadShopifyConfig, type ShopifyConfig } from './env.js'
 
-export type ShopifyConfig = {
-  mockMode: boolean
-  liveEnabled: boolean
-  token: string
-  shop: string
-  apiVersion: string
-  orgId: string
-  accountId: string
-}
-
-export function loadShopifyConfig(overrides: Partial<ShopifyConfig> = {}): ShopifyConfig {
-  return {
-    mockMode: isMockMode(true),
-    liveEnabled: boolEnv('LIVE_ENABLED', false),
-    token: process.env.CHANNEL_TOKEN?.trim() || '',
-    shop: (process.env.API_BASE || process.env.SHOPIFY_SHOP || '').replace(/^https?:\/\//, '').replace(/\/$/, ''),
-    apiVersion: process.env.SHOPIFY_API_VERSION?.trim() || '2024-10',
-    orgId: requiredEnv('DEFAULT_ORG_ID', '00000000-0000-0000-0000-000000000001'),
-    accountId: requiredEnv('DEFAULT_ACCOUNT_ID', '00000000-0000-0000-0000-000000000002'),
-    ...overrides,
-  }
+function cfg(overrides?: Partial<ShopifyConfig>): ShopifyConfig {
+  return loadShopifyConfig(overrides)
 }
 
 export function buildShopifyOrderQuery(orderId: string): string {
@@ -58,21 +39,24 @@ export function buildShopifyStockQuery(): string {
   }`
 }
 
-export function shopifyGraphqlUrl(shop: string, apiVersion = '2024-10'): string {
-  const host = shop.replace(/^https?:\/\//, '').replace(/\/$/, '')
-  return `https://${host}/admin/api/${apiVersion}/graphql.json`
+export function shopifyGraphqlPath(): string {
+  return '/admin/api/2024-10/graphql.json'
 }
 
-/** Test mock server için path-only URL builder */
-export function shopifyGraphqlPath(apiVersion = '2024-10'): string {
-  return `/admin/api/${apiVersion}/graphql.json`
+export function shopifyGraphqlUrl(shopDomain: string): string {
+  const trimmed = shopDomain.replace(/\/$/, '')
+  if (/^https?:\/\//i.test(trimmed)) {
+    return `${trimmed}${shopifyGraphqlPath()}`
+  }
+  const host = trimmed.replace(/^https?:\/\//, '')
+  return `https://${host}${shopifyGraphqlPath()}`
 }
 
 export async function lookupOrder(
   orderId: string,
   config?: Partial<ShopifyConfig>,
 ): Promise<CommerceLookupResult> {
-  const c = loadShopifyConfig(config)
+  const c = cfg(config)
 
   if (c.mockMode || !c.liveEnabled || !c.token) {
     return {
@@ -90,15 +74,12 @@ export async function lookupOrder(
     }
   }
 
-  if (!c.shop) return { ok: false, error: 'missing_shop_domain' }
-
-  const isGid = orderId.includes('gid://')
-  const url = c.shop.startsWith('127.0.0.1') || c.shop.startsWith('localhost') || c.shop.includes('://')
-    ? `${c.shop.replace(/\/$/, '')}${shopifyGraphqlPath(c.apiVersion)}`
-    : shopifyGraphqlUrl(c.shop, c.apiVersion)
+  const shop = c.apiBase || process.env.SHOPIFY_SHOP?.trim()
+  if (!shop) return { ok: false, error: 'missing_shop_domain' }
 
   try {
-    const res = await fetch(url, {
+    const isGid = orderId.includes('gid://')
+    const res = await fetch(shopifyGraphqlUrl(shop), {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -121,7 +102,7 @@ export async function lookupStock(
   sku: string,
   config?: Partial<ShopifyConfig>,
 ): Promise<CommerceLookupResult> {
-  const c = loadShopifyConfig(config)
+  const c = cfg(config)
 
   if (c.mockMode || !c.liveEnabled || !c.token) {
     return {
@@ -131,14 +112,11 @@ export async function lookupStock(
     }
   }
 
-  if (!c.shop) return { ok: false, error: 'missing_shop_domain' }
-
-  const url = c.shop.startsWith('http')
-    ? `${c.shop.replace(/\/$/, '')}${shopifyGraphqlPath(c.apiVersion)}`
-    : shopifyGraphqlUrl(c.shop, c.apiVersion)
+  const shop = c.apiBase || process.env.SHOPIFY_SHOP?.trim()
+  if (!shop) return { ok: false, error: 'missing_shop_domain' }
 
   try {
-    const res = await fetch(url, {
+    const res = await fetch(shopifyGraphqlUrl(shop), {
       method: 'POST',
       headers: {
         'content-type': 'application/json',

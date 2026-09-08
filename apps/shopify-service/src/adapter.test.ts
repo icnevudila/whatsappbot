@@ -29,12 +29,13 @@ test('shopify mock order and stock rich', async () => {
   assert.equal(stock.data?.available, 12)
 })
 
-test('shopify LIVE GraphQL with sample admin token', async () => {
+test('shopify LIVE order lookup with sample credentials against mock GraphQL', async () => {
   const mock = createMockHttp()
   mock.on('POST', shopifyGraphqlPath(), (req) => {
     assert.equal(req.headers['x-shopify-access-token'], SAMPLE_CREDENTIALS.shopifyToken)
-    const body = JSON.parse(req.body) as { query: string; variables: { query?: string } }
-    assert.match(body.query, /orders|order/)
+    const body = JSON.parse(req.body) as { query: string; variables: { query: string } }
+    assert.match(body.query, /orders\(/)
+    assert.equal(body.variables.query, 'name:1001')
     return {
       json: {
         data: {
@@ -45,7 +46,7 @@ test('shopify LIVE GraphQL with sample admin token', async () => {
                   id: 'gid://shopify/Order/1',
                   name: '#1001',
                   displayFinancialStatus: 'PAID',
-                  totalPriceSet: { shopMoney: { amount: '199.90', currencyCode: 'TRY' } },
+                  displayFulfillmentStatus: 'UNFULFILLED',
                 },
               },
             ],
@@ -56,15 +57,47 @@ test('shopify LIVE GraphQL with sample admin token', async () => {
   })
   const { base, close } = await mock.listen()
   try {
-    const result = await lookupOrder('#1001', {
+    assert.equal(shopifyGraphqlUrl(base), `${base}${shopifyGraphqlPath()}`)
+    const result = await lookupOrder('1001', {
       mockMode: false,
       liveEnabled: true,
       token: SAMPLE_CREDENTIALS.shopifyToken,
-      shop: base,
+      apiBase: base,
     })
     assert.equal(result.ok, true)
     assert.equal(result.mock, false)
-    assert.ok(result.data)
+    assert.equal(mock.calls.length, 1)
+  } finally {
+    await close()
+  }
+})
+
+test('shopify LIVE stock lookup with sample credentials against mock GraphQL', async () => {
+  const mock = createMockHttp()
+  mock.on('POST', shopifyGraphqlPath(), (req) => {
+    assert.equal(req.headers['x-shopify-access-token'], SAMPLE_CREDENTIALS.shopifyToken)
+    const body = JSON.parse(req.body) as { variables: { query: string } }
+    assert.equal(body.variables.query, 'sku:SKU-LIVE')
+    return {
+      json: {
+        data: {
+          productVariants: {
+            edges: [{ node: { sku: 'SKU-LIVE', inventoryQuantity: 7, title: 'Live variant' } }],
+          },
+        },
+      },
+    }
+  })
+  const { base, close } = await mock.listen()
+  try {
+    const result = await lookupStock('SKU-LIVE', {
+      mockMode: false,
+      liveEnabled: true,
+      token: SAMPLE_CREDENTIALS.shopifyToken,
+      apiBase: base,
+    })
+    assert.equal(result.ok, true)
+    assert.equal(result.mock, false)
     assert.equal(mock.calls.length, 1)
   } finally {
     await close()
