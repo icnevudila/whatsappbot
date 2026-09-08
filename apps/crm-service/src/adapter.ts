@@ -1,10 +1,11 @@
 import type { CommerceLookupResult } from '@wa/channels'
-import { env, CHANNEL } from './env.js'
+import { loadCrmConfig, type CrmConfig } from './env.js'
 
-const providers = Array.isArray(CHANNEL) ? CHANNEL : [CHANNEL]
-const provider = (process.env.CRM_PROVIDER?.trim() || providers[0]!) as string
+function cfg(overrides?: Partial<CrmConfig>): CrmConfig {
+  return loadCrmConfig(overrides)
+}
 
-export function crmTicketUrl(base: string, id: string): string {
+export function crmTicketUrl(base: string, id: string, provider: string): string {
   const root = base.replace(/\/$/, '')
   switch (provider) {
     case 'hubspot':
@@ -18,33 +19,47 @@ export function crmTicketUrl(base: string, id: string): string {
   }
 }
 
-export async function lookupOrder(orderId: string): Promise<CommerceLookupResult> {
+export async function lookupOrder(
+  orderId: string,
+  config?: Partial<CrmConfig>,
+): Promise<CommerceLookupResult> {
+  const c = cfg(config)
+
   // CRM'de "order" = ticket/case alias
-  if (env.mockMode || !env.liveEnabled || !env.token) {
+  if (c.mockMode || !c.liveEnabled || !c.token) {
     return {
       ok: true,
       mock: true,
-      data: { channel: provider, ticketId: orderId, status: 'open', provider },
+      data: { channel: c.provider, ticketId: orderId, status: 'open', provider: c.provider },
     }
   }
-  const base = env.apiBase
-  if (!base) return { ok: false, error: 'missing_api_base' }
+  if (!c.apiBase) return { ok: false, error: 'missing_api_base' }
   try {
-    const res = await fetch(crmTicketUrl(base, orderId), {
-      headers: { Authorization: `Bearer ${env.token}` },
+    const res = await fetch(crmTicketUrl(c.apiBase, orderId, c.provider), {
+      headers: { Authorization: `Bearer ${c.token}` },
     })
-    if (!res.ok) return { ok: false, error: `http_${res.status}` }
+    if (!res.ok) return { ok: false, error: `http_${res.status}`, mock: false }
     return { ok: true, data: (await res.json()) as Record<string, unknown>, mock: false }
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : String(error) }
+    return { ok: false, error: error instanceof Error ? error.message : String(error), mock: false }
   }
 }
 
-export async function lookupStock(sku: string): Promise<CommerceLookupResult> {
-  if (env.mockMode || !env.liveEnabled) {
-    return { ok: true, mock: true, data: { channel: provider, sku, note: 'crm_has_no_stock' } }
+export async function lookupStock(
+  sku: string,
+  config?: Partial<CrmConfig>,
+): Promise<CommerceLookupResult> {
+  const c = cfg(config)
+
+  if (c.mockMode || !c.liveEnabled) {
+    return { ok: true, mock: true, data: { channel: c.provider, sku, note: 'crm_has_no_stock' } }
   }
-  return { ok: false, error: 'not_applicable' }
+  return { ok: false, error: 'not_applicable', mock: false }
 }
 
-export { provider }
+export function getProvider(config?: Partial<CrmConfig>): string {
+  return cfg(config).provider
+}
+
+/** @deprecated use getProvider() */
+export const provider = getProvider()

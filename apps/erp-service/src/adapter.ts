@@ -1,10 +1,11 @@
 import type { CommerceLookupResult } from '@wa/channels'
-import { env, CHANNEL } from './env.js'
+import { loadErpConfig, type ErpConfig } from './env.js'
 
-const providers = Array.isArray(CHANNEL) ? CHANNEL : [CHANNEL]
-const provider = (process.env.ERP_PROVIDER?.trim() || providers[0]!) as string
+function cfg(overrides?: Partial<ErpConfig>): ErpConfig {
+  return loadErpConfig(overrides)
+}
 
-export function erpOrderUrl(base: string, orderId: string): string {
+export function erpOrderUrl(base: string, orderId: string, provider: string): string {
   const root = base.replace(/\/$/, '')
   switch (provider) {
     case 'sap':
@@ -20,32 +21,46 @@ export function erpOrderUrl(base: string, orderId: string): string {
   }
 }
 
-export async function lookupOrder(orderId: string): Promise<CommerceLookupResult> {
-  if (env.mockMode || !env.liveEnabled || !env.token) {
+export async function lookupOrder(
+  orderId: string,
+  config?: Partial<ErpConfig>,
+): Promise<CommerceLookupResult> {
+  const c = cfg(config)
+
+  if (c.mockMode || !c.liveEnabled || !c.token) {
     return {
       ok: true,
       mock: true,
-      data: { channel: provider, orderId, status: 'Open', provider },
+      data: { channel: c.provider, orderId, status: 'Open', provider: c.provider },
     }
   }
-  const base = env.apiBase
-  if (!base) return { ok: false, error: 'missing_api_base' }
+  if (!c.apiBase) return { ok: false, error: 'missing_api_base' }
   try {
-    const res = await fetch(erpOrderUrl(base, orderId), {
-      headers: { Authorization: `Bearer ${env.token}`, Accept: 'application/json' },
+    const res = await fetch(erpOrderUrl(c.apiBase, orderId, c.provider), {
+      headers: { Authorization: `Bearer ${c.token}`, Accept: 'application/json' },
     })
-    if (!res.ok) return { ok: false, error: `http_${res.status}` }
+    if (!res.ok) return { ok: false, error: `http_${res.status}`, mock: false }
     return { ok: true, data: (await res.json()) as Record<string, unknown>, mock: false }
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : String(error) }
+    return { ok: false, error: error instanceof Error ? error.message : String(error), mock: false }
   }
 }
 
-export async function lookupStock(sku: string): Promise<CommerceLookupResult> {
-  if (env.mockMode || !env.liveEnabled || !env.token) {
-    return { ok: true, mock: true, data: { channel: provider, sku, available: 100, provider } }
+export async function lookupStock(
+  sku: string,
+  config?: Partial<ErpConfig>,
+): Promise<CommerceLookupResult> {
+  const c = cfg(config)
+
+  if (c.mockMode || !c.liveEnabled || !c.token) {
+    return { ok: true, mock: true, data: { channel: c.provider, sku, available: 100, provider: c.provider } }
   }
-  return { ok: false, error: 'live_stock_provider_specific' }
+  return { ok: false, error: 'live_stock_provider_specific', mock: false }
 }
 
-export { provider }
+export function getProvider(config?: Partial<ErpConfig>): string {
+  return cfg(config).provider
+}
+
+/** @deprecated use getProvider() */
+export const provider = getProvider()

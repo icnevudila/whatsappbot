@@ -1,68 +1,53 @@
-import type { CommerceLookupResult } from '@wa/channels'
-import { boolEnv, isMockMode, requiredEnv } from '@wa/channel-runtime'
+import { type CommerceLookupResult } from '@wa/channels'
+import { loadTrendyolConfig, type TrendyolConfig } from './env.js'
 
-export type TrendyolConfig = {
-  mockMode: boolean
-  liveEnabled: boolean
-  apiKey: string
-  apiSecret: string
-  sellerId: string
-  apiBase: string
-  orgId: string
-  accountId: string
+function cfg(overrides?: Partial<TrendyolConfig>): TrendyolConfig {
+  return loadTrendyolConfig(overrides)
 }
 
-export function loadTrendyolConfig(overrides: Partial<TrendyolConfig> = {}): TrendyolConfig {
-  return {
-    mockMode: isMockMode(true),
-    liveEnabled: boolEnv('LIVE_ENABLED', false),
-    apiKey: process.env.CHANNEL_TOKEN?.trim() || process.env.TRENDYOL_API_KEY?.trim() || '',
-    apiSecret: process.env.TRENDYOL_API_SECRET?.trim() || '',
-    sellerId: process.env.TRENDYOL_SELLER_ID?.trim() || '',
-    apiBase: process.env.API_BASE?.trim() || 'https://apigw.trendyol.com',
-    orgId: requiredEnv('DEFAULT_ORG_ID', '00000000-0000-0000-0000-000000000001'),
-    accountId: requiredEnv('DEFAULT_ACCOUNT_ID', '00000000-0000-0000-0000-000000000002'),
-    ...overrides,
-  }
+export function trendyolAuthHeader(c: TrendyolConfig): string {
+  const key = c.token || 'key'
+  const secret = c.apiSecret || 'secret'
+  return `Basic ${Buffer.from(`${key}:${secret}`).toString('base64')}`
 }
 
-export function trendyolAuthHeader(apiKey: string, apiSecret: string): string {
-  return `Basic ${Buffer.from(`${apiKey}:${apiSecret}`).toString('base64')}`
+export function trendyolOrdersPath(sellerId: string): string {
+  return `/integration/order/sellers/${sellerId}/orders`
 }
 
-export function trendyolOrdersPath(sellerId: string, orderId: string): string {
-  return `/integration/order/sellers/${sellerId}/orders?orderNumber=${encodeURIComponent(orderId)}`
-}
-
-export function trendyolAnswerPath(sellerId: string, questionId: string): string {
-  return `/integration/qna/sellers/${sellerId}/questions/${questionId}/answers`
+export function trendyolQnaAnswerPath(sellerId: string, questionId: string): string {
+  return `/integration/qna/sellers/${sellerId}/questions/${encodeURIComponent(questionId)}/answers`
 }
 
 export async function lookupOrder(
   orderId: string,
   config?: Partial<TrendyolConfig>,
 ): Promise<CommerceLookupResult> {
-  const c = loadTrendyolConfig(config)
+  const c = cfg(config)
+
   if (c.mockMode || !c.liveEnabled) {
     return {
       ok: true,
       mock: true,
-      data: { channel: 'trendyol', orderId, status: 'Created', sellerId: c.sellerId || 'mock-seller' },
+      data: {
+        channel: 'trendyol',
+        orderId,
+        status: 'Created',
+        sellerId: c.sellerId || 'mock-seller',
+      },
     }
   }
-  if (!c.sellerId || !c.apiKey || !c.apiSecret) {
-    return { ok: false, error: 'missing_trendyol_credentials' }
-  }
+
+  if (!c.sellerId) return { ok: false, error: 'missing_seller_id' }
 
   try {
-    const res = await fetch(`${c.apiBase.replace(/\/$/, '')}${trendyolOrdersPath(c.sellerId, orderId)}`, {
-      headers: {
-        Authorization: trendyolAuthHeader(c.apiKey, c.apiSecret),
-        'User-Agent': 'SelfIntegration',
-      },
-    })
+    const res = await fetch(
+      `${c.apiBase.replace(/\/$/, '')}${trendyolOrdersPath(c.sellerId)}?orderNumber=${encodeURIComponent(orderId)}`,
+      { headers: { Authorization: trendyolAuthHeader(c) } },
+    )
     if (!res.ok) return { ok: false, error: `http_${res.status}`, mock: false }
-    return { ok: true, data: (await res.json()) as Record<string, unknown>, mock: false }
+    const data = (await res.json()) as Record<string, unknown>
+    return { ok: true, data, mock: false }
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error), mock: false }
   }
@@ -72,11 +57,12 @@ export async function lookupStock(
   sku: string,
   config?: Partial<TrendyolConfig>,
 ): Promise<CommerceLookupResult> {
-  const c = loadTrendyolConfig(config)
+  const c = cfg(config)
+
   if (c.mockMode || !c.liveEnabled) {
     return { ok: true, mock: true, data: { channel: 'trendyol', sku, available: 5 } }
   }
-  return { ok: false, error: 'live_stock_use_product_endpoint' }
+  return { ok: false, error: 'live_stock_not_wired', mock: false }
 }
 
 export async function answerProductQuestion(
@@ -84,7 +70,8 @@ export async function answerProductQuestion(
   answer: string,
   config?: Partial<TrendyolConfig>,
 ): Promise<CommerceLookupResult> {
-  const c = loadTrendyolConfig(config)
+  const c = cfg(config)
+
   if (c.mockMode || !c.liveEnabled) {
     return {
       ok: true,
@@ -92,19 +79,17 @@ export async function answerProductQuestion(
       data: { channel: 'trendyol', questionId, answer, answeredAt: new Date().toISOString() },
     }
   }
-  if (!c.sellerId || !c.apiKey || !c.apiSecret) {
-    return { ok: false, error: 'missing_trendyol_credentials' }
-  }
+
+  if (!c.sellerId) return { ok: false, error: 'missing_seller_id' }
 
   try {
     const res = await fetch(
-      `${c.apiBase.replace(/\/$/, '')}${trendyolAnswerPath(c.sellerId, questionId)}`,
+      `${c.apiBase.replace(/\/$/, '')}${trendyolQnaAnswerPath(c.sellerId, questionId)}`,
       {
         method: 'POST',
         headers: {
-          Authorization: trendyolAuthHeader(c.apiKey, c.apiSecret),
+          Authorization: trendyolAuthHeader(c),
           'content-type': 'application/json',
-          'User-Agent': 'SelfIntegration',
         },
         body: JSON.stringify({ text: answer }),
       },

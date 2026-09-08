@@ -5,70 +5,85 @@ import {
   answerProductQuestion,
   lookupOrder,
   lookupStock,
-  trendyolAnswerPath,
   trendyolAuthHeader,
   trendyolOrdersPath,
+  trendyolQnaAnswerPath,
 } from './adapter.js'
+import { loadTrendyolConfig } from './env.js'
 
 test('trendyol mock order stock qna', async () => {
-  assert.equal((await lookupOrder('TY-1')).ok, true)
-  assert.equal((await lookupStock('SKU-TY')).ok, true)
+  const order = await lookupOrder('TY-1')
+  assert.equal(order.ok, true)
+  assert.equal(order.mock, true)
+
+  const stock = await lookupStock('SKU-TY')
+  assert.equal(stock.ok, true)
+
   const qna = await answerProductQuestion('Q-1', 'Evet stokta')
+  assert.equal(qna.ok, true)
   assert.equal(qna.data?.answer, 'Evet stokta')
 })
 
-test('trendyol LIVE order + Q&A with sample Basic auth', async () => {
+test('trendyol LIVE order lookup with Basic auth from sample credentials', async () => {
   const sellerId = SAMPLE_CREDENTIALS.trendyolSellerId
-  const mock = createMockHttp()
   const expectedAuth = trendyolAuthHeader(
-    SAMPLE_CREDENTIALS.trendyolKey,
-    SAMPLE_CREDENTIALS.trendyolSecret,
+    loadTrendyolConfig({
+      token: SAMPLE_CREDENTIALS.trendyolKey,
+      apiSecret: SAMPLE_CREDENTIALS.trendyolSecret,
+    }),
   )
-
-  mock.on('GET', trendyolOrdersPath(sellerId, 'TY-99').split('?')[0]!, (req) => {
-    // pathname won't include query in our mock key - register with full pathname from URL
+  const mock = createMockHttp()
+  mock.on('GET', trendyolOrdersPath(sellerId), (req) => {
     assert.equal(req.headers.authorization, expectedAuth)
-    return { json: { content: [{ orderNumber: 'TY-99', status: 'Created' }] } }
+    assert.match(req.url, /orderNumber=TY-LIVE/)
+    return { json: { content: [{ orderNumber: 'TY-LIVE', status: 'Created' }] } }
   })
-
-  // createMockHttp matches pathname only — register exact path without query
-  mock.on('GET', `/integration/order/sellers/${sellerId}/orders`, (req) => {
-    assert.equal(req.headers.authorization, expectedAuth)
-    assert.match(req.url, /orderNumber=TY-99/)
-    return { json: { content: [{ orderNumber: 'TY-99', status: 'Created' }] } }
-  })
-
-  mock.on('POST', trendyolAnswerPath(sellerId, 'Q-9'), (req) => {
-    assert.equal(req.headers.authorization, expectedAuth)
-    const body = JSON.parse(req.body) as { text: string }
-    assert.equal(body.text, 'Kargo yarın')
-    return { status: 200, json: { success: true } }
-  })
-
   const { base, close } = await mock.listen()
   try {
-    const order = await lookupOrder('TY-99', {
+    const result = await lookupOrder('TY-LIVE', {
       mockMode: false,
       liveEnabled: true,
-      apiKey: SAMPLE_CREDENTIALS.trendyolKey,
+      token: SAMPLE_CREDENTIALS.trendyolKey,
       apiSecret: SAMPLE_CREDENTIALS.trendyolSecret,
       sellerId,
       apiBase: base,
     })
-    assert.equal(order.ok, true)
-    assert.equal(order.mock, false)
+    assert.equal(result.ok, true)
+    assert.equal(result.mock, false)
+    assert.equal(mock.calls.length, 1)
+  } finally {
+    await close()
+  }
+})
 
-    const qna = await answerProductQuestion('Q-9', 'Kargo yarın', {
+test('trendyol LIVE QnA answer with Basic auth from sample credentials', async () => {
+  const sellerId = SAMPLE_CREDENTIALS.trendyolSellerId
+  const expectedAuth = trendyolAuthHeader(
+    loadTrendyolConfig({
+      token: SAMPLE_CREDENTIALS.trendyolKey,
+      apiSecret: SAMPLE_CREDENTIALS.trendyolSecret,
+    }),
+  )
+  const mock = createMockHttp()
+  mock.on('POST', trendyolQnaAnswerPath(sellerId, 'Q-LIVE'), (req) => {
+    assert.equal(req.headers.authorization, expectedAuth)
+    const body = JSON.parse(req.body) as { text: string }
+    assert.equal(body.text, 'Evet stokta')
+    return { json: { questionId: 'Q-LIVE' } }
+  })
+  const { base, close } = await mock.listen()
+  try {
+    const result = await answerProductQuestion('Q-LIVE', 'Evet stokta', {
       mockMode: false,
       liveEnabled: true,
-      apiKey: SAMPLE_CREDENTIALS.trendyolKey,
+      token: SAMPLE_CREDENTIALS.trendyolKey,
       apiSecret: SAMPLE_CREDENTIALS.trendyolSecret,
       sellerId,
       apiBase: base,
     })
-    assert.equal(qna.ok, true)
-    assert.equal(qna.mock, false)
-    assert.ok(mock.calls.length >= 2)
+    assert.equal(result.ok, true)
+    assert.equal(result.mock, false)
+    assert.equal(mock.calls.length, 1)
   } finally {
     await close()
   }

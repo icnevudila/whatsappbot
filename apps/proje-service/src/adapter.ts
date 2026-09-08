@@ -1,10 +1,27 @@
 import type { CommerceLookupResult } from '@wa/channels'
-import { env, CHANNEL } from './env.js'
+import { loadProjeConfig, type ProjeConfig, CHANNEL } from './env.js'
 
 const primary = Array.isArray(CHANNEL) ? CHANNEL[0] : CHANNEL
 
-export async function lookupOrder(orderId: string): Promise<CommerceLookupResult> {
-  if (env.mockMode || !env.liveEnabled || !env.token) {
+function cfg(overrides?: Partial<ProjeConfig>): ProjeConfig {
+  return loadProjeConfig(overrides)
+}
+
+export function projeOrderPath(orderId: string): string {
+  return `/orders/${encodeURIComponent(orderId)}`
+}
+
+export function projeStockPath(sku: string): string {
+  return `/stock/${encodeURIComponent(sku)}`
+}
+
+export async function lookupOrder(
+  orderId: string,
+  config?: Partial<ProjeConfig>,
+): Promise<CommerceLookupResult> {
+  const c = cfg(config)
+
+  if (c.mockMode || !c.liveEnabled || !c.token) {
     return {
       ok: true,
       mock: true,
@@ -18,10 +35,10 @@ export async function lookupOrder(orderId: string): Promise<CommerceLookupResult
     }
   }
 
+  const base = (c.apiBase || 'https://example.invalid').replace(/\/$/, '')
   try {
-    const base = env.apiBase || 'https://example.invalid'
-    const res = await fetch(`${base}/orders/${encodeURIComponent(orderId)}`, {
-      headers: { authorization: `Bearer ${env.token}` },
+    const res = await fetch(`${base}${projeOrderPath(orderId)}`, {
+      headers: { authorization: `Bearer ${c.token}` },
     })
     if (!res.ok) return { ok: false, error: `http_${res.status}`, mock: false }
     const data = (await res.json()) as Record<string, unknown>
@@ -35,18 +52,23 @@ export async function lookupOrder(orderId: string): Promise<CommerceLookupResult
   }
 }
 
-export async function lookupStock(sku: string): Promise<CommerceLookupResult> {
-  if (env.mockMode || !env.liveEnabled || !env.token) {
+export async function lookupStock(
+  sku: string,
+  config?: Partial<ProjeConfig>,
+): Promise<CommerceLookupResult> {
+  const c = cfg(config)
+
+  if (c.mockMode || !c.liveEnabled || !c.token) {
     return {
       ok: true,
       mock: true,
       data: { channel: primary, sku, available: 12 },
     }
   }
+  const base = (c.apiBase || 'https://example.invalid').replace(/\/$/, '')
   try {
-    const base = env.apiBase || 'https://example.invalid'
-    const res = await fetch(`${base}/stock/${encodeURIComponent(sku)}`, {
-      headers: { authorization: `Bearer ${env.token}` },
+    const res = await fetch(`${base}${projeStockPath(sku)}`, {
+      headers: { authorization: `Bearer ${c.token}` },
     })
     if (!res.ok) return { ok: false, error: `http_${res.status}`, mock: false }
     const data = (await res.json()) as Record<string, unknown>
