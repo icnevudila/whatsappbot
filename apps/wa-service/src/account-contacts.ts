@@ -33,6 +33,32 @@ function pickPhoneJid(c: RawWhatsAppContact): string | null {
  *
  * Modern WA çoğu kişiyi @lid id ile yollar; telefon `contact.jid` alanında gelir.
  */
+export async function countAccountContacts(accountId: string): Promise<number> {
+  const row = await one<{ n: string }>(
+    'select count(*)::text as n from public.account_contacts where account_id = $1',
+    [accountId],
+  )
+  return Number(row?.n ?? 0)
+}
+
+export async function sampleAccountContacts(
+  accountId: string,
+  limit = 40,
+): Promise<Array<{ phone: string; label: string }>> {
+  const rows = await query<{ phone_e164: string; name: string | null; notify: string | null }>(
+    `select phone_e164, name, notify
+       from public.account_contacts
+      where account_id = $1
+      order by updated_at desc
+      limit $2`,
+    [accountId, limit],
+  )
+  return rows.map((row) => {
+    const name = (row.name ?? row.notify ?? '').trim()
+    return { phone: row.phone_e164, label: name || row.phone_e164 }
+  })
+}
+
 export async function persistAccountContacts(
   orgId: string,
   accountId: string,

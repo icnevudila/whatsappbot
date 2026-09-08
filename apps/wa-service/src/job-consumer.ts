@@ -157,20 +157,115 @@ async function handle(job: JobRow): Promise<unknown> {
       if (!job.org_id) throw new Error('account.sync_contacts isi org_id olmadan gelemez')
       const payload = (job.payload ?? {}) as JobPayloadMap['account.sync_contacts']
 
-      const session = sessionManager.get(accountId)
-      if (session?.isLive) {
-        await session.resyncContacts()
-      } else {
-        log.warn({ accountId }, 'account.sync_contacts: oturum canli degil, yalnizca DB kayitlari aktarilacak')
+      const {
+        importAccountContactsToList,
+        countAccountContacts,
+        sampleAccountContacts,
+      } = await import('./account-contacts.js')
+
+      const writeProgress = async (partial: Record<string, unknown>) => {
+        await query(
+          `update public.jobs
+              set result = coalesce(result, '{}'::jsonb) || $2::jsonb,
+                  updated_at = now()
+            where id = $1::bigint
+              and claimed_by = $3
+              and status in ('claimed', 'running')`,
+          [job.id, JSON.stringify(partial), env.workerId],
+        )
       }
 
-      const { importAccountContactsToList } = await import('./account-contacts.js')
-      return importAccountContactsToList({
+      const session = sessionManager.get(accountId)
+      const live = Boolean(session?.isLive)
+
+      await writeProgress({
+        phase: 'pulling',
+        live,
+        seen: await countAccountContacts(accountId),
+        samples: await sampleAccountContacts(accountId, 24),
+      })
+
+      if (live && session) {
+        await session.resyncContacts({
+          maxWaitMs: 90_000,
+          onTick: async () => {
+            const seen = await countAccountContacts(accountId)
+            await writeProgress({
+              phase: 'pulling',
+              live: true,
+              seen,
+              samples: await sampleAccountContacts(accountId, 24),
+            })
+          },
+        })
+      } else {
+        log.warn(
+          { accountId },
+          'account.sync_contacts: oturum canli degil, yalnizca DB kayitlari aktarilacak',
+        )
+      }
+
+      // Rehber event'leri gecikebiliyor — import oncesi sayim artana kadar kisa ek bekleme.
+      let seen = await countAccountContacts(accountId)
+      if (live) {
+        const extraStarted = Date.now()
+        while (Date.now() - extraStarted < 25_000) {
+          await new Promise((resolve) => setTimeout(resolve, 1500))
+          const next = await countAccountContacts(accountId)
+          if (next !== seen) {
+            seen = next
+            await writeProgress({
+              phase: 'pulling',
+              live: true,
+              seen,
+              samples: await sampleAccountContacts(accountId, 24),
+            })
+          } else if (seen > 0 && Date.now() - extraStarted > 6_000) {
+            break
+          }
+        }
+      }
+
+      await writeProgress({
+        phase: 'importing',
+        live,
+        seen,
+        samples: await sampleAccountContacts(accountId, 40),
+      })
+
+      let imported = await importAccountContactsToList({
         orgId: job.org_id,
         createdBy: job.created_by,
         accountId,
         listName: payload.list_name,
       })
+
+      // Ilk import 0 ise ve hat canliysa bir tur daha bekle / tekrar aktar
+      if (imported.imported === 0 && live && session) {
+        log.info({ accountId }, 'account.sync_contacts: ilk aktarim 0 — ek bekleme')
+        await session.resyncContacts({ maxWaitMs: 45_000 })
+        await new Promise((resolve) => setTimeout(resolve, 5_000))
+        imported = await importAccountContactsToList({
+          orgId: job.org_id,
+          createdBy: job.created_by,
+          accountId,
+          listName: payload.list_name,
+        })
+      }
+
+      if (imported.imported === 0 && !live) {
+        throw new NonRetryableJobError(
+          'Hat şu an canlı değil ve kayıtlı rehber yok. Hatlar’dan bağlayıp tekrar çekin.',
+        )
+      }
+
+      return {
+        ...imported,
+        phase: 'done',
+        live,
+        seen: await countAccountContacts(accountId),
+        samples: await sampleAccountContacts(accountId, 60),
+      }
     }
 
     case 'message.send': {

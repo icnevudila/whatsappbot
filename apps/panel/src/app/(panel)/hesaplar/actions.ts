@@ -144,21 +144,11 @@ export async function removeAccount(accountId: string): Promise<ActionState> {
   }
 }
 
-/** WhatsApp rehberinden çekme — yanlışlıkla kişisel rehberi boşaltmamak için şifre. */
-function expectedRehberPassword(): string {
-  return (process.env.REHBER_SYNC_PASSWORD ?? 'filo-rehber').trim()
-}
-
+/** WhatsApp rehberinden çek — şifre yok; bağlı hat yeter. */
 export async function syncAccountContactsAction(
   accountId: string,
-  password: string,
   listName?: string,
 ): Promise<ActionState> {
-  const expected = expectedRehberPassword()
-  if (!password.trim() || password.trim() !== expected) {
-    return { error: 'Rehber şifresi hatalı. İçe aktarma iptal edildi.' }
-  }
-
   const { id, error } = await enqueueJob({
     type: 'account.sync_contacts',
     accountId,
@@ -221,11 +211,25 @@ export type RehberSyncJobResult = {
   listName: string
   fromAccount: number
   fromMessages: number
+  phase?: string
+  live?: boolean
+  seen?: number
+  samples?: RehberPreviewItem[]
 }
 
-export async function readRehberSyncJobResult(
+export async function readRehberSyncJob(
   jobId: string,
-): Promise<{ error?: string; result?: RehberSyncJobResult }> {
+): Promise<{
+  error?: string
+  status?: string
+  result?: RehberSyncJobResult
+  progress?: {
+    phase?: string
+    live?: boolean
+    seen?: number
+    samples?: RehberPreviewItem[]
+  }
+}> {
   try {
     const { org, supabase } = await requireActiveOrg()
     const numericId = Number(jobId)
@@ -241,26 +245,64 @@ export async function readRehberSyncJobResult(
     if (error) return { error: error.message }
     if (!data) return { error: 'İş bulunamadı.' }
     if (data.status === 'failed' || data.status === 'cancelled') {
-      return { error: data.error?.trim() || 'Rehber çekme başarısız.' }
+      return { error: data.error?.trim() || 'Rehber çekme başarısız.', status: data.status }
     }
-    if (data.status !== 'done') return {}
 
-    const raw = data.result as Partial<RehberSyncJobResult> | null
-    if (!raw || typeof raw.listId !== 'string') {
-      return { error: 'İş sonucu okunamadı.' }
+    const raw = (data.result ?? {}) as Partial<RehberSyncJobResult> & {
+      samples?: Array<{ phone?: string; label?: string }>
+    }
+
+    const samples = Array.isArray(raw.samples)
+      ? raw.samples
+          .filter((s) => s && typeof s.phone === 'string')
+          .map((s) => ({
+            phone: String(s.phone),
+            label: String(s.label || s.phone),
+          }))
+      : undefined
+
+    const progress = {
+      phase: typeof raw.phase === 'string' ? raw.phase : undefined,
+      live: typeof raw.live === 'boolean' ? raw.live : undefined,
+      seen: typeof raw.seen === 'number' ? raw.seen : undefined,
+      samples,
+    }
+
+    if (data.status !== 'done') {
+      return { status: data.status, progress }
+    }
+
+    if (typeof raw.listId !== 'string') {
+      return { error: 'İş sonucu okunamadı.', status: 'done' }
     }
 
     return {
+      status: 'done',
+      progress,
       result: {
         imported: Number(raw.imported ?? 0),
         listId: raw.listId,
         listName: String(raw.listName ?? 'WhatsApp Rehberi'),
         fromAccount: Number(raw.fromAccount ?? 0),
         fromMessages: Number(raw.fromMessages ?? 0),
+        phase: progress.phase,
+        live: progress.live,
+        seen: progress.seen,
+        samples,
       },
     }
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Oturum yok' }
   }
+}
+
+/** @deprecated use readRehberSyncJob */
+export async function readRehberSyncJobResult(
+  jobId: string,
+): Promise<{ error?: string; result?: RehberSyncJobResult }> {
+  const out = await readRehberSyncJob(jobId)
+  if (out.error) return { error: out.error }
+  if (out.result) return { result: out.result }
+  return {}
 }
 

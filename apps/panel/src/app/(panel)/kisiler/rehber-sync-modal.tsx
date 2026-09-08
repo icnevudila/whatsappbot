@@ -2,13 +2,12 @@
 
 import { useEffect, useId, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { AccentLink, Button, Field, Input, Notice, Select } from '@/components/ui'
+import { AccentLink, Button, Field, Notice, Select } from '@/components/ui'
 import { useSyncBusy } from '@/components/busy'
 import { useToast } from '@/components/toast'
-import { waitForJob } from '@/lib/wait-for-job'
 import {
   listRehberPreview,
-  readRehberSyncJobResult,
+  readRehberSyncJob,
   syncAccountContactsAction,
   type RehberPreviewItem,
   type RehberSyncJobResult,
@@ -21,11 +20,7 @@ export type RehberAccountOption = {
   status: string
 }
 
-type Phase = 'form' | 'running' | 'done' | 'error'
-
-function displayName(item: RehberPreviewItem) {
-  return item.label
-}
+type Phase = 'pick' | 'running' | 'done' | 'error'
 
 export function RehberSyncButton({
   accounts,
@@ -47,17 +42,14 @@ export function RehberSyncButton({
         title={
           connected.length === 0
             ? 'Önce Hatlar’dan bağlı bir hat gerekir'
-            : 'WhatsApp rehberini ve sohbet kişilerini panele çeker'
+            : 'WhatsApp rehberini panele çeker — canlı izlersin'
         }
         onClick={() => setOpen(true)}
       >
         WhatsApp rehberinden çek
       </Button>
       {open ? (
-        <RehberSyncModal
-          accounts={connected}
-          onClose={() => setOpen(false)}
-        />
+        <RehberSyncModal accounts={connected} onClose={() => setOpen(false)} />
       ) : null}
     </>
   )
@@ -75,9 +67,10 @@ export function RehberSyncModal({
   const router = useRouter()
   const toast = useToast()
   const titleId = useId()
-  const descId = useId()
   const panelRef = useRef<HTMLDivElement>(null)
+  const feedRef = useRef<HTMLDivElement>(null)
   const [pending, startTransition] = useTransition()
+  const startedRef = useRef(false)
 
   const connected = accounts.filter((a) => a.status === 'connected')
   const defaultId =
@@ -86,22 +79,21 @@ export function RehberSyncModal({
       : connected[0]?.id ?? ''
 
   const [accountId, setAccountId] = useState(defaultId)
-  const [password, setPassword] = useState('')
-  const [listName, setListName] = useState('')
-  const [phase, setPhase] = useState<Phase>('form')
-  const [statusLine, setStatusLine] = useState('')
+  const [phase, setPhase] = useState<Phase>('pick')
+  const [statusLine, setStatusLine] = useState('WhatsApp’tan kişiler çekiliyor…')
   const [error, setError] = useState<string | null>(null)
   const [items, setItems] = useState<RehberPreviewItem[]>([])
-  const [total, setTotal] = useState(0)
+  const [seen, setSeen] = useState(0)
+  const [flashPhone, setFlashPhone] = useState<string | null>(null)
   const [result, setResult] = useState<RehberSyncJobResult | null>(null)
+  const [jobId, setJobId] = useState<string | null>(null)
 
   useSyncBusy(pending || phase === 'running', 'WhatsApp rehberi çekiliyor…')
 
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null
-    const node = panelRef.current?.querySelector<HTMLElement>('input,button,select')
+    const node = panelRef.current?.querySelector<HTMLElement>('button,select')
     node?.focus()
-
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && phase !== 'running') {
         event.preventDefault()
@@ -111,7 +103,6 @@ export function RehberSyncModal({
     document.addEventListener('keydown', onKey)
     const prevOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-
     return () => {
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = prevOverflow
@@ -119,118 +110,124 @@ export function RehberSyncModal({
     }
   }, [onClose, phase])
 
-  useEffect(() => {
-    if (phase !== 'running' || !accountId) return
+  const mergeItems = (next: RehberPreviewItem[]) => {
+    setItems((prev) => {
+      const map = new Map<string, RehberPreviewItem>()
+      for (const row of [...next, ...prev]) {
+        if (!map.has(row.phone)) map.set(row.phone, row)
+      }
+      const merged = [...map.values()]
+      const newest = next[0]?.phone
+      if (newest && newest !== prev[0]?.phone) {
+        setFlashPhone(newest)
+        window.setTimeout(() => setFlashPhone((cur) => (cur === newest ? null : cur)), 900)
+      }
+      return merged.slice(0, 120)
+    })
+  }
 
-    let cancelled = false
-    const tick = async () => {
-      const preview = await listRehberPreview(accountId)
-      if (cancelled || preview.error) return
-      setItems(preview.items ?? [])
-      setTotal(preview.total ?? 0)
-      setStatusLine(
-        (preview.total ?? 0) > 0
-          ? `WhatsApp’tan kişiler çekiliyor… ${preview.total} kayıt`
-          : 'WhatsApp’tan kişiler çekiliyor… (henüz isim gelmedi)',
-      )
-    }
-
-    void tick()
-    const timer = setInterval(() => {
-      void tick()
-    }, 1500)
-
-    return () => {
-      cancelled = true
-      clearInterval(timer)
-    }
-  }, [phase, accountId])
-
-  const selected = connected.find((a) => a.id === accountId)
-
-  const start = () => {
+  const runPull = (targetAccountId: string) => {
+    if (!targetAccountId || startedRef.current) return
+    startedRef.current = true
     setError(null)
-    if (!accountId) {
-      setError('Bağlı hat seçin.')
-      return
-    }
-    if (!password.trim()) {
-      setError('Rehber şifresi gerekli.')
-      return
-    }
+    setPhase('running')
+    setStatusLine('WhatsApp’tan kişiler çekiliyor…')
+    setItems([])
+    setSeen(0)
+    setResult(null)
 
     startTransition(async () => {
-      setPhase('running')
-      setStatusLine('WhatsApp’tan kişiler çekiliyor…')
-      setItems([])
-      setTotal(0)
-      setResult(null)
-
-      const outcome = await syncAccountContactsAction(
-        accountId,
-        password,
-        listName.trim() || undefined,
-      )
-
+      const outcome = await syncAccountContactsAction(targetAccountId)
       if (outcome?.error || !outcome?.jobId) {
         setPhase('error')
         setError(outcome?.error ?? 'İş başlatılamadı.')
         toast(outcome?.error ?? 'İş başlatılamadı.', 'danger')
+        startedRef.current = false
         return
       }
 
-      toast('Rehber çekme başladı.', 'accent')
+      setJobId(outcome.jobId)
+      const deadline = Date.now() + 3 * 60_000
 
-      const wait = await waitForJob(outcome.jobId, {
-        intervalMs: 2000,
-        timeoutMs: 3 * 60_000,
-      })
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 800))
 
-      if (wait.status === 'failed' || wait.status === 'cancelled') {
-        setPhase('error')
-        setError(wait.error)
-        toast(wait.error, 'danger')
-        return
+        const [job, preview] = await Promise.all([
+          readRehberSyncJob(outcome.jobId),
+          listRehberPreview(targetAccountId),
+        ])
+
+        if (job.error && job.status !== 'done') {
+          setPhase('error')
+          setError(job.error)
+          toast(job.error, 'danger')
+          return
+        }
+
+        const samples = job.progress?.samples?.length
+          ? job.progress.samples
+          : preview.items ?? []
+        const count = Math.max(job.progress?.seen ?? 0, preview.total ?? 0, samples.length)
+        setSeen(count)
+        if (samples.length) mergeItems(samples)
+
+        const phaseLabel = job.progress?.phase
+        if (phaseLabel === 'importing') {
+          setStatusLine(`Gruba aktarılıyor… ${count} kişi`)
+        } else if (count > 0) {
+          setStatusLine(`WhatsApp’tan çekiliyor… ${count} kişi`)
+        } else {
+          setStatusLine(
+            job.progress?.live === false
+              ? 'Hat canlı değil — kayıtlı rehber aktarılıyor…'
+              : 'WhatsApp’tan kişiler çekiliyor… (bekleniyor)',
+          )
+        }
+
+        if (job.status === 'done' && job.result) {
+          const finalSamples = job.result.samples?.length
+            ? job.result.samples
+            : preview.items ?? []
+          if (finalSamples.length) mergeItems(finalSamples)
+          setSeen(Math.max(count, job.result.imported, job.result.seen ?? 0))
+          setResult(job.result)
+          setPhase('done')
+          setStatusLine(
+            job.result.imported > 0
+              ? `${job.result.imported} kişi gruba aktarıldı`
+              : 'Bu turda numara gelmedi',
+          )
+          toast(
+            job.result.imported > 0
+              ? `${job.result.imported} kişi aktarıldı.`
+              : 'Numara gelmedi — hat bağlı mı kontrol et.',
+            job.result.imported > 0 ? 'success' : 'accent',
+          )
+          router.refresh()
+          return
+        }
+
+        if (job.status === 'failed' || job.status === 'cancelled') {
+          setPhase('error')
+          setError(job.error ?? 'Rehber çekme başarısız.')
+          toast(job.error ?? 'Rehber çekme başarısız.', 'danger')
+          return
+        }
       }
 
-      if (wait.status === 'timeout') {
-        setPhase('error')
-        setError(
-          'İş hâlâ sürebilir. Biraz sonra Kişiler’i yenileyin; grup oluşmuş olabilir.',
-        )
-        router.refresh()
-        return
-      }
-
-      const finished = await readRehberSyncJobResult(outcome.jobId)
-      if (finished.error || !finished.result) {
-        setPhase('error')
-        setError(finished.error ?? 'Sonuç okunamadı.')
-        return
-      }
-
-      const preview = await listRehberPreview(accountId)
-      if (!preview.error) {
-        setItems(preview.items ?? [])
-        setTotal(preview.total ?? finished.result.imported)
-      }
-
-      setResult(finished.result)
-      setPhase('done')
-      setStatusLine(
-        finished.result.imported > 0
-          ? `${finished.result.imported} kişi gruba aktarıldı.`
-          : 'Çekilecek kayıt bulunamadı.',
-      )
-      toast(
-        finished.result.imported > 0
-          ? `${finished.result.imported} kişi aktarıldı.`
-          : 'Rehber boş veya telefon çıkarılamadı.',
-        finished.result.imported > 0 ? 'success' : 'accent',
-      )
+      setPhase('error')
+      setError('Süre doldu. Biraz sonra Kişiler’i yenile — grup oluşmuş olabilir.')
       router.refresh()
     })
   }
+
+  // Tek hat: modal açılınca tek tıkla çek (otomatik çift job riski yok)
+  // Çok hat: seçip başlat
+
+  useEffect(() => {
+    if (phase !== 'running' || !feedRef.current) return
+    feedRef.current.scrollTop = 0
+  }, [items, phase])
 
   return (
     <div className="wb-modal-root" role="presentation">
@@ -248,123 +245,127 @@ export function RehberSyncModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        aria-describedby={descId}
-        className="wb-modal-panel max-w-[440px]"
+        className="wb-modal-panel max-w-[480px]"
       >
         <h2 id={titleId} className="wb-modal-title">
           WhatsApp rehberinden çek
         </h2>
 
-        <div id={descId} className="space-y-3">
-          {phase === 'form' || phase === 'error' ? (
+        <div className="space-y-3">
+          {phase === 'pick' ? (
             <>
-              <Notice tone="danger">
-                Telefonun sistem rehberi çekilmez. Bu hattın WhatsApp kişi ve sohbet
-                numaraları panele kopyalanır — kişisel rehberi istemeden doldurmamak
-                için şifre zorunlu.
-              </Notice>
-
+              <p className="text-[12.5px] leading-snug text-ink-muted">
+                Başlatınca numaralar burada anlık akar; bitince gruba yazılır. Telefon
+                sistem rehberi değil — WhatsApp kişi / sohbet numaraları.
+              </p>
               {connected.length === 0 ? (
                 <Notice tone="accent">
-                  Bağlı hat yok.{' '}
-                  <AccentLink href="/hesaplar">Hatlar’a git</AccentLink>
+                  Bağlı hat yok. <AccentLink href="/hesaplar">Hatlar’a git</AccentLink>
                 </Notice>
+              ) : connected.length === 1 ? (
+                <p className="rounded-md border border-hairline bg-canvas px-3 py-2 text-[13px] font-medium text-ink">
+                  {connected[0].label}
+                  {connected[0].phone_e164 ? (
+                    <span className="ml-1 font-normal text-ink-muted">
+                      · {connected[0].phone_e164}
+                    </span>
+                  ) : null}
+                </p>
               ) : (
-                <>
-                  <Field label="Hat">
-                    <Select
-                      value={accountId}
-                      onChange={(e) => setAccountId(e.target.value)}
-                      disabled={pending}
-                    >
-                      {connected.map((account) => (
-                        <option key={account.id} value={account.id}>
-                          {account.label}
-                          {account.phone_e164 ? ` · ${account.phone_e164}` : ''}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-
-                  <Field
-                    label="Grup adı (opsiyonel)"
-                    hint="Boşsa «WhatsApp Rehberi — hat adı» oluşturulur."
+                <Field label="Hat">
+                  <Select
+                    value={accountId}
+                    onChange={(e) => setAccountId(e.target.value)}
+                    disabled={pending}
                   >
-                    <Input
-                      value={listName}
-                      onChange={(e) => setListName(e.target.value)}
-                      placeholder={
-                        selected
-                          ? `WhatsApp Rehberi — ${selected.label}`
-                          : 'WhatsApp Rehberi'
-                      }
-                      maxLength={120}
-                      disabled={pending}
-                    />
-                  </Field>
-
-                  <Field label="Rehber şifresi" hint="Yanlışlıkla çekmeyi önler.">
-                    <Input
-                      type="password"
-                      autoComplete="off"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      disabled={pending}
-                    />
-                  </Field>
-                </>
+                    {connected.map((account) => (
+                      <option key={account.id} value={account.id}>
+                        {account.label}
+                        {account.phone_e164 ? ` · ${account.phone_e164}` : ''}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
               )}
-
               {error ? <Notice tone="danger">{error}</Notice> : null}
             </>
           ) : null}
 
           {phase === 'running' || phase === 'done' ? (
             <>
-              <p
-                className={`text-[13px] font-medium ${
-                  phase === 'running' ? 'text-accent' : 'text-ink'
-                }`}
-              >
-                {statusLine}
-              </p>
-              <p className="text-[11.5px] text-ink-faint">
-                {phase === 'running'
-                  ? 'Bağlı hat üzerinden anlık geliyor. Bitene kadar bekleyin.'
-                  : result
-                    ? `Grup: ${result.listName}`
-                    : null}
-              </p>
+              <div className="rounded-md border border-hairline bg-canvas px-4 py-4 text-center">
+                <p
+                  className={`text-[40px] font-bold tabular leading-none tracking-tight ${
+                    phase === 'running' ? 'text-accent' : 'text-ink'
+                  }`}
+                >
+                  {seen}
+                </p>
+                <p className="mt-1 text-[12.5px] font-medium text-ink-muted">
+                  {phase === 'running' ? 'kişi çekiliyor' : 'kişi'}
+                </p>
+                <p
+                  className={`mt-2 text-[12.5px] ${
+                    phase === 'running' ? 'wb-live-dot text-accent' : 'text-ink'
+                  }`}
+                >
+                  {statusLine}
+                </p>
+              </div>
 
-              <div className="max-h-[220px] overflow-y-auto rounded-md border border-hairline bg-canvas p-2">
+              <div
+                ref={feedRef}
+                className="max-h-[260px] overflow-y-auto rounded-md border border-hairline bg-surface"
+              >
                 {items.length === 0 ? (
-                  <p className="px-1 py-4 text-center text-[12px] text-ink-muted">
-                    {phase === 'running' ? 'İsimler burada görünecek…' : 'Kayıt yok.'}
-                  </p>
+                  <div className="flex flex-col items-center gap-2 px-3 py-10 text-center">
+                    <span className="wb-live-dot inline-block size-2 rounded-full bg-accent" />
+                    <p className="text-[12.5px] text-ink-muted">
+                      İsimler buraya anlık düşecek…
+                    </p>
+                  </div>
                 ) : (
-                  <ul className="flex flex-wrap gap-1">
+                  <ul className="divide-y divide-hairline">
                     {items.map((item) => (
                       <li
                         key={item.phone}
-                        className="max-w-full truncate rounded border border-hairline bg-surface px-1.5 py-0.5 text-[11px] text-ink"
-                        title={item.phone}
+                        className={`flex items-baseline justify-between gap-2 px-3 py-1.5 text-[12.5px] ${
+                          flashPhone === item.phone ? 'bg-accent-soft/70' : ''
+                        }`}
                       >
-                        {displayName(item)}
+                        <span className="min-w-0 truncate font-medium text-ink">
+                          {item.label}
+                        </span>
+                        <span className="shrink-0 font-mono text-[10.5px] tabular text-ink-faint">
+                          {item.phone.replace(/^\+90/, '')}
+                        </span>
                       </li>
                     ))}
                   </ul>
                 )}
               </div>
-              <p className="text-[11px] tabular text-ink-faint">
-                {total > 0 ? `${total} kayıt · son ${Math.min(items.length, 80)} gösteriliyor` : null}
-              </p>
+
+              {phase === 'done' && result ? (
+                <p className="text-[12px] text-ink-muted">
+                  Grup: <span className="font-medium text-ink">{result.listName}</span>
+                  {jobId ? (
+                    <span className="text-ink-faint"> · iş #{jobId}</span>
+                  ) : null}
+                </p>
+              ) : null}
             </>
+          ) : null}
+
+          {phase === 'error' ? (
+            <div className="space-y-2">
+              <Notice tone="danger">{error ?? 'Bir şey ters gitti.'}</Notice>
+              <QuietHatLink />
+            </div>
           ) : null}
         </div>
 
         <div className="wb-modal-actions">
-          {phase === 'form' || phase === 'error' ? (
+          {phase === 'pick' ? (
             <>
               <Button type="button" onClick={onClose} disabled={pending}>
                 Vazgeç
@@ -372,19 +373,18 @@ export function RehberSyncModal({
               <Button
                 type="button"
                 variant="accent"
-                data-confirm-primary
-                disabled={pending || connected.length === 0}
-                onClick={start}
+                disabled={pending || !accountId}
+                onClick={() => runPull(accountId)}
               >
-                {pending ? 'Başlatılıyor…' : 'Çekmeye başla'}
+                Şimdi çek
               </Button>
             </>
           ) : null}
 
           {phase === 'running' ? (
-            <Button type="button" disabled>
-              Çekiliyor…
-            </Button>
+            <p className="w-full text-center text-[11.5px] text-ink-faint">
+              Bitene kadar bekleyin — kapatılamaz
+            </p>
           ) : null}
 
           {phase === 'done' ? (
@@ -417,8 +417,35 @@ export function RehberSyncModal({
               )}
             </>
           ) : null}
+
+          {phase === 'error' ? (
+            <>
+              <Button type="button" onClick={onClose}>
+                Kapat
+              </Button>
+              <Button
+                type="button"
+                variant="accent"
+                onClick={() => {
+                  startedRef.current = false
+                  setPhase('pick')
+                  setError(null)
+                }}
+              >
+                Tekrar dene
+              </Button>
+            </>
+          ) : null}
         </div>
       </div>
     </div>
+  )
+}
+
+function QuietHatLink() {
+  return (
+    <p className="text-[12px] text-ink-muted">
+      Hat bağlı değilse önce <AccentLink href="/hesaplar">Hatlar</AccentLink>’dan bağla.
+    </p>
   )
 }

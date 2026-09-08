@@ -155,8 +155,11 @@ export class WhatsAppSession {
     this.onClosed = handler
   }
 
-  async resyncContacts(): Promise<void> {
-    if (!this.sock) return
+  async resyncContacts(options?: {
+    maxWaitMs?: number
+    onTick?: (info: { events: number; waitedMs: number }) => void | Promise<void>
+  }): Promise<{ events: number; waitedMs: number }> {
+    if (!this.sock) return { events: 0, waitedMs: 0 }
     this.contactEventsSinceSync = 0
     this.lastContactEventAt = Date.now()
     try {
@@ -171,23 +174,34 @@ export class WhatsAppSession {
     }
 
     // Event'ler async akar; sessiz kalana veya ust sinira kadar bekle.
+    // Onceki 8sn / 45sn erken kesiliyordu — rehber sonra geliyor, import 0 kaliyordu.
     const started = Date.now()
-    const maxWaitMs = 45_000
-    const quietMs = 2_500
+    const maxWaitMs = options?.maxWaitMs ?? 90_000
+    const quietMs = 4_000
+    const minEmptyWaitMs = 20_000
     while (Date.now() - started < maxWaitMs) {
       await new Promise((resolve) => setTimeout(resolve, 500))
+      const waitedMs = Date.now() - started
       const quietFor = Date.now() - this.lastContactEventAt
+      if (options?.onTick) {
+        try {
+          await options.onTick({ events: this.contactEventsSinceSync, waitedMs })
+        } catch {
+          /* UI progress — hata yut */
+        }
+      }
       if (quietFor >= quietMs && this.contactEventsSinceSync > 0) break
-      // Hic event yoksa en az 8sn bekle (gec gelen upsert)
-      if (this.contactEventsSinceSync === 0 && Date.now() - started < 8_000) continue
-      if (this.contactEventsSinceSync === 0 && quietFor >= 8_000) break
+      if (this.contactEventsSinceSync === 0 && waitedMs < minEmptyWaitMs) continue
+      if (this.contactEventsSinceSync === 0 && quietFor >= minEmptyWaitMs) break
     }
 
     await this.contactPersistChain
+    const waitedMs = Date.now() - started
     this.log.info(
-      { events: this.contactEventsSinceSync, waitedMs: Date.now() - started },
+      { events: this.contactEventsSinceSync, waitedMs },
       'Rehber event bekleme bitti',
     )
+    return { events: this.contactEventsSinceSync, waitedMs }
   }
 
   private resolveLidPn = async (lidJid: string): Promise<string | null> => {
