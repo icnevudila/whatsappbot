@@ -1,15 +1,10 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { lookupOrder, lookupStock } from './adapter.js'
+import { crmTicketUrl, lookupOrder, provider } from './adapter.js'
 
-test('crm-service mock order and stock', async () => {
-  const order = await lookupOrder('ORD-1')
-  assert.equal(order.ok, true)
-  assert.equal(order.mock, true)
-  assert.equal(order.data?.orderId, 'ORD-1')
-
-  const stock = await lookupStock('SKU-1')
-  assert.equal(stock.ok, true)
-  assert.equal(stock.mock, true)
-  assert.equal(stock.data?.sku, 'SKU-1')
+test('crm ticket urls + mock', async () => {
+  assert.match(crmTicketUrl('https://crm.example', 'T-1'), /T-1/)
+  const ticket = await lookupOrder('T-1')
+  assert.equal(ticket.ok, true)
+  assert.equal(ticket.data?.provider, provider)
 })

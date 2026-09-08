@@ -2,7 +2,7 @@ import process from 'node:process'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { HealthSnapshot } from '@wa/channels'
-import { createHttpServer, createLogger, sendJson } from '@wa/channel-runtime'
+import { createHttpServer, createLogger, persistChannelEvent, sendJson } from '@wa/channel-runtime'
 import { parseInbound, sendMessage } from './adapter.js'
 import { CHANNEL, env } from './env.js'
 
@@ -37,6 +37,7 @@ export function createApp() {
           sendJson(res, 400, { error: 'invalid_event' })
           return
         }
+        await persistChannelEvent(null, event, env.accountId)
         sendJson(res, 200, { ok: true, event })
       },
       'POST /send': async (_req, res, _url, body) => {
