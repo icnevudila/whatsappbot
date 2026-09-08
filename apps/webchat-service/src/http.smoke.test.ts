@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { withTempServer } from '@wa/channel-runtime'
+import { clearThreads, getThread } from './adapter.js'
 import { createApp } from './index.js'
-import { getThread, webchatStore } from './adapter.js'
 
 test('webchat-service HTTP smoke', async () => {
-  webchatStore.clear()
+  clearThreads()
   const app = createApp()
   await withTempServer(app, async (base) => {
     assert.equal((await fetch(`${base}/health`)).status, 200)
