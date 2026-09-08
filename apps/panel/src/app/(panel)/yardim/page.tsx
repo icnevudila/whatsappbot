@@ -31,7 +31,7 @@ const guides: {
     steps: [
       'Excel / CSV yükle veya numaraları yapıştır.',
       'Gruba bir ad ver (ör. Mahalle müşterileri).',
-      'Kampanyada bu grubu seçeceksin.',
+      'WhatsApp doğrula ile ✓ / × işaretle; tek numara için sağdaki kontrolü kullan.',
     ],
   },
   {

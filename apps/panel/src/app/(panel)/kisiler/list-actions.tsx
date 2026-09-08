@@ -64,11 +64,13 @@ export function ListActions({
       const result = await verifyList(listId)
       if (result.error) {
         setError(result.error)
+        toast(result.error, 'danger')
         setBusy(null)
         return
       }
 
       setOk(result.ok ?? 'Doğrulama kuyruğa alındı…')
+      toast('Doğrulama kuyruğa alındı…', 'accent')
 
       if (result.jobId) {
         const outcome = await waitForJob(result.jobId)
@@ -141,8 +143,19 @@ export function ListActions({
 
   if (compact) {
     return (
-      <div className="flex items-center gap-1">
-        {deleteButtons}
+      <div className="space-y-1.5">
+        <div className="flex flex-wrap items-center justify-end gap-1">
+          <Button
+            onClick={runVerify}
+            disabled={pending}
+            title="Bağlı hat gerekir — gruptaki numaraları WhatsApp’ta kontrol eder"
+          >
+            {busy === 'verify' ? '…' : 'WhatsApp doğrula'}
+          </Button>
+          {deleteButtons}
+        </div>
+        {error ? <Notice tone="danger">{error}</Notice> : null}
+        {ok && !error ? <Notice tone="accent">{ok}</Notice> : null}
       </div>
     )
   }

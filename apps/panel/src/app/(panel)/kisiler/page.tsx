@@ -117,7 +117,7 @@ export default async function ContactsPage({
     <>
       <PageHeader
         title={t('pages.kisilerTitle')}
-        description={`${listTotal} grup · ${total} numara — kampanyada grup seçilir`}
+        description={`${listTotal} grup · ${total} numara — WhatsApp doğrula / tek numara kontrol`}
         action={<AccentLink href="/kampanyalar#yeni-kampanya">Kampanya</AccentLink>}
       />
 
@@ -167,10 +167,13 @@ export default async function ContactsPage({
             )}
           </Card>
 
-          <Card>
-            <CardHeader title="Yeni grup" subtitle="Excel / yapıştır veya boş" />
-            <NewGroupForm embedded />
-          </Card>
+          <div className="space-y-3">
+            <Card>
+              <CardHeader title="Yeni grup" subtitle="Excel / yapıştır veya boş" />
+              <NewGroupForm embedded />
+            </Card>
+            <WaCheckForm />
+          </div>
         </div>
       ) : (
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.85fr)]">

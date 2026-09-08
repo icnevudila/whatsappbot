@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Input, Notice } from '@/components/ui'
+import { WaMark } from '@/components/wa-mark'
 import { useConfirm } from '@/components/confirm-dialog'
 import { useSyncBusy } from '@/components/busy'
 import { useToast } from '@/components/toast'
@@ -186,9 +187,9 @@ export function ContactsBoard({
                 <p className="mt-0.5 truncate text-[11px] text-ink-faint">
                   {row.phone_e164}
                   {row.source ? ` · ${sourceLabel(row.source)}` : ''}
-                  {row.wa_status === 'valid' ? ' · ✓' : ''}
                 </p>
               </div>
+              <WaMark status={row.wa_status ?? 'unknown'} />
             </li>
           ))}
         </ul>
