@@ -63,3 +63,37 @@ export function getProvider(config?: Partial<CrmConfig>): string {
 
 /** @deprecated use getProvider() */
 export const provider = getProvider()
+
+export async function answerQna(
+  question: string,
+  config?: Partial<CrmConfig>,
+): Promise<CommerceLookupResult> {
+  const c = cfg(config)
+  if (c.mockMode || !c.liveEnabled || !c.token) {
+    return {
+      ok: true,
+      mock: true,
+      data: {
+        channel: c.provider,
+        provider: c.provider,
+        question,
+        answer: `Mock CRM yaniti: "${question}" icin kayit bulundu.`,
+      },
+    }
+  }
+  if (!c.apiBase) return { ok: false, error: 'missing_api_base' }
+  try {
+    const res = await fetch(`${c.apiBase.replace(/\/$/, '')}/qna`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${c.token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ question, provider: c.provider }),
+    })
+    if (!res.ok) return { ok: false, error: `http_${res.status}`, mock: false }
+    return { ok: true, data: (await res.json()) as Record<string, unknown>, mock: false }
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error), mock: false }
+  }
+}
