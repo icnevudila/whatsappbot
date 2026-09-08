@@ -717,24 +717,20 @@ h3 {
   }
 }
 
-/* Confirm + rehber vb. modallar — mobilde alta yapışmasın, ortada kalsın */
+/* Modallar: her zaman ekranın tam ortası; taşarsa panel içi kayar */
 .wb-modal-root {
   position: fixed;
   inset: 0;
   z-index: 90;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  padding: max(16px, env(safe-area-inset-top, 0px)) 16px
-    max(16px, env(safe-area-inset-bottom, 0px));
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
+  display: grid;
+  place-items: center;
+  padding: max(12px, env(safe-area-inset-top, 0px)) 12px
+    max(12px, env(safe-area-inset-bottom, 0px));
+  overflow: hidden;
+  box-sizing: border-box;
 }
 .wb-modal-backdrop {
-  position: fixed;
+  position: absolute;
   inset: 0;
   border: 0;
   cursor: pointer;
@@ -744,12 +740,14 @@ h3 {
 .wb-modal-panel {
   position: relative;
   z-index: 1;
+  box-sizing: border-box;
   width: min(100%, 440px);
   max-width: 100%;
-  /* Kısa içerik: dikey ortala; uzun içerik: root kaydırır, üst kesilmez */
-  margin-top: auto;
-  margin-bottom: auto;
-  flex-shrink: 0;
+  max-height: min(85dvh, 640px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   border-radius: var(--radius-card);
   border: 1px solid var(--color-hairline);
   background: var(--color-surface);
@@ -760,13 +758,15 @@ h3 {
 .wb-modal-panel--wide {
   width: min(100%, 480px);
 }
-@media (max-width: 639px) {
+.wb-modal-panel .wb-modal-scroll {
+  max-height: min(36dvh, 260px);
+}
+@media (min-width: 640px) {
   .wb-modal-root {
-    padding-left: 12px;
-    padding-right: 12px;
+    padding: 24px;
   }
   .wb-modal-panel .wb-modal-scroll {
-    max-height: min(42dvh, 280px);
+    max-height: 260px;
   }
 }
 .wb-modal-title {
