@@ -31,11 +31,11 @@ import {
   logoutAccount,
   removeAccount,
   requestPairingCode,
-  syncAccountContactsAction,
   type ActionState,
 } from './actions'
 import { PairingPanel } from './pairing-panel'
 import { QrPanel } from './qr-panel'
+import { RehberSyncModal } from '../kisiler/rehber-sync-modal'
 
 export type AccountView = Pick<
   Tables<'accounts'>,
@@ -389,6 +389,7 @@ function AccountCard({
   const t = useT()
   const [pending, startTransition] = useTransition()
   const [message, setMessage] = useState<string | null>(null)
+  const [rehberOpen, setRehberOpen] = useState(false)
   useSyncBusy(pending, 'Hat işlemi…', account.label)
 
   const run = (action: () => Promise<ActionState>, okToast?: string) => {
@@ -460,33 +461,9 @@ function AccountCard({
             <>
               <Button
                 variant="accent"
-                onClick={() => {
-                  void (async () => {
-                    const password = window.prompt(
-                      'WhatsApp rehberini çekmek için şifre girin.\n(Kişisel rehberiniz panele kopyalanır — emin değilseniz iptal edin.)',
-                    )
-                    if (password == null) return
-                    if (!password.trim()) {
-                      toast('Şifre gerekli.', 'danger')
-                      return
-                    }
-                    const ok = await confirm({
-                      title: 'Rehber içe aktarılsın mı?',
-                      description:
-                        'Bu hattın WhatsApp rehberi ve sohbet kişileri panele kopyalanır. Yanlışlıkla kişisel rehberi doldurmamak için şifre zorunludur.',
-                      confirmLabel: 'İçe aktar',
-                      cancelLabel: t('common.cancel'),
-                      tone: 'danger',
-                    })
-                    if (!ok) return
-                    run(
-                      () => syncAccountContactsAction(account.id, password),
-                      'Rehber içe aktarma kuyruğa alındı. WhatsApp senkronu ~1 dk sürebilir; sonra Kişiler’de görünür.',
-                    )
-                  })()
-                }}
+                onClick={() => setRehberOpen(true)}
                 disabled={pending}
-                title="Şifre ister — WhatsApp rehberini ve sohbet kişilerini panele aktarır"
+                title="WhatsApp rehberini ve sohbet kişilerini panele aktarır"
               >
                 Rehberi içe aktar
               </Button>
@@ -643,6 +620,21 @@ function AccountCard({
 
         {message ? <Notice tone="danger">{message}</Notice> : null}
       </div>
+
+      {rehberOpen ? (
+        <RehberSyncModal
+          accounts={[
+            {
+              id: account.id,
+              label: account.label,
+              phone_e164: account.phone_e164,
+              status: account.status,
+            },
+          ]}
+          initialAccountId={account.id}
+          onClose={() => setRehberOpen(false)}
+        />
+      ) : null}
     </Card>
   )
 }

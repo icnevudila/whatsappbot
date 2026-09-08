@@ -6,7 +6,7 @@ import { enqueueJob } from '@/lib/jobs'
 import { isOrgAdminRole, requireActiveOrg } from '@/lib/org'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
-export type ActionState = { error?: string; ok?: string } | null
+export type ActionState = { error?: string; ok?: string; jobId?: string } | null
 
 function revalidateAccounts() {
   revalidatePath('/hesaplar')
@@ -159,18 +159,108 @@ export async function syncAccountContactsAction(
     return { error: 'Rehber şifresi hatalı. İçe aktarma iptal edildi.' }
   }
 
-  const { error } = await enqueueJob({
+  const { id, error } = await enqueueJob({
     type: 'account.sync_contacts',
     accountId,
     priority: 30,
     payload: listName ? { list_name: listName } : {},
   })
   if (error) return { error }
+  if (!id) return { error: 'İş kuyruğa alınamadı.' }
 
   revalidateAccounts()
   revalidatePath('/kisiler')
   return {
-    ok: 'Rehber içe aktarma kuyruğa alındı. WhatsApp senkronu ~1 dk sürebilir; sonra Kişiler’de görünür.',
+    ok: 'WhatsApp’tan kişiler çekiliyor…',
+    jobId: id,
+  }
+}
+
+export type RehberPreviewItem = { phone: string; label: string }
+
+/** Modal canlı listesi — account_contacts’tan son gelenler. */
+export async function listRehberPreview(
+  accountId: string,
+): Promise<{ error?: string; total?: number; items?: RehberPreviewItem[] }> {
+  try {
+    const { org, supabase } = await requireActiveOrg()
+    const { count, error: countError } = await supabase
+      .from('account_contacts')
+      .select('id', { count: 'exact', head: true })
+      .eq('org_id', org.id)
+      .eq('account_id', accountId)
+    if (countError) return { error: countError.message }
+
+    const { data, error } = await supabase
+      .from('account_contacts')
+      .select('phone_e164, name, notify, updated_at')
+      .eq('org_id', org.id)
+      .eq('account_id', accountId)
+      .order('updated_at', { ascending: false })
+      .limit(80)
+
+    if (error) return { error: error.message }
+
+    const items = (data ?? []).map((row) => {
+      const name = (row.name ?? row.notify ?? '').trim()
+      return {
+        phone: row.phone_e164,
+        label: name || row.phone_e164,
+      }
+    })
+
+    return { total: count ?? items.length, items }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum yok' }
+  }
+}
+
+export type RehberSyncJobResult = {
+  imported: number
+  listId: string
+  listName: string
+  fromAccount: number
+  fromMessages: number
+}
+
+export async function readRehberSyncJobResult(
+  jobId: string,
+): Promise<{ error?: string; result?: RehberSyncJobResult }> {
+  try {
+    const { org, supabase } = await requireActiveOrg()
+    const numericId = Number(jobId)
+    if (!Number.isFinite(numericId)) return { error: 'İş kimliği geçersiz.' }
+
+    const { data, error } = await supabase
+      .from('jobs')
+      .select('status, error, result, org_id')
+      .eq('id', numericId)
+      .eq('org_id', org.id)
+      .maybeSingle()
+
+    if (error) return { error: error.message }
+    if (!data) return { error: 'İş bulunamadı.' }
+    if (data.status === 'failed' || data.status === 'cancelled') {
+      return { error: data.error?.trim() || 'Rehber çekme başarısız.' }
+    }
+    if (data.status !== 'done') return {}
+
+    const raw = data.result as Partial<RehberSyncJobResult> | null
+    if (!raw || typeof raw.listId !== 'string') {
+      return { error: 'İş sonucu okunamadı.' }
+    }
+
+    return {
+      result: {
+        imported: Number(raw.imported ?? 0),
+        listId: raw.listId,
+        listName: String(raw.listName ?? 'WhatsApp Rehberi'),
+        fromAccount: Number(raw.fromAccount ?? 0),
+        fromMessages: Number(raw.fromMessages ?? 0),
+      },
+    }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum yok' }
   }
 }
 

@@ -30,7 +30,7 @@ const guides: {
     tint: 'bg-accent-soft/55',
     steps: [
       'Excel / CSV yükle veya numaraları yapıştır.',
-      'Gruba bir ad ver (ör. Mahalle müşterileri).',
+      'İstersen «WhatsApp rehberinden çek» ile bağlı hattan kişi al.',
       'WhatsApp doğrula ile ✓ / × işaretle; tek numara için sağdaki kontrolü kullan.',
     ],
   },

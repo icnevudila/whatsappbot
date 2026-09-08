@@ -24,6 +24,7 @@ import {
 import { ContactsBoard } from './contacts-board'
 import { ListActions } from './list-actions'
 import { NewGroupForm } from './new-group-form'
+import { RehberSyncButton } from './rehber-sync-modal'
 import { VerifyAllButton } from './verify-all-button'
 import { WaCheckForm } from './wa-check-form'
 
@@ -74,7 +75,8 @@ export default async function ContactsPage({
   const pageSize = PAGE_SIZES.members
   const requestedPage = parsePage(params.sayfa)
 
-  const [totalResult, waCountResult, listsResult, { messages }] = await Promise.all([
+  const [totalResult, waCountResult, listsResult, accountsResult, { messages }] =
+    await Promise.all([
     supabase.from('contacts').select('id', { count: 'exact', head: true }).eq('org_id', org.id),
     supabase
       .from('contacts')
@@ -87,12 +89,18 @@ export default async function ContactsPage({
       .eq('org_id', org.id)
       .neq('source', 'quick_send')
       .order('created_at', { ascending: false }),
+    supabase
+      .from('accounts')
+      .select('id, label, phone_e164, status')
+      .eq('org_id', org.id)
+      .order('created_at', { ascending: true }),
     getDictionary(),
   ])
 
   const total = totalResult.count ?? 0
   const whatsappCount = waCountResult.count ?? 0
   const lists = listsResult.data ?? []
+  const rehberAccounts = accountsResult.data ?? []
   const listTotal = lists.length
   const t = createT(messages)
 
@@ -118,7 +126,12 @@ export default async function ContactsPage({
       <PageHeader
         title={t('pages.kisilerTitle')}
         description={`${listTotal} grup · ${total} numara — WhatsApp doğrula / tek numara kontrol`}
-        action={<AccentLink href="/kampanyalar#yeni-kampanya">Kampanya</AccentLink>}
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <RehberSyncButton accounts={rehberAccounts} />
+            <AccentLink href="/kampanyalar#yeni-kampanya">Kampanya</AccentLink>
+          </div>
+        }
       />
 
       <div className="mb-3 inline-flex rounded-md border border-hairline bg-canvas p-0.5">
