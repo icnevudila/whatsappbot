@@ -82,7 +82,8 @@ export default function YardimPage() {
     <>
       <PageHeader
         title="Nasıl yapılır?"
-        description="Hat bağla → kişi grubu → kampanya. Takılınca SSS veya destek."
+        description="Hat bağla → kişi grubu → kampanya. Yeniysen Başlangıç’tan ilerle."
+        action={<QuietLink href="/kurulum">Başlangıç</QuietLink>}
       />
 
       <div className="grid gap-2.5 sm:grid-cols-2">

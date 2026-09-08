@@ -48,10 +48,13 @@ function NavLink({
 export function Nav({
   orientation = 'vertical',
   isPlatformAdmin = false,
+  showKurulum = false,
 }: {
   orientation?: 'vertical' | 'horizontal'
   /** Süper admin: Durum / Raporlar / Admin. */
   isPlatformAdmin?: boolean
+  /** Üye kurulumu bitmediyse Başlangıç menüde. */
+  showKurulum?: boolean
 }) {
   const pathname = usePathname()
   const t = useT()
@@ -87,6 +90,9 @@ export function Nav({
 
     const main: NavItem[] = [
       { href: '/ozet', label: t('nav.ozet'), icon: 'overview' },
+      ...(showKurulum
+        ? [{ href: '/kurulum', label: t('nav.kurulum'), icon: 'steps' as const }]
+        : []),
       { href: '/kampanyalar', label: t('nav.kampanyalar'), icon: 'campaign' },
       { href: '/raporlar', label: t('nav.raporlar'), icon: 'chart' },
       { href: '/kisiler', label: t('nav.kisiler'), icon: 'people' },
@@ -105,7 +111,7 @@ export function Nav({
       { id: 'main', label: 'İşler', items: main },
       { id: 'more', label: t('nav.groupMore'), items: more },
     ]
-  }, [isPlatformAdmin, t])
+  }, [isPlatformAdmin, showKurulum, t])
 
   /** Mobil: ana işler + ayarlar (veya admin ops). */
   const flat = useMemo(() => {

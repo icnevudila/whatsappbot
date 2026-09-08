@@ -2,8 +2,8 @@ import { cache } from 'react'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 /**
- * Soft checklist: bağlı hat + kişi grubu zorunlu his; marka isteğe bağlı.
- * Ayrı /kurulum wizard yok — Özet/Hesaplar InlineHint + gerçek sayfalar.
+ * Soft checklist: bağlı hat + kişi grubu; marka / ilk gönderim rehberde.
+ * Özet + /kurulum’da 3 adımlı kart; menüyü kilitlemez.
  */
 export const SETUP_REQUIRED_KEYS = ['connected', 'contacts'] as const
 export const SETUP_STEP_KEYS = ['connected', 'contacts', 'brand'] as const

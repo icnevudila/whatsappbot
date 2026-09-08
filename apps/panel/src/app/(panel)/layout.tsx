@@ -29,7 +29,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     redirect('/giris')
   }
 
-  const [{ showSetup }, orgs, { messages }] = await Promise.all([
+  const [{ showSetup, steps, counts }, orgs, { messages }] = await Promise.all([
     getSetupProgress(org.id),
     listUserOrgs(),
     getDictionary(),
@@ -39,6 +39,8 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   const pathname = (await headers()).get('x-filo-pathname') ?? ''
   const homeHref = isPlatformAdmin ? '/admin' : '/ozet'
   const customerNeedsSetup = !isPlatformAdmin && showSetup
+  const showKurulum =
+    !isPlatformAdmin && (!steps.connected || !steps.contacts || counts.outCount === 0)
 
   // Ops yolları yalnız platform admin (Raporlar müşteriye açık).
   if (
@@ -74,7 +76,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
-            <Nav isPlatformAdmin={isPlatformAdmin} />
+            <Nav isPlatformAdmin={isPlatformAdmin} showKurulum={showKurulum} />
           </div>
 
           <div className="border-t border-hairline px-3 py-3">
@@ -116,7 +118,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
             <div className="mb-2">
               <OrgSwitcher orgs={orgs} activeOrgId={org.id} />
             </div>
-            <Nav orientation="horizontal" isPlatformAdmin={isPlatformAdmin} />
+            <Nav orientation="horizontal" isPlatformAdmin={isPlatformAdmin} showKurulum={showKurulum} />
           </div>
 
           <header className="wb-topbar hidden h-[52px] shrink-0 items-center justify-between border-b border-hairline bg-surface px-5 md:flex">
@@ -133,7 +135,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
                 {isPlatformAdmin
                   ? `Destek görünümü · ${org.name}`
                   : customerNeedsSetup
-                    ? t('common.setupHintSoft')
+                    ? 'Başlangıç: hat · kişiler · gönder'
                     : t('common.workbench')}
               </p>
               <LocaleSwitcher compact />

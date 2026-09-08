@@ -16,10 +16,10 @@ const labels: Record<string, string> = {
   raporlar: 'Raporlar',
   ayarlar: 'Ayarlar',
   'hizli-gonderim': 'Hızlı gönderim',
-  'kara-liste': 'İstemeyenler',
+  kurulum: 'Başlangıç',
   'marka-kiti': 'Marka',
-  kurulum: 'Kurulum',
   yardim: 'Yardım',
+  'kara-liste': 'İstemeyenler',
 }
 export function WorkspaceHeader({ orgName }: { orgName: string }) {
   const pathname = usePathname()

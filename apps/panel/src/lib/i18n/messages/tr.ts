@@ -51,7 +51,7 @@ export const tr = {
     markaShort: 'Marka',
     ayarlar: 'Ayarlar',
     yardim: 'Yardım',
-    kurulum: 'Kurulum',
+    kurulum: 'Başlangıç',
   },
   auth: {
     signIn: 'Giriş yap',

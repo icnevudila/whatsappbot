@@ -27,6 +27,8 @@ import { NewGroupForm } from './new-group-form'
 import { RehberSyncButton } from './rehber-sync-modal'
 import { VerifyAllButton } from './verify-all-button'
 import { WaCheckForm } from './wa-check-form'
+import { getSetupProgress } from '@/lib/setup-progress'
+import { SetupBanner } from '../setup-banner'
 
 export const metadata: Metadata = { title: 'Kişiler' }
 export const dynamic = 'force-dynamic'
@@ -75,7 +77,7 @@ export default async function ContactsPage({
   const pageSize = PAGE_SIZES.members
   const requestedPage = parsePage(params.sayfa)
 
-  const [totalResult, waCountResult, listsResult, accountsResult, { messages }] =
+  const [totalResult, waCountResult, listsResult, accountsResult, setup, { messages }] =
     await Promise.all([
     supabase.from('contacts').select('id', { count: 'exact', head: true }).eq('org_id', org.id),
     supabase
@@ -94,6 +96,7 @@ export default async function ContactsPage({
       .select('id, label, phone_e164, status')
       .eq('org_id', org.id)
       .order('created_at', { ascending: true }),
+    getSetupProgress(org.id),
     getDictionary(),
   ])
 
@@ -133,6 +136,8 @@ export default async function ContactsPage({
           </div>
         }
       />
+
+      <SetupBanner progress={setup} />
 
       <div className="mb-3 inline-flex rounded-md border border-hairline bg-canvas p-0.5">
         <SegmentLink href="/kisiler" active={view === 'gruplar'}>

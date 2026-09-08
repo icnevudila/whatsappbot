@@ -52,7 +52,7 @@ export const en: typeof tr = {
     markaShort: 'Brand',
     ayarlar: 'Settings',
     yardim: 'Help',
-    kurulum: 'Setup',
+    kurulum: 'Get started',
   },
   auth: {
     signIn: 'Sign in',

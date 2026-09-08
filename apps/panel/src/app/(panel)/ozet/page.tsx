@@ -13,7 +13,7 @@ import {
 } from '@/components/ui'
 import { requireActiveOrg } from '@/lib/org'
 import { getSetupProgress } from '@/lib/setup-progress'
-import { SetupBanner } from '../setup-banner'
+import { SetupGuideCard } from '../setup-banner'
 
 export const metadata: Metadata = { title: 'Özet' }
 export const dynamic = 'force-dynamic'
@@ -106,7 +106,7 @@ export default async function PanelHomePage() {
         action={<AccentLink href={primaryHref}>{primaryCta}</AccentLink>}
       />
 
-      {isPlatformAdmin ? null : <SetupBanner progress={setup} />}
+      {isPlatformAdmin ? null : <SetupGuideCard progress={setup} />}
 
       <StatStrip
         items={[
