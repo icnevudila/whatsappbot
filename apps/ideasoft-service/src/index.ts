@@ -1,4 +1,6 @@
 import process from 'node:process'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import type { HealthSnapshot } from '@wa/channels'
 import { createHttpServer, createLogger, sendJson } from '@wa/channel-runtime'
 import { lookupOrder, lookupStock } from './adapter.js'
@@ -7,7 +9,7 @@ import { CHANNEL, env } from './env.js'
 const logger = createLogger('ideasoft-service')
 const startedAt = Date.now()
 
-function getHealth(): HealthSnapshot {
+export function getHealth(): HealthSnapshot {
   return {
     healthy: true,
     ready: true,
@@ -18,7 +20,8 @@ function getHealth(): HealthSnapshot {
   }
 }
 
-const app = createHttpServer({
+export function createApp() {
+  return createHttpServer({
   getHealth,
   routes: {
       'POST /lookup': async (_req, res, _url, body) => {
@@ -42,11 +45,16 @@ const app = createHttpServer({
         sendJson(res, 400, { error: 'orderId_or_sku_required' })
       },
     },
-})
+  })
+}
 
-if (process.env.NODE_ENV !== 'test') {
+const isMain =
+  process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])
+if (isMain) {
+  const app = createApp()
   await app.listen(env.port)
   logger.info({ port: env.port, channel: CHANNEL, mockMode: env.mockMode }, 'listening')
 }
 
-export { app, getHealth, env }
+export { env }
+

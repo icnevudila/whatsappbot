@@ -4,61 +4,68 @@ import {
   type SendMessageInput,
   type SendMessageResult,
 } from '@wa/channels'
-import { env, CHANNEL } from './env.js'
+import { env } from './env.js'
+import { append, clearThreads, getThread } from './store.js'
 
-const primary = Array.isArray(CHANNEL) ? CHANNEL[0] : CHANNEL
+export { getThread, append, clearThreads }
 
 export function parseInbound(raw: unknown): ChannelEvent | null {
   if (!raw || typeof raw !== 'object') return null
   const body = raw as Record<string, unknown>
-  const text =
-    typeof body.text === 'string'
-      ? body.text
-      : typeof (body.message as { text?: string } | undefined)?.text === 'string'
-        ? (body.message as { text: string }).text
-        : undefined
-  const threadId = String(body.threadId ?? body.chatId ?? body.senderId ?? 'unknown')
-  const senderId = String(body.senderId ?? body.from ?? threadId)
-  const externalMessageId =
-    typeof body.messageId === 'string' ? body.messageId : typeof body.id === 'string' ? body.id : undefined
-
-  return buildChannelEvent({
-    channel: primary,
+  const text = typeof body.text === 'string' ? body.text : undefined
+  if (!text) return null
+  const threadId = String(body.threadId ?? body.sessionId ?? body.senderId ?? 'anon')
+  const senderId = String(body.senderId ?? threadId)
+  const event = buildChannelEvent({
+    channel: 'webchat',
     orgId: env.orgId,
     accountId: env.accountId,
     direction: 'inbound',
     externalThreadId: threadId,
-    externalMessageId,
+    externalMessageId: typeof body.messageId === 'string' ? body.messageId : undefined,
     senderId,
     text,
     payload: body,
   })
+  append(threadId, {
+    id: event.id,
+    text,
+    senderId,
+    direction: 'inbound',
+    at: event.occurredAt,
+  })
+  return event
 }
 
 export async function sendMessage(input: SendMessageInput): Promise<SendMessageResult> {
+  const id = env.mockMode || !env.liveEnabled || !env.token
+    ? `mock-webchat-${Date.now()}`
+    : `webchat-${Date.now()}`
+
+  append(input.threadId, {
+    id,
+    text: input.text,
+    senderId: 'agent',
+    direction: 'outbound',
+    at: new Date().toISOString(),
+  })
+
   if (env.mockMode || !env.liveEnabled || !env.token) {
-    return {
-      ok: true,
-      externalMessageId: `mock-${primary}-${Date.now()}`,
-      mock: true,
-    }
+    return { ok: true, externalMessageId: id, mock: true }
   }
 
-  // Canli yollar servis ozelinde genisletilir; burada guvenli fallback.
+  const base = (env.apiBase || '').replace(/\/$/, '')
   try {
-    const res = await fetch(`${env.apiBase || 'https://example.invalid'}/send`, {
+    const res = await fetch(`${base}/send`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
         authorization: `Bearer ${env.token}`,
       },
-      body: JSON.stringify(input),
+      body: JSON.stringify({ threadId: input.threadId, text: input.text }),
     })
-    if (!res.ok) {
-      return { ok: false, error: `http_${res.status}`, mock: false }
-    }
-    const data = (await res.json().catch(() => ({}))) as { id?: string }
-    return { ok: true, externalMessageId: data.id ?? `live-${Date.now()}`, mock: false }
+    if (!res.ok) return { ok: false, error: `http_${res.status}`, mock: false }
+    return { ok: true, externalMessageId: id, mock: false }
   } catch (error) {
     return {
       ok: false,

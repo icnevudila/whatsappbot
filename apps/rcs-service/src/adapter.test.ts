@@ -1,23 +1,23 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { parseInbound, sendMessage } from './adapter.js'
-import { CHANNEL, env } from './env.js'
+import { env } from './env.js'
 
-test('rcs-service parseInbound + mock send', async () => {
-  const event = parseInbound({ text: 'merhaba', chatId: '100', senderId: '9', messageId: 'm1' })
+test('rcs parse + mock send', async () => {
+  const event = parseInbound({
+    senderPhoneNumber: '+905551112233',
+    text: 'merhaba rcs',
+    messageId: 'rcs-1',
+  })
   assert.ok(event)
-  assert.equal(event.text, 'merhaba')
-  assert.equal(event.externalThreadId, '100')
-  const primary = Array.isArray(CHANNEL) ? CHANNEL[0] : CHANNEL
-  assert.equal(event.channel, primary)
-
+  assert.equal(event.channel, 'rcs')
+  assert.equal(event.externalThreadId, '+905551112233')
   const result = await sendMessage({
     orgId: env.orgId,
     accountId: env.accountId,
-    channel: primary,
-    threadId: '100',
+    channel: 'rcs',
+    threadId: '+905551112233',
     text: 'yanit',
   })
   assert.equal(result.ok, true)
-  if (result.ok) assert.match(result.externalMessageId, /^mock-/)
 })

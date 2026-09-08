@@ -1,0 +1,149 @@
+# Palmate-style channel workers — mock by default
+# From repo root:
+#   docker compose -f infra/docker-compose.channels.yml up -d --build
+
+x-channel: &channel
+  build:
+    context: ..
+    dockerfile: apps/channel-service.Dockerfile
+  restart: unless-stopped
+  environment:
+    NODE_ENV: production
+    MOCK_MODE: 'true'
+    LIVE_ENABLED: 'false'
+  logging:
+    driver: json-file
+    options:
+      max-size: '5m'
+      max-file: '2'
+
+services:
+  tg-service:
+    <<: *channel
+    build:
+      context: ..
+      dockerfile: apps/channel-service.Dockerfile
+      args: { SERVICE: tg-service }
+    image: tg-service:local
+    container_name: tg-service
+    ports: ['127.0.0.1:3101:3101']
+    environment:
+      PORT: '3101'
+      MOCK_MODE: 'true'
+
+  meta-service:
+    <<: *channel
+    build:
+      context: ..
+      dockerfile: apps/channel-service.Dockerfile
+      args: { SERVICE: meta-service }
+    image: meta-service:local
+    container_name: meta-service
+    ports: ['127.0.0.1:3102:3102']
+    environment:
+      PORT: '3102'
+      MOCK_MODE: 'true'
+
+  webchat-service:
+    <<: *channel
+    build:
+      context: ..
+      dockerfile: apps/channel-service.Dockerfile
+      args: { SERVICE: webchat-service }
+    image: webchat-service:local
+    container_name: webchat-service
+    ports: ['127.0.0.1:3103:3103']
+    environment:
+      PORT: '3103'
+      MOCK_MODE: 'true'
+
+  shopify-service:
+    <<: *channel
+    build:
+      context: ..
+      dockerfile: apps/channel-service.Dockerfile
+      args: { SERVICE: shopify-service }
+    image: shopify-service:local
+    container_name: shopify-service
+    ports: ['127.0.0.1:3110:3110']
+    environment:
+      PORT: '3110'
+      MOCK_MODE: 'true'
+
+  trendyol-service:
+    <<: *channel
+    build:
+      context: ..
+      dockerfile: apps/channel-service.Dockerfile
+      args: { SERVICE: trendyol-service }
+    image: trendyol-service:local
+    container_name: trendyol-service
+    ports: ['127.0.0.1:3120:3120']
+    environment:
+      PORT: '3120'
+      MOCK_MODE: 'true'
+
+  line-service:
+    <<: *channel
+    build:
+      context: ..
+      dockerfile: apps/channel-service.Dockerfile
+      args: { SERVICE: line-service }
+    image: line-service:local
+    container_name: line-service
+    ports: ['127.0.0.1:3104:3104']
+    environment:
+      PORT: '3104'
+      MOCK_MODE: 'true'
+
+  rcs-service:
+    <<: *channel
+    build:
+      context: ..
+      dockerfile: apps/channel-service.Dockerfile
+      args: { SERVICE: rcs-service }
+    image: rcs-service:local
+    container_name: rcs-service
+    ports: ['127.0.0.1:3105:3105']
+    environment:
+      PORT: '3105'
+      MOCK_MODE: 'true'
+
+  ikas-service:
+    <<: *channel
+    build:
+      context: ..
+      dockerfile: apps/channel-service.Dockerfile
+      args: { SERVICE: ikas-service }
+    image: ikas-service:local
+    container_name: ikas-service
+    ports: ['127.0.0.1:3111:3111']
+    environment:
+      PORT: '3111'
+      MOCK_MODE: 'true'
+
+  woo-service:
+    <<: *channel
+    build:
+      context: ..
+      dockerfile: apps/channel-service.Dockerfile
+      args: { SERVICE: woo-service }
+    image: woo-service:local
+    container_name: woo-service
+    ports: ['127.0.0.1:3112:3112']
+    environment:
+      PORT: '3112'
+      MOCK_MODE: 'true'
+
+  hepsiburada-service:
+    <<: *channel
+    build:
+      context: ..
+      dockerfile: apps/channel-service.Dockerfile
+      args: { SERVICE: hepsiburada-service }
+    image: hepsiburada-service:local
+    container_name: hepsiburada-service
+    ports: ['127.0.0.1:3121:3121']
+    environment:
+      PORT: '3121'
+      MOCK_MODE: 'true'

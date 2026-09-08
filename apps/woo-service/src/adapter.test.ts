@@ -1,15 +1,15 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { lookupOrder, lookupStock } from './adapter.js'
+import { lookupOrder, lookupStock, parseWooAuthHeader } from './adapter.js'
 
-test('woo-service mock order and stock', async () => {
-  const order = await lookupOrder('ORD-1')
+test('woo auth header', () => {
+  assert.match(parseWooAuthHeader('ck:cs'), /^Basic /)
+  assert.equal(parseWooAuthHeader('plain-token'), 'Bearer plain-token')
+})
+
+test('woo mock order stock', async () => {
+  const order = await lookupOrder('55')
   assert.equal(order.ok, true)
-  assert.equal(order.mock, true)
-  assert.equal(order.data?.orderId, 'ORD-1')
-
-  const stock = await lookupStock('SKU-1')
-  assert.equal(stock.ok, true)
-  assert.equal(stock.mock, true)
-  assert.equal(stock.data?.sku, 'SKU-1')
+  assert.equal(order.data?.billing && (order.data.billing as { email: string }).email, 'musteri@ornek.com')
+  assert.equal((await lookupStock('SKU')).ok, true)
 })

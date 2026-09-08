@@ -1,23 +1,20 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { parseInbound, sendMessage } from './adapter.js'
-import { CHANNEL, env } from './env.js'
+import { clearThreads, getThread, parseInbound, sendMessage } from './adapter.js'
+import { env } from './env.js'
 
-test('webchat-service parseInbound + mock send', async () => {
-  const event = parseInbound({ text: 'merhaba', chatId: '100', senderId: '9', messageId: 'm1' })
-  assert.ok(event)
-  assert.equal(event.text, 'merhaba')
-  assert.equal(event.externalThreadId, '100')
-  const primary = Array.isArray(CHANNEL) ? CHANNEL[0] : CHANNEL
-  assert.equal(event.channel, primary)
-
-  const result = await sendMessage({
+test('webchat thread store', async () => {
+  clearThreads()
+  const inbound = parseInbound({ text: 'merhaba', threadId: 's1', senderId: 'u1' })
+  assert.ok(inbound)
+  await sendMessage({
     orgId: env.orgId,
     accountId: env.accountId,
-    channel: primary,
-    threadId: '100',
-    text: 'yanit',
+    channel: 'webchat',
+    threadId: 's1',
+    text: 'hosgeldin',
   })
-  assert.equal(result.ok, true)
-  if (result.ok) assert.match(result.externalMessageId, /^mock-/)
+  assert.equal(getThread('s1').length, 2)
+  assert.equal(getThread('s1')[0]?.direction, 'inbound')
+  assert.equal(getThread('s1')[1]?.direction, 'outbound')
 })
