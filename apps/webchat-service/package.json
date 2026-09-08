@@ -10,13 +10,17 @@
     "test": "node --import tsx --test src/**/*.test.ts"
   },
   "dependencies": {
-    "@wa/channels": "*",
+    "@sentry/node": "^10.73.0",
     "@wa/channel-runtime": "*",
+    "@wa/channel-worker-kit": "*",
+    "@wa/channels": "*",
+    "pg": "8.23.0",
     "pino": "10.3.1",
     "tsx": "4.23.13"
   },
   "devDependencies": {
     "@types/node": "^22",
+    "@types/pg": "8.23.1",
     "typescript": "^5"
   }
 }
