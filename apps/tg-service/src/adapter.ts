@@ -4,26 +4,41 @@ import {
   type SendMessageInput,
   type SendMessageResult,
 } from '@wa/channels'
-import { Bot } from 'grammy'
-import { env } from './env.js'
+import { loadTgConfig, type TgConfig } from './env.js'
 
-let bot: Bot | null = null
-
-export function getBot(): Bot | null {
-  if (env.mockMode || !env.token) return null
-  if (!bot) bot = new Bot(env.token)
-  return bot
+function cfg(overrides?: Partial<TgConfig>): TgConfig {
+  return loadTgConfig(overrides)
 }
 
-/** Telegram Update veya sade JSON → ChannelEvent */
-export function parseInbound(raw: unknown): ChannelEvent | null {
+/** Telegram Update / callback / sade JSON → ChannelEvent */
+export function parseInbound(raw: unknown, config?: Partial<TgConfig>): ChannelEvent | null {
+  const c = cfg(config)
   if (!raw || typeof raw !== 'object') return null
   const body = raw as Record<string, unknown>
 
+  const callback = body.callback_query as
+    | { id?: string; data?: string; from?: { id?: number }; message?: Record<string, unknown> }
+    | undefined
+
+  if (callback?.message) {
+    const chat = callback.message.chat as { id?: number | string } | undefined
+    const threadId = String(chat?.id ?? 'unknown')
+    return buildChannelEvent({
+      channel: 'telegram',
+      orgId: c.orgId,
+      accountId: c.accountId,
+      direction: 'inbound',
+      externalThreadId: threadId,
+      externalMessageId: callback.id ? `cb:${callback.id}` : undefined,
+      senderId: String(callback.from?.id ?? threadId),
+      text: callback.data,
+      payload: body,
+    })
+  }
+
   const updateMessage =
     (body.message as Record<string, unknown> | undefined) ||
-    (body.edited_message as Record<string, unknown> | undefined) ||
-    (body.callback_query as { message?: Record<string, unknown> } | undefined)?.message
+    (body.edited_message as Record<string, unknown> | undefined)
 
   if (updateMessage && typeof updateMessage === 'object') {
     const chat = updateMessage.chat as { id?: number | string } | undefined
@@ -41,8 +56,8 @@ export function parseInbound(raw: unknown): ChannelEvent | null {
 
     return buildChannelEvent({
       channel: 'telegram',
-      orgId: env.orgId,
-      accountId: env.accountId,
+      orgId: c.orgId,
+      accountId: c.accountId,
       direction: 'inbound',
       externalThreadId: threadId,
       externalMessageId,
@@ -60,8 +75,8 @@ export function parseInbound(raw: unknown): ChannelEvent | null {
 
   return buildChannelEvent({
     channel: 'telegram',
-    orgId: env.orgId,
-    accountId: env.accountId,
+    orgId: c.orgId,
+    accountId: c.accountId,
     direction: 'inbound',
     externalThreadId: threadId,
     externalMessageId,
@@ -71,8 +86,22 @@ export function parseInbound(raw: unknown): ChannelEvent | null {
   })
 }
 
-export async function sendMessage(input: SendMessageInput): Promise<SendMessageResult> {
-  if (env.mockMode || !env.liveEnabled || !env.token) {
+export function telegramSendUrl(apiBase: string, token: string): string {
+  const root = apiBase.replace(/\/$/, '')
+  return `${root}/bot${token}/sendMessage`
+}
+
+/**
+ * Gönderim: mock veya Telegram Bot HTTP API (grammY yerine doğrudan fetch —
+ * testlerde local mock server ile canlı path doğrulanır).
+ */
+export async function sendMessage(
+  input: SendMessageInput,
+  config?: Partial<TgConfig>,
+): Promise<SendMessageResult> {
+  const c = cfg(config)
+
+  if (c.mockMode || !c.liveEnabled || !c.token) {
     return {
       ok: true,
       externalMessageId: `mock-telegram-${Date.now()}`,
@@ -80,23 +109,44 @@ export async function sendMessage(input: SendMessageInput): Promise<SendMessageR
     }
   }
 
-  const instance = getBot()
-  if (!instance) {
-    return { ok: false, error: 'bot_not_configured', code: 'NO_BOT' }
-  }
+  const chatIdRaw = input.threadId
+  const chatIdNum = Number(chatIdRaw)
+  const chat_id = Number.isFinite(chatIdNum) ? chatIdNum : chatIdRaw
 
   try {
-    const chatId = Number(input.threadId)
-    const msg = await instance.api.sendMessage(
-      Number.isFinite(chatId) ? chatId : input.threadId,
-      input.text,
-    )
-    return { ok: true, externalMessageId: String(msg.message_id), mock: false }
+    const res = await fetch(telegramSendUrl(c.apiBase, c.token), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        chat_id,
+        text: input.text,
+        parse_mode: typeof input.metadata?.parse_mode === 'string' ? input.metadata.parse_mode : undefined,
+      }),
+    })
+    const data = (await res.json().catch(() => ({}))) as {
+      ok?: boolean
+      result?: { message_id?: number }
+      description?: string
+    }
+    if (!res.ok || data.ok === false) {
+      return {
+        ok: false,
+        error: data.description ?? `http_${res.status}`,
+        code: 'TELEGRAM_SEND_FAILED',
+        mock: false,
+      }
+    }
+    return {
+      ok: true,
+      externalMessageId: String(data.result?.message_id ?? `tg-${Date.now()}`),
+      mock: false,
+    }
   } catch (error) {
     return {
       ok: false,
       error: error instanceof Error ? error.message : String(error),
       code: 'TELEGRAM_SEND_FAILED',
+      mock: false,
     }
   }
 }
