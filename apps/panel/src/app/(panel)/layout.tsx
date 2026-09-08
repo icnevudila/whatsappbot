@@ -15,6 +15,7 @@ import { signOut } from '@/app/giris/actions'
 import { Nav } from './nav'
 import { OrgSwitcher } from './org-switcher'
 import { PushRegistrar } from '@/components/push-registrar'
+import { MobileChrome } from './mobile-chrome'
 
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
@@ -98,28 +99,19 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <div className="border-b border-hairline bg-surface px-3 py-2 md:hidden">
-            <div className="mb-2 flex items-center justify-between gap-3">
-              <Link href={homeHref} className="flex items-center">
-                <Wordmark />
-              </Link>
-              <div className="flex items-center gap-2">
-                <LocaleSwitcher compact />
-                <form action={signOut}>
-                  <button
-                    type="submit"
-                    className="text-[11.5px] text-ink-muted transition-colors hover:text-danger"
-                  >
-                    {t('common.signOutShort')}
-                  </button>
-                </form>
-              </div>
-            </div>
-            <div className="mb-2">
-              <OrgSwitcher orgs={orgs} activeOrgId={org.id} />
-            </div>
-            <Nav orientation="horizontal" isPlatformAdmin={isPlatformAdmin} showKurulum={showKurulum} />
-          </div>
+          <MobileChrome
+            homeHref={homeHref}
+            orgName={org.name}
+            email={email}
+            orgs={orgs}
+            activeOrgId={org.id}
+            isPlatformAdmin={isPlatformAdmin}
+            showKurulum={showKurulum}
+            signOutAction={signOut}
+            setupHint={
+              customerNeedsSetup ? 'Başlangıç: hat · kişiler · gönder' : null
+            }
+          />
 
           <header className="wb-topbar hidden h-[52px] shrink-0 items-center justify-between border-b border-hairline bg-surface px-5 md:flex">
             <div className="flex min-w-0 items-center gap-2">

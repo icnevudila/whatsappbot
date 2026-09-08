@@ -15,9 +15,11 @@ export type OrgOption = {
 export function OrgSwitcher({
   orgs,
   activeOrgId,
+  compact = false,
 }: {
   orgs: OrgOption[]
   activeOrgId: string
+  compact?: boolean
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -40,7 +42,7 @@ export function OrgSwitcher({
 
   if (orgs.length <= 1) {
     return (
-      <div className="mb-3 space-y-1">
+      <div className={compact ? 'space-y-0.5' : 'mb-3 space-y-1'}>
         <p className="text-[10.5px] font-medium tracking-wide text-ink-faint uppercase">İşletme</p>
         <p className="truncate text-[12.5px] font-medium text-ink" title={active?.name}>
           {active?.name ?? '—'}
@@ -55,7 +57,7 @@ export function OrgSwitcher({
   }
 
   return (
-    <div className="mb-3 space-y-2">
+    <div className={compact ? 'space-y-2' : 'mb-3 space-y-2'}>
       <label className="block">
         <span className="mb-1 block text-[10.5px] font-medium tracking-wide text-ink-faint uppercase">
           İşletme

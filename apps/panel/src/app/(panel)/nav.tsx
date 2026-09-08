@@ -49,12 +49,15 @@ export function Nav({
   orientation = 'vertical',
   isPlatformAdmin = false,
   showKurulum = false,
+  onNavigate,
 }: {
   orientation?: 'vertical' | 'horizontal'
   /** Süper admin: Durum / Raporlar / Admin. */
   isPlatformAdmin?: boolean
   /** Üye kurulumu bitmediyse Başlangıç menüde. */
   showKurulum?: boolean
+  /** Mobil drawer: link tıklanınca kapat. */
+  onNavigate?: () => void
 }) {
   const pathname = usePathname()
   const t = useT()
@@ -113,7 +116,7 @@ export function Nav({
     ]
   }, [isPlatformAdmin, showKurulum, t])
 
-  /** Mobil: ana işler + ayarlar (veya admin ops). */
+  /** Eski yatay şerit — artık hamburger kullanılıyor; geriye dönük kalsın. */
   const flat = useMemo(() => {
     if (orientation === 'horizontal') {
       if (isPlatformAdmin) {
@@ -163,6 +166,7 @@ export function Nav({
                 label={item.label}
                 icon={item.icon}
                 active={active}
+                onNavigate={onNavigate}
                 linkRef={(node) => {
                   if (active) activeRef.current = node
                 }}
@@ -188,6 +192,7 @@ export function Nav({
                 label={item.label}
                 icon={item.icon}
                 active={isActive(pathname, item.href)}
+                onNavigate={onNavigate}
               />
             ))}
           </div>
