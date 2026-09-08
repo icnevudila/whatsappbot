@@ -25,8 +25,8 @@ const OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'proje', label: 'Proj-e' },
   { value: 'trendyol', label: 'Trendyol' },
   { value: 'hepsiburada', label: 'Hepsiburada' },
-  { value: 'hubspot', label: 'HubSpot' },
-  { value: 'zendesk', label: 'Zendesk' },
+  { value: 'erp', label: 'ERP' },
+  { value: 'crm', label: 'CRM' },
 ]
 
 export function ConnectChannelForm({ canManage }: { canManage: boolean }) {

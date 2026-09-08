@@ -1,16 +1,22 @@
-# Palmate-style channel workers — mock by default
+# Palmate-style channel workers — mock by default; sample creds via env_file.
 # From repo root:
 #   docker compose -f infra/docker-compose.channels.yml up -d --build
+#
+# LIVE against local vendor sandbox: set API_BASE to sandbox URL + LIVE_ENABLED=true
+# DATABASE_URL optional — without it workers run sync HTTP (MOCK_MODE=true).
 
 x-channel: &channel
   build:
     context: ..
     dockerfile: apps/channel-service.Dockerfile
   restart: unless-stopped
+  env_file:
+    - ../packages/channel-runtime/SAMPLE_CREDENTIALS.env
   environment:
     NODE_ENV: production
     MOCK_MODE: 'true'
     LIVE_ENABLED: 'false'
+    ROLE: worker
   logging:
     driver: json-file
     options:
@@ -29,6 +35,7 @@ services:
     ports: ['127.0.0.1:3101:3101']
     environment:
       PORT: '3101'
+      WORKER_ID: tg-1
       MOCK_MODE: 'true'
 
   meta-service:
@@ -42,6 +49,7 @@ services:
     ports: ['127.0.0.1:3102:3102']
     environment:
       PORT: '3102'
+      WORKER_ID: meta-1
       MOCK_MODE: 'true'
 
   webchat-service:
@@ -55,32 +63,7 @@ services:
     ports: ['127.0.0.1:3103:3103']
     environment:
       PORT: '3103'
-      MOCK_MODE: 'true'
-
-  shopify-service:
-    <<: *channel
-    build:
-      context: ..
-      dockerfile: apps/channel-service.Dockerfile
-      args: { SERVICE: shopify-service }
-    image: shopify-service:local
-    container_name: shopify-service
-    ports: ['127.0.0.1:3110:3110']
-    environment:
-      PORT: '3110'
-      MOCK_MODE: 'true'
-
-  trendyol-service:
-    <<: *channel
-    build:
-      context: ..
-      dockerfile: apps/channel-service.Dockerfile
-      args: { SERVICE: trendyol-service }
-    image: trendyol-service:local
-    container_name: trendyol-service
-    ports: ['127.0.0.1:3120:3120']
-    environment:
-      PORT: '3120'
+      WORKER_ID: webchat-1
       MOCK_MODE: 'true'
 
   line-service:
@@ -94,6 +77,7 @@ services:
     ports: ['127.0.0.1:3104:3104']
     environment:
       PORT: '3104'
+      WORKER_ID: line-1
       MOCK_MODE: 'true'
 
   rcs-service:
@@ -107,6 +91,35 @@ services:
     ports: ['127.0.0.1:3105:3105']
     environment:
       PORT: '3105'
+      WORKER_ID: rcs-1
+      MOCK_MODE: 'true'
+
+  wechat-service:
+    <<: *channel
+    build:
+      context: ..
+      dockerfile: apps/channel-service.Dockerfile
+      args: { SERVICE: wechat-service }
+    image: wechat-service:local
+    container_name: wechat-service
+    ports: ['127.0.0.1:3106:3106']
+    environment:
+      PORT: '3106'
+      WORKER_ID: wechat-1
+      MOCK_MODE: 'true'
+
+  shopify-service:
+    <<: *channel
+    build:
+      context: ..
+      dockerfile: apps/channel-service.Dockerfile
+      args: { SERVICE: shopify-service }
+    image: shopify-service:local
+    container_name: shopify-service
+    ports: ['127.0.0.1:3110:3110']
+    environment:
+      PORT: '3110'
+      WORKER_ID: shopify-1
       MOCK_MODE: 'true'
 
   ikas-service:
@@ -120,6 +133,7 @@ services:
     ports: ['127.0.0.1:3111:3111']
     environment:
       PORT: '3111'
+      WORKER_ID: ikas-1
       MOCK_MODE: 'true'
 
   woo-service:
@@ -133,6 +147,91 @@ services:
     ports: ['127.0.0.1:3112:3112']
     environment:
       PORT: '3112'
+      WORKER_ID: woo-1
+      MOCK_MODE: 'true'
+
+  magento-service:
+    <<: *channel
+    build:
+      context: ..
+      dockerfile: apps/channel-service.Dockerfile
+      args: { SERVICE: magento-service }
+    image: magento-service:local
+    container_name: magento-service
+    ports: ['127.0.0.1:3113:3113']
+    environment:
+      PORT: '3113'
+      WORKER_ID: magento-1
+      MOCK_MODE: 'true'
+
+  tsoft-service:
+    <<: *channel
+    build:
+      context: ..
+      dockerfile: apps/channel-service.Dockerfile
+      args: { SERVICE: tsoft-service }
+    image: tsoft-service:local
+    container_name: tsoft-service
+    ports: ['127.0.0.1:3114:3114']
+    environment:
+      PORT: '3114'
+      WORKER_ID: tsoft-1
+      MOCK_MODE: 'true'
+
+  ticimax-service:
+    <<: *channel
+    build:
+      context: ..
+      dockerfile: apps/channel-service.Dockerfile
+      args: { SERVICE: ticimax-service }
+    image: ticimax-service:local
+    container_name: ticimax-service
+    ports: ['127.0.0.1:3115:3115']
+    environment:
+      PORT: '3115'
+      WORKER_ID: ticimax-1
+      MOCK_MODE: 'true'
+
+  ideasoft-service:
+    <<: *channel
+    build:
+      context: ..
+      dockerfile: apps/channel-service.Dockerfile
+      args: { SERVICE: ideasoft-service }
+    image: ideasoft-service:local
+    container_name: ideasoft-service
+    ports: ['127.0.0.1:3116:3116']
+    environment:
+      PORT: '3116'
+      WORKER_ID: ideasoft-1
+      MOCK_MODE: 'true'
+
+  proje-service:
+    <<: *channel
+    build:
+      context: ..
+      dockerfile: apps/channel-service.Dockerfile
+      args: { SERVICE: proje-service }
+    image: proje-service:local
+    container_name: proje-service
+    ports: ['127.0.0.1:3117:3117']
+    environment:
+      PORT: '3117'
+      WORKER_ID: proje-1
+      MOCK_MODE: 'true'
+
+  trendyol-service:
+    <<: *channel
+    build:
+      context: ..
+      dockerfile: apps/channel-service.Dockerfile
+      args: { SERVICE: trendyol-service }
+    image: trendyol-service:local
+    container_name: trendyol-service
+    ports: ['127.0.0.1:3120:3120']
+    environment:
+      PORT: '3120'
+      WORKER_ID: trendyol-1
       MOCK_MODE: 'true'
 
   hepsiburada-service:
@@ -146,4 +245,33 @@ services:
     ports: ['127.0.0.1:3121:3121']
     environment:
       PORT: '3121'
+      WORKER_ID: hepsiburada-1
+      MOCK_MODE: 'true'
+
+  erp-service:
+    <<: *channel
+    build:
+      context: ..
+      dockerfile: apps/channel-service.Dockerfile
+      args: { SERVICE: erp-service }
+    image: erp-service:local
+    container_name: erp-service
+    ports: ['127.0.0.1:3130:3130']
+    environment:
+      PORT: '3130'
+      WORKER_ID: erp-1
+      MOCK_MODE: 'true'
+
+  crm-service:
+    <<: *channel
+    build:
+      context: ..
+      dockerfile: apps/channel-service.Dockerfile
+      args: { SERVICE: crm-service }
+    image: crm-service:local
+    container_name: crm-service
+    ports: ['127.0.0.1:3131:3131']
+    environment:
+      PORT: '3131'
+      WORKER_ID: crm-1
       MOCK_MODE: 'true'

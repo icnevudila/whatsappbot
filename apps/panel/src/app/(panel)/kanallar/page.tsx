@@ -14,25 +14,28 @@ const CATALOG: Array<{
   service: string
   kind: string
   lib: string
+  port: number
 }> = [
-  { id: 'whatsapp', title: 'WhatsApp', service: 'wa-service', kind: 'Mesaj', lib: 'Baileys' },
-  { id: 'telegram', title: 'Telegram', service: 'tg-service', kind: 'Mesaj', lib: 'grammY' },
-  { id: 'instagram', title: 'Instagram', service: 'meta-service', kind: 'Mesaj', lib: 'Meta Graph' },
-  { id: 'facebook', title: 'Facebook', service: 'meta-service', kind: 'Mesaj', lib: 'Meta Graph' },
-  { id: 'rcs', title: 'RCS', service: 'rcs-service', kind: 'Mesaj', lib: 'Google RBM' },
-  { id: 'line', title: 'LINE', service: 'line-service', kind: 'Mesaj', lib: 'Messaging API' },
-  { id: 'wechat', title: 'WeChat', service: 'wechat-service', kind: 'Mesaj', lib: 'iLink' },
-  { id: 'webchat', title: 'Web chat', service: 'webchat-service', kind: 'Mesaj', lib: 'HTTP' },
-  { id: 'shopify', title: 'Shopify', service: 'shopify-service', kind: 'E-ticaret', lib: 'GraphQL' },
-  { id: 'ikas', title: 'iKAS', service: 'ikas-service', kind: 'E-ticaret', lib: 'GraphQL' },
-  { id: 'woocommerce', title: 'WooCommerce', service: 'woo-service', kind: 'E-ticaret', lib: 'REST' },
-  { id: 'magento', title: 'Magento', service: 'magento-service', kind: 'E-ticaret', lib: 'REST' },
-  { id: 'tsoft', title: 'T-Soft', service: 'tsoft-service', kind: 'E-ticaret', lib: 'REST' },
-  { id: 'ticimax', title: 'Ticimax', service: 'ticimax-service', kind: 'E-ticaret', lib: 'REST' },
-  { id: 'ideasoft', title: 'Ideasoft', service: 'ideasoft-service', kind: 'E-ticaret', lib: 'REST' },
-  { id: 'proje', title: 'Proj-e', service: 'proje-service', kind: 'E-ticaret', lib: 'REST' },
-  { id: 'trendyol', title: 'Trendyol', service: 'trendyol-service', kind: 'Pazaryeri', lib: 'Seller API' },
-  { id: 'hepsiburada', title: 'Hepsiburada', service: 'hepsiburada-service', kind: 'Pazaryeri', lib: 'Merchant' },
+  { id: 'whatsapp', title: 'WhatsApp', service: 'wa-service', kind: 'Mesaj', lib: 'Baileys', port: 3000 },
+  { id: 'telegram', title: 'Telegram', service: 'tg-service', kind: 'Mesaj', lib: 'grammY', port: 3101 },
+  { id: 'instagram', title: 'Instagram', service: 'meta-service', kind: 'Mesaj', lib: 'Meta Graph', port: 3102 },
+  { id: 'facebook', title: 'Facebook', service: 'meta-service', kind: 'Mesaj', lib: 'Meta Graph', port: 3102 },
+  { id: 'rcs', title: 'RCS', service: 'rcs-service', kind: 'Mesaj', lib: 'Google RBM', port: 3105 },
+  { id: 'line', title: 'LINE', service: 'line-service', kind: 'Mesaj', lib: 'Messaging API', port: 3104 },
+  { id: 'wechat', title: 'WeChat', service: 'wechat-service', kind: 'Mesaj', lib: 'iLink', port: 3106 },
+  { id: 'webchat', title: 'Web chat', service: 'webchat-service', kind: 'Mesaj', lib: 'HTTP', port: 3103 },
+  { id: 'shopify', title: 'Shopify', service: 'shopify-service', kind: 'E-ticaret', lib: 'GraphQL', port: 3110 },
+  { id: 'ikas', title: 'iKAS', service: 'ikas-service', kind: 'E-ticaret', lib: 'GraphQL', port: 3111 },
+  { id: 'woocommerce', title: 'WooCommerce', service: 'woo-service', kind: 'E-ticaret', lib: 'REST', port: 3112 },
+  { id: 'magento', title: 'Magento', service: 'magento-service', kind: 'E-ticaret', lib: 'REST', port: 3113 },
+  { id: 'tsoft', title: 'T-Soft', service: 'tsoft-service', kind: 'E-ticaret', lib: 'REST', port: 3114 },
+  { id: 'ticimax', title: 'Ticimax', service: 'ticimax-service', kind: 'E-ticaret', lib: 'REST', port: 3115 },
+  { id: 'ideasoft', title: 'Ideasoft', service: 'ideasoft-service', kind: 'E-ticaret', lib: 'REST', port: 3116 },
+  { id: 'proje', title: 'Proj-e', service: 'proje-service', kind: 'E-ticaret', lib: 'REST', port: 3117 },
+  { id: 'trendyol', title: 'Trendyol', service: 'trendyol-service', kind: 'Pazaryeri', lib: 'Seller API', port: 3120 },
+  { id: 'hepsiburada', title: 'Hepsiburada', service: 'hepsiburada-service', kind: 'Pazaryeri', lib: 'Merchant', port: 3121 },
+  { id: 'erp', title: 'ERP', service: 'erp-service', kind: 'ERP', lib: 'REST', port: 3130 },
+  { id: 'crm', title: 'CRM', service: 'crm-service', kind: 'CRM', lib: 'REST', port: 3131 },
 ]
 
 export default async function KanallarPage() {
@@ -82,7 +85,11 @@ export default async function KanallarPage() {
               <h3 className="font-medium text-ink">{item.title}</h3>
               <p className="text-sm text-muted">{item.kind}</p>
               <p className="text-xs text-muted">
-                <code>{item.service}</code> · {item.lib}
+                <code>{item.service}</code> · {item.lib} · :{item.port}
+              </p>
+              <p className="text-[11px] text-muted">
+                webhook <code>/webhook</code>
+                {item.kind === 'Mesaj' ? ' · send /send' : ' · lookup /lookup'}
               </p>
             </Card>
           ))}

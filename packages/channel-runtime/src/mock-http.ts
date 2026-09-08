@@ -85,6 +85,7 @@ export function createMockHttp() {
 export const SAMPLE_CREDENTIALS = {
   telegramToken: '123456:AASampleTelegramBotToken_ForTestsOnly',
   metaPageToken: 'EAASampleMetaPageAccessTokenForTests',
+  metaPageId: 'sample-page-id',
   metaVerifyToken: 'sample-verify-token',
   lineChannelToken: 'SampleLineChannelAccessToken',
   lineChannelSecret: 'sample_line_channel_secret_0123456789',
@@ -95,4 +96,7 @@ export const SAMPLE_CREDENTIALS = {
   trendyolSecret: 'ty_sample_secret',
   trendyolSellerId: '123456',
   genericBearer: 'sample-bearer-token-0001',
+  rcsToken: 'sample-rcs-service-account-token',
+  wechatToken: 'sample-wechat-access-token',
+  webchatToken: 'sample-webchat-relay-token',
 } as const
