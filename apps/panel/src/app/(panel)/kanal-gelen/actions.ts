@@ -50,6 +50,27 @@ export async function replyChannelMessage(
 
   if (error) return { error: error.message }
 
+  // Worker kuyruğuna gönder — channel-*-service job loop alır.
+  const { error: jobError } = await supabase.from('channel_jobs' as 'message_log').insert({
+    org_id: org.id,
+    channel_account_id: channelAccountId,
+    channel,
+    type: 'channel.send',
+    payload: {
+      threadId,
+      text,
+      accountId: channelAccountId,
+      source: 'panel_reply',
+    },
+  } as never)
+
+  if (jobError) {
+    revalidatePath('/kanal-gelen')
+    return {
+      error: `Mesaj kaydedildi ama kuyruk hatası: ${jobError.message}`,
+    }
+  }
+
   revalidatePath('/kanal-gelen')
-  return { ok: 'Yanıt kaydedildi (worker canlı gönderimi sonraki adım).' }
+  return { ok: 'Yanıt kuyruğa alındı; kanal worker gönderiyor.' }
 }

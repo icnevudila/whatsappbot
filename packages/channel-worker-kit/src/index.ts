@@ -41,3 +41,8 @@ export {
   type HttpApp,
   type RunChannelWorkerOptions,
 } from './lifecycle.js'
+
+export {
+  createChannelPersistClient,
+  enqueueChannelJob,
+} from './persist.js'

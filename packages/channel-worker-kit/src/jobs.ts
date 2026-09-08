@@ -36,6 +36,7 @@ function normalizeJob(row: Record<string, unknown>): ChannelJobRow {
 export function createJobLoop(opts: {
   query: QueryFn
   workerId: string
+  /** Single channel, comma list (`facebook,instagram`), or `*` for all. */
   channel: string
   pollIntervalMs: number
   batchSize: number
@@ -245,7 +246,11 @@ export function createJobLoop(opts: {
       `select count(*)::text as count
          from public.channel_jobs
         where status = 'pending'
-          and ($1 = '*' or channel = $1)`,
+          and (
+            $1 = '*'
+            or channel = $1
+            or channel = any(string_to_array($1, ','))
+          )`,
       [opts.channel],
     )
     return Number(rows[0]?.count ?? 0)

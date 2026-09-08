@@ -11,7 +11,8 @@ Kanal worker’ları için **wa-service** ile aynı özen seviyesinde ortak alty
 | Typed env fail-fast | `env.ts` | `requiredEnv` / `intEnv` / `assertEnum` / `resolveWorkerId` |
 | `WORKER_ID` zorunlu (worker) | ✅ | ✅ |
 | pg pool + SSL | ✅ | `createPool` |
-| Claim / `SKIP LOCKED` | `wa.claim_jobs` | `claim_channel_jobs` |
+| Claim / `SKIP LOCKED` | `wa.claim_jobs` | `claim_channel_jobs` (`*`, tek kanal veya `facebook,instagram`) |
+| Persist + enqueue helpers | — | `createChannelPersistClient` / `enqueueChannelJob` |
 | `markDone` / `markFailed` ownership | `claimed_by` check | aynı |
 | Job claimed_at heartbeat (45s) | ✅ | ✅ |
 | Exponential backoff retry | ✅ | ✅ |
