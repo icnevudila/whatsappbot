@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from 'react'
 import { Button } from '@/components/ui'
+import { ModalPortal } from '@/components/modal-portal'
 
 export type ConfirmOptions = {
   title: string
@@ -106,43 +107,45 @@ function ConfirmModal({
   }, [onCancel])
 
   return (
-    <div className="wb-modal-root" role="presentation">
-      <button
-        type="button"
-        className="wb-modal-backdrop"
-        aria-label="Kapat"
-        onClick={onCancel}
-      />
-      <div
-        ref={panelRef}
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={description ? descId : undefined}
-        className="wb-modal-panel"
-      >
-        <h2 id={titleId} className="wb-modal-title">
-          {title}
-        </h2>
-        {description ? (
-          <p id={descId} className="wb-modal-desc">
-            {description}
-          </p>
-        ) : null}
-        <div className="wb-modal-actions">
-          <Button type="button" onClick={onCancel}>
-            {cancelLabel}
-          </Button>
-          <Button
-            type="button"
-            variant={confirmVariant}
-            data-confirm-primary
-            onClick={onConfirm}
-          >
-            {confirmLabel}
-          </Button>
+    <ModalPortal>
+      <div className="wb-modal-root" role="presentation">
+        <button
+          type="button"
+          className="wb-modal-backdrop"
+          aria-label="Kapat"
+          onClick={onCancel}
+        />
+        <div
+          ref={panelRef}
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          aria-describedby={description ? descId : undefined}
+          className="wb-modal-panel"
+        >
+          <h2 id={titleId} className="wb-modal-title">
+            {title}
+          </h2>
+          {description ? (
+            <p id={descId} className="wb-modal-desc">
+              {description}
+            </p>
+          ) : null}
+          <div className="wb-modal-actions">
+            <Button type="button" onClick={onCancel}>
+              {cancelLabel}
+            </Button>
+            <Button
+              type="button"
+              variant={confirmVariant}
+              data-confirm-primary
+              onClick={onConfirm}
+            >
+              {confirmLabel}
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
+    </ModalPortal>
   )
 }
