@@ -23,11 +23,6 @@ export function Nav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname()
   const router = useRouter()
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => prefetchSettingsRoutes(router), 350)
-    return () => window.clearTimeout(timer)
-  }, [router])
-
   return (
     <nav className="flex flex-col gap-px" aria-label="Müşteri menüsü">
       {ITEMS.map((item) => {
@@ -37,7 +32,7 @@ export function Nav({ onNavigate }: { onNavigate?: () => void }) {
           <Link
             key={item.href}
             href={item.href}
-            prefetch
+            prefetch={false}
             aria-current={active ? 'page' : undefined}
             onClick={onNavigate}
             onMouseEnter={warmSettings}

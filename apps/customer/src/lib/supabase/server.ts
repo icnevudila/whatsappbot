@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import type { Database } from '@wa/shared'
 import { publicEnv } from '@/lib/env'
+import { getFastSessionClaims } from './fast-jwt'
 
 /**
  * Sunucu tarafi Supabase istemcisi.
@@ -36,18 +37,27 @@ export const createSupabaseServerClient = cache(async () => {
   )
 })
 
-/** JWT'yi yerelde doğrular; Auth sunucusuna gitmez. */
+/** JWT'yi yerelde (0ms) doğrular; Auth sunucusuna gitmez. Süresi dolmuşsa getUser() fallback yapar. */
 export const getAuthIdentity = cache(async () => {
+  const cookieStore = await cookies()
+  const fast = getFastSessionClaims(cookieStore.getAll())
   const supabase = await createSupabaseServerClient()
-  const { data, error } = await supabase.auth.getClaims()
-  const claims = data?.claims
-  const userId = typeof claims?.sub === 'string' ? claims.sub : null
-  if (error || !userId || !claims) {
-    return { supabase, userId: null as string | null, email: null as string | null, jwtPlatformAdmin: false }
+
+  let claims = fast?.claims
+  let userId = claims?.sub ?? null
+  let email = claims?.email ?? null
+  let appMeta = claims?.app_metadata
+
+  if (!userId) {
+    const { data, error } = await supabase.auth.getUser()
+    if (error || !data?.user) {
+      return { supabase, userId: null as string | null, email: null as string | null, jwtPlatformAdmin: false }
+    }
+    userId = data.user.id
+    email = data.user.email ?? null
+    appMeta = data.user.app_metadata
   }
 
-  const email = typeof claims.email === 'string' ? claims.email : null
-  const appMeta = claims.app_metadata
   const flag =
     appMeta && typeof appMeta === 'object'
       ? (appMeta as Record<string, unknown>).platform_admin

@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { getFastSessionClaims } from '@/lib/supabase/fast-jwt'
 
 const AUTH_PATHS = new Set(['/giris'])
 
@@ -30,33 +31,50 @@ export async function proxy(request: NextRequest) {
     return response
   }
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          for (const { name, value, options } of cookiesToSet) {
-            request.cookies.set(name, value)
-          }
-          response = NextResponse.next({ request })
-          for (const { name, value, options } of cookiesToSet) {
-            response.cookies.set(name, value, options)
-          }
-        },
-      },
-    },
-  )
+  const fast = getFastSessionClaims(request.cookies.getAll())
+  let hasUser = Boolean(fast?.claims?.sub)
+  let userId = fast?.claims?.sub ?? null
 
-  const { data } = await supabase.auth.getClaims()
-  const hasUser = Boolean(data?.claims?.sub)
+  let supabase: ReturnType<typeof createServerClient> | null = null
+  function getSupabase() {
+    if (!supabase) {
+      supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+        {
+          cookies: {
+            getAll() {
+              return request.cookies.getAll()
+            },
+            setAll(cookiesToSet) {
+              for (const { name, value, options } of cookiesToSet) {
+                request.cookies.set(name, value)
+              }
+              response = NextResponse.next({ request })
+              for (const { name, value, options } of cookiesToSet) {
+                response.cookies.set(name, value, options)
+              }
+            },
+          },
+        },
+      )
+    }
+    return supabase
+  }
 
   const isAuthPath = AUTH_PATHS.has(path)
   const isNoOrgPath = path === '/erisim-yok'
   const isPublic = isAuthPath || isNoOrgPath || PUBLIC_PATHS.has(path)
+
+  // Token yerelde cozulememisse veya suresi bitmisse, getUser ile dogrula / tazele
+  if (!hasUser && (!isPublic || isAuthPath)) {
+    const client = getSupabase()
+    const { data } = await client.auth.getUser()
+    if (data?.user) {
+      hasUser = true
+      userId = data.user.id
+    }
+  }
 
   function withSessionCookies(next: NextResponse) {
     for (const cookie of response.cookies.getAll()) next.cookies.set(cookie)
@@ -78,11 +96,11 @@ export async function proxy(request: NextRequest) {
   }
 
   if (hasUser && isAuthPath) {
-    const userId = String(data?.claims?.sub ?? '')
-    const { data: membership } = await supabase
+    const client = getSupabase()
+    const { data: membership } = await client
       .from('organization_members')
       .select('org_id')
-      .eq('user_id', userId)
+      .eq('user_id', userId!)
       .limit(1)
       .maybeSingle()
 

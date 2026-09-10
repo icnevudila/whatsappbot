@@ -15,8 +15,12 @@ import { MobileChrome } from './mobile-chrome'
 export default async function CustomerLayout({ children }: { children: React.ReactNode }) {
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
   let email: string | null
+  let isOnboarded = false
   try {
-    ;({ org, email } = await requireActiveOrg())
+    const res = await requireActiveOrg()
+    org = res.org
+    email = res.email
+    isOnboarded = res.isOnboarded
   } catch (error) {
     if (error instanceof Error && error.message === 'NO_ORGANIZATION') {
       redirect('/erisim-yok')
@@ -24,7 +28,11 @@ export default async function CustomerLayout({ children }: { children: React.Rea
     redirect('/giris')
   }
 
-  const [orgs, onboarding] = await Promise.all([listUserOrgs(), loadOnboardingSnapshot()])
+  // Kullanıcı onboarding'i tamamlamışsa ağır snapshot sorgularını atla
+  const [orgs, onboarding] = await Promise.all([
+    listUserOrgs(),
+    isOnboarded ? Promise.resolve(null) : loadOnboardingSnapshot(),
+  ])
   if (onboarding && !onboarding.complete) {
     redirect(`/erisim-yok?adim=${onboarding.furthest}`)
   }

@@ -48,6 +48,7 @@ export const requireActiveOrg = cache(async (): Promise<{
   email: string | null
   org: ActiveOrg
   isPlatformAdmin: boolean
+  isOnboarded: boolean
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
 }> => {
   const { supabase, userId, email, jwtPlatformAdmin } = await getAuthIdentity()
@@ -55,7 +56,7 @@ export const requireActiveOrg = cache(async (): Promise<{
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('active_org_id, is_platform_admin, email')
+    .select('active_org_id, is_platform_admin, email, onboarded_at, onboarding_step')
     .eq('id', userId)
     .maybeSingle()
 
@@ -104,10 +105,15 @@ export const requireActiveOrg = cache(async (): Promise<{
     profileFlag: (profile as { is_platform_admin?: boolean } | null)?.is_platform_admin,
   })
 
+  const isOnboarded =
+    Boolean((profile as { onboarded_at?: string | null } | null)?.onboarded_at) ||
+    (profile as { onboarding_step?: string | null } | null)?.onboarding_step === 'done'
+
   return {
     userId,
     email: resolvedEmail,
     isPlatformAdmin,
+    isOnboarded,
     org: {
       id: org.id,
       name: org.name,
