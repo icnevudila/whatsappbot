@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 const AUTH_PATHS = new Set(['/giris'])
 
 const PUBLIC_PATHS = new Set([
+  '/',
   '/giris',
   '/erisim-yok',
   '/kvkk',
@@ -12,6 +13,8 @@ const PUBLIC_PATHS = new Set([
   '/sifre-yenile',
   '/auth/callback',
   '/auth/confirm',
+  '/robots.txt',
+  '/sitemap.xml',
 ])
 
 export async function proxy(request: NextRequest) {
