@@ -12,6 +12,7 @@ import {
   type RehberPreviewItem,
   type RehberSyncJobResult,
 } from '@/app/(panel)/hesaplar/actions'
+import { ModalPortal } from '@/components/modal-portal'
 
 export type RehberAccountOption = {
   id: string
@@ -325,23 +326,24 @@ export function RehberSyncModal({
   const shownCount = Math.max(displayCount, phase === 'done' ? serverTotal : displayCount)
 
   return (
-    <div className="wb-modal-root" role="presentation">
-      <button
-        type="button"
-        className="wb-modal-backdrop"
-        aria-label="Kapat"
-        disabled={phase === 'running'}
-        onClick={() => {
-          if (phase !== 'running') onClose()
-        }}
-      />
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        className="wb-modal-panel wb-modal-panel--wide"
-      >
+    <ModalPortal>
+      <div className="wb-modal-root" role="presentation">
+        <button
+          type="button"
+          className="wb-modal-backdrop"
+          aria-label="Kapat"
+          disabled={phase === 'running'}
+          onClick={() => {
+            if (phase !== 'running') onClose()
+          }}
+        />
+        <div
+          ref={panelRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          className="wb-modal-panel wb-modal-panel--wide"
+        >
         <h2 id={titleId} className="wb-modal-title">
           WhatsApp rehberinden çek
         </h2>
@@ -539,6 +541,7 @@ export function RehberSyncModal({
         </div>
       </div>
     </div>
+    </ModalPortal>
   )
 }
 
