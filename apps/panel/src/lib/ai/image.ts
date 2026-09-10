@@ -30,6 +30,14 @@ function timeout(): AbortSignal {
   return AbortSignal.timeout(AI_TIMEOUT_MS)
 }
 
+const QUALITY_LEVELS = new Set(['low', 'medium', 'high', 'xhigh', 'max', 'auto'])
+
+function openaiQuality(): string {
+  const fromEnv = (process.env.OPENAI_IMAGE_QUALITY ?? '').trim().toLowerCase()
+  if (QUALITY_LEVELS.has(fromEnv)) return fromEnv
+  return 'high'
+}
+
 const PIXELS: Record<AspectRatio, { width: number; height: number }> = {
   '1:1': { width: 1024, height: 1024 },
   '4:5': { width: 1024, height: 1280 },
@@ -108,6 +116,7 @@ function buildProviders(config: ResolvedAiConfig): Record<AiProviderId, ImagePro
             model: config.openai.imageModel,
             prompt,
             size,
+            quality: openaiQuality(),
           }),
         })
 

@@ -14,6 +14,7 @@
     "dev:panel": "npm run dev --workspace @wa/panel",
     "dev:dashboard": "npm run dev --workspace @wa/dashboard",
     "dev:admin": "npm run dev --workspace @wa/admin",
+    "dev:customer": "npm run dev --workspace @wa/customer",
     "dev:service": "npm run dev --workspace @wa/service",
     "db:check": "npm run db:check --workspace @wa/service",
     "build": "npm run build --workspaces --if-present",

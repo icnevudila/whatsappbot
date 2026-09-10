@@ -806,14 +806,18 @@ export type Database = {
           created_by: string
           error: string | null
           format: string
+          generation_type: string
           height: number | null
           id: string
           org_id: string
+          parent_id: string | null
           payload: Json
           public_url: string | null
+          source: string
           status: string
           storage_path: string | null
           template: string
+          title: string | null
           updated_at: string
           width: number | null
         }
@@ -823,14 +827,18 @@ export type Database = {
           created_by: string
           error?: string | null
           format?: string
+          generation_type?: string
           height?: number | null
           id?: string
           org_id: string
+          parent_id?: string | null
           payload?: Json
           public_url?: string | null
+          source?: string
           status?: string
           storage_path?: string | null
           template?: string
+          title?: string | null
           updated_at?: string
           width?: number | null
         }
@@ -840,14 +848,18 @@ export type Database = {
           created_by?: string
           error?: string | null
           format?: string
+          generation_type?: string
           height?: number | null
           id?: string
           org_id?: string
+          parent_id?: string | null
           payload?: Json
           public_url?: string | null
+          source?: string
           status?: string
           storage_path?: string | null
           template?: string
+          title?: string | null
           updated_at?: string
           width?: number | null
         }
@@ -864,6 +876,13 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creatives_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "creatives"
             referencedColumns: ["id"]
           },
         ]
@@ -1161,6 +1180,136 @@ export type Database = {
           },
         ]
       }
+      org_product_images: {
+        Row: {
+          created_at: string
+          id: string
+          org_id: string
+          product_id: string
+          public_url: string
+          sort_order: number
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          org_id: string
+          product_id: string
+          public_url: string
+          sort_order?: number
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          org_id?: string
+          product_id?: string
+          public_url?: string
+          sort_order?: number
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_product_images_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_product_images_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "org_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_products: {
+        Row: {
+          box_contents: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          org_id: string
+          updated_at: string
+        }
+        Insert: {
+          box_contents?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          org_id: string
+          updated_at?: string
+        }
+        Update: {
+          box_contents?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          org_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_products_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_social_accounts: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          label: string | null
+          org_id: string
+          platform: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          label?: string | null
+          org_id: string
+          platform: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          label?: string | null
+          org_id?: string
+          platform?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_social_accounts_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_members: {
         Row: {
           created_at: string
@@ -1192,12 +1341,16 @@ export type Database = {
       }
       organizations: {
         Row: {
+          about: string | null
           accounts_quota: number
+          address: string | null
           auto_reply_enabled: boolean
           created_at: string
           id: string
           monthly_message_quota: number
           name: string
+          onboarding: Json
+          phone_e164: string | null
           plan: string
           slug: string
           stripe_customer_id: string | null
@@ -1209,12 +1362,16 @@ export type Database = {
           webhook_url: string | null
         }
         Insert: {
+          about?: string | null
           accounts_quota?: number
+          address?: string | null
           auto_reply_enabled?: boolean
           created_at?: string
           id?: string
           monthly_message_quota?: number
           name: string
+          onboarding?: Json
+          phone_e164?: string | null
           plan?: string
           slug: string
           stripe_customer_id?: string | null
@@ -1226,12 +1383,16 @@ export type Database = {
           webhook_url?: string | null
         }
         Update: {
+          about?: string | null
           accounts_quota?: number
+          address?: string | null
           auto_reply_enabled?: boolean
           created_at?: string
           id?: string
           monthly_message_quota?: number
           name?: string
+          onboarding?: Json
+          phone_e164?: string | null
           plan?: string
           slug?: string
           stripe_customer_id?: string | null
@@ -1352,6 +1513,7 @@ export type Database = {
         Returns: Json
       }
       create_organization: { Args: { p_name: string }; Returns: string }
+      onboard_create_organization: { Args: { p_name: string }; Returns: string }
       delete_organization: {
         Args: { p_confirm_name: string; p_org_id: string }
         Returns: undefined

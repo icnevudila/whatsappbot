@@ -476,10 +476,37 @@ async function handle(job: JobRow): Promise<unknown> {
     }
 
     case 'creative.render': {
-      // Panel /api/kreatif ile uretir; kuyruga dusen eski satirlar kalici fail olmasin.
-      throw new NonRetryableJobError(
-        'Kreatif uretimi panel uzerinden yapilir (/marka-kiti). Bu is tipi kullanilmiyor.',
-      )
+      const payload = job.payload as JobPayloadMap['creative.render']
+      const creativeId = String(payload.creative_id ?? '').trim()
+      if (!creativeId) throw new NonRetryableJobError('creative_id eksik.')
+      const base =
+        process.env.CUSTOMER_APP_URL?.trim() ||
+        process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+        process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+        ''
+      const secret = process.env.JOB_INTERNAL_SECRET?.trim()
+      if (!base || !secret) {
+        throw new NonRetryableJobError(
+          'CUSTOMER_APP_URL ve JOB_INTERNAL_SECRET yok; kreatif isci HTTP cagiramiyor. Panel after() yedegi kullanilmali.',
+        )
+      }
+      const response = await fetch(`${base.replace(/\/$/, '')}/api/internal/creative-render`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${secret}`,
+        },
+        body: JSON.stringify({ creativeId }),
+        signal: AbortSignal.timeout(Math.max(env.sendTimeoutMs, 55_000)),
+      })
+      if (response.status === 401) {
+        throw new NonRetryableJobError('Kreatif ic istek yetkisiz (JOB_INTERNAL_SECRET).')
+      }
+      if (!response.ok) {
+        const bodyText = await response.text()
+        throw new Error(`Kreatif uretimi ${response.status}: ${bodyText.slice(0, 240)}`)
+      }
+      return { creative_id: creativeId }
     }
 
     default: {
