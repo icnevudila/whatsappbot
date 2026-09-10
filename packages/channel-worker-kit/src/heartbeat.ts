@@ -1,6 +1,6 @@
 import type { WorkerLogger } from './logger.js'
 
-type QueryFn = <T>(sql: string, params?: unknown[]) => Promise<T[]>
+import { type QueryFn } from './db.js'
 
 export type HeartbeatOptions = {
   query: QueryFn

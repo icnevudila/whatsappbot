@@ -12,7 +12,7 @@ export {
   type WorkerRole,
 } from './env-helpers.js'
 
-export { createPool, type CreatePoolOptions, type DbHelpers } from './db.js'
+export { createPool, type CreatePoolOptions, type DbHelpers, type QueryFn } from './db.js'
 
 export { createWorkerLogger, type WorkerLogger } from './logger.js'
 

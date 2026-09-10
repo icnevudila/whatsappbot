@@ -42,7 +42,7 @@ export const getAuthIdentity = cache(async () => {
   const { data, error } = await supabase.auth.getClaims()
   const claims = data?.claims
   const userId = typeof claims?.sub === 'string' ? claims.sub : null
-  if (error || !userId) {
+  if (error || !userId || !claims) {
     return { supabase, userId: null as string | null, email: null as string | null, jwtPlatformAdmin: false }
   }
 

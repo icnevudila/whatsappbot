@@ -8,10 +8,13 @@ export type MockRequest = {
   body: string
 }
 
-export type MockResponse =
+export type MockResponseBody =
   | { status?: number; json: unknown }
   | { status?: number; text: string }
-  | ((req: MockRequest) => MockResponse | Promise<MockResponse>)
+
+export type MockResponse =
+  | MockResponseBody
+  | ((req: MockRequest) => MockResponseBody | Promise<MockResponseBody>)
 
 /** Yerel HTTP mock — örnek credential ile canlı path testleri için. */
 export function createMockHttp() {

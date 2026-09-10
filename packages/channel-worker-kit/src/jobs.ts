@@ -14,7 +14,7 @@ export type ChannelJobRow = {
 
 export type JobHandler = (job: ChannelJobRow) => Promise<unknown>
 
-type QueryFn = <T>(sql: string, params?: unknown[]) => Promise<T[]>
+import { type QueryFn } from './db.js'
 
 function normalizeJob(row: Record<string, unknown>): ChannelJobRow {
   const payload = row.payload

@@ -98,7 +98,7 @@ export const env = {
 
 export const hasDatabase = Boolean(env.databaseUrl)
 
-export function resolveMetaJobChannel(raw?: unknown): string {
+export function resolveMetaJobChannel(raw?: unknown): 'instagram' | 'facebook' {
   if (raw && typeof raw === 'object') {
     const body = raw as { object?: string; channel?: string }
     if (body.channel === 'instagram' || body.channel === 'facebook') return body.channel

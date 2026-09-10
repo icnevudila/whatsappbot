@@ -52,7 +52,7 @@ export function loadErpConfig(overrides: Partial<ErpConfig> = {}): ErpConfig {
     orgId: requiredEnv('DEFAULT_ORG_ID', '00000000-0000-0000-0000-000000000001'),
     accountId: requiredEnv('DEFAULT_ACCOUNT_ID', '00000000-0000-0000-0000-000000000002'),
     verifyToken: process.env.VERIFY_TOKEN?.trim() || 'dev-verify',
-    provider: process.env.ERP_PROVIDER?.trim() || (Array.isArray(CHANNEL) ? CHANNEL[0]! : CHANNEL),
+    provider: process.env.ERP_PROVIDER?.trim() || CHANNEL[0],
     ...overrides,
   }
 }

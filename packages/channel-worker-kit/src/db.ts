@@ -17,12 +17,14 @@ export type CreatePoolOptions = {
   onPoolError?: (error: Error) => void
 }
 
+export type QueryFn = <T extends pg.QueryResultRow = pg.QueryResultRow>(
+  text: string,
+  params?: unknown[],
+) => Promise<T[]>
+
 export type DbHelpers = {
   pool: pg.Pool
-  query: <T extends pg.QueryResultRow = pg.QueryResultRow>(
-    text: string,
-    params?: unknown[],
-  ) => Promise<T[]>
+  query: QueryFn
   one: <T extends pg.QueryResultRow = pg.QueryResultRow>(
     text: string,
     params?: unknown[],
