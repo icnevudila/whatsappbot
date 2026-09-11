@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useId, useState, useTransition } from 'react'
+import { createPortal } from 'react-dom'
 import { Button, Field, Input, Notice, Textarea } from '@/components/ui'
 import { useToast } from '@/components/toast'
 import { quickCreateProduct } from './actions'
@@ -17,14 +18,18 @@ export function AddProductModal({
 }) {
   const titleId = useId()
   const toast = useToast()
+  const [mounted, setMounted] = useState(false)
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [name, setName] = useState('')
-  const [price, setPrice] = useState('')
-  const [boxContents, setBoxContents] = useState('')
   const [description, setDescription] = useState('')
+  const [boxContents, setBoxContents] = useState('')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [filePreview, setFilePreview] = useState<string | null>(null)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (!open) return
@@ -52,7 +57,7 @@ export function AddProductModal({
     return () => URL.revokeObjectURL(url)
   }, [selectedFile])
 
-  if (!open) return null
+  if (!open || !mounted) return null
 
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -65,10 +70,7 @@ export function AddProductModal({
     const formData = new FormData()
     formData.set('name', name.trim())
     if (description.trim()) formData.set('description', description.trim())
-    if (boxContents.trim() || price.trim()) {
-      const parts = [price.trim() ? `Fiyat: ${price.trim()}` : null, boxContents.trim()].filter(Boolean)
-      formData.set('box_contents', parts.join(' · '))
-    }
+    if (boxContents.trim()) formData.set('box_contents', boxContents.trim())
     if (selectedFile) {
       formData.append('images', selectedFile)
     }
@@ -83,17 +85,15 @@ export function AddProductModal({
 
       toast(`“${result.product.name}” eklendi ve seçildi.`, 'success')
       onSuccess(result.product)
-      // Formu temizle
       setName('')
-      setPrice('')
-      setBoxContents('')
       setDescription('')
+      setBoxContents('')
       setSelectedFile(null)
       onClose()
     })
   }
 
-  return (
+  return createPortal(
     <div className="wb-modal-root" role="presentation">
       <button
         type="button"
@@ -122,7 +122,7 @@ export function AddProductModal({
           </button>
         </div>
         <p className="wb-modal-desc">
-          Görsel sihirbazında kullanılmak üzere ürün bilgisi ve fotoğrafı ekleyin.
+          Görsel sihirbazında kullanılmak üzere ürün bilgisi ekleyin.
         </p>
 
         <form onSubmit={submit} className="mt-4 space-y-3">
@@ -130,36 +130,26 @@ export function AddProductModal({
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Örn. Karışık Döner Dürüm"
+              placeholder="Örn. Filo Starter Paket, Döner Dürüm vb."
               required
-              autoFocus
               maxLength={160}
             />
           </Field>
 
-          <div className="grid gap-2.5 sm:grid-cols-2">
-            <Field label="Fiyat" hint="İsteğe bağlı">
-              <Input
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                placeholder="Örn. 249 TL"
-              />
-            </Field>
-            <Field label="Porsiyon / Kutu içeriği" hint="İsteğe bağlı">
-              <Input
-                value={boxContents}
-                onChange={(e) => setBoxContents(e.target.value)}
-                placeholder="Örn. Patates ve içecek ile"
-              />
-            </Field>
-          </div>
-
-          <Field label="Açıklama" hint="İsteğe bağlı">
+          <Field label="Açıklama" hint="Görselde veya kampanyada vurgulanacak detaylar">
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
               placeholder="Ürünü kısaca anlatın..."
+            />
+          </Field>
+
+          <Field label="Kutu / Porsiyon içeriği" hint="İsteğe bağlı">
+            <Input
+              value={boxContents}
+              onChange={(e) => setBoxContents(e.target.value)}
+              placeholder="Örn. Yanında patates ve ayran ile"
             />
           </Field>
 
@@ -225,6 +215,7 @@ export function AddProductModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
