@@ -15,6 +15,7 @@ import {
   Toolbar,
 } from '@/components/ui'
 import { useSyncBusy } from '@/components/busy'
+import { useConfirm } from '@/components/confirm-dialog'
 import { useToast } from '@/components/toast'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { blacklistPhone } from '../kara-liste/actions'
@@ -114,6 +115,7 @@ export function MessagesBoard({
 }) {
   const router = useRouter()
   const toast = useToast()
+  const confirm = useConfirm()
   const [list, setList] = useState(previews)
   const [pending, startTransition] = useTransition()
   const [notice, setNotice] = useState<string | null>(null)
@@ -197,21 +199,29 @@ export function MessagesBoard({
 
   const block = () => {
     if (!selectedPhone || !selectedPhone.startsWith('+')) {
-      setError('Bu sohbette telefon numarası yok; İstemeyenler’e eklenemedi.')
+      setError('Bu sohbette telefon numarası yok; İstemeyenler\'e eklenemedi.')
       toast('İstemeyenlere eklenemedi — numara yok.', 'danger')
       return
     }
-    setError(null)
-    setNotice(null)
-    startTransition(async () => {
-      const result = await blacklistPhone(selectedPhone, 'Mesajlar’dan eklendi')
-      if (result.error) {
-        setError(result.error)
-        toast(result.error, 'danger')
-      } else {
-        setNotice('İstemeyenlere eklendi. Bundan sonra kampanya bu numarayı atlar.')
-        toast('İstemeyenlere eklendi.', 'success')
-      }
+    const displayName = threadDisplayName(selectedPreview ?? {}) ?? selectedPhone
+    void confirm({
+      title: 'İstemeyenlere al',
+      description: `${displayName} numarasını istemeyenler listesine eklemek istediğinize emin misiniz? Bu numara bundan sonra kampanyalara dahil edilmeyecek.`,
+      confirmLabel: 'Evet, ekle',
+    }).then((ok) => {
+      if (!ok) return
+      setError(null)
+      setNotice(null)
+      startTransition(async () => {
+        const result = await blacklistPhone(selectedPhone, 'Mesajlar\'dan eklendi')
+        if (result.error) {
+          setError(result.error)
+          toast(result.error, 'danger')
+        } else {
+          setNotice('İstemeyenlere eklendi. Bundan sonra kampanya bu numarayı atlar.')
+          toast('İstemeyenlere eklendi.', 'success')
+        }
+      })
     })
   }
 

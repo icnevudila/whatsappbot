@@ -544,7 +544,7 @@ export function AiRewriteBar({
     <div className="space-y-2">
       <div className="relative" ref={menuRef}>
         <Button type="button" disabled={!currentMessage.trim()} onClick={() => setOpen((value) => !value)}>
-          ✨ AI ile İyileştir
+          AI ile İyileştir
         </Button>
         {open ? (
           <div className="absolute z-20 mt-1 w-[min(100%,280px)] rounded-md border border-hairline bg-surface p-1.5 shadow-[var(--shadow-md)]">

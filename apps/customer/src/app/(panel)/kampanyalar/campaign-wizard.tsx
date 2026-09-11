@@ -446,7 +446,7 @@ export function CampaignWizard({
                 <p className="text-[13px] font-semibold text-ink-muted">Mesaj</p>
                 {shared.aiEnabled ? (
                   <Button type="button" variant="accent" onClick={() => setAiOpen(true)}>
-                    ✨ AI ile Yaz
+                    AI ile Yaz
                   </Button>
                 ) : null}
               </div>

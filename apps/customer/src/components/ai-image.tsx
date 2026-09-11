@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button, Field, Input, Notice, Select } from '@/components/ui'
 
 const STYLES = [
@@ -19,6 +19,17 @@ export type BrandKitOption = {
 function pickDefaultKitId(kits: BrandKitOption[]): string {
   return kits.find((kit) => kit.isDefault)?.id ?? kits[0]?.id ?? ''
 }
+
+import { TypewriterText } from '@/components/typewriter-text'
+
+const LOADING_MESSAGES = [
+  'Kompozisyon hazırlanıyor…',
+  'Marka renkleri uygulanıyor…',
+  'Görsel oluşturuluyor…',
+  'Detaylar ekleniyor…',
+  'Son rötuşlar yapılıyor…',
+  'Neredeyse hazır…',
+]
 
 /**
  * Kampanya / hızlı gönderim için AI görsel üretimi.
@@ -43,6 +54,13 @@ export function AiImage({
   const [preview, setPreview] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [busyTick, setBusyTick] = useState(0)
+
+  useEffect(() => {
+    if (!busy) { setBusyTick(0); return }
+    const timer = setInterval(() => setBusyTick((v) => v + 1), 3000)
+    return () => clearInterval(timer)
+  }, [busy])
 
   const selectedKit = brandKits.find((kit) => kit.id === brandKitId)
 
@@ -168,6 +186,12 @@ export function AiImage({
           {busy ? 'Üretiliyor…' : preview ? 'Tekrar üret' : 'Üret'}
         </Button>
       </div>
+
+      {busy ? (
+        <div className="rounded-md border border-accent/30 bg-accent-soft/40 px-3 py-2 text-[12.5px] text-accent">
+          <TypewriterText text={LOADING_MESSAGES[busyTick % LOADING_MESSAGES.length] ?? ''} />
+        </div>
+      ) : null}
 
       {error ? <Notice tone="danger">{error}</Notice> : null}
 

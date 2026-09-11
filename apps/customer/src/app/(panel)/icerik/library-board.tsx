@@ -9,6 +9,7 @@ import { useToast } from '@/components/toast'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { useServerSyncedState } from '@/lib/use-server-synced-state'
 import { deleteCreative } from './actions'
+import { TypewriterText } from '@/components/typewriter-text'
 
 export type LibraryItem = {
   id: string
@@ -125,7 +126,7 @@ export function LibraryBoard({
           tone="brand"
           title="İlk kampanya görselini oluştur"
           description="Markanıza ve ürünlerinize uygun kampanya görsellerini AI ile hazırlayın. Üretim arka planda devam eder."
-          action={<AccentLink href="/icerik/yeni">✨ Kampanya görseli oluştur</AccentLink>}
+          action={<AccentLink href="/icerik/yeni">Kampanya görseli oluştur</AccentLink>}
         />
       </div>
     )
@@ -311,7 +312,9 @@ function GeneratingFrame({ status, error }: { status: string; error: string | nu
       ) : (
         <>
           <span className="wb-busy-pill" aria-hidden />
-          <p className="text-[12.5px] text-ink-muted">{STAGES[tick % STAGES.length]}</p>
+          <p className="text-[12.5px] text-ink-muted">
+            <TypewriterText text={STAGES[tick % STAGES.length] ?? ''} />
+          </p>
         </>
       )}
     </div>

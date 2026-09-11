@@ -14,6 +14,7 @@ import {
   retryCreative,
   startCreativeGeneration,
 } from './actions'
+import { TypewriterText } from '@/components/typewriter-text'
 
 const STAGES = [
   'Markanızı analiz ediyoruz…',
@@ -173,7 +174,9 @@ export function CreativeDetail({
       {spinning ? (
         <div className="rounded-[var(--radius-card)] border border-accent/30 bg-accent-soft/40 px-4 py-8 text-center">
           <p className="text-[14.5px] font-bold">Görsel üretiliyor</p>
-          <p className="mt-2 text-[13px] text-ink-muted">{STAGES[tick % STAGES.length]}</p>
+          <p className="mt-2 text-[13px] text-ink-muted">
+            <TypewriterText text={STAGES[tick % STAGES.length] ?? ''} />
+          </p>
           <p className="mt-3 text-[12.5px] text-ink-faint">Bu sayfa açıkken üretim devam eder.</p>
           <QuietLibrary />
         </div>
@@ -285,7 +288,7 @@ export function CreativeDetail({
 
       {creative.status === 'ready' && canManage ? (
         <section className="space-y-2 rounded-[var(--radius-card)] border border-hairline bg-surface p-3.5">
-          <h2 className="text-[14px] font-bold">✨ AI ile revize et</h2>
+          <h2 className="text-[14px] font-bold">AI ile revize et</h2>
           <Field label="Neyi değiştirmek istiyorsunuz?">
             <Textarea
               rows={3}

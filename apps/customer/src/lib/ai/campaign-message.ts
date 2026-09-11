@@ -7,14 +7,14 @@ export const CAMPAIGN_TONES = [
 ] as const
 
 export const REWRITE_PRIMARY = [
-  { value: 'improve', label: 'Daha iyi yaz', mark: '✨' },
-  { value: 'shorten', label: 'Daha kısa yaz', mark: '✂️' },
-  { value: 'expand', label: 'Daha uzun / detaylı yaz', mark: '📝' },
-  { value: 'attention_grabbing', label: 'Daha dikkat çekici yap', mark: '🔥' },
-  { value: 'sales_focused', label: 'Daha satış odaklı yap', mark: '🎯' },
-  { value: 'friendly', label: 'Daha samimi yap', mark: '😊' },
-  { value: 'professional', label: 'Daha profesyonel yap', mark: '👔' },
-  { value: 'fix_grammar', label: 'Yazım ve imlayı düzelt', mark: '✓' },
+  { value: 'improve', label: 'Daha iyi yaz', mark: '' },
+  { value: 'shorten', label: 'Daha kısa yaz', mark: '' },
+  { value: 'expand', label: 'Daha uzun / detaylı yaz', mark: '' },
+  { value: 'attention_grabbing', label: 'Daha dikkat çekici yap', mark: '' },
+  { value: 'sales_focused', label: 'Daha satış odaklı yap', mark: '' },
+  { value: 'friendly', label: 'Daha samimi yap', mark: '' },
+  { value: 'professional', label: 'Daha profesyonel yap', mark: '' },
+  { value: 'fix_grammar', label: 'Yazım ve imlayı düzelt', mark: '' },
 ] as const
 
 export const REWRITE_MORE = [

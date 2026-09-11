@@ -63,6 +63,7 @@ export default async function ContactsPage({
     sayfa?: string | string[]
     gorunum?: string | string[]
     ara?: string | string[]
+    durum?: string | string[]
   }>
 }) {
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
@@ -79,6 +80,8 @@ export default async function ContactsPage({
   const params = await searchParams
   const viewRaw = Array.isArray(params.gorunum) ? params.gorunum[0] : params.gorunum
   const view = viewRaw === 'defter' ? 'defter' : 'gruplar'
+  const statusRaw = Array.isArray(params.durum) ? params.durum[0] : params.durum
+  const statusFilter = statusRaw === 'var' || statusRaw === 'yok' || statusRaw === 'bekleyen' ? statusRaw : 'tum'
   const searchQuery = sanitizeContactSearch(
     Array.isArray(params.ara) ? params.ara[0] ?? '' : params.ara ?? '',
   )
@@ -86,9 +89,19 @@ export default async function ContactsPage({
   const pageSize = PAGE_SIZES.members
   const requestedPage = parsePage(params.sayfa)
 
-  const [totalResult, waCountResult, listsResult, accountsResult, setup, { messages }] =
+  const [totalResult, waValidResult, waInvalidResult, waCountResult, listsResult, accountsResult, setup, { messages }] =
     await Promise.all([
     supabase.from('contacts').select('id', { count: 'exact', head: true }).eq('org_id', org.id),
+    supabase
+      .from('contacts')
+      .select('id', { count: 'exact', head: true })
+      .eq('org_id', org.id)
+      .eq('wa_status', 'valid'),
+    supabase
+      .from('contacts')
+      .select('id', { count: 'exact', head: true })
+      .eq('org_id', org.id)
+      .eq('wa_status', 'invalid'),
     supabase
       .from('contacts')
       .select('id', { count: 'exact', head: true })
@@ -110,6 +123,9 @@ export default async function ContactsPage({
   ])
 
   const total = totalResult.count ?? 0
+  const validCount = waValidResult.count ?? 0
+  const invalidCount = waInvalidResult.count ?? 0
+  const unknownCount = Math.max(0, total - (validCount + invalidCount))
   const whatsappCount = waCountResult.count ?? 0
   const lists = listsResult.data ?? []
   const rehberAccounts = accountsResult.data ?? []
@@ -117,13 +133,19 @@ export default async function ContactsPage({
   const t = createT(messages)
 
   let matchTotal = total
-  if (view === 'defter' && searchOr) {
-    const { count: matchCount } = await supabase
-      .from('contacts')
-      .select('id', { count: 'exact', head: true })
-      .eq('org_id', org.id)
-      .or(searchOr)
-    matchTotal = matchCount ?? 0
+  if (view === 'defter') {
+    if (searchOr || statusFilter !== 'tum') {
+      let countQ = supabase
+        .from('contacts')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', org.id)
+      if (searchOr) countQ = countQ.or(searchOr)
+      if (statusFilter === 'var') countQ = countQ.eq('wa_status', 'valid')
+      else if (statusFilter === 'yok') countQ = countQ.eq('wa_status', 'invalid')
+      else if (statusFilter === 'bekleyen') countQ = countQ.not('wa_status', 'in', '("valid","invalid")')
+      const { count: matchCount } = await countQ
+      matchTotal = matchCount ?? 0
+    }
   }
 
   const pages = totalPages(matchTotal, pageSize)
@@ -139,6 +161,9 @@ export default async function ContactsPage({
       .eq('org_id', org.id)
       .order('created_at', { ascending: false })
     if (searchOr) q = q.or(searchOr)
+    if (statusFilter === 'var') q = q.eq('wa_status', 'valid')
+    else if (statusFilter === 'yok') q = q.eq('wa_status', 'invalid')
+    else if (statusFilter === 'bekleyen') q = q.not('wa_status', 'in', '("valid","invalid")')
     const { data } = await q.range(from, to)
     contacts = data ?? []
   }
@@ -222,12 +247,19 @@ export default async function ContactsPage({
               subtitle={
                 searchQuery
                   ? `“${searchQuery}” · ${matchTotal} sonuç / ${total} numara`
-                  : `${total} numara · seçip gruba taşı`
+                  : `${total} numara · ${validCount} WhatsApp'ta var · ${invalidCount} yok`
               }
             />
             {total > 0 ? (
               <div className="border-b border-hairline px-3.5 py-2.5">
-                <VerifyAllButton />
+                <VerifyAllButton
+                  total={total}
+                  validCount={validCount}
+                  invalidCount={invalidCount}
+                  unknownCount={unknownCount}
+                  currentStatus={statusFilter}
+                  searchQuery={searchQuery}
+                />
               </div>
             ) : null}
             <ContactsBoard
@@ -239,11 +271,18 @@ export default async function ContactsPage({
             <Pagination
               page={page}
               totalPages={pages}
-              label={searchQuery ? `${matchTotal} sonuç` : `${total} kişi`}
+              label={
+                statusFilter !== 'tum'
+                  ? `${matchTotal} kişi (${statusFilter === 'var' ? 'WhatsApp var' : statusFilter === 'yok' ? 'WhatsApp yok' : 'Doğrulanmamış'})`
+                  : searchQuery
+                    ? `${matchTotal} sonuç`
+                    : `${total} kişi`
+              }
               hrefForPage={(p) =>
                 buildPageHref('/kisiler', p, {
                   gorunum: 'defter',
                   ara: searchQuery || undefined,
+                  durum: statusFilter !== 'tum' ? statusFilter : undefined,
                 })
               }
             />

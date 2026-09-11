@@ -15,7 +15,7 @@ import {
 } from '@/lib/creative/types'
 import { collectImageFiles, readImageFile } from '@/app/(panel)/ayarlar/upload-image'
 import { isOrgAdminRole, requireActiveOrg } from '@/lib/org'
-import { DEFAULT_INCLUDE, formatFromId } from './wizard-types'
+import { DEFAULT_INCLUDE, formatFromId, type ProductCard } from './wizard-types'
 
 export type CreativeActionState = { error?: string; ok?: string; id?: string } | null
 
@@ -475,5 +475,82 @@ export async function uploadLibraryImage(formData: FormData): Promise<CreativeAc
     return { ok: 'Görsel yüklendi.', id: data.id }
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Oturum yok.' }
+  }
+}
+
+/** Kampanya görsel sihirbazından ayrılmadan hızlı ürün ekleme */
+export async function quickCreateProduct(
+  formData: FormData,
+): Promise<{ error?: string; product?: ProductCard }> {
+  let ctx: Awaited<ReturnType<typeof requireActiveOrg>>
+  try {
+    ctx = await requireActiveOrg()
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
+  }
+  const { org, supabase, userId } = ctx
+  if (!isOrgAdminRole(org.role)) {
+    return { error: 'Yalnızca sahip veya yönetici ürün ekleyebilir.' }
+  }
+
+  const name = String(formData.get('name') ?? '').trim()
+  if (!name) return { error: 'Ürün adı zorunludur.' }
+
+  const description = String(formData.get('description') ?? '').trim()
+  const boxContents = String(formData.get('box_contents') ?? '').trim()
+  const productId = crypto.randomUUID()
+
+  const { error: insertError } = await supabase.from('org_products').insert({
+    id: productId,
+    org_id: org.id,
+    created_by: userId,
+    name: name.slice(0, 160),
+    description: description || null,
+    box_contents: boxContents || null,
+    is_active: true,
+  })
+
+  if (insertError) return { error: insertError.message }
+
+  const files = collectImageFiles(formData, 'images')
+  const images: { id: string; url: string }[] = []
+
+  for (let index = 0; index < files.length; index += 1) {
+    const file = files[index]
+    const parsed = await readImageFile(file)
+    if ('error' in parsed && parsed.error) continue
+    if (!('buffer' in parsed)) continue
+    const path = `${org.id}/products/${productId}/${crypto.randomUUID()}.${parsed.ext}`
+    const { error: upError } = await supabase.storage.from('creatives').upload(path, parsed.buffer, {
+      contentType: parsed.mime,
+      upsert: false,
+    })
+    if (upError) continue
+    const { data: publicUrl } = supabase.storage.from('creatives').getPublicUrl(path)
+    const imgId = crypto.randomUUID()
+    const { error: imgError } = await supabase.from('org_product_images').insert({
+      id: imgId,
+      org_id: org.id,
+      product_id: productId,
+      storage_path: path,
+      public_url: publicUrl.publicUrl,
+      sort_order: index,
+    })
+    if (!imgError) {
+      images.push({ id: imgId, url: publicUrl.publicUrl })
+    }
+  }
+
+  revalidatePath('/icerik/yeni')
+  revalidatePath('/ayarlar/urunler')
+
+  return {
+    product: {
+      id: productId,
+      name,
+      description: description || null,
+      boxContents: boxContents || null,
+      images,
+    },
   }
 }

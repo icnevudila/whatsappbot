@@ -48,7 +48,7 @@ export default async function CreativeLibraryPage() {
       <PageHeader
         title="İçerik kütüphanesi"
         description="Kampanya görselleri üretin, revize edin, tekrar kullanın."
-        action={<AccentLink href="/icerik/yeni">✨ Kampanya görseli oluştur</AccentLink>}
+        action={<AccentLink href="/icerik/yeni">Kampanya görseli oluştur</AccentLink>}
       />
       <LibraryBoard orgId={org.id} initial={initial} canManage={isOrgAdminRole(org.role)} />
     </>

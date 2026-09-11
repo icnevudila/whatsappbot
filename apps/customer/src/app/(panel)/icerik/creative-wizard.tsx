@@ -14,7 +14,8 @@ import {
   type ProductFieldKey,
 } from '@/lib/creative/types'
 import { startCreativeGeneration, uploadLibraryImage, type CreativeActionState } from './actions'
-import { DEFAULT_INCLUDE, type WizardBootstrap } from './wizard-types'
+import { DEFAULT_INCLUDE, type ProductCard, type WizardBootstrap } from './wizard-types'
+import { AddProductModal } from './add-product-modal'
 
 const DRAFT_KEY = 'wa.customer.creative-wizard.v1'
 
@@ -143,9 +144,15 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
     }
   }, [draft])
 
-  const stepIndex = STEPS.findIndex((row) => row.id === step)
+  // 1 kit (veya hiç kit) varsa marka seçim adımına gerek yok — defaultDraft zaten doğru kiti seçiyor.
+  const effectiveSteps = data.kits.length <= 1 ? STEPS.filter((s) => s.id !== 'brand') : STEPS
+
+  const [productsList, setProductsList] = useState<ProductCard[]>(data.products)
+  const [addProductOpen, setAddProductOpen] = useState(false)
+
+  const stepIndex = effectiveSteps.findIndex((row) => row.id === step)
   const selectedKit = data.kits.find((kit) => kit.id === draft.brandKitId)
-  const selectedProducts = data.products.filter((product) => draft.productIds.includes(product.id))
+  const selectedProducts = productsList.filter((product) => draft.productIds.includes(product.id))
   const payload = useMemo(
     () =>
       JSON.stringify({
@@ -158,11 +165,11 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
 
   const go = (next: Step) => setStep(next)
   const nextStep = () => {
-    const next = STEPS[Math.min(STEPS.length - 1, stepIndex + 1)]
+    const next = effectiveSteps[Math.min(effectiveSteps.length - 1, stepIndex + 1)]
     if (next) go(next.id)
   }
   const prevStep = () => {
-    const prev = STEPS[Math.max(0, stepIndex - 1)]
+    const prev = effectiveSteps[Math.max(0, stepIndex - 1)]
     if (prev) go(prev.id)
   }
 
@@ -170,7 +177,7 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
 
   const addProduct = (id: string) => {
     if (draft.productIds.includes(id)) return
-    const product = data.products.find((row) => row.id === id)
+    const product = productsList.find((row) => row.id === id)
     patch({
       productIds: [...draft.productIds, id],
       productExtras: {
@@ -209,7 +216,7 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
 
       <nav aria-label="Görsel adımları" className="overflow-x-auto">
         <ol className="flex min-w-max gap-1">
-          {STEPS.map((row, index) => {
+          {effectiveSteps.map((row, index) => {
             const active = row.id === step
             const done = index < stepIndex
             return (
@@ -405,7 +412,7 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
       {step === 'products' ? (
         <div className="space-y-2">
           <div className="flex flex-wrap gap-1.5">
-            {data.products.map((product) => (
+            {productsList.map((product) => (
               <button
                 key={product.id}
                 type="button"
@@ -415,12 +422,23 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
                 + {product.name}
               </button>
             ))}
-            {data.products.length === 0 ? (
+            <button
+              type="button"
+              onClick={() => setAddProductOpen(true)}
+              className="rounded-full border border-dashed border-accent/60 bg-accent-soft/30 px-3 py-1 text-[12.5px] font-medium text-accent hover:bg-accent-soft/60"
+            >
+              + Ürün ekle
+            </button>
+            {productsList.length === 0 ? (
               <Notice tone="warn">
                 Aktif ürün yok.{' '}
-                <Link href="/ayarlar/urunler/yeni" className="underline">
-                  Ürün ekle
-                </Link>
+                <button
+                  type="button"
+                  onClick={() => setAddProductOpen(true)}
+                  className="underline font-semibold cursor-pointer text-ink hover:text-accent"
+                >
+                  Modal ile ürün ekle
+                </button>
               </Notice>
             ) : null}
           </div>
@@ -769,7 +787,7 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
             ) : null}
             <p className="text-ink-muted">{draft.brief}</p>
             <Button type="submit" variant="accent" disabled={pending || !data.canManage || !data.imageAiEnabled}>
-              {pending ? 'Kuyruğa alınıyor…' : '✨ Görseli oluştur'}
+              {pending ? 'Kuyruğa alınıyor…' : 'Görseli oluştur'}
             </Button>
             {!data.canManage ? <Notice tone="warn">Üretim için yönetici gerekir.</Notice> : null}
           </div>
@@ -797,6 +815,15 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
           Geri
         </Button>
       ) : null}
+
+      <AddProductModal
+        open={addProductOpen}
+        onClose={() => setAddProductOpen(false)}
+        onSuccess={(newProduct) => {
+          setProductsList((prev) => [...prev, newProduct])
+          addProduct(newProduct.id)
+        }}
+      />
     </form>
   )
 }
