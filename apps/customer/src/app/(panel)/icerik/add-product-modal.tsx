@@ -20,18 +20,37 @@ export function AddProductModal({
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
+  const [price, setPrice] = useState('')
   const [boxContents, setBoxContents] = useState('')
-  const [files, setFiles] = useState<File[]>([])
+  const [description, setDescription] = useState('')
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [filePreview, setFilePreview] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) return
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose()
     }
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prevOverflow
+    }
   }, [open, onClose])
+
+  useEffect(() => {
+    if (!selectedFile) {
+      setFilePreview(null)
+      return
+    }
+    const url = URL.createObjectURL(selectedFile)
+    setFilePreview(url)
+    return () => URL.revokeObjectURL(url)
+  }, [selectedFile])
 
   if (!open) return null
 
@@ -46,9 +65,12 @@ export function AddProductModal({
     const formData = new FormData()
     formData.set('name', name.trim())
     if (description.trim()) formData.set('description', description.trim())
-    if (boxContents.trim()) formData.set('box_contents', boxContents.trim())
-    for (const file of files) {
-      formData.append('images', file)
+    if (boxContents.trim() || price.trim()) {
+      const parts = [price.trim() ? `Fiyat: ${price.trim()}` : null, boxContents.trim()].filter(Boolean)
+      formData.set('box_contents', parts.join(' · '))
+    }
+    if (selectedFile) {
+      formData.append('images', selectedFile)
     }
 
     startTransition(async () => {
@@ -61,39 +83,49 @@ export function AddProductModal({
 
       toast(`“${result.product.name}” eklendi ve seçildi.`, 'success')
       onSuccess(result.product)
+      // Formu temizle
+      setName('')
+      setPrice('')
+      setBoxContents('')
+      setDescription('')
+      setSelectedFile(null)
       onClose()
     })
   }
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4"
-    >
-      <div
-        className="fixed inset-0 bg-backdrop/60 backdrop-blur-sm transition-opacity"
+    <div className="wb-modal-root" role="presentation">
+      <button
+        type="button"
+        className="wb-modal-backdrop"
+        aria-label="Kapat"
         onClick={onClose}
-        aria-hidden="true"
       />
 
-      <div className="relative z-10 w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[var(--radius-card)] border border-hairline bg-surface p-4 sm:p-5 shadow-[var(--shadow-overlay)]">
-        <div className="flex items-center justify-between border-b border-hairline pb-3">
-          <h2 id={titleId} className="text-[15px] font-bold text-ink">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="wb-modal-panel wb-modal-panel--wide"
+      >
+        <div className="flex items-center justify-between">
+          <h2 id={titleId} className="wb-modal-title">
             Yeni ürün ekle
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="rounded p-1 text-ink-muted hover:bg-canvas hover:text-ink"
+            className="rounded p-1 text-ink-muted hover:bg-canvas hover:text-ink text-sm"
             aria-label="Kapat"
           >
             ✕
           </button>
         </div>
+        <p className="wb-modal-desc">
+          Görsel sihirbazında kullanılmak üzere ürün bilgisi ve fotoğrafı ekleyin.
+        </p>
 
-        <form onSubmit={submit} className="mt-3 space-y-3">
+        <form onSubmit={submit} className="mt-4 space-y-3">
           <Field label="Ürün adı" hint="Zorunlu">
             <Input
               value={name}
@@ -105,38 +137,89 @@ export function AddProductModal({
             />
           </Field>
 
-          <Field label="Açıklama" hint="Görselde veya kampanyada vurgulanacak detaylar">
+          <div className="grid gap-2.5 sm:grid-cols-2">
+            <Field label="Fiyat" hint="İsteğe bağlı">
+              <Input
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                placeholder="Örn. 249 TL"
+              />
+            </Field>
+            <Field label="Porsiyon / Kutu içeriği" hint="İsteğe bağlı">
+              <Input
+                value={boxContents}
+                onChange={(e) => setBoxContents(e.target.value)}
+                placeholder="Örn. Patates ve içecek ile"
+              />
+            </Field>
+          </div>
+
+          <Field label="Açıklama" hint="İsteğe bağlı">
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
-              placeholder="Örn. Özel soslu, lavaş arası enfes lezzet."
-            />
-          </Field>
-
-          <Field label="Kutu / Porsiyon içeriği" hint="İsteğe bağlı">
-            <Input
-              value={boxContents}
-              onChange={(e) => setBoxContents(e.target.value)}
-              placeholder="Örn. Yanında patates ve ayran ile"
+              placeholder="Ürünü kısaca anlatın..."
             />
           </Field>
 
           <Field label="Ürün görseli" hint="PNG, JPG veya WEBP (en fazla 5 MB)">
-            <Input
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
-            />
+            {filePreview ? (
+              <div className="flex items-center gap-3 rounded-md border border-hairline bg-canvas p-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={filePreview}
+                  alt=""
+                  className="size-14 rounded border border-hairline object-cover"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[12.5px] font-medium text-ink">
+                    {selectedFile?.name}
+                  </p>
+                  <p className="text-[11px] text-ink-muted">
+                    {selectedFile ? `${Math.round(selectedFile.size / 1024)} KB` : ''}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="quiet"
+                  onClick={() => setSelectedFile(null)}
+                >
+                  Kaldır
+                </Button>
+              </div>
+            ) : (
+              <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-hairline-strong bg-canvas/60 p-4 text-center transition-colors hover:border-accent hover:bg-accent-soft/20">
+                <span className="text-[13px] font-medium text-accent">
+                  + Görsel seç veya sürükle
+                </span>
+                <span className="mt-0.5 text-[11px] text-ink-muted">
+                  PNG, JPG, WEBP — En fazla 5 MB
+                </span>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) setSelectedFile(file)
+                  }}
+                />
+              </label>
+            )}
           </Field>
 
           {error ? <Notice tone="danger">{error}</Notice> : null}
 
-          <div className="flex justify-end gap-2 pt-2 border-t border-hairline">
-            <Button type="button" variant="quiet" onClick={onClose} disabled={pending}>
+          <div className="wb-modal-actions pt-2">
+            <Button type="button" onClick={onClose} disabled={pending}>
               Vazgeç
             </Button>
-            <Button type="submit" variant="accent" disabled={pending || !name.trim()}>
+            <Button
+              type="submit"
+              variant="accent"
+              disabled={pending || !name.trim()}
+            >
               {pending ? 'Ekleniyor…' : 'Kaydet ve Seç'}
             </Button>
           </div>

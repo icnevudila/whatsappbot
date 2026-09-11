@@ -205,14 +205,15 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
     step !== 'brief' || draft.brief.trim().length >= 8
 
   return (
-    <form
-      action={formAction}
-      onSubmit={(event) => {
-        if (step !== 'summary') event.preventDefault()
-      }}
-      className="space-y-3"
-    >
-      <input type="hidden" name="draft" value={payload} />
+    <>
+      <form
+        action={formAction}
+        onSubmit={(event) => {
+          if (step !== 'summary') event.preventDefault()
+        }}
+        className="space-y-3"
+      >
+        <input type="hidden" name="draft" value={payload} />
 
       <nav aria-label="Görsel adımları" className="overflow-x-auto">
         <ol className="flex min-w-max gap-1">
@@ -815,15 +816,16 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
           Geri
         </Button>
       ) : null}
-
-      <AddProductModal
-        open={addProductOpen}
-        onClose={() => setAddProductOpen(false)}
-        onSuccess={(newProduct) => {
-          setProductsList((prev) => [...prev, newProduct])
-          addProduct(newProduct.id)
-        }}
-      />
     </form>
+
+    <AddProductModal
+      open={addProductOpen}
+      onClose={() => setAddProductOpen(false)}
+      onSuccess={(newProduct) => {
+        setProductsList((prev) => [...prev, newProduct])
+        addProduct(newProduct.id)
+      }}
+    />
+  </>
   )
 }
