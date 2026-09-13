@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { Card, CardHeader, Notice } from '@/components/ui'
 import { requireActiveOrg } from '@/lib/org'
-import { WebhookSettingsForm, DeleteOrganizationForm } from '../org-forms'
+import { WebhookSettingsForm } from '../org-forms'
 import { BillingCheckoutButton } from '../billing-checkout-button'
 import { ApiKeyForm } from '../api-key-form'
 import { SettingsPageFrame } from '../settings-shell'
@@ -35,7 +35,6 @@ export default async function AdvancedSettingsPage({
         : undefined
 
   const canManage = org.role === 'owner' || org.role === 'admin'
-  const isOwner = org.role === 'owner'
 
   const { data: apiKeyRows } = canManage
     ? await supabase
@@ -55,7 +54,7 @@ export default async function AdvancedSettingsPage({
   return (
     <SettingsPageFrame
       title="Gelişmiş"
-      description="Webhook, API anahtarı, faturalama ve tehlikeli işlemler."
+      description="Webhook, API anahtarı ve faturalama."
     >
       {billing === 'ok' ? (
         <Notice tone="success">Ödeme alındı. Paket kısa süre içinde güncellenir.</Notice>
@@ -93,18 +92,6 @@ export default async function AdvancedSettingsPage({
               }[]}
             />
           </Card>
-
-          {isOwner ? (
-            <Card>
-              <CardHeader title="Tehlikeli bölge" subtitle="İşletmeyi kalıcı olarak siler." />
-              <div className="p-3.5">
-                <DeleteOrganizationForm
-                  orgName={org.name}
-                  hasStripeSubscription={Boolean(org.stripe_subscription_id)}
-                />
-              </div>
-            </Card>
-          ) : null}
         </div>
       )}
     </SettingsPageFrame>

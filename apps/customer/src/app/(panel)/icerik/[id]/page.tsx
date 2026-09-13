@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
-import { PageHeader, QuietLink } from '@/components/ui'
+import { PageHeader } from '@/components/ui'
 import { isOrgAdminRole, requireActiveOrg } from '@/lib/org'
 import { CreativeDetail, type DetailCreative, type VersionRow } from '../detail-view'
 import type { CreativePayload } from '@/lib/creative/types'
@@ -127,7 +127,8 @@ export default async function CreativeDetailPage({
       <PageHeader
         title={displayTitle}
         description="Revize edin, varyasyon alın veya kampanyada kullanın."
-        action={<QuietLink href="/icerik">← Kütüphane</QuietLink>}
+        backHref="/icerik"
+        backLabel="Kütüphane"
       />
       <CreativeDetail
         orgId={org.id}

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { AccentLink, Notice, PageHeader, QuietLink, StatusPill } from '@/components/ui'
+import { AccentLink, Notice, PageHeader, StatusPill } from '@/components/ui'
 import { requireActiveOrg } from '@/lib/org'
 import { CampaignLive, type CampaignView } from './campaign-live'
 import { TargetFeed, type TargetView } from './target-feed'
@@ -28,7 +28,7 @@ export async function generateMetadata({
 }
 
 const FIELDS =
-  'id, name, status, body, body_b, ab_percent, media_url, message_type, total_targets, sent_count, failed_count, skipped_count, stop_reason, min_delay_seconds, max_delay_seconds, daily_cap_per_account, started_at, completed_at, scheduled_at, source_list_ids'
+  'id, name, status, body, body_b, ab_percent, media_url, message_type, total_targets, sent_count, failed_count, skipped_count, stop_reason, wait_reason, min_delay_seconds, max_delay_seconds, daily_cap_per_account, started_at, completed_at, scheduled_at, source_list_ids'
 
 export default async function CampaignDetailPage({
   params,
@@ -152,10 +152,11 @@ export default async function CampaignDetailPage({
       <PageHeader
         title={campaign.name}
         description={`${startLabel} · ${recipientLabel} · ${senderLabel}`}
+        backHref="/kampanyalar"
+        backLabel="Kampanyalar"
         action={
           <div className="flex flex-wrap items-center gap-2">
             <StatusPill status={campaign.status} />
-            <QuietLink href="/kampanyalar">← Kampanyalar</QuietLink>
             {campaign.status !== 'completed' && campaign.status !== 'failed' ? (
               <AccentLink href={`/kampanyalar/${id}/duzenle`}>Düzenle</AccentLink>
             ) : null}

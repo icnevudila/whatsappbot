@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { PageHeader, QuietLink } from '@/components/ui'
+import { PageHeader } from '@/components/ui'
 import { requireActiveOrg } from '@/lib/org'
 import { CreativeWizard } from '../creative-wizard'
 import { loadCreativeWizardData } from '../wizard-data'
@@ -23,7 +23,8 @@ export default async function NewCreativePage() {
       <PageHeader
         title="Kampanya görseli oluştur"
         description="Marka, ürün ve iletişim bilgilerinizle üretin. İşlem arka planda sürer."
-        action={<QuietLink href="/icerik">← Kütüphane</QuietLink>}
+        backHref="/icerik"
+        backLabel="Kütüphane"
       />
       <CreativeWizard data={data} />
     </div>

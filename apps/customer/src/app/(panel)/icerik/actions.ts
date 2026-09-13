@@ -16,6 +16,7 @@ import {
 import { collectImageFiles, readImageFile } from '@/app/(panel)/ayarlar/upload-image'
 import { isOrgAdminRole, requireActiveOrg } from '@/lib/org'
 import { DEFAULT_INCLUDE, formatFromId, type ProductCard } from './wizard-types'
+import { LIBRARY_PAGE_SIZE, type LibraryCreativeRow } from './library-shared'
 
 export type CreativeActionState = { error?: string; ok?: string; id?: string } | null
 
@@ -431,6 +432,52 @@ export async function deleteCreative(id: string): Promise<CreativeActionState> {
     return { ok: 'Silindi.' }
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Oturum yok.' }
+  }
+}
+
+export async function listLibraryCreatives({
+  query = '',
+  sort = 'new',
+  offset = 0,
+  limit = LIBRARY_PAGE_SIZE,
+}: {
+  query?: string
+  sort?: 'new' | 'old'
+  offset?: number
+  limit?: number
+}): Promise<{ items: LibraryCreativeRow[]; hasMore: boolean; error?: string }> {
+  try {
+    const { org, supabase } = await requireActiveOrg()
+    const start = Math.max(0, offset)
+    const size = Math.min(120, Math.max(1, limit))
+    let request = supabase
+      .from('creatives')
+      .select('id, title, public_url, status, source, generation_type, created_at, error, parent_id')
+      .eq('org_id', org.id)
+      .order('created_at', { ascending: sort === 'old' })
+      .range(start, start + size - 1)
+    const term = query.trim()
+    if (term) request = request.ilike('title', `%${term}%`)
+    const { data, error } = await request
+    if (error) return { items: [], hasMore: false, error: error.message }
+    const items = (data ?? []).map((row) => ({
+      id: row.id,
+      title: row.title,
+      publicUrl: row.public_url,
+      status: row.status,
+      source: row.source,
+      generationType: row.generation_type,
+      createdAt: row.created_at,
+      error: row.error,
+      parentId: row.parent_id,
+    }))
+    return { items, hasMore: items.length === size }
+  } catch (error) {
+    return {
+      items: [],
+      hasMore: false,
+      error: error instanceof Error ? error.message : 'Oturum yok.',
+    }
   }
 }
 

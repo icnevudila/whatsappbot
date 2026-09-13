@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useId, useRef, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import type { Tables } from '@wa/shared'
 import {
   Button,
@@ -34,6 +35,7 @@ import {
 import { PairingPanel } from './pairing-panel'
 import { QrPanel } from './qr-panel'
 import { RehberSyncModal } from '../kisiler/rehber-sync-modal'
+import { SendWindowControl } from '../ayarlar/send-window-control'
 
 export type AccountView = Pick<
   Tables<'accounts'>,
@@ -63,16 +65,23 @@ export function AccountsBoard({
   orgId,
   accountsQuota,
   canManage = true,
+  sendWindowStart = '08:00',
+  sendWindowEnd = '18:00',
+  autoOpenAdd = false,
 }: {
   initial: AccountView[]
   orgId: string
   accountsQuota: number
   /** false ise hat silme gizli (üye). */
   canManage?: boolean
+  sendWindowStart?: string
+  sendWindowEnd?: string
+  autoOpenAdd?: boolean
 }) {
   // Sunucu revalidate ettiginde tazelensin, Realtime olaylari da uzerine yazsin.
   const [accounts, setAccounts] = useServerSyncedState(initial)
   const [flashIds, setFlashIds] = useState<Set<string>>(() => new Set())
+  const router = useRouter()
   const toast = useToast()
   const knownStatus = useRef(new Map(initial.map((a) => [a.id, a.status])))
 
@@ -208,7 +217,16 @@ export function AccountsBoard({
     return sum + (account.sent_today_on === today ? account.sent_today : 0)
   }, 0)
 
-  const [addOpen, setAddOpen] = useState(false)
+  const [addOpen, setAddOpen] = useState(autoOpenAdd)
+
+  useEffect(() => {
+    if (autoOpenAdd) setAddOpen(true)
+  }, [autoOpenAdd])
+
+  const closeAdd = () => {
+    setAddOpen(false)
+    if (autoOpenAdd) router.replace('/ayarlar/hatlar', { scroll: false })
+  }
 
   const highlight = (id: string) => {
     setFlashIds((cur) => {
@@ -240,22 +258,30 @@ export function AccountsBoard({
   return (
     <div className="space-y-2.5">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <StatStrip
-          className="mb-0 min-w-0 flex-1"
-          items={[
-            {
-              label: 'Bağlı',
-              value: connected,
-              tone: connected > 0 ? 'ok' : 'default',
-            },
-            { label: 'Bugün', value: sentTodayTotal },
-            {
-              label: 'Kota',
-              value: `${accounts.length}/${accountsQuota}`,
-              tone: atCap ? 'danger' : 'default',
-            },
-          ]}
-        />
+        <div className="min-w-0 flex-1">
+          <StatStrip
+            className="mb-0"
+            items={[
+              {
+                label: 'Bağlı',
+                value: connected,
+                tone: connected > 0 ? 'ok' : 'default',
+              },
+              { label: 'Bugün', value: sentTodayTotal },
+              {
+                label: 'Kota',
+                value: `${accounts.length}/${accountsQuota}`,
+                tone: atCap ? 'danger' : 'default',
+              },
+            ]}
+          >
+            <SendWindowControl
+              start={sendWindowStart}
+              end={sendWindowEnd}
+              canEdit={canManage}
+            />
+          </StatStrip>
+        </div>
         {addHatButton()}
       </div>
 
@@ -286,7 +312,7 @@ export function AccountsBoard({
         <AddHatModal
           remaining={remaining}
           accounts={accounts}
-          onClose={() => setAddOpen(false)}
+          onClose={closeAdd}
           onCreated={highlight}
         />
       ) : null}

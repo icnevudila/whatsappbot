@@ -1,4 +1,4 @@
-import { e164ToJid, type JobPayloadMap, type JobType } from '@wa/shared'
+import { e164ToJid, nextSendWindowOpen, type JobPayloadMap, type JobType } from '@wa/shared'
 import { one, query } from './db.js'
 import { env } from './env.js'
 import { logger } from './logger.js'
@@ -50,6 +50,43 @@ async function markDone(jobId: string, result: unknown): Promise<boolean> {
     return false
   }
   return true
+}
+
+/** Saat penceresi: deneme hakkını yakmadan sonraya bırak. */
+class SendWindowWaitError extends Error {
+  openAt: Date
+  constructor(message: string, openAt: Date) {
+    super(message)
+    this.name = 'SendWindowWaitError'
+    this.openAt = openAt
+  }
+}
+
+async function requeueForWindow(job: JobRow, error: SendWindowWaitError): Promise<void> {
+  const delaySeconds = Math.max(
+    30,
+    Math.min(6 * 3600, Math.ceil((error.openAt.getTime() - Date.now()) / 1000)),
+  )
+  const rows = await query<{ id: string }>(
+    `update public.jobs
+        set status = 'pending',
+            error = $2,
+            run_after = now() + make_interval(secs => $3),
+            attempts = greatest(0, attempts - 1),
+            claimed_by = null,
+            claimed_at = null,
+            updated_at = now()
+      where id = $1::bigint
+        and claimed_by = $4
+        and status in ('claimed', 'running')
+      returning id::text`,
+    [job.id, error.message, delaySeconds, env.workerId],
+  )
+  if (rows.length === 0) {
+    log.warn({ jobId: job.id }, 'requeueForWindow atlandi: sahiplik kaybedildi')
+    return
+  }
+  log.info({ jobId: job.id, delaySeconds }, 'Gönderim saat aralığı için ertelendi')
 }
 
 /** Retry edilmemesi gereken islem sonrasi hatalar (WA zaten gitti / kara liste). */
@@ -157,20 +194,128 @@ async function handle(job: JobRow): Promise<unknown> {
       if (!job.org_id) throw new Error('account.sync_contacts isi org_id olmadan gelemez')
       const payload = (job.payload ?? {}) as JobPayloadMap['account.sync_contacts']
 
-      const session = sessionManager.get(accountId)
-      if (session?.isLive) {
-        await session.resyncContacts()
-      } else {
-        log.warn({ accountId }, 'account.sync_contacts: oturum canli degil, yalnizca DB kayitlari aktarilacak')
+      const {
+        importAccountContactsToList,
+        countAccountContacts,
+        sampleAccountContacts,
+      } = await import('./account-contacts.js')
+
+      const writeProgress = async (partial: Record<string, unknown>) => {
+        await query(
+          `update public.jobs
+              set result = coalesce(result, '{}'::jsonb) || $2::jsonb,
+                  updated_at = now()
+            where id = $1::bigint
+              and claimed_by = $3
+              and status in ('claimed', 'running')`,
+          [job.id, JSON.stringify(partial), env.workerId],
+        )
       }
 
-      const { importAccountContactsToList } = await import('./account-contacts.js')
-      return importAccountContactsToList({
+      const session = sessionManager.get(accountId)
+      const live = Boolean(session?.isLive)
+
+      await writeProgress({
+        phase: 'pulling',
+        live,
+        seen: await countAccountContacts(accountId),
+        samples: await sampleAccountContacts(accountId, 24),
+      })
+
+      if (live && session) {
+        await session.resyncContacts({
+          maxWaitMs: 90_000,
+          onTick: async () => {
+            const seen = await countAccountContacts(accountId)
+            await writeProgress({
+              phase: 'pulling',
+              live: true,
+              seen,
+              samples: await sampleAccountContacts(accountId, 24),
+            })
+          },
+        })
+      } else {
+        log.warn(
+          { accountId },
+          'account.sync_contacts: oturum canli degil, yalnizca DB kayitlari aktarilacak',
+        )
+      }
+
+      // Rehber event'leri gecikebiliyor — import oncesi sayim artana kadar kisa ek bekleme.
+      let seen = await countAccountContacts(accountId)
+      if (live) {
+        const extraStarted = Date.now()
+        while (Date.now() - extraStarted < 25_000) {
+          await new Promise((resolve) => setTimeout(resolve, 1500))
+          const next = await countAccountContacts(accountId)
+          if (next !== seen) {
+            seen = next
+            await writeProgress({
+              phase: 'pulling',
+              live: true,
+              seen,
+              samples: await sampleAccountContacts(accountId, 24),
+            })
+          } else if (seen > 0 && Date.now() - extraStarted > 6_000) {
+            break
+          }
+        }
+      }
+
+      await writeProgress({
+        phase: 'importing',
+        live,
+        seen,
+        samples: await sampleAccountContacts(accountId, 40),
+      })
+
+      let imported = await importAccountContactsToList({
         orgId: job.org_id,
         createdBy: job.created_by,
         accountId,
         listName: payload.list_name,
       })
+
+      // Ilk import 0 ise: gecikmeli rehber icin bekle (iPhone / yeni bagli cihaz sik)
+      if (imported.imported === 0) {
+        log.info({ accountId, live }, 'account.sync_contacts: ilk aktarim 0 — gecikme beklemesi')
+        const lateStarted = Date.now()
+        while (Date.now() - lateStarted < 60_000) {
+          if (live && session && Date.now() - lateStarted < 5_000) {
+            await session.resyncContacts({ maxWaitMs: 30_000 })
+          }
+          await new Promise((resolve) => setTimeout(resolve, 2_000))
+          const next = await countAccountContacts(accountId)
+          await writeProgress({
+            phase: 'pulling',
+            live,
+            seen: next,
+            samples: await sampleAccountContacts(accountId, 40),
+          })
+          if (next > 0) break
+        }
+        imported = await importAccountContactsToList({
+          orgId: job.org_id,
+          createdBy: job.created_by,
+          accountId,
+          listName: payload.list_name,
+        })
+      }
+
+      if (imported.imported === 0 && !live) {
+        throw new NonRetryableJobError(
+          'Hat şu an canlı değil ve kayıtlı rehber yok. Hatlar’dan bağlayıp tekrar çekin.',
+        )
+      }
+
+      return {
+        ...imported,
+        phase: 'done',
+        live,
+        seen: await countAccountContacts(accountId),
+        samples: await sampleAccountContacts(accountId, 60),
+      }
     }
 
     case 'message.send': {
@@ -185,6 +330,12 @@ async function handle(job: JobRow): Promise<unknown> {
 
       const gate = await checkOrgSendGate(job.org_id)
       if (!gate.ok) {
+        if (gate.reason === 'send_window') {
+          throw new SendWindowWaitError(
+            orgSendGateMessage(gate),
+            nextSendWindowOpen(new Date(), gate.window_start, gate.window_end),
+          )
+        }
         throw new NonRetryableJobError(orgSendGateMessage(gate))
       }
 
@@ -572,7 +723,11 @@ async function tick(): Promise<void> {
           throw error
         }
       } catch (error) {
-        await markFailed(job, error)
+        if (error instanceof SendWindowWaitError) {
+          await requeueForWindow(job, error)
+        } else {
+          await markFailed(job, error)
+        }
       } finally {
         clearInterval(heartbeat)
         inFlightJobs -= 1

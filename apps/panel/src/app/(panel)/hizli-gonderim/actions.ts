@@ -64,7 +64,7 @@ export async function quickSend(
 
   const { data: gate } = await supabase.rpc('org_send_gate_member', { p_org_id: org.id })
   const gateObj = gate as { ok?: boolean; reason?: string; used?: number; quota?: number } | null
-  if (gateObj && gateObj.ok === false) {
+  if (gateObj && gateObj.ok === false && gateObj.reason !== 'send_window') {
     if (gateObj.reason === 'monthly_quota') {
       return {
         error: `Aylık mesaj kotası doldu (${gateObj.used ?? '?'}/${gateObj.quota ?? '?'}).`,

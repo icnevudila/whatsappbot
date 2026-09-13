@@ -125,7 +125,7 @@ export async function POST(request: Request) {
   if (needsQuota) {
     const { data: gate } = await admin.rpc('org_send_gate', { p_org_id: orgId })
     const gateObj = gate as { ok?: boolean; reason?: string; used?: number; quota?: number } | null
-    if (gateObj && gateObj.ok === false) {
+    if (gateObj && gateObj.ok === false && gateObj.reason !== 'send_window') {
       const status = gateObj.reason === 'suspended' ? 403 : 429
       return NextResponse.json(
         {

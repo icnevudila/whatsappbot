@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import {
-  AccentLink,
   Card,
   CardHeader,
   EmptyState,
@@ -24,10 +23,11 @@ import {
 import { contactSearchOrFilter, sanitizeContactSearch } from './contact-search'
 import { ContactsBoard, type ContactRow } from './contacts-board'
 import { ListActions } from './list-actions'
-import { NewGroupForm } from './new-group-form'
+import { NewGroupButton } from './new-group-form'
+import { AddPersonButton } from './add-person-modal'
+import { ListRequestButton } from './list-request-modal'
 import { RehberSyncButton } from './rehber-sync-modal'
-import { VerifyAllButton } from './verify-all-button'
-import { WaCheckForm } from './wa-check-form'
+import { VerifyAllButton, ContactsHeaderMenu } from './verify-all-button'
 import { getSetupProgress } from '@/lib/setup-progress'
 import { SetupBanner } from '../setup-banner'
 
@@ -174,122 +174,129 @@ export default async function ContactsPage({
     <>
       <PageHeader
         title={t('pages.kisilerTitle')}
-        description={`${listTotal} grup · ${total} numara — WhatsApp doğrula / tek numara kontrol`}
-        action={
-          <div className="flex flex-wrap items-center gap-2">
-            <RehberSyncButton accounts={rehberAccounts} />
-            <AccentLink href="/kampanyalar/yeni">Kampanya</AccentLink>
-          </div>
-        }
+        description={`${listTotal} grup · ${total} numara`}
       />
 
       <SetupBanner progress={setup} />
 
-      <div className="mb-3 inline-flex rounded-md border border-hairline bg-canvas p-0.5">
-        <SegmentLink href="/kisiler" active={view === 'gruplar'}>
-          Gruplar
-        </SegmentLink>
-        <SegmentLink href="/kisiler?gorunum=defter" active={view === 'defter'}>
-          Defter
-        </SegmentLink>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <div className="inline-flex rounded-md border border-hairline bg-canvas p-0.5">
+          <SegmentLink href="/kisiler" active={view === 'gruplar'}>
+            Gruplar
+          </SegmentLink>
+          <SegmentLink href="/kisiler?gorunum=defter" active={view === 'defter'}>
+            Kişiler
+          </SegmentLink>
+        </div>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <ListRequestButton />
+          <AddPersonButton groups={lists.map((list) => ({ id: list.id, name: list.name }))} />
+          <NewGroupButton />
+        </div>
       </div>
 
+      <div className="space-y-3">
       {view === 'gruplar' ? (
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.85fr)]">
-          <Card>
-            <CardHeader
-              title="Kampanya grupları"
-              subtitle={listTotal === 0 ? 'Önce grup oluştur' : `${listTotal} grup`}
+        <>
+        <Card>
+          <CardHeader
+            title="Kampanya grupları"
+            subtitle={listTotal === 0 ? 'Önce grup oluştur' : `${listTotal} grup`}
+          />
+          {listTotal === 0 ? (
+            <EmptyState
+              tone="people"
+              title="Grup yok"
+              description="+ Grup ile Excel yükleyin veya boş açın."
             />
-            {listTotal === 0 ? (
-              <EmptyState
-                tone="people"
-                title="Grup yok"
-                description="Sağdan Excel ile doldur veya boş aç."
-              />
-            ) : (
-              <ul className="divide-y divide-hairline">
-                {lists.map((list) => (
-                  <li key={list.id} className="px-3.5 py-2.5">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <Link
-                        href={`/kisiler/${list.id}`}
-                        className="min-w-0 flex-1 transition-colors hover:text-accent"
-                      >
-                        <p className="truncate text-[13.5px] font-semibold text-ink">
-                          {list.name}
-                        </p>
-                        <p className="mt-0.5 text-[11.5px] text-ink-muted tabular">
-                          {list.contact_count} numara
-                        </p>
-                      </Link>
-                      <ListActions listId={list.id} compact />
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
+          ) : (
+            <ul className="divide-y divide-hairline">
+              {lists.map((list) => (
+                <li key={list.id} className="px-3.5 py-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <Link
+                      href={`/kisiler/${list.id}`}
+                      className="min-w-0 flex-1 transition-colors hover:text-accent"
+                    >
+                      <p className="truncate text-[13.5px] font-semibold text-ink">
+                        {list.name}
+                      </p>
+                      <p className="mt-0.5 text-[11.5px] text-ink-muted tabular">
+                        {list.contact_count} numara
+                      </p>
+                    </Link>
+                    <ListActions listId={list.id} compact />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
 
-          <div className="space-y-3">
-            <Card>
-              <CardHeader title="Yeni grup" subtitle="Excel / yapıştır veya boş" />
-              <NewGroupForm embedded />
-            </Card>
-            <WaCheckForm />
+        <Card>
+          <CardHeader
+            title="WhatsApp rehberi"
+            subtitle="Bağlı hattan kişi ve sohbet numaralarını çekin"
+          />
+          <div className="space-y-3 px-3.5 py-3">
+            <p className="text-[13px] leading-relaxed text-ink-muted">
+              WhatsApp rehberini içeri aktar.
+            </p>
+            <RehberSyncButton accounts={rehberAccounts} className="w-full sm:w-auto" />
           </div>
-        </div>
+        </Card>
+        </>
       ) : (
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.85fr)]">
-          <Card>
-            <CardHeader
-              title="Defter"
-              subtitle={
-                searchQuery
-                  ? `“${searchQuery}” · ${matchTotal} sonuç / ${total} numara`
-                  : `${total} numara · ${validCount} WhatsApp'ta var · ${invalidCount} yok`
-              }
-            />
-            {total > 0 ? (
-              <div className="border-b border-hairline px-3.5 py-2.5">
-                <VerifyAllButton
-                  total={total}
-                  validCount={validCount}
-                  invalidCount={invalidCount}
-                  unknownCount={unknownCount}
-                  currentStatus={statusFilter}
-                  searchQuery={searchQuery}
-                />
+        <Card>
+          <CardHeader
+            title="Kişiler"
+            subtitle={
+              searchQuery
+                ? `“${searchQuery}” · ${matchTotal} sonuç / ${total} numara`
+                : `${total} numara · ${validCount} WhatsApp'ta var · ${invalidCount} yok`
+            }
+            action={
+              <div className="flex shrink-0 items-center gap-1">
+                {total > 0 ? (
+                  <VerifyAllButton
+                    total={total}
+                    validCount={validCount}
+                    invalidCount={invalidCount}
+                    unknownCount={unknownCount}
+                    currentStatus={statusFilter}
+                    searchQuery={searchQuery}
+                  />
+                ) : null}
+                <ContactsHeaderMenu disabled={total === 0} whatsappCount={whatsappCount} />
               </div>
-            ) : null}
-            <ContactsBoard
-              contacts={contacts}
-              groups={groups}
-              whatsappCount={whatsappCount}
-              searchQuery={searchQuery}
-            />
-            <Pagination
-              page={page}
-              totalPages={pages}
-              label={
-                statusFilter !== 'tum'
-                  ? `${matchTotal} kişi (${statusFilter === 'var' ? 'WhatsApp var' : statusFilter === 'yok' ? 'WhatsApp yok' : 'Doğrulanmamış'})`
-                  : searchQuery
-                    ? `${matchTotal} sonuç`
-                    : `${total} kişi`
-              }
-              hrefForPage={(p) =>
-                buildPageHref('/kisiler', p, {
-                  gorunum: 'defter',
-                  ara: searchQuery || undefined,
-                  durum: statusFilter !== 'tum' ? statusFilter : undefined,
-                })
-              }
-            />
-          </Card>
-          <WaCheckForm />
-        </div>
+            }
+          />
+          <ContactsBoard
+            contacts={contacts}
+            groups={groups}
+            searchQuery={searchQuery}
+          />
+          <Pagination
+            page={page}
+            totalPages={pages}
+            label={
+              statusFilter !== 'tum'
+                ? `${matchTotal} kişi (${statusFilter === 'var' ? 'WhatsApp var' : statusFilter === 'yok' ? 'WhatsApp yok' : 'Doğrulanmamış'})`
+                : searchQuery
+                  ? `${matchTotal} sonuç`
+                  : `${total} kişi`
+            }
+            hrefForPage={(p) =>
+              buildPageHref('/kisiler', p, {
+                gorunum: 'defter',
+                ara: searchQuery || undefined,
+                durum: statusFilter !== 'tum' ? statusFilter : undefined,
+              })
+            }
+          />
+        </Card>
       )}
+      </div>
     </>
   )
 }

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { normalizeClock } from '@wa/shared'
 import { requireActiveOrg } from '@/lib/org'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { cancelStripeSubscription } from '@/lib/stripe-cancel'
@@ -99,6 +100,40 @@ export async function updateOrgName(
   revalidatePath('/ayarlar/gelismis')
   revalidatePath('/', 'layout')
   return { ok: 'İşletme adı güncellendi.' }
+}
+
+export async function updateOrgSendWindow(formData: FormData) {
+  const start = normalizeClock(String(formData.get('send_window_start') ?? ''))
+  const end = normalizeClock(String(formData.get('send_window_end') ?? ''))
+  const clock = /^([01]\d|2[0-3]):[0-5]\d$/
+  if (!clock.test(start) || !clock.test(end)) {
+    return { error: 'Saat 00:00–23:59 aralığında HH:MM olmalı.' }
+  }
+
+  let org
+  let supabase
+  try {
+    ;({ org, supabase } = await requireActiveOrg())
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
+  }
+
+  if (org.role !== 'owner' && org.role !== 'admin') {
+    return { error: 'Gönderim saatini yalnızca yönetici değiştirebilir.' }
+  }
+
+  const { error } = await supabase
+    .from('organizations')
+    .update({ send_window_start: start, send_window_end: end })
+    .eq('id', org.id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/ayarlar/hatlar')
+  revalidatePath('/ayarlar/isletme')
+  revalidatePath('/kampanyalar')
+  revalidatePath('/', 'layout')
+  return { ok: 'Gönderim saati kaydedildi.' }
 }
 
 export async function updateOrgWebhook(

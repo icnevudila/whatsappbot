@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { AccentLink, Badge, Card, CardHeader } from '@/components/ui'
 import { requireActiveOrg } from '@/lib/org'
 import { planLabel } from '@wa/shared'
-import { MembersPanel, OrgSettingsForm } from '../org-forms'
+import { DeleteOrganizationForm, MembersPanel, OrgSettingsForm } from '../org-forms'
 import { QuotaRow } from '../quota-row'
 import { SettingsPageFrame } from '../settings-shell'
 
@@ -138,6 +138,28 @@ export default async function OrgSettingsPage() {
           <CardHeader title="Ekip" subtitle="Yalnız yöneticiler ekip yönetebilir." />
         </Card>
       )}
+
+      {org.role === 'owner' ? (
+        <Card>
+          <details className="group">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3.5 py-2.5 [&::-webkit-details-marker]:hidden">
+              <div className="min-w-0">
+                <h2 className="text-[14.5px] font-bold text-ink">Tehlikeli bölge</h2>
+                <p className="mt-0.5 text-[13px] text-ink-muted">İşletmeyi kalıcı olarak siler.</p>
+              </div>
+              <span className="shrink-0 text-[18px] leading-none text-ink-faint transition-transform group-open:rotate-45">
+                +
+              </span>
+            </summary>
+            <div className="border-t border-hairline">
+              <DeleteOrganizationForm
+                orgName={org.name}
+                hasStripeSubscription={Boolean(org.stripe_subscription_id)}
+              />
+            </div>
+          </details>
+        </Card>
+      ) : null}
     </SettingsPageFrame>
   )
 }

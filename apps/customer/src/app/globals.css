@@ -174,6 +174,289 @@ h3 {
   display: block;
   min-width: 0;
 }
+
+.wb-tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  width: 100%;
+  border-top: 1px solid var(--color-hairline);
+  background: color-mix(in srgb, var(--color-surface) 95%, transparent);
+  backdrop-filter: blur(12px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.wb-tabbar-link {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 52px;
+  padding: 7px 4px 6px;
+  color: var(--color-ink-muted);
+  text-align: center;
+  transition:
+    color 140ms var(--ease-out),
+    background-color 140ms var(--ease-out);
+}
+.wb-tabbar-link:hover {
+  color: var(--color-ink);
+}
+.wb-tabbar-link.is-active,
+.wb-tabbar-link[aria-current='page'] {
+  color: var(--color-accent);
+}
+.wb-tabbar-icon {
+  flex-shrink: 0;
+  opacity: 0.78;
+}
+.wb-tabbar-link.is-active .wb-tabbar-icon,
+.wb-tabbar-link[aria-current='page'] .wb-tabbar-icon {
+  opacity: 1;
+}
+.wb-tabbar-label {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+.wb-tabbar-link.is-active .wb-tabbar-label,
+.wb-tabbar-link[aria-current='page'] .wb-tabbar-label {
+  font-weight: 600;
+}
+@media (min-width: 768px) {
+  .wb-tabbar {
+    display: none;
+  }
+}
+
+.wb-tabbar-spacer {
+  display: none;
+  flex-shrink: 0;
+  height: calc(52px + env(safe-area-inset-bottom, 0px));
+  pointer-events: none;
+}
+@media (max-width: 767px) {
+  .wb-tabbar-spacer {
+    display: block;
+  }
+}
+
+.wb-fab-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  border: 0;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--color-ink) 28%, transparent);
+}
+.wb-fab {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right, 0px));
+  bottom: calc(52px + env(safe-area-inset-bottom, 0px) + 12px);
+  z-index: 51;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+.wb-fab-menu {
+  display: flex;
+  width: min(17.5rem, calc(100vw - 2rem));
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+.wb-fab-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  padding: 10px 10px;
+  text-align: left;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+.wb-fab-item:hover,
+.wb-fab-item:focus-visible {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-dim);
+}
+.wb-fab-other {
+  margin-top: 4px;
+  border-top: 1px solid var(--color-hairline);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+}
+.wb-fab-caret {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--color-ink-faint);
+  transition: transform 160ms var(--ease-out);
+}
+.wb-fab-caret.is-open {
+  transform: rotate(180deg);
+}
+.wb-fab-other-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 0 2px 10px;
+}
+.wb-fab-btn {
+  display: inline-flex;
+  width: 52px;
+  height: 52px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  transition:
+    transform 180ms var(--ease-out),
+    background-color 180ms var(--ease-out);
+}
+.wb-fab-btn:hover {
+  background: var(--color-accent-dim);
+}
+.wb-fab-btn.is-open {
+  transform: rotate(45deg);
+}
+@media (min-width: 768px) {
+  .wb-fab {
+    right: 24px;
+    bottom: 24px;
+  }
+}
+
+.wb-steps {
+  width: 100%;
+}
+.wb-steps-list {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  margin: 0;
+  padding: 2px 0 0;
+  list-style: none;
+}
+.wb-steps-item {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  justify-content: center;
+}
+.wb-steps-item:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  top: 13px;
+  left: calc(50% + 16px);
+  width: calc(100% - 32px);
+  height: 2px;
+  background: var(--color-hairline);
+  pointer-events: none;
+}
+.wb-steps-item.is-done:not(:last-child)::before {
+  background: var(--color-accent);
+}
+.wb-steps-btn {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+.wb-steps-btn:disabled {
+  cursor: default;
+}
+.wb-steps-dot {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--color-hairline-strong);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-ink-faint);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  transition:
+    background-color 160ms var(--ease-out),
+    border-color 160ms var(--ease-out),
+    color 160ms var(--ease-out),
+    box-shadow 160ms var(--ease-out);
+}
+.wb-steps-item.is-done .wb-steps-dot {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+}
+.wb-steps-item.is-active .wb-steps-dot {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+  box-shadow: 0 0 0 4px var(--color-accent-soft);
+}
+.wb-steps-item.is-pending .wb-steps-dot {
+  background: var(--color-canvas);
+}
+.wb-steps-label {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 2px;
+  text-align: center;
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--color-ink-faint);
+}
+.wb-steps-item.is-done .wb-steps-label {
+  color: var(--color-accent);
+}
+.wb-steps-item.is-active .wb-steps-label {
+  color: var(--color-ink);
+  font-weight: 700;
+}
+.wb-steps-item.is-done .wb-steps-btn:hover .wb-steps-dot {
+  background: var(--color-accent-dim);
+  border-color: var(--color-accent-dim);
+}
 .wb-rail-group {
   margin: 14px 10px 6px;
   font-size: 11px;
@@ -185,7 +468,7 @@ h3 {
 .wb-page-head {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 14px;
@@ -199,8 +482,8 @@ h3 {
   letter-spacing: -0.03em;
   line-height: 1.2;
   color: var(--color-ink);
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 .wb-page-desc {
   margin-top: 6px;
@@ -484,6 +767,10 @@ h3 {
 
 /* Page enter — short, not sluggish */
 .wb-page-enter {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
   animation: filo-page-enter 180ms var(--ease-out) both;
 }
 
@@ -760,12 +1047,40 @@ h3 {
 .wb-modal-panel--wide {
   width: min(100%, 480px);
 }
+.wb-modal-root--fill {
+  padding: 0;
+  place-items: stretch;
+}
+.wb-modal-panel--fill {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 0;
+  padding-top: max(18px, env(safe-area-inset-top, 0px));
+  padding-right: max(18px, env(safe-area-inset-right, 0px));
+  padding-bottom: max(14px, env(safe-area-inset-bottom, 0px));
+  padding-left: max(18px, env(safe-area-inset-left, 0px));
+}
 .wb-modal-panel .wb-modal-scroll {
   max-height: min(36dvh, 260px);
 }
 @media (min-width: 640px) {
   .wb-modal-root {
     padding: 24px;
+  }
+  .wb-modal-root--fill {
+    padding: 24px;
+    place-items: center;
+  }
+  .wb-modal-panel--fill {
+    width: min(100%, 480px);
+    height: min(92dvh, 800px);
+    max-height: min(92dvh, 800px);
+    border-radius: var(--radius-card);
+    padding: 18px 18px 14px;
   }
   .wb-modal-panel .wb-modal-scroll {
     max-height: 260px;
@@ -802,6 +1117,14 @@ h3 {
   gap: 8px;
   width: min(360px, calc(100vw - 32px));
   pointer-events: none;
+}
+@media (max-width: 767px) {
+  .wb-toast-stack {
+    right: 12px;
+    left: 12px;
+    bottom: calc(52px + env(safe-area-inset-bottom, 0px) + 12px);
+    width: auto;
+  }
 }
 .wb-toast {
   pointer-events: auto;

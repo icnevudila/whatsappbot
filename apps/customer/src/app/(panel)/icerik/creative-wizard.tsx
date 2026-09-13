@@ -3,6 +3,8 @@
 import { useActionState, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Button, Card, Field, FileUploadButton, Input, Notice, Textarea } from '@/components/ui'
+import { Icon } from '@/components/icon'
+import { Stepper } from '@/components/stepper'
 import { useSyncBusy } from '@/components/busy'
 import {
   BRIEF_CHIPS,
@@ -215,34 +217,12 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
       >
         <input type="hidden" name="draft" value={payload} />
 
-      <nav aria-label="Görsel adımları" className="overflow-x-auto">
-        <ol className="flex min-w-max gap-1">
-          {effectiveSteps.map((row, index) => {
-            const active = row.id === step
-            const done = index < stepIndex
-            return (
-              <li key={row.id}>
-                <button
-                  type="button"
-                  disabled={index > stepIndex}
-                  onClick={() => {
-                    if (index < stepIndex) go(row.id)
-                  }}
-                  className={`rounded-full px-2.5 py-1 text-[12px] font-medium ${
-                    active
-                      ? 'bg-accent text-white'
-                      : done
-                        ? 'bg-accent-soft text-accent'
-                        : 'bg-canvas text-ink-faint'
-                  }`}
-                >
-                  {row.label}
-                </button>
-              </li>
-            )
-          })}
-        </ol>
-      </nav>
+      <Stepper
+        label="Görsel adımları"
+        steps={effectiveSteps}
+        current={step}
+        onJump={(id) => go(id as Step)}
+      />
 
       {step === 'start' ? (
         <div className="grid gap-2 sm:grid-cols-2">
@@ -803,16 +783,19 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
       {step !== 'start' && step !== 'summary' ? (
         <div className="flex justify-between gap-2">
           <Button type="button" variant="quiet" onClick={prevStep}>
+            <Icon name="back" className="size-4" />
             Geri
           </Button>
           <Button type="button" variant="accent" disabled={!canContinue} onClick={nextStep}>
             İleri
+            <Icon name="outbound" className="size-4" />
           </Button>
         </div>
       ) : null}
 
       {step === 'summary' ? (
         <Button type="button" variant="quiet" onClick={prevStep}>
+          <Icon name="back" className="size-4" />
           Geri
         </Button>
       ) : null}

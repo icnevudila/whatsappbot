@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState, useTransition } from 'react'
+import { useEffect, useId, useRef, useState, useTransition } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import {
   IMPORT_CHUNK_SIZE,
@@ -10,6 +11,7 @@ import {
   type ImportedRow,
 } from '@wa/shared'
 import { Button, Field, Input, Notice, Textarea } from '@/components/ui'
+import { Icon } from '@/components/icon'
 import { useSyncBusy } from '@/components/busy'
 import { useToast } from '@/components/toast'
 import {
@@ -19,17 +21,88 @@ import {
   importContacts,
 } from './actions'
 
-const TEMPLATE_CSV = `telefon,ad
-05321234567,Örnek Kişi
-+905321112233,Başka Kişi
-`
+export function NewGroupButton({ className }: { className?: string }) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <>
+      <Button type="button" variant="accent" className={className} onClick={() => setOpen(true)}>
+        + Grup
+      </Button>
+      {open ? <NewGroupModal onClose={() => setOpen(false)} /> : null}
+    </>
+  )
+}
+
+export function NewGroupModal({ onClose }: { onClose: () => void }) {
+  const titleId = useId()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = (event) => {
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prev
+    }
+  }, [onClose])
+
+  if (!mounted) return null
+
+  return createPortal(
+    <div className="wb-modal-root wb-modal-root--fill" role="presentation">
+      <button type="button" className="wb-modal-backdrop" aria-label="Kapat" onClick={onClose} />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="wb-modal-panel wb-modal-panel--fill"
+      >
+        <div className="mb-3 flex shrink-0 items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 id={titleId} className="wb-modal-title">
+              Yeni grup
+            </h2>
+            <p className="wb-modal-desc">Excel yükleyin, numaraları yapıştırın veya boş grup açın.</p>
+          </div>
+          <button
+            type="button"
+            aria-label="Kapat"
+            onClick={onClose}
+            className="inline-flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-ink-muted hover:bg-canvas hover:text-ink"
+          >
+            <Icon name="close" className="size-4" />
+          </button>
+        </div>
+        <NewGroupForm embedded fill onDone={onClose} />
+      </div>
+    </div>,
+    document.body,
+  )
+}
 
 /** Tek form: Excel/yapıştır veya boş grup. */
-export function NewGroupForm({ embedded = false }: { embedded?: boolean }) {
+export function NewGroupForm({
+  embedded = false,
+  fill = false,
+  onDone,
+}: {
+  embedded?: boolean
+  fill?: boolean
+  onDone?: () => void
+}) {
   const router = useRouter()
   const toast = useToast()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const [mode, setMode] = useState<'fill' | 'empty'>('fill')
+  const [mode, setMode] = useState('empty')
   const [name, setName] = useState('')
   const [pending, startTransition] = useTransition()
   const [fileName, setFileName] = useState<string | null>(null)
@@ -46,16 +119,6 @@ export function NewGroupForm({ embedded = false }: { embedded?: boolean }) {
   useEffect(() => {
     if (error) toast(error, 'danger')
   }, [error, toast])
-
-  const downloadTemplate = () => {
-    const blob = new Blob([TEMPLATE_CSV], { type: 'text/csv;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'filo-kisi-sablon.csv'
-    a.click()
-    URL.revokeObjectURL(url)
-  }
 
   const readFile = async (file: File) => {
     const textarea = textareaRef.current
@@ -116,6 +179,7 @@ export function NewGroupForm({ embedded = false }: { embedded?: boolean }) {
       }
       toast(result.ok ?? 'Grup oluşturuldu.', 'success')
       setName('')
+      onDone?.()
       if (result.listId) router.push(`/kisiler/${result.listId}`)
       else router.refresh()
     })
@@ -168,6 +232,7 @@ export function NewGroupForm({ embedded = false }: { embedded?: boolean }) {
         textarea.value = ''
         setPreview(null)
         setFileName(null)
+        onDone?.()
         router.refresh()
         return
       }
@@ -203,22 +268,22 @@ export function NewGroupForm({ embedded = false }: { embedded?: boolean }) {
         }
       }
       setProgress(null)
+      onDone?.()
       router.push(`/kisiler/${created.listId}`)
     })
   }
 
   return (
-    <div className={embedded ? 'space-y-2.5' : 'space-y-2.5 p-3.5'}>
+    <div
+      className={
+        fill
+          ? 'flex min-h-0 flex-1 flex-col gap-2.5'
+          : embedded
+            ? 'space-y-2.5'
+            : 'space-y-2.5 p-3.5'
+      }
+    >
       <div className="flex gap-1 rounded-md border border-hairline bg-canvas p-0.5">
-        <button
-          type="button"
-          className={`flex-1 rounded-[5px] px-2 py-1.5 text-[12px] font-semibold ${
-            mode === 'fill' ? 'bg-surface text-ink shadow-sm' : 'text-ink-muted'
-          }`}
-          onClick={() => setMode('fill')}
-        >
-          Excel / yapıştır
-        </button>
         <button
           type="button"
           className={`flex-1 rounded-[5px] px-2 py-1.5 text-[12px] font-semibold ${
@@ -227,6 +292,15 @@ export function NewGroupForm({ embedded = false }: { embedded?: boolean }) {
           onClick={() => setMode('empty')}
         >
           Boş grup
+        </button>
+        <button
+          type="button"
+          className={`flex-1 rounded-[5px] px-2 py-1.5 text-[12px] font-semibold ${
+            mode === 'fill' ? 'bg-surface text-ink shadow-sm' : 'text-ink-muted'
+          }`}
+          onClick={() => setMode('fill')}
+        >
+          Excel / yapıştır
         </button>
       </div>
 
@@ -241,24 +315,15 @@ export function NewGroupForm({ embedded = false }: { embedded?: boolean }) {
 
       {mode === 'fill' ? (
         <>
-          <p className="text-[11.5px] text-ink-faint">
-            Şablon:{' '}
-            <button
-              type="button"
-              onClick={downloadTemplate}
-              className="font-semibold text-accent underline underline-offset-2"
-            >
-              CSV indir
-            </button>
-            · üst sınır {IMPORT_HARD_LIMIT.toLocaleString('tr-TR')}
-          </p>
-          <Field label="Numaralar">
+          <label className={fill ? 'flex min-h-0 flex-1 flex-col' : 'block'}>
+            <span className="mb-1.5 block text-[13px] font-semibold text-ink-muted">Numaralar</span>
             <Textarea
               ref={textareaRef}
-              rows={6}
+              rows={fill ? 8 : 6}
+              className={fill ? 'min-h-0 flex-1 !resize-none' : undefined}
               placeholder={'05321234567,Ali\n+905321112233'}
             />
-          </Field>
+          </label>
           <label className="inline-flex cursor-pointer items-center gap-2 text-[12.5px] text-accent">
             <input
               type="file"
@@ -285,7 +350,7 @@ export function NewGroupForm({ embedded = false }: { embedded?: boolean }) {
         </>
       ) : (
         <p className="text-[12px] text-ink-muted">
-          Sonra gruba numara eklersin veya defterden taşırsın.
+          Sonra gruba numara eklersin veya kişilerden taşırsın.
         </p>
       )}
 
@@ -295,6 +360,7 @@ export function NewGroupForm({ embedded = false }: { embedded?: boolean }) {
       <Button
         type="button"
         variant="accent"
+        className={fill ? 'mt-auto w-full' : undefined}
         disabled={pending || name.trim().length < 2}
         onClick={() => (mode === 'empty' ? submitEmpty() : submitFill())}
       >

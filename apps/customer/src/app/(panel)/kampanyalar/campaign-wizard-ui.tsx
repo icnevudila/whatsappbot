@@ -1,8 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { AiImage } from '@/components/ai-image'
+import { Icon } from '@/components/icon'
 import { Button, Field, FileUploadButton, Notice, Textarea } from '@/components/ui'
 import {
   CAMPAIGN_TONES,
@@ -17,6 +18,7 @@ import type {
   WizardStepId,
 } from './campaign-wizard-types'
 import { WIZARD_STEPS, formatCount } from './campaign-wizard-types'
+import { Stepper } from '@/components/stepper'
 
 export function WizardStepper({
   current,
@@ -25,37 +27,14 @@ export function WizardStepper({
   current: WizardStepId
   onJump: (id: WizardStepId) => void
 }) {
-  const currentIndex = WIZARD_STEPS.findIndex((step) => step.id === current)
   return (
-    <nav aria-label="Kampanya adımları" className="border-b border-hairline px-4 py-3 sm:px-5">
-      <ol className="flex flex-wrap gap-1">
-        {WIZARD_STEPS.map((step, index) => {
-          const active = step.id === current
-          const done = index < currentIndex
-          return (
-            <li key={step.id} className="flex items-center gap-1">
-              {index > 0 ? <span className="hidden text-ink-faint sm:inline">→</span> : null}
-              <button
-                type="button"
-                disabled={index > currentIndex}
-                onClick={() => {
-                  if (index < currentIndex) onJump(step.id)
-                }}
-                className={`rounded-full px-2.5 py-1 text-[12px] font-medium ${
-                  active
-                    ? 'bg-accent text-white'
-                    : done
-                      ? 'bg-accent-soft text-accent'
-                      : 'bg-canvas text-ink-faint'
-                }`}
-              >
-                {step.label}
-              </button>
-            </li>
-          )
-        })}
-      </ol>
-    </nav>
+    <Stepper
+      label="Kampanya adımları"
+      steps={[...WIZARD_STEPS]}
+      current={current}
+      onJump={(id) => onJump(id as WizardStepId)}
+      className="border-b border-hairline px-4 py-3 sm:px-5"
+    />
   )
 }
 
@@ -139,6 +118,9 @@ export function SenderPicker({
   locked?: boolean
   onToggle: (id: string) => void
 }) {
+  const enabled = accounts.filter((account) => !account.disabled)
+  const lockSingle = enabled.length === 1
+
   if (accounts.length === 0) {
     return (
       <p className="rounded-md border border-hairline bg-canvas px-3 py-3 text-[13px] text-ink-muted">
@@ -153,21 +135,26 @@ export function SenderPicker({
 
   return (
     <div className="space-y-3">
+      {lockSingle ? (
+        <p className="text-[12.5px] text-ink-faint">Bağlı tek hat var; gönderim bu numaradan gider.</p>
+      ) : null}
       <div className="grid gap-2 sm:grid-cols-2">
         {accounts.map((account) => {
           const on = selected.includes(account.id)
+          const forceOn = lockSingle && enabled[0]?.id === account.id
+          const frozen = locked || account.disabled || forceOn
           return (
             <label
               key={account.id}
               className={`flex min-h-14 items-start gap-2.5 rounded-md border px-3 py-2.5 ${
-                account.disabled || locked ? 'cursor-not-allowed opacity-55' : 'cursor-pointer'
-              } ${on ? 'border-accent bg-accent-soft/60' : 'border-hairline bg-canvas'}`}
+                account.disabled || locked ? 'cursor-not-allowed opacity-55' : forceOn ? 'cursor-default' : 'cursor-pointer'
+              } ${on || forceOn ? 'border-accent bg-accent-soft/60' : 'border-hairline bg-canvas'}`}
             >
               <input
                 type="checkbox"
                 className="mt-1 size-4 accent-[var(--color-accent)]"
-                checked={on}
-                disabled={locked || account.disabled}
+                checked={on || forceOn}
+                disabled={frozen}
                 onChange={() => onToggle(account.id)}
               />
               <span className="min-w-0">
@@ -255,14 +242,18 @@ export function MediaPicker({
       <p className="text-[13px] font-semibold text-ink-muted">Görsel ekle</p>
       <p className="text-[12.5px] text-ink-faint">İsteğe bağlı. Seçmezseniz yalnızca metin gider.</p>
       {mediaUrl ? (
-        <div className="flex items-center gap-3 rounded-md border border-hairline bg-canvas p-2">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={mediaUrl} alt="" className="size-16 rounded object-cover" />
+        <div className="space-y-2">
+          <div className="overflow-hidden rounded-md border border-hairline bg-canvas">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={mediaUrl} alt="" className="block w-full max-h-[min(70dvh,32rem)] object-contain" />
+          </div>
           <div className="flex flex-wrap gap-2">
             <Button type="button" onClick={() => setLibraryOpen(true)}>
+              <Icon name="refresh" className="size-3.5" />
               Değiştir
             </Button>
             <Button type="button" onClick={onClear}>
+              <Icon name="trash" className="size-3.5" />
               Kaldır
             </Button>
           </div>
@@ -371,11 +362,13 @@ export function AiWriteModal({
   open,
   onClose,
   defaultTone,
+  initialBrief,
   onApply,
 }: {
   open: boolean
   onClose: () => void
   defaultTone?: string
+  initialBrief?: string
   onApply: (text: string) => void
 }) {
   const titleId = useId()
@@ -390,8 +383,10 @@ export function AiWriteModal({
       setDraft(null)
       setError(null)
       setBusy(false)
+      return
     }
-  }, [open])
+    setBrief(initialBrief?.trim() ?? '')
+  }, [open, initialBrief])
 
   const write = async () => {
     setBusy(true)
@@ -544,6 +539,7 @@ export function AiRewriteBar({
     <div className="space-y-2">
       <div className="relative" ref={menuRef}>
         <Button type="button" disabled={!currentMessage.trim()} onClick={() => setOpen((value) => !value)}>
+          <Icon name="tune" className="size-3.5" />
           AI ile İyileştir
         </Button>
         {open ? (
@@ -641,16 +637,24 @@ export function PublishCards({
   uniqueCount: number
   accountCount: number
 }) {
-  const cards: { id: 'draft' | 'schedule' | 'now'; title: string; body: string; danger?: boolean }[] = [
+  const cards: {
+    id: 'draft' | 'schedule' | 'now'
+    title: string
+    body: string
+    icon: 'file' | 'clock' | 'send'
+    danger?: boolean
+  }[] = [
     {
       id: 'draft',
       title: 'Taslak olarak kaydet',
       body: 'Daha sonra düzenleyip yayınlarsınız.',
+      icon: 'file',
     },
     {
       id: 'schedule',
       title: 'Planla',
       body: 'Seçtiğiniz tarih ve saatte gönderim başlar.',
+      icon: 'clock',
     },
     {
       id: 'now',
@@ -659,6 +663,7 @@ export function PublishCards({
         uniqueCount > 0
           ? `${formatCount(uniqueCount)} kişiye ${accountCount} hattan gönderilir.`
           : 'Kayıttan sonra gönderim hemen başlar.',
+      icon: 'send',
       danger: true,
     },
   ]
@@ -685,10 +690,21 @@ export function PublishCards({
               <span className="flex items-start gap-2.5">
                 <input
                   type="radio"
-                  className="mt-1 accent-[var(--color-accent)]"
+                  className="mt-2 accent-[var(--color-accent)]"
                   checked={on}
                   onChange={() => onSelect(card.id)}
                 />
+                <span
+                  className={`mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md border ${
+                    on
+                      ? card.danger
+                        ? 'border-danger/30 bg-danger/10 text-danger'
+                        : 'border-accent/30 bg-accent-soft text-accent'
+                      : 'border-hairline bg-surface text-ink-muted'
+                  }`}
+                >
+                  <Icon name={card.icon} className="size-4" />
+                </span>
                 <span>
                   <span className="block text-[14px] font-semibold text-ink">{card.title}</span>
                   <span className="text-[12.5px] text-ink-muted">{card.body}</span>
@@ -710,24 +726,25 @@ export function PublishCards({
   )
 }
 
-export function SummaryRow({
-  label,
-  value,
-  onEdit,
+export function SummaryPills({
+  items,
 }: {
-  label: string
-  value: ReactNode
-  onEdit: () => void
+  items: { label: string; value: string; onEdit: () => void }[]
 }) {
   return (
-    <div className="flex items-start justify-between gap-3 border-b border-hairline py-2.5 last:border-b-0">
-      <div className="min-w-0">
-        <p className="text-[11.5px] font-medium text-ink-faint">{label}</p>
-        <p className="text-[13.5px] text-ink">{value}</p>
-      </div>
-      <button type="button" className="shrink-0 text-[12.5px] font-medium text-accent" onClick={onEdit}>
-        Düzenle
-      </button>
+    <div className="flex flex-wrap gap-1.5">
+      {items.map((item) => (
+        <button
+          key={item.label}
+          type="button"
+          onClick={item.onEdit}
+          className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-hairline bg-canvas py-1 pl-2.5 pr-2 text-left hover:border-accent/40 hover:bg-accent-soft/50"
+        >
+          <span className="shrink-0 text-[11px] font-medium text-ink-faint">{item.label}</span>
+          <span className="min-w-0 truncate text-[12.5px] font-semibold text-ink">{item.value}</span>
+          <Icon name="edit" className="size-3 shrink-0 text-accent" />
+        </button>
+      ))}
     </div>
   )
 }

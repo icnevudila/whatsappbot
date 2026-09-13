@@ -1,10 +1,13 @@
 ﻿import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Notice, PageHeader } from '@/components/ui'
+import { Button, Card, CardHeader, Notice, PageHeader } from '@/components/ui'
 import { Icon } from '@/components/icon'
-import { requireActiveOrg } from '@/lib/org'
+import { Wordmark } from '@/components/brand'
+import { requireActiveOrg, listUserOrgs } from '@/lib/org'
 import { CONTACT_EMAIL } from '@/lib/contact'
+import { signOut } from '@/app/giris/actions'
+import { OrgSwitcher } from '../org-switcher'
 import { SETTINGS_SECTIONS } from './sections'
 
 export const metadata: Metadata = { title: 'Ayarlar' }
@@ -15,14 +18,17 @@ export default async function SettingsHubPage({
   searchParams: Promise<{ billing?: string | string[] }>
 }) {
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let email: string | null
   try {
-    ;({ org } = await requireActiveOrg())
+    ;({ org, email } = await requireActiveOrg())
   } catch (error) {
     if (error instanceof Error && error.message === 'NO_ORGANIZATION') {
       redirect('/erisim-yok')
     }
     redirect('/giris')
   }
+
+  const orgs = await listUserOrgs()
 
   const params = await searchParams
   const billingRaw = params.billing
@@ -35,7 +41,7 @@ export default async function SettingsHubPage({
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-3">
-      <PageHeader title="Ayarlar" description={`${org.name} · bölüm seçin`} />
+      <PageHeader title="Ayarlar" description="Bölüm seçin" />
 
       {billing === 'ok' ? (
         <Notice tone="success">Ödeme alındı. Paket kısa süre içinde güncellenir.</Notice>
@@ -50,6 +56,12 @@ export default async function SettingsHubPage({
           {CONTACT_EMAIL}
         </Notice>
       ) : null}
+
+      <Card>
+        <div className="p-3.5">
+          <OrgSwitcher orgs={orgs} activeOrgId={org.id} compact />
+        </div>
+      </Card>
 
       <div className="grid gap-2 sm:grid-cols-2">
         {SETTINGS_SECTIONS.map((section) => (
@@ -68,6 +80,24 @@ export default async function SettingsHubPage({
             </span>
           </Link>
         ))}
+      </div>
+
+      <Card>
+        <CardHeader title="Hesap" subtitle={email ?? undefined} />
+        <div className="flex flex-wrap items-center justify-between gap-2 p-3.5">
+          <p className="text-[12.5px] text-ink-muted">
+            Çıksan da hatların bağlı kalır, gönderimler durmaz.
+          </p>
+          <form action={signOut}>
+            <Button type="submit" variant="danger">
+              Çıkış
+            </Button>
+          </form>
+        </div>
+      </Card>
+
+      <div className="flex justify-center pb-1 pt-4 text-ink-faint">
+        <Wordmark />
       </div>
     </div>
   )

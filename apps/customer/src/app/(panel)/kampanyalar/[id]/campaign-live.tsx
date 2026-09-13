@@ -31,6 +31,7 @@ export type CampaignView = Pick<
   | 'failed_count'
   | 'skipped_count'
   | 'stop_reason'
+  | 'wait_reason'
   | 'min_delay_seconds'
   | 'max_delay_seconds'
   | 'daily_cap_per_account'
@@ -129,7 +130,7 @@ export function CampaignLive({
       const { data } = await supabase
         .from('campaigns')
         .select(
-          'id, name, status, body, body_b, ab_percent, media_url, message_type, total_targets, sent_count, failed_count, skipped_count, stop_reason, min_delay_seconds, max_delay_seconds, daily_cap_per_account, started_at, completed_at, scheduled_at, source_list_ids',
+          'id, name, status, body, body_b, ab_percent, media_url, message_type, total_targets, sent_count, failed_count, skipped_count, stop_reason, wait_reason, min_delay_seconds, max_delay_seconds, daily_cap_per_account, started_at, completed_at, scheduled_at, source_list_ids',
         )
         .eq('id', initial.id)
         .eq('org_id', orgId)
@@ -337,6 +338,10 @@ export function CampaignLive({
             </p>
           ) : null}
 
+          {campaign.status === 'running' && remaining > 0 && campaign.wait_reason ? (
+            <Notice tone="warn">{campaign.wait_reason}</Notice>
+          ) : null}
+
           {campaign.status === 'completed' && !campaign.stop_reason ? (
             <Notice tone="accent">Kampanya tamamlandı. Numaralar aşağıda.</Notice>
           ) : null}
@@ -352,7 +357,7 @@ export function CampaignLive({
 
           {error ? <Notice tone="danger">{error}</Notice> : null}
 
-          {campaign.status === 'running' ? (
+          {campaign.status === 'running' && remaining > 0 && !campaign.wait_reason ? (
             <Notice tone="warn">
               Bu kampanya şu anda gönderiliyor. Mesajı düzenlerseniz değişiklik yalnızca henüz
               mesaj gönderilmemiş müşterilere uygulanır.

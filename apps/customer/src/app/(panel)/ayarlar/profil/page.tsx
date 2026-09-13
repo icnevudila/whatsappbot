@@ -42,7 +42,7 @@ export default async function ProfileSettingsPage() {
         <CardHeader title="Oturum" />
         <div className="flex flex-wrap items-center justify-between gap-2 p-3.5">
           <p className="text-[12.5px] text-ink-muted">
-            Çıkış hatları kesmez; gönderim sunucuda sürer.
+            Çıksan da hatların bağlı kalır, gönderimler durmaz.
           </p>
           <form action={signOut}>
             <Button type="submit" variant="danger">

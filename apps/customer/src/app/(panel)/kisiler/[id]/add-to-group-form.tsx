@@ -15,7 +15,15 @@ import { useToast } from '@/components/toast'
 import { importContactChunk } from '../actions'
 
 /** Mevcut gruba Excel / yapıştır ile numara ekle. */
-export function AddToGroupForm({ listId }: { listId: string }) {
+export function AddToGroupForm({
+  listId,
+  padded = true,
+  onDone,
+}: {
+  listId: string
+  padded?: boolean
+  onDone?: () => void
+}) {
   const router = useRouter()
   const toast = useToast()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -104,11 +112,12 @@ export function AddToGroupForm({ listId }: { listId: string }) {
       textarea.value = ''
       setPreview(null)
       router.refresh()
+      onDone?.()
     })
   }
 
   return (
-    <div className="space-y-2.5 p-3.5">
+    <div className={padded ? 'space-y-2.5 p-3.5' : 'mt-4 space-y-2.5'}>
       <Field label="Numaralar" hint="Bu gruba eklenir · deftere de yazılır">
         <Textarea ref={textareaRef} rows={5} placeholder={'05321234567,Ali\n+90532…'} />
       </Field>

@@ -580,6 +580,7 @@ export type Database = {
           stop_reason: string | null
           total_targets: number
           updated_at: string
+          wait_reason: string | null
         }
         Insert: {
           ab_percent?: number
@@ -609,6 +610,7 @@ export type Database = {
           stop_reason?: string | null
           total_targets?: number
           updated_at?: string
+          wait_reason?: string | null
         }
         Update: {
           ab_percent?: number
@@ -638,6 +640,7 @@ export type Database = {
           stop_reason?: string | null
           total_targets?: number
           updated_at?: string
+          wait_reason?: string | null
         }
         Relationships: [
           {
@@ -1013,6 +1016,62 @@ export type Database = {
           },
         ]
       }
+      list_requests: {
+        Row: {
+          address: string | null
+          category: string | null
+          contact_count: number
+          created_at: string
+          created_by: string
+          id: string
+          kind: string
+          locations: Json
+          nationwide: boolean
+          org_id: string
+          radius_km: number | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          category?: string | null
+          contact_count?: number
+          created_at?: string
+          created_by: string
+          id?: string
+          kind: string
+          locations?: Json
+          nationwide?: boolean
+          org_id: string
+          radius_km?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          category?: string | null
+          contact_count?: number
+          created_at?: string
+          created_by?: string
+          id?: string
+          kind?: string
+          locations?: Json
+          nationwide?: boolean
+          org_id?: string
+          radius_km?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "list_requests_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message_log: {
         Row: {
           account_id: string | null
@@ -1352,6 +1411,8 @@ export type Database = {
           onboarding: Json
           phone_e164: string | null
           plan: string
+          send_window_end: string
+          send_window_start: string
           slug: string
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
@@ -1373,6 +1434,8 @@ export type Database = {
           onboarding?: Json
           phone_e164?: string | null
           plan?: string
+          send_window_end?: string
+          send_window_start?: string
           slug: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
@@ -1394,6 +1457,8 @@ export type Database = {
           onboarding?: Json
           phone_e164?: string | null
           plan?: string
+          send_window_end?: string
+          send_window_start?: string
           slug?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null

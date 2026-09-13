@@ -1,10 +1,9 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { AccentLink, Badge, Card, EmptyState } from '@/components/ui'
+import { AccentLink, Card, EmptyState } from '@/components/ui'
 import { requireActiveOrg, isOrgAdminRole } from '@/lib/org'
 import { SettingsPageFrame } from '../settings-shell'
-import { DeleteProductButton } from './delete-button'
+import { ProductsBoard } from './products-board'
 
 export const metadata: Metadata = { title: 'Ürünlerim' }
 export const dynamic = 'force-dynamic'
@@ -25,8 +24,9 @@ export default async function ProductsPage() {
   const [{ data: products }, { data: imageRows }] = await Promise.all([
     supabase
       .from('org_products')
-      .select('id, name, description, is_active')
+      .select('id, name, description, is_active, created_at')
       .eq('org_id', org.id)
+      .order('is_active', { ascending: false })
       .order('created_at', { ascending: false }),
     supabase
       .from('org_product_images')
@@ -36,70 +36,39 @@ export default async function ProductsPage() {
   ])
 
   const list = products ?? []
-  const imagesByProduct = new Map<string, string>()
+  const imagesByProduct = new Map()
   for (const image of imageRows ?? []) {
     if (!imagesByProduct.has(image.product_id)) {
       imagesByProduct.set(image.product_id, image.public_url)
     }
   }
 
+  const cards = list.map((product) => ({
+    id: product.id,
+    name: product.name,
+    description: product.description,
+    is_active: product.is_active,
+    thumb: imagesByProduct.get(product.id) ?? null,
+  }))
+
   return (
     <SettingsPageFrame
       wide
       title="Ürünlerim"
-      description="Katalog: ad, açıklama, kutu içeriği ve görseller."
+      description="Görsel üretmede kullanacağınız tüm ürünleri buraya ekleyin."
       action={canManage ? <AccentLink href="/ayarlar/urunler/yeni">Ürün ekle</AccentLink> : undefined}
     >
-      {list.length === 0 ? (
+      {cards.length === 0 ? (
         <Card>
           <EmptyState
             tone="generic"
             title="Henüz ürün yok"
-            description="Ürün ekleyin, birden fazla görsel yükleyin ve aktif / pasif durumunu yönetin."
+            description="Kampanya görseli üretirken kullanılacak ürünleri ekleyin."
             action={canManage ? <AccentLink href="/ayarlar/urunler/yeni">İlk ürünü ekle</AccentLink> : undefined}
           />
         </Card>
       ) : (
-        <ul className="grid gap-2 sm:grid-cols-2">
-          {list.map((product) => {
-            const thumb = imagesByProduct.get(product.id)
-            return (
-              <li key={product.id}>
-                <div className="overflow-hidden rounded-[var(--radius-card)] border border-hairline bg-surface shadow-[var(--shadow-card)]">
-                  <Link href={`/ayarlar/urunler/${product.id}`} className="block">
-                    {thumb ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={thumb} alt="" className="h-36 w-full object-cover bg-canvas" />
-                    ) : (
-                      <div className="flex h-36 items-center justify-center bg-canvas text-[12px] text-ink-faint">
-                        Görsel yok
-                      </div>
-                    )}
-                    <div className="space-y-1 p-3.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="truncate font-semibold text-ink">{product.name}</p>
-                        <Badge tone={product.is_active ? 'accent' : 'neutral'}>
-                          {product.is_active ? 'Aktif' : 'Pasif'}
-                        </Badge>
-                      </div>
-                      <p className="line-clamp-2 text-[12.5px] text-ink-muted">
-                        {product.description || 'Açıklama yok'}
-                      </p>
-                    </div>
-                  </Link>
-                  {canManage ? (
-                    <div className="flex justify-end gap-2 border-t border-hairline px-3.5 py-2">
-                      <AccentLink href={`/ayarlar/urunler/${product.id}`} className="h-8 text-[12.5px]">
-                        Düzenle
-                      </AccentLink>
-                      <DeleteProductButton id={product.id} name={product.name} />
-                    </div>
-                  ) : null}
-                </div>
-              </li>
-            )
-          })}
-        </ul>
+        <ProductsBoard products={cards} canManage={canManage} />
       )}
     </SettingsPageFrame>
   )

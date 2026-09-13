@@ -2,14 +2,15 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import {
-  AccentLink,
-  EmptyState,
+  CreateCta,
   Meter,
   Notice,
   PageHeader,
   Pagination,
+  QuietLink,
   StatusPill,
 } from '@/components/ui'
+import { Icon } from '@/components/icon'
 import { requireActiveOrg } from '@/lib/org'
 import {
   PAGE_SIZES,
@@ -133,81 +134,87 @@ export default async function CampaignsPage({
   const connectedCount = connectedResult.count ?? 0
   const hazirQs = justReady ? '1' : undefined
 
-  const emptyAction =
-    listCount === 0 ? (
-      <AccentLink href="/kisiler">Önce kişi grubu ekle</AccentLink>
-    ) : connectedCount === 0 ? (
-      <AccentLink href="/ayarlar/hatlar">Önce hat bağla</AccentLink>
-    ) : (
-      <AccentLink href="/kampanyalar/yeni">İlk Kampanyanı Oluştur</AccentLink>
-    )
+  const emptyHint =
+    listCount === 0
+      ? 'Önce bir kişi grubu ekleyin, sonra buradan gönderin.'
+      : connectedCount === 0
+        ? 'Önce bir hat bağlayın, sonra buradan gönderin.'
+        : 'Mesaj yazın, grup ve hat seçin, gönderin.'
 
   return (
     <>
       <PageHeader
         title="Kampanyalar"
         description="Müşterilerinize WhatsApp’tan duyuru ve kampanya gönderin."
-        action={<AccentLink href="/kampanyalar/yeni">Yeni kampanya</AccentLink>}
+        action={
+          <QuietLink href="/icerik">
+            <Icon name="image" className="size-4" />
+            İçerik kütüphanesi
+          </QuietLink>
+        }
       />
 
       {justReady ? <Notice tone="success">Kampanya hazır.</Notice> : null}
 
-      {campaignTotal === 0 ? (
-        <div className="rounded-[var(--radius-card)] border border-hairline bg-surface shadow-[var(--shadow-card)]">
-          <EmptyState
-            tone="campaign"
-            title="İlk kampanyanı oluştur"
-            description="Müşterilerine WhatsApp üzerinden kampanya ve duyurular göndermeye başla."
-            action={emptyAction}
-          />
-        </div>
-      ) : (
-        <div className="rounded-[var(--radius-card)] border border-hairline bg-surface shadow-[var(--shadow-card)]">
-          <ul className="divide-y divide-hairline">
-            {campaigns.map((campaign, index) => {
-              const done = campaign.sent_count + campaign.failed_count + campaign.skipped_count
-              const total = Math.max(0, campaign.total_targets)
-              const hint = statusHint(campaign.status)
-              return (
-                <li
-                  key={campaign.id}
-                  className="wb-row-enter"
-                  style={{ animationDelay: `${Math.min(index, 12) * 28}ms` }}
-                >
-                  <Link
-                    href={`/kampanyalar/${campaign.id}`}
-                    className={`wb-card-lift wb-list-row block px-4 py-3 ${campaignShell(campaign.status)}`}
+      <div className="space-y-2">
+        <CreateCta
+          href="/kampanyalar/yeni"
+          title="Yeni kampanya"
+          description={
+            campaignTotal === 0
+              ? 'İlk gönderimini hazırla. Müşterilerin WhatsApp’tan görsün.'
+              : emptyHint
+          }
+        />
+
+        {campaignTotal === 0 ? null : (
+          <div className="rounded-[var(--radius-card)] border border-hairline bg-surface shadow-[var(--shadow-card)]">
+            <ul className="divide-y divide-hairline">
+              {campaigns.map((campaign, index) => {
+                const done = campaign.sent_count + campaign.failed_count + campaign.skipped_count
+                const total = Math.max(0, campaign.total_targets)
+                const hint = statusHint(campaign.status)
+                return (
+                  <li
+                    key={campaign.id}
+                    className="wb-row-enter"
+                    style={{ animationDelay: `${Math.min(index, 12) * 28}ms` }}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="min-w-0 truncate text-[14px] font-bold tracking-[-0.02em] text-ink">
-                        {campaign.name}
-                      </p>
-                      <StatusPill status={campaign.status} />
-                    </div>
-                    {hint ? <p className="mt-0.5 text-[12px] text-ink-muted">{hint}</p> : null}
-                    <div className="mt-2 flex items-center gap-2">
-                      <Meter
-                        value={done}
-                        max={Math.max(1, total)}
-                        tone={meterTone(campaign.status, campaign.failed_count)}
-                      />
-                      <span className="shrink-0 tabular text-[11.5px] font-medium text-ink-muted">
-                        {done}/{total || '—'}
-                      </span>
-                    </div>
-                  </Link>
-                </li>
-              )
-            })}
-          </ul>
-          <Pagination
-            page={page}
-            totalPages={pages}
-            label={`${campaignTotal} kayıt`}
-            hrefForPage={(p) => buildPageHref('/kampanyalar', p, { hazir: hazirQs })}
-          />
-        </div>
-      )}
+                    <Link
+                      href={`/kampanyalar/${campaign.id}`}
+                      className={`wb-card-lift wb-list-row block px-4 py-3 ${campaignShell(campaign.status)}`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="min-w-0 truncate text-[14px] font-bold tracking-[-0.02em] text-ink">
+                          {campaign.name}
+                        </p>
+                        <StatusPill status={campaign.status} />
+                      </div>
+                      {hint ? <p className="mt-0.5 text-[12px] text-ink-muted">{hint}</p> : null}
+                      <div className="mt-2 flex items-center gap-2">
+                        <Meter
+                          value={done}
+                          max={Math.max(1, total)}
+                          tone={meterTone(campaign.status, campaign.failed_count)}
+                        />
+                        <span className="shrink-0 tabular text-[11.5px] font-medium text-ink-muted">
+                          {done}/{total || '—'}
+                        </span>
+                      </div>
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+            <Pagination
+              page={page}
+              totalPages={pages}
+              label={`${campaignTotal} kayıt`}
+              hrefForPage={(p) => buildPageHref('/kampanyalar', p, { hazir: hazirQs })}
+            />
+          </div>
+        )}
+      </div>
     </>
   )
 }

@@ -26,7 +26,6 @@ import { ListActions } from './list-actions'
 import { NewGroupForm } from './new-group-form'
 import { RehberSyncButton } from './rehber-sync-modal'
 import { VerifyAllButton } from './verify-all-button'
-import { WaCheckForm } from './wa-check-form'
 import { getSetupProgress } from '@/lib/setup-progress'
 import { SetupBanner } from '../setup-banner'
 
@@ -128,7 +127,7 @@ export default async function ContactsPage({
     <>
       <PageHeader
         title={t('pages.kisilerTitle')}
-        description={`${listTotal} grup · ${total} numara — WhatsApp doğrula / tek numara kontrol`}
+        description={`${listTotal} grup · ${total} numara`}
         action={
           <div className="flex flex-wrap items-center gap-2">
             <RehberSyncButton accounts={rehberAccounts} />
@@ -185,17 +184,13 @@ export default async function ContactsPage({
             )}
           </Card>
 
-          <div className="space-y-3">
-            <Card>
-              <CardHeader title="Yeni grup" subtitle="Excel / yapıştır veya boş" />
-              <NewGroupForm embedded />
-            </Card>
-            <WaCheckForm />
-          </div>
+          <Card>
+            <CardHeader title="Yeni grup" subtitle="Excel / yapıştır veya boş" />
+            <NewGroupForm embedded />
+          </Card>
         </div>
       ) : (
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.85fr)]">
-          <Card>
+        <Card>
             <CardHeader
               title="Defter"
               subtitle={`${total} numara · seçip gruba taşı`}
@@ -217,8 +212,6 @@ export default async function ContactsPage({
               hrefForPage={(p) => buildPageHref('/kisiler', p, { gorunum: 'defter' })}
             />
           </Card>
-          <WaCheckForm />
-        </div>
       )}
     </>
   )

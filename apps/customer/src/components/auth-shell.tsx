@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { LogoMark, Wordmark } from './brand'
+import { BRAND_NAME, LogoMark, Wordmark } from './brand'
 
 export function AuthShell({
   children,
@@ -12,7 +12,7 @@ export function AuthShell({
     </>
   ),
   asideLead = 'WhatsApp hattını bağla, kişilerini yükle, kampanyanı başlat.',
-  footerLabel = 'Filo · müşteri paneli',
+  footerLabel = `${BRAND_NAME} · müşteri paneli`,
   privacyLabel = 'Gizlilik',
   termsLabel = 'Kullanım koşulları',
 }: {
@@ -33,9 +33,9 @@ export function AuthShell({
         <div className="relative z-10">
           <Link href="/giris" className="inline-flex items-center gap-3 text-white">
             <span className="grid size-9 place-items-center bg-accent text-[15px] font-black text-accent-ink">
-              F
+              M
             </span>
-            <span className="text-[18px] font-black tracking-[-0.03em]">Filo</span>
+            <span className="text-[18px] font-black tracking-[-0.03em]">{BRAND_NAME}</span>
           </Link>
           <h2 className="mt-12 max-w-[14ch] text-[clamp(28px,3.5vw,40px)] font-black leading-[1.1] tracking-[-0.035em]">
             {asideTitle}
@@ -56,7 +56,7 @@ export function AuthShell({
           <div className="filo-fade-up w-full max-w-[420px]">
             <div className="mb-6 inline-flex items-center gap-2 md:hidden">
               <LogoMark className="size-6" />
-              <span className="text-[15px] font-semibold tracking-[-0.02em]">Filo</span>
+              <span className="text-[15px] font-semibold tracking-[-0.02em]">{BRAND_NAME}</span>
             </div>
             <div className="rounded-[16px] border border-hairline bg-surface px-7 py-8 shadow-[var(--shadow-card)]">
               {children}

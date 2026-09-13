@@ -1,4 +1,4 @@
-import { e164ToJid, type JobPayloadMap, type JobType } from '@wa/shared'
+import { e164ToJid, nextSendWindowOpen, type JobPayloadMap, type JobType } from '@wa/shared'
 import { one, query } from './db.js'
 import { env } from './env.js'
 import { logger } from './logger.js'
@@ -50,6 +50,43 @@ async function markDone(jobId: string, result: unknown): Promise<boolean> {
     return false
   }
   return true
+}
+
+/** Saat penceresi: deneme hakkını yakmadan sonraya bırak. */
+class SendWindowWaitError extends Error {
+  openAt: Date
+  constructor(message: string, openAt: Date) {
+    super(message)
+    this.name = 'SendWindowWaitError'
+    this.openAt = openAt
+  }
+}
+
+async function requeueForWindow(job: JobRow, error: SendWindowWaitError): Promise<void> {
+  const delaySeconds = Math.max(
+    30,
+    Math.min(6 * 3600, Math.ceil((error.openAt.getTime() - Date.now()) / 1000)),
+  )
+  const rows = await query<{ id: string }>(
+    `update public.jobs
+        set status = 'pending',
+            error = $2,
+            run_after = now() + make_interval(secs => $3),
+            attempts = greatest(0, attempts - 1),
+            claimed_by = null,
+            claimed_at = null,
+            updated_at = now()
+      where id = $1::bigint
+        and claimed_by = $4
+        and status in ('claimed', 'running')
+      returning id::text`,
+    [job.id, error.message, delaySeconds, env.workerId],
+  )
+  if (rows.length === 0) {
+    log.warn({ jobId: job.id }, 'requeueForWindow atlandi: sahiplik kaybedildi')
+    return
+  }
+  log.info({ jobId: job.id, delaySeconds }, 'Gönderim saat aralığı için ertelendi')
 }
 
 /** Retry edilmemesi gereken islem sonrasi hatalar (WA zaten gitti / kara liste). */
@@ -293,6 +330,12 @@ async function handle(job: JobRow): Promise<unknown> {
 
       const gate = await checkOrgSendGate(job.org_id)
       if (!gate.ok) {
+        if (gate.reason === 'send_window') {
+          throw new SendWindowWaitError(
+            orgSendGateMessage(gate),
+            nextSendWindowOpen(new Date(), gate.window_start, gate.window_end),
+          )
+        }
         throw new NonRetryableJobError(orgSendGateMessage(gate))
       }
 
@@ -680,7 +723,11 @@ async function tick(): Promise<void> {
           throw error
         }
       } catch (error) {
-        await markFailed(job, error)
+        if (error instanceof SendWindowWaitError) {
+          await requeueForWindow(job, error)
+        } else {
+          await markFailed(job, error)
+        }
       } finally {
         clearInterval(heartbeat)
         inFlightJobs -= 1

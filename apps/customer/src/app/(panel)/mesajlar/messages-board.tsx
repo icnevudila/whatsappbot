@@ -15,6 +15,7 @@ import {
   Toolbar,
 } from '@/components/ui'
 import { useSyncBusy } from '@/components/busy'
+import { Icon } from '@/components/icon'
 import { useConfirm } from '@/components/confirm-dialog'
 import { useToast } from '@/components/toast'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
@@ -121,10 +122,36 @@ export function MessagesBoard({
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [timeOpen, setTimeOpen] = useState(dateRange !== 'tum')
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const searchRef = useRef(null)
+  const menuRef = useRef(null)
   const threadEndRef = useRef<HTMLDivElement>(null)
   const [flashPhone, setFlashPhone] = useState<string | null>(null)
   const topPhoneRef = useRef<string | null>(previews[0]?.phone ?? null)
   useSyncBusy(pending, 'İstemeyenlere ekleniyor…')
+
+  useEffect(() => {
+    if (!searchOpen) return
+    searchRef.current?.focus()
+  }, [searchOpen])
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const onDoc = (event) => {
+      if (!menuRef.current?.contains(event.target)) setMenuOpen(false)
+    }
+    const onKey = (event) => {
+      if (event.key === 'Escape') setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDoc)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [menuOpen])
 
   const visibleList = list.filter((item) =>
     `${item.contactName ?? ''} ${item.pushName ?? ''} ${item.phone} ${item.lastBody ?? ''} ${item.accountLabel ?? ''}`
@@ -246,45 +273,124 @@ export function MessagesBoard({
     <SplitPane
       list={
         <div className={selectedPhone ? 'hidden lg:flex lg:min-h-0 lg:flex-col' : 'flex min-h-0 flex-col'}>
-          <CardHeader title="Sohbetler" subtitle={`${list.length} kişi`} />
-          <div className="border-b border-hairline px-3 py-2">
-            <Toolbar className="mb-2">
-              {(
-                [
-                  ['tum', 'Tümü'],
-                  ['bugun', 'Bugün'],
-                  ['dun', 'Dün'],
-                  ['7gun', 'Son 7 gün'],
-                ] as const
-              ).map(([id, label]) => (
-                <FilterChip
-                  key={id}
-                  href={hrefFor({ tel: selectedPhone, tab, date: id })}
-                  active={dateRange === id}
-                >
-                  {label}
+          <CardHeader
+            title="Sohbetler"
+            subtitle={`${list.length} kişi`}
+            action={
+              <div className="flex flex-wrap items-center justify-end gap-1">
+                <FilterChip href={hrefFor({ tel: selectedPhone, tab: 'tum', date: dateRange })} active={tab === 'tum'}>
+                  Tümü ({allCount})
                 </FilterChip>
-              ))}
-            </Toolbar>
-            <Toolbar className="mb-2">
-              <FilterChip href={hrefFor({ tel: selectedPhone, tab: 'tum', date: dateRange })} active={tab === 'tum'}>
-                Tümü ({allCount})
-              </FilterChip>
-              <FilterChip
-                href={hrefFor({ tel: selectedPhone, tab: 'giden', date: dateRange })}
-                active={tab === 'giden'}
-              >
-                Cevapsız ({outboundCount})
-              </FilterChip>
-            </Toolbar>
-            <Input
-              aria-label="Sohbetlerde ara"
-              type="search"
-              placeholder="İsim, numara veya mesaj ara…"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-          </div>
+                <FilterChip
+                  href={hrefFor({ tel: selectedPhone, tab: 'giden', date: dateRange })}
+                  active={tab === 'giden'}
+                >
+                  Cevapsız ({outboundCount})
+                </FilterChip>
+                <button
+                  type="button"
+                  aria-label="Zaman filtresi"
+                  aria-expanded={timeOpen}
+                  title="Zaman filtresi"
+                  onClick={() => {
+                    setTimeOpen((value) => !value)
+                    setSearchOpen(false)
+                    setMenuOpen(false)
+                  }}
+                  className="relative inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-hairline bg-surface text-ink hover:bg-canvas"
+                >
+                  <Icon name="clock" className="size-4" />
+                  {dateRange !== 'tum' ? (
+                    <span className="absolute right-1 top-1 size-1.5 rounded-full bg-accent" aria-hidden />
+                  ) : null}
+                </button>
+                <button
+                  type="button"
+                  aria-label="Ara"
+                  aria-expanded={searchOpen}
+                  title="Ara"
+                  onClick={() => {
+                    setSearchOpen((value) => !value)
+                    setTimeOpen(false)
+                    setMenuOpen(false)
+                  }}
+                  className="relative inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-hairline bg-surface text-ink hover:bg-canvas"
+                >
+                  <Icon name="search" className="size-4" />
+                  {search.trim() ? (
+                    <span className="absolute right-1 top-1 size-1.5 rounded-full bg-accent" aria-hidden />
+                  ) : null}
+                </button>
+                <div className="relative shrink-0" ref={menuRef}>
+                  <button
+                    type="button"
+                    aria-label="Diğer"
+                    aria-haspopup="menu"
+                    aria-expanded={menuOpen}
+                    title="Diğer"
+                    onClick={() => {
+                      setMenuOpen((value) => !value)
+                      setTimeOpen(false)
+                      setSearchOpen(false)
+                    }}
+                    className="inline-flex size-8 items-center justify-center rounded-full border border-hairline bg-surface text-ink hover:bg-canvas"
+                  >
+                    <Icon name="ellipsis" className="size-4" />
+                  </button>
+                  {menuOpen ? (
+                    <div
+                      role="menu"
+                      className="absolute right-0 z-30 mt-1 min-w-[12.5rem] rounded-md border border-hairline bg-surface p-1 shadow-[var(--shadow-md)]"
+                    >
+                      <Link
+                        href="/ayarlar/engellenenler"
+                        role="menuitem"
+                        className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-left text-[13px] font-medium text-ink hover:bg-canvas"
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        <Icon name="shield" className="size-4 text-ink-muted" />
+                        Engellenenler
+                      </Link>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            }
+          />
+          {timeOpen || searchOpen ? (
+            <div className="border-b border-hairline px-3 py-2">
+              {timeOpen ? (
+                <Toolbar className={searchOpen ? 'mb-2' : '!mb-0'}>
+                  {(
+                    [
+                      ['tum', 'Tümü'],
+                      ['bugun', 'Bugün'],
+                      ['dun', 'Dün'],
+                      ['7gun', 'Son 7 gün'],
+                    ] as const
+                  ).map(([id, label]) => (
+                    <FilterChip
+                      key={id}
+                      href={hrefFor({ tel: selectedPhone, tab, date: id })}
+                      active={dateRange === id}
+                    >
+                      {label}
+                    </FilterChip>
+                  ))}
+                </Toolbar>
+              ) : null}
+              {searchOpen ? (
+                <Input
+                  ref={searchRef}
+                  aria-label="Sohbetlerde ara"
+                  type="search"
+                  placeholder="İsim, numara veya mesaj ara…"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                />
+              ) : null}
+            </div>
+          ) : null}
           {visibleList.length === 0 ? (
             <EmptyState
               tone="inbox"

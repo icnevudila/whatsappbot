@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 import { Suspense } from 'react'
-import { PageHeader, QuietLink } from '@/components/ui'
+import { PageHeader } from '@/components/ui'
 import { requireActiveOrg } from '@/lib/org'
 import { CampaignWizard } from '../../campaign-wizard'
 import { loadCampaignWizardData } from '../../wizard-data'
@@ -74,7 +74,8 @@ export default async function EditCampaignPage({
       <PageHeader
         title="Kampanyayı düzenle"
         description={campaign.name}
-        action={<QuietLink href={`/kampanyalar/${id}`}>← Detay</QuietLink>}
+        backHref={`/kampanyalar/${id}`}
+        backLabel="Kampanya"
       />
       <Suspense>
         <CampaignWizard

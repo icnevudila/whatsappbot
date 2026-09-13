@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
-import { PageHeader, QuietLink } from '@/components/ui'
+import { PageHeader } from '@/components/ui'
 import { requireActiveOrg } from '@/lib/org'
 import { CampaignWizard } from '../campaign-wizard'
 import { loadCampaignWizardData } from '../wizard-data'
@@ -27,14 +27,15 @@ export default async function NewCampaignPage({
   const raw = Array.isArray(params.adim) ? params.adim[0] : params.adim
   const gorselRaw = Array.isArray(params.gorsel) ? params.gorsel[0] : params.gorsel
   const data = await loadCampaignWizardData(org.id)
-  const initialStep = raw ? parseWizardStep(raw) : gorselRaw?.trim() ? 'icerik' : 'kampanya'
+  const initialStep = raw ? parseWizardStep(raw) : gorselRaw?.trim() ? 'gorsel' : 'kampanya'
 
   return (
     <>
       <PageHeader
         title="Yeni kampanya"
         description="Adım adım hazırlayın, sonra taslak, plan veya gönderim seçin."
-        action={<QuietLink href="/kampanyalar">← Kampanyalar</QuietLink>}
+        backHref="/kampanyalar"
+        backLabel="Kampanyalar"
       />
       <Suspense>
         <CampaignWizard

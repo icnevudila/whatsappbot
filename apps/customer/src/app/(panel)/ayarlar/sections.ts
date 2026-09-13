@@ -31,12 +31,6 @@ export const SETTINGS_SECTIONS: {
     icon: 'shield',
   },
   {
-    href: '/ayarlar/gelismis',
-    title: 'Gelişmiş',
-    description: 'Webhook, API anahtarı ve fatura',
-    icon: 'settings',
-  },
-  {
     href: '/ayarlar/marka',
     title: 'Marka kitleri',
     description: 'Listele, ekle, düzenle ve sil',

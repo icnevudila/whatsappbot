@@ -13,7 +13,11 @@ export const metadata: Metadata = { title: 'Hatlar' }
 const ACCOUNT_FIELDS =
   'id, label, phone_e164, status, status_detail, enabled, is_locked, lock_reason, qr_code, qr_expires_at, pairing_code, pairing_expires_at, daily_send_limit, sent_today, sent_today_on, warmup_started_at, new_chat_quota_total, new_chat_quota_used, reachout_locked_until'
 
-export default async function SettingsAccountsPage() {
+export default async function SettingsAccountsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ ekle?: string | string[] }>
+}) {
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
   let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
   let isPlatformAdmin = false
@@ -25,6 +29,9 @@ export default async function SettingsAccountsPage() {
     }
     redirect('/giris')
   }
+
+  const qs = await searchParams
+  const ekleRaw = Array.isArray(qs.ekle) ? qs.ekle[0] : qs.ekle
 
   const [accountsResult, setup] = await Promise.all([
     supabase
@@ -50,6 +57,9 @@ export default async function SettingsAccountsPage() {
         orgId={org.id}
         accountsQuota={org.accounts_quota}
         canManage={isOrgAdminRole(org.role)}
+        sendWindowStart={org.send_window_start ?? '08:00'}
+        sendWindowEnd={org.send_window_end ?? '18:00'}
+        autoOpenAdd={ekleRaw === '1'}
       />
     </SettingsPageFrame>
   )

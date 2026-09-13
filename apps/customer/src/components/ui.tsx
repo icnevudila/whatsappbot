@@ -1,6 +1,7 @@
-import type { ComponentProps, ReactNode } from 'react'
+import { Children, type ComponentProps, type ReactNode } from 'react'
 import Link from 'next/link'
 import { EmptyIllustration, type EmptyTone } from '@/components/empty-illustrations'
+import { Icon } from '@/components/icon'
 
 function cx(...parts: (string | false | null | undefined)[]): string {
   return parts.filter(Boolean).join(' ')
@@ -49,6 +50,34 @@ export function AccentLink({
   return (
     <Link href={href} prefetch className={cx(buttonBase, buttonVariants.accent, className)}>
       {children}
+    </Link>
+  )
+}
+
+export function CreateCta({
+  href,
+  title,
+  description,
+  icon = 'plus',
+}: {
+  href: string
+  title: string
+  description: string
+  icon?: 'plus' | 'phone' | 'people' | 'campaign'
+}) {
+  return (
+    <Link
+      href={href}
+      prefetch
+      className="wb-card-lift group flex items-center gap-3 rounded-[var(--radius-card)] border border-dashed border-accent/45 bg-accent-soft/50 px-4 py-3.5 shadow-[var(--shadow-card)]"
+    >
+      <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-accent/30 bg-surface text-accent">
+        <Icon name={icon} className="size-5" />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-[14.5px] font-bold tracking-[-0.02em] text-ink">{title}</span>
+        <span className="mt-0.5 block text-[12.5px] text-ink-muted">{description}</span>
+      </span>
     </Link>
   )
 }
@@ -103,7 +132,7 @@ export function CardHeader({
   action?: ReactNode
 }) {
   return (
-    <div className="flex shrink-0 items-start justify-between gap-4 border-b border-hairline px-3.5 py-2.5">
+    <div className="flex shrink-0 items-center justify-between gap-3 border-b border-hairline px-3.5 py-2.5">
       <div className="min-w-0">
         <h2 className="text-[14.5px] font-bold text-ink">{title}</h2>
         {subtitle ? (
@@ -662,20 +691,39 @@ export function PageHeader({
   title,
   description,
   action,
+  backHref,
+  backLabel = 'Geri',
 }: {
   title: string
   description?: string
   action?: ReactNode
+  backHref?: string
+  backLabel?: string
 }) {
   return (
     <header className="wb-page-head">
-      <div className="min-w-0">
-        <h1 className="wb-page-title">{title}</h1>
-        {description ? (
-          <p className="wb-page-desc line-clamp-2 md:line-clamp-none">{description}</p>
+      <div className="flex min-w-0 flex-[1_1_16rem] items-start gap-2.5">
+        {backHref ? (
+          <Link
+            href={backHref}
+            prefetch
+            aria-label={backLabel}
+            title={backLabel}
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-hairline-strong bg-surface text-ink hover:bg-surface-raised"
+          >
+            <Icon name="back" className="size-[18px]" />
+          </Link>
         ) : null}
+        <div className="min-w-0 flex-1">
+          <h1 className="wb-page-title">{title}</h1>
+          {description ? (
+            <p className="wb-page-desc line-clamp-2 md:line-clamp-none">{description}</p>
+          ) : null}
+        </div>
       </div>
-      {action ? <div className="flex shrink-0 flex-wrap items-center gap-2">{action}</div> : null}
+      {action ? (
+        <div className="flex max-w-full shrink-0 flex-wrap items-start justify-end gap-2">{action}</div>
+      ) : null}
     </header>
   )
 }
@@ -684,18 +732,19 @@ export function PageHeader({
 export function StatStrip({
   items,
   className,
+  children,
 }: {
   items: { label: string; value: ReactNode; href?: string; tone?: 'default' | 'ok' | 'danger' }[]
   className?: string
+  children?: ReactNode
 }) {
+  const extra = Children.toArray(children).filter(Boolean)
+  const count = items.length + extra.length
+  const cols =
+    count <= 3 ? 'grid-cols-3' : count <= 4 ? 'grid-cols-4' : 'grid-cols-5'
+
   return (
-    <div
-      className={cx(
-        'filo-fade-in mb-3 flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:overflow-visible',
-        items.length <= 3 ? 'sm:grid-cols-3' : items.length <= 4 ? 'sm:grid-cols-4' : 'sm:grid-cols-5',
-        className,
-      )}
-    >
+    <div className={cx('filo-fade-in mb-3 grid gap-2', cols, className)}>
       {items.map((item, index) => {
         const toneClass =
           item.tone === 'ok'
@@ -708,13 +757,13 @@ export function StatStrip({
             <p className="text-[10.5px] font-medium tracking-wide text-ink-faint uppercase">
               {item.label}
             </p>
-            <p className={cx('mt-0.5 text-[16px] font-extrabold tabular sm:text-[18px]', toneClass)}>
+            <p className={cx('mt-0.5 truncate text-[16px] font-extrabold tabular sm:text-[18px]', toneClass)}>
               {item.value}
             </p>
           </>
         )
         const boxClass =
-          'wb-row-enter wb-card-lift min-w-[108px] shrink-0 rounded-md border border-hairline bg-surface px-3 py-2 sm:min-w-0'
+          'wb-row-enter wb-card-lift flex min-w-0 flex-col justify-center rounded-md border border-hairline bg-surface px-2.5 py-2 sm:px-3'
         const style = { animationDelay: `${Math.min(index, 6) * 40}ms` }
         return item.href ? (
           <Link
@@ -731,6 +780,7 @@ export function StatStrip({
           </div>
         )
       })}
+      {extra}
     </div>
   )
 }

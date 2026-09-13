@@ -6,7 +6,7 @@ import { useSyncBusy } from '@/components/busy'
 import { useConfirm } from '@/components/confirm-dialog'
 import { useToast } from '@/components/toast'
 import { Button, Card, Field, Input, Notice, Textarea } from '@/components/ui'
-import { appendOptOutFooter } from '@/lib/opt-out-footer'
+import { Icon } from '@/components/icon'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { countUniqueRecipients, createCampaign, duplicateCampaign, updateCampaign, type CampaignState } from './actions'
 import {
@@ -16,7 +16,7 @@ import {
   MediaPicker,
   PublishCards,
   SenderPicker,
-  SummaryRow,
+  SummaryPills,
   WaPreview,
   WizardStepper,
 } from './campaign-wizard-ui'
@@ -30,9 +30,10 @@ import {
   type WizardStepId,
 } from './campaign-wizard-types'
 
-const DRAFT_KEY = 'wa.customer.campaign-wizard.v1'
+const DRAFT_PREFIX = 'wa.customer.campaign-wizard.v1'
 
 type DraftShape = {
+  step?: string
   name: string
   body: string
   mediaUrl: string
@@ -41,6 +42,21 @@ type DraftShape = {
   accounts: string[]
   startMode: 'draft' | 'schedule' | 'now'
   scheduledAt: string
+}
+
+function draftKey(orgId: string) {
+  return `${DRAFT_PREFIX}.${orgId}`
+}
+
+function readDraft(orgId: string) {
+  try {
+    const raw =
+      localStorage.getItem(draftKey(orgId)) ?? localStorage.getItem(DRAFT_PREFIX)
+    if (!raw) return null
+    return JSON.parse(raw) as DraftShape
+  } catch {
+    return null
+  }
 }
 
 function typeFromMime(mime: string): 'image' | 'video' | null {
@@ -89,6 +105,7 @@ export function CampaignWizard({
   const [uniqueCount, setUniqueCount] = useState<number | null>(null)
   const [counting, setCounting] = useState(false)
   const [dirty, setDirty] = useState(false)
+  const [ready, setReady] = useState(mode !== 'create')
   const formRef = useRef<HTMLFormElement>(null)
   const sendArmedRef = useRef(false)
   const allowSubmitRef = useRef(false)
@@ -98,6 +115,10 @@ export function CampaignWizard({
   const structureLocked = campaign?.status === 'running'
   const readOnly = campaign ? !['draft', 'paused', 'scheduled', 'running', 'stopped'].includes(campaign.status) : false
   const stepIndex = WIZARD_STEPS.findIndex((item) => item.id === step)
+  const enabledAccounts = useMemo(
+    () => shared.accounts.filter((item) => !item.disabled),
+    [shared.accounts],
+  )
 
   useSyncBusy(pending, 'Kampanya kaydediliyor…')
   useSyncBusy(uploading, 'Görsel yükleniyor…')
@@ -105,31 +126,44 @@ export function CampaignWizard({
   useEffect(() => {
     if (mode !== 'create' || restored.current) return
     restored.current = true
+    const urlStep = searchParams.get('adim')
     try {
-      const raw = localStorage.getItem(DRAFT_KEY)
-      if (!raw) return
-      const saved = JSON.parse(raw) as DraftShape
-      setName(saved.name ?? '')
-      setBody(saved.body ?? '')
-      if (initialMediaUrl) {
-        setMediaUrl(initialMediaUrl)
-        setMessageType('image')
-      } else {
-        setMediaUrl(saved.mediaUrl ?? '')
-        setMessageType(saved.messageType || 'text')
+      const saved = readDraft(shared.orgId)
+      if (saved) {
+        setName(saved.name ?? '')
+        setBody(saved.body ?? '')
+        if (initialMediaUrl) {
+          setMediaUrl(initialMediaUrl)
+          setMessageType('image')
+        } else {
+          setMediaUrl(saved.mediaUrl ?? '')
+          setMessageType(saved.messageType || 'text')
+        }
+        setSelectedLists(Array.isArray(saved.lists) ? saved.lists : [])
+        setSelectedAccounts(Array.isArray(saved.accounts) ? saved.accounts : [])
+        setStartMode(saved.startMode ?? 'draft')
+        setScheduledAt(saved.scheduledAt ?? '')
       }
-      setSelectedLists(saved.lists ?? [])
-      setSelectedAccounts(saved.accounts ?? [])
-      setStartMode(saved.startMode ?? 'draft')
-      setScheduledAt(saved.scheduledAt ?? '')
+      const fromUrl = urlStep ? parseWizardStep(urlStep) : null
+      const fromInitial = initialStep && initialStep !== 'kampanya' ? parseWizardStep(initialStep) : null
+      const fromSaved = saved?.step ? parseWizardStep(saved.step) : null
+      const next = fromUrl || fromInitial || fromSaved || 'kampanya'
+      setStep(next)
+      if (!urlStep && next !== 'kampanya') {
+        const params = new URLSearchParams(searchParams.toString())
+        params.set('adim', next)
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+      }
     } catch {
       /* ignore */
     }
-  }, [mode, initialMediaUrl])
+    setReady(true)
+  }, [mode, initialMediaUrl, initialStep, pathname, router, searchParams, shared.orgId])
 
   useEffect(() => {
-    if (mode !== 'create' || !dirty) return
+    if (mode !== 'create' || !ready) return
     const payload: DraftShape = {
+      step,
       name,
       body,
       mediaUrl,
@@ -139,8 +173,15 @@ export function CampaignWizard({
       startMode,
       scheduledAt,
     }
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(payload))
-  }, [mode, dirty, name, body, mediaUrl, messageType, selectedLists, selectedAccounts, startMode, scheduledAt])
+    localStorage.setItem(draftKey(shared.orgId), JSON.stringify(payload))
+  }, [mode, ready, step, name, body, mediaUrl, messageType, selectedLists, selectedAccounts, startMode, scheduledAt, shared.orgId])
+
+  useEffect(() => {
+    if (mode === 'create' && !ready) return
+    if (enabledAccounts.length !== 1) return
+    const only = enabledAccounts[0].id
+    setSelectedAccounts((current) => (current.length === 1 && current[0] === only ? current : [only]))
+  }, [enabledAccounts, mode, ready])
 
   useEffect(() => {
     const onLeave = (event: BeforeUnloadEvent) => {
@@ -160,12 +201,13 @@ export function CampaignWizard({
     if (state?.ok) {
       toast(state.ok, 'success')
       setDirty(false)
-      if (mode === 'create') localStorage.removeItem(DRAFT_KEY)
+      if (mode === 'create') localStorage.removeItem(draftKey(shared.orgId))
     }
-  }, [state?.error, state?.ok, toast, mode])
+  }, [state?.error, state?.ok, toast, mode, shared.orgId])
 
   useEffect(() => {
-    setStep(parseWizardStep(searchParams.get('adim')))
+    const fromUrl = searchParams.get('adim')
+    if (fromUrl) setStep(parseWizardStep(fromUrl))
   }, [searchParams])
 
   const go = (next: WizardStepId) => {
@@ -201,7 +243,7 @@ export function CampaignWizard({
       if (shared.lists.length === 0) return 'Önce Kişiler’den bir grup oluşturun.'
       if (selectedLists.length === 0) return 'En az bir kişi grubu seçin.'
     }
-    if (id === 'icerik' && !body.trim() && !mediaUrl) return 'Mesaj yazın veya görsel ekleyin.'
+    if (id === 'mesaj' && !body.trim() && !mediaUrl) return 'Mesaj yazın veya görsel ekleyin.'
     if (id === 'gonderen') {
       if (shared.accounts.filter((item) => !item.disabled).length === 0 && selectedAccounts.length === 0) {
         return 'Önce Hatlar’dan bir hat bağlayın.'
@@ -323,18 +365,13 @@ export function CampaignWizard({
 
   return (
     <Card className="overflow-visible">
-      <div className="px-4 pt-5 sm:px-5">
-        <h1 className="text-[22px] font-semibold tracking-[-0.03em]">
-          {mode === 'create' ? 'Yeni kampanya' : 'Kampanyayı düzenle'}
-        </h1>
-        <p className="mt-1 text-[13.5px] text-ink-muted">
-          {mode === 'create'
-            ? 'Birkaç adımda hazırlayın. Müşteriler kampanya adını görmez.'
-            : structureLocked
-              ? 'Bu kampanya şu anda gönderiliyor. Yaptığınız değişiklikler yalnızca henüz mesaj gönderilmemiş müşterilere uygulanacaktır.'
-              : 'Gönderilmiş mesajlar değişmez.'}
-        </p>
-      </div>
+      {mode === 'edit' && structureLocked ? (
+        <div className="px-4 pt-4 sm:px-5">
+          <Notice tone="warn">
+            Bu kampanya şu anda gönderiliyor. Değişiklikler yalnızca henüz mesaj gitmemiş kişilere uygulanır.
+          </Notice>
+        </div>
+      ) : null}
 
       <WizardStepper current={step} onJump={go} />
 
@@ -352,14 +389,14 @@ export function CampaignWizard({
             validateStep('yayinla') ||
             validateStep('kampanya') ||
             validateStep('alicilar') ||
-            validateStep('icerik') ||
+            validateStep('mesaj') ||
             validateStep('gonderen')
           if (error) {
             event.preventDefault()
             setHint(error)
             return
           }
-          if (mode === 'create') localStorage.removeItem(DRAFT_KEY)
+          if (mode === 'create') localStorage.removeItem(draftKey(shared.orgId))
           setDirty(false)
           if (startMode === 'now' && !sendArmedRef.current) {
             event.preventDefault()
@@ -408,17 +445,33 @@ export function CampaignWizard({
               label="Kampanya adı"
               hint="Müşterilere gösterilmez. Siz bulmak için kullanırsınız."
             >
-              <Input
-                name="name"
-                value={name}
-                onChange={(event) => {
-                  setName(event.target.value)
-                  mark()
-                }}
-                placeholder="Eylül Ayı %20 İndirim Kampanyası"
-                required
-                autoComplete="off"
-              />
+              <div className="relative">
+                <Input
+                  name="name"
+                  value={name}
+                  onChange={(event) => {
+                    setName(event.target.value)
+                    mark()
+                  }}
+                  placeholder="Eylül Ayı %20 İndirim Kampanyası"
+                  required
+                  autoComplete="off"
+                  className={name ? 'pr-10' : undefined}
+                />
+                {name ? (
+                  <button
+                    type="button"
+                    aria-label="Temizle"
+                    className="absolute right-1.5 top-1/2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-ink-faint hover:bg-surface-raised hover:text-ink"
+                    onClick={() => {
+                      setName('')
+                      mark()
+                    }}
+                  >
+                    <Icon name="close" className="size-3.5" />
+                  </button>
+                ) : null}
+              </div>
             </Field>
           ) : (
             <input type="hidden" name="name" value={name} />
@@ -440,48 +493,8 @@ export function CampaignWizard({
             />
           ) : null}
 
-          {step === 'icerik' ? (
-            <div className="space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-[13px] font-semibold text-ink-muted">Mesaj</p>
-                {shared.aiEnabled ? (
-                  <Button type="button" variant="accent" onClick={() => setAiOpen(true)}>
-                    AI ile Yaz
-                  </Button>
-                ) : null}
-              </div>
-              <Textarea
-                name="body"
-                rows={8}
-                value={body}
-                onChange={(event) => {
-                  setBody(event.target.value)
-                  mark()
-                }}
-                placeholder="Merhaba {{ad}}, bu ay mağazamızda özel bir indirim var."
-              />
-              <div className="flex flex-wrap items-center justify-between gap-2 text-[12px] text-ink-faint">
-                <span className="tabular">{body.length} / 4096</span>
-                <button
-                  type="button"
-                  className="font-medium text-accent underline underline-offset-2"
-                  onClick={() => {
-                    setBody((current) => appendOptOutFooter(current))
-                    mark()
-                  }}
-                >
-                  Çıkış satırı ekle
-                </button>
-              </div>
-              {body.trim() && shared.aiEnabled ? (
-                <AiRewriteBar
-                  currentMessage={body}
-                  onApply={(text) => {
-                    setBody(text)
-                    mark()
-                  }}
-                />
-              ) : null}
+          {step === 'gorsel' ? (
+            <div className="space-y-3">
               <MediaPicker
                 orgId={shared.orgId}
                 mediaUrl={mediaUrl}
@@ -504,6 +517,44 @@ export function CampaignWizard({
               />
               {uploadError ? <Notice tone="danger">{uploadError}</Notice> : null}
             </div>
+          ) : null}
+
+          {step === 'mesaj' ? (
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[13px] font-semibold text-ink-muted">
+                  Mesaj
+                  <span className="ml-2 font-normal tabular text-ink-faint">
+                    {body.length} / 4096
+                  </span>
+                </p>
+                {shared.aiEnabled ? (
+                  <Button type="button" variant="accent" onClick={() => setAiOpen(true)}>
+                    <Icon name="wand" className="size-3.5" />
+                    AI ile Yaz
+                  </Button>
+                ) : null}
+              </div>
+              <Textarea
+                name="body"
+                rows={8}
+                value={body}
+                onChange={(event) => {
+                  setBody(event.target.value)
+                  mark()
+                }}
+                placeholder="Merhaba {{ad}}, bu ay mağazamızda özel bir indirim var."
+              />
+              {body.trim() && shared.aiEnabled ? (
+                <AiRewriteBar
+                  currentMessage={body}
+                  onApply={(text) => {
+                    setBody(text)
+                    mark()
+                  }}
+                />
+              ) : null}
+            </div>
           ) : (
             <input type="hidden" name="body" value={body} />
           )}
@@ -514,6 +565,7 @@ export function CampaignWizard({
               selected={selectedAccounts}
               locked={structureLocked}
               onToggle={(id) => {
+                if (enabledAccounts.length === 1 && enabledAccounts[0].id === id) return
                 setSelectedAccounts((current) =>
                   current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
                 )
@@ -523,35 +575,45 @@ export function CampaignWizard({
           ) : null}
 
           {step === 'onizleme' ? (
-            <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_auto]">
-              <div className="rounded-md border border-hairline px-3">
-                <SummaryRow label="Kampanya" value={name || 'Adsız'} onEdit={() => go('kampanya')} />
-                <SummaryRow
-                  label="Alıcılar"
-                  value={
-                    uniqueCount
+            <div className="space-y-4">
+              <SummaryPills
+                items={[
+                  { label: 'Kampanya', value: name || 'Adsız', onEdit: () => go('kampanya') },
+                  {
+                    label: 'Alıcılar',
+                    value: uniqueCount
                       ? `${formatCount(uniqueCount)} müşteri`
-                      : `${selectedLists.length} grup`
-                  }
-                  onEdit={() => go('alicilar')}
-                />
-                <SummaryRow
-                  label="Gruplar"
-                  value={selectedListNames.join(', ') || 'Seçilmedi'}
-                  onEdit={() => go('alicilar')}
-                />
-                <SummaryRow
-                  label="Gönderen"
-                  value={`${selectedAccounts.length} WhatsApp hattı`}
-                  onEdit={() => go('gonderen')}
-                />
-                <SummaryRow
-                  label="İçerik"
-                  value={mediaUrl ? 'Görsel + Metin' : 'Metin'}
-                  onEdit={() => go('icerik')}
-                />
+                      : `${selectedLists.length} grup`,
+                    onEdit: () => go('alicilar'),
+                  },
+                  {
+                    label: 'Gruplar',
+                    value: selectedListNames.join(', ') || 'Seçilmedi',
+                    onEdit: () => go('alicilar'),
+                  },
+                  {
+                    label: 'Gönderen',
+                    value:
+                      enabledAccounts.length === 1
+                        ? enabledAccounts[0].label
+                        : `${selectedAccounts.length} WhatsApp hattı`,
+                    onEdit: () => go('gonderen'),
+                  },
+                  {
+                    label: 'Görsel',
+                    value: mediaUrl ? 'Eklendi' : 'Yok',
+                    onEdit: () => go('gorsel'),
+                  },
+                  {
+                    label: 'Mesaj',
+                    value: body.trim() ? 'Yazıldı' : 'Yazılmadı',
+                    onEdit: () => go('mesaj'),
+                  },
+                ]}
+              />
+              <div className="flex justify-center">
+                <WaPreview body={body} mediaUrl={mediaUrl || null} />
               </div>
-              <WaPreview body={body} mediaUrl={mediaUrl || null} />
             </div>
           ) : null}
 
@@ -586,11 +648,13 @@ export function CampaignWizard({
           {hint ? <Notice tone="warn">{hint}</Notice> : null}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Button type="button" disabled={pending || stepIndex === 0} onClick={goBack}>
+              <Icon name="back" className="size-4 shrink-0" />
               Geri
             </Button>
             {step !== 'yayinla' ? (
               <Button type="button" variant="accent" disabled={pending} onClick={goNext}>
                 İleri
+                <Icon name="back" className="size-4 shrink-0 rotate-180" />
               </Button>
             ) : (
               <Button
@@ -613,6 +677,7 @@ export function CampaignWizard({
         open={aiOpen}
         onClose={() => setAiOpen(false)}
         defaultTone={shared.brandTone}
+        initialBrief={body}
         onApply={(text) => {
           setBody(text)
           mark()

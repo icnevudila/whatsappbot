@@ -1,13 +1,10 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import {
   AccentLink,
   Card,
-  CardHeader,
   PageHeader,
   Pagination,
-  QuietLink,
 } from '@/components/ui'
 import { requireActiveOrg } from '@/lib/org'
 import {
@@ -19,8 +16,8 @@ import {
   totalPages,
 } from '@/lib/pagination'
 import { ListActions } from '../list-actions'
-import { AddToGroupForm } from './add-to-group-form'
 import { MemberActions, type MemberRow } from './member-actions'
+import { MembersPanelHeader } from './members-toolbar'
 
 export const dynamic = 'force-dynamic'
 
@@ -145,11 +142,21 @@ export default async function ContactListDetailPage({
     .filter((row): row is MemberRow => row !== null)
 
   const hasVerification = validCount > 0 || invalidCount > 0
+  const membersSubtitle =
+    statusFilter !== 'tum'
+      ? `${matchTotal} numara (${
+          statusFilter === 'var'
+            ? 'WhatsApp var'
+            : statusFilter === 'yok'
+              ? 'WhatsApp yok'
+              : 'Doğrulanmamış'
+        }) · Sayfa ${page}/${pages}`
+      : memberTotal === 0
+        ? 'Henüz yok'
+        : `Sayfa ${page}/${pages}`
 
   return (
     <>
-      <QuietLink href="/kisiler">← Gruplar</QuietLink>
-
       <PageHeader
         title={list.name}
         description={
@@ -157,120 +164,51 @@ export default async function ContactListDetailPage({
             ? `${memberTotal} numara · ${validCount} WhatsApp'ta var · ${invalidCount} yok${
                 unknownCount > 0 ? ` · ${unknownCount} doğrulanmamış` : ''
               }`
-            : `${memberTotal} numara — WhatsApp kontrolü için sağdaki “WhatsApp doğrula”yı tıklayın`
+            : `${memberTotal} numara — WhatsApp kontrolü için menüden “WhatsApp doğrula”yı tıklayın`
         }
+        backHref="/kisiler"
+        backLabel="Gruplar"
         action={
-          <div className="flex flex-wrap items-center gap-2">
-            <ListActions listId={list.id} currentName={list.name} />
-            <AccentLink href="/kisiler?gorunum=defter">Defter</AccentLink>
+          <div className="flex flex-wrap items-start justify-end gap-2">
+            <ListActions compact listId={list.id} currentName={list.name} />
             <AccentLink href="/kampanyalar/yeni">Kampanya</AccentLink>
           </div>
         }
       />
 
-      <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.85fr)]">
-        <Card>
-          <CardHeader
-            title="Üyeler"
-            subtitle={
-              statusFilter !== 'tum'
-                ? `${matchTotal} numara (${
-                    statusFilter === 'var'
-                      ? 'WhatsApp var'
-                      : statusFilter === 'yok'
-                        ? 'WhatsApp yok'
-                        : 'Doğrulanmamış'
-                  }) · Sayfa ${page}/${pages}`
-                : memberTotal === 0
-                  ? 'Henüz yok'
-                  : `Sayfa ${page}/${pages}`
-            }
-          />
+      <Card className="mt-3">
+        <MembersPanelHeader
+          listId={list.id}
+          statusFilter={statusFilter}
+          memberTotal={memberTotal}
+          validCount={validCount}
+          invalidCount={invalidCount}
+          unknownCount={unknownCount}
+          subtitle={membersSubtitle}
+        />
 
-          <div className="border-b border-hairline px-3.5 py-2 bg-canvas/40">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-[12px] font-semibold text-ink">WhatsApp Durumu:</span>
-              <div className="flex flex-wrap items-center gap-1.5">
-                <Link
-                  href={`/kisiler/${list.id}`}
-                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11.5px] font-medium transition-colors ${
-                    statusFilter === 'tum'
-                      ? 'bg-ink text-canvas font-bold'
-                      : 'border border-hairline bg-surface text-ink-muted hover:text-ink'
-                  }`}
-                >
-                  Tümü ({memberTotal})
-                </Link>
-                <Link
-                  href={`/kisiler/${list.id}?durum=var`}
-                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11.5px] font-medium transition-colors ${
-                    statusFilter === 'var'
-                      ? 'border border-ok bg-ok text-white font-bold'
-                      : 'border border-ok/35 bg-ok-soft text-ok hover:bg-ok/15'
-                  }`}
-                  title="WhatsApp hesabı olan numaralar"
-                >
-                  <span aria-hidden>✓</span>
-                  <span>WhatsApp'ta Var ({validCount})</span>
-                </Link>
-                <Link
-                  href={`/kisiler/${list.id}?durum=yok`}
-                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11.5px] font-medium transition-colors ${
-                    statusFilter === 'yok'
-                      ? 'border border-danger bg-danger text-white font-bold'
-                      : 'border border-danger/35 bg-danger/10 text-danger hover:bg-danger/20'
-                  }`}
-                  title="WhatsApp hesabı olmayan numaralar"
-                >
-                  <span aria-hidden>×</span>
-                  <span>WhatsApp'ta Yok ({invalidCount})</span>
-                </Link>
-                {unknownCount > 0 ? (
-                  <Link
-                    href={`/kisiler/${list.id}?durum=bekleyen`}
-                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11.5px] font-medium transition-colors ${
-                      statusFilter === 'bekleyen'
-                        ? 'bg-ink-muted text-canvas font-bold'
-                        : 'border border-hairline bg-surface text-ink-muted hover:text-ink'
-                    }`}
-                    title="Henüz kontrol edilmemiş numaralar"
-                  >
-                    <span aria-hidden>?</span>
-                    <span>Doğrulanmamış ({unknownCount})</span>
-                  </Link>
-                ) : null}
-              </div>
-            </div>
-          </div>
-
-          <MemberActions listId={list.id} members={members} totalCount={matchTotal} />
-          <Pagination
-            page={page}
-            totalPages={pages}
-            label={
-              statusFilter !== 'tum'
-                ? `${matchTotal} numara (${
-                    statusFilter === 'var'
-                      ? 'WhatsApp var'
-                      : statusFilter === 'yok'
-                        ? 'WhatsApp yok'
-                        : 'Doğrulanmamış'
-                  })`
-                : `${memberTotal} numara`
-            }
-            hrefForPage={(p) =>
-              buildPageHref(`/kisiler/${list.id}`, p, {
-                durum: statusFilter !== 'tum' ? statusFilter : undefined,
-              })
-            }
-          />
-        </Card>
-
-        <Card>
-          <CardHeader title="Numara ekle" subtitle="Excel veya yapıştır" />
-          <AddToGroupForm listId={list.id} />
-        </Card>
-      </div>
+        <MemberActions listId={list.id} members={members} totalCount={matchTotal} />
+        <Pagination
+          page={page}
+          totalPages={pages}
+          label={
+            statusFilter !== 'tum'
+              ? `${matchTotal} numara (${
+                  statusFilter === 'var'
+                    ? 'WhatsApp var'
+                    : statusFilter === 'yok'
+                      ? 'WhatsApp yok'
+                      : 'Doğrulanmamış'
+                })`
+              : `${memberTotal} numara`
+          }
+          hrefForPage={(p) =>
+            buildPageHref(`/kisiler/${list.id}`, p, {
+              durum: statusFilter !== 'tum' ? statusFilter : undefined,
+            })
+          }
+        />
+      </Card>
     </>
   )
 }

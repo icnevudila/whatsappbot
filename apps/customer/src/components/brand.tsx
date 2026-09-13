@@ -1,10 +1,13 @@
 /**
- * Filo marka isareti.
+ * Mesajify marka isareti.
  *
  * Bicim: giderek kisalan uc yatay cubuk (bosalan gonderim kuyrugu) ve
  * ustunde tek dolu nokta (aktif hat). Nokta kobalt accent: pilot-ui / Messora
  * marka aksaniyla ayni dil.
  */
+export const BRAND_NAME = 'Mesajify'
+export const BRAND_TAGLINE = 'Çoklu WhatsApp hattından toplu kampanya gönderimi'
+
 export function LogoMark({ className = 'size-4' }: { className?: string }) {
   return (
     <svg viewBox="0 0 16 16" fill="none" aria-hidden className={className}>
@@ -20,11 +23,7 @@ export function Wordmark({ className = '' }: { className?: string }) {
   return (
     <span className={`inline-flex items-center gap-2 ${className}`}>
       <LogoMark />
-      <span className="text-[13.5px] font-semibold tracking-[-0.02em]">Filo</span>
+      <span className="text-[13.5px] font-semibold tracking-[-0.02em]">{BRAND_NAME}</span>
     </span>
   )
 }
-
-/** Tek yerden isim: degistirmek istendiginde yalnizca burasi degisir. */
-export const BRAND_NAME = 'Filo'
-export const BRAND_TAGLINE = 'Çoklu WhatsApp hattından toplu kampanya gönderimi'

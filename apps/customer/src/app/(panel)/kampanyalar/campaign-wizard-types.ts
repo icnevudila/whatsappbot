@@ -3,7 +3,8 @@ import type { BrandKitOption } from '@/components/ai-image'
 export const WIZARD_STEPS = [
   { id: 'kampanya', label: 'Kampanya' },
   { id: 'alicilar', label: 'Alıcılar' },
-  { id: 'icerik', label: 'İçerik' },
+  { id: 'gorsel', label: 'Görsel' },
+  { id: 'mesaj', label: 'Mesaj' },
   { id: 'gonderen', label: 'Gönderen' },
   { id: 'onizleme', label: 'Önizleme' },
   { id: 'yayinla', label: 'Yayınla' },
@@ -62,6 +63,7 @@ export type WizardSharedProps = {
 }
 
 export function parseWizardStep(raw: string | null | undefined): WizardStepId {
+  if (raw === 'icerik') return 'mesaj'
   return WIZARD_STEPS.some((step) => step.id === raw) ? (raw as WizardStepId) : 'kampanya'
 }
 

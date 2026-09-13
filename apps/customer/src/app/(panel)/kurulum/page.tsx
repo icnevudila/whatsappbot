@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { PageHeader, QuietLink } from '@/components/ui'
+import { PageHeader } from '@/components/ui'
 import { requireActiveOrg } from '@/lib/org'
 import { getSetupProgress } from '@/lib/setup-progress'
 import { SetupGuideCard } from '../setup-banner'
@@ -35,7 +35,8 @@ export default async function SetupPage() {
       <PageHeader
         title="Başlangıç"
         description={`${org.name} · gönderime hazır olmak için 2 adım`}
-        action={<QuietLink href="/ozet">Ana sayfa</QuietLink>}
+        backHref="/ozet"
+        backLabel="Özet"
       />
       <SetupGuideCard progress={progress} variant="page" />
       <p className="mt-3 text-center text-[12px] text-ink-faint">Takılırsan destek@filo.app</p>

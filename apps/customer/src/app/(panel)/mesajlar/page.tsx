@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { AccentLink, PageHeader } from '@/components/ui'
+import { PageHeader } from '@/components/ui'
 import { createT } from '@/lib/i18n'
 import { getDictionary } from '@/lib/i18n/server'
 import { requireActiveOrg } from '@/lib/org'
@@ -221,8 +221,7 @@ export default async function MessagesPage({
     <>
       <PageHeader
         title={t('pages.mesajlarTitle')}
-        description="Sohbetlerde gelen ve giden birlikte. Cevapsız = yazdınız, henüz dönüş yok."
-        action={<AccentLink href="/ayarlar/engellenenler">{t('nav.karaListe')}</AccentLink>}
+        description="Tüm WhatsApp mesajlarınız tek panelde. Gelen, giden ve cevapsız sohbetler bir arada."
       />
 
       <MessagesBoard

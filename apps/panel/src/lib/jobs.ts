@@ -39,7 +39,7 @@ export async function enqueueJob<T extends JobType>(options: {
         return { id: null, error: gateError.message }
       }
       const gateObj = gate as { ok?: boolean; reason?: string; used?: number; quota?: number } | null
-      if (gateObj && gateObj.ok === false) {
+      if (gateObj && gateObj.ok === false && gateObj.reason !== 'send_window') {
         if (gateObj.reason === 'suspended') {
           return { id: null, error: 'İşletme askıda. Gönderim kapalı.' }
         }

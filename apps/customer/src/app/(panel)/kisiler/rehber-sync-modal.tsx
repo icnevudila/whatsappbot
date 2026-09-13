@@ -3,6 +3,8 @@
 import { useEffect, useId, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { AccentLink, Button, Field, Notice, Select } from '@/components/ui'
+import { WhatsAppGlyph } from '@/components/wa-mark'
+import { useConfirm } from '@/components/confirm-dialog'
 import { useSyncBusy } from '@/components/busy'
 import { useToast } from '@/components/toast'
 import {
@@ -40,6 +42,7 @@ export function RehberSyncButton({
   accounts: RehberAccountOption[]
   className?: string
 }) {
+  const confirm = useConfirm()
   const [open, setOpen] = useState(false)
   const connected = accounts.filter((a) => a.status === 'connected')
 
@@ -47,20 +50,39 @@ export function RehberSyncButton({
     <>
       <Button
         type="button"
-        variant="accent"
-        className={className}
+        className={[
+          '!border-0 !bg-ok !text-white shadow-sm hover:!bg-ok-dim disabled:!bg-hairline disabled:!text-ink-faint disabled:shadow-none',
+          className,
+        ]
+          .filter(Boolean)
+          .join(' ')}
         disabled={connected.length === 0}
         title={
           connected.length === 0
             ? 'Önce Hatlar’dan bağlı bir hat gerekir'
             : 'WhatsApp rehberini panele çeker — canlı izlersin'
         }
-        onClick={() => setOpen(true)}
+        onClick={async () => {
+          const ok = await confirm({
+            title: 'Rehberi içeri aktar?',
+            description:
+              'WhatsApp rehberindeki kişi ve sohbet numaraları panele çekilir. Onaylıyor musun?',
+            confirmLabel: 'İçeri aktar',
+            cancelLabel: 'Vazgeç',
+            tone: 'accent',
+          })
+          if (ok) setOpen(true)
+        }}
       >
+        <WhatsAppGlyph />
         WhatsApp rehberinden çek
       </Button>
       {open ? (
-        <RehberSyncModal accounts={connected} onClose={() => setOpen(false)} />
+        <RehberSyncModal
+          accounts={connected}
+          autoStart={connected.length === 1}
+          onClose={() => setOpen(false)}
+        />
       ) : null}
     </>
   )
@@ -69,10 +91,12 @@ export function RehberSyncButton({
 export function RehberSyncModal({
   accounts,
   initialAccountId,
+  autoStart = false,
   onClose,
 }: {
   accounts: RehberAccountOption[]
   initialAccountId?: string
+  autoStart?: boolean
   onClose: () => void
 }) {
   const router = useRouter()
@@ -96,7 +120,7 @@ export function RehberSyncModal({
       : connected[0]?.id ?? ''
 
   const [accountId, setAccountId] = useState(defaultId)
-  const [phase, setPhase] = useState<Phase>('pick')
+  const [phase, setPhase] = useState<Phase>(autoStart && defaultId ? 'running' : 'pick')
   const [statusLine, setStatusLine] = useState('WhatsApp’tan kişiler çekiliyor…')
   const [error, setError] = useState<string | null>(null)
   const [items, setItems] = useState<RehberPreviewItem[]>([])
@@ -318,6 +342,13 @@ export function RehberSyncModal({
   }
 
   useEffect(() => {
+    if (!autoStart || !accountId) return
+    runPull(accountId)
+    // Tek sefer: startedRef tekrar çağrıyı keser.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStart, accountId])
+
+  useEffect(() => {
     if ((phase !== 'running' && phase !== 'done') || !feedRef.current) return
     feedRef.current.scrollTop = 0
   }, [items[0]?.phone, phase])
@@ -512,7 +543,7 @@ export function RehberSyncModal({
                     router.push('/kisiler?gorunum=defter')
                   }}
                 >
-                  Deftere git
+                  Kişilere git
                 </Button>
               )}
             </>

@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Input, Notice } from '@/components/ui'
+import { Icon } from '@/components/icon'
 import { useConfirm } from '@/components/confirm-dialog'
 import { useSyncBusy } from '@/components/busy'
 import { useToast } from '@/components/toast'
@@ -29,6 +30,8 @@ export function ListActions({
   const [ok, setOk] = useState<string | null>(null)
   const [renaming, setRenaming] = useState(false)
   const [nameDraft, setNameDraft] = useState(currentName ?? '')
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef(null)
   useSyncBusy(
     pending,
     busy === 'delete'
@@ -37,6 +40,22 @@ export function ListActions({
         ? 'Ad güncelleniyor…'
         : 'Liste doğrulanıyor…',
   )
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const onDoc = (event) => {
+      if (!menuRef.current?.contains(event.target)) setMenuOpen(false)
+    }
+    const onKey = (event) => {
+      if (event.key === 'Escape') setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDoc)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [menuOpen])
 
   const runDelete = (deleteContactsToo: boolean) => {
     setError(null)
@@ -110,6 +129,20 @@ export function ListActions({
     })
   }
 
+  const askDeleteCompact = () => {
+    void (async () => {
+      const okDelete = await confirm({
+        title: t('confirm.deleteListTitle'),
+        description: 'Grup kaldırılır. Numaralar kişilerde kalır.',
+        confirmLabel: 'Sil',
+        cancelLabel: t('common.cancel'),
+        tone: 'danger',
+      })
+      if (!okDelete) return
+      runDelete(false)
+    })()
+  }
+
   const deleteButtons = (
     <Button
       variant="danger"
@@ -142,20 +175,86 @@ export function ListActions({
   )
 
   if (compact) {
-    return (
-      <div className="space-y-1.5">
-        <div className="flex flex-wrap items-center justify-end gap-1">
-          <Button
-            onClick={runVerify}
-            disabled={pending}
-            title="Bağlı hat gerekir — gruptaki numaraları WhatsApp’ta kontrol eder"
-          >
-            {busy === 'verify' ? '…' : 'WhatsApp doğrula'}
+    if (renaming) {
+      return (
+        <div className="flex flex-wrap items-center justify-end gap-1.5">
+          <Input
+            value={nameDraft}
+            onChange={(e) => setNameDraft(e.target.value)}
+            className="h-8 w-[148px]"
+            maxLength={120}
+            aria-label="Grup adı"
+          />
+          <Button variant="accent" disabled={pending} onClick={runRename}>
+            Kaydet
           </Button>
-          {deleteButtons}
+          <Button disabled={pending} onClick={() => setRenaming(false)}>
+            Vazgeç
+          </Button>
         </div>
-        {error ? <Notice tone="danger">{error}</Notice> : null}
-        {ok && !error ? <Notice tone="accent">{ok}</Notice> : null}
+      )
+    }
+
+    return (
+      <div className="relative shrink-0" ref={menuRef}>
+        <button
+          type="button"
+          aria-label="Grup işlemleri"
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          disabled={pending}
+          onClick={() => setMenuOpen((value) => !value)}
+          className="inline-flex size-8 items-center justify-center rounded-full border border-hairline bg-surface text-ink hover:bg-canvas disabled:opacity-50"
+        >
+          <Icon name="ellipsis" className="size-4" />
+        </button>
+        {menuOpen ? (
+          <div
+            role="menu"
+            className="absolute right-0 z-30 mt-1 min-w-[11.5rem] rounded-md border border-hairline bg-surface p-1 shadow-[var(--shadow-md)]"
+          >
+            {currentName != null ? (
+              <button
+                type="button"
+                role="menuitem"
+                disabled={pending}
+                className="flex w-full items-center rounded px-2.5 py-2 text-left text-[13px] font-medium text-ink hover:bg-canvas disabled:opacity-50"
+                onClick={() => {
+                  setMenuOpen(false)
+                  setNameDraft(currentName)
+                  setRenaming(true)
+                }}
+              >
+                Adı değiştir
+              </button>
+            ) : null}
+            <button
+              type="button"
+              role="menuitem"
+              disabled={pending}
+              title="Bağlı hat gerekir — gruptaki numaraları WhatsApp’ta kontrol eder"
+              className="flex w-full items-center rounded px-2.5 py-2 text-left text-[13px] font-medium text-ink hover:bg-canvas disabled:opacity-50"
+              onClick={() => {
+                setMenuOpen(false)
+                runVerify()
+              }}
+            >
+              {busy === 'verify' ? 'Doğrulanıyor…' : 'WhatsApp doğrula'}
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              disabled={pending}
+              className="flex w-full items-center rounded px-2.5 py-2 text-left text-[13px] font-medium text-danger hover:bg-canvas disabled:opacity-50"
+              onClick={() => {
+                setMenuOpen(false)
+                askDeleteCompact()
+              }}
+            >
+              {busy === 'delete' ? 'Siliniyor…' : 'Sil'}
+            </button>
+          </div>
+        ) : null}
       </div>
     )
   }

@@ -273,6 +273,102 @@ export async function importContactChunk(options: {
   }
 }
 
+export async function listContactGroups(): Promise<{ id: string; name: string }[]> {
+  try {
+    const { org, supabase } = await requireActiveOrg()
+    const { data } = await supabase
+      .from('contact_lists')
+      .select('id, name')
+      .eq('org_id', org.id)
+      .neq('source', 'quick_send')
+      .order('created_at', { ascending: false })
+    return data ?? []
+  } catch {
+    return []
+  }
+}
+
+export async function createManualContact(input: {
+  name: string
+  phone: string
+  listId: string
+}): Promise<{ error?: string; ok?: string }> {
+  const name = String(input.name ?? '').trim().slice(0, 120)
+  const listId = String(input.listId ?? '').trim()
+  const phone = toE164(String(input.phone ?? ''))
+
+  if (!name || name.length < 2) return { error: 'Kişiye bir ad verin.' }
+  if (!phone) return { error: 'Geçerli bir cep numarası girin.' }
+  if (!listId) return { error: 'Grup seçin.' }
+
+  try {
+    const { userId, org, supabase } = await requireActiveOrg()
+    const { data: list } = await supabase
+      .from('contact_lists')
+      .select('id')
+      .eq('id', listId)
+      .eq('org_id', org.id)
+      .maybeSingle()
+    if (!list) return { error: 'Grup bulunamadı.' }
+
+    const { error: contactError } = await supabase.from('contacts').upsert(
+      {
+        org_id: org.id,
+        created_by: userId,
+        phone_e164: phone,
+        name,
+        source: 'manual' as const,
+      },
+      { onConflict: 'org_id,phone_e164' },
+    )
+    if (contactError) return { error: contactError.message }
+
+    const { data: contact, error: resolveError } = await supabase
+      .from('contacts')
+      .select('id')
+      .eq('org_id', org.id)
+      .eq('phone_e164', phone)
+      .maybeSingle()
+    if (resolveError) return { error: resolveError.message }
+    if (!contact) return { error: 'Kişi kaydedilemedi.' }
+
+    const { error: memberError } = await supabase.from('contact_list_members').upsert(
+      {
+        org_id: org.id,
+        created_by: userId,
+        list_id: listId,
+        contact_id: contact.id,
+      },
+      { onConflict: 'list_id,contact_id', ignoreDuplicates: true },
+    )
+    if (memberError) return { error: memberError.message }
+
+    const { count } = await supabase
+      .from('contact_list_members')
+      .select('contact_id', { count: 'exact', head: true })
+      .eq('list_id', listId)
+      .eq('org_id', org.id)
+
+    await supabase
+      .from('contact_lists')
+      .update({ contact_count: count ?? 0 })
+      .eq('id', listId)
+      .eq('org_id', org.id)
+
+    await enqueueJob({
+      type: 'contacts.verify',
+      payload: { list_id: listId },
+      priority: 50,
+    })
+
+    revalidatePath('/kisiler')
+    revalidatePath(`/kisiler/${listId}`)
+    return { ok: `${name} gruba eklendi.` }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
+  }
+}
+
 export async function verifyList(
   listId: string,
 ): Promise<{ error?: string; ok?: string; jobId?: string }> {
@@ -648,135 +744,149 @@ export async function removeMember(
   return {}
 }
 
-export type PhoneCheckResult = {
-  error?: string
-  /** Bağlı hat yoksa UI Hatlar’a yönlendirebilir. */
-  code?: 'no_line' | 'invalid_phone' | 'timeout' | 'failed'
-  phone_e164?: string
-  exists?: boolean
+const MAX_LIST_REQUEST_PLACES = 100
+
+export async function listListRequests() {
+  try {
+    const { org, supabase } = await requireActiveOrg()
+    const { data, error } = await supabase
+      .from('list_requests')
+      .select('id, kind, status, category, address, locations, radius_km, nationwide, contact_count, created_at')
+      .eq('org_id', org.id)
+      .order('created_at', { ascending: false })
+      .limit(80)
+    if (error) return { error: error.message, items: [] }
+    return { items: data ?? [] }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.', items: [] }
+  }
 }
 
-function friendlyCheckError(raw: string | null | undefined): string {
-  const text = (raw ?? '').trim()
-  if (!text) return 'Kontrol başarısız. Bağlı hattı ve servisi kontrol edip tekrar deneyin.'
-  const lower = text.toLocaleLowerCase('tr-TR')
-  if (lower.includes('bagli') || lower.includes('bağlı') || lower.includes('hesabi') || lower.includes('hesabı')) {
-    return 'Kontrol için bağlı bir WhatsApp hattı gerekli. Hatlar’dan oturumu açın.'
+function parsePlaces(raw: unknown) {
+  if (!Array.isArray(raw)) return { error: 'İl veya ilçe seçin.' }
+  if (raw.length < 1) return { error: 'En az bir il veya ilçe ekleyin.' }
+  if (raw.length > MAX_LIST_REQUEST_PLACES) {
+    return { error: `En fazla ${MAX_LIST_REQUEST_PLACES} il / ilçe seçebilirsiniz.` }
   }
-  if (lower.includes('dogrulama') || lower.includes('doğrulama') || lower.includes('oturum')) {
-    return 'Doğrulama sonucu alınamadı. Hat bağlantısı düşmüş olabilir; tekrar deneyin.'
+
+  const seen = new Set()
+  const places = []
+  for (const row of raw as {
+    type?: string
+    province_id?: number
+    province_name?: string
+    district_id?: number
+    district_name?: string
+  }[]) {
+    if (!row || (row.type !== 'province' && row.type !== 'district')) {
+      return { error: 'Geçersiz yer seçimi.' }
+    }
+    const provinceId = Number(row.province_id)
+    const provinceName = String(row.province_name ?? '').trim()
+    if (!Number.isInteger(provinceId) || provinceId < 1 || !provinceName) {
+      return { error: 'Geçersiz il seçimi.' }
+    }
+    if (row.type === 'province') {
+      const key = `p:${provinceId}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      places.push({ type: 'province', province_id: provinceId, province_name: provinceName })
+      continue
+    }
+    const districtId = Number(row.district_id)
+    const districtName = String(row.district_name ?? '').trim()
+    if (!Number.isInteger(districtId) || districtId < 1 || !districtName) {
+      return { error: 'Geçersiz ilçe seçimi.' }
+    }
+    const key = `d:${districtId}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    places.push({
+      type: 'district',
+      province_id: provinceId,
+      province_name: provinceName,
+      district_id: districtId,
+      district_name: districtName,
+    })
   }
-  return text
+  if (places.length < 1) return { error: 'En az bir il veya ilçe ekleyin.' }
+  return { places }
 }
 
-/**
- * Tek numara WhatsApp kontrolu: isi kuyruga yazar, worker onWhatsApp sonucunu bekler.
- * Listeye zorla eklemez; defterde varsa wa_status guncellenir.
- */
-export async function checkWhatsAppPhone(rawPhone: string): Promise<PhoneCheckResult> {
-  const trimmed = rawPhone.trim()
-  if (!trimmed) {
-    return {
-      error: 'Numara girin. Örnek: 0532 123 45 67 veya +905321234567',
-      code: 'invalid_phone',
-    }
-  }
+export async function createListRequest(input: {
+  kind: string
+  category?: string
+  address?: string
+  radiusKm?: number
+  nationwide?: boolean
+  locations?: unknown
+}): Promise<{ error?: string; ok?: string; id?: string }> {
+  const kind = input?.kind === 'nearby' ? 'nearby' : input?.kind === 'province_district' ? 'province_district' : ''
+  if (!kind) return { error: 'Talep türü seçin.' }
 
-  const phone = toE164(trimmed)
-  if (!phone) {
-    return {
-      error: 'Geçerli numara girin. Örnek: 0532 123 45 67 veya +905321234567',
-      code: 'invalid_phone',
-    }
-  }
-
-  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let orgId: string
+  let userId: string
   let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
   try {
-    ;({ org, supabase } = await requireActiveOrg())
+    ;({ org: { id: orgId }, userId, supabase } = await requireActiveOrg())
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
   }
 
-  const { count: liveCount, error: liveError } = await supabase
-    .from('accounts')
-    .select('id', { count: 'exact', head: true })
-    .eq('org_id', org.id)
-    .eq('status', 'connected')
-
-  if (liveError) {
-    return { error: liveError.message, code: 'failed' }
+  const row: {
+    org_id: string
+    created_by: string
+    kind: 'province_district' | 'nearby'
+    category?: string | null
+    address?: string | null
+    radius_km?: number | null
+    nationwide?: boolean
+    locations?: ReturnType<typeof parsePlaces>['places']
+  } = {
+    org_id: orgId,
+    created_by: userId,
+    kind,
   }
 
-  if (!liveCount) {
-    return {
-      error: 'Kontrol için bağlı bir WhatsApp hattı gerekli. Hatlar’dan bir hat bağlayın.',
-      code: 'no_line',
-      phone_e164: phone,
+  if (kind === 'province_district') {
+    const category = String(input.category ?? '').trim()
+    if (category.length < 2) return { error: 'Kategori yazın (ör. restoran, eczane).' }
+    if (category.length > 160) return { error: 'Kategori en fazla 160 karakter.' }
+    const nationwide = Boolean(input.nationwide)
+    row.category = category
+    row.address = null
+    row.radius_km = null
+    row.nationwide = nationwide
+    if (nationwide) {
+      row.locations = []
+    } else {
+      const parsed = parsePlaces(input.locations)
+      if (parsed.error || !parsed.places) return { error: parsed.error ?? 'İl veya ilçe seçin.' }
+      row.locations = parsed.places
     }
-  }
-
-  const { id, error } = await enqueueJob({
-    type: 'contacts.check_phone',
-    payload: { phone_e164: phone },
-    priority: 10,
-  })
-  if (error || !id) {
-    return { error: error ?? 'Kontrol işi oluşturulamadı.', code: 'failed', phone_e164: phone }
-  }
-
-  const numericId = Number(id)
-  if (!Number.isFinite(numericId)) {
-    return { error: 'Kontrol işi oluşturulamadı.', code: 'failed', phone_e164: phone }
-  }
-
-  const deadline = Date.now() + 25_000
-  while (Date.now() < deadline) {
-    await new Promise((resolve) => setTimeout(resolve, 400))
-
-    const { data: job, error: pollError } = await supabase
-      .from('jobs')
-      .select('status, result, error')
-      .eq('id', numericId)
-      .eq('org_id', org.id)
-      .eq('type', 'contacts.check_phone')
-      .maybeSingle()
-
-    if (pollError) {
-      return { error: pollError.message, code: 'failed', phone_e164: phone }
+  } else {
+    const address = String(input.address ?? '').trim()
+    if (address.length < 8) return { error: 'Açık adresi yazın.' }
+    if (address.length > 1000) return { error: 'Adres en fazla 1000 karakter.' }
+    const radiusKm = Number(input.radiusKm)
+    if (!Number.isInteger(radiusKm) || radiusKm < 1 || radiusKm > 5) {
+      return { error: 'Çevre mesafesini 1–5 km seçin.' }
     }
-
-    if (!job) continue
-
-    if (job.status === 'failed' || job.status === 'cancelled') {
-      return {
-        error: friendlyCheckError(job.error),
-        code: 'failed',
-        phone_e164: phone,
-      }
-    }
-
-    if (job.status === 'done') {
-      const result = (job.result ?? {}) as { exists?: boolean; phone_e164?: string }
-      if (typeof result.exists !== 'boolean') {
-        return {
-          error: 'Kontrol sonucu okunamadı. Birkaç saniye sonra tekrar deneyin.',
-          code: 'failed',
-          phone_e164: phone,
-        }
-      }
-      revalidatePath('/kisiler')
-      return {
-        phone_e164: result.phone_e164 ?? phone,
-        exists: result.exists,
-      }
-    }
+    row.category = null
+    row.address = address
+    row.radius_km = radiusKm
+    row.nationwide = false
+    row.locations = []
   }
 
-  return {
-    error: 'Kontrol zaman aşımına uğradı. Servis yoğun olabilir; birkaç saniye sonra tekrar deneyin.',
-    code: 'timeout',
-    phone_e164: phone,
-  }
+  const { data, error } = await supabase
+    .from('list_requests')
+    .insert(row)
+    .select('id')
+    .maybeSingle()
+
+  if (error) return { error: error.message }
+  revalidatePath('/kisiler')
+  return { ok: 'Talep alındı.', id: data?.id }
 }
 

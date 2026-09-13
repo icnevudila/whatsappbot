@@ -21,16 +21,19 @@ export function OrgSwitcher({
   orgs,
   activeOrgId,
   compact = false,
+  variant = 'default',
 }: {
   orgs: OrgOption[]
   activeOrgId: string
   compact?: boolean
+  variant?: 'default' | 'header'
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
   const active = orgs.find((org) => org.id === activeOrgId) ?? orgs[0]
+  const canSwitch = orgs.length > 1
 
   const onSwitch = (orgId: string) => {
     if (orgId === activeOrgId) return
@@ -45,7 +48,58 @@ export function OrgSwitcher({
     })
   }
 
-  if (orgs.length <= 1) {
+  if (variant === 'header') {
+    const typeClass =
+      'truncate text-[13.5px] font-semibold tracking-[-0.02em] text-ink'
+    if (!canSwitch) {
+      return (
+        <p className={`${typeClass} text-right`} title={active?.name}>
+          {active?.name ?? '—'}
+        </p>
+      )
+    }
+
+    return (
+      <div className="min-w-0">
+        <div className="relative min-w-0">
+          <select
+            className={`w-full min-w-0 appearance-none bg-transparent py-0.5 pr-5 text-right focus:outline-none disabled:opacity-60 ${typeClass}`}
+            value={activeOrgId}
+            disabled={pending}
+            aria-label="İşletme seç"
+            onChange={(event) => onSwitch(event.target.value)}
+          >
+            {orgs.map((org) => (
+              <option key={org.id} value={org.id}>
+                {org.name}
+              </option>
+            ))}
+          </select>
+          <span
+            className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-[10px] text-ink-faint"
+            aria-hidden
+          >
+            ▾
+          </span>
+        </div>
+        {error ? <p className="mt-0.5 truncate text-right text-[11px] text-danger">{error}</p> : null}
+      </div>
+    )
+  }
+
+  if (!canSwitch) {
+    if (compact) {
+      return (
+        <div className="space-y-1.5">
+          <span className="block text-[10.5px] font-medium tracking-wide text-ink-faint uppercase">
+            İşletme
+          </span>
+          <p className="truncate text-[13px] font-medium text-ink" title={active?.name}>
+            {active?.name ?? '—'}
+          </p>
+        </div>
+      )
+    }
     return (
       <div className="flex min-w-0 items-baseline gap-2">
         <p className="truncate text-[13px] font-medium text-ink-soft" title={active?.name}>

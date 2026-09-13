@@ -24,6 +24,15 @@ const paths = {
   logout: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17l5-5-5-5 M21 12H9',
   trash: 'M4 7h16 M10 11v6 M14 11v6 M6 7l1 14h10l1-14 M9 7V4h6v3',
   refresh: 'M21 12a9 9 0 1 1-2.6-6.3 M21 3v6h-6',
+  edit: 'M12 20h9 M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z',
+  wand: 'M15 4V2 M15 16v-2 M8 9h2 M20 9h2 M18 12l1.5 1.5 M15 9h.01 M18 6l1.5-1.5 M3 21l9-9 M12 6 10.5 4.5',
+  tune: 'M4 21v-7 M4 10V3 M12 21v-9 M12 8V3 M20 21v-5 M20 12V3 M1 14h6 M9 8h6 M17 16h6',
+  file: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6',
+  clock: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20 M12 6v6l4 2',
+  filter: 'M3 5h18l-7 8v5l-4 2v-7z',
+  search: 'M21 21l-4.35-4.35 M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16z',
+  plus: 'M12 5v14 M5 12h14',
+  image: 'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z M11 9a2 2 0 1 1-4 0 2 2 0 0 1 4 0 M21 15l-3.1-3.1a2 2 0 0 0-2.8 0L6 21',
 } as const
 
 export type IconName = keyof typeof paths

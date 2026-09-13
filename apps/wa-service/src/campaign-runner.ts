@@ -222,7 +222,7 @@ export async function reconcileCampaignTargets(
 export async function stopCampaign(campaignId: string, reason: string): Promise<void> {
   await query(
     `update public.campaigns
-        set status = 'stopped', stop_reason = $2, updated_at = now()
+        set status = 'stopped', stop_reason = $2, wait_reason = null, updated_at = now()
       where id = $1 and status in ('running', 'paused', 'scheduled')`,
     [campaignId, reason],
   )
@@ -235,11 +235,63 @@ async function pauseCampaign(campaignId: string, reason: string): Promise<void> 
         set status = 'paused',
             paused_at = now(),
             stop_reason = $2,
+            wait_reason = null,
             updated_at = now()
       where id = $1 and status = 'running'`,
     [campaignId, reason],
   )
   log.warn({ campaignId, reason }, 'Kampanya duraklatildi (canli oturum yok)')
+}
+
+async function setWaitReason(campaignId: string, reason: string | null): Promise<void> {
+  await query(
+    `update public.campaigns
+        set wait_reason = $2,
+            updated_at = now()
+      where id = $1::uuid
+        and status = 'running'
+        and wait_reason is distinct from $2`,
+    [campaignId, reason],
+  )
+}
+
+function diagnoseIdleWait(accounts: CampaignAccountRow[], campaign: CampaignRow): string {
+  const usable = accounts.filter((account) => account.enabled && !account.is_locked)
+  const live = usable.filter((account) => sessionManager.get(account.account_id)?.isLive)
+  if (usable.length === 0) {
+    return 'Gönderim için uygun hesap kalmadı (kilitli veya kapalı).'
+  }
+  if (live.length === 0) {
+    return 'Canlı WhatsApp oturumu bekleniyor — hat bağlantısını kontrol edin.'
+  }
+
+  const notReachout = live.filter(
+    (account) =>
+      !account.reachout_locked_until ||
+      new Date(account.reachout_locked_until).getTime() <= Date.now(),
+  )
+  if (notReachout.length === 0) {
+    return 'Yeni sohbet kısıtı bitene kadar bekleniyor.'
+  }
+
+  const notQuota = notReachout.filter((account) => !newChatQuotaExhausted(account))
+  if (notQuota.length === 0) {
+    return 'Yeni sohbet kotası doldu. Kota yenilenince devam eder.'
+  }
+
+  const withDaily = notQuota.filter((account) => remainingDaily(account, campaign) > 0)
+  if (withDaily.length === 0) {
+    return 'Günlük hat limiti doldu. Yarın gönderime devam edilir.'
+  }
+
+  const waitingJitter = withDaily.every(
+    (account) => (nextSendAt.get(account.account_id) ?? 0) > Date.now(),
+  )
+  if (waitingJitter) {
+    return 'Sonraki mesaj için bekleniyor (hatlar arası süre).'
+  }
+
+  return 'Gönderim bekleniyor.'
 }
 
 /** Ardışık tick'lerde hiç claim yok + live session yok → pause. */
@@ -649,7 +701,7 @@ async function completeIfDone(campaignId: string): Promise<boolean> {
 
   await query(
     `update public.campaigns
-        set status = 'completed', completed_at = now(), updated_at = now()
+        set status = 'completed', completed_at = now(), wait_reason = null, updated_at = now()
       where id = $1::uuid and status = 'running'`,
     [campaignId],
   )
@@ -703,6 +755,7 @@ async function promoteScheduledCampaigns(): Promise<void> {
                 started_at = coalesce(started_at, now()),
                 paused_at = null,
                 stop_reason = null,
+                wait_reason = null,
                 updated_at = now()
           where id = $1::uuid and status = 'scheduled'
           returning id::text`,
@@ -720,6 +773,10 @@ async function promoteScheduledCampaigns(): Promise<void> {
 async function runCampaign(campaign: CampaignRow): Promise<void> {
   const gate = await checkOrgSendGate(campaign.org_id)
   if (!gate.ok) {
+    if (gate.reason === 'send_window') {
+      await setWaitReason(campaign.id, orgSendGateMessage(gate))
+      return
+    }
     await stopCampaign(campaign.id, orgSendGateMessage(gate))
     return
   }
@@ -859,6 +916,24 @@ async function runCampaign(campaign: CampaignRow): Promise<void> {
     }
   } else if (claimedAny) {
     idleNoSessionTicks.delete(campaign.id)
+    await setWaitReason(campaign.id, null)
+  }
+
+  if (!claimedAny) {
+    const queued = await one<{ count: string }>(
+      `select count(*)::text as count
+         from public.campaign_targets
+        where campaign_id = $1::uuid and status in ('queued', 'sending')`,
+      [campaign.id],
+    )
+    if (Number(queued?.count ?? 0) > 0) {
+      const current = await one<{ status: string }>('select status from public.campaigns where id = $1', [
+        campaign.id,
+      ])
+      if (current?.status === 'running') {
+        await setWaitReason(campaign.id, diagnoseIdleWait(accounts, campaign))
+      }
+    }
   }
 }
 

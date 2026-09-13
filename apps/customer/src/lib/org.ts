@@ -14,6 +14,8 @@ export type ActiveOrg = {
   suspend_reason?: string | null
   stripe_customer_id?: string | null
   stripe_subscription_id?: string | null
+  send_window_start?: string | null
+  send_window_end?: string | null
 }
 
 export function isOrgAdminRole(role: string | null | undefined): boolean {
@@ -129,6 +131,8 @@ export const requireActiveOrg = cache(async (): Promise<{
         (org as { stripe_customer_id?: string | null }).stripe_customer_id ?? null,
       stripe_subscription_id:
         (org as { stripe_subscription_id?: string | null }).stripe_subscription_id ?? null,
+      send_window_start: (org as { send_window_start?: string | null }).send_window_start ?? '08:00:00',
+      send_window_end: (org as { send_window_end?: string | null }).send_window_end ?? '18:00:00',
     },
     supabase,
   }

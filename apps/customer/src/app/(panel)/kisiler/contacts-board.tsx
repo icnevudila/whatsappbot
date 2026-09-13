@@ -10,7 +10,6 @@ import { useToast } from '@/components/toast'
 import {
   addContactsToList,
   deleteContacts,
-  deleteContactsBySource,
 } from './actions'
 import { sanitizeContactSearch } from './contact-search'
 
@@ -35,12 +34,10 @@ function sourceLabel(source: string) {
 export function ContactsBoard({
   contacts,
   groups,
-  whatsappCount,
   searchQuery,
 }: {
   contacts: ContactRow[]
   groups: GroupOption[]
-  whatsappCount: number
   searchQuery: string
 }) {
   const router = useRouter()
@@ -204,55 +201,39 @@ export function ContactsBoard({
           }`}
         >
           {contacts.map((row) => (
-            <li key={row.id} className="flex items-center gap-2.5 px-3 py-2.5">
-              <input
-                type="checkbox"
-                checked={selected.has(row.id)}
-                onChange={() => toggleOne(row.id)}
-                className="size-4 accent-[var(--color-accent)]"
-                aria-label={row.phone_e164}
-              />
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-mono text-[12.5px] tabular text-ink">
-                  {row.name || row.phone_e164}
-                </p>
-                <p className="mt-0.5 truncate text-[11px] text-ink-faint">
-                  {row.phone_e164}
-                  {row.source ? ` · ${sourceLabel(row.source)}` : ''}
-                </p>
-              </div>
-              <WaMark status={row.wa_status ?? 'unknown'} />
+            <li key={row.id}>
+              <button
+                type="button"
+                onClick={() => toggleOne(row.id)}
+                aria-pressed={selected.has(row.id)}
+                aria-label={`${row.name || row.phone_e164} seç`}
+                className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-left ${
+                  selected.has(row.id) ? 'bg-accent-soft/50' : 'hover:bg-canvas'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={selected.has(row.id)}
+                  readOnly
+                  tabIndex={-1}
+                  className="pointer-events-none size-4 accent-[var(--color-accent)]"
+                  aria-hidden
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-mono text-[12.5px] tabular text-ink">
+                    {row.name || row.phone_e164}
+                  </p>
+                  <p className="mt-0.5 truncate text-[11px] text-ink-faint">
+                    {row.phone_e164}
+                    {row.source ? ` · ${sourceLabel(row.source)}` : ''}
+                  </p>
+                </div>
+                <WaMark status={row.wa_status ?? 'unknown'} />
+              </button>
             </li>
           ))}
         </ul>
       )}
-
-      {whatsappCount > 0 ? (
-        <details className="text-[12px] text-ink-muted">
-          <summary className="cursor-pointer font-medium">Gelişmiş</summary>
-          <Button
-            type="button"
-            variant="danger"
-            className="mt-2"
-            disabled={pending}
-            onClick={() => {
-              void (async () => {
-                const ok = await confirm({
-                  title: 'WhatsApp kaynaklı kişiler silinsin mi?',
-                  description: `${whatsappCount} kayıt defterden silinir.`,
-                  confirmLabel: 'Sil',
-                  cancelLabel: 'Vazgeç',
-                  tone: 'danger',
-                })
-                if (!ok) return
-                run(() => deleteContactsBySource('whatsapp'))
-              })()
-            }}
-          >
-            WA rehber kişilerini sil ({whatsappCount})
-          </Button>
-        </details>
-      ) : null}
     </div>
   )
 }
