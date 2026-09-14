@@ -8,19 +8,21 @@ import { useConfirm } from '@/components/confirm-dialog'
 import { useToast } from '@/components/toast'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { VARIATION_PRESETS } from '@/lib/creative/types'
+import { useCreativeGenerationProgress } from '@/lib/creative/use-creative-progress'
 import {
   deleteCreative,
   renameCreative,
   retryCreative,
   startCreativeGeneration,
 } from './actions'
-import { TypewriterText } from '@/components/typewriter-text'
 
-const STAGES = [
-  'Markanızı analiz ediyoruz…',
-  'Ürünleri kompozisyona yerleştiriyoruz…',
-  'Kampanya tasarımınız hazırlanıyor…',
-  'Son dokunuşlar yapılıyor…',
+const DETAIL_STAGES = [
+  { at: 0, label: 'Marka kiti ve renk paleti analiz ediliyor…', detail: 'Kurumsal kimlik ve tasarım tonu parametreleri hazırlanıyor' },
+  { at: 10, label: 'Görsel kompozisyonu ve ürün hatları taranıyor…', detail: 'Odak ürün ambalaj formu ve tasarım çizgileri optimize ediliyor' },
+  { at: 25, label: 'Kampanya konsepti ve tipografi kurgulanıyor…', detail: 'Metin hiyerarşisi ve dikkat çekici görsel yerleşim tasarlanıyor' },
+  { at: 46, label: 'Yüksek çözünürlüklü sahne render ediliyor…', detail: 'Stüdyo aydınlatması, gölgeler ve arka plan detayları işleniyor' },
+  { at: 68, label: 'Afiş detayları ve renk dengesi tamamlanıyor…', detail: 'Görsel kontrastı ve son rötuşlar uygulanıyor' },
+  { at: 82, label: 'Son kontroller yapılıyor ve kütüphaneye aktarılıyor…', detail: 'Ultra yüksek çözünürlüklü çıktı hazırlanıyor' },
 ]
 
 export type DetailCreative = {
@@ -75,12 +77,14 @@ export function CreativeDetail({
   const shownError = localError || (creative.status === 'failed' ? creative.error : null)
   const spinning = (running && !localError) || busyRender
 
+  useCreativeGenerationProgress(spinning, true)
+
   async function requestRender() {
     const response = await fetch('/api/icerik/render', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ id: creative.id }),
-      signal: AbortSignal.timeout(120_000),
+      signal: AbortSignal.timeout(180_000),
     })
     const json = (await response.json().catch(() => null)) as { error?: string } | null
     if (!response.ok) {
@@ -98,10 +102,13 @@ export function CreativeDetail({
   }, [creative.status])
 
   useEffect(() => {
-    if (!running) return
-    const timer = setInterval(() => setTick((value) => value + 1), 2800)
+    if (!spinning) {
+      setTick(0)
+      return
+    }
+    const timer = setInterval(() => setTick((value) => value + 1), 1000)
     return () => clearInterval(timer)
-  }, [running])
+  }, [spinning])
 
   useEffect(() => {
     if (!canManage) return
@@ -169,15 +176,32 @@ export function CreativeDetail({
     })
   }
 
+  const targetDuration = 78
+  const remainingSeconds = Math.max(5, targetDuration - tick)
+  const remainingText =
+    tick >= targetDuration
+      ? 'Birkaç saniye içinde tamamlanıyor'
+      : `Tahmini kalan süre: ~${remainingSeconds} sn`
+  let currentStage = DETAIL_STAGES[0]
+  for (let i = DETAIL_STAGES.length - 1; i >= 0; i--) {
+    if (tick >= DETAIL_STAGES[i].at) {
+      currentStage = DETAIL_STAGES[i]
+      break
+    }
+  }
+
   return (
     <div className="space-y-3">
       {spinning ? (
         <div className="rounded-[var(--radius-card)] border border-accent/30 bg-accent-soft/40 px-4 py-8 text-center">
           <p className="text-[14.5px] font-bold">Görsel üretiliyor</p>
-          <p className="mt-2 text-[13px] text-ink-muted">
-            <TypewriterText text={STAGES[tick % STAGES.length] ?? ''} />
+          <p className="mt-2 text-[13.5px] font-medium text-ink">
+            {currentStage.label}
           </p>
-          <p className="mt-3 text-[12.5px] text-ink-faint">Bu sayfa açıkken üretim devam eder.</p>
+          <p className="mt-1 text-[12.5px] text-ink-muted">
+            {currentStage.detail} · {remainingText}
+          </p>
+          <p className="mt-3 text-[12px] text-ink-faint">Bu sayfa açıkken üretim arka planda devam eder.</p>
           <QuietLibrary />
         </div>
       ) : null}

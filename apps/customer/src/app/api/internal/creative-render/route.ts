@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { processCreativeGeneration } from '@/lib/creative/process'
 
 export const runtime = 'nodejs'
-export const maxDuration = 120
+export const maxDuration = 180
 
 function authorized(request: Request): boolean {
   const secret = process.env.JOB_INTERNAL_SECRET?.trim()

@@ -3,7 +3,7 @@ import { processCreativeGeneration } from '@/lib/creative/process'
 import { isOrgAdminRole, requireActiveOrg } from '@/lib/org'
 
 export const runtime = 'nodejs'
-export const maxDuration = 120
+export const maxDuration = 180
 
 /** Oturumlu panel — worker sırası takılsa bile üretim bu istekte biter. */
 export async function POST(request: Request) {

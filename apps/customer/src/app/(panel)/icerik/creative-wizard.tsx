@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Button, Card, Field, FileUploadButton, Input, Notice, Textarea } from '@/components/ui'
 import { Icon } from '@/components/icon'
 import { Stepper } from '@/components/stepper'
-import { useSyncBusy } from '@/components/busy'
+import { useCreativeGenerationProgress } from '@/lib/creative/use-creative-progress'
 import {
   BRIEF_CHIPS,
   CREATIVE_FORMATS,
@@ -116,7 +116,8 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
     startCreativeGeneration,
     null,
   )
-  useSyncBusy(pending, 'Görsel üretiliyor…')
+  const isImageToImage = Boolean(draft.baseCreativeId) || draft.productIds.length > 0
+  useCreativeGenerationProgress(pending, isImageToImage)
 
   useEffect(() => {
     if (!pending) return
