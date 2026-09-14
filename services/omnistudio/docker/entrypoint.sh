@@ -24,7 +24,7 @@ node server.js &
 echo "⚡ API Gateway Hazır: Port 3456"
 
 # 4. Google Chrome'u OmniStudio Eklentisi ile Başlat
-CHROME_FLAGS="--no-sandbox --disable-dev-shm-usage --disable-gpu --user-data-dir=/data/chromium-profile --load-extension=/app/extension --remote-debugging-port=9222 --start-maximized https://chatgpt.com https://gemini.google.com"
+CHROME_FLAGS="--no-sandbox --disable-dev-shm-usage --disable-gpu --user-data-dir=/data/chromium-profile --disable-extensions-except=/app/extension --load-extension=/app/extension --remote-debugging-port=9222 --start-maximized https://chatgpt.com https://gemini.google.com"
 
 echo "🖥️ Google Chrome Başlatılıyor..."
 google-chrome-stable $CHROME_FLAGS &
