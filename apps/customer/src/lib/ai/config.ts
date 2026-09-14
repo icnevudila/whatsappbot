@@ -15,7 +15,7 @@ import {
   type TextProviderChoice,
 } from './models'
 
-export type AiProviderId = 'gemini' | 'openai' | 'cloudflare' | 'pollinations'
+export type AiProviderId = 'omnistudio' | 'gemini' | 'openai' | 'cloudflare' | 'pollinations'
 
 /** Org kaydından gelen anahtarlar + model tercihleri (env üzerine yazar). */
 export type AiKeyBag = {
@@ -109,7 +109,7 @@ export const aiConfig = resolveAiConfig()
 function readOrder(raw: string | undefined, fallback: AiProviderId[]): AiProviderId[] {
   if (!raw) return fallback
 
-  const known = new Set<string>(['gemini', 'openai', 'cloudflare', 'pollinations'])
+  const known = new Set<string>(['omnistudio', 'gemini', 'openai', 'cloudflare', 'pollinations'])
   const parsed = raw
     .split(',')
     .map((part) => part.trim().toLowerCase())
@@ -119,6 +119,7 @@ function readOrder(raw: string | undefined, fallback: AiProviderId[]): AiProvide
 }
 
 const DEFAULT_IMAGE_ORDER = readOrder(process.env.AI_IMAGE_PROVIDERS, [
+  'omnistudio',
   'openai',
   'gemini',
   'cloudflare',
@@ -130,7 +131,7 @@ const DEFAULT_TEXT_ORDER = readOrder(process.env.AI_TEXT_PROVIDERS, ['gemini', '
 export function resolveImageProviderOrder(bag?: AiKeyBag | null): AiProviderId[] {
   const preferred = String(bag?.preferredImageProvider ?? 'auto').trim().toLowerCase()
   if (!preferred || preferred === 'auto') return DEFAULT_IMAGE_ORDER
-  if (!(['gemini', 'openai', 'cloudflare', 'pollinations'] as string[]).includes(preferred)) {
+  if (!(['omnistudio', 'gemini', 'openai', 'cloudflare', 'pollinations'] as string[]).includes(preferred)) {
     return DEFAULT_IMAGE_ORDER
   }
   const id = preferred as AiProviderId

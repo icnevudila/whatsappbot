@@ -46,6 +46,63 @@ const PIXELS: Record<AspectRatio, { width: number; height: number }> = {
 
 function buildProviders(config: ResolvedAiConfig): Record<AiProviderId, ImageProvider> {
   return {
+    omnistudio: {
+      id: 'omnistudio',
+      label: 'OmniStudio AI Engine',
+      isConfigured: () => Boolean(process.env.OMNISTUDIO_GATEWAY_URL || process.env.OMNISTUDIO_ENABLED === 'true'),
+      async generate(prompt, aspect) {
+        const gatewayUrl = (process.env.OMNISTUDIO_GATEWAY_URL || 'http://167.233.201.31:3456').replace(/\/$/, '')
+
+        // Yoğunluk & Sağlık Kontrolü (Aynı anda onlarca kişi yaparsa doğrudan OpenAI resmi API'ye yönlendir)
+        const healthRes = await fetch(`${gatewayUrl}/health`, { signal: AbortSignal.timeout(3000) }).catch(() => null)
+        if (!healthRes || !healthRes.ok) {
+          throw new Error('OmniStudio Gateway çevrimdışı')
+        }
+        const health = await healthRes.json()
+        if (health.pending > 0) {
+          throw new Error(`OmniStudio meşgul (${health.pending} bekleyen iş) - Doğrudan resmi OpenAI API'ye aktarılıyor`)
+        }
+
+        const size = '1024x1024'
+        const response = await fetch(`${gatewayUrl}/v1/images/generations`, {
+          method: 'POST',
+          signal: AbortSignal.timeout(75000),
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt,
+            size,
+            response_format: 'b64_json',
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error(`OmniStudio ${response.status}: ${(await response.text()).slice(0, 200)}`)
+        }
+
+        const json = (await response.json()) as { data?: { b64_json?: string; url?: string }[] }
+        const item = json.data?.[0]
+        if (!item) throw new Error('OmniStudio görsel döndürmedi')
+
+        let imageBuffer: Buffer
+        if (item.b64_json) {
+          imageBuffer = Buffer.from(item.b64_json, 'base64')
+        } else if (item.url) {
+          const publicUrl = item.url
+            .replace('localhost:3456', '167.233.201.31:3456')
+            .replace('127.0.0.1:3456', '167.233.201.31:3456')
+          const imgRes = await fetch(publicUrl, { signal: AbortSignal.timeout(30000) })
+          imageBuffer = Buffer.from(await imgRes.arrayBuffer())
+        } else {
+          throw new Error('OmniStudio geçersiz veri')
+        }
+
+        return {
+          data: imageBuffer,
+          mimeType: 'image/png',
+          provider: 'omnistudio',
+        }
+      },
+    },
     gemini: {
       id: 'gemini',
       label: 'Google Gemini',

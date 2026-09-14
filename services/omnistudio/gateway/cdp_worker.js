@@ -111,6 +111,45 @@ async function executeChatGPTJob(tab, job) {
     });
     const beforeImages = new Set(beforeEval.result?.value || []);
 
+    // 1.5 Referans Görseller Varsa (Image-to-Image / Marka Kiti) ChatGPT'ye Dosya Olarak Yükle
+    const fs = require('fs');
+    const path = require('path');
+    const tempRefPaths = [];
+
+    if (Array.isArray(job.referenceImages) && job.referenceImages.length > 0) {
+      console.log(`[CDP Worker] ${job.referenceImages.length} adet referans görsel ekleniyor...`);
+      for (let idx = 0; idx < job.referenceImages.length; idx++) {
+        const ref = job.referenceImages[idx];
+        const b64 = typeof ref === 'string' ? ref : (ref.data || ref.b64_json || '');
+        if (b64) {
+          const raw = b64.includes(',') ? b64.split(',')[1] : b64;
+          const tmpPath = path.join('/tmp', `ref_${job.id}_${idx}.png`);
+          fs.writeFileSync(tmpPath, Buffer.from(raw, 'base64'));
+          tempRefPaths.push(tmpPath);
+        }
+      }
+
+      if (tempRefPaths.length > 0) {
+        try {
+          const doc = await cdp.send('DOM.getDocument', {});
+          const fileInput = await cdp.send('DOM.querySelector', {
+            nodeId: doc.root.nodeId,
+            selector: '#upload-photos, #upload-media, input[type=file]'
+          });
+          if (fileInput && fileInput.nodeId) {
+            await cdp.send('DOM.setFileInputFiles', {
+              files: tempRefPaths,
+              nodeId: fileInput.nodeId
+            });
+            console.log('[CDP Worker] Referans görseller ChatGPT inputuna yüklendi, thumbnail bekleniyor...');
+            await sleep(3500); // Görselin yüklenip input alanına eklenmesini bekle
+          }
+        } catch (uploadErr) {
+          console.warn('[CDP Worker] Referans görsel yükleme uyarısı:', uploadErr.message);
+        }
+      }
+    }
+
     // 2. Prompt'u Enjekte Et
     const injectEval = await cdp.send('Runtime.evaluate', {
       expression: `
@@ -261,6 +300,9 @@ async function executeChatGPTJob(tab, job) {
       body: JSON.stringify({ jobId: job.id, error: err.message })
     }).catch(() => {});
   } finally {
+    for (const p of tempRefPaths) {
+      try { fs.unlinkSync(p); } catch (e) {}
+    }
     if (cdp) cdp.close();
   }
 }
