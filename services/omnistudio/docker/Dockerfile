@@ -3,7 +3,7 @@ FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Europe/Istanbul
 
-# Temel paketler, Chromium, Xvfb, VNC, Node.js kurulumu
+# Temel paketler, Xvfb, VNC, Google Chrome ve Node.js kurulumu
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     wget \
@@ -13,11 +13,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     x11vnc \
     novnc \
     websockify \
-    chromium-browser \
-    chromium-chromedriver \
     fonts-liberation \
     fonts-noto-color-emoji \
     tzdata \
+    && wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
+    && apt-get install -y --no-install-recommends ./google-chrome-stable_current_amd64.deb \
+    && rm ./google-chrome-stable_current_amd64.deb \
     && rm -rf /var/lib/apt/lists/*
 
 # Node.js 20 LTS Kurulumu
