@@ -101,6 +101,7 @@ async function workerLoop() {
 // ChatGPT İşini Çalıştır
 async function executeChatGPTJob(tab, job) {
   let cdp = null;
+  const tempRefPaths = [];
   try {
     cdp = await createCdpSession(tab.webSocketDebuggerUrl);
 
@@ -114,7 +115,6 @@ async function executeChatGPTJob(tab, job) {
     // 1.5 Referans Görseller Varsa (Image-to-Image / Marka Kiti) ChatGPT'ye Dosya Olarak Yükle
     const fs = require('fs');
     const path = require('path');
-    const tempRefPaths = [];
 
     if (Array.isArray(job.referenceImages) && job.referenceImages.length > 0) {
       console.log(`[CDP Worker] ${job.referenceImages.length} adet referans görsel ekleniyor...`);
