@@ -11,15 +11,18 @@ services:
       - "3456:3456"   # API Gateway (OpenAI Compatible Endpoint)
       - "6080:6080"   # noVNC Web Arayüzü (Tek seferlik giriş yapmak için)
     volumes:
-      # Oturum çerezlerini (ChatGPT profilleri 1, 2, 3, 4) kalıcı olarak saklar
+      # Kodlari dogrudan bagla (Guncellemeler aninda aktif olsun)
+      - ../gateway:/app/gateway
+      - ./entrypoint.sh:/app/entrypoint.sh
+      # Oturum cerezlerini (ChatGPT profilleri 1, 2, 3, 4) kalici olarak saklar
       - ./data/profile:/data/chromium-profile
       - ./data/profile-2:/data/chromium-profile-2
       - ./data/profile-3:/data/chromium-profile-3
       - ./data/profile-4:/data/chromium-profile-4
-      # Üretilen görselleri diskte tutar
+      # Uretilen gorselleri diskte tutar
       - ./data/outputs:/app/gateway/outputs
     environment:
       - PORT=3456
       - NODE_ENV=production
-      - NUM_WORKERS=4 # 4 Bağımsız ChatGPT Hesabı
+      - NUM_WORKERS=4 # 4 Bagimsiz ChatGPT Hesabi
     shm_size: 4gb
