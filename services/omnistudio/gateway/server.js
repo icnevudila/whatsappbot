@@ -96,6 +96,7 @@ class AdvancedJobQueue {
     this.jobs = new Map();
     this.pendingQueue = [];
     this.activeWorkers = new Map(); // workerId -> jobId
+    this.registeredWorkers = new Map(); // workerId -> { workerId, status, lastSeen, details }
     this.waiters = new Map();
   }
 
@@ -156,6 +157,10 @@ class AdvancedJobQueue {
     const p = workerPlatform.toLowerCase();
     const wid = workerId || p;
     if (this.activeWorkers.has(wid)) return null;
+
+    // Eğer işçi henüz giriş yapmadıysa (login ekranındaysa) iş atama
+    const reg = this.registeredWorkers.get(wid);
+    if (reg && reg.status === 'waiting_login') return null;
 
     const jobIndex = this.pendingQueue.findIndex(jobId => {
       const job = this.jobs.get(jobId);
@@ -277,6 +282,28 @@ class AdvancedJobQueue {
     }
   }
 
+  updateWorkerHeartbeat(workerId, status = 'idle', details = null) {
+    this.registeredWorkers.set(workerId, {
+      workerId,
+      status, // 'idle', 'busy', 'waiting_login', 'offline'
+      details,
+      lastSeen: Date.now(),
+    });
+    broadcastEvent('workers_updated', this.getWorkersStatus());
+  }
+
+  getWorkersStatus() {
+    const list = {};
+    for (const [wid, info] of this.registeredWorkers.entries()) {
+      list[wid] = {
+        ...info,
+        currentJobId: this.activeWorkers.get(wid) || null,
+        isBusy: this.activeWorkers.has(wid),
+      };
+    }
+    return list;
+  }
+
   getStats() {
     const active = {};
     for (const [wid, jid] of this.activeWorkers.entries()) {
@@ -286,6 +313,7 @@ class AdvancedJobQueue {
       pending: this.pendingQueue.length,
       activeCount: this.activeWorkers.size,
       activeWorkers: active,
+      workersStatus: this.getWorkersStatus(),
       total: this.jobs.size,
       recent: Array.from(this.jobs.values()).slice(-20).reverse(),
     };
@@ -513,6 +541,16 @@ const server = http.createServer(async (req, res) => {
       const workerId = parsedUrl.searchParams.get('workerId') || null;
       const job = queue.getNextJob(platform, workerId);
       return sendJson(res, 200, { job });
+    }
+
+    // 3.1 Worker: Kalp Atışı & Durum Bildir (POST /worker/heartbeat)
+    if (method === 'POST' && pathname === '/worker/heartbeat') {
+      const body = await parseJsonBody(req);
+      const { workerId, status, details } = body;
+      if (workerId) {
+        queue.updateWorkerHeartbeat(workerId, status, details);
+      }
+      return sendJson(res, 200, { ok: true });
     }
 
     // 4. Worker: İlerleme Bildir (POST /job/progress)

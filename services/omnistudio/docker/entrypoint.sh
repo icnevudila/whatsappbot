@@ -25,7 +25,7 @@ node server.js &
 echo "⚡ API Gateway Hazır: Port 3456"
 
 # 4. Worker Havuzu (Worker Pool): NUM_WORKERS kadar Chrome ve CDP Worker başlat
-NUM_WORKERS=${NUM_WORKERS:-1}
+NUM_WORKERS=${NUM_WORKERS:-4}
 echo "⚙️ Yapılandırılan Worker Havuzu Sayısı: $NUM_WORKERS"
 
 for i in $(seq 1 $NUM_WORKERS); do
@@ -43,11 +43,24 @@ for i in $(seq 1 $NUM_WORKERS); do
     EXTRA_URL="http://localhost:3456/monitor"
   fi
 
-  echo "🖥️ Google Chrome #$i Başlatılıyor (CDP Port: $PORT, Profil: $PROFILE_DIR)..."
+  WIN_POS=""
+  if [ "$NUM_WORKERS" -gt 1 ]; then
+    case $i in
+      1) WIN_POS="--window-position=0,0 --window-size=960,540" ;;
+      2) WIN_POS="--window-position=960,0 --window-size=960,540" ;;
+      3) WIN_POS="--window-position=0,540 --window-size=960,540" ;;
+      4) WIN_POS="--window-position=960,540 --window-size=960,540" ;;
+      *) WIN_POS="--start-maximized" ;;
+    esac
+  else
+    WIN_POS="--start-maximized"
+  fi
+
+  echo "🖥️ Google Chrome #$i Başlatılıyor (CDP Port: $PORT, Profil: $PROFILE_DIR, Pos: $WIN_POS)..."
   google-chrome-stable --no-sandbox --disable-dev-shm-usage --disable-gpu \
     --user-data-dir="$PROFILE_DIR" \
     --remote-debugging-port=$PORT \
-    --start-maximized https://chatgpt.com $EXTRA_URL &
+    $WIN_POS https://chatgpt.com $EXTRA_URL &
   sleep 3
 
   echo "🤖 CDP Worker #$i Başlatılıyor (Worker ID: chatgpt-$i, CDP: $PORT)..."

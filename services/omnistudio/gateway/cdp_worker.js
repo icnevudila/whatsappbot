@@ -68,6 +68,64 @@ async function getTab(matchPattern) {
   }
 }
 
+let isTabLoggedIn = false;
+let lastLoginCheck = 0;
+
+async function checkTabLogin(tab) {
+  if (!tab || !tab.url) return false;
+  if (tab.url.includes('/auth') || tab.url.includes('/login')) {
+    return false;
+  }
+  try {
+    const cdp = await createCdpSession(tab.webSocketDebuggerUrl);
+    const evalRes = await cdp.send('Runtime.evaluate', {
+      expression: `!!(
+        document.querySelector('#prompt-textarea') || 
+        document.querySelector('div[contenteditable="true"]') ||
+        document.querySelector('textarea')
+      )`,
+      returnByValue: true
+    });
+    cdp.close();
+    return !!evalRes.result?.value;
+  } catch (e) {
+    return false;
+  }
+}
+
+// Düzenli Kalp Atışı (5s)
+setInterval(async () => {
+  try {
+    const chatgptTab = await getTab('chatgpt.com');
+    if (!chatgptTab) {
+      isTabLoggedIn = false;
+      fetch(`${GATEWAY_URL}/worker/heartbeat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workerId: WORKER_ID, status: 'offline', details: 'ChatGPT sekmesi açık değil' })
+      }).catch(() => {});
+      return;
+    }
+
+    const now = Date.now();
+    if (now - lastLoginCheck > 8000) {
+      lastLoginCheck = now;
+      isTabLoggedIn = await checkTabLogin(chatgptTab);
+    }
+
+    const status = isBusy ? 'busy' : (isTabLoggedIn ? 'idle' : 'waiting_login');
+    const details = isBusy
+      ? 'Görsel üretiyor'
+      : (isTabLoggedIn ? 'Oturum açık, görev bekliyor' : 'Giriş bekleniyor (Login ekranı)');
+
+    fetch(`${GATEWAY_URL}/worker/heartbeat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workerId: WORKER_ID, status, details })
+    }).catch(() => {});
+  } catch (err) {}
+}, 5000);
+
 // Ana Döngü
 async function workerLoop() {
   if (isBusy) return;
@@ -76,7 +134,11 @@ async function workerLoop() {
     // 1. ChatGPT sekmesi var mı kontrol et
     const chatgptTab = await getTab('chatgpt.com');
     if (!chatgptTab) {
-      // ChatGPT açık değil
+      return;
+    }
+
+    // 1.1. Oturum açık mı kontrol et (Giriş yapılmadıysa iş çekme)
+    if (!isTabLoggedIn) {
       return;
     }
 

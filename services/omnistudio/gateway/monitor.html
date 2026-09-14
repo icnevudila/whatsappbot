@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
@@ -58,6 +58,8 @@
     }
     .worker-chip.busy { border-color: var(--accent); background: rgba(59, 130, 246, 0.15); color: #93c5fd; }
     .worker-chip.idle { border-color: var(--success); background: rgba(16, 185, 129, 0.1); color: #6ee7b7; }
+    .worker-chip.waiting { border-color: var(--warning); background: rgba(245, 158, 11, 0.15); color: #fcd34d; }
+    .worker-chip.offline { border-color: #475569; background: rgba(100, 116, 139, 0.1); color: #94a3b8; }
 
     .layout-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
     @media (max-width: 1024px) { .layout-grid { grid-template-columns: 1fr; } }
@@ -312,27 +314,45 @@
       document.getElementById('activeJobsCount').innerText = `${activeCount} aktif uretim`;
     }
 
-    function updateWorkersView(activeWorkers = {}) {
+    function updateWorkersView(workersStatus = {}) {
       const cont = document.getElementById('workersContainer');
       cont.innerHTML = '';
-      const workerKeys = ['chatgpt-1'];
-      for (const k in activeWorkers) {
-        if (!workerKeys.includes(k)) workerKeys.push(k);
-      }
+      const defaultWorkers = ['chatgpt-1', 'chatgpt-2', 'chatgpt-3', 'chatgpt-4'];
+      const allKeys = Array.from(new Set([...defaultWorkers, ...Object.keys(workersStatus)]));
 
       let busyCount = 0;
-      workerKeys.forEach(wid => {
-        const jobId = activeWorkers[wid];
-        const isBusy = !!jobId;
+      let activeWorkersCount = 0;
+
+      allKeys.forEach(wid => {
+        const info = workersStatus[wid] || {};
+        const isBusy = info.isBusy || (typeof info === 'string' && info !== '');
+        const isWaitingLogin = info.status === 'waiting_login';
+        const isOffline = info.status === 'offline';
+
         if (isBusy) busyCount++;
+        activeWorkersCount++;
 
         const chip = document.createElement('span');
-        chip.className = `worker-chip ${isBusy ? 'busy' : 'idle'}`;
-        chip.innerHTML = `${isBusy ? '[CALISIYOR]' : '[BOSTA]'} ${wid}`;
+        let chipClass = 'idle';
+        let label = '[BOSTA]';
+
+        if (isBusy) {
+          chipClass = 'busy';
+          label = '[CALISIYOR]';
+        } else if (isWaitingLogin) {
+          chipClass = 'waiting';
+          label = '[GIRIS BEKLIYOR]';
+        } else if (isOffline) {
+          chipClass = 'offline';
+          label = '[KAPALI]';
+        }
+
+        chip.className = `worker-chip ${chipClass}`;
+        chip.innerHTML = `${label} ${wid}`;
         cont.appendChild(chip);
       });
 
-      document.getElementById('statWorkersCount').innerText = `${workerKeys.length} Hesap (${busyCount} Uretimde)`;
+      document.getElementById('statWorkersCount').innerText = `${activeWorkersCount} Hesap (${busyCount} Uretimde)`;
     }
 
     function escapeHtml(str) {
@@ -368,9 +388,20 @@
             document.getElementById('statPendingCount').innerText = data.stats.pending || 0;
             completedCount = (data.stats.recent || []).filter(j => j.status === 'completed').length;
             document.getElementById('statCompletedCount').innerText = completedCount;
+            if (data.stats.workersStatus) {
+              updateWorkersView(data.stats.workersStatus);
+            } else {
+              updateWorkersView(data.activeWorkers || {});
+            }
           }
-          updateWorkersView(data.activeWorkers || {});
           renderPipeline();
+        } catch (err) {}
+      });
+
+      evtSource.addEventListener('workers_updated', (e) => {
+        try {
+          const payload = JSON.parse(e.data);
+          updateWorkersView(payload.data || {});
         } catch (err) {}
       });
 
