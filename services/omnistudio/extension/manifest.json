@@ -15,9 +15,8 @@
     "https://*.oaiusercontent.com/*",
     "https://*.oaistatic.com/*",
     "https://*.googleusercontent.com/*",
-    "http://localhost:3456/*",
-    "http://127.0.0.1:3456/*",
-    "http://localhost:*/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*",
     "https://*/*"
   ],
   "action": {
