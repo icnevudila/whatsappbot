@@ -7,6 +7,7 @@ echo "===================================================="
 
 # Eski kilit dosyalarını temizle
 rm -f /tmp/.X99-lock /tmp/.X11-unix/X99
+rm -f /data/chromium-profile/Singleton* /data/chromium-profile/*/Singleton* /data/chromium-profile/LOCK /data/chromium-profile/*/LOCK 2>/dev/null || true
 
 # 1. Sanal Ekranı (Xvfb) Başlat
 export DISPLAY=:99
