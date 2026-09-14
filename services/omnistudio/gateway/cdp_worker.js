@@ -9,10 +9,11 @@ const path = require('path');
 
 const GATEWAY_URL = process.env.GATEWAY_URL || 'http://127.0.0.1:3456';
 const CDP_HTTP = process.env.CDP_HTTP || 'http://127.0.0.1:9222';
+const WORKER_ID = process.env.WORKER_ID || 'chatgpt-1';
 const POLL_INTERVAL_MS = 2500;
 
-console.log('[CDP Worker] OmniStudio Otonom Tarayıcı Motoru Başlatılıyor...');
-console.log(`[CDP Worker] Gateway: ${GATEWAY_URL} | CDP: ${CDP_HTTP}`);
+console.log(`[CDP Worker: ${WORKER_ID}] OmniStudio Otonom Tarayıcı Motoru Başlatılıyor...`);
+console.log(`[CDP Worker: ${WORKER_ID}] Gateway: ${GATEWAY_URL} | CDP: ${CDP_HTTP}`);
 
 let isBusy = false;
 
@@ -80,7 +81,7 @@ async function workerLoop() {
     }
 
     // 2. Gateway'den sıradaki işi çek
-    const jobRes = await fetch(`${GATEWAY_URL}/job/next?platform=chatgpt`, { cache: 'no-store' });
+    const jobRes = await fetch(`${GATEWAY_URL}/job/next?platform=chatgpt&workerId=${encodeURIComponent(WORKER_ID)}`, { cache: 'no-store' });
     if (!jobRes.ok) return;
 
     const { job } = await jobRes.json();

@@ -48,10 +48,7 @@ class AdvancedJobQueue {
   constructor() {
     this.jobs = new Map();
     this.pendingQueue = [];
-    this.activeWorkers = {
-      chatgpt: null,
-      gemini: null,
-    };
+    this.activeWorkers = new Map(); // workerId -> jobId
     this.waiters = new Map();
   }
 
@@ -103,9 +100,10 @@ class AdvancedJobQueue {
     });
   }
 
-  getNextJob(workerPlatform) {
+  getNextJob(workerPlatform, workerId = null) {
     const p = workerPlatform.toLowerCase();
-    if (this.activeWorkers[p]) return null;
+    const wid = workerId || p;
+    if (this.activeWorkers.has(wid)) return null;
 
     const jobIndex = this.pendingQueue.findIndex(jobId => {
       const job = this.jobs.get(jobId);
@@ -121,10 +119,11 @@ class AdvancedJobQueue {
 
     const job = this.jobs.get(jobId);
     job.status = 'processing';
-    job.assignedTo = p;
+    job.assignedTo = wid;
+    job.platform = p;
     job.progress = 25;
     job.startedAt = Date.now();
-    this.activeWorkers[p] = jobId;
+    this.activeWorkers.set(wid, jobId);
 
     return job;
   }
@@ -138,8 +137,8 @@ class AdvancedJobQueue {
     const job = this.jobs.get(jobId);
     if (!job) return;
 
-    if (job.assignedTo && this.activeWorkers[job.assignedTo] === jobId) {
-      this.activeWorkers[job.assignedTo] = null;
+    if (job.assignedTo) {
+      this.activeWorkers.delete(job.assignedTo);
     }
 
     if (error) {
@@ -168,8 +167,8 @@ class AdvancedJobQueue {
     job.resultB64 = buffer.toString('base64');
     job.completedAt = Date.now();
 
-    if (job.assignedTo && this.activeWorkers[job.assignedTo] === jobId) {
-      this.activeWorkers[job.assignedTo] = null;
+    if (job.assignedTo) {
+      this.activeWorkers.delete(job.assignedTo);
     }
 
     this.notifyWaiters(jobId, job);
@@ -208,10 +207,15 @@ class AdvancedJobQueue {
   }
 
   getStats() {
+    const active = {};
+    for (const [wid, jid] of this.activeWorkers.entries()) {
+      active[wid] = jid;
+    }
     return {
       pending: this.pendingQueue.length,
+      activeCount: this.activeWorkers.size,
+      activeWorkers: active,
       total: this.jobs.size,
-      activeWorkers: this.activeWorkers,
       recent: Array.from(this.jobs.values()).slice(-20).reverse(),
     };
   }
@@ -222,11 +226,11 @@ const queue = new AdvancedJobQueue();
 // Periyodik zombi iş temizleme (200s)
 setInterval(() => {
   const now = Date.now();
-  for (const [platform, jobId] of Object.entries(queue.activeWorkers)) {
+  for (const [wid, jobId] of queue.activeWorkers.entries()) {
     if (jobId) {
       const job = queue.jobs.get(jobId);
       if (job && now - job.startedAt > 200000) {
-        console.warn(`[Gateway] Zaman aşımı: ${platform} üzerindeki ${jobId} işi serbest bırakılıyor.`);
+        console.warn(`[Gateway] Zaman aşımı: ${wid} üzerindeki ${jobId} işi serbest bırakılıyor.`);
         queue.releaseLock(jobId, 'Browser worker timeout (200s)');
       }
     }
@@ -377,10 +381,11 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
-    // 3. Worker: Boştaki İşi Çek (GET /job/next?platform=chatgpt)
+    // 3. Worker: Boştaki İşi Çek (GET /job/next?platform=chatgpt&workerId=chatgpt-1)
     if (method === 'GET' && pathname === '/job/next') {
       const platform = parsedUrl.searchParams.get('platform') || 'chatgpt';
-      const job = queue.getNextJob(platform);
+      const workerId = parsedUrl.searchParams.get('workerId') || null;
+      const job = queue.getNextJob(platform, workerId);
       return sendJson(res, 200, { job });
     }
 
