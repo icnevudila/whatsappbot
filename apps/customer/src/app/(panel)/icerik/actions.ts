@@ -48,15 +48,6 @@ function parseIds(raw: unknown): string[] {
 }
 
 async function kickGeneration(creativeId: string) {
-  after(async () => {
-    const service = createSupabaseServiceClient()
-    if (!service) return
-    const result = await processCreativeGeneration(creativeId, service)
-    if (!result.ok && !result.busy) {
-      console.error('[creative.kick]', creativeId, result.error)
-    }
-  })
-
   const origin = siteOriginFromEnv('http://127.0.0.1:3003')
   const secret = process.env.JOB_INTERNAL_SECRET?.trim()
   if (origin && secret) {
