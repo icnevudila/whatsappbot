@@ -36,15 +36,15 @@ export function LibraryBoard({
   const [hasMore, setHasMore] = useState(initialHasMore)
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
-  const [sort, setSort] = useState('new')
+  const [sort, setSort] = useState<'new' | 'old'>('new')
   const [loading, setLoading] = useState(false)
   const toast = useToast()
   const confirm = useConfirm()
   const router = useRouter()
   const [pending, startTransition] = useTransition()
-  const kicked = useRef(new Set())
-  const [renderErrors, setRenderErrors] = useState({})
-  const sentinelRef = useRef(null)
+  const kicked = useRef<Set<string>>(new Set())
+  const [renderErrors, setRenderErrors] = useState<Record<string, string>>({})
+  const sentinelRef = useRef<HTMLDivElement>(null)
   const loadingMore = useRef(false)
   const requestId = useRef(0)
   const skipFirstQuery = useRef(true)
@@ -57,7 +57,7 @@ export function LibraryBoard({
   }, [query])
 
   const fetchPage = useCallback(
-    async (offset, replace) => {
+    async (offset: number, replace = false) => {
       const id = ++requestId.current
       loadingMore.current = true
       setLoading(true)
@@ -255,7 +255,7 @@ function LibraryCard({
         <Link href={`/icerik/${item.id}`} className="block overflow-hidden rounded-t-[var(--radius-card)]">
           {ready ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={item.publicUrl} alt="" className="aspect-[4/5] w-full bg-canvas object-cover" />
+            <img src={item.publicUrl ?? undefined} alt="" className="aspect-[4/5] w-full bg-canvas object-cover" />
           ) : (
             <GeneratingFrame status={failed ? 'failed' : item.status} error={renderError ?? item.error} />
           )}
@@ -293,15 +293,15 @@ function ItemMenu({
   onDelete: () => void
 }) {
   const [open, setOpen] = useState(false)
-  const menuRef = useRef(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   const ready = item.status === 'ready' && Boolean(item.publicUrl)
 
   useEffect(() => {
     if (!open) return
-    const onDoc = (event) => {
-      if (!menuRef.current?.contains(event.target)) setOpen(false)
+    const onDoc = (event: MouseEvent | TouchEvent) => {
+      if (event.target instanceof Node && !menuRef.current?.contains(event.target)) setOpen(false)
     }
-    const onKey = (event) => {
+    const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setOpen(false)
     }
     document.addEventListener('mousedown', onDoc)
@@ -378,7 +378,7 @@ function ItemMenu({
   )
 }
 
-function statusLabel(status) {
+function statusLabel(status: string) {
   if (status === 'ready') return 'Hazır'
   if (status === 'pending') return 'Sırada'
   if (status === 'rendering') return 'Üretiliyor'
@@ -386,7 +386,7 @@ function statusLabel(status) {
   return status
 }
 
-function formatRelative(iso) {
+function formatRelative(iso: string) {
   const ms = Date.now() - new Date(iso).getTime()
   if (Number.isNaN(ms) || ms < 0) return 'az önce'
   const min = Math.floor(ms / 60_000)

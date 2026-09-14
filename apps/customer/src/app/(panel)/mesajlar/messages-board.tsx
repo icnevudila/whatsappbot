@@ -125,8 +125,8 @@ export function MessagesBoard({
   const [timeOpen, setTimeOpen] = useState(dateRange !== 'tum')
   const [searchOpen, setSearchOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  const searchRef = useRef(null)
-  const menuRef = useRef(null)
+  const searchRef = useRef<HTMLInputElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   const threadEndRef = useRef<HTMLDivElement>(null)
   const [flashPhone, setFlashPhone] = useState<string | null>(null)
   const topPhoneRef = useRef<string | null>(previews[0]?.phone ?? null)
@@ -139,10 +139,10 @@ export function MessagesBoard({
 
   useEffect(() => {
     if (!menuOpen) return
-    const onDoc = (event) => {
-      if (!menuRef.current?.contains(event.target)) setMenuOpen(false)
+    const onDoc = (event: MouseEvent | TouchEvent) => {
+      if (event.target instanceof Node && !menuRef.current?.contains(event.target)) setMenuOpen(false)
     }
-    const onKey = (event) => {
+    const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setMenuOpen(false)
     }
     document.addEventListener('mousedown', onDoc)

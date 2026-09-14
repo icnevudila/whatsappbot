@@ -28,7 +28,7 @@ export function ProductsBoard({
   const [filterOpen, setFilterOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('tum')
-  const searchRef = useRef(null)
+  const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (searchOpen) searchRef.current?.focus()
@@ -140,7 +140,7 @@ function StatusChip({
 }: {
   active: boolean
   onClick: () => void
-  children: string
+  children: React.ReactNode
 }) {
   return (
     <button
@@ -204,14 +204,14 @@ function ProductCardMenu({ id, name }: { id: string; name: string }) {
   const toast = useToast()
   const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
-  const menuRef = useRef(null)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!open) return
-    const onDoc = (event) => {
-      if (!menuRef.current?.contains(event.target)) setOpen(false)
+    const onDoc = (event: MouseEvent | TouchEvent) => {
+      if (event.target instanceof Node && !menuRef.current?.contains(event.target)) setOpen(false)
     }
-    const onKey = (event) => {
+    const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setOpen(false)
     }
     document.addEventListener('mousedown', onDoc)

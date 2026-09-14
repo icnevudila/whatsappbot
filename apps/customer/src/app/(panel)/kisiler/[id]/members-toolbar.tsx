@@ -24,7 +24,7 @@ export function MembersPanelHeader({
   unknownCount: number
   subtitle: string
 }) {
-  const menuRef = useRef(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   const filtered = statusFilter !== 'tum'
   const [filterOpen, setFilterOpen] = useState(filtered)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -32,10 +32,10 @@ export function MembersPanelHeader({
 
   useEffect(() => {
     if (!menuOpen) return
-    const onDoc = (event) => {
-      if (!menuRef.current?.contains(event.target)) setMenuOpen(false)
+    const onDoc = (event: MouseEvent | TouchEvent) => {
+      if (event.target instanceof Node && !menuRef.current?.contains(event.target)) setMenuOpen(false)
     }
-    const onKey = (event) => {
+    const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setMenuOpen(false)
     }
     document.addEventListener('mousedown', onDoc)
@@ -46,7 +46,7 @@ export function MembersPanelHeader({
     }
   }, [menuOpen])
 
-  const hrefFor = (status) =>
+  const hrefFor = (status: string) =>
     status === 'tum' ? `/kisiler/${listId}` : `/kisiler/${listId}?durum=${status}`
 
   return (
@@ -182,7 +182,7 @@ function AddToGroupModal({ listId, onClose }: { listId: string; onClose: () => v
   useEffect(() => {
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    const onKey = (event) => {
+    const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose()
     }
     window.addEventListener('keydown', onKey)

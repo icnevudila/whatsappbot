@@ -15,9 +15,9 @@ function useVerifyAll() {
   const router = useRouter()
   const toast = useToast()
   const [pending, startTransition] = useTransition()
-  const [error, setError] = useState(null)
+  const [error, setError] = useState<string | null>(null)
   const [needsLine, setNeedsLine] = useState(false)
-  const [ok, setOk] = useState(null)
+  const [ok, setOk] = useState<string | null>(null)
   useSyncBusy(pending, 'Defter doğrulanıyor…', 'WhatsApp kayıt kontrolü')
 
   const run = () => {
@@ -77,16 +77,16 @@ export function ContactsHeaderMenu({
   const router = useRouter()
   const [deleting, startDelete] = useTransition()
   const [open, setOpen] = useState(false)
-  const menuRef = useRef(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   const busy = pending || deleting
   useSyncBusy(deleting, 'WhatsApp kişileri siliniyor…')
 
   useEffect(() => {
     if (!open) return
-    const onDoc = (event) => {
-      if (!menuRef.current?.contains(event.target)) setOpen(false)
+    const onDoc = (event: MouseEvent | TouchEvent) => {
+      if (event.target instanceof Node && !menuRef.current?.contains(event.target)) setOpen(false)
     }
-    const onKey = (event) => {
+    const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setOpen(false)
     }
     document.addEventListener('mousedown', onDoc)
@@ -182,15 +182,15 @@ export function VerifyAllButton({
   searchQuery?: string
 }) {
   const [open, setOpen] = useState(false)
-  const menuRef = useRef(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   const filtered = currentStatus !== 'tum'
 
   useEffect(() => {
     if (!open) return
-    const onDoc = (event) => {
-      if (!menuRef.current?.contains(event.target)) setOpen(false)
+    const onDoc = (event: MouseEvent | TouchEvent) => {
+      if (event.target instanceof Node && !menuRef.current?.contains(event.target)) setOpen(false)
     }
-    const onKey = (event) => {
+    const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setOpen(false)
     }
     document.addEventListener('mousedown', onDoc)
@@ -201,7 +201,7 @@ export function VerifyAllButton({
     }
   }, [open])
 
-  const filterHref = (status) => {
+  const filterHref = (status: string) => {
     const params = new URLSearchParams()
     params.set('gorunum', 'defter')
     if (status !== 'tum') params.set('durum', status)

@@ -31,7 +31,7 @@ export function ListActions({
   const [renaming, setRenaming] = useState(false)
   const [nameDraft, setNameDraft] = useState(currentName ?? '')
   const [menuOpen, setMenuOpen] = useState(false)
-  const menuRef = useRef(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   useSyncBusy(
     pending,
     busy === 'delete'
@@ -43,10 +43,10 @@ export function ListActions({
 
   useEffect(() => {
     if (!menuOpen) return
-    const onDoc = (event) => {
-      if (!menuRef.current?.contains(event.target)) setMenuOpen(false)
+    const onDoc = (event: MouseEvent | TouchEvent) => {
+      if (event.target instanceof Node && !menuRef.current?.contains(event.target)) setMenuOpen(false)
     }
-    const onKey = (event) => {
+    const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setMenuOpen(false)
     }
     document.addEventListener('mousedown', onDoc)
