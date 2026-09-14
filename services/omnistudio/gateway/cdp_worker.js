@@ -141,8 +141,14 @@ async function executeChatGPTJob(tab, job) {
               files: tempRefPaths,
               nodeId: fileInput.nodeId
             });
+            await cdp.send('Runtime.evaluate', {
+              expression: `
+                const el = document.querySelector('#upload-photos') || document.querySelector('#upload-media') || document.querySelector('input[type=file]');
+                if (el) el.dispatchEvent(new Event('change', { bubbles: true }));
+              `
+            });
             console.log('[CDP Worker] Referans görseller ChatGPT inputuna yüklendi, thumbnail bekleniyor...');
-            await sleep(3500); // Görselin yüklenip input alanına eklenmesini bekle
+            await sleep(4000); // Görselin yüklenip input alanına eklenmesini bekle
           }
         } catch (uploadErr) {
           console.warn('[CDP Worker] Referans görsel yükleme uyarısı:', uploadErr.message);
