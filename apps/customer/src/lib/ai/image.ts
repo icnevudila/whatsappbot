@@ -25,6 +25,11 @@ export type ReferenceImage = {
   role?: 'product' | 'logo' | 'base'
 }
 
+export type ImageMetadata = {
+  workspace?: string
+  customer?: string
+}
+
 type ImageProvider = {
   id: AiProviderId
   label: string
@@ -33,6 +38,7 @@ type ImageProvider = {
     prompt: string,
     aspect: AspectRatio,
     references?: ReferenceImage[],
+    metadata?: ImageMetadata,
   ) => Promise<GeneratedImage>
 }
 
@@ -79,7 +85,7 @@ function buildProviders(config: ResolvedAiConfig): Record<AiProviderId, ImagePro
       id: 'omnistudio',
       label: 'OmniStudio AI Engine',
       isConfigured: () => process.env.OMNISTUDIO_DISABLED !== 'true',
-      async generate(prompt, aspect, references) {
+      async generate(prompt, aspect, references, metadata) {
         const gatewayUrl = (process.env.OMNISTUDIO_GATEWAY_URL || 'http://167.233.201.31:3456').replace(/\/$/, '')
 
         // Yoğunluk & Sağlık Kontrolü (Aynı anda onlarca kişi yaparsa doğrudan OpenAI resmi API'ye yönlendir)
@@ -109,6 +115,8 @@ function buildProviders(config: ResolvedAiConfig): Record<AiProviderId, ImagePro
             size,
             response_format: 'b64_json',
             referenceImages,
+            workspace: metadata?.workspace || 'WhatsApp Botu',
+            customer: metadata?.customer || 'Panel',
           }),
         })
 
@@ -349,6 +357,7 @@ export async function generateImage(
   aspect: AspectRatio,
   bag?: AiKeyBag | null,
   references?: ReferenceImage[],
+  metadata?: ImageMetadata,
 ): Promise<{ image: GeneratedImage; attempts: string[] }> {
   const registry = buildProviders(resolveAiConfig(bag))
   const attempts: string[] = []
@@ -359,7 +368,7 @@ export async function generateImage(
     if (!provider.isConfigured()) continue
 
     try {
-      const image = await provider.generate(prompt, aspect, refs)
+      const image = await provider.generate(prompt, aspect, refs, metadata)
       return { image, attempts }
     } catch (error) {
       attempts.push(

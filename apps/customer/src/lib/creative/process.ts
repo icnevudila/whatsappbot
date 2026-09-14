@@ -140,14 +140,20 @@ export async function processCreativeGeneration(
   try {
     const { data: orgData } = await supabase
       .from('organizations')
-      .select('ai_image_mode')
+      .select('name, ai_image_mode')
       .eq('id', creative.org_id)
       .maybeSingle()
 
     const preferred = (orgData as { ai_image_mode?: string | null })?.ai_image_mode === 'fast' ? 'openai' : 'omnistudio'
     const bag: AiKeyBag = { preferredImageProvider: preferred }
 
-    const { image, attempts } = await generateImage(prompt, aspect, bag, refs)
+    const customerName = (orgData as { name?: string | null })?.name || creative.org_id.slice(0, 8)
+    const workspaceTitle = snapshot.brief ? `Kreatif: ${snapshot.brief.slice(0, 40)}` : 'Kreatif Sihirbazı'
+
+    const { image, attempts } = await generateImage(prompt, aspect, bag, refs, {
+      customer: customerName,
+      workspace: workspaceTitle,
+    })
     const ext = image.mimeType.includes('jpeg') ? 'jpg' : 'png'
     const path = `${creative.org_id}/${crypto.randomUUID()}.${ext}`
     const { error: upError } = await supabase.storage.from('creatives').upload(path, image.data, {

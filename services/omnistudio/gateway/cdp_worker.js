@@ -215,10 +215,15 @@ async function executeChatGPTJob(tab, job) {
       // İlerlemeyi Gateway'e bildir
       const elapsed = attempt * 2 + 8;
       const progress = Math.min(96, Math.round((elapsed / 180) * 100));
+      let statusText = 'Prompt gönderildi, görsel üretimi bekleniyor...';
+      if (elapsed > 15) statusText = 'ChatGPT DALL-E görsel motoru çiziyor...';
+      if (elapsed > 45) statusText = 'Görsel ayrıntıları ve ışıklandırma işleniyor...';
+      if (elapsed > 90) statusText = 'Yüksek çözünürlüklü render tamamlanmak üzere...';
+
       fetch(`${GATEWAY_URL}/job/progress`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobId: job.id, progress })
+        body: JSON.stringify({ jobId: job.id, progress, statusText })
       }).catch(() => {});
 
       const checkEval = await cdp.send('Runtime.evaluate', {

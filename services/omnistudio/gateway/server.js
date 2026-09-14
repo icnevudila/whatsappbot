@@ -17,10 +17,57 @@ const crypto = require('crypto');
 const { URL } = require('url');
 
 const PORT = parseInt(process.env.PORT || '3456', 10);
+const PUBLIC_HOST = process.env.PUBLIC_HOST || '167.233.201.31';
 const OUTPUT_DIR = path.resolve(__dirname, 'outputs');
+const MONITOR_HTML_PATH = path.resolve(__dirname, 'monitor.html');
 
 if (!fs.existsSync(OUTPUT_DIR)) {
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+}
+
+// Canlı Olay Akışı (SSE - Server-Sent Events) İstemcileri
+const sseClients = new Set();
+
+function sanitizeJobForBroadcast(job) {
+  if (!job) return null;
+  const publicUrl = job.resultUrl
+    ? job.resultUrl.replace('localhost:3456', `${PUBLIC_HOST}:${PORT}`).replace('127.0.0.1:3456', `${PUBLIC_HOST}:${PORT}`)
+    : null;
+
+  return {
+    id: job.id,
+    customer: job.customer || 'Panel',
+    workspace: job.workspace || 'WhatsApp Botu',
+    originalPrompt: job.originalPrompt,
+    promptPreview: (job.originalPrompt || job.prompt || '').slice(0, 100),
+    size: job.size,
+    platform: job.platform,
+    referenceImagesCount: job.referenceImagesCount || (job.referenceImages ? job.referenceImages.length : 0),
+    status: job.status,
+    progress: job.progress || 0,
+    statusText: job.statusText || '',
+    queuePosition: job.queuePosition || 0,
+    assignedTo: job.assignedTo,
+    resultUrl: publicUrl,
+    error: job.error,
+    createdAt: job.createdAt,
+    startedAt: job.startedAt,
+    completedAt: job.completedAt,
+    durationMs: job.durationMs || (job.completedAt && job.startedAt ? job.completedAt - job.startedAt : null),
+  };
+}
+
+function broadcastEvent(type, data) {
+  if (sseClients.size === 0) return;
+  const payload = JSON.stringify({ type, timestamp: Date.now(), data });
+  const message = `event: ${type}\ndata: ${payload}\n\n`;
+  for (const client of sseClients) {
+    try {
+      client.write(message);
+    } catch (err) {
+      sseClients.delete(client);
+    }
+  }
 }
 
 // Otomatik Prompt Genişletici (Prompt Enhancer)
@@ -58,6 +105,7 @@ class AdvancedJobQueue {
     platform = 'auto',
     response_format = 'url',
     workspace = 'WhatsApp Botu',
+    customer = 'Panel',
     referenceImages = [], // URL veya Base64 dizisi (Ürün, Logo, Önceki Görsel)
     brandKit = null,
     optimizePrompt = true,
@@ -73,10 +121,13 @@ class AdvancedJobQueue {
       platform: platform.toLowerCase(),
       response_format,
       workspace,
+      customer,
+      referenceImagesCount: referenceImages.length,
       referenceImages, // Referans görseller (Image-to-Image için)
       brandKit,
       status: 'pending', // 'pending' | 'processing' | 'completed' | 'failed'
       progress: 0,
+      statusText: 'Kuyrukta sıra bekliyor...',
       queuePosition: this.pendingQueue.length + 1,
       resultUrl: null,
       resultB64: null,
@@ -90,6 +141,7 @@ class AdvancedJobQueue {
     this.jobs.set(id, job);
     this.pendingQueue.push(id);
     this.recalculatePositions();
+    broadcastEvent('job_created', sanitizeJobForBroadcast(job));
     return job;
   }
 
@@ -121,16 +173,28 @@ class AdvancedJobQueue {
     job.status = 'processing';
     job.assignedTo = wid;
     job.platform = p;
-    job.progress = 25;
+    job.progress = 15;
+    job.statusText = `${wid} işçisi görevi devraldı, tarayıcı hazırlanıyor...`;
     job.startedAt = Date.now();
     this.activeWorkers.set(wid, jobId);
 
+    broadcastEvent('job_assigned', sanitizeJobForBroadcast(job));
     return job;
   }
 
-  updateProgress(jobId, progressPercent) {
+  updateProgress(jobId, progressPercent, statusText = null) {
     const job = this.jobs.get(jobId);
-    if (job) job.progress = progressPercent;
+    if (job) {
+      job.progress = progressPercent;
+      if (statusText) job.statusText = statusText;
+      broadcastEvent('job_progress', {
+        id: job.id,
+        progress: job.progress,
+        statusText: job.statusText,
+        assignedTo: job.assignedTo,
+        elapsedSeconds: Math.round((Date.now() - (job.startedAt || Date.now())) / 1000),
+      });
+    }
   }
 
   releaseLock(jobId, error = null) {
@@ -144,15 +208,19 @@ class AdvancedJobQueue {
     if (error) {
       job.status = 'failed';
       job.error = error;
+      job.statusText = `Hata: ${error}`;
       job.completedAt = Date.now();
+      broadcastEvent('job_failed', sanitizeJobForBroadcast(job));
       this.notifyWaiters(jobId, job);
     } else if (job.status === 'processing') {
       job.status = 'pending';
       job.assignedTo = null;
       job.progress = 0;
+      job.statusText = 'Yeniden sıraya alındı';
       job.startedAt = null;
       this.pendingQueue.unshift(jobId);
       this.recalculatePositions();
+      broadcastEvent('job_requeued', sanitizeJobForBroadcast(job));
     }
   }
 
@@ -163,14 +231,17 @@ class AdvancedJobQueue {
     const publicUrl = `http://localhost:${PORT}/outputs/${filename}`;
     job.status = 'completed';
     job.progress = 100;
+    job.statusText = 'Görsel başarıyla üretildi';
     job.resultUrl = publicUrl;
     job.resultB64 = buffer.toString('base64');
     job.completedAt = Date.now();
+    job.durationMs = job.completedAt - (job.startedAt || job.createdAt);
 
     if (job.assignedTo) {
       this.activeWorkers.delete(job.assignedTo);
     }
 
+    broadcastEvent('job_completed', sanitizeJobForBroadcast(job));
     this.notifyWaiters(jobId, job);
     return job;
   }
@@ -237,6 +308,17 @@ setInterval(() => {
   }
 }, 5000);
 
+// SSE Heartbeat (her 25 saniyede bir ping)
+setInterval(() => {
+  for (const client of sseClients) {
+    try {
+      client.write(': ping\n\n');
+    } catch (e) {
+      sseClients.delete(client);
+    }
+  }
+}, 25000);
+
 // Yardımcılar
 function parseJsonBody(req) {
   return new Promise((resolve, reject) => {
@@ -289,6 +371,48 @@ const server = http.createServer(async (req, res) => {
   }
 
   try {
+    // 0. Canlı Olay Akışı (SSE): GET /events
+    if (method === 'GET' && pathname === '/events') {
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache, no-transform',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*',
+      });
+      res.write(': connected\n\n');
+      sseClients.add(res);
+
+      const activeObj = {};
+      for (const [wid, jid] of queue.activeWorkers.entries()) {
+        activeObj[wid] = jid;
+      }
+      const initial = {
+        stats: queue.getStats(),
+        activeWorkers: activeObj,
+        recentJobs: Array.from(queue.jobs.values()).slice(-25).map(sanitizeJobForBroadcast).reverse(),
+      };
+      res.write(`event: init\ndata: ${JSON.stringify({ type: 'init', timestamp: Date.now(), data: initial })}\n\n`);
+
+      req.on('close', () => {
+        sseClients.delete(res);
+      });
+      return;
+    }
+
+    // 0.1. Canlı İzleme Masası (Web UI): GET /monitor veya GET /dashboard
+    if (method === 'GET' && (pathname === '/monitor' || pathname === '/dashboard')) {
+      if (fs.existsSync(MONITOR_HTML_PATH)) {
+        res.writeHead(200, {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'no-cache',
+          'Access-Control-Allow-Origin': '*',
+        });
+        return fs.createReadStream(MONITOR_HTML_PATH).pipe(res);
+      } else {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        return res.end('monitor.html not found');
+      }
+    }
     // 1. Standart Görsel Üretimi VEYA Edits: POST /v1/images/generations & /v1/images/edits
     if (method === 'POST' && (
       pathname === '/v1/images/generations' ||
@@ -309,11 +433,12 @@ const server = http.createServer(async (req, res) => {
       const size = body.size || '1024x1024';
       const response_format = body.response_format || 'url';
       const workspace = body.workspace || 'WhatsApp Botu';
+      const customer = body.customer || 'Panel';
       const referenceImages = body.referenceImages || body.images || (body.image ? [body.image] : []);
       const brandKit = body.brandKit || null;
       const asyncMode = body.async === true || parsedUrl.searchParams.get('async') === 'true';
 
-      console.log(`[Gateway] Yeni iş alındı: "${prompt.slice(0, 50)}..." [RefGörsel: ${referenceImages.length}, Kit: ${brandKit ? 'Var' : 'Yok'}]`);
+      console.log(`[Gateway] Yeni iş alındı: "${prompt.slice(0, 50)}..." [Müşteri: ${customer}, Ref: ${referenceImages.length}, Kit: ${brandKit ? 'Var' : 'Yok'}]`);
 
       const job = queue.createJob({
         prompt,
@@ -321,6 +446,7 @@ const server = http.createServer(async (req, res) => {
         platform,
         response_format,
         workspace,
+        customer,
         referenceImages,
         brandKit,
         optimizePrompt: body.optimize !== false,
@@ -393,7 +519,7 @@ const server = http.createServer(async (req, res) => {
     if (method === 'POST' && pathname === '/job/progress') {
       const body = await parseJsonBody(req);
       if (body.jobId && typeof body.progress === 'number') {
-        queue.updateProgress(body.jobId, body.progress);
+        queue.updateProgress(body.jobId, body.progress, body.statusText);
       }
       return sendJson(res, 200, { ok: true });
     }

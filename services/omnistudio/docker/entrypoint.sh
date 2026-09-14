@@ -38,11 +38,16 @@ for i in $(seq 1 $NUM_WORKERS); do
   mkdir -p "$PROFILE_DIR"
   rm -f "$PROFILE_DIR/Singleton*" "$PROFILE_DIR/*/Singleton*" "$PROFILE_DIR/LOCK" "$PROFILE_DIR/*/LOCK" 2>/dev/null || true
 
+  EXTRA_URL=""
+  if [ "$i" -eq 1 ]; then
+    EXTRA_URL="http://localhost:3456/monitor"
+  fi
+
   echo "🖥️ Google Chrome #$i Başlatılıyor (CDP Port: $PORT, Profil: $PROFILE_DIR)..."
   google-chrome-stable --no-sandbox --disable-dev-shm-usage --disable-gpu \
     --user-data-dir="$PROFILE_DIR" \
     --remote-debugging-port=$PORT \
-    --start-maximized https://chatgpt.com &
+    --start-maximized https://chatgpt.com $EXTRA_URL &
   sleep 3
 
   echo "🤖 CDP Worker #$i Başlatılıyor (Worker ID: chatgpt-$i, CDP: $PORT)..."
