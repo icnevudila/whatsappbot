@@ -78,7 +78,7 @@ function buildProviders(config: ResolvedAiConfig): Record<AiProviderId, ImagePro
     omnistudio: {
       id: 'omnistudio',
       label: 'OmniStudio AI Engine',
-      isConfigured: () => Boolean(process.env.OMNISTUDIO_GATEWAY_URL || process.env.OMNISTUDIO_ENABLED === 'true'),
+      isConfigured: () => process.env.OMNISTUDIO_DISABLED !== 'true',
       async generate(prompt, aspect, references) {
         const gatewayUrl = (process.env.OMNISTUDIO_GATEWAY_URL || 'http://167.233.201.31:3456').replace(/\/$/, '')
 
