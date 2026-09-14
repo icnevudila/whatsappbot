@@ -11,6 +11,7 @@ import {
   updateOrgMemberRole,
   updateOrgName,
   updateOrgWebhook,
+  updateOrgAiImageMode,
   type OrgActionState,
 } from '../org-actions'
 
@@ -52,6 +53,112 @@ export function OrgSettingsForm({
       {canEdit ? (
         <Button type="submit" variant="accent" disabled={pending}>
           {pending ? 'Kaydediliyor…' : 'Kaydet'}
+        </Button>
+      ) : null}
+    </form>
+  )
+}
+
+export function AiImageModeForm({
+  initialMode,
+  canEdit,
+}: {
+  initialMode: string
+  canEdit: boolean
+}) {
+  const [state, formAction, pending] = useActionState<OrgActionState, FormData>(
+    updateOrgAiImageMode,
+    null,
+  )
+  const [mode, setMode] = useState(initialMode || 'economic')
+
+  return (
+    <form action={formAction} className="space-y-3 p-3.5">
+      <input type="hidden" name="ai_image_mode" value={mode} />
+
+      <div className="grid gap-2.5 sm:grid-cols-2">
+        <div
+          role="button"
+          tabIndex={0}
+          className={`cursor-pointer rounded-[var(--radius-card)] border p-3 transition-colors ${
+            mode === 'economic'
+              ? 'border-accent bg-accent-soft/30'
+              : 'border-hairline bg-surface hover:border-hairline-strong'
+          }`}
+          onClick={() => canEdit && setMode('economic')}
+          onKeyDown={(e) => {
+            if (canEdit && (e.key === ' ' || e.key === 'Enter')) setMode('economic')
+          }}
+        >
+          <div className="flex items-start gap-2.5">
+            <input
+              type="radio"
+              name="_mode_radio"
+              checked={mode === 'economic'}
+              onChange={() => canEdit && setMode('economic')}
+              className="mt-0.5 accent-accent"
+              disabled={!canEdit}
+            />
+            <div>
+              <div className="flex items-center gap-1.5 text-[13.5px] font-bold text-ink">
+                <span>Maksimum Tasarruf</span>
+                <span className="rounded bg-accent/20 px-1.5 py-0.5 text-[10.5px] font-semibold text-accent-ink">
+                  Önerilen
+                </span>
+              </div>
+              <p className="mt-1 text-[12px] text-ink-muted">
+                OmniStudio otonom motoru kullanılır. Ek API maliyeti oluşturmaz.
+              </p>
+              <div className="mt-2 text-[11.5px] text-ink-faint">
+                Ortalama süre: ~70 sn · Sınırsız
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          role="button"
+          tabIndex={0}
+          className={`cursor-pointer rounded-[var(--radius-card)] border p-3 transition-colors ${
+            mode === 'fast'
+              ? 'border-accent bg-accent-soft/30'
+              : 'border-hairline bg-surface hover:border-hairline-strong'
+          }`}
+          onClick={() => canEdit && setMode('fast')}
+          onKeyDown={(e) => {
+            if (canEdit && (e.key === ' ' || e.key === 'Enter')) setMode('fast')
+          }}
+        >
+          <div className="flex items-start gap-2.5">
+            <input
+              type="radio"
+              name="_mode_radio"
+              checked={mode === 'fast'}
+              onChange={() => canEdit && setMode('fast')}
+              className="mt-0.5 accent-accent"
+              disabled={!canEdit}
+            />
+            <div>
+              <div className="text-[13.5px] font-bold text-ink">
+                Maksimum Hız
+              </div>
+              <p className="mt-1 text-[12px] text-ink-muted">
+                Doğrudan resmi OpenAI DALL-E API&apos;sini kullanır. Çok hızlıdır ancak API bakiyesinden harcar.
+              </p>
+              <div className="mt-2 text-[11.5px] text-ink-faint">
+                Ortalama süre: ~20 sn · Hızlı teslimat
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
+      {state?.ok ? <Notice tone="accent">{state.ok}</Notice> : null}
+
+      {canEdit ? (
+        <Button type="submit" variant="accent" disabled={pending}>
+          {pending ? 'Kaydediliyor…' : 'Modu Kaydet'}
         </Button>
       ) : null}
     </form>

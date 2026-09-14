@@ -86,7 +86,7 @@ function defaultDraft(data: WizardBootstrap): Draft {
     baseCreativeId: '',
     brief: '',
     brandKitId: data.kits.find((kit) => kit.isDefault)?.id ?? data.kits[0]?.id ?? '',
-    useLogo: true,
+    useLogo: false,
     productIds: [],
     productExtras: {},
     phoneIds: [],
@@ -347,11 +347,29 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
               </Link>
             </Notice>
           ) : (
-            data.kits.map((kit) => (
+            <>
               <button
-                key={kit.id}
                 type="button"
-                onClick={() => patch({ brandKitId: kit.id })}
+                onClick={() => patch({ brandKitId: '' })}
+                className={`flex w-full items-center gap-3 rounded-[var(--radius-card)] border p-3 text-left ${
+                  !draft.brandKitId ? 'border-accent bg-accent-soft/40' : 'border-hairline bg-surface'
+                }`}
+              >
+                <span className="flex size-12 items-center justify-center rounded-md border border-hairline bg-canvas text-[12px] font-medium text-ink-muted">
+                  Nötr
+                </span>
+                <span className="min-w-0">
+                  <span className="block font-semibold">Marka kiti kullanma</span>
+                  <span className="mt-0.5 block text-[12px] text-ink-muted">
+                    Herhangi bir marka adı veya renk kuralı olmadan tamamen serbest tasarım.
+                  </span>
+                </span>
+              </button>
+              {data.kits.map((kit) => (
+                <button
+                  key={kit.id}
+                  type="button"
+                  onClick={() => patch({ brandKitId: kit.id })}
                 className={`flex w-full items-center gap-3 rounded-[var(--radius-card)] border p-3 text-left ${
                   draft.brandKitId === kit.id ? 'border-accent bg-accent-soft/40' : 'border-hairline bg-surface'
                 }`}
@@ -378,7 +396,8 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
                   {kit.tone ? <span className="mt-1 block truncate text-[12px] text-ink-muted">{kit.tone}</span> : null}
                 </span>
               </button>
-            ))
+            ))}
+          </>
           )}
           <label className="flex items-center gap-2 text-[13px]">
             <input

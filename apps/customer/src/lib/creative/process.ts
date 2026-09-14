@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateImage, type ReferenceImage } from '@/lib/ai/image'
+import type { AiKeyBag } from '@/lib/ai/config'
 import { createSupabaseServiceClient } from '@/lib/supabase/service'
 import { buildCreativePrompt } from './prompt'
 import { formatToAspect, type CreativePayload, type CreativeSnapshot } from './types'
@@ -131,31 +132,22 @@ export async function processCreativeGeneration(
       const image = await fetchBuffer(product.imageUrl)
       if (image) refs.push({ ...image, role: 'product' })
     }
-
-    // Sadece ürün tanımlanmamış genel marka kampanyalarında ve logo istenmişse marka logosu verilir.
-    // Ürün kampanyalarında ürün görseli yoksa, marka görseli ürünle karıştırılmasın diye referans verilmez.
-    if (refs.length === 0 && snapshot.products.length === 0 && snapshot.useLogo && snapshot.brandKit?.logoPath) {
-      const path = snapshot.brandKit.logoPath
-      if (path.startsWith('http')) {
-        const image = await fetchBuffer(path)
-        if (image) refs.push({ ...image, role: 'logo' })
-      } else {
-        const { data: signed } = await supabase.storage
-          .from('brand-assets')
-          .createSignedUrl(path, 120)
-        if (signed?.signedUrl) {
-          const image = await fetchBuffer(signed.signedUrl)
-          if (image) refs.push({ ...image, role: 'logo' })
-        }
-      }
-    }
   }
 
   const { prompt } = buildCreativePrompt(snapshot)
   const aspect = snapshot.aspect || formatToAspect(creative.format)
 
   try {
-    const { image, attempts } = await generateImage(prompt, aspect, null, refs)
+    const { data: orgData } = await supabase
+      .from('organizations')
+      .select('ai_image_mode')
+      .eq('id', creative.org_id)
+      .maybeSingle()
+
+    const preferred = (orgData as { ai_image_mode?: string | null })?.ai_image_mode === 'fast' ? 'openai' : 'omnistudio'
+    const bag: AiKeyBag = { preferredImageProvider: preferred }
+
+    const { image, attempts } = await generateImage(prompt, aspect, bag, refs)
     const ext = image.mimeType.includes('jpeg') ? 'jpg' : 'png'
     const path = `${creative.org_id}/${crypto.randomUUID()}.${ext}`
     const { error: upError } = await supabase.storage.from('creatives').upload(path, image.data, {

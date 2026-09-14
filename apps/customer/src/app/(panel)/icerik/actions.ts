@@ -151,7 +151,7 @@ export async function startCreativeGeneration(
     fonts: unknown
     logo_path: string | null
   } | null = null
-  if (kitId) {
+  if (kitId && kitId !== 'none') {
     const { data } = await supabase
       .from('brand_kits')
       .select('id, name, tone, colors, fonts, logo_path')
@@ -160,14 +160,6 @@ export async function startCreativeGeneration(
       .maybeSingle()
     kitRow = data
     if (!kitRow) return { error: 'Marka kiti bulunamadı.' }
-  } else {
-    const { data } = await supabase
-      .from('brand_kits')
-      .select('id, name, tone, colors, fonts, logo_path')
-      .eq('org_id', org.id)
-      .eq('is_default', true)
-      .maybeSingle()
-    kitRow = data
   }
 
   if (baseCreativeId) {
@@ -303,7 +295,7 @@ export async function startCreativeGeneration(
     textDensity: (['low', 'balanced', 'detailed'].includes(String(draft.textDensity))
       ? draft.textDensity
       : 'balanced') as CreativeSnapshot['textDensity'],
-    useLogo: Boolean(kitRow) && draft.useLogo !== false,
+    useLogo: Boolean(kitRow) && draft.useLogo === true,
     labels,
     cta: String(draft.cta ?? '').trim() || null,
     address: String(draft.address ?? '').trim() || null,

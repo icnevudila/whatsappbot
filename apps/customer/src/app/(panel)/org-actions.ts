@@ -102,6 +102,41 @@ export async function updateOrgName(
   return { ok: 'İşletme adı güncellendi.' }
 }
 
+export async function updateOrgAiImageMode(
+  _previous: OrgActionState,
+  formData: FormData,
+): Promise<OrgActionState> {
+  const mode = String(formData.get('ai_image_mode') ?? 'economic').trim().toLowerCase()
+  if (mode !== 'economic' && mode !== 'fast') {
+    return { error: 'Geçersiz mod seçimi.' }
+  }
+
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  try {
+    ;({ org, supabase } = await requireActiveOrg())
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
+  }
+
+  if (org.role !== 'owner' && org.role !== 'admin') {
+    return { error: 'Görsel üretim modunu yalnızca yönetici değiştirebilir.' }
+  }
+
+  const { error } = await supabase
+    .from('organizations')
+    .update({ ai_image_mode: mode })
+    .eq('id', org.id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/ayarlar')
+  revalidatePath('/ayarlar/isletme')
+  revalidatePath('/icerik')
+  revalidatePath('/', 'layout')
+  return { ok: 'Görsel üretim modu kaydedildi.' }
+}
+
 export async function updateOrgSendWindow(formData: FormData) {
   const start = normalizeClock(String(formData.get('send_window_start') ?? ''))
   const end = normalizeClock(String(formData.get('send_window_end') ?? ''))

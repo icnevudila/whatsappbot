@@ -1421,6 +1421,7 @@ export type Database = {
           updated_at: string
           webhook_secret: string | null
           webhook_url: string | null
+          ai_image_mode?: string | null
         }
         Insert: {
           about?: string | null
@@ -1444,6 +1445,7 @@ export type Database = {
           updated_at?: string
           webhook_secret?: string | null
           webhook_url?: string | null
+          ai_image_mode?: string | null
         }
         Update: {
           about?: string | null
@@ -1467,6 +1469,7 @@ export type Database = {
           updated_at?: string
           webhook_secret?: string | null
           webhook_url?: string | null
+          ai_image_mode?: string | null
         }
         Relationships: []
       }

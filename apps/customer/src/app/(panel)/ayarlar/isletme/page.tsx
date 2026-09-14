@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { AccentLink, Badge, Card, CardHeader } from '@/components/ui'
 import { requireActiveOrg } from '@/lib/org'
 import { planLabel } from '@wa/shared'
-import { DeleteOrganizationForm, MembersPanel, OrgSettingsForm } from '../org-forms'
+import { AiImageModeForm, DeleteOrganizationForm, MembersPanel, OrgSettingsForm } from '../org-forms'
 import { QuotaRow } from '../quota-row'
 import { SettingsPageFrame } from '../settings-shell'
 
@@ -122,6 +122,16 @@ export default async function OrgSettingsPage() {
         <Card>
           <CardHeader title="İşletme adı" />
           <OrgSettingsForm orgName={org.name} canEdit />
+        </Card>
+      ) : null}
+
+      {canManage ? (
+        <Card>
+          <CardHeader
+            title="Yapay zeka görsel modu"
+            subtitle="İçerik kütüphanesinde kullanılacak öncelikli motoru belirleyin."
+          />
+          <AiImageModeForm initialMode={org.ai_image_mode ?? 'economic'} canEdit />
         </Card>
       ) : null}
 

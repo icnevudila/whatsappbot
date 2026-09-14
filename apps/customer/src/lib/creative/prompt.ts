@@ -96,9 +96,9 @@ export function buildCreativePrompt(snapshot: CreativeSnapshot): {
     kit?.tone ? `Brand tone of voice: ${kit.tone}` : null,
     colors ? `Follow this brand palette in backgrounds, accents and props: ${colors}.` : null,
     kit?.fonts?.heading ? `Prefer a ${kit.fonts.heading}-like heading feel.` : null,
-    !snapshot.baseCreativeId && snapshot.products.length === 0 && snapshot.useLogo && kit?.logoPath
-      ? 'A real brand logo image is attached. Place it as a small clean logo. Do NOT redraw, restyle or invent a new logo. Do not distort it.'
-      : 'Do not invent a logo.',
+    kit && snapshot.useLogo
+      ? `Include brand name "${kit.name}" cleanly. Do not distort it.`
+      : 'Do not invent fake logos.',
     snapshot.baseCreativeId
       ? 'A base/reference campaign image is attached. Keep the same product and brand identity; apply the requested change.'
       : null,
