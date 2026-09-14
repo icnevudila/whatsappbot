@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect, useRef, useState, useTransition } from 'react'
+import { useActionState, useCallback, useContext, useEffect, useRef, useState, useTransition, createContext } from 'react'
 import { useRouter } from 'next/navigation'
 import { Wordmark } from '@/components/brand'
 import { Button, Field, Input, Notice } from '@/components/ui'
@@ -12,7 +12,6 @@ import {
   e164ToMaskedTr,
   formatTrMobileMask,
   isTrMobileMasked,
-  stepIndex,
   type OnboardingStep,
 } from '@/lib/onboarding'
 import type { OnboardingSnapshot } from '@/lib/onboarding-state'
@@ -41,15 +40,40 @@ const LABELS: Record<OnboardingStep, string> = {
   marka: 'Marka',
 }
 
-function go(router: ReturnType<typeof useRouter>, step: OnboardingStep) {
-  router.replace(`/erisim-yok?adim=${step}`)
+const ADDITIONAL_STEPS = ONBOARDING_STEPS.filter((step) => step !== 'hosgeldin')
+
+const OnboardFlowContext = createContext({
+  mode: 'first' as 'first' | 'additional',
+  basePath: '/erisim-yok',
+  steps: ONBOARDING_STEPS as readonly OnboardingStep[],
+})
+
+function useOnboardFlow() {
+  return useContext(OnboardFlowContext)
+}
+
+function useGo() {
+  const router = useRouter()
+  const { basePath } = useOnboardFlow()
+  return useCallback(
+    (step: OnboardingStep) => {
+      router.replace(`${basePath}?adim=${step}`)
+    },
+    [router, basePath],
+  )
+}
+
+function useStepMeta(step: OnboardingStep) {
+  const { steps } = useOnboardFlow()
+  const idx = Math.max(0, steps.indexOf(step))
+  return { idx, total: steps.length, steps }
 }
 
 function StepDots({ current }: { current: OnboardingStep }) {
-  const idx = stepIndex(current)
+  const { idx, steps } = useStepMeta(current)
   return (
     <ol className="flex items-center gap-1.5" aria-label="Kurulum adımları">
-      {ONBOARDING_STEPS.map((step, i) => (
+      {steps.map((step, i) => (
         <li
           key={step}
           className={`h-1.5 rounded-full transition-all ${
@@ -76,10 +100,12 @@ function Pager({
   nextPending?: boolean
   hideNext?: boolean
 }) {
-  const idx = stepIndex(current)
+  const { idx, total } = useStepMeta(current)
+  const { mode } = useOnboardFlow()
+  const showBack = Boolean(onBack) && (idx > 0 || mode === 'additional')
   return (
     <div className="mt-6 flex items-center justify-between gap-3">
-      {idx > 0 ? (
+      {showBack ? (
         <Button type="button" onClick={onBack} disabled={nextPending}>
           Geri
         </Button>
@@ -87,7 +113,7 @@ function Pager({
         <span />
       )}
       <p className="text-[12px] tabular text-ink-faint">
-        {idx + 1} / {ONBOARDING_STEPS.length}
+        {idx + 1} / {total}
       </p>
       {hideNext ? (
         <span />
@@ -103,20 +129,33 @@ function Pager({
 export function OnboardingWizard({
   snapshot,
   step,
+  mode = 'first',
+  basePath = '/erisim-yok',
 }: {
   snapshot: OnboardingSnapshot
   step: OnboardingStep
+  mode?: 'first' | 'additional'
+  basePath?: string
 }) {
   const router = useRouter()
-  const idx = stepIndex(step)
+  const steps = mode === 'additional' ? ADDITIONAL_STEPS : ONBOARDING_STEPS
+  const idx = Math.max(0, steps.indexOf(step))
+  const go = (next: OnboardingStep) => {
+    router.replace(`${basePath}?adim=${next}`)
+  }
 
   const back = () => {
-    const prev = ONBOARDING_STEPS[Math.max(0, idx - 1)]
-    if (prev) go(router, prev)
+    if (mode === 'additional' && (step === 'isletme' || step === 'adres')) {
+      router.push('/ayarlar/isletme')
+      return
+    }
+    const prev = steps[Math.max(0, idx - 1)]
+    if (prev) go(prev)
   }
 
   return (
-    <main className="flex min-h-dvh flex-col bg-canvas">
+    <OnboardFlowContext.Provider value={{ mode, basePath, steps }}>
+    <main className={mode === 'additional' ? 'flex min-h-0 flex-1 flex-col' : 'flex min-h-dvh flex-col bg-canvas'}>
       <div className="mx-auto flex w-full max-w-[560px] flex-1 flex-col px-5 py-8 md:py-12">
         <div className="mb-8 flex items-center justify-between gap-3">
           <Wordmark />
@@ -138,11 +177,12 @@ export function OnboardingWizard({
         </div>
       </div>
     </main>
+    </OnboardFlowContext.Provider>
   )
 }
 
 function WelcomeStep({ snapshot }: { snapshot: OnboardingSnapshot }) {
-  const router = useRouter()
+  const go = useGo()
   const [error, setError] = useState<string | null>(null)
   const [pending, start] = useTransition()
 
@@ -174,7 +214,7 @@ function WelcomeStep({ snapshot }: { snapshot: OnboardingSnapshot }) {
                 setError(result.error)
                 return
               }
-              go(router, (result?.next as OnboardingStep) || (snapshot.org ? 'adres' : 'isletme'))
+              go((result?.next as OnboardingStep) || (snapshot.org ? 'adres' : 'isletme'))
             })
           }}
         >
@@ -192,17 +232,19 @@ function BusinessStep({
   snapshot: OnboardingSnapshot
   onBack: () => void
 }) {
-  const router = useRouter()
+  const go = useGo()
+  const { mode } = useOnboardFlow()
   const [state, action, pending] = useActionState<OnboardState, FormData>(saveBusinessName, null)
 
   useEffect(() => {
-    if (state?.next) go(router, state.next as OnboardingStep)
-  }, [state?.next, router])
+    if (state?.next) go(state.next as OnboardingStep)
+  }, [state?.next, go])
 
   return (
     <form action={action}>
+      {mode === 'additional' ? <input type="hidden" name="flow" value="additional" /> : null}
       <h1 className="mt-2 text-[24px] font-semibold tracking-[-0.03em]">
-        İşletmenizi hızlıca ekleyelim
+        {mode === 'additional' ? 'Yeni işletme ekleyin' : 'İşletmenizi hızlıca ekleyelim'}
       </h1>
       <p className="mt-2 text-[13.5px] text-ink-muted">Kampanya ve gönderimlerde bu ad görünür.</p>
       <div className="mt-5">
@@ -212,7 +254,7 @@ function BusinessStep({
             required
             minLength={2}
             maxLength={80}
-            defaultValue={snapshot.org?.name ?? ''}
+            defaultValue={mode === 'additional' ? '' : snapshot.org?.name ?? ''}
             placeholder="Örn. Filo Butik"
           />
         </Field>
@@ -234,12 +276,12 @@ function AddressStep({
   snapshot: OnboardingSnapshot
   onBack: () => void
 }) {
-  const router = useRouter()
+  const go = useGo()
   const [state, action, pending] = useActionState<OnboardState, FormData>(saveAddress, null)
 
   useEffect(() => {
-    if (state?.next) go(router, state.next as OnboardingStep)
-  }, [state?.next, router])
+    if (state?.next) go(state.next as OnboardingStep)
+  }, [state?.next, go])
 
   return (
     <form action={action}>
@@ -279,6 +321,8 @@ function HatStep({
   onBack: () => void
 }) {
   const router = useRouter()
+  const go = useGo()
+  const { idx, total } = useStepMeta('hat')
   const [phone, setPhone] = useState(
     e164ToMaskedTr(snapshot.org?.phone_e164 || snapshot.account?.phone_e164),
   )
@@ -395,7 +439,7 @@ function HatStep({
           Geri
         </Button>
         <p className="text-[12px] tabular text-ink-faint">
-          {stepIndex('hat') + 1} / {ONBOARDING_STEPS.length}
+          {idx + 1} / {total}
         </p>
         <Button
           type="button"
@@ -409,7 +453,7 @@ function HatStep({
                 setAdvanceError(result.error)
                 return
               }
-              go(router, 'rehber')
+              go('rehber')
             })
           }}
         >
@@ -433,7 +477,9 @@ function RehberStep({
   snapshot: OnboardingSnapshot
   onBack: () => void
 }) {
+  const go = useGo()
   const router = useRouter()
+  const { idx, total } = useStepMeta('rehber')
   const [error, setError] = useState<string | null>(null)
   const [pending, start] = useTransition()
   const [running, setRunning] = useState(false)
@@ -530,7 +576,7 @@ function RehberStep({
           Geri
         </Button>
         <p className="text-[12px] tabular text-ink-faint">
-          {stepIndex('rehber') + 1} / {ONBOARDING_STEPS.length}
+          {idx + 1} / {total}
         </p>
         <div className="flex gap-2">
           {done ? null : (
@@ -542,7 +588,7 @@ function RehberStep({
                 start(async () => {
                   const result = await skipContactsImport()
                   if (result?.error) setError(result.error)
-                  else go(router, 'tanitim')
+                  else go('tanitim')
                 })
               }}
             >
@@ -550,7 +596,7 @@ function RehberStep({
             </Button>
           )}
           {done ? (
-            <Button type="button" variant="accent" onClick={() => go(router, 'tanitim')}>
+            <Button type="button" variant="accent" onClick={() => go('tanitim')}>
               Devam
             </Button>
           ) : (
@@ -586,12 +632,12 @@ function AboutStep({
   snapshot: OnboardingSnapshot
   onBack: () => void
 }) {
-  const router = useRouter()
+  const go = useGo()
   const [state, action, pending] = useActionState<OnboardState, FormData>(saveAbout, null)
 
   useEffect(() => {
-    if (state?.next) go(router, state.next as OnboardingStep)
-  }, [state?.next, router])
+    if (state?.next) go(state.next as OnboardingStep)
+  }, [state?.next, go])
 
   return (
     <form action={action}>
@@ -761,6 +807,7 @@ function BrandStep({
   onBack: () => void
 }) {
   const router = useRouter()
+  const { idx, total } = useStepMeta('marka')
   const [error, setError] = useState<string | null>(null)
   const [pending, start] = useTransition()
   const [brand, setBrand] = useState(snapshot.brand)
@@ -869,7 +916,7 @@ function BrandStep({
           Geri
         </Button>
         <p className="text-[12px] tabular text-ink-faint">
-          {stepIndex('marka') + 1} / {ONBOARDING_STEPS.length}
+          {idx + 1} / {total}
         </p>
         <Button
           type="button"

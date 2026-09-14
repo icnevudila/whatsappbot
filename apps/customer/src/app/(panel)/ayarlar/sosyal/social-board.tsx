@@ -7,7 +7,7 @@ import { useToast } from '@/components/toast'
 import { Button, EmptyState, Field, Input, Notice } from '@/components/ui'
 import { deleteSocialAccount, saveSocialAccount, type SocialState } from './actions'
 
-const PLATFORMS = [
+export const SOCIAL_PLATFORMS = [
   { id: 'instagram', label: 'Instagram', hint: 'instagram.com/isletme' },
   { id: 'facebook', label: 'Facebook', hint: 'facebook.com/isletme' },
   { id: 'tiktok', label: 'TikTok', hint: 'tiktok.com/@isletme' },
@@ -17,6 +17,8 @@ const PLATFORMS = [
   { id: 'website', label: 'Web sitesi', hint: 'ornek.com' },
   { id: 'other', label: 'Diğer', hint: 'https://…' },
 ] as const
+
+const PLATFORMS = SOCIAL_PLATFORMS
 
 type PlatformId = (typeof PLATFORMS)[number]['id']
 
@@ -325,7 +327,7 @@ function SocialItem({
   )
 }
 
-function SocialMark({ platform, className }: { platform: string; className?: string }) {
+export function SocialMark({ platform, className }: { platform: string; className?: string }) {
   return (
     <svg
       viewBox="0 0 24 24"

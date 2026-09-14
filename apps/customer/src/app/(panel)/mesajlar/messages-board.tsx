@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
-  Button,
   CardHeader,
   EmptyState,
   FilterChip,
@@ -24,6 +23,7 @@ import { ReplyForm } from './reply-form'
 
 export type ChatMessage = {
   id: number
+  clientKey?: string
   account_id: string | null
   direction: string
   phone_e164: string | null
@@ -33,6 +33,8 @@ export type ChatMessage = {
   status: string
   created_at: string
   campaign_id: string | null
+  campaignName?: string | null
+  wa_message_id?: string | null
 }
 
 export type ThreadPreview = {
@@ -125,8 +127,10 @@ export function MessagesBoard({
   const [timeOpen, setTimeOpen] = useState(dateRange !== 'tum')
   const [searchOpen, setSearchOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [threadMenuOpen, setThreadMenuOpen] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+  const threadMenuRef = useRef<HTMLDivElement>(null)
   const threadEndRef = useRef<HTMLDivElement>(null)
   const [flashPhone, setFlashPhone] = useState<string | null>(null)
   const topPhoneRef = useRef<string | null>(previews[0]?.phone ?? null)
@@ -138,12 +142,16 @@ export function MessagesBoard({
   }, [searchOpen])
 
   useEffect(() => {
-    if (!menuOpen) return
+    if (!menuOpen && !threadMenuOpen) return
     const onDoc = (event: MouseEvent | TouchEvent) => {
-      if (event.target instanceof Node && !menuRef.current?.contains(event.target)) setMenuOpen(false)
+      if (!(event.target instanceof Node)) return
+      if (menuOpen && !menuRef.current?.contains(event.target)) setMenuOpen(false)
+      if (threadMenuOpen && !threadMenuRef.current?.contains(event.target)) setThreadMenuOpen(false)
     }
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setMenuOpen(false)
+      if (event.key !== 'Escape') return
+      setMenuOpen(false)
+      setThreadMenuOpen(false)
     }
     document.addEventListener('mousedown', onDoc)
     window.addEventListener('keydown', onKey)
@@ -151,7 +159,11 @@ export function MessagesBoard({
       document.removeEventListener('mousedown', onDoc)
       window.removeEventListener('keydown', onKey)
     }
-  }, [menuOpen])
+  }, [menuOpen, threadMenuOpen])
+
+  useEffect(() => {
+    setThreadMenuOpen(false)
+  }, [selectedPhone])
 
   const visibleList = list.filter((item) =>
     `${item.contactName ?? ''} ${item.pushName ?? ''} ${item.phone} ${item.lastBody ?? ''} ${item.accountLabel ?? ''}`
@@ -524,9 +536,40 @@ export function MessagesBoard({
                 }
                 action={
                   selectedPhone.startsWith('+') ? (
-                    <Button disabled={pending} onClick={block}>
-                      {pending ? 'Ekleniyor…' : 'İstemeyenlere al'}
-                    </Button>
+                    <div className="relative shrink-0" ref={threadMenuRef}>
+                      <button
+                        type="button"
+                        aria-label="Diğer"
+                        aria-haspopup="menu"
+                        aria-expanded={threadMenuOpen}
+                        title="Diğer"
+                        disabled={pending}
+                        onClick={() => setThreadMenuOpen((value) => !value)}
+                        className="inline-flex size-8 items-center justify-center rounded-full border border-hairline bg-surface text-ink hover:bg-canvas disabled:opacity-50"
+                      >
+                        <Icon name="ellipsis" className="size-4" />
+                      </button>
+                      {threadMenuOpen ? (
+                        <div
+                          role="menu"
+                          className="absolute right-0 z-30 mt-1 min-w-[12.5rem] rounded-md border border-hairline bg-surface p-1 shadow-[var(--shadow-md)]"
+                        >
+                          <button
+                            type="button"
+                            role="menuitem"
+                            disabled={pending}
+                            className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-left text-[13px] font-medium text-ink hover:bg-canvas disabled:opacity-50"
+                            onClick={() => {
+                              setThreadMenuOpen(false)
+                              block()
+                            }}
+                          >
+                            <Icon name="shield" className="size-4 text-ink-muted" />
+                            {pending ? 'Ekleniyor…' : 'İstemeyenlere al'}
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
                   ) : null
                 }
               />
@@ -552,9 +595,29 @@ export function MessagesBoard({
                 <div className="wb-chat-thread" role="log" aria-live="polite" aria-relevant="additions">
                   {thread.map((row) => {
                     const outgoing = row.direction === 'out'
+                    const hat =
+                      row.account_id && accountLabels[row.account_id]
+                        ? accountLabels[row.account_id]
+                        : null
+                    const meta = row.campaign_id
+                      ? [
+                          'Kampanya',
+                          row.campaignName,
+                          hat,
+                          timeFormat.format(new Date(row.created_at)),
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')
+                      : [
+                          outgoing ? 'Giden' : 'Gelen',
+                          hat,
+                          timeFormat.format(new Date(row.created_at)),
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')
                     return (
                       <div
-                        key={row.id}
+                        key={row.clientKey ?? `log-${row.id}`}
                         className={`flex ${outgoing ? 'justify-end' : 'justify-start'}`}
                       >
                         <div
@@ -565,15 +628,7 @@ export function MessagesBoard({
                           <p className="wb-chat-bubble-body">
                             {row.body ?? `(${row.message_type})`}
                           </p>
-                          <p className="wb-chat-bubble-meta">
-                            {outgoing ? 'Giden' : 'Gelen'}
-                            {row.account_id && accountLabels[row.account_id]
-                              ? ` · ${accountLabels[row.account_id]}`
-                              : ''}
-                            {' · '}
-                            {timeFormat.format(new Date(row.created_at))}
-                            {row.campaign_id ? ' · kampanya' : ''}
-                          </p>
+                          <p className="wb-chat-bubble-meta">{meta}</p>
                           {outgoing ? (
                             <div className="mt-1">
                               <StatusPill status={row.status} />

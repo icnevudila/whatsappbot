@@ -119,6 +119,17 @@ export function CampaignWizard({
     () => shared.accounts.filter((item) => !item.disabled),
     [shared.accounts],
   )
+  const submitListIds = useMemo(
+    () => selectedLists.filter((id) => shared.lists.some((list) => list.id === id)),
+    [selectedLists, shared.lists],
+  )
+  const submitAccountIds = useMemo(
+    () =>
+      enabledAccounts.length === 1
+        ? [enabledAccounts[0].id]
+        : selectedAccounts.filter((id) => enabledAccounts.some((account) => account.id === id)),
+    [enabledAccounts, selectedAccounts],
+  )
 
   useSyncBusy(pending, 'Kampanya kaydediliyor…')
   useSyncBusy(uploading, 'Görsel yükleniyor…')
@@ -139,8 +150,16 @@ export function CampaignWizard({
           setMediaUrl(saved.mediaUrl ?? '')
           setMessageType(saved.messageType || 'text')
         }
-        setSelectedLists(Array.isArray(saved.lists) ? saved.lists : [])
-        setSelectedAccounts(Array.isArray(saved.accounts) ? saved.accounts : [])
+        setSelectedLists(
+          (Array.isArray(saved.lists) ? saved.lists : []).filter((id) =>
+            shared.lists.some((list) => list.id === id),
+          ),
+        )
+        setSelectedAccounts(
+          (Array.isArray(saved.accounts) ? saved.accounts : []).filter((id) =>
+            shared.accounts.some((account) => account.id === id && !account.disabled),
+          ),
+        )
         setStartMode(saved.startMode ?? 'draft')
         setScheduledAt(saved.scheduledAt ?? '')
       }
@@ -158,7 +177,21 @@ export function CampaignWizard({
       /* ignore */
     }
     setReady(true)
-  }, [mode, initialMediaUrl, initialStep, pathname, router, searchParams, shared.orgId])
+  }, [mode, initialMediaUrl, initialStep, pathname, router, searchParams, shared.orgId, shared.lists, shared.accounts])
+
+  useEffect(() => {
+    if (mode === 'create' && !ready) return
+    const validLists = new Set(shared.lists.map((list) => list.id))
+    setSelectedLists((current) => {
+      const next = current.filter((id) => validLists.has(id))
+      return next.length === current.length ? current : next
+    })
+    const validAccounts = new Set(enabledAccounts.map((account) => account.id))
+    setSelectedAccounts((current) => {
+      const next = current.filter((id) => validAccounts.has(id))
+      return next.length === current.length ? current : next
+    })
+  }, [mode, ready, shared.lists, enabledAccounts])
 
   useEffect(() => {
     if (mode !== 'create' || !ready) return
@@ -241,14 +274,14 @@ export function CampaignWizard({
     if (id === 'kampanya' && !name.trim()) return 'Kampanyaya bir ad verin.'
     if (id === 'alicilar') {
       if (shared.lists.length === 0) return 'Önce Kişiler’den bir grup oluşturun.'
-      if (selectedLists.length === 0) return 'En az bir kişi grubu seçin.'
+      if (submitListIds.length === 0) return 'En az bir kişi grubu seçin.'
     }
     if (id === 'mesaj' && !body.trim() && !mediaUrl) return 'Mesaj yazın veya görsel ekleyin.'
     if (id === 'gonderen') {
-      if (shared.accounts.filter((item) => !item.disabled).length === 0 && selectedAccounts.length === 0) {
+      if (enabledAccounts.length === 0 && submitAccountIds.length === 0) {
         return 'Önce Hatlar’dan bir hat bağlayın.'
       }
-      if (selectedAccounts.length === 0) return 'En az bir WhatsApp hattı seçin.'
+      if (submitAccountIds.length === 0) return 'En az bir WhatsApp hattı seçin.'
     }
     if (id === 'yayinla' && startMode === 'schedule' && !scheduledAt) return 'Planlamak için tarih ve saat seçin.'
     return null
@@ -429,10 +462,10 @@ export function CampaignWizard({
         <input type="hidden" name="body_b" value={campaign?.body_b ?? ''} />
         <input type="hidden" name="start_mode" value={startMode} />
         {scheduledAt ? <input type="hidden" name="scheduled_at" value={scheduledAt} /> : null}
-        {selectedLists.map((id) => (
+        {submitListIds.map((id) => (
           <input key={`list-${id}`} type="hidden" name="lists" value={id} />
         ))}
-        {selectedAccounts.map((id) => (
+        {submitAccountIds.map((id) => (
           <input key={`acc-${id}`} type="hidden" name="accounts" value={id} />
         ))}
         {campaign?.status === 'paused' || campaign?.status === 'stopped' ? (

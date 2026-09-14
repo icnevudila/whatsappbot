@@ -11,6 +11,16 @@ import {
   validateSchedule,
 } from '@/lib/campaign-validation'
 
+function uniqueFormIds(formData: FormData, key: string) {
+  return [...new Set(formData.getAll(key).map((value) => String(value).trim()).filter(Boolean))]
+}
+
+function idsMatch(rows: { id: string }[] | null | undefined, ids: string[]) {
+  if (!rows) return false
+  const found = new Set(rows.map((row) => row.id))
+  return ids.length === found.size && ids.every((id) => found.has(id))
+}
+
 export type CampaignState = { error?: string; ok?: string } | null
 
 export async function createCampaign(
@@ -28,8 +38,8 @@ export async function createCampaign(
       : mediaUrl
         ? 'image'
         : 'text'
-  const listIds = [...new Set(formData.getAll('lists').map(String).filter(Boolean))]
-  const accountIds = [...new Set(formData.getAll('accounts').map(String).filter(Boolean))]
+  const listIds = uniqueFormIds(formData, 'lists')
+  const accountIds = uniqueFormIds(formData, 'accounts')
   const startMode = String(formData.get('start_mode') ?? 'now').trim() || 'now'
   const scheduledAtRaw = String(formData.get('scheduled_at') ?? '').trim()
 
@@ -70,10 +80,25 @@ export async function createCampaign(
 
   const [lists, accounts] = await Promise.all([
     supabase.from('contact_lists').select('id').eq('org_id', org.id).in('id', listIds),
-    supabase.from('accounts').select('id').eq('org_id', org.id).in('id', accountIds).eq('enabled', true).eq('is_locked', false),
+    supabase
+      .from('accounts')
+      .select('id, enabled, is_locked, status')
+      .eq('org_id', org.id)
+      .in('id', accountIds),
   ])
-  if (lists.error || accounts.error || lists.data?.length !== listIds.length || accounts.data?.length !== accountIds.length) {
-    return { error: 'Seçilen grupları ve gönderime açık hatları kontrol edin.' }
+  if (lists.error) return { error: 'Seçilen gruplar doğrulanamadı. Grupları yeniden seçin.' }
+  if (accounts.error) return { error: 'Seçilen hatlar doğrulanamadı. Hatları yeniden seçin.' }
+  if (!idsMatch(lists.data, listIds)) {
+    return { error: 'Seçilen gruplardan bazıları artık yok. Grupları yeniden seçin.' }
+  }
+  if (!idsMatch(accounts.data, accountIds)) {
+    return { error: 'Seçilen hatlardan bazıları artık yok. Hatları yeniden seçin.' }
+  }
+  const blocked = (accounts.data ?? []).filter(
+    (row) => row.status !== 'connected' || row.is_locked || row.enabled === false,
+  )
+  if (blocked.length > 0) {
+    return { error: 'Seçilen hatlar bağlı ve gönderime açık olmalı.' }
   }
 
   const schedule = startMode === 'schedule'

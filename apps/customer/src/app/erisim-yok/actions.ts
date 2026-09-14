@@ -34,6 +34,12 @@ async function requireUser() {
 
 async function setProfileStep(userId: string, step: keyof typeof STEP_TO_PROFILE) {
   const supabase = await createSupabaseServerClient()
+  const { data } = await supabase
+    .from('profiles')
+    .select('onboarded_at')
+    .eq('id', userId)
+    .maybeSingle()
+  if (data?.onboarded_at) return
   await supabase
     .from('profiles')
     .update({ onboarding_step: STEP_TO_PROFILE[step] })
@@ -87,12 +93,13 @@ export async function saveBusinessName(
 
   try {
     const { user, supabase } = await requireUser()
-    const { data: orgId, error } = await supabase.rpc('onboard_create_organization', {
-      p_name: name,
-    })
+    const additional = String(formData.get('flow') ?? '') === 'additional'
+    const { data: orgId, error } = additional
+      ? await supabase.rpc('create_organization', { p_name: name })
+      : await supabase.rpc('onboard_create_organization', { p_name: name })
     if (error) {
       if (error.message.includes('org limit reached')) {
-        return { error: 'En fazla 3 işletme sahibi olabilirsiniz.' }
+        return { error: 'İşletme oluşturma hakkınız doldu.' }
       }
       return { error: error.message }
     }
@@ -101,6 +108,9 @@ export async function saveBusinessName(
     }
     await setProfileStep(user.id, 'adres')
     revalidatePath('/erisim-yok')
+    revalidatePath('/ayarlar/isletme')
+    revalidatePath('/ayarlar/isletme/yeni')
+    revalidatePath('/', 'layout')
     return { ok: 'kaydedildi', next: 'adres' }
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Kayıt başarısız.' }
@@ -499,6 +509,13 @@ export async function completeOnboarding(): Promise<OnboardState> {
       .maybeSingle()
     if (!kit) return { error: 'Önce marka kitini oluşturun.' }
 
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('onboarded_at')
+      .eq('id', userId)
+      .maybeSingle()
+    const alreadyOnboarded = Boolean(profile?.onboarded_at)
+
     await supabase
       .from('profiles')
       .update({
@@ -508,7 +525,7 @@ export async function completeOnboarding(): Promise<OnboardState> {
       .eq('id', userId)
 
     revalidatePath('/', 'layout')
-    redirect('/ozet')
+    redirect(alreadyOnboarded ? '/ayarlar/isletme' : '/ozet')
   } catch (error) {
     if (
       error &&

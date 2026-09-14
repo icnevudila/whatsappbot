@@ -620,6 +620,83 @@ export function AiRewriteBar({
   )
 }
 
+const HOURS_24 = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'))
+const MINUTES_60 = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'))
+
+function splitScheduleValue(value: string) {
+  const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})/.exec(value.trim())
+  if (!match) return { date: '', hour: '', minute: '' }
+  return { date: match[1], hour: match[2], minute: match[3] }
+}
+
+function joinScheduleValue(date: string, hour: string, minute: string) {
+  if (!date || !hour || !minute) return ''
+  return `${date}T${hour}:${minute}`
+}
+
+function ScheduleAtInput({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (value: string) => void
+}) {
+  const parts = splitScheduleValue(value)
+  const hour = parts.hour || '09'
+  const minute = parts.minute || '00'
+
+  const emit = (nextDate: string, nextHour: string, nextMinute: string) => {
+    onChange(joinScheduleValue(nextDate, nextHour, nextMinute))
+  }
+
+  const selectClass =
+    'h-[43px] rounded-md border border-hairline-strong bg-surface px-2.5 text-[14px] text-ink tabular-nums focus:border-accent focus:outline-none'
+
+  return (
+    <div className="mt-3 space-y-1.5" lang="tr-TR">
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          type="date"
+          lang="tr-TR"
+          className="h-[43px] min-w-[10.5rem] rounded-md border border-hairline-strong bg-surface px-3 text-[14px] text-ink focus:border-accent focus:outline-none"
+          value={parts.date}
+          onChange={(event) => emit(event.target.value, hour, minute)}
+        />
+        <span className="flex items-center gap-1" aria-label="Saat, 24 saat">
+          <select
+            aria-label="Saat"
+            className={selectClass}
+            value={hour}
+            onChange={(event) => emit(parts.date, event.target.value, minute)}
+          >
+            {HOURS_24.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+          </select>
+          <span className="text-[14px] font-semibold text-ink-muted" aria-hidden>
+            :
+          </span>
+          <select
+            aria-label="Dakika"
+            className={selectClass}
+            value={minute}
+            onChange={(event) => emit(parts.date, hour, event.target.value)}
+          >
+            {MINUTES_60.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+          </select>
+        </span>
+      </div>
+      <p className="text-[12px] text-ink-faint">Saat 24 saat formatında (00–23). Örn. 09:30 veya 21:45.</p>
+    </div>
+  )
+}
+
 export function PublishCards({
   mode,
   selected,
@@ -711,12 +788,7 @@ export function PublishCards({
                 </span>
               </span>
               {card.id === 'schedule' && on ? (
-                <input
-                  type="datetime-local"
-                  className="mt-3 w-full max-w-xs rounded-md border border-hairline-strong bg-surface px-3 py-2 text-[14px]"
-                  value={scheduledAt}
-                  onChange={(event) => onSchedule(event.target.value)}
-                />
+                <ScheduleAtInput value={scheduledAt} onChange={onSchedule} />
               ) : null}
             </label>
           )

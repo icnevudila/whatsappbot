@@ -16,7 +16,7 @@ export async function loadCampaignWizardData(orgId: string) {
       .order('created_at', { ascending: false }),
     supabase
       .from('accounts')
-      .select('id, label, status, is_locked, phone_e164')
+      .select('id, label, status, is_locked, enabled, phone_e164')
       .eq('org_id', orgId)
       .order('created_at'),
     supabase
@@ -43,14 +43,14 @@ export async function loadCampaignWizardData(orgId: string) {
   }))
 
   const accounts: AccountOption[] = (accountsResult.data ?? []).map((account) => {
-    const connected = account.status === 'connected' && !account.is_locked
+    const connected = account.status === 'connected' && !account.is_locked && account.enabled
     return {
       id: account.id,
       label: account.label,
       phone: e164ToMaskedTr(account.phone_e164) || account.phone_e164,
       connected,
       disabled: !connected,
-      detail: account.is_locked ? 'Kilitli' : connected ? 'Bağlı' : 'Bağlı değil',
+      detail: account.is_locked ? 'Kilitli' : !account.enabled ? 'Kapalı' : connected ? 'Bağlı' : 'Bağlı değil',
     }
   })
 

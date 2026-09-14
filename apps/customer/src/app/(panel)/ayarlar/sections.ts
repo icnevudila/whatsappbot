@@ -9,7 +9,7 @@ export const SETTINGS_SECTIONS: {
   {
     href: '/ayarlar/isletme',
     title: 'İşletme',
-    description: 'Paket, işletme adı ve ekip',
+    description: 'Paket, işletmeler, ad ve ekip',
     icon: 'overview',
   },
   {

@@ -2,20 +2,35 @@
 import { useActionState, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSyncBusy } from '@/components/busy'
+import { Icon } from '@/components/icon'
 import { useToast } from '@/components/toast'
-import { Button, Notice, Textarea } from '@/components/ui'
+import { Notice } from '@/components/ui'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { replyToConversation, type ReplyState } from './reply-actions'
+
+const COMPOSER_MAX_PX = 120
+
+function fitComposer(el: HTMLTextAreaElement) {
+  el.style.overflowY = 'hidden'
+  el.style.height = '0px'
+  const contentHeight = el.scrollHeight
+  const next = Math.min(Math.max(contentHeight, 36), COMPOSER_MAX_PX)
+  el.style.height = `${next}px`
+  el.style.overflowY = contentHeight > COMPOSER_MAX_PX ? 'auto' : 'hidden'
+}
 
 export function ReplyForm({ phone, accountId }: { phone: string; accountId: string }) {
   const [state, action, pending] = useActionState<ReplyState, FormData>(replyToConversation, null)
   const [result, setResult] = useState<{ id: string; error?: string; done?: boolean } | null>(null)
+  const [body, setBody] = useState('')
   const router = useRouter()
   const toast = useToast()
   const form = useRef<HTMLFormElement>(null)
+  const input = useRef<HTMLTextAreaElement>(null)
   const waiting = !!state?.jobId && result?.id !== state.jobId
+  const busy = pending || waiting
   useSyncBusy(
-    pending || waiting,
+    busy,
     pending ? 'Yanıt sıraya alınıyor…' : 'Yanıt gönderiliyor…',
     phone,
   )
@@ -54,7 +69,9 @@ export function ReplyForm({ phone, accountId }: { phone: string; accountId: stri
             toast(msg, 'warn')
           } else {
             setResult({ id, done: true })
+            setBody('')
             form.current?.reset()
+            if (input.current) fitComposer(input.current)
             toast('Yanıt WhatsApp’a gönderildi.', 'success')
             router.refresh()
           }
@@ -78,41 +95,47 @@ export function ReplyForm({ phone, accountId }: { phone: string; accountId: stri
     <form
       ref={form}
       action={action}
-      className="space-y-2.5 p-3"
-      aria-busy={pending || waiting}
+      className="wb-chat-composer-bar"
+      aria-busy={busy}
     >
       <input type="hidden" name="phone" value={phone} />
       <input type="hidden" name="account_id" value={accountId} />
-      <label className="block text-xs font-medium text-ink-muted" htmlFor="conversation-reply">
-        Yanıtınız
-      </label>
-      <Textarea
-        id="conversation-reply"
-        name="body"
-        required
-        maxLength={4096}
-        rows={3}
-        placeholder="Mesajınızı yazın…"
-        disabled={pending || waiting}
-        className="font-sans"
-      />
       {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
       {waiting ? (
-        <Notice tone="accent">
-          Yanıt sırada. Gönderim sonucu geldiğinde burada görünecek; yeniden göndermenize gerek yok.
-        </Notice>
+        <Notice tone="accent">Yanıt sırada; sonucu bekleyin.</Notice>
       ) : null}
       {result?.id === state?.jobId && result?.error ? (
         <Notice tone="danger">{result.error}</Notice>
       ) : null}
-      {result?.id === state?.jobId && result?.done ? (
-        <Notice tone="success">Yanıt WhatsApp’a gönderildi.</Notice>
-      ) : null}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs text-ink-muted">Seçili konuşmanın hattından gönderilir.</p>
-        <Button type="submit" variant="accent" disabled={pending || waiting}>
-          {pending ? 'Sıraya alınıyor…' : waiting ? 'Gönderim bekleniyor' : 'Yanıtı gönder →'}
-        </Button>
+      <div className="wb-chat-composer-row">
+        <label className="sr-only" htmlFor="conversation-reply">
+          Mesaj
+        </label>
+        <textarea
+          ref={input}
+          id="conversation-reply"
+          name="body"
+          required
+          maxLength={4096}
+          rows={1}
+          placeholder="Mesaj yazın"
+          disabled={busy}
+          value={body}
+          onChange={(event) => {
+            setBody(event.target.value)
+            fitComposer(event.target)
+          }}
+          className="wb-chat-composer-input font-sans"
+        />
+        <button
+          type="submit"
+          className="wb-chat-composer-send"
+          disabled={busy || !body.trim()}
+          aria-label={pending ? 'Sıraya alınıyor' : waiting ? 'Gönderim bekleniyor' : 'Gönder'}
+          title={pending ? 'Sıraya alınıyor' : waiting ? 'Gönderim bekleniyor' : 'Gönder'}
+        >
+          <Icon name="send" className="size-4" fill="currentColor" stroke="none" />
+        </button>
       </div>
     </form>
   )

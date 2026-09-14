@@ -200,7 +200,7 @@ export default async function MessagesPage({
     let threadQuery = supabase
       .from('message_log')
       .select(
-        'id, account_id, direction, phone_e164, remote_jid, message_type, body, status, created_at, campaign_id',
+        'id, account_id, direction, phone_e164, remote_jid, message_type, body, status, created_at, campaign_id, wa_message_id',
       )
       .eq('org_id', org.id)
       .in('direction', ['in', 'out'])
@@ -214,7 +214,105 @@ export default async function MessagesPage({
     if (rangeTo) threadQuery = threadQuery.lt('created_at', rangeTo.toISOString())
 
     const { data: threadRows } = await threadQuery
-    thread = [...(threadRows ?? [])].reverse() as ChatMessage[]
+    thread = [...(threadRows ?? [])].reverse().map((row) => ({
+      ...row,
+      clientKey: `log-${row.id}`,
+    })) as ChatMessage[]
+
+    if (selectedPhone.startsWith('+')) {
+      const { data: targets } = await supabase
+        .from('campaign_targets')
+        .select(
+          'id, campaign_id, account_id, phone_e164, status, sent_at, updated_at, personalized_body, wa_message_id',
+        )
+        .eq('org_id', org.id)
+        .eq('phone_e164', selectedPhone)
+        .in('status', ['sent', 'delivered', 'read'])
+        .order('id', { ascending: true })
+        .limit(100)
+
+      const datedTargets = (targets ?? []).filter((row) =>
+        inDateRange(row.sent_at ?? row.updated_at, rangeFrom, rangeTo),
+      )
+
+      const campaignIds = [
+        ...new Set(
+          [
+            ...thread.map((row) => row.campaign_id),
+            ...datedTargets.map((row) => row.campaign_id),
+          ].filter((id): id is string => Boolean(id)),
+        ),
+      ]
+
+      const campaignMeta = new Map<
+        string,
+        { name: string; body: string | null; message_type: string; media_url: string | null }
+      >()
+      if (campaignIds.length > 0) {
+        const { data: camps } = await supabase
+          .from('campaigns')
+          .select('id, name, body, message_type, media_url')
+          .eq('org_id', org.id)
+          .in('id', campaignIds)
+        for (const camp of camps ?? []) {
+          campaignMeta.set(camp.id, {
+            name: camp.name,
+            body: camp.body,
+            message_type: camp.message_type,
+            media_url: camp.media_url,
+          })
+        }
+      }
+
+      const seenCampaign = new Set(
+        thread.map((row) => row.campaign_id).filter((id): id is string => Boolean(id)),
+      )
+      const seenWa = new Set(
+        thread.map((row) => row.wa_message_id).filter((id): id is string => Boolean(id)),
+      )
+
+      for (const target of datedTargets) {
+        if (seenCampaign.has(target.campaign_id)) continue
+        if (target.wa_message_id && seenWa.has(target.wa_message_id)) continue
+        const meta = campaignMeta.get(target.campaign_id)
+        const body =
+          target.personalized_body ||
+          meta?.body ||
+          (meta?.media_url ? '(görsel)' : null)
+        thread.push({
+          id: target.id,
+          clientKey: `campaign-${target.id}`,
+          account_id: target.account_id,
+          direction: 'out',
+          phone_e164: target.phone_e164,
+          remote_jid: null,
+          message_type: meta?.message_type || 'text',
+          body,
+          status: target.status,
+          created_at: target.sent_at ?? target.updated_at,
+          campaign_id: target.campaign_id,
+          campaignName: meta?.name ?? null,
+          wa_message_id: target.wa_message_id,
+        })
+      }
+
+      thread.sort((a, b) => {
+        const delta = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        if (delta !== 0) return delta
+        return (a.clientKey ?? '').localeCompare(b.clientKey ?? '')
+      })
+
+      thread = thread.map((row) => {
+        if (!row.campaign_id) return row
+        const meta = campaignMeta.get(row.campaign_id)
+        if (!meta) return row
+        return {
+          ...row,
+          campaignName: row.campaignName ?? meta.name,
+          body: row.body || meta.body || (meta.media_url ? '(görsel)' : row.body),
+        }
+      })
+    }
   }
 
   return (

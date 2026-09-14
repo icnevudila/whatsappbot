@@ -1,9 +1,12 @@
 'use client'
 
-import { useEffect, useRef, useState, useTransition } from 'react'
+import { useEffect, useId, useRef, useState, useTransition } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AccentLink, Badge, Button, Field, Notice, Textarea } from '@/components/ui'
+import { Icon } from '@/components/icon'
+import { TypewriterText } from '@/components/typewriter-text'
 import { useConfirm } from '@/components/confirm-dialog'
 import { useToast } from '@/components/toast'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
@@ -66,6 +69,8 @@ export function CreativeDetail({
   const toast = useToast()
   const confirm = useConfirm()
   const [instruction, setInstruction] = useState('')
+  const [reviseOpen, setReviseOpen] = useState(Boolean(openRevise))
+  const [lightboxOpen, setLightboxOpen] = useState(false)
   const [title, setTitle] = useState(creative.title ?? '')
   const [tick, setTick] = useState(0)
   const [pending, startTransition] = useTransition()
@@ -149,6 +154,23 @@ export function CreativeDetail({
     })
   }
 
+  const removeCreative = () => {
+    void (async () => {
+      const ok = await confirm({
+        title: 'Görseli sil',
+        confirmLabel: 'Sil',
+        tone: 'danger',
+      })
+      if (!ok) return
+      startTransition(() => {
+        void deleteCreative(creative.id).then((result) => {
+          if (result?.error) toast(result.error, 'danger')
+          else router.push('/icerik')
+        })
+      })
+    })()
+  }
+
   const retryNow = () => {
     setLocalError(null)
     setBusyRender(true)
@@ -192,8 +214,8 @@ export function CreativeDetail({
       {spinning ? (
         <div className="rounded-[var(--radius-card)] border border-accent/30 bg-accent-soft/40 px-4 py-8 text-center">
           <p className="text-[14.5px] font-bold">Görsel üretiliyor</p>
-          <p className="mt-2 text-[13.5px] font-medium text-ink">
-            {currentStage.label}
+          <p className="mt-2 min-h-[1.4em] text-[13.5px] font-medium text-ink">
+            <TypewriterText text={currentStage.label} />
           </p>
           <p className="mt-1 text-[12.5px] text-ink-muted">
             {currentStage.detail} · {remainingText}
@@ -223,55 +245,49 @@ export function CreativeDetail({
       ) : null}
 
       {creative.publicUrl && creative.status === 'ready' ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={creative.publicUrl}
-          alt={creative.title ?? ''}
-          className="w-full rounded-[var(--radius-card)] border border-hairline bg-canvas object-contain"
-        />
+        <div className="relative overflow-visible">
+          <button
+            type="button"
+            onClick={() => setLightboxOpen(true)}
+            aria-label="Görseli tam boyutta aç"
+            className="block w-full cursor-zoom-in rounded-[var(--radius-card)] border border-hairline bg-canvas p-0"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={creative.publicUrl}
+              alt={creative.title ?? ''}
+              className="w-full rounded-[var(--radius-card)] object-contain"
+            />
+          </button>
+          <DetailImageMenu
+            publicUrl={creative.publicUrl}
+            pending={pending}
+            canManage={canManage}
+            onDelete={removeCreative}
+          />
+          <ImageLightbox
+            open={lightboxOpen}
+            src={creative.publicUrl}
+            alt={creative.title ?? ''}
+            onClose={() => setLightboxOpen(false)}
+          />
+        </div>
       ) : null}
 
-      <div className="flex flex-wrap gap-2">
-        {creative.publicUrl && creative.status === 'ready' ? (
-          <>
-            <AccentLink href={`/kampanyalar/yeni?gorsel=${encodeURIComponent(creative.publicUrl)}`}>
-              Kampanyada kullan
-            </AccentLink>
-            <a
-              href={creative.publicUrl}
-              download
-              className="inline-flex h-9 items-center rounded-[var(--radius-sm)] border border-hairline-strong px-3.5 text-[14px] font-semibold"
-            >
-              İndir
-            </a>
-            <AccentLink href="/icerik/yeni">Yeni görsel</AccentLink>
-          </>
-        ) : null}
-        {canManage ? (
-          <Button
-            type="button"
-            variant="danger"
-            onClick={() => {
-              void (async () => {
-                const ok = await confirm({
-                  title: 'Görseli sil',
-                  confirmLabel: 'Sil',
-                  tone: 'danger',
-                })
-                if (!ok) return
-                startTransition(() => {
-                  void deleteCreative(creative.id).then((result) => {
-                    if (result?.error) toast(result.error, 'danger')
-                    else router.push('/icerik')
-                  })
-                })
-              })()
-            }}
-          >
-            Sil
-          </Button>
-        ) : null}
-      </div>
+      {creative.publicUrl && creative.status === 'ready' ? (
+        <AccentLink
+          href={`/kampanyalar/yeni?gorsel=${encodeURIComponent(creative.publicUrl)}`}
+          className="w-full"
+        >
+          <Icon name="campaign" className="size-4" />
+          Kampanyada kullan
+        </AccentLink>
+      ) : canManage ? (
+        <Button type="button" variant="danger" disabled={pending} onClick={removeCreative}>
+          <Icon name="trash" className="size-4" />
+          Sil
+        </Button>
+      ) : null}
 
       <form
         className="flex flex-col gap-2 sm:flex-row sm:items-start"
@@ -308,25 +324,27 @@ export function CreativeDetail({
       {creative.brief ? <p className="text-[13px]">{creative.brief}</p> : null}
 
       {creative.status === 'ready' && canManage ? (
-        <section className="space-y-2 rounded-[var(--radius-card)] border border-hairline bg-surface p-3.5">
-          <h2 className="text-[14px] font-bold">AI ile revize et</h2>
-          <Field label="Neyi değiştirmek istiyorsunuz?">
-            <Textarea
-              rows={3}
-              value={instruction}
-              onChange={(event) => setInstruction(event.target.value)}
-              placeholder="Alttaki fiyatları kaldır. Logoyu sağ üste taşı. Arka planı daha açık yap."
-              autoFocus={openRevise}
-            />
-          </Field>
+        <>
           <Button
             type="button"
             variant="accent"
-            disabled={pending || instruction.trim().length < 4}
-            onClick={() =>
+            className="w-full"
+            onClick={() => setReviseOpen(true)}
+          >
+            <Icon name="sparkles" className="size-4" />
+            AI ile revize et
+          </Button>
+          <ReviseModal
+            open={reviseOpen}
+            pending={pending}
+            instruction={instruction}
+            previewUrl={creative.publicUrl}
+            onClose={() => setReviseOpen(false)}
+            onInstruction={setInstruction}
+            onSubmit={() =>
               spawn({
                 requestKey: crypto.randomUUID(),
-                  brief: creative.brief || instruction.trim(),
+                brief: creative.brief || instruction.trim(),
                 style: 'auto',
                 formatId: formatToId(creative.format),
                 textDensity: 'balanced',
@@ -341,10 +359,8 @@ export function CreativeDetail({
                 instruction: instruction.trim(),
               })
             }
-          >
-            Revizyon üret
-          </Button>
-        </section>
+          />
+        </>
       ) : null}
 
       {creative.status === 'ready' && canManage ? (
@@ -428,6 +444,290 @@ function QuietLibrary() {
         Arka planda devam et → kütüphane
       </Link>
     </p>
+  )
+}
+
+function ImageLightbox({
+  open,
+  src,
+  alt,
+  onClose,
+}: {
+  open: boolean
+  src: string
+  alt: string
+  onClose: () => void
+}) {
+  const titleId = useId()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!open) return
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prevOverflow
+    }
+  }, [open, onClose])
+
+  if (!open || !mounted) return null
+
+  return createPortal(
+    <div className="wb-modal-root" role="presentation" style={{ padding: 0 }}>
+      <button
+        type="button"
+        className="wb-modal-backdrop"
+        aria-label="Kapat"
+        onClick={onClose}
+        style={{ background: 'rgba(8, 10, 16, 0.88)' }}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="relative z-[1] flex h-full w-full max-h-none max-w-none cursor-zoom-out items-center justify-center p-3 sm:p-8"
+        onClick={onClose}
+      >
+        <p id={titleId} className="sr-only">
+          {alt || 'Görsel önizleme'}
+        </p>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Kapat"
+          className="absolute right-3 top-3 z-[2] inline-flex size-9 items-center justify-center rounded-full border border-white/20 bg-black/50 text-white shadow-sm hover:bg-black/70 sm:right-5 sm:top-5"
+        >
+          <Icon name="close" className="size-4" />
+        </button>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt={alt}
+          onClick={(event) => event.stopPropagation()}
+          className="max-h-[min(100dvh,100%)] max-w-full cursor-default object-contain"
+        />
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
+function DetailImageMenu({
+  publicUrl,
+  pending,
+  canManage,
+  onDelete,
+}: {
+  publicUrl: string
+  pending: boolean
+  canManage: boolean
+  onDelete: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onDoc = (event: MouseEvent) => {
+      if (event.target instanceof Node && !menuRef.current?.contains(event.target)) setOpen(false)
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDoc)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  return (
+    <div className="absolute right-2 top-2 z-20" ref={menuRef}>
+      <button
+        type="button"
+        aria-label="Görsel işlemleri"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        disabled={pending}
+        onClick={() => setOpen((value) => !value)}
+        className="inline-flex size-8 items-center justify-center rounded-full border border-hairline bg-surface/95 text-ink shadow-sm backdrop-blur-sm hover:bg-surface"
+      >
+        <Icon name="ellipsis" className="size-4" />
+      </button>
+      {open ? (
+        <div
+          role="menu"
+          className="absolute right-0 z-30 mt-1 min-w-[11.5rem] rounded-md border border-hairline bg-surface p-1 shadow-[var(--shadow-md)]"
+        >
+          <a
+            role="menuitem"
+            href={publicUrl}
+            download=""
+            className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-left text-[13px] font-medium text-ink hover:bg-canvas"
+            onClick={() => setOpen(false)}
+          >
+            <Icon name="file" className="size-4 text-ink-muted" />
+            İndir
+          </a>
+          <Link
+            href="/icerik/yeni"
+            role="menuitem"
+            className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-left text-[13px] font-medium text-ink hover:bg-canvas"
+            onClick={() => setOpen(false)}
+          >
+            <Icon name="plus" className="size-4 text-ink-muted" />
+            Yeni görsel
+          </Link>
+          {canManage ? (
+            <button
+              type="button"
+              role="menuitem"
+              disabled={pending}
+              className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-left text-[13px] font-medium text-danger hover:bg-canvas disabled:opacity-50"
+              onClick={() => {
+                setOpen(false)
+                onDelete()
+              }}
+            >
+              <Icon name="trash" className="size-4" />
+              Sil
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function ReviseModal({
+  open,
+  pending,
+  instruction,
+  previewUrl,
+  onClose,
+  onInstruction,
+  onSubmit,
+}: {
+  open: boolean
+  pending: boolean
+  instruction: string
+  previewUrl: string | null
+  onClose: () => void
+  onInstruction: (value: string) => void
+  onSubmit: () => void
+}) {
+  const titleId = useId()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!open) return
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !pending) onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prevOverflow
+    }
+  }, [open, pending, onClose])
+
+  if (!open || !mounted) return null
+
+  return createPortal(
+    <div className="wb-modal-root" role="presentation">
+      <button
+        type="button"
+        className="wb-modal-backdrop"
+        aria-label="Kapat"
+        disabled={pending}
+        onClick={() => {
+          if (!pending) onClose()
+        }}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="wb-modal-panel"
+      >
+        <div className="flex items-center justify-between">
+          <h2 id={titleId} className="wb-modal-title">
+            AI ile revize et
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={pending}
+            className="rounded p-1 text-sm text-ink-muted hover:bg-canvas hover:text-ink"
+            aria-label="Kapat"
+          >
+            ✕
+          </button>
+        </div>
+        <p className="wb-modal-desc">
+          Mevcut görsel korunur. Yeni bir revizyon üretilir.
+        </p>
+
+        {previewUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={previewUrl}
+            alt=""
+            className="mt-3 max-h-36 w-full rounded-md border border-hairline bg-canvas object-contain"
+          />
+        ) : null}
+
+        <form
+          className="mt-4 space-y-3"
+          onSubmit={(event) => {
+            event.preventDefault()
+            if (instruction.trim().length < 4 || pending) return
+            onSubmit()
+          }}
+        >
+          <Field label="Neyi değiştirmek istiyorsunuz?" hint="Kısa ve net yazın: ne kalsın, ne değişsin.">
+            <Textarea
+              rows={4}
+              value={instruction}
+              onChange={(event) => onInstruction(event.target.value)}
+              placeholder="Alttaki fiyatları kaldır. Logoyu sağ üste taşı. Arka planı daha açık yap."
+              autoFocus
+            />
+          </Field>
+
+          <div className="wb-modal-actions">
+            <Button type="button" variant="quiet" disabled={pending} onClick={onClose}>
+              Vazgeç
+            </Button>
+            <Button
+              type="submit"
+              variant="accent"
+              disabled={pending || instruction.trim().length < 4}
+            >
+              <Icon name="sparkles" className="size-4" />
+              {pending ? 'Üretiliyor…' : 'Revizyon üret'}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>,
+    document.body,
   )
 }
 

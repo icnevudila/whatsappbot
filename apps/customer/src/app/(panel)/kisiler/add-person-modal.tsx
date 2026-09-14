@@ -8,7 +8,7 @@ import { Icon } from '@/components/icon'
 import { useSyncBusy } from '@/components/busy'
 import { useToast } from '@/components/toast'
 import { formatTrMobileMask, isTrMobileMasked } from '@/lib/onboarding'
-import { createManualContact, listContactGroups } from './actions'
+import { createEmptyList, createManualContact, listContactGroups } from './actions'
 
 export function AddPersonButton({
   groups,
@@ -42,9 +42,14 @@ export function AddPersonModal({
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [listId, setListId] = useState(initialGroups?.[0]?.id ?? '')
+  const [addingGroup, setAddingGroup] = useState((initialGroups?.length ?? 0) === 0)
+  const [groupName, setGroupName] = useState('')
+  const [groupError, setGroupError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+  const [groupPending, startGroupTransition] = useTransition()
   useSyncBusy(pending, 'Kişi ekleniyor…')
+  useSyncBusy(groupPending, 'Grup oluşturuluyor…')
 
   useEffect(() => {
     setMounted(true)
@@ -55,6 +60,7 @@ export function AddPersonModal({
     void listContactGroups().then((rows) => {
       setGroups(rows)
       setListId((current) => current || rows[0]?.id || '')
+      if (rows.length > 0) setAddingGroup(false)
     })
   }, [initialGroups])
 
@@ -62,16 +68,42 @@ export function AddPersonModal({
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
+      if (event.key !== 'Escape') return
+      if (addingGroup && groups.length > 0) {
+        setAddingGroup(false)
+        return
+      }
+      onClose()
     }
     window.addEventListener('keydown', onKey)
     return () => {
       window.removeEventListener('keydown', onKey)
       document.body.style.overflow = prev
     }
-  }, [onClose])
+  }, [onClose, addingGroup, groups.length])
 
-  const canSubmit = name.trim().length >= 2 && isTrMobileMasked(phone) && Boolean(listId) && !pending
+  const canSubmit =
+    name.trim().length >= 2 && isTrMobileMasked(phone) && Boolean(listId) && !pending && !groupPending
+
+  const createGroup = () => {
+    const trimmed = groupName.trim()
+    if (trimmed.length < 2 || groupPending) return
+    setGroupError(null)
+    startGroupTransition(async () => {
+      const result = await createEmptyList(trimmed)
+      if (result.error || !result.listId) {
+        setGroupError(result.error ?? 'Grup oluşturulamadı.')
+        toast(result.error ?? 'Grup oluşturulamadı.', 'danger')
+        return
+      }
+      const created = { id: result.listId, name: trimmed }
+      setGroups((current) => [created, ...current.filter((row) => row.id !== created.id)])
+      setListId(created.id)
+      setGroupName('')
+      setAddingGroup(false)
+      toast('Grup oluşturuldu ve seçildi.', 'success')
+    })
+  }
 
   const submit = () => {
     if (!canSubmit) return
@@ -132,16 +164,72 @@ export function AddPersonModal({
             />
           </Field>
           <Field label="Grup">
-            {groups.length === 0 ? (
-              <Notice tone="accent">Önce + Grup ile bir grup açın.</Notice>
+            {addingGroup || groups.length === 0 ? (
+              <div className="space-y-2">
+                {groups.length === 0 ? (
+                  <p className="text-[12.5px] text-ink-muted">
+                    Henüz grup yok. Bir ad yazın, kişi o gruba eklenir.
+                  </p>
+                ) : null}
+                <Input
+                  value={groupName}
+                  onChange={(event) => setGroupName(event.target.value)}
+                  placeholder="Örn. Mahalle müşterileri"
+                  maxLength={120}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault()
+                      createGroup()
+                    }
+                  }}
+                />
+                {groupError ? <Notice tone="danger">{groupError}</Notice> : null}
+                <div className="flex gap-2">
+                  {groups.length > 0 ? (
+                    <Button
+                      type="button"
+                      disabled={groupPending}
+                      onClick={() => {
+                        setAddingGroup(false)
+                        setGroupError(null)
+                      }}
+                    >
+                      Vazgeç
+                    </Button>
+                  ) : null}
+                  <Button
+                    type="button"
+                    variant="accent"
+                    className="flex-1"
+                    disabled={groupPending || groupName.trim().length < 2}
+                    onClick={createGroup}
+                  >
+                    <Icon name="plus" className="size-4" />
+                    {groupPending ? 'Oluşturuluyor…' : 'Grup oluştur'}
+                  </Button>
+                </div>
+              </div>
             ) : (
-              <Select value={listId} onChange={(event) => setListId(event.target.value)}>
-                {groups.map((group) => (
-                  <option key={group.id} value={group.id}>
-                    {group.name}
-                  </option>
-                ))}
-              </Select>
+              <div className="space-y-2">
+                <Select value={listId} onChange={(event) => setListId(event.target.value)}>
+                  {groups.map((group) => (
+                    <option key={group.id} value={group.id}>
+                      {group.name}
+                    </option>
+                  ))}
+                </Select>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAddingGroup(true)
+                    setGroupError(null)
+                  }}
+                  className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-accent hover:underline"
+                >
+                  <Icon name="plus" className="size-3.5" />
+                  Yeni grup
+                </button>
+              </div>
             )}
           </Field>
           {error ? <Notice tone="danger">{error}</Notice> : null}

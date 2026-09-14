@@ -15,7 +15,7 @@ import {
 } from '@/lib/creative/types'
 import { collectImageFiles, readImageFile } from '@/app/(panel)/ayarlar/upload-image'
 import { isOrgAdminRole, requireActiveOrg } from '@/lib/org'
-import { DEFAULT_INCLUDE, formatFromId, type ProductCard } from './wizard-types'
+import { DEFAULT_INCLUDE, formatFromId, type ProductCard, type SocialOption } from './wizard-types'
 import { LIBRARY_PAGE_SIZE, type LibraryCreativeRow } from './library-shared'
 
 export type CreativeActionState = { error?: string; ok?: string; id?: string } | null
@@ -581,6 +581,73 @@ export async function quickCreateProduct(
       description: description || null,
       boxContents: boxContents || null,
       images,
+    },
+  }
+}
+
+const SOCIAL_PLATFORMS = new Set([
+  'instagram',
+  'facebook',
+  'tiktok',
+  'youtube',
+  'x',
+  'linkedin',
+  'website',
+  'other',
+])
+
+function normalizeSocialUrl(raw: string) {
+  const value = raw.trim()
+  if (!value) return ''
+  if (/^https?:\/\//i.test(value)) return value
+  return `https://${value}`
+}
+
+/** Kampanya görsel sihirbazından ayrılmadan hızlı sosyal hesap ekleme */
+export async function quickCreateSocialAccount(
+  formData: FormData,
+): Promise<{ error?: string; social?: SocialOption }> {
+  let ctx: Awaited<ReturnType<typeof requireActiveOrg>>
+  try {
+    ctx = await requireActiveOrg()
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
+  }
+  const { org, supabase, userId } = ctx
+  if (!isOrgAdminRole(org.role)) {
+    return { error: 'Yalnızca sahip veya yönetici hesap ekleyebilir.' }
+  }
+
+  const platform = String(formData.get('platform') ?? '').trim()
+  const label = String(formData.get('label') ?? '').trim().slice(0, 80) || null
+  const url = normalizeSocialUrl(String(formData.get('url') ?? ''))
+
+  if (!SOCIAL_PLATFORMS.has(platform)) return { error: 'Geçerli bir platform seçin.' }
+  if (url.length < 8) return { error: 'Geçerli bir bağlantı yazın.' }
+
+  const { data, error } = await supabase
+    .from('org_social_accounts')
+    .insert({
+      org_id: org.id,
+      created_by: userId,
+      platform,
+      label,
+      url: url.slice(0, 500),
+    })
+    .select('id, platform, label, url')
+    .single()
+
+  if (error || !data) return { error: error?.message ?? 'Hesap eklenemedi.' }
+
+  revalidatePath('/icerik/yeni')
+  revalidatePath('/ayarlar/sosyal')
+
+  return {
+    social: {
+      id: data.id,
+      platform: data.platform,
+      label: data.label,
+      url: data.url,
     },
   }
 }

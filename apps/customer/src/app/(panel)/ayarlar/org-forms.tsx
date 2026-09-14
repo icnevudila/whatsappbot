@@ -1,9 +1,15 @@
 'use client'
 
-import { useActionState, useState, useTransition } from 'react'
+import { useActionState, useEffect, useId, useState, useTransition } from 'react'
+import { createPortal } from 'react-dom'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { Icon } from '@/components/icon'
 import { useToast } from '@/components/toast'
-import { Button, EmptyState, Field, Input, Notice, Select } from '@/components/ui'
+import { Button, Card, CardHeader, EmptyState, Field, Input, Notice, Select } from '@/components/ui'
 import { CONTACT_EMAIL, contactMailto } from '@/lib/contact'
+import { OrgSwitcher, type OrgOption } from '../org-switcher'
+import { QuotaRow } from './quota-row'
 import {
   addOrgMember,
   deleteOrganization,
@@ -21,41 +27,122 @@ const ROLE_LABELS: Record<string, string> = {
   member: 'Üye',
 }
 
-export function OrgSettingsForm({
+export function OrgSettingsForm({ orgName }: { orgName: string }) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <Card>
+      <CardHeader
+        title={orgName}
+        subtitle="İşletme adı"
+        action={
+          <>
+            <button
+              type="button"
+              aria-label="İşletme adını düzenle"
+              title="Düzenle"
+              onClick={() => setOpen(true)}
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-hairline bg-surface text-ink hover:bg-canvas"
+            >
+              <Icon name="edit" className="size-4" />
+            </button>
+            {open ? <EditOrgNameModal orgName={orgName} onClose={() => setOpen(false)} /> : null}
+          </>
+        }
+      />
+    </Card>
+  )
+}
+
+function EditOrgNameModal({
   orgName,
-  canEdit,
+  onClose,
 }: {
   orgName: string
-  canEdit: boolean
+  onClose: () => void
 }) {
+  const titleId = useId()
+  const router = useRouter()
+  const toast = useToast()
+  const [mounted, setMounted] = useState(false)
   const [state, formAction, pending] = useActionState<OrgActionState, FormData>(
     updateOrgName,
     null,
   )
 
-  return (
-    <form action={formAction} className="space-y-2.5 p-3.5">
-      <Field label="İşletme adı">
-        <Input
-          name="name"
-          defaultValue={orgName}
-          disabled={!canEdit}
-          readOnly={!canEdit}
-          minLength={2}
-          required
-          placeholder="Örn. Filo Ajans"
-        />
-      </Field>
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
-      {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
-      {state?.ok ? <Notice tone="accent">{state.ok}</Notice> : null}
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prev
+    }
+  }, [onClose])
 
-      {canEdit ? (
-        <Button type="submit" variant="accent" disabled={pending}>
-          {pending ? 'Kaydediliyor…' : 'Kaydet'}
-        </Button>
-      ) : null}
-    </form>
+  useEffect(() => {
+    if (state?.error) toast(state.error, 'danger')
+    if (state?.ok) {
+      toast(state.ok, 'success')
+      onClose()
+      router.refresh()
+    }
+  }, [state?.error, state?.ok, toast, onClose, router])
+
+  if (!mounted) return null
+
+  return createPortal(
+    <div className="wb-modal-root" role="presentation">
+      <button type="button" className="wb-modal-backdrop" aria-label="Kapat" onClick={onClose} />
+      <div className="wb-modal-panel" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 id={titleId} className="wb-modal-title">
+              İşletme adını değiştir
+            </h2>
+            <p className="wb-modal-desc">Bu ad panelde ve ekip üyelerine görünür.</p>
+          </div>
+          <button
+            type="button"
+            aria-label="Kapat"
+            onClick={onClose}
+            className="inline-flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-ink-muted hover:bg-canvas hover:text-ink"
+          >
+            <Icon name="close" className="size-4" />
+          </button>
+        </div>
+
+        <form action={formAction} className="space-y-3">
+          <Field label="İşletme adı">
+            <Input
+              name="name"
+              defaultValue={orgName}
+              minLength={2}
+              required
+              autoFocus
+              placeholder="Örn. Ajans adı"
+            />
+          </Field>
+          {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
+          <div className="wb-modal-actions">
+            <Button type="button" onClick={onClose} disabled={pending}>
+              Vazgeç
+            </Button>
+            <Button type="submit" variant="accent" disabled={pending}>
+              {pending ? 'Kaydediliyor…' : 'Kaydet'}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>,
+    document.body,
   )
 }
 
@@ -220,6 +307,174 @@ export function WebhookSettingsForm({
   )
 }
 
+export function OrgsCard({
+  orgs,
+  activeOrgId,
+  used,
+  total,
+}: {
+  orgs: OrgOption[]
+  activeOrgId: string
+  used: number
+  total: number
+}) {
+  const canCreate = used < total
+  return (
+    <Card>
+      <CardHeader
+        title="İşletmeler"
+        subtitle={`${used} / ${total} hak`}
+        action={
+          canCreate ? (
+            <Link
+              href="/ayarlar/isletme/yeni"
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] border border-hairline-strong bg-surface px-3.5 text-[14px] font-semibold text-ink hover:bg-surface-raised"
+            >
+              <Icon name="plus" className="size-3.5" />
+              Yeni işletme
+            </Link>
+          ) : null
+        }
+      />
+      <div className="space-y-3 p-3.5">
+        <QuotaRow
+          label="İşletme hakkı"
+          used={used}
+          total={total}
+          hint={
+            canCreate
+              ? 'Sahibi olduğunuz işletmeler. Hakkınız varsa yeni işletme ekleyin.'
+              : 'Limit doldu. Yeni işletme için destekle iletişime geçin.'
+          }
+        />
+        <OrgSwitcher orgs={orgs} activeOrgId={activeOrgId} compact />
+      </div>
+    </Card>
+  )
+}
+
+export function AddMemberButton() {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <>
+      <Button type="button" onClick={() => setOpen(true)}>
+        <Icon name="plus" className="size-3.5" />
+        Üye ekle
+      </Button>
+      {open ? <AddMemberModal onClose={() => setOpen(false)} /> : null}
+    </>
+  )
+}
+
+function AddMemberModal({ onClose }: { onClose: () => void }) {
+  const titleId = useId()
+  const router = useRouter()
+  const toast = useToast()
+  const [mounted, setMounted] = useState(false)
+  const [state, formAction, pending] = useActionState<OrgActionState, FormData>(
+    addOrgMember,
+    null,
+  )
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prev
+    }
+  }, [onClose])
+
+  useEffect(() => {
+    if (state?.error) toast(state.error, 'danger')
+    if (state?.ok) {
+      toast(state.ok, 'success')
+      onClose()
+      router.refresh()
+    }
+  }, [state?.error, state?.ok, toast, onClose, router])
+
+  if (!mounted) return null
+
+  return createPortal(
+    <div className="wb-modal-root" role="presentation">
+      <button type="button" className="wb-modal-backdrop" aria-label="Kapat" onClick={onClose} />
+      <div className="wb-modal-panel" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 id={titleId} className="wb-modal-title">
+              Üye ekle
+            </h2>
+            <p className="wb-modal-desc">Mevcut hesap e-postası ile ekibe katın.</p>
+          </div>
+          <button
+            type="button"
+            aria-label="Kapat"
+            onClick={onClose}
+            className="inline-flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-ink-muted hover:bg-canvas hover:text-ink"
+          >
+            <Icon name="close" className="size-4" />
+          </button>
+        </div>
+
+        <form action={formAction} className="space-y-3">
+          <Field label="E-posta" hint="Kayıtlı hesap e-postası.">
+            <Input
+              name="email"
+              type="email"
+              placeholder="ornek@firma.com"
+              required
+              autoComplete="off"
+              autoFocus
+            />
+          </Field>
+          <Field label="Rol">
+            <Select name="role" defaultValue="member">
+              <option value="member">Üye</option>
+              <option value="admin">Yönetici</option>
+            </Select>
+          </Field>
+          {state?.error ? (
+            <Notice tone="danger">
+              {state.error}
+              {state.contactSupport ? (
+                <>
+                  {' '}
+                  Yazın:{' '}
+                  <a
+                    href={contactMailto('Filo hesap açma talebi')}
+                    className="font-medium underline underline-offset-2"
+                  >
+                    {CONTACT_EMAIL}
+                  </a>
+                </>
+              ) : null}
+            </Notice>
+          ) : null}
+          <div className="wb-modal-actions">
+            <Button type="button" onClick={onClose} disabled={pending}>
+              Vazgeç
+            </Button>
+            <Button type="submit" variant="accent" disabled={pending}>
+              {pending ? 'Ekleniyor…' : 'Üye ekle'}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
 export function MembersPanel({
   members,
   canManage,
@@ -228,10 +483,6 @@ export function MembersPanel({
   canManage: boolean
 }) {
   const toast = useToast()
-  const [state, formAction, pending] = useActionState<OrgActionState, FormData>(
-    addOrgMember,
-    null,
-  )
   const [busy, startBusy] = useTransition()
   const [actionError, setActionError] = useState<string | null>(null)
   const [actionOk, setActionOk] = useState<string | null>(null)
@@ -342,51 +593,6 @@ export function MembersPanel({
           <Notice tone="accent">{actionOk}</Notice>
         </div>
       ) : null}
-
-      {canManage ? (
-        <form action={formAction} className="space-y-2.5 border-t border-hairline p-3.5">
-          <Field label="Üye ekle" hint="Mevcut Filo hesabı e-postası.">
-            <Input
-              name="email"
-              type="email"
-              placeholder="ornek@firma.com"
-              required
-              autoComplete="off"
-            />
-          </Field>
-          <Field label="Rol">
-            <Select name="role" defaultValue="member">
-              <option value="member">Üye</option>
-              <option value="admin">Yönetici</option>
-            </Select>
-          </Field>
-          {state?.error ? (
-            <Notice tone="danger">
-              {state.error}
-              {state.contactSupport ? (
-                <>
-                  {' '}
-                  Yazın:{' '}
-                  <a
-                    href={contactMailto('Filo hesap açma talebi')}
-                    className="font-medium underline underline-offset-2"
-                  >
-                    {CONTACT_EMAIL}
-                  </a>
-                </>
-              ) : null}
-            </Notice>
-          ) : null}
-          {state?.ok ? <Notice tone="accent">{state.ok}</Notice> : null}
-          <Button type="submit" variant="accent" disabled={pending}>
-            {pending ? 'İşleniyor…' : 'Üye ekle'}
-          </Button>
-        </form>
-      ) : (
-        <p className="border-t border-hairline px-3.5 py-2.5 text-[11.5px] text-ink-faint">
-          Üye eklemek için yönetici veya sahip olmanız gerekir.
-        </p>
-      )}
     </div>
   )
 }

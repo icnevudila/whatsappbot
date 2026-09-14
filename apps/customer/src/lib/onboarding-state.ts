@@ -181,3 +181,106 @@ export const loadOnboardingSnapshot = cache(async (): Promise<OnboardingSnapshot
     accountConnected,
   }
 })
+
+/** Kurulumu bitmiş hesapta yeni işletme sihirbazı: aktif org’u okur, profil complete sayılmaz. */
+export const loadActiveOrgOnboardingSnapshot = cache(async (): Promise<OnboardingSnapshot | null> => {
+  const { supabase, userId, email } = await getAuthIdentity()
+  if (!userId) return null
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('active_org_id')
+    .eq('id', userId)
+    .maybeSingle()
+
+  const orgId = profile?.active_org_id ?? null
+  if (!orgId) {
+    return {
+      userId,
+      email: email ?? '',
+      complete: false,
+      furthest: 'isletme',
+      org: null,
+      account: null,
+      brand: null,
+      accountConnected: false,
+    }
+  }
+
+  const [orgRes, accountRes, brandRes] = await Promise.all([
+    supabase
+      .from('organizations')
+      .select('id, name, address, about, phone_e164, onboarding')
+      .eq('id', orgId)
+      .maybeSingle(),
+    supabase
+      .from('accounts')
+      .select('id, status, phone_e164, pairing_code, pairing_expires_at')
+      .eq('org_id', orgId)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('brand_kits')
+      .select('name, colors, fonts, tone, logo_path')
+      .eq('org_id', orgId)
+      .eq('is_default', true)
+      .maybeSingle(),
+  ])
+
+  let org: OnboardingOrg | null = null
+  if (orgRes.data) {
+    org = {
+      id: orgRes.data.id,
+      name: orgRes.data.name,
+      address: orgRes.data.address,
+      about: orgRes.data.about,
+      phone_e164: orgRes.data.phone_e164,
+      onboarding: asFlags(orgRes.data.onboarding),
+    }
+  }
+
+  const account = accountRes.data
+    ? {
+        id: accountRes.data.id,
+        status: accountRes.data.status,
+        phone_e164: accountRes.data.phone_e164,
+        pairing_code: accountRes.data.pairing_code,
+        pairing_expires_at: accountRes.data.pairing_expires_at,
+      }
+    : null
+
+  let brand: OnboardingBrand | null = null
+  if (brandRes.data) {
+    const colors =
+      brandRes.data.colors && typeof brandRes.data.colors === 'object'
+        ? (brandRes.data.colors as Record<string, string>)
+        : {}
+    const fonts =
+      brandRes.data.fonts && typeof brandRes.data.fonts === 'object'
+        ? (brandRes.data.fonts as Record<string, string>)
+        : {}
+    brand = {
+      name: brandRes.data.name,
+      colors,
+      fonts,
+      tone: brandRes.data.tone,
+      logo_path: brandRes.data.logo_path,
+    }
+  }
+
+  const accountConnected = account?.status === 'connected'
+  const brandReady = Boolean(brand && (brand.tone || org?.onboarding.brand_analyzed))
+  const furthest = computeFurthestStep({ org, accountConnected, brandReady })
+
+  return {
+    userId,
+    email: email ?? '',
+    complete: false,
+    furthest: furthest === 'hosgeldin' ? 'isletme' : furthest,
+    org,
+    account,
+    brand,
+    accountConnected,
+  }
+})

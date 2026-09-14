@@ -62,7 +62,7 @@ export async function saveProduct(
   const name = String(formData.get('name') ?? '').trim()
   const description = String(formData.get('description') ?? '').trim()
   const boxContents = String(formData.get('box_contents') ?? '').trim()
-  const isActive = String(formData.get('is_active') ?? '') === 'on'
+  const isActive = id ? String(formData.get('is_active') ?? '') === 'on' : true
   const files = collectImageFiles(formData, 'images')
 
   if (!name) return { error: 'Ürün adı yazın.' }

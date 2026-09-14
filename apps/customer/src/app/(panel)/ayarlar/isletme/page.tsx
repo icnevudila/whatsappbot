@@ -2,9 +2,9 @@ import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { AccentLink, Badge, Card, CardHeader } from '@/components/ui'
-import { requireActiveOrg } from '@/lib/org'
+import { listUserOrgs, requireActiveOrg } from '@/lib/org'
 import { planLabel } from '@wa/shared'
-import { AiImageModeForm, DeleteOrganizationForm, MembersPanel, OrgSettingsForm } from '../org-forms'
+import { AiImageModeForm, DeleteOrganizationForm, AddMemberButton, MembersPanel, OrgSettingsForm, OrgsCard } from '../org-forms'
 import { QuotaRow } from '../quota-row'
 import { SettingsPageFrame } from '../settings-shell'
 
@@ -47,9 +47,11 @@ export default async function OrgSettingsPage() {
   }
 
   const canManage = org.role === 'owner' || org.role === 'admin'
+  const orgs = await listUserOrgs()
+  const ownedCount = orgs.filter((item) => item.role === 'owner').length
 
   const [{ data: profile }, { data: accounts }, { data: memberRows }] = await Promise.all([
-    supabase.from('profiles').select('full_name, company').eq('id', userId).single(),
+    supabase.from('profiles').select('full_name, company, orgs_quota').eq('id', userId).single(),
     supabase.from('accounts').select('id, status').eq('org_id', org.id),
     canManage
       ? supabase
@@ -81,8 +83,11 @@ export default async function OrgSettingsPage() {
     }
   })
 
+  const orgsQuota = profile?.orgs_quota ?? 3
+
   return (
-    <SettingsPageFrame title="İşletme" description="Paket, ad ve ekip.">
+    <SettingsPageFrame title="İşletme" description="Paket, ad, ekip ve işletmeleriniz.">
+      <OrgsCard orgs={orgs} activeOrgId={org.id} used={ownedCount} total={orgsQuota} />
       <Card>
         <CardHeader
           title="Paket"
@@ -118,12 +123,7 @@ export default async function OrgSettingsPage() {
         </div>
       </Card>
 
-      {canManage ? (
-        <Card>
-          <CardHeader title="İşletme adı" />
-          <OrgSettingsForm orgName={org.name} canEdit />
-        </Card>
-      ) : null}
+      {canManage ? <OrgSettingsForm orgName={org.name} /> : null}
 
       {canManage ? (
         <Card>
@@ -140,6 +140,7 @@ export default async function OrgSettingsPage() {
           <CardHeader
             title="Ekip"
             subtitle={members.length <= 1 ? 'Yalnız siz' : `${members.length} üye`}
+            action={<AddMemberButton />}
           />
           <MembersPanel members={members} canManage />
         </Card>

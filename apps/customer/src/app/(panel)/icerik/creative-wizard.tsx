@@ -16,8 +16,9 @@ import {
   type ProductFieldKey,
 } from '@/lib/creative/types'
 import { startCreativeGeneration, uploadLibraryImage, type CreativeActionState } from './actions'
-import { DEFAULT_INCLUDE, type ProductCard, type WizardBootstrap } from './wizard-types'
+import { DEFAULT_INCLUDE, type ProductCard, type SocialOption, type WizardBootstrap } from './wizard-types'
 import { AddProductModal } from './add-product-modal'
+import { AddSocialModal } from './add-social-modal'
 
 const DRAFT_KEY = 'wa.customer.creative-wizard.v1'
 
@@ -151,7 +152,9 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
   const effectiveSteps = data.kits.length <= 1 ? STEPS.filter((s) => s.id !== 'brand') : STEPS
 
   const [productsList, setProductsList] = useState<ProductCard[]>(data.products)
+  const [socialsList, setSocialsList] = useState<SocialOption[]>(data.socials)
   const [addProductOpen, setAddProductOpen] = useState(false)
+  const [addSocialOpen, setAddSocialOpen] = useState(false)
 
   const stepIndex = effectiveSteps.findIndex((row) => row.id === step)
   const selectedKit = data.kits.find((kit) => kit.id === draft.brandKitId)
@@ -611,25 +614,51 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
           {showSocials ? (
             <Card>
               <div className="space-y-1.5 p-3.5">
-                {data.socials.length === 0 ? (
-                  <p className="text-[12.5px] text-ink-muted">Kayıtlı hesap yok.</p>
+                {socialsList.length === 0 ? (
+                  <div className="flex flex-col items-start gap-2">
+                    <p className="text-[12.5px] text-ink-muted">Kayıtlı hesap yok.</p>
+                    {data.canManage ? (
+                      <Button
+                        type="button"
+                        variant="accent"
+                        className="h-8"
+                        onClick={() => setAddSocialOpen(true)}
+                      >
+                        <Icon name="plus" className="size-3.5" />
+                        Hemen ekle
+                      </Button>
+                    ) : null}
+                  </div>
                 ) : (
-                  data.socials.map((social) => (
-                    <label key={social.id} className="flex items-center gap-2 text-[13px]">
-                      <input
-                        type="checkbox"
-                        checked={draft.socialIds.includes(social.id)}
-                        onChange={(event) =>
-                          patch({
-                            socialIds: event.target.checked
-                              ? [...draft.socialIds, social.id]
-                              : draft.socialIds.filter((id) => id !== social.id),
-                          })
-                        }
-                      />
-                      {social.platform} · {social.label || social.url}
-                    </label>
-                  ))
+                  <>
+                    {socialsList.map((social) => (
+                      <label key={social.id} className="flex items-center gap-2 text-[13px]">
+                        <input
+                          type="checkbox"
+                          checked={draft.socialIds.includes(social.id)}
+                          onChange={(event) =>
+                            patch({
+                              socialIds: event.target.checked
+                                ? [...draft.socialIds, social.id]
+                                : draft.socialIds.filter((id) => id !== social.id),
+                            })
+                          }
+                        />
+                        {social.platform} · {social.label || social.url}
+                      </label>
+                    ))}
+                    {data.canManage ? (
+                      <Button
+                        type="button"
+                        variant="quiet"
+                        className="mt-1 h-8 text-[12.5px]"
+                        onClick={() => setAddSocialOpen(true)}
+                      >
+                        <Icon name="plus" className="size-3.5" />
+                        Hesap ekle
+                      </Button>
+                    ) : null}
+                  </>
                 )}
               </div>
             </Card>
@@ -827,6 +856,20 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
       onSuccess={(newProduct) => {
         setProductsList((prev) => [...prev, newProduct])
         addProduct(newProduct.id)
+      }}
+    />
+    <AddSocialModal
+      open={addSocialOpen}
+      onClose={() => setAddSocialOpen(false)}
+      onSuccess={(social) => {
+        setSocialsList((prev) => (prev.some((row) => row.id === social.id) ? prev : [...prev, social]))
+        setShowSocials(true)
+        setDraft((current) => ({
+          ...current,
+          socialIds: current.socialIds.includes(social.id)
+            ? current.socialIds
+            : [...current.socialIds, social.id],
+        }))
       }}
     />
   </>

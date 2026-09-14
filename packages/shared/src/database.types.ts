@@ -1486,6 +1486,7 @@ export type Database = {
           monthly_message_quota: number
           onboarded_at: string | null
           onboarding_step: string
+          orgs_quota: number
           plan: string
           updated_at: string
         }
@@ -1501,6 +1502,7 @@ export type Database = {
           monthly_message_quota?: number
           onboarded_at?: string | null
           onboarding_step?: string
+          orgs_quota?: number
           plan?: string
           updated_at?: string
         }
@@ -1516,6 +1518,7 @@ export type Database = {
           monthly_message_quota?: number
           onboarded_at?: string | null
           onboarding_step?: string
+          orgs_quota?: number
           plan?: string
           updated_at?: string
         }

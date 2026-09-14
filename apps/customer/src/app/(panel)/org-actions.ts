@@ -60,7 +60,7 @@ export async function createOrg(
 
   if (error) {
     if (error.message.includes('org limit reached')) {
-      return { error: 'En fazla 3 işletme sahibi olabilirsiniz.' }
+      return { error: 'İşletme oluşturma hakkınız doldu.' }
     }
     return { error: error.message }
   }
