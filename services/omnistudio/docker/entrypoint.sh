@@ -18,13 +18,14 @@ x11vnc -display :99 -forever -nopw -shared -rfbport 5900 -bg
 websockify --web=/usr/share/novnc/ 6080 localhost:5900 &
 echo "🌐 noVNC Web Arayüzü Hazır: Port 6080"
 
-# 3. Node.js Gateway Başlat (Port 3456)
+# 3. Node.js Gateway & CDP Worker Başlat (Port 3456)
 cd /app/gateway
 node server.js &
-echo "⚡ API Gateway Hazır: Port 3456"
+node --experimental-websocket cdp_worker.js &
+echo "⚡ API Gateway & CDP Autonomous Worker Hazır: Port 3456"
 
-# 4. Google Chrome'u OmniStudio Eklentisi ile Başlat
-CHROME_FLAGS="--no-sandbox --disable-dev-shm-usage --disable-gpu --user-data-dir=/data/chromium-profile --disable-extensions-except=/app/extension --load-extension=/app/extension --remote-debugging-port=9222 --start-maximized https://chatgpt.com https://gemini.google.com"
+# 4. Google Chrome Başlat (Uzaktan Hata Ayıklama Portu 9222)
+CHROME_FLAGS="--no-sandbox --disable-dev-shm-usage --disable-gpu --user-data-dir=/data/chromium-profile --remote-debugging-port=9222 --start-maximized https://chatgpt.com https://gemini.google.com"
 
 echo "🖥️ Google Chrome Başlatılıyor..."
 google-chrome-stable $CHROME_FLAGS &
