@@ -8,7 +8,6 @@ import { useConfirm } from '@/components/confirm-dialog'
 import { useToast } from '@/components/toast'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { VARIATION_PRESETS } from '@/lib/creative/types'
-import { useCreativeGenerationProgress } from '@/lib/creative/use-creative-progress'
 import {
   deleteCreative,
   renameCreative,
@@ -76,8 +75,6 @@ export function CreativeDetail({
   const [busyRender, setBusyRender] = useState(false)
   const shownError = localError || (creative.status === 'failed' ? creative.error : null)
   const spinning = (running && !localError) || busyRender
-
-  useCreativeGenerationProgress(spinning, true)
 
   async function requestRender() {
     const response = await fetch('/api/icerik/render', {

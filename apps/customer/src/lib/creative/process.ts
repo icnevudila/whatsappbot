@@ -132,8 +132,9 @@ export async function processCreativeGeneration(
       if (image) refs.push({ ...image, role: 'product' })
     }
 
-    // Ürün görseli yoksa ve logo istenmişse marka logosu verilir
-    if (refs.length === 0 && snapshot.useLogo && snapshot.brandKit?.logoPath) {
+    // Sadece ürün tanımlanmamış genel marka kampanyalarında ve logo istenmişse marka logosu verilir.
+    // Ürün kampanyalarında ürün görseli yoksa, marka görseli ürünle karıştırılmasın diye referans verilmez.
+    if (refs.length === 0 && snapshot.products.length === 0 && snapshot.useLogo && snapshot.brandKit?.logoPath) {
       const path = snapshot.brandKit.logoPath
       if (path.startsWith('http')) {
         const image = await fetchBuffer(path)
