@@ -28,9 +28,9 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 WORKDIR /app
 
 # Gateway ve Extension kopyalama
-COPY ../gateway /app/gateway
-COPY ../extension /app/extension
-COPY ./entrypoint.sh /app/entrypoint.sh
+COPY gateway /app/gateway
+COPY extension /app/extension
+COPY docker/entrypoint.sh /app/entrypoint.sh
 
 RUN chmod +x /app/entrypoint.sh
 
