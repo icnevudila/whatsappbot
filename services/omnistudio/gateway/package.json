@@ -1,0 +1,12 @@
+{
+  "name": "@wa/omnistudio-gateway",
+  "version": "1.0.0",
+  "description": "OmniStudio Free AI Visual Generation Gateway (OpenAI Compatible)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "author": "WhatsAppBot Team",
+  "license": "MIT"
+}

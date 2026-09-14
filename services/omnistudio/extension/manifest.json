@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "OmniStudio · AI Visual Engine",
+  "version": "2.1.0",
+  "description": "WhatsApp Botu ve Web Servisleri için Otonom Ücretsiz Görsel Üretim Motoru (ChatGPT & Google Gemini)",
+  "permissions": [
+    "storage",
+    "tabs",
+    "scripting",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://chatgpt.com/*",
+    "https://gemini.google.com/*",
+    "https://*.oaiusercontent.com/*",
+    "https://*.oaistatic.com/*",
+    "https://*.googleusercontent.com/*",
+    "http://localhost:3456/*",
+    "http://127.0.0.1:3456/*",
+    "http://localhost:*/*",
+    "https://*/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "OmniStudio AI Engine"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://gemini.google.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+}

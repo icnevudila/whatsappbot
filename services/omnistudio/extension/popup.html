@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>OmniStudio · AI Visual Engine</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body class="dark-theme">
+  <!-- Ana Konteyner -->
+  <div class="omni-app">
+    
+    <!-- Üst Başlık & Workspace Seçici -->
+    <header class="omni-header">
+      <div class="brand-row">
+        <div class="logo-badge">
+          <span class="logo-icon">⚡</span>
+          <div class="brand-text">
+            <span class="brand-name">OmniStudio</span>
+            <span class="brand-tag">AI Visual Microservice</span>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button id="toggleWorkerBtn" class="btn-toggle-engine active" title="Motoru Aç/Kapat">
+            <span class="engine-dot"></span>
+            <span class="engine-text">CANLI</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Workspace / Proje Seçici Çubuğu -->
+      <div class="workspace-bar">
+        <label for="workspaceSelect" class="ws-label">Çalışma Alanı:</label>
+        <select id="workspaceSelect" class="glass-select">
+          <option value="whatsapp">📱 [WhatsApp Botu] Aktif Hatlar</option>
+          <option value="ecommerce">🛍️ [E-Ticaret] Ürün & Kampanya</option>
+          <option value="mobile">📲 [Mobil Uygulama] Asset Üretimi</option>
+          <option value="general">✨ [Genel] Serbest Tasarım</option>
+        </select>
+      </div>
+
+      <!-- Platform Durum Göstergeleri (Dual Mutex Status) -->
+      <div class="platforms-status">
+        <div class="platform-chip" id="chipChatGPT">
+          <span class="platform-icon">🟢</span>
+          <span class="platform-name">ChatGPT</span>
+          <span class="platform-state" id="stateChatGPT">Bağlı Değil</span>
+        </div>
+        <div class="platform-chip" id="chipGemini">
+          <span class="platform-icon">🔵</span>
+          <span class="platform-name">Gemini</span>
+          <span class="platform-state" id="stateGemini">Bağlı Değil</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Navigasyon Sekmeleri -->
+    <nav class="omni-tabs">
+      <button class="tab-btn active" data-tab="queueTab">
+        <span class="tab-icon">⚡</span> Kuyruk (<span id="queueBadge">0</span>)
+      </button>
+      <button class="tab-btn" data-tab="galleryTab">
+        <span class="tab-icon">🖼️</span> Galeri (<span id="galleryBadge">0</span>)
+      </button>
+      <button class="tab-btn" data-tab="settingsTab">
+        <span class="tab-icon">⚙️</span> Ayarlar
+      </button>
+    </nav>
+
+    <!-- SEKME 1: Canlı Kuyruk Yönetimi -->
+    <section id="queueTab" class="tab-content active">
+      <div class="queue-toolbar">
+        <div class="toolbar-left">
+          <span class="queue-status-text" id="queueStatusSummary">Kuyruk boş</span>
+        </div>
+        <div class="toolbar-actions">
+          <button id="pauseQueueBtn" class="glass-btn small" title="Kuyruğu Duraklat">⏸ Duraklat</button>
+          <button id="retryFailedBtn" class="glass-btn small warning" title="Hatalıları Yeniden Dene">🔄 Yeniden Dene</button>
+          <button id="clearCompletedBtn" class="glass-btn small danger" title="Bitenleri Temizle">🗑️</button>
+        </div>
+      </div>
+
+      <!-- Kuyruk İlerleme Çubuğu -->
+      <div id="queueProgressBar" class="progress-bar-container" style="display: none;">
+        <div class="progress-bar-fill" id="progressFill"></div>
+      </div>
+
+      <!-- Kuyruk Listesi -->
+      <div id="queueList" class="queue-list-container">
+        <!-- JS ile dinamik doldurulur -->
+      </div>
+    </section>
+
+    <!-- SEKME 2: Canlı Görsel Galerisi (Visual Feed) -->
+    <section id="galleryTab" class="tab-content">
+      <div class="gallery-toolbar">
+        <span class="gallery-title">Son Üretilen Görseller</span>
+        <button id="refreshGalleryBtn" class="glass-btn small">Yenile</button>
+      </div>
+      <div id="galleryGrid" class="gallery-grid">
+        <!-- JS ile dinamik doldurulur -->
+      </div>
+    </section>
+
+    <!-- SEKME 3: Ayarlar Paneli -->
+    <section id="settingsTab" class="tab-content">
+      <div class="settings-group">
+        <label class="setting-label">Merkezi Gateway URL:</label>
+        <input type="text" id="gatewayUrlInput" class="glass-input" value="http://localhost:3456" placeholder="http://localhost:3456">
+        <span class="setting-desc">Hetzner VPS veya yerel Node.js gateway adresi</span>
+      </div>
+
+      <div class="settings-group">
+        <label class="setting-label">Rate-Limit Bekleme Süresi (sn): <span id="delayValueText">8s</span></label>
+        <input type="range" id="delayRangeInput" class="glass-range" min="3" max="30" value="8" step="1">
+        <span class="setting-desc">Görseller arası bot tespitini önleyici bekleme payı</span>
+      </div>
+
+      <div class="settings-group">
+        <label class="setting-label">Tercih Edilen Varsayılan Platform:</label>
+        <select id="preferredPlatformSelect" class="glass-select">
+          <option value="auto">Otomatik (Hangisi Boştaysa)</option>
+          <option value="chatgpt">Önce ChatGPT (DALL-E 3)</option>
+          <option value="gemini">Önce Google Gemini (Imagen 3)</option>
+        </select>
+      </div>
+
+      <div class="settings-group toggle-row">
+        <div>
+          <span class="setting-label-inline">Anti-Throttling (Sekme Uyumama)</span>
+          <span class="setting-desc">Arka planda sekme dondurmasını engellemek için sessiz osilatör</span>
+        </div>
+        <input type="checkbox" id="antiThrottleCheck" checked class="glass-toggle">
+      </div>
+
+      <div class="settings-actions">
+        <button id="saveSettingsBtn" class="glass-btn primary full">Ayarları Kaydet</button>
+      </div>
+    </section>
+
+    <!-- Lightbox Modal (Görsel Önizleme) -->
+    <div id="lightboxModal" class="lightbox-modal" style="display: none;">
+      <div class="lightbox-backdrop" id="closeLightboxBackdrop"></div>
+      <div class="lightbox-content">
+        <button class="lightbox-close" id="closeLightboxBtn">✕</button>
+        <img id="lightboxImage" src="" alt="Görsel">
+        <div class="lightbox-info">
+          <p id="lightboxPrompt" class="lightbox-prompt"></p>
+          <div class="lightbox-actions">
+            <a id="lightboxDownloadBtn" href="#" download class="glass-btn small primary">⬇ İndir</a>
+            <button id="lightboxRetryBtn" class="glass-btn small">Tekrar Üret</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

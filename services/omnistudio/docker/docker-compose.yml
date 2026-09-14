@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  omnistudio-worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: omnistudio-engine
+    restart: unless-stopped
+    ports:
+      - "3456:3456"   # API Gateway (OpenAI Compatible Endpoint)
+      - "6080:6080"   # noVNC Web Arayüzü (Tek seferlik giriş yapmak için)
+    volumes:
+      # Oturum çerezlerini (Google & ChatGPT) kalıcı olarak saklar
+      - ./data/profile:/data/chromium-profile
+      # Üretilen görselleri diskte tutar
+      - ./data/outputs:/app/gateway/outputs
+    environment:
+      - PORT=3456
+      - NODE_ENV=production
+    shm_size: 2gb
