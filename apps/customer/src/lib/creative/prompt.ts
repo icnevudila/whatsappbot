@@ -59,7 +59,7 @@ export function buildCreativePrompt(snapshot: CreativeSnapshot): {
     }
     if (product.include.promo && product.promo) bits.push(`offer: ${product.promo}`)
     if (product.extra) bits.push(`extra: ${product.extra}`)
-    if (product.include.image && product.imageUrl) {
+    if (!snapshot.baseCreativeId && product.include.image && product.imageUrl && index === 0) {
       bits.push('A product photo is attached as a reference. Keep the real product identity.')
     }
     return bits.join('. ')
@@ -96,11 +96,11 @@ export function buildCreativePrompt(snapshot: CreativeSnapshot): {
     kit?.tone ? `Brand tone of voice: ${kit.tone}` : null,
     colors ? `Follow this brand palette in backgrounds, accents and props: ${colors}.` : null,
     kit?.fonts?.heading ? `Prefer a ${kit.fonts.heading}-like heading feel.` : null,
-    snapshot.useLogo && kit?.logoPath
+    !snapshot.baseCreativeId && !snapshot.products.some((p) => p.include.image && p.imageUrl) && snapshot.useLogo && kit?.logoPath
       ? 'A real brand logo image is attached. Place it as a small clean logo. Do NOT redraw, restyle or invent a new logo. Do not distort it.'
       : 'Do not invent a logo.',
     snapshot.baseCreativeId
-      ? 'A base/reference campaign image is attached. Keep the same product identity; apply the requested change.'
+      ? 'A base/reference campaign image is attached. Keep the same product and brand identity; apply the requested change.'
       : null,
     snapshot.instruction ? `Revision instruction (must follow): ${snapshot.instruction}` : null,
     variation ? `Variation direction: ${variation}. Same offer, different composition.` : null,

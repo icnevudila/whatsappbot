@@ -4,6 +4,9 @@
  * Chrome DevTools Protocol (CDP) on port 9222.
  */
 
+const fs = require('fs');
+const path = require('path');
+
 const GATEWAY_URL = process.env.GATEWAY_URL || 'http://127.0.0.1:3456';
 const CDP_HTTP = process.env.CDP_HTTP || 'http://127.0.0.1:9222';
 const POLL_INTERVAL_MS = 2500;
@@ -105,17 +108,7 @@ async function executeChatGPTJob(tab, job) {
   try {
     cdp = await createCdpSession(tab.webSocketDebuggerUrl);
 
-    // 1. Mevcut görsel URL'lerini kaydet
-    const beforeEval = await cdp.send('Runtime.evaluate', {
-      expression: `Array.from(document.querySelectorAll('img')).map(i => i.src)`,
-      returnByValue: true
-    });
-    const beforeImages = new Set(beforeEval.result?.value || []);
-
-    // 1.5 Referans Görseller Varsa (Image-to-Image / Marka Kiti) ChatGPT'ye Dosya Olarak Yükle
-    const fs = require('fs');
-    const path = require('path');
-
+    // 1. Referans Görseller Varsa (Image-to-Image / Ürün Görseli) ChatGPT'ye Dosya Olarak Yükle
     if (Array.isArray(job.referenceImages) && job.referenceImages.length > 0) {
       console.log(`[CDP Worker] ${job.referenceImages.length} adet referans görsel ekleniyor...`);
       for (let idx = 0; idx < job.referenceImages.length; idx++) {
@@ -147,8 +140,8 @@ async function executeChatGPTJob(tab, job) {
                 if (el) el.dispatchEvent(new Event('change', { bubbles: true }));
               `
             });
-            console.log('[CDP Worker] Referans görseller ChatGPT inputuna yüklendi, thumbnail bekleniyor...');
-            await sleep(4000); // Görselin yüklenip input alanına eklenmesini bekle
+            console.log('[CDP Worker] Referans görsel inputa yüklendi, thumbnail bekleniyor...');
+            await sleep(3500); // Görselin yüklenip input alanına eklenmesini bekle
           }
         } catch (uploadErr) {
           console.warn('[CDP Worker] Referans görsel yükleme uyarısı:', uploadErr.message);
@@ -156,7 +149,15 @@ async function executeChatGPTJob(tab, job) {
       }
     }
 
-    // 2. Prompt'u Enjekte Et
+    // 2. Mevcut görsel URL'lerini kaydet (Az önce yüklenen referans thumbnail'lar DAHİL)
+    // Böylece referans görseller asla üretilen yeni görsel sanılmaz!
+    const beforeEval = await cdp.send('Runtime.evaluate', {
+      expression: `Array.from(document.querySelectorAll('img')).map(i => i.src).filter(Boolean)`,
+      returnByValue: true
+    });
+    const beforeImages = new Set(beforeEval.result?.value || []);
+
+    // 3. Prompt'u Enjekte Et
     const injectEval = await cdp.send('Runtime.evaluate', {
       expression: `
         (function() {
@@ -200,15 +201,19 @@ async function executeChatGPTJob(tab, job) {
 
     console.log('[CDP Worker] Prompt gönderildi, görsel üretimi bekleniyor...');
 
-    // 3. Görselin üretilmesini bekle (Maks 110 saniye)
+    // DALL-E çizimi en az 10-15 saniye sürer, ön başlatma payı
+    await sleep(8000);
+
+    // 4. Görselin üretilmesini bekle (Maks 180 saniye - ChatGPT Plus DALL-E derin çizim payı)
     let foundImgSrc = null;
-    const maxAttempts = 55; // 55 * 2s = 110s
+    const maxAttempts = 85; // 85 * 2s + 8s = ~178s
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       await sleep(2000);
 
       // İlerlemeyi Gateway'e bildir
-      const progress = Math.min(95, Math.round((attempt / maxAttempts) * 100));
+      const elapsed = attempt * 2 + 8;
+      const progress = Math.min(96, Math.round((elapsed / 180) * 100));
       fetch(`${GATEWAY_URL}/job/progress`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -218,41 +223,56 @@ async function executeChatGPTJob(tab, job) {
       const checkEval = await cdp.send('Runtime.evaluate', {
         expression: `
           (function() {
-            const imgs = Array.from(document.querySelectorAll('img')).map(i => ({
-              src: i.src,
-              alt: i.alt || '',
-              width: i.naturalWidth || i.width
-            }));
-            const isThinking = !!document.querySelector('.result-thinking, [data-testid*="generating"]');
-            return { imgs, isThinking };
+            // ChatGPT üretim/düşünme durumunu kontrol et
+            const stopBtn = document.querySelector('button[data-testid="stop-button"], button[aria-label*="Stop"], button[aria-label*="durdur"]');
+            const isThinking = !!document.querySelector('.result-thinking, [data-testid*="generating"], .streaming-animated-ellipsis');
+            const isGenerating = !!stopBtn || isThinking;
+
+            // DALL-E üretilen görseller özel container (.group/imagegen-image) veya alt="Generated image..." formatındadır
+            const candidateImgs = Array.from(document.querySelectorAll(
+              '.group\\\\/imagegen-image img, img[alt^="Generated image"], [id^="image-"] img'
+            ));
+
+            const beforeList = ${JSON.stringify(Array.from(beforeImages))};
+
+            for (const img of candidateImgs) {
+              const src = img.src || '';
+              if (!src || beforeList.includes(src)) continue;
+
+              const alt = (img.alt || '').toLowerCase();
+              // Yüklenen referans dosyaları ref_... veya dosya uzantısıyla biter, onları asla alma
+              if (alt.startsWith('ref_') || alt.endsWith('.png') || alt.endsWith('.jpg') || alt.endsWith('.jpeg') || alt.endsWith('.webp')) continue;
+
+              const width = img.naturalWidth || img.width;
+              const height = img.naturalHeight || img.height;
+              // Henüz render edilmemiş veya çok küçük ikon ise geç
+              if (!img.complete || width < 512 || height < 512) continue;
+
+              // Eğer ChatGPT hala yanıt üretiyorsa çizim henüz tamamlanmamış olabilir
+              if (isGenerating) {
+                return { ready: false, isGenerating: true, foundSrc: null };
+              }
+
+              // Görsel hazır, tamamen yüklendi ve üretim bitti!
+              return { ready: true, isGenerating: false, foundSrc: src };
+            }
+
+            return { ready: false, isGenerating, foundSrc: null };
           })()
         `,
         returnByValue: true
       });
 
-      const currentImgs = checkEval.result?.value?.imgs || [];
-      
-      // Yeni oluşan görseli bul
-      const newImg = currentImgs.find(img => 
-        !beforeImages.has(img.src) &&
-        (
-          img.src.includes('backend-api/estuary/content') ||
-          img.src.includes('oaiusercontent.com') ||
-          img.src.includes('dall-e') ||
-          img.alt.startsWith('Generated image') ||
-          (img.width > 500 && img.src.startsWith('blob:'))
-        )
-      );
-
-      if (newImg) {
-        foundImgSrc = newImg.src;
-        console.log(`[CDP Worker] Görsel ${attempt * 2}. saniyede tespit edildi!`);
+      const checkResult = checkEval.result?.value;
+      if (checkResult?.ready && checkResult?.foundSrc) {
+        foundImgSrc = checkResult.foundSrc;
+        console.log(`[CDP Worker] Görsel ${elapsed}. saniyede başarıyla tamamlandı ve tespit edildi!`);
         break;
       }
     }
 
     if (!foundImgSrc) {
-      throw new Error('Görsel üretim zaman aşımı (110 saniye)');
+      throw new Error('Görsel üretim zaman aşımı (180 saniye)');
     }
 
     // 4. Görsel Blob'unu Sayfa Context'inden Çek

@@ -219,15 +219,15 @@ class AdvancedJobQueue {
 
 const queue = new AdvancedJobQueue();
 
-// Periyodik zombi iş temizleme (95s)
+// Periyodik zombi iş temizleme (200s)
 setInterval(() => {
   const now = Date.now();
   for (const [platform, jobId] of Object.entries(queue.activeWorkers)) {
     if (jobId) {
       const job = queue.jobs.get(jobId);
-      if (job && now - job.startedAt > 95000) {
+      if (job && now - job.startedAt > 200000) {
         console.warn(`[Gateway] Zaman aşımı: ${platform} üzerindeki ${jobId} işi serbest bırakılıyor.`);
-        queue.releaseLock(jobId, 'Browser worker timeout (95s)');
+        queue.releaseLock(jobId, 'Browser worker timeout (200s)');
       }
     }
   }
@@ -332,8 +332,8 @@ const server = http.createServer(async (req, res) => {
         });
       }
 
-      // Senkron bekleme modu (OpenAI SDK ile birebir uyumlu)
-      const finishedJob = await queue.waitForJob(job.id, 120000);
+      // Senkron bekleme modu (OpenAI SDK ile birebir uyumlu, ChatGPT 2dk çizim payı)
+      const finishedJob = await queue.waitForJob(job.id, 180000);
 
       if (finishedJob.status === 'completed') {
         const item = {};

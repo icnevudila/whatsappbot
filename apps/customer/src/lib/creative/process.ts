@@ -109,6 +109,9 @@ export async function processCreativeGeneration(
   const refs: ReferenceImage[] = []
 
   if (snapshot.baseCreativeId) {
+    // Var olan bir görselden türetiliyorsa (Revizyon, Varyasyon veya Görselden Türet):
+    // Modele tek odak noktası olarak SADECE seçilen kaynak görsel verilir.
+    // Ekstra ürün fotoğrafları veya logo eklenerek modelin kafası karıştırılmaz.
     const { data: base } = await supabase
       .from('creatives')
       .select('public_url, org_id')
@@ -119,29 +122,32 @@ export async function processCreativeGeneration(
       const image = await fetchBuffer(base.public_url)
       if (image) refs.push({ ...image, role: 'base' })
     }
-  }
+  } else {
+    // Sıfırdan yeni üretim:
+    // Seçili ürünler arasından ilk ürün görseli referans olarak verilir
+    for (const product of snapshot.products) {
+      if (refs.length >= 1) break
+      if (!product.include.image || !product.imageUrl) continue
+      const image = await fetchBuffer(product.imageUrl)
+      if (image) refs.push({ ...image, role: 'product' })
+    }
 
-  if (snapshot.useLogo && snapshot.brandKit?.logoPath) {
-    const path = snapshot.brandKit.logoPath
-    if (path.startsWith('http')) {
-      const image = await fetchBuffer(path)
-      if (image) refs.push({ ...image, role: 'logo' })
-    } else {
-      const { data: signed } = await supabase.storage
-        .from('brand-assets')
-        .createSignedUrl(path, 120)
-      if (signed?.signedUrl) {
-        const image = await fetchBuffer(signed.signedUrl)
+    // Ürün görseli yoksa ve logo istenmişse marka logosu verilir
+    if (refs.length === 0 && snapshot.useLogo && snapshot.brandKit?.logoPath) {
+      const path = snapshot.brandKit.logoPath
+      if (path.startsWith('http')) {
+        const image = await fetchBuffer(path)
         if (image) refs.push({ ...image, role: 'logo' })
+      } else {
+        const { data: signed } = await supabase.storage
+          .from('brand-assets')
+          .createSignedUrl(path, 120)
+        if (signed?.signedUrl) {
+          const image = await fetchBuffer(signed.signedUrl)
+          if (image) refs.push({ ...image, role: 'logo' })
+        }
       }
     }
-  }
-
-  for (const product of snapshot.products) {
-    if (refs.length >= MAX_REFS) break
-    if (!product.include.image || !product.imageUrl) continue
-    const image = await fetchBuffer(product.imageUrl)
-    if (image) refs.push({ ...image, role: 'product' })
   }
 
   const { prompt } = buildCreativePrompt(snapshot)

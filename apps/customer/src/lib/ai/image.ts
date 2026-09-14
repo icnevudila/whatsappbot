@@ -102,7 +102,7 @@ function buildProviders(config: ResolvedAiConfig): Record<AiProviderId, ImagePro
 
         const response = await fetch(`${gatewayUrl}/v1/images/generations`, {
           method: 'POST',
-          signal: AbortSignal.timeout(75000),
+          signal: AbortSignal.timeout(180000),
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             prompt,
