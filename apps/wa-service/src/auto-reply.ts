@@ -141,7 +141,11 @@ export async function maybeEnqueueAutoReply(options: {
   }
   const tone = kitRows[0]?.tone || 'Kurumsal, nazik ve yardimsever'
 
-  const gatewayUrl = (process.env.OMNISTUDIO_GATEWAY_URL || 'http://167.233.201.31:3456').replace(/\/$/, '')
+  let gatewayUrl = process.env.OMNISTUDIO_GATEWAY_URL || 'http://omnistudio-engine:3456'
+  if (gatewayUrl.includes('127.0.0.1') || gatewayUrl.includes('localhost')) {
+    gatewayUrl = 'http://omnistudio-engine:3456'
+  }
+  gatewayUrl = gatewayUrl.replace(/\/$/, '')
   try {
     const aiRes = await fetch(`${gatewayUrl}/v1/chat/suggestions`, {
       method: 'POST',
