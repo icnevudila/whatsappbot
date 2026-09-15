@@ -73,17 +73,23 @@ let lastLoginCheck = 0;
 
 async function checkTabLogin(tab) {
   if (!tab || !tab.url) return false;
-  if (tab.url.includes('/auth') || tab.url.includes('/login')) {
+  if (tab.url.includes('/auth') || tab.url.includes('/login') || tab.url.includes('/uc/') || tab.url.includes('unauth')) {
     return false;
   }
   try {
     const cdp = await createCdpSession(tab.webSocketDebuggerUrl);
     const evalRes = await cdp.send('Runtime.evaluate', {
-      expression: `!!(
-        document.querySelector('#prompt-textarea') || 
-        document.querySelector('div[contenteditable="true"]') ||
-        document.querySelector('textarea')
-      )`,
+      expression: `(() => {
+        const hasLoginBtn = !!(document.querySelector('[data-testid="login-button"]') || Array.from(document.querySelectorAll('button')).some(b => b.innerText.trim().toLowerCase().includes('log in') || b.innerText.trim().toLowerCase().includes('giriş yap')));
+        const hasProfileBtn = !!(document.querySelector('[data-testid="profile-button"]') || document.querySelector('button[aria-label*="User"]') || document.querySelector('nav img[alt]'));
+        const isUnauthUrl = window.location.pathname.startsWith('/uc/') || window.location.href.includes('unauth');
+        
+        if (hasLoginBtn || isUnauthUrl) return false;
+        if (hasProfileBtn) return true;
+
+        const hasPrompt = !!(document.querySelector('#prompt-textarea') || document.querySelector('div[contenteditable="true"]'));
+        return hasPrompt && !hasLoginBtn;
+      })()`,
       returnByValue: true
     });
     cdp.close();
