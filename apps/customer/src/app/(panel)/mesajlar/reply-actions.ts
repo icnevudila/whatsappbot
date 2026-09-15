@@ -3,6 +3,7 @@
 import { toE164 } from '@wa/shared'
 import { enqueueJob } from '@/lib/jobs'
 import { requireActiveOrg } from '@/lib/org'
+import { syncChatMessage } from '@/lib/chat-store'
 
 export type ReplyState = { error?: string; ok?: string; jobId?: string } | null
 
@@ -63,6 +64,19 @@ export async function replyToConversation(
       priority: 5,
     })
     if (queued.error || !queued.id) return { error: queued.error ?? 'Yanıt sıraya alınamadı.' }
+    void syncChatMessage(org.id, phone, {
+      id: 0,
+      clientKey: `local-${queued.id}`,
+      account_id: accountId,
+      direction: 'out',
+      phone_e164: phone,
+      remote_jid: null,
+      message_type: 'text',
+      body,
+      status: 'pending',
+      created_at: new Date().toISOString(),
+      campaign_id: null,
+    })
     return { jobId: queued.id }
   } catch {
     return { error: 'Yanıt hazırlanamadı. Bağlantınızı kontrol edip tekrar deneyin.' }

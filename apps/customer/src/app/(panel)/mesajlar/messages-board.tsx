@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import {
   CardHeader,
   EmptyState,
@@ -10,7 +9,6 @@ import {
   Input,
   Notice,
   SplitPane,
-  StatusPill,
   Toolbar,
 } from '@/components/ui'
 import { useSyncBusy } from '@/components/busy'
@@ -75,6 +73,25 @@ const timeFormat = new Intl.DateTimeFormat('tr-TR', {
   minute: '2-digit',
 })
 
+const bubbleTime = new Intl.DateTimeFormat('tr-TR', {
+  hour: '2-digit',
+  minute: '2-digit',
+})
+
+function tickMark(status: string) {
+  if (status === 'read' || status === 'delivered') return '✓✓'
+  if (status === 'failed' || status === 'skipped') return '!'
+  if (status === 'sent') return '✓'
+  return '◌'
+}
+
+function tickTone(status: string) {
+  if (status === 'read') return 'is-read'
+  if (status === 'failed' || status === 'skipped') return 'is-fail'
+  if (status === 'pending' || status === 'queued' || status === 'sending') return 'is-pending'
+  return ''
+}
+
 function hrefFor(opts: { tel?: string | null; tab: MessagesTab; date: MessagesDateRange }) {
   const params = new URLSearchParams()
   if (opts.tab !== 'tum') params.set('sekme', opts.tab)
@@ -82,6 +99,50 @@ function hrefFor(opts: { tel?: string | null; tab: MessagesTab; date: MessagesDa
   if (opts.tel) params.set('tel', opts.tel)
   const query = params.toString()
   return query ? `/mesajlar?${query}` : '/mesajlar'
+}
+
+function telFromPath() {
+  if (typeof window === 'undefined') return null
+  return new URLSearchParams(window.location.search).get('tel')
+}
+
+function rowPhone(row: ChatMessage) {
+  return row.phone_e164 || row.remote_jid || ''
+}
+
+function mergeThread(list: ChatMessage[], incoming: ChatMessage) {
+  const key = incoming.clientKey || (incoming.id ? `log-${incoming.id}` : '')
+  const match = list.findIndex(
+    (item) =>
+      (key && (item.clientKey || `log-${item.id}`) === key) ||
+      (incoming.wa_message_id && item.wa_message_id === incoming.wa_message_id) ||
+      (incoming.id && item.id === incoming.id),
+  )
+  if (match >= 0) {
+    const next = list.slice()
+    next[match] = { ...next[match], ...incoming, clientKey: next[match].clientKey || key }
+    return next
+  }
+  const pending = list.findIndex(
+    (item) =>
+      String(item.clientKey ?? '').startsWith('local-') &&
+      item.direction === incoming.direction &&
+      (item.body ?? '') === (incoming.body ?? ''),
+  )
+  if (pending >= 0) {
+    const next = list.slice()
+    next[pending] = { ...incoming, clientKey: incoming.clientKey || key }
+    return next
+  }
+  return [...list, { ...incoming, clientKey: key || `log-${incoming.id}` }]
+}
+
+function rememberCache(phone: string, message: ChatMessage, preview?: Partial<ThreadPreview>) {
+  void fetch('/api/mesajlar/cache', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ phone, message, preview: preview ?? null }),
+  })
 }
 
 function phoneMark(phone: string) {
@@ -116,10 +177,12 @@ export function MessagesBoard({
   thread: ChatMessage[]
   accountLabels: Record<string, string>
 }) {
-  const router = useRouter()
   const toast = useToast()
   const confirm = useConfirm()
   const [list, setList] = useState(previews)
+  const [labels, setLabels] = useState(accountLabels)
+  const [activePhone, setActivePhone] = useState(selectedPhone)
+  const [liveThread, setLiveThread] = useState(thread)
   const [pending, startTransition] = useTransition()
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -134,7 +197,27 @@ export function MessagesBoard({
   const threadEndRef = useRef<HTMLDivElement>(null)
   const [flashPhone, setFlashPhone] = useState<string | null>(null)
   const topPhoneRef = useRef<string | null>(previews[0]?.phone ?? null)
+  const threadMemo = useRef(new Map<string, ChatMessage[]>())
+  const inflight = useRef(new Map<string, Promise<ChatMessage[]>>())
+  const openGen = useRef(0)
+  const activePhoneRef = useRef(selectedPhone)
   useSyncBusy(pending, 'İstemeyenlere ekleniyor…')
+  activePhoneRef.current = activePhone
+
+  useEffect(() => {
+    setLabels(accountLabels)
+  }, [accountLabels])
+
+  useEffect(() => {
+    setActivePhone(selectedPhone)
+    setLiveThread(thread)
+    if (selectedPhone) threadMemo.current.set(selectedPhone, thread)
+  }, [selectedPhone, thread])
+
+  useEffect(() => {
+    document.body.classList.toggle('wb-chat-open', Boolean(activePhone))
+    return () => document.body.classList.remove('wb-chat-open')
+  }, [activePhone])
 
   useEffect(() => {
     if (!searchOpen) return
@@ -163,7 +246,7 @@ export function MessagesBoard({
 
   useEffect(() => {
     setThreadMenuOpen(false)
-  }, [selectedPhone])
+  }, [activePhone])
 
   const visibleList = list.filter((item) =>
     `${item.contactName ?? ''} ${item.pushName ?? ''} ${item.phone} ${item.lastBody ?? ''} ${item.accountLabel ?? ''}`
@@ -185,7 +268,63 @@ export function MessagesBoard({
 
   useEffect(() => {
     threadEndRef.current?.scrollIntoView({ block: 'end' })
-  }, [selectedPhone, thread.length, thread.at(-1)?.id])
+  }, [activePhone, liveThread.length, liveThread.at(-1)?.id, liveThread.at(-1)?.clientKey])
+
+  const prefetchThread = (phone: string) => {
+    if (!phone || threadMemo.current.has(phone) || inflight.current.has(phone)) {
+      return inflight.current.get(phone)
+    }
+    const req = fetch(`/api/mesajlar/thread?tel=${encodeURIComponent(phone)}`)
+      .then((response) => response.json())
+      .then((data) => {
+        const rows = Array.isArray(data.thread) ? (data.thread as ChatMessage[]) : []
+        if (!data.error) threadMemo.current.set(phone, rows)
+        return rows
+      })
+      .finally(() => {
+        inflight.current.delete(phone)
+      })
+    inflight.current.set(phone, req)
+    return req
+  }
+
+  const openChat = async (phone: string) => {
+    const gen = ++openGen.current
+    setActivePhone(phone)
+    const cached = threadMemo.current.get(phone)
+    if (cached) setLiveThread(cached)
+    window.history.pushState({ tel: phone }, '', hrefFor({ tel: phone, tab, date: dateRange }))
+    const rows = cached ?? (await (prefetchThread(phone) ?? Promise.resolve([])))
+    if (gen !== openGen.current) return
+    if (rows) setLiveThread(rows)
+  }
+
+  const closeChat = () => {
+    openGen.current += 1
+    setActivePhone(null)
+    window.history.pushState({}, '', hrefFor({ tab, date: dateRange }))
+  }
+
+  useEffect(() => {
+    const onPop = () => {
+      const tel = telFromPath()
+      setActivePhone(tel)
+      if (!tel) {
+        setLiveThread([])
+        return
+      }
+      const cached = threadMemo.current.get(tel)
+      if (cached) {
+        setLiveThread(cached)
+        return
+      }
+      void prefetchThread(tel)?.then((rows) => {
+        if (telFromPath() === tel) setLiveThread(rows)
+      })
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [tab, dateRange])
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient()
@@ -193,7 +332,35 @@ export function MessagesBoard({
     const onMessageChange = (payload: { new: Record<string, unknown> }) => {
       const row = payload.new as ChatMessage
       if (row.direction !== 'in' && row.direction !== 'out') return
-      router.refresh()
+      const phone = rowPhone(row)
+      if (!phone) return
+      const incoming = { ...row, clientKey: row.clientKey || `log-${row.id}` }
+      threadMemo.current.set(phone, mergeThread(threadMemo.current.get(phone) ?? [], incoming))
+      if (activePhoneRef.current === phone) {
+        setLiveThread((current) => mergeThread(current, incoming))
+      }
+      setList((current) => {
+        const rest = current.filter((item) => item.phone !== phone)
+        const prev = current.find((item) => item.phone === phone)
+        return [
+          {
+            phone,
+            contactName: prev?.contactName ?? null,
+            pushName: prev?.pushName ?? (typeof payload.new.push_name === 'string' ? payload.new.push_name : null),
+            lastBody: incoming.body,
+            lastAt: incoming.created_at,
+            lastDirection: incoming.direction === 'out' ? 'out' : 'in',
+            messageType: incoming.message_type,
+            accountId: incoming.account_id,
+            accountLabel: incoming.account_id ? labels[incoming.account_id] ?? prev?.accountLabel ?? null : prev?.accountLabel ?? null,
+            isReply: Boolean(prev?.isReply || incoming.direction === 'in'),
+            outboundOnly: incoming.direction === 'out' && !prev?.isReply,
+            missingPhone: !phone.startsWith('+'),
+          },
+          ...rest,
+        ]
+      })
+      rememberCache(phone, incoming)
     }
 
     const channel = supabase
@@ -220,29 +387,23 @@ export function MessagesBoard({
       )
       .subscribe()
 
-    const tick = () => {
-      if (document.visibilityState === 'visible') router.refresh()
-    }
-    const timer = setInterval(tick, 18_000)
-
     return () => {
-      clearInterval(timer)
       void supabase.removeChannel(channel)
     }
-  }, [orgId, router])
+  }, [orgId, labels])
 
   const selectedPreview = useMemo(
-    () => list.find((item) => item.phone === selectedPhone) ?? null,
-    [list, selectedPhone],
+    () => list.find((item) => item.phone === activePhone) ?? null,
+    [list, activePhone],
   )
 
   const block = () => {
-    if (!selectedPhone || !selectedPhone.startsWith('+')) {
+    if (!activePhone || !activePhone.startsWith('+')) {
       setError('Bu sohbette telefon numarası yok; İstemeyenler\'e eklenemedi.')
       toast('İstemeyenlere eklenemedi — numara yok.', 'danger')
       return
     }
-    const displayName = threadDisplayName(selectedPreview ?? {}) ?? selectedPhone
+    const displayName = threadDisplayName(selectedPreview ?? {}) ?? activePhone
     void confirm({
       title: 'İstemeyenlere al',
       description: `${displayName} numarasını istemeyenler listesine eklemek istediğinize emin misiniz? Bu numara bundan sonra kampanyalara dahil edilmeyecek.`,
@@ -252,7 +413,7 @@ export function MessagesBoard({
       setError(null)
       setNotice(null)
       startTransition(async () => {
-        const result = await blacklistPhone(selectedPhone, 'Mesajlar\'dan eklendi')
+        const result = await blacklistPhone(activePhone, 'Mesajlar\'dan eklendi')
         if (result.error) {
           setError(result.error)
           toast(result.error, 'danger')
@@ -283,18 +444,20 @@ export function MessagesBoard({
 
   return (
     <SplitPane
+      listPaneClassName={activePhone ? 'is-hidden-mobile' : undefined}
+      detailPaneClassName={activePhone ? undefined : 'is-hidden-mobile'}
       list={
-        <div className={selectedPhone ? 'hidden lg:flex lg:min-h-0 lg:flex-col' : 'flex min-h-0 flex-col'}>
+        <div className="flex min-h-0 flex-1 flex-col">
           <CardHeader
             title="Sohbetler"
             subtitle={`${list.length} kişi`}
             action={
               <div className="flex flex-wrap items-center justify-end gap-1">
-                <FilterChip href={hrefFor({ tel: selectedPhone, tab: 'tum', date: dateRange })} active={tab === 'tum'}>
+                <FilterChip href={hrefFor({ tel: activePhone, tab: 'tum', date: dateRange })} active={tab === 'tum'}>
                   Tümü ({allCount})
                 </FilterChip>
                 <FilterChip
-                  href={hrefFor({ tel: selectedPhone, tab: 'giden', date: dateRange })}
+                  href={hrefFor({ tel: activePhone, tab: 'giden', date: dateRange })}
                   active={tab === 'giden'}
                 >
                   Cevapsız ({outboundCount})
@@ -383,7 +546,7 @@ export function MessagesBoard({
                   ).map(([id, label]) => (
                     <FilterChip
                       key={id}
-                      href={hrefFor({ tel: selectedPhone, tab, date: id })}
+                      href={hrefFor({ tel: activePhone, tab, date: id })}
                       active={dateRange === id}
                     >
                       {label}
@@ -392,14 +555,31 @@ export function MessagesBoard({
                 </Toolbar>
               ) : null}
               {searchOpen ? (
-                <Input
-                  ref={searchRef}
-                  aria-label="Sohbetlerde ara"
-                  type="search"
-                  placeholder="İsim, numara veya mesaj ara…"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                />
+                <div className="relative">
+                  <Input
+                    ref={searchRef}
+                    aria-label="Sohbetlerde ara"
+                    type="text"
+                    placeholder="İsim, numara veya mesaj ara…"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    className={search ? 'pr-9' : undefined}
+                  />
+                  {search ? (
+                    <button
+                      type="button"
+                      aria-label="Aramayı temizle"
+                      title="Temizle"
+                      onClick={() => {
+                        setSearch('')
+                        searchRef.current?.focus()
+                      }}
+                      className="absolute right-1.5 top-1/2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-full text-ink-muted hover:bg-surface hover:text-ink"
+                    >
+                      <Icon name="close" className="size-3.5" />
+                    </button>
+                  ) : null}
+                </div>
               ) : null}
             </div>
           ) : null}
@@ -412,7 +592,7 @@ export function MessagesBoard({
           ) : (
             <ul className="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-1.5">
               {visibleList.map((item, index) => {
-                const active = item.phone === selectedPhone
+                const active = item.phone === activePhone
                 const displayName = threadDisplayName(item)
                 return (
                   <li
@@ -420,8 +600,18 @@ export function MessagesBoard({
                     className={`wb-row-enter${flashPhone === item.phone ? ' wb-row-flash' : ''}`}
                     style={{ animationDelay: `${Math.min(index, 10) * 24}ms` }}
                   >
-                    <Link
+                    <a
                       href={hrefFor({ tel: item.phone, tab, date: dateRange })}
+                      onPointerDown={() => {
+                        void prefetchThread(item.phone)
+                      }}
+                      onClick={(event) => {
+                        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+                          return
+                        }
+                        event.preventDefault()
+                        void openChat(item.phone)
+                      }}
                       className={`wb-list-row block rounded-[var(--radius-sm)] px-3.5 py-2.5 transition-colors hover:bg-surface-raised ${
                         active
                           ? 'border border-accent/25 bg-accent-soft shadow-[inset_3px_0_0_var(--color-accent)]'
@@ -497,7 +687,7 @@ export function MessagesBoard({
                           </div>
                         </div>
                       </div>
-                    </Link>
+                    </a>
                   </li>
                 )
               })}
@@ -506,27 +696,37 @@ export function MessagesBoard({
         </div>
       }
       detail={
-        <div className={`flex min-h-0 flex-col ${selectedPhone ? '' : 'hidden lg:flex'}`}>
-          {selectedPhone ? (
+        <div className="flex h-full min-h-0 flex-1 flex-col">
+          {activePhone ? (
             <>
-              <Link
-                href={hrefFor({ tab, date: dateRange })}
-                className="border-b border-hairline px-3.5 py-2.5 text-[12.5px] font-medium text-accent lg:hidden"
-              >
-                ← Tüm sohbetler
-              </Link>
               <CardHeader
+                className="wb-chat-header"
+                leading={
+                  <>
+                    <button
+                      type="button"
+                      aria-label="Tüm sohbetler"
+                      className="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-ink hover:bg-white/70 lg:hidden"
+                      onClick={closeChat}
+                    >
+                      <Icon name="back" className="size-4" />
+                    </button>
+                    <span className="wb-chat-avatar" aria-hidden>
+                      {phoneMark(activePhone)}
+                    </span>
+                  </>
+                }
                 title={
                   threadDisplayName(selectedPreview ?? {}) ??
                   (selectedPreview?.missingPhone
-                    ? selectedPhone.replace(/@lid$/, '')
-                    : selectedPhone)
+                    ? activePhone.replace(/@lid$/, '')
+                    : activePhone)
                 }
                 subtitle={
                   selectedPreview?.missingPhone
                     ? 'Numara okunamadı — yalnızca görüntüleme'
                     : [
-                        threadDisplayName(selectedPreview ?? {}) ? selectedPhone : null,
+                        threadDisplayName(selectedPreview ?? {}) ? activePhone : null,
                         selectedPreview?.accountLabel
                           ? `Hat: ${selectedPreview.accountLabel}`
                           : null,
@@ -535,7 +735,7 @@ export function MessagesBoard({
                         .join(' · ') || 'Konuşma geçmişi'
                 }
                 action={
-                  selectedPhone.startsWith('+') ? (
+                  activePhone.startsWith('+') ? (
                     <div className="relative shrink-0" ref={threadMenuRef}>
                       <button
                         type="button"
@@ -545,7 +745,7 @@ export function MessagesBoard({
                         title="Diğer"
                         disabled={pending}
                         onClick={() => setThreadMenuOpen((value) => !value)}
-                        className="inline-flex size-8 items-center justify-center rounded-full border border-hairline bg-surface text-ink hover:bg-canvas disabled:opacity-50"
+                        className="inline-flex size-8 items-center justify-center rounded-full text-ink hover:bg-white/70 disabled:opacity-50"
                       >
                         <Icon name="ellipsis" className="size-4" />
                       </button>
@@ -581,59 +781,56 @@ export function MessagesBoard({
                 </div>
               )}
 
-              {thread.length === 0 ? (
-                <EmptyState
-                  tone="inbox"
-                  title="Konuşma boş"
-                  description={
-                    dateRange === 'tum'
-                      ? 'Bu numara için henüz kayıtlı mesaj yok.'
-                      : 'Bu tarih aralığında mesaj yok. Tümü’ne geçerek tüm konuşmayı görün.'
-                  }
-                />
+              {liveThread.length === 0 ? (
+                <div className="wb-chat-thread">
+                  <p className="wb-chat-empty">
+                    {dateRange === 'tum'
+                      ? 'Bu konuşmada henüz mesaj yok.'
+                      : 'Bu tarih aralığında mesaj yok. Tümü’ne geçerek tüm konuşmayı görün.'}
+                  </p>
+                </div>
               ) : (
                 <div className="wb-chat-thread" role="log" aria-live="polite" aria-relevant="additions">
-                  {thread.map((row) => {
+                  {liveThread.map((row) => {
                     const outgoing = row.direction === 'out'
                     const hat =
-                      row.account_id && accountLabels[row.account_id]
-                        ? accountLabels[row.account_id]
+                      row.account_id && labels[row.account_id]
+                        ? labels[row.account_id]
                         : null
-                    const meta = row.campaign_id
-                      ? [
-                          'Kampanya',
-                          row.campaignName,
-                          hat,
-                          timeFormat.format(new Date(row.created_at)),
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')
-                      : [
-                          outgoing ? 'Giden' : 'Gelen',
-                          hat,
-                          timeFormat.format(new Date(row.created_at)),
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')
+                    const caption = row.campaign_id
+                      ? ['Kampanya', row.campaignName, hat].filter(Boolean).join(' · ')
+                      : hat && !outgoing
+                        ? hat
+                        : null
+                    const ticks = tickMark(row.status)
                     return (
                       <div
                         key={row.clientKey ?? `log-${row.id}`}
-                        className={`flex ${outgoing ? 'justify-end' : 'justify-start'}`}
+                        className={`wb-chat-row ${outgoing ? 'wb-chat-row--out' : 'wb-chat-row--in'}`}
                       >
                         <div
                           className={`wb-chat-bubble ${
                             outgoing ? 'wb-chat-bubble--out' : 'wb-chat-bubble--in'
                           }`}
                         >
+                          {caption ? <p className="wb-chat-bubble-caption">{caption}</p> : null}
                           <p className="wb-chat-bubble-body">
                             {row.body ?? `(${row.message_type})`}
+                            <span className="wb-chat-bubble-meta">
+                              <time dateTime={row.created_at}>
+                                {bubbleTime.format(new Date(row.created_at))}
+                              </time>
+                              {outgoing ? (
+                                <span
+                                  className={`wb-chat-ticks ${tickTone(row.status)}`}
+                                  title={row.status}
+                                  aria-hidden
+                                >
+                                  {ticks}
+                                </span>
+                              ) : null}
+                            </span>
                           </p>
-                          <p className="wb-chat-bubble-meta">{meta}</p>
-                          {outgoing ? (
-                            <div className="mt-1">
-                              <StatusPill status={row.status} />
-                            </div>
-                          ) : null}
                         </div>
                       </div>
                     )
@@ -641,13 +838,62 @@ export function MessagesBoard({
                   <div ref={threadEndRef} aria-hidden className="h-px shrink-0" />
                 </div>
               )}
-              {selectedPhone.startsWith('+') &&
-              (selectedPreview?.accountId || thread.at(-1)?.account_id) ? (
+              {activePhone.startsWith('+') &&
+              (selectedPreview?.accountId || liveThread.at(-1)?.account_id) ? (
                 <div className="wb-chat-composer">
                   <ReplyForm
-                    key={selectedPhone}
-                    phone={selectedPhone}
-                    accountId={(selectedPreview?.accountId || thread.at(-1)?.account_id)!}
+                    key={activePhone}
+                    phone={activePhone}
+                    accountId={(selectedPreview?.accountId || liveThread.at(-1)?.account_id)!}
+                    onQueued={(body) => {
+                      const msg = {
+                        id: 0,
+                        clientKey: `local-${Date.now()}`,
+                        account_id: selectedPreview?.accountId || liveThread.at(-1)?.account_id || null,
+                        direction: 'out',
+                        phone_e164: activePhone,
+                        remote_jid: null,
+                        message_type: 'text',
+                        body,
+                        status: 'pending',
+                        created_at: new Date().toISOString(),
+                        campaign_id: null,
+                      }
+                      setLiveThread((current) => {
+                        const next = mergeThread(current, msg)
+                        threadMemo.current.set(activePhone, next)
+                        return next
+                      })
+                      setList((current) => {
+                        const rest = current.filter((item) => item.phone !== activePhone)
+                        const prev = current.find((item) => item.phone === activePhone)
+                        return [
+                          {
+                            phone: activePhone,
+                            contactName: prev?.contactName ?? null,
+                            pushName: prev?.pushName ?? null,
+                            lastBody: body,
+                            lastAt: msg.created_at,
+                            lastDirection: 'out',
+                            messageType: 'text',
+                            accountId: msg.account_id,
+                            accountLabel: prev?.accountLabel ?? null,
+                            isReply: Boolean(prev?.isReply),
+                            outboundOnly: !prev?.isReply,
+                            missingPhone: Boolean(prev?.missingPhone),
+                          },
+                          ...rest,
+                        ]
+                      })
+                      rememberCache(activePhone, msg)
+                    }}
+                    onFailed={() => {
+                      setLiveThread((current) => {
+                        const next = current.filter((row) => !String(row.clientKey ?? '').startsWith('local-'))
+                        threadMemo.current.set(activePhone, next)
+                        return next
+                      })
+                    }}
                   />
                 </div>
               ) : (

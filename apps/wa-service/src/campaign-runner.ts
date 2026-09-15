@@ -593,10 +593,11 @@ async function sendToTarget(
       : campaign.message_type
 
   try {
-    await query(
+    const inserted = await query<{ id: string; created_at: string }>(
       `insert into public.message_log
          (org_id, created_by, account_id, campaign_id, direction, remote_jid, phone_e164, message_type, body, media_url, wa_message_id, status)
-       values ($1::uuid, $2::uuid, $3::uuid, $4::uuid, 'out', $5, $6, $7, $8, $9, $10, 'sent')`,
+       values ($1::uuid, $2::uuid, $3::uuid, $4::uuid, 'out', $5, $6, $7, $8, $9, $10, 'sent')
+       returning id::text, created_at`,
       [
         campaign.org_id,
         campaign.created_by,
@@ -610,6 +611,25 @@ async function sendToTarget(
         message.key?.id ?? null,
       ],
     )
+    const row = inserted[0]
+    void import('./chat-cache.js')
+      .then(({ rememberWaMessage }) =>
+        rememberWaMessage({
+          orgId: campaign.org_id,
+          id: row ? Number(row.id) : 0,
+          created_at: row?.created_at,
+          account_id: account.account_id,
+          campaign_id: campaign.id,
+          direction: 'out',
+          remote_jid: jid,
+          phone_e164: target.phone_e164,
+          message_type: messageType,
+          body: body || null,
+          wa_message_id: message.key?.id ?? null,
+          status: 'sent',
+        }),
+      )
+      .catch(() => {})
   } catch (error) {
     // Mesaj gitti; log yazilamadi — retry etme (cift mesaj riski).
     log.error({ err: error, targetId: target.id }, 'message_log yazilamadi (mesaj gonderildi)')

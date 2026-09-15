@@ -126,18 +126,30 @@ export function CardHeader({
   title,
   subtitle,
   action,
+  leading,
+  className,
 }: {
   title: ReactNode
   subtitle?: ReactNode
   action?: ReactNode
+  leading?: ReactNode
+  className?: string
 }) {
   return (
-    <div className="flex shrink-0 items-center justify-between gap-3 border-b border-hairline px-3.5 py-2.5">
-      <div className="min-w-0">
-        <h2 className="text-[14.5px] font-bold text-ink">{title}</h2>
-        {subtitle ? (
-          <p className="mt-0.5 text-[13px] text-ink-muted">{subtitle}</p>
-        ) : null}
+    <div
+      className={cx(
+        'flex shrink-0 items-center justify-between gap-3 border-b border-hairline px-3.5 py-2.5',
+        className,
+      )}
+    >
+      <div className="flex min-w-0 items-center gap-2">
+        {leading}
+        <div className="min-w-0">
+          <h2 className="truncate text-[14.5px] font-bold text-ink">{title}</h2>
+          {subtitle ? (
+            <p className="mt-0.5 truncate text-[13px] text-ink-muted">{subtitle}</p>
+          ) : null}
+        </div>
       </div>
       {action}
     </div>
@@ -316,11 +328,15 @@ export function SplitPane({
   list,
   detail,
   className,
+  listPaneClassName,
+  detailPaneClassName,
   variant = 'inbox',
 }: {
   list: ReactNode
   detail: ReactNode
   className?: string
+  listPaneClassName?: string
+  detailPaneClassName?: string
   /** `form`: form önce, tek sayfa kaydırma; geçmiş yan/altta ikincil. */
   variant?: 'inbox' | 'form'
 }) {
@@ -343,8 +359,8 @@ export function SplitPane({
 
   return (
     <div className={cx('wb-split', className)}>
-      <div className="wb-split-pane">{list}</div>
-      <div className="wb-split-pane">{detail}</div>
+      <div className={cx('wb-split-pane', listPaneClassName)}>{list}</div>
+      <div className={cx('wb-split-pane', detailPaneClassName)}>{detail}</div>
     </div>
   )
 }

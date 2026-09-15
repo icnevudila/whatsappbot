@@ -3,9 +3,54 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
-import { CardHeader } from '@/components/ui'
+import { CardHeader, Input } from '@/components/ui'
 import { Icon } from '@/components/icon'
 import { AddToGroupForm } from './add-to-group-form'
+import { MemberActions, type MemberRow } from './member-actions'
+
+export function MembersPanel({
+  listId,
+  members,
+  totalCount,
+  statusFilter,
+  memberTotal,
+  validCount,
+  invalidCount,
+  unknownCount,
+  subtitle,
+}: {
+  listId: string
+  members: MemberRow[]
+  totalCount: number
+  statusFilter: string
+  memberTotal: number
+  validCount: number
+  invalidCount: number
+  unknownCount: number
+  subtitle: string
+}) {
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [query, setQuery] = useState('')
+
+  return (
+    <>
+      <MembersPanelHeader
+        listId={listId}
+        statusFilter={statusFilter}
+        memberTotal={memberTotal}
+        validCount={validCount}
+        invalidCount={invalidCount}
+        unknownCount={unknownCount}
+        subtitle={subtitle}
+        searchOpen={searchOpen}
+        query={query}
+        onQueryChange={setQuery}
+        onSearchOpenChange={setSearchOpen}
+      />
+      <MemberActions listId={listId} members={members} totalCount={totalCount} query={query} />
+    </>
+  )
+}
 
 export function MembersPanelHeader({
   listId,
@@ -15,6 +60,10 @@ export function MembersPanelHeader({
   invalidCount,
   unknownCount,
   subtitle,
+  searchOpen,
+  query,
+  onQueryChange,
+  onSearchOpenChange,
 }: {
   listId: string
   statusFilter: string
@@ -23,12 +72,22 @@ export function MembersPanelHeader({
   invalidCount: number
   unknownCount: number
   subtitle: string
+  searchOpen: boolean
+  query: string
+  onQueryChange: (value: string) => void
+  onSearchOpenChange: (value: boolean | ((current: boolean) => boolean)) => void
 }) {
   const menuRef = useRef<HTMLDivElement>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
   const filtered = statusFilter !== 'tum'
   const [filterOpen, setFilterOpen] = useState(filtered)
   const [menuOpen, setMenuOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
+
+  useEffect(() => {
+    if (!searchOpen) return
+    searchRef.current?.focus()
+  }, [searchOpen])
 
   useEffect(() => {
     if (!menuOpen) return
@@ -72,6 +131,22 @@ export function MembersPanelHeader({
                 <span className="absolute right-1 top-1 size-1.5 rounded-full bg-accent" aria-hidden />
               ) : null}
             </button>
+            <button
+              type="button"
+              aria-label="Ara"
+              aria-expanded={searchOpen}
+              title="Ara"
+              onClick={() => {
+                onSearchOpenChange((value) => !value)
+                setMenuOpen(false)
+              }}
+              className="relative inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-hairline bg-surface text-ink hover:bg-canvas"
+            >
+              <Icon name="search" className="size-4" />
+              {query.trim() ? (
+                <span className="absolute right-1 top-1 size-1.5 rounded-full bg-accent" aria-hidden />
+              ) : null}
+            </button>
             <div className="relative shrink-0" ref={menuRef}>
               <button
                 type="button"
@@ -82,6 +157,7 @@ export function MembersPanelHeader({
                 onClick={() => {
                   setMenuOpen((value) => !value)
                   setFilterOpen(false)
+                  onSearchOpenChange(false)
                 }}
                 className="inline-flex size-8 items-center justify-center rounded-full border border-hairline bg-surface text-ink hover:bg-canvas"
               >
@@ -110,9 +186,10 @@ export function MembersPanelHeader({
           </div>
         }
       />
-      {filterOpen ? (
+      {filterOpen || searchOpen ? (
         <div className="border-b border-hairline bg-canvas/40 px-3 py-2">
-          <div className="flex flex-wrap items-center gap-1.5">
+          {filterOpen ? (
+            <div className={`flex flex-wrap items-center gap-1.5${searchOpen ? ' mb-2' : ''}`}>
             <Link
               href={hrefFor('tum')}
               className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-medium transition-colors ${
@@ -161,7 +238,35 @@ export function MembersPanelHeader({
                 <span>Doğrulanmamış ({unknownCount})</span>
               </Link>
             ) : null}
-          </div>
+            </div>
+          ) : null}
+          {searchOpen ? (
+            <div className="relative">
+              <Input
+                ref={searchRef}
+                aria-label="Ad veya numara ara"
+                type="text"
+                placeholder="Ad veya numara ara"
+                value={query}
+                onChange={(event) => onQueryChange(event.target.value)}
+                className={query ? 'pr-9' : undefined}
+              />
+              {query ? (
+                <button
+                  type="button"
+                  aria-label="Aramayı temizle"
+                  title="Temizle"
+                  onClick={() => {
+                    onQueryChange('')
+                    searchRef.current?.focus()
+                  }}
+                  className="absolute right-1.5 top-1/2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-full text-ink-muted hover:bg-surface hover:text-ink"
+                >
+                  <Icon name="close" className="size-3.5" />
+                </button>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       ) : null}
       {addOpen ? (

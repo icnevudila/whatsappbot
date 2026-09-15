@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useState } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { Icon, type IconName } from '@/components/icon'
 
@@ -42,6 +43,7 @@ const OTHER_ITEMS: QuickItem[] = [
 ]
 
 export function QuickAdd() {
+  const pathname = usePathname()
   const menuId = useId()
   const otherId = useId()
   const [open, setOpen] = useState(false)
@@ -49,6 +51,7 @@ export function QuickAdd() {
   const [listOpen, setListOpen] = useState(false)
   const [groupOpen, setGroupOpen] = useState(false)
   const [personOpen, setPersonOpen] = useState(false)
+  const hidden = pathname === '/mesajlar' || pathname.startsWith('/mesajlar/')
 
   useEffect(() => {
     if (!open) return
@@ -63,6 +66,8 @@ export function QuickAdd() {
     setOpen(false)
     setOtherOpen(false)
   }
+
+  if (hidden) return null
 
   const renderItem = (item: QuickItem) =>
     item.href ? (

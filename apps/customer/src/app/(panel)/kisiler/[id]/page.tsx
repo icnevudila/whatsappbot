@@ -16,8 +16,8 @@ import {
   totalPages,
 } from '@/lib/pagination'
 import { ListActions } from '../list-actions'
-import { MemberActions, type MemberRow } from './member-actions'
-import { MembersPanelHeader } from './members-toolbar'
+import { type MemberRow } from './member-actions'
+import { MembersPanel } from './members-toolbar'
 
 export const dynamic = 'force-dynamic'
 
@@ -155,30 +155,43 @@ export default async function ContactListDetailPage({
         ? 'Henüz yok'
         : `Sayfa ${page}/${pages}`
 
+  let pageDescription = `${memberTotal} kişi`
+  if (memberTotal === 0) pageDescription = 'Henüz üye yok'
+  else if (!hasVerification) pageDescription = `${memberTotal} kişi`
+  else if (unknownCount > 0) {
+    const parts = [`${memberTotal} kişi`]
+    if (validCount > 0) parts.push(`${validCount} var`)
+    if (invalidCount > 0) parts.push(`${invalidCount} yok`)
+    parts.push(`${unknownCount} bekliyor`)
+    pageDescription = parts.join(' · ')
+  } else if (invalidCount === 0) {
+    pageDescription = `${memberTotal} kişi WhatsApp’ta`
+  } else if (validCount === 0) {
+    pageDescription = `${memberTotal} kişi WhatsApp’ta yok`
+  } else {
+    pageDescription = `${validCount} var · ${invalidCount} yok`
+  }
+
   return (
-    <>
+    <div className="wb-stack-tight">
       <PageHeader
         title={list.name}
-        description={
-          hasVerification
-            ? `${memberTotal} numara · ${validCount} WhatsApp'ta var · ${invalidCount} yok${
-                unknownCount > 0 ? ` · ${unknownCount} doğrulanmamış` : ''
-              }`
-            : `${memberTotal} numara — WhatsApp kontrolü için menüden “WhatsApp doğrula”yı tıklayın`
-        }
+        description={pageDescription}
         backHref="/kisiler"
         backLabel="Gruplar"
         action={
           <div className="flex flex-wrap items-start justify-end gap-2">
-            <ListActions compact listId={list.id} currentName={list.name} />
             <AccentLink href="/kampanyalar/yeni">Kampanya</AccentLink>
+            <ListActions compact listId={list.id} currentName={list.name} />
           </div>
         }
       />
 
-      <Card className="mt-3">
-        <MembersPanelHeader
+      <Card>
+        <MembersPanel
           listId={list.id}
+          members={members}
+          totalCount={matchTotal}
           statusFilter={statusFilter}
           memberTotal={memberTotal}
           validCount={validCount}
@@ -186,8 +199,6 @@ export default async function ContactListDetailPage({
           unknownCount={unknownCount}
           subtitle={membersSubtitle}
         />
-
-        <MemberActions listId={list.id} members={members} totalCount={matchTotal} />
         <Pagination
           page={page}
           totalPages={pages}
@@ -209,6 +220,6 @@ export default async function ContactListDetailPage({
           }
         />
       </Card>
-    </>
+    </div>
   )
 }

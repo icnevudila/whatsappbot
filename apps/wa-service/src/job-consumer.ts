@@ -367,10 +367,11 @@ async function handle(job: JobRow): Promise<unknown> {
           body: payload.body ?? '',
         })
         try {
-          await query(
+          const inserted = await query<{ id: string; created_at: string }>(
             `insert into public.message_log
                (org_id, created_by, account_id, direction, phone_e164, message_type, body, wa_message_id, status)
-             values ($1, $2, $3, 'out', $4, 'text', $5, $6, 'sent')`,
+             values ($1, $2, $3, 'out', $4, 'text', $5, $6, 'sent')
+             returning id::text, created_at`,
             [
               job.org_id,
               job.created_by,
@@ -380,6 +381,23 @@ async function handle(job: JobRow): Promise<unknown> {
               result.messageId,
             ],
           )
+          const row = inserted[0]
+          void import('./chat-cache.js')
+            .then(({ rememberWaMessage }) =>
+              rememberWaMessage({
+                orgId: job.org_id,
+                id: row ? Number(row.id) : 0,
+                created_at: row?.created_at,
+                account_id: accountId,
+                direction: 'out',
+                phone_e164: payload.phone_e164,
+                message_type: 'text',
+                body: payload.body ?? '',
+                wa_message_id: result.messageId,
+                status: 'sent',
+              }),
+            )
+            .catch(() => {})
         } catch (error) {
           const detail = error instanceof Error ? error.message : String(error)
           throw new NonRetryableJobError(
@@ -434,10 +452,11 @@ async function handle(job: JobRow): Promise<unknown> {
 
       // WA gitti: DB hatasi retry = cift mesaj. Non-retryable bitir.
       try {
-        await query(
+        const inserted = await query<{ id: string; created_at: string }>(
           `insert into public.message_log
              (org_id, created_by, account_id, direction, remote_jid, phone_e164, message_type, body, media_url, wa_message_id, status)
-           values ($1, $2, $3, 'out', $4, $5, $6, $7, $8, $9, 'sent')`,
+           values ($1, $2, $3, 'out', $4, $5, $6, $7, $8, $9, 'sent')
+           returning id::text, created_at`,
           [
             job.org_id,
             job.created_by,
@@ -450,6 +469,24 @@ async function handle(job: JobRow): Promise<unknown> {
             messageId,
           ],
         )
+        const row = inserted[0]
+        void import('./chat-cache.js')
+          .then(({ rememberWaMessage }) =>
+            rememberWaMessage({
+              orgId: job.org_id,
+              id: row ? Number(row.id) : 0,
+              created_at: row?.created_at,
+              account_id: accountId,
+              direction: 'out',
+              remote_jid: jid,
+              phone_e164: payload.phone_e164,
+              message_type: messageType,
+              body: payload.body ?? null,
+              wa_message_id: messageId,
+              status: 'sent',
+            }),
+          )
+          .catch(() => {})
       } catch (error) {
         const detail = error instanceof Error ? error.message : String(error)
         throw new NonRetryableJobError(

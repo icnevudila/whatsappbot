@@ -108,12 +108,32 @@ export async function persistInboundMessage(options: {
   const pushName = message.pushName?.trim() || null
 
   try {
-    await query(
+    const inserted = await query<{ id: string; created_at: string }>(
       `insert into public.message_log
          (org_id, created_by, account_id, direction, remote_jid, phone_e164, message_type, body, wa_message_id, status, push_name)
-       values ($1, $2, $3, 'in', $4, $5, $6, $7, $8, 'delivered', $9)`,
+       values ($1, $2, $3, 'in', $4, $5, $6, $7, $8, 'delivered', $9)
+       returning id::text, created_at`,
       [orgId, createdBy, accountId, key.remoteJid, phone, type, body, waMessageId, pushName],
     )
+    const row = inserted[0]
+    void import('./chat-cache.js')
+      .then(({ rememberWaMessage }) =>
+        rememberWaMessage({
+          orgId,
+          id: row ? Number(row.id) : 0,
+          created_at: row?.created_at,
+          account_id: accountId,
+          direction: 'in',
+          remote_jid: key.remoteJid,
+          phone_e164: phone,
+          message_type: type,
+          body,
+          wa_message_id: waMessageId,
+          status: 'delivered',
+          push_name: pushName,
+        }),
+      )
+      .catch(() => {})
   } catch (error) {
     // Yarıs: ayni wa_message_id baska worker/event ile yazildi.
     const code = (error as { code?: string } | null)?.code

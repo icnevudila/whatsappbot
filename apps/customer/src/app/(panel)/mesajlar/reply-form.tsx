@@ -1,6 +1,5 @@
 'use client'
 import { useActionState, useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { useSyncBusy } from '@/components/busy'
 import { Icon } from '@/components/icon'
 import { useToast } from '@/components/toast'
@@ -9,21 +8,31 @@ import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { replyToConversation, type ReplyState } from './reply-actions'
 
 const COMPOSER_MAX_PX = 120
+const COMPOSER_MIN_PX = 42
 
 function fitComposer(el: HTMLTextAreaElement) {
   el.style.overflowY = 'hidden'
   el.style.height = '0px'
   const contentHeight = el.scrollHeight
-  const next = Math.min(Math.max(contentHeight, 36), COMPOSER_MAX_PX)
+  const next = Math.min(Math.max(contentHeight, COMPOSER_MIN_PX), COMPOSER_MAX_PX)
   el.style.height = `${next}px`
   el.style.overflowY = contentHeight > COMPOSER_MAX_PX ? 'auto' : 'hidden'
 }
 
-export function ReplyForm({ phone, accountId }: { phone: string; accountId: string }) {
+export function ReplyForm({
+  phone,
+  accountId,
+  onQueued,
+  onFailed,
+}: {
+  phone: string
+  accountId: string
+  onQueued?: (body: string) => void
+  onFailed?: () => void
+}) {
   const [state, action, pending] = useActionState<ReplyState, FormData>(replyToConversation, null)
   const [result, setResult] = useState<{ id: string; error?: string; done?: boolean } | null>(null)
   const [body, setBody] = useState('')
-  const router = useRouter()
   const toast = useToast()
   const form = useRef<HTMLFormElement>(null)
   const input = useRef<HTMLTextAreaElement>(null)
@@ -36,8 +45,11 @@ export function ReplyForm({ phone, accountId }: { phone: string; accountId: stri
   )
 
   useEffect(() => {
-    if (state?.error) toast(state.error, 'danger')
-  }, [state?.error, toast])
+    if (state?.error) {
+      toast(state.error, 'danger')
+      onFailed?.()
+    }
+  }, [state?.error, toast, onFailed])
 
   useEffect(() => {
     const id = state?.jobId
@@ -57,6 +69,7 @@ export function ReplyForm({ phone, accountId }: { phone: string; accountId: stri
         if (data.status === 'failed' || data.status === 'cancelled') {
           setResult({ id, error: data.error || 'Yanıt gönderilemedi.' })
           toast(data.error || 'Yanıt gönderilemedi.', 'danger')
+          onFailed?.()
           clearInterval(timer)
         } else if (data.status === 'done') {
           const payload = data.result as { skipped?: boolean; reason?: string } | null
@@ -67,13 +80,13 @@ export function ReplyForm({ phone, accountId }: { phone: string; accountId: stri
                 : 'Numara WhatsApp’ta doğrulanamadı; gönderilmedi.'
             setResult({ id, error: msg })
             toast(msg, 'warn')
+            onFailed?.()
           } else {
             setResult({ id, done: true })
             setBody('')
             form.current?.reset()
             if (input.current) fitComposer(input.current)
             toast('Yanıt WhatsApp’a gönderildi.', 'success')
-            router.refresh()
           }
           clearInterval(timer)
         }
@@ -89,7 +102,7 @@ export function ReplyForm({ phone, accountId }: { phone: string; accountId: stri
       disposed = true
       clearInterval(timer)
     }
-  }, [state?.jobId, router, toast])
+  }, [state?.jobId, toast, onFailed])
 
   return (
     <form
@@ -97,6 +110,10 @@ export function ReplyForm({ phone, accountId }: { phone: string; accountId: stri
       action={action}
       className="wb-chat-composer-bar"
       aria-busy={busy}
+      onSubmit={() => {
+        const text = body.trim()
+        if (text) onQueued?.(text)
+      }}
     >
       <input type="hidden" name="phone" value={phone} />
       <input type="hidden" name="account_id" value={accountId} />
@@ -118,7 +135,7 @@ export function ReplyForm({ phone, accountId }: { phone: string; accountId: stri
           required
           maxLength={4096}
           rows={1}
-          placeholder="Mesaj yazın"
+          placeholder="Mesaj"
           disabled={busy}
           value={body}
           onChange={(event) => {
