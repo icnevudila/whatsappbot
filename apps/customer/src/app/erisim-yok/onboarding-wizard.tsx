@@ -40,7 +40,7 @@ const LABELS: Record<OnboardingStep, string> = {
   marka: 'Marka',
 }
 
-const ADDITIONAL_STEPS = ONBOARDING_STEPS.filter((step) => step !== 'hosgeldin')
+const ADDITIONAL_STEPS: readonly OnboardingStep[] = ONBOARDING_STEPS.filter((step) => step !== 'hosgeldin')
 
 const OnboardFlowContext = createContext({
   mode: 'first' as 'first' | 'additional',
@@ -138,7 +138,7 @@ export function OnboardingWizard({
   basePath?: string
 }) {
   const router = useRouter()
-  const steps = mode === 'additional' ? ADDITIONAL_STEPS : ONBOARDING_STEPS
+  const steps: readonly OnboardingStep[] = mode === 'additional' ? ADDITIONAL_STEPS : ONBOARDING_STEPS
   const idx = Math.max(0, steps.indexOf(step))
   const go = (next: OnboardingStep) => {
     router.replace(`${basePath}?adim=${next}`)
