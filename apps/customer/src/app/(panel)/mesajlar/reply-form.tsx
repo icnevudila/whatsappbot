@@ -84,6 +84,32 @@ export function ReplyForm({
     }
   }, [])
 
+  useEffect(() => {
+    if (lastInbound && phone) {
+      let active = true
+      fetch('/api/mesajlar/ai-suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone,
+          lastMessage: lastInbound,
+          history: threadContext || '',
+        }),
+      })
+        .then((res) => res.json())
+        .then((data: { suggestions?: Array<{ label: string; text: string }> }) => {
+          if (active && data?.suggestions && data.suggestions.length > 0) {
+            setSuggestions(data.suggestions)
+            setShowSuggestions(true)
+          }
+        })
+        .catch(() => {})
+      return () => {
+        active = false
+      }
+    }
+  }, [phone, lastInbound, threadContext])
+
   async function fetchAiSuggestions() {
     if (isSuggesting) return
     setIsSuggesting(true)
@@ -159,7 +185,7 @@ export function ReplyForm({
           <div className="wb-ai-suggest-head">
             <span className="wb-ai-suggest-title">
               <Icon name="sparkles" className="size-3.5 text-accent" />
-              ChatGPT Yanıt Önerileri
+              Önerilen Cevaplar
             </span>
             <div className="wb-ai-suggest-actions">
               <button
@@ -218,11 +244,11 @@ export function ReplyForm({
           }}
           disabled={isSuggesting}
           className={`wb-ai-suggest-btn${isSuggesting ? ' is-loading' : ''}`}
-          title="Yapay zeka yanıt önerisi al"
+          title="Önerilen cevapları gör"
         >
           <Icon name="sparkles" className="size-3.5 text-accent" />
           <span className="hidden md:inline text-[11.5px] font-semibold text-ink-soft">
-            {isSuggesting ? 'Hazırlanıyor…' : 'AI Öneri'}
+            {isSuggesting ? 'Hazırlanıyor…' : 'Önerilen Cevaplar'}
           </span>
         </button>
         <label className="sr-only" htmlFor="conversation-reply">
@@ -235,7 +261,7 @@ export function ReplyForm({
           required
           maxLength={4096}
           rows={1}
-          placeholder="Mesaj yazın veya AI Öneri alın…"
+          placeholder="Mesaj yazın veya önerilen cevapları seçin…"
           value={body}
           onChange={(event) => {
             setBody(event.target.value)

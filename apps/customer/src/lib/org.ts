@@ -17,6 +17,7 @@ export type ActiveOrg = {
   send_window_start?: string | null
   send_window_end?: string | null
   ai_image_mode?: 'economic' | 'fast' | string | null
+  auto_reply_enabled?: boolean
 }
 
 export function isOrgAdminRole(role: string | null | undefined): boolean {
@@ -135,6 +136,7 @@ export const requireActiveOrg = cache(async (): Promise<{
       send_window_start: (org as { send_window_start?: string | null }).send_window_start ?? '08:00:00',
       send_window_end: (org as { send_window_end?: string | null }).send_window_end ?? '18:00:00',
       ai_image_mode: (org as { ai_image_mode?: string | null }).ai_image_mode ?? 'economic',
+      auto_reply_enabled: Boolean((org as { auto_reply_enabled?: boolean }).auto_reply_enabled),
     },
     supabase,
   }

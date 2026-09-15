@@ -65,6 +65,14 @@ export const SETTINGS_SECTIONS: {
     group: 'İş',
   },
   {
+    href: '/ayarlar/otomatik-yanit',
+    title: 'Otomatik Yanıt',
+    description: 'Önerilen cevaplar ve yapay zeka yanıtlama',
+    icon: 'sparkles',
+    color: '#2f5bff',
+    group: 'İş',
+  },
+  {
     href: '/ayarlar/gelismis',
     title: 'Gelişmiş',
     description: 'Webhook, API ve faturalama',

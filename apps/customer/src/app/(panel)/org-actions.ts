@@ -386,3 +386,28 @@ export async function deleteOrganization(
     return { error: error instanceof Error ? error.message : 'Oturum yok' }
   }
 }
+
+export async function updateOrgAutoReply(
+  enabled: boolean,
+): Promise<OrgActionState> {
+  try {
+    const { org, supabase } = await requireActiveOrg()
+    if (org.role !== 'owner' && org.role !== 'admin') {
+      return { error: 'Yalnızca sahip veya yönetici bu ayarı değiştirebilir.' }
+    }
+
+    const { error } = await supabase
+      .from('organizations')
+      .update({ auto_reply_enabled: enabled })
+      .eq('id', org.id)
+
+    if (error) return { error: error.message }
+
+    revalidatePath('/ayarlar/otomatik-yanit')
+    revalidatePath('/ayarlar')
+    return { ok: enabled ? 'Otomatik cevaplama açıldı.' : 'Otomatik cevaplama kapatıldı.' }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum yok' }
+  }
+}
+
