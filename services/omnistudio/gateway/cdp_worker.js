@@ -146,6 +146,46 @@ async function waitForChatInput(cdp, maxWaitMs = 15000) {
   return false;
 }
 
+async function renameChatToCustomer(cdp, customer) {
+  if (!customer) return;
+  try {
+    await cdp.send('Runtime.evaluate', {
+      expression: `(async () => {
+        const pathParts = window.location.pathname.split('/');
+        const cIndex = pathParts.indexOf('c');
+        if (cIndex === -1) return;
+        const conversationId = pathParts[cIndex + 1];
+
+        let token = '';
+        try {
+          const sess = await (await fetch('/api/auth/session')).json();
+          token = sess?.accessToken || '';
+        } catch (e) {}
+
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+        await fetch('/backend-api/conversation/' + conversationId, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ title: ${JSON.stringify(customer)} })
+        });
+
+        const links = Array.from(document.querySelectorAll('nav a'));
+        for (const a of links) {
+          if (a.href.includes(conversationId) || a.getAttribute('aria-current') === 'page') {
+            const textDiv = a.querySelector('div') || a;
+            textDiv.innerText = ${JSON.stringify(customer)};
+          }
+        }
+      })()`,
+      awaitPromise: true
+    });
+    console.log(`[CDP Worker: ${WORKER_ID}] Sohbet başlığı "${customer}" olarak adlandırıldı.`);
+  } catch (e) {
+    console.warn(`[CDP Worker: ${WORKER_ID}] Sohbet adlandırma uyarısı:`, e.message);
+  }
+}
+
 async function ensureCustomerChat(cdp, customer) {
   const chats = getCompanyChats();
   const saved = chats[customer];
@@ -505,6 +545,7 @@ async function executeChatGPTJob(tab, job) {
       const finalUrl = finalUrlEval.result?.value || '';
       if (finalUrl.includes('/c/')) {
         setCompanyChat(customer, finalUrl);
+        await renameChatToCustomer(cdp, customer);
       }
     } catch (urlErr) {
       console.warn(`[CDP Worker: ${WORKER_ID}] URL kaydetme uyarısı:`, urlErr.message);
