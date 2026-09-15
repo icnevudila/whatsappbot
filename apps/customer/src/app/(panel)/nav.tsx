@@ -6,11 +6,11 @@ import { Icon, iconForHref } from '@/components/icon'
 import { prefetchSettingsRoutes } from './ayarlar/settings-prefetch'
 
 const ITEMS = [
-  { href: '/ozet', label: 'Ana sayfa', iconSrc: '/icons/filo_icon_overview.png' },
-  { href: '/kampanyalar', label: 'Kampanyalar', iconSrc: '/icons/filo_icon_campaigns.png' },
-  { href: '/kisiler', label: 'Kişiler', iconSrc: '/icons/filo_icon_contacts.png' },
-  { href: '/mesajlar', label: 'Mesajlar', iconSrc: '/icons/filo_icon_inbox.png' },
-  { href: '/ayarlar', label: 'Ayarlar', iconSrc: '/icons/filo_icon_settings.png' },
+  { href: '/ozet', label: 'Ana sayfa' },
+  { href: '/kampanyalar', label: 'Kampanyalar' },
+  { href: '/kisiler', label: 'Kişiler' },
+  { href: '/mesajlar', label: 'Mesajlar' },
+  { href: '/ayarlar', label: 'Ayarlar' },
 ] as const
 
 function isActive(pathname: string, href: string) {
@@ -44,13 +44,7 @@ export function Nav({
               onFocus={warmSettings}
               className={`wb-tabbar-link${active ? ' is-active' : ''}`}
             >
-              <img
-                src={item.iconSrc}
-                alt=""
-                width={20}
-                height={20}
-                className="size-5 object-contain"
-              />
+              <Icon name={iconForHref(item.href)} className="wb-tabbar-icon size-5" />
               <span className="wb-tabbar-label">{item.label}</span>
             </Link>
           )
@@ -75,13 +69,7 @@ export function Nav({
             onFocus={warmSettings}
             className={`wb-rail-link${active ? ' is-active' : ''}`}
           >
-            <img
-              src={item.iconSrc}
-              alt=""
-              width={20}
-              height={20}
-              className="size-[19px] shrink-0 object-contain drop-shadow-[0_1px_3px_rgba(0,0,0,0.08)] transition-transform group-hover:scale-105"
-            />
+            <Icon name={iconForHref(item.href)} className="wb-rail-link-icon size-[16px]" />
             <span className="wb-rail-link-label">{item.label}</span>
           </Link>
         )

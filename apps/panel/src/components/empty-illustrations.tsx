@@ -130,44 +130,12 @@ function Illu({ tone }: { tone: EmptyTone }) {
   }
 }
 
-const TONE_IMAGE: Record<EmptyTone, string> = {
-  phone: '/icons/filo_icon_accounts.png',
-  people: '/icons/filo_icon_contacts.png',
-  campaign: '/icons/filo_icon_campaigns.png',
-  inbox: '/icons/filo_icon_inbox.png',
-  outbound: '/icons/filo_icon_outbound.png',
-  shield: '/icons/filo_icon_blacklist.png',
-  brand: '/icons/filo_icon_brand_kit.png',
-  chart: '/icons/filo_icon_reports.png',
-  events: '/icons/filo_icon_system_health.png',
-  generic: '/icons/filo_icon_empty_state.png',
-}
-
-export function EmptyIllustration({
-  tone = 'generic',
-  className,
-}: {
-  tone?: EmptyTone
-  className?: string
-}) {
-  const imgSrc = TONE_IMAGE[tone] ?? TONE_IMAGE.generic
-
+export function EmptyIllustration({ tone = 'generic' }: { tone?: EmptyTone }) {
   return (
     <div
-      className={`mb-2 relative flex size-18 items-center justify-center select-none ${className ?? ''}`}
+      className={`mb-1 flex size-[4.25rem] items-center justify-center rounded-2xl border ${TONE_RING[tone]}`}
     >
-      <img
-        src={imgSrc}
-        alt=""
-        width={72}
-        height={72}
-        className="size-16 object-contain filter drop-shadow-[0_8px_20px_rgba(47,91,255,0.12)] transition-transform duration-300 hover:scale-105"
-        loading="lazy"
-        onError={(e) => {
-          // If image fails to load, gracefully hide it and let container fallback
-          e.currentTarget.style.display = 'none'
-        }}
-      />
+      <Illu tone={tone} />
     </div>
   )
 }

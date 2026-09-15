@@ -115,25 +115,21 @@ export default async function PanelHomePage() {
             value: connectedCount,
             href: '/hesaplar',
             tone: hasLine ? 'ok' : 'default',
-            icon: '/icons/filo_icon_accounts.png',
           },
           {
             label: 'Grup',
             value: lists ?? 0,
             href: '/kisiler',
-            icon: '/icons/filo_icon_contacts.png',
           },
           {
             label: 'Bugün',
             value: (outToday ?? 0) + (inToday ?? 0),
             href: '/mesajlar',
-            icon: '/icons/filo_icon_quick_send.png',
           },
           {
             label: '7 gün giden',
             value: out7d ?? 0,
             href: '/raporlar?gun=7',
-            icon: '/icons/filo_icon_reports.png',
           },
         ]}
       />

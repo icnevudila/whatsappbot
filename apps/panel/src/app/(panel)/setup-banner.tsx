@@ -13,7 +13,6 @@ type Step = {
   cta: string
   done: boolean
   current: boolean
-  icon: string
 }
 
 function buildSteps(progress: Progress): Step[] {
@@ -30,7 +29,6 @@ function buildSteps(progress: Progress): Step[] {
       cta: 'Hatlar’a git',
       done: s1,
       current: !s1,
-      icon: '/icons/filo_icon_qr_connect.png',
     },
     {
       n: 2,
@@ -40,7 +38,6 @@ function buildSteps(progress: Progress): Step[] {
       cta: 'Kişiler’e git',
       done: s2,
       current: s1 && !s2,
-      icon: '/icons/filo_icon_contacts.png',
     },
     {
       n: 3,
@@ -50,7 +47,6 @@ function buildSteps(progress: Progress): Step[] {
       cta: 'Test gönder',
       done: s3,
       current: s1 && s2 && !s3,
-      icon: '/icons/filo_icon_quick_send.png',
     },
   ]
 }
@@ -113,31 +109,22 @@ export function SetupGuideCard({
         {steps.map((step) => (
           <li
             key={step.n}
-            className={`flex items-start gap-3 px-3.5 py-3 ${
+            className={`flex gap-3 px-3.5 py-3 ${
               step.current ? 'bg-accent-soft/35' : ''
             }`}
           >
-            <div className="relative mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-lg border border-hairline bg-surface p-1 shadow-sm">
-              <img
-                src={step.icon}
-                alt=""
-                width={36}
-                height={36}
-                className="size-8 object-contain"
-              />
-              <span
-                className={`absolute -bottom-1 -right-1 flex size-4 items-center justify-center rounded-full text-[9px] font-bold shadow-xs ${
-                  step.done
-                    ? 'bg-ok text-white'
-                    : step.current
-                      ? 'bg-accent text-white'
-                      : 'border border-hairline bg-canvas text-ink-faint'
-                }`}
-                aria-hidden
-              >
-                {step.done ? '✓' : step.n}
-              </span>
-            </div>
+            <span
+              className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full text-[12px] font-bold ${
+                step.done
+                  ? 'bg-ok-soft text-ok'
+                  : step.current
+                    ? 'bg-accent text-white'
+                    : 'border border-hairline bg-canvas text-ink-faint'
+              }`}
+              aria-hidden
+            >
+              {step.done ? '✓' : step.n}
+            </span>
             <div className="min-w-0 flex-1">
               <p
                 className={`text-[13.5px] font-semibold ${
