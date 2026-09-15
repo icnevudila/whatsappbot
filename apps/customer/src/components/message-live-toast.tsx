@@ -53,12 +53,13 @@ export function MessageLiveToast({ orgId }: { orgId: string }) {
           }
 
           const who = phoneLabel(row)
+          lastStatus.set(row.id, row.status)
+          if (document.body.dataset.chatPhone && who === document.body.dataset.chatPhone) return
           if (row.direction === 'in') {
             toast(`Gelen · ${who}`, 'success')
           } else {
             toast(`Giden · ${who}`, 'accent')
           }
-          lastStatus.set(row.id, row.status)
         },
       )
       .on(
@@ -77,6 +78,7 @@ export function MessageLiveToast({ orgId }: { orgId: string }) {
           if (prev === row.status) return
 
           const who = phoneLabel(row)
+          if (document.body.dataset.chatPhone && who === document.body.dataset.chatPhone) return
           if (row.status === 'delivered' || row.status === 'read') {
             toast(`İletildi · ${who}`, 'success')
           } else if (row.status === 'failed' || row.status === 'skipped') {

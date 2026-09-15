@@ -250,6 +250,18 @@ h3 {
   .wb-tabbar-spacer {
     display: block;
   }
+  body.wb-composer-focus .wb-tabbar,
+  body.wb-keyboard-open .wb-tabbar {
+    display: none;
+  }
+  body.wb-composer-focus .wb-tabbar-spacer,
+  body.wb-keyboard-open .wb-tabbar-spacer {
+    display: none;
+  }
+  body.wb-keyboard-open .h-dvh {
+    height: var(--vv-height, 100dvh);
+    max-height: var(--vv-height, 100dvh);
+  }
 }
 
 .wb-fab-backdrop {
@@ -666,9 +678,27 @@ h3 {
 .wb-chat-row--out {
   justify-content: flex-end;
 }
+.wb-chat-col {
+  display: flex;
+  max-width: min(82%, 28rem);
+  flex-direction: column;
+  align-items: flex-end;
+}
+.wb-chat-row--in .wb-chat-col {
+  align-items: flex-start;
+}
+.wb-chat-send-hint {
+  margin: 3px 4px 0;
+  font-size: 11px;
+  line-height: 1.2;
+  color: #8696a0;
+}
+.wb-chat-send-hint.is-fail {
+  color: #f15c6d;
+}
 .wb-chat-bubble {
   position: relative;
-  max-width: min(82%, 28rem);
+  max-width: 100%;
   overflow: hidden;
   border: 0;
   border-radius: 7.5px;
@@ -727,6 +757,9 @@ h3 {
   letter-spacing: 0;
   opacity: 0.7;
 }
+.wb-chat-ticks.is-pending svg {
+  display: block;
+}
 .wb-chat-composer {
   margin-top: auto;
   flex-shrink: 0;
@@ -763,6 +796,9 @@ h3 {
 .wb-chat-composer-input:focus {
   border: 0;
   outline: none;
+}
+.wb-chat-ticks.is-pending svg {
+  display: block;
 }
 .wb-chat-composer-input:disabled {
   opacity: 0.65;

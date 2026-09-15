@@ -64,9 +64,10 @@ export async function replyToConversation(
       priority: 5,
     })
     if (queued.error || !queued.id) return { error: queued.error ?? 'Yanıt sıraya alınamadı.' }
+    const clientKey = String(formData.get('client_key') ?? '').trim() || `local-${queued.id}`
     void syncChatMessage(org.id, phone, {
       id: 0,
-      clientKey: `local-${queued.id}`,
+      clientKey,
       account_id: accountId,
       direction: 'out',
       phone_e164: phone,

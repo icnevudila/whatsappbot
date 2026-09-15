@@ -216,7 +216,12 @@ export function MessagesBoard({
 
   useEffect(() => {
     document.body.classList.toggle('wb-chat-open', Boolean(activePhone))
-    return () => document.body.classList.remove('wb-chat-open')
+    if (activePhone) document.body.dataset.chatPhone = activePhone
+    else delete document.body.dataset.chatPhone
+    return () => {
+      document.body.classList.remove('wb-chat-open')
+      delete document.body.dataset.chatPhone
+    }
   }, [activePhone])
 
   useEffect(() => {
@@ -802,35 +807,48 @@ export function MessagesBoard({
                       : hat && !outgoing
                         ? hat
                         : null
+                    const pendingSend =
+                      outgoing &&
+                      (row.status === 'pending' || row.status === 'queued' || row.status === 'sending')
+                    const failedSend = outgoing && (row.status === 'failed' || row.status === 'skipped')
                     const ticks = tickMark(row.status)
                     return (
                       <div
                         key={row.clientKey ?? `log-${row.id}`}
                         className={`wb-chat-row ${outgoing ? 'wb-chat-row--out' : 'wb-chat-row--in'}`}
                       >
-                        <div
-                          className={`wb-chat-bubble ${
-                            outgoing ? 'wb-chat-bubble--out' : 'wb-chat-bubble--in'
-                          }`}
-                        >
-                          {caption ? <p className="wb-chat-bubble-caption">{caption}</p> : null}
-                          <p className="wb-chat-bubble-body">
-                            {row.body ?? `(${row.message_type})`}
-                            <span className="wb-chat-bubble-meta">
-                              <time dateTime={row.created_at}>
-                                {bubbleTime.format(new Date(row.created_at))}
-                              </time>
-                              {outgoing ? (
-                                <span
-                                  className={`wb-chat-ticks ${tickTone(row.status)}`}
-                                  title={row.status}
-                                  aria-hidden
-                                >
-                                  {ticks}
-                                </span>
-                              ) : null}
-                            </span>
-                          </p>
+                        <div className="wb-chat-col">
+                          <div
+                            className={`wb-chat-bubble ${
+                              outgoing ? 'wb-chat-bubble--out' : 'wb-chat-bubble--in'
+                            }`}
+                          >
+                            {caption ? <p className="wb-chat-bubble-caption">{caption}</p> : null}
+                            <p className="wb-chat-bubble-body">
+                              {row.body ?? `(${row.message_type})`}
+                              <span className="wb-chat-bubble-meta">
+                                <time dateTime={row.created_at}>
+                                  {bubbleTime.format(new Date(row.created_at))}
+                                </time>
+                                {outgoing ? (
+                                  <span
+                                    className={`wb-chat-ticks ${tickTone(row.status)}`}
+                                    title={
+                                      pendingSend ? 'Gönderiliyor' : failedSend ? 'Gönderilemedi' : undefined
+                                    }
+                                    aria-hidden
+                                  >
+                                    {pendingSend ? <Icon name="clock" className="size-3" /> : ticks}
+                                  </span>
+                                ) : null}
+                              </span>
+                            </p>
+                          </div>
+                          {pendingSend ? (
+                            <p className="wb-chat-send-hint">Gönderiliyor…</p>
+                          ) : failedSend ? (
+                            <p className="wb-chat-send-hint is-fail">Gönderilemedi</p>
+                          ) : null}
                         </div>
                       </div>
                     )
@@ -845,10 +863,10 @@ export function MessagesBoard({
                     key={activePhone}
                     phone={activePhone}
                     accountId={(selectedPreview?.accountId || liveThread.at(-1)?.account_id)!}
-                    onQueued={(body) => {
+                    onQueued={(body, clientKey) => {
                       const msg = {
                         id: 0,
-                        clientKey: `local-${Date.now()}`,
+                        clientKey,
                         account_id: selectedPreview?.accountId || liveThread.at(-1)?.account_id || null,
                         direction: 'out',
                         phone_e164: activePhone,
@@ -887,12 +905,15 @@ export function MessagesBoard({
                       })
                       rememberCache(activePhone, msg)
                     }}
-                    onFailed={() => {
-                      setLiveThread((current) => {
-                        const next = current.filter((row) => !String(row.clientKey ?? '').startsWith('local-'))
-                        threadMemo.current.set(activePhone, next)
-                        return next
-                      })
+                    onUpdate={(clientKey, patch) => {
+                      const apply = (rows: ChatMessage[]) =>
+                        rows.map((row) => (row.clientKey === clientKey ? { ...row, ...patch } : row))
+                      for (const [phone, rows] of threadMemo.current) {
+                        if (rows.some((row) => row.clientKey === clientKey)) {
+                          threadMemo.current.set(phone, apply(rows))
+                        }
+                      }
+                      setLiveThread((current) => apply(current))
                     }}
                   />
                 </div>
