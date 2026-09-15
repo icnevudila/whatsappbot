@@ -1,11 +1,11 @@
 const TTL_SEC = 60 * 60 * 72
 const THREAD_CAP = 100
 
-function redisEnabled() {
+function redisEnabled(): boolean {
   return Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN)
 }
 
-async function redisCommand(args) {
+async function redisCommand(args: (string | number)[]): Promise<any> {
   const url = process.env.UPSTASH_REDIS_REST_URL
   const token = process.env.UPSTASH_REDIS_REST_TOKEN
   if (!url || !token) return null
@@ -19,22 +19,22 @@ async function redisCommand(args) {
       body: JSON.stringify(args),
     })
     if (!response.ok) return null
-    const json = await response.json()
+    const json = (await response.json()) as { result?: any }
     return json.result
   } catch {
     return null
   }
 }
 
-function inboxKey(orgId) {
+function inboxKey(orgId: string): string {
   return `wb:c2:inbox:${orgId}`
 }
 
-function threadKey(orgId, phone) {
+function threadKey(orgId: string, phone: string): string {
   return `wb:c2:th:${orgId}:${encodeURIComponent(phone)}`
 }
 
-function packMsg(row) {
+function packMsg(row: any): any[] {
   return [
     row.id,
     row.account_id ?? null,
@@ -53,7 +53,7 @@ function packMsg(row) {
   ]
 }
 
-function unpackMsg(row) {
+function unpackMsg(row: any): any {
   if (!Array.isArray(row)) return row
   return {
     id: row[0],
@@ -73,7 +73,7 @@ function unpackMsg(row) {
   }
 }
 
-function packPreview(item) {
+function packPreview(item: any): any[] {
   return [
     item.phone,
     item.contactName ?? null,
@@ -90,7 +90,7 @@ function packPreview(item) {
   ]
 }
 
-function unpackPreview(row) {
+function unpackPreview(row: any): any {
   if (!Array.isArray(row)) return row
   return {
     phone: row[0],
@@ -108,7 +108,7 @@ function unpackPreview(row) {
   }
 }
 
-function parseJson(value) {
+function parseJson(value: any): any {
   if (value == null) return null
   if (typeof value === 'object') return value
   if (typeof value !== 'string') return null
@@ -119,25 +119,44 @@ function parseJson(value) {
   }
 }
 
-function serialId(value) {
+function serialId(value: any): number {
   const id = Number(value)
   if (!Number.isFinite(id) || id <= 0 || id >= 1e12) return 0
   return id
 }
 
-export function rememberWaMessage(entry) {
+export interface RememberWaMessageEntry {
+  id?: number | string | null
+  orgId?: string | null
+  account_id?: string | null
+  direction: string
+  phone_e164?: string | null
+  remote_jid?: string | null
+  message_type?: string | null
+  body?: string | null
+  media_url?: string | null
+  status?: string | null
+  created_at?: string | null
+  campaign_id?: string | null
+  wa_message_id?: string | null
+  push_name?: string | null
+  [key: string]: any
+}
+
+export function rememberWaMessage(entry: RememberWaMessageEntry): void {
   if (!redisEnabled()) return
   const phone = entry.phone_e164 || entry.remote_jid
   if (!entry.orgId || !phone) return
   void applyWaMessage(entry, phone).catch(() => {})
 }
 
-async function applyWaMessage(entry, phone) {
+async function applyWaMessage(entry: RememberWaMessageEntry, phone: string): Promise<void> {
+  if (!entry.orgId) return
   const tKey = threadKey(entry.orgId, phone)
   const iKey = inboxKey(entry.orgId)
   const rawThread = parseJson(await redisCommand(['GET', tKey]))
   const msgs = Array.isArray(rawThread?.msgs) ? rawThread.msgs.map(unpackMsg) : []
-  const incoming = {
+  const incoming: any = {
     id: entry.id,
     account_id: entry.account_id ?? null,
     direction: entry.direction,
@@ -154,11 +173,11 @@ async function applyWaMessage(entry, phone) {
     clientKey: entry.id ? `log-${entry.id}` : undefined,
   }
   const idx = msgs.findIndex(
-    (row) =>
+    (row: any) =>
       (incoming.id && row.id === incoming.id) ||
       (incoming.wa_message_id && row.wa_message_id === incoming.wa_message_id),
   )
-  const nextMsgs = idx >= 0 ? msgs.map((row, i) => (i === idx ? { ...row, ...incoming } : row)) : [...msgs, incoming]
+  const nextMsgs = idx >= 0 ? msgs.map((row: any, i: number) => (i === idx ? { ...row, ...incoming } : row)) : [...msgs, incoming]
   const packedThread = {
     v: 2,
     maxId: Math.max(serialId(rawThread?.maxId), serialId(incoming.id)),
@@ -169,8 +188,8 @@ async function applyWaMessage(entry, phone) {
   const rawInbox = parseJson(await redisCommand(['GET', iKey]))
   if (!rawInbox || !Array.isArray(rawInbox.items)) return
   const items = rawInbox.items.map(unpackPreview)
-  const prev = items.find((item) => item.phone === phone)
-  const rest = items.filter((item) => item.phone !== phone)
+  const prev = items.find((item: any) => item.phone === phone)
+  const rest = items.filter((item: any) => item.phone !== phone)
   const merged = {
     phone,
     contactName: prev?.contactName ?? null,

@@ -1,8 +1,9 @@
 'use client'
 
+import React from 'react'
 import { TypewriterText } from '@/components/typewriter-text'
 
-export function CraftMark({ size = 'md' }) {
+export function CraftMark({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' | string }) {
   return (
     <div className={`wb-craft-mark wb-craft-mark--${size}`} aria-hidden>
       <span className="wb-craft-spark wb-craft-spark-a">✦</span>
@@ -25,13 +26,21 @@ export function CraftMark({ size = 'md' }) {
   )
 }
 
+export interface CreativeGeneratingProps {
+  title?: string
+  line?: string
+  detail?: React.ReactNode
+  compact?: boolean
+  children?: React.ReactNode
+}
+
 export function CreativeGenerating({
   title = 'Tatlı bir görsel oluşuyor',
-  line,
-  detail,
+  line = '',
+  detail = null,
   compact = false,
-  children,
-}) {
+  children = null,
+}: CreativeGeneratingProps) {
   return (
     <div className={compact ? 'wb-craft wb-craft--compact' : 'wb-craft'}>
       <CraftMark size={compact ? 'sm' : 'md'} />
