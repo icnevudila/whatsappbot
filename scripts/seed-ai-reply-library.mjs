@@ -384,11 +384,7 @@ function suggestionsForIncoming(text) {
     ]
   }
 
-  return [
-    { label: 'KISA & NET', text: 'Mesajınızı aldık, yardımcı olalım. İhtiyacınızı biraz daha net paylaşır mısınız?' },
-    { label: 'SAMIMI', text: 'Tabii, memnuniyetle yardımcı oluruz. Kısaca ne yapmak istediğinizi yazarsanız hemen bakalım.' },
-    { label: 'YONLENDIRICI', text: 'Size doğru bilgi verebilmemiz için konu, kullanım amacı veya talep detayını paylaşabilirsiniz.' },
-  ]
+  return null
 }
 
 async function upsertLibraryBatch(client, rows) {
