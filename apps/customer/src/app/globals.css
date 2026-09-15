@@ -3218,14 +3218,12 @@ main:has(.wb-inbox) {
   }
 }
 
-/* AI Suggestions in WhatsApp Chat Composer */
+/* WhatsApp composer ready replies */
 .wb-ai-suggest-bar {
-  padding: 10px 12px 9px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.98)),
-    #f8fafc;
-  border-top: 1px solid rgba(15, 23, 42, 0.08);
-  box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.06);
+  padding: 9px 10px 8px;
+  background: #f7fbf7;
+  border-top: 1px solid rgba(18, 140, 126, 0.16);
+  box-shadow: 0 -5px 16px rgba(17, 94, 89, 0.07);
   animation: filo-fade-in 0.18s ease-out;
 }
 .wb-ai-suggest-head {
@@ -3237,12 +3235,11 @@ main:has(.wb-inbox) {
 .wb-ai-suggest-title {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
   font-size: 11px;
   font-weight: 750;
-  color: #172554;
+  color: #075e54;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.03em;
 }
 .wb-ai-suggest-actions {
   display: flex;
@@ -3258,7 +3255,7 @@ main:has(.wb-inbox) {
   border: 1px solid transparent;
   border-radius: 999px;
   background: transparent;
-  color: #2453e8;
+  color: #075e54;
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
@@ -3268,8 +3265,8 @@ main:has(.wb-inbox) {
     color 0.15s ease;
 }
 .wb-ai-suggest-refresh:hover:not(:disabled) {
-  background: #eef4ff;
-  border-color: #dbe6ff;
+  background: rgba(18, 140, 126, 0.08);
+  border-color: rgba(18, 140, 126, 0.16);
 }
 .wb-ai-suggest-refresh:disabled {
   cursor: wait;
@@ -3315,7 +3312,7 @@ main:has(.wb-inbox) {
   min-height: 58px;
   padding: 8px 10px 9px 12px;
   border-radius: 8px;
-  border: 1px solid #dfe7f1;
+  border: 1px solid rgba(18, 140, 126, 0.16);
   background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   cursor: pointer;
@@ -3330,13 +3327,13 @@ main:has(.wb-inbox) {
   position: absolute;
   inset: 0 auto 0 0;
   width: 3px;
-  background: #22c55e;
+  background: #25d366;
   content: '';
   opacity: 0.82;
 }
 .wb-ai-suggest-card:hover {
   transform: translateY(-1px);
-  border-color: #a8c5ff;
+  border-color: rgba(18, 140, 126, 0.34);
   background: #ffffff;
   box-shadow: 0 6px 14px rgba(15, 23, 42, 0.08);
 }
@@ -3358,8 +3355,8 @@ main:has(.wb-inbox) {
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  background: #eef6ff;
-  color: #2453e8;
+  background: rgba(37, 211, 102, 0.13);
+  color: #075e54;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3394,18 +3391,18 @@ main:has(.wb-inbox) {
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  border: 1px solid #dfe7f1;
+  border: 1px solid rgba(18, 140, 126, 0.16);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.92);
-  color: #475569;
+  color: #075e54;
   font-size: 12.5px;
   font-weight: 650;
 }
 .wb-ai-suggest-spinner {
   width: 16px;
   height: 16px;
-  border: 2px solid #dbeafe;
-  border-top-color: #2453e8;
+  border: 2px solid rgba(37, 211, 102, 0.2);
+  border-top-color: #128c7e;
   border-radius: 999px;
   animation: wb-ai-suggest-spin 0.75s linear infinite;
 }
@@ -3421,15 +3418,16 @@ main:has(.wb-inbox) {
   padding: 0 10px;
   height: 38px;
   border-radius: 20px;
-  border: 1px solid var(--color-hairline);
+  border: 1px solid rgba(18, 140, 126, 0.2);
   background: #ffffff;
+  color: #075e54;
   cursor: pointer;
   flex-shrink: 0;
   transition: all 0.15s ease;
 }
 .wb-ai-suggest-btn:hover {
-  background: #f4f7ff;
-  border-color: var(--color-accent);
+  background: rgba(37, 211, 102, 0.11);
+  border-color: rgba(18, 140, 126, 0.38);
 }
 .wb-ai-suggest-btn.is-loading {
   opacity: 0.7;

@@ -197,20 +197,19 @@ export function ReplyForm({
         <div className="wb-ai-suggest-bar">
           <div className="wb-ai-suggest-head">
             <span className="wb-ai-suggest-title">
-              <Icon name="sparkles" className="size-3.5 text-accent" />
-              Önerilen Cevaplar
+              Hazır Cevaplar
             </span>
             <div className="wb-ai-suggest-actions">
               <button
                 type="button"
-                onClick={() => fetchAiSuggestions({ force: true })}
+                onClick={() => fetchAiSuggestions()}
                 disabled={isSuggesting}
                 className="wb-ai-suggest-refresh"
-                title="Yeni öneriler üret"
-                aria-label="Yeni öneriler üret"
+                title="Hazır cevapları kontrol et"
+                aria-label="Hazır cevapları kontrol et"
               >
                 <Icon name="refresh" className="size-3.5" />
-                <span>{isSuggesting ? 'Üretiliyor' : 'Yenile'}</span>
+                <span>{isSuggesting ? 'Hazırlanıyor' : 'Yenile'}</span>
               </button>
               <button
                 type="button"
@@ -272,11 +271,11 @@ export function ReplyForm({
           }}
           aria-busy={isSuggesting}
           className={`wb-ai-suggest-btn${isSuggesting ? ' is-loading' : ''}`}
-          title="Önerilen cevapları gör"
+          title="Hazır cevapları gör"
         >
-          <Icon name="sparkles" className="size-3.5 text-accent" />
+          <Icon name="inbox" className="size-3.5" />
           <span className="hidden md:inline text-[11.5px] font-semibold text-ink-soft">
-            {isSuggesting ? 'Hazırlanıyor…' : 'Önerilen Cevaplar'}
+            {isSuggesting ? 'Hazırlanıyor…' : 'Hazır Cevaplar'}
           </span>
         </button>
         <label className="sr-only" htmlFor="conversation-reply">

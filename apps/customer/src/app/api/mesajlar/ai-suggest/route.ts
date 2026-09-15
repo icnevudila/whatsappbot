@@ -173,19 +173,22 @@ export async function POST(request: Request) {
       )
     }
 
-    void supabase
+    await supabase
       .from('ai_reply_suggestion_library')
-      .insert({
-        org_id: org.id,
-        message_fingerprint: messageFingerprint,
-        context_fingerprint: contextFingerprint,
-        incoming_sample: lastMessage.slice(0, 500),
-        suggestions: data.suggestions,
+      .upsert(
+        {
+          org_id: org.id,
+          message_fingerprint: messageFingerprint,
+          context_fingerprint: contextFingerprint,
+          incoming_sample: lastMessage.slice(0, 500),
+          suggestions: data.suggestions,
         source: 'chatgpt',
-        generated_count: 1,
-        last_used_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
+          generated_count: 1,
+          last_used_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'org_id,message_fingerprint,context_fingerprint' },
+      )
 
     return NextResponse.json({
       success: true,
