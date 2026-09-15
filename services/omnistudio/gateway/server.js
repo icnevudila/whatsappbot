@@ -162,12 +162,26 @@ class AdvancedJobQueue {
     const reg = this.registeredWorkers.get(wid);
     if (reg && reg.status === 'waiting_login') return null;
 
-    const jobIndex = this.pendingQueue.findIndex(jobId => {
+    if (!this.companyWorkerMap) this.companyWorkerMap = new Map();
+
+    // 1. Öncelik: Bu işçiye daha önce atanmış aynı firmanın işi varsa onu al (Sticky Company Routing)
+    let jobIndex = this.pendingQueue.findIndex(jobId => {
       const job = this.jobs.get(jobId);
       if (!job || job.status !== 'pending') return false;
-      if (job.platform === 'auto' || job.platform === p) return true;
-      return false;
+      if (job.platform !== 'auto' && job.platform !== p) return false;
+      const assignedWid = this.companyWorkerMap.get(job.customer);
+      return assignedWid === wid;
     });
+
+    // 2. Eğer bu işçiye özel firma işi yoksa, sıradaki uygun ilk işi al
+    if (jobIndex === -1) {
+      jobIndex = this.pendingQueue.findIndex(jobId => {
+        const job = this.jobs.get(jobId);
+        if (!job || job.status !== 'pending') return false;
+        if (job.platform === 'auto' || job.platform === p) return true;
+        return false;
+      });
+    }
 
     if (jobIndex === -1) return null;
 
@@ -182,6 +196,10 @@ class AdvancedJobQueue {
     job.statusText = `${wid} işçisi görevi devraldı, tarayıcı hazırlanıyor...`;
     job.startedAt = Date.now();
     this.activeWorkers.set(wid, jobId);
+
+    if (job.customer) {
+      this.companyWorkerMap.set(job.customer, wid);
+    }
 
     broadcastEvent('job_assigned', sanitizeJobForBroadcast(job));
     return job;

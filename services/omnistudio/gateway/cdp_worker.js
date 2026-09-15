@@ -99,6 +99,106 @@ async function checkTabLogin(tab) {
   }
 }
 
+// Firma Başına Ayrılmış Kalıcı Sohbet Yönetimi (Persistent Customer Chat Mapping)
+function getCompanyChats() {
+  const file = path.join('/data', `company_chats_${WORKER_ID}.json`);
+  try {
+    if (fs.existsSync(file)) {
+      return JSON.parse(fs.readFileSync(file, 'utf8'));
+    }
+  } catch (e) {}
+  return {};
+}
+
+function setCompanyChat(customer, chatUrl) {
+  if (!customer || !chatUrl) return;
+  const file = path.join('/data', `company_chats_${WORKER_ID}.json`);
+  try {
+    const data = getCompanyChats();
+    data[customer] = {
+      chatUrl,
+      updatedAt: Date.now()
+    };
+    fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8');
+    console.log(`[CDP Worker: ${WORKER_ID}] Firma "${customer}" sohbet URL'si kaydedildi: ${chatUrl}`);
+  } catch (e) {
+    console.error(`[CDP Worker: ${WORKER_ID}] Firma sohbeti kaydedilemedi:`, e.message);
+  }
+}
+
+async function waitForChatInput(cdp, maxWaitMs = 15000) {
+  const start = Date.now();
+  while (Date.now() - start < maxWaitMs) {
+    await sleep(600);
+    const check = await cdp.send('Runtime.evaluate', {
+      expression: `!!(
+        document.querySelector('#prompt-textarea') || 
+        document.querySelector('div[contenteditable="true"]') ||
+        document.querySelector('textarea')
+      )`,
+      returnByValue: true
+    });
+    if (check.result?.value) {
+      await sleep(600);
+      return true;
+    }
+  }
+  return false;
+}
+
+async function ensureCustomerChat(cdp, customer) {
+  const chats = getCompanyChats();
+  const saved = chats[customer];
+  const targetUrl = saved?.chatUrl || null;
+
+  const urlEval = await cdp.send('Runtime.evaluate', {
+    expression: 'window.location.href',
+    returnByValue: true
+  });
+  const currentUrl = urlEval.result?.value || '';
+
+  if (targetUrl) {
+    // Bu firma için önceden açılmış bir sohbet var
+    const targetChatPath = targetUrl.replace('https://chatgpt.com', '');
+    if (currentUrl.includes(targetChatPath)) {
+      console.log(`[CDP Worker: ${WORKER_ID}] "${customer}" firması için zaten aktif sohbetteyiz: ${targetUrl}`);
+      return;
+    }
+
+    console.log(`[CDP Worker: ${WORKER_ID}] "${customer}" firmasının özel sohbetine geçiliyor: ${targetUrl}`);
+    await cdp.send('Page.navigate', { url: targetUrl });
+    await waitForChatInput(cdp);
+
+    // Eğer geçiş sonrası sayfa 404 verdi veya ana sayfaya yönlendirdiyse (sohbet silinmiş vs.), yeni sohbet aç
+    const afterNavEval = await cdp.send('Runtime.evaluate', {
+      expression: 'window.location.href',
+      returnByValue: true
+    });
+    const afterUrl = afterNavEval.result?.value || '';
+    if (afterUrl.includes('/c/')) {
+      return;
+    }
+    console.log(`[CDP Worker: ${WORKER_ID}] "${customer}" eski sohbeti açılamadı, yeni sohbet oluşturulacak.`);
+  }
+
+  // Bu firma için kayıtlı sohbet yok veya eski sohbet kapalı -> Yeni temiz sohbet aç
+  if (currentUrl.includes('/c/')) {
+    console.log(`[CDP Worker: ${WORKER_ID}] "${customer}" firması için yeni özel sohbet açılıyor...`);
+    await cdp.send('Runtime.evaluate', {
+      expression: `(() => {
+        const link = document.querySelector('a[href="/"]');
+        if (link) { link.click(); return true; }
+        window.location.href = 'https://chatgpt.com/';
+        return false;
+      })()`,
+      returnByValue: true
+    });
+    await waitForChatInput(cdp);
+  } else {
+    console.log(`[CDP Worker: ${WORKER_ID}] "${customer}" için temiz sohbet sayfası hazır.`);
+  }
+}
+
 // Düzenli Kalp Atışı (5s)
 setInterval(async () => {
   try {
@@ -176,6 +276,11 @@ async function executeChatGPTJob(tab, job) {
   const tempRefPaths = [];
   try {
     cdp = await createCdpSession(tab.webSocketDebuggerUrl);
+
+    // 0. Firma Başına Ayrılmış Özel Sohbet Yönetimi
+    const customer = (job.customer || 'Genel').trim();
+    console.log(`[CDP Worker: ${WORKER_ID}] Firma: "${customer}" için sohbet hazırlanıyor...`);
+    await ensureCustomerChat(cdp, customer);
 
     // 1. Referans Görseller Varsa (Image-to-Image / Ürün Görseli) ChatGPT'ye Dosya Olarak Yükle
     if (Array.isArray(job.referenceImages) && job.referenceImages.length > 0) {
@@ -390,6 +495,20 @@ async function executeChatGPTJob(tab, job) {
 
     const uploadData = await uploadRes.json();
     console.log(`[CDP Worker] BAŞARIYLA TAMAMLANDI: ${uploadData.url}`);
+
+    // 6. Firma Sohbet URL'sini Güncelle/Kaydet
+    try {
+      const finalUrlEval = await cdp.send('Runtime.evaluate', {
+        expression: 'window.location.href',
+        returnByValue: true
+      });
+      const finalUrl = finalUrlEval.result?.value || '';
+      if (finalUrl.includes('/c/')) {
+        setCompanyChat(customer, finalUrl);
+      }
+    } catch (urlErr) {
+      console.warn(`[CDP Worker: ${WORKER_ID}] URL kaydetme uyarısı:`, urlErr.message);
+    }
 
   } catch (err) {
     console.error(`[CDP Worker] İş hatası (${job.id}):`, err.message);
