@@ -685,7 +685,13 @@ export function StatStrip({
   items,
   className,
 }: {
-  items: { label: string; value: ReactNode; href?: string; tone?: 'default' | 'ok' | 'danger' }[]
+  items: {
+    label: string
+    value: ReactNode
+    href?: string
+    tone?: 'default' | 'ok' | 'danger'
+    icon?: string
+  }[]
   className?: string
 }) {
   return (
@@ -704,14 +710,25 @@ export function StatStrip({
               ? 'text-danger'
               : 'text-ink'
         const inner = (
-          <>
-            <p className="text-[10.5px] font-medium tracking-wide text-ink-faint uppercase">
-              {item.label}
-            </p>
-            <p className={cx('mt-0.5 text-[16px] font-extrabold tabular sm:text-[18px]', toneClass)}>
-              {item.value}
-            </p>
-          </>
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-[10.5px] font-medium tracking-wide text-ink-faint uppercase">
+                {item.label}
+              </p>
+              <p className={cx('mt-0.5 text-[16px] font-extrabold tabular sm:text-[18px]', toneClass)}>
+                {item.value}
+              </p>
+            </div>
+            {item.icon ? (
+              <img
+                src={item.icon}
+                alt=""
+                width={32}
+                height={32}
+                className="size-8 shrink-0 object-contain drop-shadow-[0_4px_8px_rgba(47,91,255,0.08)]"
+              />
+            ) : null}
+          </div>
         )
         const boxClass =
           'wb-row-enter wb-card-lift min-w-[108px] shrink-0 rounded-md border border-hairline bg-surface px-3 py-2 sm:min-w-0'

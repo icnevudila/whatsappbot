@@ -12,6 +12,23 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
+const ICON_MAP: Partial<Record<IconName, string>> = {
+  overview: '/icons/filo_icon_overview.png',
+  phone: '/icons/filo_icon_accounts.png',
+  send: '/icons/filo_icon_quick_send.png',
+  people: '/icons/filo_icon_contacts.png',
+  campaign: '/icons/filo_icon_campaigns.png',
+  inbox: '/icons/filo_icon_inbox.png',
+  outbound: '/icons/filo_icon_outbound.png',
+  shield: '/icons/filo_icon_blacklist.png',
+  brand: '/icons/filo_icon_brand_kit.png',
+  settings: '/icons/filo_icon_settings.png',
+  help: '/icons/filo_icon_help.png',
+  chart: '/icons/filo_icon_reports.png',
+  activity: '/icons/filo_icon_system_health.png',
+  steps: '/icons/filo_icon_setup_wizard.png',
+}
+
 function NavLink({
   href,
   label,
@@ -30,6 +47,7 @@ function NavLink({
   linkRef?: (el: HTMLAnchorElement | null) => void
 }) {
   const iconName = icon ?? iconForHref(href)
+  const iconSrc = ICON_MAP[iconName]
   return (
     <Link
       ref={linkRef}
@@ -39,7 +57,17 @@ function NavLink({
       onClick={onNavigate}
       className={className ?? `wb-rail-link${active ? ' is-active' : ''}`}
     >
-      <Icon name={iconName} className="wb-rail-link-icon size-[16px]" />
+      {iconSrc ? (
+        <img
+          src={iconSrc}
+          alt=""
+          width={18}
+          height={18}
+          className="wb-rail-link-icon size-[18px] shrink-0 object-contain drop-shadow-[0_1px_2px_rgba(0,0,0,0.06)]"
+        />
+      ) : (
+        <Icon name={iconName} className="wb-rail-link-icon size-[16px]" />
+      )}
       <span className="wb-rail-link-label">{label}</span>
     </Link>
   )
