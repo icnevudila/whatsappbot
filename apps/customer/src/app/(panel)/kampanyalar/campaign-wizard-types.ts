@@ -75,6 +75,13 @@ export function toDatetimeLocal(iso: string | null | undefined): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
+export function defaultScheduleLocal(): string {
+  const date = new Date()
+  date.setDate(date.getDate() + 1)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T09:00`
+}
+
 export function formatCount(n: number): string {
   return n.toLocaleString('tr-TR')
 }

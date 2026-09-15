@@ -53,11 +53,30 @@ export function TargetFeed({
 }) {
   const [targets, setTargets] = useState(initial)
   const [filter, setFilter] = useState<Filter>('all')
+  const [open, setOpen] = useState(false)
   const flashIds = useRef(new Set<number>())
 
   useEffect(() => {
     setTargets(initial)
   }, [initial])
+
+  useEffect(() => {
+    const expandIfHash = () => {
+      if (window.location.hash === '#paylasilanlar') setOpen(true)
+    }
+    expandIfHash()
+    const onClick = (event: MouseEvent) => {
+      const target = event.target
+      if (!(target instanceof Element)) return
+      if (target.closest('a[href="#paylasilanlar"]')) setOpen(true)
+    }
+    window.addEventListener('hashchange', expandIfHash)
+    document.addEventListener('click', onClick)
+    return () => {
+      window.removeEventListener('hashchange', expandIfHash)
+      document.removeEventListener('click', onClick)
+    }
+  }, [])
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient()
@@ -149,12 +168,36 @@ export function TargetFeed({
       : 'Başka bir filtre seçin veya Tümü’ne dönün.'
 
   return (
-    <div className="flex max-h-[min(32rem,calc(100dvh-14rem))] min-h-[18rem] flex-col overflow-hidden rounded-[var(--radius-card)] border border-hairline bg-surface shadow-[var(--shadow-card)]">
-      <CardHeader
-        title="Paylaşılanlar"
-        subtitle={`${counts.sent + counts.delivered + counts.read} iletildi · ${counts.skipped} atlandı · ${counts.failed} başarısız · ${counts.queued + counts.sending} bekliyor`}
-      />
+    <div
+      className={`flex flex-col overflow-hidden rounded-[var(--radius-card)] border border-hairline bg-surface shadow-[var(--shadow-card)] ${
+        open ? 'max-h-[min(32rem,calc(100dvh-14rem))] min-h-[18rem]' : ''
+      }`}
+    >
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+        className="w-full text-left hover:bg-surface-raised/70"
+      >
+        <CardHeader
+          className={open ? undefined : 'border-b-0'}
+          title="Paylaşılanlar"
+          subtitle={`${counts.sent + counts.delivered + counts.read} iletildi · ${counts.skipped} atlandı · ${counts.failed} başarısız · ${counts.queued + counts.sending} bekliyor`}
+          action={
+            <span
+              className={`inline-block text-[12px] text-ink-muted transition-transform duration-180 ${
+                open ? 'rotate-180' : ''
+              }`}
+              aria-hidden
+            >
+              ▾
+            </span>
+          }
+        />
+      </button>
 
+      {open ? (
+        <>
       <p className="shrink-0 border-b border-hairline px-3.5 py-2 text-[11.5px] leading-relaxed text-ink-faint">
         Numara → Mesajlar’da sohbet.{' '}
         <span className="font-medium text-ink-muted">Atlandı:</span> yok / kota.{' '}
@@ -244,6 +287,8 @@ export function TargetFeed({
           })}
         </ul>
       )}
+        </>
+      ) : null}
     </div>
   )
 }

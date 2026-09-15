@@ -252,7 +252,15 @@ const STATUS_STYLES: Record<string, { label: string; tone: string; hint?: string
   read: { label: 'Okundu', tone: 'text-accent border-accent/35 bg-accent-soft', hint: 'Alıcı okudu' },
 }
 
-export function StatusPill({ status }: { status: string }) {
+export function StatusPill({
+  status,
+  label,
+  hint,
+}: {
+  status: string
+  label?: string
+  hint?: string
+}) {
   const entry = STATUS_STYLES[status] ?? {
     label: status,
     tone: 'text-ink-muted border-hairline-strong bg-surface-raised',
@@ -260,13 +268,13 @@ export function StatusPill({ status }: { status: string }) {
 
   return (
     <span
-      title={entry.hint}
+      title={hint ?? entry.hint}
       className={cx(
         'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12.5px] font-semibold',
         entry.tone,
       )}
     >
-      {entry.label}
+      {label ?? entry.label}
     </span>
   )
 }
@@ -375,15 +383,7 @@ export function FilterChip({
   href: string
 }) {
   return (
-    <Link
-      href={href}
-      className={cx(
-        'inline-flex h-8 items-center rounded-[var(--radius-sm)] border px-3 text-[13px] font-semibold transition-colors',
-        active
-          ? 'border-ink bg-ink text-accent-ink'
-          : 'border-hairline-strong bg-surface text-ink-muted hover:border-ink-faint hover:text-ink',
-      )}
-    >
+    <Link href={href} className={cx('wb-wa-chip', active && 'is-active')}>
       {children}
     </Link>
   )
@@ -707,12 +707,14 @@ export function PageHeader({
   title,
   description,
   action,
+  titleEnd,
   backHref,
   backLabel = 'Geri',
 }: {
   title: string
   description?: string
   action?: ReactNode
+  titleEnd?: ReactNode
   backHref?: string
   backLabel?: string
 }) {
@@ -731,7 +733,10 @@ export function PageHeader({
           </Link>
         ) : null}
         <div className="min-w-0 flex-1">
-          <h1 className="wb-page-title">{title}</h1>
+          <div className="flex items-start gap-1.5">
+            <h1 className="wb-page-title min-w-0 flex-1">{title}</h1>
+            {titleEnd ? <div className="mt-0.5 shrink-0">{titleEnd}</div> : null}
+          </div>
           {description ? (
             <p className="wb-page-desc line-clamp-2 md:line-clamp-none">{description}</p>
           ) : null}

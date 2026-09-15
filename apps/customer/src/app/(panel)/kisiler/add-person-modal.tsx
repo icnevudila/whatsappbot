@@ -19,7 +19,7 @@ export function AddPersonButton({
 
   return (
     <>
-      <Button type="button" onClick={() => setOpen(true)}>
+      <Button type="button" className="wb-wa-text-btn" onClick={() => setOpen(true)}>
         + Kişi
       </Button>
       {open ? <AddPersonModal groups={groups} onClose={() => setOpen(false)} /> : null}
@@ -126,7 +126,7 @@ export function AddPersonModal({
   return createPortal(
     <div className="wb-modal-root" role="presentation">
       <button type="button" className="wb-modal-backdrop" aria-label="Kapat" onClick={onClose} />
-      <div className="wb-modal-panel" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+      <div className="wb-modal-panel wb-wa-modal" role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 id={titleId} className="wb-modal-title">
@@ -138,7 +138,7 @@ export function AddPersonModal({
             type="button"
             aria-label="Kapat"
             onClick={onClose}
-            className="inline-flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-ink-muted hover:bg-canvas hover:text-ink"
+            className="wb-wa-icon-btn"
           >
             <Icon name="close" className="size-4" />
           </button>
@@ -239,7 +239,7 @@ export function AddPersonModal({
           <Button type="button" onClick={onClose} disabled={pending}>
             Vazgeç
           </Button>
-          <Button type="button" variant="accent" disabled={!canSubmit} onClick={submit}>
+          <Button type="button" variant="accent" className="wb-wa-submit" disabled={!canSubmit} onClick={submit}>
             {pending ? 'Ekleniyor…' : 'Ekle'}
           </Button>
         </div>

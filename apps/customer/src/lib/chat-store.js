@@ -113,7 +113,7 @@ async function loadThreadFromPg(supabase, orgId, phone) {
   let threadQuery = supabase
     .from('message_log')
     .select(
-      'id, account_id, direction, phone_e164, remote_jid, message_type, body, status, created_at, campaign_id, wa_message_id',
+      'id, account_id, direction, phone_e164, remote_jid, message_type, body, media_url, status, created_at, campaign_id, wa_message_id',
     )
     .eq('org_id', orgId)
     .in('direction', ['in', 'out'])
@@ -173,6 +173,7 @@ async function loadThreadFromPg(supabase, orgId, phone) {
       remote_jid: null,
       message_type: meta?.message_type || 'text',
       body: target.personalized_body || meta?.body || (meta?.media_url ? '(görsel)' : null),
+      media_url: meta?.media_url ?? null,
       status: target.status,
       created_at: target.sent_at ?? target.updated_at,
       campaign_id: target.campaign_id,
@@ -194,6 +195,8 @@ async function loadThreadFromPg(supabase, orgId, phone) {
       ...row,
       campaignName: row.campaignName ?? meta.name,
       body: row.body || meta.body || (meta.media_url ? '(görsel)' : row.body),
+      media_url: row.media_url || meta.media_url || null,
+      message_type: row.message_type && row.message_type !== 'text' ? row.message_type : meta.message_type || row.message_type,
     }
   })
 

@@ -48,8 +48,8 @@ export function ProductsBoard({
   const filtered = status !== 'tum'
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-1">
+    <div>
+      <div className="flex items-center gap-1 px-3 py-1">
         {searchOpen ? (
           <Input
             ref={searchRef}
@@ -58,10 +58,10 @@ export function ProductsBoard({
             placeholder="Ürün adına göre ara…"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            className="h-8 min-w-0 flex-1 !py-1.5"
+            className="wb-wa-search min-w-0 flex-1"
           />
         ) : (
-          <p className="min-w-0 flex-1 text-[12.5px] text-ink-muted">
+          <p className="min-w-0 flex-1 px-1 text-[13px] text-[#667781]">
             {visible.length} ürün
             {filtered || query ? ` · ${products.length} içinden` : ''}
           </p>
@@ -75,11 +75,11 @@ export function ProductsBoard({
             setSearchOpen((value) => !value)
             setFilterOpen(false)
           }}
-          className="relative inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-hairline bg-surface text-ink hover:bg-canvas"
+          className="wb-wa-icon-btn relative"
         >
-          <Icon name="search" className="size-4" />
+          <Icon name="search" className="size-5" />
           {query ? (
-            <span className="absolute right-1 top-1 size-1.5 rounded-full bg-accent" aria-hidden />
+            <span className="wb-wa-icon-dot" aria-hidden />
           ) : null}
         </button>
         <button
@@ -91,17 +91,17 @@ export function ProductsBoard({
             setFilterOpen((value) => !value)
             setSearchOpen(false)
           }}
-          className="relative inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-hairline bg-surface text-ink hover:bg-canvas"
+          className="wb-wa-icon-btn relative"
         >
-          <Icon name="filter" className="size-4" />
+          <Icon name="filter" className="size-5" />
           {filtered ? (
-            <span className="absolute right-1 top-1 size-1.5 rounded-full bg-accent" aria-hidden />
+            <span className="wb-wa-icon-dot" aria-hidden />
           ) : null}
         </button>
       </div>
 
       {filterOpen ? (
-        <div className="flex flex-wrap items-center gap-1.5 rounded-[var(--radius-sm)] border border-hairline bg-surface px-2.5 py-2">
+        <div className="wb-wa-seg px-3 pb-2">
           <StatusChip active={status === 'tum'} onClick={() => setStatus('tum')}>
             Tümü ({products.length})
           </StatusChip>
@@ -121,7 +121,7 @@ export function ProductsBoard({
           description="Aramayı veya filtreyi değiştirin."
         />
       ) : (
-        <ul className="grid grid-cols-2 gap-2">
+        <ul className="wb-inbox-list">
           {visible.map((product) => (
             <li key={product.id}>
               <ProductCard product={product} canManage={canManage} />
@@ -146,11 +146,7 @@ function StatusChip({
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11.5px] font-semibold transition-colors ${
-        active
-          ? 'bg-ink text-canvas'
-          : 'border border-hairline bg-surface text-ink-muted hover:text-ink'
-      }`}
+      className={`wb-wa-chip${active ? ' is-active' : ''}`}
     >
       {children}
     </button>
@@ -165,33 +161,25 @@ function ProductCard({
   canManage: boolean
 }) {
   return (
-    <div className="relative rounded-[var(--radius-card)] border border-hairline bg-surface shadow-[var(--shadow-card)]">
-      <Link href={`/ayarlar/urunler/${product.id}`} className="block">
-        <div className="relative overflow-hidden rounded-t-[var(--radius-card)]">
-          {product.thumb ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={product.thumb} alt="" className="h-28 w-full bg-canvas object-cover sm:h-32" />
-          ) : (
-            <div className="flex h-28 items-center justify-center bg-canvas text-[11px] text-ink-faint sm:h-32">
-              Görsel yok
-            </div>
-          )}
-          <span
-            className={`absolute left-1.5 top-1.5 rounded-full border px-1.5 py-0.5 text-[10.5px] font-semibold shadow-sm backdrop-blur-sm ${
-              product.is_active
-                ? 'border-accent/40 bg-accent text-accent-ink'
-                : 'border-hairline bg-surface/90 text-ink-muted'
-            }`}
-          >
-            {product.is_active ? 'Aktif' : 'Pasif'}
+    <div className="flex items-center">
+      <Link href={`/ayarlar/urunler/${product.id}`} className="wb-wa-row min-w-0 flex-1">
+        {product.thumb ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={product.thumb} alt="" className="wb-wa-avatar object-cover" />
+        ) : (
+          <span className="wb-wa-avatar" style={{ background: '#00a884' }} aria-hidden>
+            {product.name.slice(0, 2).toLocaleUpperCase('tr-TR')}
           </span>
-        </div>
-        <div className="space-y-0.5 px-2.5 py-2">
-          <p className="line-clamp-2 text-[13px] font-semibold leading-snug text-ink">{product.name}</p>
-          {product.description ? (
-            <p className="line-clamp-1 text-[11.5px] text-ink-muted">{product.description}</p>
-          ) : null}
-        </div>
+        )}
+        <span className="wb-wa-row-main">
+          <span className="wb-wa-row-top">
+            <span className="wb-wa-name">{product.name}</span>
+            <span className="wb-wa-time">{product.is_active ? 'Aktif' : 'Pasif'}</span>
+          </span>
+          <span className="wb-wa-row-bottom">
+            <span className="wb-wa-preview">{product.description || 'Açıklama yok'}</span>
+          </span>
+        </span>
       </Link>
       {canManage ? <ProductCardMenu id={product.id} name={product.name} /> : null}
     </div>
@@ -223,7 +211,7 @@ function ProductCardMenu({ id, name }: { id: string; name: string }) {
   }, [open])
 
   return (
-    <div className="absolute right-1.5 top-1.5 z-20" ref={menuRef}>
+    <div className="relative shrink-0 pr-1" ref={menuRef}>
       <button
         type="button"
         aria-label="Ürün işlemleri"
@@ -236,28 +224,26 @@ function ProductCardMenu({ id, name }: { id: string; name: string }) {
           event.stopPropagation()
           setOpen((value) => !value)
         }}
-        className="inline-flex size-8 items-center justify-center rounded-full border border-hairline bg-surface/95 text-ink shadow-sm backdrop-blur-sm hover:bg-canvas disabled:opacity-50"
+        className="wb-wa-icon-btn"
       >
-        <Icon name="ellipsis" className="size-4" />
+        <Icon name="ellipsis" className="size-5" />
       </button>
       {open ? (
-        <div
-          role="menu"
-          className="absolute right-0 z-30 mt-1 min-w-[9.5rem] rounded-md border border-hairline bg-surface p-1 shadow-[var(--shadow-md)]"
-        >
+        <div role="menu" className="wb-wa-menu">
           <Link
             href={`/ayarlar/urunler/${id}`}
             role="menuitem"
-            className="flex w-full items-center rounded px-2.5 py-2 text-left text-[13px] font-medium text-ink hover:bg-canvas"
+            className="wb-wa-menu-item"
             onClick={() => setOpen(false)}
           >
+            <Icon name="edit" className="size-4 text-ink-muted" />
             Düzenle
           </Link>
           <button
             type="button"
             role="menuitem"
             disabled={pending}
-            className="flex w-full items-center rounded px-2.5 py-2 text-left text-[13px] font-medium text-danger hover:bg-canvas disabled:opacity-50"
+            className="wb-wa-menu-item is-danger"
             onClick={() => {
               setOpen(false)
               void (async () => {
@@ -281,6 +267,7 @@ function ProductCardMenu({ id, name }: { id: string; name: string }) {
               })()
             }}
           >
+            <Icon name="trash" className="size-4" />
             {pending ? 'Siliniyor…' : 'Sil'}
           </button>
         </div>

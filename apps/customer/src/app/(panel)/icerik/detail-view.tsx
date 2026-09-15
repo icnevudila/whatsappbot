@@ -5,8 +5,8 @@ import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AccentLink, Badge, Button, Field, Notice, Textarea } from '@/components/ui'
-import { Icon } from '@/components/icon'
-import { TypewriterText } from '@/components/typewriter-text'
+import { Icon, type IconName } from '@/components/icon'
+import { CreativeGenerating } from '@/components/creative-generating'
 import { useConfirm } from '@/components/confirm-dialog'
 import { useToast } from '@/components/toast'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
@@ -26,6 +26,14 @@ const DETAIL_STAGES = [
   { at: 68, label: 'Afiş detayları ve renk dengesi tamamlanıyor…', detail: 'Görsel kontrastı ve son rötuşlar uygulanıyor' },
   { at: 82, label: 'Son kontroller yapılıyor ve kütüphaneye aktarılıyor…', detail: 'Ultra yüksek çözünürlüklü çıktı hazırlanıyor' },
 ]
+
+const VARIATION_ICONS: Record<(typeof VARIATION_PRESETS)[number]['id'], IconName> = {
+  similar: 'copy',
+  minimal: 'circle',
+  premium: 'gem',
+  bold: 'zap',
+  layout: 'overview',
+}
 
 export type DetailCreative = {
   id: string
@@ -52,6 +60,120 @@ export type VersionRow = {
   publicUrl: string | null
 }
 
+export function CreativeTitleEdit({ id, title }: { id: string; title: string }) {
+  const router = useRouter()
+  const toast = useToast()
+  const titleId = useId()
+  const [open, setOpen] = useState(false)
+  const [value, setValue] = useState(title)
+  const [pending, startTransition] = useTransition()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!open) setValue(title)
+  }, [open, title])
+
+  useEffect(() => {
+    if (!open) return
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !pending) setOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prevOverflow
+    }
+  }, [open, pending])
+
+  const close = () => {
+    if (!pending) setOpen(false)
+  }
+
+  const save = () => {
+    const next = value.trim()
+    if (!next || pending) return
+    const formData = new FormData()
+    formData.set('id', id)
+    formData.set('title', next)
+    startTransition(() => {
+      void renameCreative(formData).then((result) => {
+        if (result?.error) {
+          toast(result.error, 'danger')
+          return
+        }
+        toast(result?.ok ?? 'Ad güncellendi.', 'success')
+        setOpen(false)
+        router.refresh()
+      })
+    })
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        aria-label="Görsel adını düzenle"
+        title="Düzenle"
+        onClick={() => setOpen(true)}
+        className="inline-flex size-8 items-center justify-center rounded-[var(--radius-sm)] text-ink-muted hover:bg-surface-raised hover:text-ink"
+      >
+        <Icon name="edit" className="size-4" />
+      </button>
+      {open && mounted
+        ? createPortal(
+            <div className="wb-modal-root" role="presentation">
+              <button type="button" className="wb-modal-backdrop" aria-label="Kapat" onClick={close} />
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby={titleId}
+                className="wb-modal-panel"
+              >
+                <h2 id={titleId} className="wb-modal-title">
+                  Görsel adını düzenle
+                </h2>
+                <p className="wb-modal-desc">Kütüphanede ve kampanyada bu ad görünür.</p>
+                <form
+                  className="mt-4 space-y-3"
+                  onSubmit={(event) => {
+                    event.preventDefault()
+                    save()
+                  }}
+                >
+                  <Field label="Görsel adı">
+                    <Textarea
+                      name="title"
+                      rows={4}
+                      value={value}
+                      maxLength={180}
+                      onChange={(event) => setValue(event.target.value)}
+                      autoFocus
+                    />
+                  </Field>
+                  <div className="wb-modal-actions">
+                    <Button type="button" variant="quiet" disabled={pending} onClick={close}>
+                      Vazgeç
+                    </Button>
+                    <Button type="submit" variant="accent" disabled={pending || !value.trim()}>
+                      {pending ? 'Kaydediliyor…' : 'Kaydet'}
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
+  )
+}
+
 export function CreativeDetail({
   orgId,
   creative,
@@ -71,7 +193,6 @@ export function CreativeDetail({
   const [instruction, setInstruction] = useState('')
   const [reviseOpen, setReviseOpen] = useState(Boolean(openRevise))
   const [lightboxOpen, setLightboxOpen] = useState(false)
-  const [title, setTitle] = useState(creative.title ?? '')
   const [tick, setTick] = useState(0)
   const [pending, startTransition] = useTransition()
   const running = creative.status === 'pending' || creative.status === 'rendering'
@@ -94,10 +215,6 @@ export function CreativeDetail({
     }
     return null
   }
-
-  useEffect(() => {
-    setTitle(creative.title ?? '')
-  }, [creative.title])
 
   useEffect(() => {
     if (creative.status === 'ready') setLocalError(null)
@@ -212,16 +329,15 @@ export function CreativeDetail({
   return (
     <div className="space-y-3">
       {spinning ? (
-        <div className="rounded-[var(--radius-card)] border border-accent/30 bg-accent-soft/40 px-4 py-8 text-center">
-          <p className="text-[14.5px] font-bold">Görsel üretiliyor</p>
-          <p className="mt-2 min-h-[1.4em] text-[13.5px] font-medium text-ink">
-            <TypewriterText text={currentStage.label} />
-          </p>
-          <p className="mt-1 text-[12.5px] text-ink-muted">
-            {currentStage.detail} · {remainingText}
-          </p>
-          <p className="mt-3 text-[12px] text-ink-faint">Bu sayfa açıkken üretim arka planda devam eder.</p>
-          <QuietLibrary />
+        <div className="wb-craft-panel">
+          <CreativeGenerating
+            line={currentStage.label}
+            detail={`${currentStage.detail} · ${remainingText}`}
+          >
+            <div className="wb-craft-action">
+              <AccentLink href="/icerik">Arka planda devam et</AccentLink>
+            </div>
+          </CreativeGenerating>
         </div>
       ) : null}
 
@@ -275,13 +391,26 @@ export function CreativeDetail({
       ) : null}
 
       {creative.publicUrl && creative.status === 'ready' ? (
-        <AccentLink
-          href={`/kampanyalar/yeni?gorsel=${encodeURIComponent(creative.publicUrl)}`}
-          className="w-full"
-        >
-          <Icon name="campaign" className="size-4" />
-          Kampanyada kullan
-        </AccentLink>
+        <div className={`grid gap-2 ${canManage ? 'grid-cols-2' : ''}`}>
+          {canManage ? (
+            <Button
+              type="button"
+              variant="quiet"
+              className="w-full"
+              onClick={() => setReviseOpen(true)}
+            >
+              <Icon name="sparkles" className="size-4" />
+              AI ile revize et
+            </Button>
+          ) : null}
+          <AccentLink
+            href={`/kampanyalar/yeni?gorsel=${encodeURIComponent(creative.publicUrl)}`}
+            className="w-full"
+          >
+            <Icon name="campaign" className="size-4" />
+            Kampanyada kullan
+          </AccentLink>
+        </div>
       ) : canManage ? (
         <Button type="button" variant="danger" disabled={pending} onClick={removeCreative}>
           <Icon name="trash" className="size-4" />
@@ -289,51 +418,18 @@ export function CreativeDetail({
         </Button>
       ) : null}
 
-      <form
-        className="flex flex-col gap-2 sm:flex-row sm:items-start"
-        action={(formData) => {
-          startTransition(() => {
-            void renameCreative(formData).then((result) => {
-              if (result?.error) toast(result.error, 'danger')
-              else toast(result?.ok ?? 'Kaydedildi', 'success')
-            })
-          })
-        }}
-      >
-        <input type="hidden" name="id" value={creative.id} />
-        <Textarea
-          name="title"
-          rows={3}
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          className="min-h-[4.5rem] resize-y"
-          maxLength={180}
-          aria-label="Görsel adı"
-        />
-        <Button type="submit" variant="quiet" disabled={pending} className="w-full shrink-0 sm:mt-0 sm:w-auto">
-          Adı kaydet
-        </Button>
-      </form>
-
       <p className="text-[12.5px] text-ink-muted">
         {new Date(creative.createdAt).toLocaleString('tr-TR')} · {creative.format}
         {creative.brandName ? ` · ${creative.brandName}` : ''}
         {creative.provider ? ` · ${creative.provider}` : ''}
         {creative.generationType ? ` · ${creative.generationType}` : ''}
       </p>
-      {creative.brief ? <p className="text-[13px]">{creative.brief}</p> : null}
+      {creative.brief && creative.brief !== creative.title ? (
+        <p className="text-[13px]">{creative.brief}</p>
+      ) : null}
 
       {creative.status === 'ready' && canManage ? (
         <>
-          <Button
-            type="button"
-            variant="accent"
-            className="w-full"
-            onClick={() => setReviseOpen(true)}
-          >
-            <Icon name="sparkles" className="size-4" />
-            AI ile revize et
-          </Button>
           <ReviseModal
             open={reviseOpen}
             pending={pending}
@@ -393,6 +489,7 @@ export function CreativeDetail({
                   })
                 }
               >
+                <Icon name={VARIATION_ICONS[preset.id]} className="size-3.5" />
                 {preset.label}
               </Button>
             ))}
@@ -440,9 +537,7 @@ export function CreativeDetail({
 function QuietLibrary() {
   return (
     <p className="mt-4">
-      <Link href="/icerik" className="text-[13px] font-medium text-accent underline-offset-2 hover:underline">
-        Arka planda devam et → kütüphane
-      </Link>
+      <AccentLink href="/icerik">Kütüphaneye dön</AccentLink>
     </p>
   )
 }
@@ -576,18 +671,9 @@ function DetailImageMenu({
             className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-left text-[13px] font-medium text-ink hover:bg-canvas"
             onClick={() => setOpen(false)}
           >
-            <Icon name="file" className="size-4 text-ink-muted" />
+            <Icon name="download" className="size-4 text-ink-muted" />
             İndir
           </a>
-          <Link
-            href="/icerik/yeni"
-            role="menuitem"
-            className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-left text-[13px] font-medium text-ink hover:bg-canvas"
-            onClick={() => setOpen(false)}
-          >
-            <Icon name="plus" className="size-4 text-ink-muted" />
-            Yeni görsel
-          </Link>
           {canManage ? (
             <button
               type="button"

@@ -27,7 +27,7 @@ function inboxKey(orgId) {
 }
 
 function threadKey(orgId, phone) {
-  return `wb:c2:th:${orgId}:${encodeURIComponent(phone)}`
+  return `wb:c3:th:${orgId}:${encodeURIComponent(phone)}`
 }
 
 function memGet(key) {
@@ -66,6 +66,7 @@ function packMsg(row) {
     row.campaignName ?? null,
     row.wa_message_id ?? null,
     row.clientKey ?? null,
+    row.media_url ?? null,
   ]
 }
 
@@ -85,6 +86,7 @@ function unpackMsg(row) {
     campaignName: row[10],
     wa_message_id: row[11],
     clientKey: row[12] || (row[0] != null ? `log-${row[0]}` : undefined),
+    media_url: row[13] ?? null,
   }
 }
 
@@ -198,7 +200,7 @@ export async function readThreadCache(orgId, phone) {
 export async function writeThreadCache(orgId, phone, payload) {
   const msgs = (payload.msgs ?? []).slice(-THREAD_CAP)
   const packed = {
-    v: 2,
+    v: 3,
     maxId: serialId(payload.maxId),
     msgs: msgs.map(packMsg),
   }

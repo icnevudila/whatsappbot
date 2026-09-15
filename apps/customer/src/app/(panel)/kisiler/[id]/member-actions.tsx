@@ -1,15 +1,17 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Button, EmptyState, Notice } from '@/components/ui'
+import { EmptyState, Notice } from '@/components/ui'
 import { Icon } from '@/components/icon'
 import { WaMark } from '@/components/wa-mark'
 import { useConfirm } from '@/components/confirm-dialog'
 import { useSyncBusy } from '@/components/busy'
 import { useToast } from '@/components/toast'
 import { blacklistPhone } from '../../kara-liste/actions'
+import { waAvatarColor, waAvatarLetters } from '@/lib/wa-avatar'
 import { removeContactsFromList } from '../actions'
 
 export type MemberRow = {
@@ -108,86 +110,84 @@ export function MemberActions({
   }
 
   return (
-    <div className="space-y-3 p-3.5">
-      <div className="flex gap-2">
-        <Button type="button" className="flex-1 sm:flex-none" onClick={toggleAll} disabled={filtered.length === 0 || pending}>
+    <div>
+      <div className="flex items-center gap-2 px-3 py-2">
+        <button type="button" className="wb-wa-text-btn" onClick={toggleAll} disabled={filtered.length === 0 || pending}>
           {allSelected ? 'Seçimi kaldır' : 'Sayfadakileri seç'}
-        </Button>
-        <Button
+        </button>
+        <button
           type="button"
-          variant="danger"
-          className="flex-1 sm:flex-none"
+          className="wb-wa-text-btn is-danger"
           disabled={selected.size === 0 || pending}
           onClick={() =>
             run(() => removeContactsFromList(listId, [...selected]))
           }
         >
           Çıkar ({selected.size})
-        </Button>
+        </button>
       </div>
 
       {error ? <Notice tone="danger">{error}</Notice> : null}
 
       {filtered.length === 0 ? (
-        <p className="rounded-md border border-hairline px-3 py-3 text-[12.5px] text-ink-faint">
+        <p className="px-4 py-6 text-center text-[13px] text-[#667781]">
           Eşleşen üye yok.
         </p>
       ) : (
-      <ul className="divide-y divide-hairline overflow-visible rounded-md border border-hairline">
+      <ul className="wb-inbox-list wb-inbox-list--plain">
         {filtered.map((member) => {
           const title = member.name?.trim() || member.phone_e164
           return (
             <li
               key={member.contact_id}
-              className={`flex items-center gap-2 px-3 py-2.5 ${
-                selected.has(member.contact_id) ? 'bg-accent-soft/50' : 'hover:bg-canvas'
-              }`}
+              className={`wb-wa-group-item${selected.has(member.contact_id) ? ' is-selected' : ''}`}
             >
-              <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5">
+              <label className="wb-wa-row min-w-0 flex-1 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={selected.has(member.contact_id)}
                   onChange={() => toggleOne(member.contact_id)}
-                  className="size-4 shrink-0 accent-[var(--color-accent)]"
+                  className="sr-only"
                 />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13.5px] font-semibold leading-snug text-ink">{title}</p>
-                  <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
+                <span
+                  className="wb-wa-avatar"
+                  style={{ background: waAvatarColor(member.phone_e164) }}
+                  aria-hidden
+                >
+                  {waAvatarLetters(member.name, member.phone_e164)}
+                </span>
+                <span className="wb-wa-row-main">
+                  <span className="wb-wa-row-top">
+                    <span className="wb-wa-name">{title}</span>
                     <WaMark status={member.wa_status} />
-                    {member.name ? (
-                      <span className="truncate font-mono text-[12px] tabular text-ink-muted">
-                        {member.phone_e164}
-                      </span>
-                    ) : (
-                      <span className="truncate text-[12px] text-ink-muted">
-                        {member.wa_status === 'valid'
-                          ? 'WhatsApp’ta var'
-                          : member.wa_status === 'invalid'
-                            ? 'WhatsApp’ta yok'
-                            : 'Kontrol edilmedi'}
-                      </span>
-                    )}
-                  </div>
-                </div>
+                  </span>
+                  <span className="wb-wa-row-bottom">
+                    <span className="wb-wa-preview">
+                      {member.name ? member.phone_e164 : member.wa_status === 'valid' ? 'WhatsApp’ta var' : member.wa_status === 'invalid' ? 'WhatsApp’ta yok' : 'Kontrol edilmedi'}
+                    </span>
+                  </span>
+                </span>
               </label>
-              <MemberMenu
-                phone={member.phone_e164}
-                pending={pending}
-                onBlacklist={() => {
-                  void (async () => {
-                    const ok = await confirm({
-                      title: 'Kara listeye eklensin mi?',
-                      description: 'Bu numaraya bir daha kampanya gitmez.',
-                      confirmLabel: 'Ekle',
-                      cancelLabel: 'Vazgeç',
-                      tone: 'danger',
-                    })
-                    if (!ok) return
-                    run(() => blacklistPhone(member.phone_e164, 'Liste detayından eklendi'))
-                  })()
-                }}
-                onRemove={() => run(() => removeContactsFromList(listId, [member.contact_id]))}
-              />
+              <div className="wb-wa-group-actions">
+                <MemberMenu
+                  phone={member.phone_e164}
+                  pending={pending}
+                  onBlacklist={() => {
+                    void (async () => {
+                      const ok = await confirm({
+                        title: 'Kara listeye eklensin mi?',
+                        description: 'Bu numaraya bir daha kampanya gitmez.',
+                        confirmLabel: 'Ekle',
+                        cancelLabel: 'Vazgeç',
+                        tone: 'danger',
+                      })
+                      if (!ok) return
+                      run(() => blacklistPhone(member.phone_e164, 'Liste detayından eklendi'))
+                    })()
+                  }}
+                  onRemove={() => run(() => removeContactsFromList(listId, [member.contact_id]))}
+                />
+              </div>
             </li>
           )
         })}
@@ -209,12 +209,40 @@ function MemberMenu({
   onRemove: () => void
 }) {
   const [open, setOpen] = useState(false)
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+  const menuPanelRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+
+  useLayoutEffect(() => {
+    if (!open || !buttonRef.current) {
+      setMenuPos(null)
+      return
+    }
+    const place = () => {
+      const rect = buttonRef.current?.getBoundingClientRect()
+      if (!rect) return
+      setMenuPos({
+        top: rect.bottom + 4,
+        right: Math.max(8, window.innerWidth - rect.right),
+      })
+    }
+    place()
+    window.addEventListener('resize', place)
+    window.addEventListener('scroll', place, true)
+    return () => {
+      window.removeEventListener('resize', place)
+      window.removeEventListener('scroll', place, true)
+    }
+  }, [open])
 
   useEffect(() => {
     if (!open) return
     const onDoc = (event: MouseEvent) => {
-      if (event.target instanceof Node && !menuRef.current?.contains(event.target)) setOpen(false)
+      if (!(event.target instanceof Node)) return
+      if (menuRef.current?.contains(event.target)) return
+      if (menuPanelRef.current?.contains(event.target)) return
+      setOpen(false)
     }
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setOpen(false)
@@ -227,61 +255,70 @@ function MemberMenu({
     }
   }, [open])
 
+  const menu =
+    open && menuPos
+      ? createPortal(
+          <div
+            ref={menuPanelRef}
+            role="menu"
+            className="wb-wa-menu wb-wa-menu--fixed"
+            style={{ top: menuPos.top, right: menuPos.right }}
+          >
+            <Link
+              href={`/mesajlar?tel=${encodeURIComponent(phone)}`}
+              role="menuitem"
+              className="wb-wa-menu-item"
+              onClick={() => setOpen(false)}
+            >
+              <Icon name="inbox" className="size-4 text-ink-muted" />
+              Mesaj gönder
+            </Link>
+            <button
+              type="button"
+              role="menuitem"
+              disabled={pending}
+              className="wb-wa-menu-item"
+              onClick={() => {
+                setOpen(false)
+                onBlacklist()
+              }}
+            >
+              <Icon name="shield" className="size-4 text-ink-muted" />
+              Kara liste
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              disabled={pending}
+              className="wb-wa-menu-item is-danger"
+              onClick={() => {
+                setOpen(false)
+                onRemove()
+              }}
+            >
+              <Icon name="close" className="size-4" />
+              Gruptan çıkar
+            </button>
+          </div>,
+          document.body,
+        )
+      : null
+
   return (
     <div className="relative shrink-0" ref={menuRef}>
       <button
+        ref={buttonRef}
         type="button"
         aria-label="Üye işlemleri"
         aria-haspopup="menu"
         aria-expanded={open}
         disabled={pending}
         onClick={() => setOpen((value) => !value)}
-        className="inline-flex size-8 items-center justify-center rounded-full border border-hairline bg-surface text-ink hover:bg-canvas disabled:opacity-50"
+        className="wb-wa-icon-btn"
       >
-        <Icon name="ellipsis" className="size-4" />
+        <Icon name="ellipsis" className="size-5" />
       </button>
-      {open ? (
-        <div
-          role="menu"
-          className="absolute right-0 z-30 mt-1 min-w-[11.5rem] rounded-md border border-hairline bg-surface p-1 shadow-[var(--shadow-md)]"
-        >
-          <Link
-            href={`/mesajlar?tel=${encodeURIComponent(phone)}`}
-            role="menuitem"
-            className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-left text-[13px] font-medium text-ink hover:bg-canvas"
-            onClick={() => setOpen(false)}
-          >
-            <Icon name="inbox" className="size-4 text-ink-muted" />
-            Mesaj gönder
-          </Link>
-          <button
-            type="button"
-            role="menuitem"
-            disabled={pending}
-            className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-left text-[13px] font-medium text-ink hover:bg-canvas disabled:opacity-50"
-            onClick={() => {
-              setOpen(false)
-              onBlacklist()
-            }}
-          >
-            <Icon name="shield" className="size-4 text-ink-muted" />
-            Kara liste
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            disabled={pending}
-            className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-left text-[13px] font-medium text-danger hover:bg-canvas disabled:opacity-50"
-            onClick={() => {
-              setOpen(false)
-              onRemove()
-            }}
-          >
-            <Icon name="close" className="size-4" />
-            Gruptan çıkar
-          </button>
-        </div>
-      ) : null}
+      {menu}
     </div>
   )
 }

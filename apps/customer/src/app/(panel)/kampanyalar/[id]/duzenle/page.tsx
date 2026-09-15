@@ -70,7 +70,7 @@ export default async function EditCampaignPage({
   const campaign = campaignResult.data
 
   return (
-    <>
+    <div className="wb-wa-page">
       <PageHeader
         title="Kampanyayı düzenle"
         description={campaign.name}
@@ -101,6 +101,6 @@ export default async function EditCampaignPage({
           {...data}
         />
       </Suspense>
-    </>
+    </div>
   )
 }

@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation'
-import { AccentLink, PageHeader } from '@/components/ui'
+import Link from 'next/link'
+import { PageHeader } from '@/components/ui'
+import { Icon } from '@/components/icon'
 import { requireActiveOrg, isOrgAdminRole } from '@/lib/org'
 import { listLibraryCreatives } from './actions'
 import { LibraryBoard } from './library-board'
@@ -24,11 +26,16 @@ export default async function CreativeLibraryPage() {
   })
 
   return (
-    <>
+    <div className="wb-wa-page">
       <PageHeader
         title="İçerik kütüphanesi"
         description="Kampanya görselleri üretin, revize edin, tekrar kullanın."
-        action={<AccentLink href="/icerik/yeni">Görsel üret</AccentLink>}
+        action={
+          <Link href="/icerik/yeni" className="wb-wa-text-btn">
+            <Icon name="sparkles" className="size-4" />
+            Görsel üret
+          </Link>
+        }
       />
       <LibraryBoard
         orgId={org.id}
@@ -36,6 +43,6 @@ export default async function CreativeLibraryPage() {
         initialHasMore={first.hasMore}
         canManage={isOrgAdminRole(org.role)}
       />
-    </>
+    </div>
   )
 }

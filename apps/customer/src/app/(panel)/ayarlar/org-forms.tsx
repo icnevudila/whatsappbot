@@ -101,7 +101,7 @@ function EditOrgNameModal({
   return createPortal(
     <div className="wb-modal-root" role="presentation">
       <button type="button" className="wb-modal-backdrop" aria-label="Kapat" onClick={onClose} />
-      <div className="wb-modal-panel" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+      <div className="wb-modal-panel wb-wa-modal" role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 id={titleId} className="wb-modal-title">
@@ -135,7 +135,7 @@ function EditOrgNameModal({
             <Button type="button" onClick={onClose} disabled={pending}>
               Vazgeç
             </Button>
-            <Button type="submit" variant="accent" disabled={pending}>
+            <Button type="submit" variant="accent" className="wb-wa-submit" disabled={pending}>
               {pending ? 'Kaydediliyor…' : 'Kaydet'}
             </Button>
           </div>
@@ -244,7 +244,7 @@ export function AiImageModeForm({
       {state?.ok ? <Notice tone="accent">{state.ok}</Notice> : null}
 
       {canEdit ? (
-        <Button type="submit" variant="accent" disabled={pending}>
+        <Button type="submit" variant="accent" className="wb-wa-submit" disabled={pending}>
           {pending ? 'Kaydediliyor…' : 'Modu Kaydet'}
         </Button>
       ) : null}
@@ -299,7 +299,7 @@ export function WebhookSettingsForm({
       {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
       {state?.ok ? <Notice tone="accent">{state.ok}</Notice> : null}
       {canEdit ? (
-        <Button type="submit" variant="accent" disabled={pending}>
+        <Button type="submit" variant="accent" className="wb-wa-submit" disabled={pending}>
           {pending ? 'Kaydediliyor…' : 'Webhook kaydet'}
         </Button>
       ) : null}
@@ -328,7 +328,7 @@ export function OrgsCard({
           canCreate ? (
             <Link
               href="/ayarlar/isletme/yeni"
-              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] border border-hairline-strong bg-surface px-3.5 text-[14px] font-semibold text-ink hover:bg-surface-raised"
+              className="wb-wa-text-btn"
             >
               <Icon name="plus" className="size-3.5" />
               Yeni işletme
@@ -358,10 +358,10 @@ export function AddMemberButton() {
 
   return (
     <>
-      <Button type="button" onClick={() => setOpen(true)}>
+      <button type="button" className="wb-wa-text-btn" onClick={() => setOpen(true)}>
         <Icon name="plus" className="size-3.5" />
         Üye ekle
-      </Button>
+      </button>
       {open ? <AddMemberModal onClose={() => setOpen(false)} /> : null}
     </>
   )
@@ -408,7 +408,7 @@ function AddMemberModal({ onClose }: { onClose: () => void }) {
   return createPortal(
     <div className="wb-modal-root" role="presentation">
       <button type="button" className="wb-modal-backdrop" aria-label="Kapat" onClick={onClose} />
-      <div className="wb-modal-panel" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+      <div className="wb-modal-panel wb-wa-modal" role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 id={titleId} className="wb-modal-title">
@@ -464,7 +464,7 @@ function AddMemberModal({ onClose }: { onClose: () => void }) {
             <Button type="button" onClick={onClose} disabled={pending}>
               Vazgeç
             </Button>
-            <Button type="submit" variant="accent" disabled={pending}>
+            <Button type="submit" variant="accent" className="wb-wa-submit" disabled={pending}>
               {pending ? 'Ekleniyor…' : 'Üye ekle'}
             </Button>
           </div>

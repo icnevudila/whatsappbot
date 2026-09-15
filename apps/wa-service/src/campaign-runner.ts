@@ -625,6 +625,7 @@ async function sendToTarget(
           phone_e164: target.phone_e164,
           message_type: messageType,
           body: body || null,
+          media_url: campaign.media_url ?? null,
           wa_message_id: message.key?.id ?? null,
           status: 'sent',
         }),

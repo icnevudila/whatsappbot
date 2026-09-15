@@ -63,7 +63,7 @@ export function ProfileForm({
       {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
       {state?.ok ? <Notice tone="accent">{state.ok}</Notice> : null}
 
-      <Button type="submit" variant="accent" disabled={pending}>
+      <Button type="submit" variant="accent" className="wb-wa-submit" disabled={pending}>
         {pending ? 'Kaydediliyor…' : 'Kaydet'}
       </Button>
     </form>

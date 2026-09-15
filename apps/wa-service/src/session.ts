@@ -439,6 +439,7 @@ export class WhatsAppSession {
         accountId: this.accountId,
         message,
         resolveLidPn,
+        sock: this.sock,
       })
     }
   }

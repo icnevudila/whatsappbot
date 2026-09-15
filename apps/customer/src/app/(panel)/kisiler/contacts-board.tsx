@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Button, Input, Notice } from '@/components/ui'
+import { Input, Notice } from '@/components/ui'
 import { WaMark } from '@/components/wa-mark'
 import { useConfirm } from '@/components/confirm-dialog'
 import { useSyncBusy } from '@/components/busy'
 import { useToast } from '@/components/toast'
+import { waAvatarColor, waAvatarLetters } from '@/lib/wa-avatar'
 import {
   addContactsToList,
   deleteContacts,
@@ -116,8 +117,8 @@ export function ContactsBoard({
   }
 
   return (
-    <div className="space-y-3 p-3.5">
-      <div className="flex flex-wrap items-center gap-2">
+    <div>
+      <div className="flex flex-wrap items-center gap-2 px-3 py-2">
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -128,22 +129,22 @@ export function ContactsBoard({
             }
           }}
           placeholder="Ad veya numara ara"
-          className="min-w-[140px] flex-1"
+          className="wb-wa-search min-w-[140px] flex-1"
           type="search"
           autoComplete="off"
         />
-        <Button type="button" onClick={toggleAll} disabled={contacts.length === 0 || pending}>
+        <button type="button" className="wb-wa-text-btn" onClick={toggleAll} disabled={contacts.length === 0 || pending}>
           {allVisibleSelected ? 'Seçimi kaldır' : 'Sayfayı seç'}
-        </Button>
+        </button>
       </div>
 
       {selected.size > 0 ? (
-        <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 rounded-md border border-accent/30 bg-accent-soft/80 px-2.5 py-2 backdrop-blur-sm">
-          <span className="text-[12px] font-semibold text-ink tabular">{selected.size} seçili</span>
+        <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 bg-[#e7f8f2] px-3 py-2">
+          <span className="text-[13px] font-semibold text-[#008069] tabular">{selected.size} seçili</span>
           <select
             value={targetList}
             onChange={(e) => setTargetList(e.target.value)}
-            className="h-9 min-w-[120px] flex-1 rounded-md border border-hairline bg-surface px-2 text-[12.5px]"
+            className="h-9 min-w-[120px] flex-1 rounded-full border-0 bg-white px-3 text-[13px] text-[#111b21]"
             disabled={groups.length === 0 || pending}
             aria-label="Hedef grup"
           >
@@ -157,17 +158,17 @@ export function ContactsBoard({
               ))
             )}
           </select>
-          <Button
+          <button
             type="button"
-            variant="accent"
+            className="wb-wa-text-btn"
             disabled={!targetList || pending}
             onClick={() => run(() => addContactsToList(targetList, [...selected]))}
           >
             Gruba taşı
-          </Button>
-          <Button
+          </button>
+          <button
             type="button"
-            variant="danger"
+            className="wb-wa-text-btn is-danger"
             disabled={pending}
             onClick={() => {
               void (async () => {
@@ -184,51 +185,46 @@ export function ContactsBoard({
             }}
           >
             Sil
-          </Button>
+          </button>
         </div>
       ) : null}
 
       {message ? <Notice tone="danger">{message}</Notice> : null}
 
       {contacts.length === 0 ? (
-        <p className="py-6 text-center text-[13px] text-ink-muted">
+        <p className="px-4 py-6 text-center text-[13px] text-[#667781]">
           {searchQuery ? 'Eşleşen kişi yok.' : 'Numara yok.'}
         </p>
       ) : (
-        <ul
-          className={`divide-y divide-hairline rounded-md border border-hairline ${
-            searching ? 'opacity-60' : ''
-          }`}
-        >
+        <ul className={`wb-inbox-list${searching ? ' opacity-60' : ''}`}>
           {contacts.map((row) => (
-            <li key={row.id}>
+            <li key={row.id} className={selected.has(row.id) ? 'is-selected' : undefined}>
               <button
                 type="button"
                 onClick={() => toggleOne(row.id)}
                 aria-pressed={selected.has(row.id)}
                 aria-label={`${row.name || row.phone_e164} seç`}
-                className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-left ${
-                  selected.has(row.id) ? 'bg-accent-soft/50' : 'hover:bg-canvas'
-                }`}
+                className="wb-wa-row w-full text-left"
               >
-                <input
-                  type="checkbox"
-                  checked={selected.has(row.id)}
-                  readOnly
-                  tabIndex={-1}
-                  className="pointer-events-none size-4 accent-[var(--color-accent)]"
+                <span
+                  className="wb-wa-avatar"
+                  style={{ background: waAvatarColor(row.phone_e164) }}
                   aria-hidden
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-mono text-[12.5px] tabular text-ink">
-                    {row.name || row.phone_e164}
-                  </p>
-                  <p className="mt-0.5 truncate text-[11px] text-ink-faint">
-                    {row.phone_e164}
-                    {row.source ? ` · ${sourceLabel(row.source)}` : ''}
-                  </p>
-                </div>
-                <WaMark status={row.wa_status ?? 'unknown'} />
+                >
+                  {waAvatarLetters(row.name, row.phone_e164)}
+                </span>
+                <span className="wb-wa-row-main">
+                  <span className="wb-wa-row-top">
+                    <span className="wb-wa-name">{row.name || row.phone_e164}</span>
+                    <WaMark status={row.wa_status ?? 'unknown'} />
+                  </span>
+                  <span className="wb-wa-row-bottom">
+                    <span className="wb-wa-preview">
+                      {row.phone_e164}
+                      {row.source ? ` · ${sourceLabel(row.source)}` : ''}
+                    </span>
+                  </span>
+                </span>
               </button>
             </li>
           ))}

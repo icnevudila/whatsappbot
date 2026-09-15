@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { PageHeader } from '@/components/ui'
 import { createT } from '@/lib/i18n'
 import { getDictionary } from '@/lib/i18n/server'
 import { requireActiveOrg } from '@/lib/org'
@@ -19,6 +18,7 @@ function resolveTab(raw: string | undefined): MessagesTab {
 
 function resolveDateRange(raw: string | undefined): MessagesDateRange {
   if (raw === 'bugun' || raw === 'dun' || raw === '7gun') return raw
+  if (raw && /^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw
   return 'tum'
 }
 
@@ -50,7 +50,17 @@ function rangeBounds(range: MessagesDateRange): { from: Date | null; to: Date | 
     const yesterday = shiftYmd(today, -1)
     return { from: startOfIstanbulDay(yesterday), to: startOfIstanbulDay(today) }
   }
-  return { from: startOfIstanbulDay(shiftYmd(today, -6)), to: new Date(startOfIstanbulDay(today).getTime() + 86_400_000) }
+  if (range === '7gun') {
+    return {
+      from: startOfIstanbulDay(shiftYmd(today, -6)),
+      to: new Date(startOfIstanbulDay(today).getTime() + 86_400_000),
+    }
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(range)) {
+    const from = startOfIstanbulDay(range)
+    return { from, to: new Date(from.getTime() + 86_400_000) }
+  }
+  return { from: null, to: null }
 }
 
 export default async function MessagesPage({
@@ -94,12 +104,8 @@ export default async function MessagesPage({
 
   return (
     <div className="wb-inbox">
-      <PageHeader
-        title={t('pages.mesajlarTitle')}
-        description="Tüm WhatsApp mesajlarınız tek panelde. Gelen, giden ve cevapsız sohbetler bir arada."
-      />
-
       <MessagesBoard
+        title={t('pages.mesajlarTitle')}
         orgId={org.id}
         tab={tab}
         dateRange={dateRange}

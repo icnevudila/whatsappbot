@@ -19,7 +19,7 @@ export default async function NewCreativePage() {
   const data = await loadCreativeWizardData()
 
   return (
-    <div className="filo-fade-in mx-auto w-full max-w-3xl space-y-3">
+    <div className="wb-wa-page">
       <PageHeader
         title="Kampanya görseli oluştur"
         description="Marka, ürün ve iletişim bilgilerinizle üretin. İşlem arka planda sürer."

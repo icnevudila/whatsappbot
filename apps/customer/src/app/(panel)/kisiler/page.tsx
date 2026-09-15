@@ -30,6 +30,7 @@ import { RehberSyncButton } from './rehber-sync-modal'
 import { VerifyAllButton, ContactsHeaderMenu } from './verify-all-button'
 import { getSetupProgress } from '@/lib/setup-progress'
 import { SetupBanner } from '../setup-banner'
+import { waAvatarColor, waAvatarLetters } from '@/lib/wa-avatar'
 
 export const metadata: Metadata = { title: 'Kişiler' }
 export const dynamic = 'force-dynamic'
@@ -45,12 +46,7 @@ function SegmentLink({
   children: ReactNode
 }) {
   return (
-    <Link
-      href={href}
-      className={`rounded-[5px] px-3 py-1.5 text-[12.5px] font-semibold ${
-        active ? 'bg-surface text-ink shadow-sm' : 'text-ink-muted'
-      }`}
-    >
+    <Link href={href} className={`wb-wa-chip${active ? ' is-active' : ''}`}>
       {children}
     </Link>
   )
@@ -171,7 +167,7 @@ export default async function ContactsPage({
   const groups = lists.map((list) => ({ id: list.id, name: list.name }))
 
   return (
-    <>
+    <div className="wb-wa-page">
       <PageHeader
         title={t('pages.kisilerTitle')}
         description={`${listTotal} grup · ${total} numara`}
@@ -179,8 +175,8 @@ export default async function ContactsPage({
 
       <SetupBanner progress={setup} />
 
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <div className="inline-flex rounded-md border border-hairline bg-canvas p-0.5">
+      <div className="wb-wa-toolbar">
+        <div className="wb-wa-seg">
           <SegmentLink href="/kisiler" active={view === 'gruplar'}>
             Gruplar
           </SegmentLink>
@@ -188,7 +184,7 @@ export default async function ContactsPage({
             Kişiler
           </SegmentLink>
         </div>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
+        <div className="wb-wa-toolbar-actions">
           <ListRequestButton />
           <AddPersonButton groups={lists.map((list) => ({ id: list.id, name: list.name }))} />
           <NewGroupButton />
@@ -199,10 +195,6 @@ export default async function ContactsPage({
       {view === 'gruplar' ? (
         <>
         <Card>
-          <CardHeader
-            title="Kampanya grupları"
-            subtitle={listTotal === 0 ? 'Önce grup oluştur' : `${listTotal} grup`}
-          />
           {listTotal === 0 ? (
             <EmptyState
               tone="people"
@@ -210,22 +202,28 @@ export default async function ContactsPage({
               description="+ Grup ile Excel yükleyin veya boş açın."
             />
           ) : (
-            <ul className="divide-y divide-hairline">
+            <ul className="wb-inbox-list wb-inbox-list--plain">
               {lists.map((list) => (
-                <li key={list.id} className="px-3.5 py-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <Link
-                      href={`/kisiler/${list.id}`}
-                      className="min-w-0 flex-1 transition-colors hover:text-accent"
+                <li key={list.id} className="wb-wa-group-item">
+                  <Link href={`/kisiler/${list.id}`} className="wb-wa-row min-w-0 flex-1">
+                    <span
+                      className="wb-wa-avatar"
+                      style={{ background: waAvatarColor(list.id) }}
+                      aria-hidden
                     >
-                      <p className="truncate text-[13.5px] font-semibold text-ink">
-                        {list.name}
-                      </p>
-                      <p className="mt-0.5 text-[11.5px] text-ink-muted tabular">
-                        {list.contact_count} numara
-                      </p>
-                    </Link>
-                    <ListActions listId={list.id} compact />
+                      {waAvatarLetters(list.name)}
+                    </span>
+                    <span className="wb-wa-row-main">
+                      <span className="wb-wa-row-top">
+                        <span className="wb-wa-name">{list.name}</span>
+                      </span>
+                      <span className="wb-wa-row-bottom">
+                        <span className="wb-wa-preview">{list.contact_count} kişi</span>
+                      </span>
+                    </span>
+                  </Link>
+                  <div className="wb-wa-group-actions">
+                    <ListActions listId={list.id} compact currentName={list.name} />
                   </div>
                 </li>
               ))}
@@ -233,18 +231,22 @@ export default async function ContactsPage({
           )}
         </Card>
 
-        <Card>
-          <CardHeader
-            title="WhatsApp rehberi"
-            subtitle="Bağlı hattan kişi ve sohbet numaralarını çekin"
-          />
-          <div className="space-y-3 px-3.5 py-3">
-            <p className="text-[13px] leading-relaxed text-ink-muted">
+        <section className="wb-wa-framed" aria-labelledby="rehber-sync-title">
+          <div className="wb-wa-framed-head">
+            <h2 id="rehber-sync-title" className="wb-wa-framed-title">
+              WhatsApp rehberi
+            </h2>
+            <p className="wb-wa-framed-sub">
+              Bağlı hattan kişi ve sohbet numaralarını çekin
+            </p>
+          </div>
+          <div className="wb-wa-framed-body">
+            <p className="wb-wa-framed-copy">
               WhatsApp rehberini içeri aktar.
             </p>
             <RehberSyncButton accounts={rehberAccounts} className="w-full sm:w-auto" />
           </div>
-        </Card>
+        </section>
         </>
       ) : (
         <Card>
@@ -297,6 +299,6 @@ export default async function ContactsPage({
         </Card>
       )}
       </div>
-    </>
+    </div>
   )
 }

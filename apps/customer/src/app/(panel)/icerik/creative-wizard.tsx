@@ -22,12 +22,11 @@ import { AddSocialModal } from './add-social-modal'
 
 const DRAFT_KEY = 'wa.customer.creative-wizard.v1'
 
-type Step = 'start' | 'brief' | 'brand' | 'products' | 'extras' | 'style' | 'summary'
+type Step = 'start' | 'brief' | 'products' | 'extras' | 'style' | 'summary'
 
 const STEPS: { id: Step; label: string }[] = [
   { id: 'start', label: 'Başlangıç' },
   { id: 'brief', label: 'Fikir' },
-  { id: 'brand', label: 'Marka' },
   { id: 'products', label: 'Ürünler' },
   { id: 'extras', label: 'Ekler' },
   { id: 'style', label: 'Stil' },
@@ -148,15 +147,20 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
     }
   }, [draft])
 
-  // 1 kit (veya hiç kit) varsa marka seçim adımına gerek yok — defaultDraft zaten doğru kiti seçiyor.
-  const effectiveSteps = data.kits.length <= 1 ? STEPS.filter((s) => s.id !== 'brand') : STEPS
+  useEffect(() => {
+    if (data.kits.length === 0) return
+    const known = data.kits.some((kit) => kit.id === draft.brandKitId)
+    if (known) return
+    const fallback = data.kits.find((kit) => kit.isDefault)?.id ?? data.kits[0]?.id ?? ''
+    setDraft((current) => ({ ...current, brandKitId: fallback }))
+  }, [data.kits, draft.brandKitId])
 
   const [productsList, setProductsList] = useState<ProductCard[]>(data.products)
   const [socialsList, setSocialsList] = useState<SocialOption[]>(data.socials)
   const [addProductOpen, setAddProductOpen] = useState(false)
   const [addSocialOpen, setAddSocialOpen] = useState(false)
 
-  const stepIndex = effectiveSteps.findIndex((row) => row.id === step)
+  const stepIndex = STEPS.findIndex((row) => row.id === step)
   const selectedKit = data.kits.find((kit) => kit.id === draft.brandKitId)
   const selectedProducts = productsList.filter((product) => draft.productIds.includes(product.id))
   const payload = useMemo(
@@ -171,11 +175,11 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
 
   const go = (next: Step) => setStep(next)
   const nextStep = () => {
-    const next = effectiveSteps[Math.min(effectiveSteps.length - 1, stepIndex + 1)]
+    const next = STEPS[Math.min(STEPS.length - 1, stepIndex + 1)]
     if (next) go(next.id)
   }
   const prevStep = () => {
-    const prev = effectiveSteps[Math.max(0, stepIndex - 1)]
+    const prev = STEPS[Math.max(0, stepIndex - 1)]
     if (prev) go(prev.id)
   }
 
@@ -209,25 +213,32 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
 
   const canContinue =
     step !== 'brief' || draft.brief.trim().length >= 8
+  const currentLabel = STEPS.find((item) => item.id === step)?.label ?? ''
 
   return (
     <>
+      <Card className="wb-wa-wizard overflow-visible">
+        <div className="wb-wa-wizard-steps">
+          <Stepper
+            label="Görsel adımları"
+            steps={STEPS}
+            current={step}
+            onJump={(id) => go(id as Step)}
+            className="wb-wa-steps"
+          />
+          <p className="wb-wa-wizard-step-title">{currentLabel}</p>
+        </div>
+
       <form
         action={formAction}
         onSubmit={(event) => {
           if (step !== 'summary') event.preventDefault()
         }}
-        className="space-y-3"
+        className="flex flex-col"
       >
         <input type="hidden" name="draft" value={payload} />
 
-      <Stepper
-        label="Görsel adımları"
-        steps={effectiveSteps}
-        current={step}
-        onJump={(id) => go(id as Step)}
-      />
-
+      <div className="space-y-3 px-4 py-3 sm:px-5">
       {step === 'start' ? (
         <div className="grid gap-2 sm:grid-cols-2">
           <button
@@ -236,24 +247,20 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
               patch({ origin: 'new', baseCreativeId: '' })
               go('brief')
             }}
-            className={`rounded-[var(--radius-card)] border p-4 text-left shadow-[var(--shadow-card)] ${
-              draft.origin === 'new' ? 'border-accent bg-accent-soft/40' : 'border-hairline bg-surface'
-            }`}
+            className={`wb-wa-choice${draft.origin === 'new' ? ' is-on' : ''}`}
           >
-            <p className="font-bold">Yeni görsel oluştur</p>
-            <p className="mt-1 text-[12.5px] text-ink-muted">Sıfırdan kampanya görseli. Marka ve ürünleriniz bağlanır.</p>
+            <p className="font-bold text-[#111b21]">Yeni görsel oluştur</p>
+            <p className="mt-1 text-[12.5px] text-[#667781]">Sıfırdan kampanya görseli. Marka ve ürünleriniz bağlanır.</p>
           </button>
           <button
             type="button"
             onClick={() => {
               patch({ origin: 'derive' })
             }}
-            className={`rounded-[var(--radius-card)] border p-4 text-left shadow-[var(--shadow-card)] ${
-              draft.origin === 'derive' ? 'border-accent bg-accent-soft/40' : 'border-hairline bg-surface'
-            }`}
+            className={`wb-wa-choice${draft.origin === 'derive' ? ' is-on' : ''}`}
           >
-            <p className="font-bold">Var olandan türet</p>
-            <p className="mt-1 text-[12.5px] text-ink-muted">Kütüphaneden seçin veya dosya yükleyin.</p>
+            <p className="font-bold text-[#111b21]">Var olandan türet</p>
+            <p className="mt-1 text-[12.5px] text-[#667781]">Kütüphaneden seçin veya dosya yükleyin.</p>
           </button>
         </div>
       ) : null}
@@ -288,7 +295,7 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
                     type="button"
                     onClick={() => patch({ baseCreativeId: item.id })}
                     className={`overflow-hidden rounded-md border ${
-                      draft.baseCreativeId === item.id ? 'border-accent ring-1 ring-accent' : 'border-hairline'
+                      draft.baseCreativeId === item.id ? 'border-[#00a884] ring-1 ring-[#00a884]' : 'border-[#e9edef]'
                     }`}
                   >
                     {item.publicUrl ? (
@@ -301,7 +308,7 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
             ) : (
               <p className="text-[12.5px] text-ink-muted">Kütüphanede henüz görsel yok — yükleyebilirsiniz.</p>
             )}
-            <Button type="button" variant="accent" disabled={!draft.baseCreativeId} onClick={() => go('brief')}>
+            <Button type="button" className="wb-wa-submit" disabled={!draft.baseCreativeId} onClick={() => go('brief')}>
               Devam
             </Button>
           </div>
@@ -325,7 +332,7 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
                 <button
                   key={chip}
                   type="button"
-                  className="rounded-full border border-hairline bg-canvas px-2.5 py-1 text-[12px]"
+                  className="wb-wa-chip"
                   onClick={() => {
                     if (!draft.brief.includes(chip)) {
                       patch({ brief: draft.brief ? `${draft.brief.trim()} ${chip}.` : `${chip}. ` })
@@ -340,79 +347,6 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
         </Card>
       ) : null}
 
-      {step === 'brand' ? (
-        <div className="space-y-2">
-          {data.kits.length === 0 ? (
-            <Notice tone="warn">
-              Marka kiti yok. Renkler varsayılan kalır.{' '}
-              <Link href="/ayarlar/marka/yeni" className="underline">
-                Kit ekle
-              </Link>
-            </Notice>
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={() => patch({ brandKitId: '' })}
-                className={`flex w-full items-center gap-3 rounded-[var(--radius-card)] border p-3 text-left ${
-                  !draft.brandKitId ? 'border-accent bg-accent-soft/40' : 'border-hairline bg-surface'
-                }`}
-              >
-                <span className="flex size-12 items-center justify-center rounded-md border border-hairline bg-canvas text-[12px] font-medium text-ink-muted">
-                  Nötr
-                </span>
-                <span className="min-w-0">
-                  <span className="block font-semibold">Marka kiti kullanma</span>
-                  <span className="mt-0.5 block text-[12px] text-ink-muted">
-                    Herhangi bir marka adı veya renk kuralı olmadan tamamen serbest tasarım.
-                  </span>
-                </span>
-              </button>
-              {data.kits.map((kit) => (
-                <button
-                  key={kit.id}
-                  type="button"
-                  onClick={() => patch({ brandKitId: kit.id })}
-                className={`flex w-full items-center gap-3 rounded-[var(--radius-card)] border p-3 text-left ${
-                  draft.brandKitId === kit.id ? 'border-accent bg-accent-soft/40' : 'border-hairline bg-surface'
-                }`}
-              >
-                {kit.logoPreview ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={kit.logoPreview} alt="" className="size-12 rounded-md border border-hairline object-contain bg-canvas" />
-                ) : (
-                  <span className="flex size-12 items-center justify-center rounded-md border border-hairline bg-canvas text-[11px] text-ink-faint">
-                    Logo
-                  </span>
-                )}
-                <span className="min-w-0">
-                  <span className="block font-semibold">{kit.name}</span>
-                  <span className="mt-1 flex gap-1">
-                    {['primary', 'accent', 'secondary'].map((key) => (
-                      <span
-                        key={key}
-                        className="size-4 rounded-full border border-hairline"
-                        style={{ background: kit.colors[key] }}
-                      />
-                    ))}
-                  </span>
-                  {kit.tone ? <span className="mt-1 block truncate text-[12px] text-ink-muted">{kit.tone}</span> : null}
-                </span>
-              </button>
-            ))}
-          </>
-          )}
-          <label className="flex items-center gap-2 text-[13px]">
-            <input
-              type="checkbox"
-              checked={draft.useLogo}
-              onChange={(event) => patch({ useLogo: event.target.checked })}
-            />
-            Logoyu görsele ekle
-          </label>
-        </div>
-      ) : null}
-
       {step === 'products' ? (
         <div className="space-y-2">
           <div className="flex flex-wrap gap-1.5">
@@ -420,7 +354,7 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
               <button
                 key={product.id}
                 type="button"
-                className="rounded-full border border-hairline bg-surface px-3 py-1 text-[12.5px]"
+                className="wb-wa-chip"
                 onClick={() => addProduct(product.id)}
               >
                 + {product.name}
@@ -429,7 +363,7 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
             <button
               type="button"
               onClick={() => setAddProductOpen(true)}
-              className="rounded-full border border-dashed border-accent/60 bg-accent-soft/30 px-3 py-1 text-[12.5px] font-medium text-accent hover:bg-accent-soft/60"
+              className="rounded-full border border-dashed border-[#00a884]/60 bg-[#e7f8f2] px-3 py-1 text-[12.5px] font-medium text-[#008069] hover:bg-[#d9f5eb]"
             >
               + Ürün ekle
             </button>
@@ -439,7 +373,7 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
                 <button
                   type="button"
                   onClick={() => setAddProductOpen(true)}
-                  className="underline font-semibold cursor-pointer text-ink hover:text-accent"
+                  className="underline font-semibold cursor-pointer text-ink hover:text-[#008069]"
                 >
                   Modal ile ürün ekle
                 </button>
@@ -470,7 +404,7 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
                               })
                             }
                             className={`overflow-hidden rounded-md border ${
-                              extra.imageUrl === image.url ? 'border-accent' : 'border-hairline'
+                              extra.imageUrl === image.url ? 'border-[#00a884]' : 'border-[#e9edef]'
                             }`}
                           >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -620,8 +554,7 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
                     {data.canManage ? (
                       <Button
                         type="button"
-                        variant="accent"
-                        className="h-8"
+                        className="wb-wa-submit h-8"
                         onClick={() => setAddSocialOpen(true)}
                       >
                         <Icon name="plus" className="size-3.5" />
@@ -689,7 +622,7 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
                 <button
                   key={label}
                   type="button"
-                  className="rounded-full bg-accent-soft px-2.5 py-1 text-[12px] text-accent"
+                  className="rounded-full bg-[#e7f8f2] px-2.5 py-1 text-[12px] text-[#008069]"
                   onClick={() => patch({ labels: draft.labels.filter((item) => item !== label) })}
                 >
                   {label} ×
@@ -736,15 +669,96 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
                   key={row.id}
                   type="button"
                   onClick={() => patch({ formatId: row.id })}
-                  className={`rounded-md border p-3 text-left ${
-                    draft.formatId === row.id ? 'border-accent bg-accent-soft/40' : 'border-hairline bg-surface'
-                  }`}
+                  className={`wb-wa-choice${draft.formatId === row.id ? ' is-on' : ''}`}
                 >
-                  <span className="block text-[13.5px] font-semibold">{row.label}</span>
-                  <span className="text-[12px] text-ink-muted">{row.hint}</span>
+                  <span className="block text-[13.5px] font-semibold text-[#111b21]">{row.label}</span>
+                  <span className="text-[12px] text-[#667781]">{row.hint}</span>
                 </button>
               ))}
             </div>
+          </Field>
+          <Field
+            label="Marka kiti"
+            hint={
+              data.kits.length === 0
+                ? 'Kit yoksa renkler varsayılan kalır.'
+                : data.kits.length === 1
+                  ? 'Tek kitiniz üretimde kullanılacak.'
+                  : 'Varsayılan kit seçili; başka kit seçebilirsiniz.'
+            }
+          >
+            {data.kits.length === 0 ? (
+              <Notice tone="warn">
+                Marka kiti yok. Renkler varsayılan kalır.{' '}
+                <Link href="/ayarlar/marka/yeni" className="underline">
+                  Kit ekle
+                </Link>
+              </Notice>
+            ) : (
+              <div className="space-y-2">
+                {data.kits.map((kit) => {
+                  const selected = draft.brandKitId === kit.id
+                  const locked = data.kits.length === 1
+                  return (
+                    <button
+                      key={kit.id}
+                      type="button"
+                      disabled={locked}
+                      aria-pressed={selected}
+                      onClick={() => {
+                        if (!locked) patch({ brandKitId: kit.id })
+                      }}
+                      className={`wb-wa-choice flex w-full items-center gap-3 text-left${
+                        selected ? ' is-on' : ''
+                      }${locked ? ' is-fixed' : ''}`}
+                    >
+                      {kit.logoPreview ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={kit.logoPreview}
+                          alt=""
+                          className="size-12 rounded-md border border-hairline bg-canvas object-contain"
+                        />
+                      ) : (
+                        <span className="flex size-12 items-center justify-center rounded-md border border-hairline bg-canvas text-[11px] text-ink-faint">
+                          Logo
+                        </span>
+                      )}
+                      <span className="min-w-0">
+                        <span className="block font-semibold">
+                          {kit.name}
+                          {kit.isDefault ? (
+                            <span className="ml-1.5 text-[11px] font-medium text-ink-muted">varsayılan</span>
+                          ) : null}
+                        </span>
+                        <span className="mt-1 flex gap-1">
+                          {['primary', 'accent', 'secondary'].map((key) => (
+                            <span
+                              key={key}
+                              className="size-4 rounded-full border border-hairline"
+                              style={{ background: kit.colors[key] }}
+                            />
+                          ))}
+                        </span>
+                        {kit.tone ? (
+                          <span className="mt-1 block truncate text-[12px] text-ink-muted">{kit.tone}</span>
+                        ) : null}
+                      </span>
+                    </button>
+                  )
+                })}
+                {selectedKit?.logoPreview ? (
+                  <label className="flex items-center gap-2 text-[13px]">
+                    <input
+                      type="checkbox"
+                      checked={draft.useLogo}
+                      onChange={(event) => patch({ useLogo: event.target.checked })}
+                    />
+                    Logoyu görsele ekle
+                  </label>
+                ) : null}
+              </div>
+            )}
           </Field>
           <Field label="Görsel stili">
             <div className="flex flex-wrap gap-1.5">
@@ -753,9 +767,7 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
                   key={row.id}
                   type="button"
                   onClick={() => patch({ style: row.id })}
-                  className={`rounded-full px-3 py-1 text-[12.5px] ${
-                    draft.style === row.id ? 'bg-accent text-white' : 'border border-hairline bg-surface'
-                  }`}
+                  className={`wb-wa-chip${draft.style === row.id ? ' is-active' : ''}`}
                 >
                   {row.label}
                 </button>
@@ -769,9 +781,7 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
                   key={row.id}
                   type="button"
                   onClick={() => patch({ textDensity: row.id })}
-                  className={`rounded-full px-3 py-1 text-[12.5px] ${
-                    draft.textDensity === row.id ? 'bg-accent text-white' : 'border border-hairline bg-surface'
-                  }`}
+                  className={`wb-wa-chip${draft.textDensity === row.id ? ' is-active' : ''}`}
                 >
                   {row.label}
                 </button>
@@ -816,7 +826,7 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
               </p>
             ) : null}
             <p className="text-ink-muted">{draft.brief}</p>
-            <Button type="submit" variant="accent" disabled={pending || !data.canManage || !data.imageAiEnabled}>
+            <Button type="submit" className="wb-wa-submit" disabled={pending || !data.canManage || !data.imageAiEnabled}>
               {pending ? 'Kuyruğa alınıyor…' : 'Görseli oluştur'}
             </Button>
             {!data.canManage ? <Notice tone="warn">Üretim için yönetici gerekir.</Notice> : null}
@@ -828,14 +838,15 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
       {!data.imageAiEnabled ? (
         <Notice tone="warn">Görsel üretimi kapalı. Sunucuda sağlayıcı anahtarı yok.</Notice>
       ) : null}
+      </div>
 
       {step !== 'start' && step !== 'summary' ? (
-        <div className="flex justify-between gap-2">
-          <Button type="button" variant="quiet" onClick={prevStep}>
+        <div className="wb-wa-wizard-foot sticky bottom-0 z-[1] flex justify-between gap-2 px-4 py-3 sm:px-5">
+          <Button type="button" className="wb-wa-text-btn" onClick={prevStep}>
             <Icon name="back" className="size-4" />
             Geri
           </Button>
-          <Button type="button" variant="accent" disabled={!canContinue} onClick={nextStep}>
+          <Button type="button" className="wb-wa-submit" disabled={!canContinue} onClick={nextStep}>
             İleri
             <Icon name="outbound" className="size-4" />
           </Button>
@@ -843,12 +854,15 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
       ) : null}
 
       {step === 'summary' ? (
-        <Button type="button" variant="quiet" onClick={prevStep}>
-          <Icon name="back" className="size-4" />
-          Geri
-        </Button>
+        <div className="wb-wa-wizard-foot sticky bottom-0 z-[1] px-4 py-3 sm:px-5">
+          <Button type="button" className="wb-wa-text-btn" onClick={prevStep}>
+            <Icon name="back" className="size-4" />
+            Geri
+          </Button>
+        </div>
       ) : null}
     </form>
+      </Card>
 
     <AddProductModal
       open={addProductOpen}

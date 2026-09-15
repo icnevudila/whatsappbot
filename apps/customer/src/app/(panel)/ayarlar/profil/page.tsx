@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { Button, Card, CardHeader } from '@/components/ui'
+import { Card, CardHeader } from '@/components/ui'
+import { Icon } from '@/components/icon'
 import { requireActiveOrg } from '@/lib/org'
 import { signOut } from '@/app/giris/actions'
 import { ProfileForm } from '../profile-form'
@@ -40,16 +41,17 @@ export default async function ProfileSettingsPage() {
 
       <Card>
         <CardHeader title="Oturum" />
-        <div className="flex flex-wrap items-center justify-between gap-2 p-3.5">
-          <p className="text-[12.5px] text-ink-muted">
-            Çıksan da hatların bağlı kalır, gönderimler durmaz.
-          </p>
-          <form action={signOut}>
-            <Button type="submit" variant="danger">
-              Çıkış yap
-            </Button>
-          </form>
-        </div>
+        <form action={signOut}>
+          <button type="submit" className="wb-wa-set-row is-logout">
+            <span className="wb-wa-set-icon" aria-hidden>
+              <Icon name="logout" className="size-5" />
+            </span>
+            <span className="wb-wa-set-copy">
+              <span className="wb-wa-set-title">Çıkış</span>
+              <span className="wb-wa-set-desc">Hatların bağlı kalır, gönderimler durmaz.</span>
+            </span>
+          </button>
+        </form>
       </Card>
     </SettingsPageFrame>
   )

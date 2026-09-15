@@ -4,6 +4,8 @@ import { AccentLink, Notice, PageHeader, StatusPill } from '@/components/ui'
 import { requireActiveOrg } from '@/lib/org'
 import { CampaignLive, type CampaignView } from './campaign-live'
 import { TargetFeed, type TargetView } from './target-feed'
+import { ScheduledStatusPill } from '@/components/schedule-status'
+import { formatRemainingTr, formatScheduleAt } from '@/lib/schedule-remaining'
 
 export const dynamic = 'force-dynamic'
 
@@ -141,7 +143,7 @@ export default async function CampaignDetailPage({
   const startLabel = campaign.started_at
     ? new Date(campaign.started_at).toLocaleString('tr-TR')
     : campaign.scheduled_at
-      ? `Plan: ${new Date(campaign.scheduled_at).toLocaleString('tr-TR')}`
+      ? `Plan: ${formatScheduleAt(campaign.scheduled_at)} · ${formatRemainingTr(campaign.scheduled_at)}`
       : 'Henüz başlamadı'
   const recipientLabel =
     campaign.total_targets > 0 ? `${campaign.total_targets.toLocaleString('tr-TR')} alıcı` : 'Alıcı kuyruğu henüz yok'
@@ -156,7 +158,11 @@ export default async function CampaignDetailPage({
         backLabel="Kampanyalar"
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <StatusPill status={campaign.status} />
+            {campaign.status === 'scheduled' && campaign.scheduled_at ? (
+              <ScheduledStatusPill at={campaign.scheduled_at} />
+            ) : (
+              <StatusPill status={campaign.status} />
+            )}
             {campaign.status !== 'completed' && campaign.status !== 'failed' ? (
               <AccentLink href={`/kampanyalar/${id}/duzenle`}>Düzenle</AccentLink>
             ) : null}
@@ -198,7 +204,7 @@ export default async function CampaignDetailPage({
         }}
       />
 
-      <div id="paylasilanlar" className="mt-2.5">
+      <div id="paylasilanlar" className="mt-2.5 mb-8">
         <TargetFeed
           campaignId={id}
           initial={(targetsResult.data ?? []) as TargetView[]}

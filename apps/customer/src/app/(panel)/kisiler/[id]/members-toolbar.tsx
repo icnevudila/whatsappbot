@@ -5,11 +5,13 @@ import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { CardHeader, Input } from '@/components/ui'
 import { Icon } from '@/components/icon'
+import { ListActions } from '../list-actions'
 import { AddToGroupForm } from './add-to-group-form'
 import { MemberActions, type MemberRow } from './member-actions'
 
 export function MembersPanel({
   listId,
+  listName,
   members,
   totalCount,
   statusFilter,
@@ -20,6 +22,7 @@ export function MembersPanel({
   subtitle,
 }: {
   listId: string
+  listName: string
   members: MemberRow[]
   totalCount: number
   statusFilter: string
@@ -36,6 +39,7 @@ export function MembersPanel({
     <>
       <MembersPanelHeader
         listId={listId}
+        listName={listName}
         statusFilter={statusFilter}
         memberTotal={memberTotal}
         validCount={validCount}
@@ -54,6 +58,7 @@ export function MembersPanel({
 
 export function MembersPanelHeader({
   listId,
+  listName,
   statusFilter,
   memberTotal,
   validCount,
@@ -66,6 +71,7 @@ export function MembersPanelHeader({
   onSearchOpenChange,
 }: {
   listId: string
+  listName: string
   statusFilter: string
   memberTotal: number
   validCount: number
@@ -77,33 +83,15 @@ export function MembersPanelHeader({
   onQueryChange: (value: string) => void
   onSearchOpenChange: (value: boolean | ((current: boolean) => boolean)) => void
 }) {
-  const menuRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   const filtered = statusFilter !== 'tum'
   const [filterOpen, setFilterOpen] = useState(filtered)
-  const [menuOpen, setMenuOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
 
   useEffect(() => {
     if (!searchOpen) return
     searchRef.current?.focus()
   }, [searchOpen])
-
-  useEffect(() => {
-    if (!menuOpen) return
-    const onDoc = (event: MouseEvent | TouchEvent) => {
-      if (event.target instanceof Node && !menuRef.current?.contains(event.target)) setMenuOpen(false)
-    }
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setMenuOpen(false)
-    }
-    document.addEventListener('mousedown', onDoc)
-    window.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onDoc)
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [menuOpen])
 
   const hrefFor = (status: string) =>
     status === 'tum' ? `/kisiler/${listId}` : `/kisiler/${listId}?durum=${status}`
@@ -122,13 +110,12 @@ export function MembersPanelHeader({
               title="Filtre"
               onClick={() => {
                 setFilterOpen((value) => !value)
-                setMenuOpen(false)
               }}
-              className="relative inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-hairline bg-surface text-ink hover:bg-canvas"
+              className="wb-wa-icon-btn relative"
             >
               <Icon name="filter" className="size-4" />
               {filtered ? (
-                <span className="absolute right-1 top-1 size-1.5 rounded-full bg-accent" aria-hidden />
+          <span className="absolute right-1 top-1 size-1.5 rounded-full bg-[#25d366]" aria-hidden />
               ) : null}
             </button>
             <button
@@ -138,104 +125,68 @@ export function MembersPanelHeader({
               title="Ara"
               onClick={() => {
                 onSearchOpenChange((value) => !value)
-                setMenuOpen(false)
               }}
-              className="relative inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-hairline bg-surface text-ink hover:bg-canvas"
+              className="wb-wa-icon-btn relative"
             >
               <Icon name="search" className="size-4" />
               {query.trim() ? (
-                <span className="absolute right-1 top-1 size-1.5 rounded-full bg-accent" aria-hidden />
+          <span className="absolute right-1 top-1 size-1.5 rounded-full bg-[#25d366]" aria-hidden />
               ) : null}
             </button>
-            <div className="relative shrink-0" ref={menuRef}>
-              <button
-                type="button"
-                aria-label="Diğer"
-                aria-haspopup="menu"
-                aria-expanded={menuOpen}
-                title="Diğer"
-                onClick={() => {
-                  setMenuOpen((value) => !value)
-                  setFilterOpen(false)
-                  onSearchOpenChange(false)
-                }}
-                className="inline-flex size-8 items-center justify-center rounded-full border border-hairline bg-surface text-ink hover:bg-canvas"
-              >
-                <Icon name="ellipsis" className="size-4" />
-              </button>
-              {menuOpen ? (
-                <div
-                  role="menu"
-                  className="absolute right-0 z-30 mt-1 min-w-[13rem] rounded-md border border-hairline bg-surface p-1 shadow-[var(--shadow-md)]"
+            <ListActions
+              compact
+              listId={listId}
+              currentName={listName}
+              menuLabel="Diğer"
+              menuExtra={(close) => (
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="wb-wa-menu-item"
+                  onClick={() => {
+                    close()
+                    setAddOpen(true)
+                  }}
                 >
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-left text-[13px] font-medium text-ink hover:bg-canvas"
-                    onClick={() => {
-                      setMenuOpen(false)
-                      setAddOpen(true)
-                    }}
-                  >
-                    <Icon name="plus" className="size-4 text-ink-muted" />
-                    Gruba numara ekle
-                  </button>
-                </div>
-              ) : null}
-            </div>
+                  <Icon name="plus" className="size-4 text-ink-muted" />
+                  Gruba numara ekle
+                </button>
+              )}
+            />
           </div>
         }
       />
       {filterOpen || searchOpen ? (
-        <div className="border-b border-hairline bg-canvas/40 px-3 py-2">
+        <div className="px-3 py-2">
           {filterOpen ? (
-            <div className={`flex flex-wrap items-center gap-1.5${searchOpen ? ' mb-2' : ''}`}>
+            <div className={`wb-wa-seg${searchOpen ? ' mb-2' : ''}`}>
             <Link
               href={hrefFor('tum')}
-              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-medium transition-colors ${
-                statusFilter === 'tum'
-                  ? 'bg-ink text-canvas font-bold'
-                  : 'border border-hairline bg-surface text-ink-muted hover:text-ink'
-              }`}
+              className={`wb-wa-chip${statusFilter === 'tum' ? ' is-active' : ''}`}
             >
               Tümü ({memberTotal})
             </Link>
             <Link
               href={hrefFor('var')}
-              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-medium transition-colors ${
-                statusFilter === 'var'
-                  ? 'border border-ok bg-ok text-white font-bold'
-                  : 'border border-ok/35 bg-ok-soft text-ok hover:bg-ok/15'
-              }`}
+              className={`wb-wa-chip${statusFilter === 'var' ? ' is-active' : ''}`}
               title="WhatsApp hesabı olan numaralar"
             >
-              <span aria-hidden>✓</span>
-              <span>WhatsApp'ta Var ({validCount})</span>
+              WhatsApp’ta ({validCount})
             </Link>
             <Link
               href={hrefFor('yok')}
-              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-medium transition-colors ${
-                statusFilter === 'yok'
-                  ? 'border border-danger bg-danger text-white font-bold'
-                  : 'border border-danger/35 bg-danger/10 text-danger hover:bg-danger/20'
-              }`}
+              className={`wb-wa-chip${statusFilter === 'yok' ? ' is-active' : ''}`}
               title="WhatsApp hesabı olmayan numaralar"
             >
-              <span aria-hidden>×</span>
-              <span>WhatsApp'ta Yok ({invalidCount})</span>
+              Yok ({invalidCount})
             </Link>
             {unknownCount > 0 ? (
               <Link
                 href={hrefFor('bekleyen')}
-                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-medium transition-colors ${
-                  statusFilter === 'bekleyen'
-                    ? 'bg-ink-muted text-canvas font-bold'
-                    : 'border border-hairline bg-surface text-ink-muted hover:text-ink'
-                }`}
+                className={`wb-wa-chip${statusFilter === 'bekleyen' ? ' is-active' : ''}`}
                 title="Henüz kontrol edilmemiş numaralar"
               >
-                <span aria-hidden>?</span>
-                <span>Doğrulanmamış ({unknownCount})</span>
+                Bekleyen ({unknownCount})
               </Link>
             ) : null}
             </div>
@@ -249,7 +200,7 @@ export function MembersPanelHeader({
                 placeholder="Ad veya numara ara"
                 value={query}
                 onChange={(event) => onQueryChange(event.target.value)}
-                className={query ? 'pr-9' : undefined}
+                className={`wb-wa-search${query ? ' pr-9' : ''}`}
               />
               {query ? (
                 <button
@@ -306,7 +257,7 @@ function AddToGroupModal({ listId, onClose }: { listId: string; onClose: () => v
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="wb-modal-panel wb-modal-panel--wide"
+        className="wb-modal-panel wb-modal-panel--wide wb-wa-modal"
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -319,7 +270,7 @@ function AddToGroupModal({ listId, onClose }: { listId: string; onClose: () => v
             type="button"
             aria-label="Kapat"
             onClick={onClose}
-            className="inline-flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-ink-muted hover:bg-canvas hover:text-ink"
+            className="wb-wa-icon-btn"
           >
             ✕
           </button>

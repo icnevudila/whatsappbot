@@ -8,6 +8,7 @@ import {
   FilterChip,
   Input,
   Notice,
+  PageHeader,
   SplitPane,
   Toolbar,
 } from '@/components/ui'
@@ -28,6 +29,7 @@ export type ChatMessage = {
   remote_jid: string | null
   message_type: string
   body: string | null
+  media_url?: string | null
   status: string
   created_at: string
   campaign_id: string | null
@@ -64,14 +66,7 @@ export function threadDisplayName(item: {
 }
 
 export type MessagesTab = 'tum' | 'giden'
-export type MessagesDateRange = 'tum' | 'bugun' | 'dun' | '7gun'
-
-const timeFormat = new Intl.DateTimeFormat('tr-TR', {
-  day: 'numeric',
-  month: 'short',
-  hour: '2-digit',
-  minute: '2-digit',
-})
+export type MessagesDateRange = 'tum' | 'bugun' | 'dun' | '7gun' | string
 
 const bubbleTime = new Intl.DateTimeFormat('tr-TR', {
   hour: '2-digit',
@@ -151,9 +146,75 @@ function phoneMark(phone: string) {
   return phone.replace(/@lid$/, '').slice(0, 2).toUpperCase() || '?'
 }
 
+const AVATAR_COLORS = ['#00a884', '#53bdeb', '#e17076', '#7bc862', '#a586e8', '#f5c26b', '#00a5f4', '#ff8a65']
+
+function avatarColor(phone: string) {
+  let hash = 0
+  for (let i = 0; i < phone.length; i += 1) hash = (hash * 31 + phone.charCodeAt(i)) >>> 0
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length]
+}
+
+function avatarLetters(name: string | null, phone: string) {
+  if (name) {
+    const parts = name.trim().split(/\s+/).filter(Boolean)
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toLocaleUpperCase('tr-TR')
+    return name.slice(0, 2).toLocaleUpperCase('tr-TR')
+  }
+  return phoneMark(phone)
+}
+
+function formatInboxTime(iso: string) {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  const now = new Date()
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const startThat = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  const diffDays = Math.round((startToday.getTime() - startThat.getTime()) / 86_400_000)
+  if (diffDays === 0) {
+    return new Intl.DateTimeFormat('tr-TR', { hour: '2-digit', minute: '2-digit' }).format(date)
+  }
+  if (diffDays === 1) return 'Dün'
+  if (diffDays > 1 && diffDays < 7) {
+    return new Intl.DateTimeFormat('tr-TR', { weekday: 'long' }).format(date)
+  }
+  return new Intl.DateTimeFormat('tr-TR', {
+    day: 'numeric',
+    month: 'numeric',
+    year: '2-digit',
+  }).format(date)
+}
+
 function previewLine(item: ThreadPreview): string {
-  const body = item.lastBody ?? `(${item.messageType})`
-  return item.lastDirection === 'out' ? `Siz: ${body}` : body
+  const typeLabel: Record<string, string> = {
+    sticker: 'Sticker',
+    image: 'Fotoğraf',
+    video: 'Video',
+    audio: 'Ses',
+    document: 'Belge',
+  }
+  if (!item.lastBody) return typeLabel[item.messageType] ?? `(${item.messageType})`
+  return item.lastBody
+}
+
+function previewIcon(item: ThreadPreview): string | null {
+  if (item.lastBody) return null
+  const icons: Record<string, string> = {
+    image: '📷',
+    sticker: '🎨',
+    video: '🎥',
+    audio: '🎵',
+    document: '📄',
+  }
+  return icons[item.messageType] ?? null
+}
+
+function formatPhoneDisplay(phone: string): string {
+  if (phone.startsWith('+90') && phone.length === 13) {
+    const n = phone.slice(3)
+    return `0${n.slice(0, 3)} ${n.slice(3, 6)} ${n.slice(6, 8)} ${n.slice(8)}`
+  }
+  if (phone.endsWith('@lid')) return phone.replace(/@lid$/, '')
+  return phone
 }
 
 export function MessagesBoard({
@@ -166,6 +227,7 @@ export function MessagesBoard({
   selectedPhone,
   thread,
   accountLabels,
+  title = 'Mesajlar',
 }: {
   orgId: string
   tab: MessagesTab
@@ -176,6 +238,7 @@ export function MessagesBoard({
   selectedPhone: string | null
   thread: ChatMessage[]
   accountLabels: Record<string, string>
+  title?: string
 }) {
   const toast = useToast()
   const confirm = useConfirm()
@@ -183,6 +246,8 @@ export function MessagesBoard({
   const [labels, setLabels] = useState(accountLabels)
   const [activePhone, setActivePhone] = useState(selectedPhone)
   const [liveThread, setLiveThread] = useState(thread)
+  const [threadPhone, setThreadPhone] = useState(selectedPhone)
+  const [threadLoading, setThreadLoading] = useState(false)
   const [pending, startTransition] = useTransition()
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -209,10 +274,24 @@ export function MessagesBoard({
   }, [accountLabels])
 
   useEffect(() => {
+    if (activePhoneRef.current && selectedPhone !== activePhoneRef.current) {
+      return
+    }
     setActivePhone(selectedPhone)
     setLiveThread(thread)
-    if (selectedPhone) threadMemo.current.set(selectedPhone, thread)
+    setThreadLoading(false)
+    if (selectedPhone) {
+      setThreadPhone(selectedPhone)
+      threadMemo.current.set(selectedPhone, thread)
+    } else {
+      setThreadPhone(null)
+    }
   }, [selectedPhone, thread])
+
+  useEffect(() => {
+    document.body.classList.add('wb-inbox-open')
+    return () => document.body.classList.remove('wb-inbox-open')
+  }, [])
 
   useEffect(() => {
     document.body.classList.toggle('wb-chat-open', Boolean(activePhone))
@@ -297,16 +376,29 @@ export function MessagesBoard({
     const gen = ++openGen.current
     setActivePhone(phone)
     const cached = threadMemo.current.get(phone)
-    if (cached) setLiveThread(cached)
+    if (cached) {
+      setLiveThread(cached)
+      setThreadPhone(phone)
+      setThreadLoading(false)
+    } else {
+      setLiveThread([])
+      setThreadPhone(phone)
+      setThreadLoading(true)
+    }
     window.history.pushState({ tel: phone }, '', hrefFor({ tel: phone, tab, date: dateRange }))
     const rows = cached ?? (await (prefetchThread(phone) ?? Promise.resolve([])))
     if (gen !== openGen.current) return
-    if (rows) setLiveThread(rows)
+    setLiveThread(rows)
+    setThreadPhone(phone)
+    setThreadLoading(false)
   }
 
   const closeChat = () => {
     openGen.current += 1
     setActivePhone(null)
+    setThreadPhone(null)
+    setLiveThread([])
+    setThreadLoading(false)
     window.history.pushState({}, '', hrefFor({ tab, date: dateRange }))
   }
 
@@ -316,15 +408,26 @@ export function MessagesBoard({
       setActivePhone(tel)
       if (!tel) {
         setLiveThread([])
+        setThreadPhone(null)
+        setThreadLoading(false)
         return
       }
       const cached = threadMemo.current.get(tel)
       if (cached) {
         setLiveThread(cached)
+        setThreadPhone(tel)
+        setThreadLoading(false)
         return
       }
+      setLiveThread([])
+      setThreadPhone(tel)
+      setThreadLoading(true)
       void prefetchThread(tel)?.then((rows) => {
-        if (telFromPath() === tel) setLiveThread(rows)
+        if (telFromPath() === tel) {
+          setLiveThread(rows)
+          setThreadPhone(tel)
+          setThreadLoading(false)
+        }
       })
     }
     window.addEventListener('popstate', onPop)
@@ -448,16 +551,81 @@ export function MessagesBoard({
           }
 
   return (
-    <SplitPane
-      listPaneClassName={activePhone ? 'is-hidden-mobile' : undefined}
-      detailPaneClassName={activePhone ? undefined : 'is-hidden-mobile'}
-      list={
-        <div className="flex min-h-0 flex-1 flex-col">
-          <CardHeader
-            title="Sohbetler"
-            subtitle={`${list.length} kişi`}
-            action={
-              <div className="flex flex-wrap items-center justify-end gap-1">
+    <>
+      <div className="wb-inbox-chrome">
+        <PageHeader
+          title={title}
+          action={
+            <div className="flex shrink-0 items-center">
+              <button
+                type="button"
+                aria-label="Filtre"
+                aria-expanded={timeOpen}
+                title="Filtre"
+                onClick={() => {
+                  setTimeOpen((value) => !value)
+                  setSearchOpen(false)
+                  setMenuOpen(false)
+                }}
+                className="wb-wa-icon-btn relative"
+              >
+                <Icon name="tune" className="size-5" />
+                {dateRange !== 'tum' || tab !== 'tum' ? (
+                  <span className="wb-wa-icon-dot" aria-hidden />
+                ) : null}
+              </button>
+              <button
+                type="button"
+                aria-label="Ara"
+                aria-expanded={searchOpen}
+                title="Ara"
+                onClick={() => {
+                  setSearchOpen((value) => !value)
+                  setTimeOpen(false)
+                  setMenuOpen(false)
+                }}
+                className="wb-wa-icon-btn relative"
+              >
+                <Icon name="search" className="size-5" />
+                {search.trim() ? <span className="wb-wa-icon-dot" aria-hidden /> : null}
+              </button>
+              <div className="relative shrink-0" ref={menuRef}>
+                <button
+                  type="button"
+                  aria-label="Diğer"
+                  aria-haspopup="menu"
+                  aria-expanded={menuOpen}
+                  title="Diğer"
+                  onClick={() => {
+                    setMenuOpen((value) => !value)
+                    setTimeOpen(false)
+                    setSearchOpen(false)
+                  }}
+                  className="wb-wa-icon-btn"
+                >
+                  <Icon name="ellipsis" className="size-5" />
+                </button>
+                {menuOpen ? (
+                  <div role="menu" className="wb-wa-menu">
+                    <Link
+                      href="/ayarlar/engellenenler"
+                      role="menuitem"
+                      className="wb-wa-menu-item"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      <Icon name="shield" className="size-4 text-ink-muted" />
+                      Engellenenler
+                    </Link>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          }
+        />
+        {timeOpen || searchOpen ? (
+          <div className="wb-inbox-tools">
+            {timeOpen ? (
+              <Toolbar>
                 <FilterChip href={hrefFor({ tel: activePhone, tab: 'tum', date: dateRange })} active={tab === 'tum'}>
                   Tümü ({allCount})
                 </FilterChip>
@@ -467,237 +635,139 @@ export function MessagesBoard({
                 >
                   Cevapsız ({outboundCount})
                 </FilterChip>
-                <button
-                  type="button"
-                  aria-label="Zaman filtresi"
-                  aria-expanded={timeOpen}
-                  title="Zaman filtresi"
-                  onClick={() => {
-                    setTimeOpen((value) => !value)
-                    setSearchOpen(false)
-                    setMenuOpen(false)
-                  }}
-                  className="relative inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-hairline bg-surface text-ink hover:bg-canvas"
-                >
-                  <Icon name="clock" className="size-4" />
-                  {dateRange !== 'tum' ? (
-                    <span className="absolute right-1 top-1 size-1.5 rounded-full bg-accent" aria-hidden />
-                  ) : null}
-                </button>
-                <button
-                  type="button"
-                  aria-label="Ara"
-                  aria-expanded={searchOpen}
-                  title="Ara"
-                  onClick={() => {
-                    setSearchOpen((value) => !value)
-                    setTimeOpen(false)
-                    setMenuOpen(false)
-                  }}
-                  className="relative inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-hairline bg-surface text-ink hover:bg-canvas"
-                >
-                  <Icon name="search" className="size-4" />
-                  {search.trim() ? (
-                    <span className="absolute right-1 top-1 size-1.5 rounded-full bg-accent" aria-hidden />
-                  ) : null}
-                </button>
-                <div className="relative shrink-0" ref={menuRef}>
+                {(
+                  [
+                    ['tum', 'Tüm günler'],
+                    ['bugun', 'Bugün'],
+                    ['dun', 'Dün'],
+                    ['7gun', 'Son 7 gün'],
+                  ] as const
+                ).map(([id, label]) => (
+                  <FilterChip
+                    key={id}
+                    href={hrefFor({ tel: activePhone, tab, date: id })}
+                    active={dateRange === id}
+                  >
+                    {label}
+                  </FilterChip>
+                ))}
+              </Toolbar>
+            ) : null}
+            {searchOpen ? (
+              <div className="relative">
+                <Input
+                  ref={searchRef}
+                  aria-label="Sohbetlerde ara"
+                  type="text"
+                  placeholder="İsim, numara veya mesaj ara…"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  className={`wb-wa-search${search ? ' pr-9' : ''}`}
+                />
+                {search ? (
                   <button
                     type="button"
-                    aria-label="Diğer"
-                    aria-haspopup="menu"
-                    aria-expanded={menuOpen}
-                    title="Diğer"
+                    aria-label="Aramayı temizle"
+                    title="Temizle"
                     onClick={() => {
-                      setMenuOpen((value) => !value)
-                      setTimeOpen(false)
-                      setSearchOpen(false)
+                      setSearch('')
+                      searchRef.current?.focus()
                     }}
-                    className="inline-flex size-8 items-center justify-center rounded-full border border-hairline bg-surface text-ink hover:bg-canvas"
+                    className="absolute right-1.5 top-1/2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-full text-ink-muted hover:bg-surface hover:text-ink"
                   >
-                    <Icon name="ellipsis" className="size-4" />
+                    <Icon name="close" className="size-3.5" />
                   </button>
-                  {menuOpen ? (
-                    <div
-                      role="menu"
-                      className="absolute right-0 z-30 mt-1 min-w-[12.5rem] rounded-md border border-hairline bg-surface p-1 shadow-[var(--shadow-md)]"
-                    >
-                      <Link
-                        href="/ayarlar/engellenenler"
-                        role="menuitem"
-                        className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-left text-[13px] font-medium text-ink hover:bg-canvas"
-                        onClick={() => setMenuOpen(false)}
-                      >
-                        <Icon name="shield" className="size-4 text-ink-muted" />
-                        Engellenenler
-                      </Link>
-                    </div>
-                  ) : null}
-                </div>
+                ) : null}
               </div>
-            }
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    <div className="wb-inbox-body">
+    <SplitPane
+      listPaneClassName={activePhone ? 'is-hidden-mobile' : undefined}
+      detailPaneClassName={activePhone ? undefined : 'is-hidden-mobile'}
+      list={
+        <div className="flex min-h-0 flex-1 flex-col">
+        {visibleList.length === 0 ? (
+          <EmptyState
+            tone="inbox"
+            title={search ? 'Sohbet bulunamadı' : emptyCopy.title}
+            description={search ? 'Başka bir numara veya kelimeyle arayın.' : emptyCopy.description}
           />
-          {timeOpen || searchOpen ? (
-            <div className="border-b border-hairline px-3 py-2">
-              {timeOpen ? (
-                <Toolbar className={searchOpen ? 'mb-2' : '!mb-0'}>
-                  {(
-                    [
-                      ['tum', 'Tümü'],
-                      ['bugun', 'Bugün'],
-                      ['dun', 'Dün'],
-                      ['7gun', 'Son 7 gün'],
-                    ] as const
-                  ).map(([id, label]) => (
-                    <FilterChip
-                      key={id}
-                      href={hrefFor({ tel: activePhone, tab, date: id })}
-                      active={dateRange === id}
-                    >
-                      {label}
-                    </FilterChip>
-                  ))}
-                </Toolbar>
-              ) : null}
-              {searchOpen ? (
-                <div className="relative">
-                  <Input
-                    ref={searchRef}
-                    aria-label="Sohbetlerde ara"
-                    type="text"
-                    placeholder="İsim, numara veya mesaj ara…"
-                    value={search}
-                    onChange={(event) => setSearch(event.target.value)}
-                    className={search ? 'pr-9' : undefined}
-                  />
-                  {search ? (
-                    <button
-                      type="button"
-                      aria-label="Aramayı temizle"
-                      title="Temizle"
-                      onClick={() => {
-                        setSearch('')
-                        searchRef.current?.focus()
-                      }}
-                      className="absolute right-1.5 top-1/2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-full text-ink-muted hover:bg-surface hover:text-ink"
-                    >
-                      <Icon name="close" className="size-3.5" />
-                    </button>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-          {visibleList.length === 0 ? (
-            <EmptyState
-              tone="inbox"
-              title={search ? 'Sohbet bulunamadı' : emptyCopy.title}
-              description={search ? 'Başka bir numara veya kelimeyle arayın.' : emptyCopy.description}
-            />
-          ) : (
-            <ul className="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-1.5">
-              {visibleList.map((item, index) => {
-                const active = item.phone === activePhone
-                const displayName = threadDisplayName(item)
-                return (
-                  <li
-                    key={item.phone}
-                    className={`wb-row-enter${flashPhone === item.phone ? ' wb-row-flash' : ''}`}
-                    style={{ animationDelay: `${Math.min(index, 10) * 24}ms` }}
+        ) : (
+          <ul className="wb-inbox-list">
+            {visibleList.map((item, index) => {
+              const active = item.phone === activePhone
+              const displayName = threadDisplayName(item)
+              const unread = item.lastDirection === 'in'
+              const title =
+                displayName ||
+                (item.missingPhone
+                  ? item.phone.replace(/@lid$/, '')
+                  : formatPhoneDisplay(item.phone))
+              const mediaIcon = previewIcon(item)
+              return (
+                <li
+                  key={item.phone}
+                  className={`wb-row-enter${active ? ' is-selected' : ''}${flashPhone === item.phone ? ' wb-row-flash' : ''}`}
+                  style={{ animationDelay: `${Math.min(index, 10) * 24}ms` }}
+                >
+                  <a
+                    href={hrefFor({ tel: item.phone, tab, date: dateRange })}
+                    onPointerDown={() => {
+                      void prefetchThread(item.phone)
+                    }}
+                    onClick={(event) => {
+                      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+                        return
+                      }
+                      event.preventDefault()
+                      void openChat(item.phone)
+                    }}
+                    className={`wb-wa-row${active ? ' is-active' : ''}${unread ? ' is-unread' : ''}`}
                   >
-                    <a
-                      href={hrefFor({ tel: item.phone, tab, date: dateRange })}
-                      onPointerDown={() => {
-                        void prefetchThread(item.phone)
-                      }}
-                      onClick={(event) => {
-                        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-                          return
-                        }
-                        event.preventDefault()
-                        void openChat(item.phone)
-                      }}
-                      className={`wb-list-row block rounded-[var(--radius-sm)] px-3.5 py-2.5 transition-colors hover:bg-surface-raised ${
-                        active
-                          ? 'border border-accent/25 bg-accent-soft shadow-[inset_3px_0_0_var(--color-accent)]'
-                          : 'border border-transparent'
-                      }`}
+                    <span
+                      className="wb-wa-avatar"
+                      style={{ background: avatarColor(item.phone) }}
+                      aria-hidden
                     >
-                      <div className="flex items-start gap-2.5">
-                        <span
-                          className={`mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border font-mono text-[11px] font-semibold tabular ${
-                            item.lastDirection === 'out'
-                              ? 'border-accent/25 bg-accent-soft text-accent-dim'
-                              : item.isReply
-                                ? 'border-accent/25 bg-accent-soft text-accent-dim'
-                                : 'border-ok/30 bg-ok-soft text-ok-dim'
-                          }`}
-                          aria-hidden
-                        >
-                          {phoneMark(item.phone)}
+                      {avatarLetters(displayName, item.phone)}
+                    </span>
+                    <span className="wb-wa-row-main">
+                      <span className="wb-wa-row-top">
+                        <span className="wb-wa-name">{title}</span>
+                        <span className={`wb-wa-time${unread ? ' is-unread' : ''}`}>
+                          {formatInboxTime(item.lastAt)}
                         </span>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-baseline justify-between gap-2">
-                            <p className="truncate text-[13px] font-medium">
-                              {displayName ? (
-                                <>
-                                  <span>{displayName}</span>
-                                  <span className="ml-1.5 font-mono text-[12px] font-normal tabular text-ink-muted">
-                                    {item.missingPhone
-                                      ? item.phone.replace(/@lid$/, '')
-                                      : item.phone}
-                                  </span>
-                                </>
-                              ) : (
-                                <span className="font-mono tabular">
-                                  {item.missingPhone
-                                    ? item.phone.replace(/@lid$/, '')
-                                    : item.phone}
-                                </span>
-                              )}
-                            </p>
-                            <span className="shrink-0 text-[11px] text-ink-faint">
-                              {timeFormat.format(new Date(item.lastAt))}
+                      </span>
+                      <span className="wb-wa-row-bottom">
+                        <span className="wb-wa-preview">
+                          {item.lastDirection === 'out' ? (
+                            <span className="wb-wa-ticks" aria-hidden>
+                              ✓✓
                             </span>
-                          </div>
-                          <p className="mt-0.5 truncate text-[12.5px] text-ink-muted">
-                            {previewLine(item)}
-                          </p>
-                          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11.5px] text-ink-faint">
-                            {item.accountLabel ? <span>{item.accountLabel}</span> : null}
-                            {item.missingPhone ? (
-                              <span className="rounded-sm border border-hairline bg-surface-raised px-1.5 py-px text-[10.5px]">
-                                numara yok
-                              </span>
-                            ) : null}
-                            {item.lastDirection === 'out' ? (
-                              <span className="rounded-sm border border-accent/30 bg-accent-soft px-1.5 py-px text-[10.5px] font-semibold text-accent">
-                                giden
-                              </span>
-                            ) : (
-                              <span className="rounded-sm border border-ok/30 bg-ok-soft px-1.5 py-px text-[10.5px] font-semibold text-ok-dim">
-                                gelen
-                              </span>
-                            )}
-                            {item.isReply ? (
-                              <span className="rounded-sm border border-accent/30 bg-accent-soft px-1.5 py-px text-[10.5px] font-semibold text-accent">
-                                yanıt
-                              </span>
-                            ) : null}
-                            {item.outboundOnly ? (
-                              <span className="rounded-sm border border-hairline bg-surface-raised px-1.5 py-px text-[10.5px]">
-                                bekliyor
-                              </span>
-                            ) : null}
-                          </div>
-                        </div>
-                      </div>
-                    </a>
+                          ) : null}
+                          {mediaIcon ? (
+                            <span className="wb-wa-preview-icon" aria-hidden>
+                              {mediaIcon}
+                            </span>
+                          ) : null}
+                          {previewLine(item)}
+                        </span>
+                        {item.accountLabel ? (
+                          <span className="wb-wa-hat">{item.accountLabel}</span>
+                        ) : unread ? (
+                          <span className="wb-wa-unread-dot" aria-label="Okunmamış" />
+                        ) : null}
+                      </span>
+                    </span>
+                  </a>
                   </li>
                 )
               })}
             </ul>
-          )}
+        )}
         </div>
       }
       detail={
@@ -716,8 +786,12 @@ export function MessagesBoard({
                     >
                       <Icon name="back" className="size-4" />
                     </button>
-                    <span className="wb-chat-avatar" aria-hidden>
-                      {phoneMark(activePhone)}
+                    <span
+                      className="wb-chat-avatar"
+                      style={{ background: avatarColor(activePhone) }}
+                      aria-hidden
+                    >
+                      {avatarLetters(threadDisplayName(selectedPreview ?? {}), activePhone)}
                     </span>
                   </>
                 }
@@ -755,15 +829,12 @@ export function MessagesBoard({
                         <Icon name="ellipsis" className="size-4" />
                       </button>
                       {threadMenuOpen ? (
-                        <div
-                          role="menu"
-                          className="absolute right-0 z-30 mt-1 min-w-[12.5rem] rounded-md border border-hairline bg-surface p-1 shadow-[var(--shadow-md)]"
-                        >
+                        <div role="menu" className="wb-wa-menu">
                           <button
                             type="button"
                             role="menuitem"
                             disabled={pending}
-                            className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-left text-[13px] font-medium text-ink hover:bg-canvas disabled:opacity-50"
+                            className="wb-wa-menu-item"
                             onClick={() => {
                               setThreadMenuOpen(false)
                               block()
@@ -786,7 +857,18 @@ export function MessagesBoard({
                 </div>
               )}
 
-              {liveThread.length === 0 ? (
+              {threadLoading || threadPhone !== activePhone ? (
+                <div className="wb-chat-thread" role="status" aria-busy="true" aria-live="polite">
+                  <p className="wb-chat-loading">
+                    <span className="wb-chat-loading-dots" aria-hidden>
+                      <span />
+                      <span />
+                      <span />
+                    </span>
+                    Mesajlar yükleniyor…
+                  </p>
+                </div>
+              ) : liveThread.length === 0 ? (
                 <div className="wb-chat-thread">
                   <p className="wb-chat-empty">
                     {dateRange === 'tum'
@@ -802,16 +884,31 @@ export function MessagesBoard({
                       row.account_id && labels[row.account_id]
                         ? labels[row.account_id]
                         : null
+                    const personName = threadDisplayName(selectedPreview ?? {})
                     const caption = row.campaign_id
                       ? ['Kampanya', row.campaignName, hat].filter(Boolean).join(' · ')
-                      : hat && !outgoing
-                        ? hat
+                      : !outgoing
+                        ? personName
                         : null
                     const pendingSend =
                       outgoing &&
                       (row.status === 'pending' || row.status === 'queued' || row.status === 'sending')
                     const failedSend = outgoing && (row.status === 'failed' || row.status === 'skipped')
                     const ticks = tickMark(row.status)
+                    const mediaUrl = typeof row.media_url === 'string' && row.media_url.trim() ? row.media_url.trim() : null
+                    const typeFallback: Record<string, string> = {
+                      image: 'Fotoğraf',
+                      sticker: 'Sticker',
+                      video: 'Video',
+                      audio: 'Ses',
+                      document: 'Belge',
+                    }
+                    const bodyText =
+                      row.body && row.body !== '(görsel)'
+                        ? row.body
+                        : mediaUrl
+                          ? null
+                          : row.body ?? typeFallback[row.message_type] ?? `(${row.message_type})`
                     return (
                       <div
                         key={row.clientKey ?? `log-${row.id}`}
@@ -821,11 +918,25 @@ export function MessagesBoard({
                           <div
                             className={`wb-chat-bubble ${
                               outgoing ? 'wb-chat-bubble--out' : 'wb-chat-bubble--in'
-                            }`}
+                            }${mediaUrl ? ' has-media' : ''}`}
                           >
                             {caption ? <p className="wb-chat-bubble-caption">{caption}</p> : null}
+                            {mediaUrl ? (
+                              row.message_type === 'video' ? (
+                                <video
+                                  src={mediaUrl}
+                                  className="wb-chat-media"
+                                  controls
+                                  playsInline
+                                  preload="metadata"
+                                />
+                              ) : (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={mediaUrl} alt="" className="wb-chat-media" loading="lazy" />
+                              )
+                            ) : null}
                             <p className="wb-chat-bubble-body">
-                              {row.body ?? `(${row.message_type})`}
+                              {bodyText}
                               <span className="wb-chat-bubble-meta">
                                 <time dateTime={row.created_at}>
                                   {bubbleTime.format(new Date(row.created_at))}
@@ -933,5 +1044,7 @@ export function MessagesBoard({
         </div>
       }
     />
+    </div>
+    </>
   )
 }

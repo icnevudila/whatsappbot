@@ -1,7 +1,7 @@
 ﻿import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Button, Card, CardHeader, Notice, PageHeader } from '@/components/ui'
+import { Notice, PageHeader } from '@/components/ui'
 import { Icon } from '@/components/icon'
 import { Wordmark } from '@/components/brand'
 import { requireActiveOrg, listUserOrgs } from '@/lib/org'
@@ -11,6 +11,8 @@ import { OrgSwitcher } from '../org-switcher'
 import { SETTINGS_SECTIONS } from './sections'
 
 export const metadata: Metadata = { title: 'Ayarlar' }
+
+const GROUPS = ['Hesap', 'Gizlilik', 'İş', 'Diğer']
 
 export default async function SettingsHubPage({
   searchParams,
@@ -40,7 +42,7 @@ export default async function SettingsHubPage({
         : undefined
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-3">
+    <div className="wb-wa-page wb-wa-settings">
       <PageHeader title="Ayarlar" description="Bölüm seçin" />
 
       {billing === 'ok' ? (
@@ -57,48 +59,61 @@ export default async function SettingsHubPage({
         </Notice>
       ) : null}
 
-      <Card>
-        <div className="p-3.5">
-          <OrgSwitcher orgs={orgs} activeOrgId={org.id} compact />
+      <section className="wb-wa-set-group">
+        <p className="wb-wa-set-label">İşletme</p>
+        <div className="wb-wa-set-card">
+          <OrgSwitcher orgs={orgs} activeOrgId={org.id} variant="settings" />
         </div>
-      </Card>
+      </section>
 
-      <div className="grid gap-2 sm:grid-cols-2">
-        {SETTINGS_SECTIONS.map((section) => (
-          <Link
-            key={section.href}
-            href={section.href}
-            prefetch
-            className="wb-card-lift flex items-start gap-3 rounded-[var(--radius-card)] border border-hairline bg-surface p-4 shadow-[var(--shadow-card)] transition-colors hover:border-accent/35 hover:bg-accent-soft/30"
-          >
-            <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-md border border-hairline bg-canvas text-ink-muted">
-              <Icon name={section.icon} className="size-4" />
-            </span>
-            <span className="min-w-0">
-              <span className="block text-[14.5px] font-bold text-ink">{section.title}</span>
-              <span className="mt-0.5 block text-[12.5px] text-ink-muted">{section.description}</span>
-            </span>
-          </Link>
-        ))}
-      </div>
+      {GROUPS.map((group) => {
+        const items = SETTINGS_SECTIONS.filter((section) => section.group === group)
+        if (items.length === 0) return null
+        return (
+          <section key={group} className="wb-wa-set-group">
+            <p className="wb-wa-set-label">{group}</p>
+            <div className="wb-wa-set-card">
+              {items.map((section) => (
+                <Link key={section.href} href={section.href} prefetch className="wb-wa-set-row">
+                  <span className="wb-wa-set-icon" style={{ background: section.color }} aria-hidden>
+                    <Icon name={section.icon} className="size-5" />
+                  </span>
+                  <span className="wb-wa-set-copy">
+                    <span className="wb-wa-set-title">{section.title}</span>
+                    <span className="wb-wa-set-desc">{section.description}</span>
+                  </span>
+                  <span className="wb-wa-set-chevron" aria-hidden>
+                    ›
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )
+      })}
 
-      <Card>
-        <CardHeader title="Hesap" subtitle={email ?? undefined} />
-        <div className="flex flex-wrap items-center justify-between gap-2 p-3.5">
-          <p className="text-[12.5px] text-ink-muted">
-            Çıksan da hatların bağlı kalır, gönderimler durmaz.
-          </p>
+      <section className="wb-wa-set-group">
+        <p className="wb-wa-set-label">Oturum</p>
+        <div className="wb-wa-set-card">
           <form action={signOut}>
-            <Button type="submit" variant="danger">
-              Çıkış
-            </Button>
+            <button type="submit" className="wb-wa-set-row is-logout">
+              <span className="wb-wa-set-icon" aria-hidden>
+                <Icon name="logout" className="size-5" />
+              </span>
+              <span className="wb-wa-set-copy">
+                <span className="wb-wa-set-title">Çıkış</span>
+                <span className="wb-wa-set-desc">
+                  {email ? `${email} · ` : ''}Hatların bağlı kalır, gönderimler durmaz.
+                </span>
+              </span>
+            </button>
           </form>
         </div>
-      </Card>
+      </section>
 
-      <div className="flex justify-center pb-1 pt-4 text-ink-faint">
+      <footer className="wb-wa-set-foot">
         <Wordmark />
-      </div>
+      </footer>
     </div>
   )
 }

@@ -1,10 +1,11 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { AccentLink, Badge, Card, EmptyState } from '@/components/ui'
+import { EmptyState } from '@/components/ui'
 import { requireActiveOrg, isOrgAdminRole } from '@/lib/org'
 import { SettingsPageFrame } from '../settings-shell'
 import { DeleteBrandKitButton } from './delete-button'
+import { waAvatarColor, waAvatarLetters } from '@/lib/wa-avatar'
 
 export const metadata: Metadata = { title: 'Marka kitleri' }
 export const dynamic = 'force-dynamic'
@@ -36,38 +37,55 @@ export default async function BrandKitsPage() {
       wide
       title="Marka kitleri"
       description="Kampanya görselleri ve metin tonu için kitler."
-      action={canManage ? <AccentLink href="/ayarlar/marka/yeni">Kit ekle</AccentLink> : undefined}
+      action={
+        canManage ? (
+          <Link href="/ayarlar/marka/yeni" className="wb-wa-text-btn">
+            Kit ekle
+          </Link>
+        ) : undefined
+      }
     >
       {kits.length === 0 ? (
-        <Card>
-          <EmptyState
-            tone="generic"
-            title="Henüz marka kiti yok"
-            description="Renk, logo ve yazım tonunu kaydedin. Kampanya AI’sı bunları kullanır."
-            action={canManage ? <AccentLink href="/ayarlar/marka/yeni">İlk kiti oluştur</AccentLink> : undefined}
-          />
-        </Card>
+        <EmptyState
+          tone="generic"
+          title="Henüz marka kiti yok"
+          description="Renk, logo ve yazım tonunu kaydedin. Kampanya AI’sı bunları kullanır."
+          action={
+            canManage ? (
+              <Link href="/ayarlar/marka/yeni" className="wb-wa-text-btn">
+                İlk kiti oluştur
+              </Link>
+            ) : undefined
+          }
+        />
       ) : (
-        <ul className="divide-y divide-hairline rounded-[var(--radius-card)] border border-hairline bg-surface">
+        <ul className="wb-inbox-list">
           {kits.map((kit) => (
-            <li key={kit.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-              <div className="min-w-0">
-                <Link
-                  href={`/ayarlar/marka/${kit.id}`}
-                  className="font-semibold text-ink underline-offset-2 hover:underline"
-                >
-                  {kit.name}
+            <li key={kit.id}>
+              <div className="flex items-center">
+                <Link href={`/ayarlar/marka/${kit.id}`} className="wb-wa-row min-w-0 flex-1">
+                  <span
+                    className="wb-wa-avatar"
+                    style={{ background: waAvatarColor(kit.id) }}
+                    aria-hidden
+                  >
+                    {waAvatarLetters(kit.name)}
+                  </span>
+                  <span className="wb-wa-row-main">
+                    <span className="wb-wa-row-top">
+                      <span className="wb-wa-name">{kit.name}</span>
+                      {kit.is_default ? <span className="wb-wa-time">Varsayılan</span> : null}
+                    </span>
+                    <span className="wb-wa-row-bottom">
+                      <span className="wb-wa-preview">{kit.tone || 'Ton yazılmamış'}</span>
+                    </span>
+                  </span>
                 </Link>
-                <p className="mt-0.5 line-clamp-1 text-[12.5px] text-ink-muted">
-                  {kit.tone || 'Ton yazılmamış'}
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {kit.is_default ? <Badge tone="accent">Varsayılan</Badge> : null}
-                <AccentLink href={`/ayarlar/marka/${kit.id}`} className="h-8 text-[12.5px]">
-                  Görüntüle
-                </AccentLink>
-                {canManage ? <DeleteBrandKitButton id={kit.id} name={kit.name} /> : null}
+                {canManage ? (
+                  <div className="pr-1">
+                    <DeleteBrandKitButton id={kit.id} name={kit.name} />
+                  </div>
+                ) : null}
               </div>
             </li>
           ))}

@@ -3,7 +3,6 @@
 import { useRouter } from 'next/navigation'
 import { useTransition } from 'react'
 import { useConfirm } from '@/components/confirm-dialog'
-import { Button } from '@/components/ui'
 import { deleteBrandKit } from './actions'
 
 export function DeleteBrandKitButton({ id, name }: { id: string; name: string }) {
@@ -12,9 +11,9 @@ export function DeleteBrandKitButton({ id, name }: { id: string; name: string })
   const [pending, startTransition] = useTransition()
 
   return (
-    <Button
+    <button
       type="button"
-      variant="danger"
+      className="wb-wa-text-btn is-danger"
       disabled={pending}
       onClick={() => {
         void (async () => {
@@ -36,6 +35,6 @@ export function DeleteBrandKitButton({ id, name }: { id: string; name: string })
       }}
     >
       {pending ? 'Siliniyor…' : 'Sil'}
-    </Button>
+    </button>
   )
 }

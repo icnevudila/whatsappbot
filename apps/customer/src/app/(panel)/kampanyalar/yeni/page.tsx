@@ -30,7 +30,7 @@ export default async function NewCampaignPage({
   const initialStep = raw ? parseWizardStep(raw) : gorselRaw?.trim() ? 'gorsel' : 'kampanya'
 
   return (
-    <>
+    <div className="wb-wa-page">
       <PageHeader
         title="Yeni kampanya"
         description="Adım adım hazırlayın, sonra taslak, plan veya gönderim seçin."
@@ -46,6 +46,6 @@ export default async function NewCampaignPage({
           {...data}
         />
       </Suspense>
-    </>
+    </div>
   )
 }

@@ -75,8 +75,8 @@ export default async function CustomerLayout({ children }: { children: React.Rea
             </div>
           ) : null}
 
-          <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-3 py-4 md:px-5 md:py-5">
-            <div className="mx-auto flex w-full max-w-[960px] min-h-0 flex-1 flex-col">{children}</div>
+          <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
+            <div className="wb-main-inner mx-auto flex w-full min-h-0 flex-1 flex-col">{children}</div>
           </main>
           <div className="wb-tabbar-spacer" aria-hidden="true" />
         </div>

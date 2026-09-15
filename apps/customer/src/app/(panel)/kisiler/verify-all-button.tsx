@@ -7,7 +7,6 @@ import { useSyncBusy } from '@/components/busy'
 import { Icon } from '@/components/icon'
 import { useConfirm } from '@/components/confirm-dialog'
 import { useToast } from '@/components/toast'
-import { WhatsAppGlyph } from '@/components/wa-mark'
 import { waitForJob } from '@/lib/wait-for-job'
 import { deleteContactsBySource, verifyAllContacts } from './actions'
 
@@ -106,27 +105,24 @@ export function ContactsHeaderMenu({
         aria-expanded={open}
         disabled={busy}
         onClick={() => setOpen((value) => !value)}
-        className="inline-flex size-8 items-center justify-center rounded-full border border-hairline bg-surface text-ink hover:bg-canvas disabled:opacity-50"
+        className="wb-wa-icon-btn"
       >
-        <Icon name="ellipsis" className="size-4" />
+        <Icon name="ellipsis" className="size-5" />
       </button>
       {open ? (
-        <div
-          role="menu"
-          className="absolute right-0 z-30 mt-1 min-w-[13.5rem] rounded-md border border-hairline bg-surface p-1 shadow-[var(--shadow-md)]"
-        >
+        <div role="menu" className="wb-wa-menu">
           <button
             type="button"
             role="menuitem"
             disabled={pending || disabled}
             title="Bağlı hat gerekir; kontrol edilmemiş ve bayat numaralar ✓ / × ile işaretlenir"
-            className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-sm)] bg-ok px-2.5 py-2 text-[13px] font-semibold text-white hover:bg-ok-dim disabled:opacity-50"
+            className="wb-wa-menu-item"
             onClick={() => {
               setOpen(false)
               run()
             }}
           >
-            <WhatsAppGlyph />
+            <Icon name="check" className="size-4 text-ink-muted" />
             {pending ? 'Doğrulanıyor…' : 'WhatsApp doğrula'}
           </button>
           {whatsappCount > 0 ? (
@@ -134,7 +130,7 @@ export function ContactsHeaderMenu({
               type="button"
               role="menuitem"
               disabled={busy}
-              className="mt-0.5 flex w-full items-center rounded px-2.5 py-2 text-left text-[13px] font-medium text-danger hover:bg-canvas disabled:opacity-50"
+              className="wb-wa-menu-item is-danger"
               onClick={() => {
                 setOpen(false)
                 void (async () => {
@@ -157,6 +153,7 @@ export function ContactsHeaderMenu({
                 })()
               }}
             >
+              <Icon name="trash" className="size-4" />
               {deleting ? 'Siliniyor…' : `WhatsApp kişilerini sil (${whatsappCount.toLocaleString('tr-TR')})`}
             </button>
           ) : null}
@@ -218,68 +215,46 @@ export function VerifyAllButton({
         aria-expanded={open}
         title="Filtre"
         onClick={() => setOpen((value) => !value)}
-        className="relative inline-flex size-8 items-center justify-center rounded-full border border-hairline bg-surface text-ink hover:bg-canvas"
+        className="wb-wa-icon-btn relative"
       >
-        <Icon name="filter" className="size-4" />
+        <Icon name="filter" className="size-5" />
         {filtered ? (
-          <span className="absolute right-1 top-1 size-1.5 rounded-full bg-accent" aria-hidden />
+          <span className="wb-wa-icon-dot" aria-hidden />
         ) : null}
       </button>
       {open ? (
-        <div
-          role="menu"
-          className="absolute right-0 z-30 mt-1 flex w-[min(18rem,calc(100vw-2rem))] flex-col gap-1 rounded-md border border-hairline bg-surface p-2 shadow-[var(--shadow-md)]"
-        >
+        <div role="menu" className="wb-wa-menu">
           <Link
             href={filterHref('tum')}
             role="menuitem"
-            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-medium transition-colors ${
-              currentStatus === 'tum'
-                ? 'bg-ink text-canvas'
-                : 'border border-hairline bg-surface text-ink-muted hover:text-ink'
-            }`}
+            className={`wb-wa-menu-item${currentStatus === 'tum' ? ' font-semibold' : ''}`}
           >
             Tümü ({total})
           </Link>
           <Link
             href={filterHref('var')}
             role="menuitem"
-            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-medium transition-colors ${
-              currentStatus === 'var'
-                ? 'border border-ok bg-ok text-white font-bold'
-                : 'border border-ok/35 bg-ok-soft text-ok hover:bg-ok/15'
-            }`}
+            className={`wb-wa-menu-item${currentStatus === 'var' ? ' font-semibold' : ''}`}
             title="WhatsApp hesabı olan numaralar"
           >
-            <span aria-hidden>✓</span>
-            <span>WhatsApp'ta Var ({validCount})</span>
+            WhatsApp’ta ({validCount})
           </Link>
           <Link
             href={filterHref('yok')}
             role="menuitem"
-            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-medium transition-colors ${
-              currentStatus === 'yok'
-                ? 'border border-danger bg-danger text-white font-bold'
-                : 'border border-danger/35 bg-danger/10 text-danger hover:bg-danger/20'
-            }`}
+            className={`wb-wa-menu-item${currentStatus === 'yok' ? ' font-semibold' : ''}`}
             title="WhatsApp hesabı olmayan numaralar"
           >
-            <span aria-hidden>×</span>
-            <span>WhatsApp'ta Yok ({invalidCount})</span>
+            Yok ({invalidCount})
           </Link>
           {unknownCount > 0 ? (
             <Link
               href={filterHref('bekleyen')}
               role="menuitem"
-              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-medium transition-colors ${
-                currentStatus === 'bekleyen'
-                  ? 'bg-ink-muted text-canvas font-bold'
-                  : 'border border-hairline bg-surface text-ink-muted hover:text-ink'
-              }`}
+              className={`wb-wa-menu-item${currentStatus === 'bekleyen' ? ' font-semibold' : ''}`}
               title="Henüz kontrol edilmemiş numaralar"
             >
-              <span aria-hidden>?</span>
-              <span>Doğrulanmamış ({unknownCount})</span>
+              Bekleyen ({unknownCount})
             </Link>
           ) : null}
         </div>

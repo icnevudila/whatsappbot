@@ -89,6 +89,127 @@ export function HourlyDualChart({
   )
 }
 
+/** Son N gün giden mesaj çizgi grafiği — gün noktaları tıklanabilir. */
+export function WeeklyLineChart({
+  days,
+  hrefForDay,
+  emptyText = 'Bu dönemde giden mesaj yok.',
+  denseLabels = false,
+}: {
+  days: { day: string; label: string; out: number; inbound?: number }[]
+  hrefForDay?: (day: string) => string
+  emptyText?: string
+  denseLabels?: boolean
+}) {
+  const totalOut = days.reduce((s, d) => s + d.out, 0)
+  const max = Math.max(1, ...days.map((d) => d.out))
+  const w = 320
+  const h = 120
+  const padX = 8
+  const padY = 14
+  const innerW = w - padX * 2
+  const innerH = h - padY * 2
+
+  if (totalOut === 0) {
+    return (
+      <div className="wb-home-chart is-empty">
+        <p className="wb-home-chart-empty">{emptyText}</p>
+      </div>
+    )
+  }
+
+  const points = days.map((d, i) => {
+    const x = padX + (days.length <= 1 ? innerW / 2 : (i / (days.length - 1)) * innerW)
+    const y = padY + innerH - (d.out / max) * innerH
+    return { ...d, x, y }
+  })
+  const line = points.map((p) => `${p.x},${p.y}`).join(' ')
+  const area = `${padX},${padY + innerH} ${line} ${padX + innerW},${padY + innerH}`
+  const labelIndexes = denseLabels
+    ? new Set([0, 6, 12, 18, days.length - 1].filter((i) => i >= 0 && i < days.length))
+    : null
+
+  return (
+    <div className="wb-home-chart">
+      <div className="mb-2 shrink-0">
+        <p className="text-[12.5px] text-[#667781]">
+          Toplam <span className="font-semibold tabular text-[#111b21]">{totalOut.toLocaleString('tr-TR')}</span> giden
+        </p>
+      </div>
+      <svg
+        viewBox={`0 0 ${w} ${h}`}
+        className="h-36 w-full shrink-0"
+        role="img"
+        aria-label={`${totalOut} giden mesaj`}
+      >
+        <defs>
+          <linearGradient id="wbHomeLineFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#00a884" stopOpacity="0.28" />
+            <stop offset="100%" stopColor="#00a884" stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+        <polygon points={area} fill="url(#wbHomeLineFill)" />
+        <polyline
+          points={line}
+          fill="none"
+          stroke="#008069"
+          strokeWidth="2.5"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+        {points.map((p) => (
+          <g key={p.day}>
+            {hrefForDay ? (
+              <a href={hrefForDay(p.day)}>
+                <rect
+                  x={p.x - innerW / Math.max(days.length, 1) / 2}
+                  y={0}
+                  width={innerW / Math.max(days.length, 1)}
+                  height={h}
+                  fill="transparent"
+                >
+                  <title>{`${p.label}: ${p.out} giden`}</title>
+                </rect>
+              </a>
+            ) : null}
+            <circle cx={p.x} cy={p.y} r={denseLabels ? 3 : 4.5} fill="#fff" stroke="#00a884" strokeWidth="2" />
+          </g>
+        ))}
+      </svg>
+      <div className="mt-1 flex min-h-8 shrink-0 justify-between gap-1">
+        {days.map((d, index) => {
+          if (labelIndexes && !labelIndexes.has(index)) {
+            return <span key={d.day} className="min-w-0 flex-1" />
+          }
+          const label = (
+            <span className="block truncate text-center text-[10px] tabular text-[#8696a0]">{d.label}</span>
+          )
+          if (!hrefForDay || denseLabels) {
+            return (
+              <span key={d.day} className="min-w-0 flex-1">
+                {label}
+                {!denseLabels ? (
+                  <span className="mt-0.5 block text-center text-[11px] font-semibold tabular text-[#111b21]">
+                    {d.out}
+                  </span>
+                ) : null}
+              </span>
+            )
+          }
+          return (
+            <a key={d.day} href={hrefForDay(d.day)} className="min-w-0 flex-1 hover:text-[#008069]">
+              {label}
+              <span className="mt-0.5 block text-center text-[11px] font-semibold tabular text-[#111b21]">
+                {d.out}
+              </span>
+            </a>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 /** Günlük giden / gelen yan yana; fail üstte nokta. */
 export function DailyVolumeChart({
   days,

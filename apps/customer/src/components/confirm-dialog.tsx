@@ -81,7 +81,8 @@ function ConfirmModal({
   const titleId = useId()
   const descId = useId()
   const panelRef = useRef<HTMLDivElement>(null)
-  const confirmVariant = tone === 'danger' ? 'danger' : tone === 'accent' ? 'accent' : 'accent'
+  const confirmClass =
+    tone === 'danger' ? 'wb-wa-submit is-danger' : 'wb-wa-submit'
 
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null
@@ -119,7 +120,7 @@ function ConfirmModal({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={description ? descId : undefined}
-        className="wb-modal-panel"
+        className="wb-modal-panel wb-wa-modal wb-wa-confirm"
       >
         <h2 id={titleId} className="wb-modal-title">
           {title}
@@ -129,13 +130,13 @@ function ConfirmModal({
             {description}
           </p>
         ) : null}
-        <div className="wb-modal-actions">
-          <Button type="button" onClick={onCancel}>
+        <div className="wb-modal-actions wb-wa-confirm-actions">
+          <Button type="button" className="wb-wa-cancel" onClick={onCancel}>
             {cancelLabel}
           </Button>
           <Button
             type="button"
-            variant={confirmVariant}
+            className={confirmClass}
             data-confirm-primary
             onClick={onConfirm}
           >

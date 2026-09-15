@@ -25,6 +25,7 @@ import {
   formatCount,
   parseWizardStep,
   toDatetimeLocal,
+  defaultScheduleLocal,
   type WizardCampaign,
   type WizardSharedProps,
   type WizardStepId,
@@ -96,7 +97,9 @@ export function CampaignWizard({
   const [startMode, setStartMode] = useState<'draft' | 'schedule' | 'now'>(
     campaign?.status === 'scheduled' ? 'schedule' : 'draft',
   )
-  const [scheduledAt, setScheduledAt] = useState(toDatetimeLocal(campaign?.scheduled_at))
+  const [scheduledAt, setScheduledAt] = useState(
+    () => toDatetimeLocal(campaign?.scheduled_at) || defaultScheduleLocal(),
+  )
   const [hint, setHint] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [aiOpen, setAiOpen] = useState(false)
@@ -161,7 +164,7 @@ export function CampaignWizard({
           ),
         )
         setStartMode(saved.startMode ?? 'draft')
-        setScheduledAt(saved.scheduledAt ?? '')
+        setScheduledAt(saved.scheduledAt || defaultScheduleLocal())
       }
       const fromUrl = urlStep ? parseWizardStep(urlStep) : null
       const fromInitial = initialStep && initialStep !== 'kampanya' ? parseWizardStep(initialStep) : null
@@ -356,11 +359,9 @@ export function CampaignWizard({
   const submitLabel = useMemo(() => {
     if (pending) return 'Kaydediliyor…'
     if (mode === 'edit' && campaign?.status === 'running') return 'Kalan gönderimler için kaydet'
-    if (startMode === 'now') {
-      return uniqueCount ? `${formatCount(uniqueCount)} kişiye gönderimi başlat` : 'Gönderimi başlat'
-    }
-    if (startMode === 'schedule') return 'Planı kaydet'
-    return mode === 'edit' ? 'Değişiklikleri kaydet' : 'Taslak olarak kaydet'
+    if (startMode === 'now') return 'Hemen Gönder'
+    if (startMode === 'schedule') return 'Planla'
+    return 'Taslağı Kaydet'
   }, [pending, mode, campaign?.status, startMode, uniqueCount])
 
   const [copyPending, startCopy] = useTransition()
@@ -397,7 +398,7 @@ export function CampaignWizard({
   }
 
   return (
-    <Card className="overflow-visible">
+    <Card className="wb-wa-wizard overflow-visible">
       {mode === 'edit' && structureLocked ? (
         <div className="px-4 pt-4 sm:px-5">
           <Notice tone="warn">
@@ -661,6 +662,7 @@ export function CampaignWizard({
                 selected={startMode}
                 onSelect={(value) => {
                   setStartMode(value)
+                  if (value === 'schedule' && !scheduledAt) setScheduledAt(defaultScheduleLocal())
                   sendArmedRef.current = false
                   mark()
                 }}
@@ -676,23 +678,23 @@ export function CampaignWizard({
           ) : null}
         </div>
 
-        <div className="sticky bottom-0 z-[1] space-y-2.5 border-t border-hairline bg-surface/95 px-4 py-3 backdrop-blur-sm sm:px-5">
+        <div className="wb-wa-wizard-foot sticky bottom-0 z-[1] space-y-2.5 px-4 py-3 sm:px-5">
           {formError ? <Notice tone="danger">{formError}</Notice> : null}
           {hint ? <Notice tone="warn">{hint}</Notice> : null}
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <Button type="button" disabled={pending || stepIndex === 0} onClick={goBack}>
+            <Button type="button" className="wb-wa-text-btn" disabled={pending || stepIndex === 0} onClick={goBack}>
               <Icon name="back" className="size-4 shrink-0" />
               Geri
             </Button>
             {step !== 'yayinla' ? (
-              <Button type="button" variant="accent" disabled={pending} onClick={goNext}>
+              <Button type="button" className="wb-wa-submit" disabled={pending} onClick={goNext}>
                 İleri
                 <Icon name="back" className="size-4 shrink-0 rotate-180" />
               </Button>
             ) : (
               <Button
                 type="button"
-                variant={startMode === 'now' && !structureLocked ? 'danger' : 'accent'}
+                className={startMode === 'now' && !structureLocked ? 'wb-wa-submit is-danger' : 'wb-wa-submit'}
                 disabled={pending}
                 onClick={() => {
                   allowSubmitRef.current = true

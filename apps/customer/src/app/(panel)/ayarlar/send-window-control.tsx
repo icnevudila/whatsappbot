@@ -81,7 +81,7 @@ export function SendWindowControl({
             <Button type="button" onClick={() => setOpen(false)}>
               Vazgeç
             </Button>
-            <Button type="submit" variant="accent" disabled={pending}>
+            <Button type="submit" variant="accent" className="wb-wa-submit" disabled={pending}>
               {pending ? 'Kaydediliyor…' : 'Kaydet'}
             </Button>
           </div>

@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AccentLink, EmptyState, Input, Select } from '@/components/ui'
+import { EmptyState, Input, Select } from '@/components/ui'
 import { Icon } from '@/components/icon'
 import { useConfirm } from '@/components/confirm-dialog'
 import { useToast } from '@/components/toast'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
-import { TypewriterText } from '@/components/typewriter-text'
+import { CreativeGenerating } from '@/components/creative-generating'
 import { deleteCreative, listLibraryCreatives } from './actions'
 import { LIBRARY_PAGE_SIZE, type LibraryCreativeRow } from './library-shared'
 
@@ -161,7 +161,12 @@ export function LibraryBoard({
           tone="brand"
           title="İlk kampanya görselini oluştur"
           description="Markanıza ve ürünlerinize uygun kampanya görsellerini AI ile hazırlayın. Üretim arka planda devam eder."
-          action={<AccentLink href="/icerik/yeni">Görsel üret</AccentLink>}
+          action={
+            <Link href="/icerik/yeni" className="wb-wa-text-btn">
+              <Icon name="sparkles" className="size-4" />
+              Görsel üret
+            </Link>
+          }
         />
       </div>
     )
@@ -411,16 +416,13 @@ function GeneratingFrame({ status, error }: { status: string; error: string | nu
     return () => clearInterval(timer)
   }, [])
   return (
-    <div className="flex aspect-[4/5] flex-col items-center justify-center gap-1 bg-canvas px-3 text-center">
+    <div className="aspect-[4/5] w-full">
       {status === 'failed' ? (
-        <p className="text-[12.5px] text-danger">{error || 'Görsel oluşturulamadı'}</p>
+        <div className="flex h-full flex-col items-center justify-center bg-canvas px-3 text-center">
+          <p className="text-[12.5px] text-danger">{error || 'Görsel oluşturulamadı'}</p>
+        </div>
       ) : (
-        <>
-          <span className="wb-busy-pill" aria-hidden />
-          <p className="text-[12.5px] text-ink-muted">
-            <TypewriterText text={STAGES[tick % STAGES.length] ?? ''} />
-          </p>
-        </>
+        <CreativeGenerating compact line={STAGES[tick % STAGES.length] ?? ''} />
       )}
     </div>
   )

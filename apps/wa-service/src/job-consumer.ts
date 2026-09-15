@@ -482,6 +482,7 @@ async function handle(job: JobRow): Promise<unknown> {
               phone_e164: payload.phone_e164,
               message_type: messageType,
               body: payload.body ?? null,
+              media_url: mediaUrl ?? null,
               wa_message_id: messageId,
               status: 'sent',
             }),

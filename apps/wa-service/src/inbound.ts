@@ -74,6 +74,7 @@ export async function resolveInboundPhone(
 /**
  * Gelen mesajlari message_log'a yazar; panel Gelenler sayfasinda izlenir.
  * Cift kayit: partial unique index + select guard.
+ * Goruntu/video: Baileys indirme + chat-media URL (opsiyonel env).
  */
 export async function persistInboundMessage(options: {
   orgId: string
@@ -81,8 +82,9 @@ export async function persistInboundMessage(options: {
   accountId: string
   message: WAMessage
   resolveLidPn?: (lidJid: string) => Promise<string | null>
+  sock?: import('@whiskeysockets/baileys').WASocket | null
 }): Promise<void> {
-  const { orgId, createdBy, accountId, message, resolveLidPn } = options
+  const { orgId, createdBy, accountId, message, resolveLidPn, sock } = options
   const key = message.key
   if (!key?.remoteJid || key.fromMe) return
   if (isJidGroup(key.remoteJid)) return
@@ -107,13 +109,30 @@ export async function persistInboundMessage(options: {
   const phone = await resolveInboundPhone(message, resolveLidPn)
   const pushName = message.pushName?.trim() || null
 
+  let mediaUrl: string | null = null
+  if (sock && (type === 'image' || type === 'sticker' || type === 'video')) {
+    try {
+      const { storeInboundMedia } = await import('./inbound-media.js')
+      mediaUrl = await storeInboundMedia({
+        orgId,
+        accountId,
+        waMessageId,
+        messageType: type,
+        message,
+        sock,
+      })
+    } catch (error) {
+      logger.warn({ err: error, accountId, waMessageId }, 'inbound media kaydedilemedi')
+    }
+  }
+
   try {
     const inserted = await query<{ id: string; created_at: string }>(
       `insert into public.message_log
-         (org_id, created_by, account_id, direction, remote_jid, phone_e164, message_type, body, wa_message_id, status, push_name)
-       values ($1, $2, $3, 'in', $4, $5, $6, $7, $8, 'delivered', $9)
+         (org_id, created_by, account_id, direction, remote_jid, phone_e164, message_type, body, media_url, wa_message_id, status, push_name)
+       values ($1, $2, $3, 'in', $4, $5, $6, $7, $8, $9, 'delivered', $10)
        returning id::text, created_at`,
-      [orgId, createdBy, accountId, key.remoteJid, phone, type, body, waMessageId, pushName],
+      [orgId, createdBy, accountId, key.remoteJid, phone, type, body, mediaUrl, waMessageId, pushName],
     )
     const row = inserted[0]
     void import('./chat-cache.js')
@@ -128,6 +147,7 @@ export async function persistInboundMessage(options: {
           phone_e164: phone,
           message_type: type,
           body,
+          media_url: mediaUrl,
           wa_message_id: waMessageId,
           status: 'delivered',
           push_name: pushName,
@@ -159,10 +179,18 @@ export async function persistInboundMessage(options: {
     push_name: pushName,
     message_type: type,
     body: body?.slice(0, 500) ?? null,
+    media_url: mediaUrl,
     wa_message_id: waMessageId,
   })
 
-  const preview = (body ?? `(${type})`).slice(0, 120)
+  const preview = (
+    body ??
+    (type === 'image' || type === 'sticker'
+      ? 'Fotoğraf'
+      : type === 'video'
+        ? 'Video'
+        : `(${type})`)
+  ).slice(0, 120)
   const who = pushName || phone || 'Yeni mesaj'
   void dispatchPush({
     orgId,

@@ -6,7 +6,6 @@ export function SettingsPageFrame({
   description,
   action,
   children,
-  wide = false,
 }: {
   title: string
   description?: string
@@ -15,7 +14,7 @@ export function SettingsPageFrame({
   wide?: boolean
 }) {
   return (
-    <div className={`mx-auto w-full space-y-2.5 ${wide ? 'max-w-3xl' : 'max-w-xl'}`}>
+    <div className="wb-wa-page">
       <PageHeader
         title={title}
         description={description}

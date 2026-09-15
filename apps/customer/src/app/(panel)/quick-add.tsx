@@ -42,6 +42,14 @@ const OTHER_ITEMS: QuickItem[] = [
   { href: '/ayarlar/hatlar?ekle=1', label: 'Yeni hat ekle', icon: 'phone' },
 ]
 
+function chatDetailOpen() {
+  if (typeof window === 'undefined') return false
+  return (
+    document.body.classList.contains('wb-chat-open') ||
+    Boolean(new URLSearchParams(window.location.search).get('tel'))
+  )
+}
+
 export function QuickAdd() {
   const pathname = usePathname()
   const menuId = useId()
@@ -51,7 +59,27 @@ export function QuickAdd() {
   const [listOpen, setListOpen] = useState(false)
   const [groupOpen, setGroupOpen] = useState(false)
   const [personOpen, setPersonOpen] = useState(false)
-  const hidden = pathname === '/mesajlar' || pathname.startsWith('/mesajlar/')
+  const [threadOpen, setThreadOpen] = useState(false)
+  const onInbox = pathname === '/mesajlar' || pathname.startsWith('/mesajlar/')
+  const onCreateFlow =
+    pathname === '/kampanyalar/yeni' ||
+    pathname.startsWith('/kampanyalar/yeni/') ||
+    /\/kampanyalar\/[^/]+\/duzenle(?:\/|$)/.test(pathname) ||
+    pathname === '/icerik/yeni' ||
+    pathname.startsWith('/icerik/yeni/')
+  const hidden = onCreateFlow || (onInbox && threadOpen)
+
+  useEffect(() => {
+    const sync = () => setThreadOpen(chatDetailOpen())
+    sync()
+    const observer = new MutationObserver(sync)
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] })
+    window.addEventListener('popstate', sync)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('popstate', sync)
+    }
+  }, [pathname])
 
   useEffect(() => {
     if (!open) return
@@ -66,6 +94,10 @@ export function QuickAdd() {
     setOpen(false)
     setOtherOpen(false)
   }
+
+  useEffect(() => {
+    if (hidden) close()
+  }, [hidden])
 
   if (hidden) return null
 

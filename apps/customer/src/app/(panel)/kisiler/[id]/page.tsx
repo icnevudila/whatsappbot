@@ -1,11 +1,12 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
 import {
-  AccentLink,
   Card,
   PageHeader,
   Pagination,
 } from '@/components/ui'
+import { Icon } from '@/components/icon'
 import { requireActiveOrg } from '@/lib/org'
 import {
   PAGE_SIZES,
@@ -15,7 +16,6 @@ import {
   rangeForPage,
   totalPages,
 } from '@/lib/pagination'
-import { ListActions } from '../list-actions'
 import { type MemberRow } from './member-actions'
 import { MembersPanel } from './members-toolbar'
 
@@ -173,23 +173,24 @@ export default async function ContactListDetailPage({
   }
 
   return (
-    <div className="wb-stack-tight">
+    <div className="wb-wa-page">
       <PageHeader
         title={list.name}
         description={pageDescription}
         backHref="/kisiler"
         backLabel="Gruplar"
         action={
-          <div className="flex flex-wrap items-start justify-end gap-2">
-            <AccentLink href="/kampanyalar/yeni">Kampanya</AccentLink>
-            <ListActions compact listId={list.id} currentName={list.name} />
-          </div>
+          <Link href="/kampanyalar/yeni" className="wb-wa-text-btn">
+            <Icon name="plus" className="size-4" />
+            Yeni Kampanya
+          </Link>
         }
       />
 
       <Card>
         <MembersPanel
           listId={list.id}
+          listName={list.name}
           members={members}
           totalCount={matchTotal}
           statusFilter={statusFilter}

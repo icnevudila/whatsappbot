@@ -250,7 +250,7 @@ export function ProductForm({
 
       {canEdit ? (
         <div className="flex justify-center pt-1">
-          <Button type="submit" variant="accent" disabled={pending} className="w-full">
+          <Button type="submit" variant="accent" disabled={pending} className="w-full wb-wa-submit">
             <Icon name={product?.id ? 'check' : 'plus'} className="size-4" />
             {pending ? 'Kaydediliyor…' : product?.id ? 'Kaydet' : 'Ürün ekle'}
           </Button>

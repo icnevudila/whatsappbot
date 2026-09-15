@@ -50,12 +50,7 @@ export function RehberSyncButton({
     <>
       <Button
         type="button"
-        className={[
-          '!border-0 !bg-ok !text-white shadow-sm hover:!bg-ok-dim disabled:!bg-hairline disabled:!text-ink-faint disabled:shadow-none',
-          className,
-        ]
-          .filter(Boolean)
-          .join(' ')}
+        className={['wb-wa-submit', className].filter(Boolean).join(' ')}
         disabled={connected.length === 0}
         title={
           connected.length === 0

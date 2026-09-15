@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
-import { AccentLink, Badge, Card, CardHeader } from '@/components/ui'
+import Link from 'next/link'
+import { Badge, Card, CardHeader } from '@/components/ui'
 import { listUserOrgs, requireActiveOrg } from '@/lib/org'
 import { planLabel } from '@wa/shared'
 import { AiImageModeForm, DeleteOrganizationForm, AddMemberButton, MembersPanel, OrgSettingsForm, OrgsCard } from '../org-forms'
@@ -100,9 +101,9 @@ export default async function OrgSettingsPage() {
             total={org.accounts_quota}
             hint={
               connectedCount === 0 ? (
-                <AccentLink href="/ayarlar/hatlar" className="text-[12px]">
+                <Link href="/ayarlar/hatlar" className="wb-wa-text-btn text-[12px]">
                   Hat bağla →
-                </AccentLink>
+                </Link>
               ) : (
                 `${connectedCount} bağlı`
               )

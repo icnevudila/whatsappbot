@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { AccentLink, Card, EmptyState } from '@/components/ui'
+import Link from 'next/link'
+import { EmptyState } from '@/components/ui'
 import { requireActiveOrg, isOrgAdminRole } from '@/lib/org'
 import { SettingsPageFrame } from '../settings-shell'
 import { ProductsBoard } from './products-board'
@@ -56,17 +57,27 @@ export default async function ProductsPage() {
       wide
       title="Ürünlerim"
       description="Görsel üretmede kullanacağınız tüm ürünleri buraya ekleyin."
-      action={canManage ? <AccentLink href="/ayarlar/urunler/yeni">Ürün ekle</AccentLink> : undefined}
+      action={
+        canManage ? (
+          <Link href="/ayarlar/urunler/yeni" className="wb-wa-text-btn">
+            Ürün ekle
+          </Link>
+        ) : undefined
+      }
     >
       {cards.length === 0 ? (
-        <Card>
-          <EmptyState
-            tone="generic"
-            title="Henüz ürün yok"
-            description="Kampanya görseli üretirken kullanılacak ürünleri ekleyin."
-            action={canManage ? <AccentLink href="/ayarlar/urunler/yeni">İlk ürünü ekle</AccentLink> : undefined}
-          />
-        </Card>
+        <EmptyState
+          tone="generic"
+          title="Henüz ürün yok"
+          description="Kampanya görseli üretirken kullanılacak ürünleri ekleyin."
+          action={
+            canManage ? (
+              <Link href="/ayarlar/urunler/yeni" className="wb-wa-text-btn">
+                İlk ürünü ekle
+              </Link>
+            ) : undefined
+          }
+        />
       ) : (
         <ProductsBoard products={cards} canManage={canManage} />
       )}

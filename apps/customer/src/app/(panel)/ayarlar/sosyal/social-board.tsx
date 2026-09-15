@@ -69,46 +69,44 @@ export function SocialBoard({
   }, [])
 
   return (
-    <div className="space-y-3">
+    <div>
       {canEdit && initial.length > 0 ? (
-        <div className="flex justify-end">
-          <Button
+        <div className="flex justify-end px-2">
+          <button
             type="button"
-            variant="accent"
+            className="wb-wa-text-btn"
             onClick={() => {
               setEditing(null)
               setOpen(true)
             }}
           >
             Hesap ekle
-          </Button>
+          </button>
         </div>
       ) : null}
 
       {initial.length === 0 ? (
-        <div className="rounded-[var(--radius-card)] border border-hairline bg-surface">
-          <EmptyState
-            tone="brand"
-            title="Henüz hesap yok"
-            description="Instagram, web sitesi veya diğer kanalları ekleyin. Kampanya görsellerinde kullanılabilir."
-            action={
-              canEdit ? (
-                <Button
-                  type="button"
-                  variant="accent"
-                  onClick={() => {
-                    setEditing(null)
-                    setOpen(true)
-                  }}
-                >
-                  Hesap ekle
-                </Button>
-              ) : undefined
-            }
-          />
-        </div>
+        <EmptyState
+          tone="brand"
+          title="Henüz hesap yok"
+          description="Instagram, web sitesi veya diğer kanalları ekleyin. Kampanya görsellerinde kullanılabilir."
+          action={
+            canEdit ? (
+              <button
+                type="button"
+                className="wb-wa-text-btn"
+                onClick={() => {
+                  setEditing(null)
+                  setOpen(true)
+                }}
+              >
+                Hesap ekle
+              </button>
+            ) : undefined
+          }
+        />
       ) : (
-        <ul className="divide-y divide-hairline rounded-[var(--radius-card)] border border-hairline bg-surface">
+        <ul className="wb-inbox-list">
           {initial.map((row) => (
             <SocialItem
               key={row.id}
@@ -185,7 +183,7 @@ function SocialModal({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descId}
-        className="wb-modal-panel"
+        className="wb-modal-panel wb-wa-modal"
       >
         <h2 id={titleId} className="wb-modal-title">
           {initial?.id ? 'Hesabı düzenle' : 'Hesap ekle'}
@@ -247,7 +245,7 @@ function SocialModal({
             <Button type="button" variant="quiet" disabled={pending} onClick={onClose}>
               Vazgeç
             </Button>
-            <Button type="submit" variant="accent" disabled={pending}>
+            <Button type="submit" variant="accent" className="wb-wa-submit" disabled={pending}>
               {pending ? 'Kaydediliyor…' : initial?.id ? 'Kaydet' : 'Ekle'}
             </Button>
           </div>
@@ -273,33 +271,39 @@ function SocialItem({
   const name = PLATFORM_LABELS[row.platform] ?? row.platform
 
   return (
-    <li className="flex items-center gap-3 px-3.5 py-3">
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-md border border-hairline bg-canvas text-ink">
-        <SocialMark platform={row.platform} className="size-5" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[13.5px] font-semibold text-ink">
-          {name}
-          {row.label ? <span className="ml-1 font-normal text-ink-muted">· {row.label}</span> : null}
-        </p>
-        <a
-          href={row.url}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-0.5 block truncate text-[12.5px] text-ink-muted underline-offset-2 hover:text-accent hover:underline"
-        >
-          {displayUrl(row.url)}
-        </a>
+    <li>
+      <div className="flex items-center">
+      <div className="wb-wa-row min-w-0 flex-1">
+        <span className="wb-wa-set-icon" style={{ background: '#00a884' }} aria-hidden>
+          <SocialMark platform={row.platform} className="size-5 text-white" />
+        </span>
+        <span className="wb-wa-row-main">
+          <span className="wb-wa-row-top">
+            <span className="wb-wa-name">
+              {name}
+              {row.label ? ` · ${row.label}` : ''}
+            </span>
+          </span>
+          <span className="wb-wa-row-bottom">
+            <a
+              href={row.url}
+              target="_blank"
+              rel="noreferrer"
+              className="wb-wa-preview text-[#53bdeb]"
+            >
+              {displayUrl(row.url)}
+            </a>
+          </span>
+        </span>
       </div>
       {canEdit ? (
-        <div className="flex shrink-0 gap-1">
-          <Button type="button" variant="quiet" className="h-8 text-[12.5px]" onClick={onEdit}>
+        <div className="flex shrink-0 items-center pr-1">
+          <button type="button" className="wb-wa-text-btn" onClick={onEdit}>
             Düzenle
-          </Button>
-          <Button
+          </button>
+          <button
             type="button"
-            variant="danger"
-            className="h-8 text-[12.5px]"
+            className="wb-wa-text-btn is-danger"
             disabled={pending}
             onClick={() => {
               void (async () => {
@@ -320,9 +324,10 @@ function SocialItem({
             }}
           >
             {pending ? '…' : 'Sil'}
-          </Button>
+          </button>
         </div>
       ) : null}
+      </div>
     </li>
   )
 }

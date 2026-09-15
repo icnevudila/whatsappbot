@@ -2,15 +2,15 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import {
-  CreateCta,
   Meter,
   Notice,
   PageHeader,
   Pagination,
-  QuietLink,
   StatusPill,
 } from '@/components/ui'
 import { Icon } from '@/components/icon'
+import { ScheduledStatusPill } from '@/components/schedule-status'
+import { formatRelativePast, formatRemainingTr, formatScheduleAt } from '@/lib/schedule-remaining'
 import { requireActiveOrg } from '@/lib/org'
 import {
   PAGE_SIZES,
@@ -30,46 +30,64 @@ function meterTone(
 ): 'accent' | 'warn' | 'danger' {
   if (status === 'stopped' || status === 'failed') return 'danger'
   if (failedCount > 0) return 'warn'
+  if (status === 'completed') return 'accent'
   return 'accent'
 }
 
-function statusHint(status: string): string | null {
+function statusDot(status: string): string {
   switch (status) {
-    case 'draft':
-      return 'Henüz başlamadı'
-    case 'scheduled':
-      return 'Zamanı bekliyor'
     case 'running':
-      return 'Gönderiliyor'
-    case 'paused':
-      return 'Duraklatıldı'
+      return '#00a884'
     case 'completed':
-      return 'Bitti'
-    case 'stopped':
-      return 'İptal edildi'
+      return '#25d366'
     case 'failed':
-      return 'Hata oluştu'
+    case 'stopped':
+      return '#e53935'
+    case 'paused':
+    case 'scheduled':
+      return '#f5c26b'
+    case 'draft':
     default:
-      return null
+      return '#8696a0'
   }
 }
 
-function campaignShell(status: string): string {
-  switch (status) {
-    case 'running':
-      return 'border-accent/30 bg-accent-soft/70 shadow-[inset_3px_0_0_var(--color-accent)]'
-    case 'completed':
-      return 'border-ok/30 bg-ok-soft/50 shadow-[inset_3px_0_0_var(--color-ok)]'
-    case 'failed':
-    case 'stopped':
-      return 'border-danger/30 bg-[#fff5f4] shadow-[inset_3px_0_0_var(--color-danger)]'
-    case 'paused':
-    case 'scheduled':
-      return 'border-warn/30 bg-[#fff8e8] shadow-[inset_3px_0_0_var(--color-warn)]'
-    case 'draft':
-    default:
-      return 'border-hairline bg-surface-raised/60 shadow-[inset_3px_0_0_var(--color-hairline-strong)]'
+function campaignWhen(campaign: {
+  status: string
+  created_at: string
+  updated_at: string | null
+  scheduled_at: string | null
+}): { primary: string; secondary: string | null } {
+  if (campaign.status === 'scheduled' && campaign.scheduled_at) {
+    const remaining = formatRemainingTr(campaign.scheduled_at)
+    const when = formatScheduleAt(campaign.scheduled_at)
+    return {
+      primary: remaining ? remaining : 'Planlandı',
+      secondary: when || null,
+    }
   }
+  if (campaign.status === 'running') {
+    return { primary: 'Gönderiliyor', secondary: null }
+  }
+  if (campaign.status === 'paused') {
+    return { primary: 'Duraklatıldı', secondary: formatRelativePast(campaign.updated_at || campaign.created_at) || null }
+  }
+  if (campaign.status === 'draft') {
+    const ago = formatRelativePast(campaign.created_at)
+    return { primary: ago ? `${ago} oluşturuldu` : 'Taslak', secondary: null }
+  }
+  const stamp = campaign.updated_at || campaign.created_at
+  const ago = formatRelativePast(stamp)
+  if (campaign.status === 'completed') {
+    return { primary: ago ? `${ago} tamamlandı` : 'Tamamlandı', secondary: null }
+  }
+  if (campaign.status === 'stopped') {
+    return { primary: ago ? `${ago} iptal edildi` : 'İptal edildi', secondary: null }
+  }
+  if (campaign.status === 'failed') {
+    return { primary: ago ? `${ago} hata aldı` : 'Hata oluştu', secondary: null }
+  }
+  return { primary: ago || '', secondary: null }
 }
 
 export default async function CampaignsPage({
@@ -123,7 +141,7 @@ export default async function CampaignsPage({
   const { data: campaignRows } = await supabase
     .from('campaigns')
     .select(
-      'id, name, status, total_targets, sent_count, failed_count, skipped_count, created_at',
+      'id, name, status, total_targets, sent_count, failed_count, skipped_count, created_at, updated_at, scheduled_at',
     )
     .eq('org_id', org.id)
     .order('created_at', { ascending: false })
@@ -142,79 +160,107 @@ export default async function CampaignsPage({
         : 'Mesaj yazın, grup ve hat seçin, gönderin.'
 
   return (
-    <>
+    <div className="wb-wa-page">
       <PageHeader
         title="Kampanyalar"
         description="Müşterilerinize WhatsApp’tan duyuru ve kampanya gönderin."
-        action={
-          <QuietLink href="/icerik">
-            <Icon name="image" className="size-4" />
-            İçerik kütüphanesi
-          </QuietLink>
-        }
       />
 
       {justReady ? <Notice tone="success">Kampanya hazır.</Notice> : null}
 
-      <div className="space-y-2">
-        <CreateCta
-          href="/kampanyalar/yeni"
-          title="Yeni kampanya"
-          description={
-            campaignTotal === 0
-              ? 'İlk gönderimini hazırla. Müşterilerin WhatsApp’tan görsün.'
-              : emptyHint
-          }
-        />
+      <section className="wb-camp-actions" aria-label="Hızlı işlemler">
+        <Link href="/kampanyalar/yeni" className="wb-camp-action is-primary">
+          <span className="wb-camp-action-icon" aria-hidden>
+            <Icon name="campaign" className="size-5" />
+          </span>
+          <span className="wb-camp-action-copy">
+            <span className="wb-camp-action-title">Yeni kampanya</span>
+            <span className="wb-camp-action-desc">
+              {campaignTotal === 0
+                ? 'Mesaj yazın, grup ve hat seçin'
+                : emptyHint}
+            </span>
+          </span>
+        </Link>
+        <Link href="/icerik" className="wb-camp-action">
+          <span className="wb-camp-action-icon" aria-hidden>
+            <Icon name="image" className="size-5" />
+          </span>
+          <span className="wb-camp-action-copy">
+            <span className="wb-camp-action-title">İçerik kütüphanesi</span>
+            <span className="wb-camp-action-desc">Görselleri yönetin ve kullanın</span>
+          </span>
+        </Link>
+      </section>
 
+      <div className="space-y-2 px-0">
         {campaignTotal === 0 ? null : (
-          <div className="rounded-[var(--radius-card)] border border-hairline bg-surface shadow-[var(--shadow-card)]">
-            <ul className="divide-y divide-hairline">
-              {campaigns.map((campaign, index) => {
-                const done = campaign.sent_count + campaign.failed_count + campaign.skipped_count
-                const total = Math.max(0, campaign.total_targets)
-                const hint = statusHint(campaign.status)
-                return (
-                  <li
-                    key={campaign.id}
-                    className="wb-row-enter"
-                    style={{ animationDelay: `${Math.min(index, 12) * 28}ms` }}
-                  >
-                    <Link
-                      href={`/kampanyalar/${campaign.id}`}
-                      className={`wb-card-lift wb-list-row block px-4 py-3 ${campaignShell(campaign.status)}`}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="min-w-0 truncate text-[14px] font-bold tracking-[-0.02em] text-ink">
-                          {campaign.name}
-                        </p>
-                        <StatusPill status={campaign.status} />
-                      </div>
-                      {hint ? <p className="mt-0.5 text-[12px] text-ink-muted">{hint}</p> : null}
-                      <div className="mt-2 flex items-center gap-2">
+          <ul className="wb-inbox-list">
+            {campaigns.map((campaign, index) => {
+              const done = campaign.sent_count + campaign.failed_count + campaign.skipped_count
+              const total = Math.max(0, campaign.total_targets)
+              const scheduledAt = campaign.status === 'scheduled' ? campaign.scheduled_at : null
+              const when = campaignWhen(campaign)
+              const pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0
+              return (
+                <li
+                  key={campaign.id}
+                  className="wb-row-enter"
+                  style={{ animationDelay: `${Math.min(index, 12) * 28}ms` }}
+                >
+                  <Link href={`/kampanyalar/${campaign.id}`} className="wb-camp-row">
+                    <span
+                      className="wb-camp-dot"
+                      style={{ background: statusDot(campaign.status) }}
+                      aria-hidden
+                    />
+                    <span className="wb-camp-main">
+                      <span className="wb-camp-top">
+                        <span className="wb-camp-name">{campaign.name}</span>
+                        {scheduledAt ? (
+                          <ScheduledStatusPill at={scheduledAt} />
+                        ) : (
+                          <StatusPill status={campaign.status} />
+                        )}
+                      </span>
+                      <span className="wb-camp-meta">
+                        <span>{when.primary}</span>
+                        {when.secondary ? <span>· {when.secondary}</span> : null}
+                        {campaign.failed_count > 0 ? (
+                          <span className="wb-camp-fail">{campaign.failed_count} hata</span>
+                        ) : null}
+                      </span>
+                      <span className="wb-camp-progress">
                         <Meter
                           value={done}
                           max={Math.max(1, total)}
                           tone={meterTone(campaign.status, campaign.failed_count)}
                         />
-                        <span className="shrink-0 tabular text-[11.5px] font-medium text-ink-muted">
+                        <span className="wb-camp-count">
                           {done}/{total || '—'}
+                          {total > 0 ? ` · %${pct}` : ''}
                         </span>
-                      </div>
-                    </Link>
-                  </li>
-                )
-              })}
-            </ul>
-            <Pagination
-              page={page}
-              totalPages={pages}
-              label={`${campaignTotal} kayıt`}
-              hrefForPage={(p) => buildPageHref('/kampanyalar', p, { hazir: hazirQs })}
-            />
-          </div>
+                      </span>
+                    </span>
+                    <span className="wb-wa-set-chevron" aria-hidden>
+                      ›
+                    </span>
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+
+        {campaignTotal === 0 ? null : (
+          <Pagination
+            page={page}
+            totalPages={pages}
+            label={`${campaignTotal} kayıt`}
+            hrefForPage={(p) => buildPageHref('/kampanyalar', p, { hazir: hazirQs })}
+          />
         )}
       </div>
-    </>
+    </div>
   )
 }

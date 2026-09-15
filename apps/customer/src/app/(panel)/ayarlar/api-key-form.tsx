@@ -33,7 +33,7 @@ export function ApiKeyForm({
           {keys.map((row) => (
             <li
               key={row.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-hairline bg-canvas px-3 py-2 text-[12px]"
+              className="flex flex-wrap items-center justify-between gap-2 px-1 py-2 text-[13px]"
             >
               <div>
                 <p className="font-medium text-ink">{row.name}</p>
@@ -46,9 +46,9 @@ export function ApiKeyForm({
               </div>
               <form action={revokeOrgApiKey}>
                 <input type="hidden" name="id" value={row.id} />
-                <Button type="submit" variant="danger" className="!px-2 !py-1 text-[11px]">
+                <button type="submit" className="wb-wa-text-btn is-danger">
                   İptal et
-                </Button>
+                </button>
               </form>
             </li>
           ))}
@@ -62,7 +62,7 @@ export function ApiKeyForm({
         >
           <Input name="name" defaultValue="crm" />
         </Field>
-        <Button type="submit" variant="quiet" disabled={pending}>
+        <Button type="submit" variant="accent" className="wb-wa-submit" disabled={pending}>
           {pending ? '…' : 'Yeni API anahtarı'}
         </Button>
         {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}

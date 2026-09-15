@@ -26,7 +26,11 @@ export function NewGroupButton({ className }: { className?: string }) {
 
   return (
     <>
-      <Button type="button" variant="accent" className={className} onClick={() => setOpen(true)}>
+      <Button
+        type="button"
+        className={`wb-wa-text-btn is-primary${className ? ` ${className}` : ''}`}
+        onClick={() => setOpen(true)}
+      >
         + Grup
       </Button>
       {open ? <NewGroupModal onClose={() => setOpen(false)} /> : null}
@@ -64,7 +68,7 @@ export function NewGroupModal({ onClose }: { onClose: () => void }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="wb-modal-panel wb-modal-panel--fill"
+        className="wb-modal-panel wb-modal-panel--fill wb-wa-modal"
       >
         <div className="mb-3 flex shrink-0 items-start justify-between gap-3">
           <div className="min-w-0">
@@ -77,7 +81,7 @@ export function NewGroupModal({ onClose }: { onClose: () => void }) {
             type="button"
             aria-label="Kapat"
             onClick={onClose}
-            className="inline-flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-ink-muted hover:bg-canvas hover:text-ink"
+            className="wb-wa-icon-btn"
           >
             <Icon name="close" className="size-4" />
           </button>
@@ -283,21 +287,17 @@ export function NewGroupForm({
             : 'space-y-2.5 p-3.5'
       }
     >
-      <div className="flex gap-1 rounded-md border border-hairline bg-canvas p-0.5">
+      <div className="wb-wa-seg">
         <button
           type="button"
-          className={`flex-1 rounded-[5px] px-2 py-1.5 text-[12px] font-semibold ${
-            mode === 'empty' ? 'bg-surface text-ink shadow-sm' : 'text-ink-muted'
-          }`}
+          className={`wb-wa-chip${mode === 'empty' ? ' is-active' : ''}`}
           onClick={() => setMode('empty')}
         >
           Boş grup
         </button>
         <button
           type="button"
-          className={`flex-1 rounded-[5px] px-2 py-1.5 text-[12px] font-semibold ${
-            mode === 'fill' ? 'bg-surface text-ink shadow-sm' : 'text-ink-muted'
-          }`}
+          className={`wb-wa-chip${mode === 'fill' ? ' is-active' : ''}`}
           onClick={() => setMode('fill')}
         >
           Excel / yapıştır
@@ -360,7 +360,7 @@ export function NewGroupForm({
       <Button
         type="button"
         variant="accent"
-        className={fill ? 'mt-auto w-full' : undefined}
+        className={fill ? 'mt-auto w-full wb-wa-submit' : 'wb-wa-submit'}
         disabled={pending || name.trim().length < 2}
         onClick={() => (mode === 'empty' ? submitEmpty() : submitFill())}
       >

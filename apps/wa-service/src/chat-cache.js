@@ -49,6 +49,7 @@ function packMsg(row) {
     row.campaignName ?? null,
     row.wa_message_id ?? null,
     row.clientKey ?? null,
+    row.media_url ?? null,
   ]
 }
 
@@ -68,6 +69,7 @@ function unpackMsg(row) {
     campaignName: row[10],
     wa_message_id: row[11],
     clientKey: row[12] || (row[0] != null ? `log-${row[0]}` : undefined),
+    media_url: row[13] ?? null,
   }
 }
 
@@ -143,6 +145,7 @@ async function applyWaMessage(entry, phone) {
     remote_jid: entry.remote_jid ?? null,
     message_type: entry.message_type ?? 'text',
     body: entry.body ?? null,
+    media_url: entry.media_url ?? null,
     status: entry.status ?? (entry.direction === 'in' ? 'delivered' : 'sent'),
     created_at: entry.created_at ?? new Date().toISOString(),
     campaign_id: entry.campaign_id ?? null,

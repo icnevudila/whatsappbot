@@ -117,7 +117,7 @@ export function ListRequestButton() {
 
   return (
     <>
-      <Button type="button" onClick={() => setOpen(true)}>
+      <Button type="button" className="wb-wa-text-btn" onClick={() => setOpen(true)}>
         <Icon name="search" className="size-4" />
         Liste talep
       </Button>
@@ -191,7 +191,7 @@ export function ListRequestModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="wb-modal-panel wb-modal-panel--fill"
+        className="wb-modal-panel wb-modal-panel--fill wb-wa-modal"
       >
         <div className="mb-3 flex shrink-0 items-start justify-between gap-3">
           <div className="min-w-0">
@@ -225,7 +225,7 @@ export function ListRequestModal({
         ) : (
           <div className="flex min-h-0 flex-1 flex-col">
             <div className="mb-3 shrink-0">
-              <Button type="button" variant="accent" onClick={() => setView('form')}>
+              <Button type="button" className="wb-wa-submit" onClick={() => setView('form')}>
                 <Icon name="plus" className="size-4" />
                 Yeni liste talep
               </Button>

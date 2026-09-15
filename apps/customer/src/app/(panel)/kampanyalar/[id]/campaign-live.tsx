@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, useTransition } from 'react'
 import type { Tables } from '@wa/shared'
-import { Button, Card, CardHeader, Meter, Notice, StatusPill } from '@/components/ui'
+import { Button, Card, CardHeader, Meter, Notice } from '@/components/ui'
 import { LiveStat } from '@/components/live-stat'
 import { useToast } from '@/components/toast'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
@@ -209,7 +209,6 @@ export function CampaignLive({
         <CardHeader
           title="İlerleme"
           subtitle={subtitleParts.join(' · ')}
-          action={<StatusPill status={campaign.status} />}
         />
 
         <div className="space-y-2.5 p-3.5">
@@ -371,11 +370,6 @@ export function CampaignLive({
           ) : null}
 
           <div className="space-y-2 border-t border-hairline pt-2.5">
-            <div className="flex items-center justify-between gap-2 sm:hidden">
-              <span className="text-[12px] font-medium text-ink-muted">Durum</span>
-              <StatusPill status={campaign.status} />
-            </div>
-
             {queueHint > 0 &&
             (campaign.status === 'draft' || campaign.status === 'stopped') ? (
               <Notice tone="warn">

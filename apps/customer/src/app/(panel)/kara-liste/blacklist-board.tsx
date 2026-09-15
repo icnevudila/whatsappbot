@@ -77,14 +77,14 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex justify-end">
-        <Button type="button" variant="accent" onClick={() => setOpen(true)}>
+    <div>
+      <div className="flex justify-end px-2">
+        <button type="button" className="wb-wa-text-btn" onClick={() => setOpen(true)}>
           + Yeni numara engelle
-        </Button>
+        </button>
       </div>
 
-      <div className="relative">
+      <div className="relative px-3 py-2">
         <Input
           aria-label="Numara ara"
           type="search"
@@ -92,7 +92,7 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
           placeholder="Numara ara…"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          className="pr-10 [&::-webkit-search-cancel-button]:hidden"
+          className="wb-wa-search pr-10 [&::-webkit-search-cancel-button]:hidden"
         />
         {search ? (
           <button
@@ -107,32 +107,45 @@ export function BlacklistBoard({ initial }: { initial: BlacklistRow[] }) {
       </div>
 
       {rows.length === 0 ? (
-        <p className="rounded-[var(--radius-card)] border border-hairline bg-surface px-4 py-8 text-center text-[13px] text-ink-muted">
+        <p className="px-4 py-8 text-center text-[13px] text-[#667781]">
           Engellenen numara yok.
         </p>
       ) : rows.length > 0 && visible.length === 0 ? (
-        <p className="rounded-[var(--radius-card)] border border-hairline bg-surface px-4 py-8 text-center text-[13px] text-ink-muted">
+        <p className="px-4 py-8 text-center text-[13px] text-[#667781]">
           Eşleşen numara yok.
         </p>
       ) : rows.length > 0 ? (
-        <div className="overflow-hidden rounded-[var(--radius-card)] border border-hairline bg-surface">
-          <ul className="divide-y divide-hairline">
+        <div>
+          <ul className="wb-inbox-list">
             {pageRows.map((row) => (
-              <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5">
-                <div className="min-w-0">
-                  <p className="font-mono text-[13.5px] tabular text-ink">{row.phone_e164}</p>
-                  {row.reason?.trim() ? (
-                    <p className="mt-0.5 truncate text-[12px] text-ink-muted">{row.reason.trim()}</p>
-                  ) : null}
+              <li key={row.id}>
+                <div className="flex items-center">
+                  <div className="wb-wa-row min-w-0 flex-1">
+                    <span
+                      className="wb-wa-avatar"
+                      style={{ background: '#e17076' }}
+                      aria-hidden
+                    >
+                      {row.phone_e164.replace(/\D/g, '').slice(-2) || '?'}
+                    </span>
+                    <span className="wb-wa-row-main">
+                      <span className="wb-wa-row-top">
+                        <span className="wb-wa-name">{row.phone_e164}</span>
+                      </span>
+                      <span className="wb-wa-row-bottom">
+                        <span className="wb-wa-preview">{row.reason?.trim() || 'Sebep yok'}</span>
+                      </span>
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="wb-wa-text-btn is-danger mr-1"
+                    disabled={busyId === row.id}
+                    onClick={() => remove(row.id, row.phone_e164)}
+                  >
+                    {busyId === row.id ? 'Kaldırılıyor…' : 'Kaldır'}
+                  </button>
                 </div>
-                <Button
-                  variant="danger"
-                  className="h-8 text-[12.5px]"
-                  disabled={busyId === row.id}
-                  onClick={() => remove(row.id, row.phone_e164)}
-                >
-                  {busyId === row.id ? 'Kaldırılıyor…' : 'Kaldır'}
-                </Button>
               </li>
             ))}
           </ul>
@@ -213,7 +226,7 @@ function AddBlockedModal({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descId}
-        className="wb-modal-panel"
+        className="wb-modal-panel wb-wa-modal"
       >
         <h2 id={titleId} className="wb-modal-title">
           Yeni numara engelle
@@ -240,7 +253,7 @@ function AddBlockedModal({
             <Button type="button" variant="quiet" disabled={pending} onClick={onClose}>
               Vazgeç
             </Button>
-            <Button type="submit" variant="accent" disabled={pending}>
+            <Button type="submit" variant="accent" className="wb-wa-submit" disabled={pending}>
               {pending ? 'Ekleniyor…' : 'Engelle'}
             </Button>
           </div>

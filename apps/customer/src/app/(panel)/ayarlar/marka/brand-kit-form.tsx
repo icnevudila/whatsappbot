@@ -102,7 +102,7 @@ export function BrandKitForm({
       {state?.ok ? <Notice tone="accent">{state.ok}</Notice> : null}
 
       {canEdit ? (
-        <Button type="submit" variant="accent" disabled={pending}>
+        <Button type="submit" variant="accent" className="wb-wa-submit" disabled={pending}>
           {pending ? 'Kaydediliyor…' : kit?.id ? 'Kaydet' : 'Oluştur'}
         </Button>
       ) : null}

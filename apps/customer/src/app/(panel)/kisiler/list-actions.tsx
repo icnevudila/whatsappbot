@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState, useTransition } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, useTransition, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { Button, Input, Notice } from '@/components/ui'
 import { Icon } from '@/components/icon'
@@ -15,10 +16,14 @@ export function ListActions({
   listId,
   compact = false,
   currentName,
+  menuExtra,
+  menuLabel = 'Grup işlemleri',
 }: {
   listId: string
   compact?: boolean
   currentName?: string
+  menuExtra?: (close: () => void) => ReactNode
+  menuLabel?: string
 }) {
   const router = useRouter()
   const confirm = useConfirm()
@@ -31,7 +36,10 @@ export function ListActions({
   const [renaming, setRenaming] = useState(false)
   const [nameDraft, setNameDraft] = useState(currentName ?? '')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+  const menuPanelRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
   useSyncBusy(
     pending,
     busy === 'delete'
@@ -41,10 +49,35 @@ export function ListActions({
         : 'Liste doğrulanıyor…',
   )
 
+  useLayoutEffect(() => {
+    if (!menuOpen || !buttonRef.current) {
+      setMenuPos(null)
+      return
+    }
+    const place = () => {
+      const rect = buttonRef.current?.getBoundingClientRect()
+      if (!rect) return
+      setMenuPos({
+        top: rect.bottom + 4,
+        right: Math.max(8, window.innerWidth - rect.right),
+      })
+    }
+    place()
+    window.addEventListener('resize', place)
+    window.addEventListener('scroll', place, true)
+    return () => {
+      window.removeEventListener('resize', place)
+      window.removeEventListener('scroll', place, true)
+    }
+  }, [menuOpen])
+
   useEffect(() => {
     if (!menuOpen) return
     const onDoc = (event: MouseEvent | TouchEvent) => {
-      if (event.target instanceof Node && !menuRef.current?.contains(event.target)) setMenuOpen(false)
+      if (!(event.target instanceof Node)) return
+      if (menuRef.current?.contains(event.target)) return
+      if (menuPanelRef.current?.contains(event.target)) return
+      setMenuOpen(false)
     }
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setMenuOpen(false)
@@ -195,66 +228,80 @@ export function ListActions({
       )
     }
 
-    return (
-      <div className="relative shrink-0" ref={menuRef}>
-        <button
-          type="button"
-          aria-label="Grup işlemleri"
-          aria-haspopup="menu"
-          aria-expanded={menuOpen}
-          disabled={pending}
-          onClick={() => setMenuOpen((value) => !value)}
-          className="inline-flex size-8 items-center justify-center rounded-full border border-hairline bg-surface text-ink hover:bg-canvas disabled:opacity-50"
-        >
-          <Icon name="ellipsis" className="size-4" />
-        </button>
-        {menuOpen ? (
-          <div
-            role="menu"
-            className="absolute right-0 z-30 mt-1 min-w-[11.5rem] rounded-md border border-hairline bg-surface p-1 shadow-[var(--shadow-md)]"
-          >
-            {currentName != null ? (
+    const menu =
+      menuOpen && menuPos
+        ? createPortal(
+            <div
+              ref={menuPanelRef}
+              role="menu"
+              className="wb-wa-menu wb-wa-menu--fixed"
+              style={{ top: menuPos.top, right: menuPos.right }}
+            >
+              {menuExtra ? menuExtra(() => setMenuOpen(false)) : null}
+              {currentName != null ? (
+                <button
+                  type="button"
+                  role="menuitem"
+                  disabled={pending}
+                  className="wb-wa-menu-item"
+                  onClick={() => {
+                    setMenuOpen(false)
+                    setNameDraft(currentName)
+                    setRenaming(true)
+                  }}
+                >
+                  <Icon name="edit" className="size-4 text-ink-muted" />
+                  Adı değiştir
+                </button>
+              ) : null}
               <button
                 type="button"
                 role="menuitem"
                 disabled={pending}
-                className="flex w-full items-center rounded px-2.5 py-2 text-left text-[13px] font-medium text-ink hover:bg-canvas disabled:opacity-50"
+                title="Bağlı hat gerekir — gruptaki numaraları WhatsApp’ta kontrol eder"
+                className="wb-wa-menu-item"
                 onClick={() => {
                   setMenuOpen(false)
-                  setNameDraft(currentName)
-                  setRenaming(true)
+                  runVerify()
                 }}
               >
-                Adı değiştir
+                <Icon name="check" className="size-4 text-ink-muted" />
+                {busy === 'verify' ? 'Doğrulanıyor…' : 'WhatsApp doğrula'}
               </button>
-            ) : null}
-            <button
-              type="button"
-              role="menuitem"
-              disabled={pending}
-              title="Bağlı hat gerekir — gruptaki numaraları WhatsApp’ta kontrol eder"
-              className="flex w-full items-center rounded px-2.5 py-2 text-left text-[13px] font-medium text-ink hover:bg-canvas disabled:opacity-50"
-              onClick={() => {
-                setMenuOpen(false)
-                runVerify()
-              }}
-            >
-              {busy === 'verify' ? 'Doğrulanıyor…' : 'WhatsApp doğrula'}
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              disabled={pending}
-              className="flex w-full items-center rounded px-2.5 py-2 text-left text-[13px] font-medium text-danger hover:bg-canvas disabled:opacity-50"
-              onClick={() => {
-                setMenuOpen(false)
-                askDeleteCompact()
-              }}
-            >
-              {busy === 'delete' ? 'Siliniyor…' : 'Sil'}
-            </button>
-          </div>
-        ) : null}
+              <button
+                type="button"
+                role="menuitem"
+                disabled={pending}
+                className="wb-wa-menu-item is-danger"
+                onClick={() => {
+                  setMenuOpen(false)
+                  askDeleteCompact()
+                }}
+              >
+                <Icon name="trash" className="size-4" />
+                {busy === 'delete' ? 'Siliniyor…' : 'Sil'}
+              </button>
+            </div>,
+            document.body,
+          )
+        : null
+
+    return (
+      <div className="relative shrink-0" ref={menuRef}>
+        <button
+          ref={buttonRef}
+          type="button"
+          aria-label={menuLabel}
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          title={menuLabel}
+          disabled={pending}
+          onClick={() => setMenuOpen((value) => !value)}
+          className="wb-wa-icon-btn"
+        >
+          <Icon name="ellipsis" className="size-5" />
+        </button>
+        {menu}
       </div>
     )
   }

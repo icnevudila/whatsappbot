@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 import { PageHeader } from '@/components/ui'
 import { isOrgAdminRole, requireActiveOrg } from '@/lib/org'
-import { CreativeDetail, type DetailCreative, type VersionRow } from '../detail-view'
+import { CreativeDetail, CreativeTitleEdit, type DetailCreative, type VersionRow } from '../detail-view'
 import type { CreativePayload } from '@/lib/creative/types'
 
 export const metadata: Metadata = { title: 'Görsel' }
@@ -129,6 +129,7 @@ export default async function CreativeDetailPage({
         description="Revize edin, varyasyon alın veya kampanyada kullanın."
         backHref="/icerik"
         backLabel="Kütüphane"
+        titleEnd={<CreativeTitleEdit id={creative.id} title={displayTitle} />}
       />
       <CreativeDetail
         orgId={org.id}

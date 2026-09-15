@@ -27,14 +27,18 @@ export function WizardStepper({
   current: WizardStepId
   onJump: (id: WizardStepId) => void
 }) {
+  const currentLabel = WIZARD_STEPS.find((step) => step.id === current)?.label ?? ''
   return (
-    <Stepper
-      label="Kampanya adımları"
-      steps={[...WIZARD_STEPS]}
-      current={current}
-      onJump={(id) => onJump(id as WizardStepId)}
-      className="border-b border-hairline px-4 py-3 sm:px-5"
-    />
+    <div className="wb-wa-wizard-steps">
+      <Stepper
+        label="Kampanya adımları"
+        steps={[...WIZARD_STEPS]}
+        current={current}
+        onJump={(id) => onJump(id as WizardStepId)}
+        className="wb-wa-steps"
+      />
+      <p className="wb-wa-wizard-step-title">{currentLabel}</p>
+    </div>
   )
 }
 
@@ -55,9 +59,9 @@ export function AudiencePicker({
 }) {
   if (lists.length === 0) {
     return (
-      <p className="rounded-md border border-hairline bg-canvas px-3 py-3 text-[13px] text-ink-muted">
+      <p className="wb-wa-pick-empty">
         Önce{' '}
-        <Link href="/kisiler" className="font-medium text-accent underline underline-offset-2">
+        <Link href="/kisiler" className="font-medium text-[#008069] underline underline-offset-2">
           Kişiler
         </Link>
         ’den bir grup oluşturun.
@@ -73,27 +77,25 @@ export function AudiencePicker({
           return (
             <label
               key={list.id}
-              className={`flex min-h-12 cursor-pointer items-start gap-2.5 rounded-md border px-3 py-2.5 ${
-                on ? 'border-accent bg-accent-soft/60' : 'border-hairline bg-canvas'
-              } ${locked ? 'cursor-not-allowed opacity-60' : ''}`}
+              className={`wb-wa-pick${on ? ' is-on' : ''}${locked ? ' is-locked' : ''}`}
             >
               <input
                 type="checkbox"
-                className="mt-0.5 size-4 accent-[var(--color-accent)]"
+                className="mt-0.5 size-4 accent-[#008069]"
                 checked={on}
                 disabled={locked}
                 onChange={() => onToggle(list.id)}
               />
               <span className="min-w-0">
-                <span className="block truncate text-[13.5px] font-semibold text-ink">{list.label}</span>
-                <span className="text-[12px] text-ink-faint">{list.detail}</span>
+                <span className="block truncate text-[13.5px] font-semibold text-[#111b21]">{list.label}</span>
+                <span className="text-[12px] text-[#667781]">{list.detail}</span>
               </span>
             </label>
           )
         })}
       </div>
       {selected.length > 0 ? (
-        <p className="rounded-md border border-accent/25 bg-accent-soft px-3 py-2 text-[13.5px] font-medium text-ink">
+        <p className="wb-wa-pick-summary">
           {counting
             ? 'Alıcı sayısı hesaplanıyor…'
             : uniqueCount != null
@@ -123,9 +125,9 @@ export function SenderPicker({
 
   if (accounts.length === 0) {
     return (
-      <p className="rounded-md border border-hairline bg-canvas px-3 py-3 text-[13px] text-ink-muted">
+      <p className="wb-wa-pick-empty">
         Önce{' '}
-        <Link href="/ayarlar/hatlar" className="font-medium text-accent underline underline-offset-2">
+        <Link href="/ayarlar/hatlar" className="font-medium text-[#008069] underline underline-offset-2">
           Hatlar
         </Link>
         ’dan WhatsApp bağlayın.
@@ -146,21 +148,21 @@ export function SenderPicker({
           return (
             <label
               key={account.id}
-              className={`flex min-h-14 items-start gap-2.5 rounded-md border px-3 py-2.5 ${
-                account.disabled || locked ? 'cursor-not-allowed opacity-55' : forceOn ? 'cursor-default' : 'cursor-pointer'
-              } ${on || forceOn ? 'border-accent bg-accent-soft/60' : 'border-hairline bg-canvas'}`}
+              className={`wb-wa-pick${on || forceOn ? ' is-on' : ''}${
+                account.disabled || locked ? ' is-locked' : forceOn ? ' is-fixed' : ''
+              }`}
             >
               <input
                 type="checkbox"
-                className="mt-1 size-4 accent-[var(--color-accent)]"
+                className="mt-1 size-4 accent-[#008069]"
                 checked={on || forceOn}
                 disabled={frozen}
                 onChange={() => onToggle(account.id)}
               />
               <span className="min-w-0">
-                <span className="block truncate text-[13.5px] font-semibold text-ink">{account.label}</span>
-                <span className="block text-[12.5px] tabular text-ink-muted">{account.phone || 'Numara yok'}</span>
-                <span className={`text-[11.5px] font-medium ${account.connected ? 'text-ok-dim' : 'text-warn'}`}>
+                <span className="block truncate text-[13.5px] font-semibold text-[#111b21]">{account.label}</span>
+                <span className="block text-[12.5px] tabular text-[#667781]">{account.phone || 'Numara yok'}</span>
+                <span className={`text-[11.5px] font-medium ${account.connected ? 'text-[#008069]' : 'text-warn'}`}>
                   ● {account.detail}
                 </span>
               </span>
@@ -756,35 +758,21 @@ export function PublishCards({
           return (
             <label
               key={card.id}
-              className={`block cursor-pointer rounded-md border px-3 py-3 ${
-                on
-                  ? card.danger
-                    ? 'border-danger bg-danger/5'
-                    : 'border-accent bg-accent-soft/70'
-                  : 'border-hairline bg-canvas'
-              }`}
+              className={`wb-wa-publish${on ? ' is-on' : ''}${card.danger && on ? ' is-danger' : ''}`}
             >
               <span className="flex items-start gap-2.5">
                 <input
                   type="radio"
-                  className="mt-2 accent-[var(--color-accent)]"
+                  className="mt-2 accent-[#008069]"
                   checked={on}
                   onChange={() => onSelect(card.id)}
                 />
-                <span
-                  className={`mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md border ${
-                    on
-                      ? card.danger
-                        ? 'border-danger/30 bg-danger/10 text-danger'
-                        : 'border-accent/30 bg-accent-soft text-accent'
-                      : 'border-hairline bg-surface text-ink-muted'
-                  }`}
-                >
+                <span className={`wb-wa-publish-icon${card.danger && on ? ' is-danger' : on ? ' is-on' : ''}`}>
                   <Icon name={card.icon} className="size-4" />
                 </span>
                 <span>
-                  <span className="block text-[14px] font-semibold text-ink">{card.title}</span>
-                  <span className="text-[12.5px] text-ink-muted">{card.body}</span>
+                  <span className="block text-[14px] font-semibold text-[#111b21]">{card.title}</span>
+                  <span className="text-[12.5px] text-[#667781]">{card.body}</span>
                 </span>
               </span>
               {card.id === 'schedule' && on ? (
@@ -810,11 +798,11 @@ export function SummaryPills({
           key={item.label}
           type="button"
           onClick={item.onEdit}
-          className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-hairline bg-canvas py-1 pl-2.5 pr-2 text-left hover:border-accent/40 hover:bg-accent-soft/50"
+          className="wb-wa-summary-pill"
         >
-          <span className="shrink-0 text-[11px] font-medium text-ink-faint">{item.label}</span>
-          <span className="min-w-0 truncate text-[12.5px] font-semibold text-ink">{item.value}</span>
-          <Icon name="edit" className="size-3 shrink-0 text-accent" />
+          <span className="shrink-0 text-[11px] font-medium text-[#667781]">{item.label}</span>
+          <span className="min-w-0 truncate text-[12.5px] font-semibold text-[#111b21]">{item.value}</span>
+          <Icon name="edit" className="size-3 shrink-0 text-[#008069]" />
         </button>
       ))}
     </div>
