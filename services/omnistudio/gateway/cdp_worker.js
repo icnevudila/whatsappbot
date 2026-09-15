@@ -99,7 +99,7 @@ async function checkTabLogin(tab) {
   }
 }
 
-// Firma Başına Ayrılmış Kalıcı Sohbet Yönetimi (Persistent Customer Chat Mapping)
+// Firma Başına Ayrılmış Çift Kanallı (Medya vs Mesajlar) Sohbet Yönetimi
 function getCompanyChats() {
   const file = path.join('/data', `company_chats_${WORKER_ID}.json`);
   try {
@@ -110,17 +110,24 @@ function getCompanyChats() {
   return {};
 }
 
-function setCompanyChat(customer, chatUrl) {
+function setCompanyChat(customer, channel, chatUrl) {
   if (!customer || !chatUrl) return;
   const file = path.join('/data', `company_chats_${WORKER_ID}.json`);
   try {
     const data = getCompanyChats();
-    data[customer] = {
+    if (!data[customer] || typeof data[customer] !== 'object') {
+      data[customer] = {};
+    }
+    // Geriye dönük uyumluluk: Eski formatta düz chatUrl varsa media altına taşı
+    if (data[customer].chatUrl && !data[customer].media) {
+      data[customer].media = { chatUrl: data[customer].chatUrl, updatedAt: data[customer].updatedAt || Date.now() };
+    }
+    data[customer][channel] = {
       chatUrl,
       updatedAt: Date.now()
     };
     fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8');
-    console.log(`[CDP Worker: ${WORKER_ID}] Firma "${customer}" sohbet URL'si kaydedildi: ${chatUrl}`);
+    console.log(`[CDP Worker: ${WORKER_ID}] Firma "${customer}" [${channel}] sohbet URL'si kaydedildi: ${chatUrl}`);
   } catch (e) {
     console.error(`[CDP Worker: ${WORKER_ID}] Firma sohbeti kaydedilemedi:`, e.message);
   }
@@ -146,8 +153,8 @@ async function waitForChatInput(cdp, maxWaitMs = 15000) {
   return false;
 }
 
-async function renameChatToCustomer(cdp, customer) {
-  if (!customer) return;
+async function renameChatToCustomer(cdp, title) {
+  if (!title) return;
   try {
     await cdp.send('Runtime.evaluate', {
       expression: `(async () => {
@@ -167,29 +174,36 @@ async function renameChatToCustomer(cdp, customer) {
         await fetch('/backend-api/conversation/' + conversationId, {
           method: 'PATCH',
           headers,
-          body: JSON.stringify({ title: ${JSON.stringify(customer)} })
+          body: JSON.stringify({ title: ${JSON.stringify(title)} })
         });
 
         const links = Array.from(document.querySelectorAll('nav a'));
         for (const a of links) {
           if (a.href.includes(conversationId) || a.getAttribute('aria-current') === 'page') {
             const textDiv = a.querySelector('div') || a;
-            textDiv.innerText = ${JSON.stringify(customer)};
+            textDiv.innerText = ${JSON.stringify(title)};
           }
         }
       })()`,
       awaitPromise: true
     });
-    console.log(`[CDP Worker: ${WORKER_ID}] Sohbet başlığı "${customer}" olarak adlandırıldı.`);
+    console.log(`[CDP Worker: ${WORKER_ID}] Sohbet başlığı "${title}" olarak adlandırıldı.`);
   } catch (e) {
     console.warn(`[CDP Worker: ${WORKER_ID}] Sohbet adlandırma uyarısı:`, e.message);
   }
 }
 
-async function ensureCustomerChat(cdp, customer) {
+async function ensureCustomerChat(cdp, customer, channel = 'media') {
   const chats = getCompanyChats();
-  const saved = chats[customer];
-  const targetUrl = saved?.chatUrl || null;
+  const companyData = chats[customer];
+  let targetUrl = null;
+  if (companyData) {
+    if (companyData[channel]?.chatUrl) {
+      targetUrl = companyData[channel].chatUrl;
+    } else if (channel === 'media' && companyData.chatUrl) {
+      targetUrl = companyData.chatUrl;
+    }
+  }
 
   const urlEval = await cdp.send('Runtime.evaluate', {
     expression: 'window.location.href',
@@ -198,14 +212,14 @@ async function ensureCustomerChat(cdp, customer) {
   const currentUrl = urlEval.result?.value || '';
 
   if (targetUrl) {
-    // Bu firma için önceden açılmış bir sohbet var
+    // Bu firma ve kanal için önceden açılmış bir sohbet var
     const targetChatPath = targetUrl.replace('https://chatgpt.com', '');
     if (currentUrl.includes(targetChatPath)) {
-      console.log(`[CDP Worker: ${WORKER_ID}] "${customer}" firması için zaten aktif sohbetteyiz: ${targetUrl}`);
+      console.log(`[CDP Worker: ${WORKER_ID}] "${customer}" [${channel}] aktif sohbetteyiz: ${targetUrl}`);
       return;
     }
 
-    console.log(`[CDP Worker: ${WORKER_ID}] "${customer}" firmasının özel sohbetine geçiliyor: ${targetUrl}`);
+    console.log(`[CDP Worker: ${WORKER_ID}] "${customer}" [${channel}] sohbetine geçiliyor: ${targetUrl}`);
     await cdp.send('Page.navigate', { url: targetUrl });
     await waitForChatInput(cdp);
 
@@ -218,12 +232,12 @@ async function ensureCustomerChat(cdp, customer) {
     if (afterUrl.includes('/c/')) {
       return;
     }
-    console.log(`[CDP Worker: ${WORKER_ID}] "${customer}" eski sohbeti açılamadı, yeni sohbet oluşturulacak.`);
+    console.log(`[CDP Worker: ${WORKER_ID}] "${customer}" [${channel}] eski sohbeti açılamadı, yeni sohbet oluşturulacak.`);
   }
 
-  // Bu firma için kayıtlı sohbet yok veya eski sohbet kapalı -> Yeni temiz sohbet aç
+  // Bu firma ve kanal için kayıtlı sohbet yok veya eski sohbet kapalı -> Yeni temiz sohbet aç
   if (currentUrl.includes('/c/')) {
-    console.log(`[CDP Worker: ${WORKER_ID}] "${customer}" firması için yeni özel sohbet açılıyor...`);
+    console.log(`[CDP Worker: ${WORKER_ID}] "${customer}" [${channel}] için yeni özel sohbet açılıyor...`);
     await cdp.send('Runtime.evaluate', {
       expression: `(() => {
         const link = document.querySelector('a[href="/"]');
@@ -235,7 +249,7 @@ async function ensureCustomerChat(cdp, customer) {
     });
     await waitForChatInput(cdp);
   } else {
-    console.log(`[CDP Worker: ${WORKER_ID}] "${customer}" için temiz sohbet sayfası hazır.`);
+    console.log(`[CDP Worker: ${WORKER_ID}] "${customer}" [${channel}] için temiz sohbet sayfası hazır.`);
   }
 }
 
@@ -301,7 +315,11 @@ async function workerLoop() {
     console.log(`[CDP Worker] Prompt: "${job.prompt.slice(0, 80)}..."`);
     console.log(`======================================================`);
 
-    await executeChatGPTJob(chatgptTab, job);
+    if (job.type === 'chat_suggestions') {
+      await executeChatSuggestionsJob(chatgptTab, job);
+    } else {
+      await executeChatGPTJob(chatgptTab, job);
+    }
 
   } catch (err) {
     console.error('[CDP Worker] Döngü hatası:', err.message);
@@ -317,10 +335,10 @@ async function executeChatGPTJob(tab, job) {
   try {
     cdp = await createCdpSession(tab.webSocketDebuggerUrl);
 
-    // 0. Firma Başına Ayrılmış Özel Sohbet Yönetimi
+    // 0. Firma Başına Ayrılmış Özel Sohbet Yönetimi (Medya / Görsel Kanalı)
     const customer = (job.customer || 'Genel').trim();
-    console.log(`[CDP Worker: ${WORKER_ID}] Firma: "${customer}" için sohbet hazırlanıyor...`);
-    await ensureCustomerChat(cdp, customer);
+    console.log(`[CDP Worker: ${WORKER_ID}] Firma: "${customer}" için [Medya] sohbeti hazırlanıyor...`);
+    await ensureCustomerChat(cdp, customer, 'media');
 
     // 1. Referans Görseller Varsa (Image-to-Image / Ürün Görseli) ChatGPT'ye Dosya Olarak Yükle
     if (Array.isArray(job.referenceImages) && job.referenceImages.length > 0) {
@@ -544,8 +562,8 @@ async function executeChatGPTJob(tab, job) {
       });
       const finalUrl = finalUrlEval.result?.value || '';
       if (finalUrl.includes('/c/')) {
-        setCompanyChat(customer, finalUrl);
-        await renameChatToCustomer(cdp, customer);
+        setCompanyChat(customer, 'media', finalUrl);
+        await renameChatToCustomer(cdp, `${customer} - Medya`);
       }
     } catch (urlErr) {
       console.warn(`[CDP Worker: ${WORKER_ID}] URL kaydetme uyarısı:`, urlErr.message);
@@ -563,6 +581,179 @@ async function executeChatGPTJob(tab, job) {
     for (const p of tempRefPaths) {
       try { fs.unlinkSync(p); } catch (e) {}
     }
+    if (cdp) cdp.close();
+  }
+}
+
+// WhatsApp Yapay Zeka Mesaj Önerileri İşini Çalıştır (Kalıcı Mesajlaşma Sohbeti)
+async function executeChatSuggestionsJob(tab, job) {
+  let cdp = null;
+  try {
+    cdp = await createCdpSession(tab.webSocketDebuggerUrl);
+
+    const customer = (job.customer || 'Genel').trim();
+    console.log(`[CDP Worker: ${WORKER_ID}] [Mesajlar] Firma: "${customer}" için müşteri temsilcisi sohbeti hazırlanıyor...`);
+
+    // 1. Müşteri temsilcisi sohbetine geç ('chat' kanalı)
+    await ensureCustomerChat(cdp, customer, 'chat');
+
+    // 2. Prompt hazırla
+    const prompt = `Sen "${customer}" firmasının WhatsApp kurumsal müşteri temsilcisisin.
+${job.companyContext ? `Firma / Sektör Bilgisi:\n${job.companyContext}` : 'Firma Bilgisi: Müşteri odaklı kurumsal hizmet'}
+${job.tone ? `İstenen İletişim Tonu: ${job.tone}` : ''}
+
+${job.conversationHistory ? `Önceki Konuşma Geçmişi:\n${job.conversationHistory}` : 'Konuşma yeni başladı.'}
+
+MÜŞTERİDEN GELEN EN SON MESAJ:
+"${job.incomingMessage}"
+
+GÖREV:
+Bu mesaja verilebilecek en kaliteli ve uygun 3 FARKLI alternatif Türkçe yanıt hazırla:
+1. "Kısa & Net" (Hızlı, öz, gereksiz uzatmayan net bilgi)
+2. "Samimi" (Nazik, güler yüzlü, çözüm odaklı kurumsal yanıt)
+3. "Yönlendirici" (Gerekiyorsa sonraki adımı, arama saatini veya detayları soran aksiyon yanıtı)
+
+ÖNEMLİ KURAL:
+YALNIZCA VE SADECE aşağıdaki JSON formatında çıktı ver. Markdown kod bloğu (\`\`\`json) veya başka hiçbir metin ekleme:
+{"suggestions":[{"label":"Kısa & Net","text":"..."},{"label":"Samimi","text":"..."},{"label":"Yönlendirici","text":"..."}]}`;
+
+    // 3. Prompt'u ChatGPT'ye enjekte et ve gönder
+    const injectEval = await cdp.send('Runtime.evaluate', {
+      expression: `
+        (() => {
+          const textarea = document.querySelector('#prompt-textarea') || 
+                           document.querySelector('div[contenteditable="true"]') ||
+                           document.querySelector('textarea');
+          if (!textarea) return { success: false, error: 'Textarea bulunamadı' };
+          
+          textarea.focus();
+          if (textarea.tagName === 'DIV' || textarea.getAttribute('contenteditable') === 'true') {
+            textarea.innerHTML = '<p>' + ${JSON.stringify(prompt)}.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</p>';
+          } else {
+            textarea.value = ${JSON.stringify(prompt)};
+          }
+
+          textarea.dispatchEvent(new Event('input', { bubbles: true }));
+          textarea.dispatchEvent(new Event('change', { bubbles: true }));
+
+          setTimeout(() => {
+            const sendBtn = document.querySelector('button[data-testid="send-button"]') ||
+                            document.querySelector('button[aria-label*="Send"]') ||
+                            document.querySelector('button[aria-label*="Gönder"]');
+            if (sendBtn && !sendBtn.disabled) {
+              sendBtn.click();
+            } else {
+              textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
+            }
+          }, 400);
+
+          return { success: true };
+        })()
+      `,
+      returnByValue: true
+    });
+
+    if (!injectEval.result?.value?.success) {
+      throw new Error(injectEval.result?.value?.error || 'ChatGPT input kutusu bulunamadı');
+    }
+
+    console.log(`[CDP Worker: ${WORKER_ID}] [Mesajlar] Prompt gönderildi, yanıt bekleniyor...`);
+    await sleep(2500);
+
+    // 4. Metin yanıtının tamamlanmasını bekle (Maksimum 35 saniye)
+    let lastText = '';
+    const maxWait = 22; // 22 * 1.5s = ~33s
+    for (let i = 0; i < maxWait; i++) {
+      await sleep(1500);
+      const textEval = await cdp.send('Runtime.evaluate', {
+        expression: `
+          (() => {
+            const stopBtn = document.querySelector('button[data-testid="stop-button"], button[aria-label*="Stop"], button[aria-label*="durdur"]');
+            const isThinking = !!document.querySelector('.result-thinking, [data-testid*="generating"], .streaming-animated-ellipsis');
+            const isGenerating = !!stopBtn || isThinking;
+
+            const articles = Array.from(document.querySelectorAll('[data-message-author-role="assistant"]'));
+            const lastMsg = articles.pop();
+            const text = lastMsg ? (lastMsg.innerText || '').trim() : '';
+            return { isGenerating, text };
+          })()
+        `,
+        returnByValue: true
+      });
+
+      const res = textEval.result?.value;
+      if (res && res.text) {
+        lastText = res.text;
+      }
+      if (res && !res.isGenerating && lastText.length > 20) {
+        break;
+      }
+    }
+
+    if (!lastText) {
+      throw new Error('ChatGPT yanıt üretemedi veya boş döndü');
+    }
+
+    // 5. JSON ayrıştırma
+    let parsedSuggestions = [];
+    try {
+      let clean = lastText.trim();
+      if (clean.includes('```json')) {
+        clean = clean.split('```json')[1].split('```')[0].trim();
+      } else if (clean.includes('```')) {
+        clean = clean.split('```')[1].split('```')[0].trim();
+      }
+      const jsonStart = clean.indexOf('{');
+      const jsonEnd = clean.lastIndexOf('}');
+      if (jsonStart !== -1 && jsonEnd !== -1) {
+        clean = clean.slice(jsonStart, jsonEnd + 1);
+      }
+      const parsed = JSON.parse(clean);
+      if (Array.isArray(parsed.suggestions) && parsed.suggestions.length > 0) {
+        parsedSuggestions = parsed.suggestions;
+      }
+    } catch (parseErr) {
+      console.warn(`[CDP Worker: ${WORKER_ID}] JSON ayrıştırma uyarısı:`, parseErr.message);
+      parsedSuggestions = [
+        { label: 'Öneri 1', text: lastText.slice(0, 300) }
+      ];
+    }
+
+    console.log(`[CDP Worker: ${WORKER_ID}] [Mesajlar] ${parsedSuggestions.length} öneri başarıyla üretildi.`);
+
+    // 6. Gateway'e bildir
+    await fetch(`${GATEWAY_URL}/job/complete-text`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jobId: job.id,
+        result: { suggestions: parsedSuggestions, raw: lastText }
+      })
+    });
+
+    // 7. Sohbet URL'sini ve Başlığını Kaydet
+    try {
+      const finalUrlEval = await cdp.send('Runtime.evaluate', {
+        expression: 'window.location.href',
+        returnByValue: true
+      });
+      const finalUrl = finalUrlEval.result?.value || '';
+      if (finalUrl.includes('/c/')) {
+        setCompanyChat(customer, 'chat', finalUrl);
+        await renameChatToCustomer(cdp, `${customer} - Mesajlar`);
+      }
+    } catch (urlErr) {
+      console.warn(`[CDP Worker: ${WORKER_ID}] URL kaydetme uyarısı:`, urlErr.message);
+    }
+
+  } catch (err) {
+    console.error(`[CDP Worker] [Mesajlar] İş hatası (${job.id}):`, err.message);
+    await fetch(`${GATEWAY_URL}/job/release`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jobId: job.id, error: err.message })
+    }).catch(() => {});
+  } finally {
     if (cdp) cdp.close();
   }
 }

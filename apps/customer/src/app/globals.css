@@ -3218,3 +3218,126 @@ main:has(.wb-inbox) {
   }
 }
 
+/* AI Suggestions in WhatsApp Chat Composer */
+.wb-ai-suggest-bar {
+  padding: 8px 12px 6px;
+  background: #f8fafc;
+  border-top: 1px solid var(--color-hairline);
+  border-bottom: 1px solid var(--color-hairline);
+  animation: filo-fade-in 0.18s ease-out;
+}
+.wb-ai-suggest-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.wb-ai-suggest-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--color-ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.wb-ai-suggest-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.wb-ai-suggest-refresh {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-accent);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  padding: 0;
+}
+.wb-ai-suggest-refresh:hover {
+  text-decoration: underline;
+}
+.wb-ai-suggest-close {
+  font-size: 11px;
+  color: var(--color-ink-faint);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  padding: 0 2px;
+}
+.wb-ai-suggest-close:hover {
+  color: var(--color-ink);
+}
+.wb-ai-suggest-grid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 6px;
+}
+@media (min-width: 640px) {
+  .wb-ai-suggest-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.wb-ai-suggest-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  gap: 3px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--color-hairline);
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.wb-ai-suggest-card:hover {
+  border-color: var(--color-accent);
+  background: #f4f7ff;
+  box-shadow: 0 2px 6px rgba(47, 91, 255, 0.08);
+}
+.wb-ai-suggest-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: #eef2ff;
+  color: var(--color-accent);
+}
+.wb-ai-suggest-body {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--color-ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.wb-ai-suggest-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  height: 38px;
+  border-radius: 20px;
+  border: 1px solid var(--color-hairline);
+  background: #ffffff;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+.wb-ai-suggest-btn:hover {
+  background: #f4f7ff;
+  border-color: var(--color-accent);
+}
+.wb-ai-suggest-btn.is-loading {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+

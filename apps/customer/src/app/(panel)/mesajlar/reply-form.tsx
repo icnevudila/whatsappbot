@@ -57,15 +57,22 @@ async function waitForJob(jobId: string) {
 export function ReplyForm({
   phone,
   accountId,
+  lastInbound,
+  threadContext,
   onQueued,
   onUpdate,
 }: {
   phone: string
   accountId: string
+  lastInbound?: string | null
+  threadContext?: string
   onQueued?: (body: string, clientKey: string) => void
   onUpdate?: (clientKey: string, patch: { status: string }) => void
 }) {
   const [body, setBody] = useState('')
+  const [suggestions, setSuggestions] = useState<Array<{ label: string; text: string }>>([])
+  const [isSuggesting, setIsSuggesting] = useState(false)
+  const [showSuggestions, setShowSuggestions] = useState(false)
   const toast = useToast()
   const input = useRef<HTMLTextAreaElement>(null)
   const blurTimer = useRef<number>(0)
@@ -77,6 +84,37 @@ export function ReplyForm({
     }
   }, [])
 
+  async function fetchAiSuggestions() {
+    if (isSuggesting) return
+    setIsSuggesting(true)
+    try {
+      const res = await fetch('/api/mesajlar/ai-suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone,
+          lastMessage: lastInbound || body || 'Merhaba',
+          history: threadContext || '',
+        }),
+      })
+      const data = (await res.json()) as {
+        success?: boolean
+        suggestions?: Array<{ label: string; text: string }>
+        error?: string
+      }
+      if (data.suggestions && data.suggestions.length > 0) {
+        setSuggestions(data.suggestions)
+        setShowSuggestions(true)
+      } else {
+        toast(data.error || 'Yapay zeka önerisi üretilemedi.', 'warn')
+      }
+    } catch {
+      toast('Öneri servisine erişilemedi.', 'danger')
+    } finally {
+      setIsSuggesting(false)
+    }
+  }
+
   return (
     <form
       className="wb-chat-composer-bar"
@@ -87,6 +125,7 @@ export function ReplyForm({
         const clientKey = `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
         onQueued?.(text, clientKey)
         setBody('')
+        setShowSuggestions(false)
         window.requestAnimationFrame(() => {
           if (!input.current) return
           fitComposer(input.current)
@@ -115,7 +154,77 @@ export function ReplyForm({
         })()
       }}
     >
+      {showSuggestions && suggestions.length > 0 && (
+        <div className="wb-ai-suggest-bar">
+          <div className="wb-ai-suggest-head">
+            <span className="wb-ai-suggest-title">
+              <Icon name="sparkles" className="size-3.5 text-accent" />
+              ChatGPT Yanıt Önerileri
+            </span>
+            <div className="wb-ai-suggest-actions">
+              <button
+                type="button"
+                onClick={fetchAiSuggestions}
+                disabled={isSuggesting}
+                className="wb-ai-suggest-refresh"
+                title="Yeni öneriler üret"
+              >
+                {isSuggesting ? 'Üretiliyor…' : 'Yenile'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowSuggestions(false)}
+                className="wb-ai-suggest-close"
+                title="Kapat"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+          <div className="wb-ai-suggest-grid">
+            {suggestions.map((item, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => {
+                  setBody(item.text)
+                  window.requestAnimationFrame(() => {
+                    if (input.current) {
+                      fitComposer(input.current)
+                      input.current.focus()
+                    }
+                  })
+                }}
+                className="wb-ai-suggest-card"
+                title="Bu yanıtı seç"
+              >
+                <span className="wb-ai-suggest-badge">{item.label}</span>
+                <span className="wb-ai-suggest-body">{item.text}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="wb-chat-composer-row">
+        <button
+          type="button"
+          onClick={() => {
+            if (suggestions.length > 0 && !showSuggestions) {
+              setShowSuggestions(true)
+            } else {
+              void fetchAiSuggestions()
+            }
+          }}
+          disabled={isSuggesting}
+          className={`wb-ai-suggest-btn${isSuggesting ? ' is-loading' : ''}`}
+          title="Yapay zeka yanıt önerisi al"
+        >
+          <Icon name="sparkles" className="size-3.5 text-accent" />
+          <span className="hidden md:inline text-[11.5px] font-semibold text-ink-soft">
+            {isSuggesting ? 'Hazırlanıyor…' : 'AI Öneri'}
+          </span>
+        </button>
         <label className="sr-only" htmlFor="conversation-reply">
           Mesaj
         </label>
@@ -126,7 +235,7 @@ export function ReplyForm({
           required
           maxLength={4096}
           rows={1}
-          placeholder="Mesaj"
+          placeholder="Mesaj yazın veya AI Öneri alın…"
           value={body}
           onChange={(event) => {
             setBody(event.target.value)

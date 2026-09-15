@@ -54,6 +54,8 @@ function sanitizeJobForBroadcast(job) {
     startedAt: job.startedAt,
     completedAt: job.completedAt,
     durationMs: job.durationMs || (job.completedAt && job.startedAt ? job.completedAt - job.startedAt : null),
+    type: job.type || 'image',
+    result: job.result || null,
   };
 }
 
@@ -110,12 +112,18 @@ class AdvancedJobQueue {
     referenceImages = [], // URL veya Base64 dizisi (Ürün, Logo, Önceki Görsel)
     brandKit = null,
     optimizePrompt = true,
+    type = 'image',
+    incomingMessage = null,
+    conversationHistory = null,
+    companyContext = null,
+    tone = null,
   }) {
     const id = 'job_' + crypto.randomBytes(8).toString('hex');
     const finalPrompt = optimizePrompt ? enhancePrompt(prompt, { brandKit, size }) : prompt;
 
     const job = {
       id,
+      type,
       originalPrompt: prompt,
       prompt: finalPrompt,
       size,
@@ -123,6 +131,10 @@ class AdvancedJobQueue {
       response_format,
       workspace,
       customer,
+      incomingMessage,
+      conversationHistory,
+      companyContext,
+      tone,
       referenceImagesCount: referenceImages.length,
       referenceImages, // Referans görseller (Image-to-Image için)
       brandKit,
@@ -132,6 +144,7 @@ class AdvancedJobQueue {
       queuePosition: this.pendingQueue.length + 1,
       resultUrl: null,
       resultB64: null,
+      result: null,
       error: null,
       assignedTo: null,
       createdAt: Date.now(),
@@ -257,6 +270,26 @@ class AdvancedJobQueue {
     job.statusText = 'Görsel başarıyla üretildi';
     job.resultUrl = publicUrl;
     job.resultB64 = buffer.toString('base64');
+    job.completedAt = Date.now();
+    job.durationMs = job.completedAt - (job.startedAt || job.createdAt);
+
+    if (job.assignedTo) {
+      this.activeWorkers.delete(job.assignedTo);
+    }
+
+    broadcastEvent('job_completed', sanitizeJobForBroadcast(job));
+    this.notifyWaiters(jobId, job);
+    return job;
+  }
+
+  completeTextJob(jobId, resultData) {
+    const job = this.jobs.get(jobId);
+    if (!job) return null;
+
+    job.status = 'completed';
+    job.progress = 100;
+    job.statusText = 'Öneriler başarıyla üretildi';
+    job.result = resultData;
     job.completedAt = Date.now();
     job.durationMs = job.completedAt - (job.startedAt || job.createdAt);
 
@@ -536,6 +569,43 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+    // 1.1. WhatsApp Yapay Zeka Mesaj Önerileri: POST /v1/chat/suggestions
+    if (method === 'POST' && (pathname === '/v1/chat/suggestions' || pathname === '/chat/suggestions')) {
+      const body = await parseJsonBody(req);
+      const incomingMessage = (body.incomingMessage || body.message || '').trim();
+      if (!incomingMessage) {
+        return sendJson(res, 400, { error: 'incomingMessage gereklidir' });
+      }
+
+      const customer = (body.customer || 'Genel').trim();
+      const job = queue.createJob({
+        prompt: `[Mesaj Önerisi] ${incomingMessage.slice(0, 100)}`,
+        customer,
+        platform: 'chatgpt',
+        optimizePrompt: false,
+        type: 'chat_suggestions',
+        incomingMessage,
+        conversationHistory: body.conversationHistory || '',
+        companyContext: body.companyContext || '',
+        tone: body.tone || '',
+      });
+
+      console.log(`[Gateway] Yeni mesaj öneri talebi alındı: [Firma: ${customer}] "${incomingMessage.slice(0, 60)}..."`);
+      const finished = await queue.waitForJob(job.id, 45000);
+      if (finished.status === 'completed' && finished.result) {
+        return sendJson(res, 200, {
+          success: true,
+          suggestions: finished.result.suggestions || [],
+          raw: finished.result.raw || null,
+        });
+      } else {
+        return sendJson(res, 500, {
+          error: finished.error || 'Öneri oluşturulamadı',
+          details: finished.statusText,
+        });
+      }
+    }
+
     // 2. Durum ve İlerleme Sorgulama: GET /v1/images/status/:id
     if (method === 'GET' && pathname.startsWith('/v1/images/status/')) {
       const jobId = pathname.replace('/v1/images/status/', '');
@@ -617,6 +687,17 @@ const server = http.createServer(async (req, res) => {
       }
 
       return sendJson(res, 200, { ok: true, filename, url: `http://localhost:${PORT}/outputs/${filename}` });
+    }
+
+    // 6.1. Worker: Metin/Öneri Sonucunu Bildir (POST /job/complete-text)
+    if (method === 'POST' && pathname === '/job/complete-text') {
+      const body = await parseJsonBody(req);
+      const { jobId, result } = body;
+      if (!jobId) {
+        return sendJson(res, 400, { error: 'jobId is required' });
+      }
+      const job = queue.completeTextJob(jobId, result);
+      return sendJson(res, 200, { ok: true, job: sanitizeJobForBroadcast(job) });
     }
 
     // 7. Statik Görsel Sunumu: GET /outputs/:filename

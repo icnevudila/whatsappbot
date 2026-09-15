@@ -974,6 +974,15 @@ export function MessagesBoard({
                     key={activePhone}
                     phone={activePhone}
                     accountId={(selectedPreview?.accountId || liveThread.at(-1)?.account_id)!}
+                    lastInbound={
+                      liveThread.filter((m) => m.direction === 'in').at(-1)?.body ||
+                      selectedPreview?.lastBody ||
+                      null
+                    }
+                    threadContext={liveThread
+                      .slice(-6)
+                      .map((m) => `${m.direction === 'in' ? 'Müşteri' : 'Temsilci'}: ${m.body || ''}`)
+                      .join('\n')}
                     onQueued={(body, clientKey) => {
                       const msg = {
                         id: 0,
