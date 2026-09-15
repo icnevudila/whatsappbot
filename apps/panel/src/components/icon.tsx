@@ -17,6 +17,9 @@ const paths = {
   activity: 'M22 12h-4l-3 9L9 3l-3 9H2',
   steps: 'M9 5h12 M9 12h12 M9 19h12 M4 6V4 M4 13v-2 M4 20v-2',
   more: 'M5 12h.01 M12 12h.01 M19 12h.01',
+  sparkles: 'M12 3v4 M12 17v4 M3 12h4 M17 12h4 M6 6l2.5 2.5 M15.5 15.5 18 18 M18 6l-2.5 2.5 M8.5 15.5 6 18',
+  refresh: 'M21 12a9 9 0 1 1-2.6-6.3 M21 3v6h-6',
+  close: 'M6 6l12 12 M18 6 6 18',
 } as const
 
 export type IconName = keyof typeof paths

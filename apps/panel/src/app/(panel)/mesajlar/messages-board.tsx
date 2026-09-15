@@ -465,6 +465,15 @@ export function MessagesBoard({
                     key={selectedPhone}
                     phone={selectedPhone}
                     accountId={(selectedPreview?.accountId || thread.at(-1)?.account_id)!}
+                    lastInbound={
+                      thread.filter((m) => m.direction === 'in').at(-1)?.body ||
+                      selectedPreview?.lastBody ||
+                      null
+                    }
+                    threadContext={thread
+                      .slice(-6)
+                      .map((m) => `${m.direction === 'in' ? 'Müşteri' : 'Temsilci'}: ${m.body || ''}`)
+                      .join('\n')}
                   />
                 </div>
               ) : (

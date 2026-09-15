@@ -2,18 +2,41 @@
 import { useActionState, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSyncBusy } from '@/components/busy'
+import { Icon } from '@/components/icon'
 import { useToast } from '@/components/toast'
-import { Button, Notice, Textarea } from '@/components/ui'
+import { Button, Notice } from '@/components/ui'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { replyToConversation, type ReplyState } from './reply-actions'
 
-export function ReplyForm({ phone, accountId }: { phone: string; accountId: string }) {
+type Suggestion = { label: string; text: string }
+
+function suggestionKey(phone: string, message: string, history: string) {
+  return JSON.stringify([phone.trim(), message.trim(), history.trim()])
+}
+
+export function ReplyForm({
+  phone,
+  accountId,
+  lastInbound,
+  threadContext,
+}: {
+  phone: string
+  accountId: string
+  lastInbound?: string | null
+  threadContext?: string
+}) {
   const [state, action, pending] = useActionState<ReplyState, FormData>(replyToConversation, null)
   const [result, setResult] = useState<{ id: string; error?: string; done?: boolean } | null>(null)
+  const [body, setBody] = useState('')
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [isSuggesting, setIsSuggesting] = useState(false)
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [preparedKey, setPreparedKey] = useState<string | null>(null)
   const router = useRouter()
   const toast = useToast()
-  const form = useRef<HTMLFormElement>(null)
+  const inFlightKey = useRef<string | null>(null)
   const waiting = !!state?.jobId && result?.id !== state.jobId
+
   useSyncBusy(
     pending || waiting,
     pending ? 'Yanıt sıraya alınıyor…' : 'Yanıt gönderiliyor…',
@@ -54,7 +77,8 @@ export function ReplyForm({ phone, accountId }: { phone: string; accountId: stri
             toast(msg, 'warn')
           } else {
             setResult({ id, done: true })
-            form.current?.reset()
+            setBody('')
+            setShowSuggestions(false)
             toast('Yanıt WhatsApp’a gönderildi.', 'success')
             router.refresh()
           }
@@ -74,28 +98,163 @@ export function ReplyForm({ phone, accountId }: { phone: string; accountId: stri
     }
   }, [state?.jobId, router, toast])
 
+  async function fetchAiSuggestions(options?: {
+    background?: boolean
+    force?: boolean
+    shouldApply?: () => boolean
+  }) {
+    const lastMessage = (lastInbound || body || 'Merhaba').trim()
+    const history = threadContext || ''
+    const key = suggestionKey(phone, lastMessage, history)
+
+    if (!options?.force && preparedKey === key && suggestions.length > 0) {
+      if (!options?.background) setShowSuggestions(true)
+      return
+    }
+    if (inFlightKey.current === key) {
+      if (!options?.background) setShowSuggestions(true)
+      return
+    }
+
+    inFlightKey.current = key
+    setIsSuggesting(true)
+    if (!options?.background) setShowSuggestions(true)
+    try {
+      const res = await fetch('/api/mesajlar/ai-suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, lastMessage, history }),
+      })
+      const data = (await res.json()) as {
+        success?: boolean
+        suggestions?: Suggestion[]
+        error?: string
+      }
+      if (options?.shouldApply && !options.shouldApply()) return
+      if (data.suggestions && data.suggestions.length > 0) {
+        setSuggestions(data.suggestions)
+        setPreparedKey(key)
+        if (!options?.background) setShowSuggestions(true)
+      } else if (!options?.background) {
+        toast(data.error || 'Yapay zeka önerisi üretilemedi.', 'warn')
+      }
+    } catch {
+      if (!options?.background) toast('Öneri servisine erişilemedi.', 'danger')
+    } finally {
+      if (inFlightKey.current === key) inFlightKey.current = null
+      setIsSuggesting(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!lastInbound || !phone) return
+    let active = true
+    void fetchAiSuggestions({ background: true, shouldApply: () => active })
+    return () => {
+      active = false
+    }
+  }, [phone, lastInbound, threadContext]) // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
-    <form
-      ref={form}
-      action={action}
-      className="space-y-2.5 p-3"
-      aria-busy={pending || waiting}
-    >
+    <form action={action} className="space-y-2.5 p-3" aria-busy={pending || waiting}>
       <input type="hidden" name="phone" value={phone} />
       <input type="hidden" name="account_id" value={accountId} />
-      <label className="block text-xs font-medium text-ink-muted" htmlFor="conversation-reply">
-        Yanıtınız
-      </label>
-      <Textarea
-        id="conversation-reply"
-        name="body"
-        required
-        maxLength={4096}
-        rows={3}
-        placeholder="Mesajınızı yazın…"
-        disabled={pending || waiting}
-        className="font-sans"
-      />
+
+      {showSuggestions && (suggestions.length > 0 || isSuggesting) ? (
+        <div className="wb-ai-suggest-bar">
+          <div className="wb-ai-suggest-head">
+            <span className="wb-ai-suggest-title">
+              <Icon name="sparkles" className="size-3.5 text-accent" />
+              Önerilen Cevaplar
+            </span>
+            <div className="wb-ai-suggest-actions">
+              <button
+                type="button"
+                onClick={() => fetchAiSuggestions({ force: true })}
+                disabled={isSuggesting}
+                className="wb-ai-suggest-refresh"
+                title="Yeni öneriler üret"
+                aria-label="Yeni öneriler üret"
+              >
+                <Icon name="refresh" className="size-3.5" />
+                <span>{isSuggesting ? 'Üretiliyor' : 'Yenile'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowSuggestions(false)}
+                className="wb-ai-suggest-close"
+                title="Kapat"
+                aria-label="Önerileri kapat"
+              >
+                <Icon name="close" className="size-3.5" />
+              </button>
+            </div>
+          </div>
+          {suggestions.length > 0 ? (
+            <div className="wb-ai-suggest-grid">
+              {suggestions.map((item, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setBody(item.text)}
+                  className="wb-ai-suggest-card"
+                  title="Bu yanıtı seç"
+                >
+                  <span className="wb-ai-suggest-meta">
+                    <span className="wb-ai-suggest-badge">{item.label}</span>
+                    <span className="wb-ai-suggest-pick">Seç</span>
+                  </span>
+                  <span className="wb-ai-suggest-body">{item.text}</span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="wb-ai-suggest-loading" role="status" aria-live="polite">
+              <span className="wb-ai-suggest-spinner" />
+              <span>Öneriler hazırlanıyor</span>
+            </div>
+          )}
+        </div>
+      ) : null}
+
+      <div className="flex items-end gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            const lastMessage = (lastInbound || body || 'Merhaba').trim()
+            const key = suggestionKey(phone, lastMessage, threadContext || '')
+            if (suggestions.length > 0 && preparedKey === key && !showSuggestions) {
+              setShowSuggestions(true)
+            } else {
+              void fetchAiSuggestions()
+            }
+          }}
+          aria-busy={isSuggesting}
+          className={`wb-ai-suggest-btn${isSuggesting ? ' is-loading' : ''}`}
+          title="Önerilen cevapları gör"
+        >
+          <Icon name="sparkles" className="size-3.5 text-accent" />
+        </button>
+        <label className="sr-only" htmlFor="conversation-reply">
+          Yanıtınız
+        </label>
+        <textarea
+          id="conversation-reply"
+          name="body"
+          required
+          maxLength={4096}
+          rows={2}
+          placeholder="Mesaj yazın veya önerilen cevapları seçin…"
+          disabled={pending || waiting}
+          value={body}
+          onChange={(event) => setBody(event.target.value)}
+          className="wb-chat-composer-input font-sans"
+        />
+        <Button type="submit" variant="accent" disabled={pending || waiting || !body.trim()}>
+          {pending ? 'Sırada…' : waiting ? 'Bekliyor' : 'Gönder'}
+        </Button>
+      </div>
+
       {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
       {waiting ? (
         <Notice tone="accent">
@@ -108,12 +267,6 @@ export function ReplyForm({ phone, accountId }: { phone: string; accountId: stri
       {result?.id === state?.jobId && result?.done ? (
         <Notice tone="success">Yanıt WhatsApp’a gönderildi.</Notice>
       ) : null}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs text-ink-muted">Seçili konuşmanın hattından gönderilir.</p>
-        <Button type="submit" variant="accent" disabled={pending || waiting}>
-          {pending ? 'Sıraya alınıyor…' : waiting ? 'Gönderim bekleniyor' : 'Yanıtı gönder →'}
-        </Button>
-      </div>
     </form>
   )
 }

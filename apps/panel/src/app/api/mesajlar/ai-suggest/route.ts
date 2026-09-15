@@ -73,7 +73,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Yanıtlanacak mesaj bulunamadı.' }, { status: 400 })
   }
 
-  // İşletme bağlamını topla
   const [kitRow, products] = await Promise.all([
     supabase
       .from('brand_kits')
@@ -94,8 +93,7 @@ export async function POST(request: Request) {
     companyContext += ` (${kitRow.data.name})`
   }
   if (products.data && products.data.length > 0) {
-    const productList = products.data.map((p) => p.name).join(', ')
-    companyContext += `. Ürünler/Hizmetler: ${productList}`
+    companyContext += `. Ürünler/Hizmetler: ${products.data.map((p) => p.name).join(', ')}`
   }
 
   const tone = kitRow.data?.tone || 'Kurumsal, nazik, yardımsever ve samimi'
@@ -121,11 +119,7 @@ export async function POST(request: Request) {
       })
       .eq('id', cached.id)
 
-    return NextResponse.json({
-      success: true,
-      cached: true,
-      suggestions: cached.suggestions,
-    })
+    return NextResponse.json({ success: true, cached: true, suggestions: cached.suggestions })
   }
 
   const limited = rateLimit(`ai:suggest:${userId}`, { limit: 15, windowMs: 60_000 })
@@ -167,31 +161,22 @@ export async function POST(request: Request) {
     }
 
     if (!validSuggestions(data.suggestions)) {
-      return NextResponse.json(
-        { error: data.error || 'Öneri üretilemedi.' },
-        { status: 500 },
-      )
+      return NextResponse.json({ error: data.error || 'Öneri üretilemedi.' }, { status: 500 })
     }
 
-    void supabase
-      .from('ai_reply_suggestion_library')
-      .insert({
-        org_id: org.id,
-        message_fingerprint: messageFingerprint,
-        context_fingerprint: contextFingerprint,
-        incoming_sample: lastMessage.slice(0, 500),
-        suggestions: data.suggestions,
-        source: 'chatgpt',
-        generated_count: 1,
-        last_used_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-
-    return NextResponse.json({
-      success: true,
-      cached: false,
+    void supabase.from('ai_reply_suggestion_library').insert({
+      org_id: org.id,
+      message_fingerprint: messageFingerprint,
+      context_fingerprint: contextFingerprint,
+      incoming_sample: lastMessage.slice(0, 500),
       suggestions: data.suggestions,
+      source: 'chatgpt',
+      generated_count: 1,
+      last_used_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     })
+
+    return NextResponse.json({ success: true, cached: false, suggestions: data.suggestions })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)
     return NextResponse.json(

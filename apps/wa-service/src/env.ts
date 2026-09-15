@@ -118,6 +118,11 @@ export const env = {
    * otomatik yanit gonderilmez. Acmak icin AUTO_REPLY_ENABLED=true + org flag.
    */
   autoReplyEnabled: (process.env.AUTO_REPLY_ENABLED ?? '').trim().toLowerCase() === 'true',
+  /**
+   * Ayni telefon numarasina AI oto cevap tekrarini sinirlar.
+   * 120s satis sohbetini oldurmeden sonsuz dongu/spam riskini azaltir.
+   */
+  aiAutoReplyCooldownSeconds: Math.max(0, int('AI_AUTO_REPLY_COOLDOWN_SECONDS', 120)),
 } as const
 
 function resolveDiscoverEngine(): 'auto' | 'places' | 'playwright' {

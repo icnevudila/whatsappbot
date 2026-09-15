@@ -113,6 +113,59 @@ export type Database = {
           },
         ]
       }
+      ai_reply_suggestion_library: {
+        Row: {
+          context_fingerprint: string
+          created_at: string
+          generated_count: number
+          hit_count: number
+          id: string
+          incoming_sample: string
+          last_used_at: string | null
+          message_fingerprint: string
+          org_id: string
+          source: string
+          suggestions: Json
+          updated_at: string
+        }
+        Insert: {
+          context_fingerprint?: string
+          created_at?: string
+          generated_count?: number
+          hit_count?: number
+          id?: string
+          incoming_sample: string
+          last_used_at?: string | null
+          message_fingerprint: string
+          org_id: string
+          source?: string
+          suggestions: Json
+          updated_at?: string
+        }
+        Update: {
+          context_fingerprint?: string
+          created_at?: string
+          generated_count?: number
+          hit_count?: number
+          id?: string
+          incoming_sample?: string
+          last_used_at?: string | null
+          message_fingerprint?: string
+          org_id?: string
+          source?: string
+          suggestions?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_reply_suggestion_library_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       accounts: {
         Row: {
           connected_at: string | null
