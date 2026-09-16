@@ -42,6 +42,28 @@ function validSuggestions(value: unknown): value is Suggestion[] {
   )
 }
 
+function formatKnowledgeContext(rows: unknown): string {
+  if (!Array.isArray(rows) || rows.length === 0) return ''
+  const lines = rows.slice(0, 8).map((row) => {
+    const item = row as {
+      product_name?: string | null
+      price_amount?: string | number | null
+      currency?: string | null
+      raw_text?: string | null
+      source_media_url?: string | null
+    }
+    const price =
+      item.price_amount != null
+        ? ` fiyat: ${Number(item.price_amount).toLocaleString('tr-TR')} ${item.currency || 'TRY'}`
+        : ''
+    const product = item.product_name || 'Görseldeki/son paylaşılan ürün'
+    const media = item.source_media_url ? ' (görsel kaynağı var)' : ''
+    const raw = item.raw_text ? `; not: ${item.raw_text.slice(0, 140)}` : ''
+    return `- ${product}${price}${media}${raw}`
+  })
+  return `Öğrenilen ürün/fiyat bilgileri:\n${lines.join('\n')}`
+}
+
 export async function POST(request: Request) {
   let userId: string
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
@@ -95,6 +117,15 @@ export async function POST(request: Request) {
   if (products.data && products.data.length > 0) {
     companyContext += `. Ürünler/Hizmetler: ${products.data.map((p) => p.name).join(', ')}`
   }
+
+  const { data: knowledgeRows } = await (supabase as any)
+    .from('reply_product_knowledge')
+    .select('product_name, price_amount, currency, raw_text, source_media_url')
+    .eq('org_id', org.id)
+    .order('last_seen_at', { ascending: false })
+    .limit(8)
+  const knowledgeContext = formatKnowledgeContext(knowledgeRows)
+  if (knowledgeContext) companyContext += `\n${knowledgeContext}`
 
   const tone = kitRow.data?.tone || 'Kurumsal, nazik, yardımsever ve samimi'
   const historyForCache = shouldHistoryAffectCache(lastMessage) ? body.history || '' : ''

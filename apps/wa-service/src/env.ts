@@ -123,6 +123,15 @@ export const env = {
    * 120s satis sohbetini oldurmeden sonsuz dongu/spam riskini azaltir.
    */
   aiAutoReplyCooldownSeconds: Math.max(0, int('AI_AUTO_REPLY_COOLDOWN_SECONDS', 120)),
+  /**
+   * Kullanici pes pese kisa mesajlar attiginda (orn: selam / fiyat / ne / kdar)
+   * mesajlari tek govdede birlestirmek icin kayan pencere bekleme suresi (ms).
+   */
+  autoReplyDebounceMs: Math.max(1000, int('AUTO_REPLY_DEBOUNCE_MS', 5000)),
+  /**
+   * Araliksiz mesaj yazildiginda maksimum bekleme tavani (ms).
+   */
+  autoReplyMaxWaitMs: Math.max(3000, int('AUTO_REPLY_MAX_WAIT_MS', 20000)),
 } as const
 
 function resolveDiscoverEngine(): 'auto' | 'places' | 'playwright' {

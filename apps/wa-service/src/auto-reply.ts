@@ -1,7 +1,9 @@
 import { createHash } from 'node:crypto'
+import type { WASocket } from '@whiskeysockets/baileys'
 import { query } from './db.js'
 import { env } from './env.js'
 import { logger } from './logger.js'
+import { buildKnowledgeContext } from './product-knowledge.js'
 
 type RuleRow = {
   id: string
@@ -125,28 +127,188 @@ async function enqueueAiAutoReply(options: {
   )
 }
 
-/**
- * Gelen mesaja otomatik yanıt uygula:
- * 1. Eğer eşleşen statik kural varsa kural yanıtı gönderilir.
- * 2. Eğer statik kural yoksa ve organizations.auto_reply_enabled true ise:
- *    ChatGPT üzerinden akıllı kurumsal yanıt üretilip gönderilir.
- */
-export async function maybeEnqueueAutoReply(options: {
+export type AutoReplyOptions = {
   orgId: string
   createdBy: string
   accountId: string
   phoneE164: string | null
   body: string | null
-}): Promise<void> {
-  const { orgId, createdBy, accountId, phoneE164, body } = options
+  remoteJid?: string | null
+  sock?: WASocket | null
+  skipDebounce?: boolean
+}
+
+interface BufferedSession {
+  orgId: string
+  createdBy: string
+  accountId: string
+  phoneE164: string
+  remoteJid?: string | null
+  sock?: WASocket | null
+  messages: string[]
+  firstReceivedAt: number
+  debounceTimer: NodeJS.Timeout
+  maxWaitTimer: NodeJS.Timeout
+}
+
+const debounceMap = new Map<string, BufferedSession>()
+
+export function getActiveDebounceBufferCount(): number {
+  return debounceMap.size
+}
+
+export function clearAutoReplyBuffers(): void {
+  for (const session of debounceMap.values()) {
+    clearTimeout(session.debounceTimer)
+    clearTimeout(session.maxWaitTimer)
+  }
+  debounceMap.clear()
+}
+
+export function flushAllAutoReplyBuffers(): void {
+  for (const key of Array.from(debounceMap.keys())) {
+    void flushDebounceBuffer(key)
+  }
+}
+
+async function flushDebounceBuffer(key: string): Promise<void> {
+  const session = debounceMap.get(key)
+  if (!session) return
+
+  debounceMap.delete(key)
+  clearTimeout(session.debounceTimer)
+  clearTimeout(session.maxWaitTimer)
+
+  const combinedBody = session.messages.join('\n').trim()
+  if (!combinedBody) return
+
+  logger.info(
+    {
+      key,
+      phoneE164: session.phoneE164,
+      partsCount: session.messages.length,
+      combinedPreview: combinedBody.slice(0, 100),
+    },
+    'auto-reply: tampon bosaltildi, birlestirilmis mesaj isleniyor',
+  )
+
+  // WhatsApp 'yazıyor...' (composing) varlık bildirimi
+  if (session.sock && session.remoteJid) {
+    try {
+      void session.sock.sendPresenceUpdate('composing', session.remoteJid).catch(() => {})
+    } catch {
+      // presence hatasi oto-cevabi kesmemeli
+    }
+  }
+
+  await processAutoReply({
+    orgId: session.orgId,
+    createdBy: session.createdBy,
+    accountId: session.accountId,
+    phoneE164: session.phoneE164,
+    remoteJid: session.remoteJid,
+    sock: session.sock,
+    body: combinedBody,
+    skipDebounce: true,
+  })
+}
+
+/**
+ * Gelen mesaja otomatik yanıt uygula:
+ * 1. Peş peşe gelen kısa mesajları (debounceMs penceresinde) birleştirir.
+ * 2. Eşleşen statik kural varsa kural yanıtı gönderilir.
+ * 3. Eşleşen statik kural yoksa ve organizations.auto_reply_enabled true ise:
+ *    ChatGPT üzerinden akıllı kurumsal yanıt üretilip gönderilir.
+ */
+export async function maybeEnqueueAutoReply(options: AutoReplyOptions): Promise<void> {
+  const { orgId, createdBy, accountId, phoneE164, body, skipDebounce } = options
   if (!phoneE164 || !body?.trim()) return
 
+  // Org bazlı oto-cevap açık mı?
   const orgRows = await query<{ auto_reply_enabled: boolean; name: string }>(
     `select auto_reply_enabled, name from public.organizations where id = $1 limit 1`,
     [orgId],
   )
   const org = orgRows[0]
   if (!org?.auto_reply_enabled) return
+
+  // Debounce atlanacaksa doğrudan işle (örn. testler veya tekil akışlar)
+  if (skipDebounce || env.autoReplyDebounceMs <= 0) {
+    await processAutoReply(options)
+    return
+  }
+
+  const bufferKey = `${orgId}:${accountId}:${phoneE164}`
+  const existing = debounceMap.get(bufferKey)
+
+  if (existing) {
+    clearTimeout(existing.debounceTimer)
+    existing.messages.push(body.trim())
+    if (options.sock) existing.sock = options.sock
+    if (options.remoteJid) existing.remoteJid = options.remoteJid
+
+    existing.debounceTimer = setTimeout(() => {
+      void flushDebounceBuffer(bufferKey).catch((err) => {
+        logger.error({ err, bufferKey }, 'auto-reply: buffer flush hatasi')
+      })
+    }, env.autoReplyDebounceMs)
+
+    logger.info(
+      {
+        bufferKey,
+        phoneE164,
+        totalParts: existing.messages.length,
+        debounceMs: env.autoReplyDebounceMs,
+      },
+      'auto-reply: yeni mesaj tampona eklendi, bekleme suresi sifirlandi',
+    )
+    return
+  }
+
+  const session: BufferedSession = {
+    orgId,
+    createdBy,
+    accountId,
+    phoneE164,
+    remoteJid: options.remoteJid ?? null,
+    sock: options.sock ?? null,
+    messages: [body.trim()],
+    firstReceivedAt: Date.now(),
+    debounceTimer: setTimeout(() => {
+      void flushDebounceBuffer(bufferKey).catch((err) => {
+        logger.error({ err, bufferKey }, 'auto-reply: buffer flush hatasi')
+      })
+    }, env.autoReplyDebounceMs),
+    maxWaitTimer: setTimeout(() => {
+      void flushDebounceBuffer(bufferKey).catch((err) => {
+        logger.error({ err, bufferKey }, 'auto-reply: buffer maxWait flush hatasi')
+      })
+    }, env.autoReplyMaxWaitMs),
+  }
+
+  debounceMap.set(bufferKey, session)
+  logger.info(
+    {
+      bufferKey,
+      phoneE164,
+      debounceMs: env.autoReplyDebounceMs,
+      maxWaitMs: env.autoReplyMaxWaitMs,
+    },
+    'auto-reply: yeni mesaj tamponu baslatildi',
+  )
+}
+
+async function processAutoReply(options: AutoReplyOptions): Promise<void> {
+  const { orgId, createdBy, accountId, phoneE164, body, sock, remoteJid } = options
+  if (!phoneE164 || !body?.trim()) return
+
+  try {
+    const orgRows = await query<{ auto_reply_enabled: boolean; name: string }>(
+      `select auto_reply_enabled, name from public.organizations where id = $1 limit 1`,
+      [orgId],
+    )
+    const org = orgRows[0]
+    if (!org?.auto_reply_enabled) return
 
   // 1. Önce statik kuralları kontrol et
   const rules = await query<RuleRow>(
@@ -236,6 +398,10 @@ export async function maybeEnqueueAutoReply(options: {
   }
   if (productRows.length > 0) {
     companyContext += `. Ürünler/Hizmetler: ${productRows.map((p) => p.name).join(', ')}`
+  }
+  const knowledgeContext = await buildKnowledgeContext({ orgId, phoneE164, message: body })
+  if (knowledgeContext) {
+    companyContext += `\n${knowledgeContext}`
   }
   const tone = kitRows[0]?.tone || 'Kurumsal, nazik, yardımsever ve samimi'
   const historyForCache = shouldHistoryAffectCache(body) ? '' : ''
@@ -338,7 +504,16 @@ export async function maybeEnqueueAutoReply(options: {
       source: 'generated',
       label: selected.label,
     })
-  } catch (err: unknown) {
-    logger.warn({ err: err instanceof Error ? err.message : err, orgId }, 'auto-reply: AI uretim hatasi')
+    } catch (err: unknown) {
+      logger.warn({ err: err instanceof Error ? err.message : err, orgId }, 'auto-reply: AI uretim hatasi')
+    }
+  } finally {
+    if (sock && remoteJid) {
+      try {
+        void sock.sendPresenceUpdate('paused', remoteJid).catch(() => {})
+      } catch {
+        // ignore
+      }
+    }
   }
 }

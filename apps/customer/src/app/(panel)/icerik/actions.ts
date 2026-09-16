@@ -343,6 +343,34 @@ export async function startCreativeGeneration(
 
   if (error || !inserted) return { error: error?.message ?? 'Kayıt açılamadı.' }
 
+  if (products.length > 0) {
+    const knowledgeRows = products
+      .filter((p) => Boolean(p.name?.trim()))
+      .map((p) => {
+        const rawText = `${p.name}${p.price ? ` - Fiyat: ${p.price}` : ''}${p.promo ? ` (${p.promo})` : ''}${p.description ? ` - ${p.description}` : ''}`
+        const numPrice = p.price ? Number(p.price.replace(/[^\d.,]/g, '').replace(',', '.')) : null
+        return {
+          org_id: org.id,
+          source: 'campaign',
+          product_name: p.name.trim(),
+          price_amount: Number.isFinite(numPrice) ? numPrice : null,
+          currency: 'TRY',
+          raw_text: rawText,
+          source_media_url: p.imageUrl ?? null,
+          attributes: {
+            creativeId: inserted.id,
+            promo: p.promo ?? null,
+            oldPrice: p.oldPrice ?? null,
+            description: p.description ?? null,
+          },
+          confidence: 1.0,
+        }
+      })
+    if (knowledgeRows.length > 0) {
+      void (supabase as any).from('reply_product_knowledge').insert(knowledgeRows)
+    }
+  }
+
   await kickGeneration(inserted.id)
   revalidateLibrary(inserted.id)
   redirect(`/icerik/${inserted.id}`)

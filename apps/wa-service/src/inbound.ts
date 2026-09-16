@@ -207,7 +207,9 @@ export async function persistInboundMessage(options: {
         createdBy,
         accountId,
         phoneE164: phone,
+        remoteJid: key.remoteJid,
         body,
+        sock,
       }),
     )
     .catch((error) => {

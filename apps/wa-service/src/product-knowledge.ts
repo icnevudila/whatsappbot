@@ -290,7 +290,86 @@ export async function rememberCampaignKnowledge(options: {
   mediaUrl: string | null
 }): Promise<void> {
   const { orgId, campaignId, phoneE164, body, mediaUrl } = options
-  const extracted = extractKnowledgeFromText(body)
+
+  // 1. Kampanya ve bağlı görsel (creatives) verilerini doğrudan veritabanından çek (OCR gereksiz)
+  type CampaignCreativeData = {
+    campaign_name: string
+    body: string | null
+    media_url: string | null
+    creative_id: string | null
+    creative_title: string | null
+    payload: unknown
+  }
+
+  try {
+    const campaignRows = await query<CampaignCreativeData>(
+      `select c.name as campaign_name, c.body, c.media_url, c.creative_id,
+              cr.title as creative_title, cr.payload
+         from public.campaigns c
+         left join public.creatives cr on cr.id = c.creative_id
+        where c.id = $1 and c.org_id = $2
+        limit 1`,
+      [campaignId, orgId],
+    )
+
+    const campaign = campaignRows[0]
+    const creativePayload = campaign?.payload as {
+      brief?: string
+      products?: Array<{
+        name?: string
+        price?: string
+        oldPrice?: string
+        promo?: string
+        description?: string
+        imageUrl?: string
+      }>
+    } | null
+
+    // 2. Görsel sihirbazı veya kampanya ürün verilerini doğrudan %100 güvenle kaydet
+    if (creativePayload?.products && Array.isArray(creativePayload.products) && creativePayload.products.length > 0) {
+      for (const p of creativePayload.products) {
+        const pName = p.name?.trim()
+        if (!pName) continue
+        const pPrice = p.price ? parseAmount(p.price) : null
+        const pCurrency = normalizeCurrency(p.price) ?? 'TRY'
+        const rawText = `${pName}${p.price ? ` - Fiyat: ${p.price}` : ''}${p.promo ? ` (${p.promo})` : ''}${p.description ? ` - ${p.description}` : ''}`
+
+        await query(
+          `insert into public.reply_product_knowledge (
+            org_id, source, phone_e164, product_name, price_amount,
+            currency, raw_text, source_media_url, attributes, confidence, last_seen_at, updated_at
+          )
+          values ($1, 'campaign', $2, $3, $4, $5, $6, $7, $8::jsonb, 1.0, now(), now())`,
+          [
+            orgId,
+            phoneE164 ?? null,
+            pName,
+            pPrice,
+            pCurrency,
+            rawText,
+            mediaUrl ?? campaign?.media_url ?? null,
+            JSON.stringify({
+              campaignId,
+              creativeId: campaign?.creative_id ?? null,
+              promo: p.promo ?? null,
+              oldPrice: p.oldPrice ?? null,
+            }),
+          ],
+        )
+      }
+
+      logger.info(
+        { orgId, campaignId, count: creativePayload.products.length },
+        'campaign-knowledge: kampanya urunleri gorsel veritabanindan eklendi (OCR atlandi, 0ms gecikme)',
+      )
+    }
+  } catch (error) {
+    logger.warn({ err: error, orgId, campaignId }, 'campaign-knowledge: kampanya/gorsel verisi okunamadi')
+  }
+
+  // 3. Kampanya mesaj metninden (body) hızlı regex ile ek ürün/fiyat çıkarımı
+  const effectiveBody = body
+  const extracted = extractKnowledgeFromText(effectiveBody)
 
   for (const item of extracted) {
     try {
@@ -313,47 +392,8 @@ export async function rememberCampaignKnowledge(options: {
         ],
       )
     } catch (error) {
-      logger.warn({ err: error, orgId, campaignId }, 'campaign-knowledge: kaydedilemedi')
+      logger.warn({ err: error, orgId, campaignId }, 'campaign-knowledge: metin bilgisi kaydedilemedi')
     }
-  }
-
-  if (mediaUrl || (body && body.length > 20)) {
-    void (async () => {
-      try {
-        const orgRows = await query<{ name: string }>(
-          `select name from public.organizations where id = $1 limit 1`,
-          [orgId]
-        )
-        const orgName = orgRows[0]?.name || 'Genel'
-        const aiKnowledge = await extractKnowledgeFromAI({
-          orgName,
-          text: body,
-          mediaUrl,
-        })
-        for (const aiItem of aiKnowledge) {
-          await query(
-            `insert into public.reply_product_knowledge (
-              org_id, source, phone_e164, product_name, price_amount,
-              currency, raw_text, source_media_url, attributes, confidence, last_seen_at, updated_at
-            )
-            values ($1, 'campaign', $2, $3, $4, $5, $6, $7, $8::jsonb, $9, now(), now())`,
-            [
-              orgId,
-              phoneE164 ?? null,
-              aiItem.productName,
-              aiItem.priceAmount,
-              aiItem.currency,
-              aiItem.rawText,
-              mediaUrl,
-              JSON.stringify({ campaignId, ...aiItem.attributes }),
-              aiItem.confidence,
-            ],
-          )
-        }
-      } catch (err) {
-        logger.warn({ err, orgId, campaignId }, 'campaign-knowledge: AI OCR kaydedilemedi')
-      }
-    })()
   }
 }
 
