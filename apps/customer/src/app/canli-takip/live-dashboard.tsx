@@ -717,22 +717,26 @@ export function LiveDashboard() {
         }),
       })
       const json = await res.json()
-      if (json.success && json.text) {
-        const full = json.text
-        setSimulatedSuggestions([
-          {
-            label: 'Kısa & Net',
-            text: full.split('\n\n')[0] || full.slice(0, 120),
-          },
-          {
-            label: 'Samimi',
-            text: full,
-          },
-          {
-            label: 'Yönlendirici',
-            text: `Merhaba, konuyu derhal inceleyip çözüm sunmak isteriz. İletişim numaranızı ve detayları teyit etmeniz halinde hemen dönüş sağlayabiliriz.`,
-          },
-        ])
+      if (json.success) {
+        if (json.suggestions && Array.isArray(json.suggestions) && json.suggestions.length > 0) {
+          setSimulatedSuggestions(json.suggestions)
+        } else if (json.text) {
+          const full = json.text
+          setSimulatedSuggestions([
+            {
+              label: 'Kısa & Net',
+              text: full.split('\n\n')[0] || full.slice(0, 120),
+            },
+            {
+              label: 'Samimi',
+              text: full,
+            },
+            {
+              label: 'Yönlendirici',
+              text: `Merhaba, konuyu derhal inceleyip çözüm sunmak isteriz. İletişim numaranızı ve detayları teyit etmeniz halinde hemen dönüş sağlayabiliriz.`,
+            },
+          ])
+        }
         showNotice('ChatGPT yanıt önerileri hazırlandı.')
       } else {
         alert('AI Öneri Hatası: ' + (json.error || 'Öneri üretilemedi.'))
