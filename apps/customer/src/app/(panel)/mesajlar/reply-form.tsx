@@ -83,6 +83,11 @@ export function ReplyForm({
   const input = useRef<HTMLTextAreaElement>(null)
   const blurTimer = useRef<number>(0)
   const inFlightKey = useRef<string | null>(null)
+  const threadContextRef = useRef(threadContext)
+
+  useEffect(() => {
+    threadContextRef.current = threadContext
+  }, [threadContext])
 
   useEffect(() => {
     return () => {
@@ -93,36 +98,32 @@ export function ReplyForm({
 
   useEffect(() => {
     if (lastInbound && phone) {
-      let active = true
-      void fetchAiSuggestions({ background: true, shouldApply: () => active })
-      return () => {
-        active = false
-      }
+      setShowSuggestions(true)
+      void fetchAiSuggestions({ autoOpen: true })
     }
-  }, [phone, lastInbound, threadContext]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [phone, lastInbound]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function fetchAiSuggestions(options?: {
-    background?: boolean
     force?: boolean
-    shouldApply?: () => boolean
+    autoOpen?: boolean
   }) {
     const lastMessage = (lastInbound || body || 'Merhaba').trim()
-    const history = threadContext || ''
+    const history = threadContextRef.current || ''
     const key = suggestionKey(phone, lastMessage, history)
 
     if (!options?.force && preparedKey === key && suggestions.length > 0) {
-      if (!options?.background) setShowSuggestions(true)
+      setShowSuggestions(true)
       return
     }
 
     if (inFlightKey.current === key) {
-      if (!options?.background) setShowSuggestions(true)
+      setShowSuggestions(true)
       return
     }
 
     inFlightKey.current = key
     setIsSuggesting(true)
-    if (!options?.background) setShowSuggestions(true)
+    setShowSuggestions(true)
     try {
       const res = await fetch('/api/mesajlar/ai-suggest', {
         method: 'POST',
@@ -138,16 +139,15 @@ export function ReplyForm({
         suggestions?: Suggestion[]
         error?: string
       }
-      if (options?.shouldApply && !options.shouldApply()) return
       if (data.suggestions && data.suggestions.length > 0) {
         setSuggestions(data.suggestions)
         setPreparedKey(key)
-        if (!options?.background) setShowSuggestions(true)
-      } else if (!options?.background) {
-        toast(data.error || 'Yapay zeka önerisi üretilemedi.', 'warn')
+        setShowSuggestions(true)
+      } else if (!options?.autoOpen) {
+        toast(data.error || 'Öneri üretilemedi.', 'warn')
       }
     } catch {
-      if (!options?.background) toast('Öneri servisine erişilemedi.', 'danger')
+      if (!options?.autoOpen) toast('Öneri servisine erişilemedi.', 'danger')
     } finally {
       if (inFlightKey.current === key) inFlightKey.current = null
       setIsSuggesting(false)
@@ -197,18 +197,19 @@ export function ReplyForm({
         <div className="wb-ai-suggest-bar">
           <div className="wb-ai-suggest-head">
             <span className="wb-ai-suggest-title">
-              Hazır Cevaplar
+              <Icon name="sparkles" className="size-3.5 text-accent" />
+              Önerilen Cevaplar
             </span>
             <div className="wb-ai-suggest-actions">
               <button
                 type="button"
-                onClick={() => fetchAiSuggestions()}
+                onClick={() => fetchAiSuggestions({ force: true })}
                 disabled={isSuggesting}
                 className="wb-ai-suggest-refresh"
-                title="Hazır cevapları kontrol et"
-                aria-label="Hazır cevapları kontrol et"
+                title="Yeni öneriler üret"
+                aria-label="Yeni öneriler üret"
               >
-                <Icon name="refresh" className="size-3.5" />
+                <Icon name="refresh" className={`size-3.5 ${isSuggesting ? 'animate-spin' : ''}`} />
                 <span>{isSuggesting ? 'Hazırlanıyor' : 'Yenile'}</span>
               </button>
               <button
@@ -251,7 +252,7 @@ export function ReplyForm({
           ) : (
             <div className="wb-ai-suggest-loading" role="status" aria-live="polite">
               <span className="wb-ai-suggest-spinner" />
-              <span>Öneriler hazırlanıyor</span>
+              <span>Önerilen cevaplar hazırlanıyor…</span>
             </div>
           )}
         </div>
@@ -261,21 +262,26 @@ export function ReplyForm({
         <button
           type="button"
           onClick={() => {
-            const lastMessage = (lastInbound || body || 'Merhaba').trim()
-            const key = suggestionKey(phone, lastMessage, threadContext || '')
-            if (suggestions.length > 0 && preparedKey === key && !showSuggestions) {
-              setShowSuggestions(true)
-            } else {
+            if (showSuggestions) {
+              setShowSuggestions(false)
+              return
+            }
+            setShowSuggestions(true)
+            if (suggestions.length === 0) {
               void fetchAiSuggestions()
             }
           }}
           aria-busy={isSuggesting}
           className={`wb-ai-suggest-btn${isSuggesting ? ' is-loading' : ''}`}
-          title="Hazır cevapları gör"
+          title="Önerilen cevapları gör"
         >
-          <Icon name="inbox" className="size-3.5" />
+          <Icon name="sparkles" className={`size-3.5 ${isSuggesting ? 'animate-spin' : 'text-accent'}`} />
           <span className="hidden md:inline text-[11.5px] font-semibold text-ink-soft">
-            {isSuggesting ? 'Hazırlanıyor…' : 'Hazır Cevaplar'}
+            {isSuggesting
+              ? 'Hazırlanıyor…'
+              : suggestions.length > 0 && !showSuggestions
+                ? `Öneriler (${suggestions.length})`
+                : 'Önerilen Cevaplar'}
           </span>
         </button>
         <label className="sr-only" htmlFor="conversation-reply">
