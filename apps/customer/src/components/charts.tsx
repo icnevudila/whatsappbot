@@ -111,8 +111,83 @@ export function WeeklyLineChart({
   const innerH = h - padY * 2
 
   if (totalOut === 0) {
+    const pattern = [0.32, 0.55, 0.42, 0.88, 0.58, 0.72, 0.4, 0.64]
+    const ghostDays = (days.length > 0 ? days : Array.from({ length: 7 }, (_, i) => ({
+      day: `d${i}`,
+      label: String(i + 1),
+      out: 0,
+    }))).map((d, i) => ({
+      ...d,
+      out: Math.round(18 + pattern[i % pattern.length] * 90),
+    }))
+    const ghostMax = Math.max(1, ...ghostDays.map((d) => d.out))
+    const ghostPoints = ghostDays.map((d, i) => {
+      const x = padX + (ghostDays.length <= 1 ? innerW / 2 : (i / (ghostDays.length - 1)) * innerW)
+      const y = padY + innerH - (d.out / ghostMax) * innerH
+      return { ...d, x, y }
+    })
+    const ghostLine = ghostPoints.map((p) => `${p.x},${p.y}`).join(' ')
+    const ghostArea = `${padX},${padY + innerH} ${ghostLine} ${padX + innerW},${padY + innerH}`
+    const ghostLabels = denseLabels
+      ? new Set([0, 6, 12, 18, ghostDays.length - 1].filter((i) => i >= 0 && i < ghostDays.length))
+      : null
+
     return (
       <div className="wb-home-chart is-empty">
+        <div className="wb-home-chart-ghost" aria-hidden>
+          <div className="mb-2 shrink-0">
+            <p className="text-[12.5px] text-[#667781]">
+              Toplam <span className="font-semibold tabular text-[#111b21]">—</span> giden
+            </p>
+          </div>
+          <svg viewBox={`0 0 ${w} ${h}`} className="h-36 w-full shrink-0">
+            <defs>
+              <linearGradient id="wbHomeLineFillGhost" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#00a884" stopOpacity="0.28" />
+                <stop offset="100%" stopColor="#00a884" stopOpacity="0.02" />
+              </linearGradient>
+            </defs>
+            <polygon points={ghostArea} fill="url(#wbHomeLineFillGhost)" />
+            <polyline
+              points={ghostLine}
+              fill="none"
+              stroke="#008069"
+              strokeWidth="2.5"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+            {ghostPoints.map((p) => (
+              <circle
+                key={p.day}
+                cx={p.x}
+                cy={p.y}
+                r={denseLabels ? 3 : 4.5}
+                fill="#fff"
+                stroke="#00a884"
+                strokeWidth="2"
+              />
+            ))}
+          </svg>
+          <div className="mt-1 flex min-h-8 shrink-0 justify-between gap-1">
+            {ghostDays.map((d, index) => {
+              if (ghostLabels && !ghostLabels.has(index)) {
+                return <span key={d.day} className="min-w-0 flex-1" />
+              }
+              return (
+                <span key={d.day} className="min-w-0 flex-1">
+                  <span className="block truncate text-center text-[10px] tabular text-[#8696a0]">
+                    {d.label}
+                  </span>
+                  {!denseLabels ? (
+                    <span className="mt-0.5 block text-center text-[11px] font-semibold tabular text-[#111b21]">
+                      {d.out}
+                    </span>
+                  ) : null}
+                </span>
+              )
+            })}
+          </div>
+        </div>
         <p className="wb-home-chart-empty">{emptyText}</p>
       </div>
     )

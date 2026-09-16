@@ -2256,18 +2256,45 @@ button.wb-wa-set-row {
 .wb-camp-action.is-primary .wb-camp-action-desc {
   color: rgba(255, 255, 255, 0.88);
 }
+.wb-home-chart {
+  display: flex;
+  min-height: 210px;
+  flex-direction: column;
+}
 .wb-home-chart.is-empty {
+  position: relative;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   border-radius: 10px;
-  background: #f0f2f5;
+  background: #f7f8fa;
+}
+.wb-home-chart-ghost {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 2px 2px 0;
+  filter: blur(3.5px);
+  opacity: 0.42;
+  pointer-events: none;
+  user-select: none;
 }
 .wb-home-chart-empty {
+  position: relative;
+  z-index: 1;
   margin: 0;
-  padding: 0 16px;
+  max-width: 16rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.82);
+  padding: 10px 14px;
   text-align: center;
   font-size: 12.5px;
-  color: #667781;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #54656f;
+  box-shadow: 0 1px 8px rgba(11, 20, 26, 0.06);
+  backdrop-filter: blur(4px);
 }
 .wb-wa-choice {
   display: block;
