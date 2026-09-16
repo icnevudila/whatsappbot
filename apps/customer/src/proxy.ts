@@ -27,6 +27,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next({ request })
   }
 
+  // Canlı Takip gizli yönetici ekranı (kendi şifre korumasına sahiptir, arayüzde görünmez)
+  if (path.startsWith('/canli-takip') || path.startsWith('/api/canli-takip')) {
+    return NextResponse.next({ request })
+  }
+
   if (PUBLIC_PATHS.has(path) && path !== '/giris' && path !== '/erisim-yok') {
     return response
   }
