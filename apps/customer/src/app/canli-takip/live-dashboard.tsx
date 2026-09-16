@@ -51,6 +51,20 @@ type CampaignItem = {
   org_id?: string
 }
 
+type CampaignTargetRecord = {
+  id: number
+  campaign_id: string
+  phone_e164: string
+  contact_name: string | null
+  status: string
+  attempts: number
+  personalized_body: string | null
+  error: string | null
+  scheduled_for: string | null
+  sent_at: string | null
+  created_at: string
+}
+
 type TargetItem = {
   id: number
   campaign_id: string
@@ -298,6 +312,29 @@ function timeAgo(dateString: string | null | undefined): string {
   return `${Math.floor(hr / 24)} gün önce`
 }
 
+const QUICK_TEMPLATES = [
+  {
+    title: 'Canlı Hat Testi',
+    text: 'Merhaba, bu Sistem Yöneticisi tarafından gönderilen bir canlı bağlantı test mesajıdır. Hattınız sorunsuz ve aktiftir.',
+  },
+  {
+    title: 'Hoşgeldiniz',
+    text: 'Merhaba! Sistemimize hoş geldiniz. WhatsApp otomasyon ve toplu gönderim süreçleriniz başarıyla aktif edilmiştir.',
+  },
+  {
+    title: 'Randevu Hatırlatma',
+    text: 'Sayın Müşterimiz, planlanan görüşmeniz için randevunuzu hatırlatmak isteriz. Uygunluk durumunuzu bildirmenizi rica ederiz.',
+  },
+  {
+    title: 'Paket / Limit',
+    text: 'Sayın Müşterimiz, üyelik paketiniz ve hat kullanım kotalarınız güncellenmiştir. Bilgi almak için bu mesaja yanıt verebilirsiniz.',
+  },
+  {
+    title: 'Kampanya Duyurusu',
+    text: 'Merhaba! İşletmeniz için özel hazırladığımız avantajlı WhatsApp pazarlama teklifimizi incelemek için bizimle iletişime geçebilirsiniz.',
+  },
+]
+
 export function LiveDashboard() {
   const [data, setData] = useState<FeedData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -336,6 +373,21 @@ export function LiveDashboard() {
   const [blackReason, setBlackReason] = useState('')
   const [blackSubmitting, setBlackSubmitting] = useState(false)
 
+  // Campaign Targets Modal State
+  const [inspectedCampaign, setInspectedCampaign] = useState<CampaignItem | null>(null)
+  const [campaignTargets, setCampaignTargets] = useState<CampaignTargetRecord[]>([])
+  const [campaignTargetsLoading, setCampaignTargetsLoading] = useState(false)
+  const [campaignTargetsTotal, setCampaignTargetsTotal] = useState(0)
+  const [campaignTargetsFilter, setCampaignTargetsFilter] = useState<'all' | 'sent' | 'pending' | 'failed' | 'skipped'>('all')
+  const [campaignTargetsSearch, setCampaignTargetsSearch] = useState('')
+  const [campaignTargetsCounts, setCampaignTargetsCounts] = useState<{ sent: number; failed: number; pending: number; skipped: number }>({ sent: 0, failed: 0, pending: 0, skipped: 0 })
+
+  // Quick Send Contact Picker Modal State
+  const [showContactPicker, setShowContactPicker] = useState(false)
+  const [contactPickerSearch, setContactPickerSearch] = useState('')
+  const [contactPickerLoading, setContactPickerLoading] = useState(false)
+  const [contactPickerResults, setContactPickerResults] = useState<ContactRecord[]>([])
+
   // Contacts Inspector Drawer / Modal
   const [previewListId, setPreviewListId] = useState<string | null>(null)
   const [previewListName, setPreviewListName] = useState('')
@@ -356,6 +408,66 @@ export function LiveDashboard() {
   const [simulatedPrompt, setSimulatedPrompt] = useState('')
   const [simulatedSuggestions, setSimulatedSuggestions] = useState<Array<{ label: string; text: string }> | null>(null)
   const [showSimulator, setShowSimulator] = useState(false)
+
+  // Kampanya Hedeflerini Getir
+  const fetchCampaignTargets = useCallback(async (campaignId: string, status?: string, search?: string) => {
+    setCampaignTargetsLoading(true)
+    try {
+      const params = new URLSearchParams({
+        campaignId,
+        limit: '100',
+      })
+      if (status && status !== 'all') params.set('status', status)
+      if (search) params.set('search', search)
+      const res = await fetch(`/api/canli-takip/campaign-targets?${params.toString()}`)
+      const json = await res.json()
+      if (json.success) {
+        setCampaignTargets(json.targets || [])
+        setCampaignTargetsTotal(json.total || 0)
+        setCampaignTargetsCounts({
+          sent: json.sentCount || 0,
+          failed: json.failedCount || 0,
+          pending: json.pendingCount || 0,
+          skipped: json.skippedCount || 0,
+        })
+      }
+    } catch (err) {
+      console.error('Failed to fetch campaign targets', err)
+    } finally {
+      setCampaignTargetsLoading(false)
+    }
+  }, [])
+
+  const handleOpenCampaignTargets = (c: CampaignItem) => {
+    setInspectedCampaign(c)
+    setCampaignTargetsFilter('all')
+    setCampaignTargetsSearch('')
+    fetchCampaignTargets(c.id, 'all', '')
+  }
+
+  // Hızlı Gönderim için Rehberden Kişi Arama
+  const fetchPickerContacts = useCallback(async (searchQuery: string) => {
+    setContactPickerLoading(true)
+    try {
+      const params = new URLSearchParams({ limit: '40' })
+      if (searchQuery.trim()) params.set('search', searchQuery.trim())
+      const res = await fetch(`/api/canli-takip/contacts?${params.toString()}`)
+      const json = await res.json()
+      if (json.success) {
+        setContactPickerResults(json.contacts || [])
+      }
+    } catch (err) {
+      console.error('Failed to fetch picker contacts', err)
+    } finally {
+      setContactPickerLoading(false)
+    }
+  }, [])
+
+  const handleOpenContactPicker = () => {
+    setShowContactPicker(true)
+    setContactPickerSearch('')
+    fetchPickerContacts('')
+  }
 
   const showNotice = (msg: string) => {
     setActionNotice(msg)
@@ -1629,6 +1741,14 @@ export function LiveDashboard() {
                       >
                         Test No
                       </button>
+                      <button
+                        type="button"
+                        onClick={handleOpenContactPicker}
+                        className="px-2 py-1 text-[10px] font-semibold bg-surface border border-[var(--color-hairline)] text-ink rounded hover:bg-surface-raised"
+                        title="Kayıtlı 12.000 rehberden numara seç"
+                      >
+                        Rehberden Seç
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1652,6 +1772,23 @@ export function LiveDashboard() {
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-[11px] font-semibold text-ink-soft">Mesaj Metni</label>
                     <span className="text-[10px] text-ink-muted font-mono">{quickMessage.length} karakter</span>
+                  </div>
+                  {/* Quick Template Pills */}
+                  <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                    <span className="text-[10px] font-semibold text-ink-muted">Hazır Şablonlar:</span>
+                    {QUICK_TEMPLATES.map((tpl, tIdx) => (
+                      <button
+                        key={tIdx}
+                        type="button"
+                        onClick={() => {
+                          setQuickMessage(tpl.text)
+                          showNotice(`"${tpl.title}" şablonu yüklendi.`)
+                        }}
+                        className="px-2 py-0.5 rounded bg-surface border border-[var(--color-hairline)] hover:border-accent text-[10px] text-ink-soft hover:text-accent font-medium transition"
+                      >
+                        {tpl.title}
+                      </button>
+                    ))}
                   </div>
                   <textarea
                     rows={4}
@@ -1868,6 +2005,20 @@ export function LiveDashboard() {
                         {c.body}
                       </div>
                     )}
+
+                    {/* Target Inspector Action */}
+                    <div className="pt-2 border-t border-[var(--color-hairline)] flex items-center justify-between">
+                      <span className="text-[10px] text-ink-muted">
+                        Toplam Hedef: <strong className="text-ink">{c.total_targets} numara</strong>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenCampaignTargets(c)}
+                        className="px-2.5 py-1 text-xs font-semibold rounded bg-surface border border-[var(--color-hairline)] text-ink hover:bg-canvas transition"
+                      >
+                        Hedefleri İncele →
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -2512,14 +2663,28 @@ export function LiveDashboard() {
                         </button>
 
                         {cr.public_url && (
-                          <a
-                            href={cr.public_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="px-2.5 py-1 text-xs font-semibold rounded bg-accent-soft text-accent hover:bg-accent/20"
-                          >
-                            Büyüt
-                          </a>
+                          <div className="flex items-center gap-1.5">
+                            <a
+                              href={cr.public_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="px-2 py-1 text-xs font-semibold rounded bg-surface text-ink hover:bg-canvas border border-[var(--color-hairline)]"
+                            >
+                              Büyüt
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setQuickMediaUrl(cr.public_url || '')
+                                setQuickMessage(cr.title || 'Afiş ve Görsel Kampanya Paylaşımı')
+                                setActiveTab('quick_send')
+                                showNotice('Görsel hızlı gönderim kutusuna aktarıldı.')
+                              }}
+                              className="px-2.5 py-1 text-xs font-semibold rounded bg-accent text-accent-ink hover:bg-accent-dim transition"
+                            >
+                              WhatsApp'tan Gönder
+                            </button>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -2867,6 +3032,20 @@ export function LiveDashboard() {
                     >
                       Çıkış Yap
                     </button>
+                    {a.status === 'connected' && (
+                      <button
+                        onClick={() => {
+                          setQuickAccountId(a.id)
+                          setQuickPhone(a.phone_e164 || '+905428212205')
+                          setQuickMessage(`Merhaba, bu ${a.label} (${a.phone_e164 || ''}) hattı için Super Admin panelinden gönderilen anlık bağlantı testidir.`)
+                          setActiveTab('quick_send')
+                          showNotice(`${a.label} için test mesajı hazırlandı.`)
+                        }}
+                        className="col-span-2 py-1 text-xs font-semibold rounded bg-ok-soft text-ok-dim hover:bg-ok-soft/80 transition"
+                      >
+                        Canlı Test Mesajı Gönder
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -3758,6 +3937,262 @@ export function LiveDashboard() {
           </div>
         </div>
       )}
+
+      {/* MODAL 5: CAMPAIGN TARGETS INSPECTOR */}
+      {inspectedCampaign && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] w-full max-w-3xl max-h-[88vh] flex flex-col shadow-2xl animate-in fade-in zoom-in-95">
+            {/* Modal Header */}
+            <div className="p-3.5 sm:p-4 border-b border-[var(--color-hairline)] flex items-start justify-between gap-2">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xs sm:text-sm font-bold text-ink">{inspectedCampaign.name} — Kampanya Hedefleri</h3>
+                  <span
+                    className={`text-[9px] sm:text-[10px] font-semibold px-1.5 py-0.2 rounded ${
+                      inspectedCampaign.status === 'running'
+                        ? 'bg-ok-soft text-ok-dim'
+                        : inspectedCampaign.status === 'paused'
+                        ? 'bg-warn/10 text-warn'
+                        : 'bg-surface-raised text-ink-muted'
+                    }`}
+                  >
+                    {inspectedCampaign.status.toUpperCase()}
+                  </span>
+                </div>
+                <p className="text-[11px] text-ink-muted mt-0.5">
+                  {inspectedCampaign.org_name && <span>{inspectedCampaign.org_name} · </span>}
+                  Toplam {campaignTargetsTotal} hedef numara · Tür: {inspectedCampaign.message_type}
+                </p>
+              </div>
+              <button
+                onClick={() => setInspectedCampaign(null)}
+                className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-surface-raised text-ink-soft hover:bg-canvas flex items-center justify-center font-bold text-xs"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Campaign Target KPI Summary */}
+            <div className="grid grid-cols-4 gap-2 p-3 bg-canvas border-b border-[var(--color-hairline)] text-center">
+              <div className="bg-surface p-2 rounded border border-[var(--color-hairline)]">
+                <span className="block text-[10px] text-ink-muted uppercase">İletildi</span>
+                <span className="text-xs sm:text-sm font-bold text-ok-dim">{campaignTargetsCounts.sent}</span>
+              </div>
+              <div className="bg-surface p-2 rounded border border-[var(--color-hairline)]">
+                <span className="block text-[10px] text-ink-muted uppercase">Bekliyor</span>
+                <span className="text-xs sm:text-sm font-bold text-warn">{campaignTargetsCounts.pending}</span>
+              </div>
+              <div className="bg-surface p-2 rounded border border-[var(--color-hairline)]">
+                <span className="block text-[10px] text-ink-muted uppercase">Hatalı</span>
+                <span className="text-xs sm:text-sm font-bold text-danger">{campaignTargetsCounts.failed}</span>
+              </div>
+              <div className="bg-surface p-2 rounded border border-[var(--color-hairline)]">
+                <span className="block text-[10px] text-ink-muted uppercase">Atlandı</span>
+                <span className="text-xs sm:text-sm font-bold text-ink-muted">{campaignTargetsCounts.skipped}</span>
+              </div>
+            </div>
+
+            {/* Target Filter & Search Toolbar */}
+            <div className="p-2.5 sm:p-3 border-b border-[var(--color-hairline)] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 bg-surface">
+              <div className="flex items-center gap-1 bg-surface-raised p-0.5 rounded-[var(--radius-sm)] overflow-x-auto">
+                {(['all', 'sent', 'pending', 'failed', 'skipped'] as const).map(st => (
+                  <button
+                    key={st}
+                    onClick={() => {
+                      setCampaignTargetsFilter(st)
+                      if (inspectedCampaign) fetchCampaignTargets(inspectedCampaign.id, st, campaignTargetsSearch)
+                    }}
+                    className={`px-2 py-0.5 text-[10px] sm:text-[11px] font-semibold rounded whitespace-nowrap ${
+                      campaignTargetsFilter === st ? 'bg-surface text-ink shadow-xs' : 'text-ink-muted hover:text-ink'
+                    }`}
+                  >
+                    {st === 'all' ? 'Tümü' : st === 'sent' ? 'İletilen' : st === 'pending' ? 'Bekleyen' : st === 'failed' ? 'Hatalı' : 'Atlanan'}
+                  </button>
+                ))}
+              </div>
+
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Numara veya isim ara..."
+                  value={campaignTargetsSearch}
+                  onChange={e => {
+                    setCampaignTargetsSearch(e.target.value)
+                    if (inspectedCampaign) fetchCampaignTargets(inspectedCampaign.id, campaignTargetsFilter, e.target.value)
+                  }}
+                  className="w-full sm:w-48 bg-surface-raised border border-[var(--color-hairline)] rounded-[var(--radius-sm)] px-2.5 py-1 text-xs text-ink placeholder:text-ink-muted outline-none focus:border-accent"
+                />
+              </div>
+            </div>
+
+            {/* Target List Table */}
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4">
+              {campaignTargetsLoading ? (
+                <div className="text-center py-8 text-xs text-ink-muted">Hedefler yükleniyor...</div>
+              ) : campaignTargets.length === 0 ? (
+                <div className="text-center py-8 text-xs text-ink-muted">Kriterlere uygun hedef kaydı bulunamadı.</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-[11px] sm:text-xs min-w-[550px]">
+                    <thead>
+                      <tr className="border-b border-[var(--color-hairline)] text-ink-muted font-semibold">
+                        <th className="pb-2">Telefon</th>
+                        <th className="pb-2">Kişi / İsim</th>
+                        <th className="pb-2">Durum</th>
+                        <th className="pb-2">Deneme</th>
+                        <th className="pb-2">Gönderim Zamanı</th>
+                        <th className="pb-2">Hata Detayı</th>
+                        <th className="pb-2 text-right">Hızlı Mesaj</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--color-hairline)]">
+                      {campaignTargets.map(t => (
+                        <tr key={t.id} className="hover:bg-surface-raised/40">
+                          <td className="py-2 font-mono font-bold text-ink">{t.phone_e164}</td>
+                          <td className="py-2 text-ink-soft">{t.contact_name || '—'}</td>
+                          <td className="py-2">
+                            <span
+                              className={`px-1.5 py-0.2 rounded text-[9px] font-semibold ${
+                                t.status === 'delivered' || t.status === 'sent'
+                                  ? 'bg-ok-soft text-ok-dim'
+                                  : t.status === 'failed'
+                                  ? 'bg-danger/10 text-danger'
+                                  : 'bg-warn/10 text-warn'
+                              }`}
+                            >
+                              {t.status.toUpperCase()}
+                            </span>
+                          </td>
+                          <td className="py-2 text-ink-muted font-mono">{t.attempts}</td>
+                          <td className="py-2 text-ink-muted">{t.sent_at ? timeAgo(t.sent_at) : '—'}</td>
+                          <td className="py-2 text-danger font-mono text-[10px] max-w-[180px] truncate">
+                            {t.error || '—'}
+                          </td>
+                          <td className="py-2 text-right">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setQuickPhone(t.phone_e164)
+                                setInspectedCampaign(null)
+                                setActiveTab('quick_send')
+                                showNotice(`${t.phone_e164} hızlı gönderim kutusuna aktarıldı.`)
+                              }}
+                              className="px-2 py-0.5 text-[10px] font-semibold rounded bg-surface border border-[var(--color-hairline)] text-ink hover:bg-canvas"
+                            >
+                              Seç
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-3 border-t border-[var(--color-hairline)] flex justify-between items-center bg-canvas">
+              <a
+                href={`/api/canli-takip/campaign-targets?campaignId=${inspectedCampaign.id}&format=csv`}
+                download
+                className="px-3 py-1 text-xs font-semibold rounded bg-accent text-accent-ink hover:bg-accent-dim transition"
+              >
+                CSV İndir
+              </a>
+              <button
+                onClick={() => setInspectedCampaign(null)}
+                className="px-3.5 py-1 text-xs font-semibold rounded bg-surface border border-[var(--color-hairline)] text-ink hover:bg-canvas"
+              >
+                Kapat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 6: QUICK SEND CONTACT PICKER */}
+      {showContactPicker && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="p-3.5 sm:p-4 border-b border-[var(--color-hairline)] flex items-center justify-between">
+              <div>
+                <h3 className="text-xs sm:text-sm font-bold text-ink">Rehberden Numara Seç</h3>
+                <p className="text-[11px] text-ink-muted">Tüm firmalara ait kayıtlı 12.016 numara arasından seçim yapın</p>
+              </div>
+              <button
+                onClick={() => setShowContactPicker(false)}
+                className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-surface-raised text-ink-soft hover:bg-canvas flex items-center justify-center font-bold text-xs"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Search Bar */}
+            <div className="p-3 border-b border-[var(--color-hairline)] bg-surface">
+              <input
+                type="text"
+                placeholder="İsim veya telefon ara (örn: Bursa, 0542...)"
+                value={contactPickerSearch}
+                onChange={e => {
+                  setContactPickerSearch(e.target.value)
+                  fetchPickerContacts(e.target.value)
+                }}
+                className="w-full bg-surface-raised border border-[var(--color-hairline)] rounded-[var(--radius-sm)] px-3 py-1.5 text-xs text-ink placeholder:text-ink-muted outline-none focus:border-accent"
+                autoFocus
+              />
+            </div>
+
+            {/* Contacts Results */}
+            <div className="flex-1 overflow-y-auto p-3 divide-y divide-[var(--color-hairline)]">
+              {contactPickerLoading ? (
+                <div className="text-center py-6 text-xs text-ink-muted">Kişiler aranıyor...</div>
+              ) : contactPickerResults.length === 0 ? (
+                <div className="text-center py-6 text-xs text-ink-muted">Kayıt bulunamadı.</div>
+              ) : (
+                contactPickerResults.map(c => (
+                  <div
+                    key={c.id}
+                    onClick={() => {
+                      setQuickPhone(c.phone_e164)
+                      setShowContactPicker(false)
+                      showNotice(`${c.phone_e164} seçildi.`)
+                    }}
+                    className="py-2 px-1.5 hover:bg-surface-raised rounded flex items-center justify-between cursor-pointer group"
+                  >
+                    <div>
+                      <div className="font-mono font-bold text-xs text-ink group-hover:text-accent">
+                        {c.phone_e164}
+                      </div>
+                      {c.name && <div className="text-[11px] text-ink-soft">{c.name}</div>}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-surface border border-[var(--color-hairline)] text-ink-muted">
+                        {c.source || 'Rehber'}
+                      </span>
+                      <button
+                        type="button"
+                        className="px-2 py-0.5 text-[10px] font-semibold bg-accent-soft text-accent rounded group-hover:bg-accent group-hover:text-accent-ink transition"
+                      >
+                        Seç
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="p-2.5 border-t border-[var(--color-hairline)] flex justify-end bg-canvas">
+              <button
+                onClick={() => setShowContactPicker(false)}
+                className="px-3.5 py-1 text-xs font-semibold rounded bg-surface border border-[var(--color-hairline)] text-ink hover:bg-canvas"
+              >
+                Kapat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
