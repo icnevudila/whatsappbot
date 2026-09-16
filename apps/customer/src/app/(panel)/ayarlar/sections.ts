@@ -80,14 +80,6 @@ export const SETTINGS_SECTIONS: {
     color: '#2f5bff',
     group: 'İş',
   },
-  {
-    href: '/ayarlar/gelismis',
-    title: 'Gelişmiş',
-    description: 'Webhook, API ve faturalama',
-    icon: 'settings',
-    color: '#8696a0',
-    group: 'Diğer',
-  },
 ]
 
 export const SETTINGS_PREFETCH_HREFS = [

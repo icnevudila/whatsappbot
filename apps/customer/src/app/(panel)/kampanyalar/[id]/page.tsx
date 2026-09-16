@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { AccentLink, Notice, PageHeader, StatusPill } from '@/components/ui'
+import { Icon } from '@/components/icon'
+import { Notice, PageHeader, StatusPill } from '@/components/ui'
 import { requireActiveOrg } from '@/lib/org'
 import { CampaignLive, type CampaignView } from './campaign-live'
 import { TargetFeed, type TargetView } from './target-feed'
@@ -135,7 +137,6 @@ export default async function CampaignDetailPage({
         : account.status === 'connected'
           ? 'bağlı'
           : 'bağlı değil',
-      // Seçili hatlar kilitli olsa da formda kalsın; yeni eklenenler bağlı olmalı.
       disabled: selected ? false : account.is_locked || account.status !== 'connected',
     }
   })
@@ -150,40 +151,43 @@ export default async function CampaignDetailPage({
   const senderLabel = `${accounts.length} gönderen hat`
 
   return (
-    <>
+    <div className="wb-wa-page">
       <PageHeader
         title={campaign.name}
         description={`${startLabel} · ${recipientLabel} · ${senderLabel}`}
         backHref="/kampanyalar"
         backLabel="Kampanyalar"
         action={
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-col items-end gap-1.5">
             {campaign.status === 'scheduled' && campaign.scheduled_at ? (
               <ScheduledStatusPill at={campaign.scheduled_at} />
             ) : (
               <StatusPill status={campaign.status} />
             )}
             {campaign.status !== 'completed' && campaign.status !== 'failed' ? (
-              <AccentLink href={`/kampanyalar/${id}/duzenle`}>Düzenle</AccentLink>
+              <Link href={`/kampanyalar/${id}/duzenle`} className="wb-wa-text-btn">
+                <Icon name="edit" className="size-3.5 shrink-0" />
+                Düzenle
+              </Link>
             ) : null}
           </div>
         }
       />
 
       {flash === 'taslak' ? (
-        <div className="mb-2.5">
+        <div className="mb-2.5 px-0">
           <Notice tone="accent">
             Taslak kaydedildi. Hazır olunca <strong>Başlat</strong>’a basın.
           </Notice>
         </div>
       ) : null}
       {flash === 'zamanlandi' ? (
-        <div className="mb-2.5">
+        <div className="mb-2.5 px-0">
           <Notice tone="accent">Zamanlandı — seçilen saatte başlar.</Notice>
         </div>
       ) : null}
       {flash === 'baslatilamadi' ? (
-        <div className="mb-2.5">
+        <div className="mb-2.5 px-0">
           <Notice tone="warn">
             Kaydedildi; başlatma kuyruğa alınamadı. Biraz sonra <strong>Başlat</strong>’ı
             deneyin.
@@ -211,6 +215,6 @@ export default async function CampaignDetailPage({
           campaignStatus={campaign.status}
         />
       </div>
-    </>
+    </div>
   )
 }

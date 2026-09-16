@@ -1,5 +1,6 @@
 import { cache } from 'react'
 import { createSupabaseServerClient, getAuthIdentity } from '@/lib/supabase/server'
+import { readActiveOrgCookie } from '@/lib/active-org-cookie'
 
 export type ActiveOrg = {
   id: string
@@ -47,6 +48,20 @@ export function resolveIsPlatformAdmin(options: {
   return false
 }
 
+async function membershipExists(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  userId: string,
+  orgId: string,
+): Promise<boolean> {
+  const { data } = await supabase
+    .from('organization_members')
+    .select('org_id')
+    .eq('org_id', orgId)
+    .eq('user_id', userId)
+    .maybeSingle()
+  return Boolean(data)
+}
+
 export const requireActiveOrg = cache(async (): Promise<{
   userId: string
   email: string | null
@@ -58,13 +73,26 @@ export const requireActiveOrg = cache(async (): Promise<{
   const { supabase, userId, email, jwtPlatformAdmin } = await getAuthIdentity()
   if (!userId) throw new Error('Oturum bulunamadı.')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('active_org_id, is_platform_admin, email, onboarded_at, onboarding_step')
-    .eq('id', userId)
-    .maybeSingle()
+  const [{ data: profile }, cookieOrgId] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('active_org_id, is_platform_admin, email, onboarded_at, onboarding_step')
+      .eq('id', userId)
+      .maybeSingle(),
+    readActiveOrgCookie(),
+  ])
 
-  let orgId = profile?.active_org_id ?? null
+  let orgId: string | null = null
+
+  if (cookieOrgId && (await membershipExists(supabase, userId, cookieOrgId))) {
+    orgId = cookieOrgId
+  } else if (
+    profile?.active_org_id &&
+    (await membershipExists(supabase, userId, profile.active_org_id))
+  ) {
+    // Cookie yoksa profil yedek; cookie yazma Server Component'te yasak — switchOrg yazar.
+    orgId = profile.active_org_id
+  }
 
   if (!orgId) {
     const { data: membership } = await supabase
@@ -77,7 +105,7 @@ export const requireActiveOrg = cache(async (): Promise<{
 
     orgId = membership?.org_id ?? null
 
-    if (orgId) {
+    if (orgId && !profile?.active_org_id) {
       await supabase.from('profiles').update({ active_org_id: orgId }).eq('id', userId)
     }
   }

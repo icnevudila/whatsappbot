@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, useTransition } from 'react'
 import type { Tables } from '@wa/shared'
-import { Button, Card, CardHeader, Meter, Notice } from '@/components/ui'
+import { Meter, Notice } from '@/components/ui'
 import { LiveStat } from '@/components/live-stat'
 import { useToast } from '@/components/toast'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
@@ -84,6 +84,7 @@ export function CampaignLive({
   orgId: string
   initialStats?: CampaignTargetStats
 }) {
+  void accountOptions
   const [campaign, setCampaign] = useState(initial)
   const [stats, setStats] = useState<CampaignTargetStats>(initialStats ?? { delivered: 0, read: 0 })
   const [pending, startTransition] = useTransition()
@@ -99,13 +100,6 @@ export function CampaignLive({
   const queueHint =
     campaign.total_targets > 0 ? campaign.total_targets : estimatedFromLists
 
-  /**
-   * Ilerleme kampanya satirinin kendisinde tutuluyor (sent_count vb.),
-   * bu yuzden tek satir aboneligi canli ilerleme icin yeterli:
-   * her mesaj icin ayri olay dinlemek gerekmiyor.
-   *
-   * Realtime kopsa bile polling yedegi var: gonderildi 0'da takili kalmasin.
-   */
   useEffect(() => {
     const supabase = getSupabaseBrowserClient()
 
@@ -189,13 +183,14 @@ export function CampaignLive({
   const processed = campaign.sent_count + campaign.failed_count + campaign.skipped_count
   const remaining = Math.max(0, campaign.total_targets - processed)
 
-  // Ortalama bekleme suresinden kaba bir bitis tahmini.
   const averageDelay = (campaign.min_delay_seconds + campaign.max_delay_seconds) / 2
   const etaMinutes = Math.ceil((remaining * averageDelay) / 60)
 
   const subtitleParts: string[] = []
   if (campaign.started_at) {
     subtitleParts.push(`Başlama: ${new Date(campaign.started_at).toLocaleString('tr-TR')}`)
+  } else if (campaign.status === 'scheduled' && campaign.scheduled_at) {
+    subtitleParts.push(`Plan: ${new Date(campaign.scheduled_at).toLocaleString('tr-TR')}`)
   } else {
     subtitleParts.push('Henüz başlatılmadı')
   }
@@ -204,21 +199,21 @@ export function CampaignLive({
   }
 
   return (
-    <div className="space-y-2.5">
-      <Card>
-        <CardHeader
-          title="İlerleme"
-          subtitle={subtitleParts.join(' · ')}
-        />
+    <div className="wb-camp-detail space-y-2.5">
+      <section className="wb-camp-panel">
+        <header className="wb-camp-panel-head">
+          <h2 className="wb-camp-panel-title">İlerleme</h2>
+          <p className="wb-camp-panel-sub">{subtitleParts.join(' · ')}</p>
+        </header>
 
-        <div className="space-y-2.5 p-3.5">
+        <div className="space-y-3 p-3.5">
           <div>
             <div className="mb-2 flex items-baseline justify-between text-[12px]">
-              <span className="text-ink-muted">İlerleme</span>
-              <span className="text-ink tabular">
+              <span className="text-[#667781]">İlerleme</span>
+              <span className="tabular text-[#111b21]">
                 {processed} / {campaign.total_targets}
                 {campaign.total_targets > 0 ? (
-                  <span className="text-ink-faint">
+                  <span className="text-[#8696a0]">
                     {' '}
                     · %{Math.min(100, Math.round((processed / campaign.total_targets) * 100))}
                   </span>
@@ -232,13 +227,14 @@ export function CampaignLive({
             />
           </div>
 
-          <p className="mb-2 text-[12.5px] tabular text-ink">
+          <p className="text-[12.5px] tabular text-[#111b21]">
             {campaign.sent_count.toLocaleString('tr-TR')} / {campaign.total_targets.toLocaleString('tr-TR')} gönderildi
             {campaign.total_targets > 0
               ? ` · %${Math.min(100, Math.round((campaign.sent_count / campaign.total_targets) * 100))}`
               : ''}
           </p>
-          <dl className="grid grid-cols-2 gap-2.5 border-t border-hairline pt-2.5 sm:grid-cols-4">
+
+          <dl className="wb-camp-stats">
             <LiveStat
               label="Gönderim"
               value={
@@ -284,27 +280,24 @@ export function CampaignLive({
             />
           </dl>
 
-          <p className="text-[12px] text-ink-muted">
+          <p className="text-[12px] text-[#667781]">
             Numara durumları aşağıda.{' '}
-            <a
-              href="#paylasilanlar"
-              className="font-medium text-accent underline underline-offset-2"
-            >
+            <a href="#paylasilanlar" className="font-medium text-[#008069] underline underline-offset-2">
               Numaralara git
             </a>
           </p>
 
           {(sourceLists.length > 0 || accounts.length > 0) && (
-            <div className="space-y-1.5 border-t border-hairline pt-2.5 text-[12px] text-ink-muted">
+            <div className="space-y-1.5 border-t border-[#e9edef] pt-2.5 text-[12px] text-[#667781]">
               {sourceLists.length > 0 ? (
                 <p>
-                  <span className="text-ink-faint">Gruplar: </span>
+                  <span className="text-[#8696a0]">Gruplar: </span>
                   {sourceLists.map((list, index) => (
                     <span key={list.id}>
                       {index > 0 ? ', ' : null}
                       <Link
                         href={`/kisiler/${list.id}`}
-                        className="font-medium text-ink underline underline-offset-2 hover:text-accent"
+                        className="font-medium text-[#111b21] underline underline-offset-2 hover:text-[#008069]"
                       >
                         {list.name}
                       </Link>
@@ -314,13 +307,13 @@ export function CampaignLive({
               ) : null}
               {accounts.length > 0 ? (
                 <p>
-                  <span className="text-ink-faint">Hatlar: </span>
+                  <span className="text-[#8696a0]">Hatlar: </span>
                   {accounts.map((account, index) => (
                     <span key={account.id}>
                       {index > 0 ? ', ' : null}
                       <Link
                         href="/ayarlar/hatlar"
-                        className="font-medium text-ink underline underline-offset-2 hover:text-accent"
+                        className="font-medium text-[#111b21] underline underline-offset-2 hover:text-[#008069]"
                       >
                         {account.label}
                       </Link>
@@ -332,9 +325,7 @@ export function CampaignLive({
           )}
 
           {campaign.status === 'running' && remaining > 0 ? (
-            <p className="text-[11.5px] text-ink-faint tabular">
-              Tahmini kalan: ~{etaMinutes} dk
-            </p>
+            <p className="text-[11.5px] tabular text-[#8696a0]">Tahmini kalan: ~{etaMinutes} dk</p>
           ) : null}
 
           {campaign.status === 'running' && remaining > 0 && campaign.wait_reason ? (
@@ -369,7 +360,7 @@ export function CampaignLive({
             </Notice>
           ) : null}
 
-          <div className="space-y-2 border-t border-hairline pt-2.5">
+          <div className="space-y-2 border-t border-[#e9edef] pt-2.5">
             {queueHint > 0 &&
             (campaign.status === 'draft' || campaign.status === 'stopped') ? (
               <Notice tone="warn">
@@ -377,11 +368,11 @@ export function CampaignLive({
               </Notice>
             ) : null}
 
-            <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap">
+            <div className="wb-camp-detail-actions">
               {campaign.status === 'draft' || campaign.status === 'stopped' ? (
-                <Button
-                  variant="accent"
-                  className="min-h-11 w-full touch-manipulation sm:min-h-9 sm:w-auto"
+                <button
+                  type="button"
+                  className="wb-wa-submit"
                   disabled={pending}
                   onClick={() => run(() => startCampaign(campaign.id))}
                 >
@@ -390,43 +381,45 @@ export function CampaignLive({
                     : campaign.status === 'stopped'
                       ? 'Yeniden başlat'
                       : 'Başlat'}
-                </Button>
+                </button>
               ) : null}
 
               {campaign.status === 'running' ? (
-                <Button
-                  className="min-h-11 w-full touch-manipulation sm:min-h-9 sm:w-auto"
+                <button
+                  type="button"
+                  className="wb-wa-submit is-secondary"
                   disabled={pending}
                   onClick={() => run(() => pauseCampaign(campaign.id))}
                 >
                   {pending ? 'Duraklatılıyor…' : 'Gönderimi Duraklat'}
-                </Button>
+                </button>
               ) : null}
 
               {campaign.status === 'paused' ? (
-                <Button
-                  variant="accent"
-                  className="min-h-11 w-full touch-manipulation sm:min-h-9 sm:w-auto"
+                <button
+                  type="button"
+                  className="wb-wa-submit"
                   disabled={pending}
                   onClick={() => run(() => resumeCampaign(campaign.id))}
                 >
                   {pending ? 'Devam ediliyor…' : 'Gönderime Devam Et'}
-                </Button>
+                </button>
               ) : null}
 
               {['running', 'paused', 'scheduled'].includes(campaign.status) ? (
-                <Button
-                  variant="danger"
-                  className="min-h-11 w-full touch-manipulation sm:min-h-9 sm:w-auto"
+                <button
+                  type="button"
+                  className="wb-wa-submit is-danger"
                   disabled={pending}
                   onClick={() => run(() => stopCampaign(campaign.id))}
                 >
                   Durdur
-                </Button>
+                </button>
               ) : null}
 
-              <Button
-                className="min-h-11 w-full touch-manipulation sm:min-h-9 sm:w-auto"
+              <button
+                type="button"
+                className="wb-wa-submit is-secondary"
                 disabled={pending}
                 onClick={() =>
                   run(async () => {
@@ -437,28 +430,21 @@ export function CampaignLive({
                   })
                 }
               >
-                {pending ? 'Kopyalanıyor…' : 'Kopyala ve Yeni Kampanya Oluştur'}
-              </Button>
+                {pending ? 'Kopyalanıyor…' : 'Kopyala'}
+              </button>
 
-              {campaign.status !== 'completed' && campaign.status !== 'failed' ? (
-                <Link
-                  href={`/kampanyalar/${campaign.id}/duzenle`}
-                  className="inline-flex h-9 min-h-11 w-full items-center justify-center rounded-[var(--radius-sm)] border border-hairline-strong bg-surface px-3.5 text-[14px] font-semibold text-ink touch-manipulation sm:min-h-9 sm:w-auto"
-                >
-                  Düzenle
-                </Link>
-              ) : (
-                <Link
-                  href={`/kampanyalar/${campaign.id}/duzenle`}
-                  className="inline-flex h-9 min-h-11 w-full items-center justify-center rounded-[var(--radius-sm)] border border-hairline-strong bg-surface px-3.5 text-[14px] font-semibold text-ink touch-manipulation sm:min-h-9 sm:w-auto"
-                >
-                  Kampanyayı gör
-                </Link>
-              )}
+              <Link
+                href={`/kampanyalar/${campaign.id}/duzenle`}
+                className="wb-wa-submit is-secondary"
+              >
+                {campaign.status !== 'completed' && campaign.status !== 'failed'
+                  ? 'Düzenle'
+                  : 'Kampanyayı gör'}
+              </Link>
             </div>
           </div>
         </div>
-      </Card>
+      </section>
     </div>
   )
 }

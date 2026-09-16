@@ -6,6 +6,7 @@ import { toE164, type Json } from '@wa/shared'
 import { enqueueJob } from '@/lib/jobs'
 import { isTrMobileMasked, STEP_TO_PROFILE, type OnboardingFlags } from '@/lib/onboarding'
 import { requireActiveOrg } from '@/lib/org'
+import { writeActiveOrgCookie } from '@/lib/active-org-cookie'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export type OnboardState = {
@@ -105,6 +106,7 @@ export async function saveBusinessName(
     }
     if (orgId) {
       await supabase.from('organizations').update({ name }).eq('id', orgId)
+      await writeActiveOrgCookie(String(orgId))
     }
     await setProfileStep(user.id, 'adres')
     revalidatePath('/erisim-yok')

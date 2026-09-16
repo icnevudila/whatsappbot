@@ -77,7 +77,7 @@ export function ReplyForm({
   const [body, setBody] = useState('')
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [isSuggesting, setIsSuggesting] = useState(false)
-  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [showSuggestions, setShowSuggestions] = useState(true)
   const [preparedKey, setPreparedKey] = useState<string | null>(null)
   const toast = useToast()
   const input = useRef<HTMLTextAreaElement>(null)
@@ -97,10 +97,9 @@ export function ReplyForm({
   }, [])
 
   useEffect(() => {
-    if (lastInbound && phone) {
-      setShowSuggestions(true)
-      void fetchAiSuggestions({ autoOpen: true })
-    }
+    if (!phone) return
+    setShowSuggestions(true)
+    void fetchAiSuggestions({ autoOpen: true })
   }, [phone, lastInbound]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function fetchAiSuggestions(options?: {
@@ -231,6 +230,7 @@ export function ReplyForm({
                   type="button"
                   onClick={() => {
                     setBody(item.text)
+                    setShowSuggestions(false)
                     window.requestAnimationFrame(() => {
                       if (input.current) {
                         fitComposer(input.current)
@@ -294,7 +294,7 @@ export function ReplyForm({
           required
           maxLength={4096}
           rows={1}
-          placeholder="Mesaj yazın veya önerilen cevapları seçin…"
+          placeholder="Mesaj yaz veya seç"
           value={body}
           onChange={(event) => {
             setBody(event.target.value)

@@ -16,7 +16,6 @@ import {
   removeOrgMember,
   updateOrgMemberRole,
   updateOrgName,
-  updateOrgWebhook,
   updateOrgAiImageMode,
   type OrgActionState,
 } from '../org-actions'
@@ -246,61 +245,6 @@ export function AiImageModeForm({
       {canEdit ? (
         <Button type="submit" variant="accent" className="wb-wa-submit" disabled={pending}>
           {pending ? 'Kaydediliyor…' : 'Modu Kaydet'}
-        </Button>
-      ) : null}
-    </form>
-  )
-}
-
-export function WebhookSettingsForm({
-  webhookUrl,
-  canEdit,
-}: {
-  webhookUrl: string | null
-  canEdit: boolean
-}) {
-  const [state, formAction, pending] = useActionState<OrgActionState, FormData>(
-    updateOrgWebhook,
-    null,
-  )
-
-  return (
-    <form action={formAction} className="space-y-2.5 p-3.5">
-      <Field
-        label="CRM webhook URL"
-        hint="Gelen mesaj ve kampanya bitişinde bu adrese bildirim gider."
-      >
-        <Input
-          name="webhook_url"
-          type="url"
-          defaultValue={webhookUrl ?? ''}
-          disabled={!canEdit}
-          placeholder="https://example.com/hooks/filo"
-        />
-      </Field>
-      <Field
-        label="Webhook secret (opsiyonel)"
-        hint="Boş bırakırsanız mevcut secret değişmez. İsteğe özel güvenlik anahtarı."
-      >
-        <Input
-          name="webhook_secret"
-          type="password"
-          disabled={!canEdit}
-          placeholder="Yeni secret (isteğe bağlı)"
-          autoComplete="off"
-        />
-      </Field>
-      {canEdit ? (
-        <label className="flex items-center gap-2 text-[12.5px] text-ink-muted">
-          <input type="checkbox" name="clear_secret" value="1" className="rounded border-hairline" />
-          Mevcut secret’i temizle
-        </label>
-      ) : null}
-      {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
-      {state?.ok ? <Notice tone="accent">{state.ok}</Notice> : null}
-      {canEdit ? (
-        <Button type="submit" variant="accent" className="wb-wa-submit" disabled={pending}>
-          {pending ? 'Kaydediliyor…' : 'Webhook kaydet'}
         </Button>
       ) : null}
     </form>

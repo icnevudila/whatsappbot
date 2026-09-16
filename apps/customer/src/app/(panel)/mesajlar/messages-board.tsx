@@ -824,7 +824,7 @@ export function MessagesBoard({
                         title="Diğer"
                         disabled={pending}
                         onClick={() => setThreadMenuOpen((value) => !value)}
-                        className="inline-flex size-8 items-center justify-center rounded-full text-ink hover:bg-white/70 disabled:opacity-50"
+                        className="inline-flex size-8 items-center justify-center rounded-full border border-[#e9edef] bg-white text-[#54656f] shadow-[0_1px_1px_rgba(11,20,26,0.04)] hover:border-[#d1d7db] hover:bg-white hover:text-[#111b21] disabled:opacity-50"
                       >
                         <Icon name="ellipsis" className="size-4" />
                       </button>

@@ -168,6 +168,14 @@ export default async function ContactsPage({
       <PageHeader
         title={t('pages.kisilerTitle')}
         description={`${listTotal} grup · ${total} numara`}
+        action={
+          <ContactsToolbarMenu
+            groups={lists.map((list) => ({ id: list.id, name: list.name }))}
+            contactsTab={view === 'defter'}
+            contactsDisabled={total === 0}
+            whatsappCount={whatsappCount}
+          />
+        }
       />
 
       <SetupBanner progress={setup} />
@@ -181,8 +189,8 @@ export default async function ContactsPage({
             Kişiler
           </SegmentLink>
         </div>
-        <div className="wb-wa-toolbar-actions">
-          {view === 'defter' && total > 0 ? (
+        {view === 'defter' && total > 0 ? (
+          <div className="wb-wa-toolbar-actions">
             <VerifyAllButton
               total={total}
               validCount={validCount}
@@ -191,14 +199,8 @@ export default async function ContactsPage({
               currentStatus={statusFilter}
               searchQuery={searchQuery}
             />
-          ) : null}
-          <ContactsToolbarMenu
-            groups={lists.map((list) => ({ id: list.id, name: list.name }))}
-            contactsTab={view === 'defter'}
-            contactsDisabled={total === 0}
-            whatsappCount={whatsappCount}
-          />
-        </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="space-y-3">

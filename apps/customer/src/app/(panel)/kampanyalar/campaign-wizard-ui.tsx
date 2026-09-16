@@ -636,6 +636,32 @@ function joinScheduleValue(date: string, hour: string, minute: string) {
   return `${date}T${hour}:${minute}`
 }
 
+function pad2(n: number) {
+  return String(n).padStart(2, '0')
+}
+
+function localDateKey(date: Date) {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`
+}
+
+function scheduleForDayOffset(offsetDays: number, hour: string, minute: string) {
+  const date = new Date()
+  date.setHours(0, 0, 0, 0)
+  date.setDate(date.getDate() + offsetDays)
+  let next = joinScheduleValue(localDateKey(date), hour || '09', minute || '00')
+  const parsed = new Date(next)
+  if (!Number.isNaN(parsed.getTime()) && parsed.getTime() <= Date.now() + 60_000) {
+    const bumped = new Date(Date.now() + 5 * 60_000)
+    bumped.setSeconds(0, 0)
+    next = joinScheduleValue(
+      localDateKey(bumped),
+      pad2(bumped.getHours()),
+      pad2(bumped.getMinutes()),
+    )
+  }
+  return next
+}
+
 function ScheduleAtInput({
   value,
   onChange,
@@ -652,15 +678,37 @@ function ScheduleAtInput({
   }
 
   const selectClass =
-    'h-[43px] rounded-md border border-hairline-strong bg-surface px-2.5 text-[14px] text-ink tabular-nums focus:border-accent focus:outline-none'
+    'h-[43px] rounded-md border border-[#d1d7db] bg-white px-2.5 text-[14px] text-[#111b21] tabular-nums focus:border-[#008069] focus:outline-none'
 
   return (
-    <div className="mt-3 space-y-1.5" lang="tr-TR">
+    <div className="mt-3 space-y-2" lang="tr-TR">
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Hızlı gün seçimi">
+        {[
+          { label: 'Bugün', offset: 0 },
+          { label: 'Yarın', offset: 1 },
+          { label: '2 gün sonra', offset: 2 },
+        ].map((item) => {
+          const target = new Date()
+          target.setHours(0, 0, 0, 0)
+          target.setDate(target.getDate() + item.offset)
+          const active = parts.date === localDateKey(target)
+          return (
+            <button
+              key={item.label}
+              type="button"
+              className={`wb-wa-quick-day${active ? ' is-on' : ''}`}
+              onClick={() => onChange(scheduleForDayOffset(item.offset, hour, minute))}
+            >
+              {item.label}
+            </button>
+          )
+        })}
+      </div>
       <div className="flex flex-wrap items-center gap-2">
         <input
           type="date"
           lang="tr-TR"
-          className="h-[43px] min-w-[10.5rem] rounded-md border border-hairline-strong bg-surface px-3 text-[14px] text-ink focus:border-accent focus:outline-none"
+          className="h-[43px] min-w-[10.5rem] rounded-md border border-[#d1d7db] bg-white px-3 text-[14px] text-[#111b21] focus:border-[#008069] focus:outline-none"
           value={parts.date}
           onChange={(event) => emit(event.target.value, hour, minute)}
         />
@@ -677,7 +725,7 @@ function ScheduleAtInput({
               </option>
             ))}
           </select>
-          <span className="text-[14px] font-semibold text-ink-muted" aria-hidden>
+          <span className="text-[14px] font-semibold text-[#667781]" aria-hidden>
             :
           </span>
           <select
@@ -694,7 +742,7 @@ function ScheduleAtInput({
           </select>
         </span>
       </div>
-      <p className="text-[12px] text-ink-faint">Saat 24 saat formatında (00–23). Örn. 09:30 veya 21:45.</p>
+      <p className="text-[12px] text-[#8696a0]">Saat 24 saat formatında (00–23). Örn. 09:30 veya 21:45.</p>
     </div>
   )
 }

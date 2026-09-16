@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { normalizeClock } from '@wa/shared'
 import { requireActiveOrg } from '@/lib/org'
+import { writeActiveOrgCookie } from '@/lib/active-org-cookie'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { cancelStripeSubscription } from '@/lib/stripe-cancel'
 
@@ -30,12 +31,8 @@ export async function switchOrg(orgId: string): Promise<OrgActionState> {
 
   if (!membership) return { error: 'Bu işletmeye erişiminiz yok.' }
 
-  const { error } = await supabase
-    .from('profiles')
-    .update({ active_org_id: orgId })
-    .eq('id', user.id)
-
-  if (error) return { error: error.message }
+  // Cihaz bazlı tercih — profiles.active_org_id güncellenmez (diğer oturumlar etkilenmez).
+  await writeActiveOrgCookie(orgId)
 
   revalidatePath('/', 'layout')
   return { ok: 'İşletme değiştirildi.' }
@@ -64,6 +61,8 @@ export async function createOrg(
     }
     return { error: error.message }
   }
+
+  if (orgId) await writeActiveOrgCookie(String(orgId))
 
   revalidatePath('/', 'layout')
   return { ok: `İşletme oluşturuldu (${String(orgId).slice(0, 8)}…).` }
@@ -97,7 +96,6 @@ export async function updateOrgName(
 
   revalidatePath('/ayarlar')
   revalidatePath('/ayarlar/isletme')
-  revalidatePath('/ayarlar/gelismis')
   revalidatePath('/', 'layout')
   return { ok: 'İşletme adı güncellendi.' }
 }
@@ -171,51 +169,6 @@ export async function updateOrgSendWindow(formData: FormData) {
   return { ok: 'Gönderim saati kaydedildi.' }
 }
 
-export async function updateOrgWebhook(
-  _previous: OrgActionState,
-  formData: FormData,
-): Promise<OrgActionState> {
-  const webhookUrl = String(formData.get('webhook_url') ?? '').trim()
-  const webhookSecret = String(formData.get('webhook_secret') ?? '').trim()
-
-  if (webhookUrl) {
-    try {
-      const u = new URL(webhookUrl)
-      if (u.protocol !== 'https:' && u.protocol !== 'http:') {
-        return { error: 'Webhook http(s) olmalı.' }
-      }
-    } catch {
-      return { error: 'Geçersiz webhook URL.' }
-    }
-  }
-
-  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
-  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
-  try {
-    ;({ org, supabase } = await requireActiveOrg())
-  } catch (error) {
-    return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
-  }
-
-  if (org.role !== 'owner' && org.role !== 'admin') {
-    return { error: 'Yalnızca yönetici webhook ayarlayabilir.' }
-  }
-
-  const clearSecret = String(formData.get('clear_secret') ?? '') === '1'
-  const { error } = await supabase.rpc('set_organization_webhook', {
-    p_org_id: org.id,
-    p_webhook_url: webhookUrl,
-    p_webhook_secret: webhookSecret || undefined,
-    p_clear_secret: clearSecret,
-  })
-
-  if (error) return { error: error.message }
-  revalidatePath('/ayarlar')
-  revalidatePath('/ayarlar/isletme')
-  revalidatePath('/ayarlar/gelismis')
-  return { ok: 'Webhook kaydedildi.' }
-}
-
 function normalizeMemberRole(raw: string): 'admin' | 'member' | null {
   const role = raw.trim().toLowerCase() || 'member'
   if (role === 'admin' || role === 'member') return role
@@ -252,8 +205,7 @@ export async function addOrgMember(
 
   if (!error) {
     revalidatePath('/ayarlar')
-  revalidatePath('/ayarlar/isletme')
-  revalidatePath('/ayarlar/gelismis')
+    revalidatePath('/ayarlar/isletme')
     return { ok: 'Üye eklendi.' }
   }
 
@@ -302,8 +254,7 @@ export async function updateOrgMemberRole(
     }
 
     revalidatePath('/ayarlar')
-  revalidatePath('/ayarlar/isletme')
-  revalidatePath('/ayarlar/gelismis')
+    revalidatePath('/ayarlar/isletme')
     return { ok: 'Rol güncellendi.' }
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Oturum yok' }
@@ -327,8 +278,7 @@ export async function removeOrgMember(userId: string): Promise<OrgActionState> {
 
     if (error) return { error: error.message }
     revalidatePath('/ayarlar')
-  revalidatePath('/ayarlar/isletme')
-  revalidatePath('/ayarlar/gelismis')
+    revalidatePath('/ayarlar/isletme')
     return { ok: 'Üye çıkarıldı.' }
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Oturum yok' }

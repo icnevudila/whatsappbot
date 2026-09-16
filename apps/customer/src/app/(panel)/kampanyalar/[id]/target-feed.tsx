@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Tables } from '@wa/shared'
-import { CardHeader, EmptyState, QuietLink, StatusPill } from '@/components/ui'
+import { EmptyState, QuietLink, StatusPill } from '@/components/ui'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 
 export type TargetView = Pick<
@@ -168,43 +168,40 @@ export function TargetFeed({
       : 'Başka bir filtre seçin veya Tümü’ne dönün.'
 
   return (
-    <div
-      className={`flex flex-col overflow-hidden rounded-[var(--radius-card)] border border-hairline bg-surface shadow-[var(--shadow-card)] ${
-        open ? 'max-h-[min(32rem,calc(100dvh-14rem))] min-h-[18rem]' : ''
-      }`}
-    >
+    <div className={`wb-camp-panel${open ? ' wb-camp-feed-open' : ''}`}>
       <button
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
-        className="w-full text-left hover:bg-surface-raised/70"
+        className="w-full text-left hover:bg-[#f0f2f5]/70"
       >
-        <CardHeader
-          className={open ? undefined : 'border-b-0'}
-          title="Paylaşılanlar"
-          subtitle={`${counts.sent + counts.delivered + counts.read} iletildi · ${counts.skipped} atlandı · ${counts.failed} başarısız · ${counts.queued + counts.sending} bekliyor`}
-          action={
-            <span
-              className={`inline-block text-[12px] text-ink-muted transition-transform duration-180 ${
-                open ? 'rotate-180' : ''
-              }`}
-              aria-hidden
-            >
-              ▾
-            </span>
-          }
-        />
+        <div className="wb-camp-panel-head flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h2 className="wb-camp-panel-title">Paylaşılanlar</h2>
+            <p className="wb-camp-panel-sub">
+              {`${counts.sent + counts.delivered + counts.read} iletildi · ${counts.skipped} atlandı · ${counts.failed} başarısız · ${counts.queued + counts.sending} bekliyor`}
+            </p>
+          </div>
+          <span
+            className={`mt-0.5 inline-block text-[12px] text-[#667781] transition-transform duration-180 ${
+              open ? 'rotate-180' : ''
+            }`}
+            aria-hidden
+          >
+            ▾
+          </span>
+        </div>
       </button>
 
       {open ? (
         <>
-      <p className="shrink-0 border-b border-hairline px-3.5 py-2 text-[11.5px] leading-relaxed text-ink-faint">
+      <p className="shrink-0 border-b border-[#e9edef] px-3.5 py-2 text-[11.5px] leading-relaxed text-[#8696a0]">
         Numara → Mesajlar’da sohbet.{' '}
-        <span className="font-medium text-ink-muted">Atlandı:</span> yok / kota.{' '}
-        <span className="font-medium text-ink-muted">Başarısız:</span> iletilemedi.
+        <span className="font-medium text-[#667781]">Atlandı:</span> yok / kota.{' '}
+        <span className="font-medium text-[#667781]">Başarısız:</span> iletilemedi.
       </p>
 
-      <div className="flex shrink-0 flex-wrap gap-1 border-b border-hairline px-3.5 py-2">
+      <div className="flex shrink-0 flex-wrap gap-1 border-b border-[#e9edef] px-3.5 py-2">
         {FILTERS.map((item) => {
           const count = counts[item.key]
           if (item.key !== 'all' && count === 0) return null
@@ -214,14 +211,10 @@ export function TargetFeed({
               key={item.key}
               type="button"
               onClick={() => setFilter(item.key)}
-              className={`rounded-md px-2.5 py-1 text-[12px] transition-colors ${
-                filter === item.key
-                  ? 'bg-accent-soft font-medium text-accent'
-                  : 'text-ink-muted hover:bg-surface-raised hover:text-ink'
-              }`}
+              className={`wb-wa-chip${filter === item.key ? ' is-active' : ''}`}
             >
               {item.label}
-              <span className="ml-1 tabular text-ink-faint">{count}</span>
+              <span className="ml-1 tabular opacity-70">{count}</span>
             </button>
           )
         })}

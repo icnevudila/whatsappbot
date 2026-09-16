@@ -70,11 +70,11 @@ export async function POST(request: Request) {
   const successUrl =
     body.successUrl?.trim() ||
     process.env.STRIPE_SUCCESS_URL?.trim() ||
-    `${siteOrigin}/ayarlar/gelismis?billing=ok`
+    `${siteOrigin}/ayarlar?billing=ok`
   const cancelUrl =
     body.cancelUrl?.trim() ||
     process.env.STRIPE_CANCEL_URL?.trim() ||
-    `${siteOrigin}/ayarlar/gelismis?billing=cancel`
+    `${siteOrigin}/ayarlar?billing=cancel`
 
   const params = new URLSearchParams()
   params.set('mode', 'subscription')

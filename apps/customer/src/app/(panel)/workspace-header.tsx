@@ -25,7 +25,6 @@ const labels: Record<string, string> = {
   profil: 'Profil',
   hatlar: 'Hatlar',
   engellenenler: 'Engellenenler',
-  gelismis: 'Gelişmiş',
   marka: 'Marka kitleri',
   sosyal: 'Sosyal medya',
   urunler: 'Ürünlerim',

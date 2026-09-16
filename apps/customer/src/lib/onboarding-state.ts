@@ -1,5 +1,6 @@
 import { cache } from 'react'
 import type { Json } from '@wa/shared'
+import { readActiveOrgCookie } from '@/lib/active-org-cookie'
 import { getAuthIdentity } from '@/lib/supabase/server'
 import {
   computeFurthestStep,
@@ -187,13 +188,12 @@ export const loadActiveOrgOnboardingSnapshot = cache(async (): Promise<Onboardin
   const { supabase, userId, email } = await getAuthIdentity()
   if (!userId) return null
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('active_org_id')
-    .eq('id', userId)
-    .maybeSingle()
+  const [{ data: profile }, cookieOrgId] = await Promise.all([
+    supabase.from('profiles').select('active_org_id').eq('id', userId).maybeSingle(),
+    readActiveOrgCookie(),
+  ])
 
-  const orgId = profile?.active_org_id ?? null
+  const orgId = cookieOrgId ?? profile?.active_org_id ?? null
   if (!orgId) {
     return {
       userId,

@@ -336,13 +336,13 @@ export async function updateCampaign(
     daily_cap_per_account: dailyCap,
   }
 
-  if (existing.status === 'draft' && startMode === 'schedule') {
+  const canSchedule = ['draft', 'stopped', 'paused', 'scheduled'].includes(existing.status)
+  if (startMode === 'schedule' && canSchedule) {
     patch.status = 'scheduled'
     patch.scheduled_at = new Date(scheduledAtRaw).toISOString()
-  } else if (existing.status === 'scheduled' && scheduledAtRaw) {
-    const scheduleError = validateSchedule('schedule', scheduledAtRaw)
-    if (scheduleError) return { error: scheduleError }
-    patch.scheduled_at = new Date(scheduledAtRaw).toISOString()
+  } else if (startMode === 'draft' && existing.status === 'scheduled') {
+    patch.status = 'draft'
+    patch.scheduled_at = null
   }
 
   const { error: updateError } = await supabase
@@ -408,7 +408,7 @@ export async function updateCampaign(
     redirect(`/kampanyalar/${campaignId}`)
   }
 
-  if (existing.status === 'draft' && startMode === 'schedule') {
+  if (startMode === 'schedule' && canSchedule) {
     revalidatePath(`/kampanyalar/${campaignId}`)
     revalidatePath('/kampanyalar')
     redirect(`/kampanyalar/${campaignId}?zamanlandi=1`)

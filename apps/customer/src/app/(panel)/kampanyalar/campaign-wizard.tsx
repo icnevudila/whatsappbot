@@ -462,7 +462,7 @@ export function CampaignWizard({
         <input type="hidden" name="ab_percent" value={campaign?.ab_percent ?? 0} />
         <input type="hidden" name="body_b" value={campaign?.body_b ?? ''} />
         <input type="hidden" name="start_mode" value={startMode} />
-        {scheduledAt ? <input type="hidden" name="scheduled_at" value={scheduledAt} /> : null}
+        <input type="hidden" name="scheduled_at" value={scheduledAt || defaultScheduleLocal()} />
         {submitListIds.map((id) => (
           <input key={`list-${id}`} type="hidden" name="lists" value={id} />
         ))}
