@@ -317,6 +317,8 @@ async function workerLoop() {
 
     if (job.type === 'chat_suggestions') {
       await executeChatSuggestionsJob(chatgptTab, job);
+    } else if (job.type === 'extract_knowledge') {
+      await executeExtractKnowledgeJob(chatgptTab, job);
     } else {
       await executeChatGPTJob(chatgptTab, job);
     }
@@ -754,6 +756,227 @@ YALNIZCA VE SADECE aşağıdaki JSON formatında çıktı ver. Markdown kod blo�
       body: JSON.stringify({ jobId: job.id, error: err.message })
     }).catch(() => {});
   } finally {
+    if (cdp) cdp.close();
+  }
+}
+
+// OCR ve Kampanya Ürün/Fiyat Bilgi Çıkarımı İşini Çalıştır
+async function executeExtractKnowledgeJob(tab, job) {
+  let cdp = null;
+  const tempRefPaths = [];
+  try {
+    cdp = await createCdpSession(tab.webSocketDebuggerUrl);
+
+    const customer = (job.customer || 'Genel').trim();
+    const hasImages = Array.isArray(job.referenceImages) && job.referenceImages.length > 0;
+    const channel = hasImages ? 'media' : 'chat';
+    console.log(`[CDP Worker: ${WORKER_ID}] [OCR/Bilgi Çıkarımı] Firma: "${customer}" (${channel} kanalı)...`);
+
+    await ensureCustomerChat(cdp, customer, channel);
+
+    // 1. Görsel varsa ChatGPT'ye yükle (Vision OCR)
+    if (hasImages) {
+      for (let idx = 0; idx < job.referenceImages.length; idx++) {
+        const ref = job.referenceImages[idx];
+        let buffer = null;
+        if (typeof ref === 'string' && ref.startsWith('http')) {
+          try {
+            const resp = await fetch(ref);
+            if (resp.ok) buffer = Buffer.from(await resp.arrayBuffer());
+          } catch (e) {
+            console.warn(`[CDP Worker] Görsel indirilemedi: ${ref}`);
+          }
+        } else if (typeof ref === 'string') {
+          const raw = ref.includes(',') ? ref.split(',')[1] : ref;
+          buffer = Buffer.from(raw, 'base64');
+        } else if (ref && (ref.data || ref.b64_json)) {
+          const raw = (ref.data || ref.b64_json).replace(/^data:image\/\w+;base64,/, '');
+          buffer = Buffer.from(raw, 'base64');
+        }
+
+        if (buffer) {
+          const tmpPath = path.join('/tmp', `ocr_${job.id}_${idx}.png`);
+          fs.writeFileSync(tmpPath, buffer);
+          tempRefPaths.push(tmpPath);
+        }
+      }
+
+      if (tempRefPaths.length > 0) {
+        try {
+          const doc = await cdp.send('DOM.getDocument', {});
+          const fileInput = await cdp.send('DOM.querySelector', {
+            nodeId: doc.root.nodeId,
+            selector: 'input[type="file"]'
+          });
+          if (fileInput && fileInput.nodeId) {
+            console.log(`[CDP Worker] ${tempRefPaths.length} görsel dosya seçiciye aktarılıyor (OCR)...`);
+            await cdp.send('DOM.setFileInputFiles', {
+              files: tempRefPaths,
+              nodeId: fileInput.nodeId
+            });
+            await sleep(2500);
+          }
+        } catch (uploadErr) {
+          console.warn('[CDP Worker] Görsel dosya seçiciye yüklenemedi:', uploadErr.message);
+        }
+      }
+    }
+
+    // 2. OCR ve Ürün/Fiyat Çıkarım Prompt'u
+    const prompt = `Sen kurumsal e-ticaret, perakende ve WhatsApp veri analizi uzmanısın.
+${job.companyContext ? `İşletme / Sektör: ${job.companyContext}` : ''}
+${job.incomingMessage ? `Kampanya / Mesaj Metni:\n"${job.incomingMessage}"` : ''}
+
+GÖREV:
+Görseli ve varsa metni derinlemesine analiz et (OCR yap):
+1. Görselde veya metinde geçen TÜM ürünleri tespit et (adı, fiyatı, para birimi [TRY, USD, EUR], birim/paket miktarı [koli, adet, kg, paket vb.] ve ürün detayları).
+2. Kampanya koşulları varsa (indirim oranı, minimum sipariş adedi, kampanya son tarihi, kargo detayı vb.) çıkar.
+3. Görselde okunabilen tüm metinleri eksiksiz OCR transcript olarak çıkar.
+
+ÖNEMLİ KURAL:
+YALNIZCA aşağıdaki JSON formatında yanıt ver, markdown kod bloğu (\`\`\`json) veya başka hiçbir açıklama ekleme:
+{
+  "products": [
+    { "name": "...", "price": 100, "currency": "TRY", "unit": "adet", "details": "..." }
+  ],
+  "campaign": {
+    "title": "...",
+    "discount": "...",
+    "conditions": "..."
+  },
+  "ocrText": "..."
+}`;
+
+    // 3. Prompt'u enjekte et ve gönder
+    const injectEval = await cdp.send('Runtime.evaluate', {
+      expression: `
+        (() => {
+          const textarea = document.querySelector('#prompt-textarea') || 
+                           document.querySelector('div[contenteditable="true"]') ||
+                           document.querySelector('textarea');
+          if (!textarea) return { success: false, error: 'Textarea bulunamadı' };
+          
+          textarea.focus();
+          if (textarea.tagName === 'DIV' || textarea.getAttribute('contenteditable') === 'true') {
+            textarea.innerHTML = '<p>' + ${JSON.stringify(prompt)}.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</p>';
+          } else {
+            textarea.value = ${JSON.stringify(prompt)};
+          }
+
+          textarea.dispatchEvent(new Event('input', { bubbles: true }));
+          textarea.dispatchEvent(new Event('change', { bubbles: true }));
+
+          setTimeout(() => {
+            const sendBtn = document.querySelector('button[data-testid="send-button"]') ||
+                            document.querySelector('button[aria-label*="Send"]') ||
+                            document.querySelector('button[aria-label*="Gönder"]');
+            if (sendBtn && !sendBtn.disabled) {
+              sendBtn.click();
+            } else {
+              textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
+            }
+          }, 400);
+
+          return { success: true };
+        })()
+      `,
+      returnByValue: true
+    });
+
+    if (!injectEval.result?.value?.success) {
+      throw new Error(injectEval.result?.value?.error || 'Prompt enjekte edilemedi');
+    }
+
+    console.log(`[CDP Worker: ${WORKER_ID}] [OCR/Bilgi Çıkarımı] Prompt gönderildi, yanıt bekleniyor...`);
+    await sleep(2500);
+
+    // 4. Yanıtı bekle
+    let lastText = '';
+    const maxWait = 35;
+    for (let i = 0; i < maxWait; i++) {
+      await sleep(1500);
+
+      const textEval = await cdp.send('Runtime.evaluate', {
+        expression: `
+          (() => {
+            const stopBtn = document.querySelector('button[data-testid="stop-button"], button[aria-label*="Stop"], button[aria-label*="durdur"]');
+            const isThinking = !!document.querySelector('.result-thinking, [data-testid*="generating"], .streaming-animated-ellipsis');
+            const isGenerating = !!stopBtn || isThinking;
+
+            const articles = Array.from(document.querySelectorAll('[data-message-author-role="assistant"]'));
+            const lastMsg = articles.pop();
+            const text = lastMsg ? (lastMsg.innerText || '').trim() : '';
+            return { isGenerating, text };
+          })()
+        `,
+        returnByValue: true
+      });
+
+      const res = textEval.result?.value;
+      if (res && res.text) {
+        lastText = res.text;
+      }
+      if (res && !res.isGenerating && lastText.length > 20) {
+        break;
+      }
+    }
+
+    if (!lastText) {
+      throw new Error('ChatGPT OCR/çıkarım yanıtı üretemedi veya boş döndü');
+    }
+
+    // 5. JSON ayrıştırma
+    let parsedResult = { products: [], campaign: null, ocrText: '' };
+    try {
+      let clean = lastText.trim();
+      if (clean.includes('```json')) {
+        clean = clean.split('```json')[1].split('```')[0].trim();
+      } else if (clean.includes('```')) {
+        clean = clean.split('```')[1].split('```')[0].trim();
+      }
+      const jsonStart = clean.indexOf('{');
+      const jsonEnd = clean.lastIndexOf('}');
+      if (jsonStart !== -1 && jsonEnd !== -1) {
+        clean = clean.slice(jsonStart, jsonEnd + 1);
+      }
+      const parsed = JSON.parse(clean);
+      parsedResult = {
+        products: Array.isArray(parsed.products) ? parsed.products : [],
+        campaign: parsed.campaign || null,
+        ocrText: parsed.ocrText || '',
+      };
+    } catch (parseErr) {
+      console.warn(`[CDP Worker: ${WORKER_ID}] OCR JSON ayrıştırma uyarısı:`, parseErr.message);
+      parsedResult = {
+        products: [],
+        campaign: null,
+        ocrText: lastText.slice(0, 1000)
+      };
+    }
+
+    console.log(`[CDP Worker: ${WORKER_ID}] [OCR/Bilgi Çıkarımı] ${parsedResult.products.length} ürün ve OCR tamamlandı.`);
+
+    // 6. Gateway'e bildir
+    await fetch(`${GATEWAY_URL}/job/complete-text`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jobId: job.id,
+        result: { ...parsedResult, raw: lastText }
+      })
+    });
+
+  } catch (err) {
+    console.error(`[CDP Worker] [OCR/Bilgi Çıkarımı] İş hatası (${job.id}):`, err.message);
+    await fetch(`${GATEWAY_URL}/job/release`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jobId: job.id, error: err.message })
+    }).catch(() => {});
+  } finally {
+    for (const p of tempRefPaths) {
+      try { fs.unlinkSync(p); } catch (e) {}
+    }
     if (cdp) cdp.close();
   }
 }

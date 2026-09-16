@@ -606,6 +606,46 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+    // 1.2. WhatsApp OCR ve Kampanya Ürün/Fiyat Bilgi Çıkarımı: POST /v1/chat/extract-knowledge
+    if (method === 'POST' && (pathname === '/v1/chat/extract-knowledge' || pathname === '/chat/extract-knowledge')) {
+      const body = await parseJsonBody(req);
+      const text = (body.text || body.body || body.message || '').trim();
+      const mediaUrl = body.mediaUrl || body.imageUrl || null;
+      const customer = (body.customer || 'Genel').trim();
+
+      if (!text && !mediaUrl) {
+        return sendJson(res, 400, { error: 'En az bir metin veya görsel URL gereklidir' });
+      }
+
+      const job = queue.createJob({
+        prompt: `[OCR ve Ürün Çıkarımı] ${text.slice(0, 100) || '(Görsel Analizi)'}`,
+        customer,
+        platform: 'chatgpt',
+        optimizePrompt: false,
+        type: 'extract_knowledge',
+        incomingMessage: text,
+        referenceImages: mediaUrl ? [mediaUrl] : (body.referenceImages || []),
+        companyContext: body.companyContext || '',
+      });
+
+      console.log(`[Gateway] Yeni OCR / Ürün Çıkarım talebi: [Firma: ${customer}] ${mediaUrl ? '(Görsel var)' : ''}`);
+      const finished = await queue.waitForJob(job.id, 60000);
+      if (finished.status === 'completed' && finished.result) {
+        return sendJson(res, 200, {
+          success: true,
+          products: finished.result.products || [],
+          campaign: finished.result.campaign || null,
+          ocrText: finished.result.ocrText || '',
+          raw: finished.result.raw || null,
+        });
+      } else {
+        return sendJson(res, 500, {
+          error: finished.error || 'Bilgi çıkarılamadı',
+          details: finished.statusText,
+        });
+      }
+    }
+
     // 2. Durum ve İlerleme Sorgulama: GET /v1/images/status/:id
     if (method === 'GET' && pathname.startsWith('/v1/images/status/')) {
       const jobId = pathname.replace('/v1/images/status/', '');

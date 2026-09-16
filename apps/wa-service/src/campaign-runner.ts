@@ -631,6 +631,17 @@ async function sendToTarget(
         }),
       )
       .catch(() => {})
+    void import('./product-knowledge.js')
+      .then(({ rememberCampaignKnowledge }) =>
+        rememberCampaignKnowledge({
+          orgId: campaign.org_id,
+          campaignId: campaign.id,
+          phoneE164: target.phone_e164,
+          body: body || null,
+          mediaUrl: campaign.media_url ?? null,
+        }),
+      )
+      .catch(() => {})
   } catch (error) {
     // Mesaj gitti; log yazilamadi — retry etme (cift mesaj riski).
     log.error({ err: error, targetId: target.id }, 'message_log yazilamadi (mesaj gonderildi)')
