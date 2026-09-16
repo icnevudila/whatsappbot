@@ -18,11 +18,43 @@ const jetbrains = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://mesajify.com'),
   title: {
-    default: `${BRAND_NAME} — Müşteri paneli`,
+    default: `${BRAND_NAME} — Çoklu hattan toplu kampanya gönderimi`,
     template: `%s · ${BRAND_NAME}`,
   },
-  description: 'WhatsApp hattınızı bağlayın, kişilerinizi yükleyin, kampanyanızı gönderin.',
+  description: 'Kendi hatlarınızı bağlayın, kişi listenizi yükleyin, hattı koruyan hızda toplu kampanya gönderin. Numara doğrulama, ısındırma ve otomatik durdurma dahil.',
+  icons: {
+    icon: [
+      { url: '/icon.png', sizes: '512x512', type: 'image/png' },
+      { url: '/favicon.ico', sizes: '32x32' },
+    ],
+    apple: [
+      { url: '/apple-icon.png', sizes: '512x512', type: 'image/png' },
+    ],
+  },
+  openGraph: {
+    title: `${BRAND_NAME} — Çoklu hattan toplu kampanya gönderimi`,
+    description: 'Kendi hatlarınızı bağlayın, kişi listenizi yükleyin, hattı koruyan hızda toplu kampanya gönderin. Numara doğrulama, ısındırma ve otomatik durdurma dahil.',
+    url: 'https://mesajify.com',
+    siteName: BRAND_NAME,
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: `${BRAND_NAME} — WhatsApp Otomasyonu & Kampanya Platformu`,
+      },
+    ],
+    locale: 'tr_TR',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${BRAND_NAME} — Çoklu hattan toplu kampanya gönderimi`,
+    description: 'Kendi hatlarınızı bağlayın, kişi listenizi yükleyin, hattı koruyan hızda toplu kampanya gönderin.',
+    images: ['/og-image.png'],
+  },
 }
 
 export const viewport: Viewport = {

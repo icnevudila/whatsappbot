@@ -1,5 +1,5 @@
 export const landingTr = {
-  metaTitle: 'Filo — Çoklu hattan toplu kampanya gönderimi',
+  metaTitle: 'Mesajify — Çoklu hattan toplu kampanya gönderimi',
   metaDescription:
     'Kendi hatlarınızı bağlayın, kişi listenizi yükleyin, hattı koruyan hızda toplu kampanya gönderin. Numara doğrulama, ısındırma ve otomatik durdurma dahil.',
   hero: {
@@ -8,7 +8,7 @@ export const landingTr = {
     lead: 'Hatlarınızı QR ile bağlayın, listenizi yükleyin, mesajı hazırlayın. Gönderim gerçek limitler içinde, arka planda yürür.',
     ctaPrimary: 'İletişime geç',
     ctaSecondary: 'Ürünü gör',
-    trust: 'Hesaplar Filo tarafından açılır · Kendi kendine kayıt yok',
+    trust: 'Hesaplar Mesajify tarafından açılır · Kendi kendine kayıt yok',
     caption: 'Canlı panel turu — özet, hatlar, gönderim',
   },
   proof: [
@@ -44,8 +44,8 @@ export const landingTr = {
   problem: {
     kicker: 'Sorun → çözüm',
     title: 'Toplu mesaj panellerinin takıldığı yerler',
-    lead: 'Filo gönderimi hızlandırmaktan çok hattı ayakta tutmaya odaklanır. Kaydırdıkça her probleme karşılık gelen ekranı görün.',
-    solutionLabel: 'Filo’da çözüm',
+    lead: 'Mesajify gönderimi hızlandırmaktan çok hattı ayakta tutmaya odaklanır. Kaydırdıkça her probleme karşılık gelen ekranı görün.',
+    solutionLabel: 'Mesajify’da çözüm',
     items: [
       {
         title: 'Hattı yakan hız',
@@ -118,21 +118,21 @@ export const landingTr = {
         label: 'Kampanyalar',
         lead: 'Listeyi ve hatları seçin, mesajı yazın. Gönderim arka planda sürer.',
         caption: 'Raporlar · kampanya performansı',
-        alt: 'Filo raporlar ve kampanya özeti ekranı',
+        alt: 'Mesajify raporlar ve kampanya özeti ekranı',
       },
       {
         id: 'hesaplar',
         label: 'Hesaplar',
         lead: 'Birden fazla hattı QR ile bağlayın, kotayı canlı görün.',
         caption: 'Hesaplar · çoklu hat',
-        alt: 'Filo hesaplar ekranı — bağlı hatlar',
+        alt: 'Mesajify hesaplar ekranı — bağlı hatlar',
       },
       {
         id: 'ozet',
         label: 'Özet',
         lead: 'Günün operasyon görünümü: hatlar, defter, trafik ve kısayollar.',
         caption: 'Özet · workbench',
-        alt: 'Filo özet paneli',
+        alt: 'Mesajify özet paneli',
       },
     ],
     cards: [{ label: 'Hızlı gönderim' }, { label: 'Kişiler' }, { label: 'Durum' }],
@@ -172,7 +172,7 @@ export const landingTr = {
   safety: {
     kicker: 'Ban önleme',
     title: 'Asıl iş mesaj atmak değil, hattı ayakta tutmak',
-    lead: 'Toplu mesaj göndermek teknik olarak kolaydır. Zor olan, üçüncü kampanyadan sonra hattın hâlâ çalışıyor olmasıdır. Filo büyük ölçüde bunu yapar.',
+    lead: 'Toplu mesaj göndermek teknik olarak kolaydır. Zor olan, üçüncü kampanyadan sonra hattın hâlâ çalışıyor olmasıdır. Mesajify büyük ölçüde bunu yapar.',
     items: [
       {
         title: 'Numara doğrulama',
@@ -202,7 +202,7 @@ export const landingTr = {
   },
   multi: {
     title: 'Kapasiteyi hat sayısıyla büyütün',
-    lead: 'Tek hattı zorlamak işe yaramaz. Bunun yerine birden fazla hat bağlarsınız; Filo kampanyayı hatlar arasında dağıtır, her hattın kotasını ayrı takip eder ve biri kısıt alırsa diğerlerinden devam eder.',
+    lead: 'Tek hattı zorlamak işe yaramaz. Bunun yerine birden fazla hat bağlarsınız; Mesajify kampanyayı hatlar arasında dağıtır, her hattın kotasını ayrı takip eder ve biri kısıt alırsa diğerlerinden devam eder.',
     bullets: [
       'Tek panelden istediğiniz kadar hat',
       'Hat başına ayrı günlük kota ve canlı durum',
@@ -318,8 +318,8 @@ export const landingTr = {
     ],
   },
   final: {
-    title: 'İşletmeniz için Filo’yu açalım',
-    lead: 'Hesaplar yalnızca Filo tarafından oluşturulur. İletişime geçin; size giriş bilgilerini iletelim.',
+    title: 'İşletmeniz için Mesajify’ı açalım',
+    lead: 'Hesaplar yalnızca Mesajify tarafından oluşturulur. İletişime geçin; size giriş bilgilerini iletelim.',
     ctaPrimary: 'İletişime geç',
     ctaSecondary: 'Ürünü gör',
     hasAccount: 'Hesabın var mı?',

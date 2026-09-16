@@ -9,9 +9,23 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: { absolute: L.metaTitle },
     description: L.metaDescription,
-  openGraph: {
+    openGraph: {
       title: L.metaTitle,
       description: L.metaDescription,
+      images: [
+        {
+          url: '/og-image.png',
+          width: 1200,
+          height: 630,
+          alt: 'Mesajify — Çoklu hattan toplu kampanya gönderimi',
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: L.metaTitle,
+      description: L.metaDescription,
+      images: ['/og-image.png'],
     },
   }
 }
