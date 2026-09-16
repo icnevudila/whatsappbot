@@ -847,33 +847,58 @@ export function LiveDashboard() {
         </div>
       )}
 
-      {/* Main Header Bar - Mobile Optimized, No Flashy Badges */}
-      <header className="sticky top-0 z-40 bg-[var(--color-surface)]/95 backdrop-blur-md border-b border-[var(--color-hairline)] px-3 sm:px-6 py-2 sm:py-3">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2.5">
-            <div className="p-1 sm:p-1.5 rounded-[var(--radius-sm)] bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] flex items-center justify-center">
-              <LogoMark className="w-5 h-5 sm:w-6 sm:h-6 text-accent" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-xs sm:text-sm tracking-tight text-ink">{BRAND_NAME}</span>
-                <span className="text-[10px] font-mono font-medium px-1.5 py-0.2 rounded bg-[var(--color-surface-raised)] text-ink-muted border border-[var(--color-hairline)]">
-                  Operasyon
-                </span>
+      {/* Main Header Bar - Fully Mobile Optimized */}
+      <header className="sticky top-0 z-40 bg-[var(--color-surface)]/95 backdrop-blur-md border-b border-[var(--color-hairline)] px-3 sm:px-6 py-2 sm:py-2.5">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          {/* Header Row 1 (Mobile: Logo + Status + Logout) */}
+          <div className="flex items-center justify-between w-full sm:w-auto">
+            <div className="flex items-center gap-2">
+              <div className="p-1 rounded-[var(--radius-sm)] bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] flex items-center justify-center">
+                <LogoMark className="w-4 h-4 sm:w-5 sm:h-5 text-accent" />
               </div>
-              <p className="text-[10px] sm:text-[11px] text-ink-muted">Canlı Sistem & Gönderim İzleme</p>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-xs sm:text-sm tracking-tight text-ink">{BRAND_NAME}</span>
+                  <span className="text-[9px] sm:text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded bg-surface-raised text-ink-muted border border-[var(--color-hairline)]">
+                    Operasyon
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile-only right indicators */}
+            <div className="flex sm:hidden items-center gap-1.5">
+              <button
+                onClick={() => setAutoRefresh(!autoRefresh)}
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border transition ${
+                  autoRefresh
+                    ? 'bg-ok-soft text-ok-dim border-ok-dim/20'
+                    : 'bg-[var(--color-surface-raised)] text-ink-muted border-[var(--color-hairline)]'
+                }`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${autoRefresh ? 'bg-ok animate-pulse' : 'bg-ink-muted'}`} />
+                <span>{autoRefresh ? 'Canlı' : 'Duraklat'}</span>
+              </button>
+              <button
+                onClick={handleLogout}
+                disabled={loggingOut}
+                className="px-2 py-0.5 rounded text-[10px] font-medium text-ink-muted hover:text-danger border border-[var(--color-hairline)]"
+              >
+                Çıkış
+              </button>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          {/* Header Row 2: Controls & Actions */}
+          <div className="flex items-center justify-between sm:justify-end gap-1.5 overflow-x-auto pb-0.5 sm:pb-0 scrollbar-none w-full sm:w-auto">
             {/* Organization Filter Selector */}
             {organizationsList.length > 0 && (
-              <div className="flex items-center gap-1 bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] px-2 py-1">
+              <div className="flex items-center gap-1 bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] px-2 py-0.5 shrink-0">
                 <span className="text-[10px] text-ink-muted font-medium">İşletme:</span>
                 <select
                   value={selectedOrg}
                   onChange={e => setSelectedOrg(e.target.value)}
-                  className="bg-transparent text-[11px] font-semibold text-ink outline-none cursor-pointer"
+                  className="bg-transparent text-[10px] sm:text-[11px] font-semibold text-ink outline-none cursor-pointer"
                 >
                   <option value="all">Tümü ({organizationsList.length})</option>
                   {organizationsList.map(o => (
@@ -885,209 +910,170 @@ export function LiveDashboard() {
               </div>
             )}
 
-            {/* Quick Action: Baileys Restart */}
-            <button
-              onClick={handleRestartService}
-              disabled={actionBusy}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-[var(--radius-sm)] text-[11px] font-semibold bg-danger/10 text-danger border border-danger/20 hover:bg-danger/15 transition disabled:opacity-50"
-              title="Hetzner VPS üzerindeki Baileys Docker konteynerini yeniden başlatır"
-            >
-              Restart
-            </button>
+            {/* Action Buttons Group */}
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={handleRestartService}
+                disabled={actionBusy}
+                className="px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-semibold bg-danger/10 text-danger border border-danger/20 hover:bg-danger/15 transition disabled:opacity-50"
+                title="VPS Baileys servisini yeniden başlat"
+              >
+                Restart
+              </button>
+              <button
+                onClick={handleReconnectAll}
+                disabled={actionBusy}
+                className="px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-semibold bg-accent-soft text-accent border border-accent/20 hover:bg-accent/15 transition disabled:opacity-50"
+                title="Tüm hatları senkronize et"
+              >
+                Senkronize
+              </button>
+              <button
+                onClick={handleClearStuckJobs}
+                disabled={actionBusy}
+                className="px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-semibold bg-surface-raised text-ink-soft border border-[var(--color-hairline)] hover:bg-canvas transition disabled:opacity-50"
+                title="Takılı işleri temizle"
+              >
+                Temizle
+              </button>
+            </div>
 
-            {/* Quick Action: Reconnect Lines */}
-            <button
-              onClick={handleReconnectAll}
-              disabled={actionBusy}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-[var(--radius-sm)] text-[11px] font-semibold bg-accent-soft text-accent border border-accent/20 hover:bg-accent/15 transition disabled:opacity-50"
-              title="Tüm hatların WhatsApp bağlantısını tazeler"
-            >
-              Senkronize Et
-            </button>
-
-            {/* Quick Action: Clear Stuck Jobs */}
-            <button
-              onClick={handleClearStuckJobs}
-              disabled={actionBusy}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-[var(--radius-sm)] text-[11px] font-semibold bg-[var(--color-surface-raised)] text-ink-soft border border-[var(--color-hairline)] hover:bg-canvas transition disabled:opacity-50"
-              title="Takılı kalan arka plan işlerini temizler"
-            >
-              Temizle
-            </button>
-
-            {/* Auto Refresh Toggle */}
-            <button
-              onClick={() => setAutoRefresh(!autoRefresh)}
-              className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-[var(--radius-sm)] text-[11px] font-semibold border transition ${
-                autoRefresh
-                  ? 'bg-ok-soft text-ok-dim border-ok-dim/20'
-                  : 'bg-[var(--color-surface-raised)] text-ink-muted border-[var(--color-hairline)]'
-              }`}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${autoRefresh ? 'bg-ok animate-pulse' : 'bg-ink-muted'}`} />
-              <span>{autoRefresh ? 'Canlı' : 'Durduruldu'}</span>
-            </button>
-
-            {/* Logout */}
-            <button
-              onClick={handleLogout}
-              disabled={loggingOut}
-              className="inline-flex items-center px-2 py-1 rounded-[var(--radius-sm)] text-[11px] font-medium text-ink-muted hover:text-danger transition"
-              title="Yönetici oturumunu kapat"
-            >
-              Çıkış
-            </button>
+            {/* Desktop-only status & logout */}
+            <div className="hidden sm:flex items-center gap-1.5 pl-1.5 border-l border-[var(--color-hairline)] shrink-0">
+              <button
+                onClick={() => setAutoRefresh(!autoRefresh)}
+                className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-[var(--radius-sm)] text-[11px] font-semibold border transition ${
+                  autoRefresh
+                    ? 'bg-ok-soft text-ok-dim border-ok-dim/20'
+                    : 'bg-[var(--color-surface-raised)] text-ink-muted border-[var(--color-hairline)]'
+                }`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${autoRefresh ? 'bg-ok animate-pulse' : 'bg-ink-muted'}`} />
+                <span>{autoRefresh ? 'Canlı' : 'Durduruldu'}</span>
+              </button>
+              <button
+                onClick={handleLogout}
+                disabled={loggingOut}
+                className="px-2 py-1 rounded-[var(--radius-sm)] text-[11px] font-medium text-ink-muted hover:text-danger transition"
+                title="Yönetici oturumunu kapat"
+              >
+                Çıkış
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 space-y-4 sm:space-y-6">
-        {/* KPI Dashboard Cards Grid - Mobile Tight & Proportionate with Live CPU & RAM */}
-        <section className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2 sm:gap-2.5">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-2.5 sm:p-5 space-y-3 sm:space-y-5">
+        {/* KPI Dashboard Cards Grid - Horizontally Swipeable on Mobile, 10-col on Desktop */}
+        <section className="flex sm:grid overflow-x-auto pb-1.5 sm:pb-0 scrollbar-none gap-2 sm:grid-cols-5 lg:grid-cols-10 sm:gap-2">
           {/* Card 1: Baileys Worker */}
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3 shadow-sm flex flex-col justify-between">
-            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Baileys VPS</span>
-            <div className="mt-1 flex items-baseline gap-1">
-              <span className="text-base sm:text-lg font-bold text-ink">{worker?.live ?? 0}</span>
-              <span className="text-[10px] text-ink-muted">/ {worker?.tracked ?? 0} hat</span>
+          <div className="min-w-[115px] sm:min-w-0 shrink-0 sm:shrink bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 sm:p-2.5 shadow-xs flex flex-col justify-between">
+            <span className="text-[9px] sm:text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Baileys</span>
+            <div className="mt-0.5 flex items-baseline gap-1">
+              <span className="text-sm sm:text-base font-bold text-ink">{worker?.live ?? 0}</span>
+              <span className="text-[9px] text-ink-muted">/{worker?.tracked ?? 0}</span>
             </div>
-            <span className="text-[9px] text-ok-dim font-medium mt-0.5">
+            <span className="text-[8px] sm:text-[9px] text-ok-dim font-medium">
               {worker ? 'Aktif' : 'Kopuk'}
             </span>
           </div>
 
           {/* Card 2: VPS CPU Yükü */}
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3 shadow-sm flex flex-col justify-between">
+          <div className="min-w-[115px] sm:min-w-0 shrink-0 sm:shrink bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 sm:p-2.5 shadow-xs flex flex-col justify-between">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">VPS CPU</span>
+              <span className="text-[9px] sm:text-[10px] font-semibold text-ink-muted uppercase tracking-wider">CPU</span>
               <span className="w-1.5 h-1.5 rounded-full bg-ok animate-pulse" />
             </div>
-            <div className="mt-1 flex items-baseline gap-1">
-              <span className={`text-base sm:text-lg font-bold ${
-                Number(data?.serverMetrics?.cpu_percent ?? 5) > 80
-                  ? 'text-danger'
-                  : Number(data?.serverMetrics?.cpu_percent ?? 5) > 50
-                  ? 'text-warn'
-                  : 'text-ink'
-              }`}>
-                %{data?.serverMetrics?.cpu_percent ?? 5.6}
-              </span>
-              <span className="text-[10px] text-ink-muted">
-                {data?.serverMetrics?.cpu_cores ?? 2}vCPU
-              </span>
+            <div className="mt-0.5 flex items-baseline gap-1">
+              <span className="text-sm sm:text-base font-bold text-ink">%{data?.serverMetrics?.cpu_percent ?? 5.6}</span>
+              <span className="text-[9px] text-ink-muted">{data?.serverMetrics?.cpu_cores ?? 2}c</span>
             </div>
-            <div className="w-full bg-surface-raised rounded-full h-1 mt-1 overflow-hidden">
+            <div className="w-full bg-surface-raised rounded-full h-1 mt-0.5 overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all duration-500 ${
-                  Number(data?.serverMetrics?.cpu_percent ?? 5) > 80
-                    ? 'bg-danger'
-                    : Number(data?.serverMetrics?.cpu_percent ?? 5) > 50
-                    ? 'bg-warn'
-                    : 'bg-ok'
-                }`}
+                className="h-full rounded-full bg-ok"
                 style={{ width: `${Math.min(100, Math.max(5, Number(data?.serverMetrics?.cpu_percent ?? 5)))}%` }}
               />
             </div>
           </div>
 
           {/* Card 3: VPS RAM Kullanımı */}
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3 shadow-sm flex flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">VPS RAM</span>
-              <span className="text-[9px] font-mono text-ink-muted">
-                {(((data?.serverMetrics?.ram_used_mb ?? 2280) / 1024)).toFixed(1)}GB
-              </span>
+          <div className="min-w-[115px] sm:min-w-0 shrink-0 sm:shrink bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 sm:p-2.5 shadow-xs flex flex-col justify-between">
+            <span className="text-[9px] sm:text-[10px] font-semibold text-ink-muted uppercase tracking-wider">RAM</span>
+            <div className="mt-0.5 flex items-baseline gap-1">
+              <span className="text-sm sm:text-base font-bold text-ink">%{data?.serverMetrics?.ram_percent ?? 60}</span>
+              <span className="text-[9px] text-ink-muted">/{(((data?.serverMetrics?.ram_total_mb ?? 3809) / 1024)).toFixed(1)}G</span>
             </div>
-            <div className="mt-1 flex items-baseline gap-1">
-              <span className={`text-base sm:text-lg font-bold ${
-                Number(data?.serverMetrics?.ram_percent ?? 60) > 85
-                  ? 'text-danger'
-                  : Number(data?.serverMetrics?.ram_percent ?? 60) > 70
-                  ? 'text-warn'
-                  : 'text-ink'
-              }`}>
-                %{data?.serverMetrics?.ram_percent ?? 60}
-              </span>
-              <span className="text-[10px] text-ink-muted">
-                / {(((data?.serverMetrics?.ram_total_mb ?? 3809) / 1024)).toFixed(1)}GB
-              </span>
-            </div>
-            <div className="w-full bg-surface-raised rounded-full h-1 mt-1 overflow-hidden">
+            <div className="w-full bg-surface-raised rounded-full h-1 mt-0.5 overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all duration-500 ${
-                  Number(data?.serverMetrics?.ram_percent ?? 60) > 85
-                    ? 'bg-danger'
-                    : Number(data?.serverMetrics?.ram_percent ?? 60) > 70
-                    ? 'bg-warn'
-                    : 'bg-accent'
-                }`}
+                className="h-full rounded-full bg-accent"
                 style={{ width: `${Math.min(100, Math.max(5, Number(data?.serverMetrics?.ram_percent ?? 60)))}%` }}
               />
             </div>
           </div>
 
           {/* Card 4: Contacts */}
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3 shadow-sm flex flex-col justify-between">
-            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Toplam Kişi</span>
-            <div className="mt-1 text-base sm:text-lg font-bold text-ink">
+          <div className="min-w-[115px] sm:min-w-0 shrink-0 sm:shrink bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 sm:p-2.5 shadow-xs flex flex-col justify-between">
+            <span className="text-[9px] sm:text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Rehber</span>
+            <div className="mt-0.5 text-sm sm:text-base font-bold text-ink">
               {Number(summary.totalContacts).toLocaleString('tr-TR')}
             </div>
-            <span className="text-[9px] text-accent font-medium mt-0.5">Rehber & Lead</span>
+            <span className="text-[8px] sm:text-[9px] text-accent font-medium">Toplam</span>
           </div>
 
           {/* Card 5: Today Inbound */}
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3 shadow-sm flex flex-col justify-between">
-            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Bugün Gelen</span>
-            <div className="mt-1 text-base sm:text-lg font-bold text-success">
+          <div className="min-w-[115px] sm:min-w-0 shrink-0 sm:shrink bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 sm:p-2.5 shadow-xs flex flex-col justify-between">
+            <span className="text-[9px] sm:text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Gelen</span>
+            <div className="mt-0.5 text-sm sm:text-base font-bold text-success">
               {summary.todayInbound}
             </div>
-            <span className="text-[9px] text-ink-muted mt-0.5">Gelen sohbetler</span>
+            <span className="text-[8px] sm:text-[9px] text-ink-muted">Bugün</span>
           </div>
 
           {/* Card 6: Today Outbound */}
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3 shadow-sm flex flex-col justify-between">
-            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Bugün Giden</span>
-            <div className="mt-1 text-base sm:text-lg font-bold text-accent">
+          <div className="min-w-[115px] sm:min-w-0 shrink-0 sm:shrink bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2 sm:p-2.5 shadow-xs flex flex-col justify-between">
+            <span className="text-[9px] sm:text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Giden</span>
+            <div className="mt-0.5 text-sm sm:text-base font-bold text-accent">
               {summary.todayOutbound}
             </div>
-            <span className="text-[9px] text-ink-muted mt-0.5">Gönderilen mesaj</span>
+            <span className="text-[8px] sm:text-[9px] text-ink-muted">Bugün</span>
           </div>
 
           {/* Card 7: Queued Targets */}
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3 shadow-sm flex flex-col justify-between">
-            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Gönderim Sırası</span>
-            <div className="mt-1 text-base sm:text-lg font-bold text-warn">
+          <div className="min-w-[115px] sm:min-w-0 shrink-0 sm:shrink bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 sm:p-2.5 shadow-xs flex flex-col justify-between">
+            <span className="text-[9px] sm:text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Sırada</span>
+            <div className="mt-0.5 text-sm sm:text-base font-bold text-warn">
               {summary.queuedMessages}
             </div>
-            <span className="text-[9px] text-ink-muted mt-0.5">Bekleyen hedef</span>
+            <span className="text-[8px] sm:text-[9px] text-ink-muted">Bekleyen</span>
           </div>
 
           {/* Card 8: Active Campaigns */}
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3 shadow-sm flex flex-col justify-between">
-            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Kampanyalar</span>
-            <div className="mt-1 text-base sm:text-lg font-bold text-ink">
+          <div className="min-w-[115px] sm:min-w-0 shrink-0 sm:shrink bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 sm:p-2.5 shadow-xs flex flex-col justify-between">
+            <span className="text-[9px] sm:text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Kampanya</span>
+            <div className="mt-0.5 text-sm sm:text-base font-bold text-ink">
               {summary.activeCampaigns}
             </div>
-            <span className="text-[9px] text-ink-muted mt-0.5">Çalışan gönderim</span>
+            <span className="text-[8px] sm:text-[9px] text-ink-muted">Aktif</span>
           </div>
 
           {/* Card 9: Lead Requests */}
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3 shadow-sm flex flex-col justify-between">
-            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Veri Talepleri</span>
-            <div className="mt-1 text-base sm:text-lg font-bold text-ink">
+          <div className="min-w-[115px] sm:min-w-0 shrink-0 sm:shrink bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 sm:p-2.5 shadow-xs flex flex-col justify-between">
+            <span className="text-[9px] sm:text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Talepler</span>
+            <div className="mt-0.5 text-sm sm:text-base font-bold text-ink">
               {summary.pendingDataRequests}
             </div>
-            <span className="text-[9px] text-ink-muted mt-0.5">Bekleyen talep</span>
+            <span className="text-[8px] sm:text-[9px] text-ink-muted">Onay Bekleyen</span>
           </div>
 
           {/* Card 10: Blacklist Count */}
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3 shadow-sm flex flex-col justify-between">
-            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Kara Liste</span>
-            <div className="mt-1 text-base sm:text-lg font-bold text-danger">
+          <div className="min-w-[115px] sm:min-w-0 shrink-0 sm:shrink bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 sm:p-2.5 shadow-xs flex flex-col justify-between">
+            <span className="text-[9px] sm:text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Kara Liste</span>
+            <div className="mt-0.5 text-sm sm:text-base font-bold text-danger">
               {summary.blacklistedCount ?? 0}
             </div>
-            <span className="text-[9px] text-ink-muted mt-0.5">Engellenen numara</span>
+            <span className="text-[8px] sm:text-[9px] text-ink-muted">Engelli</span>
           </div>
         </section>
 
@@ -1110,7 +1096,7 @@ export function LiveDashboard() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-[var(--radius-sm)] text-[11px] sm:text-xs font-semibold whitespace-nowrap transition flex items-center gap-1.5 ${
+                className={`shrink-0 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-[var(--radius-sm)] text-[11px] sm:text-xs font-semibold whitespace-nowrap transition flex items-center gap-1.5 ${
                   activeTab === tab.id
                     ? 'bg-accent text-accent-ink shadow-sm'
                     : 'text-ink-soft hover:bg-[var(--color-surface-raised)]'
@@ -1486,46 +1472,90 @@ export function LiveDashboard() {
             {filteredTargets.length === 0 ? (
               <p className="text-xs text-ink-muted text-center py-6">Kuyrukta hedef bulunmuyor.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-[11px] sm:text-xs">
-                  <thead>
-                    <tr className="border-b border-[var(--color-hairline)] text-ink-muted font-semibold">
-                      <th className="pb-2">Telefon</th>
-                      <th className="pb-2">Kampanya</th>
-                      <th className="pb-2">Durum</th>
-                      <th className="pb-2">Zaman</th>
-                      <th className="pb-2">Mesaj Özeti</th>
-                      <th className="pb-2">Hata</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[var(--color-hairline)]">
-                    {filteredTargets.map(t => (
-                      <tr key={t.id} className="hover:bg-[var(--color-surface-raised)] transition">
-                        <td className="py-2 font-mono font-semibold text-ink">{t.phone_e164}</td>
-                        <td className="py-2 text-ink-soft">{t.campaign_name}</td>
-                        <td className="py-2">
-                          <span
-                            className={`px-1.5 py-0.2 rounded text-[10px] font-semibold ${
-                              t.status === 'queued'
-                                ? 'bg-warn/10 text-warn'
-                                : t.status === 'sent' || t.status === 'delivered'
-                                ? 'bg-ok-soft text-ok-dim'
-                                : t.status === 'failed'
-                                ? 'bg-danger/10 text-danger'
-                                : 'bg-surface-raised text-ink-muted'
-                            }`}
-                          >
-                            {t.status}
-                          </span>
-                        </td>
-                        <td className="py-2 text-ink-muted">{timeAgo(t.scheduled_for || t.created_at)}</td>
-                        <td className="py-2 text-ink-muted max-w-xs truncate">{t.personalized_body || '—'}</td>
-                        <td className="py-2 text-danger font-mono text-[10px] max-w-xs truncate">{t.error || '—'}</td>
+              <>
+                {/* Mobile Card List for Queue */}
+                <div className="block sm:hidden space-y-2.5">
+                  {filteredTargets.map(t => (
+                    <div
+                      key={t.id}
+                      className="bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-3 space-y-1.5"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono font-bold text-xs text-ink">{t.phone_e164}</span>
+                        <span
+                          className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                            t.status === 'queued'
+                              ? 'bg-warn/10 text-warn'
+                              : t.status === 'sent' || t.status === 'delivered'
+                              ? 'bg-ok-soft text-ok-dim'
+                              : t.status === 'failed'
+                              ? 'bg-danger/10 text-danger'
+                              : 'bg-surface-raised text-ink-muted'
+                          }`}
+                        >
+                          {t.status}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-ink-soft font-medium">{t.campaign_name}</span>
+                        <span className="text-[10px] text-ink-muted">{timeAgo(t.scheduled_for || t.created_at)}</span>
+                      </div>
+                      {t.personalized_body && (
+                        <p className="text-[11px] text-ink-muted bg-surface/70 border border-[var(--color-hairline)] p-2 rounded line-clamp-2">
+                          {t.personalized_body}
+                        </p>
+                      )}
+                      {t.error && (
+                        <p className="text-[10px] text-danger font-mono bg-danger/10 p-1.5 rounded">
+                          {t.error}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop Table */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full text-left text-xs min-w-[700px]">
+                    <thead>
+                      <tr className="border-b border-[var(--color-hairline)] text-ink-muted font-semibold">
+                        <th className="pb-2">Telefon</th>
+                        <th className="pb-2">Kampanya</th>
+                        <th className="pb-2">Durum</th>
+                        <th className="pb-2">Zaman</th>
+                        <th className="pb-2">Mesaj Özeti</th>
+                        <th className="pb-2">Hata</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--color-hairline)]">
+                      {filteredTargets.map(t => (
+                        <tr key={t.id} className="hover:bg-[var(--color-surface-raised)] transition">
+                          <td className="py-2 font-mono font-semibold text-ink">{t.phone_e164}</td>
+                          <td className="py-2 text-ink-soft">{t.campaign_name}</td>
+                          <td className="py-2">
+                            <span
+                              className={`px-1.5 py-0.2 rounded text-[10px] font-semibold ${
+                                t.status === 'queued'
+                                  ? 'bg-warn/10 text-warn'
+                                  : t.status === 'sent' || t.status === 'delivered'
+                                  ? 'bg-ok-soft text-ok-dim'
+                                  : t.status === 'failed'
+                                  ? 'bg-danger/10 text-danger'
+                                  : 'bg-surface-raised text-ink-muted'
+                              }`}
+                            >
+                              {t.status}
+                            </span>
+                          </td>
+                          <td className="py-2 text-ink-muted">{timeAgo(t.scheduled_for || t.created_at)}</td>
+                          <td className="py-2 text-ink-muted max-w-xs truncate">{t.personalized_body || '—'}</td>
+                          <td className="py-2 text-danger font-mono text-[10px] max-w-xs truncate">{t.error || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
         )}
@@ -1547,8 +1577,96 @@ export function LiveDashboard() {
               {data?.listRequests.length === 0 ? (
                 <p className="text-xs text-ink-muted text-center py-6">Henüz firmalardan gelen bir talep bulunmuyor.</p>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-[11px] sm:text-xs">
+              <>
+                {/* Mobile Card List for Lead Requests */}
+                <div className="block sm:hidden space-y-3">
+                  {data?.listRequests.map(r => (
+                    <div
+                      key={r.id}
+                      className="bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-3 space-y-2.5"
+                    >
+                      <div className="flex items-start justify-between gap-2 border-b border-[var(--color-hairline)] pb-2">
+                        <div>
+                          <div className="font-bold text-xs text-ink">{r.org_name || 'Genel'}</div>
+                          <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-surface text-ink-soft border border-[var(--color-hairline)]">
+                            {r.kind}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-ink-muted whitespace-nowrap">{timeAgo(r.created_at)}</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="bg-surface/70 border border-[var(--color-hairline)] rounded p-2">
+                          <span className="block text-[10px] text-ink-muted font-semibold uppercase">Sektör / Kategori</span>
+                          <span className="font-semibold text-ink truncate block">{r.category || '—'}</span>
+                        </div>
+                        <div className="bg-surface/70 border border-[var(--color-hairline)] rounded p-2">
+                          <span className="block text-[10px] text-ink-muted font-semibold uppercase">Konum / Bölge</span>
+                          <span className="text-ink-soft truncate block">{r.address || (r.nationwide ? 'Tüm Türkiye' : 'Bölgesel')}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between bg-surface/70 border border-[var(--color-hairline)] rounded p-2 text-xs">
+                        <span className="text-[10px] text-ink-muted font-semibold uppercase">Toplanan Kişi</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-accent text-sm">{r.contact_count}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const input = prompt('Bu talep için toplanan kişi sayısını girin:', String(r.contact_count || 0))
+                              if (input !== null) {
+                                const count = parseInt(input, 10) || 0
+                                handleUpdateRequestStatus(r.id, r.status as any, count)
+                              }
+                            }}
+                            className="text-[11px] text-ink-muted hover:text-accent underline"
+                            title="Kişi sayısını düzenle"
+                          >
+                            düzenle
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-semibold text-ink-muted uppercase mb-1">Durum / Yönetim</label>
+                        <select
+                          value={r.status}
+                          disabled={actionBusy}
+                          onChange={e => {
+                            const newStatus = e.target.value as 'pending' | 'processing' | 'completed' | 'rejected'
+                            handleUpdateRequestStatus(r.id, newStatus, r.contact_count)
+                          }}
+                          className={`w-full text-xs font-semibold px-2.5 py-1.5 rounded-[var(--radius-sm)] border outline-none cursor-pointer transition ${
+                            r.status === 'completed'
+                              ? 'bg-ok-soft text-ok-dim border-ok/30'
+                              : r.status === 'processing'
+                              ? 'bg-accent-soft text-accent border-accent/30'
+                              : r.status === 'rejected'
+                              ? 'bg-danger/10 text-danger border-danger/30'
+                              : 'bg-warn/15 text-warn border-warn/30'
+                          }`}
+                        >
+                          <option value="pending" className="bg-surface text-warn font-semibold">
+                            Beklemede (pending)
+                          </option>
+                          <option value="processing" className="bg-surface text-accent font-semibold">
+                            Onaylandı & Hazırlanıyor (processing)
+                          </option>
+                          <option value="completed" className="bg-surface text-ok-dim font-semibold">
+                            Tamamlandı (completed)
+                          </option>
+                          <option value="rejected" className="bg-surface text-danger font-semibold">
+                            Reddedildi (rejected)
+                          </option>
+                        </select>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop Table */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full text-left text-xs min-w-[750px]">
                     <thead>
                       <tr className="border-b border-[var(--color-hairline)] text-ink-muted font-semibold">
                         <th className="pb-2">İşletme / Firma</th>
@@ -1626,6 +1744,7 @@ export function LiveDashboard() {
                     </tbody>
                   </table>
                 </div>
+              </>
               )}
             </div>
           </div>
@@ -1859,38 +1978,70 @@ export function LiveDashboard() {
               {filteredBlacklist.length === 0 ? (
                 <p className="text-xs text-ink-muted text-center py-6">Engellenen numara kaydı bulunmuyor.</p>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-[11px] sm:text-xs">
-                    <thead>
-                      <tr className="border-b border-[var(--color-hairline)] text-ink-muted font-semibold">
-                        <th className="pb-2">Telefon</th>
-                        <th className="pb-2">Gerekçe</th>
-                        <th className="pb-2">İşletme</th>
-                        <th className="pb-2">Tarih</th>
-                        <th className="pb-2 text-right">Eylem</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[var(--color-hairline)]">
-                      {filteredBlacklist.map(b => (
-                        <tr key={b.id} className="hover:bg-[var(--color-surface-raised)]">
-                          <td className="py-2 font-mono font-semibold text-danger">{b.phone_e164}</td>
-                          <td className="py-2 text-ink-soft">{b.reason || 'Gerekçe belirtilmemiş'}</td>
-                          <td className="py-2 text-ink-muted">{b.org_name || 'Genel'}</td>
-                          <td className="py-2 text-ink-muted">{timeAgo(b.created_at)}</td>
-                          <td className="py-2 text-right">
-                            <button
-                              onClick={() => handleRemoveBlacklist(b.id)}
-                              disabled={actionBusy}
-                              className="px-2 py-0.5 text-xs font-semibold rounded bg-surface-raised text-danger hover:bg-danger/10"
-                            >
-                              Kaldır
-                            </button>
-                          </td>
+                <>
+                  {/* Mobile Card List for Blacklist */}
+                  <div className="block sm:hidden space-y-2.5">
+                    {filteredBlacklist.map(b => (
+                      <div
+                        key={b.id}
+                        className="bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-3 space-y-2"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono font-bold text-xs text-danger">{b.phone_e164}</span>
+                          <span className="text-[10px] text-ink-muted">{timeAgo(b.created_at)}</span>
+                        </div>
+                        <div className="text-xs text-ink-soft bg-surface/70 border border-[var(--color-hairline)] rounded p-2">
+                          <span className="block text-[10px] text-ink-muted font-semibold uppercase mb-0.5">Gerekçe</span>
+                          <span>{b.reason || 'Gerekçe belirtilmemiş'}</span>
+                        </div>
+                        <div className="flex items-center justify-between pt-1">
+                          <span className="text-[11px] text-ink-muted">{b.org_name || 'Genel'}</span>
+                          <button
+                            onClick={() => handleRemoveBlacklist(b.id)}
+                            disabled={actionBusy}
+                            className="px-3 py-1 text-xs font-semibold rounded bg-danger/10 text-danger hover:bg-danger/20 transition"
+                          >
+                            Engeli Kaldır
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Desktop Table */}
+                  <div className="hidden sm:block overflow-x-auto">
+                    <table className="w-full text-left text-xs min-w-[550px]">
+                      <thead>
+                        <tr className="border-b border-[var(--color-hairline)] text-ink-muted font-semibold">
+                          <th className="pb-2">Telefon</th>
+                          <th className="pb-2">Gerekçe</th>
+                          <th className="pb-2">İşletme</th>
+                          <th className="pb-2">Tarih</th>
+                          <th className="pb-2 text-right">Eylem</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="divide-y divide-[var(--color-hairline)]">
+                        {filteredBlacklist.map(b => (
+                          <tr key={b.id} className="hover:bg-[var(--color-surface-raised)]">
+                            <td className="py-2 font-mono font-semibold text-danger">{b.phone_e164}</td>
+                            <td className="py-2 text-ink-soft">{b.reason || 'Gerekçe belirtilmemiş'}</td>
+                            <td className="py-2 text-ink-muted">{b.org_name || 'Genel'}</td>
+                            <td className="py-2 text-ink-muted">{timeAgo(b.created_at)}</td>
+                            <td className="py-2 text-right">
+                              <button
+                                onClick={() => handleRemoveBlacklist(b.id)}
+                                disabled={actionBusy}
+                                className="px-2 py-0.5 text-xs font-semibold rounded bg-surface-raised text-danger hover:bg-danger/10"
+                              >
+                                Kaldır
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -2017,7 +2168,7 @@ export function LiveDashboard() {
                     <span className="text-[10px] text-ink-muted font-mono">{data.serverMetrics.containers.length} Konteyner Çalışıyor</span>
                   </div>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left text-[11px]">
+                    <table className="w-full text-left text-[11px] min-w-[550px]">
                       <thead>
                         <tr className="border-b border-[var(--color-hairline)] text-ink-muted font-semibold bg-surface/50">
                           <th className="px-3 py-1.5">Konteyner / Servis</th>
@@ -2552,61 +2703,117 @@ export function LiveDashboard() {
             {filteredJobs.length === 0 ? (
               <p className="text-xs text-ink-muted text-center py-6">Kayıtlı iş bulunamadı.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-[11px] sm:text-xs">
-                  <thead>
-                    <tr className="border-b border-[var(--color-hairline)] text-ink-muted font-semibold">
-                      <th className="pb-2">İş No</th>
-                      <th className="pb-2">Tür</th>
-                      <th className="pb-2">Öncelik</th>
-                      <th className="pb-2">Durum</th>
-                      <th className="pb-2">Deneme</th>
-                      <th className="pb-2">Oluşturulma</th>
-                      <th className="pb-2">Hata / Detay</th>
-                      <th className="pb-2 text-right">İncele</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[var(--color-hairline)]">
-                    {filteredJobs.map(j => (
-                      <tr key={j.id} className="hover:bg-[var(--color-surface-raised)]">
-                        <td className="py-2 font-mono font-semibold text-ink">#{j.id}</td>
-                        <td className="py-2 font-mono text-[10px] sm:text-[11px] text-accent font-semibold">{j.type}</td>
-                        <td className="py-2 text-ink-muted">{j.priority}</td>
-                        <td className="py-2">
-                          <span
-                            className={`px-1.5 py-0.2 rounded text-[10px] font-semibold ${
-                              j.status === 'done'
-                                ? 'bg-ok-soft text-ok-dim'
-                                : j.status === 'running' || j.status === 'claimed'
-                                ? 'bg-accent-soft text-accent'
-                                : j.status === 'failed'
-                                ? 'bg-danger/10 text-danger'
-                                : 'bg-warn/10 text-warn'
-                            }`}
-                          >
-                            {j.status}
+              <>
+                {/* Mobile Card List for Jobs */}
+                <div className="block sm:hidden space-y-2.5">
+                  {filteredJobs.map(j => (
+                    <div
+                      key={j.id}
+                      className="bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-3 space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-xs text-ink">#{j.id}</span>
+                          <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-accent/10 text-accent font-semibold">
+                            {j.type}
                           </span>
-                        </td>
-                        <td className="py-2 text-ink-muted">
-                          {j.attempts}/{j.max_attempts}
-                        </td>
-                        <td className="py-2 text-ink-muted">{timeAgo(j.created_at)}</td>
-                        <td className="py-2 text-danger font-mono text-[10px] max-w-xs truncate">
-                          {j.error || '—'}
-                        </td>
-                        <td className="py-2 text-right">
-                          <button
-                            onClick={() => setInspectedJob(j)}
-                            className="px-2 py-0.5 text-xs font-semibold rounded bg-surface-raised text-ink hover:bg-canvas"
-                          >
-                            JSON
-                          </button>
-                        </td>
+                        </div>
+                        <span
+                          className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                            j.status === 'done'
+                              ? 'bg-ok-soft text-ok-dim'
+                              : j.status === 'running' || j.status === 'claimed'
+                              ? 'bg-accent-soft text-accent'
+                              : j.status === 'failed'
+                              ? 'bg-danger/10 text-danger'
+                              : 'bg-warn/10 text-warn'
+                          }`}
+                        >
+                          {j.status}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-[11px] text-ink-muted">
+                        <span>Deneme: <b className="text-ink">{j.attempts}/{j.max_attempts}</b></span>
+                        <span>Öncelik: <b className="text-ink">{j.priority}</b></span>
+                        <span>{timeAgo(j.created_at)}</span>
+                      </div>
+
+                      {j.error && (
+                        <p className="text-[10px] text-danger font-mono bg-danger/10 p-2 rounded">
+                          {j.error}
+                        </p>
+                      )}
+
+                      <div className="flex justify-end pt-1">
+                        <button
+                          onClick={() => setInspectedJob(j)}
+                          className="px-3 py-1 text-xs font-semibold rounded bg-surface border border-[var(--color-hairline)] text-ink hover:bg-canvas transition"
+                        >
+                          JSON Payloads İncele
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop Table */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full text-left text-xs min-w-[700px]">
+                    <thead>
+                      <tr className="border-b border-[var(--color-hairline)] text-ink-muted font-semibold">
+                        <th className="pb-2">İş No</th>
+                        <th className="pb-2">Tür</th>
+                        <th className="pb-2">Öncelik</th>
+                        <th className="pb-2">Durum</th>
+                        <th className="pb-2">Deneme</th>
+                        <th className="pb-2">Oluşturulma</th>
+                        <th className="pb-2">Hata / Detay</th>
+                        <th className="pb-2 text-right">İncele</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--color-hairline)]">
+                      {filteredJobs.map(j => (
+                        <tr key={j.id} className="hover:bg-[var(--color-surface-raised)]">
+                          <td className="py-2 font-mono font-semibold text-ink">#{j.id}</td>
+                          <td className="py-2 font-mono text-[10px] sm:text-[11px] text-accent font-semibold">{j.type}</td>
+                          <td className="py-2 text-ink-muted">{j.priority}</td>
+                          <td className="py-2">
+                            <span
+                              className={`px-1.5 py-0.2 rounded text-[10px] font-semibold ${
+                                j.status === 'done'
+                                  ? 'bg-ok-soft text-ok-dim'
+                                  : j.status === 'running' || j.status === 'claimed'
+                                  ? 'bg-accent-soft text-accent'
+                                  : j.status === 'failed'
+                                  ? 'bg-danger/10 text-danger'
+                                  : 'bg-warn/10 text-warn'
+                              }`}
+                            >
+                              {j.status}
+                            </span>
+                          </td>
+                          <td className="py-2 text-ink-muted">
+                            {j.attempts}/{j.max_attempts}
+                          </td>
+                          <td className="py-2 text-ink-muted">{timeAgo(j.created_at)}</td>
+                          <td className="py-2 text-danger font-mono text-[10px] max-w-xs truncate">
+                            {j.error || '—'}
+                          </td>
+                          <td className="py-2 text-right">
+                            <button
+                              onClick={() => setInspectedJob(j)}
+                              className="px-2 py-0.5 text-xs font-semibold rounded bg-surface-raised text-ink hover:bg-canvas"
+                            >
+                              JSON
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
         )}
@@ -2635,38 +2842,40 @@ export function LiveDashboard() {
               ) : previewContacts.length === 0 ? (
                 <div className="text-center py-6 text-xs text-ink-muted">Bu grupta kayıt bulunamadı.</div>
               ) : (
-                <table className="w-full text-left text-[11px] sm:text-xs">
-                  <thead>
-                    <tr className="border-b border-[var(--color-hairline)] text-ink-muted font-semibold">
-                      <th className="pb-2">Telefon</th>
-                      <th className="pb-2">İsim</th>
-                      <th className="pb-2">Kaynak</th>
-                      <th className="pb-2">Durum</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[var(--color-hairline)]">
-                    {previewContacts.map(c => (
-                      <tr key={c.id} className="hover:bg-[var(--color-surface-raised)]">
-                        <td className="py-2 font-mono font-semibold text-ink">{c.phone_e164}</td>
-                        <td className="py-2 text-ink-soft">{c.name || '—'}</td>
-                        <td className="py-2 text-ink-muted">{c.source || '—'}</td>
-                        <td className="py-2">
-                          <span
-                            className={`px-1.5 py-0.2 rounded text-[9px] font-semibold ${
-                              c.wa_status === 'valid'
-                                ? 'bg-ok-soft text-ok-dim'
-                                : c.wa_status === 'invalid'
-                                ? 'bg-danger/10 text-danger'
-                                : 'bg-surface-raised text-ink-muted'
-                            }`}
-                          >
-                            {c.wa_status || 'bilinmiyor'}
-                          </span>
-                        </td>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-[11px] sm:text-xs min-w-[480px]">
+                    <thead>
+                      <tr className="border-b border-[var(--color-hairline)] text-ink-muted font-semibold">
+                        <th className="pb-2">Telefon</th>
+                        <th className="pb-2">İsim</th>
+                        <th className="pb-2">Kaynak</th>
+                        <th className="pb-2">Durum</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--color-hairline)]">
+                      {previewContacts.map(c => (
+                        <tr key={c.id} className="hover:bg-[var(--color-surface-raised)]">
+                          <td className="py-2 font-mono font-semibold text-ink">{c.phone_e164}</td>
+                          <td className="py-2 text-ink-soft">{c.name || '—'}</td>
+                          <td className="py-2 text-ink-muted">{c.source || '—'}</td>
+                          <td className="py-2">
+                            <span
+                              className={`px-1.5 py-0.2 rounded text-[9px] font-semibold ${
+                                c.wa_status === 'valid'
+                                  ? 'bg-ok-soft text-ok-dim'
+                                  : c.wa_status === 'invalid'
+                                  ? 'bg-danger/10 text-danger'
+                                  : 'bg-surface-raised text-ink-muted'
+                              }`}
+                            >
+                              {c.wa_status || 'bilinmiyor'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
 
