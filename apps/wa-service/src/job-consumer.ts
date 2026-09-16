@@ -698,6 +698,14 @@ async function handle(job: JobRow): Promise<unknown> {
       return { creative_id: creativeId }
     }
 
+    case 'service.restart': {
+      log.warn({ jobId: job.id }, 'Yonetici tarafindan Baileys servis yeniden baslatma tetiklendi, servis 1 sn icinde kapaniyor')
+      setTimeout(() => {
+        process.exit(1)
+      }, 1000)
+      return { scheduled: true }
+    }
+
     default: {
       throw new Error(`Bilinmeyen is tipi: ${job.type}`)
     }

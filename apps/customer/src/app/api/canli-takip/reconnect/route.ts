@@ -1,37 +1,66 @@
 import { NextResponse } from 'next/server'
-import { requireActiveOrg } from '@/lib/org'
-import { enqueueJob } from '@/lib/jobs'
+import { checkIsAuthenticated } from '@/app/canli-takip/auth'
+import { createSupabaseServiceClient } from '@/lib/supabase/service'
 
 export const runtime = 'nodejs'
 
 export async function POST(req: Request) {
   try {
-    const { org, supabase } = await requireActiveOrg()
+    const isAuth = await checkIsAuthenticated()
+    if (!isAuth) {
+      return NextResponse.json(
+        { success: false, error: 'Yetkisiz erişim. Lütfen giriş yapın.' },
+        { status: 401 },
+      )
+    }
+
+    const serviceClient = createSupabaseServiceClient()
+    if (!serviceClient) {
+      return NextResponse.json(
+        { success: false, error: 'Veritabanı servisi yapılandırılmamış.' },
+        { status: 500 },
+      )
+    }
+
     const body = (await req.json().catch(() => ({}))) as { accountId?: string; all?: boolean }
 
     if (body.accountId) {
       // Tek hat yeniden bağlan
-      const { error } = await enqueueJob({
+      const { data: acc } = await serviceClient
+        .from('accounts')
+        .select('id, org_id')
+        .eq('id', body.accountId)
+        .maybeSingle()
+
+      if (!acc) {
+        return NextResponse.json({ success: false, error: 'Hat bulunamadı' }, { status: 404 })
+      }
+
+      const { error } = await serviceClient.from('jobs').insert({
+        org_id: acc.org_id,
+        account_id: acc.id,
         type: 'account.connect',
-        accountId: body.accountId,
+        payload: {},
         priority: 10,
       })
-      if (error) return NextResponse.json({ success: false, error }, { status: 400 })
+
+      if (error) return NextResponse.json({ success: false, error: error.message }, { status: 400 })
       return NextResponse.json({ success: true, message: 'Hat bağlantı isteği kuyruğa alındı' })
     }
 
     // Tüm bağlı/etkin hatları yeniden bağla
-    const { data: accounts } = await supabase
+    const { data: accounts } = await serviceClient
       .from('accounts')
-      .select('id')
-      .eq('org_id', org.id)
+      .select('id, org_id')
       .eq('enabled', true)
 
     if (accounts && accounts.length > 0) {
       for (const acc of accounts) {
-        await enqueueJob({
+        await serviceClient.from('jobs').insert({
+          org_id: acc.org_id,
+          account_id: acc.id,
           type: 'account.connect',
-          accountId: acc.id,
+          payload: {},
           priority: 10,
         })
       }
