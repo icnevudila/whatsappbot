@@ -189,8 +189,30 @@ type OrganizationItem = {
   id: string
   name: string
   slug: string
+  plan: 'free' | 'starter' | 'pro' | 'enterprise'
+  accounts_quota: number
+  monthly_message_quota: number
+  suspended_at: string | null
+  suspend_reason: string | null
+  phone_e164: string | null
   member_count: number
+  account_count: number
+  connected_account_count: number
+  campaign_count: number
+  list_count: number
+  total_contacts: number
   created_at: string
+}
+
+type RecentContactItem = {
+  id: string
+  phone_e164: string
+  name: string | null
+  source: string | null
+  wa_status: string | null
+  created_at: string
+  org_id: string
+  org_name?: string
 }
 
 type ContactRecord = {
@@ -236,6 +258,7 @@ type FeedData = {
   creatives: CreativeItem[]
   listRequests: ListRequestItem[]
   contactLists: ContactListItem[]
+  recentContacts?: RecentContactItem[]
   messages: MessageLog[]
   aiSuggestions?: AiSuggestionItem[]
   autoReplies?: AutoReplyItem[]
@@ -250,6 +273,9 @@ type FeedData = {
     failedJobs?: number
     activeCampaigns: number
     totalContacts: number
+    validContacts?: number
+    totalOrganizations?: number
+    totalContactLists?: number
     pendingDataRequests: number
     blacklistedCount?: number
     connectedAccounts?: number
@@ -277,8 +303,8 @@ export function LiveDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<
-    'quick_send' | 'campaigns' | 'queue' | 'data_requests' | 'contact_lists' | 'ai_studio' | 'blacklist' | 'baileys' | 'messages' | 'jobs'
-  >('quick_send')
+    'organizations' | 'contacts' | 'data_requests' | 'quick_send' | 'campaigns' | 'queue' | 'ai_studio' | 'blacklist' | 'baileys' | 'messages' | 'jobs'
+  >('organizations')
 
   const [selectedOrg, setSelectedOrg] = useState<string>('all')
   const [autoRefresh, setAutoRefresh] = useState(true)
@@ -646,6 +672,101 @@ export function LiveDashboard() {
     }
   }
 
+  // Firma Üyelik Paketi / Plan Güncelleme
+  const handleUpdateOrgPlan = async (orgId: string, plan: string) => {
+    setActionBusy(true)
+    try {
+      const res = await fetch('/api/canli-takip/org-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orgId, plan }),
+      })
+      const json = await res.json()
+      if (json.success) {
+        showNotice(`Firma üyelik paketi "${plan.toUpperCase()}" olarak güncellendi.`)
+        fetchData()
+      } else {
+        alert('Hata: ' + (json.error || 'İşlem başarısız'))
+      }
+    } catch (err) {
+      alert('İstek hatası: ' + (err instanceof Error ? err.message : String(err)))
+    } finally {
+      setActionBusy(false)
+    }
+  }
+
+  // Firma Kotalarını Düzenle (Hat ve Mesaj Limiti)
+  const handleUpdateOrgQuotas = async (org: OrganizationItem) => {
+    const newAccounts = prompt(`${org.name} için Hat Kotası (Mevcut: ${org.accounts_quota}):`, String(org.accounts_quota))
+    if (newAccounts === null) return
+    const newMonthly = prompt(`${org.name} için Aylık Mesaj Limiti (Mevcut: ${org.monthly_message_quota}):`, String(org.monthly_message_quota))
+    if (newMonthly === null) return
+
+    const accQuota = parseInt(newAccounts, 10)
+    const msgQuota = parseInt(newMonthly, 10)
+
+    if (isNaN(accQuota) || isNaN(msgQuota)) {
+      alert('Lütfen geçerli sayısal değerler girin.')
+      return
+    }
+
+    setActionBusy(true)
+    try {
+      const res = await fetch('/api/canli-takip/org-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orgId: org.id,
+          accountsQuota: accQuota,
+          monthlyQuota: msgQuota,
+        }),
+      })
+      const json = await res.json()
+      if (json.success) {
+        showNotice(`${org.name} limitleri güncellendi: ${accQuota} Hat, ${msgQuota.toLocaleString('tr-TR')} Mesaj/Ay.`)
+        fetchData()
+      } else {
+        alert('Hata: ' + (json.error || 'İşlem başarısız'))
+      }
+    } catch (err) {
+      alert('İstek hatası: ' + (err instanceof Error ? err.message : String(err)))
+    } finally {
+      setActionBusy(false)
+    }
+  }
+
+  // Firma Durumu (Askıya Al / Aktifleştir)
+  const handleToggleOrgSuspend = async (org: OrganizationItem) => {
+    const isSuspended = !!org.suspended_at
+    const confirmMsg = isSuspended
+      ? `${org.name} işletmesinin erişim engelini kaldırıp aktif hale getirmek istiyor musunuz?`
+      : `${org.name} işletmesini askıya alıp tüm hat ve mesaj gönderimlerini durdurmak istiyor musunuz?`
+    if (!confirm(confirmMsg)) return
+
+    setActionBusy(true)
+    try {
+      const res = await fetch('/api/canli-takip/org-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orgId: org.id,
+          suspended: !isSuspended,
+        }),
+      })
+      const json = await res.json()
+      if (json.success) {
+        showNotice(`${org.name} ${!isSuspended ? 'askıya alındı' : 'tekrar aktif hale getirildi'}.`)
+        fetchData()
+      } else {
+        alert('Hata: ' + (json.error || 'İşlem başarısız'))
+      }
+    } catch (err) {
+      alert('İstek hatası: ' + (err instanceof Error ? err.message : String(err)))
+    } finally {
+      setActionBusy(false)
+    }
+  }
+
   // Kara Listeye Ekle
   const handleAddBlacklist = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -813,6 +934,40 @@ export function LiveDashboard() {
 
   const organizationsList = useMemo(() => data?.organizations || [], [data?.organizations])
 
+  const filteredOrganizations = useMemo(() => {
+    let list = data?.organizations || []
+    if (selectedOrg !== 'all') {
+      list = list.filter(o => o.id === selectedOrg)
+    }
+    if (globalSearch.trim()) {
+      const q = globalSearch.toLowerCase()
+      list = list.filter(
+        o =>
+          o.name.toLowerCase().includes(q) ||
+          o.slug.toLowerCase().includes(q) ||
+          (o.plan && o.plan.toLowerCase().includes(q))
+      )
+    }
+    return list
+  }, [data?.organizations, selectedOrg, globalSearch])
+
+  const filteredRecentContacts = useMemo(() => {
+    let list = data?.recentContacts || []
+    if (selectedOrg !== 'all') {
+      list = list.filter(c => c.org_id === selectedOrg)
+    }
+    if (globalSearch.trim()) {
+      const q = globalSearch.toLowerCase()
+      list = list.filter(
+        c =>
+          c.phone_e164.includes(q) ||
+          (c.name && c.name.toLowerCase().includes(q)) ||
+          (c.org_name && c.org_name.toLowerCase().includes(q))
+      )
+    }
+    return list
+  }, [data?.recentContacts, selectedOrg, globalSearch])
+
   if (loading && !data) {
     return (
       <div className="min-h-screen bg-[var(--color-canvas)] flex flex-col items-center justify-center p-4">
@@ -832,6 +987,9 @@ export function LiveDashboard() {
     failedJobs: 0,
     activeCampaigns: 0,
     totalContacts: 0,
+    validContacts: 0,
+    totalOrganizations: 0,
+    totalContactLists: 0,
     pendingDataRequests: 0,
     blacklistedCount: 0,
     connectedAccounts: 0,
@@ -1014,15 +1172,27 @@ export function LiveDashboard() {
           </div>
 
           {/* Card 4: Contacts */}
+          {/* Card 4: Organizations & Subscriptions */}
           <div className="min-w-[115px] sm:min-w-0 shrink-0 sm:shrink bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 sm:p-2.5 shadow-xs flex flex-col justify-between">
-            <span className="text-[9px] sm:text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Rehber</span>
+            <span className="text-[9px] sm:text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Firmalar</span>
+            <div className="mt-0.5 text-sm sm:text-base font-bold text-ink">
+              {summary.totalOrganizations ?? data?.organizations?.length ?? 6}
+            </div>
+            <span className="text-[8px] sm:text-[9px] text-accent font-medium">Müşteri & Üye</span>
+          </div>
+
+          {/* Card 5: Total Contacts */}
+          <div className="min-w-[115px] sm:min-w-0 shrink-0 sm:shrink bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 sm:p-2.5 shadow-xs flex flex-col justify-between">
+            <span className="text-[9px] sm:text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Kayıtlı Kişi</span>
             <div className="mt-0.5 text-sm sm:text-base font-bold text-ink">
               {Number(summary.totalContacts).toLocaleString('tr-TR')}
             </div>
-            <span className="text-[8px] sm:text-[9px] text-accent font-medium">Toplam</span>
+            <span className="text-[8px] sm:text-[9px] text-ok-dim font-medium">
+              {summary.validContacts ? `${Number(summary.validContacts).toLocaleString('tr-TR')} Onaylı` : 'Toplam Rehber'}
+            </span>
           </div>
 
-          {/* Card 5: Today Inbound */}
+          {/* Card 6: Today Inbound */}
           <div className="min-w-[115px] sm:min-w-0 shrink-0 sm:shrink bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 sm:p-2.5 shadow-xs flex flex-col justify-between">
             <span className="text-[9px] sm:text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Gelen</span>
             <div className="mt-0.5 text-sm sm:text-base font-bold text-success">
@@ -1031,7 +1201,7 @@ export function LiveDashboard() {
             <span className="text-[8px] sm:text-[9px] text-ink-muted">Bugün</span>
           </div>
 
-          {/* Card 6: Today Outbound */}
+          {/* Card 7: Today Outbound */}
           <div className="min-w-[115px] sm:min-w-0 shrink-0 sm:shrink bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2 sm:p-2.5 shadow-xs flex flex-col justify-between">
             <span className="text-[9px] sm:text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Giden</span>
             <div className="mt-0.5 text-sm sm:text-base font-bold text-accent">
@@ -1040,7 +1210,7 @@ export function LiveDashboard() {
             <span className="text-[8px] sm:text-[9px] text-ink-muted">Bugün</span>
           </div>
 
-          {/* Card 7: Queued Targets */}
+          {/* Card 8: Queued Targets */}
           <div className="min-w-[115px] sm:min-w-0 shrink-0 sm:shrink bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 sm:p-2.5 shadow-xs flex flex-col justify-between">
             <span className="text-[9px] sm:text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Sırada</span>
             <div className="mt-0.5 text-sm sm:text-base font-bold text-warn">
@@ -1049,7 +1219,7 @@ export function LiveDashboard() {
             <span className="text-[8px] sm:text-[9px] text-ink-muted">Bekleyen</span>
           </div>
 
-          {/* Card 8: Active Campaigns */}
+          {/* Card 9: Active Campaigns */}
           <div className="min-w-[115px] sm:min-w-0 shrink-0 sm:shrink bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 sm:p-2.5 shadow-xs flex flex-col justify-between">
             <span className="text-[9px] sm:text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Kampanya</span>
             <div className="mt-0.5 text-sm sm:text-base font-bold text-ink">
@@ -1058,22 +1228,13 @@ export function LiveDashboard() {
             <span className="text-[8px] sm:text-[9px] text-ink-muted">Aktif</span>
           </div>
 
-          {/* Card 9: Lead Requests */}
+          {/* Card 10: Lead Requests */}
           <div className="min-w-[115px] sm:min-w-0 shrink-0 sm:shrink bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 sm:p-2.5 shadow-xs flex flex-col justify-between">
             <span className="text-[9px] sm:text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Talepler</span>
             <div className="mt-0.5 text-sm sm:text-base font-bold text-ink">
               {summary.pendingDataRequests}
             </div>
             <span className="text-[8px] sm:text-[9px] text-ink-muted">Onay Bekleyen</span>
-          </div>
-
-          {/* Card 10: Blacklist Count */}
-          <div className="min-w-[115px] sm:min-w-0 shrink-0 sm:shrink bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 sm:p-2.5 shadow-xs flex flex-col justify-between">
-            <span className="text-[9px] sm:text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Kara Liste</span>
-            <div className="mt-0.5 text-sm sm:text-base font-bold text-danger">
-              {summary.blacklistedCount ?? 0}
-            </div>
-            <span className="text-[8px] sm:text-[9px] text-ink-muted">Engelli</span>
           </div>
         </section>
 
@@ -1082,16 +1243,17 @@ export function LiveDashboard() {
           {/* Module Tab Buttons */}
           <div className="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
             {[
+              { id: 'organizations', label: 'Firmalar & Üyelikler', badge: data?.organizations?.length },
+              { id: 'contacts', label: 'Rehber & Kayıtlı Kişiler', badge: data?.contactLists?.length },
+              { id: 'data_requests', label: 'Veri Talepleri', badge: data?.listRequests?.length },
               { id: 'quick_send', label: 'Hızlı Gönderim', badge: null },
-              { id: 'campaigns', label: 'Kampanyalar', badge: data?.campaigns.length },
+              { id: 'campaigns', label: 'Kampanyalar', badge: data?.campaigns?.length },
               { id: 'queue', label: 'Gönderim Sırası', badge: summary.queuedMessages },
-              { id: 'data_requests', label: 'Veri Talepleri', badge: data?.listRequests.length },
-              { id: 'contact_lists', label: 'Kişi Listeleri', badge: data?.contactLists.length },
-              { id: 'ai_studio', label: 'ChatGPT & Afiş Üretimi', badge: data?.creatives.length },
-              { id: 'blacklist', label: 'Kara Liste', badge: summary.blacklistedCount },
-              { id: 'baileys', label: 'Baileys & Hatlar', badge: data?.accounts.length },
+              { id: 'ai_studio', label: 'ChatGPT & Afiş Üretimi', badge: data?.creatives?.length },
               { id: 'messages', label: 'Mesaj & AI Yanıt Akışı', badge: (data?.messages?.length || 0) + (data?.aiSuggestions?.length || 0) },
-              { id: 'jobs', label: 'İş Kuyruğu', badge: data?.jobs.length },
+              { id: 'blacklist', label: 'Kara Liste', badge: summary.blacklistedCount },
+              { id: 'baileys', label: 'Baileys & Hatlar', badge: data?.accounts?.length },
+              { id: 'jobs', label: 'İş Kuyruğu', badge: data?.jobs?.length },
             ].map(tab => (
               <button
                 key={tab.id}
@@ -1137,6 +1299,281 @@ export function LiveDashboard() {
             )}
           </div>
         </section>
+
+        {/* TAB 0: FİRMALAR & ÜYELİKLER */}
+        {activeTab === 'organizations' && (
+          <div className="space-y-4">
+            {/* Header & Stats Banner */}
+            <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 sm:p-5 shadow-sm space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--color-hairline)] pb-3">
+                <div>
+                  <h2 className="text-xs sm:text-sm font-bold text-ink">Kayıtlı Firmalar ve Üyelik Paketleri</h2>
+                  <p className="text-[11px] text-ink-muted">
+                    Sistemdeki tüm şirketler, üyelik seviyeleri (Free, Starter, Pro, Enterprise), hat/mesaj limitleri ve kayıtlı kişi sayıları.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-semibold text-ink-muted">{filteredOrganizations.length} Firma</span>
+                </div>
+              </div>
+
+              {/* Quick Summary Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div className="bg-surface-raised/70 border border-[var(--color-hairline)] rounded p-2.5">
+                  <span className="text-[10px] text-ink-muted uppercase font-semibold block">Toplam Firma</span>
+                  <div className="mt-0.5 flex items-baseline gap-1">
+                    <span className="text-base sm:text-lg font-bold text-ink">{organizationsList.length}</span>
+                    <span className="text-[10px] text-ink-muted">kayıtlı</span>
+                  </div>
+                </div>
+                <div className="bg-surface-raised/70 border border-[var(--color-hairline)] rounded p-2.5">
+                  <span className="text-[10px] text-ink-muted uppercase font-semibold block">Aktif Paketler</span>
+                  <div className="mt-0.5 flex items-center gap-1.5 flex-wrap text-[10px] font-semibold">
+                    <span className="px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-500">Ent: {organizationsList.filter(o => o.plan === 'enterprise').length}</span>
+                    <span className="px-1.5 py-0.2 rounded bg-purple-500/10 text-purple-400">Pro: {organizationsList.filter(o => o.plan === 'pro').length}</span>
+                    <span className="px-1.5 py-0.2 rounded bg-accent/10 text-accent">St: {organizationsList.filter(o => o.plan === 'starter').length}</span>
+                  </div>
+                </div>
+                <div className="bg-surface-raised/70 border border-[var(--color-hairline)] rounded p-2.5">
+                  <span className="text-[10px] text-ink-muted uppercase font-semibold block">Toplam Kişi (Rehber)</span>
+                  <div className="mt-0.5 flex items-baseline gap-1">
+                    <span className="text-base sm:text-lg font-bold text-accent">
+                      {organizationsList.reduce((acc, o) => acc + (o.total_contacts || 0), 0).toLocaleString('tr-TR')}
+                    </span>
+                    <span className="text-[10px] text-ink-muted">numara</span>
+                  </div>
+                </div>
+                <div className="bg-surface-raised/70 border border-[var(--color-hairline)] rounded p-2.5">
+                  <span className="text-[10px] text-ink-muted uppercase font-semibold block">Bağlı / Kotada Hatlar</span>
+                  <div className="mt-0.5 flex items-baseline gap-1">
+                    <span className="text-base sm:text-lg font-bold text-ok-dim">
+                      {organizationsList.reduce((acc, o) => acc + (o.connected_account_count || 0), 0)}
+                    </span>
+                    <span className="text-[10px] text-ink-muted">
+                      / {organizationsList.reduce((acc, o) => acc + (o.accounts_quota || 0), 0)} Kota
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {filteredOrganizations.length === 0 ? (
+                <p className="text-xs text-ink-muted text-center py-6">Kayıtlı firma bulunamadı.</p>
+              ) : (
+                <>
+                  {/* MOBILE CARD VIEW (block sm:hidden) */}
+                  <div className="block sm:hidden space-y-3">
+                    {filteredOrganizations.map(o => (
+                      <div
+                        key={o.id}
+                        className="bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-3 space-y-2.5"
+                      >
+                        <div className="flex items-start justify-between gap-2 border-b border-[var(--color-hairline)] pb-2">
+                          <div>
+                            <div className="font-bold text-xs sm:text-sm text-ink">{o.name}</div>
+                            <span className="font-mono text-[10px] text-ink-muted">slug: {o.slug}</span>
+                          </div>
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                              o.suspended_at
+                                ? 'bg-danger/10 text-danger'
+                                : 'bg-ok-soft text-ok-dim'
+                            }`}
+                          >
+                            {o.suspended_at ? 'Askıda' : 'Aktif'}
+                          </span>
+                        </div>
+
+                        {/* Plan selection dropdown */}
+                        <div>
+                          <label className="block text-[10px] font-semibold text-ink-muted uppercase mb-1">
+                            Üyelik Paketi
+                          </label>
+                          <select
+                            value={o.plan || 'free'}
+                            disabled={actionBusy}
+                            onChange={e => handleUpdateOrgPlan(o.id, e.target.value)}
+                            className={`w-full text-xs font-bold px-2.5 py-1.5 rounded-[var(--radius-sm)] border outline-none cursor-pointer transition ${
+                              o.plan === 'enterprise'
+                                ? 'bg-amber-500/10 text-amber-500 border-amber-500/30'
+                                : o.plan === 'pro'
+                                ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
+                                : o.plan === 'starter'
+                                ? 'bg-accent-soft text-accent border-accent/30'
+                                : 'bg-surface text-ink-soft border-[var(--color-hairline)]'
+                            }`}
+                          >
+                            <option value="free" className="bg-surface text-ink font-semibold">Ücretsiz (Free - 1 Hat / 1.000 Mesaj)</option>
+                            <option value="starter" className="bg-surface text-ink font-semibold">Başlangıç (Starter - 3 Hat / 10.000 Mesaj)</option>
+                            <option value="pro" className="bg-surface text-ink font-semibold">Profesyonel (Pro - 40 Hat / 100.000 Mesaj)</option>
+                            <option value="enterprise" className="bg-surface text-ink font-semibold">Kurumsal (Enterprise - Özel Kotasız)</option>
+                          </select>
+                        </div>
+
+                        {/* 2x2 Stats Grid */}
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="bg-surface/70 border border-[var(--color-hairline)] rounded p-2">
+                            <span className="block text-[10px] text-ink-muted font-semibold uppercase">Hat Durumu</span>
+                            <span className="font-bold text-ink">{o.connected_account_count ?? 0} / {o.accounts_quota} Kota</span>
+                          </div>
+                          <div className="bg-surface/70 border border-[var(--color-hairline)] rounded p-2">
+                            <span className="block text-[10px] text-ink-muted font-semibold uppercase">Aylık Mesaj Limiti</span>
+                            <span className="font-bold text-ink">{Number(o.monthly_message_quota || 0).toLocaleString('tr-TR')}</span>
+                          </div>
+                          <div className="bg-surface/70 border border-[var(--color-hairline)] rounded p-2">
+                            <span className="block text-[10px] text-ink-muted font-semibold uppercase">Kayıtlı Kişi</span>
+                            <span className="font-bold text-accent">{Number(o.total_contacts || 0).toLocaleString('tr-TR')}</span>
+                          </div>
+                          <div className="bg-surface/70 border border-[var(--color-hairline)] rounded p-2">
+                            <span className="block text-[10px] text-ink-muted font-semibold uppercase">Kampanya / Üye</span>
+                            <span className="font-semibold text-ink">{o.campaign_count ?? 0} Kamp. / {o.member_count ?? 0} Üye</span>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-1.5 pt-1">
+                          <button
+                            onClick={() => handleUpdateOrgQuotas(o)}
+                            disabled={actionBusy}
+                            className="flex-1 py-1 text-xs font-semibold rounded bg-surface border border-[var(--color-hairline)] text-ink hover:bg-canvas transition"
+                          >
+                            Kotaları Düzenle
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedOrg(o.name)
+                              showNotice(`Dashboard "${o.name}" firmasına filtrelendi.`)
+                            }}
+                            className="px-2.5 py-1 text-xs font-semibold rounded bg-accent-soft text-accent hover:bg-accent/20 transition"
+                          >
+                            Filtrele
+                          </button>
+                          <button
+                            onClick={() => handleToggleOrgSuspend(o)}
+                            disabled={actionBusy}
+                            className={`px-2 py-1 text-xs font-semibold rounded ${
+                              o.suspended_at
+                                ? 'bg-ok-soft text-ok-dim hover:bg-ok/20'
+                                : 'bg-danger/10 text-danger hover:bg-danger/20'
+                            }`}
+                          >
+                            {o.suspended_at ? 'Aç' : 'Askı'}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* DESKTOP TABLE VIEW (hidden sm:block) */}
+                  <div className="hidden sm:block overflow-x-auto">
+                    <table className="w-full text-left text-xs min-w-[850px]">
+                      <thead>
+                        <tr className="border-b border-[var(--color-hairline)] text-ink-muted font-semibold">
+                          <th className="pb-2">İşletme / Firma</th>
+                          <th className="pb-2">Üyelik Paketi</th>
+                          <th className="pb-2">Hat Kotası</th>
+                          <th className="pb-2">Mesaj Limiti</th>
+                          <th className="pb-2">Kayıtlı Kişi</th>
+                          <th className="pb-2">Kampanyalar</th>
+                          <th className="pb-2">Üye</th>
+                          <th className="pb-2">Durum</th>
+                          <th className="pb-2 text-right">Eylemler</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[var(--color-hairline)]">
+                        {filteredOrganizations.map(o => (
+                          <tr key={o.id} className="hover:bg-[var(--color-surface-raised)] transition">
+                            <td className="py-2.5 font-bold text-ink">
+                              <div>{o.name}</div>
+                              <span className="font-mono text-[10px] text-ink-muted font-normal">slug: {o.slug}</span>
+                            </td>
+                            <td className="py-2.5">
+                              <select
+                                value={o.plan || 'free'}
+                                disabled={actionBusy}
+                                onChange={e => handleUpdateOrgPlan(o.id, e.target.value)}
+                                className={`text-[11px] font-bold px-2 py-1 rounded border outline-none cursor-pointer transition ${
+                                  o.plan === 'enterprise'
+                                    ? 'bg-amber-500/10 text-amber-500 border-amber-500/30'
+                                    : o.plan === 'pro'
+                                    ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
+                                    : o.plan === 'starter'
+                                    ? 'bg-accent-soft text-accent border-accent/30'
+                                    : 'bg-surface text-ink-soft border-[var(--color-hairline)]'
+                                }`}
+                              >
+                                <option value="free" className="bg-surface text-ink font-semibold">Free (Ücretsiz)</option>
+                                <option value="starter" className="bg-surface text-ink font-semibold">Starter (Başlangıç)</option>
+                                <option value="pro" className="bg-surface text-ink font-semibold">Pro (Profesyonel)</option>
+                                <option value="enterprise" className="bg-surface text-ink font-semibold">Enterprise (Kurumsal)</option>
+                              </select>
+                            </td>
+                            <td className="py-2.5 font-mono text-ink">
+                              <span className="font-bold text-ok-dim">{o.connected_account_count ?? 0}</span>
+                              <span className="text-ink-muted"> / {o.accounts_quota}</span>
+                            </td>
+                            <td className="py-2.5 font-mono text-ink-soft">
+                              {Number(o.monthly_message_quota || 0).toLocaleString('tr-TR')}
+                            </td>
+                            <td className="py-2.5 font-bold text-accent">
+                              {Number(o.total_contacts || 0).toLocaleString('tr-TR')}
+                            </td>
+                            <td className="py-2.5 text-ink-muted">{o.campaign_count ?? 0}</td>
+                            <td className="py-2.5 text-ink-muted">{o.member_count ?? 0}</td>
+                            <td className="py-2.5">
+                              <span
+                                className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                                  o.suspended_at
+                                    ? 'bg-danger/10 text-danger'
+                                    : 'bg-ok-soft text-ok-dim'
+                                }`}
+                              >
+                                {o.suspended_at ? 'Askıda' : 'Aktif'}
+                              </span>
+                            </td>
+                            <td className="py-2.5 text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <button
+                                  onClick={() => handleUpdateOrgQuotas(o)}
+                                  disabled={actionBusy}
+                                  className="px-2 py-0.5 text-[11px] font-semibold rounded bg-surface border border-[var(--color-hairline)] text-ink hover:bg-canvas"
+                                  title="Kota düzenle"
+                                >
+                                  Kota
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setSelectedOrg(o.name)
+                                    showNotice(`Dashboard "${o.name}" firmasına filtrelendi.`)
+                                  }}
+                                  className="px-2 py-0.5 text-[11px] font-semibold rounded bg-accent-soft text-accent hover:bg-accent/20"
+                                  title="Filtrele"
+                                >
+                                  Filtrele
+                                </button>
+                                <button
+                                  onClick={() => handleToggleOrgSuspend(o)}
+                                  disabled={actionBusy}
+                                  className={`px-2 py-0.5 text-[11px] font-semibold rounded ${
+                                    o.suspended_at
+                                      ? 'bg-ok-soft text-ok-dim hover:bg-ok/20'
+                                      : 'bg-danger/10 text-danger hover:bg-danger/20'
+                                  }`}
+                                  title={o.suspended_at ? 'Erişimi aç' : 'Askıya al'}
+                                >
+                                  {o.suspended_at ? 'Aç' : 'Askı'}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* TAB 1: HIZLI GÖNDERİM KONSOLU */}
         {activeTab === 'quick_send' && (
@@ -1750,55 +2187,213 @@ export function LiveDashboard() {
           </div>
         )}
 
-        {/* TAB 5: KİŞİ LİSTELERİ & REHBER */}
-        {activeTab === 'contact_lists' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xs sm:text-sm font-bold text-ink">Kişi Listeleri ve Rehber Grupları</h2>
-                <p className="text-[11px] text-ink-muted">Tüm segmentler, içe aktarılan CSV'ler ve toplanan lead listeleri</p>
+        {/* TAB 5: REHBER & KAYITLI KİŞİLER (TOPLAM LİSTE) */}
+        {(activeTab === 'contacts' || (activeTab as any) === 'contact_lists') && (
+          <div className="space-y-5">
+            {/* Summary Banner */}
+            <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 sm:p-5 shadow-sm space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--color-hairline)] pb-3">
+                <div>
+                  <h2 className="text-xs sm:text-sm font-bold text-ink">Rehber ve Kayıtlı Kişiler (Toplam Numara Havuzu)</h2>
+                  <p className="text-[11px] text-ink-muted">
+                    Platformdaki tüm müşteri firmalarının kişi listeleri, segment grupları ve anlık kayıtlı telefon numaraları.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-semibold text-accent">{Number(summary.totalContacts).toLocaleString('tr-TR')} Toplam Numara</span>
+                </div>
               </div>
-              <span className="text-[11px] font-semibold text-ink-muted">{data?.contactLists.length} Liste</span>
-            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-              {data?.contactLists.map(l => (
-                <div
-                  key={l.id}
-                  className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 sm:p-4 shadow-sm flex flex-col justify-between space-y-2.5"
-                >
-                  <div>
-                    <div className="flex items-start justify-between">
-                      <h3 className="text-xs sm:text-sm font-bold text-ink">{l.name}</h3>
-                      <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded bg-surface-raised text-ink-muted">
-                        {l.source}
-                      </span>
-                    </div>
-                    <div className="mt-1.5 flex items-baseline gap-1">
-                      <span className="text-xl sm:text-2xl font-bold text-accent">{l.contact_count}</span>
-                      <span className="text-xs text-ink-muted">kayıtlı numara</span>
-                    </div>
-                    <p className="text-[10px] sm:text-[11px] text-ink-muted mt-0.5">{timeAgo(l.created_at)} oluşturuldu</p>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 pt-2 border-t border-[var(--color-hairline)]">
-                    <button
-                      onClick={() => handleOpenListContacts(l.id, l.name)}
-                      className="flex-1 py-1 text-xs font-semibold rounded bg-surface-raised text-ink hover:bg-canvas border border-[var(--color-hairline)]"
-                    >
-                      Kişileri İncele
-                    </button>
-                    <a
-                      href={`/api/canli-takip/contacts?listId=${l.id}&format=csv`}
-                      download
-                      className="px-2.5 py-1 text-xs font-semibold rounded bg-accent-soft text-accent hover:bg-accent/20"
-                      title="Listeyi CSV olarak indir"
-                    >
-                      CSV İndir
-                    </a>
+              {/* 4 Metrics Tiles */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div className="bg-surface-raised/70 border border-[var(--color-hairline)] rounded p-2.5">
+                  <span className="text-[10px] text-ink-muted uppercase font-semibold block">Toplam Numara</span>
+                  <div className="mt-0.5 flex items-baseline gap-1">
+                    <span className="text-base sm:text-lg font-bold text-ink">
+                      {Number(summary.totalContacts).toLocaleString('tr-TR')}
+                    </span>
+                    <span className="text-[10px] text-ink-muted">kayıt</span>
                   </div>
                 </div>
-              ))}
+
+                <div className="bg-surface-raised/70 border border-[var(--color-hairline)] rounded p-2.5">
+                  <span className="text-[10px] text-ink-muted uppercase font-semibold block">WhatsApp Doğrulanmış</span>
+                  <div className="mt-0.5 flex items-baseline gap-1">
+                    <span className="text-base sm:text-lg font-bold text-ok-dim">
+                      {Number(summary.validContacts ?? summary.totalContacts).toLocaleString('tr-TR')}
+                    </span>
+                    <span className="text-[10px] text-ok-dim font-medium">%99.9</span>
+                  </div>
+                </div>
+
+                <div className="bg-surface-raised/70 border border-[var(--color-hairline)] rounded p-2.5">
+                  <span className="text-[10px] text-ink-muted uppercase font-semibold block">Liste & Segment Sayısı</span>
+                  <div className="mt-0.5 flex items-baseline gap-1">
+                    <span className="text-base sm:text-lg font-bold text-ink">{data?.contactLists.length ?? 0}</span>
+                    <span className="text-[10px] text-ink-muted">grup / CSV</span>
+                  </div>
+                </div>
+
+                <div className="bg-surface-raised/70 border border-[var(--color-hairline)] rounded p-2.5">
+                  <span className="text-[10px] text-ink-muted uppercase font-semibold block">En Büyük Rehber</span>
+                  <div className="mt-0.5 truncate">
+                    <span className="text-xs sm:text-sm font-bold text-accent truncate block">
+                      {organizationsList.slice().sort((a, b) => b.total_contacts - a.total_contacts)[0]?.name || '—'}
+                    </span>
+                    <span className="text-[10px] text-ink-muted">
+                      {(organizationsList.slice().sort((a, b) => b.total_contacts - a.total_contacts)[0]?.total_contacts || 0).toLocaleString('tr-TR')} numara
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* SECTION A: KİŞİ LİSTELERİ & REHBER GRUPLARI */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xs sm:text-sm font-bold text-ink">Kişi Listeleri & Segment Grupları</h3>
+                  <p className="text-[11px] text-ink-muted">Firmalar tarafından oluşturulan veya CSV ile yüklenen listeler</p>
+                </div>
+                <span className="text-[11px] font-semibold text-ink-muted">{data?.contactLists.length} Liste</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                {data?.contactLists.map(l => (
+                  <div
+                    key={l.id}
+                    className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 sm:p-4 shadow-sm flex flex-col justify-between space-y-2.5"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-1.5">
+                        <div>
+                          <h4 className="text-xs sm:text-sm font-bold text-ink">{l.name}</h4>
+                          <span className="text-[10px] text-ink-muted">{l.org_name || 'Genel'}</span>
+                        </div>
+                        <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded bg-surface-raised text-ink-muted border border-[var(--color-hairline)]">
+                          {l.source}
+                        </span>
+                      </div>
+                      <div className="mt-2 flex items-baseline gap-1">
+                        <span className="text-xl sm:text-2xl font-bold text-accent">{l.contact_count}</span>
+                        <span className="text-xs text-ink-muted">kayıtlı numara</span>
+                      </div>
+                      <p className="text-[10px] sm:text-[11px] text-ink-muted mt-0.5">{timeAgo(l.created_at)} oluşturuldu</p>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 pt-2 border-t border-[var(--color-hairline)]">
+                      <button
+                        onClick={() => handleOpenListContacts(l.id, l.name)}
+                        className="flex-1 py-1 text-xs font-semibold rounded bg-surface-raised text-ink hover:bg-canvas border border-[var(--color-hairline)] transition"
+                      >
+                        Kişileri İncele
+                      </button>
+                      <a
+                        href={`/api/canli-takip/contacts?listId=${l.id}&format=csv`}
+                        download
+                        className="px-2.5 py-1 text-xs font-semibold rounded bg-accent-soft text-accent hover:bg-accent/20 transition"
+                        title="Listeyi CSV olarak indir"
+                      >
+                        CSV İndir
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* SECTION B: CANLI KAYITLI KİŞİLER HAVUZU */}
+            <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 sm:p-5 shadow-sm space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--color-hairline)] pb-2.5">
+                <div>
+                  <h3 className="text-xs sm:text-sm font-bold text-ink">Canlı Kayıtlı Numaralar Havuzu (Son Eklenenler)</h3>
+                  <p className="text-[11px] text-ink-muted">
+                    Sistemde doğrulanmış, WhatsApp üzerinden iletişime geçilebilir son kayıtlı kişiler
+                  </p>
+                </div>
+                <span className="text-[11px] font-semibold text-ink-muted">
+                  {filteredRecentContacts.length} Gösteriliyor
+                </span>
+              </div>
+
+              {filteredRecentContacts.length === 0 ? (
+                <p className="text-xs text-ink-muted text-center py-6">Kayıtlı kişi bulunamadı.</p>
+              ) : (
+                <>
+                  {/* MOBILE CARD VIEW (block sm:hidden) */}
+                  <div className="block sm:hidden space-y-2.5">
+                    {filteredRecentContacts.map(c => (
+                      <div
+                        key={c.id}
+                        className="bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-3 space-y-1.5"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono font-bold text-xs text-ink">{c.phone_e164}</span>
+                          <span
+                            className={`px-1.5 py-0.2 rounded text-[9px] font-semibold ${
+                              c.wa_status === 'valid'
+                                ? 'bg-ok-soft text-ok-dim'
+                                : c.wa_status === 'invalid'
+                                ? 'bg-danger/10 text-danger'
+                                : 'bg-surface text-ink-muted'
+                            }`}
+                          >
+                            {c.wa_status === 'valid' ? 'WhatsApp Onaylı' : c.wa_status || 'Bilinmiyor'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-semibold text-ink">{c.name || 'İsimsiz'}</span>
+                          <span className="text-ink-muted text-[11px]">{c.org_name || 'Genel'}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-[10px] text-ink-muted pt-0.5">
+                          <span className="font-mono">Kaynak: {c.source || 'manuel'}</span>
+                          <span>{timeAgo(c.created_at)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* DESKTOP TABLE VIEW (hidden sm:block) */}
+                  <div className="hidden sm:block overflow-x-auto">
+                    <table className="w-full text-left text-xs min-w-[700px]">
+                      <thead>
+                        <tr className="border-b border-[var(--color-hairline)] text-ink-muted font-semibold">
+                          <th className="pb-2">Telefon</th>
+                          <th className="pb-2">İsim / Açıklama</th>
+                          <th className="pb-2">İşletme / Firma</th>
+                          <th className="pb-2">Kaynak</th>
+                          <th className="pb-2">WhatsApp Durumu</th>
+                          <th className="pb-2 text-right">Kayıt Tarihi</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[var(--color-hairline)]">
+                        {filteredRecentContacts.map(c => (
+                          <tr key={c.id} className="hover:bg-[var(--color-surface-raised)] transition">
+                            <td className="py-2 font-mono font-semibold text-ink">{c.phone_e164}</td>
+                            <td className="py-2 text-ink-soft">{c.name || '—'}</td>
+                            <td className="py-2 font-semibold text-ink">{c.org_name || 'Genel'}</td>
+                            <td className="py-2 font-mono text-[10px] text-ink-muted">{c.source || '—'}</td>
+                            <td className="py-2">
+                              <span
+                                className={`px-1.5 py-0.2 rounded text-[10px] font-semibold ${
+                                  c.wa_status === 'valid'
+                                    ? 'bg-ok-soft text-ok-dim'
+                                    : c.wa_status === 'invalid'
+                                    ? 'bg-danger/10 text-danger'
+                                    : 'bg-surface-raised text-ink-muted'
+                                }`}
+                              >
+                                {c.wa_status === 'valid' ? 'Onaylı' : c.wa_status || 'bilinmiyor'}
+                              </span>
+                            </td>
+                            <td className="py-2 text-ink-muted text-right">{timeAgo(c.created_at)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
