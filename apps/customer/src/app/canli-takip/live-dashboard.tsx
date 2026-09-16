@@ -537,6 +537,46 @@ export function LiveDashboard() {
     }
   }
 
+  // Veri Talebini Onayla / Durum Güncelle
+  const handleUpdateRequestStatus = async (
+    requestId: string,
+    status: 'pending' | 'processing' | 'completed' | 'rejected',
+    currentCount?: number,
+  ) => {
+    let finalCount = currentCount
+    if (status === 'completed') {
+      const input = prompt('Bu talep için toplanan / teslim edilen kişi sayısını girin:', String(currentCount || 100))
+      if (input === null) return
+      finalCount = parseInt(input, 10) || 0
+    } else if (status === 'rejected') {
+      if (!confirm('Bu veri talebini reddetmek istediğinize emin misiniz?')) return
+    }
+
+    setActionBusy(true)
+    try {
+      const res = await fetch('/api/canli-takip/update-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requestId,
+          status,
+          contactCount: finalCount,
+        }),
+      })
+      const json = await res.json()
+      if (json.success) {
+        showNotice(json.message || 'Talep durumu başarıyla güncellendi.')
+        setTimeout(fetchData, 1500)
+      } else {
+        alert('Hata: ' + (json.error || 'İşlem başarısız'))
+      }
+    } catch (err) {
+      alert('İstek hatası: ' + (err instanceof Error ? err.message : String(err)))
+    } finally {
+      setActionBusy(false)
+    }
+  }
+
   // Kara Listeye Ekle
   const handleAddBlacklist = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -1434,17 +1474,22 @@ export function LiveDashboard() {
                   <table className="w-full text-left text-xs">
                     <thead>
                       <tr className="border-b border-[var(--color-hairline)] text-ink-muted font-semibold">
+                        <th className="pb-2">İşletme / Firma</th>
                         <th className="pb-2">Tür</th>
                         <th className="pb-2">Kategori / Sektör</th>
                         <th className="pb-2">Konum / Adres</th>
                         <th className="pb-2">Toplanan Kişi</th>
                         <th className="pb-2">Durum</th>
                         <th className="pb-2">Tarih</th>
+                        <th className="pb-2 text-right">Yönetici Onay / Eylem</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--color-hairline)]">
                       {data?.listRequests.map(r => (
-                        <tr key={r.id} className="hover:bg-[var(--color-surface-raised)]">
+                        <tr key={r.id} className="hover:bg-[var(--color-surface-raised)] transition">
+                          <td className="py-2.5 font-bold text-ink">
+                            {r.org_name || 'Genel'}
+                          </td>
                           <td className="py-2.5 font-mono text-[11px] text-ink-soft">{r.kind}</td>
                           <td className="py-2.5 font-semibold text-ink">{r.category || '—'}</td>
                           <td className="py-2.5 text-ink-muted">{r.address || (r.nationwide ? 'Tüm Türkiye' : 'Bölgesel')}</td>
@@ -1456,13 +1501,79 @@ export function LiveDashboard() {
                                   ? 'bg-ok-soft text-ok-dim'
                                   : r.status === 'processing'
                                   ? 'bg-warn/10 text-warn'
+                                  : r.status === 'rejected'
+                                  ? 'bg-danger/10 text-danger'
                                   : 'bg-surface-raised text-ink-muted'
                               }`}
                             >
-                              {r.status}
+                              {r.status === 'pending'
+                                ? 'ONAY BEKLİYOR'
+                                : r.status === 'processing'
+                                ? 'İŞLENİYOR'
+                                : r.status === 'completed'
+                                ? 'TAMAMLANDI'
+                                : 'REDDEDİLDİ'}
                             </span>
                           </td>
                           <td className="py-2.5 text-ink-muted">{timeAgo(r.created_at)}</td>
+                          <td className="py-2.5 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {r.status === 'pending' && (
+                                <>
+                                  <button
+                                    onClick={() => handleUpdateRequestStatus(r.id, 'processing')}
+                                    disabled={actionBusy}
+                                    className="px-2.5 py-1 text-xs font-semibold rounded bg-ok-soft text-ok-dim hover:bg-ok-soft/80 transition"
+                                  >
+                                    Onayla & İşle
+                                  </button>
+                                  <button
+                                    onClick={() => handleUpdateRequestStatus(r.id, 'rejected')}
+                                    disabled={actionBusy}
+                                    className="px-2 py-1 text-xs font-semibold rounded bg-danger/10 text-danger hover:bg-danger/20 transition"
+                                  >
+                                    Reddet
+                                  </button>
+                                </>
+                              )}
+                              {r.status === 'processing' && (
+                                <>
+                                  <button
+                                    onClick={() => handleUpdateRequestStatus(r.id, 'completed', r.contact_count)}
+                                    disabled={actionBusy}
+                                    className="px-2.5 py-1 text-xs font-semibold rounded bg-accent text-accent-ink hover:bg-accent-dim transition"
+                                  >
+                                    Tamamlandı Yap
+                                  </button>
+                                  <button
+                                    onClick={() => handleUpdateRequestStatus(r.id, 'rejected')}
+                                    disabled={actionBusy}
+                                    className="px-2 py-1 text-xs font-semibold rounded bg-danger/10 text-danger hover:bg-danger/20 transition"
+                                  >
+                                    Reddet
+                                  </button>
+                                </>
+                              )}
+                              {r.status === 'completed' && (
+                                <button
+                                  onClick={() => handleUpdateRequestStatus(r.id, 'processing', r.contact_count)}
+                                  disabled={actionBusy}
+                                  className="px-2 py-1 text-xs font-semibold rounded bg-surface-raised text-ink-soft hover:bg-canvas transition"
+                                >
+                                  Tekrar Aç
+                                </button>
+                              )}
+                              {r.status === 'rejected' && (
+                                <button
+                                  onClick={() => handleUpdateRequestStatus(r.id, 'pending')}
+                                  disabled={actionBusy}
+                                  className="px-2 py-1 text-xs font-semibold rounded bg-surface-raised text-ink-soft hover:bg-canvas transition"
+                                >
+                                  Yeniden Aç
+                                </button>
+                              )}
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
