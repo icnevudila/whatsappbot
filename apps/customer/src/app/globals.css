@@ -1239,8 +1239,103 @@ h3 {
 .wb-wa-menu-item:focus-visible {
   background: #f5f6f6;
 }
-.wb-wa-menu-item:disabled {
-  opacity: 0.5;
+.wb-wa-menu-sep {
+  height: 1px;
+  margin: 6px 0;
+  background: #e9edef;
+}
+.wb-wa-org-chip {
+  display: inline-flex;
+  max-width: 10rem;
+  align-items: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: 999px;
+  background: #e7f8f2;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #008069;
+}
+@media (min-width: 480px) {
+  .wb-wa-org-chip {
+    max-width: 14rem;
+  }
+}
+.wb-wa-faq-cta {
+  display: flex;
+  justify-content: stretch;
+  padding: 8px 12px 12px;
+}
+@media (min-width: 640px) {
+  .wb-wa-faq-cta {
+    justify-content: flex-end;
+  }
+}
+.wb-wa-faq-cta .wb-wa-submit,
+.wb-empty .wb-wa-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 11rem;
+  padding: 0 18px !important;
+}
+.wb-wa-faq-tag {
+  display: inline-flex;
+  margin-bottom: 6px;
+  border-radius: 999px;
+  background: #e7f8f2;
+  padding: 3px 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #008069;
+}
+.wb-wa-faq-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: #fff;
+  border-top: 1px solid #e9edef;
+  border-bottom: 1px solid #e9edef;
+}
+.wb-wa-faq-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 14px 12px 14px 16px;
+  border-bottom: 1px solid #e9edef;
+}
+.wb-wa-faq-item:last-child {
+  border-bottom: 0;
+}
+.wb-wa-faq-main {
+  min-width: 0;
+  flex: 1;
+}
+.wb-wa-faq-q {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #111b21;
+}
+.wb-wa-faq-a {
+  margin: 6px 0 0;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: #667781;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.wb-wa-faq-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 2px;
 }
 .wb-wa-menu-item.is-danger {
   color: #e53935;
@@ -1297,6 +1392,114 @@ h3 {
   align-items: center;
   gap: 6px;
   margin-left: auto;
+}
+.wb-wa-toolbar .wb-wa-icon-btn {
+  width: 36px;
+  height: 36px;
+  background: #fff;
+  border: 1px solid #e9edef;
+  color: #54656f;
+  box-shadow: 0 1px 1px rgba(11, 20, 26, 0.04);
+}
+.wb-wa-toolbar .wb-wa-icon-btn:hover {
+  background: #fff;
+  border-color: #d1d7db;
+  color: #111b21;
+}
+.wb-wa-bulk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #e7f8f2;
+  border-bottom: 1px solid #d1f0e4;
+}
+.wb-wa-bulk-count {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #008069;
+  font-variant-numeric: tabular-nums;
+}
+.wb-wa-group-picker {
+  position: relative;
+  min-width: 140px;
+  flex: 1 1 160px;
+}
+.wb-wa-group-picker-btn {
+  display: flex;
+  width: 100%;
+  height: 36px;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
+  padding: 0 12px 0 14px;
+  box-shadow: 0 1px 1px rgba(11, 20, 26, 0.04);
+  color: #111b21;
+  cursor: pointer;
+  text-align: left;
+}
+.wb-wa-group-picker-btn:hover:not(:disabled) {
+  background: #f7f8fa;
+}
+.wb-wa-group-picker-btn--field {
+  border: 1px solid #e9edef;
+  box-shadow: none;
+  height: 42px;
+  border-radius: 10px;
+  padding: 0 12px 0 14px;
+  font-size: 14px;
+}
+.wb-wa-group-picker-btn--field:hover:not(:disabled) {
+  border-color: #d1d7db;
+  background: #f7f8fa;
+}
+.wb-wa-group-picker-btn--field[aria-expanded='true'] {
+  border-color: #00a884;
+  background: #fff;
+}
+.wb-wa-group-picker-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.wb-wa-group-picker-label {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+.wb-wa-group-picker-caret {
+  flex-shrink: 0;
+  color: #667781;
+  transform: rotate(90deg);
+}
+.wb-wa-group-picker-btn[aria-expanded='true'] .wb-wa-group-picker-caret {
+  transform: rotate(-90deg);
+}
+.wb-wa-group-picker-menu {
+  max-height: min(52dvh, 320px);
+  overflow-y: auto;
+  padding: 6px 0;
+}
+.wb-wa-group-picker-menu .wb-wa-menu-item {
+  gap: 10px;
+}
+.wb-wa-group-picker-menu .wb-wa-menu-item.is-active {
+  background: #e7f8f2;
+  color: #008069;
+  font-weight: 600;
+}
+.wb-wa-avatar--sm {
+  width: 32px;
+  height: 32px;
+  font-size: 12px;
 }
 .wb-wa-toolbar .wb-wa-chip {
   background: #fff;

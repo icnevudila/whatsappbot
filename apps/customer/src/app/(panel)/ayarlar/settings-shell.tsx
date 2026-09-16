@@ -5,11 +5,13 @@ export function SettingsPageFrame({
   title,
   description,
   action,
+  titleEnd,
   children,
 }: {
   title: string
   description?: string
   action?: ReactNode
+  titleEnd?: ReactNode
   children: ReactNode
   wide?: boolean
 }) {
@@ -19,6 +21,7 @@ export function SettingsPageFrame({
         title={title}
         description={description}
         action={action}
+        titleEnd={titleEnd}
         backHref="/ayarlar"
         backLabel="Ayarlar"
       />

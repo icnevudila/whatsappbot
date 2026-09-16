@@ -3,7 +3,6 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 import {
   Card,
-  CardHeader,
   EmptyState,
   PageHeader,
   Pagination,
@@ -22,12 +21,10 @@ import {
 } from '@/lib/pagination'
 import { contactSearchOrFilter, sanitizeContactSearch } from './contact-search'
 import { ContactsBoard, type ContactRow } from './contacts-board'
+import { ContactsToolbarMenu } from './contacts-toolbar-menu'
 import { ListActions } from './list-actions'
-import { NewGroupButton } from './new-group-form'
-import { AddPersonButton } from './add-person-modal'
-import { ListRequestButton } from './list-request-modal'
 import { RehberSyncButton } from './rehber-sync-modal'
-import { VerifyAllButton, ContactsHeaderMenu } from './verify-all-button'
+import { VerifyAllButton } from './verify-all-button'
 import { getSetupProgress } from '@/lib/setup-progress'
 import { SetupBanner } from '../setup-banner'
 import { waAvatarColor, waAvatarLetters } from '@/lib/wa-avatar'
@@ -185,9 +182,22 @@ export default async function ContactsPage({
           </SegmentLink>
         </div>
         <div className="wb-wa-toolbar-actions">
-          <ListRequestButton />
-          <AddPersonButton groups={lists.map((list) => ({ id: list.id, name: list.name }))} />
-          <NewGroupButton />
+          {view === 'defter' && total > 0 ? (
+            <VerifyAllButton
+              total={total}
+              validCount={validCount}
+              invalidCount={invalidCount}
+              unknownCount={unknownCount}
+              currentStatus={statusFilter}
+              searchQuery={searchQuery}
+            />
+          ) : null}
+          <ContactsToolbarMenu
+            groups={lists.map((list) => ({ id: list.id, name: list.name }))}
+            contactsTab={view === 'defter'}
+            contactsDisabled={total === 0}
+            whatsappCount={whatsappCount}
+          />
         </div>
       </div>
 
@@ -199,7 +209,7 @@ export default async function ContactsPage({
             <EmptyState
               tone="people"
               title="Grup yok"
-              description="+ Grup ile Excel yükleyin veya boş açın."
+              description="Diğer menüsünden Grup Ekle ile Excel yükleyin veya boş açın."
             />
           ) : (
             <ul className="wb-inbox-list wb-inbox-list--plain">
@@ -250,29 +260,6 @@ export default async function ContactsPage({
         </>
       ) : (
         <Card>
-          <CardHeader
-            title="Kişiler"
-            subtitle={
-              searchQuery
-                ? `“${searchQuery}” · ${matchTotal} sonuç / ${total} numara`
-                : `${total} numara · ${validCount} WhatsApp'ta var · ${invalidCount} yok`
-            }
-            action={
-              <div className="flex shrink-0 items-center gap-1">
-                {total > 0 ? (
-                  <VerifyAllButton
-                    total={total}
-                    validCount={validCount}
-                    invalidCount={invalidCount}
-                    unknownCount={unknownCount}
-                    currentStatus={statusFilter}
-                    searchQuery={searchQuery}
-                  />
-                ) : null}
-                <ContactsHeaderMenu disabled={total === 0} whatsappCount={whatsappCount} />
-              </div>
-            }
-          />
           <ContactsBoard
             contacts={contacts}
             groups={groups}

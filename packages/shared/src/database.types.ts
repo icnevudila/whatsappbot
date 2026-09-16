@@ -1422,6 +1422,60 @@ export type Database = {
           },
         ]
       }
+      org_faqs: {
+        Row: {
+          answer: string
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          org_id: string
+          product_id: string | null
+          question: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          answer: string
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean
+          org_id: string
+          product_id?: string | null
+          question: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          answer?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean
+          org_id?: string
+          product_id?: string | null
+          question?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_faqs_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_faqs_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "org_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_members: {
         Row: {
           created_at: string

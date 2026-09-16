@@ -65,6 +65,14 @@ export const SETTINGS_SECTIONS: {
     group: 'İş',
   },
   {
+    href: '/ayarlar/sss',
+    title: 'Sık sorulan sorular',
+    description: 'İşletme soru-cevapları (AI yanıt için)',
+    icon: 'help',
+    color: '#00a5f4',
+    group: 'İş',
+  },
+  {
     href: '/ayarlar/otomatik-yanit',
     title: 'Otomatik Yanıt',
     description: 'Önerilen cevaplar ve yapay zeka yanıtlama',
