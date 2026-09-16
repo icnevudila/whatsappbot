@@ -77,6 +77,24 @@ type CreativeItem = {
   created_at: string
   org_name?: string
   org_id?: string
+  source?: string
+  generation_type?: string
+  payload?: {
+    brief?: string
+    originalPrompt?: string
+    generatedPrompt?: string
+    instruction?: string
+    style?: string
+    aspect?: string
+    provider?: string
+    brandKit?: {
+      name?: string
+      tone?: string
+      colors?: Record<string, string>
+    }
+    cost?: { provider?: string; imageCount?: number }
+    [key: string]: unknown
+  }
 }
 
 type MessageLog = {
@@ -202,16 +220,6 @@ function timeAgo(dateString: string | null | undefined): string {
   return `${Math.floor(hr / 24)} gün önce`
 }
 
-function formatClock(dateString: string | null | undefined): string {
-  if (!dateString) return ''
-  try {
-    const d = new Date(dateString)
-    return d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-  } catch {
-    return ''
-  }
-}
-
 export function LiveDashboard() {
   const [data, setData] = useState<FeedData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -259,6 +267,9 @@ export function LiveDashboard() {
 
   // Job JSON Detail Modal
   const [inspectedJob, setInspectedJob] = useState<JobItem | null>(null)
+
+  // Creative JSON & Prompt Detail Modal
+  const [inspectedCreative, setInspectedCreative] = useState<CreativeItem | null>(null)
 
   const showNotice = (msg: string) => {
     setActionNotice(msg)
@@ -517,7 +528,7 @@ export function LiveDashboard() {
       const json = await res.json()
       if (json.success) {
         showNotice(json.message || 'Talep durumu başarıyla güncellendi.')
-        setTimeout(fetchData, 1500)
+        setTimeout(fetchData, 1000)
       } else {
         alert('Hata: ' + (json.error || 'İşlem başarısız'))
       }
@@ -670,9 +681,9 @@ export function LiveDashboard() {
   if (loading && !data) {
     return (
       <div className="min-h-screen bg-[var(--color-canvas)] flex flex-col items-center justify-center p-4">
-        <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-sm font-semibold text-ink-soft">Yönetici Paneli Yükleniyor...</p>
-        <p className="text-xs text-ink-muted mt-1">Baileys VPS ve PostgreSQL bağlantısı kuruluyor.</p>
+        <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin mb-3" />
+        <p className="text-xs sm:text-sm font-semibold text-ink-soft">Yönetici Paneli Yükleniyor...</p>
+        <p className="text-[11px] text-ink-muted mt-1">Baileys VPS ve PostgreSQL bağlantısı kuruluyor.</p>
       </div>
     )
   }
@@ -696,43 +707,43 @@ export function LiveDashboard() {
     <div className="min-h-screen bg-[var(--color-canvas)] text-[var(--color-ink)] flex flex-col antialiased selection:bg-accent/20">
       {/* Top Floating Notification Banner */}
       {actionNotice && (
-        <div className="sticky top-0 z-50 bg-accent text-accent-ink px-4 py-2.5 text-center text-xs sm:text-sm font-semibold shadow-md flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-2">
+        <div className="sticky top-0 z-50 bg-accent text-accent-ink px-3 py-2 text-center text-xs font-semibold shadow-md flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-2">
           <span>{actionNotice}</span>
         </div>
       )}
 
-      {/* Main Header Bar */}
-      <header className="sticky top-0 z-40 bg-[var(--color-surface)]/95 backdrop-blur-md border-b border-[var(--color-hairline)] px-4 sm:px-6 py-3">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="p-1.5 rounded-[var(--radius-sm)] bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] flex items-center justify-center">
-              <LogoMark className="w-6 h-6 text-accent" />
+      {/* Main Header Bar - Mobile Optimized, No Flashy Badges */}
+      <header className="sticky top-0 z-40 bg-[var(--color-surface)]/95 backdrop-blur-md border-b border-[var(--color-hairline)] px-3 sm:px-6 py-2 sm:py-3">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1 sm:p-1.5 rounded-[var(--radius-sm)] bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] flex items-center justify-center">
+              <LogoMark className="w-5 h-5 sm:w-6 sm:h-6 text-accent" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-sm tracking-tight text-ink">{BRAND_NAME}</span>
-                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-accent/10 text-accent border border-accent/20">
-                  FULL+ ADMIN PACK
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-xs sm:text-sm tracking-tight text-ink">{BRAND_NAME}</span>
+                <span className="text-[10px] font-mono font-medium px-1.5 py-0.2 rounded bg-[var(--color-surface-raised)] text-ink-muted border border-[var(--color-hairline)]">
+                  Operasyon
                 </span>
               </div>
-              <p className="text-[11px] text-ink-muted">Tüm Altyapı, Baileys Hatları, Kampanya ve Lead Operasyonu</p>
+              <p className="text-[10px] sm:text-[11px] text-ink-muted">Canlı Sistem & Gönderim İzleme</p>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             {/* Organization Filter Selector */}
             {organizationsList.length > 0 && (
-              <div className="flex items-center gap-1.5 bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] px-2.5 py-1">
-                <span className="text-[11px] text-ink-muted font-medium">İşletme:</span>
+              <div className="flex items-center gap-1 bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] px-2 py-1">
+                <span className="text-[10px] text-ink-muted font-medium">İşletme:</span>
                 <select
                   value={selectedOrg}
                   onChange={e => setSelectedOrg(e.target.value)}
-                  className="bg-transparent text-xs font-semibold text-ink outline-none cursor-pointer"
+                  className="bg-transparent text-[11px] font-semibold text-ink outline-none cursor-pointer"
                 >
-                  <option value="all">Tüm İşletmeler ({organizationsList.length})</option>
+                  <option value="all">Tümü ({organizationsList.length})</option>
                   {organizationsList.map(o => (
                     <option key={o.id} value={o.name}>
-                      {o.name} ({o.member_count} üye)
+                      {o.name}
                     </option>
                   ))}
                 </select>
@@ -743,50 +754,50 @@ export function LiveDashboard() {
             <button
               onClick={handleRestartService}
               disabled={actionBusy}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] text-xs font-semibold bg-danger/10 text-danger border border-danger/20 hover:bg-danger/15 transition disabled:opacity-50"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-[var(--radius-sm)] text-[11px] font-semibold bg-danger/10 text-danger border border-danger/20 hover:bg-danger/15 transition disabled:opacity-50"
               title="Hetzner VPS üzerindeki Baileys Docker konteynerini yeniden başlatır"
             >
-              Baileys Restart
+              Restart
             </button>
 
             {/* Quick Action: Reconnect Lines */}
             <button
               onClick={handleReconnectAll}
               disabled={actionBusy}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] text-xs font-semibold bg-accent-soft text-accent border border-accent/20 hover:bg-accent/15 transition disabled:opacity-50"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-[var(--radius-sm)] text-[11px] font-semibold bg-accent-soft text-accent border border-accent/20 hover:bg-accent/15 transition disabled:opacity-50"
               title="Tüm hatların WhatsApp bağlantısını tazeler"
             >
-              Hatları Senkronize Et
+              Senkronize Et
             </button>
 
             {/* Quick Action: Clear Stuck Jobs */}
             <button
               onClick={handleClearStuckJobs}
               disabled={actionBusy}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] text-xs font-semibold bg-[var(--color-surface-raised)] text-ink-soft border border-[var(--color-hairline)] hover:bg-canvas transition disabled:opacity-50"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-[var(--radius-sm)] text-[11px] font-semibold bg-[var(--color-surface-raised)] text-ink-soft border border-[var(--color-hairline)] hover:bg-canvas transition disabled:opacity-50"
               title="Takılı kalan arka plan işlerini temizler"
             >
-              İşleri Temizle
+              Temizle
             </button>
 
             {/* Auto Refresh Toggle */}
             <button
               onClick={() => setAutoRefresh(!autoRefresh)}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-semibold border transition ${
+              className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-[var(--radius-sm)] text-[11px] font-semibold border transition ${
                 autoRefresh
                   ? 'bg-ok-soft text-ok-dim border-ok-dim/20'
                   : 'bg-[var(--color-surface-raised)] text-ink-muted border-[var(--color-hairline)]'
               }`}
             >
-              <span className={`w-2 h-2 rounded-full ${autoRefresh ? 'bg-ok animate-pulse' : 'bg-ink-muted'}`} />
-              {autoRefresh ? 'Canlı 5s' : 'Duraklatıldı'}
+              <span className={`w-1.5 h-1.5 rounded-full ${autoRefresh ? 'bg-ok animate-pulse' : 'bg-ink-muted'}`} />
+              <span>{autoRefresh ? 'Canlı' : 'Durduruldu'}</span>
             </button>
 
             {/* Logout */}
             <button
               onClick={handleLogout}
               disabled={loggingOut}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium text-ink-muted hover:text-danger hover:bg-danger/5 transition"
+              className="inline-flex items-center px-2 py-1 rounded-[var(--radius-sm)] text-[11px] font-medium text-ink-muted hover:text-danger transition"
               title="Yönetici oturumunu kapat"
             >
               Çıkış
@@ -796,87 +807,87 @@ export function LiveDashboard() {
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
-        {/* KPI Dashboard Cards Grid */}
-        <section className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 space-y-4 sm:space-y-6">
+        {/* KPI Dashboard Cards Grid - Mobile Tight & Proportionate */}
+        <section className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-3">
           {/* Card 1: Baileys Worker */}
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 shadow-sm flex flex-col justify-between">
-            <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Baileys VPS</span>
-            <div className="mt-2 flex items-baseline gap-1">
-              <span className="text-xl font-bold text-ink">{worker?.live ?? 0}</span>
-              <span className="text-xs text-ink-muted">/ {worker?.tracked ?? 0} hat</span>
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3.5 shadow-sm flex flex-col justify-between">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Baileys VPS</span>
+            <div className="mt-1 sm:mt-2 flex items-baseline gap-1">
+              <span className="text-base sm:text-lg font-bold text-ink">{worker?.live ?? 0}</span>
+              <span className="text-[10px] sm:text-xs text-ink-muted">/ {worker?.tracked ?? 0} hat</span>
             </div>
-            <span className="text-[10px] text-ok-dim font-medium mt-1">
+            <span className="text-[9px] sm:text-[10px] text-ok-dim font-medium mt-0.5">
               {worker ? `Aktif (${worker.meta?.uptimeSeconds ? Math.floor(worker.meta.uptimeSeconds / 60) + ' dk' : 'canlı'})` : 'Kopuk'}
             </span>
           </div>
 
           {/* Card 2: Contacts */}
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 shadow-sm flex flex-col justify-between">
-            <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Toplam Kişi</span>
-            <div className="mt-2 text-xl font-bold text-ink">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3.5 shadow-sm flex flex-col justify-between">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Toplam Kişi</span>
+            <div className="mt-1 sm:mt-2 text-base sm:text-lg font-bold text-ink">
               {Number(summary.totalContacts).toLocaleString('tr-TR')}
             </div>
-            <span className="text-[10px] text-accent font-medium mt-1">Rehber ve Lead Havuzu</span>
+            <span className="text-[9px] sm:text-[10px] text-accent font-medium mt-0.5">Rehber & Lead</span>
           </div>
 
           {/* Card 3: Today Inbound */}
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 shadow-sm flex flex-col justify-between">
-            <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Bugün Gelen</span>
-            <div className="mt-2 text-xl font-bold text-success">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3.5 shadow-sm flex flex-col justify-between">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Bugün Gelen</span>
+            <div className="mt-1 sm:mt-2 text-base sm:text-lg font-bold text-success">
               {summary.todayInbound}
             </div>
-            <span className="text-[10px] text-ink-muted mt-1">Gelen sohbetler</span>
+            <span className="text-[9px] sm:text-[10px] text-ink-muted mt-0.5">Gelen sohbetler</span>
           </div>
 
           {/* Card 4: Today Outbound */}
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 shadow-sm flex flex-col justify-between">
-            <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Bugün Giden</span>
-            <div className="mt-2 text-xl font-bold text-accent">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3.5 shadow-sm flex flex-col justify-between">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Bugün Giden</span>
+            <div className="mt-1 sm:mt-2 text-base sm:text-lg font-bold text-accent">
               {summary.todayOutbound}
             </div>
-            <span className="text-[10px] text-ink-muted mt-1">Gönderilen mesaj</span>
+            <span className="text-[9px] sm:text-[10px] text-ink-muted mt-0.5">Gönderilen mesaj</span>
           </div>
 
           {/* Card 5: Queued Targets */}
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 shadow-sm flex flex-col justify-between">
-            <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Gönderim Sırası</span>
-            <div className="mt-2 text-xl font-bold text-warn">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3.5 shadow-sm flex flex-col justify-between">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Gönderim Sırası</span>
+            <div className="mt-1 sm:mt-2 text-base sm:text-lg font-bold text-warn">
               {summary.queuedMessages}
             </div>
-            <span className="text-[10px] text-ink-muted mt-1">Kuyrukta bekleyen</span>
+            <span className="text-[9px] sm:text-[10px] text-ink-muted mt-0.5">Bekleyen hedef</span>
           </div>
 
           {/* Card 6: Active Campaigns */}
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 shadow-sm flex flex-col justify-between">
-            <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Kampanyalar</span>
-            <div className="mt-2 text-xl font-bold text-ink">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3.5 shadow-sm flex flex-col justify-between">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Kampanyalar</span>
+            <div className="mt-1 sm:mt-2 text-base sm:text-lg font-bold text-ink">
               {summary.activeCampaigns}
             </div>
-            <span className="text-[10px] text-ink-muted mt-1">Çalışan gönderim</span>
+            <span className="text-[9px] sm:text-[10px] text-ink-muted mt-0.5">Çalışan gönderim</span>
           </div>
 
           {/* Card 7: Lead Requests */}
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 shadow-sm flex flex-col justify-between">
-            <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Veri Talepleri</span>
-            <div className="mt-2 text-xl font-bold text-ink">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3.5 shadow-sm flex flex-col justify-between">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Veri Talepleri</span>
+            <div className="mt-1 sm:mt-2 text-base sm:text-lg font-bold text-ink">
               {summary.pendingDataRequests}
             </div>
-            <span className="text-[10px] text-ink-muted mt-1">Bekleyen talep</span>
+            <span className="text-[9px] sm:text-[10px] text-ink-muted mt-0.5">Bekleyen talep</span>
           </div>
 
           {/* Card 8: Blacklist Count */}
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 shadow-sm flex flex-col justify-between">
-            <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Kara Liste</span>
-            <div className="mt-2 text-xl font-bold text-danger">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3.5 shadow-sm flex flex-col justify-between">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Kara Liste</span>
+            <div className="mt-1 sm:mt-2 text-base sm:text-lg font-bold text-danger">
               {summary.blacklistedCount ?? 0}
             </div>
-            <span className="text-[10px] text-ink-muted mt-1">Engellenen numara</span>
+            <span className="text-[9px] sm:text-[10px] text-ink-muted mt-0.5">Engellenen numara</span>
           </div>
         </section>
 
         {/* Search & Module Tabs Bar */}
-        <section className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2">
+        <section className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-1.5 sm:p-2">
           {/* Module Tab Buttons */}
           <div className="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
             {[
@@ -885,7 +896,7 @@ export function LiveDashboard() {
               { id: 'queue', label: 'Gönderim Sırası', badge: summary.queuedMessages },
               { id: 'data_requests', label: 'Veri Talepleri', badge: data?.listRequests.length },
               { id: 'contact_lists', label: 'Kişi Listeleri', badge: data?.contactLists.length },
-              { id: 'ai_studio', label: 'Yapay Zeka & Afiş', badge: data?.creatives.length },
+              { id: 'ai_studio', label: 'ChatGPT & Afiş Üretimi', badge: data?.creatives.length },
               { id: 'blacklist', label: 'Kara Liste', badge: summary.blacklistedCount },
               { id: 'baileys', label: 'Baileys & Hatlar', badge: data?.accounts.length },
               { id: 'messages', label: 'Canlı Mesajlar', badge: data?.messages.length },
@@ -894,7 +905,7 @@ export function LiveDashboard() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`px-3 py-1.5 rounded-[var(--radius-sm)] text-xs font-semibold whitespace-nowrap transition flex items-center gap-1.5 ${
+                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-[var(--radius-sm)] text-[11px] sm:text-xs font-semibold whitespace-nowrap transition flex items-center gap-1.5 ${
                   activeTab === tab.id
                     ? 'bg-accent text-accent-ink shadow-sm'
                     : 'text-ink-soft hover:bg-[var(--color-surface-raised)]'
@@ -903,7 +914,7 @@ export function LiveDashboard() {
                 <span>{tab.label}</span>
                 {tab.badge !== null && tab.badge !== undefined && tab.badge > 0 && (
                   <span
-                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
+                    className={`text-[9px] sm:text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
                       activeTab === tab.id
                         ? 'bg-white/20 text-white'
                         : 'bg-[var(--color-surface-raised)] text-ink-muted'
@@ -917,13 +928,13 @@ export function LiveDashboard() {
           </div>
 
           {/* Quick Search Input */}
-          <div className="relative min-w-[200px] md:w-64">
+          <div className="relative min-w-[180px] md:w-64">
             <input
               type="text"
               placeholder="Numara, mesaj, isim ara..."
               value={globalSearch}
               onChange={e => setGlobalSearch(e.target.value)}
-              className="w-full bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] px-3 py-1.5 text-xs text-ink placeholder:text-ink-muted outline-none focus:border-accent"
+              className="w-full bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] px-2.5 py-1 text-xs text-ink placeholder:text-ink-muted outline-none focus:border-accent"
             />
             {globalSearch && (
               <button
@@ -936,34 +947,32 @@ export function LiveDashboard() {
           </div>
         </section>
 
-        {/* TAB CONTENT MODULES */}
-
-        {/* 1. HIZLI GÖNDERİM KONSOLU */}
+        {/* TAB 1: HIZLI GÖNDERİM KONSOLU */}
         {activeTab === 'quick_send' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
             {/* Sender Form */}
-            <div className="lg:col-span-2 bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-5 shadow-sm space-y-4">
-              <div className="flex items-center justify-between border-b border-[var(--color-hairline)] pb-3">
+            <div className="lg:col-span-2 bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-4 sm:p-5 shadow-sm space-y-3 sm:space-y-4">
+              <div className="flex items-center justify-between border-b border-[var(--color-hairline)] pb-2.5">
                 <div>
-                  <h2 className="text-sm font-bold text-ink">Doğrudan WhatsApp Mesajı Gönder</h2>
-                  <p className="text-xs text-ink-muted">
+                  <h2 className="text-xs sm:text-sm font-bold text-ink">Doğrudan WhatsApp Mesajı Gönder</h2>
+                  <p className="text-[11px] text-ink-muted">
                     Herhangi bir hatta anında tekli veya test mesajı gönderin. Öncelik 1 olarak Baileys VPS motoruna iletilir.
                   </p>
                 </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-accent/10 text-accent font-semibold">
+                <span className="text-[9px] sm:text-[10px] font-mono px-2 py-0.5 rounded bg-accent/10 text-accent font-semibold">
                   ÖNCELİK: 1 (ANINDA)
                 </span>
               </div>
 
-              <form onSubmit={handleSendQuickMessage} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <form onSubmit={handleSendQuickMessage} className="space-y-3 sm:space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Sender Account */}
                   <div>
-                    <label className="block text-xs font-semibold text-ink-soft mb-1.5">Gönderici WhatsApp Hattı</label>
+                    <label className="block text-[11px] font-semibold text-ink-soft mb-1">Gönderici WhatsApp Hattı</label>
                     <select
                       value={quickAccountId}
                       onChange={e => setQuickAccountId(e.target.value)}
-                      className="w-full bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] px-3 py-2 text-xs font-semibold text-ink outline-none focus:border-accent"
+                      className="w-full bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] px-2.5 py-1.5 text-xs font-semibold text-ink outline-none focus:border-accent"
                     >
                       {filteredAccounts?.map(a => (
                         <option key={a.id} value={a.id} disabled={a.status !== 'connected'}>
@@ -975,14 +984,14 @@ export function LiveDashboard() {
 
                   {/* Target Phone */}
                   <div>
-                    <label className="block text-xs font-semibold text-ink-soft mb-1.5">Alıcı Telefon Numarası (E.164)</label>
-                    <div className="flex gap-2">
+                    <label className="block text-[11px] font-semibold text-ink-soft mb-1">Alıcı Telefon Numarası (E.164)</label>
+                    <div className="flex gap-1.5">
                       <input
                         type="text"
                         placeholder="+905428212205"
                         value={quickPhone}
                         onChange={e => setQuickPhone(e.target.value)}
-                        className="flex-1 bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] px-3 py-2 text-xs font-mono text-ink outline-none focus:border-accent"
+                        className="flex-1 bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] px-2.5 py-1.5 text-xs font-mono text-ink outline-none focus:border-accent"
                       />
                       <button
                         type="button"
@@ -998,7 +1007,7 @@ export function LiveDashboard() {
 
                 {/* Optional Media URL */}
                 <div>
-                  <label className="block text-xs font-semibold text-ink-soft mb-1.5">
+                  <label className="block text-[11px] font-semibold text-ink-soft mb-1">
                     Görsel / Medya URL <span className="text-ink-muted font-normal">(İsteğe Bağlı)</span>
                   </label>
                   <input
@@ -1006,33 +1015,33 @@ export function LiveDashboard() {
                     placeholder="https://example.com/kampanya-afisi.jpg"
                     value={quickMediaUrl}
                     onChange={e => setQuickMediaUrl(e.target.value)}
-                    className="w-full bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] px-3 py-2 text-xs text-ink outline-none focus:border-accent"
+                    className="w-full bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] px-2.5 py-1.5 text-xs text-ink outline-none focus:border-accent"
                   />
                 </div>
 
                 {/* Message Body */}
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-semibold text-ink-soft">Mesaj Metni</label>
-                    <span className="text-[11px] text-ink-muted font-mono">{quickMessage.length} karakter</span>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[11px] font-semibold text-ink-soft">Mesaj Metni</label>
+                    <span className="text-[10px] text-ink-muted font-mono">{quickMessage.length} karakter</span>
                   </div>
                   <textarea
-                    rows={5}
+                    rows={4}
                     placeholder="Merhaba! Mesajify üzerinden size özel hazırladığımız kampanya detayları..."
                     value={quickMessage}
                     onChange={e => setQuickMessage(e.target.value)}
-                    className="w-full bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-3 text-xs text-ink outline-none focus:border-accent resize-y"
+                    className="w-full bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2.5 text-xs text-ink outline-none focus:border-accent resize-y"
                   />
                 </div>
 
-                <div className="flex items-center justify-between pt-2">
-                  <div className="text-[11px] text-ink-muted">
+                <div className="flex items-center justify-between pt-1">
+                  <div className="text-[10px] sm:text-[11px] text-ink-muted">
                     Baileys VPS üzerinden gerçek zamanlı gönderim yapılır.
                   </div>
                   <button
                     type="submit"
                     disabled={quickSending || !quickPhone.trim() || !quickMessage.trim()}
-                    className="px-5 py-2 rounded-[var(--radius-sm)] text-xs font-semibold bg-accent text-accent-ink hover:bg-accent-dim transition disabled:opacity-50 shadow-sm"
+                    className="px-4 py-1.5 rounded-[var(--radius-sm)] text-xs font-semibold bg-accent text-accent-ink hover:bg-accent-dim transition disabled:opacity-50 shadow-sm"
                   >
                     {quickSending ? 'Gönderiliyor...' : 'Hemen WhatsApp’tan Gönder'}
                   </button>
@@ -1041,33 +1050,33 @@ export function LiveDashboard() {
             </div>
 
             {/* AI Assistant Quick Writer Sidecard */}
-            <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-5 shadow-sm space-y-4 flex flex-col justify-between">
-              <div className="space-y-3">
+            <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-4 sm:p-5 shadow-sm space-y-3 flex flex-col justify-between">
+              <div className="space-y-2.5">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-ink">ChatGPT Pazarlama Asistanı</span>
                   <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-accent/10 text-accent font-semibold">AI</span>
                 </div>
-                <p className="text-xs text-ink-muted leading-relaxed">
+                <p className="text-[11px] text-ink-muted leading-relaxed">
                   Bir ürün veya duyuru yazın; ChatGPT doğrudan WhatsApp formatında yüksek dönüşümlü mesaj metni üretsin.
                 </p>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-ink-soft mb-1">Ürün / Kampanya Konusu</label>
+                  <label className="block text-[10px] sm:text-[11px] font-semibold text-ink-soft mb-1">Ürün / Kampanya Konusu</label>
                   <input
                     type="text"
                     placeholder="Örn: Yeni sezon zeytinyağında %20 indirim"
                     value={aiPrompt}
                     onChange={e => setAiPrompt(e.target.value)}
-                    className="w-full bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] px-3 py-2 text-xs text-ink outline-none focus:border-accent"
+                    className="w-full bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] px-2.5 py-1.5 text-xs text-ink outline-none focus:border-accent"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-ink-soft mb-1">Metin Tonu</label>
+                  <label className="block text-[10px] sm:text-[11px] font-semibold text-ink-soft mb-1">Metin Tonu</label>
                   <select
                     value={aiTone}
                     onChange={e => setAiTone(e.target.value as any)}
-                    className="w-full bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] px-3 py-1.5 text-xs text-ink outline-none"
+                    className="w-full bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] px-2 py-1 text-xs text-ink outline-none"
                   >
                     <option value="samimi">Samimi & Doğal</option>
                     <option value="kurumsal">Kurumsal & Profesyonel</option>
@@ -1080,13 +1089,13 @@ export function LiveDashboard() {
                   type="button"
                   onClick={handleGenerateAiMessage}
                   disabled={aiGenerating || !aiPrompt.trim()}
-                  className="w-full py-2 rounded-[var(--radius-sm)] text-xs font-semibold bg-[var(--color-surface-raised)] text-ink hover:bg-canvas border border-[var(--color-hairline)] transition disabled:opacity-50"
+                  className="w-full py-1.5 rounded-[var(--radius-sm)] text-xs font-semibold bg-[var(--color-surface-raised)] text-ink hover:bg-canvas border border-[var(--color-hairline)] transition disabled:opacity-50"
                 >
                   {aiGenerating ? 'ChatGPT Üretiyor...' : 'Metin Oluştur'}
                 </button>
 
                 {aiResult && (
-                  <div className="bg-canvas p-3 rounded-[var(--radius-sm)] border border-[var(--color-hairline)] space-y-2 mt-2">
+                  <div className="bg-canvas p-2.5 rounded-[var(--radius-sm)] border border-[var(--color-hairline)] space-y-2 mt-1">
                     <p className="text-[11px] text-ink whitespace-pre-wrap leading-relaxed">{aiResult}</p>
                     <button
                       type="button"
@@ -1094,7 +1103,7 @@ export function LiveDashboard() {
                         setQuickMessage(aiResult)
                         showNotice('Üretilen metin gönderim kutusuna aktarıldı.')
                       }}
-                      className="w-full py-1.5 text-xs font-semibold bg-accent text-accent-ink rounded-[var(--radius-sm)] hover:bg-accent-dim"
+                      className="w-full py-1 text-xs font-semibold bg-accent text-accent-ink rounded-[var(--radius-sm)] hover:bg-accent-dim"
                     >
                       Mesaj Kutusuna Aktar
                     </button>
@@ -1102,41 +1111,41 @@ export function LiveDashboard() {
                 )}
               </div>
 
-              <div className="text-[11px] text-ink-muted border-t border-[var(--color-hairline)] pt-3">
-                Üretilen metin doğrudan test gönderiminde veya toplu kampanyada kullanılabilir.
+              <div className="text-[10px] text-ink-muted border-t border-[var(--color-hairline)] pt-2">
+                Doğrudan test gönderiminde veya kampanyada kullanılabilir.
               </div>
             </div>
           </div>
         )}
 
-        {/* 2. KAMPANYALAR MODÜLÜ */}
+        {/* TAB 2: KAMPANYALAR MODÜLÜ */}
         {activeTab === 'campaigns' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-bold text-ink">Kampanya Yönetimi ve İlerleme</h2>
-                <p className="text-xs text-ink-muted">Tüm aktif, duraklatılmış ve tamamlanmış toplu gönderimler</p>
+                <h2 className="text-xs sm:text-sm font-bold text-ink">Kampanya Yönetimi ve İlerleme</h2>
+                <p className="text-[11px] text-ink-muted">Tüm aktif, duraklatılmış ve tamamlanmış toplu gönderimler</p>
               </div>
-              <span className="text-xs font-semibold text-ink-muted">{filteredCampaigns.length} Kampanya</span>
+              <span className="text-[11px] font-semibold text-ink-muted">{filteredCampaigns.length} Kampanya</span>
             </div>
 
             {filteredCampaigns.length === 0 ? (
-              <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-8 text-center text-xs text-ink-muted">
+              <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-6 text-center text-xs text-ink-muted">
                 Kayıtlı kampanya bulunamadı.
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                 {filteredCampaigns.map(c => (
                   <div
                     key={c.id}
-                    className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-4 shadow-sm space-y-3"
+                    className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 sm:p-4 shadow-sm space-y-2.5"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-sm font-bold text-ink">{c.name}</h3>
+                        <div className="flex items-center gap-1.5">
+                          <h3 className="text-xs sm:text-sm font-bold text-ink">{c.name}</h3>
                           <span
-                            className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
+                            className={`text-[9px] sm:text-[10px] font-semibold px-1.5 py-0.2 rounded ${
                               c.status === 'running'
                                 ? 'bg-ok-soft text-ok-dim'
                                 : c.status === 'paused'
@@ -1149,19 +1158,19 @@ export function LiveDashboard() {
                             {c.status.toUpperCase()}
                           </span>
                         </div>
-                        <p className="text-[11px] text-ink-muted mt-0.5">
+                        <p className="text-[10px] sm:text-[11px] text-ink-muted mt-0.5">
                           {c.org_name && <span className="font-medium text-ink-soft">{c.org_name} · </span>}
                           {timeAgo(c.created_at)} oluşturuldu · Tür: {c.message_type}
                         </p>
                       </div>
 
                       {/* Campaign Action Buttons */}
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1">
                         {c.status === 'running' && (
                           <button
                             onClick={() => handleCampaignAction(c.id, 'pause')}
                             disabled={actionBusy}
-                            className="px-2.5 py-1 text-xs font-semibold rounded bg-warn/10 text-warn hover:bg-warn/20"
+                            className="px-2 py-0.5 text-[11px] font-semibold rounded bg-warn/10 text-warn hover:bg-warn/20"
                           >
                             Duraklat
                           </button>
@@ -1170,7 +1179,7 @@ export function LiveDashboard() {
                           <button
                             onClick={() => handleCampaignAction(c.id, 'resume')}
                             disabled={actionBusy}
-                            className="px-2.5 py-1 text-xs font-semibold rounded bg-ok-soft text-ok-dim hover:bg-ok-soft/80"
+                            className="px-2 py-0.5 text-[11px] font-semibold rounded bg-ok-soft text-ok-dim hover:bg-ok-soft/80"
                           >
                             Devam Et
                           </button>
@@ -1179,7 +1188,7 @@ export function LiveDashboard() {
                           <button
                             onClick={() => handleCampaignAction(c.id, 'stop')}
                             disabled={actionBusy}
-                            className="px-2.5 py-1 text-xs font-semibold rounded bg-danger/10 text-danger hover:bg-danger/20"
+                            className="px-2 py-0.5 text-[11px] font-semibold rounded bg-danger/10 text-danger hover:bg-danger/20"
                           >
                             Durdur
                           </button>
@@ -1189,13 +1198,13 @@ export function LiveDashboard() {
 
                     {/* Progress Bar */}
                     <div>
-                      <div className="flex justify-between text-[11px] text-ink-muted mb-1">
+                      <div className="flex justify-between text-[10px] sm:text-[11px] text-ink-muted mb-1">
                         <span>İlerleme: %{c.progress_percent}</span>
                         <span>
                           {c.sent_count} / {c.total_targets} hedef
                         </span>
                       </div>
-                      <div className="w-full bg-[var(--color-surface-raised)] h-2 rounded-full overflow-hidden">
+                      <div className="w-full bg-[var(--color-surface-raised)] h-1.5 sm:h-2 rounded-full overflow-hidden">
                         <div
                           className={`h-full transition-all duration-500 ${
                             c.status === 'running' ? 'bg-ok' : c.status === 'paused' ? 'bg-warn' : 'bg-accent'
@@ -1206,28 +1215,28 @@ export function LiveDashboard() {
                     </div>
 
                     {/* Metrics Breakdown */}
-                    <div className="grid grid-cols-4 gap-2 pt-1 border-t border-[var(--color-hairline)] text-center">
+                    <div className="grid grid-cols-4 gap-1 pt-1 border-t border-[var(--color-hairline)] text-center">
                       <div>
-                        <span className="block text-[10px] text-ink-muted">İletildi</span>
+                        <span className="block text-[9px] text-ink-muted">İletildi</span>
                         <span className="text-xs font-bold text-success">{c.sent_count}</span>
                       </div>
                       <div>
-                        <span className="block text-[10px] text-ink-muted">Bekliyor</span>
+                        <span className="block text-[9px] text-ink-muted">Bekliyor</span>
                         <span className="text-xs font-bold text-warn">{c.pending_count}</span>
                       </div>
                       <div>
-                        <span className="block text-[10px] text-ink-muted">Hatalı</span>
+                        <span className="block text-[9px] text-ink-muted">Hatalı</span>
                         <span className="text-xs font-bold text-danger">{c.failed_count}</span>
                       </div>
                       <div>
-                        <span className="block text-[10px] text-ink-muted">Atlandı</span>
+                        <span className="block text-[9px] text-ink-muted">Atlandı</span>
                         <span className="text-xs font-bold text-ink-muted">{c.skipped_count}</span>
                       </div>
                     </div>
 
                     {/* Message Preview */}
                     {c.body && (
-                      <div className="bg-canvas p-2.5 rounded-[var(--radius-sm)] text-[11px] text-ink-soft line-clamp-2">
+                      <div className="bg-canvas p-2 rounded-[var(--radius-sm)] text-[11px] text-ink-soft line-clamp-2">
                         {c.body}
                       </div>
                     )}
@@ -1238,22 +1247,22 @@ export function LiveDashboard() {
           </div>
         )}
 
-        {/* 3. GÖNDERİM SIRASI (QUEUE) */}
+        {/* TAB 3: GÖNDERİM SIRASI (QUEUE) */}
         {activeTab === 'queue' && (
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-5 shadow-sm space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-hairline)] pb-3">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 sm:p-5 shadow-sm space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-hairline)] pb-2.5">
               <div>
-                <h2 className="text-sm font-bold text-ink">Hedef Mesaj Gönderim Sırası</h2>
-                <p className="text-xs text-ink-muted">Kuyrukta bekleyen, gönderilen veya hata alan alıcılar</p>
+                <h2 className="text-xs sm:text-sm font-bold text-ink">Hedef Mesaj Gönderim Sırası</h2>
+                <p className="text-[11px] text-ink-muted">Kuyrukta bekleyen, gönderilen veya hata alan alıcılar</p>
               </div>
 
               {/* Status Filter */}
-              <div className="flex items-center gap-1 bg-[var(--color-surface-raised)] p-1 rounded-[var(--radius-sm)]">
+              <div className="flex items-center gap-1 bg-[var(--color-surface-raised)] p-0.5 rounded-[var(--radius-sm)]">
                 {(['all', 'queued', 'delivered', 'failed'] as const).map(f => (
                   <button
                     key={f}
                     onClick={() => setQueueFilter(f)}
-                    className={`px-2.5 py-1 text-xs font-semibold rounded ${
+                    className={`px-2 py-0.5 text-[11px] font-semibold rounded ${
                       queueFilter === f ? 'bg-surface text-ink shadow-sm' : 'text-ink-muted hover:text-ink'
                     }`}
                   >
@@ -1270,28 +1279,28 @@ export function LiveDashboard() {
             </div>
 
             {filteredTargets.length === 0 ? (
-              <p className="text-xs text-ink-muted text-center py-8">Kuyrukta hedef bulunmuyor.</p>
+              <p className="text-xs text-ink-muted text-center py-6">Kuyrukta hedef bulunmuyor.</p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+                <table className="w-full text-left text-[11px] sm:text-xs">
                   <thead>
                     <tr className="border-b border-[var(--color-hairline)] text-ink-muted font-semibold">
                       <th className="pb-2">Telefon</th>
                       <th className="pb-2">Kampanya</th>
                       <th className="pb-2">Durum</th>
-                      <th className="pb-2">Planlanan Zaman</th>
+                      <th className="pb-2">Zaman</th>
                       <th className="pb-2">Mesaj Özeti</th>
-                      <th className="pb-2">Hata / Not</th>
+                      <th className="pb-2">Hata</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[var(--color-hairline)]">
                     {filteredTargets.map(t => (
                       <tr key={t.id} className="hover:bg-[var(--color-surface-raised)] transition">
-                        <td className="py-2.5 font-mono font-semibold text-ink">{t.phone_e164}</td>
-                        <td className="py-2.5 text-ink-soft">{t.campaign_name}</td>
-                        <td className="py-2.5">
+                        <td className="py-2 font-mono font-semibold text-ink">{t.phone_e164}</td>
+                        <td className="py-2 text-ink-soft">{t.campaign_name}</td>
+                        <td className="py-2">
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                            className={`px-1.5 py-0.2 rounded text-[10px] font-semibold ${
                               t.status === 'queued'
                                 ? 'bg-warn/10 text-warn'
                                 : t.status === 'sent' || t.status === 'delivered'
@@ -1304,9 +1313,9 @@ export function LiveDashboard() {
                             {t.status}
                           </span>
                         </td>
-                        <td className="py-2.5 text-ink-muted">{timeAgo(t.scheduled_for || t.created_at)}</td>
-                        <td className="py-2.5 text-ink-muted max-w-xs truncate">{t.personalized_body || '—'}</td>
-                        <td className="py-2.5 text-danger font-mono text-[11px] max-w-xs truncate">{t.error || '—'}</td>
+                        <td className="py-2 text-ink-muted">{timeAgo(t.scheduled_for || t.created_at)}</td>
+                        <td className="py-2 text-ink-muted max-w-xs truncate">{t.personalized_body || '—'}</td>
+                        <td className="py-2 text-danger font-mono text-[10px] max-w-xs truncate">{t.error || '—'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1316,26 +1325,25 @@ export function LiveDashboard() {
           </div>
         )}
 
-        {/* 4. VERİ TALEPLERİ & LEAD KEŞFİ */}
+        {/* TAB 4: VERİ TALEPLERİ (YALNIZCA FİRMALARDAN GELEN TALEPLER VE ONAY DROPDOWN) */}
         {activeTab === 'data_requests' && (
-          <div className="space-y-6">
-            {/* List Requests Table */}
-            <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-5 shadow-sm space-y-4">
-              <div className="flex items-center justify-between border-b border-[var(--color-hairline)] pb-3">
+          <div className="space-y-4">
+            <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 sm:p-5 shadow-sm space-y-3">
+              <div className="flex items-center justify-between border-b border-[var(--color-hairline)] pb-2.5">
                 <div>
-                  <h2 className="text-sm font-bold text-ink">Firmalardan Gelen Veri Toplama Talepleri</h2>
-                  <p className="text-xs text-ink-muted">
-                    Müşterilerin / firmaların panellerinden açtığı lead keşif talepleri. Durumu doğrudan dropdown üzerinden güncelleyebilirsiniz.
+                  <h2 className="text-xs sm:text-sm font-bold text-ink">Firmalardan Gelen Veri Toplama Talepleri</h2>
+                  <p className="text-[11px] text-ink-muted">
+                    Firmaların panellerinden açtığı lead keşif talepleri. Durumu doğrudan dropdown üzerinden onaylayıp güncelleyebilirsiniz.
                   </p>
                 </div>
-                <span className="text-xs font-semibold text-ink-muted">{data?.listRequests.length} Talep</span>
+                <span className="text-[11px] font-semibold text-ink-muted">{data?.listRequests.length} Talep</span>
               </div>
 
               {data?.listRequests.length === 0 ? (
                 <p className="text-xs text-ink-muted text-center py-6">Henüz firmalardan gelen bir talep bulunmuyor.</p>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
+                  <table className="w-full text-left text-[11px] sm:text-xs">
                     <thead>
                       <tr className="border-b border-[var(--color-hairline)] text-ink-muted font-semibold">
                         <th className="pb-2">İşletme / Firma</th>
@@ -1343,7 +1351,7 @@ export function LiveDashboard() {
                         <th className="pb-2">Kategori / Sektör</th>
                         <th className="pb-2">Konum / Adres</th>
                         <th className="pb-2">Toplanan Kişi</th>
-                        <th className="pb-2">Talep Durumu (Yönetici)</th>
+                        <th className="pb-2">Durum (Onay Dropdown)</th>
                         <th className="pb-2">Tarih</th>
                       </tr>
                     </thead>
@@ -1353,7 +1361,7 @@ export function LiveDashboard() {
                           <td className="py-2.5 font-bold text-ink">
                             {r.org_name || 'Genel'}
                           </td>
-                          <td className="py-2.5 font-mono text-[11px] text-ink-soft">{r.kind}</td>
+                          <td className="py-2.5 font-mono text-[10px] text-ink-soft">{r.kind}</td>
                           <td className="py-2.5 font-semibold text-ink">{r.category || '—'}</td>
                           <td className="py-2.5 text-ink-muted">{r.address || (r.nationwide ? 'Tüm Türkiye' : 'Bölgesel')}</td>
                           <td className="py-2.5 font-bold text-accent">
@@ -1362,7 +1370,7 @@ export function LiveDashboard() {
                               <button
                                 type="button"
                                 onClick={() => {
-                                  const input = prompt('Bu talep için kişi sayısını girin:', String(r.contact_count || 0))
+                                  const input = prompt('Bu talep için toplanan kişi sayısını girin:', String(r.contact_count || 0))
                                   if (input !== null) {
                                     const count = parseInt(input, 10) || 0
                                     handleUpdateRequestStatus(r.id, r.status as any, count)
@@ -1383,7 +1391,7 @@ export function LiveDashboard() {
                                 const newStatus = e.target.value as 'pending' | 'processing' | 'completed' | 'rejected'
                                 handleUpdateRequestStatus(r.id, newStatus, r.contact_count)
                               }}
-                              className={`text-xs font-semibold px-2.5 py-1 rounded-[var(--radius-sm)] border outline-none cursor-pointer transition ${
+                              className={`text-[11px] sm:text-xs font-semibold px-2 py-1 rounded-[var(--radius-sm)] border outline-none cursor-pointer transition ${
                                 r.status === 'completed'
                                   ? 'bg-ok-soft text-ok-dim border-ok/30'
                                   : r.status === 'processing'
@@ -1418,48 +1426,48 @@ export function LiveDashboard() {
           </div>
         )}
 
-        {/* 5. KİŞİ LİSTELERİ & REHBER */}
+        {/* TAB 5: KİŞİ LİSTELERİ & REHBER */}
         {activeTab === 'contact_lists' && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-bold text-ink">Kişi Listeleri ve Rehber Grupları</h2>
-                <p className="text-xs text-ink-muted">Tüm segmentler, içe aktarılan CSV'ler ve toplanan lead listeleri</p>
+                <h2 className="text-xs sm:text-sm font-bold text-ink">Kişi Listeleri ve Rehber Grupları</h2>
+                <p className="text-[11px] text-ink-muted">Tüm segmentler, içe aktarılan CSV'ler ve toplanan lead listeleri</p>
               </div>
-              <span className="text-xs font-semibold text-ink-muted">{data?.contactLists.length} Liste</span>
+              <span className="text-[11px] font-semibold text-ink-muted">{data?.contactLists.length} Liste</span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {data?.contactLists.map(l => (
                 <div
                   key={l.id}
-                  className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-4 shadow-sm flex flex-col justify-between space-y-3"
+                  className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 sm:p-4 shadow-sm flex flex-col justify-between space-y-2.5"
                 >
                   <div>
                     <div className="flex items-start justify-between">
-                      <h3 className="text-sm font-bold text-ink">{l.name}</h3>
-                      <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-surface-raised text-ink-muted">
+                      <h3 className="text-xs sm:text-sm font-bold text-ink">{l.name}</h3>
+                      <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded bg-surface-raised text-ink-muted">
                         {l.source}
                       </span>
                     </div>
-                    <div className="mt-2 flex items-baseline gap-1">
-                      <span className="text-2xl font-bold text-accent">{l.contact_count}</span>
+                    <div className="mt-1.5 flex items-baseline gap-1">
+                      <span className="text-xl sm:text-2xl font-bold text-accent">{l.contact_count}</span>
                       <span className="text-xs text-ink-muted">kayıtlı numara</span>
                     </div>
-                    <p className="text-[11px] text-ink-muted mt-1">{timeAgo(l.created_at)} oluşturuldu</p>
+                    <p className="text-[10px] sm:text-[11px] text-ink-muted mt-0.5">{timeAgo(l.created_at)} oluşturuldu</p>
                   </div>
 
-                  <div className="flex items-center gap-2 pt-2 border-t border-[var(--color-hairline)]">
+                  <div className="flex items-center gap-1.5 pt-2 border-t border-[var(--color-hairline)]">
                     <button
                       onClick={() => handleOpenListContacts(l.id, l.name)}
-                      className="flex-1 py-1.5 text-xs font-semibold rounded bg-surface-raised text-ink hover:bg-canvas border border-[var(--color-hairline)]"
+                      className="flex-1 py-1 text-xs font-semibold rounded bg-surface-raised text-ink hover:bg-canvas border border-[var(--color-hairline)]"
                     >
                       Kişileri İncele
                     </button>
                     <a
                       href={`/api/canli-takip/contacts?listId=${l.id}&format=csv`}
                       download
-                      className="px-3 py-1.5 text-xs font-semibold rounded bg-accent-soft text-accent hover:bg-accent/20"
+                      className="px-2.5 py-1 text-xs font-semibold rounded bg-accent-soft text-accent hover:bg-accent/20"
                       title="Listeyi CSV olarak indir"
                     >
                       CSV İndir
@@ -1471,123 +1479,206 @@ export function LiveDashboard() {
           </div>
         )}
 
-        {/* 6. YAPAY ZEKA & AFİŞ STÜDYOSU (AI STUDIO) */}
+        {/* TAB 6: CHATGPT & GÖRSEL ÜRETİM SIRASI (CANLI PROMPT, JSON VE KUYRUK TAKİBİ) */}
         {activeTab === 'ai_studio' && (
-          <div className="space-y-6">
-            <div className="border-b border-[var(--color-hairline)] pb-3">
-              <h2 className="text-sm font-bold text-ink">ChatGPT ve Yapay Zeka Afiş Galerisi</h2>
-              <p className="text-xs text-ink-muted">
-                Yapay zeka ile üretilen kampanya afişleri, şablonlar ve kreatif üretim sırası
-              </p>
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-hairline)] pb-2.5">
+              <div>
+                <h2 className="text-xs sm:text-sm font-bold text-ink">ChatGPT & Görsel Üretim Akışı</h2>
+                <p className="text-[11px] text-ink-muted">
+                  Firmalardan gelen anlık görsel üretim istekleri, ChatGPT'ye giden sistem prompt komutları ve JSON yükleri
+                </p>
+              </div>
+              <span className="text-[11px] font-semibold text-ink-muted">{data?.creatives.length} Üretim Kaydı</span>
             </div>
 
             {data?.creatives.length === 0 ? (
-              <p className="text-xs text-ink-muted text-center py-8">Henüz üretilmiş görsel bulunmuyor.</p>
+              <p className="text-xs text-ink-muted text-center py-6">Henüz üretilmiş görsel veya prompt kaydı bulunmuyor.</p>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {data?.creatives.map(cr => (
-                  <div
-                    key={cr.id}
-                    className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] overflow-hidden shadow-sm flex flex-col justify-between"
-                  >
-                    <div className="aspect-square bg-canvas relative flex items-center justify-center">
-                      {cr.public_url ? (
-                        <img
-                          src={cr.public_url}
-                          alt={cr.title}
-                          className="w-full h-full object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="text-center p-3">
-                          <span className="text-xs font-semibold text-ink-muted">Önizleme Yok</span>
-                          <span className="block text-[10px] text-warn mt-1">{cr.status}</span>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                {data?.creatives.map(cr => {
+                  const payload = cr.payload
+                  const brief = payload?.brief || cr.title
+                  const generatedPrompt = payload?.generatedPrompt || payload?.originalPrompt || ''
+                  const provider = payload?.cost?.provider || payload?.provider || 'OpenAI'
+                  const isRendering = cr.status === 'pending' || cr.status === 'rendering'
+
+                  return (
+                    <div
+                      key={cr.id}
+                      className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 shadow-sm space-y-2.5 flex flex-col justify-between"
+                    >
+                      <div className="space-y-2">
+                        {/* Header: Origin & Status */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-bold text-ink">{cr.org_name || 'Genel'}</span>
+                              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-surface-raised text-ink-muted">
+                                {cr.generation_type === 'variation'
+                                  ? 'Varyasyon'
+                                  : cr.generation_type === 'revision'
+                                  ? 'Revizyon'
+                                  : 'Yeni Görsel'}
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-ink-muted">
+                              Sağlayıcı: <strong className="text-ink-soft">{provider}</strong> · {timeAgo(cr.created_at)}
+                            </span>
+                          </div>
+
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              cr.status === 'ready'
+                                ? 'bg-ok-soft text-ok-dim'
+                                : isRendering
+                                ? 'bg-accent-soft text-accent animate-pulse'
+                                : 'bg-danger/10 text-danger'
+                            }`}
+                          >
+                            {cr.status === 'ready' ? 'TAMAMLANDI' : isRendering ? 'ÜRETİLİYOR' : cr.status.toUpperCase()}
+                          </span>
                         </div>
-                      )}
-                    </div>
-                    <div className="p-3 space-y-1">
-                      <h4 className="text-xs font-bold text-ink truncate">{cr.title}</h4>
-                      <div className="flex items-center justify-between text-[10px] text-ink-muted">
-                        <span>{cr.template}</span>
-                        <span className="font-mono">{cr.format}</span>
+
+                        {/* Image Preview or Loading Spinner */}
+                        <div className="aspect-video sm:aspect-[4/3] bg-canvas rounded-[var(--radius-sm)] border border-[var(--color-hairline)] overflow-hidden relative flex items-center justify-center">
+                          {cr.public_url ? (
+                            <img
+                              src={cr.public_url}
+                              alt={cr.title}
+                              className="w-full h-full object-cover cursor-pointer hover:scale-102 transition duration-200"
+                              onClick={() => setInspectedCreative(cr)}
+                            />
+                          ) : isRendering ? (
+                            <div className="flex flex-col items-center gap-1.5 p-3 text-center">
+                              <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+                              <span className="text-[11px] font-semibold text-accent">Görsel Üretiliyor...</span>
+                              <span className="text-[10px] text-ink-muted">ChatGPT & Görsel Motoru Çalışıyor</span>
+                            </div>
+                          ) : (
+                            <div className="text-center p-3">
+                              <span className="text-[11px] font-semibold text-danger">Üretim Başarısız</span>
+                              {cr.error && <span className="block text-[10px] text-ink-muted mt-1">{cr.error}</span>}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* User Brief */}
+                        <div>
+                          <span className="block text-[10px] font-semibold text-ink-muted">Talep / İstek:</span>
+                          <p className="text-[11px] font-medium text-ink line-clamp-2 leading-relaxed">{brief}</p>
+                        </div>
+
+                        {/* Prompt Snippet */}
+                        {generatedPrompt && (
+                          <div className="bg-canvas p-2 rounded border border-[var(--color-hairline)]">
+                            <span className="block text-[9px] font-mono font-bold text-accent mb-0.5">
+                              ChatGPT Prompt Komutu:
+                            </span>
+                            <p className="font-mono text-[10px] text-ink-soft line-clamp-2 leading-relaxed">
+                              {generatedPrompt}
+                            </p>
+                          </div>
+                        )}
                       </div>
-                      <span className="block text-[10px] text-ink-muted pt-1">{timeAgo(cr.created_at)}</span>
+
+                      {/* Card Footer: JSON & Detail Buttons */}
+                      <div className="pt-2 border-t border-[var(--color-hairline)] flex items-center justify-between gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setInspectedCreative(cr)}
+                          className="flex-1 py-1 text-xs font-semibold rounded bg-surface-raised text-ink hover:bg-canvas border border-[var(--color-hairline)] flex items-center justify-center gap-1"
+                        >
+                          <span>JSON & Prompt Detayı</span>
+                        </button>
+
+                        {cr.public_url && (
+                          <a
+                            href={cr.public_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-2.5 py-1 text-xs font-semibold rounded bg-accent-soft text-accent hover:bg-accent/20"
+                          >
+                            Büyüt
+                          </a>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>
         )}
 
-        {/* 7. KARA LİSTE (BLACKLIST) */}
+        {/* TAB 7: KARA LİSTE (BLACKLIST) */}
         {activeTab === 'blacklist' && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Add Blacklist Form */}
-            <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-5 shadow-sm space-y-4">
-              <div className="border-b border-[var(--color-hairline)] pb-3">
-                <h2 className="text-sm font-bold text-ink">Yeni Numara Engelle (Kara Liste)</h2>
-                <p className="text-xs text-ink-muted">
+            <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 sm:p-5 shadow-sm space-y-3">
+              <div className="border-b border-[var(--color-hairline)] pb-2.5">
+                <h2 className="text-xs sm:text-sm font-bold text-ink">Yeni Numara Engelle (Kara Liste)</h2>
+                <p className="text-[11px] text-ink-muted">
                   Kampanyalardan ve otomatik yanıtlardan kalıcı olarak muaf tutulacak numarayı ekleyin.
                 </p>
               </div>
 
-              <form onSubmit={handleAddBlacklist} className="flex flex-wrap sm:flex-nowrap gap-3">
+              <form onSubmit={handleAddBlacklist} className="flex flex-wrap sm:flex-nowrap gap-2">
                 <input
                   type="text"
                   placeholder="Telefon: +905xxxxxxxxx"
                   value={blackPhone}
                   onChange={e => setBlackPhone(e.target.value)}
-                  className="flex-1 bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] px-3 py-2 text-xs font-mono text-ink outline-none focus:border-accent"
+                  className="flex-1 bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] px-2.5 py-1.5 text-xs font-mono text-ink outline-none focus:border-accent"
                 />
                 <input
                   type="text"
                   placeholder="Gerekçe (İstemiyor, Şikayet, Test vb.)"
                   value={blackReason}
                   onChange={e => setBlackReason(e.target.value)}
-                  className="flex-1 bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] px-3 py-2 text-xs text-ink outline-none focus:border-accent"
+                  className="flex-1 bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] px-2.5 py-1.5 text-xs text-ink outline-none focus:border-accent"
                 />
                 <button
                   type="submit"
                   disabled={blackSubmitting || !blackPhone.trim()}
-                  className="px-5 py-2 rounded-[var(--radius-sm)] text-xs font-semibold bg-danger text-white hover:bg-danger/90 transition disabled:opacity-50"
+                  className="px-4 py-1.5 rounded-[var(--radius-sm)] text-xs font-semibold bg-danger text-white hover:bg-danger/90 transition disabled:opacity-50"
                 >
-                  {blackSubmitting ? 'Ekleniyor...' : 'Numarayı Engelle'}
+                  {blackSubmitting ? 'Ekleniyor...' : 'Engelle'}
                 </button>
               </form>
             </div>
 
             {/* Blacklist Table */}
-            <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-5 shadow-sm space-y-4">
-              <h2 className="text-sm font-bold text-ink">Engellenen Numaralar Listesi</h2>
+            <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 sm:p-5 shadow-sm space-y-3">
+              <h2 className="text-xs sm:text-sm font-bold text-ink">Engellenen Numaralar Listesi</h2>
               {filteredBlacklist.length === 0 ? (
                 <p className="text-xs text-ink-muted text-center py-6">Engellenen numara kaydı bulunmuyor.</p>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
+                  <table className="w-full text-left text-[11px] sm:text-xs">
                     <thead>
                       <tr className="border-b border-[var(--color-hairline)] text-ink-muted font-semibold">
                         <th className="pb-2">Telefon</th>
                         <th className="pb-2">Gerekçe</th>
                         <th className="pb-2">İşletme</th>
-                        <th className="pb-2">Engellenme Tarihi</th>
+                        <th className="pb-2">Tarih</th>
                         <th className="pb-2 text-right">Eylem</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--color-hairline)]">
                       {filteredBlacklist.map(b => (
                         <tr key={b.id} className="hover:bg-[var(--color-surface-raised)]">
-                          <td className="py-2.5 font-mono font-semibold text-danger">{b.phone_e164}</td>
-                          <td className="py-2.5 text-ink-soft">{b.reason || 'Gerekçe belirtilmemiş'}</td>
-                          <td className="py-2.5 text-ink-muted">{b.org_name || 'Genel'}</td>
-                          <td className="py-2.5 text-ink-muted">{timeAgo(b.created_at)}</td>
-                          <td className="py-2.5 text-right">
+                          <td className="py-2 font-mono font-semibold text-danger">{b.phone_e164}</td>
+                          <td className="py-2 text-ink-soft">{b.reason || 'Gerekçe belirtilmemiş'}</td>
+                          <td className="py-2 text-ink-muted">{b.org_name || 'Genel'}</td>
+                          <td className="py-2 text-ink-muted">{timeAgo(b.created_at)}</td>
+                          <td className="py-2 text-right">
                             <button
                               onClick={() => handleRemoveBlacklist(b.id)}
                               disabled={actionBusy}
-                              className="px-2 py-1 text-xs font-semibold rounded bg-surface-raised text-danger hover:bg-danger/10"
+                              className="px-2 py-0.5 text-xs font-semibold rounded bg-surface-raised text-danger hover:bg-danger/10"
                             >
-                              Engeli Kaldır
+                              Kaldır
                             </button>
                           </td>
                         </tr>
@@ -1600,30 +1691,30 @@ export function LiveDashboard() {
           </div>
         )}
 
-        {/* 8. BAILEYS HAT VE SUNUCU KONTROLÜ */}
+        {/* TAB 8: BAILEYS HAT VE SUNUCU KONTROLÜ */}
         {activeTab === 'baileys' && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-bold text-ink">WhatsApp Hatları ve Baileys Oturum Yönetimi</h2>
-                <p className="text-xs text-ink-muted">Tüm fiziksel hatların anlık bağlantı, kilit ve yetki durumu</p>
+                <h2 className="text-xs sm:text-sm font-bold text-ink">WhatsApp Hatları ve Baileys Oturum Yönetimi</h2>
+                <p className="text-[11px] text-ink-muted">Tüm fiziksel hatların anlık bağlantı, kilit ve yetki durumu</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               {filteredAccounts?.map(a => (
                 <div
                   key={a.id}
-                  className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-4 shadow-sm space-y-3 flex flex-col justify-between"
+                  className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 sm:p-4 shadow-sm space-y-2.5 flex flex-col justify-between"
                 >
                   <div>
                     <div className="flex items-start justify-between gap-1">
                       <div>
-                        <h3 className="text-sm font-bold text-ink">{a.label}</h3>
-                        <p className="font-mono text-xs text-ink-soft mt-0.5">{a.phone_e164 || 'Numara yok'}</p>
+                        <h3 className="text-xs sm:text-sm font-bold text-ink">{a.label}</h3>
+                        <p className="font-mono text-[11px] text-ink-soft mt-0.5">{a.phone_e164 || 'Numara yok'}</p>
                       </div>
                       <span
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
+                        className={`text-[9px] sm:text-[10px] font-semibold px-1.5 py-0.2 rounded ${
                           a.status === 'connected'
                             ? 'bg-ok-soft text-ok-dim'
                             : a.status === 'connecting'
@@ -1635,41 +1726,41 @@ export function LiveDashboard() {
                       </span>
                     </div>
 
-                    <div className="mt-2 space-y-1 text-[11px] text-ink-muted">
+                    <div className="mt-2 space-y-0.5 text-[10px] sm:text-[11px] text-ink-muted">
                       <div>İşletme: <span className="font-semibold text-ink-soft">{a.org_name}</span></div>
                       <div>Son Görülme: {timeAgo(a.last_seen_at)}</div>
                       {a.status_detail && (
-                        <div className="text-danger font-mono text-[10px]">{a.status_detail}</div>
+                        <div className="text-danger font-mono text-[9px] truncate">{a.status_detail}</div>
                       )}
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-1.5 pt-2 border-t border-[var(--color-hairline)]">
+                  <div className="grid grid-cols-2 gap-1 pt-2 border-t border-[var(--color-hairline)]">
                     <button
                       onClick={() => handleAccountAction(a.id, 'connect')}
                       disabled={actionBusy}
-                      className="py-1.5 text-xs font-semibold rounded bg-accent-soft text-accent hover:bg-accent/20 transition disabled:opacity-50"
+                      className="py-1 text-xs font-semibold rounded bg-accent-soft text-accent hover:bg-accent/20 transition disabled:opacity-50"
                     >
                       Bağlan
                     </button>
                     <button
                       onClick={() => handleAccountAction(a.id, 'sync_contacts')}
                       disabled={actionBusy || a.status !== 'connected'}
-                      className="py-1.5 text-xs font-semibold rounded bg-surface-raised text-ink hover:bg-canvas transition disabled:opacity-50"
+                      className="py-1 text-xs font-semibold rounded bg-surface-raised text-ink hover:bg-canvas transition disabled:opacity-50"
                     >
                       Rehberi Eşle
                     </button>
                     <button
                       onClick={() => handleAccountAction(a.id, 'disconnect')}
                       disabled={actionBusy || a.status !== 'connected'}
-                      className="py-1.5 text-xs font-semibold rounded bg-warn/10 text-warn hover:bg-warn/20 transition disabled:opacity-50"
+                      className="py-1 text-xs font-semibold rounded bg-warn/10 text-warn hover:bg-warn/20 transition disabled:opacity-50"
                     >
                       Kopar
                     </button>
                     <button
                       onClick={() => handleAccountAction(a.id, 'logout')}
                       disabled={actionBusy}
-                      className="py-1.5 text-xs font-semibold rounded bg-danger/10 text-danger hover:bg-danger/20 transition disabled:opacity-50"
+                      className="py-1 text-xs font-semibold rounded bg-danger/10 text-danger hover:bg-danger/20 transition disabled:opacity-50"
                     >
                       Çıkış Yap
                     </button>
@@ -1680,22 +1771,22 @@ export function LiveDashboard() {
           </div>
         )}
 
-        {/* 9. CANLI MESAJ AKIŞI (MESSAGES) */}
+        {/* TAB 9: CANLI MESAJ AKIŞI (MESSAGES) */}
         {activeTab === 'messages' && (
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-5 shadow-sm space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-hairline)] pb-3">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 sm:p-5 shadow-sm space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-hairline)] pb-2.5">
               <div>
-                <h2 className="text-sm font-bold text-ink">Canlı WhatsApp Sohbet ve Mesaj Akışı</h2>
-                <p className="text-xs text-ink-muted">Müşterilerden gelen ve giden gerçek zamanlı mesaj kayıtları</p>
+                <h2 className="text-xs sm:text-sm font-bold text-ink">Canlı WhatsApp Sohbet ve Mesaj Akışı</h2>
+                <p className="text-[11px] text-ink-muted">Müşterilerden gelen ve giden gerçek zamanlı mesaj kayıtları</p>
               </div>
 
               {/* Message Direction Filter */}
-              <div className="flex items-center gap-1 bg-[var(--color-surface-raised)] p-1 rounded-[var(--radius-sm)]">
+              <div className="flex items-center gap-1 bg-[var(--color-surface-raised)] p-0.5 rounded-[var(--radius-sm)]">
                 {(['all', 'in', 'out'] as const).map(d => (
                   <button
                     key={d}
                     onClick={() => setMsgFilter(d)}
-                    className={`px-3 py-1 text-xs font-semibold rounded ${
+                    className={`px-2.5 py-0.5 text-[11px] font-semibold rounded ${
                       msgFilter === d ? 'bg-surface text-ink shadow-sm' : 'text-ink-muted hover:text-ink'
                     }`}
                   >
@@ -1706,22 +1797,22 @@ export function LiveDashboard() {
             </div>
 
             {filteredMessages.length === 0 ? (
-              <p className="text-xs text-ink-muted text-center py-8">Mesaj bulunamadı.</p>
+              <p className="text-xs text-ink-muted text-center py-6">Mesaj bulunamadı.</p>
             ) : (
               <div className="space-y-2">
                 {filteredMessages.map(m => (
                   <div
                     key={m.id}
-                    className={`p-3 rounded-[var(--radius-sm)] border transition flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
+                    className={`p-2.5 sm:p-3 rounded-[var(--radius-sm)] border transition flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
                       m.direction === 'in'
                         ? 'bg-ok-soft/30 border-ok/20'
                         : 'bg-surface-raised/40 border-[var(--color-hairline)]'
                     }`}
                   >
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1.5">
                         <span
-                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                          className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${
                             m.direction === 'in' ? 'bg-ok text-white' : 'bg-accent text-white'
                           }`}
                         >
@@ -1731,7 +1822,7 @@ export function LiveDashboard() {
                         {m.push_name && (
                           <span className="text-xs font-medium text-ink-soft">({m.push_name})</span>
                         )}
-                        <span className="text-[11px] text-ink-muted">· {timeAgo(m.created_at)}</span>
+                        <span className="text-[10px] text-ink-muted">· {timeAgo(m.created_at)}</span>
                       </div>
                       <p className="text-xs text-ink leading-relaxed whitespace-pre-wrap">{m.body || '[Medya İçeriği]'}</p>
                     </div>
@@ -1744,7 +1835,7 @@ export function LiveDashboard() {
                             setActiveTab('quick_send')
                             showNotice(`${m.phone_e164} hızlı yanıt kutusuna aktarıldı.`)
                           }}
-                          className="px-2.5 py-1 text-xs font-semibold rounded bg-surface text-ink hover:bg-canvas border border-[var(--color-hairline)]"
+                          className="px-2 py-0.5 text-xs font-semibold rounded bg-surface text-ink hover:bg-canvas border border-[var(--color-hairline)]"
                         >
                           Hızlı Yanıtla
                         </button>
@@ -1757,22 +1848,22 @@ export function LiveDashboard() {
           </div>
         )}
 
-        {/* 10. İŞ KUYRUĞU (JOBS) */}
+        {/* TAB 10: İŞ KUYRUĞU (JOBS) */}
         {activeTab === 'jobs' && (
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-5 shadow-sm space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-hairline)] pb-3">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 sm:p-5 shadow-sm space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-hairline)] pb-2.5">
               <div>
-                <h2 className="text-sm font-bold text-ink">PostgreSQL Arka Plan Görev Kuyruğu (Jobs)</h2>
-                <p className="text-xs text-ink-muted">VPS worker tarafından asenkron işlenen komutlar</p>
+                <h2 className="text-xs sm:text-sm font-bold text-ink">PostgreSQL Arka Plan Görev Kuyruğu (Jobs)</h2>
+                <p className="text-[11px] text-ink-muted">VPS worker tarafından asenkron işlenen komutlar</p>
               </div>
 
               {/* Status Filter */}
-              <div className="flex items-center gap-1 bg-[var(--color-surface-raised)] p-1 rounded-[var(--radius-sm)]">
+              <div className="flex items-center gap-1 bg-[var(--color-surface-raised)] p-0.5 rounded-[var(--radius-sm)]">
                 {(['all', 'pending', 'running', 'failed', 'done'] as const).map(s => (
                   <button
                     key={s}
                     onClick={() => setJobFilter(s)}
-                    className={`px-2.5 py-1 text-xs font-semibold rounded ${
+                    className={`px-2 py-0.5 text-[11px] font-semibold rounded ${
                       jobFilter === s ? 'bg-surface text-ink shadow-sm' : 'text-ink-muted hover:text-ink'
                     }`}
                   >
@@ -1794,7 +1885,7 @@ export function LiveDashboard() {
               <p className="text-xs text-ink-muted text-center py-6">Kayıtlı iş bulunamadı.</p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+                <table className="w-full text-left text-[11px] sm:text-xs">
                   <thead>
                     <tr className="border-b border-[var(--color-hairline)] text-ink-muted font-semibold">
                       <th className="pb-2">İş No</th>
@@ -1810,12 +1901,12 @@ export function LiveDashboard() {
                   <tbody className="divide-y divide-[var(--color-hairline)]">
                     {filteredJobs.map(j => (
                       <tr key={j.id} className="hover:bg-[var(--color-surface-raised)]">
-                        <td className="py-2.5 font-mono font-semibold text-ink">#{j.id}</td>
-                        <td className="py-2.5 font-mono text-[11px] text-accent font-semibold">{j.type}</td>
-                        <td className="py-2.5 text-ink-muted">{j.priority}</td>
-                        <td className="py-2.5">
+                        <td className="py-2 font-mono font-semibold text-ink">#{j.id}</td>
+                        <td className="py-2 font-mono text-[10px] sm:text-[11px] text-accent font-semibold">{j.type}</td>
+                        <td className="py-2 text-ink-muted">{j.priority}</td>
+                        <td className="py-2">
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                            className={`px-1.5 py-0.2 rounded text-[10px] font-semibold ${
                               j.status === 'done'
                                 ? 'bg-ok-soft text-ok-dim'
                                 : j.status === 'running' || j.status === 'claimed'
@@ -1828,17 +1919,17 @@ export function LiveDashboard() {
                             {j.status}
                           </span>
                         </td>
-                        <td className="py-2.5 text-ink-muted">
+                        <td className="py-2 text-ink-muted">
                           {j.attempts}/{j.max_attempts}
                         </td>
-                        <td className="py-2.5 text-ink-muted">{timeAgo(j.created_at)}</td>
-                        <td className="py-2.5 text-danger font-mono text-[11px] max-w-xs truncate">
+                        <td className="py-2 text-ink-muted">{timeAgo(j.created_at)}</td>
+                        <td className="py-2 text-danger font-mono text-[10px] max-w-xs truncate">
                           {j.error || '—'}
                         </td>
-                        <td className="py-2.5 text-right">
+                        <td className="py-2 text-right">
                           <button
                             onClick={() => setInspectedJob(j)}
-                            className="px-2 py-1 text-xs font-semibold rounded bg-surface-raised text-ink hover:bg-canvas"
+                            className="px-2 py-0.5 text-xs font-semibold rounded bg-surface-raised text-ink hover:bg-canvas"
                           >
                             JSON
                           </button>
@@ -1855,34 +1946,34 @@ export function LiveDashboard() {
 
       {/* MODAL 1: CONTACTS LIST INSPECTOR */}
       {previewListId && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl animate-in fade-in zoom-in-95">
-            <div className="p-4 border-b border-[var(--color-hairline)] flex items-center justify-between">
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="p-3.5 sm:p-4 border-b border-[var(--color-hairline)] flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-bold text-ink">{previewListName} — Kişiler</h3>
-                <p className="text-xs text-ink-muted">Toplam {previewTotal} kayıt</p>
+                <h3 className="text-xs sm:text-sm font-bold text-ink">{previewListName} — Kişiler</h3>
+                <p className="text-[11px] text-ink-muted">Toplam {previewTotal} kayıt</p>
               </div>
               <button
                 onClick={() => setPreviewListId(null)}
-                className="w-7 h-7 rounded-full bg-surface-raised text-ink-soft hover:bg-canvas flex items-center justify-center font-bold"
+                className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-surface-raised text-ink-soft hover:bg-canvas flex items-center justify-center font-bold text-xs"
               >
                 ×
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4">
               {previewLoading ? (
-                <div className="text-center py-8 text-xs text-ink-muted">Kişiler yükleniyor...</div>
+                <div className="text-center py-6 text-xs text-ink-muted">Kişiler yükleniyor...</div>
               ) : previewContacts.length === 0 ? (
-                <div className="text-center py-8 text-xs text-ink-muted">Bu grupta kayıt bulunamadı.</div>
+                <div className="text-center py-6 text-xs text-ink-muted">Bu grupta kayıt bulunamadı.</div>
               ) : (
-                <table className="w-full text-left text-xs">
+                <table className="w-full text-left text-[11px] sm:text-xs">
                   <thead>
                     <tr className="border-b border-[var(--color-hairline)] text-ink-muted font-semibold">
                       <th className="pb-2">Telefon</th>
                       <th className="pb-2">İsim</th>
                       <th className="pb-2">Kaynak</th>
-                      <th className="pb-2">WhatsApp Durumu</th>
+                      <th className="pb-2">Durum</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[var(--color-hairline)]">
@@ -1893,7 +1984,7 @@ export function LiveDashboard() {
                         <td className="py-2 text-ink-muted">{c.source || '—'}</td>
                         <td className="py-2">
                           <span
-                            className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                            className={`px-1.5 py-0.2 rounded text-[9px] font-semibold ${
                               c.wa_status === 'valid'
                                 ? 'bg-ok-soft text-ok-dim'
                                 : c.wa_status === 'invalid'
@@ -1911,17 +2002,17 @@ export function LiveDashboard() {
               )}
             </div>
 
-            <div className="p-4 border-t border-[var(--color-hairline)] flex justify-between items-center bg-canvas">
+            <div className="p-3 border-t border-[var(--color-hairline)] flex justify-between items-center bg-canvas">
               <a
                 href={`/api/canli-takip/contacts?listId=${previewListId}&format=csv`}
                 download
-                className="px-3 py-1.5 text-xs font-semibold rounded bg-accent text-accent-ink hover:bg-accent-dim"
+                className="px-3 py-1 text-xs font-semibold rounded bg-accent text-accent-ink hover:bg-accent-dim"
               >
-                Tümünü CSV Olarak İndir
+                CSV İndir
               </a>
               <button
                 onClick={() => setPreviewListId(null)}
-                className="px-4 py-1.5 text-xs font-semibold rounded bg-surface border border-[var(--color-hairline)] text-ink hover:bg-canvas"
+                className="px-3 py-1 text-xs font-semibold rounded bg-surface border border-[var(--color-hairline)] text-ink hover:bg-canvas"
               >
                 Kapat
               </button>
@@ -1932,27 +2023,27 @@ export function LiveDashboard() {
 
       {/* MODAL 2: JOB DETAIL JSON INSPECTOR */}
       {inspectedJob && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] w-full max-w-xl max-h-[80vh] flex flex-col shadow-2xl animate-in fade-in zoom-in-95">
-            <div className="p-4 border-b border-[var(--color-hairline)] flex items-center justify-between">
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] w-full max-w-xl max-h-[85vh] flex flex-col shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="p-3.5 sm:p-4 border-b border-[var(--color-hairline)] flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-bold text-ink">
+                <h3 className="text-xs sm:text-sm font-bold text-ink">
                   İş Detayı: #{inspectedJob.id} ({inspectedJob.type})
                 </h3>
-                <p className="text-xs text-ink-muted">Durum: {inspectedJob.status.toUpperCase()}</p>
+                <p className="text-[11px] text-ink-muted">Durum: {inspectedJob.status.toUpperCase()}</p>
               </div>
               <button
                 onClick={() => setInspectedJob(null)}
-                className="w-7 h-7 rounded-full bg-surface-raised text-ink-soft hover:bg-canvas flex items-center justify-center font-bold"
+                className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-surface-raised text-ink-soft hover:bg-canvas flex items-center justify-center font-bold text-xs"
               >
                 ×
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 font-mono text-[11px]">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 font-mono text-[10px] sm:text-[11px]">
               <div>
                 <span className="block text-ink-muted font-sans font-semibold mb-1">Payload (Girdi):</span>
-                <pre className="bg-canvas p-3 rounded border border-[var(--color-hairline)] overflow-x-auto text-ink">
+                <pre className="bg-canvas p-2.5 rounded border border-[var(--color-hairline)] overflow-x-auto text-ink">
                   {JSON.stringify(inspectedJob.payload, null, 2)}
                 </pre>
               </div>
@@ -1960,7 +2051,7 @@ export function LiveDashboard() {
               {inspectedJob.result && (
                 <div>
                   <span className="block text-ink-muted font-sans font-semibold mb-1">Result (Sonuç):</span>
-                  <pre className="bg-canvas p-3 rounded border border-[var(--color-hairline)] overflow-x-auto text-ok-dim">
+                  <pre className="bg-canvas p-2.5 rounded border border-[var(--color-hairline)] overflow-x-auto text-ok-dim">
                     {JSON.stringify(inspectedJob.result, null, 2)}
                   </pre>
                 </div>
@@ -1969,17 +2060,118 @@ export function LiveDashboard() {
               {inspectedJob.error && (
                 <div>
                   <span className="block text-ink-muted font-sans font-semibold mb-1">Hata Detayı:</span>
-                  <pre className="bg-danger/5 p-3 rounded border border-danger/20 overflow-x-auto text-danger">
+                  <pre className="bg-danger/5 p-2.5 rounded border border-danger/20 overflow-x-auto text-danger">
                     {inspectedJob.error}
                   </pre>
                 </div>
               )}
             </div>
 
-            <div className="p-3 border-t border-[var(--color-hairline)] flex justify-end bg-canvas">
+            <div className="p-2.5 sm:p-3 border-t border-[var(--color-hairline)] flex justify-end bg-canvas">
               <button
                 onClick={() => setInspectedJob(null)}
-                className="px-4 py-1.5 text-xs font-semibold rounded bg-surface border border-[var(--color-hairline)] text-ink hover:bg-canvas"
+                className="px-3 py-1 text-xs font-semibold rounded bg-surface border border-[var(--color-hairline)] text-ink hover:bg-canvas"
+              >
+                Kapat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: CHATGPT & CREATIVE JSON & PROMPT INSPECTOR */}
+      {inspectedCreative && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] w-full max-w-2xl max-h-[88vh] flex flex-col shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="p-3.5 sm:p-4 border-b border-[var(--color-hairline)] flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-xs sm:text-sm font-bold text-ink">ChatGPT Görsel Üretim Komutu & JSON</h3>
+                  <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded bg-accent-soft text-accent">
+                    {inspectedCreative.org_name || 'Genel'}
+                  </span>
+                </div>
+                <p className="text-[10px] sm:text-[11px] text-ink-muted">
+                  Durum: {inspectedCreative.status.toUpperCase()} · Tür: {inspectedCreative.generation_type || 'yeni'} · Format: {inspectedCreative.format}
+                </p>
+              </div>
+              <button
+                onClick={() => setInspectedCreative(null)}
+                className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-surface-raised text-ink-soft hover:bg-canvas flex items-center justify-center font-bold text-xs"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3">
+              {/* Image Preview if available */}
+              {inspectedCreative.public_url && (
+                <div className="max-h-56 bg-canvas rounded border border-[var(--color-hairline)] overflow-hidden flex items-center justify-center">
+                  <img
+                    src={inspectedCreative.public_url}
+                    alt={inspectedCreative.title}
+                    className="max-h-56 object-contain"
+                  />
+                </div>
+              )}
+
+              {/* User Brief / Talep */}
+              <div className="bg-[var(--color-surface-raised)] p-2.5 rounded-[var(--radius-sm)] border border-[var(--color-hairline)]">
+                <span className="block text-[10px] font-bold text-ink-muted uppercase">İşletme / Müşteri Talebi (Brief):</span>
+                <p className="text-xs font-semibold text-ink mt-0.5">
+                  {inspectedCreative.payload?.brief || inspectedCreative.title}
+                </p>
+              </div>
+
+              {/* Prompt Sent to ChatGPT / Image Generator */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[11px] font-bold text-ink-soft">Modele Gönderilen Tam Prompt Komutu:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const text = inspectedCreative.payload?.generatedPrompt || inspectedCreative.payload?.originalPrompt || inspectedCreative.title
+                      navigator.clipboard.writeText(text)
+                      showNotice('Prompt komutu panoya kopyalandı.')
+                    }}
+                    className="text-[10px] text-accent hover:underline font-medium"
+                  >
+                    Promptu Kopyala
+                  </button>
+                </div>
+                <div className="bg-canvas p-2.5 rounded border border-[var(--color-hairline)] font-mono text-[10px] text-ink-soft whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
+                  {inspectedCreative.payload?.generatedPrompt || inspectedCreative.payload?.originalPrompt || inspectedCreative.title}
+                </div>
+              </div>
+
+              {/* Full JSON Payload */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[11px] font-bold text-ink-soft">Ham JSON Verisi (Payload):</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(JSON.stringify(inspectedCreative.payload, null, 2))
+                      showNotice('JSON yükü kopyalandı.')
+                    }}
+                    className="text-[10px] text-accent hover:underline font-medium"
+                  >
+                    JSON Kopyala
+                  </button>
+                </div>
+                <pre className="bg-canvas p-2.5 rounded border border-[var(--color-hairline)] font-mono text-[10px] text-ink overflow-x-auto max-h-48">
+                  {JSON.stringify(inspectedCreative.payload, null, 2)}
+                </pre>
+              </div>
+            </div>
+
+            <div className="p-2.5 sm:p-3 border-t border-[var(--color-hairline)] flex justify-between items-center bg-canvas">
+              <span className="text-[10px] text-ink-muted">
+                Oluşturulma: {timeAgo(inspectedCreative.created_at)}
+              </span>
+              <button
+                onClick={() => setInspectedCreative(null)}
+                className="px-3.5 py-1 text-xs font-semibold rounded bg-surface border border-[var(--color-hairline)] text-ink hover:bg-canvas"
               >
                 Kapat
               </button>
