@@ -61,6 +61,30 @@ type TargetItem = {
   org_name?: string
 }
 
+type ListRequestItem = {
+  id: string
+  kind: string
+  status: string
+  category: string | null
+  address: string | null
+  locations: Array<{ label?: string; province_name?: string; district_name?: string }> | null
+  contact_count: number
+  radius_km: number | null
+  nationwide: boolean | null
+  created_at: string
+  updated_at: string
+  org_name?: string
+}
+
+type ContactListItem = {
+  id: string
+  name: string
+  contact_count: number
+  source: string
+  created_at: string
+  org_name?: string
+}
+
 type CreativeItem = {
   id: string
   title: string
@@ -97,6 +121,8 @@ type JobItem = {
   created_at: string
   started_at: string | null
   finished_at: string | null
+  payload?: Record<string, unknown>
+  result?: Record<string, unknown>
   org_name?: string
 }
 
@@ -106,6 +132,8 @@ type FeedData = {
   campaigns: CampaignItem[]
   targets: TargetItem[]
   creatives: CreativeItem[]
+  listRequests: ListRequestItem[]
+  contactLists: ContactListItem[]
   messages: MessageLog[]
   jobs: JobItem[]
   summary: {
@@ -114,6 +142,8 @@ type FeedData = {
     queuedMessages: number
     pendingJobs: number
     activeCampaigns: number
+    totalContacts: number
+    pendingDataRequests: number
   }
   timestamp: string
 }
@@ -144,7 +174,9 @@ export function LiveDashboard() {
   const [data, setData] = useState<FeedData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'campaigns' | 'queue' | 'ai_creatives' | 'baileys' | 'messages' | 'jobs'>('campaigns')
+  const [activeTab, setActiveTab] = useState<
+    'campaigns' | 'queue' | 'data_requests' | 'contact_lists' | 'ai_creatives' | 'baileys' | 'messages' | 'jobs'
+  >('campaigns')
   const [queueFilter, setQueueFilter] = useState<'all' | 'queued' | 'delivered' | 'failed'>('all')
   const [msgFilter, setMsgFilter] = useState<'all' | 'in' | 'out'>('all')
   const [selectedOrg, setSelectedOrg] = useState<string>('all')
@@ -152,6 +184,11 @@ export function LiveDashboard() {
   const [actionNotice, setActionNotice] = useState<string | null>(null)
   const [actionBusy, setActionBusy] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
+
+  // Yeni Veri Talebi Formu
+  const [newCategory, setNewCategory] = useState('')
+  const [newLocation, setNewLocation] = useState('')
+  const [submittingRequest, setSubmittingRequest] = useState(false)
 
   const fetchData = useCallback(async () => {
     try {
@@ -272,6 +309,37 @@ export function LiveDashboard() {
     }
   }
 
+  // Yeni Veri Talebi Gönder
+  const handleCreateListRequest = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newCategory.trim()) return
+    setSubmittingRequest(true)
+    try {
+      const res = await fetch('/api/canli-takip/create-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          category: newCategory.trim(),
+          address: newLocation.trim() || 'Türkiye Geneli',
+          kind: newLocation.trim() ? 'province_district' : 'nationwide',
+        }),
+      })
+      const json = await res.json()
+      if (json.success) {
+        setActionNotice(`"${newCategory}" için veri talebi başarıyla oluşturuldu.`)
+        setNewCategory('')
+        setNewLocation('')
+        fetchData()
+      } else {
+        setActionNotice(`Hata: ${json.error}`)
+      }
+    } catch (err) {
+      setActionNotice(`Hata: ${err instanceof Error ? err.message : 'İstek başarısız'}`)
+    } finally {
+      setSubmittingRequest(false)
+    }
+  }
+
   // Filtreler
   const accounts = data?.accounts ?? []
   const orgNames = Array.from(
@@ -279,6 +347,7 @@ export function LiveDashboard() {
       [
         ...accounts.map((a) => a.org_name),
         ...(data?.campaigns ?? []).map((c) => c.org_name),
+        ...(data?.listRequests ?? []).map((l) => l.org_name),
       ].filter(Boolean),
     ),
   ) as string[]
@@ -301,6 +370,16 @@ export function LiveDashboard() {
     if (queueFilter === 'queued') return t.status === 'queued'
     if (queueFilter === 'delivered') return t.status === 'delivered' || t.status === 'sent' || t.status === 'read'
     if (queueFilter === 'failed') return t.status === 'failed' || t.status === 'skipped'
+    return true
+  })
+
+  const filteredListRequests = (data?.listRequests ?? []).filter((lr) => {
+    if (selectedOrg !== 'all' && lr.org_name && lr.org_name !== selectedOrg) return false
+    return true
+  })
+
+  const filteredContactLists = (data?.contactLists ?? []).filter((cl) => {
+    if (selectedOrg !== 'all' && cl.org_name && cl.org_name !== selectedOrg) return false
     return true
   })
 
@@ -346,7 +425,7 @@ export function LiveDashboard() {
                 </span>
               </div>
               <p className="text-[12px] text-ink-muted">
-                Tüm hatlar, kampanyalar, mesaj kuyruğu ve yapay zeka operasyon merkezi
+                Hatlar, kampanyalar, veri talepleri, kuyruk ve yapay zeka operasyon merkezi
               </p>
             </div>
           </div>
@@ -439,75 +518,87 @@ export function LiveDashboard() {
         )}
 
         {/* KPI YÖNETİCİ ÖZET KARTLARI */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-5 gap-3.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3.5">
           {/* Aktif Hatlar */}
           <div className="rounded-[var(--radius-card)] border border-hairline bg-surface p-4 shadow-[var(--shadow-card)] hover:shadow-md transition">
-            <div className="text-[11.5px] font-semibold text-ink-muted uppercase tracking-wider">
+            <div className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">
               Aktif Hatlar
             </div>
             <div className="mt-1 flex items-baseline gap-1.5">
-              <span className="text-[26px] font-bold tracking-tight text-ok-dim tabular">
+              <span className="text-[24px] font-bold tracking-tight text-ok-dim tabular">
                 {connectedAccountsCount}
               </span>
-              <span className="text-[14px] font-medium text-ink-faint">/ {totalAccountsCount}</span>
+              <span className="text-[13px] font-medium text-ink-faint">/ {totalAccountsCount}</span>
             </div>
-            <div className="mt-1 flex items-center gap-1.5 text-[12px] text-ink-muted">
-              <span className={`size-2 rounded-full ${connectedAccountsCount === totalAccountsCount ? 'bg-ok' : 'bg-warn'}`} />
-              <span>{connectedAccountsCount === totalAccountsCount ? 'Tüm hatlar canlı' : 'Bazı hatlar çevrimdışı'}</span>
+            <div className="mt-1 text-[11.5px] text-ink-muted">
+              {connectedAccountsCount === totalAccountsCount ? 'Tüm hatlar canlı' : 'Bazı hatlar çevrimdışı'}
             </div>
           </div>
 
           {/* Aktif Kampanyalar */}
           <div className="rounded-[var(--radius-card)] border border-hairline bg-surface p-4 shadow-[var(--shadow-card)] hover:shadow-md transition">
-            <div className="text-[11.5px] font-semibold text-ink-muted uppercase tracking-wider">
-              Aktif Kampanyalar
+            <div className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">
+              Aktif Kampanya
             </div>
-            <div className="mt-1 text-[26px] font-bold tracking-tight text-accent tabular">
+            <div className="mt-1 text-[24px] font-bold tracking-tight text-accent tabular">
               {data?.summary.activeCampaigns ?? 0}
             </div>
-            <div className="mt-1 text-[12px] text-ink-muted">
-              Şu an gönderimde olan
+            <div className="mt-1 text-[11.5px] text-ink-muted">
+              Gönderimde olan
             </div>
           </div>
 
           {/* Sırada Bekleyen Mesajlar */}
           <div className="rounded-[var(--radius-card)] border border-hairline bg-surface p-4 shadow-[var(--shadow-card)] hover:shadow-md transition">
-            <div className="text-[11.5px] font-semibold text-ink-muted uppercase tracking-wider">
-              Kuyrukta Bekleyen
+            <div className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">
+              Sırada Bekleyen
             </div>
-            <div className="mt-1 text-[26px] font-bold tracking-tight text-warn tabular">
+            <div className="mt-1 text-[24px] font-bold tracking-tight text-warn tabular">
               {data?.summary.queuedMessages ?? 0}
             </div>
-            <div className="mt-1 text-[12px] text-ink-muted">
-              Sırada gönderilmeyi bekleyen
+            <div className="mt-1 text-[11.5px] text-ink-muted">
+              Kuyruktaki mesajlar
             </div>
           </div>
 
-          {/* Bugün Giden Mesaj */}
+          {/* Veri Talepleri */}
           <div className="rounded-[var(--radius-card)] border border-hairline bg-surface p-4 shadow-[var(--shadow-card)] hover:shadow-md transition">
-            <div className="text-[11.5px] font-semibold text-ink-muted uppercase tracking-wider">
-              Bugün Giden
+            <div className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">
+              Veri Talepleri
             </div>
-            <div className="mt-1 text-[26px] font-bold tracking-tight text-ink tabular">
-              {data?.summary.todayOutbound ?? '--'}
+            <div className="mt-1 text-[24px] font-bold tracking-tight text-indigo-600 tabular">
+              {data?.summary.pendingDataRequests ?? 0}
             </div>
-            <div className="mt-1 text-[12px] text-ink-muted">
-              Kampanya & yanıt mesajları
+            <div className="mt-1 text-[11.5px] text-ink-muted">
+              Bekleyen talep
+            </div>
+          </div>
+
+          {/* Toplam Rehber Numaraları */}
+          <div className="rounded-[var(--radius-card)] border border-hairline bg-surface p-4 shadow-[var(--shadow-card)] hover:shadow-md transition">
+            <div className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">
+              Kayıtlı Numara
+            </div>
+            <div className="mt-1 text-[24px] font-bold tracking-tight text-ink tabular">
+              {data?.summary.totalContacts ? Number(data.summary.totalContacts).toLocaleString('tr-TR') : 0}
+            </div>
+            <div className="mt-1 text-[11.5px] text-ink-muted">
+              Sistemdeki rehber
             </div>
           </div>
 
           {/* Baileys Servisi & VPS */}
-          <div className="col-span-2 sm:col-span-1 rounded-[var(--radius-card)] border border-hairline bg-surface p-4 shadow-[var(--shadow-card)] hover:shadow-md transition">
-            <div className="text-[11.5px] font-semibold text-ink-muted uppercase tracking-wider">
-              Baileys VPS Servisi
+          <div className="rounded-[var(--radius-card)] border border-hairline bg-surface p-4 shadow-[var(--shadow-card)] hover:shadow-md transition">
+            <div className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">
+              Baileys VPS
             </div>
             <div className="mt-1 flex items-center gap-2">
               <span className={`size-2.5 rounded-full ${data?.worker ? 'bg-ok' : 'bg-danger'}`} />
-              <span className="text-[18px] font-bold text-ink truncate">
+              <span className="text-[17px] font-bold text-ink truncate">
                 {data?.worker?.worker_id ? data.worker.worker_id : 'Hetzner VPS'}
               </span>
             </div>
-            <div className="mt-1 text-[12px] text-ink-muted truncate">
+            <div className="mt-1 text-[11.5px] text-ink-muted truncate">
               {data?.worker?.seen_at ? `Sinyal: ${timeAgo(data.worker.seen_at)}` : 'Çalışıyor'}
             </div>
           </div>
@@ -518,7 +609,7 @@ export function LiveDashboard() {
           <nav className="flex flex-wrap gap-1 sm:gap-2 -mb-px" aria-label="Sekmeler">
             <button
               onClick={() => setActiveTab('campaigns')}
-              className={`inline-flex items-center gap-2 border-b-2 px-3.5 py-2.5 text-[13.5px] font-semibold transition ${
+              className={`inline-flex items-center gap-2 border-b-2 px-3 py-2.5 text-[13px] font-semibold transition ${
                 activeTab === 'campaigns'
                   ? 'border-accent text-accent'
                   : 'border-transparent text-ink-muted hover:border-hairline-strong hover:text-ink'
@@ -532,7 +623,7 @@ export function LiveDashboard() {
 
             <button
               onClick={() => setActiveTab('queue')}
-              className={`inline-flex items-center gap-2 border-b-2 px-3.5 py-2.5 text-[13.5px] font-semibold transition ${
+              className={`inline-flex items-center gap-2 border-b-2 px-3 py-2.5 text-[13px] font-semibold transition ${
                 activeTab === 'queue'
                   ? 'border-accent text-accent'
                   : 'border-transparent text-ink-muted hover:border-hairline-strong hover:text-ink'
@@ -551,14 +642,42 @@ export function LiveDashboard() {
             </button>
 
             <button
+              onClick={() => setActiveTab('data_requests')}
+              className={`inline-flex items-center gap-2 border-b-2 px-3 py-2.5 text-[13px] font-semibold transition ${
+                activeTab === 'data_requests'
+                  ? 'border-accent text-accent'
+                  : 'border-transparent text-ink-muted hover:border-hairline-strong hover:text-ink'
+              }`}
+            >
+              <span>Veri Talepleri & Lead Keşfi</span>
+              <span className="rounded-full bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-[11px] font-bold text-indigo-600">
+                {filteredListRequests.length}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('contact_lists')}
+              className={`inline-flex items-center gap-2 border-b-2 px-3 py-2.5 text-[13px] font-semibold transition ${
+                activeTab === 'contact_lists'
+                  ? 'border-accent text-accent'
+                  : 'border-transparent text-ink-muted hover:border-hairline-strong hover:text-ink'
+              }`}
+            >
+              <span>Kişi Listeleri & Rehber</span>
+              <span className="rounded-full bg-surface-raised border border-hairline px-2 py-0.5 text-[11px] font-bold text-ink-muted">
+                {filteredContactLists.length}
+              </span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('ai_creatives')}
-              className={`inline-flex items-center gap-2 border-b-2 px-3.5 py-2.5 text-[13.5px] font-semibold transition ${
+              className={`inline-flex items-center gap-2 border-b-2 px-3 py-2.5 text-[13px] font-semibold transition ${
                 activeTab === 'ai_creatives'
                   ? 'border-accent text-accent'
                   : 'border-transparent text-ink-muted hover:border-hairline-strong hover:text-ink'
               }`}
             >
-              <span>ChatGPT Görsel & İçerik Üretim Sırası</span>
+              <span>ChatGPT Görsel & İçerik Üretimi</span>
               <span className="rounded-full bg-surface-raised border border-hairline px-2 py-0.5 text-[11px] font-bold text-ink-muted">
                 {filteredCreatives.length}
               </span>
@@ -566,7 +685,7 @@ export function LiveDashboard() {
 
             <button
               onClick={() => setActiveTab('baileys')}
-              className={`inline-flex items-center gap-2 border-b-2 px-3.5 py-2.5 text-[13.5px] font-semibold transition ${
+              className={`inline-flex items-center gap-2 border-b-2 px-3 py-2.5 text-[13px] font-semibold transition ${
                 activeTab === 'baileys'
                   ? 'border-accent text-accent'
                   : 'border-transparent text-ink-muted hover:border-hairline-strong hover:text-ink'
@@ -580,7 +699,7 @@ export function LiveDashboard() {
 
             <button
               onClick={() => setActiveTab('messages')}
-              className={`inline-flex items-center gap-2 border-b-2 px-3.5 py-2.5 text-[13.5px] font-semibold transition ${
+              className={`inline-flex items-center gap-2 border-b-2 px-3 py-2.5 text-[13px] font-semibold transition ${
                 activeTab === 'messages'
                   ? 'border-accent text-accent'
                   : 'border-transparent text-ink-muted hover:border-hairline-strong hover:text-ink'
@@ -594,7 +713,7 @@ export function LiveDashboard() {
 
             <button
               onClick={() => setActiveTab('jobs')}
-              className={`inline-flex items-center gap-2 border-b-2 px-3.5 py-2.5 text-[13.5px] font-semibold transition ${
+              className={`inline-flex items-center gap-2 border-b-2 px-3 py-2.5 text-[13px] font-semibold transition ${
                 activeTab === 'jobs'
                   ? 'border-accent text-accent'
                   : 'border-transparent text-ink-muted hover:border-hairline-strong hover:text-ink'
@@ -850,7 +969,190 @@ export function LiveDashboard() {
           </div>
         )}
 
-        {/* SEKME 3: CHATGPT GÖRSEL & İÇERİK ÜRETİM SIRASI */}
+        {/* SEKME 3: VERİ TALEPLERİ & LEAD KEŞFİ (YENİ VERİ TALEBİ OLUŞTURMA İLE) */}
+        {activeTab === 'data_requests' && (
+          <div className="space-y-6">
+            {/* Hızlı Yeni Veri Talebi Açma Formu */}
+            <div className="rounded-[var(--radius-card)] border border-hairline bg-surface p-5 sm:p-6 shadow-[var(--shadow-card)] space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-[15.5px] font-bold text-ink">
+                    Yeni Veri & Numara Listesi Talebi Oluştur
+                  </h3>
+                  <p className="text-[12.5px] text-ink-muted mt-0.5">
+                    İstediğiniz sektör ve konuma ait doğrulanmış WhatsApp müşteri numaralarını sistem otomatik tarar ve listeye aktarır.
+                  </p>
+                </div>
+                <span className="rounded-full bg-accent-soft px-3 py-1 text-[12px] font-bold text-accent">
+                  Google Places & Harita Keşfi
+                </span>
+              </div>
+
+              <form onSubmit={handleCreateListRequest} className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div>
+                  <label className="block text-[12px] font-semibold uppercase tracking-wider text-ink-muted mb-1">
+                    Sektör / Kategori
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    placeholder="Örn: Eczane, Toptancı, Diş Kliniği..."
+                    className="w-full h-9 rounded-[var(--radius-sm)] border border-hairline-strong bg-canvas px-3 text-[13.5px] text-ink placeholder:text-ink-faint focus:border-accent focus:bg-surface focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[12px] font-semibold uppercase tracking-wider text-ink-muted mb-1">
+                    İl / İlçe / Bölge
+                  </label>
+                  <input
+                    type="text"
+                    value={newLocation}
+                    onChange={(e) => setNewLocation(e.target.value)}
+                    placeholder="Örn: Bursa / Nilüfer veya Türkiye Geneli"
+                    className="w-full h-9 rounded-[var(--radius-sm)] border border-hairline-strong bg-canvas px-3 text-[13.5px] text-ink placeholder:text-ink-faint focus:border-accent focus:bg-surface focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex items-end">
+                  <button
+                    type="submit"
+                    disabled={submittingRequest}
+                    className="w-full h-9 px-4 text-[13px] font-bold bg-accent hover:bg-accent-dim text-accent-ink rounded-[var(--radius-sm)] shadow-sm transition disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  >
+                    {submittingRequest ? 'Taranıyor...' : 'Veri Talebini Başlat'}
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* Mevcut Veri Talepleri Listesi */}
+            <div className="space-y-3.5">
+              <div className="flex items-center justify-between text-[13px] text-ink-muted">
+                <span className="font-semibold text-ink-soft">
+                  Sistemdeki Veri Talepleri ({filteredListRequests.length})
+                </span>
+              </div>
+
+              <div className="rounded-[var(--radius-card)] border border-hairline bg-surface overflow-hidden shadow-[var(--shadow-card)]">
+                {filteredListRequests.length === 0 ? (
+                  <div className="p-12 text-center text-[13.5px] text-ink-muted">
+                    Henüz veri talebi kaydı bulunmuyor.
+                  </div>
+                ) : (
+                  <div className="divide-y divide-hairline">
+                    {filteredListRequests.map((req) => {
+                      const isPending = req.status === 'pending'
+                      const isCompleted = req.status === 'completed'
+
+                      return (
+                        <div
+                          key={req.id}
+                          className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-surface-raised/60 transition"
+                        >
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span
+                                className={`rounded-[var(--radius-sm)] px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider ${
+                                  isPending
+                                    ? 'bg-warn/15 text-warn border border-warn/30 animate-pulse'
+                                    : isCompleted
+                                      ? 'bg-ok-soft text-ok-dim border border-ok/40'
+                                      : 'bg-surface-raised text-ink-muted border border-hairline'
+                                }`}
+                              >
+                                {isPending ? 'İŞLENİYOR / BEKLİYOR' : isCompleted ? 'TAMAMLANDI' : req.status.toUpperCase()}
+                              </span>
+
+                              {req.org_name && (
+                                <span className="rounded-[var(--radius-sm)] bg-canvas border border-hairline px-2 py-0.5 text-[11.5px] font-semibold text-ink-soft">
+                                  {req.org_name}
+                                </span>
+                              )}
+
+                              <span className="text-[14.5px] font-bold text-ink">
+                                {req.category || 'Genel Sektör'}
+                              </span>
+                            </div>
+
+                            <div className="text-[13px] text-ink-muted flex items-center gap-2">
+                              <span>Konum: <strong className="text-ink-soft">{req.address || 'Tüm Türkiye'}</strong></span>
+                              {req.radius_km && <span>• {req.radius_km} km yarıçap</span>}
+                            </div>
+                          </div>
+
+                          <div className="flex sm:flex-col items-start sm:items-end justify-between gap-1 text-[12.5px] text-ink-muted tabular shrink-0">
+                            <div className="font-bold text-accent text-[14px]">
+                              {req.contact_count > 0 ? `${req.contact_count} Numara Çekildi` : 'Taranıyor'}
+                            </div>
+                            <span className="text-[11.5px] text-ink-faint">
+                              {timeAgo(req.created_at)}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* SEKME 4: KİŞİ LİSTELERİ & REHBER */}
+        {activeTab === 'contact_lists' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between text-[13px] text-ink-muted">
+              <span>Sistemdeki tüm müşteri listeleri, kişi sayıları ve veri kaynakları:</span>
+              <span className="text-[12px] font-medium text-ink-faint">Toplam {filteredContactLists.length} liste</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {filteredContactLists.length === 0 ? (
+                <div className="col-span-full rounded-[var(--radius-card)] border border-hairline bg-surface p-12 text-center text-[13.5px] text-ink-muted">
+                  Henüz kişi listesi bulunmuyor.
+                </div>
+              ) : (
+                filteredContactLists.map((list) => (
+                  <div
+                    key={list.id}
+                    className="rounded-[var(--radius-card)] border border-hairline bg-surface p-4 flex flex-col justify-between gap-3 shadow-[var(--shadow-card)] hover:shadow-md transition"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-[15px] font-bold text-ink truncate">{list.name}</h4>
+                        <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-[11px] font-bold text-accent uppercase">
+                          {list.source}
+                        </span>
+                      </div>
+
+                      {list.org_name && (
+                        <div className="text-[12px] text-ink-muted">
+                          İşletme: <strong className="text-ink-soft">{list.org_name}</strong>
+                        </div>
+                      )}
+
+                      <div className="flex items-baseline gap-1 mt-2">
+                        <span className="text-[22px] font-bold text-ink tabular">
+                          {Number(list.contact_count).toLocaleString('tr-TR')}
+                        </span>
+                        <span className="text-[13px] text-ink-muted font-medium">kayıtlı kişi</span>
+                      </div>
+                    </div>
+
+                    <div className="pt-2.5 border-t border-hairline flex items-center justify-between text-[12px] text-ink-faint tabular">
+                      <span>Oluşturulma: {timeAgo(list.created_at)}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* SEKME 5: CHATGPT GÖRSEL & İÇERİK ÜRETİM SIRASI */}
         {activeTab === 'ai_creatives' && (
           <div className="space-y-4">
             <div className="text-[13px] text-ink-muted">
@@ -866,7 +1168,6 @@ export function LiveDashboard() {
                 filteredCreatives.map((cr) => {
                   const isReady = cr.status === 'ready'
                   const isGenerating = cr.status === 'generating' || cr.status === 'pending'
-                  const isFailed = cr.status === 'failed'
 
                   return (
                     <div
@@ -949,7 +1250,7 @@ export function LiveDashboard() {
           </div>
         )}
 
-        {/* SEKME 4: BAILEYS SERVİSİ & HATLAR */}
+        {/* SEKME 6: BAILEYS SERVİSİ & HATLAR */}
         {activeTab === 'baileys' && (
           <div className="space-y-6">
             {/* Hetzner VPS Worker Bilgi Paneli */}
@@ -1087,7 +1388,7 @@ export function LiveDashboard() {
           </div>
         )}
 
-        {/* SEKME 5: CANLI MESAJLAŞMA AKIŞI */}
+        {/* SEKME 7: CANLI MESAJLAŞMA AKIŞI */}
         {activeTab === 'messages' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -1204,7 +1505,7 @@ export function LiveDashboard() {
           </div>
         )}
 
-        {/* SEKME 6: İŞ KUYRUĞU */}
+        {/* SEKME 8: İŞ KUYRUĞU */}
         {activeTab === 'jobs' && (
           <div className="space-y-4">
             <div className="text-[13px] text-ink-muted">
