@@ -383,7 +383,7 @@ async function processAutoReply(options: AutoReplyOptions): Promise<void> {
   // İşletme bağlamı topla
   const [kitRows, productRows] = await Promise.all([
     query<{ name: string; tone: string }>(
-      `select name, tone from public.brand_kits where org_id = $1 and is_default = true limit 1`,
+      `select name, tone from public.brand_kits where org_id = $1 order by is_default desc nulls last limit 1`,
       [orgId],
     ),
     query<{ name: string }>(
@@ -551,7 +551,7 @@ export async function pregenerateAiSuggestions(options: {
         [orgId],
       ),
       query<{ name: string | null; tone: string | null }>(
-        `select name, tone from public.reply_sales_kit where org_id = $1 limit 1`,
+        `select name, tone from public.brand_kits where org_id = $1 order by is_default desc nulls last limit 1`,
         [orgId],
       ),
       query<{ name: string }>(
