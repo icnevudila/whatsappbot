@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { checkIsAuthenticated } from '@/app/canli-takip/auth'
-import { createClient } from '@supabase/supabase-js'
+import { createSupabaseServiceClient } from '@/lib/supabase/service'
 
 export const runtime = 'nodejs'
 
@@ -14,20 +14,46 @@ export async function POST() {
       )
     }
 
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-    if (!url || !key) {
-      return NextResponse.json({ success: false, error: 'Yapılandırma eksik' }, { status: 500 })
+    const supabase = createSupabaseServiceClient()
+    if (!supabase) {
+      return NextResponse.json(
+        { success: false, error: 'SUPABASE_SERVICE_ROLE_KEY eksik. Restart için servis yetkisi gerekir.' },
+        { status: 500 },
+      )
     }
 
-    const supabase = createClient(url, key)
     const { data, error } = await supabase.rpc('restart_baileys_service')
 
-    if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 400 })
+    if (!error) {
+      return NextResponse.json(data ?? { success: true, message: 'Restart işi kuyruğa alındı.' })
     }
 
-    return NextResponse.json(data)
+    const fallback = await supabase
+      .from('jobs')
+      .insert({
+        type: 'service.restart',
+        payload: {},
+        priority: 1,
+        max_attempts: 1,
+      })
+      .select('id')
+      .single()
+
+    if (fallback.error) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Restart RPC çalışmadı (${error.message}); fallback job da açılamadı (${fallback.error.message}). Migration eksik olabilir.`,
+        },
+        { status: 400 },
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Restart işi doğrudan kuyruğa alındı.',
+      jobId: fallback.data?.id,
+    })
   } catch (error) {
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : 'İşlem başarısız' },

@@ -60,6 +60,23 @@ export class SessionManager {
       if (!account.enabled) return { ok: false, reason: 'disabled' }
       if (account.is_locked) return { ok: false, reason: 'locked' }
 
+      // Ayni fiziksel telefon numarasina sahip baska bir oturum zaten aciksa ikinciyi acma.
+      if (account.phone_e164) {
+        for (const [activeId, activeSession] of this.sessions.entries()) {
+          if (activeId !== accountId && activeSession.phone === account.phone_e164) {
+            log.warn(
+              { accountId, activeId, phone: account.phone_e164 },
+              'Ayni telefon numarasina ait aktif bir oturum zaten var, ikinci soket acilmiyor',
+            )
+            return {
+              ok: false,
+              reason: 'already-active',
+              detail: `Bu numara (${account.phone_e164}) zaten aktif bir hatta bagli.`,
+            }
+          }
+        }
+      }
+
       // Kira alinmadan socket acilmaz.
       const lease = await acquireLease(accountId)
       if (!lease.acquired) {

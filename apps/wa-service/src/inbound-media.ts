@@ -1,8 +1,8 @@
 import { downloadMediaMessage, type WAMessage, type WASocket } from '@whiskeysockets/baileys'
+import { env } from './env.js'
 import { logger } from './logger.js'
 
 const BUCKET = 'chat-media'
-const MAX_BYTES = 12 * 1024 * 1024
 
 type MediaKind = 'image' | 'sticker' | 'video' | 'audio' | 'document'
 
@@ -47,6 +47,31 @@ function isSupportedKind(type: string): type is MediaKind {
   return type === 'image' || type === 'sticker' || type === 'video'
 }
 
+function numberFromProto(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'bigint') return Number(value)
+  if (value && typeof value === 'object') {
+    const longLike = value as { toNumber?: () => number; toString?: () => string }
+    if (typeof longLike.toNumber === 'function') return longLike.toNumber()
+    if (typeof longLike.toString === 'function') {
+      const parsed = Number.parseInt(longLike.toString(), 10)
+      return Number.isFinite(parsed) ? parsed : null
+    }
+  }
+  return null
+}
+
+function advertisedFileLength(message: WAMessage, kind: MediaKind): number | null {
+  const content = message.message
+  if (!content) return null
+  if (kind === 'image') return numberFromProto(content.imageMessage?.fileLength)
+  if (kind === 'sticker') return numberFromProto(content.stickerMessage?.fileLength)
+  if (kind === 'video') return numberFromProto(content.videoMessage?.fileLength)
+  if (kind === 'audio') return numberFromProto(content.audioMessage?.fileLength)
+  if (kind === 'document') return numberFromProto(content.documentMessage?.fileLength)
+  return null
+}
+
 /**
  * Baileys medyasını indirip chat-media bucket'a yükler.
  * SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY yoksa null döner.
@@ -68,6 +93,21 @@ export async function storeInboundMedia(options: {
     return null
   }
 
+  const maxBytes = env.inboundMediaMaxBytes
+  if (maxBytes <= 0) {
+    logger.info({ accountId, waMessageId }, 'inbound-media: kayit kapali')
+    return null
+  }
+
+  const expectedBytes = advertisedFileLength(message, messageType)
+  if (expectedBytes !== null && expectedBytes > maxBytes) {
+    logger.warn(
+      { accountId, waMessageId, bytes: expectedBytes, maxBytes },
+      'inbound-media: buyuk medya indirilmeden atlandi',
+    )
+    return null
+  }
+
   let buffer: Buffer
   try {
     const downloaded = await downloadMediaMessage(
@@ -85,9 +125,9 @@ export async function storeInboundMedia(options: {
     return null
   }
 
-  if (!buffer.length || buffer.length > MAX_BYTES) {
+  if (!buffer.length || buffer.length > maxBytes) {
     logger.warn(
-      { accountId, waMessageId, bytes: buffer.length },
+      { accountId, waMessageId, bytes: buffer.length, maxBytes },
       'inbound-media: boyut uygun değil',
     )
     return null

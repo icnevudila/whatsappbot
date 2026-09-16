@@ -6,7 +6,7 @@ import { emitOrgWebhook } from './org-hooks.js'
 import { isOptOutMessage } from './opt-out.js'
 import { dispatchPush } from './push-dispatch.js'
 
-function extractBody(message: WAMessage): { type: string; body: string | null } {
+export function extractBody(message: WAMessage): { type: string; body: string | null } {
   const content = message.message
   if (!content) return { type: 'unknown', body: null }
 

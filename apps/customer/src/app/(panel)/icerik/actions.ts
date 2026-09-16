@@ -65,6 +65,14 @@ async function kickGeneration(creativeId: string) {
         console.error('[creative.kick.http]', creativeId, error)
       }
     })
+  } else if (hasImageProvider()) {
+    after(async () => {
+      try {
+        await processCreativeGeneration(creativeId)
+      } catch (error) {
+        console.error('[creative.kick.local]', creativeId, error)
+      }
+    })
   }
 
   const queued = await enqueueJob({
@@ -395,6 +403,7 @@ export async function retryCreative(id: string): Promise<CreativeActionState> {
       .update({ status: 'pending', error: null })
       .eq('id', trimmed)
       .eq('org_id', org.id)
+    await kickGeneration(trimmed)
     revalidateLibrary(trimmed)
     return { ok: 'Üretim yeniden başlatıldı.' }
   } catch (error) {

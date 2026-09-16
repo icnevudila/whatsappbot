@@ -42,7 +42,22 @@ export async function lookupSentMessage(
       'select message from wa.sent_messages where account_id = $1 and msg_id = $2',
       [accountId, key.id],
     )
-    return deserializeSentMessage(row?.message)
+    if (row?.message) {
+      return deserializeSentMessage(row.message)
+    }
+
+    // Fallback: wa.sent_messages'ta yoksa message_log tablosundan metni kurtar
+    const logRow = await one<{ body: string | null }>(
+      `select body from public.message_log
+        where account_id = $1 and wa_message_id = $2
+        limit 1`,
+      [accountId, key.id],
+    )
+    if (logRow?.body) {
+      return { conversation: logRow.body }
+    }
+
+    return undefined
   } catch (error) {
     logger.warn({ err: error, accountId, id: key.id }, 'sent_messages okunamadi')
     return undefined

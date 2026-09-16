@@ -41,7 +41,7 @@ export async function loadResumableAccounts(
   limit: number,
   workerId: string,
 ): Promise<AccountRow[]> {
-  return query<AccountRow>(
+  const rows = await query<AccountRow>(
     `select a.id, a.org_id, a.created_by, a.label, a.phone_e164, a.wa_jid, a.status, a.enabled, a.is_locked,
             a.daily_send_limit, a.sent_today, a.sent_today_on, a.warmup_started_at,
             a.new_chat_quota_total, a.new_chat_quota_used, a.reachout_locked_until
@@ -60,8 +60,28 @@ export async function loadResumableAccounts(
         a.connected_at desc nulls last,
         a.created_at
       limit $1`,
-    [limit, workerId],
+    [limit * 2, workerId],
   )
+
+  const seenPhones = new Set<string>()
+  const uniqueRows: AccountRow[] = []
+  for (const row of rows) {
+    const key = row.phone_e164 || row.wa_jid
+    if (key) {
+      if (seenPhones.has(key)) {
+        logger.warn(
+          { accountId: row.id, phone: key, label: row.label },
+          'Mukkerrer telefon numarasina sahip hesap atlandi (tek hat kurali)',
+        )
+        continue
+      }
+      seenPhones.add(key)
+    }
+    uniqueRows.push(row)
+    if (uniqueRows.length >= limit) break
+  }
+
+  return uniqueRows
 }
 
 /**

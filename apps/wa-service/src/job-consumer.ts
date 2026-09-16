@@ -675,9 +675,11 @@ async function handle(job: JobRow): Promise<unknown> {
         ''
       const secret = process.env.JOB_INTERNAL_SECRET?.trim()
       if (!base || !secret) {
-        throw new NonRetryableJobError(
-          'CUSTOMER_APP_URL ve JOB_INTERNAL_SECRET yok; kreatif isci HTTP cagiramiyor. Panel after() yedegi kullanilmali.',
-        )
+        return {
+          skipped: true,
+          reason:
+            'CUSTOMER_APP_URL veya JOB_INTERNAL_SECRET yok; kreatif üretimi müşteri uygulaması fallback akışına bırakıldı.',
+        }
       }
       const response = await fetch(`${base.replace(/\/$/, '')}/api/internal/creative-render`, {
         method: 'POST',

@@ -133,13 +133,22 @@ export class WhatsAppSession {
   private pairingPhone: string | undefined
   private pairingIssuedAt = 0
   private refreshingPairing = false
+  private connectedPhone: string | null = null
 
-  constructor(account: Pick<AccountRow, 'id' | 'org_id' | 'created_by'>, epoch: number) {
+  constructor(
+    account: Pick<AccountRow, 'id' | 'org_id' | 'created_by'> & { phone_e164?: string | null },
+    epoch: number,
+  ) {
     this.accountId = account.id
     this.orgId = account.org_id
     this.createdBy = account.created_by
+    this.connectedPhone = account.phone_e164 ?? null
     this.epoch = epoch
     this.log = logger.child({ accountId: account.id, scope: 'session' })
+  }
+
+  get phone(): string | null {
+    return this.connectedPhone
   }
 
   get currentStatus(): AccountStatus {
@@ -302,6 +311,9 @@ export class WhatsAppSession {
       void this.handleInboundMessages(messages).catch((error) => {
         this.log.warn({ err: error }, 'Gelen mesaj islenerken hata')
       })
+      void this.handleOutboundMessages(messages).catch((error) => {
+        this.log.warn({ err: error }, 'Telefondan atilan mesaj islenerken hata')
+      })
       // Yeniden baglaninca fromMe mesajlarinin status'u upsert ile gelebilir.
       void applyOutboundMessageStatuses(this.accountId, messages).catch((error) => {
         this.log.warn({ err: error }, 'Outbound upsert status islenirken hata')
@@ -444,6 +456,33 @@ export class WhatsAppSession {
     }
   }
 
+  private async handleOutboundMessages(messages: WAMessage[]): Promise<void> {
+    const { syncPhoneOutboundMessages } = await import('./outbound-sync.js')
+    const resolveLidPn = async (lidJid: string): Promise<string | null> => {
+      const sock = this.sock as
+        | {
+            signalRepository?: {
+              lidMapping?: {
+                getPNForLID?: (lid: string) => Promise<string | null | undefined>
+              }
+            }
+          }
+        | null
+      const getPn = sock?.signalRepository?.lidMapping?.getPNForLID
+      if (!getPn) return null
+      const mapped = await getPn.call(sock.signalRepository!.lidMapping!, lidJid)
+      return mapped ?? null
+    }
+
+    await syncPhoneOutboundMessages({
+      accountId: this.accountId,
+      orgId: this.orgId,
+      createdBy: this.createdBy,
+      messages,
+      resolveLidPn,
+    })
+  }
+
   private async handleConnectionUpdate(update: {
     connection?: string
     qr?: string
@@ -520,6 +559,7 @@ export class WhatsAppSession {
         last_disconnect_code: null,
       })
       this.status = 'connected'
+      this.connectedPhone = phone
 
       await this.ensureWarmupStarted()
       await this.refreshQuota()
@@ -549,6 +589,7 @@ export class WhatsAppSession {
 
     switch (code) {
       case DisconnectReason.loggedOut: {
+        this.connectedPhone = null
         // Gercek logout. Auth silinecek tek durumlardan biri.
         await logAccountEvent(this, 'warn', 'account.logged_out', { code })
         await this.auth?.clear()
@@ -605,7 +646,7 @@ export class WhatsAppSession {
 
       case DisconnectReason.badSession: {
         await logAccountEvent(this, 'warn', 'account.bad_session', { code })
-        await this.tryReconnect()
+        await this.tryReconnect(10_000)
         return
       }
 
