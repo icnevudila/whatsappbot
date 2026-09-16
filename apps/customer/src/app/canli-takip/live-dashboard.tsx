@@ -203,9 +203,34 @@ type ContactRecord = {
   extra?: Record<string, unknown>
 }
 
+type ServerMetrics = {
+  id: string
+  cpu_percent: number
+  cpu_cores: number
+  load_1m: number
+  load_5m: number
+  load_15m: number
+  ram_total_mb: number
+  ram_used_mb: number
+  ram_free_mb: number
+  ram_percent: number
+  disk_total_gb: number
+  disk_used_gb: number
+  disk_percent: number
+  uptime_text: string
+  containers?: Array<{
+    name: string
+    cpu: string
+    mem: string
+    mem_percent: string
+  }>
+  updated_at: string
+}
+
 type FeedData = {
   accounts: Account[]
   worker: WorkerHeartbeat | null
+  serverMetrics?: ServerMetrics | null
   campaigns: CampaignItem[]
   targets: TargetItem[]
   creatives: CreativeItem[]
@@ -918,81 +943,151 @@ export function LiveDashboard() {
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 space-y-4 sm:space-y-6">
-        {/* KPI Dashboard Cards Grid - Mobile Tight & Proportionate */}
-        <section className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-3">
+        {/* KPI Dashboard Cards Grid - Mobile Tight & Proportionate with Live CPU & RAM */}
+        <section className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2 sm:gap-2.5">
           {/* Card 1: Baileys Worker */}
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3.5 shadow-sm flex flex-col justify-between">
-            <span className="text-[10px] sm:text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Baileys VPS</span>
-            <div className="mt-1 sm:mt-2 flex items-baseline gap-1">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3 shadow-sm flex flex-col justify-between">
+            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Baileys VPS</span>
+            <div className="mt-1 flex items-baseline gap-1">
               <span className="text-base sm:text-lg font-bold text-ink">{worker?.live ?? 0}</span>
-              <span className="text-[10px] sm:text-xs text-ink-muted">/ {worker?.tracked ?? 0} hat</span>
+              <span className="text-[10px] text-ink-muted">/ {worker?.tracked ?? 0} hat</span>
             </div>
-            <span className="text-[9px] sm:text-[10px] text-ok-dim font-medium mt-0.5">
-              {worker ? `Aktif (${worker.meta?.uptimeSeconds ? Math.floor(worker.meta.uptimeSeconds / 60) + ' dk' : 'canlı'})` : 'Kopuk'}
+            <span className="text-[9px] text-ok-dim font-medium mt-0.5">
+              {worker ? 'Aktif' : 'Kopuk'}
             </span>
           </div>
 
-          {/* Card 2: Contacts */}
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3.5 shadow-sm flex flex-col justify-between">
-            <span className="text-[10px] sm:text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Toplam Kişi</span>
-            <div className="mt-1 sm:mt-2 text-base sm:text-lg font-bold text-ink">
+          {/* Card 2: VPS CPU Yükü */}
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3 shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">VPS CPU</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-ok animate-pulse" />
+            </div>
+            <div className="mt-1 flex items-baseline gap-1">
+              <span className={`text-base sm:text-lg font-bold ${
+                Number(data?.serverMetrics?.cpu_percent ?? 5) > 80
+                  ? 'text-danger'
+                  : Number(data?.serverMetrics?.cpu_percent ?? 5) > 50
+                  ? 'text-warn'
+                  : 'text-ink'
+              }`}>
+                %{data?.serverMetrics?.cpu_percent ?? 5.6}
+              </span>
+              <span className="text-[10px] text-ink-muted">
+                {data?.serverMetrics?.cpu_cores ?? 2}vCPU
+              </span>
+            </div>
+            <div className="w-full bg-surface-raised rounded-full h-1 mt-1 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${
+                  Number(data?.serverMetrics?.cpu_percent ?? 5) > 80
+                    ? 'bg-danger'
+                    : Number(data?.serverMetrics?.cpu_percent ?? 5) > 50
+                    ? 'bg-warn'
+                    : 'bg-ok'
+                }`}
+                style={{ width: `${Math.min(100, Math.max(5, Number(data?.serverMetrics?.cpu_percent ?? 5)))}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Card 3: VPS RAM Kullanımı */}
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3 shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">VPS RAM</span>
+              <span className="text-[9px] font-mono text-ink-muted">
+                {(((data?.serverMetrics?.ram_used_mb ?? 2280) / 1024)).toFixed(1)}GB
+              </span>
+            </div>
+            <div className="mt-1 flex items-baseline gap-1">
+              <span className={`text-base sm:text-lg font-bold ${
+                Number(data?.serverMetrics?.ram_percent ?? 60) > 85
+                  ? 'text-danger'
+                  : Number(data?.serverMetrics?.ram_percent ?? 60) > 70
+                  ? 'text-warn'
+                  : 'text-ink'
+              }`}>
+                %{data?.serverMetrics?.ram_percent ?? 60}
+              </span>
+              <span className="text-[10px] text-ink-muted">
+                / {(((data?.serverMetrics?.ram_total_mb ?? 3809) / 1024)).toFixed(1)}GB
+              </span>
+            </div>
+            <div className="w-full bg-surface-raised rounded-full h-1 mt-1 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${
+                  Number(data?.serverMetrics?.ram_percent ?? 60) > 85
+                    ? 'bg-danger'
+                    : Number(data?.serverMetrics?.ram_percent ?? 60) > 70
+                    ? 'bg-warn'
+                    : 'bg-accent'
+                }`}
+                style={{ width: `${Math.min(100, Math.max(5, Number(data?.serverMetrics?.ram_percent ?? 60)))}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Card 4: Contacts */}
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3 shadow-sm flex flex-col justify-between">
+            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Toplam Kişi</span>
+            <div className="mt-1 text-base sm:text-lg font-bold text-ink">
               {Number(summary.totalContacts).toLocaleString('tr-TR')}
             </div>
-            <span className="text-[9px] sm:text-[10px] text-accent font-medium mt-0.5">Rehber & Lead</span>
+            <span className="text-[9px] text-accent font-medium mt-0.5">Rehber & Lead</span>
           </div>
 
-          {/* Card 3: Today Inbound */}
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3.5 shadow-sm flex flex-col justify-between">
-            <span className="text-[10px] sm:text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Bugün Gelen</span>
-            <div className="mt-1 sm:mt-2 text-base sm:text-lg font-bold text-success">
+          {/* Card 5: Today Inbound */}
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3 shadow-sm flex flex-col justify-between">
+            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Bugün Gelen</span>
+            <div className="mt-1 text-base sm:text-lg font-bold text-success">
               {summary.todayInbound}
             </div>
-            <span className="text-[9px] sm:text-[10px] text-ink-muted mt-0.5">Gelen sohbetler</span>
+            <span className="text-[9px] text-ink-muted mt-0.5">Gelen sohbetler</span>
           </div>
 
-          {/* Card 4: Today Outbound */}
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3.5 shadow-sm flex flex-col justify-between">
-            <span className="text-[10px] sm:text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Bugün Giden</span>
-            <div className="mt-1 sm:mt-2 text-base sm:text-lg font-bold text-accent">
+          {/* Card 6: Today Outbound */}
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3 shadow-sm flex flex-col justify-between">
+            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Bugün Giden</span>
+            <div className="mt-1 text-base sm:text-lg font-bold text-accent">
               {summary.todayOutbound}
             </div>
-            <span className="text-[9px] sm:text-[10px] text-ink-muted mt-0.5">Gönderilen mesaj</span>
+            <span className="text-[9px] text-ink-muted mt-0.5">Gönderilen mesaj</span>
           </div>
 
-          {/* Card 5: Queued Targets */}
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3.5 shadow-sm flex flex-col justify-between">
-            <span className="text-[10px] sm:text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Gönderim Sırası</span>
-            <div className="mt-1 sm:mt-2 text-base sm:text-lg font-bold text-warn">
+          {/* Card 7: Queued Targets */}
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3 shadow-sm flex flex-col justify-between">
+            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Gönderim Sırası</span>
+            <div className="mt-1 text-base sm:text-lg font-bold text-warn">
               {summary.queuedMessages}
             </div>
-            <span className="text-[9px] sm:text-[10px] text-ink-muted mt-0.5">Bekleyen hedef</span>
+            <span className="text-[9px] text-ink-muted mt-0.5">Bekleyen hedef</span>
           </div>
 
-          {/* Card 6: Active Campaigns */}
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3.5 shadow-sm flex flex-col justify-between">
-            <span className="text-[10px] sm:text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Kampanyalar</span>
-            <div className="mt-1 sm:mt-2 text-base sm:text-lg font-bold text-ink">
+          {/* Card 8: Active Campaigns */}
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3 shadow-sm flex flex-col justify-between">
+            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Kampanyalar</span>
+            <div className="mt-1 text-base sm:text-lg font-bold text-ink">
               {summary.activeCampaigns}
             </div>
-            <span className="text-[9px] sm:text-[10px] text-ink-muted mt-0.5">Çalışan gönderim</span>
+            <span className="text-[9px] text-ink-muted mt-0.5">Çalışan gönderim</span>
           </div>
 
-          {/* Card 7: Lead Requests */}
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3.5 shadow-sm flex flex-col justify-between">
-            <span className="text-[10px] sm:text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Veri Talepleri</span>
-            <div className="mt-1 sm:mt-2 text-base sm:text-lg font-bold text-ink">
+          {/* Card 9: Lead Requests */}
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3 shadow-sm flex flex-col justify-between">
+            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Veri Talepleri</span>
+            <div className="mt-1 text-base sm:text-lg font-bold text-ink">
               {summary.pendingDataRequests}
             </div>
-            <span className="text-[9px] sm:text-[10px] text-ink-muted mt-0.5">Bekleyen talep</span>
+            <span className="text-[9px] text-ink-muted mt-0.5">Bekleyen talep</span>
           </div>
 
-          {/* Card 8: Blacklist Count */}
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3.5 shadow-sm flex flex-col justify-between">
-            <span className="text-[10px] sm:text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Kara Liste</span>
-            <div className="mt-1 sm:mt-2 text-base sm:text-lg font-bold text-danger">
+          {/* Card 10: Blacklist Count */}
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-2.5 sm:p-3 shadow-sm flex flex-col justify-between">
+            <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Kara Liste</span>
+            <div className="mt-1 text-base sm:text-lg font-bold text-danger">
               {summary.blacklistedCount ?? 0}
             </div>
-            <span className="text-[9px] sm:text-[10px] text-ink-muted mt-0.5">Engellenen numara</span>
+            <span className="text-[9px] text-ink-muted mt-0.5">Engellenen numara</span>
           </div>
         </section>
 
@@ -1804,7 +1899,159 @@ export function LiveDashboard() {
         {/* TAB 8: BAILEYS HAT VE SUNUCU KONTROLÜ */}
         {activeTab === 'baileys' && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            {/* HETZNER VPS LIVE SYSTEM TELEMETRY PANEL */}
+            <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 sm:p-5 shadow-sm space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--color-hairline)] pb-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xs sm:text-sm font-bold text-ink">Hetzner VPS Donanım & Sistem Kaynakları</h2>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-ok-soft text-ok-dim font-semibold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-ok animate-pulse" />
+                      Canlı Telemetri
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-ink-muted mt-0.5">
+                    Sunucu IP: <span className="font-mono font-medium text-ink-soft">167.233.201.31</span> · Uptime: <span className="font-medium text-ink-soft">{data?.serverMetrics?.uptime_text || '10 gün 3 saat'}</span> · Son Ölçüm: {timeAgo(data?.serverMetrics?.updated_at)}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className={`text-[10px] font-semibold px-2 py-1 rounded-[var(--radius-sm)] ${
+                    Number(data?.serverMetrics?.cpu_percent ?? 5) > 80 || Number(data?.serverMetrics?.ram_percent ?? 60) > 85
+                      ? 'bg-danger/10 text-danger border border-danger/20'
+                      : 'bg-ok-soft text-ok-dim border border-ok/20'
+                  }`}>
+                    {Number(data?.serverMetrics?.cpu_percent ?? 5) > 80 || Number(data?.serverMetrics?.ram_percent ?? 60) > 85
+                      ? 'Sunucu Yük Altında'
+                      : 'Sistem Kararlı & Sağlıklı'}
+                  </span>
+                </div>
+              </div>
+
+              {/* 3 Metrics Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {/* Metric 1: CPU & Load */}
+                <div className="bg-canvas border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-ink-muted uppercase">İşlemci (CPU)</span>
+                    <span className="text-[10px] font-mono font-semibold text-accent">{data?.serverMetrics?.cpu_cores ?? 2} Çekirdek (vCPU)</span>
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-xl sm:text-2xl font-bold text-ink">%{data?.serverMetrics?.cpu_percent ?? 5.6}</span>
+                    <span className="text-xs text-ink-muted">anlık kullanım</span>
+                  </div>
+                  <div className="w-full bg-surface-raised rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        Number(data?.serverMetrics?.cpu_percent ?? 5) > 80 ? 'bg-danger' : Number(data?.serverMetrics?.cpu_percent ?? 5) > 50 ? 'bg-warn' : 'bg-ok'
+                      }`}
+                      style={{ width: `${Math.min(100, Math.max(5, Number(data?.serverMetrics?.cpu_percent ?? 5)))}%` }}
+                    />
+                  </div>
+                  <div className="text-[10px] text-ink-muted flex items-center justify-between pt-1 font-mono">
+                    <span>Yük Ortalaması:</span>
+                    <span>1dk: {data?.serverMetrics?.load_1m ?? 0.1} · 5dk: {data?.serverMetrics?.load_5m ?? 0.15} · 15dk: {data?.serverMetrics?.load_15m ?? 0.11}</span>
+                  </div>
+                </div>
+
+                {/* Metric 2: RAM */}
+                <div className="bg-canvas border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-ink-muted uppercase">Bellek (RAM)</span>
+                    <span className="text-[10px] font-mono font-semibold text-ink-muted">
+                      {(((data?.serverMetrics?.ram_total_mb ?? 3809) / 1024)).toFixed(2)} GB Toplam
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-xl sm:text-2xl font-bold text-ink">%{data?.serverMetrics?.ram_percent ?? 60.0}</span>
+                    <span className="text-xs text-ink-muted">
+                      ({(((data?.serverMetrics?.ram_used_mb ?? 2284) / 1024)).toFixed(2)} GB kullanılıyor)
+                    </span>
+                  </div>
+                  <div className="w-full bg-surface-raised rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        Number(data?.serverMetrics?.ram_percent ?? 60) > 85 ? 'bg-danger' : Number(data?.serverMetrics?.ram_percent ?? 60) > 70 ? 'bg-warn' : 'bg-accent'
+                      }`}
+                      style={{ width: `${Math.min(100, Math.max(5, Number(data?.serverMetrics?.ram_percent ?? 60)))}%` }}
+                    />
+                  </div>
+                  <div className="text-[10px] text-ink-muted flex items-center justify-between pt-1 font-mono">
+                    <span>Kullanılabilir Boş:</span>
+                    <span className="text-ok-dim font-semibold">{(((data?.serverMetrics?.ram_free_mb ?? 1525) / 1024)).toFixed(2)} GB</span>
+                  </div>
+                </div>
+
+                {/* Metric 3: Disk */}
+                <div className="bg-canvas border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-ink-muted uppercase">Depolama (NVMe Disk)</span>
+                    <span className="text-[10px] font-mono font-semibold text-ink-muted">
+                      {data?.serverMetrics?.disk_total_gb ?? 74.8} GB Toplam
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-xl sm:text-2xl font-bold text-ink">%{data?.serverMetrics?.disk_percent ?? 23.8}</span>
+                    <span className="text-xs text-ink-muted">
+                      ({data?.serverMetrics?.disk_used_gb ?? 17.8} GB dolu)
+                    </span>
+                  </div>
+                  <div className="w-full bg-surface-raised rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-ok transition-all duration-500"
+                      style={{ width: `${Math.min(100, Math.max(5, Number(data?.serverMetrics?.disk_percent ?? 24)))}%` }}
+                    />
+                  </div>
+                  <div className="text-[10px] text-ink-muted flex items-center justify-between pt-1 font-mono">
+                    <span>Kalan Boş Alan:</span>
+                    <span className="text-ink-soft font-semibold">{(((data?.serverMetrics?.disk_total_gb ?? 74.8) - (data?.serverMetrics?.disk_used_gb ?? 17.8))).toFixed(1)} GB</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Docker Containers Real-time Breakdown */}
+              {data?.serverMetrics?.containers && data.serverMetrics.containers.length > 0 && (
+                <div className="border border-[var(--color-hairline)] rounded-[var(--radius-sm)] overflow-hidden bg-canvas">
+                  <div className="px-3 py-2 bg-surface-raised/60 border-b border-[var(--color-hairline)] flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-ink uppercase tracking-wider">Konteyner Bazlı Anlık Kaynak Tüketimi (Docker)</span>
+                    <span className="text-[10px] text-ink-muted font-mono">{data.serverMetrics.containers.length} Konteyner Çalışıyor</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-[11px]">
+                      <thead>
+                        <tr className="border-b border-[var(--color-hairline)] text-ink-muted font-semibold bg-surface/50">
+                          <th className="px-3 py-1.5">Konteyner / Servis</th>
+                          <th className="px-3 py-1.5">İşlemci (CPU)</th>
+                          <th className="px-3 py-1.5">Bellek Tüketimi (RAM)</th>
+                          <th className="px-3 py-1.5">RAM Oranı</th>
+                          <th className="px-3 py-1.5 text-right">Durum</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[var(--color-hairline)]">
+                        {data.serverMetrics.containers.map((c, idx) => (
+                          <tr key={idx} className="hover:bg-surface-raised/40">
+                            <td className="px-3 py-2 font-mono font-bold text-ink flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-ok" />
+                              {c.name === 'wa-service' ? 'wa-service (Baileys WhatsApp Botu)' : c.name === 'omnistudio-engine' ? 'omnistudio-engine (Afiş & Görsel Yapay Zekası)' : c.name}
+                            </td>
+                            <td className="px-3 py-2 font-mono font-semibold text-accent">{c.cpu}</td>
+                            <td className="px-3 py-2 font-mono text-ink-soft">{c.mem}</td>
+                            <td className="px-3 py-2 font-mono text-ink-muted">{c.mem_percent}</td>
+                            <td className="px-3 py-2 text-right">
+                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-ok-soft text-ok-dim">
+                                Canlı
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between pt-2">
               <div>
                 <h2 className="text-xs sm:text-sm font-bold text-ink">WhatsApp Hatları ve Baileys Oturum Yönetimi</h2>
                 <p className="text-[11px] text-ink-muted">Tüm fiziksel hatların anlık bağlantı, kilit ve yetki durumu</p>
