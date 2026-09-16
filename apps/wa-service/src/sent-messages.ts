@@ -1,6 +1,7 @@
 import type { WAMessage, WAMessageKey, proto } from '@whiskeysockets/baileys'
 import { one, query } from './db.js'
 import { logger } from './logger.js'
+import { deserializeSentMessage, serializeSentMessage } from './sent-message-codec.js'
 
 /**
  * getMessage sozlesmesi: WhatsApp bir mesajin yeniden sifrelenmesini
@@ -20,8 +21,10 @@ export async function rememberSentMessage(
       `insert into wa.sent_messages (account_id, msg_id, remote_jid, message)
        values ($1, $2, $3, $4::jsonb)
        on conflict (account_id, msg_id) do update
-         set message = excluded.message`,
-      [accountId, id, remoteJid, JSON.stringify(message.message)],
+         set remote_jid = excluded.remote_jid,
+             message = excluded.message,
+             created_at = now()`,
+      [accountId, id, remoteJid, serializeSentMessage(message.message)],
     )
   } catch (error) {
     logger.warn({ err: error, accountId, id }, 'sent_messages yazilamadi')
@@ -39,7 +42,7 @@ export async function lookupSentMessage(
       'select message from wa.sent_messages where account_id = $1 and msg_id = $2',
       [accountId, key.id],
     )
-    return (row?.message as proto.IMessage | undefined) ?? undefined
+    return deserializeSentMessage(row?.message)
   } catch (error) {
     logger.warn({ err: error, accountId, id: key.id }, 'sent_messages okunamadi')
     return undefined

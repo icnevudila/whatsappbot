@@ -340,8 +340,8 @@ export function LiveDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<
-    'organizations' | 'contacts' | 'data_requests' | 'quick_send' | 'campaigns' | 'queue' | 'ai_studio' | 'blacklist' | 'baileys' | 'messages' | 'jobs'
-  >('organizations')
+    'overview' | 'baileys' | 'messages' | 'quick_send' | 'campaigns' | 'queue' | 'organizations' | 'contacts' | 'data_requests' | 'ai_studio' | 'blacklist' | 'jobs'
+  >('overview')
 
   const [selectedOrg, setSelectedOrg] = useState<string>('all')
   const [autoRefresh, setAutoRefresh] = useState(true)
@@ -404,6 +404,7 @@ export function LiveDashboard() {
   // Message & AI Suggestion Stream State
   const [msgStreamTab, setMsgStreamTab] = useState<'suggestions' | 'all' | 'in' | 'out' | 'auto_reply'>('suggestions')
   const [inspectedSuggestion, setInspectedSuggestion] = useState<AiSuggestionItem | null>(null)
+  const [selectedSuggestionId, setSelectedSuggestionId] = useState<string | null>(null)
   const [simulatingAi, setSimulatingAi] = useState(false)
   const [simulatedPrompt, setSimulatedPrompt] = useState('')
   const [simulatedSuggestions, setSimulatedSuggestions] = useState<Array<{ label: string; text: string }> | null>(null)
@@ -522,14 +523,14 @@ export function LiveDashboard() {
 
   // Baileys Servisini Yeniden Başlat (Restart Worker Container)
   const handleRestartService = async () => {
-    if (!confirm('Baileys WhatsApp servisi VPS üzerinde yeniden başlatılacak. Devam etmek istiyor musunuz?')) return
+    if (!confirm('WhatsApp gönderim servisi yeniden başlatılacak. Devam etmek istiyor musunuz?')) return
     if (actionBusy) return
     setActionBusy(true)
     try {
       const res = await fetch('/api/canli-takip/restart-service', { method: 'POST' })
       const json = await res.json()
       if (json.success) {
-        showNotice('Baileys servisi yeniden başlatma sinyali gönderildi.')
+        showNotice('WhatsApp servisi yeniden başlatma sinyali gönderildi.')
         setTimeout(fetchData, 3000)
       } else {
         alert('Hata: ' + (json.error || 'İşlem başarısız'))
@@ -1029,6 +1030,14 @@ export function LiveDashboard() {
     return list
   }, [data?.autoReplies, filterByOrg, globalSearch])
 
+  const selectedSuggestion = useMemo(() => {
+    if (filteredAiSuggestions.length === 0) return null
+    return (
+      filteredAiSuggestions.find(item => item.id === selectedSuggestionId) ??
+      filteredAiSuggestions[0]
+    )
+  }, [filteredAiSuggestions, selectedSuggestionId])
+
   const filteredJobs = useMemo(() => {
     let list = filterByOrg(data?.jobs)
     if (jobFilter !== 'all') list = list.filter(j => j.status === jobFilter)
@@ -1089,7 +1098,7 @@ export function LiveDashboard() {
       <div className="min-h-screen bg-[var(--color-canvas)] flex flex-col items-center justify-center p-4">
         <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin mb-3" />
         <p className="text-xs sm:text-sm font-semibold text-ink-soft">Yönetici Paneli Yükleniyor...</p>
-        <p className="text-[11px] text-ink-muted mt-1">Baileys VPS ve PostgreSQL bağlantısı kuruluyor.</p>
+        <p className="text-[11px] text-ink-muted mt-1">WhatsApp servis durumu ve PostgreSQL bağlantısı kuruluyor.</p>
       </div>
     )
   }
@@ -1176,7 +1185,7 @@ export function LiveDashboard() {
                 >
                   <option value="all">Tümü ({organizationsList.length})</option>
                   {organizationsList.map(o => (
-                    <option key={o.id} value={o.name}>
+                    <option key={o.id} value={o.id}>
                       {o.name}
                     </option>
                   ))}
@@ -1190,7 +1199,7 @@ export function LiveDashboard() {
                 onClick={handleRestartService}
                 disabled={actionBusy}
                 className="px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-semibold bg-danger/10 text-danger border border-danger/20 hover:bg-danger/15 transition disabled:opacity-50"
-                title="VPS Baileys servisini yeniden başlat"
+                title="WhatsApp gönderim servisini yeniden başlat"
               >
                 Restart
               </button>
@@ -1244,7 +1253,7 @@ export function LiveDashboard() {
         <section className="flex sm:grid overflow-x-auto pb-1.5 sm:pb-0 scrollbar-none gap-2 sm:grid-cols-5 lg:grid-cols-10 sm:gap-2">
           {/* Card 1: Baileys Worker */}
           <div className="min-w-[115px] sm:min-w-0 shrink-0 sm:shrink bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 sm:p-2.5 shadow-xs flex flex-col justify-between">
-            <span className="text-[9px] sm:text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Baileys</span>
+            <span className="text-[9px] sm:text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Servis</span>
             <div className="mt-0.5 flex items-baseline gap-1">
               <span className="text-sm sm:text-base font-bold text-ink">{worker?.live ?? 0}</span>
               <span className="text-[9px] text-ink-muted">/{worker?.tracked ?? 0}</span>
@@ -1359,17 +1368,18 @@ export function LiveDashboard() {
           {/* Module Tab Buttons */}
           <div className="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
             {[
-              { id: 'organizations', label: 'Firmalar & Üyelikler', badge: data?.organizations?.length },
-              { id: 'contacts', label: 'Rehber & Kayıtlı Kişiler', badge: data?.contactLists?.length },
-              { id: 'data_requests', label: 'Veri Talepleri', badge: data?.listRequests?.length },
+              { id: 'overview', label: 'Operasyon Özeti', badge: (summary.failedJobs || 0) + summary.pendingJobs, errorBadge: (summary.failedJobs || 0) > 0 ? summary.failedJobs : null },
+              { id: 'baileys', label: 'Servis Durumu', badge: data?.accounts?.length, isAlert: (data?.accounts?.filter(a => a.status !== 'connected').length || 0) > 0 },
+              { id: 'messages', label: 'Mesaj Yanıt Masası', badge: (data?.messages?.length || 0) + (data?.aiSuggestions?.length || 0) },
               { id: 'quick_send', label: 'Hızlı Gönderim', badge: null },
+              { id: 'jobs', label: 'İş Kuyruğu & Hatalar', badge: data?.jobs?.length, errorBadge: (summary.failedJobs ?? 0) > 0 ? summary.failedJobs : null },
               { id: 'campaigns', label: 'Kampanyalar', badge: data?.campaigns?.length },
               { id: 'queue', label: 'Gönderim Sırası', badge: summary.queuedMessages },
+              { id: 'data_requests', label: 'Veri Talepleri', badge: data?.listRequests?.length, isPending: (data?.listRequests?.filter(r => r.status === 'pending').length || 0) > 0 },
+              { id: 'organizations', label: 'Firmalar & Üyelikler', badge: data?.organizations?.length },
+              { id: 'contacts', label: 'Rehber & Kişi Havuzu', badge: data?.contactLists?.length },
               { id: 'ai_studio', label: 'ChatGPT & Afiş Üretimi', badge: data?.creatives?.length },
-              { id: 'messages', label: 'Mesaj & AI Yanıt Akışı', badge: (data?.messages?.length || 0) + (data?.aiSuggestions?.length || 0) },
               { id: 'blacklist', label: 'Kara Liste', badge: summary.blacklistedCount },
-              { id: 'baileys', label: 'Baileys & Hatlar', badge: data?.accounts?.length },
-              { id: 'jobs', label: 'İş Kuyruğu', badge: data?.jobs?.length },
             ].map(tab => (
               <button
                 key={tab.id}
@@ -1381,7 +1391,12 @@ export function LiveDashboard() {
                 }`}
               >
                 <span>{tab.label}</span>
-                {tab.badge !== null && tab.badge !== undefined && tab.badge > 0 && (
+                {tab.errorBadge !== null && tab.errorBadge !== undefined && (
+                  <span className="text-[9px] sm:text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold bg-danger text-white animate-pulse">
+                    {tab.errorBadge} Hata
+                  </span>
+                )}
+                {tab.badge !== null && tab.badge !== undefined && tab.badge > 0 && !tab.errorBadge && (
                   <span
                     className={`text-[9px] sm:text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
                       activeTab === tab.id
@@ -1415,6 +1430,104 @@ export function LiveDashboard() {
             )}
           </div>
         </section>
+
+        {/* TAB -1: OPERASYON ÖZETİ */}
+        {activeTab === 'overview' && (
+          <div className="space-y-3 sm:space-y-4">
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+              <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 sm:p-5 shadow-sm space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 border-b border-[var(--color-hairline)] pb-3">
+                  <div>
+                    <h2 className="text-xs sm:text-sm font-bold text-ink">Önce Bakılacaklar</h2>
+                    <p className="text-[11px] text-ink-muted mt-0.5">Canlı operasyon için worker, kuyruk, hat ve mesaj sağlığı.</p>
+                  </div>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    (summary.failedJobs || 0) > 0 || summary.pendingJobs > 0 || !worker
+                      ? 'bg-danger/10 text-danger'
+                      : 'bg-ok-soft text-ok-dim'
+                  }`}>
+                    {(summary.failedJobs || 0) > 0 || summary.pendingJobs > 0 || !worker ? 'Müdahale Gerekebilir' : 'Temiz'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {[
+                    {
+                      title: worker ? 'Worker canlı' : 'Worker heartbeat yok',
+                      detail: worker ? `${worker.live}/${worker.tracked} canlı oturum · ${timeAgo(worker.seen_at)}` : 'Gönderim ve senkron işlemleri durabilir.',
+                      tone: worker ? 'ok' : 'danger',
+                      action: 'Servise Git',
+                      tab: 'baileys' as const,
+                    },
+                    {
+                      title: `${summary.pendingJobs} bekleyen iş`,
+                      detail: summary.pendingJobs > 0 ? 'Kuyruk birikiyorsa worker veya DB tarafına bak.' : 'Bekleyen iş yok.',
+                      tone: summary.pendingJobs > 0 ? 'warn' : 'ok',
+                      action: 'İş Kuyruğu',
+                      tab: 'jobs' as const,
+                    },
+                    {
+                      title: `${summary.failedJobs || 0} başarısız iş`,
+                      detail: (summary.failedJobs || 0) > 0 ? 'Hata tiplerini ve payload detayını incele.' : 'Son işlerde başarısız kayıt görünmüyor.',
+                      tone: (summary.failedJobs || 0) > 0 ? 'danger' : 'ok',
+                      action: 'Hataları Aç',
+                      tab: 'jobs' as const,
+                    },
+                    {
+                      title: `${summary.todayInbound} gelen mesaj`,
+                      detail: filteredAiSuggestions.length > 0 ? `${filteredAiSuggestions.length} AI yanıt önerisi hazır.` : 'Gelenleri ve AI önerilerini mesaj masasında izle.',
+                      tone: summary.todayInbound > 0 ? 'accent' : 'neutral',
+                      action: 'Mesaj Masası',
+                      tab: 'messages' as const,
+                    },
+                  ].map(item => (
+                    <button
+                      key={item.title}
+                      type="button"
+                      onClick={() => setActiveTab(item.tab)}
+                      className={`text-left rounded-[var(--radius-sm)] border p-3 transition hover:bg-[var(--color-surface-raised)] ${
+                        item.tone === 'danger'
+                          ? 'border-danger/25 bg-danger/5'
+                          : item.tone === 'warn'
+                          ? 'border-warn/25 bg-warn/5'
+                          : item.tone === 'ok'
+                          ? 'border-ok/25 bg-ok-soft/20'
+                          : item.tone === 'accent'
+                          ? 'border-accent/25 bg-accent-soft/30'
+                          : 'border-[var(--color-hairline)] bg-canvas'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-xs font-bold text-ink">{item.title}</span>
+                        <span className="text-[10px] font-semibold text-accent whitespace-nowrap">{item.action} →</span>
+                      </div>
+                      <p className="mt-1 text-[11px] leading-relaxed text-ink-muted">{item.detail}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 sm:p-5 shadow-sm space-y-3">
+                <div className="border-b border-[var(--color-hairline)] pb-3">
+                  <h2 className="text-xs sm:text-sm font-bold text-ink">Hızlı İşlem</h2>
+                  <p className="text-[11px] text-ink-muted mt-0.5">En sık kullanılan operasyon yolları.</p>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => setActiveTab('messages')} className="rounded border border-[var(--color-hairline)] bg-canvas px-3 py-2 text-left text-[11px] font-semibold text-ink hover:bg-[var(--color-surface-raised)]">Mesajları izle</button>
+                  <button type="button" onClick={() => setActiveTab('quick_send')} className="rounded border border-accent/25 bg-accent-soft/30 px-3 py-2 text-left text-[11px] font-semibold text-accent hover:bg-accent-soft">Hızlı gönder</button>
+                  <button type="button" onClick={() => setActiveTab('baileys')} className="rounded border border-[var(--color-hairline)] bg-canvas px-3 py-2 text-left text-[11px] font-semibold text-ink hover:bg-[var(--color-surface-raised)]">Servisi kontrol et</button>
+                  <button type="button" onClick={() => setActiveTab('data_requests')} className="rounded border border-[var(--color-hairline)] bg-canvas px-3 py-2 text-left text-[11px] font-semibold text-ink hover:bg-[var(--color-surface-raised)]">Veri talepleri</button>
+                </div>
+                <div className="rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-canvas p-3 text-[11px] text-ink-muted">
+                  <div className="flex justify-between gap-2"><span>Bağlı hat</span><b className="text-ink">{summary.connectedAccounts ?? 0}/{summary.totalAccounts ?? data?.accounts?.length ?? 0}</b></div>
+                  <div className="mt-1 flex justify-between gap-2"><span>Bugün giden</span><b className="text-ink">{summary.todayOutbound}</b></div>
+                  <div className="mt-1 flex justify-between gap-2"><span>Onay bekleyen veri</span><b className="text-ink">{summary.pendingDataRequests}</b></div>
+                  <div className="mt-1 flex justify-between gap-2"><span>Kara liste</span><b className="text-ink">{summary.blacklistedCount ?? 0}</b></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* TAB 0: FİRMALAR & ÜYELİKLER */}
         {activeTab === 'organizations' && (
@@ -1700,7 +1813,7 @@ export function LiveDashboard() {
                 <div>
                   <h2 className="text-xs sm:text-sm font-bold text-ink">Doğrudan WhatsApp Mesajı Gönder</h2>
                   <p className="text-[11px] text-ink-muted">
-                    Herhangi bir hatta anında tekli veya test mesajı gönderin. Öncelik 1 olarak Baileys VPS motoruna iletilir.
+                    Herhangi bir hatta anında tekli veya test mesajı gönderin. Öncelik 1 olarak WhatsApp gönderim servisine iletilir.
                   </p>
                 </div>
                 <span className="text-[9px] sm:text-[10px] font-mono px-2 py-0.5 rounded bg-accent/10 text-accent font-semibold">
@@ -1805,7 +1918,7 @@ export function LiveDashboard() {
 
                 <div className="flex items-center justify-between pt-1">
                   <div className="text-[10px] sm:text-[11px] text-ink-muted">
-                    Baileys VPS üzerinden gerçek zamanlı gönderim yapılır.
+                    WhatsApp servisi üzerinden gerçek zamanlı gönderim yapılır.
                   </div>
                   <button
                     type="submit"
@@ -2947,7 +3060,7 @@ export function LiveDashboard() {
                           <tr key={idx} className="hover:bg-surface-raised/40">
                             <td className="px-3 py-2 font-mono font-bold text-ink flex items-center gap-1.5">
                               <span className="w-1.5 h-1.5 rounded-full bg-ok" />
-                              {c.name === 'wa-service' ? 'wa-service (Baileys WhatsApp Botu)' : c.name === 'omnistudio-engine' ? 'omnistudio-engine (Afiş & Görsel Yapay Zekası)' : c.name}
+                              {c.name === 'wa-service' ? 'wa-service (WhatsApp Gönderim Servisi)' : c.name === 'omnistudio-engine' ? 'omnistudio-engine (Afiş & Görsel Yapay Zekası)' : c.name}
                             </td>
                             <td className="px-3 py-2 font-mono font-semibold text-accent">{c.cpu}</td>
                             <td className="px-3 py-2 font-mono text-ink-soft">{c.mem}</td>
@@ -2968,8 +3081,8 @@ export function LiveDashboard() {
 
             <div className="flex items-center justify-between pt-2">
               <div>
-                <h2 className="text-xs sm:text-sm font-bold text-ink">WhatsApp Hatları ve Baileys Oturum Yönetimi</h2>
-                <p className="text-[11px] text-ink-muted">Tüm fiziksel hatların anlık bağlantı, kilit ve yetki durumu</p>
+                <h2 className="text-xs sm:text-sm font-bold text-ink">Servis Durumu ve Hat Yönetimi</h2>
+                <p className="text-[11px] text-ink-muted">WhatsApp gönderim servisi, bağlı hatlar, kilit ve oturum durumu</p>
               </div>
             </div>
 
@@ -3064,7 +3177,7 @@ export function LiveDashboard() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-[var(--color-hairline)] pb-3">
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-xs sm:text-sm font-bold text-ink">Canlı Mesaj ve Yapay Zeka (AI) Yanıt Masası</h2>
+                  <h2 className="text-xs sm:text-sm font-bold text-ink">Mesaj Yanıt Masası</h2>
                   <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-accent-soft text-accent">
                     {filteredAiSuggestions.length} AI Öneri · {filteredMessages.length} Mesaj
                   </span>
@@ -3092,10 +3205,10 @@ export function LiveDashboard() {
             {/* Sub-Tabs Selector */}
             <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none bg-[var(--color-surface-raised)] p-1 rounded-[var(--radius-sm)] border border-[var(--color-hairline)]">
               {[
-                { id: 'suggestions', label: 'ChatGPT Yanıt Önerileri', count: filteredAiSuggestions.length },
-                { id: 'all', label: 'Tüm WhatsApp Akışı', count: filteredMessages.length },
-                { id: 'in', label: 'Gelenler (Inbound)', count: filteredMessages.filter(m => m.direction === 'in').length },
-                { id: 'out', label: 'Gidenler (Outbound)', count: filteredMessages.filter(m => m.direction === 'out').length },
+                { id: 'suggestions', label: 'AI Yanıt Önerileri', count: filteredAiSuggestions.length },
+                { id: 'all', label: 'Tüm Mesaj Akışı', count: filteredMessages.length },
+                { id: 'in', label: 'Gelenler', count: filteredMessages.filter(m => m.direction === 'in').length },
+                { id: 'out', label: 'Gidenler', count: filteredMessages.filter(m => m.direction === 'out').length },
                 { id: 'auto_reply', label: 'Otomatik Yanıtlar', count: filteredAutoReplies.length },
               ].map(sub => (
                 <button
@@ -3219,61 +3332,78 @@ export function LiveDashboard() {
 
             {/* VIEW 1: CHATGPT & AI YANIT ÖNERİLERİ */}
             {msgStreamTab === 'suggestions' && (
-              <div className="space-y-3">
+              <div>
                 {filteredAiSuggestions.length === 0 ? (
                   <div className="text-center py-8 text-ink-muted text-xs bg-canvas rounded-[var(--radius-card)] border border-[var(--color-hairline)]">
                     Henüz AI yanıt önerisi kaydı bulunmuyor. Yukarıdaki simülatörle anında test edebilirsiniz.
                   </div>
                 ) : (
-                  filteredAiSuggestions.map(item => (
-                    <div
-                      key={item.id}
-                      className="bg-canvas border border-[var(--color-hairline)] hover:border-accent/40 rounded-[var(--radius-card)] p-3 sm:p-4 transition shadow-xs space-y-3"
-                    >
-                      {/* Item Meta Header */}
-                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-hairline)] pb-2">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-accent-soft text-accent">
-                            {item.org_name || 'Genel İşletme'}
-                          </span>
-                          <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded bg-surface border border-[var(--color-hairline)] text-ink-soft">
-                            Kaynak: {item.source === 'chatgpt' ? 'ChatGPT-4o' : item.source.toUpperCase()}
-                          </span>
-                          {item.hit_count != null && item.hit_count > 0 && (
-                            <span className="text-[10px] text-ink-muted">
-                              · {item.hit_count} kez kullanıldı
+                  <div className="grid gap-3 lg:grid-cols-[minmax(260px,0.9fr)_minmax(0,1.4fr)]">
+                    <div className="rounded-[var(--radius-card)] border border-[var(--color-hairline)] bg-canvas">
+                      <div className="border-b border-[var(--color-hairline)] px-3 py-2">
+                        <h3 className="text-xs font-bold text-ink">Müşteri Talepleri</h3>
+                        <p className="text-[10px] text-ink-muted">{filteredAiSuggestions.length} kayıt · önce cevaplanacak soruyu seç</p>
+                      </div>
+                      <div className="max-h-[520px] overflow-y-auto p-2 space-y-1.5">
+                        {filteredAiSuggestions.map(item => {
+                          const active = selectedSuggestion?.id === item.id
+                          return (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => setSelectedSuggestionId(item.id)}
+                              className={`w-full rounded-[var(--radius-sm)] border p-2.5 text-left transition ${
+                                active
+                                  ? 'border-accent bg-accent-soft/40'
+                                  : 'border-[var(--color-hairline)] bg-[var(--color-surface)] hover:border-accent/40'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="truncate text-[10px] font-bold text-accent">
+                                  {item.org_name || 'Genel İşletme'}
+                                </span>
+                                <span className="shrink-0 text-[10px] text-ink-muted">{timeAgo(item.created_at)}</span>
+                              </div>
+                              <p className="mt-1 line-clamp-2 text-xs font-semibold leading-snug text-ink">
+                                {item.incoming_sample}
+                              </p>
+                              <p className="mt-1 text-[10px] text-ink-muted">
+                                {item.suggestions?.length ?? 0} yanıt · {item.source === 'chatgpt' ? 'ChatGPT' : item.source.toUpperCase()}
+                              </p>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="rounded-[var(--radius-card)] border border-[var(--color-hairline)] bg-canvas p-3 sm:p-4">
+                      {selectedSuggestion ? (
+                        <div className="space-y-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-hairline)] pb-3">
+                            <div>
+                              <div className="flex items-center gap-1.5 text-[10px] font-bold text-accent uppercase tracking-wide">
+                                <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+                                Seçili Müşteri Talebi
+                              </div>
+                              <p className="mt-1 text-xs sm:text-sm font-semibold text-ink leading-relaxed">
+                                "{selectedSuggestion.incoming_sample}"
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setInspectedSuggestion(selectedSuggestion)}
+                              className="text-[10px] font-semibold text-accent hover:underline"
+                            >
+                              JSON & Detay İncele
+                            </button>
+                          </div>
+
+                          <div>
+                            <span className="block text-[11px] font-bold text-ink-soft mb-2">
+                              Hazırlanan Yanıt Seçenekleri
                             </span>
-                          )}
-                          <span className="text-[10px] text-ink-muted">· {timeAgo(item.created_at)}</span>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => setInspectedSuggestion(item)}
-                          className="text-[10px] font-semibold text-accent hover:underline flex items-center gap-1"
-                        >
-                          JSON & Detay İncele
-                        </button>
-                      </div>
-
-                      {/* Incoming Customer Message Box */}
-                      <div className="bg-[var(--color-surface)] border border-accent/25 rounded-[var(--radius-sm)] p-3 space-y-1">
-                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-accent uppercase tracking-wide">
-                          <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-                          Müşteriden Gelen Talep / Soru:
-                        </div>
-                        <p className="text-xs sm:text-sm font-semibold text-ink leading-relaxed">
-                          "{item.incoming_sample}"
-                        </p>
-                      </div>
-
-                      {/* AI Generated Suggestions Grid */}
-                      <div>
-                        <span className="block text-[11px] font-bold text-ink-soft mb-2">
-                          ChatGPT Tarafından Hazırlanan Yanıt Seçenekleri:
-                        </span>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
-                          {item.suggestions?.map((sg, idx) => (
+                            <div className="grid grid-cols-1 xl:grid-cols-3 gap-2.5">
+                              {selectedSuggestion.suggestions?.map((sg, idx) => (
                             <div
                               key={idx}
                               className="bg-[var(--color-surface)] border border-[var(--color-hairline)] hover:border-accent/50 rounded-[var(--radius-sm)] p-2.5 sm:p-3 flex flex-col justify-between transition shadow-xs"
@@ -3311,11 +3441,13 @@ export function LiveDashboard() {
                                 </button>
                               </div>
                             </div>
-                          ))}
+                              ))}
+                            </div>
+                          </div>
                         </div>
-                      </div>
+                      ) : null}
                     </div>
-                  ))
+                  </div>
                 )}
               </div>
             )}
