@@ -18,6 +18,8 @@ x-wa-common: &wa-common
   env_file:
     - ../apps/wa-service/.env
   restart: unless-stopped
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
   mem_limit: 6g
   shm_size: '256mb'
   stop_grace_period: 120s

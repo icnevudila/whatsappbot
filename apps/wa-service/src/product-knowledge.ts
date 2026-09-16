@@ -1,5 +1,6 @@
 import { query } from './db.js'
 import { logger } from './logger.js'
+import { fetchFromOmniStudio } from './omnistudio-client.js'
 
 type KnowledgeRow = {
   product_name: string | null
@@ -93,14 +94,8 @@ export async function extractKnowledgeFromAI(options: {
   text?: string | null
   mediaUrl?: string | null
 }): Promise<ExtractedKnowledge[]> {
-  let gatewayUrl = process.env.OMNISTUDIO_GATEWAY_URL || 'http://omnistudio-engine:3456'
-  if (gatewayUrl.includes('127.0.0.1') || gatewayUrl.includes('localhost')) {
-    gatewayUrl = 'http://omnistudio-engine:3456'
-  }
-  gatewayUrl = gatewayUrl.replace(/\/$/, '')
-
   try {
-    const res = await fetch(`${gatewayUrl}/v1/chat/extract-knowledge`, {
+    const res = await fetchFromOmniStudio('/v1/chat/extract-knowledge', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
