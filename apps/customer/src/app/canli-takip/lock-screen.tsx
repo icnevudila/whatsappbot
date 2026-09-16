@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { LogoMark, BRAND_NAME } from '@/components/brand'
 
 export function LockScreen() {
   const [password, setPassword] = useState('')
@@ -34,27 +35,17 @@ export function LockScreen() {
   }
 
   return (
-    <div className="flex min-h-dvh w-full items-center justify-center bg-[#070b14] px-4 py-12 text-slate-100 font-sans">
-      <div className="w-full max-w-sm rounded-2xl border border-slate-800 bg-slate-900/90 p-6 shadow-2xl backdrop-blur-xl sm:p-8">
+    <div className="flex min-h-dvh w-full items-center justify-center bg-canvas px-4 py-12 font-sans text-ink">
+      <div className="w-full max-w-sm rounded-[var(--radius-card)] border border-hairline bg-surface p-7 shadow-[var(--shadow-md)] sm:p-8">
         <div className="mb-6 flex flex-col items-center text-center">
-          <div className="mb-4 flex size-14 items-center justify-center rounded-2xl border border-indigo-500/30 bg-indigo-500/10 text-indigo-400 shadow-inner">
-            <svg
-              className="size-7"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-              />
-            </svg>
+          <div className="mb-3.5 flex size-12 items-center justify-center rounded-full border border-accent/20 bg-accent-soft text-accent">
+            <LogoMark className="size-6" />
           </div>
-          <h1 className="text-xl font-bold tracking-tight text-white">Canlı Operasyon Paneli</h1>
-          <p className="mt-1 text-xs text-slate-400">
-            Yönetici erişimi için güvenlik şifrenizi girin.
+          <h1 className="text-[18px] font-bold tracking-tight text-ink">
+            {BRAND_NAME} Operasyon Paneli
+          </h1>
+          <p className="mt-1 text-[13px] text-ink-muted">
+            Yetkili sistem yöneticisi erişimi için güvenlik şifrenizi girin.
           </p>
         </div>
 
@@ -62,9 +53,9 @@ export function LockScreen() {
           <div>
             <label
               htmlFor="password"
-              className="block text-xs font-semibold uppercase tracking-wider text-slate-400"
+              className="block text-[12.5px] font-semibold text-ink-soft uppercase tracking-wider"
             >
-              Erişim Şifresi
+              Yönetici Şifresi
             </label>
             <div className="relative mt-1.5">
               <input
@@ -74,13 +65,13 @@ export function LockScreen() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoFocus
-                placeholder="Şifrenizi girin..."
-                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 transition focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                placeholder="Şifreyi girin..."
+                className="w-full rounded-[var(--radius-sm)] border border-hairline-strong bg-canvas px-3.5 py-2.5 text-[14px] text-ink placeholder:text-ink-faint transition focus:border-accent focus:bg-surface focus:outline-none"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 flex items-center pr-3 text-xs text-slate-400 hover:text-slate-200"
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-[12px] font-medium text-ink-muted hover:text-ink"
               >
                 {showPassword ? 'Gizle' : 'Göster'}
               </button>
@@ -88,7 +79,7 @@ export function LockScreen() {
           </div>
 
           {error && (
-            <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3.5 py-2.5 text-xs text-rose-400">
+            <div className="rounded-[var(--radius-sm)] border border-danger/30 bg-danger/10 px-3.5 py-2.5 text-[13px] text-danger">
               {error}
             </div>
           )}
@@ -96,15 +87,15 @@ export function LockScreen() {
           <button
             type="submit"
             disabled={loading}
-            className="flex w-full items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+            className="flex w-full items-center justify-center rounded-[var(--radius-sm)] bg-accent px-4 py-2.5 text-[14px] font-semibold text-accent-ink shadow-sm transition hover:bg-accent-dim disabled:opacity-50"
           >
             {loading ? 'Doğrulanıyor...' : 'Panele Giriş Yap'}
           </button>
         </form>
 
-        <div className="mt-6 border-t border-slate-800/80 pt-4 text-center">
-          <p className="text-[11px] text-slate-500">
-            Bu ekran gizli yönetim ağına bağlıdır.
+        <div className="mt-6 border-t border-hairline pt-4 text-center">
+          <p className="text-[12px] text-ink-faint">
+            Bu ekran gizli yönetim ağına bağlıdır ve harici menülerde listelenmez.
           </p>
         </div>
       </div>

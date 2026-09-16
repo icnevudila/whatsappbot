@@ -77,7 +77,7 @@ export function iconForHref(href: string): IconName {
   if (href.startsWith('/mesajlar') || href.startsWith('/gelenler')) return 'inbox'
   if (href.startsWith('/gidenler')) return 'outbound'
   if (href.startsWith('/kara-liste') || href.startsWith('/ayarlar/engellenenler')) return 'shield'
-  if (href.startsWith('/canli-takip') || href.startsWith('/durum')) return 'activity'
+  if (href.startsWith('/durum')) return 'activity'
   if (href.startsWith('/raporlar')) return 'chart'
   if (href.startsWith('/marka-kiti') || href.startsWith('/ayarlar/marka')) return 'brand'
   if (href.startsWith('/ayarlar')) return 'settings'
