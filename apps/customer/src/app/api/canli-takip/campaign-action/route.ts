@@ -1,0 +1,50 @@
+import { NextResponse } from 'next/server'
+import { checkIsAuthenticated } from '@/app/canli-takip/auth'
+import { createClient } from '@supabase/supabase-js'
+
+export const runtime = 'nodejs'
+
+export async function POST(req: Request) {
+  try {
+    const isAuth = await checkIsAuthenticated()
+    if (!isAuth) {
+      return NextResponse.json(
+        { success: false, error: 'Yetkisiz erişim.' },
+        { status: 401 },
+      )
+    }
+
+    const body = await req.json()
+    const { campaignId, action } = body
+
+    if (!campaignId || !action) {
+      return NextResponse.json(
+        { success: false, error: 'Kampanya ID ve eylem zorunludur.' },
+        { status: 400 },
+      )
+    }
+
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+    if (!url || !key) {
+      return NextResponse.json({ success: false, error: 'Yapılandırma eksik' }, { status: 500 })
+    }
+
+    const supabase = createClient(url, key)
+    const { data, error } = await supabase.rpc('admin_campaign_action', {
+      p_campaign_id: campaignId,
+      p_action: action,
+    })
+
+    if (error) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 })
+    }
+
+    return NextResponse.json(data)
+  } catch (error) {
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : 'İşlem başarısız' },
+      { status: 500 },
+    )
+  }
+}
