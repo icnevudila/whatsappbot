@@ -111,6 +111,29 @@ type MessageLog = {
   org_id?: string
 }
 
+type AiSuggestionItem = {
+  id: string
+  incoming_sample: string
+  suggestions: Array<{ label: string; text: string }>
+  source: string
+  hit_count?: number
+  generated_count?: number
+  created_at: string
+  last_used_at?: string
+  org_name?: string
+  org_id?: string
+}
+
+type AutoReplyItem = {
+  id: string
+  phone_e164: string
+  reply_body: string
+  source: string
+  created_at: string
+  org_name?: string
+  org_id?: string
+}
+
 type JobItem = {
   id: number
   type: string
@@ -189,6 +212,8 @@ type FeedData = {
   listRequests: ListRequestItem[]
   contactLists: ContactListItem[]
   messages: MessageLog[]
+  aiSuggestions?: AiSuggestionItem[]
+  autoReplies?: AutoReplyItem[]
   jobs: JobItem[]
   blacklist?: BlacklistItem[]
   organizations?: OrganizationItem[]
@@ -204,6 +229,8 @@ type FeedData = {
     blacklistedCount?: number
     connectedAccounts?: number
     totalAccounts?: number
+    totalAiSuggestions?: number
+    totalAutoReplies?: number
   }
   timestamp: string
 }
@@ -270,6 +297,14 @@ export function LiveDashboard() {
 
   // Creative JSON & Prompt Detail Modal
   const [inspectedCreative, setInspectedCreative] = useState<CreativeItem | null>(null)
+
+  // Message & AI Suggestion Stream State
+  const [msgStreamTab, setMsgStreamTab] = useState<'suggestions' | 'all' | 'in' | 'out' | 'auto_reply'>('suggestions')
+  const [inspectedSuggestion, setInspectedSuggestion] = useState<AiSuggestionItem | null>(null)
+  const [simulatingAi, setSimulatingAi] = useState(false)
+  const [simulatedPrompt, setSimulatedPrompt] = useState('')
+  const [simulatedSuggestions, setSimulatedSuggestions] = useState<Array<{ label: string; text: string }> | null>(null)
+  const [showSimulator, setShowSimulator] = useState(false)
 
   const showNotice = (msg: string) => {
     setActionNotice(msg)
@@ -499,6 +534,53 @@ export function LiveDashboard() {
     }
   }
 
+  // Canlı Müşteri Mesajına ChatGPT Yanıt Önerisi Üret (Simülasyon & Test)
+  const handleSimulateSuggestion = async (inputMsg?: string) => {
+    const text = (inputMsg || simulatedPrompt).trim()
+    if (!text) {
+      alert('Lütfen test edilecek veya yanıtlanacak bir müşteri mesajı girin.')
+      return
+    }
+    setSimulatingAi(true)
+    setSimulatedSuggestions(null)
+    try {
+      const res = await fetch('/api/canli-takip/ai-generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: `Gelen müşteri mesajı: "${text}". Bu mesaja WhatsApp üzerinden verilecek profesyonel, müşteri memnuniyetini artıran ve harekete geçiren 3 farklı yanıt alternatifi oluştur.`,
+          tone: 'samimi',
+          businessName: BRAND_NAME,
+        }),
+      })
+      const json = await res.json()
+      if (json.success && json.text) {
+        const full = json.text
+        setSimulatedSuggestions([
+          {
+            label: 'Kısa & Net',
+            text: full.split('\n\n')[0] || full.slice(0, 120),
+          },
+          {
+            label: 'Samimi',
+            text: full,
+          },
+          {
+            label: 'Yönlendirici',
+            text: `Merhaba, konuyu derhal inceleyip çözüm sunmak isteriz. İletişim numaranızı ve detayları teyit etmeniz halinde hemen dönüş sağlayabiliriz.`,
+          },
+        ])
+        showNotice('ChatGPT yanıt önerileri hazırlandı.')
+      } else {
+        alert('AI Öneri Hatası: ' + (json.error || 'Öneri üretilemedi.'))
+      }
+    } catch (err) {
+      alert('İstek hatası: ' + (err instanceof Error ? err.message : String(err)))
+    } finally {
+      setSimulatingAi(false)
+    }
+  }
+
   // Veri Talebini Onayla / Durum Güncelle
   const handleUpdateRequestStatus = async (
     requestId: string,
@@ -656,6 +738,34 @@ export function LiveDashboard() {
     }
     return list
   }, [data?.messages, filterByOrg, msgFilter, globalSearch])
+
+  const filteredAiSuggestions = useMemo(() => {
+    let list = filterByOrg(data?.aiSuggestions)
+    if (globalSearch.trim()) {
+      const q = globalSearch.toLowerCase()
+      list = list.filter(
+        s =>
+          (s.incoming_sample && s.incoming_sample.toLowerCase().includes(q)) ||
+          (s.org_name && s.org_name.toLowerCase().includes(q)) ||
+          s.suggestions?.some(sg => sg.text.toLowerCase().includes(q) || sg.label.toLowerCase().includes(q))
+      )
+    }
+    return list
+  }, [data?.aiSuggestions, filterByOrg, globalSearch])
+
+  const filteredAutoReplies = useMemo(() => {
+    let list = filterByOrg(data?.autoReplies)
+    if (globalSearch.trim()) {
+      const q = globalSearch.toLowerCase()
+      list = list.filter(
+        a =>
+          (a.phone_e164 && a.phone_e164.includes(q)) ||
+          (a.reply_body && a.reply_body.toLowerCase().includes(q)) ||
+          (a.org_name && a.org_name.toLowerCase().includes(q))
+      )
+    }
+    return list
+  }, [data?.autoReplies, filterByOrg, globalSearch])
 
   const filteredJobs = useMemo(() => {
     let list = filterByOrg(data?.jobs)
@@ -899,7 +1009,7 @@ export function LiveDashboard() {
               { id: 'ai_studio', label: 'ChatGPT & Afiş Üretimi', badge: data?.creatives.length },
               { id: 'blacklist', label: 'Kara Liste', badge: summary.blacklistedCount },
               { id: 'baileys', label: 'Baileys & Hatlar', badge: data?.accounts.length },
-              { id: 'messages', label: 'Canlı Mesajlar', badge: data?.messages.length },
+              { id: 'messages', label: 'Mesaj & AI Yanıt Akışı', badge: (data?.messages?.length || 0) + (data?.aiSuggestions?.length || 0) },
               { id: 'jobs', label: 'İş Kuyruğu', badge: data?.jobs.length },
             ].map(tab => (
               <button
@@ -1771,78 +1881,389 @@ export function LiveDashboard() {
           </div>
         )}
 
-        {/* TAB 9: CANLI MESAJ AKIŞI (MESSAGES) */}
+        {/* TAB 9: CANLI MESAJ VE YAPAY ZEKA (AI) YANIT AKIŞI */}
         {activeTab === 'messages' && (
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 sm:p-5 shadow-sm space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-hairline)] pb-2.5">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 sm:p-5 shadow-sm space-y-4">
+            {/* Header & Sub-Tabs */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-[var(--color-hairline)] pb-3">
               <div>
-                <h2 className="text-xs sm:text-sm font-bold text-ink">Canlı WhatsApp Sohbet ve Mesaj Akışı</h2>
-                <p className="text-[11px] text-ink-muted">Müşterilerden gelen ve giden gerçek zamanlı mesaj kayıtları</p>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xs sm:text-sm font-bold text-ink">Canlı Mesaj ve Yapay Zeka (AI) Yanıt Masası</h2>
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-accent-soft text-accent">
+                    {filteredAiSuggestions.length} AI Öneri · {filteredMessages.length} Mesaj
+                  </span>
+                </div>
+                <p className="text-[11px] text-ink-muted mt-0.5">
+                  Müşterilerden gelen gerçek zamanlı talepler, ChatGPT tarafından üretilen yanıt alternatifleri ve otomatik yanıtlar
+                </p>
               </div>
 
-              {/* Message Direction Filter */}
-              <div className="flex items-center gap-1 bg-[var(--color-surface-raised)] p-0.5 rounded-[var(--radius-sm)]">
-                {(['all', 'in', 'out'] as const).map(d => (
-                  <button
-                    key={d}
-                    onClick={() => setMsgFilter(d)}
-                    className={`px-2.5 py-0.5 text-[11px] font-semibold rounded ${
-                      msgFilter === d ? 'bg-surface text-ink shadow-sm' : 'text-ink-muted hover:text-ink'
-                    }`}
-                  >
-                    {d === 'all' ? 'Tümü' : d === 'in' ? 'Gelenler' : 'Gidenler'}
-                  </button>
-                ))}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowSimulator(!showSimulator)}
+                  className={`px-2.5 py-1 text-[11px] font-semibold rounded-[var(--radius-sm)] border transition flex items-center gap-1.5 ${
+                    showSimulator
+                      ? 'bg-accent text-accent-ink border-accent'
+                      : 'bg-[var(--color-surface-raised)] text-ink-soft border-[var(--color-hairline)] hover:bg-canvas'
+                  }`}
+                >
+                  <span>{showSimulator ? 'Simülatörü Kapat' : 'Canlı AI Öneri Testi'}</span>
+                </button>
               </div>
             </div>
 
-            {filteredMessages.length === 0 ? (
-              <p className="text-xs text-ink-muted text-center py-6">Mesaj bulunamadı.</p>
-            ) : (
-              <div className="space-y-2">
-                {filteredMessages.map(m => (
-                  <div
-                    key={m.id}
-                    className={`p-2.5 sm:p-3 rounded-[var(--radius-sm)] border transition flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
-                      m.direction === 'in'
-                        ? 'bg-ok-soft/30 border-ok/20'
-                        : 'bg-surface-raised/40 border-[var(--color-hairline)]'
+            {/* Sub-Tabs Selector */}
+            <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none bg-[var(--color-surface-raised)] p-1 rounded-[var(--radius-sm)] border border-[var(--color-hairline)]">
+              {[
+                { id: 'suggestions', label: 'ChatGPT Yanıt Önerileri', count: filteredAiSuggestions.length },
+                { id: 'all', label: 'Tüm WhatsApp Akışı', count: filteredMessages.length },
+                { id: 'in', label: 'Gelenler (Inbound)', count: filteredMessages.filter(m => m.direction === 'in').length },
+                { id: 'out', label: 'Gidenler (Outbound)', count: filteredMessages.filter(m => m.direction === 'out').length },
+                { id: 'auto_reply', label: 'Otomatik Yanıtlar', count: filteredAutoReplies.length },
+              ].map(sub => (
+                <button
+                  key={sub.id}
+                  onClick={() => setMsgStreamTab(sub.id as any)}
+                  className={`px-2.5 py-1 text-[11px] font-semibold rounded whitespace-nowrap transition flex items-center gap-1.5 ${
+                    msgStreamTab === sub.id
+                      ? 'bg-surface text-ink shadow-xs'
+                      : 'text-ink-muted hover:text-ink'
+                  }`}
+                >
+                  <span>{sub.label}</span>
+                  <span
+                    className={`text-[9px] px-1.5 py-0.2 rounded-full font-mono ${
+                      msgStreamTab === sub.id ? 'bg-accent-soft text-accent font-bold' : 'bg-canvas text-ink-muted'
                     }`}
                   >
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-1.5">
-                        <span
-                          className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${
-                            m.direction === 'in' ? 'bg-ok text-white' : 'bg-accent text-white'
-                          }`}
-                        >
-                          {m.direction === 'in' ? 'GELEN' : 'GİDEN'}
-                        </span>
-                        <span className="font-mono text-xs font-semibold text-ink">{m.phone_e164}</span>
-                        {m.push_name && (
-                          <span className="text-xs font-medium text-ink-soft">({m.push_name})</span>
-                        )}
-                        <span className="text-[10px] text-ink-muted">· {timeAgo(m.created_at)}</span>
-                      </div>
-                      <p className="text-xs text-ink leading-relaxed whitespace-pre-wrap">{m.body || '[Medya İçeriği]'}</p>
-                    </div>
+                    {sub.count}
+                  </span>
+                </button>
+              ))}
+            </div>
 
-                    <div className="flex items-center gap-2">
-                      {m.phone_e164 && (
-                        <button
-                          onClick={() => {
-                            setQuickPhone(m.phone_e164 || '')
-                            setActiveTab('quick_send')
-                            showNotice(`${m.phone_e164} hızlı yanıt kutusuna aktarıldı.`)
-                          }}
-                          className="px-2 py-0.5 text-xs font-semibold rounded bg-surface text-ink hover:bg-canvas border border-[var(--color-hairline)]"
-                        >
-                          Hızlı Yanıtla
-                        </button>
-                      )}
+            {/* AI Suggestion Test Simulator (Collapsible) */}
+            {showSimulator && (
+              <div className="bg-canvas border border-accent/30 rounded-[var(--radius-sm)] p-3 sm:p-4 space-y-3 animate-in fade-in">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-accent animate-ping" />
+                    <h3 className="text-xs font-bold text-ink">Canlı ChatGPT Müşteri Yanıt Simülatörü</h3>
+                  </div>
+                  <span className="text-[10px] text-ink-muted">Müşteri gibi bir soru yazın ve üretilen 3 yanıtı canlı izleyin</span>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="text"
+                    value={simulatedPrompt}
+                    onChange={e => setSimulatedPrompt(e.target.value)}
+                    placeholder="Örnek: Colombia kahvede kargo bedava olması için kaç paket almalıyım?"
+                    className="flex-1 bg-surface border border-[var(--color-hairline)] rounded-[var(--radius-sm)] px-3 py-1.5 text-xs text-ink placeholder:text-ink-muted outline-none focus:border-accent"
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') handleSimulateSuggestion()
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleSimulateSuggestion()}
+                    disabled={simulatingAi || !simulatedPrompt.trim()}
+                    className="px-3.5 py-1.5 bg-accent text-accent-ink rounded-[var(--radius-sm)] text-xs font-semibold hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-1"
+                  >
+                    {simulatingAi ? 'Üretiliyor...' : 'Öneri Üret (ChatGPT)'}
+                  </button>
+                </div>
+
+                {/* Quick Presets */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  <span className="text-[10px] text-ink-muted">Hızlı Örnekler:</span>
+                  {[
+                    'Kargo ne zaman teslim edilir?',
+                    'Ürün fiyatı ve ödeme yöntemleri neler?',
+                    'Toplu alımda indirim yapıyor musunuz?',
+                  ].map((preset, pIdx) => (
+                    <button
+                      key={pIdx}
+                      type="button"
+                      onClick={() => {
+                        setSimulatedPrompt(preset)
+                        handleSimulateSuggestion(preset)
+                      }}
+                      className="text-[10px] bg-surface border border-[var(--color-hairline)] px-2 py-0.5 rounded text-ink-soft hover:text-accent hover:border-accent transition"
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Simulated Results Preview */}
+                {simulatedSuggestions && (
+                  <div className="mt-3 pt-3 border-t border-[var(--color-hairline)] space-y-2">
+                    <span className="text-[11px] font-bold text-accent">ChatGPT Tarafından Anında Üretilen Yanıt Seçenekleri:</span>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                      {simulatedSuggestions.map((sg, sIdx) => (
+                        <div key={sIdx} className="bg-surface p-2.5 rounded border border-[var(--color-hairline)] flex flex-col justify-between">
+                          <div>
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-accent-soft text-accent uppercase">
+                                {sg.label}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(sg.text)
+                                  showNotice('Yanıt panoya kopyalandı.')
+                                }}
+                                className="text-[10px] text-ink-muted hover:text-ink font-medium"
+                              >
+                                Kopyala
+                              </button>
+                            </div>
+                            <p className="text-xs text-ink leading-relaxed whitespace-pre-wrap">{sg.text}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setQuickMessage(sg.text)
+                              setActiveTab('quick_send')
+                              showNotice('Öneri hızlı gönderim konsoluna aktarıldı.')
+                            }}
+                            className="mt-2 text-[10px] font-semibold text-accent hover:underline text-right"
+                          >
+                            Bu Yanıtla Gönderim Yap →
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                ))}
+                )}
+              </div>
+            )}
+
+            {/* VIEW 1: CHATGPT & AI YANIT ÖNERİLERİ */}
+            {msgStreamTab === 'suggestions' && (
+              <div className="space-y-3">
+                {filteredAiSuggestions.length === 0 ? (
+                  <div className="text-center py-8 text-ink-muted text-xs bg-canvas rounded-[var(--radius-card)] border border-[var(--color-hairline)]">
+                    Henüz AI yanıt önerisi kaydı bulunmuyor. Yukarıdaki simülatörle anında test edebilirsiniz.
+                  </div>
+                ) : (
+                  filteredAiSuggestions.map(item => (
+                    <div
+                      key={item.id}
+                      className="bg-canvas border border-[var(--color-hairline)] hover:border-accent/40 rounded-[var(--radius-card)] p-3 sm:p-4 transition shadow-xs space-y-3"
+                    >
+                      {/* Item Meta Header */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-hairline)] pb-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-accent-soft text-accent">
+                            {item.org_name || 'Genel İşletme'}
+                          </span>
+                          <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded bg-surface border border-[var(--color-hairline)] text-ink-soft">
+                            Kaynak: {item.source === 'chatgpt' ? 'ChatGPT-4o' : item.source.toUpperCase()}
+                          </span>
+                          {item.hit_count != null && item.hit_count > 0 && (
+                            <span className="text-[10px] text-ink-muted">
+                              · {item.hit_count} kez kullanıldı
+                            </span>
+                          )}
+                          <span className="text-[10px] text-ink-muted">· {timeAgo(item.created_at)}</span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setInspectedSuggestion(item)}
+                          className="text-[10px] font-semibold text-accent hover:underline flex items-center gap-1"
+                        >
+                          JSON & Detay İncele
+                        </button>
+                      </div>
+
+                      {/* Incoming Customer Message Box */}
+                      <div className="bg-[var(--color-surface)] border border-accent/25 rounded-[var(--radius-sm)] p-3 space-y-1">
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-accent uppercase tracking-wide">
+                          <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+                          Müşteriden Gelen Talep / Soru:
+                        </div>
+                        <p className="text-xs sm:text-sm font-semibold text-ink leading-relaxed">
+                          "{item.incoming_sample}"
+                        </p>
+                      </div>
+
+                      {/* AI Generated Suggestions Grid */}
+                      <div>
+                        <span className="block text-[11px] font-bold text-ink-soft mb-2">
+                          ChatGPT Tarafından Hazırlanan Yanıt Seçenekleri:
+                        </span>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                          {item.suggestions?.map((sg, idx) => (
+                            <div
+                              key={idx}
+                              className="bg-[var(--color-surface)] border border-[var(--color-hairline)] hover:border-accent/50 rounded-[var(--radius-sm)] p-2.5 sm:p-3 flex flex-col justify-between transition shadow-xs"
+                            >
+                              <div>
+                                <div className="flex items-center justify-between gap-1 mb-1.5">
+                                  <span className="text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded bg-accent-soft text-accent uppercase">
+                                    {sg.label}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(sg.text)
+                                      showNotice('Yanıt panoya kopyalandı.')
+                                    }}
+                                    className="text-[10px] text-ink-muted hover:text-ink font-medium"
+                                  >
+                                    Kopyala
+                                  </button>
+                                </div>
+                                <p className="text-xs text-ink leading-relaxed whitespace-pre-wrap">{sg.text}</p>
+                              </div>
+
+                              <div className="mt-2.5 pt-2 border-t border-[var(--color-hairline)] flex justify-end">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setQuickMessage(sg.text)
+                                    setActiveTab('quick_send')
+                                    showNotice('Öneri hızlı gönderim konsoluna aktarıldı.')
+                                  }}
+                                  className="text-[10px] font-semibold text-accent hover:underline flex items-center gap-1"
+                                >
+                                  Bu Yanıtla Gönderim Yap →
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {/* VIEW 2: TÜM / GELEN / GİDEN WHATSAPP MESAJLARI */}
+            {(msgStreamTab === 'all' || msgStreamTab === 'in' || msgStreamTab === 'out') && (
+              <div className="space-y-2">
+                {(() => {
+                  const msgs =
+                    msgStreamTab === 'all'
+                      ? filteredMessages
+                      : filteredMessages.filter(m => m.direction === msgStreamTab)
+
+                  if (msgs.length === 0) {
+                    return <p className="text-xs text-ink-muted text-center py-8">Kriterlere uygun mesaj bulunamadı.</p>
+                  }
+
+                  return msgs.map(m => (
+                    <div
+                      key={m.id}
+                      className={`p-2.5 sm:p-3 rounded-[var(--radius-sm)] border transition flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 ${
+                        m.direction === 'in'
+                          ? 'bg-ok-soft/25 border-ok/30'
+                          : 'bg-surface-raised/40 border-[var(--color-hairline)]'
+                      }`}
+                    >
+                      <div className="space-y-1 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span
+                            className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${
+                              m.direction === 'in' ? 'bg-ok text-white' : 'bg-accent text-white'
+                            }`}
+                          >
+                            {m.direction === 'in' ? 'GELEN' : 'GİDEN'}
+                          </span>
+                          <span className="font-mono text-xs font-semibold text-ink">{m.phone_e164}</span>
+                          {m.push_name && (
+                            <span className="text-xs font-medium text-ink-soft">({m.push_name})</span>
+                          )}
+                          <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-surface border border-[var(--color-hairline)] text-ink-muted">
+                            {m.org_name || 'Genel'}
+                          </span>
+                          <span className="text-[10px] text-ink-muted">· {timeAgo(m.created_at)}</span>
+                        </div>
+                        <p className="text-xs text-ink leading-relaxed whitespace-pre-wrap">{m.body || '[Medya İçeriği]'}</p>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {m.direction === 'in' && m.body && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowSimulator(true)
+                              setSimulatedPrompt(m.body || '')
+                              handleSimulateSuggestion(m.body || '')
+                            }}
+                            className="px-2 py-1 text-[11px] font-semibold rounded bg-accent-soft text-accent hover:bg-accent/20 border border-accent/25 transition"
+                            title="Bu mesaja ChatGPT ile anında 3 yanıt alternatifi üret"
+                          >
+                            AI Yanıtı İste
+                          </button>
+                        )}
+                        {m.phone_e164 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setQuickPhone(m.phone_e164 || '')
+                              if (m.direction === 'in' && m.body) {
+                                setQuickMessage('')
+                              }
+                              setActiveTab('quick_send')
+                              showNotice(`${m.phone_e164} hızlı yanıt kutusuna aktarıldı.`)
+                            }}
+                            className="px-2 py-1 text-[11px] font-semibold rounded bg-surface text-ink hover:bg-canvas border border-[var(--color-hairline)] transition"
+                          >
+                            Hızlı Yanıtla
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                })()}
+              </div>
+            )}
+
+            {/* VIEW 3: OTOMATİK YANITLAR (AUTO REPLIES) */}
+            {msgStreamTab === 'auto_reply' && (
+              <div className="space-y-2">
+                {filteredAutoReplies.length === 0 ? (
+                  <p className="text-xs text-ink-muted text-center py-8">Henüz otomatik yanıt kaydı bulunmuyor.</p>
+                ) : (
+                  filteredAutoReplies.map(ar => (
+                    <div
+                      key={ar.id}
+                      className="p-3 rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-surface flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-purple-600 text-white">
+                            OTO-YANIT
+                          </span>
+                          <span className="font-mono text-xs font-semibold text-ink">{ar.phone_e164}</span>
+                          <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-surface-raised border border-[var(--color-hairline)] text-ink-muted">
+                            {ar.org_name || 'Genel'}
+                          </span>
+                          <span className="text-[10px] text-ink-muted">· {timeAgo(ar.created_at)}</span>
+                        </div>
+                        <p className="text-xs text-ink leading-relaxed whitespace-pre-wrap">{ar.reply_body}</p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setQuickPhone(ar.phone_e164)
+                          setActiveTab('quick_send')
+                          showNotice(`${ar.phone_e164} hızlı yanıt kutusuna aktarıldı.`)
+                        }}
+                        className="px-2.5 py-1 text-xs font-semibold rounded bg-surface-raised text-ink hover:bg-canvas border border-[var(--color-hairline)] transition"
+                      >
+                        Hızlı Yanıtla
+                      </button>
+                    </div>
+                  ))
+                )}
               </div>
             )}
           </div>
@@ -2171,6 +2592,113 @@ export function LiveDashboard() {
               </span>
               <button
                 onClick={() => setInspectedCreative(null)}
+                className="px-3.5 py-1 text-xs font-semibold rounded bg-surface border border-[var(--color-hairline)] text-ink hover:bg-canvas"
+              >
+                Kapat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: AI SUGGESTION JSON & PROMPT INSPECTOR */}
+      {inspectedSuggestion && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] w-full max-w-2xl max-h-[88vh] flex flex-col shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="p-3.5 sm:p-4 border-b border-[var(--color-hairline)] flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-xs sm:text-sm font-bold text-ink">Gelen Mesaj ve AI Yanıt Önerileri Detayı</h3>
+                  <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded bg-accent-soft text-accent">
+                    {inspectedSuggestion.org_name || 'Genel'}
+                  </span>
+                </div>
+                <p className="text-[10px] sm:text-[11px] text-ink-muted">
+                  Kaynak: {inspectedSuggestion.source.toUpperCase()} · Hit: {inspectedSuggestion.hit_count ?? 1} · Oluşturulma: {timeAgo(inspectedSuggestion.created_at)}
+                </p>
+              </div>
+              <button
+                onClick={() => setInspectedSuggestion(null)}
+                className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-surface-raised text-ink-soft hover:bg-canvas flex items-center justify-center font-bold text-xs"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3">
+              {/* Incoming Sample */}
+              <div className="bg-[var(--color-surface-raised)] p-3 rounded-[var(--radius-sm)] border border-accent/20">
+                <span className="block text-[10px] font-bold text-accent uppercase tracking-wide">Müşteriden Gelen Ham Mesaj:</span>
+                <p className="text-xs sm:text-sm font-semibold text-ink mt-1">
+                  "{inspectedSuggestion.incoming_sample}"
+                </p>
+              </div>
+
+              {/* Suggestions List */}
+              <div>
+                <span className="block text-[11px] font-bold text-ink-soft mb-2">Model Tarafından Üretilen Yanıt Seçenekleri:</span>
+                <div className="space-y-2">
+                  {inspectedSuggestion.suggestions?.map((sg, idx) => (
+                    <div key={idx} className="bg-canvas p-2.5 rounded border border-[var(--color-hairline)] flex flex-col gap-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-accent-soft text-accent uppercase">
+                          {sg.label}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(sg.text)
+                              showNotice('Öneri metni panoya kopyalandı.')
+                            }}
+                            className="text-[10px] text-accent hover:underline font-medium"
+                          >
+                            Metni Kopyala
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setQuickMessage(sg.text)
+                              setInspectedSuggestion(null)
+                              setActiveTab('quick_send')
+                              showNotice('Öneri hızlı gönderim kutusuna aktarıldı.')
+                            }}
+                            className="text-[10px] text-accent font-semibold hover:underline"
+                          >
+                            Hızlı Gönder
+                          </button>
+                        </div>
+                      </div>
+                      <p className="text-xs text-ink whitespace-pre-wrap">{sg.text}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Raw JSON Payload */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[11px] font-bold text-ink-soft">Ham JSON Verisi:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(JSON.stringify(inspectedSuggestion, null, 2))
+                      showNotice('JSON verisi kopyalandı.')
+                    }}
+                    className="text-[10px] text-accent hover:underline font-medium"
+                  >
+                    JSON Kopyala
+                  </button>
+                </div>
+                <pre className="bg-canvas p-2.5 rounded border border-[var(--color-hairline)] font-mono text-[10px] text-ink overflow-x-auto max-h-40">
+                  {JSON.stringify(inspectedSuggestion, null, 2)}
+                </pre>
+              </div>
+            </div>
+
+            <div className="p-2.5 sm:p-3 border-t border-[var(--color-hairline)] flex justify-end bg-canvas">
+              <button
+                onClick={() => setInspectedSuggestion(null)}
                 className="px-3.5 py-1 text-xs font-semibold rounded bg-surface border border-[var(--color-hairline)] text-ink hover:bg-canvas"
               >
                 Kapat
