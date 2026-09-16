@@ -245,13 +245,6 @@ export function LiveDashboard() {
   const [aiGenerating, setAiGenerating] = useState(false)
   const [aiResult, setAiResult] = useState<string | null>(null)
 
-  // New Data Request Form
-  const [reqKind, setReqKind] = useState<'province_district' | 'nearby'>('province_district')
-  const [newCategory, setNewCategory] = useState('')
-  const [newLocation, setNewLocation] = useState('')
-  const [newRadius, setNewRadius] = useState<number>(3)
-  const [submittingRequest, setSubmittingRequest] = useState(false)
-
   // Blacklist Form
   const [blackPhone, setBlackPhone] = useState('')
   const [blackReason, setBlackReason] = useState('')
@@ -492,48 +485,6 @@ export function LiveDashboard() {
       alert('İstek hatası: ' + (err instanceof Error ? err.message : String(err)))
     } finally {
       setAiGenerating(false)
-    }
-  }
-
-  // Yeni Veri Talebi Gönder
-  const handleCreateDataRequest = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newCategory.trim() && reqKind === 'province_district') {
-      alert('Lütfen bir sektör / kategori girin.')
-      return
-    }
-    if (!newLocation.trim()) {
-      alert('Lütfen bir şehir, ilçe veya açık adres girin.')
-      return
-    }
-
-    setSubmittingRequest(true)
-    try {
-      const res = await fetch('/api/canli-takip/create-request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          kind: reqKind,
-          category: newCategory.trim() || undefined,
-          address: newLocation.trim(),
-          location: newLocation.trim(),
-          radius_km: reqKind === 'nearby' ? newRadius : undefined,
-          source: 'places',
-        }),
-      })
-      const json = await res.json()
-      if (json.success) {
-        showNotice('Veri talebi başarıyla oluşturuldu ve kuyruğa alındı.')
-        setNewCategory('')
-        setNewLocation('')
-        setTimeout(fetchData, 2000)
-      } else {
-        alert('Talep oluşturulamadı: ' + (json.error || 'Bilinmeyen hata'))
-      }
-    } catch (err) {
-      alert('İstek hatası: ' + (err instanceof Error ? err.message : String(err)))
-    } finally {
-      setSubmittingRequest(false)
     }
   }
 
@@ -1368,107 +1319,20 @@ export function LiveDashboard() {
         {/* 4. VERİ TALEPLERİ & LEAD KEŞFİ */}
         {activeTab === 'data_requests' && (
           <div className="space-y-6">
-            {/* New Request Creation Form */}
-            <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-5 shadow-sm space-y-4">
-              <div className="border-b border-[var(--color-hairline)] pb-3">
-                <h2 className="text-sm font-bold text-ink">Yeni Veri Talebi & Lead Keşfi Başlat</h2>
-                <p className="text-xs text-ink-muted">
-                  Google Haritalar ve kurumsal veri tabanından il/ilçe veya yakın çevre işletmelerini toplayın.
-                </p>
-              </div>
-
-              <form onSubmit={handleCreateDataRequest} className="space-y-4">
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 text-xs font-semibold cursor-pointer">
-                    <input
-                      type="radio"
-                      name="reqKind"
-                      checked={reqKind === 'province_district'}
-                      onChange={() => setReqKind('province_district')}
-                    />
-                    İl / İlçe Kategori Araması
-                  </label>
-                  <label className="flex items-center gap-2 text-xs font-semibold cursor-pointer">
-                    <input
-                      type="radio"
-                      name="reqKind"
-                      checked={reqKind === 'nearby'}
-                      onChange={() => setReqKind('nearby')}
-                    />
-                    Yakın Çevre Adres Araması (Yarıçap)
-                  </label>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {reqKind === 'province_district' ? (
-                    <>
-                      <div>
-                        <label className="block text-xs font-semibold text-ink-soft mb-1.5">Sektör / Kategori</label>
-                        <input
-                          type="text"
-                          placeholder="Örn: Eczaneler, Restoranlar, Toptancılar"
-                          value={newCategory}
-                          onChange={e => setNewCategory(e.target.value)}
-                          className="w-full bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] px-3 py-2 text-xs text-ink outline-none focus:border-accent"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-ink-soft mb-1.5">Şehir / İlçe</label>
-                        <input
-                          type="text"
-                          placeholder="Örn: Kadıköy, İstanbul veya Bursa"
-                          value={newLocation}
-                          onChange={e => setNewLocation(e.target.value)}
-                          className="w-full bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] px-3 py-2 text-xs text-ink outline-none focus:border-accent"
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="sm:col-span-2">
-                        <label className="block text-xs font-semibold text-ink-soft mb-1.5">Açık Adres / Konum</label>
-                        <input
-                          type="text"
-                          placeholder="Örn: Üçevler Mah. Tanay Cad. Nilüfer Bursa"
-                          value={newLocation}
-                          onChange={e => setNewLocation(e.target.value)}
-                          className="w-full bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] px-3 py-2 text-xs text-ink outline-none focus:border-accent"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-ink-soft mb-1.5">Yarıçap (KM)</label>
-                        <select
-                          value={newRadius}
-                          onChange={e => setNewRadius(Number(e.target.value))}
-                          className="w-full bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] px-3 py-2 text-xs text-ink outline-none"
-                        >
-                          <option value={1}>1 km</option>
-                          <option value={2}>2 km</option>
-                          <option value={3}>3 km</option>
-                          <option value={5}>5 km</option>
-                        </select>
-                      </div>
-                    </>
-                  )}
-
-                  <div className="sm:col-span-3 flex justify-end">
-                    <button
-                      type="submit"
-                      disabled={submittingRequest}
-                      className="px-5 py-2 rounded-[var(--radius-sm)] text-xs font-semibold bg-accent text-accent-ink hover:bg-accent-dim transition disabled:opacity-50"
-                    >
-                      {submittingRequest ? 'Talebi Oluşturuyor...' : 'Veri Toplama Talebini Başlat'}
-                    </button>
-                  </div>
-                </div>
-              </form>
-            </div>
-
             {/* List Requests Table */}
             <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-5 shadow-sm space-y-4">
-              <h2 className="text-sm font-bold text-ink">Mevcut Veri Toplama Talepleri</h2>
+              <div className="flex items-center justify-between border-b border-[var(--color-hairline)] pb-3">
+                <div>
+                  <h2 className="text-sm font-bold text-ink">Firmalardan Gelen Veri Toplama Talepleri</h2>
+                  <p className="text-xs text-ink-muted">
+                    Müşterilerin / firmaların panellerinden açtığı lead keşif talepleri. Durumu doğrudan dropdown üzerinden güncelleyebilirsiniz.
+                  </p>
+                </div>
+                <span className="text-xs font-semibold text-ink-muted">{data?.listRequests.length} Talep</span>
+              </div>
+
               {data?.listRequests.length === 0 ? (
-                <p className="text-xs text-ink-muted text-center py-6">Kayıtlı talep bulunmuyor.</p>
+                <p className="text-xs text-ink-muted text-center py-6">Henüz firmalardan gelen bir talep bulunmuyor.</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
@@ -1479,9 +1343,8 @@ export function LiveDashboard() {
                         <th className="pb-2">Kategori / Sektör</th>
                         <th className="pb-2">Konum / Adres</th>
                         <th className="pb-2">Toplanan Kişi</th>
-                        <th className="pb-2">Durum</th>
+                        <th className="pb-2">Talep Durumu (Yönetici)</th>
                         <th className="pb-2">Tarih</th>
-                        <th className="pb-2 text-right">Yönetici Onay / Eylem</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--color-hairline)]">
@@ -1493,87 +1356,58 @@ export function LiveDashboard() {
                           <td className="py-2.5 font-mono text-[11px] text-ink-soft">{r.kind}</td>
                           <td className="py-2.5 font-semibold text-ink">{r.category || '—'}</td>
                           <td className="py-2.5 text-ink-muted">{r.address || (r.nationwide ? 'Tüm Türkiye' : 'Bölgesel')}</td>
-                          <td className="py-2.5 font-bold text-accent">{r.contact_count}</td>
-                          <td className="py-2.5">
-                            <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                                r.status === 'completed'
-                                  ? 'bg-ok-soft text-ok-dim'
-                                  : r.status === 'processing'
-                                  ? 'bg-warn/10 text-warn'
-                                  : r.status === 'rejected'
-                                  ? 'bg-danger/10 text-danger'
-                                  : 'bg-surface-raised text-ink-muted'
-                              }`}
-                            >
-                              {r.status === 'pending'
-                                ? 'ONAY BEKLİYOR'
-                                : r.status === 'processing'
-                                ? 'İŞLENİYOR'
-                                : r.status === 'completed'
-                                ? 'TAMAMLANDI'
-                                : 'REDDEDİLDİ'}
-                            </span>
-                          </td>
-                          <td className="py-2.5 text-ink-muted">{timeAgo(r.created_at)}</td>
-                          <td className="py-2.5 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              {r.status === 'pending' && (
-                                <>
-                                  <button
-                                    onClick={() => handleUpdateRequestStatus(r.id, 'processing')}
-                                    disabled={actionBusy}
-                                    className="px-2.5 py-1 text-xs font-semibold rounded bg-ok-soft text-ok-dim hover:bg-ok-soft/80 transition"
-                                  >
-                                    Onayla & İşle
-                                  </button>
-                                  <button
-                                    onClick={() => handleUpdateRequestStatus(r.id, 'rejected')}
-                                    disabled={actionBusy}
-                                    className="px-2 py-1 text-xs font-semibold rounded bg-danger/10 text-danger hover:bg-danger/20 transition"
-                                  >
-                                    Reddet
-                                  </button>
-                                </>
-                              )}
-                              {r.status === 'processing' && (
-                                <>
-                                  <button
-                                    onClick={() => handleUpdateRequestStatus(r.id, 'completed', r.contact_count)}
-                                    disabled={actionBusy}
-                                    className="px-2.5 py-1 text-xs font-semibold rounded bg-accent text-accent-ink hover:bg-accent-dim transition"
-                                  >
-                                    Tamamlandı Yap
-                                  </button>
-                                  <button
-                                    onClick={() => handleUpdateRequestStatus(r.id, 'rejected')}
-                                    disabled={actionBusy}
-                                    className="px-2 py-1 text-xs font-semibold rounded bg-danger/10 text-danger hover:bg-danger/20 transition"
-                                  >
-                                    Reddet
-                                  </button>
-                                </>
-                              )}
-                              {r.status === 'completed' && (
-                                <button
-                                  onClick={() => handleUpdateRequestStatus(r.id, 'processing', r.contact_count)}
-                                  disabled={actionBusy}
-                                  className="px-2 py-1 text-xs font-semibold rounded bg-surface-raised text-ink-soft hover:bg-canvas transition"
-                                >
-                                  Tekrar Aç
-                                </button>
-                              )}
-                              {r.status === 'rejected' && (
-                                <button
-                                  onClick={() => handleUpdateRequestStatus(r.id, 'pending')}
-                                  disabled={actionBusy}
-                                  className="px-2 py-1 text-xs font-semibold rounded bg-surface-raised text-ink-soft hover:bg-canvas transition"
-                                >
-                                  Yeniden Aç
-                                </button>
-                              )}
+                          <td className="py-2.5 font-bold text-accent">
+                            <div className="flex items-center gap-1.5">
+                              <span>{r.contact_count}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const input = prompt('Bu talep için kişi sayısını girin:', String(r.contact_count || 0))
+                                  if (input !== null) {
+                                    const count = parseInt(input, 10) || 0
+                                    handleUpdateRequestStatus(r.id, r.status as any, count)
+                                  }
+                                }}
+                                className="text-[10px] text-ink-muted hover:text-accent underline"
+                                title="Kişi sayısını düzenle"
+                              >
+                                düzenle
+                              </button>
                             </div>
                           </td>
+                          <td className="py-2.5">
+                            <select
+                              value={r.status}
+                              disabled={actionBusy}
+                              onChange={e => {
+                                const newStatus = e.target.value as 'pending' | 'processing' | 'completed' | 'rejected'
+                                handleUpdateRequestStatus(r.id, newStatus, r.contact_count)
+                              }}
+                              className={`text-xs font-semibold px-2.5 py-1 rounded-[var(--radius-sm)] border outline-none cursor-pointer transition ${
+                                r.status === 'completed'
+                                  ? 'bg-ok-soft text-ok-dim border-ok/30'
+                                  : r.status === 'processing'
+                                  ? 'bg-accent-soft text-accent border-accent/30'
+                                  : r.status === 'rejected'
+                                  ? 'bg-danger/10 text-danger border-danger/30'
+                                  : 'bg-warn/15 text-warn border-warn/30'
+                              }`}
+                            >
+                              <option value="pending" className="bg-surface text-warn font-semibold">
+                                Beklemede (pending)
+                              </option>
+                              <option value="processing" className="bg-surface text-accent font-semibold">
+                                Onaylandı & Hazırlanıyor (processing)
+                              </option>
+                              <option value="completed" className="bg-surface text-ok-dim font-semibold">
+                                Tamamlandı (completed)
+                              </option>
+                              <option value="rejected" className="bg-surface text-danger font-semibold">
+                                Reddedildi (rejected)
+                              </option>
+                            </select>
+                          </td>
+                          <td className="py-2.5 text-ink-muted">{timeAgo(r.created_at)}</td>
                         </tr>
                       ))}
                     </tbody>
