@@ -7,8 +7,17 @@ const BUCKET = 'chat-media'
 type MediaKind = 'image' | 'sticker' | 'video' | 'audio' | 'document'
 
 function supabaseConfig(): { url: string; key: string } | null {
-  const url = (process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim()
-  const key = (process.env.SUPABASE_SERVICE_ROLE_KEY ?? '').trim()
+  const url = (
+    process.env.SUPABASE_URL ??
+    process.env.NEXT_PUBLIC_SUPABASE_URL ??
+    'https://rnkrjmblgcdqlyslbhob.supabase.co'
+  ).trim()
+  const key = (
+    process.env.SUPABASE_SERVICE_ROLE_KEY ??
+    process.env.SUPABASE_ANON_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJua3JqbWJsZ2NkcWx5c2xiaG9iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0NTE2OTQsImV4cCI6MjEwNDAyNzY5NH0.PXOKu-TTcxKaJQKFcA-QSN7ukwK3NuPJvVpzYRpMDXg'
+  ).trim()
   if (!url || !key) return null
   return { url: url.replace(/\/$/, ''), key }
 }
@@ -44,7 +53,13 @@ function extFromMime(mime: string): string {
 }
 
 function isSupportedKind(type: string): type is MediaKind {
-  return type === 'image' || type === 'sticker' || type === 'video'
+  return (
+    type === 'image' ||
+    type === 'sticker' ||
+    type === 'video' ||
+    type === 'audio' ||
+    type === 'document'
+  )
 }
 
 function numberFromProto(value: unknown): number | null {
@@ -74,7 +89,7 @@ function advertisedFileLength(message: WAMessage, kind: MediaKind): number | nul
 
 /**
  * Baileys medyasını indirip chat-media bucket'a yükler.
- * SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY yoksa null döner.
+ * SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY / ANON_KEY ile yukleme yapar.
  */
 export async function storeInboundMedia(options: {
   orgId: string
@@ -89,7 +104,7 @@ export async function storeInboundMedia(options: {
 
   const cfg = supabaseConfig()
   if (!cfg) {
-    logger.warn('inbound-media: SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY yok — görsel atlandı')
+    logger.warn('inbound-media: SUPABASE_URL / key yok — görsel atlandı')
     return null
   }
 
@@ -135,7 +150,7 @@ export async function storeInboundMedia(options: {
 
   const mime = mimeFromMessage(message, messageType)
   const ext = extFromMime(mime)
-  const fileId = (waMessageId ?? `${Date.now()}`).replace(/[^a-zA-Z0-9_-]/g, '_')
+  const fileId = (waMessageId ?? String(Date.now())).replace(/[^a-zA-Z0-9_-]/g, '_')
   const path = `${orgId}/inbound/${accountId}/${fileId}.${ext}`
 
   try {

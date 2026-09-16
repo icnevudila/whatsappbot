@@ -597,6 +597,8 @@ async function sendToTarget(
       `insert into public.message_log
          (org_id, created_by, account_id, campaign_id, direction, remote_jid, phone_e164, message_type, body, media_url, wa_message_id, status)
        values ($1::uuid, $2::uuid, $3::uuid, $4::uuid, 'out', $5, $6, $7, $8, $9, $10, 'sent')
+       on conflict (account_id, wa_message_id) where direction = 'out' and wa_message_id is not null and account_id is not null
+       do update set status = excluded.status, campaign_id = coalesce(excluded.campaign_id, public.message_log.campaign_id)
        returning id::text, created_at`,
       [
         campaign.org_id,

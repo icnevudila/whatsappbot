@@ -134,7 +134,7 @@ export function ReplyForm({
       if (data.suggestions && data.suggestions.length > 0) {
         setSuggestions(data.suggestions)
         setPreparedKey(key)
-        if (!options?.background) setShowSuggestions(true)
+        setShowSuggestions(true)
       } else if (!options?.background) {
         toast(data.error || 'Yapay zeka önerisi üretilemedi.', 'warn')
       }

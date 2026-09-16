@@ -1,14 +1,75 @@
+import { jidToE164 } from '@wa/shared'
 import {
   isJidBroadcast,
   isJidGroup,
   isJidNewsletter,
+  isLidUser,
   type WAMessage,
 } from '@whiskeysockets/baileys'
 import { one, query } from './db.js'
 import { logger } from './logger.js'
-import { extractBody, resolveInboundPhone } from './inbound.js'
+import { extractBody } from './inbound.js'
 import { rememberSentMessage } from './sent-messages.js'
 import { statusFromAck } from './receipts.js'
+
+/**
+ * Giden (fromMe: true) mesajlarda alici karsi tarafin telefonunu bulur.
+ * ONEMLI: key.senderPn gonderenin (bizim) numaramizdir, asla kullanilmaz!
+ */
+export async function resolveOutboundPhone(
+  message: WAMessage,
+  resolveLidPn?: (lidJid: string) => Promise<string | null>,
+): Promise<string | null> {
+  const key = message.key
+  if (!key?.remoteJid) return null
+
+  // 1. Normal telefon JID (@s.whatsapp.net)
+  if (!isLidUser(key.remoteJid)) {
+    return jidToE164(key.remoteJid)
+  }
+
+  // 2. LID durumunda Baileys alici ipuclari (peerRecipientPn / recipientPn)
+  const anyKey = (key || {}) as Record<string, unknown>
+  const anyMsg = (message || {}) as unknown as Record<string, unknown>
+  const recipientHint =
+    jidToE164(String(anyKey.peerRecipientPn ?? '')) ??
+    jidToE164(String(anyKey.recipientPn ?? '')) ??
+    jidToE164(String(anyMsg.peerRecipientPn ?? '')) ??
+    jidToE164(String(anyMsg.recipientPn ?? '')) ??
+    null
+  if (recipientHint) return recipientHint
+
+  // 3. Baileys LID -> PN bellek eslemesi
+  if (resolveLidPn) {
+    try {
+      const mapped = await resolveLidPn(key.remoteJid)
+      if (mapped) return jidToE164(mapped) ?? (mapped.startsWith('+') ? mapped : null)
+    } catch {
+      // mapping basarisiz olursa devam et
+    }
+  }
+
+  // 4. Veritabaninda (account_contacts / message_log) bu LID icin kayitli telefon
+  try {
+    const contact = await one<{ phone_e164: string }>(
+      `select phone_e164 from public.account_contacts
+        where wa_jid = $1 and phone_e164 is not null limit 1`,
+      [key.remoteJid],
+    )
+    if (contact?.phone_e164) return contact.phone_e164
+
+    const prevLog = await one<{ phone_e164: string }>(
+      `select phone_e164 from public.message_log
+        where remote_jid = $1 and phone_e164 is not null limit 1`,
+      [key.remoteJid],
+    )
+    if (prevLog?.phone_e164) return prevLog.phone_e164
+  } catch {
+    // db hatasinda devam et
+  }
+
+  return null
+}
 
 export async function syncPhoneOutboundMessages(options: {
   accountId: string
@@ -47,7 +108,7 @@ export async function syncPhoneOutboundMessages(options: {
         if (!body) continue
       }
 
-      const phone = await resolveInboundPhone(message, resolveLidPn)
+      const phone = await resolveOutboundPhone(message, resolveLidPn)
       const rawStatus = statusFromAck(message.status)
       const status = rawStatus || 'sent'
 

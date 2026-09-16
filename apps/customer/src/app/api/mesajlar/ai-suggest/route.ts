@@ -142,20 +142,33 @@ export async function POST(request: Request) {
     .eq('context_fingerprint', contextFingerprint)
     .maybeSingle()
 
-  if (cached && validSuggestions(cached.suggestions)) {
+  let cachedRow = cached
+  if (!cachedRow) {
+    const { data: fallback } = await supabase
+      .from('ai_reply_suggestion_library')
+      .select('id, suggestions, hit_count')
+      .eq('org_id', org.id)
+      .eq('message_fingerprint', messageFingerprint)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (fallback) cachedRow = fallback
+  }
+
+  if (cachedRow && validSuggestions(cachedRow.suggestions)) {
     void supabase
       .from('ai_reply_suggestion_library')
       .update({
-        hit_count: Number(cached.hit_count ?? 0) + 1,
+        hit_count: Number(cachedRow.hit_count ?? 0) + 1,
         last_used_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
-      .eq('id', cached.id)
+      .eq('id', cachedRow.id)
 
     return NextResponse.json({
       success: true,
       cached: true,
-      suggestions: cached.suggestions,
+      suggestions: cachedRow.suggestions,
     })
   }
 

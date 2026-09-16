@@ -134,6 +134,7 @@ export class WhatsAppSession {
   private pairingIssuedAt = 0
   private refreshingPairing = false
   private connectedPhone: string | null = null
+  private sentMessageIds = new Set<string>()
 
   constructor(
     account: Pick<AccountRow, 'id' | 'org_id' | 'created_by'> & { phone_e164?: string | null },
@@ -457,6 +458,13 @@ export class WhatsAppSession {
   }
 
   private async handleOutboundMessages(messages: WAMessage[]): Promise<void> {
+    const externalOutbound = messages.filter((m) => {
+      const id = m.key?.id
+      if (id && this.sentMessageIds.has(id)) return false
+      return true
+    })
+    if (externalOutbound.length === 0) return
+
     const { syncPhoneOutboundMessages } = await import('./outbound-sync.js')
     const resolveLidPn = async (lidJid: string): Promise<string | null> => {
       const sock = this.sock as
@@ -478,7 +486,7 @@ export class WhatsAppSession {
       accountId: this.accountId,
       orgId: this.orgId,
       createdBy: this.createdBy,
-      messages,
+      messages: externalOutbound,
       resolveLidPn,
     })
   }
@@ -1057,6 +1065,13 @@ export class WhatsAppSession {
       if (await readLeaseHolder(this.accountId) !== env.workerId) throw new Error('Oturum sahipliği doğrulanamadı')
       if (this.shuttingDown || !this.isLive) throw new Error('Oturum gönderimden önce kapandı')
       const message = await awaitDelivery(sock.sendMessage(jid, content), env.sendTimeoutMs)
+      if (message.key?.id) {
+        const msgId = message.key.id
+        this.sentMessageIds.add(msgId)
+        setTimeout(() => {
+          this.sentMessageIds.delete(msgId)
+        }, 60_000)
+      }
       // Delivery has happened: accounting errors must not cause another send.
       await incrementSentToday(this.accountId).catch(error => {
         this.log.error({ err: error }, 'Gönderildi; günlük sayaç kaydedilemedi')

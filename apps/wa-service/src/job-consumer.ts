@@ -456,6 +456,8 @@ async function handle(job: JobRow): Promise<unknown> {
           `insert into public.message_log
              (org_id, created_by, account_id, direction, remote_jid, phone_e164, message_type, body, media_url, wa_message_id, status)
            values ($1, $2, $3, 'out', $4, $5, $6, $7, $8, $9, 'sent')
+           on conflict (account_id, wa_message_id) where direction = 'out' and wa_message_id is not null and account_id is not null
+           do update set status = excluded.status, body = coalesce(excluded.body, public.message_log.body), media_url = coalesce(excluded.media_url, public.message_log.media_url)
            returning id::text, created_at`,
           [
             job.org_id,

@@ -110,7 +110,14 @@ export async function persistInboundMessage(options: {
   const pushName = message.pushName?.trim() || null
 
   let mediaUrl: string | null = null
-  if (sock && (type === 'image' || type === 'sticker' || type === 'video')) {
+  if (
+    sock &&
+    (type === 'image' ||
+      type === 'sticker' ||
+      type === 'video' ||
+      type === 'audio' ||
+      type === 'document')
+  ) {
     try {
       const { storeInboundMedia } = await import('./inbound-media.js')
       mediaUrl = await storeInboundMedia({
@@ -198,6 +205,21 @@ export async function persistInboundMessage(options: {
     body: preview,
     path: phone ? `/mesajlar?tel=${encodeURIComponent(phone)}` : '/mesajlar',
   })
+
+  // Gelen mesaja arka planda AI yanit onerileri onceden uret (temsilci chati actiginda aninda hazir olsun)
+  if (body?.trim() && !isOptOutMessage(body)) {
+    void import('./auto-reply.js')
+      .then(({ pregenerateAiSuggestions }) =>
+        pregenerateAiSuggestions({
+          orgId,
+          phoneE164: phone,
+          body,
+        }),
+      )
+      .catch((error) => {
+        logger.debug({ err: error, accountId }, 'AI yanit onerisi onceden uretilemedi')
+      })
+  }
 
   // Varsayilan kapali (AUTO_REPLY_ENABLED + org.auto_reply_enabled).
   void import('./auto-reply.js')

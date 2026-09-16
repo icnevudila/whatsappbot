@@ -517,3 +517,115 @@ async function processAutoReply(options: AutoReplyOptions): Promise<void> {
     }
   }
 }
+
+/**
+ * Gelen mesaj icin arka planda AI cevap onerilerini onceden uretir ve
+ * ai_reply_suggestion_library tablosuna kaydeder.
+ * MUSTERIYE ASLA MESAJ GONDERMEZ (oto-cevap pasif kalir).
+ * Temsilci paneli actiginda oneriler aninda hazir olur.
+ */
+export async function pregenerateAiSuggestions(options: {
+  orgId: string
+  phoneE164: string | null
+  body: string
+}): Promise<void> {
+  const { orgId, phoneE164, body } = options
+  const trimmed = body?.trim()
+  if (!trimmed || trimmed.length < 2) return
+
+  try {
+    const messageFingerprint = fingerprint(trimmed)
+
+    // Onceden bu mesaj icin oneriler uretilmis mi?
+    const existing = await query<{ id: string }>(
+      `select id::text from public.ai_reply_suggestion_library
+        where org_id = $1 and message_fingerprint = $2
+        limit 1`,
+      [orgId, messageFingerprint],
+    )
+    if (existing.length > 0) return
+
+    const [orgRows, kitRows, productRows] = await Promise.all([
+      query<{ name: string }>(
+        `select name from public.organizations where id = $1 limit 1`,
+        [orgId],
+      ),
+      query<{ name: string | null; tone: string | null }>(
+        `select name, tone from public.reply_sales_kit where org_id = $1 limit 1`,
+        [orgId],
+      ),
+      query<{ name: string }>(
+        `select name from public.org_products where org_id = $1 and is_active = true limit 6`,
+        [orgId],
+      ),
+    ])
+
+    const org = orgRows[0]
+    if (!org) return
+
+    let companyContext = org.name
+    if (kitRows[0]?.name && kitRows[0].name !== org.name) {
+      companyContext += ` (${kitRows[0].name})`
+    }
+    if (productRows.length > 0) {
+      companyContext += `. Ürünler/Hizmetler: ${productRows.map((p) => p.name).join(', ')}`
+    }
+    const knowledgeContext = await buildKnowledgeContext({ orgId, phoneE164, message: trimmed })
+    if (knowledgeContext) {
+      companyContext += `\n${knowledgeContext}`
+    }
+    const tone = kitRows[0]?.tone || 'Kurumsal, nazik, yardımsever ve samimi'
+    const contextFingerprint = fingerprint(`${companyContext}\n${tone}\n`)
+
+    let gatewayUrl = process.env.OMNISTUDIO_GATEWAY_URL || 'http://omnistudio-engine:3456'
+    if (gatewayUrl.includes('127.0.0.1') || gatewayUrl.includes('localhost')) {
+      gatewayUrl = 'http://omnistudio-engine:3456'
+    }
+    gatewayUrl = gatewayUrl.replace(/\/$/, '')
+
+    const aiRes = await fetch(`${gatewayUrl}/v1/chat/suggestions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customer: org.name,
+        incomingMessage: trimmed,
+        companyContext,
+        tone,
+      }),
+      signal: AbortSignal.timeout(25000),
+    })
+
+    if (!aiRes.ok) {
+      logger.debug({ status: aiRes.status, orgId }, 'pregenerateAiSuggestions: gateway yanit vermedi')
+      return
+    }
+
+    const aiData = (await aiRes.json()) as {
+      success?: boolean
+      suggestions?: Suggestion[]
+    }
+
+    if (!validSuggestions(aiData.suggestions)) return
+
+    await query(
+      `insert into public.ai_reply_suggestion_library (
+        org_id, message_fingerprint, context_fingerprint, incoming_sample,
+        suggestions, source, generated_count, last_used_at, updated_at
+      )
+      values ($1, $2, $3, $4, $5::jsonb, 'chatgpt', 1, now(), now())
+      on conflict (org_id, message_fingerprint, context_fingerprint)
+      do update set
+        suggestions = excluded.suggestions,
+        incoming_sample = excluded.incoming_sample,
+        updated_at = now()`,
+      [orgId, messageFingerprint, contextFingerprint, trimmed.slice(0, 500), JSON.stringify(aiData.suggestions)],
+    )
+
+    logger.info(
+      { orgId, phoneE164, count: aiData.suggestions.length },
+      'AI yanit onerileri onceden uretildi ve kutuphaneye kaydedildi',
+    )
+  } catch (err) {
+    logger.debug({ err: err instanceof Error ? err.message : err, orgId }, 'pregenerateAiSuggestions atlandi')
+  }
+}
