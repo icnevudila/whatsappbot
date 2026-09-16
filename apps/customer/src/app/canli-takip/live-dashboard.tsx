@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { logoutCanliTakip } from './actions'
 
 type Account = {
   id: string
@@ -184,7 +183,7 @@ export function LiveDashboard() {
   const handleLogout = async () => {
     setLoggingOut(true)
     try {
-      await logoutCanliTakip()
+      await fetch('/api/canli-takip/logout', { method: 'POST' })
       window.location.reload()
     } catch {
       window.location.reload()

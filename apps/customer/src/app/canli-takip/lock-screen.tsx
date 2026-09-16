@@ -1,20 +1,43 @@
 'use client'
 
-import { useActionState, useState } from 'react'
-import { loginCanliTakip, type AuthActionResult } from './actions'
+import { useState } from 'react'
 
 export function LockScreen() {
-  const [state, formAction, isPending] = useActionState<AuthActionResult | null, FormData>(
-    loginCanliTakip,
-    null,
-  )
+  const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
+
+    try {
+      const res = await fetch('/api/canli-takip/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      })
+
+      const data = await res.json()
+      if (data.success) {
+        window.location.reload()
+      } else {
+        setError(data.error || 'Hatalı şifre. Giriş reddedildi.')
+      }
+    } catch {
+      setError('Bağlantı hatası oluştu. Lütfen tekrar deneyin.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
-    <div className="flex min-h-dvh w-full items-center justify-center bg-[#0b1120] px-4 py-12 text-slate-100">
-      <div className="w-full max-w-sm rounded-2xl border border-slate-800 bg-slate-900/80 p-6 shadow-2xl backdrop-blur-xl sm:p-8">
+    <div className="flex min-h-dvh w-full items-center justify-center bg-[#070b14] px-4 py-12 text-slate-100 font-sans">
+      <div className="w-full max-w-sm rounded-2xl border border-slate-800 bg-slate-900/90 p-6 shadow-2xl backdrop-blur-xl sm:p-8">
         <div className="mb-6 flex flex-col items-center text-center">
-          <div className="mb-4 flex size-14 items-center justify-center rounded-2xl border border-indigo-500/20 bg-indigo-500/10 text-indigo-400 shadow-inner">
+          <div className="mb-4 flex size-14 items-center justify-center rounded-2xl border border-indigo-500/30 bg-indigo-500/10 text-indigo-400 shadow-inner">
             <svg
               className="size-7"
               fill="none"
@@ -31,11 +54,11 @@ export function LockScreen() {
           </div>
           <h1 className="text-xl font-bold tracking-tight text-white">Canlı Operasyon Paneli</h1>
           <p className="mt-1 text-xs text-slate-400">
-            Yetkili yönetici erişimi için güvenlik şifresini girin.
+            Yönetici erişimi için güvenlik şifrenizi girin.
           </p>
         </div>
 
-        <form action={formAction} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label
               htmlFor="password"
@@ -46,8 +69,9 @@ export function LockScreen() {
             <div className="relative mt-1.5">
               <input
                 id="password"
-                name="password"
                 type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 required
                 autoFocus
                 placeholder="Şifrenizi girin..."
@@ -63,24 +87,24 @@ export function LockScreen() {
             </div>
           </div>
 
-          {state?.error && (
+          {error && (
             <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3.5 py-2.5 text-xs text-rose-400">
-              {state.error}
+              {error}
             </div>
           )}
 
           <button
             type="submit"
-            disabled={isPending}
+            disabled={loading}
             className="flex w-full items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
           >
-            {isPending ? 'Doğrulanıyor...' : 'Panele Giriş Yap'}
+            {loading ? 'Doğrulanıyor...' : 'Panele Giriş Yap'}
           </button>
         </form>
 
-        <div className="mt-6 border-t border-slate-800 pt-4 text-center">
+        <div className="mt-6 border-t border-slate-800/80 pt-4 text-center">
           <p className="text-[11px] text-slate-500">
-            Bu ekran gizli operasyon ağına bağlıdır.
+            Bu ekran gizli yönetim ağına bağlıdır.
           </p>
         </div>
       </div>
