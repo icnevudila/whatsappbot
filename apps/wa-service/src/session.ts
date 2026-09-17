@@ -289,6 +289,9 @@ export class WhatsAppSession {
       markOnlineOnConnect: false,
       // Mevcut bagli oturumlarda 428 hatasini onlemek icin false olmali
       syncFullHistory: false,
+      // Telefona gecmis senkronizasyon bildirimi ('Finished syncing with...') gondermesini onler
+      shouldSyncHistoryMessage: () => false,
+      maxMsgRetryCount: 2,
       msgRetryCounterCache: this.msgRetryCounterCache,
       mediaCache: this.mediaCache,
       getMessage: (key) => lookupSentMessage(this.accountId, key),
