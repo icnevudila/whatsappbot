@@ -554,18 +554,16 @@ export class WhatsAppSession {
       const phone = normalized ? jidToE164(normalized) : null
 
       if (phone) {
-        const duplicate = await one<{ id: string; org_id: string; label: string; org_name: string }>(
-          `select a.id, a.org_id, a.label, o.name as org_name
-             from public.accounts a
-             join public.organizations o on o.id = a.org_id
-            where a.phone_e164 = $1
-              and a.id <> $2
-              and a.status in ('connected', 'connecting', 'qr_pending', 'pairing_pending')
-              and a.enabled = true
-            limit 1`,
-          [phone, this.accountId],
+        const duplicate = await one<{
+          is_connected: boolean
+          is_same_org: boolean
+          org_name: string
+          account_label: string
+        }>(
+          `select * from public.check_phone_connected_elsewhere($1, $2) limit 1`,
+          [phone, this.orgId],
         )
-        if (duplicate) {
+        if (duplicate && !duplicate.is_same_org) {
           const orgName = duplicate.org_name || 'Başka bir firma'
           this.log.warn({ duplicate, phone }, 'Hat baska bir firmada zaten bagli, oturum durduruluyor')
           await patchAccount(this.accountId, {
