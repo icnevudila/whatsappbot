@@ -24,7 +24,9 @@ async function purgeBlacklistedMessages(
     await writeInboxCache(orgId, {
       maxId: inbox.maxId,
       accountLabels: inbox.accountLabels,
-      items: inbox.items.filter((item) => !blocked.has(item.phone)),
+      items: (inbox.items as Array<{ phone: string }>).filter(
+        (item: { phone: string }) => !blocked.has(item.phone),
+      ),
     })
   }
   await Promise.all(
