@@ -104,14 +104,6 @@ export function NewCampaignForm({
   }, [])
 
   const [body, setBody] = useState('')
-  const [bodyB, setBodyB] = useState('')
-  const [enableAb, setEnableAb] = useState(false)
-  const [abPercent, setAbPercent] = useState(50)
-
-  const [minDelay, setMinDelay] = useState(15)
-  const [maxDelay, setMaxDelay] = useState(45)
-  const [warmupProtection, setWarmupProtection] = useState(true)
-  const [showAdvancedSecurity, setShowAdvancedSecurity] = useState(false)
 
   const [mediaUrl, setMediaUrl] = useState('')
   const [messageType, setMessageType] = useState<MessageType>('text')
@@ -170,9 +162,6 @@ export function NewCampaignForm({
       if (!body.trim() && !mediaUrl) {
         return { ok: false, hint: 'Mesaj yazın veya görsel ekleyin.' }
       }
-      if (enableAb && !bodyB.trim()) {
-        return { ok: false, hint: 'A/B testi aktifken Varyant B mesajını da yazmalısınız.' }
-      }
       return { ok: true }
     }
     if (step === 3) {
@@ -186,13 +175,8 @@ export function NewCampaignForm({
       if (selectedAccounts.length === 0) return { ok: false, hint: 'En az bir hat seçin.' }
       return { ok: true }
     }
-    if (step === 4) {
-      if (minDelay < 3) return { ok: false, hint: 'En kısa bekleme süresi en az 3 saniye olmalıdır.' }
-      if (minDelay > maxDelay) return { ok: false, hint: 'En kısa bekleme süresi, en uzun süreden büyük olamaz.' }
-      if (startMode === 'schedule' && !scheduledAt) {
-        return { ok: false, hint: 'Zamanlama için tarih seçin.' }
-      }
-      return { ok: true }
+    if (step === 4 && startMode === 'schedule' && !scheduledAt) {
+      return { ok: false, hint: 'Zamanlama için tarih seçin.' }
     }
     return { ok: true }
   }
@@ -275,12 +259,12 @@ export function NewCampaignForm({
         >
           <input type="hidden" name="media_url" value={mediaUrl} />
           <input type="hidden" name="message_type" value={messageType} />
-          <input type="hidden" name="min_delay" value={minDelay} />
-          <input type="hidden" name="max_delay" value={maxDelay} />
+          <input type="hidden" name="min_delay" value="15" />
+          <input type="hidden" name="max_delay" value="45" />
           <input type="hidden" name="daily_cap" value="100" />
-          <input type="hidden" name="ab_percent" value={enableAb ? abPercent : 0} />
-          <input type="hidden" name="body_b" value={enableAb ? bodyB : ''} />
-          <input type="hidden" name="warmup_bypass" value={warmupProtection ? '0' : '1'} />
+          <input type="hidden" name="ab_percent" value="0" />
+          <input type="hidden" name="body_b" value="" />
+          <input type="hidden" name="warmup_bypass" value="0" />
           {selectedLists.map((id) => (
             <input key={`list-${id}`} type="hidden" name="lists" value={id} />
           ))}
@@ -344,66 +328,6 @@ export function NewCampaignForm({
                   defaultTone={brandTone}
                   onApply={setBody}
                 />
-
-                <div className="rounded-md border border-hairline bg-canvas px-3 py-2 text-[11.5px] text-ink-muted">
-                  <span className="font-medium text-accent">Anti-Ban İpucu (Spintax):</span> Metninizde{' '}
-                  <code className="rounded bg-surface px-1 py-0.5 font-mono text-ink text-[11px] border border-hairline">
-                    {'{Merhaba|Selam|İyi günler}'}
-                  </code>{' '}
-                  yazarak her müşteriye otomatik olarak rastgele farklı kelimelerle mesaj gönderebilirsiniz.
-                </div>
-
-                <div className="rounded-lg border border-hairline bg-surface p-3.5 space-y-3">
-                  <label className="flex items-center justify-between cursor-pointer select-none">
-                    <div className="space-y-0.5">
-                      <span className="text-[13px] font-medium text-ink">A/B Testi Uygula (Opsiyonel)</span>
-                      <p className="text-[11.5px] text-ink-muted">
-                        İkinci bir mesaj varyantı ekleyip kitlenizi ikiye bölerek hangi metnin daha etkili olduğunu ölçün.
-                      </p>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={enableAb}
-                      onChange={(e) => setEnableAb(e.target.checked)}
-                      className="size-4 rounded accent-accent cursor-pointer ml-3"
-                    />
-                  </label>
-
-                  {enableAb ? (
-                    <div className="space-y-3 border-t border-hairline pt-3">
-                      <Field
-                        label="Varyant B Mesajı"
-                        hint="Kitlenizin belirlenen yüzdesine bu mesaj varyantı iletilir."
-                      >
-                        <Textarea
-                          name="body_b_input"
-                          rows={4}
-                          value={bodyB}
-                          onChange={(event) => setBodyB(event.target.value)}
-                          placeholder={`Alternatif mesaj metnini yazın...\n\n${OPT_OUT_FOOTER}`}
-                        />
-                      </Field>
-
-                      <div className="space-y-1.5">
-                        <div className="flex justify-between text-[12px]">
-                          <span className="text-ink-muted">Dağılım Oranı:</span>
-                          <span className="font-semibold text-accent tabular">
-                            Varyant A: %{100 - abPercent} · Varyant B: %{abPercent}
-                          </span>
-                        </div>
-                        <input
-                          type="range"
-                          min="10"
-                          max="90"
-                          step="5"
-                          value={abPercent}
-                          onChange={(e) => setAbPercent(Number(e.target.value))}
-                          className="w-full accent-accent cursor-pointer"
-                        />
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
 
                 <div className="space-y-3">
                   <span className="mb-1.5 block text-[12px] font-medium text-ink-muted">
@@ -598,93 +522,6 @@ export function NewCampaignForm({
                     />
                   </label>
                 </fieldset>
-
-                {/* Anti-Ban & Gönderim Güvenliği Ayarları */}
-                <div className="rounded-md border border-hairline p-3 space-y-3 bg-surface">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="size-2 rounded-full bg-accent inline-block" />
-                      <span className="text-[13px] font-medium text-ink">Anti-Ban ve Gönderim Güvenliği</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowAdvancedSecurity((prev) => !prev)}
-                      className="text-[12px] font-medium text-accent hover:underline cursor-pointer"
-                    >
-                      {showAdvancedSecurity ? 'Kapat' : 'Özelleştir'}
-                    </button>
-                  </div>
-
-                  <p className="text-[11.5px] text-ink-muted leading-relaxed">
-                    Sistem her mesajdan önce doğal insan gibi <strong>&ldquo;yazıyor...&rdquo;</strong> simülasyonu yapar ve mesajları sabit aralıklarla değil, rastgele saniyelerle (Smart Drip) gönderir.
-                  </p>
-
-                  {showAdvancedSecurity ? (
-                    <div className="space-y-3.5 border-t border-hairline pt-3">
-                      {/* Smart Drip Delay Inputs */}
-                      <div className="space-y-2">
-                        <span className="text-[12px] font-medium text-ink block">
-                          Smart Drip Gecikme Aralığı (Saniye)
-                        </span>
-                        <div className="grid grid-cols-2 gap-3">
-                          <Field label="En Az (sn)">
-                            <Input
-                              type="number"
-                              min={3}
-                              max={120}
-                              value={minDelay}
-                              onChange={(e) => setMinDelay(Math.max(3, Number(e.target.value) || 3))}
-                            />
-                          </Field>
-                          <Field label="En Çok (sn)">
-                            <Input
-                              type="number"
-                              min={minDelay}
-                              max={300}
-                              value={maxDelay}
-                              onChange={(e) => setMaxDelay(Math.max(minDelay, Number(e.target.value) || minDelay))}
-                            />
-                          </Field>
-                        </div>
-                        <p className="text-[11px] text-ink-faint">
-                          Örn: 15–45 sn seçildiğinde her mesaj arasında 15 ile 45 saniye arasında rastgele beklenir.
-                        </p>
-                      </div>
-
-                      {/* Warmup Protection Toggle */}
-                      <div className="rounded border border-hairline bg-canvas p-2.5 space-y-1.5">
-                        <label className="flex items-center justify-between cursor-pointer select-none">
-                          <span className="text-[12.5px] font-medium text-ink">
-                            Yeni Hat Isıtma (Warm-Up) Koruması
-                          </span>
-                          <input
-                            type="checkbox"
-                            checked={warmupProtection}
-                            onChange={(e) => setWarmupProtection(e.target.checked)}
-                            className="size-4 rounded accent-accent cursor-pointer ml-3"
-                          />
-                        </label>
-                        <p className="text-[11px] text-ink-muted leading-relaxed">
-                          {warmupProtection
-                            ? 'Aktif: Yeni bağlanan hatların banlanmaması için günlük gönderim kotası kademeli (10 → 25 → 60 → 120) açılır.'
-                            : 'Devre Dışı: Isıtma emniyeti kapatıldı. Günlük hesap sınırına kadar tam kapasite gönderim yapılır (eski/güvenli hatlar için uygundur).'}
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex flex-wrap gap-2 text-[11px] text-ink-muted">
-                      <span className="rounded bg-canvas px-2 py-0.5 border border-hairline">
-                        Gecikme: {minDelay}–{maxDelay} sn rastgele
-                      </span>
-                      <span className="rounded bg-canvas px-2 py-0.5 border border-hairline">
-                        Yazıyor... Simülasyonu: Aktif
-                      </span>
-                      <span className="rounded bg-canvas px-2 py-0.5 border border-hairline">
-                        Isıtma Koruması: {warmupProtection ? 'Aktif' : 'Kapalı'}
-                      </span>
-                    </div>
-                  )}
-                </div>
               </div>
             ) : (
               <>
