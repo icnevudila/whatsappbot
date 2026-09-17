@@ -38,6 +38,7 @@ export type EditableCampaign = {
   max_delay_seconds: number
   daily_cap_per_account: number
   source_list_ids: string[]
+  warmup_bypass?: boolean
 }
 
 function typeFromMime(mime: string): 'image' | 'video' | null {
@@ -153,6 +154,7 @@ export function EditCampaignForm({
         <input type="hidden" name="daily_cap" value={campaign.daily_cap_per_account} />
         <input type="hidden" name="ab_percent" value={campaign.ab_percent ?? 0} />
         <input type="hidden" name="body_b" value={campaign.body_b ?? ''} />
+        <input type="hidden" name="warmup_bypass" value={campaign.warmup_bypass ? '1' : '0'} />
 
         <Field label="Kampanya adı">
           <Input name="name" defaultValue={campaign.name} required />

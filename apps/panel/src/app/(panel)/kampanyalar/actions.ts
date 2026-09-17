@@ -38,6 +38,7 @@ export async function createCampaign(
   const dailyCap = Number(formData.get('daily_cap') ?? 100)
   const abPercentRaw = formData.get('ab_percent')
   const abPercent = abPercentRaw === null || abPercentRaw === '' ? 0 : Number(abPercentRaw)
+  const warmupBypass = formData.get('warmup_bypass') === '1' || formData.get('warmup_bypass') === 'true'
 
   const validationError =
     validateCampaignSettings(minDelay, maxDelay, dailyCap) ||
@@ -94,6 +95,7 @@ export async function createCampaign(
       min_delay_seconds: minDelay,
       max_delay_seconds: maxDelay,
       daily_cap_per_account: dailyCap,
+      warmup_bypass: warmupBypass,
       scheduled_at: scheduledAt,
       status: schedule ? 'scheduled' : 'draft',
     })
@@ -209,6 +211,7 @@ export async function updateCampaign(
   const dailyCap = Number(formData.get('daily_cap') ?? 100)
   const abPercentRaw = formData.get('ab_percent')
   const abPercent = abPercentRaw === null || abPercentRaw === '' ? 0 : Number(abPercentRaw)
+  const warmupBypass = formData.get('warmup_bypass') === '1' || formData.get('warmup_bypass') === 'true'
   const cancelRemaining = String(formData.get('cancel_remaining') ?? '') === '1'
   const resumeAfter = String(formData.get('resume_after') ?? '') === '1'
 
@@ -295,6 +298,7 @@ export async function updateCampaign(
       min_delay_seconds: minDelay,
       max_delay_seconds: maxDelay,
       daily_cap_per_account: dailyCap,
+      warmup_bypass: warmupBypass,
     })
     .eq('id', campaignId)
     .eq('org_id', org.id)

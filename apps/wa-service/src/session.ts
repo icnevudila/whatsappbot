@@ -1074,7 +1074,24 @@ export class WhatsAppSession {
     return result
   }
 
-  async sendMessage(jid: string, content: AnyMessageContent): Promise<WAMessage> {
+  async sendPresenceUpdate(
+    type: 'composing' | 'paused' | 'recording' | 'available' | 'unavailable',
+    toJid?: string,
+  ): Promise<void> {
+    const sock = this.sock
+    if (!sock || !this.isLive) return
+    try {
+      await sock.sendPresenceUpdate(type, toJid)
+    } catch {
+      // presence bildirimi hatasi islemi kesmemeli
+    }
+  }
+
+  async sendMessage(
+    jid: string,
+    content: AnyMessageContent,
+    options?: { bypassWarmup?: boolean },
+  ): Promise<WAMessage> {
     const sock = this.sock
     if (!sock || !this.isLive) {
       throw new Error(`Hesap bagli degil (durum: ${this.status})`)
@@ -1087,7 +1104,13 @@ export class WhatsAppSession {
       const account = await loadAccount(this.accountId)
       if (!account || !account.enabled || account.is_locked) throw new Error('Hat gönderime kapalı')
       const remaining = await remainingDailyQuota(account)
-      if (remaining <= 0 || account.sent_today >= warmupCap(account.warmup_started_at)) throw new Error('Günlük gönderim sınırına ulaşıldı')
+      const isWarmupEnforced = !options?.bypassWarmup && account.warmup_started_at
+      if (
+        remaining <= 0 ||
+        (isWarmupEnforced && account.sent_today >= warmupCap(account.warmup_started_at))
+      ) {
+        throw new Error('Günlük gönderim sınırına ulaşıldı')
+      }
       if (account.reachout_locked_until && Date.parse(account.reachout_locked_until) > Date.now()) throw new Error('Yeni sohbet kısıtı devam ediyor')
       if (account.new_chat_quota_total !== null && account.new_chat_quota_used !== null && account.new_chat_quota_used >= account.new_chat_quota_total) throw new Error('Yeni sohbet kotası doldu')
       if (await readLeaseHolder(this.accountId) !== env.workerId) throw new Error('Oturum sahipliği doğrulanamadı')

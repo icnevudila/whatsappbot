@@ -634,6 +634,7 @@ export type Database = {
           total_targets: number
           updated_at: string
           wait_reason: string | null
+          warmup_bypass: boolean
         }
         Insert: {
           ab_percent?: number
@@ -664,6 +665,7 @@ export type Database = {
           total_targets?: number
           updated_at?: string
           wait_reason?: string | null
+          warmup_bypass?: boolean
         }
         Update: {
           ab_percent?: number
@@ -694,6 +696,7 @@ export type Database = {
           total_targets?: number
           updated_at?: string
           wait_reason?: string | null
+          warmup_bypass?: boolean
         }
         Relationships: [
           {

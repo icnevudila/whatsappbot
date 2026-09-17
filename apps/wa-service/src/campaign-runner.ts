@@ -41,6 +41,7 @@ type CampaignRow = {
   max_delay_seconds: number
   daily_cap_per_account: number
   source_list_ids: string[]
+  warmup_bypass?: boolean
 }
 
 type CampaignAccountRow = {
@@ -85,7 +86,8 @@ export async function materializeTargets(
 ): Promise<{ inserted: number; total: number }> {
   const campaign = await one<CampaignRow>(
     `select id, org_id, created_by, name, message_type, body, body_b, ab_percent, media_url,
-            min_delay_seconds, max_delay_seconds, daily_cap_per_account, source_list_ids
+            min_delay_seconds, max_delay_seconds, daily_cap_per_account, source_list_ids,
+            coalesce(warmup_bypass, false) as warmup_bypass
        from public.campaigns where id = $1`,
     [campaignId],
   )
@@ -386,9 +388,12 @@ function personalize(body: string | null, name: string | null): string {
 }
 
 function remainingDaily(account: CampaignAccountRow, campaign: CampaignRow): number {
+  const isWarmupEnforced = !campaign.warmup_bypass && account.warmup_started_at
+  const effectiveWarmup = isWarmupEnforced ? warmupCap(account.warmup_started_at) : account.daily_send_limit
+
   const cap = Math.min(
     account.daily_send_limit,
-    warmupCap(account.warmup_started_at),
+    effectiveWarmup,
     campaign.daily_cap_per_account,
   )
 
@@ -563,14 +568,27 @@ async function sendToTarget(
     )
   }
 
-  const message = await session.sendMessage(jid, content)
+  // Dogal insan yazma simulasyonu (anti-ban: composing presence)
+  if (session.isLive) {
+    void session.sendPresenceUpdate('composing', jid).catch(() => {})
+    // Mesaj uzunluguna gore 1.5 - 3.5 saniye insan tipi bekleme
+    const textLen = body?.length || 10
+    const typingMs = Math.min(3500, Math.max(1500, textLen * 20 + Math.random() * 800))
+    await new Promise((resolve) => setTimeout(resolve, typingMs))
+  }
+
+  const message = await session.sendMessage(jid, content, { bypassWarmup: campaign.warmup_bypass })
+
+  if (session.isLive) {
+    void session.sendPresenceUpdate('paused', jid).catch(() => {})
+  }
 
   const updated = await query<{ id: string }>(
     `update public.campaign_targets
-        set status = 'sent', wa_message_id = $2, sent_at = now(), error = null, updated_at = now()
+        set status = 'sent', wa_message_id = $2, personalized_body = $3, sent_at = now(), error = null, updated_at = now()
       where id = $1::bigint and status = 'sending'
       returning id::text`,
-    [target.id, message.key?.id ?? null],
+    [target.id, message.key?.id ?? null, body || null],
   ).catch(error => {
     throw new DeliveryUncertainError('WhatsApp mesajı kabul etti fakat sonuç kaydedilemedi. Otomatik tekrar yapılmadı.', { cause: error })
   })
@@ -987,7 +1005,8 @@ async function tick(): Promise<void> {
 
     const campaigns = await query<CampaignRow>(
       `select id, org_id, created_by, name, message_type, body, body_b, ab_percent, media_url,
-              min_delay_seconds, max_delay_seconds, daily_cap_per_account, source_list_ids
+              min_delay_seconds, max_delay_seconds, daily_cap_per_account, source_list_ids,
+              coalesce(warmup_bypass, false) as warmup_bypass
          from public.campaigns
         where status = 'running'
         order by started_at nulls first`,

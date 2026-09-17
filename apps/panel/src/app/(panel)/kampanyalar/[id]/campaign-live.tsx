@@ -38,6 +38,7 @@ export type CampaignView = Pick<
   | 'started_at'
   | 'completed_at'
   | 'source_list_ids'
+  | 'warmup_bypass'
 >
 
 function meterTone(
@@ -215,6 +216,44 @@ export function CampaignLive({
             <LiveStat label="Kalan" value={remaining} />
           </dl>
 
+          {/* Anti-Ban ve Gönderim Güvenliği */}
+          <div className="flex flex-wrap gap-2 border-t border-hairline pt-2.5 text-[11.5px]">
+            <span className="inline-flex items-center gap-1 rounded bg-canvas px-2 py-1 text-ink-muted border border-hairline">
+              <span className="size-1.5 rounded-full bg-accent inline-block" />
+              Smart Drip: {campaign.min_delay_seconds}–{campaign.max_delay_seconds} sn rastgele
+            </span>
+            <span className="inline-flex items-center gap-1 rounded bg-canvas px-2 py-1 text-ink-muted border border-hairline">
+              <span className="size-1.5 rounded-full bg-accent inline-block" />
+              Yazıyor... Simülasyonu: Aktif
+            </span>
+            <span className="inline-flex items-center gap-1 rounded bg-canvas px-2 py-1 text-ink-muted border border-hairline">
+              <span className={`size-1.5 rounded-full ${campaign.warmup_bypass ? 'bg-warn' : 'bg-accent'} inline-block`} />
+              Numara Isıtma: {campaign.warmup_bypass ? 'Devre Dışı (Hızlı)' : 'Aktif (Kademeli)'}
+            </span>
+          </div>
+
+          {/* A/B Testi Bilgisi */}
+          {campaign.body_b && campaign.ab_percent > 0 ? (
+            <div className="rounded-lg border border-hairline bg-canvas p-3 text-[12px] space-y-2">
+              <div className="flex items-center justify-between font-medium text-ink">
+                <span>A/B Testi Varyantları</span>
+                <span className="text-[11px] text-ink-muted">
+                  A: %{100 - campaign.ab_percent} · B: %{campaign.ab_percent}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11.5px]">
+                <div className="rounded border border-hairline bg-surface p-2 space-y-1">
+                  <div className="font-semibold text-accent">Varyant A:</div>
+                  <div className="line-clamp-3 text-ink-muted whitespace-pre-wrap">{campaign.body || '(Metin yok)'}</div>
+                </div>
+                <div className="rounded border border-hairline bg-surface p-2 space-y-1">
+                  <div className="font-semibold text-accent">Varyant B:</div>
+                  <div className="line-clamp-3 text-ink-muted whitespace-pre-wrap">{campaign.body_b}</div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           <p className="text-[12px] text-ink-muted">
             Numara durumları aşağıda.{' '}
             <a
@@ -391,6 +430,7 @@ export function CampaignLive({
           max_delay_seconds: campaign.max_delay_seconds,
           daily_cap_per_account: campaign.daily_cap_per_account,
           source_list_ids: campaign.source_list_ids ?? [],
+          warmup_bypass: campaign.warmup_bypass ?? false,
         }}
         lists={listOptions}
         accounts={accountOptions}
