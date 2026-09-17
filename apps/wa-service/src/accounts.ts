@@ -19,15 +19,18 @@ export type AccountRow = {
   new_chat_quota_total: number | null
   new_chat_quota_used: number | null
   reachout_locked_until: string | null
+  org_warmup_enabled?: boolean
 }
-
-const ACCOUNT_COLUMNS = `id, org_id, created_by, label, phone_e164, wa_jid, status, enabled, is_locked,
-  daily_send_limit, sent_today, sent_today_on, warmup_started_at,
-  new_chat_quota_total, new_chat_quota_used, reachout_locked_until`
 
 export async function loadAccount(accountId: string): Promise<AccountRow | null> {
   return one<AccountRow>(
-    `select ${ACCOUNT_COLUMNS} from public.accounts where id = $1`,
+    `select a.id, a.org_id, a.created_by, a.label, a.phone_e164, a.wa_jid, a.status, a.enabled, a.is_locked,
+            a.daily_send_limit, a.sent_today, a.sent_today_on, a.warmup_started_at,
+            a.new_chat_quota_total, a.new_chat_quota_used, a.reachout_locked_until,
+            coalesce(o.warmup_enabled, true) as org_warmup_enabled
+       from public.accounts a
+       left join public.organizations o on o.id = a.org_id
+      where a.id = $1`,
     [accountId],
   )
 }

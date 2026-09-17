@@ -16,7 +16,13 @@ import { createT } from '@/lib/i18n'
 import { getDictionary } from '@/lib/i18n/server'
 import { requireActiveOrg } from '@/lib/org'
 import { signOut } from '@/app/giris/actions'
-import { MembersPanel, OrgSettingsForm, WebhookSettingsForm, DeleteOrganizationForm } from './org-forms'
+import {
+  MembersPanel,
+  OrgSettingsForm,
+  OrgWarmupSettingsForm,
+  WebhookSettingsForm,
+  DeleteOrganizationForm,
+} from './org-forms'
 import { ProfileForm } from './profile-form'
 import { planLabel } from '@wa/shared'
 import { BillingCheckoutButton } from './billing-checkout-button'
@@ -216,6 +222,16 @@ export default async function SettingsPage({
           <div className="flex items-center justify-between p-3.5 text-[12.5px] text-ink-muted">
             <span>Mesai dışı otomatik karşılama, kelime kuralları ve temsilciye aktarma ayarları.</span>
           </div>
+        </Card>
+      ) : null}
+
+      {canManage ? (
+        <Card>
+          <CardHeader
+            title="Hat Isındırma (Warm-Up)"
+            subtitle="Spam koruması ve kademeli kota yönetimi"
+          />
+          <OrgWarmupSettingsForm warmupEnabled={org.warmup_enabled ?? true} canEdit />
         </Card>
       ) : null}
 

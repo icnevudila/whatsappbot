@@ -1104,7 +1104,8 @@ export class WhatsAppSession {
       const account = await loadAccount(this.accountId)
       if (!account || !account.enabled || account.is_locked) throw new Error('Hat gönderime kapalı')
       const remaining = await remainingDailyQuota(account)
-      const isWarmupEnforced = !options?.bypassWarmup && account.warmup_started_at
+      const isOrgWarmupActive = account.org_warmup_enabled ?? true
+      const isWarmupEnforced = isOrgWarmupActive && !options?.bypassWarmup && account.warmup_started_at
       if (
         remaining <= 0 ||
         (isWarmupEnforced && account.sent_today >= warmupCap(account.warmup_started_at))

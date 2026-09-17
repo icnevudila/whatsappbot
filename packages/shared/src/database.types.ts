@@ -1533,6 +1533,7 @@ export type Database = {
           webhook_secret: string | null
           webhook_url: string | null
           ai_image_mode?: string | null
+          warmup_enabled?: boolean
         }
         Insert: {
           about?: string | null
@@ -1558,6 +1559,7 @@ export type Database = {
           webhook_secret?: string | null
           webhook_url?: string | null
           ai_image_mode?: string | null
+          warmup_enabled?: boolean
         }
         Update: {
           about?: string | null
@@ -1583,6 +1585,7 @@ export type Database = {
           webhook_secret?: string | null
           webhook_url?: string | null
           ai_image_mode?: string | null
+          warmup_enabled?: boolean
         }
         Relationships: []
       }

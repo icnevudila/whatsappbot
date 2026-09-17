@@ -306,3 +306,38 @@ export async function deleteOrganization(
     return { error: error instanceof Error ? error.message : 'Oturum yok' }
   }
 }
+
+export async function updateOrgWarmup(
+  _previous: OrgActionState,
+  formData: FormData,
+): Promise<OrgActionState> {
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  try {
+    ;({ org, supabase } = await requireActiveOrg())
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
+  }
+
+  if (org.role !== 'owner' && org.role !== 'admin') {
+    return { error: 'Bu ayarı yalnızca yönetici değiştirebilir.' }
+  }
+
+  const warmupEnabled = formData.get('warmup_enabled') === '1'
+
+  const { error } = await supabase
+    .from('organizations')
+    .update({ warmup_enabled: warmupEnabled })
+    .eq('id', org.id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/ayarlar')
+  revalidatePath('/', 'layout')
+  return {
+    ok: warmupEnabled
+      ? 'Hat ısındırma koruması açıldı.'
+      : 'Hat ısındırma koruması kapatıldı. Hatlar tam kapasiteyle gönderebilir.',
+  }
+}
+

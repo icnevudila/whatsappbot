@@ -14,6 +14,7 @@ export type ActiveOrg = {
   suspend_reason?: string | null
   stripe_customer_id?: string | null
   stripe_subscription_id?: string | null
+  warmup_enabled?: boolean
 }
 
 export function isOrgAdminRole(role: string | null | undefined): boolean {
@@ -130,6 +131,7 @@ export const requireActiveOrg = cache(async (): Promise<{
         (org as { stripe_customer_id?: string | null }).stripe_customer_id ?? null,
       stripe_subscription_id:
         (org as { stripe_subscription_id?: string | null }).stripe_subscription_id ?? null,
+      warmup_enabled: (org as { warmup_enabled?: boolean }).warmup_enabled ?? true,
     },
     supabase,
   }

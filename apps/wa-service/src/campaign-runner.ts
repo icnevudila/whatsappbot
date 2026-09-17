@@ -42,6 +42,7 @@ type CampaignRow = {
   daily_cap_per_account: number
   source_list_ids: string[]
   warmup_bypass?: boolean
+  org_warmup_enabled?: boolean
 }
 
 type CampaignAccountRow = {
@@ -57,6 +58,7 @@ type CampaignAccountRow = {
   reachout_locked_until: string | null
   new_chat_quota_total: number | null
   new_chat_quota_used: number | null
+  org_warmup_enabled?: boolean
 }
 
 type TargetRow = {
@@ -316,9 +318,11 @@ async function eligibleAccounts(campaignId: string): Promise<CampaignAccountRow[
             a.enabled,
             a.reachout_locked_until,
             a.new_chat_quota_total,
-            a.new_chat_quota_used
+            a.new_chat_quota_used,
+            coalesce(o.warmup_enabled, true) as org_warmup_enabled
        from public.campaign_accounts ca
        join public.accounts a on a.id = ca.account_id
+       left join public.organizations o on o.id = a.org_id
       where ca.campaign_id = $1`,
     [campaignId],
   )
@@ -388,7 +392,8 @@ function personalize(body: string | null, name: string | null): string {
 }
 
 function remainingDaily(account: CampaignAccountRow, campaign: CampaignRow): number {
-  const isWarmupEnforced = !campaign.warmup_bypass && account.warmup_started_at
+  const isOrgWarmupActive = campaign.org_warmup_enabled ?? account.org_warmup_enabled ?? true
+  const isWarmupEnforced = isOrgWarmupActive && !campaign.warmup_bypass && account.warmup_started_at
   const effectiveWarmup = isWarmupEnforced ? warmupCap(account.warmup_started_at) : account.daily_send_limit
 
   const cap = Math.min(
@@ -577,7 +582,10 @@ async function sendToTarget(
     await new Promise((resolve) => setTimeout(resolve, typingMs))
   }
 
-  const message = await session.sendMessage(jid, content, { bypassWarmup: campaign.warmup_bypass })
+  const isOrgWarmupActive = campaign.org_warmup_enabled ?? account.org_warmup_enabled ?? true
+  const message = await session.sendMessage(jid, content, {
+    bypassWarmup: Boolean(campaign.warmup_bypass || !isOrgWarmupActive),
+  })
 
   if (session.isLive) {
     void session.sendPresenceUpdate('paused', jid).catch(() => {})
@@ -1004,12 +1012,14 @@ async function tick(): Promise<void> {
     await promoteScheduledCampaigns()
 
     const campaigns = await query<CampaignRow>(
-      `select id, org_id, created_by, name, message_type, body, body_b, ab_percent, media_url,
-              min_delay_seconds, max_delay_seconds, daily_cap_per_account, source_list_ids,
-              coalesce(warmup_bypass, false) as warmup_bypass
-         from public.campaigns
-        where status = 'running'
-        order by started_at nulls first`,
+      `select c.id, c.org_id, c.created_by, c.name, c.message_type, c.body, c.body_b, c.ab_percent, c.media_url,
+              c.min_delay_seconds, c.max_delay_seconds, c.daily_cap_per_account, c.source_list_ids,
+              coalesce(c.warmup_bypass, false) as warmup_bypass,
+              coalesce(o.warmup_enabled, true) as org_warmup_enabled
+         from public.campaigns c
+         left join public.organizations o on o.id = c.org_id
+        where c.status = 'running'
+        order by c.started_at nulls first`,
     )
 
     for (const campaign of campaigns) {

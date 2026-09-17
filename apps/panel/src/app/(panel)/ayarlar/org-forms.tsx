@@ -10,6 +10,7 @@ import {
   removeOrgMember,
   updateOrgMemberRole,
   updateOrgName,
+  updateOrgWarmup,
   updateOrgWebhook,
   type OrgActionState,
 } from '../org-actions'
@@ -322,3 +323,70 @@ export function DeleteOrganizationForm({
     </form>
   )
 }
+
+export function OrgWarmupSettingsForm({
+  warmupEnabled,
+  canEdit,
+}: {
+  warmupEnabled: boolean
+  canEdit: boolean
+}) {
+  const [state, formAction, pending] = useActionState<OrgActionState, FormData>(
+    updateOrgWarmup,
+    null,
+  )
+  const [enabled, setEnabled] = useState(warmupEnabled)
+
+  return (
+    <form action={formAction} className="space-y-3 p-3.5">
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-[13px] font-medium text-ink">
+              Numara Isındırma (Warm-Up) Koruması
+            </span>
+            <span
+              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                enabled
+                  ? 'bg-accent/10 text-accent border border-accent/20'
+                  : 'bg-hairline text-ink-muted border border-hairline-strong'
+              }`}
+            >
+              {enabled ? 'Açık' : 'Kapalı'}
+            </span>
+          </div>
+          <p className="text-[12px] leading-relaxed text-ink-muted">
+            Yeni bağlanan hatların spam radarına girmemesi için ilk 14 gün günlük gönderim limiti
+            kademeli artırılır (10, 25, 60, 120, 250+). Eski veya güvenli hatlar kullanıyorsanız
+            kapatarak doğrudan tam kapasiteyle gönderim yapabilirsiniz.
+          </p>
+        </div>
+
+        <label className="relative inline-flex shrink-0 cursor-pointer items-center">
+          <input
+            type="checkbox"
+            name="warmup_enabled"
+            value="1"
+            checked={enabled}
+            disabled={!canEdit || pending}
+            onChange={(e) => setEnabled(e.target.checked)}
+            className="peer sr-only"
+          />
+          <div className="peer h-6 w-11 rounded-full bg-hairline-strong after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-hairline after:bg-surface after:transition-all after:content-[''] peer-checked:bg-accent peer-checked:after:translate-x-full peer-focus:outline-none" />
+        </label>
+      </div>
+
+      {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
+      {state?.ok ? <Notice tone="accent">{state.ok}</Notice> : null}
+
+      {canEdit ? (
+        <div className="pt-1">
+          <Button type="submit" variant="accent" disabled={pending}>
+            {pending ? 'Kaydediliyor…' : 'Ayarı Kaydet'}
+          </Button>
+        </div>
+      ) : null}
+    </form>
+  )
+}
+
