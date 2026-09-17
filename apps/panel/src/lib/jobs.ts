@@ -6,6 +6,7 @@ const SEND_GATED = new Set<JobType>([
   'message.send',
   'campaign.start',
   'campaign.resume',
+  'campaign.bulk_reply',
 ])
 
 /**

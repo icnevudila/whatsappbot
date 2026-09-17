@@ -534,6 +534,9 @@ export type Database = {
           status: string
           updated_at: string
           wa_message_id: string | null
+          replied_at?: string | null
+          last_inbound_text?: string | null
+          reply_status?: string
         }
         Insert: {
           account_id?: string | null
@@ -553,6 +556,9 @@ export type Database = {
           status?: string
           updated_at?: string
           wa_message_id?: string | null
+          replied_at?: string | null
+          last_inbound_text?: string | null
+          reply_status?: string
         }
         Update: {
           account_id?: string | null
@@ -572,6 +578,9 @@ export type Database = {
           status?: string
           updated_at?: string
           wa_message_id?: string | null
+          replied_at?: string | null
+          last_inbound_text?: string | null
+          reply_status?: string
         }
         Relationships: [
           {
@@ -1653,6 +1662,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_campaign_pending_replies: {
+        Args: { p_campaign_id: string }
+        Returns: {
+          target_id: number
+          contact_id: string | null
+          contact_name: string
+          phone_e164: string
+          replied_at: string
+          last_inbound_text: string
+          suggested_reply: string
+          intent_label: string
+        }[]
+      }
       accept_org_invite: { Args: { p_token: string }; Returns: string }
       add_organization_member: {
         Args: { p_email: string; p_org_id: string; p_role?: string }

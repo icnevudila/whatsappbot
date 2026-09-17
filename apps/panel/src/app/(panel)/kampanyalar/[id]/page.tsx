@@ -4,6 +4,7 @@ import { Notice, PageHeader, QuietLink, StatusPill } from '@/components/ui'
 import { requireActiveOrg } from '@/lib/org'
 import { CampaignLive, type CampaignView } from './campaign-live'
 import { TargetFeed, type TargetView } from './target-feed'
+import { CampaignBulkReply, type PendingReplyItem } from './campaign-bulk-reply'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,7 +50,7 @@ export default async function CampaignDetailPage({
           : null
   const { org, supabase } = await requireActiveOrg()
 
-  const [campaignResult, targetsResult, accountsResult, listsResult, allAccountsResult] =
+  const [campaignResult, targetsResult, accountsResult, listsResult, allAccountsResult, repliesResult] =
     await Promise.all([
       supabase.from('campaigns').select(FIELDS).eq('id', id).eq('org_id', org.id).single(),
       supabase
@@ -75,6 +76,9 @@ export default async function CampaignDetailPage({
         .select('id, label, status, is_locked')
         .eq('org_id', org.id)
         .order('created_at'),
+      supabase.rpc('get_campaign_pending_replies', {
+        p_campaign_id: id,
+      }),
     ])
 
   if (campaignResult.error || !campaignResult.data) notFound()
@@ -169,6 +173,14 @@ export default async function CampaignDetailPage({
         accountOptions={accountOptions}
         orgId={org.id}
       />
+
+      <div className="mt-2.5">
+        <CampaignBulkReply
+          campaignId={id}
+          initialReplies={((repliesResult.data as unknown) ?? []) as PendingReplyItem[]}
+          accountId={accounts[0]?.id}
+        />
+      </div>
 
       <div id="paylasilanlar" className="mt-2.5">
         <TargetFeed

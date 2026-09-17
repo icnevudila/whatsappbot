@@ -220,6 +220,29 @@ export async function persistInboundMessage(options: {
     path: phone ? `/mesajlar?tel=${encodeURIComponent(phone)}` : '/mesajlar',
   })
 
+  // Kampanya geri donusu kontrolu: yakin zamanda gonderilen hedefler icin yanit kaydet
+  if (phone && body?.trim()) {
+    void query(
+      `update public.campaign_targets ct
+          set replied_at = now(),
+              last_inbound_text = $1,
+              reply_status = case when reply_status = 'replied' then 'replied' else 'waiting_reply' end,
+              updated_at = now()
+        where ct.org_id = $2
+          and ct.phone_e164 = $3
+          and ct.status in ('sent', 'delivered', 'read')
+          and ct.sent_at >= now() - interval '14 days'
+          and ct.campaign_id in (
+            select c.id from public.campaigns c
+             where c.org_id = $2
+               and c.started_at >= now() - interval '14 days'
+          )`,
+      [body.slice(0, 500), orgId, phone],
+    ).catch((err) => {
+      logger.debug({ err, phone }, 'campaign_targets reply update hatasi')
+    })
+  }
+
   // Gelen mesaja arka planda AI yanit onerileri onceden uret (temsilci chati actiginda aninda hazir olsun)
   if (body?.trim() && !isOptOutMessage(body)) {
     void import('./auto-reply.js')

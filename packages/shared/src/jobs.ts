@@ -19,6 +19,7 @@ export const JOB_TYPES = [
   'campaign.resume',
   'campaign.stop',
   'campaign.refresh_targets',
+  'campaign.bulk_reply',
   'service.restart',
 ] as const
 
@@ -102,6 +103,15 @@ export type JobPayloadMap = {
   'campaign.stop': { reason?: string }
   /** Liste değişince: yeni numaraları ekle, listeden çıkan queued’ları skip et. */
   'campaign.refresh_targets': { cancel_remaining?: boolean }
+  'campaign.bulk_reply': {
+    campaign_id: string
+    account_id?: string
+    replies: Array<{
+      target_id: number
+      phone_e164: string
+      text: string
+    }>
+  }
   'service.restart': Record<string, never>
 }
 

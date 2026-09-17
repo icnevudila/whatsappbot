@@ -713,6 +713,128 @@ async function handle(job: JobRow): Promise<unknown> {
       })
     }
 
+    case 'campaign.bulk_reply': {
+      const payload = job.payload as JobPayloadMap['campaign.bulk_reply']
+      const replies = payload.replies || []
+      if (replies.length === 0) return { sent: 0, total: 0 }
+
+      const campaignId = job.campaign_id || payload.campaign_id
+      if (!job.org_id) throw new Error('org_id zorunlu')
+
+      let accountId = job.account_id || payload.account_id
+      if (!accountId && campaignId) {
+        const row = await one<{ account_id: string }>(
+          `select account_id from public.campaign_accounts where campaign_id = $1 limit 1`,
+          [campaignId],
+        )
+        accountId = row?.account_id
+      }
+      if (!accountId) {
+        const row = await one<{ id: string }>(
+          `select id from public.accounts where org_id = $1 and status = 'connected' and enabled = true and is_locked = false limit 1`,
+          [job.org_id],
+        )
+        accountId = row?.id
+      }
+      if (!accountId) throw new Error('Yanıt göndermek için bağlı bir hat bulunamadı')
+
+      const session = sessionManager.get(accountId)
+      if (!session || !session.isLive) {
+        throw new Error(`Hat bağlı değil (accountId=${accountId})`)
+      }
+
+      let sentCount = 0
+      let skippedCount = 0
+
+      for (const item of replies) {
+        if (!item.phone_e164 || !item.text?.trim()) {
+          skippedCount++
+          continue
+        }
+
+        const blocked = await one<{ id: string }>(
+          `select id::text from public.blacklist where org_id = $1 and phone_e164 = $2 limit 1`,
+          [job.org_id, item.phone_e164],
+        )
+        if (blocked) {
+          await query(
+            `update public.campaign_targets set reply_status = 'opt_out', updated_at = now() where id = $1`,
+            [item.target_id],
+          )
+          skippedCount++
+          continue
+        }
+
+        const jid = e164ToJid(item.phone_e164)
+
+        try {
+          if (session.isLive) {
+            void session.sendPresenceUpdate('composing', jid).catch(() => {})
+            const textLen = item.text.length
+            const typingMs = Math.min(3000, Math.max(1200, textLen * 20 + Math.random() * 600))
+            await new Promise((resolve) => setTimeout(resolve, typingMs))
+          }
+
+          const msg = await session.sendMessage(jid, { text: item.text })
+
+          if (session.isLive) {
+            void session.sendPresenceUpdate('paused', jid).catch(() => {})
+          }
+
+          const waMsgId = msg.key?.id ?? null
+
+          await query(
+            `update public.campaign_targets set reply_status = 'replied', updated_at = now() where id = $1`,
+            [item.target_id],
+          )
+
+          const inserted = await query<{ id: string; created_at: string }>(
+            `insert into public.message_log
+               (org_id, created_by, account_id, direction, phone_e164, message_type, body, wa_message_id, status)
+             values ($1, $2, $3, 'out', $4, 'text', $5, $6, 'sent')
+             returning id::text, created_at`,
+            [
+              job.org_id,
+              job.created_by,
+              accountId,
+              item.phone_e164,
+              item.text,
+              waMsgId,
+            ],
+          )
+          const logRow = inserted[0]
+          void import('./chat-cache.js')
+            .then(({ rememberWaMessage }) =>
+              rememberWaMessage({
+                orgId: job.org_id!,
+                id: logRow ? Number(logRow.id) : 0,
+                created_at: logRow?.created_at,
+                account_id: accountId,
+                direction: 'out',
+                phone_e164: item.phone_e164,
+                message_type: 'text',
+                body: item.text,
+                wa_message_id: waMsgId,
+                status: 'sent',
+              }),
+            )
+            .catch(() => {})
+
+          sentCount++
+
+          if (sentCount < replies.length) {
+            const jitterMs = Math.floor(5000 + Math.random() * 5000)
+            await new Promise((resolve) => setTimeout(resolve, jitterMs))
+          }
+        } catch (sendErr) {
+          logger.warn({ err: sendErr, phone: item.phone_e164 }, 'Toplu yanıt gönderilemedi')
+          skippedCount++
+        }
+      }
+
+      return { sent: sentCount, skipped: skippedCount, total: replies.length }
+    }
+
     case 'creative.render': {
       const payload = job.payload as JobPayloadMap['creative.render']
       const creativeId = String(payload.creative_id ?? '').trim()
