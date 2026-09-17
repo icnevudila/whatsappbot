@@ -13,6 +13,7 @@ import {
 import NodeCache from 'node-cache'
 import { jidToE164, toE164, warmupCap, type AccountStatus } from '@wa/shared'
 import { createAuthHandle, type AuthHandle } from './auth-store.js'
+import { one, query } from './db.js'
 import { incrementSentToday, loadAccount, remainingDailyQuota, logAccountEvent, patchAccount, type AccountRow } from './accounts.js'
 import { awaitDelivery } from './delivery.js'
 import { env } from './env.js'
@@ -551,6 +552,32 @@ export class WhatsAppSession {
       const jid = this.sock?.user?.id
       const normalized = jid ? jidNormalizedUser(jid) : null
       const phone = normalized ? jidToE164(normalized) : null
+
+      if (phone) {
+        const duplicate = await one<{ id: string; org_id: string; label: string; org_name: string }>(
+          `select a.id, a.org_id, a.label, o.name as org_name
+             from public.accounts a
+             join public.organizations o on o.id = a.org_id
+            where a.phone_e164 = $1
+              and a.id <> $2
+              and a.status in ('connected', 'connecting', 'qr_pending', 'pairing_pending')
+              and a.enabled = true
+            limit 1`,
+          [phone, this.accountId],
+        )
+        if (duplicate) {
+          const orgName = duplicate.org_name || 'Başka bir firma'
+          this.log.warn({ duplicate, phone }, 'Hat baska bir firmada zaten bagli, oturum durduruluyor')
+          await patchAccount(this.accountId, {
+            status: 'disconnected',
+            status_detail: `Bu telefon numarası (${phone}) başka bir firmada (${orgName}) zaten bağlıdır.`,
+            qr_code: null,
+            pairing_code: null,
+          })
+          await this.finish('closed')
+          return
+        }
+      }
 
       await patchAccount(this.accountId, {
         status: 'connected',

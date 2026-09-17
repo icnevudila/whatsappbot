@@ -185,6 +185,23 @@ async function handle(job: JobRow): Promise<unknown> {
       const payload = job.payload as JobPayloadMap['account.request_pairing_code']
       if (!payload?.phone_e164) throw new Error('phone_e164 zorunlu')
 
+      const duplicate = await one<{ org_name: string }>(
+        `select o.name as org_name
+           from public.accounts a
+           join public.organizations o on o.id = a.org_id
+          where a.phone_e164 = $1
+            and a.id <> $2
+            and a.status in ('connected', 'connecting', 'qr_pending', 'pairing_pending')
+            and a.enabled = true
+          limit 1`,
+        [payload.phone_e164, accountId],
+      )
+      if (duplicate) {
+        throw new Error(
+          `Bu telefon numarası (${payload.phone_e164}) başka bir firmada (${duplicate.org_name}) zaten bağlıdır.`,
+        )
+      }
+
       const code = await sessionManager.requestPairingCode(accountId, payload.phone_e164)
       return { code }
     }

@@ -107,6 +107,34 @@ export async function requestPairingCode(
     }
   }
 
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  try {
+    ;({ org, supabase } = await requireActiveOrg())
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
+  }
+
+  // Numara baska bir firmada bagli mi kontrol et
+  const { data: checks } = await supabase.rpc('check_phone_connected_elsewhere', {
+    target_phone: e164,
+    current_org_id: org.id,
+  })
+
+  const check = (checks as Array<{ is_connected?: boolean; is_same_org?: boolean; org_name?: string; account_label?: string }> | null)?.[0]
+
+  if (check?.is_connected) {
+    const orgName = check.org_name || 'Başka bir firma'
+    if (!check.is_same_org) {
+      return {
+        error: `Bu telefon numarası (${e164}) başka bir firmada (${orgName}) zaten bağlıdır. Bir numara aynı anda yalnızca tek bir firmada aktif olabilir.`,
+      }
+    }
+    return {
+      error: `Bu telefon numarası (${e164}) bu firmada zaten "${check.account_label || 'Bağlı Hat'}" adıyla bağlıdır.`,
+    }
+  }
+
   const { error } = await enqueueJob({
     type: 'account.request_pairing_code',
     accountId,
