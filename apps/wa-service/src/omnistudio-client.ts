@@ -15,10 +15,10 @@ function getCandidateBaseUrls(): string[] {
   }
 
   candidates.push(
-    'http://omnistudio-engine:3456',
     'http://host.docker.internal:3456',
     'http://172.18.0.1:3456',
     'http://172.17.0.1:3456',
+    'http://omnistudio-engine:3456',
     'http://127.0.0.1:3456',
   )
 
