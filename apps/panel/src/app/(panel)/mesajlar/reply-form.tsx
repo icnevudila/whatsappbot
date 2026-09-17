@@ -16,11 +16,13 @@ function suggestionKey(phone: string, message: string, history: string) {
 
 export function ReplyForm({
   phone,
+  recipientJid,
   accountId,
   lastInbound,
   threadContext,
 }: {
   phone: string
+  recipientJid?: string
   accountId: string
   lastInbound?: string | null
   threadContext?: string
@@ -166,6 +168,7 @@ export function ReplyForm({
   return (
     <form action={action} className="space-y-2.5 p-3" aria-busy={pending || waiting}>
       <input type="hidden" name="phone" value={phone} />
+      <input type="hidden" name="recipient_jid" value={recipientJid || ''} />
       <input type="hidden" name="account_id" value={accountId} />
       <input type="hidden" name="media_url" value={mediaUrl || ''} />
       <input type="hidden" name="message_type" value={messageType} />

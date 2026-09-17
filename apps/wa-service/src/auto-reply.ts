@@ -3,6 +3,7 @@ import type { WASocket } from '@whiskeysockets/baileys'
 import { query } from './db.js'
 import { env } from './env.js'
 import { logger } from './logger.js'
+import { isWithinSendWindow } from '@wa/shared'
 import { buildKnowledgeContext } from './product-knowledge.js'
 import { fetchFromOmniStudio } from './omnistudio-client.js'
 
@@ -94,6 +95,7 @@ async function enqueueAiAutoReply(options: {
   createdBy: string
   accountId: string
   phoneE164: string
+  remoteJid?: string | null
   replyText: string
   source: 'library' | 'generated'
   label?: string
@@ -109,6 +111,7 @@ async function enqueueAiAutoReply(options: {
       options.createdBy,
       JSON.stringify({
         phone_e164: options.phoneE164,
+        recipient_jid: options.remoteJid?.endsWith('@lid') ? options.remoteJid : undefined,
         body: replyText,
         source: options.source === 'library' ? 'ai_auto_reply_library' : 'ai_auto_reply',
       }),
@@ -214,24 +217,184 @@ async function flushDebounceBuffer(key: string): Promise<void> {
   })
 }
 
-/**
- * Gelen mesaja otomatik yanıt uygula:
- * 1. Peş peşe gelen kısa mesajları (debounceMs penceresinde) birleştirir.
- * 2. Eşleşen statik kural varsa kural yanıtı gönderilir.
- * 3. Eşleşen statik kural yoksa ve organizations.auto_reply_enabled true ise:
- *    ChatGPT üzerinden akıllı kurumsal yanıt üretilip gönderilir.
- */
-export async function maybeEnqueueAutoReply(options: AutoReplyOptions): Promise<void> {
-  const { orgId, createdBy, accountId, phoneE164, body, skipDebounce } = options
-  if (!phoneE164 || !body?.trim()) return
+type OrgSafetyConfig = {
+  auto_reply_enabled: boolean
+  name: string
+  auto_reply_contact_policy?: string | null
+  auto_reply_schedule?: string | null
+  auto_reply_operator_silence_minutes?: number | null
+  auto_reply_escalation_message?: string | null
+  send_window_start?: string | null
+  send_window_end?: string | null
+}
 
-  // Org bazlı oto-cevap açık mı?
-  const orgRows = await query<{ auto_reply_enabled: boolean; name: string }>(
-    `select auto_reply_enabled, name from public.organizations where id = $1 limit 1`,
+const ESCALATION_REGEX =
+  /\b(yetkili|temsilci|musteri temsilcisi|müşteri temsilcisi|canli destek|canlı destek|insan|insanla|operator|operatör|şikayet|sikayet|iptal)\b/iu
+
+async function evaluateAutoReplySafety(options: {
+  orgId: string
+  accountId: string
+  phoneE164: string
+  body: string
+  remoteJid?: string | null
+}): Promise<{ allow: boolean; org?: OrgSafetyConfig; isEscalation?: boolean }> {
+  const { orgId, accountId, phoneE164, body, remoteJid } = options
+
+  const orgRows = await query<OrgSafetyConfig>(
+    `select auto_reply_enabled, name,
+            auto_reply_contact_policy, auto_reply_schedule,
+            auto_reply_operator_silence_minutes, auto_reply_escalation_message,
+            send_window_start, send_window_end
+       from public.organizations where id = $1 limit 1`,
     [orgId],
   )
   const org = orgRows[0]
-  if (!org?.auto_reply_enabled) return
+  if (!org?.auto_reply_enabled) {
+    return { allow: false }
+  }
+
+  // 1. Mesai Saatleri / Zaman Çizelgesi Kontrolü
+  const schedule = org.auto_reply_schedule || 'always'
+  if (schedule === 'outside_hours') {
+    const inSendWindow = isWithinSendWindow(new Date(), org.send_window_start, org.send_window_end)
+    if (inSendWindow) {
+      logger.debug({ orgId, phoneE164 }, 'auto-reply: mesai saatleri icinde, personel aktif, atlandi')
+      return { allow: false, org }
+    }
+  } else if (schedule === 'working_hours') {
+    const inSendWindow = isWithinSendWindow(new Date(), org.send_window_start, org.send_window_end)
+    if (!inSendWindow) {
+      logger.debug({ orgId, phoneE164 }, 'auto-reply: mesai saatleri disinda, atlandi')
+      return { allow: false, org }
+    }
+  }
+
+  // 2. Kişisel Rehber / Tanıdık Koruması (Contact Policy)
+  const contactPolicy = org.auto_reply_contact_policy || 'unknown_only'
+  if (contactPolicy === 'unknown_only') {
+    const contacts = await query<{ name: string | null }>(
+      `select name from public.account_contacts
+        where account_id = $1 and phone_e164 = $2 and name is not null and trim(name) != ''
+        limit 1`,
+      [accountId, phoneE164],
+    )
+    if (contacts[0]?.name) {
+      logger.info(
+        { orgId, accountId, phoneE164, contactName: contacts[0].name },
+        'auto-reply: rehberde kayitli kisi, kisisel temas korumasi devrede, atlandi',
+      )
+      return { allow: false, org }
+    }
+  }
+
+  // 3. İnsan Operatör Müdahalesi / Sessizlik Penceresi
+  const silenceMinutes = org.auto_reply_operator_silence_minutes ?? 30
+  if (silenceMinutes > 0) {
+    const recentHuman = await query<{ created_at: string }>(
+      `select ml.created_at
+         from public.message_log ml
+        where ml.org_id = $1
+          and ml.account_id = $2
+          and (ml.phone_e164 = $3 or (ml.remote_jid is not null and ml.remote_jid = $4))
+          and ml.direction = 'out'
+          and ml.campaign_id is null
+          and ml.created_at > now() - make_interval(mins => $5)
+          and not exists (
+            select 1 from public.auto_reply_log arl
+             where arl.org_id = ml.org_id
+               and arl.account_id = ml.account_id
+               and arl.phone_e164 = $3
+               and abs(extract(epoch from (arl.created_at - ml.created_at))) < 20
+          )
+        order by ml.created_at desc
+        limit 1`,
+      [orgId, accountId, phoneE164, remoteJid ?? null, silenceMinutes],
+    )
+    if (recentHuman.length > 0) {
+      logger.info(
+        { orgId, accountId, phoneE164, lastHumanAt: recentHuman[0]?.created_at },
+        'auto-reply: insan operator devrede, oto-cevap susturuldu',
+      )
+      return { allow: false, org }
+    }
+  }
+
+  // 4. Son 2 Saatte Yetkiliye Aktarılmış Müşteri Kontrolü
+  const recentEscalation = await query<{ id: string }>(
+    `select id::text from public.auto_reply_log
+      where org_id = $1 and phone_e164 = $2 and source = 'escalation'
+        and created_at > now() - interval '2 hours'
+      limit 1`,
+    [orgId, phoneE164],
+  )
+  if (recentEscalation.length > 0) {
+    logger.debug({ orgId, phoneE164 }, 'auto-reply: son 2 saatte yetkiliye aktarilmis, susturuldu')
+    return { allow: false, org }
+  }
+
+  // 5. Yetkili / Canlı Temsilci Talebi Tespiti
+  if (ESCALATION_REGEX.test(body)) {
+    return { allow: true, org, isEscalation: true }
+  }
+
+  return { allow: true, org, isEscalation: false }
+}
+
+/**
+ * Gelen mesaja otomatik yanıt uygula:
+ * 1. Güvenlik filtreleri (rehber koruması, operatör sessizliği, mesai saati, yetkili aktarımı).
+ * 2. Peş peşe gelen kısa mesajları (debounceMs penceresinde) birleştirir.
+ * 3. Eşleşen statik kural varsa kural yanıtı gönderilir.
+ * 4. Eşleşen statik kural yoksa ve organizations.auto_reply_enabled true ise:
+ *    ChatGPT üzerinden akıllı kurumsal yanıt üretilip gönderilir.
+ */
+export async function maybeEnqueueAutoReply(options: AutoReplyOptions): Promise<void> {
+  const { orgId, createdBy, accountId, phoneE164, body, skipDebounce, remoteJid } = options
+  if (!phoneE164 || !body?.trim()) return
+
+  const safety = await evaluateAutoReplySafety({
+    orgId,
+    accountId,
+    phoneE164,
+    body,
+    remoteJid,
+  })
+  if (!safety.allow || !safety.org) return
+
+  // Yetkili talebi tespit edildiyse beklemeden anında aktarım mesajı gönder
+  if (safety.isEscalation) {
+    const escalationMsg =
+      safety.org.auto_reply_escalation_message ||
+      'Talebinizi aldık. Sizi müşteri temsilcimize aktarıyorum, en kısa sürede sizinle iletişime geçilecektir.'
+
+    await query(
+      `insert into public.jobs (org_id, created_by, type, payload, account_id, priority, status)
+       values ($1, $2, 'message.send', $3::jsonb, $4, 8, 'pending')`,
+      [
+        orgId,
+        createdBy,
+        JSON.stringify({
+          phone_e164: phoneE164,
+          recipient_jid: remoteJid?.endsWith('@lid') ? remoteJid : undefined,
+          body: escalationMsg,
+          source: 'escalation_auto_reply',
+        }),
+        accountId,
+      ],
+    )
+
+    await query(
+      `insert into public.auto_reply_log (org_id, phone_e164, account_id, source, reply_body)
+       values ($1, $2, $3, 'escalation', $4)`,
+      [orgId, phoneE164, accountId, escalationMsg],
+    )
+
+    logger.info(
+      { orgId, accountId, phoneE164 },
+      'auto-reply: musteri yetkili talebinde bulundu, aktarim mesaji kuyruga alindi',
+    )
+    return
+  }
 
   // Debounce atlanacaksa doğrudan işle (örn. testler veya tekil akışlar)
   if (skipDebounce || env.autoReplyDebounceMs <= 0) {
@@ -304,12 +467,45 @@ async function processAutoReply(options: AutoReplyOptions): Promise<void> {
   if (!phoneE164 || !body?.trim()) return
 
   try {
-    const orgRows = await query<{ auto_reply_enabled: boolean; name: string }>(
-      `select auto_reply_enabled, name from public.organizations where id = $1 limit 1`,
-      [orgId],
-    )
-    const org = orgRows[0]
-    if (!org?.auto_reply_enabled) return
+    const safety = await evaluateAutoReplySafety({
+      orgId,
+      accountId,
+      phoneE164,
+      body,
+      remoteJid,
+    })
+    if (!safety.allow || !safety.org) return
+
+    if (safety.isEscalation) {
+      const escalationMsg =
+        safety.org.auto_reply_escalation_message ||
+        'Talebinizi aldık. Sizi müşteri temsilcimize aktarıyorum, en kısa sürede sizinle iletişime geçilecektir.'
+
+      await query(
+        `insert into public.jobs (org_id, created_by, type, payload, account_id, priority, status)
+         values ($1, $2, 'message.send', $3::jsonb, $4, 8, 'pending')`,
+        [
+          orgId,
+          createdBy,
+          JSON.stringify({
+            phone_e164: phoneE164,
+            recipient_jid: remoteJid?.endsWith('@lid') ? remoteJid : undefined,
+            body: escalationMsg,
+            source: 'escalation_auto_reply',
+          }),
+          accountId,
+        ],
+      )
+
+      await query(
+        `insert into public.auto_reply_log (org_id, phone_e164, account_id, source, reply_body)
+         values ($1, $2, $3, 'escalation', $4)`,
+        [orgId, phoneE164, accountId, escalationMsg],
+      )
+      return
+    }
+
+    const org = safety.org
 
   // 1. Önce statik kuralları kontrol et
   const rules = await query<RuleRow>(
@@ -346,7 +542,13 @@ async function processAutoReply(options: AutoReplyOptions): Promise<void> {
       [
         orgId,
         createdBy,
-        JSON.stringify({ phone_e164: phoneE164, body: reply, source: 'rule_auto_reply', rule_id: rule.id }),
+        JSON.stringify({
+          phone_e164: phoneE164,
+          recipient_jid: remoteJid?.endsWith('@lid') ? remoteJid : undefined,
+          body: reply,
+          source: 'rule_auto_reply',
+          rule_id: rule.id,
+        }),
         accountId,
       ],
     )
@@ -436,6 +638,7 @@ async function processAutoReply(options: AutoReplyOptions): Promise<void> {
         createdBy,
         accountId,
         phoneE164,
+        remoteJid,
         replyText,
         source: 'library',
         label: selected?.label,
@@ -496,6 +699,7 @@ async function processAutoReply(options: AutoReplyOptions): Promise<void> {
       createdBy,
       accountId,
       phoneE164,
+      remoteJid,
       replyText,
       source: 'generated',
       label: selected.label,

@@ -437,16 +437,35 @@ async function handle(job: JobRow): Promise<unknown> {
       if (isLidRecipient) {
         jid = payload.recipient_jid!
       } else if (payload.phone_e164) {
-        // Dogrulama kapisi tek mesajda da gecerli.
-        const verdict = await session.verifyNumbers([payload.phone_e164])
-        const entry = verdict.get(payload.phone_e164)
-        if (!entry) {
-          throw new Error('Dogrulama sonucu alinamadi (oturum dusmus olabilir)')
+        // Bu telefon numarasi ile bu hesapta daha once LID uzerinden konusulmus mu kontrol et.
+        // Eger konusulmussa WhatsApp o sohbeti LID'e bagladigi icin PN'e atilan mesajlar
+        // alicida 'Mesaj bekleniyor' olarak takilir. Dogrudan LID adresine gondermeliyiz.
+        const recentLid = await one<{ remote_jid: string }>(
+          `select remote_jid from public.message_log
+            where account_id = $1 and phone_e164 = $2 and remote_jid like '%@lid'
+            order by created_at desc
+            limit 1`,
+          [accountId, payload.phone_e164],
+        )
+
+        if (recentLid?.remote_jid) {
+          jid = recentLid.remote_jid
+          logger.info(
+            { phone: payload.phone_e164, lid: jid, accountId },
+            'job-consumer: Aktif LID sohbeti tespit edildi, mesaj dogrudan LID adresine yonlendirildi',
+          )
+        } else {
+          // Dogrulama kapisi tek mesajda da gecerli.
+          const verdict = await session.verifyNumbers([payload.phone_e164])
+          const entry = verdict.get(payload.phone_e164)
+          if (!entry) {
+            throw new Error('Dogrulama sonucu alinamadi (oturum dusmus olabilir)')
+          }
+          if (!entry.exists) {
+            return messageSendSkipped('not_on_whatsapp')
+          }
+          jid = entry.jid ?? e164ToJid(payload.phone_e164)
         }
-        if (!entry.exists) {
-          return messageSendSkipped('not_on_whatsapp')
-        }
-        jid = entry.jid ?? e164ToJid(payload.phone_e164)
       } else {
         throw new Error('Gecerli bir telefon numarasi veya alici kimligi (JID) bulunamadi')
       }

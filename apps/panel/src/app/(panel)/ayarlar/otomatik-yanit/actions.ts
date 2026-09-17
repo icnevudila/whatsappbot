@@ -65,3 +65,34 @@ export async function setAutoReplyRuleEnabled(formData: FormData) {
 
   revalidatePath('/ayarlar/otomatik-yanit')
 }
+
+export async function updateAutoReplySettings(formData: FormData) {
+  const { org, supabase } = await requireAdmin()
+
+  const enabled = String(formData.get('auto_reply_enabled') ?? '') === '1'
+  const contactPolicy = String(formData.get('auto_reply_contact_policy') ?? 'unknown_only').trim()
+  const schedule = String(formData.get('auto_reply_schedule') ?? 'always').trim()
+  const silenceMinutes = Math.max(0, Math.min(1440, Number(formData.get('auto_reply_operator_silence_minutes') ?? 30)))
+  const escalationMessage = String(
+    formData.get('auto_reply_escalation_message') ??
+      'Talebinizi aldık. Sizi müşteri temsilcimize aktarıyorum, en kısa sürede sizinle iletişime geçilecektir.',
+  ).trim()
+
+  const validPolicy = contactPolicy === 'all' ? 'all' : 'unknown_only'
+  const validSchedule = ['always', 'outside_hours', 'working_hours'].includes(schedule) ? schedule : 'always'
+
+  await supabase
+    .from('organizations')
+    .update({
+      auto_reply_enabled: enabled,
+      auto_reply_contact_policy: validPolicy,
+      auto_reply_schedule: validSchedule,
+      auto_reply_operator_silence_minutes: Number.isFinite(silenceMinutes) ? silenceMinutes : 30,
+      auto_reply_escalation_message: escalationMessage,
+    } as never)
+    .eq('id', org.id)
+
+  revalidatePath('/ayarlar/otomatik-yanit')
+  revalidatePath('/ayarlar')
+}
+

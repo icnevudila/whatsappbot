@@ -458,12 +458,16 @@ export function MessagesBoard({
                   <div ref={threadEndRef} aria-hidden className="h-px shrink-0" />
                 </div>
               )}
-              {selectedPhone.startsWith('+') &&
+              {(selectedPhone.startsWith('+') || selectedPhone.endsWith('@lid')) &&
               (selectedPreview?.accountId || thread.at(-1)?.account_id) ? (
                 <div className="wb-chat-composer">
                   <ReplyForm
                     key={selectedPhone}
                     phone={selectedPhone}
+                    recipientJid={
+                      thread.slice().reverse().find((m) => m.remote_jid?.endsWith('@lid'))?.remote_jid ||
+                      (selectedPhone.endsWith('@lid') ? selectedPhone : undefined)
+                    }
                     accountId={(selectedPreview?.accountId || thread.at(-1)?.account_id)!}
                     lastInbound={
                       thread.filter((m) => m.direction === 'in').at(-1)?.body ||

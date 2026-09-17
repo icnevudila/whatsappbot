@@ -12,6 +12,7 @@ export async function replyToConversation(
   formData: FormData,
 ): Promise<ReplyState> {
   const rawTarget = String(formData.get('phone') ?? '').trim()
+  const recipientJid = String(formData.get('recipient_jid') ?? '').trim()
   const accountId = String(formData.get('account_id') ?? '').trim()
   const body = String(formData.get('body') ?? '').trim()
   const mediaUrl = String(formData.get('media_url') ?? '').trim() || undefined
@@ -84,7 +85,7 @@ export async function replyToConversation(
       accountId,
       payload: {
         phone_e164: phone ?? '',
-        recipient_jid: isLid ? rawTarget : undefined,
+        recipient_jid: isLid ? rawTarget : (recipientJid.endsWith('@lid') ? recipientJid : undefined),
         body: body || undefined,
         media_url: mediaUrl,
         message_type: messageType,

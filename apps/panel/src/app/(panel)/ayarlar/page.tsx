@@ -1,4 +1,4 @@
-﻿import type { Metadata } from 'next'
+import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
@@ -199,6 +199,23 @@ export default async function SettingsPage({
         <Card>
           <CardHeader title="İşletme" />
           <OrgSettingsForm orgName={org.name} canEdit />
+        </Card>
+      ) : null}
+
+      {canManage ? (
+        <Card>
+          <CardHeader
+            title="Otomatik Yanıt ve Koruma"
+            subtitle="Gelen mesajlara otomatik cevap verme ve rehber koruma kuralları"
+            action={
+              <AccentLink href="/ayarlar/otomatik-yanit" className="text-[12.5px] h-8">
+                Yapılandır →
+              </AccentLink>
+            }
+          />
+          <div className="flex items-center justify-between p-3.5 text-[12.5px] text-ink-muted">
+            <span>Mesai dışı otomatik karşılama, kelime kuralları ve temsilciye aktarma ayarları.</span>
+          </div>
         </Card>
       ) : null}
 
