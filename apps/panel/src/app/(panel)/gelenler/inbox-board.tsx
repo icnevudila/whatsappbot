@@ -169,7 +169,7 @@ export function InboxBoard({
     const tick = () => {
       if (document.visibilityState === 'visible') router.refresh()
     }
-    const timer = setInterval(tick, 18_000)
+    const timer = setInterval(tick, 4_000)
 
     return () => {
       clearInterval(timer)
