@@ -9,6 +9,7 @@ import { DeliveryUncertainError } from './delivery.js'
 import { messageSendSkipped } from './message-send-result.js'
 import { resolveWabaMessageSend } from './waba-config.js'
 import { checkOrgSendGate, orgSendGateMessage } from './org-send-gate.js'
+import { findActiveLidForPhone, findPhoneForLid } from './lid-routing.js'
 
 const log = logger.child({ scope: 'jobs' })
 
@@ -432,24 +433,22 @@ async function handle(job: JobRow): Promise<unknown> {
       if (!session?.isLive) throw new Error('Hesap bagli degil')
 
       let jid: string
+      let resolvedPhone = payload.phone_e164 || null
       const isLidRecipient = Boolean(payload.recipient_jid && payload.recipient_jid.endsWith('@lid'))
 
       if (isLidRecipient) {
         jid = payload.recipient_jid!
+        if (!resolvedPhone) {
+          resolvedPhone = await findPhoneForLid(accountId, jid)
+        }
       } else if (payload.phone_e164) {
         // Bu telefon numarasi ile bu hesapta daha once LID uzerinden konusulmus mu kontrol et.
         // Eger konusulmussa WhatsApp o sohbeti LID'e bagladigi icin PN'e atilan mesajlar
         // alicida 'Mesaj bekleniyor' olarak takilir. Dogrudan LID adresine gondermeliyiz.
-        const recentLid = await one<{ remote_jid: string }>(
-          `select remote_jid from public.message_log
-            where account_id = $1 and phone_e164 = $2 and remote_jid like '%@lid'
-            order by created_at desc
-            limit 1`,
-          [accountId, payload.phone_e164],
-        )
+        const activeLid = await findActiveLidForPhone(accountId, payload.phone_e164)
 
-        if (recentLid?.remote_jid) {
-          jid = recentLid.remote_jid
+        if (activeLid) {
+          jid = activeLid
           logger.info(
             { phone: payload.phone_e164, lid: jid, accountId },
             'job-consumer: Aktif LID sohbeti tespit edildi, mesaj dogrudan LID adresine yonlendirildi',
@@ -512,7 +511,7 @@ async function handle(job: JobRow): Promise<unknown> {
             job.created_by,
             accountId,
             jid,
-            payload.phone_e164 || null,
+            resolvedPhone,
             messageType,
             payload.body ?? null,
             mediaUrl ?? null,

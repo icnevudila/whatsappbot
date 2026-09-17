@@ -11,6 +11,7 @@ import { expandSpintax, pickAbVariant } from './spintax.js'
 import { emitOrgWebhook } from './org-hooks.js'
 import { checkOrgSendGate, orgSendGateMessage } from './org-send-gate.js'
 import type { WhatsAppSession } from './session.js'
+import { findActiveLidForPhone } from './lid-routing.js'
 
 export { countCampaignStatusBuckets, CAMPAIGN_SENT_STATUSES, reconcileCampaignCounts } from './campaign-counts.js'
 
@@ -475,9 +476,12 @@ async function sendToTarget(
     return
   }
 
-  // Zorunlu dogrulama kapisi: kayitli olmayan numaraya gonderim denemesi
-  // hesap seviyesinde kisit tetikliyor. Sonuc contacts'ta onbellege alinir.
-  let jid = target.wa_status === 'valid' ? target.wa_jid : null
+  // Eger bu hedef numaranin bu hesapla daha once aktif bir LID sohbeti olmussa,
+  // mesaji PN yerine dogrudan LID'e atmaliyiz (aksi halde alicida cozulmez).
+  let jid = await findActiveLidForPhone(account.account_id, target.phone_e164)
+  if (!jid && target.wa_status === 'valid') {
+    jid = target.wa_jid
+  }
 
   if (!jid) {
     if (!session.isLive) {
