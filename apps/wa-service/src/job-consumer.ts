@@ -431,17 +431,25 @@ async function handle(job: JobRow): Promise<unknown> {
       const session = sessionManager.get(accountId)
       if (!session?.isLive) throw new Error('Hesap bagli degil')
 
-      // Dogrulama kapisi tek mesajda da gecerli.
-      const verdict = await session.verifyNumbers([payload.phone_e164])
-      const entry = verdict.get(payload.phone_e164)
-      if (!entry) {
-        throw new Error('Dogrulama sonucu alinamadi (oturum dusmus olabilir)')
-      }
-      if (!entry.exists) {
-        return messageSendSkipped('not_on_whatsapp')
-      }
+      let jid: string
+      const isLidRecipient = Boolean(payload.recipient_jid && payload.recipient_jid.endsWith('@lid'))
 
-      const jid = entry.jid ?? e164ToJid(payload.phone_e164)
+      if (isLidRecipient) {
+        jid = payload.recipient_jid!
+      } else if (payload.phone_e164) {
+        // Dogrulama kapisi tek mesajda da gecerli.
+        const verdict = await session.verifyNumbers([payload.phone_e164])
+        const entry = verdict.get(payload.phone_e164)
+        if (!entry) {
+          throw new Error('Dogrulama sonucu alinamadi (oturum dusmus olabilir)')
+        }
+        if (!entry.exists) {
+          return messageSendSkipped('not_on_whatsapp')
+        }
+        jid = entry.jid ?? e164ToJid(payload.phone_e164)
+      } else {
+        throw new Error('Gecerli bir telefon numarasi veya alici kimligi (JID) bulunamadi')
+      }
       const marked = await query<{ id: string }>(`update public.jobs set result = '{"delivery_attempted":true}'::jsonb, updated_at = now() where id = $1::bigint and claimed_by = $2 and status = 'running' returning id::text`, [job.id, env.workerId])
       if (marked.length === 0) throw new NonRetryableJobError('İş sahipliği kaybedildi; gönderilmedi.')
       let messageId: string | null = null
@@ -485,7 +493,7 @@ async function handle(job: JobRow): Promise<unknown> {
             job.created_by,
             accountId,
             jid,
-            payload.phone_e164,
+            payload.phone_e164 || null,
             messageType,
             payload.body ?? null,
             mediaUrl ?? null,
@@ -502,7 +510,7 @@ async function handle(job: JobRow): Promise<unknown> {
               account_id: accountId,
               direction: 'out',
               remote_jid: jid,
-              phone_e164: payload.phone_e164,
+              phone_e164: payload.phone_e164 || null,
               message_type: messageType,
               body: payload.body ?? null,
               media_url: mediaUrl ?? null,

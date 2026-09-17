@@ -1719,6 +1719,18 @@ export type Database = {
       storage_path_allowed: { Args: { p_name: string }; Returns: boolean }
       user_org_ids: { Args: never; Returns: string[] }
       worker_fleet_status: { Args: never; Returns: Json }
+      check_phone_connected_elsewhere: {
+        Args: {
+          target_phone: string
+          current_org_id: string
+        }
+        Returns: {
+          is_connected: boolean
+          is_same_org: boolean
+          org_name: string
+          account_label: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

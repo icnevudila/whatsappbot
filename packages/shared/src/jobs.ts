@@ -78,6 +78,7 @@ export type JobPayloadMap = {
   'account.sync_contacts': { list_name?: string }
   'message.send': {
     phone_e164: string
+    recipient_jid?: string
     body?: string
     media_url?: string
     message_type?: MessageType

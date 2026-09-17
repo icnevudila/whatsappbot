@@ -21,8 +21,9 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
   let email: string | null
   let isPlatformAdmin = false
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
   try {
-    ;({ org, email, isPlatformAdmin } = await requireActiveOrg())
+    ;({ org, email, isPlatformAdmin, supabase } = await requireActiveOrg())
   } catch (error) {
     if (error instanceof Error && error.message === 'NO_ORGANIZATION') {
       redirect('/erisim-yok')
@@ -30,11 +31,18 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     redirect('/giris')
   }
 
-  const [{ showSetup, steps, counts }, orgs, { messages }] = await Promise.all([
-    getSetupProgress(org.id),
-    listUserOrgs(),
-    getDictionary(),
-  ])
+  const [{ showSetup, steps, counts }, orgs, { messages }, { data: disconnectedAccounts }] =
+    await Promise.all([
+      getSetupProgress(org.id),
+      listUserOrgs(),
+      getDictionary(),
+      supabase
+        .from('accounts')
+        .select('id, label, phone_e164, status, status_detail')
+        .eq('org_id', org.id)
+        .eq('status', 'logged_out')
+        .limit(5),
+    ])
   const t = createT(messages)
 
   const pathname = (await headers()).get('x-filo-pathname') ?? ''
@@ -142,6 +150,30 @@ export default async function PanelLayout({ children }: { children: React.ReactN
               Bu işletme askıda
               {org.suspend_reason ? ` (${org.suspend_reason})` : ''}. Gönderim ve kampanyalar
               kapalı. Destek: destek@filo.app
+            </div>
+          ) : null}
+
+          {disconnectedAccounts && disconnectedAccounts.length > 0 ? (
+            <div
+              role="alert"
+              className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-amber-500/30 bg-amber-50 px-3 py-2.5 text-[13px] text-amber-950 md:px-5"
+            >
+              <div className="flex items-center gap-2">
+                <span className="inline-block size-2 shrink-0 animate-pulse rounded-full bg-amber-500" />
+                <span>
+                  <strong>Dikkat:</strong>{' '}
+                  {disconnectedAccounts
+                    .map((a) => a.label || a.phone_e164 || 'WhatsApp Hattı')
+                    .join(', ')}{' '}
+                  hattının WhatsApp bağlantısı koptu (telefondan çıkış yapıldı). Mesaj gönderip alabilmek için hattı tekrar bağlayın.
+                </span>
+              </div>
+              <Link
+                href="/hesaplar"
+                className="shrink-0 rounded bg-amber-600 px-2.5 py-1 text-[12px] font-semibold text-white transition-colors hover:bg-amber-700"
+              >
+                Hattı Bağla →
+              </Link>
             </div>
           ) : null}
 

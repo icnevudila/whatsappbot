@@ -20,6 +20,7 @@ const paths = {
   sparkles: 'M12 3v4 M12 17v4 M3 12h4 M17 12h4 M6 6l2.5 2.5 M15.5 15.5 18 18 M18 6l-2.5 2.5 M8.5 15.5 6 18',
   refresh: 'M21 12a9 9 0 1 1-2.6-6.3 M21 3v6h-6',
   close: 'M6 6l12 12 M18 6 6 18',
+  paperclip: 'm21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48',
 } as const
 
 export type IconName = keyof typeof paths

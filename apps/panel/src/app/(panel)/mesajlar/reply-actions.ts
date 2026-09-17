@@ -1,6 +1,6 @@
 'use server'
 
-import { toE164 } from '@wa/shared'
+import { toE164, type MessageType } from '@wa/shared'
 import { enqueueJob } from '@/lib/jobs'
 import { requireActiveOrg } from '@/lib/org'
 
@@ -11,33 +11,60 @@ export async function replyToConversation(
   _previous: ReplyState,
   formData: FormData,
 ): Promise<ReplyState> {
-  const phone = toE164(String(formData.get('phone') ?? ''))
-  const accountId = String(formData.get('account_id') ?? '')
+  const rawTarget = String(formData.get('phone') ?? '').trim()
+  const accountId = String(formData.get('account_id') ?? '').trim()
   const body = String(formData.get('body') ?? '').trim()
-  if (!phone || !accountId) return { error: 'Yanıt için geçerli bir numara ve bağlı hat gerekli.' }
-  if (!body || body.length > 4096) return { error: 'Yanıtınız 1–4096 karakter arasında olmalı.' }
+  const mediaUrl = String(formData.get('media_url') ?? '').trim() || undefined
+  const messageType = (String(formData.get('message_type') ?? '').trim() as MessageType) || undefined
+
+  if (!rawTarget || !accountId) {
+    return { error: 'Yanıt için geçerli bir alıcı ve bağlı hat gerekli.' }
+  }
+  if (!body && !mediaUrl) {
+    return { error: 'Mesaj metni veya gönderilecek bir dosya/görsel yazmalısınız.' }
+  }
+  if (body && body.length > 4096) {
+    return { error: 'Yanıtınız 1–4096 karakter arasında olmalı.' }
+  }
+
+  const isLid = rawTarget.endsWith('@lid')
+  const phone = isLid ? null : toE164(rawTarget)
+  if (!isLid && !phone) {
+    return { error: 'Geçerli bir telefon numarası bulunamadı.' }
+  }
 
   try {
     const { org, supabase } = await requireActiveOrg()
+
+    const accountPromise = supabase
+      .from('accounts')
+      .select('id, status, enabled, is_locked')
+      .eq('id', accountId)
+      .eq('org_id', org.id)
+      .maybeSingle()
+
+    const blacklistPromise = phone
+      ? supabase
+          .from('blacklist')
+          .select('id', { count: 'exact', head: true })
+          .eq('org_id', org.id)
+          .eq('phone_e164', phone)
+      : Promise.resolve({ count: 0 })
+
+    let messageCountQuery = supabase
+      .from('message_log')
+      .select('id', { count: 'exact', head: true })
+      .eq('org_id', org.id)
+      .eq('account_id', accountId)
+
+    messageCountQuery = phone
+      ? messageCountQuery.eq('phone_e164', phone)
+      : messageCountQuery.eq('remote_jid', rawTarget)
+
     const [{ data: account, error }, { count: blocked }, { count: messages }] = await Promise.all([
-      supabase
-        .from('accounts')
-        .select('id, status, enabled, is_locked')
-        .eq('id', accountId)
-        .eq('org_id', org.id)
-        .maybeSingle(),
-      supabase
-        .from('blacklist')
-        .select('id', { count: 'exact', head: true })
-        .eq('org_id', org.id)
-        .eq('phone_e164', phone),
-      supabase
-        .from('message_log')
-        .select('id', { count: 'exact', head: true })
-        .eq('org_id', org.id)
-        .eq('account_id', accountId)
-        .eq('phone_e164', phone)
-        .eq('direction', 'in'),
+      accountPromise,
+      blacklistPromise,
+      messageCountQuery,
     ])
 
     if (error || !account || account.status !== 'connected' || !account.enabled || account.is_locked) {
@@ -55,7 +82,13 @@ export async function replyToConversation(
     const queued = await enqueueJob({
       type: 'message.send',
       accountId,
-      payload: { phone_e164: phone, body },
+      payload: {
+        phone_e164: phone ?? '',
+        recipient_jid: isLid ? rawTarget : undefined,
+        body: body || undefined,
+        media_url: mediaUrl,
+        message_type: messageType,
+      },
       priority: 5,
     })
     if (queued.error || !queued.id) return { error: queued.error ?? 'Yanıt sıraya alınamadı.' }

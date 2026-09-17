@@ -28,6 +28,11 @@ export function ReplyForm({
   const [state, action, pending] = useActionState<ReplyState, FormData>(replyToConversation, null)
   const [result, setResult] = useState<{ id: string; error?: string; done?: boolean } | null>(null)
   const [body, setBody] = useState('')
+  const [mediaUrl, setMediaUrl] = useState<string | null>(null)
+  const [mediaName, setMediaName] = useState<string | null>(null)
+  const [messageType, setMessageType] = useState<'text' | 'image' | 'video' | 'document'>('text')
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [isSuggesting, setIsSuggesting] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -78,6 +83,9 @@ export function ReplyForm({
           } else {
             setResult({ id, done: true })
             setBody('')
+            setMediaUrl(null)
+            setMediaName(null)
+            setMessageType('text')
             setShowSuggestions(false)
             toast('Yanıt WhatsApp’a gönderildi.', 'success')
             router.refresh()
@@ -159,6 +167,8 @@ export function ReplyForm({
     <form action={action} className="space-y-2.5 p-3" aria-busy={pending || waiting}>
       <input type="hidden" name="phone" value={phone} />
       <input type="hidden" name="account_id" value={accountId} />
+      <input type="hidden" name="media_url" value={mediaUrl || ''} />
+      <input type="hidden" name="message_type" value={messageType} />
 
       {showSuggestions && (suggestions.length > 0 || isSuggesting) ? (
         <div className="wb-ai-suggest-bar">
@@ -216,7 +226,80 @@ export function ReplyForm({
         </div>
       ) : null}
 
+      {mediaUrl ? (
+        <div className="flex items-center gap-2 rounded border border-hairline bg-surface-muted px-2.5 py-1.5 text-[12.5px]">
+          <Icon name="paperclip" className="size-3.5 text-accent shrink-0" />
+          <span className="truncate text-ink font-medium">{mediaName || 'Eklenen Medya'}</span>
+          <span className="rounded bg-accent/10 px-1 text-[10px] font-bold text-accent uppercase">
+            {messageType}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setMediaUrl(null)
+              setMediaName(null)
+              setMessageType('text')
+            }}
+            className="ml-auto text-ink-muted hover:text-danger text-[14px] font-semibold leading-none px-1"
+            title="Kaldır"
+          >
+            ×
+          </button>
+        </div>
+      ) : null}
+
       <div className="flex items-end gap-2">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*,video/*,application/pdf"
+          className="hidden"
+          onChange={async (e) => {
+            const file = e.target.files?.[0]
+            if (!file) return
+            if (file.size > 16 * 1024 * 1024) {
+              toast('Dosya boyutu en fazla 16 MB olabilir.', 'warn')
+              return
+            }
+            setUploading(true)
+            try {
+              const supabase = getSupabaseBrowserClient()
+              const ext = file.name.split('.').pop() || 'bin'
+              const path = `chat/${Date.now()}_${crypto.randomUUID()}.${ext}`
+              const { error } = await supabase.storage.from('creatives').upload(path, file, {
+                contentType: file.type,
+                upsert: false,
+              })
+              if (error) throw error
+              const { data } = supabase.storage.from('creatives').getPublicUrl(path)
+              setMediaUrl(data.publicUrl)
+              setMediaName(file.name)
+              if (file.type.startsWith('image/')) setMessageType('image')
+              else if (file.type.startsWith('video/')) setMessageType('video')
+              else setMessageType('document')
+              toast('Medya eklendi.', 'success')
+            } catch (err) {
+              toast(err instanceof Error ? err.message : 'Dosya yüklenemedi.', 'danger')
+            } finally {
+              setUploading(false)
+              if (fileInputRef.current) fileInputRef.current.value = ''
+            }
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading || pending || waiting}
+          className="wb-ai-suggest-btn"
+          title="Görsel veya dosya ekle (Maks 16 MB)"
+        >
+          {uploading ? (
+            <span className="size-3.5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+          ) : (
+            <Icon name="paperclip" className="size-3.5" />
+          )}
+        </button>
+
         <button
           type="button"
           onClick={() => {
@@ -240,16 +323,20 @@ export function ReplyForm({
         <textarea
           id="conversation-reply"
           name="body"
-          required
+          required={!mediaUrl}
           maxLength={4096}
           rows={2}
-          placeholder="Mesaj yazın veya önerilen cevapları seçin…"
+          placeholder={mediaUrl ? 'Açıklama yazın (isteğe bağlı)…' : 'Mesaj yazın veya önerilen cevapları seçin…'}
           disabled={pending || waiting}
           value={body}
           onChange={(event) => setBody(event.target.value)}
           className="wb-chat-composer-input font-sans"
         />
-        <Button type="submit" variant="accent" disabled={pending || waiting || !body.trim()}>
+        <Button
+          type="submit"
+          variant="accent"
+          disabled={pending || waiting || (!body.trim() && !mediaUrl)}
+        >
           {pending ? 'Sırada…' : waiting ? 'Bekliyor' : 'Gönder'}
         </Button>
       </div>
