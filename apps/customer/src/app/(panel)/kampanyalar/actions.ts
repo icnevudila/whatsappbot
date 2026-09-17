@@ -590,3 +590,91 @@ export async function countUniqueRecipients(
 
   return { count: phones.size }
 }
+
+export type BulkReplyItem = {
+  targetId: number
+  phone: string
+  text: string
+}
+
+export async function sendCampaignBulkReplies(options: {
+  campaignId: string
+  accountId?: string
+  replies: BulkReplyItem[]
+}): Promise<{ ok?: string; error?: string }> {
+  const { campaignId, accountId, replies } = options
+  if (!replies || replies.length === 0) {
+    return { error: 'Gönderilecek yanıt bulunamadı.' }
+  }
+
+  const job = await enqueueJob({
+    type: 'campaign.bulk_reply',
+    campaignId,
+    accountId,
+    payload: {
+      campaign_id: campaignId,
+      account_id: accountId,
+      replies: replies.map((r) => ({
+        target_id: r.targetId,
+        phone_e164: r.phone,
+        text: r.text.trim(),
+      })),
+    },
+  })
+
+  if (job.error) return { error: job.error }
+
+  revalidatePath(`/kampanyalar/${campaignId}`)
+  return { ok: `${replies.length} yanıt güvenli gönderim kuyruğuna alındı.` }
+}
+
+export async function dismissCampaignReplies(options: {
+  campaignId: string
+  targetIds: number[]
+}): Promise<{ ok?: string; error?: string }> {
+  const { campaignId, targetIds } = options
+  if (!targetIds || targetIds.length === 0) return { ok: 'İşlem yapıldı.' }
+
+  const { org, supabase } = await requireActiveOrg()
+  const { error } = await supabase
+    .from('campaign_targets')
+    .update({ reply_status: 'dismissed' })
+    .eq('campaign_id', campaignId)
+    .eq('org_id', org.id)
+    .in('id', targetIds)
+
+  if (error) return { error: error.message }
+  revalidatePath(`/kampanyalar/${campaignId}`)
+  return { ok: `${targetIds.length} yanıt listeden kaldırıldı.` }
+}
+
+export async function blacklistCampaignReplies(options: {
+  campaignId: string
+  items: Array<{ targetId: number; phone: string }>
+}): Promise<{ ok?: string; error?: string }> {
+  const { campaignId, items } = options
+  if (!items || items.length === 0) return { ok: 'İşlem yapıldı.' }
+
+  const { org, userId, supabase } = await requireActiveOrg()
+
+  const blacklistRows = items.map((it) => ({
+    org_id: org.id,
+    created_by: userId,
+    phone_e164: it.phone,
+    reason: 'Kampanya dönüşü iptal / istemiyorum talebi',
+  }))
+
+  await supabase.from('blacklist').upsert(blacklistRows, { onConflict: 'org_id, phone_e164' })
+
+  const targetIds = items.map((it) => it.targetId)
+  await supabase
+    .from('campaign_targets')
+    .update({ reply_status: 'opt_out' })
+    .eq('campaign_id', campaignId)
+    .eq('org_id', org.id)
+    .in('id', targetIds)
+
+  revalidatePath(`/kampanyalar/${campaignId}`)
+  return { ok: `${items.length} kişi kara listeye eklendi ve listeden çıkarıldı.` }
+}
+

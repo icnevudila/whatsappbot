@@ -5,6 +5,7 @@ import { Icon } from '@/components/icon'
 import { Notice, PageHeader, StatusPill } from '@/components/ui'
 import { requireActiveOrg } from '@/lib/org'
 import { CampaignLive, type CampaignView } from './campaign-live'
+import { CampaignBulkReply, type PendingReplyItem } from './campaign-bulk-reply'
 import { TargetFeed, type TargetView } from './target-feed'
 import { ScheduledStatusPill } from '@/components/schedule-status'
 import { formatRemainingTr, formatScheduleAt } from '@/lib/schedule-remaining'
@@ -53,8 +54,16 @@ export default async function CampaignDetailPage({
           : null
   const { org, supabase } = await requireActiveOrg()
 
-  const [campaignResult, targetsResult, accountsResult, listsResult, allAccountsResult, deliveredCount, readCount] =
-    await Promise.all([
+  const [
+    campaignResult,
+    targetsResult,
+    accountsResult,
+    listsResult,
+    allAccountsResult,
+    deliveredCount,
+    readCount,
+    repliesResult,
+  ] = await Promise.all([
       supabase.from('campaigns').select(FIELDS).eq('id', id).eq('org_id', org.id).single(),
       supabase
         .from('campaign_targets')
@@ -91,6 +100,9 @@ export default async function CampaignDetailPage({
         .eq('campaign_id', id)
         .eq('org_id', org.id)
         .eq('status', 'read'),
+      supabase.rpc('get_campaign_pending_replies', {
+        p_campaign_id: id,
+      }),
     ])
 
   if (campaignResult.error || !campaignResult.data) notFound()
@@ -207,6 +219,14 @@ export default async function CampaignDetailPage({
           read: readCount.count ?? 0,
         }}
       />
+ 
+      <div className="mt-2.5">
+        <CampaignBulkReply
+          campaignId={id}
+          initialReplies={((repliesResult.data as unknown) ?? []) as PendingReplyItem[]}
+          accountId={accounts[0]?.id}
+        />
+      </div>
 
       <div id="paylasilanlar" className="mt-2.5 mb-8">
         <TargetFeed
