@@ -2,19 +2,25 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useRef, useState, useTransition } from 'react'
+import { useEffect, useId, useRef, useState, useTransition } from 'react'
+import { createPortal } from 'react-dom'
 import type { Tables } from '@wa/shared'
-import { Meter, Notice } from '@/components/ui'
+import { Button, Meter, Notice } from '@/components/ui'
+import { Icon } from '@/components/icon'
 import { LiveStat } from '@/components/live-stat'
 import { useToast } from '@/components/toast'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
+import { ScheduleAtInput } from '../campaign-wizard-ui'
+import { defaultScheduleLocal, toDatetimeLocal } from '../campaign-wizard-types'
 import {
   duplicateCampaign,
   pauseCampaign,
   resumeCampaign,
+  scheduleCampaign,
   startCampaign,
   stopCampaign,
 } from '../actions'
+import { CampaignPreviewButton } from '../campaign-preview'
 
 export type CampaignView = Pick<
   Tables<'campaigns'>,
@@ -89,6 +95,7 @@ export function CampaignLive({
   const [stats, setStats] = useState<CampaignTargetStats>(initialStats ?? { delivered: 0, read: 0 })
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [scheduleOpen, setScheduleOpen] = useState(false)
   const router = useRouter()
   const toast = useToast()
   const prevStatus = useRef(initial.status)
@@ -370,18 +377,32 @@ export function CampaignLive({
 
             <div className="wb-camp-detail-actions">
               {campaign.status === 'draft' || campaign.status === 'stopped' ? (
-                <button
-                  type="button"
-                  className="wb-wa-submit"
-                  disabled={pending}
-                  onClick={() => run(() => startCampaign(campaign.id))}
-                >
-                  {pending
-                    ? 'Başlatılıyor…'
-                    : campaign.status === 'stopped'
-                      ? 'Yeniden başlat'
-                      : 'Başlat'}
-                </button>
+                <div className="wb-camp-detail-primary">
+                  <button
+                    type="button"
+                    className="wb-wa-submit"
+                    disabled={pending}
+                    onClick={() => run(() => startCampaign(campaign.id))}
+                  >
+                    {pending
+                      ? 'Başlatılıyor…'
+                      : campaign.status === 'stopped'
+                        ? 'Yeniden başlat'
+                        : 'Başlat'}
+                  </button>
+                  {campaign.status === 'draft' ? (
+                    <button
+                      type="button"
+                      className="wb-camp-schedule-icon"
+                      disabled={pending}
+                      aria-label="Planla"
+                      title="Planla"
+                      onClick={() => setScheduleOpen(true)}
+                    >
+                      <Icon name="clock" className="size-5" />
+                    </button>
+                  ) : null}
+                </div>
               ) : null}
 
               {campaign.status === 'running' ? (
@@ -433,6 +454,14 @@ export function CampaignLive({
                 {pending ? 'Kopyalanıyor…' : 'Kopyala'}
               </button>
 
+              <CampaignPreviewButton
+                name={campaign.name}
+                body={campaign.body}
+                mediaUrl={campaign.media_url}
+                className="wb-wa-submit is-secondary"
+                label="Önizle"
+              />
+
               <Link
                 href={`/kampanyalar/${campaign.id}/duzenle`}
                 className="wb-wa-submit is-secondary"
@@ -445,6 +474,138 @@ export function CampaignLive({
           </div>
         </div>
       </section>
+
+      {scheduleOpen ? (
+        <ScheduleCampaignModal
+          initialAt={toDatetimeLocal(campaign.scheduled_at) || defaultScheduleLocal()}
+          pending={pending}
+          onClose={() => setScheduleOpen(false)}
+          onSave={(at) => {
+            setError(null)
+            startTransition(async () => {
+              const result = await scheduleCampaign(campaign.id, at)
+              if (result.error) {
+                setError(result.error)
+                toast(result.error, 'danger')
+                return
+              }
+              toast(result.ok ?? 'Kampanya planlandı.', 'success')
+              setScheduleOpen(false)
+              setCampaign((current) => ({
+                ...current,
+                status: 'scheduled',
+                scheduled_at: new Date(at).toISOString(),
+              }))
+              router.refresh()
+            })
+          }}
+        />
+      ) : null}
     </div>
+  )
+}
+
+function ScheduleCampaignModal({
+  initialAt,
+  pending,
+  onClose,
+  onSave,
+}: {
+  initialAt: string
+  pending: boolean
+  onClose: () => void
+  onSave: (at: string) => void
+}) {
+  const titleId = useId()
+  const [mounted, setMounted] = useState(false)
+  const [scheduledAt, setScheduledAt] = useState(initialAt)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !pending) onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prev
+    }
+  }, [onClose, pending])
+
+  if (!mounted) return null
+
+  return createPortal(
+    <div className="wb-modal-root" role="presentation">
+      <button
+        type="button"
+        className="wb-modal-backdrop"
+        aria-label="Kapat"
+        disabled={pending}
+        onClick={() => {
+          if (!pending) onClose()
+        }}
+      />
+      <div
+        className="wb-modal-panel wb-wa-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+      >
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 id={titleId} className="wb-modal-title">
+              Kampanyayı planla
+            </h2>
+            <p className="wb-modal-desc">Seçtiğiniz tarih ve saatte gönderim başlar.</p>
+          </div>
+          <button
+            type="button"
+            aria-label="Kapat"
+            disabled={pending}
+            onClick={onClose}
+            className="wb-wa-icon-btn"
+          >
+            <Icon name="close" className="size-4" />
+          </button>
+        </div>
+
+        <div className="wb-wa-publish is-on !cursor-default">
+          <span className="flex items-start gap-2.5">
+            <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-[#00a884] text-white">
+              <Icon name="clock" className="size-4" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[14px] font-semibold text-ink">Planla</span>
+              <span className="mt-0.5 block text-[12.5px] text-ink-muted">
+                Seçtiğiniz tarih ve saatte gönderim başlar.
+              </span>
+            </span>
+          </span>
+          <ScheduleAtInput value={scheduledAt} onChange={setScheduledAt} />
+        </div>
+
+        <div className="wb-modal-actions mt-4 flex-col-reverse sm:flex-row [&_button]:min-h-11 [&_button]:w-full sm:[&_button]:w-auto">
+          <Button type="button" disabled={pending} onClick={onClose}>
+            Vazgeç
+          </Button>
+          <Button
+            type="button"
+            variant="accent"
+            className="wb-wa-submit"
+            disabled={pending || !scheduledAt}
+            onClick={() => onSave(scheduledAt)}
+          >
+            <Icon name="clock" className="size-4" />
+            {pending ? 'Planlanıyor…' : 'Planla'}
+          </Button>
+        </div>
+      </div>
+    </div>,
+    document.body,
   )
 }

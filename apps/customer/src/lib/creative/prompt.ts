@@ -92,13 +92,13 @@ export function buildCreativePrompt(snapshot: CreativeSnapshot): {
     `Use case: ${formatLabel(snapshot.formatId)} (${aspect}).`,
     `Visual style: ${styleLabel(snapshot.style)}. ${STYLE_HINT[snapshot.style] ?? STYLE_HINT.auto}`,
     DENSITY_HINT[snapshot.textDensity] ?? DENSITY_HINT.balanced,
-    kit ? `Brand name: ${kit.name}.` : null,
     kit?.tone ? `Brand tone of voice: ${kit.tone}` : null,
     colors ? `Follow this brand palette in backgrounds, accents and props: ${colors}.` : null,
     kit?.fonts?.heading ? `Prefer a ${kit.fonts.heading}-like heading feel.` : null,
-    kit && snapshot.useLogo
-      ? `Include brand name "${kit.name}" cleanly. Do not distort it.`
-      : 'Do not invent fake logos.',
+    'Do NOT write internal labels on the image: never paint brand-kit titles, "marka kiti", "brand kit", "kampanya kiti", or similar meta text.',
+    snapshot.useLogo
+      ? 'A real company logo image is attached as a reference. Place that exact logo cleanly (usually a corner), keep proportions, transparent/white-friendly. Do not invent a different logo. Do not replace the logo with typed brand-name text.'
+      : 'Do not invent fake logos. Do not type a brand name as a fake logo unless the advertiser brief explicitly asks for the business name as headline text.',
     snapshot.baseCreativeId
       ? 'A base/reference campaign image is attached. Keep the same product and brand identity; apply the requested change.'
       : null,
@@ -123,6 +123,9 @@ export function buildCreativePrompt(snapshot: CreativeSnapshot): {
     'no unreadable micro-text',
     'no watermarks',
     'no misspelled brand names',
+    'no text saying marka kiti',
+    'no text saying brand kit',
+    'no campaign kit title overlays',
   ].join(', ')
 
   return { prompt, negative }

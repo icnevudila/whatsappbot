@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
       dynamic: 30,
       static: 180,
     },
+    // Next 16: bodySizeLimit yalnızca experimental.serverActions altında okunuyor
+    serverActions: {
+      bodySizeLimit: '6mb',
+    },
   },
   async redirects() {
     return [

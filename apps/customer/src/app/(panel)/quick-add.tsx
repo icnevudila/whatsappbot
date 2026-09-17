@@ -21,9 +21,15 @@ const AddPersonModal = dynamic(
   { ssr: false },
 )
 
+const AddBrandKitModal = dynamic(
+  () =>
+    import('./ayarlar/marka/add-brand-kit-button').then((mod) => mod.AddBrandKitModal),
+  { ssr: false },
+)
+
 type QuickItem = {
   href?: string
-  action?: 'list' | 'group' | 'person'
+  action?: 'list' | 'group' | 'person' | 'brandKit'
   label: string
   icon: IconName
 }
@@ -38,7 +44,7 @@ const OTHER_ITEMS: QuickItem[] = [
   { action: 'person', label: 'Yeni kişi', icon: 'people' },
   { action: 'group', label: 'Yeni grup', icon: 'people' },
   { href: '/ayarlar/urunler/yeni', label: 'Yeni ürün ekle', icon: 'file' },
-  { href: '/ayarlar/marka/yeni', label: 'Yeni kit ekle', icon: 'brand' },
+  { action: 'brandKit', label: 'Yeni kit ekle', icon: 'brand' },
   { href: '/ayarlar/hatlar?ekle=1', label: 'Yeni hat ekle', icon: 'phone' },
 ]
 
@@ -59,6 +65,7 @@ export function QuickAdd() {
   const [listOpen, setListOpen] = useState(false)
   const [groupOpen, setGroupOpen] = useState(false)
   const [personOpen, setPersonOpen] = useState(false)
+  const [brandKitOpen, setBrandKitOpen] = useState(false)
   const [threadOpen, setThreadOpen] = useState(false)
   const onInbox = pathname === '/mesajlar' || pathname.startsWith('/mesajlar/')
   const onCreateFlow =
@@ -66,7 +73,8 @@ export function QuickAdd() {
     pathname.startsWith('/kampanyalar/yeni/') ||
     /\/kampanyalar\/[^/]+\/duzenle(?:\/|$)/.test(pathname) ||
     pathname === '/icerik/yeni' ||
-    pathname.startsWith('/icerik/yeni/')
+    pathname.startsWith('/icerik/yeni/') ||
+    pathname.startsWith('/ayarlar/marka/')
   const hidden = onCreateFlow || (onInbox && threadOpen)
 
   useEffect(() => {
@@ -117,6 +125,7 @@ export function QuickAdd() {
           if (item.action === 'list') setListOpen(true)
           if (item.action === 'group') setGroupOpen(true)
           if (item.action === 'person') setPersonOpen(true)
+          if (item.action === 'brandKit') setBrandKitOpen(true)
         }}
       >
         <Icon name={item.icon} className="size-4 shrink-0 text-accent" />
@@ -176,6 +185,7 @@ export function QuickAdd() {
       ) : null}
       {groupOpen ? <NewGroupModal onClose={() => setGroupOpen(false)} /> : null}
       {personOpen ? <AddPersonModal onClose={() => setPersonOpen(false)} /> : null}
+      {brandKitOpen ? <AddBrandKitModal onClose={() => setBrandKitOpen(false)} /> : null}
     </>
   )
 }

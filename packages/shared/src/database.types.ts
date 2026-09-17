@@ -1513,6 +1513,7 @@ export type Database = {
           auto_reply_enabled: boolean
           created_at: string
           id: string
+          logo_path: string | null
           monthly_message_quota: number
           name: string
           onboarding: Json
@@ -1537,6 +1538,7 @@ export type Database = {
           auto_reply_enabled?: boolean
           created_at?: string
           id?: string
+          logo_path?: string | null
           monthly_message_quota?: number
           name: string
           onboarding?: Json
@@ -1561,6 +1563,7 @@ export type Database = {
           auto_reply_enabled?: boolean
           created_at?: string
           id?: string
+          logo_path?: string | null
           monthly_message_quota?: number
           name?: string
           onboarding?: Json

@@ -7,6 +7,8 @@ export function SettingsPageFrame({
   action,
   titleEnd,
   children,
+  backHref = '/ayarlar',
+  backLabel = 'Ayarlar',
 }: {
   title: string
   description?: string
@@ -14,6 +16,8 @@ export function SettingsPageFrame({
   titleEnd?: ReactNode
   children: ReactNode
   wide?: boolean
+  backHref?: string
+  backLabel?: string
 }) {
   return (
     <div className="wb-wa-page">
@@ -22,8 +26,8 @@ export function SettingsPageFrame({
         description={description}
         action={action}
         titleEnd={titleEnd}
-        backHref="/ayarlar"
-        backLabel="Ayarlar"
+        backHref={backHref}
+        backLabel={backLabel}
       />
       {children}
     </div>

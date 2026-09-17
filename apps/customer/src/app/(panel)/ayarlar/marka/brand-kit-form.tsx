@@ -1,7 +1,8 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useEffect, useRef, useState, useActionState } from 'react'
 import { Button, Field, Input, Notice, Textarea } from '@/components/ui'
+import { Icon } from '@/components/icon'
 import { DEFAULT_COLORS } from '@/lib/creative-templates'
 import { saveBrandKit, type BrandKitState } from './actions'
 
@@ -13,6 +14,9 @@ const COLOR_FIELDS = [
   { name: 'text', label: 'Metin' },
 ] as const
 
+const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp']
+const IMAGE_MAX = 5 * 1024 * 1024
+
 export function BrandKitForm({
   kit,
   canEdit,
@@ -21,7 +25,7 @@ export function BrandKitForm({
     id: string
     name: string
     tone: string
-    logoPreview: string | null
+    samplePreview: string | null
     isDefault: boolean
     colors: {
       primary: string
@@ -35,6 +39,43 @@ export function BrandKitForm({
 }) {
   const [state, formAction, pending] = useActionState<BrandKitState, FormData>(saveBrandKit, null)
   const colors = kit?.colors ?? DEFAULT_COLORS
+  const inputRef = useRef<HTMLInputElement>(null)
+  const dragDepth = useRef(0)
+  const [over, setOver] = useState(false)
+  const [file, setFile] = useState<File | null>(null)
+  const [localPreview, setLocalPreview] = useState<string | null>(null)
+  const [fileError, setFileError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!file) {
+      setLocalPreview(null)
+      return
+    }
+    const url = URL.createObjectURL(file)
+    setLocalPreview(url)
+    return () => URL.revokeObjectURL(url)
+  }, [file])
+
+  const takeFile = (next: File | null | undefined) => {
+    if (!next || !canEdit) return
+    if (next.size > IMAGE_MAX) {
+      setFileError('Görsel en fazla 5 MB olabilir.')
+      return
+    }
+    if (!IMAGE_TYPES.includes(next.type) && !/\.(png|jpe?g|webp)$/i.test(next.name)) {
+      setFileError('PNG, JPG veya WEBP yükleyin.')
+      return
+    }
+    setFileError(null)
+    setFile(next)
+    if (inputRef.current) {
+      const transfer = new DataTransfer()
+      transfer.items.add(next)
+      inputRef.current.files = transfer.files
+    }
+  }
+
+  const preview = localPreview ?? kit?.samplePreview ?? null
 
   return (
     <form action={formAction} className="space-y-3 p-3.5">
@@ -76,17 +117,86 @@ export function BrandKitForm({
         </div>
       </fieldset>
 
-      <Field label="Logo" hint="PNG, JPG veya WEBP. En fazla 5 MB.">
-        {kit?.logoPreview ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={kit.logoPreview}
-            alt=""
-            className="mb-2 h-16 w-16 rounded-md border border-hairline object-contain bg-canvas"
+      <div>
+        <span className="mb-1.5 block text-[13px] font-semibold text-ink-muted">Örnek görsel</span>
+        <p className="mb-2 text-[12.5px] text-ink-muted">
+          Stil referansı için. İşletme logosu ayrıdır; logo marka kitleri sayfasından yüklenir.
+        </p>
+        <div
+          onDragEnter={(event) => {
+            if (!canEdit) return
+            event.preventDefault()
+            dragDepth.current += 1
+            setOver(true)
+          }}
+          onDragOver={(event) => {
+            if (!canEdit) return
+            event.preventDefault()
+            event.dataTransfer.dropEffect = 'copy'
+          }}
+          onDragLeave={() => {
+            dragDepth.current = Math.max(0, dragDepth.current - 1)
+            if (dragDepth.current === 0) setOver(false)
+          }}
+          onDrop={(event) => {
+            if (!canEdit) return
+            event.preventDefault()
+            dragDepth.current = 0
+            setOver(false)
+            takeFile(event.dataTransfer.files?.[0])
+          }}
+          className={`relative overflow-hidden rounded-md border border-dashed transition-colors ${
+            over ? 'border-accent bg-accent-soft/40' : 'border-hairline-strong bg-canvas'
+          } ${!canEdit ? 'opacity-70' : ''}`}
+        >
+          <input
+            ref={inputRef}
+            type="file"
+            name="sample"
+            accept="image/png,image/jpeg,image/webp"
+            disabled={!canEdit}
+            className="absolute inset-0 z-10 cursor-pointer opacity-0 disabled:cursor-not-allowed"
+            aria-label="Örnek görsel yükle"
+            onChange={(event) => {
+              takeFile(event.target.files?.[0])
+            }}
           />
+          {preview ? (
+            <div className="pointer-events-none flex min-h-[140px] items-center justify-center p-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={preview} alt="" className="max-h-[160px] w-full object-contain" />
+            </div>
+          ) : (
+            <div className="pointer-events-none flex min-h-[140px] flex-col items-center justify-center gap-1.5 px-4 text-center">
+              <span className="flex size-11 items-center justify-center rounded-full border border-hairline bg-surface text-ink-muted">
+                <Icon name="image" className="size-5" />
+              </span>
+              <p className="text-[13.5px] font-semibold text-ink">
+                {canEdit ? 'Örnek görseli sürükleyin veya seçin' : 'Örnek görsel yok'}
+              </p>
+              <p className="text-[12px] text-ink-faint">PNG, JPG, WEBP · en fazla 5 MB</p>
+            </div>
+          )}
+        </div>
+        {file && canEdit ? (
+          <button
+            type="button"
+            className="mt-1.5 text-[12.5px] font-medium text-ink-muted hover:text-ink"
+            onClick={() => {
+              setFile(null)
+              setFileError(null)
+              if (inputRef.current) inputRef.current.value = ''
+            }}
+          >
+            Seçimi kaldır
+          </button>
         ) : null}
-        <Input name="logo" type="file" accept="image/png,image/jpeg,image/webp" disabled={!canEdit} />
-      </Field>
+        {fileError ? (
+          <div className="mt-2">
+            <Notice tone="danger">{fileError}</Notice>
+          </div>
+        ) : null}
+      </div>
 
       <label className="flex items-center gap-2 text-[13px]">
         <input
@@ -102,9 +212,16 @@ export function BrandKitForm({
       {state?.ok ? <Notice tone="accent">{state.ok}</Notice> : null}
 
       {canEdit ? (
-        <Button type="submit" variant="accent" className="wb-wa-submit" disabled={pending}>
-          {pending ? 'Kaydediliyor…' : kit?.id ? 'Kaydet' : 'Oluştur'}
-        </Button>
+        <div className="flex justify-center pt-1">
+          <Button
+            type="submit"
+            variant="accent"
+            className="wb-wa-submit w-full max-w-sm !min-w-[12rem] sm:w-auto sm:min-w-[14rem]"
+            disabled={pending}
+          >
+            {pending ? 'Kaydediliyor…' : kit?.id ? 'Kaydet' : 'Oluştur'}
+          </Button>
+        </div>
       ) : null}
     </form>
   )

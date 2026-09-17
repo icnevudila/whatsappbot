@@ -915,17 +915,58 @@ h3 {
 .wb-camp-row {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 10px;
   padding: 14px 12px 14px 14px;
-  color: inherit;
-  text-decoration: none;
   border-bottom: 1px solid #e9edef;
 }
 .wb-camp-row:hover {
   background: #f5f6f6;
 }
+.wb-camp-row-body {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: flex-start;
+  gap: 12px;
+  color: inherit;
+  text-decoration: none;
+}
+.wb-camp-row .wb-wa-set-chevron {
+  flex-shrink: 0;
+  align-self: center;
+  color: inherit;
+  text-decoration: none;
+}
 .wb-inbox-list > li:last-child .wb-camp-row {
   border-bottom: 0;
+}
+.wb-camp-top-end {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  margin-top: 1px;
+}
+.wb-camp-preview-btn {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d1d7db;
+  border-radius: 999px;
+  background: #fff;
+  color: #54656f;
+  cursor: pointer;
+}
+.wb-camp-preview-btn:hover {
+  background: #f0f2f5;
+  color: #111b21;
+}
+.wb-camp-preview-btn svg {
+  width: 14px;
+  height: 14px;
 }
 .wb-camp-dot {
   width: 10px;
@@ -940,12 +981,6 @@ h3 {
   flex: 1;
   flex-direction: column;
   gap: 6px;
-}
-.wb-camp-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
 }
 .wb-camp-name {
   min-width: 0;
@@ -1586,6 +1621,11 @@ h3 {
   color: #54656f;
 }
 .wb-wa-page {
+  /* WA sayfalarında kobalt yerine WhatsApp yeşili accent */
+  --color-accent: #00a884;
+  --color-accent-dim: #008069;
+  --color-accent-soft: #e7f8f2;
+  --color-accent-ink: #ffffff;
   background: #fff;
   color: #111b21;
   min-height: 0;
@@ -1894,6 +1934,12 @@ button.wb-wa-set-row {
 .wb-wa-modal .wb-modal-desc {
   color: #667781;
 }
+.wb-wa-modal {
+  --color-accent: #00a884;
+  --color-accent-dim: #008069;
+  --color-accent-soft: #e7f8f2;
+  --color-accent-ink: #ffffff;
+}
 .wb-wa-confirm {
   border: 0;
   border-radius: 14px;
@@ -2031,6 +2077,37 @@ button.wb-wa-set-row {
   flex-direction: column;
   gap: 8px;
 }
+.wb-camp-detail-primary {
+  display: flex;
+  width: 100%;
+  align-items: stretch;
+  gap: 8px;
+}
+.wb-camp-detail-primary .wb-wa-submit {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+}
+.wb-camp-schedule-icon {
+  display: inline-flex;
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: #00a884;
+  color: #fff;
+  cursor: pointer;
+}
+.wb-camp-schedule-icon:hover {
+  background: #008069;
+}
+.wb-camp-schedule-icon:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 .wb-camp-detail-actions .wb-wa-submit {
   display: inline-flex;
   width: 100%;
@@ -2049,6 +2126,10 @@ button.wb-wa-set-row {
   .wb-camp-detail-actions {
     flex-direction: row;
     flex-wrap: wrap;
+  }
+  .wb-camp-detail-primary {
+    width: auto;
+    flex: 1 1 auto;
   }
   .wb-camp-detail-actions .wb-wa-submit {
     width: auto;
@@ -2605,6 +2686,8 @@ button.wb-wa-set-row {
   justify-content: space-between;
   gap: 10px;
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 .wb-wa-row-top {
   align-items: baseline;
@@ -2633,10 +2716,9 @@ button.wb-wa-set-row {
   font-weight: 500;
 }
 .wb-wa-preview {
-  display: inline-flex;
+  display: block;
   min-width: 0;
-  flex: 1;
-  align-items: center;
+  flex: 1 1 0%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -3381,7 +3463,7 @@ main:has(.wb-inbox) {
   border: 1.5px solid color-mix(in srgb, var(--color-ink) 10%, var(--color-hairline));
   border-radius: 10px;
   background: #fff;
-  box-shadow: 0 8px 20px rgba(47, 91, 255, 0.08);
+  box-shadow: 0 8px 20px rgba(0, 168, 132, 0.1);
   animation: wb-craft-float 3.6s ease-in-out infinite;
 }
 .wb-craft-mark--sm .wb-craft-polaroid {
@@ -3405,7 +3487,7 @@ main:has(.wb-inbox) {
   left: 12%;
   width: 42%;
   height: 34%;
-  background: #c9d4ff;
+  background: #b7ebc8;
   animation: wb-craft-blob 4.2s ease-in-out infinite;
 }
 .wb-craft-wash-b {
@@ -3413,7 +3495,7 @@ main:has(.wb-inbox) {
   bottom: 22%;
   width: 48%;
   height: 38%;
-  background: #f3d5b5;
+  background: #d4f5e8;
   animation: wb-craft-blob 5s ease-in-out 0.6s infinite reverse;
 }
 .wb-craft-scan {
@@ -3421,7 +3503,7 @@ main:has(.wb-inbox) {
   left: 12%;
   right: 12%;
   height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(47, 91, 255, 0.55), transparent);
+  background: linear-gradient(90deg, transparent, rgba(0, 168, 132, 0.55), transparent);
   animation: wb-craft-scan 2.4s ease-in-out infinite;
 }
 .wb-craft-sketch {

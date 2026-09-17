@@ -36,7 +36,7 @@ export function QrPanel({
   }, [qr])
 
   return (
-    <div className="flex flex-col items-center gap-3 rounded-md border border-hairline bg-canvas p-4 sm:flex-row sm:items-start">
+    <div className="flex flex-col items-center gap-3 rounded-md border border-accent/20 bg-accent-soft/40 p-4 sm:flex-row sm:items-start">
       <div className="size-[196px] shrink-0 overflow-hidden rounded-md border border-hairline-strong bg-white p-2">
         {dataUrl ? (
           // eslint-disable-next-line @next/next/no-img-element

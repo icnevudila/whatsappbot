@@ -155,13 +155,15 @@ export function SetupGuideCard({
 export function SetupBanner({ progress }: { progress: Progress }) {
   if (!progress.steps.connected) {
     return (
-      <div className="mb-3 rounded-md border border-accent/25 bg-accent-soft/40 px-3.5 py-3">
+      <div className="mb-3 rounded-md border border-accent/30 bg-accent-soft/70 px-3.5 py-3">
         <p className="text-[13px] font-semibold text-ink">1 / 2 · WhatsApp hattını bağla</p>
         <p className="mt-1 text-[12.5px] leading-snug text-ink-muted">
           QR veya telefon koduyla bağla. Durum “Bağlı” olunca 2. adıma geçersin.
         </p>
         <div className="mt-2 flex flex-wrap gap-3">
-          <AccentLink href="/ayarlar/hatlar">Hat bağla →</AccentLink>
+          <AccentLink href="/ayarlar/hatlar" className="wb-wa-submit !h-8 !rounded-md !px-3 !text-[12.5px]">
+            Hat bağla →
+          </AccentLink>
           <QuietLink href="/kurulum">Tüm adımlar</QuietLink>
         </div>
       </div>
@@ -170,13 +172,15 @@ export function SetupBanner({ progress }: { progress: Progress }) {
 
   if (!progress.steps.contacts) {
     return (
-      <div className="mb-3 rounded-md border border-accent/25 bg-accent-soft/40 px-3.5 py-3">
+      <div className="mb-3 rounded-md border border-accent/30 bg-accent-soft/70 px-3.5 py-3">
         <p className="text-[13px] font-semibold text-ink">2 / 2 · Kişi grubu ekle</p>
         <p className="mt-1 text-[12.5px] leading-snug text-ink-muted">
           Excel / yapıştır veya WhatsApp rehberinden çek. Kampanya için grup şart.
         </p>
         <div className="mt-2 flex flex-wrap gap-3">
-          <AccentLink href="/kisiler">Grup ekle →</AccentLink>
+          <AccentLink href="/kisiler" className="wb-wa-submit !h-8 !rounded-md !px-3 !text-[12.5px]">
+            Grup ekle →
+          </AccentLink>
           <QuietLink href="/kurulum">Tüm adımlar</QuietLink>
         </div>
       </div>

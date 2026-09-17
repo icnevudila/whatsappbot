@@ -123,17 +123,19 @@ export function AccountsBoard({
           filter: `org_id=eq.${orgId}`,
         },
         (payload) => {
+          if (payload.eventType === 'DELETE') {
+            const removedId = (payload.old as { id?: string }).id
+            if (removedId) knownStatus.current.delete(removedId)
+            setAccounts((current) => current.filter((account) => account.id !== removedId))
+            return
+          }
+
+          const next = payload.new as AccountView
+          // Toast/flash setState updater içinde olmamalı (render sırasında
+          // başka bileşeni güncelleme hatası). Önce yan etki, sonra state.
+          noteStatusChange(next)
           setAccounts((current) => {
-            if (payload.eventType === 'DELETE') {
-              const removedId = (payload.old as { id?: string }).id
-              if (removedId) knownStatus.current.delete(removedId)
-              return current.filter((account) => account.id !== removedId)
-            }
-
-            const next = payload.new as AccountView
-            noteStatusChange(next)
             const exists = current.some((account) => account.id === next.id)
-
             return exists
               ? current.map((account) =>
                   account.id === next.id ? { ...account, ...next } : account,
@@ -248,7 +250,7 @@ export function AccountsBoard({
       type="button"
       variant="accent"
       disabled={atCap}
-      className="min-h-11 w-full touch-manipulation sm:w-auto"
+      className="wb-wa-submit min-h-11 w-full touch-manipulation sm:w-auto"
       onClick={() => setAddOpen(true)}
     >
       {atCap ? 'Kota dolu' : '+ Hat ekle'}
@@ -286,7 +288,7 @@ export function AccountsBoard({
       </div>
 
       {accounts.length === 0 ? (
-        <Card lift className="border-accent/20 bg-accent-soft/40">
+        <Card lift className="border-accent/25 bg-accent-soft/50">
           <EmptyState
             tone="phone"
             title="Henüz hat yok"
@@ -373,7 +375,7 @@ function AddHatModal({
   return (
     <div className="wb-modal-root">
       <button type="button" className="wb-modal-backdrop" aria-label="Kapat" onClick={onClose} />
-      <div className="wb-modal-panel wb-modal-panel--wide" role="dialog" aria-labelledby={titleId}>
+      <div className="wb-modal-panel wb-modal-panel--wide wb-wa-modal" role="dialog" aria-labelledby={titleId}>
         <h2 id={titleId} className="wb-modal-title">
           {connected ? 'Hat bağlandı' : 'Hat ekle'}
         </h2>
@@ -391,7 +393,7 @@ function AddHatModal({
           <div className="mt-4 space-y-3">
             <Notice tone="success">Tamamlandı. Hat listenize eklendi.</Notice>
             <div className="wb-modal-actions [&_button]:min-h-11 [&_button]:w-full sm:[&_button]:w-auto">
-              <Button type="button" variant="accent" onClick={onClose}>
+              <Button type="button" variant="accent" className="wb-wa-submit" onClick={onClose}>
                 Tamam
               </Button>
             </div>
@@ -433,6 +435,7 @@ function AddHatModal({
                 <Button
                   type="submit"
                   variant="accent"
+                  className="wb-wa-submit"
                   disabled={pending || !isTrMobileMasked(phone)}
                 >
                   {pending ? 'Kod isteniyor…' : 'Eşleştirme kodu al'}
@@ -533,7 +536,7 @@ function AccountActionsMenu({
         aria-expanded={open}
         disabled={pending}
         onClick={() => setOpen((value) => !value)}
-        className="inline-flex size-9 items-center justify-center rounded-[var(--radius-sm)] border border-hairline bg-surface text-ink-muted transition-colors hover:border-accent/30 hover:bg-accent-soft/50 hover:text-ink disabled:opacity-50"
+        className="inline-flex size-9 items-center justify-center rounded-[var(--radius-sm)] border border-hairline bg-surface text-ink-muted transition-colors hover:border-accent/40 hover:bg-accent-soft hover:text-ink disabled:opacity-50"
       >
         <Icon name="ellipsis" className="size-[18px]" strokeWidth={2.2} />
       </button>
@@ -840,7 +843,7 @@ function PairingSection({ account }: { account: AccountView }) {
             onClick={() => setMode(key)}
             className={`flex-1 rounded px-3 py-1.5 text-[12px] font-medium transition-colors ${
               mode === key
-                ? 'bg-surface text-ink'
+                ? 'bg-accent-soft text-accent-dim shadow-sm'
                 : 'text-ink-muted hover:text-ink'
             }`}
           >
@@ -882,7 +885,7 @@ function PairingSection({ account }: { account: AccountView }) {
             variant="accent"
             onClick={ask}
             disabled={pending || waitingCode || phone.trim().length < 10}
-            className="mt-3"
+            className="wb-wa-submit mt-3"
           >
             {pending || waitingCode ? 'Kod hazırlanıyor…' : 'Kod al'}
           </Button>

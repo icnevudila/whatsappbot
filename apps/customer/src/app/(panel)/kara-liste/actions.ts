@@ -3,8 +3,34 @@
 import { revalidatePath } from 'next/cache'
 import { parsePhoneList } from '@wa/shared'
 import { requireActiveOrg } from '@/lib/org'
+import { dropChatMem, readInboxCache, writeInboxCache, writeThreadCache } from '@/lib/chat-cache'
 
 export type BlacklistState = { error?: string; ok?: string } | null
+
+async function purgeBlacklistedMessages(
+  supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase'],
+  orgId: string,
+  phones: string[],
+) {
+  const unique = [...new Set(phones.map((phone) => phone.trim()).filter((phone) => phone.startsWith('+')))]
+  if (unique.length === 0) return
+
+  await supabase.from('message_log').delete().eq('org_id', orgId).in('phone_e164', unique)
+
+  dropChatMem(orgId)
+  const inbox = await readInboxCache(orgId)
+  if (inbox) {
+    const blocked = new Set(unique)
+    await writeInboxCache(orgId, {
+      maxId: inbox.maxId,
+      accountLabels: inbox.accountLabels,
+      items: inbox.items.filter((item) => !blocked.has(item.phone)),
+    })
+  }
+  await Promise.all(
+    unique.map((phone) => writeThreadCache(orgId, phone, { maxId: 0, msgs: [] })),
+  )
+}
 
 export async function addToBlacklist(
   _previous: BlacklistState,
@@ -31,11 +57,12 @@ export async function addToBlacklist(
     return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
   }
 
+  const phones = parsed.valid.map((row) => row.phone_e164)
   const { error } = await supabase.from('blacklist').upsert(
-    parsed.valid.map((row) => ({
+    phones.map((phone_e164) => ({
       org_id: org.id,
       created_by: userId,
-      phone_e164: row.phone_e164,
+      phone_e164,
       reason,
     })),
     { onConflict: 'org_id,phone_e164', ignoreDuplicates: false },
@@ -43,9 +70,12 @@ export async function addToBlacklist(
 
   if (error) return { error: error.message }
 
+  await purgeBlacklistedMessages(supabase, org.id, phones)
+
   revalidatePath('/kara-liste')
   revalidatePath('/ayarlar/engellenenler')
   revalidatePath('/kisiler')
+  revalidatePath('/mesajlar')
 
   const parts = [`${parsed.valid.length} numara istemeyenlere eklendi`]
   if (parsed.duplicates > 0) parts.push(`${parsed.duplicates} tekrar atlandı`)
@@ -108,8 +138,11 @@ export async function blacklistPhone(
 
   if (error) return { error: error.message }
 
+  await purgeBlacklistedMessages(supabase, org.id, [phone])
+
   revalidatePath('/kara-liste')
   revalidatePath('/ayarlar/engellenenler')
   revalidatePath('/kisiler')
+  revalidatePath('/mesajlar')
   return {}
 }

@@ -107,6 +107,19 @@ export async function persistInboundMessage(options: {
   const phone = await resolveInboundPhone(message, resolveLidPn)
   const pushName = message.pushName?.trim() || null
 
+  if (phone) {
+    const blocked = await query<{ id: string }>(
+      `select id::text from public.blacklist
+        where org_id = $1 and phone_e164 = $2
+        limit 1`,
+      [orgId, phone],
+    )
+    if (blocked.length > 0) {
+      logger.info({ accountId, phone }, 'inbound: kara listede — mesaj yok sayıldı')
+      return
+    }
+  }
+
   try {
     await query(
       `insert into public.message_log

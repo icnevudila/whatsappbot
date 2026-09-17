@@ -14,7 +14,7 @@ export type BrandKitCard = {
   tone: string | null
   colors: Record<string, string>
   fonts: Record<string, string>
-  logoPreview: string | null
+  samplePreview: string | null
   isDefault: boolean
 }
 
@@ -44,6 +44,7 @@ export type OrgBits = {
   address: string | null
   about: string | null
   websiteHint: string | null
+  logoPreview: string | null
 }
 
 export type WizardBootstrap = {

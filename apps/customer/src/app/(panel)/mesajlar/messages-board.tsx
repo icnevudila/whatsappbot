@@ -514,21 +514,25 @@ export function MessagesBoard({
     const displayName = threadDisplayName(selectedPreview ?? {}) ?? activePhone
     void confirm({
       title: 'İstemeyenlere al',
-      description: `${displayName} numarasını istemeyenler listesine eklemek istediğinize emin misiniz? Bu numara bundan sonra kampanyalara dahil edilmeyecek.`,
+      description: `${displayName} numarasını istemeyenler listesine eklemek istediğinize emin misiniz? Bu numaradan gelen mesajlar kaydedilmez ve Mesajlar listesinden kaldırılır.`,
       confirmLabel: 'Evet, ekle',
     }).then((ok) => {
       if (!ok) return
       setError(null)
       setNotice(null)
+      const blockedPhone = activePhone
       startTransition(async () => {
-        const result = await blacklistPhone(activePhone, 'Mesajlar\'dan eklendi')
+        const result = await blacklistPhone(blockedPhone, 'Mesajlar\'dan eklendi')
         if (result.error) {
           setError(result.error)
           toast(result.error, 'danger')
-        } else {
-          setNotice('İstemeyenlere eklendi. Bundan sonra kampanya bu numarayı atlar.')
-          toast('İstemeyenlere eklendi.', 'success')
+          return
         }
+        setList((current) => current.filter((item) => item.phone !== blockedPhone))
+        threadMemo.current.delete(blockedPhone)
+        closeChat()
+        setNotice('İstemeyenlere eklendi. Mesajlar silindi; bundan sonra bu numara listede görünmez.')
+        toast('İstemeyenlere eklendi.', 'success')
       })
     })
   }

@@ -662,7 +662,7 @@ function scheduleForDayOffset(offsetDays: number, hour: string, minute: string) 
   return next
 }
 
-function ScheduleAtInput({
+export function ScheduleAtInput({
   value,
   onChange,
 }: {

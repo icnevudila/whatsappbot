@@ -195,6 +195,53 @@ export async function stopCampaign(campaignId: string) {
   return control(campaignId, 'campaign.stop')
 }
 
+/** Taslak/planlı kampanyayı seçilen saate zamanla (düzenle wizard’ına girmeden). */
+export async function scheduleCampaign(
+  campaignId: string,
+  scheduledAtRaw: string,
+): Promise<{ error?: string; ok?: string }> {
+  const trimmedId = campaignId.trim()
+  if (!trimmedId) return { error: 'Kampanya bulunamadı.' }
+
+  const validationError = validateSchedule('schedule', scheduledAtRaw)
+  if (validationError) return { error: validationError }
+
+  let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
+  let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
+  try {
+    ;({ org, supabase } = await requireActiveOrg())
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
+  }
+
+  const { data: existing, error: loadError } = await supabase
+    .from('campaigns')
+    .select('id, status')
+    .eq('id', trimmedId)
+    .eq('org_id', org.id)
+    .maybeSingle()
+
+  if (loadError || !existing) return { error: 'Kampanya bulunamadı.' }
+  if (!['draft', 'stopped', 'paused', 'scheduled'].includes(existing.status)) {
+    return { error: 'Bu durumda kampanya planlanamaz.' }
+  }
+
+  const { error: updateError } = await supabase
+    .from('campaigns')
+    .update({
+      status: 'scheduled',
+      scheduled_at: new Date(scheduledAtRaw).toISOString(),
+    })
+    .eq('id', trimmedId)
+    .eq('org_id', org.id)
+
+  if (updateError) return { error: updateError.message }
+
+  revalidatePath(`/kampanyalar/${trimmedId}`)
+  revalidatePath('/kampanyalar')
+  return { ok: 'Kampanya planlandı.' }
+}
+
 const EDITABLE_STATUSES = new Set(['draft', 'paused', 'scheduled', 'running', 'stopped'])
 
 function sameIdSet(a: string[], b: string[]) {
@@ -340,7 +387,10 @@ export async function updateCampaign(
   if (startMode === 'schedule' && canSchedule) {
     patch.status = 'scheduled'
     patch.scheduled_at = new Date(scheduledAtRaw).toISOString()
-  } else if (startMode === 'draft' && existing.status === 'scheduled') {
+  } else if (
+    startMode === 'draft' &&
+    (existing.status === 'scheduled' || Boolean(existing.scheduled_at))
+  ) {
     patch.status = 'draft'
     patch.scheduled_at = null
   }

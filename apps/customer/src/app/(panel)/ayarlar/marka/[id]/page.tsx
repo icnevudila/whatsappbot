@@ -5,7 +5,7 @@ import { DEFAULT_COLORS, type BrandColors } from '@/lib/creative-templates'
 import { requireActiveOrg, isOrgAdminRole } from '@/lib/org'
 import { SettingsPageFrame } from '../../settings-shell'
 import { BrandKitForm } from '../brand-kit-form'
-import { DeleteBrandKitButton } from '../delete-button'
+import { BrandKitMoreMenu } from '../brand-kit-menu'
 
 export const metadata: Metadata = { title: 'Marka kiti' }
 export const dynamic = 'force-dynamic'
@@ -42,21 +42,23 @@ export default async function BrandKitDetailPage({
     ...((kit.colors as Partial<BrandColors> | null) ?? {}),
   }
 
-  let logoPreview: string | null = null
+  let samplePreview: string | null = null
   if (kit.logo_path?.startsWith('http')) {
-    logoPreview = kit.logo_path
+    samplePreview = kit.logo_path
   } else if (kit.logo_path) {
     const { data } = await supabase.storage
       .from('brand-assets')
       .createSignedUrl(kit.logo_path, 3600)
-    logoPreview = data?.signedUrl ?? null
+    samplePreview = data?.signedUrl ?? null
   }
 
   return (
     <SettingsPageFrame
       title={kit.name}
       description="Kit ayrıntıları"
-      action={canManage ? <DeleteBrandKitButton id={kit.id} name={kit.name} /> : undefined}
+      backHref="/ayarlar/marka"
+      backLabel="Marka kitleri"
+      action={canManage ? <BrandKitMoreMenu id={kit.id} name={kit.name} variant="detail" /> : undefined}
     >
       {!canManage ? (
         <Notice tone="warn">Görüntülüyorsunuz. Düzenleme için yönetici gerekir.</Notice>
@@ -69,7 +71,7 @@ export default async function BrandKitDetailPage({
             id: kit.id,
             name: kit.name,
             tone: kit.tone ?? '',
-            logoPreview,
+            samplePreview,
             isDefault: kit.is_default,
             colors,
           }}

@@ -170,6 +170,13 @@ export async function startCreativeGeneration(
     if (!kitRow) return { error: 'Marka kiti bulunamadı.' }
   }
 
+  const { data: orgRow } = await supabase
+    .from('organizations')
+    .select('logo_path')
+    .eq('id', org.id)
+    .maybeSingle()
+  const orgLogoPath = orgRow?.logo_path ?? null
+
   if (baseCreativeId) {
     const { data: base } = await supabase
       .from('creatives')
@@ -303,7 +310,7 @@ export async function startCreativeGeneration(
     textDensity: (['low', 'balanced', 'detailed'].includes(String(draft.textDensity))
       ? draft.textDensity
       : 'balanced') as CreativeSnapshot['textDensity'],
-    useLogo: Boolean(kitRow) && draft.useLogo === true,
+    useLogo: Boolean(orgLogoPath) && draft.useLogo === true,
     labels,
     cta: String(draft.cta ?? '').trim() || null,
     address: String(draft.address ?? '').trim() || null,
@@ -319,7 +326,7 @@ export async function startCreativeGeneration(
           tone: kitRow.tone,
           colors: asRecord(kitRow.colors),
           fonts: asRecord(kitRow.fonts),
-          logoPath: kitRow.logo_path,
+          logoPath: orgLogoPath,
         }
       : null,
     products,

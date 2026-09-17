@@ -94,9 +94,13 @@ export function CampaignWizard({
   )
   const [selectedLists, setSelectedLists] = useState<string[]>(campaign?.source_list_ids ?? [])
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>(campaign?.account_ids ?? [])
-  const [startMode, setStartMode] = useState<'draft' | 'schedule' | 'now'>(
-    campaign?.status === 'scheduled' ? 'schedule' : 'draft',
-  )
+  const [startMode, setStartMode] = useState<'draft' | 'schedule' | 'now'>(() => {
+    if (!campaign) return 'draft'
+    if (campaign.status === 'scheduled') return 'schedule'
+    // Eski bug: scheduled_at yazılıp status draft kalmış olabilir
+    if (campaign.status === 'draft' && campaign.scheduled_at) return 'schedule'
+    return 'draft'
+  })
   const [scheduledAt, setScheduledAt] = useState(
     () => toDatetimeLocal(campaign?.scheduled_at) || defaultScheduleLocal(),
   )

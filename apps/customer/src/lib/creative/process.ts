@@ -134,6 +134,40 @@ export async function processCreativeGeneration(
     }
   }
 
+  if (snapshot.useLogo && refs.length < MAX_REFS) {
+    let logoPath = snapshot.brandKit?.logoPath ?? null
+    if (!logoPath) {
+      const { data: orgLogo } = await supabase
+        .from('organizations')
+        .select('logo_path')
+        .eq('id', creative.org_id)
+        .maybeSingle()
+      logoPath = orgLogo?.logo_path ?? null
+    }
+
+    if (logoPath) {
+      if (logoPath.startsWith('http')) {
+        const image = await fetchBuffer(logoPath)
+        if (image) refs.push({ ...image, role: 'logo' })
+      } else {
+        const { data: blob } = await supabase.storage.from('brand-assets').download(logoPath)
+        if (blob) {
+          const buffer = Buffer.from(await blob.arrayBuffer())
+          if (buffer.length >= 32) {
+            const ext = logoPath.split('.').pop()?.toLowerCase()
+            const mimeType =
+              ext === 'jpg' || ext === 'jpeg'
+                ? 'image/jpeg'
+                : ext === 'webp'
+                  ? 'image/webp'
+                  : 'image/png'
+            refs.push({ data: buffer, mimeType, role: 'logo' })
+          }
+        }
+      }
+    }
+  }
+
   const { prompt } = buildCreativePrompt(snapshot)
   const aspect = snapshot.aspect || formatToAspect(creative.format)
 

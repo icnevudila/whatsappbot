@@ -37,7 +37,7 @@ export function PairingPanel({
             type="button"
             onClick={() => void copy()}
             title="Kopyalamak için tıklayın"
-            className="rounded-md border border-hairline-strong bg-surface px-4 py-3 font-mono text-[26px] font-semibold tracking-[0.18em] text-accent transition-colors hover:border-accent/60"
+            className="rounded-md border border-accent/35 bg-surface px-4 py-3 font-mono text-[26px] font-semibold tracking-[0.18em] text-accent transition-colors hover:border-accent hover:bg-accent-soft/60"
           >
             {pretty}
           </button>

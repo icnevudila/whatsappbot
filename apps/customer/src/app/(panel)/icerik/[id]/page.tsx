@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 import { PageHeader } from '@/components/ui'
 import { isOrgAdminRole, requireActiveOrg } from '@/lib/org'
-import { CreativeDetail, CreativeTitleEdit, type DetailCreative, type VersionRow } from '../detail-view'
+import { CreativeDetail, CreativeMoreMenu, CreativeTitleEdit, type DetailCreative, type VersionRow } from '../detail-view'
 import type { CreativePayload } from '@/lib/creative/types'
 
 export const metadata: Metadata = { title: 'Görsel' }
@@ -122,20 +122,31 @@ export default async function CreativeDetailPage({
   const revizeRaw = query.revize
   const openRevise = revizeRaw === '1' || (Array.isArray(revizeRaw) && revizeRaw[0] === '1')
 
+  const canManage = isOrgAdminRole(org.role)
+
   return (
-    <div className="filo-fade-in mx-auto w-full max-w-3xl space-y-3">
+    <div className="wb-wa-page filo-fade-in mx-auto w-full max-w-3xl space-y-3">
       <PageHeader
         title={displayTitle}
         description="Revize edin, varyasyon alın veya kampanyada kullanın."
         backHref="/icerik"
         backLabel="Kütüphane"
-        titleEnd={<CreativeTitleEdit id={creative.id} title={displayTitle} />}
+        titleEnd={
+          <div className="flex items-center gap-0.5">
+            <CreativeTitleEdit id={creative.id} title={displayTitle} />
+            <CreativeMoreMenu
+              creativeId={creative.id}
+              canManage={canManage}
+              publicUrl={creative.status === 'ready' ? creative.publicUrl : null}
+            />
+          </div>
+        }
       />
       <CreativeDetail
         orgId={org.id}
         creative={creative}
         versions={versions}
-        canManage={isOrgAdminRole(org.role)}
+        canManage={canManage}
         openRevise={openRevise}
       />
     </div>

@@ -34,8 +34,13 @@ async function latestMessageId(supabase, orgId, phone) {
   return data?.id ? Number(data.id) : 0
 }
 
+async function loadBlacklistedPhones(supabase, orgId) {
+  const { data } = await supabase.from('blacklist').select('phone_e164').eq('org_id', orgId)
+  return new Set((data ?? []).map((row) => row.phone_e164).filter(Boolean))
+}
+
 async function loadInboxFromPg(supabase, orgId) {
-  const [{ data: recent }, { data: accounts }] = await Promise.all([
+  const [{ data: recent }, { data: accounts }, blocked] = await Promise.all([
     supabase
       .from('message_log')
       .select(
@@ -46,13 +51,14 @@ async function loadInboxFromPg(supabase, orgId) {
       .order('id', { ascending: false })
       .limit(INBOX_LIMIT),
     supabase.from('accounts').select('id, label').eq('org_id', orgId),
+    loadBlacklistedPhones(supabase, orgId),
   ])
 
   const accountLabels = Object.fromEntries((accounts ?? []).map((account) => [account.id, account.label]))
   const outboundPhones = new Set()
   const inboundPhones = new Set()
   for (const row of recent ?? []) {
-    if (!row.phone_e164) continue
+    if (!row.phone_e164 || blocked.has(row.phone_e164)) continue
     if (row.direction === 'out') outboundPhones.add(row.phone_e164)
     if (row.direction === 'in') inboundPhones.add(row.phone_e164)
   }
@@ -61,6 +67,7 @@ async function loadInboxFromPg(supabase, orgId) {
   let maxId = 0
   for (const row of recent ?? []) {
     maxId = Math.max(maxId, Number(row.id) || 0)
+    if (row.phone_e164 && blocked.has(row.phone_e164)) continue
     const phone = row.phone_e164 ?? row.remote_jid ?? `id-${row.id}`
     const pushName = typeof row.push_name === 'string' && row.push_name.trim() ? row.push_name.trim() : null
     const direction = row.direction === 'out' ? 'out' : 'in'
@@ -110,6 +117,18 @@ async function loadInboxFromPg(supabase, orgId) {
 }
 
 async function loadThreadFromPg(supabase, orgId, phone) {
+  if (phone.startsWith('+')) {
+    const { data: blocked } = await supabase
+      .from('blacklist')
+      .select('id')
+      .eq('org_id', orgId)
+      .eq('phone_e164', phone)
+      .maybeSingle()
+    if (blocked) {
+      return { maxId: 0, msgs: [] }
+    }
+  }
+
   let threadQuery = supabase
     .from('message_log')
     .select(

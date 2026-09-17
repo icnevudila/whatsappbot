@@ -67,7 +67,7 @@ export async function loadCreativeWizardData(): Promise<WizardBootstrap> {
         .not('public_url', 'is', null)
         .order('created_at', { ascending: false })
         .limit(40),
-      supabase.from('organizations').select('name, address, about').eq('id', org.id).maybeSingle(),
+      supabase.from('organizations').select('name, address, about, logo_path').eq('id', org.id).maybeSingle(),
     ])
 
   const imagesByProduct = new Map<string, { id: string; url: string }[]>()
@@ -79,11 +79,11 @@ export async function loadCreativeWizardData(): Promise<WizardBootstrap> {
 
   const kits: BrandKitCard[] = []
   for (const kit of kitsRes.data ?? []) {
-    let logoPreview: string | null = null
-    if (kit.logo_path?.startsWith('http')) logoPreview = kit.logo_path
+    let samplePreview: string | null = null
+    if (kit.logo_path?.startsWith('http')) samplePreview = kit.logo_path
     else if (kit.logo_path) {
       const { data } = await supabase.storage.from('brand-assets').createSignedUrl(kit.logo_path, 3600)
-      logoPreview = data?.signedUrl ?? null
+      samplePreview = data?.signedUrl ?? null
     }
     kits.push({
       id: kit.id,
@@ -91,7 +91,7 @@ export async function loadCreativeWizardData(): Promise<WizardBootstrap> {
       tone: kit.tone,
       colors: { ...DEFAULT_COLORS, ...asRecord(kit.colors) },
       fonts: asRecord(kit.fonts),
-      logoPreview,
+      samplePreview,
       isDefault: kit.is_default,
     })
   }
@@ -99,12 +99,22 @@ export async function loadCreativeWizardData(): Promise<WizardBootstrap> {
   const website =
     (socialsRes.data ?? []).find((row) => row.platform === 'website')?.url ?? null
 
+  let logoPreview: string | null = null
+  if (orgRes.data?.logo_path?.startsWith('http')) logoPreview = orgRes.data.logo_path
+  else if (orgRes.data?.logo_path) {
+    const { data } = await supabase.storage
+      .from('brand-assets')
+      .createSignedUrl(orgRes.data.logo_path, 3600)
+    logoPreview = data?.signedUrl ?? null
+  }
+
   return {
     org: {
       name: orgRes.data?.name ?? org.name,
       address: orgRes.data?.address ?? null,
       about: orgRes.data?.about ?? null,
       websiteHint: website,
+      logoPreview,
     },
     kits,
     products: (productsRes.data ?? []).map((product) => ({

@@ -20,6 +20,7 @@ import {
   rangeForPage,
   totalPages,
 } from '@/lib/pagination'
+import { CampaignPreviewButton } from './campaign-preview'
 
 export const metadata: Metadata = { title: 'Kampanyalar' }
 export const dynamic = 'force-dynamic'
@@ -141,7 +142,7 @@ export default async function CampaignsPage({
   const { data: campaignRows } = await supabase
     .from('campaigns')
     .select(
-      'id, name, status, total_targets, sent_count, failed_count, skipped_count, created_at, updated_at, scheduled_at',
+      'id, name, status, body, media_url, total_targets, sent_count, failed_count, skipped_count, created_at, updated_at, scheduled_at',
     )
     .eq('org_id', org.id)
     .order('created_at', { ascending: false })
@@ -208,44 +209,56 @@ export default async function CampaignsPage({
                   className="wb-row-enter"
                   style={{ animationDelay: `${Math.min(index, 12) * 28}ms` }}
                 >
-                  <Link href={`/kampanyalar/${campaign.id}`} className="wb-camp-row">
-                    <span
-                      className="wb-camp-dot"
-                      style={{ background: statusDot(campaign.status) }}
-                      aria-hidden
-                    />
-                    <span className="wb-camp-main">
-                      <span className="wb-camp-top">
+                  <div className="wb-camp-row">
+                    <Link href={`/kampanyalar/${campaign.id}`} className="wb-camp-row-body">
+                      <span
+                        className="wb-camp-dot"
+                        style={{ background: statusDot(campaign.status) }}
+                        aria-hidden
+                      />
+                      <span className="wb-camp-main">
                         <span className="wb-camp-name">{campaign.name}</span>
-                        {scheduledAt ? (
-                          <ScheduledStatusPill at={scheduledAt} />
-                        ) : (
-                          <StatusPill status={campaign.status} />
-                        )}
-                      </span>
-                      <span className="wb-camp-meta">
-                        <span>{when.primary}</span>
-                        {when.secondary ? <span>· {when.secondary}</span> : null}
-                        {campaign.failed_count > 0 ? (
-                          <span className="wb-camp-fail">{campaign.failed_count} hata</span>
-                        ) : null}
-                      </span>
-                      <span className="wb-camp-progress">
-                        <Meter
-                          value={done}
-                          max={Math.max(1, total)}
-                          tone={meterTone(campaign.status, campaign.failed_count)}
-                        />
-                        <span className="wb-camp-count">
-                          {done}/{total || '—'}
-                          {total > 0 ? ` · %${pct}` : ''}
+                        <span className="wb-camp-meta">
+                          <span>{when.primary}</span>
+                          {when.secondary ? <span>· {when.secondary}</span> : null}
+                          {campaign.failed_count > 0 ? (
+                            <span className="wb-camp-fail">{campaign.failed_count} hata</span>
+                          ) : null}
+                        </span>
+                        <span className="wb-camp-progress">
+                          <Meter
+                            value={done}
+                            max={Math.max(1, total)}
+                            tone={meterTone(campaign.status, campaign.failed_count)}
+                          />
+                          <span className="wb-camp-count">
+                            {done}/{total || '—'}
+                            {total > 0 ? ` · %${pct}` : ''}
+                          </span>
                         </span>
                       </span>
+                    </Link>
+                    <span className="wb-camp-top-end">
+                      {scheduledAt ? (
+                        <ScheduledStatusPill at={scheduledAt} />
+                      ) : (
+                        <StatusPill status={campaign.status} />
+                      )}
+                      <CampaignPreviewButton
+                        name={campaign.name}
+                        body={campaign.body}
+                        mediaUrl={campaign.media_url}
+                      />
                     </span>
-                    <span className="wb-wa-set-chevron" aria-hidden>
+                    <Link
+                      href={`/kampanyalar/${campaign.id}`}
+                      className="wb-wa-set-chevron"
+                      tabIndex={-1}
+                      aria-hidden
+                    >
                       ›
-                    </span>
-                  </Link>
+                    </Link>
+                  </div>
                 </li>
               )
             })}

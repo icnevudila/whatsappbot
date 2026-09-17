@@ -712,16 +712,16 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
                         selected ? ' is-on' : ''
                       }${locked ? ' is-fixed' : ''}`}
                     >
-                      {kit.logoPreview ? (
+                      {kit.samplePreview ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
-                          src={kit.logoPreview}
+                          src={kit.samplePreview}
                           alt=""
                           className="size-12 rounded-md border border-hairline bg-canvas object-contain"
                         />
                       ) : (
                         <span className="flex size-12 items-center justify-center rounded-md border border-hairline bg-canvas text-[11px] text-ink-faint">
-                          Logo
+                          Kit
                         </span>
                       )}
                       <span className="min-w-0">
@@ -747,16 +747,30 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
                     </button>
                   )
                 })}
-                {selectedKit?.logoPreview ? (
-                  <label className="flex items-center gap-2 text-[13px]">
+                {data.org.logoPreview ? (
+                  <label className="flex items-center gap-2.5 text-[13px]">
                     <input
                       type="checkbox"
                       checked={draft.useLogo}
                       onChange={(event) => patch({ useLogo: event.target.checked })}
                     />
-                    Logoyu görsele ekle
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={data.org.logoPreview}
+                      alt=""
+                      className="size-8 shrink-0 rounded-md border border-hairline bg-canvas object-contain"
+                    />
+                    <span>İşletme logosunu görsele ekle</span>
                   </label>
-                ) : null}
+                ) : (
+                  <p className="text-[12.5px] text-ink-muted">
+                    Logo eklemek için{' '}
+                    <Link href="/ayarlar/marka" className="underline">
+                      Marka kitleri
+                    </Link>{' '}
+                    sayfasından işletme logosu yükleyin.
+                  </p>
+                )}
               </div>
             )}
           </Field>

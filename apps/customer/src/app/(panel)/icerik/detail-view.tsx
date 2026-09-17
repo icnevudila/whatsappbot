@@ -19,7 +19,7 @@ import {
 } from './actions'
 
 const DETAIL_STAGES = [
-  { at: 0, label: 'Marka kiti ve renk paleti analiz ediliyor…', detail: 'Kurumsal kimlik ve tasarım tonu parametreleri hazırlanıyor' },
+  { at: 0, label: 'Renk paleti ve tasarım tonu hazırlanıyor…', detail: 'Kampanya stili ve görsel dil parametreleri ayarlanıyor' },
   { at: 10, label: 'Görsel kompozisyonu ve ürün hatları taranıyor…', detail: 'Odak ürün ambalaj formu ve tasarım çizgileri optimize ediliyor' },
   { at: 25, label: 'Kampanya konsepti ve tipografi kurgulanıyor…', detail: 'Metin hiyerarşisi ve dikkat çekici görsel yerleşim tasarlanıyor' },
   { at: 46, label: 'Yüksek çözünürlüklü sahne render ediliyor…', detail: 'Stüdyo aydınlatması, gölgeler ve arka plan detayları işleniyor' },
@@ -58,6 +58,108 @@ export type VersionRow = {
   generationType: string
   createdAt: string
   publicUrl: string | null
+}
+
+export function CreativeMoreMenu({
+  creativeId,
+  canManage,
+  publicUrl,
+}: {
+  creativeId: string
+  canManage: boolean
+  publicUrl?: string | null
+}) {
+  const router = useRouter()
+  const toast = useToast()
+  const confirm = useConfirm()
+  const [open, setOpen] = useState(false)
+  const [pending, startTransition] = useTransition()
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onDoc = (event: MouseEvent) => {
+      if (event.target instanceof Node && !menuRef.current?.contains(event.target)) setOpen(false)
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDoc)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  if (!canManage && !publicUrl) return null
+
+  const removeCreative = () => {
+    void (async () => {
+      const ok = await confirm({
+        title: 'Görseli sil',
+        confirmLabel: 'Sil',
+        tone: 'danger',
+      })
+      if (!ok) return
+      startTransition(() => {
+        void deleteCreative(creativeId).then((result) => {
+          if (result?.error) toast(result.error, 'danger')
+          else router.push('/icerik')
+        })
+      })
+    })()
+  }
+
+  return (
+    <div className="relative shrink-0" ref={menuRef}>
+      <button
+        type="button"
+        aria-label="Daha fazla"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        disabled={pending}
+        onClick={() => setOpen((value) => !value)}
+        className="wb-wa-icon-btn inline-flex size-8 items-center justify-center"
+      >
+        <Icon name="ellipsis" className="size-4" />
+      </button>
+      {open ? (
+        <div
+          role="menu"
+          className="absolute right-0 z-30 mt-1 min-w-[11.5rem] rounded-md border border-hairline bg-surface p-1 shadow-[var(--shadow-md)]"
+        >
+          {publicUrl ? (
+            <a
+              role="menuitem"
+              href={publicUrl}
+              download=""
+              className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-left text-[13px] font-medium text-ink hover:bg-canvas"
+              onClick={() => setOpen(false)}
+            >
+              <Icon name="download" className="size-4 text-ink-muted" />
+              İndir
+            </a>
+          ) : null}
+          {canManage ? (
+            <button
+              type="button"
+              role="menuitem"
+              disabled={pending}
+              className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-left text-[13px] font-medium text-danger hover:bg-canvas disabled:opacity-50"
+              onClick={() => {
+                setOpen(false)
+                removeCreative()
+              }}
+            >
+              <Icon name="trash" className="size-4" />
+              Sil
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  )
 }
 
 export function CreativeTitleEdit({ id, title }: { id: string; title: string }) {
@@ -188,8 +290,6 @@ export function CreativeDetail({
   openRevise?: boolean
 }) {
   const router = useRouter()
-  const toast = useToast()
-  const confirm = useConfirm()
   const [instruction, setInstruction] = useState('')
   const [reviseOpen, setReviseOpen] = useState(Boolean(openRevise))
   const [lightboxOpen, setLightboxOpen] = useState(false)
@@ -271,23 +371,6 @@ export function CreativeDetail({
     })
   }
 
-  const removeCreative = () => {
-    void (async () => {
-      const ok = await confirm({
-        title: 'Görseli sil',
-        confirmLabel: 'Sil',
-        tone: 'danger',
-      })
-      if (!ok) return
-      startTransition(() => {
-        void deleteCreative(creative.id).then((result) => {
-          if (result?.error) toast(result.error, 'danger')
-          else router.push('/icerik')
-        })
-      })
-    })()
-  }
-
   const retryNow = () => {
     setLocalError(null)
     setBusyRender(true)
@@ -335,7 +418,12 @@ export function CreativeDetail({
             detail={`${currentStage.detail} · ${remainingText}`}
           >
             <div className="wb-craft-action">
-              <AccentLink href="/icerik">Arka planda devam et</AccentLink>
+              <AccentLink
+                href="/icerik"
+                className="!h-9 !rounded-full !border-0 !bg-[#00a884] !px-4 !text-[13.5px] !text-white !shadow-none hover:!bg-[#008069]"
+              >
+                Arka planda devam et
+              </AccentLink>
             </div>
           </CreativeGenerating>
         </div>
@@ -349,7 +437,7 @@ export function CreativeDetail({
             <Button
               type="button"
               variant="accent"
-              className="mt-3"
+              className="wb-wa-submit mt-3"
               disabled={pending || busyRender}
               onClick={retryNow}
             >
@@ -375,12 +463,7 @@ export function CreativeDetail({
               className="w-full rounded-[var(--radius-card)] object-contain"
             />
           </button>
-          <DetailImageMenu
-            publicUrl={creative.publicUrl}
-            pending={pending}
-            canManage={canManage}
-            onDelete={removeCreative}
-          />
+          <DetailImageMenu publicUrl={creative.publicUrl} />
           <ImageLightbox
             open={lightboxOpen}
             src={creative.publicUrl}
@@ -396,7 +479,7 @@ export function CreativeDetail({
             <Button
               type="button"
               variant="quiet"
-              className="w-full"
+              className="w-full !rounded-full"
               onClick={() => setReviseOpen(true)}
             >
               <Icon name="sparkles" className="size-4" />
@@ -405,22 +488,16 @@ export function CreativeDetail({
           ) : null}
           <AccentLink
             href={`/kampanyalar/yeni?gorsel=${encodeURIComponent(creative.publicUrl)}`}
-            className="w-full"
+            className="w-full !rounded-full !border-0 !bg-[#00a884] !text-white !shadow-none hover:!bg-[#008069]"
           >
             <Icon name="campaign" className="size-4" />
             Kampanyada kullan
           </AccentLink>
         </div>
-      ) : canManage ? (
-        <Button type="button" variant="danger" disabled={pending} onClick={removeCreative}>
-          <Icon name="trash" className="size-4" />
-          Sil
-        </Button>
       ) : null}
 
       <p className="text-[12.5px] text-ink-muted">
         {new Date(creative.createdAt).toLocaleString('tr-TR')} · {creative.format}
-        {creative.brandName ? ` · ${creative.brandName}` : ''}
         {creative.provider ? ` · ${creative.provider}` : ''}
         {creative.generationType ? ` · ${creative.generationType}` : ''}
       </p>
@@ -616,17 +693,7 @@ function ImageLightbox({
   )
 }
 
-function DetailImageMenu({
-  publicUrl,
-  pending,
-  canManage,
-  onDelete,
-}: {
-  publicUrl: string
-  pending: boolean
-  canManage: boolean
-  onDelete: () => void
-}) {
+function DetailImageMenu({ publicUrl }: { publicUrl: string }) {
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -653,7 +720,6 @@ function DetailImageMenu({
         aria-label="Görsel işlemleri"
         aria-haspopup="menu"
         aria-expanded={open}
-        disabled={pending}
         onClick={() => setOpen((value) => !value)}
         className="inline-flex size-8 items-center justify-center rounded-full border border-hairline bg-surface/95 text-ink shadow-sm backdrop-blur-sm hover:bg-surface"
       >
@@ -674,21 +740,6 @@ function DetailImageMenu({
             <Icon name="download" className="size-4 text-ink-muted" />
             İndir
           </a>
-          {canManage ? (
-            <button
-              type="button"
-              role="menuitem"
-              disabled={pending}
-              className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-left text-[13px] font-medium text-danger hover:bg-canvas disabled:opacity-50"
-              onClick={() => {
-                setOpen(false)
-                onDelete()
-              }}
-            >
-              <Icon name="trash" className="size-4" />
-              Sil
-            </button>
-          ) : null}
         </div>
       ) : null}
     </div>
@@ -750,7 +801,7 @@ function ReviseModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="wb-modal-panel"
+        className="wb-modal-panel wb-wa-modal"
       >
         <div className="flex items-center justify-between">
           <h2 id={titleId} className="wb-modal-title">
@@ -792,7 +843,7 @@ function ReviseModal({
               rows={4}
               value={instruction}
               onChange={(event) => onInstruction(event.target.value)}
-              placeholder="Alttaki fiyatları kaldır. Logoyu sağ üste taşı. Arka planı daha açık yap."
+              placeholder="Marka adını Ayvazoğlu İnşaat yap. Fiyatı 10 TL yaz, yanına sınırlı sayıda ekle. Hemen iletişime geçin yazısını koy."
               autoFocus
             />
           </Field>
@@ -804,6 +855,7 @@ function ReviseModal({
             <Button
               type="submit"
               variant="accent"
+              className="wb-wa-submit"
               disabled={pending || instruction.trim().length < 4}
             >
               <Icon name="sparkles" className="size-4" />
