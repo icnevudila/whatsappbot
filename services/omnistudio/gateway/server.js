@@ -603,10 +603,21 @@ const server = http.createServer(async (req, res) => {
           thumbnailUrl: result.thumbnailUrl,
           duration: result.duration,
           aspect: result.aspect,
+          accountPort: result.port,
         });
       } catch (err) {
         console.error('[Gateway Video Hata]', err);
         return sendJson(res, 500, { error: { message: err.message, type: 'video_generation_error' } });
+      }
+    }
+
+    // 1.0.1. Video Hesap Havuzu Durumu: GET /v1/videos/accounts
+    if (method === 'GET' && (pathname === '/v1/videos/accounts' || pathname === '/videos/accounts')) {
+      try {
+        const { getAccountPoolStatus } = require('./generate_video.js');
+        return sendJson(res, 200, { accounts: getAccountPoolStatus() });
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
       }
     }
 
@@ -632,7 +643,7 @@ const server = http.createServer(async (req, res) => {
       });
 
       console.log(`[Gateway] Yeni mesaj öneri talebi alındı: [Firma: ${customer}] "${incomingMessage.slice(0, 60)}..."`);
-      const finished = await queue.waitForJob(job.id, 45000);
+      const finished = await queue.waitForJob(job.id, 65000);
       if (finished.status === 'completed' && finished.result) {
         return sendJson(res, 200, {
           success: true,

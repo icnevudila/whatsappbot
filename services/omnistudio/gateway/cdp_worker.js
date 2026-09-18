@@ -625,6 +625,13 @@ Yanıtını aşağıdaki gibi geçerli bir JSON olarak ver:
   ]
 }`;
 
+    // Mevcut asistan mesajlarının sayısını al (yeni yanıtı eskisinden ayırt etmek için)
+    const countEval = await cdp.send('Runtime.evaluate', {
+      expression: 'document.querySelectorAll(\'[data-message-author-role="assistant"]\').length',
+      returnByValue: true
+    });
+    const prevAssistantCount = countEval.result?.value || 0;
+
     // 3. Prompt'u ChatGPT'ye enjekte et ve gönder
     const injectEval = await cdp.send('Runtime.evaluate', {
       expression: `
@@ -663,32 +670,39 @@ Yanıtını aşağıdaki gibi geçerli bir JSON olarak ver:
       throw new Error(injectEval.result?.value?.error || 'ChatGPT input kutusu bulunamadı');
     }
 
-    console.log(`[CDP Worker: ${WORKER_ID}] [Mesajlar] Prompt gönderildi, yanıt bekleniyor...`);
+    console.log(`[CDP Worker: ${WORKER_ID}] [Mesajlar] Prompt gönderildi, yanıt bekleniyor... (Önceki mesaj sayısı: ${prevAssistantCount})`);
     await sleep(2500);
 
-    // 4. Metin yanıtının tamamlanmasını bekle (Maksimum 45 saniye)
+    // 4. Yeni metin yanıtının tamamlanmasını bekle (Maksimum 60 saniye)
     let lastText = '';
     let stableCount = 0;
-    const maxWait = 32; // 32 * 1.5s = ~48s
+    const maxWait = 40; // 40 * 1.5s = ~60s
     for (let i = 0; i < maxWait; i++) {
       await sleep(1500);
       const textEval = await cdp.send('Runtime.evaluate', {
         expression: `
           (() => {
-            const stopBtn = document.querySelector('button[data-testid*="stop"], button[aria-label*="Stop"], button[aria-label*="durdur"], button[aria-label*="Durdur"]');
             const articles = Array.from(document.querySelectorAll('[data-message-author-role="assistant"]'));
+            if (articles.length <= ${prevAssistantCount}) {
+              return { hasNewMsg: false, isGenerating: true, text: '' };
+            }
             const lastMsg = articles.pop();
             const text = lastMsg ? (lastMsg.innerText || '').trim() : '';
+            const stopBtn = document.querySelector('button[data-testid*="stop"], button[aria-label*="Stop"], button[aria-label*="durdur"], button[aria-label*="Durdur"]');
             const isMsgStreaming = lastMsg ? !!lastMsg.querySelector('.streaming-animation, [data-is-streaming="true"]') : false;
             const isGenerating = !!stopBtn || isMsgStreaming;
 
-            return { isGenerating, text };
+            return { hasNewMsg: true, isGenerating, text };
           })()
         `,
         returnByValue: true
       });
 
       const res = textEval.result?.value;
+      if (!res?.hasNewMsg) {
+        continue;
+      }
+
       const currentText = (res && res.text) ? res.text : '';
       if (currentText && currentText === lastText) {
         stableCount++;
@@ -699,12 +713,12 @@ Yanıtını aşağıdaki gibi geçerli bir JSON olarak ver:
 
       const hasCompleteJson = lastText.includes('{') && lastText.includes('}') && lastText.includes('suggestions') && (lastText.endsWith('}') || lastText.endsWith('```'));
 
-      if ((stableCount >= 2 && lastText.length > 20) || (hasCompleteJson && stableCount >= 1)) {
+      if ((!res?.isGenerating && stableCount >= 3 && lastText.length > 50) || (hasCompleteJson && stableCount >= 1)) {
         break;
       }
     }
 
-    if (!lastText) {
+    if (!lastText || lastText.length < 15) {
       throw new Error('ChatGPT yanıt üretemedi veya boş döndü');
     }
 
@@ -724,7 +738,7 @@ Yanıtını aşağıdaki gibi geçerli bir JSON olarak ver:
       }
       const parsed = JSON.parse(clean);
       if (Array.isArray(parsed.suggestions) && parsed.suggestions.length > 0) {
-        parsedSuggestions = parsed.suggestions.filter((s) => s && typeof s.text === 'string' && s.text.trim().length > 0);
+        parsedSuggestions = parsed.suggestions.filter((s) => s && typeof s.text === 'string' && s.text.trim().length > 5);
       }
     } catch (parseErr) {
       console.warn(`[CDP Worker: ${WORKER_ID}] JSON ayrıştırma uyarısı:`, parseErr.message);
@@ -739,7 +753,7 @@ Yanıtını aşağıdaki gibi geçerli bir JSON olarak ver:
         if (match && match[3]) {
           const label = match[2].replace(/[\"\'\:\*]/g, '').trim();
           const text = match[3].replace(/^[\"\']|[\"\']$/g, '').trim();
-          if (text.length > 5 && !text.includes('suggestions')) {
+          if (text.length > 10 && !text.includes('suggestions')) {
             extracted.push({ label: label.slice(0, 20) || 'Öneri', text });
           }
         }
@@ -749,11 +763,13 @@ Yanıtını aşağıdaki gibi geçerli bir JSON olarak ver:
       }
     }
 
-    if (parsedSuggestions.length === 0 && lastText.length > 10) {
+    if (parsedSuggestions.length === 0 && lastText.length > 30) {
       const cleanFallback = lastText.replace(/[\{\}\[\]\"\'\`]/g, ' ').replace(/\s+/g, ' ').trim();
-      parsedSuggestions = [
-        { label: 'Kısa & Net', text: cleanFallback.slice(0, 250) }
-      ];
+      if (cleanFallback.length > 25 && !cleanFallback.startsWith('suggestions')) {
+        parsedSuggestions = [
+          { label: 'Kısa & Net', text: cleanFallback.slice(0, 250) }
+        ];
+      }
     }
 
     console.log(`[CDP Worker: ${WORKER_ID}] [Mesajlar] ${parsedSuggestions.length} öneri başarıyla üretildi.`);
