@@ -607,6 +607,18 @@ export function ReplyForm({
           </button>
           <button
             type="button"
+            onClick={sendBusinessLocation}
+            disabled={uploading || isRecording}
+            className="wb-ai-suggest-btn text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
+            title="İşletme Konumunu Gönder (Mamak, Ankara)"
+          >
+            <Icon name="location" className="size-3.5" />
+            <span className="hidden sm:inline text-[11.5px] font-semibold">
+              Konum Gönder
+            </span>
+          </button>
+          <button
+            type="button"
             onClick={() => {
               if (showSuggestions) {
                 setShowSuggestions(false)
