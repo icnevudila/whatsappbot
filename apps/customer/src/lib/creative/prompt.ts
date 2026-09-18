@@ -154,33 +154,19 @@ export function buildVideoPrompt(snapshot: CreativeSnapshot): {
   const productName = mainProduct?.name || 'Ürün'
   const productDesc = mainProduct?.description || snapshot.brief || 'Ticari ürün'
 
-  const descLower = `${productName} ${productDesc} ${snapshot.brief}`.toLowerCase()
-  let setting = 'modern, aydınlık ve profesyonel bir ticari çekim ortamı'
-  let act1 = `Kameranın aşırı yakın plan makro (100mm macro lens) odaklanması. ${productName} yüzeyindeki doğal malzeme dokusu, birinci sınıf işçilik ve kusursuz detaylar. Sinematik sığ alan derinliği (f/1.8), zarif ışık kırılmaları.`
-  let act2 = `Kamera akıcı gimbal hareketiyle ${productName} kullanım ve uygulama anını yakalıyor. Doğal gün ışığında 120fps ağır çekim sinematik hareketler.`
-  let act3 = `Kamera geriye doğru açılarak sahneyi geniş açıdan kahraman (hero) planında yakalıyor. 4K reklam filmi estetiği, Arri Alexa sinema renk tonları, kusursuz fotogerçekçi canlı çekim.`
-
-  if (descLower.includes('tuğla') || descLower.includes('inşaat') || descLower.includes('yapı') || descLower.includes('harç') || descLower.includes('çimento')) {
-    setting = 'modern bir mimari proje, estetik inşaat alanı ve güneşli açık hava şantiyesi'
-    act1 = `Kamera tuğlaların fırınlanmış doğal killi pürüzsüz dokusuna, nizami dizilimine ve sağlam yapısına aşırı yakın makro planla odaklanıyor. Sinematik gün batımı ışığı tuğla yüzeyinde sıcak gölgeler oluşturuyor.`
-    act2 = `Kamera akıcı gimbal kaymasıyla ustalıkla örülen modern ve kusursuz bir duvar yapısına, tuğlaların dayanıklı ve estetik mimari uyumuna geçiyor.`
-    act3 = `Kamera geriye doğru yükselerek tamamlanmış şık, modern bir mimari yapıyı ve güven veren sağlam tuğla mimarisini geniş açıdan yakalıyor. Üst düzey reklam ajansı renk paleti.`
-  } else if (descLower.includes('pompa') || descLower.includes('tarım') || descLower.includes('ilaç') || descLower.includes('bahçe') || descLower.includes('traktör')) {
-    setting = 'bereketli yeşil meyve bahçesi ve altın sarısı tarla'
-    act1 = `Kamera ürünün endüstriyel gövdesine ve kaliteli malzeme detaylarına aşırı yakın makro planla odaklanıyor.`
-    act2 = `Kamera ürünü tarlada kullanan çiftçinin akıcı hareketlerini, havaya yayılan mikro su sisini altın saat ışığında 120fps ağır çekimde yakalıyor.`
-    act3 = `Kamera geriye açılarak bereketli yemyeşil doğayı ve ürünün performansını geniş açıdan gösteriyor.`
-  }
-
   const prompt = [
     `9:16 dikey formatta profesyonel televizyon ve sosyal medya reklam filmi (Instagram Reels & WhatsApp Durum).`,
-    `Konu: ${productName}. Ortam: ${setting}.`,
-    `SAHNE 1 (0-3sn): ${act1}`,
-    `SAHNE 2 (3-7sn): ${act2}`,
-    `SAHNE 3 (7-10sn): ${act3}`,
+    `Ürün ve Konu: ${productName}.`,
+    productDesc ? `Ürün Detayları: ${productDesc}.` : null,
+    snapshot.brief ? `Reklam Senaryosu: ${snapshot.brief}.` : null,
+    `SAHNE 1 (0-3sn - MAKRO BAŞLANGIÇ): Kameranın aşırı yakın plan makro (100mm macro lens) odaklanması. ${productName} yüzeyindeki doğal malzeme dokusu, birinci sınıf işçilik ve kusursuz detaylar. Sinematik sığ alan derinliği (f/1.8), zarif ışık kırılmaları.`,
+    `SAHNE 2 (3-7sn - DİNAMİK KULLANIM): Kamera akıcı gimbal hareketiyle ${productName} ürününün gerçek ortamındaki işlevini, kalitesini ve profesyonel uygulamasını yakalıyor. Doğal gün ışığında 120fps sinematik hareketler.`,
+    `SAHNE 3 (7-10sn - KAHRAMAN KAPANIŞ): Kamera geriye doğru açılarak sahneyi geniş açıdan kahraman (hero) planında yakalıyor. 4K reklam ajansı estetiği, Arri Alexa sinema renk tonları, kusursuz fotogerçekçi canlı çekim.`,
     `ÖNEMLİ KURAL: Videoda KESİNLİKLE hiçbir yazı, metin, altyazı, logo kartı, bilgi kutusu veya grafik overlay OLMAYACAKTIR. Ekranda sadece %100 saf, temiz ve sinematik canlı çekim video görüntüsü olacaktır. Tam ekran temiz sinema karesi.`,
     `STRICT RULE: NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO SUBTITLES, NO CAPTIONS, NO ON-SCREEN TEXT, NO LOGO CARDS, NO GRAPHIC OVERLAYS, NO BANNERS, NO LOWER THIRDS. Pure clean cinematic live-action commercial footage only.`,
-  ].join(' ')
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   const negative =
     'text, words, letters, typography, watermark, logo overlay, graphic box, lower third, subtitles, captions, banner, card, cartoon, 3D animation look, deformed hands, blurry artifacts'

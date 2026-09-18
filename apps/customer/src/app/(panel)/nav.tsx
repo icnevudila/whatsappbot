@@ -8,7 +8,6 @@ import { prefetchSettingsRoutes } from './ayarlar/settings-prefetch'
 const ITEMS = [
   { href: '/ozet', label: 'Ana sayfa' },
   { href: '/kampanyalar', label: 'Kampanyalar' },
-  { href: '/icerik', label: 'İçerik Stüdyosu' },
   { href: '/kisiler', label: 'Kişiler' },
   { href: '/mesajlar', label: 'Mesajlar' },
   { href: '/ayarlar', label: 'Ayarlar' },
