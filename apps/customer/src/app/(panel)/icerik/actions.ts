@@ -17,6 +17,11 @@ import { collectImageFiles, readImageFile } from '@/app/(panel)/ayarlar/upload-i
 import { isOrgAdminRole, requireActiveOrg } from '@/lib/org'
 import { DEFAULT_INCLUDE, formatFromId, type ProductCard, type SocialOption } from './wizard-types'
 import { LIBRARY_PAGE_SIZE, type LibraryCreativeRow } from './library-shared'
+import {
+  generateVideoScenarios,
+  type VideoScenarioOption,
+  type VideoScenarioContext,
+} from '@/lib/creative/video-scenario'
 
 export type CreativeActionState = { error?: string; ok?: string; id?: string } | null
 
@@ -334,6 +339,8 @@ export async function startCreativeGeneration(
     instruction: String(draft.instruction ?? '').trim() || null,
     variationPreset: String(draft.variationPreset ?? '').trim() || null,
     videoSpeech: draft.videoSpeech !== false && draft.videoSpeech !== '0',
+    videoScenarioPrompt: String(draft.videoScenarioPrompt ?? '').trim() || null,
+    videoScenarioTitle: String(draft.videoScenarioTitle ?? '').trim() || null,
     title,
     requestKey: requestKey || undefined,
     cost: { imageCount: 1 },
@@ -706,5 +713,66 @@ export async function quickCreateSocialAccount(
       label: data.label,
       url: data.url,
     },
+  }
+}
+
+export async function fetchVideoScenariosAction(
+  draft: Record<string, unknown>,
+): Promise<{
+  ok: boolean
+  scenarios?: VideoScenarioOption[]
+  error?: string
+}> {
+  try {
+    const { org, supabase } = await requireActiveOrg()
+    const { data: orgData } = await supabase
+      .from('organizations')
+      .select('name, about')
+      .eq('id', org.id)
+      .maybeSingle()
+
+    const productIds = parseIds(draft.productIds)
+    const products: VideoScenarioContext['products'] = []
+    if (productIds.length > 0) {
+      const { data: productRows } = await supabase
+        .from('org_products')
+        .select('id, name')
+        .eq('org_id', org.id)
+        .in('id', productIds)
+
+      const extras = (draft.productExtras ?? {}) as Record<
+        string,
+        { price?: string; promo?: string; extra?: string }
+      >
+
+      for (const row of productRows ?? []) {
+        const extra = extras[row.id] ?? {}
+        products.push({
+          name: row.name,
+          price: extra.price,
+          promo: extra.promo,
+          extra: extra.extra,
+        })
+      }
+    }
+
+    const scenarios = await generateVideoScenarios({
+      brandName: orgData?.name || 'Mesajify',
+      about: orgData?.about,
+      brief: String(draft.brief ?? '').trim() || 'WhatsApp ile dijital broşür ve kampanya siparişleri',
+      customText: String(draft.customText ?? '').trim() || null,
+      dateRange: String(draft.dateRange ?? '').trim() || null,
+      cta: String(draft.cta ?? '').trim() || null,
+      videoSpeech: draft.videoSpeech !== false && draft.videoSpeech !== '0',
+      products,
+    })
+
+    return { ok: true, scenarios }
+  } catch (err) {
+    console.error('[fetchVideoScenariosAction]', err)
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : 'Senaryo üretilemedi.',
+    }
   }
 }

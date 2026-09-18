@@ -15,7 +15,13 @@ import {
   TEXT_DENSITIES,
   type ProductFieldKey,
 } from '@/lib/creative/types'
-import { startCreativeGeneration, uploadLibraryImage, type CreativeActionState } from './actions'
+import {
+  fetchVideoScenariosAction,
+  startCreativeGeneration,
+  uploadLibraryImage,
+  type CreativeActionState,
+} from './actions'
+import type { VideoScenarioOption } from '@/lib/creative/video-scenario'
 import { DEFAULT_INCLUDE, type ProductCard, type SocialOption, type WizardBootstrap } from './wizard-types'
 import { AddProductModal } from './add-product-modal'
 import { AddSocialModal } from './add-social-modal'
@@ -63,6 +69,8 @@ type Draft = {
   style: string
   textDensity: string
   videoSpeech?: boolean
+  videoScenarioPrompt?: string
+  videoScenarioTitle?: string
 }
 
 function newKey() {
@@ -102,6 +110,8 @@ function defaultDraft(data: WizardBootstrap): Draft {
     style: 'auto',
     textDensity: 'balanced',
     videoSpeech: true,
+    videoScenarioPrompt: '',
+    videoScenarioTitle: '',
   }
 }
 
@@ -121,6 +131,48 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
   const isVideo = draft.formatId === 'reels_video'
   const isImageToImage = Boolean(draft.baseCreativeId) || draft.productIds.length > 0
   useCreativeGenerationProgress(pending, isImageToImage, isVideo)
+
+  const [scenarios, setScenarios] = useState<VideoScenarioOption[]>([])
+  const [scenariosLoading, setScenariosLoading] = useState(false)
+  const [scenarioStage, setScenarioStage] = useState(0)
+  const [expandedPromptId, setExpandedPromptId] = useState<string | null>(null)
+
+  const SCENARIO_STAGES = [
+    { title: '1. Bağlam Analizi', desc: 'İşletme kimliği, ürünler ve kampanya hedefleri inceleniyor...' },
+    { title: '2. ChatGPT Senaryo Masası', desc: '3 farklı dikkat çekici reklam filmi senaryosu yazılıyor...' },
+    { title: '3. Kamera & Dış Ses Kurgusu', desc: '9:16 kamera hareketleri, sahne geçişleri ve diyaloglar kurgulanıyor...' },
+    { title: '4. Senaryolar Hazırlandı!', desc: 'Seçebileceğiniz 3 özel reklam senaryosu hazır.' },
+  ]
+
+  const handleGenerateScenarios = async () => {
+    setScenariosLoading(true)
+    setScenarioStage(0)
+
+    const timer1 = setTimeout(() => setScenarioStage(1), 900)
+    const timer2 = setTimeout(() => setScenarioStage(2), 2100)
+
+    try {
+      const res = await fetchVideoScenariosAction(draft as unknown as Record<string, unknown>)
+      clearTimeout(timer1)
+      clearTimeout(timer2)
+      setScenarioStage(3)
+      await new Promise((r) => setTimeout(r, 500))
+
+      if (res.ok && res.scenarios?.length) {
+        setScenarios(res.scenarios)
+        if (!draft.videoScenarioPrompt || !res.scenarios.some((s) => s.fullPrompt === draft.videoScenarioPrompt)) {
+          patch({
+            videoScenarioPrompt: res.scenarios[0].fullPrompt,
+            videoScenarioTitle: res.scenarios[0].title,
+          })
+        }
+      }
+    } catch (err) {
+      console.error('Senaryo üretilirken hata:', err)
+    } finally {
+      setScenariosLoading(false)
+    }
+  }
 
   useEffect(() => {
     if (!pending) return
@@ -803,7 +855,8 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
             </div>
           </Field>
           {isVideo ? (
-            <Field label="Video seslendirme ve ses kurgusu">
+            <>
+              <Field label="Video seslendirme ve ses kurgusu">
               <div className="grid gap-2 sm:grid-cols-2">
                 <button
                   type="button"
@@ -833,6 +886,187 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
                 </button>
               </div>
             </Field>
+
+            <Field
+              label="Reklam filmi senaryosu & yönetmen kurgusu"
+              hint="ChatGPT işletmeniz ve ürünleriniz için 3 farklı dikkat çekici reklam senaryosu hazırlar."
+            >
+              <div className="space-y-3">
+                {scenarios.length === 0 && !scenariosLoading ? (
+                  <div className="rounded-xl border border-dashed border-[#00a884]/40 bg-[#e7f8f2]/30 p-4 text-center">
+                    <div className="mx-auto flex size-10 items-center justify-center rounded-full bg-[#00a884]/15 text-[#008069]">
+                      <Icon name="sparkles" className="size-5" />
+                    </div>
+                    <h4 className="mt-2 text-[14px] font-semibold text-[#111b21]">
+                      ChatGPT Reklam Senaryoları Hazırla
+                    </h4>
+                    <p className="mt-1 text-[12.5px] text-[#667781]">
+                      Marka ve ürün bağlamınızdan 3 farklı video senaryosu ve Veo çekim promptu oluşturun.
+                    </p>
+                    <Button
+                      type="button"
+                      className="wb-wa-submit mx-auto mt-3 h-9 gap-2 px-4 text-[13px]"
+                      onClick={handleGenerateScenarios}
+                    >
+                      <Icon name="sparkles" className="size-4" />
+                      ChatGPT ile Senaryoları Üret
+                    </Button>
+                  </div>
+                ) : null}
+
+                {scenariosLoading ? (
+                  <div className="rounded-xl border border-[#00a884]/30 bg-[#f0fbf7] p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[12px] font-bold uppercase tracking-wider text-[#008069]">
+                        Yapay Zeka Yönetmen Sihirbazı
+                      </span>
+                      <span className="text-[12px] font-medium text-[#008069]">
+                        Adım {Math.min(scenarioStage + 1, 4)} / 4
+                      </span>
+                    </div>
+
+                    {/* Dynamic Progress Bar */}
+                    <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[#008069]/15">
+                      <div
+                        className="h-full bg-[#008069] transition-all duration-500 ease-out"
+                        style={{ width: `${((scenarioStage + 1) / 4) * 100}%` }}
+                      />
+                    </div>
+
+                    {/* Stages List */}
+                    <div className="mt-3 space-y-2">
+                      {SCENARIO_STAGES.map((st, idx) => {
+                        const isPast = scenarioStage > idx
+                        const isCurrent = scenarioStage === idx
+                        return (
+                          <div
+                            key={st.title}
+                            className={`flex items-start gap-2.5 rounded-lg p-2 transition-all ${
+                              isCurrent
+                                ? 'bg-white shadow-xs border border-[#00a884]/20'
+                                : isPast
+                                ? 'opacity-85'
+                                : 'opacity-40'
+                            }`}
+                          >
+                            <div
+                              className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
+                                isPast
+                                  ? 'bg-[#008069] text-white'
+                                  : isCurrent
+                                  ? 'bg-[#00a884] text-white animate-pulse'
+                                  : 'bg-gray-200 text-gray-500'
+                              }`}
+                            >
+                              {isPast ? '✓' : idx + 1}
+                            </div>
+                            <div className="min-w-0">
+                              <p className={`text-[12.5px] font-semibold ${isCurrent ? 'text-[#008069]' : 'text-[#111b21]'}`}>
+                                {st.title}
+                              </p>
+                              <p className="text-[11.5px] text-[#667781]">{st.desc}</p>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+
+                {scenarios.length > 0 && !scenariosLoading ? (
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[12px] font-semibold text-[#667781]">
+                        Hangi senaryoyu tercih edersiniz?
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleGenerateScenarios}
+                        className="flex items-center gap-1 text-[11.5px] font-medium text-[#008069] hover:underline"
+                      >
+                        <Icon name="refresh" className="size-3" />
+                        Farklı Senaryolar Üret
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      {scenarios.map((sc) => {
+                        const isSelected = draft.videoScenarioPrompt === sc.fullPrompt
+                        const isExpanded = expandedPromptId === sc.id
+                        return (
+                          <div
+                            key={sc.id}
+                            className={`relative rounded-xl border p-3.5 transition-all cursor-pointer ${
+                              isSelected
+                                ? 'border-[#00a884] bg-[#f0fbf7] shadow-xs'
+                                : 'border-hairline bg-white hover:border-[#00a884]/40'
+                            }`}
+                            onClick={() =>
+                              patch({
+                                videoScenarioPrompt: sc.fullPrompt,
+                                videoScenarioTitle: sc.title,
+                              })
+                            }
+                          >
+                            <div className="flex items-start gap-3">
+                              {/* Custom Radio Button */}
+                              <div
+                                className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border transition-all ${
+                                  isSelected
+                                    ? 'border-[#00a884] bg-[#00a884] text-white'
+                                    : 'border-gray-300 bg-white'
+                                }`}
+                              >
+                                {isSelected ? <div className="size-2 rounded-full bg-white" /> : null}
+                              </div>
+
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-[13.5px] font-bold text-[#111b21]">
+                                    {sc.title}
+                                  </span>
+                                  {sc.badge ? (
+                                    <span className="rounded-full bg-[#008069]/10 px-2 py-0.5 text-[10.5px] font-semibold text-[#008069]">
+                                      {sc.badge}
+                                    </span>
+                                  ) : null}
+                                </div>
+
+                                {/* Plain human-readable summary */}
+                                <p className="mt-1 text-[12.5px] leading-relaxed text-[#3b4a54]">
+                                  {sc.summary}
+                                </p>
+
+                                {/* Expandable Prompt Technical Accordion */}
+                                <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setExpandedPromptId(isExpanded ? null : sc.id)
+                                    }
+                                    className="text-[11px] font-medium text-[#667781] hover:text-[#111b21] flex items-center gap-1"
+                                  >
+                                    <span>{isExpanded ? 'Teknik promptu gizle' : 'Teknik prompt detayını gör'}</span>
+                                    <span>{isExpanded ? '▴' : '▾'}</span>
+                                  </button>
+
+                                  {isExpanded ? (
+                                    <div className="mt-1.5 rounded-md bg-gray-900 p-2.5 text-[11px] font-mono text-gray-200 whitespace-pre-wrap leading-relaxed">
+                                      {sc.fullPrompt}
+                                    </div>
+                                  ) : null}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+              </Field>
+            </>
           ) : (
             <Field label="Görseldeki metin miktarı">
               <div className="flex flex-wrap gap-1.5">
@@ -864,10 +1098,18 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
               {CREATIVE_FORMATS.find((row) => row.id === draft.formatId)?.label}
             </p>
             {isVideo ? (
-              <p>
-                <span className="text-ink-muted">Seslendirme: </span>
-                {draft.videoSpeech !== false ? 'Seslendirmeli (Türkçe Dış Ses)' : 'Konuşmasız (Sadece Müzik & Ses Efektleri)'}
-              </p>
+              <>
+                <p>
+                  <span className="text-ink-muted">Seslendirme: </span>
+                  {draft.videoSpeech !== false ? 'Seslendirmeli (Türkçe Dış Ses)' : 'Konuşmasız (Sadece Müzik & Ses Efektleri)'}
+                </p>
+                {draft.videoScenarioTitle ? (
+                  <p>
+                    <span className="text-ink-muted">Seçilen Senaryo: </span>
+                    <span className="font-semibold text-[#008069]">{draft.videoScenarioTitle}</span>
+                  </p>
+                ) : null}
+              </>
             ) : null}
             <p>
               <span className="text-ink-muted">Ürünler: </span>

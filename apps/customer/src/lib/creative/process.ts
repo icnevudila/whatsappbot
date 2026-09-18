@@ -187,7 +187,11 @@ export async function processCreativeGeneration(
     const isVideo = creative.format === 'video' || snapshot.formatId === 'reels_video'
 
     if (isVideo) {
-      const { prompt: videoPrompt, overlay } = buildVideoPrompt(snapshot)
+      const { prompt: defaultVideoPrompt, overlay } = buildVideoPrompt(snapshot)
+      const videoPrompt =
+        snapshot.videoScenarioPrompt && snapshot.videoScenarioPrompt.length > 50
+          ? snapshot.videoScenarioPrompt
+          : defaultVideoPrompt
       const gatewayUrl = (process.env.OMNISTUDIO_GATEWAY_URL || 'http://167.233.201.31:3456').replace(/\/$/, '')
 
       const vidRes = await fetch(`${gatewayUrl}/v1/videos/generations`, {

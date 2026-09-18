@@ -94,44 +94,85 @@ async function generateVideo({
         console.log("[VideoGen] Chrome CDP bağlantısı kuruldu.");
         await sendCmd("Page.bringToFront");
 
-        // 1. Şirket / Firma Ayrımı: Bu markaya ait mevcut sohbet var mı kontrol et
-        const brandKey = (brandName || '').trim().toLowerCase();
-        const chatSelectRes = await sendCmd("Runtime.evaluate", {
-          expression: `
-            (function() {
-              const brand = ${JSON.stringify(brandKey)};
-              if (!brand || brand.length < 3) return { found: false };
-              const items = Array.from(document.querySelectorAll('a, div[role="button"], [data-test-id="conversation-list-item"]'));
-              const match = items.find(el => {
-                const txt = (el.innerText || el.getAttribute('aria-label') || '').toLowerCase();
-                return txt.includes(brand) && (el.getAttribute('href')?.includes('/app/') || el.className?.includes('conversation'));
-              });
-              if (match) {
-                match.click();
-                return { found: true, title: (match.innerText || match.getAttribute('aria-label') || '').trim() };
-              }
-              return { found: false };
-            })()
-          `,
-          returnByValue: true
-        });
+        // 1. Her video için kesinlikle YENİ ve TERTEMİZ bir Gemini oturumu aç (Eski video butonlarının karışmasını 100% engeller)
+        console.log(`[VideoGen] '${brandName || 'Kampanya'}' için yeni ve bağımsız temiz sohbet başlatılıyor...`);
+        await sendCmd("Page.navigate", { url: "https://gemini.google.com/videos" });
+        await new Promise(r => setTimeout(r, 3500));
 
-        if (chatSelectRes?.result?.value?.found) {
-          console.log(`[VideoGen] Firmaya özel mevcut sohbet açıldı: "${chatSelectRes.result.value.title}"`);
-          await new Promise(r => setTimeout(r, 2000));
-        } else {
-          console.log(`[VideoGen] '${brandName || 'Firma'}' için yeni özel sohbet başlatılıyor...`);
-          await sendCmd("Runtime.evaluate", {
+        // Sayfanın ve input kutusunun hazır olmasını bekle
+        let inputReady = false;
+        for (let i = 0; i < 15; i++) {
+          const chk = await sendCmd("Runtime.evaluate", {
+            expression: `!!(document.querySelector('div[contenteditable="true"]') || document.querySelector('rich-textarea p') || document.querySelector('textarea'))`,
+            returnByValue: true
+          });
+          if (chk?.result?.value) {
+            inputReady = true;
+            break;
+          }
+          await new Promise(r => setTimeout(r, 1000));
+        }
+
+        if (!inputReady) {
+          throw new Error("Gemini sohbet giriş kutusu yüklenemedi.");
+        }
+
+        // 2. En boy oranını Dikey (9:16) olarak ayarla
+        try {
+          const aspectRes = await sendCmd("Runtime.evaluate", {
             expression: `
               (function() {
-                const btns = Array.from(document.querySelectorAll('button, a, div[role="button"]'));
-                const newChat = btns.find(b => (b.innerText || '').includes('Yeni sohbet') || (b.getAttribute('aria-label') || '').includes('Yeni sohbet'));
-                if (newChat) newChat.click();
+                const btn = Array.from(document.querySelectorAll('button')).find(b => (b.innerText || '').includes('16:9') || (b.innerText || '').includes('Yatay'));
+                if (btn) {
+                  const r = btn.getBoundingClientRect();
+                  return { found: true, x: r.left + r.width/2, y: r.top + r.height/2 };
+                }
+                return { found: false };
               })()
-            `
+            `,
+            returnByValue: true
           });
-          await new Promise(r => setTimeout(r, 2000));
+
+          if (aspectRes?.result?.value?.found) {
+            const { x, y } = aspectRes.result.value;
+            await sendCmd("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "left", clickCount: 1 });
+            await sendCmd("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", clickCount: 1 });
+            await new Promise(r => setTimeout(r, 800));
+
+            const dikeyCoord = await sendCmd("Runtime.evaluate", {
+              expression: `
+                (function() {
+                  const els = Array.from(document.querySelectorAll('*'));
+                  const target = els.find(el => el.children.length === 0 && (el.innerText || el.textContent || '').trim() === 'Dikey (9:16)');
+                  if (target) {
+                    const r = target.getBoundingClientRect();
+                    return { found: true, x: r.left + r.width/2, y: r.top + r.height/2 };
+                  }
+                  return { found: false };
+                })()
+              `,
+              returnByValue: true
+            });
+
+            if (dikeyCoord?.result?.value?.found) {
+              const { x: dx, y: dy } = dikeyCoord.result.value;
+              await sendCmd("Input.dispatchMouseEvent", { type: "mousePressed", x: dx, y: dy, button: "left", clickCount: 1 });
+              await sendCmd("Input.dispatchMouseEvent", { type: "mouseReleased", x: dx, y: dy, button: "left", clickCount: 1 });
+              console.log("[VideoGen] Aspect ratio 9:16 (Dikey) olarak seçildi.");
+              await new Promise(r => setTimeout(r, 600));
+            }
+          }
+        } catch (aspectErr) {
+          console.warn("[VideoGen] Aspect ratio seçimi atlandı:", aspectErr.message);
         }
+
+        // Başlangıçtaki indir buton sayısını kaydet (temiz sayfada 0 olmalı)
+        const baselineRes = await sendCmd("Runtime.evaluate", {
+          expression: `document.querySelectorAll('button[aria-label*="indir" i], button[aria-label*="download" i]').length`,
+          returnByValue: true
+        });
+        const initialDlCount = Number(baselineRes?.result?.value) || 0;
+        console.log(`[VideoGen] Sayfa hazır. Başlangıç video/indir butonu sayısı: ${initialDlCount}`);
 
         // Promptu yaz
         await sendCmd("Runtime.evaluate", {
@@ -148,7 +189,7 @@ async function generateVideo({
             })()
           `
         });
-        await new Promise(r => setTimeout(r, 1200));
+        await new Promise(r => setTimeout(r, 1500));
 
         // Gönder butonuna tıkla
         const btnRes = await sendCmd("Runtime.evaluate", {
@@ -179,41 +220,44 @@ async function generateVideo({
         }
         console.log("[VideoGen] Full+Full Prompt gönderildi, Veo render bekleniyor...");
 
-        // Video oluşana kadar bekle (max 4 dakika)
+        // Video oluşana kadar bekle (max 5 dakika, minimum 25 saniye)
         const startTime = Date.now();
         let downloadReady = false;
 
-        while (Date.now() - startTime < 240000) {
+        while (Date.now() - startTime < 300000) {
           await new Promise(r => setTimeout(r, 6000));
+          const elapsed = Math.round((Date.now() - startTime) / 1000);
+
           const checkRes = await sendCmd("Runtime.evaluate", {
             expression: `
               (function() {
-                const dlBtns = Array.from(document.querySelectorAll('button[aria-label*="Videoyu indir"], button[aria-label*="videoyu indir"]'));
-                const hasVideo = !!document.querySelector('video');
-                const isGenerating = document.body.innerText.includes('Videonuzu üretiyorum') || document.body.innerText.includes('Defining');
-                return { dlCount: dlBtns.length, hasVideo, isGenerating };
+                const dlBtns = Array.from(document.querySelectorAll('button[aria-label*="indir" i], button[aria-label*="download" i]'));
+                const isSpinnerActive = !!document.querySelector('mat-progress-spinner, mat-progress-bar, [role="progressbar"], button[aria-label*="Durdur" i], button[aria-label*="Stop" i]');
+                const videos = Array.from(document.querySelectorAll('video'));
+                const hasVideo = videos.some(v => v.readyState >= 2 || v.duration > 0 || (v.src && !v.src.startsWith('blob:null')));
+                return { dlCount: dlBtns.length, isSpinnerActive, hasVideo };
               })()
             `,
             returnByValue: true
           });
 
           const status = checkRes?.result?.value;
-          if (status?.dlCount > 0) {
-            console.log("[VideoGen] Video hazırlandı! İndirme tetikleniyor...");
+          // Veo render en az 25 saniye sürer. Yeni buton başlangıçtan kesinlikle fazla olmalı ve render spinner'ı bitmiş olmalı.
+          if (status && status.dlCount > initialDlCount && !status.isSpinnerActive && elapsed >= 25) {
+            console.log(`[VideoGen] Yeni video başarıyla render edildi (${elapsed}s)! İndirme tetikleniyor...`);
             downloadReady = true;
             break;
           }
-          const elapsed = Math.round((Date.now() - startTime) / 1000);
-          console.log(`[VideoGen] Veo render bekleniyor (${elapsed}s)...`);
+          console.log(`[VideoGen] Veo render bekleniyor (${elapsed}s, yeni_buton: ${status?.dlCount ?? 0} > ${initialDlCount}, aktif_spinner: ${status?.isSpinnerActive})...`);
         }
 
         if (!downloadReady) {
           ws.close();
-          throw new Error("Video üretimi zaman aşımına uğradı (4 dakika).");
+          throw new Error("Video üretimi zaman aşımına uğradı (5 dakika).");
         }
 
         // İndirme dizinini ayarla
-        const tempDlDir = '/tmp/gemini_dl_' + Date.now();
+        const tempDlDir = `/tmp/gemini_dl_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
         fs.mkdirSync(tempDlDir, { recursive: true });
 
         await sendCmd("Page.setDownloadBehavior", {
@@ -221,11 +265,11 @@ async function generateVideo({
           downloadPath: tempDlDir
         });
 
-        // 'Videoyu indir' butonuna tıkla
+        // En son eklenen 'Videoyu indir' butonuna tıkla
         await sendCmd("Runtime.evaluate", {
           expression: `
             (function() {
-              const btns = Array.from(document.querySelectorAll('button[aria-label*="Videoyu indir"], button[aria-label*="videoyu indir"]'));
+              const btns = Array.from(document.querySelectorAll('button[aria-label*="indir" i], button[aria-label*="download" i]'));
               if (btns.length > 0) {
                 btns[btns.length - 1].click();
                 return true;
@@ -235,14 +279,19 @@ async function generateVideo({
           `
         });
 
-        // Dosyanın diske yazılmasını bekle
+        // Dosyanın diske tam olarak inmesini bekle
         let downloadedFile = null;
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < 30; i++) {
           await new Promise(r => setTimeout(r, 1000));
+          if (!fs.existsSync(tempDlDir)) continue;
           const files = fs.readdirSync(tempDlDir).filter(f => f.endsWith('.mp4') && !f.endsWith('.crdownload'));
           if (files.length > 0) {
-            downloadedFile = path.join(tempDlDir, files[0]);
-            break;
+            const candidate = path.join(tempDlDir, files[0]);
+            const sz = fs.statSync(candidate).size;
+            if (sz > 500000) { // En az 500 KB (tamamlanmış video dosyası)
+              downloadedFile = candidate;
+              break;
+            }
           }
         }
 
