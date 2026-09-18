@@ -48,7 +48,13 @@ function extFromMime(mime: string): string {
   if (base === 'video/quicktime') return 'mov'
   if (base === 'audio/ogg' || base === 'audio/opus') return 'ogg'
   if (base === 'audio/mpeg') return 'mp3'
+  if (base === 'audio/mp4' || base === 'audio/x-m4a' || base === 'audio/aac') return 'm4a'
+  if (base === 'audio/wav') return 'wav'
   if (base === 'application/pdf') return 'pdf'
+  if (base === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') return 'docx'
+  if (base === 'application/msword') return 'doc'
+  if (base === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') return 'xlsx'
+  if (base === 'text/plain') return 'txt'
   return 'bin'
 }
 
