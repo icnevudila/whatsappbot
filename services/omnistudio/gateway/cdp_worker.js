@@ -153,6 +153,78 @@ async function waitForChatInput(cdp, maxWaitMs = 15000) {
   return false;
 }
 
+function stripEmojis(text) {
+  if (!text) return '';
+  return text
+    .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+async function injectPromptAndSend(cdp, promptText) {
+  try {
+    // 1. Textarea'yı temizle ve odaklan
+    await cdp.send('Runtime.evaluate', {
+      expression: `(() => {
+        const textarea = document.querySelector('#prompt-textarea') || 
+                         document.querySelector('div[contenteditable="true"]') ||
+                         document.querySelector('textarea');
+        if (textarea) {
+          textarea.focus();
+          document.execCommand('selectAll', false, null);
+          document.execCommand('delete', false, null);
+        }
+      })()`
+    });
+
+    // 2. Chrome DevTools Protocol yerel Input.insertText ile metni gerçek klavye gibi enjekte et
+    await cdp.send('Input.insertText', { text: promptText });
+    await sleep(400);
+
+    // 3. Gönder butonunun render edilmesini bekle ve tıkla
+    const clickRes = await cdp.send('Runtime.evaluate', {
+      expression: `(() => {
+        let sendBtn = document.querySelector('#composer-submit-button') ||
+                      document.querySelector('button[data-testid="send-button"]') ||
+                      document.querySelector('button[aria-label*="Send"]') ||
+                      document.querySelector('button[aria-label*="Gönder"]');
+        if (sendBtn) {
+          sendBtn.click();
+          return { success: true };
+        }
+        return { success: false, error: 'Gönder butonu bulunamadı' };
+      })()`,
+      returnByValue: true
+    });
+
+    return clickRes.result?.value || { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+async function resetToFreshChat(cdp) {
+  const navigated = await cdp.send('Runtime.evaluate', {
+    expression: `(() => {
+      const btn = document.querySelector('a[href="/"]') || document.querySelector('button[data-testid="new-chat-button"]');
+      if (btn) {
+        btn.click();
+        return true;
+      }
+      window.location.href = 'https://chatgpt.com/';
+      return false;
+    })()`,
+    returnByValue: true
+  }).then(r => r.result?.value).catch(() => false);
+
+  if (!navigated) {
+    await sleep(3000);
+  } else {
+    await sleep(2000);
+  }
+  await waitForChatInput(cdp);
+}
+
 async function renameChatToCustomer(cdp, title) {
   if (!title) return;
   try {
@@ -212,45 +284,44 @@ async function ensureCustomerChat(cdp, customer, channel = 'media') {
   const currentUrl = urlEval.result?.value || '';
 
   if (targetUrl) {
-    // Bu firma ve kanal için önceden açılmış bir sohbet var
     const targetChatPath = targetUrl.replace('https://chatgpt.com', '');
-    if (currentUrl.includes(targetChatPath)) {
-      console.log(`[CDP Worker: ${WORKER_ID}] "${customer}" [${channel}] aktif sohbetteyiz: ${targetUrl}`);
-      return;
+    const isMatching = currentUrl.includes(targetChatPath);
+    if (!isMatching) {
+      console.log(`[CDP Worker: ${WORKER_ID}] "${customer}" [${channel}] sohbetine geçiliyor: ${targetUrl}`);
+      await cdp.send('Page.navigate', { url: targetUrl });
+      await waitForChatInput(cdp);
     }
 
-    console.log(`[CDP Worker: ${WORKER_ID}] "${customer}" [${channel}] sohbetine geçiliyor: ${targetUrl}`);
-    await cdp.send('Page.navigate', { url: targetUrl });
-    await waitForChatInput(cdp);
-
-    // Eğer geçiş sonrası sayfa 404 verdi veya ana sayfaya yönlendirdiyse (sohbet silinmiş vs.), yeni sohbet aç
-    const afterNavEval = await cdp.send('Runtime.evaluate', {
-      expression: 'window.location.href',
+    // Mesaj önerilerinde sohbetin aşırı şişip donmasını önlemek için kontrol et
+    const checkBloated = await cdp.send('Runtime.evaluate', {
+      expression: `!!(
+        document.querySelectorAll('[data-message-author-role]').length >= 8 ||
+        Array.from(document.querySelectorAll('button')).some(b => (b.innerText || '').includes('Show more'))
+      )`,
       returnByValue: true
-    });
-    const afterUrl = afterNavEval.result?.value || '';
-    if (afterUrl.includes('/c/')) {
-      return;
+    }).then(r => r.result?.value).catch(() => false);
+
+    if (checkBloated) {
+      console.log(`[CDP Worker: ${WORKER_ID}] "${customer}" [${channel}] sohbeti çok uzamış (8+ mesaj/Show more), performans için temiz sohbet açılıyor...`);
+      targetUrl = null;
+    } else {
+      const afterNavEval = await cdp.send('Runtime.evaluate', {
+        expression: 'window.location.href',
+        returnByValue: true
+      });
+      const afterUrl = afterNavEval.result?.value || '';
+      if (afterUrl.includes('/c/')) {
+        console.log(`[CDP Worker: ${WORKER_ID}] "${customer}" [${channel}] aktif sohbetteyiz: ${targetUrl}`);
+        return;
+      }
     }
-    console.log(`[CDP Worker: ${WORKER_ID}] "${customer}" [${channel}] eski sohbeti açılamadı, yeni sohbet oluşturulacak.`);
   }
 
-  // Bu firma ve kanal için kayıtlı sohbet yok veya eski sohbet kapalı -> Yeni temiz sohbet aç
-  if (currentUrl.includes('/c/')) {
-    console.log(`[CDP Worker: ${WORKER_ID}] "${customer}" [${channel}] için yeni özel sohbet açılıyor...`);
-    await cdp.send('Runtime.evaluate', {
-      expression: `(() => {
-        const link = document.querySelector('a[href="/"]');
-        if (link) { link.click(); return true; }
-        window.location.href = 'https://chatgpt.com/';
-        return false;
-      })()`,
-      returnByValue: true
-    });
-    await waitForChatInput(cdp);
-  } else {
-    console.log(`[CDP Worker: ${WORKER_ID}] "${customer}" [${channel}] için temiz sohbet sayfası hazır.`);
-  }
+  // Yeni temiz sohbet aç
+  console.log(`[CDP Worker: ${WORKER_ID}] "${customer}" [${channel}] için yeni temiz sohbet açılıyor...`);
+  await cdp.send('Page.navigate', { url: 'https://chatgpt.com/' });
+  await waitForChatInput(cdp);
+  console.log(`[CDP Worker: ${WORKER_ID}] "${customer}" [${channel}] için temiz sohbet sayfası hazır.`);
 }
 
 // Düzenli Kalp Atışı (5s)
@@ -392,45 +463,9 @@ async function executeChatGPTJob(tab, job) {
     const beforeImages = new Set(beforeEval.result?.value || []);
 
     // 3. Prompt'u Enjekte Et
-    const injectEval = await cdp.send('Runtime.evaluate', {
-      expression: `
-        (function() {
-          const prompt = ${JSON.stringify(job.prompt)};
-          const textarea = document.querySelector('#prompt-textarea') || 
-                           document.querySelector('div[contenteditable="true"]') ||
-                           document.querySelector('textarea');
-          if (!textarea) return { success: false, error: 'Textarea bulunamadı' };
-          
-          textarea.focus();
-          if (textarea.tagName === 'DIV' || textarea.getAttribute('contenteditable') === 'true') {
-            textarea.innerHTML = '<p>' + prompt.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</p>';
-          } else {
-            textarea.value = prompt;
-          }
-
-          textarea.dispatchEvent(new Event('input', { bubbles: true }));
-          textarea.dispatchEvent(new Event('change', { bubbles: true }));
-
-          // Gönder butonuna tıkla
-          setTimeout(() => {
-            const sendBtn = document.querySelector('button[data-testid="send-button"]') ||
-                            document.querySelector('button[aria-label*="Send"]') ||
-                            document.querySelector('button[aria-label*="Gönder"]');
-            if (sendBtn && !sendBtn.disabled) {
-              sendBtn.click();
-            } else {
-              textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
-            }
-          }, 500);
-
-          return { success: true };
-        })()
-      `,
-      returnByValue: true
-    });
-
-    if (!injectEval.result?.value?.success) {
-      throw new Error(injectEval.result?.value?.error || 'Prompt kutusu bulunamadı');
+    const injectRes = await injectPromptAndSend(cdp, job.prompt);
+    if (!injectRes?.success) {
+      throw new Error(injectRes?.error || 'Prompt kutusu bulunamadı veya gönderilemedi');
     }
 
     console.log('[CDP Worker] Prompt gönderildi, görsel üretimi bekleniyor...');
@@ -594,10 +629,16 @@ async function executeChatSuggestionsJob(tab, job) {
     cdp = await createCdpSession(tab.webSocketDebuggerUrl);
 
     const customer = (job.customer || 'Genel').trim();
-    console.log(`[CDP Worker: ${WORKER_ID}] [Mesajlar] Firma: "${customer}" için müşteri temsilcisi sohbeti hazırlanıyor...`);
+    console.log(`[CDP Worker: ${WORKER_ID}] [Mesajlar] Firma: "${customer}" için öneri motoru hazırlanıyor...`);
 
-    // 1. Müşteri temsilcisi sohbetine geç ('chat' kanalı)
-    await ensureCustomerChat(cdp, customer, 'chat');
+    // 1. Temiz ve yüksek hızlı öneri oturumunu sağla (önceki mesaj karmaşasını ve donmaları önler)
+    await resetToFreshChat(cdp);
+
+    const countEval = await cdp.send('Runtime.evaluate', {
+      expression: `document.querySelectorAll('[data-message-author-role="assistant"]').length`,
+      returnByValue: true
+    });
+    const initialAsstCount = countEval.result?.value || 0;
 
     // 2. Prompt hazırla
     const prompt = `Sen "${customer}" firmasının WhatsApp kurumsal müşteri temsilcisisin.
@@ -612,11 +653,14 @@ MÜŞTERİDEN GELEN EN SON MESAJ:
 GÖREV:
 Bu mesaja verilebilecek en kaliteli ve uygun 3 FARKLI alternatif Türkçe yanıt hazırla:
 1. "Kısa & Net" (Hızlı, öz, gereksiz uzatmayan net bilgi)
-2. "Samimi" (Nazik, güler yüzlü, çözüm odaklı kurumsal yanıt)
+2. "Samimi" (Nazik, çözüm odaklı kurumsal yanıt)
 3. "Yönlendirici" (Gerekiyorsa sonraki adımı, arama saatini veya detayları soran aksiyon yanıtı)
 
-ÖNEMLİ KURAL:
-Yanıtını aşağıdaki gibi geçerli bir JSON olarak ver:
+ÖNEMLİ KURALLAR:
+1. Asla Canvas, doküman veya kod aracı açma.
+2. Düşünme süresini minimumda tut, doğrudan yanıt ver.
+3. Kesinlikle hiçbir emoji kullanma. Metinler tamamen emojiden arındırılmış temiz Türkçe olmalı.
+4. YALNIZCA doğrudan sohbet mesajı olarak aşağıdaki geçerli JSON metnini yaz:
 {
   "suggestions": [
     {"label": "Kısa & Net", "text": "..."},
@@ -625,71 +669,33 @@ Yanıtını aşağıdaki gibi geçerli bir JSON olarak ver:
   ]
 }`;
 
-    // Mevcut asistan mesajlarının sayısını al (yeni yanıtı eskisinden ayırt etmek için)
-    const countEval = await cdp.send('Runtime.evaluate', {
-      expression: 'document.querySelectorAll(\'[data-message-author-role="assistant"]\').length',
-      returnByValue: true
-    });
-    const prevAssistantCount = countEval.result?.value || 0;
-
     // 3. Prompt'u ChatGPT'ye enjekte et ve gönder
-    const injectEval = await cdp.send('Runtime.evaluate', {
-      expression: `
-        (() => {
-          const textarea = document.querySelector('#prompt-textarea') || 
-                           document.querySelector('div[contenteditable="true"]') ||
-                           document.querySelector('textarea');
-          if (!textarea) return { success: false, error: 'Textarea bulunamadı' };
-          
-          textarea.focus();
-          document.execCommand('selectAll', false, null);
-          const ok = document.execCommand('insertText', false, ${JSON.stringify(prompt)});
-          if (!ok) {
-            textarea.innerHTML = '<p>' + ${JSON.stringify(prompt)}.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</p>';
-            textarea.dispatchEvent(new Event('input', { bubbles: true }));
-          }
-
-          setTimeout(() => {
-            const sendBtn = document.querySelector('button[data-testid="send-button"]') ||
-                            document.querySelector('button[aria-label*="Send"]') ||
-                            document.querySelector('button[aria-label*="Gönder"]');
-            if (sendBtn && !sendBtn.disabled) {
-              sendBtn.click();
-            } else {
-              textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
-            }
-          }, 300);
-
-          return { success: true };
-        })()
-      `,
-      returnByValue: true
-    });
-
-    if (!injectEval.result?.value?.success) {
-      throw new Error(injectEval.result?.value?.error || 'ChatGPT input kutusu bulunamadı');
+    const injectRes = await injectPromptAndSend(cdp, prompt);
+    if (!injectRes?.success) {
+      throw new Error(injectRes?.error || 'ChatGPT input kutusu bulunamadı veya gönderilemedi');
     }
 
-    console.log(`[CDP Worker: ${WORKER_ID}] [Mesajlar] Prompt gönderildi, yanıt bekleniyor... (Önceki mesaj sayısı: ${prevAssistantCount})`);
-    await sleep(2500);
+    console.log(`[CDP Worker: ${WORKER_ID}] [Mesajlar] Prompt gönderildi, yanıt bekleniyor...`);
+    await sleep(2000);
 
-    // 4. Yeni metin yanıtının tamamlanmasını bekle (Maksimum 60 saniye)
+    // 4. Yeni metin yanıtının tamamlanmasını bekle (Maksimum ~60 saniye)
     let lastText = '';
     let stableCount = 0;
-    const maxWait = 40; // 40 * 1.5s = ~60s
+    const maxWait = 45; // 45 * 1.5s = ~67s
     for (let i = 0; i < maxWait; i++) {
       await sleep(1500);
       const textEval = await cdp.send('Runtime.evaluate', {
         expression: `
           (() => {
-            const articles = Array.from(document.querySelectorAll('[data-message-author-role="assistant"]'));
-            if (articles.length <= ${prevAssistantCount}) {
+            const assts = Array.from(document.querySelectorAll('[data-message-author-role="assistant"]'));
+            if (assts.length <= ${initialAsstCount}) {
               return { hasNewMsg: false, isGenerating: true, text: '' };
             }
-            const lastMsg = articles.pop();
-            const text = lastMsg ? (lastMsg.innerText || '').trim() : '';
+
+            const lastAsst = assts[assts.length - 1];
+            const text = (lastAsst.innerText || '').trim();
             const stopBtn = document.querySelector('button[data-testid*="stop"], button[aria-label*="Stop"], button[aria-label*="durdur"], button[aria-label*="Durdur"]');
-            const isMsgStreaming = lastMsg ? !!lastMsg.querySelector('.streaming-animation, [data-is-streaming="true"]') : false;
+            const isMsgStreaming = lastAsst ? !!lastAsst.querySelector('.streaming-animation, [data-is-streaming="true"]') : false;
             const isGenerating = !!stopBtn || isMsgStreaming;
 
             return { hasNewMsg: true, isGenerating, text };
@@ -711,9 +717,26 @@ Yanıtını aşağıdaki gibi geçerli bir JSON olarak ver:
       }
       lastText = currentText;
 
-      const hasCompleteJson = lastText.includes('{') && lastText.includes('}') && lastText.includes('suggestions') && (lastText.endsWith('}') || lastText.endsWith('```'));
+      let hasValidJson = false;
+      try {
+        let clean = lastText.trim();
+        if (clean.includes('```json')) clean = clean.split('```json')[1].split('```')[0].trim();
+        else if (clean.includes('```')) clean = clean.split('```')[1].split('```')[0].trim();
+        const jsonStart = clean.indexOf('{');
+        const jsonEnd = clean.lastIndexOf('}');
+        if (jsonStart !== -1 && jsonEnd !== -1) {
+          const parsed = JSON.parse(clean.slice(jsonStart, jsonEnd + 1));
+          if (Array.isArray(parsed.suggestions) && parsed.suggestions.length > 0) {
+            hasValidJson = true;
+          }
+        }
+      } catch (err) {}
 
-      if ((!res?.isGenerating && stableCount >= 3 && lastText.length > 50) || (hasCompleteJson && stableCount >= 1)) {
+      if (hasValidJson) {
+        console.log(`[CDP Worker: ${WORKER_ID}] [Mesajlar] Geçerli JSON başarıyla algılandı, döngü sonlandırılıyor.`);
+        break;
+      }
+      if (!res.isGenerating && stableCount >= 2 && lastText.length > 50) {
         break;
       }
     }
@@ -722,7 +745,7 @@ Yanıtını aşağıdaki gibi geçerli bir JSON olarak ver:
       throw new Error('ChatGPT yanıt üretemedi veya boş döndü');
     }
 
-    // 5. JSON ayrıştırma
+    // 5. JSON ayrıştırma ve emoji temizliği
     let parsedSuggestions = [];
     try {
       let clean = lastText.trim();
@@ -738,13 +761,19 @@ Yanıtını aşağıdaki gibi geçerli bir JSON olarak ver:
       }
       const parsed = JSON.parse(clean);
       if (Array.isArray(parsed.suggestions) && parsed.suggestions.length > 0) {
-        parsedSuggestions = parsed.suggestions.filter((s) => s && typeof s.text === 'string' && s.text.trim().length > 5);
+        parsedSuggestions = parsed.suggestions
+          .filter((s) => s && typeof s.text === 'string' && s.text.trim().length > 3)
+          .map((s) => ({
+            label: stripEmojis(s.label || 'Öneri').slice(0, 30),
+            text: stripEmojis(s.text),
+          }));
       }
     } catch (parseErr) {
       console.warn(`[CDP Worker: ${WORKER_ID}] JSON ayrıştırma uyarısı:`, parseErr.message);
+      console.warn(`[CDP Worker: ${WORKER_ID}] Ayrıştırılamayan Ham Metin:`, lastText);
     }
 
-    // Yedek ayrıştırıcı (Eğer JSON ayrışamadıysa veya eksik geldiyse metinden önerileri ayıkla)
+    // Yedek ayrıştırıcı
     if (parsedSuggestions.length === 0) {
       const lines = lastText.split('\n').map((l) => l.trim()).filter(Boolean);
       const extracted = [];
@@ -754,7 +783,7 @@ Yanıtını aşağıdaki gibi geçerli bir JSON olarak ver:
           const label = match[2].replace(/[\"\'\:\*]/g, '').trim();
           const text = match[3].replace(/^[\"\']|[\"\']$/g, '').trim();
           if (text.length > 10 && !text.includes('suggestions')) {
-            extracted.push({ label: label.slice(0, 20) || 'Öneri', text });
+            extracted.push({ label: stripEmojis(label.slice(0, 20) || 'Öneri'), text: stripEmojis(text) });
           }
         }
       }
@@ -764,10 +793,33 @@ Yanıtını aşağıdaki gibi geçerli bir JSON olarak ver:
     }
 
     if (parsedSuggestions.length === 0 && lastText.length > 30) {
-      const cleanFallback = lastText.replace(/[\{\}\[\]\"\'\`]/g, ' ').replace(/\s+/g, ' ').trim();
+      const cleanFallback = stripEmojis(lastText.replace(/[\{\}\[\]\"\'\`]/g, ' ').replace(/\s+/g, ' ').trim());
       if (cleanFallback.length > 25 && !cleanFallback.startsWith('suggestions')) {
         parsedSuggestions = [
           { label: 'Kısa & Net', text: cleanFallback.slice(0, 250) }
+        ];
+      }
+    }
+
+    if (parsedSuggestions.length === 0) {
+      const norm = (job.incomingMessage || '').toLowerCase();
+      if (norm.includes('fiyat') || norm.includes('ne kadar') || norm.includes('ücret') || norm.includes('ucret') || norm.includes('kaç') || norm.includes('kac')) {
+        parsedSuggestions = [
+          { label: 'Kısa & Net', text: 'Merhabalar, ilgilendiğiniz ürün veya hizmet detayını iletirseniz hemen güncel fiyat bilgisi paylaşalım.' },
+          { label: 'Samimi', text: 'Merhabalar, memnuniyetle yardımcı oluruz. Tam olarak hangi model veya ürünümüzün fiyatını öğrenmek istemiştiniz?' },
+          { label: 'Yönlendirici', text: 'Merhaba, güncel fiyat listemizi iletebilmemiz için ürün adı veya görselini iletebilir misiniz?' }
+        ];
+      } else if (norm.includes('konum') || norm.includes('adres') || norm.includes('nerede') || norm.includes('yeriniz')) {
+        parsedSuggestions = [
+          { label: 'Kısa & Net', text: 'İşletmemiz Mamak, Ankara adresindedir. WhatsApp üzerinden konum pini iletiyoruz.' },
+          { label: 'Samimi', text: 'Merhabalar, yerimiz Mamak / Ankara\'da bulunuyor. Canlı harita konumumuzu paylaşıyoruz.' },
+          { label: 'Yönlendirici', text: 'Merhaba, Mamak Ankara adresindeyiz. Ziyaretinizden memnuniyet duyarız; harita konumu gönderelim mi?' }
+        ];
+      } else {
+        parsedSuggestions = [
+          { label: 'Kısa & Net', text: `Merhabalar, ${customer} işletmemize hoş geldiniz. Size nasıl yardımcı olabiliriz?` },
+          { label: 'Samimi', text: 'Merhabalar, hoş geldiniz! Size yardımcı olmaktan memnuniyet duyarız, nasıl bir konuda bilgi almak istersiniz?' },
+          { label: 'Yönlendirici', text: 'İyi günler dileriz. Ürünlerimiz, siparişleriniz veya hizmetlerimiz hakkında bilgi almak için sorunuzu iletebilirsiniz.' }
         ];
       }
     }
@@ -784,7 +836,7 @@ Yanıtını aşağıdaki gibi geçerli bir JSON olarak ver:
       })
     });
 
-    // 7. Sohbet adlandırma
+    // 7. Sohbet kaydetme ve adlandırma
     try {
       const finalUrlEval = await cdp.send('Runtime.evaluate', {
         expression: 'window.location.href',
@@ -792,6 +844,7 @@ Yanıtını aşağıdaki gibi geçerli bir JSON olarak ver:
       });
       const finalUrl = finalUrlEval.result?.value || '';
       if (finalUrl.includes('/c/')) {
+        setCompanyChat(customer, 'chat', finalUrl);
         await renameChatToCustomer(cdp, `${customer} - Mesajlar`);
       }
     } catch (urlErr) {
@@ -898,43 +951,9 @@ YALNIZCA aşağıdaki JSON formatında yanıt ver, markdown kod bloğu (\`\`\`js
 }`;
 
     // 3. Prompt'u enjekte et ve gönder
-    const injectEval = await cdp.send('Runtime.evaluate', {
-      expression: `
-        (() => {
-          const textarea = document.querySelector('#prompt-textarea') || 
-                           document.querySelector('div[contenteditable="true"]') ||
-                           document.querySelector('textarea');
-          if (!textarea) return { success: false, error: 'Textarea bulunamadı' };
-          
-          textarea.focus();
-          if (textarea.tagName === 'DIV' || textarea.getAttribute('contenteditable') === 'true') {
-            textarea.innerHTML = '<p>' + ${JSON.stringify(prompt)}.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</p>';
-          } else {
-            textarea.value = ${JSON.stringify(prompt)};
-          }
-
-          textarea.dispatchEvent(new Event('input', { bubbles: true }));
-          textarea.dispatchEvent(new Event('change', { bubbles: true }));
-
-          setTimeout(() => {
-            const sendBtn = document.querySelector('button[data-testid="send-button"]') ||
-                            document.querySelector('button[aria-label*="Send"]') ||
-                            document.querySelector('button[aria-label*="Gönder"]');
-            if (sendBtn && !sendBtn.disabled) {
-              sendBtn.click();
-            } else {
-              textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
-            }
-          }, 400);
-
-          return { success: true };
-        })()
-      `,
-      returnByValue: true
-    });
-
-    if (!injectEval.result?.value?.success) {
-      throw new Error(injectEval.result?.value?.error || 'Prompt enjekte edilemedi');
+    const injectRes = await injectPromptAndSend(cdp, prompt);
+    if (!injectRes?.success) {
+      throw new Error(injectRes?.error || 'Prompt enjekte edilemedi');
     }
 
     console.log(`[CDP Worker: ${WORKER_ID}] [OCR/Bilgi Çıkarımı] Prompt gönderildi, yanıt bekleniyor...`);

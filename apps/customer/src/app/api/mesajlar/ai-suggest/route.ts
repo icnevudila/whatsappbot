@@ -97,6 +97,14 @@ function generateSmartFallbackSuggestions(incoming: string, company: string): Su
   ]
 }
 
+function stripEmojis(text: string): string {
+  if (!text) return ''
+  return text
+    .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 function normalizeForLibrary(input: string) {
   return input
     .trim()
@@ -282,7 +290,7 @@ export async function POST(request: Request) {
         companyContext,
         tone,
       }),
-      signal: AbortSignal.timeout(12000),
+      signal: AbortSignal.timeout(35000),
     })
 
     if (gatewayRes.ok) {
@@ -293,6 +301,11 @@ export async function POST(request: Request) {
       }
 
       if (validSuggestions(data.suggestions)) {
+        const cleanSuggestions = data.suggestions.map((s) => ({
+          label: stripEmojis(s.label || 'Öneri'),
+          text: stripEmojis(s.text),
+        }))
+
         await supabase
           .from('ai_reply_suggestion_library')
           .upsert(
@@ -301,7 +314,7 @@ export async function POST(request: Request) {
               message_fingerprint: messageFingerprint,
               context_fingerprint: contextFingerprint,
               incoming_sample: lastMessage.slice(0, 500),
-              suggestions: data.suggestions,
+              suggestions: cleanSuggestions,
               source: 'chatgpt',
               generated_count: 1,
               last_used_at: new Date().toISOString(),
@@ -313,7 +326,7 @@ export async function POST(request: Request) {
         return NextResponse.json({
           success: true,
           cached: false,
-          suggestions: data.suggestions,
+          suggestions: cleanSuggestions,
         })
       }
     }

@@ -657,7 +657,7 @@ async function processAutoReply(options: AutoReplyOptions): Promise<void> {
         companyContext,
         tone,
       }),
-      signal: AbortSignal.timeout(35000),
+      signal: AbortSignal.timeout(50000),
     })
 
     if (!aiRes.ok) {
@@ -786,7 +786,7 @@ export async function pregenerateAiSuggestions(options: {
         companyContext,
         tone,
       }),
-      signal: AbortSignal.timeout(25000),
+      signal: AbortSignal.timeout(55000),
     })
 
     if (!aiRes.ok) {
