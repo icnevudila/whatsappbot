@@ -5,6 +5,7 @@ import {
   isJidNewsletter,
   isLidUser,
   type WAMessage,
+  type WASocket,
 } from '@whiskeysockets/baileys'
 import { one, query } from './db.js'
 import { logger } from './logger.js'
@@ -77,8 +78,9 @@ export async function syncPhoneOutboundMessages(options: {
   createdBy: string
   messages: WAMessage[]
   resolveLidPn?: (lidJid: string) => Promise<string | null>
+  sock?: WASocket
 }): Promise<void> {
-  const { accountId, orgId, createdBy, messages, resolveLidPn } = options
+  const { accountId, orgId, createdBy, messages, resolveLidPn, sock } = options
 
   for (const message of messages) {
     const key = message.key
@@ -112,20 +114,45 @@ export async function syncPhoneOutboundMessages(options: {
       const rawStatus = statusFromAck(message.status)
       const status = rawStatus || 'sent'
 
+      let mediaUrl: string | null = null
+      if (
+        sock &&
+        (type === 'image' ||
+          type === 'sticker' ||
+          type === 'video' ||
+          type === 'audio' ||
+          type === 'document')
+      ) {
+        try {
+          const { storeInboundMedia } = await import('./inbound-media.js')
+          mediaUrl = await storeInboundMedia({
+            orgId,
+            accountId,
+            waMessageId,
+            messageType: type,
+            message,
+            sock,
+            folder: 'outbound',
+          })
+        } catch (error) {
+          logger.warn({ err: error, accountId, waMessageId }, 'outbound-sync: medya kaydedilemedi')
+        }
+      }
+
       const inserted = await query<{ id: string; created_at: string }>(
         `insert into public.message_log
-           (org_id, created_by, account_id, direction, remote_jid, phone_e164, message_type, body, wa_message_id, status)
-         values ($1, $2, $3, 'out', $4, $5, $6, $7, $8, $9)
+           (org_id, created_by, account_id, direction, remote_jid, phone_e164, message_type, body, media_url, wa_message_id, status)
+         values ($1, $2, $3, 'out', $4, $5, $6, $7, $8, $9, $10)
          on conflict (account_id, wa_message_id) where direction = 'out' and wa_message_id is not null and account_id is not null
-         do update set status = excluded.status
+         do update set status = excluded.status, media_url = coalesce(excluded.media_url, public.message_log.media_url)
          returning id::text, created_at`,
-        [orgId, createdBy, accountId, key.remoteJid, phone, type, body, waMessageId, status],
+        [orgId, createdBy, accountId, key.remoteJid, phone, type, body, mediaUrl, waMessageId, status],
       )
 
       const row = inserted[0]
       if (row) {
         logger.info(
-          { accountId, waMessageId, phone, body: body?.slice(0, 30) },
+          { accountId, waMessageId, phone, body: body?.slice(0, 30), mediaUrl: Boolean(mediaUrl) },
           'Telefondan atilan mesaj message_log tablosuna islendi',
         )
 
@@ -138,6 +165,7 @@ export async function syncPhoneOutboundMessages(options: {
               direction: 'out',
               body,
               messageType: type,
+              mediaUrl: mediaUrl ?? undefined,
               accountId,
               status,
               createdAt: row.created_at,

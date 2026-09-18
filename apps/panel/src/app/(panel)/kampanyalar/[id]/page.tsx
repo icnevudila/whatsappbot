@@ -179,6 +179,8 @@ export default async function CampaignDetailPage({
           campaignId={id}
           initialReplies={((repliesResult.data as unknown) ?? []) as PendingReplyItem[]}
           accountId={accounts[0]?.id}
+          campaignName={campaign.name}
+          campaignBody={campaign.body}
         />
       </div>
 

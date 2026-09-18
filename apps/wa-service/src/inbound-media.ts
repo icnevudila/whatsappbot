@@ -98,8 +98,9 @@ export async function storeInboundMedia(options: {
   messageType: string
   message: WAMessage
   sock: WASocket
+  folder?: string
 }): Promise<string | null> {
-  const { orgId, accountId, waMessageId, messageType, message, sock } = options
+  const { orgId, accountId, waMessageId, messageType, message, sock, folder = 'inbound' } = options
   if (!isSupportedKind(messageType)) return null
 
   const cfg = supabaseConfig()
@@ -151,7 +152,7 @@ export async function storeInboundMedia(options: {
   const mime = mimeFromMessage(message, messageType)
   const ext = extFromMime(mime)
   const fileId = (waMessageId ?? String(Date.now())).replace(/[^a-zA-Z0-9_-]/g, '_')
-  const path = `${orgId}/inbound/${accountId}/${fileId}.${ext}`
+  const path = `${orgId}/${folder}/${accountId}/${fileId}.${ext}`
 
   try {
     const response = await fetch(`${cfg.url}/storage/v1/object/${BUCKET}/${path}`, {

@@ -291,12 +291,41 @@ export class WhatsAppSession {
       syncFullHistory: false,
       // Telefona gecmis senkronizasyon bildirimi ('Finished syncing with...') gondermesini onler
       shouldSyncHistoryMessage: () => false,
+      appStateMacVerification: {
+        patch: false,
+        snapshot: false,
+      },
       maxMsgRetryCount: 2,
       msgRetryCounterCache: this.msgRetryCounterCache,
       mediaCache: this.mediaCache,
       getMessage: (key) => lookupSentMessage(this.accountId, key),
-      shouldIgnoreJid: (jid) => Boolean(isJidBroadcast(jid) || isJidNewsletter(jid)),
+      shouldIgnoreJid: (jid) => {
+        if (isJidBroadcast(jid) || isJidNewsletter(jid)) return true
+        // Kendi LID veya JID'imize gelen companion peer/sync mesajlarini yoksay.
+        // Bu mesajlar WhatsApp masaustu/telefon arasi ic senkron paketleridir;
+        // botta session anahtari olmadigi icin cozulemez ve cozulemedikce Baileys telefondan
+        // tekrar talep ederek telefonda "Syncing with WhatsApp on Windows stopped" bildirim dongusune yol acar.
+        const myId = auth.state.creds.me?.id ? jidNormalizedUser(auth.state.creds.me.id) : null
+        const myLid = auth.state.creds.me?.lid ? jidNormalizedUser(auth.state.creds.me.lid) : null
+        const norm = jidNormalizedUser(jid)
+        if ((myId && norm === myId) || (myLid && norm === myLid)) {
+          return true
+        }
+        return false
+      },
     })
+
+    // Baileys app-state sync (chat pin, star, archive vb.) yapisini devre disi birak.
+    // auth-store app-state-sync-key saklamadigi icin Baileys her server_sync bildiriminde
+    // "failed to find key to decode mutation" hatasi alip WhatsApp'tan v0'dan tam senkron talep ediyor,
+    // bu da kullanicinin telefonuna "Syncing with WhatsApp on Windows stopped" bildirim tufani yagdiriyor.
+    this.sock.resyncAppState = async (collections, isInitialSync) => {
+      this.log.info(
+        { collections, isInitialSync },
+        'resyncAppState yok sayildi (telefonda sync bildirim dongusunu onlemek icin)',
+      )
+      return
+    }
 
     this.sock.ev.on('creds.update', () => {
       void auth.saveCreds().catch((error) => {
@@ -492,6 +521,7 @@ export class WhatsAppSession {
       createdBy: this.createdBy,
       messages: externalOutbound,
       resolveLidPn,
+      sock: this.sock,
     })
   }
 
