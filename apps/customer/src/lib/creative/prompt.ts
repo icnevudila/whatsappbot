@@ -131,8 +131,21 @@ export function buildCreativePrompt(snapshot: CreativeSnapshot): {
   return { prompt, negative }
 }
 
+const VIDEO_STYLE_MOODS: Record<string, string> = {
+  luxury: 'Ultra-luxurious atmosphere, moody directional lighting, rich shadows, warm specular highlights, whisper-quiet elegance.',
+  premium: 'High-end commercial aesthetic, refined balanced lighting, rich tactile textures, authoritative craftsmanship.',
+  modern: 'Contemporary commercial look, pristine natural daylight, clean architectural lines, bright vivid tones, crisp focus.',
+  minimal: 'Pure minimalist aesthetic, serene spacious environment, elegant simplicity, soft diffused illumination.',
+  energetic: 'Dynamic movement, high contrast, vibrant saturated tones, intense lighting, fast-paced cinematic energy.',
+  food: 'Mouth-watering commercial culinary mood, warm soft light, glistening textures, fresh appetizing atmosphere.',
+  corporate: 'Trustworthy, clean, professional, pristine high-end industrial or office setting, steady measured camera.',
+  fun: 'Vibrant, bright, upbeat, cheerful commercial lighting, lively color balance.',
+  auto: 'High-end commercial marketing aesthetic, pristine professional lighting, natural color fidelity.',
+}
+
 /**
- * Structured brief → Pure cinematic 3-act live-action commercial video prompt (Veo / AI Video).
+ * Structured brief → High-fidelity cinematic 3-act live-action commercial video prompt (Veo / AI Video).
+ * Matches the deep detail, brand kit integration, and style fidelity of the image generation engine.
  * Guaranteed ZERO on-screen text, ZERO logo cards, ZERO graphic overlays.
  */
 export function buildVideoPrompt(snapshot: CreativeSnapshot): {
@@ -152,24 +165,76 @@ export function buildVideoPrompt(snapshot: CreativeSnapshot): {
   const mainProduct = snapshot.products[0]
   const brandName = kit?.name?.replace(/Brand Kit/i, '').replace(/Kampanya Kiti/i, '').trim() || ''
   const productName = mainProduct?.name || 'Ürün'
-  const productDesc = mainProduct?.description || snapshot.brief || 'Ticari ürün'
+
+  // Ürün ve kampanya detaylarını zenginleştir
+  const productBits: string[] = [productName]
+  if (mainProduct?.description) productBits.push(mainProduct.description)
+  if (mainProduct?.boxContents) productBits.push(`İçerik: ${mainProduct.boxContents}`)
+  if (mainProduct?.promo) productBits.push(`Kampanya: ${mainProduct.promo}`)
+  if (mainProduct?.extra) productBits.push(mainProduct.extra)
+
+  const productDetails = productBits.join('. ')
+  const briefText = snapshot.brief ? snapshot.brief.trim() : ''
+  const fullContext = `${productDetails} ${briefText}`.toLowerCase()
+
+  // Sektöre ve ürüne göre gerçekçi sinematik ortam tespiti
+  let environment = 'profesyonel, aydınlık ve modern bir ticari reklam çekim ortamı'
+  let act1Focus = `${productName} yüzeyindeki doğal malzeme dokusu, birinci sınıf işçilik ve kusursuz detaylar`
+  let act2Action = `${productName} ürününün gerçek kullanım anı, işlevi ve yüksek dayanıklılığı`
+  let act3Climax = `${productName} ürününün yer aldığı kusursuz, tamamlanmış ve güven veren geniş açı son sahne`
+
+  if (fullContext.includes('tuğla') || fullContext.includes('inşaat') || fullContext.includes('yapı') || fullContext.includes('harç') || fullContext.includes('çimento')) {
+    environment = 'modern bir mimari yapı projesi ve gün ışığında estetik şantiye ortamı'
+    act1Focus = 'fırınlanmış doğal killi tuğlaların nizami dizilimi, pürüzsüz yüzey dokusu ve sağlam kütlesi'
+    act2Action = 'ustalıkla örülen modern ve estetik tuğla duvar mimarisi, malzemenin kusursuz yerleşimi'
+    act3Climax = 'yeni tamamlanmış çağdaş ve estetik bir mimari yapının güven veren heybetli dış cephesi'
+  } else if (fullContext.includes('yemek') || fullContext.includes('gıda') || fullContext.includes('restoran') || fullContext.includes('kahve') || fullContext.includes('kahvaltı') || fullContext.includes('pasta') || fullContext.includes('döner') || fullContext.includes('burger')) {
+    environment = 'şık, sıcak ve samimi bir gourmet mutfak ve ahşap sunum masası'
+    act1Focus = 'taptaze malzemelerin iştah açıcı mikro dokusu, buharı ve canlı renkleri'
+    act2Action = 'yemeğin ustalıkla hazırlanışı, sıcak servis anı ve lezzetli sunum detayı'
+    act3Climax = 'tüm ziyafet masasını ve davetkâr lezzetleri sergileyen sıcak ışıklı geniş açı sahne'
+  } else if (fullContext.includes('pompa') || fullContext.includes('tarım') || fullContext.includes('ilaçlama') || fullContext.includes('traktör') || fullContext.includes('hasat')) {
+    environment = 'güneşli, bereketli bir tarım arazisi ve yemyeşil meyve bahçesi'
+    act1Focus = 'ürünün dayanıklı gövdesi, kaliteli malzeme detayları ve ergonomik formu'
+    act2Action = 'ürünün arazideki akıcı ve verimli çalışma performansı, bitkilerle uyumu'
+    act3Climax = 'bereketli tarlaları ve ürünün doğadaki kusursuz katkısını gösteren geniş açı plan'
+  } else if (fullContext.includes('mobilya') || fullContext.includes('dekorasyon') || fullContext.includes('koltuk') || fullContext.includes('ahşap')) {
+    environment = 'doğal güneş ışığı alan modern, minimalist ve ferah bir iç mekan yaşam alanı'
+    act1Focus = 'kumaş ve ahşap malzemenin zarif dokuma detayları, dikiş kalitesi ve pürüzsüz cila'
+    act2Action = 'mobilyanın yaşam alanına kattığı konfor, zarafet ve fonksiyonellik'
+    act3Climax = 'tüm odayı ve mobilyanın uyumunu sergileyen ilham verici geniş salon sahnesi'
+  } else if (fullContext.includes('giyim') || fullContext.includes('moda') || fullContext.includes('ayakkabı') || fullContext.includes('çanta')) {
+    environment = 'modern bir moda stüdyosu veya şık bir şehir caddesi'
+    act1Focus = 'kumaşın kaliteli dokuması, zarif dikiş hatları ve birinci sınıf malzeme parlaklığı'
+    act2Action = 'ürünün üzerdeki dinamik duruşu, akıcı kumaş hareketi ve şık tasarım çizgisi'
+    act3Climax = 'tüm kombini ve stil sahibi duruşu öne çıkaran sinematik podyum / cadde planı'
+  }
+
+  const styleMood = VIDEO_STYLE_MOODS[snapshot.style] || VIDEO_STYLE_MOODS.auto
+  const toneDesc = kit?.tone ? `Marka tonu: ${kit.tone}.` : ''
 
   const prompt = [
-    `9:16 dikey formatta profesyonel televizyon ve sosyal medya reklam filmi (Instagram Reels & WhatsApp Durum).`,
-    `Ürün ve Konu: ${productName}.`,
-    productDesc ? `Ürün Detayları: ${productDesc}.` : null,
-    snapshot.brief ? `Reklam Senaryosu: ${snapshot.brief}.` : null,
-    `SAHNE 1 (0-3sn - MAKRO BAŞLANGIÇ): Kameranın aşırı yakın plan makro (100mm macro lens) odaklanması. ${productName} yüzeyindeki doğal malzeme dokusu, birinci sınıf işçilik ve kusursuz detaylar. Sinematik sığ alan derinliği (f/1.8), zarif ışık kırılmaları.`,
-    `SAHNE 2 (3-7sn - DİNAMİK KULLANIM): Kamera akıcı gimbal hareketiyle ${productName} ürününün gerçek ortamındaki işlevini, kalitesini ve profesyonel uygulamasını yakalıyor. Doğal gün ışığında 120fps sinematik hareketler.`,
-    `SAHNE 3 (7-10sn - KAHRAMAN KAPANIŞ): Kamera geriye doğru açılarak sahneyi geniş açıdan kahraman (hero) planında yakalıyor. 4K reklam ajansı estetiği, Arri Alexa sinema renk tonları, kusursuz fotogerçekçi canlı çekim.`,
-    `ÖNEMLİ KURAL: Videoda KESİNLİKLE hiçbir yazı, metin, altyazı, logo kartı, bilgi kutusu veya grafik overlay OLMAYACAKTIR. Ekranda sadece %100 saf, temiz ve sinematik canlı çekim video görüntüsü olacaktır. Tam ekran temiz sinema karesi.`,
+    `9:16 dikey formatta üst düzey televizyon ve sinematik sosyal medya reklam filmi (Instagram Reels & WhatsApp Durum).`,
+    `Ürün: ${productName}.`,
+    productDetails ? `Ürün Nitelikleri: ${productDetails}.` : null,
+    briefText ? `Kampanya Konsepti: ${briefText}.` : null,
+    `Çekim Ortamı: ${environment}.`,
+    `Görsel Stil ve Işık Atmosferi: ${styleMood} ${toneDesc}`,
+    `Sinematografi ve Kamera: Shot on Arri Alexa Mini LF, Master Prime 100mm macro & 35mm sinema lensleri. 180 derece obtüratör açısı, akıcı gimbal ve slider hareketleri, doğal sığ alan derinliği (f/1.8), zarif sinematik bokeh. 4K HDR fotogerçekçi reklam ajansı renk derecelendirmesi (color grading).`,
+    `SAHNE 1 (0-3sn - MAKRO TANITIM): Kamera aşırı yakın plan makro odakla yaklaşır. ${act1Focus}. Işığın yüzeyde yarattığı yumuşak yansımalar ve birinci sınıf işçilik ön plandadır.`,
+    `SAHNE 2 (3-7sn - DİNAMİK KULLANIM & İŞLEV): Kamera akıcı bir gimbal kaymasıyla sahneye genişler. ${act2Action}. 120fps ağır çekim ile ürünün performansı ve gerçek hayat ortamındaki güvenilirliği sergilenir.`,
+    `SAHNE 3 (7-10sn - KAHRAMAN FİNAL REVEAL): Kamera geriye ve hafif yukarı doğru yükselerek kahraman (hero) planına geçer. ${act3Climax}. İlham verici altın saat ışığı, sıcak kontrastlar, üstün kalite hissi.`,
+    `ÖNEMLİ VE KESİN KURAL: Videoda KESİNLİKLE hiçbir yazı, metin, altyazı, logo kartı, bilgi kutusu veya grafik overlay OLMAYACAKTIR. Ekranda sadece %100 saf, temiz ve sinematik canlı çekim video görüntüsü olacaktır. Tam ekran temiz sinema karesi.`,
     `STRICT RULE: NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO SUBTITLES, NO CAPTIONS, NO ON-SCREEN TEXT, NO LOGO CARDS, NO GRAPHIC OVERLAYS, NO BANNERS, NO LOWER THIRDS. Pure clean cinematic live-action commercial footage only.`,
   ]
     .filter(Boolean)
     .join(' ')
 
-  const negative =
-    'text, words, letters, typography, watermark, logo overlay, graphic box, lower third, subtitles, captions, banner, card, cartoon, 3D animation look, deformed hands, blurry artifacts'
+  const negative = [
+    'text, words, letters, typography, watermark, logo overlay, graphic box, lower third, subtitles, captions, banner, card',
+    'cartoon, 3D animation look, cgi render, uncanny valley, deformed hands, distorted geometry',
+    'blurry artifacts, low quality, pixelated, amateur video, jump cuts, jerky camera',
+  ].join(', ')
 
   const offerTitle = snapshot.brief || 'ÖZEL KAMPANYA'
   const offerDetails =
