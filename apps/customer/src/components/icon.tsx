@@ -39,6 +39,7 @@ const paths = {
   circle: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20',
   gem: 'M3 9l9-6 9 6-9 12L3 9Z M3 9h18',
   zap: 'M13 2 4 13h7l-1 9 10-12h-7l1-8Z',
+  paperclip: 'm21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48',
 } as const
 
 export type IconName = keyof typeof paths

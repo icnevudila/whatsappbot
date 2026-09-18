@@ -75,6 +75,11 @@ export function ReplyForm({
   onUpdate?: (clientKey: string, patch: { status: string }) => void
 }) {
   const [body, setBody] = useState('')
+  const [mediaUrl, setMediaUrl] = useState<string | null>(null)
+  const [mediaName, setMediaName] = useState<string | null>(null)
+  const [messageType, setMessageType] = useState<'text' | 'image' | 'video' | 'document'>('text')
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [isSuggesting, setIsSuggesting] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(true)
@@ -155,10 +160,15 @@ export function ReplyForm({
 
   const submitText = (textToSend: string) => {
     const text = textToSend.trim()
-    if (!text) return
+    if (!text && !mediaUrl) return
     const clientKey = `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-    onQueued?.(text, clientKey)
+    const sendMediaUrl = mediaUrl
+    const sendMessageType = messageType
+    onQueued?.(text || (sendMessageType === 'image' ? 'Fotoğraf' : '(ek)'), clientKey)
     setBody('')
+    setMediaUrl(null)
+    setMediaName(null)
+    setMessageType('text')
     setShowSuggestions(false)
     window.requestAnimationFrame(() => {
       if (!input.current) return
@@ -169,7 +179,11 @@ export function ReplyForm({
       const formData = new FormData()
       formData.set('phone', phone)
       formData.set('account_id', accountId)
-      formData.set('body', text)
+      if (text) formData.set('body', text)
+      if (sendMediaUrl) {
+        formData.set('media_url', sendMediaUrl)
+        formData.set('message_type', sendMessageType)
+      }
       formData.set('client_key', clientKey)
       const queued = await replyToConversation(null, formData)
       if (queued?.error) {
@@ -275,7 +289,84 @@ export function ReplyForm({
         </div>
       )}
 
+      {mediaUrl ? (
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-canvas-subtle border-t border-line text-xs">
+          {messageType === 'image' ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={mediaUrl} alt="" className="size-8 object-cover rounded border border-line" />
+          ) : (
+            <Icon name="paperclip" className="size-4 text-ink-muted" />
+          )}
+          <span className="truncate max-w-[200px] text-ink font-medium">{mediaName || 'Eklenen Medya'}</span>
+          <span className="rounded bg-accent/10 px-1 py-0.5 text-[10px] font-bold text-accent uppercase">
+            {messageType}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setMediaUrl(null)
+              setMediaName(null)
+              setMessageType('text')
+            }}
+            className="ml-auto text-ink-muted hover:text-danger text-[16px] font-semibold leading-none px-1"
+            title="Kaldır"
+          >
+            ×
+          </button>
+        </div>
+      ) : null}
+
       <div className="wb-chat-composer-row">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*,video/*,application/pdf"
+          className="hidden"
+          onChange={async (e) => {
+            const file = e.target.files?.[0]
+            if (!file) return
+            if (file.size > 16 * 1024 * 1024) {
+              toast('Dosya boyutu en fazla 16 MB olabilir.', 'warn')
+              return
+            }
+            setUploading(true)
+            try {
+              const supabase = getSupabaseBrowserClient()
+              const ext = file.name.split('.').pop() || 'bin'
+              const path = `chat/${Date.now()}_${crypto.randomUUID()}.${ext}`
+              const { error } = await supabase.storage.from('creatives').upload(path, file, {
+                contentType: file.type,
+                upsert: false,
+              })
+              if (error) throw error
+              const { data } = supabase.storage.from('creatives').getPublicUrl(path)
+              setMediaUrl(data.publicUrl)
+              setMediaName(file.name)
+              if (file.type.startsWith('image/')) setMessageType('image')
+              else if (file.type.startsWith('video/')) setMessageType('video')
+              else setMessageType('document')
+              toast('Medya eklendi.', 'success')
+            } catch (err) {
+              toast(err instanceof Error ? err.message : 'Dosya yüklenemedi.', 'danger')
+            } finally {
+              setUploading(false)
+              if (fileInputRef.current) fileInputRef.current.value = ''
+            }
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          className="wb-ai-suggest-btn"
+          title="Görsel veya dosya ekle (Maks 16 MB)"
+        >
+          {uploading ? (
+            <span className="size-3.5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+          ) : (
+            <Icon name="paperclip" className="size-3.5" />
+          )}
+        </button>
         <button
           type="button"
           onClick={() => {
@@ -308,10 +399,10 @@ export function ReplyForm({
           ref={input}
           id="conversation-reply"
           name="body"
-          required
+          required={!mediaUrl}
           maxLength={4096}
           rows={1}
-          placeholder="Mesaj yaz veya seç"
+          placeholder={mediaUrl ? 'Açıklama yazın (isteğe bağlı)…' : 'Mesaj yaz veya seç'}
           value={body}
           onChange={(event) => {
             setBody(event.target.value)
@@ -335,7 +426,7 @@ export function ReplyForm({
         <button
           type="submit"
           className="wb-chat-composer-send"
-          disabled={!body.trim()}
+          disabled={uploading || (!body.trim() && !mediaUrl)}
           aria-label="Gönder"
           title="Gönder"
         >

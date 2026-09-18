@@ -1,6 +1,6 @@
 'use server'
 
-import { toE164 } from '@wa/shared'
+import { toE164, type MessageType } from '@wa/shared'
 import { enqueueJob } from '@/lib/jobs'
 import { requireActiveOrg } from '@/lib/org'
 import { syncChatMessage } from '@/lib/chat-store'
@@ -15,8 +15,14 @@ export async function replyToConversation(
   const phone = toE164(String(formData.get('phone') ?? ''))
   const accountId = String(formData.get('account_id') ?? '')
   const body = String(formData.get('body') ?? '').trim()
+  const mediaUrl = String(formData.get('media_url') ?? '').trim() || undefined
+  const messageType = (String(formData.get('message_type') ?? '').trim() as MessageType) || (mediaUrl ? 'image' : 'text')
+
   if (!phone || !accountId) return { error: 'Yanıt için geçerli bir numara ve bağlı hat gerekli.' }
-  if (!body || body.length > 4096) return { error: 'Yanıtınız 1–4096 karakter arasında olmalı.' }
+  if (!body && !mediaUrl) {
+    return { error: 'Mesaj metni veya gönderilecek bir dosya/görsel yazmalısınız.' }
+  }
+  if (body && body.length > 4096) return { error: 'Yanıtınız 1–4096 karakter arasında olmalı.' }
 
   try {
     const { org, supabase } = await requireActiveOrg()
@@ -60,7 +66,12 @@ export async function replyToConversation(
     const queued = await enqueueJob({
       type: 'message.send',
       accountId,
-      payload: { phone_e164: phone, body },
+      payload: {
+        phone_e164: phone,
+        body: body || undefined,
+        media_url: mediaUrl,
+        message_type: messageType,
+      },
       priority: 5,
     })
     if (queued.error || !queued.id) return { error: queued.error ?? 'Yanıt sıraya alınamadı.' }
@@ -72,8 +83,9 @@ export async function replyToConversation(
       direction: 'out',
       phone_e164: phone,
       remote_jid: null,
-      message_type: 'text',
-      body,
+      message_type: messageType,
+      body: body || (messageType === 'image' ? 'Fotoğraf' : '(ek)'),
+      media_url: mediaUrl ?? null,
       status: 'pending',
       created_at: new Date().toISOString(),
       campaign_id: null,
