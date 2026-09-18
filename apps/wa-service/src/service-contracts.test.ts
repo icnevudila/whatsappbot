@@ -299,3 +299,28 @@ test('ERROR receipt sonrasi campaign sayaclari reconcile edilir', () => {
   assert.match(file, /reconcileCampaignCounts/)
   assert.match(file, /returning campaign_id/)
 })
+
+test('message.send ve campaign.bulk_reply gonderim oncesi 2-3sn composing varlik bildirimi gonderir', () => {
+  const file = src('job-consumer.ts')
+  const sendCase = file.slice(file.indexOf("case 'message.send'"))
+  assert.match(sendCase, /sendPresenceUpdate\('composing'/)
+  assert.match(sendCase, /sendPresenceUpdate\('paused'/)
+  const bulkCase = file.slice(file.indexOf("case 'campaign.bulk_reply'"))
+  assert.match(bulkCase, /sendPresenceUpdate\('composing'/)
+  assert.match(bulkCase, /sendPresenceUpdate\('paused'/)
+})
+
+test('job-consumer stats ve health memory telemetrisi', () => {
+  const consumer = src('job-consumer.ts')
+  assert.match(consumer, /getJobConsumerStats/)
+  assert.match(consumer, /processedTotal/)
+  assert.match(consumer, /succeededTotal/)
+
+  const index = src('index.ts')
+  assert.match(index, /memory: \{[\s\S]*rssMb[\s\S]*heapUsedMb/)
+  assert.match(index, /getJobConsumerStats\(\)/)
+
+  const runner = src('campaign-runner.ts')
+  assert.match(runner, /cleanupStaleNextSendAt/)
+})
+

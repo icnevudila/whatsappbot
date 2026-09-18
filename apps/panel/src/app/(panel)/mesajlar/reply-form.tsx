@@ -35,6 +35,7 @@ export function ReplyForm({
   const [messageType, setMessageType] = useState<'text' | 'image' | 'video' | 'document'>('text')
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const formRef = useRef<HTMLFormElement>(null)
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [isSuggesting, setIsSuggesting] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -166,7 +167,7 @@ export function ReplyForm({
   }, [phone, lastInbound, threadContext]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <form action={action} className="space-y-2.5 p-3" aria-busy={pending || waiting}>
+    <form ref={formRef} action={action} className="space-y-2.5 p-3" aria-busy={pending || waiting}>
       <input type="hidden" name="phone" value={phone} />
       <input type="hidden" name="recipient_jid" value={recipientJid || ''} />
       <input type="hidden" name="account_id" value={accountId} />
@@ -214,7 +215,21 @@ export function ReplyForm({
                 >
                   <span className="wb-ai-suggest-meta">
                     <span className="wb-ai-suggest-badge">{item.label}</span>
-                    <span className="wb-ai-suggest-pick">Seç</span>
+                    <span className="flex items-center gap-2">
+                      <span className="wb-ai-suggest-pick">Seç</span>
+                      <span
+                        role="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setBody(item.text)
+                          setTimeout(() => formRef.current?.requestSubmit(), 0)
+                        }}
+                        className="wb-ai-suggest-pick font-bold text-accent hover:underline cursor-pointer"
+                        title="Bu yanıtı direkt gönder (2-3sn yazıyor efektiyle)"
+                      >
+                        Gönder ↵
+                      </span>
+                    </span>
                   </span>
                   <span className="wb-ai-suggest-body">{item.text}</span>
                 </button>

@@ -153,43 +153,47 @@ export function ReplyForm({
     }
   }
 
+  const submitText = (textToSend: string) => {
+    const text = textToSend.trim()
+    if (!text) return
+    const clientKey = `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    onQueued?.(text, clientKey)
+    setBody('')
+    setShowSuggestions(false)
+    window.requestAnimationFrame(() => {
+      if (!input.current) return
+      fitComposer(input.current)
+      input.current.focus()
+    })
+    void (async () => {
+      const formData = new FormData()
+      formData.set('phone', phone)
+      formData.set('account_id', accountId)
+      formData.set('body', text)
+      formData.set('client_key', clientKey)
+      const queued = await replyToConversation(null, formData)
+      if (queued?.error) {
+        onUpdate?.(clientKey, { status: 'failed' })
+        toast(queued.error, 'danger')
+        return
+      }
+      if (!queued?.jobId) return
+      const outcome = await waitForJob(queued.jobId)
+      if (outcome.error) {
+        onUpdate?.(clientKey, { status: 'failed' })
+        toast(outcome.error, 'danger')
+        return
+      }
+      onUpdate?.(clientKey, { status: 'sent' })
+    })()
+  }
+
   return (
     <form
       className="wb-chat-composer-bar"
       onSubmit={(event) => {
         event.preventDefault()
-        const text = body.trim()
-        if (!text) return
-        const clientKey = `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-        onQueued?.(text, clientKey)
-        setBody('')
-        setShowSuggestions(false)
-        window.requestAnimationFrame(() => {
-          if (!input.current) return
-          fitComposer(input.current)
-          input.current.focus()
-        })
-        void (async () => {
-          const formData = new FormData()
-          formData.set('phone', phone)
-          formData.set('account_id', accountId)
-          formData.set('body', text)
-          formData.set('client_key', clientKey)
-          const queued = await replyToConversation(null, formData)
-          if (queued?.error) {
-            onUpdate?.(clientKey, { status: 'failed' })
-            toast(queued.error, 'danger')
-            return
-          }
-          if (!queued?.jobId) return
-          const outcome = await waitForJob(queued.jobId)
-          if (outcome.error) {
-            onUpdate?.(clientKey, { status: 'failed' })
-            toast(outcome.error, 'danger')
-            return
-          }
-          onUpdate?.(clientKey, { status: 'sent' })
-        })()
+        submitText(body)
       }}
     >
       {showSuggestions && (suggestions.length > 0 || isSuggesting) && (
@@ -243,7 +247,20 @@ export function ReplyForm({
                 >
                   <span className="wb-ai-suggest-meta">
                     <span className="wb-ai-suggest-badge">{item.label}</span>
-                    <span className="wb-ai-suggest-pick">Seç</span>
+                    <span className="flex items-center gap-2">
+                      <span className="wb-ai-suggest-pick">Seç</span>
+                      <span
+                        role="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          submitText(item.text)
+                        }}
+                        className="wb-ai-suggest-pick font-bold text-accent hover:underline cursor-pointer"
+                        title="Bu yanıtı direkt gönder (2-3sn yazıyor efektiyle)"
+                      >
+                        Gönder ↵
+                      </span>
+                    </span>
                   </span>
                   <span className="wb-ai-suggest-body">{item.text}</span>
                 </button>

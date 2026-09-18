@@ -11,6 +11,7 @@ import { env } from './env.js'
 import { startHeartbeat, stopHeartbeat } from './heartbeat.js'
 import {
   drainJobConsumer,
+  getJobConsumerStats,
   pendingJobCount,
   reclaimStaleJobs,
   requeueOwnJobs,
@@ -82,6 +83,8 @@ async function buildHealthPayload(): Promise<{ status: number; body: unknown }> 
   const report = await sessionManager.healthReport()
   const pending = await pendingJobCount().catch(() => -1)
   const staleClaimed = await staleClaimedJobCount().catch(() => -1)
+  const jobStats = getJobConsumerStats()
+  const mem = process.memoryUsage()
 
   const { healthy, ready, degraded } = computeWorkerReady({
     dbOk,
@@ -116,7 +119,20 @@ async function buildHealthPayload(): Promise<{ status: number; body: unknown }> 
           'Filo kapasitesi = tum worker MAX_SESSIONS toplami. Autoscale: docs/autoscale.md',
         sentry: Boolean(process.env.SENTRY_DSN?.trim()),
       },
-      jobs: { pending, staleClaimed },
+      memory: {
+        rssMb: Math.round(mem.rss / (1024 * 1024)),
+        heapUsedMb: Math.round(mem.heapUsed / (1024 * 1024)),
+        heapTotalMb: Math.round(mem.heapTotal / (1024 * 1024)),
+      },
+      jobs: {
+        pending,
+        staleClaimed,
+        processedTotal: jobStats.processedTotal,
+        succeededTotal: jobStats.succeededTotal,
+        failedTotal: jobStats.failedTotal,
+        lastJobAt: jobStats.lastJobAt,
+        lastJobType: jobStats.lastJobType,
+      },
       uptimeSeconds: Math.round(process.uptime()),
       version: process.env.npm_package_version ?? '0.0.0',
     },

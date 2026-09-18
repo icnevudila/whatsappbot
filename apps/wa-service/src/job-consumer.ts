@@ -16,6 +16,26 @@ const log = logger.child({ scope: 'jobs' })
 export { messageSendSkipped } from './message-send-result.js'
 export type { MessageSendSkipReason } from './message-send-result.js'
 
+export type JobConsumerStats = {
+  processedTotal: number
+  succeededTotal: number
+  failedTotal: number
+  lastJobAt: string | null
+  lastJobType: string | null
+}
+
+const stats: JobConsumerStats = {
+  processedTotal: 0,
+  succeededTotal: 0,
+  failedTotal: 0,
+  lastJobAt: null,
+  lastJobType: null,
+}
+
+export function getJobConsumerStats(): JobConsumerStats {
+  return { ...stats }
+}
+
 type JobRow = {
   id: string
   org_id: string | null
@@ -491,8 +511,19 @@ async function handle(job: JobRow): Promise<unknown> {
         } else {
           throw new Error(`Desteklenmeyen mesaj tipi: ${messageType}`)
         }
+
+        if (session.isLive) {
+          void session.sendPresenceUpdate('composing', jid).catch(() => {})
+          const typingMs = Math.floor(2000 + Math.random() * 1000)
+          await new Promise((resolve) => setTimeout(resolve, typingMs))
+        }
+
         const message = await session.sendMessage(jid, content)
         messageId = message.key?.id ?? null
+
+        if (session.isLive) {
+          void session.sendPresenceUpdate('paused', jid).catch(() => {})
+        }
       } catch (error) {
         throw error
       }
@@ -770,8 +801,7 @@ async function handle(job: JobRow): Promise<unknown> {
         try {
           if (session.isLive) {
             void session.sendPresenceUpdate('composing', jid).catch(() => {})
-            const textLen = item.text.length
-            const typingMs = Math.min(3000, Math.max(1200, textLen * 20 + Math.random() * 600))
+            const typingMs = Math.floor(2000 + Math.random() * 1000)
             await new Promise((resolve) => setTimeout(resolve, typingMs))
           }
 
@@ -934,14 +964,22 @@ async function tick(): Promise<void> {
           log.warn({ jobId: job.id }, 'running gecisi atlandi: sahiplik kaybedildi')
           continue
         }
+
+        stats.processedTotal += 1
+        stats.lastJobAt = new Date().toISOString()
+        stats.lastJobType = job.type
+
         const result = await handle(job)
         try {
           await markDone(job.id, result)
+          stats.succeededTotal += 1
         } catch (error) {
+          stats.failedTotal += 1
           if (job.type === 'message.send') throw new NonRetryableJobError('Gönderim işlendi fakat sonuç kaydedilemedi. Otomatik tekrar yapılmadı.')
           throw error
         }
       } catch (error) {
+        stats.failedTotal += 1
         if (error instanceof SendWindowWaitError) {
           await requeueForWindow(job, error)
         } else {

@@ -73,6 +73,18 @@ type TargetRow = {
 /** Hesap basina bir sonraki gonderimin en erken zamani (rastgele gecikme). */
 const nextSendAt = new Map<string, number>()
 
+export function cleanupStaleNextSendAt(maxAgeMs = 24 * 3600 * 1000): number {
+  const now = Date.now()
+  let cleaned = 0
+  for (const [accountId, timestamp] of nextSendAt.entries()) {
+    if (now - timestamp > maxAgeMs) {
+      nextSendAt.delete(accountId)
+      cleaned++
+    }
+  }
+  return cleaned
+}
+
 let inFlight = 0
 
 export function campaignInFlightCount(): number {
@@ -1008,6 +1020,7 @@ let tickActive = false
 async function tick(): Promise<void> {
   tickActive = true
   try {
+    cleanupStaleNextSendAt()
     await reclaimStaleSending()
     await promoteScheduledCampaigns()
 
