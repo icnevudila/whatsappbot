@@ -27,8 +27,8 @@ docker exec omnistudio-engine sh -c "cd /app/gateway && npm install --no-save ws
 docker exec omnistudio-engine pkill -9 -f 'server.js' 2>/dev/null || true
 sleep 1
 
-# Start fresh daemon with --experimental-websocket and -d
-docker exec -d omnistudio-engine node --experimental-websocket /app/gateway/server.js
+# Start fresh daemon with --experimental-websocket and logging
+docker exec -d omnistudio-engine sh -c "node --experimental-websocket /app/gateway/server.js > /app/gateway/server.log 2>&1"
 sleep 2
 
 # Verify

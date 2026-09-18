@@ -305,6 +305,8 @@ async function generateVideo({
             console.log("[VideoGen] Montaj tamamlandı:", montajTarget);
             finalUrl = `http://${PUBLIC_HOST}:${PORT}/outputs/${videoId}_campaign.mp4`;
           }
+        }
+
         const videoFileForThumb = (shouldMontage && fs.existsSync(path.join(OUTPUT_DIR, `${videoId}_campaign.mp4`)))
           ? path.join(OUTPUT_DIR, `${videoId}_campaign.mp4`)
           : rawVideoTarget;
