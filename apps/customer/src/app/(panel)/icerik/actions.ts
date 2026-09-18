@@ -333,6 +333,7 @@ export async function startCreativeGeneration(
     baseCreativeId,
     instruction: String(draft.instruction ?? '').trim() || null,
     variationPreset: String(draft.variationPreset ?? '').trim() || null,
+    videoSpeech: draft.videoSpeech !== false && draft.videoSpeech !== '0',
     title,
     requestKey: requestKey || undefined,
     cost: { imageCount: 1 },

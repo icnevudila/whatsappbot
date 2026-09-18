@@ -68,6 +68,14 @@ test('Video Prompt Generator A-Z Industry Variations', () => {
     // 4. Sinematik kamera optigi yer almali
     assert.ok(prompt.includes('Arri Alexa'), 'Camera lens spec missing in ' + v.name);
 
+    // 5. Ses ve konuşma kurgusu testi
+    const withVoice = buildVideoPrompt({ ...snap, videoSpeech: true } as any);
+    assert.ok(withVoice.prompt.includes('SESLENDİRME VE TÜRKÇE REKLAM DIŞ SESİ'), 'Voiceover section missing in ' + v.name);
+
+    const silent = buildVideoPrompt({ ...snap, videoSpeech: false } as any);
+    assert.ok(silent.prompt.includes('SES DÜZENİ (KONUŞMASIZ'), 'Silent mode instruction missing in ' + v.name);
+    assert.ok(silent.prompt.includes('NO VOICE, NO SPEECH'), 'Silent negative missing in ' + v.name);
+
     console.log('[PASS] ' + v.cat + ' -> ' + v.name);
   }
 });

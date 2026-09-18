@@ -162,22 +162,47 @@ export function buildVideoPrompt(snapshot: CreativeSnapshot): {
   }
 } {
   const kit = snapshot.brandKit
-  const mainProduct = snapshot.products[0]
   const brandName = kit?.name?.replace(/Brand Kit/i, '').replace(/Kampanya Kiti/i, '').trim() || ''
+  const mainProduct = snapshot.products[0]
   const productName = mainProduct?.name || 'Ürün'
 
-  // Ürün ve kampanya detaylarını zenginleştir
-  const productBits: string[] = [productName]
-  if (mainProduct?.description) productBits.push(mainProduct.description)
-  if (mainProduct?.boxContents) productBits.push(`İçerik: ${mainProduct.boxContents}`)
-  if (mainProduct?.promo) productBits.push(`Kampanya: ${mainProduct.promo}`)
-  if (mainProduct?.extra) productBits.push(mainProduct.extra)
+  // 1. Tüm ürünlerin zengin katalog bilgilerini derle
+  const productBlocks = snapshot.products.map((product, index) => {
+    const bits: string[] = [`Ürün ${index + 1}: ${product.name}`]
+    if (product.description) bits.push(product.description)
+    if (product.boxContents) bits.push(`Kutu içeriği: ${product.boxContents}`)
+    if (product.price || product.oldPrice) {
+      bits.push(
+        `Fiyat: ${product.price || '—'} ${product.oldPrice ? `(Eski fiyat: ${product.oldPrice})` : ''}`.trim(),
+      )
+    }
+    if (product.promo) bits.push(`Kampanya: ${product.promo}`)
+    if (product.extra) bits.push(product.extra)
+    return bits.join('. ')
+  })
 
-  const productDetails = productBits.join('. ')
-  const briefText = snapshot.brief ? snapshot.brief.trim() : ''
-  const fullContext = `${productDetails} ${briefText}`.toLowerCase()
+  // 2. Kampanya bağlamı ve ek ayrıntılar
+  const campaignContext: string[] = []
+  if (snapshot.brief) campaignContext.push(`Kampanya Konsepti: ${snapshot.brief.trim()}`)
+  if (snapshot.customText) campaignContext.push(`Özel Kampanya Duyurusu / Slogan: ${snapshot.customText.trim()}`)
+  if (snapshot.dateRange) campaignContext.push(`Kampanya Süresi: ${snapshot.dateRange.trim()}`)
+  if (snapshot.labels.length) campaignContext.push(`Öne Çıkan Rozetler: ${snapshot.labels.join(', ')}`)
+  if (snapshot.cta) campaignContext.push(`Harekete Geçirici Çağrı (CTA): ${snapshot.cta.trim()}`)
+  if (snapshot.phones.length) {
+    campaignContext.push(`WhatsApp Sipariş Hattı: ${snapshot.phones.map((p) => p.phone).join(', ')}`)
+  }
 
-  // Sektöre ve ürüne göre gerçekçi sinematik ortam tespiti
+  const fullContext = [
+    productBlocks.join(' '),
+    snapshot.brief || '',
+    snapshot.customText || '',
+    snapshot.labels.join(' '),
+    kit?.tone || '',
+  ]
+    .join(' ')
+    .toLowerCase()
+
+  // 3. Sektöre ve ürüne göre gerçekçi sinematik ortam tespiti
   let environment = 'profesyonel, aydınlık ve modern bir ticari reklam çekim ortamı'
   let act1Focus = `${productName} yüzeyindeki doğal malzeme dokusu, birinci sınıf işçilik ve kusursuz detaylar`
   let act2Action = `${productName} ürününün gerçek kullanım anı, işlevi ve yüksek dayanıklılığı`
@@ -258,22 +283,30 @@ export function buildVideoPrompt(snapshot: CreativeSnapshot): {
   const styleMood = VIDEO_STYLE_MOODS[snapshot.style] || VIDEO_STYLE_MOODS.auto
   const toneDesc = kit?.tone ? `Marka tonu: ${kit.tone}.` : ''
 
+  // 4. Ses / Konuşma Kurgusu (Voiceover vs Silent Instrumental)
+  const isSpeechEnabled = snapshot.videoSpeech !== false
+  const voiceSection = isSpeechEnabled
+    ? `SESLENDİRME VE TÜRKÇE REKLAM DIŞ SESİ (VOICEOVER NARRATION): Profesyonel, etkileyici ve akıcı bir Türkçe reklam spikeri dış sesi (voiceover). Reklam filmi sahneleriyle senkronize anlatım: SAHNE 1: "${productName} ile tanışın!". SAHNE 2: "${snapshot.brief || mainProduct?.promo || 'Üstün kalite ve özel kampanya avantajları'}". SAHNE 3: "${snapshot.cta || 'Fırsatı kaçırmayın, hemen iletişime geçin!'}". Net stüdyo ses kaydı, sinematik reklam müziği ve gerçekçi ses efektleri (foley).`
+    : `SES DÜZENİ (KONUŞMASIZ & SADECE FON MÜZİĞİ VE SES EFEKTLERİ): Videoda KESİNLİKLE hiçbir insan konuşması, dış ses, seslendirme veya diyalog OLMAYACAKTIR. STRICT RULE: NO VOICE, NO SPEECH, NO SPOKEN WORDS, NO DIALOGUE. Sadece sahneye uygun yüksek kaliteli ortam ses efektleri (foley) ve arka planda modern reklam fon müziği.`
+
   const prompt = [
     `9:16 dikey formatta üst düzey televizyon ve sinematik sosyal medya reklam filmi (Instagram Reels & WhatsApp Durum).`,
+    brandName ? `Marka: ${brandName}.` : null,
     `Ürün: ${productName}.`,
-    productDetails ? `Ürün Nitelikleri: ${productDetails}.` : null,
-    briefText ? `Kampanya Konsepti: ${briefText}.` : null,
+    productBlocks.length ? `Ürün Kataloğu ve Detayları:\n${productBlocks.join('\n')}` : null,
+    campaignContext.length ? `Kampanya Ayrıntıları:\n${campaignContext.join('\n')}` : null,
     `Çekim Ortamı: ${environment}.`,
     `Görsel Stil ve Işık Atmosferi: ${styleMood} ${toneDesc}`,
     `Sinematografi ve Kamera: Shot on Arri Alexa Mini LF, Master Prime 100mm macro & 35mm sinema lensleri. 180 derece obtüratör açısı, akıcı gimbal ve slider hareketleri, doğal sığ alan derinliği (f/1.8), zarif sinematik bokeh. 4K HDR fotogerçekçi reklam ajansı renk derecelendirmesi (color grading).`,
     `SAHNE 1 (0-3sn - MAKRO TANITIM): Kamera aşırı yakın plan makro odakla yaklaşır. ${act1Focus}. Işığın yüzeyde yarattığı yumuşak yansımalar ve birinci sınıf işçilik ön plandadır.`,
     `SAHNE 2 (3-7sn - DİNAMİK KULLANIM & İŞLEV): Kamera akıcı bir gimbal kaymasıyla sahneye genişler. ${act2Action}. 120fps ağır çekim ile ürünün performansı ve gerçek hayat ortamındaki güvenilirliği sergilenir.`,
     `SAHNE 3 (7-10sn - KAHRAMAN FİNAL REVEAL): Kamera geriye ve hafif yukarı doğru yükselerek kahraman (hero) planına geçer. ${act3Climax}. İlham verici altın saat ışığı, sıcak kontrastlar, üstün kalite hissi.`,
+    voiceSection,
     `ÖNEMLİ VE KESİN KURAL: Videoda KESİNLİKLE hiçbir yazı, metin, altyazı, logo kartı, bilgi kutusu veya grafik overlay OLMAYACAKTIR. Ekranda sadece %100 saf, temiz ve sinematik canlı çekim video görüntüsü olacaktır. Tam ekran temiz sinema karesi.`,
     `STRICT RULE: NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO SUBTITLES, NO CAPTIONS, NO ON-SCREEN TEXT, NO LOGO CARDS, NO GRAPHIC OVERLAYS, NO BANNERS, NO LOWER THIRDS. Pure clean cinematic live-action commercial footage only.`,
   ]
     .filter(Boolean)
-    .join(' ')
+    .join('\n')
 
   const negative = [
     'text, words, letters, typography, watermark, logo overlay, graphic box, lower third, subtitles, captions, banner, card',

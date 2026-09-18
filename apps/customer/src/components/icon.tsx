@@ -44,6 +44,7 @@ const paths = {
   stop: 'M6 6h12v12H6z',
   play: 'M5 3l14 9-14 9V3z',
   video: 'm23 7-7 5 7 5V7z M1 5h15v14H1z',
+  location: 'M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z M12 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6',
 } as const
 
 export type IconName = keyof typeof paths

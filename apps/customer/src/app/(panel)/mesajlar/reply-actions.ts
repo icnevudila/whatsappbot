@@ -18,9 +18,10 @@ export async function replyToConversation(
   const mediaUrl = String(formData.get('media_url') ?? '').trim() || undefined
   const mediaName = String(formData.get('media_name') ?? '').trim() || undefined
   const messageType = (String(formData.get('message_type') ?? '').trim() as MessageType) || (mediaUrl ? (mediaName?.toLowerCase().endsWith('.pdf') ? 'document' : 'image') : 'text')
+  const isLocation = messageType === 'location'
 
   if (!phone || !accountId) return { error: 'Yanıt için geçerli bir numara ve bağlı hat gerekli.' }
-  if (!body && !mediaUrl) {
+  if (!body && !mediaUrl && !isLocation) {
     return { error: 'Mesaj metni veya gönderilecek bir dosya/görsel yazmalısınız.' }
   }
   if (body && body.length > 4096) return { error: 'Yanıtınız 1–4096 karakter arasında olmalı.' }
@@ -64,6 +65,11 @@ export async function replyToConversation(
     // Kendi hattından kendi numarasına test: gelen konuşma şart değil.
     if (!toSelf && messages === 0) return { error: 'Bu hatta ait konuşma bulunamadı.' }
 
+    const locationLat = formData.get('location_lat') ? Number(formData.get('location_lat')) : 39.888403
+    const locationLng = formData.get('location_lng') ? Number(formData.get('location_lng')) : 32.931024
+    const locationName = String(formData.get('location_name') || 'İşletme Konumu').trim()
+    const locationAddress = String(formData.get('location_address') || 'Mamak, Ankara').trim()
+
     const queued = await enqueueJob({
       type: 'message.send',
       accountId,
@@ -74,6 +80,14 @@ export async function replyToConversation(
         media_name: mediaName,
         message_type: messageType,
         ptt: messageType === 'audio' ? true : undefined,
+        location: isLocation
+          ? {
+              degreesLatitude: locationLat,
+              degreesLongitude: locationLng,
+              name: locationName,
+              address: locationAddress,
+            }
+          : undefined,
       },
       priority: 5,
     })
@@ -87,7 +101,15 @@ export async function replyToConversation(
       phone_e164: phone,
       remote_jid: null,
       message_type: messageType,
-      body: body || (messageType === 'document' ? (mediaName || 'Belge (PDF)') : messageType === 'image' ? 'Fotoğraf' : '(ek)'),
+      body:
+        body ||
+        (isLocation
+          ? `${locationName}\n${locationAddress}`
+          : messageType === 'document'
+            ? (mediaName || 'Belge (PDF)')
+            : messageType === 'image'
+              ? 'Fotoğraf'
+              : '(ek)'),
       media_url: mediaUrl ?? null,
       status: 'pending',
       created_at: new Date().toISOString(),

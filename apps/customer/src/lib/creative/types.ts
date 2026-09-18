@@ -106,6 +106,7 @@ export type CreativeSnapshot = {
   includeVideoLogo?: boolean
   includeVideoBanner?: boolean
   includeVideoCta?: boolean
+  videoSpeech?: boolean
 }
 
 export type CreativePayload = CreativeSnapshot & {

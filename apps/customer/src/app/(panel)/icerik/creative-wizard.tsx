@@ -62,6 +62,7 @@ type Draft = {
   formatId: string
   style: string
   textDensity: string
+  videoSpeech?: boolean
 }
 
 function newKey() {
@@ -100,6 +101,7 @@ function defaultDraft(data: WizardBootstrap): Draft {
     formatId: 'wa',
     style: 'auto',
     textDensity: 'balanced',
+    videoSpeech: true,
   }
 }
 
@@ -800,20 +802,53 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
               ))}
             </div>
           </Field>
-          <Field label="Görseldeki metin miktarı">
-            <div className="flex flex-wrap gap-1.5">
-              {TEXT_DENSITIES.map((row) => (
+          {isVideo ? (
+            <Field label="Video seslendirme ve ses kurgusu">
+              <div className="grid gap-2 sm:grid-cols-2">
                 <button
-                  key={row.id}
                   type="button"
-                  onClick={() => patch({ textDensity: row.id })}
-                  className={`wb-wa-chip${draft.textDensity === row.id ? ' is-active' : ''}`}
+                  onClick={() => patch({ videoSpeech: true })}
+                  className={`wb-wa-choice${draft.videoSpeech !== false ? ' is-on' : ''}`}
                 >
-                  {row.label}
+                  <div className="flex items-center gap-2">
+                    <Icon name="mic" className="size-4 text-emerald-600" />
+                    <span className="block text-[13.5px] font-semibold text-[#111b21]">Seslendirmeli (Dış Ses Var)</span>
+                  </div>
+                  <span className="text-[12px] text-[#667781]">
+                    Profesyonel Türkçe reklam spikeri; ürün, kampanya ve sipariş çağrısını seslendirir.
+                  </span>
                 </button>
-              ))}
-            </div>
-          </Field>
+                <button
+                  type="button"
+                  onClick={() => patch({ videoSpeech: false })}
+                  className={`wb-wa-choice${draft.videoSpeech === false ? ' is-on' : ''}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Icon name="activity" className="size-4 text-sky-600" />
+                    <span className="block text-[13.5px] font-semibold text-[#111b21]">Konuşmasız (Sadece Müzik & Foley)</span>
+                  </div>
+                  <span className="text-[12px] text-[#667781]">
+                    İnsan sesi ve diyalog yok; sadece sahneye özel doğal ses efektleri ve dinamik fon müziği.
+                  </span>
+                </button>
+              </div>
+            </Field>
+          ) : (
+            <Field label="Görseldeki metin miktarı">
+              <div className="flex flex-wrap gap-1.5">
+                {TEXT_DENSITIES.map((row) => (
+                  <button
+                    key={row.id}
+                    type="button"
+                    onClick={() => patch({ textDensity: row.id })}
+                    className={`wb-wa-chip${draft.textDensity === row.id ? ' is-active' : ''}`}
+                  >
+                    {row.label}
+                  </button>
+                ))}
+              </div>
+            </Field>
+          )}
         </div>
       ) : null}
 
@@ -828,6 +863,12 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
               <span className="text-ink-muted">Format: </span>
               {CREATIVE_FORMATS.find((row) => row.id === draft.formatId)?.label}
             </p>
+            {isVideo ? (
+              <p>
+                <span className="text-ink-muted">Seslendirme: </span>
+                {draft.videoSpeech !== false ? 'Seslendirmeli (Türkçe Dış Ses)' : 'Konuşmasız (Sadece Müzik & Ses Efektleri)'}
+              </p>
+            ) : null}
             <p>
               <span className="text-ink-muted">Ürünler: </span>
               {selectedProducts.length}

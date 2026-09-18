@@ -332,6 +332,40 @@ export function ReplyForm({
     })()
   }
 
+  const sendBusinessLocation = () => {
+    const clientKey = `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    onQueued?.('İşletme Konumu (Mamak, Ankara)', clientKey)
+
+    void (async () => {
+      const formData = new FormData()
+      formData.set('phone', phone)
+      formData.set('account_id', accountId)
+      formData.set('message_type', 'location')
+      formData.set('body', 'İşletme Konumu\nMamak, Ankara')
+      formData.set('location_lat', '39.888403')
+      formData.set('location_lng', '32.931024')
+      formData.set('location_name', 'İşletme Konumu')
+      formData.set('location_address', 'Mamak, Ankara')
+      formData.set('client_key', clientKey)
+
+      const queued = await replyToConversation(null, formData)
+      if (queued?.error) {
+        onUpdate?.(clientKey, { status: 'failed' })
+        toast(queued.error, 'danger')
+        return
+      }
+      if (!queued?.jobId) return
+      const outcome = await waitForJob(queued.jobId)
+      if (outcome.error) {
+        onUpdate?.(clientKey, { status: 'failed' })
+        toast(outcome.error, 'danger')
+        return
+      }
+      onUpdate?.(clientKey, { status: 'sent' })
+      toast('İşletme konumu gönderildi.', 'success')
+    })()
+  }
+
   return (
     <form
       className="wb-chat-composer-bar"
