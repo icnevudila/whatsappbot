@@ -389,20 +389,25 @@ export function ReplyForm({
     })()
   }
 
-  const sendBusinessLocation = () => {
+  const sendLocationMessage = (locationData: {
+    lat: number
+    lng: number
+    name: string
+    address: string
+  }) => {
     const clientKey = `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-    onQueued?.('İşletme Konumu (Mamak, Ankara)', clientKey)
+    onQueued?.(`${locationData.name} (${locationData.address})`, clientKey)
 
     void (async () => {
       const formData = new FormData()
       formData.set('phone', phone)
       formData.set('account_id', accountId)
       formData.set('message_type', 'location')
-      formData.set('body', 'İşletme Konumu\nMamak, Ankara')
-      formData.set('location_lat', '39.888403')
-      formData.set('location_lng', '32.931024')
-      formData.set('location_name', 'İşletme Konumu')
-      formData.set('location_address', 'Mamak, Ankara')
+      formData.set('body', `${locationData.name}\n${locationData.address}`)
+      formData.set('location_lat', String(locationData.lat))
+      formData.set('location_lng', String(locationData.lng))
+      formData.set('location_name', locationData.name)
+      formData.set('location_address', locationData.address)
       formData.set('client_key', clientKey)
 
       const queued = await replyToConversation(null, formData)
@@ -419,8 +424,49 @@ export function ReplyForm({
         return
       }
       onUpdate?.(clientKey, { status: 'sent' })
-      toast('İşletme konumu gönderildi.', 'success')
+      toast(`${locationData.name} gönderildi.`, 'success')
     })()
+  }
+
+  const sendBusinessLocation = () => {
+    sendLocationMessage({
+      lat: 39.888403,
+      lng: 32.931024,
+      name: 'İşletme Konumu',
+      address: 'Mamak, Ankara',
+    })
+  }
+
+  const sendCurrentDeviceLocation = () => {
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      toast('Tarayıcınız veya cihazınız konum servisini desteklemiyor.', 'warn')
+      return
+    }
+    toast('Cihazın canlı GPS konumu alınıyor…', 'accent')
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = Number(pos.coords.latitude.toFixed(6))
+        const lng = Number(pos.coords.longitude.toFixed(6))
+        sendLocationMessage({
+          lat,
+          lng,
+          name: 'Mevcut Konum',
+          address: `${lat}, ${lng}`,
+        })
+      },
+      (err) => {
+        let msg = 'Cihaz konumu alınamadı.'
+        if (err.code === 1) {
+          msg = 'Konum erişim izni verilmedi. Tarayıcı ayarlarından izin verin.'
+        } else if (err.code === 2) {
+          msg = 'GPS konum bilgisine ulaşılamadı.'
+        } else if (err.code === 3) {
+          msg = 'Konum alma işlemi zaman aşımına uğradı.'
+        }
+        toast(msg, 'danger')
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 },
+    )
   }
 
   return (
@@ -629,7 +675,7 @@ export function ReplyForm({
                   <span className="wb-chat-attach-label">Fotoğraf ve Video</span>
                 </button>
 
-                {/* 3. Konum */}
+                {/* 3. İşletme Konumu */}
                 <button
                   type="button"
                   onClick={() => {
@@ -643,8 +689,27 @@ export function ReplyForm({
                     <Icon name="location" className="size-4" />
                   </span>
                   <div className="flex flex-col">
-                    <span className="wb-chat-attach-label">Konum</span>
+                    <span className="wb-chat-attach-label">İşletme Konumu</span>
                     <span className="text-[11px] text-ink-muted -mt-0.5">Mamak, Ankara</span>
+                  </div>
+                </button>
+
+                {/* 4. Mevcut Konumum */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAttachMenu(false)
+                    sendCurrentDeviceLocation()
+                  }}
+                  className="wb-chat-attach-item"
+                  role="menuitem"
+                >
+                  <span className="wb-chat-attach-circle bg-[#059669] text-white">
+                    <Icon name="location" className="size-4" />
+                  </span>
+                  <div className="flex flex-col">
+                    <span className="wb-chat-attach-label">Mevcut Konumum</span>
+                    <span className="text-[11px] text-ink-muted -mt-0.5">Cihazın Canlı GPS'i</span>
                   </div>
                 </button>
 

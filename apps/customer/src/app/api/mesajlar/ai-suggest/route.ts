@@ -4,9 +4,98 @@ import { requireActiveOrg } from '@/lib/org'
 import { rateLimit } from '@/lib/rate-limit'
 
 export const runtime = 'nodejs'
-export const maxDuration = 45
+export const maxDuration = 60
 
 type Suggestion = { label: string; text: string }
+
+function generateSmartFallbackSuggestions(incoming: string, company: string): Suggestion[] {
+  const norm = incoming.toLowerCase()
+  if (
+    norm.includes('fiyat') ||
+    norm.includes('ne kadar') ||
+    norm.includes('ücret') ||
+    norm.includes('ucret') ||
+    norm.includes('kac') ||
+    norm.includes('kaç')
+  ) {
+    return [
+      {
+        label: 'Kısa & Net',
+        text: 'Merhabalar, ilgilendiğiniz ürün veya hizmet detayını iletirseniz hemen güncel fiyat bilgisi paylaşalım.',
+      },
+      {
+        label: 'Samimi',
+        text: 'Merhabalar, memnuniyetle yardımcı oluruz. Tam olarak hangi model veya ürünümüzün fiyatını öğrenmek istemiştiniz?',
+      },
+      {
+        label: 'Yönlendirici',
+        text: 'Merhaba, güncel fiyat listemizi ve kampanyalı tekliflerimizi iletebilmemiz için ürün görseli veya adını paylaşabilir misiniz?',
+      },
+    ]
+  }
+
+  if (
+    norm.includes('konum') ||
+    norm.includes('nerede') ||
+    norm.includes('adres') ||
+    norm.includes('yeriniz') ||
+    norm.includes('tarifi')
+  ) {
+    return [
+      {
+        label: 'Kısa & Net',
+        text: 'İşletmemiz Mamak, Ankara adresindedir. WhatsApp üzerinden harita konumumuzu hemen iletiyoruz.',
+      },
+      {
+        label: 'Samimi',
+        text: 'Merhabalar, yerimiz Mamak / Ankara\'da bulunuyor. Dilerseniz hemen canlı navigasyon pini gönderebilirim.',
+      },
+      {
+        label: 'Yönlendirici',
+        text: 'Merhaba, Mamak Ankara adresindeyiz. Ziyaretinizden mutluluk duyarız; doğrudan konum pini gönderelim mi?',
+      },
+    ]
+  }
+
+  if (
+    norm.includes('merhaba') ||
+    norm.includes('selam') ||
+    norm.includes('günaydın') ||
+    norm.includes('gunaydin') ||
+    norm.includes('iyi günler') ||
+    norm.includes('kolay gelsin')
+  ) {
+    return [
+      {
+        label: 'Kısa & Net',
+        text: `Merhabalar, ${company || 'işletmemize'} hoş geldiniz. Size nasıl yardımcı olabiliriz?`,
+      },
+      {
+        label: 'Samimi',
+        text: 'Merhabalar, hoş geldiniz! Size yardımcı olmaktan memnuniyet duyarız, nasıl bir konuda destek istersiniz?',
+      },
+      {
+        label: 'Yönlendirici',
+        text: 'İyi günler dileriz. Ürünlerimiz, siparişleriniz veya hizmetlerimiz hakkında bilgi almak için sorunuzu iletebilirsiniz.',
+      },
+    ]
+  }
+
+  return [
+    {
+      label: 'Kısa & Net',
+      text: 'Mesajınız tarafımıza ulaştı. Talebinizle ilgili en kısa sürede detaylı bilgi veriyoruz.',
+    },
+    {
+      label: 'Samimi',
+      text: 'Merhabalar, mesajınız için teşekkür ederiz. Konuyla ilgili kontrolü sağlayıp hemen size dönüş yapıyoruz.',
+    },
+    {
+      label: 'Yönlendirici',
+      text: 'Talebinizi aldık. Size daha hızlı yardımcı olabilmemiz için ürün adı, görsel veya sipariş detayınızı iletebilir misiniz?',
+    },
+  ]
+}
 
 function normalizeForLibrary(input: string) {
   return input
@@ -193,57 +282,50 @@ export async function POST(request: Request) {
         companyContext,
         tone,
       }),
-      signal: AbortSignal.timeout(35000),
+      signal: AbortSignal.timeout(12000),
     })
 
-    if (!gatewayRes.ok) {
-      const errText = await gatewayRes.text().catch(() => '')
-      return NextResponse.json(
-        { error: 'AI motorundan yanıt alınamadı.', details: errText },
-        { status: 502 },
-      )
-    }
+    if (gatewayRes.ok) {
+      const data = (await gatewayRes.json()) as {
+        success?: boolean
+        suggestions?: Suggestion[]
+        error?: string
+      }
 
-    const data = (await gatewayRes.json()) as {
-      success?: boolean
-      suggestions?: Suggestion[]
-      error?: string
-    }
+      if (validSuggestions(data.suggestions)) {
+        await supabase
+          .from('ai_reply_suggestion_library')
+          .upsert(
+            {
+              org_id: org.id,
+              message_fingerprint: messageFingerprint,
+              context_fingerprint: contextFingerprint,
+              incoming_sample: lastMessage.slice(0, 500),
+              suggestions: data.suggestions,
+              source: 'chatgpt',
+              generated_count: 1,
+              last_used_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'org_id,message_fingerprint,context_fingerprint' },
+          )
 
-    if (!validSuggestions(data.suggestions)) {
-      return NextResponse.json(
-        { error: data.error || 'Öneri üretilemedi.' },
-        { status: 500 },
-      )
-    }
-
-    await supabase
-      .from('ai_reply_suggestion_library')
-      .upsert(
-        {
-          org_id: org.id,
-          message_fingerprint: messageFingerprint,
-          context_fingerprint: contextFingerprint,
-          incoming_sample: lastMessage.slice(0, 500),
+        return NextResponse.json({
+          success: true,
+          cached: false,
           suggestions: data.suggestions,
-        source: 'chatgpt',
-          generated_count: 1,
-          last_used_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'org_id,message_fingerprint,context_fingerprint' },
-      )
-
-    return NextResponse.json({
-      success: true,
-      cached: false,
-      suggestions: data.suggestions,
-    })
+        })
+      }
+    }
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err)
-    return NextResponse.json(
-      { error: 'Yapay zeka servisine erişilemedi.', details: message },
-      { status: 504 },
-    )
+    console.warn('[AI Suggest] Gateway bağlantı uyarısı, akıllı yedek devreye alındı:', err)
   }
+
+  // Gateway yanıt veremediğinde veya zaman aşımında akıllı yedek öneriler
+  const fallbackSuggestions = generateSmartFallbackSuggestions(lastMessage, org.name)
+  return NextResponse.json({
+    success: true,
+    cached: false,
+    suggestions: fallbackSuggestions,
+  })
 }

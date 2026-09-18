@@ -616,8 +616,14 @@ Bu mesaja verilebilecek en kaliteli ve uygun 3 FARKLI alternatif Türkçe yanıt
 3. "Yönlendirici" (Gerekiyorsa sonraki adımı, arama saatini veya detayları soran aksiyon yanıtı)
 
 ÖNEMLİ KURAL:
-YALNIZCA VE SADECE aşağıdaki JSON formatında çıktı ver. Markdown kod bloğu (\`\`\`json) veya başka hiçbir metin ekleme:
-{"suggestions":[{"label":"Kısa & Net","text":"..."},{"label":"Samimi","text":"..."},{"label":"Yönlendirici","text":"..."}]}`;
+Yanıtını aşağıdaki gibi geçerli bir JSON olarak ver:
+{
+  "suggestions": [
+    {"label": "Kısa & Net", "text": "..."},
+    {"label": "Samimi", "text": "..."},
+    {"label": "Yönlendirici", "text": "..."}
+  ]
+}`;
 
     // 3. Prompt'u ChatGPT'ye enjekte et ve gönder
     const injectEval = await cdp.send('Runtime.evaluate', {
@@ -629,14 +635,12 @@ YALNIZCA VE SADECE aşağıdaki JSON formatında çıktı ver. Markdown kod blo�
           if (!textarea) return { success: false, error: 'Textarea bulunamadı' };
           
           textarea.focus();
-          if (textarea.tagName === 'DIV' || textarea.getAttribute('contenteditable') === 'true') {
+          document.execCommand('selectAll', false, null);
+          const ok = document.execCommand('insertText', false, ${JSON.stringify(prompt)});
+          if (!ok) {
             textarea.innerHTML = '<p>' + ${JSON.stringify(prompt)}.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</p>';
-          } else {
-            textarea.value = ${JSON.stringify(prompt)};
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
           }
-
-          textarea.dispatchEvent(new Event('input', { bubbles: true }));
-          textarea.dispatchEvent(new Event('change', { bubbles: true }));
 
           setTimeout(() => {
             const sendBtn = document.querySelector('button[data-testid="send-button"]') ||
@@ -647,7 +651,7 @@ YALNIZCA VE SADECE aşağıdaki JSON formatında çıktı ver. Markdown kod blo�
             } else {
               textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
             }
-          }, 400);
+          }, 300);
 
           return { success: true };
         })()
@@ -662,21 +666,22 @@ YALNIZCA VE SADECE aşağıdaki JSON formatında çıktı ver. Markdown kod blo�
     console.log(`[CDP Worker: ${WORKER_ID}] [Mesajlar] Prompt gönderildi, yanıt bekleniyor...`);
     await sleep(2500);
 
-    // 4. Metin yanıtının tamamlanmasını bekle (Maksimum 35 saniye)
+    // 4. Metin yanıtının tamamlanmasını bekle (Maksimum 45 saniye)
     let lastText = '';
-    const maxWait = 22; // 22 * 1.5s = ~33s
+    let stableCount = 0;
+    const maxWait = 32; // 32 * 1.5s = ~48s
     for (let i = 0; i < maxWait; i++) {
       await sleep(1500);
       const textEval = await cdp.send('Runtime.evaluate', {
         expression: `
           (() => {
-            const stopBtn = document.querySelector('button[data-testid="stop-button"], button[aria-label*="Stop"], button[aria-label*="durdur"]');
-            const isThinking = !!document.querySelector('.result-thinking, [data-testid*="generating"], .streaming-animated-ellipsis');
-            const isGenerating = !!stopBtn || isThinking;
-
+            const stopBtn = document.querySelector('button[data-testid*="stop"], button[aria-label*="Stop"], button[aria-label*="durdur"], button[aria-label*="Durdur"]');
             const articles = Array.from(document.querySelectorAll('[data-message-author-role="assistant"]'));
             const lastMsg = articles.pop();
             const text = lastMsg ? (lastMsg.innerText || '').trim() : '';
+            const isMsgStreaming = lastMsg ? !!lastMsg.querySelector('.streaming-animation, [data-is-streaming="true"]') : false;
+            const isGenerating = !!stopBtn || isMsgStreaming;
+
             return { isGenerating, text };
           })()
         `,
@@ -684,10 +689,17 @@ YALNIZCA VE SADECE aşağıdaki JSON formatında çıktı ver. Markdown kod blo�
       });
 
       const res = textEval.result?.value;
-      if (res && res.text) {
-        lastText = res.text;
+      const currentText = (res && res.text) ? res.text : '';
+      if (currentText && currentText === lastText) {
+        stableCount++;
+      } else {
+        stableCount = 0;
       }
-      if (res && !res.isGenerating && lastText.length > 20) {
+      lastText = currentText;
+
+      const hasCompleteJson = lastText.includes('{') && lastText.includes('}') && lastText.includes('suggestions') && (lastText.endsWith('}') || lastText.endsWith('```'));
+
+      if ((stableCount >= 2 && lastText.length > 20) || (hasCompleteJson && stableCount >= 1)) {
         break;
       }
     }
@@ -712,12 +724,35 @@ YALNIZCA VE SADECE aşağıdaki JSON formatında çıktı ver. Markdown kod blo�
       }
       const parsed = JSON.parse(clean);
       if (Array.isArray(parsed.suggestions) && parsed.suggestions.length > 0) {
-        parsedSuggestions = parsed.suggestions;
+        parsedSuggestions = parsed.suggestions.filter((s) => s && typeof s.text === 'string' && s.text.trim().length > 0);
       }
     } catch (parseErr) {
       console.warn(`[CDP Worker: ${WORKER_ID}] JSON ayrıştırma uyarısı:`, parseErr.message);
+    }
+
+    // Yedek ayrıştırıcı (Eğer JSON ayrışamadıysa veya eksik geldiyse metinden önerileri ayıkla)
+    if (parsedSuggestions.length === 0) {
+      const lines = lastText.split('\n').map((l) => l.trim()).filter(Boolean);
+      const extracted = [];
+      for (const line of lines) {
+        const match = line.match(/^(\d+[\.\)]|\-|\*)\s*(\"?[^:\"]+\"?)\s*:\s*(.+)$/i);
+        if (match && match[3]) {
+          const label = match[2].replace(/[\"\'\:\*]/g, '').trim();
+          const text = match[3].replace(/^[\"\']|[\"\']$/g, '').trim();
+          if (text.length > 5 && !text.includes('suggestions')) {
+            extracted.push({ label: label.slice(0, 20) || 'Öneri', text });
+          }
+        }
+      }
+      if (extracted.length > 0) {
+        parsedSuggestions = extracted.slice(0, 3);
+      }
+    }
+
+    if (parsedSuggestions.length === 0 && lastText.length > 10) {
+      const cleanFallback = lastText.replace(/[\{\}\[\]\"\'\`]/g, ' ').replace(/\s+/g, ' ').trim();
       parsedSuggestions = [
-        { label: 'Öneri 1', text: lastText.slice(0, 300) }
+        { label: 'Kısa & Net', text: cleanFallback.slice(0, 250) }
       ];
     }
 
@@ -733,7 +768,7 @@ YALNIZCA VE SADECE aşağıdaki JSON formatında çıktı ver. Markdown kod blo�
       })
     });
 
-    // 7. Sohbet URL'sini ve Başlığını Kaydet
+    // 7. Sohbet adlandırma
     try {
       const finalUrlEval = await cdp.send('Runtime.evaluate', {
         expression: 'window.location.href',
@@ -741,11 +776,10 @@ YALNIZCA VE SADECE aşağıdaki JSON formatında çıktı ver. Markdown kod blo�
       });
       const finalUrl = finalUrlEval.result?.value || '';
       if (finalUrl.includes('/c/')) {
-        setCompanyChat(customer, 'chat', finalUrl);
         await renameChatToCustomer(cdp, `${customer} - Mesajlar`);
       }
     } catch (urlErr) {
-      console.warn(`[CDP Worker: ${WORKER_ID}] URL kaydetme uyarısı:`, urlErr.message);
+      console.warn(`[CDP Worker: ${WORKER_ID}] Adlandırma uyarısı:`, urlErr.message);
     }
 
   } catch (err) {

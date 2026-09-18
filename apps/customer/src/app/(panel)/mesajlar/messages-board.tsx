@@ -1028,29 +1028,35 @@ export function MessagesBoard({
                                 <img src={mediaUrl} alt="" className="wb-chat-media" loading="lazy" />
                               )
                             ) : null}
-                            {row.message_type === 'location' ? (
-                              <a
-                                href="https://www.google.com/maps/search/?api=1&query=39.888403,32.931024"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-2.5 p-2.5 my-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/20 no-underline text-ink max-w-xs transition-colors"
-                              >
-                                <div className="size-9 rounded-md bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0">
-                                  <Icon name="location" className="size-5" />
-                                </div>
-                                <div className="flex flex-col min-w-0 flex-1">
-                                  <span className="text-[12px] font-bold text-emerald-800 dark:text-emerald-200 truncate">
-                                    {row.body && row.body.includes('\n') ? row.body.split('\n')[0] : 'İşletme Konumu'}
-                                  </span>
-                                  <span className="text-[11px] text-ink-muted truncate">
-                                    {row.body && row.body.includes('\n') ? row.body.split('\n')[1] : 'Mamak, Ankara'}
-                                  </span>
-                                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">
-                                    Haritada Aç ↗
-                                  </span>
-                                </div>
-                              </a>
-                            ) : null}
+                            {row.message_type === 'location' ? (() => {
+                              const title = row.body && row.body.includes('\n') ? row.body.split('\n')[0] : 'Konum'
+                              const address = row.body && row.body.includes('\n') ? row.body.split('\n')[1] : (row.body || 'Harita Konumu')
+                              const coordsMatch = (row.body || '').match(/(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/)
+                              const mapQuery = coordsMatch ? `${coordsMatch[1]},${coordsMatch[2]}` : (address && !address.includes('Mevcut') ? encodeURIComponent(address) : '39.888403,32.931024')
+                              return (
+                                <a
+                                  href={`https://www.google.com/maps/search/?api=1&query=${mapQuery}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-2.5 p-2.5 my-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/20 no-underline text-ink max-w-xs transition-colors"
+                                >
+                                  <div className="size-9 rounded-md bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0">
+                                    <Icon name="location" className="size-5" />
+                                  </div>
+                                  <div className="flex flex-col min-w-0 flex-1">
+                                    <span className="text-[12px] font-bold text-emerald-800 dark:text-emerald-200 truncate">
+                                      {title}
+                                    </span>
+                                    <span className="text-[11px] text-ink-muted truncate">
+                                      {address}
+                                    </span>
+                                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">
+                                      Haritada Aç ↗
+                                    </span>
+                                  </div>
+                                </a>
+                              )
+                            })() : null}
                             <p className="wb-chat-bubble-body">
                               {bodyText}
                               <span className="wb-chat-bubble-meta">
