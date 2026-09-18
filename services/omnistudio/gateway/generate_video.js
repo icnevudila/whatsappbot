@@ -13,24 +13,25 @@ const PORT = process.env.PORT || '3456';
  * Full + Full Sinematik Reklam Prompt Genişleticisi (Veo & AI Video Engine)
  * Kısa veya standart bir brief'i 3 perdeli bir reklam filmi yönetmeni vizyonuna genişletir.
  */
-function enhanceVideoPrompt({ prompt, brandName, productName, primaryColor, accentColor, setting }) {
-  if (prompt && prompt.length > 200) {
-    return prompt; // Zaten detaylı hazırlanmış
+function enhanceVideoPrompt({ prompt, brandName, productName }) {
+  if (prompt && prompt.length > 100) {
+    // Zaten detaylı hazırlanmış; metinsiz ve logosuz çekim kuralını pekiştir
+    if (!prompt.includes('NO TEXT')) {
+      return prompt + ' ÖNEMLİ KURAL: Videoda KESİNLİKLE hiçbir yazı, metin, altyazı, logo kartı, bilgi kutusu veya grafik overlay OLMAYACAKTIR. Ekranda sadece %100 saf, temiz ve sinematik canlı çekim video görüntüsü olacaktır. STRICT RULE: NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO SUBTITLES, NO CAPTIONS, NO ON-SCREEN TEXT, NO LOGO CARDS, NO GRAPHIC OVERLAYS.';
+    }
+    return prompt;
   }
 
-  const brand = brandName || 'Kurumsal Marka';
-  const product = productName || 'Premium Ürün';
-  const bgSetting = setting || 'güneşli ve bereketli bir tarım bahçesi, modern bağ ortamı';
-  const colorDesc = primaryColor && accentColor 
-    ? `Ürünün gövdesinde mat ${primaryColor} kurumsal tonlar ve ${accentColor} dinamik detaylar.`
-    : 'Ürünün gövdesinde birinci sınıf endüstriyel malzeme kalitesi ve kurumsal marka detayları.';
+  const product = productName || 'Ticari Ürün';
 
   return [
     `9:16 dikey formatta üst düzey televizyon ve sosyal medya reklam filmi (Instagram Reels & WhatsApp Durum).`,
-    `Marka: ${brand}. Ürün: ${product}.`,
-    `SAHNE 1 (0-3sn - ÜRÜN MAKRO GİRİŞİ): Kameranın aşırı yakın plan makro (100mm macro lens) odaklanması. ${colorDesc} Ürün gövdesinde '${brand}' logosunun hassas işçiliği ve açma/çalıştırma düğmesi belirginleşiyor. Sinematik sığ alan derinliği (f/1.8), hafif lens parlaması.`,
-    `SAHNE 2 (3-7sn - DİNAMİK EYLEM & PERFORMANS): Kamera akıcı gimbal hareketiyle ${bgSetting} içinde ürünü kullanan profesyonel kullanıcıya geçiyor. Ürünün nozulundan çıkan ultra ince mikro sis bulutu, altın saat (golden hour) gün batımı ışığında parıldıyor. 120fps ağır çekim su damlacıkları ve sinematik ışık süzülmeleri.`,
-    `SAHNE 3 (7-10sn - KAHRAMAN KAPANIŞ): Kamera geriye doğru açılarak bereketli, yemyeşil doğayı ve ürünün kusursuz performansını geniş açıdan yakalıyor. 4K reklam ajansı estetiği, Arri Alexa sinema renk paleti, canlı ve sıcak renk tonları, sıfır yapaylık, fotogerçekçi reklam çekimi.`
+    `Ürün: ${product}.`,
+    `SAHNE 1 (0-3sn - MAKRO GİRİŞ): Kameranın aşırı yakın plan makro (100mm macro lens) odaklanması. Ürün yüzeyindeki doğal malzeme dokusu, birinci sınıf işçilik ve kusursuz detaylar. Sinematik sığ alan derinliği (f/1.8), zarif ışık kırılmaları.`,
+    `SAHNE 2 (3-7sn - DİNAMİK EYLEM): Kamera akıcı gimbal hareketiyle ürünün kullanımını ve estetiğini yakalıyor. Doğal gün ışığında 120fps ağır çekim sinematik hareketler.`,
+    `SAHNE 3 (7-10sn - KAHRAMAN KAPANIŞ): Kamera geriye doğru açılarak sahneyi geniş açıdan kahraman (hero) planında yakalıyor. 4K reklam ajansı estetiği, Arri Alexa sinema renk tonları, kusursuz fotogerçekçi canlı çekim.`,
+    `ÖNEMLİ KURAL: Videoda KESİNLİKLE hiçbir yazı, metin, altyazı, logo kartı, bilgi kutusu veya grafik overlay OLMAYACAKTIR. Ekranda sadece %100 saf, temiz ve sinematik canlı çekim video görüntüsü olacaktır.`,
+    `STRICT RULE: NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO SUBTITLES, NO CAPTIONS, NO ON-SCREEN TEXT, NO LOGO CARDS, NO GRAPHIC OVERLAYS, NO BANNERS, NO LOWER THIRDS. Pure clean cinematic live-action commercial footage only.`,
   ].join(' ');
 }
 
