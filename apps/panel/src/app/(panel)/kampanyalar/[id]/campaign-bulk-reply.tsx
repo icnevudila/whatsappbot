@@ -64,19 +64,19 @@ const CATEGORY_META: Record<
   { label: string; badgeClass: string }
 > = {
   price: {
-    label: 'Fiyat Talebi',
+    label: 'Fiyat',
     badgeClass: 'bg-accent/10 text-accent border border-accent/25',
   },
   appointment: {
-    label: 'Randevu / Bilgi',
+    label: 'Randevu',
     badgeClass: 'bg-accent/10 text-accent border border-accent/25',
   },
   opt_out: {
-    label: 'İptal / Çıkış',
+    label: 'İptal',
     badgeClass: 'bg-danger/10 text-danger border border-danger/25',
   },
   general: {
-    label: 'Genel Soru',
+    label: 'Genel',
     badgeClass: 'bg-hairline text-ink-muted border border-hairline-strong',
   },
 }
@@ -294,67 +294,62 @@ export function CampaignBulkReply({
   }
 
   return (
-    <Card className="border-accent/30 bg-surface shadow-sm overflow-hidden">
+    <Card className="border-accent/30 bg-surface shadow-xs overflow-hidden">
       <CardHeader
-        title="Gelen Yanıtlar ve Akıllı Yanıtlama Masası"
+        title="Gelen Yanıtlar"
         subtitle={
           isOpen
-            ? `${items.length} müşteri kampanyaya yanıt verdi. Her mesaj için kampanya detaylarına özel yanıtlar hazırlandı.`
-            : `${items.length} müşteri yanıt verdi. Yanıtları incelemek ve toplu göndermek için masayı açın.`
+            ? `${items.length} müşteri yanıtı incelenmeye hazır.`
+            : `${items.length} müşteri yanıt verdi.`
         }
         action={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             {isOpen ? (
               <Button
                 variant="quiet"
                 onClick={handleGenerateAllAi}
                 disabled={isBulkAiGenerating || pending}
-                className="text-[12px] h-8 gap-1.5"
-                title="Kampanya içeriğini baz alarak tüm yanıtları AI ile yeniden üretir"
+                className="text-[11.5px] h-7 px-2.5 gap-1"
+                title="Tüm yanıtları kampanya detaylarına göre yeniden üretir"
               >
                 <Icon
                   name="refresh"
                   className={`size-3.5 ${isBulkAiGenerating ? 'animate-spin text-accent' : 'text-ink-muted'}`}
                 />
-                <span className="hidden sm:inline">
-                  {isBulkAiGenerating ? 'AI Hazırlıyor…' : 'AI Yanıtlarını Yenile'}
-                </span>
-                <span className="sm:hidden">
-                  {isBulkAiGenerating ? 'Hazırlanıyor' : 'Yenile'}
-                </span>
+                <span>{isBulkAiGenerating ? 'Yazılıyor…' : 'Tümünü Yenile'}</span>
               </Button>
             ) : null}
             <Button
               variant={isOpen ? 'quiet' : 'accent'}
               onClick={() => setIsOpen(!isOpen)}
-              className="text-[12px] h-8 shrink-0"
+              className="text-[11.5px] h-7 px-3 shrink-0"
             >
-              {isOpen ? 'Masayı Kapat' : `Masayı Aç (${items.length})`}
+              {isOpen ? 'Kapat' : `Masayı Aç (${items.length})`}
             </Button>
           </div>
         }
       />
 
       {!isOpen ? (
-        <div className="px-4 pb-3 flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-ink-muted">Özet Dağılım:</span>
+        <div className="px-4 pb-3 flex flex-wrap items-center gap-1.5 text-[11px]">
+          <span className="text-ink-muted font-medium">Özet:</span>
           {countByCat.price > 0 ? (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-accent/10 text-accent border border-accent/20">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full font-medium bg-accent/10 text-accent border border-accent/20">
               Fiyat: {countByCat.price}
             </span>
           ) : null}
           {countByCat.appointment > 0 ? (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-accent/10 text-accent border border-accent/20">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full font-medium bg-accent/10 text-accent border border-accent/20">
               Randevu: {countByCat.appointment}
             </span>
           ) : null}
           {countByCat.opt_out > 0 ? (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-danger/10 text-danger border border-danger/20">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full font-medium bg-danger/10 text-danger border border-danger/20">
               İptal: {countByCat.opt_out}
             </span>
           ) : null}
           {countByCat.general > 0 ? (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-hairline text-ink-muted border border-hairline-strong">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full font-medium bg-hairline text-ink-muted border border-hairline-strong">
               Genel: {countByCat.general}
             </span>
           ) : null}
@@ -368,49 +363,17 @@ export function CampaignBulkReply({
       ) : null}
 
       {isOpen ? (
-        <div className="space-y-3.5 border-t border-hairline p-4">
-          {/* Özet ve Bilgi Rozetleri */}
-          <div className="flex flex-wrap items-center justify-between gap-2.5 bg-surface-raised/50 rounded-[var(--radius-md)] p-2.5 border border-hairline">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[12px] font-medium text-ink-muted">Özet Dağılım:</span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-hairline text-ink">
-                Toplam: {countByCat.all}
-              </span>
-              {countByCat.price > 0 ? (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-accent/10 text-accent border border-accent/20">
-                  Fiyat Talebi: {countByCat.price}
-                </span>
-              ) : null}
-              {countByCat.appointment > 0 ? (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-accent/10 text-accent border border-accent/20">
-                  Randevu / Bilgi: {countByCat.appointment}
-                </span>
-              ) : null}
-              {countByCat.opt_out > 0 ? (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-danger/10 text-danger border border-danger/20">
-                  İptal / Çıkış: {countByCat.opt_out}
-                </span>
-              ) : null}
-            </div>
-
-            {campaignName ? (
-              <div className="text-[11.5px] text-ink-faint flex items-center gap-1.5 truncate max-w-xs">
-                <span className="size-1.5 rounded-full bg-accent shrink-0" />
-                <span className="truncate">Bağlam: <strong>{campaignName}</strong></span>
-              </div>
-            ) : null}
-          </div>
-
-          {/* Filtre ve Hızlı İşlem Araç Çubuğu */}
-          <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
-            <div className="flex flex-wrap items-center gap-1.5">
+        <div className="space-y-3 border-t border-hairline p-3 sm:p-4">
+          {/* Filtre ve Hızlı Seçim Çubuğu */}
+          <div className="flex flex-wrap items-center justify-between gap-2 bg-surface-raised/40 rounded-[var(--radius-md)] p-2 border border-hairline">
+            <div className="flex flex-wrap items-center gap-1">
               <button
                 type="button"
                 onClick={() => setActiveFilter('all')}
-                className={`rounded-full px-3 py-1 text-[12px] font-medium transition-colors ${
+                className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
                   activeFilter === 'all'
-                    ? 'bg-accent text-accent-ink shadow-sm'
-                    : 'bg-hairline text-ink-muted hover:bg-hairline-strong'
+                    ? 'bg-accent text-accent-ink shadow-xs'
+                    : 'bg-surface text-ink-muted hover:text-ink border border-hairline'
                 }`}
               >
                 Tümü ({countByCat.all})
@@ -419,61 +382,61 @@ export function CampaignBulkReply({
                 <button
                   type="button"
                   onClick={() => setActiveFilter('price')}
-                  className={`rounded-full px-3 py-1 text-[12px] font-medium transition-colors ${
+                  className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
                     activeFilter === 'price'
-                      ? 'bg-accent text-accent-ink shadow-sm'
-                      : 'bg-hairline text-ink-muted hover:bg-hairline-strong'
+                      ? 'bg-accent text-accent-ink shadow-xs'
+                      : 'bg-surface text-ink-muted hover:text-ink border border-hairline'
                   }`}
                 >
-                  Fiyat Talebi ({countByCat.price})
+                  Fiyat ({countByCat.price})
                 </button>
               ) : null}
               {countByCat.appointment > 0 ? (
                 <button
                   type="button"
                   onClick={() => setActiveFilter('appointment')}
-                  className={`rounded-full px-3 py-1 text-[12px] font-medium transition-colors ${
+                  className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
                     activeFilter === 'appointment'
-                      ? 'bg-accent text-accent-ink shadow-sm'
-                      : 'bg-hairline text-ink-muted hover:bg-hairline-strong'
+                      ? 'bg-accent text-accent-ink shadow-xs'
+                      : 'bg-surface text-ink-muted hover:text-ink border border-hairline'
                   }`}
                 >
-                  Randevu / Bilgi ({countByCat.appointment})
+                  Randevu ({countByCat.appointment})
                 </button>
               ) : null}
               {countByCat.general > 0 ? (
                 <button
                   type="button"
                   onClick={() => setActiveFilter('general')}
-                  className={`rounded-full px-3 py-1 text-[12px] font-medium transition-colors ${
+                  className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
                     activeFilter === 'general'
-                      ? 'bg-accent text-accent-ink shadow-sm'
-                      : 'bg-hairline text-ink-muted hover:bg-hairline-strong'
+                      ? 'bg-accent text-accent-ink shadow-xs'
+                      : 'bg-surface text-ink-muted hover:text-ink border border-hairline'
                   }`}
                 >
-                  Genel Soru ({countByCat.general})
+                  Genel ({countByCat.general})
                 </button>
               ) : null}
               {countByCat.opt_out > 0 ? (
                 <button
                   type="button"
                   onClick={() => setActiveFilter('opt_out')}
-                  className={`rounded-full px-3 py-1 text-[12px] font-medium transition-colors ${
+                  className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
                     activeFilter === 'opt_out'
-                      ? 'bg-danger text-white shadow-sm'
-                      : 'bg-danger/10 text-danger hover:bg-danger/20'
+                      ? 'bg-danger text-white shadow-xs'
+                      : 'bg-danger/10 text-danger hover:bg-danger/20 border border-danger/20'
                   }`}
                 >
-                  İptal / Çıkış ({countByCat.opt_out})
+                  İptal ({countByCat.opt_out})
                 </button>
               ) : null}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 text-[11px]">
               <button
                 type="button"
                 onClick={selectAll}
-                className="text-[12px] text-ink-muted hover:text-ink font-medium underline underline-offset-2"
+                className="text-ink-muted hover:text-ink font-medium underline underline-offset-2"
               >
                 Tümünü Seç
               </button>
@@ -481,9 +444,9 @@ export function CampaignBulkReply({
               <button
                 type="button"
                 onClick={deselectAll}
-                className="text-[12px] text-ink-muted hover:text-ink font-medium underline underline-offset-2"
+                className="text-ink-muted hover:text-ink font-medium underline underline-offset-2"
               >
-                Seçimi Kaldır
+                Kaldır
               </button>
               {countByCat.opt_out > 0 ? (
                 <>
@@ -492,9 +455,9 @@ export function CampaignBulkReply({
                     type="button"
                     onClick={handleBlacklistOptOuts}
                     disabled={pending}
-                    className="text-[12px] font-semibold text-danger hover:underline underline-offset-2"
+                    className="font-semibold text-danger hover:underline underline-offset-2"
                   >
-                    İptalleri Kara Listeye Al ({countByCat.opt_out})
+                    İptalleri Engelle ({countByCat.opt_out})
                   </button>
                 </>
               ) : null}
@@ -502,7 +465,7 @@ export function CampaignBulkReply({
           </div>
 
           {/* İki Kolonlu / Ferah Satır Düzeni */}
-          <div className="max-h-[580px] space-y-3 overflow-y-auto pr-1">
+          <div className="max-h-[540px] space-y-2.5 overflow-y-auto pr-1">
             {filteredItems.map((item) => {
               const isSelected = selectedIds.has(item.target_id)
               const catMeta = CATEGORY_META[item.cat] || CATEGORY_META.general
@@ -513,7 +476,7 @@ export function CampaignBulkReply({
               return (
                 <div
                   key={item.target_id}
-                  className={`rounded-[var(--radius-md)] border p-3.5 transition-[background-color,border-color] duration-150 ${
+                  className={`rounded-[var(--radius-md)] border p-2.5 sm:p-3 transition-[background-color,border-color] duration-150 ${
                     isSelected
                       ? 'border-accent/40 bg-surface-raised/60 shadow-xs'
                       : isOptOut
@@ -521,84 +484,78 @@ export function CampaignBulkReply({
                         : 'border-hairline bg-surface hover:border-hairline-strong'
                   }`}
                 >
-                  {/* Satır Başlığı: Checkbox, Müşteri ve Kategori */}
-                  <div className="mb-2.5 flex items-center justify-between gap-2 border-b border-hairline/60 pb-2">
-                    <div className="flex items-center gap-2.5">
+                  {/* Satır Başlığı */}
+                  <div className="mb-2 flex items-center justify-between gap-2 border-b border-hairline/60 pb-1.5">
+                    <div className="flex items-center gap-2 min-w-0">
                       {!isOptOut ? (
                         <input
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => toggleSelect(item.target_id)}
-                          className="size-4 rounded border-hairline-strong accent-accent cursor-pointer"
+                          className="size-3.5 rounded border-hairline-strong accent-accent cursor-pointer shrink-0"
                         />
                       ) : (
-                        <span className="size-4 flex items-center justify-center text-danger font-bold text-xs" title="İptal talebi">
+                        <span className="size-3.5 flex items-center justify-center text-danger font-bold text-xs shrink-0" title="İptal talebi">
                           ✕
                         </span>
                       )}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[13px] font-semibold text-ink">
-                          {item.contact_name}
-                        </span>
-                        <span className="text-[11.5px] tabular text-ink-muted">
-                          {item.phone_e164}
-                        </span>
-                        <span
-                          className={`inline-flex items-center rounded-full px-2 py-0.2 text-[10.5px] font-medium ${catMeta.badgeClass}`}
-                        >
-                          {catMeta.label}
-                        </span>
-                      </div>
+                      <span className="text-[12.5px] font-semibold text-ink truncate max-w-[120px] sm:max-w-none">
+                        {item.contact_name}
+                      </span>
+                      <span className="text-[11px] tabular text-ink-muted shrink-0">
+                        {item.phone_e164}
+                      </span>
+                      <span
+                        className={`inline-flex items-center rounded-full px-1.5 py-0.2 text-[10px] font-medium shrink-0 ${catMeta.badgeClass}`}
+                      >
+                        {catMeta.label}
+                      </span>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleDismiss(item.target_id)}
-                      className="text-[11.5px] text-ink-faint hover:text-ink-muted px-1"
-                      title="Bu yanıtı listeden gizle"
-                    >
-                      Gizle ✕
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {item.replied_at ? (
+                        <span className="text-[10px] text-ink-faint tabular">
+                          {new Date(item.replied_at).toLocaleTimeString('tr-TR', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => handleDismiss(item.target_id)}
+                        className="text-[11px] text-ink-faint hover:text-ink-muted px-1"
+                        title="Bu yanıtı listeden gizle"
+                      >
+                        Gizle ✕
+                      </button>
+                    </div>
                   </div>
 
-                  {/* İçerik Bölümü: 2 Kolonlu Masüstü / Tek Kolon Mobil */}
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-stretch">
-                    {/* Sol Kolon (5/12): Gelen Müşteri Mesajı */}
-                    <div className="md:col-span-5 flex flex-col justify-between rounded-[var(--radius-sm)] border border-hairline bg-surface p-2.5 text-[12.5px]">
-                      <div>
-                        <div className="text-[10.5px] font-semibold text-ink-faint uppercase tracking-wider mb-1 flex items-center justify-between">
-                          <span>Müşterinin Mesajı</span>
-                          {item.replied_at ? (
-                            <span className="text-[10px] font-normal lowercase">
-                              {new Date(item.replied_at).toLocaleTimeString('tr-TR', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </span>
-                          ) : null}
-                        </div>
-                        <p className="text-ink font-normal leading-relaxed whitespace-pre-wrap">
-                          {item.last_inbound_text}
-                        </p>
-                      </div>
+                  {/* İçerik: Gelen Mesaj & Yanıt */}
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-2.5 items-stretch">
+                    {/* Gelen Müşteri Mesajı */}
+                    <div className="md:col-span-5 rounded-[var(--radius-sm)] bg-hairline/35 p-2 text-[12px] text-ink flex flex-col justify-between">
+                      <p className="whitespace-pre-wrap leading-relaxed">{item.last_inbound_text}</p>
+                      <span className="text-[9.5px] text-ink-faint mt-1 self-start">Gelen Mesaj</span>
                     </div>
 
-                    {/* Sağ Kolon (7/12): Gönderilecek Yanıt */}
+                    {/* Gönderilecek Yanıt */}
                     <div className="md:col-span-7 flex flex-col justify-between">
                       {isOptOut ? (
-                        <div className="h-full flex flex-col justify-between rounded-[var(--radius-sm)] border border-danger/20 bg-danger/10 p-3 text-[12px] text-danger">
+                        <div className="h-full flex flex-col justify-between rounded-[var(--radius-sm)] border border-danger/20 bg-danger/10 p-2.5 text-[11.5px] text-danger">
                           <div>
-                            <span className="block font-semibold mb-1">Müşteri Çıkış / İptal Talep Etti</span>
-                            <p className="text-ink-muted leading-relaxed">
-                              Bu müşteriye yanıt gönderilmemesi ve gelecekte rahatsız edilmemesi için kara listeye eklenmesi önerilir.
+                            <span className="block font-semibold mb-0.5">Çıkış / İptal Talep Edildi</span>
+                            <p className="text-ink-muted leading-relaxed text-[11px]">
+                              Müşteri listeden çıkmak istiyor. Kara listeye eklenmesi önerilir.
                             </p>
                           </div>
-                          <div className="mt-2.5 flex items-center justify-end gap-2">
+                          <div className="mt-2 flex items-center justify-end">
                             <Button
                               variant="danger"
                               onClick={handleBlacklistOptOuts}
                               disabled={pending}
-                              className="text-[11px] h-7 px-2.5"
+                              className="text-[11px] h-6 px-2.5"
                             >
                               Kara Listeye Ekle
                             </Button>
@@ -606,15 +563,15 @@ export function CampaignBulkReply({
                         </div>
                       ) : (
                         <div className="flex flex-col h-full">
-                          <div className="mb-1 flex items-center justify-between text-[11px]">
+                          <div className="mb-1 flex items-center justify-between text-[10.5px]">
                             <span className="font-medium text-ink-muted">
-                              Hazırlanan Yanıt Taslağı:
+                              Yanıt Taslağı:
                             </span>
                             <div className="flex items-center gap-2">
                               {isItemAiLoading ? (
                                 <span className="text-accent font-medium animate-pulse flex items-center gap-1">
-                                  <Icon name="refresh" className="size-3 animate-spin" />
-                                  AI yazıyor…
+                                  <Icon name="refresh" className="size-2.5 animate-spin" />
+                                  Yazılıyor…
                                 </span>
                               ) : (
                                 <button
@@ -627,22 +584,22 @@ export function CampaignBulkReply({
                                     )
                                   }
                                   className="text-accent hover:underline font-medium flex items-center gap-1"
-                                  title="Bu mesaj için kampanya detaylarını kullanarak yeni taslak üretir"
+                                  title="Bu mesaj için yeniden taslak üret"
                                 >
-                                  <Icon name="sparkles" className="size-3" />
-                                  AI ile Yeniden Yaz
+                                  <Icon name="sparkles" className="size-2.5" />
+                                  AI ile Yenile
                                 </button>
                               )}
                             </div>
                           </div>
                           <textarea
-                            rows={3}
+                            rows={2}
                             value={currentText}
                             onChange={(e) => {
                               const val = e.target.value
                               setRepliesMap((prev) => ({ ...prev, [item.target_id]: val }))
                             }}
-                            className="w-full flex-1 rounded-[var(--radius-sm)] border border-hairline bg-surface p-2.5 text-[12.5px] text-ink outline-none transition-[border-color,box-shadow] focus:border-accent focus:ring-1 focus:ring-accent leading-relaxed resize-none font-sans"
+                            className="w-full flex-1 rounded-[var(--radius-sm)] border border-hairline bg-surface p-2 text-[12px] text-ink outline-none transition-[border-color,box-shadow] focus:border-accent focus:ring-1 focus:ring-accent leading-relaxed resize-none font-sans min-h-[50px]"
                             placeholder="Müşteriye iletilecek yanıt metni..."
                           />
                         </div>
@@ -654,32 +611,32 @@ export function CampaignBulkReply({
             })}
           </div>
 
-          {/* Alt Sabit Şerit & Gönderim Çubuğu */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-hairline pt-3.5 bg-surface">
-            <div className="text-[12px] text-ink-muted">
+          {/* Alt Gönderim Çubuğu */}
+          <div className="flex items-center justify-between gap-2 border-t border-hairline pt-2.5 bg-surface">
+            <div className="text-[11.5px] text-ink-muted truncate">
               <strong className="text-ink font-semibold">{selectedIds.size}</strong> yanıt seçili.
-              Hattın güvenliği için mesajlar 5-10 saniye aralıklarla ve doğal yazıyor efektiyle sırayla iletilecektir.
+              <span className="hidden sm:inline text-ink-faint"> (5-10 sn aralıkla gönderilir)</span>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 shrink-0">
               {selectedIds.size > 0 ? (
                 <Button
                   variant="quiet"
                   onClick={deselectAll}
-                  className="text-[12px] h-9 px-3"
+                  className="text-[11.5px] h-7.5 px-2.5"
                 >
-                  Seçimi Temizle
+                  Temizle
                 </Button>
               ) : null}
               <Button
                 variant="accent"
                 disabled={selectedIds.size === 0 || pending}
                 onClick={handleSend}
-                className="text-[13px] h-9 px-4 font-semibold shadow-sm"
+                className="text-[12px] h-7.5 px-3.5 font-semibold shadow-xs"
               >
                 {pending
-                  ? 'Kuyruğa Alınıyor…'
-                  : `Seçilen ${selectedIds.size} Yanıtı Gönder`}
+                  ? 'Alınıyor…'
+                  : `Gönder (${selectedIds.size})`}
               </Button>
             </div>
           </div>
