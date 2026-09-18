@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { accountId, phone, message, mediaUrl } = body
+    const { accountId, phone, message, mediaUrl, mediaName, messageType } = body
 
     if (!accountId || !phone || !message?.trim()) {
       return NextResponse.json(
@@ -36,6 +36,8 @@ export async function POST(req: Request) {
       p_phone_e164: phone,
       p_body: message,
       p_media_url: mediaUrl || null,
+      p_media_name: mediaName || null,
+      p_message_type: messageType || null,
     })
 
     if (error) {
