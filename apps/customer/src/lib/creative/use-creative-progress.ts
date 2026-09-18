@@ -70,7 +70,44 @@ const TEXT_ONLY_STAGES: Stage[] = [
   },
 ]
 
-export function useCreativeGenerationProgress(active: boolean, isImageToImage = false) {
+export const VIDEO_CAMPAIGN_STAGES: Stage[] = [
+  {
+    at: 0,
+    label: 'Firma marka kiti ve ürün kataloğu taranıyor…',
+    detail: 'Kurumsal kimlik renkleri ve 3 perdeli reklam kurgusu hazırlanıyor',
+  },
+  {
+    at: 10,
+    label: 'Yapay zeka sinematik reklam sahnesi inşa ediliyor…',
+    detail: '100mm makro lens, stüdyo aydınlatması ve altın saat ışığı tasarlanıyor',
+  },
+  {
+    at: 26,
+    label: 'Veo motoru dinamik video karelerini üretiyor…',
+    detail: '120fps ağır çekim su sisi ve mikro damlacık fiziği simüle ediliyor',
+  },
+  {
+    at: 55,
+    label: 'Gimbal kamera akışı ve sinema renk profili işleniyor…',
+    detail: 'Arri Alexa 4K renk derecelendirmesi ve kamera süzülüşü uygulanıyor',
+  },
+  {
+    at: 75,
+    label: 'Otomatik montaj motoru devreye giriyor…',
+    detail: 'Kurumsal logo, % indirim bandı ve WhatsApp butonu giydiriliyor',
+  },
+  {
+    at: 92,
+    label: 'Son kontroller yapılıyor ve videonuz hazırlanıyor…',
+    detail: '1080p dikey video WhatsApp ve Reels için paketleniyor',
+  },
+]
+
+export function useCreativeGenerationProgress(
+  active: boolean,
+  isImageToImage = false,
+  isVideo = false,
+) {
   const { setBusy, clearBusy } = useBusy()
   const busyIdRef = useRef<number | null>(null)
   const startTimeRef = useRef<number | null>(null)
@@ -85,8 +122,12 @@ export function useCreativeGenerationProgress(active: boolean, isImageToImage = 
       return
     }
 
-    const stages = isImageToImage ? IMAGE_TO_IMAGE_STAGES : TEXT_ONLY_STAGES
-    const targetDuration = isImageToImage ? 78 : 46
+    const stages = isVideo
+      ? VIDEO_CAMPAIGN_STAGES
+      : isImageToImage
+        ? IMAGE_TO_IMAGE_STAGES
+        : TEXT_ONLY_STAGES
+    const targetDuration = isVideo ? 95 : isImageToImage ? 78 : 46
     startTimeRef.current = Date.now()
 
     const update = () => {
@@ -128,5 +169,6 @@ export function useCreativeGenerationProgress(active: boolean, isImageToImage = 
       }
       startTimeRef.current = null
     }
-  }, [active, isImageToImage, setBusy, clearBusy])
+  }, [active, isImageToImage, isVideo, setBusy, clearBusy])
 }
+

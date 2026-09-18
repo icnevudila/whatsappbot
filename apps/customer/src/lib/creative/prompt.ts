@@ -130,3 +130,63 @@ export function buildCreativePrompt(snapshot: CreativeSnapshot): {
 
   return { prompt, negative }
 }
+
+/**
+ * Structured brief → 3-act cinematic commercial video prompt (Veo / AI Video).
+ */
+export function buildVideoPrompt(snapshot: CreativeSnapshot): {
+  prompt: string
+  negative: string
+  overlay: {
+    brandName: string
+    subTitle?: string
+    offerTitle?: string
+    offerDetails?: string
+    ctaText?: string
+    primaryColor?: string
+    accentColor?: string
+  }
+} {
+  const kit = snapshot.brandKit
+  const mainProduct = snapshot.products[0]
+  const brandName = kit?.name?.replace(/Brand Kit/i, '').replace(/Kampanya Kiti/i, '').trim() || 'Marka'
+  const productName = mainProduct?.name || 'Ürün'
+  const primaryColor = kit?.colors?.background || kit?.colors?.primary || '#026009'
+  const accentColor = kit?.colors?.accent || '#acfe00'
+
+  const prompt = [
+    '9:16 dikey formatta profesyonel televizyon ve sosyal medya reklam filmi (Instagram Reels & WhatsApp Durum).',
+    `Marka: ${brandName}. Ürün: ${productName}.`,
+    mainProduct?.description ? `Ürün fonksiyonu ve detayları: ${mainProduct.description}.` : null,
+    `Gövde renk paleti: ${primaryColor} kurumsal zemin ve ${accentColor} dinamik detaylar.`,
+    `SAHNE 1 (0-3sn - ÜRÜN MAKRO GİRİŞİ): Kameranın aşırı yakın plan makro (100mm macro lens) odaklanması. Ürün gövdesinde '${brandName}' logosunun hassas işçiliği ve açma/çalıştırma düğmesi belirginleşiyor. Sinematik sığ alan derinliği (f/1.8), hafif lens parlaması.`,
+    `SAHNE 2 (3-7sn - DİNAMİK EYLEM & PERFORMANS): Kamera akıcı gimbal hareketiyle bereketli bir tarım bahçesinde ürünü kullanan profesyonel kullanıcıya geçiyor. Ürünün nozulundan çıkan ultra ince mikro sis bulutu, altın saat (golden hour) gün batımı ışığında parıldıyor. 120fps ağır çekim su damlacıkları ve sinematik ışık süzülmeleri.`,
+    `SAHNE 3 (7-10sn - KAHRAMAN KAPANIŞ): Kamera geriye doğru açılarak bereketli, yemyeşil doğayı ve ürünün kusursuz performansını geniş açıdan yakalıyor. 4K reklam ajansı estetiği, Arri Alexa sinema renk paleti, canlı ve sıcak renk tonları, sıfır yapaylık, fotogerçekçi reklam çekimi.`,
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+  const negative =
+    'no cartoon, no 3D animation look, no uncanny deformed hands, no floating disjointed objects, no blurry artifacts, no misspelled on-screen text, realistic live-action commercial'
+
+  const offerTitle = snapshot.brief || 'ÖZEL KAMPANYA'
+  const offerDetails =
+    mainProduct?.promo || (mainProduct?.price ? `Fiyat: ${mainProduct.price}` : snapshot.customText || '')
+  const ctaText =
+    snapshot.cta ||
+    (snapshot.phones?.[0]?.phone ? `WHATSAPP: ${snapshot.phones[0].phone}` : 'WHATSAPP SIPARIS HATTI')
+
+  return {
+    prompt,
+    negative,
+    overlay: {
+      brandName,
+      subTitle: kit?.tone ? kit.tone.slice(0, 35) : 'Yetkili Satış & Sipariş',
+      offerTitle,
+      offerDetails,
+      ctaText,
+      primaryColor,
+      accentColor,
+    },
+  }
+}

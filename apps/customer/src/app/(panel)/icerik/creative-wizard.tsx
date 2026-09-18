@@ -116,8 +116,9 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
     startCreativeGeneration,
     null,
   )
+  const isVideo = draft.formatId === 'reels_video'
   const isImageToImage = Boolean(draft.baseCreativeId) || draft.productIds.length > 0
-  useCreativeGenerationProgress(pending, isImageToImage)
+  useCreativeGenerationProgress(pending, isImageToImage, isVideo)
 
   useEffect(() => {
     if (!pending) return

@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateImage, type ReferenceImage } from '@/lib/ai/image'
 import type { AiKeyBag } from '@/lib/ai/config'
 import { createSupabaseServiceClient } from '@/lib/supabase/service'
-import { buildCreativePrompt } from './prompt'
+import { buildCreativePrompt, buildVideoPrompt } from './prompt'
 import { formatToAspect, type CreativePayload, type CreativeSnapshot } from './types'
 
 const MAX_REFS = 4
@@ -183,6 +183,77 @@ export async function processCreativeGeneration(
 
     const customerName = (orgData as { name?: string | null })?.name || creative.org_id.slice(0, 8)
     const workspaceTitle = snapshot.brief ? `Kreatif: ${snapshot.brief.slice(0, 40)}` : 'Kreatif Sihirbazı'
+
+    const isVideo = creative.format === 'video' || snapshot.formatId === 'reels_video'
+
+    if (isVideo) {
+      const { prompt: videoPrompt, overlay } = buildVideoPrompt(snapshot)
+      const gatewayUrl = (process.env.OMNISTUDIO_GATEWAY_URL || 'http://167.233.201.31:3456').replace(/\/$/, '')
+
+      const vidRes = await fetch(`${gatewayUrl}/v1/videos/generations`, {
+        method: 'POST',
+        signal: AbortSignal.timeout(300000),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: videoPrompt,
+          brandName: overlay.brandName,
+          productName: snapshot.products[0]?.name || null,
+          subTitle: overlay.subTitle,
+          offerTitle: overlay.offerTitle,
+          offerDetails: overlay.offerDetails,
+          ctaText: overlay.ctaText,
+          primaryColor: overlay.primaryColor,
+          accentColor: overlay.accentColor,
+          customer: customerName,
+        }),
+      })
+
+      if (!vidRes.ok) {
+        throw new Error(`OmniStudio Video ${vidRes.status}: ${(await vidRes.text()).slice(0, 200)}`)
+      }
+
+      const vidJson = (await vidRes.json()) as { data?: { url?: string }[]; videoId?: string }
+      const videoUrl = vidJson.data?.[0]?.url
+      if (!videoUrl) throw new Error('Video URL alınamadı')
+
+      const fileRes = await fetch(videoUrl, { signal: AbortSignal.timeout(60000) })
+      if (!fileRes.ok) throw new Error('Üretilen video indirilemedi')
+      const videoBuffer = Buffer.from(await fileRes.arrayBuffer())
+
+      const storagePath = `${creative.org_id}/${crypto.randomUUID()}.mp4`
+      const { error: upErr } = await supabase.storage.from('creatives').upload(storagePath, videoBuffer, {
+        contentType: 'video/mp4',
+        upsert: false,
+      })
+      if (upErr) throw new Error(upErr.message)
+
+      const { data: publicUrl } = supabase.storage.from('creatives').getPublicUrl(storagePath)
+
+      const nextPayload: CreativePayload = {
+        ...snapshot,
+        originalPrompt: snapshot.brief,
+        generatedPrompt: videoPrompt,
+        provider: 'omnistudio_veo',
+        cost: { provider: 'omnistudio_veo', imageCount: 1 },
+      }
+
+      const { error: dbErr } = await supabase
+        .from('creatives')
+        .update({
+          status: 'ready',
+          error: null,
+          storage_path: storagePath,
+          public_url: publicUrl.publicUrl,
+          width: 720,
+          height: 1280,
+          payload: nextPayload,
+        })
+        .eq('id', creativeId)
+        .eq('org_id', creative.org_id)
+
+      if (dbErr) throw new Error(dbErr.message)
+      return { ok: true }
+    }
 
     const { image, attempts } = await generateImage(prompt, aspect, bag, refs, {
       customer: customerName,

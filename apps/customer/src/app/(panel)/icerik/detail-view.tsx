@@ -11,6 +11,7 @@ import { useConfirm } from '@/components/confirm-dialog'
 import { useToast } from '@/components/toast'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { VARIATION_PRESETS } from '@/lib/creative/types'
+import { VIDEO_CAMPAIGN_STAGES } from '@/lib/creative/use-creative-progress'
 import {
   deleteCreative,
   renameCreative,
@@ -395,16 +396,18 @@ export function CreativeDetail({
     })
   }
 
-  const targetDuration = 78
+  const isVideo = creative.format === 'video' || Boolean(creative.publicUrl?.endsWith('.mp4'))
+  const stages = isVideo ? VIDEO_CAMPAIGN_STAGES : DETAIL_STAGES
+  const targetDuration = isVideo ? 95 : 78
   const remainingSeconds = Math.max(5, targetDuration - tick)
   const remainingText =
     tick >= targetDuration
       ? 'Birkaç saniye içinde tamamlanıyor'
       : `Tahmini kalan süre: ~${remainingSeconds} sn`
-  let currentStage = DETAIL_STAGES[0]
-  for (let i = DETAIL_STAGES.length - 1; i >= 0; i--) {
-    if (tick >= DETAIL_STAGES[i].at) {
-      currentStage = DETAIL_STAGES[i]
+  let currentStage = stages[0]
+  for (let i = stages.length - 1; i >= 0; i--) {
+    if (tick >= stages[i].at) {
+      currentStage = stages[i]
       break
     }
   }
@@ -414,6 +417,7 @@ export function CreativeDetail({
       {spinning ? (
         <div className="wb-craft-panel">
           <CreativeGenerating
+            title={isVideo ? 'Sinematik kampanya videosu oluşuyor' : 'Tatlı bir görsel oluşuyor'}
             line={currentStage.label}
             detail={`${currentStage.detail} · ${remainingText}`}
           >
@@ -450,26 +454,39 @@ export function CreativeDetail({
 
       {creative.publicUrl && creative.status === 'ready' ? (
         <div className="relative overflow-visible">
-          <button
-            type="button"
-            onClick={() => setLightboxOpen(true)}
-            aria-label="Görseli tam boyutta aç"
-            className="block w-full cursor-zoom-in rounded-[var(--radius-card)] border border-hairline bg-canvas p-0"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={creative.publicUrl}
-              alt={creative.title ?? ''}
-              className="w-full rounded-[var(--radius-card)] object-contain"
-            />
-          </button>
-          <DetailImageMenu publicUrl={creative.publicUrl} />
-          <ImageLightbox
-            open={lightboxOpen}
-            src={creative.publicUrl}
-            alt={creative.title ?? ''}
-            onClose={() => setLightboxOpen(false)}
-          />
+          {isVideo ? (
+            <div className="overflow-hidden rounded-[var(--radius-card)] border border-hairline bg-black shadow-lg">
+              <video
+                src={creative.publicUrl}
+                controls
+                playsInline
+                className="max-h-[640px] w-full object-contain"
+              />
+            </div>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => setLightboxOpen(true)}
+                aria-label="Görseli tam boyutta aç"
+                className="block w-full cursor-zoom-in rounded-[var(--radius-card)] border border-hairline bg-canvas p-0"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={creative.publicUrl}
+                  alt={creative.title ?? ''}
+                  className="w-full rounded-[var(--radius-card)] object-contain"
+                />
+              </button>
+              <DetailImageMenu publicUrl={creative.publicUrl} />
+              <ImageLightbox
+                open={lightboxOpen}
+                src={creative.publicUrl}
+                alt={creative.title ?? ''}
+                onClose={() => setLightboxOpen(false)}
+              />
+            </>
+          )}
         </div>
       ) : null}
 
