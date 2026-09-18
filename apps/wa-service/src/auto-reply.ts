@@ -774,8 +774,29 @@ export async function pregenerateAiSuggestions(options: {
     if (knowledgeContext) {
       companyContext += `\n${knowledgeContext}`
     }
+    let conversationHistory = ''
+    if (phoneE164) {
+      try {
+        const recentLogs = await query<{ direction: string; body: string }>(
+          `select direction, body from public.message_log
+            where org_id = $1 and phone_e164 = $2
+            order by created_at desc
+            limit 6`,
+          [orgId, phoneE164],
+        )
+        if (recentLogs.length > 0) {
+          conversationHistory = recentLogs
+            .reverse()
+            .map((m) => `${m.direction === 'in' ? 'Müşteri' : 'Temsilci'}: ${m.body}`)
+            .join('\n')
+        }
+      } catch (logErr) {
+        logger.debug({ err: logErr, phoneE164 }, 'Konusma gecmisi alinamadi')
+      }
+    }
+
     const tone = kitRows[0]?.tone || 'Kurumsal, nazik, yardımsever ve samimi'
-    const contextFingerprint = fingerprint(`${companyContext}\n${tone}\n`)
+    const contextFingerprint = fingerprint(`${companyContext}\n${tone}\n${conversationHistory}`)
 
     const aiRes = await fetchFromOmniStudio('/v1/chat/suggestions', {
       method: 'POST',
@@ -783,6 +804,7 @@ export async function pregenerateAiSuggestions(options: {
       body: JSON.stringify({
         customer: org.name,
         incomingMessage: trimmed,
+        conversationHistory,
         companyContext,
         tone,
       }),
