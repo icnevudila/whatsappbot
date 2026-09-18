@@ -371,7 +371,7 @@ export function ReplyForm({
             </div>
           </div>
           {suggestions.length > 0 ? (
-            <div className="wb-ai-suggest-list">
+            <div className="wb-ai-suggest-grid wb-ai-suggest-list">
               {suggestions.map((item) => (
                 <button
                   key={item.text}

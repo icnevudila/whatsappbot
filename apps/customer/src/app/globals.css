@@ -3724,37 +3724,39 @@ main:has(.wb-inbox) {
   background: #eef2f7;
   border-color: #e2e8f0;
 }
-.wb-ai-suggest-grid {
+.wb-ai-suggest-grid,
+.wb-ai-suggest-list {
   display: flex;
+  align-items: stretch;
   gap: 8px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding-bottom: 4px;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-x: contain;
+  width: 100%;
 }
-.wb-ai-suggest-grid::-webkit-scrollbar {
-  height: 5px;
+.wb-ai-suggest-grid::-webkit-scrollbar,
+.wb-ai-suggest-list::-webkit-scrollbar {
+  height: 4px;
 }
-.wb-ai-suggest-grid::-webkit-scrollbar-thumb {
+.wb-ai-suggest-grid::-webkit-scrollbar-thumb,
+.wb-ai-suggest-list::-webkit-scrollbar-thumb {
   border-radius: 999px;
   background: rgba(7, 94, 84, 0.28);
 }
-.wb-ai-suggest-grid::-webkit-scrollbar-track {
+.wb-ai-suggest-grid::-webkit-scrollbar-track,
+.wb-ai-suggest-list::-webkit-scrollbar-track {
   background: transparent;
 }
 .wb-ai-suggest-card {
   position: relative;
   display: flex;
-  flex: 0 0 min(78%, 220px);
-  width: min(78%, 220px);
-  max-width: 220px;
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+  max-width: none;
   flex-direction: column;
   align-items: flex-start;
+  justify-content: flex-start;
   text-align: left;
   gap: 5px;
-  min-height: 72px;
+  min-height: auto;
   padding: 8px 10px 9px 12px;
   border-radius: 8px;
   border: 1px solid rgba(18, 140, 126, 0.16);
@@ -3762,12 +3764,27 @@ main:has(.wb-inbox) {
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   cursor: pointer;
   overflow: hidden;
-  scroll-snap-align: start;
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease,
     transform 0.15s ease,
     background 0.15s ease;
+}
+@media (max-width: 640px) {
+  .wb-ai-suggest-grid,
+  .wb-ai-suggest-list {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+  .wb-ai-suggest-card {
+    flex: 0 0 85%;
+    max-width: 280px;
+    scroll-snap-align: start;
+  }
 }
 .wb-ai-suggest-card::before {
   position: absolute;
@@ -3826,9 +3843,10 @@ main:has(.wb-inbox) {
   line-height: 1.38;
   color: #0f172a;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  word-break: break-word;
 }
 .wb-ai-suggest-loading {
   display: flex;
