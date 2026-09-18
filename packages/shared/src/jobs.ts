@@ -82,6 +82,7 @@ export type JobPayloadMap = {
     recipient_jid?: string
     body?: string
     media_url?: string
+    media_name?: string
     message_type?: MessageType
   }
   'contacts.verify': { list_id?: string; contact_ids?: string[] }

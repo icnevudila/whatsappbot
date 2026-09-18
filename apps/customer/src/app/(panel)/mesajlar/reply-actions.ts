@@ -16,7 +16,8 @@ export async function replyToConversation(
   const accountId = String(formData.get('account_id') ?? '')
   const body = String(formData.get('body') ?? '').trim()
   const mediaUrl = String(formData.get('media_url') ?? '').trim() || undefined
-  const messageType = (String(formData.get('message_type') ?? '').trim() as MessageType) || (mediaUrl ? 'image' : 'text')
+  const mediaName = String(formData.get('media_name') ?? '').trim() || undefined
+  const messageType = (String(formData.get('message_type') ?? '').trim() as MessageType) || (mediaUrl ? (mediaName?.toLowerCase().endsWith('.pdf') ? 'document' : 'image') : 'text')
 
   if (!phone || !accountId) return { error: 'Yanıt için geçerli bir numara ve bağlı hat gerekli.' }
   if (!body && !mediaUrl) {
@@ -70,6 +71,7 @@ export async function replyToConversation(
         phone_e164: phone,
         body: body || undefined,
         media_url: mediaUrl,
+        media_name: mediaName,
         message_type: messageType,
       },
       priority: 5,
@@ -84,7 +86,7 @@ export async function replyToConversation(
       phone_e164: phone,
       remote_jid: null,
       message_type: messageType,
-      body: body || (messageType === 'image' ? 'Fotoğraf' : '(ek)'),
+      body: body || (messageType === 'document' ? (mediaName || 'Belge (PDF)') : messageType === 'image' ? 'Fotoğraf' : '(ek)'),
       media_url: mediaUrl ?? null,
       status: 'pending',
       created_at: new Date().toISOString(),

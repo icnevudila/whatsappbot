@@ -502,11 +502,15 @@ async function handle(job: JobRow): Promise<unknown> {
         } else if (messageType === 'video') {
           content = { video: { url: mediaUrl }, caption: payload.body ?? undefined }
         } else if (messageType === 'document') {
+          const rawName = payload.media_name || (payload.body && payload.body.includes('.') ? payload.body : 'belge.pdf')
+          const isPdf = mediaUrl.toLowerCase().includes('.pdf') || rawName.toLowerCase().endsWith('.pdf')
+          const mime = isPdf ? 'application/pdf' : 'application/octet-stream'
+          const finalFileName = isPdf && !rawName.toLowerCase().endsWith('.pdf') ? `${rawName}.pdf` : rawName
           content = {
             document: { url: mediaUrl },
-            mimetype: 'application/octet-stream',
-            caption: payload.body ?? undefined,
-            fileName: 'dosya',
+            mimetype: mime,
+            caption: payload.body && payload.body !== rawName ? payload.body : undefined,
+            fileName: finalFileName,
           }
         } else {
           throw new Error(`Desteklenmeyen mesaj tipi: ${messageType}`)

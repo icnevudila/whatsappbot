@@ -16,6 +16,7 @@ export async function replyToConversation(
   const accountId = String(formData.get('account_id') ?? '').trim()
   const body = String(formData.get('body') ?? '').trim()
   const mediaUrl = String(formData.get('media_url') ?? '').trim() || undefined
+  const mediaName = String(formData.get('media_name') ?? '').trim() || undefined
   const messageType = (String(formData.get('message_type') ?? '').trim() as MessageType) || undefined
 
   if (!rawTarget || !accountId) {
@@ -88,6 +89,7 @@ export async function replyToConversation(
         recipient_jid: isLid ? rawTarget : (recipientJid.endsWith('@lid') ? recipientJid : undefined),
         body: body || undefined,
         media_url: mediaUrl,
+        media_name: mediaName,
         message_type: messageType,
       },
       priority: 5,

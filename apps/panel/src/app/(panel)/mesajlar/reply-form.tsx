@@ -172,6 +172,7 @@ export function ReplyForm({
       <input type="hidden" name="recipient_jid" value={recipientJid || ''} />
       <input type="hidden" name="account_id" value={accountId} />
       <input type="hidden" name="media_url" value={mediaUrl || ''} />
+      <input type="hidden" name="media_name" value={mediaName || ''} />
       <input type="hidden" name="message_type" value={messageType} />
 
       {showSuggestions && (suggestions.length > 0 || isSuggesting) ? (
@@ -275,27 +276,35 @@ export function ReplyForm({
           onChange={async (e) => {
             const file = e.target.files?.[0]
             if (!file) return
-            if (file.size > 16 * 1024 * 1024) {
-              toast('Dosya boyutu en fazla 16 MB olabilir.', 'warn')
+            if (file.size > 30 * 1024 * 1024) {
+              toast('Dosya boyutu en fazla 30 MB olabilir.', 'warn')
               return
             }
             setUploading(true)
             try {
               const supabase = getSupabaseBrowserClient()
-              const ext = file.name.split('.').pop() || 'bin'
-              const path = `chat/${Date.now()}_${crypto.randomUUID()}.${ext}`
-              const { error } = await supabase.storage.from('creatives').upload(path, file, {
-                contentType: file.type,
+              const { data: authData } = await supabase.auth.getUser()
+              const prefix = authData?.user?.id || 'chat'
+              const ext = file.name.split('.').pop()?.toLowerCase() || 'bin'
+              const path = `${prefix}/${Date.now()}_${crypto.randomUUID()}.${ext}`
+              const { error } = await supabase.storage.from('chat-media').upload(path, file, {
+                contentType: file.type || 'application/octet-stream',
                 upsert: false,
               })
               if (error) throw error
-              const { data } = supabase.storage.from('creatives').getPublicUrl(path)
+              const { data } = supabase.storage.from('chat-media').getPublicUrl(path)
               setMediaUrl(data.publicUrl)
               setMediaName(file.name)
-              if (file.type.startsWith('image/')) setMessageType('image')
-              else if (file.type.startsWith('video/')) setMessageType('video')
-              else setMessageType('document')
-              toast('Medya eklendi.', 'success')
+              if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+                setMessageType('document')
+              } else if (file.type.startsWith('image/')) {
+                setMessageType('image')
+              } else if (file.type.startsWith('video/')) {
+                setMessageType('video')
+              } else {
+                setMessageType('document')
+              }
+              toast('Dosya eklendi.', 'success')
             } catch (err) {
               toast(err instanceof Error ? err.message : 'Dosya yüklenemedi.', 'danger')
             } finally {
@@ -309,7 +318,7 @@ export function ReplyForm({
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading || pending || waiting}
           className="wb-ai-suggest-btn"
-          title="Görsel veya dosya ekle (Maks 16 MB)"
+          title="PDF, görsel veya dosya ekle (Maks 30 MB)"
         >
           {uploading ? (
             <span className="size-3.5 animate-spin rounded-full border-2 border-accent border-t-transparent" />

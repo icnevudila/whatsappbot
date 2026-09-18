@@ -934,6 +934,26 @@ export function MessagesBoard({
                                   playsInline
                                   preload="metadata"
                                 />
+                              ) : row.message_type === 'document' ? (
+                                <a
+                                  href={mediaUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  download
+                                  className="flex items-center gap-2.5 p-2.5 my-1 rounded-lg bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 transition-colors border border-hairline/60 no-underline text-ink max-w-xs"
+                                >
+                                  <div className="size-9 rounded-md bg-danger/10 text-danger flex items-center justify-center font-bold text-[11px] shrink-0 border border-danger/20">
+                                    PDF
+                                  </div>
+                                  <div className="flex flex-col min-w-0 flex-1">
+                                    <span className="text-[12px] font-semibold truncate leading-tight">
+                                      {row.body && row.body !== 'Belge' && row.body !== 'Fotoğraf' ? row.body : 'PDF Belgesi / Katalog'}
+                                    </span>
+                                    <span className="text-[10.5px] text-ink-muted leading-tight mt-0.5">
+                                      Görüntüle / İndir ↗
+                                    </span>
+                                  </div>
+                                </a>
                               ) : (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img src={mediaUrl} alt="" className="wb-chat-media" loading="lazy" />

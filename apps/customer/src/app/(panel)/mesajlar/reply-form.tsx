@@ -163,8 +163,9 @@ export function ReplyForm({
     if (!text && !mediaUrl) return
     const clientKey = `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
     const sendMediaUrl = mediaUrl
+    const sendMediaName = mediaName
     const sendMessageType = messageType
-    onQueued?.(text || (sendMessageType === 'image' ? 'Fotoğraf' : '(ek)'), clientKey)
+    onQueued?.(text || (sendMessageType === 'document' ? (sendMediaName || 'Belge (PDF)') : sendMessageType === 'image' ? 'Fotoğraf' : '(ek)'), clientKey)
     setBody('')
     setMediaUrl(null)
     setMediaName(null)
@@ -183,6 +184,7 @@ export function ReplyForm({
       if (sendMediaUrl) {
         formData.set('media_url', sendMediaUrl)
         formData.set('message_type', sendMessageType)
+        if (sendMediaName) formData.set('media_name', sendMediaName)
       }
       formData.set('client_key', clientKey)
       const queued = await replyToConversation(null, formData)
@@ -294,12 +296,16 @@ export function ReplyForm({
           {messageType === 'image' ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={mediaUrl} alt="" className="size-8 object-cover rounded border border-line" />
+          ) : messageType === 'document' ? (
+            <div className="size-8 rounded bg-danger/10 text-danger flex items-center justify-center font-bold text-[10px] shrink-0 border border-danger/20">
+              PDF
+            </div>
           ) : (
             <Icon name="paperclip" className="size-4 text-ink-muted" />
           )}
-          <span className="truncate max-w-[200px] text-ink font-medium">{mediaName || 'Eklenen Medya'}</span>
+          <span className="truncate max-w-[200px] text-ink font-medium">{mediaName || 'Eklenen Belge'}</span>
           <span className="rounded bg-accent/10 px-1 py-0.5 text-[10px] font-bold text-accent uppercase">
-            {messageType}
+            {messageType === 'document' ? 'PDF' : messageType}
           </span>
           <button
             type="button"
@@ -325,27 +331,35 @@ export function ReplyForm({
           onChange={async (e) => {
             const file = e.target.files?.[0]
             if (!file) return
-            if (file.size > 16 * 1024 * 1024) {
-              toast('Dosya boyutu en fazla 16 MB olabilir.', 'warn')
+            if (file.size > 30 * 1024 * 1024) {
+              toast('Dosya boyutu en fazla 30 MB olabilir.', 'warn')
               return
             }
             setUploading(true)
             try {
               const supabase = getSupabaseBrowserClient()
-              const ext = file.name.split('.').pop() || 'bin'
-              const path = `chat/${Date.now()}_${crypto.randomUUID()}.${ext}`
-              const { error } = await supabase.storage.from('creatives').upload(path, file, {
-                contentType: file.type,
+              const { data: authData } = await supabase.auth.getUser()
+              const prefix = authData?.user?.id || 'chat'
+              const ext = file.name.split('.').pop()?.toLowerCase() || 'bin'
+              const path = `${prefix}/${Date.now()}_${crypto.randomUUID()}.${ext}`
+              const { error } = await supabase.storage.from('chat-media').upload(path, file, {
+                contentType: file.type || 'application/octet-stream',
                 upsert: false,
               })
               if (error) throw error
-              const { data } = supabase.storage.from('creatives').getPublicUrl(path)
+              const { data } = supabase.storage.from('chat-media').getPublicUrl(path)
               setMediaUrl(data.publicUrl)
               setMediaName(file.name)
-              if (file.type.startsWith('image/')) setMessageType('image')
-              else if (file.type.startsWith('video/')) setMessageType('video')
-              else setMessageType('document')
-              toast('Medya eklendi.', 'success')
+              if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+                setMessageType('document')
+              } else if (file.type.startsWith('image/')) {
+                setMessageType('image')
+              } else if (file.type.startsWith('video/')) {
+                setMessageType('video')
+              } else {
+                setMessageType('document')
+              }
+              toast('Dosya eklendi.', 'success')
             } catch (err) {
               toast(err instanceof Error ? err.message : 'Dosya yüklenemedi.', 'danger')
             } finally {
@@ -359,7 +373,7 @@ export function ReplyForm({
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
           className="wb-ai-suggest-btn"
-          title="Görsel veya dosya ekle (Maks 16 MB)"
+          title="PDF, görsel veya dosya ekle (Maks 30 MB)"
         >
           {uploading ? (
             <span className="size-3.5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
