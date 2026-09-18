@@ -12,6 +12,7 @@ import { emitOrgWebhook } from './org-hooks.js'
 import { checkOrgSendGate, orgSendGateMessage } from './org-send-gate.js'
 import type { WhatsAppSession } from './session.js'
 import { findActiveLidForPhone } from './lid-routing.js'
+import { prepareVoiceNote } from './audio-converter.js'
 
 export { countCampaignStatusBuckets, CAMPAIGN_SENT_STATUSES, reconcileCampaignCounts } from './campaign-counts.js'
 
@@ -441,15 +442,17 @@ type SendContent =
       fileName?: string
     }
   | {
-      audio: { url: string }
+      audio: Buffer | { url: string }
       mimetype?: string
       ptt?: boolean
+      seconds?: number
+      waveform?: Uint8Array
     }
 
-function buildContent(
+async function buildContent(
   campaign: CampaignRow,
   body: string,
-): SendContent {
+): Promise<SendContent> {
   const type = campaign.message_type
   const media = campaign.media_url
 
@@ -500,11 +503,33 @@ function buildContent(
     const isVoiceNote =
       media.toLowerCase().includes('voice') ||
       media.toLowerCase().includes('.ogg') ||
-      media.toLowerCase().includes('.opus')
+      media.toLowerCase().includes('.opus') ||
+      media.toLowerCase().includes('.webm')
+
+    if (isVoiceNote) {
+      try {
+        const processed = await prepareVoiceNote(media)
+        return {
+          audio: processed.buffer,
+          mimetype: 'audio/ogg; codecs=opus',
+          ptt: true,
+          seconds: processed.durationSeconds,
+          waveform: processed.waveform,
+        }
+      } catch (err) {
+        log.warn({ err, media }, 'Kampanya sesi PTT formatına dönüştürülemedi, ham URL ile gönderiliyor')
+        return {
+          audio: { url: media },
+          mimetype: 'audio/ogg; codecs=opus',
+          ptt: true,
+        }
+      }
+    }
+
     return {
       audio: { url: media },
-      mimetype: isVoiceNote ? 'audio/ogg; codecs=opus' : 'audio/mp4',
-      ptt: isVoiceNote,
+      mimetype: 'audio/mp4',
+      ptt: false,
     }
   }
 
@@ -606,7 +631,7 @@ async function sendToTarget(
   })
   const rawBody = variant === 'b' ? campaign.body_b : campaign.body
   const body = expandSpintax(personalize(rawBody, target.contact_name))
-  const content = buildContent(campaign, body) as AnyMessageContent
+  const content = (await buildContent(campaign, body)) as AnyMessageContent
 
   // message.send ile ayni: sendMessage ONCESI isaretle; reclaim/retry cift gondermesin.
   const marked = await query<{ id: string }>(

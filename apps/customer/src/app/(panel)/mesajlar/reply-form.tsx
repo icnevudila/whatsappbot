@@ -284,7 +284,7 @@ export function ReplyForm({
           const supabase = getSupabaseBrowserClient()
           const { data: authData } = await supabase.auth.getUser()
           const prefix = authData?.user?.id || 'chat'
-          const ext = pendingAudioBlob.type.includes('mp4') ? 'm4a' : 'ogg'
+          const ext = pendingAudioBlob.type.includes('mp4') ? 'm4a' : pendingAudioBlob.type.includes('webm') ? 'webm' : 'ogg'
           const path = `${prefix}/${Date.now()}_voice_${crypto.randomUUID()}.${ext}`
           const { error: uploadErr } = await supabase.storage.from('chat-media').upload(path, pendingAudioBlob, {
             contentType: pendingAudioBlob.type || 'audio/ogg',

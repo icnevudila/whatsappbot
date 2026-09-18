@@ -10,6 +10,7 @@ import { messageSendSkipped } from './message-send-result.js'
 import { resolveWabaMessageSend } from './waba-config.js'
 import { checkOrgSendGate, orgSendGateMessage } from './org-send-gate.js'
 import { findActiveLidForPhone, findPhoneForLid } from './lid-routing.js'
+import { prepareVoiceNote } from './audio-converter.js'
 
 const log = logger.child({ scope: 'jobs' })
 
@@ -517,11 +518,33 @@ async function handle(job: JobRow): Promise<unknown> {
             payload.ptt === true ||
             mediaUrl.toLowerCase().includes('voice') ||
             mediaUrl.toLowerCase().includes('.ogg') ||
-            mediaUrl.toLowerCase().includes('.opus')
-          content = {
-            audio: { url: mediaUrl },
-            mimetype: isVoiceNote ? 'audio/ogg; codecs=opus' : 'audio/mp4',
-            ptt: isVoiceNote,
+            mediaUrl.toLowerCase().includes('.opus') ||
+            mediaUrl.toLowerCase().includes('.webm')
+
+          if (isVoiceNote) {
+            try {
+              const processed = await prepareVoiceNote(mediaUrl)
+              content = {
+                audio: processed.buffer,
+                mimetype: 'audio/ogg; codecs=opus',
+                ptt: true,
+                seconds: processed.durationSeconds,
+                waveform: processed.waveform,
+              } as unknown as Parameters<typeof session.sendMessage>[1]
+            } catch (err) {
+              logger.warn({ err, mediaUrl }, 'Ses PTT formatına dönüştürülemedi, ham URL ile gönderiliyor')
+              content = {
+                audio: { url: mediaUrl },
+                mimetype: 'audio/ogg; codecs=opus',
+                ptt: true,
+              }
+            }
+          } else {
+            content = {
+              audio: { url: mediaUrl },
+              mimetype: 'audio/mp4',
+              ptt: false,
+            }
           }
         } else if (!mediaUrl || messageType === 'text') {
           content = { text: payload.body ?? '' }
