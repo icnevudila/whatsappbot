@@ -5,7 +5,7 @@ import { requireActiveOrg } from '@/lib/org'
 import { CreativeWizard } from '../creative-wizard'
 import { loadCreativeWizardData } from '../wizard-data'
 
-export const metadata: Metadata = { title: 'Kampanya görseli oluştur' }
+export const metadata: Metadata = { title: 'Kampanya içeriği (görsel & video) oluştur' }
 export const dynamic = 'force-dynamic'
 
 export default async function NewCreativePage() {
@@ -21,8 +21,8 @@ export default async function NewCreativePage() {
   return (
     <div className="wb-wa-page">
       <PageHeader
-        title="Kampanya görseli oluştur"
-        description="Marka, ürün ve iletişim bilgilerinizle üretin. İşlem arka planda sürer."
+        title="Kampanya İçeriği (Görsel & Video) Oluştur"
+        description="Google Veo ve Imagen AI ile markanıza özel 9:16 sinematik reklam videosu veya afiş üretin."
         backHref="/icerik"
         backLabel="Kütüphane"
       />

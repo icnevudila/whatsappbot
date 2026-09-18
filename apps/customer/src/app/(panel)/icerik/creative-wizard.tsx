@@ -241,27 +241,54 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
 
       <div className="space-y-3 px-4 py-3 sm:px-5">
       {step === 'start' ? (
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-3">
           <button
             type="button"
             onClick={() => {
-              patch({ origin: 'new', baseCreativeId: '' })
+              patch({ origin: 'new', baseCreativeId: '', formatId: 'reels_video' })
               go('brief')
             }}
-            className={`wb-wa-choice${draft.origin === 'new' ? ' is-on' : ''}`}
+            className={`wb-wa-choice transition-all hover:border-[#00a884]${draft.formatId === 'reels_video' && draft.origin === 'new' ? ' is-on border-[#00a884] ring-2 ring-[#00a884]/20' : ''}`}
           >
-            <p className="font-bold text-[#111b21]">Yeni görsel oluştur</p>
-            <p className="mt-1 text-[12.5px] text-[#667781]">Sıfırdan kampanya görseli. Marka ve ürünleriniz bağlanır.</p>
+            <div className="flex items-center justify-between">
+              <span className="text-2xl">🎬</span>
+              <span className="rounded-full bg-[#e7f8f2] px-2 py-0.5 text-[11px] font-bold text-[#008069]">YENİ · VEO</span>
+            </div>
+            <p className="mt-2 font-bold text-[#111b21]">Kampanya Videosu</p>
+            <p className="mt-1 text-[12.5px] text-[#667781]">
+              10 sn sinematik 9:16 reels/durum videosu. Logo, kampanya bandı ve WhatsApp butonu otomatik montajlanır.
+            </p>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              patch({ origin: 'new', baseCreativeId: '', formatId: 'wa' })
+              go('brief')
+            }}
+            className={`wb-wa-choice transition-all hover:border-[#00a884]${draft.formatId !== 'reels_video' && draft.origin === 'new' ? ' is-on' : ''}`}
+          >
+            <div className="flex items-center">
+              <span className="text-2xl">🖼️</span>
+            </div>
+            <p className="mt-2 font-bold text-[#111b21]">Yeni Görsel / Afiş</p>
+            <p className="mt-1 text-[12.5px] text-[#667781]">
+              Sıfırdan kare veya dikey kampanya afişi. Marka renkleriniz ve logonuz otomatik bağlanır.
+            </p>
           </button>
           <button
             type="button"
             onClick={() => {
               patch({ origin: 'derive' })
             }}
-            className={`wb-wa-choice${draft.origin === 'derive' ? ' is-on' : ''}`}
+            className={`wb-wa-choice transition-all hover:border-[#00a884]${draft.origin === 'derive' ? ' is-on' : ''}`}
           >
-            <p className="font-bold text-[#111b21]">Var olandan türet</p>
-            <p className="mt-1 text-[12.5px] text-[#667781]">Kütüphaneden seçin veya dosya yükleyin.</p>
+            <div className="flex items-center">
+              <span className="text-2xl">🔄</span>
+            </div>
+            <p className="mt-2 font-bold text-[#111b21]">Var Olandan Türet</p>
+            <p className="mt-1 text-[12.5px] text-[#667781]">
+              Kendi ürün fotoğrafınızı veya kütüphaneden bir görseli yükleyip yeniden uyarlayın.
+            </p>
           </button>
         </div>
       ) : null}
@@ -319,13 +346,17 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
       {step === 'brief' ? (
         <Card>
           <div className="space-y-3 p-3.5">
-            <Field label="Görselde ne anlatmak istiyorsunuz?">
+            <Field label={isVideo ? 'Videoda ne anlatmak istiyorsunuz? (Senaryo & Kampanya)' : 'Görselde ne anlatmak istiyorsunuz?'}>
               <Textarea
                 name="brief-ui"
                 rows={5}
                 value={draft.brief}
                 onChange={(event) => patch({ brief: event.target.value })}
-                placeholder="Hafta sonuna özel tüm kahvaltı ürünlerinde %25 indirim. Sıcak, iştah açıcı ve premium bir WhatsApp kampanya görseli istiyorum."
+                placeholder={
+                  isVideo
+                    ? 'Örn. Bofe 16L şarjlı sırt pompası için meyve bahçesinde çalışan çiftçili, dinamik ve sinematik bir reklam videosu. %20 erken sipariş indirimi.'
+                    : 'Hafta sonuna özel tüm kahvaltı ürünlerinde %25 indirim. Sıcak, iştah açıcı ve premium bir WhatsApp kampanya görseli istiyorum.'
+                }
               />
             </Field>
             <div className="flex flex-wrap gap-1.5">
@@ -842,7 +873,7 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
             ) : null}
             <p className="text-ink-muted">{draft.brief}</p>
             <Button type="submit" className="wb-wa-submit" disabled={pending || !data.canManage || !data.imageAiEnabled}>
-              {pending ? 'Kuyruğa alınıyor…' : 'Görseli oluştur'}
+              {pending ? 'Kuyruğa alınıyor…' : isVideo ? '🎬 Kampanya Videosunu Üret' : 'Görseli oluştur'}
             </Button>
             {!data.canManage ? <Notice tone="warn">Üretim için yönetici gerekir.</Notice> : null}
           </div>
