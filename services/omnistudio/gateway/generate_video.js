@@ -41,7 +41,11 @@ async function generateVideo({
   ctaText,
   primaryColor = '#026009',
   accentColor = '#acfe00',
-  logoPath = null
+  logoPath = null,
+  includeOverlay = false,
+  includeLogo = false,
+  includeBanner = false,
+  includeCta = false
 }) {
   const fullPrompt = enhanceVideoPrompt({
     prompt,
@@ -252,45 +256,51 @@ async function generateVideo({
 
         let finalUrl = `http://${PUBLIC_HOST}:${PORT}/outputs/${videoId}_raw.mp4`;
 
-        // Montaj istenmişse FFmpeg uygula
-        if (brandName || offerTitle) {
+        // Montaj opsiyoneldir (kullanıcı açıkça istemedikçe logo, bant ve buton koyulmaz, temiz video verilir)
+        const shouldMontage = Boolean(includeOverlay || includeLogo || includeBanner || includeCta);
+        if (shouldMontage) {
           const montajTarget = path.join(OUTPUT_DIR, `${videoId}_campaign.mp4`);
-          const safeBrand = (brandName || 'MARKA').replace(/['":]/g, '').replace(/%/g, '%%');
-          const safeSub = (subTitle || '').replace(/['":]/g, '').replace(/%/g, '%%');
-          const safeOffer = (offerTitle || '').replace(/['":]/g, '').replace(/%/g, '%%');
-          const safeDetails = (offerDetails || '').replace(/['":]/g, '').replace(/%/g, '%%');
-          const safeCta = (ctaText || 'WHATSAPP SIPARIS VE BILGI').replace(/['":]/g, '').replace(/%/g, '%%');
+          let filters = [];
 
           const fontPath = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf';
           const fontReg = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf';
-
           const primaryHex = (primaryColor || '#026009').replace('#', '0x');
           const accentHex = (accentColor || '#acfe00').replace('#', '0x');
 
-          let filters = [
-            `drawbox=x=40:y=60:w=640:h=90:color=black@0.65:t=fill`,
-            `drawtext=fontfile=${fontPath}:text='${safeBrand}':fontcolor=${accentHex}:fontsize=32:x=60:y=80`,
-          ];
-          if (safeSub) {
-            filters.push(`drawtext=fontfile=${fontReg}:text='${safeSub}':fontcolor=white:fontsize=22:x=60:y=118`);
+          if (includeLogo && brandName) {
+            const safeBrand = (brandName || 'MARKA').replace(/['":]/g, '').replace(/%/g, '%%');
+            const safeSub = (subTitle || '').replace(/['":]/g, '').replace(/%/g, '%%');
+            filters.push(`drawbox=x=40:y=60:w=640:h=90:color=black@0.65:t=fill`);
+            filters.push(`drawtext=fontfile=${fontPath}:text='${safeBrand}':fontcolor=${accentHex}:fontsize=32:x=60:y=80`);
+            if (safeSub) {
+              filters.push(`drawtext=fontfile=${fontReg}:text='${safeSub}':fontcolor=white:fontsize=22:x=60:y=118`);
+            }
           }
 
-          if (safeOffer) {
-            filters.push(`drawbox=x=40:y=970:w=640:h=230:color=${primaryHex}@0.85:t=fill`);
+          if (includeBanner && offerTitle) {
+            const safeOffer = (offerTitle || '').replace(/['":]/g, '').replace(/%/g, '%%');
+            const safeDetails = (offerDetails || '').replace(/['":]/g, '').replace(/%/g, '%%');
+            filters.push(`drawbox=x=40:y=970:w=640:h=130:color=${primaryHex}@0.85:t=fill`);
             filters.push(`drawbox=x=40:y=970:w=640:h=6:color=${accentHex}:t=fill`);
             filters.push(`drawtext=fontfile=${fontPath}:text='${safeOffer}':fontcolor=${accentHex}:fontsize=22:x=60:y=995`);
             if (safeDetails) {
               filters.push(`drawtext=fontfile=${fontPath}:text='${safeDetails}':fontcolor=white:fontsize=24:x=60:y=1035`);
             }
-            filters.push(`drawbox=x=60:y=1100:w=600:h=70:color=0x25D366:t=fill`);
-            filters.push(`drawtext=fontfile=${fontPath}:text='${safeCta}':fontcolor=white:fontsize=26:x=(w-text_w)/2:y=1122`);
           }
 
-          const ffmpegCmd = `ffmpeg -y -i "${rawVideoTarget}" -vf "${filters.join(',')}" -c:a copy "${montajTarget}"`;
-          console.log("[VideoGen] FFmpeg montaj çalıştırılıyor...");
-          execSync(ffmpegCmd);
-          console.log("[VideoGen] Montaj tamamlandı:", montajTarget);
-          finalUrl = `http://${PUBLIC_HOST}:${PORT}/outputs/${videoId}_campaign.mp4`;
+          if (includeCta && ctaText) {
+            const safeCta = (ctaText || 'WHATSAPP SIPARIS VE BILGI').replace(/['":]/g, '').replace(/%/g, '%%');
+            filters.push(`drawbox=x=60:y=1120:w=600:h=70:color=0x25D366:t=fill`);
+            filters.push(`drawtext=fontfile=${fontPath}:text='${safeCta}':fontcolor=white:fontsize=26:x=(w-text_w)/2:y=1142`);
+          }
+
+          if (filters.length > 0) {
+            const ffmpegCmd = `ffmpeg -y -i "${rawVideoTarget}" -vf "${filters.join(',')}" -c:a copy "${montajTarget}"`;
+            console.log("[VideoGen] FFmpeg montaj çalıştırılıyor...");
+            execSync(ffmpegCmd);
+            console.log("[VideoGen] Montaj tamamlandı:", montajTarget);
+            finalUrl = `http://${PUBLIC_HOST}:${PORT}/outputs/${videoId}_campaign.mp4`;
+          }
         }
 
         // /public/ dizinine de kopyala

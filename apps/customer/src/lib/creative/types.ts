@@ -3,7 +3,7 @@ export const CREATIVE_FORMATS = [
   { id: 'ig', label: 'Instagram kare', format: 'square', aspect: '1:1', hint: '1:1 akış' },
   { id: 'story', label: 'Instagram story', format: 'story', aspect: '9:16', hint: 'Dikey hikâye' },
   { id: 'feed', label: 'Genel sosyal medya', format: 'feed', aspect: '4:5', hint: 'Dikey akış' },
-  { id: 'reels_video', label: '🎬 Kampanya Videosu', format: 'video', aspect: '9:16', hint: '10sn Sinematik Reels / Durum Videosu' },
+  { id: 'reels_video', label: 'Kampanya videosu', format: 'video', aspect: '9:16', hint: '10sn sinematik video (9:16)' },
   { id: 'banner', label: 'Yatay banner', format: 'banner', aspect: '16:9', hint: 'Kapak / banner' },
 ] as const
 
@@ -102,6 +102,10 @@ export type CreativeSnapshot = {
   baseCreativeId: string | null
   instruction?: string | null
   variationPreset?: string | null
+  includeVideoOverlay?: boolean
+  includeVideoLogo?: boolean
+  includeVideoBanner?: boolean
+  includeVideoCta?: boolean
 }
 
 export type CreativePayload = CreativeSnapshot & {
