@@ -1,6 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const WebSocket = globalThis.WebSocket || (() => {
+  try { return require('ws'); } catch (e) { return null; }
+})();
 
 const OUTPUT_DIR = '/app/gateway/outputs';
 const PUBLIC_HOST = process.env.PUBLIC_HOST || '167.233.201.31';
