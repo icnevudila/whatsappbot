@@ -73,6 +73,7 @@ export async function replyToConversation(
         media_url: mediaUrl,
         media_name: mediaName,
         message_type: messageType,
+        ptt: messageType === 'audio' ? true : undefined,
       },
       priority: 5,
     })

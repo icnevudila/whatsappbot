@@ -261,6 +261,33 @@ export function MessagesBoard({
   const threadMenuRef = useRef<HTMLDivElement>(null)
   const threadEndRef = useRef<HTMLDivElement>(null)
   const [flashPhone, setFlashPhone] = useState<string | null>(null)
+  const [transcribingId, setTranscribingId] = useState<number | string | null>(null)
+
+  const handleTranscribeAudio = async (messageId: number | string, mediaUrl: string) => {
+    if (transcribingId) return
+    setTranscribingId(messageId)
+    try {
+      const res = await fetch('/api/transcribe-audio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId, mediaUrl }),
+      })
+      const json = await res.json()
+      if (json.success && json.text) {
+        setLiveThread((prev) =>
+          prev.map((msg) => (msg.id === messageId ? { ...msg, body: json.text } : msg)),
+        )
+        toast('Ses başarıyla metne çevrildi.', 'success')
+      } else {
+        toast(json.error || 'Ses çevrilemedi.', 'danger')
+      }
+    } catch {
+      toast('Bağlantı hatası oluştu.', 'danger')
+    } finally {
+      setTranscribingId(null)
+    }
+  }
+
   const topPhoneRef = useRef<string | null>(previews[0]?.phone ?? null)
   const threadMemo = useRef(new Map<string, ChatMessage[]>())
   const inflight = useRef(new Map<string, Promise<ChatMessage[]>>())
@@ -907,12 +934,15 @@ export function MessagesBoard({
                       audio: 'Ses',
                       document: 'Belge',
                     }
+                    const isAudioMsg = row.message_type === 'audio'
                     const bodyText =
-                      row.body && row.body !== '(görsel)'
-                        ? row.body
-                        : mediaUrl
-                          ? null
-                          : row.body ?? typeFallback[row.message_type] ?? `(${row.message_type})`
+                      isAudioMsg
+                        ? null
+                        : row.body && row.body !== '(görsel)'
+                          ? row.body
+                          : mediaUrl
+                            ? null
+                            : row.body ?? typeFallback[row.message_type] ?? `(${row.message_type})`
                     return (
                       <div
                         key={row.clientKey ?? `log-${row.id}`}
@@ -954,6 +984,43 @@ export function MessagesBoard({
                                     </span>
                                   </div>
                                 </a>
+                              ) : row.message_type === 'audio' ? (
+                                <div className="flex flex-col gap-1.5 my-1.5 min-w-[240px] max-w-xs">
+                                  <audio
+                                    src={mediaUrl}
+                                    controls
+                                    preload="metadata"
+                                    className="w-full h-8"
+                                  />
+                                  {row.body && row.body !== 'Ses' && row.body !== '(ses)' && row.body !== 'Sesli Mesaj' ? (
+                                    <div className="mt-1 p-2 rounded bg-black/5 dark:bg-white/5 border border-hairline/60 text-xs">
+                                      <div className="flex items-center gap-1 font-semibold text-[10.5px] text-accent">
+                                        <Icon name="sparkles" className="size-3 text-accent" />
+                                        <span>Ses Metni (AI):</span>
+                                      </div>
+                                      <p className="mt-0.5 whitespace-pre-wrap leading-relaxed text-[12px] text-ink font-sans">{row.body}</p>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      disabled={transcribingId === row.id}
+                                      onClick={() => handleTranscribeAudio(row.id, mediaUrl)}
+                                      className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded bg-accent/10 hover:bg-accent/20 text-accent transition-colors self-start cursor-pointer border border-accent/20 mt-1"
+                                    >
+                                      {transcribingId === row.id ? (
+                                        <>
+                                          <span className="size-3 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+                                          <span>Metne Çevriliyor…</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Icon name="sparkles" className="size-3" />
+                                          <span>Metne Çevir (Ücretsiz)</span>
+                                        </>
+                                      )}
+                                    </button>
+                                  )}
+                                </div>
                               ) : (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img src={mediaUrl} alt="" className="wb-chat-media" loading="lazy" />
