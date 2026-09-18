@@ -437,37 +437,6 @@ export function ReplyForm({
     })
   }
 
-  const sendCurrentDeviceLocation = () => {
-    if (typeof window === 'undefined' || !navigator.geolocation) {
-      toast('Tarayıcınız veya cihazınız konum servisini desteklemiyor.', 'warn')
-      return
-    }
-    toast('Cihazın canlı GPS konumu alınıyor…', 'accent')
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const lat = Number(pos.coords.latitude.toFixed(6))
-        const lng = Number(pos.coords.longitude.toFixed(6))
-        sendLocationMessage({
-          lat,
-          lng,
-          name: 'Mevcut Konum',
-          address: `${lat}, ${lng}`,
-        })
-      },
-      (err) => {
-        let msg = 'Cihaz konumu alınamadı.'
-        if (err.code === 1) {
-          msg = 'Konum erişim izni verilmedi. Tarayıcı ayarlarından izin verin.'
-        } else if (err.code === 2) {
-          msg = 'GPS konum bilgisine ulaşılamadı.'
-        } else if (err.code === 3) {
-          msg = 'Konum alma işlemi zaman aşımına uğradı.'
-        }
-        toast(msg, 'danger')
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 },
-    )
-  }
 
   return (
     <form
@@ -694,24 +663,6 @@ export function ReplyForm({
                   </div>
                 </button>
 
-                {/* 4. Mevcut Konumum */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAttachMenu(false)
-                    sendCurrentDeviceLocation()
-                  }}
-                  className="wb-chat-attach-item"
-                  role="menuitem"
-                >
-                  <span className="wb-chat-attach-circle bg-[#059669] text-white">
-                    <Icon name="location" className="size-4" />
-                  </span>
-                  <div className="flex flex-col">
-                    <span className="wb-chat-attach-label">Mevcut Konumum</span>
-                    <span className="text-[11px] text-ink-muted -mt-0.5">Cihazın Canlı GPS'i</span>
-                  </div>
-                </button>
 
                 {/* 4. Önerilen Cevaplar */}
                 <button
