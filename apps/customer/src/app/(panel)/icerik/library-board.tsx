@@ -253,14 +253,45 @@ function LibraryCard({
 }) {
   const failed = Boolean(renderError) && item.status !== 'ready'
   const ready = item.status === 'ready' && Boolean(item.publicUrl)
+  const isVideo = item.format === 'video' || Boolean(item.publicUrl?.endsWith('.mp4'))
 
   return (
-    <article className="flex h-full flex-col overflow-visible rounded-[var(--radius-card)] border border-hairline bg-surface shadow-[var(--shadow-card)]">
+    <article className="group flex h-full flex-col overflow-visible rounded-[var(--radius-card)] border border-hairline bg-surface shadow-[var(--shadow-card)] transition-all duration-200 hover:shadow-md">
       <div className="relative">
         <Link href={`/icerik/${item.id}`} className="block overflow-hidden rounded-t-[var(--radius-card)]">
           {ready ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={item.publicUrl ?? undefined} alt="" className="aspect-[4/5] w-full bg-canvas object-cover" />
+            isVideo ? (
+              <div className="relative aspect-[4/5] w-full overflow-hidden bg-black">
+                {item.thumbnailUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={item.thumbnailUrl}
+                    alt={item.title || 'Kampanya videosu'}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                ) : (
+                  <video
+                    src={`${item.publicUrl}#t=0.5`}
+                    preload="metadata"
+                    muted
+                    playsInline
+                    className="pointer-events-none h-full w-full object-cover"
+                  />
+                )}
+                <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[0.5px] transition-colors group-hover:bg-black/30">
+                  <div className="flex size-11 items-center justify-center rounded-full bg-white/95 text-ink shadow-lg transition-transform duration-200 group-hover:scale-110">
+                    <Icon name="play" className="size-5 translate-x-0.5 fill-current text-ink" />
+                  </div>
+                </div>
+                <span className="absolute bottom-2 right-2 flex items-center gap-1 rounded bg-black/80 px-2 py-0.5 text-[10.5px] font-semibold tracking-wide text-white shadow-sm">
+                  <Icon name="video" className="size-3 text-white" />
+                  0:10
+                </span>
+              </div>
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={item.publicUrl ?? undefined} alt="" className="aspect-[4/5] w-full bg-canvas object-cover" />
+            )
           ) : (
             <GeneratingFrame status={failed ? 'failed' : item.status} error={renderError ?? item.error} />
           )}

@@ -598,8 +598,9 @@ const server = http.createServer(async (req, res) => {
 
         return sendJson(res, 200, {
           created: Math.floor(Date.now() / 1000),
-          data: [{ url: result.videoUrl }],
+          data: [{ url: result.videoUrl, thumbnailUrl: result.thumbnailUrl }],
           videoId: result.videoId,
+          thumbnailUrl: result.thumbnailUrl,
           duration: result.duration,
           aspect: result.aspect,
         });

@@ -228,6 +228,31 @@ export function buildVideoPrompt(snapshot: CreativeSnapshot): {
     act1Focus = 'ürünün aktif formülü, köpük dokusu ve ferahlatıcı mikro tanecikleri'
     act2Action = 'yüzeyin zahmetsizce temizlenişi, ardında bıraktığı ışıl ışıl ayna gibi parlaklık'
     act3Climax = 'tertemiz, kusursuz ve hijyenik yaşam alanını gösteren aydınlık geniş plan'
+  } else if (fullContext.includes('takı') || fullContext.includes('mücevher') || fullContext.includes('saat') || fullContext.includes('altın') || fullContext.includes('pırlanta') || fullContext.includes('gümüş') || fullContext.includes('kolye') || fullContext.includes('yüzük') || fullContext.includes('bileklik')) {
+    environment = 'karanlık ve lüks bir mücevher stüdyosu, kadife zemin ve odaklanmış kristal spot ışıkları'
+    act1Focus = 'değerli taşların ve parlatılmış metalin mikro prizmatik ışık kırılmaları, kusursuz faset kesimleri ve lüks yansımaları'
+    act2Action = 'mücevherin zarif bir ışık hüzmesi altında yavaşça dönmesi, ışıltının her açıdan parıldayan büyüleyici dansı'
+    act3Climax = 'ürünün tüm asaleti ve prestijini gözler önüne seren nefes kesici lüks hero planı'
+  } else if (fullContext.includes('spor') || fullContext.includes('fitness') || fullContext.includes('gym') || fullContext.includes('antrenman') || fullContext.includes('outdoor') || fullContext.includes('kamp') || fullContext.includes('koşu') || fullContext.includes('protein') || fullContext.includes('bisiklet')) {
+    environment = 'modern, dinamik ve enerjik bir fitness kulübü veya gün doğumunda sisli bir dağ patikası'
+    act1Focus = 'ürünün nefes alan aerodinamik teknik dokusu, sağlam dikişleri ve yüksek performanslı malzemesi'
+    act2Action = 'ürünün dinamik hareket anındaki esnekliği ve gücü, 120fps ağır çekim ile performans detayı'
+    act3Climax = 'ürünün kazandırdığı motivasyonu, dinamizmi ve üstün performansı yansıtan güçlü geniş açı'
+  } else if (fullContext.includes('sağlık') || fullContext.includes('medikal') || fullContext.includes('diş') || fullContext.includes('klinik') || fullContext.includes('optik') || fullContext.includes('gözlük') || fullContext.includes('eczane') || fullContext.includes('doktor')) {
+    environment = 'tertemiz, aydınlık, beyaz ve güven verici bir modern klinik veya optik stüdyosu'
+    act1Focus = 'ürünün steril, medikal kalitede pürüzsüz yüzeyi, ergonomik hatları ve hassas mühendisliği'
+    act2Action = 'ürünün güven ve konfor sağlayan pratik kullanımı, hassas ve profesyonel dokunuşlar'
+    act3Climax = 'ferah, sağlıklı ve güven veren bir atmosferde ürünün estetiğini sergileyen berrak plan'
+  } else if (fullContext.includes('emlak') || fullContext.includes('gayrimenkul') || fullContext.includes('villa') || fullContext.includes('daire') || fullContext.includes('rezidans') || fullContext.includes('konut') || fullContext.includes('arsa')) {
+    environment = 'gün batımında havuzlu modern bir lüks villa veya panoramik manzaralı rezidans terası'
+    act1Focus = 'geniş cam cepheler, mermer zeminler ve birinci sınıf mimari malzeme detayları'
+    act2Action = 'iç mekandan gün batımı manzarasına doğru süzülen akıcı ve ferah gimbal / slider çekimi'
+    act3Climax = 'yapının ışıklandırılmış heybetli ve büyüleyici akşam siluetini gösteren sinematik geniş açı'
+  } else if (fullContext.includes('eğitim') || fullContext.includes('kitap') || fullContext.includes('kırtasiye') || fullContext.includes('sanat') || fullContext.includes('hobi') || fullContext.includes('kurs') || fullContext.includes('okul')) {
+    environment = 'sıcak ahşap raflı modern bir kütüphane veya aydınlık, ilham dolu bir tasarım atölyesi'
+    act1Focus = 'kaliteli kâğıdın mikro dokusu, kabartma kapak işçiliği veya boya pigmentlerinin canlı renkleri'
+    act2Action = 'sayfaların veya fırça darbelerinin akıcı, ilham verici hareketi, odaklanmış yaratıcı an'
+    act3Climax = 'tüm çalışma masasını ve yaratıcı atmosferi kucaklayan sıcak ve dingin geniş sahne'
   }
 
   const styleMood = VIDEO_STYLE_MOODS[snapshot.style] || VIDEO_STYLE_MOODS.auto

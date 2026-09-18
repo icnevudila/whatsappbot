@@ -14,7 +14,12 @@ test('Video Prompt Generator A-Z Industry Variations', () => {
     { cat: 'Kozmetik / Parfüm', name: 'Oud & Amber Parfüm', desc: 'Kalıcı odunsu esanslı lüks parfüm', brief: 'Büyüleyici koku deneyimi' },
     { cat: 'Elektronik / Kulaklık', name: 'Kablosuz ANC Kulaklık', desc: 'Aktif gürültü engelleyici bluetooth kulaklık', brief: 'Müzikte kristal netlik' },
     { cat: 'Otomotiv / Lastik', name: 'Dört Mevsim Performans Lastiği', desc: 'Islak zemin tutuşu yüksek oto lastiği', brief: 'Yola güvenle çıkın' },
-    { cat: 'Temizlik / Deterjan', name: 'Doğal Yüzey Temizleyici', desc: 'Bitkisel bazlı leke çıkarıcı sprey', brief: 'Evinizde tertemiz hijyen' }
+    { cat: 'Temizlik / Deterjan', name: 'Doğal Yüzey Temizleyici', desc: 'Bitkisel bazlı leke çıkarıcı sprey', brief: 'Evinizde tertemiz hijyen' },
+    { cat: 'Mücevher / Pırlanta', name: 'Baget Kesim Pırlanta Yüzük', desc: '18 ayar beyaz altın montürlü tektaş pırlanta', brief: 'Evlilik tekliflerine özel indirim' },
+    { cat: 'Spor / Fitness', name: 'Akıllı Direnç Antrenman Seti', desc: 'Çok fonksiyonlu ev ve gym egzersiz ekipmanı', brief: 'Formunu koru yaza hazırlan' },
+    { cat: 'Sağlık / Diş', name: 'Estetik Zirkonyum Diş & Gülüş Tasarımı', desc: 'Doğal ve dayanıklı estetik diş hekimliği', brief: 'Kendine güvenen gülüşler' },
+    { cat: 'Emlak / Villa', name: 'Akıllı Lüks Doğa Villası', desc: 'Müstakil havuzlu ve panoramik doğa manzaralı 4+1 villa', brief: 'Lansmana özel ödeme kolaylığı' },
+    { cat: 'Eğitim / Kitap', name: 'İlham Veren Girişimcilik Kitap Seti', desc: 'Özel ciltli sert kapak rehber kitap serisi', brief: 'Yeni baskı özel avantajı' }
   ];
 
   for (const v of variations) {

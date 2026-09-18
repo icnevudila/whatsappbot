@@ -479,7 +479,7 @@ export async function listLibraryCreatives({
     const size = Math.min(120, Math.max(1, limit))
     let request = supabase
       .from('creatives')
-      .select('id, title, public_url, status, source, generation_type, created_at, error, parent_id')
+      .select('id, title, public_url, status, source, generation_type, created_at, error, parent_id, format, payload')
       .eq('org_id', org.id)
       .order('created_at', { ascending: sort === 'old' })
       .range(start, start + size - 1)
@@ -487,17 +487,29 @@ export async function listLibraryCreatives({
     if (term) request = request.ilike('title', `%${term}%`)
     const { data, error } = await request
     if (error) return { items: [], hasMore: false, error: error.message }
-    const items = (data ?? []).map((row) => ({
-      id: row.id,
-      title: row.title,
-      publicUrl: row.public_url,
-      status: row.status,
-      source: row.source,
-      generationType: row.generation_type,
-      createdAt: row.created_at,
-      error: row.error,
-      parentId: row.parent_id,
-    }))
+    const items = (data ?? []).map((row) => {
+      const payload = (row.payload ?? {}) as Record<string, unknown>
+      const isVideo = row.format === 'video' || Boolean(row.public_url?.endsWith('.mp4'))
+      const thumb =
+        typeof payload.thumbnailUrl === 'string' && payload.thumbnailUrl
+          ? payload.thumbnailUrl
+          : isVideo
+            ? null
+            : row.public_url
+      return {
+        id: row.id,
+        title: row.title,
+        publicUrl: row.public_url,
+        thumbnailUrl: thumb,
+        format: row.format,
+        status: row.status,
+        source: row.source,
+        generationType: row.generation_type,
+        createdAt: row.created_at,
+        error: row.error,
+        parentId: row.parent_id,
+      }
+    })
     return { items, hasMore: items.length === size }
   } catch (error) {
     return {

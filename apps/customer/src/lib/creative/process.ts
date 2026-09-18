@@ -212,9 +212,15 @@ export async function processCreativeGeneration(
         throw new Error(`OmniStudio Video ${vidRes.status}: ${(await vidRes.text()).slice(0, 200)}`)
       }
 
-      const vidJson = (await vidRes.json()) as { data?: { url?: string }[]; videoId?: string }
+      const vidJson = (await vidRes.json()) as {
+        data?: { url?: string; thumbnailUrl?: string }[]
+        videoId?: string
+        thumbnailUrl?: string
+      }
       const videoUrl = vidJson.data?.[0]?.url
       if (!videoUrl) throw new Error('Video URL alınamadı')
+
+      const rawThumbUrl = vidJson.thumbnailUrl || vidJson.data?.[0]?.thumbnailUrl
 
       const fileRes = await fetch(videoUrl, { signal: AbortSignal.timeout(60000) })
       if (!fileRes.ok) throw new Error('Üretilen video indirilemedi')
@@ -229,11 +235,33 @@ export async function processCreativeGeneration(
 
       const { data: publicUrl } = supabase.storage.from('creatives').getPublicUrl(storagePath)
 
+      let uploadedThumbnailUrl: string | null = null
+      if (rawThumbUrl) {
+        try {
+          const thumbRes = await fetch(rawThumbUrl, { signal: AbortSignal.timeout(15000) })
+          if (thumbRes.ok) {
+            const thumbBuffer = Buffer.from(await thumbRes.arrayBuffer())
+            const thumbPath = `${creative.org_id}/${crypto.randomUUID()}_thumb.jpg`
+            const { error: thumbErr } = await supabase.storage.from('creatives').upload(thumbPath, thumbBuffer, {
+              contentType: 'image/jpeg',
+              upsert: false,
+            })
+            if (!thumbErr) {
+              const { data: thumbPub } = supabase.storage.from('creatives').getPublicUrl(thumbPath)
+              uploadedThumbnailUrl = thumbPub.publicUrl
+            }
+          }
+        } catch (err) {
+          console.warn('[creative.video.thumbnail]', err)
+        }
+      }
+
       const nextPayload: CreativePayload = {
         ...snapshot,
         originalPrompt: snapshot.brief,
         generatedPrompt: videoPrompt,
         provider: 'omnistudio_veo',
+        thumbnailUrl: uploadedThumbnailUrl || rawThumbUrl || null,
         cost: { provider: 'omnistudio_veo', imageCount: 1 },
       }
 

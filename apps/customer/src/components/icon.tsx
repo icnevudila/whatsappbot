@@ -42,6 +42,8 @@ const paths = {
   paperclip: 'm21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48',
   mic: 'M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z M19 10v2a7 7 0 0 1-14 0v-2 M12 19v3 M8 22h8',
   stop: 'M6 6h12v12H6z',
+  play: 'M5 3l14 9-14 9V3z',
+  video: 'm23 7-7 5 7 5V7z M1 5h15v14H1z',
 } as const
 
 export type IconName = keyof typeof paths

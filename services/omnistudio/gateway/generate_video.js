@@ -305,15 +305,30 @@ async function generateVideo({
             console.log("[VideoGen] Montaj tamamlandı:", montajTarget);
             finalUrl = `http://${PUBLIC_HOST}:${PORT}/outputs/${videoId}_campaign.mp4`;
           }
+        const videoFileForThumb = (shouldMontage && fs.existsSync(path.join(OUTPUT_DIR, `${videoId}_campaign.mp4`)))
+          ? path.join(OUTPUT_DIR, `${videoId}_campaign.mp4`)
+          : rawVideoTarget;
+
+        const thumbTarget = path.join(OUTPUT_DIR, `${videoId}_thumb.jpg`);
+        let thumbUrl = null;
+        try {
+          execSync(`ffmpeg -y -ss 00:00:01 -i "${videoFileForThumb}" -vframes 1 -q:v 2 "${thumbTarget}"`);
+          if (fs.existsSync(thumbTarget)) {
+            thumbUrl = `http://${PUBLIC_HOST}:${PORT}/outputs/${videoId}_thumb.jpg`;
+            console.log("[VideoGen] Kapak fotoğrafı (thumbnail) oluşturuldu:", thumbTarget);
+          }
+        } catch (thumbErr) {
+          console.warn("[VideoGen] Thumbnail çıkartılırken hata:", thumbErr.message);
         }
 
         // /public/ dizinine de kopyala
-        execSync(`cp -f ${OUTPUT_DIR}/*.mp4 /app/gateway/public/ 2>/dev/null || true`);
+        execSync(`cp -f ${OUTPUT_DIR}/*.mp4 ${OUTPUT_DIR}/*.jpg /app/gateway/public/ 2>/dev/null || true`);
 
         resolve({
           success: true,
           videoId,
           videoUrl: finalUrl,
+          thumbnailUrl: thumbUrl,
           duration: 10,
           aspect: "9:16",
           promptUsed: fullPrompt

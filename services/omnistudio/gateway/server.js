@@ -569,6 +569,47 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+    // 1.0. Video Üretimi: POST /v1/videos/generations & /videos/generations
+    if (method === 'POST' && (pathname === '/v1/videos/generations' || pathname === '/videos/generations')) {
+      const body = await parseJsonBody(req);
+      const prompt = body.prompt;
+      if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
+        return sendJson(res, 400, { error: { message: 'Prompt alanı zorunludur.', type: 'invalid_request_error' } });
+      }
+
+      console.log(`[Gateway] Yeni Video Üretim Talebi: "${prompt.slice(0, 60)}..."`);
+      try {
+        const { generateVideo } = require('./generate_video.js');
+        const result = await generateVideo({
+          prompt,
+          brandName: body.brandName || body.brandKit?.name || null,
+          productName: body.productName || body.product?.name || null,
+          subTitle: body.subTitle || null,
+          offerTitle: body.offerTitle || null,
+          offerDetails: body.offerDetails || null,
+          ctaText: body.ctaText || null,
+          primaryColor: body.primaryColor || body.brandKit?.colors?.background || '#026009',
+          accentColor: body.accentColor || body.brandKit?.colors?.accent || '#acfe00',
+          includeOverlay: Boolean(body.includeOverlay),
+          includeLogo: Boolean(body.includeLogo),
+          includeBanner: Boolean(body.includeBanner),
+          includeCta: Boolean(body.includeCta),
+        });
+
+        return sendJson(res, 200, {
+          created: Math.floor(Date.now() / 1000),
+          data: [{ url: result.videoUrl, thumbnailUrl: result.thumbnailUrl }],
+          videoId: result.videoId,
+          thumbnailUrl: result.thumbnailUrl,
+          duration: result.duration,
+          aspect: result.aspect,
+        });
+      } catch (err) {
+        console.error('[Gateway Video Hata]', err);
+        return sendJson(res, 500, { error: { message: err.message, type: 'video_generation_error' } });
+      }
+    }
+
     // 1.1. WhatsApp Yapay Zeka Mesaj Önerileri: POST /v1/chat/suggestions
     if (method === 'POST' && (pathname === '/v1/chat/suggestions' || pathname === '/chat/suggestions')) {
       const body = await parseJsonBody(req);
@@ -740,26 +781,56 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { ok: true, job: sanitizeJobForBroadcast(job) });
     }
 
-    // 7. Statik Görsel Sunumu: GET /outputs/:filename
-    if (method === 'GET' && pathname.startsWith('/outputs/')) {
-      const filename = path.basename(pathname.replace('/outputs/', ''));
-      const filePath = path.join(OUTPUT_DIR, filename);
-
+    // 7. Statik Dosya / Video / Görsel Sunumu: GET/HEAD /outputs/:filename veya /public/:filename
+    if ((method === 'GET' || method === 'HEAD') && (pathname.startsWith('/outputs/') || pathname.startsWith('/public/'))) {
+      const prefix = pathname.startsWith('/outputs/') ? '/outputs/' : '/public/';
+      const filename = path.basename(pathname.replace(prefix, ''));
+      let filePath = path.join(OUTPUT_DIR, filename);
       if (!fs.existsSync(filePath)) {
-        res.writeHead(404, { 'Content-Type': 'text/plain' });
-        return res.end('File not found');
+        filePath = path.join(__dirname, 'public', filename);
       }
 
+      if (!fs.existsSync(filePath)) {
+        res.writeHead(404, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        return res.end(JSON.stringify({ error: 'File not found' }));
+      }
+
+      const stat = fs.statSync(filePath);
       const ext = path.extname(filePath).toLowerCase();
-      let mime = 'image/png';
+      let mime = 'application/octet-stream';
       if (ext === '.jpg' || ext === '.jpeg') mime = 'image/jpeg';
+      if (ext === '.png') mime = 'image/png';
       if (ext === '.webp') mime = 'image/webp';
+      if (ext === '.mp4') mime = 'video/mp4';
+      if (ext === '.webm') mime = 'video/webm';
+
+      // Video range streaming support (HTTP 206)
+      const range = req.headers.range;
+      if (range && mime.startsWith('video/')) {
+        const parts = range.replace(/bytes=/, '').split('-');
+        const start = parseInt(parts[0], 10);
+        const end = parts[1] ? parseInt(parts[1], 10) : stat.size - 1;
+        const chunksize = (end - start) + 1;
+        res.writeHead(206, {
+          'Content-Range': `bytes ${start}-${end}/${stat.size}`,
+          'Accept-Ranges': 'bytes',
+          'Content-Length': chunksize,
+          'Content-Type': mime,
+          'Access-Control-Allow-Origin': '*',
+        });
+        if (method === 'HEAD') return res.end();
+        const file = fs.createReadStream(filePath, { start, end });
+        return file.pipe(res);
+      }
 
       res.writeHead(200, {
         'Content-Type': mime,
+        'Content-Length': stat.size,
+        'Accept-Ranges': 'bytes',
         'Cache-Control': 'public, max-age=86400',
         'Access-Control-Allow-Origin': '*',
       });
+      if (method === 'HEAD') return res.end();
       return fs.createReadStream(filePath).pipe(res);
     }
 
@@ -785,6 +856,7 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 OmniStudio AI Visual Gateway (V2 Gelişmiş) Çalışıyor!`);
   console.log(`📡 URL: http://localhost:${PORT}`);
   console.log(`🎨 Generations: http://localhost:${PORT}/v1/images/generations`);
+  console.log(`🎬 Videos: http://localhost:${PORT}/v1/videos/generations`);
   console.log(`🖼️ Edits/Varyasyon: http://localhost:${PORT}/v1/images/edits`);
   console.log(`📂 Outputs: ${OUTPUT_DIR}`);
   console.log(`====================================================`);
