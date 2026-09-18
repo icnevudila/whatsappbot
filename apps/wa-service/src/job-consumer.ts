@@ -495,7 +495,35 @@ async function handle(job: JobRow): Promise<unknown> {
       const messageType = payload.message_type ?? (mediaUrl ? 'image' : 'text')
       try {
         let content: Parameters<typeof session.sendMessage>[1]
-        if (!mediaUrl || messageType === 'text') {
+        if (messageType === 'location' && payload.location) {
+          content = {
+            location: {
+              degreesLatitude: payload.location.degreesLatitude,
+              degreesLongitude: payload.location.degreesLongitude,
+              name: payload.location.name,
+              address: payload.location.address,
+            },
+          }
+        } else if (messageType === 'contact' && payload.contact) {
+          content = {
+            contacts: {
+              displayName: payload.contact.displayName,
+              contacts: [{ vcard: payload.contact.vcard }],
+            },
+          }
+        } else if (messageType === 'audio') {
+          if (!mediaUrl) throw new Error('Ses mesaji icin media_url zorunludur')
+          const isVoiceNote =
+            payload.ptt === true ||
+            mediaUrl.toLowerCase().includes('voice') ||
+            mediaUrl.toLowerCase().includes('.ogg') ||
+            mediaUrl.toLowerCase().includes('.opus')
+          content = {
+            audio: { url: mediaUrl },
+            mimetype: isVoiceNote ? 'audio/ogg; codecs=opus' : 'audio/mp4',
+            ptt: isVoiceNote,
+          }
+        } else if (!mediaUrl || messageType === 'text') {
           content = { text: payload.body ?? '' }
         } else if (messageType === 'image') {
           content = { image: { url: mediaUrl }, caption: payload.body ?? undefined }

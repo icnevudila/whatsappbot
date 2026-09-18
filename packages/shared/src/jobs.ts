@@ -61,7 +61,7 @@ export type TargetStatus =
   | 'failed'
   | 'skipped'
 
-export type MessageType = 'text' | 'image' | 'video' | 'document'
+export type MessageType = 'text' | 'image' | 'video' | 'document' | 'audio' | 'location' | 'contact'
 
 /** onWhatsApp() dogrulama sonucu. Gonderim yalnizca 'valid' hedeflere gider. */
 export type WaCheckStatus = 'unknown' | 'valid' | 'invalid'
@@ -84,6 +84,17 @@ export type JobPayloadMap = {
     media_url?: string
     media_name?: string
     message_type?: MessageType
+    location?: {
+      degreesLatitude: number
+      degreesLongitude: number
+      name?: string
+      address?: string
+    }
+    contact?: {
+      displayName: string
+      vcard: string
+    }
+    ptt?: boolean
   }
   'contacts.verify': { list_id?: string; contact_ids?: string[] }
   /** Tek numara anlik onWhatsApp kontrolu. */

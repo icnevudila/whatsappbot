@@ -440,6 +440,11 @@ type SendContent =
       caption?: string
       fileName?: string
     }
+  | {
+      audio: { url: string }
+      mimetype?: string
+      ptt?: boolean
+    }
 
 function buildContent(
   campaign: CampaignRow,
@@ -461,11 +466,45 @@ function buildContent(
   }
 
   if (type === 'document') {
+    let rawName = 'belge.pdf'
+    if (body && body.includes('.')) {
+      rawName = body
+    } else {
+      try {
+        const urlObj = new URL(media)
+        const pathParts = urlObj.pathname.split('/').filter(Boolean)
+        const last = pathParts[pathParts.length - 1]
+        if (last && last.includes('.')) {
+          rawName = decodeURIComponent(last)
+        }
+      } catch {
+        const clean = media.split('?')[0] || ''
+        const last = clean.split('/').pop() || ''
+        if (last && last.includes('.')) {
+          rawName = decodeURIComponent(last)
+        }
+      }
+    }
+    const isPdf = media.toLowerCase().includes('.pdf') || rawName.toLowerCase().endsWith('.pdf')
+    const mime = isPdf ? 'application/pdf' : 'application/octet-stream'
+    const finalFileName = isPdf && !rawName.toLowerCase().endsWith('.pdf') ? `${rawName}.pdf` : rawName
     return {
       document: { url: media },
-      mimetype: 'application/octet-stream',
-      caption: body || undefined,
-      fileName: 'dosya',
+      mimetype: mime,
+      caption: body && body !== rawName ? body : undefined,
+      fileName: finalFileName,
+    }
+  }
+
+  if (type === 'audio') {
+    const isVoiceNote =
+      media.toLowerCase().includes('voice') ||
+      media.toLowerCase().includes('.ogg') ||
+      media.toLowerCase().includes('.opus')
+    return {
+      audio: { url: media },
+      mimetype: isVoiceNote ? 'audio/ogg; codecs=opus' : 'audio/mp4',
+      ptt: isVoiceNote,
     }
   }
 

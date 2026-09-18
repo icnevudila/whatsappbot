@@ -6,7 +6,7 @@ import {
   formatSendWindowWait,
   isWithinSendWindow,
   normalizeClock,
-} from './send-window.ts'
+} from './send-window.js'
 
 test('normalizeClock 08:00:00 ve 8:00 kabul eder', () => {
   assert.equal(normalizeClock('08:00:00'), '08:00')
