@@ -83,10 +83,13 @@ export function ReplyForm({
   const [recordingSeconds, setRecordingSeconds] = useState(0)
   const [recordedAudioBlob, setRecordedAudioBlob] = useState<Blob | null>(null)
   const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null)
+  const [showAttachMenu, setShowAttachMenu] = useState(false)
+  const attachMenuRef = useRef<HTMLDivElement>(null)
+  const mediaInputRef = useRef<HTMLInputElement>(null)
+  const docInputRef = useRef<HTMLInputElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const recordingTimerRef = useRef<number | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [isSuggesting, setIsSuggesting] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(true)
@@ -102,6 +105,20 @@ export function ReplyForm({
   }, [threadContext])
 
   useEffect(() => {
+    const handlePointerDown = (e: MouseEvent | TouchEvent) => {
+      if (attachMenuRef.current && !attachMenuRef.current.contains(e.target as Node)) {
+        setShowAttachMenu(false)
+      }
+    }
+    if (showAttachMenu) {
+      document.addEventListener('pointerdown', handlePointerDown)
+    }
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+    }
+  }, [showAttachMenu])
+
+  useEffect(() => {
     return () => {
       window.clearTimeout(blurTimer.current)
       if (recordingTimerRef.current) clearInterval(recordingTimerRef.current)
@@ -111,6 +128,60 @@ export function ReplyForm({
       setComposerFocus(false)
     }
   }, [])
+
+  const uploadMedia = async (fileOrBlob: File | Blob, customName?: string) => {
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      if (fileOrBlob instanceof File) {
+        fd.set('file', fileOrBlob, fileOrBlob.name)
+      } else {
+        const ext = fileOrBlob.type.includes('mp4') ? 'm4a' : fileOrBlob.type.includes('webm') ? 'webm' : 'ogg'
+        fd.set('file', fileOrBlob, customName || `ses_kaydi.${ext}`)
+      }
+      const res = await fetch('/api/mesajlar/upload', {
+        method: 'POST',
+        body: fd,
+      })
+      const data = (await res.json()) as {
+        success?: boolean
+        url?: string
+        fileName?: string
+        messageType?: 'image' | 'video' | 'audio' | 'document'
+        error?: string
+      }
+      if (!res.ok || !data.success || !data.url) {
+        throw new Error(data.error || 'Dosya sunucuya yüklenemedi.')
+      }
+      return data as {
+        url: string
+        fileName: string
+        messageType: 'image' | 'video' | 'audio' | 'document'
+      }
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleFileSelection = async (file: File | undefined) => {
+    if (!file) return
+    if (file.size > 50 * 1024 * 1024) {
+      toast('Dosya boyutu en fazla 50 MB olabilir.', 'warn')
+      return
+    }
+    try {
+      const uploaded = await uploadMedia(file)
+      setMediaUrl(uploaded.url)
+      setMediaName(uploaded.fileName)
+      setMessageType(uploaded.messageType)
+      toast('Dosya eklendi.', 'success')
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Dosya yüklenemedi.', 'danger')
+    } finally {
+      if (mediaInputRef.current) mediaInputRef.current.value = ''
+      if (docInputRef.current) docInputRef.current.value = ''
+    }
+  }
 
   const startRecording = async () => {
     try {
@@ -279,29 +350,15 @@ export function ReplyForm({
       let finalMediaName = pendingMediaName
 
       if (pendingAudioBlob) {
-        setUploading(true)
         try {
-          const supabase = getSupabaseBrowserClient()
-          const { data: authData } = await supabase.auth.getUser()
-          const prefix = authData?.user?.id || 'chat'
-          const ext = pendingAudioBlob.type.includes('mp4') ? 'm4a' : pendingAudioBlob.type.includes('webm') ? 'webm' : 'ogg'
-          const path = `${prefix}/${Date.now()}_voice_${crypto.randomUUID()}.${ext}`
-          const { error: uploadErr } = await supabase.storage.from('chat-media').upload(path, pendingAudioBlob, {
-            contentType: pendingAudioBlob.type || 'audio/ogg',
-            upsert: false,
-          })
-          if (uploadErr) throw uploadErr
-          const { data: pubData } = supabase.storage.from('chat-media').getPublicUrl(path)
-          finalMediaUrl = pubData.publicUrl
+          const uploaded = await uploadMedia(pendingAudioBlob, 'ses_kaydi.ogg')
+          finalMediaUrl = uploaded.url
           finalMessageType = 'audio'
-          finalMediaName = `ses_kaydi.${ext}`
+          finalMediaName = uploaded.fileName
         } catch (err) {
           onUpdate?.(clientKey, { status: 'failed' })
           toast('Ses kaydı yüklenemedi: ' + (err instanceof Error ? err.message : String(err)), 'danger')
-          setUploading(false)
           return
-        } finally {
-          setUploading(false)
         }
       }
 
@@ -535,113 +592,121 @@ export function ReplyForm({
           </div>
         </div>
       ) : (
-        <div className="wb-chat-composer-row">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*,video/*,application/pdf,audio/*,.mp3,.ogg,.wav,.m4a"
-            className="hidden"
-            onChange={async (e) => {
-              const file = e.target.files?.[0]
-              if (!file) return
-              if (file.size > 30 * 1024 * 1024) {
-                toast('Dosya boyutu en fazla 30 MB olabilir.', 'warn')
-                return
-              }
-              setUploading(true)
-              try {
-                const supabase = getSupabaseBrowserClient()
-                const { data: authData } = await supabase.auth.getUser()
-                const prefix = authData?.user?.id || 'chat'
-                const ext = file.name.split('.').pop()?.toLowerCase() || 'bin'
-                const path = `${prefix}/${Date.now()}_${crypto.randomUUID()}.${ext}`
-                const { error } = await supabase.storage.from('chat-media').upload(path, file, {
-                  contentType: file.type || 'application/octet-stream',
-                  upsert: false,
-                })
-                if (error) throw error
-                const { data } = supabase.storage.from('chat-media').getPublicUrl(path)
-                setMediaUrl(data.publicUrl)
-                setMediaName(file.name)
-                if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-                  setMessageType('document')
-                } else if (file.type.startsWith('audio/') || ['.mp3', '.ogg', '.wav', '.m4a', '.opus'].some((x) => file.name.toLowerCase().endsWith(x))) {
-                  setMessageType('audio')
-                } else if (file.type.startsWith('image/')) {
-                  setMessageType('image')
-                } else if (file.type.startsWith('video/')) {
-                  setMessageType('video')
-                } else {
-                  setMessageType('document')
-                }
-                toast('Dosya eklendi.', 'success')
-              } catch (err) {
-                toast(err instanceof Error ? err.message : 'Dosya yüklenemedi.', 'danger')
-              } finally {
-                setUploading(false)
-                if (fileInputRef.current) fileInputRef.current.value = ''
-              }
-            }}
-          />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className="wb-ai-suggest-btn"
-            title="PDF, ses, görsel veya dosya ekle (Maks 30 MB)"
-          >
-            {uploading ? (
-              <span className="size-3.5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
-            ) : (
-              <Icon name="paperclip" className="size-3.5" />
+        <div className="wb-chat-composer-row items-center">
+          {/* WhatsApp Native Attachment (+) Button & Popup */}
+          <div className="relative shrink-0" ref={attachMenuRef}>
+            {showAttachMenu && (
+              <div className="wb-chat-attach-popup" role="menu" aria-orientation="vertical">
+                {/* 1. Belge */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAttachMenu(false)
+                    docInputRef.current?.click()
+                  }}
+                  className="wb-chat-attach-item"
+                  role="menuitem"
+                >
+                  <span className="wb-chat-attach-circle bg-[#7f66ff] text-white">
+                    <Icon name="file" className="size-4" />
+                  </span>
+                  <span className="wb-chat-attach-label">Belge</span>
+                </button>
+
+                {/* 2. Fotoğraf ve Video */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAttachMenu(false)
+                    mediaInputRef.current?.click()
+                  }}
+                  className="wb-chat-attach-item"
+                  role="menuitem"
+                >
+                  <span className="wb-chat-attach-circle bg-[#007bfc] text-white">
+                    <Icon name="image" className="size-4" />
+                  </span>
+                  <span className="wb-chat-attach-label">Fotoğraf ve Video</span>
+                </button>
+
+                {/* 3. Konum */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAttachMenu(false)
+                    sendBusinessLocation()
+                  }}
+                  className="wb-chat-attach-item"
+                  role="menuitem"
+                >
+                  <span className="wb-chat-attach-circle bg-[#00a884] text-white">
+                    <Icon name="location" className="size-4" />
+                  </span>
+                  <div className="flex flex-col">
+                    <span className="wb-chat-attach-label">Konum</span>
+                    <span className="text-[11px] text-ink-muted -mt-0.5">Mamak, Ankara</span>
+                  </div>
+                </button>
+
+                {/* 4. Önerilen Cevaplar */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAttachMenu(false)
+                    setShowSuggestions(true)
+                    if (suggestions.length === 0) {
+                      void fetchAiSuggestions()
+                    }
+                  }}
+                  className="wb-chat-attach-item"
+                  role="menuitem"
+                >
+                  <span className="wb-chat-attach-circle bg-[#0284c7] text-white">
+                    <Icon name="sparkles" className="size-4" />
+                  </span>
+                  <div className="flex flex-col">
+                    <span className="wb-chat-attach-label">Önerilen Cevaplar</span>
+                    <span className="text-[11px] text-ink-muted -mt-0.5">Yapay zeka hazır yanıtları</span>
+                  </div>
+                </button>
+              </div>
             )}
-          </button>
-          <button
-            type="button"
-            onClick={startRecording}
-            disabled={uploading || Boolean(recordedAudioUrl)}
-            className="wb-ai-suggest-btn text-accent hover:text-accent/80"
-            title="Canlı ses kaydet (Mikrofon)"
-          >
-            <Icon name="mic" className="size-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={sendBusinessLocation}
-            disabled={uploading || isRecording}
-            className="wb-ai-suggest-btn text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
-            title="İşletme Konumunu Gönder (Mamak, Ankara)"
-          >
-            <Icon name="location" className="size-3.5" />
-            <span className="hidden sm:inline text-[11.5px] font-semibold">
-              Konum Gönder
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              if (showSuggestions) {
-                setShowSuggestions(false)
-                return
-              }
-              setShowSuggestions(true)
-              if (suggestions.length === 0) {
-                void fetchAiSuggestions()
-              }
-            }}
-            aria-busy={isSuggesting}
-            className={`wb-ai-suggest-btn${isSuggesting ? ' is-loading' : ''}`}
-            title="Önerilen cevapları gör"
-          >
-            <Icon name="sparkles" className={`size-3.5 ${isSuggesting ? 'animate-spin' : 'text-accent'}`} />
-            <span className="hidden md:inline text-[11.5px] font-semibold text-ink-soft">
-              {isSuggesting
-                ? 'Hazırlanıyor…'
-                : suggestions.length > 0 && !showSuggestions
-                  ? `Öneriler (${suggestions.length})`
-                  : 'Önerilen Cevaplar'}
-            </span>
-          </button>
+
+            <button
+              type="button"
+              onClick={() => setShowAttachMenu((prev) => !prev)}
+              disabled={uploading}
+              className="wb-chat-attach-btn"
+              title="Ekle"
+              aria-label="Ekle"
+            >
+              {uploading ? (
+                <span className="size-5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+              ) : (
+                <Icon
+                  name="plus"
+                  className={`size-5 transition-transform duration-200 ${showAttachMenu ? 'rotate-45 text-accent' : ''}`}
+                />
+              )}
+            </button>
+          </div>
+
+          {/* Hidden File Inputs */}
+          <input
+            ref={mediaInputRef}
+            type="file"
+            accept="image/*,video/*"
+            className="hidden"
+            onChange={(e) => void handleFileSelection(e.target.files?.[0])}
+          />
+          <input
+            ref={docInputRef}
+            type="file"
+            accept="application/pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+            className="hidden"
+            onChange={(e) => void handleFileSelection(e.target.files?.[0])}
+          />
+
           <label className="sr-only" htmlFor="conversation-reply">
             Mesaj
           </label>
@@ -652,7 +717,13 @@ export function ReplyForm({
             required={!mediaUrl && !recordedAudioBlob}
             maxLength={4096}
             rows={1}
-            placeholder={recordedAudioUrl ? 'Ses kaydı eklendi. İsteğe bağlı açıklama yazın…' : mediaUrl ? 'Açıklama yazın (isteğe bağlı)…' : 'Mesaj yaz veya seç'}
+            placeholder={
+              recordedAudioUrl
+                ? 'Ses kaydı eklendi. İsteğe bağlı açıklama yazın…'
+                : mediaUrl
+                  ? 'Açıklama yazın (isteğe bağlı)…'
+                  : 'Bir mesaj yazın'
+            }
             value={body}
             onChange={(event) => {
               setBody(event.target.value)
@@ -673,15 +744,30 @@ export function ReplyForm({
             }}
             className="wb-chat-composer-input font-sans"
           />
-          <button
-            type="submit"
-            className="wb-chat-composer-send"
-            disabled={uploading || (!body.trim() && !mediaUrl && !recordedAudioBlob)}
-            aria-label="Gönder"
-            title="Gönder"
-          >
-            <Icon name="send" className="size-4" fill="currentColor" stroke="none" />
-          </button>
+
+          {/* Right Action: Send Button if text/media, Mic Button if empty */}
+          {body.trim() || mediaUrl || recordedAudioBlob ? (
+            <button
+              type="submit"
+              className="wb-chat-composer-send"
+              disabled={uploading}
+              aria-label="Gönder"
+              title="Gönder"
+            >
+              <Icon name="send" className="size-4" fill="currentColor" stroke="none" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={startRecording}
+              disabled={uploading}
+              className="wb-chat-attach-btn text-ink-muted hover:text-accent"
+              aria-label="Sesli Mesaj Kaydet"
+              title="Sesli Mesaj Kaydet (Mikrofon)"
+            >
+              <Icon name="mic" className="size-5" />
+            </button>
+          )}
         </div>
       )}
     </form>
