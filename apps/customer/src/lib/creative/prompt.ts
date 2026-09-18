@@ -183,31 +183,51 @@ export function buildVideoPrompt(snapshot: CreativeSnapshot): {
   let act2Action = `${productName} ürününün gerçek kullanım anı, işlevi ve yüksek dayanıklılığı`
   let act3Climax = `${productName} ürününün yer aldığı kusursuz, tamamlanmış ve güven veren geniş açı son sahne`
 
-  if (fullContext.includes('tuğla') || fullContext.includes('inşaat') || fullContext.includes('yapı') || fullContext.includes('harç') || fullContext.includes('çimento')) {
+  if (fullContext.includes('tuğla') || fullContext.includes('inşaat') || fullContext.includes('yapı') || fullContext.includes('harç') || fullContext.includes('çimento') || fullContext.includes('boya') || fullContext.includes('fayans') || fullContext.includes('seramik') || fullContext.includes('mermer') || fullContext.includes('çatı')) {
     environment = 'modern bir mimari yapı projesi ve gün ışığında estetik şantiye ortamı'
-    act1Focus = 'fırınlanmış doğal killi tuğlaların nizami dizilimi, pürüzsüz yüzey dokusu ve sağlam kütlesi'
-    act2Action = 'ustalıkla örülen modern ve estetik tuğla duvar mimarisi, malzemenin kusursuz yerleşimi'
+    act1Focus = 'doğal killi yapı malzemesinin nizami dizilimi, pürüzsüz yüzey dokusu ve sağlam kütlesi'
+    act2Action = 'ustalıkla örülen modern ve estetik duvar mimarisi, malzemenin kusursuz yerleşimi'
     act3Climax = 'yeni tamamlanmış çağdaş ve estetik bir mimari yapının güven veren heybetli dış cephesi'
-  } else if (fullContext.includes('yemek') || fullContext.includes('gıda') || fullContext.includes('restoran') || fullContext.includes('kahve') || fullContext.includes('kahvaltı') || fullContext.includes('pasta') || fullContext.includes('döner') || fullContext.includes('burger')) {
+  } else if (fullContext.includes('yemek') || fullContext.includes('gıda') || fullContext.includes('restoran') || fullContext.includes('kahve') || fullContext.includes('kahvaltı') || fullContext.includes('pasta') || fullContext.includes('döner') || fullContext.includes('burger') || fullContext.includes('tatlı') || fullContext.includes('fırın') || fullContext.includes('çikolata')) {
     environment = 'şık, sıcak ve samimi bir gourmet mutfak ve ahşap sunum masası'
     act1Focus = 'taptaze malzemelerin iştah açıcı mikro dokusu, buharı ve canlı renkleri'
     act2Action = 'yemeğin ustalıkla hazırlanışı, sıcak servis anı ve lezzetli sunum detayı'
     act3Climax = 'tüm ziyafet masasını ve davetkâr lezzetleri sergileyen sıcak ışıklı geniş açı sahne'
-  } else if (fullContext.includes('pompa') || fullContext.includes('tarım') || fullContext.includes('ilaçlama') || fullContext.includes('traktör') || fullContext.includes('hasat')) {
+  } else if (fullContext.includes('pompa') || fullContext.includes('tarım') || fullContext.includes('ilaçlama') || fullContext.includes('traktör') || fullContext.includes('hasat') || fullContext.includes('tohum') || fullContext.includes('fidan') || fullContext.includes('gübre') || fullContext.includes('bahçe')) {
     environment = 'güneşli, bereketli bir tarım arazisi ve yemyeşil meyve bahçesi'
     act1Focus = 'ürünün dayanıklı gövdesi, kaliteli malzeme detayları ve ergonomik formu'
     act2Action = 'ürünün arazideki akıcı ve verimli çalışma performansı, bitkilerle uyumu'
     act3Climax = 'bereketli tarlaları ve ürünün doğadaki kusursuz katkısını gösteren geniş açı plan'
-  } else if (fullContext.includes('mobilya') || fullContext.includes('dekorasyon') || fullContext.includes('koltuk') || fullContext.includes('ahşap')) {
+  } else if (fullContext.includes('mobilya') || fullContext.includes('dekorasyon') || fullContext.includes('koltuk') || fullContext.includes('ahşap') || fullContext.includes('yatak') || fullContext.includes('dolap') || fullContext.includes('masa') || fullContext.includes('halı')) {
     environment = 'doğal güneş ışığı alan modern, minimalist ve ferah bir iç mekan yaşam alanı'
     act1Focus = 'kumaş ve ahşap malzemenin zarif dokuma detayları, dikiş kalitesi ve pürüzsüz cila'
     act2Action = 'mobilyanın yaşam alanına kattığı konfor, zarafet ve fonksiyonellik'
     act3Climax = 'tüm odayı ve mobilyanın uyumunu sergileyen ilham verici geniş salon sahnesi'
-  } else if (fullContext.includes('giyim') || fullContext.includes('moda') || fullContext.includes('ayakkabı') || fullContext.includes('çanta')) {
+  } else if (fullContext.includes('giyim') || fullContext.includes('moda') || fullContext.includes('ayakkabı') || fullContext.includes('çanta') || fullContext.includes('butik') || fullContext.includes('elbise') || fullContext.includes('ceket')) {
     environment = 'modern bir moda stüdyosu veya şık bir şehir caddesi'
     act1Focus = 'kumaşın kaliteli dokuması, zarif dikiş hatları ve birinci sınıf malzeme parlaklığı'
     act2Action = 'ürünün üzerdeki dinamik duruşu, akıcı kumaş hareketi ve şık tasarım çizgisi'
     act3Climax = 'tüm kombini ve stil sahibi duruşu öne çıkaran sinematik podyum / cadde planı'
+  } else if (fullContext.includes('kozmetik') || fullContext.includes('parfüm') || fullContext.includes('güzellik') || fullContext.includes('cilt') || fullContext.includes('bakım') || fullContext.includes('krem') || fullContext.includes('serum')) {
+    environment = 'aydınlık, ferah ve lüks bir spa veya minimalist banyo atmosferi'
+    act1Focus = 'şişenin cam yansımaları, mikro damlacık dokusu ve ürünün berrak saf kıvamı'
+    act2Action = 'ürünün cilde nazikçe uygulanışı, kadifemsi emilişi ve ışıltılı tazeliği'
+    act3Climax = 'ürünü ve tazeleyici saf güzellik hissini yansıtan zarif soft ışıklı geniş plan'
+  } else if (fullContext.includes('elektronik') || fullContext.includes('telefon') || fullContext.includes('bilgisayar') || fullContext.includes('kulaklık') || fullContext.includes('cihaz') || fullContext.includes('teknoloji') || fullContext.includes('akıllı')) {
+    environment = 'fütüristik, minimalist ve modern bir teknoloji stüdyosu'
+    act1Focus = 'ürünün mat metalik kaplaması, mikro hassas kenarları ve kusursuz montajı'
+    act2Action = 'cihazın akıcı kullanımı, parlak ekran netliği ve ergonomik kontrolü'
+    act3Climax = 'ürünün şık tasarımını ve ileri mühendisliğini sergileyen dramatik stüdyo planı'
+  } else if (fullContext.includes('otomotiv') || fullContext.includes('araç') || fullContext.includes('araba') || fullContext.includes('oto') || fullContext.includes('lastik') || fullContext.includes('servis') || fullContext.includes('yıkama') || fullContext.includes('yedek parça')) {
+    environment = 'modern bir showroom veya gün batımında akıcı asfalt sahil yolu'
+    act1Focus = 'parlatılmış gövdenin metalik yansımaları, aerodinamik hatlar ve işçilik kalitesi'
+    act2Action = 'aracın yoldaki akıcı ve güven veren sürüş performansı, dinamik tekerlek dönüşü'
+    act3Climax = 'aracın heybetli duruşunu ve yoldaki asaleti sergileyen sinematik geniş takip planı'
+  } else if (fullContext.includes('temizlik') || fullContext.includes('deterjan') || fullContext.includes('hijyen') || fullContext.includes('yıkama') || fullContext.includes('dezenfektan')) {
+    environment = 'pırıl pırıl, aydınlık ve ferah bir ev ortamı'
+    act1Focus = 'ürünün aktif formülü, köpük dokusu ve ferahlatıcı mikro tanecikleri'
+    act2Action = 'yüzeyin zahmetsizce temizlenişi, ardında bıraktığı ışıl ışıl ayna gibi parlaklık'
+    act3Climax = 'tertemiz, kusursuz ve hijyenik yaşam alanını gösteren aydınlık geniş plan'
   }
 
   const styleMood = VIDEO_STYLE_MOODS[snapshot.style] || VIDEO_STYLE_MOODS.auto

@@ -241,14 +241,14 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
 
       <div className="space-y-3 px-4 py-3 sm:px-5">
       {step === 'start' ? (
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="flex flex-col gap-2">
           <button
             type="button"
             onClick={() => {
-              patch({ origin: 'new', baseCreativeId: '' })
+              patch({ origin: 'new', baseCreativeId: '', formatId: 'wa' })
               go('brief')
             }}
-            className={`wb-wa-choice${draft.origin === 'new' ? ' is-on' : ''}`}
+            className={`wb-wa-choice${draft.origin === 'new' && draft.formatId !== 'reels_video' ? ' is-on' : ''}`}
           >
             <p className="font-bold text-[#111b21]">Yeni görsel oluştur</p>
             <p className="mt-1 text-[12.5px] text-[#667781]">Sıfırdan kampanya görseli. Marka ve ürünleriniz bağlanır.</p>
@@ -262,6 +262,17 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
           >
             <p className="font-bold text-[#111b21]">Var olandan türet</p>
             <p className="mt-1 text-[12.5px] text-[#667781]">Kütüphaneden seçin veya dosya yükleyin.</p>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              patch({ origin: 'new', baseCreativeId: '', formatId: 'reels_video' })
+              go('brief')
+            }}
+            className={`wb-wa-choice${draft.origin === 'new' && draft.formatId === 'reels_video' ? ' is-on' : ''}`}
+          >
+            <p className="font-bold text-[#111b21]">Kampanya videosu üret</p>
+            <p className="mt-1 text-[12.5px] text-[#667781]">Sıfırdan sinematik 9:16 reklam videosu. Marka ve ürünleriniz bağlanır.</p>
           </button>
         </div>
       ) : null}
