@@ -319,6 +319,35 @@ export class WhatsAppSession {
     // auth-store app-state-sync-key saklamadigi icin Baileys her server_sync bildiriminde
     // "failed to find key to decode mutation" hatasi alip WhatsApp'tan v0'dan tam senkron talep ediyor,
     // bu da kullanicinin telefonuna "Syncing with WhatsApp on Windows stopped" bildirim tufani yagdiriyor.
+    // sock.query intercept edilerek WhatsApp'a sync IQ gitmesi ve hata dongusu kokten engellenir.
+    const originalQuery = this.sock.query.bind(this.sock)
+    this.sock.query = async (node: any, timeoutMs?: number) => {
+      if (node?.attrs?.xmlns === 'w:sync:app:state') {
+        const syncNode = node.content && Array.isArray(node.content) ? node.content[0] : null
+        const collectionNodes = (syncNode && Array.isArray(syncNode.content)) ? syncNode.content : []
+        return {
+          tag: 'iq',
+          attrs: { type: 'result', from: 's.whatsapp.net', id: node.attrs?.id },
+          content: [
+            {
+              tag: 'sync',
+              attrs: {},
+              content: collectionNodes.map((n: any) => ({
+                tag: 'collection',
+                attrs: {
+                  name: n.attrs?.name || 'regular_low',
+                  version: n.attrs?.version || '1',
+                  has_more_patches: 'false',
+                },
+                content: [],
+              })),
+            },
+          ],
+        } as any
+      }
+      return originalQuery(node, timeoutMs)
+    }
+
     this.sock.resyncAppState = async (collections, isInitialSync) => {
       this.log.info(
         { collections, isInitialSync },
