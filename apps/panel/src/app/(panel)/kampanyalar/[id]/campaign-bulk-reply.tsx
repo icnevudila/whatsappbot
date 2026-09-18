@@ -108,7 +108,7 @@ export function CampaignBulkReply({
     return set
   })
   const [activeFilter, setActiveFilter] = useState<'all' | 'price' | 'appointment' | 'opt_out' | 'general'>('all')
-  const [isOpen, setIsOpen] = useState(true)
+  const [isOpen, setIsOpen] = useState(false)
   const [pending, startTransition] = useTransition()
   const [statusNotice, setStatusNotice] = useState<{ tone: 'accent' | 'danger'; text: string } | null>(null)
   const [aiLoadingIds, setAiLoadingIds] = useState<Set<number>>(new Set())
@@ -297,32 +297,69 @@ export function CampaignBulkReply({
     <Card className="border-accent/30 bg-surface shadow-sm overflow-hidden">
       <CardHeader
         title="Gelen Yanıtlar ve Akıllı Yanıtlama Masası"
-        subtitle={`${items.length} müşteri kampanyaya yanıt verdi. Her mesaj için kampanya detaylarına özel yanıtlar hazırlandı.`}
+        subtitle={
+          isOpen
+            ? `${items.length} müşteri kampanyaya yanıt verdi. Her mesaj için kampanya detaylarına özel yanıtlar hazırlandı.`
+            : `${items.length} müşteri yanıt verdi. Yanıtları incelemek ve toplu göndermek için masayı açın.`
+        }
         action={
           <div className="flex items-center gap-2">
-            <Button
-              variant="quiet"
-              onClick={handleGenerateAllAi}
-              disabled={isBulkAiGenerating || pending}
-              className="text-[12px] h-8 gap-1.5"
-              title="Kampanya içeriğini baz alarak tüm yanıtları AI ile yeniden üretir"
-            >
-              <Icon
-                name="refresh"
-                className={`size-3.5 ${isBulkAiGenerating ? 'animate-spin text-accent' : 'text-ink-muted'}`}
-              />
-              {isBulkAiGenerating ? 'AI Hazırlıyor…' : 'AI Yanıtlarını Yenile'}
-            </Button>
+            {isOpen ? (
+              <Button
+                variant="quiet"
+                onClick={handleGenerateAllAi}
+                disabled={isBulkAiGenerating || pending}
+                className="text-[12px] h-8 gap-1.5"
+                title="Kampanya içeriğini baz alarak tüm yanıtları AI ile yeniden üretir"
+              >
+                <Icon
+                  name="refresh"
+                  className={`size-3.5 ${isBulkAiGenerating ? 'animate-spin text-accent' : 'text-ink-muted'}`}
+                />
+                <span className="hidden sm:inline">
+                  {isBulkAiGenerating ? 'AI Hazırlıyor…' : 'AI Yanıtlarını Yenile'}
+                </span>
+                <span className="sm:hidden">
+                  {isBulkAiGenerating ? 'Hazırlanıyor' : 'Yenile'}
+                </span>
+              </Button>
+            ) : null}
             <Button
               variant={isOpen ? 'quiet' : 'accent'}
               onClick={() => setIsOpen(!isOpen)}
-              className="text-[12px] h-8"
+              className="text-[12px] h-8 shrink-0"
             >
-              {isOpen ? 'Masayı Daralt' : `Yanıt Masasını Aç (${items.length}) →`}
+              {isOpen ? 'Masayı Kapat' : `Masayı Aç (${items.length})`}
             </Button>
           </div>
         }
       />
+
+      {!isOpen ? (
+        <div className="px-4 pb-3 flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-ink-muted">Özet Dağılım:</span>
+          {countByCat.price > 0 ? (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-accent/10 text-accent border border-accent/20">
+              Fiyat: {countByCat.price}
+            </span>
+          ) : null}
+          {countByCat.appointment > 0 ? (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-accent/10 text-accent border border-accent/20">
+              Randevu: {countByCat.appointment}
+            </span>
+          ) : null}
+          {countByCat.opt_out > 0 ? (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-danger/10 text-danger border border-danger/20">
+              İptal: {countByCat.opt_out}
+            </span>
+          ) : null}
+          {countByCat.general > 0 ? (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-hairline text-ink-muted border border-hairline-strong">
+              Genel: {countByCat.general}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
 
       {statusNotice ? (
         <div className="p-3 pt-0">
