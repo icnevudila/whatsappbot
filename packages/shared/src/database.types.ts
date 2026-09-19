@@ -1527,6 +1527,7 @@ export type Database = {
           id: string
           logo_path: string | null
           monthly_message_quota: number
+          monthly_video_quota: number
           name: string
           onboarding: Json
           phone_e164: string | null
@@ -1553,6 +1554,7 @@ export type Database = {
           id?: string
           logo_path?: string | null
           monthly_message_quota?: number
+          monthly_video_quota?: number
           name: string
           onboarding?: Json
           phone_e164?: string | null
@@ -1579,6 +1581,7 @@ export type Database = {
           id?: string
           logo_path?: string | null
           monthly_message_quota?: number
+          monthly_video_quota?: number
           name?: string
           onboarding?: Json
           phone_e164?: string | null

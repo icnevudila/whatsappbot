@@ -32,6 +32,7 @@ type OrgDetail = {
     plan: string
     accounts_quota: number
     monthly_message_quota: number
+    monthly_video_quota?: number
     suspended_at: string | null
     suspend_reason: string | null
     auto_reply_enabled: boolean
@@ -76,6 +77,7 @@ type OrgDetail = {
     blacklist: number
     out_today: number
     out_month?: number
+    video_month_used?: number
     jobs_pending?: number
     jobs_failed?: number
   }
@@ -205,13 +207,17 @@ export default async function AdminOrgPage({
 
       <div className="grid gap-2.5 lg:grid-cols-2">
         <Card>
-          <CardHeader title="Paket / kota" subtitle={`${org.accounts_quota} hat · ${org.monthly_message_quota} msg/ay`} />
+          <CardHeader
+            title="Paket / kota"
+            subtitle={`${org.accounts_quota} hat · ${org.monthly_message_quota} msg/ay · ${detail.counts?.video_month_used ?? 0}/${org.monthly_video_quota ?? 5} video/ay`}
+          />
           <div className="p-3.5">
             <OrgQuotaForm
               orgId={org.id}
               plan={org.plan}
               accountsQuota={org.accounts_quota}
               monthlyQuota={org.monthly_message_quota}
+              monthlyVideoQuota={org.monthly_video_quota ?? 5}
             />
           </div>
         </Card>

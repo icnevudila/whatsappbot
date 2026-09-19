@@ -10,11 +10,13 @@ export function OrgQuotaForm({
   plan,
   accountsQuota,
   monthlyQuota,
+  monthlyVideoQuota,
 }: {
   orgId: string
   plan: string
   accountsQuota: number
   monthlyQuota: number
+  monthlyVideoQuota?: number
 }) {
   const toast = useToast()
   const [state, action, pending] = useActionState<AdminActionState, FormData>(
@@ -47,6 +49,9 @@ export function OrgQuotaForm({
       </Field>
       <Field label="Aylık mesaj kotası">
         <Input name="monthly_message_quota" type="number" min={0} defaultValue={monthlyQuota} />
+      </Field>
+      <Field label="Aylık video üretim kotası (Adet)">
+        <Input name="monthly_video_quota" type="number" min={0} defaultValue={monthlyVideoQuota ?? 5} />
       </Field>
       {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
       {state?.ok ? <Notice tone="accent">{state.ok}</Notice> : null}

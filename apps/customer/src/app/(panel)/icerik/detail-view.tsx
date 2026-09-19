@@ -51,6 +51,7 @@ export type DetailCreative = {
   provider: string | null
   brief: string | null
   thumbnailUrl?: string | null
+  cleanPublicUrl?: string | null
 }
 
 export type VersionRow = {

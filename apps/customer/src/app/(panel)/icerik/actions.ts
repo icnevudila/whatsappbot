@@ -299,6 +299,50 @@ export async function startCreativeGeneration(
 
   if (brief.length < 8) return { error: 'Görselde ne anlatmak istediğinizi bir cümleyle yazın.' }
 
+  if (format.format === 'video') {
+    // 0. İşletme Bazlı Aylık Video Kotası Kontrolü
+    const { data: orgData } = await supabase
+      .from('organizations')
+      .select('monthly_video_quota')
+      .eq('id', org.id)
+      .maybeSingle()
+
+    const videoQuota = orgData?.monthly_video_quota ?? 5
+
+    const startOfMonth = new Date()
+    startOfMonth.setDate(1)
+    startOfMonth.setHours(0, 0, 0, 0)
+
+    const { count: videoUsedCount } = await supabase
+      .from('creatives')
+      .select('id', { count: 'exact', head: true })
+      .eq('org_id', org.id)
+      .eq('format', 'video')
+      .in('status', ['ready', 'processing', 'pending'])
+      .gte('created_at', startOfMonth.toISOString())
+
+    const used = videoUsedCount ?? 0
+    if (used >= videoQuota) {
+      return {
+        error: `Bu ayki video üretim kotanıza (${used}/${videoQuota}) ulaştınız. Limit artırımı için lütfen platform yöneticinizle iletişime geçin.`,
+      }
+    }
+
+    const effectiveLogo = kitRow?.logo_path || orgLogoPath
+    if (!effectiveLogo) {
+      return {
+        error:
+          'Video üretimi için kurumsal Logo ve Marka Kiti zorunludur. Yapay zekanın uydurma logo ve semboller üretmemesi için lütfen logonuzu yükleyin veya Ayarlar > Marka Kiti bölümünden tanımlayın.',
+      }
+    }
+    if (products.length === 0 || !products.some((p) => p.imageUrl)) {
+      return {
+        error:
+          'Video üretimi için gerçek bir Ürün Görseli (fotoğraf) seçilmesi veya yüklenmesi zorunludur. Yapay zekanın alakasız cihazlar türetmemesi için gerçek ürün fotoğrafı şarttır.',
+      }
+    }
+  }
+
   const labels = parseIds(draft.labels).map((label) => label.slice(0, 48)).slice(0, 8)
   if (parentPayload) {
     if (products.length === 0 && parentPayload.products?.length) products.push(...parentPayload.products)

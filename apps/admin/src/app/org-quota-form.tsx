@@ -10,11 +10,13 @@ export function OrgQuotaForm({
   plan,
   accountsQuota,
   messageQuota,
+  videoQuota,
 }: {
   orgId: string
   plan: string
   accountsQuota: number
   messageQuota?: number
+  videoQuota?: number
 }) {
   const [state, action, pending] = useActionState<OrgEditState, FormData>(
     updateOrganizationQuotas,
@@ -46,6 +48,14 @@ export function OrgQuotaForm({
         defaultValue={messageQuota ?? 1000}
         className="w-[96px]"
         title="Aylık mesaj kotası"
+      />
+      <Input
+        name="monthly_video_quota"
+        type="number"
+        min={0}
+        defaultValue={videoQuota ?? 5}
+        className="w-[72px]"
+        title="Aylık video kotası"
       />
       <Button type="submit" variant="quiet" disabled={pending}>
         {pending ? '…' : 'Kaydet'}

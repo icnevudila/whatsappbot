@@ -11,6 +11,7 @@ export type AdminOrgRow = {
   plan: string
   accounts_quota: number
   monthly_message_quota?: number
+  monthly_video_quota?: number
   suspended_at?: string | null
   member_count?: number
   connected: number
@@ -75,7 +76,10 @@ export function AdminOrgList({ orgs }: { orgs: AdminOrgRow[] }) {
                     {org.locked > 0 ? ` · ${org.locked} kilitli` : ''} · kota{' '}
                     {org.accounts_quota}
                     {org.monthly_message_quota != null
-                      ? ` · aylık ${org.monthly_message_quota}`
+                      ? ` · aylık ${org.monthly_message_quota} msj`
+                      : ''}
+                    {org.monthly_video_quota != null
+                      ? ` · ${org.monthly_video_quota} video`
                       : ''}
                   </span>
                 </span>

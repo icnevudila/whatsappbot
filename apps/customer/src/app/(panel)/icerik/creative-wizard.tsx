@@ -342,7 +342,9 @@ export function CreativeWizard({
             }}
             className={`wb-wa-choice${draft.origin === 'new' && draft.formatId === 'reels_video' ? ' is-on' : ''}`}
           >
-            <p className="font-bold text-[#111b21]">Kampanya videosu üret</p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-bold text-[#111b21]">Kampanya videosu üret</p>
+            </div>
             <p className="mt-1 text-[12.5px] text-[#667781]">Sıfırdan sinematik 9:16 reklam videosu. Marka ve ürünleriniz bağlanır.</p>
           </button>
         </div>
@@ -447,6 +449,47 @@ export function CreativeWizard({
                     </button>
                   ))}
             </div>
+
+            {isVideo ? (
+              <div className="mt-4 pt-3.5 border-t border-hairline space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-[12.5px] font-semibold text-[#111b21] flex items-center gap-1.5">
+                    <span>🎯</span> Bozulmayan Katı Fiziksel Türkçe CTA (Eylem Çağrısı)
+                  </p>
+                  <span className="text-[11px] text-[#008069] bg-[#e7f8f2] px-2 py-0.5 rounded-full font-medium">Ayvazoğlu Kuralı</span>
+                </div>
+                <p className="text-[11.5px] text-[#667781]">
+                  Videoda fiziksel nesneler (metal/ahşap tabela, masa plaketi, araç kapısı, ürün ambalajı) üzerine net işlenecek 2-3 kelimelik eylem çağrısını seçin:
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    'WHATSAPP İLE BAŞLA',
+                    'WHATSAPP SİPARİŞ',
+                    'FABRİKADAN DOĞRUDAN',
+                    'HEMEN RANDEVU AL',
+                    'ÜCRETSİZ MUAYENE',
+                    'KAPIDA ÖDEME',
+                    'SERVİS RANDEVUSU',
+                    'HEMEN TEKLİF AL',
+                    'GEL AL PAKET',
+                    'ÖZEL FİYATLARLA'
+                  ].map((ctaItem) => (
+                    <button
+                      key={ctaItem}
+                      type="button"
+                      className={`wb-wa-chip text-[12px] transition-all ${
+                        draft.cta === ctaItem
+                          ? '!border-[#00a884] !bg-[#00a884] !text-white font-semibold shadow-sm scale-[1.02]'
+                          : 'hover:border-[#00a884]'
+                      }`}
+                      onClick={() => patch({ cta: ctaItem })}
+                    >
+                      {draft.cta === ctaItem ? '✓ ' : ''}{ctaItem}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
         </Card>
       ) : null}
@@ -1005,6 +1048,15 @@ export function CreativeWizard({
                 <p className="text-[11.5px] font-medium text-ink-muted uppercase tracking-wider">Kampanya Fikri / Brief</p>
                 <p className="text-[#111b21]">{draft.brief}</p>
               </div>
+
+              {draft.cta ? (
+                <div className="rounded-md border border-[#00a884]/30 bg-[#e7f8f2]/60 p-3 space-y-1">
+                  <p className="text-[11.5px] font-semibold text-[#008069] uppercase tracking-wider flex items-center gap-1.5">
+                    <span>🎯</span> Sahne İçi Fiziksel Türkçe CTA (Bozulmayan Yazı)
+                  </p>
+                  <p className="text-[13px] font-bold text-[#111b21]">{draft.cta}</p>
+                </div>
+              ) : null}
 
               {isVideo && !hasValidVideoLogo ? (
                 <Notice tone="danger">

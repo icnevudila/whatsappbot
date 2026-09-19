@@ -35,7 +35,6 @@ export default async function NewCreativePage({
             : 'Marka, ürün ve iletişim bilgilerinizle üretin. İşlem arka planda sürer.'
         }
         backHref="/icerik"
-        backLabel="Kütüphane"
       />
       <CreativeWizard data={data} initialFormat={isVideo ? 'reels_video' : undefined} />
     </div>

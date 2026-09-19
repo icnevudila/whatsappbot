@@ -105,7 +105,7 @@ function getLogoVisualDescription(brandName, logoPath, hasExplicitLogo = false) 
     return "Zarif, minimalist ve modern siyah 'bofe' yazı logosu (küçük harflerle 'bofe', 'e' harfinde karakteristik açılı modern kesim). Kesinlikle uydurma geometrik üçgen, amblem veya rastgele sembol KULLANILMAYACAKTIR; yalnızca saf, estetik 'bofe' kurumsal tipografisi yer alacaktır.";
   }
   if (lower.includes('veri burada') || lower.includes('veriburada')) {
-    return "Orijinal yeşil bağlantılı veri ağı (connected network nodes constellation) amblemi: Merkezinde büyük yeşil dairesel çekirdek düğüm ve etrafında ince yeşil çizgilerle birbirine bağlanan farklı yeşil tonlarında veri düğüm noktaları (network graph nodes). Yanında temiz, modern sans-serif 'Veri Burada' kurumsal tipografisi. KESİNLİKLE uydurma onay tiki, sahte üçgen veya soyut logo KULLANILMAYACAKTIR; yalnızca bu orijinal yeşil veri ağı amblemi fiziksel nesnelere (laptop çerçevesi, akrilik ofis tabelası) işlenecektir.";
+    return "Orijinal yeşil bağlantılı veri ağı (connected network nodes constellation) amblemi: Merkezinde büyük yeşil dairesel çekirdek düğüm ve etrafında ince yeşil çizgilerle birbirine bağlanan farklı yeşil tonlarında veri düğüm noktaları (network graph nodes). Yanında temiz, modern sans-serif 'Veri Burada' kurumsal tipografisi. KESİNLİKLE uydurma yeşil altıgen, uydurma 'V' harfi amblemi, onay tiki, sahte üçgen veya soyut sembol KULLANILMAYACAKTIR; yalnızca ekli görseldeki orijinal yeşil bağlantılı veri ağı amblemi ve temiz 'Veri Burada' kurumsal tipografisi fırçalanmış metal isimliğe işlenecektir.";
   }
   if (lower.includes('ayvazoğlu')) {
     return "Cesur geometrik sarı ve sıcak turuncu (#ffc300, #ff5733) tonlarında stilize mimari üçgen 'A' inşaat logo amblemi";
@@ -164,9 +164,9 @@ function detectSectorAndStyle(brand, product, brief) {
       creativeAngle,
       sceneAtmosphere: 'Gerçekçi, son derece aydınlık ve ferah modern cam gökdelen ofisi ve teknoloji stüdyosu. Şık toplantı masasında ince çerçeveli dizüstü bilgisayar ekranında canlı akan veri grafikleri, harita üzerinde beliren yeni işletme bildirimleri, prestijli kurumsal B2B iş ortamı. Kesinlikle ütopik bilim kurgu unsuru, uzay veya havada uçuşan anlamsız 3D yazılar olmayacaktır; %100 gerçekçi iş dünyası ve yazılım ortamı.',
       brandingPlacements: `
-- Ofisin modern cam bölmesinde veya yönetici masası üzerindeki mat akrilik masa isimliğinde/plaketinde net "${brand}" logosu.
-- Laptop ekranındaki profesyonel kurumsal portal arayüzünün sol üst köşesinde temiz "${brand}" amblemi.
-- Kahraman Final Sahnesi: Güneş alan modern ofis manzarasında, ekranda yeşil büyüme grafikleri eşliğinde ofis duvarındaki zarif tabelada "${brand}" kurumsal kimliği.`,
+- Ofisin modern ceviz/cam çalışma masası üzerindeki şık mat akrilik masa isimliğinde/plaketinde net "${brand}" logosu ve ismi.
+- Laptop ekranındaki profesyonel harita/veri arayüzünün butonunda temiz "MÜŞTERİ BUL".
+- Kahraman Final Sahnesi: Güneş alan modern çalışma masası, laptop başında güvenle tebessüm eden profesyonel yönetici ve masadaki şık masa isimliğinde "${brand}". KESİNLİKLE bomboş mermer duvara dev altın tabela veya boş koridor sahnelenmeyecektir. SIFIR ABSÜRT BOŞ DUVAR.`,
       sampleFocus: `${product || 'B2B Veri & Yeni İşletme Takip Çözümü'} yapay zeka destekli firma taraması, sıcak müşteri bildirimleri ve satışları katlayan veri gücü`
     };
   }
@@ -351,7 +351,7 @@ VEO VİDEO MOTORU İÇİN KESİN SİNEMATİK DİREKTİF (AYVAZOĞLU İNŞAAT USU
 1. FİZİKSEL YÜZEYE SABİTLEME KURALI (RIGID SURFACE ANCHORING - SIFIR METİN ÇORBASI):
    - Havada boşlukta uçuşan soyut 3D harfler, havada asılı cümleler veya sonradan yapıştırılmış grafik bantları KESİNLİKLE YASAKTIR (harflerin erimesini ve difüzyon bozulmasını %100 engellemek için).
    - Sahnedeki tek yazılar ve logo, doğrudan sahne içindeki KATI FİZİKSEL NESNELERİN DOKUSUNA (metal tabela, ahşap yönlendirme panosu, bina dış cephesi, resepsiyon camı, araç kapısı, ürün ambalajı veya iş önlüğü) basılmış, monte edilmiş veya kazınmış olacaktır (Ayvazoğlu İnşaat fabrikadaki çelik tabela gibi).
-   - Tipografi: Maksimum 2-3 kelime, net, büyük harfli (ALL CAPS), yüksek kontrastlı sans-serif endüstriyel tabela formatı (Örn: "${cleanBrand}", "WHATSAPP SİPARİŞ", "FABRİKADAN DOĞRUDAN").
+   - Tipografi: Maksimum 2-3 kelime, net, büyük harfli (ALL CAPS), yüksek kontrastlı sans-serif endüstriyel tabela formatı (Örn: "${cleanBrand}", "B2B ÇÖZÜMLERİ", "FABRİKADAN DOĞRUDAN").
 
 2. GERÇEK DÜNYA FİZİĞİ & ANTİ-ÜTOPİK MANTIK:
    - Sektörün gerçek hayat dinamikleri %100 korunmalıdır. Nesneler yerçekimine, sahne ışığına ve mimari perspektife tam uyumlu olmalıdır.
@@ -368,9 +368,15 @@ VEO VİDEO MOTORU İÇİN KESİN SİNEMATİK DİREKTİF (AYVAZOĞLU İNŞAAT USU
    - Firmanın orijinal logosu, amblemi, renk kodları ve gerçek ürün formu asla deforme edilemez, uydurma semboller eklenemez.
    - ZERO MUTATION, ZERO PRODUCT MORPHING, RIGID PHYSICAL SIGNAGE ONLY.
 
-6. SES VE TÜRKÇE SESLENDİRME (AUDIO VOICEOVER - YALNIZCA SES):
-   - Profesyonel, samimi ve berrak Türkçe reklam spikeri: "${brand} kalitesiyle... Detaylı bilgi ve avantajlı teklifler için WhatsApp'tan hemen iletişime geçin."
-   - 4K reklam ajansı estetiği, 24 FPS akıcı sinematik kamera hareketi, gerçekçi sinematik ışıklandırma.
+7. SIFIR EKRAN ALTYAZISI KURALI (ZERO ON-SCREEN SUBTITLES / NO CAPTIONS):
+   - Videonun ham çekiminde ekranda KESİNLİKLE hiçbir altyazı, kayan yazı, konuşma metni veya havada uçuşan kelimeler OLMAYACAKTIR.
+   - Spikerin seslendirmesi YALNIZCA ses kanalında duyulacak, ekrana harf olarak basılmayacaktır.
+   - STRICT MANDATE: ZERO ON-SCREEN SUBTITLES, NO FLOATING TEXT, NO CAPTIONS, NO TEXT WATERMARKS. Pure clean cinematic commercial footage only.
+
+8. FİZİKSEL NESNELERE ZORLAMA İLETİŞİM/WHATSAPP BASMA YASAĞI:
+   - Masadaki isimlik, ahşap plaket, tabela veya cam yüzeylere 'WHATSAPP İLE BAŞLA', 'WHATSAPP İLE İLETİŞİME GEÇİN' gibi zorlama çağrılar KESİNLİKLE YAZILMAYACAKTIR.
+   - Fiziksel tabelalar firmanın kurumsal kimliğine aittir: Orijinal Logo, Firma İsmi ("${cleanBrand}") ve varsa firmanın kurumsal sloganı.
+   - STRICT MANDATE: NO FORCED WHATSAPP OR CONTACT CTA TEXT ON PHYSICAL PROPS/PLAQUES. Only authentic company branding and official slogans.
 ${buildLearningPromptBlock(brand, product, brief)}`;
 }
 

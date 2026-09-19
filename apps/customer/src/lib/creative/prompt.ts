@@ -300,8 +300,11 @@ export function buildVideoPrompt(snapshot: CreativeSnapshot): {
 
   // 4. Ses / Konuşma Kurgusu (Voiceover vs Silent Instrumental)
   const isSpeechEnabled = snapshot.videoSpeech !== false
+  const voiceLine = snapshot.brief
+    ? `${productName ? `${productName} ile ` : ''}${snapshot.brief.replace(/[\r\n]+/g, ' ').trim()}. Hemen WhatsApp ile sipariş verin.`
+    : `${productName ? `${productName} ile ` : ''}en kaliteli çözümler kapınızda. Hemen WhatsApp ile iletişime geçin.`
   const voiceSection = isSpeechEnabled
-    ? `SESLENDİRME VE TÜRKÇE REKLAM DIŞ SESİ (VOICEOVER NARRATION): Profesyonel, etkileyici ve akıcı bir Türkçe reklam spikeri dış sesi (voiceover). Reklam filmi sahneleriyle senkronize anlatım: SAHNE 1: "${productName} ile tanışın!". SAHNE 2: "${snapshot.brief || mainProduct?.promo || 'Üstün kalite ve özel kampanya avantajları'}". SAHNE 3: "${snapshot.cta || 'Fırsatı kaçırmayın, hemen iletişime geçin!'}". Net stüdyo ses kaydı, sinematik reklam müziği ve gerçekçi ses efektleri (foley).`
+    ? `SESLENDİRME: Kristal netliğinde profesyonel Türkçe erkek reklam spikeri sesi: "${voiceLine}"`
     : `SES DÜZENİ (KONUŞMASIZ & SADECE FON MÜZİĞİ VE SES EFEKTLERİ): Videoda KESİNLİKLE hiçbir insan konuşması, dış ses, seslendirme veya diyalog OLMAYACAKTIR. STRICT RULE: NO VOICE, NO SPEECH, NO SPOKEN WORDS, NO DIALOGUE. Sadece sahneye uygun yüksek kaliteli ortam ses efektleri (foley) ve arka planda modern reklam fon müziği.`
 
   const prompt = [

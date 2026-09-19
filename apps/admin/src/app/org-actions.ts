@@ -53,6 +53,7 @@ export async function updateOrganizationQuotas(
   const plan = String(formData.get('plan') ?? '').trim()
   const accountsQuota = Number(formData.get('accounts_quota') ?? '')
   const messageQuota = Number(formData.get('monthly_message_quota') ?? '')
+  const videoQuota = Number(formData.get('monthly_video_quota') ?? '')
 
   if (!orgId) return { error: 'org_id gerekli' }
 
@@ -63,6 +64,7 @@ export async function updateOrganizationQuotas(
       p_plan: plan || null,
       p_accounts_quota: Number.isFinite(accountsQuota) ? accountsQuota : null,
       p_monthly_message_quota: Number.isFinite(messageQuota) ? messageQuota : null,
+      p_monthly_video_quota: Number.isFinite(videoQuota) ? videoQuota : null,
     } as never)
 
     if (error) return { error: error.message }

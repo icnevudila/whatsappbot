@@ -32,7 +32,11 @@ export async function loadCreativeWizardData(): Promise<WizardBootstrap> {
   const { org, supabase } = await requireActiveOrg()
   const canManage = isOrgAdminRole(org.role)
 
-  const [kitsRes, productsRes, imagesRes, accountsRes, socialsRes, libraryRes, orgRes] =
+  const startOfMonth = new Date()
+  startOfMonth.setDate(1)
+  startOfMonth.setHours(0, 0, 0, 0)
+
+  const [kitsRes, productsRes, imagesRes, accountsRes, socialsRes, libraryRes, orgRes, videoUsedRes] =
     await Promise.all([
       supabase
         .from('brand_kits')
@@ -68,7 +72,14 @@ export async function loadCreativeWizardData(): Promise<WizardBootstrap> {
         .not('public_url', 'is', null)
         .order('created_at', { ascending: false })
         .limit(40),
-      supabase.from('organizations').select('name, address, about, logo_path').eq('id', org.id).maybeSingle(),
+      supabase.from('organizations').select('name, address, about, logo_path, monthly_video_quota').eq('id', org.id).maybeSingle(),
+      supabase
+        .from('creatives')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', org.id)
+        .eq('format', 'video')
+        .in('status', ['ready', 'processing', 'pending'])
+        .gte('created_at', startOfMonth.toISOString()),
     ])
 
   const imagesByProduct = new Map<string, { id: string; url: string }[]>()
@@ -128,6 +139,8 @@ export async function loadCreativeWizardData(): Promise<WizardBootstrap> {
         about: orgRes.data?.about ?? null,
         websiteHint: website,
         logoPreview,
+        monthlyVideoQuota: orgRes.data?.monthly_video_quota ?? 5,
+        monthlyVideoUsed: videoUsedRes.count ?? 0,
       },
       kits,
       products: mappedProducts,

@@ -689,12 +689,22 @@ const server = http.createServer(async (req, res) => {
           logoUrl: body.logoUrl || null,
           customer: body.customer || null,
           port: body.port || null,
+          preferredEngine: body.preferredEngine || body.engine || (body.useFlow ? 'flow' : null),
+          engine: body.engine || body.preferredEngine || null,
         });
 
         return sendJson(res, 200, {
           created: Math.floor(Date.now() / 1000),
-          data: [{ url: result.videoUrl, thumbnailUrl: result.thumbnailUrl }],
+          data: [{
+            url: result.videoUrl,
+            cleanUrl: result.cleanVideoUrl || null,
+            subtitledUrl: result.subtitledVideoUrl || result.videoUrl,
+            thumbnailUrl: result.thumbnailUrl,
+          }],
           videoId: result.videoId,
+          videoUrl: result.videoUrl,
+          cleanVideoUrl: result.cleanVideoUrl || null,
+          subtitledVideoUrl: result.subtitledVideoUrl || result.videoUrl,
           thumbnailUrl: result.thumbnailUrl,
           duration: result.duration,
           aspect: result.aspect,

@@ -29,6 +29,12 @@ try {
 } catch (e) {
   recordSuccess = () => {};
 }
+let processVideoAudioAndSubtitles;
+try {
+  ({ processVideoAudioAndSubtitles } = require('./auto_subtitle_processor.js'));
+} catch (e) {
+  processVideoAudioAndSubtitles = null;
+}
 
 /**
  * Full + Full Sinematik Reklam Prompt Genişleticisi (Veo & AI Video Engine)
@@ -86,56 +92,52 @@ async function generatePromptWithChatGptWeb(port, { prompt, brandName, productNa
     const { detectSectorAndStyle } = require('./brand_resolver.js');
     const sectorInfo = detectSectorAndStyle(brand, product, brief);
 
-    const gptAskPrompt = `Sen Cannes ödüllü bir ticari reklam filmi yönetmeni ve Google Veo video prompt uzmanısın.
-Görevin: Verilen işletme ve marka verilerini kullanarak Google Veo video motoruna doğrudan iletilecek, aşırı detaylı, sektöre ve bu firmaya ÖZEL, sıfır hatalı tek bir 9:16 Dikey Reklam Filmi Promptu oluşturmak.
+    const gptAskPrompt = `Sen Cannes ve Kristal Elma ödüllü bir ticari reklam filmi yönetmeni ve Google Veo video prompt uzmanısın.
+Görevin: Verilen işletme verilerini kullanarak Google Veo motoruna doğrudan iletilecek, TAM BİR TELEVİZYON / REELS REKLAM FİLMİ DİNAMİZMİNDE, her seferinde YARATICI VE ÖZGÜN tek bir 9:16 Dikey Reklam Filmi Promptu oluşturmak.
 
-İŞLETME VE MARKA KİTİ VERİLERİ:
-- Sektör / Tema: ${sectorInfo.sector} (${sectorInfo.sceneAtmosphere})
-- Marka / Firma Adı: ${brand} (ZORUNLU: Videoda net ve fiziksel olarak yer alacak)
-- Kurumsal Logo Amblemi: ${logoDesc} (ZORUNLU: Sahne içinde fiziksel olarak yer alacak)
-- Kurumsal Renk Paleti: ${colors.accent || '#ffc300'}, ${colors.primary || '#ff5733'}, Siyah ve Beyaz
-- Öne Çıkan Ürün: ${product}
+İŞLETME VE MARKA VERİLERİ:
+- Sektör / Konsept: ${sectorInfo.sector} (${sectorInfo.sceneAtmosphere})
+- Marka Adı: ${brand} (Videoda kurumsal logo ve fiziksel marka olarak yer alacaktır)
+- Kurumsal Logo Amblemi: ${logoDesc}
+- Ekli Medya / Logo Dosyası: Firmanın orijinal kurumsal logosu / ürün görseli bu mesaja ekli görsel dosya olarak yüklenmiştir. Görseldeki orijinal hatları, renkleri ve sembol detaylarını %100 baz alarak Veo promptundaki fiziksel nesneye birebir yerleştirilmesini sağla.
+- Kurumsal Renk Paleti (KESİNLİKLE METİN OLARAK PROMPTA # HEX KODU YAZILMAYACAK): Koyu zümrüt yeşili, canlı parlak yeşil, beyaz ve siyah
+- Öne Çıkan Ürün/Hizmet: ${product}
 - Kampanya Brief'i: ${brief}
-- Bu Çekim İçin Belirlenen Sinematik Yönetmen Açısı: ${sectorInfo.creativeAngle?.name || 'Macro & Sensory'}
-  * Kamera Tekniği: ${sectorInfo.creativeAngle?.cameraStyle || 'Arri Alexa Mini LF, 9:16 dikey sinema lensi'}
-  * Işık & Atmosfer: ${sectorInfo.creativeAngle?.lighting || 'Sinematik yönlü aydınlatma, derin sıcak tonlar'}
 
-ZORUNLU YÖNETMEN KURALLARI (AYVAZOĞLU İNŞAAT USULÜ FİZİKSEL TABELA & SIFIR HARİCİ BİNDİRME):
-1. FİZİKSEL YÜZEYE KAZINMIŞ / MONTE EDİLMİŞ TABELA KURALI (RIGID SURFACE ANCHORING):
-   - Kesinlikle havada boşlukta uçuşan 3D yazılar, havada asılı cümleler ya da sonradan yapıştırılmış grafik kutuları YASAKTIR.
-   - Yazılar TAMLİGİYLE sahnenin fiziksel katı nesnelerine sabitlenecektir (Örn: Ayvazoğlu fabrikasındaki tavan metal tabelasındaki 'FABRİKADAN DOĞRUDAN' gibi, ya da şık bir ahşap/metal çiftlik panosu, bina dış cephesi, cam tabela, palet ambalajı veya tır kapısı).
-   - Metinler: Maksimum 2-3 kelime, BÜYÜK HARFLİ (ALL CAPS), yüksek kontrastlı kalın sans-serif endüstriyel tabela formatı olmalıdır (Örn: "${(brand || 'FİRMA').toUpperCase()}", "WHATSAPP İLE İLETİŞİME GEÇİN", "FABRİKADAN DOĞRUDAN").
+KRİTİK YÖNETMEN VE REKLAM STANDARTLARI (ÖNEMLİ):
+1. SIFIR HEX KODU KURALI (NO HEX CODES ON PROMPTS):
+   - Prompt metnine ASLA '#4caf50', '#1b5e20' gibi hex kodları YAZMA! Veo modeli bunları tabela metni sanıp plakete basar. Sadece 'koyu yeşil', 'parlak zümrüt yeşili' gibi doğal Türkçe renk isimleri kullan.
 
-2. GERÇEK KURUMSAL LOGO DOKUNULMAZLIĞI (ASLA SAHTE/MOCK LOGO KULLANILMAYACAK):
-   - Sistemde tanımlı ve yüklenmiş kurumsal logo amblemi sahneye fiziksel olarak işlenecektir.
-   - KESİNLİKLE uydurma geometrik sembol, sahte üçgen, mock amblem veya stilize logo varyasyonu YAPILMAYACAKTIR.
-   - Sadece firmanın gerçek logo kimliği (${logoDesc}) ve orijinal renk kodları sahnedeki tabelaya ve ürün yüzeyine basılacaktır.
+2. TEMİZ MİNİMALİST HARİTA & DİJİTAL ARAYÜZ KURALI (SIFIR SAHTE SOKAK YAZISI):
+   - Laptop ekranında Google Haritalar gösterildiğinde 'Goaticlafa' gibi uydurma sokak, şehir veya mahalle isimleri KESİNLİKLE YAZDIRILMAYACAKTIR.
+   - Harita SADECE temiz minimalist grafik topoğrafik yollardan, dairesel yeşil radar tarama dalgalarından ve parıldayan temiz yeşil konum pinlerinden oluşmalıdır (CLEAN MINIMALIST VECTOR MAP, NO STREET LABELS, NO GIBBERISH NAMES).
+   - Ekrandaki tek metin pindeki şık küçük buton olmalıdır: 'MÜŞTERİ BUL'.
 
-3. ANTİ-ÜTOPİK GERÇEK DÜNYA SİNEMATOGRAFİSİ:
-   - Sektörün gerçek hayat dinamikleri %100 korunmalıdır. Nesneler yerçekimine, sahne ışığına ve gerçek fizik kurallarına tam uyumlu olmalıdır; bilim kurgu ya da mantıksız elementler KESİNLİKLE gösterilmeyecektir.
+3. DOĞAL PRESTİJLİ REKLAM KAPANIŞI (SIFIR ABSÜRT DEV DUVAR TABELASI, SIFIR BOŞ KORİDOR):
+   - KESİNLİKLE bomboş mermer duvara devasa altın kutu tabela veya absürt boş koridor/lobi SAHNELENMEYECEKTİR.
+   - Kapanış sahnesi (Sahne 3) gerçek, canlı bir çalışma masası, modern teknoloji ofisi veya ürünün kullanıldığı doğal ortam olmalıdır.
+   - Firma adı ve logosu masanın üzerindeki şık, zarif masa isimliğinde ('${brand}') ve açık laptop ekranında yer alır.
+   - Güven veren yönetici veya çalışan kameraya/ekrana bakar, arkada gün batımı ve canlı kurumsal ofis atmosferi görünür. TERTEMİZ DOĞAL REKLAM KAPANIŞI.
 
-4. 3 PERDELİ SİNEMATİK AKIŞ:
-   - ACT 1 (0-3s) - Kanca: Ürünün makro dokusu, estetiği ve birinci sınıf malzeme kalitesi.
-   - ACT 2 (3-7s) - Aksiyon & Kullanım: Ürünün/hizmetin gerçek kullanım performansı ve sağladığı çözüm.
-   - ACT 3 (7-10s) - Kahraman Finali: Firmanın güven veren kurumsal duruşu ve memnun kullanıcı.
+4. NATİF TÜRKÇE SPİKER SESLENDİRMESİ (SESLENDİRME BLOĞU):
+   - Promptun sonuna şu formatta profesyonel, akıcı, reklam spikeri tonunda 15-20 kelimelik bir Türkçe replik ekle:
+   SESLENDİRME: Kristal netliğinde profesyonel Türkçe erkek reklam spikeri sesi: '[Reklam repliği]'
 
-3. TÜRKÇE SESLENDİRME (AUDIO VOICEOVER - YALNIZCA SES METNİ, EKRANDA YAZI YOK):
-   - 15-20 kelimelik berrak Türkçe reklam spikeri repliği ekle.
+5. SIFIR UYDURMA LOGO & SIFIR TEKNİK JARGON (SIFIR VELL CAPS, SIFIR SAHTE ALTIĞEN):
+   - Tabelaya, standa veya sahneye ASLA 'ALL CAPS', 'VELL CAPS', 'TEXT CARD', 'FONT', 'LOGO' gibi teknik komutlar YAZILMAYACAKTIR.
+   - İsimlik veya tabelada yalnızca ve sadece firmanın kurumsal adı ('${brand}') ve ekli görseldeki orijinal kurumsal logosu yer alacaktır.
+   - KESİNLİKLE uydurma yeşil altıgen, uydurma 'V' harfi amblemi, onay tiki veya sahte sembol EKLENMEYECEKTİR.
 
-4. MARKA KİTİ, LOGO VE ÜRÜN DOKUNULMAZLIĞI (ASLA OYNAMA VEYA VARYASYON YAPMA):
-   - Firmanın orijinal logosu, amblemi, marka renkleri ve ürün tasarımı KESİNLİKLE değiştirilmeyecek veya farklı varyasyonlara sokulmayacaktır.
-   - Gerçek ürünün formu, kasası, fiziksel donanımı ve görünümü birebir orijinal fotoğraftaki gibi korunmalıdır. Hayali veya dönüştürülmüş ürün şekilleri kesinlikle üretilmeyecektir.
-   - ZERO MUTATION, ZERO PRODUCT MORPHING, ZERO LOGO ALTERATION.
+6. ÇIKTI FORMATI:
+   - SADECE doğrudan Google Veo'ya yapıştırılacak tek parça prompt metnini yaz. Başka açıklama, selamlama veya tırnak ekleme.
 
-5. ÇIKTI FORMATI:
-   - SADECE Google Veo video motoruna doğrudan yapıştırılacak tek parça sinematik video prompt metnini yaz.
-   - Başka hiçbir selamlama, açıklama, başlık veya markdown tırnağı koyma.`;
+${require('./brand_learning_store.js').buildLearningPromptBlock(brand, product, brief)}`;
 
     return await new Promise((resolve) => {
       const timeoutTimer = setTimeout(() => {
         try { ws.close(); } catch(e){}
         resolve(null);
-      }, 35000);
+      }, 80000);
 
       ws.onopen = async () => {
         try {
@@ -157,6 +159,40 @@ ZORUNLU YÖNETMEN KURALLARI (AYVAZOĞLU İNŞAAT USULÜ FİZİKSEL TABELA & SIFI
             clearTimeout(timeoutTimer);
             ws.close();
             return resolve(null);
+          }
+
+          // Eğer firmanın Wizard'dan yüklenmiş kurumsal logosu veya ürün görseli varsa, doğrudan ChatGPT'ye dosya olarak yükle
+          let uploadedFilesCount = 0;
+          try {
+            const filesToUpload = [];
+            if (brandKit.logo_path) {
+              const absLogo = brandKit.logo_path.startsWith('/app/') ? brandKit.logo_path : path.join('/app/gateway', brandKit.logo_path);
+              if (fs.existsSync(absLogo)) filesToUpload.push(absLogo);
+            }
+            if (brandKit.product_image_path) {
+              const absProd = brandKit.product_image_path.startsWith('/app/') ? brandKit.product_image_path : path.join('/app/gateway', brandKit.product_image_path);
+              if (fs.existsSync(absProd)) filesToUpload.push(absProd);
+            }
+
+            if (filesToUpload.length > 0) {
+              await sendCmd("DOM.enable");
+              const doc = await sendCmd("DOM.getDocument", { depth: -1 });
+              const nodeRes = await sendCmd("DOM.querySelector", {
+                nodeId: doc.root.nodeId,
+                selector: 'input#upload-photos, input#upload-files, input[type="file"]'
+              });
+              if (nodeRes?.nodeId) {
+                console.log(`[VideoGen -> ChatGPT Web] 🖼️ Gerçek kurumsal logo/medya dosyaları yükleniyor:`, filesToUpload);
+                await sendCmd("DOM.setFileInputFiles", {
+                  nodeId: nodeRes.nodeId,
+                  files: filesToUpload
+                });
+                uploadedFilesCount = filesToUpload.length;
+                await new Promise(r => setTimeout(r, 2500));
+              }
+            }
+          } catch (fileUploadErr) {
+            console.warn('[VideoGen -> ChatGPT Web] Görsel yükleme hatası (metinle devam ediliyor):', fileUploadErr.message);
           }
 
           // Textarea'ya odaklan
@@ -198,17 +234,17 @@ ZORUNLU YÖNETMEN KURALLARI (AYVAZOĞLU İNŞAAT USULÜ FİZİKSEL TABELA & SIFI
             await sendCmd("Input.dispatchKeyEvent", { type: "keyUp", windowsVirtualKeyCode: 13 });
           }
 
-          // ChatGPT yanıtını bekle
+          // ChatGPT yanıtını bekle (görsel analizi için yeterli süre tanı)
           let responseText = '';
-          for (let i = 0; i < 30; i++) {
-            await new Promise(r => setTimeout(r, 1200));
+          for (let i = 0; i < 50; i++) {
+            await new Promise(r => setTimeout(r, 1500));
             const checkRes = await sendCmd("Runtime.evaluate", {
               expression: `(() => {
                 const stopBtn = document.querySelector('button[data-testid="stop-button"], button[aria-label*="Stop"], button[aria-label*="durdur"]');
                 const isThinking = !!document.querySelector('.result-thinking, [data-testid*="generating"], .streaming-animated-ellipsis');
                 const isGenerating = !!stopBtn || isThinking;
 
-                const articles = Array.from(document.querySelectorAll('[data-message-author-role="assistant"]'));
+                const articles = Array.from(document.querySelectorAll('[data-message-author-role="assistant"], div.markdown'));
                 const lastMsg = articles.pop();
                 const text = lastMsg ? (lastMsg.innerText || lastMsg.textContent || '').trim() : '';
                 return { isGenerating, text };
@@ -559,8 +595,31 @@ function attemptGenerateOnCdp(port, tab, options) {
 
         const videoId = 'video_' + Date.now();
         const rawVideoTarget = path.join(OUTPUT_DIR, `${videoId}_raw.mp4`);
-        // 2. Saf Veo Canlı Çekim Video (Kullanıcının talimatı: SIFIR HARİCİ YAZI BİNDİRME)
-        // Video Veo tarafından 100% natif üretilir (Ayvazoğlu usulü).
+        if (fs.existsSync(downloadedFile)) {
+          fs.renameSync(downloadedFile, rawVideoTarget);
+        }
+
+        // Otonom CapCut Altyazı Giydirme (Gemini videoları)
+        try {
+          if (processVideoAudioAndSubtitles && fs.existsSync(rawVideoTarget)) {
+            console.log(`[VideoGen] 🎬 Gemini videosuna CapCut dinamik altyazı işleniyor...`);
+            await processVideoAudioAndSubtitles({
+              videoPath: rawVideoTarget,
+              engine: 'gemini',
+              options: {
+                ...options,
+                brandName: options.brandName || options.customer,
+                productName: options.productName || options.product,
+                chatGptPrompt: options.chatGptPrompt || fullPrompt,
+                veoPrompt: fullPrompt
+              }
+            });
+          }
+        } catch (subErr) {
+          console.warn('[VideoGen] Gemini altyazı giydirme hatası:', subErr.message);
+        }
+
+        // 2. Saf Veo Canlı Çekim Video
         const videoFileForThumb = rawVideoTarget;
         const thumbTarget = path.join(OUTPUT_DIR, `${videoId}_thumb.jpg`);
         let thumbUrl = null;
@@ -631,12 +690,15 @@ function attemptGenerateOnCdp(port, tab, options) {
           console.warn('[VideoGen] LearningStore kaydetme hatası:', recErr.message);
         }
 
+        const cleanUrl = finalUrl.replace(/(_raw|_capcut_final|_final|_sub)?\.mp4$/, '_clean_nosub.mp4');
         resolve({
           success: true,
           isLimited: false,
           port,
           videoId,
           videoUrl: finalUrl,
+          subtitledVideoUrl: finalUrl,
+          cleanVideoUrl: cleanUrl,
           campaignVideoUrl: campaignUrl,
           thumbnailUrl: thumbUrl,
           duration: 10,
@@ -702,6 +764,12 @@ async function checkPortLoggedIn(port, tab) {
  * 1. Hesabı dener; kota sınırındaysa anında 2. hesaba, sonra 3. ve 4. hesaba devreder.
  */
 async function generateVideo(options) {
+  // Eğer kullanıcı veya sistem doğrudan Google Flow (Veo 3.1) tercih ettiyse doğrudan Flow'u çalıştır!
+  if (options.preferredEngine === 'flow' || options.engine === 'flow' || options.useFlow) {
+    console.log(`[VideoGen] 🎯 Kullanıcı tercihi doğrultusunda Google Flow (Veo 3.1) motoru doğrudan seçildi.`);
+    return await generateVideoOnFlow(options);
+  }
+
   const now = Date.now();
 
   // Havuzdaki uygun portları seç veya belirtilen portu kullan
@@ -919,10 +987,10 @@ async function generateVideoOnFlow(options = {}) {
     })()`
   });
 
-  // 5. Video tile'ını bekle (en fazla 180 saniye)
+  // 5. Video tile'ını bekle (en fazla 240 saniye)
   let videoTileFound = false;
   const startTime = Date.now();
-  while (Date.now() - startTime < 180000) {
+  while (Date.now() - startTime < 240000) {
     await sleep(5000);
     const checkTile = await send('Runtime.evaluate', {
       expression: `(() => {
@@ -957,42 +1025,134 @@ async function generateVideoOnFlow(options = {}) {
   if (!videoTileFound) {
     ws.close();
     await fetch(`http://127.0.0.1:${port}/json/close/${tab.id}`);
-    throw new Error('Google Flow video render işlemi zaman aşımına uğradı (120sn).');
+    throw new Error('Google Flow video render işlemi zaman aşımına uğradı (240sn).');
   }
 
-  // 6. Download butonuna tıkla
-  const dlBtn = await send('Runtime.evaluate', {
-    expression: `(() => {
-      const btn = document.querySelector('button[aria-label="Download media"]') ||
-                  document.querySelector('button[aria-label*="download" i]');
-      if (btn) {
-        const r = btn.getBoundingClientRect();
-        return { x: r.left + r.width/2, y: r.top + r.height/2 };
-      }
-      return null;
-    })()`,
-    returnByValue: true
-  });
+  // 5.5 Download davranışını ayarla (Dosyaların OUTPUT_DIR'e inmesini garantile)
+  try {
+    await send('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: OUTPUT_DIR });
+  } catch(e) {}
+  try {
+    await send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: OUTPUT_DIR, eventsEnabled: true });
+  } catch(e) {}
 
-  if (dlBtn?.result?.value) {
-    await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: dlBtn.result.value.x, y: dlBtn.result.value.y, button: 'left', clickCount: 1 });
-    await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: dlBtn.result.value.x, y: dlBtn.result.value.y, button: 'left', clickCount: 1 });
-    await sleep(1500);
+  // 6. Download butonuna tıkla (Hem üst menüdeki Download Media hem de tile More options menüsünü destekle)
+  let downloadTriggered = false;
 
-    // 7. 720p seçeneğini tıkla
-    await send('Runtime.evaluate', {
+  // YÖNTEM A: Üst çubuktaki doğrudan "Download media" butonu
+  for (let b = 0; b < 5; b++) {
+    const dlBtn = await send('Runtime.evaluate', {
       expression: `(() => {
-        const items = Array.from(document.querySelectorAll('[role="menuitem"], .mat-mdc-menu-item, button'));
-        const target = items.find(i => i.innerText.includes('720p') || i.innerText.includes('Original size'));
-        if (target) target.click();
-      })()`
+        const btn = document.querySelector('button[aria-label="Download media"]') ||
+                    document.querySelector('button[aria-label*="download" i]') ||
+                    document.querySelector('[data-tooltip*="Download" i]') ||
+                    Array.from(document.querySelectorAll('button')).find(b => (b.innerText || '').trim().toLowerCase() === 'download');
+        if (btn) {
+          const r = btn.getBoundingClientRect();
+          if (r.width > 0 && r.height > 0) {
+            return { x: r.left + r.width/2, y: r.top + r.height/2 };
+          }
+        }
+        return null;
+      })()`,
+      returnByValue: true
     });
-    console.log(`[Flow Video] 📥 İndirme tetiklendi, dosya bekleniyor...`);
-    await sleep(10000);
+
+    if (dlBtn?.result?.value) {
+      console.log(`[Flow Video] 📥 Üst indirme butonu bulundu, tıklanıyor (${dlBtn.result.value.x}, ${dlBtn.result.value.y})...`);
+      await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: dlBtn.result.value.x, y: dlBtn.result.value.y, button: 'left', clickCount: 1 });
+      await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: dlBtn.result.value.x, y: dlBtn.result.value.y, button: 'left', clickCount: 1 });
+      await sleep(1500);
+
+      // 720p veya Original size seçeneğini tıkla
+      const popupRes = await send('Runtime.evaluate', {
+        expression: `(() => {
+          const items = Array.from(document.querySelectorAll('*'));
+          const opt = items.find(e => {
+            const t = (e.innerText || '').trim();
+            return (t === '720p' || t.startsWith('720p') || t.includes('Original size')) && e.getBoundingClientRect().width > 0;
+          });
+          if (opt) {
+            const r = opt.getBoundingClientRect();
+            return { found: true, x: r.left + r.width/2, y: r.top + r.height/2 };
+          }
+          return { found: false };
+        })()`,
+        returnByValue: true
+      });
+
+      if (popupRes?.result?.value?.found) {
+        const { x, y } = popupRes.result.value;
+        console.log(`[Flow Video] 📥 720p seçeneği tıklandı (${x}, ${y})...`);
+        await send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 });
+        await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
+      } else {
+        await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: 706, y: 141, button: 'left', clickCount: 1 });
+        await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 706, y: 141, button: 'left', clickCount: 1 });
+      }
+      downloadTriggered = true;
+      break;
+    }
+    await sleep(1000);
   }
 
-  ws.close();
-  await fetch(`http://127.0.0.1:${port}/json/close/${tab.id}`);
+  // YÖNTEM B: More options menüsünden İndir (Tile üç nokta menüsü)
+  if (!downloadTriggered) {
+    console.log(`[Flow Video] 📥 Üst buton bulunamadı, More Options menüsü deneniyor...`);
+    const moreRes = await send('Runtime.evaluate', {
+      expression: `(() => {
+        const btns = Array.from(document.querySelectorAll('button[aria-label="More options"]'));
+        const tileBtn = btns.find(b => {
+          const r = b.getBoundingClientRect();
+          return r.width > 20 && r.width < 45 && r.top > 0;
+        });
+        if (tileBtn) {
+          tileBtn.click();
+          return true;
+        }
+        return false;
+      })()`,
+      returnByValue: true
+    });
+
+    if (moreRes?.result?.value) {
+      await sleep(1200);
+      const menuRes = await send('Runtime.evaluate', {
+        expression: `(() => {
+          const items = Array.from(document.querySelectorAll('.mat-mdc-menu-panel button, [role="menuitem"]'));
+          const dl = items.find(i => (i.innerText || '').toLowerCase().includes('download'));
+          if (dl) {
+            dl.click();
+            return true;
+          }
+          return false;
+        })()`,
+        returnByValue: true
+      });
+      if (menuRes?.result?.value) {
+        console.log(`[Flow Video] 📥 More Options menüsünden Download seçeneği başarıyla tıklandı!`);
+        downloadTriggered = true;
+      }
+    }
+  }
+
+  console.log(`[Flow Video] 📥 İndirme işlemi tetiklendi, dosyanın diske yazılması bekleniyor...`);
+    
+    // Dosya inene kadar en fazla 30 saniye bekle
+    for (let w = 0; w < 30; w++) {
+      await sleep(1000);
+      const filesNow = fs.readdirSync(OUTPUT_DIR);
+      const isDownloading = filesNow.some(f => f.endsWith('.crdownload'));
+      const hasDownloadFile = filesNow.includes('download');
+      const recentMp4 = filesNow.find(f => f.endsWith('.mp4') && (Date.now() - fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs < 15000));
+      if ((recentMp4 || hasDownloadFile) && !isDownloading) {
+        console.log(`[Flow Video] ✅ İndirilen dosya yakalandı: ${recentMp4 || 'download'}`);
+        break;
+      }
+    }
+
+  try { ws.close(); } catch(e){}
+  try { await fetch(`http://127.0.0.1:${port}/json/close/${tab.id}`); } catch(e){}
 
   // 8. Dosya ve thumbnail oluştur
   const timestamp = Date.now();
@@ -1002,14 +1162,44 @@ async function generateVideoOnFlow(options = {}) {
   const thumbPath = path.join(OUTPUT_DIR, thumbFileName);
 
   const downloadedCandidate = path.join(OUTPUT_DIR, 'download');
+  const rootDownloadCandidate = '/root/Downloads/download';
+  
   if (fs.existsSync(downloadedCandidate)) {
-    fs.renameSync(downloadedCandidate, rawPath);
+    fs.copyFileSync(downloadedCandidate, rawPath);
+    try { fs.unlinkSync(downloadedCandidate); } catch(e){}
+  } else if (fs.existsSync(rootDownloadCandidate)) {
+    fs.copyFileSync(rootDownloadCandidate, rawPath);
+    try { fs.unlinkSync(rootDownloadCandidate); } catch(e){}
   } else {
-    const files = fs.readdirSync(OUTPUT_DIR).map(f => ({ name: f, time: fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs })).sort((a, b) => b.time - a.time);
-    const recent = files.find(f => f.name.endsWith('.mp4') && f.name !== rawFileName && Date.now() - f.time < 60000);
+    const files = fs.readdirSync(OUTPUT_DIR)
+      .filter(f => f.endsWith('.mp4') && f !== rawFileName)
+      .map(f => ({ name: f, time: fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs }))
+      .sort((a, b) => b.time - a.time);
+    const recent = files.find(f => Date.now() - f.time < 90000);
     if (recent) {
       fs.copyFileSync(path.join(OUTPUT_DIR, recent.name), rawPath);
     }
+  }
+
+  // 8.1 Otonom Nöral Türkçe Seslendirme / Natif Veo Sesi + Milisaniyelik CapCut Altyazı
+  try {
+    if (processVideoAudioAndSubtitles && fs.existsSync(rawPath)) {
+      console.log(`[Flow Video] 🎙️ Flow videosuna CapCut Senkron Altyazı işleniyor...`);
+      await processVideoAudioAndSubtitles({
+        videoPath: rawPath,
+        engine: 'flow',
+        options: {
+          ...options,
+          keepNativeAudio: options.keepNativeAudio !== false, // Varsayılan: Natif Veo spiker sesini koru!
+          brandName: options.brandName || options.customer,
+          productName: options.productName || options.product,
+          chatGptPrompt: options.chatGptPrompt || prompt,
+          veoPrompt: prompt
+        }
+      });
+    }
+  } catch (flowSubErr) {
+    console.warn('[Flow Video] Flow altyazı/seslendirme giydirme hatası:', flowSubErr.message);
   }
 
   try {
@@ -1061,10 +1251,23 @@ async function generateVideoOnFlow(options = {}) {
     console.warn('[Flow Video] Meta JSON kaydetme hatası:', mErr.message);
   }
 
+  try {
+    recordSuccess(options.brandName || options.customer, {
+      product: options.productName || options.product,
+      videoId: `video_${timestamp}_flow`,
+      resultNotes: 'Google Flow Veo 3.1 ile 9:16 canlı sinematik reklam videosu üretildi'
+    });
+  } catch (recErr) {
+    console.warn('[Flow Video] LearningStore kaydetme hatası:', recErr.message);
+  }
+
+  const cleanFileName = rawFileName.replace(/(_capcut_final|_final|_sub)?\.mp4$/, '_clean_nosub.mp4');
   return {
     success: true,
     engine: 'Google Flow (Veo 3.1)',
     videoUrl: `http://${PUBLIC_HOST}:${PORT}/outputs/${rawFileName}`,
+    subtitledVideoUrl: `http://${PUBLIC_HOST}:${PORT}/outputs/${rawFileName}`,
+    cleanVideoUrl: `http://${PUBLIC_HOST}:${PORT}/outputs/${cleanFileName}`,
     thumbnailUrl: `http://${PUBLIC_HOST}:${PORT}/outputs/${thumbFileName}`,
     duration: 10,
     aspectRatio: '9:16',
@@ -1076,7 +1279,7 @@ function getRecentVideos() {
   try {
     if (!fs.existsSync(OUTPUT_DIR)) return [];
     const files = fs.readdirSync(OUTPUT_DIR);
-    const mp4Files = files.filter(f => (f.startsWith('video_') || f.startsWith('flow_') || f.includes('commercial') || f.includes('bofe')) && f.endsWith('.mp4'));
+    const mp4Files = files.filter(f => f.endsWith('.mp4') && !f.startsWith('temp_') && !f.includes('slice_') && !f.includes('test_direct'));
     return mp4Files.map(file => {
       const fullPath = path.join(OUTPUT_DIR, file);
       const stat = fs.statSync(fullPath);
@@ -1188,7 +1391,7 @@ function getRecentVideos() {
         createdAt: stat.mtime.toISOString(),
         timestamp: stat.mtimeMs,
       };
-    }).sort((a, b) => b.timestamp - a.timestamp).slice(0, 16);
+    }).sort((a, b) => b.timestamp - a.timestamp).slice(0, 30);
   } catch (err) {
     console.warn('[VideoGen] getRecentVideos hatası:', err.message);
     return [];
@@ -1844,6 +2047,7 @@ function getAiEngineStatus() {
 module.exports = {
   generateVideo,
   generateVideoOnFlow,
+  generatePromptWithChatGptWeb,
   enhanceVideoPrompt,
   getAccountPoolStatus,
   getRecentVideos,

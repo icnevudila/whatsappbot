@@ -1,15 +1,687 @@
 {
-  "version": "1.0",
-  "lastUpdated": "2026-09-19T11:45:37.405Z",
+  "version": "3.0",
+  "lastUpdated": "2026-09-19T19:05:00.000Z",
   "universalRules": [
     "STRICT ZERO TEXT SALAD: Difüzyon video modellerine havada boşlukta uçuşan soyut 3D harfler veya uzun cümleler yazdırma; harfler erir ve bozulur.",
-    "RIGID PHYSICAL SURFACE ANCHORING (FİZİKSEL YÜZEY KURALI): Ekranda yer alacak her metin ve logo fiziksel bir nesneye (metal fabrika tabelası, ahşap yönlendirme panosu, araç şoför kapısı, ürün ambalaj etiketi, bina cephesi) kazınmış, monte edilmiş veya basılmış olmalıdır (Ayvazoğlu İnşaat fabrikadan doğrudan tabelası gibi).",
-    "SHORT & IMPACTFUL TYPOGRAPHY (MAKSİMUM 2-3 KELİME & ALL CAPS): Yazılacak metin en fazla 2-3 kelimeden oluşmalı, kısa, net ve büyük harfli (ALL CAPS) olmalıdır (Örn: 'FABRİKADAN DOĞRUDAN', 'BOFE', 'HASAT ZAMANI'). Asla uzun slogan veya paragraf yazdırılamaz.",
+    "RIGID PHYSICAL SURFACE ANCHORING (FİZİKSEL YÜZEY KURALI): Ekranda yer alacak her metin ve logo fiziksel bir nesneye (metal fabrika tabelası, ahşap yönlendirme panosu, araç şoför kapısı, ürün ambalaj etiketi, bina cephesi, mat pleksi masa isimliği, iş önlüğü nakışı, mermer kaide) kazınmış, monte edilmiş veya basılmış olmalıdır.",
+    "SHORT & IMPACTFUL TYPOGRAPHY (MAKSİMUM 2-3 KELİME & BÜYÜK HARFLERLE): Sahneye yazılacak metin en fazla 2-3 kelimeden oluşmalı, kısa, net ve büyük harfli olmalıdır (Örn: 'FABRİKADAN DOĞRUDAN', 'WHATSAPP İLE YAZIN', 'HEMEN RANDEVU AL', 'MÜŞTERİ BUL', 'SİPARİŞ VER'). Asla uzun slogan veya paragraf yazdırılamaz. Prompt metnine ASLA 'ALL CAPS' gibi teknik terimler yazılmayacaktır; model bunu tabela üstüne 'VELL CAPS' olarak basar.",
     "HIGH-CONTRAST SANS-SERIF SPECIFICATION: Tipografi daima kalın, net, okunaklı modern endüstriyel sans-serif ve yüksek kontrastlı (koyu zemin üstü beyaz/sarı ya da açık yüzey üstü siyah) olarak sahnelenmelidir.",
-    "STRICT BRAND & LOGO INVIOLABILITY: Yüklenen kurumsal logo, amblem şekli ve kurumsal renk kodları asla değiştirilemez, stilize varyasyonu yapılamaz.",
+    "STRICT BRAND & LOGO INVIOLABILITY: Yüklenen kurumsal logo, amblem şekli ve kurumsal renk kodları asla değiştirilemez, stilize varyasyonu yapılamaz. Şirketin tanımlı logosu yoksa ASLA uydurma rastgele sembol/üçgen üretilmez, sadece okunaklı şirket adı yazılır.",
     "STRICT PRODUCT FIDELITY: Gerçek ürün fotoğrafındaki kasa, gövde, renk ve fiziksel detaylar %100 birebir korunmalıdır; hayali veya farklılaştırılmış ürün varyasyonları üretilemez.",
-    "REALISTIC CINEMATIC SECTOR CONTEXT: Sektör asla karıştırılamaz (B2B teknoloji için gökdelen ofis; tarım için güneşli bahçe; inşaat için mimari şantiye)."
+    "REALISTIC CINEMATIC SECTOR CONTEXT: Sektör asla karıştırılamaz (B2B teknoloji için gökdelen ofis; gastronomi için rustik mutfak; tarım için güneşli bahçe; inşaat için mimari şantiye; sağlık için hijyenik klinik; otomotiv için pırıl pırıl servis plazasında).",
+    "NATIVE TURKISH CTA ENFORCEMENT: Her videoda sektörün doğasına uygun, bozulmayan katı bir fiziksel Türkçe CTA (Eylem Çağrısı) yer almalıdır.",
+    "SECTOR-AUTHENTIC AUDIO & FOLEY: Arka plan ses efektleri (foley) sektöre tam uygun olmalıdır (mutfakta cızırtı ve bıçak tıkırtısı, ofiste hafif klavye ve fincan sesi, şantiyede güçlü forklift ve çekiç, doğada kuş cıvıltısı ve yaprak hışırtısı).",
+    "NATIVE TURKISH VOICEOVER DIRECTIVE (SESLENDİRME BLOĞU): Her video promptunun sonunda 'SESLENDİRME: Kristal netliğinde profesyonel Türkçe reklam spikeri sesi: [replik]' bloğu yer alacaktır. Veo/Flow bu bloğu okuyarak natif Türkçe seslendirme üretir. Sonrasında CapCut altyazı servisimiz senkronize altyazıyı giydirir.",
+    "CLEAN SCENE & REALISTIC COMMERCIAL CLOSING: Bomboş mermer duvara devasa altın veya metal kutu tabela asıp boş koridor göstermek KESİNLİKLE YASAKTIR. Kapanış sahnesi gerçek bir çalışma masası, modern aydınlık ofis veya ürünün canlı ortamıdır. Kurumsal logo ve marka adı masanın üzerindeki zarif masa isimliğinde ('{{MARKA}}') veya laptop ekranında şık şekilde yer alır. SIFIR ABSÜRT BOŞ DUVAR.",
+    "NO HEX CODES IN PROMPTS (HEX KODU YASAĞI): Prompt metinlerine ASLA '#4caf50', '#1b5e20' gibi hex kodları yazılmayacaktır; difüzyon modelleri bunları tabela metni sanıp sahneye basar. Renkler daima doğal dille ('koyu zümrüt yeşili', 'parlak canlı yeşil') tarif edilir.",
+    "CLEAN MINIMALIST DIGITAL UI & MAPS (SAHTE HARİTA YAZISI YASAĞI): Ekranda harita veya dijital arayüz gösterildiğinde 'Goaticlafa' gibi uydurma sokak/şehir metinleri KESİNLİKLE OLMAYACAKTIR. Harita minimalist grafik çizgilerden, yollardan ve parlayan temiz konum pinlerinden ibaret olmalıdır (CLEAN MINIMALIST VECTOR MAP, NO STREET LABELS, NO GIBBERISH NAMES).",
+    "ZERO PROMPT JARGON ON SIGNS (TABELAYA TEKNİK KELİME BASMA YASAĞI): Tabelaya veya standa ASLA 'ALL CAPS', 'TEXT CARD', 'FONT', 'LOGO' gibi prompt komutları yazılmayacaktır. Plakette yalnızca ve sadece firmanın kurumsal ismi '{{MARKA}}' yer alacaktır.",
+    "NO FORCED CONTACT CTA ON PHYSICAL PROPS (ZORLAMA İLETİŞİM/WHATSAPP YASAĞI): Masadaki isimlik, ahşap plaket veya dükkan vitrini gibi fiziksel nesnelerin üzerine 'WHATSAPP İLE BAŞLA', 'WHATSAPP İLE İLETİŞİME GEÇİN' veya telefon numarası gibi zorlama çağrılar KESİNLİKLE YAZILMAYACAKTIR. Fiziksel nesneler sadece firmanın prestijli kurumsal kimliğine aittir: Orijinal Logo, Marka İsmi ve varsa kısa kurumsal slogan (Örn: 'B2B VERİ ÇÖZÜMLERİ', 'TÜRKİYE'NİN VERİ REHBERİ', 'DOĞAL LEZZETLER', 'ÖZEL TASARIM & İMALAT'). WhatsApp sadece spikerin seslendirmesinde veya dijital arayüzde geçebilir, asla fiziksel objeye zorla basılamaz."
   ],
+  "sectors": {
+    "food_restaurant": {
+      "name": "Gastronomi, Restoran, Kafe, Döner, Burger & Gıda",
+      "keywords": [
+        "döner",
+        "doner",
+        "kebap",
+        "lahmacun",
+        "burger",
+        "pizza",
+        "pide",
+        "köfte",
+        "kofte",
+        "restoran",
+        "lokanta",
+        "kafe",
+        "tatlı",
+        "tatli",
+        "baklava",
+        "kahve",
+        "yemek",
+        "lezzet",
+        "mutfak",
+        "şef",
+        "sef",
+        "et",
+        "tavuk",
+        "gıda",
+        "gida",
+        "gurme",
+        "pastane",
+        "fırın",
+        "firin"
+      ],
+      "sceneAtmosphere": "Sıcak, iştah kabartan ve samimi gurme gastronomi ortamı. Taze hazırlanan ürünün dumanı, altın sarısı kızarmış detaylar, usta şefin titiz dokunuşları, taş fırın veya döküm ızgara alevi. Kesinlikle yapay süsleme olmayacak; %100 taze malzeme ve lezzet odaklı sinematografi. Arri Master Macro 90mm lens, sıcak amber ışıklandırma.",
+      "rigidSurfaceObjects": [
+        "Masadaki masif ahşap sunum tahtasının kenarındaki sıcak dağlama logo & isim",
+        "Şefin siyah/beyaz aşçı önlüğünün göğsündeki ince dikiş nakış amblem",
+        "Paket servis kraft poşeti ve ambalaj kağıdı üzerindeki net baskı",
+        "Ahşap servis tezgahı veya masadaki döküm menü standı"
+      ],
+      "recommendedTurkishCTAs": [
+        "SİPARİŞ VER",
+        "LEZZET BURADA",
+        "REZERVASYON",
+        "HEMEN DENE",
+        "KAPINIZA GELSİN"
+      ],
+      "audioDirectives": "Cızırdayan ızgara alevi, çıtır ekmek kesilme sesi, taze etin mühürlenme foley sesleri. Samimi, enerjik ve iştah açıcı Türkçe spiker ses tonu: 'En taze lezzetler sofranızda, lezzetin doğru adresi.'",
+      "forbiddenElements": [
+        "Çiğ et gösterimi",
+        "dağınık kirli mutfak",
+        "plastik tek kullanımlık tabak",
+        "boş mermer duvara asılı dev tabela",
+        "ekrana gömülü yazı"
+      ],
+      "goldenPromptTemplate": "9:16 dikey formatta üst düzey Türk televizyon ve sinema reklam filmi.\nMarka: {{MARKA}}. Kurumsal Logo: {{LOGO_TANIMI}}.\nÜrün: {{URUN}}.\nSAHNE 1 (0-3sn): Sıcak rustik restoran mutfağında usta şef taze ürünü hazırlıyor. Masif ahşap sunum tahtasının kenarına dağlanmış logo ve '{{MARKA}}'. SIFIR KÜÇÜK YAZI.\nSAHNE 2 (3-7sn): Altın sarısı kızarmış taze spesiyal yakın çekimi, buhar ve iştah açıcı doku. Paket servis kraft ambalajında ufak net buton: 'SİPARİŞ VER'. TERTEMİZ SİNEMATİK ÇEKİM.\nSAHNE 3 (7-10sn): Sıcak ve samimi restoran salonu. Ahşap servis tezgahındaki şık döküm standında '{{MARKA}}' ve 'DOĞAL GURME LEZZETLER' yer alır. SIFIR BOŞ DUVAR, SIFIR DEV MERMER TABELA.\nSESLENDİRME: Kristal netliğinde profesyonel Türkçe erkek reklam spikeri sesi: 'En taze lezzetler sofranızda, unutulmaz anlar için lezzetin doğru adresi.'\nKESİN KURAL: Ekranda havada uçuşan harf, boş duvara dev kutu tabela KESİNLİKLE OLMAYACAKTIR. STRICT RULE: NO FLOATING LETTERS, NO GIBBERISH TEXT, NO GIANT WALL PLAQUE ON EMPTY WALLS. Pure cinematic live-action only."
+    },
+    "healthcare_medical": {
+      "name": "Sağlık, Klinik, Diş Hekimliği, Estetik & Medikal",
+      "keywords": [
+        "diş",
+        "dis",
+        "klinik",
+        "sağlık",
+        "saglik",
+        "doktor",
+        "hekim",
+        "estetik",
+        "hastane",
+        "medikal",
+        "tedavi",
+        "implant",
+        "gülüş",
+        "gulus",
+        "botoks",
+        "dolgu",
+        "dermatoloji",
+        "fizyoterapi"
+      ],
+      "sceneAtmosphere": "Pırıl pırıl, son derece hijyenik ve ferah modern özel klinik ve sağlık merkezi. Yumuşak tavan aydınlatması, ileri teknoloji diş ünitesi veya medikal cihazlar, güler yüzlü hekimin hasta ile güven veren diyaloğu. Masmavi veya bembeyaz steril ferahlık. Pastel ve asil tonlar.",
+      "rigidSurfaceObjects": [
+        "Resepsiyon bankosu üzerindeki şık buzlu akrilik masa isimliği",
+        "Doktorun ve asistanın beyaz önlüğünün sol göğsünde nakış işlemeli logo",
+        "Steril muayene konsolu ekranında veya randevu kartvizitinde okunaklı marka kimliği",
+        "Hekim ceviz çalışma masasındaki zarif pleksi isimlik"
+      ],
+      "recommendedTurkishCTAs": [
+        "RANDEVU AL",
+        "ÜCRETSİZ MUAYENE",
+        "BİLGİ ALIN",
+        "GÜLÜŞÜNÜ YENİLE",
+        "HEMEN DANIŞIN"
+      ],
+      "audioDirectives": "Hafif ferah klinik piyano tınısı, steril ortam ambiyansı. Güven aşılayan, sakin, şefkatli ve uzman Türkçe hekim/spiker tonu: 'Sağlıklı bir gülüşle hayata güvenle bakın. Uzman hekim kadromuzla yanınızdayız.'",
+      "forbiddenElements": [
+        "Kan gösterimi",
+        "iğne enjeksiyon yakın planı",
+        "korkan acı çeken hasta",
+        "boş koridor mermer duvara dev altın tabela",
+        "ekrana gömülü altyazı"
+      ],
+      "goldenPromptTemplate": "9:16 dikey formatta üst düzey Türk televizyon ve sinema reklam filmi.\nMarka: {{MARKA}}. Kurumsal Logo: {{LOGO_TANIMI}}.\nÜrün: {{URUN}}.\nSAHNE 1 (0-3sn): Pırıl pırıl, ferah modern özel klinik. Resepsiyon bankosundaki şık buzlu akrilik masa isimliğinde logo ve '{{MARKA}}'. SIFIR KÜÇÜK YAZI.\nSAHNE 2 (3-7sn): Hekim hastaya gülümser ve güvenle bilgilendirir. Doktor önlüğünde ince nakış logo, konsol tabletinde ufak net buton: 'RANDEVU AL'. TERTEMİZ DİJİTAL ARAYÜZ.\nSAHNE 3 (7-10sn): Aydınlık ve güven veren hekim çalışma odası. Ceviz hekim masasında şık kristal masa isimliğinde '{{MARKA}}' ve 'GÜVENİLİR SAĞLIK & ESTETİK' yer alır. SIFIR BOŞ DUVAR, SIFIR DEV KUTU TABELA.\nSESLENDİRME: Kristal netliğinde profesyonel Türkçe erkek reklam spikeri sesi: 'Sağlıklı bir gülüşle hayata güvenle bakın. Uzman hekim kadromuzla yanınızdayız.'\nKESİN KURAL: Ekranda havada uçuşan harf, boş mermer duvara dev kutu tabela KESİNLİKLE OLMAYACAKTIR. STRICT RULE: NO FLOATING LETTERS, NO GIBBERISH TEXT, NO GIANT WALL PLAQUE ON EMPTY WALLS. Pure cinematic live-action only."
+    },
+    "automotive_service": {
+      "name": "Otomotiv, Araç Servisi, Ekspertiz, Detailing & Yedek Parça",
+      "keywords": [
+        "oto",
+        "araç",
+        "arac",
+        "araba",
+        "servis",
+        "tamir",
+        "bakım",
+        "bakim",
+        "detailing",
+        "kaplama",
+        "seramik",
+        "lastik",
+        "jant",
+        "ekspertiz",
+        "motor",
+        "fren",
+        "yağ",
+        "yag",
+        "yedek parça"
+      ],
+      "sceneAtmosphere": "Pırıl pırıl, aydınlık ve profesyonel otomotiv servis plazasında veya kapalı detailing stüdyosunda geçen dinamik çekim. Hidrolik liftte yükselen pırıl pırıl araç, parlayan jantlar, uzman teknisyenin titiz kontrolleri ve güven veren atölye düzeni. Keskin neon veya LED tavan çizgileri.",
+      "rigidSurfaceObjects": [
+        "Servis kabul bankosundaki fırçalanmış metal masa isimliği",
+        "Uzman teknisyenin profesyonel iş tulumunun göğsünde marka nakışı",
+        "Müşteri temsilcisi masasında lazer kesim akrilik masa standı",
+        "Hidrolik araç liftinin sarı çelik sütunu üzerindeki net güvenlik & marka etiketi"
+      ],
+      "recommendedTurkishCTAs": [
+        "SERVİS RANDEVUSU",
+        "HEMEN TEKLİF AL",
+        "EKSPERTİZ AL",
+        "ÜCRETSİZ KONTROL",
+        "HEMEN ARAYIN"
+      ],
+      "audioDirectives": "Pürüzsüz çalışan motor sesi, havalı anahtarın hafif tıkırtısı, pırıl pırıl cila yüzeyi sesi. Güçlü, güvenilir ve kendinden emin Türkçe spiker tonu: 'Aracınız için en yüksek servis standardı ve güvenilir bakım. Hemen randevu alın.'",
+      "forbiddenElements": [
+        "Hurda dağınık araçlar",
+        "yağlı kirli yerler",
+        "kaza görüntüsü",
+        "boş duvara dev kutu tabela",
+        "ekrana gömülü yazı"
+      ],
+      "goldenPromptTemplate": "9:16 dikey formatta üst düzey Türk televizyon ve sinema reklam filmi.\nMarka: {{MARKA}}. Kurumsal Logo: {{LOGO_TANIMI}}.\nÜrün: {{URUN}}.\nSAHNE 1 (0-3sn): Aydınlık ve pırıl pırıl kapalı detailing stüdyosu. Servis kabul bankosundaki fırçalanmış metal masa isimliğinde logo ve '{{MARKA}}'. SIFIR KÜÇÜK YAZI.\nSAHNE 2 (3-7sn): Hidrolik liftte yükselen kusursuz parlayan araç, teknisyenin titiz kontrolü. Lift sütununda ufak net etiket: 'EKSPERTİZ'. TERTEMİZ DİNAMİK ÇEKİM.\nSAHNE 3 (7-10sn): Güven veren modern müşteri teslim alanı. Müşteri temsilcisi masasında şık metal isimlikte '{{MARKA}}' ve 'PROFESYONEL SERVİS & DETAY' yer alır. SIFIR BOŞ DUVAR, SIFIR DEV KUTU TABELA.\nSESLENDİRME: Kristal netliğinde profesyonel Türkçe erkek reklam spikeri sesi: 'Aracınız için en yüksek servis standardı ve güvenilir bakım. Hemen randevu alın.'\nKESİN KURAL: Ekranda havada uçuşan harf, boş duvara dev kutu tabela KESİNLİKLE OLMAYACAKTIR. STRICT RULE: NO FLOATING LETTERS, NO GIBBERISH TEXT, NO GIANT WALL PLAQUE ON EMPTY WALLS. Pure cinematic live-action only."
+    },
+    "b2b_tech_data": {
+      "name": "B2B, Veri, Yazılım, Teknoloji, Dijital Platform & SaaS",
+      "keywords": [
+        "veri",
+        "data",
+        "yazılım",
+        "yazilim",
+        "b2b",
+        "platform",
+        "istihbarat",
+        "leads",
+        "crm",
+        "erp",
+        "analiz",
+        "dashboard",
+        "şirket takip",
+        "sirket takip",
+        "veriburada",
+        "veri burada",
+        "bilişim",
+        "bilisim",
+        "müşteri bul",
+        "musteri bul",
+        "bulut",
+        "cloud",
+        "fintech",
+        "yapay zeka",
+        "ai",
+        "siber",
+        "cyber",
+        "kod",
+        "dijital"
+      ],
+      "sceneAtmosphere": "Gerçekçi, aydınlık ve ferah modern cam gökdelen ofisi ve teknoloji stüdyosu. Şık toplantı masasında açık dizüstü bilgisayar ekranında canlı akan veri grafikleri, harita üzerinde beliren yeni işletme bildirimleri, prestijli kurumsal B2B iş ortamı. Gün batımı veya sabah gün ışığı.",
+      "rigidSurfaceObjects": [
+        "Cam toplantı masası üzerindeki şeffaf/mat akrilik masa isimliği ve plaketi",
+        "Laptop ekranındaki arayüz UI kartı üzerindeki net okunur buton",
+        "Ofis cam bölmesinde veya yönetici kapısındaki modern kumlama logo",
+        "Ofis duvarındaki arkadan aydınlatmalı kurumsal amblem"
+      ],
+      "recommendedTurkishCTAs": [
+        "MÜŞTERİ BUL",
+        "HEMEN DENE",
+        "BİLGİ ALIN",
+        "LİSTEYİ İNCELE",
+        "ÜCRETSİZ TEST"
+      ],
+      "audioDirectives": "Modern teknoloji arayüz bip sesleri, klavye tıkırtısı ve sıcak ofis ambiyansı. Kendinden emin, dinamik, profesyonel kurumsal Türkçe spiker tonu: 'Doğru müşterilere anında ulaşın, satışlarınızı Veri Burada ile hemen büyütün.'",
+      "forbiddenElements": [
+        "Bilim kurgu uçan hologramlar",
+        "Uzay gemisi",
+        "Dağınık kablolar",
+        "Yapay montaj kutuları",
+        "Restoran/tarım araçları"
+      ],
+      "goldenPromptTemplate": "9:16 dikey formatta üst düzey Türk televizyon ve sinema reklam filmi.\nMarka: {{MARKA}}. Kurumsal Logo: {{LOGO_TANIMI}}.\nÜrün: {{URUN}}.\nSAHNE 1 (0-3sn): Prestijli kurumsal ofis, sıcak ceviz çalışma masası ve modern dizüstü bilgisayar. Masanın üzerinde zarif şeffaf akrilik masa isimliğinde yalnızca kurumsal yeşil veri ağı logosu ve '{{MARKA}}'. SIFIR KÜÇÜK YAZI, SIFIR UYDURMA AMBLEM.\nSAHNE 2 (3-7sn): Laptop ekranında Google Haritalar üzerinde temiz minimalist radar taraması, canlı parlayan yeşil konum pinleri. Ekran arayüz butonunda ufak net buton: 'MÜŞTERİ BUL'. TERTEMİZ SİNEMATİK DİJİTAL ARAYÜZ, SIFIR SAHTE SOKAK YAZISI.\nSAHNE 3 (7-10sn): Gün batımı ışığında sıcak ve aydınlık çalışma ortamı. Güven veren genç yönetici laptop ekranına gülümseyerek bakar, masadaki şık masa isimliğinde '{{MARKA}}' ve 'B2B VERİ ÇÖZÜMLERİ' yer alır. SIFIR BOŞ DUVAR, SIFIR DEV MERMER LEVHA.\nSESLENDİRME: Kristal netliğinde profesyonel Türkçe erkek reklam spikeri sesi: 'Doğru müşterilere anında ulaşın, satışlarınızı Veri Burada ile hemen büyütün.'\nKESİN KURAL: Ekranda havada uçuşan harf, bilgi kutusu, uydurma altıgen, boş duvara dev kutu tabela KESİNLİKLE OLMAYACAKTIR. STRICT RULE: NO FLOATING LETTERS, NO GIBBERISH TEXT, NO GIANT WALL PLAQUE ON EMPTY MARBLE WALLS. Pure cinematic live-action only."
+    },
+    "industrial_construction": {
+      "name": "Sanayi, İmalat, Yapı Malzemeleri, Tuğla, Çelik & İnşaat",
+      "keywords": [
+        "inşaat",
+        "insaat",
+        "tuğla",
+        "tugla",
+        "briket",
+        "çimento",
+        "cimento",
+        "beton",
+        "çelik",
+        "celik",
+        "fabrika",
+        "imalat",
+        "sanayi",
+        "şantiye",
+        "santiye",
+        "palet",
+        "forklift",
+        "yapı",
+        "yapi",
+        "toptan"
+      ],
+      "sceneAtmosphere": "Modern, düzenli ve güçlü üretim fabrikası ve şantiye sevkiyat sahası. Konveyör bandından çıkan nizami fırınlanmış paletler, forkliftin güvenli taşıması, sevkiyat tırı ve gün ışığında parlayan endüstriyel dayanıklılık. Gerçekçi endüstriyel çekim.",
+      "rigidSurfaceObjects": [
+        "Sevkiyat kabul deskindeki fırçalanmış kalın çelik masa isimliği",
+        "Paletli ürünlerin üzerindeki şeffaf shrink koruyucu ambalaj baskısı",
+        "Forklift gövdesi veya sevkiyat tırının şoför kapısındaki kurumsal amblem",
+        "Sevkiyat ofisi yönetici masasında ağır metal döküm isimlik"
+      ],
+      "recommendedTurkishCTAs": [
+        "TOPTAN FİYAT",
+        "FABRİKADAN DOĞRUDAN",
+        "ŞANTİYEYE TESLİM",
+        "TEKLİF AL",
+        "HEMEN SİPARİŞ"
+      ],
+      "audioDirectives": "Güçlü endüstriyel fabrika uğultusu, forklift hidroliği, metal çınlaması. Tok, güvenilir, usta ve kararlı Türkçe ses: 'Fabrikadan doğrudan şantiyenize yüksek kalite ve güven. Güçlü yarınlar için üretiyoruz.'",
+      "forbiddenElements": [
+        "Yıkıntı virane bina",
+        "iş güvenliği ihlali baret takmayan işçi",
+        "çatlak kırık malzeme",
+        "boş mermer duvara asılı tabela",
+        "ekrana gömülü altyazı"
+      ],
+      "goldenPromptTemplate": "9:16 dikey formatta üst düzey Türk televizyon ve sinema reklam filmi.\nMarka: {{MARKA}}. Kurumsal Logo: {{LOGO_TANIMI}}.\nÜrün: {{URUN}}.\nSAHNE 1 (0-3sn): Modern ve düzenli üretim fabrikası. Sevkiyat kabul deskindeki fırçalanmış çelik masa isimliğinde logo ve '{{MARKA}}'. SIFIR KÜÇÜK YAZI.\nSAHNE 2 (3-7sn): Forklift nizami fırınlanmış paletli ürünleri taşır. Şeffaf shrink ambalaj üzerinde net etiket: 'FABRİKADAN DOĞRUDAN'. TERTEMİZ ENDÜSTRİYEL KADRAJ.\nSAHNE 3 (7-10sn): Fabrika sevkiyat ofisi, aydınlık pencereden görünen sevkiyat tırları. Yönetici masasında şık metal isimlikte '{{MARKA}}' ve 'TOPTAN İMALAT & SATIŞ' yer alır. SIFIR BOŞ DUVAR, SIFIR DEV KUTU TABELA.\nSESLENDİRME: Kristal netliğinde profesyonel Türkçe erkek reklam spikeri sesi: 'Fabrikadan doğrudan şantiyenize yüksek kalite ve güven. Güçlü yarınlar için üretiyoruz.'\nKESİN KURAL: Ekranda havada uçuşan harf, boş duvara dev kutu tabela KESİNLİKLE OLMAYACAKTIR. STRICT RULE: NO FLOATING LETTERS, NO GIBBERISH TEXT, NO GIANT WALL PLAQUE ON EMPTY WALLS. Pure cinematic live-action only."
+    },
+    "agriculture_equipment": {
+      "name": "Tarım, Zirai Makineler, Zeytincilik, Hasat & Çiftçilik",
+      "keywords": [
+        "tarım",
+        "tarim",
+        "çiftçi",
+        "ciftci",
+        "hasat",
+        "traktör",
+        "traktor",
+        "zeytin",
+        "zeytincilik",
+        "makine",
+        "silkeleme",
+        "ekipman",
+        "sulama",
+        "tohum",
+        "gübre",
+        "gubre",
+        "sera",
+        "bahçe",
+        "bahce",
+        "zeytinyağı",
+        "tarla"
+      ],
+      "sceneAtmosphere": "Güneşli, bereketli Ege zeytinlikleri veya geniş altın sarısı buğday tarlaları. Mavi gökyüzü, hafif rüzgar, zeytin ağaçlarının gümüşi yeşil yaprakları, modern tarım makinesinin gövdesinde parlayan güneş ışığı. Doğal gün ışığı, organik ve bereketli doğa estetiği.",
+      "rigidSurfaceObjects": [
+        "Çiftlik ofisi masif ahşap masasında şık ceviz isimlik",
+        "Zirai makinenin fırın boyalı metal gövdesinde kabartma amblem",
+        "Hasat toplama kasalarının veya zeytinyağı tenekelerinin üzerindeki litografi baskı",
+        "Çiftlik verandası masasında rustik ahşap masa standı"
+      ],
+      "recommendedTurkishCTAs": [
+        "HASAT ZAMANI",
+        "HEMEN SİPARİŞ",
+        "YÜKSEK VERİM",
+        "FİYAT ÖĞRENİN",
+        "ÇİFTÇİYE DESTEK"
+      ],
+      "audioDirectives": "Hafif rüzgar ve yaprak hışırtısı, uzaktan gelen traktör motoru, zeytinlerin brandaya dökülme tıkırtısı. Sıcak, güven veren, Anadolu samimiyetinde Türkçe spiker tonu: 'Hasatta yüksek verim, sıfır yorgunluk. Toprağınıza değer katan çözümler.'",
+      "forbiddenElements": [
+        "Kurumuş solmuş çöl arazisi",
+        "paslı hurda tarım aleti",
+        "çamurlu bataklık",
+        "boş duvara asılı tabela",
+        "ekrana gömülü yazı"
+      ],
+      "goldenPromptTemplate": "9:16 dikey formatta üst düzey Türk televizyon ve sinema reklam filmi.\nMarka: {{MARKA}}. Kurumsal Logo: {{LOGO_TANIMI}}.\nÜrün: {{URUN}}.\nSAHNE 1 (0-3sn): Güneşli zeytinlik ve bereketli tarım arazisi. Çiftlik ofisi ahşap masasında şık ceviz masa isimliği: '{{MARKA}}'. SIFIR KÜÇÜK YAZI.\nSAHNE 2 (3-7sn): Zirai makine sahada pürüzsüz çalışır, dallardan zeytinler sergiye dökülür. Taşıma kasası üzerinde net etiket: 'YÜKSEK VERİM'. TERTEMİZ DOĞAL KADRAJ.\nSAHNE 3 (7-10sn): Gün batımı ışığında çiftlik evi verandası. Doğal ahşap masada tebessüm eden üretici, masadaki şık ahşap isimlikte '{{MARKA}}' ve 'ÇİFTÇİ DOSTU TEKNOLOJİ' yer alır. SIFIR BOŞ DUVAR, SIFIR DEV MERMER TABELA.\nSESLENDİRME: Kristal netliğinde profesyonel Türkçe erkek reklam spikeri sesi: 'Hasatta yüksek verim, sıfır yorgunluk. Toprağınıza değer katan çözümler.'\nKESİN KURAL: Ekranda havada uçuşan harf, boş duvara dev kutu tabela KESİNLİKLE OLMAYACAKTIR. STRICT RULE: NO FLOATING LETTERS, NO GIBBERISH TEXT, NO GIANT WALL PLAQUE ON EMPTY WALLS. Pure cinematic live-action only."
+    },
+    "fashion_boutique": {
+      "name": "Moda, Butik, Tekstil, Ayakkabı, Çanta & Mücevher",
+      "keywords": [
+        "butik",
+        "moda",
+        "elbise",
+        "giyim",
+        "kıyafet",
+        "kiyafet",
+        "kombin",
+        "tekstil",
+        "çanta",
+        "canta",
+        "ayakkabı",
+        "ayakkabi",
+        "takı",
+        "taki",
+        "mücevher",
+        "mucevher",
+        "ipek",
+        "deri",
+        "trend"
+      ],
+      "sceneAtmosphere": "Şık, sofistike, sıcak aydınlatmalı lüks butik mağaza veya haute couture stüdyo. Kadife askılıklar, fırçalanmış pirinç detaylar, dökümlü kumaş dokuları, yumuşak stüdyo aydınlatması ve podyum zarafeti.",
+      "rigidSurfaceObjects": [
+        "Kasa ve karşılama mermer tezgahındaki pirinç masa isimliği",
+        "Lüks giysi etiketindeki kalın dokulu kabartma karton logo",
+        "Özel dikim hediye kutusunun kapağındaki altın yaldız marka ismi",
+        "Showroom tasarım masasında şık pleksi isimlik"
+      ],
+      "recommendedTurkishCTAs": [
+        "YENİ SEZON",
+        "KOMBİNİ KEŞFET",
+        "HEMEN SİPARİŞ",
+        "ÖZEL KOLEKSİYON",
+        "STİLİNİ YENİLE"
+      ],
+      "audioDirectives": "Zarif, ritmik ve sofistike modern akustik tınılar, ipek kumaş hışırtısı, hediye paketi kurdele sesi. Trend, havalı ve kendinden emin Türkçe spiker tonu: 'Stilinizi yansıtan en özel koleksiyonlar. Yeni sezonun zarafetini keşfedin.'",
+      "forbiddenElements": [
+        "Pazaryeri kalabalığı",
+        "dağınık buruşuk kıyafetler",
+        "plastik manken uzuv kopuklukları",
+        "boş duvara dev kutu tabela",
+        "ekrana gömülü yazı"
+      ],
+      "goldenPromptTemplate": "9:16 dikey formatta üst düzey Türk televizyon ve sinema reklam filmi.\nMarka: {{MARKA}}. Kurumsal Logo: {{LOGO_TANIMI}}.\nÜrün: {{URUN}}.\nSAHNE 1 (0-3sn): Şık ve ferah lüks butik mağaza. Kasa ve karşılama tezgahındaki pirinç masa isimliğinde logo ve '{{MARKA}}'. SIFIR KÜÇÜK YAZI.\nSAHNE 2 (3-7sn): Premium kumaş dokusu, terzi dikiş hassasiyeti ve hediye kutusu detayı. Lüks paket üzerinde altın yaldız buton: 'YENİ SEZON'. TERTEMİZ ESTETİK ÇEKİM.\nSAHNE 3 (7-10sn): Aydınlık showroom çalışma alanı. Tasarım masasında çizimler ve kumaş kartelası, şık pleksi isimlikte '{{MARKA}}' ve 'ÖZEL TASARIM & STİL' yer alır. SIFIR BOŞ DUVAR, SIFIR DEV KUTU TABELA.\nSESLENDİRME: Kristal netliğinde profesyonel Türkçe erkek reklam spikeri sesi: 'Stilinizi yansıtan en özel koleksiyonlar. Yeni sezonun zarafetini keşfedin.'\nKESİN KURAL: Ekranda havada uçuşan harf, boş duvara dev kutu tabela KESİNLİKLE OLMAYACAKTIR. STRICT RULE: NO FLOATING LETTERS, NO GIBBERISH TEXT, NO GIANT WALL PLAQUE ON EMPTY WALLS. Pure cinematic live-action only."
+    },
+    "real_estate_architecture": {
+      "name": "Gayrimenkul, Konut, Villa, İç Mimarlık & Proje",
+      "keywords": [
+        "emlak",
+        "gayrimenkul",
+        "konut",
+        "daire",
+        "villa",
+        "rezidans",
+        "arsa",
+        "proje",
+        "mimarlık",
+        "mimarlik",
+        "inşaat projesi",
+        "satılık",
+        "satilik",
+        "kiralık",
+        "kiralik",
+        "lüks konut"
+      ],
+      "sceneAtmosphere": "Geniş, ferah, gün ışığıyla yıkanan ultra lüks villa salonu veya panoramik şehir manzaralı penthouse terası. Tavandan tabana camlar, minimalist mimari çizgiler, havuz yansımaları ve huzurlu zenginlik hissi.",
+      "rigidSurfaceObjects": [
+        "Satış ofisi cam toplantı masasında şeffaf akrilik masa plaketi",
+        "Mimari maketin ahşap kaidesi üzerindeki metal künye",
+        "Proje kataloğunun sert kapak cildindeki kabartma marka amblemi",
+        "Satış danışmanı masasında şık ceviz masa isimliği"
+      ],
+      "recommendedTurkishCTAs": [
+        "ÖRNEK DAİRE",
+        "FİYAT TEKLİFİ",
+        "KAT PLANI İNCELE",
+        "HEMEN BİLGİ AL",
+        "RANDEVU AL"
+      ],
+      "audioDirectives": "Görkemli sinematik yaylılar ve piyano tınısı, hafif su ve rüzgar huzuru. Asil, güven veren ve prestijli Türkçe spiker tonu: 'Hayalinizdeki yaşam alanı şimdi gerçek oluyor. Ayrıcalıklı projelerimizle tanışın.'",
+      "forbiddenElements": [
+        "Terk edilmiş inşaat",
+        "çarpık kentleşme",
+        "boş mermer duvara asılı dev tabela",
+        "ekrana gömülü altyazı"
+      ],
+      "goldenPromptTemplate": "9:16 dikey formatta üst düzey Türk televizyon ve sinema reklam filmi.\nMarka: {{MARKA}}. Kurumsal Logo: {{LOGO_TANIMI}}.\nÜrün: {{URUN}}.\nSAHNE 1 (0-3sn): Panoramik şehir manzaralı lüks mimarlık ofisi. Cam toplantı masasında şeffaf akrilik plaket: '{{MARKA}}'. SIFIR KÜÇÜK YAZI.\nSAHNE 2 (3-7sn): Mimari maket ve 3D villa projesi üzerinde mimarın çalışmaları. Çizim masası kenarında net buton: 'ÖRNEK DAİRE'. TERTEMİZ MİMARİ PERSPEKTİF.\nSAHNE 3 (7-10sn): Gün batımı ışığında modern rezidans satış ofisi. Masada laptop ve tebessüm eden danışman, şık masa isimliğinde '{{MARKA}}' ve 'MİMARİ YAŞAM PROJELERİ' yer alır. SIFIR BOŞ DUVAR, SIFIR DEV MERMER LEVHA.\nSESLENDİRME: Kristal netliğinde profesyonel Türkçe erkek reklam spikeri sesi: 'Hayalinizdeki yaşam alanı şimdi gerçek oluyor. Ayrıcalıklı projelerimizle tanışın.'\nKESİN KURAL: Ekranda havada uçuşan harf, boş duvara dev kutu tabela KESİNLİKLE OLMAYACAKTIR. STRICT RULE: NO FLOATING LETTERS, NO GIBBERISH TEXT, NO GIANT WALL PLAQUE ON EMPTY WALLS. Pure cinematic live-action only."
+    },
+    "tourism_hospitality": {
+      "name": "Turizm, Butik Otel, Tatil Köyü, Seyahat & Konaklama",
+      "keywords": [
+        "otel",
+        "butik otel",
+        "tatil",
+        "pansiyon",
+        "resort",
+        "bungalov",
+        "glamping",
+        "turizm",
+        "seyahat",
+        "konaklama",
+        "rezervasyon",
+        "deniz",
+        "plaj",
+        "havuz",
+        "spa",
+        "gezi"
+      ],
+      "sceneAtmosphere": "Turkuaz deniz manzaralı, zeytin ağaçları ve begonvillerle çevrili Ege/Akdeniz butik oteli. Sonsuzluk havuzunda güneş pırıltıları, beyaz keten perdeler, tik ağacı şezlonglar ve huzurlu sessizlik.",
+      "rigidSurfaceObjects": [
+        "Resepsiyon ceviz tezgahında pirinç masa isimliği",
+        "Oda anahtarlığı masif ahşap künyesinde dağlama logo",
+        "Karşılama tepsisindeki porselen veya cam altlıkta zarif amblem",
+        "Lobi lounge karşılama masasında şık ahşap masa standı"
+      ],
+      "recommendedTurkishCTAs": [
+        "REZERVASYON",
+        "ERKEN REZERVASYON",
+        "ODANI SEÇ",
+        "FİYATLARI GÖR",
+        "TATİLİNİ PLANLA"
+      ],
+      "audioDirectives": "Yumuşak dalga sesleri, uzaktan cırcır böceği ve hafif chillout lounge piyano melodisi. Huzur veren, dinlendirici ve davetkar Türkçe spiker tonu: 'Tüm yorgunluğunuzu geride bırakın. Unutulmaz bir tatil deneyimi sizi bekliyor.'",
+      "forbiddenElements": [
+        "Kötü hava fırtına",
+        "aşırı kalabalık gürültülü havuz",
+        "kirli şezlong",
+        "boş duvara asılı dev tabela",
+        "ekrana gömülü yazı"
+      ],
+      "goldenPromptTemplate": "9:16 dikey formatta üst düzey Türk televizyon ve sinema reklam filmi.\nMarka: {{MARKA}}. Kurumsal Logo: {{LOGO_TANIMI}}.\nÜrün: {{URUN}}.\nSAHNE 1 (0-3sn): Turkuaz deniz manzaralı huzurlu butik otel. Resepsiyon ceviz tezgahında pirinç masa isimliği: '{{MARKA}}'. SIFIR KÜÇÜK YAZI.\nSAHNE 2 (3-7sn): Şezlong başı ferahlatıcı sunum, havuz başı gün ışığı. Karşılama tepsisinde ufak net buton: 'REZERVASYON'. TERTEMİZ HUZUR VEREN ÇEKİM.\nSAHNE 3 (7-10sn): Butik otel lobi lounge alanı, deniz esintisi. Karşılama masasında şık ahşap isimlikte '{{MARKA}}' ve 'AYRICALIKLI TATİL DENEYİMİ' yer alır. SIFIR BOŞ DUVAR, SIFIR DEV KUTU TABELA.\nSESLENDİRME: Kristal netliğinde profesyonel Türkçe erkek reklam spikeri sesi: 'Tüm yorgunluğunuzu geride bırakın. Unutulmaz bir tatil deneyimi sizi bekliyor.'\nKESİN KURAL: Ekranda havada uçuşan harf, boş duvara dev kutu tabela KESİNLİKLE OLMAYACAKTIR. STRICT RULE: NO FLOATING LETTERS, NO GIBBERISH TEXT, NO GIANT WALL PLAQUE ON EMPTY WALLS. Pure cinematic live-action only."
+    },
+    "logistics_transport": {
+      "name": "Lojistik, Taşımacılık, Kargo, Antrepo & Filo Yönetimi",
+      "keywords": [
+        "lojistik",
+        "kargo",
+        "nakliye",
+        "nakliyat",
+        "taşımacılık",
+        "tasimacilik",
+        "tır",
+        "tir",
+        "kamyon",
+        "filo",
+        "antrepo",
+        "depo",
+        "navlun",
+        "gümrük",
+        "gumruk",
+        "dağıtım",
+        "dagitim"
+      ],
+      "sceneAtmosphere": "Geniş otobanda gün batımına doğru güvenle ilerleyen pırıl pırıl kurumsal tır filosu veya devasa, ışıl ışıl modern lojistik aktarma merkezi. Dinamik dron takip açısı, pürüzsüz asfalt ve profesyonel filo gücü.",
+      "rigidSurfaceObjects": [
+        "Operasyon bankosundaki fırçalanmış çelik masa isimliği",
+        "Tır dorse brandasındaki ve kabin kapısındaki kurumsal logo",
+        "Koli ve palet etiketlerindeki okunaklı barkod ve kurumsal kimlik",
+        "Filo sevk masasında şık metal isimlik"
+      ],
+      "recommendedTurkishCTAs": [
+        "TEKLİF AL",
+        "FİLO KİRALAMA",
+        "GÜVENLİ TESLİMAT",
+        "FİYAT ALIN",
+        "HEMEN ARAYIN"
+      ],
+      "audioDirectives": "Güçlü ama sakin motor uğultusu, otoban akışı foley sesi, telsiz onay tıkırtısı. Tok, dinamik, güvenilir ve dakik Türkçe spiker tonu: 'Türkiye'nin her noktasına güvenli ve zamanında teslimat. Lojistikte güçlü çözüm ortağınız.'",
+      "forbiddenElements": [
+        "Kaza devrilmiş tır",
+        "çamurlu bozuk yol",
+        "hasarlı ezilmiş koli",
+        "boş duvara dev kutu tabela",
+        "ekrana gömülü yazı"
+      ],
+      "goldenPromptTemplate": "9:16 dikey formatta üst düzey Türk televizyon ve sinema reklam filmi.\nMarka: {{MARKA}}. Kurumsal Logo: {{LOGO_TANIMI}}.\nÜrün: {{URUN}}.\nSAHNE 1 (0-3sn): Pırıl pırıl lojistik operasyon merkezi. Operasyon bankosundaki fırçalanmış çelik masa isimliğinde logo ve '{{MARKA}}'. SIFIR KÜÇÜK YAZI.\nSAHNE 2 (3-7sn): Modern antrepoda barkod tarama ve düzenli sevkiyat operasyonu. Koli etiketinde net buton: 'GÜVENLİ TESLİMAT'. TERTEMİZ DİNAMİK KADRAJ.\nSAHNE 3 (7-10sn): Filo sevk ve kontrol merkezi. Ekranlar önünde planlama yapan uzman, masadaki şık metal isimlikte '{{MARKA}}' ve 'ZAMANINDA GÜVENLİ LOJİSTİK' yer alır. SIFIR BOŞ DUVAR, SIFIR DEV KUTU TABELA.\nSESLENDİRME: Kristal netliğinde profesyonel Türkçe erkek reklam spikeri sesi: 'Türkiye\\'nin her noktasına güvenli ve zamanında teslimat. Lojistikte güçlü çözüm ortağınız.'\nKESİN KURAL: Ekranda havada uçuşan harf, boş duvara dev kutu tabela KESİNLİKLE OLMAYACAKTIR. STRICT RULE: NO FLOATING LETTERS, NO GIBBERISH TEXT, NO GIANT WALL PLAQUE ON EMPTY WALLS. Pure cinematic live-action only."
+    },
+    "education_academy": {
+      "name": "Eğitim, Akademi, Kurs, Üniversite, Dil Okulu & Sınav",
+      "keywords": [
+        "kurs",
+        "akademi",
+        "eğitim",
+        "egitim",
+        "okul",
+        "kolej",
+        "üniversite",
+        "universite",
+        "dershane",
+        "yks",
+        "lgs",
+        "kpss",
+        "ingilizce",
+        "dil kursu",
+        "yazılım kursu",
+        "öğrenci",
+        "ogrenci",
+        "özel ders",
+        "ozel ders"
+      ],
+      "sceneAtmosphere": "Aydınlık, geniş pencereli, ahşap ve modern renklerle tasarlanmış interaktif sınıf ve kütüphane amfisi. Gençlerin hevesle tablet ve defterleriyle derse katıldığı, pozitif ve geleceğe umut aşılayan modern eğitim atmosferi.",
+      "rigidSurfaceObjects": [
+        "Karşılama deskindeki şık akrilik masa isimliği",
+        "Derslik kapısındaki mat pleksi yönlendirme levhası",
+        "Akademi rozetinde veya öğrenci dosya klasöründe logo baskısı",
+        "Rehberlik danışman masasında şık pleksi isimlik"
+      ],
+      "recommendedTurkishCTAs": [
+        "KAYIT OL",
+        "ERKEN KAYIT",
+        "ÜCRETSİZ DENEME",
+        "BURSLULUK SINAVI",
+        "BİLGİ ALIN"
+      ],
+      "audioDirectives": "İlham veren, tempolu hafif marimba ve akustik gitar tınısı, defter yaprağı çevirme sesi. Dinamik, motive edici, genç ve samimi Türkçe eğitmen/spiker tonu: 'Geleceğinizi ertelemeyin. Uzman eğitim kadromuzla başarıya giden yolu keşfedin.'",
+      "forbiddenElements": [
+        "Sıkılmış uyuyan öğrenci",
+        "karanlık eski sınıf",
+        "karatahta tozu",
+        "boş duvara dev kutu tabela",
+        "ekrana gömülü altyazı"
+      ],
+      "goldenPromptTemplate": "9:16 dikey formatta üst düzey Türk televizyon ve sinema reklam filmi.\nMarka: {{MARKA}}. Kurumsal Logo: {{LOGO_TANIMI}}.\nÜrün: {{URUN}}.\nSAHNE 1 (0-3sn): Ferah, modern ve ilham verici akademi ortamı. Karşılama deskindeki şık akrilik masa isimliğinde logo ve '{{MARKA}}'. SIFIR KÜÇÜK YAZI.\nSAHNE 2 (3-7sn): Öğrenciler interaktif ekran ve tabletlerle keyifle çalışır. Sunum tahtası kenarında net buton: 'GELECEĞİNİ ŞEKİLLENDİR'. TERTEMİZ İLHAM VERİCİ ÇEKİM.\nSAHNE 3 (7-10sn): Aydınlık danışmanlık ofisi. Başarı sertifikaları yanında rehber öğretmen masası, şık pleksi isimlikte '{{MARKA}}' ve 'GELECEĞİN EĞİTİM VİZYONU' yer alır. SIFIR BOŞ DUVAR, SIFIR DEV LEVHA.\nSESLENDİRME: Kristal netliğinde profesyonel Türkçe erkek reklam spikeri sesi: 'Geleceğinizi ertelemeyin. Uzman eğitim kadromuzla başarıya giden yolu keşfedin.'\nKESİN KURAL: Ekranda havada uçuşan harf, boş duvara dev kutu tabela KESİNLİKLE OLMAYACAKTIR. STRICT RULE: NO FLOATING LETTERS, NO GIBBERISH TEXT, NO GIANT WALL PLAQUE ON EMPTY WALLS. Pure cinematic live-action only."
+    },
+    "beauty_wellness": {
+      "name": "Güzellik Merkezi, Kuaför, Cilt Bakımı, Spa & Kozmetik",
+      "keywords": [
+        "kuaför",
+        "kuafor",
+        "güzellik",
+        "guzellik",
+        "cilt bakımı",
+        "cilt bakimi",
+        "lazer epilasyon",
+        "manikür",
+        "pedikür",
+        "tırnak",
+        "tirnak",
+        "masaj",
+        "spa",
+        "wellness",
+        "makyaj",
+        "kozmetik",
+        "saç bakım",
+        "sac bakim"
+      ],
+      "sceneAtmosphere": "Yumuşak pembe, pudra, krem ve altın yansımalarla bezenmiş ferah, lüks güzellik salonu veya spa süiti. Yuvarlak aydınlatmalı aynalar, cam damlalıklı serum şişeleri, tütsü hafifliği ve dingin şıklık.",
+      "rigidSurfaceObjects": [
+        "Karşılama mermer bankosundaki altın çerçeveli pleksi masa isimliği",
+        "Ayna çerçevesine monte edilmiş zarif metalik logo amblemi",
+        "Kozmetik ürün cam şişesindeki altın yaldız etiket",
+        "Dinlenme köşesi ceviz sehpasında şık akrilik masa isimliği"
+      ],
+      "recommendedTurkishCTAs": [
+        "RANDEVU AL",
+        "KENDİNİ ŞIMART",
+        "ÜCRETSİZ ANALİZ",
+        "FIRSATI YAKALA",
+        "BİLGİ ALIN"
+      ],
+      "audioDirectives": "Sakinleştirici su sesi, hafif arp ve rüzgar çanı tınısı, krem/serum damlama foley sesi. Yumuşak, kadife, zarif ve güven veren Türkçe spiker tonu: 'Kendinize hak ettiğiniz ışıltıyı hediye edin. Doğal güzelliğiniz için buradayız.'",
+      "forbiddenElements": [
+        "Kızarmış tahriş olmuş cilt",
+        "yerdeki saç kılları",
+        "dağınık boya kapları",
+        "boş duvara dev kutu tabela",
+        "ekrana gömülü yazı"
+      ],
+      "goldenPromptTemplate": "9:16 dikey formatta üst düzey Türk televizyon ve sinema reklam filmi.\nMarka: {{MARKA}}. Kurumsal Logo: {{LOGO_TANIMI}}.\nÜrün: {{URUN}}.\nSAHNE 1 (0-3sn): Lüks ve dingin güzellik & wellness stüdyosu. Karşılama mermer bankosundaki altın çerçeveli pleksi isimlikte logo ve '{{MARKA}}'. SIFIR KÜÇÜK YAZI.\nSAHNE 2 (3-7sn): Uzman estetisyen titizlikle cilt analizi ve bakım uygular. Serum şişesi yanında net buton: 'GÜZELLİK DOKUNUŞU'. TERTEMİZ DİNGİN KADRAJ.\nSAHNE 3 (7-10sn): Huzurlu bakım odası dinlenme köşesi. Masadaki şık akrilik isimlikte '{{MARKA}}' ve 'DOĞAL IŞILTI & GÜZELLİK' yer alır. SIFIR BOŞ DUVAR, SIFIR KUTU TABELA.\nSESLENDİRME: Kristal netliğinde profesyonel Türkçe erkek reklam spikeri sesi: 'Kendinize hak ettiğiniz ışıltıyı hediye edin. Doğal güzelliğiniz için buradayız.'\nKESİN KURAL: Ekranda havada uçuşan harf, boş duvara dev kutu tabela KESİNLİKLE OLMAYACAKTIR. STRICT RULE: NO FLOATING LETTERS, NO GIBBERISH TEXT, NO GIANT WALL PLAQUE ON EMPTY WALLS. Pure cinematic live-action only."
+    },
+    "furniture_interior": {
+      "name": "Mobilya, Dekorasyon, Mutfak, Banyo & İç Mimari",
+      "keywords": [
+        "mobilya",
+        "koltuk",
+        "kanepe",
+        "yatak",
+        "baza",
+        "masa",
+        "sandalye",
+        "dolap",
+        "mutfak dolabı",
+        "banyo",
+        "ahşap",
+        "ahsap",
+        "lake",
+        "dekorasyon",
+        "showroom",
+        "tasarım mobilya"
+      ],
+      "sceneAtmosphere": "Geniş, yüksek tavanlı, sıcak parke zeminli ferah showroom veya modern mimari salon. Doğal ceviz kaplamalar, dokulu keten kumaşlar, yumuşak lambader ışığı ve huzurlu ev konforu.",
+      "rigidSurfaceObjects": [
+        "Masif meşe sehpa üzerindeki pirinç masa isimliği",
+        "Koltuk kolçağındaki deri kabartma marka etiketi",
+        "Showroom ürün kartvizitliği ve ahşap katalog standı",
+        "Tasarım ofisi masasında şık ceviz masa isimliği"
+      ],
+      "recommendedTurkishCTAs": [
+        "ÖLÇÜ ALALIM",
+        "SHOWROOM'A GELİN",
+        "ÖZEL TASARIM",
+        "KATALOG İNCELE",
+        "FİYAT ALIN"
+      ],
+      "audioDirectives": "Hafif marangoz ahşap planya sesi, kumaşa dokunma hışırtısı, fincanın masaya konma tıkırtısı. Sıcak, güven veren, usta ve zevkli Türkçe spiker tonu: 'Evinize değer katan el işçiliği tasarımlar. Konfor ve estetiği bir arada yaşayın.'",
+      "forbiddenElements": [
+        "Tozlu talaşlı dağınık atölye",
+        "çizik kırık mobilya",
+        "sallanan dayanıksız ayaklar",
+        "boş duvara dev kutu tabela",
+        "ekrana gömülü yazı"
+      ],
+      "goldenPromptTemplate": "9:16 dikey formatta üst düzey Türk televizyon ve sinema reklam filmi.\nMarka: {{MARKA}}. Kurumsal Logo: {{LOGO_TANIMI}}.\nÜrün: {{URUN}}.\nSAHNE 1 (0-3sn): Geniş, ferah ve zevkle döşenmiş mobilya showroomu. Masif meşe sehpa üzerindeki pirinç masa isimliğinde logo ve '{{MARKA}}'. SIFIR KÜÇÜK YAZI.\nSAHNE 2 (3-7sn): Usta ellerin ahşap ve deri birleşimindeki kusursuz işçiliği. Tasarım kataloğu üzerinde net buton: 'ÖZEL İŞÇİLİK'. TERTEMİZ DOKU ÇEKİMİ.\nSAHNE 3 (7-10sn): Sıcak salon yaşam alanı konsepti. Masada kahve fincanı ve mimari katalog, şık ceviz masa isimliğinde '{{MARKA}}' ve 'YAŞAM ALANLARINA DEĞER KATAN TASARIMLAR' yer alır. SIFIR BOŞ DUVAR, SIFIR DEV TABELA.\nSESLENDİRME: Kristal netliğinde profesyonel Türkçe erkek reklam spikeri sesi: 'Evinize değer katan el işçiliği tasarımlar. Konfor ve estetiği bir arada yaşayın.'\nKESİN KURAL: Ekranda havada uçuşan harf, boş duvara dev kutu tabela KESİNLİKLE OLMAYACAKTIR. STRICT RULE: NO FLOATING LETTERS, NO GIBBERISH TEXT, NO GIANT WALL PLAQUE ON EMPTY WALLS. Pure cinematic live-action only."
+    },
+    "corporate_services": {
+      "name": "Kurumsal Hizmetler, Hukuk, Mali Müşavirlik, Sigorta & Finans",
+      "keywords": [
+        "avukat",
+        "hukuk",
+        "mali müşavir",
+        "muhasebe",
+        "sigorta",
+        "kasko",
+        "finans",
+        "danışmanlık",
+        "danismanlik",
+        "denetim",
+        "vergi",
+        "bordro",
+        "kurumsal",
+        "yönetim danışmanlığı"
+      ],
+      "sceneAtmosphere": "Görkemli gökdelen plazada, panoramik şehir manzaralı prestijli toplantı odası. Cilalı maun masa, deri evrak çantası, sıcak gün batımı yansıması ve kararlı profesyonel iş duruşu.",
+      "rigidSurfaceObjects": [
+        "Toplantı masası üzeri fırçalanmış metal masa isimliği",
+        "Deri evrak klasörü üzerindeki altın yaldız kurumsal baskı",
+        "Danışman masasında şeffaf akrilik masa plaketi",
+        "Yönetici masasında şık masa isimliği"
+      ],
+      "recommendedTurkishCTAs": [
+        "HEMEN DANIŞIN",
+        "TEKLİF ALIN",
+        "RANDEVU OLUŞTUR",
+        "BİLGİ EDİNİN",
+        "GÜVENCEYE ALIN"
+      ],
+      "audioDirectives": "Pürüzsüz saat tik-tak sesi, hafif dolmakalem yazma foley sesi, derin kurumsal piyano akoru. Ağırbaşlı, prestijli, güven veren ve net Türkçe spiker tonu: 'İşiniz emin ellerde. Büyümenize güç katan profesyonel kurumsal danışmanlık.'",
+      "forbiddenElements": [
+        "Mahkeme kaosu",
+        "haciz evrakı",
+        "dağınık tozlu arşiv",
+        "boş mermer duvara dev kutu tabela",
+        "ekrana gömülü altyazı"
+      ],
+      "goldenPromptTemplate": "9:16 dikey formatta üst düzey Türk televizyon ve sinema reklam filmi.\nMarka: {{MARKA}}. Kurumsal Logo: {{LOGO_TANIMI}}.\nÜrün: {{URUN}}.\nSAHNE 1 (0-3sn): Prestijli gökdelen toplantı odası, panoramik şehir manzarası. Toplantı masası üzeri fırçalanmış metal isimlikte logo ve '{{MARKA}}'. SIFIR KÜÇÜK YAZI.\nSAHNE 2 (3-7sn): İş ortakları güvenle el sıkışır, ekranda başarı grafiği. Deri evrak klasöründe net buton: 'UZMAN DANIŞMANLIK'. TERTEMİZ PRESTİJLİ KADRAJ.\nSAHNE 3 (7-10sn): Yönetici ofisi çalışma masası, aydınlık gün ışığı. Masada açık laptop ve şık masa isimliğinde '{{MARKA}}' ve 'STRATEJİK KURUMSAL ÇÖZÜMLER' yer alır. SIFIR BOŞ DUVAR, SIFIR DEV KUTU TABELA.\nSESLENDİRME: Kristal netliğinde profesyonel Türkçe erkek reklam spikeri sesi: 'İşiniz emin ellerde. Büyümenize güç katan profesyonel kurumsal danışmanlık.'\nKESİN KURAL: Ekranda havada uçuşan harf, boş duvara dev kutu tabela KESİNLİKLE OLMAYACAKTIR. STRICT RULE: NO FLOATING LETTERS, NO GIBBERISH TEXT, NO GIANT WALL PLAQUE ON EMPTY WALLS. Pure cinematic live-action only."
+    }
+  },
   "brands": {
     "bofe": {
       "brandName": "Bofe",
@@ -30,20 +702,24 @@
             "hasat",
             "tarak",
             "teleskopik",
-            "çırpıcı"
+            "çırpıcı",
+            "cirpici"
           ],
           "visualIdentity": "Üstte sarı/lime mekanik şanzıman kutusu, üzerinde çift hareketli esnek siyah karbon fiber tarak çubukları, hafif siyah alüminyum/karbon teleskopik boru, altta sarı/lime ergonomik tetikli tutma sapı ve spiral batarya bağlantı kablosu.",
-          "cinematicScene": "Ege ve Akdeniz'in güneşli, bereketli zeytinlikleri. Yaşlı zeytin ağaçlarının gümüşi yeşil yaprakları arasından süzülen altın rengi gün ışığı. Yere serilmiş temiz hasat brandaları üzerine makinenin titreşimiyle doludizgin dökülen etli parlak yeşil ve siyah zeytinler. Çiftçinin yorulmadan, titreşimsiz ve hafif teleskopik makineyle yüksek dallara kolayca ulaşma anı.",
-          "goldenPromptTemplate": "Güneşli bir Ege zeytinliğinde, yere serilmiş geniş hasat brandaları üzerinde çalışan Bofe akülü teleskopik zeytin hasat makinesi. Makinenin sarı/lime renkli üst şanzıman kafasındaki esnek siyah karbon çubuklar zeytin dalları arasında hızla titreşerek zeytinleri nazikçe yere dökerken, etli taze zeytinlerin brandaya yağmur gibi dökülüşü. Kullanıcının ergonomik tutma sapıyla yüksek dallara zahmetsizce uzanması, gün ışığı hüzmeleri, 4K sinematik canlı çekim."
+          "cinematicScene": "Ege ve Akdeniz'in güneşli, bereketli zeytinlikleri. Yaşlı zeytin ağaçlarının gümüşi yeşil yaprakları arasından süzülen altın rengi gün ışığı. Yere serilmiş temiz hasat brandaları üzerine makinenin titreşimiyle doludizgin dökülen etli parlak yeşil ve siyah zeytinler.",
+          "goldenPromptTemplate": "SAHNE 3 (7-10sn): Gün batımı modern plaza lobisi. Mermer duvara monte şık fırçalanmış tabelada kurumsal logo ve net: '{{MARKA}}'. TERTEMİZ PRESTİJLİ REKLAM KAPANIŞI."
         },
         "sarjli_pompa": {
           "productName": "Bofe Şarjlı Akülü Sırt İlaçlama Pompası",
           "keywords": [
             "pompa",
             "sırt pompası",
+            "sirt pompasi",
             "ilaçlama",
+            "ilaclama",
             "sisleme",
-            "akülü pompa"
+            "akülü pompa",
+            "akulu pompa"
           ],
           "visualIdentity": "Açık mavi polietilen ergonomik depo gövdesi, üzerinde belirgin siyah 'bofe' logosu, siyah kalın omuz askıları, yüksek basınçlı mikronize nozul lansı.",
           "cinematicScene": "Meyve bahçesinde ve serada gün doğumunda mikronize sisleme yapan çiftçi. Bitki yaprakları üzerinde parıldayan mikro su damlacıkları, hafif ve güçlü çalışma anı."
@@ -65,19 +741,41 @@
     },
     "veriburada": {
       "brandName": "Veri Burada",
-      "organization": "Veri Burada B2B Lead & Data Platformu",
+      "organization": "Veri Burada B2B Lead & Google Haritalar Platformu",
       "colors": {
-        "primary": "#2e7d32",
-        "accent": "#a5d6a7",
-        "background": "#0a192f"
+        "primary": "#1b5e20",
+        "accent": "#2e7d32",
+        "secondary": "#4caf50",
+        "background": "#ffffff"
       },
-      "logoGuidelines": "Yeşil onay tikli 'Veri Burada' kurumsal amblemi.",
-      "cinematicScene": "Yüksek katlı cam gökdelen ofisi, veri ve finans dashboard ekranları, canlı akan harita grafikleri.",
+      "logoGuidelines": "Orijinal yeşil bağlantılı veri ağı (connected network nodes constellation) amblemi: Merkezinde büyük yeşil dairesel çekirdek düğüm ve etrafında ince yeşil çizgilerle birbirine bağlanan veri düğüm noktaları. Sans-serif temiz 'Veri Burada' tipografisi. Kesinlikle onay tiki veya sahte logo yapılmayacak.",
+      "products": {
+        "harita_veri": {
+          "productName": "Google Haritalar İşletme Listesi ve Müşteri Analitiği",
+          "keywords": [
+            "harita",
+            "liste",
+            "müşteri",
+            "musteri",
+            "b2b",
+            "veri",
+            "leads",
+            "işletme",
+            "isletme",
+            "excel",
+            "google haritalar"
+          ],
+          "visualIdentity": "Laptop ekranındaki Google Haritalar üzerinde yeşil pinlerle parıldayan işletmeler, ekranda net 'YENİ MÜŞTERİLER' arayüz kartı ve 'MÜŞTERİ BUL' butonu.",
+          "cinematicScene": "Prestijli kurumsal ofis, sıcak ceviz çalışma masası. Masanın üzerinde zarif fırçalanmış metal masa isimliği ve standında yalnızca orijinal yeşil veri ağı logo amblemi ve VERİ BURADA kurumsal tipografisi.",
+          "goldenPromptTemplate": "9:16 dikey formatta üst düzey Türk televizyon ve sinema reklam filmi.\nMarka: {{MARKA}}. Kurumsal Logo: {{LOGO_TANIMI}}.\nÜrün: {{URUN}}.\nSAHNE 1 (0-3sn): Prestijli kurumsal ofis, sıcak ceviz çalışma masası ve modern dizüstü bilgisayar. Masanın üzerinde zarif fırçalanmış metal isimlikte yalnızca kurumsal yeşil veri ağı logosu ve '{{MARKA}}'. SIFIR KÜÇÜK YAZI, SIFIR UYDURMA AMBLEM.\nSAHNE 2 (3-7sn): Laptop ekranında Google Haritalar üzerinde temiz minimalist radar taraması, canlı parlayan yeşil konum pinleri. Ekran arayüz butonunda ufak net buton: 'MÜŞTERİ BUL'. TERTEMİZ SİNEMATİK DİJİTAL ARAYÜZ, SIFIR SAHTE SOKAK YAZISI.\nSAHNE 3 (7-10sn): Gün batımı ışığında sıcak ve aydınlık çalışma ortamı. Güven veren genç yönetici laptop ekranına gülümseyerek bakar, masadaki şık masa isimliğinde '{{MARKA}}' ve 'B2B VERİ ÇÖZÜMLERİ' yer alır. SIFIR BOŞ DUVAR, SIFIR DEV MERMER LEVHA.\nSESLENDİRME: Kristal netliğinde profesyonel Türkçe erkek reklam spikeri sesi: 'Doğru müşterilere anında ulaşın, satışlarınızı Veri Burada ile hemen büyütün.'\nKESİN KURAL: Ekranda havada uçuşan harf, bilgi kutusu, uydurma altıgen, boş duvara dev kutu tabela KESİNLİKLE OLMAYACAKTIR. STRICT RULE: NO FLOATING LETTERS, NO GIBBERISH TEXT, NO GIANT WALL PLAQUE ON EMPTY MARBLE WALLS. Pure cinematic live-action only."
+        }
+      },
       "pastSuccesses": [
         {
-          "id": "video_1789814831422",
-          "product": "B2B Yeni İşletme Takip Çözümü",
-          "result": "Kusursuz kurumsal ofis ve laptop çerçevesinde jilet gibi Veri Burada logosu."
+          "id": "VeriBurada_Kampanya_CTA_Veo",
+          "product": "Google Haritalar İşletme Listesi",
+          "result": "Cam masa üzeri akrilik plakada net yeşil logo ve VERİ BURADA kurumsal ismi; ekranda Google Haritalar UI'ı; sıfır harf bozulması.",
+          "timestamp": "2026-09-19T13:25:00.000Z"
         }
       ]
     },
@@ -96,22 +794,28 @@
           "productName": "Tuğla (Fabrikadan Halka Toptan Satış)",
           "keywords": [
             "tuğla",
+            "tugla",
             "inşaat",
+            "insaat",
             "şantiye",
+            "santiye",
             "palet",
             "çimento",
-            "yapı"
+            "cimento",
+            "yapı",
+            "yapi"
           ],
           "visualIdentity": "Nizami dizilmiş fırınlanmış killi kırmızı tuğla paletleri, şeffaf koruyucu shrink ambalaj üzerinde baskılı Ayvazoğlu İnşaat amblemi, sarı endüstriyel forklift ve sevkiyat tırı.",
           "cinematicScene": "Modern ve aydınlık tuğla üretim fabrikası ve şantiye sevkiyat sahası. Konveyör bantları, nizami tuğla paletleri, vinç ve tır yükleme alanı, gün ışığında güven veren endüstriyel çekim.",
-          "goldenPromptTemplate": "Modern ve aydınlık bir tuğla üretim fabrikası ve sevkiyat sahası. Konveyör bandından çıkan nizami killi tuğla paletlerinin şeffaf ambalajı üzerinde baskılı Ayvazoğlu İnşaat logosu. Fabrika tavanındaki endüstriyel metal tabelada net ve kusursuz büyük harflerle 'FABRİKADAN DOĞRUDAN' yazısı. Sarı forkliftin paletleri güvenle taşıması, şantiye alanına yanaşan tır, 4K sinematik canlı çekim."
+          "goldenPromptTemplate": "SAHNE 3 (7-10sn): Gün batımı modern plaza lobisi. Mermer duvara monte şık fırçalanmış tabelada kurumsal logo ve net: '{{MARKA}}'. TERTEMİZ PRESTİJLİ REKLAM KAPANIŞI."
         }
       },
       "pastSuccesses": [
         {
           "id": "video_ayvazoglu_tugla_flow",
           "product": "Tuğla (Fabrikadan Halka Toptan Satış)",
-          "result": "Kusursuz 3D endüstriyel metal tabela ('FABRİKADAN DOĞRUDAN'), ambalaj üstü logo ve tır kapısı kurumsal kimliği; sıfır harf bozulması."
+          "result": "Kusursuz 3D endüstriyel metal tabela ('FABRİKADAN DOĞRUDAN'), ambalaj üstü logo ve tır kapısı kurumsal kimliği; sıfır harf bozulması.",
+          "timestamp": "2026-09-19T11:45:00.000Z"
         }
       ]
     }

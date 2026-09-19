@@ -19,6 +19,7 @@ export async function updateOrgQuotas(
     const plan = String(formData.get('plan') ?? '').trim() || null
     const accountsQuota = Number(formData.get('accounts_quota'))
     const monthlyQuota = Number(formData.get('monthly_message_quota'))
+    const monthlyVideoQuota = Number(formData.get('monthly_video_quota'))
 
     if (!orgId) return { error: 'Org gerekli.' }
 
@@ -27,6 +28,7 @@ export async function updateOrgQuotas(
       p_plan: plan ?? undefined,
       p_accounts_quota: Number.isFinite(accountsQuota) ? accountsQuota : undefined,
       p_monthly_message_quota: Number.isFinite(monthlyQuota) ? monthlyQuota : undefined,
+      p_monthly_video_quota: Number.isFinite(monthlyVideoQuota) ? monthlyVideoQuota : undefined,
     })
     if (error) return { error: error.message }
 

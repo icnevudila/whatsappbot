@@ -45,6 +45,8 @@ export type OrgBits = {
   about: string | null
   websiteHint: string | null
   logoPreview: string | null
+  monthlyVideoQuota?: number
+  monthlyVideoUsed?: number
 }
 
 export type WizardBootstrap = {

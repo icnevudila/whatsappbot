@@ -120,6 +120,8 @@ export type CreativePayload = CreativeSnapshot & {
   model?: string | null
   attempts?: string[] | null
   thumbnailUrl?: string | null
+  cleanPublicUrl?: string | null
+  cleanStoragePath?: string | null
   videoDuration?: number | null
   cost?: { provider?: string; model?: string; imageCount: number } | null
 }

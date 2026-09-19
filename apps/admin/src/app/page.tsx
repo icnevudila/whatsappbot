@@ -16,6 +16,7 @@ type OverviewOrg = {
   plan: string
   accounts_quota: number
   monthly_message_quota?: number
+  monthly_video_quota?: number
   member_count: number
   suspended_at?: string | null
   suspend_reason?: string | null
@@ -333,6 +334,7 @@ export default async function AdminOverviewPage() {
                           plan={org.plan}
                           accountsQuota={org.accounts_quota}
                           messageQuota={org.monthly_message_quota}
+                          videoQuota={org.monthly_video_quota}
                         />
                       </td>
                       <td className="px-4 py-2.5">

@@ -187,6 +187,33 @@ export async function processCreativeGeneration(
     const isVideo = creative.format === 'video' || snapshot.formatId === 'reels_video'
 
     if (isVideo) {
+      // 0. İşletme Bazlı Video Kotası Güvence Kontrolü
+      const { data: orgQuotaData } = await supabase
+        .from('organizations')
+        .select('monthly_video_quota')
+        .eq('id', creative.org_id)
+        .maybeSingle()
+
+      const videoQuota = orgQuotaData?.monthly_video_quota ?? 5
+
+      const startOfMonth = new Date()
+      startOfMonth.setDate(1)
+      startOfMonth.setHours(0, 0, 0, 0)
+
+      const { count: videoUsedCount } = await supabase
+        .from('creatives')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', creative.org_id)
+        .eq('format', 'video')
+        .in('status', ['ready', 'processing', 'pending'])
+        .neq('id', creative.id)
+        .gte('created_at', startOfMonth.toISOString())
+
+      const used = videoUsedCount ?? 0
+      if (used >= videoQuota) {
+        throw new Error(`Bu ayki video üretim kotanıza (${used}/${videoQuota}) ulaştınız. Limit artırımı için lütfen platform yöneticinizle iletişime geçin.`)
+      }
+
       // 1. Kurumsal Logo & Marka Kiti Zorunluluk Kontrolü
       let logoUrl: string | null = null
       if (snapshot.brandKit?.logoPath) {
@@ -223,6 +250,9 @@ export async function processCreativeGeneration(
         body: JSON.stringify({
           orgId: creative.org_id,
           prompt: videoPrompt,
+          preferredEngine: 'flow',
+          engine: 'flow',
+          useFlow: true,
           brandName: overlay.brandName,
           productName: chosenProduct.name || null,
           productImageUrl,
@@ -242,13 +272,17 @@ export async function processCreativeGeneration(
       }
 
       const vidJson = (await vidRes.json()) as {
-        data?: { url?: string; thumbnailUrl?: string }[]
+        data?: { url?: string; cleanUrl?: string; thumbnailUrl?: string }[]
         videoId?: string
+        videoUrl?: string
+        cleanVideoUrl?: string
+        subtitledVideoUrl?: string
         thumbnailUrl?: string
       }
-      const videoUrl = vidJson.data?.[0]?.url
+      const videoUrl = vidJson.data?.[0]?.url || vidJson.videoUrl
       if (!videoUrl) throw new Error('Video URL alınamadı')
 
+      const cleanVideoUrl = vidJson.data?.[0]?.cleanUrl || vidJson.cleanVideoUrl || null
       const rawThumbUrl = vidJson.thumbnailUrl || vidJson.data?.[0]?.thumbnailUrl
 
       const fileRes = await fetch(videoUrl, { signal: AbortSignal.timeout(60000) })
@@ -263,6 +297,29 @@ export async function processCreativeGeneration(
       if (upErr) throw new Error(upErr.message)
 
       const { data: publicUrl } = supabase.storage.from('creatives').getPublicUrl(storagePath)
+
+      // Temiz (Altyazısız) Video Yükleme (İsteğe bağlı veya alternatif versiyon olarak)
+      let uploadedCleanUrl: string | null = null
+      let uploadedCleanPath: string | null = null
+      if (cleanVideoUrl && cleanVideoUrl !== videoUrl) {
+        try {
+          const cleanRes = await fetch(cleanVideoUrl, { signal: AbortSignal.timeout(60000) })
+          if (cleanRes.ok) {
+            const cleanBuffer = Buffer.from(await cleanRes.arrayBuffer())
+            uploadedCleanPath = `${creative.org_id}/${crypto.randomUUID()}_clean.mp4`
+            const { error: cleanUpErr } = await supabase.storage.from('creatives').upload(uploadedCleanPath, cleanBuffer, {
+              contentType: 'video/mp4',
+              upsert: false,
+            })
+            if (!cleanUpErr) {
+              const { data: cleanPub } = supabase.storage.from('creatives').getPublicUrl(uploadedCleanPath)
+              uploadedCleanUrl = cleanPub.publicUrl
+            }
+          }
+        } catch (cleanErr) {
+          console.warn('[creative.video.clean]', cleanErr)
+        }
+      }
 
       let uploadedThumbnailUrl: string | null = null
       if (rawThumbUrl) {
@@ -291,6 +348,8 @@ export async function processCreativeGeneration(
         generatedPrompt: videoPrompt,
         provider: 'omnistudio_veo',
         thumbnailUrl: uploadedThumbnailUrl || rawThumbUrl || null,
+        cleanPublicUrl: uploadedCleanUrl || null,
+        cleanStoragePath: uploadedCleanPath || null,
         cost: { provider: 'omnistudio_veo', imageCount: 1 },
       }
 

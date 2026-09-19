@@ -362,10 +362,10 @@ Görevin: Verilen marka, marka kiti, ürünler ve kampanya bağlamını inceleye
 - Süre: 10 saniye (3 Perde: ACT 1 (0-3s Giriş/Kanca/Ürün Detayı), ACT 2 (3-7s Eylem/Mesaj/Kullanım/Esnaf veya Oyuncu Diyaloğu), ACT 3 (7-10s Kapanış/Aksiyon Çağrısı)).
 - Dış Ses / Konuşma Durumu: ${
     isSpeech
-      ? 'Dış ses veya oyuncu konuşması VARDIR. Oyuncunun samimi Türkçe konuşma repliği veya dış ses metni mutlaka senaryoya yazılmalıdır.'
+      ? 'Dış ses veya oyuncu konuşması VARDIR. Promptun sonuna MUTLAKA tam olarak şu formatta ekle: SESLENDİRME: Kristal netliğinde profesyonel Türkçe erkek reklam spikeri sesi: "[15-20 kelimelik akıcı Türkçe reklam repliği]"'
       : 'Konuşma ve insan sesi YOKTUR. Sadece foley doğal ses efektleri ve dinamik fon müziği vardır. STRICT RULE: NO VOICE, NO SPEECH, NO DIALOGUE ekle.'
   }
-- EKRANDA YAZI YASAKTIR: Videonun ham çekiminde kesinlikle ekranda hiçbir banner, altyazı, yazı, tipografi, logo kartı OLMAYACAKTIR. 'STRICT RULE: NO ON-SCREEN TEXT, NO WORDS, NO LETTERS, NO LOGO CARDS, NO GRAPHIC OVERLAYS, NO BANNERS. Pure photorealistic live commercial footage only.' kuralı promptun sonuna eklenmelidir.
+- EKRANDA YAZI VE TABELA KURALI: Sahneye yazdırılacak metin SADECE katı fiziksel yüzeyler üzerinde (akrilik plaka, ahşap tezgah, metal tabela), EN FAZLA 2-3 ALL CAPS kelime olacaktır (Örn: "${brand.toUpperCase()}", "SİPARİŞ VER", "WHATSAPP İLE İLETİŞİME GEÇİN"). Ekranda havada uçuşan harf, bilgi kutusu, alt başlık veya uzun cümle KESİNLİKLE OLMAYACAKTIR.
 - MARKA VE ÜRÜN DOKUNULMAZLIĞI (ASLA OYNAMA YA DA VARYASYON YAPMA): Firmanın orijinal logosu, amblemi, marka renkleri ve gerçek ürün tasarımı kesinlikle korunacaktır. Ürün üzerinde hiçbir oynama, deformasyon veya varyasyon yapılmayacaktır. STRICT MANDATE: ZERO ALTERATION TO BRAND LOGO OR PRODUCT IDENTITY. PRESERVE ORIGINAL EMBLEM, COLORS, AND PHYSICAL PRODUCT FORM EXACTLY.
 - Çıktı olarak SADECE video motoruna gönderilecek nihai prompt metnini dön. Başka hiçbir açıklama, selamlama veya markdown tırnağı yazma.`
 

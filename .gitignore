@@ -73,3 +73,31 @@ apps/panel/public/landing/*-raw.mp4
 apps/panel/public/landing/shot-*.png
 apps/panel/public/landing/demo-raw.mp4
 whatsapp görsel/
+
+# Test ve debug scriptleri (root dizininde biriken)
+infra/
+*.wav
+*.mp4
+*.txt
+*.png
+mesajify_logos/
+mesajify_doner_test.*
+doner_*
+tugla_*
+montaj_frame*
+vnc_screen*
+v2_frame*
+gemini_snap*
+gemini_videos*
+flow_tr*
+flow_recognized*
+recognized_tr*
+slices.txt
+domain_onerileri.txt
+actual_speeches.txt
+vps_*.txt
+null
+4b09d84f-55d8-40f5-be7b-85b98b571070.png
+ayvaz_raw.wav
+bofe_raw.wav
+bofe_sarjli*
