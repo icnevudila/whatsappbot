@@ -1,0 +1,82 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2026-09-19T11:41:40.023Z",
+  "universalRules": [
+    "STRICT ZERO TEXT SALAD: Difüzyon video modellerine havada 3D yazı veya uzun başlık yazdırma; harfler erir ve bozulur. Sahne %100 saf canlı çekim olmalıdır.",
+    "STRICT BRAND & LOGO INVIOLABILITY: Yüklenen kurumsal logo, amblem şekli ve kurumsal renk kodları asla değiştirilemez, stilize varyasyonu yapılamaz.",
+    "STRICT PRODUCT FIDELITY: Gerçek ürün fotoğrafındaki kasa, gövde, renk ve fiziksel detaylar %100 birebir korunmalıdır; hayali veya farklılaştırılmış ürün varyasyonları üretilemez.",
+    "REALISTIC CINEMATIC SECTOR CONTEXT: Sektör asla karıştırılamaz (B2B teknoloji için gökdelen ofis; tarım için güneşli bahçe; inşaat için mimari şantiye)."
+  ],
+  "brands": {
+    "bofe": {
+      "brandName": "Bofe",
+      "organization": "Bofe Tarım & Bahçe Teknolojileri",
+      "colors": {
+        "primary": "#000000",
+        "secondary": "#026009",
+        "accent": "#acfe00",
+        "background": "#ffffff"
+      },
+      "logoGuidelines": "Küçük harfli, temiz geometrik 'bofe' tipografisi (tilted 'e' harfi ile). Ürünün kendi kasasında veya sahne köşesinde saf beyaz veya siyah olarak net görünmeli; asla harfleri bozulmamalıdır.",
+      "products": {
+        "zeytin_hasat": {
+          "productName": "Bofe Akülü Teleskopik Zeytin Silkme ve Hasat Makinesi",
+          "keywords": [
+            "zeytin",
+            "silkme",
+            "hasat",
+            "tarak",
+            "teleskopik",
+            "çırpıcı"
+          ],
+          "visualIdentity": "Üstte sarı/lime mekanik şanzıman kutusu, üzerinde çift hareketli esnek siyah karbon fiber tarak çubukları, hafif siyah alüminyum/karbon teleskopik boru, altta sarı/lime ergonomik tetikli tutma sapı ve spiral batarya bağlantı kablosu.",
+          "cinematicScene": "Ege ve Akdeniz'in güneşli, bereketli zeytinlikleri. Yaşlı zeytin ağaçlarının gümüşi yeşil yaprakları arasından süzülen altın rengi gün ışığı. Yere serilmiş temiz hasat brandaları üzerine makinenin titreşimiyle doludizgin dökülen etli parlak yeşil ve siyah zeytinler. Çiftçinin yorulmadan, titreşimsiz ve hafif teleskopik makineyle yüksek dallara kolayca ulaşma anı.",
+          "goldenPromptTemplate": "Güneşli bir Ege zeytinliğinde, yere serilmiş geniş hasat brandaları üzerinde çalışan Bofe akülü teleskopik zeytin hasat makinesi. Makinenin sarı/lime renkli üst şanzıman kafasındaki esnek siyah karbon çubuklar zeytin dalları arasında hızla titreşerek zeytinleri nazikçe yere dökerken, etli taze zeytinlerin brandaya yağmur gibi dökülüşü. Kullanıcının ergonomik tutma sapıyla yüksek dallara zahmetsizce uzanması, gün ışığı hüzmeleri, 4K sinematik canlı çekim."
+        },
+        "sarjli_pompa": {
+          "productName": "Bofe Şarjlı Akülü Sırt İlaçlama Pompası",
+          "keywords": [
+            "pompa",
+            "sırt pompası",
+            "ilaçlama",
+            "sisleme",
+            "akülü pompa"
+          ],
+          "visualIdentity": "Açık mavi polietilen ergonomik depo gövdesi, üzerinde belirgin siyah 'bofe' logosu, siyah kalın omuz askıları, yüksek basınçlı mikronize nozul lansı.",
+          "cinematicScene": "Meyve bahçesinde ve serada gün doğumunda mikronize sisleme yapan çiftçi. Bitki yaprakları üzerinde parıldayan mikro su damlacıkları, hafif ve güçlü çalışma anı."
+        }
+      },
+      "pastSuccesses": [
+        {
+          "id": "video_1789818099578",
+          "product": "Bofe Akülü Teleskopik Zeytin Silkme ve Hasat Makinesi",
+          "result": "Veo ile 9:16 canlı sinematik reklam videosu başarıyla üretildi",
+          "timestamp": "2026-09-19T11:41:40.022Z"
+        },
+        {
+          "id": "video_1789816453729",
+          "product": "Bofe Şarjlı Akülü Sırt İlaçlama Pompası",
+          "result": "Mükemmel fotogerçekçi su damlalı mavi gövde ve net 'bofe' logosu; sıfır metin çorbası."
+        }
+      ]
+    },
+    "veriburada": {
+      "brandName": "Veri Burada",
+      "organization": "Veri Burada B2B Lead & Data Platformu",
+      "colors": {
+        "primary": "#2e7d32",
+        "accent": "#a5d6a7",
+        "background": "#0a192f"
+      },
+      "logoGuidelines": "Yeşil onay tikli 'Veri Burada' kurumsal amblemi.",
+      "cinematicScene": "Yüksek katlı cam gökdelen ofisi, veri ve finans dashboard ekranları, canlı akan harita grafikleri.",
+      "pastSuccesses": [
+        {
+          "id": "video_1789814831422",
+          "product": "B2B Yeni İşletme Takip Çözümü",
+          "result": "Kusursuz kurumsal ofis ve laptop çerçevesinde jilet gibi Veri Burada logosu."
+        }
+      ]
+    }
+  }
+}

@@ -7,6 +7,13 @@
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://rnkrjmblgcdqlyslbhob.supabase.co';
 const SUPABASE_ANON = process.env.SUPABASE_ANON || 'sb_publishable_S2-QnqQVsshYjQ7PR5lOxg_pYeS9gzB';
 
+let buildLearningPromptBlock;
+try {
+  ({ buildLearningPromptBlock } = require('./brand_learning_store.js'));
+} catch (e) {
+  buildLearningPromptBlock = () => '';
+}
+
 let cachedBrandKit = null;
 let lastFetchTime = 0;
 
@@ -192,7 +199,21 @@ function detectSectorAndStyle(brand, product, brief) {
     };
   }
 
-  // 3. Tarım, Sera, Bahçe & Bofe Ekipmanları (Şarjlı İlaçlama Pompası vb.)
+  // 3a. Bofe Zeytin Silkme / Hasat Makinesi (Öncelikli Eşleşme)
+  if (text.match(/(zeytin|silkme|hasat|çırpıcı|tarak|teleskopik)/)) {
+    return {
+      sector: 'olive_harvest_machinery',
+      creativeAngle,
+      sceneAtmosphere: 'Güneşli, bereketli bir Ege/Akdeniz zeytinliği. Yaşlı zeytin ağaçlarının dalları arasında titreşen Bofe akülü zeytin hasat makinesi. Sarı üst şanzıman kafasındaki esnek siyah karbon fiber çubuklar dalları nazikçe silkelerken, etli taze zeytinler yere serilmiş geniş hasat brandaları üzerine yağmur gibi dökülüyor. Ergonomik tutma sapı, spiral batarya kablosu ve hafif siyah teleskopik boruyla yüksek dallara zahmetsizce uzanan çiftçi. Kesinlikle uydurma nesne veya metin çorbası olmayacak, %100 saf tarım hasat sinematografisi.',
+      brandingPlacements: `
+- Makinenin sarı/lime şanzıman kafa gövdesinde ve tutma sapında temiz, orijinal siyah "bofe" logosu.
+- Çiftçinin omzundaki batarya çantasında ve yere serili zeytin brandası köşesinde net "bofe" kurumsal kimliği.
+- Kahraman Final Sahnesi: Güneş ışığı hüzmeleri altında, zeytin brandası ve ağaçların önünde Bofe teleskopik zeytin silkme makinesi ve dalından dökülen taze zeytinler; üstte saf, şık "bofe" logosu.`,
+      sampleFocus: `${product || 'Bofe Akülü Teleskopik Zeytin Silkme ve Hasat Makinesi'} yüksek hasat verimi, dalları kırmayan karbon fiber çubuklar ve hafif ergonomisi`
+    };
+  }
+
+  // 3b. Tarım, Sera, Bahçe & Bofe Şarjlı İlaçlama Pompası
   if (text.match(/(bofe|ilaçlama|tarım|sera|bağ|bahçe|pülverizatör|sırt pompası|akülü pompa)/)) {
     return {
       sector: 'agriculture_equipment',
@@ -338,7 +359,8 @@ VEO VİDEO MOTORU İÇİN KESİN SİNEMATİK DİREKTİF (SIFIR METİN ÇORBASI &
 
 5. SES VE TÜRKÇE SESLENDİRME (AUDIO VOICEOVER - YALNIZCA SES):
    - Profesyonel, berrak Türkçe reklam spikeri sesi: "${brand} kalitesiyle ${product}... Detaylı bilgi ve avantajlı teklifler için WhatsApp'tan hemen iletişime geçin."
-   - 4K reklam ajansı estetiği, 24 FPS akıcı sinematik kamera hareketi, sahneye uygun kusursuz ışıklandırma.`;
+   - 4K reklam ajansı estetiği, 24 FPS akıcı sinematik kamera hareketi, sahneye uygun kusursuz ışıklandırma.
+${buildLearningPromptBlock(brand, product, brief)}`;
 }
 
 module.exports = {

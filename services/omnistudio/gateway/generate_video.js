@@ -23,6 +23,12 @@ function sleep(ms) {
 }
 
 const { getActiveBrandKit, buildTurkishVeoDirectorPrompt, getLogoVisualDescription } = require('./brand_resolver.js');
+let recordSuccess;
+try {
+  ({ recordSuccess } = require('./brand_learning_store.js'));
+} catch (e) {
+  recordSuccess = () => {};
+}
 
 /**
  * Full + Full Sinematik Reklam Prompt Genişleticisi (Veo & AI Video Engine)
@@ -565,6 +571,16 @@ function attemptGenerateOnCdp(port, tab, options) {
 
         // /public/ dizinine de kopyala
         execSync(`cp -f ${OUTPUT_DIR}/*.mp4 ${OUTPUT_DIR}/*.jpg /app/gateway/public/ 2>/dev/null || true`);
+
+        try {
+          recordSuccess(options.brandName || options.customer, {
+            product: options.productName || options.product,
+            videoId,
+            resultNotes: 'Veo ile 9:16 canlı sinematik reklam videosu başarıyla üretildi'
+          });
+        } catch (recErr) {
+          console.warn('[VideoGen] LearningStore kaydetme hatası:', recErr.message);
+        }
 
         resolve({
           success: true,
