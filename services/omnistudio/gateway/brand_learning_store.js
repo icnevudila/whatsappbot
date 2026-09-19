@@ -133,7 +133,7 @@ const SECTOR_SLOGANS = {
   logistics_transport: 'ZAMANINDA GÜVENLİ LOJİSTİK',
   education_academy: 'GELECEĞİN EĞİTİM VİZYONU',
   beauty_wellness: 'DOĞAL IŞILTI & GÜZELLİK',
-  furniture_interior: 'YAŞAM ALANLARINA DEĞER KATAN TASARIMLAR',
+  furniture_interior: 'ÖZEL MOBİLYA TASARIMI',
   corporate_services: 'STRATEJİK KURUMSAL ÇÖZÜMLER'
 };
 
@@ -249,98 +249,68 @@ class BrandLearningStore {
     const sector = this.detectSector(brandName, productName, brief);
     const archetype = this.resolveCreativeArchetype(brandName, productName, brief, sector);
 
-    const rules = (this.data.universalRules || DEFAULT_LEARNINGS.universalRules)
-      .map(r => `• ${r}`)
-      .join('\n');
+    // En kritik 5 kural — tüm listeyi değil, modelin en çok ihlal ettiği kurallar
+    const TOP_CRITICAL_RULES = [
+      "SIFIR METİN ÇORBASI: Havada uçuşan soyut 3D harfler veya uzun cümleler KESİNLİKLE YASAKTIR — harfler difüzyon modelde erir ve bozulur.",
+      "FİZİKSEL YÜZEY ZORUNLULUĞU: Tüm yazılar ve logo yalnızca fiziksel nesnelere (metal tabela, ahşap plaket, ambalaj, iş önlüğü nakışı) kazınmış/monte edilmiş olacaktır — havada asılı metin YASAK.",
+      "MAKSİMUM 2-3 KELİME: Tabelaya/plakete yazılacak metin 2-3 kısa kelimeden oluşacak (örn: 'FABRİKADAN DOĞRUDAN', 'SİPARİŞ VER', 'RANDEVU AL'). Uzun cümle ve slogan YASAK.",
+      "SIFIR HEX KODU: Prompt metnine '#1b5e20', '#ffc300' gibi hex kodları ASLA yazılmayacaktır — model bunu tabelaya metin olarak basar. Renkler doğal dille tarif edilir.",
+      "SIFIR UYDURMA LOGO: Firmanın tanımlı logosu yoksa KESİNLİKLE geometrik üçgen, sembol veya rastgele amblem üretilmeyecektir. Sadece firma adı temiz tipografiyle yazılır."
+    ];
 
-    let archetypeSection = `\nÖĞRENİLMİŞ YÖNETMEN ARKETİPİ: ${archetype.name}\n` +
-      `- Kamera Hareketi: ${archetype.cameraStyle}\n` +
-      `- Işık & Atmosfer: ${archetype.lightingStyle}\n` +
-      `- Ses & Müzik Direktifi: ${archetype.audioDirectives}\n`;
+    const rules = TOP_CRITICAL_RULES.map(r => `• ${r}`).join('\n');
+
+    let archetypeSection = `\nÖĞRENİLMİŞ YARATICI ARKETİP: ${archetype.name}\n` +
+      `- Kamera: ${archetype.cameraStyle}\n` +
+      `- Işık: ${archetype.lightingStyle}\n`;
 
     let sectorSection = '';
     if (sector) {
-      sectorSection = `\nÖĞRENİLMİŞ SEKTÖR DİREKTİFİ (${sector.name}):\n` +
-        `- Sahne Atmosferi & Işık: ${sector.sceneAtmosphere}\n` +
-        `- Fiziksel Katı Yüzey Nesneleri (Rigid Surfaces): ${(sector.rigidSurfaceObjects || []).join(' | ')}
-` +
-        `- Önerilen Bozulmayan Türkçe Eylemler: ${(sector.recommendedTurkishCTAs || []).join(', ')}
-` +
-        `- Ses & Foley Direktifi: ${sector.audioDirectives || 'Sektöre uygun profesyonel Türkçe seslendirme'}
-` +
-        `- KESİNLİKLE YASAKLI UNSURLAR: ${(sector.forbiddenElements || []).join(', ')}
-`;
+      const sceneShortCTA = sector.recommendedTurkishCTAs ? sector.recommendedTurkishCTAs[0] : 'KEŞFET';
+      const brandSlogan = SECTOR_SLOGANS[sector.sectorKey] || 'KURUMSAL ÇÖZÜMLER';
 
+      sectorSection = `\nÖĞRENİLMİŞ SEKTÖR (${sector.name}):\n` +
+        `- Sahne atmosferi: ${sector.sceneAtmosphere}\n` +
+        `- Fiziksel yüzeyler: ${(sector.rigidSurfaceObjects || []).join(' | ')}\n` +
+        `- Kısa CTA örnekleri: ${(sector.recommendedTurkishCTAs || []).join(', ')}\n` +
+        `- Yasaklı unsurlar: ${(sector.forbiddenElements || []).join(', ')}\n`;
+
+      // goldenPromptTemplate'i kapanış referansı olarak ver — brand_resolver'ın 3-act yapısıyla çakışmaması için
       if (sector.goldenPromptTemplate) {
-        const searchBrief = `${brief || ''} ${productName || ''} ${brandName || ''}`.toLowerCase();
-        let dynamicClosingCTA = 'HEMEN DANIŞIN';
-
-        if (searchBrief.includes('whatsapp')) {
-          dynamicClosingCTA = 'WHATSAPP İLE YAZIN';
-        } else if (searchBrief.includes('randevu') || searchBrief.includes('klinik') || searchBrief.includes('doktor')) {
-          dynamicClosingCTA = 'HEMEN RANDEVU AL';
-        } else if (searchBrief.includes('fiyat') || searchBrief.includes('teklif') || searchBrief.includes('toptan')) {
-          dynamicClosingCTA = 'TEKLİF AL';
-        } else if (searchBrief.includes('sipariş') || searchBrief.includes('yemek') || searchBrief.includes('lezzet')) {
-          dynamicClosingCTA = 'SİPARİŞ VER';
-        } else if (searchBrief.includes('rezervasyon') || searchBrief.includes('otel') || searchBrief.includes('tatil')) {
-          dynamicClosingCTA = 'REZERVASYON';
-        } else if (sector.recommendedTurkishCTAs && sector.recommendedTurkishCTAs.length > 0) {
-          dynamicClosingCTA = sector.recommendedTurkishCTAs[0];
-        }
-
-        const sceneShortCTA = sector.recommendedTurkishCTAs ? sector.recommendedTurkishCTAs[0] : 'KEŞFET';
-        const brandSlogan = SECTOR_SLOGANS[sector.sectorKey] || 'KURUMSAL ÇÖZÜMLER';
-
         let filledTemplate = sector.goldenPromptTemplate
           .replace(/\{\{MARKA\}\}/g, brandName || 'FİRMA')
           .replace(/\{\{LOGO_TANIMI\}\}/g, brand?.logoGuidelines || 'Kurumsal logo amblemi')
           .replace(/\{\{URUN\}\}/g, productName || 'Ürün & Hizmet')
           .replace(/\{\{SLOGAN\}\}/g, brandSlogan)
-          .replace(/\{\{KAPANIS_CTA\}\}/g, dynamicClosingCTA)
-          .replace(/\{\{SEKTOR_KISA_CTA\}\}/g, sceneShortCTA)
-          .replace(/'WHATSAPP İLE İLETİŞİME GEÇİN'/g, `'${dynamicClosingCTA}'`);
+          .replace(/\{\{KAPANIS_CTA\}\}/g, sceneShortCTA)
+          .replace(/\{\{SEKTOR_KISA_CTA\}\}/g, sceneShortCTA);
 
-        sectorSection += `- ÖRNEK ALTIN PROMPT YAPISI: "${filledTemplate}"\n`;
+        sectorSection += `- Başarılı kapanış sahne referansı: "${filledTemplate.split('\n').find(l => l.includes('SAHNE 3')) || 'SAHNE 3: Aydınlık çalışma ortamı, fiziksel isimlikte marka adı ve sektör sloganı.'}"\n`;
       }
     }
 
     let brandSection = '';
     if (brand) {
       brandSection = `\nÖĞRENİLMİŞ MARKA HAFIZASI (${brand.brandName}):\n` +
-        `- Kurumsal Kimlik & Logo Kuralı: ${brand.logoGuidelines}\n` +
-        `- Kurumsal Renkler: Koyu zümrüt yeşili, parlak canlı yeşil ve temiz beyaz (HEX YAZILMAYACAK)\n`;
-      
+        `- Logo kuralı: ${brand.logoGuidelines}\n`;
+
       const searchContext = `${productName || ''} ${brief || ''}`.toLowerCase();
-      let matchedProduct = null;
       if (brand.products) {
         for (const prod of Object.values(brand.products)) {
           if (prod.keywords && prod.keywords.some(k => searchContext.includes(k))) {
-            matchedProduct = prod;
+            brandSection += `- Ürün görünümü: ${prod.visualIdentity}\n` +
+              `- Sahne ortamı: ${prod.cinematicScene}\n`;
             break;
           }
         }
       }
 
-      if (matchedProduct) {
-        brandSection += `- Öğrenilmiş Ürün Görseli & Formu: ${matchedProduct.visualIdentity}\n` +
-          `- İdeal Sinematik Ortam & Atmosfer: ${matchedProduct.cinematicScene}\n`;
-        if (matchedProduct.goldenPromptTemplate) {
-          let filledBrandTemplate = matchedProduct.goldenPromptTemplate
-            .replace(/\{\{MARKA\}\}/g, brand.brandName || brandName || 'FİRMA')
-            .replace(/\{\{LOGO_TANIMI\}\}/g, brand.logoGuidelines || 'Kurumsal logo amblemi')
-            .replace(/\{\{URUN\}\}/g, matchedProduct.productName || productName || 'Ürün & Hizmet');
-          brandSection += `- Referans Altın Senaryo: "${filledBrandTemplate}"\n`;
-        }
-      }
-
       if (brand.pastSuccesses && brand.pastSuccesses.length > 0) {
-        const lastSuccess = brand.pastSuccesses[0];
-        brandSection += `- Geçmiş Başarılı Üretim Çıkarımı: "${lastSuccess.result}"\n`;
+        brandSection += `- Önceki başarılı üretimden çıkarım: "${brand.pastSuccesses[0].result}"\n`;
       }
     }
 
-    return `\n=== YAPAY ZEKA SÜREKLİ ÖĞRENME MOTORU (CONTINUOUS LEARNING INJECTION) ===\n${rules}${archetypeSection}${sectorSection}${brandSection}=== BU KURALLARA VE ÖĞRENİLMİŞ MARKA HAFIZASINA %100 SADIK KALINACAKTIR ===\n`;
+    return `\n=== SÜREKLİ ÖĞRENME & KRİTİK KURAL BLOĞU ===\n${rules}${archetypeSection}${sectorSection}${brandSection}=== YUKARIDA BELİRTİLEN KURALLARA VE MARKA HAFIZASINA TAM UYUM ZORUNLUDUR ===\n`;
   }
 
   recordSuccess(brandName, { product, videoId, resultNotes, sectorKey }) {
