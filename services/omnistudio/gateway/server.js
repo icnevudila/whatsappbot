@@ -607,7 +607,10 @@ const server = http.createServer(async (req, res) => {
           includeOverlay: Boolean(body.includeOverlay),
           includeLogo: Boolean(body.includeLogo),
           includeBanner: Boolean(body.includeBanner),
-          includeCta: Boolean(body.includeCta),
+          orgId: body.orgId || null,
+          productImageUrl: body.productImageUrl || null,
+          logoUrl: body.logoUrl || null,
+          customer: body.customer || null,
           port: body.port || null,
         });
 

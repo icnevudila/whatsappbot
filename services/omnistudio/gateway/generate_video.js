@@ -109,7 +109,12 @@ ZORUNLU YÖNETMEN KURALLARI (SAF CANLI ÇEKİM SİNEMATOGRAFİSİ & SIFIR KELİM
 3. TÜRKÇE SESLENDİRME (AUDIO VOICEOVER - YALNIZCA SES METNİ, EKRANDA YAZI YOK):
    - 15-20 kelimelik berrak Türkçe reklam spikeri repliği ekle.
 
-4. ÇIKTI FORMATI:
+4. MARKA KİTİ, LOGO VE ÜRÜN DOKUNULMAZLIĞI (ASLA OYNAMA VEYA VARYASYON YAPMA):
+   - Firmanın orijinal logosu, amblemi, marka renkleri ve ürün tasarımı KESİNLİKLE değiştirilmeyecek veya farklı varyasyonlara sokulmayacaktır.
+   - Gerçek ürünün formu, kasası, fiziksel donanımı ve görünümü birebir orijinal fotoğraftaki gibi korunmalıdır. Hayali veya dönüştürülmüş ürün şekilleri kesinlikle üretilmeyecektir.
+   - ZERO MUTATION, ZERO PRODUCT MORPHING, ZERO LOGO ALTERATION.
+
+5. ÇIKTI FORMATI:
    - SADECE Google Veo video motoruna doğrudan yapıştırılacak tek parça sinematik video prompt metnini yaz.
    - Başka hiçbir selamlama, açıklama, başlık veya markdown tırnağı koyma.`;
 

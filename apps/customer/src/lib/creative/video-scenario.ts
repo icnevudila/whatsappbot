@@ -366,6 +366,7 @@ Görevin: Verilen marka, marka kiti, ürünler ve kampanya bağlamını inceleye
       : 'Konuşma ve insan sesi YOKTUR. Sadece foley doğal ses efektleri ve dinamik fon müziği vardır. STRICT RULE: NO VOICE, NO SPEECH, NO DIALOGUE ekle.'
   }
 - EKRANDA YAZI YASAKTIR: Videonun ham çekiminde kesinlikle ekranda hiçbir banner, altyazı, yazı, tipografi, logo kartı OLMAYACAKTIR. 'STRICT RULE: NO ON-SCREEN TEXT, NO WORDS, NO LETTERS, NO LOGO CARDS, NO GRAPHIC OVERLAYS, NO BANNERS. Pure photorealistic live commercial footage only.' kuralı promptun sonuna eklenmelidir.
+- MARKA VE ÜRÜN DOKUNULMAZLIĞI (ASLA OYNAMA YA DA VARYASYON YAPMA): Firmanın orijinal logosu, amblemi, marka renkleri ve gerçek ürün tasarımı kesinlikle korunacaktır. Ürün üzerinde hiçbir oynama, deformasyon veya varyasyon yapılmayacaktır. STRICT MANDATE: ZERO ALTERATION TO BRAND LOGO OR PRODUCT IDENTITY. PRESERVE ORIGINAL EMBLEM, COLORS, AND PHYSICAL PRODUCT FORM EXACTLY.
 - Çıktı olarak SADECE video motoruna gönderilecek nihai prompt metnini dön. Başka hiçbir açıklama, selamlama veya markdown tırnağı yazma.`
 
   const userPrompt = `Marka: ${brand}

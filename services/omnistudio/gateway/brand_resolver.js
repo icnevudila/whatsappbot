@@ -330,7 +330,13 @@ VEO VİDEO MOTORU İÇİN KESİN SİNEMATİK DİREKTİF (SIFIR METİN ÇORBASI &
 
 3. MARKA VE AMBLEM YERLEŞİMİ (FİZİKSEL & ORGANİK):${sectorProfile.brandingPlacements}
 
-4. SES VE TÜRKÇE SESLENDİRME (AUDIO VOICEOVER - YALNIZCA SES):
+4. MARKA KİTİ, LOGO VE ÜRÜN DOKUNULMAZLIĞI (ASLA OYNAMA VEYA VARYASYON YAPMA):
+   - KESİNLİKLE marka logosu ve marka kiti üzerinde hiçbir oynama, değişiklik, deformasyon veya stilize varyasyon yapılmayacaktır.
+   - Orijinal logo geometrisi, amblemi, tipografisi ve kurumsal renkleri (%100) korunacaktır.
+   - Öne çıkan ürünün gerçek tasarımı, fiziksel formu, malzemesi, rengi ve kasası birebir orijinal haliyle sahnelenecektir; hayali veya farklılaştırılmış ürün varyasyonları kesinlikle üretilmeyecektir.
+   - STRICT MANDATE: ZERO ALTERATION TO BRAND LOGO OR PRODUCT IDENTITY. PRESERVE ORIGINAL EMBLEM, COLORS, AND PHYSICAL PRODUCT FORM EXACTLY. NO PRODUCT MORPHING, NO LOGO REINVENTION.
+
+5. SES VE TÜRKÇE SESLENDİRME (AUDIO VOICEOVER - YALNIZCA SES):
    - Profesyonel, berrak Türkçe reklam spikeri sesi: "${brand} kalitesiyle ${product}... Detaylı bilgi ve avantajlı teklifler için WhatsApp'tan hemen iletişime geçin."
    - 4K reklam ajansı estetiği, 24 FPS akıcı sinematik kamera hareketi, sahneye uygun kusursuz ışıklandırma.`;
 }

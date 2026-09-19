@@ -97,21 +97,22 @@ export function buildCreativePrompt(snapshot: CreativeSnapshot): {
     kit?.fonts?.heading ? `Prefer a ${kit.fonts.heading}-like heading feel.` : null,
     'Do NOT write internal labels on the image: never paint brand-kit titles, "marka kiti", "brand kit", "kampanya kiti", or similar meta text.',
     snapshot.useLogo
-      ? 'A real company logo image is attached as a reference. Place that exact logo cleanly (usually a corner), keep proportions, transparent/white-friendly. Do not invent a different logo. Do not replace the logo with typed brand-name text.'
+      ? 'STRICT LOGO FIDELITY: A real company logo image is attached as a reference. Place that exact logo cleanly without any modification, restyling, or variation. Keep its exact proportions, geometry, emblem shape, and brand colors. NEVER invent a different logo, NEVER stylize or morph the logo, and NEVER replace the logo with typed text.'
       : 'Do not invent fake logos. Do not type a brand name as a fake logo unless the advertiser brief explicitly asks for the business name as headline text.',
     snapshot.baseCreativeId
-      ? 'A base/reference campaign image is attached. Keep the same product and brand identity; apply the requested change.'
+      ? 'A base/reference campaign image is attached. Keep the exact same product and brand identity; apply the requested change.'
       : null,
     snapshot.instruction ? `Revision instruction (must follow): ${snapshot.instruction}` : null,
     variation ? `Variation direction: ${variation}. Same offer, different composition.` : null,
     `Campaign brief from the advertiser (do not add facts they did not give): ${snapshot.brief}`,
     productBlocks.length ? `Products:\n${productBlocks.join('\n')}` : 'No specific product catalog items.',
+    'STRICT PRODUCT FIDELITY: The real product photo is provided as a reference. You must preserve the real physical product exactly as shown: exact shape, casing, components, buttons, materials, and colors. Do NOT mutate the product, do NOT invent fantasy product variations, do NOT change the product design, and do NOT replace the product with a generic item.',
     contacts.length
       ? `Contact lines that may appear on the creative if text is used: ${contacts.join(' · ')}`
       : null,
     extras.length ? extras.join(' ') : null,
     'Do not invent prices, discounts, slogans, dates, product names or brand claims that are not in this brief.',
-    'Do not replace products with different products. Preserve packaging and product shape from reference photos.',
+    'Do not replace products with different products. Preserve packaging and product shape from reference photos with 100% fidelity.',
     'Clean visual hierarchy. One focal offer. Not cluttered. Readable on a phone screen.',
   ]
     .filter(Boolean)
@@ -120,6 +121,15 @@ export function buildCreativePrompt(snapshot: CreativeSnapshot): {
   const negative = [
     'no extra products that were not listed',
     'no fake logos',
+    'no distorted logo',
+    'no modified logo',
+    'no logo variations',
+    'no redesigned brand logo',
+    'no wrong brand colors',
+    'no morphed product',
+    'no deformed product design',
+    'no fantasy product variations',
+    'no generic product replacement',
     'no unreadable micro-text',
     'no watermarks',
     'no misspelled brand names',
@@ -307,8 +317,8 @@ export function buildVideoPrompt(snapshot: CreativeSnapshot): {
     `SAHNE 2 (3-7sn - DİNAMİK KULLANIM & İŞLEV): Kamera akıcı bir gimbal kaymasıyla sahneye genişler. ${act2Action}. 120fps ağır çekim ile ürünün performansı ve gerçek hayat ortamındaki güvenilirliği sergilenir.`,
     `SAHNE 3 (7-10sn - KAHRAMAN FİNAL REVEAL): Kamera geriye ve hafif yukarı doğru yükselerek kahraman (hero) planına geçer. ${act3Climax}. İlham verici altın saat ışığı, sıcak kontrastlar, üstün kalite hissi.`,
     voiceSection,
-    `ÖNEMLİ VE KESİN KURAL: Videoda KESİNLİKLE hiçbir yazı, metin, altyazı, logo kartı, bilgi kutusu veya grafik overlay OLMAYACAKTIR. Ekranda sadece %100 saf, temiz ve sinematik canlı çekim video görüntüsü olacaktır. Tam ekran temiz sinema karesi.`,
-    `STRICT RULE: NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO SUBTITLES, NO CAPTIONS, NO ON-SCREEN TEXT, NO LOGO CARDS, NO GRAPHIC OVERLAYS, NO BANNERS, NO LOWER THIRDS. Pure clean cinematic live-action commercial footage only.`,
+    `ÖNEMLİ VE KESİN KURAL 1 (SIFIR METİN & CANLI ÇEKİM): Videoda KESİNLİKLE hiçbir yazı, metin, altyazı, logo kartı, bilgi kutusu veya grafik overlay OLMAYACAKTIR. Ekranda sadece %100 saf, temiz ve sinematik canlı çekim video görüntüsü olacaktır. Tam ekran temiz sinema karesi. STRICT RULE: NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO SUBTITLES, NO CAPTIONS, NO ON-SCREEN TEXT, NO LOGO CARDS, NO GRAPHIC OVERLAYS, NO BANNERS, NO LOWER THIRDS. Pure clean cinematic live-action commercial footage only.`,
+    `ÖNEMLİ VE KESİN KURAL 2 (MARKA VE ÜRÜN DOKUNULMAZLIĞI): Marka logosu, amblemi, renkleri ve gerçek ürün tasarımı üzerinde KESİNLİKLE hiçbir oynama, değişiklik, deformasyon veya varyasyon YAPILMAYACAKTIR. Ürünün gerçek fiziksel kasası, formu, renkleri ve amblemi %100 birebir korunacaktır. Hayali veya dönüştürülmüş ürün varyasyonları kesinlikle üretilmeyecektir. STRICT MANDATE: ZERO ALTERATION TO BRAND LOGO OR PRODUCT IDENTITY. PRESERVE ORIGINAL EMBLEM, COLORS, AND PHYSICAL PRODUCT FORM EXACTLY. NO PRODUCT MORPHING, NO LOGO REINVENTION.`,
   ]
     .filter(Boolean)
     .join('\n')
@@ -316,6 +326,8 @@ export function buildVideoPrompt(snapshot: CreativeSnapshot): {
   const negative = [
     'text, words, letters, typography, watermark, logo overlay, graphic box, lower third, subtitles, captions, banner, card',
     'cartoon, 3D animation look, cgi render, uncanny valley, deformed hands, distorted geometry',
+    'distorted logo, modified logo, altered logo, logo variations, redesigned logo, wrong brand colors',
+    'morphed product, deformed product, altered product design, fantasy product variations, generic product replacement',
     'blurry artifacts, low quality, pixelated, amateur video, jump cuts, jerky camera',
   ].join(', ')
 
