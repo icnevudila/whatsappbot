@@ -452,6 +452,29 @@ setInterval(async () => {
   } catch (err) {}
 }, 5000);
 
+let lastJobTime = Date.now();
+
+// Boşta kalan ChatGPT oturumunu diri tut (Session Keep-Alive - 12 dakikada bir hafif ping)
+setInterval(async () => {
+  if (isBusy) return;
+  const idleMs = Date.now() - lastJobTime;
+  if (idleMs > 12 * 60 * 1000) {
+    try {
+      const chatTab = await getTab('chatgpt.com');
+      if (chatTab) {
+        const cdp = await createCdpSession(chatTab.webSocketDebuggerUrl);
+        await cdp.send('Runtime.evaluate', {
+          expression: `fetch('https://chatgpt.com/', { method: 'HEAD', cache: 'no-store' }).then(() => true).catch(() => false);`,
+          awaitPromise: true
+        }).catch(() => {});
+        cdp.close();
+        lastJobTime = Date.now();
+        console.log(`[CDP Worker: ${WORKER_ID}] ChatGPT oturum canlılık tazeleme (keep-alive) pingi gönderildi.`);
+      }
+    } catch (e) {}
+  }
+}, 6 * 60 * 1000);
+
 // Ana Döngü
 async function workerLoop() {
   if (isBusy) return;
@@ -494,6 +517,7 @@ async function workerLoop() {
     }
 
     completedJobCount++;
+    lastJobTime = Date.now();
     if (completedJobCount % RECYCLE_JOB_THRESHOLD === 0) {
       await performMemoryRecycle(chatgptTab);
     }

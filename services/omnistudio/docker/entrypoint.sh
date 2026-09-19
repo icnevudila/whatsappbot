@@ -24,49 +24,25 @@ cd /app/gateway
 node server.js &
 echo "⚡ API Gateway Hazır: Port 3456"
 
-# 4. Worker Havuzu (Worker Pool): NUM_WORKERS kadar Chrome ve CDP Worker başlat
-NUM_WORKERS=${NUM_WORKERS:-4}
-echo "⚙️ Yapılandırılan Worker Havuzu Sayısı: $NUM_WORKERS"
+# 4. Google Chrome Başlat (Port 9222, Paylaşılan Ana Profil)
+PROFILE_DIR="/data/chromium-profile"
+mkdir -p "$PROFILE_DIR"
+rm -f "$PROFILE_DIR/Singleton*" "$PROFILE_DIR/*/Singleton*" "$PROFILE_DIR/LOCK" "$PROFILE_DIR/*/LOCK" 2>/dev/null || true
 
-for i in $(seq 1 $NUM_WORKERS); do
-  PORT=$((9221 + i))
-  if [ "$i" -eq 1 ]; then
-    PROFILE_DIR="/data/chromium-profile"
-  else
-    PROFILE_DIR="/data/chromium-profile-$i"
-  fi
-  mkdir -p "$PROFILE_DIR"
-  rm -f "$PROFILE_DIR/Singleton*" "$PROFILE_DIR/*/Singleton*" "$PROFILE_DIR/LOCK" "$PROFILE_DIR/*/LOCK" 2>/dev/null || true
+echo "🖥️ Google Chrome Başlatılıyor (CDP Port: 9222, Profil: $PROFILE_DIR)..."
+google-chrome-stable --no-sandbox --disable-dev-shm-usage --disable-gpu \
+  --disable-search-engine-choice-screen \
+  --user-data-dir="$PROFILE_DIR" \
+  --remote-debugging-port=9222 \
+  --start-maximized https://chatgpt.com https://gemini.google.com/videos http://localhost:3456/monitor &
+sleep 5
 
-  EXTRA_URL=""
-  if [ "$i" -eq 1 ]; then
-    EXTRA_URL="http://localhost:3456/monitor"
-  fi
+# 5. Dual Worker Havuzu Başlat (chatgpt-1: Sekme 0, chatgpt-2: Sekme 1 + RAM Guard)
+echo "🤖 CDP Worker #1 Başlatılıyor (Worker ID: chatgpt-1, Sekme 0)..."
+CDP_HTTP="http://127.0.0.1:9222" WORKER_ID="chatgpt-1" TAB_INDEX=0 node --experimental-websocket cdp_worker.js &
 
-  WIN_POS=""
-  if [ "$NUM_WORKERS" -gt 1 ]; then
-    case $i in
-      1) WIN_POS="--window-position=0,0 --window-size=960,540" ;;
-      2) WIN_POS="--window-position=960,0 --window-size=960,540" ;;
-      3) WIN_POS="--window-position=0,540 --window-size=960,540" ;;
-      4) WIN_POS="--window-position=960,540 --window-size=960,540" ;;
-      *) WIN_POS="--start-maximized" ;;
-    esac
-  else
-    WIN_POS="--start-maximized"
-  fi
-
-  echo "🖥️ Google Chrome #$i Başlatılıyor (CDP Port: $PORT, Profil: $PROFILE_DIR, Pos: $WIN_POS)..."
-  google-chrome-stable --no-sandbox --disable-dev-shm-usage --disable-gpu \
-    --disable-search-engine-choice-screen \
-    --user-data-dir="$PROFILE_DIR" \
-    --remote-debugging-port=$PORT \
-    $WIN_POS https://chatgpt.com https://gemini.google.com/videos $EXTRA_URL &
-  sleep 3
-
-  echo "🤖 CDP Worker #$i Başlatılıyor (Worker ID: chatgpt-$i, CDP: $PORT)..."
-  CDP_HTTP="http://127.0.0.1:$PORT" WORKER_ID="chatgpt-$i" node --experimental-websocket cdp_worker.js &
-done
+echo "🤖 CDP Worker #2 Başlatılıyor (Worker ID: chatgpt-2, Sekme 1, RAM Guard Aktif)..."
+CDP_HTTP="http://127.0.0.1:9222" WORKER_ID="chatgpt-2" TAB_INDEX=1 node --experimental-websocket cdp_worker.js &
 
 # Konteyneri canlı tut
 while true; do

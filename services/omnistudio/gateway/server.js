@@ -989,12 +989,23 @@ const server = http.createServer(async (req, res) => {
     if (method === 'GET' && (pathname === '/health' || pathname === '/stats' || pathname === '/')) {
       const freeMb = Math.round(os.freemem() / (1024 * 1024));
       const totalMb = Math.round(os.totalmem() / (1024 * 1024));
+      const stats = queue.getStats();
+      const workers = stats.workersStatus || {};
+      const activeWorkerKeys = Object.keys(workers);
+      const anyLoggedIn = activeWorkerKeys.some(k => workers[k].status === 'idle' || workers[k].status === 'busy');
+      const ai_ready = activeWorkerKeys.length > 0 && anyLoggedIn;
+      const alert = !ai_ready && activeWorkerKeys.length > 0
+        ? 'ChatGPT oturumu kapalı! Lütfen noVNC (port 6080) üzerinden giriş yapın.'
+        : null;
+
       return sendJson(res, 200, {
         service: 'OmniStudio AI Visual Gateway',
         status: 'online',
+        ai_ready,
+        alert,
         port: PORT,
         memory: { freeMb, totalMb },
-        ...queue.getStats(),
+        ...stats,
       });
     }
 
