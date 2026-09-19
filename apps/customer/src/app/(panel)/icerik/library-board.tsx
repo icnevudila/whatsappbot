@@ -132,13 +132,27 @@ export function LibraryBoard({
           }
           void fetchPage(0, true)
         })
-        .catch((error) => {
-          const timedOut = error instanceof Error && error.name === 'TimeoutError'
-          const message = timedOut ? 'Üretim zaman aşımına uğradı.' : 'Üretim başlatılamadı.'
-          setRenderErrors((prev) => ({ ...prev, [item.id]: message }))
+        .catch(() => {
+          // Ağ kopması veya istemci zaman aşımında kartı kırmızıya düşürme;
+          // Arka plandaki ChatGPT worker'ı üretmeye devam ediyor.
+          setTimeout(() => {
+            void fetchPage(0, true)
+          }, 4000)
         })
     }
   }, [canManage, items, fetchPage])
+
+  // Arka planda bekleyen veya çizilen işler varsa periyodik olarak listeyi tazele
+  useEffect(() => {
+    const hasActiveJobs = items.some(
+      (item) => item.source === 'ai' && (item.status === 'pending' || item.status === 'rendering')
+    )
+    if (!hasActiveJobs) return
+    const pollTimer = setInterval(() => {
+      void fetchPage(0, true)
+    }, 5000)
+    return () => clearInterval(pollTimer)
+  }, [items, fetchPage])
 
   useEffect(() => {
     const el = sentinelRef.current
@@ -162,10 +176,16 @@ export function LibraryBoard({
           title="İlk kampanya görselini oluştur"
           description="Markanıza ve ürünlerinize uygun kampanya görsellerini AI ile hazırlayın. Üretim arka planda devam eder."
           action={
-            <Link href="/icerik/yeni" className="wb-wa-text-btn">
-              <Icon name="sparkles" className="size-4" />
-              Görsel üret
-            </Link>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Link href="/icerik/yeni?format=video" className="wb-wa-submit">
+                <Icon name="video" className="size-4" />
+                Kampanya videosu oluştur
+              </Link>
+              <Link href="/icerik/yeni" className="wb-wa-text-btn">
+                <Icon name="sparkles" className="size-4" />
+                Görsel üret
+              </Link>
+            </div>
           }
         />
       </div>

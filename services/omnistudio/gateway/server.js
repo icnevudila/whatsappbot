@@ -14,6 +14,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const os = require('os');
 const { URL } = require('url');
 
 const PORT = parseInt(process.env.PORT || '3456', 10);
@@ -635,7 +636,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // 1.0.2. Tüm AI & Video Motorları Canlı Durum Özeti: GET /v1/ai-engine/status
-    if (method === 'GET' && (pathname === '/v1/ai-engine/status' || pathname === '/ai-engine/status')) {
+    if (method === 'GET' && (pathname === '/v1/ai-engine/status' || pathname === '/ai-engine/status' || pathname === '/v1/ai-engine/accounts')) {
       try {
         const { getAiEngineStatus } = require('./generate_video.js');
         return sendJson(res, 200, getAiEngineStatus());
@@ -643,6 +644,100 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 500, { error: err.message });
       }
     }
+
+    // 1.0.3. AI Hesap Doğrulama (CDP ile Google/Gemini oturum testi): POST /v1/ai-engine/accounts/verify
+    if (method === 'POST' && (pathname === '/v1/ai-engine/accounts/verify' || pathname === '/ai-engine/accounts/verify')) {
+      try {
+        const body = await parseJsonBody(req);
+        const port = parseInt(body.port, 10);
+        if (!port) return sendJson(res, 400, { error: 'port gereklidir' });
+        const { verifyAccount } = require('./generate_video.js');
+        const result = await verifyAccount(port);
+        return sendJson(res, 200, result);
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+
+    // 1.0.4. AI Hesap Kotasını Sıfırla: POST /v1/ai-engine/accounts/reset-limit
+    if (method === 'POST' && (pathname === '/v1/ai-engine/accounts/reset-limit' || pathname === '/ai-engine/accounts/reset-limit')) {
+      try {
+        const body = await parseJsonBody(req);
+        const port = parseInt(body.port, 10);
+        if (!port) return sendJson(res, 400, { error: 'port gereklidir' });
+        const { resetAccountLimit } = require('./generate_video.js');
+        const result = resetAccountLimit(port);
+        return sendJson(res, 200, result);
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+
+    // 1.0.5. Yeni Hesap Slotu Oluştur / Hetzner'de Başlat: POST /v1/ai-engine/accounts/provision
+    if (method === 'POST' && (pathname === '/v1/ai-engine/accounts/provision' || pathname === '/ai-engine/accounts/provision')) {
+      try {
+        const body = await parseJsonBody(req);
+        const port = parseInt(body.port, 10);
+        const name = (body.name || '').trim();
+        if (!port) return sendJson(res, 400, { error: 'port gereklidir' });
+        const flowProjectUrl = (body.flowProjectUrl || '').trim();
+        const { provisionAccountSlot } = require('./generate_video.js');
+        const result = await provisionAccountSlot(port, name, flowProjectUrl);
+        return sendJson(res, 200, result);
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+
+    // 1.0.6. Slot Flow Projesini Güncelle / Bağla: POST /v1/ai-engine/accounts/update-flow
+    if (method === 'POST' && (pathname === '/v1/ai-engine/accounts/update-flow' || pathname === '/ai-engine/accounts/update-flow')) {
+      try {
+        const body = await parseJsonBody(req);
+        const port = parseInt(body.port, 10);
+        const flowProjectUrl = (body.flowProjectUrl || '').trim();
+        const flowCredits = body.flowCredits !== undefined ? parseInt(body.flowCredits, 10) : undefined;
+        if (!port) return sendJson(res, 400, { error: 'port gereklidir' });
+        if (!flowProjectUrl) return sendJson(res, 400, { error: 'flowProjectUrl gereklidir' });
+        const { updateAccountFlow } = require('./generate_video.js');
+        const result = await updateAccountFlow(port, flowProjectUrl, flowCredits);
+        return sendJson(res, 200, result);
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+
+    // 1.0.7. Çerez / Oturum Senkronizasyonu (VNC Olmadan Giriş): POST /v1/ai-engine/accounts/sync-cookies
+    if (method === 'POST' && (pathname === '/v1/ai-engine/accounts/sync-cookies' || pathname === '/ai-engine/accounts/sync-cookies')) {
+      try {
+        const body = await parseJsonBody(req);
+        const port = parseInt(body.port, 10);
+        const cookies = body.cookies || body.cookieData;
+        const platform = (body.platform || 'google').trim();
+        if (!port) return sendJson(res, 400, { error: 'port gereklidir' });
+        if (!cookies) return sendJson(res, 400, { error: 'cookies verisi gereklidir' });
+        const { syncAccountCookies } = require('./generate_video.js');
+        const result = await syncAccountCookies(port, cookies, platform);
+        return sendJson(res, 200, result);
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+
+    // 1.0.8. Slot Bilgilerini Düzenle / Aktif-Pasif Yap: POST /v1/ai-engine/accounts/update-slot
+    if (method === 'POST' && (pathname === '/v1/ai-engine/accounts/update-slot' || pathname === '/ai-engine/accounts/update-slot')) {
+      try {
+        const body = await parseJsonBody(req);
+        const port = parseInt(body.port, 10);
+        if (!port) return sendJson(res, 400, { error: 'port gereklidir' });
+        const { updateAccountSlot } = require('./generate_video.js');
+        const result = updateAccountSlot(port, { name: body.name, enabled: body.enabled });
+        return sendJson(res, 200, result);
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+
+
 
     // 1.1. WhatsApp Yapay Zeka Mesaj Önerileri: POST /v1/chat/suggestions
     if (method === 'POST' && (pathname === '/v1/chat/suggestions' || pathname === '/chat/suggestions')) {
@@ -870,10 +965,13 @@ const server = http.createServer(async (req, res) => {
 
     // 8. Sistem Durumu: GET /health veya GET /stats
     if (method === 'GET' && (pathname === '/health' || pathname === '/stats' || pathname === '/')) {
+      const freeMb = Math.round(os.freemem() / (1024 * 1024));
+      const totalMb = Math.round(os.totalmem() / (1024 * 1024));
       return sendJson(res, 200, {
         service: 'OmniStudio AI Visual Gateway',
         status: 'online',
         port: PORT,
+        memory: { freeMb, totalMb },
         ...queue.getStats(),
       });
     }
@@ -883,6 +981,17 @@ const server = http.createServer(async (req, res) => {
     console.error('[Gateway Hata]', err);
     sendJson(res, 500, { error: err.message });
   }
+});
+
+server.timeout = 300000;
+server.keepAliveTimeout = 300000;
+server.headersTimeout = 305000;
+
+process.on('uncaughtException', (err) => {
+  console.error('[Gateway UncaughtException]', err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[Gateway UnhandledRejection]', reason);
 });
 
 server.listen(PORT, '0.0.0.0', () => {

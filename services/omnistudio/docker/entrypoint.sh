@@ -58,9 +58,10 @@ for i in $(seq 1 $NUM_WORKERS); do
 
   echo "🖥️ Google Chrome #$i Başlatılıyor (CDP Port: $PORT, Profil: $PROFILE_DIR, Pos: $WIN_POS)..."
   google-chrome-stable --no-sandbox --disable-dev-shm-usage --disable-gpu \
+    --disable-search-engine-choice-screen \
     --user-data-dir="$PROFILE_DIR" \
     --remote-debugging-port=$PORT \
-    $WIN_POS https://chatgpt.com $EXTRA_URL &
+    $WIN_POS https://chatgpt.com https://gemini.google.com/videos $EXTRA_URL &
   sleep 3
 
   echo "🤖 CDP Worker #$i Başlatılıyor (Worker ID: chatgpt-$i, CDP: $PORT)..."

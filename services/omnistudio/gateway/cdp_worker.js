@@ -6,11 +6,22 @@
 
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 
 const GATEWAY_URL = process.env.GATEWAY_URL || 'http://127.0.0.1:3456';
 const CDP_HTTP = process.env.CDP_HTTP || 'http://127.0.0.1:9222';
 const WORKER_ID = process.env.WORKER_ID || 'chatgpt-1';
+const TAB_INDEX = parseInt(process.env.TAB_INDEX || (WORKER_ID.endsWith('2') ? '1' : '0'), 10);
 const POLL_INTERVAL_MS = 2500;
+
+let cachedTabId = null;
+
+function isMemorySafeForWork() {
+  if (WORKER_ID === 'chatgpt-1') return true; // Ana worker her zaman çalışır
+  const freeMb = os.freemem() / (1024 * 1024);
+  // 2. worker en az 650 MB boş RAM varsa iş alır
+  return freeMb >= 650;
+}
 
 console.log(`[CDP Worker: ${WORKER_ID}] OmniStudio Otonom Tarayıcı Motoru Başlatılıyor...`);
 console.log(`[CDP Worker: ${WORKER_ID}] Gateway: ${GATEWAY_URL} | CDP: ${CDP_HTTP}`);
@@ -73,12 +84,32 @@ function createCdpSession(wsUrl) {
   });
 }
 
-// Sekmeyi bul veya oluştur
+// Worker'a atanmış ChatGPT sekmesini bul veya gerekirse yeni sekme aç
 async function getTab(matchPattern) {
   try {
     const res = await fetch(`${CDP_HTTP}/json/list`);
     const tabs = await res.json();
-    return tabs.find(t => t.url && t.url.includes(matchPattern));
+    const chatTabs = tabs.filter(t => t.url && t.url.includes(matchPattern));
+
+    // Eğer bu worker daha önce bir sekmeye bağlandıysa ve sekme hala açıksa onu kullan
+    if (cachedTabId) {
+      const existing = chatTabs.find(t => t.id === cachedTabId);
+      if (existing) return existing;
+    }
+
+    // Eğer bu worker için gereken sekme (ör. 2. sekme) henüz açık değilse, Chrome'da aç
+    if (chatTabs.length <= TAB_INDEX) {
+      console.log(`[CDP Worker: ${WORKER_ID}] Sekme #${TAB_INDEX + 1} açılıyor...`);
+      const newRes = await fetch(`${CDP_HTTP}/json/new?https://chatgpt.com/`, { method: 'PUT' });
+      const newTab = await newRes.json();
+      await sleep(3500);
+      cachedTabId = newTab.id;
+      return newTab;
+    }
+
+    const assigned = chatTabs[TAB_INDEX] || chatTabs[0];
+    if (assigned) cachedTabId = assigned.id;
+    return assigned;
   } catch (err) {
     return null;
   }
@@ -195,50 +226,64 @@ async function injectPromptAndSend(cdp, promptText) {
 
     // 2. Chrome DevTools Protocol yerel Input.insertText ile metni gerçek klavye gibi enjekte et
     await cdp.send('Input.insertText', { text: promptText });
-    await sleep(400);
+    
+    // 3. Gönder butonunun render edilmesini bekle ve tıkla (React state güncelleme payı - döngüsel)
+    let clicked = false;
+    for (let wait = 0; wait < 15; wait++) {
+      await sleep(400);
+      const clickRes = await cdp.send('Runtime.evaluate', {
+        expression: `(() => {
+          let sendBtn = document.querySelector('#composer-submit-button') ||
+                        document.querySelector('button[data-testid="send-button"]') ||
+                        document.querySelector('button[aria-label*="Send"]') ||
+                        document.querySelector('button[aria-label*="Gönder"]');
+          if (sendBtn && !sendBtn.disabled) {
+            sendBtn.click();
+            return true;
+          }
+          return false;
+        })()`,
+        returnByValue: true
+      });
 
-    // 3. Gönder butonunun render edilmesini bekle ve tıkla
-    const clickRes = await cdp.send('Runtime.evaluate', {
-      expression: `(() => {
-        let sendBtn = document.querySelector('#composer-submit-button') ||
-                      document.querySelector('button[data-testid="send-button"]') ||
-                      document.querySelector('button[aria-label*="Send"]') ||
-                      document.querySelector('button[aria-label*="Gönder"]');
-        if (sendBtn) {
-          sendBtn.click();
-          return { success: true };
-        }
-        return { success: false, error: 'Gönder butonu bulunamadı' };
-      })()`,
-      returnByValue: true
-    });
+      if (clickRes.result?.value) {
+        clicked = true;
+        break;
+      }
+    }
 
-    return clickRes.result?.value || { success: true };
+    if (!clicked) {
+      console.log(`[CDP Worker: ${WORKER_ID}] Buton bulunamadı/tıklanamadı, Enter tuşu simüle ediliyor...`);
+      // Alternatif: Enter tuşu gönder
+      await cdp.send('Input.dispatchKeyEvent', {
+        type: 'rawKeyDown',
+        windowsVirtualKeyCode: 13,
+        unmodifiedText: '\r',
+        text: '\r'
+      });
+      await cdp.send('Input.dispatchKeyEvent', {
+        type: 'keyUp',
+        windowsVirtualKeyCode: 13,
+        unmodifiedText: '\r',
+        text: '\r'
+      });
+      await sleep(1000);
+    }
+
+    return { success: true };
   } catch (err) {
     return { success: false, error: err.message };
   }
 }
 
 async function resetToFreshChat(cdp) {
-  const navigated = await cdp.send('Runtime.evaluate', {
-    expression: `(() => {
-      const btn = document.querySelector('a[href="/"]') || document.querySelector('button[data-testid="new-chat-button"]');
-      if (btn) {
-        btn.click();
-        return true;
-      }
-      window.location.href = 'https://chatgpt.com/';
-      return false;
-    })()`,
-    returnByValue: true
-  }).then(r => r.result?.value).catch(() => false);
-
-  if (!navigated) {
+  try {
+    await cdp.send('Page.navigate', { url: 'https://chatgpt.com/' });
     await sleep(3000);
-  } else {
-    await sleep(2000);
+    await waitForChatInput(cdp);
+  } catch (err) {
+    console.warn(`[CDP Worker: ${WORKER_ID}] resetToFreshChat uyarısı:`, err.message);
   }
-  await waitForChatInput(cdp);
 }
 
 let completedJobCount = 0;
@@ -381,6 +426,19 @@ setInterval(async () => {
       isTabLoggedIn = await checkTabLogin(chatgptTab);
     }
 
+    if (!isMemorySafeForWork()) {
+      fetch(`${GATEWAY_URL}/worker/heartbeat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workerId: WORKER_ID,
+          status: 'sleeping',
+          details: `Bellek tasarrufu modu (${(os.freemem() / (1024 * 1024)).toFixed(0)} MB boş RAM)`
+        })
+      }).catch(() => {});
+      return;
+    }
+
     const status = isBusy ? 'busy' : (isTabLoggedIn ? 'idle' : 'waiting_login');
     const details = isBusy
       ? 'Görsel üretiyor'
@@ -397,6 +455,10 @@ setInterval(async () => {
 // Ana Döngü
 async function workerLoop() {
   if (isBusy) return;
+
+  if (!isMemorySafeForWork()) {
+    return;
+  }
 
   try {
     // 1. ChatGPT sekmesi var mı kontrol et
@@ -539,30 +601,32 @@ async function executeChatGPTJob(tab, job) {
       const checkEval = await cdp.send('Runtime.evaluate', {
         expression: `
           (function() {
+            const beforeList = ${JSON.stringify(Array.from(beforeImages))};
             // ChatGPT üretim/düşünme durumunu kontrol et
             const stopBtn = document.querySelector('button[data-testid="stop-button"], button[aria-label*="Stop"], button[aria-label*="durdur"]');
             const isThinking = !!document.querySelector('.result-thinking, [data-testid*="generating"], .streaming-animated-ellipsis');
             const isGenerating = !!stopBtn || isThinking;
 
-            // DALL-E üretilen görseller özel container (.group/imagegen-image), estuary backend URL veya alt="Generated image..." formatındadır
-            const candidateImgs = Array.from(document.querySelectorAll(
-              'img[alt^="Generated image"], img[src*="backend-api/estuary"], .group\\\\/imagegen-image img, [id^="image-"] img'
-            ));
-
-            const beforeList = ${JSON.stringify(Array.from(beforeImages))};
+            // Tüm img elementlerini tara (DALL-E estuary backend URL veya Generated image)
+            const candidateImgs = Array.from(document.querySelectorAll('img'));
 
             for (const img of candidateImgs) {
               const src = img.src || '';
-              if (!src || beforeList.includes(src)) continue;
+              if (!src) continue;
 
               const alt = (img.alt || '').toLowerCase();
+              const isEstuaryOrGenerated = src.includes('backend-api/estuary') || alt.startsWith('generated image');
+
+              if (!isEstuaryOrGenerated) continue;
+              if (beforeList.includes(src)) continue;
+
               // Yüklenen referans dosyaları ref_... veya dosya uzantısıyla biter, onları asla alma
               if (alt.startsWith('ref_') || alt.endsWith('.png') || alt.endsWith('.jpg') || alt.endsWith('.jpeg') || alt.endsWith('.webp')) continue;
 
               const width = img.naturalWidth || img.width;
               const height = img.naturalHeight || img.height;
               // Henüz render edilmemiş veya çok küçük profil/ikon ise geç (minimum 80px)
-              if (!img.complete || width < 80 || height < 80) continue;
+              if (width < 80 || height < 80) continue;
 
               // Eğer ChatGPT hala yanıt üretiyorsa çizim henüz tamamlanmamış olabilir
               if (isGenerating) {
