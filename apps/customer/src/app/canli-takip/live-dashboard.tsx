@@ -2023,20 +2023,88 @@ export function LiveDashboard() {
 
               <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 sm:p-5 shadow-sm space-y-3">
                 <div className="border-b border-[var(--color-hairline)] pb-3">
-                  <h2 className="text-xs sm:text-sm font-bold text-ink">Hızlı İşlem</h2>
-                  <p className="text-[11px] text-ink-muted mt-0.5">En sık kullanılan operasyon yolları.</p>
+                  <h2 className="text-xs sm:text-sm font-bold text-ink">Hızlı Aksiyon Merkezi</h2>
+                  <p className="text-[11px] text-ink-muted mt-0.5">Tüm modüllere tek tıkla erişim.</p>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <button type="button" onClick={() => setActiveTab('messages')} className="rounded border border-[var(--color-hairline)] bg-canvas px-3 py-2 text-left text-[11px] font-semibold text-ink hover:bg-[var(--color-surface-raised)]">Mesajları izle</button>
-                  <button type="button" onClick={() => setActiveTab('quick_send')} className="rounded border border-accent/25 bg-accent-soft/30 px-3 py-2 text-left text-[11px] font-semibold text-accent hover:bg-accent-soft">Hızlı gönder</button>
-                  <button type="button" onClick={() => setActiveTab('baileys')} className="rounded border border-[var(--color-hairline)] bg-canvas px-3 py-2 text-left text-[11px] font-semibold text-ink hover:bg-[var(--color-surface-raised)]">Servisi kontrol et</button>
-                  <button type="button" onClick={() => setActiveTab('data_requests')} className="rounded border border-[var(--color-hairline)] bg-canvas px-3 py-2 text-left text-[11px] font-semibold text-ink hover:bg-[var(--color-surface-raised)]">Veri talepleri</button>
+
+                {/* AI & Video */}
+                <div className="space-y-1.5">
+                  <span className="text-[9px] font-bold text-ink-muted uppercase tracking-wider">🎬 AI & Video Üretimi</span>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button type="button" onClick={() => setActiveTab('ai_studio')}
+                      className="rounded-[var(--radius-sm)] border border-purple-500/30 bg-purple-500/10 px-3 py-2.5 text-left hover:bg-purple-500/15 transition group">
+                      <div className="text-[11px] font-bold text-purple-400 group-hover:text-purple-300">🤖 AI Stüdyo</div>
+                      <div className="text-[10px] text-ink-muted mt-0.5">Video & görsel üretim</div>
+                    </button>
+                    <button type="button" onClick={() => setActiveTab('quick_send')}
+                      className="rounded-[var(--radius-sm)] border border-accent/30 bg-accent-soft/30 px-3 py-2.5 text-left hover:bg-accent-soft transition group">
+                      <div className="text-[11px] font-bold text-accent">⚡ Hızlı Gönder</div>
+                      <div className="text-[10px] text-ink-muted mt-0.5">Anlık mesaj gönder</div>
+                    </button>
+                  </div>
+                  {/* AI Engine Status */}
+                  <div className="rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-canvas px-3 py-2 flex items-center justify-between gap-2">
+                    <span className="text-[11px] text-ink-muted">OmniStudio Motor</span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                      data?.ai_engine?.status === 'online' ? 'bg-ok-soft text-ok-dim' : 'bg-danger/10 text-danger'
+                    }`}>
+                      {data?.ai_engine?.status === 'online' ? '● Online' : '○ Offline'}
+                    </span>
+                  </div>
                 </div>
-                <div className="rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-canvas p-3 text-[11px] text-ink-muted">
-                  <div className="flex justify-between gap-2"><span>Bağlı hat</span><b className="text-ink">{summary.connectedAccounts ?? 0}/{summary.totalAccounts ?? data?.accounts?.length ?? 0}</b></div>
-                  <div className="mt-1 flex justify-between gap-2"><span>Bugün giden</span><b className="text-ink">{summary.todayOutbound}</b></div>
-                  <div className="mt-1 flex justify-between gap-2"><span>Onay bekleyen veri</span><b className="text-ink">{summary.pendingDataRequests}</b></div>
-                  <div className="mt-1 flex justify-between gap-2"><span>Kara liste</span><b className="text-ink">{summary.blacklistedCount ?? 0}</b></div>
+
+                {/* Operasyon */}
+                <div className="space-y-1.5">
+                  <span className="text-[9px] font-bold text-ink-muted uppercase tracking-wider">📡 Operasyon</span>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button type="button" onClick={() => setActiveTab('messages')}
+                      className="rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-canvas px-3 py-2.5 text-left hover:bg-[var(--color-surface-raised)] transition group">
+                      <div className="text-[11px] font-bold text-ink">💬 Mesajlar</div>
+                      <div className="text-[10px] text-ink-muted mt-0.5">{summary.todayInbound + summary.todayOutbound} bugün</div>
+                    </button>
+                    <button type="button" onClick={() => setActiveTab('campaigns')}
+                      className="rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-canvas px-3 py-2.5 text-left hover:bg-[var(--color-surface-raised)] transition group">
+                      <div className="text-[11px] font-bold text-ink">📢 Kampanyalar</div>
+                      <div className="text-[10px] text-ink-muted mt-0.5">{summary.activeCampaigns} aktif</div>
+                    </button>
+                    <button type="button" onClick={() => setActiveTab('queue')}
+                      className={`rounded-[var(--radius-sm)] border px-3 py-2.5 text-left transition group ${summary.queuedMessages > 0 ? 'border-warn/30 bg-warn/5 hover:bg-warn/10' : 'border-[var(--color-hairline)] bg-canvas hover:bg-[var(--color-surface-raised)]'}`}>
+                      <div className="text-[11px] font-bold text-ink">📋 Kuyruk</div>
+                      <div className={`text-[10px] mt-0.5 ${summary.queuedMessages > 0 ? 'text-warn font-semibold' : 'text-ink-muted'}`}>{summary.queuedMessages} bekliyor</div>
+                    </button>
+                    <button type="button" onClick={() => setActiveTab('baileys')}
+                      className="rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-canvas px-3 py-2.5 text-left hover:bg-[var(--color-surface-raised)] transition group">
+                      <div className="text-[11px] font-bold text-ink">📶 WhatsApp</div>
+                      <div className={`text-[10px] mt-0.5 ${worker ? 'text-ok-dim' : 'text-danger font-semibold'}`}>{worker ? `${worker.live} hat bağlı` : 'Servis kopuk'}</div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Yönetim */}
+                <div className="space-y-1.5">
+                  <span className="text-[9px] font-bold text-ink-muted uppercase tracking-wider">🏢 Yönetim</span>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button type="button" onClick={() => setActiveTab('organizations')}
+                      className="rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-canvas px-3 py-2.5 text-left hover:bg-[var(--color-surface-raised)] transition">
+                      <div className="text-[11px] font-bold text-ink">🏢 Firmalar</div>
+                      <div className="text-[10px] text-ink-muted mt-0.5">{summary.totalOrganizations ?? organizationsList.length} kayıtlı</div>
+                    </button>
+                    <button type="button" onClick={() => setActiveTab('contacts')}
+                      className="rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-canvas px-3 py-2.5 text-left hover:bg-[var(--color-surface-raised)] transition">
+                      <div className="text-[11px] font-bold text-ink">👥 Kişiler</div>
+                      <div className="text-[10px] text-ink-muted mt-0.5">{Number(summary.totalContacts).toLocaleString('tr-TR')} kişi</div>
+                    </button>
+                    <button type="button" onClick={() => setActiveTab('data_requests')}
+                      className={`rounded-[var(--radius-sm)] border px-3 py-2.5 text-left transition ${summary.pendingDataRequests > 0 ? 'border-warn/30 bg-warn/5 hover:bg-warn/10' : 'border-[var(--color-hairline)] bg-canvas hover:bg-[var(--color-surface-raised)]'}`}>
+                      <div className="text-[11px] font-bold text-ink">📊 Veri Talepleri</div>
+                      <div className={`text-[10px] mt-0.5 ${summary.pendingDataRequests > 0 ? 'text-warn font-semibold' : 'text-ink-muted'}`}>{summary.pendingDataRequests} onay bekliyor</div>
+                    </button>
+                    <button type="button" onClick={() => setActiveTab('blacklist')}
+                      className="rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-canvas px-3 py-2.5 text-left hover:bg-[var(--color-surface-raised)] transition">
+                      <div className="text-[11px] font-bold text-ink">🚫 Kara Liste</div>
+                      <div className="text-[10px] text-ink-muted mt-0.5">{summary.blacklistedCount ?? 0} engelli</div>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -5238,7 +5306,7 @@ export function LiveDashboard() {
       {/* MODAL: SINEMATIK VIDEO PRODÜKSIYON & AI PROMPT İNCELEYICI */}
       {inspectedVideo && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl animate-in fade-in zoom-in-95 my-auto">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] w-full max-w-5xl max-h-[94vh] flex flex-col shadow-2xl animate-in fade-in zoom-in-95 my-auto">
             {/* Header */}
             <div className="p-3.5 sm:p-4 border-b border-[var(--color-hairline)] flex items-center justify-between bg-surface-raised/50">
               <div className="space-y-0.5">
@@ -5339,11 +5407,14 @@ export function LiveDashboard() {
               </div>
 
               {/* SECTION 1: KULLANICININ YAZDIĞI HAM MESAJ / BRİEF */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
+              <div className="space-y-1.5 bg-canvas p-3 sm:p-4 rounded-[var(--radius-sm)] border border-[var(--color-hairline)] shadow-xs">
+                <div className="flex items-center justify-between gap-2 flex-wrap pb-1.5 border-b border-[var(--color-hairline)]">
+                  <div className="flex items-center gap-2">
                     <span className="w-5 h-5 rounded-full bg-blue-500/10 text-blue-600 font-bold text-xs flex items-center justify-center">1</span>
                     <h4 className="text-xs font-bold text-ink">Kullanıcının Girdiği Ham Brief / Talep Mesajı</h4>
+                    <span className="text-[10px] text-ink-muted font-mono bg-surface-raised px-1.5 py-0.5 rounded border border-[var(--color-hairline)]">
+                      {(inspectedVideo.userPrompt || '').length} karakter
+                    </span>
                   </div>
                   {inspectedVideo.userPrompt && (
                     <button
@@ -5352,69 +5423,82 @@ export function LiveDashboard() {
                         navigator.clipboard.writeText(inspectedVideo.userPrompt || '')
                         showNotice('Kullanıcı briefi panoya kopyalandı.')
                       }}
-                      className="text-[11px] text-accent hover:underline font-semibold"
+                      className="text-[11px] text-accent hover:underline font-semibold flex items-center gap-1"
                     >
-                      Metni Kopyala
+                      <span>📋 Metni Kopyala</span>
                     </button>
                   )}
                 </div>
-                <div className="bg-canvas p-3 rounded-[var(--radius-sm)] border border-[var(--color-hairline)] text-xs text-ink-soft leading-relaxed font-sans">
+                <div className="text-xs text-ink leading-relaxed font-sans whitespace-pre-wrap select-text pt-1">
                   {inspectedVideo.userPrompt || 'İşletme için 9:16 dikey formatta reklam briefi.'}
                 </div>
               </div>
 
               {/* SECTION 2: CHATGPT WEB YÖNETMEN KURGUSU & SAHNE SENARYOSU */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
+              <div className="space-y-1.5 bg-canvas p-3 sm:p-4 rounded-[var(--radius-sm)] border border-purple-500/20 shadow-xs">
+                <div className="flex items-center justify-between gap-2 flex-wrap pb-1.5 border-b border-[var(--color-hairline)]">
+                  <div className="flex items-center gap-2">
                     <span className="w-5 h-5 rounded-full bg-purple-500/10 text-purple-600 font-bold text-xs flex items-center justify-center">2</span>
                     <h4 className="text-xs font-bold text-ink">ChatGPT Web Yönetmen Kurgusu & Sahne Senaryosu</h4>
-                    <span className="text-[10px] bg-purple-500/10 text-purple-600 font-mono px-1.5 py-0.2 rounded font-semibold">
-                      Director Prompt
+                    <span className="text-[10px] bg-purple-500/10 text-purple-600 font-mono px-1.5 py-0.5 rounded font-semibold border border-purple-500/20">
+                      Director Prompt · {(inspectedVideo.chatGptPrompt || inspectedVideo.veoPrompt || '').length} karakter
                     </span>
                   </div>
-                  {inspectedVideo.chatGptPrompt && (
+                  {(inspectedVideo.chatGptPrompt || inspectedVideo.veoPrompt) && (
                     <button
                       type="button"
                       onClick={() => {
-                        navigator.clipboard.writeText(inspectedVideo.chatGptPrompt || '')
+                        navigator.clipboard.writeText(inspectedVideo.chatGptPrompt || inspectedVideo.veoPrompt || '')
                         showNotice('ChatGPT kurgu promptu panoya kopyalandı.')
                       }}
-                      className="text-[11px] text-accent hover:underline font-semibold"
+                      className="text-[11px] text-purple-600 hover:underline font-semibold flex items-center gap-1"
                     >
-                      Promptu Kopyala
+                      <span>📋 Promptu Kopyala</span>
                     </button>
                   )}
                 </div>
-                <div className="bg-canvas p-3 rounded-[var(--radius-sm)] border border-[var(--color-hairline)] text-xs text-ink-soft leading-relaxed font-mono whitespace-pre-wrap max-h-48 overflow-y-auto">
+                <div className="text-xs text-ink font-mono whitespace-pre-wrap leading-relaxed max-h-72 overflow-y-auto select-text pt-1 p-2 bg-surface/50 rounded border border-[var(--color-hairline)] scrollbar-thin">
                   {inspectedVideo.chatGptPrompt || inspectedVideo.veoPrompt}
                 </div>
               </div>
 
               {/* SECTION 3: GOOGLE VEO NİHAİ FİZİKSEL PROMPTU (VİDEOYU ÜRETTİREN ASIL PROMPT) */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
+              <div className="space-y-1.5 bg-canvas p-3 sm:p-4 rounded-[var(--radius-sm)] border border-emerald-500/30 shadow-xs">
+                <div className="flex items-center justify-between gap-2 flex-wrap pb-1.5 border-b border-[var(--color-hairline)]">
+                  <div className="flex items-center gap-2">
                     <span className="w-5 h-5 rounded-full bg-emerald-500/10 text-emerald-600 font-bold text-xs flex items-center justify-center">3</span>
                     <h4 className="text-xs font-bold text-ink">Google Veo Nihai Fiziksel Promptu (Videoyu Ürettiren Asıl Prompt)</h4>
-                    <span className="text-[10px] bg-emerald-500/10 text-emerald-600 font-mono px-1.5 py-0.2 rounded font-semibold">
-                      Veo 3.1 / Pro Input
+                    <span className="text-[10px] bg-emerald-500/10 text-emerald-600 font-mono px-1.5 py-0.5 rounded font-semibold border border-emerald-500/20">
+                      Veo 3.1 / Pro Input · {(inspectedVideo.veoPrompt || '').length} karakter
                     </span>
                   </div>
                   {inspectedVideo.veoPrompt && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        navigator.clipboard.writeText(inspectedVideo.veoPrompt || '')
-                        showNotice('Google Veo nihai promptu panoya kopyalandı.')
-                      }}
-                      className="text-[11px] text-accent hover:underline font-semibold"
-                    >
-                      Veo Promptunu Kopyala
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const fullPackage = `### 1. KULLANICI BRİEFİ\n${inspectedVideo.userPrompt || ''}\n\n### 2. YÖNETMEN SENARYOSU\n${inspectedVideo.chatGptPrompt || ''}\n\n### 3. GOOGLE VEO PROMPTU\n${inspectedVideo.veoPrompt || ''}`;
+                          navigator.clipboard.writeText(fullPackage);
+                          showNotice('Tüm prompt paketi panoya kopyalandı.');
+                        }}
+                        className="text-[10px] font-bold px-2 py-0.5 rounded bg-surface-raised hover:bg-canvas border border-[var(--color-hairline)] text-ink"
+                      >
+                        Tüm Paketi Kopyala
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(inspectedVideo.veoPrompt || '')
+                          showNotice('Google Veo nihai promptu panoya kopyalandı.')
+                        }}
+                        className="text-[11px] text-emerald-600 hover:underline font-semibold flex items-center gap-1"
+                      >
+                        <span>📋 Veo Promptunu Kopyala</span>
+                      </button>
+                    </div>
                   )}
                 </div>
-                <div className="bg-canvas p-3 rounded-[var(--radius-sm)] border border-emerald-500/30 text-xs text-ink font-mono whitespace-pre-wrap leading-relaxed max-h-56 overflow-y-auto shadow-inner">
+                <div className="text-xs text-ink font-mono whitespace-pre-wrap leading-relaxed max-h-96 overflow-y-auto select-text pt-1 p-2 bg-surface/50 rounded border border-emerald-500/20 shadow-inner scrollbar-thin">
                   {inspectedVideo.veoPrompt}
                 </div>
               </div>

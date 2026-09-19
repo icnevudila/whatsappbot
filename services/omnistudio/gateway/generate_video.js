@@ -1297,14 +1297,33 @@ function getRecentVideos() {
       }
       const hasThumb = fs.existsSync(path.join(OUTPUT_DIR, thumbFile));
 
-      // Sidecar meta JSON dosyasını oku
-      const metaPath = path.join(OUTPUT_DIR, `${id}_meta.json`);
-      const altMetaPath = path.join(OUTPUT_DIR, `${file.replace(/\.mp4$/, '')}_meta.json`);
+      // Sidecar meta JSON dosyasını akıllıca ara (tüm varyasyonlar ve türevler için)
+      const baseName = file.replace(/\.mp4$/, '');
+      const cleanBase = baseName.replace(/_(clean_nosub|capcut_final|campaign|raw|nosub|subtitled).*/, '');
+      const timeMatch = baseName.match(/(video_\d+_flow|video_\d+)/);
+
+      const candidateMetaPaths = [
+        path.join(OUTPUT_DIR, `${id}_meta.json`),
+        path.join(OUTPUT_DIR, `${baseName}_meta.json`),
+        path.join(OUTPUT_DIR, `${cleanBase}_meta.json`),
+        path.join(OUTPUT_DIR, `${cleanBase}_flow_meta.json`),
+        timeMatch ? path.join(OUTPUT_DIR, `${timeMatch[1]}_flow_meta.json`) : null,
+        timeMatch ? path.join(OUTPUT_DIR, `${timeMatch[1]}_meta.json`) : null,
+        path.join('/app/gateway/public', `${id}_meta.json`),
+        path.join('/app/gateway/public', `${cleanBase}_meta.json`),
+      ].filter(Boolean);
+
       let meta = {};
-      if (fs.existsSync(metaPath)) {
-        try { meta = JSON.parse(fs.readFileSync(metaPath, 'utf8')); } catch(e){}
-      } else if (fs.existsSync(altMetaPath)) {
-        try { meta = JSON.parse(fs.readFileSync(altMetaPath, 'utf8')); } catch(e){}
+      for (const p of candidateMetaPaths) {
+        if (fs.existsSync(p)) {
+          try {
+            const parsed = JSON.parse(fs.readFileSync(p, 'utf8'));
+            if (parsed && (parsed.veoPrompt || parsed.userPrompt || parsed.chatGptPrompt)) {
+              meta = parsed;
+              break;
+            }
+          } catch(e){}
+        }
       }
 
       // Hangi motordan üretildiğini dosya adı ve meta verisinden tespit et
@@ -1318,19 +1337,22 @@ function getRecentVideos() {
         creditsCost = meta.creditsCost ?? 15;
       }
 
-      // Marka & Sektör
+      // Marka & Sektör tespiti
       let brand = meta.brand || 'Genel Reklam';
       let sector = meta.sector || 'Genel / Kurumsal';
       const fLower = file.toLowerCase();
       if (fLower.includes('bofe')) {
         brand = meta.brand || 'Bofe';
         sector = meta.sector || 'Tarım & Hasat Teknolojileri';
-      } else if (fLower.includes('veri') || fLower.includes('burada')) {
+      } else if (fLower.includes('veri') || fLower.includes('burada') || fLower.includes('desk')) {
         brand = meta.brand || 'Veri Burada';
         sector = meta.sector || 'B2B / Yazılım & Harita Analitiği';
       } else if (fLower.includes('ayvaz') || fLower.includes('brick') || fLower.includes('tugla')) {
         brand = meta.brand || 'Ayvazoğlu';
         sector = meta.sector || 'Sanayi & Yapı Malzemeleri';
+      } else if (fLower.includes('doner') || fLower.includes('restoran') || fLower.includes('food')) {
+        brand = meta.brand || 'Ustaoğlu Yaprak Döner';
+        sector = meta.sector || 'Gıda & Restoran';
       }
 
       // Kullanıcı mesajı / brief, ChatGPT promptu, Veo promptu ve yüzey kuralı
@@ -1339,32 +1361,70 @@ function getRecentVideos() {
       let veoPrompt = meta.veoPrompt;
       let physicalAnchoring = meta.physicalAnchoring;
 
-      if (!userPrompt) {
-        if (brand === 'Veri Burada') {
-          userPrompt = 'Veri Burada için modern kurumsal ofiste 9:16 dikey sinematik reklam videosu üret. Ekranda harita verileri ve cam masada firma logosu olsun.';
-          chatGptPrompt = '9:16 dikey formatta üst düzey B2B reklam filmi senaryosu. Gün batımında modern gökdelendeki cam ofis ve veri analitiği harita ekranları görünür. Masa üstünde logo standı net şekilde parlar. Kamera zarifçe yaklaşır.';
-          veoPrompt = '9:16 vertical commercial shot. In a high-tech corporate office, the VERI BURADA logo is firmly anchored onto a matte acrylic desk plaque on a glass table. Warm sunset light streaming through skyscrapers. 8K cinematic commercial, zero floating elements.';
-          physicalAnchoring = 'Cam Masa Üstü Mat Pleksi Plaka & Gökdelen Cam Duvarı';
+      if (!userPrompt || !veoPrompt) {
+        if (brand === 'Veri Burada' || fLower.includes('desk')) {
+          userPrompt = userPrompt || 'Veri Burada markası için modern plazada cam masa üstünde mat pleksi plaka ve arka planda veri harita grafikleri olan 9:16 sinematik reklam videosu.';
+          chatGptPrompt = chatGptPrompt || `9:16 dikey formatta üst düzey B2B Türk teknoloji reklam filmi senaryosu.
+Marka: VERİ BURADA. Sektör: Harita Verisi ve Lokasyon Analitiği.
+SAHNE 1 (0-3sn): Gün batımında modern gökdelenin 40. katındaki cam ofis. Cam toplantı masasının üzerindeki mat pleksi plakada kristal netliğinde VERİ BURADA logosu ve 'VERİ BURADA' kabartması.
+SAHNE 2 (3-7sn): Arka plandaki dev cam bölmede etkileşimli Türkiye haritası ve parlayan lokasyon analiz noktaları. Pleksi plaka üzerinde ufak net çağrı: 'WHATSAPP İLE BAŞLA'.
+SAHNE 3 (7-10sn): Kamera yavaş ve akıcı bir sinematik tilt hareketiyle logoya odaklanır. Dışarıda şehir ışıkları parıldar.
+SESLENDİRME: Kristal netliğinde profesyonel Türkçe erkek reklam spikeri sesi: 'Lokasyon analitiği ve harita verisinde doğru adrese ulaşın. Veri Burada ile gücünüze güç katın.'
+KESİN KURAL: Havada uçuşan yazı veya yapay şerit olmayacaktır. Metin sadece fiziksel pleksi stand üzerindedir.`;
+          veoPrompt = veoPrompt || `9:16 vertical commercial cinematic shot. High-end Türk television advertising visual standards. In a modern high-rise corporate executive office during golden hour sunset, a clear frosted acrylic desk trophy plaque sits firmly on a sleek glass conference table. The VERI BURADA logo and crisp typography 'VERI BURADA' are precisely UV-printed and laser-etched onto the rigid acrylic plaque with subtle amber reflections from skyscraper windows. On the lower portion of the desk plaque, neat typography reads 'WHATSAPP ILE BASLA'. In the softly blurred background, interactive glowing map analytics and geographic data points illuminate a high-tech smart glass partition. 8K resolution, Arri Master Prime 50mm lens, photorealistic reflections, cinematic depth of field, pure live-action feel. ZERO floating letters, NO text banners, NO artificial CGI graphics overlay. Everything is strictly anchored to the physical acrylic desk stand.`;
+          physicalAnchoring = 'Cam Masa Üstü Lazer Kazıma Akrilik/Pleksi Plaka & Akıllı Ofis Camı';
         } else if (brand === 'Bofe' && fLower.includes('hasat')) {
-          userPrompt = 'Bofe zeytin hasat makinesi için Ege zeytinliğinde profesyonel 9:16 dikey sinematik reklam filmi.';
-          chatGptPrompt = 'Sabah güneşi eşliğinde Ege zeytinliği. Bofe zeytin hasat makinesi dalları titreterek zeytinleri döker. Makinenin sarı gövdesine kabartmalı BOFE logosu sabitlenmiştir.';
-          veoPrompt = '9:16 vertical cinematic commercial. Golden hour Aegean olive grove, olive branches vibrating with ripe olives falling into harvesting nets. The bright yellow BOFE olive harvester is shown in action, with the BOFE brand name embossed cleanly onto the rigid yellow equipment casing.';
+          userPrompt = userPrompt || 'Bofe zeytin hasat makinesi için Ege zeytinliğinde profesyonel 9:16 dikey sinematik reklam filmi.';
+          chatGptPrompt = chatGptPrompt || `9:16 dikey formatta tarım teknolojileri reklam filmi senaryosu.
+Marka: BOFE. Ürün: Bofe Profesyonel Zeytin Hasat Makinesi.
+SAHNE 1 (0-3sn): Ege'de asırlık zeytin bahçesinde sabah güneşi. Canlı sarı renkli Bofe zeytin silkme makinesinin polimer gövdesinde net kabartma 'BOFE' amblemi.
+SAHNE 2 (3-7sn): Karbon fiber silkme kolları zeytin dallarını titreterek olgun zeytinleri hasat brandasına döker. Gövde yanındaki metal bilgi plakasında: 'HASAT ZAMANI'.
+SAHNE 3 (7-10sn): Çiftçinin omzundaki ergonomik batarya çantasında ve makinede 'BOFE' markası güven verir.
+SESLENDİRME: Kristal netliğinde profesyonel Türkçe erkek spiker sesi: 'Bofe ile zeytin hasadında maksimum verim, sıfır yorgunluk. Bereketli toprakların vazgeçilmez gücü.'
+KESİN KURAL: Tüm yazılar makine ve ekipman yüzeylerine kalıplanmış veya lazerle işlenmiştir.`;
+          veoPrompt = veoPrompt || `9:16 vertical cinematic commercial. Golden hour morning sunlight in an expansive Aegean olive grove. A professional yellow and graphite BOFE motorized olive harvester in dynamic macro action, carbon fiber shaking rods gently vibrating branches as plump green and black olives fall smoothly onto ground tarps. The BOFE brand logo is clearly embossed on the heavy-duty yellow polymer motor chassis. Clean agricultural documentary cinematography, 4K 60fps slow motion, natural dust motes catching sunlight. Strict rigid surface anchoring on machine housing.`;
           physicalAnchoring = 'Hasat Makinesi Sarı Metal/Polimer Ekipman Gövdesi';
         } else if (brand === 'Bofe') {
-          userPrompt = 'Bofe şarjlı tarım ve ilaçlama pompası için tarlada kullanım videosu.';
-          chatGptPrompt = 'Meyve bahçesinde Bofe şarjlı tarım pompası ile hassas ilaçlama. Depo yüzeyinde Bofe logosu ve dayanıklı tasarım vurgusu.';
-          veoPrompt = '9:16 vertical commercial. An orchard at morning sunrise, professional agricultural spraying pump in crisp focus. The BOFE logo is embossed on the heavy-duty blue tank surface. Water droplets catching sunlight.';
+          userPrompt = userPrompt || 'Bofe şarjlı tarım ve ilaçlama pompası için tarlada kullanım videosu.';
+          chatGptPrompt = chatGptPrompt || `9:16 dikey formatta tarım ekipmanı reklam senaryosu.
+Marka: BOFE. Ürün: Bofe 16L Şarjlı Sırt Pompası.
+SAHNE 1 (0-3sn): Meyve bahçesinde sabah çiyi. Bofe şarjlı tarım pompasının mavi polietilen deposu üzerinde serigrafi 'BOFE' amblemi.
+SAHNE 2 (3-7sn): Teleskopik pirinç nozül homojen mikro damlacıklar püskürtür. Deponun altındaki batarya kapağında: 'GÜÇLÜ POMPA'.
+SAHNE 3 (7-10sn): Çiftçi pompayı sırtına asar, güneş ışığında su zerrecikleri parlar.
+SESLENDİRME: Kristal netliğinde Türkçe reklam spikeri: 'Tarlanızda ve bahçenizde kesintisiz basınç. Bofe şarjlı pompa ile ilaçlama artık zahmetsiz.'`;
+          veoPrompt = veoPrompt || `9:16 vertical commercial. An orchard at morning sunrise, professional agricultural spraying pump in crisp focus. The BOFE logo is embossed on the heavy-duty blue tank surface. Water droplets catching sunlight. Telephoto 85mm lens, pristine live action.`;
           physicalAnchoring = 'Tarım Pompası Basınçlı Depo Yüzeyi';
         } else if (brand === 'Ayvazoğlu') {
-          userPrompt = 'Ayvazoğlu tuğla fabrikasından kapıya satış sinematik dikey reklam filmi.';
-          chatGptPrompt = 'Endüstriyel kırmızı tuğla fabrikası. Paletli fırınlanmış tuğlalar forklift ile sevk edilir. Fabrika metal kirişinde AYVAZOĞLU tabelası asılıdır.';
-          veoPrompt = '9:16 vertical commercial shot. Industrial red brick manufacturing plant. Palletized red bricks with AYVAZOGLU signage rigidly mounted on the metal warehouse beam. Direct factory-to-door sales theme.';
+          userPrompt = userPrompt || 'Ayvazoğlu kiremit ve pres tuğla fabrikasından şantiyeye teslimat sinematik reklam filmi.';
+          chatGptPrompt = chatGptPrompt || `9:16 dikey formatta ağır sanayi ve yapı malzemeleri reklam senaryosu.
+Marka: AYVAZOĞLU İNŞAAT. Ürün: Fırınlanmış Pres Tuğla.
+SAHNE 1 (0-3sn): Yüksek sıcaklıktaki tünel fırından çıkan kızıl pres tuğla paletleri. Fabrika tavanındaki dev çelik kirişe monte endüstriyel tabela: 'AYVAZOĞLU İNŞAAT'.
+SAHNE 2 (3-7sn): Forklift sağlam paleti kamyona yüklerken tuğlaların keskin köşeleri ve pres baskısı görünür. Palet ambalaj bandında: 'SAĞLAM TEMELLER'.
+SAHNE 3 (7-10sn): Kamyon şantiye girişindeki dövme demir nizamiye tabelasının önünden geçer: 'AYVAZOĞLU'.
+SESLENDİRME: Tok, kararlı Türkçe erkek reklam spikeri sesi: 'Geleceği inşa eden sağlam yapılar için, nesiller boyu güven: Ayvazoğlu İnşaat.'`;
+          veoPrompt = veoPrompt || `9:16 vertical commercial shot. Industrial red brick manufacturing plant. Palletized red bricks with AYVAZOGLU signage rigidly mounted on the metal warehouse beam. Direct factory-to-door sales theme. Warm industrial lighting, tungsten glow, heavy industrial aesthetic.`;
           physicalAnchoring = 'Fabrika Metal Çelik Kiriş Tabelası & Fırınlanmış Tuğla Paleti';
+        } else if (brand === 'Ustaoğlu Yaprak Döner' || fLower.includes('doner')) {
+          userPrompt = userPrompt || 'Geleneksel odun ateşi yaprak döner ustasının hazırlık ve lavaş sunumunu anlatan 9:16 iştah kabartan dikey reklam filmi.';
+          chatGptPrompt = chatGptPrompt || `9:16 dikey formatta gurme gastronomi reklam filmi senaryosu.
+Marka: USTAOĞLU YAPRAK DÖNER. Ürün: Meşe Odunu Ateşinde Hakiki Yaprak Döner.
+SAHNE 1 (0-3sn): Meşe kömürü ateşinde nar gibi kızaran yaprak döner. Ustanın çelik bıçağı incecik dilimler keser. Ustanın siyah aşçı önlüğünde altın nakışlı 'USTAOĞLU' logosu.
+SAHNE 2 (3-7sn): Sıcak taş fırından yeni çıkan tırnak pide üzerine döner dilimleri, közlenmiş biber ve tereyağı dökülür. Masif ahşap sunum tahtasının kenarında dağlama: 'LEZZETİN USTASI'.
+SAHNE 3 (7-10sn): Dumanı tüten porsiyon masaya konur. Arka planda döküm menü standında 'USTAOĞLU YAPRAK DÖNER' yer alır.
+SESLENDİRME: Samimi, iştah kabartan profesyonel Türkçe erkek ses tonu: 'Meşe odunu ateşinde, nesillerdir değişmeyen hakiki yaprak döner lezzeti. Ustaoğlu lezzet durağınız.'`;
+          veoPrompt = veoPrompt || `9:16 vertical commercial cinematic food cinematography. Authentic Turkish doner kebab turning on a vertical spit in front of roaring red wood fire embers. A seasoned master chef cleanly carves ultra-thin, glistening ribbons of premium beef with a specialized polished stainless steel doner knife. The chef's crisp black apron features the 'USTAOGLU' emblem embroidered neatly in gold thread. Next, the succulent meat is served on freshly baked pita on a rustic oiled olive wood board with 'LEZZETIN USTASI' laser-burned along the rim. Sizzling melted brown butter drizzled over top with rising steam. Macro 90mm lens, warm amber lighting, 60fps slow motion, mouth-watering gourmet texture. ZERO floating text cards, NO artificial overlays.`;
+          physicalAnchoring = 'Şef Önlüğü Göğüs Nakışı & Ahşap Sunum Tahtası Dağlama';
         } else {
-          userPrompt = 'İşletme için 9:16 dikey formatta üst düzey sinematik reklam prodüksiyonu.';
-          chatGptPrompt = '9:16 dikey formatta Türk televizyon ve sinema reklam standartlarında reklam senaryosu.';
-          veoPrompt = '9:16 vertical commercial cinematic shot. High-end advertising visuals with rigid physical surface anchoring.';
-          physicalAnchoring = 'Fiziksel Yüzey Sabitleme (Rigid Surface Anchoring)';
+          userPrompt = userPrompt || 'İşletme için 9:16 dikey formatta üst düzey Türk sinema ve televizyon standartlarında reklam prodüksiyonu.';
+          chatGptPrompt = chatGptPrompt || `9:16 dikey formatta Türk televizyon ve sinema reklam standartlarında 3 sahnelik yönetmen kurgusu.
+Marka: ${brand}. Sektör: ${sector}.
+SAHNE 1 (0-3sn): Prestijli kurumsal mekanda geniş açı açılış. Mekanın katı mimari yüzeyine monte edilmiş tabela: '${brand}'.
+SAHNE 2 (3-7sn): Ürün/hizmet kullanımının dinamik sinematik yakın planı. İlgili fiziksel ekipman yüzeyinde net çağrı: 'HEMEN KEŞFEDİN'.
+SAHNE 3 (7-10sn): Kapanış planında güven veren atmosfer ve kurumsal amblem detayı.
+SESLENDİRME: Kristal netliğinde profesyonel Türkçe erkek reklam spikeri sesi: '${brand} ile kalitede yeni standart. Detaylar ve fırsatlar için hemen iletişime geçin.'
+KESİN KURAL: Ekranda havada uçuşan harf, bilgi kutusu veya uzun alt başlık KESİNLİKLE OLMAYACAKTIR. Saf sinematik çekim.`;
+          veoPrompt = veoPrompt || `9:16 vertical commercial cinematic shot. High-end advertising visuals with rigid physical surface anchoring. Photorealistic cinematic commercial for ${brand} in ${sector}. Sharp focus, cinematic depth of field, anamorphic lens flare, Arri Alexa Mini LF. Master color grade. All branding strictly anchored to physical rigid materials. Zero floating text overlays.`;
+          physicalAnchoring = 'Mimari Katı Yüzey & Kurumsal Ürün Gövdesi';
         }
       }
 

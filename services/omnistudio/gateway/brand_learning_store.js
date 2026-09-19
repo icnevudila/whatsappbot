@@ -269,15 +269,38 @@ class BrandLearningStore {
       const sceneShortCTA = sector.recommendedTurkishCTAs ? sector.recommendedTurkishCTAs[0] : 'KEŞFET';
       const brandSlogan = SECTOR_SLOGANS[sector.sectorKey] || 'KURUMSAL ÇÖZÜMLER';
 
-      sectorSection = `\nÖĞRENİLMİŞ SEKTÖR (${sector.name}):\n` +
-        `- Sahne atmosferi: ${sector.sceneAtmosphere}\n` +
+      // Çoklu Varyasyon Çözümleme (Kullanıcı Talebi: Tekdüzelik olmasın, zengin varyasyonlar olsun)
+      let activeVariation = null;
+      if (sector.variations && Array.isArray(sector.variations) && sector.variations.length > 0) {
+        const queryText = `${productName || ''} ${brief || ''}`.toLowerCase();
+        // 1. Önce brief içindeki anahtar kelimelerle en uygun varyasyonu bul
+        for (const v of sector.variations) {
+          const vTitle = (v.title || '').toLowerCase();
+          const vId = (v.id || '').toLowerCase();
+          if (queryText.includes(vId) || vTitle.split(' ').some(w => w.length > 3 && queryText.includes(w))) {
+            activeVariation = v;
+            break;
+          }
+        }
+        // 2. Özel eşleşme yoksa zamana göre dönüşümlü (rotasyonlu) varyasyon seç
+        if (!activeVariation) {
+          const vIdx = Math.abs(Math.floor(Date.now() / 1000)) % sector.variations.length;
+          activeVariation = sector.variations[vIdx];
+        }
+      }
+
+      const activeAtmosphere = activeVariation ? activeVariation.atmosphere : sector.sceneAtmosphere;
+      const activeTemplate = activeVariation ? activeVariation.template : sector.goldenPromptTemplate;
+      const variationTitle = activeVariation ? ` [Varyasyon Modeli: ${activeVariation.title}]` : '';
+
+      sectorSection = `\nÖĞRENİLMİŞ SEKTÖR (${sector.name}${variationTitle}):\n` +
+        `- Sahne atmosferi: ${activeAtmosphere}\n` +
         `- Fiziksel yüzeyler: ${(sector.rigidSurfaceObjects || []).join(' | ')}\n` +
         `- Kısa CTA örnekleri: ${(sector.recommendedTurkishCTAs || []).join(', ')}\n` +
         `- Yasaklı unsurlar: ${(sector.forbiddenElements || []).join(', ')}\n`;
 
-      // goldenPromptTemplate'i kapanış referansı olarak ver — brand_resolver'ın 3-act yapısıyla çakışmaması için
-      if (sector.goldenPromptTemplate) {
-        let filledTemplate = sector.goldenPromptTemplate
+      if (activeTemplate) {
+        let filledTemplate = activeTemplate
           .replace(/\{\{MARKA\}\}/g, brandName || 'FİRMA')
           .replace(/\{\{LOGO_TANIMI\}\}/g, brand?.logoGuidelines || 'Kurumsal logo amblemi')
           .replace(/\{\{URUN\}\}/g, productName || 'Ürün & Hizmet')
@@ -285,7 +308,8 @@ class BrandLearningStore {
           .replace(/\{\{KAPANIS_CTA\}\}/g, sceneShortCTA)
           .replace(/\{\{SEKTOR_KISA_CTA\}\}/g, sceneShortCTA);
 
-        sectorSection += `- Başarılı kapanış sahne referansı: "${filledTemplate.split('\n').find(l => l.includes('SAHNE 3')) || 'SAHNE 3: Aydınlık çalışma ortamı, fiziksel isimlikte marka adı ve sektör sloganı.'}"\n`;
+        const s3Line = filledTemplate.split('\n').find(l => l.includes('SAHNE 3'));
+        sectorSection += `- Başarılı kapanış sahne referansı: "${s3Line || 'SAHNE 3: Aydınlık çalışma ortamı, fiziksel isimlikte marka adı ve sektör sloganı.'}"\n`;
       }
     }
 
