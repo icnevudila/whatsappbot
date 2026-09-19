@@ -47,7 +47,7 @@ async function getActiveBrandKit(orgId = null, brandHint = null) {
         text: '#212121',
         background: '#ffffff',
       },
-      tone: 'Modern ve profesyonel B2B veri, istihbarat ve kurumsal müşteri büyüme teknolojileri platformu. Kesinlikle restoran veya gıda ile alakası yoktur; %100 ileri teknoloji B2B veri ve yazılım platformudur.',
+      tone: 'Modern ve profesyonel B2B veri, istihbarat ve kurumsal müşteri büyüme teknolojileri platformu. Yüksek teknolojili kurumsal SaaS ve veri analitiği kimliği.',
       logo_path: 'fb19aab1-92ea-4614-9da9-9229e3cc364d/onboarding/brand.webp',
       hasExplicitLogo: true,
     };
@@ -98,7 +98,7 @@ function getLogoVisualDescription(brandName, logoPath, hasExplicitLogo = false) 
     return "Zarif, minimalist ve modern siyah 'bofe' yazı logosu (küçük harflerle 'bofe', 'e' harfinde karakteristik açılı modern kesim). Kesinlikle uydurma geometrik üçgen, amblem veya rastgele sembol KULLANILMAYACAKTIR; yalnızca saf, estetik 'bofe' kurumsal tipografisi yer alacaktır.";
   }
   if (lower.includes('veri burada') || lower.includes('veriburada')) {
-    return "Zarif, modern yeşil tonlarında (#2e7d32, #a5d6a7) minimalist 'Veri Burada' B2B kurumsal teknoloji logosu. KESİNLİKLE dönerci, restoran, şef veya alakasız gastronomi sembolleri KULLANILMAYACAKTIR; saf kurumsal veri platformu kimliği yer alacaktır.";
+    return "Zarif, modern yeşil tonlarında (#2e7d32, #a5d6a7) minimalist 'Veri Burada' B2B kurumsal veri ve teknoloji amblemi. Yalnızca saf, yüksek teknolojili kurumsal yazılım kimliği yer alacaktır.";
   }
   if (lower.includes('ayvazoğlu')) {
     return "Cesur geometrik sarı ve sıcak turuncu (#ffc300, #ff5733) tonlarında stilize mimari üçgen 'A' inşaat logo amblemi";
