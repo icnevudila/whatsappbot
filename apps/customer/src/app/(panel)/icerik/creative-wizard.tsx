@@ -117,7 +117,7 @@ function defaultDraft(data: WizardBootstrap, initialFormat?: string): Draft {
     baseCreativeId: '',
     brief: isVideo ? defaultVideoBrief : '',
     brandKitId: data.kits.find((kit) => kit.isDefault)?.id ?? data.kits[0]?.id ?? '',
-    useLogo: false,
+    useLogo: true,
     productIds: [],
     productExtras: {},
     phoneIds: [],

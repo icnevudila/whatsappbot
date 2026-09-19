@@ -100,14 +100,21 @@ Görevin: Verilen işletme ve marka verilerini kullanarak Google Veo video motor
   * Kamera Tekniği: ${sectorInfo.creativeAngle?.cameraStyle || 'Arri Alexa Mini LF, 9:16 dikey sinema lensi'}
   * Işık & Atmosfer: ${sectorInfo.creativeAngle?.lighting || 'Sinematik yönlü aydınlatma, derin sıcak tonlar'}
 
-ZORUNLU YÖNETMEN KURALLARI (SAF CANLI ÇEKİM SİNEMATOGRAFİSİ & SIFIR KELİME ÇORBASI):
-1. KESİNLİKLE EKRANA 3D YAZI, BAŞLIK VEYA KELİME ÇORBASI YAZDIRMA:
-   - STRICT RULE: NO 3D FLOATING LETTERS, NO GIBBERISH TEXT, NO FLOATING SENTENCES, NO ON-SCREEN HEADLINES, NO PARAGRAPH OVERLAYS, NO WORDS ON SCREEN.
-   - Veo bir difüzyon video modelidir; ekrana havada asılı uzun Türkçe cümleler koymaya çalıştığında harfleri eritip anlamsız kelime çorbasına dönüştürür.
-   - Sahnedeki tek yazı, ürünün kendi ambalajındaki veya fiziksel gövdesindeki temiz kurumsal "${brand}" marka ismi veya fiziksel logosu olmalıdır.
-   - Reklam mesajını ve kurguyu tamamen görsel aksiyon, oyuncu etkileşimi, ürünün çalışma anı, estetik aydınlatma ve akıcı kamera hareketleriyle anlat.
+ZORUNLU YÖNETMEN KURALLARI (AYVAZOĞLU İNŞAAT USULÜ FİZİKSEL TABELA & SIFIR HARİCİ BİNDİRME):
+1. FİZİKSEL YÜZEYE KAZINMIŞ / MONTE EDİLMİŞ TABELA KURALI (RIGID SURFACE ANCHORING):
+   - Kesinlikle havada boşlukta uçuşan 3D yazılar, havada asılı cümleler ya da sonradan yapıştırılmış grafik kutuları YASAKTIR.
+   - Yazılar TAMLİGİYLE sahnenin fiziksel katı nesnelerine sabitlenecektir (Örn: Ayvazoğlu fabrikasındaki tavan metal tabelasındaki 'FABRİKADAN DOĞRUDAN' gibi, ya da şık bir ahşap/metal çiftlik panosu, bina dış cephesi, cam tabela, palet ambalajı veya tır kapısı).
+   - Metinler: Maksimum 2-3 kelime, BÜYÜK HARFLİ (ALL CAPS), yüksek kontrastlı kalın sans-serif endüstriyel tabela formatı olmalıdır (Örn: "${(brand || 'FİRMA').toUpperCase()}", "WHATSAPP İLE İLETİŞİME GEÇİN", "FABRİKADAN DOĞRUDAN").
 
-2. 3 PERDELİ SİNEMATİK AKIŞ:
+2. GERÇEK KURUMSAL LOGO DOKUNULMAZLIĞI (ASLA SAHTE/MOCK LOGO KULLANILMAYACAK):
+   - Sistemde tanımlı ve yüklenmiş kurumsal logo amblemi sahneye fiziksel olarak işlenecektir.
+   - KESİNLİKLE uydurma geometrik sembol, sahte üçgen, mock amblem veya stilize logo varyasyonu YAPILMAYACAKTIR.
+   - Sadece firmanın gerçek logo kimliği (${logoDesc}) ve orijinal renk kodları sahnedeki tabelaya ve ürün yüzeyine basılacaktır.
+
+3. ANTİ-ÜTOPİK GERÇEK DÜNYA SİNEMATOGRAFİSİ:
+   - Sektörün gerçek hayat dinamikleri %100 korunmalıdır. Nesneler yerçekimine, sahne ışığına ve gerçek fizik kurallarına tam uyumlu olmalıdır; bilim kurgu ya da mantıksız elementler KESİNLİKLE gösterilmeyecektir.
+
+4. 3 PERDELİ SİNEMATİK AKIŞ:
    - ACT 1 (0-3s) - Kanca: Ürünün makro dokusu, estetiği ve birinci sınıf malzeme kalitesi.
    - ACT 2 (3-7s) - Aksiyon & Kullanım: Ürünün/hizmetin gerçek kullanım performansı ve sağladığı çözüm.
    - ACT 3 (7-10s) - Kahraman Finali: Firmanın güven veren kurumsal duruşu ve memnun kullanıcı.
@@ -552,49 +559,36 @@ function attemptGenerateOnCdp(port, tab, options) {
 
         const videoId = 'video_' + Date.now();
         const rawVideoTarget = path.join(OUTPUT_DIR, `${videoId}_raw.mp4`);
-        fs.copyFileSync(downloadedFile, rawVideoTarget);
-        const finalUrl = `http://${PUBLIC_HOST}:${PORT}/outputs/${videoId}_raw.mp4`;
-
-        // 2. Otomatik Profesyonel Kampanya Montajı (Orijinal Logo + Bozulmayan Vektör Tipografi + WhatsApp Butonu)
-        const campaignVideoTarget = path.join(OUTPUT_DIR, `${videoId}_campaign.mp4`);
-        let campaignUrl = finalUrl;
-        try {
-          const brandKit = await getActiveBrandKit(options.orgId, options.brandName || options.customer);
-          const brandUpper = (options.brandName || options.customer || brandKit?.organization_name || 'BOFE').toUpperCase();
-          const productUpper = (options.productName || options.product || 'ÖZEL KAMPANYA').toUpperCase();
-          const accentColor = (options.accentColor || brandKit?.colors?.accent || '#acfe00').replace('#', '');
-          const secondaryColor = (brandKit?.colors?.secondary || '#026009').replace('#', '');
-
-          const bofeLogoWhite = path.join(__dirname, 'bofe_logo_clean_white.png');
-          const hasBofeLogo = brandUpper.includes('BOFE') && fs.existsSync(bofeLogoWhite);
-
-          if (hasBofeLogo) {
-            const fc = `[1:v]scale=-1:44[logo];[0:v]drawbox=x=40:y=55:w=640:h=90:color=black@0.70:t=fill[bg1];[bg1][logo]overlay=x=65:y=78[with_logo];[with_logo]drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='AKILLI HASAT TEKNOLOJILERI':fontcolor=0x${accentColor}:fontsize=17:x=225:y=92[with_top_txt];[with_top_txt]drawbox=x=40:y=950:w=640:h=255:color=0x${secondaryColor}@0.90:t=fill[bg_bottom];[bg_bottom]drawbox=x=40:y=950:w=640:h=6:color=0x${accentColor}:t=fill[accent_line];[accent_line]drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='YENI SEZON ${brandUpper} HASAT MAKINESI':fontcolor=0x${accentColor}:fontsize=22:x=60:y=980[txt_badge];[txt_badge]drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='TELESKOPIK KARBON GOVDE - YUKSEK VERIM':fontcolor=white:fontsize=21:x=60:y=1020[txt_sub];[txt_sub]drawbox=x=60:y=1085:w=600:h=75:color=0x25D366:t=fill[btn_wa];[btn_wa]drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='WHATSAPP ILE ILETISIME GECIN':fontcolor=white:fontsize=24:x=(w-text_w)/2:y=1108[final_v]`;
-            execSync(`ffmpeg -y -i "${rawVideoTarget}" -i "${bofeLogoWhite}" -filter_complex "${fc}" -map "[final_v]" -c:v libx264 -preset fast -crf 20 -c:a copy "${campaignVideoTarget}"`);
-          } else {
-            const fc = `drawbox=x=40:y=55:w=640:h=90:color=black@0.70:t=fill,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${brandUpper}':fontcolor=0x${accentColor}:fontsize=28:x=65:y=82,drawbox=x=40:y=950:w=640:h=255:color=0x${secondaryColor}@0.90:t=fill,drawbox=x=40:y=950:w=640:h=6:color=0x${accentColor}:t=fill,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='YENI SEZON KAMPANYASI':fontcolor=0x${accentColor}:fontsize=22:x=60:y=980,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${productUpper.slice(0, 36)}':fontcolor=white:fontsize=21:x=60:y=1020,drawbox=x=60:y=1085:w=600:h=75:color=0x25D366:t=fill,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='WHATSAPP ILE ILETISIME GECIN':fontcolor=white:fontsize=24:x=(w-text_w)/2:y=1108`;
-            execSync(`ffmpeg -y -i "${rawVideoTarget}" -vf "${fc}" -c:v libx264 -preset fast -crf 20 -c:a copy "${campaignVideoTarget}"`);
-          }
-
-          if (fs.existsSync(campaignVideoTarget)) {
-            campaignUrl = `http://${PUBLIC_HOST}:${PORT}/outputs/${videoId}_campaign.mp4`;
-            console.log("[VideoGen] ✅ Kusursuz tipografili kampanya montaj videosu üretildi:", campaignVideoTarget);
-          }
-        } catch (montageErr) {
-          console.warn("[VideoGen] Otomatik kampanya montajı oluşturulurken hata:", montageErr.message);
-        }
-
-        const videoFileForThumb = fs.existsSync(campaignVideoTarget) ? campaignVideoTarget : rawVideoTarget;
+        // 2. Saf Veo Canlı Çekim Video (Kullanıcının talimatı: SIFIR HARİCİ YAZI BİNDİRME)
+        // Video Veo tarafından 100% natif üretilir (Ayvazoğlu usulü).
+        const videoFileForThumb = rawVideoTarget;
         const thumbTarget = path.join(OUTPUT_DIR, `${videoId}_thumb.jpg`);
         let thumbUrl = null;
         try {
           execSync(`ffmpeg -y -ss 00:00:01 -i "${videoFileForThumb}" -vframes 1 -q:v 2 "${thumbTarget}"`);
           if (fs.existsSync(thumbTarget)) {
             thumbUrl = `http://${PUBLIC_HOST}:${PORT}/outputs/${videoId}_thumb.jpg`;
-            console.log("[VideoGen] Kapak fotoğrafı (thumbnail) oluşturuldu:", thumbTarget);
+            console.log("[VideoGen] Saf Veo Kapak fotoğrafı (thumbnail) oluşturuldu:", thumbTarget);
           }
         } catch (thumbErr) {
           console.warn("[VideoGen] Thumbnail çıkartılırken hata:", thumbErr.message);
+        }
+
+        // İsteğe bağlı olarak sadece includeOverlay true ise harici montaj üret (varsayılan: false)
+        let campaignUrl = finalUrl;
+        if (options.includeOverlay) {
+          try {
+            const campaignVideoTarget = path.join(OUTPUT_DIR, `${videoId}_campaign.mp4`);
+            const brandKit = await getActiveBrandKit(options.orgId, options.brandName || options.customer);
+            const brandUpper = (options.brandName || options.customer || brandKit?.organization_name || 'BOFE').toUpperCase();
+            const accentColor = (options.accentColor || brandKit?.colors?.accent || '#acfe00').replace('#', '');
+            const secondaryColor = (brandKit?.colors?.secondary || '#026009').replace('#', '');
+            const fc = `drawbox=x=40:y=1085:w=600:h=75:color=0x25D366:t=fill,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='WHATSAPP ILE ILETISIME GECIN':fontcolor=white:fontsize=24:x=(w-text_w)/2:y=1108`;
+            execSync(`ffmpeg -y -i "${rawVideoTarget}" -vf "${fc}" -c:v libx264 -preset fast -crf 20 -c:a copy "${campaignVideoTarget}"`);
+            if (fs.existsSync(campaignVideoTarget)) {
+              campaignUrl = `http://${PUBLIC_HOST}:${PORT}/outputs/${videoId}_campaign.mp4`;
+            }
+          } catch (mErr) {}
         }
 
         // /public/ dizinine de kopyala
@@ -604,7 +598,7 @@ function attemptGenerateOnCdp(port, tab, options) {
           recordSuccess(options.brandName || options.customer, {
             product: options.productName || options.product,
             videoId,
-            resultNotes: 'Veo ile 9:16 canlı sinematik reklam videosu ve kampanya montajı başarıyla üretildi'
+            resultNotes: 'Veo ile 9:16 saf canlı sinematik reklam videosu başarıyla üretildi'
           });
         } catch (recErr) {
           console.warn('[VideoGen] LearningStore kaydetme hatası:', recErr.message);
