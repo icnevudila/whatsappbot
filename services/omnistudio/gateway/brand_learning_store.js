@@ -8,7 +8,10 @@ const DEFAULT_LEARNINGS = {
   version: "1.0",
   lastUpdated: new Date().toISOString(),
   universalRules: [
-    "STRICT ZERO TEXT SALAD: Difüzyon video modellerine havada 3D yazı veya uzun başlık yazdırma; harfler erir ve bozulur. Sahne %100 saf canlı çekim olmalıdır.",
+    "STRICT ZERO TEXT SALAD: Difüzyon video modellerine havada boşlukta uçuşan soyut 3D harfler veya uzun cümleler yazdırma; harfler erir ve bozulur.",
+    "RIGID PHYSICAL SURFACE ANCHORING (FİZİKSEL YÜZEY KURALI): Ekranda yer alacak her metin ve logo fiziksel bir nesneye (metal fabrika tabelası, ahşap yönlendirme panosu, araç şoför kapısı, ürün ambalaj etiketi, bina cephesi) kazınmış, monte edilmiş veya basılmış olmalıdır (Ayvazoğlu İnşaat fabrikadan doğrudan tabelası gibi).",
+    "SHORT & IMPACTFUL TYPOGRAPHY (MAKSİMUM 2-3 KELİME & ALL CAPS): Yazılacak metin en fazla 2-3 kelimeden oluşmalı, kısa, net ve büyük harfli (ALL CAPS) olmalıdır (Örn: 'FABRİKADAN DOĞRUDAN', 'BOFE', 'HASAT ZAMANI'). Asla uzun slogan veya paragraf yazdırılamaz.",
+    "HIGH-CONTRAST SANS-SERIF SPECIFICATION: Tipografi daima kalın, net, okunaklı modern endüstriyel sans-serif ve yüksek kontrastlı (koyu zemin üstü beyaz/sarı ya da açık yüzey üstü siyah) olarak sahnelenmelidir.",
     "STRICT BRAND & LOGO INVIOLABILITY: Yüklenen kurumsal logo, amblem şekli ve kurumsal renk kodları asla değiştirilemez, stilize varyasyonu yapılamaz.",
     "STRICT PRODUCT FIDELITY: Gerçek ürün fotoğrafındaki kasa, gövde, renk ve fiziksel detaylar %100 birebir korunmalıdır; hayali veya farklılaştırılmış ürün varyasyonları üretilemez.",
     "REALISTIC CINEMATIC SECTOR CONTEXT: Sektör asla karıştırılamaz (B2B teknoloji için gökdelen ofis; tarım için güneşli bahçe; inşaat için mimari şantiye)."
@@ -62,6 +65,33 @@ const DEFAULT_LEARNINGS = {
           id: "video_1789814831422",
           product: "B2B Yeni İşletme Takip Çözümü",
           result: "Kusursuz kurumsal ofis ve laptop çerçevesinde jilet gibi Veri Burada logosu."
+        }
+      ]
+    },
+    "ayvazoglu": {
+      brandName: "Ayvazoğlu İnşaat",
+      organization: "Ayvazoğlu İnşaat & Yapı Malzemeleri Sanayi",
+      colors: {
+        primary: "#ff5733",
+        accent: "#ffc300",
+        secondary: "#333333",
+        background: "#ffffff"
+      },
+      logoGuidelines: "Cesur geometrik sarı ve sıcak turuncu (#ffc300, #ff5733) tonlarında stilize mimari üçgen 'A' inşaat logo amblemi.",
+      products: {
+        "tugla": {
+          productName: "Tuğla (Fabrikadan Halka Toptan Satış)",
+          keywords: ["tuğla", "inşaat", "şantiye", "palet", "çimento", "yapı"],
+          visualIdentity: "Nizami dizilmiş fırınlanmış killi kırmızı tuğla paletleri, şeffaf koruyucu shrink ambalaj üzerinde baskılı Ayvazoğlu İnşaat amblemi, sarı endüstriyel forklift ve sevkiyat tırı.",
+          cinematicScene: "Modern ve aydınlık tuğla üretim fabrikası ve şantiye sevkiyat sahası. Konveyör bantları, nizami tuğla paletleri, vinç ve tır yükleme alanı, gün ışığında güven veren endüstriyel çekim.",
+          goldenPromptTemplate: "Modern ve aydınlık bir tuğla üretim fabrikası ve sevkiyat sahası. Konveyör bandından çıkan nizami killi tuğla paletlerinin şeffaf ambalajı üzerinde baskılı Ayvazoğlu İnşaat logosu. Fabrika tavanındaki endüstriyel metal tabelada net ve kusursuz büyük harflerle 'FABRİKADAN DOĞRUDAN' yazısı. Sarı forkliftin paletleri güvenle taşıması, şantiye alanına yanaşan tır, 4K sinematik canlı çekim."
+        }
+      },
+      pastSuccesses: [
+        {
+          id: "video_ayvazoglu_tugla_flow",
+          product: "Tuğla (Fabrikadan Halka Toptan Satış)",
+          result: "Kusursuz 3D endüstriyel metal tabela ('FABRİKADAN DOĞRUDAN'), ambalaj üstü logo ve tır kapısı kurumsal kimliği; sıfır harf bozulması."
         }
       ]
     }
