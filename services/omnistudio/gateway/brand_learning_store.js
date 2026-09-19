@@ -54,21 +54,25 @@ const DEFAULT_LEARNINGS = {
     },
     "veriburada": {
       brandName: "Veri Burada",
-      organization: "Veri Burada B2B Lead & Data Platformu",
+      organization: "Veri Burada B2B Veri & Google Haritalar Müşteri Platformu",
       colors: {
-        primary: "#2e7d32",
-        accent: "#a5d6a7",
-        background: "#0a192f"
+        primary: "#1b5e20",
+        accent: "#2e7d32",
+        secondary: "#4caf50",
+        background: "#ffffff"
       },
-      logoGuidelines: "Yeşil onay tikli 'Veri Burada' kurumsal amblemi.",
-      cinematicScene: "Yüksek katlı cam gökdelen ofisi, veri ve finans dashboard ekranları, canlı akan harita grafikleri.",
-      pastSuccesses: [
-        {
-          id: "video_1789814831422",
-          product: "B2B Yeni İşletme Takip Çözümü",
-          result: "Kusursuz kurumsal ofis ve laptop çerçevesinde jilet gibi Veri Burada logosu."
+      logoGuidelines: "Orijinal yeşil bağlantılı veri ağı (connected network nodes graph) amblemi: Merkezinde büyük yeşil dairesel çekirdek ve etrafında ince çizgilerle birbirine bağlanan veri düğüm noktaları (network constellation). Yanında sans-serif 'Veri Burada' tipografisi. Asla uydurma onay tiki veya farklı şekil yapılmayacak.",
+      products: {
+        "harita_veri": {
+          productName: "Google Haritalar'daki İşletmeleri Liste Olarak İndirme Çözümü",
+          keywords: ["harita", "liste", "müşteri", "b2b", "veri", "leads", "işletme", "excel", "google haritalar"],
+          visualIdentity: "Ekrandaki modern yazılım arayüzünde Google Haritalar üzerinde yeşil pinlerle işaretlenmiş işletmeler (İzmir nalbur listesi, restoranlar, klinikler vb.), '567 işletme bulundu' bilgi kartı, 'Hemen Başla' butonu ve Excel listesi olarak saniyeler içinde indirilen sıcak müşteri kontakları.",
+          cinematicScene: "Aydınlık ve ferah modern bir ofiste, şık masada açık ince çerçeveli dizüstü bilgisayar. Ekranda çalışan Veri Burada web platformunda harita üzerinden taranan binlerce yeni işletmenin tek tıkla Excel listesine dönüştüğü an. Masadaki zarif akrilik ofis isimliğinde veya ofis cam bölmesinde yeşil veri ağı amblemi ve 'VERİ BURADA' kurumsal tabelası. Kameranın ekrandaki harita verilerinden mutlu ve güven dolu iş insanına doğru akıcı sinematik kayması, 4K gerçekçi kurumsal çekim.",
+          goldenPromptTemplate: "Aydınlık ve ferah modern bir kurumsal ofiste, cam toplantı masası üzerinde açık ince çerçeveli dizüstü bilgisayar. Ekranda Veri Burada platformunun gerçek arayüzü: Harita üzerindeki yeşil pinlerle taranan binlerce işletme ve 'Google Haritalar'daki işletmeleri liste olarak indirin' ekranı. Masanın üzerindeki şık şeffaf akrilik masa isimliğinde ve ofis cam bölmesinde net ve fiziksel olarak yeşil veri ağı amblemi ve büyük harflerle 'VERİ BURADA' kurumsal tabelası. Ekranda 'Excel Olarak İndir' butonuna basılmasıyla listelenen gerçek müşteri verileri, Arri Alexa 4K sinematik canlı çekim, sıfır yapay kutu, sıfır harf bozulması."
         }
-      ]
+      },
+      cinematicScene: "Aydınlık ve ferah modern cam gökdelen ofisi, laptop ekranında harita üzerinde parıldayan işletme pinleri ve müşteri veri listeleri, masadaki akrilik kurumsal tabela.",
+      pastSuccesses: []
     },
     "ayvazoglu": {
       brandName: "Ayvazoğlu İnşaat",

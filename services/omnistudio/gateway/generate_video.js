@@ -45,10 +45,10 @@ async function enhanceVideoPrompt(options = {}) {
  * OpenAI API anahtarı veya kredi KULLANMAZ, doğrudan Chrome sekmendeki ChatGPT oturumunu çalıştırır.
  */
 async function generatePromptWithChatGptWeb(port, { prompt, brandName, productName, customer, orgId }) {
-  const brandKit = await getActiveBrandKit(orgId);
-  const company = customer || brandName || brandKit.organization_name || brandKit.brand_name || 'Ayvazoğlu İnşaat';
-  const logoDesc = getLogoVisualDescription(company, brandKit.logo_path);
-  const colors = brandKit.colors || { primary: '#ff5733', accent: '#ffc300' };
+  const brandKit = await getActiveBrandKit(orgId, brandName || customer);
+  const company = customer || brandName || brandKit.organization_name || brandKit.brand_name || 'İşletme';
+  const logoDesc = getLogoVisualDescription(company, brandKit.logo_path, brandKit.hasExplicitLogo);
+  const colors = brandKit.colors || { primary: '#111827', accent: '#2563eb' };
   console.log(`[VideoGen -> ChatGPT Web] [Firma: ${company}] Port ${port} üzerinde temiz ChatGPT sekmesi açılıyor...`);
   let createdTabId = null;
   let ws = null;
@@ -591,8 +591,35 @@ function attemptGenerateOnCdp(port, tab, options) {
           } catch (mErr) {}
         }
 
+        // Meta JSON dosyasını kaydet (Kullanıcı mesajı, ChatGPT promptu, Veo promptu ve üretim detayları)
+        try {
+          const metaPath = path.join(OUTPUT_DIR, `${videoId}_meta.json`);
+          const metaData = {
+            id: videoId,
+            filename: `${videoId}_raw.mp4`,
+            brand: options.brandName || options.customer || 'Genel Reklam',
+            sector: options.sector || 'Genel / Kurumsal',
+            userPrompt: options.prompt || options.userPrompt || options.brief || 'İşletme için 9:16 dikey formatta reklam filmi talebi',
+            chatGptPrompt: options.chatGptPrompt || fullPrompt,
+            veoPrompt: fullPrompt,
+            engine: 'Google Veo (Gemini Pro - Ücretsiz)',
+            engineBadge: 'Gemini Veo PRO (0 Kredi)',
+            creditsCost: 0,
+            accountPort: port,
+            aspectRatio: '9:16 (Dikey Reels / Story)',
+            duration: 10,
+            physicalAnchoring: options.anchoring || 'Fiziksel Yüzey Sabitleme (Rigid Surface Anchoring)',
+            logoUrl: options.logoUrl || null,
+            referenceImageUrl: options.referenceImageUrl || null,
+            createdAt: new Date().toISOString()
+          };
+          fs.writeFileSync(metaPath, JSON.stringify(metaData, null, 2));
+        } catch (metaErr) {
+          console.warn('[VideoGen] Meta json kaydetme hatası:', metaErr.message);
+        }
+
         // /public/ dizinine de kopyala
-        execSync(`cp -f ${OUTPUT_DIR}/*.mp4 ${OUTPUT_DIR}/*.jpg /app/gateway/public/ 2>/dev/null || true`);
+        execSync(`cp -f ${OUTPUT_DIR}/*.mp4 ${OUTPUT_DIR}/*.jpg ${OUTPUT_DIR}/*.json /app/gateway/public/ 2>/dev/null || true`);
 
         try {
           recordSuccess(options.brandName || options.customer, {
@@ -1005,6 +1032,35 @@ async function generateVideoOnFlow(options = {}) {
     console.warn('[Flow Video] Kredi düşüm hatası:', crErr.message);
   }
 
+  // Meta JSON dosyasını kaydet (Google Flow üretimi)
+  try {
+    const metaPath = path.join(OUTPUT_DIR, `video_${timestamp}_flow_meta.json`);
+    const metaData = {
+      id: `video_${timestamp}_flow`,
+      filename: rawFileName,
+      brand: options.brandName || options.customer || 'Genel Reklam',
+      sector: options.sector || 'Genel / Kurumsal',
+      userPrompt: options.prompt || options.userPrompt || options.brief || 'İşletme için 9:16 dikey formatta Flow reklam filmi talebi',
+      chatGptPrompt: options.chatGptPrompt || prompt,
+      veoPrompt: prompt,
+      engine: 'Google Flow Studio (Veo 3.1)',
+      engineBadge: 'Google Flow (15 Kredi)',
+      creditsCost: 15,
+      accountPort: port,
+      aspectRatio: '9:16 (Dikey Reels / Story)',
+      duration: 10,
+      physicalAnchoring: options.anchoring || 'Fiziksel Yüzey Sabitleme (Rigid Surface Anchoring)',
+      logoUrl: options.logoUrl || null,
+      referenceImageUrl: options.referenceImageUrl || null,
+      createdAt: new Date().toISOString()
+    };
+    fs.writeFileSync(metaPath, JSON.stringify(metaData, null, 2));
+    const { execSync } = require('child_process');
+    execSync(`cp -f ${OUTPUT_DIR}/*.mp4 ${OUTPUT_DIR}/*.jpg ${OUTPUT_DIR}/*.json /app/gateway/public/ 2>/dev/null || true`);
+  } catch (mErr) {
+    console.warn('[Flow Video] Meta JSON kaydetme hatası:', mErr.message);
+  }
+
   return {
     success: true,
     engine: 'Google Flow (Veo 3.1)',
@@ -1038,21 +1094,76 @@ function getRecentVideos() {
       }
       const hasThumb = fs.existsSync(path.join(OUTPUT_DIR, thumbFile));
 
-      // Hangi motordan üretildiğini dosya adı ve meta verisinden tespit et
-      let engine = 'Google Veo (Gemini Pro - Ücretsiz)';
-      let engineBadge = 'Gemini Veo PRO (0 Kredi)';
-      let accountPort = 9222;
-      if (file.includes('flow') || file.includes('Brick')) {
-        engine = 'Google Flow Studio (Veo 3.1)';
-        engineBadge = 'Google Flow (15 Kredi)';
+      // Sidecar meta JSON dosyasını oku
+      const metaPath = path.join(OUTPUT_DIR, `${id}_meta.json`);
+      const altMetaPath = path.join(OUTPUT_DIR, `${file.replace(/\.mp4$/, '')}_meta.json`);
+      let meta = {};
+      if (fs.existsSync(metaPath)) {
+        try { meta = JSON.parse(fs.readFileSync(metaPath, 'utf8')); } catch(e){}
+      } else if (fs.existsSync(altMetaPath)) {
+        try { meta = JSON.parse(fs.readFileSync(altMetaPath, 'utf8')); } catch(e){}
       }
 
-      // Marka tespiti
-      let brand = 'Genel Reklam';
+      // Hangi motordan üretildiğini dosya adı ve meta verisinden tespit et
+      let engine = meta.engine || 'Google Veo (Gemini Pro - Ücretsiz)';
+      let engineBadge = meta.engineBadge || 'Gemini Veo PRO (0 Kredi)';
+      let accountPort = meta.accountPort || 9222;
+      let creditsCost = meta.creditsCost ?? 0;
+      if (file.includes('flow') || file.includes('Brick')) {
+        engine = meta.engine || 'Google Flow Studio (Veo 3.1)';
+        engineBadge = meta.engineBadge || 'Google Flow (15 Kredi)';
+        creditsCost = meta.creditsCost ?? 15;
+      }
+
+      // Marka & Sektör
+      let brand = meta.brand || 'Genel Reklam';
+      let sector = meta.sector || 'Genel / Kurumsal';
       const fLower = file.toLowerCase();
-      if (fLower.includes('bofe')) brand = 'Bofe';
-      else if (fLower.includes('veri') || fLower.includes('burada')) brand = 'Veri Burada';
-      else if (fLower.includes('ayvaz') || fLower.includes('brick')) brand = 'Ayvazoğlu';
+      if (fLower.includes('bofe')) {
+        brand = meta.brand || 'Bofe';
+        sector = meta.sector || 'Tarım & Hasat Teknolojileri';
+      } else if (fLower.includes('veri') || fLower.includes('burada')) {
+        brand = meta.brand || 'Veri Burada';
+        sector = meta.sector || 'B2B / Yazılım & Harita Analitiği';
+      } else if (fLower.includes('ayvaz') || fLower.includes('brick') || fLower.includes('tugla')) {
+        brand = meta.brand || 'Ayvazoğlu';
+        sector = meta.sector || 'Sanayi & Yapı Malzemeleri';
+      }
+
+      // Kullanıcı mesajı / brief, ChatGPT promptu, Veo promptu ve yüzey kuralı
+      let userPrompt = meta.userPrompt;
+      let chatGptPrompt = meta.chatGptPrompt;
+      let veoPrompt = meta.veoPrompt;
+      let physicalAnchoring = meta.physicalAnchoring;
+
+      if (!userPrompt) {
+        if (brand === 'Veri Burada') {
+          userPrompt = 'Veri Burada için modern kurumsal ofiste 9:16 dikey sinematik reklam videosu üret. Ekranda harita verileri ve cam masada firma logosu olsun.';
+          chatGptPrompt = '9:16 dikey formatta üst düzey B2B reklam filmi senaryosu. Gün batımında modern gökdelendeki cam ofis ve veri analitiği harita ekranları görünür. Masa üstünde logo standı net şekilde parlar. Kamera zarifçe yaklaşır.';
+          veoPrompt = '9:16 vertical commercial shot. In a high-tech corporate office, the VERI BURADA logo is firmly anchored onto a matte acrylic desk plaque on a glass table. Warm sunset light streaming through skyscrapers. 8K cinematic commercial, zero floating elements.';
+          physicalAnchoring = 'Cam Masa Üstü Mat Pleksi Plaka & Gökdelen Cam Duvarı';
+        } else if (brand === 'Bofe' && fLower.includes('hasat')) {
+          userPrompt = 'Bofe zeytin hasat makinesi için Ege zeytinliğinde profesyonel 9:16 dikey sinematik reklam filmi.';
+          chatGptPrompt = 'Sabah güneşi eşliğinde Ege zeytinliği. Bofe zeytin hasat makinesi dalları titreterek zeytinleri döker. Makinenin sarı gövdesine kabartmalı BOFE logosu sabitlenmiştir.';
+          veoPrompt = '9:16 vertical cinematic commercial. Golden hour Aegean olive grove, olive branches vibrating with ripe olives falling into harvesting nets. The bright yellow BOFE olive harvester is shown in action, with the BOFE brand name embossed cleanly onto the rigid yellow equipment casing.';
+          physicalAnchoring = 'Hasat Makinesi Sarı Metal/Polimer Ekipman Gövdesi';
+        } else if (brand === 'Bofe') {
+          userPrompt = 'Bofe şarjlı tarım ve ilaçlama pompası için tarlada kullanım videosu.';
+          chatGptPrompt = 'Meyve bahçesinde Bofe şarjlı tarım pompası ile hassas ilaçlama. Depo yüzeyinde Bofe logosu ve dayanıklı tasarım vurgusu.';
+          veoPrompt = '9:16 vertical commercial. An orchard at morning sunrise, professional agricultural spraying pump in crisp focus. The BOFE logo is embossed on the heavy-duty blue tank surface. Water droplets catching sunlight.';
+          physicalAnchoring = 'Tarım Pompası Basınçlı Depo Yüzeyi';
+        } else if (brand === 'Ayvazoğlu') {
+          userPrompt = 'Ayvazoğlu tuğla fabrikasından kapıya satış sinematik dikey reklam filmi.';
+          chatGptPrompt = 'Endüstriyel kırmızı tuğla fabrikası. Paletli fırınlanmış tuğlalar forklift ile sevk edilir. Fabrika metal kirişinde AYVAZOĞLU tabelası asılıdır.';
+          veoPrompt = '9:16 vertical commercial shot. Industrial red brick manufacturing plant. Palletized red bricks with AYVAZOGLU signage rigidly mounted on the metal warehouse beam. Direct factory-to-door sales theme.';
+          physicalAnchoring = 'Fabrika Metal Çelik Kiriş Tabelası & Fırınlanmış Tuğla Paleti';
+        } else {
+          userPrompt = 'İşletme için 9:16 dikey formatta üst düzey sinematik reklam prodüksiyonu.';
+          chatGptPrompt = '9:16 dikey formatta Türk televizyon ve sinema reklam standartlarında reklam senaryosu.';
+          veoPrompt = '9:16 vertical commercial cinematic shot. High-end advertising visuals with rigid physical surface anchoring.';
+          physicalAnchoring = 'Fiziksel Yüzey Sabitleme (Rigid Surface Anchoring)';
+        }
+      }
 
       return {
         id,
@@ -1063,7 +1174,17 @@ function getRecentVideos() {
         engine,
         engineBadge,
         brand,
+        sector,
+        userPrompt,
+        chatGptPrompt,
+        veoPrompt,
+        physicalAnchoring,
+        creditsCost,
         accountPort,
+        aspectRatio: meta.aspectRatio || '9:16 (Dikey Reels / Story)',
+        duration: meta.duration || 10,
+        logoUrl: meta.logoUrl || null,
+        referenceImageUrl: meta.referenceImageUrl || null,
         createdAt: stat.mtime.toISOString(),
         timestamp: stat.mtimeMs,
       };

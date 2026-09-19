@@ -48,14 +48,14 @@ async function getActiveBrandKit(orgId = null, brandHint = null) {
       organization_name: 'Veri Burada',
       brand_name: 'Veri Burada',
       colors: {
-        primary: '#2e7d32',
-        accent: '#a5d6a7',
-        secondary: '#66bb6a',
-        text: '#212121',
+        primary: '#1b5e20',
+        accent: '#2e7d32',
+        secondary: '#4caf50',
+        text: '#111827',
         background: '#ffffff',
       },
-      tone: 'Modern ve profesyonel B2B veri, istihbarat ve kurumsal müşteri büyüme teknolojileri platformu. Yüksek teknolojili kurumsal SaaS ve veri analitiği kimliği.',
-      logo_path: 'fb19aab1-92ea-4614-9da9-9229e3cc364d/onboarding/brand.webp',
+      tone: 'Google Haritalar işletme verisi, B2B müşteri listesi ve veri madenciliği platformu.',
+      logo_path: '/outputs/veriburada_logo.png',
       hasExplicitLogo: true,
     };
   }
@@ -105,7 +105,7 @@ function getLogoVisualDescription(brandName, logoPath, hasExplicitLogo = false) 
     return "Zarif, minimalist ve modern siyah 'bofe' yazı logosu (küçük harflerle 'bofe', 'e' harfinde karakteristik açılı modern kesim). Kesinlikle uydurma geometrik üçgen, amblem veya rastgele sembol KULLANILMAYACAKTIR; yalnızca saf, estetik 'bofe' kurumsal tipografisi yer alacaktır.";
   }
   if (lower.includes('veri burada') || lower.includes('veriburada')) {
-    return "Zarif, modern yeşil tonlarında (#2e7d32, #a5d6a7) minimalist 'Veri Burada' B2B kurumsal veri ve teknoloji amblemi. Yalnızca saf, yüksek teknolojili kurumsal yazılım kimliği yer alacaktır.";
+    return "Orijinal yeşil bağlantılı veri ağı (connected network nodes constellation) amblemi: Merkezinde büyük yeşil dairesel çekirdek düğüm ve etrafında ince yeşil çizgilerle birbirine bağlanan farklı yeşil tonlarında veri düğüm noktaları (network graph nodes). Yanında temiz, modern sans-serif 'Veri Burada' kurumsal tipografisi. KESİNLİKLE uydurma onay tiki, sahte üçgen veya soyut logo KULLANILMAYACAKTIR; yalnızca bu orijinal yeşil veri ağı amblemi fiziksel nesnelere (laptop çerçevesi, akrilik ofis tabelası) işlenecektir.";
   }
   if (lower.includes('ayvazoğlu')) {
     return "Cesur geometrik sarı ve sıcak turuncu (#ffc300, #ff5733) tonlarında stilize mimari üçgen 'A' inşaat logo amblemi";

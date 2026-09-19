@@ -289,7 +289,17 @@ type AiEngineRecentVideo = {
   engine?: string
   engineBadge?: string
   brand?: string
+  sector?: string
+  userPrompt?: string
+  chatGptPrompt?: string
+  veoPrompt?: string
+  physicalAnchoring?: string
+  creditsCost?: number
   accountPort?: number
+  aspectRatio?: string
+  duration?: number | string
+  logoUrl?: string | null
+  referenceImageUrl?: string | null
   createdAt: string
   timestamp: number
 }
@@ -520,6 +530,9 @@ export function LiveDashboard() {
 
   // Creative JSON & Prompt Detail Modal
   const [inspectedCreative, setInspectedCreative] = useState<CreativeItem | null>(null)
+
+  // Video Production & Prompt Detail Modal
+  const [inspectedVideo, setInspectedVideo] = useState<AiEngineRecentVideo | null>(null)
 
   // Message & AI Suggestion Stream State
   const [msgStreamTab, setMsgStreamTab] = useState<'all' | 'in' | 'out' | 'pdf' | 'images' | 'suggestions' | 'auto_reply'>('all')
@@ -3727,28 +3740,41 @@ export function LiveDashboard() {
                       </div>
 
                       {/* Video Actions */}
-                      <div className="pt-2 border-t border-[var(--color-hairline)] flex items-center gap-1.5">
-                        <a
-                          href={vid.videoUrl}
-                          download={`${vid.id}.mp4`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex-1 py-1 text-xs font-semibold rounded bg-surface-raised hover:bg-canvas border border-[var(--color-hairline)] text-ink text-center transition"
-                        >
-                          İndir (MP4)
-                        </a>
+                      <div className="pt-2 border-t border-[var(--color-hairline)] space-y-1.5">
                         <button
                           type="button"
-                          onClick={() => {
-                            setQuickMediaUrl(vid.videoUrl)
-                            setQuickMessage('İşletmemiz için hazırlanan özel sinematik reklam videosu.')
-                            setActiveTab('quick_send')
-                            showNotice('Video hızlı gönderim kutusuna aktarıldı.')
-                          }}
-                          className="px-2.5 py-1 text-xs font-semibold rounded bg-accent text-accent-ink hover:bg-accent-dim transition"
+                          onClick={() => setInspectedVideo(vid)}
+                          className="w-full py-1.5 text-xs font-semibold rounded bg-accent/10 hover:bg-accent/20 text-accent border border-accent/25 flex items-center justify-center gap-1.5 transition"
                         >
-                          WhatsApp'a Aktar
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          <span>Prompt & Üretim Detayları</span>
                         </button>
+                        <div className="flex items-center gap-1.5">
+                          <a
+                            href={vid.videoUrl}
+                            download={`${vid.id}.mp4`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex-1 py-1 text-xs font-semibold rounded bg-surface-raised hover:bg-canvas border border-[var(--color-hairline)] text-ink text-center transition"
+                          >
+                            İndir (MP4)
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setQuickMediaUrl(vid.videoUrl)
+                              setQuickMessage('İşletmemiz için hazırlanan özel sinematik reklam videosu.')
+                              setActiveTab('quick_send')
+                              showNotice('Video hızlı gönderim kutusuna aktarıldı.')
+                            }}
+                            className="px-2.5 py-1 text-xs font-semibold rounded bg-accent text-accent-ink hover:bg-accent-dim transition"
+                          >
+                            WhatsApp'a Aktar
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -5170,6 +5196,231 @@ export function LiveDashboard() {
               >
                 Kapat
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: SINEMATIK VIDEO PRODÜKSIYON & AI PROMPT İNCELEYICI */}
+      {inspectedVideo && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl animate-in fade-in zoom-in-95 my-auto">
+            {/* Header */}
+            <div className="p-3.5 sm:p-4 border-b border-[var(--color-hairline)] flex items-center justify-between bg-surface-raised/50">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <h3 className="text-sm sm:text-base font-bold text-ink">
+                    AI Sinematik Video Prodüksiyon & Prompt Detayı
+                  </h3>
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-accent-soft text-accent border border-accent/20">
+                    {inspectedVideo.brand || 'Genel Reklam'}
+                  </span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                    (inspectedVideo.engineBadge || '').includes('Flow')
+                      ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                      : 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
+                  }`}>
+                    {inspectedVideo.engineBadge || 'Gemini Veo PRO (0 Kredi)'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-ink-muted">
+                  Dosya: <code className="font-mono text-ink-soft">{inspectedVideo.filename}</code> · Sektör: <span className="font-semibold text-ink">{inspectedVideo.sector || 'Ticari / Kurumsal'}</span> · Port: <span className="font-mono">Port {inspectedVideo.accountPort || 9222}</span>
+                </p>
+              </div>
+              <button
+                onClick={() => setInspectedVideo(null)}
+                className="w-7 h-7 rounded-full bg-surface-raised text-ink-soft hover:bg-canvas flex items-center justify-center font-bold text-sm"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+              {/* Top Row: Video Player + Production Specs */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start bg-canvas p-3.5 rounded-[var(--radius-card)] border border-[var(--color-hairline)]">
+                {/* 9:16 Video Player */}
+                <div className="md:col-span-5 max-w-[240px] mx-auto md:mx-0 aspect-[9/16] bg-black rounded-lg overflow-hidden shadow-md">
+                  <video
+                    src={inspectedVideo.videoUrl}
+                    poster={inspectedVideo.thumbnailUrl || undefined}
+                    controls
+                    autoPlay
+                    loop
+                    playsInline
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+
+                {/* Specs & Hardware Attributes */}
+                <div className="md:col-span-7 space-y-3">
+                  <h4 className="text-xs font-bold text-ink uppercase tracking-wider flex items-center gap-1.5 text-ink-muted">
+                    <svg className="w-4 h-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    <span>Prodüksiyon & Çekim Parametreleri</span>
+                  </h4>
+
+                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    <div className="bg-surface p-2 rounded border border-[var(--color-hairline)]">
+                      <span className="block text-[10px] text-ink-muted font-semibold">Video Çözünürlüğü:</span>
+                      <strong className="text-ink">1080x1920 (9:16 Dikey)</strong>
+                    </div>
+                    <div className="bg-surface p-2 rounded border border-[var(--color-hairline)]">
+                      <span className="block text-[10px] text-ink-muted font-semibold">Kare / Süre:</span>
+                      <strong className="text-ink">10 Saniye (24 FPS Canlı)</strong>
+                    </div>
+                    <div className="bg-surface p-2 rounded border border-[var(--color-hairline)]">
+                      <span className="block text-[10px] text-ink-muted font-semibold">Kredi / Maliyet:</span>
+                      <strong className="text-ink">{inspectedVideo.creditsCost ?? 0} Kredi (0 TL)</strong>
+                    </div>
+                    <div className="bg-surface p-2 rounded border border-[var(--color-hairline)]">
+                      <span className="block text-[10px] text-ink-muted font-semibold">Dosya Boyutu:</span>
+                      <strong className="text-ink">{inspectedVideo.sizeMb} MB</strong>
+                    </div>
+                  </div>
+
+                  {/* Physical Anchoring Rule */}
+                  <div className="bg-surface p-2.5 rounded border border-[var(--color-hairline)] space-y-1">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-bold text-ink flex items-center gap-1">
+                        <span>🛡️ Evrensel Fiziksel Yüzey Sabitleme:</span>
+                      </span>
+                      <span className="text-[10px] text-emerald-600 font-bold bg-emerald-500/10 px-1.5 py-0.2 rounded">
+                        Sıfır Difüzyon Bozulması
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-ink-soft leading-relaxed">
+                      {inspectedVideo.physicalAnchoring || 'Sahne içerisindeki doğal fiziksel nesneye (tabela, akrilik stant, iş makinesi gövdesi) sabitlenmiştir.'}
+                    </p>
+                  </div>
+
+                  {/* AI Pipeline Architecture */}
+                  <div className="text-[10px] text-ink-muted bg-surface-raised p-2 rounded border border-[var(--color-hairline)] space-y-0.5 font-mono">
+                    <div>1. Brief Alımı ➜ 2. ChatGPT Web Senaryosu ➜ 3. Google Veo PRO Canlı Render</div>
+                    <div className="text-ink-soft">Harici yapay şerit veya FFmpeg yazısı içermez, 100% saf yapay zeka video renderıdır.</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 1: KULLANICININ YAZDIĞI HAM MESAJ / BRİEF */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-5 h-5 rounded-full bg-blue-500/10 text-blue-600 font-bold text-xs flex items-center justify-center">1</span>
+                    <h4 className="text-xs font-bold text-ink">Kullanıcının Girdiği Ham Brief / Talep Mesajı</h4>
+                  </div>
+                  {inspectedVideo.userPrompt && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(inspectedVideo.userPrompt || '')
+                        showNotice('Kullanıcı briefi panoya kopyalandı.')
+                      }}
+                      className="text-[11px] text-accent hover:underline font-semibold"
+                    >
+                      Metni Kopyala
+                    </button>
+                  )}
+                </div>
+                <div className="bg-canvas p-3 rounded-[var(--radius-sm)] border border-[var(--color-hairline)] text-xs text-ink-soft leading-relaxed font-sans">
+                  {inspectedVideo.userPrompt || 'İşletme için 9:16 dikey formatta reklam briefi.'}
+                </div>
+              </div>
+
+              {/* SECTION 2: CHATGPT WEB YÖNETMEN KURGUSU & SAHNE SENARYOSU */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-5 h-5 rounded-full bg-purple-500/10 text-purple-600 font-bold text-xs flex items-center justify-center">2</span>
+                    <h4 className="text-xs font-bold text-ink">ChatGPT Web Yönetmen Kurgusu & Sahne Senaryosu</h4>
+                    <span className="text-[10px] bg-purple-500/10 text-purple-600 font-mono px-1.5 py-0.2 rounded font-semibold">
+                      Director Prompt
+                    </span>
+                  </div>
+                  {inspectedVideo.chatGptPrompt && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(inspectedVideo.chatGptPrompt || '')
+                        showNotice('ChatGPT kurgu promptu panoya kopyalandı.')
+                      }}
+                      className="text-[11px] text-accent hover:underline font-semibold"
+                    >
+                      Promptu Kopyala
+                    </button>
+                  )}
+                </div>
+                <div className="bg-canvas p-3 rounded-[var(--radius-sm)] border border-[var(--color-hairline)] text-xs text-ink-soft leading-relaxed font-mono whitespace-pre-wrap max-h-48 overflow-y-auto">
+                  {inspectedVideo.chatGptPrompt || inspectedVideo.veoPrompt}
+                </div>
+              </div>
+
+              {/* SECTION 3: GOOGLE VEO NİHAİ FİZİKSEL PROMPTU (VİDEOYU ÜRETTİREN ASIL PROMPT) */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-5 h-5 rounded-full bg-emerald-500/10 text-emerald-600 font-bold text-xs flex items-center justify-center">3</span>
+                    <h4 className="text-xs font-bold text-ink">Google Veo Nihai Fiziksel Promptu (Videoyu Ürettiren Asıl Prompt)</h4>
+                    <span className="text-[10px] bg-emerald-500/10 text-emerald-600 font-mono px-1.5 py-0.2 rounded font-semibold">
+                      Veo 3.1 / Pro Input
+                    </span>
+                  </div>
+                  {inspectedVideo.veoPrompt && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(inspectedVideo.veoPrompt || '')
+                        showNotice('Google Veo nihai promptu panoya kopyalandı.')
+                      }}
+                      className="text-[11px] text-accent hover:underline font-semibold"
+                    >
+                      Veo Promptunu Kopyala
+                    </button>
+                  )}
+                </div>
+                <div className="bg-canvas p-3 rounded-[var(--radius-sm)] border border-emerald-500/30 text-xs text-ink font-mono whitespace-pre-wrap leading-relaxed max-h-56 overflow-y-auto shadow-inner">
+                  {inspectedVideo.veoPrompt}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-3 sm:p-4 border-t border-[var(--color-hairline)] flex flex-wrap justify-between items-center gap-2 bg-canvas">
+              <span className="text-[11px] text-ink-muted">
+                Oluşturulma Tarihi: <strong className="text-ink">{timeAgo(inspectedVideo.createdAt)}</strong> ({new Date(inspectedVideo.createdAt).toLocaleString('tr-TR')})
+              </span>
+              <div className="flex items-center gap-2">
+                <a
+                  href={inspectedVideo.videoUrl}
+                  download={`${inspectedVideo.id}.mp4`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3.5 py-1.5 text-xs font-semibold rounded bg-surface-raised hover:bg-canvas border border-[var(--color-hairline)] text-ink transition"
+                >
+                  İndir (MP4)
+                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuickMediaUrl(inspectedVideo.videoUrl)
+                    setQuickMessage(`${inspectedVideo.brand || 'İşletmemiz'} için hazırlanan özel sinematik reklam videosu.`)
+                    setInspectedVideo(null)
+                    setActiveTab('quick_send')
+                    showNotice('Video hızlı gönderim kutusuna aktarıldı.')
+                  }}
+                  className="px-3.5 py-1.5 text-xs font-semibold rounded bg-accent text-accent-ink hover:bg-accent-dim transition"
+                >
+                  WhatsApp'a Aktar
+                </button>
+                <button
+                  onClick={() => setInspectedVideo(null)}
+                  className="px-3.5 py-1.5 text-xs font-semibold rounded bg-surface border border-[var(--color-hairline)] text-ink hover:bg-canvas transition"
+                >
+                  Kapat
+                </button>
+              </div>
             </div>
           </div>
         </div>
