@@ -348,7 +348,11 @@ function attemptGenerateOnCdp(port, tab, options) {
               expression: `
                 (function() {
                   const els = Array.from(document.querySelectorAll('*'));
-                  const target = els.find(el => el.children.length === 0 && (el.innerText || el.textContent || '').trim() === 'Dikey (9:16)');
+                  const target = els.find(el => el.children.length === 0 && (
+                    (el.innerText || el.textContent || '').trim() === 'Dikey (9:16)' ||
+                    (el.innerText || el.textContent || '').trim().includes('9:16') ||
+                    (el.innerText || el.textContent || '').trim().toLowerCase().includes('portrait')
+                  ));
                   if (target) {
                     const r = target.getBoundingClientRect();
                     return { found: true, x: r.left + r.width/2, y: r.top + r.height/2 };
@@ -365,6 +369,9 @@ function attemptGenerateOnCdp(port, tab, options) {
               await sendCmd("Input.dispatchMouseEvent", { type: "mouseReleased", x: dx, y: dy, button: "left", clickCount: 1 });
               console.log("[VideoGen] Aspect ratio 9:16 (Dikey) olarak seçildi.");
               await new Promise(r => setTimeout(r, 600));
+            } else {
+              await sendCmd("Input.dispatchKeyEvent", { type: "rawKeyDown", windowsVirtualKeyCode: 27 });
+              await sendCmd("Input.dispatchKeyEvent", { type: "keyUp", windowsVirtualKeyCode: 27 });
             }
           }
         } catch (aspectErr) {
@@ -379,7 +386,7 @@ function attemptGenerateOnCdp(port, tab, options) {
         const initialDlCount = Number(baselineRes?.result?.value) || 0;
         console.log(`[VideoGen] Sayfa hazır. Başlangıç video/indir butonu sayısı: ${initialDlCount}`);
 
-        // Promptu yaz
+        // Prompt kutusuna odaklan ve CDP native Input.insertText ile yaz
         await sendCmd("Runtime.evaluate", {
           expression: `
             (function() {
@@ -388,13 +395,28 @@ function attemptGenerateOnCdp(port, tab, options) {
                               document.querySelector('textarea');
               if (!inputEl) throw new Error("Input element bulunamadı");
               inputEl.focus();
-              inputEl.innerText = ${JSON.stringify(fullPrompt)};
-              inputEl.dispatchEvent(new Event('input', { bubbles: true }));
-              inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+              document.execCommand('selectAll', false, null);
+              document.execCommand('delete', false, null);
             })()
           `
         });
-        await new Promise(r => setTimeout(r, 1500));
+        await new Promise(r => setTimeout(r, 400));
+        await sendCmd("Input.insertText", { text: fullPrompt });
+        await new Promise(r => setTimeout(r, 800));
+        await sendCmd("Runtime.evaluate", {
+          expression: `
+            (function() {
+              const inputEl = document.querySelector('div[contenteditable="true"]') || 
+                              document.querySelector('rich-textarea p') ||
+                              document.querySelector('textarea');
+              if (inputEl) {
+                inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+                inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+              }
+            })()
+          `
+        });
+        await new Promise(r => setTimeout(r, 1000));
 
         // Gönder butonuna tıkla
         const btnRes = await sendCmd("Runtime.evaluate", {
@@ -403,7 +425,8 @@ function attemptGenerateOnCdp(port, tab, options) {
               const btns = Array.from(document.querySelectorAll('button'));
               const sendBtn = btns.find(b => {
                 const label = (b.getAttribute('aria-label') || '').toLowerCase();
-                return label.includes('gönder') || label.includes('send');
+                const isSend = label.includes('gönder') || label.includes('send') || b.querySelector('mat-icon[data-mat-icon-name="send"]');
+                return isSend && !b.disabled && b.getAttribute('aria-disabled') !== 'true';
               });
               if (sendBtn) {
                 const rect = sendBtn.getBoundingClientRect();
@@ -420,8 +443,8 @@ function attemptGenerateOnCdp(port, tab, options) {
           await sendCmd("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "left", clickCount: 1 });
           await sendCmd("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", clickCount: 1 });
         } else {
-          await sendCmd("Input.dispatchKeyEvent", { type: "rawKeyDown", windowsVirtualKeyCode: 13, unmodifiedText: "\\r", text: "\\r", modifiers: 2 });
-          await sendCmd("Input.dispatchKeyEvent", { type: "keyUp", windowsVirtualKeyCode: 13, modifiers: 2 });
+          await sendCmd("Input.dispatchKeyEvent", { type: "rawKeyDown", windowsVirtualKeyCode: 13, unmodifiedText: "\\r", text: "\\r" });
+          await sendCmd("Input.dispatchKeyEvent", { type: "keyUp", windowsVirtualKeyCode: 13 });
         }
         console.log("[VideoGen] Full+Full Prompt gönderildi, Veo render bekleniyor...");
 
@@ -453,6 +476,13 @@ function attemptGenerateOnCdp(port, tab, options) {
             console.log(`[VideoGen Port:${port}] Yeni video başarıyla render edildi (${elapsed}s)! İndirme tetikleniyor...`);
             downloadReady = true;
             break;
+          }
+          if (elapsed >= 12 && elapsed <= 24 && !status?.isSpinnerActive && !status?.hasVideo) {
+            console.log(`[VideoGen Port:${port}] ⚠️ Spinner henüz başlamadı, Enter tuşu tekrar tetikleniyor (${elapsed}s)...`);
+            try {
+              await sendCmd("Input.dispatchKeyEvent", { type: "rawKeyDown", windowsVirtualKeyCode: 13, unmodifiedText: "\\r", text: "\\r" });
+              await sendCmd("Input.dispatchKeyEvent", { type: "keyUp", windowsVirtualKeyCode: 13 });
+            } catch(e) {}
           }
           console.log(`[VideoGen Port:${port}] Veo render bekleniyor (${elapsed}s, yeni_buton: ${status?.dlCount ?? 0} > ${initialDlCount}, video_var: ${status?.hasVideo}, aktif_spinner: ${status?.isSpinnerActive})...`);
         }
@@ -603,8 +633,8 @@ async function checkPortLoggedIn(port, tab) {
 async function generateVideo(options) {
   const now = Date.now();
 
-  // Havuzdaki uygun portları seç ve en az son kullanılan hesaba göre sırala (fair round-robin)
-  const candidatePorts = CDP_PORTS.filter(p => {
+  // Havuzdaki uygun portları seç veya belirtilen portu kullan
+  const candidatePorts = options.port ? [Number(options.port)] : CDP_PORTS.filter(p => {
     const st = accountPool[p];
     return !st || !st.limitedUntil || st.limitedUntil <= now;
   }).sort((a, b) => (accountPool[a]?.lastUsed || 0) - (accountPool[b]?.lastUsed || 0));
@@ -773,6 +803,13 @@ async function generateVideoOnFlow(options = {}) {
   await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
   await sleep(500);
 
+  // 1.5. Mevcut tile sayısını kaydet
+  const baselineTiles = await send('Runtime.evaluate', {
+    expression: `document.querySelectorAll('.tile, flow-tile, flow-media-tile, div[class*="tile"], div[class*="virtual-item"]').length`,
+    returnByValue: true
+  });
+  const initialTileCount = Number(baselineTiles?.result?.value) || 0;
+
   // 2. Promptu yaz
   await send('Input.insertText', { text: prompt });
   await sleep(1000);
@@ -811,15 +848,20 @@ async function generateVideoOnFlow(options = {}) {
     })()`
   });
 
-  // 5. Video tile'ını bekle (en fazla 120 saniye)
+  // 5. Video tile'ını bekle (en fazla 180 saniye)
   let videoTileFound = false;
   const startTime = Date.now();
-  while (Date.now() - startTime < 120000) {
+  while (Date.now() - startTime < 180000) {
     await sleep(5000);
     const checkTile = await send('Runtime.evaluate', {
       expression: `(() => {
         const tiles = Array.from(document.querySelectorAll('.tile, flow-tile, flow-media-tile, div[class*="tile"], div[class*="virtual-item"]'));
-        const playTile = tiles.find(t => t.innerText.includes('play_circle') || t.querySelector('video') || t.querySelector('[aria-label*="Play"]'));
+        const newTiles = tiles.length > ${initialTileCount} ? tiles.slice(${initialTileCount}) : tiles;
+        const playTile = newTiles.find(t => {
+          const text = (t.innerText || '').toLowerCase();
+          const isFinished = !text.includes('generating') && !text.includes('rendering') && !text.includes('bekleniyor');
+          return (text.includes('play_circle') || t.querySelector('video') || t.querySelector('[aria-label*="Play"]')) && isFinished;
+        });
         if (playTile) {
           const r = playTile.getBoundingClientRect();
           return { found: true, x: r.left + r.width/2, y: r.top + r.height/2 };

@@ -608,6 +608,7 @@ const server = http.createServer(async (req, res) => {
           includeLogo: Boolean(body.includeLogo),
           includeBanner: Boolean(body.includeBanner),
           includeCta: Boolean(body.includeCta),
+          port: body.port || null,
         });
 
         return sendJson(res, 200, {
