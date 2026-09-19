@@ -450,10 +450,10 @@ async function executeChatGPTJob(tab, job) {
   try {
     cdp = await createCdpSession(tab.webSocketDebuggerUrl);
 
-    // 0. Firma Başına Ayrılmış Özel Sohbet Yönetimi (Medya / Görsel Kanalı)
+    // 0. Temiz ve yüksek hızlı görsel oturumu sağla (önceki sohbetlerdeki takılma ve donmaları önler)
     const customer = (job.customer || 'Genel').trim();
-    console.log(`[CDP Worker: ${WORKER_ID}] Firma: "${customer}" için [Medya] sohbeti hazırlanıyor...`);
-    await ensureCustomerChat(cdp, customer, 'media');
+    console.log(`[CDP Worker: ${WORKER_ID}] Firma: "${customer}" için [Medya] oturumu hazırlanıyor...`);
+    await resetToFreshChat(cdp);
 
     // 1. Referans Görseller Varsa (Image-to-Image / Ürün Görseli) ChatGPT'ye Dosya Olarak Yükle
     if (Array.isArray(job.referenceImages) && job.referenceImages.length > 0) {
@@ -544,9 +544,9 @@ async function executeChatGPTJob(tab, job) {
             const isThinking = !!document.querySelector('.result-thinking, [data-testid*="generating"], .streaming-animated-ellipsis');
             const isGenerating = !!stopBtn || isThinking;
 
-            // DALL-E üretilen görseller özel container (.group/imagegen-image) veya alt="Generated image..." formatındadır
+            // DALL-E üretilen görseller özel container (.group/imagegen-image), estuary backend URL veya alt="Generated image..." formatındadır
             const candidateImgs = Array.from(document.querySelectorAll(
-              '.group\\\\/imagegen-image img, img[alt^="Generated image"], [id^="image-"] img'
+              'img[alt^="Generated image"], img[src*="backend-api/estuary"], .group\\\\/imagegen-image img, [id^="image-"] img'
             ));
 
             const beforeList = ${JSON.stringify(Array.from(beforeImages))};
@@ -561,8 +561,8 @@ async function executeChatGPTJob(tab, job) {
 
               const width = img.naturalWidth || img.width;
               const height = img.naturalHeight || img.height;
-              // Henüz render edilmemiş veya çok küçük ikon ise geç
-              if (!img.complete || width < 512 || height < 512) continue;
+              // Henüz render edilmemiş veya çok küçük profil/ikon ise geç (minimum 80px)
+              if (!img.complete || width < 80 || height < 80) continue;
 
               // Eğer ChatGPT hala yanıt üretiyorsa çizim henüz tamamlanmamış olabilir
               if (isGenerating) {
@@ -632,6 +632,9 @@ async function executeChatGPTJob(tab, job) {
 
     const uploadData = await uploadRes.json();
     console.log(`[CDP Worker] BAŞARIYLA TAMAMLANDI: ${uploadData.url}`);
+
+    // Sohbeti müşteri adına adlandır
+    await renameChatToCustomer(cdp, `${customer} - Medya`).catch(() => {});
 
     // 6. Firma Sohbet URL'sini Güncelle/Kaydet
     try {

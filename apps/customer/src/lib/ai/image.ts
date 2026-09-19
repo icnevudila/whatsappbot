@@ -88,14 +88,10 @@ function buildProviders(config: ResolvedAiConfig): Record<AiProviderId, ImagePro
       async generate(prompt, aspect, references, metadata) {
         const gatewayUrl = (process.env.OMNISTUDIO_GATEWAY_URL || 'http://167.233.201.31:3456').replace(/\/$/, '')
 
-        // Yoğunluk & Sağlık Kontrolü (Aynı anda onlarca kişi yaparsa doğrudan OpenAI resmi API'ye yönlendir)
-        const healthRes = await fetch(`${gatewayUrl}/health`, { signal: AbortSignal.timeout(3000) }).catch(() => null)
+        // Sağlık Kontrolü (Gateway erişilebilir mi?)
+        const healthRes = await fetch(`${gatewayUrl}/health`, { signal: AbortSignal.timeout(5000) }).catch(() => null)
         if (!healthRes || !healthRes.ok) {
           throw new Error('OmniStudio Gateway çevrimdışı')
-        }
-        const health = await healthRes.json()
-        if (health.pending > 0) {
-          throw new Error(`OmniStudio meşgul (${health.pending} bekleyen iş) - Doğrudan resmi OpenAI API'ye aktarılıyor`)
         }
 
         const size = aspect === '16:9' ? '1536x1024' : '1024x1024'
