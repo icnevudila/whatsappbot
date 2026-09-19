@@ -8,7 +8,11 @@ import { loadCreativeWizardData } from '../wizard-data'
 export const metadata: Metadata = { title: 'Kampanya görseli oluştur' }
 export const dynamic = 'force-dynamic'
 
-export default async function NewCreativePage() {
+export default async function NewCreativePage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ format?: string; mode?: string }>
+}) {
   try {
     await requireActiveOrg()
   } catch (error) {
@@ -16,17 +20,24 @@ export default async function NewCreativePage() {
     redirect('/giris')
   }
 
+  const resolvedParams = searchParams ? await searchParams : {}
+  const isVideo = resolvedParams.format === 'video' || resolvedParams.mode === 'video' || resolvedParams.format === 'reels_video'
+
   const data = await loadCreativeWizardData()
 
   return (
     <div className="wb-wa-page">
       <PageHeader
-        title="Kampanya görseli oluştur"
-        description="Marka, ürün ve iletişim bilgilerinizle üretin. İşlem arka planda sürer."
+        title={isVideo ? 'Kampanya videosu oluştur' : 'Kampanya görseli oluştur'}
+        description={
+          isVideo
+            ? 'İşletmeniz ve ürünleriniz için 9:16 sinematik dikey reels reklam videosu üretin. İşlem arka planda sürer.'
+            : 'Marka, ürün ve iletişim bilgilerinizle üretin. İşlem arka planda sürer.'
+        }
         backHref="/icerik"
         backLabel="Kütüphane"
       />
-      <CreativeWizard data={data} />
+      <CreativeWizard data={data} initialFormat={isVideo ? 'reels_video' : undefined} />
     </div>
   )
 }

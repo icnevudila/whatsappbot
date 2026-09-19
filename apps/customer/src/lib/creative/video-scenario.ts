@@ -186,3 +186,239 @@ ${strictRule}`
     },
   ]
 }
+
+/**
+ * Kullanıcıyı teknik prompt detaylarıyla meşgul etmeden,
+ * arka planda ChatGPT üzerinden tek bir kusursuz sinematik reklam promptu üretir.
+ */
+export async function generateBackgroundMasterPrompt(
+  snapshot: any,
+  bag?: AiKeyBag | null,
+): Promise<string> {
+  const brand = snapshot.brandKit?.name?.trim() || 'İşletme'
+  const isSpeech = snapshot.videoSpeech !== false
+  const products = snapshot.products || []
+  const productsSummary = products
+    .map((p: any) => `${p.name}${p.price ? ` (${p.price})` : ''}${p.promo ? ` - ${p.promo}` : ''}${p.description ? ` [${p.description}]` : ''}`)
+    .join(', ')
+
+  const systemPrompt = `Sen Cannes ödüllü bir ticari reklam filmi yönetmeni ve Google Veo video prompt uzmanısın.
+Görevin: Verilen marka, marka kiti, ürünler ve kampanya bağlamını inceleyerek Google Veo yapay zeka video motorunun üreteceği tek bir MASTER reklam filmi promptu (çekim senaryosu) oluşturmak.
+
+ÇOK ÖNEMLİ KURALLAR:
+- Format: 9:16 Dikey (Instagram Reels, TikTok, WhatsApp Durum formatı).
+- Süre: 10 saniye (3 Perde: ACT 1 (0-3s Giriş/Kanca/Ürün Detayı), ACT 2 (3-7s Eylem/Mesaj/Kullanım/Esnaf veya Oyuncu Diyaloğu), ACT 3 (7-10s Kapanış/Aksiyon Çağrısı)).
+- Dış Ses / Konuşma Durumu: ${
+    isSpeech
+      ? 'Dış ses veya oyuncu konuşması VARDIR. Oyuncunun samimi Türkçe konuşma repliği veya dış ses metni mutlaka senaryoya yazılmalıdır.'
+      : 'Konuşma ve insan sesi YOKTUR. Sadece foley doğal ses efektleri ve dinamik fon müziği vardır. STRICT RULE: NO VOICE, NO SPEECH, NO DIALOGUE ekle.'
+  }
+- EKRANDA YAZI YASAKTIR: Videonun ham çekiminde kesinlikle ekranda hiçbir banner, altyazı, yazı, tipografi, logo kartı OLMAYACAKTIR. 'STRICT RULE: NO ON-SCREEN TEXT, NO WORDS, NO LETTERS, NO LOGO CARDS, NO GRAPHIC OVERLAYS, NO BANNERS. Pure photorealistic live commercial footage only.' kuralı promptun sonuna eklenmelidir.
+- Çıktı olarak SADECE video motoruna gönderilecek nihai prompt metnini dön. Başka hiçbir açıklama, selamlama veya markdown tırnağı yazma.`
+
+  const userPrompt = `Marka: ${brand}
+Marka Tonu: ${snapshot.brandKit?.tone || 'Güvenilir, dinamik ve kaliteli'}
+Kampanya Fikri / Brief: ${snapshot.brief}
+Ek Metin / Kampanya Detayı: ${snapshot.customText || '—'}
+Ürünler ve Detaylar: ${productsSummary || 'Ana Ticari Ürün'}
+Kampanya Tarihi: ${snapshot.dateRange || 'Hemen Şimdi'}
+Aksiyon Çağrısı (CTA): ${snapshot.cta || 'WhatsApp İle Sipariş Ver'}
+Dış Ses / Konuşma: ${isSpeech ? 'Sesli / Türkçe Konuşmalı' : 'Sessiz / Sadece Müzik ve Foley'}`
+
+  try {
+    const rawPrompt = await completeText(systemPrompt, userPrompt, {
+      ...bag,
+      preferredTextProvider: 'openai',
+    })
+
+    const cleanPrompt = rawPrompt
+      .replace(/^```text\s*/i, '')
+      .replace(/^```\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim()
+
+    if (cleanPrompt.length > 80) {
+      console.log(`[VideoScenario] ChatGPT arka planda master prompt üretti (${cleanPrompt.length} karakter)`)
+      return cleanPrompt
+    }
+  } catch (err) {
+    console.warn('[VideoScenario] ChatGPT arka plan üretimi atlandı, zengin yerel şablon devrede:', err)
+  }
+
+  // Akıllı Fallback: 16 sektör destekli zengin video promptu
+  const { buildVideoPrompt } = await import('./prompt')
+  const { prompt } = buildVideoPrompt(snapshot)
+  return prompt
+}
+
+export interface BusinessVideoIdea {
+  label: string
+  text: string
+}
+
+/**
+ * İşletmenin adı, sektörü ve kayıtlı ürünlerini analiz ederek
+ * o işletmeye özel 4 adet vurucu, hazır 9:16 reklam fikri üretir.
+ */
+export function buildSmartBusinessVideoIdeas(
+  org: { name?: string | null; about?: string | null },
+  products?: Array<{ name: string; description?: string | null }>,
+): BusinessVideoIdea[] {
+  const name = org.name?.trim() || 'İşletmemiz'
+  const about = (org.about || '').toLowerCase()
+  const prodList = (products || []).filter((p) => p.name)
+  const firstProd = prodList[0]?.name || ''
+  const allKeywords = `${name} ${about} ${prodList.map((p) => p.name).join(' ')}`.toLowerCase()
+
+  // 1. Restoran / Döner / Kafe / Gıda
+  if (
+    allKeywords.includes('döner') ||
+    allKeywords.includes('kebap') ||
+    allKeywords.includes('restoran') ||
+    allKeywords.includes('lokanta') ||
+    allKeywords.includes('kafe') ||
+    allKeywords.includes('cafe') ||
+    allKeywords.includes('burger') ||
+    allKeywords.includes('pizza') ||
+    allKeywords.includes('pide') ||
+    allKeywords.includes('lezzet') ||
+    allKeywords.includes('yemek')
+  ) {
+    const dish = firstProd || 'Günün taze spesiyali'
+    return [
+      {
+        label: `Ustanın ${dish} sunumu & WhatsApp sipariş`,
+        text: `${name} mutfağında usta tarafından taze hazırlanan ${dish}, dumanı tüten iştah kabartan makro çekimler ve WhatsApp'tan sıcacık paket servis çağrısı.`,
+      },
+      {
+        label: 'Kağıt broşür yerine WhatsApp menü',
+        text: `Geleneksel kağıt broşür basımını bırakıp müşterilere ${name} dijital menüsünü doğrudan WhatsApp üzerinden ulaştıran yenilikçi reklam filmi.`,
+      },
+      {
+        label: 'Hafta sonu indirimli menü',
+        text: `Hafta sonuna özel ${dish} siparişlerinde avantajlı fiyat ve WhatsApp hattımıza özel sürpriz ikramlar.`,
+      },
+      {
+        label: 'Sıra beklemeden hızlı sipariş',
+        text: `Sıra beklemeden doğrudan WhatsApp hattımızdan sipariş verin, ${name} lezzeti sıcacık kapınıza gelsin.`,
+      },
+    ]
+  }
+
+  // 2. Otomotiv / Donanım / Teknoloji (Örn: Bofe Şarjlı Pompa)
+  if (
+    allKeywords.includes('pompa') ||
+    allKeywords.includes('lastik') ||
+    allKeywords.includes('oto') ||
+    allKeywords.includes('araba') ||
+    allKeywords.includes('araç') ||
+    allKeywords.includes('motor') ||
+    allKeywords.includes('şarj') ||
+    allKeywords.includes('teknoloji') ||
+    allKeywords.includes('tamir') ||
+    allKeywords.includes('yedek parça')
+  ) {
+    const item = firstProd || 'Akıllı Şarjlı Pompa'
+    return [
+      {
+        label: 'Yolda kalan sürücüye 60sn kurtarıcı',
+        text: `Yolda lastik basıncı düşen sürücünün torpidosundan ${item} çıkarıp 60 saniyede lastiği şişirmesi ve ${name} WhatsApp sipariş kolaylığı.`,
+      },
+      {
+        label: 'Kompakt & kablosuz güç testi',
+        text: `${item} ile araç lastiğinden bisiklete tek tuşla otomatik hava basma gücü ve tek tıkla WhatsApp sipariş çağrısı.`,
+      },
+      {
+        label: 'Sınırlı stok özel kampanya',
+        text: `${item} için bu haftaya özel indirim ve ücretsiz kargo avantajı ile WhatsApp'tan anında satın alma fırsatı.`,
+      },
+      {
+        label: 'WhatsApp kullanım kılavuzu & sipariş',
+        text: `Müşterilere kullanım videolarını ve sipariş desteğini doğrudan WhatsApp üzerinden sunan yenilikçi tanıtım filmi.`,
+      },
+    ]
+  }
+
+  // 3. İnşaat / Yapı / Malzeme (Örn: Tuğla, Çimento)
+  if (
+    allKeywords.includes('inşaat') ||
+    allKeywords.includes('tuğla') ||
+    allKeywords.includes('yapı') ||
+    allKeywords.includes('malzeme') ||
+    allKeywords.includes('hafriyat') ||
+    allKeywords.includes('beton') ||
+    allKeywords.includes('lojistik')
+  ) {
+    const mat = firstProd || 'Birinci kalite yapı malzemesi'
+    return [
+      {
+        label: `${mat} kapıya teslimat & WhatsApp hat`,
+        text: `${name} güvencesiyle fabrikadan doğrudan şantiyeye ve kapıya teslim ${mat}. Hızlı teklif ve sipariş için tek tıkla WhatsApp hattımıza bağlanın.`,
+      },
+      {
+        label: 'Dayanıklılık & kalite yakın çekim',
+        text: `${mat} dokusu, sağlamlığı ve şantiyedeki kusursuz uygulama kalitesini gösteren 4K sinematik reklam çekimi.`,
+      },
+      {
+        label: 'Toptan alımlara özel fiyat avantajı',
+        text: `Bu aya özel toptan ${mat} alımlarında özel iskontolar ve WhatsApp üzerinden 1 dakikada anında fiyat teklifi.`,
+      },
+      {
+        label: 'Katalog yerine WhatsApp dijital liste',
+        text: `Tüm ürün ve fiyat listesini müşterilere doğrudan WhatsApp'tan ulaştıran profesyonel kurumsal tanıtım filmi.`,
+      },
+    ]
+  }
+
+  // 4. Moda / Butik / Tekstil
+  if (
+    allKeywords.includes('butik') ||
+    allKeywords.includes('giyim') ||
+    allKeywords.includes('elbise') ||
+    allKeywords.includes('moda') ||
+    allKeywords.includes('kombin') ||
+    allKeywords.includes('ayakkabı') ||
+    allKeywords.includes('çanta')
+  ) {
+    const item = firstProd || 'Yeni sezon koleksiyon'
+    return [
+      {
+        label: 'Yeni sezon vitrin kombini & WhatsApp',
+        text: `${name} yeni sezon vitrininin en göz alıcı parçaları, şık kombin çekimleri ve tek tıkla WhatsApp siparişi.`,
+      },
+      {
+        label: 'Sınırlı stok %20 indirim',
+        text: `${item} için geçerli sınırlı stok indirimi. Siparişinizi hızlıca WhatsApp'tan oluşturun, kapınıza gelsin.`,
+      },
+      {
+        label: 'WhatsApp dijital katalog vitrini',
+        text: `Müşterilere yeni sezon kataloğunu doğrudan WhatsApp'tan sunan modern ve estetik reklam filmi.`,
+      },
+      {
+        label: 'Kumaş kalitesi & detay çekimi',
+        text: `Ürünün dikiş ve kumaş kalitesini öne çıkaran 120fps ağır çekim sinematik vitrin tanıtımı.`,
+      },
+    ]
+  }
+
+  // 5. Genel / Hizmet / WhatsApp İşletmesi
+  const genericProd = firstProd ? `${firstProd} ve ` : ''
+  return [
+    {
+      label: 'Broşür yerine WhatsApp dijital menü',
+      text: `Geleneksel kağıt broşür basımını bırakıp müşterilere ${name} dijital kataloğunu doğrudan WhatsApp üzerinden ulaştıran yenilikçi reklam filmi.`,
+    },
+    {
+      label: `${firstProd || 'Günün spesiyali'} & hızlı sipariş`,
+      text: `${name} güvencesiyle sunulan ${genericProd}hizmetlerimiz için sıra beklemeden tek tıkla WhatsApp sipariş kolaylığı.`,
+    },
+    {
+      label: 'Hafta sonu avantajlı kampanya',
+      text: `Bu haftaya özel avantajlı fiyatlar ve ${name} WhatsApp hattına özel sürpriz indirimler.`,
+    },
+    {
+      label: 'WhatsApp tek tıkla sipariş çağrısı',
+      text: `Müşterilerinize hızlı, samimi ve kesintisiz WhatsApp sipariş deneyimi sunan 9:16 dikey reklam filmi.`,
+    },
+  ]
+}

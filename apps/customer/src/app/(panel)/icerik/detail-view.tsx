@@ -50,6 +50,7 @@ export type DetailCreative = {
   format: string
   provider: string | null
   brief: string | null
+  thumbnailUrl?: string | null
 }
 
 export type VersionRow = {
@@ -458,6 +459,7 @@ export function CreativeDetail({
             <div className="overflow-hidden rounded-[var(--radius-card)] border border-hairline bg-black shadow-lg">
               <video
                 src={creative.publicUrl}
+                poster={creative.thumbnailUrl || undefined}
                 controls
                 playsInline
                 className="max-h-[640px] w-full object-contain"

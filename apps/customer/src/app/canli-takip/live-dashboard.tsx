@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { LogoMark, BRAND_NAME } from '@/components/brand'
 
 type Account = {
@@ -265,6 +265,80 @@ type ServerMetrics = {
   updated_at: string
 }
 
+type AiEngineAccount = {
+  port: number
+  name: string
+  email?: string | null
+  isLoggedIn: boolean
+  isLimited: boolean
+  secondsUntilReset?: number
+  limitedUntil: string | null
+  lastUsed: string | null
+  limitReason: string | null
+  flowProjectUrl?: string | null
+  flowCredits?: number
+  vncUrl: string
+}
+
+type AiEngineRecentVideo = {
+  id: string
+  filename: string
+  videoUrl: string
+  thumbnailUrl: string | null
+  sizeMb: string
+  createdAt: string
+  timestamp: number
+}
+
+type AiEngineStatus = {
+  success: boolean
+  timestamp: string
+  chatgpt: {
+    status: string
+    accountName: string
+    port: number
+    mode: string
+    model: string
+    zeroApiCost: boolean
+  }
+  geminiPool: {
+    totalAccounts: number
+    activeAccounts: number
+    limitedAccounts: number
+    accounts: AiEngineAccount[]
+    vncUrl: string
+  }
+  googleFlow: {
+    status: string
+    license: string
+    accountName: string
+    projectName: string
+    projectUrl: string
+    initialCredits?: number
+    credits?: number
+    creditsPerVideo?: number
+    usedVideos?: number
+    videosRemaining?: number
+    activeFlowCount?: number
+    totalAccountsCount?: number
+    accounts?: Array<{
+      port: number
+      accountName: string
+      projectUrl: string
+      credits: number
+      initialCredits: number
+      videosRemaining: number
+      status: 'active' | 'ready_to_link' | 'not_logged_in'
+    }>
+    watermark?: string
+    aspectRatio?: string
+    model: string
+    quotaType: string
+    role: string
+  }
+  recentVideos: AiEngineRecentVideo[]
+}
+
 type FeedData = {
   accounts: Account[]
   worker: WorkerHeartbeat | null
@@ -281,6 +355,7 @@ type FeedData = {
   jobs: JobItem[]
   blacklist?: BlacklistItem[]
   organizations?: OrganizationItem[]
+  ai_engine?: AiEngineStatus | null
   summary: {
     todayInbound: number
     todayOutbound: number
@@ -339,6 +414,40 @@ const QUICK_TEMPLATES = [
 
 export function LiveDashboard() {
   const [data, setData] = useState<FeedData | null>(null)
+  const tabsRef = useRef<HTMLDivElement>(null)
+  const isDraggingTabs = useRef(false)
+  const dragStartX = useRef(0)
+  const dragScrollLeft = useRef(0)
+  const hasDragged = useRef(false)
+
+  const handleTabsMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!tabsRef.current) return
+    isDraggingTabs.current = true
+    hasDragged.current = false
+    dragStartX.current = e.pageX - tabsRef.current.offsetLeft
+    dragScrollLeft.current = tabsRef.current.scrollLeft
+  }
+
+  const handleTabsMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDraggingTabs.current || !tabsRef.current) return
+    const x = e.pageX - tabsRef.current.offsetLeft
+    const walk = (x - dragStartX.current)
+    if (Math.abs(walk) > 4) {
+      hasDragged.current = true
+    }
+    tabsRef.current.scrollLeft = dragScrollLeft.current - walk
+  }
+
+  const handleTabsMouseUp = () => {
+    isDraggingTabs.current = false
+  }
+
+  const scrollTabs = (direction: 'left' | 'right') => {
+    if (tabsRef.current) {
+      const amount = direction === 'left' ? -280 : 280
+      tabsRef.current.scrollBy({ left: amount, behavior: 'smooth' })
+    }
+  }
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<
@@ -373,6 +482,7 @@ export function LiveDashboard() {
   const [aiTone, setAiTone] = useState<'samimi' | 'kurumsal' | 'kampanya' | 'firsat'>('samimi')
   const [aiGenerating, setAiGenerating] = useState(false)
   const [aiResult, setAiResult] = useState<string | null>(null)
+  const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null)
 
   // Blacklist Form
   const [blackPhone, setBlackPhone] = useState('')
@@ -420,6 +530,29 @@ export function LiveDashboard() {
   const [diagnosticLoading, setDiagnosticLoading] = useState(false)
   const [diagnosticData, setDiagnosticData] = useState<any>(null)
   const [showDiagnosticModal, setShowDiagnosticModal] = useState(false)
+
+  // AI Account & Quota Operations State
+  const [showAddAccountModal, setShowAddAccountModal] = useState(false)
+  const [newAccountPort, setNewAccountPort] = useState<number>(9224)
+  const [newAccountName, setNewAccountName] = useState('')
+  const [newFlowProjectUrl, setNewFlowProjectUrl] = useState('')
+  const [accountActionBusy, setAccountActionBusy] = useState<number | null>(null)
+  const [isProvisioning, setIsProvisioning] = useState(false)
+  const [showVncModal, setShowVncModal] = useState(false)
+  const [verifyingAll, setVerifyingAll] = useState(false)
+
+  // Flow & Cookie Modals State (VNC-Free Operation)
+  const [showFlowModal, setShowFlowModal] = useState(false)
+  const [flowModalPort, setFlowModalPort] = useState<number>(9223)
+  const [flowModalUrl, setFlowModalUrl] = useState('')
+  const [flowModalCredits, setFlowModalCredits] = useState<number>(1050)
+  const [isUpdatingFlow, setIsUpdatingFlow] = useState(false)
+
+  const [showCookieModal, setShowCookieModal] = useState(false)
+  const [cookieModalPort, setCookieModalPort] = useState<number>(9223)
+  const [cookieModalData, setCookieModalData] = useState('')
+  const [cookieModalPlatform, setCookieModalPlatform] = useState<string>('all')
+  const [isSyncingCookies, setIsSyncingCookies] = useState(false)
 
   // Kampanya Hedeflerini Getir
   const fetchCampaignTargets = useCallback(async (campaignId: string, status?: string, search?: string) => {
@@ -529,6 +662,174 @@ export function LiveDashboard() {
       window.location.reload()
     } catch {
       window.location.reload()
+    }
+  }
+
+  // AI Hesap Doğrulama (CDP Testi)
+  const handleVerifyAccount = async (port: number) => {
+    setAccountActionBusy(port)
+    try {
+      const res = await fetch('/api/canli-takip/ai-accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'verify', port }),
+      })
+      const json = await res.json()
+      if (json.success && json.ok) {
+        if (json.isLoggedIn) {
+          showNotice(`Port ${port} doğrulandı: ${json.accountName || json.email || 'Oturum Açık ve Aktif'}`)
+        } else {
+          showNotice(`Port ${port} oturumu açık değil. Lütfen VNC üzerinden Google girişi yapın.`)
+        }
+      } else {
+        showNotice(`Doğrulama hatası: ${json.error || 'Bilinmeyen hata'}`)
+      }
+      fetchData()
+    } catch {
+      showNotice('Sunucu ile bağlantı kurulamadı.')
+    } finally {
+      setAccountActionBusy(null)
+    }
+  }
+
+  // Tüm Gemini Havuzunu Sırayla Doğrula
+  const handleVerifyAllAccounts = async () => {
+    if (verifyingAll) return
+    setVerifyingAll(true)
+    showNotice('Tüm Google & Gemini portları taranıyor...')
+    try {
+      const ports = data?.ai_engine?.geminiPool?.accounts?.map(a => a.port) || [9222, 9223, 9224, 9225]
+      for (const p of ports) {
+        await fetch('/api/canli-takip/ai-accounts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'verify', port: p }),
+        })
+      }
+      showNotice('Tüm hesap havuzu başarıyla tarandı ve güncellendi.')
+      fetchData()
+    } catch {
+      showNotice('Tarama sırasında bağlantı hatası oluştu.')
+    } finally {
+      setVerifyingAll(false)
+    }
+  }
+
+  // Hesap Kotasını Manuel Sıfırla
+  const handleResetAccountLimit = async (port: number) => {
+    setAccountActionBusy(port)
+    try {
+      const res = await fetch('/api/canli-takip/ai-accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reset_limit', port }),
+      })
+      const json = await res.json()
+      if (json.success && json.ok) {
+        showNotice(json.message || `Port ${port} kotası sıfırlandı.`)
+      } else {
+        showNotice(`Kota sıfırlanamadı: ${json.error || 'Hata'}`)
+      }
+      fetchData()
+    } catch {
+      showNotice('Sunucu ile bağlantı kurulamadı.')
+    } finally {
+      setAccountActionBusy(null)
+    }
+  }
+
+  // Yeni Hesap Slotu Oluştur (Hetzner'de Başlat)
+  const handleProvisionAccount = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsProvisioning(true)
+    try {
+      const res = await fetch('/api/canli-takip/ai-accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'provision',
+          port: newAccountPort,
+          name: newAccountName,
+          flowProjectUrl: newFlowProjectUrl
+        }),
+      })
+      const json = await res.json()
+      if (json.success && json.ok) {
+        showNotice(`Port ${newAccountPort} Hetzner'de aktif edildi! VNC üzerinden Google & Flow hesabınıza giriş yapabilirsiniz.`)
+        setShowAddAccountModal(false)
+        setShowVncModal(true)
+        setNewAccountName('')
+        setNewFlowProjectUrl('')
+      } else {
+        showNotice(`Slot oluşturulamadı: ${json.error || 'Hata'}`)
+      }
+      fetchData()
+    } catch {
+      showNotice('Sunucu ile bağlantı kurulamadı.')
+    } finally {
+      setIsProvisioning(false)
+    }
+  }
+
+  // Google Flow Proje URL'sini Güncelle
+  const handleUpdateFlow = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsUpdatingFlow(true)
+    try {
+      const res = await fetch('/api/canli-takip/ai-accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_flow',
+          port: flowModalPort,
+          flowProjectUrl: flowModalUrl,
+          flowCredits: flowModalCredits,
+        }),
+      })
+      const json = await res.json()
+      if (json.success && json.ok) {
+        showNotice(`Port ${flowModalPort} Flow projesi başarıyla bağlandı! Toplam kredi havuzuna dahil edildi.`)
+        setShowFlowModal(false)
+        setFlowModalUrl('')
+      } else {
+        showNotice(`Flow projesi kaydedilemedi: ${json.error || 'Hata'}`)
+      }
+      fetchData()
+    } catch {
+      showNotice('Sunucu ile bağlantı kurulamadı.')
+    } finally {
+      setIsUpdatingFlow(false)
+    }
+  }
+
+  // Kendi Tarayıcından Cookie Enjekte Et (VNC'siz Giriş)
+  const handleSyncCookies = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSyncingCookies(true)
+    try {
+      const res = await fetch('/api/canli-takip/ai-accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'sync_cookies',
+          port: cookieModalPort,
+          cookies: cookieModalData,
+          platform: cookieModalPlatform,
+        }),
+      })
+      const json = await res.json()
+      if (json.success && json.ok) {
+        showNotice(`Port ${cookieModalPort} için ${json.cookiesCount || 0} adet çerez aktarıldı ve oturum doğrulandı!`)
+        setShowCookieModal(false)
+        setCookieModalData('')
+      } else {
+        showNotice(`Çerez aktarımı başarısız: ${json.error || 'Hata'}`)
+      }
+      fetchData()
+    } catch {
+      showNotice('Sunucu ile bağlantı kurulamadı.')
+    } finally {
+      setIsSyncingCookies(false)
     }
   }
 
@@ -1244,7 +1545,12 @@ export function LiveDashboard() {
           </div>
 
           {/* Header Row 2: Controls & Actions */}
-          <div className="flex items-center justify-between sm:justify-end gap-1.5 overflow-x-auto pb-0.5 sm:pb-0 scrollbar-none w-full sm:w-auto">
+          <div
+            onWheel={(e) => {
+              if (e.deltaY !== 0) e.currentTarget.scrollLeft += e.deltaY;
+            }}
+            className="flex items-center justify-between sm:justify-end gap-1.5 overflow-x-auto pb-0.5 sm:pb-0 scrollbar-none w-full sm:w-auto"
+          >
             {/* Organization Filter Selector */}
             {organizationsList.length > 0 && (
               <div className="flex items-center gap-1 bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] px-2 py-0.5 shrink-0">
@@ -1321,7 +1627,12 @@ export function LiveDashboard() {
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-2.5 sm:p-5 space-y-3 sm:space-y-5">
         {/* KPI Dashboard Cards Grid - Horizontally Swipeable on Mobile, 10-col on Desktop */}
-        <section className="flex sm:grid overflow-x-auto pb-1.5 sm:pb-0 scrollbar-none gap-2 sm:grid-cols-5 lg:grid-cols-10 sm:gap-2">
+        <section
+          onWheel={(e) => {
+            if (e.deltaY !== 0) e.currentTarget.scrollLeft += e.deltaY;
+          }}
+          className="flex sm:grid overflow-x-auto pb-1.5 sm:pb-0 scrollbar-none gap-2 sm:grid-cols-5 lg:grid-cols-10 sm:gap-2"
+        >
           {/* Card 1: Baileys Worker */}
           <div className="min-w-[115px] sm:min-w-0 shrink-0 sm:shrink bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 sm:p-2.5 shadow-xs flex flex-col justify-between">
             <span className="text-[9px] sm:text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Servis</span>
@@ -1436,50 +1747,84 @@ export function LiveDashboard() {
 
         {/* Search & Module Tabs Bar */}
         <section className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-1.5 sm:p-2">
-          {/* Module Tab Buttons */}
-          <div className="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
-            {[
-              { id: 'overview', label: 'Operasyon Özeti', badge: (summary.failedJobs || 0) + summary.pendingJobs, errorBadge: (summary.failedJobs || 0) > 0 ? summary.failedJobs : null },
-              { id: 'baileys', label: 'Servis Durumu', badge: data?.accounts?.length, isAlert: (data?.accounts?.filter(a => a.status !== 'connected').length || 0) > 0 },
-              { id: 'messages', label: 'Mesaj Yanıt Masası', badge: (data?.messages?.length || 0) + (data?.aiSuggestions?.length || 0) },
-              { id: 'quick_send', label: 'Hızlı Gönderim', badge: null },
-              { id: 'jobs', label: 'İş Kuyruğu & Hatalar', badge: data?.jobs?.length, errorBadge: (summary.failedJobs ?? 0) > 0 ? summary.failedJobs : null },
-              { id: 'campaigns', label: 'Kampanyalar', badge: data?.campaigns?.length },
-              { id: 'queue', label: 'Gönderim Sırası', badge: summary.queuedMessages },
-              { id: 'data_requests', label: 'Veri Talepleri', badge: data?.listRequests?.length, isPending: (data?.listRequests?.filter(r => r.status === 'pending').length || 0) > 0 },
-              { id: 'organizations', label: 'Firmalar & Üyelikler', badge: data?.organizations?.length },
-              { id: 'contacts', label: 'Rehber & Kişi Havuzu', badge: data?.contactLists?.length },
-              { id: 'ai_studio', label: 'ChatGPT & Afiş Üretimi', badge: data?.creatives?.length },
-              { id: 'blacklist', label: 'Kara Liste', badge: summary.blacklistedCount },
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`shrink-0 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-[var(--radius-sm)] text-[11px] sm:text-xs font-semibold whitespace-nowrap transition flex items-center gap-1.5 ${
-                  activeTab === tab.id
-                    ? 'bg-accent text-accent-ink shadow-sm'
-                    : 'text-ink-soft hover:bg-[var(--color-surface-raised)]'
-                }`}
-              >
-                <span>{tab.label}</span>
-                {tab.errorBadge !== null && tab.errorBadge !== undefined && (
-                  <span className="text-[9px] sm:text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold bg-danger text-white animate-pulse">
-                    {tab.errorBadge} Hata
-                  </span>
-                )}
-                {tab.badge !== null && tab.badge !== undefined && tab.badge > 0 && !tab.errorBadge && (
-                  <span
-                    className={`text-[9px] sm:text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
-                      activeTab === tab.id
-                        ? 'bg-white/20 text-white'
-                        : 'bg-[var(--color-surface-raised)] text-ink-muted'
-                    }`}
-                  >
-                    {tab.badge}
-                  </span>
-                )}
-              </button>
-            ))}
+          {/* Module Tab Buttons with Desktop Drag, Wheel & Arrow Scroll Support */}
+          <div className="relative flex items-center w-full min-w-0">
+            <button
+              type="button"
+              onClick={() => scrollTabs('left')}
+              className="flex shrink-0 items-center justify-center w-7 h-7 rounded-[var(--radius-sm)] bg-surface hover:bg-surface-raised border border-[var(--color-hairline)] text-ink mr-1.5 shadow-xs z-10 transition cursor-pointer"
+              title="Sola Kaydır"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
+            </button>
+
+            <div
+              ref={tabsRef}
+              onMouseDown={handleTabsMouseDown}
+              onMouseMove={handleTabsMouseMove}
+              onMouseUp={handleTabsMouseUp}
+              onMouseLeave={handleTabsMouseUp}
+              onWheel={(e) => {
+                if (e.deltaY !== 0) {
+                  e.currentTarget.scrollLeft += e.deltaY;
+                }
+              }}
+              className="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0 w-full select-none cursor-grab active:cursor-grabbing scrollbar-thin scrollbar-thumb-[var(--color-hairline-strong)]"
+            >
+              {[
+                { id: 'overview', label: 'Operasyon Özeti', badge: (summary.failedJobs || 0) + summary.pendingJobs, errorBadge: (summary.failedJobs || 0) > 0 ? summary.failedJobs : null },
+                { id: 'baileys', label: 'Servis Durumu', badge: data?.accounts?.length, isAlert: (data?.accounts?.filter(a => a.status !== 'connected').length || 0) > 0 },
+                { id: 'messages', label: 'Mesaj Yanıt Masası', badge: (data?.messages?.length || 0) + (data?.aiSuggestions?.length || 0) },
+                { id: 'quick_send', label: 'Hızlı Gönderim', badge: null },
+                { id: 'jobs', label: 'İş Kuyruğu & Hatalar', badge: data?.jobs?.length, errorBadge: (summary.failedJobs ?? 0) > 0 ? summary.failedJobs : null },
+                { id: 'campaigns', label: 'Kampanyalar', badge: data?.campaigns?.length },
+                { id: 'queue', label: 'Gönderim Sırası', badge: summary.queuedMessages },
+                { id: 'data_requests', label: 'Veri Talepleri', badge: data?.listRequests?.length, isPending: (data?.listRequests?.filter(r => r.status === 'pending').length || 0) > 0 },
+                { id: 'organizations', label: 'Firmalar & Üyelikler', badge: data?.organizations?.length },
+                { id: 'contacts', label: 'Rehber & Kişi Havuzu', badge: data?.contactLists?.length },
+                { id: 'ai_studio', label: 'AI Video & Görsel Motoru', badge: (data?.ai_engine?.recentVideos?.length || 0) + (data?.creatives?.length || 0), isAlert: (data?.ai_engine?.geminiPool?.limitedAccounts || 0) > 0 },
+                { id: 'blacklist', label: 'Kara Liste', badge: summary.blacklistedCount },
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    if (!hasDragged.current) setActiveTab(tab.id as any)
+                  }}
+                  className={`shrink-0 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-[var(--radius-sm)] text-[11px] sm:text-xs font-semibold whitespace-nowrap transition flex items-center gap-1.5 ${
+                    activeTab === tab.id
+                      ? 'bg-accent text-accent-ink shadow-sm'
+                      : 'text-ink-soft hover:bg-[var(--color-surface-raised)]'
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  {tab.errorBadge !== null && tab.errorBadge !== undefined && (
+                    <span className="text-[9px] sm:text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold bg-danger text-white animate-pulse">
+                      {tab.errorBadge} Hata
+                    </span>
+                  )}
+                  {tab.badge !== null && tab.badge !== undefined && tab.badge > 0 && !tab.errorBadge && (
+                    <span
+                      className={`text-[9px] sm:text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
+                        activeTab === tab.id
+                          ? 'bg-white/20 text-white'
+                          : 'bg-[var(--color-surface-raised)] text-ink-muted'
+                      }`}
+                    >
+                      {tab.badge}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => scrollTabs('right')}
+              className="flex shrink-0 items-center justify-center w-7 h-7 rounded-[var(--radius-sm)] bg-surface hover:bg-surface-raised border border-[var(--color-hairline)] text-ink ml-1.5 shadow-xs z-10 transition cursor-pointer"
+              title="Sağa Kaydır"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+            </button>
           </div>
 
           {/* Quick Search Input */}
@@ -2817,18 +3162,546 @@ export function LiveDashboard() {
           </div>
         )}
 
-        {/* TAB 6: CHATGPT & GÖRSEL ÜRETİM SIRASI (CANLI PROMPT, JSON VE KUYRUK TAKİBİ) */}
+        {/* TAB 6: AI VİDEO & GÖRSEL ÜRETİM MERKEZİ (CHATGPT, GEMINI VEO, GOOGLE FLOW, KOTA TAKİBİ) */}
         {activeTab === 'ai_studio' && (
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-hairline)] pb-2.5">
-              <div>
-                <h2 className="text-xs sm:text-sm font-bold text-ink">ChatGPT & Görsel Üretim Akışı</h2>
-                <p className="text-[11px] text-ink-muted">
-                  Firmalardan gelen anlık görsel üretim istekleri, ChatGPT'ye giden sistem prompt komutları ve JSON yükleri
-                </p>
+          <div className="space-y-6">
+            {/* 1. ÜST PANEL: AI VİDEO MOTORLARI, HESAP HAVUZU VE KOTA DURUMU */}
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-hairline)] pb-2.5">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xs sm:text-sm font-bold text-ink">AI Video & Medya Motorları Operasyon Merkezi</h2>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-accent-soft text-accent font-bold">
+                      Canlı Kota & Hesap Havuzu
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-ink-muted mt-0.5">
+                    ChatGPT Web otonom prompt motoru, Google Gemini Veo 4'lü hesap havuzu ve Google Flow Veo 3.1 stüdyosu canlı durumu.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddAccountModal(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] text-[11px] font-bold bg-accent text-accent-ink hover:bg-accent-dim shadow-sm transition"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                    </svg>
+                    <span>Yeni Hesap Bağla</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleVerifyAllAccounts}
+                    disabled={verifyingAll}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-[11px] font-semibold bg-surface-raised hover:bg-canvas border border-[var(--color-hairline)] text-ink transition disabled:opacity-50"
+                  >
+                    {verifyingAll ? (
+                      <>
+                        <span className="w-3 h-3 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+                        <span>Taranıyor...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-3.5 h-3.5 text-ink-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <span>Tümünü Doğrula</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowVncModal(true)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-[11px] font-semibold bg-surface-raised hover:bg-canvas border border-[var(--color-hairline)] text-ink transition"
+                  >
+                    <svg className="w-3.5 h-3.5 text-ink-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    <span>Canlı VNC Masası</span>
+                  </button>
+
+                  <a
+                    href={data?.ai_engine?.googleFlow?.projectUrl || 'https://flow.google.com/project/6b718bdf-9bf3-44c3-8b65-4c8f9110c8c5'}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-[11px] font-semibold bg-accent-soft/30 hover:bg-accent-soft border border-accent/25 text-accent transition"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <span>Flow Stüdyosu</span>
+                    <svg className="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                </div>
               </div>
-              <span className="text-[11px] font-semibold text-ink-muted">{data?.creatives.length} Üretim Kaydı</span>
+
+              {/* 3 SÜTUNLU MOTOR BİLGİ KARTLARI */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+                {/* KART 1: GOOGLE GEMINI (VEO) ÇOKLU HESAP HAVUZU */}
+                <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 shadow-sm space-y-3 flex flex-col justify-between">
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-[var(--radius-sm)] bg-accent-soft text-accent flex items-center justify-center shrink-0">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                          </svg>
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-bold text-ink">Google Gemini Havuz Matrisi</h3>
+                          <span className="text-[10px] text-ink-muted">Hetzner Multi-Port CDP Rotasyonu</span>
+                        </div>
+                      </div>
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          (data?.ai_engine?.geminiPool?.activeAccounts || 0) > 0
+                            ? 'bg-ok-soft text-ok-dim'
+                            : 'bg-danger/10 text-danger'
+                        }`}
+                      >
+                        {data?.ai_engine?.geminiPool?.activeAccounts || 0} / {data?.ai_engine?.geminiPool?.totalAccounts || 4} Aktif
+                      </span>
+                    </div>
+
+                    {/* Hesap Slotları Listesi */}
+                    <div className="space-y-2 bg-canvas p-2.5 rounded-[var(--radius-sm)] border border-[var(--color-hairline)]">
+                      {(data?.ai_engine?.geminiPool?.accounts || [
+                        { port: 9222, name: 'Ali Düvenci (Pro)', email: 'jeynjones@gmail.com', isLoggedIn: true, isLimited: false, flowProjectUrl: 'https://flow.google.com/project/6b718bdf-9bf3-44c3-8b65-4c8f9110c8c5' },
+                        { port: 9223, name: 'Ali Düvenci (2. Hesap)', email: 'icnevudila@gmail.com', isLoggedIn: true, isLimited: false },
+                        { port: 9224, name: '3. Havuz Hesabı', email: null, isLoggedIn: false, isLimited: false },
+                        { port: 9225, name: '4. Havuz Hesabı', email: null, isLoggedIn: false, isLimited: false },
+                      ]).map((acc: any) => (
+                        <div key={acc.port} className="flex flex-col gap-1.5 py-1.5 border-b border-[var(--color-hairline)] last:border-0">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className={`w-2 h-2 rounded-full shrink-0 ${
+                                acc.isLimited
+                                  ? 'bg-danger animate-pulse'
+                                  : acc.isLoggedIn
+                                  ? 'bg-ok'
+                                  : 'bg-ink-muted/30'
+                              }`} />
+                              <div className="truncate">
+                                <div className="font-semibold text-ink truncate leading-tight flex items-center gap-1.5">
+                                  <span>{acc.name}</span>
+                                  {acc.flowProjectUrl ? (
+                                    <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-accent-soft text-accent font-bold">
+                                      Flow Bağlı
+                                    </span>
+                                  ) : null}
+                                </div>
+                                <div className="text-[9px] text-ink-muted font-mono truncate">
+                                  {acc.email || `Giriş yapılmadı`} · :{acc.port}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="shrink-0 text-right">
+                              {acc.isLimited ? (
+                                <span className="text-[9px] font-bold text-danger bg-danger/10 px-1.5 py-0.5 rounded">
+                                  Kota Dolu {acc.secondsUntilReset ? `(${Math.round(acc.secondsUntilReset / 60)} dk)` : ''}
+                                </span>
+                              ) : acc.isLoggedIn ? (
+                                <span className="text-[9px] font-bold text-ok-dim bg-ok-soft px-1.5 py-0.5 rounded">
+                                  Hazır
+                                </span>
+                              ) : (
+                                <span className="text-[9px] font-medium text-ink-muted bg-surface-raised px-1.5 py-0.5 rounded">
+                                  Giriş Gerekli
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Slot Aksiyonları */}
+                          <div className="flex flex-wrap items-center justify-end gap-1 pt-0.5">
+                            {acc.isLimited && (
+                              <button
+                                type="button"
+                                onClick={() => handleResetAccountLimit(acc.port)}
+                                disabled={accountActionBusy === acc.port}
+                                className="text-[9px] px-1.5 py-0.5 rounded bg-danger/10 hover:bg-danger/20 text-danger font-semibold transition"
+                              >
+                                Kotayı Sıfırla
+                              </button>
+                            )}
+
+                            {/* Flow Projesi Bağla / Değiştir */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFlowModalPort(acc.port)
+                                setFlowModalUrl(acc.flowProjectUrl || '')
+                                setFlowModalCredits(acc.flowCredits || 1050)
+                                setShowFlowModal(true)
+                              }}
+                              className="text-[9px] px-1.5 py-0.5 rounded bg-accent-soft/40 hover:bg-accent-soft text-accent font-semibold transition"
+                              title="Bu slot için Google Flow Proje URL'sini bağla"
+                            >
+                              {acc.flowProjectUrl ? 'Flow URL' : '+ Flow Bağla'}
+                            </button>
+
+                            {/* VNC'siz Çerez / Oturum Aktar */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCookieModalPort(acc.port)
+                                setShowCookieModal(true)
+                              }}
+                              className="text-[9px] px-1.5 py-0.5 rounded bg-surface-raised hover:bg-canvas border border-[var(--color-hairline)] text-ink font-medium transition"
+                              title="Kendi tarayıcından VNC'siz çerez aktar"
+                            >
+                              Oturum Aktar
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleVerifyAccount(acc.port)}
+                              disabled={accountActionBusy === acc.port}
+                              className="text-[9px] px-1.5 py-0.5 rounded bg-surface-raised hover:bg-canvas border border-[var(--color-hairline)] text-ink font-medium transition"
+                            >
+                              {accountActionBusy === acc.port ? '...' : 'Doğrula'}
+                            </button>
+
+                            <a
+                              href={acc.vncUrl || 'http://167.233.201.31:6080/vnc.html'}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[9px] px-1.5 py-0.5 rounded bg-surface-raised hover:bg-canvas border border-[var(--color-hairline)] text-ink-muted transition"
+                              title="İsteğe bağlı VNC masaüstü"
+                            >
+                              VNC
+                            </a>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[10px] text-ink-muted pt-2 border-t border-[var(--color-hairline)]">
+                    <span>Otomatik failover: <strong>Aktif</strong></span>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddAccountModal(true)}
+                      className="text-accent font-semibold hover:underline"
+                    >
+                      + Slot Ekle →
+                    </button>
+                  </div>
+                </div>
+
+                {/* KART 2: GOOGLE FLOW (VEO 3.1) STÜDYO & KREDİ HAVUZU */}
+                <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 shadow-sm space-y-3 flex flex-col justify-between">
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-[var(--radius-sm)] bg-accent-soft text-accent flex items-center justify-center shrink-0">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-bold text-ink">Google Flow Creative Studio</h3>
+                          <span className="text-[10px] text-ink-muted">Çoklu Hesap & Veo 3.1 Havuzu</span>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-accent-soft text-accent">
+                        {data?.ai_engine?.googleFlow?.activeFlowCount || 1} / {data?.ai_engine?.googleFlow?.totalAccountsCount || 2} Hesap Aktif
+                      </span>
+                    </div>
+
+                    {/* Kredi İlerleme Çubuğu */}
+                    <div className="bg-canvas p-2.5 rounded-[var(--radius-sm)] border border-[var(--color-hairline)] space-y-2 text-[11px]">
+                      <div className="flex items-center justify-between">
+                        <span className="text-ink-muted font-medium">Toplam Havuz Kredisi:</span>
+                        <span className="font-bold text-accent font-mono text-xs">
+                          {data?.ai_engine?.googleFlow?.credits ?? 1020} / {data?.ai_engine?.googleFlow?.initialCredits ?? 2100} Kredi
+                        </span>
+                      </div>
+
+                      {/* Görsel Progress Bar */}
+                      <div className="w-full h-2 rounded-full bg-surface-raised overflow-hidden border border-[var(--color-hairline)]">
+                        <div
+                          className="h-full bg-accent rounded-full transition-all duration-500"
+                          style={{
+                            width: `${Math.min(100, Math.max(5, (((data?.ai_engine?.googleFlow?.credits ?? 1020) / (data?.ai_engine?.googleFlow?.initialCredits ?? 2100)) * 100)))}%`
+                          }}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-1.5 pt-1">
+                        <div className="bg-surface-raised p-1.5 rounded border border-[var(--color-hairline)] text-center">
+                          <div className="text-[9px] text-ink-muted">Toplam Kalan Video</div>
+                          <div className="text-xs font-bold text-ink">
+                            {data?.ai_engine?.googleFlow?.videosRemaining ?? 68} Adet
+                          </div>
+                        </div>
+                        <div className="bg-surface-raised p-1.5 rounded border border-[var(--color-hairline)] text-center">
+                          <div className="text-[9px] text-ink-muted">Birim Maliyet</div>
+                          <div className="text-xs font-bold text-accent">15 Kr / Video</div>
+                        </div>
+                      </div>
+
+                      {/* Flow Hesap Havuzu Listesi */}
+                      <div className="space-y-1.5 pt-1.5 border-t border-[var(--color-hairline)]">
+                        <div className="flex items-center justify-between text-[10px] text-ink-muted font-bold">
+                          <span>Hesap Havuzu Slotları:</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFlowModalPort(9223)
+                              setShowFlowModal(true)
+                            }}
+                            className="text-accent hover:underline"
+                          >
+                            + Proje Ekle
+                          </button>
+                        </div>
+
+                        {(data?.ai_engine?.googleFlow?.accounts || [
+                          { port: 9222, accountName: 'Ali Düvenci (Pro)', projectUrl: 'https://flow.google.com/project/6b718bdf-9bf3-44c3-8b65-4c8f9110c8c5', credits: 1020, status: 'active' },
+                          { port: 9223, accountName: 'Ali Düvenci (2. Hesap)', projectUrl: '', credits: 1050, status: 'ready_to_link' }
+                        ]).map((fa: any) => (
+                          <div key={fa.port} className="flex items-center justify-between p-1.5 rounded bg-surface-raised border border-[var(--color-hairline)] text-[10px]">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                fa.status === 'active' ? 'bg-ok' : fa.status === 'ready_to_link' ? 'bg-accent animate-pulse' : 'bg-ink-muted/40'
+                              }`} />
+                              <div className="truncate">
+                                <span className="font-semibold text-ink truncate">{fa.accountName}</span>
+                                <span className="text-ink-muted ml-1 font-mono">:{fa.port}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {fa.status === 'active' ? (
+                                <>
+                                  <span className="font-bold text-accent font-mono">{fa.credits} Kr</span>
+                                  <a
+                                    href={fa.projectUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="px-1.5 py-0.5 rounded bg-surface text-ink hover:bg-canvas border border-[var(--color-hairline)] font-medium"
+                                  >
+                                    Aç ↗
+                                  </a>
+                                </>
+                              ) : fa.status === 'ready_to_link' ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setFlowModalPort(fa.port)
+                                    setFlowModalCredits(fa.credits || 1050)
+                                    setShowFlowModal(true)
+                                  }}
+                                  className="px-2 py-0.5 rounded bg-accent text-accent-ink font-bold hover:bg-accent-dim shadow-xs transition"
+                                >
+                                  + Proje Bağla
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setCookieModalPort(fa.port)
+                                    setShowCookieModal(true)
+                                  }}
+                                  className="px-1.5 py-0.5 rounded bg-surface border border-[var(--color-hairline)] text-ink font-medium hover:bg-canvas"
+                                >
+                                  Giriş Yap
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="space-y-1 pt-1 text-[10px] text-ink-muted border-t border-[var(--color-hairline)]">
+                        <div className="flex items-center justify-between">
+                          <span>Filigran:</span>
+                          <span className="font-semibold text-ok">{data?.ai_engine?.googleFlow?.watermark || 'Kapalı (Filigransız Saf Reklam)'}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Format:</span>
+                          <span className="font-semibold text-ink">Veo 3.1 • 9:16 Dikey Reklam</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex items-center gap-1.5">
+                    <a
+                      href={data?.ai_engine?.googleFlow?.projectUrl || 'https://flow.google.com/project/6b718bdf-9bf3-44c3-8b65-4c8f9110c8c5'}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex-1 py-1.5 text-xs font-semibold rounded bg-surface-raised hover:bg-canvas border border-[var(--color-hairline)] text-ink flex items-center justify-center gap-1 transition"
+                    >
+                      <span>Aktif Stüdyoyu Aç</span>
+                      <svg className="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                    <button
+                      type="button"
+                      onClick={fetchData}
+                      className="px-2.5 py-1.5 text-xs font-semibold rounded bg-surface-raised hover:bg-canvas border border-[var(--color-hairline)] text-ink transition flex items-center justify-center"
+                      title="Kredileri Yenile"
+                    >
+                      <svg className="w-3.5 h-3.5 text-ink-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                {/* KART 3: CHATGPT WEB OTONOM PROMPT YÖNETMENİ */}
+                <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 shadow-sm space-y-3 flex flex-col justify-between">
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-[var(--radius-sm)] bg-ok-soft text-ok-dim flex items-center justify-center shrink-0">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-bold text-ink">ChatGPT Web Otonom Yönetmen</h3>
+                          <span className="text-[10px] text-ink-muted">Cannes Reklam Filmi Motoru</span>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-ok-soft text-ok-dim flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-ok animate-pulse" />
+                        Aktif
+                      </span>
+                    </div>
+
+                    <div className="space-y-1.5 bg-canvas p-2.5 rounded-[var(--radius-sm)] border border-[var(--color-hairline)] text-[11px]">
+                      <div className="flex items-center justify-between py-1 border-b border-[var(--color-hairline)]">
+                        <span className="text-ink-muted">Hesap:</span>
+                        <span className="font-semibold text-ink">{data?.ai_engine?.chatgpt?.accountName || 'Yahya Gökbey (Plus)'}</span>
+                      </div>
+                      <div className="flex items-center justify-between py-1 border-b border-[var(--color-hairline)]">
+                        <span className="text-ink-muted">Bağlantı:</span>
+                        <span className="font-mono text-ink">Port :9222 (CDP)</span>
+                      </div>
+                      <div className="flex items-center justify-between py-1 border-b border-[var(--color-hairline)]">
+                        <span className="text-ink-muted">Maliyet:</span>
+                        <span className="font-bold text-ok-dim">0 TL (Sıfır API Anahtarı)</span>
+                      </div>
+                      <div className="flex items-center justify-between py-1">
+                        <span className="text-ink-muted">Görev:</span>
+                        <span className="font-medium text-ink">3 Perdeli 9:16 Video Senaryosu</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-[10px] text-ink-muted pt-2 border-t border-[var(--color-hairline)]">
+                    <span>Brief ve firma analizi yaparak Veo'ya iletilecek kusursuz promptları otonom üretir.</span>
+                  </div>
+                </div>
+              </div>
             </div>
+
+            {/* 2. ORTA PANEL: SON ÜRETİLEN SİNEMATİK REKLAM VİDEOLARI (HTML5 9:16 OYNATICI) */}
+            {data?.ai_engine?.recentVideos && data.ai_engine.recentVideos.length > 0 && (
+              <div className="space-y-3 border-t border-[var(--color-hairline)] pt-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-xs sm:text-sm font-bold text-ink flex items-center gap-2">
+                      <svg className="w-4 h-4 text-ink-muted shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>Son Üretilen Sinematik Reklam Videoları</span>
+                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-surface-raised text-ink-muted font-bold">
+                        9:16 Dikey (Veo AI)
+                      </span>
+                    </h3>
+                    <p className="text-[11px] text-ink-muted">
+                      Yapay zeka video motoru (Google Veo) tarafından 9:16 dikey çekilmiş 100% saf canlı çekim reklam videoları
+                    </p>
+                  </div>
+                  <span className="text-[11px] font-semibold text-ink-muted">
+                    {data.ai_engine.recentVideos.length} Video Kaydı
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+                  {data.ai_engine.recentVideos.map(vid => (
+                    <div
+                      key={vid.id}
+                      className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3 shadow-sm space-y-2.5 flex flex-col justify-between"
+                    >
+                      <div className="space-y-2">
+                        {/* Video Header */}
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-mono font-bold text-ink truncate max-w-[150px]">{vid.id}</span>
+                          <span className="text-[10px] text-ink-muted">{timeAgo(vid.createdAt)}</span>
+                        </div>
+
+                        {/* Video Player */}
+                        <div className="aspect-[9/16] bg-black rounded-[var(--radius-sm)] overflow-hidden relative group">
+                          <video
+                            src={vid.videoUrl}
+                            poster={vid.thumbnailUrl || undefined}
+                            controls
+                            playsInline
+                            preload="metadata"
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-between text-[10px] text-ink-muted pt-0.5">
+                          <span>Boyut: <strong>{vid.sizeMb} MB</strong></span>
+                          <span>Format: <strong>9:16 Dikey MP4</strong></span>
+                        </div>
+                      </div>
+
+                      {/* Video Actions */}
+                      <div className="pt-2 border-t border-[var(--color-hairline)] flex items-center gap-1.5">
+                        <a
+                          href={vid.videoUrl}
+                          download={`${vid.id}.mp4`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex-1 py-1 text-xs font-semibold rounded bg-surface-raised hover:bg-canvas border border-[var(--color-hairline)] text-ink text-center transition"
+                        >
+                          İndir (MP4)
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setQuickMediaUrl(vid.videoUrl)
+                            setQuickMessage('İşletmemiz için hazırlanan özel sinematik reklam videosu.')
+                            setActiveTab('quick_send')
+                            showNotice('Video hızlı gönderim kutusuna aktarıldı.')
+                          }}
+                          className="px-2.5 py-1 text-xs font-semibold rounded bg-accent text-accent-ink hover:bg-accent-dim transition"
+                        >
+                          WhatsApp'a Aktar
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 3. ALT PANEL: CHATGPT & GÖRSEL / AFİŞ ÜRETİM SIRASI */}
+            <div className="border-t border-[var(--color-hairline)] pt-4 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-xs sm:text-sm font-bold text-ink">ChatGPT & Görsel / Afiş Üretim Akışı</h3>
+                  <p className="text-[11px] text-ink-muted">
+                    Firmalardan gelen anlık görsel üretim istekleri, ChatGPT'ye giden sistem prompt komutları ve JSON yükleri
+                  </p>
+                </div>
+                <span className="text-[11px] font-semibold text-ink-muted">{data?.creatives.length} Afiş Kaydı</span>
+              </div>
 
             {data?.creatives.length === 0 ? (
               <p className="text-xs text-ink-muted text-center py-6">Henüz üretilmiş görsel veya prompt kaydı bulunmuyor.</p>
@@ -2960,6 +3833,7 @@ export function LiveDashboard() {
                 })}
               </div>
             )}
+            </div>
           </div>
         )}
 
@@ -3362,7 +4236,12 @@ export function LiveDashboard() {
             </div>
 
             {/* Sub-Tabs Selector */}
-            <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none bg-[var(--color-surface-raised)] p-1 rounded-[var(--radius-sm)] border border-[var(--color-hairline)]">
+            <div
+              onWheel={(e) => {
+                if (e.deltaY !== 0) e.currentTarget.scrollLeft += e.deltaY;
+              }}
+              className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-[var(--color-hairline-strong)] bg-[var(--color-surface-raised)] p-1 rounded-[var(--radius-sm)] border border-[var(--color-hairline)]"
+            >
               {[
                 { id: 'all', label: 'Tüm Mesaj Akışı', count: filteredMessages.length },
                 { id: 'in', label: 'Gelenler', count: filteredMessages.filter(m => m.direction === 'in').length },
@@ -4394,7 +5273,12 @@ export function LiveDashboard() {
 
             {/* Target Filter & Search Toolbar */}
             <div className="p-2.5 sm:p-3 border-b border-[var(--color-hairline)] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 bg-surface">
-              <div className="flex items-center gap-1 bg-surface-raised p-0.5 rounded-[var(--radius-sm)] overflow-x-auto">
+              <div
+                onWheel={(e) => {
+                  if (e.deltaY !== 0) e.currentTarget.scrollLeft += e.deltaY;
+                }}
+                className="flex items-center gap-1 bg-surface-raised p-0.5 rounded-[var(--radius-sm)] overflow-x-auto scrollbar-thin"
+              >
                 {(['all', 'sent', 'pending', 'failed', 'skipped'] as const).map(st => (
                   <button
                     key={st}
@@ -4704,6 +5588,390 @@ export function LiveDashboard() {
                 Kapat
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 1: YENİ AI HESAP SLOTU BAĞLAMA MODALI */}
+      {showAddAccountModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] w-full max-w-md flex flex-col shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="p-4 border-b border-[var(--color-hairline)] flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-[var(--radius-sm)] bg-accent-soft text-accent flex items-center justify-center shrink-0">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-xs sm:text-sm font-bold text-ink">Yeni AI Hesabı & Port Bağla</h3>
+                  <p className="text-[11px] text-ink-muted">Hetzner VPS üzerinde bağımsız bir Chrome slotu başlatır</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddAccountModal(false)}
+                className="w-7 h-7 rounded-full bg-surface-raised text-ink hover:bg-canvas flex items-center justify-center font-bold text-sm"
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleProvisionAccount} className="p-4 space-y-4 text-xs">
+              <div className="space-y-1.5">
+                <label className="font-semibold text-ink">Hedef Port / Slot Seçimi:</label>
+                <select
+                  value={newAccountPort}
+                  onChange={e => setNewAccountPort(parseInt(e.target.value, 10))}
+                  className="w-full bg-surface-raised border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 text-ink outline-none focus:border-accent"
+                >
+                  <option value={9223}>Port 9223 (2. Havuz Slotu)</option>
+                  <option value={9224}>Port 9224 (3. Havuz Slotu)</option>
+                  <option value={9225}>Port 9225 (4. Havuz Slotu)</option>
+                  <option value={9226}>Port 9226 (5. Yeni Havuz Slotu)</option>
+                  <option value={9227}>Port 9227 (6. Yeni Havuz Slotu)</option>
+                  <option value={9228}>Port 9228 (7. Yeni Havuz Slotu)</option>
+                </select>
+                <p className="text-[10px] text-ink-muted">Her slot izole bir profil klasörü ile birbirinden bağımsız çalışır.</p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-semibold text-ink">Hesap Takma Adı:</label>
+                <input
+                  type="text"
+                  placeholder="Örn: 2. Şirket Google & Flow Hesabı"
+                  value={newAccountName}
+                  onChange={e => setNewAccountName(e.target.value)}
+                  className="w-full bg-surface-raised border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 text-ink placeholder:text-ink-muted outline-none focus:border-accent"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-semibold text-ink">Google Flow Proje URL'si (Opsiyonel):</label>
+                <input
+                  type="url"
+                  placeholder="https://flow.google.com/project/..."
+                  value={newFlowProjectUrl}
+                  onChange={e => setNewFlowProjectUrl(e.target.value)}
+                  className="w-full bg-surface-raised border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 text-ink placeholder:text-ink-muted outline-none focus:border-accent font-mono text-[11px]"
+                />
+                <p className="text-[10px] text-ink-muted">Bu Google hesabına ait özel bir Flow Creative Studio projeniz varsa bağlayabilirsiniz.</p>
+              </div>
+
+              {/* Bilgilendirme Kutusu */}
+              <div className="bg-accent-soft/20 border border-accent/30 rounded-[var(--radius-sm)] p-2.5 space-y-1 text-[11px] text-ink">
+                <div className="font-bold text-accent">Nasıl Çalışır?</div>
+                <ol className="list-decimal pl-4 space-y-0.5 text-ink-soft">
+                  <li><strong>Hetzner'de Başlat</strong> butonuna bastığınızda izole Chrome oturumu ayağa kalkar.</li>
+                  <li>Açılan <strong>VNC ekranında</strong> Google hesabınıza (veya Flow stüdyonuza) giriş yapın.</li>
+                  <li>Giriş tamamlandığında <strong>Doğrula</strong> butonuna basarak hesabı havuza alın.</li>
+                </ol>
+              </div>
+
+              <div className="pt-2 border-t border-[var(--color-hairline)] flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddAccountModal(false)}
+                  className="px-3.5 py-1.5 rounded-[var(--radius-sm)] bg-surface-raised border border-[var(--color-hairline)] text-ink hover:bg-canvas transition"
+                >
+                  Vazgeç
+                </button>
+                <button
+                  type="submit"
+                  disabled={isProvisioning}
+                  className="px-4 py-1.5 rounded-[var(--radius-sm)] bg-accent text-accent-ink font-bold hover:bg-accent-dim shadow transition disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {isProvisioning && <span className="w-3 h-3 border-2 border-accent-ink border-t-transparent rounded-full animate-spin" />}
+                  <span>{isProvisioning ? 'Hetzner Hazırlanıyor...' : 'Hetzner\'de Başlat ve VNC Aç'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: CANLI VNC KONSOLU MODALI (GÖMÜLÜ NO-VNC) */}
+      {showVncModal && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] w-full max-w-5xl h-[88vh] flex flex-col shadow-2xl animate-in fade-in zoom-in-95 overflow-hidden">
+            <div className="p-3 sm:p-3.5 border-b border-[var(--color-hairline)] flex items-center justify-between bg-surface">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-[var(--radius-sm)] bg-surface-raised text-ink flex items-center justify-center shrink-0 border border-[var(--color-hairline)]">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-xs sm:text-sm font-bold text-ink">Hetzner VPS Canlı VNC Masası</h3>
+                  <p className="text-[10px] text-ink-muted">Chrome pencerelerinden Google / Gemini / ChatGPT hesaplarınıza tek tıkla giriş yapın</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={data?.ai_engine?.geminiPool?.vncUrl || 'http://167.233.201.31:6080/vnc.html'}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-2.5 py-1 text-xs font-semibold rounded bg-surface-raised border border-[var(--color-hairline)] text-ink hover:bg-canvas flex items-center gap-1"
+                >
+                  <span>Yeni Sekmede Aç</span>
+                  <svg className="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setShowVncModal(false)}
+                  className="w-7 h-7 rounded-full bg-surface-raised text-ink hover:bg-canvas flex items-center justify-center font-bold text-sm"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            {/* VNC iframe */}
+            <div className="flex-1 bg-black relative">
+              <iframe
+                src={data?.ai_engine?.geminiPool?.vncUrl || 'http://167.233.201.31:6080/vnc.html'}
+                title="Hetzner noVNC Desktop"
+                className="w-full h-full border-0"
+              />
+            </div>
+
+            {/* Alt Kontrol Çubuğu */}
+            <div className="p-2.5 border-t border-[var(--color-hairline)] bg-surface flex flex-wrap items-center justify-between gap-2 text-xs">
+              <span className="text-[11px] text-ink-muted">
+                İpucu: Giriş yaptıktan sonra aşağıdaki butona tıklayarak oturumu test edin ve havuza dahil edin.
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleVerifyAllAccounts}
+                  disabled={verifyingAll}
+                  className="px-3.5 py-1.5 rounded-[var(--radius-sm)] bg-accent text-accent-ink font-bold hover:bg-accent-dim shadow transition disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {verifyingAll ? (
+                    <>
+                      <span className="w-3 h-3 border-2 border-accent-ink border-t-transparent rounded-full animate-spin" />
+                      <span>Doğrulanıyor...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      <span>Oturumları Doğrula & Havuza Al</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowVncModal(false)}
+                  className="px-3.5 py-1.5 rounded-[var(--radius-sm)] bg-surface-raised border border-[var(--color-hairline)] text-ink hover:bg-canvas"
+                >
+                  Kapat
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: GOOGLE FLOW PROJE URL BAĞLAMA MODALI (VNC'SİZ) */}
+      {showFlowModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] w-full max-w-md flex flex-col shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="p-4 border-b border-[var(--color-hairline)] flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-[var(--radius-sm)] bg-accent-soft text-accent flex items-center justify-center shrink-0">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-xs sm:text-sm font-bold text-ink">Google Flow Projesi Bağla</h3>
+                  <p className="text-[11px] text-ink-muted">Kredi havuzuna eklemek istediğiniz Flow stüdyo URL'si</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowFlowModal(false)}
+                className="w-7 h-7 rounded-full bg-surface-raised text-ink hover:bg-canvas flex items-center justify-center font-bold text-sm"
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateFlow} className="p-4 space-y-4 text-xs">
+              <div className="space-y-1.5">
+                <label className="font-semibold text-ink">Hedef Slot (Port):</label>
+                <select
+                  value={flowModalPort}
+                  onChange={e => setFlowModalPort(parseInt(e.target.value, 10))}
+                  className="w-full bg-surface-raised border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 text-ink outline-none focus:border-accent"
+                >
+                  <option value={9222}>Port 9222 (Ali Düvenci - 1. Hesap)</option>
+                  <option value={9223}>Port 9223 (Ali Düvenci - 2. Hesap)</option>
+                  <option value={9224}>Port 9224 (3. Hesap Slotu)</option>
+                  <option value={9225}>Port 9225 (4. Hesap Slotu)</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-semibold text-ink">Google Flow Proje URL'si:</label>
+                <input
+                  type="url"
+                  required
+                  placeholder="https://flow.google.com/project/6b718bdf-..."
+                  value={flowModalUrl}
+                  onChange={e => setFlowModalUrl(e.target.value)}
+                  className="w-full bg-surface-raised border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 text-ink placeholder:text-ink-muted outline-none focus:border-accent font-mono text-[11px]"
+                />
+                <p className="text-[10px] text-ink-muted">
+                  Kendi tarayıcınızda <strong>flow.google.com</strong> adresine girip projenizi açın ve adres çubuğundaki URL'yi buraya yapıştırın.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-semibold text-ink">Hesap Kredi Bakiyesi (Opsiyonel):</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="10000"
+                  value={flowModalCredits}
+                  onChange={e => setFlowModalCredits(parseInt(e.target.value, 10) || 0)}
+                  className="w-full bg-surface-raised border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 text-ink outline-none focus:border-accent font-mono text-[11px]"
+                />
+                <p className="text-[10px] text-ink-muted">Varsayılan PRO bakiye 1.050 kredidir (70 adet video).</p>
+              </div>
+
+              <div className="bg-ok-soft/30 border border-ok/20 rounded-[var(--radius-sm)] p-2.5 text-[11px] text-ink space-y-1">
+                <div className="font-bold text-ok-dim flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Sıfır VNC Gereksinimi</span>
+                </div>
+                <p className="text-ink-soft">
+                  Kaydettiğiniz an Hetzner'deki izole Chrome sekmesi arka planda doğrudan bu stüdyo projesine yönlendirilir ve anında ortak havuza dahil edilir.
+                </p>
+              </div>
+
+              <div className="pt-2 border-t border-[var(--color-hairline)] flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowFlowModal(false)}
+                  className="px-3.5 py-1.5 rounded-[var(--radius-sm)] bg-surface-raised border border-[var(--color-hairline)] text-ink hover:bg-canvas transition"
+                >
+                  Vazgeç
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdatingFlow}
+                  className="px-4 py-1.5 rounded-[var(--radius-sm)] bg-accent text-accent-ink font-bold hover:bg-accent-dim shadow transition disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {isUpdatingFlow && <span className="w-3 h-3 border-2 border-accent-ink border-t-transparent rounded-full animate-spin" />}
+                  <span>{isUpdatingFlow ? 'Kaydediliyor...' : 'Projeyi Havuza Bağla'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: KENDİ TARAYICIMDAN OTURUM / COOKIE AKTAR MODALI (VNC'SİZ GİRİŞ) */}
+      {showCookieModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] w-full max-w-lg flex flex-col shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="p-4 border-b border-[var(--color-hairline)] flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-[var(--radius-sm)] bg-ok-soft text-ok-dim flex items-center justify-center shrink-0">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-xs sm:text-sm font-bold text-ink">Tarayıcımdan Oturum / Çerez Aktar</h3>
+                  <p className="text-[11px] text-ink-muted">Hetzner VNC'ye girmeden 1 tıkla Google veya ChatGPT oturumu bağlayın</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCookieModal(false)}
+                className="w-7 h-7 rounded-full bg-surface-raised text-ink hover:bg-canvas flex items-center justify-center font-bold text-sm"
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleSyncCookies} className="p-4 space-y-3.5 text-xs">
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="space-y-1.5">
+                  <label className="font-semibold text-ink">Hedef Slot (Port):</label>
+                  <select
+                    value={cookieModalPort}
+                    onChange={e => setCookieModalPort(parseInt(e.target.value, 10))}
+                    className="w-full bg-surface-raised border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 text-ink outline-none focus:border-accent"
+                  >
+                    <option value={9222}>Port 9222 (Slot 1)</option>
+                    <option value={9223}>Port 9223 (Slot 2)</option>
+                    <option value={9224}>Port 9224 (Slot 3)</option>
+                    <option value={9225}>Port 9225 (Slot 4)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-semibold text-ink">Hedef Platform:</label>
+                  <select
+                    value={cookieModalPlatform}
+                    onChange={e => setCookieModalPlatform(e.target.value)}
+                    className="w-full bg-surface-raised border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 text-ink outline-none focus:border-accent"
+                  >
+                    <option value="all">Otomatik (Google & ChatGPT)</option>
+                    <option value="google">Google Flow & Gemini</option>
+                    <option value="chatgpt">OpenAI ChatGPT</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-semibold text-ink">Çerez (Cookie) Verisi:</label>
+                <textarea
+                  required
+                  rows={5}
+                  placeholder={`Kendi tarayıcınızdan kopyaladığınız JSON çerez dizisi veya "name=value; name2=value2" formatında çerez metni...`}
+                  value={cookieModalData}
+                  onChange={e => setCookieModalData(e.target.value)}
+                  className="w-full bg-surface-raised border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2.5 text-ink placeholder:text-ink-muted outline-none focus:border-accent font-mono text-[10px] leading-relaxed resize-none"
+                />
+              </div>
+
+              <div className="bg-canvas border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2.5 space-y-1 text-[10px] text-ink-muted">
+                <div className="font-semibold text-ink">Nasıl Yapılır? (1 Dakika)</div>
+                <ol className="list-decimal pl-4 space-y-0.5">
+                  <li>Bilgisayarınızdaki Chrome'a <strong>Cookie-Editor</strong> eklentisini ekleyin.</li>
+                  <li><strong>flow.google.com</strong> veya <strong>chatgpt.com</strong> sekmesine geçin.</li>
+                  <li>Eklenti simgesine tıklayıp <strong>Export → Export as JSON</strong> deyin ve buraya yapıştırın.</li>
+                </ol>
+              </div>
+
+              <div className="pt-2 border-t border-[var(--color-hairline)] flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCookieModal(false)}
+                  className="px-3.5 py-1.5 rounded-[var(--radius-sm)] bg-surface-raised border border-[var(--color-hairline)] text-ink hover:bg-canvas transition"
+                >
+                  Vazgeç
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSyncingCookies}
+                  className="px-4 py-1.5 rounded-[var(--radius-sm)] bg-ok text-white font-bold hover:bg-ok-dim shadow transition disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {isSyncingCookies && <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                  <span>{isSyncingCookies ? 'Aktarılıyor...' : 'Çerezleri Aktar ve Oturumu Doğrula'}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

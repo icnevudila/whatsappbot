@@ -65,6 +65,7 @@ export default async function CreativeDetailPage({
     format: row.format,
     provider: provider || null,
     brief: payload?.brief ?? payload?.instruction ?? null,
+    thumbnailUrl: payload?.thumbnailUrl ?? null,
   }
 
   let rootId = row.id

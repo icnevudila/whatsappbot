@@ -34,7 +34,23 @@ export async function GET() {
       )
     }
 
-    return NextResponse.json(data)
+    let aiEngineStatus = null
+    try {
+      const aiRes = await fetch('http://167.233.201.31:3456/v1/ai-engine/status', {
+        signal: AbortSignal.timeout(2500),
+        cache: 'no-store',
+      })
+      if (aiRes.ok) {
+        aiEngineStatus = await aiRes.json()
+      }
+    } catch {
+      // Gateway geçici olarak ulaşılamazsa sessizce geç
+    }
+
+    return NextResponse.json({
+      ...data,
+      ai_engine: aiEngineStatus,
+    })
   } catch (error) {
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : 'Veriler alınamadı' },

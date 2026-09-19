@@ -56,6 +56,7 @@ export type WizardBootstrap = {
   library: LibraryOption[]
   imageAiEnabled: boolean
   canManage: boolean
+  suggestedVideoChips?: Array<{ label: string; text: string }>
 }
 
 export function formatFromId(formatId: string): (typeof CREATIVE_FORMATS)[number] {

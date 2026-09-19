@@ -7,6 +7,7 @@ import {
   type BrandKitCard,
   type WizardBootstrap,
 } from './wizard-types'
+import { buildSmartBusinessVideoIdeas } from '@/lib/creative/video-scenario'
 
 export type {
   BrandKitCard,
@@ -107,44 +108,51 @@ export async function loadCreativeWizardData(): Promise<WizardBootstrap> {
       .createSignedUrl(orgRes.data.logo_path, 3600)
     logoPreview = data?.signedUrl ?? null
   }
-
-  return {
-    org: {
-      name: orgRes.data?.name ?? org.name,
-      address: orgRes.data?.address ?? null,
-      about: orgRes.data?.about ?? null,
-      websiteHint: website,
-      logoPreview,
-    },
-    kits,
-    products: (productsRes.data ?? []).map((product) => ({
+  const mappedProducts = (productsRes.data ?? []).map((product) => ({
       id: product.id,
       name: product.name,
       description: product.description,
       boxContents: product.box_contents,
       images: imagesByProduct.get(product.id) ?? [],
-    })),
-    phones: (accountsRes.data ?? [])
-      .filter((row) => row.phone_e164)
-      .map((row) => ({
+    }))
+
+    const suggestedVideoChips = buildSmartBusinessVideoIdeas(
+      { name: orgRes.data?.name, about: orgRes.data?.about },
+      mappedProducts,
+    )
+
+    return {
+      org: {
+        name: orgRes.data?.name ?? 'İşletmem',
+        address: orgRes.data?.address ?? null,
+        about: orgRes.data?.about ?? null,
+        websiteHint: website,
+        logoPreview,
+      },
+      kits,
+      products: mappedProducts,
+      phones: (accountsRes.data ?? [])
+        .filter((row) => row.phone_e164)
+        .map((row) => ({
+          id: row.id,
+          label: row.label,
+          phone: row.phone_e164 as string,
+        })),
+      socials: (socialsRes.data ?? []).map((row) => ({
         id: row.id,
+        platform: row.platform,
         label: row.label,
-        phone: row.phone_e164 as string,
+        url: row.url,
       })),
-    socials: (socialsRes.data ?? []).map((row) => ({
-      id: row.id,
-      platform: row.platform,
-      label: row.label,
-      url: row.url,
-    })),
-    library: (libraryRes.data ?? []).map((row) => ({
-      id: row.id,
-      title: row.title,
-      publicUrl: row.public_url,
-      status: row.status,
-      createdAt: row.created_at,
-    })),
-    imageAiEnabled: hasImageProvider(),
-    canManage,
+      library: (libraryRes.data ?? []).map((row) => ({
+        id: row.id,
+        title: row.title,
+        publicUrl: row.public_url,
+        status: row.status,
+        createdAt: row.created_at,
+      })),
+      imageAiEnabled: hasImageProvider(),
+      canManage,
+      suggestedVideoChips,
+    }
   }
-}

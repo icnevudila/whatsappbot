@@ -15,13 +15,7 @@ import {
   TEXT_DENSITIES,
   type ProductFieldKey,
 } from '@/lib/creative/types'
-import {
-  fetchVideoScenariosAction,
-  startCreativeGeneration,
-  uploadLibraryImage,
-  type CreativeActionState,
-} from './actions'
-import type { VideoScenarioOption } from '@/lib/creative/video-scenario'
+import { startCreativeGeneration, uploadLibraryImage, type CreativeActionState } from './actions'
 import { DEFAULT_INCLUDE, type ProductCard, type SocialOption, type WizardBootstrap } from './wizard-types'
 import { AddProductModal } from './add-product-modal'
 import { AddSocialModal } from './add-social-modal'
@@ -30,13 +24,39 @@ const DRAFT_KEY = 'wa.customer.creative-wizard.v1'
 
 type Step = 'start' | 'brief' | 'products' | 'extras' | 'style' | 'summary'
 
-const STEPS: { id: Step; label: string }[] = [
+const IMAGE_STEPS: { id: Step; label: string }[] = [
   { id: 'start', label: 'Başlangıç' },
   { id: 'brief', label: 'Fikir' },
   { id: 'products', label: 'Ürünler' },
   { id: 'extras', label: 'Ekler' },
   { id: 'style', label: 'Stil' },
   { id: 'summary', label: 'Özet' },
+]
+
+const VIDEO_STEPS: { id: Step; label: string }[] = [
+  { id: 'brief', label: 'Video Fikri' },
+  { id: 'products', label: 'Öne Çıkan Ürünler' },
+  { id: 'style', label: 'Marka & Ses' },
+  { id: 'summary', label: 'Özet & Başlat' },
+]
+
+const VIDEO_BRIEF_CHIPS = [
+  {
+    label: 'Broşür yerine WhatsApp menü',
+    text: 'Geleneksel broşür basımını bırakıp müşterilere dijital broşürü doğrudan WhatsApp üzerinden ulaştıran yenilikçi ve samimi bir reklam filmi.',
+  },
+  {
+    label: 'Hafta sonu %20 indirim',
+    text: 'Hafta sonuna özel tüm siparişlerde geçerli %20 indirim. Taze, sıcak ve iştah kabartan dinamik çekimlerle dolu kampanya videosu.',
+  },
+  {
+    label: 'Şefin taze spesiyali & sunum',
+    text: 'Ustasından taze hazırlanan günün özel spesiyali. Aşırı yakın plan (makro) sinematik çekimler ve dumanı tüten lezzet.',
+  },
+  {
+    label: 'WhatsApp sipariş çağrısı',
+    text: 'Sıra beklemeden doğrudan WhatsApp hattımızdan sipariş verin, sıcacık kapınıza gelsin.',
+  },
 ]
 
 type ProductExtra = {
@@ -88,12 +108,14 @@ function emptyExtra(imageUrl = ''): ProductExtra {
   }
 }
 
-function defaultDraft(data: WizardBootstrap): Draft {
+function defaultDraft(data: WizardBootstrap, initialFormat?: string): Draft {
+  const isVideo = initialFormat === 'reels_video'
+  const defaultVideoBrief = data.suggestedVideoChips?.[0]?.text || ''
   return {
     requestKey: newKey(),
     origin: 'new',
     baseCreativeId: '',
-    brief: '',
+    brief: isVideo ? defaultVideoBrief : '',
     brandKitId: data.kits.find((kit) => kit.isDefault)?.id ?? data.kits[0]?.id ?? '',
     useLogo: false,
     productIds: [],
@@ -106,7 +128,7 @@ function defaultDraft(data: WizardBootstrap): Draft {
     website: data.org.websiteHint ?? '',
     dateRange: '',
     customText: '',
-    formatId: 'wa',
+    formatId: isVideo ? 'reels_video' : 'wa',
     style: 'auto',
     textDensity: 'balanced',
     videoSpeech: true,
@@ -115,9 +137,16 @@ function defaultDraft(data: WizardBootstrap): Draft {
   }
 }
 
-export function CreativeWizard({ data }: { data: WizardBootstrap }) {
-  const [step, setStep] = useState<Step>('start')
-  const [draft, setDraft] = useState<Draft>(() => defaultDraft(data))
+export function CreativeWizard({
+  data,
+  initialFormat,
+}: {
+  data: WizardBootstrap
+  initialFormat?: string
+}) {
+  const isInitialVideo = initialFormat === 'reels_video'
+  const [draft, setDraft] = useState<Draft>(() => defaultDraft(data, initialFormat))
+  const [step, setStep] = useState<Step>(() => (isInitialVideo ? 'brief' : 'start'))
   const [labelInput, setLabelInput] = useState('')
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -132,47 +161,7 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
   const isImageToImage = Boolean(draft.baseCreativeId) || draft.productIds.length > 0
   useCreativeGenerationProgress(pending, isImageToImage, isVideo)
 
-  const [scenarios, setScenarios] = useState<VideoScenarioOption[]>([])
-  const [scenariosLoading, setScenariosLoading] = useState(false)
-  const [scenarioStage, setScenarioStage] = useState(0)
-  const [expandedPromptId, setExpandedPromptId] = useState<string | null>(null)
-
-  const SCENARIO_STAGES = [
-    { title: '1. Bağlam Analizi', desc: 'İşletme kimliği, ürünler ve kampanya hedefleri inceleniyor...' },
-    { title: '2. ChatGPT Senaryo Masası', desc: '3 farklı dikkat çekici reklam filmi senaryosu yazılıyor...' },
-    { title: '3. Kamera & Dış Ses Kurgusu', desc: '9:16 kamera hareketleri, sahne geçişleri ve diyaloglar kurgulanıyor...' },
-    { title: '4. Senaryolar Hazırlandı!', desc: 'Seçebileceğiniz 3 özel reklam senaryosu hazır.' },
-  ]
-
-  const handleGenerateScenarios = async () => {
-    setScenariosLoading(true)
-    setScenarioStage(0)
-
-    const timer1 = setTimeout(() => setScenarioStage(1), 900)
-    const timer2 = setTimeout(() => setScenarioStage(2), 2100)
-
-    try {
-      const res = await fetchVideoScenariosAction(draft as unknown as Record<string, unknown>)
-      clearTimeout(timer1)
-      clearTimeout(timer2)
-      setScenarioStage(3)
-      await new Promise((r) => setTimeout(r, 500))
-
-      if (res.ok && res.scenarios?.length) {
-        setScenarios(res.scenarios)
-        if (!draft.videoScenarioPrompt || !res.scenarios.some((s) => s.fullPrompt === draft.videoScenarioPrompt)) {
-          patch({
-            videoScenarioPrompt: res.scenarios[0].fullPrompt,
-            videoScenarioTitle: res.scenarios[0].title,
-          })
-        }
-      }
-    } catch (err) {
-      console.error('Senaryo üretilirken hata:', err)
-    } finally {
-      setScenariosLoading(false)
-    }
-  }
+  const activeSteps = isVideo ? VIDEO_STEPS : IMAGE_STEPS
 
   useEffect(() => {
     if (!pending) return
@@ -188,11 +177,20 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
       const raw = localStorage.getItem(DRAFT_KEY)
       if (!raw) return
       const saved = JSON.parse(raw) as Partial<Draft>
-      setDraft((current) => ({ ...current, ...saved, requestKey: saved.requestKey || current.requestKey }))
+      const effectiveFormat = initialFormat || saved.formatId || (isInitialVideo ? 'reels_video' : 'wa')
+      setDraft((current) => ({
+        ...current,
+        ...saved,
+        formatId: effectiveFormat,
+        requestKey: saved.requestKey || current.requestKey,
+      }))
+      if (effectiveFormat === 'reels_video') {
+        setStep((s) => (s === 'start' ? 'brief' : s))
+      }
     } catch {
       /* ignore */
     }
-  }, [])
+  }, [initialFormat, isInitialVideo])
 
   useEffect(() => {
     try {
@@ -215,7 +213,7 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
   const [addProductOpen, setAddProductOpen] = useState(false)
   const [addSocialOpen, setAddSocialOpen] = useState(false)
 
-  const stepIndex = STEPS.findIndex((row) => row.id === step)
+  const stepIndex = activeSteps.findIndex((row) => row.id === step)
   const selectedKit = data.kits.find((kit) => kit.id === draft.brandKitId)
   const selectedProducts = productsList.filter((product) => draft.productIds.includes(product.id))
   const payload = useMemo(
@@ -230,11 +228,16 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
 
   const go = (next: Step) => setStep(next)
   const nextStep = () => {
-    const next = STEPS[Math.min(STEPS.length - 1, stepIndex + 1)]
+    const safeIndex = stepIndex >= 0 ? stepIndex : 0
+    const next = activeSteps[Math.min(activeSteps.length - 1, safeIndex + 1)]
     if (next) go(next.id)
   }
   const prevStep = () => {
-    const prev = STEPS[Math.max(0, stepIndex - 1)]
+    if (stepIndex <= 0) {
+      if (!isVideo && step !== 'start') go('start')
+      return
+    }
+    const prev = activeSteps[stepIndex - 1]
     if (prev) go(prev.id)
   }
 
@@ -268,15 +271,15 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
 
   const canContinue =
     step !== 'brief' || draft.brief.trim().length >= 8
-  const currentLabel = STEPS.find((item) => item.id === step)?.label ?? ''
+  const currentLabel = activeSteps[stepIndex]?.label ?? ''
 
   return (
     <>
       <Card className="wb-wa-wizard overflow-visible">
         <div className="wb-wa-wizard-steps">
           <Stepper
-            label="Görsel adımları"
-            steps={STEPS}
+            label={isVideo ? 'Video adımları' : 'Görsel adımları'}
+            steps={activeSteps}
             current={step}
             onJump={(id) => go(id as Step)}
             className="wb-wa-steps"
@@ -384,30 +387,51 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
       {step === 'brief' ? (
         <Card>
           <div className="space-y-3 p-3.5">
-            <Field label="Görselde ne anlatmak istiyorsunuz?">
+            <Field
+              label={isVideo ? 'Kampanya videosunda ne anlatmak istiyorsunuz?' : 'Görselde ne anlatmak istiyorsunuz?'}
+              hint={isVideo ? '10 saniyelik dikey reklam filminizin ana temasını ve mesajını yazın.' : undefined}
+            >
               <Textarea
                 name="brief-ui"
-                rows={5}
+                rows={4}
                 value={draft.brief}
                 onChange={(event) => patch({ brief: event.target.value })}
-                placeholder="Hafta sonuna özel tüm kahvaltı ürünlerinde %25 indirim. Sıcak, iştah açıcı ve premium bir WhatsApp kampanya görseli istiyorum."
+                placeholder={
+                  isVideo
+                    ? 'Dönerci işletmemiz için müşteriye "Artık broşür bastırmıyorum, dijital broşürü WhatsApp\'tan gönderiyorum" dedirten, iştah kabartan 9:16 dikey reels reklam videosu.'
+                    : 'Hafta sonuna özel tüm kahvaltı ürünlerinde %25 indirim. Sıcak, iştah açıcı ve premium bir WhatsApp kampanya görseli istiyorum.'
+                }
               />
             </Field>
             <div className="flex flex-wrap gap-1.5">
-              {BRIEF_CHIPS.map((chip) => (
-                <button
-                  key={chip}
-                  type="button"
-                  className="wb-wa-chip"
-                  onClick={() => {
-                    if (!draft.brief.includes(chip)) {
-                      patch({ brief: draft.brief ? `${draft.brief.trim()} ${chip}.` : `${chip}. ` })
-                    }
-                  }}
-                >
-                  {chip}
-                </button>
-              ))}
+              {isVideo
+                ? (data.suggestedVideoChips && data.suggestedVideoChips.length > 0
+                    ? data.suggestedVideoChips
+                    : VIDEO_BRIEF_CHIPS
+                  ).map((chip) => (
+                    <button
+                      key={chip.label}
+                      type="button"
+                      className={`wb-wa-chip ${draft.brief === chip.text ? '!border-[#00a884] !bg-[#e7f8f2] !text-[#008069] font-medium' : ''}`}
+                      onClick={() => patch({ brief: chip.text })}
+                    >
+                      {chip.label}
+                    </button>
+                  ))
+                : BRIEF_CHIPS.map((chip) => (
+                    <button
+                      key={chip}
+                      type="button"
+                      className="wb-wa-chip"
+                      onClick={() => {
+                        if (!draft.brief.includes(chip)) {
+                          patch({ brief: draft.brief ? `${draft.brief.trim()} ${chip}.` : `${chip}. ` })
+                        }
+                      }}
+                    >
+                      {chip}
+                    </button>
+                  ))}
             </div>
           </div>
         </Card>
@@ -415,6 +439,11 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
 
       {step === 'products' ? (
         <div className="space-y-2">
+          {isVideo ? (
+            <Notice tone="accent">
+              <strong>Videoda öne çıkarılacak ürünler (İsteğe bağlı):</strong> Döner, burger, menü veya ürünlerinizi seçin. ChatGPT bu ürünlerin adını ve detaylarını sinematik senaryoya otomatik olarak entegre edecektir. Ürün seçmeden sadece işletme odaklı genel video olarak da devam edebilirsiniz.
+            </Notice>
+          ) : null}
           <div className="flex flex-wrap gap-1.5">
             {productsList.map((product) => (
               <button
@@ -576,7 +605,7 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
         </div>
       ) : null}
 
-      {step === 'extras' ? (
+      {step === 'extras' && !isVideo ? (
         <div className="space-y-2">
           <Button type="button" variant="quiet" onClick={() => setShowPhones((value) => !value)}>
             Numara ekle
@@ -728,21 +757,23 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
 
       {step === 'style' ? (
         <div className="space-y-3">
-          <Field label="Kullanım alanı">
-            <div className="grid gap-2 sm:grid-cols-2">
-              {CREATIVE_FORMATS.map((row) => (
-                <button
-                  key={row.id}
-                  type="button"
-                  onClick={() => patch({ formatId: row.id })}
-                  className={`wb-wa-choice${draft.formatId === row.id ? ' is-on' : ''}`}
-                >
-                  <span className="block text-[13.5px] font-semibold text-[#111b21]">{row.label}</span>
-                  <span className="text-[12px] text-[#667781]">{row.hint}</span>
-                </button>
-              ))}
-            </div>
-          </Field>
+          {!isVideo ? (
+            <Field label="Kullanım alanı">
+              <div className="grid gap-2 sm:grid-cols-2">
+                {CREATIVE_FORMATS.map((row) => (
+                  <button
+                    key={row.id}
+                    type="button"
+                    onClick={() => patch({ formatId: row.id })}
+                    className={`wb-wa-choice${draft.formatId === row.id ? ' is-on' : ''}`}
+                  >
+                    <span className="block text-[13.5px] font-semibold text-[#111b21]">{row.label}</span>
+                    <span className="text-[12px] text-[#667781]">{row.hint}</span>
+                  </button>
+                ))}
+              </div>
+            </Field>
+          ) : null}
           <Field
             label="Marka kiti"
             hint={
@@ -826,7 +857,7 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
                       alt=""
                       className="size-8 shrink-0 rounded-md border border-hairline bg-canvas object-contain"
                     />
-                    <span>İşletme logosunu görsele ekle</span>
+                    <span>{isVideo ? 'İşletme logosu videonun kapanış sahnesinde yer alsın' : 'İşletme logosunu görsele ekle'}</span>
                   </label>
                 ) : (
                   <p className="text-[12.5px] text-ink-muted">
@@ -840,306 +871,170 @@ export function CreativeWizard({ data }: { data: WizardBootstrap }) {
               </div>
             )}
           </Field>
-          <Field label="Görsel stili">
-            <div className="flex flex-wrap gap-1.5">
-              {CREATIVE_STYLES.map((row) => (
-                <button
-                  key={row.id}
-                  type="button"
-                  onClick={() => patch({ style: row.id })}
-                  className={`wb-wa-chip${draft.style === row.id ? ' is-active' : ''}`}
-                >
-                  {row.label}
-                </button>
-              ))}
-            </div>
-          </Field>
-          {isVideo ? (
+          {!isVideo ? (
             <>
-              <Field label="Video seslendirme ve ses kurgusu">
-              <div className="grid gap-2 sm:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() => patch({ videoSpeech: true })}
-                  className={`wb-wa-choice${draft.videoSpeech !== false ? ' is-on' : ''}`}
-                >
-                  <div className="flex items-center gap-2">
-                    <Icon name="mic" className="size-4 text-emerald-600" />
-                    <span className="block text-[13.5px] font-semibold text-[#111b21]">Seslendirmeli (Dış Ses Var)</span>
-                  </div>
-                  <span className="text-[12px] text-[#667781]">
-                    Profesyonel Türkçe reklam spikeri; ürün, kampanya ve sipariş çağrısını seslendirir.
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => patch({ videoSpeech: false })}
-                  className={`wb-wa-choice${draft.videoSpeech === false ? ' is-on' : ''}`}
-                >
-                  <div className="flex items-center gap-2">
-                    <Icon name="activity" className="size-4 text-sky-600" />
-                    <span className="block text-[13.5px] font-semibold text-[#111b21]">Konuşmasız (Sadece Müzik & Foley)</span>
-                  </div>
-                  <span className="text-[12px] text-[#667781]">
-                    İnsan sesi ve diyalog yok; sadece sahneye özel doğal ses efektleri ve dinamik fon müziği.
-                  </span>
-                </button>
-              </div>
-            </Field>
-
-            <Field
-              label="Reklam filmi senaryosu & yönetmen kurgusu"
-              hint="ChatGPT işletmeniz ve ürünleriniz için 3 farklı dikkat çekici reklam senaryosu hazırlar."
-            >
-              <div className="space-y-3">
-                {scenarios.length === 0 && !scenariosLoading ? (
-                  <div className="rounded-xl border border-dashed border-[#00a884]/40 bg-[#e7f8f2]/30 p-4 text-center">
-                    <div className="mx-auto flex size-10 items-center justify-center rounded-full bg-[#00a884]/15 text-[#008069]">
-                      <Icon name="sparkles" className="size-5" />
-                    </div>
-                    <h4 className="mt-2 text-[14px] font-semibold text-[#111b21]">
-                      ChatGPT Reklam Senaryoları Hazırla
-                    </h4>
-                    <p className="mt-1 text-[12.5px] text-[#667781]">
-                      Marka ve ürün bağlamınızdan 3 farklı video senaryosu ve Veo çekim promptu oluşturun.
-                    </p>
-                    <Button
+              <Field label="Görsel stili">
+                <div className="flex flex-wrap gap-1.5">
+                  {CREATIVE_STYLES.map((row) => (
+                    <button
+                      key={row.id}
                       type="button"
-                      className="wb-wa-submit mx-auto mt-3 h-9 gap-2 px-4 text-[13px]"
-                      onClick={handleGenerateScenarios}
+                      onClick={() => patch({ style: row.id })}
+                      className={`wb-wa-chip${draft.style === row.id ? ' is-active' : ''}`}
                     >
-                      <Icon name="sparkles" className="size-4" />
-                      ChatGPT ile Senaryoları Üret
-                    </Button>
-                  </div>
-                ) : null}
-
-                {scenariosLoading ? (
-                  <div className="rounded-xl border border-[#00a884]/30 bg-[#f0fbf7] p-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[12px] font-bold uppercase tracking-wider text-[#008069]">
-                        Yapay Zeka Yönetmen Sihirbazı
-                      </span>
-                      <span className="text-[12px] font-medium text-[#008069]">
-                        Adım {Math.min(scenarioStage + 1, 4)} / 4
-                      </span>
-                    </div>
-
-                    {/* Dynamic Progress Bar */}
-                    <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[#008069]/15">
-                      <div
-                        className="h-full bg-[#008069] transition-all duration-500 ease-out"
-                        style={{ width: `${((scenarioStage + 1) / 4) * 100}%` }}
-                      />
-                    </div>
-
-                    {/* Stages List */}
-                    <div className="mt-3 space-y-2">
-                      {SCENARIO_STAGES.map((st, idx) => {
-                        const isPast = scenarioStage > idx
-                        const isCurrent = scenarioStage === idx
-                        return (
-                          <div
-                            key={st.title}
-                            className={`flex items-start gap-2.5 rounded-lg p-2 transition-all ${
-                              isCurrent
-                                ? 'bg-white shadow-xs border border-[#00a884]/20'
-                                : isPast
-                                ? 'opacity-85'
-                                : 'opacity-40'
-                            }`}
-                          >
-                            <div
-                              className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
-                                isPast
-                                  ? 'bg-[#008069] text-white'
-                                  : isCurrent
-                                  ? 'bg-[#00a884] text-white animate-pulse'
-                                  : 'bg-gray-200 text-gray-500'
-                              }`}
-                            >
-                              {isPast ? '✓' : idx + 1}
-                            </div>
-                            <div className="min-w-0">
-                              <p className={`text-[12.5px] font-semibold ${isCurrent ? 'text-[#008069]' : 'text-[#111b21]'}`}>
-                                {st.title}
-                              </p>
-                              <p className="text-[11.5px] text-[#667781]">{st.desc}</p>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                ) : null}
-
-                {scenarios.length > 0 && !scenariosLoading ? (
-                  <div className="space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[12px] font-semibold text-[#667781]">
-                        Hangi senaryoyu tercih edersiniz?
-                      </span>
-                      <button
-                        type="button"
-                        onClick={handleGenerateScenarios}
-                        className="flex items-center gap-1 text-[11.5px] font-medium text-[#008069] hover:underline"
-                      >
-                        <Icon name="refresh" className="size-3" />
-                        Farklı Senaryolar Üret
-                      </button>
-                    </div>
-
-                    <div className="space-y-2">
-                      {scenarios.map((sc) => {
-                        const isSelected = draft.videoScenarioPrompt === sc.fullPrompt
-                        const isExpanded = expandedPromptId === sc.id
-                        return (
-                          <div
-                            key={sc.id}
-                            className={`relative rounded-xl border p-3.5 transition-all cursor-pointer ${
-                              isSelected
-                                ? 'border-[#00a884] bg-[#f0fbf7] shadow-xs'
-                                : 'border-hairline bg-white hover:border-[#00a884]/40'
-                            }`}
-                            onClick={() =>
-                              patch({
-                                videoScenarioPrompt: sc.fullPrompt,
-                                videoScenarioTitle: sc.title,
-                              })
-                            }
-                          >
-                            <div className="flex items-start gap-3">
-                              {/* Custom Radio Button */}
-                              <div
-                                className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border transition-all ${
-                                  isSelected
-                                    ? 'border-[#00a884] bg-[#00a884] text-white'
-                                    : 'border-gray-300 bg-white'
-                                }`}
-                              >
-                                {isSelected ? <div className="size-2 rounded-full bg-white" /> : null}
-                              </div>
-
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-[13.5px] font-bold text-[#111b21]">
-                                    {sc.title}
-                                  </span>
-                                  {sc.badge ? (
-                                    <span className="rounded-full bg-[#008069]/10 px-2 py-0.5 text-[10.5px] font-semibold text-[#008069]">
-                                      {sc.badge}
-                                    </span>
-                                  ) : null}
-                                </div>
-
-                                {/* Plain human-readable summary */}
-                                <p className="mt-1 text-[12.5px] leading-relaxed text-[#3b4a54]">
-                                  {sc.summary}
-                                </p>
-
-                                {/* Expandable Prompt Technical Accordion */}
-                                <div className="mt-2" onClick={(e) => e.stopPropagation()}>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setExpandedPromptId(isExpanded ? null : sc.id)
-                                    }
-                                    className="text-[11px] font-medium text-[#667781] hover:text-[#111b21] flex items-center gap-1"
-                                  >
-                                    <span>{isExpanded ? 'Teknik promptu gizle' : 'Teknik prompt detayını gör'}</span>
-                                    <span>{isExpanded ? '▴' : '▾'}</span>
-                                  </button>
-
-                                  {isExpanded ? (
-                                    <div className="mt-1.5 rounded-md bg-gray-900 p-2.5 text-[11px] font-mono text-gray-200 whitespace-pre-wrap leading-relaxed">
-                                      {sc.fullPrompt}
-                                    </div>
-                                  ) : null}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
+                      {row.label}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+              <Field label="Görseldeki metin miktarı">
+                <div className="flex flex-wrap gap-1.5">
+                  {TEXT_DENSITIES.map((row) => (
+                    <button
+                      key={row.id}
+                      type="button"
+                      onClick={() => patch({ textDensity: row.id })}
+                      className={`wb-wa-chip${draft.textDensity === row.id ? ' is-active' : ''}`}
+                    >
+                      {row.label}
+                    </button>
+                  ))}
+                </div>
               </Field>
             </>
           ) : (
-            <Field label="Görseldeki metin miktarı">
-              <div className="flex flex-wrap gap-1.5">
-                {TEXT_DENSITIES.map((row) => (
+            <>
+              <Field label="Video seslendirme ve ses kurgusu">
+                <div className="grid gap-2 sm:grid-cols-2">
                   <button
-                    key={row.id}
                     type="button"
-                    onClick={() => patch({ textDensity: row.id })}
-                    className={`wb-wa-chip${draft.textDensity === row.id ? ' is-active' : ''}`}
+                    onClick={() => patch({ videoSpeech: true })}
+                    className={`wb-wa-choice${draft.videoSpeech !== false ? ' is-on' : ''}`}
                   >
-                    {row.label}
+                    <div className="flex items-center gap-2">
+                      <Icon name="mic" className="size-4 text-emerald-600" />
+                      <span className="block text-[13.5px] font-semibold text-[#111b21]">Seslendirmeli (Dış Ses Var)</span>
+                    </div>
+                    <span className="text-[12px] text-[#667781]">
+                      Profesyonel Türkçe spiker ürün ve kampanya çağrısını seslendirir.
+                    </span>
                   </button>
-                ))}
-              </div>
-            </Field>
+                  <button
+                    type="button"
+                    onClick={() => patch({ videoSpeech: false })}
+                    className={`wb-wa-choice${draft.videoSpeech === false ? ' is-on' : ''}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Icon name="activity" className="size-4 text-sky-600" />
+                      <span className="block text-[13.5px] font-semibold text-[#111b21]">Konuşmasız (Sadece Müzik & Foley)</span>
+                    </div>
+                    <span className="text-[12px] text-[#667781]">
+                      İnsan sesi yok; sahneye özel doğal ses efektleri ve dinamik fon müziği.
+                    </span>
+                  </button>
+                </div>
+              </Field>
+
+              <Notice tone="accent">
+                ChatGPT işletmenizi, marka kitinizi ve seçtiğiniz ürünleri analiz ederek en yüksek dönüşüm getiren sinematik reklam kurgusunu arka planda otomatik olarak oluşturacaktır.
+              </Notice>
+            </>
           )}
         </div>
       ) : null}
 
       {step === 'summary' ? (
         <Card>
-          <div className="space-y-2 p-3.5 text-[13px]">
-            <p>
-              <span className="text-ink-muted">Marka: </span>
-              {selectedKit?.name ?? 'Yok'}
-            </p>
-            <p>
-              <span className="text-ink-muted">Format: </span>
-              {CREATIVE_FORMATS.find((row) => row.id === draft.formatId)?.label}
-            </p>
-            {isVideo ? (
-              <>
-                <p>
-                  <span className="text-ink-muted">Seslendirme: </span>
-                  {draft.videoSpeech !== false ? 'Seslendirmeli (Türkçe Dış Ses)' : 'Konuşmasız (Sadece Müzik & Ses Efektleri)'}
-                </p>
-                {draft.videoScenarioTitle ? (
-                  <p>
-                    <span className="text-ink-muted">Seçilen Senaryo: </span>
-                    <span className="font-semibold text-[#008069]">{draft.videoScenarioTitle}</span>
+          {isVideo ? (
+            <div className="space-y-3 p-4 text-[13px]">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="rounded-md border border-hairline bg-canvas p-3 space-y-1">
+                  <p className="text-[11.5px] font-medium text-ink-muted uppercase tracking-wider">Format & Süre</p>
+                  <p className="font-bold text-[#111b21]">9:16 Dikey Reklam Videosu (10 Saniye)</p>
+                  <p className="text-[12px] text-[#667781]">Reels, TikTok ve WhatsApp Durum için optimize</p>
+                </div>
+                <div className="rounded-md border border-hairline bg-canvas p-3 space-y-1">
+                  <p className="text-[11.5px] font-medium text-ink-muted uppercase tracking-wider">Ses Kurgusu</p>
+                  <p className="font-bold text-[#111b21]">
+                    {draft.videoSpeech !== false ? '🎙️ Türkçe Dış Ses (Spiker)' : '🎵 Konuşmasız (Müzik & Foley)'}
                   </p>
-                ) : null}
-              </>
-            ) : null}
-            <p>
-              <span className="text-ink-muted">Ürünler: </span>
-              {selectedProducts.length}
-            </p>
-            <p>
-              <span className="text-ink-muted">Logo: </span>
-              {draft.useLogo ? 'Eklenecek' : 'Yok'}
-            </p>
-            {draft.phoneIds.length ? (
+                  <p className="text-[12px] text-[#667781]">
+                    {draft.videoSpeech !== false ? 'Satış ve kampanya çağrısı seslendirilir' : 'Dinamik fon müziği ve doğal foley'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-md border border-hairline bg-canvas p-3 space-y-1">
+                <p className="text-[11.5px] font-medium text-ink-muted uppercase tracking-wider">Marka & Logo</p>
+                <p className="text-[#111b21]">
+                  <span className="font-semibold">{selectedKit?.name ?? 'Varsayılan Kurumsal Kimlik'}</span> · Logo: {draft.useLogo ? 'Videonun kapanış sahnesinde yer alacak' : 'Logosuz (Saf Sinematik Çekim)'}
+                </p>
+              </div>
+
+              <div className="rounded-md border border-hairline bg-canvas p-3 space-y-1">
+                <p className="text-[11.5px] font-medium text-ink-muted uppercase tracking-wider">Öne Çıkan Ürünler</p>
+                <p className="text-[#111b21]">
+                  {selectedProducts.length > 0
+                    ? selectedProducts.map((p) => p.name).join(', ')
+                    : 'Genel işletme ve marka tanıtımı'}
+                </p>
+              </div>
+
+              <div className="rounded-md border border-hairline bg-canvas p-3 space-y-1">
+                <p className="text-[11.5px] font-medium text-ink-muted uppercase tracking-wider">Kampanya Fikri / Brief</p>
+                <p className="text-[#111b21]">{draft.brief}</p>
+              </div>
+
+              <Button
+                type="submit"
+                className="wb-wa-submit w-full h-11 text-[13.5px] font-semibold"
+                disabled={pending || !data.canManage || !data.imageAiEnabled}
+              >
+                <Icon name="video" className="size-4" />
+                {pending ? 'Video prodüksiyonu başlatılıyor…' : 'Kampanya Videosunu Başlat'}
+              </Button>
+              {!data.canManage ? <Notice tone="warn">Üretim için yönetici gerekir.</Notice> : null}
+            </div>
+          ) : (
+            <div className="space-y-2 p-3.5 text-[13px]">
               <p>
-                <span className="text-ink-muted">Telefon: </span>
-                {data.phones
-                  .filter((row) => draft.phoneIds.includes(row.id))
-                  .map((row) => row.phone)
-                  .join(', ')}
+                <span className="text-ink-muted">Marka: </span>
+                {selectedKit?.name ?? 'Yok'}
               </p>
-            ) : null}
-            {draft.labels.length ? (
               <p>
-                <span className="text-ink-muted">Etiketler: </span>
-                {draft.labels.join(', ')}
+                <span className="text-ink-muted">Format: </span>
+                {CREATIVE_FORMATS.find((row) => row.id === draft.formatId)?.label}
               </p>
-            ) : null}
-            <p className="text-ink-muted">{draft.brief}</p>
-            <Button type="submit" className="wb-wa-submit" disabled={pending || !data.canManage || !data.imageAiEnabled}>
-              {pending ? 'Kuyruğa alınıyor…' : 'Görseli oluştur'}
-            </Button>
-            {!data.canManage ? <Notice tone="warn">Üretim için yönetici gerekir.</Notice> : null}
-          </div>
+              <p>
+                <span className="text-ink-muted">Ürünler: </span>
+                {selectedProducts.length}
+              </p>
+              <p>
+                <span className="text-ink-muted">Logo: </span>
+                {draft.useLogo ? 'Eklenecek' : 'Yok'}
+              </p>
+              {draft.phoneIds.length ? (
+                <p>
+                  <span className="text-ink-muted">Telefon: </span>
+                  {data.phones
+                    .filter((row) => draft.phoneIds.includes(row.id))
+                    .map((row) => row.phone)
+                    .join(', ')}
+                </p>
+              ) : null}
+              {draft.labels.length ? (
+                <p>
+                  <span className="text-ink-muted">Etiketler: </span>
+                  {draft.labels.join(', ')}
+                </p>
+              ) : null}
+              <p className="text-ink-muted">{draft.brief}</p>
+              <Button type="submit" className="wb-wa-submit" disabled={pending || !data.canManage || !data.imageAiEnabled}>
+                {pending ? 'Kuyruğa alınıyor…' : 'Görseli oluştur'}
+              </Button>
+              {!data.canManage ? <Notice tone="warn">Üretim için yönetici gerekir.</Notice> : null}
+            </div>
+          )}
         </Card>
       ) : null}
 
