@@ -553,10 +553,38 @@ function attemptGenerateOnCdp(port, tab, options) {
         const videoId = 'video_' + Date.now();
         const rawVideoTarget = path.join(OUTPUT_DIR, `${videoId}_raw.mp4`);
         fs.copyFileSync(downloadedFile, rawVideoTarget);
-        // Videonun saf, sinematik canlı çekim hali doğrudan kullanılır (Yapay FFmpeg kutuları yakılmaz!)
         const finalUrl = `http://${PUBLIC_HOST}:${PORT}/outputs/${videoId}_raw.mp4`;
-        const videoFileForThumb = rawVideoTarget;
 
+        // 2. Otomatik Profesyonel Kampanya Montajı (Orijinal Logo + Bozulmayan Vektör Tipografi + WhatsApp Butonu)
+        const campaignVideoTarget = path.join(OUTPUT_DIR, `${videoId}_campaign.mp4`);
+        let campaignUrl = finalUrl;
+        try {
+          const brandKit = await getActiveBrandKit(options.orgId, options.brandName || options.customer);
+          const brandUpper = (options.brandName || options.customer || brandKit?.organization_name || 'BOFE').toUpperCase();
+          const productUpper = (options.productName || options.product || 'ÖZEL KAMPANYA').toUpperCase();
+          const accentColor = (options.accentColor || brandKit?.colors?.accent || '#acfe00').replace('#', '');
+          const secondaryColor = (brandKit?.colors?.secondary || '#026009').replace('#', '');
+
+          const bofeLogoWhite = path.join(__dirname, 'bofe_logo_clean_white.png');
+          const hasBofeLogo = brandUpper.includes('BOFE') && fs.existsSync(bofeLogoWhite);
+
+          if (hasBofeLogo) {
+            const fc = `[1:v]scale=-1:44[logo];[0:v]drawbox=x=40:y=55:w=640:h=90:color=black@0.70:t=fill[bg1];[bg1][logo]overlay=x=65:y=78[with_logo];[with_logo]drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='AKILLI HASAT TEKNOLOJILERI':fontcolor=0x${accentColor}:fontsize=17:x=225:y=92[with_top_txt];[with_top_txt]drawbox=x=40:y=950:w=640:h=255:color=0x${secondaryColor}@0.90:t=fill[bg_bottom];[bg_bottom]drawbox=x=40:y=950:w=640:h=6:color=0x${accentColor}:t=fill[accent_line];[accent_line]drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='YENI SEZON ${brandUpper} HASAT MAKINESI':fontcolor=0x${accentColor}:fontsize=22:x=60:y=980[txt_badge];[txt_badge]drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='TELESKOPIK KARBON GOVDE - YUKSEK VERIM':fontcolor=white:fontsize=21:x=60:y=1020[txt_sub];[txt_sub]drawbox=x=60:y=1085:w=600:h=75:color=0x25D366:t=fill[btn_wa];[btn_wa]drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='WHATSAPP ILE ILETISIME GECIN':fontcolor=white:fontsize=24:x=(w-text_w)/2:y=1108[final_v]`;
+            execSync(`ffmpeg -y -i "${rawVideoTarget}" -i "${bofeLogoWhite}" -filter_complex "${fc}" -map "[final_v]" -c:v libx264 -preset fast -crf 20 -c:a copy "${campaignVideoTarget}"`);
+          } else {
+            const fc = `drawbox=x=40:y=55:w=640:h=90:color=black@0.70:t=fill,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${brandUpper}':fontcolor=0x${accentColor}:fontsize=28:x=65:y=82,drawbox=x=40:y=950:w=640:h=255:color=0x${secondaryColor}@0.90:t=fill,drawbox=x=40:y=950:w=640:h=6:color=0x${accentColor}:t=fill,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='YENI SEZON KAMPANYASI':fontcolor=0x${accentColor}:fontsize=22:x=60:y=980,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${productUpper.slice(0, 36)}':fontcolor=white:fontsize=21:x=60:y=1020,drawbox=x=60:y=1085:w=600:h=75:color=0x25D366:t=fill,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='WHATSAPP ILE ILETISIME GECIN':fontcolor=white:fontsize=24:x=(w-text_w)/2:y=1108`;
+            execSync(`ffmpeg -y -i "${rawVideoTarget}" -vf "${fc}" -c:v libx264 -preset fast -crf 20 -c:a copy "${campaignVideoTarget}"`);
+          }
+
+          if (fs.existsSync(campaignVideoTarget)) {
+            campaignUrl = `http://${PUBLIC_HOST}:${PORT}/outputs/${videoId}_campaign.mp4`;
+            console.log("[VideoGen] ✅ Kusursuz tipografili kampanya montaj videosu üretildi:", campaignVideoTarget);
+          }
+        } catch (montageErr) {
+          console.warn("[VideoGen] Otomatik kampanya montajı oluşturulurken hata:", montageErr.message);
+        }
+
+        const videoFileForThumb = fs.existsSync(campaignVideoTarget) ? campaignVideoTarget : rawVideoTarget;
         const thumbTarget = path.join(OUTPUT_DIR, `${videoId}_thumb.jpg`);
         let thumbUrl = null;
         try {
@@ -576,7 +604,7 @@ function attemptGenerateOnCdp(port, tab, options) {
           recordSuccess(options.brandName || options.customer, {
             product: options.productName || options.product,
             videoId,
-            resultNotes: 'Veo ile 9:16 canlı sinematik reklam videosu başarıyla üretildi'
+            resultNotes: 'Veo ile 9:16 canlı sinematik reklam videosu ve kampanya montajı başarıyla üretildi'
           });
         } catch (recErr) {
           console.warn('[VideoGen] LearningStore kaydetme hatası:', recErr.message);
@@ -588,6 +616,7 @@ function attemptGenerateOnCdp(port, tab, options) {
           port,
           videoId,
           videoUrl: finalUrl,
+          campaignVideoUrl: campaignUrl,
           thumbnailUrl: thumbUrl,
           duration: 10,
           aspect: "9:16",
