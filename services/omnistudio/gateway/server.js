@@ -412,6 +412,83 @@ setInterval(() => {
   }
 }, 25000);
 
+// ==========================================
+// 🐤 KANARYA SAĞLIK NÖBETÇİSİ (Canary Watchdog)
+// ==========================================
+let canaryStatus = {
+  lastRun: null,
+  ok: true,
+  durationMs: null,
+  error: null,
+  lastSuccessfulOutput: null,
+};
+
+async function runCanaryCheck() {
+  const stats = queue.getStats();
+  const workers = stats.workersStatus || {};
+  const anyWorkerIdle = Object.values(workers).some(w => w.status === 'idle');
+
+  if (!anyWorkerIdle) {
+    console.log('[Canary] Boşta çalışan işçi yok, kanarya testi erteleniyor.');
+    return;
+  }
+
+  console.log('[Canary] 🐤 Otomatik Kanarya Sağlık Testi Başlatılıyor...');
+  const start = Date.now();
+  const job = queue.createJob({
+    prompt: 'Canary test minimal vector red circle emblem',
+    size: '1024x1024',
+    platform: 'auto',
+    workspace: 'Canary Watchdog',
+    customer: 'Sistem Nöbetçisi',
+    referenceImages: [],
+    brandKit: null,
+    optimizePrompt: false,
+  });
+
+  try {
+    const finished = await queue.waitForJob(job.id, 95000);
+    const dur = Date.now() - start;
+    if (finished.status === 'completed') {
+      canaryStatus = {
+        lastRun: Date.now(),
+        ok: true,
+        durationMs: dur,
+        error: null,
+        lastSuccessfulOutput: finished.resultUrl,
+      };
+      console.log(`[Canary] ✅ Kanarya testi ${dur}ms içinde BAŞARILI! ChatGPT ve DALL-E tam çalışır durumda.`);
+    } else {
+      canaryStatus = {
+        lastRun: Date.now(),
+        ok: false,
+        durationMs: dur,
+        error: finished.error || 'Kanarya görseli üretilemedi',
+        lastSuccessfulOutput: canaryStatus.lastSuccessfulOutput,
+      };
+      console.error(`[Canary] ⚠️ DİKKAT: Kanarya testi BAŞARISIZ! ChatGPT arayüzünde değişiklik veya takılma olabilir: ${canaryStatus.error}`);
+    }
+  } catch (err) {
+    canaryStatus = {
+      lastRun: Date.now(),
+      ok: false,
+      durationMs: Date.now() - start,
+      error: err.message,
+      lastSuccessfulOutput: canaryStatus.lastSuccessfulOutput,
+    };
+    console.error(`[Canary] ⚠️ Kanarya hatası: ${err.message}`);
+  }
+}
+
+// İlk test sunucu açıldıktan 45 saniye sonra, ardından her 6 saatte bir otomatik çalışır
+setTimeout(() => {
+  runCanaryCheck().catch(() => {});
+}, 45000);
+
+setInterval(() => {
+  runCanaryCheck().catch(() => {});
+}, 6 * 60 * 60 * 1000);
+
 // Yardımcılar
 function parseJsonBody(req) {
   return new Promise((resolve, reject) => {
@@ -885,9 +962,13 @@ const server = http.createServer(async (req, res) => {
     // 5. Worker: Kilidi Serbest Bırak / Hata Bildir (POST /job/release)
     if (method === 'POST' && pathname === '/job/release') {
       const body = await parseJsonBody(req);
-      const { jobId, error } = body;
+      const { jobId, error, crashSnapshotUrl } = body;
       if (jobId) {
         queue.releaseLock(jobId, error);
+        if (crashSnapshotUrl) {
+          const j = queue.jobs.get(jobId);
+          if (j) j.crashSnapshotUrl = crashSnapshotUrl;
+        }
       }
       return sendJson(res, 200, { ok: true });
     }
@@ -994,18 +1075,33 @@ const server = http.createServer(async (req, res) => {
       const activeWorkerKeys = Object.keys(workers);
       const anyLoggedIn = activeWorkerKeys.some(k => workers[k].status === 'idle' || workers[k].status === 'busy');
       const ai_ready = activeWorkerKeys.length > 0 && anyLoggedIn;
-      const alert = !ai_ready && activeWorkerKeys.length > 0
-        ? 'ChatGPT oturumu kapalı! Lütfen noVNC (port 6080) üzerinden giriş yapın.'
-        : null;
+
+      let alert = null;
+      if (!ai_ready && activeWorkerKeys.length > 0) {
+        alert = 'ChatGPT oturumu kapalı! Lütfen noVNC (port 6080) üzerinden giriş yapın.';
+      } else if (canaryStatus.ok === false) {
+        alert = `Kanarya Testi Başarısız: ${canaryStatus.error}. ChatGPT arayüzü değişmiş olabilir! Kontrol: port 6080`;
+      }
 
       return sendJson(res, 200, {
         service: 'OmniStudio AI Visual Gateway',
         status: 'online',
         ai_ready,
         alert,
+        canary: canaryStatus,
         port: PORT,
         memory: { freeMb, totalMb },
         ...stats,
+      });
+    }
+
+    // 8.1. Kanarya Testini Anında Tetikle: POST /v1/canary/run
+    if (method === 'POST' && (pathname === '/v1/canary/run' || pathname === '/canary/run')) {
+      runCanaryCheck().catch(() => {});
+      return sendJson(res, 200, {
+        ok: true,
+        message: 'Kanarya testi arka planda başlatıldı',
+        canary: canaryStatus
       });
     }
 

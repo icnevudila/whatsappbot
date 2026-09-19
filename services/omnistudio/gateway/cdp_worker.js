@@ -741,11 +741,28 @@ async function executeChatGPTJob(tab, job) {
 
   } catch (err) {
     console.error(`[CDP Worker] İş hatası (${job.id}):`, err.message);
+
+    let crashSnapshotUrl = null;
+    if (cdp) {
+      try {
+        const snap = await cdp.send('Page.captureScreenshot', { format: 'png' });
+        if (snap?.data) {
+          const crashFile = `crash_${job.id}_${Date.now()}.png`;
+          const crashPath = path.join('/app/gateway/outputs', crashFile);
+          fs.writeFileSync(crashPath, Buffer.from(snap.data, 'base64'));
+          crashSnapshotUrl = `${GATEWAY_URL}/outputs/${crashFile}`;
+          console.log(`[CDP Worker] 📸 HATA ANINDA EKRAN GÖRÜNTÜSÜ ALINDI: ${crashSnapshotUrl}`);
+        }
+      } catch (snapErr) {
+        console.warn(`[CDP Worker] Crash snapshot alınamadı:`, snapErr.message);
+      }
+    }
+
     // Kilidi serbest bırak
     await fetch(`${GATEWAY_URL}/job/release`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jobId: job.id, error: err.message })
+      body: JSON.stringify({ jobId: job.id, error: err.message, crashSnapshotUrl })
     }).catch(() => {});
   } finally {
     for (const p of tempRefPaths) {
