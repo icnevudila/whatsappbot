@@ -152,6 +152,19 @@ class AdvancedJobQueue {
       completedAt: null,
     };
 
+    if (type === 'chat_suggestions') {
+      this.pendingQueue = this.pendingQueue.filter((pendingId) => {
+        const pj = this.jobs.get(pendingId);
+        if (pj && pj.type === 'chat_suggestions' && pj.customer === customer && pj.status === 'pending') {
+          pj.status = 'failed';
+          pj.error = 'Daha yeni bir sohbet açıldığı için iptal edildi';
+          this.notifyWaiters(pendingId, pj);
+          return false;
+        }
+        return true;
+      });
+    }
+
     this.jobs.set(id, job);
     this.pendingQueue.push(id);
     this.recalculatePositions();
@@ -616,6 +629,16 @@ const server = http.createServer(async (req, res) => {
       try {
         const { getAccountPoolStatus } = require('./generate_video.js');
         return sendJson(res, 200, { accounts: getAccountPoolStatus() });
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+
+    // 1.0.2. Tüm AI & Video Motorları Canlı Durum Özeti: GET /v1/ai-engine/status
+    if (method === 'GET' && (pathname === '/v1/ai-engine/status' || pathname === '/ai-engine/status')) {
+      try {
+        const { getAiEngineStatus } = require('./generate_video.js');
+        return sendJson(res, 200, getAiEngineStatus());
       } catch (err) {
         return sendJson(res, 500, { error: err.message });
       }

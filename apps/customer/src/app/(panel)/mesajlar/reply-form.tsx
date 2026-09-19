@@ -99,6 +99,7 @@ export function ReplyForm({
   const blurTimer = useRef<number>(0)
   const inFlightKey = useRef<string | null>(null)
   const threadContextRef = useRef(threadContext)
+  const abortCtrlRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     threadContextRef.current = threadContext
@@ -258,7 +259,16 @@ export function ReplyForm({
   useEffect(() => {
     if (!phone) return
     setShowSuggestions(true)
-    void fetchAiSuggestions({ autoOpen: true })
+    const timer = setTimeout(() => {
+      void fetchAiSuggestions({ autoOpen: true })
+    }, 200)
+    return () => {
+      clearTimeout(timer)
+      if (abortCtrlRef.current) {
+        abortCtrlRef.current.abort()
+        abortCtrlRef.current = null
+      }
+    }
   }, [phone, lastInbound]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function fetchAiSuggestions(options?: {
@@ -279,6 +289,12 @@ export function ReplyForm({
       return
     }
 
+    if (abortCtrlRef.current) {
+      abortCtrlRef.current.abort()
+    }
+    const ctrl = new AbortController()
+    abortCtrlRef.current = ctrl
+
     inFlightKey.current = key
     setIsSuggesting(true)
     setShowSuggestions(true)
@@ -286,10 +302,12 @@ export function ReplyForm({
       const res = await fetch('/api/mesajlar/ai-suggest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: ctrl.signal,
         body: JSON.stringify({
           phone,
           lastMessage,
           history,
+          force: Boolean(options?.force),
         }),
       })
       const data = (await res.json()) as {
@@ -304,10 +322,12 @@ export function ReplyForm({
       } else if (!options?.autoOpen) {
         toast(data.error || 'Öneri üretilemedi.', 'warn')
       }
-    } catch {
+    } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
       if (!options?.autoOpen) toast('Öneri servisine erişilemedi.', 'danger')
     } finally {
       if (inFlightKey.current === key) inFlightKey.current = null
+      if (abortCtrlRef.current === ctrl) abortCtrlRef.current = null
       setIsSuggesting(false)
     }
   }

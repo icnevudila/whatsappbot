@@ -180,6 +180,7 @@ export async function POST(request: Request) {
     phone?: string
     lastMessage?: string
     history?: string
+    force?: boolean
   }
   try {
     body = await request.json()
@@ -280,6 +281,7 @@ export async function POST(request: Request) {
   const gatewayUrl = (process.env.OMNISTUDIO_GATEWAY_URL || 'http://167.233.201.31:3456').replace(/\/$/, '')
 
   try {
+    const timeoutMs = body.force ? 35000 : 7000
     const gatewayRes = await fetch(`${gatewayUrl}/v1/chat/suggestions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -290,7 +292,7 @@ export async function POST(request: Request) {
         companyContext,
         tone,
       }),
-      signal: AbortSignal.timeout(35000),
+      signal: AbortSignal.timeout(timeoutMs),
     })
 
     if (gatewayRes.ok) {
