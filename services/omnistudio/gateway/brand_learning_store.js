@@ -9,12 +9,14 @@ const DEFAULT_LEARNINGS = {
   lastUpdated: new Date().toISOString(),
   universalRules: [
     "STRICT ZERO TEXT SALAD: Difüzyon video modellerine havada boşlukta uçuşan soyut 3D harfler veya uzun cümleler yazdırma; harfler erir ve bozulur.",
-    "RIGID PHYSICAL SURFACE ANCHORING (FİZİKSEL YÜZEY KURALI): Ekranda yer alacak her metin ve logo fiziksel bir nesneye (metal fabrika tabelası, ahşap yönlendirme panosu, araç şoför kapısı, ürün ambalaj etiketi, bina cephesi) kazınmış, monte edilmiş veya basılmış olmalıdır (Ayvazoğlu İnşaat fabrikadan doğrudan tabelası gibi).",
-    "SHORT & IMPACTFUL TYPOGRAPHY (MAKSİMUM 2-3 KELİME & ALL CAPS): Yazılacak metin en fazla 2-3 kelimeden oluşmalı, kısa, net ve büyük harfli (ALL CAPS) olmalıdır (Örn: 'FABRİKADAN DOĞRUDAN', 'BOFE', 'HASAT ZAMANI'). Asla uzun slogan veya paragraf yazdırılamaz.",
+    "RIGID PHYSICAL SURFACE ANCHORING (FİZİKSEL YÜZEY KURALI): Ekranda yer alacak her metin ve logo fiziksel bir nesneye (metal fabrika tabelası, ahşap yönlendirme panosu, araç şoför kapısı, ürün ambalaj etiketi, bina cephesi, klinik camı, iş tulumu nakışı) kazınmış, monte edilmiş veya basılmış olmalıdır (Ayvazoğlu İnşaat fabrikadan doğrudan tabelası gibi).",
+    "SHORT & IMPACTFUL TYPOGRAPHY (MAKSİMUM 2-3 KELİME & ALL CAPS): Yazılacak metin en fazla 2-3 kelimeden oluşmalı, kısa, net ve büyük harfli (ALL CAPS) olmalıdır (Örn: 'FABRİKADAN DOĞRUDAN', 'BOFE', 'HASAT ZAMANI', 'WHATSAPP SİPARİŞ'). Asla uzun slogan veya paragraf yazdırılamaz.",
     "HIGH-CONTRAST SANS-SERIF SPECIFICATION: Tipografi daima kalın, net, okunaklı modern endüstriyel sans-serif ve yüksek kontrastlı (koyu zemin üstü beyaz/sarı ya da açık yüzey üstü siyah) olarak sahnelenmelidir.",
+    "ANTI-UTOPIAN REALISTIC PHYSICS (GERÇEK DÜNYA MANTIĞI): Videolar kesinlikle ütopik, bilim kurgu ya da mantıksız nesne kombinasyonları içermeyecektir. Yerçekimi, sahne ışığı, gölgeler ve insan etkileşimi %100 gerçek dünyayla uyumlu olmalıdır.",
+    "UNIVERSAL SECTOR ADAPTABILITY: Hangi sektör veya branş gelirse gelsin (diş hekimi, oto servis, dönerci, yazılım, mimarlık, tarım), sahne o sektörün doğal dünyasında kurgulanmalıdır.",
     "STRICT BRAND & LOGO INVIOLABILITY: Yüklenen kurumsal logo, amblem şekli ve kurumsal renk kodları asla değiştirilemez, stilize varyasyonu yapılamaz.",
     "STRICT PRODUCT FIDELITY: Gerçek ürün fotoğrafındaki kasa, gövde, renk ve fiziksel detaylar %100 birebir korunmalıdır; hayali veya farklılaştırılmış ürün varyasyonları üretilemez.",
-    "REALISTIC CINEMATIC SECTOR CONTEXT: Sektör asla karıştırılamaz (B2B teknoloji için gökdelen ofis; tarım için güneşli bahçe; inşaat için mimari şantiye)."
+    "REALISTIC CINEMATIC SECTOR CONTEXT: Sektör asla karıştırılamaz (B2B teknoloji için gökdelen ofis; tarım için güneşli bahçe; inşaat için mimari şantiye; sağlık için hijyenik klinik)."
   ],
   brands: {
     "bofe": {

@@ -157,142 +157,151 @@ function detectSectorAndStyle(brand, product, brief) {
   const angleIndex = Math.floor(Math.random() * CINEMATIC_DIRECTOR_ANGLES.length);
   const creativeAngle = CINEMATIC_DIRECTOR_ANGLES[angleIndex];
 
-  // 1. B2B, Veri, Yazılım, Teknoloji & Dijital Platform (Veri Burada vb.) -> ÖNCELİKLİ KONTROL
-  if (text.match(/(veri|data|yazılım|b2b|platform|istihbarat|leads|crm|erp|analiz|dashboard|şirket takip|veriburada|veri burada|bilişim|müşteri bul)/)) {
+  // 1. B2B, Veri, Yazılım, Teknoloji, Dijital Platform & SaaS
+  if (text.match(/(veri|data|yazılım|b2b|platform|istihbarat|leads|crm|erp|analiz|dashboard|şirket takip|veriburada|veri burada|bilişim|müşteri bul|bulut|cloud|fintech|yapay zeka|ai|siber|cyber|kod)/)) {
     return {
       sector: 'b2b_tech_data',
       creativeAngle,
-      sceneAtmosphere: 'Son derece aydınlık, ferah ve modern cam gökdelen ofisi ve teknoloji stüdyosu. İnce çerçeveli dizüstü bilgisayar ekranında canlı akan veri grafikleri, harita üzerinde parıldayan yeni işletme bildirimleri, şık ve karizmatik profesyonel B2B ortamı. Asla yemek, mutfak veya alakasız restoran ögeleri gösterilmeyecektir; %100 ileri teknoloji veri platformu ortamı.',
+      sceneAtmosphere: 'Gerçekçi, son derece aydınlık ve ferah modern cam gökdelen ofisi ve teknoloji stüdyosu. Şık toplantı masasında ince çerçeveli dizüstü bilgisayar ekranında canlı akan veri grafikleri, harita üzerinde beliren yeni işletme bildirimleri, prestijli kurumsal B2B iş ortamı. Kesinlikle ütopik bilim kurgu unsuru, uzay veya havada uçuşan anlamsız 3D yazılar olmayacaktır; %100 gerçekçi iş dünyası ve yazılım ortamı.',
       brandingPlacements: `
-- Ofis cam bölmesinde veya modern akrilik desk üzerinde minimalist "${brand}" logosu.
-- Ekranda açılan canlı veri analitiği panelinde ve akıllı telefon arayüzünde net "${brand}" amblemi.
-- Kahraman Final Sahnesi: Güneş alan modern ofis manzarasında, ekranda yeşil büyüme grafikleri eşliğinde merkezde ışıldayan "${brand}" kurumsal kimliği.`,
+- Ofisin modern cam bölmesinde veya yönetici masası üzerindeki mat akrilik masa isimliğinde/plaketinde net "${brand}" logosu.
+- Laptop ekranındaki profesyonel kurumsal portal arayüzünün sol üst köşesinde temiz "${brand}" amblemi.
+- Kahraman Final Sahnesi: Güneş alan modern ofis manzarasında, ekranda yeşil büyüme grafikleri eşliğinde ofis duvarındaki zarif tabelada "${brand}" kurumsal kimliği.`,
       sampleFocus: `${product || 'B2B Veri & Yeni İşletme Takip Çözümü'} yapay zeka destekli firma taraması, sıcak müşteri bildirimleri ve satışları katlayan veri gücü`
     };
   }
 
-  // 2. Gıda & Restoran (Döner, Kebap, Burger, Kafe, Tatlı vb.)
-  if (text.match(/(döner|kebap|lahmacun|burger|pizza|pide|köfte|restoran|lokanta|kafe|tatlı|baklava|kahve|yemek|lezzet|mutfak|şef|et|tavuk|menü|dürüm)/)) {
+  // 2. Sağlık, Tıp, Diş Polikliniği, Estetik & Klinik
+  if (text.match(/(diş|klinik|poliklinik|doktor|sağlık|medikal|implant|ortodonti|göz|estetik|hastane|cerrahi|tedavi|eczane|laboratuvar|hekim)/)) {
+    return {
+      sector: 'healthcare_medical',
+      creativeAngle,
+      sceneAtmosphere: 'Pırıl pırıl, son derece hijyenik ve ferah modern özel klinik ve sağlık merkezi. Yumuşak tavan aydınlatması, ileri teknoloji diş ünitesi veya medikal cihazlar, güler yüzlü hekimin hasta ile samimi ve güven veren diyaloğu. Kesinlikle karanlık veya rahatsız edici unsur olmayacak; %100 güven, sağlık ve ferahlık dolu sinematik ortam.',
+      brandingPlacements: `
+- Resepsiyon karşılama deskinin arkasındaki buzlu cam veya ahşap panel üzerinde estetik aydınlatmalı 3D "${brand}" tabelası.
+- Doktorun temiz beyaz önlüğünün veya cerrahi formasının sol göğsünde ince nakış işlemeli "${brand}" logosu.
+- Randevu kartvizitinde veya steril medikal konsol ekranında net "${brand}" amblemi.
+- Kahraman Final Sahnesi: Aydınlık klinik salonunda mutlu hastanın gülümsemesi ve arka planda duvardaki prestijli "${brand}" kliniği tabelası.`,
+      sampleFocus: `${product || 'Modern Sağlık & Gülüş Tasarımı'} uzman hekim kadrosu, ağrısız tedavi konforu ve sağlıklı güvenli hizmet`
+    };
+  }
+
+  // 3. Otomotiv, Araç Servisi, Ekspertiz, Detailing & Kiralama
+  if (text.match(/(oto|araç|araba|otomobil|lastik|jant|motor|servis|ekspertiz|bakım|kiralama|rent|detailing|kaplama|modifiye|yıkama|tamir|fren|egzoz)/)) {
+    return {
+      sector: 'automotive_service',
+      creativeAngle,
+      sceneAtmosphere: 'Pırıl pırıl, aydınlık ve profesyonel otomotiv servis plazasında veya kapalı detailing stüdyosunda geçen dinamik çekim. Hidrolik liftte yükselen pırıl pırıl araç, parlayan jantlar, uzman teknisyenin titiz kontrolleri ve güven veren atölye düzeni. Kesinlikle dağınık veya paslı ortam olmayacak; %100 yüksek standartlı otomotiv merkezi.',
+      brandingPlacements: `
+- Servis istasyonu duvarındaki ışıklı endüstriyel metal/akrilik "${brand}" panosu.
+- Uzman teknisyenin profesyonel iş tulumunun göğsünde ve servis danışmanı tabletinde "${brand}" logosu.
+- Servis girişindeki cam kapıda veya araç plakalığında lazer kesim "${brand}" marka ismi.
+- Kahraman Final Sahnesi: Parlayan otomobilin önünde, modern servis stüdyosunda güven veren ekip ve merkezde net "${brand}" kurumsal tabelası.`,
+      sampleFocus: `${product || 'Profesyonel Otomotiv & Ekspertiz Hizmeti'} bilgisayarlı arıza tespiti, güvenli sürüş garantisi ve uzman mühendislik`
+    };
+  }
+
+  // 4. Gastronomi, Restoran, Kafe, Döner, Burger & Gıda
+  if (text.match(/(döner|kebap|lahmacun|burger|pizza|pide|köfte|restoran|lokanta|kafe|tatlı|baklava|kahve|yemek|lezzet|mutfak|şef|et|tavuk|menü|dürüm|fırın|pasta|çikolata)/)) {
     return {
       sector: 'food_restaurant',
       creativeAngle,
-      sceneAtmosphere: 'Sıcak ve iştah kabartan gastronomi ortamı. Taze hazırlanan ürünün dumanı, çıtırtısı ve lezzeti, altın sarısı kızarmış detaylar, usta sunumu ve şık ahşap veya taş servis masası.',
+      sceneAtmosphere: 'Sıcak, iştah kabartan ve samimi gurme gastronomi ortamı. Taze hazırlanan ürünün dumanı, altın sarısı kızarmış detaylar, usta şefin titiz dokunuşları ve şık ahşap veya taş servis masası. Gerçekçi mutfak dinamiği, taze malzemeler ve sıcacık restoran aydınlatması.',
       brandingPlacements: `
-- Ahşap sunum tahtası, taş tabak kenarı veya servis tepsisi üzerinde estetik sıcak baskı/dağlama "${brand}" logosu.
-- Şefin temiz aşçı önlüğünün göğsünde veya modern restoran duvarındaki aydınlatmalı tabelada zarif "${brand}" amblemi.
-- Kahraman Final Sahnesi: Sahnenin üstünde ışıldayan kurumsal logo ve altında altın sarısı/sıcak beyaz 3D fontla "${brand}" ismi.`,
-      sampleFocus: `${product || 'Enfes Gurme Lezzet'} hazırlığı, dumanı tüten sunumu ve iştah kabartan yakın çekimleri`
+- Masadaki doğal ahşap sunum tahtası veya mermer servis tepsisinin kenarında estetik sıcak baskı/dağlama "${brand}" logosu.
+- Şefin temiz siyah/beyaz aşçı önlüğünün göğsünde veya restoranın tuğla/ahşap duvarındaki rustik aydınlatmalı "${brand}" tabelasında.
+- Paket servis ambalajı veya kraft poşet üzerinde temiz basılı "${brand}" amblemi.
+- Kahraman Final Sahnesi: Dumanı tüten nefis sunumun yanında masadaki ahşap logolu sunumluk ve arkada şık restoran ambiyansı eşliğinde "${brand}".`,
+      sampleFocus: `${product || 'Enfes Gurme Lezzet'} taze malzeme kalitesi, usta elinden çıkan benzersiz sunum ve damak çatlatan lezzet`
     };
   }
 
-  // 2. İnşaat, İmalat, Sanayi & Ağır Malzeme (Tuğla, Mermer, Çimento, Metal, Fabrika vb.)
-  if (text.match(/(tuğla|inşaat|çimento|şantiye|yapı|mermer|beton|boya|hırdavat|fabrika|sanayi|metal|çelik|nalbur|palet|nakliye|forklift|kiremit|yalıtım)/)) {
+  // 5. İnşaat, İmalat, Sanayi, Ağır Malzeme & Fabrika (Ayvazoğlu usulü)
+  if (text.match(/(tuğla|inşaat|çimento|şantiye|yapı|mermer|beton|boya|hırdavat|fabrika|sanayi|metal|çelik|nalbur|palet|nakliye|forklift|kiremit|yalıtım|boru|cam|ahşap)/)) {
     return {
       sector: 'industrial_construction',
       creativeAngle,
-      sceneAtmosphere: 'Düzenli, güçlü ve modern üretim fabrikası veya prestijli şantiye ortamı. Sevkiyat alanında forklift veya tır hareketi, paletli ürünlerin sağlamlığı ve güven veren endüstriyel estetik.',
+      sceneAtmosphere: 'Modern, düzenli ve güçlü üretim fabrikası ve şantiye sevkiyat sahası. Konveyör bandından çıkan nizami fırınlanmış paletler, forkliftin güvenli taşıması, sevkiyat tırı ve gün ışığında parlayan endüstriyel dayanıklılık. Kesinlikle yapay grafik olmayacak; Ayvazoğlu fabrikasındaki gibi %100 fiziksel ve katı doku.',
       brandingPlacements: `
-- Forkliftin taşıdığı paletli ürünlerin endüstriyel ambalajı veya kutusu üzerinde büyük ve net basılı "${brand}" logosu.
-- Sevkiyat aracı kapısında veya baretli mühendisin/personelin iş yeleğinde okunaklı "${brand}" amblemi.
-- Kahraman Final Sahnesi: Sahnenin üst merkezinde büyük ışıldayan kurumsal amblem; hemen altında kalın beyaz/metalik 3D fontla "${brand}" kurumsal ismi.`,
-      sampleFocus: `${product || 'Yüksek Mukavemetli Sanayi Ürünü'} üretim kalitesi, dayanıklılığı ve fabrikadan doğrudan teslimat güveni`
+- Fabrika tavanındaki veya sevkiyat sundurmasındaki endüstriyel metal tabelada net ve kalın harflerle "${brand}" ve "FABRİKADAN DOĞRUDAN" yazısı.
+- Paletli ürünlerin üzerindeki şeffaf shrink koruyucu ambalajında ve sarı forkliftin gövdesinde basılı "${brand}" amblemi.
+- Mühendisin baretinde ve sevkiyat aracı kapısında okunaklı "${brand}" kurumsal logosu.
+- Kahraman Final Sahnesi: Nizami dizilmiş tuğla paletleri ve sevkiyat alanı önünde, güneş ışığı altında güven veren "${brand}" kurumsal endüstriyel tabelası.`,
+      sampleFocus: `${product || 'Yüksek Mukavemetli Sanayi Ürünü'} üretim dayanıklılığı, standartlara tam uyum ve fabrikadan doğrudan teslimat güvencesi`
     };
   }
 
-  // 3a. Bofe Zeytin Silkme / Hasat Makinesi (Öncelikli Eşleşme)
-  if (text.match(/(zeytin|silkme|hasat|çırpıcı|tarak|teleskopik)/)) {
-    return {
-      sector: 'olive_harvest_machinery',
-      creativeAngle,
-      sceneAtmosphere: 'Güneşli, bereketli bir Ege/Akdeniz zeytinliği. Yaşlı zeytin ağaçlarının dalları arasında titreşen Bofe akülü zeytin hasat makinesi. Sarı üst şanzıman kafasındaki esnek siyah karbon fiber çubuklar dalları nazikçe silkelerken, etli taze zeytinler yere serilmiş geniş hasat brandaları üzerine yağmur gibi dökülüyor. Ergonomik tutma sapı, spiral batarya kablosu ve hafif siyah teleskopik boruyla yüksek dallara zahmetsizce uzanan çiftçi. Kesinlikle uydurma nesne veya metin çorbası olmayacak, %100 saf tarım hasat sinematografisi.',
-      brandingPlacements: `
-- Makinenin sarı/lime şanzıman kafa gövdesinde ve tutma sapında temiz, orijinal siyah "bofe" logosu.
-- Çiftçinin omzundaki batarya çantasında ve yere serili zeytin brandası köşesinde net "bofe" kurumsal kimliği.
-- Kahraman Final Sahnesi: Güneş ışığı hüzmeleri altında, zeytin brandası ve ağaçların önünde Bofe teleskopik zeytin silkme makinesi ve dalından dökülen taze zeytinler; üstte saf, şık "bofe" logosu.`,
-      sampleFocus: `${product || 'Bofe Akülü Teleskopik Zeytin Silkme ve Hasat Makinesi'} yüksek hasat verimi, dalları kırmayan karbon fiber çubuklar ve hafif ergonomisi`
-    };
-  }
-
-  // 3b. Tarım, Sera, Bahçe & Bofe Şarjlı İlaçlama Pompası
-  if (text.match(/(bofe|ilaçlama|tarım|sera|bağ|bahçe|pülverizatör|sırt pompası|akülü pompa)/)) {
+  // 6. Tarım, Zeytinlik, Sera, Bahçe & Bofe Teknolojileri
+  if (text.match(/(zeytin|hasat|silkme|çırpıcı|tarak|teleskopik|bofe|ilaçlama|tarım|sera|bağ|bahçe|pülverizatör|sırt pompası|akülü pompa|budama|traktör|sulama)/)) {
     return {
       sector: 'agriculture_equipment',
       creativeAngle,
-      sceneAtmosphere: 'Verimli modern sera, zeytin/meyve bahçesi ve profesyonel tarım arazisi. Sabahın ferah güneş ışığı altında, açık mavi gövdeli akülü sırt pompası ile bitkiler üzerine yapılan yüksek basınçlı mikronize sisleme. Asla matkap, endüstriyel tuğla veya alakasız alet gösterilmeyecektir; %100 profesyonel tarım ve bahçe ortamı.',
+      sceneAtmosphere: 'Bereketli Ege ve Akdeniz arazisi, güneşli zeytinlikler veya ferah modern sera. Yaşlı zeytin ağaçlarının gümüşi yaprakları arasından süzülen altın rengi gün ışığı. Yere serilmiş hasat brandaları üzerine makinenin nazik titreşimiyle doludizgin dökülen etli taze zeytinler. Çiftçinin yorulmadan hafif ve güçlü makineyle yüksek dallara uzanması; saf ve bereketli tarım sinematografisi.',
       brandingPlacements: `
-- Açık mavi renkli sırt deposunun tam üzerinde temiz, okunaklı siyah "bofe" logosu.
-- Paslanmaz çelik uzatma borusu ve pirinç nozuldan homojen şekilde fışkıran mikronize ilaçlama sisi.
-- Kahraman Final Sahnesi: Güneşli yeşil meyve bahçesi önünde Bofe sırt pompası, hemen üzerinde neon lime (#acfe00) ve beyaz ışıklarla parlayan "bofe" logosu; altta net beyaz yazıyla "HEMEN SİPARİŞ & TEKLİF İÇİN İLETİŞİME GEÇİN".`,
-      sampleFocus: `${product || 'Bofe Şarjlı Akülü Sırt İlaçlama Pompası'} yüksek basınçlı püskürtme performansı, ergonomik sırt askısı ve uzun batarya ömrü`
+- Makinenin ergonomik gövdesinde ve tutma sapında temiz, orijinal siyah "${brand}" logosu.
+- Zeytin bahçesinin girişindeki rustik ahşap çiftlik yönlendirme panosunda kazınmış net "${brand}" tabelası.
+- Çiftçinin hasat yeleğinde ve yere serili zeytin brandası köşesinde okunaklı "${brand}" amblemi.
+- Kahraman Final Sahnesi: Güneş ışığı hüzmeleri altında, zeytin ağaçları ve bereketli hasat sepetlerinin yanında Bofe makinesi ve duvardaki/panodaki şık "${brand}" kimliği.`,
+      sampleFocus: `${product || 'Bofe Akülü Zeytin Hasat & Tarım Teknolojisi'} yüksek hasat verimi, dalları kırmayan karbon fiber çubuklar ve hafif batarya gücü`
     };
   }
 
-  // 4. E-Ticaret, Tüketici Elektroniği & Akıllı Cihazlar
-  if (text.match(/(pompa|şarjlı|elektronik|cihaz|robot|telefon|kulaklık|akıllı|aksesuar|lamba|led|alet|aparat|şarj|oto aksesuar|lastik şişirme|vantilatör|hoparlör)/)) {
+  // 7. Moda, Giyim, Tekstil, Butik & Lüks Aksesuar
+  if (text.match(/(giyim|elbise|ayakkabı|çanta|mont|parfüm|krem|serum|cilt|kozmetik|saç|makyaj|takı|kolye|saat|moda|butik|tekstil|deri|kumaş|terzi)/)) {
     return {
-      sector: 'ecommerce_tech',
+      sector: 'fashion_luxury',
       creativeAngle,
-      sceneAtmosphere: 'Son teknoloji minimalist stüdyo ve gerçek hayat pratik kullanım sahnesi. Mat yüzeyler, ürünün modern LED dijital ekranındaki dinamik göstergeler, kusursuz 3D dönme ve yüksek teknoloji aydınlatması.',
+      sceneAtmosphere: 'Lüks moda katalog ve Vogue reklam filmi estetiği. İpeksi kumaşın rüzgarda zarif dalgalanışı, softbox stüdyo aydınlatması, ince dikiş detayları ve kusursuz renk tonlaması. Doğal ve prestijli estetik.',
       brandingPlacements: `
-- Ürünün mat ergonomik gövdesinde lazer kazıma şeklinde parlayan kaliteli "${brand}" logosu.
-- Premium minimalist siyah veya beyaz ürün ambalaj kutusunun üzerinde şık kabartma gümüş/altın varak "${brand}" logosu.
-- Kahraman Final Sahnesi: Ürünün yanında 3D holografik parlayan kurumsal logo ve altında modern fütüristik beyaz fontla "${brand}" ismi.`,
-      sampleFocus: `${product || 'Akıllı Yeni Nesil Cihaz'} kablosuz gücü, taşınabilir ergonomisi ve hayatı kolaylaştıran performansı`
+- Kıyafetin iç veya dış yakasındaki zarif jakarlı dokuma etiketinde ince "${brand}" logosu.
+- Lüks sert hediye kutusu veya mat siyah alışveriş çantasında altın/gümüş varak kabartmalı "${brand}" amblemi.
+- Butiğin girişindeki minimalist pirinç tabelada net "${brand}" ismi.
+- Kahraman Final Sahnesi: Lüks vitrin veya softbox stüdyo fonunda kusursuz kıyafet tasarımı ve hemen yanında şık hediye kutusu üzerinde ışıldayan "${brand}".`,
+      sampleFocus: `${product || 'Yeni Sezon Özel Koleksiyon'} birinci sınıf kumaş dokusu, kusursuz kalıp ve zamansız şıklık`
     };
   }
 
-  // 4. Moda, Giyim, Kozmetik & Güzellik
-  if (text.match(/(giyim|elbise|ayakkabı|çanta|mont|parfüm|krem|serum|cilt|kozmetik|saç|makyaj|takı|kolye|saat|moda|butik|tekstil|deri)/)) {
+  // 8. Emlak, Gayrimenkul, Mimarlık & Villa Projeleri
+  if (text.match(/(emlak|konut|daire|villa|arsa|gayrimenkul|mimar|dekorasyon|mobilya|inşaat projesi|rezidans|yatırım|site|havuz)/)) {
     return {
-      sector: 'fashion_beauty',
+      sector: 'realestate_architecture',
       creativeAngle,
-      sceneAtmosphere: 'Vogue ve lüks reklam filmi estetiği. İpeksi kumaş salınımları, su damlacıkları veya softbox stüdyo ışıkları, zarafet dolu yakın planlar ve kusursuz lüks renk tonlaması.',
+      sceneAtmosphere: 'Güneş ışığı alan ferah ve lüks villa/rezidans yaşam alanı, yüksek tavanlı modern mimari, geniş panoramik pencerelerden giren doğal gün ışığı, havuz başı peyzajı ve prestijli sinematik drone dış çekimleri.',
       brandingPlacements: `
-- Ürün ambalajında veya kıyafetin zarif dokuma etiketinde şık ve estetik "${brand}" logosu.
-- Lüks hediye kutusu veya alışveriş çantası üzerinde altın varak işlemeli "${brand}" yazısı.
-- Kahraman Final Sahnesi: Üst merkezde parıldayan zarif logo amblemi ve altında tipografik ince lüks fontla "${brand}" ismi.`,
-      sampleFocus: `${product || 'Yeni Sezon Özel Tasarım'} estetiği, dokusal kalitesi ve benzersiz şıklığı`
+- Proje girişindeki anıtsal mermer veya bazalt pylon üzerinde zarif metal kabartma "${brand}" amblemi.
+- Mimarın masası üzerindeki lüks mimari katalog ve akıllı sunum tabletinde "${brand}" logosu.
+- Rezidans lobisindeki akustik ahşap duvar panelinde arkadan aydınlatmalı (backlit) 3D "${brand}" tabelası.
+- Kahraman Final Sahnesi: Masmavi havuz ve lüks villa cephesi eşliğinde, bahçe girişindeki mimari kaidede asilce yükselen "${brand}" kurumsal logosu.`,
+      sampleFocus: `${product || 'Ayrıcalıklı Yaşam Alanı & Villa Projesi'} yüksek yatırım değeri, mimari ferahlık ve 1. sınıf malzeme kalitesi`
     };
   }
 
-  // 5. Otomotiv, Araç Servisi & Kiralama
-  if (text.match(/(oto|araç|araba|otomobil|lastik|jant|motor|servis|ekspertiz|bakım|kiralama|rent|detailing|kaplama|modifiye)/)) {
+  // 9. Ev Hizmetleri, Tadilat, Tesisat, Temizlik & Zanaat
+  if (text.match(/(tadilat|boya badana|tesisat|klima|kombi|temizlik|nakliyat|halı yıkama|marangoz|çilingir|cam balkon|panjur|çatı)/)) {
     return {
-      sector: 'automotive',
+      sector: 'home_services_craft',
       creativeAngle,
-      sceneAtmosphere: 'Dinamik sinematik otomobil reklamı. Pırıl pırıl aydınlatılmış modern servis plazasında yansıyan ışıklar, dönen parlak jantlar ve yüksek tempolu kamera takibi.',
+      sceneAtmosphere: 'Tertemiz, aydınlık bir evin yenilenme ve tamamlanma anı. Titiz çalışan usta, pırıl pırıl teslim edilen mekan, hassas montaj detayları ve ev sahibinin iç rahatlığıyla tebessümü. Güven, dürüst zanaatkarlık ve düzen dolu atmosfer.',
       brandingPlacements: `
-- Modern servis plazasının giriş tabelasında ve çalışanların tulumlarında "${brand}" logosu.
-- Aracın kaputunda veya plakalığında şık lazer kesim "${brand}" marka ismi.
-- Kahraman Final Sahnesi: Sahnenin ortasında krom parıltılı 3D kurumsal logo ve altında keskin neon beyaz "${brand}" yazısı.`,
-      sampleFocus: `${product || 'Profesyonel Araç Hizmeti'} yol güvenliği, uzman mühendislik ve konfor`
+- Servis aracının yan kapısında veya bagajında temiz endüstriyel vinil "${brand}" yazısı.
+- Ustanın iş tulumunun arkasında ve ölçü aletinde/takım çantasında baskılı "${brand}" logosu.
+- Teslim formunda veya kapı girişindeki onay kartında net "${brand}" kimliği.
+- Kahraman Final Sahnesi: Yenilenmiş ferah yaşam alanı önünde takım çantasıyla profesyonel usta ve duvardaki şık yönlendirme kartında "${brand}".`,
+      sampleFocus: `${product || 'Profesyonel Ev & Tadilat Hizmeti'} garantili işçilik, temiz teslimat ve zamanında kusursuz uygulama`
     };
   }
 
-  // 6. Emlak, Gayrimenkul & Mimarlık
-  if (text.match(/(emlak|konut|daire|villa|arsa|gayrimenkul|mimar|dekorasyon|mobilya|inşaat projesi|rezidans|yatırım)/)) {
-    return {
-      sector: 'realestate_interior',
-      creativeAngle,
-      sceneAtmosphere: 'Gün ışığı alan ferah ve lüks yaşam alanı, yüksek tavanlı modern mimari, geniş panoramik pencerelerden giren güneş, şık tasarım mobilyalar ve prestijli drone dış çekimleri.',
-      brandingPlacements: `
-- Proje girişindeki anıtsal mermer pylon üzerinde zarif altın kaplama "${brand}" amblemi.
-- Masa üstündeki lüks mimari katalog ve akıllı tablet sunumunda "${brand}" logosu.
-- Kahraman Final Sahnesi: Gökyüzüne doğru açılan açıda parıldayan kurumsal amblem ve altında asil beyaz fontla "${brand}" ismi.`,
-      sampleFocus: `${product || 'Ayrıcalıklı Yaşam Alanı'} konforu, yüksek yatırım değeri ve prestijli yaşam standardı`
-    };
-  }
-
-  // 7. Genel Hizmet, Sağlık, Hukuk, B2B & Kurumsal (Default)
+  // 10. Genel Hizmet, Hukuk, Finans, Danışmanlık & Tüm Diğer Branşlar (Evrensel Fallback)
   return {
     sector: 'services_corporate',
     creativeAngle,
-    sceneAtmosphere: 'Son derece profesyonel, temiz ve güven aşılayan modern iş merkezi veya klinik ortamı. Geniş cam cepheler, güler yüzlü uzman ekip ve prestijli kurumsal atmosfer.',
+    sceneAtmosphere: 'Son derece profesyonel, temiz, modern ve güven aşılayan prestijli iş merkezi veya toplantı salonu ortamı. Geniş cam cepheler, mermer zemin yansımaları, güler yüzlü uzman ekip ve prestijli kurumsal atmosfer.',
     brandingPlacements: `
-- Karşılama deski arkasındaki buzlu cam veya ahşap panel üzerinde kabartmalı 3D "${brand}" logosu.
-- Personelin profesyonel kartvizit ve tablet ekranında kurumsal "${brand}" kimliği.
-- Kahraman Final Sahnesi: Sahnenin üstünde ışıldayan kurumsal amblem ve altında kalın net beyaz fontla "${brand}" ismi.`,
-    sampleFocus: `${product || 'Kurumsal Çözüm & Hizmet'} güvenilirliği, uzmanlığı ve müşteri memnuniyeti`
+- Karşılama deski arkasındaki füme cam veya ahşap panel üzerinde kabartmalı metalik 3D "${brand}" logosu.
+- Toplantı masası üzerindeki kaliteli deri sunum klasöründe ve tablete yansıyan arayüzde "${brand}" amblemi.
+- Ofis giriş kapısındaki pirinç veya mat akrilik tabelada okunaklı "${brand}" ismi.
+- Kahraman Final Sahnesi: Güneş alan ferah toplantı odasında, başarılı anlaşma anı ve arka plandaki prestijli duvarda ışıldayan "${brand}" kurumsal tabelası.`,
+    sampleFocus: `${product || 'Kurumsal Çözüm & Profesyonel Hizmet'} güvenilirliği, uzmanlığı, şeffaf çalışma prensipleri ve yüksek müşteri memnuniyeti`
   };
 }
 
@@ -323,43 +332,45 @@ async function buildTurkishVeoDirectorPrompt(options = {}) {
     lighting: 'Dramatik yönlü yan aydınlatma, derin sıcak tonlar'
   };
 
-  const cleanProduct = product.toUpperCase();
+  const cleanBrand = (brand || 'İŞLETME').toUpperCase();
 
   return `9:16 dikey formatta (Instagram Reels & WhatsApp Durum), 10 saniyelik üst düzey Türk televizyon ve sinema reklam filmi.
 
 KURUMSAL MARKA VE KAMPANYA VERİLERİ:
-- Marka Adı: "${brand}" (ZORUNLU: Sahnenin her aşamasında ve finalde açıkça yer alacaktır)
-- Marka Logo Amblemi: ${logoDesc} (ZORUNLU: Sahne içinde fiziksel olarak yer alacaktır)
+- Marka / Firma Adı: "${brand}" (ZORUNLU: Sahnenin her aşamasında ve finalde açıkça yer alacaktır)
+- Kurumsal Logo Amblemi: ${logoDesc} (ZORUNLU: Sahne içinde fiziksel olarak yer alacaktır)
 - Kurumsal Renk Paleti: ${colors.accent || '#ffc300'}, ${colors.primary || '#ff5733'}, Beyaz ve Siyah.
-- Öne Çıkan Ürün: ${product}
+- Tanıtılan Ürün / Hizmet: ${product}
 - Kampanya Konsepti: ${brief}
-- Sektör Teması: ${sectorProfile.sector} (${sectorProfile.sceneAtmosphere})
+- Sektör / Atmosfer: ${sectorProfile.sector} (${sectorProfile.sceneAtmosphere})
 - Sinematik Yönetmen Açısı: ${angle.name}
-  * Kamera: ${angle.cameraStyle}
-  * Işıklandırma: ${angle.lighting}
+  * Kamera Tekniği: ${angle.cameraStyle}
+  * Işık & Doku: ${angle.lighting}
 
-VEO VİDEO MOTORU İÇİN KESİN SİNEMATİK DİREKTİF (SIFIR METİN ÇORBASI & SAF CANLI ÇEKİM):
-1. KESİNLİKLE EKRANDA 3D YAZI, BAŞLIK VEYA KELİME ÇORBASI OLMAYACAKTIR:
-   - STRICT RULE: NO 3D FLOATING LETTERS, NO GIBBERISH TEXT, NO FLOATING SENTENCES, NO ON-SCREEN HEADLINES, NO PARAGRAPH OVERLAYS, NO WORDS ON SCREEN.
-   - Diffüzyon video modellerinin havada 3D yazı veya uzun cümleler üretmesi KESİNLİKLE YASAKTIR (harflerin bozulmasını ve anlamsız kelime tekrarını engellemek için).
-   - Sahnedeki tek metin veya amblem, ürünün kendi fiziksel yüzeyindeki doğal orijinal logo/baskı veya kurumsal "${brand}" logosu olacaktır.
+VEO VİDEO MOTORU İÇİN KESİN SİNEMATİK DİREKTİF (AYVAZOĞLU İNŞAAT USULÜ FİZİKSEL YÜZEY MODELLEMESİ):
+1. FİZİKSEL YÜZEYE SABİTLEME KURALI (RIGID SURFACE ANCHORING - SIFIR METİN ÇORBASI):
+   - Havada boşlukta uçuşan soyut 3D harfler, havada asılı cümleler veya sonradan yapıştırılmış grafik bantları KESİNLİKLE YASAKTIR (harflerin erimesini ve difüzyon bozulmasını %100 engellemek için).
+   - Sahnedeki tek yazılar ve logo, doğrudan sahne içindeki KATI FİZİKSEL NESNELERİN DOKUSUNA (metal tabela, ahşap yönlendirme panosu, bina dış cephesi, resepsiyon camı, araç kapısı, ürün ambalajı veya iş önlüğü) basılmış, monte edilmiş veya kazınmış olacaktır (Ayvazoğlu İnşaat fabrikadaki çelik tabela gibi).
+   - Tipografi: Maksimum 2-3 kelime, net, büyük harfli (ALL CAPS), yüksek kontrastlı sans-serif endüstriyel tabela formatı (Örn: "${cleanBrand}", "WHATSAPP SİPARİŞ", "FABRİKADAN DOĞRUDAN").
 
-2. 3 PERDELİ SİNEMATİK CANLI REKLAM AKIŞI:
-   - ACT 1 (0-3s) - Kanca & Ürün Detayı: ${sectorProfile.sampleFocus}. Makro yakın plan (100mm lens), yüzey detayları ve birinci sınıf malzeme kalitesi.
-   - ACT 2 (3-7s) - Kullanım & Dinamik Performans: Ürünün gerçek kullanım anı, akıcı çalışma performansı ve kullanıcıya sunduğu büyük kolaylık. Doğal ortam ve gerçekçi insan etkileşimi.
-   - ACT 3 (7-10s) - Kahraman Finali: ${brand} güvenini yansıtan estetik geniş açı, memnun kullanıcı ve prestijli kurumsal duruş.
+2. GERÇEK DÜNYA FİZİĞİ & ANTİ-ÜTOPİK MANTIK:
+   - Sektörün gerçek hayat dinamikleri %100 korunmalıdır. Nesneler yerçekimine, sahne ışığına ve mimari perspektife tam uyumlu olmalıdır.
+   - Bilim kurgu, uçan soyut objeler veya mantıksız elementler KESİNLİKLE sahnelenmeyecektir.
 
-3. MARKA VE AMBLEM YERLEŞİMİ (FİZİKSEL & ORGANİK):${sectorProfile.brandingPlacements}
+3. 3 PERDELİ SİNEMATİK AKIŞ:
+   - ACT 1 (0-3s) - Kanca & Kalite Detayı: ${sectorProfile.sampleFocus}. Makro yakın plan, yüzey dokusu ve malzeme kalitesi.
+   - ACT 2 (3-7s) - Gerçek Kullanım & Çözüm: Ürünün veya hizmetin gerçek çalışma performansı, insan etkileşimi ve sağladığı net fayda.
+   - ACT 3 (7-10s) - Kahraman Finali: Güven veren kurumsal duruş, memnun müşteri ve sahnedeki fiziksel tabela/logo ile prestijli kapanış.
 
-4. MARKA KİTİ, LOGO VE ÜRÜN DOKUNULMAZLIĞI (ASLA OYNAMA VEYA VARYASYON YAPMA):
-   - KESİNLİKLE marka logosu ve marka kiti üzerinde hiçbir oynama, değişiklik, deformasyon veya stilize varyasyon yapılmayacaktır.
-   - Orijinal logo geometrisi, amblemi, tipografisi ve kurumsal renkleri (%100) korunacaktır.
-   - Öne çıkan ürünün gerçek tasarımı, fiziksel formu, malzemesi, rengi ve kasası birebir orijinal haliyle sahnelenecektir; hayali veya farklılaştırılmış ürün varyasyonları kesinlikle üretilmeyecektir.
-   - STRICT MANDATE: ZERO ALTERATION TO BRAND LOGO OR PRODUCT IDENTITY. PRESERVE ORIGINAL EMBLEM, COLORS, AND PHYSICAL PRODUCT FORM EXACTLY. NO PRODUCT MORPHING, NO LOGO REINVENTION.
+4. FİZİKSEL MARKA VE TABELA YERLEŞİMİ:${sectorProfile.brandingPlacements}
 
-5. SES VE TÜRKÇE SESLENDİRME (AUDIO VOICEOVER - YALNIZCA SES):
-   - Profesyonel, berrak Türkçe reklam spikeri sesi: "${brand} kalitesiyle ${product}... Detaylı bilgi ve avantajlı teklifler için WhatsApp'tan hemen iletişime geçin."
-   - 4K reklam ajansı estetiği, 24 FPS akıcı sinematik kamera hareketi, sahneye uygun kusursuz ışıklandırma.
+5. MARKA KİTİ VE ÜRÜN DOKUNULMAZLIĞI (SIFIR VARYASYON):
+   - Firmanın orijinal logosu, amblemi, renk kodları ve gerçek ürün formu asla deforme edilemez, uydurma semboller eklenemez.
+   - ZERO MUTATION, ZERO PRODUCT MORPHING, RIGID PHYSICAL SIGNAGE ONLY.
+
+6. SES VE TÜRKÇE SESLENDİRME (AUDIO VOICEOVER - YALNIZCA SES):
+   - Profesyonel, samimi ve berrak Türkçe reklam spikeri: "${brand} kalitesiyle... Detaylı bilgi ve avantajlı teklifler için WhatsApp'tan hemen iletişime geçin."
+   - 4K reklam ajansı estetiği, 24 FPS akıcı sinematik kamera hareketi, gerçekçi sinematik ışıklandırma.
 ${buildLearningPromptBlock(brand, product, brief)}`;
 }
 

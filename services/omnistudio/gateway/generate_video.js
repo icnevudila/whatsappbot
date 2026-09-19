@@ -996,6 +996,21 @@ async function generateVideoOnFlow(options = {}) {
     execSync(`ffmpeg -y -ss 00:00:03 -i "${rawPath}" -frames:v 1 -update 1 "${thumbPath}"`, { stdio: 'ignore' });
   } catch(e) {}
 
+  let currentRemainingCredits = 1020;
+  try {
+    const cfg = loadAccountsConfig();
+    cfg.accounts = cfg.accounts || {};
+    if (cfg.accounts[port]) {
+      const prev = cfg.accounts[port].flowCredits || 1050;
+      cfg.accounts[port].flowCredits = Math.max(0, prev - 15);
+      currentRemainingCredits = cfg.accounts[port].flowCredits;
+      saveAccountsConfig(cfg);
+      console.log(`[Flow Video] Port ${port} için 15 kredi düşüldü. Yeni bakiye: ${currentRemainingCredits}`);
+    }
+  } catch (crErr) {
+    console.warn('[Flow Video] Kredi düşüm hatası:', crErr.message);
+  }
+
   return {
     success: true,
     engine: 'Google Flow (Veo 3.1)',
@@ -1003,7 +1018,7 @@ async function generateVideoOnFlow(options = {}) {
     thumbnailUrl: `http://${PUBLIC_HOST}:${PORT}/outputs/${thumbFileName}`,
     duration: 10,
     aspectRatio: '9:16',
-    creditsRemaining: 1035,
+    creditsRemaining: currentRemainingCredits,
   };
 }
 
@@ -1028,12 +1043,33 @@ function getRecentVideos() {
         }
       }
       const hasThumb = fs.existsSync(path.join(OUTPUT_DIR, thumbFile));
+
+      // Hangi motordan üretildiğini dosya adı ve meta verisinden tespit et
+      let engine = 'Google Veo (Gemini Pro - Ücretsiz)';
+      let engineBadge = 'Gemini Veo PRO (0 Kredi)';
+      let accountPort = 9222;
+      if (file.includes('flow') || file.includes('Brick')) {
+        engine = 'Google Flow Studio (Veo 3.1)';
+        engineBadge = 'Google Flow (15 Kredi)';
+      }
+
+      // Marka tespiti
+      let brand = 'Genel Reklam';
+      const fLower = file.toLowerCase();
+      if (fLower.includes('bofe')) brand = 'Bofe';
+      else if (fLower.includes('veri') || fLower.includes('burada')) brand = 'Veri Burada';
+      else if (fLower.includes('ayvaz') || fLower.includes('brick')) brand = 'Ayvazoğlu';
+
       return {
         id,
         filename: file,
         videoUrl: `http://${PUBLIC_HOST}:${PORT}/outputs/${file}`,
         thumbnailUrl: hasThumb ? `http://${PUBLIC_HOST}:${PORT}/outputs/${thumbFile}` : null,
         sizeMb: (stat.size / (1024 * 1024)).toFixed(2),
+        engine,
+        engineBadge,
+        brand,
+        accountPort,
         createdAt: stat.mtime.toISOString(),
         timestamp: stat.mtimeMs,
       };

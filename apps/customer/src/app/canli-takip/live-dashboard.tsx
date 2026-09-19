@@ -286,6 +286,10 @@ type AiEngineRecentVideo = {
   videoUrl: string
   thumbnailUrl: string | null
   sizeMb: string
+  engine?: string
+  engineBadge?: string
+  brand?: string
+  accountPort?: number
   createdAt: string
   timestamp: number
 }
@@ -3476,6 +3480,10 @@ export function LiveDashboard() {
                         </div>
                       </div>
 
+                      <div className="p-1.5 rounded bg-surface-raised/70 border border-[var(--color-hairline)] text-[10px] text-ink-muted leading-tight">
+                        <span className="font-semibold text-accent">ℹ️ Akıllı Kredi Koruma:</span> Gemini Veo havuzu devredeyken videolar ücretsiz üretilir, Flow kredisi harcanmaz. Krediler yalnızca Gemini kotaya girdiğinde devreye girer.
+                      </div>
+
                       {/* Flow Hesap Havuzu Listesi */}
                       <div className="space-y-1.5 pt-1.5 border-t border-[var(--color-hairline)]">
                         <div className="flex items-center justify-between text-[10px] text-ink-muted font-bold">
@@ -3510,6 +3518,19 @@ export function LiveDashboard() {
                               {fa.status === 'active' ? (
                                 <>
                                   <span className="font-bold text-accent font-mono">{fa.credits} Kr</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setFlowModalPort(fa.port)
+                                      setFlowModalCredits(fa.credits || 1050)
+                                      setFlowModalUrl(fa.projectUrl || '')
+                                      setShowFlowModal(true)
+                                    }}
+                                    className="px-1.5 py-0.5 rounded bg-surface text-ink hover:bg-canvas border border-[var(--color-hairline)] font-medium text-[9px]"
+                                    title="Kredi Miktarını veya Proje URL'sini Güncelle"
+                                  >
+                                    Düzenle
+                                  </button>
                                   <a
                                     href={fa.projectUrl}
                                     target="_blank"
@@ -3667,8 +3688,24 @@ export function LiveDashboard() {
                       <div className="space-y-2">
                         {/* Video Header */}
                         <div className="flex items-center justify-between text-[11px]">
-                          <span className="font-mono font-bold text-ink truncate max-w-[150px]">{vid.id}</span>
+                          <span className="font-mono font-bold text-ink truncate max-w-[140px]">{vid.id}</span>
                           <span className="text-[10px] text-ink-muted">{timeAgo(vid.createdAt)}</span>
+                        </div>
+
+                        {/* Motor & Marka Rozetleri (Hangi Motordan Üretildi?) */}
+                        <div className="flex flex-wrap items-center gap-1">
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                            (vid.engineBadge || '').includes('Flow')
+                              ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                              : 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
+                          }`}>
+                            {vid.engineBadge || 'Gemini Veo PRO (0 Kredi)'}
+                          </span>
+                          {vid.brand && (
+                            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-surface-raised border border-[var(--color-hairline)] text-ink">
+                              {vid.brand}
+                            </span>
+                          )}
                         </div>
 
                         {/* Video Player */}
