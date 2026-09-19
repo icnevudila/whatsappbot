@@ -85,7 +85,19 @@ export async function POST(req: Request) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ port, flowProjectUrl, flowCredits }),
-        signal: AbortSignal.timeout(8000),
+        signal: AbortSignal.timeout(20000),
+      })
+      const result = await gwRes.json()
+      return NextResponse.json({ success: gwRes.ok, ...result })
+    }
+
+    if (action === 'auto_detect_flow') {
+      if (!port) return NextResponse.json({ success: false, error: 'Port gereklidir' }, { status: 400 })
+      const gwRes = await fetch(`${GATEWAY_URL}/v1/ai-engine/accounts/auto-detect-flow`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ port }),
+        signal: AbortSignal.timeout(20000),
       })
       const result = await gwRes.json()
       return NextResponse.json({ success: gwRes.ok, ...result })

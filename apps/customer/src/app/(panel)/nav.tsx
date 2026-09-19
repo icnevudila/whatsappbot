@@ -10,6 +10,7 @@ const ITEMS = [
   { href: '/kampanyalar', label: 'Kampanyalar' },
   { href: '/kisiler', label: 'Kişiler' },
   { href: '/mesajlar', label: 'Mesajlar' },
+  { href: '/canli-takip', label: 'Canlı Takip' },
   { href: '/ayarlar', label: 'Ayarlar' },
 ] as const
 

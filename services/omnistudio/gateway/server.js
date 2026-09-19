@@ -697,9 +697,27 @@ const server = http.createServer(async (req, res) => {
         const flowProjectUrl = (body.flowProjectUrl || '').trim();
         const flowCredits = body.flowCredits !== undefined ? parseInt(body.flowCredits, 10) : undefined;
         if (!port) return sendJson(res, 400, { error: 'port gereklidir' });
-        if (!flowProjectUrl) return sendJson(res, 400, { error: 'flowProjectUrl gereklidir' });
-        const { updateAccountFlow } = require('./generate_video.js');
+        const { updateAccountFlow, autoDetectFlowProject } = require('./generate_video.js');
+        if (!flowProjectUrl) {
+          // URL girilmemişse otomatik algıla!
+          const autoRes = await autoDetectFlowProject(port);
+          return sendJson(res, 200, autoRes);
+        }
         const result = await updateAccountFlow(port, flowProjectUrl, flowCredits);
+        return sendJson(res, 200, result);
+      } catch (err) {
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+
+    // 1.0.6b. Flow Projesini 1-Tıkta Otomatik Algıla & Bağla: POST /v1/ai-engine/accounts/auto-detect-flow
+    if (method === 'POST' && (pathname === '/v1/ai-engine/accounts/auto-detect-flow' || pathname === '/ai-engine/accounts/auto-detect-flow')) {
+      try {
+        const body = await parseJsonBody(req);
+        const port = parseInt(body.port, 10);
+        if (!port) return sendJson(res, 400, { error: 'port gereklidir' });
+        const { autoDetectFlowProject } = require('./generate_video.js');
+        const result = await autoDetectFlowProject(port);
         return sendJson(res, 200, result);
       } catch (err) {
         return sendJson(res, 500, { error: err.message });

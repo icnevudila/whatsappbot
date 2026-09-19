@@ -802,6 +802,34 @@ export function LiveDashboard() {
     }
   }
 
+  // Google Flow Projesini 1-Tıkta Otomatik Algıla & Bağla
+  const handleAutoDetectFlow = async (port: number) => {
+    setIsUpdatingFlow(true)
+    try {
+      const res = await fetch('/api/canli-takip/ai-accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'auto_detect_flow',
+          port,
+        }),
+      })
+      const json = await res.json()
+      if (json.success && json.ok) {
+        showNotice(`Port ${port} Flow projesi otomatik algılandı ve başarıyla bağlandı!`)
+        setFlowModalUrl(json.flowProjectUrl || '')
+        setShowFlowModal(false)
+        fetchData()
+      } else {
+        showNotice(`Otomatik algılanamadı: ${json.error || 'Hata'}`)
+      }
+    } catch {
+      showNotice('Sunucu ile bağlantı kurulamadı.')
+    } finally {
+      setIsUpdatingFlow(false)
+    }
+  }
+
   // Kendi Tarayıcından Cookie Enjekte Et (VNC'siz Giriş)
   const handleSyncCookies = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -3646,7 +3674,7 @@ export function LiveDashboard() {
                         {/* Video Player */}
                         <div className="aspect-[9/16] bg-black rounded-[var(--radius-sm)] overflow-hidden relative group">
                           <video
-                            src={vid.videoUrl}
+                            src={`${vid.videoUrl}#t=0.1`}
                             poster={vid.thumbnailUrl || undefined}
                             controls
                             playsInline
@@ -5817,17 +5845,26 @@ export function LiveDashboard() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="font-semibold text-ink">Google Flow Proje URL'si:</label>
+                <div className="flex items-center justify-between">
+                  <label className="font-semibold text-ink">Google Flow Proje URL'si:</label>
+                  <button
+                    type="button"
+                    onClick={() => handleAutoDetectFlow(flowModalPort)}
+                    disabled={isUpdatingFlow}
+                    className="text-[11px] font-bold px-2 py-0.5 rounded bg-accent text-accent-ink hover:bg-accent-dim flex items-center gap-1 shadow-sm transition disabled:opacity-50"
+                  >
+                    <span>⚡ 1-Tıkla Otomatik Algıla & Bağla</span>
+                  </button>
+                </div>
                 <input
                   type="url"
-                  required
-                  placeholder="https://flow.google.com/project/6b718bdf-..."
+                  placeholder="Otomatik algılamak için yukarıdaki butona tıklayın veya URL yapıştırın"
                   value={flowModalUrl}
                   onChange={e => setFlowModalUrl(e.target.value)}
                   className="w-full bg-surface-raised border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 text-ink placeholder:text-ink-muted outline-none focus:border-accent font-mono text-[11px]"
                 />
                 <p className="text-[10px] text-ink-muted">
-                  Kendi tarayıcınızda <strong>flow.google.com</strong> adresine girip projenizi açın ve adres çubuğundaki URL'yi buraya yapıştırın.
+                  <strong>İpucu:</strong> "Otomatik Algıla & Bağla" butonuna bastığınızda sistem Hetzner'deki Chrome oturumuna bağlanıp projeyi kendisi bulur veya oluşturur; URL aramanıza gerek yoktur.
                 </p>
               </div>
 

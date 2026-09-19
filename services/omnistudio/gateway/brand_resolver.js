@@ -13,68 +13,99 @@ let lastFetchTime = 0;
 /**
  * Supabase'den aktif veya varsayılan Marka Kitini otomatik çeker.
  */
-async function getActiveBrandKit(orgId = null) {
-  const now = Date.now();
-  // 2 dakikalık önbellek
-  if (cachedBrandKit && !orgId && now - lastFetchTime < 120000) {
-    return cachedBrandKit;
-  }
+async function getActiveBrandKit(orgId = null, brandHint = null) {
+  const brandLower = `${brandHint || ''}`.toLowerCase();
 
-  try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_active_brand_kit`, {
-      method: 'POST',
-      headers: {
-        'apikey': SUPABASE_ANON,
-        'Authorization': `Bearer ${SUPABASE_ANON}`,
-        'Content-Type': 'application/json',
+  // Bofe için özel tanımlı kurumsal marka kiti
+  if (brandLower.includes('bofe') || orgId === 'afc4ff9f-67a4-4dd1-af1d-e60b38c9ccdc' || orgId === 'b359ccd3-3ec8-40fd-928e-bc6dbbd489c0' || orgId === 'af504c75-9db5-4a97-bb92-52d1a0e2de8b') {
+    return {
+      organization_name: 'Bofe',
+      brand_name: 'Bofe',
+      colors: {
+        primary: '#000000',
+        accent: '#acfe00',
+        secondary: '#026009',
+        text: '#ffffff',
+        background: '#000000',
       },
-      body: JSON.stringify(orgId ? { p_org_id: orgId } : {}),
-      signal: AbortSignal.timeout(4000),
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.brand_name) {
-        cachedBrandKit = data;
-        lastFetchTime = now;
-        return data;
-      }
-    }
-  } catch (err) {
-    console.warn('[BrandResolver] Supabase get_active_brand_kit uyarısı:', err.message);
+      tone: 'Modern, yüksek teknolojili ve profesyonel tarım & bahçe ekipmanları. Siyah, beyaz, neon lime (#acfe00) ve koyu orman yeşili (#026009).',
+      logo_path: '/outputs/bofe_logo.png',
+      product_image_path: '/outputs/bofe_product.png',
+      hasExplicitLogo: true,
+    };
   }
 
-  // Fallback varsayılan marka kiti
+  // Veri Burada için kurumsal marka kiti
+  if (brandLower.includes('veri burada') || orgId === 'c9b24e55-6d07-48ef-b4e4-e0cb1678ded5') {
+    return {
+      organization_name: 'Veri Burada',
+      brand_name: 'Veri Burada',
+      colors: {
+        primary: '#2e7d32',
+        accent: '#a5d6a7',
+        secondary: '#212121',
+        text: '#ffffff',
+        background: '#ffffff',
+      },
+      tone: 'Kurumsal B2B veri, istihbarat ve büyüme teknolojileri platformu.',
+      logo_path: null,
+      hasExplicitLogo: false,
+    };
+  }
+
+  // Ayvazoğlu İnşaat için marka kiti
+  if (brandLower.includes('ayvazoğlu') || orgId === '4a58b0dd-0931-4901-880a-686457d15010') {
+    return {
+      organization_name: 'Ayvazoğlu İnşaat',
+      brand_name: 'Ayvazoğlu İnşaat',
+      colors: {
+        primary: '#ff5733',
+        accent: '#ffc300',
+        secondary: '#333333',
+        text: '#000000',
+        background: '#ffffff',
+      },
+      tone: 'Modern ve güven verici bir tasarım dili. Canlı turuncu ve nötr tonlar, net tipografi.',
+      logo_path: '4a58b0dd-0931-4901-880a-686457d15010/kits/489f335c-ea99-46e4-b8dd-b75dd68255ea/sample.jpg',
+      hasExplicitLogo: true,
+    };
+  }
+
+  // Genel kurumsal fallback (Uydurma logo veya sahte üçgen KESİNLİKLE YOK)
   return {
-    organization_name: 'Ayvazoğlu İnşaat',
-    brand_name: 'Ayvazoğlu İnşaat',
+    organization_name: 'İşletme',
+    brand_name: 'İşletme',
     colors: {
-      primary: '#ff5733',
-      accent: '#ffc300',
-      secondary: '#333333',
-      text: '#000000',
+      primary: '#111827',
+      accent: '#2563eb',
+      secondary: '#6b7280',
+      text: '#ffffff',
       background: '#ffffff',
     },
-    tone: 'Modern ve güven verici bir tasarım dili. Canlı turuncu ve nötr tonlar, net tipografi.',
-    logo_path: '4a58b0dd-0931-4901-880a-686457d15010/kits/489f335c-ea99-46e4-b8dd-b75dd68255ea/sample.jpg',
+    tone: 'Modern ve profesyonel kurumsal tanıtım.',
+    logo_path: null,
+    hasExplicitLogo: false,
   };
 }
 
 /**
  * Marka kiti verilerine göre Veo'nun sahne içinde üreteceği görsel logo tanımını üretir.
+ * KURAL: Şirketin tanımlı logosu yoksa ASLA uydurma geometrik üçgen / rastgele sembol ATILMAYACAKTIR.
  */
-function getLogoVisualDescription(brandName, logoPath) {
+function getLogoVisualDescription(brandName, logoPath, hasExplicitLogo = false) {
   const lower = (brandName || '').toLowerCase();
-  if (lower.includes('ayvazoğlu') || lower.includes('inşaat') || (logoPath && logoPath.includes('4a58b0dd'))) {
+  if (lower.includes('bofe')) {
+    return "Zarif, minimalist ve modern siyah 'bofe' yazı logosu (küçük harflerle 'bofe', 'e' harfinde karakteristik açılı modern kesim). Kesinlikle uydurma geometrik üçgen, amblem veya rastgele sembol KULLANILMAYACAKTIR; yalnızca saf, estetik 'bofe' kurumsal tipografisi yer alacaktır.";
+  }
+  if (lower.includes('ayvazoğlu')) {
     return "Cesur geometrik sarı ve sıcak turuncu (#ffc300, #ff5733) tonlarında stilize mimari üçgen 'A' inşaat logo amblemi";
   }
-  if (lower.includes('bofe') || lower.includes('tarım')) {
-    return "Modern koyu yeşil ve parlak neon lime (#026009, #acfe00) tarım teknolojisi dairesel logo amblemi";
-  }
   if (lower.includes('döner') || lower.includes('restoran')) {
-    return "Kırmızı ve altın sarısı sıcak gastronomi logo amblemi";
+    return "Kırmızı ve altın sarısı sıcak gastronomi amblemi";
   }
-  return "Modern ve estetik kurumsal logo amblemi";
+
+  // Tanımlı logo yoksa: SIFIR UYDURMA LOGO!
+  return `Şirketin tanımlı özel bir geometrik amblemi bulunmamaktadır. KESİNLİKLE uydurma geometrik şekil, sarı üçgen veya yapay logo heykeli EKLENMEYECEKTİR. Yalnızca "${brandName || 'İşletme'}" ismi sahneye uygun temiz, modern, şık ve okunaklı 3D kurumsal tipografi ile yazılacaktır.`;
 }
 
 const CINEMATIC_DIRECTOR_ANGLES = [
@@ -144,7 +175,21 @@ function detectSectorAndStyle(brand, product, brief) {
     };
   }
 
-  // 3. E-Ticaret, Tüketici Elektroniği & Akıllı Cihazlar (Şarjlı Pompa, Telefon, Robot, Alet vb.)
+  // 3. Tarım, Sera, Bahçe & Bofe Ekipmanları (Şarjlı İlaçlama Pompası vb.)
+  if (text.match(/(bofe|ilaçlama|tarım|sera|bağ|bahçe|pülverizatör|sırt pompası|akülü pompa)/)) {
+    return {
+      sector: 'agriculture_equipment',
+      creativeAngle,
+      sceneAtmosphere: 'Verimli modern sera, zeytin/meyve bahçesi ve profesyonel tarım arazisi. Sabahın ferah güneş ışığı altında, açık mavi gövdeli akülü sırt pompası ile bitkiler üzerine yapılan yüksek basınçlı mikronize sisleme. Asla matkap, endüstriyel tuğla veya alakasız alet gösterilmeyecektir; %100 profesyonel tarım ve bahçe ortamı.',
+      brandingPlacements: `
+- Açık mavi renkli sırt deposunun tam üzerinde temiz, okunaklı siyah "bofe" logosu.
+- Paslanmaz çelik uzatma borusu ve pirinç nozuldan homojen şekilde fışkıran mikronize ilaçlama sisi.
+- Kahraman Final Sahnesi: Güneşli yeşil meyve bahçesi önünde Bofe sırt pompası, hemen üzerinde neon lime (#acfe00) ve beyaz ışıklarla parlayan "bofe" logosu; altta net beyaz yazıyla "HEMEN SİPARİŞ & TEKLİF İÇİN İLETİŞİME GEÇİN".`,
+      sampleFocus: `${product || 'Bofe Şarjlı Akülü Sırt İlaçlama Pompası'} yüksek basınçlı püskürtme performansı, ergonomik sırt askısı ve uzun batarya ömrü`
+    };
+  }
+
+  // 4. E-Ticaret, Tüketici Elektroniği & Akıllı Cihazlar
   if (text.match(/(pompa|şarjlı|elektronik|cihaz|robot|telefon|kulaklık|akıllı|aksesuar|lamba|led|alet|aparat|şarj|oto aksesuar|lastik şişirme|vantilatör|hoparlör)/)) {
     return {
       sector: 'ecommerce_tech',
@@ -222,10 +267,14 @@ function detectSectorAndStyle(brand, product, brief) {
  * - Tüm bunları videoda Veo kendisi sahne içinde organik üretecek (sıfır yapay kutu)
  */
 async function buildTurkishVeoDirectorPrompt(options = {}) {
-  const brandKit = await getActiveBrandKit(options.orgId);
+  const brandKit = await getActiveBrandKit(options.orgId, options.brandName || options.customer);
   const brand = options.brandName || options.customer || brandKit.organization_name || brandKit.brand_name || 'İşletme';
-  const logoDesc = getLogoVisualDescription(brand, brandKit.logo_path);
-  const colors = brandKit.colors || { primary: '#ff5733', accent: '#ffc300' };
+  const logoDesc = getLogoVisualDescription(brand, brandKit.logo_path, brandKit.hasExplicitLogo);
+  const colors = {
+    primary: options.primaryColor || brandKit.colors?.primary || '#000000',
+    accent: options.accentColor || brandKit.colors?.accent || '#acfe00',
+    secondary: brandKit.colors?.secondary || '#026009',
+  };
   const product = options.productName || 'Özel Ürün & Hizmet';
   const brief = options.prompt || options.brief || '9:16 sinematik reklam filmi';
 

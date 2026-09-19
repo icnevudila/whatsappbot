@@ -912,12 +912,22 @@ function getRecentVideos() {
   try {
     if (!fs.existsSync(OUTPUT_DIR)) return [];
     const files = fs.readdirSync(OUTPUT_DIR);
-    const mp4Files = files.filter(f => (f.startsWith('video_') || f.startsWith('flow_')) && f.endsWith('.mp4'));
+    const mp4Files = files.filter(f => (f.startsWith('video_') || f.startsWith('flow_') || f.includes('commercial') || f.includes('bofe')) && f.endsWith('.mp4'));
     return mp4Files.map(file => {
       const fullPath = path.join(OUTPUT_DIR, file);
       const stat = fs.statSync(fullPath);
       const id = file.replace(/_raw\.mp4$/, '').replace(/\.mp4$/, '');
-      const thumbFile = `${id}_thumb.jpg`;
+      let thumbFile = `${id}_thumb.jpg`;
+      if (!fs.existsSync(path.join(OUTPUT_DIR, thumbFile))) {
+        const alt = `${file.replace(/\.mp4$/, '')}_thumb.jpg`;
+        if (fs.existsSync(path.join(OUTPUT_DIR, alt))) {
+          thumbFile = alt;
+        } else {
+          try {
+            execSync(`ffmpeg -y -ss 00:00:01 -i "${fullPath}" -vframes 1 -q:v 2 "${path.join(OUTPUT_DIR, thumbFile)}" 2>/dev/null`);
+          } catch(e){}
+        }
+      }
       const hasThumb = fs.existsSync(path.join(OUTPUT_DIR, thumbFile));
       return {
         id,
@@ -928,7 +938,7 @@ function getRecentVideos() {
         createdAt: stat.mtime.toISOString(),
         timestamp: stat.mtimeMs,
       };
-    }).sort((a, b) => b.timestamp - a.timestamp).slice(0, 12);
+    }).sort((a, b) => b.timestamp - a.timestamp).slice(0, 16);
   } catch (err) {
     console.warn('[VideoGen] getRecentVideos hatası:', err.message);
     return [];
@@ -1196,6 +1206,143 @@ async function updateAccountFlow(port, flowProjectUrl, flowCredits) {
 }
 
 /**
+ * Belirli bir slotun açık Flow sekmesini inceler veya 'New project'e tıklayarak
+ * proje URL'sini sıfır kullanıcı çabasıyla 1-tıkta otomatik algılar ve bağlar.
+ */
+async function autoDetectFlowProject(port) {
+  const p = parseInt(port, 10);
+  if (!p) throw new Error('Geçerli bir port numarası gereklidir.');
+
+  try {
+    const tabsRes = await fetch(`http://127.0.0.1:${p}/json`, { signal: AbortSignal.timeout(4000) });
+    if (!tabsRes.ok) throw new Error(`Port ${p} Chrome servisine ulaşılamadı.`);
+    const tabs = await tabsRes.json();
+
+    // 1. Zaten açık /project/ sekmesi var mı?
+    const existingProjectTab = tabs.find(t => t.type === 'page' && t.url && t.url.includes('flow.google.com/project/'));
+    if (existingProjectTab) {
+      console.log(`[Flow AutoDetect] Port ${p} için mevcut proje sekmesi bulundu:`, existingProjectTab.url);
+      return await updateAccountFlow(p, existingProjectTab.url);
+    }
+
+    // 2. flow.google.com sekmesi var mı?
+    let flowTab = tabs.find(t => t.type === 'page' && t.url && t.url.includes('flow.google.com'));
+    if (!flowTab) {
+      const newTabRes = await fetch(`http://127.0.0.1:${p}/json/new?https://flow.google.com/`, { method: 'PUT' });
+      if (newTabRes.ok) {
+        flowTab = await newTabRes.json();
+        await sleep(3500);
+      }
+    }
+
+    if (!flowTab || !flowTab.webSocketDebuggerUrl) {
+      throw new Error(`Port ${p} üzerinde Flow sekmesi bulunamadı veya açılamadı.`);
+    }
+
+    const WebSocketClass = globalThis.WebSocket || (() => {
+      try { return require('ws'); } catch (e) { return null; }
+    })();
+
+    if (!WebSocketClass) throw new Error('WebSocket desteği bulunamadı.');
+    const ws = new WebSocketClass(flowTab.webSocketDebuggerUrl);
+
+    let msgId = 1;
+    const sendCdp = (method, params = {}) => new Promise((resolve, reject) => {
+      const id = msgId++;
+      const timer = setTimeout(() => reject(new Error('CDP zaman aşımı')), 8000);
+      const handler = (event) => {
+        const str = typeof event.data === 'string' ? event.data : event.toString();
+        try {
+          const parsed = JSON.parse(str);
+          if (parsed.id === id) {
+            clearTimeout(timer);
+            ws.removeEventListener ? ws.removeEventListener('message', handler) : ws.off?.('message', handler);
+            resolve(parsed.result);
+          }
+        } catch(e){}
+      };
+      ws.addEventListener ? ws.addEventListener('message', handler) : ws.on?.('message', handler);
+      ws.send(JSON.stringify({ id, method, params }));
+    });
+
+    const detectedUrl = await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        try { ws.close(); } catch(e){}
+        reject(new Error('Flow proje tespiti zaman aşımına uğradı.'));
+      }, 15000);
+
+      const onOpen = async () => {
+        try {
+          const evalRes = await sendCdp('Runtime.evaluate', {
+            expression: `
+              (() => {
+                if (window.location.href.includes('/project/')) return window.location.href;
+                const a = document.querySelector('a[href*="/project/"]');
+                if (a && a.href) return a.href;
+                return null;
+              })()
+            `,
+            returnByValue: true
+          });
+
+          if (evalRes?.result?.value) {
+            clearTimeout(timeout);
+            try { ws.close(); } catch(e){}
+            return resolve(evalRes.result.value);
+          }
+
+          // Butonları tara ve yeni proje oluştur
+          await sendCdp('Runtime.evaluate', {
+            expression: `
+              (() => {
+                const el = Array.from(document.querySelectorAll('button, div[role="button"], a')).find(b => {
+                  const t = (b.innerText || b.getAttribute('aria-label') || '').toLowerCase();
+                  return t.includes('new project') || t.includes('yeni proje') || t.includes('create') || t.includes('start');
+                });
+                if (el) el.click();
+              })()
+            `
+          });
+
+          await sleep(3500);
+
+          const finalEval = await sendCdp('Runtime.evaluate', {
+            expression: `window.location.href`,
+            returnByValue: true
+          });
+
+          clearTimeout(timeout);
+          try { ws.close(); } catch(e){}
+
+          const currentHref = finalEval?.result?.value;
+          if (currentHref && currentHref.includes('/project/')) {
+            return resolve(currentHref);
+          }
+          return resolve(null);
+        } catch (err) {
+          clearTimeout(timeout);
+          try { ws.close(); } catch(e){}
+          reject(err);
+        }
+      };
+
+      ws.addEventListener ? ws.addEventListener('open', onOpen) : ws.on?.('open', onOpen);
+      ws.addEventListener ? ws.addEventListener('error', reject) : ws.on?.('error', reject);
+    });
+
+    if (detectedUrl) {
+      console.log(`[Flow AutoDetect] Port ${p} için proje otomatik tespit edildi:`, detectedUrl);
+      return await updateAccountFlow(p, detectedUrl);
+    } else {
+      throw new Error(`Port ${p} üzerinde aktif Flow projesi bulunamadı. Lütfen oturumun açık olduğundan emin olun.`);
+    }
+  } catch (err) {
+    console.error(`[Flow AutoDetect] Port ${p} hatası:`, err.message);
+    throw err;
+  }
+}
+
+/**
  * Kullanıcının kendi tarayıcısından kopyaladığı Google / Flow / ChatGPT çerezlerini
  * doğrudan Hetzner'deki hedef slota enjekte eder (VNC'ye hiç girmeden oturum açar).
  */
@@ -1455,6 +1602,7 @@ module.exports = {
   resetAccountLimit,
   provisionAccountSlot,
   updateAccountFlow,
+  autoDetectFlowProject,
   syncAccountCookies,
   updateAccountSlot
 };

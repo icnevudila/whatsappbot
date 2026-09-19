@@ -42,6 +42,17 @@ export async function GET() {
       })
       if (aiRes.ok) {
         aiEngineStatus = await aiRes.json()
+        if (aiEngineStatus && Array.isArray(aiEngineStatus.recentVideos)) {
+          aiEngineStatus.recentVideos = aiEngineStatus.recentVideos.map((v: any) => {
+            const vFile = v.filename || ''
+            const tFile = v.thumbnailUrl ? v.thumbnailUrl.split('/').pop() : ''
+            return {
+              ...v,
+              videoUrl: `/api/canli-takip/media-proxy?file=${encodeURIComponent(vFile)}`,
+              thumbnailUrl: tFile ? `/api/canli-takip/media-proxy?file=${encodeURIComponent(tFile)}` : null,
+            }
+          })
+        }
       }
     } catch {
       // Gateway geçici olarak ulaşılamazsa sessizce geç
