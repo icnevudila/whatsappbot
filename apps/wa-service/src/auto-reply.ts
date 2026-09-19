@@ -34,6 +34,28 @@ function fingerprint(input: string): string {
   return createHash('sha256').update(normalizeForLibrary(input)).digest('hex')
 }
 
+function extractSemanticIntentKey(input: string): string | null {
+  const norm = normalizeForLibrary(input)
+  if (!norm) return null
+
+  if (/\b(fiyat|fiyati|fiyatlar|fiyatlari|ucret|ucreti|kac\s*tl|kac\s*para|ne\s*kadar|maliyet|tarife)\b/u.test(norm)) {
+    return 'intent:fiyat_sorgusu'
+  }
+  if (/\b(konum|adres|adresi|nerede|neredesiniz|yeriniz|yeriniz\s*nerede|harita|tarifi|nasil\s*gelirim)\b/u.test(norm)) {
+    return 'intent:konum_adres'
+  }
+  if (/\b(var\s*mi|elinizde\s*var\s*mi|stok|stokta|stokta\s*var\s*mi|temin|mevcut\s*mu|bulunur\s*mu)\b/u.test(norm)) {
+    return 'intent:stok_temin'
+  }
+  if (/\b(kargo|kargoya|teslimat|ne\s*zaman\s*gelir|kac\s*gunde|kargom|takip)\b/u.test(norm)) {
+    return 'intent:kargo_teslimat'
+  }
+  if (/\b(merhaba|selam|selamlar|gunaydin|iyi\s*gunler|kolay\s*gelsin|iyi\s*calismalar|iyi\s*aksamlar)\b/u.test(norm)) {
+    return 'intent:selamlasma'
+  }
+  return null
+}
+
 function shouldHistoryAffectCache(message: string): boolean {
   const normalized = normalizeForLibrary(message)
   if (normalized.length < 18) return true
@@ -735,13 +757,14 @@ export async function pregenerateAiSuggestions(options: {
 
   try {
     const messageFingerprint = fingerprint(trimmed)
+    const semanticIntent = extractSemanticIntentKey(trimmed)
 
-    // Onceden bu mesaj icin oneriler uretilmis mi?
+    // Onceden bu mesaj icin veya ayni niyet icin oneriler uretilmis mi?
     const existing = await query<{ id: string }>(
       `select id::text from public.ai_reply_suggestion_library
-        where org_id = $1 and message_fingerprint = $2
+        where org_id = $1 and (message_fingerprint = $2 or ($3::text is not null and message_fingerprint = $3))
         limit 1`,
-      [orgId, messageFingerprint],
+      [orgId, messageFingerprint, semanticIntent ? fingerprint(semanticIntent) : null],
     )
     if (existing.length > 0) return
 
@@ -836,6 +859,23 @@ export async function pregenerateAiSuggestions(options: {
         updated_at = now()`,
       [orgId, messageFingerprint, contextFingerprint, trimmed.slice(0, 500), JSON.stringify(aiData.suggestions)],
     )
+
+    if (semanticIntent) {
+      const intentFingerprint = fingerprint(semanticIntent)
+      await query(
+        `insert into public.ai_reply_suggestion_library (
+          org_id, message_fingerprint, context_fingerprint, incoming_sample,
+          suggestions, source, generated_count, last_used_at, updated_at
+        )
+        values ($1, $2, $3, $4, $5::jsonb, 'chatgpt_intent', 1, now(), now())
+        on conflict (org_id, message_fingerprint, context_fingerprint)
+        do update set
+          suggestions = excluded.suggestions,
+          incoming_sample = excluded.incoming_sample,
+          updated_at = now()`,
+        [orgId, intentFingerprint, fingerprint(companyContext), `[${semanticIntent}] ${trimmed.slice(0, 300)}`, JSON.stringify(aiData.suggestions)],
+      ).catch(() => {})
+    }
 
     logger.info(
       { orgId, phoneE164, count: aiData.suggestions.length },

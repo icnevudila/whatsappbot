@@ -26,10 +26,26 @@ function createCdpSession(wsUrl) {
 
     ws.onopen = () => {
       resolve({
-        send(method, params = {}) {
+        send(method, params = {}, timeoutMs = 45000) {
           return new Promise((res, rej) => {
             const id = msgId++;
-            callbacks.set(id, { res, rej });
+            let timer = null;
+            if (timeoutMs > 0) {
+              timer = setTimeout(() => {
+                callbacks.delete(id);
+                rej(new Error(`[CDP Timeout] ${method} ${timeoutMs}ms icinde yanit vermedi`));
+              }, timeoutMs);
+            }
+            callbacks.set(id, {
+              res: (val) => {
+                if (timer) clearTimeout(timer);
+                res(val);
+              },
+              rej: (err) => {
+                if (timer) clearTimeout(timer);
+                rej(err);
+              }
+            });
             ws.send(JSON.stringify({ id, method, params }));
           });
         },
@@ -225,6 +241,27 @@ async function resetToFreshChat(cdp) {
   await waitForChatInput(cdp);
 }
 
+let completedJobCount = 0;
+const RECYCLE_JOB_THRESHOLD = 30;
+
+async function performMemoryRecycle(tab) {
+  console.log(`[CDP Worker: ${WORKER_ID}] 🧹 Bellek ve DOM temizliği tetiklendi (Tamamlanan iş: ${completedJobCount})...`);
+  let cdp = null;
+  try {
+    cdp = await createCdpSession(tab.webSocketDebuggerUrl);
+    await cdp.send('Runtime.evaluate', {
+      expression: `window.location.replace('https://chatgpt.com/')`
+    }, 15000);
+    await sleep(4000);
+    await waitForChatInput(cdp);
+    console.log(`[CDP Worker: ${WORKER_ID}] ✨ Bellek ve DOM başarıyla tazelendi.`);
+  } catch (err) {
+    console.warn(`[CDP Worker: ${WORKER_ID}] Bellek temizleme uyarısı:`, err.message);
+  } finally {
+    if (cdp) cdp.close();
+  }
+}
+
 async function renameChatToCustomer(cdp, title) {
   if (!title) return;
   try {
@@ -392,6 +429,11 @@ async function workerLoop() {
       await executeExtractKnowledgeJob(chatgptTab, job);
     } else {
       await executeChatGPTJob(chatgptTab, job);
+    }
+
+    completedJobCount++;
+    if (completedJobCount % RECYCLE_JOB_THRESHOLD === 0) {
+      await performMemoryRecycle(chatgptTab);
     }
 
   } catch (err) {

@@ -38,6 +38,57 @@ export function extractBody(message: WAMessage): { type: string; body: string | 
   return { type: 'other', body: null }
 }
 
+type PendingPregen = {
+  timer: NodeJS.Timeout
+  messages: string[]
+  orgId: string
+  phoneE164: string | null
+}
+const pregenBuffers = new Map<string, PendingPregen>()
+
+export function schedulePregenerateAiSuggestions(options: {
+  orgId: string
+  phoneE164: string | null
+  body: string
+}) {
+  const { orgId, phoneE164, body } = options
+  const trimmed = body.trim()
+  if (!trimmed || isOptOutMessage(trimmed)) return
+
+  const bufferKey = `${orgId}:${phoneE164 || 'unknown'}`
+  const existing = pregenBuffers.get(bufferKey)
+
+  if (existing) {
+    clearTimeout(existing.timer)
+    existing.messages.push(trimmed)
+  }
+
+  const messages = existing ? existing.messages : [trimmed]
+
+  const timer = setTimeout(() => {
+    pregenBuffers.delete(bufferKey)
+    const combinedBody = messages.join('. ')
+    void import('./auto-reply.js')
+      .then(({ pregenerateAiSuggestions }) =>
+        pregenerateAiSuggestions({
+          orgId,
+          phoneE164,
+          body: combinedBody,
+        }),
+      )
+      .catch((error) => {
+        logger.debug({ err: error, orgId }, 'AI yanit onerisi onceden uretilemedi')
+      })
+  }, 2500)
+
+  pregenBuffers.set(bufferKey, {
+    timer,
+    messages,
+    orgId,
+    phoneE164,
+  })
+}
+
 /**
  * LID (@lid) rakamlari telefon degildir. Once senderPn / participantPn,
  * sonra PN remoteJid, son olarak opsiyonel mapping resolver.
@@ -243,19 +294,13 @@ export async function persistInboundMessage(options: {
     })
   }
 
-  // Gelen mesaja arka planda AI yanit onerileri onceden uret (temsilci chati actiginda aninda hazir olsun)
+  // Gelen mesaja arka planda AI yanit onerilerini ardisik mesajlari birlestirerek onceden uret
   if (body?.trim() && !isOptOutMessage(body)) {
-    void import('./auto-reply.js')
-      .then(({ pregenerateAiSuggestions }) =>
-        pregenerateAiSuggestions({
-          orgId,
-          phoneE164: phone,
-          body,
-        }),
-      )
-      .catch((error) => {
-        logger.debug({ err: error, accountId }, 'AI yanit onerisi onceden uretilemedi')
-      })
+    schedulePregenerateAiSuggestions({
+      orgId,
+      phoneE164: phone,
+      body,
+    })
   }
 
   // Varsayilan kapali (AUTO_REPLY_ENABLED + org.auto_reply_enabled).

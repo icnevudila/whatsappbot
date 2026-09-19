@@ -118,6 +118,38 @@ function fingerprint(input: string) {
   return createHash('sha256').update(normalizeForLibrary(input)).digest('hex')
 }
 
+function extractSemanticIntentKey(input: string): string | null {
+  const norm = normalizeForLibrary(input)
+  if (!norm) return null
+
+  // Fiyat / Maliyet sorgusu
+  if (/\b(fiyat|fiyati|fiyatlar|fiyatlari|ucret|ucreti|kac\s*tl|kac\s*para|ne\s*kadar|maliyet|tarife)\b/u.test(norm)) {
+    return 'intent:fiyat_sorgusu'
+  }
+
+  // Konum / Adres sorgusu
+  if (/\b(konum|adres|adresi|nerede|neredesiniz|yeriniz|yeriniz\s*nerede|harita|tarifi|nasil\s*gelirim)\b/u.test(norm)) {
+    return 'intent:konum_adres'
+  }
+
+  // Stok / Urun temin
+  if (/\b(var\s*mi|elinizde\s*var\s*mi|stok|stokta|stokta\s*var\s*mi|temin|mevcut\s*mu|bulunur\s*mu)\b/u.test(norm)) {
+    return 'intent:stok_temin'
+  }
+
+  // Kargo / Teslimat
+  if (/\b(kargo|kargoya|teslimat|ne\s*zaman\s*gelir|kac\s*gunde|kargom|takip)\b/u.test(norm)) {
+    return 'intent:kargo_teslimat'
+  }
+
+  // Selamlasma
+  if (/\b(merhaba|selam|selamlar|gunaydin|iyi\s*gunler|kolay\s*gelsin|iyi\s*calismalar|iyi\s*aksamlar)\b/u.test(norm)) {
+    return 'intent:selamlasma'
+  }
+
+  return null
+}
+
 function shouldHistoryAffectCache(message: string) {
   const normalized = normalizeForLibrary(message)
   if (normalized.length < 18) return true
@@ -253,6 +285,21 @@ export async function POST(request: Request) {
     if (fallback) cachedRow = fallback
   }
 
+  // Semantik niyet kontrolu (Ayni firmanin benzer niyetli hazir yanitlari)
+  const semanticIntent = extractSemanticIntentKey(lastMessage)
+  if (!cachedRow && semanticIntent) {
+    const intentFingerprint = fingerprint(semanticIntent)
+    const { data: intentCached } = await supabase
+      .from('ai_reply_suggestion_library')
+      .select('id, suggestions, hit_count')
+      .eq('org_id', org.id)
+      .eq('message_fingerprint', intentFingerprint)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (intentCached) cachedRow = intentCached
+  }
+
   if (cachedRow && validSuggestions(cachedRow.suggestions)) {
     void supabase
       .from('ai_reply_suggestion_library')
@@ -324,6 +371,26 @@ export async function POST(request: Request) {
             },
             { onConflict: 'org_id,message_fingerprint,context_fingerprint' },
           )
+
+        if (semanticIntent) {
+          const intentFingerprint = fingerprint(semanticIntent)
+          void supabase
+            .from('ai_reply_suggestion_library')
+            .upsert(
+              {
+                org_id: org.id,
+                message_fingerprint: intentFingerprint,
+                context_fingerprint: fingerprint(companyContext),
+                incoming_sample: `[${semanticIntent}] ${lastMessage.slice(0, 300)}`,
+                suggestions: cleanSuggestions,
+                source: 'chatgpt_intent',
+                generated_count: 1,
+                last_used_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: 'org_id,message_fingerprint,context_fingerprint' },
+            )
+        }
 
         return NextResponse.json({
           success: true,
