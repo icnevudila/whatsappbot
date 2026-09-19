@@ -120,69 +120,221 @@ Dış Ses / Konuşma: ${isSpeech ? 'Sesli / Konuşmalı' : 'Sessiz / Sadece Müz
 function generateFallbackScenarios(context: VideoScenarioContext): VideoScenarioOption[] {
   const brand = context.brandName?.trim() || 'Mesajify'
   const isSpeech = context.videoSpeech !== false
-  const product = context.products?.[0]?.name || 'Ticari Hizmet ve Ürün'
-  const brief = context.brief || 'WhatsApp ile dijital broşür ve sipariş'
+  const product = context.products?.[0]?.name || 'Kurumsal Hizmet ve Ürün'
+  const brief = context.brief || 'WhatsApp ile dijital tanıtım ve hızlı iletişim'
+  const allText = `${brand} ${context.about || ''} ${context.sector || ''} ${product} ${brief}`.toLowerCase()
 
   const strictRule =
-    'ÖNEMLİ KURAL: Videoda KESİNLİKLE hiçbir yazı, metin, altyazı, logo kartı, bilgi kutusu veya grafik overlay OLMAYACAKTIR. STRICT RULE: NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO SUBTITLES, NO CAPTIONS, NO ON-SCREEN TEXT, NO LOGO CARDS, NO GRAPHIC OVERLAYS. Pure clean cinematic live-action commercial footage only.'
+    'ÖNEMLİ KURAL: Videoda KESİNLİKLE hiçbir yazı, metin, altyazı, logo kartı, bilgi kutusu veya grafik overlay OLMAYACAKTIR. STRICT RULE: NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO SUBTITLES, NO CAPTIONS, NO ON-SCREEN TEXT, NO LOGO CARDS, NO GRAPHIC OVERLAYS, NO 3D LETTERING. Pure clean cinematic live-action commercial footage only.'
 
-  // 1. Samimi Esnaf & Telefon Senaryosu (Örn. Dönerci / İşletme Sahibi)
-  const speech1 = isSpeech
-    ? `Oyuncu kameraya samimiyetle gülümseyerek konuşur: "Artık broşür bastırmıyorum! Bunun yerine ${brand} ile dijital broşürümü etrafımdaki tüm müşterilere tek tıkla WhatsApp'tan gönderiyorum, siparişler patladı!"`
-    : `STRICT RULE: NO VOICE, NO SPEECH, NO DIALOGUE. Doğal mekan sesleri, telefon bildirim sesleri ve dinamik fon müziği.`
+  // 1. B2B / Veri / Yazılım / Kurumsal Platform (Örn: Veri Burada)
+  if (allText.match(/(veri|data|yazılım|b2b|platform|istihbarat|leads|crm|erp|teknoloji|analiz|dashboard|şirket|veriburada|veri burada|bilişim)/)) {
+    const speech1 = isSpeech
+      ? `Oyuncu kameraya samimiyetle konuşur: "Yeni açılan tüm işletmeleri anında tespit edip WhatsApp'tan ilk teklifi biz veriyoruz, ${brand} ile satışlarımız patladı!"`
+      : `STRICT RULE: NO VOICE, NO SPEECH, NO DIALOGUE. Doğal klavye ve modern ofis ortam sesleri, dinamik fon müziği.`
 
-  const prompt1 = `9:16 vertical cinematic commercial advertisement for "${brand}".
-ACT 1 (0-3s): Sizzling macro close-up (100mm f/1.8 lens) of fresh, seasoned ${product}, fragrant steam rising, clean professional prep counter in warm appetizing lighting.
-ACT 2 (3-7s): Medium shot of an authentic, friendly business owner/chef in clean uniform standing proudly behind the counter. He holds up a sleek smartphone toward the camera showing a WhatsApp chat screen with digital brochures. ${speech1}
-ACT 3 (7-10s): Smooth cinematic gimbal pull-back showing the buzzing shop, notifications chiming, the actor giving an energetic thumbs up with a confident smile. 4K live-action commercial cinematography, Arri Alexa natural color grade.
+    const prompt1 = `9:16 vertical cinematic corporate tech commercial for "${brand}".
+ACT 1 (0-3s): Macro 100mm f/2.0 cinematic close-up of a sleek, ultra-thin laptop screen in a sunlit modern glass skyscraper office. The screen displays vibrant real-time data analytics, interactive map pins, and qualified business leads glowing in green and white lights.
+ACT 2 (3-7s): Medium shot of a sharp, charismatic business professional (30s, smart casual blazer) standing near the panoramic glass window holding a smartphone with real-time business notifications. ${speech1}
+ACT 3 (7-10s): Dynamic cinematic gimbal pull-back revealing the high-rise corporate office and city skyline, upward trending growth metrics on background monitors, executive smiling with confident nod. 4K high-end commercial cinematography, Arri Alexa natural color grade.
 ${strictRule}`
 
-  // 2. Hızlı & Dinamik Sipariş Patlaması Senaryosu
-  const speech2 = isSpeech
-    ? `Dış ses enerjik bir spiker tonuyla seslendirir: "Geleneksel kağıt broşür bitti, dijital dönüşüm başladı! ${brand} ile WhatsApp üzerinden anında tüm müşterilerinize ulaşın, siparişleri katlayın!"`
-    : `STRICT RULE: NO VOICE, NO SPEECH, NO DIALOGUE. Hızlı tempo perküsyon ve dinamik modern ritimler.`
+    const speech2 = isSpeech
+      ? `Dış ses enerjik bir kurumsal tonla seslendirir: "Müşteri aramakla vakit kaybetmeyin! ${brand} ile hedef sektörünüzdeki yeni işletmelere tek tıkla ulaşın, satışlarınızı katlayın!"`
+      : `STRICT RULE: NO VOICE, NO SPEECH, NO DIALOGUE. Yüksek tempolu kurumsal modern ritimler.`
 
-  const prompt2 = `9:16 vertical fast-paced cinematic commercial for "${brand}".
-ACT 1 (0-3s): Dynamic tilt-down showing rapid orders arriving on modern tablets and smartphones, notification chimes echoing, bustling business energy.
-ACT 2 (3-7s): Eye-level tracking shot of staff preparing fresh orders of ${product} with speed and precision, smiling team members packing items into branded eco-friendly delivery bags. ${speech2}
-ACT 3 (7-10s): Wide hero shot of happy staff looking into camera, customer receiving package with delight, vibrant street background in golden hour light. Sharp 4K advertising aesthetic.
+    const prompt2 = `9:16 vertical dynamic B2B intelligence commercial for "${brand}".
+ACT 1 (0-3s): Dynamic tilt-down from modern glass ceiling to high-performance tablet showing real-time incoming qualified business contacts and directory updates.
+ACT 2 (3-7s): Tracking shot of energetic sales team in an open-space tech office, smiling professionals closing partnerships and reviewing verified company data. ${speech2}
+ACT 3 (7-10s): Wide hero shot of executive confidently shaking hands, smartphone screen buzzing with incoming deals, warm afternoon sunlight filling the workspace. 4K crisp advertising aesthetic.
 ${strictRule}`
 
-  // 3. Premium Sinematik & İştah Açıcı Ürün Vitrini Senaryosu
-  const speech3 = isSpeech
-    ? `Karizmatik bir dış ses konuşur: "Müşterileriniz tek dokunuşla en taze lezzetlerinize ve kampanyalarınıza ulaşsın. ${brand}, işletmenizin yeni nesil dijital vitrini."`
-    : `STRICT RULE: NO VOICE, NO SPEECH, NO DIALOGUE. Derin baslar, akustik melodiler ve iştah açıcı foley efektleri.`
+    const prompt3 = `9:16 vertical premium executive showcase commercial for "${brand}".
+ACT 1 (0-3s): 120fps slow-motion capture of executive typing on a minimalist aluminium keyboard, reflections of data charts on glasses, pristine executive desk.
+ACT 2 (3-7s): Elegant camera glide around high-tech holographic data presentation, smooth glowing UI elements and verified lead analytics. ${isSpeech ? `Karizmatik dış ses: "${brand}, şirketinizin dijital büyüme motoru. Doğru müşteriye, doğru zamanda ulaşın."` : 'STRICT RULE: NO VOICE, NO SPEECH.'}
+ACT 3 (7-10s): Smooth transition to modern executive smiling into camera, giving a confident nod of success against stunning architectural background. 4K commercial cinematography.
+${strictRule}`
 
-  const prompt3 = `9:16 vertical luxury cinematic showcase commercial for "${brand}".
-ACT 1 (0-3s): High-speed 120fps slow-motion capture of ${product} being prepared with supreme craftsmanship, rich textures, glistening details, studio cinematic backlighting.
-ACT 2 (3-7s): Elegant camera glide around the finished hero presentation on a dark slate surface, gentle natural steam, subtle bokeh. ${speech3}
-ACT 3 (7-10s): Smooth transition to a customer smiling while admiring the digital menu on their smartphone and placing a seamless order. High-end television commercial cinematography, 4K crisp resolution.
+    return [
+      {
+        id: 'scenario_1',
+        title: 'Canlı Veri Paneli & B2B Leads',
+        badge: 'En Çok Tercih Edilen',
+        summary: 'Gökdelen ofisinde laptop ekranındaki canlı veriler, gelen bildirimler ve yöneticinin hızlı müşteri bulma başarısı.',
+        fullPrompt: prompt1,
+      },
+      {
+        id: 'scenario_2',
+        title: 'Dinamik B2B Satış Büyümesi',
+        badge: 'Yüksek Dönüşüm',
+        summary: 'Modern teknoloji ofisinde ekibin yeni şirket kayıtlarını incelemesi ve anında iletişime geçerek satışları katlaması.',
+        fullPrompt: prompt2,
+      },
+      {
+        id: 'scenario_3',
+        title: 'Prestijli Kurumsal İstihbarat',
+        badge: 'Sinematik Kalite',
+        summary: '120fps ağır çekim yönetici masası, yüksek teknoloji veri grafikleri ve kurumsal güvenilirlik vurgusu.',
+        fullPrompt: prompt3,
+      },
+    ]
+  }
+
+  // 2. Tarım / Bahçe / Bofe Ekipmanları
+  if (allText.match(/(bofe|ilaçlama|tarım|sera|bağ|bahçe|pülverizatör|sırt pompası|akülü pompa)/)) {
+    const speech1 = isSpeech
+      ? `Bahçe sahibi gülümseyerek konuşur: "Artık sırt pompasıyla yorulmak bitti! ${brand} akülü pompa ile tüm bahçeyi tek şarjla kolayca ilaçlıyorum, verimimiz katlandı!"`
+      : `STRICT RULE: NO VOICE, NO SPEECH, NO DIALOGUE. Kuş sesleri, hafif rüzgar ve foley mikronize sisleme sesleri.`
+
+    const prompt1 = `9:16 vertical cinematic agriculture commercial for "${brand}".
+ACT 1 (0-3s): Macro close-up (100mm lens) of the ergonomic sky-blue sprayer tank with crisp "${brand}" branding in warm morning sunlight, brass nozzle spraying ultra-fine micronized mist over lush green orchard leaves.
+ACT 2 (3-7s): Medium shot of a friendly modern farmer/gardener in clean outdoor vest comfortably holding the lightweight spray wand, walking effortlessly through sunlit rows of fruit trees. ${speech1}
+ACT 3 (7-10s): Wide cinematic gimbal sweep showing the vibrant green orchard, golden sunbeams streaming through leaves, the gardener smiling proudly and giving a thumbs up. 4K commercial cinematography, Arri Alexa natural grade.
+${strictRule}`
+
+    const prompt2 = `9:16 vertical high-performance equipment commercial for "${brand}".
+ACT 1 (0-3s): Dynamic low-angle track showing high-pressure uniform spraying across fertile greenhouse plants, crystalline water droplets catching morning light.
+ACT 2 (3-7s): Fast-paced tracking shot of the powerful rechargeable battery pack clicking securely into place, digital battery level glowing, effortless continuous spraying action.
+ACT 3 (7-10s): Hero shot of the sprayer resting gracefully on a wooden farm crate against rich green farmland, satisfied grower smiling in background. 4K advertising aesthetic.
+${strictRule}`
+
+    const prompt3 = `9:16 vertical luxury farm & garden showcase for "${brand}".
+ACT 1 (0-3s): 120fps slow-motion capture of golden hour droplets gently dispersing over emerald vineyard leaves, cinematic backlight.
+ACT 2 (3-7s): Elegant camera glide around the sprayer's durable build, comfortable padded shoulder straps, and stainless steel telescopic wand in action.
+ACT 3 (7-10s): Cinematic drone pull-back revealing endless fertile land at sunset, farmer standing proudly with the equipment. Sharp 4K television commercial quality.
+${strictRule}`
+
+    return [
+      {
+        id: 'scenario_1',
+        title: 'Meyve Bahçesinde Kolay İlaçlama',
+        badge: 'En Çok Tercih Edilen',
+        summary: 'Güneşli bahçede Bofe akülü sırt pompasının mikronize sisi, konforlu kullanımı ve bahçe sahibinin memnuniyeti.',
+        fullPrompt: prompt1,
+      },
+      {
+        id: 'scenario_2',
+        title: 'Yüksek Basınç & Güçlü Batarya',
+        badge: 'Yüksek Performans',
+        summary: 'Serada ve arazide kesintisiz yüksek basınçlı püskürtme, kolay takılan batarya ve iş verimliliği.',
+        fullPrompt: prompt2,
+      },
+      {
+        id: 'scenario_3',
+        title: 'Gün Batımında Bereketli Hasat',
+        badge: 'Sinematik Kalite',
+        summary: '120fps ağır çekimde gün batımı ışığında su damlacıkları, dayanıklı paslanmaz ekipman ve prestijli tarım.',
+        fullPrompt: prompt3,
+      },
+    ]
+  }
+
+  // 3. İnşaat, Yapı Malzemeleri & Sanayi (Tuğla, Mermer vb.)
+  if (allText.match(/(tuğla|inşaat|çimento|şantiye|yapı|mermer|beton|sanayi|metal|nalbur)/)) {
+    const speech1 = isSpeech
+      ? `Usta baretini düzeltip gülümseyerek konuşur: "Şantiyemize malzeme lazım olduğunda beklemiyoruz; ${brand} ile WhatsApp'tan siparişi veriyoruz, doğrudan kapımıza geliyor!"`
+      : `STRICT RULE: NO VOICE, NO SPEECH, NO DIALOGUE. Endüstriyel ortam sesleri ve ritmik müzik.`
+
+    const prompt1 = `9:16 vertical cinematic industrial commercial for "${brand}".
+ACT 1 (0-3s): Macro 100mm close-up of high-grade construction ${product}, smooth texture, precise geometric edges, morning sunlight glancing off pristine material.
+ACT 2 (3-7s): Medium shot of a confident construction engineer in white hardhat and safety vest at an organized modern building site, holding smartphone showing WhatsApp order confirmation. ${speech1}
+ACT 3 (7-10s): Wide cinematic crane tilt-up showing majestic newly built modern architectural project, delivery truck arriving in background, engineer smiling with thumbs up. 4K Arri Alexa commercial cinematography.
+${strictRule}`
+
+    return [
+      {
+        id: 'scenario_1',
+        title: 'Şantiye & Hızlı Fabrika Teslimatı',
+        badge: 'En Çok Tercih Edilen',
+        summary: 'Şantiyede mimari malzemenin sağlamlığı, mühendisin WhatsApp ile hızlı sipariş kolaylığı ve güvenilir teslimat.',
+        fullPrompt: prompt1,
+      },
+      {
+        id: 'scenario_2',
+        title: 'Yüksek Mukavemet & Malzeme Kalitesi',
+        badge: 'Yüksek Dayanıklılık',
+        summary: 'Malzemenin sağlamlığı, nizami istiflenmesi ve fabrikadan doğrudan teslim avantajı.',
+        fullPrompt: prompt1,
+      },
+      {
+        id: 'scenario_3',
+        title: 'Modern Mimari Proje Vitrini',
+        badge: 'Sinematik Kalite',
+        summary: 'Çağdaş mimari yapının görkemli dış cephesi ve birinci sınıf yapı malzemesi vurgusu.',
+        fullPrompt: prompt1,
+      },
+    ]
+  }
+
+  // 4. Gıda & Restoran (Sadece gıda kelimeleri varsa!)
+  if (allText.match(/(döner|kebap|lahmacun|burger|pizza|pide|köfte|restoran|lokanta|kafe|tatlı|baklava|yemek|lezzet|mutfak|şef|dürüm)/)) {
+    const speech1 = isSpeech
+      ? `Usta kameraya samimiyetle gülümseyerek konuşur: "Artık broşür bastırmıyorum! Bunun yerine ${brand} ile dijital menümü etrafımdaki tüm müşterilere tek tıkla WhatsApp'tan gönderiyorum, siparişler patladı!"`
+      : `STRICT RULE: NO VOICE, NO SPEECH, NO DIALOGUE. Doğal mekan sesleri, telefon bildirim sesleri ve dinamik fon müziği.`
+
+    const prompt1 = `9:16 vertical cinematic commercial advertisement for "${brand}".
+ACT 1 (0-3s): Sizzling macro close-up (100mm f/1.8 lens) of fresh, seasoned ${product}, fragrant natural steam rising, clean professional prep counter in warm appetizing lighting.
+ACT 2 (3-7s): Medium shot of an authentic, friendly business owner in clean uniform standing proudly behind the counter. He holds up a sleek smartphone toward the camera showing a WhatsApp chat screen. ${speech1}
+ACT 3 (7-10s): Smooth cinematic gimbal pull-back showing the buzzing shop, incoming orders ringing, the actor giving an energetic thumbs up with a confident smile. 4K live-action commercial cinematography, Arri Alexa natural color grade.
+${strictRule}`
+
+    return [
+      {
+        id: 'scenario_1',
+        title: 'Usta & Akıllı Telefon (Samimi Esnaf)',
+        badge: 'En Çok Tercih Edilen',
+        summary: 'İşletme sahibi tezgah başında akıllı telefonunu kameraya gösterir: "Artık broşür basmıyorum, dijital broşürümü WhatsApp\'tan gönderiyorum!" diyerek siparişlerin hızını anlatır.',
+        fullPrompt: prompt1,
+      },
+      {
+        id: 'scenario_2',
+        title: 'Dinamik Sipariş Patlaması (Hızlı & Enerjik)',
+        badge: 'Yüksek Dönüşüm',
+        summary: 'Telefonlara düşen sipariş bildirimleri, mutfakta hızlı hazırlık ve mutlu kurye teslimatıyla işletmenin yoğun hareketliliği vurgulanır.',
+        fullPrompt: prompt1,
+      },
+      {
+        id: 'scenario_3',
+        title: 'Premium Sinematik Vitrin (120fps Ağır Çekim)',
+        badge: 'Sinematik Kalite',
+        summary: 'Ürünün en iştah açıcı ve kaliteli detayları 120fps ağır çekimde ekrana gelir; tek tıkla dijital sipariş konforu aktarılır.',
+        fullPrompt: prompt1,
+      },
+    ]
+  }
+
+  // 5. Genel Ticari İşletme & Hizmet (Temiz, kurumsal, gıdasız default!)
+  const speechGen = isSpeech
+    ? `İşletme yetkilisi samimiyetle konuşur: "Müşterilerimize en hızlı şekilde ulaşıp siparişleri doğrudan ${brand} WhatsApp hattımızdan alıyoruz, işlerimiz çok kolaylaştı!"`
+    : `STRICT RULE: NO VOICE, NO SPEECH, NO DIALOGUE. Dinamik modern fon müziği ve doğal foley sesleri.`
+
+  const promptGen = `9:16 vertical modern commercial advertisement for "${brand}".
+ACT 1 (0-3s): Macro close-up of ${product}, pristine surface details, elegant studio lighting, premium craftsmanship and sleek design.
+ACT 2 (3-7s): Medium shot of a friendly, professional team member interacting with a customer and showing a smartphone with WhatsApp instant communication. ${speechGen}
+ACT 3 (7-10s): Smooth gimbal sweep showing happy customer, stylish business storefront, confident team smiling toward the camera. 4K crisp advertising aesthetic.
 ${strictRule}`
 
   return [
     {
       id: 'scenario_1',
-      title: 'Usta & Akıllı Telefon (Samimi Esnaf)',
+      title: 'Hızlı İletişim & WhatsApp Kolaylığı',
       badge: 'En Çok Tercih Edilen',
-      summary:
-        'İşletme sahibi tezgah başında akıllı telefonunu kameraya gösterir: "Artık broşür basmıyorum, dijital broşürümü WhatsApp\'tan gönderiyorum!" diyerek siparişlerin hızını anlatır.',
-      fullPrompt: prompt1,
+      summary: 'Müşterilerle kesintisiz iletişim, kaliteli ürün sunumu ve tek tıkla WhatsApp sipariş kolaylığı.',
+      fullPrompt: promptGen,
     },
     {
       id: 'scenario_2',
-      title: 'Dinamik Sipariş Patlaması (Hızlı & Enerjik)',
+      title: 'Dinamik Ticari Büyüme & Memnuniyet',
       badge: 'Yüksek Dönüşüm',
-      summary:
-        'Telefonlara düşen sipariş bildirimleri, mutfakta ve tezgâhta hızlı hazırlık ve mutlu kurye teslimatıyla işletmenin yoğun hareketliliği vurgulanır.',
-      fullPrompt: prompt2,
+      summary: 'Hızlı sipariş akışı, güler yüzlü hizmet ve modern işletme konforu.',
+      fullPrompt: promptGen,
     },
     {
       id: 'scenario_3',
-      title: 'Premium Sinematik Vitrin (120fps Ağır Çekim)',
+      title: 'Prestijli Ürün ve Marka Vitrini',
       badge: 'Sinematik Kalite',
-      summary:
-        'Ürünün en iştah açıcı ve kaliteli detayları 120fps ağır çekimde ekrana gelir; tek tıkla dijital sipariş konforu zarif bir dille aktarılır.',
-      fullPrompt: prompt3,
+      summary: 'Ürünün üstün kalitesini ve işletmenin güvenilir kurumsal kimliğini öne çıkaran 4K reklam çekimi.',
+      fullPrompt: promptGen,
     },
   ]
 }
@@ -270,7 +422,43 @@ export function buildSmartBusinessVideoIdeas(
   const firstProd = prodList[0]?.name || ''
   const allKeywords = `${name} ${about} ${prodList.map((p) => p.name).join(' ')}`.toLowerCase()
 
-  // 1. Restoran / Döner / Kafe / Gıda
+  // 1. B2B / Veri / Yazılım / Kurumsal Platform (Örn: Veri Burada)
+  if (
+    allKeywords.includes('veri') ||
+    allKeywords.includes('data') ||
+    allKeywords.includes('yazılım') ||
+    allKeywords.includes('b2b') ||
+    allKeywords.includes('platform') ||
+    allKeywords.includes('istihbarat') ||
+    allKeywords.includes('leads') ||
+    allKeywords.includes('crm') ||
+    allKeywords.includes('erp') ||
+    allKeywords.includes('analiz') ||
+    allKeywords.includes('şirket') ||
+    allKeywords.includes('bilişim')
+  ) {
+    const item = firstProd || 'Yeni Açılan İşletme Takip ve B2B Veri'
+    return [
+      {
+        label: 'Yeni açılan işletmeleri ilk siz bulun',
+        text: `${name} ile Türkiye'de yeni açılan tüm işletmelerin iletişim bilgilerini anında tespit edin, rakiplerinizden önce ilk satışı siz yapın.`,
+      },
+      {
+        label: 'Sıcak potansiyel müşteri listesi & WhatsApp',
+        text: `Hedef sektörünüze özel filtrelenmiş kurumsal işletme listelerine ${name} ile tek tıkla ulaşın, WhatsApp üzerinden anında sıcak temas kurun.`,
+      },
+      {
+        label: 'Veri odaklı B2B büyüme fırsatı',
+        text: `Satış ekibinizin verimini katlayan güncel işletme ve pazar istihbaratı ile ${name} avantajlarından hemen yararlanın.`,
+      },
+      {
+        label: 'Demo ve örnek liste için WhatsApp hattı',
+        text: `Sektörünüze özel ücretsiz örnek firma listesi ve demo sunumu için doğrudan ${name} WhatsApp hattımıza bağlanın.`,
+      },
+    ]
+  }
+
+  // 2. Restoran / Döner / Kafe / Gıda
   if (
     allKeywords.includes('döner') ||
     allKeywords.includes('kebap') ||

@@ -208,7 +208,12 @@ export function buildVideoPrompt(snapshot: CreativeSnapshot): {
   let act2Action = `${productName} ürününün gerçek kullanım anı, işlevi ve yüksek dayanıklılığı`
   let act3Climax = `${productName} ürününün yer aldığı kusursuz, tamamlanmış ve güven veren geniş açı son sahne`
 
-  if (fullContext.includes('tuğla') || fullContext.includes('inşaat') || fullContext.includes('yapı') || fullContext.includes('harç') || fullContext.includes('çimento') || fullContext.includes('boya') || fullContext.includes('fayans') || fullContext.includes('seramik') || fullContext.includes('mermer') || fullContext.includes('çatı')) {
+  if (fullContext.includes('veri') || fullContext.includes('data') || fullContext.includes('yazılım') || fullContext.includes('b2b') || fullContext.includes('platform') || fullContext.includes('istihbarat') || fullContext.includes('leads') || fullContext.includes('crm') || fullContext.includes('analiz') || fullContext.includes('şirket takip') || fullContext.includes('bilişim')) {
+    environment = 'modern, aydınlık ve fütüristik bir cam gökdelen ofisi ve teknoloji veri analitiği merkezi'
+    act1Focus = 'ince çerçeveli dizüstü bilgisayar ekranında canlı akan veri grafikleri, harita üzerinde parıldayan yeni işletme bildirimleri'
+    act2Action = 'kullanıcının onaylı şirket iletişim bilgilerine tek tıkla ulaşması, sıcak potansiyel müşterilere WhatsApp ile anında teklif sunuşu'
+    act3Climax = 'panoramik şehir manzarası önünde yükselen başarı grafikleri ve güven veren prestijli kurumsal teknoloji vitrini'
+  } else if (fullContext.includes('tuğla') || fullContext.includes('inşaat') || fullContext.includes('yapı') || fullContext.includes('harç') || fullContext.includes('çimento') || fullContext.includes('boya') || fullContext.includes('fayans') || fullContext.includes('seramik') || fullContext.includes('mermer') || fullContext.includes('çatı')) {
     environment = 'modern bir mimari yapı projesi ve gün ışığında estetik şantiye ortamı'
     act1Focus = 'doğal killi yapı malzemesinin nizami dizilimi, pürüzsüz yüzey dokusu ve sağlam kütlesi'
     act2Action = 'ustalıkla örülen modern ve estetik duvar mimarisi, malzemenin kusursuz yerleşimi'

@@ -42,20 +42,20 @@ const VIDEO_STEPS: { id: Step; label: string }[] = [
 
 const VIDEO_BRIEF_CHIPS = [
   {
-    label: 'Broşür yerine WhatsApp menü',
-    text: 'Geleneksel broşür basımını bırakıp müşterilere dijital broşürü doğrudan WhatsApp üzerinden ulaştıran yenilikçi ve samimi bir reklam filmi.',
+    label: 'Broşür yerine WhatsApp',
+    text: 'Geleneksel basılı broşürü bırakıp müşterilere doğrudan WhatsApp üzerinden ulaşan yenilikçi ve samimi bir reklam filmi.',
   },
   {
-    label: 'Hafta sonu %20 indirim',
-    text: 'Hafta sonuna özel tüm siparişlerde geçerli %20 indirim. Taze, sıcak ve iştah kabartan dinamik çekimlerle dolu kampanya videosu.',
+    label: 'Yeni lansman & özel indirim',
+    text: 'Yeni döneme özel tüm sipariş ve taleplerde geçerli avantajlı fiyat teklifi. Dinamik ve güven veren çekimlerle dolu kampanya videosu.',
   },
   {
-    label: 'Şefin taze spesiyali & sunum',
-    text: 'Ustasından taze hazırlanan günün özel spesiyali. Aşırı yakın plan (makro) sinematik çekimler ve dumanı tüten lezzet.',
+    label: 'Hızlı sipariş & anlık iletişim',
+    text: 'Sıra beklemeden doğrudan WhatsApp hattımızdan sipariş verin, en hızlı şekilde kapınıza ve adresinize ulaşsın.',
   },
   {
-    label: 'WhatsApp sipariş çağrısı',
-    text: 'Sıra beklemeden doğrudan WhatsApp hattımızdan sipariş verin, sıcacık kapınıza gelsin.',
+    label: 'Ürün kalitesi & yakın çekim',
+    text: 'Ürünün üstün kalitesini, dayanıklılığını ve işçiliğini öne çıkaran 4K makro sinematik detay çekimleri.',
   },
 ]
 
@@ -269,8 +269,22 @@ export function CreativeWizard({
     patch({ origin: 'derive', baseCreativeId: result.id })
   }
 
-  const canContinue =
-    step !== 'brief' || draft.brief.trim().length >= 8
+  const hasValidVideoProduct =
+    selectedProducts.length > 0 &&
+    selectedProducts.some((p) => {
+      const extra = draft.productExtras[p.id]
+      return Boolean(extra?.imageUrl || p.images[0]?.url)
+    })
+  const hasValidVideoLogo = Boolean(selectedKit?.samplePreview || data.org.logoPreview)
+
+  let canContinue = true
+  if (step === 'brief') {
+    canContinue = draft.brief.trim().length >= 8
+  } else if (step === 'products' && isVideo) {
+    canContinue = hasValidVideoProduct
+  } else if (step === 'summary' && isVideo) {
+    canContinue = hasValidVideoProduct && hasValidVideoLogo
+  }
   const currentLabel = activeSteps[stepIndex]?.label ?? ''
 
   return (
@@ -398,8 +412,8 @@ export function CreativeWizard({
                 onChange={(event) => patch({ brief: event.target.value })}
                 placeholder={
                   isVideo
-                    ? 'Dönerci işletmemiz için müşteriye "Artık broşür bastırmıyorum, dijital broşürü WhatsApp\'tan gönderiyorum" dedirten, iştah kabartan 9:16 dikey reels reklam videosu.'
-                    : 'Hafta sonuna özel tüm kahvaltı ürünlerinde %25 indirim. Sıcak, iştah açıcı ve premium bir WhatsApp kampanya görseli istiyorum.'
+                    ? `${data.org.name || 'İşletmemiz'} için müşteriye sunduğumuz avantajları ve hızlı WhatsApp sipariş kolaylığını anlatan, 9:16 dikey reels reklam videosu.`
+                    : 'Hafta sonuna özel tüm ürünlerde %25 indirim. Sıcak, kaliteli ve premium bir WhatsApp kampanya görseli istiyorum.'
                 }
               />
             </Field>
@@ -440,9 +454,16 @@ export function CreativeWizard({
       {step === 'products' ? (
         <div className="space-y-2">
           {isVideo ? (
-            <Notice tone="accent">
-              <strong>Videoda öne çıkarılacak ürünler (İsteğe bağlı):</strong> Döner, burger, menü veya ürünlerinizi seçin. ChatGPT bu ürünlerin adını ve detaylarını sinematik senaryoya otomatik olarak entegre edecektir. Ürün seçmeden sadece işletme odaklı genel video olarak da devam edebilirsiniz.
-            </Notice>
+            <div className="space-y-2">
+              <Notice tone={hasValidVideoProduct ? 'accent' : 'warn'}>
+                <strong>Videoda öne çıkarılacak ürün (Zorunlu):</strong> Yapay zeka video motorunun gerçekçi ve kaliteli bir reklam filmi üretebilmesi için işletmenize ait en az 1 ürün seçmeniz ve bu ürünün gerçek bir fotoğrafının bulunması zorunludur.
+              </Notice>
+              {!hasValidVideoProduct ? (
+                <Notice tone="danger">
+                  ⚠️ Lütfen aşağıdan en az 1 ürün seçin ve ürün fotoğrafının yüklü olduğundan emin olun. Ürün görseli olmadan sonraki adıma geçilemez.
+                </Notice>
+              ) : null}
+            </div>
           ) : null}
           <div className="flex flex-wrap gap-1.5">
             {productsList.map((product) => (
@@ -985,10 +1006,29 @@ export function CreativeWizard({
                 <p className="text-[#111b21]">{draft.brief}</p>
               </div>
 
+              {isVideo && !hasValidVideoLogo ? (
+                <Notice tone="danger">
+                  ⚠️ <strong>Kurumsal Logo Zorunludur:</strong> Yapay zekanın uydurma semboller veya alakasız grafikler üretmemesi için Marka Kiti veya İşletme logonuzun tanımlı olması gerekir. Lütfen{' '}
+                  <Link href="/ayarlar/marka" className="underline font-semibold">
+                    Marka Kiti sayfasından logonuzu yükleyin.
+                  </Link>
+                </Notice>
+              ) : null}
+              {isVideo && !hasValidVideoProduct ? (
+                <Notice tone="danger">
+                  ⚠️ <strong>Ürün Görseli Zorunludur:</strong> Video üretimi için en az 1 adet ürün seçilmeli ve ürünün gerçek bir fotoğrafı bulunmalıdır. Lütfen Ürünler adımına dönüp ürün fotoğrafınızı seçin.
+                </Notice>
+              ) : null}
+
               <Button
                 type="submit"
                 className="wb-wa-submit w-full h-11 text-[13.5px] font-semibold"
-                disabled={pending || !data.canManage || !data.imageAiEnabled}
+                disabled={
+                  pending ||
+                  !data.canManage ||
+                  !data.imageAiEnabled ||
+                  (isVideo && (!hasValidVideoProduct || !hasValidVideoLogo))
+                }
               >
                 <Icon name="video" className="size-4" />
                 {pending ? 'Video prodüksiyonu başlatılıyor…' : 'Kampanya Videosunu Başlat'}

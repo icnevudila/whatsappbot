@@ -187,6 +187,30 @@ export async function processCreativeGeneration(
     const isVideo = creative.format === 'video' || snapshot.formatId === 'reels_video'
 
     if (isVideo) {
+      // 1. Kurumsal Logo & Marka Kiti Zorunluluk Kontrolü
+      let logoUrl: string | null = null
+      if (snapshot.brandKit?.logoPath) {
+        logoUrl = snapshot.brandKit.logoPath
+      } else {
+        const { data: orgLogo } = await supabase
+          .from('organizations')
+          .select('logo_path')
+          .eq('id', creative.org_id)
+          .maybeSingle()
+        logoUrl = orgLogo?.logo_path ?? null
+      }
+
+      if (!logoUrl) {
+        throw new Error('Video üretimi için kurumsal Logo ve Marka Kiti zorunludur. Yapay zekanın uydurma logo ve semboller üretmemesi için lütfen Ayarlar > Marka Kiti bölümünden logonuzu tanımlayın.')
+      }
+
+      // 2. Gerçek Ürün Görseli Zorunluluk Kontrolü
+      const chosenProduct = snapshot.products[0]
+      const productImageUrl = chosenProduct?.imageUrl || null
+      if (!chosenProduct || !productImageUrl) {
+        throw new Error('Video üretimi için gerçek bir Ürün Görseli (fotoğraf) seçilmesi veya yüklenmesi zorunludur. Yapay zekanın alakasız hayali cihazlar türetmemesi için gerçek ürün fotoğrafı şarttır.')
+      }
+
       const { overlay } = buildVideoPrompt(snapshot)
       const { generateBackgroundMasterPrompt } = await import('./video-scenario')
       const videoPrompt = await generateBackgroundMasterPrompt(snapshot, bag)
@@ -197,9 +221,12 @@ export async function processCreativeGeneration(
         signal: AbortSignal.timeout(300000),
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          orgId: creative.org_id,
           prompt: videoPrompt,
           brandName: overlay.brandName,
-          productName: snapshot.products[0]?.name || null,
+          productName: chosenProduct.name || null,
+          productImageUrl,
+          logoUrl,
           subTitle: overlay.subTitle,
           offerTitle: overlay.offerTitle,
           offerDetails: overlay.offerDetails,

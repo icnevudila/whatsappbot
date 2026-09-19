@@ -94,18 +94,20 @@ Görevin: Verilen işletme ve marka verilerini kullanarak Google Veo video motor
   * Kamera Tekniği: ${sectorInfo.creativeAngle?.cameraStyle || 'Arri Alexa Mini LF, 9:16 dikey sinema lensi'}
   * Işık & Atmosfer: ${sectorInfo.creativeAngle?.lighting || 'Sinematik yönlü aydınlatma, derin sıcak tonlar'}
 
-ZORUNLU YÖNETMEN KURALLARI (VEO KENDİSİ SAHNEDE ÜRETECEK):
-1. %100 ÖZGÜN, FİRMAYA VE ÜRÜNE ÖZEL TÜRKÇE METİNLER (ASLA BASMAKALIP YA DA HERKESE AYNI ÇIKTIYI VERME):
-   - Başlık 1 (3D Sinematik Başlık): '${brand}' markasının '${product}' ürününü veya hizmetini öne çıkaran, 3-5 kelimelik, büyük harfli, ultra vurucu, tamamen bu firmaya özel orijinal bir Türkçe başlık YARAT. (Örn: firmanın tam ürününe ve brief'ine özel, spesifik ve akılda kalıcı olsun).
-   - Başlık 2 (Kampanya / Fayda Alt Başlığı): Bu ürünün en çarpıcı özelliğini veya kampanyasını anlatan özgün bir Türkçe alt başlık YARAT.
-   - Eylem Çağrısı (CTA): Sahne sonuna uygun Türkçe eylem çağrısı ve yeşil WhatsApp butonu ("WhatsApp ile İletişim").
-   - Türkçe Seslendirme (Audio Voiceover): Firmanın adını ve ürününü içeren, reklam spikeri tonunda 15-20 kelimelik akıcı Türkçe seslendirme repliği yaz.
+ZORUNLU YÖNETMEN KURALLARI (SAF CANLI ÇEKİM SİNEMATOGRAFİSİ & SIFIR KELİME ÇORBASI):
+1. KESİNLİKLE EKRANA 3D YAZI, BAŞLIK VEYA KELİME ÇORBASI YAZDIRMA:
+   - STRICT RULE: NO 3D FLOATING LETTERS, NO GIBBERISH TEXT, NO FLOATING SENTENCES, NO ON-SCREEN HEADLINES, NO PARAGRAPH OVERLAYS, NO WORDS ON SCREEN.
+   - Veo bir difüzyon video modelidir; ekrana havada asılı uzun Türkçe cümleler koymaya çalıştığında harfleri eritip anlamsız kelime çorbasına dönüştürür.
+   - Sahnedeki tek yazı, ürünün kendi ambalajındaki veya fiziksel gövdesindeki temiz kurumsal "${brand}" marka ismi veya fiziksel logosu olmalıdır.
+   - Reklam mesajını ve kurguyu tamamen görsel aksiyon, oyuncu etkileşimi, ürünün çalışma anı, estetik aydınlatma ve akıcı kamera hareketleriyle anlat.
 
-2. MARKA İSMİ VE LOGO YERLEŞİMİ (SEKTÖRE ÖZEL VE ORGANİK):
-${sectorInfo.brandingPlacements}
+2. 3 PERDELİ SİNEMATİK AKIŞ:
+   - ACT 1 (0-3s) - Kanca: Ürünün makro dokusu, estetiği ve birinci sınıf malzeme kalitesi.
+   - ACT 2 (3-7s) - Aksiyon & Kullanım: Ürünün/hizmetin gerçek kullanım performansı ve sağladığı çözüm.
+   - ACT 3 (7-10s) - Kahraman Finali: Firmanın güven veren kurumsal duruşu ve memnun kullanıcı.
 
-3. SIFIR YAPAY KUTU / SIFIR OVERLAY:
-   - Tüm 3D tipografiyi, logo amblemini ve yazıları Google Veo kendisi sahne içinde fiziksel ve organik (3D ahşap oyma, lazer kazıma, neon tabela, ambalaj baskısı veya 3D sinematik parlayan tipografi) olarak üretecektir. Sonradan harici grafik bant veya yapay overlay EKLENMEYECEKTİR.
+3. TÜRKÇE SESLENDİRME (AUDIO VOICEOVER - YALNIZCA SES METNİ, EKRANDA YAZI YOK):
+   - 15-20 kelimelik berrak Türkçe reklam spikeri repliği ekle.
 
 4. ÇIKTI FORMATI:
    - SADECE Google Veo video motoruna doğrudan yapıştırılacak tek parça sinematik video prompt metnini yaz.
@@ -697,8 +699,13 @@ async function generateVideoOnFlow(options = {}) {
   
   let prompt = options.fullPrompt;
   if (!prompt) {
-    console.log(`[Flow Video] 🤖 ChatGPT Web üzerinden marka kitiyle reklam promptu hazırlanıyor...`);
-    prompt = await generatePromptWithChatGptWeb(port, options);
+    if (options.prompt && options.prompt.length >= 80) {
+      console.log(`[Flow Video] 📋 Mevcut detaylı kampanya promptu doğrudan kullanılıyor (${options.prompt.length} karakter).`);
+      prompt = options.prompt;
+    } else {
+      console.log(`[Flow Video] 🤖 ChatGPT Web üzerinden marka kitiyle reklam promptu hazırlanıyor...`);
+      prompt = await generatePromptWithChatGptWeb(port, options);
+    }
   }
   if (!prompt) {
     prompt = await enhanceVideoPrompt(options);

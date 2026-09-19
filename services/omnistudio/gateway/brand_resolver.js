@@ -36,20 +36,20 @@ async function getActiveBrandKit(orgId = null, brandHint = null) {
   }
 
   // Veri Burada için kurumsal marka kiti
-  if (brandLower.includes('veri burada') || orgId === 'c9b24e55-6d07-48ef-b4e4-e0cb1678ded5') {
+  if (brandLower.includes('veri burada') || brandLower.includes('veriburada') || orgId === 'c9b24e55-6d07-48ef-b4e4-e0cb1678ded5') {
     return {
       organization_name: 'Veri Burada',
       brand_name: 'Veri Burada',
       colors: {
         primary: '#2e7d32',
         accent: '#a5d6a7',
-        secondary: '#212121',
-        text: '#ffffff',
+        secondary: '#66bb6a',
+        text: '#212121',
         background: '#ffffff',
       },
-      tone: 'Kurumsal B2B veri, istihbarat ve büyüme teknolojileri platformu.',
-      logo_path: null,
-      hasExplicitLogo: false,
+      tone: 'Modern ve profesyonel B2B veri, istihbarat ve kurumsal müşteri büyüme teknolojileri platformu. Kesinlikle restoran veya gıda ile alakası yoktur; %100 ileri teknoloji B2B veri ve yazılım platformudur.',
+      logo_path: 'fb19aab1-92ea-4614-9da9-9229e3cc364d/onboarding/brand.webp',
+      hasExplicitLogo: true,
     };
   }
 
@@ -96,6 +96,9 @@ function getLogoVisualDescription(brandName, logoPath, hasExplicitLogo = false) 
   const lower = (brandName || '').toLowerCase();
   if (lower.includes('bofe')) {
     return "Zarif, minimalist ve modern siyah 'bofe' yazı logosu (küçük harflerle 'bofe', 'e' harfinde karakteristik açılı modern kesim). Kesinlikle uydurma geometrik üçgen, amblem veya rastgele sembol KULLANILMAYACAKTIR; yalnızca saf, estetik 'bofe' kurumsal tipografisi yer alacaktır.";
+  }
+  if (lower.includes('veri burada') || lower.includes('veriburada')) {
+    return "Zarif, modern yeşil tonlarında (#2e7d32, #a5d6a7) minimalist 'Veri Burada' B2B kurumsal teknoloji logosu. KESİNLİKLE dönerci, restoran, şef veya alakasız gastronomi sembolleri KULLANILMAYACAKTIR; saf kurumsal veri platformu kimliği yer alacaktır.";
   }
   if (lower.includes('ayvazoğlu')) {
     return "Cesur geometrik sarı ve sıcak turuncu (#ffc300, #ff5733) tonlarında stilize mimari üçgen 'A' inşaat logo amblemi";
@@ -147,7 +150,21 @@ function detectSectorAndStyle(brand, product, brief) {
   const angleIndex = Math.floor(Math.random() * CINEMATIC_DIRECTOR_ANGLES.length);
   const creativeAngle = CINEMATIC_DIRECTOR_ANGLES[angleIndex];
 
-  // 1. Gıda & Restoran (Döner, Kebap, Burger, Kafe, Tatlı vb.)
+  // 1. B2B, Veri, Yazılım, Teknoloji & Dijital Platform (Veri Burada vb.) -> ÖNCELİKLİ KONTROL
+  if (text.match(/(veri|data|yazılım|b2b|platform|istihbarat|leads|crm|erp|analiz|dashboard|şirket takip|veriburada|veri burada|bilişim|müşteri bul)/)) {
+    return {
+      sector: 'b2b_tech_data',
+      creativeAngle,
+      sceneAtmosphere: 'Son derece aydınlık, ferah ve modern cam gökdelen ofisi ve teknoloji stüdyosu. İnce çerçeveli dizüstü bilgisayar ekranında canlı akan veri grafikleri, harita üzerinde parıldayan yeni işletme bildirimleri, şık ve karizmatik profesyonel B2B ortamı. Asla yemek, mutfak veya alakasız restoran ögeleri gösterilmeyecektir; %100 ileri teknoloji veri platformu ortamı.',
+      brandingPlacements: `
+- Ofis cam bölmesinde veya modern akrilik desk üzerinde minimalist "${brand}" logosu.
+- Ekranda açılan canlı veri analitiği panelinde ve akıllı telefon arayüzünde net "${brand}" amblemi.
+- Kahraman Final Sahnesi: Güneş alan modern ofis manzarasında, ekranda yeşil büyüme grafikleri eşliğinde merkezde ışıldayan "${brand}" kurumsal kimliği.`,
+      sampleFocus: `${product || 'B2B Veri & Yeni İşletme Takip Çözümü'} yapay zeka destekli firma taraması, sıcak müşteri bildirimleri ve satışları katlayan veri gücü`
+    };
+  }
+
+  // 2. Gıda & Restoran (Döner, Kebap, Burger, Kafe, Tatlı vb.)
   if (text.match(/(döner|kebap|lahmacun|burger|pizza|pide|köfte|restoran|lokanta|kafe|tatlı|baklava|kahve|yemek|lezzet|mutfak|şef|et|tavuk|menü|dürüm)/)) {
     return {
       sector: 'food_restaurant',
@@ -300,18 +317,21 @@ KURUMSAL MARKA VE KAMPANYA VERİLERİ:
   * Kamera: ${angle.cameraStyle}
   * Işıklandırma: ${angle.lighting}
 
-VEO YAPAY ZEKA VİDEO MOTORU İÇİN ZORUNLU KURALLAR (VEO KENDİSİ SAHNEDE ÜRETECEK):
-1. DİL VE TİPOGRAFİ (100% TÜRKÇE):
-   - Videodaki tüm başlıklar, tabelalar, ambalaj yazıları ve ekran metinleri İSTİSNASIZ TÜRKÇE olacaktır.
-   - Perde 1 Üst Başlık (3D Sinematik): "${brand.toUpperCase()} İLE ${cleanProduct}" (Kalın 3D sinematik yazı karakteri, hafif gölgeli).
-   - Perde 2 Kampanya Başlığı: "${cleanProduct} - ÖZEL LANSMAN FIRSATI".
-   - Perde 3 Eylem Çağrısı: "HEMEN SİPARİŞ & TEKLİF İÇİN İLETİŞİME GEÇİN" ve yeşil WhatsApp butonu ("WhatsApp ile İletişim").
-   - Türkçe Seslendirme (Audio Voiceover): Kristal netliğinde profesyonel Türkçe reklam spikeri sesi: "${brand} kalitesiyle ${product}... En avantajlı teklif ve hızlı teslimat için WhatsApp'tan hemen iletişime geçin."
+VEO VİDEO MOTORU İÇİN KESİN SİNEMATİK DİREKTİF (SIFIR METİN ÇORBASI & SAF CANLI ÇEKİM):
+1. KESİNLİKLE EKRANDA 3D YAZI, BAŞLIK VEYA KELİME ÇORBASI OLMAYACAKTIR:
+   - STRICT RULE: NO 3D FLOATING LETTERS, NO GIBBERISH TEXT, NO FLOATING SENTENCES, NO ON-SCREEN HEADLINES, NO PARAGRAPH OVERLAYS, NO WORDS ON SCREEN.
+   - Diffüzyon video modellerinin havada 3D yazı veya uzun cümleler üretmesi KESİNLİKLE YASAKTIR (harflerin bozulmasını ve anlamsız kelime tekrarını engellemek için).
+   - Sahnedeki tek metin veya amblem, ürünün kendi fiziksel yüzeyindeki doğal orijinal logo/baskı veya kurumsal "${brand}" logosu olacaktır.
 
-2. MARKA İSMİ VE LOGO YERLEŞİMİ (SEKTÖRE ÖZEL ORGANİK YERLEŞİM):${sectorProfile.brandingPlacements}
+2. 3 PERDELİ SİNEMATİK CANLI REKLAM AKIŞI:
+   - ACT 1 (0-3s) - Kanca & Ürün Detayı: ${sectorProfile.sampleFocus}. Makro yakın plan (100mm lens), yüzey detayları ve birinci sınıf malzeme kalitesi.
+   - ACT 2 (3-7s) - Kullanım & Dinamik Performans: Ürünün gerçek kullanım anı, akıcı çalışma performansı ve kullanıcıya sunduğu büyük kolaylık. Doğal ortam ve gerçekçi insan etkileşimi.
+   - ACT 3 (7-10s) - Kahraman Finali: ${brand} güvenini yansıtan estetik geniş açı, memnun kullanıcı ve prestijli kurumsal duruş.
 
-3. SIFIR YAPAY KUTU (HER ŞEYİ VEO VİDEONUN KENDİSİNDE OLUŞTURACAK):
-   - Sonradan harici grafik bant veya yapay overlay EKLENMEYECEKTİR; tüm 3D tipografi, logolar ve yazılar Google Veo video motorunun ürettiği fotogerçekçi canlı sahnenin doğrudan fiziksel bir parçası olacaktır.
+3. MARKA VE AMBLEM YERLEŞİMİ (FİZİKSEL & ORGANİK):${sectorProfile.brandingPlacements}
+
+4. SES VE TÜRKÇE SESLENDİRME (AUDIO VOICEOVER - YALNIZCA SES):
+   - Profesyonel, berrak Türkçe reklam spikeri sesi: "${brand} kalitesiyle ${product}... Detaylı bilgi ve avantajlı teklifler için WhatsApp'tan hemen iletişime geçin."
    - 4K reklam ajansı estetiği, 24 FPS akıcı sinematik kamera hareketi, sahneye uygun kusursuz ışıklandırma.`;
 }
 
