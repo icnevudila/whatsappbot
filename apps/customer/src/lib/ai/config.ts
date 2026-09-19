@@ -120,9 +120,6 @@ function readOrder(raw: string | undefined, fallback: AiProviderId[]): AiProvide
 
 const DEFAULT_IMAGE_ORDER = readOrder(process.env.AI_IMAGE_PROVIDERS, [
   'omnistudio',
-  'gemini',
-  'cloudflare',
-  'openai',
 ])
 
 const DEFAULT_TEXT_ORDER = readOrder(process.env.AI_TEXT_PROVIDERS, ['gemini', 'openai'])
