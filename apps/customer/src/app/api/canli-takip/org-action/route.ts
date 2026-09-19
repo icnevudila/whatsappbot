@@ -1,4 +1,4 @@
-﻿import { NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { checkIsAuthenticated } from '@/app/canli-takip/auth'
 import { createClient } from '@supabase/supabase-js'
 
@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { orgId, plan, accountsQuota, monthlyQuota, suspended } = body
+    const { orgId, plan, accountsQuota, monthlyQuota, videoQuota, suspended } = body
 
     if (!orgId) {
       return NextResponse.json(
@@ -36,6 +36,7 @@ export async function POST(req: Request) {
       p_plan: plan || null,
       p_accounts_quota: accountsQuota !== undefined ? parseInt(accountsQuota, 10) : null,
       p_monthly_quota: monthlyQuota !== undefined ? parseInt(monthlyQuota, 10) : null,
+      p_monthly_video_quota: videoQuota !== undefined ? parseInt(videoQuota, 10) : null,
       p_suspended: suspended !== undefined ? Boolean(suspended) : null,
     })
 

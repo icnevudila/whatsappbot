@@ -208,6 +208,7 @@ type OrganizationItem = {
   plan: 'free' | 'starter' | 'pro' | 'enterprise'
   accounts_quota: number
   monthly_message_quota: number
+  monthly_video_quota: number
   suspended_at: string | null
   suspend_reason: string | null
   phone_e164: string | null
@@ -464,9 +465,34 @@ export function LiveDashboard() {
   }
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<
-    'overview' | 'baileys' | 'messages' | 'quick_send' | 'campaigns' | 'queue' | 'organizations' | 'contacts' | 'data_requests' | 'ai_studio' | 'blacklist' | 'jobs'
-  >('overview')
+
+  type TabId = 'overview' | 'baileys' | 'messages' | 'quick_send' | 'campaigns' | 'queue' | 'organizations' | 'contacts' | 'data_requests' | 'ai_studio' | 'blacklist' | 'jobs'
+  const VALID_TABS: TabId[] = ['overview', 'baileys', 'messages', 'quick_send', 'campaigns', 'queue', 'organizations', 'contacts', 'data_requests', 'ai_studio', 'blacklist', 'jobs']
+
+  const getHashTab = (): TabId => {
+    if (typeof window === 'undefined') return 'overview'
+    const hash = window.location.hash.replace('#', '') as TabId
+    return VALID_TABS.includes(hash) ? hash : 'overview'
+  }
+
+  const [activeTab, setActiveTabState] = useState<TabId>(getHashTab)
+
+  const setActiveTab = (tab: TabId) => {
+    setActiveTabState(tab)
+    if (typeof window !== 'undefined') {
+      window.history.pushState(null, '', `#${tab}`)
+    }
+  }
+
+  // Browser back/forward ile sekme değişimi
+  useEffect(() => {
+    const onHashChange = () => {
+      setActiveTabState(getHashTab())
+    }
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
+
 
   const [selectedOrg, setSelectedOrg] = useState<string>('all')
   const [autoRefresh, setAutoRefresh] = useState(true)
@@ -1229,17 +1255,20 @@ export function LiveDashboard() {
     }
   }
 
-  // Firma Kotalarını Düzenle (Hat ve Mesaj Limiti)
+  // Firma Kotalarını Düzenle (Hat, Mesaj ve Video Limiti)
   const handleUpdateOrgQuotas = async (org: OrganizationItem) => {
     const newAccounts = prompt(`${org.name} için Hat Kotası (Mevcut: ${org.accounts_quota}):`, String(org.accounts_quota))
     if (newAccounts === null) return
     const newMonthly = prompt(`${org.name} için Aylık Mesaj Limiti (Mevcut: ${org.monthly_message_quota}):`, String(org.monthly_message_quota))
     if (newMonthly === null) return
+    const newVideo = prompt(`${org.name} için Aylık Video Kotası (Mevcut: ${org.monthly_video_quota ?? 3}):`, String(org.monthly_video_quota ?? 3))
+    if (newVideo === null) return
 
     const accQuota = parseInt(newAccounts, 10)
     const msgQuota = parseInt(newMonthly, 10)
+    const vidQuota = parseInt(newVideo, 10)
 
-    if (isNaN(accQuota) || isNaN(msgQuota)) {
+    if (isNaN(accQuota) || isNaN(msgQuota) || isNaN(vidQuota)) {
       alert('Lütfen geçerli sayısal değerler girin.')
       return
     }
@@ -1253,11 +1282,12 @@ export function LiveDashboard() {
           orgId: org.id,
           accountsQuota: accQuota,
           monthlyQuota: msgQuota,
+          videoQuota: vidQuota,
         }),
       })
       const json = await res.json()
       if (json.success) {
-        showNotice(`${org.name} limitleri güncellendi: ${accQuota} Hat, ${msgQuota.toLocaleString('tr-TR')} Mesaj/Ay.`)
+        showNotice(`${org.name} limitleri güncellendi: ${accQuota} Hat · ${msgQuota.toLocaleString('tr-TR')} Mesaj/Ay · ${vidQuota} Video/Ay.`)
         fetchData()
       } else {
         alert('Hata: ' + (json.error || 'İşlem başarısız'))
@@ -2131,6 +2161,10 @@ export function LiveDashboard() {
                           <div className="bg-surface/70 border border-[var(--color-hairline)] rounded p-2">
                             <span className="block text-[10px] text-ink-muted font-semibold uppercase">Aylık Mesaj Limiti</span>
                             <span className="font-bold text-ink">{Number(o.monthly_message_quota || 0).toLocaleString('tr-TR')}</span>
+                          </div>
+                          <div className="bg-surface/70 border border-[var(--color-hairline)] rounded p-2">
+                            <span className="block text-[10px] text-ink-muted font-semibold uppercase">🎬 Aylık Video Kotası</span>
+                            <span className="font-bold text-ink">{o.monthly_video_quota ?? 3} Video/Ay</span>
                           </div>
                           <div className="bg-surface/70 border border-[var(--color-hairline)] rounded p-2">
                             <span className="block text-[10px] text-ink-muted font-semibold uppercase">Kayıtlı Kişi</span>
