@@ -194,7 +194,7 @@ export async function processCreativeGeneration(
         .eq('id', creative.org_id)
         .maybeSingle()
 
-      const videoQuota = orgQuotaData?.monthly_video_quota ?? 5
+      const videoQuota = orgQuotaData?.monthly_video_quota ?? 3
 
       const startOfMonth = new Date()
       startOfMonth.setDate(1)

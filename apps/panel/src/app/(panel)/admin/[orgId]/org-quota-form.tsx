@@ -51,7 +51,7 @@ export function OrgQuotaForm({
         <Input name="monthly_message_quota" type="number" min={0} defaultValue={monthlyQuota} />
       </Field>
       <Field label="Aylık video üretim kotası (Adet)">
-        <Input name="monthly_video_quota" type="number" min={0} defaultValue={monthlyVideoQuota ?? 5} />
+        <Input name="monthly_video_quota" type="number" min={0} defaultValue={monthlyVideoQuota ?? 3} />
       </Field>
       {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
       {state?.ok ? <Notice tone="accent">{state.ok}</Notice> : null}

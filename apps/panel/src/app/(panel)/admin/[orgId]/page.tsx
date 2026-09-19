@@ -209,7 +209,7 @@ export default async function AdminOrgPage({
         <Card>
           <CardHeader
             title="Paket / kota"
-            subtitle={`${org.accounts_quota} hat · ${org.monthly_message_quota} msg/ay · ${detail.counts?.video_month_used ?? 0}/${org.monthly_video_quota ?? 5} video/ay`}
+            subtitle={`${org.accounts_quota} hat · ${org.monthly_message_quota} msg/ay · ${detail.counts?.video_month_used ?? 0}/${org.monthly_video_quota ?? 3} video/ay`}
           />
           <div className="p-3.5">
             <OrgQuotaForm
@@ -217,7 +217,7 @@ export default async function AdminOrgPage({
               plan={org.plan}
               accountsQuota={org.accounts_quota}
               monthlyQuota={org.monthly_message_quota}
-              monthlyVideoQuota={org.monthly_video_quota ?? 5}
+              monthlyVideoQuota={org.monthly_video_quota ?? 3}
             />
           </div>
         </Card>
