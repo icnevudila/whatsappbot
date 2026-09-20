@@ -36,6 +36,15 @@ const VARIATION_ICONS: Record<(typeof VARIATION_PRESETS)[number]['id'], IconName
   layout: 'overview',
 }
 
+export function getSafeMediaUrl(url: string | null | undefined): string | undefined {
+  if (!url) return undefined
+  if (url.startsWith('http://167.233.201.31:3456/outputs/')) {
+    const fileName = url.split('/').pop()
+    return `/api/canli-takip/media-proxy?file=${encodeURIComponent(fileName || '')}`
+  }
+  return url
+}
+
 export type DetailCreative = {
   id: string
   title: string | null
@@ -459,8 +468,8 @@ export function CreativeDetail({
           {isVideo ? (
             <div className="overflow-hidden rounded-[var(--radius-card)] border border-hairline bg-black shadow-lg">
               <video
-                src={creative.publicUrl}
-                poster={creative.thumbnailUrl || undefined}
+                src={getSafeMediaUrl(creative.publicUrl)}
+                poster={getSafeMediaUrl(creative.thumbnailUrl)}
                 controls
                 playsInline
                 className="max-h-[640px] w-full object-contain"

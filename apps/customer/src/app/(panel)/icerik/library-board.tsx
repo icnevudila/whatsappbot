@@ -11,6 +11,7 @@ import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { CreativeGenerating } from '@/components/creative-generating'
 import { deleteCreative, listLibraryCreatives } from './actions'
 import { LIBRARY_PAGE_SIZE, type LibraryCreativeRow } from './library-shared'
+import { getSafeMediaUrl } from './detail-view'
 
 export type LibraryItem = LibraryCreativeRow
 
@@ -285,13 +286,13 @@ function LibraryCard({
                 {item.thumbnailUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={item.thumbnailUrl}
+                    src={getSafeMediaUrl(item.thumbnailUrl)}
                     alt={item.title || 'Kampanya videosu'}
                     className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                   />
                 ) : (
                   <video
-                    src={`${item.publicUrl}#t=0.5`}
+                    src={`${getSafeMediaUrl(item.publicUrl)}#t=0.5`}
                     preload="metadata"
                     muted
                     playsInline
@@ -310,7 +311,7 @@ function LibraryCard({
               </div>
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={item.publicUrl ?? undefined} alt="" className="aspect-[4/5] w-full bg-canvas object-cover" />
+              <img src={getSafeMediaUrl(item.publicUrl) ?? undefined} alt="" className="aspect-[4/5] w-full bg-canvas object-cover" />
             )
           ) : (
             <GeneratingFrame status={failed ? 'failed' : item.status} error={renderError ?? item.error} />
