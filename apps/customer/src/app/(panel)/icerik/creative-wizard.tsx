@@ -131,7 +131,7 @@ function defaultDraft(data: WizardBootstrap, initialFormat?: string): Draft {
     phoneIds: [],
     socialIds: [],
     labels: [],
-    cta: '',
+    cta: isVideo ? 'Bizimle İletişime Geçin' : '',
     address: '',
     website: data.org.websiteHint ?? '',
     dateRange: '',
@@ -472,12 +472,12 @@ export function CreativeWizard({
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {[
-                    'Sipariş Ver',
-                    'Teklif Al',
-                    'Bilgi Alın',
+                    'Bizimle İletişime Geçin',
+                    'Fiyat Teklifi Alın',
+                    'Detaylı Bilgi Alın',
                     'Hemen Keşfet',
-                    'Randevu Al',
-                    'Özel Fiyatlar',
+                    'Randevu Alın',
+                    'Sipariş Verin',
                   ].map((ctaItem) => (
                     <button
                       key={ctaItem}
@@ -688,6 +688,25 @@ export function CreativeWizard({
                       </div>
                     </Field>
                   )}
+                  {isVideo ? (
+                    <Field
+                      label="Kampanya veya İskonto Vurgusu (İsteğe Bağlı)"
+                      hint="Bu bilgi reklam spikeri tarafından videoda seslendirilir ve CapCut altyazısında vurgulanır."
+                    >
+                      <Input
+                        value={extra.promo}
+                        onChange={(event) =>
+                          patch({
+                            productExtras: {
+                              ...draft.productExtras,
+                              [product.id]: { ...extra, promo: event.target.value },
+                            },
+                          })
+                        }
+                        placeholder="Örn: Bu aya özel toptan alımlarda özel iskonto veya avantajlı fiyat"
+                      />
+                    </Field>
+                  ) : null}
                   {!isVideo ? (
                     <>
                       <div className="grid gap-2 sm:grid-cols-2">

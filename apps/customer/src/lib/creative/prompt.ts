@@ -303,26 +303,34 @@ export function buildVideoPrompt(snapshot: CreativeSnapshot): {
   let rawBrief = (snapshot.brief || '').replace(/[\r\n]+/g, ' ').trim()
   rawBrief = rawBrief.replace(/[\.\s]+$/, '').trim()
 
+  const promoEmphasis = (mainProduct?.promo || snapshot.customText || '').replace(/[\r\n]+/g, ' ').replace(/[\.\s]+$/, '').trim()
+  const customCta = (snapshot.cta || '').replace(/[\r\n]+/g, ' ').replace(/[\.\s]+$/, '').trim()
+  const ctaClosing = customCta
+    ? (customCta.toLowerCase().includes('geçin') || customCta.toLowerCase().includes('alın') || customCta.toLowerCase().includes('verin')
+        ? `${customCta}.`
+        : `${customCta} için hemen bizimle iletişime geçin.`)
+    : 'Fiyat teklifi ve detaylı bilgi için hemen bizimle iletişime geçin.'
+
   let voiceLine = ''
   if (rawBrief) {
     const briefLower = rawBrief.toLowerCase()
     const hasCTA =
-      briefLower.includes('whatsapp') ||
-      briefLower.includes('sipariş') ||
-      briefLower.includes('teklif') ||
       briefLower.includes('iletişim') ||
       briefLower.includes('ulaşın') ||
       briefLower.includes('yazın') ||
       briefLower.includes('arayın') ||
-      briefLower.includes('bağlanın')
+      briefLower.includes('bağlanın') ||
+      briefLower.includes('geçin')
 
-    if (hasCTA) {
+    if (promoEmphasis && !briefLower.includes(promoEmphasis.toLowerCase())) {
+      voiceLine = `${rawBrief}. ${promoEmphasis}. ${hasCTA ? '' : ctaClosing}`.replace(/\s+/g, ' ').trim()
+    } else if (hasCTA) {
       voiceLine = `${rawBrief}.`
     } else {
-      voiceLine = `${rawBrief}. Detaylı bilgi ve sipariş için hemen WhatsApp ile iletişime geçin.`
+      voiceLine = `${rawBrief}. ${ctaClosing}`
     }
   } else {
-    voiceLine = `${brandName ? `${brandName} ile ` : ''}${productName ? `${productName} ` : ''}kalitesi kapınızda. Hızlı sipariş ve bilgi için hemen WhatsApp ile iletişime geçin.`
+    voiceLine = `${brandName ? `${brandName} ` : ''}${productName ? `${productName} kalitesi ` : ''}şimdi projenizde. ${promoEmphasis ? `${promoEmphasis}. ` : ''}${ctaClosing}`.replace(/\s+/g, ' ').trim()
   }
   const voiceSection = isSpeechEnabled
     ? `SESLENDİRME: Kristal netliğinde profesyonel Türkçe erkek reklam spikeri sesi: "${voiceLine}"`
