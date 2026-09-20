@@ -326,40 +326,58 @@ export function buildVideoPrompt(snapshot: CreativeSnapshot): {
       voiceLine = `${rawBrief}. ${promoEmphasis}. ${hasCTA ? '' : ctaClosing}`.replace(/\s+/g, ' ').trim()
     } else if (hasCTA) {
       voiceLine = `${rawBrief}.`
-    } else {
       voiceLine = `${rawBrief}. ${ctaClosing}`
     }
   } else {
     voiceLine = `${brandName ? `${brandName} ` : ''}${productName ? `${productName} kalitesi ` : ''}şimdi projenizde. ${promoEmphasis ? `${promoEmphasis}. ` : ''}${ctaClosing}`.replace(/\s+/g, ' ').trim()
   }
+
+  // v4 Seslendirme Kuralı: 8 saniyelik klip için en fazla 18 kelime, ideal 10-14 kelime
+  const voiceWords = voiceLine.split(/\s+/).filter(Boolean)
+  if (voiceWords.length > 18) {
+    voiceLine = voiceWords.slice(0, 14).join(' ') + ' için hemen iletişime geçin.'
+  }
   const voiceSection = isSpeechEnabled
-    ? `SESLENDİRME: Kristal netliğinde profesyonel Türkçe erkek reklam spikeri sesi: "${voiceLine}"`
+    ? `SESLENDİRME VE TÜRKÇE REKLAM DIŞ SESİ: Kristal netliğinde profesyonel Türkçe erkek reklam spikeri sesi: ${voiceLine}`
     : `SES DÜZENİ (KONUŞMASIZ & SADECE FON MÜZİĞİ VE SES EFEKTLERİ): Videoda KESİNLİKLE hiçbir insan konuşması, dış ses, seslendirme veya diyalog OLMAYACAKTIR. STRICT RULE: NO VOICE, NO SPEECH, NO SPOKEN WORDS, NO DIALOGUE. Sadece sahneye uygun yüksek kaliteli ortam ses efektleri (foley) ve arka planda modern reklam fon müziği.`
 
   const prompt = [
-    `9:16 dikey formatta üst düzey televizyon ve sinematik sosyal medya reklam filmi (Instagram Reels & WhatsApp Durum).`,
+    `9:16 dikey formatta, 8 saniyelik üst düzey Türk televizyon ve sinema reklam filmi (Instagram Reels & WhatsApp Durum).`,
     brandName ? `Marka: ${brandName}.` : null,
     `Ürün: ${productName}.`,
     productBlocks.length ? `Ürün Kataloğu ve Detayları:\n${productBlocks.join('\n')}` : null,
     campaignContext.length ? `Kampanya Ayrıntıları:\n${campaignContext.join('\n')}` : null,
-    `Çekim Ortamı: ${environment}.`,
+    `Tek Lokasyon ve Çekim Ortamı: ${environment}. Tek mekan devamlılığı, tutarlı ışık kurulumu ve sıfır gereksiz mekan değişimi.`,
     `Görsel Stil ve Işık Atmosferi: ${styleMood} ${toneDesc}`,
-    `Sinematografi ve Kamera: Shot on Arri Alexa Mini LF, Master Prime 100mm macro & 35mm sinema lensleri. 180 derece obtüratör açısı, akıcı gimbal ve slider hareketleri, doğal sığ alan derinliği (f/1.8), zarif sinematik bokeh. 4K HDR fotogerçekçi reklam ajansı renk derecelendirmesi (color grading).`,
-    `SAHNE 1 (0-3sn - MAKRO TANITIM): Kamera aşırı yakın plan makro odakla yaklaşır. ${act1Focus}. Işığın yüzeyde yarattığı yumuşak yansımalar ve birinci sınıf işçilik ön plandadır.`,
-    `SAHNE 2 (3-7sn - DİNAMİK KULLANIM & İŞLEV): Kamera akıcı bir gimbal kaymasıyla sahneye genişler. ${act2Action}. 120fps ağır çekim ile ürünün performansı ve gerçek hayat ortamındaki güvenilirliği sergilenir.`,
-    `SAHNE 3 (7-10sn - KAHRAMAN FİNAL REVEAL): Kamera geriye ve hafif yukarı doğru yükselerek kahraman (hero) planına geçer. ${act3Climax}. İlham verici altın saat ışığı, sıcak kontrastlar, üstün kalite hissi.`,
+    `Sinematografi ve Kamera: Shot on Arri Alexa Mini LF, Master Prime 100mm macro & 35mm sinema lensleri. 180 derece obtüratör açısı, tek akıcı kamera hareketi, doğal sığ alan derinliği (f/1.8), zarif sinematik bokeh. 4K HDR fotogerçekçi reklam ajansı renk derecelendirmesi (color grading).`,
+    `SAHNE 1 (0.0s - 2.2s - GÖRSEL KANCA & MAKRO DETAY): Kamera aşırı yakın plan makro odakla yaklaşır. ${act1Focus}. Işığın yüzeyde yarattığı yumuşak yansımalar ve birinci sınıf işçilik ön plandadır.`,
+    `SAHNE 2 (2.2s - 5.8s - DİNAMİK KULLANIM & İŞLEV KANITI): Kamera akıcı bir gimbal kaymasıyla sahneye genişler. ${act2Action}. Ürünün gerçek hayat ortamındaki güvenilir performansı ve pratik faydası sergilenir.`,
+    `SAHNE 3 (5.8s - 8.0s - ODAK KAHRAMAN FİNALİ): Kamera geriye ve hafif yukarı doğru yükselerek kahraman (hero) kadrajına geçer. ${act3Climax}. İlham verici aydınlık ışık, sıcak kontrastlar, üstün kalite hissi.`,
     voiceSection,
-    `ÖNEMLİ VE KESİN KURAL 1 (SIFIR METİN & CANLI ÇEKİM): Videoda KESİNLİKLE hiçbir yazı, metin, altyazı, logo kartı, bilgi kutusu veya grafik overlay OLMAYACAKTIR. Ekranda sadece %100 saf, temiz ve sinematik canlı çekim video görüntüsü olacaktır. Tam ekran temiz sinema karesi. STRICT RULE: NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO SUBTITLES, NO CAPTIONS, NO ON-SCREEN TEXT, NO LOGO CARDS, NO GRAPHIC OVERLAYS, NO BANNERS, NO LOWER THIRDS. Pure clean cinematic live-action commercial footage only.`,
+    `ÖNEMLİ VE KESİN KURAL 1 (SIFIR METİN & POST-PRODÜKSİYON AYRIMI): Videonun ham çekiminde KESİNLİKLE hiçbir yazı, metin, altyazı, logo kartı, bilgi kutusu veya grafik overlay OLMAYACAKTIR. Ekranda sadece %100 saf, temiz ve sinematik canlı çekim video görüntüsü olacaktır. Tüm fiyat, kampanya, telefon ve altyazılar post-prodüksiyon aşamasında eklenecektir. STRICT RULE: NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO SUBTITLES, NO CAPTIONS, NO ON-SCREEN TEXT, NO LOGO CARDS, NO GRAPHIC OVERLAYS, NO BANNERS, NO LOWER THIRDS. Pure clean cinematic live-action commercial footage only.`,
     `ÖNEMLİ VE KESİN KURAL 2 (MARKA VE ÜRÜN DOKUNULMAZLIĞI): Marka logosu, amblemi, renkleri ve gerçek ürün tasarımı üzerinde KESİNLİKLE hiçbir oynama, değişiklik, deformasyon veya varyasyon YAPILMAYACAKTIR. Ürünün gerçek fiziksel kasası, formu, renkleri ve amblemi %100 birebir korunacaktır. Hayali veya dönüştürülmüş ürün varyasyonları kesinlikle üretilmeyecektir. STRICT MANDATE: ZERO ALTERATION TO BRAND LOGO OR PRODUCT IDENTITY. PRESERVE ORIGINAL EMBLEM, COLORS, AND PHYSICAL PRODUCT FORM EXACTLY. NO PRODUCT MORPHING, NO LOGO REINVENTION.`,
   ]
     .filter(Boolean)
     .join('\n')
 
   const negative = [
-    'text, words, letters, typography, watermark, logo overlay, graphic box, lower third, subtitles, captions, banner, card',
-    'cartoon, 3D animation look, cgi render, uncanny valley, deformed hands, distorted geometry',
-    'distorted logo, modified logo, altered logo, logo variations, redesigned logo, wrong brand colors',
-    'morphed product, deformed product, altered product design, fantasy product variations, generic product replacement',
+    'duplicate subject',
+    'duplicate product',
+    'altered product geometry',
+    'incorrect product color',
+    'warped packaging',
+    'warped logo',
+    'gibberish typography',
+    'floating graphics',
+    'holographic interface',
+    'unmotivated location change',
+    'identity drift',
+    'extra fingers',
+    'deformed hands',
+    'unsafe product use',
+    'watermark',
+    'text, words, letters, typography, logo overlay, graphic box, lower third, subtitles, captions, banner, card',
+    'cartoon, 3D animation look, cgi render, uncanny valley',
     'blurry artifacts, low quality, pixelated, amateur video, jump cuts, jerky camera',
   ].join(', ')
 

@@ -410,7 +410,7 @@ async function buildTurkishVeoDirectorPrompt(options = {}) {
   const primaryColorDesc = convertHexToTurkishColor(colors.primary);
   const accentColorDesc = convertHexToTurkishColor(colors.accent);
 
-  return `9:16 dikey formatta (Instagram Reels & WhatsApp Durum), 10 saniyelik üst düzey Türk televizyon ve sinema reklam filmi.
+  return `9:16 dikey formatta (Instagram Reels & WhatsApp Durum), 8 saniyelik üst düzey Türk televizyon ve sinema reklam filmi.
 
 KURUMSAL MARKA VE KAMPANYA VERİLERİ:
 - Marka / Firma Adı: "${brand}" (ZORUNLU: Sahnenin her aşamasında ve finalde açıkça yer alacaktır)
@@ -423,20 +423,20 @@ KURUMSAL MARKA VE KAMPANYA VERİLERİ:
   * Kamera Tekniği: ${angle.cameraStyle}
   * Işık & Doku: ${angle.lighting}
 
-VEO VİDEO MOTORU İÇİN KESİN SİNEMATİK DİREKTİF (FİZİKSEL YÜZEY MODELLEMESİ):
-1. FİZİKSEL YÜZEYE SABİTLEME KURALI (SIFIR METİN ÇORBASI):
+VEO VİDEO MOTORU İÇİN KESİN SİNEMATİK DİREKTİF (VEO v4 STANDARDI):
+1. TEK LOKASYON & DEVAMLILIK KURALI (SIFIR MEKAN SIÇRAMASI):
+   - Tüm video tek bir lokasyonda, aynı ışık kurulumu ve aynı sahne atmosferinde çekilir. Üç perde aynı ortamın üç tamamlayıcı kadrajıdır.
+   - Sektörün gerçek hayat dinamikleri %100 korunmalıdır. Nesneler yerçekimine, sahne ışığına ve mimari perspektife tam uyumlu olmalıdır.
+
+2. FİZİKSEL YÜZEYE SABİTLEME & SIFIR YAZI HALÜSİNASYONU:
    - Havada boşlukta uçuşan soyut 3D harfler, havada asılı cümleler veya sonradan yapıştırılmış grafik bantları KESİNLİKLE YASAKTIR.
    - Sahnedeki tek yazılar ve logo, doğrudan sahne içindeki KATI FİZİKSEL NESNELERİN DOKUSUNA (metal tabela, ahşap yönlendirme panosu, bina dış cephesi, resepsiyon camı, araç kapısı, ürün ambalajı veya iş önlüğü) basılmış, monte edilmiş veya kazınmış olacaktır.
    - Tipografi: En fazla 2-3 kelime, kalın ve net büyük harflerle yazılı, yüksek kontrastlı sans-serif endüstriyel tabela formatı (örn: "${cleanBrand}", "B2B ÇÖZÜMLERİ", "FABRİKADAN DOĞRUDAN").
 
-2. GERÇEK DÜNYA FİZİĞİ & ANTİ-ÜTOPİK MANTIK:
-   - Sektörün gerçek hayat dinamikleri %100 korunmalıdır. Nesneler yerçekimine, sahne ışığına ve mimari perspektife tam uyumlu olmalıdır.
-   - Bilim kurgu, uçan soyut objeler veya mantıksız elementler KESİNLİKLE sahnelenmeyecektir.
-
-3. 3 PERDELİ SİNEMATİK AKIŞ:
-   - ACT 1 (0-3s) - Kanca & Kalite Detayı: ${sectorProfile.sampleFocus}. Makro yakın plan, yüzey dokusu ve malzeme kalitesi.
-   - ACT 2 (3-7s) - Gerçek Kullanım & Çözüm: Ürünün veya hizmetin gerçek çalışma performansı, insan etkileşimi ve sağladığı net fayda.
-   - ACT 3 (7-10s) - Kahraman Finali: Güven veren kurumsal duruş, memnun müşteri ve sahnedeki fiziksel tabela/logo ile prestijli kapanış.
+3. 3 KADRAJLI SİNEMATİK AKIŞ (8 SANİYE VEO 3.1 FLOW STANDARDI):
+   - ACT 1 (0.0s - 2.2s) - Görsel Kanca & Makro Kalite: ${sectorProfile.sampleFocus}. Makro yakın plan, yüzey dokusu ve malzeme kalitesi.
+   - ACT 2 (2.2s - 5.8s) - Eylem & Kanıt: Ürünün veya hizmetin gerçek çalışma performansı, insan etkileşimi ve sağladığı net fayda.
+   - ACT 3 (5.8s - 8.0s) - Odak Kahraman Kapanışı: Güven veren kurumsal duruş, memnun müşteri ve sahnedeki fiziksel tabela/logo ile prestijli kapanış.
 
 4. FİZİKSEL MARKA VE TABELA YERLEŞİMİ:${sectorProfile.brandingPlacements}
 

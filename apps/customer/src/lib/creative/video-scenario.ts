@@ -1,5 +1,5 @@
-import { completeText } from '@/lib/ai/text'
-import type { AiKeyBag } from '@/lib/ai/config'
+import { completeText } from '../ai/text'
+import type { AiKeyBag } from '../ai/config'
 
 export interface VideoScenarioOption {
   id: string
@@ -48,15 +48,16 @@ Her senaryo şu 2 seviyeden oluşmalıdır:
 1. "summary": Kullanıcı dostu, sade Türkçe ile yazılmış 1-2 cümlelik kısa özet. Kullanıcı bu özeti okuduğunda videoda ne olacağını (kim var, ne yapıyor, ne söylüyor) saniyesinde anlar.
 2. "fullPrompt": Google Veo yapay zeka video motoruna iletilecek ultra detaylı 9:16 dikey sinematik çekim direktifi (İngilizce + Türkçe diyalog/dış ses).
 
-ÇOK ÖNEMLİ KURALLAR:
+ÇOK ÖNEMLİ KURALLAR (VEO v4 STANDARDI):
 - Format: 9:16 Dikey (Instagram Reels, TikTok, WhatsApp Durum formatı).
-- Süre: 10 saniye (3 Perde: 0-3s Giriş/Kanca, 3-7s Eylem/Mesaj, 7-10s Kapanış/Aksiyon Çağrısı).
+- Süre: 8 saniye (3 Perde: ACT 1: 0-2.2s Görsel Kanca, ACT 2: 2.2-5.8s Ürün/Hizmet Eylemi & Kanıt, ACT 3: 5.8-8s Odak Kapanış).
+- Tek Lokasyon Devamlılığı: Üç perde aynı lokasyonun üç tamamlayıcı kadrajı olmalıdır. Mekan sıçraması kesinlikle yasaktır.
 - Dış Ses / Konuşma Durumu: ${
     isSpeech
-      ? 'Dış ses veya oyuncu konuşması VARDIR. Oyuncunun Türkçe konuşma repliği veya dış ses tam metin olarak senaryoya yazılmalıdır.'
-      : 'Konuşma ve insan sesi YOKTUR. Sadece foley doğal ses efektleri ve dinamik fon müziği vardır.'
+      ? 'Dış ses veya oyuncu konuşması VARDIR. En fazla 18, ideal olarak 10-14 Türkçe kelimeden oluşan doğal, akıcı ve devrik olmayan tam Türkçe replik yazılmalıdır. Tırnak işareti kullanılmaz.'
+      : 'Konuşma ve insan sesi YOKTUR. Sadece foley doğal ses efektleri ve dinamik fon müziği vardır. STRICT RULE: NO VOICE, NO SPEECH.'
   }
-- EKRANDA YAZI YASAKTIR: Videonun ham çekiminde kesinlikle ekranda hiçbir banner, altyazı, yazı, tipografi, logo kartı OLMAYACAKTIR. 'STRICT RULE: NO ON-SCREEN TEXT, NO WORDS, NO LETTERS, NO LOGO CARDS' kuralı promptun sonuna eklenmelidir.
+- EKRANDA YAZI YASAKTIR (Post-prodüksiyon Ayrımı): Videonun ham çekiminde kesinlikle ekranda hiçbir banner, altyazı, yazı, tipografi, logo kartı OLMAYACAKTIR. 'STRICT RULE: NO ON-SCREEN TEXT, NO WORDS, NO LETTERS, NO LOGO CARDS' kuralı promptun sonuna eklenmelidir.
 - Yanıtı YALNIZCA geçerli bir JSON dizisi olarak dön. Başka hiçbir açıklama, selamlama veya markdown tırnağı yazma.
 
 JSON ŞEMASI:
