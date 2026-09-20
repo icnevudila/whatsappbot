@@ -8,14 +8,12 @@ import type {
 
 /**
  * Derives a punchy 2-4 word hook headline from verified benefit, problem, or offer.
- * Rule: NEVER default to just "MARKA + ÜRÜN".
+ * Rule: NEVER default to just "MARKA + ÜRÜN", and NEVER invent unverified hype claims (kusursuz, özel reçeteli, anlık).
  */
 export function deriveHookHeadline(
   facts: FactNormalizerOutput,
   ontology: OntologyClassification,
 ): string {
-  const brand = facts.verifiedFacts.brandName
-  const subject = facts.verifiedFacts.offerName || 'FIRSAT'
   const discount = facts.verifiedFacts.discount
   const benefits = facts.verifiedFacts.benefits
   const features = facts.verifiedFacts.features
@@ -25,24 +23,29 @@ export function deriveHookHeadline(
   if (discount) {
     if (discount.includes('%')) {
       const match = discount.match(/%\s*\d+|\d+\s*%/)?.[0] || discount
-      return `${match} TOPTAN AVANTAJI`.toUpperCase()
+      return `${match} TOPTAN İSKONTO`.toLocaleUpperCase('tr-TR')
     }
-    const words = discount.trim().split(/\s+/).slice(0, 3).join(' ')
-    return words.toUpperCase()
+    const words = discount.trim().split(/\s+/).filter(Boolean)
+    if (words.length >= 2 && words.length <= 4) {
+      return discount.toLocaleUpperCase('tr-TR')
+    }
+    return 'AVANTAJLI FİYAT TEKLİFİ'
   }
 
-  // 2. Derive from verified benefits / features
+  // 2. Derive from verified benefits / features without slicing mid-clause
   if (benefits.length > 0) {
-    const candidate = benefits[0].replace(/[.,]/g, '').trim().split(/\s+/)
-    if (candidate.length >= 2) {
-      return candidate.slice(0, 3).join(' ').toUpperCase()
+    const firstClause = benefits[0].split(/[,.;]/)[0].trim()
+    const words = firstClause.split(/\s+/).filter(Boolean)
+    if (words.length >= 2 && words.length <= 4) {
+      return firstClause.toLocaleUpperCase('tr-TR')
     }
   }
 
   if (features.length > 0) {
-    const candidate = features[0].replace(/[.,]/g, '').trim().split(/\s+/)
-    if (candidate.length >= 2) {
-      return candidate.slice(0, 3).join(' ').toUpperCase()
+    const firstClause = features[0].split(/[,.;]/)[0].trim()
+    const words = firstClause.split(/\s+/).filter(Boolean)
+    if (words.length >= 2 && words.length <= 4) {
+      return firstClause.toLocaleUpperCase('tr-TR')
     }
   }
 
@@ -57,20 +60,23 @@ export function deriveHookHeadline(
     return 'CANLI İŞLETME İSTİHBARATI'
   }
 
-  // 4. Derive from primary value & ontology (strictly 2-4 words, never MARKA + URUN)
-  if (ontology.primaryValue === 'reduces_effort') return 'ZAHMETSİZ HIZLI KULLANIM'
-  if (ontology.primaryValue === 'speed') return 'HIZLI KESİNTİSİZ ÇÖZÜM'
-  if (ontology.primaryValue === 'price_or_value') return 'ÖZEL FİYAT AVANTAJI'
-  if (ontology.primaryValue === 'sensory_appeal') return 'ÖZEL REÇETELİ LEZZET'
-  if (ontology.primaryValue === 'reliability') return 'DAYANIKLI KUSURSUZ YAPI'
-  if (ontology.primaryValue === 'access_or_discovery') return 'ANLIK DOĞRU VERİ'
-  if (ontology.offerType === 'food_or_consumable') return 'USTALIKLA HAZIRLANAN LEZZET'
-  if (ontology.offerType === 'digital_product_or_saas') return 'AKILLI DİJİTAL ANALİTİK'
-  if (ontology.offerType === 'property_or_high_consideration_offer') return 'AYRICALIKLI YAŞAM ALANI'
-  if (ontology.riskClass === 'regulated_health') return 'UZMAN HEKİM KONTROLÜNDE'
+  // 4. Derive from primary value & ontology (strictly 2-4 words, ZERO unverified claims like kusursuz/özel reçeteli/anlık)
+  if (ontology.primaryValue === 'reduces_effort') return 'KOLAY VE PRATİK KULLANIM'
+  if (ontology.primaryValue === 'speed') return 'HIZLI VE ETKİN ÇÖZÜM'
+  if (ontology.primaryValue === 'price_or_value') return 'AVANTAJLI FİYAT TEKLİFİ'
+  if (ontology.primaryValue === 'sensory_appeal') return 'ÖZENLE HAZIRLANAN MENÜ'
+  if (ontology.primaryValue === 'reliability') return 'PROJENİZE UYGUN ÇÖZÜM'
+  if (ontology.primaryValue === 'access_or_discovery') return 'DİJİTAL VERİ PLATFORMU'
+  if (ontology.offerType === 'food_or_consumable') return 'MENÜMÜZÜ KEŞFEDİN'
+  if (ontology.offerType === 'digital_product_or_saas') return 'DİJİTAL İŞ SÜREÇLERİ'
+  if (ontology.offerType === 'property_or_high_consideration_offer') return 'YENİ PROJEYİ KEŞFEDİN'
+  if (ontology.riskClass === 'regulated_health') return 'HEKİM KONTROLÜNDE RANDEVU'
+  if (ontology.offerType === 'professional_service' || ontology.riskClass === 'legal_or_professional_claim') {
+    return 'UZMAN DANIŞMANLIK HİZMETİ'
+  }
 
   // Universal fallback: 2-3 words action headline
-  return 'PROJENİZ İÇİN HAZIR'
+  return 'PROJENİZ İÇİN ÇÖZÜM'
 }
 
 /**
@@ -105,7 +111,7 @@ export function compileOverlay(
       from: 2.4,
       to: 5.6,
       type: 'offer',
-      text: offerText.slice(0, 40),
+      text: offerText,
       placement: 'center_safe_area',
     })
   }
@@ -165,6 +171,7 @@ export function compileOverlay(
       enabled: true,
       mode: 'synchronized_voiceover',
       safeArea: '9:16',
+      sourceText: voiceover.text,
     },
     brandWatermarkOrLogoPlacement: {
       enabled: facts.assets.logoReference,

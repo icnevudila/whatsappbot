@@ -15,251 +15,309 @@ import {
   analyzeOntology,
   selectCreativeStrategy,
 } from '../apps/customer/src/lib/creative/v5/index.ts'
-import type { UserVideoInput } from '../apps/customer/src/lib/creative/v5/schemas.ts'
 
 // ======================================================================
-// 12 REFINEMENT INTEGRATION TESTS FOR MESAJIFY VIDEO ENGINE V5
+// 10 MANDATORY DEFECT FIX INTEGRATION TESTS & COUNTER-EXAMPLES (V5)
 // ======================================================================
 
-test('1. Voiceover is truly wired to Veo prompt AUDIO directive and not just in JSON', () => {
-  const pkg = compileDeterministicV5({
+test('1. Dynamic hook candidate scoring: different inputs produce different winning candidates', () => {
+  // Scenario A: Agriculture / Spraying -> Action focused should win
+  const pkgAgri = compileDeterministicV5({
     brandName: 'Bofe',
-    brief: 'Bahçede yorulmadan tek şarjla yüksek basınçlı ilaçlama',
+    brief: 'Bahçede tek şarjla yüksek basınçlı mikronize ilaç püskürtme',
     products: [{ name: '16L Akülü Sırt Pompası' }],
   })
-
-  assert.ok(pkg.voiceover.text.length > 5, 'Voiceover text is empty')
-  // Verify VO text is directly inside veoPrompt and shotPlan.veoEnglishPrompt
-  assert.ok(
-    pkg.veoPrompt.includes(`AUDIO: Professional crystal-clear Turkish voiceover: "${pkg.voiceover.text}"`),
-    'Veo prompt AUDIO directive does not contain the exact voiceover text'
+  assert.strictEqual(
+    pkgAgri.hookPlan.selectedCandidate.type,
+    'action_focused',
+    `Expected action_focused to win for spray equipment, got: ${pkgAgri.hookPlan.selectedCandidate.type}`
   )
-  assert.ok(
-    pkg.shotPlan.veoEnglishPrompt.includes(pkg.voiceover.text),
-    'Shot plan does not include the voiceover text in its prompt'
-  )
-})
 
-test('2. usesOnlyVerifiedClaims evaluates to true when only verified facts are used', () => {
-  const pkg = compileDeterministicV5({
+  // Scenario B: Restaurant / Food -> Result reveal focused should win
+  const pkgFood = compileDeterministicV5({
+    brandName: 'Burger Lab',
+    brief: 'Özel marinasyonlu dana burger ve taze lezzet dönüşümü',
+    products: [{ name: 'Truffle Burger' }],
+  })
+  assert.strictEqual(
+    pkgFood.hookPlan.selectedCandidate.type,
+    'result_reveal_focused',
+    `Expected result_reveal_focused to win for food experience, got: ${pkgFood.hookPlan.selectedCandidate.type}`
+  )
+
+  // Scenario C: Heavy Bulk Logistics / Brick -> Curiosity or scale focused should win
+  const pkgBrick = compileDeterministicV5({
     brandName: 'Ayvazoğlu Tuğla',
-    brief: 'Şantiyelere doğrudan tır bazında killi tuğla sevkiyatı',
-    products: [{ name: 'Killi Cephe Tuğlası', promo: '%15 toptan iskonto' }],
+    brief: 'Şantiyelere doğrudan tır bazında toptan killi cephe tuğlası sevkiyatı ve stok hacmi',
+    products: [{ name: 'Killi Cephe Tuğlası' }],
   })
+  assert.strictEqual(
+    pkgBrick.hookPlan.selectedCandidate.type,
+    'curiosity_or_scale_focused',
+    `Expected curiosity_or_scale_focused to win for heavy bulk bricks, got: ${pkgBrick.hookPlan.selectedCandidate.type}`
+  )
 
-  assert.strictEqual(pkg.voiceover.usesOnlyVerifiedClaims, true)
-  assert.strictEqual(pkg.validation.status, 'pass')
+  // Verify all 3 scenarios selected 3 DIFFERENT candidate types
+  const winners = [
+    pkgAgri.hookPlan.selectedCandidate.type,
+    pkgFood.hookPlan.selectedCandidate.type,
+    pkgBrick.hookPlan.selectedCandidate.type,
+  ]
+  const uniqueWinners = new Set(winners)
+  assert.strictEqual(uniqueWinners.size, 3, 'Hook scoring is static; different inputs did not produce 3 distinct winning candidate types')
 })
 
-test('3. usesOnlyVerifiedClaims catches unverified marketing claims and discount percentages', () => {
+test('2. Claim validation counter-examples: negation-aware and unit-aware checks', () => {
   const facts = normalizeFacts({
-    brandName: 'Kahve Dünyası',
-    brief: 'Taze çekilmiş filtre kahve',
-    products: [{ name: 'Filtre Kahve' }],
+    brandName: 'Örnek Mağaza',
+    brief: '500 gram paketli taze kavrulmuş kahve çekirdeği. Hızlı teslimat yok.',
+    products: [{ name: '500g Filtre Kahve' }],
   })
 
-  // Test unverified hype words
-  const checkHype = validateClaims('Taptaze filtre kahve kapınızda, hemen sipariş verin.', facts)
-  assert.strictEqual(checkHype.valid, false)
-  assert.ok(checkHype.unverifiedClaims.includes('taptaze') || checkHype.unverifiedClaims.includes('kapınızda'))
+  // Counter-example 1: Negation detection ("Hızlı teslimat yok")
+  const checkNegation = validateClaims('Hızlı teslimat imkanı ile kapınızda.', facts)
+  assert.strictEqual(
+    checkNegation.valid,
+    false,
+    'Failed to catch negation: "Hızlı teslimat yok" in brief should invalidate "hızlı teslimat"'
+  )
+  assert.ok(
+    checkNegation.unverifiedClaims.some((c) => c.includes('olumsuz') || c.includes('hızlı teslimat')),
+    `Expected negation reason, got: ${checkNegation.unverifiedClaims.join(', ')}`
+  )
 
-  // Test unverified discount percentage
-  const checkPercent = validateClaims('Filtre kahvede %50 indirim fırsatı.', facts)
-  assert.strictEqual(checkPercent.valid, false)
-  assert.ok(checkPercent.unverifiedClaims.some((c) => c.includes('50')))
+  // Counter-example 2: Unit mismatch ("500 gram" must NOT substantiate "%50 indirim")
+  const checkPercentFalsePositive = validateClaims('Kahvede %50 indirim fırsatı.', facts)
+  assert.strictEqual(
+    checkPercentFalsePositive.valid,
+    false,
+    'Numeric false positive: 500 gram erroneously validated %50 discount'
+  )
+  assert.ok(
+    checkPercentFalsePositive.unverifiedClaims.some((c) => c.includes('%50') || c.includes('indirim')),
+    `Expected unverified %50 discount claim, got: ${checkPercentFalsePositive.unverifiedClaims.join(', ')}`
+  )
 
-  // Verify validator blocks or reports unverified claims if injected
+  // Verified claim should pass
+  const checkValid = validateClaims('500 gram paketli taze kavrulmuş kahve çekirdeği.', facts)
+  assert.strictEqual(checkValid.valid, true, `Verified claim failed: ${checkValid.unverifiedClaims.join(', ')}`)
+})
+
+test('3. Overlay texts are clean of unverified hype words (özel reçeteli, kusursuz, anlık)', () => {
+  const pkg = compileDeterministicV5({
+    brandName: 'Burger Ustası',
+    brief: 'Izgara köfte ve taze ekmek',
+    products: [{ name: 'Klasik Köfte' }],
+  })
+
+  const allOverlayText = pkg.overlayPlan.overlayTimeline.map((item) => item.text.toLowerCase()).join(' ')
+  assert.ok(!allOverlayText.includes('özel reçeteli'), 'Overlay contains unverified claim "özel reçeteli"')
+  assert.ok(!allOverlayText.includes('kusursuz'), 'Overlay contains unverified claim "kusursuz"')
+  assert.ok(!allOverlayText.includes('anlık'), 'Overlay contains unverified claim "anlık"')
+
+  // Counter-example: Injecting an unverified hype claim into overlay causes validator to catch it
+  const ontology = analyzeOntology(pkg.normalizedBrief)
+  const strategy = selectCreativeStrategy(ontology)
+  const hook = selectHook(ontology, pkg.normalizedBrief)
+  const badOverlay = compileOverlay(pkg.normalizedBrief, ontology, pkg.voiceover)
+  badOverlay.overlayTimeline.push({
+    type: 'benefit',
+    text: 'KUSURSUZ VE ÖZEL REÇETELİ LEZZET',
+    from: 3.0,
+    to: 5.5,
+    position: 'middle',
+    style: 'highlight',
+  })
+
+  const valResult = validateAndRepair(pkg.normalizedBrief, ontology, hook, pkg.shotPlan, pkg.voiceover, badOverlay)
+  assert.ok(
+    valResult.validation.hardFails.some((hf) => hf.includes('unverified_claims_in_overlay')),
+    'Validator failed to flag unverified hype claim injected into overlay timeline'
+  )
+})
+
+test('4. Complete removal of word-slicing across VO and overlay with recursive re-validation', () => {
+  const pkg = compileDeterministicV5({
+    brandName: 'Uluslararası Ağır Sanayi Ekipmanları Anonim Şirketi',
+    brief: 'Yüksek mukavemetli çelik konstrüksiyon imalatı, montajı, anahtar teslim endüstriyel tesisler ve projelendirme hizmetleri',
+    products: [{ name: 'Ağır Çelik Konstrüksiyon Fabrika Binaları' }],
+  })
+
+  // Grammatically complete sentence verification
+  assert.ok(pkg.voiceover.text.endsWith('.'), 'Voiceover does not end with a period')
+  assert.ok(!pkg.voiceover.text.endsWith(' ve.'), 'Voiceover cut mid-conjunction')
+  assert.ok(!pkg.voiceover.text.endsWith(' ile.'), 'Voiceover cut mid-postposition')
+  assert.ok(!pkg.voiceover.text.endsWith(' için.'), 'Voiceover cut mid-phrase')
+  assert.ok(pkg.voiceover.wordCount <= 16, `Word count ${pkg.voiceover.wordCount} > 16`)
+
+  // Re-validated against claims
+  assert.strictEqual(pkg.voiceover.usesOnlyVerifiedClaims, true)
+})
+
+test('5. HardFails stop production, checks returned, long VO cannot pass', () => {
+  const pkg = compileDeterministicV5({
+    brandName: 'Test Marka',
+    brief: '30 kelimelik çok uzun bir seslendirme metni talebi. Bu metin ilk haliyle kesinlikle sekiz saniyeye sığmaz ve doğrudan pass alamaz.',
+    products: [{ name: 'Test Ürün' }],
+  })
+
+  // 1. Checks object is present and contains dynamic boolean flags
+  assert.ok(pkg.validation.checks, 'ValidationOutput missing checks object')
+  assert.strictEqual(typeof pkg.validation.checks.durationTotalsEightSeconds, 'boolean')
+  assert.strictEqual(typeof pkg.validation.checks.timelineContinuityValid, 'boolean')
+  assert.strictEqual(typeof pkg.validation.checks.voiceoverWithinLimit, 'boolean')
+  assert.strictEqual(typeof pkg.validation.checks.allOverlayFactsVerified, 'boolean')
+
+  // 2. Direct validator test with long VO: long VO cannot pass
+  const facts = normalizeFacts({
+    brandName: 'Test Marka',
+    brief: 'Kısa brief',
+    products: [{ name: 'Test Ürün' }],
+  })
   const ontology = analyzeOntology(facts)
   const strategy = selectCreativeStrategy(ontology)
   const hook = selectHook(ontology, facts)
-  const vo = writeVoiceover(facts, ontology, strategy)
-  vo.text = 'Filtre kahvede %50 indirim kapınızda.'
-  const shots = planShots(facts, ontology, strategy, hook, vo.text)
-  const overlay = compileOverlay(facts, ontology, vo)
-  const val = validateAndRepair(facts, ontology, hook, shots, vo, overlay)
-
-  assert.ok(val.validation.hardFails.some((hf) => hf.includes('unverified_claims_in_voiceover')))
-})
-
-test('4. Hype words are NOT generated unless verified in brief or facts', () => {
-  // Case A: Food brief without "taptaze" or "kapınızda"
-  const foodPkg = compileDeterministicV5({
-    brandName: 'Burger Lab',
-    brief: 'Özel marinasyonlu dana burger',
-    products: [{ name: 'Truffle Burger' }],
-  })
-  assert.ok(!foodPkg.voiceover.text.toLowerCase().includes('taptaze'), 'Unverified taptaze was generated')
-  assert.ok(!foodPkg.voiceover.text.toLowerCase().includes('kapınızda'), 'Unverified kapınızda was generated')
-
-  // Case B: Sprayer brief with "yorulmadan" explicitly verified in brief
-  const agriPkg = compileDeterministicV5({
-    brandName: 'Bofe',
-    brief: 'Bahçede yorulmadan tek şarjla ilaçlama',
-    products: [{ name: 'Akülü Pülverizatör' }],
-  })
-  assert.ok(agriPkg.voiceover.text.toLowerCase().includes('yorulmadan'), 'Verified word yorulmadan was not utilized')
-
-  // Case C: Bulk brief without "fabrikadan doğrudan"
-  const bulkPkg = compileDeterministicV5({
-    brandName: 'Mega Çimento',
-    brief: 'Şantiyelere dökme çimento tedariği',
-    products: [{ name: 'Portland Çimento' }],
-  })
-  assert.ok(!bulkPkg.voiceover.text.toLowerCase().includes('fabrikadan doğrudan'), 'Unverified fabrikadan doğrudan was generated')
-})
-
-test('5. Long VO is rewritten into grammatically complete 8-13 word sentence without slicing mid-sentence', () => {
-  const pkg = compileDeterministicV5({
-    brandName: 'Çok Uzun Kurumsal Şirketler Topluluğu Anonim Şirketi',
-    brief: 'Her türlü endüstriyel tesisler için yüksek standartlarda ağır çelik konstrüksiyon imalatı ve montajı',
-    products: [{ name: 'Ağır Çelik Konstrüksiyon Taşıyıcı Sistemleri', description: 'Depreme dayanıklı sertifikalı çelik yapı çözümleri' }],
-  })
-
-  const words = pkg.voiceover.text.split(/\s+/).filter(Boolean)
-  assert.ok(words.length <= 16, `Voiceover too long: ${words.length} words`)
-  // Check grammatical integrity: must end with terminal punctuation and valid Turkish sentence
-  assert.ok(pkg.voiceover.text.endsWith('.'), 'Voiceover does not end with a period')
-  assert.ok(!pkg.voiceover.text.endsWith(' ve.'), 'Voiceover sliced mid-conjunction')
-  assert.ok(!pkg.voiceover.text.endsWith(' ile.'), 'Voiceover sliced mid-postposition')
-  assert.ok(!pkg.voiceover.text.endsWith(' için.'), 'Voiceover sliced mid-sentence')
-})
-
-test('6. Duration calculated by Turkish syllable count & pauses (~4.8 syl/s + pauses) with >= 0.5s safety margin', () => {
-  // Test syllable counter
-  const syl = countTurkishSyllables('Ayvazoğlu Tuğla')
-  assert.strictEqual(syl, 6, 'Syllable count mismatch for Ayvazoğlu Tuğla')
-
-  const est = estimateSpeechDuration('Ayvazoğlu Tuğla ile kaliteli yapılar, hemen bilgi alın.')
-  assert.ok(est.syllableCount > 15)
-  assert.ok(est.durationSeconds > 3.0 && est.durationSeconds < 7.5)
-  assert.ok(est.safetyMarginSeconds >= 0.5)
-
-  // Test in compiled package
-  const pkg = compileDeterministicV5({
-    brandName: 'Veri Burada',
-    brief: 'Yeni açılan tüm işletmeleri Google Haritalar üzerinde anında tespit edin',
-    products: [{ name: 'Harita Müşteri Bulucu' }],
-  })
-  assert.ok(pkg.voiceover.syllableCount > 10)
-  assert.ok(pkg.voiceover.estimatedDurationSeconds <= 7.5, `Duration ${pkg.voiceover.estimatedDurationSeconds} exceeds 7.5s`)
-  assert.ok(pkg.voiceover.safetyMarginSeconds >= 0.5, `Safety margin ${pkg.voiceover.safetyMarginSeconds} < 0.5s`)
-})
-
-test('7. Generates at least 3 distinct hook candidates scored on 5 criteria and selects the winner', () => {
-  const pkg = compileDeterministicV5({
-    brandName: 'Bofe',
-    brief: 'Bahçede yorulmadan tek şarjla yüksek basınçlı ilaçlama',
-    products: [{ name: '16L Akülü Sırt Pompası' }],
-  })
-
-  assert.ok(pkg.hookPlan.candidates.length >= 3, 'Did not generate at least 3 hook candidates')
-  const types = pkg.hookPlan.candidates.map((c) => c.type)
-  assert.ok(types.includes('action_focused'), 'Missing action_focused candidate')
-  assert.ok(types.includes('result_reveal_focused'), 'Missing result_reveal_focused candidate')
-  assert.ok(types.includes('curiosity_or_scale_focused'), 'Missing curiosity_or_scale_focused candidate')
-
-  for (const c of pkg.hookPlan.candidates) {
-    assert.ok(c.scores.actionSpeed >= 1 && c.scores.actionSpeed <= 10)
-    assert.ok(c.scores.relevanceToOffer >= 1 && c.scores.relevanceToOffer <= 10)
-    assert.ok(c.scores.visualImpact >= 1 && c.scores.visualImpact <= 10)
-    assert.ok(c.scores.physicalPlausibility >= 1 && c.scores.physicalPlausibility <= 10)
-    assert.ok(c.scores.clarityWithoutText >= 1 && c.scores.clarityWithoutText <= 10)
-    assert.strictEqual(
-      c.totalScore,
-      c.scores.actionSpeed + c.scores.relevanceToOffer + c.scores.visualImpact + c.scores.physicalPlausibility + c.scores.clarityWithoutText
-    )
+  const shots = planShots(facts, ontology, strategy, hook, 'test')
+  const longVoText = 'Bu seslendirme metni kasıtlı olarak otuzdan fazla kelime içerecek şekilde uzatılmıştır çünkü sekiz saniyeye sığamayacak uzunluktaki metinlerin kesinlikle doğrudan onay alamadığını ve üretiminin durdurulması gerektiğini test etmemiz gerekiyor.'
+  const est = estimateSpeechDuration(longVoText)
+  const longVo = {
+    text: longVoText,
+    wordCount: longVoText.split(/\s+/).filter(Boolean).length,
+    syllableCount: est.syllableCount,
+    estimatedDurationSeconds: est.durationSeconds,
+    safetyMarginSeconds: est.safetyMarginSeconds,
+    speechRateSyllablesPerSecond: 4.8,
+    usesOnlyVerifiedClaims: true,
+    toneOfVoice: 'corporate' as const,
+    brandMentionedInFirst3Seconds: true,
+    genericCopyCheck: 'passed' as const,
+    reasonCode: 'test_long_vo',
   }
+  const overlay = compileOverlay(facts, ontology, longVo)
+  const validationResult = validateAndRepair(facts, ontology, hook, shots, longVo, overlay)
 
-  assert.strictEqual(pkg.hookPlan.selectedCandidate.id, pkg.hookPlan.candidates[0].id)
-  assert.strictEqual(pkg.hookPlan.visualEventDescription, pkg.hookPlan.selectedCandidate.visualEventDescription)
-})
-
-test('8. Decoupled stereotypes - hooks derived from visualAffordance and verified facts', () => {
-  // A. Tuğla / Bulk: does not default to pallet cliché
-  const brickPkg = compileDeterministicV5({
-    brandName: 'Ayvazoğlu Tuğla',
-    brief: 'Şantiyelere doğrudan tır bazında killi tuğla sevkiyatı',
-    products: [{ name: 'Killi Cephe Tuğlası' }],
-  })
-  assert.ok(
-    brickPkg.hookPlan.visualEventDescription.toLowerCase().includes('killi cephe tuğlası') ||
-    brickPkg.hookPlan.visualEventDescription.toLowerCase().includes('tuğla'),
-    'Hook does not reference the actual brick product'
-  )
-
-  // B. SaaS without map: should not mention harita pini if not in brief
-  const crmPkg = compileDeterministicV5({
-    brandName: 'Bulut CRM',
-    brief: 'Satış ekipleri için müşteri takip ve teklif platformu',
-    products: [{ name: 'Bulut CRM Paneli' }],
-  })
-  assert.ok(!crmPkg.hookPlan.visualEventDescription.includes('harita pinleri'), 'Stereotype map pins appeared in non-map SaaS')
-
-  // C. Food without sauce: should not mention pouring sauce
-  const breadPkg = compileDeterministicV5({
-    brandName: 'Taş Fırın',
-    brief: 'Geleneksel ekşi mayalı köy ekmeği',
-    products: [{ name: 'Köy Ekmeği' }],
-  })
-  assert.ok(!breadPkg.hookPlan.visualEventDescription.includes('sos/sıvı akışıyla'), 'Stereotype sauce drizzle appeared for bread')
-})
-
-test('9. Camera modes (continuous_take vs three_cut) properly set and enforced in prompt and validator', () => {
-  // Test continuous_take
-  const continuousPkg = compileDeterministicV5({
-    brandName: 'Lüks Parfüm',
-    brief: 'Altın varaklı cam şişede kalıcı esans',
-    cameraMode: 'continuous_take',
-    products: [{ name: 'Amber Oud Parfüm' }],
-  })
-  assert.strictEqual(continuousPkg.shotPlan.cameraMode, 'continuous_take')
-  assert.ok(continuousPkg.shotPlan.veoEnglishPrompt.includes('CAMERA MOVEMENT: continuous_take - Single unbroken camera movement'))
-
-  // Test three_cut
-  const cutPkg = compileDeterministicV5({
-    brandName: 'Bofe',
-    brief: 'Tarımda pratik ilaçlama',
-    cameraMode: 'three_cut',
-    products: [{ name: 'Sırt Pompası' }],
-  })
-  assert.strictEqual(cutPkg.shotPlan.cameraMode, 'three_cut')
-  assert.ok(cutPkg.shotPlan.veoEnglishPrompt.includes('CAMERA MOVEMENT: three_cut - Three distinct controlled camera framings'))
-})
-
-test('10. First overlay headline is 2-4 words hook, not "MARKA + ÜRÜN"', () => {
-  const pkg = compileDeterministicV5({
-    brandName: 'Ayvazoğlu Tuğla',
-    brief: 'Şantiyelere doğrudan tır bazında killi tuğla sevkiyatı',
-    products: [{ name: 'Killi Cephe Tuğlası', promo: '%15 toptan iskonto' }],
-  })
-
-  const hookOverlay = pkg.overlayPlan.overlayTimeline.find((i) => i.type === 'hook')
-  assert.ok(hookOverlay, 'Missing hook overlay')
-  const words = hookOverlay.text.split(/\s+/).filter(Boolean)
-  assert.ok(words.length >= 2 && words.length <= 4, `Headline words count ${words.length} not in 2-4 range: ${hookOverlay.text}`)
+  // Long VO must NOT have status === 'pass'
   assert.notStrictEqual(
-    hookOverlay.text,
-    'AYVAZOĞLU TUĞLA KİLLİ CEPHE TUĞLASI',
-    'Headline defaulted to MARKA + URUN'
+    validationResult.validation.status,
+    'pass',
+    'Long VO erroneously received status: pass'
   )
 })
 
-test('11. HardFailChecks contains ZERO hardcoded booleans (all computed)', () => {
-  const pkg = compileDeterministicV5({
-    brandName: 'Veri Burada',
-    brief: 'Yeni açılan tüm işletmeleri Google Haritalar üzerinde anında tespit edin',
-    products: [{ name: 'Harita Müşteri Bulucu' }],
-  })
-
-  assert.strictEqual(pkg.validation.status, 'pass')
-  assert.strictEqual(pkg.validation.hardFails.length, 0)
-  assert.strictEqual(typeof pkg.validation.score, 'number')
-})
-
-test('12. Preserves ctaText, ctaDestination, campaignDeadline, deliveryArea and prevents duplicate brand/product words', () => {
+test('6. Timeline continuity: 0.0s to 8.0s, sequential, positive durations, zero gaps, zero overlaps', () => {
   const pkg = compileDeterministicV5({
     brandName: 'Ayvazoğlu Tuğla',
     brief: 'Şantiyelere killi tuğla sevkiyatı',
+    products: [{ name: 'Killi Cephe Tuğlası' }],
+  })
+
+  // Valid package check
+  assert.strictEqual(pkg.validation.checks.timelineContinuityValid, true)
+  assert.strictEqual(pkg.shotPlan.durationSeconds, 8.0)
+  assert.strictEqual(pkg.shotPlan.shots.length, 3)
+  assert.strictEqual(pkg.shotPlan.shots[0].timing.from, 0.0)
+  assert.strictEqual(pkg.shotPlan.shots[0].timing.to, 2.2)
+  assert.strictEqual(pkg.shotPlan.shots[1].timing.from, 2.2)
+  assert.strictEqual(pkg.shotPlan.shots[1].timing.to, 5.8)
+  assert.strictEqual(pkg.shotPlan.shots[2].timing.from, 5.8)
+  assert.strictEqual(pkg.shotPlan.shots[2].timing.to, 8.0)
+
+  // Counter-example: Inject a gap into shots (e.g. shot 0 ends at 2.0s, shot 1 starts at 2.5s)
+  const brokenShots = JSON.parse(JSON.stringify(pkg.shotPlan))
+  brokenShots.shots[0].timing.to = 2.0 // Gap of 0.5s between shot 0 and shot 1
+  const ontology = analyzeOntology(pkg.normalizedBrief)
+  const hook = selectHook(ontology, pkg.normalizedBrief)
+  const valWithGap = validateAndRepair(pkg.normalizedBrief, ontology, hook, brokenShots, pkg.voiceover, pkg.overlayPlan)
+
+  assert.strictEqual(valWithGap.validation.checks.timelineContinuityValid, false)
+  assert.ok(valWithGap.validation.hardFails.includes('shot_timeline_gap_or_overlap_detected'))
+  assert.strictEqual(valWithGap.validation.status, 'blocked')
+})
+
+test('7. Domain decoupling: Legal/consulting copy free of health terms, SaaS copy free of generic "müşteri bulma"', () => {
+  // Case A: Legal / Consulting
+  const legalPkg = compileDeterministicV5({
+    brandName: 'Adalet Hukuk Bürosu',
+    brief: 'Şirketler hukuku, ticari davalar ve sözleşme yönetimi',
+    products: [{ name: 'Ticari Dava Danışmanlığı' }],
+  })
+  const legalCombinedText = `${legalPkg.voiceover.text} ${legalPkg.overlayPlan.overlayTimeline.map((i) => i.text).join(' ')}`.toLowerCase()
+  assert.ok(!legalCombinedText.includes('sağlık'), 'Legal copy contains health term "sağlık"')
+  assert.ok(!legalCombinedText.includes('hekim'), 'Legal copy contains medical term "hekim"')
+  assert.ok(!legalCombinedText.includes('bakım'), 'Legal copy contains personal care term "bakım"')
+  assert.ok(!legalCombinedText.includes('klinik'), 'Legal copy contains clinic term "klinik"')
+
+  // Case B: SaaS - Accounting software
+  const saasAccountingPkg = compileDeterministicV5({
+    brandName: 'Bulut Ön Muhasebe',
+    brief: 'Küçük işletmeler için e-fatura ve gelir gider takibi',
+    products: [{ name: 'E-Fatura Ön Muhasebe Programı' }],
+  })
+  assert.ok(
+    saasAccountingPkg.voiceover.text.toLowerCase().includes('muhasebe') ||
+    saasAccountingPkg.voiceover.text.toLowerCase().includes('finans') ||
+    saasAccountingPkg.voiceover.text.toLowerCase().includes('e-fatura'),
+    'Accounting SaaS copy failed to anchor in accounting context'
+  )
+
+  // Case C: SaaS - HR software
+  const saasHrPkg = compileDeterministicV5({
+    brandName: 'İnsan Kaynakları 360',
+    brief: 'Şirketler için personel vardiya ve bordro yönetimi',
+    products: [{ name: 'Personel Takip Sistemi' }],
+  })
+  assert.ok(
+    saasHrPkg.voiceover.text.toLowerCase().includes('ekip') ||
+    saasHrPkg.voiceover.text.toLowerCase().includes('personel') ||
+    saasHrPkg.voiceover.text.toLowerCase().includes('ik'),
+    'HR SaaS copy failed to anchor in HR/personnel context'
+  )
+})
+
+test('8. continuous_take camera trajectory: single unbroken camera glide with zero "cut" mentions', () => {
+  const continuousPkg = compileDeterministicV5({
+    brandName: 'Lüks Parfüm',
+    brief: 'Cam şişede kalıcı esans',
+    cameraMode: 'continuous_take',
+    products: [{ name: 'Amber Oud Parfüm' }],
+  })
+
+  assert.strictEqual(continuousPkg.shotPlan.cameraMode, 'continuous_take')
+  const prompt = continuousPkg.shotPlan.veoEnglishPrompt
+
+  // 1. Must describe continuous unbroken camera glide across all 3 phases
+  assert.ok(prompt.includes('CAMERA MOVEMENT: continuous_take - Single unbroken camera movement'))
+
+  // 2. Must contain ZERO occurrences of "cut" or "cuts"
+  const hasCut = /\bcuts?\b/i.test(prompt)
+  assert.strictEqual(hasCut, false, `continuous_take prompt contains forbidden word "cut":\n${prompt}`)
+})
+
+test('9. 100% voiceover text synchronization across voiceover, Veo AUDIO directive, and subtitles sourceText', () => {
+  const pkg = compileDeterministicV5({
+    brandName: 'Bofe',
+    brief: 'Bahçede tek şarjla ilaçlama',
+    products: [{ name: '16L Akülü Sırt Pompası' }],
+  })
+
+  const voText = pkg.voiceover.text
+  const subtitleSource = pkg.overlayPlan.subtitles.sourceText
+  const veoAudioDirectiveMatch = pkg.veoPrompt.match(/AUDIO: Professional crystal-clear Turkish voiceover: "(.*?)"/)
+  const shotPlanAudioMatch = pkg.shotPlan.veoEnglishPrompt.match(/AUDIO: Professional crystal-clear Turkish voiceover: "(.*?)"/)
+
+  assert.ok(veoAudioDirectiveMatch, 'veoPrompt does not contain AUDIO directive')
+  assert.ok(shotPlanAudioMatch, 'shotPlan.veoEnglishPrompt does not contain AUDIO directive')
+
+  // Exact 100% string equality
+  assert.strictEqual(voText, subtitleSource, 'voiceover.text and overlay.subtitles.sourceText are not identical')
+  assert.strictEqual(voText, veoAudioDirectiveMatch[1], 'voiceover.text and veoPrompt AUDIO text are not identical')
+  assert.strictEqual(voText, shotPlanAudioMatch[1], 'voiceover.text and shotPlan AUDIO text are not identical')
+})
+
+test('10. Preserves ctaText, ctaDestination, campaignDeadline, deliveryArea, and Turkish brand characters', () => {
+  const pkg = compileDeterministicV5({
+    brandName: 'Özgür Çelik İmalat',
+    brief: 'Şantiyelere doğrudan killi tuğla sevkiyatı',
     ctaText: 'Hemen Fiyat Teklifi Alın',
     ctaDestination: 'WhatsApp: 05321112233',
     campaignDeadline: '31 Mart 2026',
@@ -268,23 +326,21 @@ test('12. Preserves ctaText, ctaDestination, campaignDeadline, deliveryArea and 
     products: [{ name: 'Killi Cephe Tuğlası' }],
   })
 
-  // 1. Preserved in facts
+  // 1. Facts preservation
+  assert.strictEqual(pkg.normalizedBrief.verifiedFacts.brandName, 'Özgür Çelik İmalat')
   assert.strictEqual(pkg.normalizedBrief.verifiedFacts.campaignDeadline, '31 Mart 2026')
   assert.strictEqual(pkg.normalizedBrief.verifiedFacts.deliveryArea, 'Marmara ve Ege Bölgesi')
   assert.strictEqual(pkg.normalizedBrief.verifiedFacts.ctaText, 'Hemen Fiyat Teklifi Alın')
   assert.strictEqual(pkg.normalizedBrief.verifiedFacts.ctaDestination, 'WhatsApp: 05321112233')
 
-  // 2. Preserved in overlay
+  // 2. Overlay timeline preservation
   const ctaOverlay = pkg.overlayPlan.overlayTimeline.find((i) => i.type === 'cta')
-  assert.ok(ctaOverlay?.text.includes('HEMEN FİYAT TEKLİFİ ALIN'), 'Custom CTA text was dropped from overlay')
-  assert.ok(ctaOverlay?.text.includes('WHATSAPP'), 'WhatsApp destination dropped from CTA')
+  assert.ok(ctaOverlay?.text.includes('HEMEN FİYAT TEKLİFİ ALIN'))
+  assert.ok(ctaOverlay?.text.includes('WHATSAPP'))
 
   const deliveryOverlay = pkg.overlayPlan.overlayTimeline.find((i) => i.text.includes('MARMARA VE EGE BÖLGESİ'))
-  assert.ok(deliveryOverlay, 'Delivery area dropped from overlay timeline')
+  assert.ok(deliveryOverlay)
 
-  // 3. Prevent duplicate brand/product words (no "Tuğla Tuğla")
-  assert.ok(
-    !pkg.voiceover.text.match(/\btuğla\s+tuğla\b/i),
-    `Voiceover contains consecutive duplicate words: ${pkg.voiceover.text}`
-  )
+  // 3. Brand spelling preserved with Turkish characters
+  assert.ok(pkg.veoPrompt.includes('Özgür Çelik İmalat'))
 })

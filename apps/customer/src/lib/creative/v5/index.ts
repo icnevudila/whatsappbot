@@ -56,12 +56,20 @@ export function compileDeterministicV5(input: UserVideoInput): V5FinalOutputPack
 
   if (validationResult.repairedVoiceover) {
     voiceover = validationResult.repairedVoiceover
+    // Sync subtitles sourceText to the repaired voiceover
+    overlay.subtitles.sourceText = voiceover.text
   }
   if (validationResult.repairedShotPlan) {
     shotPlan = validationResult.repairedShotPlan
+  } else if (validationResult.repairedVoiceover) {
+    // If voiceover was repaired, ensure shotPlan prompt reflects the exact repaired voiceover
+    shotPlan.veoEnglishPrompt = shotPlan.veoEnglishPrompt.replace(
+      /AUDIO: Professional crystal-clear Turkish voiceover: "[^"]*"/,
+      `AUDIO: Professional crystal-clear Turkish voiceover: "${voiceover.text.replace(/["']/g, '')}"`
+    )
   }
 
-  // 9. Veo Raw-Video Prompt (Includes exact VO directive)
+  // 9. Veo Raw-Video Prompt (Fully synchronized with final voiceover and subtitles)
   const veoPrompt = shotPlan.veoEnglishPrompt
 
   // 10. Final Output Package

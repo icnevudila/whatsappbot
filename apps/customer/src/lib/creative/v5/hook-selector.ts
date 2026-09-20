@@ -59,108 +59,158 @@ export function selectHook(
     actionDesc = `Sevkiyata hazır ${subject} birimlerinin nizami yerleşim anı ve dinamik yükleme hareketi ilk karede başlar.`
   } else if (ontology.primaryAffordance === 'material_texture_shift') {
     actionFamily = 'tactile_macro'
-    actionDesc = `100mm f/1.8 makro odakta ${subject} yüzeyinin kusursuz malzeme kalitesi ve pürüzsüz dokusu ilk karede belirir.`
+    actionDesc = `100mm f/1.8 makro odakta ${subject} yüzeyinin doğal malzeme kalitesi ve belirgin dokusu ilk karede belirir.`
   } else {
     actionDesc = `${subject} ilk karede merkezdedir; ana fonksiyonel hareket 0.3. saniyede gecikmesiz başlar.`
   }
+
+  // 1. DYNAMIC ACTION-FOCUSED HOOK EVALUATION
+  let actionRel = 7
+  let actionImp = 8
+  if (
+    ontology.primaryAffordance === 'apply_spray_mist' ||
+    ontology.primaryAffordance === 'press_trigger_switch' ||
+    allContext.includes('püskürt') ||
+    allContext.includes('çalış') ||
+    allContext.includes('basınç') ||
+    allContext.includes('hareket')
+  ) {
+    actionRel = 10
+    actionImp = 10
+  } else if (ontology.proofMode === 'scale_or_inventory' || allContext.includes('tır') || allContext.includes('toptan')) {
+    actionRel = 5
+    actionImp = 7
+  }
+
+  const actionScores = {
+    actionSpeed: 10,
+    relevanceToOffer: actionRel,
+    visualImpact: actionImp,
+    physicalPlausibility: 10,
+    clarityWithoutText: 9,
+  }
+  const actionTotal = Object.values(actionScores).reduce((a, b) => a + b, 0)
 
   const actionCandidate: HookCandidate = {
     id: 'candidate_action_focused',
     type: 'action_focused',
     family: actionFamily,
     visualEventDescription: actionDesc,
-    scores: {
-      actionSpeed: 10,
-      relevanceToOffer: 9,
-      visualImpact: 9,
-      physicalPlausibility: 10,
-      clarityWithoutText: 9,
-    },
-    totalScore: 47,
+    scores: actionScores,
+    totalScore: actionTotal,
     reason: 'Doğrudan ürün eylemine ve fiziksel fonksiyona odaklanarak ilk 0.5 saniyede yüksek dikkat yakalar.',
   }
 
-  // 2. DYNAMIC RESULT/REVEAL-FOCUSED HOOK (Finished state / immediate outcome)
+  // 2. DYNAMIC RESULT/REVEAL-FOCUSED HOOK EVALUATION
   let resultFamily: HookFamily = 'result_first'
   let resultDesc = ''
-  if (ontology.offerType === 'digital_product_or_saas') {
-    resultFamily = 'result_first'
-    resultDesc = `Ekranda doğrudan sonuçlanmış ve filtrelenmiş ${subject} çıktı tablosu belirir; aranan net bilgiler tek bakışta hazırdır.`
-  } else if (ontology.offerType === 'food_or_consumable') {
+  if (ontology.offerType === 'food_or_consumable') {
     resultFamily = 'sensory_motion'
-    resultDesc = `Taze hazırlanmış ${subject} tüm kusursuz katmanları ve buharı tüten canlı sunumuyla kameranın önünde ışıldar.`
-  } else if (ontology.primaryAffordance === 'apply_spray_mist') {
+    resultDesc = `Servise hazır ${subject}, ilk karede dumanı üstünde ve iştah kabartan formuyla belirir.`
+  } else if (ontology.riskClass === 'regulated_health') {
     resultFamily = 'result_first'
-    resultDesc = `${subject} ile tek seferde homojen nemlenmiş, üzerinde mikro damlacıklar parıldayan canlı yaprak yüzeyi ilk karede görülür.`
-  } else if (ontology.offerType === 'physical_product') {
-    resultFamily = 'result_first'
-    resultDesc = `Kusursuz biçimde yerine oturmuş veya uygulanmış ${subject}, pürüzsüz yüzeyi ve sağlam duruşuyla ilk saniyede kanıt sunar.`
+    resultDesc = `Uygulama sonrasındaki estetik ve dengeli sonuç, profesyonel klinik ışığı altında ilk saniyede netleşir.`
   } else {
-    resultFamily = 'transformation_reveal'
-    resultDesc = `${subject} tamamlanmış yüksek kaliteli nihai formuyla ekranda belirir; elde edilen somut değer ilk karede açıktır.`
+    resultDesc = `${subject} uygulamasının sağladığı somut nihai sonuç ilk karede net şekilde sergilenir.`
   }
+
+  let resultRel = 7
+  let resultImp = 8
+  if (
+    allContext.includes('sonuç') ||
+    allContext.includes('gülüş') ||
+    allContext.includes('lezzet') ||
+    allContext.includes('dönüşüm') ||
+    ontology.offerType === 'food_or_consumable' ||
+    ontology.riskClass === 'regulated_health' ||
+    ontology.offerType === 'venue_or_experience'
+  ) {
+    resultRel = 10
+    resultImp = 10
+  } else if (ontology.proofMode === 'scale_or_inventory' || allContext.includes('tır') || allContext.includes('toptan')) {
+    resultRel = 6
+    resultImp = 7
+  }
+
+  const resultScores = {
+    actionSpeed: 8,
+    relevanceToOffer: resultRel,
+    visualImpact: resultImp,
+    physicalPlausibility: 10,
+    clarityWithoutText: 10,
+  }
+  const resultTotal = Object.values(resultScores).reduce((a, b) => a + b, 0)
 
   const resultCandidate: HookCandidate = {
     id: 'candidate_result_reveal_focused',
     type: 'result_reveal_focused',
     family: resultFamily,
     visualEventDescription: resultDesc,
-    scores: {
-      actionSpeed: 8,
-      relevanceToOffer: 10,
-      visualImpact: 9,
-      physicalPlausibility: 10,
-      clarityWithoutText: 10,
-    },
-    totalScore: 47,
+    scores: resultScores,
+    totalScore: resultTotal,
     reason: 'Beklemeden doğrudan nihai sonucu ve faydayı göstererek izleyici güvenini ilk saniyede tesis eder.',
   }
 
-  // 3. DYNAMIC CURIOSITY/SCALE-FOCUSED HOOK (Macro texture / volume / perspective)
-  let scaleFamily: HookFamily = 'tactile_macro'
+  // 3. DYNAMIC CURIOSITY/SCALE-FOCUSED HOOK EVALUATION
+  let scaleFamily: HookFamily = 'scale_reveal'
   let scaleDesc = ''
-  if (ontology.proofMode === 'scale_or_inventory' || allContext.includes('tır') || allContext.includes('toptan') || allContext.includes('ton')) {
+  if (
+    ontology.proofMode === 'scale_or_inventory' ||
+    allContext.includes('tır') ||
+    allContext.includes('tuğla') ||
+    allContext.includes('toptan')
+  ) {
     scaleFamily = 'scale_reveal'
-    scaleDesc = `Genişleyen açıyla ${subject} sevkiyat hacminin ve nizami stok düzeninin etkileyici simetrisi ekrana yansır.`
-  } else if (ontology.offerType === 'digital_product_or_saas') {
-    scaleFamily = 'unexpected_perspective'
-    scaleDesc = `Klavye ve çalışma alanından ekrana doğru süzülen dinamik açıyla ${subject} akıllı kontrol paneli odağa oturur.`
-  } else if (ontology.offerType === 'food_or_consumable') {
+    scaleDesc = `Geniş depolama ve sevkiyat alanında nizami istiflenmiş binlerce birim ${subject}, etkileyici hacmiyle ilk karede kadraja girer.`
+  } else if (ontology.primaryAffordance === 'material_texture_shift' || ontology.proofMode === 'craftsmanship') {
     scaleFamily = 'tactile_macro'
-    scaleDesc = `Ultra yakın makro açıda ${subject} üzerindeki çıtır doku, parlak gözenekler ve sıcak ışıltı ilk karede açılır.`
+    scaleDesc = `Yüksek çözünürlüklü makro lens ile ${subject} dokusundaki detaylar ve malzeme yoğunluğu ilk karede vurgulanır.`
   } else {
-    scaleFamily = 'tactile_macro'
-    scaleDesc = `100mm makro lens ile ${subject} üzerindeki özel malzeme detayları ve hassas işçilik çizgileri ilk karede netleşir.`
+    scaleFamily = 'unexpected_perspective'
+    scaleDesc = `Alışılagelmiş durum ile ${subject} sonrasındaki belirgin fark, odak kaydırma efektiyle ilk saniyede ortaya çıkar.`
   }
 
-  // Adjust score based on ontology fit
-  let scaleImpact = 8
-  if (ontology.proofMode === 'scale_or_inventory') scaleImpact = 10
-  if (ontology.primaryAffordance === 'material_texture_shift') scaleImpact = 10
+  let scaleRel = 5
+  let scaleImp = 7
+  if (
+    ontology.proofMode === 'scale_or_inventory' ||
+    allContext.includes('tır') ||
+    allContext.includes('toptan') ||
+    allContext.includes('ton') ||
+    allContext.includes('stok') ||
+    allContext.includes('sevkiyat') ||
+    allContext.includes('tuğla') ||
+    allContext.includes('hacim')
+  ) {
+    scaleRel = 10
+    scaleImp = 10
+  } else if (ontology.primaryAffordance === 'material_texture_shift' || ontology.proofMode === 'craftsmanship') {
+    scaleRel = 9
+    scaleImp = 9
+  }
+
+  const scaleScores = {
+    actionSpeed: 7,
+    relevanceToOffer: scaleRel,
+    visualImpact: scaleImp,
+    physicalPlausibility: 10,
+    clarityWithoutText: 9,
+  }
+  const scaleTotal = Object.values(scaleScores).reduce((a, b) => a + b, 0)
 
   const scaleCandidate: HookCandidate = {
     id: 'candidate_curiosity_or_scale_focused',
     type: 'curiosity_or_scale_focused',
     family: scaleFamily,
     visualEventDescription: scaleDesc,
-    scores: {
-      actionSpeed: 8,
-      relevanceToOffer: 9,
-      visualImpact: scaleImpact,
-      physicalPlausibility: 10,
-      clarityWithoutText: 9,
-    },
-    totalScore: 36 + scaleImpact,
+    scores: scaleScores,
+    totalScore: scaleTotal,
     reason: 'Merak uyandıran makro perspektif veya hacim simetrisiyle görsel kanca oluşturur.',
   }
 
   // Multi-candidate evaluation: Pick highest scoring candidate
   const candidates: HookCandidate[] = [actionCandidate, resultCandidate, scaleCandidate]
   
-  // Tie-breaker / strategy preference:
-  // If strategy is scale_and_availability -> scaleCandidate favored
-  // If strategy is result_first -> resultCandidate favored
-  // Default: actionCandidate favored if tied
   let winner = candidates[0]
   for (const c of candidates) {
     if (c.totalScore > winner.totalScore) {

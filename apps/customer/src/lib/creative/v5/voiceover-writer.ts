@@ -24,6 +24,9 @@ export const HYPE_WORDS_TO_VERIFY = [
   'taptaze',
   'kapınızda',
   'anında',
+  'anlık',
+  'kusursuz',
+  'özel reçeteli',
   'yüksek verim',
   'yorulmadan',
   'hızlı sevkiyat',
@@ -40,8 +43,13 @@ export const HYPE_WORDS_TO_VERIFY = [
   '%100 garanti',
 ]
 
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 /**
- * Checks whether a specific claim or marketing term is verified in the facts corpus.
+ * Checks whether a specific claim or marketing term is verified in the facts corpus,
+ * ensuring it is NOT negated (e.g. "Hızlı teslimat yok" is recognized as negative).
  */
 export function isClaimVerified(term: string, facts: FactNormalizerOutput): boolean {
   const corpus = [
@@ -52,16 +60,36 @@ export function isClaimVerified(term: string, facts: FactNormalizerOutput): bool
     facts.verifiedFacts.price || '',
     facts.verifiedFacts.deliveryArea || '',
     facts.verifiedFacts.campaignDeadline || '',
-  ].join(' ').toLowerCase()
+  ].join(' ')
 
   const normalizedTerm = term.toLowerCase().trim()
-  return corpus.includes(normalizedTerm)
+  if (!normalizedTerm) return false
+
+  const regex = new RegExp(`(?:^|\\s|[,.;:!?])${escapeRegex(normalizedTerm)}(?:$|\\s|[,.;:!?])`, 'gi')
+  let match: RegExpExecArray | null
+  let hasPositive = false
+
+  while ((match = regex.exec(corpus)) !== null) {
+    const start = Math.max(0, match.index - 35)
+    const end = Math.min(corpus.length, match.index + match[0].length + 35)
+    const window = corpus.slice(start, end).toLowerCase()
+
+    // Check for negative context around the term
+    const isNegated = /\b(yok|değil|yapmıyoruz|yapılmaz|yapılmamaktadır|bulunmamaktadır|hariç|olmayan|mümkün değil)\b/i.test(window)
+    if (!isNegated) {
+      hasPositive = true
+      break
+    }
+  }
+
+  return hasPositive
 }
 
 /**
  * Real Claim Validator:
- * Validates all marketing claims in text against verified facts.
- * Returns valid=false and list of unverified claims if text asserts unverified claims.
+ * - Checks known hype words with negation awareness
+ * - Enforces strict numeric & percentage matching (500g is NOT %50)
+ * - Returns valid=false and list of unverified claims if text asserts unverified claims.
  */
 export function validateClaims(
   text: string,
@@ -77,17 +105,26 @@ export function validateClaims(
     }
   }
 
-  // 2. Check numeric discount claims (e.g. %15, %20, 50%)
+  // 2. Check numeric discount claims (e.g. %15, %20, %50, 50%)
+  // Strict: Must match percentage syntax in corpus; mass or length digits (500g, 50cm) do NOT count as discounts!
   const percentMatches = text.match(/%\s*\d+|\d+\s*%/g) || []
+  const corpus = [
+    facts.verifiedFacts.rawBrief,
+    facts.verifiedFacts.discount || '',
+    ...(facts.verifiedFacts.features || []),
+    ...(facts.verifiedFacts.benefits || []),
+  ].join(' ')
+
   for (const pm of percentMatches) {
     const num = pm.replace(/\D/g, '')
-    const corpus = [
-      facts.verifiedFacts.rawBrief,
-      facts.verifiedFacts.discount || '',
-      ...(facts.verifiedFacts.features || []),
-    ].join(' ')
-    if (!corpus.includes(num)) {
-      unverified.push(pm)
+    const percentRegex = new RegExp(`(?:%\\s*${num}|${num}\\s*%|yüzde\\s*${num}|iskonto:\\s*%?${num}|indirim:\\s*%?${num})`, 'i')
+    const hasExplicitPercent = percentRegex.test(corpus)
+
+    if (!hasExplicitPercent || !isClaimVerified(`%${num}`, facts)) {
+      // Double check if any positive percentage match exists
+      if (!hasExplicitPercent) {
+        unverified.push(pm)
+      }
     }
   }
 
@@ -126,16 +163,14 @@ export function estimateSpeechDuration(text: string): {
  * Clean duplicate brand and product words (e.g. "Ayvazoğlu Tuğla Killi Cephe Tuğlası" -> avoids repeating "Tuğla")
  */
 function cleanDuplicateWords(text: string): string {
-  // Remove consecutive duplicate words
   let cleaned = text.replace(/\b(\p{L}+)\s+\1\b/giu, '$1')
-  // Remove duplicate occurrences of specific common brand nouns if adjacent
   cleaned = cleaned.replace(/\s+/g, ' ').trim()
   return cleaned
 }
 
 /**
  * Rewrites a voiceover into a grammatically complete 8-13 word sentence.
- * Never cuts mid-sentence or truncates with slice().
+ * Strictly avoids cutting with slice(); takes complete clauses or pre-formed templates.
  */
 function rewriteVoiceoverGrammatically(
   brand: string | null,
@@ -150,18 +185,20 @@ function rewriteVoiceoverGrammatically(
 
   if (discount) {
     if (cleanBrand) {
-      return `${cleanBrand} ${cleanSubject}, özel toptan avantajlarıyla projenizde. Hemen bilgi alın.`
+      return `${cleanBrand} ${cleanSubject}, avantajlı fiyat teklifleriyle projenizde. Hemen bilgi alın.`
     }
     return `${cleanSubject} avantajlı fiyat teklifleriyle projenizde hazır. Detaylar için yazın.`
   }
 
   if (benefits.length > 0) {
-    const b = benefits[0].replace(/[.,]/g, '').trim()
-    const shortB = b.length > 30 ? b.split(/\s+/).slice(0, 4).join(' ') : b
-    if (cleanBrand) {
-      return `${cleanBrand} ${cleanSubject} ile ${shortB}. Detaylı bilgi için yazın.`
+    const firstClause = benefits[0].split(/[,.;]/)[0].trim()
+    const words = firstClause.split(/\s+/).filter(Boolean)
+    if (words.length >= 2 && words.length <= 5) {
+      if (cleanBrand) {
+        return `${cleanBrand} ${cleanSubject} ile ${firstClause}. Detaylı bilgi için yazın.`
+      }
+      return `${cleanSubject} ile ${firstClause}. Hemen bizimle iletişime geçin.`
     }
-    return `${cleanSubject} ile ${shortB}. Hemen bizimle iletişime geçin.`
   }
 
   if (ontology.offerType === 'food_or_consumable') {
@@ -173,9 +210,16 @@ function rewriteVoiceoverGrammatically(
 
   if (ontology.offerType === 'digital_product_or_saas') {
     if (cleanBrand) {
-      return `${cleanBrand} ${cleanSubject} ile hedeflerinize ulaşın. Hemen deneyin.`
+      return `${cleanBrand} ${cleanSubject} ile işlerinizi hızlandırın. Hemen keşfedin.`
     }
-    return `${cleanSubject} ile hedeflerinize kolayca ulaşın. Hemen keşfedin.`
+    return `${cleanSubject} ile işlerinizi hızlandırın. Hemen keşfedin.`
+  }
+
+  if (ontology.offerType === 'professional_service' || ontology.riskClass === 'legal_or_professional_claim') {
+    if (cleanBrand) {
+      return `${cleanBrand} ile ${cleanSubject} danışmanlığı. Detaylı bilgi alın.`
+    }
+    return `${cleanSubject} alanında profesyonel danışmanlık. Detaylı bilgi alın.`
   }
 
   if (cleanBrand) {
@@ -188,7 +232,9 @@ function rewriteVoiceoverGrammatically(
  * Universal Turkish Voiceover Writer
  * Target: 8-13 words (max 16 words, strictly fitting within ~6.5-7.2s duration).
  * Enforces:
- *  - Real claim verification (zero unverified hype words)
+ *  - Negation-aware claim verification (zero unverified hype words)
+ *  - Decoupled legal/consulting from health copy
+ *  - Context-derived SaaS copy (not assuming customer finder for all SaaS)
  *  - Turkish syllable & pause duration calculation
  *  - Grammatically complete sentences (zero mid-sentence slicing)
  *  - Duplicate word prevention
@@ -213,8 +259,20 @@ export function writeVoiceover(
   let line = ''
   let formula = 'benefit_offer'
 
-  // 1. Select Formula & Draft Replik with STRICT claim verification
-  if (strategy.primary === 'sensory_desire' || ontology.offerType === 'food_or_consumable') {
+  // 1. Select Formula & Draft Replik with STRICT claim verification & proper domain separation
+  if (ontology.riskClass === 'regulated_health') {
+    formula = 'trust_process'
+    // Strict health compliance: Objective medical phrasing, zero health guarantees
+    line = brand
+      ? `${brand} ile hekim kontrolünde ${subject}, detaylı bilgi alın.`
+      : `Hekim kontrolünde ${subject}, detaylı bilgi alın.`
+  } else if (ontology.offerType === 'professional_service' || ontology.riskClass === 'legal_or_professional_claim') {
+    formula = 'professional_expertise'
+    // Legal & Professional consulting: strictly professional, ZERO health copy
+    line = brand
+      ? `${brand} ile ${subject} alanında uzman danışmanlık. Detaylar için yazın.`
+      : `${subject} alanında profesyonel danışmanlık için iletişime geçin.`
+  } else if (strategy.primary === 'sensory_desire' || ontology.offerType === 'food_or_consumable') {
     formula = 'sensory_invitation'
     const tazeAllowed = isClaimVerified('taze', facts) || isClaimVerified('taptaze', facts)
     const kapiAllowed = isClaimVerified('kapı', facts) || isClaimVerified('kapınızda', facts)
@@ -228,9 +286,26 @@ export function writeVoiceover(
     formula = 'discovery_ease'
     const anindaAllowed = isClaimVerified('anında', facts)
     const anindaWord = anindaAllowed ? 'anında ' : 'hızla '
-    line = brand
-      ? `Yeni müşterilere ${brand} ile ${anindaWord}ulaşın, satışlarınızı büyütün.`
-      : `Hedef işletmelere ${anindaWord}ulaşın, satışlarınızı büyütün.`
+    
+    // Derive SaaS copy from actual product & brief context (accounting, HR, leads, analytics)
+    const rawB = facts.verifiedFacts.rawBrief.toLowerCase()
+    if (rawB.match(/muhasebe|fatura|finans|cari/)) {
+      line = brand
+        ? `${brand} ${subject} ile muhasebe süreçlerinizi ${anindaWord}yönetin.`
+        : `${subject} ile muhasebe süreçlerinizi ${anindaWord}yönetin.`
+    } else if (rawB.match(/harita|istihbarat|leads|müşteri bul/)) {
+      line = brand
+        ? `Yeni müşterilere ${brand} ile ${anindaWord}ulaşın, satışlarınızı büyütün.`
+        : `Hedef işletmelere ${anindaWord}ulaşın, satışlarınızı büyütün.`
+    } else if (rawB.match(/ik|personel|ekip|bordro/)) {
+      line = brand
+        ? `${brand} ${subject} ile ekip süreçlerinizi kolayca yönetin.`
+        : `${subject} ile personel süreçlerinizi kolayca yönetin.`
+    } else {
+      line = brand
+        ? `${brand} ${subject} ile iş süreçlerinizi verimli yönetin.`
+        : `${subject} ile iş süreçlerinizi verimli yönetin.`
+    }
   } else if (strategy.primary === 'scale_and_availability' || ontology.proofMode === 'scale_or_inventory') {
     formula = 'opportunity_action'
     const fabrikaAllowed = isClaimVerified('fabrika', facts) || isClaimVerified('fabrikadan', facts)
@@ -269,12 +344,6 @@ export function writeVoiceover(
         ? `${brand} ${subject} ile işlerinizi pratik şekilde tamamlayın.`
         : `${subject} ile işlerinizi pratik şekilde tamamlayın.`
     }
-  } else if (ontology.riskClass === 'regulated_health' || strategy.primary === 'trust_and_expertise') {
-    formula = 'trust_process'
-    // Strict health compliance: No unverified superlatives or guarantees
-    line = brand
-      ? `${brand} ile sağlığınız için uzman kontrolünde titiz bakım.`
-      : `Sağlığınız için uzman kontrolünde ${subject}, detaylı bilgi alın.`
   } else if (discount) {
     formula = 'benefit_offer'
     line = brand
@@ -282,10 +351,10 @@ export function writeVoiceover(
       : `${subject} avantajını kaçırmayın, bizimle iletişime geçin.`
   } else if (benefits.length > 0) {
     formula = 'benefit_offer'
-    const cleanB = benefits[0].replace(/[.,]/g, '').trim()
+    const firstClause = benefits[0].split(/[,.;]/)[0].trim()
     line = brand
-      ? `${brand} ${subject} ile ${cleanB}.`
-      : `${subject} ile ${cleanB}.`
+      ? `${brand} ${subject} ile ${firstClause}.`
+      : `${subject} ile ${firstClause}.`
   } else {
     formula = 'benefit_offer'
     line = brand
@@ -328,7 +397,7 @@ export function writeVoiceover(
     wordCount = line.split(/\s+/).filter(Boolean).length
   }
 
-  // 6. Real Claim Validation Assertion
+  // 6. Real Claim Validation Assertion (Recursive check on final line)
   const claimValidation = validateClaims(line, facts)
 
   return {

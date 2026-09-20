@@ -295,6 +295,7 @@ export interface OverlayPlanOutput {
     enabled: boolean
     mode: 'synchronized_voiceover'
     safeArea: '9:16'
+    sourceText?: string
   }
   brandWatermarkOrLogoPlacement: {
     enabled: boolean
@@ -305,6 +306,7 @@ export interface OverlayPlanOutput {
 // Validator & Auto Repair
 export interface HardFailChecks {
   durationTotalsEightSeconds: boolean
+  timelineContinuityValid: boolean
   verticalFormatSpecified: boolean
   cameraModeMatch: boolean
   hasOnePrimaryIdea: boolean
@@ -324,6 +326,7 @@ export interface HardFailChecks {
 
 export interface ValidationOutput {
   status: 'pass' | 'repaired' | 'needs_clarification' | 'blocked'
+  checks: HardFailChecks
   hardFails: string[]
   warnings: string[]
   repairedModules?: string[]

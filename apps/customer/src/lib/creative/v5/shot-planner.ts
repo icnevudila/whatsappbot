@@ -25,7 +25,7 @@ export const V5_STANDARD_NEGATIVES = [
   'watermark',
   'text, words, letters, typography, logo overlay, graphic box, lower third, subtitles, captions, banner, card',
   'cartoon, 3D animation look, cgi render, uncanny valley',
-  'blurry artifacts, low quality, pixelated, amateur video, jump cuts, jerky camera',
+  'blurry artifacts, low quality, pixelated, amateur video, choppy jumps, abrupt view shifts, jerky camera',
 ].join(', ')
 
 /**
@@ -73,11 +73,13 @@ export function planShots(
     shotNumber: 1,
     timing: { from: 0.0, to: 2.2 },
     role: 'visual_hook',
-    framing: 'Macro 100mm close-up',
+    framing: isContinuous
+      ? 'Continuous take: fluid dynamic push-in beginning the unbroken sequence'
+      : 'Tight macro close-up framing',
     subjectAction: hook.visualEventDescription,
     cameraMotion: isContinuous
-      ? 'Subtle smooth push-in beginning the single continuous uninterrupted camera take'
-      : 'Tight macro close-up framing with smooth push-in directly toward focal action',
+      ? 'Camera initiates a single unbroken forward dolly glide gliding directly toward the focal action seamlessly'
+      : 'Smooth push-in directly toward focal action',
     lightingAndPhysics: 'Natural daylight with soft specular highlights, shallow depth of field (f/1.8)',
   }
 
@@ -85,11 +87,13 @@ export function planShots(
     shotNumber: 2,
     timing: { from: 2.2, to: 5.8 },
     role: 'proof_or_action',
-    framing: 'Medium dynamic tracking',
+    framing: isContinuous
+      ? 'Continuous take: uninterrupted orbit tracking maintaining continuous lock'
+      : 'Medium dynamic tracking framing',
     subjectAction: `The focal subject (${subject}) performs its core verified function smoothly in realistic physical environment.`,
     cameraMotion: isContinuous
-      ? 'Continuous seamless camera glide pulling out slightly to track subject action without cut'
-      : 'Cut to medium dynamic framing, steady gimbal tracking maintaining continuous lock on the subject',
+      ? 'Maintaining continuous unbroken momentum without scene interruption, the camera seamlessly arcs around the active subject'
+      : 'Cut to medium framing, steady gimbal tracking maintaining continuous lock on the subject',
     lightingAndPhysics: 'Balanced natural illumination, true-to-life reflections and realistic physics',
   }
 
@@ -97,10 +101,12 @@ export function planShots(
     shotNumber: 3,
     timing: { from: 5.8, to: 8.0 },
     role: 'hero_close',
-    framing: 'Clean hero medium-wide',
+    framing: isContinuous
+      ? 'Continuous take: elevated hero perspective concluding the single take'
+      : 'Clean hero wide framing',
     subjectAction: `The subject (${subject}) rests in pristine final state, delivering quiet confidence and satisfaction.`,
     cameraMotion: isContinuous
-      ? 'Continuous unbroken glide rising gently into final hero perspective to conclude the take'
+      ? 'Still in the same continuous take without interruption, the camera smoothly rises into an elevated hero perspective to conclude the take'
       : 'Cut to clean hero wide framing, gentle crane rise revealing complete focal scene',
     lightingAndPhysics: 'Warm rim light, cinematic contrast and clean composition',
   }
@@ -120,7 +126,7 @@ export function planShots(
 
   // 6. Camera Directive
   const cameraDirective = isContinuous
-    ? `CAMERA MOVEMENT: continuous_take - Single unbroken camera movement throughout the entire 8.0 seconds with zero cuts or abrupt scene transitions.`
+    ? `CAMERA MOVEMENT: continuous_take - Single unbroken camera movement throughout the entire 8.0 seconds with seamless fluid glide and zero scene interruption.`
     : `CAMERA MOVEMENT: three_cut - Three distinct controlled camera framings connected by clean cinematic cut transitions.`
 
   // 7. Assemble Technical Veo English Prompt
