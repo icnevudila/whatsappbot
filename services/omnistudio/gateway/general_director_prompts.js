@@ -94,16 +94,19 @@ Temas, ağırlık, sıvı akışı, gölge ve yansıma tutarlı olsun. Nesneler 
     id: 'G4',
     title: 'GENEL PROMPT 4 — TÜRKÇE DIŞ SES VE SES TASARIMI',
     prompt: `KURALLAR:
-- Tek ana mesaj, doğal akıcı Türkçe.
-- Yaklaşık 10–14 kelime hedefle.
+- SIFIR DEVRİK CÜMLE: Kesinlikle devrik, kesik, noktalı virgüllü veya fiilsiz cümle kullanma. Yüklem daima sonda, kurallı Türk televizyon reklamı akıcılığında olmalıdır.
+- Yasak: 'Yüksek mukavemetli killi cephe tuğlası, fabrikadan doğrudan; projeniz için teklifinizi alın.' (Kesik ve devrik yapı yasak).
+- Doğru: '[MARKA] killi cephe tuğlaları, fabrikadan doğrudan şantiyenize güvenle ulaşıyor. Projenize özel teklif almak için bizimle iletişime geçin.'
+- Tek ana mesaj, akıcı kurallı Türkçe, tek net çağrı.
+- Yaklaşık 12–16 kelime hedefle.
 - Aynı metinde birden fazla CTA kullanma ('yazın, ulaşın, keşfedin' sıralaması yasak).
 - Doğrulanmamış üstünlük, hız, tazelik, teslimat veya garanti iddiası ekleme.
 - Dış ses 0,4–7,3 saniye arasında rahatça tamamlansın.
 - Uzun metni kelime keserek kısaltma; anlamı koruyarak yeniden yaz.
 
 SES TASARIMI:
-- Dış ses ön planda (spoken ONCE, zero repetition, zero looping).
-- Müzik reklamın ritmini destekler; kapanışta temiz çözülür.
+- Dış ses ön planda (spoken ONCE between 0.5s and 5.5s, zero repetition, zero looping).
+- 5.5s - 8.0s arası müzik reklamın ritmini destekler; temiz çözülür.
 - Efekt (foley) yalnız görüntüdeki gerçek eylemle eşleşir.`
   },
 
@@ -160,7 +163,7 @@ TEMEL İLKELER:
 1. İLK 2 SANİYE: Eylem ve doku anında başlar, izleyici neyin reklamı olduğunu anlar.
 2. 2.0s - 5.5s (AKSİYON & KANIT): Gerçek insan etkileşimi (usta, çalışan veya kullanıcı). Yapay poz yok, doğal eylem var. Eller ve alet tutuşu anatomik olarak doğru.
 3. 5.5s - 8.0s (MARKA KAPANIŞI): ${brand} tam yazımı ve orijinal logo, sahnedeki katı fiziksel yüzeyde (ambalaj, tabela, araç, iş kıyafeti) en az 2 saniye odakta, okunur ve sakin kalır. Sıfır boş duvar, sıfır havada uçuşan yazı.
-4. SESLENDİRME: Doğal Türkçe dış ses EXACTLY ONCE (0.5s - 5.5s) okunur. Tek ana mesaj, tek net çağrı. Sıfır tekrar, sıfır loop. 5.5s - 8.0s arası modern reklam müziği ve ambiyans foley ile prestijli çözülür.
+4. SESLENDİRME: %100 Kurallı ve doğal Türkçe dış ses EXACTLY ONCE (0.5s - 5.5s) okunur. KESİNLİKLE DEVRİK, KESİK VEYA NOKTALI VİRGÜLLÜ ÇEVİRİ CÜMLESİ KULLANILMAZ; yüklem daima sonda, televizyon reklamı akıcılığında tek ana mesaj ve tek net çağrı olur. Sıfır tekrar, sıfır loop. 5.5s - 8.0s arası modern reklam müziği ve ambiyans foley ile prestijli çözülür.
 5. DOĞRULUK: Doğrulanmamış hiçbir özellik, sahte sertifika veya abartılı iddia üretilemez.`;
 }
 

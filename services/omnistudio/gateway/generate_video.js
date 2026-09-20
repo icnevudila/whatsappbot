@@ -232,11 +232,19 @@ KRİTİK YÖNETMEN VE REKLAM STANDARTLARI (ÖNEMLİ):
    - Firma adı ve logosu küçük masa levhasında değil, ürün/araç/kıyafet/giriş tabelası gibi doğal marka yüzeylerinde yer alır.
    - Güven veren yönetici veya çalışan kameraya/ekrana bakar, arkada gün batımı ve canlı kurumsal ofis atmosferi görünür. TERTEMİZ DOĞAL REKLAM KAPANIŞI.
 
-5. NATİF TÜRKÇE SPİKER SESLENDİRMESİ (GENEL PROMPT 4 KURALLARI):
-   - Dış ses 10-14 kelime arasında, tek ana mesaj ve tek net çağrı içermelidir.
-   - Doğrulanmamış üstünlük, teslimat veya garanti iddiası eklenemez.
+5. NATİF TÜRKÇE SPİKER SESLENDİRMESİ (%100 KURALLI TÜRKÇE — SIFIR DEVRİK CÜMLE):
+   - KESİNLİKLE DEVRİK, KESİK VEYA FİİLSİZ CÜMLE KULLANILMAYACAKTIR.
+   - YASAK YAPILAR (Devrik, çeviri kokan, fiilsiz veya parçalı yapılar):
+     * "Yüksek mukavemetli tuğla, fabrikadan doğrudan; teklif alın." (YASAK! Yüklem yok, devrik, kesik)
+     * "Projenizi tanıyın. Ayvazoğlu ile tanışın. Birlikte konuşalım." (YASAK! Robotik, parçalı)
+   - ZORUNLU KURAL: Türkçenin doğal kurallı söz dizimine tam uygun (Özne + Nesne/Tümleç + Yüklem sonda), profesyonel Türk televizyon reklamı akıcılığında tek birleşik cümle kurulmalıdır.
+   - DOĞRU ÖRNEKLER:
+     * "${brand} killi cephe tuğlaları, fabrikadan doğrudan şantiyenize güvenle ulaşıyor. Projenize özel fiyat teklifi almak için bize yazın."
+     * "${brand} güvencesiyle yüksek mukavemetli tuğlalar şantiyenizde yükseliyor. Detaylı bilgi almak için bizimle iletişime geçin."
+     * "${brand} akülü sırt pompası ile bahçenizde ilaçlama yapmak artık çok daha kolay. Detaylı bilgi için bize yazın."
+   - Uzunluk: 12-16 kelime arasında, tek ana mesaj ve tek net çağrı içermelidir.
    - Format:
-   AUDIO: Professional crystal-clear Turkish commercial voiceover spoken ONCE between 0.5s and 5.5s with zero repetition, zero looping, and zero echo: "[10-14 kelimelik Türkçe replik]". From 5.5s to 8.0s: subtle modern commercial rhythm and natural ambient foley carry the remaining seconds to a polished, confident conclusion with zero voice re-entry.
+   AUDIO: Professional crystal-clear Turkish commercial voiceover spoken ONCE between 0.5s and 5.5s with zero repetition, zero looping, and zero echo: "[12-16 kelimelik %100 kurallı, yüklemi sonda akıcı Türkçe replik]". From 5.5s to 8.0s: subtle modern commercial rhythm and natural ambient foley carry the remaining seconds to a polished, confident conclusion with zero voice re-entry.
 
 6. İNSAN, EL VE FİZİK TUTARLILIĞI (GENEL PROMPT 3 KURALLARI):
    - Her kişinin rolü (çalışan, usta veya alıcı) ve yaptığı iş net olmalıdır.
@@ -868,6 +876,12 @@ function attemptGenerateOnCdp(port, tab, options) {
           console.warn("[VideoGen] Thumbnail çıkartılırken hata:", thumbErr.message);
         }
 
+        const rawVideoUrl = `http://${PUBLIC_HOST}:${PORT}/outputs/${videoId}_raw.mp4`;
+        const capcutFinal = path.join(OUTPUT_DIR, `${videoId}_raw_capcut_final.mp4`);
+        const finalUrl = fs.existsSync(capcutFinal)
+          ? `http://${PUBLIC_HOST}:${PORT}/outputs/${videoId}_raw_capcut_final.mp4`
+          : rawVideoUrl;
+
         // İsteğe bağlı olarak sadece includeOverlay true ise harici montaj üret (varsayılan: false)
         let campaignUrl = finalUrl;
         if (options.includeOverlay) {
@@ -1016,10 +1030,8 @@ async function generateVideo(options) {
   }).sort((a, b) => (accountPool[a]?.lastUsed || 0) - (accountPool[b]?.lastUsed || 0));
 
   if (candidatePorts.length === 0) {
-    const resetTimes = CDP_PORTS.map(p => accountPool[p]?.limitedUntil || 0).filter(t => t > now);
-    const earliest = resetTimes.length ? Math.min(...resetTimes) : now + 3600000;
-    const timeStr = new Date(earliest).toLocaleTimeString('tr-TR');
-    throw new Error(`Bağlı olan tüm Google Gemini hesapları (4 hesap) şu anda video kota sınırında. İlk hesap sıfırlanma zamanı: ${timeStr}`);
+    console.log(`[VideoGen Pool] ⚠️ Bağlı olan tüm Google Gemini hesapları şu an kota sınırında. Otomatik olarak Google Flow (Veo 3.1) motoruna devrediliyor...`);
+    return await generateVideoOnFlow(options);
   }
 
   let lastError = null;
