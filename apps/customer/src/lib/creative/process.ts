@@ -231,6 +231,11 @@ export async function processCreativeGeneration(
         throw new Error('Video üretimi için kurumsal Logo ve Marka Kiti zorunludur. Yapay zekanın uydurma logo ve semboller üretmemesi için lütfen Ayarlar > Marka Kiti bölümünden logonuzu tanımlayın.')
       }
 
+      if (logoUrl && !logoUrl.startsWith('http')) {
+        const { data: pub } = supabase.storage.from('brand-assets').getPublicUrl(logoUrl)
+        logoUrl = pub.publicUrl
+      }
+
       // 2. Ürün Görseli veya Kurumsal Hizmet Çözümlemesi
       const chosenProduct = snapshot.products?.[0]
       let productImageUrl = chosenProduct?.imageUrl || null
@@ -258,6 +263,11 @@ export async function processCreativeGeneration(
         productImageUrl = logoUrl
       }
 
+      if (productImageUrl && !productImageUrl.startsWith('http')) {
+        const { data: pub } = supabase.storage.from('brand-assets').getPublicUrl(productImageUrl)
+        productImageUrl = pub.publicUrl
+      }
+
       const { overlay } = buildVideoPrompt(snapshot)
       let videoPrompt: string
       try {
@@ -269,7 +279,7 @@ export async function processCreativeGeneration(
           ctaText: overlay.ctaText || null,
           campaignDeadline: snapshot.dateRange || null,
           deliveryArea: (snapshot as any).deliveryArea || null,
-          cameraMode: 'continuous_take',
+          cameraMode: (snapshot as any).cameraMode || undefined,
           products: (snapshot.products || []).map((p) => ({
             name: p.name,
             imageUrl: p.imageUrl || productImageUrl,

@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const { execSync } = require('child_process');
 const WebSocket = globalThis.WebSocket || (() => {
   try { return require('ws'); } catch (e) { return null; }
@@ -53,10 +54,107 @@ async function enhanceVideoPrompt(options = {}) {
 }
 
 /**
+ * Resolves concrete local file paths for logo and product images.
+ * Downloads remote HTTP(S) URLs to local temporary files if needed, or verifies existing local files.
+ * If user didn't explicitly upload an image in the wizard, falls back to the organization's brand kit.
+ */
+async function resolveLocalMediaFiles(options = {}) {
+  const files = [];
+  const candidateItems = [];
+
+  // 1. Wizard veya API çağrısından gelen somut görseller (ürün ve logo)
+  if (options.productImageUrl) candidateItems.push({ url: options.productImageUrl, role: 'product' });
+  if (options.logoUrl) candidateItems.push({ url: options.logoUrl, role: 'logo' });
+
+  // 2. Çoklu referans görselleri
+  if (Array.isArray(options.referenceImages)) {
+    for (const ref of options.referenceImages) {
+      if (typeof ref === 'string') candidateItems.push({ url: ref, role: 'reference' });
+      else if (ref?.url) candidateItems.push({ url: ref.url, role: ref.role || 'reference' });
+      else if (ref && (ref.data || ref.b64_json)) candidateItems.push({ b64: ref.data || ref.b64_json, role: ref.role || 'reference' });
+    }
+  }
+
+  // 3. Kullanıcı yüklemediyse veya eksikse, kayıtlı kurumsal Marka Kitinden çek
+  if (!options.productImageUrl || !options.logoUrl) {
+    try {
+      const bk = options.brandKit || await getActiveBrandKit(options.orgId, options.brandName || options.customer);
+      if (bk) {
+        if (!options.logoUrl && bk.logo_path) candidateItems.push({ url: bk.logo_path, role: 'logo' });
+        if (!options.productImageUrl && bk.product_image_path) candidateItems.push({ url: bk.product_image_path, role: 'product' });
+      }
+    } catch (e) {
+      console.warn('[VideoGen] Brand kit çözümleme uyarısı:', e.message);
+    }
+  }
+
+  const tmpDir = os.tmpdir ? os.tmpdir() : '/tmp';
+
+  // 4. Dosyaları yerel dosya yoluna indir veya doğrula
+  for (let idx = 0; idx < candidateItems.length; idx++) {
+    const item = candidateItems[idx];
+    try {
+      if (item.b64) {
+        const raw = item.b64.includes(',') ? item.b64.split(',')[1] : item.b64;
+        const tmpPath = path.join(tmpDir, `video_b64_${Date.now()}_${idx}.png`);
+        fs.writeFileSync(tmpPath, Buffer.from(raw, 'base64'));
+        files.push(tmpPath);
+      } else if (item.url) {
+        let strUrl = item.url.trim();
+        // Supabase relative storage path ise public URL'e çevir
+        if (!strUrl.startsWith('http://') && !strUrl.startsWith('https://') && !strUrl.startsWith('/') && !strUrl.startsWith('.')) {
+          strUrl = `https://rnkrjmblgcdqlyslbhob.supabase.co/storage/v1/object/public/brand-assets/${strUrl}`;
+        }
+
+        if (strUrl.startsWith('http://') || strUrl.startsWith('https://')) {
+          console.log(`[VideoGen] 🌐 Somut görsel indiriliyor (${item.role}): ${strUrl.slice(0, 70)}...`);
+          const res = await fetch(strUrl, { signal: AbortSignal.timeout(12000) });
+          if (res.ok) {
+            const buf = Buffer.from(await res.arrayBuffer());
+            const extMatch = strUrl.match(/\.(png|jpg|jpeg|webp)/i);
+            const ext = extMatch ? extMatch[1].toLowerCase() : 'png';
+            const tmpPath = path.join(tmpDir, `video_media_${Date.now()}_${idx}.${ext}`);
+            fs.writeFileSync(tmpPath, buf);
+            files.push(tmpPath);
+            console.log(`[VideoGen] 💾 Somut görsel diske yazıldı: ${tmpPath} (${buf.length} bytes)`);
+          } else {
+            console.warn(`[VideoGen] ⚠️ Görsel indirilemedi (${res.status} ${res.statusText}): ${strUrl}`);
+          }
+        } else {
+          // Yerel dosya yolları
+          const clean = strUrl.replace(/^\/outputs\//, '/app/gateway/outputs/');
+          const localCandidates = [
+            strUrl,
+            clean,
+            path.join('/app/gateway', strUrl),
+            path.join('/app/gateway/outputs', path.basename(strUrl)),
+            path.resolve(strUrl),
+          ];
+          for (const cand of localCandidates) {
+            if (fs.existsSync(cand) && fs.statSync(cand).isFile()) {
+              files.push(cand);
+              console.log(`[VideoGen] 📁 Yerel somut dosya eşleşti (${item.role}): ${cand}`);
+              break;
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn(`[VideoGen] Görsel işleme hatası (${item.role}):`, err.message);
+    }
+  }
+
+  const uniqueFiles = Array.from(new Set(files));
+  console.log(`[VideoGen] 🎯 Toplam ${uniqueFiles.length} adet somut görsel dosyası hazırlandı.`);
+  return uniqueFiles;
+}
+
+/**
  * Normal ChatGPT Web Servisine Girerek Otonom Video Promptu Üretir
  * OpenAI API anahtarı veya kredi KULLANMAZ, doğrudan Chrome sekmendeki ChatGPT oturumunu çalıştırır.
  */
-async function generatePromptWithChatGptWeb(port, { prompt, brandName, productName, customer, orgId }) {
+async function generatePromptWithChatGptWeb(port, options = {}) {
+  const { prompt, brandName, productName, customer, orgId, productImageUrl, logoUrl } = options;
   const brandKit = await getActiveBrandKit(orgId, brandName || customer);
   const company = customer || brandName || brandKit.organization_name || brandKit.brand_name || 'İşletme';
   const logoDesc = getLogoVisualDescription(company, brandKit.logo_path, brandKit.hasExplicitLogo);
@@ -179,15 +277,14 @@ ${require('./brand_learning_store.js').buildLearningPromptBlock(brand, product, 
           // Eğer firmanın Wizard'dan yüklenmiş kurumsal logosu veya ürün görseli varsa, doğrudan ChatGPT'ye dosya olarak yükle
           let uploadedFilesCount = 0;
           try {
-            const filesToUpload = [];
-            if (brandKit.logo_path) {
-              const absLogo = brandKit.logo_path.startsWith('/app/') ? brandKit.logo_path : path.join('/app/gateway', brandKit.logo_path);
-              if (fs.existsSync(absLogo)) filesToUpload.push(absLogo);
-            }
-            if (brandKit.product_image_path) {
-              const absProd = brandKit.product_image_path.startsWith('/app/') ? brandKit.product_image_path : path.join('/app/gateway', brandKit.product_image_path);
-              if (fs.existsSync(absProd)) filesToUpload.push(absProd);
-            }
+            const filesToUpload = await resolveLocalMediaFiles({
+              orgId,
+              brandName: company,
+              customer: company,
+              brandKit,
+              productImageUrl,
+              logoUrl,
+            });
 
             if (filesToUpload.length > 0) {
               await sendCmd("DOM.enable");
@@ -494,6 +591,62 @@ function attemptGenerateOnCdp(port, tab, options) {
         });
         const initialDlCount = Number(baselineRes?.result?.value) || 0;
         console.log(`[VideoGen] Sayfa hazır. Başlangıç video/indir butonu sayısı: ${initialDlCount}`);
+
+        // 2.5. Eğer ürün veya logo görseli varsa Gemini inputuna fiziksel dosya olarak yükle
+        try {
+          const filesToUpload = await resolveLocalMediaFiles(options);
+          if (filesToUpload.length > 0) {
+            console.log(`[VideoGen -> Gemini] 🖼️ Gemini için ${filesToUpload.length} adet somut görsel dosyası hazırlanıyor:`, filesToUpload);
+            await sendCmd("DOM.enable");
+            const doc = await sendCmd("DOM.getDocument", { depth: -1 });
+            let fileInput = await sendCmd("DOM.querySelector", {
+              nodeId: doc.root.nodeId,
+              selector: 'input[type="file"]'
+            });
+
+            if (!fileInput?.nodeId) {
+              await sendCmd("Runtime.evaluate", {
+                expression: `(() => {
+                  const btns = Array.from(document.querySelectorAll('button, [role="button"]'));
+                  const upBtn = btns.find(b => {
+                    const l = (b.getAttribute('aria-label') || b.innerText || '').toLowerCase();
+                    return l.includes('yükle') || l.includes('upload') || l.includes('resim') || l.includes('dosya') || l.includes('ekle') || l.includes('add');
+                  });
+                  if (upBtn) upBtn.click();
+                })()`
+              });
+              await new Promise(r => setTimeout(r, 1200));
+              const docRetry = await sendCmd("DOM.getDocument", { depth: -1 });
+              fileInput = await sendCmd("DOM.querySelector", {
+                nodeId: docRetry.root.nodeId,
+                selector: 'input[type="file"]'
+              });
+            }
+
+            if (fileInput?.nodeId) {
+              console.log(`[VideoGen -> Gemini] 🚀 Somut dosyalar Gemini inputuna aktarılıyor (nodeId: ${fileInput.nodeId})...`);
+              await sendCmd("DOM.setFileInputFiles", {
+                nodeId: fileInput.nodeId,
+                files: filesToUpload
+              });
+              await sendCmd("Runtime.evaluate", {
+                expression: `(() => {
+                  const inputs = document.querySelectorAll('input[type="file"]');
+                  inputs.forEach(i => {
+                    i.dispatchEvent(new Event('change', { bubbles: true }));
+                    i.dispatchEvent(new Event('input', { bubbles: true }));
+                  });
+                })()`
+              });
+              console.log(`[VideoGen -> Gemini] ✅ Görseller yüklendi, arayüze oturması bekleniyor (4sn)...`);
+              await new Promise(r => setTimeout(r, 4000));
+            } else {
+              console.warn(`[VideoGen -> Gemini] ⚠️ Gemini sayfasında input[type="file"] bulunamadı.`);
+            }
+          }
+        } catch (geminiUpErr) {
+          console.warn('[VideoGen -> Gemini] Görsel yükleme uyarısı (metinle devam ediliyor):', geminiUpErr.message);
+        }
 
         // Prompt kutusuna odaklan ve CDP native Input.insertText ile yaz
         await sendCmd("Runtime.evaluate", {
@@ -1014,6 +1167,63 @@ async function generateVideoOnFlow(options = {}) {
   await send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 });
   await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
   await sleep(500);
+
+  // 1.2. Kurumsal logo ve ürün görseli varsa somut dosya olarak Flow'a yükle
+  try {
+    const filesToUpload = await resolveLocalMediaFiles(options);
+    if (filesToUpload.length > 0) {
+      console.log(`[Flow Video] 🖼️ Google Flow için ${filesToUpload.length} adet somut görsel dosyası hazırlanıyor:`, filesToUpload);
+      await send('DOM.enable');
+      const doc = await send('DOM.getDocument', { depth: -1 });
+      let fileInput = await send('DOM.querySelector', {
+        nodeId: doc.root.nodeId,
+        selector: 'input[type="file"]'
+      });
+
+      if (!fileInput?.nodeId) {
+        // Upload / Add butonunu ara ve tıkla
+        await send('Runtime.evaluate', {
+          expression: `(() => {
+            const btns = Array.from(document.querySelectorAll('button, [role="button"], mat-icon'));
+            const addBtn = btns.find(b => {
+              const text = (b.innerText || b.getAttribute('aria-label') || b.getAttribute('data-tooltip') || '').toLowerCase();
+              return text.includes('add') || text.includes('upload') || text.includes('yükle') || text.includes('ingredient') || text.includes('media');
+            });
+            if (addBtn) addBtn.click();
+          })()`
+        });
+        await sleep(1200);
+        const docRetry = await send('DOM.getDocument', { depth: -1 });
+        fileInput = await send('DOM.querySelector', {
+          nodeId: docRetry.root.nodeId,
+          selector: 'input[type="file"]'
+        });
+      }
+
+      if (fileInput?.nodeId) {
+        console.log(`[Flow Video] 🚀 Somut dosyalar Flow inputuna iletiliyor (nodeId: ${fileInput.nodeId})...`);
+        await send('DOM.setFileInputFiles', {
+          nodeId: fileInput.nodeId,
+          files: filesToUpload
+        });
+        await send('Runtime.evaluate', {
+          expression: `(() => {
+            const inputs = document.querySelectorAll('input[type="file"]');
+            inputs.forEach(i => {
+              i.dispatchEvent(new Event('change', { bubbles: true }));
+              i.dispatchEvent(new Event('input', { bubbles: true }));
+            });
+          })()`
+        });
+        console.log(`[Flow Video] ✅ ${filesToUpload.length} adet görsel dosyası yüklendi, arayüze oturması bekleniyor (4sn)...`);
+        await sleep(4000);
+      } else {
+        console.warn(`[Flow Video] ⚠️ Google Flow sayfasında input[type="file"] bulunamadı.`);
+      }
+    }
+  } catch (flowUpErr) {
+    console.warn(`[Flow Video] Görsel yükleme uyarısı (metinle devam ediliyor):`, flowUpErr.message);
+  }
 
   // 1.5. Başlangıçtaki mevcut tile'ların imza listesini kaydet (Eski videolarla karışmasını %100 engelle)
   const baselineTiles = await send('Runtime.evaluate', {
