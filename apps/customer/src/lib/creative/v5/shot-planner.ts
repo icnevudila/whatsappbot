@@ -5,9 +5,19 @@ import type {
   HookPlanOutput,
   ShotPlanOutput,
   ShotItem,
+  ReferenceAssetInput,
 } from './schemas'
 
 export const V5_STANDARD_NEGATIVES = [
+  'additional logos',
+  'invented brand names',
+  'generated captions',
+  'promotional badges',
+  'extra products',
+  'invented accessories',
+  'altered packaging',
+  'distorted labels',
+  'product deformation',
   'duplicate subject',
   'duplicate product',
   'altered product geometry',
@@ -43,10 +53,12 @@ export function planShots(
   const brand = facts.verifiedFacts.brandName || 'Brand'
   const subject = facts.verifiedFacts.offerName || 'the product or service'
 
-  // 1. Determine Camera Mode
+  // 1. Determine Camera Mode (Rule 5: reference products default to continuous_take to prevent geometry drift)
   const cameraMode: 'continuous_take' | 'three_cut' =
     cameraModeInput ||
-    (strategy.primary === 'sensory_desire' || strategy.primary === 'craftsmanship'
+    (facts.assets.productReference ||
+    strategy.primary === 'sensory_desire' ||
+    strategy.primary === 'craftsmanship'
       ? 'continuous_take'
       : 'three_cut')
 
@@ -144,9 +156,22 @@ export function planShots(
     cameraDirective,
     `LIGHT AND PHYSICS: Natural lighting, realistic physical gravity and authentic material reflections.`,
     audioDirective,
-    `TEXT POLICY: No newly generated text, captions, prices, phone numbers, calls to action, signs or logos. No gibberish words, small text, long campaign copy, subtitles, floating text, handheld signs, desk signs, graphic overlays, banners or lower thirds. Real physical brand identity is allowed: preserve supplied product labels and original logo, and place the brand name only on large clean physical brand surfaces such as product labels, uniforms, vehicle decals, shop/factory entrance signage or hero product nameplates. Use the brand color palette on products, clothing, environment accents and lighting. Do not redesign or invent a logo.`,
+    `TEXT POLICY: No newly generated text, captions, prices, phone numbers, calls to action, signs, or fake logos. No gibberish words, small text, long campaign copy, subtitles, floating text, handheld signs, desk signs, graphic overlays, banners or lower thirds. Real physical brand identity is strictly preserved: pre-existing printed labels and authentic branding on reference products remain as-is without modification. Brand name appears only on natural physical surfaces (uniforms, vehicle decals, entrance signage, or product nameplates) matching the brand palette. Do not redesign or invent a logo.`,
     `NEGATIVE CONSTRAINTS: ${V5_STANDARD_NEGATIVES}`,
   ].join('\n')
+
+  const referenceAssetInput: ReferenceAssetInput = {
+    hasImageInput: Boolean(facts.assets.productReference),
+    imageUrl: facts.assets.productReferenceUrl || null,
+    mode: facts.assets.productReference ? 'product_reference' : 'none',
+    motionDirective: facts.assets.productReference
+      ? 'Preserve physical product geometry, label, and packaging exactly as shown in the reference image. Motion is continuous camera movement and physical lighting interaction around the locked subject.'
+      : 'Maintain realistic physical proportions and verified specifications.',
+  }
+
+  const imageToVideoPrompt = facts.assets.productReference
+    ? `IMAGE-TO-VIDEO: Anchor to provided product reference image. Zero alteration of product packaging, color, or printed label. 8-second continuous take camera movement revealing realistic physical interaction in ${singleLocation}.`
+    : undefined
 
   return {
     durationSeconds: 8,
@@ -157,6 +182,8 @@ export function planShots(
     veoEnglishPrompt: veoPrompt,
     negativePrompt: V5_STANDARD_NEGATIVES,
     brandIdentityMode,
+    referenceAssetInput,
+    imageToVideoPrompt,
     reasonCode: `shotplan_8s_${cameraMode}_${strategy.primary}_location_${ontology.offerType}`,
   }
 }

@@ -23,7 +23,7 @@ export { selectHook } from './hook-selector'
 export { planShots, V5_STANDARD_NEGATIVES } from './shot-planner'
 export { writeVoiceover, validateClaims, verifyPercentageClaim, countTurkishSyllables, estimateSpeechDuration } from './voiceover-writer'
 export { compileOverlay, deriveHookHeadline } from './overlay-compiler'
-export { validateAndRepair } from './validator'
+export { validateAndRepair, validateGeneratedVideoArtifact } from './validator'
 
 /**
  * Deterministic V5 Video Compiler Pipeline
@@ -84,6 +84,14 @@ export function compileDeterministicV5(input: UserVideoInput): V5FinalOutputPack
     veoPrompt,
     overlayPlan: overlay,
     validation: validationResult.validation,
+    lockedBrandIdentity: facts.lockedBrandIdentity || {
+      brandName: facts.verifiedFacts.brandName || null,
+      originalLogoUrl: facts.assets.logoReferenceUrl || null,
+      colors: {},
+      fonts: undefined,
+      isLocked: true,
+    },
+    videoArtifactValidation: undefined,
   }
 }
 

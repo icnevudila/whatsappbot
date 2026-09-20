@@ -167,8 +167,51 @@ export interface UserVideoInput {
   }>
   phones?: Array<{ phone: string; label?: string | null }>
   logoUrl?: string | null
+  productImageUrl?: string | null
+  referenceImageUrl?: string | null
+  brandKit?: {
+    name?: string | null
+    colors?: {
+      primary?: string
+      secondary?: string
+      accent?: string
+      background?: string
+      text?: string
+    }
+    fonts?: {
+      primary?: string
+      heading?: string
+    }
+    logoUrl?: string | null
+  }
   videoSpeech?: boolean
   style?: string | null
+}
+
+// 1. Kilitli Marka Kimliği (Doğrudan Girdiden Taşınır, Model Değiştiremez)
+export interface LockedBrandIdentity {
+  brandName: string | null
+  originalLogoUrl: string | null
+  colors: {
+    primary?: string
+    secondary?: string
+    accent?: string
+    background?: string
+    text?: string
+  }
+  fonts?: {
+    primary?: string
+    heading?: string
+  }
+  isLocked: true
+}
+
+// 5. Gerçek Referans Görseli Girişi (Image-to-Video / First Frame)
+export interface ReferenceAssetInput {
+  hasImageInput: boolean
+  imageUrl: string | null
+  mode: 'first_frame' | 'product_reference' | 'none'
+  motionDirective: string
 }
 
 // Structured Percentage & Claim Verification Types
@@ -230,6 +273,7 @@ export interface FactNormalizerOutput {
   unknowns: string[]
   forbiddenClaims: string[]
   sectorHint: string | null
+  lockedBrandIdentity?: LockedBrandIdentity
 }
 
 // Universal Ontology Classification
@@ -287,6 +331,8 @@ export interface ShotPlanOutput {
   veoEnglishPrompt: string
   negativePrompt: string
   brandIdentityMode: 'reference_locked' | 'name_for_voice_and_overlay_only' | 'none'
+  referenceAssetInput?: ReferenceAssetInput
+  imageToVideoPrompt?: string
   reasonCode: string
 }
 
@@ -351,6 +397,7 @@ export interface HardFailChecks {
   firstShotIsNotEstablishingOnly: boolean
   claimsAllowedForRiskClass: boolean
   allOverlayFactsVerified: boolean
+  lockedBrandIdentityPreserved?: boolean
 }
 
 export interface ValidationOutput {
@@ -361,6 +408,19 @@ export interface ValidationOutput {
   repairedModules?: string[]
   clarificationQuestion?: string | null
   score: number // Analytic score only, not gating boolean pass
+}
+
+// 8. Üretilmiş Video Eseri Doğrulama Çıktısı (Prompt doğrulamasından ayrı tutulur)
+export interface GeneratedVideoValidationResult {
+  status: 'pass' | 'failed' | 'not_checked'
+  analysisAvailable: boolean
+  checks: {
+    textOrLogoHallucinationDetected: boolean | 'not_checked'
+    productDriftDetected: boolean | 'not_checked'
+    voiceoverMismatchDetected: boolean | 'not_checked'
+    durationValid: boolean | 'not_checked'
+  }
+  notes: string[]
 }
 
 // Final Unified Machine-Readable Package Contract
@@ -374,4 +434,6 @@ export interface V5FinalOutputPackage {
   veoPrompt: string
   overlayPlan: OverlayPlanOutput
   validation: ValidationOutput
+  lockedBrandIdentity: LockedBrandIdentity
+  videoArtifactValidation?: GeneratedVideoValidationResult
 }

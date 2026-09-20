@@ -735,6 +735,7 @@ function attemptGenerateOnCdp(port, tab, options) {
             physicalAnchoring: options.anchoring || 'Fiziksel Yüzey Sabitleme (Rigid Surface Anchoring)',
             logoUrl: options.logoUrl || null,
             referenceImageUrl: options.referenceImageUrl || null,
+            videoVisualValidation: options.hasVisionAnalysis ? 'analyzed' : 'not_checked',
             createdAt: new Date().toISOString()
           };
           fs.writeFileSync(metaPath, JSON.stringify(metaData, null, 2));
@@ -768,6 +769,7 @@ function attemptGenerateOnCdp(port, tab, options) {
           thumbnailUrl: thumbUrl,
           duration: 10,
           aspect: "9:16",
+          videoVisualValidation: options.hasVisionAnalysis ? 'analyzed' : 'not_checked',
           promptUsed: fullPrompt
         });
 

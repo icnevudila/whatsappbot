@@ -7,6 +7,7 @@ import type {
   OverlayPlanOutput,
   ValidationOutput,
   HardFailChecks,
+  GeneratedVideoValidationResult,
 } from './schemas'
 import { validateClaims, estimateSpeechDuration } from './voiceover-writer'
 
@@ -318,6 +319,17 @@ export function validateAndRepair(
 
   const hasInventedOfferOrFeature = !claimsAllowed
 
+  // 14. Locked Brand Identity Check
+  let lockedBrandIdentityPreserved = true
+  if (facts.lockedBrandIdentity && facts.lockedBrandIdentity.brandName) {
+    const lockedName = facts.lockedBrandIdentity.brandName.trim()
+    const verifiedName = (facts.verifiedFacts.brandName || '').trim()
+    if (lockedName !== verifiedName) {
+      lockedBrandIdentityPreserved = false
+      hardFails.push('locked_brand_identity_name_mutated')
+    }
+  }
+
   const checks: HardFailChecks = {
     durationTotalsEightSeconds: durationOk,
     timelineContinuityValid,
@@ -336,9 +348,10 @@ export function validateAndRepair(
     firstShotIsNotEstablishingOnly: !hook.establishingShotOnly,
     claimsAllowedForRiskClass: claimsAllowed,
     allOverlayFactsVerified: overlayFactsValid,
+    lockedBrandIdentityPreserved,
   }
 
-  // 14. Status calculation (Hard fails strictly stop production / block)
+  // 15. Status calculation (Hard fails strictly stop production / block)
   let status: ValidationOutput['status'] = 'pass'
   let clarificationQuestion: string | null = null
 
@@ -375,5 +388,53 @@ export function validateAndRepair(
     },
     repairedVoiceover: repairedModules.includes('voiceover') ? currentVoiceover : undefined,
     repairedShotPlan: repairedModules.includes('shotPlan') ? currentShotPlan : undefined,
+  }
+}
+
+/**
+ * 8. Generated Video Artifact Validator (Decoupled from prompt validation)
+ * If no vision model is attached or analysis is not run, returns 'not_checked'.
+ * Never returns synthetic pass without real verification.
+ */
+export function validateGeneratedVideoArtifact(
+  videoPathOrUrl?: string | null,
+  options?: {
+    hasVisionAnalysis?: boolean
+    visionReport?: {
+      textOrLogoHallucinationDetected: boolean
+      productDriftDetected: boolean
+      voiceoverMismatchDetected: boolean
+      durationValid: boolean
+      notes?: string[]
+    }
+  }
+): GeneratedVideoValidationResult {
+  if (!options?.hasVisionAnalysis || !options.visionReport) {
+    return {
+      status: 'not_checked',
+      analysisAvailable: false,
+      checks: {
+        textOrLogoHallucinationDetected: 'not_checked',
+        productDriftDetected: 'not_checked',
+        voiceoverMismatchDetected: 'not_checked',
+        durationValid: 'not_checked',
+      },
+      notes: ['Video visual analysis tool is not connected; generated video artifact was not inspected.'],
+    }
+  }
+
+  const { textOrLogoHallucinationDetected, productDriftDetected, voiceoverMismatchDetected, durationValid, notes } = options.visionReport
+  const failed = textOrLogoHallucinationDetected || productDriftDetected || voiceoverMismatchDetected || !durationValid
+
+  return {
+    status: failed ? 'failed' : 'pass',
+    analysisAvailable: true,
+    checks: {
+      textOrLogoHallucinationDetected,
+      productDriftDetected,
+      voiceoverMismatchDetected,
+      durationValid,
+    },
+    notes: notes || [],
   }
 }

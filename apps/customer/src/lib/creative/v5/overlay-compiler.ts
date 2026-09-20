@@ -202,8 +202,8 @@ export function compileOverlay(
       sourceText: voiceover.text,
     },
     brandWatermarkOrLogoPlacement: {
-      enabled: facts.assets.logoReference,
-      sourceAsset: facts.assets.logoReferenceUrl || null,
+      enabled: Boolean(facts.assets.logoReference || facts.lockedBrandIdentity?.originalLogoUrl),
+      sourceAsset: facts.lockedBrandIdentity?.originalLogoUrl || facts.assets.logoReferenceUrl || null,
     },
   }
 }

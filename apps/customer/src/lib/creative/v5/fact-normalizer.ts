@@ -286,14 +286,34 @@ export function normalizeFacts(input: UserVideoInput): FactNormalizerOutput {
     campaignObjective = 'promotion'
   }
 
-  // 7. Assets State
+  // 7. Assets State (Ürün ve Logo Referansları)
+  const productRefUrl = mainProduct?.imageUrl || input.productImageUrl || input.referenceImageUrl || null
+  const logoRefUrl = input.logoUrl || input.brandKit?.logoUrl || null
   const assets: AssetState = {
-    productReference: Boolean(mainProduct?.imageUrl),
-    productReferenceUrl: mainProduct?.imageUrl || null,
-    logoReference: Boolean(input.logoUrl),
-    logoReferenceUrl: input.logoUrl || null,
+    productReference: Boolean(productRefUrl),
+    productReferenceUrl: productRefUrl,
+    logoReference: Boolean(logoRefUrl),
+    logoReferenceUrl: logoRefUrl,
     locationReference: false,
     personReference: false,
+  }
+
+  // 7.1 Kilitli Marka Kimliği (Doğrudan Girdiden Taşınır, Model Değiştiremez)
+  const lockedBrandIdentity = {
+    brandName: input.brandName?.trim() || input.brandKit?.name?.trim() || null,
+    originalLogoUrl: logoRefUrl,
+    colors: {
+      primary: input.brandKit?.colors?.primary,
+      secondary: input.brandKit?.colors?.secondary,
+      accent: input.brandKit?.colors?.accent,
+      background: input.brandKit?.colors?.background,
+      text: input.brandKit?.colors?.text,
+    },
+    fonts: {
+      primary: input.brandKit?.fonts?.primary,
+      heading: input.brandKit?.fonts?.heading,
+    },
+    isLocked: true as const,
   }
 
   // 8. Unknowns Identification
@@ -350,6 +370,7 @@ export function normalizeFacts(input: UserVideoInput): FactNormalizerOutput {
     unknowns,
     forbiddenClaims,
     sectorHint: input.sectorHint?.trim() || null,
+    lockedBrandIdentity,
   }
 }
 
