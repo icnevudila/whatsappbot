@@ -410,6 +410,42 @@ async function buildTurkishVeoDirectorPrompt(options = {}) {
   const primaryColorDesc = convertHexToTurkishColor(colors.primary);
   const accentColorDesc = convertHexToTurkishColor(colors.accent);
 
+  // 100 Sektör & 1.000 Varyasyonluk Uzman Bankadan Sektör Eşlemesi Yap
+  let sectorBlueprint = null;
+  try {
+    const { resolveSectorPrompt } = require('./sector_matcher.js');
+    sectorBlueprint = resolveSectorPrompt({
+      brand,
+      product,
+      brief,
+      videoType: options.videoType || 'product_showcase',
+      logoDescription: logoDesc,
+      brandKitText: `${accentColorDesc} ve ${primaryColorDesc} kurumsal tonlar`
+    });
+  } catch (err) {
+    console.warn('[BrandResolver] 100-sektör bankası çağrılırken fallback kullanıldı:', err.message);
+  }
+
+  // Eğer 100 sektör bankasından tam şablon çözüldüyse, o kusursuz direktifi esas al
+  if (sectorBlueprint && sectorBlueprint.veoPrompt) {
+    return `${sectorBlueprint.veoPrompt}
+
+KURUMSAL MARKA VE GÖRSEL KİMLİK KİLİDİ:
+- Marka / Firma Adı: "${brand}"
+- Kurumsal Orijinal Logo: ${logoDesc}
+- Kurumsal Renk Paleti: ${accentColorDesc}, ${primaryColorDesc}, beyaz ve siyah.
+- Sektörel Kategori: ${sectorBlueprint.sectorId} - ${sectorBlueprint.sectorName} (${sectorBlueprint.variationTitle})
+- Zorunlu İnsan & Eylem: ${sectorBlueprint.hasHuman ? 'Sahne çalışan, usta veya yetişkin kullanıcı ile aktiftir. Doğal iş eylemi esastır, poz vermek yasaktır.' : 'Ürün ve malzeme odaklı kompozisyon.'}
+- Sektöre Özel Sınır: ${sectorBlueprint.forbiddenClaims || 'Doğrulanmamış özellik, sahte sertifika veya abartılı vaat eklenemez.'}
+
+AUDIO DİREKTİFİ:
+AUDIO: Professional crystal-clear Turkish commercial voiceover spoken ONCE between 0.5s and 5.5s with zero repetition, zero looping, and zero echo: "${sectorBlueprint.voiceoverText}". From 5.5s to 8.0s: subtle modern commercial rhythm and natural ambient foley carry the remaining seconds to a polished, confident conclusion with zero voice re-entry.
+
+SIFIR ALTYAZI VE SIFIR SAHTE LOGO MANDATI:
+STRICT MANDATE: ZERO ON-SCREEN SUBTITLES, NO FLOATING TEXT, NO CAPTIONS, NO TEXT WATERMARKS. The verified brand name "${brand}" and authentic corporate logo are mandatory on-screen visual elements directly on physical surfaces (5.5s - 8.0s steady shot). Do not redesign or invent a logo.
+${buildLearningPromptBlock(brand, product, brief)}`;
+  }
+
   return `9:16 dikey formatta (Instagram Reels & WhatsApp Durum), 8 saniyelik üst düzey Türk televizyon ve sinema reklam filmi.
 
 KURUMSAL MARKA VE KAMPANYA VERİLERİ:
