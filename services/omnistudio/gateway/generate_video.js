@@ -1138,15 +1138,16 @@ async function generateVideoOnFlow(options = {}) {
 
   console.log(`[Flow Video] 📥 İndirme işlemi tetiklendi, dosyanın diske yazılması bekleniyor...`);
     
-    // Dosya inene kadar en fazla 30 saniye bekle
-    for (let w = 0; w < 30; w++) {
+    // Dosya inene kadar en fazla 35 saniye bekle
+    for (let w = 0; w < 35; w++) {
       await sleep(1000);
       const filesNow = fs.readdirSync(OUTPUT_DIR);
       const isDownloading = filesNow.some(f => f.endsWith('.crdownload'));
       const hasDownloadFile = filesNow.includes('download');
-      const recentMp4 = filesNow.find(f => f.endsWith('.mp4') && (Date.now() - fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs < 15000));
-      if ((recentMp4 || hasDownloadFile) && !isDownloading) {
-        console.log(`[Flow Video] ✅ İndirilen dosya yakalandı: ${recentMp4 || 'download'}`);
+      const recentMp4 = filesNow.find(f => f.endsWith('.mp4') && (Date.now() - fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs < 20000));
+      const recentZip = filesNow.find(f => f.endsWith('.zip') && (Date.now() - fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs < 20000));
+      if ((recentMp4 || recentZip || hasDownloadFile) && !isDownloading) {
+        console.log(`[Flow Video] ✅ İndirilen dosya yakalandı: ${recentMp4 || recentZip || 'download'}`);
         break;
       }
     }
@@ -1163,21 +1164,56 @@ async function generateVideoOnFlow(options = {}) {
 
   const downloadedCandidate = path.join(OUTPUT_DIR, 'download');
   const rootDownloadCandidate = '/root/Downloads/download';
+
+  // Eğer Google Flow projeyi .zip arşivi olarak indirdiyse, zip içindeki en taze MP4'ü çıkar
+  const recentZipFile = fs.readdirSync(OUTPUT_DIR)
+    .filter(f => f.endsWith('.zip'))
+    .map(f => ({ name: f, time: fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs }))
+    .sort((a, b) => b.time - a.time)[0];
+
+  let extractedFromZip = false;
+  if (recentZipFile && (Date.now() - recentZipFile.time < 90000)) {
+    try {
+      const zipPath = path.join(OUTPUT_DIR, recentZipFile.name);
+      const extractDir = path.join(OUTPUT_DIR, `unzip_${timestamp}`);
+      fs.mkdirSync(extractDir, { recursive: true });
+      const { execSync } = require('child_process');
+      execSync(`unzip -o "${zipPath}" -d "${extractDir}" 2>/dev/null || true`);
+      
+      // İçindeki mp4 dosyalarını tara
+      const unzippedFiles = fs.readdirSync(extractDir)
+        .filter(f => f.endsWith('.mp4'))
+        .map(f => ({ name: f, size: fs.statSync(path.join(extractDir, f)).size }))
+        .filter(f => f.size > 500000); // 500KB üstü geçerli videolar
+
+      if (unzippedFiles.length > 0) {
+        // İlgili veya en büyük/taze videoyu al
+        const bestMp4 = unzippedFiles[0];
+        fs.copyFileSync(path.join(extractDir, bestMp4.name), rawPath);
+        console.log(`[Flow Video] 📦 ZIP arşivinden video başarıyla çıkarıldı: ${bestMp4.name} (${(bestMp4.size/(1024*1024)).toFixed(2)} MB) -> ${rawFileName}`);
+        extractedFromZip = true;
+      }
+    } catch (zipErr) {
+      console.warn('[Flow Video] Zip çıkarma hatası:', zipErr.message);
+    }
+  }
   
-  if (fs.existsSync(downloadedCandidate)) {
-    fs.copyFileSync(downloadedCandidate, rawPath);
-    try { fs.unlinkSync(downloadedCandidate); } catch(e){}
-  } else if (fs.existsSync(rootDownloadCandidate)) {
-    fs.copyFileSync(rootDownloadCandidate, rawPath);
-    try { fs.unlinkSync(rootDownloadCandidate); } catch(e){}
-  } else {
-    const files = fs.readdirSync(OUTPUT_DIR)
-      .filter(f => f.endsWith('.mp4') && f !== rawFileName)
-      .map(f => ({ name: f, time: fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs }))
-      .sort((a, b) => b.time - a.time);
-    const recent = files.find(f => Date.now() - f.time < 90000);
-    if (recent) {
-      fs.copyFileSync(path.join(OUTPUT_DIR, recent.name), rawPath);
+  if (!extractedFromZip) {
+    if (fs.existsSync(downloadedCandidate)) {
+      fs.copyFileSync(downloadedCandidate, rawPath);
+      try { fs.unlinkSync(downloadedCandidate); } catch(e){}
+    } else if (fs.existsSync(rootDownloadCandidate)) {
+      fs.copyFileSync(rootDownloadCandidate, rawPath);
+      try { fs.unlinkSync(rootDownloadCandidate); } catch(e){}
+    } else {
+      const files = fs.readdirSync(OUTPUT_DIR)
+        .filter(f => f.endsWith('.mp4') && f !== rawFileName)
+        .map(f => ({ name: f, time: fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs }))
+        .sort((a, b) => b.time - a.time);
+      const recent = files.find(f => Date.now() - f.time < 90000);
+      if (recent) {
+        fs.copyFileSync(path.join(OUTPUT_DIR, recent.name), rawPath);
+      }
     }
   }
 
