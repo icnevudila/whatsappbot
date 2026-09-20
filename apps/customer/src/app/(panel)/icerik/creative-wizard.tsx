@@ -120,6 +120,7 @@ function emptyExtra(imageUrl = ''): ProductExtra {
 function defaultDraft(data: WizardBootstrap, initialFormat?: string): Draft {
   const isVideo = initialFormat === 'reels_video'
   const defaultVideoBrief = data.suggestedVideoChips?.[0]?.text || ''
+  const firstProduct = data.products?.[0]
   return {
     requestKey: newKey(),
     origin: 'new',
@@ -127,8 +128,10 @@ function defaultDraft(data: WizardBootstrap, initialFormat?: string): Draft {
     brief: isVideo ? defaultVideoBrief : '',
     brandKitId: data.kits.find((kit) => kit.isDefault)?.id ?? data.kits[0]?.id ?? '',
     useLogo: true,
-    productIds: [],
-    productExtras: {},
+    productIds: isVideo && firstProduct ? [firstProduct.id] : [],
+    productExtras: isVideo && firstProduct && firstProduct.images?.[0]?.url ? {
+      [firstProduct.id]: emptyExtra(firstProduct.images[0].url)
+    } : {},
     phoneIds: [],
     socialIds: [],
     labels: [],

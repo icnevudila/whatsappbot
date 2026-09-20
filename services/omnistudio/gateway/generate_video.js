@@ -232,16 +232,28 @@ KRİTİK YÖNETMEN VE REKLAM STANDARTLARI (ÖNEMLİ):
    - Firma adı ve logosu küçük masa levhasında değil, ürün/araç/kıyafet/giriş tabelası gibi doğal marka yüzeylerinde yer alır.
    - Güven veren yönetici veya çalışan kameraya/ekrana bakar, arkada gün batımı ve canlı kurumsal ofis atmosferi görünür. TERTEMİZ DOĞAL REKLAM KAPANIŞI.
 
-5. NATİF TÜRKÇE SPİKER SESLENDİRMESİ (SESLENDİRME BLOĞU):
-   - Promptun sonuna şu formatta profesyonel, akıcı, reklam spikeri tonunda 15-20 kelimelik bir Türkçe replik ekle:
-   SESLENDİRME: Kristal netliğinde profesyonel Türkçe erkek reklam spikeri sesi: '[Reklam repliği]'
+5. NATİF TÜRKÇE SPİKER SESLENDİRMESİ (GENEL PROMPT 4 KURALLARI):
+   - Dış ses 10-14 kelime arasında, tek ana mesaj ve tek net çağrı içermelidir.
+   - Doğrulanmamış üstünlük, teslimat veya garanti iddiası eklenemez.
+   - Format:
+   AUDIO: Professional crystal-clear Turkish commercial voiceover spoken ONCE between 0.5s and 5.5s with zero repetition, zero looping, and zero echo: "[10-14 kelimelik Türkçe replik]". From 5.5s to 8.0s: subtle modern commercial rhythm and natural ambient foley carry the remaining seconds to a polished, confident conclusion with zero voice re-entry.
 
-6. SIFIR UYDURMA LOGO & SIFIR TEKNİK JARGON (SIFIR VELL CAPS, SIFIR SAHTE ALTIĞEN):
-   - Tabelaya, standa veya sahneye ASLA 'ALL CAPS', 'VELL CAPS', 'TEXT CARD', 'FONT', 'LOGO' gibi teknik komutlar YAZILMAYACAKTIR.
-   - Görünür marka yüzeyinde yalnızca ve sadece firmanın kurumsal adı ('${brand}') ve ekli görseldeki orijinal kurumsal logosu yer alacaktır.
-   - KESİNLİKLE uydurma yeşil altıgen, uydurma 'V' harfi amblemi, onay tiki veya sahte sembol EKLENMEYECEKTİR.
+6. İNSAN, EL VE FİZİK TUTARLILIĞI (GENEL PROMPT 3 KURALLARI):
+   - Her kişinin rolü (çalışan, usta veya alıcı) ve yaptığı iş net olmalıdır.
+   - Yapay poz, abartılı gülümseme ve kameraya bakış KESİNLİKLE YOKTUR.
+   - Eller nesneyi doğal tutmalı, parmaklar nesnenin içinden geçmemeli, ağırlık ve fiziksel temas gerçekçi olmalıdır.
 
-7. ÇIKTI FORMATI:
+7. KURGU VE PLAN AKIŞI (GENEL PROMPT 1 & 2 KURALLARI):
+   - 0.0s - 2.0s: Ürün veya dokuyla ilişkili güçlü açılış (eylem hemen başlar).
+   - 2.0s - 5.5s: Gerçek insan etkileşimi, kullanım veya doğrulanmış detay.
+   - 5.5s - 8.0s: Marka adı ('${brand}') ve orijinal logo, katı fiziksel yüzeyde en az 2 saniye odakta ve okunur kapanış.
+
+8. SIFIR UYDURMA LOGO & SIFIR TEKNİK JARGON:
+   - Tabelaya veya sahneye ASLA 'ALL CAPS', 'TEXT CARD', 'FONT', 'LOGO' gibi teknik komutlar YAZILMAYACAKTIR.
+   - Görünür marka yüzeyinde yalnızca firmanın kurumsal adı ('${brand}') ve ekli görseldeki orijinal kurumsal logosu yer alacaktır.
+   - KESİNLİKLE uydurma geometrik şekil veya sahte sembol EKLENMEYECEKTİR.
+
+9. ÇIKTI FORMATI:
    - SADECE doğrudan Google Veo'ya yapıştırılacak tek parça prompt metnini yaz. Başka açıklama, selamlama veya tırnak ekleme.
 
 ${require('./brand_learning_store.js').buildLearningPromptBlock(brand, product, brief)}`;
