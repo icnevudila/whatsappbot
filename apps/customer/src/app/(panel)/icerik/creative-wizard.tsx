@@ -42,28 +42,28 @@ const VIDEO_STEPS: { id: Step; label: string }[] = [
 
 const VIDEO_BRIEF_CHIPS = [
   {
-    label: '📋 Dijital Ürün Kataloğu',
-    text: 'Geniş ürün yelpazemizi ve güncel ürün listemizi tanıtan prestijli reklam filmi.',
+    label: 'Dijital Katalog',
+    text: 'Güncel ürün kataloğumuzu ve fiyat listemizi inceleyerek WhatsApp üzerinden hızlıca sipariş verebilirsiniz.',
   },
   {
-    label: '🏭 Fabrikadan Doğrudan Teslimat',
-    text: 'Fabrikadan şantiyenize ve adresinize doğrudan, hızlı ve güvenilir teslimat avantajı.',
+    label: 'Fabrikadan Hızlı Teslimat',
+    text: 'Fabrikadan doğrudan adresinize hızlı ve güvenli teslimat. Avantajlı fiyat teklifi için WhatsApp ile iletişime geçin.',
   },
   {
-    label: '⭐ Üstün Kalite & İşçilik',
-    text: 'Ürünlerimizin sağlamlığını, birinci sınıf malzeme kalitesini ve usta işçiliğini öne çıkaran sinematik tanıtım.',
+    label: 'Üstün Kalite & İşçilik',
+    text: 'Birinci sınıf malzeme ve uzman işçilikle üretilen ürünlerimiz hakkında detaylı bilgi almak için hemen yazın.',
   },
   {
-    label: '🔥 Özel Fiyat & Kampanya',
-    text: 'Bu döneme özel avantajlı fiyat tekliflerimiz ve toplu sipariş fırsatlarını duyuran dinamik reklam videosu.',
+    label: 'Özel Fiyat & Kampanya',
+    text: 'Bu döneme özel avantajlı fiyat tekliflerimiz ve toplu sipariş fırsatları için hemen WhatsApp üzerinden teklif isteyin.',
   },
   {
-    label: '🚚 Hızlı Sevkiyat & Stoktan Teslim',
-    text: 'Beklemeden, aynı gün stoktan hızlı sevkiyat ve doğrudan adrese teslimat kolaylığı.',
+    label: 'Stoktan Hızlı Sevkiyat',
+    text: 'Beklemeden, aynı gün stoktan teslim avantajıyla ihtiyacınız olan ürünleri hemen WhatsApp üzerinden sipariş edin.',
   },
   {
-    label: '📞 Doğrudan İletişim & Teklif',
-    text: 'Detaylı bilgi, katalog ve size özel fiyat teklifi almak için doğrudan bizimle iletişime geçin.',
+    label: 'Doğrudan İletişim & Teklif',
+    text: 'İşletmenize özel fiyat teklifi ve detaylı ürün bilgisi almak için doğrudan WhatsApp hattımıza bağlanın.',
   },
 ]
 
@@ -472,12 +472,12 @@ export function CreativeWizard({
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {[
-                    'SİPARİŞ VER',
-                    'HEMEN KEŞFET',
-                    'RANDEVU AL',
-                    'TEKLİF AL',
-                    'BİLGİ ALIN',
-                    'ÖZEL FİYATLAR'
+                    'Sipariş Ver',
+                    'Teklif Al',
+                    'Bilgi Alın',
+                    'Hemen Keşfet',
+                    'Randevu Al',
+                    'Özel Fiyatlar',
                   ].map((ctaItem) => (
                     <button
                       key={ctaItem}
@@ -489,7 +489,7 @@ export function CreativeWizard({
                       }`}
                       onClick={() => patch({ cta: draft.cta === ctaItem ? '' : ctaItem })}
                     >
-                      {draft.cta === ctaItem ? '✓ ' : ''}{ctaItem}
+                      {ctaItem}
                     </button>
                   ))}
                 </div>
@@ -503,7 +503,7 @@ export function CreativeWizard({
         <div className="space-y-3">
           {isVideo ? (
             <Notice tone="accent">
-              <strong>Öne Çıkarılacak Ürünler (İsteğe Bağlı):</strong> Tanıtmak istediğiniz ürünleri seçebilir, kütüphaneden görsel ekleyebilir veya ürün seçmeden doğrudan genel kurumsal tanıtım videosu üretebilirsiniz.
+              Tanıtmak istediğiniz bir ürün varsa seçebilir veya ürün seçmeden doğrudan genel kurumsal tanıtım videosu üretebilirsiniz.
             </Notice>
           ) : null}
           <div className="flex flex-wrap gap-1.5">
@@ -516,7 +516,7 @@ export function CreativeWizard({
                   className={`wb-wa-chip ${isSelected ? '!border-[#00a884] !bg-[#e7f8f2] !text-[#008069] font-medium' : ''}`}
                   onClick={() => toggleProduct(product.id)}
                 >
-                  {isSelected ? '✓ ' : '+ '}{product.name}
+                  {product.name}
                 </button>
               )
             })}
@@ -525,7 +525,7 @@ export function CreativeWizard({
               onClick={() => setAddProductOpen(true)}
               className="rounded-full border border-dashed border-[#00a884]/60 bg-[#e7f8f2] px-3 py-1 text-[12.5px] font-medium text-[#008069] hover:bg-[#d9f5eb]"
             >
-              + Ürün ekle
+              Yeni ürün ekle
             </button>
             {productsList.length === 0 ? (
               <Notice tone="warn">
@@ -535,7 +535,7 @@ export function CreativeWizard({
                   onClick={() => setAddProductOpen(true)}
                   className="underline font-semibold cursor-pointer text-ink hover:text-[#008069]"
                 >
-                  Modal ile ürün ekle
+                  Ürün ekle
                 </button>
               </Notice>
             ) : null}
@@ -688,87 +688,91 @@ export function CreativeWizard({
                       </div>
                     </Field>
                   )}
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <Field label="Fiyat">
-                      <Input
-                        value={extra.price}
-                        onChange={(event) =>
-                          patch({
-                            productExtras: {
-                              ...draft.productExtras,
-                              [product.id]: { ...extra, price: event.target.value },
-                            },
-                          })
-                        }
-                        placeholder="Örn. 249 TL"
-                      />
-                    </Field>
-                    <Field label="Eski fiyat">
-                      <Input
-                        value={extra.oldPrice}
-                        onChange={(event) =>
-                          patch({
-                            productExtras: {
-                              ...draft.productExtras,
-                              [product.id]: { ...extra, oldPrice: event.target.value },
-                            },
-                          })
-                        }
-                      />
-                    </Field>
-                  </div>
-                  <Field label="Bu görsele özel ek bilgi">
-                    <Input
-                      value={extra.extra}
-                      onChange={(event) =>
-                        patch({
-                          productExtras: {
-                            ...draft.productExtras,
-                            [product.id]: { ...extra, extra: event.target.value },
-                          },
-                        })
-                      }
-                      placeholder="%40 indirim, 2 al 1 öde…"
-                    />
-                  </Field>
-                  <Field label="Kampanya bilgisi">
-                    <Input
-                      value={extra.promo}
-                      onChange={(event) =>
-                        patch({
-                          productExtras: {
-                            ...draft.productExtras,
-                            [product.id]: { ...extra, promo: event.target.value },
-                          },
-                        })
-                      }
-                    />
-                  </Field>
-                  <details>
-                    <summary className="cursor-pointer text-[12.5px] text-ink-muted">AI ile paylaşılacak bilgiler</summary>
-                    <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
-                      {PRODUCT_FIELD_KEYS.map((key) => (
-                        <label key={key} className="flex items-center gap-2 text-[12.5px]">
-                          <input
-                            type="checkbox"
-                            checked={extra.include[key]}
+                  {!isVideo ? (
+                    <>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <Field label="Fiyat">
+                          <Input
+                            value={extra.price}
                             onChange={(event) =>
                               patch({
                                 productExtras: {
                                   ...draft.productExtras,
-                                  [product.id]: {
-                                    ...extra,
-                                    include: { ...extra.include, [key]: event.target.checked },
-                                  },
+                                  [product.id]: { ...extra, price: event.target.value },
+                                },
+                              })
+                            }
+                            placeholder="Örn. 249 TL"
+                          />
+                        </Field>
+                        <Field label="Eski fiyat">
+                          <Input
+                            value={extra.oldPrice}
+                            onChange={(event) =>
+                              patch({
+                                productExtras: {
+                                  ...draft.productExtras,
+                                  [product.id]: { ...extra, oldPrice: event.target.value },
                                 },
                               })
                             }
                           />
-                          {PRODUCT_FIELD_LABELS[key]}
-                        </label>
-                      ))}
-                    </div>
-                  </details>
+                        </Field>
+                      </div>
+                      <Field label="Bu görsele özel ek bilgi">
+                        <Input
+                          value={extra.extra}
+                          onChange={(event) =>
+                            patch({
+                              productExtras: {
+                                ...draft.productExtras,
+                                [product.id]: { ...extra, extra: event.target.value },
+                              },
+                            })
+                          }
+                          placeholder="%40 indirim, 2 al 1 öde…"
+                        />
+                      </Field>
+                      <Field label="Kampanya bilgisi">
+                        <Input
+                          value={extra.promo}
+                          onChange={(event) =>
+                            patch({
+                              productExtras: {
+                                ...draft.productExtras,
+                                [product.id]: { ...extra, promo: event.target.value },
+                              },
+                            })
+                          }
+                        />
+                      </Field>
+                      <details>
+                        <summary className="cursor-pointer text-[12.5px] text-ink-muted">AI ile paylaşılacak bilgiler</summary>
+                        <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
+                          {PRODUCT_FIELD_KEYS.map((key) => (
+                            <label key={key} className="flex items-center gap-2 text-[12.5px]">
+                              <input
+                                type="checkbox"
+                                checked={extra.include[key]}
+                                onChange={(event) =>
+                                  patch({
+                                    productExtras: {
+                                      ...draft.productExtras,
+                                      [product.id]: {
+                                        ...extra,
+                                        include: { ...extra.include, [key]: event.target.checked },
+                                      },
+                                    },
+                                  })
+                                }
+                              />
+                              {PRODUCT_FIELD_LABELS[key]}
+                            </label>
+                          ))}
+                        </div>
+                      </details>
+                    </>
+                  ) : null}
                   <Button
                     type="button"
                     variant="danger"
@@ -1090,10 +1094,7 @@ export function CreativeWizard({
                     onClick={() => patch({ videoSpeech: true })}
                     className={`wb-wa-choice${draft.videoSpeech !== false ? ' is-on' : ''}`}
                   >
-                    <div className="flex items-center gap-2">
-                      <Icon name="mic" className="size-4 text-emerald-600" />
-                      <span className="block text-[13.5px] font-semibold text-[#111b21]">Seslendirmeli (Dış Ses Var)</span>
-                    </div>
+                    <span className="block text-[13.5px] font-semibold text-[#111b21]">Seslendirmeli (Dış Ses Var)</span>
                     <span className="text-[12px] text-[#667781]">
                       Profesyonel Türkçe spiker ürün ve kampanya çağrısını seslendirir.
                     </span>
@@ -1103,10 +1104,7 @@ export function CreativeWizard({
                     onClick={() => patch({ videoSpeech: false })}
                     className={`wb-wa-choice${draft.videoSpeech === false ? ' is-on' : ''}`}
                   >
-                    <div className="flex items-center gap-2">
-                      <Icon name="activity" className="size-4 text-sky-600" />
-                      <span className="block text-[13.5px] font-semibold text-[#111b21]">Konuşmasız (Sadece Müzik & Foley)</span>
-                    </div>
+                    <span className="block text-[13.5px] font-semibold text-[#111b21]">Konuşmasız (Sadece Müzik)</span>
                     <span className="text-[12px] text-[#667781]">
                       İnsan sesi yok; sahneye özel doğal ses efektleri ve dinamik fon müziği.
                     </span>
@@ -1135,10 +1133,10 @@ export function CreativeWizard({
                 <div className="rounded-md border border-hairline bg-canvas p-3 space-y-1">
                   <p className="text-[11.5px] font-medium text-ink-muted uppercase tracking-wider">Ses Kurgusu</p>
                   <p className="font-bold text-[#111b21]">
-                    {draft.videoSpeech !== false ? '🎙️ Türkçe Dış Ses (Spiker)' : '🎵 Konuşmasız (Müzik & Foley)'}
+                    {draft.videoSpeech !== false ? 'Türkçe Dış Ses (Spiker)' : 'Konuşmasız (Sadece Müzik)'}
                   </p>
                   <p className="text-[12px] text-[#667781]">
-                    {draft.videoSpeech !== false ? 'Satış ve kampanya çağrısı seslendirilir' : 'Dinamik fon müziği ve doğal foley'}
+                    {draft.videoSpeech !== false ? 'Satış ve kampanya çağrısı seslendirilir' : 'Dinamik fon müziği ve ses efektleri'}
                   </p>
                 </div>
               </div>
@@ -1175,7 +1173,7 @@ export function CreativeWizard({
 
               {isVideo && !hasValidVideoLogo ? (
                 <Notice tone="danger">
-                  ⚠️ <strong>Kurumsal Logo Zorunludur:</strong> Yapay zekanın uydurma semboller veya alakasız grafikler üretmemesi için Marka Kiti veya İşletme logonuzun tanımlı olması gerekir. Lütfen{' '}
+                  <strong>Kurumsal Logo Zorunludur:</strong> Yapay zekanın uydurma semboller veya alakasız grafikler üretmemesi için Marka Kiti veya İşletme logonuzun tanımlı olması gerekir. Lütfen{' '}
                   <Link href="/ayarlar/marka" className="underline font-semibold">
                     Marka Kiti sayfasından logonuzu yükleyin.
                   </Link>
@@ -1183,11 +1181,11 @@ export function CreativeWizard({
               ) : null}
               {isVideo && hasValidVideoProduct ? (
                 <Notice tone="accent">
-                  ✓ Seçilen ürün fotoğrafı ve kurumsal kimliğiniz ile reklam filmi üretilecektir.
+                  Seçilen ürün fotoğrafı ve kurumsal kimliğiniz ile reklam filmi üretilecektir.
                 </Notice>
               ) : isVideo ? (
                 <Notice tone="accent">
-                  ℹ️ Ürün fotoğrafı seçilmedi; kurumsal logonuz ve marka kimliğiniz temel alınarak genel tanıtım filmi üretilecektir.
+                  Ürün fotoğrafı seçilmedi; kurumsal logonuz ve marka kimliğiniz temel alınarak genel tanıtım filmi üretilecektir.
                 </Notice>
               ) : null}
 
@@ -1201,7 +1199,6 @@ export function CreativeWizard({
                   (isVideo && !hasValidVideoLogo)
                 }
               >
-                <Icon name="video" className="size-4" />
                 {pending ? 'Video prodüksiyonu başlatılıyor…' : 'Kampanya Videosunu Başlat'}
               </Button>
               {!data.canManage ? <Notice tone="warn">Üretim için yönetici gerekir.</Notice> : null}

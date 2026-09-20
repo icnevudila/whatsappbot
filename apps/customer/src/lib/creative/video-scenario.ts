@@ -438,23 +438,22 @@ export function buildSmartBusinessVideoIdeas(
     allKeywords.includes('şirket') ||
     allKeywords.includes('bilişim')
   ) {
-    const item = firstProd || 'Yeni Açılan İşletme Takip ve B2B Veri'
     return [
       {
-        label: 'Yeni açılan işletmeleri ilk siz bulun',
-        text: `${name} ile Türkiye'de yeni açılan tüm işletmelerin iletişim bilgilerini anında tespit edin, rakiplerinizden önce ilk satışı siz yapın.`,
+        label: 'Yeni Müşteri Keşfi',
+        text: `${name} ile sektörünüzde yeni açılan tüm işletmeleri anında tespit edin, rakiplerinizden önce ilk teklifi WhatsApp ile siz verin.`,
       },
       {
-        label: 'Sıcak potansiyel müşteri listesi & WhatsApp',
-        text: `Hedef sektörünüze özel filtrelenmiş kurumsal işletme listelerine ${name} ile tek tıkla ulaşın, WhatsApp üzerinden anında sıcak temas kurun.`,
+        label: 'Sıcak Müşteri Listesi',
+        text: `Hedef sektörünüze özel filtrelenmiş güncel firma listelerine ${name} ile tek tıkla ulaşın, WhatsApp üzerinden satışlarınızı büyütün.`,
       },
       {
-        label: 'Veri odaklı B2B büyüme fırsatı',
-        text: `Satış ekibinizin verimini katlayan güncel işletme ve pazar istihbaratı ile ${name} avantajlarından hemen yararlanın.`,
+        label: 'Satış Verimliliği & İstihbarat',
+        text: `Satış ekibinizin verimini artıran doğrulanmış kurumsal verilerle hemen tanışın. Ayrıntılı bilgi için WhatsApp'tan iletişime geçin.`,
       },
       {
-        label: 'Demo ve örnek liste için WhatsApp hattı',
-        text: `Sektörünüze özel ücretsiz örnek firma listesi ve demo sunumu için doğrudan ${name} WhatsApp hattımıza bağlanın.`,
+        label: 'Ücretsiz Demo ve Örnek Liste',
+        text: `Sektörünüze özel ücretsiz örnek firma listesi ve canlı sistem tanıtımı için doğrudan ${name} WhatsApp hattımıza yazın.`,
       },
     ]
   }
@@ -473,28 +472,28 @@ export function buildSmartBusinessVideoIdeas(
     allKeywords.includes('lezzet') ||
     allKeywords.includes('yemek')
   ) {
-    const dish = firstProd || 'Günün taze spesiyali'
+    const dish = firstProd || 'günün spesiyali'
     return [
       {
-        label: `Ustanın ${dish} sunumu & WhatsApp sipariş`,
-        text: `${name} mutfağında usta tarafından taze hazırlanan ${dish}, dumanı tüten iştah kabartan makro çekimler ve WhatsApp'tan sıcacık paket servis çağrısı.`,
+        label: 'Günün Taze Spesiyali',
+        text: `${name} mutfağında taze hazırlanan ${dish} lezzetini kaçırmayın. Sıcacık kapınıza teslim için hemen WhatsApp'tan sipariş verin.`,
       },
       {
-        label: 'Kağıt broşür yerine WhatsApp menü',
-        text: `Geleneksel kağıt broşür basımını bırakıp müşterilere ${name} dijital menüsünü doğrudan WhatsApp üzerinden ulaştıran yenilikçi reklam filmi.`,
+        label: 'Dijital Menü & Kolay Sipariş',
+        text: `${name} güncel menüsünü inceleyin, dilediğiniz lezzeti WhatsApp üzerinden tek tıkla zahmetsizce sipariş edin.`,
       },
       {
-        label: 'Hafta sonu indirimli menü',
-        text: `Hafta sonuna özel ${dish} siparişlerinde avantajlı fiyat ve WhatsApp hattımıza özel sürpriz ikramlar.`,
+        label: 'Hafta Sonuna Özel Fırsat',
+        text: `Hafta sonuna özel avantajlı fiyatlar ve sürpriz ikramlar sizi bekliyor. Siparişinizi WhatsApp hattımızdan hemen oluşturun.`,
       },
       {
-        label: 'Sıra beklemeden hızlı sipariş',
-        text: `Sıra beklemeden doğrudan WhatsApp hattımızdan sipariş verin, ${name} lezzeti sıcacık kapınıza gelsin.`,
+        label: 'Hızlı Paket Servis',
+        text: `Sıra beklemeden doğrudan WhatsApp hattımız üzerinden sipariş verin, en taze lezzetler sıcacık adresinize gelsin.`,
       },
     ]
   }
 
-  // 2. Otomotiv / Donanım / Teknoloji (Örn: Bofe Şarjlı Pompa)
+  // 3. Otomotiv / Donanım / Teknoloji (Örn: Bofe Şarjlı Pompa)
   if (
     allKeywords.includes('pompa') ||
     allKeywords.includes('lastik') ||
@@ -510,25 +509,25 @@ export function buildSmartBusinessVideoIdeas(
     const item = firstProd || 'Akıllı Şarjlı Pompa'
     return [
       {
-        label: 'Yolda kalan sürücüye 60sn kurtarıcı',
-        text: `Yolda lastik basıncı düşen sürücünün torpidosundan ${item} çıkarıp 60 saniyede lastiği şişirmesi ve ${name} WhatsApp sipariş kolaylığı.`,
+        label: 'Acil Durum Kurtarıcısı',
+        text: `Yolda lastik basıncınız düştüğünde ${item} yanınızda. Pratik kullanım ve hızlı sipariş için hemen WhatsApp hattımıza yazın.`,
       },
       {
-        label: 'Kompakt & kablosuz güç testi',
-        text: `${item} ile araç lastiğinden bisiklete tek tuşla otomatik hava basma gücü ve tek tıkla WhatsApp sipariş çağrısı.`,
+        label: 'Kompakt Güç ve Performans',
+        text: `Kompakt tasarımı ve üstün gücüyle ${item} her an elinizin altında. Avantajlı fiyatlarla satın almak için WhatsApp ile iletişime geçin.`,
       },
       {
-        label: 'Sınırlı stok özel kampanya',
-        text: `${item} için bu haftaya özel indirim ve ücretsiz kargo avantajı ile WhatsApp'tan anında satın alma fırsatı.`,
+        label: 'Sınırlı Stok Kampanyası',
+        text: `${item} için bu haftaya özel indirim ve ücretsiz kargo avantajı başladı. Stoklar tükenmeden WhatsApp üzerinden sipariş verin.`,
       },
       {
-        label: 'WhatsApp kullanım kılavuzu & sipariş',
-        text: `Müşterilere kullanım videolarını ve sipariş desteğini doğrudan WhatsApp üzerinden sunan yenilikçi tanıtım filmi.`,
+        label: 'Ürün Bilgisi ve Sipariş',
+        text: `${name} güvencesiyle ${item} teknik özelliklerini öğrenin ve tek tıkla WhatsApp üzerinden siparişinizi tamamlayın.`,
       },
     ]
   }
 
-  // 3. İnşaat / Yapı / Malzeme (Örn: Tuğla, Çimento)
+  // 4. İnşaat / Yapı / Malzeme (Örn: Ayvazoğlu Tuğla)
   if (
     allKeywords.includes('inşaat') ||
     allKeywords.includes('tuğla') ||
@@ -538,28 +537,28 @@ export function buildSmartBusinessVideoIdeas(
     allKeywords.includes('beton') ||
     allKeywords.includes('lojistik')
   ) {
-    const mat = firstProd || 'Birinci kalite yapı malzemesi'
+    const mat = firstProd || 'yapı malzemesi'
     return [
       {
-        label: `${mat} kapıya teslimat & WhatsApp hat`,
-        text: `${name} güvencesiyle fabrikadan doğrudan şantiyeye ve kapıya teslim ${mat}. Hızlı teklif ve sipariş için tek tıkla WhatsApp hattımıza bağlanın.`,
+        label: 'Şantiyeye Doğrudan Teslimat',
+        text: `${name} güvencesiyle fabrikadan doğrudan şantiyenize birinci kalite ${mat} teslimatı. Hızlı fiyat teklifi için WhatsApp'tan yazın.`,
       },
       {
-        label: 'Dayanıklılık & kalite yakın çekim',
-        text: `${mat} dokusu, sağlamlığı ve şantiyedeki kusursuz uygulama kalitesini gösteren 4K sinematik reklam çekimi.`,
+        label: 'Toptan Alımlarda Özel İskonto',
+        text: `Bu aya özel toptan ${mat} alımlarında geçerli özel iskonto avantajları. Anında net fiyat teklifi almak için WhatsApp hattımıza bağlanın.`,
       },
       {
-        label: 'Toptan alımlara özel fiyat avantajı',
-        text: `Bu aya özel toptan ${mat} alımlarında özel iskontolar ve WhatsApp üzerinden 1 dakikada anında fiyat teklifi.`,
+        label: 'Üstün Kalite ve Dayanıklılık',
+        text: `Projelerinizde uzun ömürlü sağlamlık için birinci sınıf ${mat}. Detaylı ürün bilgisi ve toplu sipariş için bizimle iletişime geçin.`,
       },
       {
-        label: 'Katalog yerine WhatsApp dijital liste',
-        text: `Tüm ürün ve fiyat listesini müşterilere doğrudan WhatsApp'tan ulaştıran profesyonel kurumsal tanıtım filmi.`,
+        label: 'Dijital Katalog ve Fiyat Listesi',
+        text: `${name} güncel ürün kataloğuna ve toptan fiyat listesine doğrudan WhatsApp hattımız üzerinden tek tıkla ulaşın.`,
       },
     ]
   }
 
-  // 4. Moda / Butik / Tekstil
+  // 5. Moda / Butik / Tekstil
   if (
     allKeywords.includes('butik') ||
     allKeywords.includes('giyim') ||
@@ -569,45 +568,45 @@ export function buildSmartBusinessVideoIdeas(
     allKeywords.includes('ayakkabı') ||
     allKeywords.includes('çanta')
   ) {
-    const item = firstProd || 'Yeni sezon koleksiyon'
+    const item = firstProd || 'Yeni sezon koleksiyonu'
     return [
       {
-        label: 'Yeni sezon vitrin kombini & WhatsApp',
-        text: `${name} yeni sezon vitrininin en göz alıcı parçaları, şık kombin çekimleri ve tek tıkla WhatsApp siparişi.`,
+        label: 'Yeni Sezon Vitrini',
+        text: `${name} yeni sezonun en göz alıcı kombinleri mağazamızda. Beğendiğiniz modelleri incelemek ve sipariş vermek için WhatsApp'tan yazın.`,
       },
       {
-        label: 'Sınırlı stok %20 indirim',
-        text: `${item} için geçerli sınırlı stok indirimi. Siparişinizi hızlıca WhatsApp'tan oluşturun, kapınıza gelsin.`,
+        label: 'Sınırlı Stok İndirimi',
+        text: `${item} parçalarında geçerli sınırlı stok indirimi başladı. Tükenmeden hemen WhatsApp hattımız üzerinden siparişinizi oluşturun.`,
       },
       {
-        label: 'WhatsApp dijital katalog vitrini',
-        text: `Müşterilere yeni sezon kataloğunu doğrudan WhatsApp'tan sunan modern ve estetik reklam filmi.`,
+        label: 'Dijital Katalog',
+        text: `${name} yeni sezon dijital kataloğunu ve özel parçalarını doğrudan WhatsApp hattımız üzerinden keşfedin.`,
       },
       {
-        label: 'Kumaş kalitesi & detay çekimi',
-        text: `Ürünün dikiş ve kumaş kalitesini öne çıkaran 120fps ağır çekim sinematik vitrin tanıtımı.`,
+        label: 'Kumaş Kalitesi ve Detaylar',
+        text: `Özenli el işçiliği ve birinci sınıf kumaş kalitesiyle üretilen modellerimizi keşfetmek için hemen WhatsApp'tan bilgi alın.`,
       },
     ]
   }
 
-  // 5. Genel / Hizmet / WhatsApp İşletmesi
+  // 6. Genel / Hizmet / WhatsApp İşletmesi
   const genericProd = firstProd ? `${firstProd} ve ` : ''
   return [
     {
-      label: 'Broşür yerine WhatsApp dijital menü',
-      text: `Geleneksel kağıt broşür basımını bırakıp müşterilere ${name} dijital kataloğunu doğrudan WhatsApp üzerinden ulaştıran yenilikçi reklam filmi.`,
+      label: 'Dijital Liste & Ürünler',
+      text: `${name} güncel ürün ve hizmet kataloğuna doğrudan WhatsApp hattımız üzerinden tek tıkla ulaşın.`,
     },
     {
-      label: `${firstProd || 'Günün spesiyali'} & hızlı sipariş`,
-      text: `${name} güvencesiyle sunulan ${genericProd}hizmetlerimiz için sıra beklemeden tek tıkla WhatsApp sipariş kolaylığı.`,
+      label: 'Hızlı Sipariş Kolaylığı',
+      text: `${name} güvencesiyle sunulan ${genericProd}hizmetlerimiz için sıra beklemeden tek tıkla WhatsApp üzerinden sipariş verebilirsiniz.`,
     },
     {
-      label: 'Hafta sonu avantajlı kampanya',
-      text: `Bu haftaya özel avantajlı fiyatlar ve ${name} WhatsApp hattına özel sürpriz indirimler.`,
+      label: 'Haftaya Özel Fırsatlar',
+      text: `Bu haftaya özel avantajlı fiyatlarımızı kaçırmayın. Size özel fiyat teklifi almak için WhatsApp'tan hemen iletişime geçin.`,
     },
     {
-      label: 'WhatsApp tek tıkla sipariş çağrısı',
-      text: `Müşterilerinize hızlı, samimi ve kesintisiz WhatsApp sipariş deneyimi sunan 9:16 dikey reklam filmi.`,
+      label: 'Doğrudan WhatsApp İletişimi',
+      text: `Tüm soru ve siparişleriniz için ${name} WhatsApp hattı üzerinden doğrudan satış ekibimize bağlanın.`,
     },
   ]
 }

@@ -36,7 +36,7 @@ type QuickItem = {
 
 const ITEMS: QuickItem[] = [
   { href: '/kampanyalar/yeni', label: 'Yeni kampanya', icon: 'campaign' },
-  { href: '/icerik/yeni', label: 'Yeni görsel üret', icon: 'image' },
+  { href: '/icerik/yeni', label: 'Yeni içerik üret', icon: 'image' },
   { action: 'list', label: 'Yeni kişi listesi talep', icon: 'search' },
 ]
 
