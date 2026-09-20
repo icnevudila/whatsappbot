@@ -994,8 +994,8 @@ async function generateVideoOnFlow(options = {}) {
     })()`
   });
 
-  // 5. Video tile'ını bekle (en fazla 260 saniye — SADECE YENİ ÜRETİLEN TILE BEKLENİR)
-  let videoTileFound = false;
+  // 5. Video renderını bekle (en fazla 260 saniye)
+  let videoRenderDone = false;
   const startTime = Date.now();
   await sleep(15000); // İlk 15 saniye yeni render oturma payı
 
@@ -1003,61 +1003,34 @@ async function generateVideoOnFlow(options = {}) {
     await sleep(6000);
     const elapsed = Math.round((Date.now() - startTime) / 1000);
 
-    const checkTile = await send('Runtime.evaluate', {
+    const checkRender = await send('Runtime.evaluate', {
       expression: `(() => {
-        const initialSigs = new Set(${JSON.stringify(initialSignaturesArray)});
-        const allTiles = Array.from(document.querySelectorAll('.tile, flow-tile, flow-media-tile, div[class*="tile"], div[class*="virtual-item"]'));
-        
-        // Başlangıçta olmayan yepyeni tile'ları tespit et
-        let targetTiles = allTiles.filter((t, idx) => {
-          const sig = t.getAttribute('data-id') || t.id || t.querySelector('video')?.src || (t.innerText || '').slice(0, 40) || String(idx);
-          return !initialSigs.has(sig);
-        });
+        const spinners = document.querySelectorAll('mat-spinner, [role="progressbar"], .loading, svg[class*="spin"], [aria-label*="generating" i]');
+        const bodyText = (document.body.innerText || '').toLowerCase();
+        const isGenerating = spinners.length > 0 || bodyText.includes('generating') || bodyText.includes('rendering');
 
-        if (targetTiles.length === 0 && allTiles.length > ${initialTileCount}) {
-          targetTiles = allTiles.slice(${initialTileCount});
+        // En az 40 saniye render payı ver (Veo 3.1 ortalama 45-75 saniyede üretir)
+        if (${elapsed} < 40 || isGenerating) {
+          return { status: 'rendering', elapsed: ${elapsed}, isGenerating };
         }
 
-        if (targetTiles.length === 0) {
-          return { status: 'waiting_for_new_tile', count: allTiles.length };
-        }
-
-        const newestTile = targetTiles[targetTiles.length - 1];
-        const text = (newestTile.innerText || '').toLowerCase();
-        const hasSpinner = Boolean(newestTile.querySelector('mat-spinner, [role="progressbar"], .loading, svg[class*="spin"]'));
-        const isGenerating = text.includes('generating') || text.includes('rendering') || text.includes('bekleniyor') || hasSpinner;
-
-        if (isGenerating) {
-          return { status: 'rendering', text: text.slice(0, 40) };
-        }
-
-        const hasPlay = text.includes('play_circle') || newestTile.querySelector('video') || newestTile.querySelector('[aria-label*="Play"]');
-        if (hasPlay && !isGenerating) {
-          const r = newestTile.getBoundingClientRect();
-          return { status: 'ready', found: true, x: r.left + r.width/2, y: r.top + r.height/2 };
-        }
-
-        return { status: 'processing' };
+        return { status: 'ready', elapsed: ${elapsed} };
       })()`,
       returnByValue: true
     });
 
-    const res = checkTile?.result?.value;
-    if (res?.status === 'ready' && res?.found && elapsed >= 25) {
-      videoTileFound = true;
-      const tx = res.x;
-      const ty = res.y;
-      console.log(`[Flow Video] 🎬 Yepyeni video renderı başarıyla tamamlandı (${elapsed} sn)! Tile açılıyor (${tx}, ${ty})...`);
-      await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: tx, y: ty, button: 'left', clickCount: 1 });
-      await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: tx, y: ty, button: 'left', clickCount: 1 });
-      await sleep(3000);
+    const res = checkRender?.result?.value;
+    if (res?.status === 'ready' && elapsed >= 40) {
+      videoRenderDone = true;
+      console.log(`[Flow Video] 🎬 Video renderı başarıyla tamamlandı (${elapsed} sn)! İndirme aşamasına geçiliyor...`);
+      await sleep(2500);
       break;
     } else {
-      console.log(`[Flow Video] ⏳ Render devam ediyor (${elapsed} sn, durum: ${res?.status || 'bekleniyor'})...`);
+      console.log(`[Flow Video] ⏳ Render devam ediyor (${elapsed} sn, aktif üretim: ${res?.isGenerating ?? true})...`);
     }
   }
 
-  if (!videoTileFound) {
+  if (!videoRenderDone) {
     ws.close();
     await fetch(`http://127.0.0.1:${port}/json/close/${tab.id}`);
     throw new Error('Google Flow video render işlemi zaman aşımına uğradı (260sn).');
@@ -1213,19 +1186,89 @@ async function generateVideoOnFlow(options = {}) {
       const extractDir = path.join(OUTPUT_DIR, `unzip_${timestamp}`);
       fs.mkdirSync(extractDir, { recursive: true });
       const { execSync } = require('child_process');
-      execSync(`unzip -o "${zipPath}" -d "${extractDir}" 2>/dev/null || true`);
-      
-      // İçindeki mp4 dosyalarını tara
-      const unzippedFiles = fs.readdirSync(extractDir)
-        .filter(f => f.endsWith('.mp4'))
-        .map(f => ({ name: f, size: fs.statSync(path.join(extractDir, f)).size }))
-        .filter(f => f.size > 500000); // 500KB üstü geçerli videolar
 
-      if (unzippedFiles.length > 0) {
-        // İlgili veya en büyük/taze videoyu al
-        const bestMp4 = unzippedFiles[0];
-        fs.copyFileSync(path.join(extractDir, bestMp4.name), rawPath);
-        console.log(`[Flow Video] 📦 ZIP arşivinden video başarıyla çıkarıldı: ${bestMp4.name} (${(bestMp4.size/(1024*1024)).toFixed(2)} MB) -> ${rawFileName}`);
+      // 1. Arşivdeki MP4'lerin sıralı listesini al (Google Flow en yeni videoyu en sona ekler)
+      let zipOrderMp4s = [];
+      try {
+        const orderOut = execSync(`python3 -c "import zipfile, json; z = zipfile.ZipFile('${zipPath}'); print(json.dumps([f for f in z.namelist() if f.lower().endsWith('.mp4')]))"`).toString();
+        zipOrderMp4s = JSON.parse(orderOut);
+      } catch (_) {}
+
+      // 2. Arşivi çıkar
+      try {
+        execSync(`unzip -o "${zipPath}" -d "${extractDir}" 2>/dev/null`);
+      } catch (_) {
+        execSync(`python3 -m zipfile -e "${zipPath}" "${extractDir}" 2>/dev/null || true`);
+      }
+
+      // 3. Çıkarılan dosyalardan en doğru videoyu seç
+      const keywords = [
+        options.brandName,
+        options.productName,
+        options.customer,
+        options.sector
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+        .replace(/[^a-z0-9ğüşıöç]/g, ' ')
+        .split(/\s+/)
+        .filter(w => w.length >= 3);
+
+      const sectorEnglishMap = {
+        'inşaat': ['brick', 'construction', 'building', 'worker'],
+        'tuğla': ['brick', 'construction'],
+        'veri': ['data', 'analytics', 'laptop', 'map'],
+        'harita': ['map', 'location', 'laptop'],
+        'zeytin': ['olive', 'harvest', 'tree'],
+        'pompa': ['pump', 'sprayer', 'backpack'],
+        'döner': ['doner', 'kebab', 'chef', 'meat']
+      };
+
+      const searchTerms = [...keywords];
+      for (const [tr, enList] of Object.entries(sectorEnglishMap)) {
+        if (keywords.some(k => k.includes(tr))) {
+          searchTerms.push(...enList);
+        }
+      }
+
+      // En sondan başa doğru (en yeni renderlar sondadır)
+      let chosenFileName = null;
+      const candidateList = zipOrderMp4s.length > 0 ? zipOrderMp4s : fs.readdirSync(extractDir).filter(f => f.endsWith('.mp4'));
+
+      // Arama 1: İsimde sektör/marka anahtar kelimesi geçen en yeni video
+      for (let i = candidateList.length - 1; i >= 0; i--) {
+        const rawItem = candidateList[i];
+        const fname = rawItem.toLowerCase();
+        const baseName = path.basename(rawItem);
+        const fullP = path.join(extractDir, baseName);
+        if (fs.existsSync(fullP) && fs.statSync(fullP).size > 500000) {
+          if (searchTerms.some(term => fname.includes(term))) {
+            chosenFileName = baseName;
+            console.log(`[Flow Video] 🎯 Anahtar kelime eşleşmesi ile en yeni video seçildi: ${chosenFileName} (anahtar: ${searchTerms.join(', ')})`);
+            break;
+          }
+        }
+      }
+
+      // Arama 2: Eşleşme yoksa arşivdeki en son geçerli MP4
+      if (!chosenFileName) {
+        for (let i = candidateList.length - 1; i >= 0; i--) {
+          const baseName = path.basename(candidateList[i]);
+          const fullP = path.join(extractDir, baseName);
+          if (fs.existsSync(fullP) && fs.statSync(fullP).size > 500000) {
+            chosenFileName = baseName;
+            console.log(`[Flow Video] ⏱️ Arşivdeki en son üretilen video seçildi: ${chosenFileName}`);
+            break;
+          }
+        }
+      }
+
+      if (chosenFileName) {
+        const bestMp4Path = path.join(extractDir, chosenFileName);
+        const bestSize = fs.statSync(bestMp4Path).size;
+        fs.copyFileSync(bestMp4Path, rawPath);
+        console.log(`[Flow Video] 📦 ZIP arşivinden video başarıyla çıkarıldı: ${chosenFileName} (${(bestSize/(1024*1024)).toFixed(2)} MB) -> ${rawFileName}`);
         extractedFromZip = true;
       }
     } catch (zipErr) {
