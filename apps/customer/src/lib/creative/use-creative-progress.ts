@@ -93,8 +93,8 @@ export const VIDEO_CAMPAIGN_STAGES: Stage[] = [
   },
   {
     at: 75,
-    label: 'Otomatik montaj motoru devreye giriyor…',
-    detail: 'Kurumsal logo, % indirim bandı ve WhatsApp butonu giydiriliyor',
+    label: 'Marka kimliği sahneye işleniyor…',
+    detail: 'Logo, tabela ve ürün etiketi doğal fiziksel yüzeylerde korunuyor',
   },
   {
     at: 92,
@@ -171,4 +171,3 @@ export function useCreativeGenerationProgress(
     }
   }, [active, isImageToImage, isVideo, setBusy, clearBusy])
 }
-

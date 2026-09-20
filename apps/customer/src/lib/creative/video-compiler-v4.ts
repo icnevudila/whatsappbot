@@ -296,7 +296,10 @@ export function compileDeterministicV4(brief: VideoBriefInputV4): VeoCompilerOut
   const finalVeoPrompt = [
     `9:16 dikey formatta, 8 saniyelik üst düzey Türk televizyon ve sinema reklam filmi.`,
     `Fikir: ${brand} ile ${subject} tanıtımı.`,
-    `Konu ve Kimlik: ${subject}. Referans ürün formu ve renkleri %100 korunur.`,
+    `Konu ve Kimlik: ${subject}. Referans ürün formu, marka adı, varsa gerçek logo ve renkler %100 korunur.`,
+    brief.brand?.name
+      ? `Marka Görünürlüğü: ${brand} adı ve varsa ekli gerçek logo sahne içinde doğal, büyük ve okunabilir fiziksel marka yüzeylerinde görünür olmalıdır: ürün gövdesi/ambalaj etiketi, iş kıyafeti nakışı, araç etiketi, dükkan/fabrika giriş tabelası veya ana hero üründeki marka plakası. Küçük masa levhası, elde taşınan mini tabela ve rastgele CTA tabelası kullanma. Logo yeniden tasarlanmaz, uydurma amblem eklenmez.`
+      : null,
     `Tek Lokasyon ve Işık: ${location}. Doğal gün ışığı, sıcak gölgeler ve Arri Alexa sinematik renk derecelendirmesi.`,
     `0.0s - 2.2s (Görsel Kanca): ${act1Visual}. 100mm f/1.8 sığ alan derinliği.`,
     `2.2s - 5.8s (Eylem ve Kanıt): ${act2Action}. Akıcı gimbal hareketi, net ve dengeli sinematografi.`,
@@ -304,8 +307,8 @@ export function compileDeterministicV4(brief: VideoBriefInputV4): VeoCompilerOut
     `Kamera ve Fizik: Tek pürüzsüz kamera hareketi. Gerçek hayat fiziğine tam uyum.`,
     `Süreklilik: Tek lokasyon, tek ana konu, aynı ışık kurulumu ve sıfır sahne sıçraması.`,
     voiceSection,
-    `Ham Video Metin Politikası: Videonun ham çekiminde kesinlikle ekranda hiçbir yazı, harf, fiyat, indirim veya sonradan eklenmiş grafik kartı OLMAYACAKTIR. STRICT RULE: NO ON-SCREEN TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO SUBTITLES, NO LOGO CARDS. Tüm dinamik metinler ve altyazı post-prodüksiyon katmanında eklenecektir.`,
-  ].join('\n')
+    `Ham Video Metin Politikası: Ham videoda fiyat, indirim, telefon, uzun kampanya metni, altyazı veya sonradan eklenmiş grafik kartı OLMAYACAKTIR. Veo'nun bozduğu küçük yazılar yasaktır: küçük masa levhası, elde taşınan küçük tabela, arka plan etiketi, karmaşık ekran metni ve rastgele CTA tabelası kullanma. Gerçek fiziksel marka adı, ürün etiketi, büyük dükkan/fabrika tabelası veya ekli gerçek logo sahne içinde doğal biçimde kullanılabilir. Marka renk paleti ürün, kıyafet, mekan aksanı ve ışıkta kullanılmalıdır. STRICT RULE: NO GIBBERISH WORDS, NO SMALL TEXT, NO RANDOM CTA SIGNS, NO PRICES, NO DISCOUNTS, NO PHONE NUMBERS, NO SUBTITLES, NO GRAPHIC OVERLAYS. ALLOW LARGE CLEAN PHYSICAL BRAND SIGNAGE AND ORIGINAL LOGO ONLY.`,
+  ].filter(Boolean).join('\n')
 
   return {
     status: 'ready',
@@ -363,7 +366,7 @@ KAYNAK: VEO_GENEL_REKLAM_MOTORU_v4 tek kural kaynağıdır.
 ÖNCELİK: safety/platform > kullanıcının açık talebi > ürün/hizmet gerçekleri > referans görseller > marka > kampanya hedefi > sektör ortam ipucu > arketip.
 KURALLAR:
 1. Tek lokasyon, tek ana konu ve tek ana eylem seç. Üç perdeyi aynı ortamın üç kadrajı olarak kur (0-2.2s Görsel Kanca, 2.2-5.8s Kanıt/Eylem, 5.8-8.0s Odak Kapanış).
-2. Dinamik metni post-prodüksiyona taşı. Ham videoda yeni kampanya metni, fiyat, CTA, telefon ve altyazı bulunmaz. 'STRICT RULE: NO ON-SCREEN TEXT, NO WORDS, NO LETTERS'.
+2. Dinamik metni post-prodüksiyona taşı. Ham videoda fiyat, CTA, telefon, altyazı, uzun kampanya metni ve rastgele levha yazısı bulunmaz. Marka adı ve varsa ekli gerçek logo yalnızca büyük, temiz, doğal fiziksel marka yüzeylerinde kullanılabilir; küçük tabela/masa levhası yasaktır.
 3. 8 saniyelik seslendirmeyi en fazla 18, tercihen 10-14 Türkçe kelimeyle sınırla. Tırnak işareti kullanma.
 4. ÇIKTI: Yalnızca geçerli JSON döndür. Başka hiçbir markdown veya açıklama yazma.`
 

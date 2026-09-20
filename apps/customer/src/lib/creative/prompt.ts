@@ -156,7 +156,7 @@ const VIDEO_STYLE_MOODS: Record<string, string> = {
 /**
  * Structured brief → High-fidelity cinematic 3-act live-action commercial video prompt (Veo / AI Video).
  * Matches the deep detail, brand kit integration, and style fidelity of the image generation engine.
- * Guaranteed ZERO on-screen text, ZERO logo cards, ZERO graphic overlays.
+ * Keeps campaign text out of the raw video while allowing real-world brand identity.
  */
 export function buildVideoPrompt(snapshot: CreativeSnapshot): {
   prompt: string
@@ -297,6 +297,11 @@ export function buildVideoPrompt(snapshot: CreativeSnapshot): {
 
   const styleMood = VIDEO_STYLE_MOODS[snapshot.style] || VIDEO_STYLE_MOODS.auto
   const toneDesc = kit?.tone ? `Marka tonu: ${kit.tone}.` : ''
+  const brandPresence = brandName
+    ? snapshot.useLogo !== false && kit?.logoPath
+      ? `Marka Kimliği: Videoda ${brandName} işletme adı ve ekli gerçek kurumsal logo doğal, büyük ve okunabilir fiziksel marka yüzeylerinde yer almalıdır: ürün gövdesi/ambalaj etiketi, iş kıyafeti nakışı, araç gövde etiketi, dükkan/fabrika giriş tabelası veya ana hero üründeki marka plakası. Küçük masa standı, elde taşınan mini tabela veya rastgele CTA levhası kullanma. Logoyu yeniden tasarlama; ekli referanstaki oran, amblem ve renkleri koru.`
+      : `Marka Kimliği: Videoda ${brandName} işletme adı doğal, büyük ve okunabilir fiziksel marka yüzeylerinde yer almalıdır: ürün etiketi, iş kıyafeti, araç etiketi, dükkan/fabrika giriş tabelası veya ana hero üründeki marka plakası. Küçük masa standı, elde taşınan mini tabela veya rastgele CTA levhası kullanma. Hayali amblem üretme.`
+    : null
 
   // 4. Ses / Konuşma Kurgusu (Voiceover vs Silent Instrumental)
   const isSpeechEnabled = snapshot.videoSpeech !== false
@@ -344,6 +349,7 @@ export function buildVideoPrompt(snapshot: CreativeSnapshot): {
   const prompt = [
     `9:16 dikey formatta, 8 saniyelik üst düzey Türk televizyon ve sinema reklam filmi (Instagram Reels & WhatsApp Durum).`,
     brandName ? `Marka: ${brandName}.` : null,
+    brandPresence,
     `Ürün: ${productName}.`,
     productBlocks.length ? `Ürün Kataloğu ve Detayları:\n${productBlocks.join('\n')}` : null,
     campaignContext.length ? `Kampanya Ayrıntıları:\n${campaignContext.join('\n')}` : null,
@@ -354,7 +360,7 @@ export function buildVideoPrompt(snapshot: CreativeSnapshot): {
     `SAHNE 2 (2.2s - 5.8s - DİNAMİK KULLANIM & İŞLEV KANITI): Kamera akıcı bir gimbal kaymasıyla sahneye genişler. ${act2Action}. Ürünün gerçek hayat ortamındaki güvenilir performansı ve pratik faydası sergilenir.`,
     `SAHNE 3 (5.8s - 8.0s - ODAK KAHRAMAN FİNALİ): Kamera geriye ve hafif yukarı doğru yükselerek kahraman (hero) kadrajına geçer. ${act3Climax}. İlham verici aydınlık ışık, sıcak kontrastlar, üstün kalite hissi.`,
     voiceSection,
-    `ÖNEMLİ VE KESİN KURAL 1 (SIFIR METİN & POST-PRODÜKSİYON AYRIMI): Videonun ham çekiminde KESİNLİKLE hiçbir yazı, metin, altyazı, logo kartı, bilgi kutusu veya grafik overlay OLMAYACAKTIR. Ekranda sadece %100 saf, temiz ve sinematik canlı çekim video görüntüsü olacaktır. Tüm fiyat, kampanya, telefon ve altyazılar post-prodüksiyon aşamasında eklenecektir. STRICT RULE: NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO SUBTITLES, NO CAPTIONS, NO ON-SCREEN TEXT, NO LOGO CARDS, NO GRAPHIC OVERLAYS, NO BANNERS, NO LOWER THIRDS. Pure clean cinematic live-action commercial footage only.`,
+    `ÖNEMLİ VE KESİN KURAL 1 (MARKALI HAM VIDEO, METIN ÇORBASI YOK): Ham videoda fiyat, indirim, telefon, uzun kampanya metni, altyazı, CTA butonu, bilgi kutusu, grafik overlay, banner veya lower-third OLMAYACAKTIR. Veo'nun bozduğu küçük yazılardan kaçın: küçük masa levhası, elde taşınan küçük pankart, arka plan raf etiketi, karmaşık ekran metni ve rastgele CTA tabelası yasaktır. Ancak gerçek dünyadaki fiziksel marka kimliği SERBESTTİR: ürün üzerindeki orijinal logo/etiket, büyük dükkan/fabrika tabelası, araç etiketi, önlük nakışı veya ana hero üründeki marka plakası gibi doğal yüzeylerde ${brandName || 'işletme'} adı ve varsa ekli gerçek logo görünmelidir. Marka renk paleti sahnenin objelerinde, kıyafette, ürün gövdesinde ve ışık aksanlarında kullanılmalıdır; hex kod yazma. STRICT RULE: NO GIBBERISH WORDS, NO SMALL TEXT, NO RANDOM CTA SIGNS, NO PRICES, NO DISCOUNTS, NO PHONE NUMBERS, NO SUBTITLES, NO CAPTIONS, NO GRAPHIC OVERLAYS, NO BANNERS, NO LOWER THIRDS. ALLOW LARGE CLEAN PHYSICAL BRAND SIGNAGE AND ORIGINAL LOGO ONLY.`,
     `ÖNEMLİ VE KESİN KURAL 2 (MARKA VE ÜRÜN DOKUNULMAZLIĞI): Marka logosu, amblemi, renkleri ve gerçek ürün tasarımı üzerinde KESİNLİKLE hiçbir oynama, değişiklik, deformasyon veya varyasyon YAPILMAYACAKTIR. Ürünün gerçek fiziksel kasası, formu, renkleri ve amblemi %100 birebir korunacaktır. Hayali veya dönüştürülmüş ürün varyasyonları kesinlikle üretilmeyecektir. STRICT MANDATE: ZERO ALTERATION TO BRAND LOGO OR PRODUCT IDENTITY. PRESERVE ORIGINAL EMBLEM, COLORS, AND PHYSICAL PRODUCT FORM EXACTLY. NO PRODUCT MORPHING, NO LOGO REINVENTION.`,
   ]
     .filter(Boolean)
@@ -376,7 +382,7 @@ export function buildVideoPrompt(snapshot: CreativeSnapshot): {
     'deformed hands',
     'unsafe product use',
     'watermark',
-    'text, words, letters, typography, logo overlay, graphic box, lower third, subtitles, captions, banner, card',
+    'gibberish words, misspelled words, small text, random CTA signs, handheld sign, desk sign, prices, discounts, phone numbers, long text, subtitles, captions, floating typography, logo overlay, graphic box, lower third, banner, card',
     'cartoon, 3D animation look, cgi render, uncanny valley',
     'blurry artifacts, low quality, pixelated, amateur video, jump cuts, jerky camera',
   ].join(', ')

@@ -44,20 +44,21 @@ const DEFAULT_LEARNINGS = {
   lastUpdated: new Date().toISOString(),
   universalRules: [
     "STRICT ZERO TEXT SALAD: Difüzyon video modellerine havada boşlukta uçuşan soyut 3D harfler veya uzun cümleler yazdırma; harfler erir ve bozulur.",
-    "RIGID PHYSICAL SURFACE ANCHORING (FİZİKSEL YÜZEY KURALI): Ekranda yer alacak her metin ve logo fiziksel bir nesneye (fırçalanmış metal masa isimliği, ahşap yönlendirme panosu, araç şoför kapısı, ürün ambalaj etiketi, bina cephesi, mat pleksi masa standı, iş önlüğü nakışı) kazınmış, monte edilmiş veya basılmış olmalıdır.",
-    "SHORT & IMPACTFUL TYPOGRAPHY (MAKSİMUM 2-3 KELİME & BÜYÜK HARFLERLE): Sahneye yazılacak metin en fazla 2-3 kelimeden oluşmalı, kısa, net ve büyük harfli olmalıdır (Örn: 'FABRİKADAN DOĞRUDAN', 'HEMEN RANDEVU AL', 'B2B ÇÖZÜMLERİ', 'SİPARİŞ VER'). Asla uzun slogan veya paragraf yazdırılamaz.",
+    "RIGID PHYSICAL BRAND SURFACE RULE (FİZİKSEL MARKA YÜZEYİ): Ekranda yer alacak marka adı ve logo yalnızca büyük, temiz ve doğal fiziksel marka yüzeylerinde olmalıdır: ürün gövdesi/ambalaj etiketi, araç gövde etiketi, iş önlüğü nakışı, dükkan/fabrika giriş tabelası veya ana hero ürün plakası. Küçük masa levhası, elde taşınan mini tabela ve arka plan raf etiketi yasaktır.",
+    "NO RANDOM CTA SIGNS: 'ANINDA TEKLİF AL', 'SİPARİŞ VER', 'HEMEN ARA', 'WHATSAPP İLE BAŞLA' gibi CTA yazıları kullanıcı açıkça istemedikçe sahne içine tabela/levha olarak yazdırılmaz. CTA gerekiyorsa seslendirmede söylenir veya post-prodüksiyonda temiz overlay olarak eklenir.",
+    "SHORT CLEAN BRAND TYPOGRAPHY ONLY: Sahne içinde zorunlu metin yalnızca marka adı veya kullanıcı doğrulamışsa tek kısa hero ibaresidir. Metin büyük, net, yüksek kontrastlı ve tek ana yüzeyde olmalıdır. Küçük yazı, uzun slogan, paragraf ve dekoratif tabela yasaktır.",
     "HIGH-CONTRAST SANS-SERIF SPECIFICATION: Tipografi daima kalın, net, okunaklı modern endüstriyel sans-serif ve yüksek kontrastlı (koyu zemin üstü beyaz/sarı ya da açık yüzey üstü siyah) olarak sahnelenmelidir.",
     "STRICT BRAND & LOGO INVIOLABILITY: Yüklenen kurumsal logo, amblem şekli ve kurumsal renk kodları asla değiştirilemez, stilize varyasyonu yapılamaz. Şirketin tanımlı logosu yoksa ASLA uydurma rastgele sembol/üçgen üretilmez, sadece okunaklı şirket adı yazılır.",
     "STRICT PRODUCT FIDELITY: Gerçek ürün fotoğrafındaki kasa, gövde, renk ve fiziksel detaylar %100 birebir korunmalıdır; hayali veya farklılaştırılmış ürün varyasyonları üretilemez.",
     "REALISTIC CINEMATIC SECTOR CONTEXT: Sektör asla karıştırılamaz (B2B teknoloji için gökdelen ofis; gastronomi için rustik mutfak; tarım için güneşli bahçe; inşaat için mimari şantiye; sağlık için hijyenik klinik; otomotiv için pırıl pırıl servis plazasında).",
-    "NATIVE TURKISH CTA & SLOGAN ENFORCEMENT: Her videoda sektörün doğasına uygun veya firmanın kendi resmi sloganı yer almalıdır.",
+    "BRAND PALETTE WITHOUT TEXT: Marka renk paleti ürün gövdesi, kıyafet, mekan aksanı, ambalaj, araç kaplaması ve ışıkta kullanılmalıdır; renk kodları ve küçük yazılar sahneye basılmaz.",
     "SECTOR-AUTHENTIC AUDIO & FOLEY: Arka plan ses efektleri (foley) sektöre tam uygun olmalıdır (mutfakta cızırtı ve bıçak tıkırtısı, ofiste hafif klavye ve fincan sesi, şantiyede güçlü forklift ve çekiç, doğada kuş cıvıltısı ve yaprak hışırtısı).",
     "NATIVE TURKISH VOICEOVER DIRECTIVE (SESLENDİRME BLOĞU): Her video promptunun sonunda 'SESLENDİRME: Kristal netliğinde profesyonel Türkçe erkek reklam spikeri sesi: [replik]' bloğu yer alacaktır. Veo/Flow bu bloğu okuyarak natif Türkçe seslendirme üretir. Sonrasında CapCut altyazı servisimiz senkronize dinamik neon altyazıyı giydirir.",
-    "CLEAN SCENE & REALISTIC COMMERCIAL CLOSING (SIFIR ABSÜRT BOŞ DUVAR): Bomboş mermer duvara devasa altın veya metal kutu tabela asıp boş koridor göstermek KESİNLİKLE YASAKTIR. Kapanış sahnesi gerçek bir çalışma masası, modern aydınlık ofis veya ürünün canlı ortamıdır. Kurumsal logo ve marka adı masanın üzerindeki zarif masa isimliğinde ('{{MARKA}}') veya laptop ekranında şık şekilde yer alır.",
+    "CLEAN SCENE & REALISTIC COMMERCIAL CLOSING (SIFIR ABSÜRT BOŞ DUVAR): Bomboş mermer duvara devasa altın veya metal kutu tabela asıp boş koridor göstermek KESİNLİKLE YASAKTIR. Kapanış sahnesi gerçek çalışma ortamı, ürünün canlı kullanımı veya marka renkleriyle düzenlenmiş doğal ortamdır. Kurumsal logo ve marka adı küçük masa levhasında değil; ürün, araç, kıyafet veya giriş tabelası gibi büyük ve doğal yüzeylerde yer alır.",
     "NO HEX CODES IN PROMPTS (HEX KODU YASAĞI): Prompt metinlerine ASLA '#4caf50', '#1b5e20' gibi hex kodları yazılmayacaktır; difüzyon modelleri bunları tabela metni sanıp sahneye basar. Renkler daima doğal dille tarif edilir.",
     "CLEAN MINIMALIST DIGITAL UI & MAPS (SAHTE HARİTA YAZISI YASAĞI): Ekranda harita veya dijital arayüz gösterildiğinde uydurma sokak/şehir metinleri KESİNLİKLE OLMAYACAKTIR. Harita minimalist grafik çizgilerden, yollardan ve parlayan temiz konum pinlerinden ibaret olmalıdır.",
     "ZERO PROMPT JARGON ON SIGNS (TABELAYA TEKNİK KELİME BASMA YASAĞI): Tabelaya veya standa ASLA 'ALL CAPS', 'TEXT CARD', 'FONT', 'LOGO' gibi prompt komutları yazılmayacaktır. Plakette yalnızca ve sadece firmanın kurumsal ismi ve varsa kurumsal sloganı yer alacaktır.",
-    "NO FORCED CONTACT CTA ON PHYSICAL PROPS (ZORLAMA İLETİŞİM YASAĞI): Masadaki isimlik, ahşap plaket veya dükkan vitrini gibi fiziksel nesnelerin üzerine 'WHATSAPP İLE BAŞLA', 'WHATSAPP İLE İLETİŞİME GEÇİN' veya telefon numarası gibi zorlama çağrılar KESİNLİKLE YAZILMAYACAKTIR. Fiziksel nesneler sadece firmanın prestijli kurumsal kimliğine aittir: Orijinal Logo, Marka İsmi ve varsa firmanın kurumsal sloganı."
+    "NO FORCED CONTACT CTA ON PHYSICAL PROPS (ZORLAMA İLETİŞİM YASAĞI): Fiziksel nesnelerin üzerine 'WHATSAPP İLE BAŞLA', 'WHATSAPP İLE İLETİŞİME GEÇİN', 'ANINDA TEKLİF AL' veya telefon numarası gibi zorlama çağrılar KESİNLİKLE YAZILMAYACAKTIR. Fiziksel nesneler sadece firmanın prestijli kurumsal kimliğine aittir: Orijinal logo, marka ismi ve marka renkleri."
   ]
 };
 
@@ -252,8 +253,8 @@ class BrandLearningStore {
     // En kritik 5 kural — tüm listeyi değil, modelin en çok ihlal ettiği kurallar
     const TOP_CRITICAL_RULES = [
       "SIFIR METİN ÇORBASI: Havada uçuşan soyut 3D harfler veya uzun cümleler KESİNLİKLE YASAKTIR — harfler difüzyon modelde erir ve bozulur.",
-      "FİZİKSEL YÜZEY ZORUNLULUĞU: Tüm yazılar ve logo yalnızca fiziksel nesnelere (metal tabela, ahşap plaket, ambalaj, iş önlüğü nakışı) kazınmış/monte edilmiş olacaktır — havada asılı metin YASAK.",
-      "MAKSİMUM 2-3 KELİME: Tabelaya/plakete yazılacak metin 2-3 kısa kelimeden oluşacak (örn: 'FABRİKADAN DOĞRUDAN', 'SİPARİŞ VER', 'RANDEVU AL'). Uzun cümle ve slogan YASAK.",
+      "BÜYÜK MARKA YÜZEYİ ZORUNLULUĞU: Marka adı ve logo yalnızca büyük, temiz fiziksel marka yüzeylerinde olmalıdır: ürün etiketi, araç etiketi, iş önlüğü nakışı, dükkan/fabrika giriş tabelası. Küçük masa levhası ve elde taşınan tabela YASAK.",
+      "CTA LEVHASI YASAĞI: Kullanıcı açıkça istemedikçe 'ANINDA TEKLİF AL', 'SİPARİŞ VER', 'HEMEN ARA' gibi CTA metinleri sahneye tabela/plaket olarak yazdırılmaz. CTA seslendirmede kalır.",
       "SIFIR HEX KODU: Prompt metnine '#1b5e20', '#ffc300' gibi hex kodları ASLA yazılmayacaktır — model bunu tabelaya metin olarak basar. Renkler doğal dille tarif edilir.",
       "SIFIR UYDURMA LOGO: Firmanın tanımlı logosu yoksa KESİNLİKLE geometrik üçgen, sembol veya rastgele amblem üretilmeyecektir. Sadece firma adı temiz tipografiyle yazılır."
     ];
@@ -266,7 +267,7 @@ class BrandLearningStore {
 
     let sectorSection = '';
     if (sector) {
-      const sceneShortCTA = sector.recommendedTurkishCTAs ? sector.recommendedTurkishCTAs[0] : 'KEŞFET';
+      const sceneShortCTA = '';
       const brandSlogan = SECTOR_SLOGANS[sector.sectorKey] || 'KURUMSAL ÇÖZÜMLER';
 
       // Çoklu Varyasyon Çözümleme (Kullanıcı Talebi: Tekdüzelik olmasın, zengin varyasyonlar olsun)
@@ -296,20 +297,11 @@ class BrandLearningStore {
       sectorSection = `\nÖĞRENİLMİŞ SEKTÖR (${sector.name}${variationTitle}):\n` +
         `- Sahne atmosferi: ${activeAtmosphere}\n` +
         `- Fiziksel yüzeyler: ${(sector.rigidSurfaceObjects || []).join(' | ')}\n` +
-        `- Kısa CTA örnekleri: ${(sector.recommendedTurkishCTAs || []).join(', ')}\n` +
+        `- CTA levhası: kullanıcı açıkça istemedikçe sahne içinde yok; CTA seslendirmede veya post-prodüksiyonda kalır.\n` +
         `- Yasaklı unsurlar: ${(sector.forbiddenElements || []).join(', ')}\n`;
 
       if (activeTemplate) {
-        let filledTemplate = activeTemplate
-          .replace(/\{\{MARKA\}\}/g, brandName || 'FİRMA')
-          .replace(/\{\{LOGO_TANIMI\}\}/g, brand?.logoGuidelines || 'Kurumsal logo amblemi')
-          .replace(/\{\{URUN\}\}/g, productName || 'Ürün & Hizmet')
-          .replace(/\{\{SLOGAN\}\}/g, brandSlogan)
-          .replace(/\{\{KAPANIS_CTA\}\}/g, sceneShortCTA)
-          .replace(/\{\{SEKTOR_KISA_CTA\}\}/g, sceneShortCTA);
-
-        const s3Line = filledTemplate.split('\n').find(l => l.includes('SAHNE 3'));
-        sectorSection += `- Başarılı kapanış sahne referansı: "${s3Line || 'SAHNE 3: Aydınlık çalışma ortamı, fiziksel isimlikte marka adı ve sektör sloganı.'}"\n`;
+        sectorSection += `- Temiz kapanış referansı: "SAHNE 3: Ürün veya hizmet doğal ortamında net görünür; marka adı ve varsa gerçek logo yalnızca büyük, temiz ürün/araç/kıyafet/giriş tabelası yüzeyinde yer alır. Küçük yazı, masa levhası ve CTA tabelası yoktur."\n`;
       }
     }
 

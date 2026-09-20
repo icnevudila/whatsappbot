@@ -120,24 +120,30 @@ KRİTİK YÖNETMEN VE REKLAM STANDARTLARI (ÖNEMLİ):
 2. TEMİZ MİNİMALİST HARİTA & DİJİTAL ARAYÜZ KURALI (SIFIR SAHTE SOKAK YAZISI):
    - Laptop ekranında Google Haritalar gösterildiğinde 'Goaticlafa' gibi uydurma sokak, şehir veya mahalle isimleri KESİNLİKLE YAZDIRILMAYACAKTIR.
    - Harita SADECE temiz minimalist grafik topoğrafik yollardan, dairesel yeşil radar tarama dalgalarından ve parıldayan temiz yeşil konum pinlerinden oluşmalıdır (CLEAN MINIMALIST VECTOR MAP, NO STREET LABELS, NO GIBBERISH NAMES).
-   - Ekrandaki tek metin pindeki şık küçük buton olmalıdır: 'MÜŞTERİ BUL'.
+   - Küçük buton yazısı, sokak adı, arayüz etiketi veya okunması zor mikro metin YOKTUR; arayüz ikonlar, pinler ve renkli durum ışıklarıyla anlaşılır.
 
-3. DOĞAL PRESTİJLİ REKLAM KAPANIŞI (SIFIR ABSÜRT DEV DUVAR TABELASI, SIFIR BOŞ KORİDOR):
+3. MARKA KİMLİĞİ VE YAZI KURALI (SIFIR GIBBERISH, SIFIR RASTGELE CTA LEVHASI):
+   - Veo küçük yazılarda bozulduğu için küçük masa isimliği, elde taşınan mini tabela, arka plan raf etiketi, uzun slogan, bilgi kutusu ve CTA levhası KULLANMA.
+   - 'ANINDA TEKLİF AL', 'SİPARİŞ VER', 'HEMEN ARA', 'WHATSAPP İLE İLETİŞİME GEÇİN' gibi CTA metinleri kullanıcı açıkça istemedikçe sahneye yazılmayacaktır; CTA seslendirmede söylenir.
+   - Marka adı ('${brand}') ve varsa ekli gerçek logo yalnızca büyük, temiz, okunabilir fiziksel marka yüzeylerinde görünür: ürün gövdesi/ambalaj etiketi, iş önlüğü nakışı, araç gövde etiketi, dükkan/fabrika giriş tabelası veya ana hero ürün plakası.
+   - Marka renk paleti ürün, kıyafet, mekan aksanı, ambalaj ve ışıkta kullanılmalıdır; renk kodları prompta yazılmayacaktır.
+
+4. DOĞAL PRESTİJLİ REKLAM KAPANIŞI (SIFIR ABSÜRT DEV DUVAR TABELASI, SIFIR BOŞ KORİDOR):
    - KESİNLİKLE bomboş mermer duvara devasa altın kutu tabela veya absürt boş koridor/lobi SAHNELENMEYECEKTİR.
    - Kapanış sahnesi (Sahne 3) gerçek, canlı bir çalışma masası, modern teknoloji ofisi veya ürünün kullanıldığı doğal ortam olmalıdır.
-   - Firma adı ve logosu masanın üzerindeki şık, zarif masa isimliğinde ('${brand}') ve açık laptop ekranında yer alır.
+   - Firma adı ve logosu küçük masa levhasında değil, ürün/araç/kıyafet/giriş tabelası gibi doğal marka yüzeylerinde yer alır.
    - Güven veren yönetici veya çalışan kameraya/ekrana bakar, arkada gün batımı ve canlı kurumsal ofis atmosferi görünür. TERTEMİZ DOĞAL REKLAM KAPANIŞI.
 
-4. NATİF TÜRKÇE SPİKER SESLENDİRMESİ (SESLENDİRME BLOĞU):
+5. NATİF TÜRKÇE SPİKER SESLENDİRMESİ (SESLENDİRME BLOĞU):
    - Promptun sonuna şu formatta profesyonel, akıcı, reklam spikeri tonunda 15-20 kelimelik bir Türkçe replik ekle:
    SESLENDİRME: Kristal netliğinde profesyonel Türkçe erkek reklam spikeri sesi: '[Reklam repliği]'
 
-5. SIFIR UYDURMA LOGO & SIFIR TEKNİK JARGON (SIFIR VELL CAPS, SIFIR SAHTE ALTIĞEN):
+6. SIFIR UYDURMA LOGO & SIFIR TEKNİK JARGON (SIFIR VELL CAPS, SIFIR SAHTE ALTIĞEN):
    - Tabelaya, standa veya sahneye ASLA 'ALL CAPS', 'VELL CAPS', 'TEXT CARD', 'FONT', 'LOGO' gibi teknik komutlar YAZILMAYACAKTIR.
-   - İsimlik veya tabelada yalnızca ve sadece firmanın kurumsal adı ('${brand}') ve ekli görseldeki orijinal kurumsal logosu yer alacaktır.
+   - Görünür marka yüzeyinde yalnızca ve sadece firmanın kurumsal adı ('${brand}') ve ekli görseldeki orijinal kurumsal logosu yer alacaktır.
    - KESİNLİKLE uydurma yeşil altıgen, uydurma 'V' harfi amblemi, onay tiki veya sahte sembol EKLENMEYECEKTİR.
 
-6. ÇIKTI FORMATI:
+7. ÇIKTI FORMATI:
    - SADECE doğrudan Google Veo'ya yapıştırılacak tek parça prompt metnini yaz. Başka açıklama, selamlama veya tırnak ekleme.
 
 ${require('./brand_learning_store.js').buildLearningPromptBlock(brand, product, brief)}`;
@@ -922,6 +928,7 @@ async function generateVideo(options) {
  * Pro hesap ile kota engeline takılmadan aylık kredi havuzundan saf 9:16 ticari video üretir.
  */
 async function generateVideoOnFlow(options = {}) {
+  const requestStartedAt = Date.now();
   const port = options.port || 9222;
   const projectUrl = options.projectUrl || 'https://flow.google.com/project/6b718bdf-9bf3-44c3-8b65-4c8f9110c8c5';
   
@@ -1232,14 +1239,15 @@ async function generateVideoOnFlow(options = {}) {
   const downloadedCandidate = path.join(OUTPUT_DIR, 'download');
   const rootDownloadCandidate = '/root/Downloads/download';
 
-  // Eğer Google Flow projeyi .zip arşivi olarak indirdiyse, zip içindeki en taze MP4'ü çıkar
+  // Eğer Google Flow projeyi .zip arşivi olarak indirdiyse, yalnızca bu istekte inen arşivden
+  // son MP4'ü çıkar. Marka/sektör anahtar kelimesiyle arşiv taramak eski render seçtirebilir.
   const recentZipFile = fs.readdirSync(OUTPUT_DIR)
     .filter(f => f.endsWith('.zip'))
     .map(f => ({ name: f, time: fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs }))
     .sort((a, b) => b.time - a.time)[0];
 
   let extractedFromZip = false;
-  if (recentZipFile && (Date.now() - recentZipFile.time < 90000)) {
+  if (recentZipFile && recentZipFile.time >= requestStartedAt - 5000) {
     try {
       const zipPath = path.join(OUTPUT_DIR, recentZipFile.name);
       const extractDir = path.join(OUTPUT_DIR, `unzip_${timestamp}`);
@@ -1260,66 +1268,18 @@ async function generateVideoOnFlow(options = {}) {
         execSync(`python3 -m zipfile -e "${zipPath}" "${extractDir}" 2>/dev/null || true`);
       }
 
-      // 3. Çıkarılan dosyalardan en doğru videoyu seç
-      const keywords = [
-        options.brandName,
-        options.productName,
-        options.customer,
-        options.sector
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-        .replace(/[^a-z0-9ğüşıöç]/g, ' ')
-        .split(/\s+/)
-        .filter(w => w.length >= 3);
-
-      const sectorEnglishMap = {
-        'inşaat': ['brick', 'construction', 'building', 'worker'],
-        'tuğla': ['brick', 'construction'],
-        'veri': ['data', 'analytics', 'laptop', 'map'],
-        'harita': ['map', 'location', 'laptop'],
-        'zeytin': ['olive', 'harvest', 'tree'],
-        'pompa': ['pump', 'sprayer', 'backpack'],
-        'döner': ['doner', 'kebab', 'chef', 'meat']
-      };
-
-      const searchTerms = [...keywords];
-      for (const [tr, enList] of Object.entries(sectorEnglishMap)) {
-        if (keywords.some(k => k.includes(tr))) {
-          searchTerms.push(...enList);
-        }
-      }
-
-      // En sondan başa doğru (en yeni renderlar sondadır)
+      // Google Flow proje arşivinde eski renderlar da bulunabilir. En sondan başa doğru
+      // yalnızca arşiv sırasındaki son geçerli MP4 alınır; isim/anahtar kelime kullanılmaz.
       let chosenFileName = null;
       const candidateList = zipOrderMp4s.length > 0 ? zipOrderMp4s : fs.readdirSync(extractDir).filter(f => f.endsWith('.mp4'));
 
-      // Arama 1: İsimde sektör/marka anahtar kelimesi geçen en yeni video
       for (let i = candidateList.length - 1; i >= 0; i--) {
-        const rawItem = candidateList[i];
-        const fname = rawItem.toLowerCase();
-        const baseName = path.basename(rawItem);
+        const baseName = path.basename(candidateList[i]);
         const fullP = path.join(extractDir, baseName);
         if (fs.existsSync(fullP) && fs.statSync(fullP).size > 500000) {
-          if (searchTerms.some(term => fname.includes(term))) {
-            chosenFileName = baseName;
-            console.log(`[Flow Video] 🎯 Anahtar kelime eşleşmesi ile en yeni video seçildi: ${chosenFileName} (anahtar: ${searchTerms.join(', ')})`);
-            break;
-          }
-        }
-      }
-
-      // Arama 2: Eşleşme yoksa arşivdeki en son geçerli MP4
-      if (!chosenFileName) {
-        for (let i = candidateList.length - 1; i >= 0; i--) {
-          const baseName = path.basename(candidateList[i]);
-          const fullP = path.join(extractDir, baseName);
-          if (fs.existsSync(fullP) && fs.statSync(fullP).size > 500000) {
-            chosenFileName = baseName;
-            console.log(`[Flow Video] ⏱️ Arşivdeki en son üretilen video seçildi: ${chosenFileName}`);
-            break;
-          }
+          chosenFileName = baseName;
+          console.log(`[Flow Video] ⏱️ Bu indirme arşivindeki son geçerli video seçildi: ${chosenFileName}`);
+          break;
         }
       }
 
@@ -1347,7 +1307,7 @@ async function generateVideoOnFlow(options = {}) {
         .filter(f => f.endsWith('.mp4') && f !== rawFileName)
         .map(f => ({ name: f, time: fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs }))
         .sort((a, b) => b.time - a.time);
-      const recent = files.find(f => Date.now() - f.time < 90000);
+      const recent = files.find(f => f.time >= requestStartedAt - 5000);
       if (recent) {
         fs.copyFileSync(path.join(OUTPUT_DIR, recent.name), rawPath);
       }
@@ -1562,7 +1522,7 @@ KESİN KURAL: Tüm yazılar makine ve ekipman yüzeylerine kalıplanmış veya l
           chatGptPrompt = chatGptPrompt || `9:16 dikey formatta tarım ekipmanı reklam senaryosu.
 Marka: BOFE. Ürün: Bofe 16L Şarjlı Sırt Pompası.
 SAHNE 1 (0-3sn): Meyve bahçesinde sabah çiyi. Bofe şarjlı tarım pompasının mavi polietilen deposu üzerinde serigrafi 'BOFE' amblemi.
-SAHNE 2 (3-7sn): Teleskopik pirinç nozül homojen mikro damlacıklar püskürtür. Deponun altındaki batarya kapağında: 'GÜÇLÜ POMPA'.
+SAHNE 2 (3-7sn): Teleskopik pirinç nozül homojen mikro damlacıklar püskürtür. Depo gövdesinde Bofe marka renk paleti, büyük temiz logo etiketi ve sağlam ürün formu görünür; küçük yazı veya CTA tabelası yoktur.
 SAHNE 3 (7-10sn): Çiftçi pompayı sırtına asar, güneş ışığında su zerrecikleri parlar.
 SESLENDİRME: Kristal netliğinde Türkçe reklam spikeri: 'Tarlanızda ve bahçenizde kesintisiz basınç. Bofe şarjlı pompa ile ilaçlama artık zahmetsiz.'`;
           veoPrompt = veoPrompt || `9:16 vertical commercial. An orchard at morning sunrise, professional agricultural spraying pump in crisp focus. The BOFE logo is embossed on the heavy-duty blue tank surface. Water droplets catching sunlight. Telephoto 85mm lens, pristine live action.`;
@@ -1572,7 +1532,7 @@ SESLENDİRME: Kristal netliğinde Türkçe reklam spikeri: 'Tarlanızda ve bahç
           chatGptPrompt = chatGptPrompt || `9:16 dikey formatta ağır sanayi ve yapı malzemeleri reklam senaryosu.
 Marka: AYVAZOĞLU İNŞAAT. Ürün: Fırınlanmış Pres Tuğla.
 SAHNE 1 (0-3sn): Yüksek sıcaklıktaki tünel fırından çıkan kızıl pres tuğla paletleri. Fabrika tavanındaki dev çelik kirişe monte endüstriyel tabela: 'AYVAZOĞLU İNŞAAT'.
-SAHNE 2 (3-7sn): Forklift sağlam paleti kamyona yüklerken tuğlaların keskin köşeleri ve pres baskısı görünür. Palet ambalaj bandında: 'SAĞLAM TEMELLER'.
+SAHNE 2 (3-7sn): Forklift sağlam paleti kamyona yüklerken tuğlaların keskin köşeleri ve pres baskısı görünür. Palet ambalaj bandında yalnızca büyük, temiz Ayvazoğlu marka etiketi ve kurumsal renk şeridi yer alır; küçük slogan veya CTA yazısı yoktur.
 SAHNE 3 (7-10sn): Kamyon şantiye girişindeki dövme demir nizamiye tabelasının önünden geçer: 'AYVAZOĞLU'.
 SESLENDİRME: Tok, kararlı Türkçe erkek reklam spikeri sesi: 'Geleceği inşa eden sağlam yapılar için, nesiller boyu güven: Ayvazoğlu İnşaat.'`;
           veoPrompt = veoPrompt || `9:16 vertical commercial shot. Industrial red brick manufacturing plant. Palletized red bricks with AYVAZOGLU signage rigidly mounted on the metal warehouse beam. Direct factory-to-door sales theme. Warm industrial lighting, tungsten glow, heavy industrial aesthetic.`;
@@ -1592,7 +1552,7 @@ SESLENDİRME: Samimi, iştah kabartan profesyonel Türkçe erkek ses tonu: 'Meş
           chatGptPrompt = chatGptPrompt || `9:16 dikey formatta Türk televizyon ve sinema reklam standartlarında 3 sahnelik yönetmen kurgusu.
 Marka: ${brand}. Sektör: ${sector}.
 SAHNE 1 (0-3sn): Prestijli kurumsal mekanda geniş açı açılış. Mekanın katı mimari yüzeyine monte edilmiş tabela: '${brand}'.
-SAHNE 2 (3-7sn): Ürün/hizmet kullanımının dinamik sinematik yakın planı. İlgili fiziksel ekipman yüzeyinde net çağrı: 'HEMEN KEŞFEDİN'.
+SAHNE 2 (3-7sn): Ürün/hizmet kullanımının dinamik sinematik yakın planı. İlgili fiziksel ekipman yüzeyinde yalnızca marka renk paleti ve varsa büyük temiz marka etiketi görünür; rastgele CTA yazısı yoktur.
 SAHNE 3 (7-10sn): Kapanış planında güven veren atmosfer ve kurumsal amblem detayı.
 SESLENDİRME: Kristal netliğinde profesyonel Türkçe erkek reklam spikeri sesi: '${brand} ile kalitede yeni standart. Detaylar ve fırsatlar için hemen iletişime geçin.'
 KESİN KURAL: Ekranda havada uçuşan harf, bilgi kutusu veya uzun alt başlık KESİNLİKLE OLMAYACAKTIR. Saf sinematik çekim.`;
@@ -2293,4 +2253,3 @@ module.exports = {
   syncAccountCookies,
   updateAccountSlot
 };
-
