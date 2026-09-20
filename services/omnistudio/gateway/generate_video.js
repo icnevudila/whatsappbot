@@ -942,12 +942,19 @@ async function generateVideoOnFlow(options = {}) {
   await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
   await sleep(500);
 
-  // 1.5. Mevcut tile sayısını kaydet
+  // 1.5. Başlangıçtaki mevcut tile'ların imza listesini kaydet (Eski videolarla karışmasını %100 engelle)
   const baselineTiles = await send('Runtime.evaluate', {
-    expression: `document.querySelectorAll('.tile, flow-tile, flow-media-tile, div[class*="tile"], div[class*="virtual-item"]').length`,
+    expression: `(() => {
+      const els = Array.from(document.querySelectorAll('.tile, flow-tile, flow-media-tile, div[class*="tile"], div[class*="virtual-item"]'));
+      return {
+        count: els.length,
+        signatures: els.map((el, idx) => el.getAttribute('data-id') || el.id || el.querySelector('video')?.src || (el.innerText || '').slice(0, 40) || String(idx))
+      };
+    })()`,
     returnByValue: true
   });
-  const initialTileCount = Number(baselineTiles?.result?.value) || 0;
+  const initialTileCount = Number(baselineTiles?.result?.value?.count) || 0;
+  const initialSignaturesArray = baselineTiles?.result?.value?.signatures || [];
 
   // 2. Promptu yaz
   await send('Input.insertText', { text: prompt });
@@ -987,45 +994,73 @@ async function generateVideoOnFlow(options = {}) {
     })()`
   });
 
-  // 5. Video tile'ını bekle (en fazla 240 saniye)
+  // 5. Video tile'ını bekle (en fazla 260 saniye — SADECE YENİ ÜRETİLEN TILE BEKLENİR)
   let videoTileFound = false;
   const startTime = Date.now();
-  while (Date.now() - startTime < 240000) {
-    await sleep(5000);
+  await sleep(15000); // İlk 15 saniye yeni render oturma payı
+
+  while (Date.now() - startTime < 260000) {
+    await sleep(6000);
+    const elapsed = Math.round((Date.now() - startTime) / 1000);
+
     const checkTile = await send('Runtime.evaluate', {
       expression: `(() => {
-        const tiles = Array.from(document.querySelectorAll('.tile, flow-tile, flow-media-tile, div[class*="tile"], div[class*="virtual-item"]'));
-        const newTiles = tiles.length > ${initialTileCount} ? tiles.slice(${initialTileCount}) : tiles;
-        const playTile = newTiles.find(t => {
-          const text = (t.innerText || '').toLowerCase();
-          const isFinished = !text.includes('generating') && !text.includes('rendering') && !text.includes('bekleniyor');
-          return (text.includes('play_circle') || t.querySelector('video') || t.querySelector('[aria-label*="Play"]')) && isFinished;
+        const initialSigs = new Set(${JSON.stringify(initialSignaturesArray)});
+        const allTiles = Array.from(document.querySelectorAll('.tile, flow-tile, flow-media-tile, div[class*="tile"], div[class*="virtual-item"]'));
+        
+        // Başlangıçta olmayan yepyeni tile'ları tespit et
+        let targetTiles = allTiles.filter((t, idx) => {
+          const sig = t.getAttribute('data-id') || t.id || t.querySelector('video')?.src || (t.innerText || '').slice(0, 40) || String(idx);
+          return !initialSigs.has(sig);
         });
-        if (playTile) {
-          const r = playTile.getBoundingClientRect();
-          return { found: true, x: r.left + r.width/2, y: r.top + r.height/2 };
+
+        if (targetTiles.length === 0 && allTiles.length > ${initialTileCount}) {
+          targetTiles = allTiles.slice(${initialTileCount});
         }
-        return { found: false };
+
+        if (targetTiles.length === 0) {
+          return { status: 'waiting_for_new_tile', count: allTiles.length };
+        }
+
+        const newestTile = targetTiles[targetTiles.length - 1];
+        const text = (newestTile.innerText || '').toLowerCase();
+        const hasSpinner = Boolean(newestTile.querySelector('mat-spinner, [role="progressbar"], .loading, svg[class*="spin"]'));
+        const isGenerating = text.includes('generating') || text.includes('rendering') || text.includes('bekleniyor') || hasSpinner;
+
+        if (isGenerating) {
+          return { status: 'rendering', text: text.slice(0, 40) };
+        }
+
+        const hasPlay = text.includes('play_circle') || newestTile.querySelector('video') || newestTile.querySelector('[aria-label*="Play"]');
+        if (hasPlay && !isGenerating) {
+          const r = newestTile.getBoundingClientRect();
+          return { status: 'ready', found: true, x: r.left + r.width/2, y: r.top + r.height/2 };
+        }
+
+        return { status: 'processing' };
       })()`,
       returnByValue: true
     });
 
-    if (checkTile?.result?.value?.found) {
+    const res = checkTile?.result?.value;
+    if (res?.status === 'ready' && res?.found && elapsed >= 25) {
       videoTileFound = true;
-      const tx = checkTile.result.value.x;
-      const ty = checkTile.result.value.y;
-      console.log(`[Flow Video] 🎬 Video render tamamlandı! Tile açılıyor (${tx}, ${ty})...`);
+      const tx = res.x;
+      const ty = res.y;
+      console.log(`[Flow Video] 🎬 Yepyeni video renderı başarıyla tamamlandı (${elapsed} sn)! Tile açılıyor (${tx}, ${ty})...`);
       await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: tx, y: ty, button: 'left', clickCount: 1 });
       await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: tx, y: ty, button: 'left', clickCount: 1 });
-      await sleep(2500);
+      await sleep(3000);
       break;
+    } else {
+      console.log(`[Flow Video] ⏳ Render devam ediyor (${elapsed} sn, durum: ${res?.status || 'bekleniyor'})...`);
     }
   }
 
   if (!videoTileFound) {
     ws.close();
     await fetch(`http://127.0.0.1:${port}/json/close/${tab.id}`);
-    throw new Error('Google Flow video render işlemi zaman aşımına uğradı (240sn).');
+    throw new Error('Google Flow video render işlemi zaman aşımına uğradı (260sn).');
   }
 
   // 5.5 Download davranışını ayarla (Dosyaların OUTPUT_DIR'e inmesini garantile)

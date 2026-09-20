@@ -231,11 +231,31 @@ export async function processCreativeGeneration(
         throw new Error('Video üretimi için kurumsal Logo ve Marka Kiti zorunludur. Yapay zekanın uydurma logo ve semboller üretmemesi için lütfen Ayarlar > Marka Kiti bölümünden logonuzu tanımlayın.')
       }
 
-      // 2. Gerçek Ürün Görseli Zorunluluk Kontrolü
-      const chosenProduct = snapshot.products[0]
-      const productImageUrl = chosenProduct?.imageUrl || null
-      if (!chosenProduct || !productImageUrl) {
-        throw new Error('Video üretimi için gerçek bir Ürün Görseli (fotoğraf) seçilmesi veya yüklenmesi zorunludur. Yapay zekanın alakasız hayali cihazlar türetmemesi için gerçek ürün fotoğrafı şarttır.')
+      // 2. Ürün Görseli veya Kurumsal Hizmet Çözümlemesi
+      const chosenProduct = snapshot.products?.[0]
+      let productImageUrl = chosenProduct?.imageUrl || null
+
+      // Eğer seçilen ürünün görseli yoksa kütüphanedeki hazır görsellerden destek al
+      if (!productImageUrl && creative.org_id) {
+        try {
+          const { data: latestImg } = await supabase
+            .from('creatives')
+            .select('public_url')
+            .eq('org_id', creative.org_id)
+            .eq('status', 'ready')
+            .neq('format', 'video')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+          if (latestImg?.public_url) {
+            productImageUrl = latestImg.public_url
+          }
+        } catch (_) {}
+      }
+
+      // Eğer ürün görseli bulunamazsa kurumsal logoyu referans olarak kullan
+      if (!productImageUrl) {
+        productImageUrl = logoUrl
       }
 
       const { overlay } = buildVideoPrompt(snapshot)
@@ -254,7 +274,7 @@ export async function processCreativeGeneration(
           engine: 'flow',
           useFlow: true,
           brandName: overlay.brandName,
-          productName: chosenProduct.name || null,
+          productName: chosenProduct?.name || null,
           productImageUrl,
           logoUrl,
           subTitle: overlay.subTitle,

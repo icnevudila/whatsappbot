@@ -42,20 +42,28 @@ const VIDEO_STEPS: { id: Step; label: string }[] = [
 
 const VIDEO_BRIEF_CHIPS = [
   {
-    label: 'Ürün kalitesi & ustalık',
-    text: 'Ürünün üstün kalitesini, dayanıklılığını ve özenli işçiliğini öne çıkaran 4K makro sinematik detay çekimleri.',
+    label: '📋 Dijital Ürün Kataloğu',
+    text: 'Geniş ürün yelpazemizi ve güncel ürün listemizi tanıtan prestijli reklam filmi.',
   },
   {
-    label: 'Özel kampanya & fırsat',
-    text: 'Yeni döneme özel avantajlı fiyat teklifi ve cazip fırsatları öne çıkaran dinamik ve güven veren kampanya videosu.',
+    label: '🏭 Fabrikadan Doğrudan Teslimat',
+    text: 'Fabrikadan şantiyenize ve adresinize doğrudan, hızlı ve güvenilir teslimat avantajı.',
   },
   {
-    label: 'Hızlı teslimat & kolay sipariş',
-    text: 'Sıra beklemeden doğrudan hızlı ve güvenli sipariş kolaylığı ile adrese teslimat avantajını anlatan reklam filmi.',
+    label: '⭐ Üstün Kalite & İşçilik',
+    text: 'Ürünlerimizin sağlamlığını, birinci sınıf malzeme kalitesini ve usta işçiliğini öne çıkaran sinematik tanıtım.',
   },
   {
-    label: 'Yeni sezon & lansman',
-    text: 'Yeni sezon ürünlerimizi ve güncel koleksiyonumuzu tanıtan modern, prestijli ve estetik reklam filmi.',
+    label: '🔥 Özel Fiyat & Kampanya',
+    text: 'Bu döneme özel avantajlı fiyat tekliflerimiz ve toplu sipariş fırsatlarını duyuran dinamik reklam videosu.',
+  },
+  {
+    label: '🚚 Hızlı Sevkiyat & Stoktan Teslim',
+    text: 'Beklemeden, aynı gün stoktan hızlı sevkiyat ve doğrudan adrese teslimat kolaylığı.',
+  },
+  {
+    label: '📞 Doğrudan İletişim & Teklif',
+    text: 'Detaylı bilgi, katalog ve size özel fiyat teklifi almak için doğrudan bizimle iletişime geçin.',
   },
 ]
 
@@ -243,16 +251,25 @@ export function CreativeWizard({
 
   const patch = (partial: Partial<Draft>) => setDraft((current) => ({ ...current, ...partial }))
 
+  const toggleProduct = (id: string) => {
+    if (draft.productIds.includes(id)) {
+      patch({ productIds: draft.productIds.filter((item) => item !== id) })
+    } else {
+      const product = productsList.find((row) => row.id === id)
+      patch({
+        productIds: [...draft.productIds, id],
+        productExtras: {
+          ...draft.productExtras,
+          [id]: draft.productExtras[id] ?? emptyExtra(product?.images[0]?.url ?? ''),
+        },
+      })
+    }
+  }
+
   const addProduct = (id: string) => {
-    if (draft.productIds.includes(id)) return
-    const product = productsList.find((row) => row.id === id)
-    patch({
-      productIds: [...draft.productIds, id],
-      productExtras: {
-        ...draft.productExtras,
-        [id]: draft.productExtras[id] ?? emptyExtra(product?.images[0]?.url ?? ''),
-      },
-    })
+    if (!draft.productIds.includes(id)) {
+      toggleProduct(id)
+    }
   }
 
   const onUpload = async (file: File) => {
@@ -280,10 +297,8 @@ export function CreativeWizard({
   let canContinue = true
   if (step === 'brief') {
     canContinue = draft.brief.trim().length >= 8
-  } else if (step === 'products' && isVideo) {
-    canContinue = hasValidVideoProduct
   } else if (step === 'summary' && isVideo) {
-    canContinue = hasValidVideoProduct && hasValidVideoLogo
+    canContinue = hasValidVideoLogo
   }
   const currentLabel = activeSteps[stepIndex]?.label ?? ''
 
@@ -485,30 +500,26 @@ export function CreativeWizard({
       ) : null}
 
       {step === 'products' ? (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {isVideo ? (
-            <div className="space-y-2">
-              <Notice tone={hasValidVideoProduct ? 'accent' : 'warn'}>
-                <strong>Videoda öne çıkarılacak ürün (Zorunlu):</strong> Yapay zeka video motorunun gerçekçi ve kaliteli bir reklam filmi üretebilmesi için işletmenize ait en az 1 ürün seçmeniz ve bu ürünün gerçek bir fotoğrafının bulunması zorunludur.
-              </Notice>
-              {!hasValidVideoProduct ? (
-                <Notice tone="danger">
-                  ⚠️ Lütfen aşağıdan en az 1 ürün seçin ve ürün fotoğrafının yüklü olduğundan emin olun. Ürün görseli olmadan sonraki adıma geçilemez.
-                </Notice>
-              ) : null}
-            </div>
+            <Notice tone="accent">
+              <strong>Öne Çıkarılacak Ürünler (İsteğe Bağlı):</strong> Tanıtmak istediğiniz ürünleri seçebilir, kütüphaneden görsel ekleyebilir veya ürün seçmeden doğrudan genel kurumsal tanıtım videosu üretebilirsiniz.
+            </Notice>
           ) : null}
           <div className="flex flex-wrap gap-1.5">
-            {productsList.map((product) => (
-              <button
-                key={product.id}
-                type="button"
-                className="wb-wa-chip"
-                onClick={() => addProduct(product.id)}
-              >
-                + {product.name}
-              </button>
-            ))}
+            {productsList.map((product) => {
+              const isSelected = draft.productIds.includes(product.id)
+              return (
+                <button
+                  key={product.id}
+                  type="button"
+                  className={`wb-wa-chip ${isSelected ? '!border-[#00a884] !bg-[#e7f8f2] !text-[#008069] font-medium' : ''}`}
+                  onClick={() => toggleProduct(product.id)}
+                >
+                  {isSelected ? '✓ ' : '+ '}{product.name}
+                </button>
+              )
+            })}
             <button
               type="button"
               onClick={() => setAddProductOpen(true)}
@@ -533,36 +544,150 @@ export function CreativeWizard({
             const extra = draft.productExtras[product.id] ?? emptyExtra(product.images[0]?.url ?? '')
             return (
               <details key={product.id} open className="rounded-[var(--radius-card)] border border-hairline bg-surface">
-                <summary className="cursor-pointer px-3.5 py-2.5 text-[13.5px] font-semibold">
-                  {product.name}
+                <summary className="cursor-pointer px-3.5 py-2.5 text-[13.5px] font-semibold flex items-center justify-between">
+                  <span>{product.name}</span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      toggleProduct(product.id)
+                    }}
+                    className="text-[12px] font-normal text-rose-600 hover:underline cursor-pointer"
+                  >
+                    Kaldır
+                  </button>
                 </summary>
                 <div className="space-y-2 border-t border-hairline p-3.5">
-                  {product.images.length > 1 ? (
+                  {product.images.length > 0 ? (
                     <Field label="AI’a gönderilecek ürün görseli">
-                      <div className="grid grid-cols-4 gap-1.5">
-                        {product.images.map((image) => (
-                          <button
-                            key={image.id}
-                            type="button"
-                            onClick={() =>
-                              patch({
-                                productExtras: {
-                                  ...draft.productExtras,
-                                  [product.id]: { ...extra, imageUrl: image.url },
-                                },
-                              })
-                            }
-                            className={`overflow-hidden rounded-md border ${
-                              extra.imageUrl === image.url ? 'border-[#00a884]' : 'border-[#e9edef]'
-                            }`}
-                          >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={image.url} alt="" className="h-16 w-full object-cover" />
-                          </button>
-                        ))}
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5">
+                          {product.images.map((image) => {
+                            const isSelected = (extra.imageUrl || product.images[0]?.url) === image.url
+                            return (
+                              <button
+                                key={image.id}
+                                type="button"
+                                onClick={() =>
+                                  patch({
+                                    productExtras: {
+                                      ...draft.productExtras,
+                                      [product.id]: { ...extra, imageUrl: image.url },
+                                    },
+                                  })
+                                }
+                                className={`relative overflow-hidden rounded-md border ${
+                                  isSelected ? 'border-[#00a884] ring-2 ring-[#00a884]' : 'border-[#e9edef]'
+                                }`}
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={image.url} alt="" className="h-16 w-full object-cover" />
+                                {isSelected ? (
+                                  <span className="absolute top-1 right-1 bg-[#00a884] text-white rounded-full p-0.5 text-[9px] leading-none">
+                                    ✓
+                                  </span>
+                                ) : null}
+                              </button>
+                            )
+                          })}
+                        </div>
+                        <div className="flex items-center gap-2 pt-1">
+                          <FileUploadButton
+                            accept="image/png,image/jpeg,image/webp"
+                            uploading={uploading}
+                            label="Farklı Fotoğraf Yükle"
+                            onFile={async (file) => {
+                              setUploading(true)
+                              const form = new FormData()
+                              form.set('file', file)
+                              const res = await uploadLibraryImage(form)
+                              setUploading(false)
+                              if (res?.publicUrl) {
+                                patch({
+                                  productExtras: {
+                                    ...draft.productExtras,
+                                    [product.id]: { ...extra, imageUrl: res.publicUrl },
+                                  },
+                                })
+                              }
+                            }}
+                          />
+                        </div>
                       </div>
                     </Field>
-                  ) : null}
+                  ) : (
+                    <Field label="Ürün Görseli (İsteğe Bağlı)">
+                      <div className="space-y-2">
+                        <p className="text-[12px] text-ink-muted">
+                          Bu ürünün kayıtlı fotoğrafı yok. Aşağıdaki içerik kütüphanesinden bir görsel seçebilir veya doğrudan yeni bir fotoğraf yükleyebilirsiniz:
+                        </p>
+                        {data.library.length > 0 ? (
+                          <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5 max-h-32 overflow-y-auto p-1.5 bg-canvas rounded-md border border-hairline">
+                            {data.library.map((item) => {
+                              if (!item.publicUrl) return null
+                              const isSelected = extra.imageUrl === item.publicUrl
+                              return (
+                                <button
+                                  key={item.id}
+                                  type="button"
+                                  onClick={() =>
+                                    patch({
+                                      productExtras: {
+                                        ...draft.productExtras,
+                                        [product.id]: { ...extra, imageUrl: item.publicUrl! },
+                                      },
+                                    })
+                                  }
+                                  className={`relative overflow-hidden rounded-md border transition-all ${
+                                    isSelected ? 'border-[#00a884] ring-2 ring-[#00a884]' : 'border-hairline hover:opacity-80'
+                                  }`}
+                                >
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={item.publicUrl} alt="" className="h-14 w-full object-cover" />
+                                  {isSelected ? (
+                                    <span className="absolute top-1 right-1 bg-[#00a884] text-white rounded-full p-0.5 text-[9px] leading-none">
+                                      ✓
+                                    </span>
+                                  ) : null}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        ) : null}
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          <FileUploadButton
+                            accept="image/png,image/jpeg,image/webp"
+                            uploading={uploading}
+                            label="Fotoğraf Yükle"
+                            onFile={async (file) => {
+                              setUploading(true)
+                              const form = new FormData()
+                              form.set('file', file)
+                              const res = await uploadLibraryImage(form)
+                              setUploading(false)
+                              if (res?.publicUrl) {
+                                patch({
+                                  productExtras: {
+                                    ...draft.productExtras,
+                                    [product.id]: { ...extra, imageUrl: res.publicUrl },
+                                  },
+                                })
+                              }
+                            }}
+                          />
+                          {extra.imageUrl ? (
+                            <span className="text-[12px] text-[#008069] font-medium flex items-center gap-1">
+                              ✓ Ürün görseli seçildi
+                            </span>
+                          ) : (
+                            <span className="text-[12px] text-ink-muted">
+                              (Görsel seçmeden de devam edebilirsiniz)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </Field>
+                  )}
                   <div className="grid gap-2 sm:grid-cols-2">
                     <Field label="Fiyat">
                       <Input
@@ -990,7 +1115,7 @@ export function CreativeWizard({
               </Field>
 
               <Notice tone="accent">
-                ChatGPT işletmenizi, marka kitinizi ve seçtiğiniz ürünleri analiz ederek en yüksek dönüşüm getiren sinematik reklam kurgusunu arka planda otomatik olarak oluşturacaktır.
+                Yapay zeka işletmenizi, marka kitinizi ve ürünlerinizi analiz ederek en yüksek dönüşüm getiren sinematik reklam kurgusunu otomatik olarak oluşturacaktır.
               </Notice>
             </>
           )}
@@ -1056,9 +1181,13 @@ export function CreativeWizard({
                   </Link>
                 </Notice>
               ) : null}
-              {isVideo && !hasValidVideoProduct ? (
-                <Notice tone="danger">
-                  ⚠️ <strong>Ürün Görseli Zorunludur:</strong> Video üretimi için en az 1 adet ürün seçilmeli ve ürünün gerçek bir fotoğrafı bulunmalıdır. Lütfen Ürünler adımına dönüp ürün fotoğrafınızı seçin.
+              {isVideo && hasValidVideoProduct ? (
+                <Notice tone="accent">
+                  ✓ Seçilen ürün fotoğrafı ve kurumsal kimliğiniz ile reklam filmi üretilecektir.
+                </Notice>
+              ) : isVideo ? (
+                <Notice tone="accent">
+                  ℹ️ Ürün fotoğrafı seçilmedi; kurumsal logonuz ve marka kimliğiniz temel alınarak genel tanıtım filmi üretilecektir.
                 </Notice>
               ) : null}
 
@@ -1069,7 +1198,7 @@ export function CreativeWizard({
                   pending ||
                   !data.canManage ||
                   !data.imageAiEnabled ||
-                  (isVideo && (!hasValidVideoProduct || !hasValidVideoLogo))
+                  (isVideo && !hasValidVideoLogo)
                 }
               >
                 <Icon name="video" className="size-4" />

@@ -306,8 +306,9 @@ type AiEngineRecentVideo = {
 }
 
 type AiEngineStatus = {
-  success: boolean
-  timestamp: string
+  status?: string
+  success?: boolean
+  timestamp?: string
   chatgpt: {
     status: string
     accountName: string

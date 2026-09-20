@@ -23,7 +23,7 @@ import {
   type VideoScenarioContext,
 } from '@/lib/creative/video-scenario'
 
-export type CreativeActionState = { error?: string; ok?: string; id?: string } | null
+export type CreativeActionState = { error?: string; ok?: string; id?: string; publicUrl?: string } | null
 
 function revalidateLibrary(id?: string) {
   revalidatePath('/icerik')
@@ -252,11 +252,7 @@ export async function startCreativeGeneration(
       if (!product) continue
       const extra = extras[id] ?? {}
       const include = { ...DEFAULT_INCLUDE, ...(extra.include ?? {}) }
-      const chosenImage =
-        extra.imageUrl &&
-        (imageRows ?? []).some((row) => row.product_id === id && row.public_url === extra.imageUrl)
-          ? extra.imageUrl
-          : firstImage.get(id) ?? null
+      const chosenImage = extra.imageUrl?.trim() || firstImage.get(id) || null
       products.push({
         id: product.id,
         name: product.name,
@@ -610,7 +606,7 @@ export async function uploadLibraryImage(formData: FormData): Promise<CreativeAc
       .single()
     if (error || !data) return { error: error?.message ?? 'Kayıt açılamadı.' }
     revalidateLibrary(data.id)
-    return { ok: 'Görsel yüklendi.', id: data.id }
+    return { ok: 'Görsel yüklendi.', id: data.id, publicUrl: publicUrl.publicUrl }
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Oturum yok.' }
   }
