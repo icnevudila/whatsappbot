@@ -665,23 +665,28 @@ function attemptGenerateOnCdp(port, tab, options) {
         }
 
         // Otonom CapCut Altyazı Giydirme (Gemini videoları)
-        try {
-          if (processVideoAudioAndSubtitles && fs.existsSync(rawVideoTarget)) {
-            console.log(`[VideoGen] 🎬 Gemini videosuna CapCut dinamik altyazı işleniyor...`);
-            await processVideoAudioAndSubtitles({
-              videoPath: rawVideoTarget,
-              engine: 'gemini',
-              options: {
-                ...options,
-                brandName: options.brandName || options.customer,
-                productName: options.productName || options.product,
-                chatGptPrompt: options.chatGptPrompt || fullPrompt,
-                veoPrompt: fullPrompt
-              }
-            });
+        const shouldAddSubtitlesGemini = options.subtitles !== false;
+        if (shouldAddSubtitlesGemini) {
+          try {
+            if (processVideoAudioAndSubtitles && fs.existsSync(rawVideoTarget)) {
+              console.log(`[VideoGen] 🎬 Gemini videosuna CapCut dinamik altyazı işleniyor...`);
+              await processVideoAudioAndSubtitles({
+                videoPath: rawVideoTarget,
+                engine: 'gemini',
+                options: {
+                  ...options,
+                  brandName: options.brandName || options.customer,
+                  productName: options.productName || options.product,
+                  chatGptPrompt: options.chatGptPrompt || fullPrompt,
+                  veoPrompt: fullPrompt
+                }
+              });
+            }
+          } catch (subErr) {
+            console.warn('[VideoGen] Gemini altyazı giydirme hatası:', subErr.message);
           }
-        } catch (subErr) {
-          console.warn('[VideoGen] Gemini altyazı giydirme hatası:', subErr.message);
+        } else {
+          console.log('[VideoGen] 🚫 options.subtitles=false: Altyazı adımı atlandı (saf video korundu).');
         }
 
         // 2. Saf Veo Canlı Çekim Video
@@ -1364,24 +1369,29 @@ print(json.dumps([it['name'] for it in items]))" 2>/dev/null`).toString();
   }
 
   // 8.1 Otonom Nöral Türkçe Seslendirme / Natif Veo Sesi + Milisaniyelik CapCut Altyazı
-  try {
-    if (processVideoAudioAndSubtitles && fs.existsSync(rawPath)) {
-      console.log(`[Flow Video] 🎙️ Flow videosuna CapCut Senkron Altyazı işleniyor...`);
-      await processVideoAudioAndSubtitles({
-        videoPath: rawPath,
-        engine: 'flow',
-        options: {
-          ...options,
-          keepNativeAudio: options.keepNativeAudio !== false, // Varsayılan: Natif Veo spiker sesini koru!
-          brandName: options.brandName || options.customer,
-          productName: options.productName || options.product,
-          chatGptPrompt: options.chatGptPrompt || prompt,
-          veoPrompt: prompt
-        }
-      });
+  const shouldAddSubtitlesFlow = options.subtitles !== false;
+  if (shouldAddSubtitlesFlow) {
+    try {
+      if (processVideoAudioAndSubtitles && fs.existsSync(rawPath)) {
+        console.log(`[Flow Video] 🎙️ Flow videosuna CapCut Senkron Altyazı işleniyor...`);
+        await processVideoAudioAndSubtitles({
+          videoPath: rawPath,
+          engine: 'flow',
+          options: {
+            ...options,
+            keepNativeAudio: options.keepNativeAudio !== false, // Varsayılan: Natif Veo spiker sesini koru!
+            brandName: options.brandName || options.customer,
+            productName: options.productName || options.product,
+            chatGptPrompt: options.chatGptPrompt || prompt,
+            veoPrompt: prompt
+          }
+        });
+      }
+    } catch (flowSubErr) {
+      console.warn('[Flow Video] Flow altyazı/seslendirme giydirme hatası:', flowSubErr.message);
     }
-  } catch (flowSubErr) {
-    console.warn('[Flow Video] Flow altyazı/seslendirme giydirme hatası:', flowSubErr.message);
+  } else {
+    console.log('[Flow Video] 🚫 options.subtitles=false: Altyazı adımı atlandı (saf video korundu).');
   }
 
   // 8.2 Marka Kiti, Logo ve CTA Overlay Giydirme

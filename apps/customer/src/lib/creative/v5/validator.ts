@@ -94,10 +94,11 @@ export function validateAndRepair(
     rawPrompt.includes('CAPTIONS ON SCREEN')
   if (hasDynamicTextInRaw) hardFails.push('raw_video_has_unauthorized_text')
 
-  // 6. Invented Logo Check
+  // 6. Invented Logo Check (Inspect positive visual scenes, excluding negative constraints)
+  const positivePrompt = shotPlan.shots.map((sh) => `${sh.subjectAction} ${sh.framing}`).join(' ')
   const hasInventedLogo =
     !facts.assets.logoReference &&
-    (rawPrompt.includes('invented logo') || rawPrompt.includes('random emblem'))
+    (positivePrompt.toLowerCase().includes('invented logo') || positivePrompt.toLowerCase().includes('random emblem'))
   if (hasInventedLogo) hardFails.push('has_invented_logo')
 
   // 7. Reference Conflict Check
@@ -405,6 +406,8 @@ export function validateGeneratedVideoArtifact(
       productDriftDetected: boolean
       voiceoverMismatchDetected: boolean
       durationValid: boolean
+      brandOrLogoVisible?: boolean
+      brandNameCorrect?: boolean
       notes?: string[]
     }
   }
@@ -418,13 +421,33 @@ export function validateGeneratedVideoArtifact(
         productDriftDetected: 'not_checked',
         voiceoverMismatchDetected: 'not_checked',
         durationValid: 'not_checked',
+        brandOrLogoVisible: 'not_checked',
+        brandNameCorrect: 'not_checked',
       },
       notes: ['Video visual analysis tool is not connected; generated video artifact was not inspected.'],
     }
   }
 
-  const { textOrLogoHallucinationDetected, productDriftDetected, voiceoverMismatchDetected, durationValid, notes } = options.visionReport
-  const failed = textOrLogoHallucinationDetected || productDriftDetected || voiceoverMismatchDetected || !durationValid
+  const {
+    textOrLogoHallucinationDetected,
+    productDriftDetected,
+    voiceoverMismatchDetected,
+    durationValid,
+    brandOrLogoVisible,
+    brandNameCorrect,
+    notes,
+  } = options.visionReport
+
+  const brandDefect = brandOrLogoVisible === false || brandNameCorrect === false
+  const failed = textOrLogoHallucinationDetected || productDriftDetected || voiceoverMismatchDetected || !durationValid || brandDefect
+
+  const finalNotes = notes ? [...notes] : []
+  if (brandOrLogoVisible === false) {
+    finalNotes.push('Brand name or logo was not visibly detected in the generated video artifact.')
+  }
+  if (brandNameCorrect === false) {
+    finalNotes.push('Brand name or logo appeared distorted or misspelled in the generated video.')
+  }
 
   return {
     status: failed ? 'failed' : 'pass',
@@ -434,7 +457,10 @@ export function validateGeneratedVideoArtifact(
       productDriftDetected,
       voiceoverMismatchDetected,
       durationValid,
+      brandOrLogoVisible: brandOrLogoVisible !== undefined ? brandOrLogoVisible : true,
+      brandNameCorrect: brandNameCorrect !== undefined ? brandNameCorrect : true,
     },
-    notes: notes || [],
+    notes: finalNotes,
+    postProcessLogoRecommended: brandDefect,
   }
 }

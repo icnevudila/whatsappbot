@@ -313,6 +313,7 @@ export async function processCreativeGeneration(
           logoUrl,
           includeLogo: snapshot.useLogo !== false,
           includeOverlay: false,
+          subtitles: snapshot.subtitles !== false,
           subTitle: overlay.subTitle,
           offerTitle: overlay.offerTitle,
           offerDetails: overlay.offerDetails,

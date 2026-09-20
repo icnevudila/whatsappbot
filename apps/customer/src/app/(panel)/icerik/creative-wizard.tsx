@@ -97,6 +97,7 @@ type Draft = {
   style: string
   textDensity: string
   videoSpeech?: boolean
+  subtitles?: boolean
   videoScenarioPrompt?: string
   videoScenarioTitle?: string
 }
@@ -140,6 +141,7 @@ function defaultDraft(data: WizardBootstrap, initialFormat?: string): Draft {
     style: 'auto',
     textDensity: 'balanced',
     videoSpeech: true,
+    subtitles: true,
     videoScenarioPrompt: '',
     videoScenarioTitle: '',
   }
@@ -1106,26 +1108,26 @@ export function CreativeWizard({
             </>
           ) : (
             <>
-              <Field label="Video seslendirme ve ses kurgusu">
+              <Field label="Video Altyazı Seçeneği">
                 <div className="grid gap-2 sm:grid-cols-2">
                   <button
                     type="button"
-                    onClick={() => patch({ videoSpeech: true })}
-                    className={`wb-wa-choice${draft.videoSpeech !== false ? ' is-on' : ''}`}
+                    onClick={() => patch({ subtitles: true })}
+                    className={`wb-wa-choice${draft.subtitles !== false ? ' is-on' : ''}`}
                   >
-                    <span className="block text-[13.5px] font-semibold text-[#111b21]">Seslendirmeli (Dış Ses Var)</span>
+                    <span className="block text-[13.5px] font-semibold text-[#111b21]">Altyazılı</span>
                     <span className="text-[12px] text-[#667781]">
-                      Profesyonel Türkçe spiker ürün ve kampanya çağrısını seslendirir.
+                      Video oluşturulduktan sonra altyazı botumuz Türkçe dış sesi algılayıp videoya senkronize altyazı ekler.
                     </span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => patch({ videoSpeech: false })}
-                    className={`wb-wa-choice${draft.videoSpeech === false ? ' is-on' : ''}`}
+                    onClick={() => patch({ subtitles: false })}
+                    className={`wb-wa-choice${draft.subtitles === false ? ' is-on' : ''}`}
                   >
-                    <span className="block text-[13.5px] font-semibold text-[#111b21]">Konuşmasız (Sadece Müzik)</span>
+                    <span className="block text-[13.5px] font-semibold text-[#111b21]">Altyazısız</span>
                     <span className="text-[12px] text-[#667781]">
-                      İnsan sesi yok; sahneye özel doğal ses efektleri ve dinamik fon müziği.
+                      Saf sinematik video; videonun üzerine hiçbir yazı veya altyazı eklenmez.
                     </span>
                   </button>
                 </div>
@@ -1150,12 +1152,12 @@ export function CreativeWizard({
                   <p className="text-[12px] text-[#667781]">Reels, TikTok ve WhatsApp Durum için optimize</p>
                 </div>
                 <div className="rounded-md border border-hairline bg-canvas p-3 space-y-1">
-                  <p className="text-[11.5px] font-medium text-ink-muted uppercase tracking-wider">Ses Kurgusu</p>
+                  <p className="text-[11.5px] font-medium text-ink-muted uppercase tracking-wider">Altyazı Kurgusu</p>
                   <p className="font-bold text-[#111b21]">
-                    {draft.videoSpeech !== false ? 'Türkçe Dış Ses (Spiker)' : 'Konuşmasız (Sadece Müzik)'}
+                    {draft.subtitles !== false ? 'Altyazılı' : 'Altyazısız'}
                   </p>
                   <p className="text-[12px] text-[#667781]">
-                    {draft.videoSpeech !== false ? 'Satış ve kampanya çağrısı seslendirilir' : 'Dinamik fon müziği ve ses efektleri'}
+                    {draft.subtitles !== false ? 'CapCut botu senkronize altyazı ekler' : 'Saf sinematik video (yazısız)'}
                   </p>
                 </div>
               </div>

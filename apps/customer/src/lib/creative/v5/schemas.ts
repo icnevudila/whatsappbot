@@ -419,8 +419,11 @@ export interface GeneratedVideoValidationResult {
     productDriftDetected: boolean | 'not_checked'
     voiceoverMismatchDetected: boolean | 'not_checked'
     durationValid: boolean | 'not_checked'
+    brandOrLogoVisible?: boolean | 'not_checked'
+    brandNameCorrect?: boolean | 'not_checked'
   }
   notes: string[]
+  postProcessLogoRecommended?: boolean
 }
 
 // Final Unified Machine-Readable Package Contract

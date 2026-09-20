@@ -107,6 +107,7 @@ export type CreativeSnapshot = {
   includeVideoBanner?: boolean
   includeVideoCta?: boolean
   videoSpeech?: boolean
+  subtitles?: boolean
   videoScenarioPrompt?: string | null
   videoScenarioTitle?: string | null
 }

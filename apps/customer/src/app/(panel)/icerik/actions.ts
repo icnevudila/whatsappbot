@@ -379,6 +379,7 @@ export async function startCreativeGeneration(
     instruction: String(draft.instruction ?? '').trim() || null,
     variationPreset: String(draft.variationPreset ?? '').trim() || null,
     videoSpeech: draft.videoSpeech !== false && draft.videoSpeech !== '0',
+    subtitles: draft.subtitles !== false && draft.subtitles !== '0' && draft.subtitles !== 'false',
     videoScenarioPrompt: String(draft.videoScenarioPrompt ?? '').trim() || null,
     videoScenarioTitle: String(draft.videoScenarioTitle ?? '').trim() || null,
     title,
