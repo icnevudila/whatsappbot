@@ -139,7 +139,7 @@ export async function loadCreativeWizardData(): Promise<WizardBootstrap> {
         about: orgRes.data?.about ?? null,
         websiteHint: website,
         logoPreview,
-        monthlyVideoQuota: orgRes.data?.monthly_video_quota ?? 5,
+        monthlyVideoQuota: orgRes.data?.monthly_video_quota ?? 3,
         monthlyVideoUsed: videoUsedRes.count ?? 0,
       },
       kits,

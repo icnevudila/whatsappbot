@@ -42,20 +42,20 @@ const VIDEO_STEPS: { id: Step; label: string }[] = [
 
 const VIDEO_BRIEF_CHIPS = [
   {
-    label: 'Broşür yerine WhatsApp',
-    text: 'Geleneksel basılı broşürü bırakıp müşterilere doğrudan WhatsApp üzerinden ulaşan yenilikçi ve samimi bir reklam filmi.',
+    label: 'Ürün kalitesi & ustalık',
+    text: 'Ürünün üstün kalitesini, dayanıklılığını ve özenli işçiliğini öne çıkaran 4K makro sinematik detay çekimleri.',
   },
   {
-    label: 'Yeni lansman & özel indirim',
-    text: 'Yeni döneme özel tüm sipariş ve taleplerde geçerli avantajlı fiyat teklifi. Dinamik ve güven veren çekimlerle dolu kampanya videosu.',
+    label: 'Özel kampanya & fırsat',
+    text: 'Yeni döneme özel avantajlı fiyat teklifi ve cazip fırsatları öne çıkaran dinamik ve güven veren kampanya videosu.',
   },
   {
-    label: 'Hızlı sipariş & anlık iletişim',
-    text: 'Sıra beklemeden doğrudan WhatsApp hattımızdan sipariş verin, en hızlı şekilde kapınıza ve adresinize ulaşsın.',
+    label: 'Hızlı teslimat & kolay sipariş',
+    text: 'Sıra beklemeden doğrudan hızlı ve güvenli sipariş kolaylığı ile adrese teslimat avantajını anlatan reklam filmi.',
   },
   {
-    label: 'Ürün kalitesi & yakın çekim',
-    text: 'Ürünün üstün kalitesini, dayanıklılığını ve işçiliğini öne çıkaran 4K makro sinematik detay çekimleri.',
+    label: 'Yeni sezon & lansman',
+    text: 'Yeni sezon ürünlerimizi ve güncel koleksiyonumuzu tanıtan modern, prestijli ve estetik reklam filmi.',
   },
 ]
 
@@ -414,7 +414,7 @@ export function CreativeWizard({
                 onChange={(event) => patch({ brief: event.target.value })}
                 placeholder={
                   isVideo
-                    ? `${data.org.name || 'İşletmemiz'} için müşteriye sunduğumuz avantajları ve hızlı WhatsApp sipariş kolaylığını anlatan, 9:16 dikey reels reklam videosu.`
+                    ? `${data.org.name || 'İşletmemiz'} için ürün kalitemizi ve sunduğumuz ayrıcalıkları anlatan, 9:16 dikey sinematik reklam videosu.`
                     : 'Hafta sonuna özel tüm ürünlerde %25 indirim. Sıcak, kaliteli ve premium bir WhatsApp kampanya görseli istiyorum.'
                 }
               />
@@ -452,37 +452,27 @@ export function CreativeWizard({
 
             {isVideo ? (
               <div className="mt-4 pt-3.5 border-t border-hairline space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-[12.5px] font-semibold text-[#111b21] flex items-center gap-1.5">
-                    <span>🎯</span> Bozulmayan Katı Fiziksel Türkçe CTA (Eylem Çağrısı)
-                  </p>
-                  <span className="text-[11px] text-[#008069] bg-[#e7f8f2] px-2 py-0.5 rounded-full font-medium">Ayvazoğlu Kuralı</span>
-                </div>
-                <p className="text-[11.5px] text-[#667781]">
-                  Videoda fiziksel nesneler (metal/ahşap tabela, masa plaketi, araç kapısı, ürün ambalajı) üzerine net işlenecek 2-3 kelimelik eylem çağrısını seçin:
+                <p className="text-[12.5px] font-semibold text-[#111b21]">
+                  Eylem Çağrısı (İsteğe Bağlı)
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {[
-                    'WHATSAPP İLE BAŞLA',
-                    'WHATSAPP SİPARİŞ',
-                    'FABRİKADAN DOĞRUDAN',
-                    'HEMEN RANDEVU AL',
-                    'ÜCRETSİZ MUAYENE',
-                    'KAPIDA ÖDEME',
-                    'SERVİS RANDEVUSU',
-                    'HEMEN TEKLİF AL',
-                    'GEL AL PAKET',
-                    'ÖZEL FİYATLARLA'
+                    'SİPARİŞ VER',
+                    'HEMEN KEŞFET',
+                    'RANDEVU AL',
+                    'TEKLİF AL',
+                    'BİLGİ ALIN',
+                    'ÖZEL FİYATLAR'
                   ].map((ctaItem) => (
                     <button
                       key={ctaItem}
                       type="button"
                       className={`wb-wa-chip text-[12px] transition-all ${
                         draft.cta === ctaItem
-                          ? '!border-[#00a884] !bg-[#00a884] !text-white font-semibold shadow-sm scale-[1.02]'
+                          ? '!border-[#00a884] !bg-[#e7f8f2] !text-[#008069] font-semibold'
                           : 'hover:border-[#00a884]'
                       }`}
-                      onClick={() => patch({ cta: ctaItem })}
+                      onClick={() => patch({ cta: draft.cta === ctaItem ? '' : ctaItem })}
                     >
                       {draft.cta === ctaItem ? '✓ ' : ''}{ctaItem}
                     </button>
@@ -1050,9 +1040,9 @@ export function CreativeWizard({
               </div>
 
               {draft.cta ? (
-                <div className="rounded-md border border-[#00a884]/30 bg-[#e7f8f2]/60 p-3 space-y-1">
-                  <p className="text-[11.5px] font-semibold text-[#008069] uppercase tracking-wider flex items-center gap-1.5">
-                    <span>🎯</span> Sahne İçi Fiziksel Türkçe CTA (Bozulmayan Yazı)
+                <div className="rounded-md border border-hairline bg-canvas p-3 space-y-1">
+                  <p className="text-[11.5px] font-medium text-ink-muted uppercase tracking-wider">
+                    Eylem Çağrısı
                   </p>
                   <p className="text-[13px] font-bold text-[#111b21]">{draft.cta}</p>
                 </div>
