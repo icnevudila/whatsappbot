@@ -1,0 +1,128 @@
+{
+  "engineVersion": "5.0.0",
+  "architecture": "MESAJIFY_SECTOR_INDEPENDENT_V5",
+  "runtimeRule": "Strict runtime isolation. Deprecated V3 golden templates and V4 examples are prohibited in runtime context.",
+  "ontology": {
+    "offerTypes": [
+      "physical_product",
+      "food_or_consumable",
+      "local_service",
+      "professional_service",
+      "digital_product_or_saas",
+      "venue_or_experience",
+      "property_or_high_consideration_offer",
+      "event_or_education",
+      "unknown"
+    ],
+    "campaignObjectives": [
+      "awareness",
+      "product_demonstration",
+      "lead_generation",
+      "quote_request",
+      "direct_order",
+      "store_visit",
+      "appointment_booking",
+      "launch",
+      "promotion",
+      "trust_building",
+      "retention"
+    ],
+    "proofModes": [
+      "product_in_use",
+      "process",
+      "scale_or_inventory",
+      "craftsmanship",
+      "interface_workflow",
+      "environment_or_experience",
+      "human_expertise",
+      "social_proof_only_if_supplied",
+      "offer_value",
+      "none_available"
+    ],
+    "primaryValues": [
+      "saves_time",
+      "reduces_effort",
+      "improves_control",
+      "convenience",
+      "quality_or_craft",
+      "access_or_discovery",
+      "speed",
+      "price_or_value",
+      "reliability",
+      "comfort",
+      "sensory_appeal",
+      "status_or_design",
+      "trust_or_safety",
+      "availability",
+      "other_verified"
+    ],
+    "visualAffordances": [
+      "toggle_open_close",
+      "press_trigger_switch",
+      "pour_drizzle_flow",
+      "cut_slice_carve",
+      "lift_stack_haul",
+      "rotate_unfold_extend",
+      "apply_spray_mist",
+      "pack_box_deliver",
+      "screen_tap_filter_result",
+      "artisan_expert_touch",
+      "enter_experience_space",
+      "material_texture_shift",
+      "service_process_outcome",
+      "human_delight_reaction"
+    ],
+    "riskClasses": [
+      "standard",
+      "high_consideration",
+      "regulated_health",
+      "finance_or_investment",
+      "children_or_sensitive",
+      "legal_or_professional_claim"
+    ]
+  },
+  "modelSpec": {
+    "defaultModel": "veo_3_1_flow",
+    "durationSeconds": 8,
+    "aspectRatio": "9:16",
+    "shots": [
+      {
+        "from": 0,
+        "to": 2.2,
+        "role": "visual_hook"
+      },
+      {
+        "from": 2.2,
+        "to": 5.8,
+        "role": "proof_or_action"
+      },
+      {
+        "from": 5.8,
+        "to": 8,
+        "role": "hero_close"
+      }
+    ],
+    "continuity": "single_location_unbroken_continuity"
+  },
+  "textPolicy": {
+    "rawVideo": "strict_zero_new_text",
+    "postProduction": "capcut_overlay_and_subtitles"
+  },
+  "voiceoverPolicy": {
+    "targetWordsMin": 8,
+    "targetWordsMax": 13,
+    "softLimitWords": 16,
+    "hardLimitWords": 18,
+    "language": "tr-TR",
+    "disallowedCliches": [
+      "lezzetin doğru adresi",
+      "kalitenin adresi",
+      "ayrıcalıklı deneyim sizi bekliyor",
+      "geleceği bugünden yönetin",
+      "güvenilir çözüm ortağınız",
+      "uzman kadromuzla yanınızdayiz",
+      "hayallerinizi gerçeğe dönüştürün",
+      "unutulmaz bir deneyim"
+    ]
+  }
+}

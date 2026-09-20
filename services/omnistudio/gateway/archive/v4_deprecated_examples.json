@@ -1,0 +1,198 @@
+{
+  "schemaVersion": "4.0.0",
+  "purpose": "Marka ve sektor bagimsiz, kisa reklam ve urun tanitim videolari icin normalize edilmis Veo prompt derleyici ayarlari",
+  "runtimeRule": "Bu dosya tek kurallar kaynagidir. Eski sektor promptlari, canli ornekler ve marka profilleri final modele topluca gonderilmez.",
+  "priorityOrder": [
+    "safety_and_platform_limits",
+    "explicit_user_request",
+    "product_or_service_facts",
+    "visual_references",
+    "brand_profile",
+    "campaign_goal",
+    "sector_environment_hint",
+    "creative_archetype"
+  ],
+  "conflictPolicy": {
+    "higherPriorityWins": true,
+    "neverInventMissingFacts": true,
+    "productActionCannotComeFromSector": true,
+    "archetypeMayOnlyControl": ["tempo", "camera", "lighting", "emotion", "editing_rhythm"],
+    "onCriticalAmbiguity": "return_needs_clarification"
+  },
+  "modelProfiles": {
+    "veo_3_1_flow": {
+      "durationSeconds": 8,
+      "aspectRatio": "9:16",
+      "structure": [
+        {"from": 0.0, "to": 2.2, "role": "visual_hook"},
+        {"from": 2.2, "to": 5.8, "role": "proof_or_product_action"},
+        {"from": 5.8, "to": 8.0, "role": "hero_close"}
+      ],
+      "continuity": "one_location_one_subject_one_light_setup",
+      "maxPrimaryActions": 1,
+      "maxLocations": 1,
+      "maxVisibleProducts": 1
+    },
+    "custom": {
+      "allowedDurationSeconds": [4, 6, 8],
+      "rule": "Sure modelin gercek destekledigi surelerden secilir; zaman kodlari secilen sureye oransal uyarlanir."
+    }
+  },
+  "inputContract": {
+    "required": ["campaign.goal", "offer.subject", "offer.type"],
+    "recommended": [
+      "brand.name",
+      "offer.primaryBenefit",
+      "offer.realAction",
+      "audience",
+      "references.product",
+      "references.logo"
+    ],
+    "fields": {
+      "campaign.goal": ["awareness", "product_demo", "lead_generation", "sale", "launch", "store_visit", "app_install"],
+      "offer.type": ["physical_product", "food", "service", "software", "property", "event", "destination", "other"],
+      "creative.archetype": ["direct_response", "premium", "social_dynamic", "demonstration", "testimonial_style", "craft_story"],
+      "text.rawVideoPolicy": ["none", "existing_only", "one_short_label"],
+      "audio.mode": ["voiceover", "dialogue", "music_foley", "silent"]
+    }
+  },
+  "referencePolicy": {
+    "productReferencePresent": [
+      "Referans urun ana gorsel gercegidir.",
+      "Geometri, renk, malzeme, etiket ve ayirt edici detaylar korunur.",
+      "Urunun uzerine yeni logo, kampanya metni veya CTA eklenmez.",
+      "Metin referans gorselle celisirse referans kazanir."
+    ],
+    "logoReferencePresent": [
+      "Logo yeniden tasarlanmaz veya tariften uretilmez.",
+      "Logo yalnizca gercekci ve okunabilir olma ihtimali yuksekse sahne icinde kullanilir.",
+      "Logo dogrulugu kritikse post-produksiyon end-card tercih edilir."
+    ],
+    "referenceAbsent": [
+      "Kesin fiziksel ozellik uydurulmaz.",
+      "Kullanici tarifinden yalnizca acikca verilen ozellikler kullanilir.",
+      "Marka logosu yoksa hayali amblem uretilmez."
+    ]
+  },
+  "scenePolicy": {
+    "core": [
+      "Uc perde, uc ayri mekan degil; ayni sahnenin uc tamamlayici kadrajidir.",
+      "Ilk karede ana konu veya sonuc gorunur.",
+      "Orta bolumde tek bir gercek urun eylemi ya da hizmet kaniti gosterilir.",
+      "Kapanis urun, sonuc veya insan tepkisi uzerinde biter; bos tabela sahnesine donmez.",
+      "Kamera hareketi tek ana hareketle sinirlanir.",
+      "Sureklilik: ayni urun, ayni kisi, ayni kiyafet, ayni ortam ve ayni isik."
+    ],
+    "serviceOrSoftware": [
+      "Fiziksel urun yoksa tek bir kullanici sonucu veya is akisi gosterilir.",
+      "Karmasik okunabilir UI yerine temiz, az etiketli, gercekci arayuz hareketi kullanilir.",
+      "Sahte grafik, sahte metrik veya garanti edilen sonuc uydurulmaz."
+    ],
+    "people": [
+      "Ayni kisinin yuz, yas, kiyafet ve aksesuar surekliligi korunur.",
+      "Kalabalik yalnizca kampanya icin zorunluysa kullanilir.",
+      "Diyalog varsa tek konusan ve tek kisa cumle tercih edilir."
+    ]
+  },
+  "textPolicy": {
+    "defaultRawVideoPolicy": "existing_only",
+    "rules": [
+      "Fiyat, indirim, telefon, web adresi, kampanya kosulu, altyazi ve CTA post-produksiyona ayrilir.",
+      "Ham videoda yalnizca referans urunde zaten bulunan gercek marka metni kalir.",
+      "one_short_label secilirse en fazla bir adet, en fazla iki kelimelik sahne ici yazi kullanilir.",
+      "Kullanici ozellikle istemedikce tabela, plaket, hologram veya yazi karti uretilmez.",
+      "Prompt komutlari gorunecek metin gibi tirnak icine alinmaz."
+    ],
+    "postProductionFields": ["headline", "price", "discount", "cta", "phone", "url", "subtitles", "legalLine"]
+  },
+  "audioPolicy": {
+    "voiceover": {
+      "maxTurkishWordsFor8Seconds": 18,
+      "preferredWords": 12,
+      "rules": [
+        "Tek cumle veya iki cok kisa cumle.",
+        "Goruntude zaten acik olan seyi kelimesi kelimesine tekrarlama.",
+        "Kanitlanmayan superlatif, garanti ve tibbi ya da finansal iddia ekleme.",
+        "Repligi tirnak isareti kullanmadan ver.",
+        "Ses karakteri kampanyaya gore secilir; varsayilan cinsiyet dayatilmaz."
+      ]
+    },
+    "mix": [
+      "En fazla bir seslendirme veya bir diyalog katmani.",
+      "En fazla iki belirgin foley olayi.",
+      "Muzik seslendirmeyi bastirmaz.",
+      "Ayni klipte spiker, karakter diyalogu ve yogun sarki sozu birlikte kullanilmaz."
+    ]
+  },
+  "negativePrompt": [
+    "duplicate subject",
+    "duplicate product",
+    "altered product geometry",
+    "incorrect product color",
+    "warped packaging",
+    "warped logo",
+    "gibberish typography",
+    "floating graphics",
+    "holographic interface",
+    "unmotivated location change",
+    "identity drift",
+    "extra fingers",
+    "deformed hands",
+    "unsafe product use",
+    "watermark"
+  ],
+  "promptAssemblyOrder": [
+    "format_and_duration",
+    "single_sentence_concept",
+    "subject_identity_and_reference_lock",
+    "location_and_light",
+    "timed_shots",
+    "camera_and_motion",
+    "continuity",
+    "audio",
+    "raw_video_text_policy"
+  ],
+  "validation": {
+    "hardFail": [
+      "missing_offer_subject",
+      "unsupported_duration",
+      "product_action_conflicts_with_product",
+      "reference_conflicts_with_description",
+      "more_than_one_location",
+      "more_than_one_primary_action",
+      "invented_price_or_claim",
+      "voiceover_over_word_limit"
+    ],
+    "autoRepair": [
+      "move_dynamic_text_to_postproduction",
+      "remove_repeated_negative_instructions",
+      "reduce_camera_moves_to_one",
+      "replace_three_locations_with_three_shots_in_one_location",
+      "remove_hex_codes_from_final_prompt",
+      "remove_prompt_jargon_from_visible_text"
+    ],
+    "qualityScoreWeights": {
+      "product_or_service_fidelity": 30,
+      "continuity": 20,
+      "campaign_clarity": 15,
+      "visual_hook": 15,
+      "feasibility_in_duration": 10,
+      "audio_clarity": 5,
+      "brand_safety": 5
+    },
+    "minimumPassScore": 82
+  },
+  "runtimeOutput": {
+    "format": "strict_json",
+    "fields": [
+      "status",
+      "normalizedBrief",
+      "finalVeoPrompt",
+      "negativePrompt",
+      "postProduction",
+      "qualityChecks",
+      "warnings"
+    ],
+    "allowedStatus": ["ready", "needs_clarification", "rejected"]
+  }
+}
