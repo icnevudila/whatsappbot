@@ -46,14 +46,16 @@ export function selectHook(
   let actionFamily: HookFamily = 'action_begins_immediately'
   let actionDesc = ''
   if (ontology.primaryAffordance === 'apply_spray_mist') {
-    actionDesc = `${subject} nozülünden anında fışkıran mikronize ince sis bulutu hedef yüzeyi homojen kaplarken cihazın akıcı fonksiyonu 0.3 saniyede devreye girer.`
+    actionDesc = `${subject} nozülünden fışkıran mikronize ince sis bulutu hedef yüzeyi homojen kaplarken cihazın akıcı fonksiyonu 0.3 saniyede devreye girer.`
   } else if (ontology.primaryAffordance === 'screen_tap_filter_result' || ontology.offerType === 'digital_product_or_saas') {
     actionFamily = 'interface_event'
     actionDesc = `Minimalist arayüzde bir arama veya filtre butonuna dokunulur; filtrelenmiş ${subject} veri akışı gecikmesiz olarak ekranda listelenir.`
   } else if (ontology.primaryAffordance === 'pour_drizzle_flow' || ontology.primaryAffordance === 'cut_slice_carve') {
     actionFamily = 'sensory_motion'
-    const verb = allContext.includes('kes') || allContext.includes('dilim') ? 'bıçakla nizami dilimlenir' : 'servise hazır hale getirilirken dumanı tüten sıcak dokusu'
-    actionDesc = `Yakın planda ${subject} ${verb}, iştah açıcı mikro hareket 0.3 saniyede başlar.`
+    const verb = allContext.includes('kes') || allContext.includes('dilim')
+      ? 'bıçakla nizami dilimlenir'
+      : 'servise hazır hale getirilirken iştah kabartan formuyla sunulur'
+    actionDesc = `Yakın planda ${subject} ${verb}, hareket 0.3 saniyede başlar.`
   } else if (ontology.primaryAffordance === 'lift_stack_haul' || ontology.proofMode === 'scale_or_inventory') {
     actionFamily = 'scale_reveal'
     actionDesc = `Sevkiyata hazır ${subject} birimlerinin nizami yerleşim anı ve dinamik yükleme hareketi ilk karede başlar.`
@@ -106,10 +108,10 @@ export function selectHook(
   let resultDesc = ''
   if (ontology.offerType === 'food_or_consumable') {
     resultFamily = 'sensory_motion'
-    resultDesc = `Servise hazır ${subject}, ilk karede dumanı üstünde ve iştah kabartan formuyla belirir.`
+    resultDesc = `Servise hazır ${subject}, ilk karede iştah kabartan sunumu ve formuyla belirir.`
   } else if (ontology.riskClass === 'regulated_health') {
     resultFamily = 'result_first'
-    resultDesc = `Uygulama sonrasındaki estetik ve dengeli sonuç, profesyonel klinik ışığı altında ilk saniyede netleşir.`
+    resultDesc = `Profesyonel klinik ortamında uzman hekim danışmanlığı ilk karede netleşir.`
   } else {
     resultDesc = `${subject} uygulamasının sağladığı somut nihai sonuç ilk karede net şekilde sergilenir.`
   }
@@ -161,7 +163,10 @@ export function selectHook(
     allContext.includes('toptan')
   ) {
     scaleFamily = 'scale_reveal'
-    scaleDesc = `Geniş depolama ve sevkiyat alanında nizami istiflenmiş binlerce birim ${subject}, etkileyici hacmiyle ilk karede kadraja girer.`
+    const hasThousands = allContext.includes('binlerce')
+    const hasStok = allContext.includes('stok')
+    const scaleTerm = hasThousands && hasStok ? 'binlerce stok birimi' : hasThousands ? 'binlerce birim' : hasStok ? 'geniş stok birimleri' : 'nizami birimleri'
+    scaleDesc = `Geniş depolama ve sevkiyat alanında nizami istiflenmiş ${scaleTerm} ${subject}, etkileyici hacmiyle ilk karede kadraja girer.`
   } else if (ontology.primaryAffordance === 'material_texture_shift' || ontology.proofMode === 'craftsmanship') {
     scaleFamily = 'tactile_macro'
     scaleDesc = `Yüksek çözünürlüklü makro lens ile ${subject} dokusundaki detaylar ve malzeme yoğunluğu ilk karede vurgulanır.`

@@ -111,8 +111,7 @@ export function validateAndRepair(
     hook.productOrResultVisible
   if (!hookOk) hardFails.push('hook_is_establishing_only_or_missing_action')
 
-  // 9. Risk Class Compliance (Health, legal, finance, children, high consideration)
-  let claimsAllowed = true
+  // 9. Risk Class Compliance Pre-Check & Auto-Repair
   const voLower = currentVoiceover.text.toLowerCase()
 
   if (ontology.riskClass === 'regulated_health') {
@@ -205,11 +204,26 @@ export function validateAndRepair(
     hardFails.push('voiceover_cannot_fit_eight_seconds')
   }
 
-  // 11. Claim Validation Check (VO and Overlay)
+  // 11. Claim Validation Check (VO, Overlay, Hook and Shot Plan)
   const voClaimValidation = validateClaims(currentVoiceover.text, facts)
   if (!voClaimValidation.valid) {
     currentVoiceover.usesOnlyVerifiedClaims = false
     hardFails.push(`unverified_claims_in_voiceover: ${voClaimValidation.unverifiedClaims.join(', ')}`)
+  }
+
+  const hookClaimCheck = validateClaims(hook.visualEventDescription, facts)
+  const hookClaimsValid = hookClaimCheck.valid
+  if (!hookClaimsValid) {
+    hardFails.push(`unverified_claims_in_hook: ${hookClaimCheck.unverifiedClaims.join(', ')}`)
+  }
+
+  let shotPlanClaimsValid = true
+  for (const sh of currentShotPlan.shots) {
+    const actionCheck = validateClaims(sh.subjectAction, facts)
+    if (!actionCheck.valid) {
+      shotPlanClaimsValid = false
+      hardFails.push(`unverified_claims_in_shot_${sh.shotNumber}: ${actionCheck.unverifiedClaims.join(', ')}`)
+    }
   }
 
   // 12. All Overlay Facts & Timeline Verified Check
@@ -232,7 +246,7 @@ export function validateAndRepair(
         hardFails.push('unverified_offer_in_overlay')
         break
       }
-      const percentMatches = item.text.match(/%\s*\d+|\d+\s*%/g) || []
+      const percentMatches = item.text.match(/(?:%\s*\d+|\d+\s*%)/g) || []
       for (const pm of percentMatches) {
         const num = pm.replace(/\D/g, '')
         const corpus = [facts.verifiedFacts.rawBrief, facts.verifiedFacts.discount || ''].join(' ')
@@ -245,7 +259,44 @@ export function validateAndRepair(
     }
   }
 
-  // 13. Dynamic checks computation (Zero hardcoded booleans)
+  // 13. Dynamic Risk Class & Claims Compliance Computation
+  let riskClassCompliant = true
+  const currentVoLower = currentVoiceover.text.toLowerCase()
+  const allOverlayText = overlay.overlayTimeline.map((item) => item.text.toLowerCase()).join(' ')
+  const combinedScrutinyText = `${currentVoLower} ${allOverlayText} ${hook.visualEventDescription.toLowerCase()}`
+
+  if (ontology.riskClass === 'regulated_health') {
+    const hasForbiddenHealthClaim = /(%100 garanti|kesin sonuç|garantili|mucizevi|kesin iyileşme|tam tedavi|tedavi garantisi)/i.test(combinedScrutinyText)
+    if (hasForbiddenHealthClaim) {
+      riskClassCompliant = false
+      hardFails.push('unauthorized_health_guarantee_detected')
+    }
+  } else if (ontology.riskClass === 'finance_or_investment') {
+    const hasForbiddenFinanceClaim = /(kesin kazanç|zengin olun|garanti getiri|%100 kâr|sıfır risk)/i.test(combinedScrutinyText)
+    if (hasForbiddenFinanceClaim) {
+      riskClassCompliant = false
+      hardFails.push('unauthorized_financial_guarantee_detected')
+    }
+  } else if (ontology.riskClass === 'legal_or_professional_claim') {
+    const hasForbiddenLegalClaim = /(kazanma garantisi|kesin beraat|kesin tahliye)/i.test(combinedScrutinyText)
+    if (hasForbiddenLegalClaim) {
+      riskClassCompliant = false
+      hardFails.push('unauthorized_legal_guarantee_detected')
+    }
+  }
+
+  const claimsAllowed = Boolean(
+    riskClassCompliant &&
+    voClaimValidation.valid &&
+    overlayFactsValid &&
+    hookClaimsValid &&
+    shotPlanClaimsValid
+  )
+  if (!claimsAllowed) {
+    hardFails.push('claims_not_allowed_or_unverified')
+  }
+
+  // 14. Dynamic checks computation (Zero hardcoded booleans)
   const hasOnePrimaryIdea = Boolean(
     ontology.offerType &&
     ontology.offerType !== 'unknown' &&
@@ -265,7 +316,7 @@ export function validateAndRepair(
     shotPlan.brandIdentityMode !== 'none'
   )
 
-  const hasInventedOfferOrFeature = !voClaimValidation.valid || !overlayFactsValid
+  const hasInventedOfferOrFeature = !claimsAllowed
 
   const checks: HardFailChecks = {
     durationTotalsEightSeconds: durationOk,

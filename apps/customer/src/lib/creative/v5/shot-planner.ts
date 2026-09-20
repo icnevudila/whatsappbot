@@ -74,11 +74,11 @@ export function planShots(
     timing: { from: 0.0, to: 2.2 },
     role: 'visual_hook',
     framing: isContinuous
-      ? 'Continuous take: fluid dynamic push-in beginning the unbroken sequence'
+      ? 'Continuous take: wide-medium framing initiating the continuous slow forward push-in route'
       : 'Tight macro close-up framing',
     subjectAction: hook.visualEventDescription,
     cameraMotion: isContinuous
-      ? 'Camera initiates a single unbroken forward dolly glide gliding directly toward the focal action seamlessly'
+      ? 'The camera begins a single unbroken slow forward push-in route gliding smoothly toward the active subject'
       : 'Smooth push-in directly toward focal action',
     lightingAndPhysics: 'Natural daylight with soft specular highlights, shallow depth of field (f/1.8)',
   }
@@ -88,11 +88,11 @@ export function planShots(
     timing: { from: 2.2, to: 5.8 },
     role: 'proof_or_action',
     framing: isContinuous
-      ? 'Continuous take: uninterrupted orbit tracking maintaining continuous lock'
+      ? 'Continuous take: medium framing maintaining the identical continuous forward push-in route'
       : 'Medium dynamic tracking framing',
     subjectAction: `The focal subject (${subject}) performs its core verified function smoothly in realistic physical environment.`,
     cameraMotion: isContinuous
-      ? 'Maintaining continuous unbroken momentum without scene interruption, the camera seamlessly arcs around the active subject'
+      ? 'Continuing the exact same slow forward push-in route at uniform speed toward the active subject without any trajectory change or scene interruption'
       : 'Cut to medium framing, steady gimbal tracking maintaining continuous lock on the subject',
     lightingAndPhysics: 'Balanced natural illumination, true-to-life reflections and realistic physics',
   }
@@ -102,11 +102,11 @@ export function planShots(
     timing: { from: 5.8, to: 8.0 },
     role: 'hero_close',
     framing: isContinuous
-      ? 'Continuous take: elevated hero perspective concluding the single take'
+      ? 'Continuous take: close hero framing reaching the destination of the continuous forward push-in route'
       : 'Clean hero wide framing',
     subjectAction: `The subject (${subject}) rests in pristine final state, delivering quiet confidence and satisfaction.`,
     cameraMotion: isContinuous
-      ? 'Still in the same continuous take without interruption, the camera smoothly rises into an elevated hero perspective to conclude the take'
+      ? 'Continuing the exact same slow forward push-in route smoothly into crisp close hero framing to conclude the unbroken take'
       : 'Cut to clean hero wide framing, gentle crane rise revealing complete focal scene',
     lightingAndPhysics: 'Warm rim light, cinematic contrast and clean composition',
   }
@@ -126,7 +126,7 @@ export function planShots(
 
   // 6. Camera Directive
   const cameraDirective = isContinuous
-    ? `CAMERA MOVEMENT: continuous_take - Single unbroken camera movement throughout the entire 8.0 seconds with seamless fluid glide and zero scene interruption.`
+    ? `CAMERA MOVEMENT: continuous_take - Single unbroken slow forward push-in route maintained across all 8.0 seconds at uniform velocity with zero trajectory changes and zero scene interruption.`
     : `CAMERA MOVEMENT: three_cut - Three distinct controlled camera framings connected by clean cinematic cut transitions.`
 
   // 7. Assemble Technical Veo English Prompt

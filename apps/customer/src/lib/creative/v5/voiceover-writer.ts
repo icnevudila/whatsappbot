@@ -29,6 +29,13 @@ export const HYPE_WORDS_TO_VERIFY = [
   'özel reçeteli',
   'yüksek verim',
   'yorulmadan',
+  'yüksek basınç',
+  'binlerce stok',
+  'binlerce',
+  'dumanı üstünde',
+  'dumanı tüten',
+  'tedavi sonrası',
+  'kesin iyileşme',
   'hızlı sevkiyat',
   'hızlı teslimat',
   'güvenilir',
@@ -65,6 +72,27 @@ export function isClaimVerified(term: string, facts: FactNormalizerOutput): bool
   const normalizedTerm = term.toLowerCase().trim()
   if (!normalizedTerm) return false
 
+  // If term is a numeric percentage (e.g. "%5", "%50"), enforce strict digit boundaries
+  if (normalizedTerm.startsWith('%') || normalizedTerm.endsWith('%')) {
+    const num = normalizedTerm.replace(/\D/g, '')
+    const regex = new RegExp(`(?:%\\s*|\\byüzde\\s*)(?<!\\d)${num}(?!\\d)|(?<!\\d)${num}(?!\\d)\\s*%`, 'gi')
+    let match: RegExpExecArray | null
+    let hasPositive = false
+
+    while ((match = regex.exec(corpus)) !== null) {
+      const start = Math.max(0, match.index - 35)
+      const end = Math.min(corpus.length, match.index + match[0].length + 35)
+      const window = corpus.slice(start, end).toLowerCase()
+
+      const isNegated = /\b(yok|değil|yapmıyoruz|yapılmaz|yapılmamaktadır|bulunmamaktadır|hariç|olmayan|mümkün değil)\b/i.test(window)
+      if (!isNegated) {
+        hasPositive = true
+        break
+      }
+    }
+    return hasPositive
+  }
+
   const regex = new RegExp(`(?:^|\\s|[,.;:!?])${escapeRegex(normalizedTerm)}(?:$|\\s|[,.;:!?])`, 'gi')
   let match: RegExpExecArray | null
   let hasPositive = false
@@ -86,9 +114,60 @@ export function isClaimVerified(term: string, facts: FactNormalizerOutput): bool
 }
 
 /**
+ * Validates that a percentage claim is truly a discount/promo and not a material spec
+ * (e.g. "%100 pamuk" is not a discount, and "%50 indirim" is distinct from "%5 indirim").
+ */
+function isPercentageDiscountVerified(numStr: string, facts: FactNormalizerOutput): { verified: boolean; reason?: string } {
+  const corpus = [
+    facts.verifiedFacts.rawBrief,
+    facts.verifiedFacts.discount || '',
+    ...(facts.verifiedFacts.features || []),
+    ...(facts.verifiedFacts.benefits || []),
+  ].join(' ')
+
+  // Strict numeric boundary: %5 does not match %50 or %15
+  const regex = new RegExp(`(?:%\\s*|\\byüzde\\s*)(?<!\\d)${numStr}(?!\\d)|(?<!\\d)${numStr}(?!\\d)\\s*%`, 'gi')
+  let match: RegExpExecArray | null
+  let foundDiscountMatch = false
+  let foundOnlyMaterialMatch = false
+
+  while ((match = regex.exec(corpus)) !== null) {
+    const start = Math.max(0, match.index - 40)
+    const end = Math.min(corpus.length, match.index + match[0].length + 40)
+    const window = corpus.slice(start, end).toLowerCase()
+
+    // Check negation (e.g. "indirim yok", "%15 indirim yapılmamaktadır")
+    const isNegated = /\b(yok|değil|yapmıyoruz|yapılmaz|yapılmamaktadır|bulunmamaktadır|hariç|olmayan|mümkün değil)\b/i.test(window)
+    if (isNegated) continue
+
+    const hasDiscountContext =
+      /\b(indirim|iskonto|fırsat|kampanya|avantaj|fiyat|fiyatla|teklif|ucuz|indirimli|hediye)\b/i.test(window) ||
+      Boolean(facts.verifiedFacts.discount && new RegExp(`(?<!\\d)${numStr}(?!\\d)`).test(facts.verifiedFacts.discount))
+
+    const hasMaterialContext =
+      /\b(pamuk|killi|yün|alkol|nem|elyaf|keten|saf|saflık|oran|içerik|materyal|kompozisyon|asit|yağ|şeker|protein|gram|kilo|ton|metre)\b/i.test(window)
+
+    if (hasDiscountContext) {
+      foundDiscountMatch = true
+      break
+    } else if (hasMaterialContext) {
+      foundOnlyMaterialMatch = true
+    }
+  }
+
+  if (foundDiscountMatch) return { verified: true }
+  if (foundOnlyMaterialMatch) {
+    return { verified: false, reason: `%${numStr} materyal/içerik oranıdır, indirim olarak doğrulanamaz` }
+  }
+  return { verified: false, reason: `%${numStr} indirim oranı brief'te doğrulanmamış` }
+}
+
+/**
  * Real Claim Validator:
  * - Checks known hype words with negation awareness
- * - Enforces strict numeric & percentage matching (500g is NOT %50)
+ * - Enforces strict numeric & percentage matching (%5 vs %50, 500g is NOT %50)
+ * - Separates discount rates from material composition specs (e.g. %100 pamuk vs %100 indirim)
+ * - Separates positive discounts from "indirim yok"
  * - Returns valid=false and list of unverified claims if text asserts unverified claims.
  */
 export function validateClaims(
@@ -98,33 +177,39 @@ export function validateClaims(
   const lower = text.toLowerCase()
   const unverified: string[] = []
 
-  // 1. Check known hype words
+  // 1. Check known hype words with word boundaries (avoids false positives like 'alanında' matching 'anında')
   for (const hype of HYPE_WORDS_TO_VERIFY) {
-    if (lower.includes(hype) && !isClaimVerified(hype, facts)) {
+    const hypeRegex = new RegExp(`(?:^|\\s|[,.;:!?])${escapeRegex(hype)}(?:$|\\s|[,.;:!?])`, 'i')
+    if (hypeRegex.test(lower) && !isClaimVerified(hype, facts)) {
       unverified.push(hype)
     }
   }
 
-  // 2. Check numeric discount claims (e.g. %15, %20, %50, 50%)
-  // Strict: Must match percentage syntax in corpus; mass or length digits (500g, 50cm) do NOT count as discounts!
-  const percentMatches = text.match(/%\s*\d+|\d+\s*%/g) || []
-  const corpus = [
-    facts.verifiedFacts.rawBrief,
-    facts.verifiedFacts.discount || '',
-    ...(facts.verifiedFacts.features || []),
-    ...(facts.verifiedFacts.benefits || []),
-  ].join(' ')
-
+  // 2. Check numeric discount & percentage claims (e.g. %15, %20, %50, 50%)
+  const percentMatches = text.match(/(?:%\s*\d+|\d+\s*%)/g) || []
   for (const pm of percentMatches) {
     const num = pm.replace(/\D/g, '')
-    const percentRegex = new RegExp(`(?:%\\s*${num}|${num}\\s*%|yüzde\\s*${num}|iskonto:\\s*%?${num}|indirim:\\s*%?${num})`, 'i')
-    const hasExplicitPercent = percentRegex.test(corpus)
+    const isOfferContext = /\b(indirim|iskonto|fırsat|kampanya|avantaj|teklif|fiyat|indirimli)\b/i.test(lower)
 
-    if (!hasExplicitPercent || !isClaimVerified(`%${num}`, facts)) {
-      // Double check if any positive percentage match exists
-      if (!hasExplicitPercent) {
+    if (isOfferContext) {
+      const discountCheck = isPercentageDiscountVerified(num, facts)
+      if (!discountCheck.verified) {
+        unverified.push(discountCheck.reason || pm)
+      }
+    } else {
+      if (!isClaimVerified(`%${num}`, facts)) {
         unverified.push(pm)
       }
+    }
+  }
+
+  // 3. Check for explicit discount assertion when brief states "indirim yok" / "kampanya yok"
+  const rawBriefLower = (facts.verifiedFacts.rawBrief || '').toLowerCase()
+  if (/\b(indirim yok|kampanya yok|iskonto yok|indirim yapılmaz|iskonto yapılmamaktadır)\b/i.test(rawBriefLower)) {
+    const assertsDiscount = /\b(indirim|kampanya|iskonto)\b/i.test(lower)
+    const isClarification = /\b(indirim yok|kampanya yok|iskonto yok)\b/i.test(lower)
+    if (assertsDiscount && !isClarification) {
+      unverified.push('indirim_yokken_indirim_iddiası')
     }
   }
 
@@ -314,8 +399,9 @@ export function writeVoiceover(
     const hizliWord = hizliAllowed ? 'hızlı ' : ''
 
     if (discount) {
+      const toptanAllowed = isClaimVerified('toptan', facts)
       line = brand
-        ? `${brand} ${subject}, toptan alımlarda avantajla şantiyenizde.`
+        ? (toptanAllowed ? `${brand} ${subject}, toptan alımlarda avantajla şantiyenizde.` : `${brand} ${subject}, avantajlı fiyatla şantiyenizde.`)
         : `${prefix}${subject}, avantajlı fiyatla şantiyenizde.`
     } else {
       line = brand

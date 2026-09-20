@@ -53,8 +53,14 @@ export function deriveHookHeadline(
   if (rawBrief.includes('şantiye') && rawBrief.includes('sevkiyat')) {
     return 'ŞANTİYEYE DOĞRUDAN SEVKİYAT'
   }
-  if (rawBrief.includes('yorulmadan') || rawBrief.includes('basınç')) {
+  if (rawBrief.includes('yorulmadan') && rawBrief.includes('yüksek basınç')) {
     return 'YORULMADAN YÜKSEK BASINÇ'
+  }
+  if (rawBrief.includes('basınç')) {
+    return 'GÜÇLÜ BASINÇLI ÇÖZÜM'
+  }
+  if (rawBrief.includes('yorulmadan')) {
+    return 'YORULMADAN PRATİK KULLANIM'
   }
   if (rawBrief.includes('harita') || rawBrief.includes('tespit')) {
     return 'CANLI İŞLETME İSTİHBARATI'
