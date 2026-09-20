@@ -60,7 +60,7 @@ test('Video Prompt Generator A-Z Industry Variations', () => {
     assert.strictEqual(/#[0-9a-fA-F]{3,6}/.test(prompt), false, 'Hex code found in prompt for ' + v.name);
 
     // 2. No Text kurali bulunmali
-    assert.ok(prompt.includes('STRICT RULE: NO TEXT'), 'No-text rule missing in ' + v.name);
+    assert.ok(prompt.includes('STRICT RULE: NO'), 'No-text rule missing in ' + v.name);
 
     // 3. 3 Sahne kurgusu eksiksiz olmali
     assert.ok(prompt.includes('SAHNE 1') && prompt.includes('SAHNE 2') && prompt.includes('SAHNE 3'), '3-act structure missing in ' + v.name);

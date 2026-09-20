@@ -144,7 +144,7 @@ export function planShots(
     cameraDirective,
     `LIGHT AND PHYSICS: Natural lighting, realistic physical gravity and authentic material reflections.`,
     audioDirective,
-    `TEXT POLICY: No gibberish words, small text, prices, phone numbers, long campaign copy, calls to action, subtitles, captions, floating text, handheld signs, desk signs, graphic overlays, banners or lower thirds. Real physical brand identity is allowed: preserve supplied product labels and original logo, and place the brand name only on large clean physical brand surfaces such as product labels, uniforms, vehicle decals, shop/factory entrance signage or hero product nameplates. Use the brand color palette on products, clothing, environment accents and lighting. Do not redesign or invent a logo.`,
+    `TEXT POLICY: No newly generated text, captions, prices, phone numbers, calls to action, signs or logos. No gibberish words, small text, long campaign copy, subtitles, floating text, handheld signs, desk signs, graphic overlays, banners or lower thirds. Real physical brand identity is allowed: preserve supplied product labels and original logo, and place the brand name only on large clean physical brand surfaces such as product labels, uniforms, vehicle decals, shop/factory entrance signage or hero product nameplates. Use the brand color palette on products, clothing, environment accents and lighting. Do not redesign or invent a logo.`,
     `NEGATIVE CONSTRAINTS: ${V5_STANDARD_NEGATIVES}`,
   ].join('\n')
 

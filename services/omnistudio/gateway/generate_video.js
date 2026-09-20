@@ -1110,6 +1110,31 @@ async function generateVideoOnFlow(options = {}) {
     await send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: OUTPUT_DIR, eventsEnabled: true });
   } catch(e) {}
 
+  // 5.6 İndirme öncesi artık veya yarım dosyaları temizle
+  try {
+    const staleFiles = fs.readdirSync(OUTPUT_DIR).filter(f => f.endsWith('.crdownload') || f === 'download');
+    for (const sf of staleFiles) {
+      try { fs.unlinkSync(path.join(OUTPUT_DIR, sf)); } catch(_) {}
+    }
+  } catch(_) {}
+
+  // 5.7 Yeni üretilen en son tile'ı seç (odakla)
+  try {
+    await send('Runtime.evaluate', {
+      expression: `(() => {
+        const tiles = Array.from(document.querySelectorAll('.tile, flow-tile, flow-media-tile, div[class*="tile"], div[class*="virtual-item"]'));
+        if (tiles.length > 0) {
+          const lastTile = tiles[tiles.length - 1];
+          lastTile.scrollIntoView({ behavior: 'instant', block: 'center' });
+          lastTile.click();
+          const videoEl = lastTile.querySelector('video');
+          if (videoEl) videoEl.click();
+        }
+      })()`
+    });
+    await sleep(1200);
+  } catch(_) {}
+
   // 6. Download butonuna tıkla (Hem üst menüdeki Download Media hem de tile More options menüsünü destekle)
   let downloadTriggered = false;
 
@@ -1212,16 +1237,18 @@ async function generateVideoOnFlow(options = {}) {
 
   console.log(`[Flow Video] 📥 İndirme işlemi tetiklendi, dosyanın diske yazılması bekleniyor...`);
     
-    // Dosya inene kadar en fazla 35 saniye bekle
-    for (let w = 0; w < 35; w++) {
+    // Dosya inene kadar en fazla 45 saniye bekle
+    let detectedDownloadedFile = null;
+    for (let w = 0; w < 45; w++) {
       await sleep(1000);
       const filesNow = fs.readdirSync(OUTPUT_DIR);
       const isDownloading = filesNow.some(f => f.endsWith('.crdownload'));
       const hasDownloadFile = filesNow.includes('download');
-      const recentMp4 = filesNow.find(f => f.endsWith('.mp4') && (Date.now() - fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs < 20000));
-      const recentZip = filesNow.find(f => f.endsWith('.zip') && (Date.now() - fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs < 20000));
+      const recentMp4 = filesNow.find(f => f.endsWith('.mp4') && !f.startsWith('video_') && (Date.now() - fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs < 30000));
+      const recentZip = filesNow.find(f => f.endsWith('.zip') && (Date.now() - fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs < 30000));
       if ((recentMp4 || recentZip || hasDownloadFile) && !isDownloading) {
-        console.log(`[Flow Video] ✅ İndirilen dosya yakalandı: ${recentMp4 || recentZip || 'download'}`);
+        detectedDownloadedFile = recentMp4 || recentZip || 'download';
+        console.log(`[Flow Video] ✅ İndirilen dosya yakalandı: ${detectedDownloadedFile}`);
         break;
       }
     }
@@ -1239,26 +1266,34 @@ async function generateVideoOnFlow(options = {}) {
   const downloadedCandidate = path.join(OUTPUT_DIR, 'download');
   const rootDownloadCandidate = '/root/Downloads/download';
 
-  // Eğer Google Flow projeyi .zip arşivi olarak indirdiyse, yalnızca bu istekte inen arşivden
-  // son MP4'ü çıkar. Marka/sektör anahtar kelimesiyle arşiv taramak eski render seçtirebilir.
+  // Eğer Google Flow projeyi .zip arşivi olarak indirdiyse:
+  // ZipInfo.date_time sıralamasıyla arşiv içindeki EN YENİ videoyu seç.
+  // namelist() veya rastgele son dosya seçimi eski videoları tekrarlatabilir.
   const recentZipFile = fs.readdirSync(OUTPUT_DIR)
     .filter(f => f.endsWith('.zip'))
     .map(f => ({ name: f, time: fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs }))
     .sort((a, b) => b.time - a.time)[0];
 
   let extractedFromZip = false;
-  if (recentZipFile && recentZipFile.time >= requestStartedAt - 5000) {
+  if (recentZipFile && recentZipFile.time >= requestStartedAt - 10000) {
     try {
       const zipPath = path.join(OUTPUT_DIR, recentZipFile.name);
       const extractDir = path.join(OUTPUT_DIR, `unzip_${timestamp}`);
       fs.mkdirSync(extractDir, { recursive: true });
       const { execSync } = require('child_process');
 
-      // 1. Arşivdeki MP4'lerin sıralı listesini al (Google Flow en yeni videoyu en sona ekler)
-      let zipOrderMp4s = [];
+      // 1. Arşivdeki MP4'leri ZipInfo.date_time (oluşturulma zamanına göre BÜYÜKTEN KÜÇÜĞE) sırala
+      let sortedZipMp4s = [];
       try {
-        const orderOut = execSync(`python3 -c "import zipfile, json; z = zipfile.ZipFile('${zipPath}'); print(json.dumps([f for f in z.namelist() if f.lower().endsWith('.mp4')]))"`).toString();
-        zipOrderMp4s = JSON.parse(orderOut);
+        const orderOut = execSync(`python3 -c "import zipfile, json
+z = zipfile.ZipFile('${zipPath}')
+items = []
+for info in z.infolist():
+    if info.filename.lower().endswith('.mp4') and info.file_size > 500000:
+        items.append({'name': info.filename, 'time': list(info.date_time), 'size': info.file_size})
+items.sort(key=lambda x: x['time'], reverse=True)
+print(json.dumps([it['name'] for it in items]))" 2>/dev/null`).toString();
+        sortedZipMp4s = JSON.parse(orderOut);
       } catch (_) {}
 
       // 2. Arşivi çıkar
@@ -1268,18 +1303,30 @@ async function generateVideoOnFlow(options = {}) {
         execSync(`python3 -m zipfile -e "${zipPath}" "${extractDir}" 2>/dev/null || true`);
       }
 
-      // Google Flow proje arşivinde eski renderlar da bulunabilir. En sondan başa doğru
-      // yalnızca arşiv sırasındaki son geçerli MP4 alınır; isim/anahtar kelime kullanılmaz.
+      // En yeni videoyu belirle: Python ile date_time bazlı sıralı ilk eleman,
+      // yoksa extractDir içindeki dosyaların mtime'ına göre en yenisi
       let chosenFileName = null;
-      const candidateList = zipOrderMp4s.length > 0 ? zipOrderMp4s : fs.readdirSync(extractDir).filter(f => f.endsWith('.mp4'));
+      if (sortedZipMp4s.length > 0) {
+        for (const candidate of sortedZipMp4s) {
+          const baseName = path.basename(candidate);
+          const fullP = path.join(extractDir, baseName);
+          if (fs.existsSync(fullP) && fs.statSync(fullP).size > 500000) {
+            chosenFileName = baseName;
+            console.log(`[Flow Video] ⏱️ Zip arşivi içindeki EN YENİ video (date_time sıralı) seçildi: ${chosenFileName}`);
+            break;
+          }
+        }
+      }
 
-      for (let i = candidateList.length - 1; i >= 0; i--) {
-        const baseName = path.basename(candidateList[i]);
-        const fullP = path.join(extractDir, baseName);
-        if (fs.existsSync(fullP) && fs.statSync(fullP).size > 500000) {
-          chosenFileName = baseName;
-          console.log(`[Flow Video] ⏱️ Bu indirme arşivindeki son geçerli video seçildi: ${chosenFileName}`);
-          break;
+      if (!chosenFileName) {
+        const extractedMp4s = fs.readdirSync(extractDir)
+          .filter(f => f.endsWith('.mp4'))
+          .map(f => ({ name: f, time: fs.statSync(path.join(extractDir, f)).mtimeMs, size: fs.statSync(path.join(extractDir, f)).size }))
+          .filter(f => f.size > 500000)
+          .sort((a, b) => b.time - a.time);
+        if (extractedMp4s.length > 0) {
+          chosenFileName = extractedMp4s[0].name;
+          console.log(`[Flow Video] ⏱️ Çıkarılan dosyalar arasından en yeni MP4 seçildi: ${chosenFileName}`);
         }
       }
 
@@ -1307,7 +1354,7 @@ async function generateVideoOnFlow(options = {}) {
         .filter(f => f.endsWith('.mp4') && f !== rawFileName)
         .map(f => ({ name: f, time: fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs }))
         .sort((a, b) => b.time - a.time);
-      const recent = files.find(f => f.time >= requestStartedAt - 5000);
+      const recent = files.find(f => f.time >= requestStartedAt - 10000);
       if (recent) {
         fs.copyFileSync(path.join(OUTPUT_DIR, recent.name), rawPath);
       }
@@ -1333,6 +1380,64 @@ async function generateVideoOnFlow(options = {}) {
     }
   } catch (flowSubErr) {
     console.warn('[Flow Video] Flow altyazı/seslendirme giydirme hatası:', flowSubErr.message);
+  }
+
+  // 8.2 Marka Kiti, Logo ve CTA Overlay Giydirme
+  // Saf Veo videosunun üzerine marka logosu, renk kiti ve WhatsApp CTA katmanı yerleştirilir.
+  const cleanNosubPath = rawPath.replace(/(_capcut_final|_final|_sub)?\.mp4$/, '_clean_nosub.mp4');
+  if (fs.existsSync(rawPath) && !fs.existsSync(cleanNosubPath)) {
+    try { fs.copyFileSync(rawPath, cleanNosubPath); } catch(_) {}
+  }
+
+  if (options.includeOverlay !== false && fs.existsSync(rawPath)) {
+    try {
+      const brandKit = await getActiveBrandKit(options.orgId, options.brandName || options.customer);
+      const brandName = (options.brandName || options.customer || brandKit?.organization_name || 'İşletme').trim();
+      const accentColor = (options.accentColor || brandKit?.colors?.accent || '#acfe00').replace('#', '');
+      const secondaryColor = (options.primaryColor || brandKit?.colors?.secondary || brandKit?.colors?.primary || '#026009').replace('#', '');
+      const ctaText = (options.ctaText || 'WHATSAPP İLE İLETİŞİME GEÇİN').toUpperCase().replace(/['"]/g, '');
+
+      // Logo yolu çözümü
+      let logoCandidate = options.logoUrl || brandKit?.logo_path;
+      let localLogoPath = null;
+      if (logoCandidate) {
+        if (logoCandidate.startsWith('/')) {
+          const testP = path.join(OUTPUT_DIR, path.basename(logoCandidate));
+          if (fs.existsSync(testP)) localLogoPath = testP;
+        } else if (fs.existsSync(path.join(OUTPUT_DIR, path.basename(logoCandidate)))) {
+          localLogoPath = path.join(OUTPUT_DIR, path.basename(logoCandidate));
+        }
+      }
+      if (!localLogoPath) {
+        const bofeWhite = path.join(__dirname, 'bofe_logo_clean_white.png');
+        const bofeStd = path.join(OUTPUT_DIR, 'bofe_logo.png');
+        if (brandName.toLowerCase().includes('bofe')) {
+          localLogoPath = fs.existsSync(bofeWhite) ? bofeWhite : (fs.existsSync(bofeStd) ? bofeStd : null);
+        }
+      }
+
+      const tempOverlayOut = path.join(OUTPUT_DIR, `temp_overlay_${timestamp}.mp4`);
+      let filterComplex = '';
+
+      if (localLogoPath && fs.existsSync(localLogoPath)) {
+        // Logo + CTA Bar
+        filterComplex = `[1:v]scale=220:-1[logo];[0:v][logo]overlay=40:80[v1];[v1]drawbox=x=40:y=1120:w=640:h=70:color=0x${secondaryColor}@0.9:t=fill,drawbox=x=40:y=1120:w=640:h=70:color=0x${accentColor}:t=3,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${ctaText}':fontcolor=white:fontsize=22:x=(w-text_w)/2:y=1143[vout]`;
+        execSync(`ffmpeg -y -i "${rawPath}" -i "${localLogoPath}" -filter_complex "${filterComplex}" -map "[vout]" -map 0:a? -c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p -movflags +faststart -c:a copy "${tempOverlayOut}" 2>/dev/null || ffmpeg -y -i "${rawPath}" -i "${localLogoPath}" -filter_complex "${filterComplex}" -map "[vout]" -c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p -movflags +faststart "${tempOverlayOut}"`, { stdio: 'ignore' });
+      } else {
+        // Marka Adı Bandı + CTA Bar
+        const brandUpper = brandName.toUpperCase().slice(0, 24);
+        filterComplex = `drawbox=x=40:y=80:w=320:h=60:color=0x000000@0.7:t=fill,drawbox=x=40:y=80:w=320:h=60:color=0x${accentColor}:t=2,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${brandUpper}':fontcolor=white:fontsize=24:x=60:y=98,drawbox=x=40:y=1120:w=640:h=70:color=0x${secondaryColor}@0.9:t=fill,drawbox=x=40:y=1120:w=640:h=70:color=0x${accentColor}:t=3,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${ctaText}':fontcolor=white:fontsize=22:x=(w-text_w)/2:y=1143`;
+        execSync(`ffmpeg -y -i "${rawPath}" -vf "${filterComplex}" -c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p -movflags +faststart -c:a copy "${tempOverlayOut}" 2>/dev/null || ffmpeg -y -i "${rawPath}" -vf "${filterComplex}" -c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p -movflags +faststart "${tempOverlayOut}"`, { stdio: 'ignore' });
+      }
+
+      if (fs.existsSync(tempOverlayOut) && fs.statSync(tempOverlayOut).size > 200000) {
+        fs.copyFileSync(tempOverlayOut, rawPath);
+        try { fs.unlinkSync(tempOverlayOut); } catch(_) {}
+        console.log(`[Flow Video] 🎨 Marka Kiti & CTA Overlay (${brandName}, #${accentColor}) başarıyla giydirildi.`);
+      }
+    } catch (overlayErr) {
+      console.warn('[Flow Video] Marka overlay giydirme hatası:', overlayErr.message);
+    }
   }
 
   try {

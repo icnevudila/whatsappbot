@@ -278,6 +278,7 @@ export async function processCreativeGeneration(
           productImageUrl,
           logoUrl,
           includeLogo: snapshot.useLogo !== false,
+          includeOverlay: true,
           subTitle: overlay.subTitle,
           offerTitle: overlay.offerTitle,
           offerDetails: overlay.offerDetails,
