@@ -1352,27 +1352,82 @@ async function generateVideoOnFlow(options = {}) {
     await sleep(1200);
   } catch(_) {}
 
-  // 6. Download butonuna tıkla (Hem üst menüdeki Download Media hem de tile More options menüsünü destekle)
-  let downloadTriggered = false;
+  // 8. Dosya ve thumbnail dosya yollarını hazırla
+  const timestamp = Date.now();
+  const rawFileName = `video_${timestamp}_flow.mp4`;
+  const thumbFileName = `video_${timestamp}_flow_thumb.jpg`;
+  const rawPath = path.join(OUTPUT_DIR, rawFileName);
+  const thumbPath = path.join(OUTPUT_DIR, thumbFileName);
 
-  // YÖNTEM A: Üst çubuktaki doğrudan "Download media" butonu
-  for (let b = 0; b < 5; b++) {
-    const dlBtn = await send('Runtime.evaluate', {
-      expression: `(() => {
-        const btn = document.querySelector('button[aria-label="Download media"]') ||
-                    document.querySelector('button[aria-label*="download" i]') ||
-                    document.querySelector('[data-tooltip*="Download" i]') ||
-                    Array.from(document.querySelectorAll('button')).find(b => (b.innerText || '').trim().toLowerCase() === 'download');
-        if (btn) {
-          const r = btn.getBoundingClientRect();
-          if (r.width > 0 && r.height > 0) {
-            return { x: r.left + r.width/2, y: r.top + r.height/2 };
-          }
+  // 5.8 DOĞRUDAN OYNATICIDAKİ AKTİF VİDEOYU YAKALA (Direct Video Element Stream / Blob)
+  let capturedDirectly = false;
+  try {
+    console.log(`[Flow Video] 🎬 Flow oynatıcısındaki aktif video doğrudan yakalanıyor...`);
+    const captureRes = await send('Runtime.evaluate', {
+      expression: `(async () => {
+        const v = document.querySelector('flow-preview-panel video') ||
+                  document.querySelector('flow-video-player video') ||
+                  document.querySelector('.player-container video') ||
+                  document.querySelector('video[src]') ||
+                  document.querySelector('video');
+        if (!v) return { found: false, reason: 'video_element_not_found' };
+        const src = v.currentSrc || v.src;
+        if (!src) return { found: false, reason: 'no_src' };
+        
+        try {
+          const res = await fetch(src);
+          const blob = await res.blob();
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve({ found: true, size: blob.size, src: src.slice(0, 80), dataUrl: reader.result });
+            reader.onerror = () => resolve({ found: false, reason: 'blob_read_error' });
+            reader.readAsDataURL(blob);
+          });
+        } catch (fetchErr) {
+          return { found: false, src, reason: fetchErr.message };
         }
-        return null;
       })()`,
+      awaitPromise: true,
       returnByValue: true
     });
+
+    const capVal = captureRes?.result?.value;
+    if (capVal?.found && capVal.dataUrl && capVal.dataUrl.includes(',')) {
+      const base64Data = capVal.dataUrl.split(',')[1];
+      const videoBuffer = Buffer.from(base64Data, 'base64');
+      if (videoBuffer.length > 300000) {
+        fs.writeFileSync(rawPath, videoBuffer);
+        console.log(`[Flow Video] 🎯 EKRANDAKİ GERÇEK VİDEO DOĞRUDAN YAKALANDI VE YAZILDI (${(videoBuffer.length / (1024 * 1024)).toFixed(2)} MB)!`);
+        capturedDirectly = true;
+      }
+    } else {
+      console.log(`[Flow Video] Doğrudan video yakalama sonucu:`, capVal);
+    }
+  } catch (directCapErr) {
+    console.warn(`[Flow Video] Doğrudan video yakalama uyarısı:`, directCapErr.message);
+  }
+
+  // 6. Download butonuna tıkla (Doğrudan yakalanamadıysa yedek yol)
+  let downloadTriggered = false;
+  if (!capturedDirectly) {
+    // YÖNTEM A: Üst çubuktaki doğrudan "Download media" butonu
+    for (let b = 0; b < 5; b++) {
+      const dlBtn = await send('Runtime.evaluate', {
+        expression: `(() => {
+          const btn = document.querySelector('button[aria-label="Download media"]') ||
+                      document.querySelector('button[aria-label*="download" i]') ||
+                      document.querySelector('[data-tooltip*="Download" i]') ||
+                      Array.from(document.querySelectorAll('button')).find(b => (b.innerText || '').trim().toLowerCase() === 'download');
+          if (btn) {
+            const r = btn.getBoundingClientRect();
+            if (r.width > 0 && r.height > 0) {
+              return { x: r.left + r.width/2, y: r.top + r.height/2 };
+            }
+          }
+          return null;
+        })()`,
+        returnByValue: true
+      });
 
     if (dlBtn?.result?.value) {
       console.log(`[Flow Video] 📥 Üst indirme butonu bulundu, tıklanıyor (${dlBtn.result.value.x}, ${dlBtn.result.value.y})...`);
@@ -1469,40 +1524,34 @@ async function generateVideoOnFlow(options = {}) {
         break;
       }
     }
+  }
 
   try { ws.close(); } catch(e){}
   try { await fetch(`http://127.0.0.1:${port}/json/close/${tab.id}`); } catch(e){}
 
-  // 8. Dosya ve thumbnail oluştur
-  const timestamp = Date.now();
-  const rawFileName = `video_${timestamp}_flow.mp4`;
-  const thumbFileName = `video_${timestamp}_flow_thumb.jpg`;
-  const rawPath = path.join(OUTPUT_DIR, rawFileName);
-  const thumbPath = path.join(OUTPUT_DIR, thumbFileName);
+  if (!capturedDirectly) {
+    const downloadedCandidate = path.join(OUTPUT_DIR, 'download');
+    const rootDownloadCandidate = '/root/Downloads/download';
 
-  const downloadedCandidate = path.join(OUTPUT_DIR, 'download');
-  const rootDownloadCandidate = '/root/Downloads/download';
+    // Eğer Google Flow projeyi .zip arşivi olarak indirdiyse:
+    // ZipInfo.date_time sıralamasıyla arşiv içindeki EN YENİ videoyu seç.
+    const recentZipFile = fs.readdirSync(OUTPUT_DIR)
+      .filter(f => f.endsWith('.zip'))
+      .map(f => ({ name: f, time: fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs }))
+      .sort((a, b) => b.time - a.time)[0];
 
-  // Eğer Google Flow projeyi .zip arşivi olarak indirdiyse:
-  // ZipInfo.date_time sıralamasıyla arşiv içindeki EN YENİ videoyu seç.
-  // namelist() veya rastgele son dosya seçimi eski videoları tekrarlatabilir.
-  const recentZipFile = fs.readdirSync(OUTPUT_DIR)
-    .filter(f => f.endsWith('.zip'))
-    .map(f => ({ name: f, time: fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs }))
-    .sort((a, b) => b.time - a.time)[0];
-
-  let extractedFromZip = false;
-  if (recentZipFile && recentZipFile.time >= requestStartedAt - 10000) {
-    try {
-      const zipPath = path.join(OUTPUT_DIR, recentZipFile.name);
-      const extractDir = path.join(OUTPUT_DIR, `unzip_${timestamp}`);
-      fs.mkdirSync(extractDir, { recursive: true });
-      const { execSync } = require('child_process');
-
-      // 1. Arşivdeki MP4'leri ZipInfo.date_time (oluşturulma zamanına göre BÜYÜKTEN KÜÇÜĞE) sırala
-      let sortedZipMp4s = [];
+    let extractedFromZip = false;
+    if (recentZipFile && recentZipFile.time >= requestStartedAt - 10000) {
       try {
-        const orderOut = execSync(`python3 -c "import zipfile, json
+        const zipPath = path.join(OUTPUT_DIR, recentZipFile.name);
+        const extractDir = path.join(OUTPUT_DIR, `unzip_${timestamp}`);
+        fs.mkdirSync(extractDir, { recursive: true });
+        const { execSync } = require('child_process');
+
+        // 1. Arşivdeki MP4'leri ZipInfo.date_time (oluşturulma zamanına göre BÜYÜKTEN KÜÇÜĞE) sırala
+        let sortedZipMp4s = [];
+        try {
+          const orderOut = execSync(`python3 -c "import zipfile, json
 z = zipfile.ZipFile('${zipPath}')
 items = []
 for info in z.infolist():
@@ -1510,70 +1559,71 @@ for info in z.infolist():
         items.append({'name': info.filename, 'time': list(info.date_time), 'size': info.file_size})
 items.sort(key=lambda x: x['time'], reverse=True)
 print(json.dumps([it['name'] for it in items]))" 2>/dev/null`).toString();
-        sortedZipMp4s = JSON.parse(orderOut);
-      } catch (_) {}
+          sortedZipMp4s = JSON.parse(orderOut);
+        } catch (_) {}
 
-      // 2. Arşivi çıkar
-      try {
-        execSync(`unzip -o "${zipPath}" -d "${extractDir}" 2>/dev/null`);
-      } catch (_) {
-        execSync(`python3 -m zipfile -e "${zipPath}" "${extractDir}" 2>/dev/null || true`);
-      }
+        // 2. Arşivi çıkar
+        try {
+          execSync(`unzip -o "${zipPath}" -d "${extractDir}" 2>/dev/null`);
+        } catch (_) {
+          execSync(`python3 -m zipfile -e "${zipPath}" "${extractDir}" 2>/dev/null || true`);
+        }
 
-      // En yeni videoyu belirle: Python ile date_time bazlı sıralı ilk eleman,
-      // yoksa extractDir içindeki dosyaların mtime'ına göre en yenisi
-      let chosenFileName = null;
-      if (sortedZipMp4s.length > 0) {
-        for (const candidate of sortedZipMp4s) {
-          const baseName = path.basename(candidate);
-          const fullP = path.join(extractDir, baseName);
-          if (fs.existsSync(fullP) && fs.statSync(fullP).size > 500000) {
-            chosenFileName = baseName;
-            console.log(`[Flow Video] ⏱️ Zip arşivi içindeki EN YENİ video (date_time sıralı) seçildi: ${chosenFileName}`);
-            break;
+        // En yeni videoyu belirle: Python ile date_time bazlı sıralı ilk eleman,
+        // yoksa extractDir içindeki dosyaların mtime'ına göre en yenisi
+        let chosenFileName = null;
+        if (sortedZipMp4s.length > 0) {
+          for (const candidate of sortedZipMp4s) {
+            const baseName = path.basename(candidate);
+            const fullP = path.join(extractDir, baseName);
+            if (fs.existsSync(fullP) && fs.statSync(fullP).size > 500000) {
+              chosenFileName = baseName;
+              console.log(`[Flow Video] ⏱️ Zip arşivi içindeki EN YENİ video (date_time sıralı) seçildi: ${chosenFileName}`);
+              break;
+            }
           }
         }
-      }
 
-      if (!chosenFileName) {
-        const extractedMp4s = fs.readdirSync(extractDir)
-          .filter(f => f.endsWith('.mp4'))
-          .map(f => ({ name: f, time: fs.statSync(path.join(extractDir, f)).mtimeMs, size: fs.statSync(path.join(extractDir, f)).size }))
-          .filter(f => f.size > 500000)
-          .sort((a, b) => b.time - a.time);
-        if (extractedMp4s.length > 0) {
-          chosenFileName = extractedMp4s[0].name;
-          console.log(`[Flow Video] ⏱️ Çıkarılan dosyalar arasından en yeni MP4 seçildi: ${chosenFileName}`);
+        if (!chosenFileName) {
+          const extractedMp4s = fs.readdirSync(extractDir)
+            .filter(f => f.endsWith('.mp4'))
+            .map(f => ({ name: f, time: fs.statSync(path.join(extractDir, f)).mtimeMs, size: fs.statSync(path.join(extractDir, f)).size }))
+            .filter(f => f.size > 500000)
+            .sort((a, b) => b.time - a.time);
+          if (extractedMp4s.length > 0) {
+            chosenFileName = extractedMp4s[0].name;
+            console.log(`[Flow Video] ⏱️ Çıkarılan dosyalar arasından en yeni MP4 seçildi: ${chosenFileName}`);
+          }
         }
-      }
 
-      if (chosenFileName) {
-        const bestMp4Path = path.join(extractDir, chosenFileName);
-        const bestSize = fs.statSync(bestMp4Path).size;
-        fs.copyFileSync(bestMp4Path, rawPath);
-        console.log(`[Flow Video] 📦 ZIP arşivinden video başarıyla çıkarıldı: ${chosenFileName} (${(bestSize/(1024*1024)).toFixed(2)} MB) -> ${rawFileName}`);
-        extractedFromZip = true;
+        if (chosenFileName) {
+          const bestMp4Path = path.join(extractDir, chosenFileName);
+          const bestSize = fs.statSync(bestMp4Path).size;
+          fs.copyFileSync(bestMp4Path, rawPath);
+          console.log(`[Flow Video] 📦 ZIP arşivinden video başarıyla çıkarıldı: ${chosenFileName} (${(bestSize/(1024*1024)).toFixed(2)} MB) -> ${rawFileName}`);
+          extractedFromZip = true;
+        }
+      } catch (zipErr) {
+        console.warn('[Flow Video] Zip çıkarma hatası:', zipErr.message);
       }
-    } catch (zipErr) {
-      console.warn('[Flow Video] Zip çıkarma hatası:', zipErr.message);
     }
-  }
-  
-  if (!extractedFromZip) {
-    if (fs.existsSync(downloadedCandidate)) {
-      fs.copyFileSync(downloadedCandidate, rawPath);
-      try { fs.unlinkSync(downloadedCandidate); } catch(e){}
-    } else if (fs.existsSync(rootDownloadCandidate)) {
-      fs.copyFileSync(rootDownloadCandidate, rawPath);
-      try { fs.unlinkSync(rootDownloadCandidate); } catch(e){}
-    } else {
-      const files = fs.readdirSync(OUTPUT_DIR)
-        .filter(f => f.endsWith('.mp4') && f !== rawFileName)
-        .map(f => ({ name: f, time: fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs }))
-        .sort((a, b) => b.time - a.time);
-      const recent = files.find(f => f.time >= requestStartedAt - 10000);
-      if (recent) {
-        fs.copyFileSync(path.join(OUTPUT_DIR, recent.name), rawPath);
+    
+    if (!extractedFromZip) {
+      if (fs.existsSync(downloadedCandidate)) {
+        fs.copyFileSync(downloadedCandidate, rawPath);
+        try { fs.unlinkSync(downloadedCandidate); } catch(e){}
+      } else if (fs.existsSync(rootDownloadCandidate)) {
+        fs.copyFileSync(rootDownloadCandidate, rawPath);
+        try { fs.unlinkSync(rootDownloadCandidate); } catch(e){}
+      } else {
+        const files = fs.readdirSync(OUTPUT_DIR)
+          .filter(f => f.endsWith('.mp4') && f !== rawFileName)
+          .map(f => ({ name: f, time: fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs }))
+          .sort((a, b) => b.time - a.time);
+        const recent = files.find(f => f.time >= requestStartedAt - 10000);
+        if (recent) {
+          fs.copyFileSync(path.join(OUTPUT_DIR, recent.name), rawPath);
+        }
       }
     }
   }
