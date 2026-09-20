@@ -106,10 +106,14 @@ async function renameChatToTitle(cdp, title) {
         const headers = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = 'Bearer ' + token;
 
+        const MESAJIFY_PROJECT_ID = 'g-p-6aaf94b0ae20819180ce47c040ff4a59';
         const res = await fetch('/backend-api/conversation/' + conversationId, {
           method: 'PATCH',
           headers,
-          body: JSON.stringify({ title: ${JSON.stringify(title)} })
+          body: JSON.stringify({
+            title: ${JSON.stringify(title)},
+            gizmo_id: MESAJIFY_PROJECT_ID
+          })
         });
 
         const links = Array.from(document.querySelectorAll('nav a'));

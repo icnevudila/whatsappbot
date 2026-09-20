@@ -286,10 +286,14 @@ ${require('./brand_learning_store.js').buildLearningPromptBlock(brand, product, 
                         } catch (e) {}
                         const headers = { 'Content-Type': 'application/json' };
                         if (token) headers['Authorization'] = 'Bearer ' + token;
+                        const MESAJIFY_PROJECT_ID = 'g-p-6aaf94b0ae20819180ce47c040ff4a59';
                         await fetch('/backend-api/conversation/' + ${JSON.stringify(convId)}, {
                           method: 'PATCH',
                           headers,
-                          body: JSON.stringify({ title: ${JSON.stringify(expectedTitle)} })
+                          body: JSON.stringify({
+                            title: ${JSON.stringify(expectedTitle)},
+                            gizmo_id: MESAJIFY_PROJECT_ID
+                          })
                         });
                       })()`,
                       awaitPromise: true
