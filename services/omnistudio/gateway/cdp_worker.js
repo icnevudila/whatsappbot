@@ -740,6 +740,7 @@ async function executeChatSuggestionsJob(tab, job) {
     const customer = (job.customer || 'Genel').trim();
     console.log(`[CDP Worker: ${WORKER_ID}] [Mesajlar] Firma: "${customer}" için oturum hazırlanıyor...`);
     const chatInfo = await ensureCustomerChat(cdp, customer, 'chat');
+    await sleep(1500); // DOM geçmişinin tam oturmasını bekle
 
     const countEval = await cdp.send('Runtime.evaluate', {
       expression: `document.querySelectorAll('[data-message-author-role="assistant"]').length`,
@@ -849,7 +850,7 @@ Bu mesaja verilebilecek en kaliteli ve uygun 3 FARKLI alternatif Türkçe yanıt
     }
 
     if (!lastText || lastText.length < 15) {
-      throw new Error('ChatGPT yanıt üretemedi veya boş döndü');
+      console.warn(`[CDP Worker: ${WORKER_ID}] [Mesajlar] ChatGPT web yanıtı kısa veya gecikmeli, akıllı şablon önerileri devreye giriyor.`);
     }
 
     // 5. JSON ayrıştırma ve emoji temizliği

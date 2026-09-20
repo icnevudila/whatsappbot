@@ -870,7 +870,7 @@ const server = http.createServer(async (req, res) => {
       });
 
       console.log(`[Gateway] Yeni mesaj öneri talebi alındı: [Firma: ${customer}] "${incomingMessage.slice(0, 60)}..."`);
-      const finished = await queue.waitForJob(job.id, 85000);
+      const finished = await queue.waitForJob(job.id, 180000);
       if (finished.status === 'completed' && finished.result) {
         return sendJson(res, 200, {
           success: true,
