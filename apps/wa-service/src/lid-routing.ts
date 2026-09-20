@@ -23,23 +23,21 @@ export async function findActiveLidForPhone(
 
   const row = await one<{ remote_jid: string }>(
     `select remote_jid from (
-       select remote_jid, created_at from public.message_log
-        where account_id = $1
-          and remote_jid like '%@lid'
+       select remote_jid, (case when account_id = $1 then 1 else 0 end) as priority, created_at from public.message_log
+        where remote_jid like '%@lid'
           and (
             phone_e164 in ($2, $3, $4)
             or ($5 <> '' and right(regexp_replace(phone_e164, '\\D', '', 'g'), 10) = $5)
           )
        union all
-       select wa_jid as remote_jid, updated_at as created_at from public.account_contacts
-        where account_id = $1
-          and wa_jid like '%@lid'
+       select wa_jid as remote_jid, (case when account_id = $1 then 1 else 0 end) as priority, updated_at as created_at from public.account_contacts
+        where wa_jid like '%@lid'
           and (
             phone_e164 in ($2, $3, $4)
             or ($5 <> '' and right(regexp_replace(phone_e164, '\\D', '', 'g'), 10) = $5)
           )
      ) sub
-     order by created_at desc
+     order by priority desc, created_at desc
      limit 1`,
     [accountId, phone, withPlus, digits, last10],
   )

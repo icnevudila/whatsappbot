@@ -645,7 +645,17 @@ function attemptGenerateOnCdp(port, tab, options) {
         const videoId = 'video_' + Date.now();
         const rawVideoTarget = path.join(OUTPUT_DIR, `${videoId}_raw.mp4`);
         if (fs.existsSync(downloadedFile)) {
-          fs.renameSync(downloadedFile, rawVideoTarget);
+          try {
+            // WhatsApp ve mobil cihazlar için faststart (moov atom başta) standardı
+            execSync(`ffmpeg -y -i "${downloadedFile}" -c copy -movflags +faststart "${rawVideoTarget}"`, { stdio: 'ignore' });
+            if (fs.existsSync(rawVideoTarget)) {
+              fs.unlinkSync(downloadedFile);
+            } else {
+              fs.renameSync(downloadedFile, rawVideoTarget);
+            }
+          } catch (_) {
+            fs.renameSync(downloadedFile, rawVideoTarget);
+          }
         }
 
         // Otonom CapCut Altyazı Giydirme (Gemini videoları)
@@ -692,7 +702,7 @@ function attemptGenerateOnCdp(port, tab, options) {
             const accentColor = (options.accentColor || brandKit?.colors?.accent || '#acfe00').replace('#', '');
             const secondaryColor = (brandKit?.colors?.secondary || '#026009').replace('#', '');
             const fc = `drawbox=x=40:y=1085:w=600:h=75:color=0x25D366:t=fill,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='WHATSAPP ILE ILETISIME GECIN':fontcolor=white:fontsize=24:x=(w-text_w)/2:y=1108`;
-            execSync(`ffmpeg -y -i "${rawVideoTarget}" -vf "${fc}" -c:v libx264 -preset fast -crf 20 -c:a copy "${campaignVideoTarget}"`);
+            execSync(`ffmpeg -y -i "${rawVideoTarget}" -vf "${fc}" -c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p -movflags +faststart -c:a copy "${campaignVideoTarget}"`);
             if (fs.existsSync(campaignVideoTarget)) {
               campaignUrl = `http://${PUBLIC_HOST}:${PORT}/outputs/${videoId}_campaign.mp4`;
             }

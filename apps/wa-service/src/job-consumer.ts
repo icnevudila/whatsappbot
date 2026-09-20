@@ -484,7 +484,7 @@ async function handle(job: JobRow): Promise<unknown> {
           if (!entry.exists) {
             return messageSendSkipped('not_on_whatsapp')
           }
-          jid = entry.jid ?? e164ToJid(payload.phone_e164)
+          jid = entry.lid || entry.jid || e164ToJid(payload.phone_e164)
         }
       } else {
         throw new Error('Gecerli bir telefon numarasi veya alici kimligi (JID) bulunamadi')
@@ -551,7 +551,24 @@ async function handle(job: JobRow): Promise<unknown> {
         } else if (messageType === 'image') {
           content = { image: { url: mediaUrl }, caption: payload.body ?? undefined }
         } else if (messageType === 'video') {
-          content = { video: { url: mediaUrl }, caption: payload.body ?? undefined }
+          const payloadAny = payload as Record<string, unknown>
+          let thumbB64: string | undefined
+          if (typeof payloadAny.thumbnail_url === 'string' && payloadAny.thumbnail_url) {
+            try {
+              const res = await fetch(payloadAny.thumbnail_url, { signal: AbortSignal.timeout(4000) })
+              if (res.ok) {
+                const arr = await res.arrayBuffer()
+                thumbB64 = Buffer.from(arr).toString('base64')
+              }
+            } catch (_) {}
+          }
+          content = {
+            video: { url: mediaUrl },
+            caption: payload.body ?? undefined,
+            mimetype: 'video/mp4',
+            gifPlayback: false,
+            ...(thumbB64 ? { jpegThumbnail: thumbB64 } : {}),
+          }
         } else if (messageType === 'document') {
           const rawName = payload.media_name || (payload.body && payload.body.includes('.') ? payload.body : 'belge.pdf')
           const isPdf = mediaUrl.toLowerCase().includes('.pdf') || rawName.toLowerCase().endsWith('.pdf')

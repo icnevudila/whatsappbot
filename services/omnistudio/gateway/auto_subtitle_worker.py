@@ -276,8 +276,10 @@ def process_video(input_video, output_with_subs, output_without_subs, fallback_s
             "-i", input_video,
             "-vf", f"subtitles='{escaped_ass}'",
             "-c:v", "libx264",
+            "-pix_fmt", "yuv420p",
             "-preset", "fast",
             "-crf", "18",
+            "-movflags", "+faststart",
             "-c:a", "copy",
             output_with_subs
         ]

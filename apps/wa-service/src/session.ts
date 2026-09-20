@@ -1111,8 +1111,8 @@ export class WhatsAppSession {
    */
   async verifyNumbers(
     phones: string[],
-  ): Promise<Map<string, { exists: boolean; jid: string | null }>> {
-    const result = new Map<string, { exists: boolean; jid: string | null }>()
+  ): Promise<Map<string, { exists: boolean; jid: string | null; lid?: string | null }>> {
+    const result = new Map<string, { exists: boolean; jid: string | null; lid?: string | null }>()
     const sock = this.sock
     if (!sock || !this.isLive || phones.length === 0) return result
 
@@ -1127,6 +1127,7 @@ export class WhatsAppSession {
       result.set(phone, {
         exists: entry?.exists === true,
         jid: entry?.jid ?? null,
+        lid: (entry as { lid?: string } | undefined)?.lid ?? null,
       })
     }
 

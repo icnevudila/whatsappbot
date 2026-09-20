@@ -434,7 +434,7 @@ function newChatQuotaExhausted(account: CampaignAccountRow): boolean {
 type SendContent =
   | { text: string }
   | { image: { url: string }; caption?: string }
-  | { video: { url: string }; caption?: string }
+  | { video: { url: string }; caption?: string; mimetype?: string; gifPlayback?: boolean }
   | {
       document: { url: string }
       mimetype: string
@@ -465,7 +465,12 @@ async function buildContent(
   }
 
   if (type === 'video') {
-    return { video: { url: media }, caption: body || undefined }
+    return {
+      video: { url: media },
+      caption: body || undefined,
+      mimetype: 'video/mp4',
+      gifPlayback: false,
+    }
   }
 
   if (type === 'document') {
@@ -620,7 +625,7 @@ async function sendToTarget(
       return
     }
 
-    jid = verdict.jid ?? e164ToJid(target.phone_e164)
+    jid = verdict.lid || verdict.jid || e164ToJid(target.phone_e164)
   }
 
   const variant = pickAbVariant({
