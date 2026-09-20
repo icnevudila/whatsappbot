@@ -448,3 +448,96 @@ test('13. Three concrete defect regression tests: cotton vs discount, cross-prod
   assert.strictEqual(wholesaleHeadline, '%20 TOPTAN İSKONTO', 'Explicit wholesale discount should produce TOPTAN İSKONTO')
 })
 
+test('14. Four specific verification gap regression tests: sentence-isolated product scoping, promo negation, condition broadening prevention, and non-wholesale headline', () => {
+  // 1. Sentence-isolated product scoping:
+  // "Gömlek koleksiyonunu keşfedin. Pantolonda %15 indirim." must REJECT because Pantolon has no discount,
+  // even though Gömlek has a %15 discount elsewhere in the text.
+  const factsTwoProducts = normalizeFacts({
+    brandName: 'Stil Giyim',
+    brief: 'Yeni sezon giyim ürünleri',
+    products: [
+      { name: 'Gömlek', promo: '%15 indirim' },
+      { name: 'Pantolon' },
+    ],
+  })
+  const checkCrossSentenceLeakage = validateClaims('Gömlek koleksiyonunu keşfedin. Pantolonda %15 indirim.', factsTwoProducts)
+  assert.strictEqual(
+    checkCrossSentenceLeakage.valid,
+    false,
+    'Failed to isolate product to its own sentence: Pantolonda %15 indirim erroneously passed due to Gömlek in preceding sentence'
+  )
+  assert.ok(
+    checkCrossSentenceLeakage.unverifiedClaims.some((c) => c.includes('Pantolon')),
+    `Expected Pantolon rejection reason, got: ${JSON.stringify(checkCrossSentenceLeakage.unverifiedClaims)}`
+  )
+
+  // Correct product in its sentence must pass:
+  const checkCorrectSentence = validateClaims('Pantolon koleksiyonunu keşfedin. Gömlekte %15 indirim.', factsTwoProducts)
+  assert.strictEqual(checkCorrectSentence.valid, true, 'Valid discount for Gömlek in its own sentence should pass')
+
+  // 2. Promo negation check:
+  // promo: "%20 indirim yok" must NOT create a positive discount record.
+  const factsPromoNegation = normalizeFacts({
+    brandName: 'Net Fiyat',
+    brief: 'Sabit fiyatlı ürünler',
+    products: [{ name: 'Klasik Ayakkabı', promo: '%20 indirim yok' }],
+  })
+  assert.strictEqual(
+    factsPromoNegation.verifiedFacts.discountOffers?.length || 0,
+    0,
+    'promo: "%20 indirim yok" erroneously created a positive discount offer'
+  )
+  assert.strictEqual(
+    factsPromoNegation.verifiedFacts.productFacts?.[0]?.discounts?.length || 0,
+    0,
+    'promo: "%20 indirim yok" erroneously created a product discount record'
+  )
+  assert.strictEqual(
+    factsPromoNegation.verifiedFacts.discount,
+    null,
+    'promo: "%20 indirim yok" erroneously set verifiedFacts.discount'
+  )
+  const checkAssertOnNegatedPromo = validateClaims('Klasik Ayakkabıda %20 indirim fırsatı.', factsPromoNegation)
+  assert.strictEqual(checkAssertOnNegatedPromo.valid, false, 'Failed to reject discount claim when promo says "%20 indirim yok"')
+
+  // 3. Condition expansion / dropping prevention:
+  // "Toptan alımlarda %20 indirim" source must REJECT "Her alışverişte %20 indirim"
+  const factsWholesaleCondition = normalizeFacts({
+    brandName: 'Toptan Tekstil',
+    brief: 'Toptan alımlarda %20 indirim fırsatı.',
+    products: [{ name: 'Pamuk Tişört', promo: '%20 toptan iskonto' }],
+  })
+  const checkConditionBroadened = validateClaims('Her alışverişte %20 indirim avantajı sizleri bekliyor.', factsWholesaleCondition)
+  assert.strictEqual(
+    checkConditionBroadened.valid,
+    false,
+    'Failed to reject broadened condition: "Her alışverişte %20 indirim" was allowed on wholesale-only offer'
+  )
+  assert.ok(
+    checkConditionBroadened.unverifiedClaims.some((c) => c.includes('koşulludur') || c.includes('genişletilemez') || c.includes('toptan')),
+    `Expected condition broadening rejection reason, got: ${JSON.stringify(checkConditionBroadened.unverifiedClaims)}`
+  )
+
+  // With wholesale condition, it passes:
+  const checkConditionPreserved = validateClaims('Toptan alımlarda %20 indirim avantajı sizleri bekliyor.', factsWholesaleCondition)
+  assert.strictEqual(checkConditionPreserved.valid, true, 'Wholesale claim matching wholesale source should pass')
+
+  // 4. "Toptan satış yok. %20 indirim" must produce "%20 İNDİRİM" (NOT "%20 TOPTAN İSKONTO")
+  const pkgNoWholesale = compileDeterministicV5({
+    brandName: 'Perakende Center',
+    brief: 'Toptan satış yok. %20 indirim fırsatı',
+    products: [{ name: 'Yazlık Elbise' }],
+  })
+  const headline = deriveHookHeadline(pkgNoWholesale.normalizedBrief, pkgNoWholesale.classification)
+  assert.strictEqual(
+    headline,
+    '%20 İNDİRİM',
+    `"Toptan satış yok. %20 indirim" headline became "${headline}" instead of "%20 İNDİRİM"`
+  )
+  assert.ok(!headline.includes('TOPTAN'), 'Headline contains unverified TOPTAN when brief states "Toptan satış yok"')
+  const overlayHookItem = pkgNoWholesale.overlayPlan.overlayTimeline.find((i) => i.type === 'hook')
+  assert.strictEqual(overlayHookItem?.text, '%20 İNDİRİM')
+  assert.ok(!overlayHookItem?.text.includes('TOPTAN'))
+})
+
+

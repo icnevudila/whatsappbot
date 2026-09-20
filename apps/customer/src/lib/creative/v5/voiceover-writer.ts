@@ -129,6 +129,7 @@ export function verifyPercentageClaim(
   targetProduct: string | null,
   isWholesaleAsserted: boolean,
   facts: FactNormalizerOutput,
+  claimClause: string = '',
 ): { verified: boolean; reason?: string } {
   const verifiedFacts = facts.verifiedFacts
   const materialSpecs = verifiedFacts.materialSpecs || []
@@ -167,7 +168,7 @@ export function verifyPercentageClaim(
     }
 
     // 2. Cross-Product Discount Leakage Prevention:
-    // If a specific product was mentioned or targeted in the claim
+    // If a specific product was mentioned or targeted in the claim's own sentence
     if (targetProduct) {
       const targetNormalized = targetProduct.toLowerCase().trim()
       const pf = productFacts.find((p) => p.name.toLowerCase().trim() === targetNormalized)
@@ -210,9 +211,35 @@ export function verifyPercentageClaim(
       }
     }
 
-    // 3. Wholesale condition check
+    // 3. Condition expansion & dropping check:
+    // If text asserts universal scope ("her alışverişte", "tüm alışverişlerde", "koşulsuz", "şartsız", "her siparişte")
+    const isBroadened =
+      /\b(her alışverişte|tüm alışverişlerde|her siparişte|tüm siparişlerde|koşulsuz|şartsız|herkese|istisnasız)\b/i.test(
+        claimClause
+      )
+
+    const isWholesaleOnlyOffer =
+      matchingDiscounts.length > 0 && matchingDiscounts.every((d) => d.isWholesale)
+
+    if (isBroadened) {
+      if (isWholesaleOnlyOffer || matchingDiscounts.some((d) => d.condition || d.isWholesale)) {
+        return {
+          verified: false,
+          reason: `%${rate} indirim kampanyası koşulludur (toptan alımlarda), genel/koşulsuz ('her alışverişte') olarak genişletilemez`,
+        }
+      }
+    }
+
+    if (isWholesaleOnlyOffer && !isWholesaleAsserted) {
+      return {
+        verified: false,
+        reason: `%${rate} indirim yalnızca toptan alımlarda geçerlidir; toptan koşulu kaldırılamaz`,
+      }
+    }
+
     if (isWholesaleAsserted) {
-      const hasWholesaleMatch = matchingDiscounts.some((d) => d.isWholesale) || Boolean(verifiedFacts.isWholesale)
+      const hasWholesaleMatch =
+        matchingDiscounts.some((d) => d.isWholesale) || Boolean(verifiedFacts.isWholesale)
       if (!hasWholesaleMatch) {
         return {
           verified: false,
@@ -282,28 +309,40 @@ export function validateClaims(
     const rate = Number(pm.replace(/\D/g, ''))
     if (isNaN(rate)) continue
 
+    // 1. Isolate the exact sentence containing this percentage match
     const pmIdx = text.indexOf(pm)
-    const startIdx = Math.max(0, text.lastIndexOf('.', pmIdx) + 1)
-    const nextDot = text.indexOf('.', pmIdx)
-    const endIdx = nextDot !== -1 ? nextDot : text.length
-    const clause = text.slice(startIdx, endIdx).toLowerCase()
+    let startIdx = 0
+    for (let i = pmIdx - 1; i >= 0; i--) {
+      if (['.', '!', '?', ';', '\n'].includes(text[i])) {
+        startIdx = i + 1
+        break
+      }
+    }
+    let endIdx = text.length
+    for (let i = pmIdx + pm.length; i < text.length; i++) {
+      if (['.', '!', '?', ';', '\n'].includes(text[i])) {
+        endIdx = i
+        break
+      }
+    }
+    const clause = text.slice(startIdx, endIdx).toLowerCase().trim()
 
     const isOfferContext =
       /\b(indirim|iskonto|fırsat|kampanya|avantaj|teklif|fiyat|indirimli|kazanç)\b/i.test(clause) ||
       /\b(indirim|iskonto|fırsat|kampanya|avantaj|teklif|fiyat|indirimli|kazanç)\b/i.test(lower)
 
-    const isWholesaleAsserted = /\btoptan\b/i.test(clause) || /\btoptan\b/i.test(lower)
+    const isWholesaleAsserted = /\btoptan\b/i.test(clause)
 
-    // Detect if this clause or text refers to a specific product
+    // Strictly determine product from the claim's OWN sentence/clause; NEVER search outside the sentence
     let targetProduct: string | null = null
     for (const p of productFacts) {
-      if (clause.includes(p.name.toLowerCase()) || lower.includes(p.name.toLowerCase())) {
+      if (clause.includes(p.name.toLowerCase())) {
         targetProduct = p.name
         break
       }
     }
 
-    const check = verifyPercentageClaim(rate, isOfferContext, targetProduct, isWholesaleAsserted, facts)
+    const check = verifyPercentageClaim(rate, isOfferContext, targetProduct, isWholesaleAsserted, facts, clause)
     if (!check.verified) {
       unverified.push(check.reason || pm)
     }
@@ -318,6 +357,7 @@ export function validateClaims(
       unverified.push('indirim_yokken_indirim_iddiası')
     }
   }
+
 
 
   return {

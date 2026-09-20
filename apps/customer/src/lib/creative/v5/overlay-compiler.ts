@@ -14,24 +14,36 @@ export function deriveHookHeadline(
   facts: FactNormalizerOutput,
   ontology: OntologyClassification,
 ): string {
-  const discount = facts.verifiedFacts.discount
-  const benefits = facts.verifiedFacts.benefits
-  const features = facts.verifiedFacts.features
-  const rawBrief = facts.verifiedFacts.rawBrief.toLowerCase()
+  const verifiedFacts = facts.verifiedFacts
+  const productFacts = verifiedFacts.productFacts || []
+  const discountOffers = verifiedFacts.discountOffers || []
+  const benefits = verifiedFacts.benefits
+  const features = verifiedFacts.features
+  const rawBrief = verifiedFacts.rawBrief.toLowerCase()
 
-  // 1. If discount or promo is verified, highlight the concrete offer
+  // 1. Resolve selected product and its valid verified campaign record
+  const heroProduct =
+    productFacts.find((p) => p.name.toLowerCase() === verifiedFacts.offerName?.toLowerCase()) ||
+    productFacts[0]
+
+  const validCampaign =
+    heroProduct?.discounts?.[0] ||
+    discountOffers.find((d) => !d.productName || (heroProduct && d.productName === heroProduct.name)) ||
+    discountOffers[0]
+
+  if (validCampaign) {
+    const rate = validCampaign.rate
+    if (validCampaign.isWholesale) {
+      return `%${rate} TOPTAN İSKONTO`
+    }
+    return `%${rate} İNDİRİM`
+  }
+
+  // Fallback for non-percentage discount text
+  const discount = verifiedFacts.discount
   if (discount) {
-    if (discount.includes('%')) {
-      const match = discount.match(/%\s*\d+|\d+\s*%/)?.[0] || discount
-      const isWholesale = Boolean(
-        facts.verifiedFacts.isWholesale ||
-        facts.verifiedFacts.discountOffers?.some((d) => d.isWholesale) ||
-        /\btoptan\b/i.test(discount) ||
-        /\btoptan\b/i.test(rawBrief)
-      )
-      if (isWholesale) {
-        return `${match} TOPTAN İSKONTO`.toLocaleUpperCase('tr-TR')
-      }
+    const match = discount.match(/%\s*\d+|\d+\s*%/)?.[0]
+    if (match) {
       return `${match} İNDİRİM`.toLocaleUpperCase('tr-TR')
     }
     const words = discount.trim().split(/\s+/).filter(Boolean)
@@ -40,6 +52,7 @@ export function deriveHookHeadline(
     }
     return 'AVANTAJLI FİYAT TEKLİFİ'
   }
+
 
   // 2. Derive from verified benefits / features without slicing mid-clause
   if (benefits.length > 0) {

@@ -71,33 +71,37 @@ export function normalizeFacts(input: UserVideoInput): FactNormalizerOutput {
 
     if (p.promo) {
       const pText = p.promo.trim()
-      const isWholesale = /\btoptan\b/i.test(pText)
-      const matches = pText.match(/(?:%\s*(\d+)|(\d+)\s*%)/g) || []
-      for (const m of matches) {
-        const rate = Number(m.replace(/\D/g, ''))
-        const isMaterial = MATERIAL_KEYWORDS_REGEX.test(pText)
-        if (isMaterial) {
-          pMaterials.push({
-            productName: p.name,
-            claimType: 'material_composition',
-            rate,
-            rawText: m,
-            property: pText.match(MATERIAL_KEYWORDS_REGEX)?.[0] || 'malzeme',
-            isWholesale: false,
-          })
-        } else {
-          pDiscounts.push({
-            productName: p.name,
-            claimType: 'discount',
-            rate,
-            rawText: m,
-            property: 'indirim',
-            condition: isWholesale ? 'toptan' : null,
-            isWholesale,
-          })
+      const isNeg = NEGATION_KEYWORDS_REGEX.test(pText)
+      if (!isNeg) {
+        const isWholesale = /\btoptan\b/i.test(pText)
+        const matches = pText.match(/(?:%\s*(\d+)|(\d+)\s*%)/g) || []
+        for (const m of matches) {
+          const rate = Number(m.replace(/\D/g, ''))
+          const isMaterial = MATERIAL_KEYWORDS_REGEX.test(pText)
+          if (isMaterial) {
+            pMaterials.push({
+              productName: p.name,
+              claimType: 'material_composition',
+              rate,
+              rawText: m,
+              property: pText.match(MATERIAL_KEYWORDS_REGEX)?.[0] || 'malzeme',
+              isWholesale: false,
+            })
+          } else {
+            pDiscounts.push({
+              productName: p.name,
+              claimType: 'discount',
+              rate,
+              rawText: m,
+              property: 'indirim',
+              condition: isWholesale ? 'toptan' : null,
+              isWholesale,
+            })
+          }
         }
       }
     }
+
 
     const pCorpus = [p.description || '', ...(p.features || [])].join('. ')
     if (pCorpus) {
@@ -144,7 +148,7 @@ export function normalizeFacts(input: UserVideoInput): FactNormalizerOutput {
           : p.price?.includes('€')
           ? 'EUR'
           : null,
-      discount: p.promo || null,
+      discount: p.promo && !NEGATION_KEYWORDS_REGEX.test(p.promo) ? p.promo.trim() : null,
       discounts: pDiscounts,
       materials: pMaterials,
       features: p.features || [],
@@ -216,13 +220,12 @@ export function normalizeFacts(input: UserVideoInput): FactNormalizerOutput {
     }
   }
 
-  const isWholesale = /\btoptan\b/i.test(
-    `${briefText} ${customText} ${rawProducts.map((p) => `${p.name} ${p.promo || ''} ${p.description || ''}`).join(' ')}`
-  )
+  // isWholesale is strictly true iff any non-negated verified discount offer has isWholesale === true
+  const isWholesale = discountOffers.some((d) => d.isWholesale)
 
   const percentageFacts: StructuredPercentageFact[] = [...materialSpecs, ...discountOffers]
 
-  // 4. Price & Discount (Strict: only if explicitly supplied in input)
+  // 4. Price & Discount (Strict: only if explicitly supplied in input and not negated)
   let price: string | null = null
   let currency: string | null = null
   let discount: string | null = null
@@ -235,14 +238,18 @@ export function normalizeFacts(input: UserVideoInput): FactNormalizerOutput {
     else if (p.includes('€')) currency = 'EUR'
   }
 
-  if (mainProduct?.promo) {
+  if (mainProduct?.promo && !NEGATION_KEYWORDS_REGEX.test(mainProduct.promo)) {
     discount = mainProduct.promo.trim()
-  } else if (customText.match(/(%?\d+\s*indirim|iskonto|fırsat|kampanya|hediye)/i)) {
+  } else if (
+    customText.match(/(%?\d+\s*indirim|iskonto|fırsat|kampanya|hediye)/i) &&
+    !NEGATION_KEYWORDS_REGEX.test(customText)
+  ) {
     discount = customText
   } else if (discountOffers.length > 0) {
     const firstDisc = discountOffers[0]
     discount = `%${firstDisc.rate} ${firstDisc.isWholesale ? 'toptan iskonto' : 'indirim'}`
   }
+
 
   // 5. Risk Class Detection
   let riskClass: TrustAndRiskClass = 'standard'
