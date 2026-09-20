@@ -440,7 +440,7 @@ async function runCanaryCheck() {
     size: '1024x1024',
     platform: 'auto',
     workspace: 'Canary Watchdog',
-    customer: 'Sistem Nöbetçisi',
+    customer: 'Sistem',
     referenceImages: [],
     brandKit: null,
     optimizePrompt: false,

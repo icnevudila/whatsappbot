@@ -29,6 +29,12 @@ try {
 } catch (e) {
   recordSuccess = () => {};
 }
+
+const {
+  getCompanyChat,
+  setCompanyChat,
+  getExpectedChatTitle
+} = require('./chat_manager.js');
 let processVideoAudioAndSubtitles;
 try {
   ({ processVideoAudioAndSubtitles } = require('./auto_subtitle_processor.js'));
@@ -55,14 +61,17 @@ async function generatePromptWithChatGptWeb(port, { prompt, brandName, productNa
   const company = customer || brandName || brandKit.organization_name || brandKit.brand_name || 'İşletme';
   const logoDesc = getLogoVisualDescription(company, brandKit.logo_path, brandKit.hasExplicitLogo);
   const colors = brandKit.colors || { primary: '#111827', accent: '#2563eb' };
-  console.log(`[VideoGen -> ChatGPT Web] [Firma: ${company}] Port ${port} üzerinde temiz ChatGPT sekmesi açılıyor...`);
+  const savedChat = getCompanyChat(company, 'video');
+  const targetUrl = savedChat?.chatUrl || 'https://chatgpt.com/';
+  const isNewChat = !savedChat?.chatUrl;
+  console.log(`[VideoGen -> ChatGPT Web] [Firma: ${company}] [Video Prompt] Hedef URL: ${targetUrl}...`);
   let createdTabId = null;
   let ws = null;
   try {
-    // 1. Temiz ve bağımsız bir sekme aç
-    const newTabRes = await fetch(`http://127.0.0.1:${port}/json/new?https://chatgpt.com/`, {
+    // 1. Firma video sohbet sekmesini aç (Kayıtlı sohbet varsa doğrudan oraya girer, yoksa temiz açar)
+    const newTabRes = await fetch(`http://127.0.0.1:${port}/json/new?${targetUrl}`, {
       method: 'PUT',
-      signal: AbortSignal.timeout(5000)
+      signal: AbortSignal.timeout(8000)
     });
     if (!newTabRes.ok) throw new Error('Yeni ChatGPT sekmesi açılamadı');
     const newTab = await newTabRes.json();
@@ -257,6 +266,42 @@ ${require('./brand_learning_store.js').buildLearningPromptBlock(brand, product, 
               responseText = val.text;
             }
             if (val && !val.isGenerating && responseText.length > 80) {
+              if (isNewChat) {
+                try {
+                  const urlEval = await sendCmd("Runtime.evaluate", { expression: "window.location.href", returnByValue: true });
+                  const currentUrl = urlEval?.result?.value || '';
+                  if (currentUrl.includes('/c/')) {
+                    const pathParts = currentUrl.split('/');
+                    const cIndex = pathParts.indexOf('c');
+                    const convId = pathParts[cIndex + 1]?.split('?')[0];
+                    const expectedTitle = getExpectedChatTitle(company, 'video');
+
+                    await sendCmd("Runtime.evaluate", {
+                      expression: `(async () => {
+                        let token = '';
+                        try {
+                          const sessionRes = await fetch('/api/auth/session');
+                          const session = await sessionRes.json();
+                          token = session.accessToken;
+                        } catch (e) {}
+                        const headers = { 'Content-Type': 'application/json' };
+                        if (token) headers['Authorization'] = 'Bearer ' + token;
+                        await fetch('/backend-api/conversation/' + ${JSON.stringify(convId)}, {
+                          method: 'PATCH',
+                          headers,
+                          body: JSON.stringify({ title: ${JSON.stringify(expectedTitle)} })
+                        });
+                      })()`,
+                      awaitPromise: true
+                    });
+
+                    setCompanyChat(company, 'video', currentUrl, expectedTitle);
+                    console.log(`[VideoGen -> ChatGPT Web] [Firma: ${company}] Video chat kaydedildi: ${currentUrl}`);
+                  }
+                } catch (saveErr) {
+                  console.warn('[VideoGen -> ChatGPT Web] Video sohbet kaydetme hatası:', saveErr.message);
+                }
+              }
               clearTimeout(timeoutTimer);
               ws.close();
               console.log(`[VideoGen -> ChatGPT Web] ✅ ChatGPT Web senaryoyu üretti (${responseText.length} karakter)!`);
