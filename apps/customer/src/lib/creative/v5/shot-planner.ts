@@ -95,6 +95,34 @@ export function planShots(
     singleLocation = 'Professional, immaculate and bright service consultation workspace'
   }
 
+  // 2b. Brand Pillar & Color Grade (derived from sector/strategy — per SurePrompts best practice)
+  let brandPillar = `Reliable quality and professional delivery — a trusted brand in its category.`
+  let colorGradeDirective = `COLOR GRADE: Warm-neutral commercial grade, accurate product colors, clean lifted blacks — premium brand visual identity.`
+  let musicDirective = `subtle modern commercial groove starting sparse, building at midpoint, peaking on the brand reveal, then resolving to silence`
+
+  if (ontology.offerType === 'food_or_consumable') {
+    brandPillar = `Freshness and craft — this product is made with care and should feel delicious and inviting.`
+    colorGradeDirective = `COLOR GRADE: Warm artisan amber tones, rich saturated food colors, soft lifted highlights — appetizing and inviting.`
+    musicDirective = `warm acoustic guitar with light percussion starting gentle, building through product interaction, resolving warmly`
+  } else if (ontology.offerType === 'digital_product_or_saas') {
+    brandPillar = `Precision and ease — this platform removes friction and makes complex work feel effortless.`
+    colorGradeDirective = `COLOR GRADE: Cool-neutral with clean whites and precise midtones — modern tech-product visual identity.`
+    musicDirective = `minimal electronic motif, clean and forward-moving, entering at product reveal and building confidently`
+  } else if (
+    facts.sectorHint?.includes('inşaat') ||
+    facts.sectorHint?.includes('tuğla') ||
+    facts.verifiedFacts.offerName?.toLowerCase().includes('tuğla') ||
+    facts.verifiedFacts.rawBrief.toLowerCase().includes('tuğla')
+  ) {
+    brandPillar = `Industrial strength and reliable delivery — this brand is the structural backbone of serious construction projects.`
+    colorGradeDirective = `COLOR GRADE: Warm industrial amber, rich earth tones, deep material textures, documentary-grade lifted blacks — conveying strength, scale and reliability.`
+    musicDirective = `post-industrial orchestral groove with driving percussion, building from sparse at opening to full-bodied at product hero reveal, resolving on brand close`
+  } else if (strategy.primary === 'scale_and_availability' || ontology.proofMode === 'scale_or_inventory') {
+    brandPillar = `Scale and dependability — this brand delivers at volume with consistent quality and speed.`
+    colorGradeDirective = `COLOR GRADE: Bold warm-neutral commercial grade, strong material textures, clean highlights — conveying industrial capability and reliability.`
+    musicDirective = `confident commercial rhythm building steadily from opening, peaking during product action, resolving cleanly on brand close`
+  }
+
   // 3. Three Shot Kadraj Setup (Adapts to camera mode)
   const isContinuous = cameraMode === 'continuous_take'
 
@@ -105,7 +133,7 @@ export function planShots(
     framing: isContinuous
       ? 'Continuous take: wide-medium framing initiating the continuous slow forward push-in route'
       : 'Wide dynamic establishing commercial framing with natural ambient motion',
-    subjectAction: hook.visualEventDescription,
+    subjectAction: `${hook.visualEventDescription} A real professional person (clear recognizable face, industry-appropriate attire, confident purposeful body language) is actively and prominently visible in the foreground engaging with the product or activity.`,
     cameraMotion: isContinuous
       ? 'The camera begins a single unbroken slow forward push-in route gliding smoothly toward the active subject'
       : 'Smooth dynamic commercial push-in capturing the active environment and initial visual hook',
@@ -170,8 +198,8 @@ export function planShots(
   // 5. Audio Directive (Directly wires generated voiceover text into Veo prompt)
   const cleanVoText = voiceoverText ? voiceoverText.trim().replace(/["']/g, '') : null
   const audioDirective = cleanVoText
-    ? `AUDIO: Professional crystal-clear Turkish voiceover: "${cleanVoText}". Accompanying natural ambient foley sound effects matching the physical action, accompanied by modern subtle commercial background rhythm.`
-    : `AUDIO: Natural ambient foley sound effects matching the physical action, accompanied by modern subtle commercial background rhythm.`
+    ? `AUDIO: Professional crystal-clear Turkish male commercial narrator delivers the following line EXACTLY ONCE between 0.5s and 5.5s with zero repetition, zero looping, zero echo, and zero re-entry: \"${cleanVoText}\". The narration ends cleanly and conclusively before 5.5 seconds. From 5.5s to 8.0s: compelling modern commercial music groove and natural ambient foley sounds carry the remaining seconds to a polished, confident conclusion — zero voice, zero narration rerun.`
+    : `AUDIO: No voiceover. Natural ambient foley sound effects matching the physical action, accompanied by modern subtle commercial background rhythm throughout all 8 seconds.`
 
   // 6. Camera Directive
   const cameraDirective = isContinuous
@@ -185,6 +213,7 @@ export function planShots(
   // 7. Assemble Technical Veo English Prompt
   const veoPrompt = [
     `FORMAT: 9:16 vertical commercial video, exactly 8.0 seconds total runtime.`,
+    `BRAND PILLAR AND EMOTIONAL INTENT: ${brandPillar} Every visual, lighting, and audio choice should serve this emotional intent directly.`,
     `SUBJECT AND REFERENCE LOCK: Focal subject is "${subject}". ${
       facts.assets.productReference
         ? 'A reference product photo is provided; preserve physical geometry, materials, casing, and colors exactly with zero mutation.'
@@ -196,7 +225,8 @@ export function planShots(
     `SHOT 3 (5.8s - 8.0s - HERO CLOSE): ${shot3.framing}. ${shot3.subjectAction}. ${shot3.cameraMotion}.`,
     ...(brandRevealDirective ? [brandRevealDirective] : []),
     cameraDirective,
-    `LIGHT AND PHYSICS: Natural lighting, realistic physical gravity and authentic material reflections.`,
+    `LIGHT AND PHYSICS: Natural lighting, realistic physical gravity and authentic material reflections. ${colorGradeDirective}`,
+    `MUSIC SHAPE: ${musicDirective}.`,
     audioDirective,
     brandName
       ? `TEXT POLICY: No newly generated text or promotional advertising copy (strictly NO prices, NO discount badges, NO phone numbers, NO website URLs, NO promotional captions, NO subtitles, NO floating letters, NO banners, NO CTA badges). The verified brand name "${brandName}", the original corporate logo, and pre-existing product labels are MANDATORY on-screen visual elements directly in the video. Real physical brand identity is strictly preserved: pre-existing printed labels and authentic branding on reference products remain as-is without modification. Do not redesign or invent a logo.`

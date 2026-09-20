@@ -542,18 +542,22 @@ export function writeVoiceover(
     formula = 'opportunity_action'
     const fabrikaAllowed = isClaimVerified('fabrika', facts) || isClaimVerified('fabrikadan', facts)
     const hizliAllowed = isClaimVerified('hızlı', facts)
+    const toptanAllowed = isClaimVerified('toptan', facts)
     const prefix = fabrikaAllowed ? 'Fabrikadan doğrudan şantiyenize ' : 'Şantiyenize doğrudan '
     const hizliWord = hizliAllowed ? 'hızlı ' : ''
 
     if (discount) {
-      const toptanAllowed = isClaimVerified('toptan', facts)
       line = brand
-        ? (toptanAllowed ? `${brand} ${subject}, toptan alımlarda avantajla şantiyenizde.` : `${brand} ${subject}, avantajlı fiyatla şantiyenizde.`)
-        : `${prefix}${subject}, avantajlı fiyatla şantiyenizde.`
+        ? (toptanAllowed
+          ? `${brand} ${subject} ile şantiyenize toptan avantajlı fiyatla fabrika hızında sevkiyat. Hemen fiyat alın.`
+          : `${brand} ${subject} ile şantiyenize avantajlı fiyatla doğrudan hızlı teslimat. Toplu sipariş için yazın.`)
+        : (toptanAllowed
+          ? `${prefix}${subject}, toptan avantajlı fiyatla kalite ve hız bir arada. Hemen fiyat teklifi alın.`
+          : `${prefix}${hizliWord}${subject} avantajlı fiyatla şantiyenizde. Detaylar için yazın.`)
     } else {
       line = brand
-        ? `${prefix}${brand} ${subject} sevkiyatı.`
-        : `${prefix}${hizliWord}${subject} sevkiyatı.`
+        ? `${prefix}${brand} ${subject} ile güçlü yapı, güvenilir sevkiyat ve yüksek dayanım garantisi. Toplu sipariş için yazın.`
+        : `${prefix}${hizliWord}${subject} ile güvenilir yapı ve yüksek dayanım. Detaylı bilgi için yazın.`
     }
   } else if (strategy.primary === 'problem_solution' || ontology.primaryValue === 'reduces_effort') {
     formula = 'problem_solution'
@@ -591,8 +595,8 @@ export function writeVoiceover(
   } else {
     formula = 'benefit_offer'
     line = brand
-      ? `${brand} ile ${subject}, detaylı bilgi için yazın.`
-      : `${subject} kalitesi şimdi projenizde, detaylar için yazın.`
+      ? `${brand} ${subject} ile güvenilir kalite ve profesyonel hizmet bir arada. Detaylı bilgi almak için bizimle iletişime geçin.`
+      : `${subject} ile güvenilir kalite ve profesyonel hizmet avantajını yaşayın. Detaylı bilgi için hemen yazın.`
   }
 
   // 2. Generic Cliché Check & Auto-Repair
@@ -617,8 +621,25 @@ export function writeVoiceover(
   let { syllableCount, durationSeconds, safetyMarginSeconds } = estimateSpeechDuration(line)
   let wordCount = line.split(/\s+/).filter(Boolean).length
 
+  // 4b. MINIMUM LENGTH GUARD: If under 9 words, Veo will loop the narration to fill silence.
+  // Extend the line with a CTA suffix to guarantee at least 5+ seconds of speech.
+  if (wordCount < 9) {
+    const ctaSuffix = brand
+      ? ` Toplu sipariş ve detaylı bilgi için hemen bizimle iletişime geçin.`
+      : ` Detaylı bilgi ve fiyat teklifi için hemen yazın.`
+    if (!line.endsWith('.')) line = line.slice(0, -1)
+    line = line.replace(/\.$/, '') + ctaSuffix
+    line = cleanDuplicateWords(line)
+    if (!line.endsWith('.')) line += '.'
+    const reEstMin = estimateSpeechDuration(line)
+    syllableCount = reEstMin.syllableCount
+    durationSeconds = reEstMin.durationSeconds
+    safetyMarginSeconds = reEstMin.safetyMarginSeconds
+    wordCount = line.split(/\s+/).filter(Boolean).length
+  }
+
   // 5. Grammatical Rewrite if exceeding duration or word limits (NEVER SLICE)
-  if (wordCount > 13 || durationSeconds > 7.2) {
+  if (wordCount > 16 || durationSeconds > 7.2) {
     line = rewriteVoiceoverGrammatically(brand || null, subject, facts, ontology)
     line = cleanDuplicateWords(line)
     if (!line.endsWith('.')) line += '.'
