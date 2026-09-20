@@ -21,16 +21,16 @@ export { analyzeOntology } from './ontology-analyzer'
 export { selectCreativeStrategy } from './strategy-selector'
 export { selectHook } from './hook-selector'
 export { planShots, V5_STANDARD_NEGATIVES } from './shot-planner'
-export { writeVoiceover } from './voiceover-writer'
-export { compileOverlay } from './overlay-compiler'
+export { writeVoiceover, validateClaims, countTurkishSyllables, estimateSpeechDuration } from './voiceover-writer'
+export { compileOverlay, deriveHookHeadline } from './overlay-compiler'
 export { validateAndRepair } from './validator'
 
 /**
  * Deterministic V5 Video Compiler Pipeline
- * Fully executes the 10-step modular chain with zero runtime external dependencies.
+ * Fully executes the modular chain with zero runtime external dependencies.
  */
 export function compileDeterministicV5(input: UserVideoInput): V5FinalOutputPackage {
-  // 1. Fact Normalizer
+  // 1. Fact Normalizer (Extracts facts, preserves ctaText, deadline, deliveryArea)
   const facts = normalizeFacts(input)
 
   // 2. Offer & Objective Analyzer (Universal Ontology)
@@ -39,26 +39,29 @@ export function compileDeterministicV5(input: UserVideoInput): V5FinalOutputPack
   // 3. Creative Strategy Selector
   const strategy = selectCreativeStrategy(ontology)
 
-  // 4. Hook Selector (Affordance + Proof Mode)
-  const hook = selectHook(ontology, facts.verifiedFacts.offerName)
+  // 4. Hook Selector (3 dynamic candidates scored on 5 criteria, zero stereotypes)
+  const hook = selectHook(ontology, facts)
 
-  // 5. Shot Planner (8s 3-kadraj + single location)
-  const shotPlan = planShots(facts, ontology, strategy, hook)
-
-  // 6. Turkish Voiceover Writer (Target 8-13 words, anti-cliché, non-devrik)
+  // 5. Turkish Voiceover Writer (Target 8-13 words, real claim validation, syllable duration)
   let voiceover = writeVoiceover(facts, ontology, strategy)
 
-  // 7. Overlay & Subtitle Compiler (Decoupled text layer)
+  // 6. Shot Planner (8s 3-kadraj + single location + VO wired into Veo prompt AUDIO directive + cameraMode)
+  let shotPlan = planShots(facts, ontology, strategy, hook, voiceover.text, input.cameraMode)
+
+  // 7. Overlay & Subtitle Compiler (2-4 word benefit headline, decoupled text layer)
   const overlay = compileOverlay(facts, ontology, voiceover)
 
-  // 8. Deterministic Validator & Modular Auto-Repair
+  // 8. Deterministic Hard-Fail Validator & Modular Auto-Repair
   const validationResult = validateAndRepair(facts, ontology, hook, shotPlan, voiceover, overlay)
 
   if (validationResult.repairedVoiceover) {
     voiceover = validationResult.repairedVoiceover
   }
+  if (validationResult.repairedShotPlan) {
+    shotPlan = validationResult.repairedShotPlan
+  }
 
-  // 9. Veo Raw-Video Prompt
+  // 9. Veo Raw-Video Prompt (Includes exact VO directive)
   const veoPrompt = shotPlan.veoEnglishPrompt
 
   // 10. Final Output Package

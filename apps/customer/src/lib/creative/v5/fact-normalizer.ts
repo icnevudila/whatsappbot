@@ -127,6 +127,11 @@ export function normalizeFacts(input: UserVideoInput): FactNormalizerOutput {
 
   const phones = (input.phones || []).map((p) => p.phone).filter(Boolean)
 
+  // 9. Campaign Deadline & Delivery Area (Preserve explicit or detect from brief)
+  const campaignDeadline = input.campaignDeadline?.trim() || null
+  const deliveryArea = input.deliveryArea?.trim() || null
+  const ctaText = input.ctaText?.trim() || null
+
   const verifiedFacts: VerifiedFacts = {
     brandName: input.brandName?.trim() || null,
     offerName,
@@ -136,8 +141,9 @@ export function normalizeFacts(input: UserVideoInput): FactNormalizerOutput {
     price,
     currency,
     discount,
-    campaignDeadline: null,
-    deliveryArea: null,
+    campaignDeadline,
+    deliveryArea,
+    ctaText,
     ctaDestination: input.ctaDestination || (phones.length ? `WhatsApp: ${phones[0]}` : null),
     phones,
     rawBrief: briefText,

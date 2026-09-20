@@ -37,11 +37,20 @@ export function planShots(
   ontology: OntologyClassification,
   strategy: CreativeStrategyOutput,
   hook: HookPlanOutput,
+  voiceoverText?: string | null,
+  cameraModeInput?: 'continuous_take' | 'three_cut',
 ): ShotPlanOutput {
   const brand = facts.verifiedFacts.brandName || 'Brand'
   const subject = facts.verifiedFacts.offerName || 'the product or service'
 
-  // 1. Single Location Determination
+  // 1. Determine Camera Mode
+  const cameraMode: 'continuous_take' | 'three_cut' =
+    cameraModeInput ||
+    (strategy.primary === 'sensory_desire' || strategy.primary === 'craftsmanship'
+      ? 'continuous_take'
+      : 'three_cut')
+
+  // 2. Single Location Determination
   let singleLocation = 'Clean, modern and sunlit commercial setting tailored to the subject'
   if (ontology.offerType === 'food_or_consumable') {
     singleLocation = 'Warm artisan kitchen presentation counter with rustic wooden textures'
@@ -57,14 +66,18 @@ export function planShots(
     singleLocation = 'Professional, immaculate and bright service consultation workspace'
   }
 
-  // 2. Three Shot Kadraj Setup
+  // 3. Three Shot Kadraj Setup (Adapts to camera mode)
+  const isContinuous = cameraMode === 'continuous_take'
+
   const shot1: ShotItem = {
     shotNumber: 1,
     timing: { from: 0.0, to: 2.2 },
     role: 'visual_hook',
     framing: 'Macro 100mm close-up',
     subjectAction: hook.visualEventDescription,
-    cameraMotion: 'Subtle smooth push-in directly toward focal action',
+    cameraMotion: isContinuous
+      ? 'Subtle smooth push-in beginning the single continuous uninterrupted camera take'
+      : 'Tight macro close-up framing with smooth push-in directly toward focal action',
     lightingAndPhysics: 'Natural daylight with soft specular highlights, shallow depth of field (f/1.8)',
   }
 
@@ -74,7 +87,9 @@ export function planShots(
     role: 'proof_or_action',
     framing: 'Medium dynamic tracking',
     subjectAction: `The focal subject (${subject}) performs its core verified function smoothly in realistic physical environment.`,
-    cameraMotion: 'Steady gimbal tracking maintaining continuous lock on the subject',
+    cameraMotion: isContinuous
+      ? 'Continuous seamless camera glide pulling out slightly to track subject action without cut'
+      : 'Cut to medium dynamic framing, steady gimbal tracking maintaining continuous lock on the subject',
     lightingAndPhysics: 'Balanced natural illumination, true-to-life reflections and realistic physics',
   }
 
@@ -84,18 +99,31 @@ export function planShots(
     role: 'hero_close',
     framing: 'Clean hero medium-wide',
     subjectAction: `The subject (${subject}) rests in pristine final state, delivering quiet confidence and satisfaction.`,
-    cameraMotion: 'Gentle crane rise revealing complete focal scene',
+    cameraMotion: isContinuous
+      ? 'Continuous unbroken glide rising gently into final hero perspective to conclude the take'
+      : 'Cut to clean hero wide framing, gentle crane rise revealing complete focal scene',
     lightingAndPhysics: 'Warm rim light, cinematic contrast and clean composition',
   }
 
-  // 3. Brand Identity Mode
+  // 4. Brand Identity Mode
   const brandIdentityMode = facts.assets.logoReference
     ? 'reference_locked'
     : facts.verifiedFacts.brandName
     ? 'name_for_voice_and_overlay_only'
     : 'none'
 
-  // 4. Assemble Technical Veo English Prompt
+  // 5. Audio Directive (Directly wires generated voiceover text into Veo prompt)
+  const cleanVoText = voiceoverText ? voiceoverText.trim().replace(/["']/g, '') : null
+  const audioDirective = cleanVoText
+    ? `AUDIO: Professional crystal-clear Turkish voiceover: "${cleanVoText}". Accompanying natural ambient foley sound effects matching the physical action, accompanied by modern subtle commercial background rhythm.`
+    : `AUDIO: Natural ambient foley sound effects matching the physical action, accompanied by modern subtle commercial background rhythm.`
+
+  // 6. Camera Directive
+  const cameraDirective = isContinuous
+    ? `CAMERA MOVEMENT: continuous_take - Single unbroken camera movement throughout the entire 8.0 seconds with zero cuts or abrupt scene transitions.`
+    : `CAMERA MOVEMENT: three_cut - Three distinct controlled camera framings connected by clean cinematic cut transitions.`
+
+  // 7. Assemble Technical Veo English Prompt
   const veoPrompt = [
     `FORMAT: 9:16 vertical commercial video, exactly 8.0 seconds total runtime.`,
     `SUBJECT AND REFERENCE LOCK: Focal subject is "${subject}". ${
@@ -107,9 +135,9 @@ export function planShots(
     `SHOT 1 (0.0s - 2.2s - VISUAL HOOK): ${shot1.framing}. ${shot1.subjectAction}. ${shot1.cameraMotion}.`,
     `SHOT 2 (2.2s - 5.8s - PROOF AND ACTION): ${shot2.framing}. ${shot2.subjectAction}. ${shot2.cameraMotion}.`,
     `SHOT 3 (5.8s - 8.0s - HERO CLOSE): ${shot3.framing}. ${shot3.subjectAction}. ${shot3.cameraMotion}.`,
-    `CAMERA MOVEMENT: One continuous smooth camera motion with zero abrupt jump cuts.`,
+    cameraDirective,
     `LIGHT AND PHYSICS: Natural lighting, realistic physical gravity and authentic material reflections.`,
-    `AUDIO: Natural ambient foley sound effects matching the physical action, accompanied by modern subtle commercial background rhythm.`,
+    audioDirective,
     `TEXT POLICY: No newly generated text, captions, prices, phone numbers, calls to action, signs or logos. Preserve only text and branding already visible on a supplied reference asset; do not redesign or invent it.`,
     `NEGATIVE CONSTRAINTS: ${V5_STANDARD_NEGATIVES}`,
   ].join('\n')
@@ -117,11 +145,12 @@ export function planShots(
   return {
     durationSeconds: 8,
     aspectRatio: '9:16',
+    cameraMode,
     singleLocation,
     shots: [shot1, shot2, shot3],
     veoEnglishPrompt: veoPrompt,
     negativePrompt: V5_STANDARD_NEGATIVES,
     brandIdentityMode,
-    reasonCode: `shotplan_8s_${strategy.primary}_location_${ontology.offerType}`,
+    reasonCode: `shotplan_8s_${cameraMode}_${strategy.primary}_location_${ontology.offerType}`,
   }
 }

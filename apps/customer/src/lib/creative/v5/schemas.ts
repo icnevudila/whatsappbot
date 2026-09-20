@@ -128,6 +128,23 @@ export type HookFamily =
   | 'sensory_motion'
   | 'before_after_only_if_truthful_and_safe'
 
+// Hook Candidate for Multi-candidate scoring
+export interface HookCandidate {
+  id: string
+  type: 'action_focused' | 'result_reveal_focused' | 'curiosity_or_scale_focused'
+  family: HookFamily
+  visualEventDescription: string
+  scores: {
+    actionSpeed: number         // 1-10: immediate tangible motion <=0.5s
+    relevanceToOffer: number     // 1-10: direct tie to verified product/value
+    visualImpact: number         // 1-10: striking framing, tactile depth
+    physicalPlausibility: number // 1-10: realistic physics, no CGI uncanny valley
+    clarityWithoutText: number   // 1-10: communicates clearly with zero dynamic text cards
+  }
+  totalScore: number
+  reason: string
+}
+
 // Raw User Input Interface
 export interface UserVideoInput {
   brandName?: string | null
@@ -137,6 +154,9 @@ export interface UserVideoInput {
   customText?: string | null
   ctaText?: string | null
   ctaDestination?: string | null
+  campaignDeadline?: string | null
+  deliveryArea?: string | null
+  cameraMode?: 'continuous_take' | 'three_cut'
   products?: Array<{
     name: string
     description?: string | null
@@ -163,6 +183,7 @@ export interface VerifiedFacts {
   discount: string | null
   campaignDeadline: string | null
   deliveryArea: string | null
+  ctaText: string | null
   ctaDestination: string | null
   phones: string[]
   rawBrief: string
@@ -213,6 +234,8 @@ export interface HookPlanOutput {
   physicallyPlausible: boolean
   visualEventDescription: string
   reasonCode: string
+  candidates: HookCandidate[]
+  selectedCandidate: HookCandidate
 }
 
 // Shot Plan
@@ -229,6 +252,7 @@ export interface ShotItem {
 export interface ShotPlanOutput {
   durationSeconds: 8
   aspectRatio: '9:16'
+  cameraMode: 'continuous_take' | 'three_cut'
   singleLocation: string
   shots: [ShotItem, ShotItem, ShotItem]
   veoEnglishPrompt: string
@@ -241,6 +265,9 @@ export interface ShotPlanOutput {
 export interface VoiceoverOutput {
   text: string
   wordCount: number
+  syllableCount: number
+  estimatedDurationSeconds: number
+  safetyMarginSeconds: number
   strategy: string
   voiceCharacter: {
     gender: 'auto' | 'neutral' | 'male' | 'female'
@@ -279,6 +306,7 @@ export interface OverlayPlanOutput {
 export interface HardFailChecks {
   durationTotalsEightSeconds: boolean
   verticalFormatSpecified: boolean
+  cameraModeMatch: boolean
   hasOnePrimaryIdea: boolean
   hasOnePrimaryAction: boolean
   locationContinuityValid: boolean

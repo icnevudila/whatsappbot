@@ -22,7 +22,7 @@ export function analyzeOntology(facts: FactNormalizerOutput): OntologyClassifica
   let offerType: OfferType = 'physical_product'
 
   if (
-    text.match(/(burger|döner|pizza|tatlı|kahve|pasta|kebap|\byemek\b|yiyecek|içecek|çikolata|lezzet|kahvaltı|gıda|restoran|kafe)/) &&
+    text.match(/(burger|döner|pizza|tatlı|kahve|pasta|kebap|köfte|\byemek\b|yiyecek|içecek|çikolata|lezzet|kahvaltı|gıda|restoran|kafe)/) &&
     !text.match(/(yemek masası|yemek odası|mama sandalyesi)/)
   ) {
     offerType = 'food_or_consumable'
