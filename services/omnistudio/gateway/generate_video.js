@@ -1391,7 +1391,7 @@ print(json.dumps([it['name'] for it in items]))" 2>/dev/null`).toString();
     try { fs.copyFileSync(rawPath, cleanNosubPath); } catch(_) {}
   }
 
-  if (options.includeOverlay !== false && fs.existsSync(rawPath)) {
+  if (options.includeOverlay === true && fs.existsSync(rawPath)) {
     try {
       const brandKit = await getActiveBrandKit(options.orgId, options.brandName || options.customer);
       const brandName = (options.brandName || options.customer || brandKit?.organization_name || 'İşletme').trim();

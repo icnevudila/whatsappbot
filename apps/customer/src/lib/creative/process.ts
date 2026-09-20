@@ -259,8 +259,42 @@ export async function processCreativeGeneration(
       }
 
       const { overlay } = buildVideoPrompt(snapshot)
-      const { generateBackgroundMasterPrompt } = await import('./video-scenario')
-      const videoPrompt = await generateBackgroundMasterPrompt(snapshot, bag)
+      let videoPrompt: string
+      try {
+        const { compileDeterministicV5 } = await import('./v5')
+        const v5Result = compileDeterministicV5({
+          brandName: overlay.brandName || snapshot.brandKit?.name || null,
+          brief: snapshot.brief || 'İşletme reklam filmi',
+          customText: snapshot.customText || null,
+          ctaText: overlay.ctaText || null,
+          campaignDeadline: snapshot.dateRange || null,
+          deliveryArea: (snapshot as any).deliveryArea || null,
+          cameraMode: 'continuous_take',
+          products: (snapshot.products || []).map((p) => ({
+            name: p.name,
+            imageUrl: p.imageUrl || productImageUrl,
+            price: p.price,
+            promo: p.promo,
+            description: p.description,
+          })),
+          productImageUrl,
+          logoUrl,
+          brandKit: {
+            name: overlay.brandName || snapshot.brandKit?.name,
+            colors: snapshot.brandKit?.colors,
+            fonts: snapshot.brandKit?.fonts,
+            logoUrl,
+          },
+          videoSpeech: (snapshot as any).videoSpeech !== false,
+        })
+        videoPrompt = v5Result.veoPrompt
+        console.log('[CreativeProcess] V5 Video Engine promptu başarıyla derlendi (continuous_take):', videoPrompt.slice(0, 100))
+      } catch (v5Err) {
+        console.warn('[CreativeProcess] V5 fallback, legacy scenario kullanılıyor:', v5Err)
+        const { generateBackgroundMasterPrompt } = await import('./video-scenario')
+        videoPrompt = await generateBackgroundMasterPrompt(snapshot, bag)
+      }
+
       const gatewayUrl = (process.env.OMNISTUDIO_GATEWAY_URL || 'http://167.233.201.31:3456').replace(/\/$/, '')
 
       const vidRes = await fetch(`${gatewayUrl}/v1/videos/generations`, {
@@ -278,7 +312,7 @@ export async function processCreativeGeneration(
           productImageUrl,
           logoUrl,
           includeLogo: snapshot.useLogo !== false,
-          includeOverlay: true,
+          includeOverlay: false,
           subTitle: overlay.subTitle,
           offerTitle: overlay.offerTitle,
           offerDetails: overlay.offerDetails,
