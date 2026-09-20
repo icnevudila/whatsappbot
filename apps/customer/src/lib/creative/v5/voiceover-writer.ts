@@ -117,49 +117,138 @@ export function isClaimVerified(term: string, facts: FactNormalizerOutput): bool
  * Validates that a percentage claim is truly a discount/promo and not a material spec
  * (e.g. "%100 pamuk" is not a discount, and "%50 indirim" is distinct from "%5 indirim").
  */
-function isPercentageDiscountVerified(numStr: string, facts: FactNormalizerOutput): { verified: boolean; reason?: string } {
-  const corpus = [
-    facts.verifiedFacts.rawBrief,
-    facts.verifiedFacts.discount || '',
-    ...(facts.verifiedFacts.features || []),
-    ...(facts.verifiedFacts.benefits || []),
-  ].join(' ')
+/**
+ * Verifies a percentage claim using structured (product + claimType + rate + condition) matching.
+ * - Separates material composition specs from discount offers.
+ * - Prevents cross-product discount leakage (Product A's discount cannot apply to Product B).
+ * - Enforces condition matching (e.g. toptan condition cannot be asserted unless explicitly verified).
+ */
+export function verifyPercentageClaim(
+  rate: number,
+  isDiscountClaim: boolean,
+  targetProduct: string | null,
+  isWholesaleAsserted: boolean,
+  facts: FactNormalizerOutput,
+): { verified: boolean; reason?: string } {
+  const verifiedFacts = facts.verifiedFacts
+  const materialSpecs = verifiedFacts.materialSpecs || []
+  const discountOffers = verifiedFacts.discountOffers || []
+  const productFacts = verifiedFacts.productFacts || []
 
-  // Strict numeric boundary: %5 does not match %50 or %15
-  const regex = new RegExp(`(?:%\\s*|\\byüzde\\s*)(?<!\\d)${numStr}(?!\\d)|(?<!\\d)${numStr}(?!\\d)\\s*%`, 'gi')
-  let match: RegExpExecArray | null
-  let foundDiscountMatch = false
-  let foundOnlyMaterialMatch = false
+  // 1. If text is claiming a discount/offer with %rate
+  if (isDiscountClaim) {
+    // Check if this percentage exists ONLY as a material composition spec
+    const hasMaterialSpec = materialSpecs.some((m) => m.rate === rate)
+    const matchingDiscounts = discountOffers.filter((d) => d.rate === rate)
 
-  while ((match = regex.exec(corpus)) !== null) {
-    const start = Math.max(0, match.index - 40)
-    const end = Math.min(corpus.length, match.index + match[0].length + 40)
-    const window = corpus.slice(start, end).toLowerCase()
-
-    // Check negation (e.g. "indirim yok", "%15 indirim yapılmamaktadır")
-    const isNegated = /\b(yok|değil|yapmıyoruz|yapılmaz|yapılmamaktadır|bulunmamaktadır|hariç|olmayan|mümkün değil)\b/i.test(window)
-    if (isNegated) continue
-
-    const hasDiscountContext =
-      /\b(indirim|iskonto|fırsat|kampanya|avantaj|fiyat|fiyatla|teklif|ucuz|indirimli|hediye)\b/i.test(window) ||
-      Boolean(facts.verifiedFacts.discount && new RegExp(`(?<!\\d)${numStr}(?!\\d)`).test(facts.verifiedFacts.discount))
-
-    const hasMaterialContext =
-      /\b(pamuk|killi|yün|alkol|nem|elyaf|keten|saf|saflık|oran|içerik|materyal|kompozisyon|asit|yağ|şeker|protein|gram|kilo|ton|metre)\b/i.test(window)
-
-    if (hasDiscountContext) {
-      foundDiscountMatch = true
-      break
-    } else if (hasMaterialContext) {
-      foundOnlyMaterialMatch = true
+    if (hasMaterialSpec && matchingDiscounts.length === 0) {
+      const mat = materialSpecs.find((m) => m.rate === rate)
+      return {
+        verified: false,
+        reason: `%${rate} ${mat?.property || 'materyal'} oranıdır, indirim olarak doğrulanamaz`,
+      }
     }
+
+    if (matchingDiscounts.length === 0) {
+      // Fallback check against verifiedFacts.discount string if structured array was empty
+      if (verifiedFacts.discount) {
+        const discMatch = new RegExp(`(?:%\\s*|\\byüzde\\s*)(?<!\\d)${rate}(?!\\d)|(?<!\\d)${rate}(?!\\d)\\s*%`, 'i')
+        if (discMatch.test(verifiedFacts.discount)) {
+          if (isWholesaleAsserted && !verifiedFacts.isWholesale && !/\btoptan\b/i.test(verifiedFacts.discount)) {
+            return { verified: false, reason: `%${rate} toptan koşulu doğrulanmamış` }
+          }
+          return { verified: true }
+        }
+      }
+      return {
+        verified: false,
+        reason: `%${rate} indirim oranı brief'te doğrulanmamış`,
+      }
+    }
+
+    // 2. Cross-Product Discount Leakage Prevention:
+    // If a specific product was mentioned or targeted in the claim
+    if (targetProduct) {
+      const targetNormalized = targetProduct.toLowerCase().trim()
+      const pf = productFacts.find((p) => p.name.toLowerCase().trim() === targetNormalized)
+      if (pf) {
+        const productHasRate = pf.discounts.some((d) => d.rate === rate)
+        const isStoreWideDiscount = matchingDiscounts.some((d) => !d.productName)
+        const ownerProduct = productFacts.find(
+          (p) => p.name.toLowerCase().trim() !== targetNormalized && p.discounts.some((d) => d.rate === rate)
+        )
+
+        if (!productHasRate) {
+          if (ownerProduct && !isStoreWideDiscount) {
+            return {
+              verified: false,
+              reason: `%${rate} indirim ${ownerProduct.name} ürününe aittir, ${pf.name} için uygulanamaz`,
+            }
+          }
+          if (!isStoreWideDiscount) {
+            return {
+              verified: false,
+              reason: `%${rate} indirim ${pf.name} ürünü için tanımlı değildir`,
+            }
+          }
+        }
+      }
+    } else {
+      // If no specific product was named in the sentence, but multiple products exist
+      // and this discount is tied strictly to a non-hero product
+      if (productFacts.length > 1 && verifiedFacts.offerName) {
+        const primaryPf = productFacts.find((p) => p.name.toLowerCase() === verifiedFacts.offerName?.toLowerCase())
+        if (primaryPf && !primaryPf.discounts.some((d) => d.rate === rate)) {
+          const owner = productFacts.find((p) => p.discounts.some((d) => d.rate === rate))
+          if (owner && owner.name.toLowerCase() !== primaryPf.name.toLowerCase()) {
+            return {
+              verified: false,
+              reason: `%${rate} indirim ${owner.name} ürününe aittir, ${primaryPf.name} için uygulanamaz`,
+            }
+          }
+        }
+      }
+    }
+
+    // 3. Wholesale condition check
+    if (isWholesaleAsserted) {
+      const hasWholesaleMatch = matchingDiscounts.some((d) => d.isWholesale) || Boolean(verifiedFacts.isWholesale)
+      if (!hasWholesaleMatch) {
+        return {
+          verified: false,
+          reason: `%${rate} toptan koşulu doğrulanmamış (yalnızca perakende/standart indirim geçerli)`,
+        }
+      }
+    }
+
+    return { verified: true }
   }
 
-  if (foundDiscountMatch) return { verified: true }
-  if (foundOnlyMaterialMatch) {
-    return { verified: false, reason: `%${numStr} materyal/içerik oranıdır, indirim olarak doğrulanamaz` }
+  // If text is asserting material spec (e.g. %50 pamuk)
+  const hasMaterialSpec = materialSpecs.some((m) => m.rate === rate)
+  if (hasMaterialSpec) {
+    if (targetProduct) {
+      const targetNormalized = targetProduct.toLowerCase().trim()
+      const pf = productFacts.find((p) => p.name.toLowerCase().trim() === targetNormalized)
+      if (pf && !pf.materials.some((m) => m.rate === rate)) {
+        return {
+          verified: false,
+          reason: `%${rate} materyal oranı ${pf.name} ürünü için tanımlı değildir`,
+        }
+      }
+    }
+    return { verified: true }
   }
-  return { verified: false, reason: `%${numStr} indirim oranı brief'te doğrulanmamış` }
+
+  // Fallback check against rawBrief with boundary check
+  if (isClaimVerified(`%${rate}`, facts)) {
+    return { verified: true }
+  }
+
+  return {
+    verified: false,
+    reason: `%${rate} özelliği brief'te doğrulanmamış`,
+  }
 }
 
 /**
@@ -185,21 +274,38 @@ export function validateClaims(
     }
   }
 
-  // 2. Check numeric discount & percentage claims (e.g. %15, %20, %50, 50%)
+  // 2. Check numeric discount & percentage claims (e.g. %15, %20, %50, 50%) via tuple verification
   const percentMatches = text.match(/(?:%\s*\d+|\d+\s*%)/g) || []
-  for (const pm of percentMatches) {
-    const num = pm.replace(/\D/g, '')
-    const isOfferContext = /\b(indirim|iskonto|fırsat|kampanya|avantaj|teklif|fiyat|indirimli)\b/i.test(lower)
+  const productFacts = facts.verifiedFacts.productFacts || []
 
-    if (isOfferContext) {
-      const discountCheck = isPercentageDiscountVerified(num, facts)
-      if (!discountCheck.verified) {
-        unverified.push(discountCheck.reason || pm)
+  for (const pm of percentMatches) {
+    const rate = Number(pm.replace(/\D/g, ''))
+    if (isNaN(rate)) continue
+
+    const pmIdx = text.indexOf(pm)
+    const startIdx = Math.max(0, text.lastIndexOf('.', pmIdx) + 1)
+    const nextDot = text.indexOf('.', pmIdx)
+    const endIdx = nextDot !== -1 ? nextDot : text.length
+    const clause = text.slice(startIdx, endIdx).toLowerCase()
+
+    const isOfferContext =
+      /\b(indirim|iskonto|fırsat|kampanya|avantaj|teklif|fiyat|indirimli|kazanç)\b/i.test(clause) ||
+      /\b(indirim|iskonto|fırsat|kampanya|avantaj|teklif|fiyat|indirimli|kazanç)\b/i.test(lower)
+
+    const isWholesaleAsserted = /\btoptan\b/i.test(clause) || /\btoptan\b/i.test(lower)
+
+    // Detect if this clause or text refers to a specific product
+    let targetProduct: string | null = null
+    for (const p of productFacts) {
+      if (clause.includes(p.name.toLowerCase()) || lower.includes(p.name.toLowerCase())) {
+        targetProduct = p.name
+        break
       }
-    } else {
-      if (!isClaimVerified(`%${num}`, facts)) {
-        unverified.push(pm)
-      }
+    }
+
+    const check = verifyPercentageClaim(rate, isOfferContext, targetProduct, isWholesaleAsserted, facts)
+    if (!check.verified) {
+      unverified.push(check.reason || pm)
     }
   }
 
@@ -212,6 +318,7 @@ export function validateClaims(
       unverified.push('indirim_yokken_indirim_iddiası')
     }
   }
+
 
   return {
     valid: unverified.length === 0,

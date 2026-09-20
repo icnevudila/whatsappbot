@@ -23,7 +23,16 @@ export function deriveHookHeadline(
   if (discount) {
     if (discount.includes('%')) {
       const match = discount.match(/%\s*\d+|\d+\s*%/)?.[0] || discount
-      return `${match} TOPTAN İSKONTO`.toLocaleUpperCase('tr-TR')
+      const isWholesale = Boolean(
+        facts.verifiedFacts.isWholesale ||
+        facts.verifiedFacts.discountOffers?.some((d) => d.isWholesale) ||
+        /\btoptan\b/i.test(discount) ||
+        /\btoptan\b/i.test(rawBrief)
+      )
+      if (isWholesale) {
+        return `${match} TOPTAN İSKONTO`.toLocaleUpperCase('tr-TR')
+      }
+      return `${match} İNDİRİM`.toLocaleUpperCase('tr-TR')
     }
     const words = discount.trim().split(/\s+/).filter(Boolean)
     if (words.length >= 2 && words.length <= 4) {

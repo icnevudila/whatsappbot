@@ -171,6 +171,30 @@ export interface UserVideoInput {
   style?: string | null
 }
 
+// Structured Percentage & Claim Verification Types
+export type PercentageClaimType = 'discount' | 'material_composition' | 'interest_or_financial' | 'specification'
+
+export interface StructuredPercentageFact {
+  productName: string | null     // Product name if bound to one, or null if universal
+  claimType: PercentageClaimType // 'discount' vs 'material_composition' vs 'specification'
+  rate: number                   // e.g. 50, 10
+  rawText: string                // e.g. "%50 pamuk", "%10 indirim"
+  property?: string | null       // e.g. "pamuk", "yün", "indirim", "iskonto"
+  condition?: string | null      // e.g. "toptan alımlarda"
+  isWholesale: boolean           // true iff 'toptan' explicitly present
+}
+
+export interface StructuredProductFact {
+  name: string
+  price: string | null
+  currency: string | null
+  discount: string | null
+  discounts: StructuredPercentageFact[]
+  materials: StructuredPercentageFact[]
+  features: string[]
+  benefits: string[]
+}
+
 // Normalized Verified Facts
 export interface VerifiedFacts {
   brandName: string | null
@@ -187,6 +211,11 @@ export interface VerifiedFacts {
   ctaDestination: string | null
   phones: string[]
   rawBrief: string
+  percentageFacts?: StructuredPercentageFact[]
+  materialSpecs?: StructuredPercentageFact[]
+  discountOffers?: StructuredPercentageFact[]
+  productFacts?: StructuredProductFact[]
+  isWholesale?: boolean
 }
 
 export interface FactNormalizerOutput {

@@ -367,3 +367,84 @@ test('12. Preserves ctaText, ctaDestination, campaignDeadline, deliveryArea, and
   assert.ok(deliveryOverlay)
   assert.ok(pkg.veoPrompt.includes('Özgür Çelik İmalat'))
 })
+
+test('13. Three concrete defect regression tests: cotton vs discount, cross-product discount leakage, retail vs wholesale overlay', () => {
+  // Defect 1: "%50 pamuk. %10 indirim." -> "%50 indirim" must be REJECTED, "%10 indirim" must PASS
+  const factsCottonDiscount = normalizeFacts({
+    brandName: 'Tekstil Dünyası',
+    brief: '%50 pamuk. %10 indirim.',
+    products: [{ name: 'Gömlek' }],
+  })
+
+  // Material and discount must be segregated in structured facts
+  assert.ok(factsCottonDiscount.verifiedFacts.materialSpecs?.some((m) => m.rate === 50 && m.property === 'pamuk'))
+  assert.ok(factsCottonDiscount.verifiedFacts.discountOffers?.some((d) => d.rate === 10))
+  assert.ok(!factsCottonDiscount.verifiedFacts.discountOffers?.some((d) => d.rate === 50))
+
+  const checkFalse50 = validateClaims('Gömleklerde %50 indirim fırsatını kaçırmayın.', factsCottonDiscount)
+  assert.strictEqual(checkFalse50.valid, false, 'Defect 1 regression: "%50 pamuk. %10 indirim." erroneously validated "%50 indirim"')
+  assert.ok(
+    checkFalse50.unverifiedClaims.some((c) => c.includes('materyal') || c.includes('pamuk')),
+    `Expected material rejection reason, got: ${JSON.stringify(checkFalse50.unverifiedClaims)}`
+  )
+
+  const checkTrue10 = validateClaims('Gömleklerde %10 indirim fırsatı.', factsCottonDiscount)
+  assert.strictEqual(checkTrue10.valid, true, 'Valid %10 discount should pass')
+
+  // Defect 2: Product A discount rate cannot be applied to Product B (Cross-product discount leakage)
+  const factsMultiProduct = normalizeFacts({
+    brandName: 'Moda Plus',
+    brief: 'Yeni sezon giyim koleksiyonu',
+    products: [
+      { name: 'Gömlek', promo: '%15 indirim' },
+      { name: 'Pantolon' },
+    ],
+  })
+
+  // Verify discounts are bound to specific product in structured facts
+  const gomlekFact = factsMultiProduct.verifiedFacts.productFacts?.find((p) => p.name === 'Gömlek')
+  const pantolonFact = factsMultiProduct.verifiedFacts.productFacts?.find((p) => p.name === 'Pantolon')
+  assert.ok(gomlekFact?.discounts.some((d) => d.rate === 15))
+  assert.strictEqual(pantolonFact?.discounts.length, 0)
+
+  // Applying Product A (%15) discount to Product B (Pantolon) must FAIL
+  const checkLeakage = validateClaims('Pantolonda %15 indirim fırsatı sizleri bekliyor.', factsMultiProduct)
+  assert.strictEqual(checkLeakage.valid, false, 'Defect 2 regression: Product A (%15) discount was erroneously allowed on Product B (Pantolon)')
+  assert.ok(
+    checkLeakage.unverifiedClaims.some((c) => c.includes('Pantolon') || c.includes('Gömlek') || c.includes('%15')),
+    `Expected cross-product mismatch reason, got: ${JSON.stringify(checkLeakage.unverifiedClaims)}`
+  )
+
+  // Applying Product A (%15) discount to Product A (Gömlek) must PASS
+  const checkCorrectProduct = validateClaims('Gömlekte %15 indirim fırsatı sizleri bekliyor.', factsMultiProduct)
+  assert.strictEqual(checkCorrectProduct.valid, true, 'Valid discount for correct product should pass')
+
+  // Defect 3: Retail "%20 indirim" overlay headline must NOT be "%20 TOPTAN İSKONTO"
+  const retailDiscountPkg = compileDeterministicV5({
+    brandName: 'Moda Butik',
+    brief: 'Yeni sezon kıyafetlerde %20 indirim fırsatı',
+    products: [{ name: 'Yün Triko', promo: '%20 indirim' }],
+  })
+
+  const hookHeadline = deriveHookHeadline(retailDiscountPkg.normalizedBrief, retailDiscountPkg.classification)
+  assert.strictEqual(
+    hookHeadline,
+    '%20 İNDİRİM',
+    `Defect 3 regression: Retail discount hook headline became "${hookHeadline}" instead of "%20 İNDİRİM"`
+  )
+  assert.ok(!hookHeadline.includes('TOPTAN'), 'Retail hook headline contains unverified TOPTAN')
+
+  const overlayHook = retailDiscountPkg.overlayPlan.overlayTimeline.find((i) => i.type === 'hook')
+  assert.strictEqual(overlayHook?.text, '%20 İNDİRİM')
+  assert.ok(!overlayHook?.text.includes('TOPTAN'))
+
+  // Counter-test: Explicit wholesale MUST still produce "%20 TOPTAN İSKONTO"
+  const wholesalePkg = compileDeterministicV5({
+    brandName: 'Ayvazoğlu Tuğla',
+    brief: 'Şantiyelere tır bazında tuğla sevkiyatı. Toptan alımlarda %20 toptan iskonto',
+    products: [{ name: 'Killi Tuğla', promo: '%20 toptan iskonto' }],
+  })
+  const wholesaleHeadline = deriveHookHeadline(wholesalePkg.normalizedBrief, wholesalePkg.classification)
+  assert.strictEqual(wholesaleHeadline, '%20 TOPTAN İSKONTO', 'Explicit wholesale discount should produce TOPTAN İSKONTO')
+})
+

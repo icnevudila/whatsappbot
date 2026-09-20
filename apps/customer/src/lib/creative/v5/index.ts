@@ -21,7 +21,7 @@ export { analyzeOntology } from './ontology-analyzer'
 export { selectCreativeStrategy } from './strategy-selector'
 export { selectHook } from './hook-selector'
 export { planShots, V5_STANDARD_NEGATIVES } from './shot-planner'
-export { writeVoiceover, validateClaims, countTurkishSyllables, estimateSpeechDuration } from './voiceover-writer'
+export { writeVoiceover, validateClaims, verifyPercentageClaim, countTurkishSyllables, estimateSpeechDuration } from './voiceover-writer'
 export { compileOverlay, deriveHookHeadline } from './overlay-compiler'
 export { validateAndRepair } from './validator'
 
