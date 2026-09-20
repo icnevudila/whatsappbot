@@ -121,16 +121,29 @@ const SECTOR_KEYWORDS = {
   S100: ['sanat atölyesi', 'el işi', 'seramik atölyesi', 'resim kursu', 'heykel', 'ahşap oyma']
 };
 
+function normalizeTr(str) {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .replace(/ğ/g, 'g')
+    .replace(/ü/g, 'u')
+    .replace(/ş/g, 's')
+    .replace(/ı/g, 'i')
+    .replace(/ö/g, 'o')
+    .replace(/ç/g, 'c');
+}
+
 /**
  * Intelligent sector matcher: finds the exact Sxxx ID matching brand, product, and brief
  */
 function matchSector(text) {
   if (!text) return 'S001';
-  const clean = text.toLowerCase();
+  const rawClean = text.toLowerCase();
+  const clean = normalizeTr(text);
   
   // Direct specific brand hooks
-  if (clean.includes('ayvazoğlu') || clean.includes('tuğla')) return 'S077';
-  if (clean.includes('bofe') || clean.includes('sırt pompası') || clean.includes('zeytin hasat')) return 'S082';
+  if (clean.includes('ayvazoglu') || clean.includes('tugla')) return 'S077';
+  if (clean.includes('bofe') || clean.includes('sirt pompasi') || clean.includes('zeytin hasat')) return 'S082';
   if (clean.includes('veri burada') || clean.includes('veriburada') || clean.includes('leads') || clean.includes('istihbarat')) return 'S091';
 
   let bestSector = 'S001';
@@ -139,7 +152,8 @@ function matchSector(text) {
   for (const [sectorId, keywords] of Object.entries(SECTOR_KEYWORDS)) {
     let score = 0;
     for (const kw of keywords) {
-      if (clean.includes(kw)) {
+      const kwNorm = normalizeTr(kw);
+      if (clean.includes(kwNorm) || rawClean.includes(kw)) {
         score += kw.length > 5 ? 3 : 2;
       }
     }
