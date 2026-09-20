@@ -300,9 +300,30 @@ export function buildVideoPrompt(snapshot: CreativeSnapshot): {
 
   // 4. Ses / Konuşma Kurgusu (Voiceover vs Silent Instrumental)
   const isSpeechEnabled = snapshot.videoSpeech !== false
-  const voiceLine = snapshot.brief
-    ? `${productName ? `${productName} ile ` : ''}${snapshot.brief.replace(/[\r\n]+/g, ' ').trim()}. Hemen WhatsApp ile sipariş verin.`
-    : `${productName ? `${productName} ile ` : ''}en kaliteli çözümler kapınızda. Hemen WhatsApp ile iletişime geçin.`
+  let rawBrief = (snapshot.brief || '').replace(/[\r\n]+/g, ' ').trim()
+  rawBrief = rawBrief.replace(/[\.\s]+$/, '').trim()
+
+  let voiceLine = ''
+  if (rawBrief) {
+    const briefLower = rawBrief.toLowerCase()
+    const hasCTA =
+      briefLower.includes('whatsapp') ||
+      briefLower.includes('sipariş') ||
+      briefLower.includes('teklif') ||
+      briefLower.includes('iletişim') ||
+      briefLower.includes('ulaşın') ||
+      briefLower.includes('yazın') ||
+      briefLower.includes('arayın') ||
+      briefLower.includes('bağlanın')
+
+    if (hasCTA) {
+      voiceLine = `${rawBrief}.`
+    } else {
+      voiceLine = `${rawBrief}. Detaylı bilgi ve sipariş için hemen WhatsApp ile iletişime geçin.`
+    }
+  } else {
+    voiceLine = `${brandName ? `${brandName} ile ` : ''}${productName ? `${productName} ` : ''}kalitesi kapınızda. Hızlı sipariş ve bilgi için hemen WhatsApp ile iletişime geçin.`
+  }
   const voiceSection = isSpeechEnabled
     ? `SESLENDİRME: Kristal netliğinde profesyonel Türkçe erkek reklam spikeri sesi: "${voiceLine}"`
     : `SES DÜZENİ (KONUŞMASIZ & SADECE FON MÜZİĞİ VE SES EFEKTLERİ): Videoda KESİNLİKLE hiçbir insan konuşması, dış ses, seslendirme veya diyalog OLMAYACAKTIR. STRICT RULE: NO VOICE, NO SPEECH, NO SPOKEN WORDS, NO DIALOGUE. Sadece sahneye uygun yüksek kaliteli ortam ses efektleri (foley) ve arka planda modern reklam fon müziği.`
