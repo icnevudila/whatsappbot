@@ -306,6 +306,12 @@ export function CreativeWizard({
     ? sanitizeVoiceover(draft.customVoiceover)
     : defaultVoiceover
 
+  const [transcriptConfirmed, setTranscriptConfirmed] = useState(false)
+
+  useEffect(() => {
+    setTranscriptConfirmed(false)
+  }, [activeVoiceoverText])
+
   const voiceoverWordCount = useMemo(() => {
     return activeVoiceoverText.trim().split(/\s+/).filter(Boolean).length
   }, [activeVoiceoverText])
@@ -1830,11 +1836,29 @@ export function CreativeWizard({
                   </div>
                 </div>
 
-                {/* Garanti Notu */}
-                <div className="flex items-center gap-1.5 text-[11px] text-[#667781] pt-0.5">
-                  <Icon name="check" className="size-3.5 text-[#008069] shrink-0" />
-                  <span>Spiker ve altyazı motoru videoda sadece bu onaylanan metni okur.</span>
-                </div>
+                {/* Onay Kutusu (Zorunlu İnceleme Kapısı) */}
+                <label
+                  className={`flex items-start gap-3 p-3 rounded-lg border transition-all cursor-pointer select-none ${
+                    transcriptConfirmed
+                      ? 'border-[#008069] bg-[#e7f7ef]/50'
+                      : 'border-amber-300 bg-amber-50/60 hover:bg-amber-50'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={transcriptConfirmed}
+                    onChange={(e) => setTranscriptConfirmed(e.target.checked)}
+                    className="mt-0.5 size-4.5 rounded border-gray-300 text-[#008069] focus:ring-[#008069] accent-[#008069] cursor-pointer shrink-0"
+                  />
+                  <div className="text-[12px] leading-snug">
+                    <span className={`font-semibold ${transcriptConfirmed ? 'text-[#008069]' : 'text-amber-900'}`}>
+                      Spiker seslendirme metnini okudum ve onaylıyorum.
+                    </span>
+                    <p className="text-[11px] text-[#667781] mt-0.5">
+                      Yapay zeka seslendirmeni ve video altyazı motoru kelimesi kelimesine sadece bu onaylanan metni seslendirir.
+                    </p>
+                  </div>
+                </label>
               </div>
 
               {isVideo && !hasValidVideoLogo ? (
@@ -1860,16 +1884,21 @@ export function CreativeWizard({
                 </Button>
                 <Button
                   type="submit"
-                  className="wb-wa-submit flex-2 h-10 text-[13px] font-semibold !bg-[#008069] hover:!bg-[#00a884] text-white shadow-sm"
+                  className="wb-wa-submit flex-2 h-10 text-[13px] font-semibold !bg-[#008069] hover:!bg-[#00a884] text-white shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={
                     pending ||
                     !data.canManage ||
                     !data.imageAiEnabled ||
                     !hasValidVideoLogo ||
-                    !hasValidVideoProduct
+                    !hasValidVideoProduct ||
+                    (isVideo && !transcriptConfirmed)
                   }
                 >
-                  {pending ? 'Video Prodüksiyonu Başlatılıyor…' : 'Metni Onayla ve Videoyu Üret'}
+                  {pending
+                    ? 'Video Prodüksiyonu Başlatılıyor…'
+                    : isVideo && !transcriptConfirmed
+                      ? 'Lütfen Metni Okuyup Onaylayın'
+                      : 'Metni Onayla ve Videoyu Üret'}
                 </Button>
               </div>
               {!data.canManage ? <Notice tone="warn">Üretim için yönetici gerekir.</Notice> : null}
