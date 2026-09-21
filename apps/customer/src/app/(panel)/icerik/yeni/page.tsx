@@ -1,12 +1,14 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { PageHeader } from '@/components/ui'
+import { Icon } from '@/components/icon'
 import { requireActiveOrg } from '@/lib/org'
 import { CreativeWizard as VideoCreativeWizard } from '../creative-wizard'
 import { ImageCreativeWizard } from '../image-wizard'
 import { loadCreativeWizardData } from '../wizard-data'
 
-export const metadata: Metadata = { title: 'Kampanya görseli oluştur' }
+export const metadata: Metadata = { title: 'Kampanya içeriği oluştur' }
 export const dynamic = 'force-dynamic'
 
 export default async function NewCreativePage({
@@ -37,6 +39,33 @@ export default async function NewCreativePage({
         }
         backHref="/icerik"
       />
+
+      {/* Video / Görsel Seçim Tabları */}
+      <div className="mb-5 flex items-center gap-2 border-b border-[var(--color-hairline)] pb-3">
+        <Link
+          href="/icerik/yeni?format=video"
+          className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all ${
+            isVideo
+              ? 'bg-[#00a884] text-white shadow-sm ring-2 ring-[#00a884]/30'
+              : 'bg-surface text-ink hover:bg-canvas border border-[var(--color-hairline)]'
+          }`}
+        >
+          <Icon name="video" className="size-3.5" />
+          <span>Kampanya Videosu (9:16 Reels)</span>
+        </Link>
+        <Link
+          href="/icerik/yeni"
+          className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all ${
+            !isVideo
+              ? 'bg-[#00a884] text-white shadow-sm ring-2 ring-[#00a884]/30'
+              : 'bg-surface text-ink hover:bg-canvas border border-[var(--color-hairline)]'
+          }`}
+        >
+          <Icon name="image" className="size-3.5" />
+          <span>Görsel Üret (Afiş & Kare)</span>
+        </Link>
+      </div>
+
       {isVideo ? (
         <VideoCreativeWizard data={data} initialFormat="reels_video" />
       ) : (

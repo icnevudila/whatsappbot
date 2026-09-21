@@ -19,6 +19,7 @@ import { startCreativeGeneration, uploadLibraryImage, type CreativeActionState }
 import { DEFAULT_INCLUDE, type ProductCard, type SocialOption, type WizardBootstrap } from './wizard-types'
 import { AddProductModal } from './add-product-modal'
 import { AddSocialModal } from './add-social-modal'
+import { getSafeMediaUrl } from '@/lib/media-url'
 
 const DRAFT_KEY = 'wa.customer.creative-wizard.video.v1'
 
@@ -317,7 +318,7 @@ export function CreativeWizard({
       const extra = draft.productExtras[p.id]
       return Boolean(extra?.imageUrl || p.images[0]?.url)
     })
-  const activeLogoUrl = draft.customLogoUrl || selectedKit?.samplePreview || data.org.logoPreview || ''
+  const activeLogoUrl = getSafeMediaUrl(draft.customLogoUrl || selectedKit?.samplePreview || data.org.logoPreview || '') || ''
   const hasValidVideoLogo = Boolean(activeLogoUrl)
 
   let canContinue = true
@@ -670,7 +671,7 @@ export function CreativeWizard({
                     {productsList.map((product) => {
                       const isSelected = draft.productIds.includes(product.id)
                       const extra = draft.productExtras[product.id]
-                      const activeProductImg = extra?.imageUrl || product.images[0]?.url
+                      const activeProductImg = getSafeMediaUrl(extra?.imageUrl || product.images[0]?.url)
                       return (
                         <button
                           key={product.id}
@@ -878,7 +879,7 @@ export function CreativeWizard({
                   {selectedProducts[0] && (draft.productExtras[selectedProducts[0].id]?.imageUrl || selectedProducts[0].images[0]?.url) ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={draft.productExtras[selectedProducts[0].id]?.imageUrl || selectedProducts[0].images[0]?.url}
+                      src={getSafeMediaUrl(draft.productExtras[selectedProducts[0].id]?.imageUrl || selectedProducts[0].images[0]?.url)}
                       alt=""
                       className="size-10 rounded object-cover border border-hairline shrink-0"
                     />

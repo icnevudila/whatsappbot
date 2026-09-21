@@ -8,6 +8,7 @@ import {
   type WizardBootstrap,
 } from './wizard-types'
 import { buildSmartBusinessVideoIdeas } from '@/lib/creative/video-scenario'
+import { getSafeMediaUrl } from '@/lib/media-url'
 
 export type {
   BrandKitCard,
@@ -85,14 +86,15 @@ export async function loadCreativeWizardData(): Promise<WizardBootstrap> {
   const imagesByProduct = new Map<string, { id: string; url: string }[]>()
   for (const row of imagesRes.data ?? []) {
     const list = imagesByProduct.get(row.product_id) ?? []
-    list.push({ id: row.id, url: row.public_url })
+    const safeUrl = getSafeMediaUrl(row.public_url) ?? row.public_url
+    list.push({ id: row.id, url: safeUrl })
     imagesByProduct.set(row.product_id, list)
   }
 
   const kits: BrandKitCard[] = []
   for (const kit of kitsRes.data ?? []) {
     let samplePreview: string | null = null
-    if (kit.logo_path?.startsWith('http')) samplePreview = kit.logo_path
+    if (kit.logo_path?.startsWith('http')) samplePreview = getSafeMediaUrl(kit.logo_path) ?? kit.logo_path
     else if (kit.logo_path) {
       const { data } = await supabase.storage.from('brand-assets').createSignedUrl(kit.logo_path, 3600)
       samplePreview = data?.signedUrl ?? null
@@ -112,7 +114,7 @@ export async function loadCreativeWizardData(): Promise<WizardBootstrap> {
     (socialsRes.data ?? []).find((row) => row.platform === 'website')?.url ?? null
 
   let logoPreview: string | null = null
-  if (orgRes.data?.logo_path?.startsWith('http')) logoPreview = orgRes.data.logo_path
+  if (orgRes.data?.logo_path?.startsWith('http')) logoPreview = getSafeMediaUrl(orgRes.data.logo_path) ?? orgRes.data.logo_path
   else if (orgRes.data?.logo_path) {
     const { data } = await supabase.storage
       .from('brand-assets')
@@ -160,7 +162,7 @@ export async function loadCreativeWizardData(): Promise<WizardBootstrap> {
       library: (libraryRes.data ?? []).map((row) => ({
         id: row.id,
         title: row.title,
-        publicUrl: row.public_url,
+        publicUrl: getSafeMediaUrl(row.public_url) ?? row.public_url,
         status: row.status,
         createdAt: row.created_at,
       })),
