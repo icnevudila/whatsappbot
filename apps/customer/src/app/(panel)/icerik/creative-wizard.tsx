@@ -458,13 +458,13 @@ export function CreativeWizard({
               <div className="space-y-4">
                 <div>
                   <p className="text-[14px] font-bold text-[#111b21]">2 — Reklam Filminin Amacını Seçin</p>
-                  <p className="text-[12px] text-[#667781] mt-0.5">Videonun sinematik kurgusu ve Türkçe seslendirme senaryosu bu amaca göre şekillenir.</p>
+                  <p className="text-[12px] text-[#667781] mt-0.5">Videonun kurgusu ve seslendirmesi bu amaca göre hazırlanır.</p>
                 </div>
 
                 <div className="grid gap-2.5 sm:grid-cols-3">
                   <button
                     type="button"
-                    onClick={() => patch({ videoPurpose: 'tanitim', brief: `${data.org.name || 'İşletmemiz'} ürün kalitesi ve üretim gücünü anlatan sinematik tanıtım filmi.` })}
+                    onClick={() => patch({ videoPurpose: 'tanitim', brief: `${data.org.name || 'İşletmemiz'} ürün kalitesi ve üretim gücünü anlatan tanıtım filmi.` })}
                     className={`rounded-lg border p-3.5 text-left transition-all cursor-pointer ${
                       draft.videoPurpose === 'tanitim'
                         ? 'border-[#00a884] bg-[#e7f8f2] ring-1 ring-[#00a884]'
@@ -476,7 +476,7 @@ export function CreativeWizard({
                       {draft.videoPurpose === 'tanitim' ? <span className="text-[#00a884] font-bold text-sm">✓</span> : null}
                     </div>
                     <p className="text-[11.5px] text-[#667781] mt-1.5 leading-relaxed">
-                      Kurumsal güven, ürün kalitesi ve dayanıklılığı öne çıkaran 8 saniyelik tanıtım filmi. Metin zorunlu değildir.
+                      Kurumsal güven, ürün kalitesi ve üretim gücünü öne çıkaran tanıtım filmi.
                     </p>
                   </button>
 
@@ -500,7 +500,7 @@ export function CreativeWizard({
 
                   <button
                     type="button"
-                    onClick={() => patch({ videoPurpose: 'yeni_urun', brief: `${data.org.name || 'İşletmemiz'} yeni ürün lansmanı ve duyurusu.` })}
+                    onClick={() => patch({ videoPurpose: 'yeni_urun', brief: `${data.org.name || 'İşletmemiz'} yeni ürün tanıtımı ve duyurusu.` })}
                     className={`rounded-lg border p-3.5 text-left transition-all cursor-pointer ${
                       draft.videoPurpose === 'yeni_urun'
                         ? 'border-[#00a884] bg-[#e7f8f2] ring-1 ring-[#00a884]'
@@ -520,8 +520,8 @@ export function CreativeWizard({
                 {draft.videoPurpose === 'kampanya' ? (
                   <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/50 p-3.5">
                     <Field
-                      label="Kampanya / Teklif Bilgisi (Zorunlu)"
-                      hint="Yalnızca işletmenizin gerçek kampanya şartlarını yazın. Bilinmeyen fiyat veya indirim uydurulmaz."
+                      label="Kampanya / İndirim Bilgisi"
+                      hint="Varsa indirim oranı veya kampanya detayını yazın."
                     >
                       <Input
                         value={draft.offerDetails || ''}
@@ -530,54 +530,28 @@ export function CreativeWizard({
                       />
                     </Field>
                   </div>
-                ) : (
-                  <Notice tone="accent">
-                    {draft.videoPurpose === 'tanitim'
-                      ? 'Tanıtım modunda hiçbir metin yazmanız zorunlu değildir. Yapay zeka ürününüzü ve marka kitinizi analiz ederek sinematik 8 saniyelik kurguyu ve Türkçe seslendirmeyi otomatik oluşturur.'
-                      : 'Yeni ürün lansman modunda yapay zeka ürün görselinizi ve tasarım detaylarını merkeze alarak prestijli bir duyuru kurgusu oluşturur.'}
-                  </Notice>
-                )}
+                ) : null}
 
-                {/* Diğer Ayarlar Akordeonu (Kapalı) */}
-                <div className="rounded-lg border border-hairline bg-surface overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => patch({ moreSettingsOpen: !draft.moreSettingsOpen })}
-                    className="w-full px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-[#667781] hover:text-[#111b21] flex items-center justify-between cursor-pointer bg-canvas/40"
-                  >
-                    <span>Diğer Ayarlar (Seslendirme, Altyazı, İsteğe Bağlı Not)</span>
-                    <span>{draft.moreSettingsOpen ? '▲ Kapat' : '▼ Aç'}</span>
-                  </button>
-                  {draft.moreSettingsOpen ? (
-                    <div className="p-3.5 space-y-3 border-t border-hairline">
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        <label className="flex items-center gap-2 text-[12.5px] text-[#111b21] cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={draft.videoSpeech !== false}
-                            onChange={(e) => patch({ videoSpeech: e.target.checked })}
-                          />
-                          <span>Profesyonel Türkçe Seslendirme</span>
-                        </label>
-                        <label className="flex items-center gap-2 text-[12.5px] text-[#111b21] cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={draft.subtitles !== false}
-                            onChange={(e) => patch({ subtitles: e.target.checked })}
-                          />
-                          <span>Senkronize CapCut Altyazı</span>
-                        </label>
-                      </div>
-                      <Field label="İsteğe Bağlı Özel Not veya Detay">
-                        <Textarea
-                          rows={2}
-                          value={draft.customText || ''}
-                          onChange={(e) => patch({ customText: e.target.value })}
-                          placeholder="Örn: Videoda gün batımı ışığı kullanılsın, fabrika içi forklift hareketi gösterilsin vb."
-                        />
-                      </Field>
-                    </div>
-                  ) : null}
+                {/* Altyazı Seçeneği ve İsteğe Bağlı Not */}
+                <div className="rounded-lg border border-hairline bg-surface p-3.5 space-y-3">
+                  <label className="flex items-center gap-2 text-[13px] font-medium text-[#111b21] cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="size-4 rounded border-hairline text-[#00a884] focus:ring-[#00a884]"
+                      checked={draft.subtitles !== false}
+                      onChange={(e) => patch({ subtitles: e.target.checked })}
+                    />
+                    <span>Videoya altyazı eklensin</span>
+                  </label>
+
+                  <Field label="Özel İstek / Not (İsteğe Bağlı)">
+                    <Textarea
+                      rows={2}
+                      value={draft.customText || ''}
+                      onChange={(e) => patch({ customText: e.target.value })}
+                      placeholder="Örn: Videoda gün batımı ışığı kullanılsın, fabrika içi forklift hareketi gösterilsin vb."
+                    />
+                  </Field>
                 </div>
               </div>
             ) : (
@@ -623,7 +597,7 @@ export function CreativeWizard({
                   <div>
                     <p className="text-[14px] font-bold text-[#111b21]">1 — Aktif Marka ve Kurumsal Logo</p>
                     <p className="text-[12px] text-[#667781] mt-0.5">
-                      Videonun açılış ve kapanış sahnelerinde kurumsal kimliğinizi temsil edecek logo.
+                      Videonuzda ve tabelalarda kullanılacak kurumsal marka logonuz.
                     </p>
                   </div>
                   {hasValidVideoLogo ? (
@@ -697,9 +671,9 @@ export function CreativeWizard({
               <div className="p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-[14px] font-bold text-[#111b21]">2 — Tanıtılacak Ürünü / Hizmeti Seçin</p>
+                    <p className="text-[14px] font-bold text-[#111b21]">2 — Tanıtılacak Ürünü Seçin</p>
                     <p className="text-[12px] text-[#667781] mt-0.5">
-                      Videoda merkezde yer alacak ana ürünü aşağıdaki görselli kartlardan seçin.
+                      Videoda yer alacak ana ürününüzü seçin.
                     </p>
                   </div>
                   <button
@@ -780,7 +754,7 @@ export function CreativeWizard({
                     <div className="mt-3 rounded-lg border border-[#00a884]/30 bg-[#e7f8f2]/20 p-3 space-y-2">
                       <div className="flex items-center justify-between">
                         <p className="text-[12.5px] font-semibold text-[#111b21]">
-                          Seçilen: <strong>{product.name}</strong> — AI Referans Fotoğrafı
+                          Seçilen: <strong>{product.name}</strong> — Ürün Fotoğrafı
                         </p>
                         <FileUploadButton
                           accept="image/png,image/jpeg,image/webp"
@@ -848,7 +822,7 @@ export function CreativeWizard({
             {/* 3. Marka & Ürün Özet Şeridi */}
             <div className="rounded-lg border border-hairline bg-canvas p-3">
               <p className="text-[11.5px] font-semibold uppercase tracking-wider text-[#667781] mb-2">
-                Seçim Özeti (Flow ve Veo'ya Aktarılacak Referanslar)
+                Kullanılacak Marka ve Ürün Görselleri
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex items-center gap-2.5 rounded-md border border-hairline bg-surface p-2.5">
@@ -859,7 +833,7 @@ export function CreativeWizard({
                     <div className="size-10 rounded border border-dashed border-rose-300 bg-rose-50 flex items-center justify-center text-[10px] text-rose-500 font-bold shrink-0">Yok</div>
                   )}
                   <div className="min-w-0">
-                    <p className="text-[11px] text-[#667781]">1. Referans (Logo)</p>
+                    <p className="text-[11px] text-[#667781]">Marka Logosu</p>
                     <p className="text-[12.5px] font-semibold text-[#111b21] truncate">{data.org.name || 'Marka Logosu'}</p>
                   </div>
                 </div>
@@ -876,7 +850,7 @@ export function CreativeWizard({
                     <div className="size-10 rounded border border-dashed border-amber-300 bg-amber-50 flex items-center justify-center text-[10px] text-amber-600 font-bold shrink-0">Seçilmedi</div>
                   )}
                   <div className="min-w-0">
-                    <p className="text-[11px] text-[#667781]">2. Referans (Ürün)</p>
+                    <p className="text-[11px] text-[#667781]">Ürün Fotoğrafı</p>
                     <p className="text-[12.5px] font-semibold text-[#111b21] truncate">{selectedProducts[0]?.name || 'Henüz seçilmedi'}</p>
                   </div>
                 </div>
@@ -1357,7 +1331,7 @@ export function CreativeWizard({
             </Field>
           ) : null}
           {isVideo ? (
-            <Field label="Kurumsal Marka Logosu" hint="Videonun kapanış sahnesinde ve mekan tabelalarında Google Flow / Veo'ya aktarılacaktır.">
+            <Field label="Kurumsal Marka Logosu" hint="Videonuzda ve mekan tabelalarında kullanılacak kurumsal logonuz.">
               <div className="space-y-3">
                 {draft.customLogoUrl || data.org.logoPreview ? (
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3.5">
@@ -1373,7 +1347,7 @@ export function CreativeWizard({
                           {draft.customLogoUrl ? 'Özel Yüklenen Logo' : `${data.org.name || 'İşletme'} Resmi Logosu`}
                         </p>
                         <p className="text-[12px] font-medium text-emerald-700">
-                          ✓ Google Flow ve Veo'ya otomatik aktarılacak
+                          ✓ Videonuzda ve tabelalarda yer alacaktır
                         </p>
                       </div>
                     </div>

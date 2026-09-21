@@ -78,7 +78,7 @@ async function getActiveBrandKit(orgId = null, brandHint = null) {
       logo_path: '/outputs/ayvazoglu_logo.png',
       product_image_path: '/outputs/ayvazoglu_brick.webp',
       logo_visual_description: "Minimalist kırmızı ince çizgili çatı piktogramı ve ortasından yukarı doğru yükselen kırmızı dikey ok sembolü. Altında siyah, net ve büyük harflerle 'AYVAZOĞLU' ve 'İ N Ş A A T'. Plaket veya tabela üzerinde bu kırmızı çatı ve dikey ok amblemi kesinlikle çizilecektir; yalnızca yazı yazıp amblem asla atlanmayacaktır.",
-      product_visual_description: "Karakteristik 18 delikli pişmiş kil blok tuğla (üst yüzeyinde nizami dikdörtgen hava delikli petek oda yapısı, yan yüzeylerinde dikey oluklu çizgiler olan kırmızı-turuncu renkli yapı tuğlası). Kesinlikle deliksiz masif taş veya düz harman tuğlası değildir; ekli görseldeki gibi içi hava kanallı delikli kil blok tuğladır.",
+      product_visual_description: "Karakteristik 18 delikli pişmiş kil blok tuğla (uzunlamasına yatay dikdörtgen prizma oranında, üst yüzeyinde nizami dikdörtgen hava delikli petek oda yapısı, yan yüzeylerinde dikey oluklu çizgiler olan kırmızı-turuncu renkli yapı tuğlası). Kesinlikle kare küp, deliksiz masif taş veya düz harman tuğlası değildir; ekli görseldeki gibi uzun dikdörtgen formunda ve içi hava kanallı delikli kil blok tuğladır.",
       hasExplicitLogo: true,
     };
   }
