@@ -1934,18 +1934,23 @@ async function generateVideoOnFlow(options = {}) {
   }
 
   // 6. Download butonuna tıkla (Doğrudan yakalanamadıysa yedek yol)
-  // 6. Download butonuna tıkla (Doğrudan yakalanamadıysa yedek yol)
   let downloadTriggered = false;
+  let downloadGuid = null;
+  let downloadState = null;
+  let suggestedFilename = null;
+  let totalBytes = 0;
+  let receivedBytes = 0;
+
   if (!capturedDirectly) {
-    // 6.1. Öncelikle en son üretilen videonun kartına tıkla ki medya görüntüleyici açılsın
+    // 6.1. Öncelikle en son üretilen videonun kartına tıkla ki medya görüntüleyici açılsın (En yeni video index 0'dadır)
     console.log(`[Flow Video] 🎬 En son üretilen video kartı açılıyor...`);
     try {
       const tileClickRes = await send('Runtime.evaluate', {
         expression: `(() => {
           const tiles = Array.from(document.querySelectorAll('flow-grid-tile-container, flow-media-tile, [class*="tile"]'));
           if (tiles.length > 0) {
-            const lastTile = tiles[tiles.length - 1];
-            const r = lastTile.getBoundingClientRect();
+            const newestTile = tiles[0];
+            const r = newestTile.getBoundingClientRect();
             if (r.width > 0 && r.height > 0) {
               return { found: true, x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
             }
@@ -2002,12 +2007,6 @@ async function generateVideoOnFlow(options = {}) {
       if (!fs.existsSync(jobDownloadDir)) {
         fs.mkdirSync(jobDownloadDir, { recursive: true });
       }
-
-      let downloadGuid = null;
-      let downloadState = null;
-      let suggestedFilename = null;
-      let totalBytes = 0;
-      let receivedBytes = 0;
 
       const cdpDownloadHandler = (data) => {
         try {
