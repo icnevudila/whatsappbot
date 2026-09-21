@@ -1825,10 +1825,12 @@ async function generateVideoOnFlow(options = {}) {
 
   // 8. Dosya ve thumbnail dosya yollarını hazırla
   const timestamp = Date.now();
+  const videoId = options.videoId || options.id || `flow_${timestamp}`;
   const rawFileName = `video_${timestamp}_flow.mp4`;
   const thumbFileName = `video_${timestamp}_flow_thumb.jpg`;
   const rawPath = path.join(OUTPUT_DIR, rawFileName);
   const thumbPath = path.join(OUTPUT_DIR, thumbFileName);
+  const jobDownloadDir = path.join(OUTPUT_DIR, `dl_${timestamp}_${videoId}`);
 
   // 5.8 DOĞRUDAN OYNATICIDAKİ AKTİF VİDEOYU YAKALA (Direct Video Element Stream / Blob)
   let capturedDirectly = false;
@@ -1938,7 +1940,6 @@ async function generateVideoOnFlow(options = {}) {
     }
 
     // 6.3. İZOLE VE GÜVENİLİR CDP İNDİRME BORU HATTI
-    const jobDownloadDir = path.join(OUTPUT_DIR, `dl_${timestamp}_${videoId}`);
     if (!fs.existsSync(jobDownloadDir)) {
       fs.mkdirSync(jobDownloadDir, { recursive: true });
     }
@@ -2105,7 +2106,6 @@ async function generateVideoOnFlow(options = {}) {
   try { ws.close(); } catch(e){}
   try { await fetch(`http://127.0.0.1:${port}/json/close/${tab.id}`); } catch(e){}
 
-  const jobDownloadDir = path.join(OUTPUT_DIR, `dl_${timestamp}_${videoId}`);
   if (!capturedDirectly && fs.existsSync(jobDownloadDir)) {
     const downloadedFiles = fs.readdirSync(jobDownloadDir).filter(f => !f.endsWith('.crdownload'));
     for (const f of downloadedFiles) {
