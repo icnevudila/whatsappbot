@@ -248,13 +248,13 @@ export function CreativeWizard({
 
   const defaultVoiceover = useMemo(() => {
     if (draft.videoPurpose === 'kampanya') {
-      return `${currentBrandName} güvencesiyle ${currentProductName}${currentOffer ? `: ${currentOffer}` : ''}. Avantajlı fiyatlar ve hızlı sipariş için hemen WhatsApp ile iletişime geçin.`
+      return `${currentBrandName} güvencesiyle ${currentProductName}. Avantajlı fırsatlar için hemen WhatsApp ile yazın.`
     }
     if (draft.videoPurpose === 'yeni_urun') {
-      return `${currentBrandName} yeni ${currentProductName} ile tanışın. Yüksek kalite ve üstün performans bir arada. Detaylar için hemen yazın.`
+      return `${currentBrandName} yeni ${currentProductName} ile tanışın. Detaylar ve sipariş için hemen ulaşın.`
     }
-    return `${currentBrandName} kalitesi ve güvencesiyle ${currentProductName}. Projenize özel avantajlı fabrika fiyatları için hemen WhatsApp ile ulaşın.`
-  }, [currentBrandName, currentProductName, currentOffer, draft.videoPurpose])
+    return `${currentBrandName} ile ${currentProductName} şimdi sizlerle. Hızlı bilgi ve sipariş için hemen yazın.`
+  }, [currentBrandName, currentProductName, draft.videoPurpose])
 
   const activeVoiceoverText = (draft.customVoiceover && draft.customVoiceover.trim().length > 0)
     ? draft.customVoiceover
@@ -267,21 +267,21 @@ export function CreativeWizard({
   const voiceoverPresets = useMemo(() => [
     {
       label: 'Fırsat & Kampanya',
-      text: `${currentBrandName} güvencesiyle ${currentProductName}${currentOffer ? `: ${currentOffer}` : ''}. Avantajlı fiyat ve hızlı sipariş için hemen WhatsApp ile iletişime geçin.`,
+      text: `${currentBrandName} güvencesiyle ${currentProductName}. Avantajlı fırsatlar için hemen WhatsApp ile yazın.`,
     },
     {
       label: 'Kalite & Güven',
-      text: `${currentBrandName} kalitesiyle üretilen ${currentProductName}, işinize değer katar. Avantajlı fabrika fiyatları için hemen WhatsApp ile yazın.`,
+      text: `${currentBrandName} kalitesiyle ${currentProductName} yanınızda. En uygun teklif için hemen yazın.`,
     },
     {
       label: 'Hızlı Teslimat',
-      text: `${currentBrandName} ${currentProductName} stoktan hızlı teslimat avantajıyla doğrudan adresinizde. Teklif almak için hemen mesaj atın.`,
+      text: `${currentBrandName} ${currentProductName} stoktan hızlı teslimatla adresinizde. Hemen mesaj atın.`,
     },
     {
       label: 'Ürün Tanıtımı',
-      text: `${currentBrandName} yeni ${currentProductName} ile tanışın. Üstün performans ve dayanıklılık bir arada. Bilgi almak için hemen yazın.`,
+      text: `${currentBrandName} yeni ${currentProductName} ile tanışın. Detaylı bilgi ve sipariş için ulaşın.`,
     },
-  ], [currentBrandName, currentProductName, currentOffer])
+  ], [currentBrandName, currentProductName])
 
   const payload = useMemo(
     () =>
@@ -1685,58 +1685,59 @@ export function CreativeWizard({
                 </p>
               </div>
 
-              {/* Yan Yana Logo ve Ürün Görseli */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col items-center justify-center rounded-lg border border-hairline bg-canvas p-4 text-center">
-                  <p className="text-[11.5px] font-semibold text-[#667781] uppercase tracking-wider mb-2">Kurumsal Logo</p>
+              {/* Kompakt Logo ve Ürün Özeti */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="flex items-center gap-2.5 rounded-lg border border-hairline bg-[#f8fafb] p-2">
                   {activeLogoUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={activeLogoUrl}
                       alt="Logo"
-                      className="size-20 rounded-md object-contain border border-hairline bg-white p-2 shadow-sm"
+                      className="size-9 rounded-md object-contain border border-hairline bg-white p-0.5 shrink-0"
                     />
                   ) : (
-                    <div className="size-20 rounded-md border border-dashed border-rose-300 bg-rose-50 flex items-center justify-center text-xs text-rose-500 font-bold">
-                      Logo Yok
+                    <div className="size-9 rounded-md border border-dashed border-rose-300 bg-rose-50 flex items-center justify-center text-[10px] text-rose-500 font-bold shrink-0">
+                      Yok
                     </div>
                   )}
-                  <p className="font-bold text-[#111b21] text-[13px] mt-2.5 truncate w-full">{data.org.name || 'İşletmeniz'}</p>
-                  <p className="text-[11px] text-emerald-700 mt-0.5">✓ Marka Kimliği Hazır</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] uppercase font-semibold text-[#667781] tracking-wider">Logo</p>
+                    <p className="font-semibold text-[#111b21] text-[12px] truncate">{data.org.name || 'İşletmeniz'}</p>
+                  </div>
                 </div>
 
-                <div className="flex flex-col items-center justify-center rounded-lg border border-hairline bg-canvas p-4 text-center">
-                  <p className="text-[11.5px] font-semibold text-[#667781] uppercase tracking-wider mb-2">Ürün Görseli</p>
+                <div className="flex items-center gap-2.5 rounded-lg border border-hairline bg-[#f8fafb] p-2">
                   {selectedProducts[0] && (draft.productExtras[selectedProducts[0].id]?.imageUrl || selectedProducts[0].images[0]?.url) ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={draft.productExtras[selectedProducts[0].id]?.imageUrl || selectedProducts[0].images[0]?.url}
                       alt="Ürün"
-                      className="size-20 rounded-md object-cover border border-hairline shadow-sm"
+                      className="size-9 rounded-md object-cover border border-hairline shrink-0"
                     />
                   ) : (
-                    <div className="size-20 rounded-md border border-dashed border-amber-300 bg-amber-50 flex items-center justify-center text-xs text-amber-600 font-bold">
-                      Ürün Yok
+                    <div className="size-9 rounded-md border border-dashed border-amber-300 bg-amber-50 flex items-center justify-center text-[10px] text-amber-600 font-bold shrink-0">
+                      Yok
                     </div>
                   )}
-                  <p className="font-bold text-[#111b21] text-[13px] mt-2.5 truncate w-full">{selectedProducts[0]?.name || 'Ürün'}</p>
-                  <p className="text-[11px] text-emerald-700 mt-0.5">✓ Ürün Sahnesi Hazır</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] uppercase font-semibold text-[#667781] tracking-wider">Ürün</p>
+                    <p className="font-semibold text-[#111b21] text-[12px] truncate">{selectedProducts[0]?.name || 'Ürün'}</p>
+                  </div>
                 </div>
               </div>
 
               {/* Spiker Seslendirme Metni (Ön Onay) */}
-              <div className="rounded-xl border border-hairline bg-surface p-4 space-y-3.5 shadow-2xs">
+              <div className="rounded-xl border border-hairline bg-surface p-3.5 space-y-2.5 shadow-2xs">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <span className="flex size-7 items-center justify-center rounded-lg bg-[#e7f8f2] text-[#008069]">
-                      <Icon name="mic" className="size-4" />
+                  <div className="flex items-center gap-2">
+                    <span className="flex size-6 items-center justify-center rounded-md bg-[#e7f8f2] text-[#008069]">
+                      <Icon name="mic" className="size-3.5" />
                     </span>
                     <div>
-                      <p className="text-[13.5px] font-semibold text-[#111b21]">Seslendirme Metni</p>
-                      <p className="text-[11.5px] text-[#667781]">Videoda spikerin okuyacağı ve altyazıda yer alacak metin</p>
+                      <p className="text-[13px] font-semibold text-[#111b21]">Seslendirme Metni</p>
                     </div>
                   </div>
-                  <span className="inline-flex items-center rounded-md bg-[#e7f8f2] px-2 py-0.5 text-[11px] font-medium text-[#008069] border border-[#00a884]/30">
+                  <span className="inline-flex items-center rounded bg-[#e7f8f2] px-2 py-0.5 text-[10.5px] font-medium text-[#008069] border border-[#00a884]/30">
                     Ön Onaylı
                   </span>
                 </div>
@@ -1746,13 +1747,13 @@ export function CreativeWizard({
                   <Textarea
                     value={activeVoiceoverText}
                     onChange={(e) => patch({ customVoiceover: e.target.value })}
-                    rows={3}
-                    className="w-full rounded-lg border border-[#d1d7db] bg-white p-3 text-[13.5px] font-normal text-[#111b21] focus:border-[#008069] focus:ring-1 focus:ring-[#008069]"
+                    rows={2}
+                    className="w-full rounded-lg border border-[#d1d7db] bg-white p-2.5 text-[13px] font-normal text-[#111b21] focus:border-[#008069] focus:ring-1 focus:ring-[#008069]"
                     placeholder="Spikerin okumasını istediğiniz reklam repliğini buraya yazın veya düzenleyin..."
                   />
-                  <div className="mt-1.5 flex items-center justify-between text-[11.5px]">
+                  <div className="mt-1 flex items-center justify-between text-[11px]">
                     <span className={voiceoverWordCount > 18 ? 'text-amber-700 font-medium' : 'text-[#667781]'}>
-                      {voiceoverWordCount} kelime · Tahmini süre: ~{(voiceoverWordCount * 0.45).toFixed(1)} sn (Önerilen: 10-15 kelime)
+                      {voiceoverWordCount} kelime · ~{(voiceoverWordCount * 0.45).toFixed(1)} sn
                     </span>
                     {draft.customVoiceover && (
                       <button
@@ -1767,15 +1768,15 @@ export function CreativeWizard({
                 </div>
 
                 {/* Hızlı Replik Şablonları */}
-                <div className="space-y-1.5 pt-0.5">
-                  <p className="text-[11px] font-semibold text-[#667781]">Hazır Replik Şablonları:</p>
+                <div className="space-y-1">
+                  <p className="text-[10.5px] font-medium text-[#667781]">Hazır Şablonlar:</p>
                   <div className="flex flex-wrap gap-1.5">
                     {voiceoverPresets.map((preset, idx) => (
                       <button
                         key={idx}
                         type="button"
                         onClick={() => patch({ customVoiceover: preset.text })}
-                        className="rounded-md border border-[#e9edef] bg-white px-2.5 py-1 text-[12px] font-medium text-[#111b21] hover:bg-[#f0f2f5] hover:border-[#d1d7db] transition-colors cursor-pointer"
+                        className="rounded-md border border-[#e9edef] bg-white px-2 py-0.5 text-[11.5px] font-medium text-[#111b21] hover:bg-[#f0f2f5] hover:border-[#d1d7db] transition-colors cursor-pointer"
                       >
                         {preset.label}
                       </button>
@@ -1783,39 +1784,37 @@ export function CreativeWizard({
                   </div>
                 </div>
 
-                {/* Garanti ve Onay Kutucuğu */}
-                <div className="rounded-lg border border-[#e9edef] bg-[#f8fafb] p-2.5 flex items-start gap-2 text-[12px] text-[#3b4a54]">
-                  <Icon name="check" className="size-4 text-[#008069] shrink-0 mt-0.5" />
-                  <p className="leading-snug">
-                    <span className="font-semibold text-[#111b21]">Birebir Okuma Garantisi:</span> Spiker ve altyazı motoru videoda sadece bu onayladığınız metni okur.
-                  </p>
+                {/* Garanti Notu */}
+                <div className="flex items-center gap-1.5 text-[11px] text-[#667781] pt-0.5">
+                  <Icon name="check" className="size-3.5 text-[#008069] shrink-0" />
+                  <span>Spiker ve altyazı motoru videoda sadece bu onaylanan metni okur.</span>
                 </div>
               </div>
 
               {isVideo && !hasValidVideoLogo ? (
                 <Notice tone="danger">
-                  <strong>Kurumsal Logo Zorunludur:</strong> Yapay zekanın uydurma amblem veya semboller üretmemesi için kurumsal logonuzun tanımlı olması gerekir.
+                  <strong>Kurumsal Logo Zorunludur:</strong> Yapay zekanın uydurma amblem üretmemesi için kurumsal logonuz tanımlı olmalıdır.
                 </Notice>
               ) : null}
               {isVideo && !hasValidVideoProduct ? (
                 <Notice tone="danger">
-                  <strong>Ürün Görseli Zorunludur:</strong> Reklam videosunun gerçek ürününüz üzerinden üretilmesi için lütfen geri dönüp bir ürün seçin.
+                  <strong>Ürün Görseli Zorunludur:</strong> Reklam videosu için lütfen geri dönüp ürün seçin.
                 </Notice>
               ) : null}
 
               {/* Düzenle ve Videoyu Oluştur Butonları */}
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-2.5 pt-1">
                 <Button
                   type="button"
                   variant="quiet"
                   onClick={() => go('products')}
-                  className="flex-1 h-11 text-[13.5px] font-semibold border border-hairline"
+                  className="flex-1 h-10 text-[13px] font-medium border border-hairline"
                 >
                   Düzenle
                 </Button>
                 <Button
                   type="submit"
-                  className="wb-wa-submit flex-2 h-11 text-[13.5px] font-semibold !bg-[#008069] hover:!bg-[#00a884] text-white shadow-sm"
+                  className="wb-wa-submit flex-2 h-10 text-[13px] font-semibold !bg-[#008069] hover:!bg-[#00a884] text-white shadow-sm"
                   disabled={
                     pending ||
                     !data.canManage ||
