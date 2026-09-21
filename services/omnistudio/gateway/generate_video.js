@@ -1554,7 +1554,7 @@ async function generateVideoOnFlow(options = {}) {
       logoShapeNote = ` Orijinal kurumsal amblem: ${bk.logo_visual_description}. Masadaki akrilik plaket veya duvardaki tabelada bu kırmızı çatı ve dikey ok amblemi kesinlikle en üstte çizilecektir; yalnızca yazı yazılıp amblem ASLA atlanmayacaktır.`;
     }
   } catch(_) {}
-  const mandatoryMediaDirective = `\n\nKESİN GÖRSEL VE MARKA TALİMATI:\n1. ÜRÜN BİÇİMİ: İliştirilmiş ürün fotoğrafını ana ürünün görsel referansı olarak kullan. Ürünün fiziksel formunu, rengini ve ayırt edici geometrik yapısını koru.${productShapeNote}\n2. KURUMSAL LOGO: İliştirilmiş kurumsal logo dosyasını marka kimliği referansı olarak kullan. Logoyu yeniden tasarlama, sarı üçgen veya uydurma semboller ekleme.${logoShapeNote} Marka adı "${brandNameForDirective}" olarak doğru yazılsın. Kapanış sahnesindeki fiziksel tabela/akrilik plaket üzerinde orijinal amblem ve kurumsal isim eksiksiz yer alsın.`;
+  const mandatoryMediaDirective = `\n\nKESİN GÖRSEL VE MARKA TALİMATI:\n1. ÜRÜN BİÇİMİ: İliştirilmiş ürün fotoğrafını ana ürünün görsel referansı olarak kullan. Ürünün fiziksel formunu, rengini ve ayırt edici geometrik yapısını koru.${productShapeNote}\n2. KURUMSAL LOGO: İliştirilmiş kurumsal logo dosyasını marka kimliği referansı olarak kullan. Logoyu yeniden tasarlama, sarı üçgen veya uydurma semboller ekleme.${logoShapeNote} Marka adı "${brandNameForDirective}" olarak doğru yazılsın.\n3. SIFIR HATA DÜZ YÜZEY KURALI (ZERO-ERROR FLAT RIGID SURFACE): Model logoyu ASLA kavisli kaportaya, araç şoför kapısına (kulp ve cam eğimi logoyu bozar), araç ön panjuruna veya barete basmayacaktır. Logo yalnızca 1 kez, sıfır hata vereceği düz beyaz tır kasa panelinde, düz mimari tabelada veya ofis masa isimliğinde yer alacaktır.`;
 
   let finalPrompt = prompt;
   if (!finalPrompt.includes('KESİN GÖRSEL VE MARKA TALİMATI') && filesToUpload.length > 0) {
@@ -2014,25 +2014,33 @@ async function generateVideoOnFlow(options = {}) {
     }
   }
 
-  console.log(`[Flow Video] 📥 İndirme işlemi tetiklendi, dosyanın diske yazılması bekleniyor...`);
+    // Eski veya bayat indirme dosyalarını baştan temizle
+    try { fs.unlinkSync(path.join(OUTPUT_DIR, 'download')); } catch(_) {}
+    try { fs.unlinkSync('/root/Downloads/download'); } catch(_) {}
+
+    console.log(`[Flow Video] 📥 İndirme işlemi tetiklendi, taze dosyanın diske yazılması bekleniyor...`);
     
-    // Dosya inene kadar en fazla 45 saniye bekle
+    // Taze dosya diske tam yazılana kadar bekle (mtime >= requestStartedAt)
     let detectedDownloadedFile = null;
     for (let w = 0; w < 45; w++) {
       await sleep(1000);
       const filesNow = fs.readdirSync(OUTPUT_DIR);
       const isDownloading = filesNow.some(f => f.endsWith('.crdownload'));
-      const hasDownloadFile = filesNow.includes('download');
-      const recentMp4 = filesNow.find(f => f.endsWith('.mp4') && !f.startsWith('video_') && (Date.now() - fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs < 30000));
-      const recentZip = filesNow.find(f => f.endsWith('.zip') && (Date.now() - fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs < 30000));
-      if ((recentMp4 || recentZip || hasDownloadFile) && !isDownloading) {
+      
+      const dlPath = path.join(OUTPUT_DIR, 'download');
+      const hasFreshDownload = fs.existsSync(dlPath) && fs.statSync(dlPath).mtimeMs >= requestStartedAt && fs.statSync(dlPath).size > 500000;
+      const recentMp4 = filesNow.find(f => f.endsWith('.mp4') && !f.startsWith('video_') && fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs >= requestStartedAt && fs.statSync(path.join(OUTPUT_DIR, f)).size > 500000);
+      const recentZip = filesNow.find(f => f.endsWith('.zip') && fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs >= requestStartedAt);
+
+      if ((recentMp4 || recentZip || hasFreshDownload) && !isDownloading) {
         detectedDownloadedFile = recentMp4 || recentZip || 'download';
-        console.log(`[Flow Video] ✅ İndirilen dosya yakalandı: ${detectedDownloadedFile}`);
+        console.log(`[Flow Video] 🎯 Taze indirilen video diske yazıldı (${w} sn): ${detectedDownloadedFile} (${fs.statSync(path.join(OUTPUT_DIR, detectedDownloadedFile)).size} bytes)`);
         break;
       }
     }
   }
 
+  // İndirme bittikten sonra tab'ı kapat
   try { ws.close(); } catch(e){}
   try { await fetch(`http://127.0.0.1:${port}/json/close/${tab.id}`); } catch(e){}
 
@@ -2191,10 +2199,10 @@ async function generateVideoOnFlow(options = {}) {
         .map(f => ({ path: path.join(OUTPUT_DIR, f), time: fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs, size: fs.statSync(path.join(OUTPUT_DIR, f)).size }))
         .filter(f => f.size > 500000)
         .sort((a, b) => b.time - a.time);
-      const recentOutputs = allOutputsMp4.filter(f => f.time >= requestStartedAt - 30000);
+      const recentOutputs = allOutputsMp4.filter(f => f.time >= requestStartedAt);
       if (recentOutputs.length > 0) {
         fs.copyFileSync(recentOutputs[0].path, rawPath);
-        console.log(`[Flow Video] 🛡️ Emniyet Kopyası: Outputs dizinindeki güncel MP4 rawPath'e aktarıldı: ${recentOutputs[0].path}`);
+        console.log(`[Flow Video] 🛡️ Emniyet Kopyası: Bu üretim döngüsünde inen taze MP4 rawPath'e aktarıldı: ${recentOutputs[0].path}`);
       }
     }
 
