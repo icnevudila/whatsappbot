@@ -110,6 +110,7 @@ export type CreativeSnapshot = {
   subtitles?: boolean
   videoScenarioPrompt?: string | null
   videoScenarioTitle?: string | null
+  referenceImageUrls?: string[] | null
 }
 
 export type CreativePayload = CreativeSnapshot & {
@@ -124,6 +125,7 @@ export type CreativePayload = CreativeSnapshot & {
   cleanPublicUrl?: string | null
   cleanStoragePath?: string | null
   videoDuration?: number | null
+  pendingVideoUrl?: string | null
   cost?: { provider?: string; model?: string; imageCount: number } | null
 }
 

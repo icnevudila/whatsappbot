@@ -73,33 +73,28 @@ const TEXT_ONLY_STAGES: Stage[] = [
 export const VIDEO_CAMPAIGN_STAGES: Stage[] = [
   {
     at: 0,
-    label: 'Firma marka kiti ve ürün kataloğu taranıyor…',
-    detail: 'Kurumsal kimlik renkleri ve 3 perdeli reklam kurgusu hazırlanıyor',
+    label: 'Marka ve ürün bilgileri hazırlanıyor…',
+    detail: 'Kurgu ve sahne detayları düzenleniyor',
   },
   {
     at: 10,
-    label: 'Yapay zeka sinematik reklam sahnesi inşa ediliyor…',
-    detail: '100mm makro lens, stüdyo aydınlatması ve altın saat ışığı tasarlanıyor',
+    label: 'Video üretiliyor…',
+    detail: 'Tanıtım videosu sahneleri ve seslendirme oluşturuluyor',
   },
   {
-    at: 26,
-    label: 'Veo motoru dinamik video karelerini üretiyor…',
-    detail: '120fps ağır çekim su sisi ve mikro damlacık fiziği simüle ediliyor',
+    at: 60,
+    label: 'Video hazırlandı, uygulamaya aktarılıyor…',
+    detail: 'Yüksek kalitede video indiriliyor',
   },
   {
-    at: 55,
-    label: 'Gimbal kamera akışı ve sinema renk profili işleniyor…',
-    detail: 'Arri Alexa 4K renk derecelendirmesi ve kamera süzülüşü uygulanıyor',
+    at: 82,
+    label: 'Sisteme kaydediliyor…',
+    detail: 'Video kütüphanenize güvenle ekleniyor',
   },
   {
-    at: 75,
-    label: 'Marka kimliği sahneye işleniyor…',
-    detail: 'Logo, tabela ve ürün etiketi doğal fiziksel yüzeylerde korunuyor',
-  },
-  {
-    at: 92,
-    label: 'Son kontroller yapılıyor ve videonuz hazırlanıyor…',
-    detail: '1080p dikey video WhatsApp ve Reels için paketleniyor',
+    at: 94,
+    label: 'Hazır…',
+    detail: 'Videonuz kütüphanede kullanıma sunuluyor',
   },
 ]
 

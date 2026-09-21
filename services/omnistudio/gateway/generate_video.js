@@ -69,13 +69,15 @@ async function resolveLocalMediaFiles(options = {}) {
   }
   if (options.logoUrl) candidateItems.push({ url: options.logoUrl, role: 'logo' });
 
-  // 2. Çoklu referans görselleri
-  if (Array.isArray(options.referenceImages)) {
-    for (const ref of options.referenceImages) {
-      const u = typeof ref === 'string' ? ref : ref?.url;
-      if (u && u !== options.productImageUrl && u !== options.detailImageUrl && u !== options.logoUrl) {
-        candidateItems.push({ url: u, role: typeof ref === 'object' ? ref.role || 'reference' : 'reference' });
-      }
+  // 2. Çoklu referans görselleri (en fazla 5 adet ek referans görseli)
+  const incomingRefs = Array.isArray(options.referenceImageUrls)
+    ? options.referenceImageUrls
+    : (Array.isArray(options.referenceImages) ? options.referenceImages : []);
+
+  for (const ref of incomingRefs.slice(0, 5)) {
+    const u = typeof ref === 'string' ? ref : ref?.url;
+    if (u && u !== options.productImageUrl && u !== options.detailImageUrl && u !== options.logoUrl) {
+      candidateItems.push({ url: u, role: typeof ref === 'object' ? ref.role || 'reference' : 'reference' });
     }
   }
 
@@ -1935,14 +1937,60 @@ async function generateVideoOnFlow(options = {}) {
       console.warn('[Flow Video] Stream indirme uyarısı:', streamErr.message);
     }
 
-    // YÖNTEM A: Üst çubuktaki doğrudan "Download media" butonu
+    // 6.3. İZOLE VE GÜVENİLİR CDP İNDİRME BORU HATTI
+    const jobDownloadDir = path.join(OUTPUT_DIR, `dl_${timestamp}_${videoId}`);
+    if (!fs.existsSync(jobDownloadDir)) {
+      fs.mkdirSync(jobDownloadDir, { recursive: true });
+    }
+
+    let downloadGuid = null;
+    let downloadState = null;
+    let suggestedFilename = null;
+    let totalBytes = 0;
+    let receivedBytes = 0;
+
+    const cdpDownloadHandler = (data) => {
+      try {
+        const msg = JSON.parse(data.toString());
+        if (msg.method === 'Browser.downloadWillBegin') {
+          downloadGuid = msg.params.guid;
+          suggestedFilename = msg.params.suggestedFilename;
+          console.log(`[Flow Video] 📥 [CDP] downloadWillBegin: guid=${downloadGuid}, dosya=${suggestedFilename}`);
+        } else if (msg.method === 'Browser.downloadProgress') {
+          if (!downloadGuid || msg.params.guid === downloadGuid) {
+            downloadState = msg.params.state;
+            totalBytes = msg.params.totalBytes;
+            receivedBytes = msg.params.receivedBytes;
+            if (downloadState === 'completed') {
+              console.log(`[Flow Video] ✅ [CDP] İndirme tamamlandı (${receivedBytes} bytes)`);
+            }
+          }
+        }
+      } catch (_) {}
+    };
+    ws.on('message', cdpDownloadHandler);
+
+    try {
+      await send('Browser.setDownloadBehavior', {
+        behavior: 'allow',
+        downloadPath: jobDownloadDir,
+        eventsEnabled: true
+      });
+    } catch (bhErr) {
+      console.warn('[Flow Video] setDownloadBehavior uyarısı:', bhErr.message);
+    }
+
+    // YÖNTEM A: Sahne içi doğrudan "Download media" butonu (asla proje düzeyi export butonunu tıklama!)
     for (let b = 0; b < 6; b++) {
       const dlBtn = await send('Runtime.evaluate', {
         expression: `(() => {
+          // Kesin kural: YALNIZCA sahne içi "Download media" butonunu hedefle (asla proje düzeyi export butonunu değil!)
           const btn = document.querySelector('button[aria-label="Download media"]') ||
-                      document.querySelector('button[aria-label*="download" i]') ||
-                      document.querySelector('[data-tooltip*="Download" i]') ||
-                      Array.from(document.querySelectorAll('button')).find(b => (b.innerText || '').trim().toLowerCase() === 'download');
+                      Array.from(document.querySelectorAll('button')).find(b => {
+                        const al = (b.getAttribute('aria-label') || '').toLowerCase();
+                        const t = (b.innerText || '').trim().toLowerCase();
+                        return (al === 'download media' || t === 'download media') && b.getBoundingClientRect().width > 0;
+                      });
           if (btn) {
             const r = btn.getBoundingClientRect();
             if (r.width > 0 && r.height > 0) {
@@ -1955,7 +2003,7 @@ async function generateVideoOnFlow(options = {}) {
       });
 
       if (dlBtn?.result?.value) {
-        console.log(`[Flow Video] 📥 Üst indirme butonu bulundu, tıklanıyor (${dlBtn.result.value.x}, ${dlBtn.result.value.y})...`);
+        console.log(`[Flow Video] 📥 Sahne indirme butonu bulundu, tıklanıyor (${dlBtn.result.value.x}, ${dlBtn.result.value.y})...`);
         await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: dlBtn.result.value.x, y: dlBtn.result.value.y, button: 'left', clickCount: 1 });
         await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: dlBtn.result.value.x, y: dlBtn.result.value.y, button: 'left', clickCount: 1 });
         await sleep(1200);
@@ -1963,7 +2011,7 @@ async function generateVideoOnFlow(options = {}) {
         // 720p veya Original size seçeneğini tıkla
         const popupRes = await send('Runtime.evaluate', {
           expression: `(() => {
-            const items = Array.from(document.querySelectorAll('.mat-mdc-menu-item, [role="menuitem"], *'));
+            const items = Array.from(document.querySelectorAll('.mat-mdc-menu-item, [role="menuitem"], button'));
             const opt = items.find(e => {
               const t = (e.innerText || '').trim();
               return (t.includes('720p') || t.includes('Original size') || t === '720p') && e.getBoundingClientRect().width > 0;
@@ -1992,68 +2040,63 @@ async function generateVideoOnFlow(options = {}) {
       await sleep(1000);
     }
 
-  // YÖNTEM B: More options menüsünden İndir (Tile üç nokta menüsü)
-  if (!downloadTriggered) {
-    console.log(`[Flow Video] 📥 Üst buton bulunamadı, More Options menüsü deneniyor...`);
-    const moreRes = await send('Runtime.evaluate', {
-      expression: `(() => {
-        const btns = Array.from(document.querySelectorAll('button[aria-label="More options"]'));
-        const tileBtn = btns.find(b => {
-          const r = b.getBoundingClientRect();
-          return r.width > 20 && r.width < 45 && r.top > 0;
-        });
-        if (tileBtn) {
-          tileBtn.click();
-          return true;
-        }
-        return false;
-      })()`,
-      returnByValue: true
-    });
-
-    if (moreRes?.result?.value) {
-      await sleep(1200);
-      const menuRes = await send('Runtime.evaluate', {
+    // YÖNTEM B: More options menüsünden İndir (Tile üç nokta menüsü)
+    if (!downloadTriggered) {
+      console.log(`[Flow Video] 📥 Üst buton bulunamadı, More Options menüsü deneniyor...`);
+      const moreRes = await send('Runtime.evaluate', {
         expression: `(() => {
-          const items = Array.from(document.querySelectorAll('.mat-mdc-menu-panel button, [role="menuitem"]'));
-          const dl = items.find(i => (i.innerText || '').toLowerCase().includes('download'));
-          if (dl) {
-            dl.click();
+          const btns = Array.from(document.querySelectorAll('button[aria-label="More options"]'));
+          const tileBtn = btns.find(b => {
+            const r = b.getBoundingClientRect();
+            return r.width > 20 && r.width < 45 && r.top > 0;
+          });
+          if (tileBtn) {
+            tileBtn.click();
             return true;
           }
           return false;
         })()`,
         returnByValue: true
       });
-      if (menuRes?.result?.value) {
-        console.log(`[Flow Video] 📥 More Options menüsünden Download seçeneği başarıyla tıklandı!`);
-        downloadTriggered = true;
+
+      if (moreRes?.result?.value) {
+        await sleep(1200);
+        const menuRes = await send('Runtime.evaluate', {
+          expression: `(() => {
+            const items = Array.from(document.querySelectorAll('.mat-mdc-menu-panel button, [role="menuitem"]'));
+            const dl = items.find(i => (i.innerText || '').toLowerCase().includes('download'));
+            if (dl) {
+              dl.click();
+              return true;
+            }
+            return false;
+          })()`,
+          returnByValue: true
+        });
+        if (menuRes?.result?.value) {
+          console.log(`[Flow Video] 📥 More Options menüsünden Download seçeneği başarıyla tıklandı!`);
+          downloadTriggered = true;
+        }
       }
     }
-  }
 
-    // Eski veya bayat indirme dosyalarını baştan temizle
-    try { fs.unlinkSync(path.join(OUTPUT_DIR, 'download')); } catch(_) {}
-    try { fs.unlinkSync('/root/Downloads/download'); } catch(_) {}
-
-    console.log(`[Flow Video] 📥 İndirme işlemi tetiklendi, taze dosyanın diske yazılması bekleniyor...`);
-    
-    // Taze dosya diske tam yazılana kadar bekle (mtime >= requestStartedAt)
-    let detectedDownloadedFile = null;
-    for (let w = 0; w < 45; w++) {
+    console.log(`[Flow Video] 📥 İndirme tetiklendi, CDP olayının tamamlanması bekleniyor...`);
+    for (let w = 0; w < 40; w++) {
       await sleep(1000);
-      const filesNow = fs.readdirSync(OUTPUT_DIR);
-      const isDownloading = filesNow.some(f => f.endsWith('.crdownload'));
-      
-      const dlPath = path.join(OUTPUT_DIR, 'download');
-      const hasFreshDownload = fs.existsSync(dlPath) && fs.statSync(dlPath).mtimeMs >= requestStartedAt && fs.statSync(dlPath).size > 500000;
-      const recentMp4 = filesNow.find(f => f.endsWith('.mp4') && !f.startsWith('video_') && fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs >= requestStartedAt && fs.statSync(path.join(OUTPUT_DIR, f)).size > 500000);
-      const recentZip = filesNow.find(f => f.endsWith('.zip') && fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs >= requestStartedAt);
-
-      if ((recentMp4 || recentZip || hasFreshDownload) && !isDownloading) {
-        detectedDownloadedFile = recentMp4 || recentZip || 'download';
-        console.log(`[Flow Video] 🎯 Taze indirilen video diske yazıldı (${w} sn): ${detectedDownloadedFile} (${fs.statSync(path.join(OUTPUT_DIR, detectedDownloadedFile)).size} bytes)`);
+      if (downloadState === 'completed') {
+        console.log(`[Flow Video] 🎯 CDP downloadState=completed (${w} sn)!`);
         break;
+      }
+      if (downloadState === 'canceled') {
+        console.warn(`[Flow Video] ⚠️ CDP downloadState=canceled!`);
+        break;
+      }
+      if (fs.existsSync(jobDownloadDir)) {
+        const dlFiles = fs.readdirSync(jobDownloadDir).filter(f => !f.endsWith('.crdownload'));
+        if (dlFiles.length > 0 && fs.statSync(path.join(jobDownloadDir, dlFiles[0])).size > 300000) {
+          console.log(`[Flow Video] 🎯 jobDownloadDir dosya tespit edildi (${w} sn): ${dlFiles[0]}`);
+          break;
+        }
       }
     }
   }
@@ -2062,138 +2105,41 @@ async function generateVideoOnFlow(options = {}) {
   try { ws.close(); } catch(e){}
   try { await fetch(`http://127.0.0.1:${port}/json/close/${tab.id}`); } catch(e){}
 
-  if (!capturedDirectly) {
-    const downloadedCandidate = path.join(OUTPUT_DIR, 'download');
-    const rootDownloadCandidate = '/root/Downloads/download';
-
-    // Eğer Google Flow projeyi .zip arşivi olarak indirdiyse:
-    // ZipInfo.date_time sıralamasıyla arşiv içindeki EN YENİ videoyu seç.
-    const recentZipFile = fs.readdirSync(OUTPUT_DIR)
-      .filter(f => f.endsWith('.zip'))
-      .map(f => ({ name: f, time: fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs }))
-      .sort((a, b) => b.time - a.time)[0];
-
-    let extractedFromZip = false;
-    if (recentZipFile && recentZipFile.time >= requestStartedAt - 10000) {
-      try {
-        const zipPath = path.join(OUTPUT_DIR, recentZipFile.name);
-        const extractDir = path.join(OUTPUT_DIR, `unzip_${timestamp}`);
-        fs.mkdirSync(extractDir, { recursive: true });
-        const { execSync } = require('child_process');
-
-        // 1. Arşivi çıkar: Python zipfile ile UTF-8 uyumlu çıkarma, hata durumunda unzip
-        try {
-          execSync(`python3 -c "import zipfile; zipfile.ZipFile('${zipPath}').extractall('${extractDir}')" 2>/dev/null`);
-        } catch (_) {
+  const jobDownloadDir = path.join(OUTPUT_DIR, `dl_${timestamp}_${videoId}`);
+  if (!capturedDirectly && fs.existsSync(jobDownloadDir)) {
+    const downloadedFiles = fs.readdirSync(jobDownloadDir).filter(f => !f.endsWith('.crdownload'));
+    for (const f of downloadedFiles) {
+      const candidatePath = path.join(jobDownloadDir, f);
+      const stat = fs.statSync(candidatePath);
+      if (stat.size > 300000) {
+        if (f.endsWith('.zip')) {
+          console.log(`[Flow Video] 📦 Zip dosyası tespit edildi, tekil sahne MP4 ayıklanıyor...`);
+          const extractDir = path.join(jobDownloadDir, 'extracted');
+          fs.mkdirSync(extractDir, { recursive: true });
           try {
-            execSync(`unzip -o "${zipPath}" -d "${extractDir}" 2>/dev/null`);
-          } catch (__) {
-            try { execSync(`python3 -m zipfile -e "${zipPath}" "${extractDir}" 2>/dev/null`); } catch (___) {}
+            const { execSync } = require('child_process');
+            execSync(`python3 -c "import zipfile; zipfile.ZipFile('${candidatePath}').extractall('${extractDir}')" 2>/dev/null || unzip -o "${candidatePath}" -d "${extractDir}" 2>/dev/null`, { stdio: 'ignore' });
+            const extractedMp4s = fs.readdirSync(extractDir).filter(x => x.toLowerCase().endsWith('.mp4'));
+            if (extractedMp4s.length > 0) {
+              const best = path.join(extractDir, extractedMp4s[0]);
+              fs.copyFileSync(best, rawPath);
+              capturedDirectly = true;
+              console.log(`[Flow Video] 📦 Zip içinden video çıkarıldı -> ${rawFileName}`);
+              break;
+            }
+          } catch (zErr) {
+            console.warn('[Flow Video] Zip ayıklama hatası:', zErr.message);
           }
-        }
-
-        // 2. Dosyaları DOĞRUDAN DİSKTEN (extractDir içinden) oku
-        const diskFiles = fs.readdirSync(extractDir).filter(f => f.toLowerCase().endsWith('.mp4'));
-
-        // Normalizasyon: Türkçe karakterleri ve Info-ZIP'in #Uxxxx escape'lerini temizle
-        const normalizeStr = (s) => {
-          if (!s) return '';
-          return s.toLowerCase()
-            .replace(/#u[0-9a-f]{4}/gi, '')
-            .replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's')
-            .replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ç/g, 'c')
-            .replace(/[^a-z0-9]/g, '');
-        };
-
-        const brandNorm = normalizeStr(options.brandName || options.customer || '');
-        const prodNorm = normalizeStr(options.productName || options.product || '');
-
-        const getFileTimestamp = (filename) => {
-          const m = filename.match(/(\d{14})/);
-          if (m) return parseInt(m[1], 10);
-          try {
-            return fs.statSync(path.join(extractDir, filename)).mtimeMs;
-          } catch (_) {
-            return 0;
-          }
-        };
-
-        // 1. Marka eşleşmesi
-        const brandMatches = diskFiles.filter(name => {
-          const norm = normalizeStr(name);
-          if (brandNorm.length >= 3 && (norm.includes(brandNorm.slice(0, 5)) || norm.includes(brandNorm.slice(0, 4)))) return true;
-          if (brandNorm.includes('ayvaz') && norm.includes('ayvaz')) return true;
-          if (brandNorm.includes('veri') && (norm.includes('veri') || norm.includes('burada'))) return true;
-          if (brandNorm.includes('bofe') && norm.includes('bofe')) return true;
-          return false;
-        });
-
-        // 2. Ürün eşleşmesi
-        const prodMatches = diskFiles.filter(name => {
-          const norm = normalizeStr(name);
-          if (prodNorm.length >= 3 && norm.includes(prodNorm.slice(0, 4))) return true;
-          if ((prodNorm.includes('tugla') || prodNorm.includes('insaat')) && (norm.includes('brick') || norm.includes('construct'))) return true;
-          if (prodNorm.includes('harita') && (norm.includes('map') || norm.includes('radar') || norm.includes('harita'))) return true;
-          if (prodNorm.includes('pompa') || prodNorm.includes('hasat') || prodNorm.includes('zeytin')) {
-            if (norm.includes('spray') || norm.includes('farmer') || norm.includes('garden')) return true;
-          }
-          return false;
-        });
-
-        let candidatePool = [];
-        if (brandMatches.length > 0) {
-          brandMatches.sort((a, b) => getFileTimestamp(b) - getFileTimestamp(a));
-          candidatePool = brandMatches;
-        } else if (prodMatches.length > 0) {
-          prodMatches.sort((a, b) => getFileTimestamp(b) - getFileTimestamp(a));
-          candidatePool = prodMatches;
         } else {
-          diskFiles.sort((a, b) => getFileTimestamp(b) - getFileTimestamp(a));
-          candidatePool = diskFiles;
-        }
-
-        console.log(`[Flow Video] 🔍 Zip filtreleme: ${brandMatches.length} marka eşleşmesi, ${prodMatches.length} ürün eşleşmesi. En yeni adaylar:`, candidatePool.slice(0, 3));
-
-        let chosenFileName = null;
-        for (const candidate of candidatePool) {
-          const fullP = path.join(extractDir, candidate);
-          if (fs.existsSync(fullP) && fs.statSync(fullP).size > 500000) {
-            chosenFileName = candidate;
-            console.log(`[Flow Video] ⏱️ Zip arşivi içinden SEÇİLEN video (${brandMatches.length > 0 ? 'MARKA DOĞRULANDI' : (prodMatches.length > 0 ? 'ÜRÜN DOĞRULANDI' : 'FALLBACK')}): ${chosenFileName}`);
-            break;
-          }
-        }
-
-        if (chosenFileName) {
-          const bestMp4Path = path.join(extractDir, chosenFileName);
-          const bestSize = fs.statSync(bestMp4Path).size;
-          fs.copyFileSync(bestMp4Path, rawPath);
-          console.log(`[Flow Video] 📦 ZIP arşivinden video başarıyla çıkarıldı: ${chosenFileName} (${(bestSize/(1024*1024)).toFixed(2)} MB) -> ${rawFileName}`);
-          extractedFromZip = true;
-        }
-      } catch (zipErr) {
-        console.warn('[Flow Video] Zip çıkarma hatası:', zipErr.message);
-      }
-    }
-    
-    if (!extractedFromZip) {
-      if (fs.existsSync(downloadedCandidate)) {
-        fs.copyFileSync(downloadedCandidate, rawPath);
-        try { fs.unlinkSync(downloadedCandidate); } catch(e){}
-      } else if (fs.existsSync(rootDownloadCandidate)) {
-        fs.copyFileSync(rootDownloadCandidate, rawPath);
-        try { fs.unlinkSync(rootDownloadCandidate); } catch(e){}
-      } else {
-        const files = fs.readdirSync(OUTPUT_DIR)
-          .filter(f => f.endsWith('.mp4') && f !== rawFileName)
-          .map(f => ({ name: f, time: fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs }))
-          .sort((a, b) => b.time - a.time);
-        const recent = files.find(f => f.time >= requestStartedAt - 10000);
-        if (recent) {
-          fs.copyFileSync(path.join(OUTPUT_DIR, recent.name), rawPath);
+          fs.copyFileSync(candidatePath, rawPath);
+          capturedDirectly = true;
+          console.log(`[Flow Video] 🎯 İndirilen video diske başarıyla yazıldı (${(stat.size / 1024 / 1024).toFixed(2)} MB) -> ${rawFileName}`);
+          break;
         }
       }
     }
+    try { fs.rmSync(jobDownloadDir, { recursive: true, force: true }); } catch (_) {}
+  }
 
     // 🛡️ GÜVENLİK KONTROLÜ: rawPath diske yazılmadıysa extractDir veya outputs'tan en yeni MP4'ü bul
     if (!fs.existsSync(rawPath)) {
@@ -2227,7 +2173,6 @@ async function generateVideoOnFlow(options = {}) {
     if (!fs.existsSync(rawPath)) {
       throw new Error(`Google Flow video dosyası diske yazılamadı (${rawFileName}). İndirme veya arşiv çıkarma başarısız.`);
     }
-  }
 
   // 8.1 Otonom Nöral Türkçe Seslendirme / Natif Veo Sesi + Milisaniyelik CapCut Altyazı
   const shouldAddSubtitlesFlow = options.subtitles !== false;

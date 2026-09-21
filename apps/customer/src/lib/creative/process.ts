@@ -308,68 +308,124 @@ export async function processCreativeGeneration(
 
       const gatewayUrl = (process.env.OMNISTUDIO_GATEWAY_URL || 'http://167.233.201.31:3456').replace(/\/$/, '')
 
-      const vidRes = await fetch(`${gatewayUrl}/v1/videos/generations`, {
-        method: 'POST',
-        signal: AbortSignal.timeout(300000),
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orgId: creative.org_id,
-          prompt: videoPrompt,
-          preferredEngine: 'flow',
-          engine: 'flow',
-          useFlow: true,
-          brandName: overlay.brandName,
-          productName: chosenProduct?.name || null,
-          productImageUrl,
-          logoUrl,
-          includeLogo: snapshot.useLogo !== false,
-          includeOverlay: false,
-          subtitles: snapshot.subtitles !== false,
-          subTitle: overlay.subTitle,
-          offerTitle: overlay.offerTitle,
-          offerDetails: overlay.offerDetails,
-          ctaText: overlay.ctaText,
-          primaryColor: overlay.primaryColor,
-          accentColor: overlay.accentColor,
-          customer: customerName,
-        }),
-      })
+      let videoUrl = (snapshot as CreativePayload).pendingVideoUrl || null
+      let cleanVideoUrl: string | null = (snapshot as CreativePayload).cleanPublicUrl || null
+      let rawThumbUrl: string | null = (snapshot as CreativePayload).thumbnailUrl || null
 
-      if (!vidRes.ok) {
-        throw new Error(`OmniStudio Video ${vidRes.status}: ${(await vidRes.text()).slice(0, 200)}`)
+      if (!videoUrl) {
+        console.log('[CreativeProcess] Flow / Veo video üretimi başlatılıyor...')
+        const vidRes = await fetch(`${gatewayUrl}/v1/videos/generations`, {
+          method: 'POST',
+          signal: AbortSignal.timeout(300000),
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orgId: creative.org_id,
+            prompt: videoPrompt,
+            preferredEngine: 'flow',
+            engine: 'flow',
+            useFlow: true,
+            brandName: overlay.brandName,
+            productName: chosenProduct?.name || null,
+            productImageUrl,
+            referenceImageUrls: snapshot.referenceImageUrls || [],
+            logoUrl,
+            includeLogo: snapshot.useLogo !== false,
+            includeOverlay: false,
+            subtitles: snapshot.subtitles !== false,
+            subTitle: overlay.subTitle,
+            offerTitle: overlay.offerTitle,
+            offerDetails: overlay.offerDetails,
+            ctaText: overlay.ctaText,
+            primaryColor: overlay.primaryColor,
+            accentColor: overlay.accentColor,
+            customer: customerName,
+          }),
+        })
+
+        if (!vidRes.ok) {
+          throw new Error(`Video Motoru Hatası (${vidRes.status}): ${(await vidRes.text()).slice(0, 200)}`)
+        }
+
+        const vidJson = (await vidRes.json()) as {
+          data?: { url?: string; cleanUrl?: string; thumbnailUrl?: string }[]
+          videoId?: string
+          videoUrl?: string
+          cleanVideoUrl?: string
+          subtitledVideoUrl?: string
+          thumbnailUrl?: string
+        }
+        videoUrl = vidJson.data?.[0]?.url || vidJson.videoUrl || null
+        if (!videoUrl) throw new Error('Video URL alınamadı')
+
+        cleanVideoUrl = vidJson.data?.[0]?.cleanUrl || vidJson.cleanVideoUrl || null
+        rawThumbUrl = vidJson.thumbnailUrl || vidJson.data?.[0]?.thumbnailUrl || null
+
+        // 🎯 AŞAMA 1: Video Flow'da üretildi!
+        // İndirme veya storage aksasa bile yeniden Veo çalıştırmamak için pendingVideoUrl'yi hemen kaydet.
+        await supabase
+          .from('creatives')
+          .update({
+            status: 'rendering',
+            error: null,
+            payload: {
+              ...snapshot,
+              pendingVideoUrl: videoUrl,
+              cleanPublicUrl: cleanVideoUrl,
+              thumbnailUrl: rawThumbUrl,
+            },
+          })
+          .eq('id', creativeId)
+      } else {
+        console.log('[CreativeProcess] Mevcut üretilmiş video bulundu, yeniden üretim atlandı:', videoUrl)
       }
 
-      const vidJson = (await vidRes.json()) as {
-        data?: { url?: string; cleanUrl?: string; thumbnailUrl?: string }[]
-        videoId?: string
-        videoUrl?: string
-        cleanVideoUrl?: string
-        subtitledVideoUrl?: string
-        thumbnailUrl?: string
+      // 🎯 AŞAMA 2: İndirme & Depolama (Yeniden Denemeli)
+      console.log('[CreativeProcess] Video indiriliyor ve sisteme aktarılıyor:', videoUrl)
+      let videoBuffer: Buffer | null = null
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          const fileRes = await fetch(videoUrl, { signal: AbortSignal.timeout(60000) })
+          if (fileRes.ok) {
+            const buf = Buffer.from(await fileRes.arrayBuffer())
+            if (buf.length > 300000) {
+              videoBuffer = buf
+              break
+            }
+          }
+        } catch (fetchErr) {
+          console.warn(`[creative.video.download] Deneme ${attempt} hatası:`, fetchErr)
+        }
+        if (attempt < 3) await new Promise((r) => setTimeout(r, 2000))
       }
-      const videoUrl = vidJson.data?.[0]?.url || vidJson.videoUrl
-      if (!videoUrl) throw new Error('Video URL alınamadı')
 
-      const cleanVideoUrl = vidJson.data?.[0]?.cleanUrl || vidJson.cleanVideoUrl || null
-      const rawThumbUrl = vidJson.thumbnailUrl || vidJson.data?.[0]?.thumbnailUrl
+      let storagePath: string
+      let finalPublicUrl: string
 
-      const fileRes = await fetch(videoUrl, { signal: AbortSignal.timeout(60000) })
-      if (!fileRes.ok) throw new Error('Üretilen video indirilemedi')
-      const videoBuffer = Buffer.from(await fileRes.arrayBuffer())
+      if (videoBuffer) {
+        storagePath = `${creative.org_id}/${crypto.randomUUID()}.mp4`
+        const { error: upErr } = await supabase.storage.from('creatives').upload(storagePath, videoBuffer, {
+          contentType: 'video/mp4',
+          upsert: false,
+        })
+        if (upErr) {
+          console.warn('[creative.video.upload] Storage yükleme uyarısı (gateway URL yedek olarak atanıyor):', upErr.message)
+          storagePath = `external/${crypto.randomUUID()}.mp4`
+          finalPublicUrl = videoUrl
+        } else {
+          const { data: pubData } = supabase.storage.from('creatives').getPublicUrl(storagePath)
+          finalPublicUrl = pubData.publicUrl
+        }
+      } else {
+        // İndirme zaman aşımına uğrasa bile asla "video üretilemedi" deme!
+        // Gateway URL'si atanır; panel getSafeMediaUrl üzerinden proxy ile videoyu kesintisiz oynatır.
+        storagePath = `external/${crypto.randomUUID()}.mp4`
+        finalPublicUrl = videoUrl
+      }
 
-      const storagePath = `${creative.org_id}/${crypto.randomUUID()}.mp4`
-      const { error: upErr } = await supabase.storage.from('creatives').upload(storagePath, videoBuffer, {
-        contentType: 'video/mp4',
-        upsert: false,
-      })
-      if (upErr) throw new Error(upErr.message)
-
-      const { data: publicUrl } = supabase.storage.from('creatives').getPublicUrl(storagePath)
-
-      // Temiz (Altyazısız) Video Yükleme (İsteğe bağlı veya alternatif versiyon olarak)
-      let uploadedCleanUrl: string | null = null
+      // Temiz (Altyazısız) Video Yükleme
+      let uploadedCleanUrl: string | null = cleanVideoUrl
       let uploadedCleanPath: string | null = null
-      if (cleanVideoUrl && cleanVideoUrl !== videoUrl) {
+      if (cleanVideoUrl && cleanVideoUrl !== videoUrl && cleanVideoUrl.startsWith('http')) {
         try {
           const cleanRes = await fetch(cleanVideoUrl, { signal: AbortSignal.timeout(60000) })
           if (cleanRes.ok) {
@@ -389,8 +445,8 @@ export async function processCreativeGeneration(
         }
       }
 
-      let uploadedThumbnailUrl: string | null = null
-      if (rawThumbUrl) {
+      let uploadedThumbnailUrl: string | null = rawThumbUrl
+      if (rawThumbUrl && rawThumbUrl.startsWith('http')) {
         try {
           const thumbRes = await fetch(rawThumbUrl, { signal: AbortSignal.timeout(15000) })
           if (thumbRes.ok) {
@@ -418,16 +474,18 @@ export async function processCreativeGeneration(
         thumbnailUrl: uploadedThumbnailUrl || rawThumbUrl || null,
         cleanPublicUrl: uploadedCleanUrl || null,
         cleanStoragePath: uploadedCleanPath || null,
+        pendingVideoUrl: null, // Tamamlandı, pending temizlendi
         cost: { provider: 'omnistudio_veo', imageCount: 1 },
       }
 
+      // 🎯 AŞAMA 3: Hazır!
       const { error: dbErr } = await supabase
         .from('creatives')
         .update({
           status: 'ready',
           error: null,
           storage_path: storagePath,
-          public_url: publicUrl.publicUrl,
+          public_url: finalPublicUrl,
           width: 720,
           height: 1280,
           payload: nextPayload,

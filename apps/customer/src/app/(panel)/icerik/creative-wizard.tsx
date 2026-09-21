@@ -103,6 +103,7 @@ type Draft = {
   videoPurpose?: 'tanitim' | 'kampanya' | 'yeni_urun'
   offerDetails?: string
   moreSettingsOpen?: boolean
+  referenceImageUrls?: string[]
 }
 
 function newKey() {
@@ -154,6 +155,7 @@ function defaultDraft(data: WizardBootstrap, initialFormat?: string): Draft {
     videoPurpose: 'tanitim',
     offerDetails: '',
     moreSettingsOpen: false,
+    referenceImageUrls: [],
   }
 }
 
@@ -384,19 +386,6 @@ export function CreativeWizard({
           >
             <p className="font-bold text-[#111b21]">Var olandan türet</p>
             <p className="mt-1 text-[12.5px] text-[#667781]">Kütüphaneden seçin veya dosya yükleyin.</p>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              patch({ origin: 'new', baseCreativeId: '', formatId: 'reels_video' })
-              go('brief')
-            }}
-            className={`wb-wa-choice${draft.origin === 'new' && draft.formatId === 'reels_video' ? ' is-on' : ''}`}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <p className="font-bold text-[#111b21]">Kampanya videosu üret</p>
-            </div>
-            <p className="mt-1 text-[12.5px] text-[#667781]">Sıfırdan sinematik 9:16 reklam videosu. Marka ve ürünleriniz bağlanır.</p>
           </button>
         </div>
       ) : null}
@@ -819,12 +808,73 @@ export function CreativeWizard({
               </div>
             </Card>
 
-            {/* 3. Marka & Ürün Özet Şeridi */}
+            {/* 3. Ek Referans Fotoğrafları (Opsiyonel - En fazla 5 adet) */}
+            <Card>
+              <div className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[14px] font-bold text-[#111b21]">3 — Ek Referans Fotoğrafları (İsteğe Bağlı)</p>
+                    <p className="text-[12px] text-[#667781] mt-0.5">
+                      Farklı ürün açıları, ambalaj detayları veya mekan/şantiye fotoğrafları ekleyebilirsiniz (en fazla 5 adet).
+                    </p>
+                  </div>
+                  <span className="text-[11.5px] font-semibold text-[#667781]">
+                    {(draft.referenceImageUrls || []).length} / 5
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap gap-2.5 items-center">
+                  {(draft.referenceImageUrls || []).map((imgUrl, idx) => (
+                    <div key={idx} className="relative group size-16 sm:size-20 rounded-lg border border-hairline overflow-hidden bg-canvas shrink-0 shadow-sm">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={imgUrl} alt={`Referans ${idx + 1}`} className="size-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = (draft.referenceImageUrls || []).filter((_, i) => i !== idx)
+                          patch({ referenceImageUrls: updated })
+                        }}
+                        className="absolute top-1 right-1 size-5 rounded-full bg-black/70 text-white flex items-center justify-center text-[10px] hover:bg-rose-600 transition-colors cursor-pointer"
+                        title="Fotoğrafı Kaldır"
+                      >
+                        ✕
+                      </button>
+                      <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1 py-0.5 text-[9px] text-white">
+                        #{idx + 1}
+                      </span>
+                    </div>
+                  ))}
+
+                  {(draft.referenceImageUrls || []).length < 5 ? (
+                    <FileUploadButton
+                      accept="image/png,image/jpeg,image/webp"
+                      uploading={uploading}
+                      label="+ Fotoğraf Ekle"
+                      onFile={async (file) => {
+                        setUploading(true)
+                        const form = new FormData()
+                        form.set('file', file)
+                        const res = await uploadLibraryImage(form)
+                        setUploading(false)
+                        if (res?.publicUrl) {
+                          const current = draft.referenceImageUrls || []
+                          if (current.length < 5) {
+                            patch({ referenceImageUrls: [...current, res.publicUrl] })
+                          }
+                        }
+                      }}
+                    />
+                  ) : null}
+                </div>
+              </div>
+            </Card>
+
+            {/* 4. Marka & Ürün Özet Şeridi */}
             <div className="rounded-lg border border-hairline bg-canvas p-3">
               <p className="text-[11.5px] font-semibold uppercase tracking-wider text-[#667781] mb-2">
                 Kullanılacak Marka ve Ürün Görselleri
               </p>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div className="flex items-center gap-2.5 rounded-md border border-hairline bg-surface p-2.5">
                   {activeLogoUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -850,8 +900,22 @@ export function CreativeWizard({
                     <div className="size-10 rounded border border-dashed border-amber-300 bg-amber-50 flex items-center justify-center text-[10px] text-amber-600 font-bold shrink-0">Seçilmedi</div>
                   )}
                   <div className="min-w-0">
-                    <p className="text-[11px] text-[#667781]">Ürün Fotoğrafı</p>
+                    <p className="text-[11px] text-[#667781]">Ana Ürün</p>
                     <p className="text-[12.5px] font-semibold text-[#111b21] truncate">{selectedProducts[0]?.name || 'Henüz seçilmedi'}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 rounded-md border border-hairline bg-surface p-2.5">
+                  <div className="size-10 rounded border border-hairline bg-surface flex items-center justify-center text-[12px] font-bold text-[#00a884] shrink-0">
+                    {(draft.referenceImageUrls || []).length}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] text-[#667781]">Ek Referans</p>
+                    <p className="text-[12.5px] font-semibold text-[#111b21] truncate">
+                      {(draft.referenceImageUrls || []).length > 0
+                        ? `${(draft.referenceImageUrls || []).length} Fotoğraf Eklendi`
+                        : 'İsteğe Bağlı'}
+                    </p>
                   </div>
                 </div>
               </div>
