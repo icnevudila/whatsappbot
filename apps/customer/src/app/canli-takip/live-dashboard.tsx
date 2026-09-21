@@ -111,6 +111,15 @@ type CreativeItem = {
   }
 }
 
+function getSafeMediaUrl(url: string | null | undefined): string | undefined {
+  if (!url) return undefined
+  if (url.startsWith('http://167.233.201.31:3456/outputs/')) {
+    const fileName = url.split('/').pop()
+    return `/api/canli-takip/media-proxy?file=${encodeURIComponent(fileName || '')}`
+  }
+  return url
+}
+
 type MessageLog = {
   id: string | number
   direction: 'in' | 'out'
@@ -3945,20 +3954,44 @@ export function LiveDashboard() {
                           </span>
                         </div>
 
-                        {/* Image Preview or Loading Spinner */}
-                        <div className="aspect-video sm:aspect-[4/3] bg-canvas rounded-[var(--radius-sm)] border border-[var(--color-hairline)] overflow-hidden relative flex items-center justify-center">
+                        {/* Image / Video Preview or Loading Spinner */}
+                        <div className="aspect-video sm:aspect-[4/3] bg-canvas rounded-[var(--radius-sm)] border border-[var(--color-hairline)] overflow-hidden relative flex items-center justify-center group">
                           {cr.public_url ? (
-                            <img
-                              src={cr.public_url}
-                              alt={cr.title}
-                              className="w-full h-full object-cover cursor-pointer hover:scale-102 transition duration-200"
-                              onClick={() => setInspectedCreative(cr)}
-                            />
+                            (() => {
+                              const isVideo = cr.format === 'video' || (typeof cr.public_url === 'string' && cr.public_url.toLowerCase().endsWith('.mp4'))
+                              const safeUrl = getSafeMediaUrl(cr.public_url)
+                              return isVideo ? (
+                                <div className="w-full h-full relative cursor-pointer" onClick={() => setInspectedCreative(cr)}>
+                                  <video
+                                    src={safeUrl}
+                                    autoPlay
+                                    muted
+                                    loop
+                                    playsInline
+                                    className="w-full h-full object-cover group-hover:scale-102 transition duration-200"
+                                  />
+                                  <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/70 text-white text-[9px] font-bold tracking-wide flex items-center gap-1">
+                                    <span>▶</span> VIDEO
+                                  </div>
+                                </div>
+                              ) : (
+                                <img
+                                  src={safeUrl}
+                                  alt={cr.title}
+                                  className="w-full h-full object-cover cursor-pointer hover:scale-102 transition duration-200"
+                                  onClick={() => setInspectedCreative(cr)}
+                                />
+                              )
+                            })()
                           ) : isRendering ? (
                             <div className="flex flex-col items-center gap-1.5 p-3 text-center">
                               <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-                              <span className="text-[11px] font-semibold text-accent">Görsel Üretiliyor...</span>
-                              <span className="text-[10px] text-ink-muted">ChatGPT & Görsel Motoru Çalışıyor</span>
+                              <span className="text-[11px] font-semibold text-accent">
+                                {cr.format === 'video' ? 'Video Üretiliyor...' : 'Görsel Üretiliyor...'}
+                              </span>
+                              <span className="text-[10px] text-ink-muted">
+                                {cr.format === 'video' ? 'Google Flow & Veo Motoru Çalışıyor' : 'ChatGPT & Görsel Motoru Çalışıyor'}
+                              </span>
                             </div>
                           ) : (
                             <div className="text-center p-3">
@@ -3978,7 +4011,7 @@ export function LiveDashboard() {
                         {generatedPrompt && (
                           <div className="bg-canvas p-2 rounded border border-[var(--color-hairline)]">
                             <span className="block text-[9px] font-mono font-bold text-accent mb-0.5">
-                              ChatGPT Prompt Komutu:
+                              {cr.format === 'video' ? 'Flow / Veo Prompt Komutu:' : 'ChatGPT Prompt Komutu:'}
                             </span>
                             <p className="font-mono text-[10px] text-ink-soft line-clamp-2 leading-relaxed">
                               {generatedPrompt}
@@ -4000,20 +4033,24 @@ export function LiveDashboard() {
                         {cr.public_url && (
                           <div className="flex items-center gap-1.5">
                             <a
-                              href={cr.public_url}
+                              href={getSafeMediaUrl(cr.public_url)}
                               target="_blank"
                               rel="noreferrer"
                               className="px-2 py-1 text-xs font-semibold rounded bg-surface text-ink hover:bg-canvas border border-[var(--color-hairline)]"
                             >
-                              Büyüt
+                              {cr.format === 'video' || (typeof cr.public_url === 'string' && cr.public_url.toLowerCase().endsWith('.mp4')) ? 'İzle' : 'Büyüt'}
                             </a>
                             <button
                               type="button"
                               onClick={() => {
-                                setQuickMediaUrl(cr.public_url || '')
-                                setQuickMessage(cr.title || 'Afiş ve Görsel Kampanya Paylaşımı')
+                                setQuickMediaUrl(getSafeMediaUrl(cr.public_url) || cr.public_url || '')
+                                setQuickMessage(cr.title || (cr.format === 'video' ? 'Video Kampanya Paylaşımı' : 'Afiş ve Görsel Kampanya Paylaşımı'))
                                 setActiveTab('quick_send')
-                                showNotice('Görsel hızlı gönderim kutusuna aktarıldı.')
+                                showNotice(
+                                  cr.format === 'video' || (typeof cr.public_url === 'string' && cr.public_url.toLowerCase().endsWith('.mp4'))
+                                    ? 'Video hızlı gönderim kutusuna aktarıldı.'
+                                    : 'Görsel hızlı gönderim kutusuna aktarıldı.'
+                                )
                               }}
                               className="px-2.5 py-1 text-xs font-semibold rounded bg-accent text-accent-ink hover:bg-accent-dim transition"
                             >
@@ -5210,7 +5247,9 @@ export function LiveDashboard() {
             <div className="p-3.5 sm:p-4 border-b border-[var(--color-hairline)] flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-1.5">
-                  <h3 className="text-xs sm:text-sm font-bold text-ink">ChatGPT Görsel Üretim Komutu & JSON</h3>
+                  <h3 className="text-xs sm:text-sm font-bold text-ink">
+                    {inspectedCreative.format === 'video' ? 'Google Flow & Veo Video Komutu & JSON' : 'ChatGPT Görsel Üretim Komutu & JSON'}
+                  </h3>
                   <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded bg-accent-soft text-accent">
                     {inspectedCreative.org_name || 'Genel'}
                   </span>
@@ -5228,14 +5267,24 @@ export function LiveDashboard() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3">
-              {/* Image Preview if available */}
+              {/* Media Preview if available */}
               {inspectedCreative.public_url && (
-                <div className="max-h-56 bg-canvas rounded border border-[var(--color-hairline)] overflow-hidden flex items-center justify-center">
-                  <img
-                    src={inspectedCreative.public_url}
-                    alt={inspectedCreative.title}
-                    className="max-h-56 object-contain"
-                  />
+                <div className="max-h-80 bg-canvas rounded border border-[var(--color-hairline)] overflow-hidden flex items-center justify-center">
+                  {(inspectedCreative.format === 'video' || (typeof inspectedCreative.public_url === 'string' && inspectedCreative.public_url.toLowerCase().endsWith('.mp4'))) ? (
+                    <video
+                      src={getSafeMediaUrl(inspectedCreative.public_url)}
+                      controls
+                      autoPlay
+                      playsInline
+                      className="max-h-80 w-full object-contain"
+                    />
+                  ) : (
+                    <img
+                      src={getSafeMediaUrl(inspectedCreative.public_url)}
+                      alt={inspectedCreative.title}
+                      className="max-h-56 object-contain"
+                    />
+                  )}
                 </div>
               )}
 
