@@ -108,7 +108,11 @@ export type JobPayloadMap = {
     query: string
     max_results?: number
   }
-  'creative.render': { creative_id: string }
+  'creative.render': {
+    creative_id: string
+    /** Worker ile panel arasındaki tek işlik yetki kanıtı; tarayıcıya dönülmez. */
+    callback_token?: string
+  }
   'campaign.start': Record<string, never>
   'campaign.pause': Record<string, never>
   'campaign.resume': Record<string, never>

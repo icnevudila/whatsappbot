@@ -3,6 +3,7 @@
 import { after } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { randomBytes } from 'node:crypto'
 import { enqueueJob } from '@/lib/jobs'
 import { hasImageProvider } from '@/lib/ai/image'
 import { processCreativeGeneration } from '@/lib/creative/process'
@@ -57,7 +58,12 @@ async function kickGeneration(creativeId: string) {
   // tüketebiliyordu; uzun kuyruklarda kayıt rendering durumunda kalıyordu.
   const queued = await enqueueJob({
     type: 'creative.render',
-    payload: { creative_id: creativeId },
+    payload: {
+      creative_id: creativeId,
+      // Global bir worker sırrı ayarlanmamış ortamlarda da yalnız bu job'ın
+      // tekrar çalıştırılmasına izin verir. Bu değer istemciye dönmez.
+      callback_token: randomBytes(32).toString('base64url'),
+    },
     priority: 40,
   })
   if (queued.error) {
@@ -67,7 +73,7 @@ async function kickGeneration(creativeId: string) {
   // Yerel geliştirmede worker ile uygulama aynı sırrı paylaşmıyorsa worker iç
   // route'a yetkili istek yapamaz. Production'da bu kol çalışmaz; localde ise
   // Flow jobını yeni üretim açmadan kısa turlarla takip eder.
-  if (!process.env.JOB_INTERNAL_SECRET?.trim() && hasImageProvider()) {
+  if (process.env.NODE_ENV !== 'production' && !process.env.JOB_INTERNAL_SECRET?.trim() && hasImageProvider()) {
     after(async () => {
       for (let attempt = 0; attempt < 12; attempt += 1) {
         try {

@@ -2672,6 +2672,7 @@ async function verifyAccount(port) {
       const cfg = loadAccountsConfig();
       cfg.accounts = cfg.accounts || {};
       cfg.accounts[port] = {
+        ...(cfg.accounts[port] || {}),
         name: res.accountName || cfg.accounts[port]?.name || `Hesap (Port ${port})`,
         email: res.email || cfg.accounts[port]?.email || null,
         enabled: true,
@@ -3125,7 +3126,7 @@ function getAccountPoolStatus() {
       port,
       name: cfgAcc.name || defaultNames[port] || `Hesap (Port ${port})`,
       email: cfgAcc.email || (port === 9222 ? 'jeynjones@gmail.com' : (port === 9223 ? 'icnevudila@gmail.com' : null)),
-      isLoggedIn: info.notLoggedIn === false || (port === 9222 || port === 9223),
+      isLoggedIn: info.notLoggedIn === false || (!!cfgAcc.email && info.notLoggedIn !== true),
       isLimited,
       secondsUntilReset: remainingSec,
       limitedUntil: isLimited ? new Date(info.limitedUntil).toISOString() : null,

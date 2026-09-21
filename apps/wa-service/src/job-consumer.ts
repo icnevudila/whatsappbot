@@ -980,18 +980,20 @@ async function handle(job: JobRow): Promise<unknown> {
         process.env.NEXT_PUBLIC_APP_URL?.trim() ||
         ''
       const secret = process.env.JOB_INTERNAL_SECRET?.trim()
-      if (!base || !secret) {
+      const callbackToken = payload.callback_token?.trim()
+      if (!base || (!secret && !callbackToken)) {
         return {
           skipped: true,
           reason:
-            'CUSTOMER_APP_URL veya JOB_INTERNAL_SECRET yok; kreatif üretimi müşteri uygulaması fallback akışına bırakıldı.',
+            'CUSTOMER_APP_URL veya worker yetki kanıtı yok; kreatif üretimi müşteri uygulaması fallback akışına bırakıldı.',
         }
       }
       const response = await fetch(`${base.replace(/\/$/, '')}/api/internal/creative-render`, {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          authorization: `Bearer ${secret}`,
+          authorization: `Bearer ${secret || callbackToken}`,
+          'x-creative-job-id': String(job.id),
         },
         body: JSON.stringify({ creativeId }),
         signal: AbortSignal.timeout(Math.max(env.sendTimeoutMs, 55_000)),
