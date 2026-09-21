@@ -43,6 +43,7 @@ export const V5_STANDARD_NEGATIVES = [
   'watermark',
   'fake phone numbers, fake URLs, discount badges, graphic overlays, lower thirds, floating banners, text cards',
   'cartoon, 3D animation look, cgi render, uncanny valley',
+  'spinning laptop, rotating laptop, turntable spin, rotating table, motorized rotation, spinning gadget, 360 degree turntable, levitating objects',
   'blurry artifacts, low quality, pixelated, amateur video, choppy jumps, abrupt view shifts, jerky camera',
 ].join(', ')
 
@@ -147,7 +148,7 @@ export function planShots(
   } else if (ontology.primaryAffordance === 'apply_spray_mist') {
     shot2Action = `The equipment (${subject}) operates smoothly, releasing an ultra-fine micronized mist spray over verdant orchard foliage.`
   } else if (ontology.offerType === 'digital_product_or_saas') {
-    shot2Action = `The digital platform (${subject}) performs live radar business scanning on a premium laptop screen with clean glowing pin indicators.`
+    shot2Action = `The digital platform (${subject}) performs live radar business scanning on a premium laptop screen with clean glowing pin indicators. The laptop rests firmly stationary and flat on the desk with zero rotation or spinning.`
   }
 
   const shot2: ShotItem = {
