@@ -142,7 +142,7 @@ export function ImageCreativeWizard({ data }: { data: WizardBootstrap }) {
       const validProductIds = (saved.productIds || []).filter((id) =>
         data.products.some((p) => p.id === id)
       )
-      const validKitId = data.kits.some((k) => k.id === saved.brandKitId)
+      const validKitId = (data.kits.some((k) => k.id === saved.brandKitId) && saved.brandKitId)
         ? saved.brandKitId
         : (data.kits.find((k) => k.isDefault)?.id ?? data.kits[0]?.id ?? '')
 

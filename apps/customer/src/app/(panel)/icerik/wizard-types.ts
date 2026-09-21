@@ -40,6 +40,7 @@ export type SocialOption = {
 }
 
 export type OrgBits = {
+  id: string
   name: string
   address: string | null
   about: string | null

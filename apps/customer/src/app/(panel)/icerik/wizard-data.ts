@@ -136,6 +136,7 @@ export async function loadCreativeWizardData(): Promise<WizardBootstrap> {
 
     return {
       org: {
+        id: org.id,
         name: orgRes.data?.name ?? 'İşletmem',
         address: orgRes.data?.address ?? null,
         about: orgRes.data?.about ?? null,
