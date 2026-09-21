@@ -974,48 +974,158 @@ async function handle(job: JobRow): Promise<unknown> {
       const payload = job.payload as JobPayloadMap['creative.render']
       const creativeId = String(payload.creative_id ?? '').trim()
       if (!creativeId) throw new NonRetryableJobError('creative_id eksik.')
-      const base =
-        process.env.CUSTOMER_APP_URL?.trim() ||
-        process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-        process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-        ''
-      const secret = process.env.JOB_INTERNAL_SECRET?.trim()
-      const callbackToken = payload.callback_token?.trim()
-      if (!base || (!secret && !callbackToken)) {
+
+      // Kreatif kaydını oku — flowJob bilgisi ve mevcut durumu lazım.
+      const [creative] = await query<{
+        id: string
+        status: string
+        format: string
+        public_url: string | null
+        payload: Record<string, unknown> | null
+      }>(
+        `SELECT id, status, format, public_url, payload FROM creatives WHERE id = $1`,
+        [creativeId],
+      )
+      if (!creative) throw new NonRetryableJobError('Kreatif kaydi bulunamadi.')
+
+      // Zaten tamamlanmış mı?
+      if (creative.status === 'ready' && creative.public_url) {
+        return { creative_id: creativeId, skipped: true, reason: 'Zaten hazır.' }
+      }
+
+      // flowJob bilgisini payload'dan çıkar
+      const pl = (creative.payload ?? {}) as Record<string, unknown>
+      const flowJobRaw = pl.flowJob as { id?: string; gatewayUrl?: string } | null
+      const flowJobId = flowJobRaw?.id
+      const gatewayUrl = (
+        flowJobRaw?.gatewayUrl ||
+        process.env.OMNISTUDIO_GATEWAY_URL ||
+        'http://167.233.201.31:3456'
+      ).replace(/\/$/, '')
+
+      if (!flowJobId) {
+        // flowJob yoksa — muhtemelen henüz Gateway'e gönderilmedi veya görsel üretimi.
+        // Vercel panel tarafı /api/icerik/render ile üretimi kendi yürütür.
         return {
+          creative_id: creativeId,
           skipped: true,
-          reason:
-            'CUSTOMER_APP_URL veya worker yetki kanıtı yok; kreatif üretimi müşteri uygulaması fallback akışına bırakıldı.',
+          reason: 'flowJob yok; üretim panel tarafindan yurutulecek.',
         }
       }
-      const response = await fetch(`${base.replace(/\/$/, '')}/api/internal/creative-render`, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          authorization: `Bearer ${secret || callbackToken}`,
-          'x-creative-job-id': String(job.id),
-        },
-        body: JSON.stringify({ creativeId }),
-        signal: AbortSignal.timeout(Math.max(env.sendTimeoutMs, 55_000)),
-      })
-      if (response.status === 401) {
-        throw new NonRetryableJobError('Kreatif ic istek yetkisiz (JOB_INTERNAL_SECRET).')
+
+      // Gateway'den video durumunu kontrol et
+      const statusRes = await fetch(
+        `${gatewayUrl}/v1/videos/status/${encodeURIComponent(flowJobId)}`,
+        { signal: AbortSignal.timeout(15_000) },
+      )
+
+      if (statusRes.status === 404) {
+        const errMsg = 'Flow video görevi bulunamadı. Gateway yeniden başlamış olabilir.'
+        await query(
+          `UPDATE creatives SET status = 'failed', error = $2, updated_at = now() WHERE id = $1 AND status = 'rendering'`,
+          [creativeId, errMsg],
+        )
+        throw new NonRetryableJobError(errMsg)
       }
-      const body = (await response.json().catch(() => null)) as {
-        pending?: boolean
-        retryAfterSeconds?: number
-      } | null
-      if (response.status === 202 || body?.pending) {
+
+      if (!statusRes.ok) {
         throw new JobDeferredError(
-          'Flow video kuyruğunda; sonuç için yeniden kontrol edilecek.',
-          body?.retryAfterSeconds ?? 15,
+          `Gateway durum sorgusu ${statusRes.status}; tekrar denenecek.`,
+          15,
         )
       }
-      if (!response.ok) {
-        const bodyText = JSON.stringify(body ?? {})
-        throw new Error(`Kreatif uretimi ${response.status}: ${bodyText.slice(0, 240)}`)
+
+      const jobStatus = (await statusRes.json()) as {
+        status?: string
+        error?: string
+        result?: unknown
+        data?: unknown[]
+        videoUrl?: string
+        cleanVideoUrl?: string
+        thumbnailUrl?: string
       }
-      return { creative_id: creativeId }
+
+      if (jobStatus.status === 'failed') {
+        const errMsg = (jobStatus.error || 'Video üretimi başarısız oldu.').slice(0, 400)
+        await query(
+          `UPDATE creatives SET status = 'failed', error = $2, updated_at = now() WHERE id = $1 AND status = 'rendering'`,
+          [creativeId, errMsg],
+        )
+        throw new NonRetryableJobError(errMsg)
+      }
+
+      if (jobStatus.status !== 'completed') {
+        // Hâlâ kuyrukta veya işleniyor — lastStatus güncelle ve sonra tekrar bak
+        const updatedFlowJob = {
+          ...flowJobRaw,
+          lastStatus: jobStatus.status || 'queued',
+          lastCheckedAt: new Date().toISOString(),
+        }
+        await query(
+          `UPDATE creatives SET payload = payload || $2::jsonb, updated_at = now() WHERE id = $1 AND status = 'rendering'`,
+          [creativeId, JSON.stringify({ flowJob: updatedFlowJob })],
+        )
+        throw new JobDeferredError(
+          `Flow video kuyrukta (${jobStatus.status}); tekrar kontrol edilecek.`,
+          15,
+        )
+      }
+
+      // ✅ COMPLETED — video URL'lerini çıkar ve doğrudan DB'ye yaz
+      const gjResult = jobStatus.result && typeof jobStatus.result === 'object'
+        ? jobStatus.result as Record<string, unknown>
+        : jobStatus as Record<string, unknown>
+      const firstData = Array.isArray(gjResult.data) && gjResult.data[0] && typeof gjResult.data[0] === 'object'
+        ? gjResult.data[0] as Record<string, unknown>
+        : {}
+      const str = (v: unknown) => typeof v === 'string' && v.trim() ? v : null
+      const videoUrl = str(firstData.url) || str(gjResult.videoUrl) || str(jobStatus.videoUrl)
+      const cleanVideoUrl = str(firstData.cleanUrl) || str(gjResult.cleanVideoUrl) || str(jobStatus.cleanVideoUrl)
+      const thumbnailUrl = str(firstData.thumbnailUrl) || str(gjResult.thumbnailUrl) || str(jobStatus.thumbnailUrl)
+
+      if (!videoUrl) {
+        const errMsg = 'Flow görevi tamamlandı ancak video URL dönmedi.'
+        await query(
+          `UPDATE creatives SET status = 'failed', error = $2, updated_at = now() WHERE id = $1 AND status = 'rendering'`,
+          [creativeId, errMsg],
+        )
+        throw new NonRetryableJobError(errMsg)
+      }
+
+      // Doğrudan creatives tablosuna status='ready' + public_url yaz.
+      // Supabase Realtime bu UPDATE'i yakalar → tarayıcı anında güncellenir.
+      const nextPayload = {
+        ...pl,
+        flowJob: null,
+        pendingVideoUrl: null,
+        cleanPublicUrl: cleanVideoUrl || null,
+        thumbnailUrl: thumbnailUrl || null,
+        provider: 'omnistudio_veo',
+        cost: { provider: 'omnistudio_veo', imageCount: 1 },
+      }
+      const updateRows = await query<{ id: string }>(
+        `UPDATE creatives
+            SET status = 'ready',
+                error = NULL,
+                public_url = $2,
+                storage_path = $3,
+                width = 720,
+                height = 1280,
+                payload = $4::jsonb,
+                updated_at = now()
+          WHERE id = $1
+            AND status IN ('rendering', 'pending')
+          RETURNING id`,
+        [creativeId, videoUrl, `external/${creativeId}.mp4`, JSON.stringify(nextPayload)],
+      )
+
+      if (updateRows.length === 0) {
+        logger.warn({ creativeId }, 'Kreatif guncelleme atlandi: durum degismis olabilir.')
+      } else {
+        logger.info({ creativeId, videoUrl: (videoUrl as string).slice(0, 80) }, '✅ Video kreatifi hazir — DB guncellendi.')
+      }
+
+      return { creative_id: creativeId, video_url: videoUrl }
     }
 
     case 'service.restart': {

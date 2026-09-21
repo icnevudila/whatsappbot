@@ -44,14 +44,12 @@ export async function POST(request: Request) {
   }
 
   const result = await processCreativeGeneration(id, supabase)
-  if (result.pending) {
+  if (result.pending || result.busy) {
+    // busy da pending olarak dön — poll loop devam etsin, spinner durmasın.
     return NextResponse.json(
-      { ok: true, pending: true, retryAfterSeconds: result.retryAfterSeconds ?? 15 },
+      { ok: true, pending: true, retryAfterSeconds: result.retryAfterSeconds ?? 5 },
       { status: 202 },
     )
-  }
-  if (result.busy) {
-    return NextResponse.json({ ok: true, busy: true })
   }
   if (!result.ok) {
     const message = result.error ?? 'Üretim başarısız.'

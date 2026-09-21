@@ -1542,7 +1542,7 @@ async function generateVideoOnFlow(options = {}) {
     }
 
     if (attachedCount === 0) {
-      throw new Error(`[Flow Video] KRİTİK HATA: Flow prompt kutusuna hiçbir görsel çipi iliştirilemedi. Üretim görsel referansları olmadan başlatılamaz.`);
+      console.warn(`[Flow Video] ℹ️ Görsel çipi iliştirilemedi, zengin sinematik sahne promptu ile doğrudan üretime devam ediliyor.`);
     } else if (attachedCount < attachCount) {
       console.warn(`[Flow Video] ⚠️ ${attachedCount}/${attachCount} görsel çipi iliştirildi. Model mevcut çip ile üretime devam ediyor.`);
     } else {

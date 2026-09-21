@@ -167,7 +167,7 @@ export async function processCreativeGeneration(
         if (jobStatus.status === 'completed') {
           const completed = readVideoResult(jobStatus)
           if (!completed.videoUrl) {
-            const message = 'Flow görevi tamamlandı ancak video URL’si dönmedi.'
+            const message = 'Flow görevi tamamlandı ancak video URL\'si dönmedi.'
             await supabase
               .from('creatives')
               .update({ status: 'failed', error: message })
@@ -175,23 +175,30 @@ export async function processCreativeGeneration(
               .eq('status', 'rendering')
             return { ok: false, error: message }
           }
-          const { error: resumeError } = await supabase
+          // Doğrudan ready'ye geçir — pending'e alıp tekrar pipeline'dan geçirme.
+          const { error: readyError } = await supabase
             .from('creatives')
             .update({
-              status: 'pending',
+              status: 'ready',
               error: null,
+              public_url: completed.videoUrl,
+              storage_path: `external/${crypto.randomUUID()}.mp4`,
+              width: 720,
+              height: 1280,
               payload: {
                 ...payload,
                 flowJob: null,
-                pendingVideoUrl: completed.videoUrl,
+                pendingVideoUrl: null,
                 cleanPublicUrl: completed.cleanVideoUrl,
                 thumbnailUrl: completed.thumbnailUrl,
+                provider: 'omnistudio_veo',
+                cost: { provider: 'omnistudio_veo', imageCount: 1 },
               },
             })
             .eq('id', creativeId)
             .eq('status', 'rendering')
-          if (resumeError) return { ok: false, error: resumeError.message }
-          return processCreativeGeneration(creativeId, supabase)
+          if (readyError) return { ok: false, error: readyError.message }
+          return { ok: true }
         }
 
         await supabase
