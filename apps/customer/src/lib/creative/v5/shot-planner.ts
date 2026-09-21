@@ -206,8 +206,13 @@ export function planShots(
     ? `CAMERA MOVEMENT: continuous_take - Single unbroken slow forward push-in route maintained across all 8.0 seconds at uniform velocity with zero trajectory changes and zero scene interruption.`
     : `CAMERA MOVEMENT: three_cut - Three distinct controlled camera framings connected by clean cinematic cut transitions.`
 
+  const isAyvaz = brand.toLowerCase().includes('ayvazoğlu') || brand.toLowerCase().includes('ayvazoglu');
+  const logoDetail = isAyvaz
+    ? ' (minimalist red line-art roof symbol with central upward arrow, and bold uppercase text: "AYVAZOĞLU")'
+    : '';
+
   const brandRevealDirective = brandName
-    ? `MANDATORY VISUAL BRAND IDENTITY (5.8s - 8.0s): The verified brand name "${brandName}" and original corporate logo are mandatory on-screen visual elements directly in the video. For at least 2 continuous seconds (5.8s - 8.0s), the camera frames the exact brand name "${brandName}" and authentic logo mark prominently and legibly at readable size on the physical surface of the subject or setting (e.g. product casing, engraved plaque, or entrance signage). Rock-steady framing: zero camera shake, zero rapid rotation, zero extreme perspective, zero motion blur, zero harsh glare, completely unobstructed.`
+    ? `MANDATORY VISUAL BRAND IDENTITY (5.8s - 8.0s): The verified brand name "${brandName}" and authentic corporate logo mark${logoDetail} are mandatory on-screen visual elements directly in the video. In the final framing (5.8s - 8.0s), the camera settles rock-steadily on a prominent, clean, large brushed steel entrance plaque or office reception sign displaying the authentic logo and bold letters: "${isAyvaz ? 'AYVAZOĞLU' : brandName}". Rock-steady framing, centered at eye level: zero camera shake, zero rapid rotation, zero motion blur, zero distorted letters.`
     : null
 
   // 7. Assemble Technical Veo English Prompt
@@ -216,7 +221,11 @@ export function planShots(
     `BRAND PILLAR AND EMOTIONAL INTENT: ${brandPillar} Every visual, lighting, and audio choice should serve this emotional intent directly.`,
     `SUBJECT AND REFERENCE LOCK: Focal subject is "${subject}". ${
       facts.assets.productReference
-        ? 'A reference product photo is provided; preserve physical geometry, materials, casing, and colors exactly with zero mutation.'
+        ? 'A reference product photo is provided; preserve physical geometry, materials, casing, and colors exactly with zero mutation.' + (
+            (subject.toLowerCase().includes('tuğla') || facts.verifiedFacts.rawBrief.toLowerCase().includes('tuğla'))
+              ? ' Specifically, the hero product is a perforated hollow clay brick with core rectangular air chambers on top and vertical ribbed fluting on side walls; DO NOT generate solid stone or unperforated bricks.'
+              : ''
+          )
         : 'Realistic physical proportions and authentic material textures.'
     }`,
     `LOCATION: ${singleLocation}. Strict continuity: single unbroken location, identical lighting setup, zero scene jumping.`,

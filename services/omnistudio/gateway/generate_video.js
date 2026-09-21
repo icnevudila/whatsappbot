@@ -1210,7 +1210,7 @@ async function generateVideoOnFlow(options = {}) {
   const port = options.port || 9222;
   const projectUrl = options.projectUrl || 'https://flow.google.com/project/6b718bdf-9bf3-44c3-8b65-4c8f9110c8c5';
   
-  let prompt = options.fullPrompt;
+  let prompt = options.fullPrompt || (options.prompt && options.prompt.length > 80 ? options.prompt : null);
   let dynamicVoiceScript = options.voiceoverText || null;
 
   if (!prompt) {
