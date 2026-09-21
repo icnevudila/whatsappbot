@@ -215,16 +215,17 @@ export async function processCreativeGeneration(
       }
 
       // 1. Kurumsal Logo & Marka Kiti Zorunluluk Kontrolü
-      let logoUrl: string | null = null
-      if (snapshot.brandKit?.logoPath) {
-        logoUrl = snapshot.brandKit.logoPath
-      } else {
+      let logoUrl: string | null = (snapshot as any).customLogoUrl || null
+      if (!logoUrl) {
         const { data: orgLogo } = await supabase
           .from('organizations')
           .select('logo_path')
           .eq('id', creative.org_id)
           .maybeSingle()
         logoUrl = orgLogo?.logo_path ?? null
+      }
+      if (!logoUrl && snapshot.brandKit?.logoPath) {
+        logoUrl = snapshot.brandKit.logoPath
       }
 
       if (!logoUrl) {

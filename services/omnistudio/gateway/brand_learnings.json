@@ -940,12 +940,13 @@
       "brandName": "Ayvazoğlu İnşaat",
       "organization": "Ayvazoğlu İnşaat & Yapı Malzemeleri Sanayi",
       "colors": {
-        "primary": "#ff5733",
-        "accent": "#ffc300",
-        "secondary": "#333333",
+        "primary": "#e53935",
+        "accent": "#d32f2f",
+        "secondary": "#111111",
         "background": "#ffffff"
       },
-      "logoGuidelines": "Cesur geometrik sarı ve sıcak turuncu (#ffc300, #ff5733) tonlarında stilize mimari üçgen 'A' inşaat logo amblemi.",
+      "logoUrl": "http://167.233.201.31:3456/outputs/ayvazoglu_logo.png",
+      "logoGuidelines": "Kırmızı (#e53935) renkli geometrik mimari çatı ve 3 dikey kolon taşıyıcı amblemi, hemen altında siyah modern sans-serif harflerle 'AYVAZOĞLU' ve 'İNŞAAT' tek parça logo tipografisi. KESİN KURAL: Logoya veya sahneye 'kurumsal mimari', slogan, alt metin veya ayrık harf ASLA eklenmeyecektir.",
       "products": {
         "tugla": {
           "productName": "Tuğla (Fabrikadan Halka Toptan Satış)",

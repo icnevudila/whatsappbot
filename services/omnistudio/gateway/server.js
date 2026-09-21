@@ -691,6 +691,11 @@ const server = http.createServer(async (req, res) => {
           port: body.port || null,
           preferredEngine: body.preferredEngine || body.engine || (body.useFlow ? 'flow' : null),
           engine: body.engine || body.preferredEngine || null,
+          videoType: body.videoType || null,
+          variationIndex: body.variationIndex !== undefined ? body.variationIndex : null,
+          variationId: body.variationId || null,
+          brief: body.brief || null,
+          voiceoverText: body.voiceoverText || null,
         });
 
         return sendJson(res, 200, {

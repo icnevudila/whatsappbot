@@ -146,7 +146,7 @@ function matchSector(text) {
   if (clean.includes('bofe') || clean.includes('sirt pompasi') || clean.includes('zeytin hasat')) return 'S082';
   if (clean.includes('veri burada') || clean.includes('veriburada') || clean.includes('leads') || clean.includes('istihbarat')) return 'S091';
 
-  let bestSector = 'S001';
+  let bestSector = null;
   let bestScore = 0;
 
   for (const [sectorId, keywords] of Object.entries(SECTOR_KEYWORDS)) {
@@ -179,7 +179,10 @@ function resolveSectorPrompt(options = {}) {
   // Combine all texts to identify best sector
   const combinedText = `${brand} ${product} ${brief} ${options.sectorHint || ''}`;
   const sectorId = options.sectorId || matchSector(combinedText);
-  const sectorData = bank[sectorId] || bank['S001'];
+  if (!sectorId || !bank[sectorId]) {
+    return null;
+  }
+  const sectorData = bank[sectorId];
   
   // Select variation based on videoType / goal
   // V01: Dokudan Eyleme (Product showcase / sensory hook)
@@ -193,18 +196,27 @@ function resolveSectorPrompt(options = {}) {
   // V09: Günlük Anın İçinde (Lifestyle integration)
   // V10: Referans Odaklı Marka Filmi (Hero Brand Anthem / Corporate)
   let varIndex = 0; // Default V01
-  if (videoType === 'campaign_promotion' || videoType === 'offer' || videoType === 'kampanya') {
+  if (options.variationIndex !== undefined && options.variationIndex !== null) {
+    varIndex = Math.max(0, Math.min(Number(options.variationIndex), (sectorData.variations?.length || 1) - 1));
+  } else if (options.variationId) {
+    const foundIdx = (sectorData.variations || []).findIndex(v => v.id === options.variationId || v.id.endsWith(options.variationId));
+    if (foundIdx >= 0) varIndex = foundIdx;
+  } else if (videoType === 'campaign_promotion' || videoType === 'offer' || videoType === 'kampanya') {
     varIndex = 4; // V05
-  } else if (videoType === 'user_experience' || videoType === 'deneyim') {
+  } else if (videoType === 'user_experience' || videoType === 'deneyim' || videoType === 'pov') {
     varIndex = 1; // V02
-  } else if (videoType === 'behind_the_scenes' || videoType === 'craft') {
+  } else if (videoType === 'behind_the_scenes' || videoType === 'craft' || videoType === 'ustalik') {
     varIndex = 2; // V03
-  } else if (videoType === 'no_human' || videoType === 'insansiz') {
+  } else if (videoType === 'no_human' || videoType === 'insansiz' || videoType === 'minimal') {
     varIndex = 3; // V04
-  } else if (videoType === 'problem_solution') {
+  } else if (videoType === 'problem_solution' || videoType === 'cozum') {
     varIndex = 5; // V06
-  } else if (videoType === 'rhythm' || videoType === 'reels') {
+  } else if (videoType === 'rhythm' || videoType === 'reels' || videoType === 'enerji') {
     varIndex = 6; // V07
+  } else if (videoType === 'space_reveal' || videoType === 'mekan') {
+    varIndex = 7; // V08
+  } else if (videoType === 'lifestyle' || videoType === 'gunluk') {
+    varIndex = 8; // V09
   } else if (videoType === 'brand_film' || videoType === 'manifesto') {
     varIndex = 9; // V10
   }
@@ -225,11 +237,14 @@ function resolveSectorPrompt(options = {}) {
     .replace(/\[BRAND_KIT\]/g, brandKitDesc);
 
   // Substitute placeholders in voiceover
-  let finalVoiceover = variation.voiceoverSample
+  let finalVoiceover = options.voiceoverText || variation.voiceoverSample
     .replace(/\[MARKA\]/g, brand)
-    .replace(/\[URUN_REF\]/g, product);
+    .replace(/\[URUN_REF\]/g, product)
+    .replace(/;/g, ',')
+    .replace(/\s+/g, ' ')
+    .trim();
 
-  return {
+  const baseBlueprint = {
     sectorId,
     sectorName: sectorData.name,
     variationId: variation.id,
@@ -247,6 +262,15 @@ function resolveSectorPrompt(options = {}) {
     soundSources: sectorData.soundSources,
     forbiddenClaims: sectorData.forbiddenClaims
   };
+
+  // 10x Genişletme: 10 Ticari Konu Matrisi (100 Sektör x 10 Varyasyon x 10 Konu = 10.000 Kombinasyon)
+  try {
+    const { matchTopic, applyTopicModifier } = require('./video_topics.js');
+    const topicKey = options.videoTopic || options.topicId || matchTopic(brief);
+    return applyTopicModifier(baseBlueprint, topicKey, { brand, product, voiceoverText: options.voiceoverText });
+  } catch (err) {
+    return baseBlueprint;
+  }
 }
 
 module.exports = {

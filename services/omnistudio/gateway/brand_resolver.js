@@ -75,7 +75,8 @@ async function getActiveBrandKit(orgId = null, brandHint = null) {
         background: '#ffffff',
       },
       tone: 'Modern ve güven verici bir tasarım dili. Canlı turuncu ve nötr tonlar, net tipografi.',
-      logo_path: '4a58b0dd-0931-4901-880a-686457d15010/kits/489f335c-ea99-46e4-b8dd-b75dd68255ea/sample.jpg',
+      logo_path: '/outputs/ayvazoglu_logo.png',
+      product_image_path: '/outputs/ayvazoglu_brick.webp',
       hasExplicitLogo: true,
     };
   }
@@ -110,7 +111,7 @@ function getLogoVisualDescription(brandName, logoPath, hasExplicitLogo = false) 
     return "Orijinal yeşil bağlantılı veri ağı (connected network nodes constellation) amblemi: Merkezinde büyük yeşil dairesel çekirdek düğüm ve etrafında ince yeşil çizgilerle birbirine bağlanan farklı yeşil tonlarında veri düğüm noktaları (network graph nodes). Yanında temiz, modern sans-serif 'Veri Burada' kurumsal tipografisi. KESİNLİKLE uydurma yeşil altıgen, uydurma 'V' harfi amblemi, onay tiki, sahte üçgen veya soyut sembol KULLANILMAYACAKTIR; yalnızca ekli görseldeki orijinal yeşil bağlantılı veri ağı amblemi ve temiz 'Veri Burada' kurumsal tipografisi fırçalanmış metal isimliğe işlenecektir.";
   }
   if (lower.includes('ayvazoğlu')) {
-    return "Cesur geometrik sarı ve sıcak turuncu tonlarında stilize mimari üçgen 'A' inşaat logo amblemi";
+    return "Zarif kırmızı stilize çatı piktogramı ve altında temiz 'AYVAZOĞLU İNŞAAT' kurumsal tipografisi içeren resmi kurumsal logo amblemi.";
   }
 
   // Tanımlı logo yoksa: SIFIR UYDURMA LOGO — sadece şirket adı yazılır
@@ -419,6 +420,9 @@ async function buildTurkishVeoDirectorPrompt(options = {}) {
       product,
       brief,
       videoType: options.videoType || 'product_showcase',
+      variationIndex: options.variationIndex,
+      variationId: options.variationId,
+      voiceoverText: options.voiceoverText,
       logoDescription: logoDesc,
       brandKitText: `${accentColorDesc} ve ${primaryColorDesc} kurumsal tonlar`
     });

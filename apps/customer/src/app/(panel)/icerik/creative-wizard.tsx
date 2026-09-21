@@ -34,10 +34,9 @@ const IMAGE_STEPS: { id: Step; label: string }[] = [
 ]
 
 const VIDEO_STEPS: { id: Step; label: string }[] = [
-  { id: 'brief', label: 'Video Fikri' },
-  { id: 'products', label: 'Öne Çıkan Ürünler' },
-  { id: 'style', label: 'Marka & Ses' },
-  { id: 'summary', label: 'Özet & Başlat' },
+  { id: 'products', label: '1 — Ürününü Seç' },
+  { id: 'brief', label: '2 — Amacını Seç' },
+  { id: 'summary', label: '3 — Kontrol Et ve Oluştur' },
 ]
 
 const VIDEO_BRIEF_CHIPS = [
@@ -83,6 +82,7 @@ type Draft = {
   brief: string
   brandKitId: string
   useLogo: boolean
+  customLogoUrl?: string
   productIds: string[]
   productExtras: Record<string, ProductExtra>
   phoneIds: string[]
@@ -100,6 +100,9 @@ type Draft = {
   subtitles?: boolean
   videoScenarioPrompt?: string
   videoScenarioTitle?: string
+  videoPurpose?: 'tanitim' | 'kampanya' | 'yeni_urun'
+  offerDetails?: string
+  moreSettingsOpen?: boolean
 }
 
 function newKey() {
@@ -128,6 +131,7 @@ function defaultDraft(data: WizardBootstrap, initialFormat?: string): Draft {
     brief: isVideo ? defaultVideoBrief : '',
     brandKitId: data.kits.find((kit) => kit.isDefault)?.id ?? data.kits[0]?.id ?? '',
     useLogo: true,
+    customLogoUrl: '',
     productIds: isVideo && firstProduct ? [firstProduct.id] : [],
     productExtras: isVideo && firstProduct && firstProduct.images?.[0]?.url ? {
       [firstProduct.id]: emptyExtra(firstProduct.images[0].url)
@@ -147,6 +151,9 @@ function defaultDraft(data: WizardBootstrap, initialFormat?: string): Draft {
     subtitles: true,
     videoScenarioPrompt: '',
     videoScenarioTitle: '',
+    videoPurpose: 'tanitim',
+    offerDetails: '',
+    moreSettingsOpen: false,
   }
 }
 
@@ -159,7 +166,7 @@ export function CreativeWizard({
 }) {
   const isInitialVideo = initialFormat === 'reels_video'
   const [draft, setDraft] = useState<Draft>(() => defaultDraft(data, initialFormat))
-  const [step, setStep] = useState<Step>(() => (isInitialVideo ? 'brief' : 'start'))
+  const [step, setStep] = useState<Step>(() => (isInitialVideo ? 'products' : 'start'))
   const [labelInput, setLabelInput] = useState('')
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -198,7 +205,7 @@ export function CreativeWizard({
         requestKey: saved.requestKey || current.requestKey,
       }))
       if (effectiveFormat === 'reels_video') {
-        setStep((s) => (s === 'start' ? 'brief' : s))
+        setStep((s) => (s === 'start' ? 'products' : s))
       }
     } catch {
       /* ignore */
@@ -257,6 +264,17 @@ export function CreativeWizard({
   const patch = (partial: Partial<Draft>) => setDraft((current) => ({ ...current, ...partial }))
 
   const toggleProduct = (id: string) => {
+    if (isVideo) {
+      const product = productsList.find((row) => row.id === id)
+      patch({
+        productIds: [id],
+        productExtras: {
+          ...draft.productExtras,
+          [id]: draft.productExtras[id] ?? emptyExtra(product?.images[0]?.url ?? ''),
+        },
+      })
+      return
+    }
     if (draft.productIds.includes(id)) {
       patch({ productIds: draft.productIds.filter((item) => item !== id) })
     } else {
@@ -297,13 +315,26 @@ export function CreativeWizard({
       const extra = draft.productExtras[p.id]
       return Boolean(extra?.imageUrl || p.images[0]?.url)
     })
-  const hasValidVideoLogo = Boolean(selectedKit?.samplePreview || data.org.logoPreview)
+  const activeLogoUrl = draft.customLogoUrl || selectedKit?.samplePreview || data.org.logoPreview || ''
+  const hasValidVideoLogo = Boolean(activeLogoUrl)
 
   let canContinue = true
-  if (step === 'brief') {
-    canContinue = draft.brief.trim().length >= 8
-  } else if (step === 'summary' && isVideo) {
-    canContinue = hasValidVideoLogo
+  if (isVideo) {
+    if (step === 'products') {
+      canContinue = hasValidVideoProduct && hasValidVideoLogo
+    } else if (step === 'brief') {
+      if (draft.videoPurpose === 'kampanya') {
+        canContinue = (draft.offerDetails || '').trim().length >= 3
+      } else {
+        canContinue = true
+      }
+    } else if (step === 'summary') {
+      canContinue = hasValidVideoLogo && hasValidVideoProduct
+    }
+  } else {
+    if (step === 'brief') {
+      canContinue = draft.brief.trim().length >= 8
+    }
   }
   const currentLabel = activeSteps[stepIndex]?.label ?? ''
 
@@ -422,39 +453,146 @@ export function CreativeWizard({
 
       {step === 'brief' ? (
         <Card>
-          <div className="space-y-3 p-3.5">
-            <Field
-              label={isVideo ? 'Kampanya videosunda ne anlatmak istiyorsunuz?' : 'Görselde ne anlatmak istiyorsunuz?'}
-              hint={isVideo ? '10 saniyelik dikey reklam filminizin ana temasını ve mesajını yazın.' : undefined}
-            >
-              <Textarea
-                name="brief-ui"
-                rows={4}
-                value={draft.brief}
-                onChange={(event) => patch({ brief: event.target.value })}
-                placeholder={
-                  isVideo
-                    ? `${data.org.name || 'İşletmemiz'} için ürün kalitemizi ve sunduğumuz ayrıcalıkları anlatan, 9:16 dikey sinematik reklam videosu.`
-                    : 'Hafta sonuna özel tüm ürünlerde %25 indirim. Sıcak, kaliteli ve premium bir WhatsApp kampanya görseli istiyorum.'
-                }
-              />
-            </Field>
-            <div className="flex flex-wrap gap-1.5">
-              {isVideo
-                ? (data.suggestedVideoChips && data.suggestedVideoChips.length > 0
-                    ? data.suggestedVideoChips
-                    : VIDEO_BRIEF_CHIPS
-                  ).map((chip) => (
-                    <button
-                      key={chip.label}
-                      type="button"
-                      className={`wb-wa-chip ${draft.brief === chip.text ? '!border-[#00a884] !bg-[#e7f8f2] !text-[#008069] font-medium' : ''}`}
-                      onClick={() => patch({ brief: chip.text })}
+          <div className="space-y-4 p-4">
+            {isVideo ? (
+              <div className="space-y-4">
+                <div>
+                  <p className="text-[14px] font-bold text-[#111b21]">2 — Reklam Filminin Amacını Seçin</p>
+                  <p className="text-[12px] text-[#667781] mt-0.5">Videonun sinematik kurgusu ve Türkçe seslendirme senaryosu bu amaca göre şekillenir.</p>
+                </div>
+
+                <div className="grid gap-2.5 sm:grid-cols-3">
+                  <button
+                    type="button"
+                    onClick={() => patch({ videoPurpose: 'tanitim', brief: `${data.org.name || 'İşletmemiz'} ürün kalitesi ve üretim gücünü anlatan sinematik tanıtım filmi.` })}
+                    className={`rounded-lg border p-3.5 text-left transition-all cursor-pointer ${
+                      draft.videoPurpose === 'tanitim'
+                        ? 'border-[#00a884] bg-[#e7f8f2] ring-1 ring-[#00a884]'
+                        : 'border-[#e9edef] hover:border-[#00a884]/40 bg-surface'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="text-[13.5px] font-bold text-[#111b21]">Tanıtım</p>
+                      {draft.videoPurpose === 'tanitim' ? <span className="text-[#00a884] font-bold text-sm">✓</span> : null}
+                    </div>
+                    <p className="text-[11.5px] text-[#667781] mt-1.5 leading-relaxed">
+                      Kurumsal güven, ürün kalitesi ve dayanıklılığı öne çıkaran 8 saniyelik tanıtım filmi. Metin zorunlu değildir.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => patch({ videoPurpose: 'kampanya' })}
+                    className={`rounded-lg border p-3.5 text-left transition-all cursor-pointer ${
+                      draft.videoPurpose === 'kampanya'
+                        ? 'border-[#00a884] bg-[#e7f8f2] ring-1 ring-[#00a884]'
+                        : 'border-[#e9edef] hover:border-[#00a884]/40 bg-surface'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="text-[13.5px] font-bold text-[#111b21]">Kampanya</p>
+                      {draft.videoPurpose === 'kampanya' ? <span className="text-[#00a884] font-bold text-sm">✓</span> : null}
+                    </div>
+                    <p className="text-[11.5px] text-[#667781] mt-1.5 leading-relaxed">
+                      Özel fiyat teklifi, indirim, toptan alım avantajı veya sınırlı süreli fırsat duyurusu.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => patch({ videoPurpose: 'yeni_urun', brief: `${data.org.name || 'İşletmemiz'} yeni ürün lansmanı ve duyurusu.` })}
+                    className={`rounded-lg border p-3.5 text-left transition-all cursor-pointer ${
+                      draft.videoPurpose === 'yeni_urun'
+                        ? 'border-[#00a884] bg-[#e7f8f2] ring-1 ring-[#00a884]'
+                        : 'border-[#e9edef] hover:border-[#00a884]/40 bg-surface'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="text-[13.5px] font-bold text-[#111b21]">Yeni Ürün / Hizmet</p>
+                      {draft.videoPurpose === 'yeni_urun' ? <span className="text-[#00a884] font-bold text-sm">✓</span> : null}
+                    </div>
+                    <p className="text-[11.5px] text-[#667781] mt-1.5 leading-relaxed">
+                      Piyasaya yeni çıkan ürün veya hizmetinizin ilk lansmanı ve duyurusu.
+                    </p>
+                  </button>
+                </div>
+
+                {draft.videoPurpose === 'kampanya' ? (
+                  <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/50 p-3.5">
+                    <Field
+                      label="Kampanya / Teklif Bilgisi (Zorunlu)"
+                      hint="Yalnızca işletmenizin gerçek kampanya şartlarını yazın. Bilinmeyen fiyat veya indirim uydurulmaz."
                     >
-                      {chip.label}
-                    </button>
-                  ))
-                : BRIEF_CHIPS.map((chip) => (
+                      <Input
+                        value={draft.offerDetails || ''}
+                        onChange={(e) => patch({ offerDetails: e.target.value, brief: `${data.org.name || 'İşletme'} kampanya teklifi: ${e.target.value}` })}
+                        placeholder="Örn: Toptan alımlarda özel fabrika fiyatı ve şantiyeye doğrudan teslimat"
+                      />
+                    </Field>
+                  </div>
+                ) : (
+                  <Notice tone="accent">
+                    {draft.videoPurpose === 'tanitim'
+                      ? 'Tanıtım modunda hiçbir metin yazmanız zorunlu değildir. Yapay zeka ürününüzü ve marka kitinizi analiz ederek sinematik 8 saniyelik kurguyu ve Türkçe seslendirmeyi otomatik oluşturur.'
+                      : 'Yeni ürün lansman modunda yapay zeka ürün görselinizi ve tasarım detaylarını merkeze alarak prestijli bir duyuru kurgusu oluşturur.'}
+                  </Notice>
+                )}
+
+                {/* Diğer Ayarlar Akordeonu (Kapalı) */}
+                <div className="rounded-lg border border-hairline bg-surface overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => patch({ moreSettingsOpen: !draft.moreSettingsOpen })}
+                    className="w-full px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-[#667781] hover:text-[#111b21] flex items-center justify-between cursor-pointer bg-canvas/40"
+                  >
+                    <span>Diğer Ayarlar (Seslendirme, Altyazı, İsteğe Bağlı Not)</span>
+                    <span>{draft.moreSettingsOpen ? '▲ Kapat' : '▼ Aç'}</span>
+                  </button>
+                  {draft.moreSettingsOpen ? (
+                    <div className="p-3.5 space-y-3 border-t border-hairline">
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <label className="flex items-center gap-2 text-[12.5px] text-[#111b21] cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={draft.videoSpeech !== false}
+                            onChange={(e) => patch({ videoSpeech: e.target.checked })}
+                          />
+                          <span>Profesyonel Türkçe Seslendirme</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-[12.5px] text-[#111b21] cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={draft.subtitles !== false}
+                            onChange={(e) => patch({ subtitles: e.target.checked })}
+                          />
+                          <span>Senkronize CapCut Altyazı</span>
+                        </label>
+                      </div>
+                      <Field label="İsteğe Bağlı Özel Not veya Detay">
+                        <Textarea
+                          rows={2}
+                          value={draft.customText || ''}
+                          onChange={(e) => patch({ customText: e.target.value })}
+                          placeholder="Örn: Videoda gün batımı ışığı kullanılsın, fabrika içi forklift hareketi gösterilsin vb."
+                        />
+                      </Field>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            ) : (
+              <>
+                <Field label="Görselde ne anlatmak istiyorsunuz?">
+                  <Textarea
+                    name="brief-ui"
+                    rows={4}
+                    value={draft.brief}
+                    onChange={(event) => patch({ brief: event.target.value })}
+                    placeholder="Hafta sonuna özel tüm ürünlerde %25 indirim. Sıcak, kaliteli ve premium bir WhatsApp kampanya görseli istiyorum."
+                  />
+                </Field>
+                <div className="flex flex-wrap gap-1.5">
+                  {BRIEF_CHIPS.map((chip) => (
                     <button
                       key={chip}
                       type="button"
@@ -468,50 +606,286 @@ export function CreativeWizard({
                       {chip}
                     </button>
                   ))}
-            </div>
-
-            {isVideo ? (
-              <div className="mt-4 pt-3.5 border-t border-hairline space-y-2">
-                <p className="text-[12.5px] font-semibold text-[#111b21]">
-                  Eylem Çağrısı (İsteğe Bağlı)
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    'Bizimle İletişime Geçin',
-                    'Fiyat Teklifi Alın',
-                    'Detaylı Bilgi Alın',
-                    'Hemen Keşfet',
-                    'Randevu Alın',
-                    'Sipariş Verin',
-                  ].map((ctaItem) => (
-                    <button
-                      key={ctaItem}
-                      type="button"
-                      className={`wb-wa-chip text-[12px] transition-all ${
-                        draft.cta === ctaItem
-                          ? '!border-[#00a884] !bg-[#e7f8f2] !text-[#008069] font-semibold'
-                          : 'hover:border-[#00a884]'
-                      }`}
-                      onClick={() => patch({ cta: draft.cta === ctaItem ? '' : ctaItem })}
-                    >
-                      {ctaItem}
-                    </button>
-                  ))}
                 </div>
-              </div>
-            ) : null}
+              </>
+            )}
           </div>
         </Card>
       ) : null}
 
       {step === 'products' ? (
-        <div className="space-y-3">
-          {isVideo ? (
-            <Notice tone="accent">
-              Tanıtmak istediğiniz bir ürün varsa seçebilir veya ürün seçmeden doğrudan genel kurumsal tanıtım videosu üretebilirsiniz.
-            </Notice>
-          ) : null}
-          <div className="flex flex-wrap gap-1.5">
+        isVideo ? (
+          <div className="space-y-4">
+            {/* 1. Marka ve Kayıtlı Logo Özeti */}
+            <Card>
+              <div className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[14px] font-bold text-[#111b21]">1 — Aktif Marka ve Kurumsal Logo</p>
+                    <p className="text-[12px] text-[#667781] mt-0.5">
+                      Videonun açılış ve kapanış sahnelerinde kurumsal kimliğinizi temsil edecek logo.
+                    </p>
+                  </div>
+                  {hasValidVideoLogo ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11.5px] font-semibold text-emerald-700 border border-emerald-200">
+                      ✓ Kayıtlı Logo Hazır
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-[11.5px] font-semibold text-rose-700 border border-rose-200">
+                      Logo Gerekli
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-hairline bg-canvas p-3">
+                  <div className="flex items-center gap-3">
+                    {activeLogoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={activeLogoUrl}
+                        alt="Marka Logosu"
+                        className="size-14 rounded-md border border-hairline bg-white object-contain p-1 shadow-sm shrink-0"
+                      />
+                    ) : (
+                      <div className="size-14 rounded-md border border-dashed border-rose-300 bg-rose-50 flex items-center justify-center text-rose-500 font-bold text-xs shrink-0">
+                        Logo Yok
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-bold text-[#111b21] text-[14px]">
+                        {data.org.name || 'İşletmeniz'}
+                      </p>
+                      <p className="text-[12px] text-[#667781]">
+                        {draft.customLogoUrl ? 'Özel yüklenen kurumsal logo' : 'Sistemde kayıtlı kurumsal logo'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <FileUploadButton
+                      accept="image/png,image/jpeg,image/webp"
+                      uploading={uploading}
+                      label={draft.customLogoUrl ? 'Farklı Logo Seç' : 'Farklı Logo Yükle'}
+                      onFile={async (file) => {
+                        setUploading(true)
+                        const form = new FormData()
+                        form.set('file', file)
+                        const res = await uploadLibraryImage(form)
+                        setUploading(false)
+                        if (res?.publicUrl) {
+                          patch({ customLogoUrl: res.publicUrl })
+                        }
+                      }}
+                    />
+                    {draft.customLogoUrl ? (
+                      <Button
+                        type="button"
+                        variant="quiet"
+                        className="h-8 text-[12px]"
+                        onClick={() => patch({ customLogoUrl: '' })}
+                      >
+                        Kayıtlı Logoya Dön
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* 2. Ürün Seçimi Bölümü (Görselli Kartlar) */}
+            <Card>
+              <div className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[14px] font-bold text-[#111b21]">2 — Tanıtılacak Ürünü / Hizmeti Seçin</p>
+                    <p className="text-[12px] text-[#667781] mt-0.5">
+                      Videoda merkezde yer alacak ana ürünü aşağıdaki görselli kartlardan seçin.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAddProductOpen(true)}
+                    className="rounded-full border border-dashed border-[#00a884]/60 bg-[#e7f8f2] px-3 py-1 text-[12px] font-medium text-[#008069] hover:bg-[#d9f5eb] cursor-pointer"
+                  >
+                    + Yeni Ürün Ekle
+                  </button>
+                </div>
+
+                {productsList.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {productsList.map((product) => {
+                      const isSelected = draft.productIds.includes(product.id)
+                      const extra = draft.productExtras[product.id]
+                      const activeProductImg = extra?.imageUrl || product.images[0]?.url
+                      return (
+                        <button
+                          key={product.id}
+                          type="button"
+                          onClick={() => toggleProduct(product.id)}
+                          className={`flex flex-col rounded-lg border text-left overflow-hidden transition-all cursor-pointer ${
+                            isSelected
+                              ? 'border-[#00a884] bg-[#e7f8f2]/30 ring-2 ring-[#00a884] shadow-sm'
+                              : 'border-[#e9edef] hover:border-[#00a884]/40 bg-surface'
+                          }`}
+                        >
+                          <div className="relative aspect-video w-full bg-[#f0f2f5] overflow-hidden">
+                            {activeProductImg ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={activeProductImg}
+                                alt={product.name}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-[11px] text-ink-muted">
+                                Fotoğraf Yok
+                              </div>
+                            )}
+                            {isSelected ? (
+                              <span className="absolute top-2 right-2 bg-[#00a884] text-white rounded-full p-1 text-[10px] leading-none shadow">
+                                ✓
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="p-2.5">
+                            <p className="text-[13px] font-semibold text-[#111b21] truncate">
+                              {product.name}
+                            </p>
+                            <p className="text-[11px] text-[#667781] line-clamp-1 mt-0.5">
+                              {product.description || 'Kayıtlı ürün'}
+                            </p>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <Notice tone="warn">
+                    Kayıtlı ürün bulunamadı. Lütfen videoda kullanılacak ürünü ekleyin.{' '}
+                    <button
+                      type="button"
+                      onClick={() => setAddProductOpen(true)}
+                      className="underline font-semibold cursor-pointer text-ink hover:text-[#008069]"
+                    >
+                      Ürün ekle
+                    </button>
+                  </Notice>
+                )}
+
+                {/* Seçilen Ürün Detayı & Fotoğraf Değiştirme */}
+                {selectedProducts[0] ? (() => {
+                  const product = selectedProducts[0]
+                  const extra = draft.productExtras[product.id] ?? emptyExtra(product.images[0]?.url ?? '')
+                  return (
+                    <div className="mt-3 rounded-lg border border-[#00a884]/30 bg-[#e7f8f2]/20 p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[12.5px] font-semibold text-[#111b21]">
+                          Seçilen: <strong>{product.name}</strong> — AI Referans Fotoğrafı
+                        </p>
+                        <FileUploadButton
+                          accept="image/png,image/jpeg,image/webp"
+                          uploading={uploading}
+                          label="Farklı Fotoğraf Yükle"
+                          onFile={async (file) => {
+                            setUploading(true)
+                            const form = new FormData()
+                            form.set('file', file)
+                            const res = await uploadLibraryImage(form)
+                            setUploading(false)
+                            if (res?.publicUrl) {
+                              patch({
+                                productExtras: {
+                                  ...draft.productExtras,
+                                  [product.id]: { ...extra, imageUrl: res.publicUrl },
+                                },
+                              })
+                            }
+                          }}
+                        />
+                      </div>
+
+                      {product.images.length > 1 ? (
+                        <div>
+                          <p className="text-[11.5px] text-[#667781] mb-1.5">Bu ürün için kayıtlı farklı fotoğraf seçebilirsiniz:</p>
+                          <div className="flex gap-2 overflow-x-auto pb-1">
+                            {product.images.map((image) => {
+                              const isImgSelected = (extra.imageUrl || product.images[0]?.url) === image.url
+                              return (
+                                <button
+                                  key={image.id}
+                                  type="button"
+                                  onClick={() =>
+                                    patch({
+                                      productExtras: {
+                                        ...draft.productExtras,
+                                        [product.id]: { ...extra, imageUrl: image.url },
+                                      },
+                                    })
+                                  }
+                                  className={`relative shrink-0 overflow-hidden rounded-md border ${
+                                    isImgSelected ? 'border-[#00a884] ring-2 ring-[#00a884]' : 'border-[#e9edef]'
+                                  }`}
+                                >
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={image.url} alt="" className="size-14 object-cover" />
+                                  {isImgSelected ? (
+                                    <span className="absolute top-1 right-1 bg-[#00a884] text-white rounded-full p-0.5 text-[8px] leading-none">
+                                      ✓
+                                    </span>
+                                  ) : null}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  )
+                })() : null}
+              </div>
+            </Card>
+
+            {/* 3. Marka & Ürün Özet Şeridi */}
+            <div className="rounded-lg border border-hairline bg-canvas p-3">
+              <p className="text-[11.5px] font-semibold uppercase tracking-wider text-[#667781] mb-2">
+                Seçim Özeti (Flow ve Veo'ya Aktarılacak Referanslar)
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center gap-2.5 rounded-md border border-hairline bg-surface p-2.5">
+                  {activeLogoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={activeLogoUrl} alt="" className="size-10 rounded object-contain border border-hairline bg-white p-0.5 shrink-0" />
+                  ) : (
+                    <div className="size-10 rounded border border-dashed border-rose-300 bg-rose-50 flex items-center justify-center text-[10px] text-rose-500 font-bold shrink-0">Yok</div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-[11px] text-[#667781]">1. Referans (Logo)</p>
+                    <p className="text-[12.5px] font-semibold text-[#111b21] truncate">{data.org.name || 'Marka Logosu'}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 rounded-md border border-hairline bg-surface p-2.5">
+                  {selectedProducts[0] && (draft.productExtras[selectedProducts[0].id]?.imageUrl || selectedProducts[0].images[0]?.url) ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={draft.productExtras[selectedProducts[0].id]?.imageUrl || selectedProducts[0].images[0]?.url}
+                      alt=""
+                      className="size-10 rounded object-cover border border-hairline shrink-0"
+                    />
+                  ) : (
+                    <div className="size-10 rounded border border-dashed border-amber-300 bg-amber-50 flex items-center justify-center text-[10px] text-amber-600 font-bold shrink-0">Seçilmedi</div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-[11px] text-[#667781]">2. Referans (Ürün)</p>
+                    <p className="text-[12.5px] font-semibold text-[#111b21] truncate">{selectedProducts[0]?.name || 'Henüz seçilmedi'}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-1.5">
             {productsList.map((product) => {
               const isSelected = draft.productIds.includes(product.id)
               return (
@@ -810,7 +1184,8 @@ export function CreativeWizard({
             )
           })}
         </div>
-      ) : null}
+      )
+    ) : null}
 
       {step === 'extras' && !isVideo ? (
         <div className="space-y-2">
@@ -981,103 +1356,188 @@ export function CreativeWizard({
               </div>
             </Field>
           ) : null}
-          <Field
-            label="Marka kiti"
-            hint={
-              data.kits.length === 0
-                ? 'Kit yoksa renkler varsayılan kalır.'
-                : data.kits.length === 1
-                  ? 'Tek kitiniz üretimde kullanılacak.'
-                  : 'Varsayılan kit seçili; başka kit seçebilirsiniz.'
-            }
-          >
-            {data.kits.length === 0 ? (
-              <Notice tone="warn">
-                Marka kiti yok. Renkler varsayılan kalır.{' '}
-                <Link href="/ayarlar/marka/yeni" className="underline">
-                  Kit ekle
-                </Link>
-              </Notice>
-            ) : (
-              <div className="space-y-2">
-                {data.kits.map((kit) => {
-                  const selected = draft.brandKitId === kit.id
-                  const locked = data.kits.length === 1
-                  return (
-                    <button
-                      key={kit.id}
-                      type="button"
-                      disabled={locked}
-                      aria-pressed={selected}
-                      onClick={() => {
-                        if (!locked) patch({ brandKitId: kit.id })
+          {isVideo ? (
+            <Field label="Kurumsal Marka Logosu" hint="Videonun kapanış sahnesinde ve mekan tabelalarında Google Flow / Veo'ya aktarılacaktır.">
+              <div className="space-y-3">
+                {draft.customLogoUrl || data.org.logoPreview ? (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3.5">
+                    <div className="flex items-center gap-3">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={draft.customLogoUrl || data.org.logoPreview!}
+                        alt="Marka Logosu"
+                        className="size-14 shrink-0 rounded-lg border border-hairline bg-white object-contain p-1 shadow-sm"
+                      />
+                      <div>
+                        <p className="text-[13.5px] font-bold text-[#111b21]">
+                          {draft.customLogoUrl ? 'Özel Yüklenen Logo' : `${data.org.name || 'İşletme'} Resmi Logosu`}
+                        </p>
+                        <p className="text-[12px] font-medium text-emerald-700">
+                          ✓ Google Flow ve Veo'ya otomatik aktarılacak
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <FileUploadButton
+                        label="Farklı Logo Yükle"
+                        accept="image/png,image/jpeg,image/webp"
+                        uploading={uploading}
+                        onFile={async (file) => {
+                          setUploading(true)
+                          try {
+                            const form = new FormData()
+                            form.append('file', file)
+                            const res = await uploadLibraryImage(form)
+                            if (res?.publicUrl) patch({ customLogoUrl: res.publicUrl })
+                          } finally {
+                            setUploading(false)
+                          }
+                        }}
+                      />
+                      {draft.customLogoUrl ? (
+                        <button
+                          type="button"
+                          onClick={() => patch({ customLogoUrl: '' })}
+                          className="text-[12px] font-medium text-rose-600 hover:underline"
+                        >
+                          Varsayılana Dön
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-amber-300 bg-amber-50/60 p-4 text-center space-y-2">
+                    <p className="text-[13px] font-semibold text-amber-900">Şirket logonuz tanımlı değil</p>
+                    <p className="text-[12px] text-amber-800">
+                      Videonun kurumsal kimliğinizi taşıması için lütfen logonuzu yükleyin.
+                    </p>
+                    <FileUploadButton
+                      label="Logo Yükle"
+                      accept="image/png,image/jpeg,image/webp"
+                      uploading={uploading}
+                      onFile={async (file) => {
+                        setUploading(true)
+                        try {
+                          const form = new FormData()
+                          form.append('file', file)
+                          const res = await uploadLibraryImage(form)
+                          if (res?.publicUrl) patch({ customLogoUrl: res.publicUrl })
+                        } finally {
+                          setUploading(false)
+                        }
                       }}
-                      className={`wb-wa-choice flex w-full items-center gap-3 text-left${
-                        selected ? ' is-on' : ''
-                      }${locked ? ' is-fixed' : ''}`}
-                    >
-                      {kit.samplePreview ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={kit.samplePreview}
-                          alt=""
-                          className="size-12 rounded-md border border-hairline bg-canvas object-contain"
-                        />
-                      ) : (
-                        <span className="flex size-12 items-center justify-center rounded-md border border-hairline bg-canvas text-[11px] text-ink-faint">
-                          Kit
-                        </span>
-                      )}
-                      <span className="min-w-0">
-                        <span className="block font-semibold">
-                          {kit.name}
-                          {kit.isDefault ? (
-                            <span className="ml-1.5 text-[11px] font-medium text-ink-muted">varsayılan</span>
+                    />
+                  </div>
+                )}
+                <label className="flex items-center gap-2 text-[13px] text-[#111b21]">
+                  <input
+                    type="checkbox"
+                    checked={draft.useLogo}
+                    onChange={(event) => patch({ useLogo: event.target.checked })}
+                  />
+                  <span>İşletme logosu videonun kapanış sahnesinde yer alsın</span>
+                </label>
+              </div>
+            </Field>
+          ) : (
+            <Field
+              label="Marka kiti"
+              hint={
+                data.kits.length === 0
+                  ? 'Kit yoksa renkler varsayılan kalır.'
+                  : data.kits.length === 1
+                    ? 'Tek kitiniz üretimde kullanılacak.'
+                    : 'Varsayılan kit seçili; başka kit seçebilirsiniz.'
+              }
+            >
+              {data.kits.length === 0 ? (
+                <Notice tone="warn">
+                  Marka kiti yok. Renkler varsayılan kalır.{' '}
+                  <Link href="/ayarlar/marka/yeni" className="underline">
+                    Kit ekle
+                  </Link>
+                </Notice>
+              ) : (
+                <div className="space-y-2">
+                  {data.kits.map((kit) => {
+                    const selected = draft.brandKitId === kit.id
+                    const locked = data.kits.length === 1
+                    return (
+                      <button
+                        key={kit.id}
+                        type="button"
+                        disabled={locked}
+                        aria-pressed={selected}
+                        onClick={() => {
+                          if (!locked) patch({ brandKitId: kit.id })
+                        }}
+                        className={`wb-wa-choice flex w-full items-center gap-3 text-left${
+                          selected ? ' is-on' : ''
+                        }${locked ? ' is-fixed' : ''}`}
+                      >
+                        {kit.samplePreview ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={kit.samplePreview}
+                            alt=""
+                            className="size-12 rounded-md border border-hairline bg-canvas object-contain"
+                          />
+                        ) : (
+                          <span className="flex size-12 items-center justify-center rounded-md border border-hairline bg-canvas text-[11px] text-ink-faint">
+                            Kit
+                          </span>
+                        )}
+                        <span className="min-w-0">
+                          <span className="block font-semibold">
+                            {kit.name}
+                            {kit.isDefault ? (
+                              <span className="ml-1.5 text-[11px] font-medium text-ink-muted">varsayılan</span>
+                            ) : null}
+                          </span>
+                          <span className="mt-1 flex gap-1">
+                            {['primary', 'accent', 'secondary'].map((key) => (
+                              <span
+                                key={key}
+                                className="size-4 rounded-full border border-hairline"
+                                style={{ background: kit.colors[key] }}
+                              />
+                            ))}
+                          </span>
+                          {kit.tone ? (
+                            <span className="mt-1 block truncate text-[12px] text-ink-muted">{kit.tone}</span>
                           ) : null}
                         </span>
-                        <span className="mt-1 flex gap-1">
-                          {['primary', 'accent', 'secondary'].map((key) => (
-                            <span
-                              key={key}
-                              className="size-4 rounded-full border border-hairline"
-                              style={{ background: kit.colors[key] }}
-                            />
-                          ))}
-                        </span>
-                        {kit.tone ? (
-                          <span className="mt-1 block truncate text-[12px] text-ink-muted">{kit.tone}</span>
-                        ) : null}
-                      </span>
-                    </button>
-                  )
-                })}
-                {data.org.logoPreview ? (
-                  <label className="flex items-center gap-2.5 text-[13px]">
-                    <input
-                      type="checkbox"
-                      checked={draft.useLogo}
-                      onChange={(event) => patch({ useLogo: event.target.checked })}
-                    />
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={data.org.logoPreview}
-                      alt=""
-                      className="size-8 shrink-0 rounded-md border border-hairline bg-canvas object-contain"
-                    />
-                    <span>{isVideo ? 'İşletme logosu videonun kapanış sahnesinde yer alsın' : 'İşletme logosunu görsele ekle'}</span>
-                  </label>
-                ) : (
-                  <p className="text-[12.5px] text-ink-muted">
-                    Logo eklemek için{' '}
-                    <Link href="/ayarlar/marka" className="underline">
-                      Marka kitleri
-                    </Link>{' '}
-                    sayfasından işletme logosu yükleyin.
-                  </p>
-                )}
-              </div>
-            )}
-          </Field>
+                      </button>
+                    )
+                  })}
+                  {data.org.logoPreview ? (
+                    <label className="flex items-center gap-2.5 text-[13px]">
+                      <input
+                        type="checkbox"
+                        checked={draft.useLogo}
+                        onChange={(event) => patch({ useLogo: event.target.checked })}
+                      />
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={data.org.logoPreview}
+                        alt=""
+                        className="size-8 shrink-0 rounded-md border border-hairline bg-canvas object-contain"
+                      />
+                      <span>İşletme logosunu görsele ekle</span>
+                    </label>
+                  ) : (
+                    <p className="text-[12.5px] text-ink-muted">
+                      Logo eklemek için{' '}
+                      <Link href="/ayarlar/marka" className="underline">
+                        Marka kitleri
+                      </Link>{' '}
+                      sayfasından işletme logosu yükleyin.
+                    </p>
+                  )}
+                </div>
+              )}
+            </Field>
+          )}
           {!isVideo ? (
             <>
               <Field label="Görsel stili">
@@ -1147,84 +1607,117 @@ export function CreativeWizard({
       {step === 'summary' ? (
         <Card>
           {isVideo ? (
-            <div className="space-y-3 p-4 text-[13px]">
-              <div className="grid gap-2 sm:grid-cols-2">
-                <div className="rounded-md border border-hairline bg-canvas p-3 space-y-1">
-                  <p className="text-[11.5px] font-medium text-ink-muted uppercase tracking-wider">Format & Süre</p>
-                  <p className="font-bold text-[#111b21]">9:16 Dikey Reklam Videosu (10 Saniye)</p>
-                  <p className="text-[12px] text-[#667781]">Reels, TikTok ve WhatsApp Durum için optimize</p>
-                </div>
-                <div className="rounded-md border border-hairline bg-canvas p-3 space-y-1">
-                  <p className="text-[11.5px] font-medium text-ink-muted uppercase tracking-wider">Altyazı Kurgusu</p>
-                  <p className="font-bold text-[#111b21]">
-                    {draft.subtitles !== false ? 'Altyazılı' : 'Altyazısız'}
-                  </p>
-                  <p className="text-[12px] text-[#667781]">
-                    {draft.subtitles !== false ? 'CapCut botu senkronize altyazı ekler' : 'Saf sinematik video (yazısız)'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="rounded-md border border-hairline bg-canvas p-3 space-y-1">
-                <p className="text-[11.5px] font-medium text-ink-muted uppercase tracking-wider">Marka & Logo</p>
-                <p className="text-[#111b21]">
-                  <span className="font-semibold">{selectedKit?.name ?? 'Varsayılan Kurumsal Kimlik'}</span> · Logo: {draft.useLogo ? 'Videonun kapanış sahnesinde yer alacak' : 'Logosuz (Saf Sinematik Çekim)'}
+            <div className="space-y-4 p-4 text-[13px]">
+              <div>
+                <p className="text-[14px] font-bold text-[#111b21]">3 — Kontrol Et ve Oluştur</p>
+                <p className="text-[12px] text-[#667781] mt-0.5">
+                  9:16 Dikey Format (8 Saniye) · Reels, TikTok ve WhatsApp Durum için optimize
                 </p>
               </div>
 
-              <div className="rounded-md border border-hairline bg-canvas p-3 space-y-1">
-                <p className="text-[11.5px] font-medium text-ink-muted uppercase tracking-wider">Öne Çıkan Ürünler</p>
-                <p className="text-[#111b21]">
-                  {selectedProducts.length > 0
-                    ? selectedProducts.map((p) => p.name).join(', ')
-                    : 'Genel işletme ve marka tanıtımı'}
-                </p>
-              </div>
-
-              <div className="rounded-md border border-hairline bg-canvas p-3 space-y-1">
-                <p className="text-[11.5px] font-medium text-ink-muted uppercase tracking-wider">Kampanya Fikri / Brief</p>
-                <p className="text-[#111b21]">{draft.brief}</p>
-              </div>
-
-              {draft.cta ? (
-                <div className="rounded-md border border-hairline bg-canvas p-3 space-y-1">
-                  <p className="text-[11.5px] font-medium text-ink-muted uppercase tracking-wider">
-                    Eylem Çağrısı
-                  </p>
-                  <p className="text-[13px] font-bold text-[#111b21]">{draft.cta}</p>
+              {/* Yan Yana Logo ve Ürün Görseli */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col items-center justify-center rounded-lg border border-hairline bg-canvas p-4 text-center">
+                  <p className="text-[11.5px] font-semibold text-[#667781] uppercase tracking-wider mb-2">Kurumsal Logo</p>
+                  {activeLogoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={activeLogoUrl}
+                      alt="Logo"
+                      className="size-20 rounded-md object-contain border border-hairline bg-white p-2 shadow-sm"
+                    />
+                  ) : (
+                    <div className="size-20 rounded-md border border-dashed border-rose-300 bg-rose-50 flex items-center justify-center text-xs text-rose-500 font-bold">
+                      Logo Yok
+                    </div>
+                  )}
+                  <p className="font-bold text-[#111b21] text-[13px] mt-2.5 truncate w-full">{data.org.name || 'İşletmeniz'}</p>
+                  <p className="text-[11px] text-emerald-700 mt-0.5">✓ Marka Kimliği Hazır</p>
                 </div>
-              ) : null}
+
+                <div className="flex flex-col items-center justify-center rounded-lg border border-hairline bg-canvas p-4 text-center">
+                  <p className="text-[11.5px] font-semibold text-[#667781] uppercase tracking-wider mb-2">Ürün Görseli</p>
+                  {selectedProducts[0] && (draft.productExtras[selectedProducts[0].id]?.imageUrl || selectedProducts[0].images[0]?.url) ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={draft.productExtras[selectedProducts[0].id]?.imageUrl || selectedProducts[0].images[0]?.url}
+                      alt="Ürün"
+                      className="size-20 rounded-md object-cover border border-hairline shadow-sm"
+                    />
+                  ) : (
+                    <div className="size-20 rounded-md border border-dashed border-amber-300 bg-amber-50 flex items-center justify-center text-xs text-amber-600 font-bold">
+                      Ürün Yok
+                    </div>
+                  )}
+                  <p className="font-bold text-[#111b21] text-[13px] mt-2.5 truncate w-full">{selectedProducts[0]?.name || 'Ürün'}</p>
+                  <p className="text-[11px] text-emerald-700 mt-0.5">✓ Ürün Sahnesi Hazır</p>
+                </div>
+              </div>
+
+              {/* Reklam Amacı / Metin Özeti & Türkçe Seslendirme */}
+              <div className="rounded-lg border border-hairline bg-canvas p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11.5px] font-semibold text-[#667781] uppercase tracking-wider">Reklam Amacı</span>
+                  <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-[12px] font-bold text-[#008069] border border-emerald-200">
+                    {draft.videoPurpose === 'kampanya' ? 'Kampanya / Teklif' : draft.videoPurpose === 'yeni_urun' ? 'Yeni Ürün Lansmanı' : 'Kurumsal Tanıtım'}
+                  </span>
+                </div>
+                {draft.videoPurpose === 'kampanya' && draft.offerDetails ? (
+                  <div>
+                    <p className="text-[11.5px] text-[#667781]">Teklif / Kampanya Şartı:</p>
+                    <p className="text-[13px] font-semibold text-[#111b21] mt-0.5">{draft.offerDetails}</p>
+                  </div>
+                ) : null}
+                <div className="border-t border-hairline pt-2">
+                  <p className="text-[11.5px] font-semibold text-[#667781] uppercase tracking-wider">Türkçe Seslendirme Metni</p>
+                  <p className="text-[12.5px] text-[#111b21] mt-1 leading-relaxed">
+                    {draft.videoPurpose === 'kampanya'
+                      ? `"${data.org.name || 'İşletmemiz'} özel kampanyası: ${draft.offerDetails}. Avantajlı fiyatlar ve hızlı sipariş için hemen WhatsApp ile iletişime geçin."`
+                      : draft.videoPurpose === 'yeni_urun'
+                      ? `"${data.org.name || 'İşletmemiz'} yeni ${selectedProducts[0]?.name || 'ürünümüz'} ile tanışın. Kalite, dayanıklılık ve estetik bir arada. Detaylı bilgi için hemen yazın."`
+                      : `"${data.org.name || 'İşletmemiz'} kalitesi ve güvencesiyle üretilen ${selectedProducts[0]?.name || 'ürünlerimiz'} projelerinize değer katar. Detaylar için WhatsApp ile iletişime geçin."`}
+                  </p>
+                  <p className="text-[11px] text-[#667781] mt-1">
+                    * Canlı ChatGPT servisi, seçtiğiniz ürün ve marka kitine göre repliği en doğal Türkçe reklam tonuyla zenginleştirecektir.
+                  </p>
+                </div>
+              </div>
 
               {isVideo && !hasValidVideoLogo ? (
                 <Notice tone="danger">
-                  <strong>Kurumsal Logo Zorunludur:</strong> Yapay zekanın uydurma semboller veya alakasız grafikler üretmemesi için Marka Kiti veya İşletme logonuzun tanımlı olması gerekir. Lütfen{' '}
-                  <Link href="/ayarlar/marka" className="underline font-semibold">
-                    Marka Kiti sayfasından logonuzu yükleyin.
-                  </Link>
+                  <strong>Kurumsal Logo Zorunludur:</strong> Yapay zekanın uydurma amblem veya semboller üretmemesi için kurumsal logonuzun tanımlı olması gerekir.
                 </Notice>
               ) : null}
-              {isVideo && hasValidVideoProduct ? (
-                <Notice tone="accent">
-                  Seçilen ürün fotoğrafı ve kurumsal kimliğiniz ile reklam filmi üretilecektir.
-                </Notice>
-              ) : isVideo ? (
-                <Notice tone="accent">
-                  Ürün fotoğrafı seçilmedi; kurumsal logonuz ve marka kimliğiniz temel alınarak genel tanıtım filmi üretilecektir.
+              {isVideo && !hasValidVideoProduct ? (
+                <Notice tone="danger">
+                  <strong>Ürün Görseli Zorunludur:</strong> Reklam videosunun gerçek ürününüz üzerinden üretilmesi için lütfen geri dönüp bir ürün seçin.
                 </Notice>
               ) : null}
 
-              <Button
-                type="submit"
-                className="wb-wa-submit w-full h-11 text-[13.5px] font-semibold"
-                disabled={
-                  pending ||
-                  !data.canManage ||
-                  !data.imageAiEnabled ||
-                  (isVideo && !hasValidVideoLogo)
-                }
-              >
-                {pending ? 'Video prodüksiyonu başlatılıyor…' : 'Kampanya Videosunu Başlat'}
-              </Button>
+              {/* Düzenle ve Videoyu Oluştur Butonları */}
+              <div className="flex gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="quiet"
+                  onClick={() => go('products')}
+                  className="flex-1 h-11 text-[13.5px] font-semibold border border-hairline"
+                >
+                  Düzenle
+                </Button>
+                <Button
+                  type="submit"
+                  className="wb-wa-submit flex-2 h-11 text-[13.5px] font-semibold"
+                  disabled={
+                    pending ||
+                    !data.canManage ||
+                    !data.imageAiEnabled ||
+                    !hasValidVideoLogo ||
+                    !hasValidVideoProduct
+                  }
+                >
+                  {pending ? 'Video Prodüksiyonu Başlatılıyor…' : 'Videoyu Oluştur'}
+                </Button>
+              </div>
               {!data.canManage ? <Notice tone="warn">Üretim için yönetici gerekir.</Notice> : null}
             </div>
           ) : (
@@ -1289,7 +1782,7 @@ export function CreativeWizard({
         </div>
       ) : null}
 
-      {step === 'summary' ? (
+      {step === 'summary' && !isVideo ? (
         <div className="wb-wa-wizard-foot sticky bottom-0 z-[1] px-4 py-3 sm:px-5">
           <Button type="button" className="wb-wa-text-btn" onClick={prevStep}>
             <Icon name="back" className="size-4" />
