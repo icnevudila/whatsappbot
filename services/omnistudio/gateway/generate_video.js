@@ -2009,17 +2009,19 @@ async function generateVideoOnFlow(options = {}) {
         await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: dlBtn.result.value.x, y: dlBtn.result.value.y, button: 'left', clickCount: 1 });
         await sleep(1200);
 
-        // 720p veya Original size seçeneğini tıkla
+        // 720p veya Orijinal boyut seçeneğini tıkla
         const popupRes = await send('Runtime.evaluate', {
           expression: `(() => {
             const items = Array.from(document.querySelectorAll('.mat-mdc-menu-item, [role="menuitem"], button'));
             const opt = items.find(e => {
-              const t = (e.innerText || '').trim();
-              return (t.includes('720p') || t.includes('Original size') || t === '720p') && e.getBoundingClientRect().width > 0;
+              const label = e.querySelector('.label')?.innerText?.trim();
+              const caption = e.querySelector('.caption')?.innerText?.toLowerCase();
+              const text = (e.innerText || '').toLowerCase();
+              return (label === '720p' || text.includes('720p') || caption?.includes('orijinal') || text.includes('orijinal boyut') || text.includes('original size')) && e.getBoundingClientRect().width > 0;
             });
             if (opt) {
               const r = opt.getBoundingClientRect();
-              return { found: true, x: r.left + r.width/2, y: r.top + r.height/2 };
+              return { found: true, x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2) };
             }
             return { found: false };
           })()`,
@@ -2028,28 +2030,30 @@ async function generateVideoOnFlow(options = {}) {
 
         if (popupRes?.result?.value?.found) {
           const { x, y } = popupRes.result.value;
-          console.log(`[Flow Video] 📥 720p / Original size seçeneği tıklandı (${x}, ${y})...`);
+          console.log(`[Flow Video] 📥 720p Orijinal boyut seçeneği tıklandı (${x}, ${y})...`);
           await send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 });
           await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
+          downloadTriggered = true;
+          break;
         } else {
           await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: 706, y: 141, button: 'left', clickCount: 1 });
           await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 706, y: 141, button: 'left', clickCount: 1 });
+          downloadTriggered = true;
+          break;
         }
-        downloadTriggered = true;
-        break;
       }
       await sleep(1000);
     }
 
-    // YÖNTEM B: More options menüsünden İndir (Tile üç nokta menüsü)
+    // YÖNTEM B: More options menüsünden İndir -> 720p Orijinal boyut (Tile üç nokta menüsü)
     if (!downloadTriggered) {
       console.log(`[Flow Video] 📥 Üst buton bulunamadı, More Options menüsü deneniyor...`);
       const moreRes = await send('Runtime.evaluate', {
         expression: `(() => {
-          const btns = Array.from(document.querySelectorAll('button[aria-label="More options"]'));
+          const btns = Array.from(document.querySelectorAll('button[aria-label="More options"], button[aria-label*="seçenek"], button[aria-label*="options"]'));
           const tileBtn = btns.find(b => {
             const r = b.getBoundingClientRect();
-            return r.width > 20 && r.width < 45 && r.top > 0;
+            return r.width > 15 && r.width < 50 && r.top > 0;
           });
           if (tileBtn) {
             tileBtn.click();
@@ -2061,22 +2065,56 @@ async function generateVideoOnFlow(options = {}) {
       });
 
       if (moreRes?.result?.value) {
-        await sleep(1200);
+        await sleep(1000);
         const menuRes = await send('Runtime.evaluate', {
           expression: `(() => {
-            const items = Array.from(document.querySelectorAll('.mat-mdc-menu-panel button, [role="menuitem"]'));
-            const dl = items.find(i => (i.innerText || '').toLowerCase().includes('download'));
+            const items = Array.from(document.querySelectorAll('.mat-mdc-menu-panel [role="menuitem"], .mat-mdc-menu-item, [role="menuitem"]'));
+            const dl = items.find(i => {
+              const t = (i.innerText || '').toLowerCase();
+              return (t.includes('indir') || t.includes('download')) && i.getBoundingClientRect().width > 0;
+            });
             if (dl) {
-              dl.click();
-              return true;
+              const r = dl.getBoundingClientRect();
+              return { found: true, x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2) };
             }
-            return false;
+            return { found: false };
           })()`,
           returnByValue: true
         });
-        if (menuRes?.result?.value) {
-          console.log(`[Flow Video] 📥 More Options menüsünden Download seçeneği başarıyla tıklandı!`);
-          downloadTriggered = true;
+
+        if (menuRes?.result?.value?.found) {
+          const { x, y } = menuRes.result.value;
+          console.log(`[Flow Video] 📥 'İndir' menü seçeneği bulundu (${x}, ${y}), açılıyor...`);
+          await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
+          await send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 });
+          await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
+          await sleep(1000);
+
+          const sub720Res = await send('Runtime.evaluate', {
+            expression: `(() => {
+              const items = Array.from(document.querySelectorAll('.mat-mdc-menu-panel [role="menuitem"], .mat-mdc-menu-item, [role="menuitem"]'));
+              const btn = items.find(el => {
+                const label = el.querySelector('.label')?.innerText?.trim();
+                const caption = el.querySelector('.caption')?.innerText?.toLowerCase();
+                const text = (el.innerText || '').toLowerCase();
+                return (label === '720p' || text.includes('720p') || caption?.includes('orijinal') || text.includes('orijinal boyut') || text.includes('original size')) && el.getBoundingClientRect().width > 0;
+              });
+              if (btn) {
+                const r = btn.getBoundingClientRect();
+                return { found: true, x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2) };
+              }
+              return { found: false };
+            })()`,
+            returnByValue: true
+          });
+
+          if (sub720Res?.result?.value?.found) {
+            const { x: sx, y: sy } = sub720Res.result.value;
+            console.log(`[Flow Video] 🎯 Submenu 720p Orijinal boyut butonuna tıklandı (${sx}, ${sy})!`);
+            await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: sx, y: sy, button: 'left', clickCount: 1 });
+            await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: sx, y: sy, button: 'left', clickCount: 1 });
+            downloadTriggered = true;
+          }
         }
       }
     }
