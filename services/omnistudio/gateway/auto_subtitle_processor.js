@@ -3,18 +3,33 @@ const path = require('path');
 const { execSync, spawnSync } = require('child_process');
 const { detectSector, resolveCreativeArchetype, getRecommendedCTAs } = require('./brand_learning_store.js');
 
+function cleanSpeechText(text) {
+  if (!text) return '';
+  return text
+    .replace(/\bbrand\s*kit\b/gi, '')
+    .replace(/\bmarka\s*kiti\b/gi, '')
+    .replace(/\bkampanya\s*kiti\b/gi, '')
+    .replace(/\b(?:cta|prompt|act\s*\d+|shot\s*\d+|sahne\s*\d+|veo|flow|google\s*flow)\b/gi, '')
+    .replace(/["“”«»*#\[\]]/g, '')
+    .replace(/\byeni\s+yeni\b/gi, 'yeni')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
 /**
  * Prompt içinden veya Marka/Sektör hafızasından 3 perdeli 10 saniyelik Türkçe reklam senaryosunu çıkarır.
  */
 function extractOrGenerateScript(options = {}) {
   const { prompt, veoPrompt, chatGptPrompt, brief, brandName, customer, productName, voiceoverText } = options;
-  const brand = (brandName || customer || 'İşletme').trim();
+  const brand = (brandName || customer || 'İşletme')
+    .replace(/\b(brand\s*kit|marka\s*kiti|kampanya\s*kiti)\b/gi, '')
+    .trim() || 'İşletme';
   const product = (productName || 'Hizmet').trim();
   const allText = `${chatGptPrompt || ''} \n ${veoPrompt || ''} \n ${prompt || ''} \n ${brief || ''}`;
 
   // 0. Açıkça iletilmiş seslendirme metni varsa doğrudan kullan
   if (voiceoverText && voiceoverText.trim().length >= 10) {
-    return voiceoverText.replace(/["“”]/g, '').trim();
+    return cleanSpeechText(voiceoverText);
   }
 
   // 1. ChatGPT AUDIO: bloğu veya Türkçe Seslendirme direktifi
@@ -22,7 +37,7 @@ function extractOrGenerateScript(options = {}) {
                      allText.match(/SPİKER(?:İN\s+AYNEN\s+SÖYLEYECEĞİ)?.*?:\s*["“]?(.*?)(?:["”\n]|$)/i) ||
                      allText.match(/(?:TÜRKÇE SESLENDİRME|AUDIO VOICEOVER|SES METNİ|VOICEOVER)\s*[:\-]\s*([^\n\r"]{15,200})/i);
   if (audioQuote && audioQuote[1]) {
-    const raw = audioQuote[1].replace(/["“”]/g, '').trim();
+    const raw = cleanSpeechText(audioQuote[1]);
     if (raw.length >= 12) {
       return raw;
     }

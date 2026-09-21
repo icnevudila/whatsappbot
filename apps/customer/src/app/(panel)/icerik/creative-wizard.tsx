@@ -272,22 +272,38 @@ export function CreativeWizard({
       .trim()
   }
 
+  const sanitizeVoiceover = (text: string) => {
+    return text
+      .replace(/\bbrand\s*kit\b/gi, '')
+      .replace(/\bmarka\s*kiti\b/gi, '')
+      .replace(/\bkampanya\s*kiti\b/gi, '')
+      .replace(/\b(?:cta|prompt|act\s*\d+|shot\s*\d+|sahne\s*\d+|veo|flow)\b/gi, '')
+      .replace(/["“”«»*#\[\]]/g, '')
+      .replace(/\byeni\s+yeni\b/gi, 'yeni')
+      .replace(/\s{2,}/g, ' ')
+      .trim()
+  }
+
   const currentProductName = selectedProducts[0]?.name?.trim() || 'Ürünümüz'
   const currentBrandName = cleanBrandName(data.org.name) || cleanBrandName(selectedKit?.name) || 'İşletmemiz'
   const currentOffer = draft.offerDetails?.trim()
 
+  const productIntroPhrase = currentProductName.toLowerCase().startsWith('yeni ')
+    ? currentProductName
+    : `yeni ${currentProductName}`
+
   const defaultVoiceover = useMemo(() => {
     if (draft.videoPurpose === 'kampanya') {
-      return `${currentBrandName} güvencesiyle ${currentProductName}. Avantajlı fırsatlar için hemen WhatsApp ile yazın.`
+      return sanitizeVoiceover(`${currentBrandName} güvencesiyle ${currentProductName}. Avantajlı fırsatlar için hemen WhatsApp ile yazın.`)
     }
     if (draft.videoPurpose === 'yeni_urun') {
-      return `${currentBrandName} yeni ${currentProductName} ile tanışın. Detaylar ve sipariş için hemen ulaşın.`
+      return sanitizeVoiceover(`${currentBrandName} ${productIntroPhrase} ile tanışın. Detaylar ve sipariş için hemen ulaşın.`)
     }
-    return `${currentBrandName} ile ${currentProductName} şimdi sizlerle. Hızlı bilgi ve sipariş için hemen yazın.`
-  }, [currentBrandName, currentProductName, draft.videoPurpose])
+    return sanitizeVoiceover(`${currentBrandName} ile ${currentProductName} şimdi sizlerle. Hızlı bilgi ve sipariş için hemen yazın.`)
+  }, [currentBrandName, currentProductName, productIntroPhrase, draft.videoPurpose])
 
   const activeVoiceoverText = (draft.customVoiceover && draft.customVoiceover.trim().length > 0)
-    ? draft.customVoiceover
+    ? sanitizeVoiceover(draft.customVoiceover)
     : defaultVoiceover
 
   const voiceoverWordCount = useMemo(() => {
@@ -297,21 +313,21 @@ export function CreativeWizard({
   const voiceoverPresets = useMemo(() => [
     {
       label: 'Fırsat & Kampanya',
-      text: `${currentBrandName} güvencesiyle ${currentProductName}. Avantajlı fırsatlar için hemen WhatsApp ile yazın.`,
+      text: sanitizeVoiceover(`${currentBrandName} güvencesiyle ${currentProductName}. Avantajlı fırsatlar için hemen WhatsApp ile yazın.`),
     },
     {
       label: 'Kalite & Güven',
-      text: `${currentBrandName} kalitesiyle ${currentProductName} yanınızda. En uygun teklif için hemen yazın.`,
+      text: sanitizeVoiceover(`${currentBrandName} kalitesiyle ${currentProductName} yanınızda. En uygun teklif için hemen yazın.`),
     },
     {
       label: 'Hızlı Teslimat',
-      text: `${currentBrandName} ${currentProductName} stoktan hızlı teslimatla adresinizde. Hemen mesaj atın.`,
+      text: sanitizeVoiceover(`${currentBrandName} ${currentProductName} stoktan hızlı teslimatla adresinizde. Hemen mesaj atın.`),
     },
     {
       label: 'Ürün Tanıtımı',
-      text: `${currentBrandName} yeni ${currentProductName} ile tanışın. Detaylı bilgi ve sipariş için ulaşın.`,
+      text: sanitizeVoiceover(`${currentBrandName} ${productIntroPhrase} ile tanışın. Detaylı bilgi ve sipariş için ulaşın.`),
     },
-  ], [currentBrandName, currentProductName])
+  ], [currentBrandName, currentProductName, productIntroPhrase])
 
   const payload = useMemo(
     () =>
