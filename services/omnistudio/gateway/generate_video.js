@@ -2002,14 +2002,31 @@ print(json.dumps([it['name'] for it in items]))" 2>/dev/null`).toString();
           return matchProd;
         });
 
-        console.log(`[Flow Video] 🔍 Zip filtreleme: ${brandMatches.length} marka eşleşmesi, ${prodMatches.length} ürün eşleşmesi`);
-        const candidatePool = brandMatches.length > 0 ? brandMatches : (prodMatches.length > 0 ? prodMatches : allCandidateNames);
+        // Google Flow dosya adlarındaki YYYYMMDDHHMMSS zaman damgasını sayısal olarak al
+        const getTimestamp = (filename) => {
+          const m = filename.match(/(\d{14})/);
+          return m ? parseInt(m[1], 10) : 0;
+        };
+
+        let candidatePool = [];
+        if (brandMatches.length > 0) {
+          brandMatches.sort((a, b) => getTimestamp(b) - getTimestamp(a));
+          candidatePool = brandMatches;
+        } else if (prodMatches.length > 0) {
+          prodMatches.sort((a, b) => getTimestamp(b) - getTimestamp(a));
+          candidatePool = prodMatches;
+        } else {
+          allCandidateNames.sort((a, b) => getTimestamp(b) - getTimestamp(a));
+          candidatePool = allCandidateNames;
+        }
+
+        console.log(`[Flow Video] 🔍 Zip filtreleme: ${brandMatches.length} marka eşleşmesi, ${prodMatches.length} ürün eşleşmesi. En yeni adaylar:`, candidatePool.slice(0, 3));
 
         for (const candidate of candidatePool) {
           const fullP = path.join(extractDir, candidate);
           if (fs.existsSync(fullP) && fs.statSync(fullP).size > 500000) {
             chosenFileName = candidate;
-            console.log(`[Flow Video] ⏱️ Zip arşivi içinden SEÇİLEN video (${matchedCandidates.length > 0 ? 'MARKA DOĞRULANDI' : 'FALLBACK'}): ${chosenFileName}`);
+            console.log(`[Flow Video] ⏱️ Zip arşivi içinden SEÇİLEN video (${brandMatches.length > 0 ? 'MARKA DOĞRULANDI' : 'FALLBACK'}): ${chosenFileName}`);
             break;
           }
         }
