@@ -1649,7 +1649,7 @@ async function generateVideoOnFlow(options = {}) {
     })()`,
     returnByValue: true
   });
-  const initialTileCount = Number(baselineTiles?.result?.value?.count) || 0;
+  const baselineTileCount = Number(baselineTiles?.result?.value?.count) || 0;
   const initialSignaturesArray = baselineTiles?.result?.value?.signatures || [];
 
   // 1.7. Üretim öncesi çip ve prompt kanıt ekran görüntüsü al
