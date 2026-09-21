@@ -841,6 +841,7 @@ const server = http.createServer(async (req, res) => {
           variationId: body.variationId || null,
           brief: body.brief || null,
           voiceoverText: body.voiceoverText || null,
+          jobId,
         };
 
         const taskRunner = async () => {
@@ -903,6 +904,10 @@ const server = http.createServer(async (req, res) => {
           aspect: result.aspect,
           accountPort: result.port,
           provider: result.provider || 'veo-flow',
+          flowProjectId: result.flowProjectId || null,
+          flowProjectUrl: result.flowProjectUrl || null,
+          sha256: result.sha256 || null,
+          jobId: result.jobId || jobId,
         });
       } catch (err) {
         console.error('[Gateway Video Hata]', err);

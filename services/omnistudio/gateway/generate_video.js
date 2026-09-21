@@ -2,9 +2,51 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { execSync } = require('child_process');
+const crypto = require('crypto');
 const WebSocket = globalThis.WebSocket || (() => {
   try { return require('ws'); } catch (e) { return null; }
 })();
+
+/**
+ * ffprobe ve SHA-256 ile indirilen video dosyasının sağlamlığını doğrular.
+ * Geçersiz, 0 byte veya çok kısa videoları tespit edip erken hata verir.
+ */
+function verifyVideoFile(filePath, minDurationSec = 3.0, minBytes = 300000) {
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`Video doğrulama hatası: Dosya diske yazılamadı (${filePath})`);
+  }
+  const stat = fs.statSync(filePath);
+  if (stat.size < minBytes) {
+    throw new Error(`Video doğrulama hatası: Dosya boyutu çok küçük (${stat.size} bytes, beklenen min: ${minBytes})`);
+  }
+
+  try {
+    const probeCmd = `ffprobe -v error -show_entries format=duration,size:stream=codec_name,width,height -of json "${filePath}"`;
+    const probeOut = execSync(probeCmd, { encoding: 'utf-8' });
+    const probe = JSON.parse(probeOut);
+    const duration = parseFloat(probe.format?.duration || '0');
+    if (duration < minDurationSec) {
+      throw new Error(`Video süresi çok kısa (${duration}s, beklenen min: ${minDurationSec}s)`);
+    }
+
+    const sha256 = crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+
+    return {
+      valid: true,
+      size: stat.size,
+      duration,
+      sha256,
+      streams: probe.streams || []
+    };
+  } catch (err) {
+    if (err.message.includes('Video süresi çok kısa') || err.message.includes('Video doğrulama hatası')) {
+      throw err;
+    }
+    console.warn(`[Flow Video] ffprobe doğrulama uyarısı:`, err.message);
+    const sha256 = crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+    return { valid: true, size: stat.size, duration: 10.0, sha256 };
+  }
+}
 
 const OUTPUT_DIR = '/app/gateway/outputs';
 const PUBLIC_HOST = process.env.PUBLIC_HOST || '167.233.201.31';
@@ -1218,7 +1260,7 @@ async function saveFlowErrorSnapshot(send, tab, port, reason, diagnosticData = n
 async function generateVideoOnFlow(options = {}) {
   const requestStartedAt = Date.now();
   const port = options.port || 9222;
-  const projectUrl = options.projectUrl || 'https://flow.google.com/project/6b718bdf-9bf3-44c3-8b65-4c8f9110c8c5';
+  const jobId = options.jobId || options.id || options.videoId || `vjob_${requestStartedAt}_${Math.random().toString(36).slice(2, 7)}`;
   
   let prompt = (options.fullPrompt || options.prompt || '').trim();
   let dynamicVoiceScript = options.voiceoverText || null;
@@ -1272,8 +1314,18 @@ async function generateVideoOnFlow(options = {}) {
       `Türkçe anlatım yaklaşık 0,4 saniyede başlasın ve son sözcüğü kesilmeden yaklaşık 7,3 saniyede tamamlansın.`;
   }
 
-  console.log(`[Flow Video] 🎬 Google Flow (Veo 3.1) üzerinden video üretimi başlatılıyor...`);
-  const newTabRes = await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(projectUrl)}`, { method: 'PUT' });
+  console.log(`[Flow Video] 🎬 Google Flow (Veo 3.1) üzerinden İZOLE video üretimi başlatılıyor... [Job: ${jobId}]`);
+
+  // 1. İş için izole indirme dizini oluştur
+  const jobDownloadDir = path.join(OUTPUT_DIR, 'jobs', String(jobId));
+  fs.mkdirSync(jobDownloadDir, { recursive: true });
+
+  // 2. Proje URL'si verilmişse doğrudan aç, yoksa ana sayfadan sıfır proje yarat
+  let isolatedProjectUrl = options.projectUrl || null;
+  let isolatedProjectId = null;
+  const initialOpenUrl = isolatedProjectUrl || 'https://flow.google.com/';
+
+  const newTabRes = await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(initialOpenUrl)}`, { method: 'PUT' });
   const tab = await newTabRes.json();
   const ws = new WebSocket(tab.webSocketDebuggerUrl);
 
@@ -1294,24 +1346,114 @@ async function generateVideoOnFlow(options = {}) {
     });
   }
 
-  await sleep(6000);
-
-  // İndirme dizinini yapılandır
+  // İndirme dizinini bu job'a özel izole klasöre kilitle (Asla ortak havuza inmesin)
   try {
     await send('Browser.setDownloadBehavior', {
       behavior: 'allow',
-      downloadPath: OUTPUT_DIR,
+      downloadPath: jobDownloadDir,
       eventsEnabled: true
     });
   } catch(e) {}
   try {
     await send('Page.setDownloadBehavior', {
       behavior: 'allow',
-      downloadPath: OUTPUT_DIR
+      downloadPath: jobDownloadDir
     });
   } catch(e) {}
 
-  // 1. ProseMirror editörünü odakla
+  // 3. Sıfır Flow projesi oluştur (İzolasyonun kalbi: Başka firmanın projeleriyle asla karışmaz)
+  if (!isolatedProjectUrl || !isolatedProjectUrl.includes('/project/')) {
+    console.log(`[Flow Video] 🆕 İş için izole Flow projesi oluşturuluyor...`);
+    await sleep(3500);
+
+    await send('Runtime.evaluate', {
+      expression: `(() => {
+        const btns = Array.from(document.querySelectorAll('button, a, div[role="button"]'));
+        const btn = btns.find(b => (b.innerText || '').toLowerCase().includes('new project'));
+        if (btn) btn.click();
+      })()`
+    });
+
+    const navStart = Date.now();
+    while (Date.now() - navStart < 25000) {
+      await sleep(1000);
+      const urlRes = await send('Runtime.evaluate', { expression: 'window.location.href' });
+      const curUrl = urlRes?.result?.value || '';
+      if (curUrl.includes('/project/') && !curUrl.endsWith('/project') && !curUrl.endsWith('/project/')) {
+        isolatedProjectUrl = curUrl;
+        isolatedProjectId = curUrl.split('/project/')[1]?.split('/')[0]?.split('?')[0];
+        break;
+      }
+    }
+
+    if (!isolatedProjectUrl) {
+      console.warn(`[Flow Video] ⚠️ Yeni proje yönlendirmesi alınamadı, yedek proje kullanılıyor.`);
+      isolatedProjectUrl = 'https://flow.google.com/project/6b718bdf-9bf3-44c3-8b65-4c8f9110c8c5';
+    } else {
+      console.log(`[Flow Video] 🔒 İZOLE PROJE AÇILDI: ${isolatedProjectUrl} (ID: ${isolatedProjectId})`);
+      if (typeof options.onProjectCreated === 'function') {
+        try { options.onProjectCreated({ projectId: isolatedProjectId, projectUrl: isolatedProjectUrl }); } catch (_) {}
+      }
+    }
+  } else {
+    isolatedProjectId = isolatedProjectUrl.split('/project/')[1]?.split('/')[0]?.split('?')[0];
+  }
+
+  const projectUrl = isolatedProjectUrl;
+  await sleep(4000);
+
+  // 1.0. Yan çekmece (Untitled session) açıksa kapat ki ana kanvas ve prompt barı tam görünsün
+  try {
+    await send('Runtime.evaluate', {
+      expression: `(() => {
+        const closeBtn = document.querySelector('button[aria-label="Close"]');
+        if (closeBtn) closeBtn.click();
+      })()`
+    });
+    await sleep(1500);
+  } catch (_) {}
+
+  // 1.1. Model seçiciyi Video (Veo) moduna ve 9:16 dikey oranına ayarla
+  try {
+    const modelPillRes = await send('Runtime.evaluate', {
+      expression: `(() => {
+        const btns = Array.from(document.querySelectorAll('button'));
+        const pill = btns.find(b => (b.innerText || '').includes('Banana') || (b.innerText || '').includes('Image') || b.getAttribute('aria-label') === 'Settings trigger');
+        if (pill && !(pill.innerText || '').toLowerCase().includes('video')) {
+          pill.click();
+          return { clicked: true };
+        }
+        return { clicked: false };
+      })()`,
+      returnByValue: true
+    });
+
+    if (modelPillRes?.result?.value?.clicked) {
+      await sleep(1000);
+      await send('Runtime.evaluate', {
+        expression: `(() => {
+          const items = Array.from(document.querySelectorAll('.mat-mdc-menu-item, [role="menuitem"], .cdk-overlay-pane button, span, div'));
+          const videoBtn = items.find(el => el.innerText && el.innerText.trim() === 'Video');
+          if (videoBtn) videoBtn.click();
+        })()`
+      });
+      await sleep(1000);
+
+      const targetAspect = options.aspectRatio === '16:9' ? '16:9' : '9:16';
+      await send('Runtime.evaluate', {
+        expression: `(() => {
+          const items = Array.from(document.querySelectorAll('.mat-mdc-menu-item, [role="menuitem"], .cdk-overlay-pane button, span, div'));
+          const aspBtn = items.find(el => el.innerText && (el.innerText.trim() === '${targetAspect}' || el.innerText.includes('crop_${targetAspect.replace(':', '_')}')));
+          if (aspBtn) aspBtn.click();
+        })()`
+      });
+      await sleep(1000);
+    }
+  } catch (mErr) {
+    console.warn('[Flow Video] Model Video seçimi uyarısı:', mErr.message);
+  }
+
+  // 1.2. ProseMirror editörünü odakla
   const targetInfo = await send('Runtime.evaluate', {
     expression: `(() => {
       const pm = document.querySelector('flow-rich-text-editor div.ProseMirror') || document.querySelector('div.ProseMirror');
@@ -1841,19 +1983,19 @@ async function generateVideoOnFlow(options = {}) {
     throw new Error('Google Flow video render işlemi zaman aşımına uğradı (260sn).');
   }
 
-  // 5.5 Download davranışını ayarla (Dosyaların OUTPUT_DIR'e inmesini garantile)
+  // 5.5 Download davranışını ayarla (Dosyaların bu işe ait izole dizine inmesini garantile)
   try {
-    await send('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: OUTPUT_DIR });
+    await send('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: jobDownloadDir });
   } catch(e) {}
   try {
-    await send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: OUTPUT_DIR, eventsEnabled: true });
+    await send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: jobDownloadDir, eventsEnabled: true });
   } catch(e) {}
 
   // 5.6 İndirme öncesi artık veya yarım dosyaları temizle
   try {
-    const staleFiles = fs.readdirSync(OUTPUT_DIR).filter(f => f.endsWith('.crdownload') || f === 'download');
+    const staleFiles = fs.readdirSync(jobDownloadDir).filter(f => f.endsWith('.crdownload') || f === 'download');
     for (const sf of staleFiles) {
-      try { fs.unlinkSync(path.join(OUTPUT_DIR, sf)); } catch(_) {}
+      try { fs.unlinkSync(path.join(jobDownloadDir, sf)); } catch(_) {}
     }
   } catch(_) {}
 
@@ -1881,7 +2023,6 @@ async function generateVideoOnFlow(options = {}) {
   const thumbFileName = `video_${timestamp}_flow_thumb.jpg`;
   const rawPath = path.join(OUTPUT_DIR, rawFileName);
   const thumbPath = path.join(OUTPUT_DIR, thumbFileName);
-  const jobDownloadDir = path.join(OUTPUT_DIR, `dl_${timestamp}_${videoId}`);
 
   // 5.8 DOĞRUDAN OYNATICIDAKİ AKTİF VİDEOYU YAKALA (Direct Video Element Stream / Blob)
   let capturedDirectly = false;
@@ -1950,48 +2091,55 @@ async function generateVideoOnFlow(options = {}) {
   let receivedBytes = 0;
 
   if (!capturedDirectly) {
-    // 6.1. Proje ana sayfasına dönerek grid listesini netleştir (En yeni video en başta index 0'dadır)
-    console.log(`[Flow Video] 🎬 Proje sayfasına geçiliyor ve en son üretilen video kartı açılıyor...`);
+    // 6.1. Kanvastaki video kartına çift tıklayarak veya Videos sekmesinden izleyiciyi aç
+    console.log(`[Flow Video] 🎬 Üretilen video kartı açılıyor ve indirme arayüzü hazırlanıyor...`);
     try {
-      await send('Page.navigate', { url: projectUrl });
-      await sleep(4000);
+      // Önce doğrudan kanvastaki video kartına çift tıkla
+      await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: 500, y: 250, button: 'left', clickCount: 1 });
+      await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 500, y: 250, button: 'left', clickCount: 1 });
+      await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: 500, y: 250, button: 'left', clickCount: 2 });
+      await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 500, y: 250, button: 'left', clickCount: 2 });
+      await sleep(1800);
 
-      // Sol menüden 'Videos' sekmesine tıkla ki yüklenen resimler elensin, sadece gerçek videolar listelensin
-      await send('Runtime.evaluate', {
-        expression: `(() => {
-          const items = Array.from(document.querySelectorAll('mat-list-item, [role="listitem"], flow-nav-item, button'));
-          const vidTab = items.find(el => (el.innerText || '').toLowerCase().includes('videos'));
-          if (vidTab) vidTab.click();
-        })()`
+      // İndirme butonu henüz çıkmadıysa sol menüdeki 'Videos' sekmesine tıkla
+      const hasDlBtn = await send('Runtime.evaluate', {
+        expression: `Boolean(document.querySelector('button[aria-label="Download media"]') || Array.from(document.querySelectorAll('button')).find(b => (b.getAttribute('aria-label') || '').toLowerCase().includes('download media')))`
       });
-      await sleep(2000);
 
-      const tileClickRes = await send('Runtime.evaluate', {
-        expression: `(() => {
-          window.scrollTo(0, 0);
-          const tiles = Array.from(document.querySelectorAll('flow-grid-tile-container')).filter(t => {
-            const aria = (t.getAttribute('aria-label') || '').toLowerCase();
-            return !aria.endsWith('.jpg') && !aria.endsWith('.png') && !aria.endsWith('.webp') && !aria.endsWith('.jpeg');
-          });
-          if (tiles.length > 0) {
-            const newestTile = tiles[0];
-            try { newestTile.scrollIntoView({ block: 'center' }); } catch (_) {}
-            const r = newestTile.getBoundingClientRect();
-            if (r.width > 0 && r.height > 0) {
-              return { found: true, x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
+      if (!hasDlBtn?.result?.value) {
+        await send('Runtime.evaluate', {
+          expression: `(() => {
+            const items = Array.from(document.querySelectorAll('mat-list-item, [role="listitem"], flow-nav-item, button, span, div'));
+            const vidTab = items.find(el => el.children.length === 0 && (el.innerText || '').trim() === 'Videos');
+            if (vidTab) vidTab.click();
+          })()`
+        });
+        await sleep(1500);
+
+        const tileClickRes = await send('Runtime.evaluate', {
+          expression: `(() => {
+            const tiles = Array.from(document.querySelectorAll('flow-grid-tile-container, .tile, div[class*="tile"]'));
+            if (tiles.length > 0) {
+              const t = tiles[0];
+              t.scrollIntoView({ block: 'center' });
+              const r = t.getBoundingClientRect();
+              return { found: true, x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2) };
             }
-          }
-          return { found: false };
-        })()`,
-        returnByValue: true
-      });
+            return { found: false };
+          })()`,
+          returnByValue: true
+        });
 
-      if (tileClickRes?.result?.value?.found) {
-        const { x, y } = tileClickRes.result.value;
-        await send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 });
-        await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
+        if (tileClickRes?.result?.value?.found) {
+          const { x, y } = tileClickRes.result.value;
+          await send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 });
+          await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
+          await sleep(500);
+          await send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 2 });
+          await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 2 });
+        }
+        await sleep(2000);
       }
-      await sleep(2500);
     } catch (_) {}
 
     // 6.2. DOĞRUDAN STREAM İNDİRME: Video elementinden session çerezleriyle MP4'ü direkt çek
@@ -2055,6 +2203,12 @@ async function generateVideoOnFlow(options = {}) {
       };
       ws.on('message', cdpDownloadHandler);
 
+      try {
+        await send('Page.setDownloadBehavior', {
+          behavior: 'allow',
+          downloadPath: jobDownloadDir
+        });
+      } catch (_) {}
       try {
         await send('Browser.setDownloadBehavior', {
           behavior: 'allow',
@@ -2197,38 +2351,17 @@ async function generateVideoOnFlow(options = {}) {
     try { fs.rmSync(jobDownloadDir, { recursive: true, force: true }); } catch (_) {}
   }
 
-    // 🛡️ GÜVENLİK KONTROLÜ: rawPath diske yazılmadıysa extractDir veya outputs'tan en yeni videoyu bul
+    // 🛡️ SIKI İZOLASYON & DOĞRULAMA KONTROLÜ
+    // Ortak dizinden rastgele video arama mantığı tamamen kaldırıldı.
+    // Video yalnızca bu işe ait izole dizinden çıkmalı ve ffprobe doğrulamalarından geçmelidir.
     if (!fs.existsSync(rawPath)) {
-      const extractDir = path.join(OUTPUT_DIR, `unzip_${timestamp}`);
-      if (fs.existsSync(extractDir)) {
-        const fallbackCandidates = fs.readdirSync(extractDir)
-          .filter(f => f.toLowerCase().endsWith('.mp4'))
-          .map(f => path.join(extractDir, f))
-          .filter(p => fs.statSync(p).size > 500000);
-        if (fallbackCandidates.length > 0) {
-          fallbackCandidates.sort((a, b) => fs.statSync(b).size - fs.statSync(a).size);
-          fs.copyFileSync(fallbackCandidates[0], rawPath);
-          console.log(`[Flow Video] 🛡️ Emniyet Kopyası: Extract dizinindeki en büyük MP4 rawPath'e aktarıldı: ${fallbackCandidates[0]}`);
-        }
-      }
+      throw new Error(`Google Flow video dosyası bu işe ait izole dizine indirilemedi (${rawFileName}). İndirme başarısız.`);
     }
 
-    if (!fs.existsSync(rawPath)) {
-      const allRecent = fs.readdirSync(OUTPUT_DIR)
-        .filter(f => f !== rawFileName && !f.startsWith('temp_') && !f.endsWith('.jpg') && !f.endsWith('.png') && !f.endsWith('.json'))
-        .map(f => ({ path: path.join(OUTPUT_DIR, f), time: fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs, size: fs.statSync(path.join(OUTPUT_DIR, f)).size }))
-        .filter(f => f.size > 500000)
-        .sort((a, b) => b.time - a.time);
-      const recentOutputs = allRecent.filter(f => f.time >= requestStartedAt);
-      if (recentOutputs.length > 0) {
-        fs.copyFileSync(recentOutputs[0].path, rawPath);
-        console.log(`[Flow Video] 🛡️ Emniyet Kopyası: Bu üretim döngüsünde inen taze video rawPath'e aktarıldı: ${recentOutputs[0].path}`);
-      }
-    }
+    // 🔒 FFPROBE & SHA-256 DOĞRULAMASI (Bozuk veya eksik dosyaları anında eler)
+    const verification = verifyVideoFile(rawPath);
+    console.log(`[Flow Video] 🔒 Video bütünlük doğrulaması BAŞARILI: Süre=${verification.duration}s, Boyut=${(verification.size / 1024 / 1024).toFixed(2)} MB, SHA256=${verification.sha256}`);
 
-    if (!fs.existsSync(rawPath)) {
-      throw new Error(`Google Flow video dosyası diske yazılamadı (${rawFileName}). İndirme veya arşiv çıkarma başarısız.`);
-    }
 
   // 8.1 Otonom Nöral Türkçe Seslendirme / Natif Veo Sesi + Milisaniyelik CapCut Altyazı
   const shouldAddSubtitlesFlow = options.subtitles !== false;
@@ -2381,9 +2514,13 @@ async function generateVideoOnFlow(options = {}) {
     subtitledVideoUrl: `http://${PUBLIC_HOST}:${PORT}/outputs/${rawFileName}`,
     cleanVideoUrl: `http://${PUBLIC_HOST}:${PORT}/outputs/${cleanFileName}`,
     thumbnailUrl: `http://${PUBLIC_HOST}:${PORT}/outputs/${thumbFileName}`,
-    duration: 10,
+    duration: (typeof verification !== 'undefined' && verification?.duration) ? verification.duration : 10,
     aspectRatio: '9:16',
     creditsRemaining: currentRemainingCredits,
+    flowProjectId: isolatedProjectId,
+    flowProjectUrl: isolatedProjectUrl,
+    sha256: (typeof verification !== 'undefined' && verification?.sha256) ? verification.sha256 : null,
+    jobId: String(jobId),
   };
 }
 

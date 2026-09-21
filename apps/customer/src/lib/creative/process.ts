@@ -68,6 +68,9 @@ function readVideoResult(value: unknown): {
   videoUrl: string | null
   cleanVideoUrl: string | null
   thumbnailUrl: string | null
+  flowProjectId: string | null
+  flowProjectUrl: string | null
+  sha256: string | null
 } {
   const result = value && typeof value === 'object' && 'result' in value
     ? (value as { result?: unknown }).result
@@ -82,6 +85,9 @@ function readVideoResult(value: unknown): {
     videoUrl: stringValue(first.url) || stringValue(row.videoUrl),
     cleanVideoUrl: stringValue(first.cleanUrl) || stringValue(row.cleanVideoUrl),
     thumbnailUrl: stringValue(first.thumbnailUrl) || stringValue(row.thumbnailUrl),
+    flowProjectId: stringValue(row.flowProjectId) || stringValue(first.flowProjectId),
+    flowProjectUrl: stringValue(row.flowProjectUrl) || stringValue(first.flowProjectUrl),
+    sha256: stringValue(row.sha256) || stringValue(first.sha256),
   }
 }
 
@@ -193,6 +199,9 @@ export async function processCreativeGeneration(
                 thumbnailUrl: completed.thumbnailUrl,
                 provider: 'omnistudio_veo',
                 cost: { provider: 'omnistudio_veo', imageCount: 1 },
+                flowProjectId: completed.flowProjectId || null,
+                flowProjectUrl: completed.flowProjectUrl || null,
+                sha256: completed.sha256 || null,
               },
             })
             .eq('id', creativeId)
