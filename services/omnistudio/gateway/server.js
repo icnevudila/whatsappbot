@@ -387,6 +387,54 @@ class AdvancedJobQueue {
 
 const queue = new AdvancedJobQueue();
 
+class VideoJobQueue {
+  constructor(maxConcurrent = 1) {
+    this.maxConcurrent = maxConcurrent;
+    this.activeCount = 0;
+    this.queue = [];
+  }
+
+  enqueue(taskFn) {
+    return new Promise((resolve, reject) => {
+      this.queue.push({ taskFn, resolve, reject, enqueuedAt: Date.now() });
+      this.processNext();
+    });
+  }
+
+  async processNext() {
+    if (this.activeCount >= this.maxConcurrent || this.queue.length === 0) {
+      return;
+    }
+
+    this.activeCount++;
+    const item = this.queue.shift();
+    const waitSeconds = Math.round((Date.now() - item.enqueuedAt) / 1000);
+    if (waitSeconds > 1) {
+      console.log(`[VideoQueue] ⏳ Sıradaki video görevi işleme alınıyor (Kuyruk bekleme: ${waitSeconds}s, Kuyrukta bekleyen: ${this.queue.length})`);
+    }
+
+    try {
+      const result = await item.taskFn();
+      item.resolve(result);
+    } catch (err) {
+      item.reject(err);
+    } finally {
+      this.activeCount--;
+      this.processNext();
+    }
+  }
+
+  getStats() {
+    return {
+      active: this.activeCount,
+      waiting: this.queue.length,
+      maxConcurrent: this.maxConcurrent,
+    };
+  }
+}
+
+const videoQueue = new VideoJobQueue(1);
+
 // Periyodik zombi iş temizleme (200s)
 setInterval(() => {
   const now = Date.now();
@@ -668,10 +716,9 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 400, { error: { message: 'Prompt alanı zorunludur.', type: 'invalid_request_error' } });
       }
 
-      console.log(`[Gateway] Yeni Video Üretim Talebi: "${prompt.slice(0, 60)}..."`);
+      console.log(`[Gateway] Yeni Video Talebi Kuyruğa Alındı: "${prompt.slice(0, 60)}..." (Kuyruk: ${videoQueue.queue.length} bekliyor, ${videoQueue.activeCount} aktif)`);
       try {
-        const { generateVideo } = require('./generate_video.js');
-        const result = await generateVideo({
+        const videoOptions = {
           prompt,
           brandName: body.brandName || body.brandKit?.name || null,
           productName: body.productName || body.product?.name || null,
@@ -686,6 +733,7 @@ const server = http.createServer(async (req, res) => {
           includeBanner: Boolean(body.includeBanner),
           orgId: body.orgId || null,
           productImageUrl: body.productImageUrl || null,
+          referenceImageUrls: body.referenceImageUrls || [],
           logoUrl: body.logoUrl || null,
           customer: body.customer || null,
           port: body.port || null,
@@ -696,6 +744,33 @@ const server = http.createServer(async (req, res) => {
           variationId: body.variationId || null,
           brief: body.brief || null,
           voiceoverText: body.voiceoverText || null,
+        };
+
+        const result = await videoQueue.enqueue(async () => {
+          const useOfficialApiOnly = process.env.USE_OFFICIAL_API === 'true' || body.useOfficialApi === true;
+          if (useOfficialApiOnly) {
+            const { generateVideoViaOfficialApi } = require('./video_api_fallback.js');
+            return await generateVideoViaOfficialApi(videoOptions);
+          }
+
+          try {
+            const { generateVideo } = require('./generate_video.js');
+            return await generateVideo(videoOptions);
+          } catch (browserErr) {
+            console.warn(`[Gateway Video] ⚠️ Tarayıcı botu video üretiminde hata aldı: ${browserErr.message}`);
+
+            // Otomatik REST API Sigortası
+            try {
+              const { isApiFallbackConfigured, generateVideoViaOfficialApi } = require('./video_api_fallback.js');
+              if (isApiFallbackConfigured()) {
+                console.log(`[Gateway Video] 🔄 Otomatik Sigorta: Resmi REST Video API motoruna devrediliyor...`);
+                return await generateVideoViaOfficialApi(videoOptions);
+              }
+            } catch (fallbackErr) {
+              console.error(`[Gateway Video Fallback Hata]`, fallbackErr);
+            }
+            throw browserErr;
+          }
         });
 
         return sendJson(res, 200, {
@@ -714,11 +789,21 @@ const server = http.createServer(async (req, res) => {
           duration: result.duration,
           aspect: result.aspect,
           accountPort: result.port,
+          provider: result.provider || 'veo-flow',
         });
       } catch (err) {
         console.error('[Gateway Video Hata]', err);
         return sendJson(res, 500, { error: { message: err.message, type: 'video_generation_error' } });
       }
+    }
+
+    // 1.0.0. Video Kuyruğu Durumu: GET /v1/videos/queue
+    if (method === 'GET' && (pathname === '/v1/videos/queue' || pathname === '/videos/queue')) {
+      const { isApiFallbackConfigured } = require('./video_api_fallback.js');
+      return sendJson(res, 200, {
+        queue: videoQueue.getStats(),
+        apiFallbackConfigured: isApiFallbackConfigured(),
+      });
     }
 
     // 1.0.1. Video Hesap Havuzu Durumu: GET /v1/videos/accounts
