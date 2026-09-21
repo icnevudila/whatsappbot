@@ -225,8 +225,10 @@ Görevin: Verilen işletme verilerini kullanarak Google Veo motoruna doğrudan i
 - Sektör / Konsept: ${sectorInfo.sector} (${sectorInfo.sceneAtmosphere})
 - Marka Adı: ${brand} (Videoda kurumsal logo ve fiziksel marka olarak yer alacaktır)
 - Kurumsal Logo Tanımı: ${logoDesc}
-- Ekli Medya ve Ürün/Logo Analizi: Firmanın orijinal kurumsal logosu (${logoDesc}) ve ürün görseli sana verilmiştir. Bu görselleri incele ve Veo promptunun içine logonun ve ürünün fiziksel görünümünü (renklerini, geometrisini, gövde yapısını) METİNSEL OLARAK DOĞRUDAN VE KUSURSUZCA YAZ. Sahnenin başında veya kapanışında şirketin kurumsal logosu akrilik tabela, araç kapısı veya plaket üzerinde kristal netliğinde yer almalıdır.
-- KESİN UYARI (VEO'YA 'EKLİ DOSYA' YAZMA YASAĞI): Veo'ya iletilecek nihai prompt metninde KESİNLİKLE 'ekli görsel', 'ektedir', 'dosyadaki görsel', 'ekli logo' gibi ifadeler YAZMA! Veo difüzyon modeli bunu görünce 'Lütfen görsel yükleyin' diyerek videoyu başlatmaz. Bunun yerine ekteki görselin neye benzediğini Veo'ya doğrudan canlı dille betimle (Örn: '${logoDesc}'; sıcak fırınlanmış kırmızı-kiremit pres tuğlalar). Veo'nun doğrudan video üretmeye başlamasını sağla.
+- Ekli Medya ve Ürün/Logo Analizi: Firmanın orijinal kurumsal logosu (${logoDesc}) ve ürün görseli sana verilmiştir. Bu görselleri incele ve Veo promptunun içine logonun ve ürünün fiziksel görünümünü (renklerini, geometrisini, gövde yapısını) METİNSEL OLARAK DOĞRUDAN VE KUSURSUZCA YAZ.
+  * EKLİ ÜRÜNÜN FİZİKSEL FORMUNU KESİNLİKLE KORU: Eğer ürün hava delikli killi blok tuğla ise (üstünde dikdörtgen delikler, yanlarında dikey oluklu çizgiler olan kırmızı kil blok), promptunda ASLA 'masif gövdeli pres tuğla' veya 'düzgün deliksiz dikdörtgen gövde' YAZMA. Birebir 'üst yüzeyinde hava delikleri ve yanlarında dikey oluk çizgileri olan fırınlanmış kırmızı kil blok tuğla (perforated hollow core clay brick)' olarak tam fiziksel detaylarıyla betimle. Veo difüzyon modelinin deliksiz düz taş üretmesini kesinlikle engelle.
+  * EKLİ LOGO KİMLİĞİNİ HARFİYEN KORU: Şirketin kurumsal logosu (${logoDesc}) ve şirket adı ('${brand}') sahnedeki araç kapısı veya tabelada kusursuz, net ve okunaklı yer almalıdır. Uydurma geometrik şekiller, sarı üçgenler, yapay amblemler veya bozuk yazılar KESİNLİKLE EKLENMEYECEKTİR.
+- KESİN UYARI (VEO'YA 'EKLİ DOSYA' YAZMA YASAĞI): Veo'ya iletilecek nihai prompt metninde KESİNLİKLE 'ekli görsel', 'ektedir', 'dosyadaki görsel', 'ekli logo' gibi ifadeler YAZMA! Veo difüzyon modeli bunu görünce 'Lütfen görsel yükleyin' diyerek videoyu başlatmaz. Bunun yerine ekteki görselin neye benzediğini Veo'ya doğrudan canlı dille betimle (Örn: '${logoDesc}'; üstünde hava delikleri ve yan olukları olan kırmızı pişmiş kil blok tuğlalar). Veo'nun doğrudan video üretmeye başlamasını sağla.
 - Kurumsal Renk Paleti (KESİNLİKLE METİN OLARAK PROMPTA # HEX KODU YAZILMAYACAK): Koyu zümrüt yeşili, canlı parlak yeşil, beyaz ve siyah
 - Öne Çıkan Ürün/Hizmet: ${product}
 - Kampanya Brief'i: ${brief}
@@ -335,12 +337,13 @@ ${require('./brand_learning_store.js').buildLearningPromptBlock(brand, product, 
                 selector: 'input#upload-photos, input#upload-files, input[type="file"]'
               });
               if (nodeRes?.nodeId) {
-                console.log(`[VideoGen -> ChatGPT Web] 🖼️ Gerçek kurumsal logo/medya dosyaları yükleniyor:`, filesToUpload);
+                const filePathsToUpload = filesToUpload.map(f => typeof f === 'string' ? f : (f.path || f));
+                console.log(`[VideoGen -> ChatGPT Web] 🖼️ Gerçek kurumsal logo/medya dosyaları yükleniyor:`, filePathsToUpload);
                 await sendCmd("DOM.setFileInputFiles", {
                   nodeId: nodeRes.nodeId,
-                  files: filesToUpload
+                  files: filePathsToUpload
                 });
-                uploadedFilesCount = filesToUpload.length;
+                uploadedFilesCount = filePathsToUpload.length;
                 await new Promise(r => setTimeout(r, 2500));
               }
             }
@@ -1511,12 +1514,16 @@ async function generateVideoOnFlow(options = {}) {
   await send('Input.dispatchKeyEvent', { type: 'keyUp', windowsVirtualKeyCode: 27, key: 'Escape' });
   await sleep(600);
 
-  // 1.4. Prompt metnine kesin görsel/marka talimatını ekle
-  const brandNameForDirective = options.brandName || 'Marka';
-  const mandatoryMediaDirective = `\n\nKESİN GÖRSEL VE MARKA TALİMATI:\nİliştirilmiş ürün fotoğrafını ana ürünün görsel referansı olarak kullan. Ürünün rengini, biçimini ve ayırt edici detaylarını koru. İliştirilmiş kurumsal logo dosyasını marka kimliği referansı olarak kullan. Logoyu yeniden tasarlama veya başka amblem üretme. Marka adı "${brandNameForDirective}" olarak doğru yazılsın. Kapanışta ürünle birlikte marka adı ve orijinal logo okunabilir biçimde görünür olsun.`;
+  const brandNameForDirective = options.brandName || options.customer || 'Marka';
+  const prodNameForDirective = options.productName || options.product || '';
+  let productShapeNote = '';
+  if (prodNameForDirective.toLowerCase().includes('tuğla') || prodNameForDirective.toLowerCase().includes('tugla')) {
+    productShapeNote = ' İliştirilmiş tuğla fotoğrafındaki delikli killi blok tuğla formunu, hava deliklerini ve dikey yan oluklarını kesinlikle koru; deliksiz düz tuğlaya veya masif taşa dönüştürme.';
+  }
+  const mandatoryMediaDirective = `\n\nKESİN GÖRSEL VE MARKA TALİMATI:\n1. ÜRÜN BİÇİMİ: İliştirilmiş ürün fotoğrafını ana ürünün görsel referansı olarak kullan. Ürünün fiziksel formunu, rengini ve ayırt edici geometrik yapısını koru.${productShapeNote}\n2. KURUMSAL LOGO: İliştirilmiş kurumsal logo dosyasını marka kimliği referansı olarak kullan. Logoyu yeniden tasarlama, sarı üçgen veya uydurma semboller ekleme. Marka adı "${brandNameForDirective}" olarak doğru yazılsın. Kapanışta ve araç kapısında/tabelada orijinal logo okunabilir biçimde yer alsın.`;
 
   let finalPrompt = prompt;
-  if (!finalPrompt.includes('İliştirilmiş kurumsal logo dosyasını') && filesToUpload.length > 0) {
+  if (!finalPrompt.includes('KESİN GÖRSEL VE MARKA TALİMATI') && filesToUpload.length > 0) {
     finalPrompt = finalPrompt + mandatoryMediaDirective;
   }
 
@@ -1820,8 +1827,30 @@ async function generateVideoOnFlow(options = {}) {
   // 6. Download butonuna tıkla (Doğrudan yakalanamadıysa yedek yol)
   let downloadTriggered = false;
   if (!capturedDirectly) {
+    // 6.1. Öncelikle en son üretilen videonun play butonuna/tile'ına tıkla ki medya görüntüleyici açılsın
+    console.log(`[Flow Video] 🎬 En son üretilen video kartı açılıyor...`);
+    try {
+      await send('Runtime.evaluate', {
+        expression: `(() => {
+          const playBadges = Array.from(document.querySelectorAll('.play-icon-badge, [class*="play-badge"]'));
+          if (playBadges.length > 0) {
+            playBadges[playBadges.length - 1].click();
+            return { ok: true, type: 'playBadge' };
+          }
+          const tiles = Array.from(document.querySelectorAll('flow-media-tile, .tile-row.virtual-item-container, [class*="tile"]'));
+          if (tiles.length > 0) {
+            tiles[tiles.length - 1].click();
+            return { ok: true, type: 'tile' };
+          }
+          return { ok: false };
+        })()`,
+        returnByValue: true
+      });
+      await sleep(1500);
+    } catch (_) {}
+
     // YÖNTEM A: Üst çubuktaki doğrudan "Download media" butonu
-    for (let b = 0; b < 5; b++) {
+    for (let b = 0; b < 6; b++) {
       const dlBtn = await send('Runtime.evaluate', {
         expression: `(() => {
           const btn = document.querySelector('button[aria-label="Download media"]') ||
@@ -1839,43 +1868,43 @@ async function generateVideoOnFlow(options = {}) {
         returnByValue: true
       });
 
-    if (dlBtn?.result?.value) {
-      console.log(`[Flow Video] 📥 Üst indirme butonu bulundu, tıklanıyor (${dlBtn.result.value.x}, ${dlBtn.result.value.y})...`);
-      await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: dlBtn.result.value.x, y: dlBtn.result.value.y, button: 'left', clickCount: 1 });
-      await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: dlBtn.result.value.x, y: dlBtn.result.value.y, button: 'left', clickCount: 1 });
-      await sleep(1500);
+      if (dlBtn?.result?.value) {
+        console.log(`[Flow Video] 📥 Üst indirme butonu bulundu, tıklanıyor (${dlBtn.result.value.x}, ${dlBtn.result.value.y})...`);
+        await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: dlBtn.result.value.x, y: dlBtn.result.value.y, button: 'left', clickCount: 1 });
+        await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: dlBtn.result.value.x, y: dlBtn.result.value.y, button: 'left', clickCount: 1 });
+        await sleep(1200);
 
-      // 720p veya Original size seçeneğini tıkla
-      const popupRes = await send('Runtime.evaluate', {
-        expression: `(() => {
-          const items = Array.from(document.querySelectorAll('*'));
-          const opt = items.find(e => {
-            const t = (e.innerText || '').trim();
-            return (t === '720p' || t.startsWith('720p') || t.includes('Original size')) && e.getBoundingClientRect().width > 0;
-          });
-          if (opt) {
-            const r = opt.getBoundingClientRect();
-            return { found: true, x: r.left + r.width/2, y: r.top + r.height/2 };
-          }
-          return { found: false };
-        })()`,
-        returnByValue: true
-      });
+        // 720p veya Original size seçeneğini tıkla
+        const popupRes = await send('Runtime.evaluate', {
+          expression: `(() => {
+            const items = Array.from(document.querySelectorAll('.mat-mdc-menu-item, [role="menuitem"], *'));
+            const opt = items.find(e => {
+              const t = (e.innerText || '').trim();
+              return (t.includes('720p') || t.includes('Original size') || t === '720p') && e.getBoundingClientRect().width > 0;
+            });
+            if (opt) {
+              const r = opt.getBoundingClientRect();
+              return { found: true, x: r.left + r.width/2, y: r.top + r.height/2 };
+            }
+            return { found: false };
+          })()`,
+          returnByValue: true
+        });
 
-      if (popupRes?.result?.value?.found) {
-        const { x, y } = popupRes.result.value;
-        console.log(`[Flow Video] 📥 720p seçeneği tıklandı (${x}, ${y})...`);
-        await send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 });
-        await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
-      } else {
-        await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: 706, y: 141, button: 'left', clickCount: 1 });
-        await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 706, y: 141, button: 'left', clickCount: 1 });
+        if (popupRes?.result?.value?.found) {
+          const { x, y } = popupRes.result.value;
+          console.log(`[Flow Video] 📥 720p / Original size seçeneği tıklandı (${x}, ${y})...`);
+          await send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 });
+          await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
+        } else {
+          await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: 706, y: 141, button: 'left', clickCount: 1 });
+          await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 706, y: 141, button: 'left', clickCount: 1 });
+        }
+        downloadTriggered = true;
+        break;
       }
-      downloadTriggered = true;
-      break;
+      await sleep(1000);
     }
-    await sleep(1000);
-  }
 
   // YÖNTEM B: More options menüsünden İndir (Tile üç nokta menüsü)
   if (!downloadTriggered) {

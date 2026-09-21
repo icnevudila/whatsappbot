@@ -963,8 +963,8 @@
             "yapı",
             "yapi"
           ],
-          "visualIdentity": "Nizami dizilmiş fırınlanmış killi kırmızı tuğla paletleri, şeffaf koruyucu shrink ambalaj üzerinde baskılı Ayvazoğlu İnşaat amblemi, sarı endüstriyel forklift ve sevkiyat tırı.",
-          "cinematicScene": "Modern ve aydınlık tuğla üretim fabrikası ve şantiye sevkiyat sahası. Konveyör bantları, nizami tuğla paletleri, vinç ve tır yükleme alanı, gün ışığında güven veren endüstriyel çekim.",
+          "visualIdentity": "Nizami dizilmiş, üstünde karakteristik 18 dikdörtgen hava deliği bulunan kırmızı-kiremit renkli fırınlanmış kil blok tuğlalar (perforated hollow clay brick), yan yüzeylerinde dikey oluklu çizgiler, şeffaf koruyucu shrink ambalaj üzerinde baskılı Ayvazoğlu İnşaat amblemi, sarı endüstriyel forklift ve sevkiyat tırı. Kesinlikle deliksiz düz taş veya masif harman tuğlası üretilmeyecektir.",
+          "cinematicScene": "Modern ve aydınlık tuğla üretim fabrikası ve şantiye sevkiyat sahası. Konveyör bantları, nizami delikli tuğla paletleri, vinç ve tır yükleme alanı, gün ışığında güven veren endüstriyel çekim.",
           "goldenPromptTemplate": "SAHNE 3 (7-10sn): Gün batımı modern plaza lobisi. Mermer duvara monte şık fırçalanmış tabelada kurumsal logo ve net: '{{MARKA}}'. TERTEMİZ PRESTİJLİ REKLAM KAPANIŞI."
         }
       },

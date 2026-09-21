@@ -77,6 +77,7 @@ async function getActiveBrandKit(orgId = null, brandHint = null) {
       tone: 'Modern ve güven verici bir tasarım dili. Canlı turuncu ve nötr tonlar, net tipografi.',
       logo_path: '/outputs/ayvazoglu_logo.png',
       product_image_path: '/outputs/ayvazoglu_brick.webp',
+      product_visual_description: "Karakteristik 18 delikli pişmiş kil blok tuğla (üst yüzeyinde nizami dikdörtgen hava delikli petek oda yapısı, yan yüzeylerinde dikey oluklu çizgiler olan kırmızı-turuncu renkli yapı tuğlası). Kesinlikle deliksiz masif taş veya düz harman tuğlası değildir; ekli görseldeki gibi içi hava kanallı delikli kil blok tuğladır.",
       hasExplicitLogo: true,
     };
   }
@@ -111,7 +112,7 @@ function getLogoVisualDescription(brandName, logoPath, hasExplicitLogo = false) 
     return "Orijinal yeşil bağlantılı veri ağı (connected network nodes constellation) amblemi: Merkezinde büyük yeşil dairesel çekirdek düğüm ve etrafında ince yeşil çizgilerle birbirine bağlanan farklı yeşil tonlarında veri düğüm noktaları (network graph nodes). Yanında temiz, modern sans-serif 'Veri Burada' kurumsal tipografisi. KESİNLİKLE uydurma yeşil altıgen, uydurma 'V' harfi amblemi, onay tiki, sahte üçgen veya soyut sembol KULLANILMAYACAKTIR; yalnızca ekli görseldeki orijinal yeşil bağlantılı veri ağı amblemi ve temiz 'Veri Burada' kurumsal tipografisi fırçalanmış metal isimliğe işlenecektir.";
   }
   if (lower.includes('ayvazoğlu')) {
-    return "Zarif kırmızı stilize çatı piktogramı ve altında temiz 'AYVAZOĞLU İNŞAAT' kurumsal tipografisi içeren resmi kurumsal logo amblemi.";
+    return "Minimalist kırmızı ince çizgili çatı piktogramı ve ortasından yukarı doğru yükselen kırmızı dikey ok sembolü. Altında siyah, net ve büyük harflerle 'AYVAZOĞLU' ve hemen altında geniş aralıklı 'İ N Ş A A T' yazısı içeren resmi kurumsal logo amblemi. Kesinlikle uydurma geometrik üçgen, sarı şekil, harf bozulması veya farklı amblem kullanılmayacaktır.";
   }
 
   // Tanımlı logo yoksa: SIFIR UYDURMA LOGO — sadece şirket adı yazılır
