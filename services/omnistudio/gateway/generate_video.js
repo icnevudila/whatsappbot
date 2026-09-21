@@ -1593,55 +1593,61 @@ async function generateVideoOnFlow(options = {}) {
 
   // 1.5. ProseMirror editörünü odakla ve promptu güvenle enjekte et (Çipleri koruyarak)
   console.log(`[Flow Video] ✍️ Prompt editörü odaklanıyor ve metin güvenle yazılıyor...`);
-  const writePromptResult = await send('Runtime.evaluate', {
+
+  // ProseMirror editörünü koordinatından tıkla ve gerçek fare odağı ver
+  const pmCoordsRes = await send('Runtime.evaluate', {
     expression: `(() => {
       const pm = document.querySelector('flow-rich-text-editor div.ProseMirror') || document.querySelector('div.ProseMirror');
-      if (!pm) return { ok: false, error: 'ProseMirror editörü DOM içinde bulunamadı.' };
-      pm.focus();
-
-      // Ingredient çiplerini koruyarak imleci en sona taşı
-      const sel = window.getSelection();
-      const range = document.createRange();
-      range.selectNodeContents(pm);
-      range.collapse(false);
-      sel.removeAllRanges();
-      sel.addRange(range);
-
-      // Metni yapıştırma olayıyla enjekte et (ProseMirror ve Angular reaktivitesini tetikler)
-      const dt = new DataTransfer();
-      dt.setData('text/plain', ${JSON.stringify(finalPrompt)});
-      const pasteEvt = new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true });
-      pm.dispatchEvent(pasteEvt);
-
-      // Geri oku ve doğrula
-      const currentText = (pm.innerText || '').trim();
-      return {
-        ok: currentText.length > 20,
-        textLength: currentText.length,
-        textSnippet: currentText.slice(0, 80)
-      };
+      if (!pm) return null;
+      const r = pm.getBoundingClientRect();
+      return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
     })()`,
     returnByValue: true
   });
 
-  if (!writePromptResult?.result?.value?.ok) {
-    console.warn(`[Flow Video] Yapıştırma olayı yetersiz kaldı, execCommand ve Input.insertText deneniyor...`);
-    await send('Runtime.evaluate', {
-      expression: `(() => {
-        const pm = document.querySelector('flow-rich-text-editor div.ProseMirror') || document.querySelector('div.ProseMirror');
-        if (pm) {
-          pm.focus();
-          document.execCommand('insertText', false, ${JSON.stringify(finalPrompt)});
-        }
-      })()`
-    });
-    await sleep(500);
+  if (pmCoordsRes?.result?.value) {
+    const { x, y } = pmCoordsRes.result.value;
+    await send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 });
+    await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
+    await sleep(400);
   }
+
+  // Ingredient çiplerini koruyarak imleci en sona taşı
+  await send('Runtime.evaluate', {
+    expression: `(() => {
+      const pm = document.querySelector('flow-rich-text-editor div.ProseMirror') || document.querySelector('div.ProseMirror');
+      if (pm) {
+        pm.focus();
+        const sel = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(pm);
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    })()`
+  });
+  await sleep(200);
+
+  // CDP Input.insertText ile metni gerçek klavye girişi olarak enjekte et (Angular ve ProseMirror'ı anında tetikler)
+  await send('Input.insertText', { text: finalPrompt });
+  await sleep(800);
+
+  // Geri oku ve doğrula
+  const verifyPmRes = await send('Runtime.evaluate', {
+    expression: `(() => {
+      const pm = document.querySelector('flow-rich-text-editor div.ProseMirror') || document.querySelector('div.ProseMirror');
+      const text = (pm?.innerText || '').trim();
+      return { ok: text.length > 20, len: text.length, snippet: text.slice(0, 60) };
+    })()`,
+    returnByValue: true
+  });
+  console.log(`[Flow Video] 📝 Prompt kutusu doğrulandı:`, verifyPmRes?.result?.value);
 
   // 1.6. Başlangıçtaki mevcut tile'ların imza listesini kaydet (Eski videolarla karışmasını %100 engelle)
   const baselineTiles = await send('Runtime.evaluate', {
     expression: `(() => {
-      const els = Array.from(document.querySelectorAll('.tile, flow-tile, flow-media-tile, div[class*="tile"], div[class*="virtual-item"]'));
+      const els = Array.from(document.querySelectorAll('flow-grid-tile-container, .tile, flow-tile, flow-media-tile, div[class*="tile"], div[class*="virtual-item"]'));
       return {
         count: els.length,
         signatures: els.map((el, idx) => el.getAttribute('data-id') || el.id || el.querySelector('video')?.src || (el.innerText || '').slice(0, 40) || String(idx))
@@ -1673,12 +1679,14 @@ async function generateVideoOnFlow(options = {}) {
       const x = r.left + r.width / 2;
       const y = r.top + r.height / 2;
       const top = visible ? document.elementFromPoint(x, y) : null;
+      const isMatDisabled = el.classList.contains('mat-mdc-button-disabled') || Boolean(el.closest('.mat-mdc-button-disabled'));
+      const isAriaDisabled = el.getAttribute('aria-disabled') === 'true' || Boolean(el.closest('[aria-disabled="true"]'));
       return {
         tag: el.tagName,
         role: el.getAttribute('role'),
         text: (el.innerText || '').trim().slice(0, 100),
         ariaLabel: el.getAttribute('aria-label'),
-        disabled: el.matches(':disabled') || Boolean(el.closest('[aria-disabled="true"], [inert]')),
+        disabled: el.matches(':disabled') || el.disabled === true || isMatDisabled || isAriaDisabled || Boolean(el.closest('[inert]')),
         visible,
         rect: { x: Math.round(x), y: Math.round(y), w: Math.round(r.width), h: Math.round(r.height) },
         centerReceivesClick: Boolean(top && el.contains(top)),
@@ -1817,7 +1825,7 @@ async function generateVideoOnFlow(options = {}) {
     const res = checkRender?.result?.value;
     const isNewVideo = (res?.currentSrc && !initialKnownSrcs.has(res.currentSrc)) || (res?.tileCount > initialTileCount);
 
-    if (res && !res.isGenerating && elapsed >= 35 && (isNewVideo || elapsed >= 90)) {
+    if (res && !res.isGenerating && elapsed >= 65 && (isNewVideo || elapsed >= 90)) {
       videoRenderDone = true;
       console.log(`[Flow Video] 🎬 Video renderı başarıyla tamamlandı (${elapsed} sn)! İndirme aşamasına geçiliyor...`);
       await sleep(2500);
@@ -1948,10 +1956,23 @@ async function generateVideoOnFlow(options = {}) {
       await send('Page.navigate', { url: projectUrl });
       await sleep(4000);
 
+      // Sol menüden 'Videos' sekmesine tıkla ki yüklenen resimler elensin, sadece gerçek videolar listelensin
+      await send('Runtime.evaluate', {
+        expression: `(() => {
+          const items = Array.from(document.querySelectorAll('mat-list-item, [role="listitem"], flow-nav-item, button'));
+          const vidTab = items.find(el => (el.innerText || '').toLowerCase().includes('videos'));
+          if (vidTab) vidTab.click();
+        })()`
+      });
+      await sleep(2000);
+
       const tileClickRes = await send('Runtime.evaluate', {
         expression: `(() => {
           window.scrollTo(0, 0);
-          const tiles = Array.from(document.querySelectorAll('flow-grid-tile-container'));
+          const tiles = Array.from(document.querySelectorAll('flow-grid-tile-container')).filter(t => {
+            const aria = (t.getAttribute('aria-label') || '').toLowerCase();
+            return !aria.endsWith('.jpg') && !aria.endsWith('.png') && !aria.endsWith('.webp') && !aria.endsWith('.jpeg');
+          });
           if (tiles.length > 0) {
             const newestTile = tiles[0];
             try { newestTile.scrollIntoView({ block: 'center' }); } catch (_) {}
