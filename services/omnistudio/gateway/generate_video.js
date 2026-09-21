@@ -1210,7 +1210,18 @@ async function generateVideoOnFlow(options = {}) {
   const port = options.port || 9222;
   const projectUrl = options.projectUrl || 'https://flow.google.com/project/6b718bdf-9bf3-44c3-8b65-4c8f9110c8c5';
   
-  let prompt = options.fullPrompt || (options.prompt && options.prompt.length > 80 ? options.prompt : null);
+  const isPrecompiledDirectorPrompt = Boolean(
+    options.fullPrompt || 
+    (options.prompt && (
+      options.prompt.includes('SAHNE 1') || 
+      options.prompt.includes('KURUMSAL MARKA') || 
+      options.prompt.includes('ACT 1') || 
+      options.prompt.includes('STRICT MANDATE') ||
+      options.prompt.includes('VEO VİDEO MOTORU')
+    ))
+  );
+
+  let prompt = isPrecompiledDirectorPrompt ? (options.fullPrompt || options.prompt) : null;
   let dynamicVoiceScript = options.voiceoverText || null;
 
   if (!prompt) {
@@ -1429,17 +1440,22 @@ async function generateVideoOnFlow(options = {}) {
     const attachCount = Math.min(filesToUpload.length, 2);
     for (let ci = 0; ci < attachCount; ci++) {
       console.log(`[Flow Video] 📎 Görsel ${ci + 1}/${attachCount} prompt çipine bağlanıyor...`);
+      // Varsa açık menüyü kapat
+      await send('Input.dispatchKeyEvent', { type: 'rawKeyDown', windowsVirtualKeyCode: 27, key: 'Escape' });
+      await send('Input.dispatchKeyEvent', { type: 'keyUp', windowsVirtualKeyCode: 27, key: 'Escape' });
+      await sleep(500);
+
       await send('Runtime.evaluate', {
         expression: `(async () => {
           const cards = Array.from(document.querySelectorAll('.tile-row.virtual-item-container, flow-media-tile, div[class*="tile"]'));
           const card = cards[${ci}];
           if (!card) return false;
-          const moreBtn = card.querySelector('button[aria-label="More options"]');
+          const moreBtn = card.querySelector('button[aria-label="More options"]') || card.querySelector('button');
           if (moreBtn) {
             moreBtn.click();
-            await new Promise(r => setTimeout(r, 600));
-            const items = Array.from(document.querySelectorAll('.mat-mdc-menu-item, [role="menuitem"]'));
-            const addItem = items.find(el => (el.innerText || '').includes('Add to prompt'));
+            await new Promise(r => setTimeout(r, 700));
+            const items = Array.from(document.querySelectorAll('.mat-mdc-menu-item, [role="menuitem"], button'));
+            const addItem = items.find(el => (el.innerText || '').toLowerCase().includes('add to prompt'));
             if (addItem) {
               addItem.click();
               await new Promise(r => setTimeout(r, 800));
@@ -1450,10 +1466,10 @@ async function generateVideoOnFlow(options = {}) {
         })()`,
         awaitPromise: true
       });
-      await sleep(1000);
+      await sleep(1200);
     }
 
-    // 5. Çiplerin gerçekten bağlandığını %100 doğrula!
+    // 5. Çiplerin durumunu doğrula
     console.log(`[Flow Video] 🔍 Prompt çipleri doğrulanıyor...`);
     const checkChipsResult = await send('Runtime.evaluate', {
       expression: `(() => {
@@ -1467,30 +1483,37 @@ async function generateVideoOnFlow(options = {}) {
     });
     let attachedCount = checkChipsResult?.result?.value?.count || 0;
     console.log(`[Flow Video] 📊 Prompt kutusunda doğrulanan çip sayısı: ${attachedCount} (Beklenen: ${attachCount})`);
+
     if (attachedCount < attachCount) {
-      console.warn(`[Flow Video] ⚠️ Çip sayısı beklenen (${attachCount}) altında kaldı (${attachedCount}), tekrar deneniyor...`);
-      await send('Runtime.evaluate', {
-        expression: `(async () => {
-          const cards = Array.from(document.querySelectorAll('.tile-row.virtual-item-container, flow-media-tile, div[class*="tile"]'));
-          for (let i = 0; i < ${attachCount}; i++) {
-            const card = cards[i];
-            if (!card) continue;
-            const moreBtn = card.querySelector('button[aria-label="More options"]');
+      console.warn(`[Flow Video] ⚠️ Çip sayısı beklenen (${attachCount}) altında kaldı (${attachedCount}), tek tek tekrar deneniyor...`);
+      for (let ci = attachedCount; ci < attachCount; ci++) {
+        await send('Input.dispatchKeyEvent', { type: 'rawKeyDown', windowsVirtualKeyCode: 27, key: 'Escape' });
+        await send('Input.dispatchKeyEvent', { type: 'keyUp', windowsVirtualKeyCode: 27, key: 'Escape' });
+        await sleep(500);
+
+        await send('Runtime.evaluate', {
+          expression: `(async () => {
+            const cards = Array.from(document.querySelectorAll('.tile-row.virtual-item-container, flow-media-tile, div[class*="tile"]'));
+            const card = cards[${ci}];
+            if (!card) return false;
+            const moreBtn = card.querySelector('button[aria-label="More options"]') || card.querySelector('button');
             if (moreBtn) {
               moreBtn.click();
-              await new Promise(r => setTimeout(r, 600));
-              const items = Array.from(document.querySelectorAll('.mat-mdc-menu-item, [role="menuitem"]'));
-              const addItem = items.find(el => (el.innerText || '').includes('Add to prompt'));
+              await new Promise(r => setTimeout(r, 700));
+              const items = Array.from(document.querySelectorAll('.mat-mdc-menu-item, [role="menuitem"], button'));
+              const addItem = items.find(el => (el.innerText || '').toLowerCase().includes('add to prompt'));
               if (addItem) {
                 addItem.click();
                 await new Promise(r => setTimeout(r, 800));
+                return true;
               }
             }
-          }
-        })()`,
-        awaitPromise: true
-      });
-      await sleep(1500);
+            return false;
+          })()`,
+          awaitPromise: true
+        });
+        await sleep(1200);
+      }
 
       const retryChipsCheck = await send('Runtime.evaluate', {
         expression: `(() => {
@@ -1502,10 +1525,13 @@ async function generateVideoOnFlow(options = {}) {
       attachedCount = retryChipsCheck?.result?.value?.count || 0;
     }
 
-    if (attachedCount < attachCount) {
-      throw new Error(`[Flow Video] KRİTİK HATA: Flow prompt kutusuna beklenen ${attachCount} görsel çipi iliştirilemedi (Mevcut: ${attachedCount}). Üretim görsel referansları olmadan başlatılamaz.`);
+    if (attachedCount === 0) {
+      throw new Error(`[Flow Video] KRİTİK HATA: Flow prompt kutusuna hiçbir görsel çipi iliştirilemedi. Üretim görsel referansları olmadan başlatılamaz.`);
+    } else if (attachedCount < attachCount) {
+      console.warn(`[Flow Video] ⚠️ ${attachedCount}/${attachCount} görsel çipi iliştirildi. Model mevcut çip ile üretime devam ediyor.`);
+    } else {
+      console.log(`[Flow Video] ✅ ${attachedCount} görsel çipi prompt kutusuna %100 bağlandı.`);
     }
-    console.log(`[Flow Video] ✅ ${attachedCount} görsel çipi prompt kutusuna %100 bağlandı.`);
   }
 
   // 1.3. Açık kalmış olabilecek menü ve modalları kapat
@@ -1520,7 +1546,15 @@ async function generateVideoOnFlow(options = {}) {
   if (prodNameForDirective.toLowerCase().includes('tuğla') || prodNameForDirective.toLowerCase().includes('tugla')) {
     productShapeNote = ' İliştirilmiş tuğla fotoğrafındaki delikli killi blok tuğla formunu, hava deliklerini ve dikey yan oluklarını kesinlikle koru; deliksiz düz tuğlaya veya masif taşa dönüştürme.';
   }
-  const mandatoryMediaDirective = `\n\nKESİN GÖRSEL VE MARKA TALİMATI:\n1. ÜRÜN BİÇİMİ: İliştirilmiş ürün fotoğrafını ana ürünün görsel referansı olarak kullan. Ürünün fiziksel formunu, rengini ve ayırt edici geometrik yapısını koru.${productShapeNote}\n2. KURUMSAL LOGO: İliştirilmiş kurumsal logo dosyasını marka kimliği referansı olarak kullan. Logoyu yeniden tasarlama, sarı üçgen veya uydurma semboller ekleme. Marka adı "${brandNameForDirective}" olarak doğru yazılsın. Kapanışta ve araç kapısında/tabelada orijinal logo okunabilir biçimde yer alsın.`;
+  let logoShapeNote = '';
+  try {
+    const { getActiveBrandKit } = require('./brand_resolver.js');
+    const bk = await getActiveBrandKit(options.orgId, brandNameForDirective);
+    if (bk && bk.logo_visual_description) {
+      logoShapeNote = ` Orijinal kurumsal amblem: ${bk.logo_visual_description}. Masadaki akrilik plaket veya duvardaki tabelada bu kırmızı çatı ve dikey ok amblemi kesinlikle en üstte çizilecektir; yalnızca yazı yazılıp amblem ASLA atlanmayacaktır.`;
+    }
+  } catch(_) {}
+  const mandatoryMediaDirective = `\n\nKESİN GÖRSEL VE MARKA TALİMATI:\n1. ÜRÜN BİÇİMİ: İliştirilmiş ürün fotoğrafını ana ürünün görsel referansı olarak kullan. Ürünün fiziksel formunu, rengini ve ayırt edici geometrik yapısını koru.${productShapeNote}\n2. KURUMSAL LOGO: İliştirilmiş kurumsal logo dosyasını marka kimliği referansı olarak kullan. Logoyu yeniden tasarlama, sarı üçgen veya uydurma semboller ekleme.${logoShapeNote} Marka adı "${brandNameForDirective}" olarak doğru yazılsın. Kapanış sahnesindeki fiziksel tabela/akrilik plaket üzerinde orijinal amblem ve kurumsal isim eksiksiz yer alsın.`;
 
   let finalPrompt = prompt;
   if (!finalPrompt.includes('KESİN GÖRSEL VE MARKA TALİMATI') && filesToUpload.length > 0) {
@@ -1849,6 +1883,40 @@ async function generateVideoOnFlow(options = {}) {
       await sleep(1500);
     } catch (_) {}
 
+    // 6.2. DOĞRUDAN STREAM İNDİRME: Video elementinden session çerezleriyle MP4'ü direkt çek
+    try {
+      const vidInfo = await send('Runtime.evaluate', {
+        expression: `(() => {
+          const v = document.querySelector('video');
+          return v && v.currentSrc && v.currentSrc.startsWith('http') ? v.currentSrc : '';
+        })()`,
+        returnByValue: true
+      });
+      const streamUrl = vidInfo?.result?.value;
+      if (streamUrl) {
+        console.log(`[Flow Video] ⚡ Doğrudan video stream URL bulundu: ${streamUrl.slice(0, 80)}...`);
+        const cookiesRes = await send('Network.getCookies', { urls: ['https://flow.google.com'] });
+        const cookies = (cookiesRes?.cookies || []).map(c => `${c.name}=${c.value}`).join('; ');
+        const fetchRes = await fetch(streamUrl, {
+          headers: {
+            'Cookie': cookies,
+            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+            'Referer': 'https://flow.google.com/'
+          }
+        });
+        if (fetchRes.ok) {
+          const streamBuf = Buffer.from(await fetchRes.arrayBuffer());
+          if (streamBuf.length > 500000) {
+            fs.writeFileSync(rawPath, streamBuf);
+            console.log(`[Flow Video] 🎯 DOĞRUDAN STREAM İNDİRME BAŞARILI (${(streamBuf.length / (1024 * 1024)).toFixed(2)} MB) -> ${rawFileName}`);
+            capturedDirectly = true;
+          }
+        }
+      }
+    } catch (streamErr) {
+      console.warn('[Flow Video] Stream indirme uyarısı:', streamErr.message);
+    }
+
     // YÖNTEM A: Üst çubuktaki doğrudan "Download media" butonu
     for (let b = 0; b < 6; b++) {
       const dlBtn = await send('Runtime.evaluate', {
@@ -2123,9 +2191,10 @@ async function generateVideoOnFlow(options = {}) {
         .map(f => ({ path: path.join(OUTPUT_DIR, f), time: fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs, size: fs.statSync(path.join(OUTPUT_DIR, f)).size }))
         .filter(f => f.size > 500000)
         .sort((a, b) => b.time - a.time);
-      if (allOutputsMp4.length > 0) {
-        fs.copyFileSync(allOutputsMp4[0].path, rawPath);
-        console.log(`[Flow Video] 🛡️ Emniyet Kopyası: Outputs dizinindeki en yeni MP4 rawPath'e aktarıldı: ${allOutputsMp4[0].path}`);
+      const recentOutputs = allOutputsMp4.filter(f => f.time >= requestStartedAt - 30000);
+      if (recentOutputs.length > 0) {
+        fs.copyFileSync(recentOutputs[0].path, rawPath);
+        console.log(`[Flow Video] 🛡️ Emniyet Kopyası: Outputs dizinindeki güncel MP4 rawPath'e aktarıldı: ${recentOutputs[0].path}`);
       }
     }
 

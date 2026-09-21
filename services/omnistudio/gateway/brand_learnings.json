@@ -17,7 +17,8 @@
     "NO HEX CODES IN PROMPTS (HEX KODU YASAĞI): Prompt metinlerine ASLA '#4caf50', '#1b5e20' gibi hex kodları yazılmayacaktır; difüzyon modelleri bunları tabela metni sanıp sahneye basar. Renkler daima doğal dille ('koyu zümrüt yeşili', 'parlak canlı yeşil') tarif edilir.",
     "CLEAN MINIMALIST DIGITAL UI & MAPS (SAHTE HARİTA YAZISI YASAĞI): Ekranda harita veya dijital arayüz gösterildiğinde 'Goaticlafa' gibi uydurma sokak/şehir metinleri KESİNLİKLE OLMAYACAKTIR. Harita minimalist grafik çizgilerden, yollardan ve parlayan temiz konum pinlerinden ibaret olmalıdır (CLEAN MINIMALIST VECTOR MAP, NO STREET LABELS, NO GIBBERISH NAMES).",
     "ZERO PROMPT JARGON ON SIGNS (TABELAYA TEKNİK KELİME BASMA YASAĞI): Tabelaya veya standa ASLA 'ALL CAPS', 'TEXT CARD', 'FONT', 'LOGO' gibi prompt komutları yazılmayacaktır. Plakette yalnızca ve sadece firmanın kurumsal ismi '{{MARKA}}' yer alacaktır.",
-    "NO FORCED CONTACT CTA ON PHYSICAL PROPS (ZORLAMA İLETİŞİM/WHATSAPP YASAĞI): Fiziksel nesnelerin üzerine 'WHATSAPP İLE BAŞLA', 'WHATSAPP İLE İLETİŞİME GEÇİN', 'ANINDA TEKLİF AL' veya telefon numarası gibi zorlama çağrılar KESİNLİKLE YAZILMAYACAKTIR. Fiziksel nesneler sadece firmanın prestijli kurumsal kimliğine aittir: Orijinal logo, marka ismi ve marka renkleri."
+    "NO FORCED CONTACT CTA ON PHYSICAL PROPS (ZORLAMA İLETİŞİM/WHATSAPP YASAĞI): Fiziksel nesnelerin üzerine 'WHATSAPP İLE BAŞLA', 'WHATSAPP İLE İLETİŞİME GEÇİN', 'ANINDA TEKLİF AL' veya telefon numarası gibi zorlama çağrılar KESİNLİKLE YAZILMAYACAKTIR. Fiziksel nesneler sadece firmanın prestijli kurumsal kimliğine aittir: Orijinal logo, marka ismi ve marka renkleri.",
+    "ZERO-ERROR FLAT RIGID SURFACE ONLY (SIFIR HATA DÜZ YÜZEY KURALI): Model logoyu ASLA kavisli kaportaya, araç şoför kapısına (kulp/cam eğimi nedeniyle model logoyu bozar), araç ön panjuruna, baret veya kumaş kıvrımlarına çizmeye çalışmayacaktır. Logo YALNIZCA sıfır hata verecek geniş, pürüzsüz, düz (flat) dikdörtgen yüzeylerde yer alacaktır: Tırın/kamyonun düz beyaz yan/arka kasa paneli, fabrikanın düz mimari tabelası veya ofisin düz masa plaketi. Bir sahnede birden fazla yere logo basmak YASAKTIR; tüm videoda yalnızca 1 adet tek ve sıfır hata logo olacaktır."
   ],
   "sectors": {
     "food_restaurant": {
@@ -329,7 +330,7 @@
       "rigidSurfaceObjects": [
         "Sevkiyat kabul deskindeki fırçalanmış kalın çelik masa isimliği",
         "Paletli ürünlerin üzerindeki şeffaf shrink koruyucu ambalaj baskısı",
-        "Forklift gövdesi veya sevkiyat tırının şoför kapısındaki kurumsal amblem",
+        "Sevkiyat tırının düz beyaz yan veya arka kasa paneli (kabin kapısına veya ızgaraya ASLA logo konulmayacaktır; yalnızca pürüzsüz düz kasa kapağında tek logo)",
         "Sevkiyat ofisi yönetici masasında ağır metal döküm isimlik"
       ],
       "recommendedTurkishCTAs": [
@@ -345,7 +346,9 @@
         "iş güvenliği ihlali baret takmayan işçi",
         "çatlak kırık malzeme",
         "boş mermer duvara asılı tabela",
-        "ekrana gömülü altyazı"
+        "ekrana gömülü altyazı",
+        "kavisli araç şoför kapısına veya araç ön ızgarasına logo koymak",
+        "aynı araçta veya sahnede birden fazla yere logo basmak"
       ],
       "goldenPromptTemplate": "9:16 dikey formatta üst düzey Türk televizyon ve sinema reklam filmi.\nMarka: {{MARKA}}. Kurumsal Logo: {{LOGO_TANIMI}}.\nÜrün: {{URUN}}.\nSAHNE 1 (0-3sn): Modern ve düzenli üretim fabrikası. Sevkiyat kabul deskindeki fırçalanmış çelik masa isimliğinde logo ve '{{MARKA}}'. Küçük yazı yok.\nSAHNE 2 (3-7sn): Forklift nizami fırınlanmış paletli ürünleri taşır. Şeffaf shrink ambalaj üzerinde net etiket: 'FABRİKADAN DOĞRUDAN'. Temiz endüstriyel kadraj.\nSAHNE 3 (7-10sn): Fabrika sevkiyat ofisi, aydınlık pencereden görünen sevkiyat tırları. Yönetici masasında şık metal isimlikte '{{MARKA}}' ve 'TOPTAN İMALAT & SATIŞ' yer alır. Boş duvar yok, dev tabela yok.\nSESLENDİRME: Kristal netliğinde profesyonel Türkçe erkek reklam spikeri sesi: 'Fabrikadan doğrudan şantiyenize yüksek kalite ve güven. Güçlü yarınlar için üretiyoruz.'\nKESİN KURAL: Ekranda havada uçuşan harf, boş duvara dev kutu tabela KESİNLİKLE OLMAYACAKTIR. Havada uçuşan harf ve boş duvara dev tabela olmayacaktir.",
       "variations": [
@@ -946,7 +949,7 @@
         "background": "#ffffff"
       },
       "logoUrl": "http://167.233.201.31:3456/outputs/ayvazoglu_logo.png",
-      "logoGuidelines": "Kırmızı (#e53935) renkli geometrik mimari çatı ve 3 dikey kolon taşıyıcı amblemi, hemen altında siyah modern sans-serif harflerle 'AYVAZOĞLU' ve 'İNŞAAT' tek parça logo tipografisi. KESİN KURAL: Logoya veya sahneye 'kurumsal mimari', slogan, alt metin veya ayrık harf ASLA eklenmeyecektir.",
+      "logoGuidelines": "Minimalist kırmızı ince çizgili çatı piktogramı ve ortasından yukarı doğru yükselen kırmızı dikey ok sembolü. Altında siyah, net ve büyük harflerle 'AYVAZOĞLU' ve 'İ N Ş A A T'. Plakette veya tabelada bu kırmızı çatı ve dikey ok amblemi kesinlikle çizilecektir; yalnızca yazı yazıp amblem asla atlanmayacaktır.",
       "products": {
         "tugla": {
           "productName": "Tuğla (Fabrikadan Halka Toptan Satış)",
@@ -965,7 +968,7 @@
           ],
           "visualIdentity": "Nizami dizilmiş, üstünde karakteristik 18 dikdörtgen hava deliği bulunan kırmızı-kiremit renkli fırınlanmış kil blok tuğlalar (perforated hollow clay brick), yan yüzeylerinde dikey oluklu çizgiler, şeffaf koruyucu shrink ambalaj üzerinde baskılı Ayvazoğlu İnşaat amblemi, sarı endüstriyel forklift ve sevkiyat tırı. Kesinlikle deliksiz düz taş veya masif harman tuğlası üretilmeyecektir.",
           "cinematicScene": "Modern ve aydınlık tuğla üretim fabrikası ve şantiye sevkiyat sahası. Konveyör bantları, nizami delikli tuğla paletleri, vinç ve tır yükleme alanı, gün ışığında güven veren endüstriyel çekim.",
-          "goldenPromptTemplate": "SAHNE 3 (7-10sn): Gün batımı modern plaza lobisi. Mermer duvara monte şık fırçalanmış tabelada kurumsal logo ve net: '{{MARKA}}'. TERTEMİZ PRESTİJLİ REKLAM KAPANIŞI."
+          "goldenPromptTemplate": "9:16 dikey formatta üst düzey Türk televizyon ve sinema reklam filmi.\nMarka: {{MARKA}}. Kurumsal Logo: Minimalist kırmızı ince çizgili çatı piktogramı ve ortasından yukarı doğru yükselen kırmızı dikey ok sembolü. Altında siyah, net ve büyük harflerle 'AYVAZOĞLU' ve 'İ N Ş A A T'.\nÜrün: Karakteristik 18 delikli pişmiş kil blok tuğla (perforated hollow clay brick).\nSAHNE 1 (0-3sn): Modern ve aydınlık tuğla fabrikası. Konveyör üzerinde nizami dizilmiş delikli kil blok tuğlalar. Tavan çelik konstrüksiyonunda tabela: 'AYVAZOĞLU İNŞAAT'. SIFIR KÜÇÜK YAZI.\nSAHNE 2 (3-7sn): Forklift shrink ambalajlı delikli tuğla paletlerini taşır. Palet şeffaf ambalajında ufak net CTA: 'TOPTAN FİYAT'. TERTEMİZ SİNEMATİK ÇEKİM.\nSAHNE 3 (7-10sn): Gün batımı ışığında şantiye yönetim ofisi masası. Şeffaf akrilik masa isimliği üzerinde EN ÜSTTE KIRMIZI ÇATI VE DİK OK AMBLEMİ, ALTINDA 'AYVAZOĞLU İNŞAAT'. Logo amblemi eksiksiz ve net yer alır.\nSESLENDİRME: Kristal netliğinde profesyonel Türkçe erkek reklam spikeri sesi: 'Fabrikadan şantiyenize doğrudan teslimat. Toptan fiyat ve hızlı sevkiyat için WhatsApp ile yazın.'\nKESİN KURAL: Ekranda havada uçuşan harf veya bilgi kutusu KESİNLİKLE OLMAYACAKTIR. Akrilik plakette kırmızı çatı logo amblemi ASLA ATLANMAYACAKTIR."
         }
       },
       "pastSuccesses": [

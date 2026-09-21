@@ -77,6 +77,7 @@ async function getActiveBrandKit(orgId = null, brandHint = null) {
       tone: 'Modern ve güven verici bir tasarım dili. Canlı turuncu ve nötr tonlar, net tipografi.',
       logo_path: '/outputs/ayvazoglu_logo.png',
       product_image_path: '/outputs/ayvazoglu_brick.webp',
+      logo_visual_description: "Minimalist kırmızı ince çizgili çatı piktogramı ve ortasından yukarı doğru yükselen kırmızı dikey ok sembolü. Altında siyah, net ve büyük harflerle 'AYVAZOĞLU' ve 'İ N Ş A A T'. Plaket veya tabela üzerinde bu kırmızı çatı ve dikey ok amblemi kesinlikle çizilecektir; yalnızca yazı yazıp amblem asla atlanmayacaktır.",
       product_visual_description: "Karakteristik 18 delikli pişmiş kil blok tuğla (üst yüzeyinde nizami dikdörtgen hava delikli petek oda yapısı, yan yüzeylerinde dikey oluklu çizgiler olan kırmızı-turuncu renkli yapı tuğlası). Kesinlikle deliksiz masif taş veya düz harman tuğlası değildir; ekli görseldeki gibi içi hava kanallı delikli kil blok tuğladır.",
       hasExplicitLogo: true,
     };
@@ -112,7 +113,7 @@ function getLogoVisualDescription(brandName, logoPath, hasExplicitLogo = false) 
     return "Orijinal yeşil bağlantılı veri ağı (connected network nodes constellation) amblemi: Merkezinde büyük yeşil dairesel çekirdek düğüm ve etrafında ince yeşil çizgilerle birbirine bağlanan farklı yeşil tonlarında veri düğüm noktaları (network graph nodes). Yanında temiz, modern sans-serif 'Veri Burada' kurumsal tipografisi. KESİNLİKLE uydurma yeşil altıgen, uydurma 'V' harfi amblemi, onay tiki, sahte üçgen veya soyut sembol KULLANILMAYACAKTIR; yalnızca ekli görseldeki orijinal yeşil bağlantılı veri ağı amblemi ve temiz 'Veri Burada' kurumsal tipografisi fırçalanmış metal isimliğe işlenecektir.";
   }
   if (lower.includes('ayvazoğlu')) {
-    return "Minimalist kırmızı ince çizgili çatı piktogramı ve ortasından yukarı doğru yükselen kırmızı dikey ok sembolü. Altında siyah, net ve büyük harflerle 'AYVAZOĞLU' ve hemen altında geniş aralıklı 'İ N Ş A A T' yazısı içeren resmi kurumsal logo amblemi. Kesinlikle uydurma geometrik üçgen, sarı şekil, harf bozulması veya farklı amblem kullanılmayacaktır.";
+    return "Minimalist kırmızı ince çizgili çatı piktogramı ve ortasından yukarı doğru yükselen kırmızı dikey ok sembolü. Altında siyah, net ve büyük harflerle 'AYVAZOĞLU' ve hemen altında geniş aralıklı 'İ N Ş A A T' yazısı içeren resmi kurumsal logo amblemi. Sahnedeki akrilik plaket veya tabela üzerinde KESİNLİKLE EN ÜSTTE BU KIRMIZI ÇATI VE DİKEY OK AMBLEMİ çizilecektir; yalnızca yazı yazıp amblem ASLA atlanmayacaktır.";
   }
 
   // Tanımlı logo yoksa: SIFIR UYDURMA LOGO — sadece şirket adı yazılır
@@ -226,8 +227,8 @@ function detectSectorAndStyle(brand, product, brief) {
       brandingPlacements: `
 - Fabrika tavanındaki veya sevkiyat sundurmasındaki endüstriyel metal tabelada net ve kalın harflerle "${brand}" ve "FABRİKADAN DOĞRUDAN" yazısı.
 - Paletli ürünlerin üzerindeki şeffaf shrink koruyucu ambalajında ve sarı forkliftin gövdesinde basılı "${brand}" amblemi.
-- Mühendisin baretinde ve sevkiyat aracı kapısında okunaklı "${brand}" kurumsal logosu.
-- Kahraman Final Sahnesi: Nizami dizilmiş tuğla paletleri ve sevkiyat alanı önünde, güneş ışığı altında güven veren "${brand}" kurumsal endüstriyel tabelası.`,
+- Sevkiyat tırının düz beyaz yan veya arka kasa paneli üzerinde TEK BİR KEZ, büyük, okunaklı "${brand}" kurumsal logosu. (Kavisli şoför kapısına, araç ön ızgarasına veya barete ASLA logo basılmayacaktır; model bu kavisli yüzeylerde logoyu bozar. YALNIZCA pürüzsüz düz kasa panelinde sıfır hata tek logo yer alacaktır).
+- Kahraman Final Sahnesi: Nizami dizilmiş tuğla paletleri ve sevkiyat alanı önünde, güneş ışığı altında güven veren düz "${brand}" kurumsal endüstriyel tabelası veya tırın düz kasa paneli.`,
       sampleFocus: `${product || 'Yüksek Mukavemetli Sanayi Ürünü'} üretim dayanıklılığı, standartlara tam uyum ve fabrikadan doğrudan teslimat güvencesi`
     };
   }
@@ -471,7 +472,7 @@ VEO VİDEO MOTORU İÇİN KESİN SİNEMATİK DİREKTİF (VEO v4 STANDARDI):
 
 2. FİZİKSEL YÜZEYE SABİTLEME & SIFIR YAZI HALÜSİNASYONU:
    - Havada boşlukta uçuşan soyut 3D harfler, havada asılı cümleler veya sonradan yapıştırılmış grafik bantları KESİNLİKLE YASAKTIR.
-   - Sahnedeki tek yazılar ve logo, doğrudan sahne içindeki KATI FİZİKSEL NESNELERİN DOKUSUNA (metal tabela, ahşap yönlendirme panosu, bina dış cephesi, resepsiyon camı, araç kapısı, ürün ambalajı veya iş önlüğü) basılmış, monte edilmiş veya kazınmış olacaktır.
+   - Sahnedeki tek yazılar ve logo, doğrudan sahne içindeki KATI FİZİKSEL DÜZ NESNELERİN DOKUSUNA (metal fabrika tabelası, tırın düz beyaz yan/arka kasa kapağı, bina dış cephesi veya mat pleksi masa isimliği) basılmış, monte edilmiş veya kazınmış olacaktır.
    - Tipografi: En fazla 2-3 kelime, kalın ve net büyük harflerle yazılı, yüksek kontrastlı sans-serif endüstriyel tabela formatı (örn: "${cleanBrand}", "B2B ÇÖZÜMLERİ", "FABRİKADAN DOĞRUDAN").
 
 3. 3 KADRAJLI SİNEMATİK AKIŞ (8 SANİYE VEO 3.1 FLOW STANDARDI):
@@ -493,6 +494,11 @@ VEO VİDEO MOTORU İÇİN KESİN SİNEMATİK DİREKTİF (VEO v4 STANDARDI):
 8. FİZİKSEL NESNELERE ZORLAMA İLETİŞİM/WHATSAPP BASMA YASAĞI:
    - Masadaki isimlik, ahşap plaket, tabela veya cam yüzeylere 'WHATSAPP İLE BAŞLA', 'WHATSAPP İLE İLETİŞİME GEÇİN' gibi zorlama çağrılar KESİNLİKLE YAZILMAYACAKTIR.
    - Fiziksel tabelalar firmanın kurumsal kimliğine aittir: Orijinal Logo, Firma İsmi ("${cleanBrand}") ve varsa firmanın kurumsal sloganı.
+
+9. SIFIR HATA DÜZ YÜZEY KURALI (ZERO-ERROR FLAT RIGID SURFACE MANDATE):
+   - Model logoyu asla kavisli araç şoför kapısına, kapı kolu yanına, araç ön panjuruna, barete veya kıvrımlı kumaşlara çizmeye çalışmayacaktır (buralarda logo bozulur).
+   - Logo YALNIZCA sıfır hata verecek geniş, pürüzsüz ve düz (flat) dikdörtgen yüzeylerde TEK BİR KEZ yer alacaktır: Tırın/kamyonun düz beyaz yan/arka kasa paneli veya fabrikanın düz mimari tabelası.
+   - STRICT MANDATE: NO LOGOS ON CURVED CABIN DOORS, NO LOGOS ON FRONT GRILLES. SINGLE LOGO ON FLAT RIGID CARGO BED PANEL ONLY.
    - STRICT MANDATE: NO FORCED WHATSAPP OR CONTACT CTA TEXT ON PHYSICAL PROPS/PLAQUES. Only authentic company branding and official slogans.
 ${buildLearningPromptBlock(brand, product, brief)}`;
 }
