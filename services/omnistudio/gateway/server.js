@@ -392,11 +392,83 @@ class VideoJobQueue {
     this.maxConcurrent = maxConcurrent;
     this.activeCount = 0;
     this.queue = [];
+    this.jobs = new Map();
   }
 
-  enqueue(taskFn) {
+  createJob(meta = {}) {
+    const id = 'vjob_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+    const job = {
+      id,
+      status: 'queued',
+      enqueuedAt: Date.now(),
+      startedAt: null,
+      completedAt: null,
+      meta,
+      result: null,
+      error: null,
+    };
+    this.jobs.set(id, job);
+    if (this.jobs.size > 150) {
+      const oldestKey = this.jobs.keys().next().value;
+      this.jobs.delete(oldestKey);
+    }
+    return job;
+  }
+
+  getJob(id) {
+    const job = this.jobs.get(id);
+    if (!job) return null;
+    let position = 0;
+    if (job.status === 'queued') {
+      const idx = this.queue.findIndex(item => item.jobId === id);
+      position = idx >= 0 ? idx + 1 : 1;
+    }
+    return {
+      ...job,
+      queue_position: position,
+      estimated_wait_seconds: position * 110,
+      elapsed_seconds: Math.round((Date.now() - job.enqueuedAt) / 1000),
+    };
+  }
+
+  enqueue(taskFn, jobId = null) {
+    const id = jobId || ('vjob_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7));
+    if (!this.jobs.has(id)) {
+      this.jobs.set(id, {
+        id,
+        status: 'queued',
+        enqueuedAt: Date.now(),
+        startedAt: null,
+        completedAt: null,
+        result: null,
+        error: null,
+      });
+    }
+
     return new Promise((resolve, reject) => {
-      this.queue.push({ taskFn, resolve, reject, enqueuedAt: Date.now() });
+      this.queue.push({
+        jobId: id,
+        taskFn,
+        resolve: (val) => {
+          const j = this.jobs.get(id);
+          if (j) {
+            j.status = 'completed';
+            j.completedAt = Date.now();
+            j.result = val;
+          }
+          resolve(val);
+        },
+        reject: (err) => {
+          const j = this.jobs.get(id);
+          if (j) {
+            j.status = 'failed';
+            j.completedAt = Date.now();
+            j.error = err?.message || String(err);
+          }
+          reject(err);
+        },
+        enqueuedAt: Date.now(),
+      });
       this.processNext();
     });
   }
@@ -409,8 +481,14 @@ class VideoJobQueue {
     this.activeCount++;
     const item = this.queue.shift();
     const waitSeconds = Math.round((Date.now() - item.enqueuedAt) / 1000);
+    const job = this.jobs.get(item.jobId);
+    if (job) {
+      job.status = 'processing';
+      job.startedAt = Date.now();
+    }
+
     if (waitSeconds > 1) {
-      console.log(`[VideoQueue] ⏳ Sıradaki video görevi işleme alınıyor (Kuyruk bekleme: ${waitSeconds}s, Kuyrukta bekleyen: ${this.queue.length})`);
+      console.log(`[VideoQueue] ⏳ Sıradaki video görevi işleme alınıyor [${item.jobId}] (Kuyruk bekleme: ${waitSeconds}s, Kuyrukta bekleyen: ${this.queue.length})`);
     }
 
     try {
@@ -429,6 +507,7 @@ class VideoJobQueue {
       active: this.activeCount,
       waiting: this.queue.length,
       maxConcurrent: this.maxConcurrent,
+      totalTrackedJobs: this.jobs.size,
     };
   }
 }
@@ -716,7 +795,11 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 400, { error: { message: 'Prompt alanı zorunludur.', type: 'invalid_request_error' } });
       }
 
-      console.log(`[Gateway] Yeni Video Talebi Kuyruğa Alındı: "${prompt.slice(0, 60)}..." (Kuyruk: ${videoQueue.queue.length} bekliyor, ${videoQueue.activeCount} aktif)`);
+      const isAsync = body.async === true || req.headers['x-async'] === 'true';
+      const job = videoQueue.createJob({ brandName: body.brandName, productName: body.productName });
+      const jobId = job.id;
+
+      console.log(`[Gateway] Yeni Video Talebi Kuyruğa Alındı [${jobId}] (Async: ${isAsync}): "${prompt.slice(0, 55)}..." (Kuyruk: ${videoQueue.queue.length} bekliyor, ${videoQueue.activeCount} aktif)`);
       try {
         const videoOptions = {
           prompt,
@@ -746,7 +829,7 @@ const server = http.createServer(async (req, res) => {
           voiceoverText: body.voiceoverText || null,
         };
 
-        const result = await videoQueue.enqueue(async () => {
+        const taskRunner = async () => {
           const useOfficialApiOnly = process.env.USE_OFFICIAL_API === 'true' || body.useOfficialApi === true;
           if (useOfficialApiOnly) {
             const { generateVideoViaOfficialApi } = require('./video_api_fallback.js');
@@ -771,7 +854,23 @@ const server = http.createServer(async (req, res) => {
             }
             throw browserErr;
           }
-        });
+        };
+
+        const taskPromise = videoQueue.enqueue(taskRunner, jobId);
+
+        if (isAsync) {
+          const jobInfo = videoQueue.getJob(jobId);
+          return sendJson(res, 202, {
+            job_id: jobId,
+            status: 'queued',
+            queue_position: jobInfo?.queue_position || 1,
+            estimated_wait_seconds: jobInfo?.estimated_wait_seconds || 110,
+            status_url: `/v1/videos/status/${jobId}`,
+            message: 'Video başarıyla kuyruğa alındı. Durumunu status_url üzerinden takip edebilirsiniz.',
+          });
+        }
+
+        const result = await taskPromise;
 
         return sendJson(res, 200, {
           created: Math.floor(Date.now() / 1000),
@@ -804,6 +903,16 @@ const server = http.createServer(async (req, res) => {
         queue: videoQueue.getStats(),
         apiFallbackConfigured: isApiFallbackConfigured(),
       });
+    }
+
+    // 1.0.0.1. Video Durum Sorgulama (Polling): GET /v1/videos/status/:jobId
+    if (method === 'GET' && (pathname.startsWith('/v1/videos/status/') || pathname.startsWith('/videos/status/'))) {
+      const jobId = pathname.split('/').pop();
+      const job = videoQueue.getJob(jobId);
+      if (!job) {
+        return sendJson(res, 404, { error: 'Video işi bulunamadı veya süresi doldu.' });
+      }
+      return sendJson(res, 200, job);
     }
 
     // 1.0.1. Video Hesap Havuzu Durumu: GET /v1/videos/accounts

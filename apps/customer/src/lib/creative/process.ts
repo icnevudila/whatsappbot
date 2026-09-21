@@ -317,9 +317,10 @@ export async function processCreativeGeneration(
         console.log('[CreativeProcess] Flow / Veo video üretimi başlatılıyor...')
         const vidRes = await fetch(`${gatewayUrl}/v1/videos/generations`, {
           method: 'POST',
-          signal: AbortSignal.timeout(300000),
+          signal: AbortSignal.timeout(60000),
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            async: true,
             orgId: creative.org_id,
             prompt: videoPrompt,
             preferredEngine: 'flow',
@@ -348,14 +349,52 @@ export async function processCreativeGeneration(
           throw new Error(`Video Motoru Hatası (${vidRes.status}): ${(await vidRes.text()).slice(0, 200)}`)
         }
 
-        const vidJson = (await vidRes.json()) as {
-          data?: { url?: string; cleanUrl?: string; thumbnailUrl?: string }[]
-          videoId?: string
-          videoUrl?: string
-          cleanVideoUrl?: string
-          subtitledVideoUrl?: string
-          thumbnailUrl?: string
+        let vidJson = (await vidRes.json()) as any
+
+        // Eğer asenkron kuyruk modundaysa, polling yaparak sonucu bekle (Soket zaman aşımını %100 engeller)
+        if (vidJson.job_id && (vidRes.status === 202 || vidJson.status === 'queued' || vidJson.status === 'processing')) {
+          const jobId = vidJson.job_id
+          console.log(`[CreativeProcess] ⏳ Video görevi kuyruğa alındı [${jobId}], pozisyon: ${vidJson.queue_position}. Polling başlatılıyor...`)
+
+          await supabase
+            .from('creatives')
+            .update({
+              status: 'rendering',
+              payload: {
+                ...snapshot,
+                jobId,
+                queuePosition: vidJson.queue_position,
+                estimatedWaitSeconds: vidJson.estimated_wait_seconds,
+              },
+            })
+            .eq('id', creative.id)
+
+          const pollStart = Date.now()
+          const maxWaitMs = 600000 // 10 dakika
+          while (Date.now() - pollStart < maxWaitMs) {
+            await new Promise((r) => setTimeout(r, 4000))
+            try {
+              const pollRes = await fetch(`${gatewayUrl}/v1/videos/status/${jobId}`, {
+                signal: AbortSignal.timeout(10000),
+              })
+              if (pollRes.ok) {
+                const jobStatus = (await pollRes.json()) as any
+                if (jobStatus.status === 'completed' && jobStatus.result) {
+                  vidJson = jobStatus.result
+                  break
+                }
+                if (jobStatus.status === 'failed') {
+                  throw new Error(jobStatus.error || 'Video üretimi başarısız oldu.')
+                }
+              }
+            } catch (pErr: any) {
+              if (pErr.message && !pErr.message.includes('fetch failed')) {
+                console.warn('[CreativeProcess] Polling uyarısı:', pErr.message)
+              }
+            }
+          }
         }
+
         videoUrl = vidJson.data?.[0]?.url || vidJson.videoUrl || null
         if (!videoUrl) throw new Error('Video URL alınamadı')
 
