@@ -1958,75 +1958,85 @@ async function generateVideoOnFlow(options = {}) {
         fs.mkdirSync(extractDir, { recursive: true });
         const { execSync } = require('child_process');
 
-        // 1. Arşivdeki MP4'leri ZipInfo.date_time (oluşturulma zamanına göre BÜYÜKTEN KÜÇÜĞE) sırala
-        let sortedZipMp4s = [];
+        // 1. Arşivi çıkar: Python zipfile ile UTF-8 uyumlu çıkarma, hata durumunda unzip
         try {
-          const orderOut = execSync(`python3 -c "import zipfile, json
-z = zipfile.ZipFile('${zipPath}')
-items = []
-for info in z.infolist():
-    if info.filename.lower().endswith('.mp4') and info.file_size > 500000:
-        items.append({'name': info.filename, 'time': list(info.date_time), 'size': info.file_size})
-items.sort(key=lambda x: x['time'], reverse=True)
-print(json.dumps([it['name'] for it in items]))" 2>/dev/null`).toString();
-          sortedZipMp4s = JSON.parse(orderOut);
-        } catch (_) {}
-
-        // 2. Arşivi çıkar
-        try {
-          execSync(`unzip -o "${zipPath}" -d "${extractDir}" 2>/dev/null`);
+          execSync(`python3 -c "import zipfile; zipfile.ZipFile('${zipPath}').extractall('${extractDir}')" 2>/dev/null`);
         } catch (_) {
-          execSync(`python3 -m zipfile -e "${zipPath}" "${extractDir}" 2>/dev/null || true`);
+          try {
+            execSync(`unzip -o "${zipPath}" -d "${extractDir}" 2>/dev/null`);
+          } catch (__) {
+            try { execSync(`python3 -m zipfile -e "${zipPath}" "${extractDir}" 2>/dev/null`); } catch (___) {}
+          }
         }
 
-        // En yeni videoyu belirle: ÖNCELİKLE Marka Adı ve Ürün anahtar kelimeleriyle eşleşenleri seç!
-        let chosenFileName = null;
-        const brandClean = (options.brandName || options.customer || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-        const prodClean = (options.productName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        // 2. Dosyaları DOĞRUDAN DİSKTEN (extractDir içinden) oku
+        const diskFiles = fs.readdirSync(extractDir).filter(f => f.toLowerCase().endsWith('.mp4'));
 
-        const allCandidateNames = sortedZipMp4s.length > 0 
-          ? sortedZipMp4s.map(c => path.basename(c))
-          : fs.readdirSync(extractDir).filter(f => f.endsWith('.mp4'));
-
-        // 1. En yüksek öncelik: Dosya adı MARKA adı içerenler (örn: Ayvazo...)
-        const brandMatches = allCandidateNames.filter(name => {
-          const lower = name.toLowerCase();
-          const matchBrand = brandClean && brandClean.length >= 3 && (lower.includes(brandClean.slice(0, 5)) || lower.includes('ayvaz'));
-          return matchBrand;
-        });
-
-        // 2. İkinci öncelik: Ürün adı içerenler (örn: tugla, brick)
-        const prodMatches = allCandidateNames.filter(name => {
-          const lower = name.toLowerCase();
-          const matchProd = prodClean && prodClean.length >= 3 && (lower.includes(prodClean.slice(0, 4)) || lower.includes('brick'));
-          return matchProd;
-        });
-
-        // Google Flow dosya adlarındaki YYYYMMDDHHMMSS zaman damgasını sayısal olarak al
-        const getTimestamp = (filename) => {
-          const m = filename.match(/(\d{14})/);
-          return m ? parseInt(m[1], 10) : 0;
+        // Normalizasyon: Türkçe karakterleri ve Info-ZIP'in #Uxxxx escape'lerini temizle
+        const normalizeStr = (s) => {
+          if (!s) return '';
+          return s.toLowerCase()
+            .replace(/#u[0-9a-f]{4}/gi, '')
+            .replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's')
+            .replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ç/g, 'c')
+            .replace(/[^a-z0-9]/g, '');
         };
+
+        const brandNorm = normalizeStr(options.brandName || options.customer || '');
+        const prodNorm = normalizeStr(options.productName || options.product || '');
+
+        const getFileTimestamp = (filename) => {
+          const m = filename.match(/(\d{14})/);
+          if (m) return parseInt(m[1], 10);
+          try {
+            return fs.statSync(path.join(extractDir, filename)).mtimeMs;
+          } catch (_) {
+            return 0;
+          }
+        };
+
+        // 1. Marka eşleşmesi
+        const brandMatches = diskFiles.filter(name => {
+          const norm = normalizeStr(name);
+          if (brandNorm.length >= 3 && (norm.includes(brandNorm.slice(0, 5)) || norm.includes(brandNorm.slice(0, 4)))) return true;
+          if (brandNorm.includes('ayvaz') && norm.includes('ayvaz')) return true;
+          if (brandNorm.includes('veri') && (norm.includes('veri') || norm.includes('burada'))) return true;
+          if (brandNorm.includes('bofe') && norm.includes('bofe')) return true;
+          return false;
+        });
+
+        // 2. Ürün eşleşmesi
+        const prodMatches = diskFiles.filter(name => {
+          const norm = normalizeStr(name);
+          if (prodNorm.length >= 3 && norm.includes(prodNorm.slice(0, 4))) return true;
+          if ((prodNorm.includes('tugla') || prodNorm.includes('insaat')) && (norm.includes('brick') || norm.includes('construct'))) return true;
+          if (prodNorm.includes('harita') && (norm.includes('map') || norm.includes('radar') || norm.includes('harita'))) return true;
+          if (prodNorm.includes('pompa') || prodNorm.includes('hasat') || prodNorm.includes('zeytin')) {
+            if (norm.includes('spray') || norm.includes('farmer') || norm.includes('garden')) return true;
+          }
+          return false;
+        });
 
         let candidatePool = [];
         if (brandMatches.length > 0) {
-          brandMatches.sort((a, b) => getTimestamp(b) - getTimestamp(a));
+          brandMatches.sort((a, b) => getFileTimestamp(b) - getFileTimestamp(a));
           candidatePool = brandMatches;
         } else if (prodMatches.length > 0) {
-          prodMatches.sort((a, b) => getTimestamp(b) - getTimestamp(a));
+          prodMatches.sort((a, b) => getFileTimestamp(b) - getFileTimestamp(a));
           candidatePool = prodMatches;
         } else {
-          allCandidateNames.sort((a, b) => getTimestamp(b) - getTimestamp(a));
-          candidatePool = allCandidateNames;
+          diskFiles.sort((a, b) => getFileTimestamp(b) - getFileTimestamp(a));
+          candidatePool = diskFiles;
         }
 
         console.log(`[Flow Video] 🔍 Zip filtreleme: ${brandMatches.length} marka eşleşmesi, ${prodMatches.length} ürün eşleşmesi. En yeni adaylar:`, candidatePool.slice(0, 3));
 
+        let chosenFileName = null;
         for (const candidate of candidatePool) {
           const fullP = path.join(extractDir, candidate);
           if (fs.existsSync(fullP) && fs.statSync(fullP).size > 500000) {
             chosenFileName = candidate;
-            console.log(`[Flow Video] ⏱️ Zip arşivi içinden SEÇİLEN video (${brandMatches.length > 0 ? 'MARKA DOĞRULANDI' : 'FALLBACK'}): ${chosenFileName}`);
+            console.log(`[Flow Video] ⏱️ Zip arşivi içinden SEÇİLEN video (${brandMatches.length > 0 ? 'MARKA DOĞRULANDI' : (prodMatches.length > 0 ? 'ÜRÜN DOĞRULANDI' : 'FALLBACK')}): ${chosenFileName}`);
             break;
           }
         }
@@ -2060,6 +2070,38 @@ print(json.dumps([it['name'] for it in items]))" 2>/dev/null`).toString();
           fs.copyFileSync(path.join(OUTPUT_DIR, recent.name), rawPath);
         }
       }
+    }
+
+    // 🛡️ GÜVENLİK KONTROLÜ: rawPath diske yazılmadıysa extractDir veya outputs'tan en yeni MP4'ü bul
+    if (!fs.existsSync(rawPath)) {
+      const extractDir = path.join(OUTPUT_DIR, `unzip_${timestamp}`);
+      if (fs.existsSync(extractDir)) {
+        const fallbackCandidates = fs.readdirSync(extractDir)
+          .filter(f => f.toLowerCase().endsWith('.mp4'))
+          .map(f => path.join(extractDir, f))
+          .filter(p => fs.statSync(p).size > 500000);
+        if (fallbackCandidates.length > 0) {
+          fallbackCandidates.sort((a, b) => fs.statSync(b).size - fs.statSync(a).size);
+          fs.copyFileSync(fallbackCandidates[0], rawPath);
+          console.log(`[Flow Video] 🛡️ Emniyet Kopyası: Extract dizinindeki en büyük MP4 rawPath'e aktarıldı: ${fallbackCandidates[0]}`);
+        }
+      }
+    }
+
+    if (!fs.existsSync(rawPath)) {
+      const allOutputsMp4 = fs.readdirSync(OUTPUT_DIR)
+        .filter(f => f.toLowerCase().endsWith('.mp4') && f !== rawFileName && !f.startsWith('temp_'))
+        .map(f => ({ path: path.join(OUTPUT_DIR, f), time: fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs, size: fs.statSync(path.join(OUTPUT_DIR, f)).size }))
+        .filter(f => f.size > 500000)
+        .sort((a, b) => b.time - a.time);
+      if (allOutputsMp4.length > 0) {
+        fs.copyFileSync(allOutputsMp4[0].path, rawPath);
+        console.log(`[Flow Video] 🛡️ Emniyet Kopyası: Outputs dizinindeki en yeni MP4 rawPath'e aktarıldı: ${allOutputsMp4[0].path}`);
+      }
+    }
+
+    if (!fs.existsSync(rawPath)) {
+      throw new Error(`Google Flow video dosyası diske yazılamadı (${rawFileName}). İndirme veya arşiv çıkarma başarısız.`);
     }
   }
 
