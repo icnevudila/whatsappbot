@@ -20,7 +20,7 @@ import { DEFAULT_INCLUDE, type ProductCard, type SocialOption, type WizardBootst
 import { AddProductModal } from './add-product-modal'
 import { AddSocialModal } from './add-social-modal'
 
-const DRAFT_KEY = 'wa.customer.creative-wizard.v1'
+const DRAFT_KEY = 'wa.customer.creative-wizard.video.v1'
 
 type Step = 'start' | 'brief' | 'products' | 'extras' | 'style' | 'summary'
 
@@ -589,15 +589,6 @@ export function CreativeWizard({
                       Videonuzda ve tabelalarda kullanılacak kurumsal marka logonuz.
                     </p>
                   </div>
-                  {hasValidVideoLogo ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11.5px] font-semibold text-emerald-700 border border-emerald-200">
-                      ✓ Kayıtlı Logo Hazır
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-[11.5px] font-semibold text-rose-700 border border-rose-200">
-                      Logo Gerekli
-                    </span>
-                  )}
                 </div>
 
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-hairline bg-canvas p-3">
@@ -1766,7 +1757,9 @@ export function CreativeWizard({
               </p>
               <p>
                 <span className="text-ink-muted">Format: </span>
-                {CREATIVE_FORMATS.find((row) => row.id === draft.formatId)?.label}
+                {isVideo
+                  ? 'Kampanya videosu (9:16)'
+                  : CREATIVE_FORMATS.find((row) => row.id === draft.formatId)?.label}
               </p>
               <p>
                 <span className="text-ink-muted">Ürünler: </span>

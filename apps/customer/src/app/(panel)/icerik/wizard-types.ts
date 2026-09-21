@@ -1,4 +1,4 @@
-import { CREATIVE_FORMATS, type ProductFieldKey } from '@/lib/creative/types'
+import { CREATIVE_FORMATS, VIDEO_CREATIVE_FORMAT, type ProductFieldKey } from '@/lib/creative/types'
 
 export type LibraryOption = {
   id: string
@@ -61,7 +61,8 @@ export type WizardBootstrap = {
   suggestedVideoChips?: Array<{ label: string; text: string }>
 }
 
-export function formatFromId(formatId: string): (typeof CREATIVE_FORMATS)[number] {
+export function formatFromId(formatId: string): (typeof CREATIVE_FORMATS)[number] | typeof VIDEO_CREATIVE_FORMAT {
+  if (formatId === 'reels_video') return VIDEO_CREATIVE_FORMAT
   return CREATIVE_FORMATS.find((row) => row.id === formatId) ?? CREATIVE_FORMATS[0]
 }
 

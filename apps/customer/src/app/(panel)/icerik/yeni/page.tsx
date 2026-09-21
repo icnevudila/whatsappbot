@@ -2,7 +2,8 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { PageHeader } from '@/components/ui'
 import { requireActiveOrg } from '@/lib/org'
-import { CreativeWizard } from '../creative-wizard'
+import { CreativeWizard as VideoCreativeWizard } from '../creative-wizard'
+import { ImageCreativeWizard } from '../image-wizard'
 import { loadCreativeWizardData } from '../wizard-data'
 
 export const metadata: Metadata = { title: 'Kampanya görseli oluştur' }
@@ -36,7 +37,11 @@ export default async function NewCreativePage({
         }
         backHref="/icerik"
       />
-      <CreativeWizard data={data} initialFormat={isVideo ? 'reels_video' : undefined} />
+      {isVideo ? (
+        <VideoCreativeWizard data={data} initialFormat="reels_video" />
+      ) : (
+        <ImageCreativeWizard data={data} />
+      )}
     </div>
   )
 }

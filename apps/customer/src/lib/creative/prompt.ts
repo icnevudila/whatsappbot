@@ -21,6 +21,7 @@ const DENSITY_HINT: Record<string, string> = {
 }
 
 function formatLabel(formatId: string): string {
+  if (formatId === 'reels_video') return 'Kampanya videosu'
   return CREATIVE_FORMATS.find((row) => row.id === formatId)?.label ?? formatId
 }
 
@@ -36,7 +37,9 @@ export function buildCreativePrompt(snapshot: CreativeSnapshot): {
   negative: string
 } {
   const aspect =
-    CREATIVE_FORMATS.find((row) => row.id === snapshot.formatId)?.aspect ?? snapshot.aspect
+    snapshot.formatId === 'reels_video'
+      ? '9:16'
+      : CREATIVE_FORMATS.find((row) => row.id === snapshot.formatId)?.aspect ?? snapshot.aspect
   const kit = snapshot.brandKit
   const colors = kit?.colors
     ? Object.entries(kit.colors)
