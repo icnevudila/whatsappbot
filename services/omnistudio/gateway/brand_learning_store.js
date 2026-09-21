@@ -169,8 +169,9 @@ class BrandLearningStore {
   getBrandLearnings(brandName) {
     if (!brandName) return null;
     const key = brandName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (key.length < 3) return null;
     for (const [k, val] of Object.entries(this.data.brands || {})) {
-      if (key.includes(k) || k.includes(key)) {
+      if (key === k || (k.length >= 4 && key.includes(k))) {
         return val;
       }
     }
