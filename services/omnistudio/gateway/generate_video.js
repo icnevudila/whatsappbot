@@ -2062,16 +2062,22 @@ async function generateVideoOnFlow(options = {}) {
         await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: dlBtn.result.value.x, y: dlBtn.result.value.y, button: 'left', clickCount: 1 });
         await sleep(1200);
 
-        // 720p veya Orijinal boyut seçeneğini tıkla
+        // 1080p, 720p veya Orijinal boyut seçeneğini tıkla
         const popupRes = await send('Runtime.evaluate', {
           expression: `(() => {
             const items = Array.from(document.querySelectorAll('.mat-mdc-menu-item, [role="menuitem"], button'));
             const opt = items.find(e => {
-              const label = e.querySelector('.label')?.innerText?.trim();
-              const caption = e.querySelector('.caption')?.innerText?.toLowerCase();
+              const label = (e.querySelector('.label')?.innerText || '').trim();
+              const caption = (e.querySelector('.caption')?.innerText || '').toLowerCase();
               const text = (e.innerText || '').toLowerCase();
-              return (label === '720p' || text.includes('720p') || caption?.includes('orijinal') || text.includes('orijinal boyut') || text.includes('original size')) && e.getBoundingClientRect().width > 0;
-            });
+              return (
+                label === '1080p' || label === '720p' ||
+                text.includes('1080p') || text.includes('720p') ||
+                caption.includes('orijinal') || caption.includes('original') ||
+                text.includes('orijinal') || text.includes('original') ||
+                text.includes('mp4') || text.includes('indir') || text.includes('download')
+              ) && e.getBoundingClientRect().width > 0;
+            }) || items.find(e => e.getBoundingClientRect().width > 0 && e.getBoundingClientRect().height > 0);
             if (opt) {
               const r = opt.getBoundingClientRect();
               return { found: true, x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2) };
@@ -2147,11 +2153,17 @@ async function generateVideoOnFlow(options = {}) {
             expression: `(() => {
               const items = Array.from(document.querySelectorAll('.mat-mdc-menu-panel [role="menuitem"], .mat-mdc-menu-item, [role="menuitem"]'));
               const btn = items.find(el => {
-                const label = el.querySelector('.label')?.innerText?.trim();
-                const caption = el.querySelector('.caption')?.innerText?.toLowerCase();
+                const label = (el.querySelector('.label')?.innerText || '').trim();
+                const caption = (el.querySelector('.caption')?.innerText || '').toLowerCase();
                 const text = (el.innerText || '').toLowerCase();
-                return (label === '720p' || text.includes('720p') || caption?.includes('orijinal') || text.includes('orijinal boyut') || text.includes('original size')) && el.getBoundingClientRect().width > 0;
-              });
+                return (
+                  label === '1080p' || label === '720p' ||
+                  text.includes('1080p') || text.includes('720p') ||
+                  caption.includes('orijinal') || caption.includes('original') ||
+                  text.includes('orijinal') || text.includes('original') ||
+                  text.includes('mp4') || text.includes('indir') || text.includes('download')
+                ) && el.getBoundingClientRect().width > 0;
+              }) || items.find(el => el.getBoundingClientRect().width > 0 && el.getBoundingClientRect().height > 0);
               if (btn) {
                 const r = btn.getBoundingClientRect();
                 return { found: true, x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2) };
