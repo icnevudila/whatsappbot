@@ -962,48 +962,28 @@ export function CreativeWizard({
                         </div>
                       ) : null}
 
-                      {/* 3. Kritik Ürün Özelliği ve Logo Yerleşimi */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 border-t border-[#00a884]/15 pt-2.5">
-                        <div>
-                          <label className="block text-[11.5px] font-semibold text-[#111b21] mb-1">
-                            Kritik Ürün Detayı (AI Negatif Kalkanı)
-                          </label>
-                          <input
-                            type="text"
-                            value={extra.productKeyFeature || ''}
-                            onChange={(e) =>
-                              patch({
-                                productExtras: {
-                                  ...draft.productExtras,
-                                  [product.id]: { ...extra, productKeyFeature: e.target.value },
-                                },
-                              })
-                            }
-                            placeholder="Örn: 18 delikli hava kanallı kil blok tuğla"
-                            className="w-full rounded border border-[#c3cdd3] bg-white px-2.5 py-1.5 text-[12px] text-[#111b21] focus:border-[#00a884] focus:outline-none"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-[11.5px] font-semibold text-[#111b21] mb-1">
-                            Logo Yerleşimi (Sıfır Hata Yüzeyi)
-                          </label>
-                          <select
-                            value={extra.logoPlacement || 'flat_rigid_surface'}
-                            onChange={(e) =>
-                              patch({
-                                productExtras: {
-                                  ...draft.productExtras,
-                                  [product.id]: { ...extra, logoPlacement: e.target.value },
-                                },
-                              })
-                            }
-                            className="w-full rounded border border-[#c3cdd3] bg-white px-2.5 py-1.5 text-[12px] text-[#111b21] focus:border-[#00a884] focus:outline-none"
-                          >
-                            <option value="flat_rigid_surface">✅ Düz Kasa / Fabrika Tabelası (Tavsiye Edilen)</option>
-                            <option value="reception_plaque">🏢 Masa Akrilik Plaketi / Yönetici Masası</option>
-                          </select>
-                        </div>
+                      {/* 3. Kritik Ürün Özelliği */}
+                      <div className="border-t border-[#00a884]/15 pt-2.5">
+                        <label className="block text-[11.5px] font-semibold text-[#111b21] mb-1">
+                          Kritik Ürün Detayı & Biçimi (AI Negatif Kalkanı)
+                        </label>
+                        <input
+                          type="text"
+                          value={extra.productKeyFeature || ''}
+                          onChange={(e) =>
+                            patch({
+                              productExtras: {
+                                ...draft.productExtras,
+                                [product.id]: { ...extra, productKeyFeature: e.target.value },
+                              },
+                            })
+                          }
+                          placeholder="Örn: Uzunlamasına dikdörtgen prizma, 18 delikli hava kanallı kırmızı kil blok (kare küp veya deliksiz düz taş yapılmayacaktır)"
+                          className="w-full rounded border border-[#c3cdd3] bg-white px-2.5 py-1.5 text-[12px] text-[#111b21] focus:border-[#00a884] focus:outline-none"
+                        />
+                        <p className="text-[11px] text-[#667781] mt-1">
+                          Yapay zekanın ürünü kareye sıkıştırmasını veya delikleri atlamasını önlemek için ürünün ayırt edici formunu kısaca belirtebilirsiniz.
+                        </p>
                       </div>
                     </div>
                   )
