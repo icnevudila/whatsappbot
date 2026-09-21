@@ -802,16 +802,11 @@ export function CreativeWizard({
             {/* 3. Ek Referans Fotoğrafları (Opsiyonel - En fazla 5 adet) */}
             <Card>
               <div className="p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[14px] font-bold text-[#111b21]">3 — Ek Referans Fotoğrafları (İsteğe Bağlı)</p>
-                    <p className="text-[12px] text-[#667781] mt-0.5">
-                      Farklı ürün açıları, ambalaj detayları veya mekan/şantiye fotoğrafları ekleyebilirsiniz (en fazla 5 adet).
-                    </p>
-                  </div>
-                  <span className="text-[11.5px] font-semibold text-[#667781]">
-                    {(draft.referenceImageUrls || []).length} / 5
-                  </span>
+                <div>
+                  <p className="text-[14px] font-bold text-[#111b21]">3 — Ek Referans Fotoğrafları (İsteğe Bağlı)</p>
+                  <p className="text-[12px] text-[#667781] mt-0.5">
+                    Farklı ürün açıları, ambalaj detayları veya mekan/şantiye fotoğrafları ekleyebilirsiniz (en fazla 5 adet).
+                  </p>
                 </div>
 
                 <div className="flex flex-wrap gap-2.5 items-center">
