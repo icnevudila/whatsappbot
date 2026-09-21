@@ -1147,14 +1147,18 @@ async function generateVideo(options) {
       accountPool[port].notLoggedIn = false;
       accountPool[port].lastUsed = Date.now();
 
-      // 1. Önce doğrudan bu porttaki ChatGPT Web sekmesine girip promptu ürettir!
-      console.log(`[VideoGen Pool] 🤖 Port ${port} ChatGPT Web sekmesinden reklam promptu isteniyor...`);
-      let fullPrompt = await generatePromptWithChatGptWeb(port, options);
-      if (!fullPrompt) {
-        console.log(`[VideoGen Pool] ChatGPT Web promptu oluşturamadı, yerel sinematik şablon devrede.`);
-        fullPrompt = await enhanceVideoPrompt(options);
+      let fullPrompt = (options.fullPrompt || options.prompt || '').trim();
+      if (!fullPrompt || fullPrompt.length < 30) {
+        console.log(`[VideoGen Pool] 🤖 Port ${port} ChatGPT Web sekmesinden reklam promptu isteniyor...`);
+        fullPrompt = await generatePromptWithChatGptWeb(port, options);
+        if (!fullPrompt) {
+          console.log(`[VideoGen Pool] ChatGPT Web promptu oluşturamadı, yerel sinematik şablon devrede.`);
+          fullPrompt = await enhanceVideoPrompt(options);
+        } else {
+          console.log(`[VideoGen Pool] 🎯 ChatGPT Web promptu başarıyla alındı ve Gemini'ye iletiliyor!`);
+        }
       } else {
-        console.log(`[VideoGen Pool] 🎯 ChatGPT Web promptu başarıyla alındı ve Gemini'ye iletiliyor!`);
+        console.log(`[VideoGen Pool] 🎯 Panelden iletilen prompt doğrudan kullanılıyor (${fullPrompt.length} karakter).`);
       }
 
       const result = await attemptGenerateOnCdp(port, tab, { ...options, fullPrompt });
@@ -1216,27 +1220,18 @@ async function generateVideoOnFlow(options = {}) {
   const port = options.port || 9222;
   const projectUrl = options.projectUrl || 'https://flow.google.com/project/6b718bdf-9bf3-44c3-8b65-4c8f9110c8c5';
   
-  const isPrecompiledDirectorPrompt = Boolean(
-    options.fullPrompt || 
-    (options.prompt && (
-      options.prompt.includes('SAHNE 1') || 
-      options.prompt.includes('KURUMSAL MARKA') || 
-      options.prompt.includes('ACT 1') || 
-      options.prompt.includes('STRICT MANDATE') ||
-      options.prompt.includes('VEO VİDEO MOTORU')
-    ))
-  );
-
-  let prompt = isPrecompiledDirectorPrompt ? (options.fullPrompt || options.prompt) : null;
+  let prompt = (options.fullPrompt || options.prompt || '').trim();
   let dynamicVoiceScript = options.voiceoverText || null;
 
-  if (!prompt) {
-    console.log(`[Flow Video] 🤖 ChatGPT Web üzerinden kullanıcı briefi ve marka kitiyle ÖZGÜN reklam senaryosu hazırlanıyor...`);
+  if (!prompt || prompt.length < 30) {
+    console.log(`[Flow Video] 🤖 Prompt bulunamadı, ChatGPT Web üzerinden reklam senaryosu hazırlanıyor...`);
     prompt = await generatePromptWithChatGptWeb(port, options);
-  }
-  if (!prompt) {
-    console.log(`[Flow Video] ⚠️ ChatGPT Web yanıt vermedi, yerel akıllı reklam motoru devrede.`);
-    prompt = await enhanceVideoPrompt(options);
+    if (!prompt) {
+      console.log(`[Flow Video] ⚠️ ChatGPT Web yanıt vermedi, yerel akıllı reklam motoru devrede.`);
+      prompt = await enhanceVideoPrompt(options);
+    }
+  } else {
+    console.log(`[Flow Video] 🎯 Panelden derlenmiş özgün reklam promptu doğrudan kullanılıyor (${prompt.length} karakter).`);
   }
 
   // ChatGPT çıktısından dinamik seslendirme repliğini çıkar
