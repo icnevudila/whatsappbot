@@ -21,7 +21,7 @@ import { AddProductModal } from './add-product-modal'
 import { AddSocialModal } from './add-social-modal'
 import { getSafeMediaUrl } from '@/lib/media-url'
 
-const DRAFT_KEY = 'wa.customer.creative-wizard.video.v1'
+const DRAFT_KEY_PREFIX = 'wa.customer.creative-wizard.v2'
 
 type Step = 'start' | 'brief' | 'products' | 'extras' | 'style' | 'summary'
 
@@ -188,24 +188,46 @@ export function CreativeWizard({
 
   const activeSteps = isVideo ? VIDEO_STEPS : IMAGE_STEPS
 
+  const orgDraftKey = useMemo(
+    () => `${DRAFT_KEY_PREFIX}.${isVideo ? 'video' : 'image'}.${data.org.id}`,
+    [isVideo, data.org.id],
+  )
+
   useEffect(() => {
     if (!pending) return
     try {
-      localStorage.removeItem(DRAFT_KEY)
+      localStorage.removeItem(orgDraftKey)
     } catch {
       /* ignore */
     }
-  }, [pending])
+  }, [pending, orgDraftKey])
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(DRAFT_KEY)
+      // Eski zehirli paylaşılan draft anahtarlarını temizle
+      localStorage.removeItem('wa.customer.creative-wizard.video.v1')
+      localStorage.removeItem('wa.customer.creative-wizard.v1')
+
+      const raw = localStorage.getItem(orgDraftKey)
       if (!raw) return
       const saved = JSON.parse(raw) as Partial<Draft>
+
+      // Güvenlik: Kaydedilen ürünlerin gerçekten bu organizasyona ait olduğunu doğrula
+      const validProductIds = (saved.productIds || []).filter((id) =>
+        data.products.some((p) => p.id === id)
+      )
+      const validKitId = data.kits.some((k) => k.id === saved.brandKitId)
+        ? saved.brandKitId
+        : (data.kits.find((k) => k.isDefault)?.id ?? data.kits[0]?.id ?? '')
+
       const effectiveFormat = initialFormat || saved.formatId || (isInitialVideo ? 'reels_video' : 'wa')
       setDraft((current) => ({
         ...current,
         ...saved,
+        brandKitId: validKitId,
+        productIds: validProductIds,
+        productExtras: validProductIds.length > 0 ? (saved.productExtras || {}) : {},
+        customVoiceover: validProductIds.length > 0 ? saved.customVoiceover : undefined,
         formatId: effectiveFormat,
         requestKey: saved.requestKey || current.requestKey,
       }))
@@ -215,15 +237,15 @@ export function CreativeWizard({
     } catch {
       /* ignore */
     }
-  }, [initialFormat, isInitialVideo])
+  }, [orgDraftKey, initialFormat, isInitialVideo, data.products, data.kits])
 
   useEffect(() => {
     try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
+      localStorage.setItem(orgDraftKey, JSON.stringify(draft))
     } catch {
       /* ignore */
     }
-  }, [draft])
+  }, [orgDraftKey, draft])
 
   useEffect(() => {
     if (data.kits.length === 0) return

@@ -20,7 +20,7 @@ import { DEFAULT_INCLUDE, type ProductCard, type SocialOption, type WizardBootst
 import { AddProductModal } from './add-product-modal'
 import { AddSocialModal } from './add-social-modal'
 
-const DRAFT_KEY = 'wa.customer.creative-wizard.v1'
+const DRAFT_KEY_PREFIX = 'wa.customer.creative-wizard.image.v2'
 
 type Step = 'start' | 'brief' | 'products' | 'extras' | 'style' | 'summary'
 
@@ -119,36 +119,52 @@ export function ImageCreativeWizard({ data }: { data: WizardBootstrap }) {
   const isImageToImage = Boolean(draft.baseCreativeId) || draft.productIds.length > 0
   useCreativeGenerationProgress(pending, isImageToImage)
 
+  const orgDraftKey = `${DRAFT_KEY_PREFIX}.${data.org.id}`
+
   useEffect(() => {
     if (!pending) return
     try {
-      localStorage.removeItem(DRAFT_KEY)
+      localStorage.removeItem(orgDraftKey)
     } catch {
       /* ignore */
     }
-  }, [pending])
+  }, [pending, orgDraftKey])
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(DRAFT_KEY)
+      localStorage.removeItem('wa.customer.creative-wizard.v1')
+      const raw = localStorage.getItem(orgDraftKey)
       if (!raw) return
       const saved = JSON.parse(raw) as Partial<Draft>
       if (saved.formatId === 'reels_video') {
         saved.formatId = 'wa'
       }
-      setDraft((current) => ({ ...current, ...saved, requestKey: saved.requestKey || current.requestKey }))
+      const validProductIds = (saved.productIds || []).filter((id) =>
+        data.products.some((p) => p.id === id)
+      )
+      const validKitId = data.kits.some((k) => k.id === saved.brandKitId)
+        ? saved.brandKitId
+        : (data.kits.find((k) => k.isDefault)?.id ?? data.kits[0]?.id ?? '')
+
+      setDraft((current) => ({
+        ...current,
+        ...saved,
+        brandKitId: validKitId,
+        productIds: validProductIds,
+        requestKey: saved.requestKey || current.requestKey,
+      }))
     } catch {
       /* ignore */
     }
-  }, [])
+  }, [orgDraftKey, data.products, data.kits])
 
   useEffect(() => {
     try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
+      localStorage.setItem(orgDraftKey, JSON.stringify(draft))
     } catch {
       /* ignore */
     }
-  }, [draft])
+  }, [orgDraftKey, draft])
 
   useEffect(() => {
     if (data.kits.length === 0) return

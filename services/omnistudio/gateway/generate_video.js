@@ -1725,6 +1725,28 @@ async function generateVideoOnFlow(options = {}) {
     throw new Error(`Google Flow üretim butonu pasif (disabled: true). Editör metin uzunluğu: ${readyState.editorTextLength}. Lütfen promptun ve görsellerin işlenmesini kontrol edin.`);
   }
 
+  // 2.9. Üretim öncesi mevcut medya durumunu kaydet (Eski videoyu yeni sanma hatasını %100 önler)
+  const pregenMediaInfo = await send('Runtime.evaluate', {
+    expression: `(() => {
+      const v = document.querySelector('flow-preview-panel video') ||
+                document.querySelector('flow-video-player video') ||
+                document.querySelector('.player-container video') ||
+                document.querySelector('video[src]') ||
+                document.querySelector('video');
+      const allVideos = Array.from(document.querySelectorAll('video')).map(el => el.currentSrc || el.src || '');
+      return {
+        currentSrc: v ? (v.currentSrc || v.src || '') : '',
+        allSrcs: allVideos.filter(Boolean),
+        tileCount: document.querySelectorAll('.tile, flow-tile, flow-media-tile, div[class*="tile"]').length
+      };
+    })()`,
+    returnByValue: true
+  });
+  const initialVideoSrc = pregenMediaInfo?.result?.value?.currentSrc || '';
+  const initialKnownSrcs = new Set(pregenMediaInfo?.result?.value?.allSrcs || []);
+  const initialTileCount = pregenMediaInfo?.result?.value?.tileCount || 0;
+  console.log(`[Flow Video] 🔎 Üretim öncesi mevcut video src: ${initialVideoSrc.slice(0, 60)}... (${initialKnownSrcs.size} bilinen video, ${initialTileCount} tile)`);
+
   // 3. Üretimi başlat butonuna tıkla (Hem DOM hem CDP)
   console.log(`[Flow Video] 🚀 Üretim başlatma butonuna tıklanıyor:`, readyState.button.rect);
   const { x: bx, y: by } = readyState.button.rect;
@@ -1765,24 +1787,35 @@ async function generateVideoOnFlow(options = {}) {
         const bodyText = (document.body.innerText || '').toLowerCase();
         const isGenerating = spinners.length > 0 || bodyText.includes('generating') || bodyText.includes('rendering');
 
-        // En az 40 saniye render payı ver (Veo 3.1 ortalama 45-75 saniyede üretir)
-        if (${elapsed} < 40 || isGenerating) {
-          return { status: 'rendering', elapsed: ${elapsed}, isGenerating };
-        }
+        const v = document.querySelector('flow-preview-panel video') ||
+                  document.querySelector('flow-video-player video') ||
+                  document.querySelector('.player-container video') ||
+                  document.querySelector('video[src]') ||
+                  document.querySelector('video');
+        const currentSrc = v ? (v.currentSrc || v.src || '') : '';
+        const tiles = document.querySelectorAll('.tile, flow-tile, flow-media-tile, div[class*="tile"], div[class*="virtual-item"]');
 
-        return { status: 'ready', elapsed: ${elapsed} };
+        return {
+          status: isGenerating ? 'rendering' : 'ready',
+          elapsed: ${elapsed},
+          isGenerating,
+          currentSrc,
+          tileCount: tiles.length
+        };
       })()`,
       returnByValue: true
     });
 
     const res = checkRender?.result?.value;
-    if (res?.status === 'ready' && elapsed >= 40) {
+    const isNewVideo = (res?.currentSrc && !initialKnownSrcs.has(res.currentSrc)) || (res?.tileCount > initialTileCount);
+
+    if (res && !res.isGenerating && elapsed >= 35 && (isNewVideo || elapsed >= 90)) {
       videoRenderDone = true;
       console.log(`[Flow Video] 🎬 Video renderı başarıyla tamamlandı (${elapsed} sn)! İndirme aşamasına geçiliyor...`);
       await sleep(2500);
       break;
     } else {
-      console.log(`[Flow Video] ⏳ Render devam ediyor (${elapsed} sn, aktif üretim: ${res?.isGenerating ?? true})...`);
+      console.log(`[Flow Video] ⏳ Render devam ediyor (${elapsed} sn, aktif üretim: ${res?.isGenerating ?? true}, yeni video hazır mı: ${Boolean(isNewVideo)})...`);
     }
   }
 
@@ -1840,6 +1873,15 @@ async function generateVideoOnFlow(options = {}) {
     console.log(`[Flow Video] 🎬 Flow oynatıcısındaki aktif video doğrudan yakalanıyor...`);
     const captureRes = await send('Runtime.evaluate', {
       expression: `(async () => {
+        // En son üretilen video tile'ını bul ve oynatıcıya yükle
+        const tiles = Array.from(document.querySelectorAll('.tile, flow-tile, flow-media-tile, div[class*="tile"], div[class*="virtual-item"]'));
+        if (tiles.length > 0) {
+          const lastTile = tiles[tiles.length - 1];
+          lastTile.scrollIntoView({ behavior: 'instant', block: 'center' });
+          lastTile.click();
+          await new Promise(r => setTimeout(r, 800));
+        }
+
         const v = document.querySelector('flow-preview-panel video') ||
                   document.querySelector('flow-video-player video') ||
                   document.querySelector('.player-container video') ||
@@ -1854,7 +1896,7 @@ async function generateVideoOnFlow(options = {}) {
           const blob = await res.blob();
           return new Promise((resolve) => {
             const reader = new FileReader();
-            reader.onloadend = () => resolve({ found: true, size: blob.size, src: src.slice(0, 80), dataUrl: reader.result });
+            reader.onloadend = () => resolve({ found: true, size: blob.size, src, dataUrl: reader.result });
             reader.onerror = () => resolve({ found: false, reason: 'blob_read_error' });
             reader.readAsDataURL(blob);
           });
@@ -1867,16 +1909,17 @@ async function generateVideoOnFlow(options = {}) {
     });
 
     const capVal = captureRes?.result?.value;
-    if (capVal?.found && capVal.dataUrl && capVal.dataUrl.includes(',')) {
+    const isActuallyNew = capVal?.src && !initialKnownSrcs.has(capVal.src);
+    if (capVal?.found && capVal.dataUrl && capVal.dataUrl.includes(',') && (isActuallyNew || initialKnownSrcs.size === 0)) {
       const base64Data = capVal.dataUrl.split(',')[1];
       const videoBuffer = Buffer.from(base64Data, 'base64');
       if (videoBuffer.length > 300000) {
         fs.writeFileSync(rawPath, videoBuffer);
-        console.log(`[Flow Video] 🎯 EKRANDAKİ GERÇEK VİDEO DOĞRUDAN YAKALANDI VE YAZILDI (${(videoBuffer.length / (1024 * 1024)).toFixed(2)} MB)!`);
+        console.log(`[Flow Video] 🎯 EKRANDAKİ GERÇEK YENİ VİDEO DOĞRUDAN YAKALANDI VE YAZILDI (${(videoBuffer.length / (1024 * 1024)).toFixed(2)} MB)!`);
         capturedDirectly = true;
       }
     } else {
-      console.log(`[Flow Video] Doğrudan video yakalama sonucu:`, capVal);
+      console.log(`[Flow Video] Doğrudan video yakalama sonucu (yeni video mu: ${Boolean(isActuallyNew)}):`, capVal);
     }
   } catch (directCapErr) {
     console.warn(`[Flow Video] Doğrudan video yakalama uyarısı:`, directCapErr.message);
