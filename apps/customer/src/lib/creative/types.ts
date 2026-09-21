@@ -117,6 +117,8 @@ export type CreativeSnapshot = {
   subtitles?: boolean
   videoScenarioPrompt?: string | null
   videoScenarioTitle?: string | null
+  customVoiceover?: string | null
+  voiceoverScript?: string | null
   referenceImageUrls?: string[] | null
 }
 

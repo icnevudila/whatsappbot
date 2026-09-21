@@ -44,6 +44,16 @@ export function compileDeterministicV5(input: UserVideoInput): V5FinalOutputPack
 
   // 5. Turkish Voiceover Writer (Target 8-13 words, real claim validation, syllable duration)
   let voiceover = writeVoiceover(facts, ontology, strategy)
+  if (input.customVoiceover && input.customVoiceover.trim().length > 5) {
+    const cleanUserVo = input.customVoiceover.trim().replace(/["']/g, '')
+    const wc = cleanUserVo.split(/\s+/).length
+    voiceover = {
+      ...voiceover,
+      text: cleanUserVo,
+      wordCount: wc,
+      estimatedDurationSeconds: Math.min(7.0, Math.max(2.0, wc * 0.45)),
+    }
+  }
 
   // 6. Shot Planner (8s 3-kadraj + single location + VO wired into Veo prompt AUDIO directive + cameraMode)
   let shotPlan = planShots(facts, ontology, strategy, hook, voiceover.text, input.cameraMode)
@@ -54,7 +64,7 @@ export function compileDeterministicV5(input: UserVideoInput): V5FinalOutputPack
   // 8. Deterministic Hard-Fail Validator & Modular Auto-Repair
   const validationResult = validateAndRepair(facts, ontology, hook, shotPlan, voiceover, overlay)
 
-  if (validationResult.repairedVoiceover) {
+  if (validationResult.repairedVoiceover && (!input.customVoiceover || input.customVoiceover.trim().length <= 5)) {
     voiceover = validationResult.repairedVoiceover
   }
   if (validationResult.repairedShotPlan) {

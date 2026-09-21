@@ -151,6 +151,7 @@ export interface UserVideoInput {
   about?: string | null
   sectorHint?: string | null
   brief: string
+  customVoiceover?: string | null
   customText?: string | null
   ctaText?: string | null
   ctaDestination?: string | null

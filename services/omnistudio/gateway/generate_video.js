@@ -267,8 +267,8 @@ KRİTİK YÖNETMEN VE REKLAM STANDARTLARI (ÖNEMLİ):
     - KESİNLİKLE "detaylı bilgi için bize yazın", "detaylı bilgi almak için", "bizimle iletişime geçin" gibi soğuk, klişe, devlet dairesi veya robotik çağrılar KULLANILMAYACAKTIR.
     - ZORUNLU KURAL: Türkçenin doğal kurallı söz dizimine tam uygun (Özne + Nesne/Tümleç + Yüklem sonda), doğrudan ticari fayda (fiyat, sipariş, kampanya, teklif, hızlı teslimat) içeren enerjik reklam kapanışları yapılmalıdır.
     - DOĞRU VE CANLI REKLAM ÖRNEKLERİ:
-      * "${brand} killi cephe tuğlaları ile şantiyenize doğrudan teslimat avantajını yaşayın. Projenize özel toptan fiyat teklifi almak için hemen WhatsApp'tan yazın."
-      * "${brand} güvencesiyle yüksek mukavemetli tuğlalar yapılarınıza değer katar. Avantajlı fabrika fiyatlarını öğrenmek için hemen mesaj atın."
+      * "${brand} kalitesiyle inşaat ve yapı malzemelerinde şantiyenize doğrudan teslimat avantajını yaşayın. Projenize özel toptan fiyat teklifi için hemen WhatsApp ile yazın."
+      * "${brand} güvencesiyle yüksek mukavemetli yapı ürünleri projelerinize değer katar. Avantajlı fabrika fiyatlarını öğrenmek için hemen mesaj atın."
       * "${brand} akülü sırt pompası ile bahçenizde ilaçlama yapmak artık çok daha zahmetsiz. Kampanyalı fiyattan yararlanmak için hemen sipariş verin."
       * "${brand} ile hasatta yüksek verimi ve konforu yakalayın. Sezon fırsatını kaçırmadan hemen WhatsApp'tan siparişinizi oluşturun."
     - Uzunluk: 12-16 kelime arasında, tek ana mesaj ve tek net çağrı içermelidir.
@@ -1249,9 +1249,16 @@ async function generateVideoOnFlow(options = {}) {
   }
 
   const brand = options.brandName || options.customer || 'Markamız';
-  const voiceScript = dynamicVoiceScript || options.script || options.brief || `${brand} ile projelerinize sağlam temel ve üstün dayanıklılık.`;
+  const voiceScript = options.voiceoverText || dynamicVoiceScript || options.script || options.brief || `${brand} ile projelerinize sağlam temel ve üstün dayanıklılık.`;
   options.dynamicVoiceover = voiceScript;
   options.voiceoverText = voiceScript;
+
+  if (options.voiceoverText && prompt && prompt.includes('AUDIO:')) {
+    prompt = prompt.replace(
+      /AUDIO:\s*Professional crystal-clear Turkish commercial voiceover spoken ONCE between 0.5s and 5.5s with zero repetition, zero looping, and zero echo:\s*"[^"]*"/,
+      `AUDIO: Professional crystal-clear Turkish commercial voiceover spoken ONCE between 0.5s and 5.5s with zero repetition, zero looping, and zero echo: "${voiceScript}"`
+    );
+  }
 
   if (!/(?:KONUŞMA DİLİ|SPİKERİN AYNEN|SES VE KONUŞMA|ZORUNLU SES DİLİ)/i.test(prompt)) {
     prompt = `KONUŞMA DİLİ TÜRKÇE (tr-TR). Bu üretim sessiz video değildir; aşağıda verilen Türkçe dış ses videoda duyulmalıdır.\n` +

@@ -382,6 +382,8 @@ export async function startCreativeGeneration(
     subtitles: draft.subtitles !== false && draft.subtitles !== '0' && draft.subtitles !== 'false',
     videoScenarioPrompt: String(draft.videoScenarioPrompt ?? '').trim() || null,
     videoScenarioTitle: String(draft.videoScenarioTitle ?? '').trim() || null,
+    customVoiceover: String(draft.customVoiceover ?? '').trim() || null,
+    voiceoverScript: String(draft.customVoiceover ?? '').trim() || null,
     referenceImageUrls: Array.isArray(draft.referenceImageUrls)
       ? draft.referenceImageUrls.map(String).filter((u) => u.startsWith('http')).slice(0, 5)
       : [],

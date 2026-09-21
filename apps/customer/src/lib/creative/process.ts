@@ -297,6 +297,7 @@ export async function processCreativeGeneration(
             logoUrl,
           },
           videoSpeech: (snapshot as any).videoSpeech !== false,
+          customVoiceover: (snapshot as any).customVoiceover || null,
         })
         videoPrompt = v5Result.veoPrompt
         console.log('[CreativeProcess] V5 Video Engine promptu başarıyla derlendi (continuous_take):', videoPrompt.slice(0, 100))
@@ -324,6 +325,7 @@ export async function processCreativeGeneration(
             preferredEngine: 'flow',
             engine: 'flow',
             useFlow: true,
+            voiceoverText: (snapshot as any).customVoiceover || null,
             brandName: overlay.brandName,
             productName: chosenProduct?.name || null,
             productImageUrl,

@@ -101,6 +101,7 @@ type Draft = {
   subtitles?: boolean
   videoScenarioPrompt?: string
   videoScenarioTitle?: string
+  customVoiceover?: string
   videoPurpose?: 'tanitim' | 'kampanya' | 'yeni_urun'
   offerDetails?: string
   moreSettingsOpen?: boolean
@@ -153,6 +154,7 @@ function defaultDraft(data: WizardBootstrap, initialFormat?: string): Draft {
     subtitles: true,
     videoScenarioPrompt: '',
     videoScenarioTitle: '',
+    customVoiceover: '',
     videoPurpose: 'tanitim',
     offerDetails: '',
     moreSettingsOpen: false,
@@ -239,14 +241,57 @@ export function CreativeWizard({
   const stepIndex = activeSteps.findIndex((row) => row.id === step)
   const selectedKit = data.kits.find((kit) => kit.id === draft.brandKitId)
   const selectedProducts = productsList.filter((product) => draft.productIds.includes(product.id))
+
+  const currentProductName = selectedProducts[0]?.name?.trim() || 'Ürünümüz'
+  const currentBrandName = selectedKit?.name || data.org.name || 'İşletmemiz'
+  const currentOffer = draft.offerDetails?.trim()
+
+  const defaultVoiceover = useMemo(() => {
+    if (draft.videoPurpose === 'kampanya') {
+      return `${currentBrandName} güvencesiyle ${currentProductName}${currentOffer ? `: ${currentOffer}` : ''}. Avantajlı fiyatlar ve hızlı sipariş için hemen WhatsApp ile iletişime geçin.`
+    }
+    if (draft.videoPurpose === 'yeni_urun') {
+      return `${currentBrandName} yeni ${currentProductName} ile tanışın. Yüksek kalite ve üstün performans bir arada. Detaylar için hemen yazın.`
+    }
+    return `${currentBrandName} kalitesi ve güvencesiyle ${currentProductName}. Projenize özel avantajlı fabrika fiyatları için hemen WhatsApp ile ulaşın.`
+  }, [currentBrandName, currentProductName, currentOffer, draft.videoPurpose])
+
+  const activeVoiceoverText = (draft.customVoiceover && draft.customVoiceover.trim().length > 0)
+    ? draft.customVoiceover
+    : defaultVoiceover
+
+  const voiceoverWordCount = useMemo(() => {
+    return activeVoiceoverText.trim().split(/\s+/).filter(Boolean).length
+  }, [activeVoiceoverText])
+
+  const voiceoverPresets = useMemo(() => [
+    {
+      label: '⚡ Fırsat & Kampanya',
+      text: `${currentBrandName} güvencesiyle ${currentProductName}${currentOffer ? `: ${currentOffer}` : ''}. Avantajlı fiyat ve hızlı sipariş için hemen WhatsApp ile iletişime geçin.`,
+    },
+    {
+      label: '⭐ Kalite & Güven',
+      text: `${currentBrandName} kalitesiyle üretilen ${currentProductName}, işinize değer katar. Avantajlı fabrika fiyatları için hemen WhatsApp ile yazın.`,
+    },
+    {
+      label: '🚚 Hızlı Teslimat',
+      text: `${currentBrandName} ${currentProductName} stoktan hızlı teslimat avantajıyla doğrudan adresinizde. Teklif almak için hemen mesaj atın.`,
+    },
+    {
+      label: '🎯 Ürün Lansmanı',
+      text: `${currentBrandName} yeni ${currentProductName} ile tanışın. Üstün performans ve dayanıklılık bir arada. Bilgi almak için hemen yazın.`,
+    },
+  ], [currentBrandName, currentProductName, currentOffer])
+
   const payload = useMemo(
     () =>
       JSON.stringify({
         ...draft,
+        customVoiceover: activeVoiceoverText,
         generationType: draft.origin === 'derive' ? 'derived' : 'new',
         useLogo: draft.useLogo,
       }),
-    [draft],
+    [draft, activeVoiceoverText],
   )
 
   const go = (next: Step) => setStep(next)
@@ -1679,31 +1724,70 @@ export function CreativeWizard({
                 </div>
               </div>
 
-              {/* Reklam Amacı / Metin Özeti & Türkçe Seslendirme */}
-              <div className="rounded-lg border border-hairline bg-canvas p-3.5 space-y-2.5">
+              {/* 🎙️ Spiker Seslendirme Metni (Transcript Ön Onayı) */}
+              <div className="rounded-xl border-2 border-emerald-500/30 bg-emerald-50/40 p-4 space-y-3.5 shadow-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11.5px] font-semibold text-[#667781] uppercase tracking-wider">Reklam Amacı</span>
-                  <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-[12px] font-bold text-[#008069] border border-emerald-200">
-                    {draft.videoPurpose === 'kampanya' ? 'Kampanya / Teklif' : draft.videoPurpose === 'yeni_urun' ? 'Yeni Ürün Lansmanı' : 'Kurumsal Tanıtım'}
+                  <div className="flex items-center gap-2">
+                    <span className="flex size-7 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-sm">
+                      <Icon name="mic" className="size-4" />
+                    </span>
+                    <div>
+                      <p className="text-[13.5px] font-bold text-[#111b21]">🎙️ Spiker Seslendirme Metni (Transcript)</p>
+                      <p className="text-[11.5px] text-[#667781]">Videonuzda Türkçe spikerin ve altyazının okuyacağı metin</p>
+                    </div>
+                  </div>
+                  <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11.5px] font-bold text-emerald-800 border border-emerald-300">
+                    Ön Onaylı Metin
                   </span>
                 </div>
-                {draft.videoPurpose === 'kampanya' && draft.offerDetails ? (
-                  <div>
-                    <p className="text-[11.5px] text-[#667781]">Teklif / Kampanya Şartı:</p>
-                    <p className="text-[13px] font-semibold text-[#111b21] mt-0.5">{draft.offerDetails}</p>
+
+                {/* Düzenlenebilir Metin Kutusu */}
+                <div>
+                  <Textarea
+                    value={activeVoiceoverText}
+                    onChange={(e) => patch({ customVoiceover: e.target.value })}
+                    rows={3}
+                    className="w-full rounded-lg border border-emerald-300 bg-white p-3 text-[13.5px] font-medium text-[#111b21] shadow-inner focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                    placeholder="Spikerin söylemesini istediğiniz Türkçe reklam repliğini buraya yazın veya düzenleyin..."
+                  />
+                  <div className="mt-1.5 flex items-center justify-between text-[11.5px]">
+                    <span className={voiceoverWordCount > 18 ? 'text-amber-700 font-semibold' : 'text-[#667781]'}>
+                      {voiceoverWordCount} kelime · Tahmini seslendirme: ~{(voiceoverWordCount * 0.45).toFixed(1)} sn (İdeal: 10-15 kelime)
+                    </span>
+                    {draft.customVoiceover && (
+                      <button
+                        type="button"
+                        onClick={() => patch({ customVoiceover: '' })}
+                        className="text-emerald-700 hover:underline font-medium cursor-pointer"
+                      >
+                        Varsayılan Metne Dön
+                      </button>
+                    )}
                   </div>
-                ) : null}
-                <div className="border-t border-hairline pt-2">
-                  <p className="text-[11.5px] font-semibold text-[#667781] uppercase tracking-wider">Türkçe Seslendirme Metni</p>
-                  <p className="text-[12.5px] text-[#111b21] mt-1 leading-relaxed">
-                    {draft.videoPurpose === 'kampanya'
-                      ? `"${data.org.name || 'İşletmemiz'} özel kampanyası: ${draft.offerDetails}. Avantajlı fiyatlar ve hızlı sipariş için hemen WhatsApp ile iletişime geçin."`
-                      : draft.videoPurpose === 'yeni_urun'
-                      ? `"${data.org.name || 'İşletmemiz'} yeni ${selectedProducts[0]?.name || 'ürünümüz'} ile tanışın. Kalite, dayanıklılık ve estetik bir arada. Detaylı bilgi için hemen yazın."`
-                      : `"${data.org.name || 'İşletmemiz'} kalitesi ve güvencesiyle üretilen ${selectedProducts[0]?.name || 'ürünlerimiz'} projelerinize değer katar. Detaylar için WhatsApp ile iletişime geçin."`}
-                  </p>
-                  <p className="text-[11px] text-[#667781] mt-1">
-                    * Canlı ChatGPT servisi, seçtiğiniz ürün ve marka kitine göre repliği en doğal Türkçe reklam tonuyla zenginleştirecektir.
+                </div>
+
+                {/* Hızlı Replik Önerileri (AI Alternatifleri) */}
+                <div className="space-y-1.5 pt-1">
+                  <p className="text-[11.5px] font-semibold text-[#667781] uppercase tracking-wider">Hızlı AI Alternatifleri (Tıkla ve Seç):</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {voiceoverPresets.map((preset, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => patch({ customVoiceover: preset.text })}
+                        className="rounded-full border border-emerald-200 bg-white px-3 py-1 text-[12px] font-semibold text-emerald-800 hover:bg-emerald-50 hover:border-emerald-300 transition-colors shadow-2xs cursor-pointer"
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Garanti ve Onay Kutucuğu */}
+                <div className="rounded-lg border border-emerald-200 bg-white/80 p-2.5 flex items-start gap-2 text-[12px] text-emerald-900">
+                  <span className="text-emerald-600 font-bold text-sm mt-[-1px]">✓</span>
+                  <p className="leading-snug">
+                    <strong>Birebir Okuma Güvencesi:</strong> Spiker ve senkronize altyazı motoru videoda sadece bu onayladığınız metni okur. Firmanızın satmadığı ürün veya kelimeler kesinlikle söylenmez.
                   </p>
                 </div>
               </div>
@@ -1731,7 +1815,7 @@ export function CreativeWizard({
                 </Button>
                 <Button
                   type="submit"
-                  className="wb-wa-submit flex-2 h-11 text-[13.5px] font-semibold"
+                  className="wb-wa-submit flex-2 h-11 text-[13.5px] font-semibold !bg-[#008069] hover:!bg-[#00a884] text-white shadow-md"
                   disabled={
                     pending ||
                     !data.canManage ||
@@ -1740,7 +1824,7 @@ export function CreativeWizard({
                     !hasValidVideoProduct
                   }
                 >
-                  {pending ? 'Video Prodüksiyonu Başlatılıyor…' : 'Videoyu Oluştur'}
+                  {pending ? 'Video Prodüksiyonu Başlatılıyor…' : '✓ Metni Onayla ve Videoyu Üret'}
                 </Button>
               </div>
               {!data.canManage ? <Notice tone="warn">Üretim için yönetici gerekir.</Notice> : null}
