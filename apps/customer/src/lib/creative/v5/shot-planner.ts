@@ -44,6 +44,7 @@ export const V5_STANDARD_NEGATIVES = [
   'fake phone numbers, fake URLs, discount badges, graphic overlays, lower thirds, floating banners, text cards',
   'cartoon, 3D animation look, cgi render, uncanny valley',
   'spinning laptop, rotating laptop, turntable spin, rotating table, motorized rotation, spinning gadget, 360 degree turntable, levitating objects',
+  'laptop manufacturer logo, text on laptop bezel, laptop brand name, hardware logo, text on screen frame, screen bezel text, macbook text, notebook text, keyboard text, keyboard gibberish, fake laptop brand, MeBesuk, branding on hardware, unbranded hardware violations',
   'blurry artifacts, low quality, pixelated, amateur video, choppy jumps, abrupt view shifts, jerky camera',
 ].join(', ')
 
@@ -148,7 +149,7 @@ export function planShots(
   } else if (ontology.primaryAffordance === 'apply_spray_mist') {
     shot2Action = `The equipment (${subject}) operates smoothly, releasing an ultra-fine micronized mist spray over verdant orchard foliage.`
   } else if (ontology.offerType === 'digital_product_or_saas') {
-    shot2Action = `The digital platform (${subject}) performs live radar business scanning on a premium laptop screen with clean glowing pin indicators. The laptop rests firmly stationary and flat on the desk with zero rotation or spinning.`
+    shot2Action = `The digital platform (${subject}) performs live radar business scanning on a premium laptop screen with clean glowing pin indicators. The laptop rests firmly stationary and flat on the desk with zero rotation or spinning. The laptop hardware is completely sterile and unbranded with a completely blank black matte screen bezel, zero laptop manufacturer logos, zero text on screen frame or hinge.`
   }
 
   const shot2: ShotItem = {
