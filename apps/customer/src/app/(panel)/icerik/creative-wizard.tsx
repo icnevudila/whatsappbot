@@ -15,7 +15,7 @@ import {
   TEXT_DENSITIES,
   type ProductFieldKey,
 } from '@/lib/creative/types'
-import { startCreativeGeneration, uploadLibraryImage, type CreativeActionState } from './actions'
+import { startCreativeGeneration, uploadLibraryImage, uploadAssetOnly, type CreativeActionState } from './actions'
 import { DEFAULT_INCLUDE, type ProductCard, type SocialOption, type WizardBootstrap } from './wizard-types'
 import { AddProductModal } from './add-product-modal'
 import { AddSocialModal } from './add-social-modal'
@@ -266,19 +266,19 @@ export function CreativeWizard({
 
   const voiceoverPresets = useMemo(() => [
     {
-      label: '⚡ Fırsat & Kampanya',
+      label: 'Fırsat & Kampanya',
       text: `${currentBrandName} güvencesiyle ${currentProductName}${currentOffer ? `: ${currentOffer}` : ''}. Avantajlı fiyat ve hızlı sipariş için hemen WhatsApp ile iletişime geçin.`,
     },
     {
-      label: '⭐ Kalite & Güven',
+      label: 'Kalite & Güven',
       text: `${currentBrandName} kalitesiyle üretilen ${currentProductName}, işinize değer katar. Avantajlı fabrika fiyatları için hemen WhatsApp ile yazın.`,
     },
     {
-      label: '🚚 Hızlı Teslimat',
+      label: 'Hızlı Teslimat',
       text: `${currentBrandName} ${currentProductName} stoktan hızlı teslimat avantajıyla doğrudan adresinizde. Teklif almak için hemen mesaj atın.`,
     },
     {
-      label: '🎯 Ürün Lansmanı',
+      label: 'Ürün Tanıtımı',
       text: `${currentBrandName} yeni ${currentProductName} ile tanışın. Üstün performans ve dayanıklılık bir arada. Bilgi almak için hemen yazın.`,
     },
   ], [currentBrandName, currentProductName, currentOffer])
@@ -670,7 +670,7 @@ export function CreativeWizard({
                         setUploading(true)
                         const form = new FormData()
                         form.set('file', file)
-                        const res = await uploadLibraryImage(form)
+                        const res = await uploadAssetOnly(form, 'logos')
                         setUploading(false)
                         if (res?.publicUrl) {
                           patch({ customLogoUrl: res.publicUrl })
@@ -790,7 +790,7 @@ export function CreativeWizard({
                             setUploading(true)
                             const form = new FormData()
                             form.set('file', file)
-                            const res = await uploadLibraryImage(form)
+                            const res = await uploadAssetOnly(form, 'products')
                             setUploading(false)
                             if (res?.publicUrl) {
                               patch({
@@ -886,7 +886,7 @@ export function CreativeWizard({
                         setUploading(true)
                         const form = new FormData()
                         form.set('file', file)
-                        const res = await uploadLibraryImage(form)
+                        const res = await uploadAssetOnly(form, 'references')
                         setUploading(false)
                         if (res?.publicUrl) {
                           const current = draft.referenceImageUrls || []
@@ -1049,7 +1049,7 @@ export function CreativeWizard({
                               setUploading(true)
                               const form = new FormData()
                               form.set('file', file)
-                              const res = await uploadLibraryImage(form)
+                              const res = await uploadAssetOnly(form, 'products')
                               setUploading(false)
                               if (res?.publicUrl) {
                                 patch({
@@ -1112,7 +1112,7 @@ export function CreativeWizard({
                               setUploading(true)
                               const form = new FormData()
                               form.set('file', file)
-                              const res = await uploadLibraryImage(form)
+                              const res = await uploadAssetOnly(form, 'products')
                               setUploading(false)
                               if (res?.publicUrl) {
                                 patch({
@@ -1457,7 +1457,7 @@ export function CreativeWizard({
                           try {
                             const form = new FormData()
                             form.append('file', file)
-                            const res = await uploadLibraryImage(form)
+                            const res = await uploadAssetOnly(form, 'logos')
                             if (res?.publicUrl) patch({ customLogoUrl: res.publicUrl })
                           } finally {
                             setUploading(false)
@@ -1490,7 +1490,7 @@ export function CreativeWizard({
                         try {
                           const form = new FormData()
                           form.append('file', file)
-                          const res = await uploadLibraryImage(form)
+                          const res = await uploadAssetOnly(form, 'logos')
                           if (res?.publicUrl) patch({ customLogoUrl: res.publicUrl })
                         } finally {
                           setUploading(false)
@@ -1724,20 +1724,20 @@ export function CreativeWizard({
                 </div>
               </div>
 
-              {/* 🎙️ Spiker Seslendirme Metni (Transcript Ön Onayı) */}
-              <div className="rounded-xl border-2 border-emerald-500/30 bg-emerald-50/40 p-4 space-y-3.5 shadow-sm">
+              {/* Spiker Seslendirme Metni (Ön Onay) */}
+              <div className="rounded-xl border border-hairline bg-surface p-4 space-y-3.5 shadow-2xs">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="flex size-7 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-sm">
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex size-7 items-center justify-center rounded-lg bg-[#e7f8f2] text-[#008069]">
                       <Icon name="mic" className="size-4" />
                     </span>
                     <div>
-                      <p className="text-[13.5px] font-bold text-[#111b21]">🎙️ Spiker Seslendirme Metni (Transcript)</p>
-                      <p className="text-[11.5px] text-[#667781]">Videonuzda Türkçe spikerin ve altyazının okuyacağı metin</p>
+                      <p className="text-[13.5px] font-semibold text-[#111b21]">Seslendirme Metni</p>
+                      <p className="text-[11.5px] text-[#667781]">Videoda spikerin okuyacağı ve altyazıda yer alacak metin</p>
                     </div>
                   </div>
-                  <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11.5px] font-bold text-emerald-800 border border-emerald-300">
-                    Ön Onaylı Metin
+                  <span className="inline-flex items-center rounded-md bg-[#e7f8f2] px-2 py-0.5 text-[11px] font-medium text-[#008069] border border-[#00a884]/30">
+                    Ön Onaylı
                   </span>
                 </div>
 
@@ -1747,18 +1747,18 @@ export function CreativeWizard({
                     value={activeVoiceoverText}
                     onChange={(e) => patch({ customVoiceover: e.target.value })}
                     rows={3}
-                    className="w-full rounded-lg border border-emerald-300 bg-white p-3 text-[13.5px] font-medium text-[#111b21] shadow-inner focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                    placeholder="Spikerin söylemesini istediğiniz Türkçe reklam repliğini buraya yazın veya düzenleyin..."
+                    className="w-full rounded-lg border border-[#d1d7db] bg-white p-3 text-[13.5px] font-normal text-[#111b21] focus:border-[#008069] focus:ring-1 focus:ring-[#008069]"
+                    placeholder="Spikerin okumasını istediğiniz reklam repliğini buraya yazın veya düzenleyin..."
                   />
                   <div className="mt-1.5 flex items-center justify-between text-[11.5px]">
-                    <span className={voiceoverWordCount > 18 ? 'text-amber-700 font-semibold' : 'text-[#667781]'}>
-                      {voiceoverWordCount} kelime · Tahmini seslendirme: ~{(voiceoverWordCount * 0.45).toFixed(1)} sn (İdeal: 10-15 kelime)
+                    <span className={voiceoverWordCount > 18 ? 'text-amber-700 font-medium' : 'text-[#667781]'}>
+                      {voiceoverWordCount} kelime · Tahmini süre: ~{(voiceoverWordCount * 0.45).toFixed(1)} sn (Önerilen: 10-15 kelime)
                     </span>
                     {draft.customVoiceover && (
                       <button
                         type="button"
                         onClick={() => patch({ customVoiceover: '' })}
-                        className="text-emerald-700 hover:underline font-medium cursor-pointer"
+                        className="text-[#008069] hover:underline font-medium cursor-pointer"
                       >
                         Varsayılan Metne Dön
                       </button>
@@ -1766,16 +1766,16 @@ export function CreativeWizard({
                   </div>
                 </div>
 
-                {/* Hızlı Replik Önerileri (AI Alternatifleri) */}
-                <div className="space-y-1.5 pt-1">
-                  <p className="text-[11.5px] font-semibold text-[#667781] uppercase tracking-wider">Hızlı AI Alternatifleri (Tıkla ve Seç):</p>
+                {/* Hızlı Replik Şablonları */}
+                <div className="space-y-1.5 pt-0.5">
+                  <p className="text-[11px] font-semibold text-[#667781]">Hazır Replik Şablonları:</p>
                   <div className="flex flex-wrap gap-1.5">
                     {voiceoverPresets.map((preset, idx) => (
                       <button
                         key={idx}
                         type="button"
                         onClick={() => patch({ customVoiceover: preset.text })}
-                        className="rounded-full border border-emerald-200 bg-white px-3 py-1 text-[12px] font-semibold text-emerald-800 hover:bg-emerald-50 hover:border-emerald-300 transition-colors shadow-2xs cursor-pointer"
+                        className="rounded-md border border-[#e9edef] bg-white px-2.5 py-1 text-[12px] font-medium text-[#111b21] hover:bg-[#f0f2f5] hover:border-[#d1d7db] transition-colors cursor-pointer"
                       >
                         {preset.label}
                       </button>
@@ -1784,10 +1784,10 @@ export function CreativeWizard({
                 </div>
 
                 {/* Garanti ve Onay Kutucuğu */}
-                <div className="rounded-lg border border-emerald-200 bg-white/80 p-2.5 flex items-start gap-2 text-[12px] text-emerald-900">
-                  <span className="text-emerald-600 font-bold text-sm mt-[-1px]">✓</span>
+                <div className="rounded-lg border border-[#e9edef] bg-[#f8fafb] p-2.5 flex items-start gap-2 text-[12px] text-[#3b4a54]">
+                  <Icon name="check" className="size-4 text-[#008069] shrink-0 mt-0.5" />
                   <p className="leading-snug">
-                    <strong>Birebir Okuma Güvencesi:</strong> Spiker ve senkronize altyazı motoru videoda sadece bu onayladığınız metni okur. Firmanızın satmadığı ürün veya kelimeler kesinlikle söylenmez.
+                    <span className="font-semibold text-[#111b21]">Birebir Okuma Garantisi:</span> Spiker ve altyazı motoru videoda sadece bu onayladığınız metni okur.
                   </p>
                 </div>
               </div>
@@ -1815,7 +1815,7 @@ export function CreativeWizard({
                 </Button>
                 <Button
                   type="submit"
-                  className="wb-wa-submit flex-2 h-11 text-[13.5px] font-semibold !bg-[#008069] hover:!bg-[#00a884] text-white shadow-md"
+                  className="wb-wa-submit flex-2 h-11 text-[13.5px] font-semibold !bg-[#008069] hover:!bg-[#00a884] text-white shadow-sm"
                   disabled={
                     pending ||
                     !data.canManage ||
@@ -1824,7 +1824,7 @@ export function CreativeWizard({
                     !hasValidVideoProduct
                   }
                 >
-                  {pending ? 'Video Prodüksiyonu Başlatılıyor…' : '✓ Metni Onayla ve Videoyu Üret'}
+                  {pending ? 'Video Prodüksiyonu Başlatılıyor…' : 'Metni Onayla ve Videoyu Üret'}
                 </Button>
               </div>
               {!data.canManage ? <Notice tone="warn">Üretim için yönetici gerekir.</Notice> : null}

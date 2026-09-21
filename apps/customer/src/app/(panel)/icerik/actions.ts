@@ -535,6 +535,7 @@ export async function listLibraryCreatives({
       .from('creatives')
       .select('id, title, public_url, status, source, generation_type, created_at, error, parent_id, format, payload')
       .eq('org_id', org.id)
+      .neq('source', 'upload')
       .order('created_at', { ascending: sort === 'old' })
       .range(start, start + size - 1)
     const term = query.trim()
@@ -613,6 +614,34 @@ export async function uploadLibraryImage(formData: FormData): Promise<CreativeAc
     if (error || !data) return { error: error?.message ?? 'Kayıt açılamadı.' }
     revalidateLibrary(data.id)
     return { ok: 'Görsel yüklendi.', id: data.id, publicUrl: publicUrl.publicUrl }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum yok.' }
+  }
+}
+
+/** Yalnızca materyal yükler (Logo, ürün fotoğrafı, referans görsel). Creatives tablosuna kayıt ATMAZ, kütüphaneyi kirletmez. */
+export async function uploadAssetOnly(
+  formData: FormData,
+  folder: 'logos' | 'products' | 'references' = 'products',
+): Promise<{ error?: string; publicUrl?: string }> {
+  const files = collectImageFiles(formData, 'file')
+  const file = files[0]
+  if (!file) return { error: 'PNG, JPG veya WEBP seçin (en fazla 5 MB).' }
+  const parsed = await readImageFile(file)
+  if ('error' in parsed && parsed.error) return { error: parsed.error }
+  if (!('buffer' in parsed)) return { error: 'Dosya okunamadı.' }
+
+  try {
+    const { org, supabase } = await requireActiveOrg()
+    if (!isOrgAdminRole(org.role)) return { error: 'Yetki yok.' }
+    const path = `${org.id}/${folder}/${crypto.randomUUID()}.${parsed.ext}`
+    const { error: upError } = await supabase.storage.from('creatives').upload(path, parsed.buffer, {
+      contentType: parsed.mime,
+      upsert: false,
+    })
+    if (upError) return { error: upError.message }
+    const { data: publicUrl } = supabase.storage.from('creatives').getPublicUrl(path)
+    return { publicUrl: publicUrl.publicUrl }
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Oturum yok.' }
   }
