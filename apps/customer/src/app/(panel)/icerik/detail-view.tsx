@@ -308,18 +308,30 @@ export function CreativeDetail({
   const shownError = localError || (creative.status === 'failed' ? creative.error : null)
   const spinning = (running && !localError) || busyRender
 
-  async function requestRender() {
+  async function requestRender(): Promise<{
+    error: string | null
+    pending: boolean
+    retryAfterSeconds?: number
+  }> {
     const response = await fetch('/api/icerik/render', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ id: creative.id }),
-      signal: AbortSignal.timeout(70_000),
+      signal: AbortSignal.timeout(25_000),
     })
-    const json = (await response.json().catch(() => null)) as { error?: string } | null
+    const json = (await response.json().catch(() => null)) as {
+      ok?: boolean
+      pending?: boolean
+      retryAfterSeconds?: number
+      error?: string
+    } | null
     if (!response.ok) {
-      return json?.error ?? 'Görsel üretilemedi.'
+      return { error: json?.error ?? 'Görsel üretilemedi.', pending: false }
     }
-    return null
+    if (json?.pending || response.status === 202) {
+      return { error: null, pending: true, retryAfterSeconds: json?.retryAfterSeconds ?? 5 }
+    }
+    return { error: null, pending: false }
   }
 
   useEffect(() => {
@@ -342,16 +354,58 @@ export function CreativeDetail({
     kicked.current = true
     setBusyRender(true)
     setLocalError(null)
-    void requestRender()
-      .then((error) => {
-        if (error) setLocalError(error)
-        router.refresh()
-      })
-      .catch((error: unknown) => {
-        const timedOut = error instanceof Error && error.name === 'TimeoutError'
-        setLocalError(timedOut ? 'Üretim zaman aşımına uğradı.' : 'Üretim başlatılamadı.')
-      })
-      .finally(() => setBusyRender(false))
+
+    let isMounted = true
+    let pollTimer: ReturnType<typeof setTimeout> | null = null
+    const startTime = Date.now()
+    const MAX_WAIT_MS = 6 * 60 * 1000 // 6 minutes max
+
+    async function pollLoop() {
+      if (!isMounted) return
+      if (Date.now() - startTime > MAX_WAIT_MS) {
+        setLocalError('Üretim zaman aşımına uğradı. Sayfayı yenileyip tekrar deneyebilirsiniz.')
+        setBusyRender(false)
+        return
+      }
+
+      try {
+        const res = await requestRender()
+        if (!isMounted) return
+
+        if (res.error) {
+          setLocalError(res.error)
+          setBusyRender(false)
+          router.refresh()
+          return
+        }
+
+        if (res.pending) {
+          router.refresh()
+          const delay = (res.retryAfterSeconds || 5) * 1000
+          pollTimer = setTimeout(pollLoop, Math.max(3000, delay))
+        } else {
+          setLocalError(null)
+          setBusyRender(false)
+          router.refresh()
+        }
+      } catch (err: unknown) {
+        if (!isMounted) return
+        console.warn('[detail-view] poll error:', err)
+        if (Date.now() - startTime < MAX_WAIT_MS) {
+          pollTimer = setTimeout(pollLoop, 5000)
+        } else {
+          setLocalError('Bağlantı hatası veya zaman aşımı.')
+          setBusyRender(false)
+        }
+      }
+    }
+
+    void pollLoop()
+
+    return () => {
+      isMounted = false
+      if (pollTimer) clearTimeout(pollTimer)
+    }
   }, [canManage, creative.id, creative.status, router])
 
   useEffect(() => {
@@ -388,7 +442,6 @@ export function CreativeDetail({
   const retryNow = () => {
     setLocalError(null)
     setBusyRender(true)
-    kicked.current = true
     startTransition(() => {
       void retryCreative(creative.id).then(async (result) => {
         if (result?.error) {
@@ -396,15 +449,8 @@ export function CreativeDetail({
           setBusyRender(false)
           return
         }
-        try {
-          const error = await requestRender()
-          if (error) setLocalError(error)
-        } catch (error) {
-          const timedOut = error instanceof Error && error.name === 'TimeoutError'
-          setLocalError(timedOut ? 'Üretim zaman aşımına uğradı.' : 'Üretim başlatılamadı.')
-        }
+        kicked.current = false
         router.refresh()
-        setBusyRender(false)
       })
     })
   }

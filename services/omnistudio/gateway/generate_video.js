@@ -1463,7 +1463,7 @@ async function generateVideoOnFlow(options = {}) {
 
       await send('Runtime.evaluate', {
         expression: `(async () => {
-          const cards = Array.from(document.querySelectorAll('.tile-row.virtual-item-container, flow-media-tile, div[class*="tile"]'));
+          const cards = Array.from(document.querySelectorAll('flow-grid-tile-container, .tile-row.virtual-item-container, flow-media-tile, div[class*="tile"]'));
           const card = cards[${ci}];
           if (!card) return false;
           const moreBtn = card.querySelector('button[aria-label="More options"]') || card.querySelector('button');
@@ -1509,7 +1509,7 @@ async function generateVideoOnFlow(options = {}) {
 
         await send('Runtime.evaluate', {
           expression: `(async () => {
-            const cards = Array.from(document.querySelectorAll('.tile-row.virtual-item-container, flow-media-tile, div[class*="tile"]'));
+            const cards = Array.from(document.querySelectorAll('flow-grid-tile-container, .tile-row.virtual-item-container, flow-media-tile, div[class*="tile"]'));
             const card = cards[${ci}];
             if (!card) return false;
             const moreBtn = card.querySelector('button[aria-label="More options"]') || card.querySelector('button');
@@ -1801,7 +1801,7 @@ async function generateVideoOnFlow(options = {}) {
                   document.querySelector('video[src]') ||
                   document.querySelector('video');
         const currentSrc = v ? (v.currentSrc || v.src || '') : '';
-        const tiles = document.querySelectorAll('.tile, flow-tile, flow-media-tile, div[class*="tile"], div[class*="virtual-item"]');
+        const tiles = document.querySelectorAll('flow-grid-tile-container, .tile, flow-tile, flow-media-tile, div[class*="tile"], div[class*="virtual-item"]');
 
         return {
           status: isGenerating ? 'rendering' : 'ready',
@@ -1853,7 +1853,7 @@ async function generateVideoOnFlow(options = {}) {
   try {
     await send('Runtime.evaluate', {
       expression: `(() => {
-        const tiles = Array.from(document.querySelectorAll('.tile, flow-tile, flow-media-tile, div[class*="tile"], div[class*="virtual-item"]'));
+        const tiles = Array.from(document.querySelectorAll('flow-grid-tile-container, .tile, flow-tile, flow-media-tile, div[class*="tile"], div[class*="virtual-item"]'));
         if (tiles.length > 0) {
           const lastTile = tiles[tiles.length - 1];
           lastTile.scrollIntoView({ behavior: 'instant', block: 'center' });
@@ -1882,7 +1882,7 @@ async function generateVideoOnFlow(options = {}) {
     const captureRes = await send('Runtime.evaluate', {
       expression: `(async () => {
         // En son üretilen video tile'ını bul ve oynatıcıya yükle
-        const tiles = Array.from(document.querySelectorAll('.tile, flow-tile, flow-media-tile, div[class*="tile"], div[class*="virtual-item"]'));
+        const tiles = Array.from(document.querySelectorAll('flow-grid-tile-container, .tile, flow-tile, flow-media-tile, div[class*="tile"], div[class*="virtual-item"]'));
         if (tiles.length > 0) {
           const lastTile = tiles[tiles.length - 1];
           lastTile.scrollIntoView({ behavior: 'instant', block: 'center' });
