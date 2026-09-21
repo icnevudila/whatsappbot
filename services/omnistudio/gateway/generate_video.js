@@ -1934,27 +1934,32 @@ async function generateVideoOnFlow(options = {}) {
   }
 
   // 6. Download butonuna tıkla (Doğrudan yakalanamadıysa yedek yol)
+  // 6. Download butonuna tıkla (Doğrudan yakalanamadıysa yedek yol)
   let downloadTriggered = false;
   if (!capturedDirectly) {
-    // 6.1. Öncelikle en son üretilen videonun play butonuna/tile'ına tıkla ki medya görüntüleyici açılsın
+    // 6.1. Öncelikle en son üretilen videonun kartına tıkla ki medya görüntüleyici açılsın
     console.log(`[Flow Video] 🎬 En son üretilen video kartı açılıyor...`);
     try {
-      await send('Runtime.evaluate', {
+      const tileClickRes = await send('Runtime.evaluate', {
         expression: `(() => {
-          const playBadges = Array.from(document.querySelectorAll('.play-icon-badge, [class*="play-badge"]'));
-          if (playBadges.length > 0) {
-            playBadges[playBadges.length - 1].click();
-            return { ok: true, type: 'playBadge' };
-          }
-          const tiles = Array.from(document.querySelectorAll('flow-media-tile, .tile-row.virtual-item-container, [class*="tile"]'));
+          const tiles = Array.from(document.querySelectorAll('flow-grid-tile-container, flow-media-tile, [class*="tile"]'));
           if (tiles.length > 0) {
-            tiles[tiles.length - 1].click();
-            return { ok: true, type: 'tile' };
+            const lastTile = tiles[tiles.length - 1];
+            const r = lastTile.getBoundingClientRect();
+            if (r.width > 0 && r.height > 0) {
+              return { found: true, x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
+            }
           }
-          return { ok: false };
+          return { found: false };
         })()`,
         returnByValue: true
       });
+
+      if (tileClickRes?.result?.value?.found) {
+        const { x, y } = tileClickRes.result.value;
+        await send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 });
+        await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
+      }
       await sleep(1500);
     } catch (_) {}
 
@@ -1992,214 +1997,121 @@ async function generateVideoOnFlow(options = {}) {
       console.warn('[Flow Video] Stream indirme uyarısı:', streamErr.message);
     }
 
-    // 6.3. İZOLE VE GÜVENİLİR CDP İNDİRME BORU HATTI
-    if (!fs.existsSync(jobDownloadDir)) {
-      fs.mkdirSync(jobDownloadDir, { recursive: true });
-    }
-
-    let downloadGuid = null;
-    let downloadState = null;
-    let suggestedFilename = null;
-    let totalBytes = 0;
-    let receivedBytes = 0;
-
-    const cdpDownloadHandler = (data) => {
-      try {
-        const msg = JSON.parse(data.toString());
-        if (msg.method === 'Browser.downloadWillBegin') {
-          downloadGuid = msg.params.guid;
-          suggestedFilename = msg.params.suggestedFilename;
-          console.log(`[Flow Video] 📥 [CDP] downloadWillBegin: guid=${downloadGuid}, dosya=${suggestedFilename}`);
-        } else if (msg.method === 'Browser.downloadProgress') {
-          if (!downloadGuid || msg.params.guid === downloadGuid) {
-            downloadState = msg.params.state;
-            totalBytes = msg.params.totalBytes;
-            receivedBytes = msg.params.receivedBytes;
-            if (downloadState === 'completed') {
-              console.log(`[Flow Video] ✅ [CDP] İndirme tamamlandı (${receivedBytes} bytes)`);
-            }
-          }
-        }
-      } catch (_) {}
-    };
-    ws.on('message', cdpDownloadHandler);
-
-    try {
-      await send('Browser.setDownloadBehavior', {
-        behavior: 'allow',
-        downloadPath: jobDownloadDir,
-        eventsEnabled: true
-      });
-    } catch (bhErr) {
-      console.warn('[Flow Video] setDownloadBehavior uyarısı:', bhErr.message);
-    }
-
-    // YÖNTEM A: Sahne içi doğrudan "Download media" butonu (asla proje düzeyi export butonunu tıklama!)
-    for (let b = 0; b < 6; b++) {
-      const dlBtn = await send('Runtime.evaluate', {
-        expression: `(() => {
-          // Kesin kural: YALNIZCA sahne içi "Download media" butonunu hedefle (asla proje düzeyi export butonunu değil!)
-          const btn = document.querySelector('button[aria-label="Download media"]') ||
-                      Array.from(document.querySelectorAll('button')).find(b => {
-                        const al = (b.getAttribute('aria-label') || '').toLowerCase();
-                        const t = (b.innerText || '').trim().toLowerCase();
-                        return (al === 'download media' || t === 'download media') && b.getBoundingClientRect().width > 0;
-                      });
-          if (btn) {
-            const r = btn.getBoundingClientRect();
-            if (r.width > 0 && r.height > 0) {
-              return { x: r.left + r.width/2, y: r.top + r.height/2 };
-            }
-          }
-          return null;
-        })()`,
-        returnByValue: true
-      });
-
-      if (dlBtn?.result?.value) {
-        console.log(`[Flow Video] 📥 Sahne indirme butonu bulundu, tıklanıyor (${dlBtn.result.value.x}, ${dlBtn.result.value.y})...`);
-        await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: dlBtn.result.value.x, y: dlBtn.result.value.y, button: 'left', clickCount: 1 });
-        await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: dlBtn.result.value.x, y: dlBtn.result.value.y, button: 'left', clickCount: 1 });
-        await sleep(1200);
-
-        // 1080p, 720p veya Orijinal boyut seçeneğini tıkla
-        const popupRes = await send('Runtime.evaluate', {
-          expression: `(() => {
-            const items = Array.from(document.querySelectorAll('.mat-mdc-menu-item, [role="menuitem"], button'));
-            const opt = items.find(e => {
-              const label = (e.querySelector('.label')?.innerText || '').trim();
-              const caption = (e.querySelector('.caption')?.innerText || '').toLowerCase();
-              const text = (e.innerText || '').toLowerCase();
-              return (
-                label === '1080p' || label === '720p' ||
-                text.includes('1080p') || text.includes('720p') ||
-                caption.includes('orijinal') || caption.includes('original') ||
-                text.includes('orijinal') || text.includes('original') ||
-                text.includes('mp4') || text.includes('indir') || text.includes('download')
-              ) && e.getBoundingClientRect().width > 0;
-            }) || items.find(e => e.getBoundingClientRect().width > 0 && e.getBoundingClientRect().height > 0);
-            if (opt) {
-              const r = opt.getBoundingClientRect();
-              return { found: true, x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2) };
-            }
-            return { found: false };
-          })()`,
-          returnByValue: true
-        });
-
-        if (popupRes?.result?.value?.found) {
-          const { x, y } = popupRes.result.value;
-          console.log(`[Flow Video] 📥 720p Orijinal boyut seçeneği tıklandı (${x}, ${y})...`);
-          await send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 });
-          await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
-          downloadTriggered = true;
-          break;
-        } else {
-          await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: 706, y: 141, button: 'left', clickCount: 1 });
-          await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 706, y: 141, button: 'left', clickCount: 1 });
-          downloadTriggered = true;
-          break;
-        }
+    if (!capturedDirectly) {
+      // 6.3. İZOLE VE GÜVENİLİR CDP İNDİRME BORU HATTI
+      if (!fs.existsSync(jobDownloadDir)) {
+        fs.mkdirSync(jobDownloadDir, { recursive: true });
       }
-      await sleep(1000);
-    }
 
-    // YÖNTEM B: More options menüsünden İndir -> 720p Orijinal boyut (Tile üç nokta menüsü)
-    if (!downloadTriggered) {
-      console.log(`[Flow Video] 📥 Üst buton bulunamadı, More Options menüsü deneniyor...`);
-      const moreRes = await send('Runtime.evaluate', {
-        expression: `(() => {
-          const btns = Array.from(document.querySelectorAll('button[aria-label="More options"], button[aria-label*="seçenek"], button[aria-label*="options"]'));
-          const tileBtn = btns.find(b => {
-            const r = b.getBoundingClientRect();
-            return r.width > 15 && r.width < 50 && r.top > 0;
-          });
-          if (tileBtn) {
-            tileBtn.click();
-            return true;
-          }
-          return false;
-        })()`,
-        returnByValue: true
-      });
+      let downloadGuid = null;
+      let downloadState = null;
+      let suggestedFilename = null;
+      let totalBytes = 0;
+      let receivedBytes = 0;
 
-      if (moreRes?.result?.value) {
-        await sleep(1000);
-        const menuRes = await send('Runtime.evaluate', {
-          expression: `(() => {
-            const items = Array.from(document.querySelectorAll('.mat-mdc-menu-panel [role="menuitem"], .mat-mdc-menu-item, [role="menuitem"]'));
-            const dl = items.find(i => {
-              const t = (i.innerText || '').toLowerCase();
-              return (t.includes('indir') || t.includes('download')) && i.getBoundingClientRect().width > 0;
-            });
-            if (dl) {
-              const r = dl.getBoundingClientRect();
-              return { found: true, x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2) };
+      const cdpDownloadHandler = (data) => {
+        try {
+          const msg = JSON.parse(data.toString());
+          if (msg.method === 'Browser.downloadWillBegin') {
+            downloadGuid = msg.params.guid;
+            suggestedFilename = msg.params.suggestedFilename;
+            console.log(`[Flow Video] 📥 [CDP] downloadWillBegin: guid=${downloadGuid}, dosya=${suggestedFilename}`);
+          } else if (msg.method === 'Browser.downloadProgress') {
+            if (!downloadGuid || msg.params.guid === downloadGuid) {
+              downloadState = msg.params.state;
+              totalBytes = msg.params.totalBytes;
+              receivedBytes = msg.params.receivedBytes;
+              if (downloadState === 'completed') {
+                console.log(`[Flow Video] ✅ [CDP] İndirme tamamlandı (${receivedBytes} bytes)`);
+              }
             }
-            return { found: false };
+          }
+        } catch (_) {}
+      };
+      ws.on('message', cdpDownloadHandler);
+
+      try {
+        await send('Browser.setDownloadBehavior', {
+          behavior: 'allow',
+          downloadPath: jobDownloadDir,
+          eventsEnabled: true
+        });
+      } catch (bhErr) {
+        console.warn('[Flow Video] setDownloadBehavior uyarısı:', bhErr.message);
+      }
+
+      // 6.4. Görüntüleyici içindeki "Download media" butonuna tıkla
+      for (let b = 0; b < 6; b++) {
+        const dlBtn = await send('Runtime.evaluate', {
+          expression: `(() => {
+            const btn = document.querySelector('button[aria-label="Download media"]') ||
+                        Array.from(document.querySelectorAll('button')).find(b => {
+                          const al = (b.getAttribute('aria-label') || '').toLowerCase();
+                          return al === 'download media' && b.getBoundingClientRect().width > 0;
+                        });
+            if (btn) {
+              const r = btn.getBoundingClientRect();
+              if (r.width > 0 && r.height > 0) {
+                return { x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2) };
+              }
+            }
+            return null;
           })()`,
           returnByValue: true
         });
 
-        if (menuRes?.result?.value?.found) {
-          const { x, y } = menuRes.result.value;
-          console.log(`[Flow Video] 📥 'İndir' menü seçeneği bulundu (${x}, ${y}), açılıyor...`);
-          await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
-          await send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 });
-          await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
+        if (dlBtn?.result?.value) {
+          console.log(`[Flow Video] 📥 Sahne indirme butonu bulundu, tıklanıyor (${dlBtn.result.value.x}, ${dlBtn.result.value.y})...`);
+          await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: dlBtn.result.value.x, y: dlBtn.result.value.y, button: 'left', clickCount: 1 });
+          await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: dlBtn.result.value.x, y: dlBtn.result.value.y, button: 'left', clickCount: 1 });
           await sleep(1000);
 
-          const sub720Res = await send('Runtime.evaluate', {
+          // Açılan mat-mdc-menu-panel içindeki 720p veya 1080p seçeneğini tıkla
+          const popupRes = await send('Runtime.evaluate', {
             expression: `(() => {
-              const items = Array.from(document.querySelectorAll('.mat-mdc-menu-panel [role="menuitem"], .mat-mdc-menu-item, [role="menuitem"]'));
-              const btn = items.find(el => {
-                const label = (el.querySelector('.label')?.innerText || '').trim();
-                const caption = (el.querySelector('.caption')?.innerText || '').toLowerCase();
-                const text = (el.innerText || '').toLowerCase();
-                return (
-                  label === '1080p' || label === '720p' ||
-                  text.includes('1080p') || text.includes('720p') ||
-                  caption.includes('orijinal') || caption.includes('original') ||
-                  text.includes('orijinal') || text.includes('original') ||
-                  text.includes('mp4') || text.includes('indir') || text.includes('download')
-                ) && el.getBoundingClientRect().width > 0;
-              }) || items.find(el => el.getBoundingClientRect().width > 0 && el.getBoundingClientRect().height > 0);
-              if (btn) {
-                const r = btn.getBoundingClientRect();
-                return { found: true, x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2) };
+              const menuItems = Array.from(document.querySelectorAll('.mat-mdc-menu-panel .mat-mdc-menu-item, [role="menuitem"]'));
+              const btn720 = menuItems.find(b => {
+                const t = (b.innerText || '').toLowerCase();
+                return (t.includes('720p') || t.includes('original size') || t.includes('orijinal')) && !t.includes('animated') && !t.includes('gif');
+              }) || menuItems.find(b => (b.innerText || '').toLowerCase().includes('1080p'));
+              if (btn720) {
+                const r = btn720.getBoundingClientRect();
+                return { found: true, text: btn720.innerText, x: Math.round(r.left + r.width/2), y: Math.round(r.top + r.height/2) };
               }
               return { found: false };
             })()`,
             returnByValue: true
           });
 
-          if (sub720Res?.result?.value?.found) {
-            const { x: sx, y: sy } = sub720Res.result.value;
-            console.log(`[Flow Video] 🎯 Submenu 720p Orijinal boyut butonuna tıklandı (${sx}, ${sy})!`);
-            await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: sx, y: sy, button: 'left', clickCount: 1 });
-            await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: sx, y: sy, button: 'left', clickCount: 1 });
+          if (popupRes?.result?.value?.found) {
+            const { x, y, text } = popupRes.result.value;
+            console.log(`[Flow Video] 🎯 ${text.replace(/\\n/g, ' ')} seçeneği tıklandı (${x}, ${y})...`);
+            await send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 });
+            await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
             downloadTriggered = true;
+            break;
           }
         }
+        await sleep(1000);
       }
-    }
 
-    console.log(`[Flow Video] 📥 İndirme tetiklendi, CDP olayının tamamlanması bekleniyor...`);
-    for (let w = 0; w < 40; w++) {
-      await sleep(1000);
-      if (downloadState === 'completed') {
-        console.log(`[Flow Video] 🎯 CDP downloadState=completed (${w} sn)!`);
-        break;
-      }
-      if (downloadState === 'canceled') {
-        console.warn(`[Flow Video] ⚠️ CDP downloadState=canceled!`);
-        break;
-      }
-      if (fs.existsSync(jobDownloadDir)) {
-        const dlFiles = fs.readdirSync(jobDownloadDir).filter(f => !f.endsWith('.crdownload'));
-        if (dlFiles.length > 0 && fs.statSync(path.join(jobDownloadDir, dlFiles[0])).size > 300000) {
-          console.log(`[Flow Video] 🎯 jobDownloadDir dosya tespit edildi (${w} sn): ${dlFiles[0]}`);
+      console.log(`[Flow Video] 📥 İndirme tetiklendi (${downloadTriggered}), CDP olayının tamamlanması bekleniyor...`);
+      for (let w = 0; w < 40; w++) {
+        await sleep(1000);
+        if (downloadState === 'completed') {
+          console.log(`[Flow Video] 🎯 CDP downloadState=completed (${w} sn)!`);
           break;
+        }
+        if (downloadState === 'canceled') {
+          console.warn(`[Flow Video] ⚠️ CDP downloadState=canceled!`);
+          break;
+        }
+        if (fs.existsSync(jobDownloadDir)) {
+          const dlFiles = fs.readdirSync(jobDownloadDir).filter(f => !f.endsWith('.crdownload'));
+          if (dlFiles.length > 0 && fs.statSync(path.join(jobDownloadDir, dlFiles[0])).size > 300000) {
+            console.log(`[Flow Video] 🎯 jobDownloadDir dosya tespit edildi (${w} sn): ${dlFiles[0]}`);
+            break;
+          }
         }
       }
     }
@@ -2208,6 +2120,17 @@ async function generateVideoOnFlow(options = {}) {
   // İndirme bittikten sonra tab'ı kapat
   try { ws.close(); } catch(e){}
   try { await fetch(`http://127.0.0.1:${port}/json/close/${tab.id}`); } catch(e){}
+
+  if (!capturedDirectly && suggestedFilename) {
+    const p1 = path.join(jobDownloadDir, suggestedFilename);
+    const p2 = path.join(OUTPUT_DIR, suggestedFilename);
+    const valid = [p1, p2].find(p => fs.existsSync(p) && fs.statSync(p).size > 300000);
+    if (valid) {
+      fs.copyFileSync(valid, rawPath);
+      capturedDirectly = true;
+      console.log(`[Flow Video] 🎯 CDP suggestedFilename üzerinden dosya rawPath'e aktarıldı: ${valid}`);
+    }
+  }
 
   if (!capturedDirectly && fs.existsSync(jobDownloadDir)) {
     const downloadedFiles = fs.readdirSync(jobDownloadDir).filter(f => !f.endsWith('.crdownload'));
