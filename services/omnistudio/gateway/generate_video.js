@@ -1947,9 +1947,13 @@ async function generateVideoOnFlow(options = {}) {
     try {
       const tileClickRes = await send('Runtime.evaluate', {
         expression: `(() => {
+          window.scrollTo(0, 0);
+          const scrollable = document.querySelector('.virtual-scroll-container, cdk-virtual-scroll-viewport, .grid-container, main');
+          if (scrollable) scrollable.scrollTop = 0;
           const tiles = Array.from(document.querySelectorAll('flow-grid-tile-container, flow-media-tile, [class*="tile"]'));
           if (tiles.length > 0) {
             const newestTile = tiles[0];
+            try { newestTile.scrollIntoView({ block: 'center' }); } catch (_) {}
             const r = newestTile.getBoundingClientRect();
             if (r.width > 0 && r.height > 0) {
               return { found: true, x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
@@ -1965,7 +1969,7 @@ async function generateVideoOnFlow(options = {}) {
         await send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 });
         await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
       }
-      await sleep(1500);
+      await sleep(2000);
     } catch (_) {}
 
     // 6.2. DOĞRUDAN STREAM İNDİRME: Video elementinden session çerezleriyle MP4'ü direkt çek
