@@ -313,7 +313,7 @@ export function CreativeDetail({
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ id: creative.id }),
-      signal: AbortSignal.timeout(180_000),
+      signal: AbortSignal.timeout(70_000),
     })
     const json = (await response.json().catch(() => null)) as { error?: string } | null
     if (!response.ok) {
@@ -368,6 +368,14 @@ export function CreativeDetail({
       void supabase.removeChannel(channel)
     }
   }, [creative.id, orgId, router])
+
+  // Realtime yayını kapalı/gecikmiş olsa dahi Flow sonucu DB'ye yazıldığında
+  // ekran kendini yeniler; kullanıcı manuel yenilemeye bağlı kalmaz.
+  useEffect(() => {
+    if (!running) return
+    const timer = window.setInterval(() => router.refresh(), 5_000)
+    return () => window.clearInterval(timer)
+  }, [running, router])
 
   const spawn = (draft: Record<string, unknown>) => {
     const form = new FormData()

@@ -44,6 +44,12 @@ export async function POST(request: Request) {
   }
 
   const result = await processCreativeGeneration(id, supabase)
+  if (result.pending) {
+    return NextResponse.json(
+      { ok: true, pending: true, retryAfterSeconds: result.retryAfterSeconds ?? 15 },
+      { status: 202 },
+    )
+  }
   if (result.busy) {
     return NextResponse.json({ ok: true, busy: true })
   }

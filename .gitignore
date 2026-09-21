@@ -97,7 +97,14 @@ domain_onerileri.txt
 actual_speeches.txt
 vps_*.txt
 null
-4b09d84f-55d8-40f5-be7b-85b98b571070.png
 ayvaz_raw.wav
 bofe_raw.wav
 bofe_sarjli*
+scratch/
+*.zip
+veo_genel_video_sistemi_v4/
+flow_pregeneration_proof.jpg
+tests/*.jpg
+tests/*.ts
+tests/*.mjs
+services/omnistudio/gateway/outputs/

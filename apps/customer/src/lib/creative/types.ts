@@ -135,6 +135,16 @@ export type CreativePayload = CreativeSnapshot & {
   cleanStoragePath?: string | null
   videoDuration?: number | null
   pendingVideoUrl?: string | null
+  /** Flow'un asenkron video kuyruğu. Kayıt DB'de kaldığı için HTTP isteği bitse bile iş devam eder. */
+  flowJob?: {
+    id: string
+    gatewayUrl: string
+    queuedAt: string
+    queuePosition?: number | null
+    estimatedWaitSeconds?: number | null
+    lastStatus?: string | null
+    lastCheckedAt?: string | null
+  } | null
   cost?: { provider?: string; model?: string; imageCount: number } | null
 }
 

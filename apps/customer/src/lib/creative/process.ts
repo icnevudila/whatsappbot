@@ -35,6 +35,55 @@ async function fetchBuffer(url: string): Promise<ReferenceImage | null> {
 }
 
 const STALE_RENDER_MS = 3 * 60 * 1000
+const FLOW_POLL_RETRY_SECONDS = 15
+
+type FlowJobState = NonNullable<CreativePayload['flowJob']>
+
+function defaultGatewayUrl(): string {
+  return (process.env.OMNISTUDIO_GATEWAY_URL || 'http://167.233.201.31:3456').replace(/\/$/, '')
+}
+
+/** Eski kayıtlardaki jobId alanını da okuyarak yarım kalmış işleri kurtarır. */
+function readFlowJob(payload: CreativePayload): FlowJobState | null {
+  const current = payload.flowJob
+  if (current?.id && current.gatewayUrl) return current
+
+  const legacyId = (payload as CreativePayload & { jobId?: unknown }).jobId
+  if (typeof legacyId !== 'string' || !legacyId.trim()) return null
+  return {
+    id: legacyId,
+    gatewayUrl: defaultGatewayUrl(),
+    queuedAt: new Date().toISOString(),
+    queuePosition: typeof (payload as CreativePayload & { queuePosition?: unknown }).queuePosition === 'number'
+      ? (payload as CreativePayload & { queuePosition: number }).queuePosition
+      : null,
+    estimatedWaitSeconds:
+      typeof (payload as CreativePayload & { estimatedWaitSeconds?: unknown }).estimatedWaitSeconds === 'number'
+        ? (payload as CreativePayload & { estimatedWaitSeconds: number }).estimatedWaitSeconds
+        : null,
+  }
+}
+
+function readVideoResult(value: unknown): {
+  videoUrl: string | null
+  cleanVideoUrl: string | null
+  thumbnailUrl: string | null
+} {
+  const result = value && typeof value === 'object' && 'result' in value
+    ? (value as { result?: unknown }).result
+    : value
+  const row = result && typeof result === 'object' ? result as Record<string, unknown> : {}
+  const first = Array.isArray(row.data) && row.data[0] && typeof row.data[0] === 'object'
+    ? row.data[0] as Record<string, unknown>
+    : {}
+  const stringValue = (input: unknown) => typeof input === 'string' && input.trim() ? input : null
+
+  return {
+    videoUrl: stringValue(first.url) || stringValue(row.videoUrl),
+    cleanVideoUrl: stringValue(first.cleanUrl) || stringValue(row.cleanVideoUrl),
+    thumbnailUrl: stringValue(first.thumbnailUrl) || stringValue(row.thumbnailUrl),
+  }
+}
 
 export async function processCreativeGeneration(
   creativeId: string,
@@ -43,6 +92,8 @@ export async function processCreativeGeneration(
   ok: boolean
   skipped?: boolean
   busy?: boolean
+  pending?: boolean
+  retryAfterSeconds?: number
   error?: string
 }> {
   const supabase = client || createSupabaseServiceClient()
@@ -63,8 +114,118 @@ export async function processCreativeGeneration(
     .maybeSingle()
 
   if (!creative) return { ok: false, error: 'Kayıt bulunamadı.' }
+
+  const snapshot = asSnapshot(creative.payload)
+  if (!snapshot) {
+    await supabase
+      .from('creatives')
+      .update({ status: 'failed', error: 'Üretim özeti eksik.' })
+      .eq('id', creativeId)
+    return { ok: false, error: 'Üretim özeti eksik.' }
+  }
+
+  const payload = snapshot as CreativePayload
+  const isVideo = creative.format === 'video' || snapshot.formatId === 'reels_video'
+
   if (creative.status === 'ready' && creative.public_url) {
     return { ok: true, skipped: true }
+  }
+
+  // Flow işi HTTP isteğinin ömründen uzundur. Job kimliği DB'de tutulur ve her
+  // servis turunda yalnızca bir kez sorgulanır; uzun kuyrukta isteği açık tutmayız.
+  if (creative.status === 'rendering' && isVideo) {
+    const flowJob = readFlowJob(payload)
+    if (flowJob && !payload.pendingVideoUrl) {
+      try {
+        const response = await fetch(`${flowJob.gatewayUrl}/v1/videos/status/${encodeURIComponent(flowJob.id)}`, {
+          signal: AbortSignal.timeout(12_000),
+        })
+        if (response.status === 404) {
+          const message = 'Flow video görevi bulunamadı. Gateway yeniden başlamış olabilir; tekrar deneyin.'
+          await supabase
+            .from('creatives')
+            .update({ status: 'failed', error: message })
+            .eq('id', creativeId)
+            .eq('status', 'rendering')
+          return { ok: false, error: message }
+        }
+        if (!response.ok) {
+          return { ok: true, pending: true, retryAfterSeconds: FLOW_POLL_RETRY_SECONDS }
+        }
+
+        const jobStatus = (await response.json()) as { status?: string; error?: string }
+        if (jobStatus.status === 'failed') {
+          const message = jobStatus.error || 'Video üretimi başarısız oldu.'
+          await supabase
+            .from('creatives')
+            .update({ status: 'failed', error: message.slice(0, 400) })
+            .eq('id', creativeId)
+            .eq('status', 'rendering')
+          return { ok: false, error: message }
+        }
+
+        if (jobStatus.status === 'completed') {
+          const completed = readVideoResult(jobStatus)
+          if (!completed.videoUrl) {
+            const message = 'Flow görevi tamamlandı ancak video URL’si dönmedi.'
+            await supabase
+              .from('creatives')
+              .update({ status: 'failed', error: message })
+              .eq('id', creativeId)
+              .eq('status', 'rendering')
+            return { ok: false, error: message }
+          }
+          const { error: resumeError } = await supabase
+            .from('creatives')
+            .update({
+              status: 'pending',
+              error: null,
+              payload: {
+                ...payload,
+                flowJob: null,
+                pendingVideoUrl: completed.videoUrl,
+                cleanPublicUrl: completed.cleanVideoUrl,
+                thumbnailUrl: completed.thumbnailUrl,
+              },
+            })
+            .eq('id', creativeId)
+            .eq('status', 'rendering')
+          if (resumeError) return { ok: false, error: resumeError.message }
+          return processCreativeGeneration(creativeId, supabase)
+        }
+
+        await supabase
+          .from('creatives')
+          .update({
+            payload: {
+              ...payload,
+              flowJob: {
+                ...flowJob,
+                lastStatus: jobStatus.status || 'queued',
+                lastCheckedAt: new Date().toISOString(),
+              },
+            },
+          })
+          .eq('id', creativeId)
+          .eq('status', 'rendering')
+        return { ok: true, pending: true, retryAfterSeconds: FLOW_POLL_RETRY_SECONDS }
+      } catch (error) {
+        console.warn('[creative.video.poll]', creativeId, error)
+        return { ok: true, pending: true, retryAfterSeconds: FLOW_POLL_RETRY_SECONDS }
+      }
+    }
+
+    // Eski akış indirme sırasında kesilmiş olabilir. Flow’u yeniden çalıştırmak
+    // yerine, kayıtlı çıktı URL’sinden devam eder.
+    if (payload.pendingVideoUrl) {
+      const { error: resumeError } = await supabase
+        .from('creatives')
+        .update({ status: 'pending', error: null })
+        .eq('id', creativeId)
+        .eq('status', 'rendering')
+      if (resumeError) return { ok: false, error: resumeError.message }
+      return processCreativeGeneration(creativeId, supabase)
+    }
   }
 
   const staleBefore = new Date(Date.now() - STALE_RENDER_MS).toISOString()
@@ -96,15 +257,6 @@ export async function processCreativeGeneration(
     if (again?.status === 'ready' && again.public_url) return { ok: true, skipped: true }
     if (again?.status === 'rendering') return { ok: false, busy: true, error: 'Üretim sürüyor.' }
     return { ok: false, error: 'Üretim kilitlenemedi.' }
-  }
-
-  const snapshot = asSnapshot(creative.payload)
-  if (!snapshot) {
-    await supabase
-      .from('creatives')
-      .update({ status: 'failed', error: 'Üretim özeti eksik.' })
-      .eq('id', creativeId)
-    return { ok: false, error: 'Üretim özeti eksik.' }
   }
 
   const refs: ReferenceImage[] = []
@@ -349,50 +501,37 @@ export async function processCreativeGeneration(
           throw new Error(`Video Motoru Hatası (${vidRes.status}): ${(await vidRes.text()).slice(0, 200)}`)
         }
 
-        let vidJson = (await vidRes.json()) as any
+        const vidJson = (await vidRes.json()) as any
 
-        // Eğer asenkron kuyruk modundaysa, polling yaparak sonucu bekle (Soket zaman aşımını %100 engeller)
-        if (vidJson.job_id && (vidRes.status === 202 || vidJson.status === 'queued' || vidJson.status === 'processing')) {
+        // Flow kuyrukta dakikalarca kalabilir. Bu isteği açık tutmak yerine job
+        // kimliğini kalıcı olarak yazıp worker'ın kısa turla devam etmesini sağla.
+        if (vidJson.job_id && !readVideoResult(vidJson).videoUrl) {
           const jobId = vidJson.job_id
-          console.log(`[CreativeProcess] ⏳ Video görevi kuyruğa alındı [${jobId}], pozisyon: ${vidJson.queue_position}. Polling başlatılıyor...`)
+          console.log(`[CreativeProcess] ⏳ Video görevi kuyruğa alındı [${jobId}], pozisyon: ${vidJson.queue_position}.`)
 
-          await supabase
+          const { error: queueStateError } = await supabase
             .from('creatives')
             .update({
               status: 'rendering',
               payload: {
                 ...snapshot,
-                jobId,
-                queuePosition: vidJson.queue_position,
-                estimatedWaitSeconds: vidJson.estimated_wait_seconds,
+                flowJob: {
+                  id: String(jobId),
+                  gatewayUrl,
+                  queuedAt: new Date().toISOString(),
+                  queuePosition: typeof vidJson.queue_position === 'number' ? vidJson.queue_position : null,
+                  estimatedWaitSeconds:
+                    typeof vidJson.estimated_wait_seconds === 'number'
+                      ? vidJson.estimated_wait_seconds
+                      : null,
+                  lastStatus: typeof vidJson.status === 'string' ? vidJson.status : 'queued',
+                  lastCheckedAt: new Date().toISOString(),
+                },
               },
             })
             .eq('id', creative.id)
-
-          const pollStart = Date.now()
-          const maxWaitMs = 600000 // 10 dakika
-          while (Date.now() - pollStart < maxWaitMs) {
-            await new Promise((r) => setTimeout(r, 4000))
-            try {
-              const pollRes = await fetch(`${gatewayUrl}/v1/videos/status/${jobId}`, {
-                signal: AbortSignal.timeout(10000),
-              })
-              if (pollRes.ok) {
-                const jobStatus = (await pollRes.json()) as any
-                if (jobStatus.status === 'completed' && jobStatus.result) {
-                  vidJson = jobStatus.result
-                  break
-                }
-                if (jobStatus.status === 'failed') {
-                  throw new Error(jobStatus.error || 'Video üretimi başarısız oldu.')
-                }
-              }
-            } catch (pErr: any) {
-              if (pErr.message && !pErr.message.includes('fetch failed')) {
-                console.warn('[CreativeProcess] Polling uyarısı:', pErr.message)
-              }
-            }
-          }
+          if (queueStateError) throw new Error(queueStateError.message)
+          return { ok: true, pending: true, retryAfterSeconds: FLOW_POLL_RETRY_SECONDS }
         }
 
         videoUrl = vidJson.data?.[0]?.url || vidJson.videoUrl || null
@@ -420,113 +559,31 @@ export async function processCreativeGeneration(
         console.log('[CreativeProcess] Mevcut üretilmiş video bulundu, yeniden üretim atlandı:', videoUrl)
       }
 
-      // 🎯 AŞAMA 2: İndirme & Depolama (Yeniden Denemeli)
-      console.log('[CreativeProcess] Video indiriliyor ve sisteme aktarılıyor:', videoUrl)
-      let videoBuffer: Buffer | null = null
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        try {
-          const fileRes = await fetch(videoUrl, { signal: AbortSignal.timeout(60000) })
-          if (fileRes.ok) {
-            const buf = Buffer.from(await fileRes.arrayBuffer())
-            if (buf.length > 300000) {
-              videoBuffer = buf
-              break
-            }
-          }
-        } catch (fetchErr) {
-          console.warn(`[creative.video.download] Deneme ${attempt} hatası:`, fetchErr)
-        }
-        if (attempt < 3) await new Promise((r) => setTimeout(r, 2000))
-      }
-
-      let storagePath: string
-      let finalPublicUrl: string
-
-      if (videoBuffer) {
-        storagePath = `${creative.org_id}/${crypto.randomUUID()}.mp4`
-        const { error: upErr } = await supabase.storage.from('creatives').upload(storagePath, videoBuffer, {
-          contentType: 'video/mp4',
-          upsert: false,
-        })
-        if (upErr) {
-          console.warn('[creative.video.upload] Storage yükleme uyarısı (gateway URL yedek olarak atanıyor):', upErr.message)
-          storagePath = `external/${crypto.randomUUID()}.mp4`
-          finalPublicUrl = videoUrl
-        } else {
-          const { data: pubData } = supabase.storage.from('creatives').getPublicUrl(storagePath)
-          finalPublicUrl = pubData.publicUrl
-        }
-      } else {
-        // İndirme zaman aşımına uğrasa bile asla "video üretilemedi" deme!
-        // Gateway URL'si atanır; panel getSafeMediaUrl üzerinden proxy ile videoyu kesintisiz oynatır.
-        storagePath = `external/${crypto.randomUUID()}.mp4`
-        finalPublicUrl = videoUrl
-      }
-
-      // Temiz (Altyazısız) Video Yükleme
-      let uploadedCleanUrl: string | null = cleanVideoUrl
-      let uploadedCleanPath: string | null = null
-      if (cleanVideoUrl && cleanVideoUrl !== videoUrl && cleanVideoUrl.startsWith('http')) {
-        try {
-          const cleanRes = await fetch(cleanVideoUrl, { signal: AbortSignal.timeout(60000) })
-          if (cleanRes.ok) {
-            const cleanBuffer = Buffer.from(await cleanRes.arrayBuffer())
-            uploadedCleanPath = `${creative.org_id}/${crypto.randomUUID()}_clean.mp4`
-            const { error: cleanUpErr } = await supabase.storage.from('creatives').upload(uploadedCleanPath, cleanBuffer, {
-              contentType: 'video/mp4',
-              upsert: false,
-            })
-            if (!cleanUpErr) {
-              const { data: cleanPub } = supabase.storage.from('creatives').getPublicUrl(uploadedCleanPath)
-              uploadedCleanUrl = cleanPub.publicUrl
-            }
-          }
-        } catch (cleanErr) {
-          console.warn('[creative.video.clean]', cleanErr)
-        }
-      }
-
-      let uploadedThumbnailUrl: string | null = rawThumbUrl
-      if (rawThumbUrl && rawThumbUrl.startsWith('http')) {
-        try {
-          const thumbRes = await fetch(rawThumbUrl, { signal: AbortSignal.timeout(15000) })
-          if (thumbRes.ok) {
-            const thumbBuffer = Buffer.from(await thumbRes.arrayBuffer())
-            const thumbPath = `${creative.org_id}/${crypto.randomUUID()}_thumb.jpg`
-            const { error: thumbErr } = await supabase.storage.from('creatives').upload(thumbPath, thumbBuffer, {
-              contentType: 'image/jpeg',
-              upsert: false,
-            })
-            if (!thumbErr) {
-              const { data: thumbPub } = supabase.storage.from('creatives').getPublicUrl(thumbPath)
-              uploadedThumbnailUrl = thumbPub.publicUrl
-            }
-          }
-        } catch (err) {
-          console.warn('[creative.video.thumbnail]', err)
-        }
-      }
-
+      // Flow çıktısı gateway'de range-stream edilebiliyor ve panel proxy'si bu
+      // URL'yi oynatıyor. Storage'a tam kopya alma yavaşlasa bile ekranın
+      // "hazır" durumuna geçmesini buna bağlamıyoruz.
       const nextPayload: CreativePayload = {
         ...snapshot,
         originalPrompt: snapshot.brief,
         generatedPrompt: videoPrompt,
         provider: 'omnistudio_veo',
-        thumbnailUrl: uploadedThumbnailUrl || rawThumbUrl || null,
-        cleanPublicUrl: uploadedCleanUrl || null,
-        cleanStoragePath: uploadedCleanPath || null,
-        pendingVideoUrl: null, // Tamamlandı, pending temizlendi
+        thumbnailUrl: rawThumbUrl || null,
+        cleanPublicUrl: cleanVideoUrl || null,
+        cleanStoragePath: null,
+        pendingVideoUrl: null,
+        flowJob: null,
         cost: { provider: 'omnistudio_veo', imageCount: 1 },
       }
 
-      // 🎯 AŞAMA 3: Hazır!
+      // Flow tamamlandığı anda URL kayda yazılır; indirme/Storage gecikmesi
+      // kullanıcının videoyu görmesini ya da oynatmasını engelleyemez.
       const { error: dbErr } = await supabase
         .from('creatives')
         .update({
           status: 'ready',
           error: null,
-          storage_path: storagePath,
-          public_url: finalPublicUrl,
+          storage_path: `external/${crypto.randomUUID()}.mp4`,
+          public_url: videoUrl,
           width: 720,
           height: 1280,
           payload: nextPayload,

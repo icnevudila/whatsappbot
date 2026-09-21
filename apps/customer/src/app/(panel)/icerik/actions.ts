@@ -6,7 +6,6 @@ import { redirect } from 'next/navigation'
 import { enqueueJob } from '@/lib/jobs'
 import { hasImageProvider } from '@/lib/ai/image'
 import { processCreativeGeneration } from '@/lib/creative/process'
-import { createSupabaseServiceClient, siteOriginFromEnv } from '@/lib/supabase/service'
 import {
   titleFromBrief,
   type CreativePayload,
@@ -53,33 +52,9 @@ function parseIds(raw: unknown): string[] {
 }
 
 async function kickGeneration(creativeId: string) {
-  const origin = siteOriginFromEnv('http://127.0.0.1:3003')
-  const secret = process.env.JOB_INTERNAL_SECRET?.trim()
-  if (origin && secret) {
-    after(async () => {
-      try {
-        await fetch(`${origin}/api/internal/creative-render`, {
-          method: 'POST',
-          headers: {
-            'content-type': 'application/json',
-            authorization: `Bearer ${secret}`,
-          },
-          body: JSON.stringify({ creativeId }),
-        })
-      } catch (error) {
-        console.error('[creative.kick.http]', creativeId, error)
-      }
-    })
-  } else if (hasImageProvider()) {
-    after(async () => {
-      try {
-        await processCreativeGeneration(creativeId)
-      } catch (error) {
-        console.error('[creative.kick.local]', creativeId, error)
-      }
-    })
-  }
-
+  // Tek sahip: kalıcı jobs kuyruğu. Aynı kaydı hem after() hem servis
+  // çalıştırdığında biri Flow'u beklerken diğeri "busy" görüp denemelerini
+  // tüketebiliyordu; uzun kuyruklarda kayıt rendering durumunda kalıyordu.
   const queued = await enqueueJob({
     type: 'creative.render',
     payload: { creative_id: creativeId },
@@ -87,6 +62,29 @@ async function kickGeneration(creativeId: string) {
   })
   if (queued.error) {
     console.error('[creative.kick.job]', creativeId, queued.error)
+  }
+
+  // Yerel geliştirmede worker ile uygulama aynı sırrı paylaşmıyorsa worker iç
+  // route'a yetkili istek yapamaz. Production'da bu kol çalışmaz; localde ise
+  // Flow jobını yeni üretim açmadan kısa turlarla takip eder.
+  if (!process.env.JOB_INTERNAL_SECRET?.trim() && hasImageProvider()) {
+    after(async () => {
+      for (let attempt = 0; attempt < 12; attempt += 1) {
+        try {
+          const result = await processCreativeGeneration(creativeId)
+          if (result.ok && !result.pending) return
+          if (!result.pending && !result.busy) {
+            console.error('[creative.kick.local]', creativeId, result.error)
+            return
+          }
+          await new Promise((resolve) => setTimeout(resolve, result.retryAfterSeconds ? result.retryAfterSeconds * 1000 : 5_000))
+        } catch (error) {
+          console.error('[creative.kick.local]', creativeId, error)
+          return
+        }
+      }
+      console.warn('[creative.kick.local] Flow takibi süre sınırına ulaştı:', creativeId)
+    })
   }
 }
 

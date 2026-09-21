@@ -30,6 +30,12 @@ export async function POST(request: Request) {
   }
 
   const result = await processCreativeGeneration(creativeId)
+  if (result.pending) {
+    return NextResponse.json(
+      { ok: true, pending: true, retryAfterSeconds: result.retryAfterSeconds ?? 15 },
+      { status: 202 },
+    )
+  }
   if (result.busy) {
     return NextResponse.json({ error: result.error ?? 'Üretim sürüyor.' }, { status: 503 })
   }

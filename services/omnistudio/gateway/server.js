@@ -395,6 +395,22 @@ class VideoJobQueue {
     this.jobs = new Map();
   }
 
+  // Durum endpoint'i uzun kuyruktaki bir işi bulmak zorunda. Eski uygulama
+  // Map'teki "ilk" kaydı, halen queued/processing olsa bile siliyordu; panel
+  // 404 gördüğü için Flow çıktısı DB'ye hiç yazılamıyordu.
+  pruneFinishedJobs(maxHistory = 150) {
+    if (this.jobs.size <= maxHistory) return;
+
+    const finished = [...this.jobs.entries()]
+      .filter(([, job]) => job.status === 'completed' || job.status === 'failed')
+      .sort(([, a], [, b]) => (a.completedAt || a.enqueuedAt) - (b.completedAt || b.enqueuedAt));
+
+    for (const [id] of finished) {
+      if (this.jobs.size <= maxHistory) break;
+      this.jobs.delete(id);
+    }
+  }
+
   createJob(meta = {}) {
     const id = 'vjob_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
     const job = {
@@ -408,10 +424,7 @@ class VideoJobQueue {
       error: null,
     };
     this.jobs.set(id, job);
-    if (this.jobs.size > 150) {
-      const oldestKey = this.jobs.keys().next().value;
-      this.jobs.delete(oldestKey);
-    }
+    this.pruneFinishedJobs();
     return job;
   }
 
@@ -498,6 +511,7 @@ class VideoJobQueue {
       item.reject(err);
     } finally {
       this.activeCount--;
+      this.pruneFinishedJobs();
       this.processNext();
     }
   }

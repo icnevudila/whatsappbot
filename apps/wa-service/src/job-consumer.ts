@@ -84,6 +84,39 @@ class SendWindowWaitError extends Error {
   }
 }
 
+/** Uzak iş (ör. Flow video kuyruğu) sürüyor; deneme hakkını harcamadan tekrar bak. */
+class JobDeferredError extends Error {
+  delaySeconds: number
+  constructor(message: string, delaySeconds: number) {
+    super(message)
+    this.name = 'JobDeferredError'
+    this.delaySeconds = Math.max(5, Math.min(60, Math.round(delaySeconds)))
+  }
+}
+
+async function deferJob(job: JobRow, error: JobDeferredError): Promise<void> {
+  const rows = await query<{ id: string }>(
+    `update public.jobs
+        set status = 'pending',
+            error = $2,
+            run_after = now() + make_interval(secs => $3),
+            attempts = greatest(0, attempts - 1),
+            claimed_by = null,
+            claimed_at = null,
+            updated_at = now()
+      where id = $1::bigint
+        and claimed_by = $4
+        and status in ('claimed', 'running')
+      returning id::text`,
+    [job.id, error.message, error.delaySeconds, env.workerId],
+  )
+  if (rows.length === 0) {
+    log.warn({ jobId: job.id }, 'deferJob atlandi: sahiplik kaybedildi')
+    return
+  }
+  log.info({ jobId: job.id, type: job.type, delaySeconds: error.delaySeconds }, 'Is sonucu bekleniyor; yeniden kuyruga alindi')
+}
+
 async function requeueForWindow(job: JobRow, error: SendWindowWaitError): Promise<void> {
   const delaySeconds = Math.max(
     30,
@@ -966,8 +999,18 @@ async function handle(job: JobRow): Promise<unknown> {
       if (response.status === 401) {
         throw new NonRetryableJobError('Kreatif ic istek yetkisiz (JOB_INTERNAL_SECRET).')
       }
+      const body = (await response.json().catch(() => null)) as {
+        pending?: boolean
+        retryAfterSeconds?: number
+      } | null
+      if (response.status === 202 || body?.pending) {
+        throw new JobDeferredError(
+          'Flow video kuyruğunda; sonuç için yeniden kontrol edilecek.',
+          body?.retryAfterSeconds ?? 15,
+        )
+      }
       if (!response.ok) {
-        const bodyText = await response.text()
+        const bodyText = JSON.stringify(body ?? {})
         throw new Error(`Kreatif uretimi ${response.status}: ${bodyText.slice(0, 240)}`)
       }
       return { creative_id: creativeId }
@@ -1051,10 +1094,13 @@ async function tick(): Promise<void> {
           throw error
         }
       } catch (error) {
-        stats.failedTotal += 1
-        if (error instanceof SendWindowWaitError) {
+        if (error instanceof JobDeferredError) {
+          await deferJob(job, error)
+        } else if (error instanceof SendWindowWaitError) {
+          stats.failedTotal += 1
           await requeueForWindow(job, error)
         } else {
+          stats.failedTotal += 1
           await markFailed(job, error)
         }
       } finally {
