@@ -348,7 +348,9 @@ export async function generateBackgroundMasterPrompt(
   snapshot: any,
   bag?: AiKeyBag | null,
 ): Promise<string> {
-  const brand = snapshot.brandKit?.name?.trim() || 'İşletme'
+  const brand = (snapshot.brandName || snapshot.brandKit?.name || 'İşletme')
+    .replace(/\s*(brand\s*kit|marka\s*kiti|kampanya\s*kiti)\s*/gi, '')
+    .trim() || 'İşletme'
   const isSpeech = snapshot.videoSpeech !== false
   const products = snapshot.products || []
   const productsSummary = products

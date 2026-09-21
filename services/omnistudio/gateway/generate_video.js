@@ -1243,8 +1243,16 @@ async function generateVideoOnFlow(options = {}) {
     console.log(`[Flow Video] 🎙️ ChatGPT'den özgün reklam spikeri repliği ayrıştırıldı: "${dynamicVoiceScript}"`);
   }
 
-  const brand = options.brandName || options.customer || 'Markamız';
-  const voiceScript = options.voiceoverText || dynamicVoiceScript || options.script || options.brief || `${brand} ile projelerinize sağlam temel ve üstün dayanıklılık.`;
+  const brand = (options.brandName || options.customer || 'Markamız')
+    .replace(/\s*(brand\s*kit|marka\s*kiti|kampanya\s*kiti)\s*/gi, '')
+    .trim() || 'Markamız';
+  let voiceScript = options.voiceoverText || dynamicVoiceScript || options.script || options.brief || `${brand} ile projelerinize sağlam temel ve üstün dayanıklılık.`;
+  voiceScript = voiceScript
+    .replace(/\bbrand\s*kit\b/gi, '')
+    .replace(/\bmarka\s*kiti\b/gi, '')
+    .replace(/\bkampanya\s*kiti\b/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
   options.dynamicVoiceover = voiceScript;
   options.voiceoverText = voiceScript;
 

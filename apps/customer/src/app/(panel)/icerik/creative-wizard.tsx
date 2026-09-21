@@ -264,8 +264,16 @@ export function CreativeWizard({
   const selectedKit = data.kits.find((kit) => kit.id === draft.brandKitId)
   const selectedProducts = productsList.filter((product) => draft.productIds.includes(product.id))
 
+  const cleanBrandName = (name?: string | null) => {
+    if (!name) return ''
+    return name
+      .replace(/\s*(brand\s*kit|marka\s*kiti|kampanya\s*kiti)\s*/gi, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim()
+  }
+
   const currentProductName = selectedProducts[0]?.name?.trim() || 'Ürünümüz'
-  const currentBrandName = selectedKit?.name || data.org.name || 'İşletmemiz'
+  const currentBrandName = cleanBrandName(data.org.name) || cleanBrandName(selectedKit?.name) || 'İşletmemiz'
   const currentOffer = draft.offerDetails?.trim()
 
   const defaultVoiceover = useMemo(() => {
