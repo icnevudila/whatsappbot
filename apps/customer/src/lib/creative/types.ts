@@ -68,6 +68,9 @@ export type CreativeSnapshotProduct = {
   description: string | null
   boxContents: string | null
   imageUrl: string | null
+  detailImageUrl?: string | null
+  productKeyFeature?: string | null
+  logoPlacement?: string | null
   price: string | null
   oldPrice: string | null
   promo: string | null

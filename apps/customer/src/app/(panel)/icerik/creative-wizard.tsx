@@ -68,6 +68,9 @@ const VIDEO_BRIEF_CHIPS = [
 
 type ProductExtra = {
   imageUrl: string
+  detailImageUrl?: string
+  productKeyFeature?: string
+  logoPlacement?: string
   price: string
   oldPrice: string
   promo: string
@@ -109,9 +112,12 @@ function newKey() {
   return crypto.randomUUID()
 }
 
-function emptyExtra(imageUrl = ''): ProductExtra {
+function emptyExtra(imageUrl = '', detailImageUrl = ''): ProductExtra {
   return {
     imageUrl,
+    detailImageUrl,
+    productKeyFeature: '',
+    logoPlacement: 'flat_rigid_surface',
     price: '',
     oldPrice: '',
     promo: '',
@@ -772,73 +778,233 @@ export function CreativeWizard({
                   </Notice>
                 )}
 
-                {/* Seçilen Ürün Detayı & Fotoğraf Değiştirme */}
+                {/* Seçilen Ürün Detayı & Çoklu Açı Referansları (Smart Asset Kit) */}
                 {selectedProducts[0] ? (() => {
                   const product = selectedProducts[0]
                   const extra = draft.productExtras[product.id] ?? emptyExtra(product.images[0]?.url ?? '')
                   return (
-                    <div className="mt-3 rounded-lg border border-[#00a884]/30 bg-[#e7f8f2]/20 p-3 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <p className="text-[12.5px] font-semibold text-[#111b21]">
-                          Seçilen: <strong>{product.name}</strong> — AI Referans Fotoğrafı
-                        </p>
-                        <FileUploadButton
-                          accept="image/png,image/jpeg,image/webp"
-                          uploading={uploading}
-                          label="Farklı Fotoğraf Yükle"
-                          onFile={async (file) => {
-                            setUploading(true)
-                            const form = new FormData()
-                            form.set('file', file)
-                            const res = await uploadLibraryImage(form)
-                            setUploading(false)
-                            if (res?.publicUrl) {
-                              patch({
-                                productExtras: {
-                                  ...draft.productExtras,
-                                  [product.id]: { ...extra, imageUrl: res.publicUrl },
-                                },
-                              })
-                            }
-                          }}
-                        />
+                    <div className="mt-3 rounded-lg border border-[#00a884]/30 bg-[#e7f8f2]/20 p-3.5 space-y-3.5">
+                      <div className="flex items-center justify-between border-b border-[#00a884]/20 pb-2">
+                        <div>
+                          <p className="text-[13px] font-bold text-[#111b21]">
+                            Akıllı Varlık Kiti: <strong>{product.name}</strong>
+                          </p>
+                          <p className="text-[11.5px] text-[#667781]">
+                            Yapay zekanın kör tahmin yapmasını engellemek için ürünü birden fazla açıyla referans verin.
+                          </p>
+                        </div>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100/80 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
+                          🎯 Sıfır Hata Kalkanı
+                        </span>
                       </div>
 
-                      {product.images.length > 1 ? (
-                        <div>
-                          <p className="text-[11.5px] text-[#667781] mb-1.5">Bu ürün için kayıtlı farklı fotoğraf seçebilirsiniz:</p>
-                          <div className="flex gap-2 overflow-x-auto pb-1">
-                            {product.images.map((image) => {
-                              const isImgSelected = (extra.imageUrl || product.images[0]?.url) === image.url
-                              return (
+                      {/* 1. ve 2. Açı Görsel Kartları */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {/* 1. Açı: Ana Ürün Çekimi */}
+                        <div className="rounded-md border border-[#e9edef] bg-white p-2.5 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[12px] font-bold text-[#111b21]">1. Açı: Ana Ürün Görseli</span>
+                            <span className="text-[10.5px] text-[#008069] bg-[#e7f8f2] px-1.5 py-0.5 rounded font-medium">Genel Form</span>
+                          </div>
+                          <div className="flex items-center gap-2.5">
+                            {extra.imageUrl || product.images[0]?.url ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={extra.imageUrl || product.images[0]?.url}
+                                alt="Ana Açı"
+                                className="size-14 rounded border border-hairline object-cover shrink-0"
+                              />
+                            ) : (
+                              <div className="size-14 rounded border border-dashed border-hairline flex items-center justify-center text-[10px] text-ink-muted">Fotoğraf Yok</div>
+                            )}
+                            <div className="space-y-1">
+                              <FileUploadButton
+                                accept="image/png,image/jpeg,image/webp"
+                                uploading={uploading}
+                                label="Ana Fotoğrafı Değiştir"
+                                onFile={async (file) => {
+                                  setUploading(true)
+                                  const form = new FormData()
+                                  form.set('file', file)
+                                  const res = await uploadLibraryImage(form)
+                                  setUploading(false)
+                                  if (res?.publicUrl) {
+                                    patch({
+                                      productExtras: {
+                                        ...draft.productExtras,
+                                        [product.id]: { ...extra, imageUrl: res.publicUrl },
+                                      },
+                                    })
+                                  }
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 2. Açı: Karakteristik Detay Açısı */}
+                        <div className="rounded-md border border-[#e9edef] bg-white p-2.5 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[12px] font-bold text-[#111b21]">2. Açı: Detay / Ayırt Edici Yüzey</span>
+                            <span className="text-[10.5px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded font-medium">Tavsiye Edilen</span>
+                          </div>
+                          <div className="flex items-center gap-2.5">
+                            {extra.detailImageUrl ? (
+                              <div className="relative size-14 shrink-0">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={extra.detailImageUrl}
+                                  alt="Detay Açısı"
+                                  className="size-14 rounded border border-hairline object-cover"
+                                />
                                 <button
-                                  key={image.id}
                                   type="button"
                                   onClick={() =>
                                     patch({
                                       productExtras: {
                                         ...draft.productExtras,
-                                        [product.id]: { ...extra, imageUrl: image.url },
+                                        [product.id]: { ...extra, detailImageUrl: '' },
                                       },
                                     })
                                   }
-                                  className={`relative shrink-0 overflow-hidden rounded-md border ${
-                                    isImgSelected ? 'border-[#00a884] ring-2 ring-[#00a884]' : 'border-[#e9edef]'
-                                  }`}
+                                  className="absolute -top-1 -right-1 size-4 rounded-full bg-rose-500 text-white text-[10px] flex items-center justify-center cursor-pointer shadow"
                                 >
-                                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                                  <img src={image.url} alt="" className="size-14 object-cover" />
-                                  {isImgSelected ? (
-                                    <span className="absolute top-1 right-1 bg-[#00a884] text-white rounded-full p-0.5 text-[8px] leading-none">
-                                      ✓
-                                    </span>
-                                  ) : null}
+                                  ×
                                 </button>
+                              </div>
+                            ) : (
+                              <div className="size-14 rounded border border-dashed border-amber-300 bg-amber-50/50 flex items-center justify-center text-[10px] text-amber-600 font-medium text-center p-1 leading-tight">
+                                Detay Açısı Ekle
+                              </div>
+                            )}
+                            <div className="space-y-1">
+                              <FileUploadButton
+                                accept="image/png,image/jpeg,image/webp"
+                                uploading={uploading}
+                                label={extra.detailImageUrl ? 'Detay Fotoğrafını Değiştir' : '+ Detay Açısı Fotoğrafı Yükle'}
+                                onFile={async (file) => {
+                                  setUploading(true)
+                                  const form = new FormData()
+                                  form.set('file', file)
+                                  const res = await uploadLibraryImage(form)
+                                  setUploading(false)
+                                  if (res?.publicUrl) {
+                                    patch({
+                                      productExtras: {
+                                        ...draft.productExtras,
+                                        [product.id]: { ...extra, detailImageUrl: res.publicUrl },
+                                      },
+                                    })
+                                  }
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Kayıtlı Diğer Fotoğraflar Varsa Seçebilme */}
+                      {product.images.length > 1 ? (
+                        <div className="border-t border-[#00a884]/15 pt-2">
+                          <p className="text-[11px] text-[#667781] mb-1.5">Kayıtlı diğer fotoğraflardan ana veya detay açısı atayın:</p>
+                          <div className="flex gap-2 overflow-x-auto pb-1">
+                            {product.images.map((image) => {
+                              const isMain = (extra.imageUrl || product.images[0]?.url) === image.url
+                              const isDetail = extra.detailImageUrl === image.url
+                              return (
+                                <div key={image.id} className="relative shrink-0 flex flex-col items-center gap-1">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    src={image.url}
+                                    alt=""
+                                    className={`size-12 rounded object-cover border ${
+                                      isMain ? 'border-[#00a884] ring-2 ring-[#00a884]' : isDetail ? 'border-amber-500 ring-2 ring-amber-500' : 'border-[#e9edef]'
+                                    }`}
+                                  />
+                                  <div className="flex gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        patch({
+                                          productExtras: {
+                                            ...draft.productExtras,
+                                            [product.id]: { ...extra, imageUrl: image.url },
+                                          },
+                                        })
+                                      }
+                                      className={`text-[9.5px] px-1 py-0.5 rounded cursor-pointer ${
+                                        isMain ? 'bg-[#00a884] text-white font-bold' : 'bg-canvas text-ink-muted hover:bg-surface'
+                                      }`}
+                                    >
+                                      Ana
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        patch({
+                                          productExtras: {
+                                            ...draft.productExtras,
+                                            [product.id]: { ...extra, detailImageUrl: image.url },
+                                          },
+                                        })
+                                      }
+                                      className={`text-[9.5px] px-1 py-0.5 rounded cursor-pointer ${
+                                        isDetail ? 'bg-amber-600 text-white font-bold' : 'bg-canvas text-ink-muted hover:bg-surface'
+                                      }`}
+                                    >
+                                      Detay
+                                    </button>
+                                  </div>
+                                </div>
                               )
                             })}
                           </div>
                         </div>
                       ) : null}
+
+                      {/* 3. Kritik Ürün Özelliği ve Logo Yerleşimi */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 border-t border-[#00a884]/15 pt-2.5">
+                        <div>
+                          <label className="block text-[11.5px] font-semibold text-[#111b21] mb-1">
+                            Kritik Ürün Detayı (AI Negatif Kalkanı)
+                          </label>
+                          <input
+                            type="text"
+                            value={extra.productKeyFeature || ''}
+                            onChange={(e) =>
+                              patch({
+                                productExtras: {
+                                  ...draft.productExtras,
+                                  [product.id]: { ...extra, productKeyFeature: e.target.value },
+                                },
+                              })
+                            }
+                            placeholder="Örn: 18 delikli hava kanallı kil blok tuğla"
+                            className="w-full rounded border border-[#c3cdd3] bg-white px-2.5 py-1.5 text-[12px] text-[#111b21] focus:border-[#00a884] focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11.5px] font-semibold text-[#111b21] mb-1">
+                            Logo Yerleşimi (Sıfır Hata Yüzeyi)
+                          </label>
+                          <select
+                            value={extra.logoPlacement || 'flat_rigid_surface'}
+                            onChange={(e) =>
+                              patch({
+                                productExtras: {
+                                  ...draft.productExtras,
+                                  [product.id]: { ...extra, logoPlacement: e.target.value },
+                                },
+                              })
+                            }
+                            className="w-full rounded border border-[#c3cdd3] bg-white px-2.5 py-1.5 text-[12px] text-[#111b21] focus:border-[#00a884] focus:outline-none"
+                          >
+                            <option value="flat_rigid_surface">✅ Düz Kasa / Fabrika Tabelası (Tavsiye Edilen)</option>
+                            <option value="reception_plaque">🏢 Masa Akrilik Plaketi / Yönetici Masası</option>
+                          </select>
+                        </div>
+                      </div>
                     </div>
                   )
                 })() : null}
@@ -848,36 +1014,55 @@ export function CreativeWizard({
             {/* 3. Marka & Ürün Özet Şeridi */}
             <div className="rounded-lg border border-hairline bg-canvas p-3">
               <p className="text-[11.5px] font-semibold uppercase tracking-wider text-[#667781] mb-2">
-                Seçim Özeti (Flow ve Veo'ya Aktarılacak Referanslar)
+                Seçim Özeti (Flow ve Veo'ya Aktarılacak Referans Çipleri)
               </p>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex items-center gap-2.5 rounded-md border border-hairline bg-surface p-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div className="flex items-center gap-2 rounded-md border border-hairline bg-surface p-2">
                   {activeLogoUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={activeLogoUrl} alt="" className="size-10 rounded object-contain border border-hairline bg-white p-0.5 shrink-0" />
+                    <img src={activeLogoUrl} alt="" className="size-9 rounded object-contain border border-hairline bg-white p-0.5 shrink-0" />
                   ) : (
-                    <div className="size-10 rounded border border-dashed border-rose-300 bg-rose-50 flex items-center justify-center text-[10px] text-rose-500 font-bold shrink-0">Yok</div>
+                    <div className="size-9 rounded border border-dashed border-rose-300 bg-rose-50 flex items-center justify-center text-[9px] text-rose-500 font-bold shrink-0">Yok</div>
                   )}
                   <div className="min-w-0">
-                    <p className="text-[11px] text-[#667781]">1. Referans (Logo)</p>
-                    <p className="text-[12.5px] font-semibold text-[#111b21] truncate">{data.org.name || 'Marka Logosu'}</p>
+                    <p className="text-[10.5px] text-[#667781]">Çip 1 (Logo)</p>
+                    <p className="text-[12px] font-semibold text-[#111b21] truncate">{data.org.name || 'Marka Logosu'}</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2.5 rounded-md border border-hairline bg-surface p-2.5">
+                <div className="flex items-center gap-2 rounded-md border border-hairline bg-surface p-2">
                   {selectedProducts[0] && (draft.productExtras[selectedProducts[0].id]?.imageUrl || selectedProducts[0].images[0]?.url) ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={draft.productExtras[selectedProducts[0].id]?.imageUrl || selectedProducts[0].images[0]?.url}
                       alt=""
-                      className="size-10 rounded object-cover border border-hairline shrink-0"
+                      className="size-9 rounded object-cover border border-hairline shrink-0"
                     />
                   ) : (
-                    <div className="size-10 rounded border border-dashed border-amber-300 bg-amber-50 flex items-center justify-center text-[10px] text-amber-600 font-bold shrink-0">Seçilmedi</div>
+                    <div className="size-9 rounded border border-dashed border-amber-300 bg-amber-50 flex items-center justify-center text-[9px] text-amber-600 font-bold shrink-0">Seçilmedi</div>
                   )}
                   <div className="min-w-0">
-                    <p className="text-[11px] text-[#667781]">2. Referans (Ürün)</p>
-                    <p className="text-[12.5px] font-semibold text-[#111b21] truncate">{selectedProducts[0]?.name || 'Henüz seçilmedi'}</p>
+                    <p className="text-[10.5px] text-[#667781]">Çip 2 (Ana Ürün)</p>
+                    <p className="text-[12px] font-semibold text-[#111b21] truncate">{selectedProducts[0]?.name || 'Henüz seçilmedi'}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 rounded-md border border-hairline bg-surface p-2">
+                  {selectedProducts[0] && draft.productExtras[selectedProducts[0].id]?.detailImageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={draft.productExtras[selectedProducts[0].id]?.detailImageUrl}
+                      alt=""
+                      className="size-9 rounded object-cover border border-hairline shrink-0"
+                    />
+                  ) : (
+                    <div className="size-9 rounded border border-dashed border-hairline bg-canvas flex items-center justify-center text-[9px] text-ink-muted shrink-0">Opsiyonel</div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-[10.5px] text-[#667781]">Çip 3 (Detay Açısı)</p>
+                    <p className="text-[12px] font-semibold text-[#111b21] truncate">
+                      {selectedProducts[0] && draft.productExtras[selectedProducts[0].id]?.detailImageUrl ? 'Karakteristik Açı Aktif' : 'Yüklenmedi (Tek Açı)'}
+                    </p>
                   </div>
                 </div>
               </div>

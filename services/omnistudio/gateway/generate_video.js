@@ -62,16 +62,20 @@ async function resolveLocalMediaFiles(options = {}) {
   const files = [];
   const candidateItems = [];
 
-  // 1. Wizard veya API çağrısından gelen somut görseller (ürün ve logo)
+  // 1. Wizard veya API çağrısından gelen somut görseller (ana ürün, detay açısı ve logo)
   if (options.productImageUrl) candidateItems.push({ url: options.productImageUrl, role: 'product' });
+  if (options.detailImageUrl && options.detailImageUrl !== options.productImageUrl) {
+    candidateItems.push({ url: options.detailImageUrl, role: 'product_detail' });
+  }
   if (options.logoUrl) candidateItems.push({ url: options.logoUrl, role: 'logo' });
 
   // 2. Çoklu referans görselleri
   if (Array.isArray(options.referenceImages)) {
     for (const ref of options.referenceImages) {
-      if (typeof ref === 'string') candidateItems.push({ url: ref, role: 'reference' });
-      else if (ref?.url) candidateItems.push({ url: ref.url, role: ref.role || 'reference' });
-      else if (ref && (ref.data || ref.b64_json)) candidateItems.push({ b64: ref.data || ref.b64_json, role: ref.role || 'reference' });
+      const u = typeof ref === 'string' ? ref : ref?.url;
+      if (u && u !== options.productImageUrl && u !== options.detailImageUrl && u !== options.logoUrl) {
+        candidateItems.push({ url: u, role: typeof ref === 'object' ? ref.role || 'reference' : 'reference' });
+      }
     }
   }
 
@@ -1437,7 +1441,7 @@ async function generateVideoOnFlow(options = {}) {
     });
     await sleep(1500);
 
-    const attachCount = Math.min(filesToUpload.length, 2);
+    const attachCount = Math.min(filesToUpload.length, 3);
     for (let ci = 0; ci < attachCount; ci++) {
       console.log(`[Flow Video] 📎 Görsel ${ci + 1}/${attachCount} prompt çipine bağlanıyor...`);
       // Varsa açık menüyü kapat
@@ -1543,9 +1547,18 @@ async function generateVideoOnFlow(options = {}) {
   const brandNameForDirective = options.brandName || options.customer || 'Marka';
   const prodNameForDirective = options.productName || options.product || '';
   let productShapeNote = '';
-  if (prodNameForDirective.toLowerCase().includes('tuğla') || prodNameForDirective.toLowerCase().includes('tugla')) {
+  if (options.productKeyFeature) {
+    productShapeNote = ` KRİTİK AYIRT EDİCİ ÖZELLİK: ${options.productKeyFeature}. Bu detay videodaki tüm ürün çekimlerinde kesinlikle net biçimde korunacaktır; aksi formlar veya uydurma malzemeler KESİNLİKLE YASAKTIR.`;
+  } else if (prodNameForDirective.toLowerCase().includes('tuğla') || prodNameForDirective.toLowerCase().includes('tugla')) {
     productShapeNote = ' İliştirilmiş tuğla fotoğrafındaki delikli killi blok tuğla formunu, hava deliklerini ve dikey yan oluklarını kesinlikle koru; deliksiz düz tuğlaya veya masif taşa dönüştürme.';
   }
+
+  const hasDetailImage = filesToUpload.some(f => f.role === 'product_detail');
+  let detailDirective = '';
+  if (hasDetailImage) {
+    detailDirective = `\n2. ÜRÜN DETAY AÇISI: İliştirilmiş ikinci ürün detay fotoğrafındaki karakteristik dokuyu, hava deliklerini, olukları ve teknik yüzeyi eksiksiz koru; kamera döndüğünde ürünün bu detaylarını asla kaybetme.`;
+  }
+
   let logoShapeNote = '';
   try {
     const { getActiveBrandKit } = require('./brand_resolver.js');
@@ -1554,7 +1567,12 @@ async function generateVideoOnFlow(options = {}) {
       logoShapeNote = ` Orijinal kurumsal amblem: ${bk.logo_visual_description}. Masadaki akrilik plaket veya duvardaki tabelada bu kırmızı çatı ve dikey ok amblemi kesinlikle en üstte çizilecektir; yalnızca yazı yazılıp amblem ASLA atlanmayacaktır.`;
     }
   } catch(_) {}
-  const mandatoryMediaDirective = `\n\nKESİN GÖRSEL VE MARKA TALİMATI:\n1. ÜRÜN BİÇİMİ: İliştirilmiş ürün fotoğrafını ana ürünün görsel referansı olarak kullan. Ürünün fiziksel formunu, rengini ve ayırt edici geometrik yapısını koru.${productShapeNote}\n2. KURUMSAL LOGO: İliştirilmiş kurumsal logo dosyasını marka kimliği referansı olarak kullan. Logoyu yeniden tasarlama, sarı üçgen veya uydurma semboller ekleme.${logoShapeNote} Marka adı "${brandNameForDirective}" olarak doğru yazılsın.\n3. SIFIR HATA DÜZ YÜZEY KURALI (ZERO-ERROR FLAT RIGID SURFACE): Model logoyu ASLA kavisli kaportaya, araç şoför kapısına (kulp ve cam eğimi logoyu bozar), araç ön panjuruna veya barete basmayacaktır. Logo yalnızca 1 kez, sıfır hata vereceği düz beyaz tır kasa panelinde, düz mimari tabelada veya ofis masa isimliğinde yer alacaktır.`;
+
+  const logoTargetSurface = options.logoPlacement === 'reception_plaque'
+    ? 'ofis masa akrilik/metal isimliğinde'
+    : 'tırın/kamyonun pürüzsüz düz beyaz kasa panelinde veya fabrikanın mimari kurumsal tabelasında';
+
+  const mandatoryMediaDirective = `\n\nKESİN GÖRSEL VE MARKA TALİMATI:\n1. ÜRÜN ANA BİÇİMİ: İliştirilmiş ana ürün fotoğrafını ana ürünün görsel referansı olarak kullan. Ürünün fiziksel formunu, rengini ve ayırt edici geometrik yapısını koru.${productShapeNote}${detailDirective}\n${hasDetailImage ? '3' : '2'}. KURUMSAL LOGO: İliştirilmiş kurumsal logo dosyasını marka kimliği referansı olarak kullan. Logoyu yeniden tasarlama, sarı üçgen veya uydurma semboller ekleme.${logoShapeNote} Marka adı "${brandNameForDirective}" olarak doğru yazılsın.\n${hasDetailImage ? '4' : '3'}. SIFIR HATA DÜZ YÜZEY KURALI (ZERO-ERROR FLAT RIGID SURFACE): Model logoyu ASLA kavisli kaportaya, araç şoför kapısına (kulp ve cam eğimi logoyu bozar), araç ön panjuruna veya barete basmayacaktır. Logo yalnızca 1 kez, sıfır hata vereceği ${logoTargetSurface} yer alacaktır.`;
 
   let finalPrompt = prompt;
   if (!finalPrompt.includes('KESİN GÖRSEL VE MARKA TALİMATI') && filesToUpload.length > 0) {
