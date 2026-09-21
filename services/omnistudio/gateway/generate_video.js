@@ -1942,15 +1942,16 @@ async function generateVideoOnFlow(options = {}) {
   let receivedBytes = 0;
 
   if (!capturedDirectly) {
-    // 6.1. Öncelikle en son üretilen videonun kartına tıkla ki medya görüntüleyici açılsın (En yeni video index 0'dadır)
-    console.log(`[Flow Video] 🎬 En son üretilen video kartı açılıyor...`);
+    // 6.1. Proje ana sayfasına dönerek grid listesini netleştir (En yeni video en başta index 0'dadır)
+    console.log(`[Flow Video] 🎬 Proje sayfasına geçiliyor ve en son üretilen video kartı açılıyor...`);
     try {
+      await send('Page.navigate', { url: projectUrl });
+      await sleep(4000);
+
       const tileClickRes = await send('Runtime.evaluate', {
         expression: `(() => {
           window.scrollTo(0, 0);
-          const scrollable = document.querySelector('.virtual-scroll-container, cdk-virtual-scroll-viewport, .grid-container, main');
-          if (scrollable) scrollable.scrollTop = 0;
-          const tiles = Array.from(document.querySelectorAll('flow-grid-tile-container, flow-media-tile, [class*="tile"]'));
+          const tiles = Array.from(document.querySelectorAll('flow-grid-tile-container'));
           if (tiles.length > 0) {
             const newestTile = tiles[0];
             try { newestTile.scrollIntoView({ block: 'center' }); } catch (_) {}
@@ -1969,7 +1970,7 @@ async function generateVideoOnFlow(options = {}) {
         await send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 });
         await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
       }
-      await sleep(2000);
+      await sleep(2500);
     } catch (_) {}
 
     // 6.2. DOĞRUDAN STREAM İNDİRME: Video elementinden session çerezleriyle MP4'ü direkt çek
@@ -2124,14 +2125,19 @@ async function generateVideoOnFlow(options = {}) {
   try { ws.close(); } catch(e){}
   try { await fetch(`http://127.0.0.1:${port}/json/close/${tab.id}`); } catch(e){}
 
-  if (!capturedDirectly && suggestedFilename) {
-    const p1 = path.join(jobDownloadDir, suggestedFilename);
-    const p2 = path.join(OUTPUT_DIR, suggestedFilename);
-    const valid = [p1, p2].find(p => fs.existsSync(p) && fs.statSync(p).size > 300000);
-    if (valid) {
-      fs.copyFileSync(valid, rawPath);
-      capturedDirectly = true;
-      console.log(`[Flow Video] 🎯 CDP suggestedFilename üzerinden dosya rawPath'e aktarıldı: ${valid}`);
+  if (!capturedDirectly) {
+    const candidateNames = [suggestedFilename, 'download', 'download.mp4'].filter(Boolean);
+    for (const name of candidateNames) {
+      const p1 = path.join(jobDownloadDir, name);
+      const p2 = path.join(OUTPUT_DIR, name);
+      const valid = [p1, p2].find(p => fs.existsSync(p) && fs.statSync(p).size > 300000);
+      if (valid) {
+        fs.copyFileSync(valid, rawPath);
+        try { fs.unlinkSync(valid); } catch (_) {}
+        capturedDirectly = true;
+        console.log(`[Flow Video] 🎯 CDP ${name} üzerinden dosya rawPath'e aktarıldı: ${valid}`);
+        break;
+      }
     }
   }
 
@@ -2170,7 +2176,7 @@ async function generateVideoOnFlow(options = {}) {
     try { fs.rmSync(jobDownloadDir, { recursive: true, force: true }); } catch (_) {}
   }
 
-    // 🛡️ GÜVENLİK KONTROLÜ: rawPath diske yazılmadıysa extractDir veya outputs'tan en yeni MP4'ü bul
+    // 🛡️ GÜVENLİK KONTROLÜ: rawPath diske yazılmadıysa extractDir veya outputs'tan en yeni videoyu bul
     if (!fs.existsSync(rawPath)) {
       const extractDir = path.join(OUTPUT_DIR, `unzip_${timestamp}`);
       if (fs.existsSync(extractDir)) {
@@ -2187,15 +2193,15 @@ async function generateVideoOnFlow(options = {}) {
     }
 
     if (!fs.existsSync(rawPath)) {
-      const allOutputsMp4 = fs.readdirSync(OUTPUT_DIR)
-        .filter(f => f.toLowerCase().endsWith('.mp4') && f !== rawFileName && !f.startsWith('temp_'))
+      const allRecent = fs.readdirSync(OUTPUT_DIR)
+        .filter(f => f !== rawFileName && !f.startsWith('temp_') && !f.endsWith('.jpg') && !f.endsWith('.png') && !f.endsWith('.json'))
         .map(f => ({ path: path.join(OUTPUT_DIR, f), time: fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs, size: fs.statSync(path.join(OUTPUT_DIR, f)).size }))
         .filter(f => f.size > 500000)
         .sort((a, b) => b.time - a.time);
-      const recentOutputs = allOutputsMp4.filter(f => f.time >= requestStartedAt);
+      const recentOutputs = allRecent.filter(f => f.time >= requestStartedAt);
       if (recentOutputs.length > 0) {
         fs.copyFileSync(recentOutputs[0].path, rawPath);
-        console.log(`[Flow Video] 🛡️ Emniyet Kopyası: Bu üretim döngüsünde inen taze MP4 rawPath'e aktarıldı: ${recentOutputs[0].path}`);
+        console.log(`[Flow Video] 🛡️ Emniyet Kopyası: Bu üretim döngüsünde inen taze video rawPath'e aktarıldı: ${recentOutputs[0].path}`);
       }
     }
 
