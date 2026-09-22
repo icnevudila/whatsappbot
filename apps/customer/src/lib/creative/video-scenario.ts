@@ -496,20 +496,62 @@ export function buildSmartBusinessVideoIdeas(
     ]
   }
 
-  // 3. Otomotiv / Donanım / Teknoloji (Örn: Bofe Şarjlı Pompa)
+  // 3. Tarım / Ziraat / Bahçe / İlaçlama & Çevre Sağlığı / Kimya (Örn: Bofe)
   if (
-    allKeywords.includes('pompa') ||
-    allKeywords.includes('lastik') ||
-    allKeywords.includes('oto') ||
-    allKeywords.includes('araba') ||
-    allKeywords.includes('araç') ||
-    allKeywords.includes('motor') ||
-    allKeywords.includes('şarj') ||
-    allKeywords.includes('teknoloji') ||
-    allKeywords.includes('tamir') ||
-    allKeywords.includes('yedek parça')
+    allKeywords.includes('ilaçlama') ||
+    allKeywords.includes('sırt pompası') ||
+    allKeywords.includes('pülverizatör') ||
+    allKeywords.includes('tarım') ||
+    allKeywords.includes('ziraat') ||
+    allKeywords.includes('bahçe') ||
+    allKeywords.includes('sera') ||
+    allKeywords.includes('haşere') ||
+    allKeywords.includes('çevre sağlığı') ||
+    allKeywords.includes('halk sağlığı') ||
+    allKeywords.includes('bağ') ||
+    allKeywords.includes('hasat') ||
+    allKeywords.includes('gübre') ||
+    allKeywords.includes('bofe') ||
+    allKeywords.includes('kimya') ||
+    allKeywords.includes('lavabo açıcı') ||
+    allKeywords.includes('dezenfektan') ||
+    allKeywords.includes('fare zehri') ||
+    allKeywords.includes('zeytin silkeleme')
   ) {
-    const item = firstProd || 'Akıllı Şarjlı Pompa'
+    const item = firstProd || 'Akülü Sırt İlaçlama Pompası'
+    return [
+      {
+        label: 'Bahçe ve Tarımda Kolay İlaçlama',
+        text: `Geniş arazilerde ve bahçenizde yorulmadan pratik ilaçlama yapın. ${item} ile yüksek basınçlı mikronize püskürtme avantajını keşfedin. Sipariş için hemen WhatsApp hattımıza yazın.`,
+      },
+      {
+        label: 'Sırt Ağrılarına ve Yorulmaya Son',
+        text: `Tek şarjla saatlerce kesintisiz ilaçlama gücü. ${item} ile hem zamandan tasarruf edin hem sırt ağrılarına veda edin. Detaylı bilgi için WhatsApp'tan iletişime geçin.`,
+      },
+      {
+        label: 'Profesyonel Çevre & Halk Sağlığı',
+        text: `${name} güvencesiyle haşere kontrolü ve çevre sağlığında üstün performans. Toptan ve perakende siparişleriniz için WhatsApp üzerinden hemen ulaşın.`,
+      },
+      {
+        label: 'Teknik Özellikler ve Hızlı Sipariş',
+        text: `${name} kalitesiyle ${item} teknik özelliklerini öğrenin, yedek parça ve garanti güvencesiyle tek tıkla WhatsApp üzerinden siparişinizi verin.`,
+      },
+    ]
+  }
+
+  // 4. Otomotiv / Araç Bakım / Donanım
+  if (
+    allKeywords.includes('lastik pompası') ||
+    allKeywords.includes('oto kompresör') ||
+    allKeywords.includes('lastik') ||
+    allKeywords.includes('otomotiv') ||
+    allKeywords.includes('oto aksesuar') ||
+    allKeywords.includes('araba') ||
+    allKeywords.includes('araç bakım') ||
+    allKeywords.includes('oto yedek parça') ||
+    allKeywords.includes('tamirhane')
+  ) {
+    const item = firstProd || 'Oto Lastik Kompresörü'
     return [
       {
         label: 'Acil Durum Kurtarıcısı',
@@ -530,7 +572,7 @@ export function buildSmartBusinessVideoIdeas(
     ]
   }
 
-  // 4. İnşaat / Yapı / Malzeme (Örn: Ayvazoğlu Tuğla)
+  // 5. İnşaat / Yapı / Malzeme (Örn: Ayvazoğlu Tuğla)
   if (
     allKeywords.includes('inşaat') ||
     allKeywords.includes('tuğla') ||
@@ -561,7 +603,7 @@ export function buildSmartBusinessVideoIdeas(
     ]
   }
 
-  // 5. Moda / Butik / Tekstil
+  // 6. Moda / Butik / Tekstil
   if (
     allKeywords.includes('butik') ||
     allKeywords.includes('giyim') ||
@@ -592,7 +634,7 @@ export function buildSmartBusinessVideoIdeas(
     ]
   }
 
-  // 6. Genel / Hizmet / WhatsApp İşletmesi
+  // 7. Genel / Hizmet / WhatsApp İşletmesi
   const genericProd = firstProd ? `${firstProd} ve ` : ''
   return [
     {
