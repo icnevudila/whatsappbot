@@ -8,46 +8,12 @@ import type {
   ReferenceAssetInput,
 } from './schemas'
 import { resolveCreativeEnvironmentProfile } from './sector-profiles'
+import { V5_STANDARD_NEGATIVES, V5_STANDARD_NEGATIVES_LIST } from './constants'
+import { resolveCreativeDNA } from './creative-dna'
+import { buildSceneContracts, compileSceneContractsToVeo } from './scene-contract'
+import { evaluateCreativeMemory, type CreativeHistoryItem } from './creative-memory'
 
-export const V5_STANDARD_NEGATIVES = [
-  'fake logos',
-  'additional brands',
-  'misspelled brand name',
-  'distorted logo',
-  'altered lettering',
-  'promotional captions',
-  'price tags',
-  'subtitles',
-  'additional logos',
-  'invented brand names',
-  'generated captions',
-  'promotional badges',
-  'extra products',
-  'invented accessories',
-  'altered packaging',
-  'distorted labels',
-  'product deformation',
-  'duplicate subject',
-  'duplicate product',
-  'altered product geometry',
-  'incorrect product color',
-  'warped packaging',
-  'warped logo',
-  'gibberish typography',
-  'floating graphics',
-  'holographic interface',
-  'unmotivated location change',
-  'identity drift',
-  'extra fingers',
-  'deformed hands',
-  'unsafe product use',
-  'watermark',
-  'fake phone numbers, fake URLs, discount badges, graphic overlays, lower thirds, floating banners, text cards',
-  'cartoon, 3D animation look, cgi render, uncanny valley',
-  'spinning laptop, rotating laptop, turntable spin, rotating table, motorized rotation, spinning gadget, 360 degree turntable, levitating objects',
-  'laptop manufacturer logo, text on laptop bezel, laptop brand name, hardware logo, text on screen frame, screen bezel text, macbook text, notebook text, keyboard text, keyboard gibberish, fake laptop brand, MeBesuk, branding on hardware, unbranded hardware violations',
-  'blurry artifacts, low quality, pixelated, amateur video, choppy jumps, abrupt view shifts, jerky camera',
-].join(', ')
+export { V5_STANDARD_NEGATIVES, V5_STANDARD_NEGATIVES_LIST }
 
 /**
  * Shot Planner: Generates an 8-second 3-shot cinematic plan with single location continuity
@@ -60,6 +26,8 @@ export function planShots(
   hook: HookPlanOutput,
   voiceoverText?: string | null,
   cameraModeInput?: 'continuous_take' | 'three_cut',
+  history?: CreativeHistoryItem[],
+  targetDurationSeconds?: number,
 ): ShotPlanOutput {
   const brand = facts.verifiedFacts.brandName || 'Brand'
   const brandName = facts.verifiedFacts.brandName
@@ -80,8 +48,37 @@ export function planShots(
     rawBrief: facts.verifiedFacts.rawBrief,
   })
 
-  // 2a. Location Determination (Generic Profile Driven)
-  let singleLocation = profile.preferredEnvironments[0] || 'Clean, modern and sunlit commercial setting tailored to the subject'
+  // 2a. 4-Tier Creative DNA Resolution (Brand DNA -> Product DNA -> Intent -> Strategy)
+  const dna = resolveCreativeDNA({
+    facts,
+    ontology,
+    strategy,
+    profile,
+    manifest: (facts.lockedBrandIdentity as any) || null,
+  })
+
+  // 2b. Creative History & Repetition Memory Evaluation
+  const creativeScore = evaluateCreativeMemory(history, {
+    hookType: hook.family,
+    environment: profile.preferredEnvironments[0] || 'commercial_setting',
+    heroShot: 'close_macro',
+    cameraLanguage: [cameraMode],
+    storyArchetype: strategy.primary,
+    lighting: 'natural_daylight',
+  })
+
+  // 2c. Dual Creative Grammar & Machine-Readable Scene Contracts
+  const { grammarType, contracts } = buildSceneContracts({
+    dna,
+    targetDurationSeconds: targetDurationSeconds || 8,
+    offerName: subject,
+    brandName: brandName || null,
+    hookDescription: hook.visualEventDescription,
+    cameraMode,
+  })
+
+  // 2d. Location Determination (Generic Profile & DNA Driven)
+  let singleLocation = dna.product.visualWorld[0] || profile.preferredEnvironments[0] || 'Clean, modern and sunlit commercial setting tailored to the subject'
   if (!profile.preferredEnvironments || profile.preferredEnvironments.length === 0) {
     if (ontology.offerType === 'food_or_consumable') {
       singleLocation = 'Warm artisan kitchen presentation counter with rustic wooden textures'
@@ -96,17 +93,17 @@ export function planShots(
     }
   }
 
-  // 2b. Brand Pillar & Color Grade (Generic Profile Driven)
-  const brandPillar = profile.brandPillar || `Reliable quality and professional delivery — a trusted brand in its category.`
+  // 2e. Brand Pillar & Color Grade (Generic Profile & DNA Driven)
+  const brandPillar = dna.brand.corePillar || profile.brandPillar || `Reliable quality and professional delivery — a trusted brand in its category.`
   const colorGradeDirective = profile.colorGradeDirective || `COLOR GRADE: Warm-neutral commercial grade, accurate product colors, clean lifted blacks — premium brand visual identity.`
   const musicDirective = profile.musicDirective || `subtle modern commercial groove starting sparse, building at midpoint, peaking on the brand reveal, then resolving to silence`
 
   // 3. Three Shot Kadraj Setup (Adapts to camera mode)
   const isContinuous = cameraMode === 'continuous_take'
 
-  const shot1Action = profile.preferredUsageContext[0]
+  const shot1Action = contracts[0]?.action_description || (profile.preferredUsageContext[0]
     ? profile.preferredUsageContext[0].replace(/\{subject\}/g, subject)
-    : `${hook.visualEventDescription} A real professional person (clear recognizable face, industry-appropriate attire, confident purposeful body language) is actively and prominently visible in the foreground engaging with the product or activity.`
+    : `${hook.visualEventDescription} A real professional person (clear recognizable face, industry-appropriate attire, confident purposeful body language) is actively and prominently visible in the foreground engaging with the product or activity.`)
 
   const shot1: ShotItem = {
     shotNumber: 1,
@@ -122,10 +119,10 @@ export function planShots(
     lightingAndPhysics: 'Natural daylight with soft specular highlights, shallow depth of field (f/1.8)',
   }
 
-  // Dynamic Shot 2 Action tailored via Profile
-  const shot2Action = profile.preferredUsageContext[1]
+  // Dynamic Shot 2 Action tailored via Profile & Contracts
+  const shot2Action = contracts[1]?.action_description || (profile.preferredUsageContext[1]
     ? profile.preferredUsageContext[1].replace(/\{subject\}/g, subject)
-    : `The focal subject (${subject}) performs its core verified function smoothly in realistic physical environment.`
+    : `The focal subject (${subject}) performs its core verified function smoothly in realistic physical environment.`)
 
   const shot2: ShotItem = {
     shotNumber: 2,
@@ -196,28 +193,44 @@ export function planShots(
     : V5_STANDARD_NEGATIVES
 
   // 7. Assemble Technical Veo English Prompt
-  const veoPrompt = [
-    `FORMAT: 9:16 vertical commercial video, exactly 8.0 seconds total runtime.`,
-    `BRAND PILLAR AND EMOTIONAL INTENT: ${brandPillar} Every visual, lighting, and audio choice should serve this emotional intent directly.`,
-    `SUBJECT AND REFERENCE LOCK: Focal subject is "${subject}". ${
-      facts.assets.productReference
-        ? 'A reference product photo is provided; preserve physical geometry, materials, casing, and colors exactly with zero mutation.'
-        : 'Realistic physical proportions and authentic material textures.'
-    }`,
-    `LOCATION: ${singleLocation}. Strict continuity: single unbroken location, identical lighting setup, zero scene jumping.`,
-    `SHOT 1 (0.0s - 2.2s - VISUAL HOOK): ${shot1.framing}. ${shot1.subjectAction}. ${shot1.cameraMotion}.`,
-    `SHOT 2 (2.2s - 5.8s - PROOF AND ACTION): ${shot2.framing}. ${shot2.subjectAction}. ${shot2.cameraMotion}.`,
-    `SHOT 3 (5.8s - 8.0s - HERO CLOSE): ${shot3.framing}. ${shot3.subjectAction}. ${shot3.cameraMotion}.`,
-    ...(brandRevealDirective ? [brandRevealDirective] : []),
-    cameraDirective,
-    `LIGHT AND PHYSICS: Natural lighting, realistic physical gravity and authentic material reflections. ${colorGradeDirective}`,
-    `MUSIC SHAPE: ${musicDirective}.`,
-    audioDirective,
-    brandName
-      ? `TEXT POLICY: No newly generated text or promotional advertising copy (strictly NO prices, NO discount badges, NO phone numbers, NO website URLs, NO promotional captions, NO subtitles, NO floating letters, NO banners, NO CTA badges). The verified brand name "${brandName}", the original corporate logo, and pre-existing product labels are MANDATORY on-screen visual elements directly in the video. Real physical brand identity is strictly preserved: pre-existing printed labels and authentic branding on reference products remain as-is without modification. Do not redesign or invent a logo.`
-      : `TEXT POLICY: No newly generated text, captions, prices, phone numbers, calls to action, signs, or fake logos. No gibberish words, small text, long campaign copy, subtitles, floating text, handheld signs, desk signs, graphic overlays, banners or lower thirds. Real physical brand identity is strictly preserved: pre-existing printed labels and authentic branding on reference products remain as-is without modification. Brand name appears only on natural physical surfaces (uniforms, vehicle decals, entrance signage, or product nameplates) matching the brand palette. Do not redesign or invent a logo.`,
-    `NEGATIVE CONSTRAINTS: ${negativeConstraints}`,
-  ].join('\n')
+  const isBrandFilm = (targetDurationSeconds || 8) >= 20
+  const veoPrompt = isBrandFilm
+    ? compileSceneContractsToVeo({
+        contracts,
+        grammarType,
+        dna,
+        brandName: brandName || null,
+        offerName: subject,
+        audioDirective,
+        cameraMode,
+        hasProductReference: Boolean(facts.assets.productReference),
+        antiRepetitionDirectives: creativeScore.antiRepetitionDirectives,
+      })
+    : [
+        `FORMAT: 9:16 vertical commercial video, exactly 8.0 seconds total runtime.`,
+        `BRAND PILLAR AND EMOTIONAL INTENT: ${brandPillar} Every visual, lighting, and audio choice should serve this emotional intent directly.`,
+        `SUBJECT AND REFERENCE LOCK: Focal subject is "${subject}". ${
+          facts.assets.productReference
+            ? 'A reference product photo is provided; preserve physical geometry, materials, casing, and colors exactly with zero mutation.'
+            : `Material specification: ${dna.product.material}. Visual strengths: ${dna.product.visualStrength.join(', ')}.`
+        }`,
+        `LOCATION: ${singleLocation}. Strict continuity: single unbroken location, identical lighting setup, zero scene jumping.`,
+        `SHOT 1 (${shot1.timing.from.toFixed(1)}s - ${shot1.timing.to.toFixed(1)}s - VISUAL HOOK): ${shot1.framing}. ${shot1.subjectAction}. ${shot1.cameraMotion}.`,
+        `SHOT 2 (${shot2.timing.from.toFixed(1)}s - ${shot2.timing.to.toFixed(1)}s - PROOF AND ACTION): ${shot2.framing}. ${shot2.subjectAction}. ${shot2.cameraMotion}.`,
+        `SHOT 3 (${shot3.timing.from.toFixed(1)}s - ${shot3.timing.to.toFixed(1)}s - HERO CLOSE): ${shot3.framing}. ${shot3.subjectAction}. ${shot3.cameraMotion}.`,
+        ...(brandRevealDirective ? [brandRevealDirective] : []),
+        cameraDirective,
+        `LIGHT AND PHYSICS: Natural lighting, realistic physical gravity and authentic material reflections. ${colorGradeDirective}`,
+        `MUSIC SHAPE: ${musicDirective}.`,
+        audioDirective,
+        brandName
+          ? `TEXT POLICY: No newly generated text or promotional advertising copy (strictly NO prices, NO discount badges, NO phone numbers, NO website URLs, NO promotional captions, NO subtitles, NO floating letters, NO banners, NO CTA badges). The verified brand name "${brandName}", the original corporate logo, and pre-existing product labels are MANDATORY on-screen visual elements directly in the video. Real physical brand identity is strictly preserved: pre-existing printed labels and authentic branding on reference products remain as-is without modification. Do not redesign or invent a logo.`
+          : `TEXT POLICY: No newly generated text, captions, prices, phone numbers, calls to action, signs, or fake logos. No gibberish words, small text, long campaign copy, subtitles, floating text, handheld signs, desk signs, graphic overlays, banners or lower thirds. Real physical brand identity is strictly preserved: pre-existing printed labels and authentic branding on reference products remain as-is without modification. Brand name appears only on natural physical surfaces (uniforms, vehicle decals, entrance signage, or product nameplates) matching the brand palette. Do not redesign or invent a logo.`,
+        ...(creativeScore.antiRepetitionDirectives && creativeScore.antiRepetitionDirectives.length > 0
+          ? creativeScore.antiRepetitionDirectives.map((d) => `CREATIVE DIVERSITY DIRECTIVE: ${d}`)
+          : []),
+        `NEGATIVE CONSTRAINTS: ${negativeConstraints}`,
+      ].join('\n')
 
   const referenceAssetInput: ReferenceAssetInput = {
     hasImageInput: Boolean(facts.assets.productReference),
@@ -233,7 +246,7 @@ export function planShots(
     : undefined
 
   return {
-    durationSeconds: 8,
+    durationSeconds: targetDurationSeconds || 8,
     aspectRatio: '9:16',
     cameraMode,
     singleLocation,
@@ -244,5 +257,8 @@ export function planShots(
     referenceAssetInput,
     imageToVideoPrompt,
     reasonCode: `shotplan_8s_${cameraMode}_${strategy.primary}_location_${ontology.offerType}`,
+    sceneContracts: contracts,
+    creativeDNA: dna,
+    creativeScore,
   }
 }

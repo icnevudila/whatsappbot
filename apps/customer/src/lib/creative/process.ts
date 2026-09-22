@@ -586,9 +586,10 @@ export async function processCreativeGeneration(
 
       const { overlay } = buildVideoPrompt(snapshot)
       let videoPrompt: string
+      let v5Result: any = null
       try {
         const { compileDeterministicV5 } = await import('./v5')
-        const v5Result = compileDeterministicV5({
+        v5Result = compileDeterministicV5({
           brandName: overlay.brandName || snapshot.brandKit?.name || null,
           brief: snapshot.brief || 'İşletme reklam filmi',
           customText: snapshot.customText || null,
@@ -659,6 +660,9 @@ export async function processCreativeGeneration(
             primaryColor: overlay.primaryColor,
             accentColor: overlay.accentColor,
             customer: customerName,
+            sceneContracts: v5Result?.sceneContracts || null,
+            creativeDNA: v5Result?.creativeDNA || null,
+            creativeScore: v5Result?.creativeScore || null,
           }),
         })
 

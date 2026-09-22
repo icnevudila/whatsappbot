@@ -3,6 +3,10 @@
  * Universal, sector-independent ontology and machine-readable data contracts.
  */
 
+import type { CreativeDNASnapshot } from './creative-dna'
+import type { SceneContract, CreativeGrammarType } from './scene-contract'
+import type { CreativeOptimizationScore, CreativeHistoryItem } from './creative-memory'
+
 // A. Offer Type
 export type OfferType =
   | 'physical_product'
@@ -158,6 +162,8 @@ export interface UserVideoInput {
   campaignDeadline?: string | null
   deliveryArea?: string | null
   cameraMode?: 'continuous_take' | 'three_cut'
+  targetDurationSeconds?: number
+  creativeHistory?: CreativeHistoryItem[]
   products?: Array<{
     name: string
     description?: string | null
@@ -324,7 +330,7 @@ export interface ShotItem {
 }
 
 export interface ShotPlanOutput {
-  durationSeconds: 8
+  durationSeconds: number
   aspectRatio: '9:16'
   cameraMode: 'continuous_take' | 'three_cut'
   singleLocation: string
@@ -335,6 +341,9 @@ export interface ShotPlanOutput {
   referenceAssetInput?: ReferenceAssetInput
   imageToVideoPrompt?: string
   reasonCode: string
+  sceneContracts?: SceneContract[]
+  creativeDNA?: CreativeDNASnapshot
+  creativeScore?: CreativeOptimizationScore
 }
 
 // Turkish Voiceover Output
@@ -440,4 +449,7 @@ export interface V5FinalOutputPackage {
   validation: ValidationOutput
   lockedBrandIdentity: LockedBrandIdentity
   videoArtifactValidation?: GeneratedVideoValidationResult
+  sceneContracts?: SceneContract[]
+  creativeDNA?: CreativeDNASnapshot
+  creativeScore?: CreativeOptimizationScore
 }

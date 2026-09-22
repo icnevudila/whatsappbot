@@ -2428,6 +2428,24 @@ async function generateVideoOnFlow(options = {}) {
   const verification = verifyVideoFile(rawPath);
   console.log(`[Flow Video] 🔒 Video bütünlük doğrulaması BAŞARILI: Süre=${verification.duration}s, Boyut=${(verification.size / 1024 / 1024).toFixed(2)} MB, SHA256=${verification.sha256}`);
 
+  // 🔬 MULTI-FRAME VISUAL QA ENGINE (0%, 25%, 50%, 75%, 95% kare analizi)
+  let visualQaReport = null;
+  try {
+    const { runVisualQA } = require('./visual_qa_engine.js');
+    visualQaReport = await runVisualQA({
+      videoPath: rawPath,
+      duration: verification.duration,
+      sceneContracts: options.sceneContracts || [],
+      brandName: options.brandName || options.customer,
+      productName: options.productName || options.product,
+      mustNotShow: options.mustNotShow || [],
+      strictMode: false
+    });
+    console.log(`[Flow Video] 🔬 Visual QA Sonucu: ${visualQaReport.verdict} (Skor: ${visualQaReport.score}/100)`);
+  } catch (qaErr) {
+    console.warn('[Flow Video] Visual QA uyarısı (üretim kesintiye uğramadı):', qaErr.message);
+  }
+
   // 💾 STATE FLUSH: Flow sekmesini kapatmadan önce final state ve URL'lerin kaydedildiğini garanti et!
   if (typeof options.onStateFlush === 'function') {
     try {
@@ -2437,7 +2455,8 @@ async function generateVideoOnFlow(options = {}) {
         rawFileName,
         duration: verification.duration,
         sha256: verification.sha256,
-        status: 'verified'
+        status: 'verified',
+        visualQa: visualQaReport
       });
     } catch (flushErr) {
       console.warn('[Flow Video] onStateFlush uyarısı:', flushErr.message);
@@ -2501,12 +2520,9 @@ async function generateVideoOnFlow(options = {}) {
           localLogoPath = path.join(OUTPUT_DIR, path.basename(logoCandidate));
         }
       }
-      if (!localLogoPath) {
-        const bofeWhite = path.join(__dirname, 'bofe_logo_clean_white.png');
-        const bofeStd = path.join(OUTPUT_DIR, 'bofe_logo.png');
-        if (brandName.toLowerCase().includes('bofe')) {
-          localLogoPath = fs.existsSync(bofeWhite) ? bofeWhite : (fs.existsSync(bofeStd) ? bofeStd : null);
-        }
+      if (!localLogoPath && brandKit?.logo_path) {
+        const candidateP = path.join(OUTPUT_DIR, path.basename(brandKit.logo_path));
+        if (fs.existsSync(candidateP)) localLogoPath = candidateP;
       }
 
       const tempOverlayOut = path.join(OUTPUT_DIR, `temp_overlay_${timestamp}.mp4`);

@@ -24,6 +24,10 @@ export { planShots, V5_STANDARD_NEGATIVES } from './shot-planner'
 export { writeVoiceover, validateClaims, verifyPercentageClaim, countTurkishSyllables, estimateSpeechDuration } from './voiceover-writer'
 export { compileOverlay, deriveHookHeadline } from './overlay-compiler'
 export { validateAndRepair, validateGeneratedVideoArtifact } from './validator'
+export * from './creative-dna'
+export * from './scene-contract'
+export * from './creative-memory'
+export * from './constants'
 
 /**
  * Deterministic V5 Video Compiler Pipeline
@@ -56,7 +60,16 @@ export function compileDeterministicV5(input: UserVideoInput): V5FinalOutputPack
   }
 
   // 6. Shot Planner (8s 3-kadraj + single location + VO wired into Veo prompt AUDIO directive + cameraMode)
-  let shotPlan = planShots(facts, ontology, strategy, hook, voiceover.text, input.cameraMode)
+  let shotPlan = planShots(
+    facts,
+    ontology,
+    strategy,
+    hook,
+    voiceover.text,
+    input.cameraMode,
+    input.creativeHistory,
+    input.targetDurationSeconds,
+  )
 
   // 7. Overlay & Subtitle Compiler (2-4 word benefit headline, decoupled text layer)
   const overlay = compileOverlay(facts, ontology, voiceover)
@@ -102,6 +115,9 @@ export function compileDeterministicV5(input: UserVideoInput): V5FinalOutputPack
       isLocked: true,
     },
     videoArtifactValidation: undefined,
+    sceneContracts: shotPlan.sceneContracts,
+    creativeDNA: shotPlan.creativeDNA,
+    creativeScore: shotPlan.creativeScore,
   }
 }
 
