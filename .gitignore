@@ -74,8 +74,9 @@ apps/panel/public/landing/shot-*.png
 apps/panel/public/landing/demo-raw.mp4
 whatsapp görsel/
 
-# Test ve debug scriptleri (root dizininde biriken)
-infra/
+infra/*
+!infra/docker-compose*.yml
+!infra/chrome-seccomp.json
 *.wav
 *.mp4
 *.txt

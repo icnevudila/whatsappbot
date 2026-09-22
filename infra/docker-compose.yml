@@ -191,3 +191,97 @@ services:
       SCALE_COMPOSE_SERVICE: wa-worker
       SCALE_COMPOSE_PROJECT: filo-wa
       # SCALE_ACTUATOR=docker icin CLI build-arg ile kurulur; varsayilan noop.
+
+  # --- AI Media Control: Orchestration & Validation (Port 3460) ---
+  ai-media-control:
+    build:
+      context: ..
+      dockerfile: services/ai-media-control/Dockerfile
+    container_name: ai-media-control
+    profiles: ['small', 'solo', 'scale']
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:3460:3460'
+    networks:
+      - default
+      - gflow-internal
+    volumes:
+      # Shared volumes — same named volumes as gflow-engine for ffprobe/SHA/QA
+      - flow-outputs:/shared/outputs
+      - flow-incidents:/shared/incidents
+    env_file:
+      - ../apps/wa-service/.env
+    environment:
+      NODE_ENV: production
+      PORT: '3460'
+      DATABASE_URL: ${DATABASE_URL}
+      GFLOW_ENGINE_URL: 'http://gflow-engine:3461'
+      SHARED_OUTPUTS_DIR: '/shared/outputs'
+      SHARED_INCIDENTS_DIR: '/shared/incidents'
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://127.0.0.1:3460/health']
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    mem_limit: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  # --- GFlow Engine: Isolated Flow Driver (NO Public Ports) ---
+  gflow-engine:
+    build:
+      context: ..
+      dockerfile: services/gflow-engine/Dockerfile
+    container_name: gflow-engine
+    profiles: ['small', 'solo', 'scale']
+    restart: unless-stopped
+    # NO host ports — not accessible from outside Docker
+    networks:
+      - gflow-internal       # ai-media-control ↔ gflow-engine private communication
+      - gflow-egress         # outbound internet → Google Flow (no inbound)
+    volumes:
+      - /app/flow-profiles:/app/flow-profiles
+      - flow-outputs:/shared/outputs
+      - flow-incidents:/shared/incidents
+    shm_size: '1gb'
+    security_opt:
+      - seccomp:./chrome-seccomp.json
+    environment:
+      FLOW_PROFILES_DIR: '/app/flow-profiles'
+      FLOW_OUTPUTS_DIR: '/shared/outputs'
+      FLOW_INCIDENTS_DIR: '/shared/incidents'
+      GFLOW_CLI_PATH: '/app/upstream_gflow/gflow-cli'
+      GFLOW_CHROME_NO_SANDBOX: '0'
+      DISPLAY: ':99'
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://127.0.0.1:3461/health']
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    mem_limit: 4g
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+networks:
+  gflow-internal:
+    driver: bridge
+    internal: true    # No internet — only container-to-container traffic
+
+  gflow-egress:
+    driver: bridge
+    # NOT internal — allows outbound internet for Google Flow access
+    # No host port binding on gflow-engine → no inbound exposure
+
+volumes:
+  flow-outputs:
+    driver: local
+  flow-incidents:
+    driver: local
