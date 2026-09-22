@@ -1,0 +1,286 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "VideoQualityQASchema",
+  "description": "Comprehensive QA evaluation schema for video assets including fail-closed invariant gates, three-frame analysis, reference fidelity metrics, and 18-dimension creative scorecard.",
+  "type": "object",
+  "required": [
+    "evaluation_id",
+    "video_metadata",
+    "fail_closed_gates",
+    "three_frame_qa",
+    "reference_fidelity",
+    "creative_scorecard",
+    "decision_summary"
+  ],
+  "properties": {
+    "evaluation_id": {
+      "type": "string",
+      "description": "Unique evaluation run identifier (UUID or benchmark test run ID)."
+    },
+    "video_metadata": {
+      "type": "object",
+      "required": [
+        "benchmark_id",
+        "brand",
+        "format_type",
+        "duration_seconds",
+        "aspect_ratio",
+        "resolution",
+        "fps"
+      ],
+      "properties": {
+        "benchmark_id": { "type": "string" },
+        "brand": { "type": "string" },
+        "format_type": { "type": "string", "enum": ["short_video", "long_video"] },
+        "duration_seconds": { "type": "number" },
+        "aspect_ratio": { "type": "string", "enum": ["9:16", "16:9", "1:1"] },
+        "resolution": { "type": "string" },
+        "fps": { "type": "number" },
+        "scene_count": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "fail_closed_gates": {
+      "type": "object",
+      "description": "Strict security & integrity gates. Any failure causes IMMEDIATE DELIVERY REJECTION regardless of creative score.",
+      "required": [
+        "WRONG_PRODUCT",
+        "WRONG_BRAND",
+        "FOREIGN_TENANT_ASSET",
+        "MISSING_REQUIRED_REFERENCE",
+        "INVALID_OUTPUT",
+        "BROKEN_VIDEO",
+        "WRONG_LOGO",
+        "VALIDATION_BYPASS"
+      ],
+      "properties": {
+        "WRONG_PRODUCT": { "$ref": "#/definitions/GateEvaluation" },
+        "WRONG_BRAND": { "$ref": "#/definitions/GateEvaluation" },
+        "FOREIGN_TENANT_ASSET": { "$ref": "#/definitions/GateEvaluation" },
+        "MISSING_REQUIRED_REFERENCE": { "$ref": "#/definitions/GateEvaluation" },
+        "INVALID_OUTPUT": { "$ref": "#/definitions/GateEvaluation" },
+        "BROKEN_VIDEO": { "$ref": "#/definitions/GateEvaluation" },
+        "WRONG_LOGO": { "$ref": "#/definitions/GateEvaluation" },
+        "VALIDATION_BYPASS": { "$ref": "#/definitions/GateEvaluation" }
+      }
+    },
+    "three_frame_qa": {
+      "type": "object",
+      "description": "Deterministic keyframe sampling and inspection.",
+      "properties": {
+        "short_video_sample": {
+          "type": "object",
+          "properties": {
+            "frame_10_pct": { "$ref": "#/definitions/KeyframeInspection" },
+            "frame_50_pct": { "$ref": "#/definitions/KeyframeInspection" },
+            "frame_90_pct": { "$ref": "#/definitions/KeyframeInspection" }
+          }
+        },
+        "long_video_scenes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["scene_index", "frame_15_pct", "frame_50_pct", "frame_85_pct", "scene_end_frame"],
+            "properties": {
+              "scene_index": { "type": "integer" },
+              "scene_title": { "type": "string" },
+              "frame_15_pct": { "$ref": "#/definitions/KeyframeInspection" },
+              "frame_50_pct": { "$ref": "#/definitions/KeyframeInspection" },
+              "frame_85_pct": { "$ref": "#/definitions/KeyframeInspection" },
+              "scene_end_frame": { "$ref": "#/definitions/KeyframeInspection" },
+              "continuation_match": {
+                "type": "object",
+                "properties": {
+                  "parent_end_frame_hash": { "type": "string" },
+                  "child_start_frame_hash": { "type": "string" },
+                  "visual_continuity_score": { "type": "number", "minimum": 0, "maximum": 1 },
+                  "discontinuity_detected": { "type": "boolean" },
+                  "notes": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "reference_fidelity": {
+      "type": "object",
+      "description": "Detailed multi-point comparison between original input reference images and rendered video product.",
+      "required": [
+        "primary_color_delta_e",
+        "silhouette_similarity",
+        "aspect_ratio_stability",
+        "controls_buttons_fidelity",
+        "packaging_form_fidelity",
+        "distinctive_features_preserved",
+        "logo_placement_accuracy",
+        "model_morph_detected"
+      ],
+      "properties": {
+        "primary_color_delta_e": {
+          "type": "number",
+          "description": "CIELAB Delta E score between reference asset and rendered product (acceptable <= 12.0)."
+        },
+        "silhouette_similarity": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Intersection-over-Union (IoU) of normalized product contours (>= 0.70 pass)."
+        },
+        "aspect_ratio_stability": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Ratio stability of product dimensional axes (width/height/depth) across frames."
+        },
+        "controls_buttons_fidelity": {
+          "type": "string",
+          "enum": ["PRESERVED", "SLIGHT_DISTORTION", "HALLUCINATED_CONTROLS", "NOT_APPLICABLE"]
+        },
+        "packaging_form_fidelity": {
+          "type": "string",
+          "enum": ["ACCURATE", "SLIGHT_VARIATION", "COMPLETELY_ALTERED", "NOT_APPLICABLE"]
+        },
+        "distinctive_features_preserved": {
+          "type": "boolean",
+          "description": "Whether branded ridges, seams, nozzle, handles, or unique textures are preserved."
+        },
+        "logo_placement_accuracy": {
+          "type": "string",
+          "enum": ["CORRECT", "MIRRORED", "DISPLACED", "HALLUCINATED_TEXT", "ABSENT"]
+        },
+        "model_morph_detected": {
+          "type": "boolean",
+          "description": "TRUE if AI turned the product into a different class or model (e.g. brick into concrete, sprayer into drill). INVARIANT: If true, fails WRONG_PRODUCT gate."
+        }
+      }
+    },
+    "creative_scorecard": {
+      "type": "object",
+      "description": "18 Creative assessment dimensions scored on a 0 to 10 scale (10 = studio commercial quality).",
+      "required": [
+        "PRODUCT_IDENTITY",
+        "PRODUCT_GEOMETRY_STABILITY",
+        "BRAND_CONTEXT_MATCH",
+        "ENVIRONMENT_MATCH",
+        "REFERENCE_FIDELITY",
+        "CHARACTER_CONTINUITY",
+        "SCENE_CONTINUITY",
+        "CAMERA_QUALITY",
+        "MOTION_REALISM",
+        "LIGHTING",
+        "COMPOSITION",
+        "PROMPT_ADHERENCE",
+        "TEXT_ARTIFACTS",
+        "FOREIGN_BRAND_DETECTION",
+        "FORBIDDEN_OBJECT_DETECTION",
+        "STORY_COHERENCE",
+        "VOICEOVER_COHERENCE",
+        "CTA_QUALITY"
+      ],
+      "properties": {
+        "PRODUCT_IDENTITY": { "$ref": "#/definitions/DimensionScore" },
+        "PRODUCT_GEOMETRY_STABILITY": { "$ref": "#/definitions/DimensionScore" },
+        "BRAND_CONTEXT_MATCH": { "$ref": "#/definitions/DimensionScore" },
+        "ENVIRONMENT_MATCH": { "$ref": "#/definitions/DimensionScore" },
+        "REFERENCE_FIDELITY": { "$ref": "#/definitions/DimensionScore" },
+        "CHARACTER_CONTINUITY": { "$ref": "#/definitions/DimensionScore" },
+        "SCENE_CONTINUITY": { "$ref": "#/definitions/DimensionScore" },
+        "CAMERA_QUALITY": { "$ref": "#/definitions/DimensionScore" },
+        "MOTION_REALISM": { "$ref": "#/definitions/DimensionScore" },
+        "LIGHTING": { "$ref": "#/definitions/DimensionScore" },
+        "COMPOSITION": { "$ref": "#/definitions/DimensionScore" },
+        "PROMPT_ADHERENCE": { "$ref": "#/definitions/DimensionScore" },
+        "TEXT_ARTIFACTS": { "$ref": "#/definitions/DimensionScore" },
+        "FOREIGN_BRAND_DETECTION": { "$ref": "#/definitions/DimensionScore" },
+        "FORBIDDEN_OBJECT_DETECTION": { "$ref": "#/definitions/DimensionScore" },
+        "STORY_COHERENCE": { "$ref": "#/definitions/DimensionScore" },
+        "VOICEOVER_COHERENCE": { "$ref": "#/definitions/DimensionScore" },
+        "CTA_QUALITY": { "$ref": "#/definitions/DimensionScore" }
+      }
+    },
+    "decision_summary": {
+      "type": "object",
+      "required": [
+        "all_gates_passed",
+        "total_creative_score",
+        "max_possible_score",
+        "score_percentage",
+        "delivery_verdict",
+        "rejection_reasons"
+      ],
+      "properties": {
+        "all_gates_passed": { "type": "boolean" },
+        "total_creative_score": { "type": "number", "minimum": 0, "maximum": 180 },
+        "max_possible_score": { "type": "number", "default": 180 },
+        "score_percentage": { "type": "number", "minimum": 0, "maximum": 100 },
+        "delivery_verdict": {
+          "type": "string",
+          "enum": [
+            "DELIVERABLE",
+            "REJECTED_GATE_FAILURE",
+            "REJECTED_LOW_SCORE",
+            "NEEDS_MANUAL_REVIEW"
+          ]
+        },
+        "rejection_reasons": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "GateEvaluation": {
+      "type": "object",
+      "required": ["pass"],
+      "properties": {
+        "pass": {
+          "type": "boolean",
+          "description": "True if invariant holds; False if violated."
+        },
+        "violation_detail": {
+          "type": "string",
+          "description": "Specific reason if gate failed."
+        },
+        "evidence_frame_or_asset": {
+          "type": "string",
+          "description": "Reference frame URL or artifact hash demonstrating gate state."
+        }
+      }
+    },
+    "KeyframeInspection": {
+      "type": "object",
+      "required": ["timestamp_sec", "product_detected", "geometry_intact", "artifacts_detected"],
+      "properties": {
+        "frame_number": { "type": "integer" },
+        "timestamp_sec": { "type": "number" },
+        "product_detected": { "type": "boolean" },
+        "geometry_intact": { "type": "boolean" },
+        "artifacts_detected": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["hallucinated_text", "floating_limbs", "melting_surfaces", "warping", "noise_blur", "watermark"]
+          }
+        },
+        "context_match": { "type": "boolean" },
+        "frame_uri": { "type": "string" }
+      }
+    },
+    "DimensionScore": {
+      "type": "object",
+      "required": ["score", "rationale"],
+      "properties": {
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "rationale": {
+          "type": "string",
+          "description": "Specific objective justification based on evaluation criteria."
+        }
+      }
+    }
+  }
+}

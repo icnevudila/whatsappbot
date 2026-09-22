@@ -1,0 +1,185 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ShortVideoBenchmarkCases",
+  "description": "Test cases for short commercials (8-15 seconds) covering 6 strategic categories across benchmark tenants.",
+  "cases": [
+    {
+      "benchmark_id": "SHORT-BOFE-HERO-01",
+      "brand": "Bofe",
+      "sector": "agriculture_machinery",
+      "category": "product_hero",
+      "objective": "Showcase heavy-duty soil cultivator / sprayer machine in pristine studio-lit field transition, highlighting solid mechanical build and brand reliability.",
+      "aspect_ratio": "9:16",
+      "expected_duration": 10,
+      "required_assets": [
+        "assets/benchmark/bofe/logo_primary.png",
+        "assets/benchmark/bofe/product_sprayer_hero.png"
+      ],
+      "required_logo": "Bofe official vector logo with authentic yellow/green brand accents",
+      "required_product": "Bofe industrial agricultural sprayer equipment with distinct tank contour and hydraulic arm geometry",
+      "required_environment": "Modern agricultural open field at dawn with dry tilled earth, morning dew, warm natural sunlight",
+      "forbidden_elements": [
+        "car_wash",
+        "drill",
+        "handheld_power_tools",
+        "household_cleaning",
+        "concrete_mixer",
+        "urban_street",
+        "unrelated_industrial_factory"
+      ],
+      "recommended_strategy": "Keyframe_to_I2V",
+      "success_criteria": {
+        "product_grounding": "Machine silhouette and mechanical arm structure identical to reference image",
+        "motion": "Smooth dolly forward with natural soil dust particles kicking up under slow wheel rotation",
+        "branding": "Logo visible without warping or AI character hallucination; deterministic final overlay",
+        "duration_adherence": "Generated video duration must be between 8s and 12s"
+      }
+    },
+    {
+      "benchmark_id": "SHORT-AYVAZOGLU-CINEMATIC-01",
+      "brand": "Ayvazoğlu",
+      "sector": "building_materials_masonry",
+      "category": "cinematic_product",
+      "objective": "Cinematic low-angle tracking shot of premium architectural red clay bricks stacked in precision geometric pattern on a contemporary construction site.",
+      "aspect_ratio": "9:16",
+      "expected_duration": 12,
+      "required_assets": [
+        "assets/benchmark/ayvazoglu/logo_white.png",
+        "assets/benchmark/ayvazoglu/brick_terracotta_stack.png"
+      ],
+      "required_logo": "Ayvazoğlu Tuğla official typography logo",
+      "required_product": "Terracotta architectural clay brick with precision rectangular edges, porous acoustic cavities, and natural terracotta clay texture",
+      "required_environment": "Architectural high-end modern building construction site with clean concrete, scaffolding accents, and golden hour rim lighting",
+      "forbidden_elements": [
+        "consumer_electronics",
+        "food_items",
+        "plastic_toys",
+        "indoor_living_room",
+        "farm_animals",
+        "car_repair_shop"
+      ],
+      "recommended_strategy": "Direct_R2V",
+      "success_criteria": {
+        "product_grounding": "Exact red-orange terracotta color (CIELAB ΔE <= 10), rectangular structural edges preserved without melting",
+        "motion": "Controlled cinematic orbital pan with shallow depth of field (bokeh background)",
+        "branding": "Clean contrast, brand color adherence, authentic architectural context"
+      }
+    },
+    {
+      "benchmark_id": "SHORT-BOFE-DEMO-02",
+      "brand": "Bofe",
+      "sector": "agriculture_machinery",
+      "category": "demonstration",
+      "objective": "Demonstrate the precision mist discharge of the Bofe orchard spraying rig moving steadily between rows of fruit trees.",
+      "aspect_ratio": "16:9",
+      "expected_duration": 10,
+      "required_assets": [
+        "assets/benchmark/bofe/logo_primary.png",
+        "assets/benchmark/bofe/sprayer_orchard_nozzle.png"
+      ],
+      "required_logo": "Bofe official logo",
+      "required_product": "Bofe orchard fan sprayer attachment hitched to agricultural tractor",
+      "required_environment": "Symmetrical orchard grove with apple or olive trees, sunny afternoon, clear blue sky",
+      "forbidden_elements": [
+        "car_wash_pressure_washer",
+        "fire_hose",
+        "indoor_plumbing",
+        "mining_equipment",
+        "paint_gun"
+      ],
+      "recommended_strategy": "Keyframe_Explicit_Cinematography",
+      "success_criteria": {
+        "product_grounding": "Fan housing, nozzle arc, and tank maintain fixed geometry during active spraying",
+        "motion": "Realistic fluid particle dynamics of fine water mist dispersing symmetrically through tree branches",
+        "forbidden_check": "Zero resemblance to car wash foam or high-pressure domestic cleaning"
+      }
+    },
+    {
+      "benchmark_id": "SHORT-VERIBURADA-B2B-01",
+      "brand": "Veri Burada",
+      "sector": "b2b_saas_data_intelligence",
+      "category": "corporate_b2b",
+      "objective": "Highlight data intelligence platform on executive glass screens in a high-tech corporate operations center, communicating security and real-time enterprise insights.",
+      "aspect_ratio": "16:9",
+      "expected_duration": 10,
+      "required_assets": [
+        "assets/benchmark/veriburada/logo_cyan.png",
+        "assets/benchmark/veriburada/dashboard_kpi_screen.png"
+      ],
+      "required_logo": "Veri Burada corporate emblem and minimalist sans-serif wordmark",
+      "required_product": "Veri Burada analytics intelligence suite interface displayed on ultra-thin ergonomic monitors and holographic glass board",
+      "required_environment": "Modern enterprise analytics boardroom or operations command room with soft ambient blue lighting, architectural glass, and city skyline view",
+      "forbidden_elements": [
+        "outdoor_farm",
+        "construction_machinery",
+        "heavy_industrial_tools",
+        "kitchen_appliances",
+        "comic_cartoons"
+      ],
+      "recommended_strategy": "Hero_Keyframe_I2V",
+      "success_criteria": {
+        "product_grounding": "Dashboard data graphs maintain crisp lines without surreal illegible glyph melting",
+        "motion": "Smooth camera pull-back revealing modern office setting and professional analysts",
+        "branding": "Deterministic corporate palette (deep navy blue, tech cyan, clean white)"
+      }
+    },
+    {
+      "benchmark_id": "SHORT-TESTBRAND-UGC-01",
+      "brand": "AuraGlow",
+      "sector": "consumer_cosmetics",
+      "category": "ugc_style",
+      "objective": "Authentic creator POV unboxing and applying organic vitamin C serum in naturally lit bathroom setting with enthusiastic authentic pacing.",
+      "aspect_ratio": "9:16",
+      "expected_duration": 15,
+      "required_assets": [
+        "assets/benchmark/auraglow/logo_minimal.png",
+        "assets/benchmark/auraglow/dropper_bottle_amber.png"
+      ],
+      "required_logo": "AuraGlow clean serif wordmark",
+      "required_product": "Amber glass serum bottle with white rubber dropper bulb and gold collar",
+      "required_environment": "Aesthetic minimalist bathroom with white marble countertop, potted eucalyptus plant, morning window light",
+      "forbidden_elements": [
+        "industrial_hardware",
+        "tractor",
+        "dirty_garage",
+        "exaggerated_glitch_vfx",
+        "distorted_fingers"
+      ],
+      "recommended_strategy": "Keyframe_to_I2V",
+      "success_criteria": {
+        "product_grounding": "Glass dropper bottle shape, amber hue, and label placement identical to reference",
+        "motion": "Natural handheld camera micro-shake, fluid serum drop viscosity, human hand anatomical correctness (5 distinct fingers)",
+        "pacing": "Fast hook within first 2 seconds"
+      }
+    },
+    {
+      "benchmark_id": "SHORT-TESTBRAND-FOOD-01",
+      "brand": "ArtisanBakery",
+      "sector": "food_and_beverage",
+      "category": "food_appetite",
+      "objective": "Appetizing slow-motion reveal of freshly baked sourdough bread being pulled apart, showing steaming airy crumb and golden crispy crust.",
+      "aspect_ratio": "9:16",
+      "expected_duration": 8,
+      "required_assets": [
+        "assets/benchmark/artisan/logo_stamp.png",
+        "assets/benchmark/artisan/sourdough_loaf.png"
+      ],
+      "required_logo": "ArtisanBakery rustic stamp logo",
+      "required_product": "Artisan sourdough boule with rustic flour dusting and ear-score crust",
+      "required_environment": "Rustic wooden baker's table with scattered organic flour, sourdough starter jar in soft focus background",
+      "forbidden_elements": [
+        "plastic_packaging",
+        "machinery_grease",
+        "electronic_gadgets",
+        "metallic_clanking",
+        "artificial_colors"
+      ],
+      "recommended_strategy": "Keyframe_Explicit_Cinematography",
+      "success_criteria": {
+        "product_grounding": "Golden blistered crust texture, natural flour dusting, authentic airy alveoli crumb structure",
+        "motion": "60fps slow-motion pull showing steam release without gelatinous morphing",
+        "appetite_appeal": "Crisp lighting accentuating texture depth"
+      }
+    }
+  ]
+}

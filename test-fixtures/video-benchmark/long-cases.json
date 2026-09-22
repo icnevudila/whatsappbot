@@ -1,0 +1,247 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LongVideoBenchmarkCases",
+  "description": "Multi-scene long-form commercial benchmarks (30-60 seconds) testing scene-to-scene visual continuity, narrative progression, deterministic overlays, and strict domain grounding.",
+  "cases": [
+    {
+      "benchmark_id": "LONG-AYVAZOGLU-COMMERCIAL-01",
+      "brand": "Ayvazoğlu",
+      "sector": "building_materials_masonry",
+      "target_duration_range": [35, 40],
+      "aspect_ratio": "16:9",
+      "story_theme": "Topraktan Geleceğe: Doğanın Gücüyle Yükselen Mimari",
+      "required_brand_assets": {
+        "logo_svg": "assets/benchmark/ayvazoglu/ayvazoglu_official_logo.svg",
+        "primary_color_hex": "#B44C28",
+        "secondary_color_hex": "#2B2B2B",
+        "typography": "Outfit / Inter SemiBold",
+        "database_cta": {
+          "headline": "Yapılarınıza Değer Katın",
+          "subtext": "Projeleriniz için kurumsal teklif ve numune talebi:",
+          "action_url": "www.ayvazoglutuðla.com",
+          "phone": "+90 384 511 40 00"
+        }
+      },
+      "scenes": [
+        {
+          "scene_index": 1,
+          "name": "Hook / Toprak / Malzeme",
+          "target_duration_sec": 7,
+          "visual_description": "Cinematic macro shot of rich Anatolian red clay soil being gently sifted through hands in an open-air quarry at sunrise. Golden sunbeams illuminating fine organic mineral texture.",
+          "voiceover_script": "Her büyük yapı, toprağın en saf haliyle başlar. Yüzlerce yıllık birikim, doğanın en dayanıklı formuyla buluşuyor.",
+          "required_elements": ["natural_red_clay", "sunlit_quarry", "geological_texture"],
+          "forbidden_elements": ["plastic_waste", "urban_trash", "alien_surfaces"],
+          "camera_motion": "Slow tilt-down from golden sky into macro shallow-depth earth view"
+        },
+        {
+          "scene_index": 2,
+          "name": "Üretim / Fırınlama / İşçilik",
+          "target_duration_sec": 8,
+          "visual_description": "Modern high-tech industrial brickworks facility. Automated precision cutters slicing clay, moving into fiery continuous tunnel kiln glowing with intense orange heat, emerging as hardened terracotta blocks.",
+          "voiceover_script": "Geleneksel hammadde, ileri teknoloji ve bin dereceyi aşan fırınlarımızda milimetrik hassasiyetle işlenir.",
+          "required_elements": ["tunnel_kiln", "glowing_heat_atmosphere", "precision_automated_line", "ayvazoglu_brick_geometry"],
+          "forbidden_elements": ["molten_metal_foundry", "chemical_reactors", "chaotic_dirt"],
+          "camera_motion": "Smooth tracking dolly alongside cooling conveyor rack"
+        },
+        {
+          "scene_index": 3,
+          "name": "Ürün / Mimari Kullanım",
+          "target_duration_sec": 8,
+          "visual_description": "Expert mason carefully laying the exact same terracotta brick onto a clean mortar line on a contemporary building facade. Spirit level confirming absolute precision.",
+          "voiceover_script": "Her tuğla; ısı yalıtımı, yangın direnci ve zamansız estetik için kusursuz bir denge sunar.",
+          "required_elements": ["exact_same_terracotta_brick", "masonry_trowel", "mortar_line", "architectural_facade"],
+          "forbidden_elements": ["cracked_irregular_rubble", "cinder_blocks", "spray_paint"],
+          "camera_motion": "Dynamic push-in to brick corner joinery"
+        },
+        {
+          "scene_index": 4,
+          "name": "Proje / Sonuç / Dayanıklılık",
+          "target_duration_sec": 8,
+          "visual_description": "Wide majestic drone reveal of an award-winning modern residential and cultural center constructed entirely with Ayvazoğlu terracotta bricks. Sunset light reflecting off the textured brick facade.",
+          "voiceover_script": "Nesiller boyu ayakta kalan, nefes alan ve güven veren yaşam alanları için...",
+          "required_elements": ["completed_modern_brick_architecture", "panoramic_reveal", "evening_lighting"],
+          "forbidden_elements": ["abandoned_ruins", "glass_skyscraper_with_no_bricks", "decay"],
+          "camera_motion": "Slow sweeping architectural crane shot rising above facade"
+        },
+        {
+          "scene_index": 5,
+          "name": "Marka / Kararlı CTA",
+          "target_duration_sec": 6,
+          "visual_description": "Elegant clean terracotta background texture with subtle lighting vignette. Real SVG logo and official database CTA cleanly animated via deterministic compositor.",
+          "voiceover_script": "Ayvazoğlu Tuğla. Geleceğin mimarisine sağlam temel.",
+          "required_elements": ["authentic_vector_logo_overlay", "rendered_cta_text_from_database"],
+          "forbidden_elements": ["ai_hallucinated_gibberish_text", "foreign_brand_watermark"],
+          "camera_motion": "Static graphic layout with subtle organic particle drift"
+        }
+      ],
+      "invariants": {
+        "single_narrative_thread": true,
+        "voiceover_duplication_allowed": false,
+        "product_visual_consistency_required": true,
+        "allow_foreign_brand_logos": false,
+        "final_logo_source": "official_asset_only",
+        "final_cta_source": "database_record_only"
+      }
+    },
+    {
+      "benchmark_id": "LONG-BOFE-COMMERCIAL-01",
+      "brand": "Bofe",
+      "sector": "agriculture_machinery",
+      "target_duration_range": [35, 40],
+      "aspect_ratio": "16:9",
+      "story_theme": "Toprağın Gücü, Bofe'nin Mühendisliği: Verimli Hasadın Güvencesi",
+      "required_brand_assets": {
+        "logo_svg": "assets/benchmark/bofe/bofe_official_logo.svg",
+        "primary_color_hex": "#1E7A34",
+        "secondary_color_hex": "#F4B223",
+        "typography": "Barlow / Montserrat Bold",
+        "database_cta": {
+          "headline": "Tarımda Güç ve Verim Bofe ile Başlar",
+          "subtext": "Size en yakın yetkili bayiyi keşfedin ve demo talep edin:",
+          "action_url": "www.bofemakina.com.tr",
+          "phone": "+90 850 440 26 33"
+        }
+      },
+      "scenes": [
+        {
+          "scene_index": 1,
+          "name": "Hook / Tarla / Sezon Hazırlığı",
+          "target_duration_sec": 7,
+          "visual_description": "Atmospheric early morning wide shot of vast Anatolian agricultural plains shrouded in soft golden mist. A progressive farmer gazes across fertile soil as morning sun breaks the horizon.",
+          "voiceover_script": "Toprak emek ister, zamanlama ister. Her yeni sezon, çiftçimizin alın teriyle filizlenir.",
+          "required_elements": ["vast_plains", "morning_mist", "fertile_agricultural_soil", "golden_sunrise"],
+          "forbidden_elements": ["car_wash", "urban_traffic", "construction_scaffolding", "domestic_garden"],
+          "camera_motion": "Slow majestic drone tracking shot over morning field"
+        },
+        {
+          "scene_index": 2,
+          "name": "Ekipman Devrede / Bofe Saha Operasyonu",
+          "target_duration_sec": 8,
+          "visual_description": "Bofe heavy-duty agricultural machine hitched to a modern tractor moving through the field. High-tensile steel tines aerating the deep soil with effortless mechanical torque.",
+          "voiceover_script": "Zorlu zemin koşullarına meydan okuyan Bofe tarım makineleri, toprağı en verimli şekilde hazırlar.",
+          "required_elements": ["bofe_branded_equipment", "soil_tillage_mechanisms", "active_field_operation"],
+          "forbidden_elements": ["handheld_power_drill", "car_wash_spray", "jackhammer", "home_vacuum"],
+          "camera_motion": "Parallel tracking shot moving alongside tractor tires and tilling blades"
+        },
+        {
+          "scene_index": 3,
+          "name": "Mühendislik Detayı / Dayanıklılık",
+          "target_duration_sec": 8,
+          "visual_description": "Dynamic low-angle close-up of Bofe's reinforced chassis, hardened alloy components, and sealed hydraulic joints operating under intense load without deflection.",
+          "voiceover_script": "Özel alaşımlı çelik gövde ve dayanıklı hidrolik mimari, en ağır yük altında bile kesintisiz güç sağlar.",
+          "required_elements": ["bofe_yellow_green_metal_surfaces", "reinforced_hydraulic_cylinders", "clean_engineering"],
+          "forbidden_elements": ["plastic_toy_parts", "rust_decay", "broken_metal", "unrelated_engine_block"],
+          "camera_motion": "Cinematic low-angle gimbal sweep tracing the steel chassis contour"
+        },
+        {
+          "scene_index": 4,
+          "name": "Hasat / Bereket ve Çiftçi Memnuniyeti",
+          "target_duration_sec": 8,
+          "visual_description": "Golden wheat field in peak harvest condition. Smiling farmer running hands through abundant, healthy crop heads under a warm sunny sky, tractor standing proudly in background.",
+          "voiceover_script": "Daha az yakıt, daha yüksek verim. Emeğiniz berekete dönüşsün.",
+          "required_elements": ["golden_wheat_field", "healthy_crop_yield", "content_farmer", "bofe_machine_in_background"],
+          "forbidden_elements": ["failed_crop", "drought_cracks", "pesticide_hazard_symbols"],
+          "camera_motion": "Warm orbit around farmer gazing at fruitful horizon"
+        },
+        {
+          "scene_index": 5,
+          "name": "Marka Kapanış / Kararlı CTA",
+          "target_duration_sec": 6,
+          "visual_description": "Deep forest green background with warm sunburst highlight. High-resolution Bofe official emblem with database-driven dealer inquiry CTA.",
+          "voiceover_script": "Bofe Tarım Makineleri. Toprağınızın güvencesi.",
+          "required_elements": ["official_bofe_vector_logo", "database_driven_cta_phone_and_url"],
+          "forbidden_elements": ["ai_font_hallucination", "unregistered_trademark_claims"],
+          "camera_motion": "Clean lock-off with soft brand shimmer effect"
+        }
+      ],
+      "invariants": {
+        "single_narrative_thread": true,
+        "voiceover_duplication_allowed": false,
+        "product_visual_consistency_required": true,
+        "allow_foreign_brand_logos": false,
+        "final_logo_source": "official_asset_only",
+        "final_cta_source": "database_record_only"
+      }
+    },
+    {
+      "benchmark_id": "LONG-VERIBURADA-COMMERCIAL-01",
+      "brand": "Veri Burada",
+      "sector": "b2b_saas_data_intelligence",
+      "target_duration_range": [35, 40],
+      "aspect_ratio": "16:9",
+      "story_theme": "Büyük Veriden Stratejik Karara: Kurumsal Zekanın Yeni Çağı",
+      "required_brand_assets": {
+        "logo_svg": "assets/benchmark/veriburada/veriburada_official_logo.svg",
+        "primary_color_hex": "#0066FF",
+        "secondary_color_hex": "#00E5FF",
+        "typography": "Plus Jakarta Sans / Inter",
+        "database_cta": {
+          "headline": "Kararlarınızı Veriye Dayandırın",
+          "subtext": "14 günlük kurumsal deneme sürümünü hemen başlatın:",
+          "action_url": "www.veriburada.com/kurumsal",
+          "phone": "+90 212 900 83 74"
+        }
+      },
+      "scenes": [
+        {
+          "scene_index": 1,
+          "name": "Hook / Veri Yığını / Karar Zorluğu",
+          "target_duration_sec": 7,
+          "visual_description": "Rapid cinematic montage of complex enterprise data streams, multiple screens with conflicting spreadsheets, and an executive looking thoughtfully at fragmented reports.",
+          "voiceover_script": "Her saniye milyonlarca veri akıyor. Ancak doğru kararı vermek, karmaşayı anlamlandırabilmekten geçiyor.",
+          "required_elements": ["modern_corporate_setting", "abstract_data_visualizations", "executive_contemplation"],
+          "forbidden_elements": ["farm_animals", "construction_brick", "car_wash", "handheld_tools"],
+          "camera_motion": "Fast push-in transitioning into digital particle matrix"
+        },
+        {
+          "scene_index": 2,
+          "name": "Veri Burada Entegrasyonu / Berraklık",
+          "target_duration_sec": 8,
+          "visual_description": "Data streams dynamically converge into the sleek, unified Veri Burada intelligence dashboard. Real-time predictive charts render cleanly in vivid cyan and navy tones.",
+          "voiceover_script": "Veri Burada; tüm kaynaklarınızı saniyeler içinde birleştirir, yapay zeka destekli öngörülerle netleştirir.",
+          "required_elements": ["veriburada_ui_elements", "clean_analytics_charts", "cyan_navy_palette"],
+          "forbidden_elements": ["glitchy_unreadable_glyphs", "retro_green_hacker_terminal"],
+          "camera_motion": "Smooth 3D camera pan across high-resolution curved monitors"
+        },
+        {
+          "scene_index": 3,
+          "name": "Ekip İşbirliği / Hızlı Aksiyon",
+          "target_duration_sec": 8,
+          "visual_description": "Collaborative enterprise team in a sunlit modern glass conference room interacting with the platform on an interactive display, reaching unanimous strategic consensus.",
+          "voiceover_script": "Tüm departmanlar aynı güvenilir gerçekle çalışır, stratejik kararlar hızla aksiyona dönüşür.",
+          "required_elements": ["professional_corporate_team", "modern_boardroom", "interactive_dashboard_display"],
+          "forbidden_elements": ["casual_home_kitchen", "sweatshop", "fantasy_scifi_monsters"],
+          "camera_motion": "Medium tracking shot circling the conference table"
+        },
+        {
+          "scene_index": 4,
+          "name": "Büyüme / Başarı / Global Metrikler",
+          "target_duration_sec": 8,
+          "visual_description": "Graphic overlay of upward trajectory metrics, revenue growth graphs, and satisfied executive smiling against a panoramic metropolitan skyline view at dusk.",
+          "voiceover_script": "Daha hızlı büyüme, kontrollü risk ve sürdürülebilir başarı için verinizin gücünü serbest bırakın.",
+          "required_elements": ["positive_growth_graphs", "metropolitan_skyline", "confident_business_leader"],
+          "forbidden_elements": ["falling_red_arrow_crash", "empty_office", "cluttered_storage_room"],
+          "camera_motion": "Grand dolly-back through floor-to-ceiling glass windows"
+        },
+        {
+          "scene_index": 5,
+          "name": "Marka / Kararlı B2B CTA",
+          "target_duration_sec": 6,
+          "visual_description": "Clean deep navy background with luminous cyan geometric grid. Official Veri Burada vector logo and dynamic database enterprise trial CTA.",
+          "voiceover_script": "Veri Burada. Geleceği verinizle yönetin.",
+          "required_elements": ["official_vector_logo", "database_cta_trial_link_and_phone"],
+          "forbidden_elements": ["ai_hallucinated_watermarks", "misspelled_domain"],
+          "camera_motion": "Static high-contrast enterprise presentation lock-off"
+        }
+      ],
+      "invariants": {
+        "single_narrative_thread": true,
+        "voiceover_duplication_allowed": false,
+        "product_visual_consistency_required": true,
+        "allow_foreign_brand_logos": false,
+        "final_logo_source": "official_asset_only",
+        "final_cta_source": "database_record_only"
+      }
+    }
+  ]
+}

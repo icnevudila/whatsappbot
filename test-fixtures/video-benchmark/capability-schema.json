@@ -1,0 +1,149 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "VeoFlowCapabilityRecord",
+  "description": "Schema for tracking verified vs untested Veo and Google Flow platform capabilities per account and model.",
+  "type": "object",
+  "required": [
+    "account_id",
+    "flow_ui_variant",
+    "model",
+    "t2v",
+    "i2v",
+    "r2v",
+    "first_frame",
+    "last_frame",
+    "first_last_frame",
+    "extend",
+    "chain",
+    "native_audio",
+    "duration_control",
+    "supported_durations",
+    "aspect_ratios",
+    "reference_limit",
+    "tested_at",
+    "result"
+  ],
+  "properties": {
+    "account_id": {
+      "type": "string",
+      "description": "Identifier of the Google Flow / Veo tenant account or workspace."
+    },
+    "flow_ui_variant": {
+      "type": "string",
+      "enum": [
+        "flow_v1_legacy",
+        "flow_v2_pinpoint",
+        "flow_enterprise",
+        "gemini_api_direct",
+        "vertex_ai_veo",
+        "untested"
+      ],
+      "description": "UI or API interface variant through which Veo generation is invoked."
+    },
+    "model": {
+      "type": "string",
+      "description": "Model tag or endpoint name, e.g. veo-2.0-generate-001, veo-2.0-preview, etc."
+    },
+    "t2v": {
+      "$ref": "#/definitions/CapabilityStatus",
+      "description": "Text-to-Video generation capability."
+    },
+    "i2v": {
+      "$ref": "#/definitions/CapabilityStatus",
+      "description": "Image-to-Video single reference keyframe animation capability."
+    },
+    "r2v": {
+      "$ref": "#/definitions/CapabilityStatus",
+      "description": "Reference-to-Video multi-asset grounded generation capability."
+    },
+    "first_frame": {
+      "$ref": "#/definitions/CapabilityStatus",
+      "description": "Capability to enforce an initial keyframe (start frame)."
+    },
+    "last_frame": {
+      "$ref": "#/definitions/CapabilityStatus",
+      "description": "Capability to enforce a concluding keyframe (end frame)."
+    },
+    "first_last_frame": {
+      "$ref": "#/definitions/CapabilityStatus",
+      "description": "Capability to interpolate video between defined first and last frames."
+    },
+    "extend": {
+      "$ref": "#/definitions/CapabilityStatus",
+      "description": "Capability to extend an existing video forward in time."
+    },
+    "chain": {
+      "$ref": "#/definitions/CapabilityStatus",
+      "description": "Capability to chain consecutive generation prompts maintaining visual context."
+    },
+    "native_audio": {
+      "$ref": "#/definitions/CapabilityStatus",
+      "description": "Capability of model to generate synchronized native audio/sound design."
+    },
+    "duration_control": {
+      "$ref": "#/definitions/CapabilityStatus",
+      "description": "Explicit control over generated clip duration in seconds."
+    },
+    "supported_durations": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      },
+      "description": "Verified supported durations in seconds (e.g. [5, 8, 10, 15])."
+    },
+    "aspect_ratios": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["9:16", "16:9", "1:1", "4:5", "21:9"]
+      },
+      "description": "Verified supported aspect ratios."
+    },
+    "reference_limit": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Maximum number of simultaneous reference images accepted in a prompt."
+    },
+    "tested_at": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "ISO timestamp of actual live execution. Must be null if UNTESTED."
+    },
+    "result": {
+      "type": "string",
+      "enum": ["VALIDATED", "UNTESTED", "FAILED", "PARTIAL"],
+      "description": "Overall capability verification state. Strict invariant: Cannot be VALIDATED without live test evidence."
+    },
+    "evidence_log": {
+      "type": "object",
+      "properties": {
+        "run_id": { "type": "string" },
+        "prompt_used": { "type": "string" },
+        "generated_asset_url": { "type": "string" },
+        "latency_sec": { "type": "number" },
+        "failure_reason": { "type": "string" }
+      }
+    }
+  },
+  "definitions": {
+    "CapabilityStatus": {
+      "type": "object",
+      "required": ["state"],
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": ["SUPPORTED", "UNSUPPORTED", "UNTESTED", "DEGRADED"],
+          "description": "Strict verification status. Never assume SUPPORTED from documentation alone."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Operational notes or observed behavioral constraints."
+        },
+        "verified_version": {
+          "type": "string",
+          "description": "Build or API version at time of verification."
+        }
+      }
+    }
+  }
+}
