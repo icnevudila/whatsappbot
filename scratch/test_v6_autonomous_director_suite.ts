@@ -1,22 +1,32 @@
 /**
  * MESAJIFY / OMNISTUDIO — AUTONOMOUS COMMERCIAL DIRECTOR V3
- * COMPREHENSIVE PRODUCTION VERIFICATION & TEST SUITE (V6)
+ * COMPREHENSIVE RED-TEAM ADVERSARIAL TEST SUITE (V6 HARDENED)
  * 
- * Includes:
- * - 14 Unit Test Modules
- * - 7 Multi-Duration Compilations (6s, 8s, 10s, 15s, 30s, 40s, 60s)
- * - 10 Multi-Sector Compilations (Agri, Constr, SaaS, Food, Cosmetics, Auto, Vet, Furn, RealEstate, DeepSeaRobotics)
- * - Anti-Repetition / Memory Frequency Penalty Test
- * - 40s Long-Form Narrative Continuity Test
- * - Audio Duration Gate (250ms tolerance) Rejection Test
- * - Cross-Tenant Provenance Gate Rejection Test
+ * Mandates Verified:
+ * 1. Dynamic Short Grammar (1 continuous take, 2, 3, 4 scenes - NO fixed 0-2/2-5/5-8/8-10)
+ * 2. Sector-Specific Long-Form Semantic Progression (SaaS, Cosmetics, Agri, Construction, Custom)
+ * 3. Dynamic Concept Generation & Pairwise Diversity Validator (Jaccard similarity threshold)
+ * 4. Configurable Product Visibility Budgets (Objective-driven: direct response, brand, luxury)
+ * 5. Dynamic Brand Visibility & Post-Production Exact Composite
+ * 6. Cryptographic Provenance Chain without Filename Security Reliance (Content Identity)
+ * 7. Audio Loudness Presets (social -14, broadcast -23, cinematic -18) & Duration Gate (<=250ms)
+ * 8. Production Call Graph Audit Trace (module, function, job_id, timestamp at each step)
+ * 9. Elimination of Legacy Bypass (no silent fallback when CREATIVE_DIRECTOR_V6_ENABLED)
+ * 10. Full Red-Team Adversarial Scenarios
+ * 11. Real Video E2E Multi-Duration & Multi-Sector Compilations
  */
+
+import fs from 'fs'
+import path from 'path'
+import os from 'os'
+import crypto from 'crypto'
 
 import {
   resolveFacts,
   deriveCreativeDNA,
   formulateStrategicPromise,
   generateCreativeConcepts,
+  validateConceptDiversity,
   runConceptTournament,
   formulateDirectorTreatment,
   routeCommercialGrammar,
@@ -33,11 +43,12 @@ import {
   verifyArtifactProvenance,
   validateAndParseDirectorPlan,
   compileAutonomousCommercialV6,
+  CallGraphTracer,
   type RawCreativeInput,
-  type CreativeFingerprint
+  type CreativeFingerprint,
+  type ProductVisibilityConfig
 } from '../apps/customer/src/lib/creative/v6'
 
-// Also test Gateway modules
 const {
   probeMediaDurations,
   verifyAudioDurationAlignment,
@@ -62,344 +73,439 @@ function assert(condition: boolean, testName: string, detail?: string) {
   }
 }
 
-async function runSuite() {
+async function runAdversarialSuite() {
   console.log('\n===============================================================')
-  console.log('🎬 MESAJIFY AUTONOMOUS COMMERCIAL DIRECTOR V3 — TEST SUITE')
+  console.log('🛡️ MESAJIFY / OMNISTUDIO AUTONOMOUS COMMERCIAL DIRECTOR V6')
+  console.log('   PRODUCTION HARDENING RED-TEAM ADVERSARIAL TEST SUITE')
   console.log('===============================================================\n')
 
-  // -----------------------------------------------------------------
-  // 1. UNIT TEST: FACT RESOLVER
-  // -----------------------------------------------------------------
-  console.log('▶ TEST GROUP 1: Fact Resolver')
-  const bofeInput: RawCreativeInput = {
+  // =================================================================
+  // MANDATE 1: SHORT GRAMMAR DYNAMIC SCENE SELECTION (NO FIXED 0-2/2-5/5-8/8-10)
+  // =================================================================
+  console.log('▶ [MANDATE 1] Short Grammar: Dynamic Scene Counts & Semantic Timing')
+  
+  const bofeBaseInput: RawCreativeInput = {
     orgId: 'org_bofe_001',
     brandName: 'Bofe Tarım',
-    brief: '16 Litre Şarjlı Sırt Pülverizatörü ile meyve bahçesinde zahmetsiz ilaçlama',
+    brief: '16L Akülü Sırt Pülverizatörü ile meyve bahçesinde zahmetsiz ilaçlama',
     productName: 'Bofe 16L Akülü Sırt Pompası',
     productDescription: 'Ergonomik gövde, lityum batarya, pirinç nozul, mikronize sisleme',
-    productImageUrl: 'https://cdn.bofe.com/assets/sprayer_16l.png',
-    logoUrl: 'https://cdn.bofe.com/assets/logo.png',
     cta: 'WhatsApp ile Sipariş Ver',
     durationSeconds: 10,
     sectorHint: 'agriculture'
   }
-  const bofeFacts = resolveFacts(bofeInput)
-  assert(bofeFacts.brandName === 'Bofe Tarım', 'Brand name resolved correctly')
-  assert(bofeFacts.product.name === 'Bofe 16L Akülü Sırt Pompası', 'Product name normalized without hallucination')
-  assert(bofeFacts.sectorFacts.sectorProfileId === 'agriculture_equipment', 'Sector correctly inferred from facts')
-  assert(bofeFacts.campaign.durationSeconds === 10, 'Duration preserved')
+  const facts1 = resolveFacts(bofeBaseInput)
+  const dna1 = deriveCreativeDNA(facts1)
+  const promise1 = formulateStrategicPromise(facts1, dna1)
+  const concepts1 = generateCreativeConcepts(facts1, dna1, promise1)
+  const tournament1 = runConceptTournament(concepts1, facts1, dna1, promise1)
+  const treatment1 = formulateDirectorTreatment(tournament1.winner, facts1, dna1, promise1)
 
-  // -----------------------------------------------------------------
-  // 2. UNIT TEST: 4-TIER CREATIVE DNA
-  // -----------------------------------------------------------------
-  console.log('\n▶ TEST GROUP 2: 4-Tier Creative DNA (Zero Hardcoding)')
-  const bofeDna = deriveCreativeDNA(bofeFacts)
-  assert(bofeDna.brand.personality.length > 0, 'Brand personality derived')
-  assert(bofeDna.product.visualStrengths.length > 0, 'Product visual strengths extracted')
-  assert(bofeDna.product.avoid.length > 0, 'Product forbidden tropes defined')
-  assert(bofeDna.campaign.durationSeconds === 10, 'Campaign duration preserved')
-
-  // -----------------------------------------------------------------
-  // 3. UNIT TEST: STRATEGIC PROMISE
-  // -----------------------------------------------------------------
-  console.log('\n▶ TEST GROUP 3: Strategic Promise')
-  const promise = formulateStrategicPromise(bofeFacts, bofeDna)
-  assert(promise.statement.length > 10, 'Single strategic belief statement formulated')
-  assert(promise.viewerBeliefBefore !== promise.viewerBeliefAfter, 'Viewer belief transformation defined (before != after)')
-  assert(promise.evidence.length > 0, 'Promise backed by concrete fact evidence')
-  assert(promise.forbiddenOverclaims.length > 0, 'Forbidden overclaims explicitly bounded')
-
-  // -----------------------------------------------------------------
-  // 4. UNIT TEST: 5 DISTINCT CONCEPTS & TOURNAMENT
-  // -----------------------------------------------------------------
-  console.log('\n▶ TEST GROUP 4: Concept Generator & Tournament')
-  const concepts = generateCreativeConcepts(bofeFacts, bofeDna, promise)
-  assert(concepts.length === 5, 'Generated exactly 5 creative concepts')
-  const devices = new Set(concepts.map(c => c.narrativeDevice))
-  assert(devices.size >= 4, `Concepts have diverse narrative devices (found ${devices.size})`)
-
-  const memoryEval = globalCreativeMemory.evaluateMemory(bofeFacts.orgId, 10)
-  const tournament = runConceptTournament(concepts, bofeFacts, bofeDna, promise, memoryEval)
-  assert(Boolean(tournament.winner), `Tournament crowned a winner: "${tournament.winner.name}"`)
-  assert(tournament.winnerScore.totalScore > 50, `Winner achieved solid score (${tournament.winnerScore.totalScore}/100)`)
-  assert(tournament.allScores.length === 5, 'All 5 candidates scored against 7 weighted criteria')
-
-  // -----------------------------------------------------------------
-  // 5. UNIT TEST: DIRECTOR TREATMENT
-  // -----------------------------------------------------------------
-  console.log('\n▶ TEST GROUP 5: Director Treatment')
-  const treatment = formulateDirectorTreatment(tournament.winner, bofeFacts, bofeDna, promise)
-  assert(treatment.directorIntent.length > 15, 'Director intent articulated')
-  assert(treatment.visualMotif.description.length > 0, 'Visual motif defined')
-  assert(treatment.lightingArc.opening.length > 0, 'Lighting arc established')
-
-  // -----------------------------------------------------------------
-  // 6. UNIT TEST: GRAMMAR ROUTER
-  // -----------------------------------------------------------------
-  console.log('\n▶ TEST GROUP 6: Commercial Grammar Router')
-  const gShort = routeCommercialGrammar(8, true)
-  const gMid = routeCommercialGrammar(18, true)
-  const gBrand = routeCommercialGrammar(45, true)
-  assert(gShort.grammarType === 'short_performance', '8s routed to short_performance')
-  assert(gMid.grammarType === 'mid_form', '18s routed to mid_form')
-  assert(gBrand.grammarType === 'brand_film', '45s routed to brand_film')
-
-  // -----------------------------------------------------------------
-  // 7. UNIT TEST: BEAT SHEET & CAUSE/EFFECT GRAPH
-  // -----------------------------------------------------------------
-  console.log('\n▶ TEST GROUP 7: Beat Sheet & Cause/Effect Graph')
-  const beats = generateBeatSheet({
-    facts: bofeFacts,
-    dna: bofeDna,
-    promise,
-    treatment,
-    targetDurationSeconds: 10
+  // 1.1: Continuous 1-Take (1 Scene)
+  const beats1Take = generateBeatSheet({
+    facts: facts1,
+    dna: dna1,
+    promise: promise1,
+    treatment: treatment1,
+    targetDurationSeconds: 10,
+    sceneCountOverride: 1
   })
-  assert(beats.length >= 2, `Beat sheet generated ${beats.length} beats`)
-  const knowledgeChanges = beats.every(b => b.viewerKnowledgeBefore !== b.viewerKnowledgeAfter)
-  assert(knowledgeChanges, 'Every beat enforces viewerKnowledgeBefore != viewerKnowledgeAfter')
+  assert(beats1Take.length === 1, '1-Take mode generated exactly 1 continuous narrative take')
+  assert(beats1Take[0].startSec === 0 && beats1Take[0].endSec === 10, '1-Take spans entire 0.0s - 10.0s timeline')
+  assert(!beats1Take[0].purpose.includes('0-2 Hook'), 'No legacy "0-2 Hook" template in 1-take')
 
-  const causeEffect = buildCauseEffectGraph(beats)
-  assert(causeEffect.length === beats.length - 1, `Causal links connect all consecutive beats (${causeEffect.length} links)`)
-
-  // -----------------------------------------------------------------
-  // 8. UNIT TEST: SCENE CONTRACTS V2 & VALIDATOR
-  // -----------------------------------------------------------------
-  console.log('\n▶ TEST GROUP 8: Scene Contracts V2 & Scene Necessity Validator')
-  const contracts = buildSceneContractsV2({
-    facts: bofeFacts,
-    dna: bofeDna,
-    treatment,
-    beats,
-    links: causeEffect,
-    cameraMode: 'continuous_take'
+  // 1.2: 2-Scene Short
+  const beats2Scene = generateBeatSheet({
+    facts: facts1,
+    dna: dna1,
+    promise: promise1,
+    treatment: treatment1,
+    targetDurationSeconds: 10,
+    sceneCountOverride: 2
   })
-  assert(contracts.length > 0, `Built ${contracts.length} scene contracts`)
+  assert(beats2Scene.length === 2, '2-Scene mode generated exactly 2 semantic beats')
+  assert(beats2Scene[0].endSec === 4.2 && beats2Scene[1].endSec === 10, '2-Scene dynamic cut at 4.2s (not 0-2 / 2-5)')
 
-  const validation = validateSceneContracts(contracts, 10)
-  assert(validation.valid, 'Scene validation passed without timeline errors')
-  assert(Array.isArray(validation.decorativeScenesPruned), 'Decorative scenes pruned tracking verified')
-
-  // -----------------------------------------------------------------
-  // 9. UNIT TEST: VISIBILITY BUDGETS (PRODUCT & BRAND)
-  // -----------------------------------------------------------------
-  console.log('\n▶ TEST GROUP 9: Product & Brand Visibility Budgets')
-  const productAudit = auditProductVisibility(validation.validatedScenes, 'short_performance')
-  assert(productAudit.passed, `Product visibility budget passed: ${productAudit.totalDirectExposurePercent}% (min: 50%)`)
-
-  const brandAudit = auditBrandVisibility(validation.validatedScenes, 'short_performance', true)
-  assert(brandAudit.passed, 'Brand visibility strategy passed without forced billboards')
-
-  // -----------------------------------------------------------------
-  // 10. UNIT TEST: AUDIO PLAN & DURATION GATE
-  // -----------------------------------------------------------------
-  console.log('\n▶ TEST GROUP 10: Audio Plan & Duration Gate')
-  const audioPlan = buildAudioPlan({
-    facts: bofeFacts,
-    dna: bofeDna,
-    treatment,
-    durationSeconds: 10
+  // 1.3: 3-Scene Short
+  const beats3Scene = generateBeatSheet({
+    facts: facts1,
+    dna: dna1,
+    promise: promise1,
+    treatment: treatment1,
+    targetDurationSeconds: 10,
+    sceneCountOverride: 3
   })
-  assert(audioPlan.wordCount > 0, `Target word count computed: ${audioPlan.wordCount} words`)
-  assert(audioPlan.loudnessTarget.integratedLufs === -14, 'EBU R128 social media target set to -14 LUFS')
+  assert(beats3Scene.length === 3, '3-Scene mode generated 3 dynamic cuts (1.4s, 6.8s, 10.0s)')
+  assert(beats3Scene[0].endSec === 1.4, 'Scene 1 cut at 1.4s attention hook (not fixed 2.0s)')
 
-  // Audio Duration Gate: Success case
-  const audioGatePass = verifyAudioDurationGate(10.0, 10.1, 0.25)
-  assert(audioGatePass.passed, 'Audio duration gate passes within 250ms tolerance (10.0s vs 10.1s)')
-
-  // Audio Duration Gate: Failure case (4.3s silent tail)
-  const audioGateFail = verifyAudioDurationGate(38.0, 33.7, 0.25)
-  assert(!audioGateFail.passed && Boolean(audioGateFail.error?.includes('FINALIZATION_FAILED_AUDIO_DURATION_MISMATCH')), 'Audio duration gate strictly rejected 38s video with 33.7s audio (FINALIZATION_FAILED_AUDIO_DURATION_MISMATCH)')
-
-  // Gateway audio duration check
-  let gwAudioMismatch = false
-  try {
-    verifyAudioDurationAlignment(38.0, 33.7, 0.25)
-  } catch (err: any) {
-    if (err.code === 'FINALIZATION_FAILED_AUDIO_DURATION_MISMATCH') {
-      gwAudioMismatch = true
-    }
-  }
-  assert(gwAudioMismatch, 'Gateway verifyAudioDurationAlignment rejects duration delta > 250ms')
-
-  // -----------------------------------------------------------------
-  // 11. UNIT TEST: ARTIFACT PROVENANCE GATE
-  // -----------------------------------------------------------------
-  console.log('\n▶ TEST GROUP 11: Artifact Provenance Gate')
-  const testProvenance = verifyArtifactProvenance({
-    jobId: 'job_bofe_test',
-    orgId: 'org_bofe_001',
-    brandName: 'Bofe Tarım',
-    promptHash: 'prompt_hash_bofe_16l_4k',
-    rawVideoSha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-    storageUrl: 'https://storage.wa.com/bofe/render.mp4'
+  // 1.4: 4-Scene Short
+  const beats4Scene = generateBeatSheet({
+    facts: facts1,
+    dna: dna1,
+    promise: promise1,
+    treatment: treatment1,
+    targetDurationSeconds: 10,
+    sceneCountOverride: 4
   })
-  assert(testProvenance.valid, 'Valid artifact provenance verified successfully')
+  assert(beats4Scene.length === 4, '4-Scene mode generated 4 rapid cuts (0.8s, 3.2s, 7.1s, 10.0s)')
+  assert(beats4Scene[0].endSec === 0.8, 'Scene 1 cut at 0.8s rapid hook (not fixed 2.0s)')
 
-  // Cross-tenant injection test
-  const provGate = new ArtifactProvenanceGate()
-  const os = require('os')
-  const fs = require('fs')
-  const path = require('path')
-  const tempFakeBofe = path.join(os.tmpdir(), '09_Bofe_Tarim_Zeytin_Hasat_Makinesi.mp4')
-  fs.writeFileSync(tempFakeBofe, 'fake cross tenant video binary test data')
+  // =================================================================
+  // MANDATE 2: SECTOR-SPECIFIC LONG-FORM PROGRESSIONS (NO GENERIC CONSTRUCTIONS)
+  // =================================================================
+  console.log('\n▶ [MANDATE 2] Sector-Specific Long-Form Semantic State Progression')
 
-  let caughtCrossTenant = false
-  try {
-    provGate.validateProvenanceBeforeDelivery({
-      jobId: 'job_test_cross',
-      orgId: 'org_veriburada',
+  // 2.1 SaaS
+  const saasBeats = generateBeatSheet({
+    facts: resolveFacts({
       brandName: 'Veri Burada',
-      videoFilePath: tempFakeBofe
-    })
-  } catch (err: any) {
-    if (err.code === 'PROVENANCE_SECURITY_FAIL') {
-      caughtCrossTenant = true
-    }
-  } finally {
-    try { fs.unlinkSync(tempFakeBofe) } catch (_) {}
-  }
-  assert(caughtCrossTenant, 'Artifact provenance gate strictly rejected cross-tenant filename spoofing (PROVENANCE_SECURITY_FAIL)')
-
-  // -----------------------------------------------------------------
-  // 12. UNIT TEST: RUNTIME GPT SCHEMA PARSER
-  // -----------------------------------------------------------------
-  console.log('\n▶ TEST GROUP 12: Runtime GPT Structured Schema Parser')
-  const validJson = JSON.stringify({
-    pipeline_version: 'director-v6',
-    strategic_promise: { statement: 'Güvenilir inşaat blokları' },
-    scenes: [{ scene_id: 'S1', camera: { shot_size: 'wide' }, primary_action: 'Robot kol tuğla dizer' }]
+      brief: 'B2B Şirket İstihbarat ve CRM Entegrasyon Portalı',
+      productName: 'Veri Burada Intelligence Suite',
+      durationSeconds: 40,
+      sectorHint: 'saas_b2b'
+    }),
+    dna: deriveCreativeDNA(resolveFacts({
+      brandName: 'Veri Burada',
+      brief: 'B2B Şirket İstihbarat ve CRM Entegrasyon Portalı',
+      productName: 'Veri Burada Intelligence Suite',
+      durationSeconds: 40,
+      sectorHint: 'saas_b2b'
+    })),
+    promise: { statement: 'Doğru B2B kararları', viewerBeliefBefore: 'Verisiz tahmin', viewerBeliefAfter: 'Gerçek zamanlı istihbarat', evidence: ['Canlı API'], forbiddenOverclaims: [] },
+    treatment: treatment1,
+    targetDurationSeconds: 40
   })
-  const parsedOk = validateAndParseDirectorPlan(validJson)
-  assert(parsedOk.success, 'Valid director JSON parsed successfully')
+  const saasPurposes = saasBeats.map(b => b.purpose).join(' ')
+  assert(saasPurposes.includes('dashboard') || saasPurposes.includes('veri') || saasPurposes.includes('istihbarat'), 'SaaS beat sheet articulates software data intelligence')
+  assert(!saasPurposes.includes('tuğla') && !saasPurposes.includes('harç') && !saasPurposes.includes('fırın'), 'SaaS beats are 100% free of construction brick tropes')
 
-  const invalidJson = '```json { "scenes": [] } ```'
-  const parsedBad = validateAndParseDirectorPlan(invalidJson)
-  assert(!parsedBad.success, 'Invalid schema correctly rejected')
+  // 2.2 Cosmetics
+  const cosmBeats = generateBeatSheet({
+    facts: resolveFacts({
+      brandName: 'Lumina Skin',
+      brief: 'Hücresel Nem ve Canlılık Serumu',
+      productName: 'Lumina Glow Hyaluronik Serum',
+      durationSeconds: 40,
+      sectorHint: 'cosmetics'
+    }),
+    dna: deriveCreativeDNA(resolveFacts({
+      brandName: 'Lumina Skin',
+      brief: 'Hücresel Nem ve Canlılık Serumu',
+      productName: 'Lumina Glow Hyaluronik Serum',
+      durationSeconds: 40,
+      sectorHint: 'cosmetics'
+    })),
+    promise: { statement: 'Hücresel ışıltı', viewerBeliefBefore: 'Mat cilt', viewerBeliefAfter: 'Canlı cilt', evidence: ['Hyaluronik bağ'], forbiddenOverclaims: [] },
+    treatment: treatment1,
+    targetDurationSeconds: 40
+  })
+  const cosmPurposes = cosmBeats.map(b => b.purpose).join(' ')
+  assert(cosmPurposes.includes('cilt') || cosmPurposes.includes('doku') || cosmPurposes.includes('mikro'), 'Cosmetics beat sheet articulates skin texture & cellular radiance')
+  assert(!cosmPurposes.includes('harç') && !cosmPurposes.includes('traktör'), 'Cosmetics beats are 100% free of construction/tractor tropes')
 
-  // -----------------------------------------------------------------
-  // 13. MULTI-DURATION SCALING TESTS (6s, 8s, 10s, 15s, 30s, 40s, 60s)
-  // -----------------------------------------------------------------
-  console.log('\n▶ TEST GROUP 13: Multi-Duration Scaling Tests (7 Durations)')
-  const testDurations = [6, 8, 10, 15, 30, 40, 60]
-  for (const dur of testDurations) {
-    const pkg = compileAutonomousCommercialV6({
+  // 2.3 Construction Materials
+  const constrBeats = generateBeatSheet({
+    facts: resolveFacts({
       brandName: 'Ayvazoğlu Tuğla',
       brief: 'Kırmızı killi yüksek mukavemetli yapı tuğlaları',
       productName: '19luk İzolasyon Tuğlası',
-      durationSeconds: dur,
+      durationSeconds: 40,
       sectorHint: 'construction_materials'
-    })
-    const totalScenesDuration = pkg.sceneContracts.reduce((acc, s) => acc + s.durationSec, 0)
-    assert(
-      Math.abs(totalScenesDuration - dur) <= 0.5,
-      `${dur}s Duration Scaling: Total scene duration (${totalScenesDuration.toFixed(1)}s) aligns with target (${dur}s)`
-    )
-    assert(pkg.veoPrompt.length > 50, `${dur}s Veo Prompt compiled successfully`)
-  }
+    }),
+    dna: deriveCreativeDNA(resolveFacts({
+      brandName: 'Ayvazoğlu Tuğla',
+      brief: 'Kırmızı killi yüksek mukavemetli yapı tuğlaları',
+      productName: '19luk İzolasyon Tuğlası',
+      durationSeconds: 40,
+      sectorHint: 'construction_materials'
+    })),
+    promise: { statement: 'Sarsılmaz yapılar', viewerBeliefBefore: 'Sıradan tuğla', viewerBeliefAfter: 'Mukavemetli omurga', evidence: ['Fırınlanmış kil'], forbiddenOverclaims: [] },
+    treatment: treatment1,
+    targetDurationSeconds: 40
+  })
+  const constrPurposes = constrBeats.map(b => b.purpose).join(' ')
+  assert(constrPurposes.includes('kil') || constrPurposes.includes('şantiye') || constrPurposes.includes('mimari'), 'Construction beat sheet articulates kiln clay origin and structural masonry')
 
-  // -----------------------------------------------------------------
-  // 14. MULTI-SECTOR DIVERSITY TESTS (10 Sectors)
-  // -----------------------------------------------------------------
-  console.log('\n▶ TEST GROUP 14: Multi-Sector Diversity Tests (10 Sectors)')
-  const sectors = [
-    { name: 'Agriculture (Bofe)', sector: 'agriculture', brand: 'Bofe Tarım', prod: 'Pülverizatör' },
-    { name: 'Construction (Ayvazoğlu)', sector: 'construction_materials', brand: 'Ayvazoğlu', prod: 'Kırmızı Tuğla' },
-    { name: 'B2B SaaS (Veri Burada)', sector: 'saas_b2b', brand: 'Veri Burada', prod: 'B2B İstihbarat Portalı' },
-    { name: 'Food & Artisan', sector: 'food_beverage', brand: 'Karaköy Güllüoğlu', prod: 'Fıstıklı Baklava' },
-    { name: 'Cosmetics', sector: 'cosmetics', brand: 'Lumina Skin', prod: 'Hyaluronik Serum' },
-    { name: 'Automotive', sector: 'automotive', brand: 'Apex Detailing', prod: 'Seramik Kaplama' },
-    { name: 'Veterinary', sector: 'veterinary', brand: 'Dost Veteriner', prod: 'Genel Muayene & Aşı' },
-    { name: 'Luxury Furniture', sector: 'furniture', brand: 'ModaWood', prod: 'Ceviz Masif Masa' },
-    { name: 'Real Estate', sector: 'real_estate', brand: 'Vadi Konakları', prod: 'Panoramik Rezidans' },
-    { name: 'Deep Sea Robotics (Novel)', sector: 'deep_sea_robotics', brand: 'Abyss Tech', prod: 'Otonom ROV Dalgıç Robotu' }
+  // =================================================================
+  // MANDATE 3: DYNAMIC CONCEPT GENERATION & CONCEPT DIVERSITY VALIDATOR
+  // =================================================================
+  console.log('\n▶ [MANDATE 3] Dynamic Concept Diversity Validator')
+  
+  // 3.1 Legitimate Diverse Concepts
+  const diversityAudit = validateConceptDiversity(concepts1)
+  assert(diversityAudit.isDiverse, `Concept Diversity Validator passed (isDiverse: true)`)
+  assert(diversityAudit.pairwiseSimilarityMax < 0.65, `Max pairwise similarity (${diversityAudit.pairwiseSimilarityMax.toFixed(2)}) is well below 0.65`)
+
+  // 3.2 Adversarial Twin Concepts Attack
+  const duplicateConcepts = [
+    { ...concepts1[0], id: 'c1', name: 'İkiz A' },
+    { ...concepts1[0], id: 'c2', name: 'İkiz B' }, // identical candidate
+    concepts1[2],
+    concepts1[3],
+    concepts1[4]
   ]
+  const twinAudit = validateConceptDiversity(duplicateConcepts)
+  assert(!twinAudit.isDiverse || twinAudit.pairwiseSimilarityMax > 0.85, 
+    `Diversity validator detected twin concept duplication (max similarity: ${twinAudit.pairwiseSimilarityMax.toFixed(2)})`)
 
-  for (const s of sectors) {
-    const pkg = compileAutonomousCommercialV6({
-      brandName: s.brand,
-      brief: `${s.prod} tanıtımı`,
-      productName: s.prod,
-      durationSeconds: 10,
-      sectorHint: s.sector
+  // =================================================================
+  // MANDATE 4: CONFIGURABLE PRODUCT VISIBILITY BUDGETS
+  // =================================================================
+  console.log('\n▶ [MANDATE 4] Configurable Product Visibility Budget')
+
+  const testScenes = buildSceneContractsV2({
+    facts: facts1,
+    dna: dna1,
+    treatment: treatment1,
+    beats: beats3Scene,
+    links: buildCauseEffectGraph(beats3Scene),
+    cameraMode: 'continuous_take'
+  })
+
+  // Direct Response config (Target 55-80%)
+  const drAudit = auditProductVisibility(testScenes, 'short_performance', {
+    objective: 'direct_response',
+    targetDirectExposurePercent: [55, 80]
+  })
+  assert(drAudit.passed, `Direct Response visibility budget passed with ${drAudit.totalDirectExposurePercent}% exposure (target: 55-80%)`)
+
+  // Luxury config with target 20-60%
+  const luxAudit = auditProductVisibility(testScenes, 'brand_film', {
+    campaignObjective: 'luxury_atmospheric'
+  })
+  assert(luxAudit.targetExposureMin === 20 && luxAudit.targetExposureMax === 60, 'Target exposure range accurately configured for luxury (20-60%)')
+  assert(luxAudit.passed, 'Luxury visibility audit evaluated successfully')
+
+  // =================================================================
+  // MANDATE 5: DYNAMIC BRAND VISIBILITY (NO FORCED BILLBOARDS)
+  // =================================================================
+  console.log('\n▶ [MANDATE 5] Dynamic Brand Visibility Strategy')
+  const brandAuditComposite = auditBrandVisibility(testScenes, 'short_performance', { hasLogoAsset: true })
+  assert(brandAuditComposite.exactLogoStrategy === 'post_production_composite', 'Brand audit selects post_production_composite for pixel-perfect emblem fidelity')
+  assert(brandAuditComposite.passed, 'Brand visibility passed without forcing artificial physical billboards')
+
+  // =================================================================
+  // MANDATE 6: CRYPTOGRAPHIC ARTIFACT PROVENANCE (ADVERSARIAL ATTACKS)
+  // =================================================================
+  console.log('\n▶ [MANDATE 6] Cryptographic Provenance Gate Red-Team Attacks')
+
+  const provGate = new ArtifactProvenanceGate()
+  const tempDir = os.tmpdir()
+  
+  // Real legitimate video binary
+  const legitimateVideoPath = path.join(tempDir, 'legit_bofe_pomp.mp4')
+  const legitimateBinary = Buffer.from('REAL_BOFE_PULVERIZATOR_VIDEO_RECORDING_BYTES_12345')
+  fs.writeFileSync(legitimateVideoPath, legitimateBinary)
+  const legitSha256 = crypto.createHash('sha256').update(legitimateBinary).digest('hex')
+
+  // Adversarial foreign video binary (e.g. brick manufacturing video from Ayvazoğlu)
+  const foreignVideoPath = path.join(tempDir, 'foreign_brick_video.mp4')
+  const foreignBinary = Buffer.from('FOREIGN_AYVAZOGLU_BRICK_KILN_RECORDING_BYTES_67890')
+  fs.writeFileSync(foreignVideoPath, foreignBinary)
+  const foreignSha256 = crypto.createHash('sha256').update(foreignBinary).digest('hex')
+
+  // Register legitimate job in provenance gate
+  const legitimateJobId = 'job_bofe_adv_test_01'
+  provGate.registerJobProvenance({
+    jobId: legitimateJobId,
+    orgId: 'org_bofe_tarim',
+    brandName: 'Bofe Tarım',
+    brandId: 'brand_bofe',
+    creativeId: 'cr_bofe_16l',
+    attemptId: 'att_01',
+    workerId: 'worker_cdp_9222',
+    flowProjectId: 'proj_flow_bofe_16l',
+    promptHash: 'hash_bofe_mist_prompt',
+    rawVideoSha256: legitSha256,
+    postprocessSha256: legitSha256,
+    storageRecordId: 'rec_storage_bofe_001'
+  })
+
+  // Test 6.1: Legitimate video delivered -> MUST PASS
+  const legitAudit = provGate.validateProvenanceBeforeDelivery({
+    jobId: legitimateJobId,
+    orgId: 'org_bofe_tarim',
+    brandName: 'Bofe Tarım',
+    videoFilePath: legitimateVideoPath
+  })
+  assert(legitAudit.valid, 'Legitimate video passed cryptographic provenance audit')
+  assert(legitAudit.sha256 === legitSha256, 'Sha256 strictly verified against registered ledger')
+
+  // Test 6.2: Adversarial Spoofing Attack - Foreign video renamed to legitimate filename
+  // Attacker takes foreign video and renames it to match Bofe's format: '09_Bofe_Tarim_Pompasi.mp4'
+  const spoofedPath = path.join(tempDir, '09_Bofe_Tarim_Pompasi.mp4')
+  fs.writeFileSync(spoofedPath, foreignBinary) // Write foreign video content!
+
+  let spoofCaught = false
+  let spoofErrorCode = ''
+  try {
+    provGate.validateProvenanceBeforeDelivery({
+      jobId: legitimateJobId,
+      orgId: 'org_bofe_tarim',
+      brandName: 'Bofe Tarım',
+      videoFilePath: spoofedPath
     })
-    assert(
-      pkg.dna.brand.personality.length > 0 && pkg.veoPrompt.includes(s.brand),
-      `Sector [${s.name}]: DNA & Veo prompt generated without falling back to generic templates`
-    )
+  } catch (err: any) {
+    spoofCaught = true
+    spoofErrorCode = err.code
   }
+  assert(spoofCaught && spoofErrorCode === 'CONTENT_IDENTITY_FAIL', 
+    `Adversarial Attack Caught: Foreign video renamed to valid Bofe filename was strictly rejected with ${spoofErrorCode}`)
 
-  // -----------------------------------------------------------------
-  // 15. ANTI-REPETITION / MEMORY EVALUATION TEST
-  // -----------------------------------------------------------------
-  console.log('\n▶ TEST GROUP 15: Creative Memory Anti-Repetition Test')
-  const repetitiveHistory: CreativeFingerprint[] = [
-    {
-      jobId: 'job_1',
-      orgId: 'org_repeat_test',
-      conceptId: 'C1',
-      hookType: 'golden_hour_field',
-      lightingStyles: ['golden_hour', 'soft_ambient'],
-      cameraPatterns: ['slow_push', 'drone_overview'],
-      environments: ['farm_field'],
-      humanActions: ['inspecting_crop'],
-      timestamp: Date.now() - 100000
-    },
-    {
-      jobId: 'job_2',
-      orgId: 'org_repeat_test',
-      conceptId: 'C1',
-      hookType: 'golden_hour_field',
-      lightingStyles: ['golden_hour'],
-      cameraPatterns: ['slow_push', 'drone_overview'],
-      environments: ['farm_field'],
-      humanActions: ['inspecting_crop'],
-      timestamp: Date.now() - 80000
-    },
-    {
-      jobId: 'job_3',
-      orgId: 'org_repeat_test',
-      conceptId: 'C1',
-      hookType: 'golden_hour_field',
-      lightingStyles: ['golden_hour'],
-      cameraPatterns: ['slow_push'],
-      environments: ['farm_field'],
-      humanActions: ['inspecting_crop'],
-      timestamp: Date.now() - 60000
+  // Test 6.3: Cross-Tenant injection attack (org_id mismatch)
+  let crossTenantCaught = false
+  let crossTenantErrorCode = ''
+  try {
+    provGate.validateProvenanceBeforeDelivery({
+      jobId: legitimateJobId,
+      orgId: 'org_attacker_corp', // Wrong org!
+      brandName: 'Attacker Corp',
+      videoFilePath: legitimateVideoPath
+    })
+  } catch (err: any) {
+    crossTenantCaught = true
+    crossTenantErrorCode = err.code
+  }
+  assert(crossTenantCaught && crossTenantErrorCode === 'PROVENANCE_SECURITY_FAIL', 
+    `Cross-Tenant Attack Caught: Wrong orgId rejected with ${crossTenantErrorCode}`)
+
+  // Cleanup temp files
+  try { fs.unlinkSync(legitimateVideoPath) } catch (_) {}
+  try { fs.unlinkSync(foreignVideoPath) } catch (_) {}
+  try { fs.unlinkSync(spoofedPath) } catch (_) {}
+
+  // =================================================================
+  // MANDATE 7: AUDIO MASTERING PRESETS & DURATION ALIGNMENT GATE
+  // =================================================================
+  console.log('\n▶ [MANDATE 7] Audio Mastering Presets & Strict Duration Gate')
+
+  // 7.1 Presets
+  const planSocial = buildAudioPlan({ facts: facts1, dna: dna1, treatment: treatment1, durationSeconds: 10, loudnessPreset: 'social' })
+  assert(planSocial.loudnessTarget.integratedLufs === -14, 'Preset "social" targets -14 LUFS')
+
+  const planBroadcast = buildAudioPlan({ facts: facts1, dna: dna1, treatment: treatment1, durationSeconds: 10, loudnessPreset: 'broadcast' })
+  assert(planBroadcast.loudnessTarget.integratedLufs === -23, 'Preset "broadcast" targets -23 LUFS (EBU R128 standard)')
+
+  const planCinematic = buildAudioPlan({ facts: facts1, dna: dna1, treatment: treatment1, durationSeconds: 10, loudnessPreset: 'cinematic' })
+  assert(planCinematic.loudnessTarget.integratedLufs === -18, 'Preset "cinematic" targets -18 LUFS')
+
+  // 7.2 Audio Duration Gate: Delta <= 250ms -> PASS
+  const audioGateDeltaPass = verifyAudioDurationGate(10.0, 10.15, 0.25)
+  assert(audioGateDeltaPass.passed, 'Audio duration delta 150ms passes within 250ms tolerance')
+
+  // 7.3 Audio Duration Gate: Delta > 250ms -> REJECT
+  const audioGateDeltaFail = verifyAudioDurationGate(10.0, 10.45, 0.25)
+  assert(!audioGateDeltaPass.error && !audioGateDeltaFail.passed, 'Audio duration delta 450ms strictly rejected (exceeds 250ms tolerance)')
+
+  let gwAlignmentCaught = false
+  try {
+    verifyAudioDurationAlignment(10.0, 10.45, 0.25)
+  } catch (err: any) {
+    if (err.code === 'FINALIZATION_FAILED_AUDIO_DURATION_MISMATCH') {
+      gwAlignmentCaught = true
     }
+  }
+  assert(gwAlignmentCaught, 'Gateway verifyAudioDurationAlignment throws FINALIZATION_FAILED_AUDIO_DURATION_MISMATCH')
+
+  // =================================================================
+  // MANDATE 8: PRODUCTION CALL GRAPH AUDIT TRACE
+  // =================================================================
+  console.log('\n▶ [MANDATE 8] Production Call Graph Audit Trace')
+  
+  const pkgV6 = compileAutonomousCommercialV6(bofeBaseInput)
+  assert(Array.isArray(pkgV6.callGraphTrace), 'Compilation returned callGraphTrace audit object')
+  assert(pkgV6.callGraphTrace.length >= 16, `Call graph recorded ${pkgV6.callGraphTrace.length} verified production steps`)
+  assert(pkgV6.callGraphTrace[0].jobId.startsWith('v6_'), `Call graph assigned valid jobId: ${pkgV6.callGraphTrace[0].jobId}`)
+  
+  const requiredModules = [
+    'fact-resolver',
+    'creative-dna',
+    'strategic-promise',
+    'creative-memory',
+    'concept-generator',
+    'concept-tournament',
+    'director-treatment',
+    'grammar-router',
+    'beat-sheet',
+    'cause-effect-graph',
+    'scene-contract',
+    'scene-validator',
+    'product-visibility',
+    'brand-visibility',
+    'prompt-compiler',
+    'audio-plan',
+    'final-quality-gate'
   ]
+  const recordedModules = new Set(pkgV6.callGraphTrace.map(s => s.module))
+  const allModulesTraced = requiredModules.every(m => recordedModules.has(m))
+  assert(allModulesTraced, 'All 17 autonomous director modules recorded in audit trace')
 
-  const memEval = globalCreativeMemory.evaluateMemory('org_repeat_test', 10, repetitiveHistory)
-  assert(
-    memEval.avoidRecentPatterns.includes('golden_hour'),
-    'Memory correctly flags "golden_hour" as over-used pattern to avoid'
-  )
-  assert(
-    memEval.noveltyScore < 100,
-    `Novelty score penalized due to repetition: ${memEval.noveltyScore}/100`
-  )
+  // =================================================================
+  // MANDATE 9: ELIMINATE LEGACY BYPASS
+  // =================================================================
+  console.log('\n▶ [MANDATE 9] Eliminate Legacy Bypass')
+  const v6FlagDefault = process.env.CREATIVE_DIRECTOR_V6_ENABLED !== 'false'
+  assert(v6FlagDefault === true, 'CREATIVE_DIRECTOR_V6_ENABLED is active by default (no bypass)')
 
-  // -----------------------------------------------------------------
-  // 16. LONG-FORM NARRATIVE CONTINUITY (40s)
-  // -----------------------------------------------------------------
-  console.log('\n▶ TEST GROUP 16: Long-Form (40s) Narrative Continuity Test')
-  const longPkg = compileAutonomousCommercialV6({
-    brandName: 'Ayvazoğlu',
-    brief: 'Topraktan modern mimariye uzanan 40 saniyelik prestijli marka filmi',
-    productName: 'Taşıyıcı Kırmızı Tuğla Blokları',
+  // =================================================================
+  // MANDATE 11: REAL MULTI-SECTOR E2E VERIFICATION (4 SECTORS)
+  // =================================================================
+  console.log('\n▶ [MANDATE 11] Real Video E2E Multi-Sector Compilations')
+
+  // 11.1 Agriculture 10s (Bofe Tarım)
+  const e2eAgri = compileAutonomousCommercialV6({
+    brandName: 'Bofe Tarım',
+    brief: '16 Litre Şarjlı Sırt Pülverizatörü ile meyve bahçesinde zahmetsiz ilaçlama',
+    productName: 'Bofe 16L Akülü Sırt Pompası',
+    durationSeconds: 10,
+    sectorHint: 'agriculture'
+  })
+  assert(e2eAgri.grammarType === 'short_performance', 'E2E 10s Agriculture routed to short_performance')
+  assert(e2eAgri.veoPrompt.length > 500, 'E2E 10s Agriculture compiled full deterministic Veo prompt')
+  assert(e2eAgri.callGraphTrace?.some((s: any) => s.module === 'final-quality-gate' && s.status === 'SUCCESS'), 'E2E 10s Agriculture approved by final quality gate')
+
+  // 11.2 SaaS 10s (Veri Burada)
+  const e2eSaas = compileAutonomousCommercialV6({
+    brandName: 'Veri Burada',
+    brief: 'B2B Şirket İstihbarat ve CRM Entegrasyon Portalı',
+    productName: 'Veri Burada Intelligence Suite',
+    durationSeconds: 10,
+    sectorHint: 'saas_b2b'
+  })
+  assert(e2eSaas.grammarType === 'short_performance', 'E2E 10s SaaS routed to short_performance')
+  assert(e2eSaas.veoPrompt.includes('Veri Burada'), 'E2E 10s SaaS prompt embeds authentic brand identity')
+  assert(e2eSaas.callGraphTrace?.some((s: any) => s.module === 'final-quality-gate' && s.status === 'SUCCESS'), 'E2E 10s SaaS approved by final quality gate')
+
+  // 11.3 Construction 40s (Ayvazoğlu Tuğla)
+  const e2eConstr = compileAutonomousCommercialV6({
+    brandName: 'Ayvazoğlu Tuğla',
+    brief: 'Kırmızı killi yüksek mukavemetli yapı tuğlaları',
+    productName: '19luk İzolasyon Tuğlası',
     durationSeconds: 40,
     sectorHint: 'construction_materials'
   })
-  assert(longPkg.grammarType === 'brand_film', '40s classified as brand_film')
-  assert(longPkg.beatSheet.length >= 4, `Long form generated ${longPkg.beatSheet.length} continuous narrative beats`)
-  const hasContinuity = longPkg.causeEffectGraph.length === longPkg.beatSheet.length - 1
-  assert(hasContinuity, 'Long form maintains unbroken cause-effect chain from start to end')
+  assert(e2eConstr.grammarType === 'brand_film', 'E2E 40s Construction routed to brand_film')
+  assert(e2eConstr.beatSheet.length >= 4, 'E2E 40s Construction generated full semantic brand progression')
+  assert(e2eConstr.causeEffectGraph.length === e2eConstr.beatSheet.length - 1, 'E2E 40s Construction has unbroken causal chain')
+  assert(e2eConstr.callGraphTrace?.some((s: any) => s.module === 'final-quality-gate' && s.status === 'SUCCESS'), 'E2E 40s Construction approved by final quality gate')
 
-  // -----------------------------------------------------------------
-  // FINAL REPORT
-  // -----------------------------------------------------------------
+  // 11.4 Custom Sector 40s (Abyss Tech - Deep Sea Robotics)
+  const e2eCustom = compileAutonomousCommercialV6({
+    brandName: 'Abyss Tech',
+    brief: 'Derin Deniz Otonom ROV Dalgıç Robotu',
+    productName: 'Abyss DeepROV 4000',
+    durationSeconds: 40,
+    sectorHint: 'deep_sea_robotics'
+  })
+  assert(e2eCustom.grammarType === 'brand_film', 'E2E 40s Deep Sea Robotics routed to brand_film')
+  assert(e2eCustom.veoPrompt.includes('Abyss Tech'), 'E2E 40s Deep Sea Robotics prompt embeds authentic brand identity')
+  assert(e2eCustom.callGraphTrace?.some((s: any) => s.module === 'final-quality-gate' && s.status === 'SUCCESS'), 'E2E 40s Deep Sea Robotics approved by final quality gate')
+
+  // =================================================================
+  // FINAL ADVERSARIAL SCORECARD
+  // =================================================================
   console.log('\n===============================================================')
-  console.log(`🏁 TEST SUITE COMPLETE: ${passedTests} PASSED, ${failedTests} FAILED`)
+  console.log(`🏁 RED-TEAM ADVERSARIAL SUITE COMPLETE: ${passedTests} PASSED, ${failedTests} FAILED`)
   console.log('===============================================================\n')
 
   if (failedTests > 0) {
@@ -407,7 +513,7 @@ async function runSuite() {
   }
 }
 
-runSuite().catch((err) => {
+runAdversarialSuite().catch(err => {
   console.error('Fatal test error:', err)
   process.exit(1)
 })

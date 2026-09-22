@@ -381,6 +381,7 @@ export interface ArtifactProvenanceRecord {
   rawVideoSha256: string
   postProcessedSha256?: string
   finalStorageUrl?: string
+  storageUrl?: string
   provenanceValid: boolean
   verifiedAt: string
 }
@@ -410,5 +411,6 @@ export interface V6FinalProductionPackage {
   featureFlags: V6FeatureFlags
   grammarType: 'short_performance' | 'mid_form' | 'brand_film'
   targetDurationSeconds: number
+  callGraphTrace?: any[]
   version: '6.0.0'
 }

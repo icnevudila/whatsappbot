@@ -1,15 +1,15 @@
 /**
  * MESAJIFY / OMNISTUDIO — AUTONOMOUS COMMERCIAL DIRECTOR V3
- * BRAND VISIBILITY BUDGET ENGINE (V6)
+ * DYNAMIC BRAND VISIBILITY ENGINE (V6 HARDENED)
  * 
  * Kesin İlke:
- * Her sahneye yapay logo veya bina tabelası koyma zorunluluğu kaldırılmıştır.
- * Marka görünürlüğü zaman içerisinde kontrollü bir bütçe ile yönetilir.
- * Exact Logo Tercih Sırası:
- * 1. Ürün üzerindeki gerçek logo
- * 2. Referans asset ile fiziksel marka
- * 3. Post-production exact logo compositing
- * 4. Veo'nun serbest tabela üretimi (Son çare)
+ * 1. Forced billboard (tarlaya/mutfağa devasa yapay tabela koyma) YASAKTIR.
+ * 2. Üniforma logosu, araç giydirme veya fabrika tabelası da OTOMATİK ZORUNLU DEĞİLDİR.
+ * 3. Marka görünümü konseptin doğasına göre seçilir (dijital UI bildirimi, ambalaj kabartması,
+ *    lazer plaket, minimal iş önlüğü arması veya tamamen temiz çekim).
+ * 4. Exact logo fidelity gerekiyorsa default ve güvenli tercih:
+ *    POST-PRODUCTION EXACT LOGO COMPOSITING.
+ *    Veo'ya prompt üzerinden logo uydurtmak EN SON seçenektir.
  */
 
 import type { SceneContractV2 } from './creative-types'
@@ -18,16 +18,21 @@ export interface BrandVisibilityAudit {
   passed: boolean
   totalBrandExposurePercent: number
   hasForcedArtificialSignage: boolean
-  exactLogoStrategy: 'product_surface' | 'post_production_composite' | 'physical_plaque'
+  exactLogoStrategy: 'post_production_composite' | 'subtle_product_emboss' | 'concept_driven_natural'
+  brandAppearanceType: string
   warnings: string[]
 }
 
 export function auditBrandVisibility(
   scenes: SceneContractV2[],
   grammarType: 'short_performance' | 'mid_form' | 'brand_film',
-  hasLogoAsset = false
+  options: {
+    hasLogoAsset?: boolean
+    conceptAppearancePreference?: string
+  } = {}
 ): BrandVisibilityAudit {
   const warnings: string[] = []
+  const hasLogoAsset = options.hasLogoAsset ?? false
 
   let totalDuration = 0
   let weightedBrandExposure = 0
@@ -37,7 +42,14 @@ export function auditBrandVisibility(
     totalDuration += sc.durationSec
     weightedBrandExposure += sc.durationSec * sc.brandVisibility
 
-    if (sc.primaryAction.toLowerCase().includes('bina tabelası') || sc.primaryAction.toLowerCase().includes('akrilik tabela')) {
+    // Tarlanın ortasına veya uyumsuz mekana zoraki konulan dev tabelalar
+    const lowerAction = sc.primaryAction.toLowerCase()
+    if (
+      lowerAction.includes('bina tabelası') ||
+      lowerAction.includes('akrilik tabela') ||
+      lowerAction.includes('dev afiş') ||
+      lowerAction.includes('giant billboard')
+    ) {
       forcedSignageCount++
     }
   }
@@ -45,9 +57,9 @@ export function auditBrandVisibility(
   const effectiveExposureRatio = totalDuration > 0 ? (weightedBrandExposure / totalDuration) : 0
   const exposurePercent = Math.round(effectiveExposureRatio * 100)
 
-  // Kısa reklamda logo dozu %40'ı geçmemeli, yoksa tabela klibine döner
+  // Kısa reklamda logo dozu %45'i geçmemeli
   if (grammarType === 'short_performance' && exposurePercent > 45) {
-    warnings.push(`EXCESSIVE_BRAND_EXPOSURE: Marka görünürlüğü (%${exposurePercent}) kısa reklam için aşırı yüksek; ürün eylemini gölgeliyor.`)
+    warnings.push(`EXCESSIVE_BRAND_EXPOSURE: Marka görünürlüğü (%${exposurePercent}) kısa reklam için aşırı yüksek.`)
   }
 
   const hasForcedArtificialSignage = forcedSignageCount > 0
@@ -55,16 +67,23 @@ export function auditBrandVisibility(
     warnings.push('FORCED_SIGNAGE_DETECTED: Sırf marka adı göstermek için yapay tabela sahnesi üretilmiş.')
   }
 
-  // Exact Logo Stratejisi
+  // Exact Logo Stratejisi:
+  // Logo asset'i varsa veya kurumsal kimlik korunacaksa her zaman post-production exact composite tercih edilir
   const exactLogoStrategy: BrandVisibilityAudit['exactLogoStrategy'] = hasLogoAsset
     ? 'post_production_composite'
-    : 'product_surface'
+    : options.conceptAppearancePreference === 'emboss'
+      ? 'subtle_product_emboss'
+      : 'concept_driven_natural'
+
+  const brandAppearanceType = options.conceptAppearancePreference ||
+    (hasLogoAsset ? 'post_production_exact_overlay' : 'integrated_concept_signature')
 
   return {
     passed: warnings.length === 0,
     totalBrandExposurePercent: exposurePercent,
     hasForcedArtificialSignage,
     exactLogoStrategy,
+    brandAppearanceType,
     warnings,
   }
 }

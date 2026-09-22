@@ -1,16 +1,15 @@
 /**
  * MESAJIFY / OMNISTUDIO — AUTONOMOUS COMMERCIAL DIRECTOR V3
- * AUDIO PLAN & MASTERING GATE (V6)
+ * AUDIO PLAN & MASTERING GATE (V6 HARDENED)
  * 
- * Kesin İlke:
- * Default olarak Veo = görüntü + doğal ortam sesidir (ambience).
- * Ana seslendirme izole TTS pipeline'ından gelir:
- * SCRIPT -> TTS -> WORD TIMESTAMPS -> MUSIC BED -> SFX -> DUCKING -> MASTERING -> KINETIC SUBTITLES.
- * 
- * Audio Duration Gate:
- * abs(video_duration - audio_duration) <= 250ms.
- * Fark toleransı aşarsa: FINALIZATION_FAILED_AUDIO_DURATION_MISMATCH.
- * Final video sessiz son birkaç saniye içeremez!
+ * Standartlar:
+ * 1. Loudness Presets:
+ *    - social (varsayılan): -14.0 LUFS, true peak <= -1.0 dBTP
+ *    - broadcast: -23.0 LUFS, true peak <= -1.0 dBTP
+ *    - cinematic: -18.0 LUFS, true peak <= -1.5 dBTP
+ *    - custom: yapılandırılabilir LUFS
+ * 2. Audio Duration Alignment Gate:
+ *    abs(video_duration - audio_duration) <= toleranceSec (varsayılan: 250ms).
  */
 
 import type {
@@ -20,19 +19,22 @@ import type {
   AudioPlan
 } from './creative-types'
 
+export type AudioLoudnessPreset = 'social' | 'social_media' | 'broadcast' | 'cinematic' | 'custom'
+
 export function buildAudioPlan(params: {
   facts: ResolvedCreativeFacts
   dna: CreativeDNA
   treatment: DirectorTreatment
   durationSeconds: number
   customVoiceover?: string | null
+  loudnessPreset?: AudioLoudnessPreset
+  customTargetLufs?: number
 }): AudioPlan {
-  const { facts, dna, treatment, durationSeconds, customVoiceover } = params
+  const { facts, dna, treatment, durationSeconds, customVoiceover, loudnessPreset = 'social', customTargetLufs } = params
   const product = facts.product.name
   const brand = facts.brandName
 
   // 1. Süreye Göre Hedef Kelime Yoğunluğu
-  // 10s: 15-24 | 20s: 35-50 | 30s: 55-75 | 40s: 70-95 | 60s: 100-135
   let targetMinWords = 15
   let targetMaxWords = 24
   if (durationSeconds > 12 && durationSeconds <= 24) {
@@ -49,7 +51,7 @@ export function buildAudioPlan(params: {
     targetMaxWords = 135
   }
 
-  // 2. Seslendirme Metni Üretimi (Doğal Türkçe, sıfır devrik cümle, sıfır ucuz klişe)
+  // 2. Seslendirme Metni Üretimi
   let voText = ''
   if (customVoiceover && customVoiceover.trim().length > 5) {
     voText = customVoiceover.trim().replace(/["']/g, '')
@@ -59,33 +61,33 @@ export function buildAudioPlan(params: {
     } else if (durationSeconds <= 24) {
       voText = `İşinizi şansa bırakmayın. ${brand}, ${product} ile zorlu saha koşullarında kesintisiz verim ve birinci sınıf dayanıklılık sunar. Zamanında teslimat ve doğrudan üretici güvencesi için hemen iletişime geçin.`
     } else {
-      voText = `Bir eseri veya hasadı ayakta tutan, temelindeki malzemenin tavizsiz kalitesidir. ${brand}, ${product} ile ilk andan nihai sonuca kadar sarsılmaz bir güven inşa eder. Yüksek standart, kesintisiz stok ve doğrudan teslimatla yanınızdayız.`
+      voText = `Bir eseri veya hasadı geleceğe taşıyan şey, malzemeye ve emeğe duyulan sarsılmaz sadakattir. ${brand}, ${product} ile üretimin her aşamasında en yüksek standardı belirler. Sahada sıfır taviz, mimaride sarsılmaz sağlamlık. Geleceğinizi ${brand} güvencesiyle inşa edin.`
     }
   }
 
   const wordCount = voText.split(/\s+/).filter(Boolean).length
-  const estimatedDurationSec = Math.min(durationSeconds - 0.5, Math.max(2.0, wordCount * 0.42))
+  const estimatedDurationSec = Number((wordCount / 2.4).toFixed(1))
 
-  // 3. Müzik ve SFX Planı (Director Treatment'tan türetilir)
-  const isIndustrial = dna.brand.premiumLevel === 'industrial_grade'
-  const music: AudioPlan['music'] = {
-    tempo: isIndustrial ? 112 : 118,
-    instrumentation: isIndustrial
-      ? ['acoustic rhythmic percussion', 'deep solid bass line', 'subtle metallic strikes']
-      : ['modern clean synths', 'uplifting light commercial pulse', 'organic piano accents'],
-    energyCurve: '0-2s dikkat çeken başlangıç, orta bölümde dengeli ritim, 6. saniyede zirve, kapanışta temiz sönümlenme',
-    introCharacter: 'Temiz ve dikkat toplayıcı sparse giriş',
+  // 3. Müzik Tasarımı
+  const music = {
+    tempo: treatment.editingRhythm.start.includes('fast') ? 128 : 115,
+    instrumentation: dna.brand.premiumLevel === 'luxury' || dna.brand.premiumLevel === 'premium'
+      ? ['felt_piano', 'deep_sub_bass', 'organic_percussion']
+      : ['acoustic_guitar', 'warm_analog_synth', 'crisp_clap'],
+    energyCurve: 'progressive_lift',
+    introCharacter: 'ambient_establishing',
     buildSec: Number((durationSeconds * 0.4).toFixed(1)),
-    peakSec: Number((durationSeconds * 0.8).toFixed(1)),
-    resolutionSec: durationSeconds,
-    duckingDb: -14, // Spiker konuşurken müziğin -14 dB bastırılması
+    peakSec: Number((durationSeconds * 0.75).toFixed(1)),
+    resolutionSec: Number((durationSeconds * 0.95).toFixed(1)),
+    duckingDb: -16,
   }
 
-  const sfxCues: AudioPlan['sfxCues'] = [
+  // 4. Foley & SFX Cues
+  const sfxCues = [
     {
-      timestampSec: 0.3,
-      description: 'İlk temas ve eylem başlangıcı ses efekti',
-      audioEvent: isIndustrial ? 'heavy_material_foley_thud' : 'clean_mechanical_click',
+      timestampSec: 0.2,
+      description: 'Açılış kanca ve atmosfer ses efekti',
+      audioEvent: 'impact_whoosh_clean',
     },
     {
       timestampSec: Number((durationSeconds * 0.5).toFixed(1)),
@@ -93,6 +95,30 @@ export function buildAudioPlan(params: {
       audioEvent: 'subtle_operational_foley',
     },
   ]
+
+  // 5. Loudness Preset Ayarları
+  let targetLufs = -14.0
+  let targetTp = -1.0
+  let presetName: 'social_media' | 'broadcast' | 'cinematic' = 'social_media'
+
+  if (loudnessPreset === 'broadcast') {
+    targetLufs = customTargetLufs ?? -23.0
+    targetTp = -1.0
+    presetName = 'broadcast'
+  } else if (loudnessPreset === 'cinematic') {
+    targetLufs = customTargetLufs ?? -18.0
+    targetTp = -1.5
+    presetName = 'cinematic'
+  } else if (loudnessPreset === 'custom') {
+    targetLufs = customTargetLufs ?? -14.0
+    targetTp = -1.0
+    presetName = 'social_media'
+  } else {
+    // social / social_media
+    targetLufs = customTargetLufs ?? -14.0
+    targetTp = -1.0
+    presetName = 'social_media'
+  }
 
   return {
     fullVoiceoverText: voText,
@@ -108,9 +134,9 @@ export function buildAudioPlan(params: {
     music,
     sfxCues,
     loudnessTarget: {
-      integratedLufs: -14.0, // Sosyal medya ve dijital reklam standardı
-      truePeakDbTp: -1.0,
-      preset: 'social_media',
+      integratedLufs: targetLufs,
+      truePeakDbTp: targetTp,
+      preset: presetName,
     },
     maxDurationToleranceSec: 0.25, // <= 250ms
   }
@@ -118,7 +144,6 @@ export function buildAudioPlan(params: {
 
 /**
  * Audio Duration Gate: Video ve ses sürelerini milisaniyelik toleransla karşılaştırır.
- * 38s video + 33.7s audio gibi sessiz kuyruk (silent tail) bırakan videoları reddeder.
  */
 export function verifyAudioDurationGate(
   videoDurationSec: number,

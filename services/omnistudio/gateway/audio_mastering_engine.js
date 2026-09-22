@@ -1,10 +1,15 @@
 /**
  * MESAJIFY / OMNISTUDIO — AUTONOMOUS COMMERCIAL DIRECTOR V3
- * AUDIO MASTERING & DURATION GATE ENGINE (V6)
+ * AUDIO MASTERING & DURATION GATE ENGINE (V6 HARDENED)
  * 
  * Kesin Standart:
- * 1. EBU R128 Loudness Normalization (Sosyal Medya Standardı: -14 LUFS, True Peak <= -1.0 dBTP)
- * 2. Audio Duration Gate: abs(video_duration - audio_duration) <= 250ms
+ * 1. Loudness Presets:
+ *    - SOCIAL: target ≈ -14.0 LUFS, true peak <= -1.0 dBTP (Sosyal Medya / Reels / TikTok)
+ *    - BROADCAST: target ≈ -23.0 LUFS, true peak <= -1.0 dBTP (EBU R128 TV Yayın Standardı)
+ *    - CINEMATIC: target ≈ -18.0 LUFS, true peak <= -1.5 dBTP (Dramatik Sinematik Gösterim)
+ *    - CUSTOM: Tenant veya spesifik kampanya tarafından sağlanan özel hedef
+ * 2. Audio Duration Alignment Gate:
+ *    abs(video_duration - audio_duration) <= configured_tolerance (varsayılan: 250ms)
  *    Tolerans aşılırsa veya sessiz kuyruk tespit edilirse: FINALIZATION_FAILED_AUDIO_DURATION_MISMATCH
  */
 
@@ -13,9 +18,10 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 const LOUDNESS_PRESETS = {
-  social_media: { targetI: -14.0, targetTp: -1.0, targetLra: 11.0 },
-  broadcast: { targetI: -23.0, targetTp: -1.0, targetLra: 7.0 },
-  cinematic: { targetI: -18.0, targetTp: -1.5, targetLra: 14.0 },
+  social: { targetI: -14.0, targetTp: -1.0, targetLra: 11.0, name: 'SOCIAL' },
+  social_media: { targetI: -14.0, targetTp: -1.0, targetLra: 11.0, name: 'SOCIAL' },
+  broadcast: { targetI: -23.0, targetTp: -1.0, targetLra: 7.0, name: 'BROADCAST' },
+  cinematic: { targetI: -18.0, targetTp: -1.5, targetLra: 14.0, name: 'CINEMATIC' },
 };
 
 /**
@@ -45,7 +51,6 @@ function probeMediaDurations(filePath) {
       }
     }
 
-    // Ses akışı yoksa audioDur 0 kalır
     return {
       formatDuration: formatDur,
       videoDuration: videoDur || formatDur,
@@ -58,11 +63,10 @@ function probeMediaDurations(filePath) {
 }
 
 /**
- * Audio Duration Gate: Video ve ses süresi farkı toleransı aşarsa hata fırlatır.
+ * Audio Duration Alignment Gate: Video ve ses süresi farkı toleransı aşarsa hata fırlatır.
  */
 function verifyAudioDurationAlignment(videoDur, audioDur, toleranceSec = 0.25) {
   if (audioDur <= 0) {
-    // Sessiz video istenen bir durum değilse
     const err = new Error('FINALIZATION_FAILED_AUDIO_DURATION_MISMATCH: Videoda ses akışı bulunamadı!');
     err.code = 'FINALIZATION_FAILED_AUDIO_DURATION_MISMATCH';
     throw err;
@@ -77,6 +81,7 @@ function verifyAudioDurationAlignment(videoDur, audioDur, toleranceSec = 0.25) {
     err.delta = delta;
     err.videoDuration = videoDur;
     err.audioDuration = audioDur;
+    err.tolerance = toleranceSec;
     throw err;
   }
 
@@ -84,7 +89,8 @@ function verifyAudioDurationAlignment(videoDur, audioDur, toleranceSec = 0.25) {
     valid: true,
     delta,
     videoDuration: videoDur,
-    audioDuration: audioDur
+    audioDuration: audioDur,
+    tolerance: toleranceSec
   };
 }
 
@@ -92,17 +98,27 @@ function verifyAudioDurationAlignment(videoDur, audioDur, toleranceSec = 0.25) {
  * EBU R128 Standartlarında Loudness Normalizasyonu ve Mastering
  * @param {string} inputVideoPath Girdi video dosya yolu
  * @param {string} outputVideoPath Çıktı dosya yolu
- * @param {'social_media' | 'broadcast' | 'cinematic'} preset Hedef preset
+ * @param {string | object} presetOrCustom Preset adı ('social', 'broadcast', 'cinematic') veya özel nesne { targetI, targetTp, targetLra }
  */
-function masterAudioLoudness(inputVideoPath, outputVideoPath, preset = 'social_media') {
+function masterAudioLoudness(inputVideoPath, outputVideoPath, presetOrCustom = 'social') {
   if (!fs.existsSync(inputVideoPath)) {
     throw new Error(`MASTERING_FILE_MISSING: ${inputVideoPath}`);
   }
 
-  const cfg = LOUDNESS_PRESETS[preset] || LOUDNESS_PRESETS.social_media;
-  console.log(`[AudioMaster] 🎚️ EBU R128 Mastering başlatılıyor: Hedef ${cfg.targetI} LUFS, Max TP ${cfg.targetTp} dBTP (${preset})`);
+  let cfg;
+  if (typeof presetOrCustom === 'object' && presetOrCustom !== null) {
+    cfg = {
+      targetI: presetOrCustom.targetI ?? -14.0,
+      targetTp: presetOrCustom.targetTp ?? -1.0,
+      targetLra: presetOrCustom.targetLra ?? 11.0,
+      name: 'CUSTOM'
+    };
+  } else {
+    cfg = LOUDNESS_PRESETS[presetOrCustom] || LOUDNESS_PRESETS.social;
+  }
 
-  // loudnorm filtresi ile tek geçişli veya iki geçişli normalizasyon
+  console.log(`[AudioMaster] 🎚️ EBU R128 Mastering başlatılıyor: Hedef ${cfg.targetI} LUFS, Max TP ${cfg.targetTp} dBTP (${cfg.name})`);
+
   const loudnormFilter = `loudnorm=I=${cfg.targetI}:TP=${cfg.targetTp}:LRA=${cfg.targetLra}`;
   const cmd = `ffmpeg -y -i "${inputVideoPath}" -af "${loudnormFilter}" -c:v copy -c:a aac -b:a 192k -ar 48000 -movflags +faststart "${outputVideoPath}"`;
 
@@ -111,7 +127,7 @@ function masterAudioLoudness(inputVideoPath, outputVideoPath, preset = 'social_m
     if (!fs.existsSync(outputVideoPath) || fs.statSync(outputVideoPath).size < 10000) {
       throw new Error('Mastering çıktısı diske yazılamadı veya boyutu çok küçük.');
     }
-    console.log(`[AudioMaster] ✅ Mastering Başarılı: ${path.basename(outputVideoPath)}`);
+    console.log(`[AudioMaster] ✅ Mastering Başarılı: ${path.basename(outputVideoPath)} (${cfg.targetI} LUFS)`);
     return outputVideoPath;
   } catch (err) {
     console.warn(`[AudioMaster] ⚠️ ffmpeg loudnorm hatası: ${err.message}`);

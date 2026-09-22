@@ -412,12 +412,14 @@ export async function generateBackgroundMasterPrompt(
         productDescription: products[0]?.description || null,
         cta: snapshot.cta || null,
       })
-      if (pkg?.veoPrompt) {
-        console.log('[VideoScenario] V6 Autonomous Director master prompt üretti:', pkg.veoPrompt.slice(0, 100))
-        return pkg.veoPrompt
+      if (!pkg?.veoPrompt) {
+        throw new Error('No veoPrompt returned by V6 autonomous director')
       }
-    } catch (v6err) {
-      console.warn('[VideoScenario] V6 generateBackgroundMasterPrompt hatası, klasik fallback:', v6err)
+      console.log('[VideoScenario] V6 Autonomous Director master prompt üretti:', pkg.veoPrompt.slice(0, 100))
+      return pkg.veoPrompt
+    } catch (v6err: any) {
+      console.error('[VideoScenario] 🛑 V6 generateBackgroundMasterPrompt hatası (Legacy bypass engellendi):', v6err)
+      throw new Error(`CREATIVE_DIRECTOR_V6_FAILED: Autonomous commercial compilation failed under V6 mandate: ${v6err?.message || v6err}`)
     }
   }
 

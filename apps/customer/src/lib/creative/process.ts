@@ -617,12 +617,12 @@ export async function processCreativeGeneration(
           })
           videoPrompt = v6Result.veoPrompt
           console.log('[CreativeProcess] V6 Autonomous Commercial Director promptu başarıyla derlendi:', videoPrompt.slice(0, 100))
-        } catch (v6Err) {
-          console.warn('[CreativeProcess] V6 derleme hatası, V5 fallback uygulanıyor:', v6Err)
+        } catch (v6Err: any) {
+          console.error('[CreativeProcess] 🛑 V6 derleme hatası (Legacy bypass engellendi):', v6Err)
+          throw new Error(`CREATIVE_DIRECTOR_V6_FAILED: Autonomous commercial compilation failed under V6 mandate: ${v6Err?.message || v6Err}`)
         }
-      }
-
-      if (!videoPrompt) {
+      } else {
+        // Legacy V5 path only when explicitly disabled via CREATIVE_DIRECTOR_V6_ENABLED=false
         try {
           const { compileDeterministicV5 } = await import('./v5')
           v5Result = compileDeterministicV5({
