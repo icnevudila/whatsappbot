@@ -349,6 +349,9 @@ export function CreativeWizard({
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search)
+      if (params.get('new') === 'true') {
+        return
+      }
       const queryJobId = params.get('job_id')
       if (queryJobId) {
         setActiveJobId(queryJobId)
@@ -510,13 +513,29 @@ export function CreativeWizard({
               </p>
             </div>
 
-            <div className="flex justify-center pt-2">
+            <div className="flex justify-center items-center gap-3 pt-2">
               <Link
                 href="/icerik"
                 className="inline-flex items-center gap-2 rounded-full border border-hairline bg-white px-5 py-2 text-[13px] font-medium text-[#111b21] hover:bg-[#f0f2f5] transition-colors"
               >
                 İçerik Kütüphanesine Git
               </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveJobId(null)
+                  setJobState('IDLE')
+                  setStep('what')
+                  if (typeof window !== 'undefined') {
+                    const url = new URL(window.location.href)
+                    url.searchParams.delete('job_id')
+                    window.history.pushState({}, '', url.toString())
+                  }
+                }}
+                className="text-[12.5px] font-medium text-[#667781] hover:text-[#111b21] transition-colors"
+              >
+                Yeni Taslak Oluştur
+              </button>
             </div>
           </div>
         ) : null}
