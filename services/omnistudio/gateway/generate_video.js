@@ -2005,12 +2005,12 @@ async function generateVideoOnFlow(options = {}) {
     })()`
   });
 
-  // 5. Video renderını bekle (en fazla 260 saniye)
+  // 5. Video renderını bekle (en fazla 380 saniye - Veo 3.1 derin render toleransı)
   let videoRenderDone = false;
   const startTime = Date.now();
   await sleep(15000); // İlk 15 saniye yeni render oturma payı
 
-  while (Date.now() - startTime < 260000) {
+  while (Date.now() - startTime < 380000) {
     await sleep(6000);
     const elapsed = Math.round((Date.now() - startTime) / 1000);
 
@@ -2572,11 +2572,13 @@ async function generateVideoOnFlow(options = {}) {
       const secondaryColor = (options.primaryColor || brandKit?.colors?.secondary || brandKit?.colors?.primary || '#026009').replace('#', '');
       const ctaText = (options.ctaText || 'WHATSAPP İLE İLETİŞİME GEÇİN').toUpperCase().replace(/['"]/g, '');
 
-      // Logo yolu çözümü
+      // Logo yolu çözümü (Resmi kurumsal logo önceliği)
       let logoCandidate = options.logoUrl || brandKit?.logo_path;
       let localLogoPath = null;
       if (logoCandidate) {
-        if (logoCandidate.startsWith('/')) {
+        if (fs.existsSync(logoCandidate)) {
+          localLogoPath = logoCandidate;
+        } else if (logoCandidate.startsWith('/')) {
           const testP = path.join(OUTPUT_DIR, path.basename(logoCandidate));
           if (fs.existsSync(testP)) localLogoPath = testP;
         } else if (fs.existsSync(path.join(OUTPUT_DIR, path.basename(logoCandidate)))) {
@@ -2584,8 +2586,20 @@ async function generateVideoOnFlow(options = {}) {
         }
       }
       if (!localLogoPath && brandKit?.logo_path) {
-        const candidateP = path.join(OUTPUT_DIR, path.basename(brandKit.logo_path));
-        if (fs.existsSync(candidateP)) localLogoPath = candidateP;
+        if (fs.existsSync(brandKit.logo_path)) localLogoPath = brandKit.logo_path;
+        else {
+          const candidateP = path.join(OUTPUT_DIR, path.basename(brandKit.logo_path));
+          if (fs.existsSync(candidateP)) localLogoPath = candidateP;
+        }
+      }
+      // Bilinen kurumsal logolar için deterministik kontrol
+      if (!localLogoPath) {
+        const lowerBrand = brandName.toLowerCase();
+        if ((lowerBrand.includes('ayvazoğlu') || lowerBrand.includes('ayvazoglu')) && fs.existsSync('/app/gateway/ayvazoglu_logo_official.png')) {
+          localLogoPath = '/app/gateway/ayvazoglu_logo_official.png';
+        } else if (lowerBrand.includes('bofe') && fs.existsSync('/app/gateway/bofe_logo_clean_white.png')) {
+          localLogoPath = '/app/gateway/bofe_logo_clean_white.png';
+        }
       }
 
       const tempOverlayOut = path.join(OUTPUT_DIR, `temp_overlay_${timestamp}.mp4`);

@@ -183,6 +183,7 @@ export interface StoryBeat {
   type: StoryBeatType
   startSec: number
   endSec: number
+  durationSeconds?: number
   purpose: string
   viewerKnowledgeBefore: string
   viewerKnowledgeAfter: string
@@ -374,12 +375,17 @@ export interface ArtifactProvenanceRecord {
   attemptId: string
   workerId: string
   flowProjectId: string
+  flowGenerationId?: string
   generationId?: string
+  outputTileProof?: string
   promptHash: string
   assetHashes: Record<string, string>
+  downloadGuid?: string
   downloadPath?: string
   rawVideoSha256: string
   postProcessedSha256?: string
+  storageRecordId?: string
+  storageRecord?: string
   finalStorageUrl?: string
   storageUrl?: string
   provenanceValid: boolean

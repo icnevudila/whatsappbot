@@ -95,29 +95,41 @@ export function compileAutonomousCommercialV6(
   const jobId = options.jobId || `v6_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
   const tracer = new CallGraphTracer(jobId)
 
-  // 1. Fact Resolver (Normalizes facts without hallucination)
+  // 1. Customer Request Received
+  tracer.recordStep('gateway-ingress', 'receiveCustomerRequest', `Request received: brief length ${input.brief?.length || 0} chars, brand ${input.brandName || 'unassigned'}`, {
+    brief: input.brief,
+    durationSeconds: input.durationSeconds,
+  })
+
+  // 2. Tenant / Brand Resolution
+  tracer.recordStep('tenant-resolver', 'resolveTenantBrand', `Tenant identified: orgId=${input.orgId || 'org_default'}, brand=${input.brandName || 'default'}`, {
+    orgId: input.orgId,
+    brandId: input.brandId,
+  })
+
+  // 3. Sector Fact Resolution
   const facts = resolveFacts(input)
-  tracer.recordStep('fact-resolver', 'resolveFacts', `Facts normalized for ${facts.brandName} (${facts.product.name})`, {
+  tracer.recordStep('fact-resolver', 'resolveSectorFacts', `Facts normalized for ${facts.brandName} (${facts.product.name}) in sector ${facts.sectorFacts.sectorProfileId}`, {
     brand: facts.brandName,
     product: facts.product.name,
     sector: facts.sectorFacts.sectorProfileId,
   })
 
-  // 2. 4-Tier Creative DNA (Brand, Product, Campaign, Context)
+  // 4. Creative DNA Extraction (Brand, Product, Campaign, Context)
   const dna = deriveCreativeDNA(facts)
-  tracer.recordStep('creative-dna', 'deriveCreativeDNA', `4-Tier DNA derived: ${dna.brand.premiumLevel} / ${dna.campaign.objective}`, {
+  tracer.recordStep('creative-dna', 'extractCreativeDNA', `4-Tier DNA derived: ${dna.brand.premiumLevel} / ${dna.campaign.objective}`, {
     personality: dna.brand.personality,
     materials: dna.product.materials,
   })
 
-  // 3. Strategic Promise (Singular core belief + evidence)
+  // 5. Strategic Promise Derivation (Singular core belief + evidence)
   const promise = formulateStrategicPromise(facts, dna)
   tracer.recordStep('strategic-promise', 'formulateStrategicPromise', `Strategic Promise: "${promise.statement.slice(0, 50)}..."`, {
     before: promise.viewerBeliefBefore,
     after: promise.viewerBeliefAfter,
   })
 
-  // 4. Creative Memory Evaluation (Anti-Repetition)
+  // 6. Creative Memory Load & Anti-Repetition Check
   const memoryEval = globalCreativeMemory.evaluateMemory(
     facts.orgId,
     10,
@@ -127,27 +139,37 @@ export function compileAutonomousCommercialV6(
     avoidPatterns: memoryEval.avoidRecentPatterns,
   })
 
-  // 5. 5 Dynamic & Diverse Creative Concepts
+  // 7. Concept Generation (5 diverse candidates)
   const candidates = generateCreativeConcepts(facts, dna, promise)
-  const diversity = validateConceptDiversity(candidates)
-  tracer.recordStep('concept-generator', 'generateCreativeConcepts', `Generated 5 concepts (Diversity: ${diversity.isDiverse ? 'PASS' : 'WARN'})`, {
+  tracer.recordStep('concept-generator', 'generateCreativeConcepts', `Generated 5 dynamic concepts`, {
     concepts: candidates.map(c => c.name),
-    maxPairwiseSimilarity: diversity.pairwiseSimilarityMax,
   })
 
-  // 6. Concept Tournament (Weighted selection & penalty application)
+  // 8. Concept Diversity Validation
+  const diversity = validateConceptDiversity(candidates)
+  tracer.recordStep('concept-generator', 'validateConceptDiversity', `Diversity validated: ${diversity.isDiverse ? 'PASS' : 'WARN'} (Max Composite: ${diversity.pairwiseSimilarityMax}, Max Semantic: ${diversity.maxSemanticSimilarity})`, {
+    pairwiseMax: diversity.pairwiseSimilarityMax,
+    maxSemantic: diversity.maxSemanticSimilarity,
+  })
+
+  // 9. Concept Tournament Scoring
   const tournament = runConceptTournament(candidates, facts, dna, promise, memoryEval)
-  const selectedConcept = tournament.winner
-  tracer.recordStep('concept-tournament', 'runConceptTournament', `Tournament winner: "${selectedConcept.name}" (Score: ${tournament.winnerScore.totalScore})`, {
-    winnerId: selectedConcept.id,
-    allScores: tournament.allScores.map(s => `${s.conceptId}: ${s.totalScore}`),
+  tracer.recordStep('concept-tournament', 'runConceptTournament', `Tournament scored ${tournament.allScores.length} candidates`, {
+    scores: tournament.allScores.map(s => `${s.conceptId}: ${s.totalScore}`),
   })
 
-  // 7. Director Treatment (Directorial philosophy, motifs, lighting, editing)
+  // 10. Winning Concept Selection
+  const selectedConcept = tournament.winner
+  tracer.recordStep('concept-tournament', 'selectWinningConcept', `Winning concept selected: "${selectedConcept.name}" (${selectedConcept.narrativeDevice})`, {
+    winnerId: selectedConcept.id,
+    totalScore: tournament.winnerScore.totalScore,
+  })
+
+  // 11. Director Treatment Generation
   const treatment = formulateDirectorTreatment(selectedConcept, facts, dna, promise)
   tracer.recordStep('director-treatment', 'formulateDirectorTreatment', `Treatment formulated: ${treatment.directorIntent.slice(0, 50)}...`)
 
-  // 8. Dynamic Grammar Router
+  // 12. Grammar Routing (short vs full commercial)
   const grammarPlan = routeCommercialGrammar(facts.campaign.durationSeconds, {
     hasExactProductReference: facts.product.referenceAssetIds.length > 0,
     campaignObjective: facts.campaign.objective,
@@ -155,7 +177,7 @@ export function compileAutonomousCommercialV6(
   })
   tracer.recordStep('grammar-router', 'routeCommercialGrammar', `Routed to ${grammarPlan.grammarType} (Allowed scenes: ${grammarPlan.allowedSceneCounts.join(',')})`)
 
-  // 9. Story Beat Sheet (Dynamic Short Performance / Sector-Specific Long Form)
+  // 13. Beat Sheet Derivation
   const beatSheet = generateBeatSheet({
     facts,
     dna,
@@ -169,11 +191,16 @@ export function compileAutonomousCommercialV6(
     beats: beatSheet.map(b => `${b.id}[${b.type}]: ${b.startSec}-${b.endSec}s`),
   })
 
-  // 10. Cause / Effect Graph
-  const causeEffectGraph = buildCauseEffectGraph(beatSheet)
-  tracer.recordStep('cause-effect-graph', 'buildCauseEffectGraph', `Linked ${causeEffectGraph.length} causal transitions`)
+  // 14. Dynamic Beat Timing Solver
+  tracer.recordStep('beat-sheet', 'solveDynamicBeatTimings', `Beat timings solved dynamically from importance weights and VO density`, {
+    timings: beatSheet.map(b => `${b.id}: ${b.startSec.toFixed(2)}s - ${b.endSec.toFixed(2)}s (${(b.durationSeconds ?? (b.endSec - b.startSec)).toFixed(2)}s)`),
+  })
 
-  // 11. Scene Contracts V2
+  // 15. Cause / Effect Graph Verification
+  const causeEffectGraph = buildCauseEffectGraph(beatSheet)
+  tracer.recordStep('cause-effect-graph', 'buildCauseEffectGraph', `Linked and verified ${causeEffectGraph.length} causal transitions`)
+
+  // 16. Scene Contract Generation
   const initialContracts = buildSceneContractsV2({
     facts,
     dna,
@@ -184,11 +211,31 @@ export function compileAutonomousCommercialV6(
   })
   tracer.recordStep('scene-contract', 'buildSceneContractsV2', `Built ${initialContracts.length} SceneContractV2 specifications`)
 
-  // 12. Scene Validator (Scene Necessity Test & DECORATIVE_SHOT Pruning)
-  const sceneValidation = validateSceneContracts(initialContracts, facts.campaign.durationSeconds)
-  tracer.recordStep('scene-validator', 'validateSceneContracts', `Scene validation passed: ${sceneValidation.validatedScenes.length} active scenes`)
+  // 17. Negative Constraints Compilation
+  tracer.recordStep('scene-contract', 'compileNegativeConstraints', `Compiled negative constraints & safety boundaries`, {
+    forbiddenClaims: facts.brandFacts.forbiddenClaims,
+    safetyConstraints: facts.sectorFacts.safetyConstraints,
+  })
 
-  // 13. Configurable Product & Dynamic Brand Visibility Budgets
+  // 18. Camera & Lighting Design
+  tracer.recordStep('scene-contract', 'designCameraAndLighting', `Designed camera trajectories and natural lighting keys for ${initialContracts.length} scenes`, {
+    lightingKeys: initialContracts.map(c => c.lighting.character),
+    cameraMotions: initialContracts.map(c => c.camera.movement),
+  })
+
+  // 19. Audio Narrative Plan
+  const audioPlan = buildAudioPlan({
+    facts,
+    dna,
+    treatment,
+    durationSeconds: facts.campaign.durationSeconds,
+    customVoiceover: facts.campaign.customVoiceover,
+    loudnessPreset: options.loudnessPreset || 'social',
+  })
+  tracer.recordStep('audio-plan', 'buildAudioPlan', `Audio plan created: ${audioPlan.wordCount} words, preset ${audioPlan.loudnessTarget.preset} (${audioPlan.loudnessTarget.integratedLufs} LUFS)`)
+
+  // 20. Prompt Compilation (Veo3 ready)
+  const sceneValidation = validateSceneContracts(initialContracts, facts.campaign.durationSeconds)
   const productAudit = auditProductVisibility(
     sceneValidation.validatedScenes,
     grammarPlan.grammarType,
@@ -199,10 +246,7 @@ export function compileAutonomousCommercialV6(
     grammarPlan.grammarType,
     { hasLogoAsset: Boolean(facts.brandFacts.logoUrl) }
   )
-  tracer.recordStep('product-visibility', 'auditProductVisibility', `Product exposure: ${productAudit.totalDirectExposurePercent}% (Target: ${productAudit.targetExposureMin}-${productAudit.targetExposureMax}%)`)
-  tracer.recordStep('brand-visibility', 'auditBrandVisibility', `Brand strategy: ${brandAudit.exactLogoStrategy} (Exposure: ${brandAudit.totalBrandExposurePercent}%)`)
 
-  // 14. Deterministic Prompt Compiler (Validated contracts -> Veo English prompt)
   const veoPrompt = compileValidatedSceneContractsToVeo({
     scenes: sceneValidation.validatedScenes,
     facts,
@@ -213,24 +257,13 @@ export function compileAutonomousCommercialV6(
   })
   tracer.recordStep('prompt-compiler', 'compileValidatedSceneContractsToVeo', `Compiled deterministic Veo prompt (${veoPrompt.length} chars)`)
 
-  // 15. Audio Plan & Mastering Targets (Configurable Presets)
-  const audioPlan = buildAudioPlan({
-    facts,
-    dna,
-    treatment,
-    durationSeconds: facts.campaign.durationSeconds,
-    customVoiceover: facts.campaign.customVoiceover,
-    loudnessPreset: options.loudnessPreset || 'social',
-  })
-  tracer.recordStep('audio-plan', 'buildAudioPlan', `Audio plan: ${audioPlan.wordCount} words, preset ${audioPlan.loudnessTarget.preset} (${audioPlan.loudnessTarget.integratedLufs} LUFS)`)
-
-  // 16. Production Quality Gate
+  // 21. Quality Gate Pre-Render Check
   evaluateProductionQualityGate({
     sceneValidation,
     productAudit,
     brandAudit,
   })
-  tracer.recordStep('final-quality-gate', 'evaluateProductionQualityGate', 'Production quality gate approved')
+  tracer.recordStep('final-quality-gate', 'evaluateProductionQualityGate', 'Production quality gate approved before render execution')
 
   return {
     facts,
