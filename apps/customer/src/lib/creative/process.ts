@@ -585,42 +585,79 @@ export async function processCreativeGeneration(
       productImageUrl = resolveAssetUrl(productImageUrl)
 
       const { overlay } = buildVideoPrompt(snapshot)
-      let videoPrompt: string
+      let videoPrompt: string = ''
+      let v6Result: any = null
       let v5Result: any = null
-      try {
-        const { compileDeterministicV5 } = await import('./v5')
-        v5Result = compileDeterministicV5({
-          brandName: overlay.brandName || snapshot.brandKit?.name || null,
-          brief: snapshot.brief || 'İşletme reklam filmi',
-          customText: snapshot.customText || null,
-          ctaText: overlay.ctaText || null,
-          campaignDeadline: snapshot.dateRange || null,
-          deliveryArea: (snapshot as any).deliveryArea || null,
-          cameraMode: (snapshot as any).cameraMode || undefined,
-          products: (snapshot.products || []).map((p) => ({
-            name: p.name,
-            imageUrl: resolveAssetUrl(p.imageUrl || productImageUrl),
-            price: p.price,
-            promo: p.promo,
-            description: p.description,
-          })),
-          productImageUrl,
-          logoUrl,
-          brandKit: {
-            name: overlay.brandName || snapshot.brandKit?.name,
-            colors: snapshot.brandKit?.colors,
-            fonts: snapshot.brandKit?.fonts,
+      const v6Enabled = process.env.CREATIVE_DIRECTOR_V6_ENABLED !== 'false'
+
+      if (v6Enabled) {
+        try {
+          const { compileAutonomousCommercialV6 } = await import('./v6')
+          v6Result = compileAutonomousCommercialV6({
+            orgId: creative.org_id,
+            brandName: overlay.brandName || snapshot.brandKit?.name || null,
+            brief: snapshot.brief || 'İşletme reklam filmi',
+            productName: chosenProduct?.name || null,
+            productDescription: chosenProduct?.description || null,
+            productImageUrl,
+            referenceAssetIds: (snapshot.referenceImageUrls || []).map((u: string) => resolveAssetUrl(u) || u).filter(Boolean),
             logoUrl,
-          },
-          videoSpeech: (snapshot as any).videoSpeech !== false,
-          customVoiceover: (snapshot as any).customVoiceover || null,
-        })
-        videoPrompt = v5Result.veoPrompt
-        console.log('[CreativeProcess] V5 Video Engine promptu başarıyla derlendi (continuous_take):', videoPrompt.slice(0, 100))
-      } catch (v5Err) {
-        console.warn('[CreativeProcess] V5 fallback, legacy scenario kullanılıyor:', v5Err)
-        const { generateBackgroundMasterPrompt } = await import('./video-scenario')
-        videoPrompt = await generateBackgroundMasterPrompt(snapshot, bag)
+            offer: overlay.offerTitle || null,
+            cta: overlay.ctaText || null,
+            durationSeconds: (snapshot as any).durationSeconds || 10,
+            aspectRatio: aspect || '9:16',
+            brandKit: {
+              name: overlay.brandName || snapshot.brandKit?.name,
+              colors: snapshot.brandKit?.colors,
+              logoUrl,
+            },
+            customVoiceover: (snapshot as any).customVoiceover || null,
+          }, {
+            cameraMode: (snapshot as any).cameraMode || undefined,
+          })
+          videoPrompt = v6Result.veoPrompt
+          console.log('[CreativeProcess] V6 Autonomous Commercial Director promptu başarıyla derlendi:', videoPrompt.slice(0, 100))
+        } catch (v6Err) {
+          console.warn('[CreativeProcess] V6 derleme hatası, V5 fallback uygulanıyor:', v6Err)
+        }
+      }
+
+      if (!videoPrompt) {
+        try {
+          const { compileDeterministicV5 } = await import('./v5')
+          v5Result = compileDeterministicV5({
+            brandName: overlay.brandName || snapshot.brandKit?.name || null,
+            brief: snapshot.brief || 'İşletme reklam filmi',
+            customText: snapshot.customText || null,
+            ctaText: overlay.ctaText || null,
+            campaignDeadline: snapshot.dateRange || null,
+            deliveryArea: (snapshot as any).deliveryArea || null,
+            cameraMode: (snapshot as any).cameraMode || undefined,
+            products: (snapshot.products || []).map((p) => ({
+              name: p.name,
+              imageUrl: resolveAssetUrl(p.imageUrl || productImageUrl),
+              price: p.price,
+              promo: p.promo,
+              description: p.description,
+            })),
+            productImageUrl,
+            logoUrl,
+            brandKit: {
+              name: overlay.brandName || snapshot.brandKit?.name,
+              colors: snapshot.brandKit?.colors,
+              fonts: snapshot.brandKit?.fonts,
+              logoUrl,
+            },
+            videoSpeech: (snapshot as any).videoSpeech !== false,
+            customVoiceover: (snapshot as any).customVoiceover || null,
+          })
+          videoPrompt = v5Result.veoPrompt
+          console.log('[CreativeProcess] V5 Video Engine promptu başarıyla derlendi (continuous_take):', videoPrompt.slice(0, 100))
+        } catch (v5Err) {
+          console.warn('[CreativeProcess] V5 fallback, legacy scenario kullanılıyor:', v5Err)
+          const { generateBackgroundMasterPrompt } = await import('./video-scenario')
+          videoPrompt = await generateBackgroundMasterPrompt(snapshot, bag)
+        }
       }
 
       const gatewayUrl = (process.env.OMNISTUDIO_GATEWAY_URL || 'http://167.233.201.31:3456').replace(/\/$/, '')
@@ -660,9 +697,19 @@ export async function processCreativeGeneration(
             primaryColor: overlay.primaryColor,
             accentColor: overlay.accentColor,
             customer: customerName,
-            sceneContracts: v5Result?.sceneContracts || null,
-            creativeDNA: v5Result?.creativeDNA || null,
-            creativeScore: v5Result?.creativeScore || null,
+            sceneContracts: v6Result?.sceneContracts || v5Result?.sceneContracts || null,
+            creativeDNA: v6Result?.dna || v5Result?.creativeDNA || null,
+            creativeScore: v6Result?.conceptTournament?.winnerScore?.totalScore || v5Result?.creativeScore || null,
+            audioPlan: v6Result?.audioPlan || null,
+            directorTreatment: v6Result?.directorTreatment || null,
+            tournamentWinner: v6Result?.conceptTournament?.winner?.name || null,
+            v6Package: v6Result ? {
+              version: v6Result.version,
+              grammarType: v6Result.grammarType,
+              promise: v6Result.promise,
+              beatSheet: v6Result.beatSheet,
+              causeEffectGraph: v6Result.causeEffectGraph,
+            } : null,
           }),
         })
 
@@ -747,6 +794,17 @@ export async function processCreativeGeneration(
         pendingVideoUrl: null,
         flowJob: null,
         cost: { provider: 'omnistudio_veo', imageCount: 1 },
+        ...(v6Result ? {
+          v6Director: {
+            version: v6Result.version,
+            grammarType: v6Result.grammarType,
+            promise: v6Result.promise,
+            directorTreatment: v6Result.directorTreatment,
+            audioPlan: v6Result.audioPlan,
+            winnerConcept: v6Result.conceptTournament?.winner?.name || null,
+            creativeScore: v6Result.conceptTournament?.winnerScore?.totalScore || null,
+          }
+        } : {}),
       }
 
       // Flow tamamlandığı anda URL kayda yazılır; indirme/Storage gecikmesi

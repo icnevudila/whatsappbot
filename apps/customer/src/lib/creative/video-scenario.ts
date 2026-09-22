@@ -41,50 +41,6 @@ export async function generateVideoScenarios(
     .map((p) => `${p.name}${p.price ? ` (${p.price})` : ''}${p.promo ? ` - ${p.promo}` : ''}`)
     .join(', ')
 
-  const systemPrompt = `Sen Cannes ödüllü bir ticari reklam filmi yönetmeni ve Google Veo video prompt uzmanısın.
-Görevin: Verilen işletme ve kampanya bağlamını inceleyerek kullanıcıya sunulacak 3 FARKLI reklam senaryosu üretmek.
-
-Her senaryo şu 2 seviyeden oluşmalıdır:
-1. "summary": Kullanıcı dostu, sade Türkçe ile yazılmış 1-2 cümlelik kısa özet. Kullanıcı bu özeti okuduğunda videoda ne olacağını (kim var, ne yapıyor, ne söylüyor) saniyesinde anlar.
-2. "fullPrompt": Google Veo yapay zeka video motoruna iletilecek ultra detaylı 9:16 dikey sinematik çekim direktifi (İngilizce + Türkçe diyalog/dış ses).
-
-ÇOK ÖNEMLİ KURALLAR (VEO v4 STANDARDI):
-- Format: 9:16 Dikey (Instagram Reels, TikTok, WhatsApp Durum formatı).
-- Süre: 8 saniye (3 Perde: ACT 1: 0-2.2s Görsel Kanca, ACT 2: 2.2-5.8s Ürün/Hizmet Eylemi & Kanıt, ACT 3: 5.8-8s Odak Kapanış).
-- Tek Lokasyon Devamlılığı: Üç perde aynı lokasyonun üç tamamlayıcı kadrajı olmalıdır. Mekan sıçraması kesinlikle yasaktır.
-- Dış Ses / Konuşma Durumu: ${
-    isSpeech
-      ? 'Dış ses veya oyuncu konuşması VARDIR. En fazla 18, ideal olarak 10-14 Türkçe kelimeden oluşan doğal, akıcı ve devrik olmayan tam Türkçe replik yazılmalıdır. Tırnak işareti kullanılmaz.'
-      : 'Konuşma ve insan sesi YOKTUR. Sadece foley doğal ses efektleri ve dinamik fon müziği vardır. STRICT RULE: NO VOICE, NO SPEECH.'
-  }
-- EKRANDA YAZI YASAKTIR (Post-prodüksiyon Ayrımı): Videonun ham çekiminde kesinlikle ekranda hiçbir banner, altyazı, yazı, tipografi, logo kartı OLMAYACAKTIR. 'STRICT RULE: NO ON-SCREEN TEXT, NO WORDS, NO LETTERS, NO LOGO CARDS' kuralı promptun sonuna eklenmelidir.
-- Yanıtı YALNIZCA geçerli bir JSON dizisi olarak dön. Başka hiçbir açıklama, selamlama veya markdown tırnağı yazma.
-
-JSON ŞEMASI:
-[
-  {
-    "id": "scenario_1",
-    "title": "Kısa Çarpıcı Başlık (Örn: Usta & Akıllı Telefon)",
-    "badge": "En Çok Tercih Edilen",
-    "summary": "1-2 cümlelik sade, anlaşılır Türkçe kullanıcı özeti.",
-    "fullPrompt": "9:16 vertical cinematic commercial for [Brand]... ACT 1... ACT 2... ACT 3... STRICT RULE: NO ON-SCREEN TEXT..."
-  },
-  {
-    "id": "scenario_2",
-    "title": "2. Senaryo Başlığı",
-    "badge": "Dinamik & Enerjik",
-    "summary": "...",
-    "fullPrompt": "..."
-  },
-  {
-    "id": "scenario_3",
-    "title": "3. Senaryo Başlığı",
-    "badge": "Premium Sinematik",
-    "summary": "...",
-    "fullPrompt": "..."
-  }
-]`
-
   const userPrompt = `Marka: ${brand}
 Açıklama / Sektör: ${context.about || context.sector || 'Genel Ticari İşletme'}
 Kampanya Fikri / Brief: ${context.brief}
@@ -93,6 +49,94 @@ Ek Metin / Kampanya Detayı: ${context.customText || '—'}
 Kampanya Tarihi: ${context.dateRange || 'Hemen Şimdi'}
 Aksiyon Çağrısı (CTA): ${context.cta || 'WhatsApp İle Sipariş Ver'}
 Dış Ses / Konuşma: ${isSpeech ? 'Sesli / Konuşmalı' : 'Sessiz / Sadece Müzik ve Foley'}`
+
+  const isV6Enabled = process.env.CREATIVE_DIRECTOR_V6_ENABLED !== 'false'
+
+  if (isV6Enabled) {
+    try {
+      const { COMMERCIAL_DIRECTOR_RUNTIME_SYSTEM_PROMPT, validateAndParseDirectorPlan } = await import('./v6/runtime-gpt-prompt')
+      const { compileAutonomousCommercialV6 } = await import('./v6')
+
+      // 1. LLM Çağrısı: V6 Commercial Director Runtime System Prompt ile yapılandırılmış plan iste
+      try {
+        const rawResponse = await completeText(COMMERCIAL_DIRECTOR_RUNTIME_SYSTEM_PROMPT, userPrompt, {
+          ...bag,
+          preferredTextProvider: 'openai',
+        })
+        const validation = validateAndParseDirectorPlan(rawResponse)
+        if (validation.success && validation.data?.scenes?.length) {
+          const plan = validation.data
+          const options: VideoScenarioOption[] = []
+          // Plan üzerinden kullanıcıya 3 seçenek veya sahnelerden derlenen ana opsiyonları sun
+          const winnerConcept = plan.concept_candidates?.[0]
+          options.push({
+            id: 'scenario_v6_1',
+            title: winnerConcept?.name || plan.strategic_promise?.statement?.slice(0, 40) || 'Stratejik Yönetmen Kurgusu',
+            badge: 'Cannes Lions Standardı (V6)',
+            summary: `${plan.strategic_promise?.statement || 'Doğrulanmış ürün gücü ve müşteri vaadi.'} ${winnerConcept?.one_sentence_idea || ''}`.trim(),
+            fullPrompt: plan.scenes.map((s: any) => `[SCENE ${s.scene_id || 1}: ${s.camera?.shot_size || 'Cinematic'} ${s.primary_action}]`).join(' -> '),
+          })
+          if (options.length > 0) {
+            // Tamamlayıcı V6 varyasyonları ekle
+            const v6Pkg = compileAutonomousCommercialV6({
+              brandName: brand,
+              brief: context.brief,
+              productName: context.products?.[0]?.name || null,
+              customVoiceover: context.customText || null,
+            })
+            options.push({
+              id: 'scenario_v6_2',
+              title: v6Pkg.conceptTournament.winner.name,
+              badge: 'Yüksek Dönüşüm (Otonom)',
+              summary: v6Pkg.conceptTournament.winner.oneSentenceIdea,
+              fullPrompt: v6Pkg.veoPrompt,
+            })
+            return options.slice(0, 3)
+          }
+        }
+      } catch (llmErr) {
+        console.warn('[VideoScenario] V6 ChatGPT çağrısı başarısız, deterministik V6 motoru çalıştırılıyor:', llmErr)
+      }
+
+      // 2. Deterministik V6 Otonom Motoru (LLM olmadan da 5 benzersiz konsept & turnuva ile 3 mükemmel senaryo)
+      const v6Pkg = compileAutonomousCommercialV6({
+        brandName: brand,
+        brief: context.brief,
+        productName: context.products?.[0]?.name || null,
+        customVoiceover: context.customText || null,
+      })
+
+      const topCandidates = v6Pkg.conceptTournament.candidates.slice(0, 3)
+      return topCandidates.map((candidate, idx: number) => ({
+        id: `scenario_v6_${idx + 1}`,
+        title: candidate.name,
+        badge: idx === 0 ? 'En Çok Tercih Edilen (V6)' : idx === 1 ? 'Yüksek Dönüşüm (V6)' : 'Prestijli Sinematik (V6)',
+        summary: candidate.oneSentenceIdea,
+        fullPrompt: v6Pkg.veoPrompt,
+      }))
+    } catch (v6InitErr) {
+      console.warn('[VideoScenario] V6 başlatma hatası, klasik pipeline kullanılıyor:', v6InitErr)
+    }
+  }
+
+  // Klasik Fallback Akışı (V5 / V4)
+  const systemPrompt = `Sen Cannes ödüllü bir ticari reklam filmi yönetmeni ve Google Veo video prompt uzmanısın.
+Görevin: Verilen işletme ve kampanya bağlamını inceleyerek kullanıcıya sunulacak 3 FARKLI reklam senaryosu üretmek.
+
+Her senaryo şu 2 seviyeden oluşmalıdır:
+1. "summary": Kullanıcı dostu, sade Türkçe ile yazılmış 1-2 cümlelik kısa özet.
+2. "fullPrompt": Google Veo yapay zeka video motoruna iletilecek ultra detaylı 9:16 dikey sinematik çekim direktifi.
+
+JSON ŞEMASI:
+[
+  {
+    "id": "scenario_1",
+    "title": "Kısa Çarpıcı Başlık",
+    "badge": "En Çok Tercih Edilen",
+    "summary": "...",
+    "fullPrompt": "..."
+  }
+]`
 
   try {
     const rawResponse = await completeText(systemPrompt, userPrompt, {
@@ -356,6 +400,26 @@ export async function generateBackgroundMasterPrompt(
   const productsSummary = products
     .map((p: any) => `${p.name}${p.price ? ` (${p.price})` : ''}${p.promo ? ` - ${p.promo}` : ''}${p.description ? ` [${p.description}]` : ''}`)
     .join(', ')
+
+  if (process.env.CREATIVE_DIRECTOR_V6_ENABLED !== 'false') {
+    try {
+      const { compileAutonomousCommercialV6 } = await import('./v6')
+      const pkg = compileAutonomousCommercialV6({
+        brandName: brand,
+        brief: snapshot.brief || 'İşletme reklam filmi',
+        customVoiceover: snapshot.customVoiceover || snapshot.customText || null,
+        productName: products[0]?.name || null,
+        productDescription: products[0]?.description || null,
+        cta: snapshot.cta || null,
+      })
+      if (pkg?.veoPrompt) {
+        console.log('[VideoScenario] V6 Autonomous Director master prompt üretti:', pkg.veoPrompt.slice(0, 100))
+        return pkg.veoPrompt
+      }
+    } catch (v6err) {
+      console.warn('[VideoScenario] V6 generateBackgroundMasterPrompt hatası, klasik fallback:', v6err)
+    }
+  }
 
   const systemPrompt = `Sen Cannes ödüllü bir ticari reklam filmi yönetmeni ve Google Veo video prompt uzmanısın.
 Görevin: Verilen marka, marka kiti, ürünler ve kampanya bağlamını inceleyerek Google Veo yapay zeka video motorunun üreteceği tek bir MASTER reklam filmi promptu (çekim senaryosu) oluşturmak.

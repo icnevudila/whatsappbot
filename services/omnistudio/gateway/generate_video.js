@@ -91,6 +91,22 @@ try {
   processVideoAudioAndSubtitles = null;
 }
 
+let probeMediaDurations, verifyAudioDurationAlignment, masterAudioLoudness;
+try {
+  ({ probeMediaDurations, verifyAudioDurationAlignment, masterAudioLoudness } = require('./audio_mastering_engine.js'));
+} catch (e) {
+  probeMediaDurations = null;
+  verifyAudioDurationAlignment = null;
+  masterAudioLoudness = null;
+}
+
+let globalArtifactProvenanceGate;
+try {
+  ({ globalArtifactProvenanceGate } = require('./artifact_provenance_gate.js'));
+} catch (e) {
+  globalArtifactProvenanceGate = null;
+}
+
 /**
  * Full + Full Sinematik Reklam Prompt Genişleticisi (Veo & AI Video Engine)
  * Kısa veya standart bir brief'i 3 perdeli bir reklam filmi yönetmeni vizyonuna genişletir.
@@ -2428,6 +2444,22 @@ async function generateVideoOnFlow(options = {}) {
   const verification = verifyVideoFile(rawPath);
   console.log(`[Flow Video] 🔒 Video bütünlük doğrulaması BAŞARILI: Süre=${verification.duration}s, Boyut=${(verification.size / 1024 / 1024).toFixed(2)} MB, SHA256=${verification.sha256}`);
 
+  // 🛡️ V6 Provenance Kaydı
+  if (globalArtifactProvenanceGate) {
+    try {
+      globalArtifactProvenanceGate.registerJobProvenance({
+        jobId: isolatedProjectId || rawFileName,
+        orgId: options.orgId || 'org_default',
+        brandName: options.brandName || options.customer || 'Brand',
+        rawVideoSha256: verification.sha256,
+        filePath: rawPath
+      });
+      console.log(`[Flow Video] 🛡️ Provenance kaydedildi: Job=${isolatedProjectId || rawFileName}, Org=${options.orgId || 'org_default'}`);
+    } catch (provErr) {
+      console.warn('[Flow Video] Provenance kayıt uyarısı:', provErr.message);
+    }
+  }
+
   // 🔬 MULTI-FRAME VISUAL QA ENGINE (0%, 25%, 50%, 75%, 95% kare analizi)
   let visualQaReport = null;
   try {
@@ -2492,6 +2524,37 @@ async function generateVideoOnFlow(options = {}) {
     }
   } else {
     console.log('[Flow Video] 🚫 options.subtitles=false: Altyazı adımı atlandı (saf video korundu).');
+  }
+
+  // 🔒 V6 Audio Duration Gate & EBU R128 (-14 LUFS) Mastering
+  if (probeMediaDurations && fs.existsSync(rawPath)) {
+    try {
+      const audioDurations = probeMediaDurations(rawPath);
+      if (audioDurations.hasAudio) {
+        console.log(`[Flow Video] 🔊 Ses akışı doğrulandı: Video=${audioDurations.videoDuration.toFixed(2)}s, Ses=${audioDurations.audioDuration.toFixed(2)}s`);
+        // Süre uyum kapısı: 250ms tolerans
+        if (verifyAudioDurationAlignment) {
+          verifyAudioDurationAlignment(audioDurations.videoDuration, audioDurations.audioDuration, 0.25);
+        }
+        
+        // EBU R128 (-14 LUFS) Mastering
+        if (masterAudioLoudness) {
+          const masteredTemp = rawPath.replace(/\.mp4$/, '_mastered_temp.mp4');
+          masterAudioLoudness(rawPath, masteredTemp, 'social_media');
+          if (fs.existsSync(masteredTemp) && fs.statSync(masteredTemp).size > 10000) {
+            fs.copyFileSync(masteredTemp, rawPath);
+            try { fs.unlinkSync(masteredTemp); } catch (_) {}
+            console.log(`[Flow Video] 🎚️ EBU R128 (-14 LUFS) mastering başarıyla uygulandı.`);
+          }
+        }
+      }
+    } catch (audioGateErr) {
+      if (audioGateErr.code === 'FINALIZATION_FAILED_AUDIO_DURATION_MISMATCH') {
+        console.error(`[Flow Video] 🛑 Audio Duration Gate Reddi:`, audioGateErr.message);
+        throw audioGateErr;
+      }
+      console.warn(`[Flow Video] Audio mastering uyarısı:`, audioGateErr.message);
+    }
   }
 
   // 8.2 Marka Kiti, Logo ve CTA Overlay Giydirme
@@ -2609,6 +2672,23 @@ async function generateVideoOnFlow(options = {}) {
   }
 
   const cleanFileName = rawFileName.replace(/(_capcut_final|_final|_sub)?\.mp4$/, '_clean_nosub.mp4');
+
+  // 🛡️ V6 Artifact Provenance Gate (Teslimat öncesi sahte dosya ve çapraz kurum kontrolü)
+  if (globalArtifactProvenanceGate && fs.existsSync(rawPath)) {
+    try {
+      globalArtifactProvenanceGate.validateProvenanceBeforeDelivery({
+        jobId: isolatedProjectId || rawFileName,
+        orgId: options.orgId || 'org_default',
+        brandName: options.brandName || options.customer,
+        videoFilePath: rawPath
+      });
+      console.log(`[Flow Video] 🛡️ Artifact Provenance Gate: Teslimat ONAYLANDI (${rawFileName})`);
+    } catch (provErr) {
+      console.error(`[Flow Video] 🛑 ARTIFACT PROVENANCE GATE İHLALİ:`, provErr.message);
+      throw provErr;
+    }
+  }
+
   return {
     success: true,
     engine: 'Google Flow (Veo 3.1)',
