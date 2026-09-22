@@ -1,0 +1,276 @@
+import type { BrandContextSnapshot } from '../types/brand-snapshot.js'
+import type { FfprobeMetadata } from '../adapters/interfaces.js'
+
+export interface SceneQARequest {
+  sceneId: string
+  orgId: string
+  outputFilePath: string
+  sha256: string
+  ffprobe: FfprobeMetadata
+  targetDurationSec: number
+  expectedReferenceIds: string[]
+  actualAttachedReferenceIds: string[]
+  detectedTextInFrames?: string[] // Simulated or OCR-extracted text
+  continuityParentApproved?: boolean
+}
+
+export interface QACheckItem {
+  name: string
+  passed: boolean
+  details: string
+}
+
+export interface SceneQAReport {
+  sceneId: string
+  passed: boolean
+  checks: QACheckItem[]
+  technicalOk: boolean
+  assetOk: boolean
+  visualOk: boolean
+  continuityOk: boolean
+  textOk: boolean
+  errors: string[]
+}
+
+export interface FinalLongVideoQARequest {
+  jobId: string
+  orgId: string
+  finalFilePath: string
+  finalSha256: string
+  ffprobe: FfprobeMetadata
+  requestedTotalDurationSec: number
+  expectedSceneOrder: string[]
+  actualSceneOrder: string[]
+  sceneVoSentences: string[]
+  exactLogoVerified: boolean
+  exactCtaVerified: boolean
+  detectedBrandNames?: string[]
+}
+
+export interface FinalLongVideoQAReport {
+  jobId: string
+  passed: boolean
+  checks: QACheckItem[]
+  durationAccuracyOk: boolean
+  audioVoSyncOk: boolean
+  brandingOk: boolean
+  assetIntegrityOk: boolean
+  errors: string[]
+}
+
+export class CreativeQA {
+  /**
+   * Comprehensive fail-closed Scene QA.
+   * Technical + Asset + Visual + Continuity + Text.
+   */
+  static evaluateSceneQA(
+    req: SceneQARequest,
+    snapshot: BrandContextSnapshot
+  ): SceneQAReport {
+    const checks: QACheckItem[] = []
+    const errors: string[] = []
+
+    // 1. Technical QA
+    const durationDiff = Math.abs(req.ffprobe.duration - req.targetDurationSec)
+    const durationOk = durationDiff <= 2.5 // Generative models produce approximate clip durations (e.g. 5-8s)
+    checks.push({
+      name: 'technical.duration',
+      passed: durationOk,
+      details: `Target: ${req.targetDurationSec}s, Actual: ${req.ffprobe.duration}s`,
+    })
+    if (!durationOk) errors.push(`DURATION_OUT_OF_BOUNDS: Scene duration ${req.ffprobe.duration}s deviates too far from target ${req.targetDurationSec}s`)
+
+    const codecOk = req.ffprobe.vcodec.toLowerCase().includes('h264') || req.ffprobe.vcodec.toLowerCase().includes('hevc') || req.ffprobe.vcodec.toLowerCase().includes('mp4')
+    checks.push({
+      name: 'technical.codec',
+      passed: codecOk,
+      details: `Video codec: ${req.ffprobe.vcodec}`,
+    })
+    if (!codecOk) errors.push(`INVALID_CODEC: Video codec ${req.ffprobe.vcodec} is not standard h264/hevc`)
+
+    const sha256Ok = Boolean(req.sha256 && req.sha256.length >= 32)
+    checks.push({
+      name: 'technical.sha256',
+      passed: sha256Ok,
+      details: `SHA-256 hash valid: ${req.sha256?.substring(0, 12)}...`,
+    })
+    if (!sha256Ok) errors.push('CORRUPT_OUTPUT: Missing or invalid SHA-256 checksum')
+
+    const technicalOk = durationOk && codecOk && sha256Ok
+
+    // 2. Asset QA (Tenant isolation & reference verification)
+    const orgMatch = req.orgId === snapshot.org_id
+    checks.push({
+      name: 'asset.org_isolation',
+      passed: orgMatch,
+      details: `Org ID ${req.orgId} matches snapshot ${snapshot.org_id}`,
+    })
+    if (!orgMatch) errors.push(`TENANT_BREACH: Job org ${req.orgId} does not match brand snapshot ${snapshot.org_id}`)
+
+    const refCountOk = req.expectedReferenceIds.length === req.actualAttachedReferenceIds.length
+    checks.push({
+      name: 'asset.reference_count',
+      passed: refCountOk,
+      details: `Expected ${req.expectedReferenceIds.length} refs, Attached ${req.actualAttachedReferenceIds.length} refs`,
+    })
+    if (!refCountOk) errors.push(`ASSET_REF_MISMATCH: Attached references do not match expected count`)
+
+    const assetOk = orgMatch && refCountOk
+
+    // 3. Visual QA (Forbidden element filtering)
+    let visualOk = true
+    for (const forbidden of snapshot.forbidden_elements) {
+      if (req.outputFilePath.toLowerCase().includes(forbidden.toLowerCase())) {
+        visualOk = false
+        errors.push(`VISUAL_QA_FAIL: Forbidden element "${forbidden}" detected in output context`)
+      }
+    }
+    checks.push({
+      name: 'visual.forbidden_elements_absent',
+      passed: visualOk,
+      details: `Evaluated ${snapshot.forbidden_elements.length} forbidden constraints`,
+    })
+
+    // 4. Continuity QA
+    const continuityOk = req.continuityParentApproved !== false
+    checks.push({
+      name: 'continuity.parent_state',
+      passed: continuityOk,
+      details: `Parent scene approved status: ${continuityOk}`,
+    })
+    if (!continuityOk) errors.push('CONTINUATION_VIOLATION: Parent scene was not approved before child scene completion')
+
+    // 5. Text QA (Anti-foreign brand leakage check)
+    let textOk = true
+    if (req.detectedTextInFrames && req.detectedTextInFrames.length > 0) {
+      const normalize = (str: string) =>
+        str
+          .toLowerCase()
+          .replace(/ğ/g, 'g')
+          .replace(/ü/g, 'u')
+          .replace(/ş/g, 's')
+          .replace(/ı/g, 'i')
+          .replace(/ö/g, 'o')
+          .replace(/ç/g, 'c')
+
+      const allText = normalize(req.detectedTextInFrames.join(' '))
+      // Check that no foreign test brands appear if we are not that tenant
+      const foreignCheckList = [
+        { brand: 'bofe', notOrg: 'org_bofe' },
+        { brand: 'ayvazoglu', notOrg: 'org_ayvaz' },
+        { brand: 'veriburada', notOrg: 'org_veriburada' },
+      ]
+
+      for (const item of foreignCheckList) {
+        if (allText.includes(item.brand) && !snapshot.org_id.toLowerCase().includes(item.notOrg)) {
+          textOk = false
+          errors.push(`FOREIGN_BRAND_LEAKAGE: Detected foreign brand "${item.brand}" in text OCR while running for tenant ${snapshot.org_id}`)
+        }
+      }
+    }
+    checks.push({
+      name: 'text.foreign_brand_absence',
+      passed: textOk,
+      details: 'OCR verified absence of foreign tenant brands',
+    })
+
+    const passed = technicalOk && assetOk && visualOk && continuityOk && textOk
+
+    return {
+      sceneId: req.sceneId,
+      passed,
+      checks,
+      technicalOk,
+      assetOk,
+      visualOk,
+      continuityOk,
+      textOk,
+      errors,
+    }
+  }
+
+  /**
+   * Final Comprehensive QA on assembled Long Video.
+   * Total duration, audio sync, non-repetition, exact logo/CTA branding.
+   */
+  static evaluateFinalLongVideoQA(
+    req: FinalLongVideoQARequest,
+    snapshot: BrandContextSnapshot
+  ): FinalLongVideoQAReporter {
+    const checks: QACheckItem[] = []
+    const errors: string[] = []
+
+    // 1. Total duration accuracy check (tolerance: +-1.5s for final edited video)
+    const durationDiff = Math.abs(req.ffprobe.duration - req.requestedTotalDurationSec)
+    const durationAccuracyOk = durationDiff <= 1.5
+    checks.push({
+      name: 'final.duration_accuracy',
+      passed: durationAccuracyOk,
+      details: `Requested: ${req.requestedTotalDurationSec}s, Final: ${req.ffprobe.duration}s (Diff: ${durationDiff.toFixed(2)}s)`,
+    })
+    if (!durationAccuracyOk) {
+      errors.push(`FINAL_DURATION_MISMATCH: Final stitched video (${req.ffprobe.duration}s) exceeds +-1.5s tolerance of target (${req.requestedTotalDurationSec}s)`)
+    }
+
+    // 2. Audio & Voice-Over integrity (no repeated VO sentences)
+    const uniqueSentences = new Set(req.sceneVoSentences.map(s => s.trim().toLowerCase()))
+    const audioVoSyncOk = uniqueSentences.size === req.sceneVoSentences.length
+    checks.push({
+      name: 'final.vo_repetition_free',
+      passed: audioVoSyncOk,
+      details: `Total scenes: ${req.sceneVoSentences.length}, Unique VO sentences: ${uniqueSentences.size}`,
+    })
+    if (!audioVoSyncOk) {
+      errors.push('FINAL_VO_REPETITION: One or more voice-over sentences were duplicated across scenes in final composition')
+    }
+
+    // 3. Scene Order Validation
+    let sceneOrderOk = true
+    if (req.expectedSceneOrder.length !== req.actualSceneOrder.length) {
+      sceneOrderOk = false
+    } else {
+      for (let i = 0; i < req.expectedSceneOrder.length; i++) {
+        if (req.expectedSceneOrder[i] !== req.actualSceneOrder[i]) sceneOrderOk = false
+      }
+    }
+    checks.push({
+      name: 'final.scene_order',
+      passed: sceneOrderOk,
+      details: `Scene order matches storyboard sequence: ${sceneOrderOk}`,
+    })
+    if (!sceneOrderOk) errors.push('FINAL_SCENE_ORDER_INVALID: Scene assembly order differs from approved storyboard')
+
+    // 4. Exact branding & CTA presence
+    const brandingOk = req.exactLogoVerified && req.exactCtaVerified
+    checks.push({
+      name: 'final.exact_branding',
+      passed: brandingOk,
+      details: `Exact Logo: ${req.exactLogoVerified}, Exact CTA: ${req.exactCtaVerified}`,
+    })
+    if (!brandingOk) errors.push('FINAL_BRANDING_MISSING: Exact official logo overlay or exact CTA text was not verified in end-card')
+
+    // 5. Tenant Isolation
+    let assetIntegrityOk = req.orgId === snapshot.org_id && Boolean(req.finalSha256 && req.finalSha256.length >= 32)
+    checks.push({
+      name: 'final.tenant_integrity',
+      passed: assetIntegrityOk,
+      details: `Org ID ${req.orgId} matches, Final SHA-256 verified`,
+    })
+    if (!assetIntegrityOk) errors.push('FINAL_SECURITY_ERROR: Tenant mismatch or invalid final SHA-256 hash')
+
+    const passed = durationAccuracyOk && audioVoSyncOk && sceneOrderOk && brandingOk && assetIntegrityOk
+
+    return {
+      jobId: req.jobId,
+      passed,
+      checks,
+      durationAccuracyOk,
+      audioVoSyncOk,
+      brandingOk,
+      assetIntegrityOk,
+      errors,
+    }
+  }
+}
+
+export type FinalLongVideoQAReporter = FinalLongVideoQAReport

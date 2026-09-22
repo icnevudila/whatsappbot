@@ -1,0 +1,19 @@
+{
+  "name": "@wa/creative-video-orchestrator",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "Autonomous Commercial Video Creative Orchestrator (BrandContextSnapshot, ReferenceRegistry, Short & Long Storyboards, ContinuityGraph, Deterministic Finishing & CreativeQA)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "node --import tsx --test test/*.test.ts"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.23.13",
+    "typescript": "^5.0.0"
+  }
+}
