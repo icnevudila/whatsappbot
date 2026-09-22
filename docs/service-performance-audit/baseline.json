@@ -1,0 +1,398 @@
+{
+  "audit_metadata": {
+    "generated_at": "2026-09-22T20:42:00+03:00",
+    "environment": "Hetzner Cloud VPS (167.233.201.31)",
+    "mode": "READ_ONLY_AUDIT",
+    "analyst": "Antigravity AI Agent",
+    "git_branch": "feature/video-quality-benchmark"
+  },
+  "host": {
+    "cpu": {
+      "model": "AMD EPYC-Genoa Processor",
+      "cores": 2,
+      "sockets": 1,
+      "threads_per_core": 1,
+      "load_average": {
+        "1m": 1.39,
+        "5m": 0.68,
+        "15m": 0.62
+      },
+      "iowait_percent": 0.0
+    },
+    "memory_bytes": {
+      "total": 3994259456,
+      "used": 2488209408,
+      "free": 155230208,
+      "shared": 8404992,
+      "buff_cache": 1663545344,
+      "available": 1506050048
+    },
+    "memory_human": {
+      "total": "3.72 GiB",
+      "used": "2.32 GiB",
+      "free": "148.0 MiB",
+      "available": "1.40 GiB",
+      "buff_cache": "1.55 GiB"
+    },
+    "swap_bytes": {
+      "total": 2147479552,
+      "used": 2083491840,
+      "free": 63987712,
+      "usage_percent": 97.02
+    },
+    "swap_human": {
+      "total": "2.00 GiB",
+      "used": "1.94 GiB",
+      "free": "61.02 MiB",
+      "status": "CRITICAL_SWAP_EXHAUSTION"
+    },
+    "disk": {
+      "device": "/dev/sda1",
+      "mount": "/",
+      "total": "75 GiB",
+      "used": "38 GiB",
+      "available": "34 GiB",
+      "use_percent": 53,
+      "inodes": {
+        "total": 4940208,
+        "used": 545003,
+        "free": 4395205,
+        "use_percent": 12
+      }
+    },
+    "docker_volumes": {
+      "infra_flow-incidents": {
+        "mountpoint": "/var/lib/docker/volumes/infra_flow-incidents/_data",
+        "size": "4.0 KiB"
+      },
+      "infra_flow-outputs": {
+        "mountpoint": "/var/lib/docker/volumes/infra_flow-outputs/_data",
+        "size": "12.0 KiB"
+      }
+    }
+  },
+  "containers": {
+    "omnistudio-engine": {
+      "status": "Up 24 hours",
+      "classification": "CRITICAL",
+      "role": "ChatGPT & Gemini Headless Automation, Poster & Video Gateway",
+      "resources": {
+        "cpu_percent": 11.83,
+        "memory_rss_bytes": 1899380736,
+        "memory_rss_human": "1.769 GiB",
+        "memory_cgroup_current_bytes": 2302906368,
+        "memory_cgroup_current_human": "2.14 GiB",
+        "memory_limit": "unlimited (host 3.72 GiB)",
+        "memory_percent": 47.56,
+        "swap_bytes": 1288490188,
+        "swap_human": "~1.20 GiB",
+        "pids_and_tasks": {
+          "os_processes": 92,
+          "os_threads": 790,
+          "cgroup_pids": 790
+        },
+        "open_files_count": 1248,
+        "network_io": {
+          "rx": "1.23 GB",
+          "tx": "1.98 GB"
+        },
+        "block_io": {
+          "read": "243 GB",
+          "write": "72.2 GB"
+        },
+        "restart_count": 0
+      },
+      "deep_analysis": {
+        "rss_breakdown_by_component": {
+          "chrome_processes": {
+            "process_count": 70,
+            "aggregate_rss_human": "3.24 GiB (includes shared/forked pages, ~1.45 GiB net physical)",
+            "instances": [
+              {
+                "pid": 18838,
+                "cdp_port": 9222,
+                "profile": "/data/chromium-profile",
+                "open_tabs": 9,
+                "purpose": "Profile 1 (Flow + ChatGPT + Monitor)"
+              },
+              {
+                "pid": 276,
+                "cdp_port": 9223,
+                "profile": "/data/chromium-profile-2",
+                "open_tabs": 10,
+                "purpose": "Profile 2 (Gemini Yedek / Flow)"
+              },
+              {
+                "pid": 3176,
+                "cdp_port": 9224,
+                "profile": "/data/chromium-profile-3",
+                "open_tabs": 11,
+                "purpose": "Profile 3 (UNASSIGNED / ORPHANED - No worker attached)"
+              },
+              {
+                "pid": 3900,
+                "cdp_port": 9225,
+                "profile": "/data/chromium-profile-4",
+                "open_tabs": 17,
+                "purpose": "Profile 4 (UNASSIGNED / ORPHANED - No worker attached, 502 error tabs)"
+              }
+            ]
+          },
+          "node_processes": {
+            "process_count": 7,
+            "aggregate_rss_human": "183.87 MiB",
+            "heap_used_human": "~55.0 MiB",
+            "processes": [
+              {
+                "pid": 20955,
+                "cmd": "node /app/gateway/server.js",
+                "rss_human": "26.46 MiB"
+              },
+              {
+                "pid": 520,
+                "cmd": "node --experimental-websocket cdp_worker.js (chatgpt-1)",
+                "rss_human": "38.65 MiB"
+              },
+              {
+                "pid": 521,
+                "cmd": "node --experimental-websocket cdp_worker.js (chatgpt-2)",
+                "rss_human": "39.71 MiB"
+              },
+              {
+                "pid": 522,
+                "cmd": "node --experimental-websocket cdp_worker.js (gemini-1)",
+                "rss_human": "38.97 MiB"
+              },
+              {
+                "pid": 523,
+                "cmd": "node --experimental-websocket cdp_worker.js (gemini-2)",
+                "rss_human": "37.03 MiB"
+              },
+              {
+                "pid": 20771,
+                "cmd": "node --experimental-websocket /app/debug_flow_9222.js",
+                "rss_human": "3.62 MiB"
+              }
+            ]
+          },
+          "display_and_vnc": {
+            "aggregate_rss_human": "9.62 MiB",
+            "processes": [
+              {
+                "pid": 10,
+                "cmd": "Xvfb :99",
+                "rss_human": "8.5 MiB"
+              },
+              {
+                "pid": 15,
+                "cmd": "x11vnc",
+                "rss_human": "1.1 MiB"
+              },
+              {
+                "pid": 16,
+                "cmd": "websockify (novnc 6080)",
+                "rss_human": "1.02 MiB"
+              }
+            ]
+          }
+        },
+        "disk_and_cache_growth": {
+          "total_app_size": "5.2 GiB",
+          "outputs_dir": "3.6 GiB (/app/gateway/outputs)",
+          "public_dir": "1.3 GiB (/app/gateway/public)",
+          "playwright_cache": "646 MiB (/root/.cache/ms-playwright)",
+          "temp_downloads": "61 MiB (/tmp/gemini_dl_*)",
+          "profiles_disk_usage": {
+            "profile_1": "2.2 GiB (/data/chromium-profile)",
+            "profile_2": "420 MiB (/data/chromium-profile-2)",
+            "profile_3": "362 MiB (/data/chromium-profile-3)",
+            "profile_4": "359 MiB (/data/chromium-profile-4)",
+            "total_profiles": "3.3 GiB"
+          }
+        },
+        "memory_leak_and_orphan_findings": [
+          "47 open browser tabs retained across 4 Chrome instances",
+          "Ports 9224 and 9225 have 28 active tabs with no assigned worker",
+          "Stale tabs from Sept 19 and Sept 21 never closed",
+          "Continuous keep-alive pings every 5s prevent garbage collection and keep DOM inflated",
+          "70 Chrome processes creating 790 OS threads"
+        ]
+      }
+    },
+    "gflow-engine": {
+      "status": "Up 13 minutes (healthy)",
+      "classification": "CRITICAL",
+      "role": "Internal Video Generation Engine (gflow-cli v0.79.1 wrapper)",
+      "resources": {
+        "cpu_percent": 0.13,
+        "memory_rss_bytes": 29527900,
+        "memory_rss_human": "28.16 MiB (Idle baseline)",
+        "memory_peak_expected_human": "600 - 900 MiB (Single account) / 1.2 - 1.8 GiB (Dual account)",
+        "memory_cgroup_current_bytes": 89128960,
+        "memory_cgroup_current_human": "85.0 MiB",
+        "memory_limit": "4.0 GiB (Exceeds host 3.72 GiB RAM)",
+        "memory_percent": 0.74,
+        "pids_and_tasks": {
+          "os_processes": 4,
+          "os_threads": 7,
+          "cgroup_pids": 7
+        },
+        "open_files_count": 54,
+        "network_io": {
+          "rx": "2.29 MB",
+          "tx": "263 kB"
+        },
+        "block_io": {
+          "read": "35.4 MB",
+          "write": "122 MB"
+        },
+        "restart_count": 0
+      },
+      "deep_analysis": {
+        "idle_processes": [
+          {
+            "pid": 13,
+            "cmd": "uvicorn server:app --port 3461",
+            "rss_human": "64.27 MiB"
+          },
+          {
+            "pid": 7,
+            "cmd": "Xvfb :99",
+            "rss_human": "63.48 MiB"
+          },
+          {
+            "pid": 1,
+            "cmd": "/bin/sh entrypoint",
+            "rss_human": "1.64 MiB"
+          }
+        ],
+        "active_generation_characteristics": {
+          "browser_engine": "Playwright Chromium (launch_persistent_context)",
+          "per_account_concurrency": 1,
+          "expected_ram_per_account": "600 - 900 MiB",
+          "expected_cpu_per_account": "100 - 150% (1.0 to 1.5 vCPU)",
+          "zombie_processes": 0
+        },
+        "profile_storage": {
+          "profile_account_01": {
+            "total_size": "2.1 GiB",
+            "cache_size": "1.2 GiB",
+            "indexed_db_size": "444 MiB",
+            "code_cache_size": "308 MiB"
+          },
+          "profile_account_02": {
+            "total_size": "416 MiB",
+            "cache_size": "149 MiB",
+            "code_cache_size": "148 MiB"
+          },
+          "total_profiles_dir": "2.5 GiB"
+        }
+      }
+    },
+    "ai-media-control": {
+      "status": "Up 3 hours (healthy)",
+      "classification": "HEALTHY",
+      "role": "AI Media Orchestration & Job State Machine",
+      "resources": {
+        "cpu_percent": 0.0,
+        "memory_rss_bytes": 26361139,
+        "memory_rss_human": "25.14 MiB",
+        "memory_cgroup_current_bytes": 42991616,
+        "memory_cgroup_current_human": "41.0 MiB",
+        "memory_limit": "1.0 GiB",
+        "memory_percent": 2.46,
+        "pids_and_tasks": {
+          "os_processes": 2,
+          "os_threads": 11,
+          "cgroup_pids": 11
+        },
+        "open_files_count": 49,
+        "network_io": {
+          "rx": "5.14 MB",
+          "tx": "2.35 MB"
+        },
+        "block_io": {
+          "read": "174 MB",
+          "write": "21.6 MB"
+        },
+        "restart_count": 0
+      },
+      "deep_analysis": {
+        "process": "node dist/index.js (PID 1928922, 11 threads)",
+        "network_sockets": [
+          "1x internal HTTP client to gflow-engine:3461",
+          "1x TCP connection to Supabase DB/Realtime (port 5432/65432)"
+        ],
+        "queue_footprint": "In-memory state machine minimal (<5 MiB), zero leaks detected"
+      }
+    },
+    "wa-service": {
+      "status": "Up 20 hours (healthy)",
+      "classification": "WATCH",
+      "role": "WhatsApp Multi-Session Management (Baileys Engine)",
+      "resources": {
+        "cpu_percent": 0.33,
+        "memory_rss_bytes": 50728796,
+        "memory_rss_human": "48.38 MiB",
+        "memory_cgroup_current_bytes": 78643200,
+        "memory_cgroup_current_human": "75.0 MiB",
+        "memory_limit": "3.5 GiB / 6.0 GiB (configured via compose profiles)",
+        "memory_percent": 1.27,
+        "pids_and_tasks": {
+          "os_processes": 3,
+          "os_threads": 19,
+          "cgroup_pids": 19
+        },
+        "open_files_count": 71,
+        "network_io": {
+          "rx": "66 MB",
+          "tx": "54.7 MB"
+        },
+        "block_io": {
+          "read": "10 GB",
+          "write": "342 MB"
+        },
+        "restart_count": 0
+      },
+      "deep_analysis": {
+        "processes": [
+          {
+            "pid": 7,
+            "cmd": "node --env-file-if-exists=.env --import tsx src/index.ts",
+            "rss_human": "55.5 MiB"
+          },
+          {
+            "pid": 6351,
+            "cmd": "esbuild --service=0.28.2 --ping",
+            "rss_human": "5.84 MiB"
+          }
+        ],
+        "active_sessions": 2,
+        "active_workers": [
+          "oracle-1"
+        ],
+        "network_connections": [
+          "2x TCP TLS connections to WhatsApp Baileys gateways (*.whatsapp.net:443)",
+          "2x TCP connections to Supabase PostgreSQL (port 5432/65432)"
+        ],
+        "memory_stability": "Extremely stable at ~50 MiB RSS under current 2-account load"
+      }
+    }
+  },
+  "capacity_simulation_2_flow_accounts": {
+    "scenario": "Dual Flow Accounts (account-01 + account-02) Parallel Video Generation",
+    "required_ram_estimate_gib": {
+      "omnistudio_engine_baseline": 1.77,
+      "host_os_kernel_docker": 0.4,
+      "wa_service_and_ai_media": 0.08,
+      "gflow_account_01_peak": 0.8,
+      "gflow_account_02_peak": 0.8,
+      "total_ram_demand": 3.85
+    },
+    "host_physical_ram_gib": 3.72,
+    "current_free_swap_gib": 0.061,
+    "deficit_gib": -0.13,
+    "verdict": "FAIL_CRITICAL_OOM",
+    "risk_summary": "System will trigger OOM killer or severe swap thrashing leading to container kill (exit 137) or kernel freeze."
+  }
+}
