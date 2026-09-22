@@ -1338,7 +1338,35 @@ async function generateVideoOnFlow(options = {}) {
   let isolatedProjectId = null;
   const initialOpenUrl = isolatedProjectUrl || 'https://flow.google.com/';
 
-  const newTabRes = await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(initialOpenUrl)}`, { method: 'PUT' });
+  let activePort = port;
+  let newTabRes = null;
+  const tryPorts = [port, 9222, 9225, 9223, 9224].filter((v, i, a) => a.indexOf(v) === i);
+  for (const p of tryPorts) {
+    try {
+      const r = await fetch(`http://127.0.0.1:${p}/json/new?${encodeURIComponent(initialOpenUrl)}`, { method: 'PUT', signal: AbortSignal.timeout(3000) });
+      if (r.ok) {
+        newTabRes = r;
+        activePort = p;
+        break;
+      }
+    } catch (_) {}
+  }
+
+  if (!newTabRes || !newTabRes.ok) {
+    // Port 9222'yi temizleyip yeniden ayağa kaldır
+    try {
+      console.warn(`[Flow Video] ⚠️ Hiçbir Chrome portu yanıt vermedi (${tryPorts.join(', ')}). Chrome #1 yeniden başlatılıyor...`);
+      execSync('rm -f /data/chromium-profile/Singleton* /data/chromium-profile/*/Singleton* /data/chromium-profile/LOCK 2>/dev/null || true');
+      execSync('DISPLAY=:99 google-chrome-stable --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-search-engine-choice-screen --user-data-dir=/data/chromium-profile --remote-debugging-port=9222 --start-maximized https://flow.google.com/ &');
+      await new Promise(r => setTimeout(r, 4500));
+      newTabRes = await fetch(`http://127.0.0.1:9222/json/new?${encodeURIComponent(initialOpenUrl)}`, { method: 'PUT', signal: AbortSignal.timeout(5000) });
+      activePort = 9222;
+    } catch (launchErr) {
+      throw new Error(`CDP_PORT_UNAVAILABLE: Chrome tarayıcısına bağlanılamadı (${tryPorts.join(', ')}): ${launchErr.message}`);
+    }
+  }
+
+  console.log(`[Flow Video] 🔗 CDP Bağlantısı kuruldu (Port: ${activePort})`);
   const tab = await newTabRes.json();
   const ws = new WebSocket(tab.webSocketDebuggerUrl);
 
