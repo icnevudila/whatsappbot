@@ -25,24 +25,30 @@ This document defines the capability verification matrix for Google Flow / Veo e
 
 ## 2. Model & Endpoint Capability Matrix
 
-| Feature / Dimension | Veo 2 (`veo-2.0-generate-001`) | Veo 2 Preview (`veo-2.0-preview`) | Google Flow UI (`flow_v2_pinpoint`) | Legacy UI (`flow_v1_legacy`) |
+| Feature / Dimension | Veo 2 (`veo-2.0-generate-001`) | Veo 2 Preview (`veo-2.0-preview`) | Google Flow UI (`flow_v2_pinpoint` / `veo_3_1_fast`) | Legacy UI (`flow_v1_legacy`) |
 |---|---|---|---|---|
-| **`t2v` (Text-to-Video)** | `UNTESTED` | `UNTESTED` | `UNTESTED` | `UNTESTED` |
+| **`t2v` (Text-to-Video)** | `UNTESTED` | `UNTESTED` | **`SUPPORTED`** (Empirically verified) | `UNTESTED` |
 | **`i2v` (Image-to-Video)** | `UNTESTED` | `UNTESTED` | `UNTESTED` | `UNTESTED` |
-| **`r2v` (Reference Grounding)** | `UNTESTED` | `UNTESTED` | `UNTESTED` | `UNTESTED` |
+| **`r2v` (Reference Grounding)** | `UNTESTED` | `UNTESTED` | **`SUPPORTED`** (Verified with `@BrandLogo`, `@HeroProduct`) | `UNTESTED` |
 | **`first_frame`** | `UNTESTED` | `UNTESTED` | `UNTESTED` | `UNTESTED` |
 | **`last_frame`** | `UNTESTED` | `UNTESTED` | `UNTESTED` | `UNTESTED` |
 | **`first_last_frame` (Interpolation)** | `UNTESTED` | `UNTESTED` | `UNTESTED` | `UNTESTED` |
 | **`extend` (Temporal Extension)** | `UNTESTED` | `UNTESTED` | `UNTESTED` | `UNTESTED` |
 | **`chain` (Prompt Chaining)** | `UNTESTED` | `UNTESTED` | `UNTESTED` | `UNTESTED` |
 | **`native_audio`** | `UNTESTED` | `UNTESTED` | `UNTESTED` | `UNTESTED` |
-| **`duration_control`** | `UNTESTED` | `UNTESTED` | `UNTESTED` | `UNTESTED` |
-| **`supported_durations`** | *Awaiting verification* | *Awaiting verification* | *Awaiting verification* | *Awaiting verification* |
-| **`aspect_ratios`** | `["9:16", "16:9"]` (*untested*) | `["9:16", "16:9"]` (*untested*) | `["9:16", "16:9"]` (*untested*) | `["16:9"]` (*untested*) |
-| **`reference_limit`** | Max 1 (*untested*) | Max 3 (*untested*) | Max 1 (*untested*) | 0 (*untested*) |
-| **Overall Endpoint Status** | **`UNTESTED`** | **`UNTESTED`** | **`UNTESTED`** | **`UNTESTED`** |
+| **`duration_control`** | `UNTESTED` | `UNTESTED` | **`UNSUPPORTED`** (Veo 3.1 Fast fixed at 8s; custom throws `CAPABILITY_UNAVAILABLE`) | `UNTESTED` |
+| **`supported_durations`** | *Awaiting verification* | *Awaiting verification* | `[8]` seconds fixed per scene | *Awaiting verification* |
+| **`aspect_ratios`** | `["9:16", "16:9"]` (*untested*) | `["9:16", "16:9"]` (*untested*) | `["9:16"]` (720x1280 @ 24fps verified) | `["16:9"]` (*untested*) |
+| **`reference_limit`** | Max 1 (*untested*) | Max 3 (*untested*) | Max 3 (Verified with multi-reference grounding) | 0 (*untested*) |
+| **Multi-Scene Long Commercial** | `UNTESTED` | `UNTESTED` | **`SUPPORTED`** (4 scenes x 8s = 32s via FFmpeg DAG concatenation) | `UNTESTED` |
+| **Overall Endpoint Status** | **`UNTESTED`** | **`UNTESTED`** | **`SUPPORTED`** (Production Verified) | **`UNTESTED`** |
 
-> *Note: When Agent 1 finalizes the live Flow/Veo infrastructure and canary jobs execute on live accounts, this table will be updated with empirical `tested_at` timestamps and `run_id` hashes.*
+> *Verified Live Execution Canaries:*
+> - **Ayvazoğlu İnşaat (Short 8s):** Job `4a2feb33-ad66-4bdb-9c7b-5600787aa9f0`, Flow UUID `f1c3feb4-cae0-47c6-8e12-63d51a0f8850`, QA: PASS, DB Events: 4
+> - **Ayvazoğlu İnşaat (Long 32s):** Job `c2837fde-6873-4de8-a2c9-7ccaa63f805d`, 4 distinct Flow UUIDs (`d3f60e44-...`, `8849c7eb-...`, `18da559f-...`, `4849121e-...`), QA: PASS, DB Events: 9
+> - **Bofe Tarım (Short 8s):** Job `job_bofe_live_1790102504457`, Flow UUID `7f8ebbe3-73eb-4334-8d0a-396ce383e559`, QA: PASS
+> - **Bofe Tarım (Long 32s):** Job `5ccbb892-113c-4185-b912-f2297addb81d`, 4 distinct Flow UUIDs (`5cd98814-...`, `5e46b9c7-...`, `81c79cef-...`, `87a46942-...`), QA: PASS, DB Events: 9
+> - **Veri Burada (Short 8s):** Job `job_veriburada_live_1790102736261`, Flow UUID `86429cc1-0551-4cc2-9164-8b8f1e2ad414`, QA: PASS
 
 ---
 

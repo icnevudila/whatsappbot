@@ -2,7 +2,7 @@
 # Port: 3460
 # Single write authority for all ai_media_* tables
 
-FROM node:20-slim
+FROM node:22-slim
 
 # Install ffmpeg for video validation and frame extraction
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -12,6 +12,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+
+# Copy and build creative-video-orchestrator
+COPY services/creative-video-orchestrator /creative-video-orchestrator
+RUN cd /creative-video-orchestrator && npm install && npm run build
 
 # Install dependencies
 COPY services/ai-media-control/package.json /app/package.json

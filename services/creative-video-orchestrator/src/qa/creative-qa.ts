@@ -271,6 +271,89 @@ export class CreativeQA {
       errors,
     }
   }
+
+  /**
+   * Evaluates post-generation native Turkish dialogue.
+   * Fails-closed if the expected exact Turkish sentence is not matched in the audio transcript.
+   */
+  static evaluateSpokenDialogueQA(req: {
+    expectedSpokenLine: string
+    actualAudioTranscript: string
+    spokenLanguage: string
+    allowParaphrase?: boolean
+  }): {
+    passed: boolean
+    hardFailGate?: 'SPOKEN_DIALOGUE_FAIL' | 'DIALOGUE_MISMATCH'
+    expected: string
+    actual: string
+    reasons: string[]
+  } {
+    const cleanExpected = req.expectedSpokenLine.trim().toLowerCase().replace(/[.,!?;:"']/g, '')
+    const cleanActual = req.actualAudioTranscript.trim().toLowerCase().replace(/[.,!?;:"']/g, '')
+
+    const passed = req.allowParaphrase
+      ? cleanActual.includes(cleanExpected) || cleanExpected.includes(cleanActual)
+      : cleanActual === cleanExpected
+
+    const reasons: string[] = []
+    if (!passed) {
+      reasons.push(
+        `CRITICAL_HARD_FAIL [SPOKEN_DIALOGUE_FAIL / DIALOGUE_MISMATCH]: Expected exact Turkish spoken line "${req.expectedSpokenLine}", but audio transcript returned "${req.actualAudioTranscript}".`
+      )
+    }
+
+    return {
+      passed,
+      hardFailGate: passed ? undefined : 'SPOKEN_DIALOGUE_FAIL',
+      expected: req.expectedSpokenLine,
+      actual: req.actualAudioTranscript,
+      reasons,
+    }
+  }
+
+  /**
+   * Evaluates generated diegetic logo against authoritative @BrandLogo.
+   * If fidelity is high: KEEP_GENERATED_DIEGETIC_LOGO
+   * If corrupted but trackable: triggers DIEGETIC_SURFACE_RESTORE
+   * Else: LOGO_FIDELITY_FAIL
+   */
+  static evaluateDiegeticLogoQA(req: {
+    sceneId: string
+    hasNaturalBrandingSurface: boolean
+    surfaceType?: string
+    generatedLogoFidelityScore: number
+    surfaceTrackable: boolean
+  }): {
+    decision: 'KEEP_GENERATED_DIEGETIC_LOGO' | 'DIEGETIC_SURFACE_RESTORE' | 'LOGO_FIDELITY_FAIL'
+    passed: boolean
+    surfaceRestoreRequired: boolean
+    details: string
+  } {
+    if (req.generatedLogoFidelityScore >= 0.85) {
+      return {
+        decision: 'KEEP_GENERATED_DIEGETIC_LOGO',
+        passed: true,
+        surfaceRestoreRequired: false,
+        details: `Exact diegetic logo fidelity is high (${(req.generatedLogoFidelityScore * 100).toFixed(1)}% >= 85%). Native AI logo preserved.`,
+      }
+    }
+
+    if (req.surfaceTrackable) {
+      return {
+        decision: 'DIEGETIC_SURFACE_RESTORE',
+        passed: true,
+        surfaceRestoreRequired: true,
+        details: `Logo text/symbol corrupted (${(req.generatedLogoFidelityScore * 100).toFixed(1)}% < 85%), but surface (${req.surfaceType || 'equipment_panel'}) is trackable. Applying planar perspective DIEGETIC_SURFACE_RESTORE.`,
+      }
+    }
+
+    return {
+      decision: 'LOGO_FIDELITY_FAIL',
+      passed: false,
+      surfaceRestoreRequired: false,
+      details: `Logo text/symbol corrupted (${(req.generatedLogoFidelityScore * 100).toFixed(1)}% < 85%) and surface is not trackable. Fail-closed.`,
+    }
+  }
 }
 
 export type FinalLongVideoQAReporter = FinalLongVideoQAReport

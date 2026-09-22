@@ -14,6 +14,8 @@ export interface FlowAccountCapabilities {
 }
 
 export interface AssetPayload {
+  asset_id?: string
+  org_id?: string
   role: string
   file_path: string
   sha256?: string
@@ -46,6 +48,20 @@ export interface GenerateResponse {
   expected_ingredient_count: number
   actual_ingredient_count: number
   actual_attached_reference_ids: string[] // Execution report from provider
+  verified_assets?: Array<{
+    asset_id: string
+    org_id: string
+    sha256: string
+    role: string
+    attached_media_id: string
+  }>
+  attempts?: Array<{
+    attempt_number: number
+    flow_project_id: string
+    status: 'SUCCESS' | 'RETRY' | 'FAILED'
+    error?: string
+    created_at: string
+  }>
   verified: boolean
 }
 
@@ -57,6 +73,15 @@ export interface IGFlowProvider {
 }
 
 export interface IAIMediaControlAdapter {
+  ensureJobRow?(
+    jobId: string,
+    orgId: string,
+    title: string,
+    prompt: string,
+    durationSeconds?: number,
+    model?: string,
+    aspectRatio?: string
+  ): Promise<void>
   transitionState(
     jobId: string,
     orgId: string,

@@ -161,3 +161,61 @@ jobsRouter.post('/:id/cancel', async (req, res) => {
     res.status(500).json({ error: true, message: e.message })
   }
 })
+
+// POST /api/v1/jobs/:id/transition — State transition via adapter
+jobsRouter.post('/:id/transition', async (req, res) => {
+  try {
+    const { org_id, from_state, to_state, message, payload, attempt_id } = req.body
+    await transitionJob(
+      supabase,
+      req.params.id,
+      org_id,
+      from_state as JobState,
+      to_state as JobState,
+      message || `Transitioned to ${to_state}`,
+      payload || {},
+      attempt_id
+    )
+    res.json({ success: true })
+  } catch (e: any) {
+    res.status(500).json({ error: true, message: e.message })
+  }
+})
+
+// POST /api/v1/jobs/:id/events — Log audit event via adapter
+jobsRouter.post('/:id/events', async (req, res) => {
+  try {
+    const { org_id, event_type, message, payload } = req.body
+    await supabase.from('ai_media_events').insert({
+      job_id: req.params.id,
+      org_id,
+      event_type,
+      message: message || '',
+      payload: payload || {},
+      created_at: new Date().toISOString(),
+    })
+    res.json({ success: true })
+  } catch (e: any) {
+    res.status(500).json({ error: true, message: e.message })
+  }
+})
+
+// PATCH /api/v1/jobs/:id/metadata — Update metadata via adapter
+jobsRouter.patch('/:id/metadata', async (req, res) => {
+  try {
+    const { metadata } = req.body
+    const { data: job } = await supabase.from('ai_media_jobs').select('metadata').eq('id', req.params.id).single()
+    const existing = (job?.metadata as Record<string, unknown>) || {}
+    await supabase
+      .from('ai_media_jobs')
+      .update({
+        metadata: { ...existing, ...(metadata || {}) },
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', req.params.id)
+    res.json({ success: true })
+  } catch (e: any) {
+    res.status(500).json({ error: true, message: e.message })
+  }
+})
+

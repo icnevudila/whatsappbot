@@ -103,28 +103,26 @@ export function buildSceneContractsV2(params: {
         description: `${product} (${material})`,
       },
       primaryAction: isFirst
-        ? `${treatment.directorIntent}. Eylem 0.3 saniyede başlar.`
+        ? `Camera dynamically introduces ${product} (${material}) in ${env}. Purposeful action begins decisively at 0.3s.`
         : isLast
-        ? `Kamera ${brand} kurumsal mühür ve ${product} formuna kaya gibi stabil oturur.`
-        : `${product} operasyonel işlevini yüksek hassasiyetle gerçekleştirir.`,
-      secondaryAction: isLast ? undefined : 'Arka plandaki profesyonel süreç doğal akışında devam eder.',
+        ? `Camera settles with rock-steady stability on the pristine physical form of ${product}, anchoring the authentic craftsmanship of ${brand}.`
+        : `A focused professional demonstrates the authentic structural integrity and practical operational performance of ${product}.`,
+      secondaryAction: isLast ? undefined : 'Professional workplace process continues with organic realism in the background.',
       environment: env,
       composition: {
-        foreground: isLast ? `${product} ve mühür` : `${product} eylemi`,
-        midground: 'Gerçek çalışma ortamı',
-        background: 'Derinlik veren doğal aydınlatmalı çalışma alanı',
+        foreground: isLast ? `${product} structural finish` : `${product} in action`,
+        midground: 'Authentic commercial workspace',
+        background: 'Natural atmospheric depth and realistic ambient illumination',
       },
       camera: {
         shotSize,
         lens,
         movement,
-        movementSpeed: 'steady uniform speed',
-        focusStrategy: 'razor-sharp focus on subject with shallow cinematic depth of field',
       },
       lighting: {
-        motivation: 'Doğal gün ışığı ve ortamın gerçek fiziksel aydınlatması',
+        motivation: 'Natural balanced daylight and authentic physical workplace illumination.',
         character: isLast ? treatment.lightingArc.ending : (isFirst ? treatment.lightingArc.opening : treatment.lightingArc.middle),
-        continuity: 'Tüm sahnede tek ve tutarlı aydınlatma kurulumu, sahne atlaması yok',
+        continuity: 'Strict spatial continuity and consistent color temperature across all scenes.',
       },
       visualMotif: treatment.visualMotif.description,
       motionDirection: treatment.motionMotif.primaryDirection,
@@ -141,6 +139,24 @@ export function buildSceneContractsV2(params: {
       mustAvoid: [
         ...dna.brand.avoid,
         ...dna.product.avoid,
+      ],
+      expectedVisualEvidence: [
+        product,
+        material,
+        env,
+      ],
+      expectedActionEvidence: [
+        ...(dna.product.authenticInteractions.length > 0 ? [dna.product.authenticInteractions[0]] : []),
+      ],
+      expectedEnvironmentEvidence: [
+        env,
+      ],
+      forbiddenVisualEvidence: [
+        ...dna.product.avoid,
+        ...(dna.product.forbiddenUses || []),
+      ],
+      forbiddenActionEvidence: [
+        ...(dna.product.forbiddenInteractions || []),
       ],
       naturalAudio: [
         'Otantik ortam foley sesleri ve mekanik fiziksel temas sesi',

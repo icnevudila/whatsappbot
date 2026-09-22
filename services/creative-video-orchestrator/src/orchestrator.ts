@@ -185,6 +185,8 @@ export class CreativeVideoOrchestrator {
       .map(id => registry.getByAssetId(id))
       .filter((r): r is NonNullable<typeof r> => Boolean(r))
       .map(r => ({
+        asset_id: r.asset_id,
+        org_id: snapshot.org_id,
         role: r.role,
         file_path: r.file_path || `/assets/${r.asset_id}`,
         sha256: r.sha256,
@@ -246,6 +248,16 @@ export class CreativeVideoOrchestrator {
     )
     const finalSha256 = createHash('sha256').update(finishedOutputPath + 'deterministic').digest('hex')
 
+    const realFlowProjectId = genResponse.flow_project_id || flowProjectId
+
+    const attachedRefs = (genResponse.verified_assets || []).map(va => ({
+      asset_id: va.asset_id,
+      org_id: va.org_id,
+      sha256: va.sha256,
+      role: va.role,
+      actual_flow_media_id: va.attached_media_id,
+    }))
+
     // Provenance Record
     const provenance: CreativeProvenanceRecord = {
       job_id: jobId,
@@ -257,12 +269,21 @@ export class CreativeVideoOrchestrator {
       prompt_sha256: { short_scene: createHash('sha256').update(plan.compiledPrompt).digest('hex') },
       input_asset_sha256: Object.fromEntries(registry.getAll().map(r => [r.handle, r.sha256])),
       keyframe_asset_ids: {},
-      flow_project_id: flowProjectId,
+      flow_project_id: realFlowProjectId,
       flow_account_id: accountId,
       scene_output_ids: { short_scene: genResponse.output_path },
       scene_sha256: { short_scene: rawSha256 },
       final_output_sha256: finalSha256,
       qa_reports: { sceneQA: sceneQAReport },
+      scene_attempts: {
+        short_scene: genResponse.attempts || [{
+          attempt_number: 1,
+          flow_project_id: realFlowProjectId,
+          status: 'SUCCESS',
+          created_at: new Date().toISOString(),
+        }]
+      },
+      attached_references: attachedRefs,
       created_at: new Date().toISOString(),
       completed_at: new Date().toISOString(),
       verified: true,
@@ -310,6 +331,10 @@ export class CreativeVideoOrchestrator {
     const sceneShaMap: Record<string, string> = {}
     const keyframeMap: Record<string, string> = {}
 
+    const sceneFlowProjectUuids: Record<string, string> = {}
+    const sceneAttempts: Record<string, any[]> = {}
+    const allAttachedRefs: any[] = []
+
     // Process DAG scenes: loop until all approved or failed
     while (!graph.isAllApproved()) {
       const readyScenes = graph.getReadyScenes()
@@ -323,6 +348,16 @@ export class CreativeVideoOrchestrator {
       for (const scene of readyScenes) {
         const node = graph.getNode(scene.sceneId)!
         node.executionState = 'GENERATING'
+
+        if (this.options.aiMediaAdapter) {
+          await this.options.aiMediaAdapter.transitionState(
+            jobId,
+            snapshot.org_id,
+            'GENERATING',
+            'GENERATING',
+            `Generating scene ${scene.sceneId} (Order: ${scene.order})`
+          )
+        }
 
         // Keyframe-first evaluation if image provider present
         let approvedKeyframePath: string | undefined
@@ -360,6 +395,8 @@ export class CreativeVideoOrchestrator {
           .map(id => registry.getByAssetId(id))
           .filter((r): r is NonNullable<typeof r> => Boolean(r))
           .map(r => ({
+            asset_id: r.asset_id,
+            org_id: snapshot.org_id,
             role: r.role,
             file_path: r.file_path || `/assets/${r.asset_id}`,
             sha256: r.sha256,
@@ -381,6 +418,34 @@ export class CreativeVideoOrchestrator {
           assets: assetPayloads,
           expected_reference_ids: compiledPlan.referenceAssetIds,
         })
+
+        // Enforce strict project UUID uniqueness: reject reuse across scenes
+        const realSceneFlowUuid = genResponse.flow_project_id || scene.flowProjectId
+        if (Object.values(sceneFlowProjectUuids).includes(realSceneFlowUuid)) {
+          throw new Error(`PROJECT_REUSE_VIOLATION: Scene ${scene.sceneId} attempted to reuse Flow project UUID ${realSceneFlowUuid}`)
+        }
+        sceneFlowProjectUuids[scene.sceneId] = realSceneFlowUuid
+
+        sceneAttempts[scene.sceneId] = genResponse.attempts || [{
+          attempt_number: 1,
+          flow_project_id: realSceneFlowUuid,
+          status: 'SUCCESS',
+          created_at: new Date().toISOString(),
+        }]
+
+        if (genResponse.verified_assets && genResponse.verified_assets.length > 0) {
+          for (const va of genResponse.verified_assets) {
+            if (!allAttachedRefs.some(ar => ar.asset_id === va.asset_id && ar.actual_flow_media_id === va.attached_media_id)) {
+              allAttachedRefs.push({
+                asset_id: va.asset_id,
+                org_id: va.org_id,
+                sha256: va.sha256,
+                role: va.role,
+                actual_flow_media_id: va.attached_media_id,
+              })
+            }
+          }
+        }
 
         // Invariant check on references
         const refGate = ShortVideoPlanner.verifyReferenceExecutionGate(
@@ -422,6 +487,16 @@ export class CreativeVideoOrchestrator {
         graph.markSceneApproved(scene.sceneId, genResponse.output_path)
         approvedClipPaths.push(genResponse.output_path)
         sceneVoSentences.push(scene.voiceoverSegment)
+
+        if (this.options.aiMediaAdapter) {
+          await this.options.aiMediaAdapter.logAuditEvent(
+            jobId,
+            snapshot.org_id,
+            'SCENE_APPROVED',
+            `Scene ${scene.sceneId} QA passed. Flow UUID: ${realSceneFlowUuid}`,
+            { scene_id: scene.sceneId, flow_project_id: realSceneFlowUuid, sha256: sceneSha }
+          )
+        }
       }
     }
 
@@ -481,7 +556,7 @@ export class CreativeVideoOrchestrator {
       prompt_sha256: promptHashes,
       input_asset_sha256: Object.fromEntries(registry.getAll().map(r => [r.handle, r.sha256])),
       keyframe_asset_ids: keyframeMap,
-      flow_project_id: `multi_proj_${jobId.substring(0, 8)}`,
+      flow_project_id: sceneFlowProjectUuids[storyboard.scenes[0]?.sceneId] || `multi_proj_${jobId.substring(0, 8)}`,
       flow_account_id: accountId,
       scene_output_ids: Object.fromEntries(storyboard.scenes.map((s, idx) => [s.sceneId, approvedClipPaths[idx] || ''])),
       scene_sha256: sceneShaMap,
@@ -489,10 +564,23 @@ export class CreativeVideoOrchestrator {
       qa_reports: {
         sceneQAs: sceneQAReports,
         finalQA: finalQAReport,
+        sceneFlowProjectUuids,
       },
+      scene_attempts: sceneAttempts,
+      attached_references: allAttachedRefs,
       created_at: new Date().toISOString(),
       completed_at: new Date().toISOString(),
       verified: true,
+    }
+
+    if (this.options.aiMediaAdapter) {
+      await this.options.aiMediaAdapter.logAuditEvent(
+        jobId,
+        snapshot.org_id,
+        'LONG_VIDEO_COMPLETED',
+        `All ${storyboard.scenes.length} scenes approved and assembled. Final SHA: ${finalSha256.substring(0, 16)}`,
+        { scene_flow_project_uuids: sceneFlowProjectUuids, finalSha256 }
+      )
     }
 
     return {

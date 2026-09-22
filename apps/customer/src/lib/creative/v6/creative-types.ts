@@ -62,6 +62,10 @@ export interface CreativeDNA {
     physicalStrengths: string[]
     visualStrengths: string[]
     authenticInteractions: string[]
+    intendedUses?: string[]
+    credibleInteractions?: string[]
+    forbiddenUses?: string[]
+    forbiddenInteractions?: string[]
     transformations: string[]
     proofOpportunities: string[]
     visualWorld: string[]
@@ -292,6 +296,11 @@ export interface SceneContractV2 {
   }
   mustShow: string[]
   mustAvoid: string[]
+  expectedVisualEvidence?: string[]
+  expectedActionEvidence?: string[]
+  expectedEnvironmentEvidence?: string[]
+  forbiddenVisualEvidence?: string[]
+  forbiddenActionEvidence?: string[]
   naturalAudio?: string[]
   sfx?: string[]
   voiceoverSegment?: string
@@ -340,6 +349,11 @@ export interface DirectorQAReport {
     noCrossTenantAssets: boolean
     productReferenceFidelity: boolean
     noForbiddenObjects: boolean
+    noForbiddenActions?: boolean
+    useCaseMatch?: boolean
+    environmentMatch?: boolean
+    motionDynamics?: boolean
+    negativeEvidenceVeto?: boolean
   }
   directorChecks: {
     intendedBeatConveyed: boolean
@@ -350,6 +364,7 @@ export interface DirectorQAReport {
     noAnatomicalDefects: boolean
     motionEnergyConsistent: boolean
     noRepetitiveLogoShots: boolean
+    physicalPlausibility?: boolean
   }
   narrativeChecks: {
     hookStrength: boolean
@@ -358,6 +373,7 @@ export interface DirectorQAReport {
     payoffValid: boolean
     noDecorativeShotsRemaining: boolean
   }
+  visionFindings?: Record<string, any>
   issues: string[]
   retryRecommended: boolean
   inspectedFrames: Array<{
@@ -366,6 +382,14 @@ export interface DirectorQAReport {
     path?: string
   }>
 }
+
+export type ArtifactOriginType =
+  | 'flow_veo_render'
+  | 'postprocessed_flow_render'
+  | 'synthetic_placeholder'
+  | 'legacy_asset'
+  | 'uploaded_user_video'
+  | 'test_fixture'
 
 export interface ArtifactProvenanceRecord {
   orgId: string
@@ -388,6 +412,12 @@ export interface ArtifactProvenanceRecord {
   storageRecord?: string
   finalStorageUrl?: string
   storageUrl?: string
+  artifactOriginType?: ArtifactOriginType
+  jobCreatedAt?: string
+  attemptStartedAt?: string
+  artifactCreatedAt?: string
+  baselineSnapshotHashes?: string[]
+  freshnessVerified?: boolean
   provenanceValid: boolean
   verifiedAt: string
 }

@@ -37,6 +37,33 @@ export function verifyArtifactProvenance(record: Partial<ArtifactProvenanceRecor
   if (!rawSha || rawSha.length < 32) errors.push('PROVENANCE_ERROR: rawVideoSha256 eksik veya geçersiz.')
   if (!promptHash) errors.push('PROVENANCE_ERROR: promptHash eksik.')
 
+  // 1. Origin Type Invariant: Yalnızca gerçek render tipleri onay alabilir
+  const originType = record.artifactOriginType || 'flow_veo_render'
+  if (originType === 'synthetic_placeholder') {
+    errors.push('GENERATION_FAILED_NO_REAL_VIDEO: Sentetik veya yer tutucu (placeholder) video gerçek prodüksiyon olarak kabul edilemez.')
+  } else if (originType === 'legacy_asset') {
+    errors.push('LEGACY_ARTIFACT_REUSE_DETECTED: Eski legacy varlık yeni video olarak teslim edilemez.')
+  }
+
+  // 2. Freshness Invariant: Dosya oluşturulma zamanı iş başlangıcından önce olamaz
+  let freshnessVerified = true
+  if (record.attemptStartedAt && record.artifactCreatedAt) {
+    const attemptTime = new Date(record.attemptStartedAt).getTime()
+    const artifactTime = new Date(record.artifactCreatedAt).getTime()
+    if (artifactTime < attemptTime) {
+      errors.push('ARTIFACT_FRESHNESS_VIOLATION: Dosyanın oluşturulma zamanı işin başlangıç zamanından eskidir. Eski dosya sahiplenilemez.')
+      freshnessVerified = false
+    }
+  }
+
+  // 3. Baseline Snapshot Invariant: Başlangıçta var olan hiçbir dosya/hash kabul edilemez
+  if (record.baselineSnapshotHashes && record.baselineSnapshotHashes.length > 0 && rawSha) {
+    if (record.baselineSnapshotHashes.includes(rawSha)) {
+      errors.push(`ARTIFACT_FRESHNESS_VIOLATION: Bu dosya hash'i (${rawSha}) iş başlamadan önceki baseline snapshot'ta zaten mevcuttur. Eski dosya tekrarı reddedildi.`)
+      freshnessVerified = false
+    }
+  }
+
   // Filename kontrolü yalnızca diagnostic warning'dir (güvenlik hash ile sağlanır)
   if (record.downloadPath && record.downloadPath.toLowerCase().includes('bofe') && orgId.includes('veriburada')) {
     diagnosticWarnings.push('DIAGNOSTIC_WARNING: Dosya adı ile tenant kimliği isimsel çelişki gösteriyor.')
@@ -60,6 +87,12 @@ export function verifyArtifactProvenance(record: Partial<ArtifactProvenanceRecor
     postProcessedSha256: record.postProcessedSha256,
     storageUrl: record.storageUrl || record.finalStorageUrl,
     finalStorageUrl: record.finalStorageUrl || record.storageUrl,
+    artifactOriginType: originType,
+    jobCreatedAt: record.jobCreatedAt,
+    attemptStartedAt: record.attemptStartedAt,
+    artifactCreatedAt: record.artifactCreatedAt,
+    baselineSnapshotHashes: record.baselineSnapshotHashes,
+    freshnessVerified,
     provenanceValid: valid,
     verifiedAt: new Date().toISOString(),
   }

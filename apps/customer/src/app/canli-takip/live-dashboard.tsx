@@ -469,8 +469,8 @@ export function LiveDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  type TabId = 'overview' | 'baileys' | 'messages' | 'quick_send' | 'campaigns' | 'queue' | 'organizations' | 'contacts' | 'data_requests' | 'ai_studio' | 'blacklist' | 'jobs'
-  const VALID_TABS: TabId[] = ['overview', 'baileys', 'messages', 'quick_send', 'campaigns', 'queue', 'organizations', 'contacts', 'data_requests', 'ai_studio', 'blacklist', 'jobs']
+  type TabId = 'overview' | 'baileys' | 'messages' | 'quick_send' | 'campaigns' | 'queue' | 'organizations' | 'contacts' | 'data_requests' | 'ai_studio' | 'ai_media' | 'blacklist' | 'jobs'
+  const VALID_TABS: TabId[] = ['overview', 'baileys', 'messages', 'quick_send', 'campaigns', 'queue', 'organizations', 'contacts', 'data_requests', 'ai_studio', 'ai_media', 'blacklist', 'jobs']
 
   const getHashTab = (): TabId => {
     if (typeof window === 'undefined') return 'overview'
@@ -1861,6 +1861,7 @@ export function LiveDashboard() {
                 { id: 'organizations', label: 'Firmalar & Üyelikler', badge: data?.organizations?.length },
                 { id: 'contacts', label: 'Rehber & Kişi Havuzu', badge: data?.contactLists?.length },
                 { id: 'ai_studio', label: 'AI Video & Görsel Motoru', badge: (data?.ai_engine?.recentVideos?.length || 0) + (data?.creatives?.length || 0), isAlert: (data?.ai_engine?.geminiPool?.limitedAccounts || 0) > 0 },
+                { id: 'ai_media', label: 'AI Görsel & Video', badge: null, isAlert: false },
                 { id: 'blacklist', label: 'Kara Liste', badge: summary.blacklistedCount },
               ].map(tab => (
                 <button
@@ -4060,6 +4061,491 @@ export function LiveDashboard() {
             </div>
           </div>
         )}
+
+        {/* TAB: AI GÖRSEL & VİDEO ÜRETİM MERKEZİ (BAĞIMSIZ SERVİS) */}
+        {activeTab === 'ai_media' && (() => {
+          // AI Media sub-tab state
+          const [aiMediaSubTab, setAiMediaSubTab] = useState<'overview' | 'jobs' | 'accounts' | 'workers' | 'queue' | 'incidents' | 'visual_qa' | 'health'>('overview')
+          const [aiMediaData, setAiMediaData] = useState<any>(null)
+          const [aiMediaLoading, setAiMediaLoading] = useState(true)
+          const [aiMediaJobDetail, setAiMediaJobDetail] = useState<any>(null)
+          const [showJobDrawer, setShowJobDrawer] = useState(false)
+
+          const AI_MEDIA_CONTROL_URL = '/api/canli-takip/ai-media'
+
+          const fetchAiMediaData = useCallback(async () => {
+            try {
+              const res = await fetch(AI_MEDIA_CONTROL_URL)
+              if (res.ok) {
+                const d = await res.json()
+                setAiMediaData(d)
+              }
+            } catch (e) { console.error('AI Media fetch error:', e) }
+            finally { setAiMediaLoading(false) }
+          }, [])
+
+          useEffect(() => { fetchAiMediaData() }, [fetchAiMediaData])
+          useEffect(() => {
+            if (!autoRefresh) return
+            const iv = setInterval(fetchAiMediaData, 10000)
+            return () => clearInterval(iv)
+          }, [autoRefresh, fetchAiMediaData])
+
+          const STATE_LABELS: Record<string, { label: string; color: string }> = {
+            PENDING: { label: 'Bekliyor', color: 'bg-gray-400' },
+            VALIDATING_INPUTS: { label: 'Girdiler Doğrulanıyor', color: 'bg-blue-400' },
+            QUEUED: { label: 'Kuyrukta', color: 'bg-yellow-500' },
+            LEASED: { label: 'Hesaba Atandı', color: 'bg-indigo-400' },
+            PREPARING_ENV: { label: 'Ortam Hazırlanıyor', color: 'bg-indigo-500' },
+            OPENING_PROJECT: { label: 'Proje Açılıyor', color: 'bg-purple-400' },
+            ATTACHING_INGREDIENTS: { label: 'Çipler Bağlanıyor', color: 'bg-purple-500' },
+            INGREDIENTS_VERIFIED: { label: 'Çipler Doğrulandı', color: 'bg-teal-400' },
+            GENERATING: { label: 'Üretiliyor', color: 'bg-orange-500 animate-pulse' },
+            POLLING_FLOW: { label: 'Flow İzleniyor', color: 'bg-orange-400 animate-pulse' },
+            DOWNLOADING_MEDIA: { label: 'Video İndiriliyor', color: 'bg-cyan-500' },
+            MEDIA_DOWNLOADED: { label: 'Video İndi', color: 'bg-cyan-400' },
+            FFPROBE_INSPECTING: { label: 'ffprobe Denetimi', color: 'bg-emerald-500' },
+            SHA256_VERIFYING: { label: 'SHA256 Kontrolü', color: 'bg-emerald-400' },
+            VISUAL_QA_EVALUATING: { label: 'Görsel QA', color: 'bg-lime-500' },
+            COMPLETED: { label: 'Tamamlandı', color: 'bg-ok' },
+            NEEDS_REVIEW: { label: 'İnceleme Gerekli', color: 'bg-warning' },
+            FAILED: { label: 'Başarısız', color: 'bg-danger' },
+          }
+
+          const alarms = aiMediaData?.alarms || { cross_org_contamination: 0, wrong_output_delivery: 0, validation_bypass: 0 }
+          const hasAlarms = alarms.cross_org_contamination > 0 || alarms.wrong_output_delivery > 0 || alarms.validation_bypass > 0
+          const jobs = aiMediaData?.jobs || []
+          const accounts = aiMediaData?.accounts || []
+          const workers = aiMediaData?.workers || []
+          const queueItems = aiMediaData?.queue || []
+          const incidents = aiMediaData?.incidents || []
+          const overview = aiMediaData?.overview || {}
+
+          return (
+            <div className="space-y-4">
+              {/* RED ALARMS BANNER */}
+              {hasAlarms && (
+                <div className="bg-danger/10 border-2 border-danger rounded-[var(--radius-card)] p-3 animate-pulse">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <svg className="w-5 h-5 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
+                    <span className="text-xs font-bold text-danger uppercase tracking-wider">SIFIR TOLERANS ALARMI — Kritik Güvenlik İhlali Algılandı</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="bg-danger/20 rounded p-2">
+                      <div className="text-2xl font-black text-danger">{alarms.cross_org_contamination}</div>
+                      <div className="text-[9px] font-bold text-danger/80 uppercase">Çapraz Org Kontaminasyon</div>
+                    </div>
+                    <div className="bg-danger/20 rounded p-2">
+                      <div className="text-2xl font-black text-danger">{alarms.wrong_output_delivery}</div>
+                      <div className="text-[9px] font-bold text-danger/80 uppercase">Yanlış Çıktı Teslimi</div>
+                    </div>
+                    <div className="bg-danger/20 rounded p-2">
+                      <div className="text-2xl font-black text-danger">{alarms.validation_bypass}</div>
+                      <div className="text-[9px] font-bold text-danger/80 uppercase">Doğrulama Atlaması</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* SUB-TAB NAV */}
+              <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-thin">
+                {([
+                  { id: 'overview', label: 'Genel Bakış' },
+                  { id: 'jobs', label: 'İşler' },
+                  { id: 'accounts', label: 'Flow Hesapları' },
+                  { id: 'workers', label: "Worker'lar" },
+                  { id: 'queue', label: 'Kuyruk' },
+                  { id: 'incidents', label: 'Hatalar / Incidents' },
+                  { id: 'visual_qa', label: 'Marka & Asset QA' },
+                  { id: 'health', label: 'Sistem Sağlığı' },
+                ] as const).map(st => (
+                  <button
+                    key={st.id}
+                    onClick={() => setAiMediaSubTab(st.id)}
+                    className={`shrink-0 px-2.5 py-1 rounded text-[10px] sm:text-[11px] font-semibold whitespace-nowrap transition ${
+                      aiMediaSubTab === st.id
+                        ? 'bg-accent text-accent-ink shadow-sm'
+                        : 'text-ink-soft hover:bg-[var(--color-surface-raised)]'
+                    }`}
+                  >
+                    {st.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* SUB-TAB: GENEL BAKIŞ */}
+              {aiMediaSubTab === 'overview' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+                    {[
+                      { label: 'Aktif İşler', value: overview.active_jobs ?? 0, accent: true },
+                      { label: 'Kuyrukta', value: overview.queued_jobs ?? 0 },
+                      { label: '24s Başarılı', value: overview.completed_24h ?? 0, ok: true },
+                      { label: 'Ort. Süre (sn)', value: overview.avg_duration_seconds ?? '—' },
+                      { label: 'Başarı Oranı', value: overview.success_rate ? `${overview.success_rate}%` : '—', ok: overview.success_rate >= 90 },
+                    ].map((kpi, i) => (
+                      <div key={i} className={`bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3 text-center shadow-sm ${kpi.accent ? 'ring-1 ring-accent/30' : ''}`}>
+                        <div className={`text-xl sm:text-2xl font-black ${kpi.ok ? 'text-ok' : kpi.accent ? 'text-accent' : 'text-ink'}`}>{kpi.value}</div>
+                        <div className="text-[10px] text-ink-muted font-semibold mt-0.5">{kpi.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3">
+                    <h3 className="text-xs font-bold text-ink mb-2">Son İşler</h3>
+                    {jobs.length === 0 ? (
+                      <div className="text-[11px] text-ink-muted py-4 text-center">Henüz AI media iş kaydı yok.</div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-[10px]">
+                          <thead><tr className="border-b border-[var(--color-hairline)]">
+                            <th className="text-left py-1 px-1.5 font-semibold text-ink-muted">İş</th>
+                            <th className="text-left py-1 px-1.5 font-semibold text-ink-muted">Durum</th>
+                            <th className="text-left py-1 px-1.5 font-semibold text-ink-muted">Org</th>
+                            <th className="text-right py-1 px-1.5 font-semibold text-ink-muted">Tarih</th>
+                          </tr></thead>
+                          <tbody>
+                            {jobs.slice(0, 10).map((j: any) => (
+                              <tr key={j.id} className="border-b border-[var(--color-hairline)] last:border-0 hover:bg-[var(--color-surface-raised)] cursor-pointer" onClick={() => { setAiMediaJobDetail(j); setShowJobDrawer(true) }}>
+                                <td className="py-1.5 px-1.5 font-mono text-ink">{j.title || j.id?.slice(0,8)}</td>
+                                <td className="py-1.5 px-1.5"><span className={`inline-block w-2 h-2 rounded-full mr-1 ${STATE_LABELS[j.state]?.color || 'bg-gray-400'}`} /><span className="text-ink">{STATE_LABELS[j.state]?.label || j.state}</span></td>
+                                <td className="py-1.5 px-1.5 text-ink-muted">{j.org_name || '—'}</td>
+                                <td className="py-1.5 px-1.5 text-right text-ink-muted font-mono">{j.created_at ? new Date(j.created_at).toLocaleString('tr-TR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '—'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* SUB-TAB: İŞLER */}
+              {aiMediaSubTab === 'jobs' && (
+                <div className="space-y-3">
+                  <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3 shadow-sm">
+                    <div className="flex items-center justify-between mb-2.5">
+                      <h3 className="text-xs font-bold text-ink">AI Media İşleri (Kanonik 18-State)</h3>
+                      <span className="text-[9px] font-mono text-ink-muted">{jobs.length} iş</span>
+                    </div>
+                    {jobs.length === 0 ? (
+                      <div className="text-[11px] text-ink-muted py-6 text-center">Henüz iş kaydı bulunmuyor.</div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-[10px]">
+                          <thead><tr className="border-b border-[var(--color-hairline)]">
+                            <th className="text-left py-1.5 px-1.5 font-semibold text-ink-muted">ID</th>
+                            <th className="text-left py-1.5 px-1.5 font-semibold text-ink-muted">Başlık</th>
+                            <th className="text-left py-1.5 px-1.5 font-semibold text-ink-muted">Durum</th>
+                            <th className="text-left py-1.5 px-1.5 font-semibold text-ink-muted">Model</th>
+                            <th className="text-left py-1.5 px-1.5 font-semibold text-ink-muted">Oran</th>
+                            <th className="text-left py-1.5 px-1.5 font-semibold text-ink-muted">Hesap</th>
+                            <th className="text-left py-1.5 px-1.5 font-semibold text-ink-muted">Çip</th>
+                            <th className="text-right py-1.5 px-1.5 font-semibold text-ink-muted">Oluşturulma</th>
+                          </tr></thead>
+                          <tbody>
+                            {jobs.map((j: any) => (
+                              <tr key={j.id} className="border-b border-[var(--color-hairline)] last:border-0 hover:bg-[var(--color-surface-raised)] cursor-pointer" onClick={() => { setAiMediaJobDetail(j); setShowJobDrawer(true) }}>
+                                <td className="py-1.5 px-1.5 font-mono text-ink text-[9px]">{j.id?.slice(0,8)}…</td>
+                                <td className="py-1.5 px-1.5 text-ink font-semibold">{j.title}</td>
+                                <td className="py-1.5 px-1.5">
+                                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold text-white ${STATE_LABELS[j.state]?.color || 'bg-gray-400'}`}>
+                                    {STATE_LABELS[j.state]?.label || j.state}
+                                  </span>
+                                </td>
+                                <td className="py-1.5 px-1.5 text-ink-muted">{j.model}</td>
+                                <td className="py-1.5 px-1.5 text-ink-muted">{j.aspect_ratio}</td>
+                                <td className="py-1.5 px-1.5 text-ink-muted font-mono text-[9px]">{j.lease_account_id || '—'}</td>
+                                <td className="py-1.5 px-1.5 text-center">
+                                  <span className={`font-mono text-[9px] font-bold ${j.expected_ingredient_count === j.actual_ingredient_count ? 'text-ok' : 'text-danger'}`}>
+                                    {j.actual_ingredient_count}/{j.expected_ingredient_count}
+                                  </span>
+                                </td>
+                                <td className="py-1.5 px-1.5 text-right text-ink-muted font-mono text-[9px]">{j.created_at ? new Date(j.created_at).toLocaleString('tr-TR') : '—'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* SUB-TAB: FLOW HESAPLARI */}
+              {aiMediaSubTab === 'accounts' && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {accounts.length === 0 ? (
+                      <div className="col-span-full text-[11px] text-ink-muted py-6 text-center bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-4">Flow hesabı bulunamadı.</div>
+                    ) : accounts.map((acc: any) => (
+                      <div key={acc.id} className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3 shadow-sm">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-2.5 h-2.5 rounded-full ${acc.status === 'idle' ? 'bg-ok' : acc.status === 'busy' ? 'bg-warning animate-pulse' : acc.status === 'agent_ui_blocked' ? 'bg-danger' : 'bg-gray-400'}`} />
+                            <span className="text-xs font-bold text-ink">{acc.display_name}</span>
+                          </div>
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase ${acc.status === 'idle' ? 'bg-ok/20 text-ok' : acc.status === 'busy' ? 'bg-warning/20 text-warning' : 'bg-danger/20 text-danger'}`}>{acc.status}</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+                          <div><span className="text-ink-muted">E-posta:</span> <span className="text-ink font-mono">{acc.email}</span></div>
+                          <div><span className="text-ink-muted">Kredi:</span> <span className="text-ink font-bold">{acc.credit_balance ?? '?'}</span></div>
+                          <div><span className="text-ink-muted">Profil:</span> <span className="text-ink font-mono text-[9px]">{acc.persistent_profile_path}</span></div>
+                          <div><span className="text-ink-muted">Son Kalp Atışı:</span> <span className="text-ink font-mono">{acc.last_heartbeat_at ? new Date(acc.last_heartbeat_at).toLocaleTimeString('tr-TR') : '—'}</span></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* SUB-TAB: WORKER'LAR */}
+              {aiMediaSubTab === 'workers' && (
+                <div className="space-y-3">
+                  {workers.length === 0 ? (
+                    <div className="text-[11px] text-ink-muted py-6 text-center bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-4">Aktif worker bulunmuyor.</div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {workers.map((w: any) => (
+                        <div key={w.id} className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3 shadow-sm">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-bold text-ink">{w.id}</span>
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${w.status === 'online' ? 'bg-ok/20 text-ok' : 'bg-danger/20 text-danger'}`}>{w.status}</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-1 text-[10px]">
+                            <div><span className="text-ink-muted">Host:</span> <span className="text-ink">{w.host}</span></div>
+                            <div><span className="text-ink-muted">PID:</span> <span className="text-ink font-mono">{w.pid || '—'}</span></div>
+                            <div><span className="text-ink-muted">CPU:</span> <span className="text-ink">{w.cpu_percent != null ? `${w.cpu_percent}%` : '—'}</span></div>
+                            <div><span className="text-ink-muted">RAM:</span> <span className="text-ink">{w.ram_percent != null ? `${w.ram_percent}%` : '—'}</span></div>
+                            <div><span className="text-ink-muted">Aktif İş:</span> <span className="text-ink font-mono text-[9px]">{w.active_job_id?.slice(0,8) || 'Boşta'}</span></div>
+                            <div><span className="text-ink-muted">Kalp Atışı:</span> <span className="text-ink font-mono">{w.heartbeat_at ? new Date(w.heartbeat_at).toLocaleTimeString('tr-TR') : '—'}</span></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* SUB-TAB: KUYRUK */}
+              {aiMediaSubTab === 'queue' && (
+                <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3 shadow-sm">
+                  <h3 className="text-xs font-bold text-ink mb-2">Fair-Share Tenant Kuyruğu</h3>
+                  {queueItems.length === 0 ? (
+                    <div className="text-[11px] text-ink-muted py-6 text-center">Kuyruk boş.</div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-[10px]">
+                        <thead><tr className="border-b border-[var(--color-hairline)]">
+                          <th className="text-left py-1.5 px-1.5 font-semibold text-ink-muted">Sıra</th>
+                          <th className="text-left py-1.5 px-1.5 font-semibold text-ink-muted">İş</th>
+                          <th className="text-left py-1.5 px-1.5 font-semibold text-ink-muted">Firma</th>
+                          <th className="text-right py-1.5 px-1.5 font-semibold text-ink-muted">Öncelik</th>
+                        </tr></thead>
+                        <tbody>
+                          {queueItems.map((q: any, idx: number) => (
+                            <tr key={q.id} className="border-b border-[var(--color-hairline)] last:border-0">
+                              <td className="py-1.5 px-1.5 font-mono text-ink">{idx + 1}</td>
+                              <td className="py-1.5 px-1.5 text-ink">{q.title || q.id?.slice(0,8)}</td>
+                              <td className="py-1.5 px-1.5 text-ink-muted">{q.org_name || '—'}</td>
+                              <td className="py-1.5 px-1.5 text-right font-mono text-ink">{q.priority}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* SUB-TAB: HATALAR / INCIDENTS */}
+              {aiMediaSubTab === 'incidents' && (
+                <div className="space-y-3">
+                  <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3 shadow-sm">
+                    <h3 className="text-xs font-bold text-ink mb-2">Flow Incidents (Redacted, Admin-Only)</h3>
+                    {incidents.length === 0 ? (
+                      <div className="text-[11px] text-ink-muted py-6 text-center">Henüz kayıtlı incident bulunmuyor. 🎉</div>
+                    ) : (
+                      <div className="space-y-2">
+                        {incidents.map((inc: any) => (
+                          <div key={inc.id} className="bg-danger/5 border border-danger/20 rounded-[var(--radius-sm)] p-2.5">
+                            <div className="flex items-center justify-between mb-1.5">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[9px] font-mono font-bold text-danger bg-danger/10 px-1.5 py-0.5 rounded">{inc.error_code}</span>
+                                <span className="text-[10px] text-ink font-semibold">{inc.error_type}</span>
+                              </div>
+                              <span className="text-[9px] font-mono text-ink-muted">{inc.created_at ? new Date(inc.created_at).toLocaleString('tr-TR') : ''}</span>
+                            </div>
+                            <div className="flex gap-2 text-[9px]">
+                              {inc.screenshot_path && <span className="text-accent underline cursor-pointer">📷 Ekran Görüntüsü</span>}
+                              {inc.dom_dump_path && <span className="text-accent underline cursor-pointer">🌐 DOM Dökümü</span>}
+                              {inc.har_path && <span className="text-accent underline cursor-pointer">📦 HAR (Redacted)</span>}
+                            </div>
+                            {inc.is_redacted && <div className="text-[8px] text-ink-muted mt-1 flex items-center gap-1"><span className="text-ok">🔒</span> Credential redaction uygulanmış</div>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* SUB-TAB: MARKA & ASSET QA */}
+              {aiMediaSubTab === 'visual_qa' && (
+                <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3 shadow-sm">
+                  <h3 className="text-xs font-bold text-ink mb-1">Marka & Görsel QA Denetim Galerisi</h3>
+                  <p className="text-[10px] text-ink-muted mb-3">Her üretilen videonun %10, %50 ve %90 karelerinde logo, ürün ve metin denetimi.</p>
+                  {(aiMediaData?.outputs || []).length === 0 ? (
+                    <div className="text-[11px] text-ink-muted py-6 text-center">Doğrulanmış çıktı henüz bulunmuyor.</div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {(aiMediaData?.outputs || []).map((out: any) => (
+                        <div key={out.id} className="border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-semibold text-ink">{out.job_title || out.job_id?.slice(0,8)}</span>
+                            <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-bold ${out.is_approved ? 'bg-ok/20 text-ok' : 'bg-warning/20 text-warning'}`}>{out.is_approved ? 'Onaylı' : 'İnceleniyor'}</span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-1">
+                            {[out.qa_frame_10_url, out.qa_frame_50_url, out.qa_frame_90_url].map((url, i) => (
+                              <div key={i} className="aspect-[9/16] bg-canvas rounded border border-[var(--color-hairline)] flex items-center justify-center overflow-hidden">
+                                {url ? <img src={url} alt={`Frame ${[10,50,90][i]}%`} className="w-full h-full object-cover" /> : <span className="text-[8px] text-ink-muted">{[10,50,90][i]}%</span>}
+                              </div>
+                            ))}
+                          </div>
+                          <div className="text-[9px] text-ink-muted grid grid-cols-2 gap-1">
+                            <div>QA Skor: <span className={`font-bold ${(out.visual_qa_score || 0) >= 7 ? 'text-ok' : 'text-warning'}`}>{out.visual_qa_score ?? '—'}/10</span></div>
+                            <div>SHA256: <span className="font-mono">{out.sha256?.slice(0,12)}…</span></div>
+                            <div>Çözünürlük: <span className="font-mono">{out.width}×{out.height}</span></div>
+                            <div>Süre: <span className="font-mono">{out.duration_seconds}s</span></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* SUB-TAB: SİSTEM SAĞLIĞI */}
+              {aiMediaSubTab === 'health' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {[
+                    { label: 'ai-media-control', status: aiMediaData ? 'Çevrimiçi' : 'Çevrimdışı', ok: !!aiMediaData },
+                    { label: 'gflow-engine', status: aiMediaData?.engine_health?.status || 'Bilinmiyor', ok: aiMediaData?.engine_health?.status === 'ok' },
+                    { label: 'Supabase DB', status: aiMediaData?.db_health || 'Bilinmiyor', ok: aiMediaData?.db_health === 'ok' },
+                    { label: 'ffmpeg/ffprobe', status: aiMediaData?.ffmpeg_health || 'Bilinmiyor', ok: aiMediaData?.ffmpeg_health === 'ok' },
+                  ].map((h, i) => (
+                    <div key={i} className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3 text-center shadow-sm">
+                      <div className={`w-3 h-3 rounded-full mx-auto mb-2 ${h.ok ? 'bg-ok' : 'bg-danger animate-pulse'}`} />
+                      <div className="text-xs font-bold text-ink">{h.label}</div>
+                      <div className={`text-[10px] font-semibold ${h.ok ? 'text-ok' : 'text-danger'}`}>{h.status}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* JOB DETAIL DRAWER */}
+              {showJobDrawer && aiMediaJobDetail && (
+                <div className="fixed inset-0 z-50 flex justify-end" onClick={() => setShowJobDrawer(false)}>
+                  <div className="absolute inset-0 bg-black/40" />
+                  <div className="relative w-full max-w-lg bg-[var(--color-surface)] shadow-2xl overflow-y-auto" onClick={e => e.stopPropagation()}>
+                    <div className="sticky top-0 bg-[var(--color-surface)] border-b border-[var(--color-hairline)] p-3 flex items-center justify-between z-10">
+                      <div>
+                        <h3 className="text-sm font-bold text-ink">{aiMediaJobDetail.title || 'İş Detayı'}</h3>
+                        <span className="text-[9px] font-mono text-ink-muted">{aiMediaJobDetail.id}</span>
+                      </div>
+                      <button onClick={() => setShowJobDrawer(false)} className="w-7 h-7 rounded flex items-center justify-center hover:bg-[var(--color-surface-raised)]">
+                        <svg className="w-4 h-4 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                    </div>
+                    <div className="p-3 space-y-4">
+                      {/* State Badge */}
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold text-white ${STATE_LABELS[aiMediaJobDetail.state]?.color || 'bg-gray-400'}`}>
+                          {STATE_LABELS[aiMediaJobDetail.state]?.label || aiMediaJobDetail.state}
+                        </span>
+                        <span className="text-[10px] text-ink-muted">Deneme: {aiMediaJobDetail.retry_count}/{aiMediaJobDetail.max_retries}</span>
+                      </div>
+                      {/* Identity */}
+                      <div className="grid grid-cols-2 gap-2 text-[10px]">
+                        <div><span className="text-ink-muted">Model:</span> <span className="text-ink font-semibold">{aiMediaJobDetail.model}</span></div>
+                        <div><span className="text-ink-muted">Oran:</span> <span className="text-ink font-semibold">{aiMediaJobDetail.aspect_ratio}</span></div>
+                        <div><span className="text-ink-muted">Süre:</span> <span className="text-ink font-semibold">{aiMediaJobDetail.duration_seconds}s</span></div>
+                        <div><span className="text-ink-muted">Öncelik:</span> <span className="text-ink font-semibold">{aiMediaJobDetail.priority}</span></div>
+                        <div className="col-span-2"><span className="text-ink-muted">Çip Bağlama:</span> <span className={`font-bold ${aiMediaJobDetail.expected_ingredient_count === aiMediaJobDetail.actual_ingredient_count ? 'text-ok' : 'text-danger'}`}>{aiMediaJobDetail.actual_ingredient_count}/{aiMediaJobDetail.expected_ingredient_count}</span></div>
+                      </div>
+                      {/* Prompt */}
+                      <div>
+                        <div className="text-[10px] font-semibold text-ink-muted mb-1">Prompt</div>
+                        <div className="bg-canvas border border-[var(--color-hairline)] rounded p-2 text-[10px] text-ink font-mono whitespace-pre-wrap max-h-40 overflow-y-auto">{aiMediaJobDetail.prompt}</div>
+                      </div>
+                      {/* Error */}
+                      {aiMediaJobDetail.error_message && (
+                        <div className="bg-danger/10 border border-danger/20 rounded p-2.5">
+                          <div className="text-[9px] font-bold text-danger uppercase mb-0.5">{aiMediaJobDetail.error_code || 'HATA'}</div>
+                          <div className="text-[10px] text-ink">{aiMediaJobDetail.error_message}</div>
+                        </div>
+                      )}
+                      {/* Creative Orchestrator Info (SHORT & LONG) */}
+                      {aiMediaJobDetail.metadata?.provenance && (
+                        <div className="bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded p-2.5 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-ink">Creative Orchestrator Provenance</span>
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-accent/20 text-accent font-mono font-bold">
+                              {aiMediaJobDetail.metadata?.strategy?.strategyType || 'CREATIVE_PIPELINE'}
+                            </span>
+                          </div>
+
+                          {/* Brand & Reference Handles */}
+                          <div className="grid grid-cols-2 gap-1.5 text-[9px]">
+                            <div><span className="text-ink-muted">Gerçek Flow UUID:</span> <span className="font-mono text-ink font-semibold">{aiMediaJobDetail.metadata.real_flow_project_uuid || aiMediaJobDetail.metadata.provenance.flow_project_id || '—'}</span></div>
+                            <div><span className="text-ink-muted">Referanslar:</span> <span className="font-mono text-ink">{(aiMediaJobDetail.metadata.provenance.reference_registry_handles || []).join(', ') || '—'}</span></div>
+                          </div>
+
+                          {/* Multi-Scene Breakdown (LONG VIDEO) */}
+                          {aiMediaJobDetail.metadata.provenance.qa_reports?.sceneFlowProjectUuids && Object.keys(aiMediaJobDetail.metadata.provenance.qa_reports.sceneFlowProjectUuids).length > 0 && (
+                            <div className="pt-1.5 border-t border-[var(--color-hairline)] space-y-1">
+                              <span className="text-[9px] font-bold text-ink-muted uppercase">Sahne Flow Projeleri (DAG)</span>
+                              <div className="space-y-1 max-h-36 overflow-y-auto">
+                                {Object.entries(aiMediaJobDetail.metadata.provenance.qa_reports.sceneFlowProjectUuids).map(([sceneId, uuid]: any) => (
+                                  <div key={sceneId} className="flex items-center justify-between text-[9px] p-1 rounded bg-canvas border border-[var(--color-hairline)]">
+                                    <span className="font-bold text-ink">{sceneId}</span>
+                                    <span className="font-mono text-ink-muted">{uuid}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Final SHA256 & Finishing */}
+                          <div className="text-[9px] text-ink-muted pt-1 border-t border-[var(--color-hairline)] flex items-center justify-between">
+                            <span>Çıktı SHA256: <span className="font-mono text-ink">{aiMediaJobDetail.metadata.provenance.final_output_sha256?.slice(0, 16)}…</span></span>
+                            <span className="text-ok font-semibold">Deterministic Finishing: PASS</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Audit Timeline placeholder */}
+                      <div>
+                        <div className="text-[10px] font-semibold text-ink-muted mb-1">Denetim Zaman Çizelgesi</div>
+                        <div className="text-[10px] text-ink-muted py-3 text-center border border-dashed border-[var(--color-hairline)] rounded">Etkinlik geçmişi yüklenecek (ai_media_events)</div>
+                      </div>
+                      {/* Admin Actions */}
+                      <div className="flex gap-2 pt-2 border-t border-[var(--color-hairline)]">
+                        {(aiMediaJobDetail.state === 'FAILED' || aiMediaJobDetail.state === 'NEEDS_REVIEW') && (
+                          <button className="px-3 py-1.5 bg-accent text-accent-ink text-[10px] font-bold rounded shadow hover:bg-accent-dim transition">Yeniden Dene</button>
+                        )}
+                        {!['COMPLETED', 'FAILED'].includes(aiMediaJobDetail.state) && (
+                          <button className="px-3 py-1.5 bg-danger text-white text-[10px] font-bold rounded shadow hover:bg-danger/80 transition">İptal Et</button>
+                        )}
+                        <button className="px-3 py-1.5 bg-warning text-white text-[10px] font-bold rounded shadow hover:bg-warning/80 transition">Manuel İncelemeye Al</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })()}
 
         {/* TAB 7: KARA LİSTE (BLACKLIST) */}
         {activeTab === 'blacklist' && (

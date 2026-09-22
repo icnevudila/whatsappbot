@@ -31,13 +31,7 @@ if (DATABASE_URL) {
   console.log('[db] Initializing Supabase HTTP client')
   supabaseClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 } else {
-  console.warn('[db] Neither DATABASE_URL nor SUPABASE_SERVICE_ROLE_KEY provided. Setting fallback DATABASE_URL.')
-  const fallbackUrl = 'postgresql://postgres.rnkrjmblgcdqlyslbhob:0A4kWcQIJFoRL3D6@aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres'
-  pool = new Pool({
-    connectionString: fallbackUrl,
-    max: 5,
-    idleTimeoutMillis: 30000,
-  })
+  throw new Error('[db] FATAL: Neither DATABASE_URL nor SUPABASE_SERVICE_ROLE_KEY provided in environment. Refusing to run on unauthenticated fallback.')
 }
 
 /**
@@ -105,6 +99,15 @@ class PgQueryBuilder {
   }
 
   single() {
+    this.isSingle = true
+    this.limitCount = 1
+    return this.execute().then(res => ({
+      data: (res.data && res.data.length > 0) ? res.data[0] : null,
+      error: res.error,
+    }))
+  }
+
+  maybeSingle() {
     this.isSingle = true
     this.limitCount = 1
     return this.execute().then(res => ({

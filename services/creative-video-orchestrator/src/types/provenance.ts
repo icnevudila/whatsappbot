@@ -1,3 +1,21 @@
+export interface SceneAttemptRecord {
+  attempt_number: number
+  flow_project_id: string
+  status: 'SUCCESS' | 'RETRY' | 'FAILED'
+  error?: string
+  media_ids?: string[]
+  duration_seconds?: number
+  created_at: string
+}
+
+export interface AttachedReferenceIdentity {
+  asset_id: string
+  org_id: string
+  sha256: string
+  role: string
+  actual_flow_media_id: string
+}
+
 export interface CreativeProvenanceRecord {
   job_id: string
   org_id: string
@@ -16,6 +34,8 @@ export interface CreativeProvenanceRecord {
   scene_sha256: Record<string, string> // scene_id -> sha256
   final_output_sha256?: string
   qa_reports: Record<string, any>
+  scene_attempts?: Record<string, SceneAttemptRecord[]> // scene_id -> list of all attempts
+  attached_references?: AttachedReferenceIdentity[] // verified reference identity per asset
   created_at: string
   completed_at?: string
   verified: boolean

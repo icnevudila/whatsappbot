@@ -119,9 +119,7 @@ export class LongVideoPlanner {
       segments.push({
         sceneOrder: i + 1,
         scenePurpose: purposes[i] || `Scene ${i + 1}`,
-        durationTargetSec: i === sceneCount - 1
-          ? totalDuration - (segmentDuration * (sceneCount - 1))
-          : segmentDuration,
+        durationTargetSec: 8,
         voiceoverText: sentence,
       })
     }

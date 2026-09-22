@@ -37,11 +37,30 @@ app.get('/health', (_req, res) => {
   })
 })
 
+import { hostResourceGuard } from './resource-guard.js'
+
 // API routes
 app.use('/api/v1/jobs', jobsRouter)
 app.use('/api/v1/dashboard', dashboardRouter)
 app.use('/api/v1/accounts', accountsRouter)
 app.use('/api/v1/incidents', incidentsRouter)
+
+// Telemetry & Resource Guard routes
+app.get('/api/v1/telemetry/resources', async (_req, res) => {
+  const status = await hostResourceGuard.checkHostResources(supabase)
+  res.json({
+    status,
+    alarm_counters: hostResourceGuard.getAlarmCounters(),
+  })
+})
+
+app.post('/api/v1/telemetry/alarms/reset', (_req, res) => {
+  hostResourceGuard.resetAlarmCounters()
+  res.json({
+    success: true,
+    alarm_counters: hostResourceGuard.getAlarmCounters(),
+  })
+})
 
 // Error handling
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

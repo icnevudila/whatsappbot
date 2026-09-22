@@ -81,6 +81,49 @@ export function deriveCreativeDNA(facts: ResolvedCreativeFacts): CreativeDNA {
     action.replace(/\{subject\}/g, facts.product.name)
   )
 
+  // Sector and domain-specific intended & forbidden boundaries
+  const intendedUses = authenticInteractions.length > 0
+    ? authenticInteractions
+    : [`Operational deployment of ${facts.product.name} for intended commercial purpose`]
+
+  const credibleInteractions = [
+    `Professional operation of ${facts.product.name} in authentic ${facts.sectorFacts.physicalWorld[0] || 'workplace'}`,
+    `Physical inspection of ${facts.product.name} structural and functional details`,
+  ]
+
+  const forbiddenUses: string[] = []
+  const forbiddenInteractions: string[] = []
+
+  if (sector === 'agriculture_farming' || fullText.match(/\b(pompa|tarım|ilaçlama|bağ|bahçe|hasat|sera)\b/i)) {
+    forbiddenUses.push(
+      'vehicle washing',
+      'car detailing',
+      'automotive shampoo pressure wash',
+      'indoor luxury apartment cleaning',
+      'street sidewalk jet washing'
+    )
+    forbiddenInteractions.push(
+      'spraying foam or water onto automobiles or cars',
+      'operating inside a car wash garage or detailing bay',
+      'using agricultural sprayer as automotive equipment'
+    )
+  } else if (sector === 'construction_materials' || fullText.match(/\b(tuğla|kiremit|şantiye|bina|harç)\b/i)) {
+    forbiddenUses.push(
+      'food preparation',
+      'office desk paperweight demonstration',
+      'software coding'
+    )
+    forbiddenInteractions.push(
+      'fragile glass dropping',
+      'submerging in food liquids'
+    )
+  } else if (sector === 'saas_digital' || sector === 'tech_hardware' || fullText.match(/\b(yazılım|robot|sualtı|derin deniz|rov|lidar|telemetri)\b/i)) {
+    forbiddenUses.push(
+      'agricultural field fertilization',
+      'heavy masonry bricklaying'
+    )
+  }
+
   const product: CreativeDNA['product'] = {
     materials,
     physicalStrengths: facts.product.physicalAttributes.length > 0
@@ -88,6 +131,10 @@ export function deriveCreativeDNA(facts: ResolvedCreativeFacts): CreativeDNA {
       : ['verified structural integrity', 'engineered reliability'],
     visualStrengths,
     authenticInteractions,
+    intendedUses,
+    credibleInteractions,
+    forbiddenUses,
+    forbiddenInteractions,
     transformations: [
       `from raw operational readiness to accomplished verified result with ${facts.product.name}`
     ],
@@ -95,6 +142,7 @@ export function deriveCreativeDNA(facts: ResolvedCreativeFacts): CreativeDNA {
     visualWorld: facts.sectorFacts.physicalWorld,
     avoid: [
       ...facts.sectorFacts.forbiddenVisuals,
+      ...forbiddenUses,
       'fake laboratory white void',
       'plastic CGI imitation look',
       'unrealistic gravity defying spins',

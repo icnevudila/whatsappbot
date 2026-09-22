@@ -214,10 +214,10 @@ services:
     environment:
       NODE_ENV: production
       PORT: '3460'
-      DATABASE_URL: ${DATABASE_URL}
       GFLOW_ENGINE_URL: 'http://gflow-engine:3461'
       SHARED_OUTPUTS_DIR: '/shared/outputs'
       SHARED_INCIDENTS_DIR: '/shared/incidents'
+      CREATIVE_VIDEO_ORCHESTRATOR: 'v1'
     healthcheck:
       test: ['CMD', 'curl', '-fsS', 'http://127.0.0.1:3460/health']
       interval: 30s

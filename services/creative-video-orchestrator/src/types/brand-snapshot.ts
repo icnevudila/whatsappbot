@@ -42,10 +42,16 @@ export interface ReferenceAsset {
 
 export interface CampaignFacts {
   objective: string
+  headline?: string
   offer?: string
   price?: string
   cta: string
+  phoneNumber?: string
+  website?: string
   target_audience?: string
+  approved_spoken_line?: string
+  user_style_preference?: string
+  subtitles?: 'auto' | 'off'
 }
 
 export type AspectRatio = '9:16' | '16:9' | '1:1' | '4:3' | '3:4'
@@ -68,6 +74,8 @@ export interface RawBrandInput {
   campaign: CampaignFacts
   mandatory_elements?: string[]
   forbidden_elements?: string[]
+  unverified_facts?: string[]
+  verified_claims?: string[]
   language?: string
   aspect_ratio?: AspectRatio
   requested_duration?: number
@@ -92,6 +100,8 @@ export interface BrandContextSnapshot {
   readonly campaign: Readonly<CampaignFacts>
   readonly mandatory_elements: readonly string[]
   readonly forbidden_elements: readonly string[]
+  readonly unverified_facts?: readonly string[]
+  readonly verified_claims?: readonly string[]
   readonly language: string
   readonly aspect_ratio: AspectRatio
   readonly requested_duration: number
@@ -163,14 +173,20 @@ export function createBrandContextSnapshot(input: RawBrandInput): Readonly<Brand
       url: r.url,
     })),
     campaign: {
-      objective: input.campaign.objective.trim(),
+      objective: (input.campaign.objective || 'Brand Awareness').trim(),
+      headline: input.campaign.headline?.trim(),
       offer: input.campaign.offer?.trim(),
       price: input.campaign.price?.trim(),
-      cta: input.campaign.cta.trim(),
+      cta: (input.campaign.cta || 'Learn More').trim(),
+      phoneNumber: input.campaign.phoneNumber?.trim(),
+      website: input.campaign.website?.trim(),
       target_audience: input.campaign.target_audience?.trim(),
+      approved_spoken_line: input.campaign.approved_spoken_line?.trim(),
     },
     mandatory_elements: input.mandatory_elements ? [...input.mandatory_elements] : [],
     forbidden_elements: input.forbidden_elements ? [...input.forbidden_elements] : [],
+    unverified_facts: input.unverified_facts ? [...input.unverified_facts] : [],
+    verified_claims: input.verified_claims ? [...input.verified_claims] : [],
     language: input.language || 'tr',
     aspect_ratio: input.aspect_ratio || '9:16',
     requested_duration: input.requested_duration || 8,
