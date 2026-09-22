@@ -1405,19 +1405,10 @@ async function generateVideoOnFlow(options = {}) {
   // 3. Sıfır Flow projesi oluştur (İzolasyonun kalbi: Başka firmanın projeleriyle asla karışmaz)
   if (!isolatedProjectUrl || !isolatedProjectUrl.includes('/project/')) {
     console.log(`[Flow Video] 🆕 İş için izole Flow projesi oluşturuluyor...`);
-    await sleep(3500);
-
-    await send('Runtime.evaluate', {
-      expression: `(() => {
-        const btns = Array.from(document.querySelectorAll('button, a, div[role="button"]'));
-        const btn = btns.find(b => (b.innerText || '').toLowerCase().includes('new project'));
-        if (btn) btn.click();
-      })()`
-    });
+    await sleep(2500);
 
     const navStart = Date.now();
-    while (Date.now() - navStart < 25000) {
-      await sleep(1000);
+    while (Date.now() - navStart < 30000) {
       const urlRes = await send('Runtime.evaluate', { expression: 'window.location.href' });
       const curUrl = urlRes?.result?.value || '';
       if (curUrl.includes('/project/') && !curUrl.endsWith('/project') && !curUrl.endsWith('/project/')) {
@@ -1425,6 +1416,23 @@ async function generateVideoOnFlow(options = {}) {
         isolatedProjectId = curUrl.split('/project/')[1]?.split('/')[0]?.split('?')[0];
         break;
       }
+
+      // Varsa duyuru modalını kapat ve + New project butonuna tıkla
+      await send('Runtime.evaluate', {
+        expression: `(() => {
+          const closeBtn = document.querySelector('button[aria-label="Close"], button[aria-label="close"], button.close');
+          if (closeBtn) closeBtn.click();
+
+          const btn = document.querySelector('button.new-project-button, button[class*="new-project"]') ||
+                      Array.from(document.querySelectorAll('button, a, div[role="button"], span')).find(b => (b.innerText || '').toLowerCase().includes('new project'));
+          if (btn) {
+            btn.click();
+            const inner = btn.querySelector('span') || btn;
+            inner.click();
+          }
+        })()`
+      });
+      await sleep(1500);
     }
 
     if (!isolatedProjectUrl) {
