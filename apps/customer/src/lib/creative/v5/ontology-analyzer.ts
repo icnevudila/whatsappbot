@@ -49,7 +49,13 @@ export function analyzeOntology(facts: FactNormalizerOutput): OntologyClassifica
   // 2. Proof Mode Classification
   let proofMode: ProofMode = 'product_in_use'
 
-  if (offerType === 'digital_product_or_saas') {
+  const isAgriOrSprayer = Boolean(
+    text.match(/(tarım|ziraat|bahçe|çiftlik|ilaçlama|bağ|sera|meyve|fidan|hasat|sulama|püskürt|akülü sırt|sırt pompası|pompa)/i)
+  )
+
+  if (isAgriOrSprayer) {
+    proofMode = 'product_in_use'
+  } else if (offerType === 'digital_product_or_saas') {
     proofMode = 'interface_workflow'
   } else if (offerType === 'professional_service') {
     proofMode = 'human_expertise'
@@ -57,7 +63,7 @@ export function analyzeOntology(facts: FactNormalizerOutput): OntologyClassifica
     proofMode = 'environment_or_experience'
   } else if (offerType === 'local_service') {
     proofMode = 'process'
-  } else if (text.match(/(toptan|palet|tır|stok|fabrika|sevkiyat|koli|depo|ton|hacim|üretim)/)) {
+  } else if (text.match(/(toptan|paletli|tır bazında|koli bazında|tonluk|depolama tesisi|lojistik sevkiyat)/)) {
     proofMode = 'scale_or_inventory'
   } else if (text.match(/(el yapımı|el işi|özel dikim|ahşap oyma|zanaat|ustalık|deri dikiş|özenle)/)) {
     proofMode = 'craftsmanship'
@@ -89,7 +95,9 @@ export function analyzeOntology(facts: FactNormalizerOutput): OntologyClassifica
   // 4. Visual Affordance (Real tangible action)
   let primaryAffordance: VisualAffordanceAction = 'toggle_open_close'
 
-  if (offerType === 'food_or_consumable') {
+  if (isAgriOrSprayer || text.match(/(püskürt|ilaçla|sisle|sprey|damla|su)/)) {
+    primaryAffordance = 'apply_spray_mist'
+  } else if (offerType === 'food_or_consumable') {
     primaryAffordance = text.match(/(kes|dilim|bıçak)/) ? 'cut_slice_carve' : 'pour_drizzle_flow'
   } else if (offerType === 'digital_product_or_saas') {
     primaryAffordance = 'screen_tap_filter_result'
@@ -97,8 +105,6 @@ export function analyzeOntology(facts: FactNormalizerOutput): OntologyClassifica
     primaryAffordance = 'enter_experience_space'
   } else if (offerType === 'professional_service' || offerType === 'local_service') {
     primaryAffordance = 'artisan_expert_touch'
-  } else if (text.match(/(püskürt|ilaçla|sisle|sprey|damla|su)/)) {
-    primaryAffordance = 'apply_spray_mist'
   } else if (text.match(/(kaldır|taşı|palet|forklift|yükle|diz)/)) {
     primaryAffordance = 'lift_stack_haul'
   } else if (text.match(/(düğme|tetik|bas|anahtar|çalıştır|start)/)) {

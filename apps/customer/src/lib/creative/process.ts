@@ -382,6 +382,25 @@ export async function processCreativeGeneration(
         throw new Error(`Bu ayki video üretim kotanıza (${used}/${videoQuota}) ulaştınız. Limit artırımı için lütfen platform yöneticinizle iletişime geçin.`)
       }
 
+      const resolveAssetUrl = (rawUrl: string | null): string | null => {
+        if (!rawUrl) return null
+        const gw = (process.env.OMNISTUDIO_GATEWAY_URL || 'http://167.233.201.31:3456').replace(/\/$/, '')
+        if (rawUrl.includes('media-proxy?file=')) {
+          const fileName = rawUrl.split('media-proxy?file=')[1]?.split('&')[0]
+          if (fileName) return `${gw}/outputs/${decodeURIComponent(fileName)}`
+        }
+        if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
+          if (rawUrl.includes('media-proxy?file=')) {
+            const fileName = rawUrl.split('media-proxy?file=')[1]?.split('&')[0]
+            if (fileName) return `${gw}/outputs/${decodeURIComponent(fileName)}`
+          }
+          return rawUrl
+        }
+        const clean = rawUrl.replace(/^\/+/, '')
+        const { data: pub } = supabase.storage.from('brand-assets').getPublicUrl(clean)
+        return pub?.publicUrl || rawUrl
+      }
+
       // 1. Kurumsal Logo & Marka Kiti Zorunluluk Kontrolü
       let logoUrl: string | null = (snapshot as any).customLogoUrl || null
       if (!logoUrl) {
@@ -400,10 +419,7 @@ export async function processCreativeGeneration(
         throw new Error('Video üretimi için kurumsal Logo ve Marka Kiti zorunludur. Yapay zekanın uydurma logo ve semboller üretmemesi için lütfen Ayarlar > Marka Kiti bölümünden logonuzu tanımlayın.')
       }
 
-      if (logoUrl && !logoUrl.startsWith('http')) {
-        const { data: pub } = supabase.storage.from('brand-assets').getPublicUrl(logoUrl)
-        logoUrl = pub.publicUrl
-      }
+      logoUrl = resolveAssetUrl(logoUrl)
 
       // 2. Ürün Görseli veya Kurumsal Hizmet Çözümlemesi
       const chosenProduct = snapshot.products?.[0]
@@ -432,10 +448,7 @@ export async function processCreativeGeneration(
         productImageUrl = logoUrl
       }
 
-      if (productImageUrl && !productImageUrl.startsWith('http')) {
-        const { data: pub } = supabase.storage.from('brand-assets').getPublicUrl(productImageUrl)
-        productImageUrl = pub.publicUrl
-      }
+      productImageUrl = resolveAssetUrl(productImageUrl)
 
       const { overlay } = buildVideoPrompt(snapshot)
       let videoPrompt: string
@@ -451,7 +464,7 @@ export async function processCreativeGeneration(
           cameraMode: (snapshot as any).cameraMode || undefined,
           products: (snapshot.products || []).map((p) => ({
             name: p.name,
-            imageUrl: p.imageUrl || productImageUrl,
+            imageUrl: resolveAssetUrl(p.imageUrl || productImageUrl),
             price: p.price,
             promo: p.promo,
             description: p.description,
@@ -498,7 +511,7 @@ export async function processCreativeGeneration(
             brandName: overlay.brandName,
             productName: chosenProduct?.name || null,
             productImageUrl,
-            referenceImageUrls: snapshot.referenceImageUrls || [],
+            referenceImageUrls: (snapshot.referenceImageUrls || []).map((u: string) => resolveAssetUrl(u) || u),
             logoUrl,
             includeLogo: snapshot.useLogo !== false,
             includeOverlay: false,

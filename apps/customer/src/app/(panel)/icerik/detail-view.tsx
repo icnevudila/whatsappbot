@@ -306,7 +306,7 @@ export function CreativeDetail({
   const [localError, setLocalError] = useState<string | null>(null)
   const [busyRender, setBusyRender] = useState(false)
   const shownError = localError || (creative.status === 'failed' ? creative.error : null)
-  const spinning = (running && !localError) || busyRender
+  const spinning = creative.status !== 'ready' && ((running && !localError) || busyRender)
 
   async function requestRender(): Promise<{
     error: string | null
@@ -335,7 +335,10 @@ export function CreativeDetail({
   }
 
   useEffect(() => {
-    if (creative.status === 'ready') setLocalError(null)
+    if (creative.status === 'ready') {
+      setBusyRender(false)
+      setLocalError(null)
+    }
   }, [creative.status])
 
   useEffect(() => {
@@ -457,7 +460,7 @@ export function CreativeDetail({
 
   const isVideo = creative.format === 'video' || Boolean(creative.publicUrl?.endsWith('.mp4'))
   const stages = isVideo ? VIDEO_CAMPAIGN_STAGES : DETAIL_STAGES
-  const targetDuration = isVideo ? 95 : 78
+  const targetDuration = isVideo ? 110 : 78
   const remainingSeconds = Math.max(5, targetDuration - tick)
   const remainingText =
     tick >= targetDuration

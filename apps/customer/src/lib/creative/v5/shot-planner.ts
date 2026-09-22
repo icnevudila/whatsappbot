@@ -74,25 +74,29 @@ export function planShots(
 
   // 2. Single Location Determination
   let singleLocation = 'Clean, modern and sunlit commercial setting tailored to the subject'
-  if (ontology.offerType === 'food_or_consumable') {
+  const isAgriOrSprayer =
+    ontology.primaryAffordance === 'apply_spray_mist' ||
+    Boolean(facts.sectorHint?.match(/(tarım|ziraat|bahçe|çiftlik|ilaçlama|bağ|sera)/i)) ||
+    Boolean(facts.verifiedFacts.offerName?.match(/(ilaçlama|pompa|püskürt|tarım|ziraat|bahçe|akülü sırt|sırt pompası)/i)) ||
+    Boolean(facts.verifiedFacts.rawBrief?.match(/(ilaçlama|pompa|püskürt|tarım|ziraat|bahçe|meyve|fidan|hasat)/i))
+
+  if (isAgriOrSprayer) {
+    singleLocation = 'Sunlit fertile agricultural orchard with lush green fruit trees and natural orchard soil under warm morning sunlight'
+  } else if (ontology.offerType === 'food_or_consumable') {
     singleLocation = 'Warm artisan kitchen presentation counter with rustic wooden textures'
   } else if (ontology.offerType === 'digital_product_or_saas') {
     singleLocation = 'Modern sunlit minimalist office desk with natural window light'
   } else if (ontology.offerType === 'property_or_high_consideration_offer') {
     singleLocation = 'Contemporary architectural living space with panoramic glass window'
-  } else if (ontology.proofMode === 'scale_or_inventory' || ontology.offerType === 'physical_product') {
-    if (
-      facts.sectorHint?.includes('inşaat') ||
-      facts.sectorHint?.includes('tuğla') ||
-      facts.verifiedFacts.offerName?.toLowerCase().includes('tuğla') ||
-      facts.verifiedFacts.rawBrief.toLowerCase().includes('tuğla')
-    ) {
-      singleLocation = 'Modern, immaculate brick manufacturing facility and sunlit outdoor dispatch loading yard'
-    } else {
-      singleLocation = 'Organized bright logistics hub and professional outdoor delivery bay'
-    }
-  } else if (ontology.primaryAffordance === 'apply_spray_mist') {
-    singleLocation = 'Sunlit fertile agricultural orchard in golden morning light'
+  } else if (
+    facts.sectorHint?.includes('inşaat') ||
+    facts.sectorHint?.includes('tuğla') ||
+    facts.verifiedFacts.offerName?.toLowerCase().includes('tuğla') ||
+    facts.verifiedFacts.rawBrief.toLowerCase().includes('tuğla')
+  ) {
+    singleLocation = 'Modern, immaculate brick manufacturing facility and sunlit outdoor dispatch loading yard'
+  } else if (ontology.proofMode === 'scale_or_inventory') {
+    singleLocation = 'Organized bright logistics hub and professional outdoor delivery bay'
   } else if (ontology.offerType === 'professional_service' || ontology.offerType === 'local_service') {
     singleLocation = 'Professional, immaculate and bright service consultation workspace'
   }
@@ -102,7 +106,11 @@ export function planShots(
   let colorGradeDirective = `COLOR GRADE: Warm-neutral commercial grade, accurate product colors, clean lifted blacks — premium brand visual identity.`
   let musicDirective = `subtle modern commercial groove starting sparse, building at midpoint, peaking on the brand reveal, then resolving to silence`
 
-  if (ontology.offerType === 'food_or_consumable') {
+  if (isAgriOrSprayer) {
+    brandPillar = `Agricultural excellence and dependable crop care — high-performance farm and garden equipment trusted by growers.`
+    colorGradeDirective = `COLOR GRADE: Vivid natural outdoor green tones, warm sunlit golden morning highlights, crisp authentic foliage textures, clean lifted shadows.`
+    musicDirective = `uplifting organic acoustic commercial rhythm with light inspiring percussion, building steadily, resolving cleanly on brand close`
+  } else if (ontology.offerType === 'food_or_consumable') {
     brandPillar = `Freshness and craft — this product is made with care and should feel delicious and inviting.`
     colorGradeDirective = `COLOR GRADE: Warm artisan amber tones, rich saturated food colors, soft lifted highlights — appetizing and inviting.`
     musicDirective = `warm acoustic guitar with light percussion starting gentle, building through product interaction, resolving warmly`
@@ -128,6 +136,11 @@ export function planShots(
   // 3. Three Shot Kadraj Setup (Adapts to camera mode)
   const isContinuous = cameraMode === 'continuous_take'
 
+  let shot1Action = `${hook.visualEventDescription} A real professional person (clear recognizable face, industry-appropriate attire, confident purposeful body language) is actively and prominently visible in the foreground engaging with the product or activity.`
+  if (isAgriOrSprayer) {
+    shot1Action = `Outdoors in a sunlit green agricultural orchard or lush garden with ripe fruit trees. A professional grower wearing practical outdoor attire is actively operating the spraying equipment (${subject}), with a fine, even mist spray visible in the morning sunlight over vibrant foliage. Absolutely NO warehouse, NO concrete loading docks, NO delivery trucks.`
+  }
+
   const shot1: ShotItem = {
     shotNumber: 1,
     timing: { from: 0.0, to: 2.2 },
@@ -135,7 +148,7 @@ export function planShots(
     framing: isContinuous
       ? 'Continuous take: wide-medium framing initiating the continuous slow forward push-in route'
       : 'Wide dynamic establishing commercial framing with natural ambient motion',
-    subjectAction: `${hook.visualEventDescription} A real professional person (clear recognizable face, industry-appropriate attire, confident purposeful body language) is actively and prominently visible in the foreground engaging with the product or activity.`,
+    subjectAction: shot1Action,
     cameraMotion: isContinuous
       ? 'The camera begins a single unbroken slow forward push-in route gliding smoothly toward the active subject'
       : 'Smooth dynamic commercial push-in capturing the active environment and initial visual hook',
@@ -146,8 +159,8 @@ export function planShots(
   let shot2Action = `The focal subject (${subject}) performs its core verified function smoothly in realistic physical environment.`
   if (facts.verifiedFacts.offerName?.toLowerCase().includes('tuğla') || facts.verifiedFacts.rawBrief.toLowerCase().includes('tuğla')) {
     shot2Action = `Uniform shrink-wrapped pallets of high-grade construction material (${subject}) are loaded smoothly by an active yellow forklift in the sunlit factory yard, highlighting structural durability and stock volume.`
-  } else if (ontology.primaryAffordance === 'apply_spray_mist') {
-    shot2Action = `The equipment (${subject}) operates smoothly, releasing an ultra-fine micronized mist spray over verdant orchard foliage.`
+  } else if (isAgriOrSprayer || ontology.primaryAffordance === 'apply_spray_mist') {
+    shot2Action = `The equipment (${subject}) operates smoothly outdoors among verdant orchard trees, releasing an ultra-fine micronized mist spray evenly over fruit tree leaves with crisp sunlight catching the mist droplets.`
   } else if (ontology.offerType === 'digital_product_or_saas') {
     shot2Action = `The digital platform (${subject}) performs live radar business scanning on a premium laptop screen with clean glowing pin indicators. The laptop rests firmly stationary and flat on the desk with zero rotation or spinning. The laptop hardware is completely sterile and unbranded with a completely blank black matte screen bezel, zero laptop manufacturer logos, zero text on screen frame or hinge.`
   }
@@ -170,6 +183,11 @@ export function planShots(
     ? ` In the concluding framing (5.8s - 8.0s, lasting a full continuous 2.2 seconds), the camera settles directly and steadily on the authentic brand mark "${brandName}" and original corporate logo. The brand name and logo are prominently displayed at an easily readable size on the focal physical surface (product casing, clean engraved metal plaque, or corporate entrance). Fully visible and centered: zero rapid rotation, zero extreme perspective, zero motion blur, zero harsh glare, completely unobstructed by hands or objects.`
     : ''
 
+  let shot3SubjectAction = `The subject (${subject}) rests in pristine final state, delivering quiet confidence and commercial prestige.${brandHeroAction}`
+  if (isAgriOrSprayer) {
+    shot3SubjectAction = `The equipment (${subject}) is showcased in crystal-clear hero framing outdoors against the lush green orchard background with healthy foliage.${brandHeroAction}`
+  }
+
   const shot3: ShotItem = {
     shotNumber: 3,
     timing: { from: 5.8, to: 8.0 },
@@ -179,7 +197,7 @@ export function planShots(
           ? 'Continuous take: steady macro hero framing reaching the destination of the continuous forward push-in route settling on the primary brand mark and logo'
           : 'Continuous take: close hero framing reaching the destination of the continuous forward push-in route')
       : (brandName ? 'Crisp steady macro hero framing centered on the primary brand mark and logo' : 'Clean hero wide framing'),
-    subjectAction: `The subject (${subject}) rests in pristine final state, delivering quiet confidence and commercial prestige.${brandHeroAction}`,
+    subjectAction: shot3SubjectAction,
     cameraMotion: isContinuous
       ? (brandName
           ? `Continuing the exact same slow forward push-in route smoothly into rock-steady close hero framing settling directly on the authentic brand mark "${brandName}" and logo to conclude the unbroken take`
@@ -213,9 +231,18 @@ export function planShots(
     ? ' (minimalist red line-art roof symbol with central upward arrow, and bold uppercase text: "AYVAZOĞLU")'
     : '';
 
+  let brandSurface = 'prominent, clean, large brushed steel entrance plaque or office reception sign'
+  if (isAgriOrSprayer) {
+    brandSurface = 'clean durable badge on the equipment casing or sleek branded garden field marker'
+  }
+
   const brandRevealDirective = brandName
-    ? `MANDATORY VISUAL BRAND IDENTITY (5.8s - 8.0s): The verified brand name "${brandName}" and authentic corporate logo mark${logoDetail} are mandatory on-screen visual elements directly in the video. In the final framing (5.8s - 8.0s), the camera settles rock-steadily on a prominent, clean, large brushed steel entrance plaque or office reception sign displaying the authentic logo and bold letters: "${isAyvaz ? 'AYVAZOĞLU' : brandName}". Rock-steady framing, centered at eye level: zero camera shake, zero rapid rotation, zero motion blur, zero distorted letters.`
+    ? `MANDATORY VISUAL BRAND IDENTITY (5.8s - 8.0s): The verified brand name "${brandName}" and authentic corporate logo mark${logoDetail} are mandatory on-screen visual elements directly in the video. In the final framing (5.8s - 8.0s), the camera settles rock-steadily on the authentic logo and bold letters: "${isAyvaz ? 'AYVAZOĞLU' : brandName}" displayed prominently on ${brandSurface}. Rock-steady framing, centered at eye level: zero camera shake, zero rapid rotation, zero motion blur, zero distorted letters.`
     : null
+
+  const negativeConstraints = isAgriOrSprayer
+    ? `${V5_STANDARD_NEGATIVES}, warehouse, storage facility, logistics center, factory interior, shipping pallets, cardboard boxes, delivery trucks, concrete loading dock, industrial forklift, indoor loading bay, shipping containers, asphalt parking lot`
+    : V5_STANDARD_NEGATIVES
 
   // 7. Assemble Technical Veo English Prompt
   const veoPrompt = [
@@ -242,7 +269,7 @@ export function planShots(
     brandName
       ? `TEXT POLICY: No newly generated text or promotional advertising copy (strictly NO prices, NO discount badges, NO phone numbers, NO website URLs, NO promotional captions, NO subtitles, NO floating letters, NO banners, NO CTA badges). The verified brand name "${brandName}", the original corporate logo, and pre-existing product labels are MANDATORY on-screen visual elements directly in the video. Real physical brand identity is strictly preserved: pre-existing printed labels and authentic branding on reference products remain as-is without modification. Do not redesign or invent a logo.`
       : `TEXT POLICY: No newly generated text, captions, prices, phone numbers, calls to action, signs, or fake logos. No gibberish words, small text, long campaign copy, subtitles, floating text, handheld signs, desk signs, graphic overlays, banners or lower thirds. Real physical brand identity is strictly preserved: pre-existing printed labels and authentic branding on reference products remain as-is without modification. Brand name appears only on natural physical surfaces (uniforms, vehicle decals, entrance signage, or product nameplates) matching the brand palette. Do not redesign or invent a logo.`,
-    `NEGATIVE CONSTRAINTS: ${V5_STANDARD_NEGATIVES}`,
+    `NEGATIVE CONSTRAINTS: ${negativeConstraints}`,
   ].join('\n')
 
   const referenceAssetInput: ReferenceAssetInput = {
@@ -265,7 +292,7 @@ export function planShots(
     singleLocation,
     shots: [shot1, shot2, shot3],
     veoEnglishPrompt: veoPrompt,
-    negativePrompt: V5_STANDARD_NEGATIVES,
+    negativePrompt: negativeConstraints,
     brandIdentityMode,
     referenceAssetInput,
     imageToVideoPrompt,

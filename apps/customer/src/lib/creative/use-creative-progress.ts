@@ -73,28 +73,33 @@ const TEXT_ONLY_STAGES: Stage[] = [
 export const VIDEO_CAMPAIGN_STAGES: Stage[] = [
   {
     at: 0,
-    label: 'Marka ve ürün bilgileri hazırlanıyor…',
-    detail: 'Kurgu ve sahne detayları düzenleniyor',
+    label: 'Senaryo ve görsel kompozisyon planlanıyor…',
+    detail: 'Marka kimliği, ürün açıları ve seslendirme metni kurgulanıyor',
   },
   {
     at: 10,
-    label: 'Video üretiliyor…',
-    detail: 'Tanıtım videosu sahneleri ve seslendirme oluşturuluyor',
+    label: 'Google Veo AI video motoru başlatılıyor…',
+    detail: 'Ürün ve kurumsal marka varlıkları sinematik sahneye bağlanıyor',
   },
   {
-    at: 60,
-    label: 'Video hazırlandı, uygulamaya aktarılıyor…',
-    detail: 'Yüksek kalitede video indiriliyor',
+    at: 28,
+    label: 'Bulut GPU üzerinde sinematik render işleniyor…',
+    detail: 'Yüksek kaliteli yapay zeka video karesi üretiliyor (~90-120 sn)',
   },
   {
-    at: 82,
-    label: 'Sisteme kaydediliyor…',
-    detail: 'Video kütüphanenize güvenle ekleniyor',
+    at: 75,
+    label: 'Akıllı altyazı ve ses miksajı senkronlanıyor…',
+    detail: 'CapCut neon altyazıları ve seslendirme videoyla birleştiriliyor',
   },
   {
-    at: 94,
-    label: 'Hazır…',
-    detail: 'Videonuz kütüphanede kullanıma sunuluyor',
+    at: 98,
+    label: 'Video indiriliyor ve optimize ediliyor…',
+    detail: 'Yüksek çözünürlüklü video kütüphanenize aktarılıyor',
+  },
+  {
+    at: 110,
+    label: 'Son kontroller yapılıyor…',
+    detail: 'Videonuz birazdan hazır ve oynatılabilir olacak',
   },
 ]
 
@@ -122,7 +127,7 @@ export function useCreativeGenerationProgress(
       : isImageToImage
         ? IMAGE_TO_IMAGE_STAGES
         : TEXT_ONLY_STAGES
-    const targetDuration = isVideo ? 95 : isImageToImage ? 78 : 46
+    const targetDuration = isVideo ? 110 : isImageToImage ? 78 : 46
     startTimeRef.current = Date.now()
 
     const update = () => {
