@@ -40,14 +40,30 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Yalnızca AI üretimleri.' }, { status: 400 })
   }
   if (data.status === 'ready') {
-    return NextResponse.json({ ok: true, skipped: true })
+    const { data: full } = await supabase
+      .from('creatives')
+      .select('public_url')
+      .eq('id', id)
+      .maybeSingle()
+    return NextResponse.json({
+      ok: true,
+      ready: true,
+      skipped: true,
+      publicUrl: full?.public_url || null,
+      thumbnailUrl: null,
+    })
   }
 
   const result = await processCreativeGeneration(id, supabase)
   if (result.pending || result.busy) {
     // busy da pending olarak dön — poll loop devam etsin, spinner durmasın.
     return NextResponse.json(
-      { ok: true, pending: true, retryAfterSeconds: result.retryAfterSeconds ?? 5 },
+      {
+        ok: true,
+        pending: true,
+        retryAfterSeconds: result.retryAfterSeconds ?? 3,
+        progressInfo: result.progressInfo ?? null,
+      },
       { status: 202 },
     )
   }
@@ -64,5 +80,11 @@ export async function POST(request: Request) {
     }
     return NextResponse.json({ error: message }, { status: 502 })
   }
-  return NextResponse.json({ ok: true, skipped: result.skipped ?? false })
+  return NextResponse.json({
+    ok: true,
+    ready: true,
+    skipped: result.skipped ?? false,
+    publicUrl: result.publicUrl ?? null,
+    thumbnailUrl: result.thumbnailUrl ?? null,
+  })
 }

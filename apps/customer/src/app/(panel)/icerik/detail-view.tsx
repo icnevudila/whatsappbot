@@ -297,6 +297,15 @@ export function CreativeDetail({
 }) {
   const router = useRouter()
   const [instruction, setInstruction] = useState('')
+  type ServerProgressInfo = {
+    elapsedSeconds: number
+    remainingSeconds: number
+    progressPercent: number
+    stage: string
+    stageLabel: string
+    stageDetail: string
+  }
+
   const [reviseOpen, setReviseOpen] = useState(Boolean(openRevise))
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [tick, setTick] = useState(0)
@@ -305,13 +314,24 @@ export function CreativeDetail({
   const kicked = useRef(false)
   const [localError, setLocalError] = useState<string | null>(null)
   const [busyRender, setBusyRender] = useState(false)
+  const [livePublicUrl, setLivePublicUrl] = useState<string | null>(creative.publicUrl)
+  const [liveThumbnailUrl, setLiveThumbnailUrl] = useState<string | null>(creative.thumbnailUrl ?? null)
+  const [serverProgress, setServerProgress] = useState<ServerProgressInfo | null>(null)
+
+  const displayPublicUrl = livePublicUrl || creative.publicUrl
+  const displayThumbnailUrl = liveThumbnailUrl || creative.thumbnailUrl
+  const isReady = creative.status === 'ready' || Boolean(livePublicUrl)
   const shownError = localError || (creative.status === 'failed' ? creative.error : null)
-  const spinning = creative.status !== 'ready' && ((running && !localError) || busyRender)
+  const spinning = !isReady && ((running && !localError) || busyRender)
 
   async function requestRender(): Promise<{
     error: string | null
     pending: boolean
+    ready?: boolean
+    publicUrl?: string | null
+    thumbnailUrl?: string | null
     retryAfterSeconds?: number
+    progressInfo?: ServerProgressInfo | null
   }> {
     const response = await fetch('/api/icerik/render', {
       method: 'POST',
@@ -322,16 +342,31 @@ export function CreativeDetail({
     const json = (await response.json().catch(() => null)) as {
       ok?: boolean
       pending?: boolean
+      ready?: boolean
+      publicUrl?: string | null
+      thumbnailUrl?: string | null
       retryAfterSeconds?: number
+      progressInfo?: ServerProgressInfo | null
       error?: string
     } | null
     if (!response.ok) {
       return { error: json?.error ?? 'Görsel üretilemedi.', pending: false }
     }
     if (json?.pending || response.status === 202) {
-      return { error: null, pending: true, retryAfterSeconds: json?.retryAfterSeconds ?? 5 }
+      return {
+        error: null,
+        pending: true,
+        retryAfterSeconds: json?.retryAfterSeconds ?? 3,
+        progressInfo: json?.progressInfo ?? null,
+      }
     }
-    return { error: null, pending: false }
+    return {
+      error: null,
+      pending: false,
+      ready: true,
+      publicUrl: json?.publicUrl || null,
+      thumbnailUrl: json?.thumbnailUrl || null,
+    }
   }
 
   useEffect(() => {
@@ -346,7 +381,17 @@ export function CreativeDetail({
       setTick(0)
       return
     }
-    const timer = setInterval(() => setTick((value) => value + 1), 1000)
+    const timer = setInterval(() => {
+      setTick((value) => value + 1)
+      setServerProgress((prev) => {
+        if (!prev) return null
+        return {
+          ...prev,
+          elapsedSeconds: prev.elapsedSeconds + 1,
+          remainingSeconds: Math.max(0, prev.remainingSeconds - 1),
+        }
+      })
+    }, 1000)
     return () => clearInterval(timer)
   }, [spinning])
 
@@ -382,11 +427,25 @@ export function CreativeDetail({
           return
         }
 
-        if (res.pending) {
+        if (res.progressInfo) {
+          setServerProgress(res.progressInfo)
+        }
+
+        if (res.ready || res.publicUrl) {
+          if (res.publicUrl) setLivePublicUrl(res.publicUrl)
+          if (res.thumbnailUrl) setLiveThumbnailUrl(res.thumbnailUrl)
+          setServerProgress(null)
+          setLocalError(null)
+          setBusyRender(false)
           router.refresh()
-          const delay = (res.retryAfterSeconds || 5) * 1000
-          pollTimer = setTimeout(pollLoop, Math.max(3000, delay))
+          return
+        }
+
+        if (res.pending) {
+          const delay = (res.retryAfterSeconds || 3) * 1000
+          pollTimer = setTimeout(pollLoop, Math.max(2500, delay))
         } else {
+          setServerProgress(null)
           setLocalError(null)
           setBusyRender(false)
           router.refresh()
@@ -395,7 +454,7 @@ export function CreativeDetail({
         if (!isMounted) return
         console.warn('[detail-view] poll error:', err)
         if (Date.now() - startTime < MAX_WAIT_MS) {
-          pollTimer = setTimeout(pollLoop, 5000)
+          pollTimer = setTimeout(pollLoop, 4000)
         } else {
           setLocalError('Bağlantı hatası veya zaman aşımı.')
           setBusyRender(false)
@@ -458,21 +517,35 @@ export function CreativeDetail({
     })
   }
 
-  const isVideo = creative.format === 'video' || Boolean(creative.publicUrl?.endsWith('.mp4'))
+  const isVideo =
+    creative.format === 'video' ||
+    Boolean(creative.publicUrl?.endsWith('.mp4')) ||
+    Boolean(displayPublicUrl?.endsWith('.mp4'))
   const stages = isVideo ? VIDEO_CAMPAIGN_STAGES : DETAIL_STAGES
-  const targetDuration = isVideo ? 110 : 78
-  const remainingSeconds = Math.max(5, targetDuration - tick)
-  const remainingText =
-    tick >= targetDuration
-      ? 'Birkaç saniye içinde tamamlanıyor'
-      : `Tahmini kalan süre: ~${remainingSeconds} sn`
-  let currentStage = stages[0]
+  const targetDuration = isVideo ? 122 : 78
+
+  let stageLabel = stages[0].label
+  let stageDetail = stages[0].detail
+  let remainingSeconds = Math.max(0, targetDuration - tick)
+
   for (let i = stages.length - 1; i >= 0; i--) {
     if (tick >= stages[i].at) {
-      currentStage = stages[i]
+      stageLabel = stages[i].label
+      stageDetail = stages[i].detail
       break
     }
   }
+
+  if (serverProgress && isVideo) {
+    stageLabel = serverProgress.stageLabel
+    stageDetail = serverProgress.stageDetail
+    remainingSeconds = serverProgress.remainingSeconds
+  }
+
+  const remainingText =
+    remainingSeconds <= 0
+      ? '0 sn · Video tamamlandı, yükleniyor…'
+      : `Tahmini kalan süre: ~${remainingSeconds} sn`
 
   return (
     <div className="space-y-3">
@@ -480,8 +553,8 @@ export function CreativeDetail({
         <div className="wb-craft-panel">
           <CreativeGenerating
             title={isVideo ? 'Sinematik kampanya videosu oluşuyor' : 'Tatlı bir görsel oluşuyor'}
-            line={currentStage.label}
-            detail={`${currentStage.detail} · ${remainingText}`}
+            line={stageLabel}
+            detail={`${stageDetail} · ${remainingText}`}
           >
             <div className="wb-craft-action">
               <AccentLink
@@ -514,14 +587,15 @@ export function CreativeDetail({
         </Notice>
       ) : null}
 
-      {creative.publicUrl && creative.status === 'ready' ? (
+      {displayPublicUrl && isReady ? (
         <div className="relative overflow-visible">
           {isVideo ? (
             <div className="overflow-hidden rounded-[var(--radius-card)] border border-hairline bg-black shadow-lg">
               <video
-                src={getSafeMediaUrl(creative.publicUrl)}
-                poster={getSafeMediaUrl(creative.thumbnailUrl)}
+                src={getSafeMediaUrl(displayPublicUrl)}
+                poster={getSafeMediaUrl(displayThumbnailUrl)}
                 controls
+                autoPlay
                 playsInline
                 className="max-h-[640px] w-full object-contain"
               />
@@ -536,15 +610,15 @@ export function CreativeDetail({
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={creative.publicUrl}
+                  src={displayPublicUrl}
                   alt={creative.title ?? ''}
                   className="w-full rounded-[var(--radius-card)] object-contain"
                 />
               </button>
-              <DetailImageMenu publicUrl={creative.publicUrl} />
+              <DetailImageMenu publicUrl={displayPublicUrl} />
               <ImageLightbox
                 open={lightboxOpen}
-                src={creative.publicUrl}
+                src={displayPublicUrl}
                 alt={creative.title ?? ''}
                 onClose={() => setLightboxOpen(false)}
               />
@@ -553,7 +627,7 @@ export function CreativeDetail({
         </div>
       ) : null}
 
-      {creative.publicUrl && creative.status === 'ready' ? (
+      {displayPublicUrl && isReady ? (
         <div className={`grid gap-2 ${canManage ? 'grid-cols-2' : ''}`}>
           {canManage ? (
             <Button
@@ -567,7 +641,7 @@ export function CreativeDetail({
             </Button>
           ) : null}
           <AccentLink
-            href={`/kampanyalar/yeni?gorsel=${encodeURIComponent(creative.publicUrl)}`}
+            href={`/kampanyalar/yeni?gorsel=${encodeURIComponent(displayPublicUrl)}`}
             className="w-full !rounded-full !border-0 !bg-[#00a884] !text-white !shadow-none hover:!bg-[#008069]"
           >
             <Icon name="campaign" className="size-4" />
@@ -585,13 +659,13 @@ export function CreativeDetail({
         <p className="text-[13px]">{creative.brief}</p>
       ) : null}
 
-      {creative.status === 'ready' && canManage ? (
+      {isReady && canManage ? (
         <>
           <ReviseModal
             open={reviseOpen}
             pending={pending}
             instruction={instruction}
-            previewUrl={creative.publicUrl}
+            previewUrl={displayPublicUrl}
             onClose={() => setReviseOpen(false)}
             onInstruction={setInstruction}
             onSubmit={() =>
@@ -616,7 +690,7 @@ export function CreativeDetail({
         </>
       ) : null}
 
-      {creative.status === 'ready' && canManage ? (
+      {isReady && canManage ? (
         <section className="space-y-2 rounded-[var(--radius-card)] border border-hairline bg-surface p-3.5">
           <h2 className="text-[14px] font-bold">Varyasyon oluştur</h2>
           <div className="flex flex-wrap gap-1.5">

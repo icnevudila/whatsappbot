@@ -35,7 +35,123 @@ async function fetchBuffer(url: string): Promise<ReferenceImage | null> {
 }
 
 const STALE_RENDER_MS = 3 * 60 * 1000
-const FLOW_POLL_RETRY_SECONDS = 15
+const FLOW_POLL_RETRY_SECONDS = 3
+
+export type VideoProgressInfo = {
+  elapsedSeconds: number
+  remainingSeconds: number
+  progressPercent: number
+  stage: string
+  stageLabel: string
+  stageDetail: string
+}
+
+export function computeVideoProgress(
+  flowJob?: { queuedAt?: string | null; queuePosition?: number | null } | null,
+  jobStatus?: { status?: string; queue_position?: number; startedAt?: number; elapsed_seconds?: number } | null,
+  fallbackCreatedAt?: string | null,
+): VideoProgressInfo {
+  const now = Date.now()
+  let elapsed = 0
+
+  if (typeof jobStatus?.elapsed_seconds === 'number' && jobStatus.elapsed_seconds >= 0) {
+    elapsed = jobStatus.elapsed_seconds
+  } else if (jobStatus?.startedAt) {
+    elapsed = Math.max(0, Math.floor((now - jobStatus.startedAt) / 1000))
+  } else if (flowJob?.queuedAt) {
+    elapsed = Math.max(0, Math.floor((now - new Date(flowJob.queuedAt).getTime()) / 1000))
+  } else if (fallbackCreatedAt) {
+    elapsed = Math.max(0, Math.floor((now - new Date(fallbackCreatedAt).getTime()) / 1000))
+  }
+
+  const queuePos = jobStatus?.queue_position ?? flowJob?.queuePosition ?? 0
+  const isQueued = jobStatus?.status === 'queued' || (!jobStatus?.startedAt && queuePos > 0)
+
+  if (isQueued && queuePos > 0) {
+    const queueWait = queuePos * 120
+    const remaining = Math.max(5, queueWait + 122 - elapsed)
+    return {
+      elapsedSeconds: elapsed,
+      remainingSeconds: remaining,
+      progressPercent: Math.min(10, Math.floor((elapsed / (queueWait + 122)) * 10)),
+      stage: 'queued',
+      stageLabel: 'Önceki video tamamlanıyor, kuyrukta sıra bekleniyor…',
+      stageDetail: `Kuyruk sıranız: ${queuePos} · Yaklaşık ${queueWait} sn sonra başlayacak`,
+    }
+  }
+
+  const TOTAL_TARGET_SECONDS = 122
+
+  if (elapsed < 16) {
+    const remaining = Math.max(1, TOTAL_TARGET_SECONDS - elapsed)
+    return {
+      elapsedSeconds: elapsed,
+      remainingSeconds: remaining,
+      progressPercent: Math.min(15, Math.floor((elapsed / 16) * 15)),
+      stage: 'preparing',
+      stageLabel: 'Senaryo ve görsel kompozisyon planlanıyor…',
+      stageDetail: 'Marka kimliği, ürün açıları ve seslendirme metni kurgulanıyor',
+    }
+  }
+
+  if (elapsed < 32) {
+    const remaining = Math.max(1, TOTAL_TARGET_SECONDS - elapsed)
+    return {
+      elapsedSeconds: elapsed,
+      remainingSeconds: remaining,
+      progressPercent: Math.min(28, 15 + Math.floor(((elapsed - 16) / 16) * 13)),
+      stage: 'attaching_assets',
+      stageLabel: 'Google Veo AI video motoru başlatılıyor…',
+      stageDetail: 'Kurumsal logo ve ürün görseli sinematik sahneye bağlanıyor',
+    }
+  }
+
+  if (elapsed < 98) {
+    const remaining = Math.max(1, TOTAL_TARGET_SECONDS - elapsed)
+    const veoRatio = (elapsed - 32) / 66
+    return {
+      elapsedSeconds: elapsed,
+      remainingSeconds: remaining,
+      progressPercent: Math.min(78, 28 + Math.floor(veoRatio * 50)),
+      stage: 'veo_rendering',
+      stageLabel: 'Bulut GPU üzerinde sinematik render işleniyor…',
+      stageDetail: 'Yüksek kaliteli yapay zeka video karesi üretiliyor (~65 sn)',
+    }
+  }
+
+  if (elapsed < 108) {
+    const remaining = Math.max(1, TOTAL_TARGET_SECONDS - elapsed)
+    return {
+      elapsedSeconds: elapsed,
+      remainingSeconds: remaining,
+      progressPercent: Math.min(88, 78 + Math.floor(((elapsed - 98) / 10) * 10)),
+      stage: 'downloading',
+      stageLabel: 'Video indiriliyor ve doğrulanıyor…',
+      stageDetail: 'Yüksek çözünürlüklü video karesi işleme sunucusundan alınıyor',
+    }
+  }
+
+  if (elapsed < 122) {
+    const remaining = Math.max(1, TOTAL_TARGET_SECONDS - elapsed)
+    return {
+      elapsedSeconds: elapsed,
+      remainingSeconds: remaining,
+      progressPercent: Math.min(98, 88 + Math.floor(((elapsed - 108) / 14) * 10)),
+      stage: 'subtitling',
+      stageLabel: 'CapCut neon altyazıları ve ses miksajı senkronlanıyor…',
+      stageDetail: 'Spiker seslendirmesi ve CapCut altyazı katmanı videoya işleniyor',
+    }
+  }
+
+  return {
+    elapsedSeconds: elapsed,
+    remainingSeconds: 0,
+    progressPercent: 99,
+    stage: 'finalizing',
+    stageLabel: 'Video kütüphanenize aktarılıyor…',
+    stageDetail: 'Son kontroller yapılıyor, video yükleniyor…',
+  }
+}
 
 type FlowJobState = NonNullable<CreativePayload['flowJob']>
 
@@ -99,8 +215,12 @@ export async function processCreativeGeneration(
   skipped?: boolean
   busy?: boolean
   pending?: boolean
+  ready?: boolean
+  publicUrl?: string | null
+  thumbnailUrl?: string | null
   retryAfterSeconds?: number
   error?: string
+  progressInfo?: VideoProgressInfo | null
 }> {
   const supabase = client || createSupabaseServiceClient()
   if (!supabase) {
@@ -114,7 +234,7 @@ export async function processCreativeGeneration(
   const { data: creative } = await supabase
     .from('creatives')
     .select(
-      'id, org_id, status, payload, format, brand_kit_id, parent_id, storage_path, public_url, updated_at',
+      'id, org_id, status, payload, format, brand_kit_id, parent_id, storage_path, public_url, created_at, updated_at',
     )
     .eq('id', creativeId)
     .maybeSingle()
@@ -134,7 +254,13 @@ export async function processCreativeGeneration(
   const isVideo = creative.format === 'video' || snapshot.formatId === 'reels_video'
 
   if (creative.status === 'ready' && creative.public_url) {
-    return { ok: true, skipped: true }
+    return {
+      ok: true,
+      skipped: true,
+      ready: true,
+      publicUrl: creative.public_url,
+      thumbnailUrl: (creative.payload as any)?.thumbnailUrl || null,
+    }
   }
 
   // Flow işi HTTP isteğinin ömründen uzundur. Job kimliği DB'de tutulur ve her
@@ -156,7 +282,8 @@ export async function processCreativeGeneration(
           return { ok: false, error: message }
         }
         if (!response.ok) {
-          return { ok: true, pending: true, retryAfterSeconds: FLOW_POLL_RETRY_SECONDS }
+          const progressInfo = computeVideoProgress(flowJob, null, creative.created_at)
+          return { ok: true, pending: true, retryAfterSeconds: FLOW_POLL_RETRY_SECONDS, progressInfo }
         }
 
         const jobStatus = (await response.json()) as { status?: string; error?: string }
@@ -207,7 +334,12 @@ export async function processCreativeGeneration(
             .eq('id', creativeId)
             .eq('status', 'rendering')
           if (readyError) return { ok: false, error: readyError.message }
-          return { ok: true }
+          return {
+            ok: true,
+            ready: true,
+            publicUrl: completed.videoUrl,
+            thumbnailUrl: completed.thumbnailUrl,
+          }
         }
 
         await supabase
@@ -224,10 +356,12 @@ export async function processCreativeGeneration(
           })
           .eq('id', creativeId)
           .eq('status', 'rendering')
-        return { ok: true, pending: true, retryAfterSeconds: FLOW_POLL_RETRY_SECONDS }
+        const progressInfo = computeVideoProgress(flowJob, jobStatus, creative.created_at)
+        return { ok: true, pending: true, retryAfterSeconds: FLOW_POLL_RETRY_SECONDS, progressInfo }
       } catch (error) {
         console.warn('[creative.video.poll]', creativeId, error)
-        return { ok: true, pending: true, retryAfterSeconds: FLOW_POLL_RETRY_SECONDS }
+        const progressInfo = computeVideoProgress(flowJob, null, creative.created_at)
+        return { ok: true, pending: true, retryAfterSeconds: FLOW_POLL_RETRY_SECONDS, progressInfo }
       }
     }
 
@@ -560,7 +694,12 @@ export async function processCreativeGeneration(
             })
             .eq('id', creative.id)
           if (queueStateError) throw new Error(queueStateError.message)
-          return { ok: true, pending: true, retryAfterSeconds: FLOW_POLL_RETRY_SECONDS }
+          const progressInfo = computeVideoProgress(
+            { queuedAt: new Date().toISOString(), queuePosition: vidJson.queue_position },
+            vidJson,
+            creative.created_at,
+          )
+          return { ok: true, pending: true, retryAfterSeconds: FLOW_POLL_RETRY_SECONDS, progressInfo }
         }
 
         videoUrl = vidJson.data?.[0]?.url || vidJson.videoUrl || null
@@ -621,7 +760,7 @@ export async function processCreativeGeneration(
         .eq('org_id', creative.org_id)
 
       if (dbErr) throw new Error(dbErr.message)
-      return { ok: true }
+      return { ok: true, ready: true, publicUrl: videoUrl, thumbnailUrl: rawThumbUrl }
     }
 
     const { image, attempts } = await generateImage(prompt, aspect, bag, refs, {
