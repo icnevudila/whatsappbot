@@ -6,6 +6,7 @@ import type {
   PrimaryValue,
   VisualAffordanceAction,
 } from './schemas'
+import { resolveCreativeEnvironmentProfile } from './sector-profiles'
 
 /**
  * Universal Advertising Ontology Analyzer
@@ -17,6 +18,12 @@ export function analyzeOntology(facts: FactNormalizerOutput): OntologyClassifica
   const rawBrief = facts.verifiedFacts.rawBrief || ''
   const brief = facts.verifiedFacts.benefits.join(' ') + ' ' + facts.verifiedFacts.features.join(' ')
   const text = `${offer} ${rawBrief} ${brief} ${facts.verifiedFacts.brandName || ''} ${facts.sectorHint || ''}`.toLowerCase()
+
+  const profile = resolveCreativeEnvironmentProfile({
+    sectorHint: facts.sectorHint,
+    offerName: facts.verifiedFacts.offerName,
+    rawBrief: facts.verifiedFacts.rawBrief,
+  })
 
   // 1. Offer Type Classification
   let offerType: OfferType = 'physical_product'
@@ -38,8 +45,6 @@ export function analyzeOntology(facts: FactNormalizerOutput): OntologyClassifica
     offerType = 'venue_or_experience'
   } else if (text.match(/(oto servis|ekspertiz|kuaför|berber|kuru temizleme|nakliyat|halı yıkama|tadilat|boyacı|veteriner|bakım|servis|klinik|diş|doktor|hekim|sağlık|poliklinik|terapi|muayene|fitness|gym|spor salonu|antrenör|pilates)/)) {
     offerType = 'local_service'
-  } else if (text.match(/(tuğla|çimento|pompa|mobilya|koltuk|ayakkabı|elbise|parfüm|kulaklık|lastik|deterjan|yüzük|mücevher|saat|kablo|cihaz|makine|alet)/)) {
-    offerType = 'physical_product'
   } else if (!offer) {
     offerType = 'unknown'
   }
@@ -47,15 +52,9 @@ export function analyzeOntology(facts: FactNormalizerOutput): OntologyClassifica
   facts.verifiedFacts.offerType = offerType
 
   // 2. Proof Mode Classification
-  let proofMode: ProofMode = 'product_in_use'
+  let proofMode: ProofMode = profile.defaultProofMode || 'product_in_use'
 
-  const isAgriOrSprayer = Boolean(
-    text.match(/(tarım|ziraat|bahçe|çiftlik|ilaçlama|bağ|sera|meyve|fidan|hasat|sulama|püskürt|akülü sırt|sırt pompası|pompa)/i)
-  )
-
-  if (isAgriOrSprayer) {
-    proofMode = 'product_in_use'
-  } else if (offerType === 'digital_product_or_saas') {
+  if (offerType === 'digital_product_or_saas') {
     proofMode = 'interface_workflow'
   } else if (offerType === 'professional_service') {
     proofMode = 'human_expertise'
@@ -93,9 +92,9 @@ export function analyzeOntology(facts: FactNormalizerOutput): OntologyClassifica
   }
 
   // 4. Visual Affordance (Real tangible action)
-  let primaryAffordance: VisualAffordanceAction = 'toggle_open_close'
+  let primaryAffordance: VisualAffordanceAction = profile.defaultAffordance || 'toggle_open_close'
 
-  if (isAgriOrSprayer || text.match(/(püskürt|ilaçla|sisle|sprey|damla|su)/)) {
+  if (text.match(/(püskürt|ilaçla|sisle|sprey|damla|su)/)) {
     primaryAffordance = 'apply_spray_mist'
   } else if (offerType === 'food_or_consumable') {
     primaryAffordance = text.match(/(kes|dilim|bıçak)/) ? 'cut_slice_carve' : 'pour_drizzle_flow'

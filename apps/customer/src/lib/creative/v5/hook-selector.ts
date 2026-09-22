@@ -5,6 +5,7 @@ import type {
   HookCandidate,
   HookFamily,
 } from './schemas'
+import { resolveCreativeEnvironmentProfile } from './sector-profiles'
 
 /**
  * Dynamic Universal Hook Selector
@@ -42,15 +43,17 @@ export function selectHook(
   const benefits = facts?.verifiedFacts?.benefits || []
   const allContext = `${subject} ${rawBrief} ${features.join(' ')} ${benefits.join(' ')}`.toLowerCase()
 
-  const isAgriOrSprayer =
-    ontology.primaryAffordance === 'apply_spray_mist' ||
-    Boolean(allContext.match(/(tarım|ziraat|bahçe|çiftlik|ilaçlama|bağ|sera|meyve|fidan|hasat|sulama|püskürt|akülü sırt|sırt pompası|pompa)/i))
+  const profile = resolveCreativeEnvironmentProfile({
+    sectorHint: typeof factsOrOfferName !== 'string' ? factsOrOfferName?.sectorHint : null,
+    offerName: subject,
+    rawBrief,
+  })
 
   // 1. DYNAMIC ACTION-FOCUSED HOOK (Tangible operation / physical function)
   let actionFamily: HookFamily = 'action_begins_immediately'
   let actionDesc = ''
-  if (isAgriOrSprayer || ontology.primaryAffordance === 'apply_spray_mist') {
-    actionDesc = `Güneşli, bereketli bir meyve bahçesinde ${subject} nozülünden fışkıran mikronize ince sis bulutu ağaç yapraklarını homojen kaplarken profesyonel bahçe/tarım bakımı 0.3 saniyede devreye girer.`
+  if (profile.actionHookTemplate) {
+    actionDesc = profile.actionHookTemplate.replace(/\{subject\}/g, subject)
   } else if (ontology.primaryAffordance === 'screen_tap_filter_result' || ontology.offerType === 'digital_product_or_saas') {
     actionFamily = 'interface_event'
     actionDesc = `Minimalist arayüzde bir arama veya filtre butonuna dokunulur; filtrelenmiş ${subject} veri akışı gecikmesiz olarak ekranda listelenir.`
@@ -160,13 +163,13 @@ export function selectHook(
   // 3. DYNAMIC CURIOSITY/SCALE-FOCUSED HOOK EVALUATION
   let scaleFamily: HookFamily = 'scale_reveal'
   let scaleDesc = ''
-  if (isAgriOrSprayer) {
+  if (profile.sectorId === 'agriculture_equipment') {
     scaleFamily = 'scale_reveal'
     scaleDesc = `Güneşli geniş bir meyve bahçesinde sıra sıra dizili ağaçlar arasında ${subject} ile yapılan profesyonel bakım ilk karede kadraja girer.`
   } else if (
     ontology.proofMode === 'scale_or_inventory' ||
+    profile.sectorId === 'construction_materials' ||
     allContext.includes('tır') ||
-    allContext.includes('tuğla') ||
     allContext.includes('toptan')
   ) {
     scaleFamily = 'scale_reveal'
@@ -185,13 +188,13 @@ export function selectHook(
   let scaleRel = 5
   let scaleImp = 7
   if (
-    !isAgriOrSprayer && (
+    profile.sectorId !== 'agriculture_equipment' && (
       ontology.proofMode === 'scale_or_inventory' ||
+      profile.sectorId === 'construction_materials' ||
       allContext.includes('tır') ||
       allContext.includes('toptan') ||
       allContext.includes('ton') ||
       allContext.includes('sevkiyat') ||
-      allContext.includes('tuğla') ||
       allContext.includes('hacim')
     )
   ) {

@@ -636,7 +636,9 @@ export async function processCreativeGeneration(
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             async: true,
+            idempotencyKey: `${creative.org_id || 'org'}:${creative.id}:${(snapshot as any).requestKey || 'render'}`,
             orgId: creative.org_id,
+            creativeId: creative.id,
             prompt: videoPrompt,
             preferredEngine: 'flow',
             engine: 'flow',

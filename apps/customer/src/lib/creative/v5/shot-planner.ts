@@ -7,6 +7,7 @@ import type {
   ShotItem,
   ReferenceAssetInput,
 } from './schemas'
+import { resolveCreativeEnvironmentProfile } from './sector-profiles'
 
 export const V5_STANDARD_NEGATIVES = [
   'fake logos',
@@ -72,74 +73,40 @@ export function planShots(
       ? 'continuous_take'
       : 'three_cut')
 
-  // 2. Single Location Determination
-  let singleLocation = 'Clean, modern and sunlit commercial setting tailored to the subject'
-  const isAgriOrSprayer =
-    ontology.primaryAffordance === 'apply_spray_mist' ||
-    Boolean(facts.sectorHint?.match(/(tarım|ziraat|bahçe|çiftlik|ilaçlama|bağ|sera)/i)) ||
-    Boolean(facts.verifiedFacts.offerName?.match(/(ilaçlama|pompa|püskürt|tarım|ziraat|bahçe|akülü sırt|sırt pompası)/i)) ||
-    Boolean(facts.verifiedFacts.rawBrief?.match(/(ilaçlama|pompa|püskürt|tarım|ziraat|bahçe|meyve|fidan|hasat)/i))
+  // 2. Generic Sector & Environment Profile Resolution
+  const profile = resolveCreativeEnvironmentProfile({
+    sectorHint: facts.sectorHint,
+    offerName: facts.verifiedFacts.offerName,
+    rawBrief: facts.verifiedFacts.rawBrief,
+  })
 
-  if (isAgriOrSprayer) {
-    singleLocation = 'Sunlit fertile agricultural orchard with lush green fruit trees and natural orchard soil under warm morning sunlight'
-  } else if (ontology.offerType === 'food_or_consumable') {
-    singleLocation = 'Warm artisan kitchen presentation counter with rustic wooden textures'
-  } else if (ontology.offerType === 'digital_product_or_saas') {
-    singleLocation = 'Modern sunlit minimalist office desk with natural window light'
-  } else if (ontology.offerType === 'property_or_high_consideration_offer') {
-    singleLocation = 'Contemporary architectural living space with panoramic glass window'
-  } else if (
-    facts.sectorHint?.includes('inşaat') ||
-    facts.sectorHint?.includes('tuğla') ||
-    facts.verifiedFacts.offerName?.toLowerCase().includes('tuğla') ||
-    facts.verifiedFacts.rawBrief.toLowerCase().includes('tuğla')
-  ) {
-    singleLocation = 'Modern, immaculate brick manufacturing facility and sunlit outdoor dispatch loading yard'
-  } else if (ontology.proofMode === 'scale_or_inventory') {
-    singleLocation = 'Organized bright logistics hub and professional outdoor delivery bay'
-  } else if (ontology.offerType === 'professional_service' || ontology.offerType === 'local_service') {
-    singleLocation = 'Professional, immaculate and bright service consultation workspace'
+  // 2a. Location Determination (Generic Profile Driven)
+  let singleLocation = profile.preferredEnvironments[0] || 'Clean, modern and sunlit commercial setting tailored to the subject'
+  if (!profile.preferredEnvironments || profile.preferredEnvironments.length === 0) {
+    if (ontology.offerType === 'food_or_consumable') {
+      singleLocation = 'Warm artisan kitchen presentation counter with rustic wooden textures'
+    } else if (ontology.offerType === 'digital_product_or_saas') {
+      singleLocation = 'Modern sunlit minimalist office desk with natural window light'
+    } else if (ontology.offerType === 'property_or_high_consideration_offer') {
+      singleLocation = 'Contemporary architectural living space with panoramic glass window'
+    } else if (ontology.proofMode === 'scale_or_inventory') {
+      singleLocation = 'Organized bright logistics hub and professional outdoor delivery bay'
+    } else if (ontology.offerType === 'professional_service' || ontology.offerType === 'local_service') {
+      singleLocation = 'Professional, immaculate and bright service consultation workspace'
+    }
   }
 
-  // 2b. Brand Pillar & Color Grade (derived from sector/strategy — per SurePrompts best practice)
-  let brandPillar = `Reliable quality and professional delivery — a trusted brand in its category.`
-  let colorGradeDirective = `COLOR GRADE: Warm-neutral commercial grade, accurate product colors, clean lifted blacks — premium brand visual identity.`
-  let musicDirective = `subtle modern commercial groove starting sparse, building at midpoint, peaking on the brand reveal, then resolving to silence`
-
-  if (isAgriOrSprayer) {
-    brandPillar = `Agricultural excellence and dependable crop care — high-performance farm and garden equipment trusted by growers.`
-    colorGradeDirective = `COLOR GRADE: Vivid natural outdoor green tones, warm sunlit golden morning highlights, crisp authentic foliage textures, clean lifted shadows.`
-    musicDirective = `uplifting organic acoustic commercial rhythm with light inspiring percussion, building steadily, resolving cleanly on brand close`
-  } else if (ontology.offerType === 'food_or_consumable') {
-    brandPillar = `Freshness and craft — this product is made with care and should feel delicious and inviting.`
-    colorGradeDirective = `COLOR GRADE: Warm artisan amber tones, rich saturated food colors, soft lifted highlights — appetizing and inviting.`
-    musicDirective = `warm acoustic guitar with light percussion starting gentle, building through product interaction, resolving warmly`
-  } else if (ontology.offerType === 'digital_product_or_saas') {
-    brandPillar = `Precision and ease — this platform removes friction and makes complex work feel effortless.`
-    colorGradeDirective = `COLOR GRADE: Cool-neutral with clean whites and precise midtones — modern tech-product visual identity.`
-    musicDirective = `minimal electronic motif, clean and forward-moving, entering at product reveal and building confidently`
-  } else if (
-    facts.sectorHint?.includes('inşaat') ||
-    facts.sectorHint?.includes('tuğla') ||
-    facts.verifiedFacts.offerName?.toLowerCase().includes('tuğla') ||
-    facts.verifiedFacts.rawBrief.toLowerCase().includes('tuğla')
-  ) {
-    brandPillar = `Industrial strength and reliable delivery — this brand is the structural backbone of serious construction projects.`
-    colorGradeDirective = `COLOR GRADE: Warm industrial amber, rich earth tones, deep material textures, documentary-grade lifted blacks — conveying strength, scale and reliability.`
-    musicDirective = `post-industrial orchestral groove with driving percussion, building from sparse at opening to full-bodied at product hero reveal, resolving on brand close`
-  } else if (strategy.primary === 'scale_and_availability' || ontology.proofMode === 'scale_or_inventory') {
-    brandPillar = `Scale and dependability — this brand delivers at volume with consistent quality and speed.`
-    colorGradeDirective = `COLOR GRADE: Bold warm-neutral commercial grade, strong material textures, clean highlights — conveying industrial capability and reliability.`
-    musicDirective = `confident commercial rhythm building steadily from opening, peaking during product action, resolving cleanly on brand close`
-  }
+  // 2b. Brand Pillar & Color Grade (Generic Profile Driven)
+  const brandPillar = profile.brandPillar || `Reliable quality and professional delivery — a trusted brand in its category.`
+  const colorGradeDirective = profile.colorGradeDirective || `COLOR GRADE: Warm-neutral commercial grade, accurate product colors, clean lifted blacks — premium brand visual identity.`
+  const musicDirective = profile.musicDirective || `subtle modern commercial groove starting sparse, building at midpoint, peaking on the brand reveal, then resolving to silence`
 
   // 3. Three Shot Kadraj Setup (Adapts to camera mode)
   const isContinuous = cameraMode === 'continuous_take'
 
-  let shot1Action = `${hook.visualEventDescription} A real professional person (clear recognizable face, industry-appropriate attire, confident purposeful body language) is actively and prominently visible in the foreground engaging with the product or activity.`
-  if (isAgriOrSprayer) {
-    shot1Action = `Outdoors in a sunlit green agricultural orchard or lush garden with ripe fruit trees. A professional grower wearing practical outdoor attire is actively operating the spraying equipment (${subject}), with a fine, even mist spray visible in the morning sunlight over vibrant foliage. Absolutely NO warehouse, NO concrete loading docks, NO delivery trucks.`
-  }
+  const shot1Action = profile.preferredUsageContext[0]
+    ? profile.preferredUsageContext[0].replace(/\{subject\}/g, subject)
+    : `${hook.visualEventDescription} A real professional person (clear recognizable face, industry-appropriate attire, confident purposeful body language) is actively and prominently visible in the foreground engaging with the product or activity.`
 
   const shot1: ShotItem = {
     shotNumber: 1,
@@ -155,15 +122,10 @@ export function planShots(
     lightingAndPhysics: 'Natural daylight with soft specular highlights, shallow depth of field (f/1.8)',
   }
 
-  // Dynamic Shot 2 Action tailored to sector/offer
-  let shot2Action = `The focal subject (${subject}) performs its core verified function smoothly in realistic physical environment.`
-  if (facts.verifiedFacts.offerName?.toLowerCase().includes('tuğla') || facts.verifiedFacts.rawBrief.toLowerCase().includes('tuğla')) {
-    shot2Action = `Uniform shrink-wrapped pallets of high-grade construction material (${subject}) are loaded smoothly by an active yellow forklift in the sunlit factory yard, highlighting structural durability and stock volume.`
-  } else if (isAgriOrSprayer || ontology.primaryAffordance === 'apply_spray_mist') {
-    shot2Action = `The equipment (${subject}) operates smoothly outdoors among verdant orchard trees, releasing an ultra-fine micronized mist spray evenly over fruit tree leaves with crisp sunlight catching the mist droplets.`
-  } else if (ontology.offerType === 'digital_product_or_saas') {
-    shot2Action = `The digital platform (${subject}) performs live radar business scanning on a premium laptop screen with clean glowing pin indicators. The laptop rests firmly stationary and flat on the desk with zero rotation or spinning. The laptop hardware is completely sterile and unbranded with a completely blank black matte screen bezel, zero laptop manufacturer logos, zero text on screen frame or hinge.`
-  }
+  // Dynamic Shot 2 Action tailored via Profile
+  const shot2Action = profile.preferredUsageContext[1]
+    ? profile.preferredUsageContext[1].replace(/\{subject\}/g, subject)
+    : `The focal subject (${subject}) performs its core verified function smoothly in realistic physical environment.`
 
   const shot2: ShotItem = {
     shotNumber: 2,
@@ -183,10 +145,7 @@ export function planShots(
     ? ` In the concluding framing (5.8s - 8.0s, lasting a full continuous 2.2 seconds), the camera settles directly and steadily on the authentic brand mark "${brandName}" and original corporate logo. The brand name and logo are prominently displayed at an easily readable size on the focal physical surface (product casing, clean engraved metal plaque, or corporate entrance). Fully visible and centered: zero rapid rotation, zero extreme perspective, zero motion blur, zero harsh glare, completely unobstructed by hands or objects.`
     : ''
 
-  let shot3SubjectAction = `The subject (${subject}) rests in pristine final state, delivering quiet confidence and commercial prestige.${brandHeroAction}`
-  if (isAgriOrSprayer) {
-    shot3SubjectAction = `The equipment (${subject}) is showcased in crystal-clear hero framing outdoors against the lush green orchard background with healthy foliage.${brandHeroAction}`
-  }
+  const shot3SubjectAction = `The subject (${subject}) rests in pristine final state, delivering quiet confidence and commercial prestige.${brandHeroAction}`
 
   const shot3: ShotItem = {
     shotNumber: 3,
@@ -226,22 +185,14 @@ export function planShots(
     ? `CAMERA MOVEMENT: continuous_take - Single unbroken slow forward push-in route maintained across all 8.0 seconds at uniform velocity with zero trajectory changes and zero scene interruption.`
     : `CAMERA MOVEMENT: three_cut - Three distinct controlled camera framings connected by clean cinematic cut transitions.`
 
-  const isAyvaz = brand.toLowerCase().includes('ayvazoğlu') || brand.toLowerCase().includes('ayvazoglu');
-  const logoDetail = isAyvaz
-    ? ' (minimalist red line-art roof symbol with central upward arrow, and bold uppercase text: "AYVAZOĞLU")'
-    : '';
-
-  let brandSurface = 'prominent, clean, large brushed steel entrance plaque or office reception sign'
-  if (isAgriOrSprayer) {
-    brandSurface = 'clean durable badge on the equipment casing or sleek branded garden field marker'
-  }
+  const brandSurface = 'clean durable surface on the product casing or polished entrance plaque'
 
   const brandRevealDirective = brandName
-    ? `MANDATORY VISUAL BRAND IDENTITY (5.8s - 8.0s): The verified brand name "${brandName}" and authentic corporate logo mark${logoDetail} are mandatory on-screen visual elements directly in the video. In the final framing (5.8s - 8.0s), the camera settles rock-steadily on the authentic logo and bold letters: "${isAyvaz ? 'AYVAZOĞLU' : brandName}" displayed prominently on ${brandSurface}. Rock-steady framing, centered at eye level: zero camera shake, zero rapid rotation, zero motion blur, zero distorted letters.`
+    ? `MANDATORY VISUAL BRAND IDENTITY (5.8s - 8.0s): The verified brand name "${brandName}" and authentic corporate logo mark are mandatory on-screen visual elements directly in the video. In the final framing (5.8s - 8.0s), the camera settles rock-steadily on the authentic logo and bold letters: "${brandName}" displayed prominently on ${brandSurface}. Rock-steady framing, centered at eye level: zero camera shake, zero rapid rotation, zero motion blur, zero distorted letters.`
     : null
 
-  const negativeConstraints = isAgriOrSprayer
-    ? `${V5_STANDARD_NEGATIVES}, warehouse, storage facility, logistics center, factory interior, shipping pallets, cardboard boxes, delivery trucks, concrete loading dock, industrial forklift, indoor loading bay, shipping containers, asphalt parking lot`
+  const negativeConstraints = profile.forbiddenEnvironments && profile.forbiddenEnvironments.length > 0
+    ? `${V5_STANDARD_NEGATIVES}, ${profile.forbiddenEnvironments.join(', ')}`
     : V5_STANDARD_NEGATIVES
 
   // 7. Assemble Technical Veo English Prompt
@@ -250,11 +201,7 @@ export function planShots(
     `BRAND PILLAR AND EMOTIONAL INTENT: ${brandPillar} Every visual, lighting, and audio choice should serve this emotional intent directly.`,
     `SUBJECT AND REFERENCE LOCK: Focal subject is "${subject}". ${
       facts.assets.productReference
-        ? 'A reference product photo is provided; preserve physical geometry, materials, casing, and colors exactly with zero mutation.' + (
-            (subject.toLowerCase().includes('tuğla') || facts.verifiedFacts.rawBrief.toLowerCase().includes('tuğla'))
-              ? ' Specifically, the hero product is a perforated hollow clay brick with core rectangular air chambers on top and vertical ribbed fluting on side walls; DO NOT generate solid stone or unperforated bricks.'
-              : ''
-          )
+        ? 'A reference product photo is provided; preserve physical geometry, materials, casing, and colors exactly with zero mutation.'
         : 'Realistic physical proportions and authentic material textures.'
     }`,
     `LOCATION: ${singleLocation}. Strict continuity: single unbroken location, identical lighting setup, zero scene jumping.`,

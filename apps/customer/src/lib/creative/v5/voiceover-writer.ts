@@ -479,10 +479,10 @@ export function writeVoiceover(
   const brand = facts.verifiedFacts.brandName
   const rawSubject = facts.verifiedFacts.offerName || 'çözüm'
   
-  // Prevent brand/product repetitive collision (e.g. Brand "Ayvazoğlu Tuğla", Subject "Killi Cephe Tuğlası")
+  // Prevent brand/product repetitive collision (e.g. Subject begins with identical brand tokens)
   let subject = rawSubject
-  if (brand && brand.toLowerCase().includes('tuğla') && subject.toLowerCase().startsWith('killi cephe tuğlası')) {
-    subject = 'killi cephe tuğlaları'
+  if (brand && subject.toLowerCase().startsWith(brand.toLowerCase())) {
+    subject = subject.slice(brand.length).trim() || subject
   }
 
   const discount = facts.verifiedFacts.discount

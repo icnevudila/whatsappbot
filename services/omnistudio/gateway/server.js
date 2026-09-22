@@ -425,6 +425,7 @@ class VideoJobQueue {
     this.activeCount = 0;
     this.queue = [];
     this.jobs = new Map();
+    this.idempotencyMap = new Map(); // idempotencyKey -> jobId
   }
 
   // Durum endpoint'i uzun kuyruktaki bir işi bulmak zorunda. Eski uygulama
@@ -439,14 +440,41 @@ class VideoJobQueue {
 
     for (const [id] of finished) {
       if (this.jobs.size <= maxHistory) break;
+      const j = this.jobs.get(id);
+      if (j && j.idempotencyKey) {
+        this.idempotencyMap.delete(j.idempotencyKey);
+      }
       this.jobs.delete(id);
     }
   }
 
+  findJobByIdempotencyKey(key) {
+    if (!key) return null;
+    const normKey = String(key).trim();
+    const jobId = this.idempotencyMap.get(normKey);
+    if (!jobId) return null;
+    const job = this.jobs.get(jobId);
+    if (!job) {
+      this.idempotencyMap.delete(normKey);
+      return null;
+    }
+    // Eğer iş başarısız olmuşsa (failed), kullanıcının tekrar denemesine izin ver (retry)
+    if (job.status === 'failed') {
+      return null;
+    }
+    // Eğer iş tamamlanmışsa ve üzerinden 20 dakika geçmişse yeni üretime izin ver
+    if (job.status === 'completed' && Date.now() - (job.completedAt || 0) > 20 * 60 * 1000) {
+      return null;
+    }
+    return this.getJob(jobId);
+  }
+
   createJob(meta = {}) {
     const id = meta.jobId || ('vjob_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7));
+    const idempotencyKey = meta.idempotencyKey ? String(meta.idempotencyKey).trim() : null;
     const job = {
       id,
+      idempotencyKey,
       attemptCount: 0,
       attemptId: null,
       workerId: null,
@@ -465,6 +493,9 @@ class VideoJobQueue {
       errorCode: null,
     };
     this.jobs.set(id, job);
+    if (idempotencyKey) {
+      this.idempotencyMap.set(idempotencyKey, id);
+    }
     this.pruneFinishedJobs();
     return job;
   }
@@ -943,7 +974,28 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
-      // 1.3. Değişmez İş Enstantanesi (Immutable Job Snapshot)
+      // 1.3. Idempotency Check & Değişmez İş Enstantanesi (Immutable Job Snapshot)
+      const idempotencyKey = body.idempotencyKey || body.idempotency_key || req.headers['idempotency-key'] || req.headers['x-idempotency-key'] || null;
+
+      if (idempotencyKey) {
+        const existingJob = videoQueue.findJobByIdempotencyKey(idempotencyKey);
+        if (existingJob) {
+          console.log(`[Gateway Video] ⚡ Idempotency Hit! [${idempotencyKey}] -> Mevcut İş [${existingJob.id}], Durum: ${existingJob.status}`);
+          return sendJson(res, existingJob.status === 'completed' ? 200 : 202, {
+            ok: true,
+            job_id: existingJob.id,
+            idempotent: true,
+            status: existingJob.status,
+            queue_position: existingJob.queue_position,
+            status_url: `http://localhost:${PORT}/v1/videos/status/${existingJob.id}`,
+            outputUrl: existingJob.result?.outputUrl || existingJob.result?.publicUrl || null,
+            flowProjectId: existingJob.flowProjectId,
+            flowProjectUrl: existingJob.flowProjectUrl,
+            sha256: existingJob.sha256,
+          });
+        }
+      }
+
       const isAsync = body.async === true || req.headers['x-async'] === 'true';
       const initialJobId = body.jobId || ('vjob_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7));
       const jobSnapshot = brandRegistry.createJobSnapshot({
@@ -960,6 +1012,7 @@ const server = http.createServer(async (req, res) => {
 
       const job = videoQueue.createJob({
         jobId: initialJobId,
+        idempotencyKey,
         orgId,
         brandName,
         productName: body.productName,
@@ -967,7 +1020,7 @@ const server = http.createServer(async (req, res) => {
       });
       const jobId = job.id;
 
-      console.log(`[Gateway] Yeni Video Talebi Kuyruğa Alındı [${jobId}] (Org: ${orgId}, Async: ${isAsync}): "${prompt.slice(0, 55)}..." (Kuyruk: ${videoQueue.queue.length} bekliyor, ${videoQueue.activeCount} aktif)`);
+      console.log(`[Gateway] Yeni Video Talebi Kuyruğa Alındı [${jobId}] (Org: ${orgId}, IdempotencyKey: ${idempotencyKey || 'yok'}, Async: ${isAsync}): "${prompt.slice(0, 55)}..." (Kuyruk: ${videoQueue.queue.length} bekliyor, ${videoQueue.activeCount} aktif)`);
       try {
         const videoOptions = {
           prompt,

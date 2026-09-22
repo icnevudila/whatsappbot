@@ -47,6 +47,7 @@ class TenantBrandRegistry {
       tone: Array.isArray(manifest.tone) ? manifest.tone : [manifest.tone || 'professional'],
       required_terms: Array.isArray(manifest.required_terms) ? manifest.required_terms : [],
       forbidden_brand_ids: Array.isArray(manifest.forbidden_brand_ids) ? manifest.forbidden_brand_ids : [],
+      creative_environment_profile: manifest.creative_environment_profile || manifest.sector_profile || null,
       version: manifest.version || 1,
       created_at: manifest.created_at || new Date().toISOString(),
       updated_at: new Date().toISOString()
