@@ -108,3 +108,4 @@ tests/*.jpg
 tests/*.ts
 tests/*.mjs
 services/omnistudio/gateway/outputs/
+services/omnistudio/gateway/*.cjs

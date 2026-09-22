@@ -93,6 +93,38 @@ function enhancePrompt(rawPrompt, options = {}) {
   return prompt;
 }
 
+// Generic Tenant-Aware Brand Manifest & Registry
+const {
+  brandRegistry,
+  initializeTenantRegistry,
+} = require('./brand_manifest.js');
+
+initializeTenantRegistry(OUTPUT_DIR);
+
+const AUDIT_LOG_PATH = path.join(OUTPUT_DIR, 'audit_security_events.json');
+const memoryAuditEvents = [];
+
+function recordAuditEvent(eventData) {
+  const entry = {
+    timestamp: Date.now(),
+    iso: new Date().toISOString(),
+    ...eventData
+  };
+  memoryAuditEvents.push(entry);
+  if (memoryAuditEvents.length > 500) memoryAuditEvents.shift();
+  try {
+    let existing = [];
+    if (fs.existsSync(AUDIT_LOG_PATH)) {
+      try { existing = JSON.parse(fs.readFileSync(AUDIT_LOG_PATH, 'utf-8')); } catch (_) {}
+    }
+    existing.push(entry);
+    if (existing.length > 1000) existing = existing.slice(-1000);
+    fs.writeFileSync(AUDIT_LOG_PATH, JSON.stringify(existing, null, 2));
+  } catch (err) {
+    console.warn('[Audit] Event kaydedilemedi:', err.message);
+  }
+}
+
 // Gelişmiş Kuyruk Yöneticisi
 class AdvancedJobQueue {
   constructor() {
@@ -412,16 +444,25 @@ class VideoJobQueue {
   }
 
   createJob(meta = {}) {
-    const id = 'vjob_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+    const id = meta.jobId || ('vjob_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7));
     const job = {
       id,
+      attemptCount: 0,
+      attemptId: null,
+      workerId: null,
+      orgId: meta.orgId || null,
+      brandName: meta.brandName || null,
       status: 'queued',
       enqueuedAt: Date.now(),
       startedAt: null,
       completedAt: null,
+      flowProjectId: null,
+      flowProjectUrl: null,
+      sha256: null,
       meta,
       result: null,
       error: null,
+      errorCode: null,
     };
     this.jobs.set(id, job);
     this.pruneFinishedJobs();
@@ -447,15 +488,7 @@ class VideoJobQueue {
   enqueue(taskFn, jobId = null) {
     const id = jobId || ('vjob_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7));
     if (!this.jobs.has(id)) {
-      this.jobs.set(id, {
-        id,
-        status: 'queued',
-        enqueuedAt: Date.now(),
-        startedAt: null,
-        completedAt: null,
-        result: null,
-        error: null,
-      });
+      this.createJob({ jobId: id });
     }
 
     return new Promise((resolve, reject) => {
@@ -467,6 +500,9 @@ class VideoJobQueue {
           if (j) {
             j.status = 'completed';
             j.completedAt = Date.now();
+            j.flowProjectId = val?.flowProjectId || j.flowProjectId || null;
+            j.flowProjectUrl = val?.flowProjectUrl || j.flowProjectUrl || null;
+            j.sha256 = val?.sha256 || j.sha256 || null;
             j.result = val;
           }
           resolve(val);
@@ -477,6 +513,7 @@ class VideoJobQueue {
             j.status = 'failed';
             j.completedAt = Date.now();
             j.error = err?.message || String(err);
+            j.errorCode = err?.code || 'VIDEO_GENERATION_FAILED';
           }
           reject(err);
         },
@@ -495,17 +532,25 @@ class VideoJobQueue {
     const item = this.queue.shift();
     const waitSeconds = Math.round((Date.now() - item.enqueuedAt) / 1000);
     const job = this.jobs.get(item.jobId);
+
+    // ✨ attempt_id ve worker_id claim anında dinamik olarak atanır
     if (job) {
       job.status = 'processing';
       job.startedAt = Date.now();
+      job.attemptCount = (job.attemptCount || 0) + 1;
+      job.attemptId = `${job.id}_att${job.attemptCount}`;
+      job.workerId = `worker_${os.hostname().slice(0, 8)}_cdp_${Date.now().toString(36)}`;
     }
 
     if (waitSeconds > 1) {
-      console.log(`[VideoQueue] ⏳ Sıradaki video görevi işleme alınıyor [${item.jobId}] (Kuyruk bekleme: ${waitSeconds}s, Kuyrukta bekleyen: ${this.queue.length})`);
+      console.log(`[VideoQueue] ⏳ Sıradaki video görevi işleme alınıyor [${item.jobId}] (Attempt: ${job?.attemptId}, Worker: ${job?.workerId}, Kuyruk bekleme: ${waitSeconds}s, Kuyrukta bekleyen: ${this.queue.length})`);
     }
 
     try {
-      const result = await item.taskFn();
+      const result = await item.taskFn({
+        attemptId: job?.attemptId,
+        workerId: job?.workerId,
+      });
       item.resolve(result);
     } catch (err) {
       item.reject(err);
@@ -809,11 +854,120 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 400, { error: { message: 'Prompt alanı zorunludur.', type: 'invalid_request_error' } });
       }
 
+      // 1. Immutable Job Snapshot & Tenant Validation Gate
+      const orgId = body.orgId || body.org_id || 'org_default';
+      const brandName = body.brandName || body.brandKit?.name || null;
+
+      // Yeni firma veya marka adı geldiğinde kendi promptunu yabancı görmemesi için önceden kaydet
+      if (brandName && !brandRegistry.getManifest(orgId)) {
+        brandRegistry.registerManifest({
+          org_id: orgId,
+          brand_name: brandName,
+          allowed_brand_names: [brandName]
+        });
+      }
+
+      // 1.1. Generic Prompt Validation (Zero hardcoded brand names)
+      try {
+        brandRegistry.validatePromptAgainstRegistry(prompt, orgId);
+      } catch (promptErr) {
+        console.warn(`[Gateway Video] 🛑 Prompt Negative Gate Tetiklendi: [${promptErr.code}] ${promptErr.message}`);
+        recordAuditEvent({
+          event: 'NEGATIVE_GATE_REJECTION',
+          code: promptErr.code,
+          message: promptErr.message,
+          org_id: orgId,
+          brand_name: brandName,
+          offending_brand: promptErr.offending_brand,
+          foreign_org: promptErr.foreign_org,
+          prompt_snippet: prompt.slice(0, 100),
+        });
+        return sendJson(res, promptErr.statusCode || 400, {
+          error: {
+            code: promptErr.code,
+            message: promptErr.message,
+            type: 'invalid_request_error'
+          }
+        });
+      }
+
+      // 1.2. Generic Asset Ownership Validation (Tenant-Scoped Assets)
+      const assetsToCheck = [
+        body.logoUrl ? { url: body.logoUrl, sha256: body.logoSha256 || body.logo_sha256, org_id: body.logoOrgId || body.logo_org_id } : null,
+        body.productImageUrl ? { url: body.productImageUrl, sha256: body.productSha256 || body.product_asset_sha256, org_id: body.productOrgId || body.product_org_id } : null,
+        ...(Array.isArray(body.referenceImageUrls) ? body.referenceImageUrls.map(u => ({ url: u })) : []),
+        ...(Array.isArray(body.assets) ? body.assets : [])
+      ].filter(Boolean);
+
+      // Explicit assetOrgId mismatch
+      const incomingAssetOrgId = body.assetOrgId || body.asset_org_id;
+      if (incomingAssetOrgId && orgId && String(incomingAssetOrgId).trim() !== String(orgId).trim()) {
+        const err = new Error(`ASSET_ORG_MISMATCH: Talebe eklenen görsel varlık kurumu (${incomingAssetOrgId}) ile işin ait olduğu kurum (${orgId}) uyuşmuyor.`);
+        recordAuditEvent({
+          event: 'NEGATIVE_GATE_REJECTION',
+          code: 'ASSET_ORG_MISMATCH',
+          message: err.message,
+          org_id: orgId,
+          foreign_org: incomingAssetOrgId
+        });
+        return sendJson(res, 400, {
+          error: {
+            code: 'ASSET_ORG_MISMATCH',
+            message: err.message,
+            type: 'invalid_request_error'
+          }
+        });
+      }
+
+      for (const assetRef of assetsToCheck) {
+        try {
+          brandRegistry.validateAssetOwnership(assetRef, orgId);
+        } catch (assetErr) {
+          console.warn(`[Gateway Video] 🛑 Asset Negative Gate Tetiklendi: [${assetErr.code}] ${assetErr.message}`);
+          recordAuditEvent({
+            event: 'NEGATIVE_GATE_REJECTION',
+            code: assetErr.code,
+            message: assetErr.message,
+            org_id: orgId,
+            offending_hash: assetErr.offending_hash,
+            offending_url: assetErr.offending_url,
+            foreign_org: assetErr.foreign_org
+          });
+          return sendJson(res, assetErr.statusCode || 400, {
+            error: {
+              code: assetErr.code,
+              message: assetErr.message,
+              type: 'invalid_request_error'
+            }
+          });
+        }
+      }
+
+      // 1.3. Değişmez İş Enstantanesi (Immutable Job Snapshot)
       const isAsync = body.async === true || req.headers['x-async'] === 'true';
-      const job = videoQueue.createJob({ brandName: body.brandName, productName: body.productName });
+      const initialJobId = body.jobId || ('vjob_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7));
+      const jobSnapshot = brandRegistry.createJobSnapshot({
+        jobId: initialJobId,
+        orgId,
+        brandName,
+        prompt,
+        logoUrl: body.logoUrl,
+        logoSha256: body.logoSha256 || body.logo_sha256,
+        productImageUrl: body.productImageUrl,
+        productSha256: body.productSha256 || body.product_asset_sha256,
+        referenceImageUrls: body.referenceImageUrls || []
+      });
+
+      const job = videoQueue.createJob({
+        jobId: initialJobId,
+        orgId,
+        brandName,
+        productName: body.productName,
+        snapshot: jobSnapshot
+      });
       const jobId = job.id;
 
-      console.log(`[Gateway] Yeni Video Talebi Kuyruğa Alındı [${jobId}] (Async: ${isAsync}): "${prompt.slice(0, 55)}..." (Kuyruk: ${videoQueue.queue.length} bekliyor, ${videoQueue.activeCount} aktif)`);
+      console.log(`[Gateway] Yeni Video Talebi Kuyruğa Alındı [${jobId}] (Org: ${orgId}, Async: ${isAsync}): "${prompt.slice(0, 55)}..." (Kuyruk: ${videoQueue.queue.length} bekliyor, ${videoQueue.activeCount} aktif)`);
       try {
         const videoOptions = {
           prompt,
@@ -834,8 +988,8 @@ const server = http.createServer(async (req, res) => {
           logoUrl: body.logoUrl || null,
           customer: body.customer || null,
           port: body.port || null,
-          preferredEngine: body.preferredEngine || body.engine || (body.useFlow ? 'flow' : null),
-          engine: body.engine || body.preferredEngine || null,
+          preferredEngine: body.preferredEngine || body.engine || 'flow',
+          engine: body.engine || body.preferredEngine || 'flow',
           videoType: body.videoType || null,
           variationIndex: body.variationIndex !== undefined ? body.variationIndex : null,
           variationId: body.variationId || null,
@@ -844,16 +998,43 @@ const server = http.createServer(async (req, res) => {
           jobId,
         };
 
-        const taskRunner = async () => {
+        const taskRunner = async ({ attemptId, workerId } = {}) => {
+          const runOpts = {
+            ...videoOptions,
+            attemptId,
+            workerId,
+            onStateFlush: ({ flowProjectId, flowProjectUrl, rawFileName, duration, sha256, status }) => {
+              const j = videoQueue.jobs.get(jobId);
+              if (j) {
+                j.flowProjectId = flowProjectId;
+                j.flowProjectUrl = flowProjectUrl;
+                j.sha256 = sha256;
+              }
+              try {
+                fs.writeFileSync(path.join(OUTPUT_DIR, `job_${jobId}_state.json`), JSON.stringify({
+                  jobId,
+                  attemptId,
+                  workerId,
+                  flowProjectId,
+                  flowProjectUrl,
+                  rawFileName,
+                  duration,
+                  sha256,
+                  updatedAt: new Date().toISOString()
+                }, null, 2));
+              } catch (_) {}
+            }
+          };
+
           const useOfficialApiOnly = process.env.USE_OFFICIAL_API === 'true' || body.useOfficialApi === true;
           if (useOfficialApiOnly) {
             const { generateVideoViaOfficialApi } = require('./video_api_fallback.js');
-            return await generateVideoViaOfficialApi(videoOptions);
+            return await generateVideoViaOfficialApi(runOpts);
           }
 
           try {
             const { generateVideo } = require('./generate_video.js');
-            return await generateVideo(videoOptions);
+            return await generateVideo(runOpts);
           } catch (browserErr) {
             console.warn(`[Gateway Video] ⚠️ Tarayıcı botu video üretiminde hata aldı: ${browserErr.message}`);
 
@@ -862,7 +1043,7 @@ const server = http.createServer(async (req, res) => {
               const { isApiFallbackConfigured, generateVideoViaOfficialApi } = require('./video_api_fallback.js');
               if (isApiFallbackConfigured()) {
                 console.log(`[Gateway Video] 🔄 Otomatik Sigorta: Resmi REST Video API motoruna devrediliyor...`);
-                return await generateVideoViaOfficialApi(videoOptions);
+                return await generateVideoViaOfficialApi(runOpts);
               }
             } catch (fallbackErr) {
               console.error(`[Gateway Video Fallback Hata]`, fallbackErr);
@@ -908,11 +1089,36 @@ const server = http.createServer(async (req, res) => {
           flowProjectUrl: result.flowProjectUrl || null,
           sha256: result.sha256 || null,
           jobId: result.jobId || jobId,
+          attemptId: result.attemptId || job.attemptId,
+          workerId: result.workerId || job.workerId,
+          inputAssets: result.inputAssets || [],
         });
       } catch (err) {
         console.error('[Gateway Video Hata]', err);
-        return sendJson(res, 500, { error: { message: err.message, type: 'video_generation_error' } });
+        const statusCode = err.statusCode || 500;
+        recordAuditEvent({
+          event: 'JOB_EXECUTION_ERROR',
+          job_id: jobId,
+          code: err.code || 'VIDEO_GENERATION_ERROR',
+          message: err.message,
+          stack: err.stack ? err.stack.slice(0, 300) : null
+        });
+        return sendJson(res, statusCode, {
+          error: {
+            message: err.message,
+            code: err.code || 'video_generation_error',
+            type: 'video_generation_error'
+          }
+        });
       }
+    }
+
+    // 1.0.0.0. Güvenlik ve Denetim Kayıtları: GET /v1/videos/audit
+    if (method === 'GET' && (pathname === '/v1/videos/audit' || pathname === '/videos/audit')) {
+      return sendJson(res, 200, {
+        total: memoryAuditEvents.length,
+        events: memoryAuditEvents.slice(-100).reverse()
+      });
     }
 
     // 1.0.0. Video Kuyruğu Durumu: GET /v1/videos/queue

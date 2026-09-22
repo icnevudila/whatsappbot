@@ -13,11 +13,15 @@ const WebSocket = globalThis.WebSocket || (() => {
  */
 function verifyVideoFile(filePath, minDurationSec = 3.0, minBytes = 300000) {
   if (!fs.existsSync(filePath)) {
-    throw new Error(`Video doğrulama hatası: Dosya diske yazılamadı (${filePath})`);
+    const err = new Error(`FILE_VALIDATION_FAILED: Dosya diske yazılamadı (${filePath})`);
+    err.code = 'FILE_VALIDATION_FAILED';
+    throw err;
   }
   const stat = fs.statSync(filePath);
   if (stat.size < minBytes) {
-    throw new Error(`Video doğrulama hatası: Dosya boyutu çok küçük (${stat.size} bytes, beklenen min: ${minBytes})`);
+    const err = new Error(`FILE_VALIDATION_FAILED: Dosya boyutu çok küçük (${stat.size} bytes, beklenen min: ${minBytes})`);
+    err.code = 'FILE_VALIDATION_FAILED';
+    throw err;
   }
 
   try {
@@ -40,11 +44,13 @@ function verifyVideoFile(filePath, minDurationSec = 3.0, minBytes = 300000) {
     };
   } catch (err) {
     if (err.message.includes('Video süresi çok kısa') || err.message.includes('Video doğrulama hatası')) {
+      err.code = 'FILE_VALIDATION_FAILED';
       throw err;
     }
-    console.warn(`[Flow Video] ffprobe doğrulama uyarısı:`, err.message);
-    const sha256 = crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
-    return { valid: true, size: stat.size, duration: 10.0, sha256 };
+    console.error(`[Flow Video] 🛑 ffprobe doğrulama hatası (Dosya bozuk veya geçersiz):`, err.message);
+    const customErr = new Error(`FILE_VALIDATION_FAILED: ffprobe video formatını doğrulayamadı veya dosya bozuk: ${err.message}`);
+    customErr.code = 'FILE_VALIDATION_FAILED';
+    throw customErr;
   }
 }
 
@@ -140,14 +146,18 @@ async function resolveLocalMediaFiles(options = {}) {
   const targetDir = fs.existsSync(OUTPUT_DIR) ? OUTPUT_DIR : (os.tmpdir ? os.tmpdir() : '/tmp');
 
   // 4. Dosyaları yerel dosya yoluna indir veya doğrula
+  const jid = options.jobId || ('vjob_' + Date.now());
   for (let idx = 0; idx < candidateItems.length; idx++) {
     const item = candidateItems[idx];
     try {
       if (item.b64) {
         const raw = item.b64.includes(',') ? item.b64.split(',')[1] : item.b64;
-        const tmpPath = path.join(targetDir, `video_b64_${Date.now()}_${idx}.png`);
-        fs.writeFileSync(tmpPath, Buffer.from(raw, 'base64'));
-        files.push({ role: item.role, path: tmpPath, fileName: path.basename(tmpPath), toString() { return this.path; } });
+        const buf = Buffer.from(raw, 'base64');
+        const sha256 = crypto.createHash('sha256').update(buf).digest('hex');
+        const tmpPath = path.join(targetDir, `video_b64_${jid}_${idx}_${sha256.slice(0, 8)}.png`);
+        fs.writeFileSync(tmpPath, buf);
+        files.push({ role: item.role, path: tmpPath, fileName: path.basename(tmpPath), sha256, toString() { return this.path; } });
+        console.log(`[VideoGen] 💾 Somut görsel base64 yazıldı (${item.role}): ${tmpPath} (SHA256: ${sha256.slice(0, 12)}...)`);
       } else if (item.url) {
         let strUrl = item.url.trim();
         // Supabase relative storage path ise public URL'e çevir
@@ -160,12 +170,13 @@ async function resolveLocalMediaFiles(options = {}) {
           const res = await fetch(strUrl, { signal: AbortSignal.timeout(12000) });
           if (res.ok) {
             const buf = Buffer.from(await res.arrayBuffer());
+            const sha256 = crypto.createHash('sha256').update(buf).digest('hex');
             const extMatch = strUrl.match(/\.(png|jpg|jpeg|webp)/i);
             const ext = extMatch ? extMatch[1].toLowerCase() : 'png';
-            const tmpPath = path.join(targetDir, `video_media_${Date.now()}_${idx}.${ext}`);
+            const tmpPath = path.join(targetDir, `video_media_${jid}_${idx}_${sha256.slice(0, 8)}.${ext}`);
             fs.writeFileSync(tmpPath, buf);
-            files.push({ role: item.role, path: tmpPath, fileName: path.basename(tmpPath), toString() { return this.path; } });
-            console.log(`[VideoGen] 💾 Somut görsel diske yazıldı (${item.role}): ${tmpPath} (${buf.length} bytes)`);
+            files.push({ role: item.role, path: tmpPath, fileName: path.basename(tmpPath), sha256, toString() { return this.path; } });
+            console.log(`[VideoGen] 💾 Somut görsel diske yazıldı (${item.role}): ${tmpPath} (${buf.length} bytes, SHA256: ${sha256.slice(0, 12)}...)`);
           } else {
             console.warn(`[VideoGen] ⚠️ Görsel indirilemedi (${res.status} ${res.statusText}): ${strUrl}`);
             if (options.requireMedia === true) {
@@ -185,8 +196,10 @@ async function resolveLocalMediaFiles(options = {}) {
           let matched = false;
           for (const cand of localCandidates) {
             if (fs.existsSync(cand) && fs.statSync(cand).isFile()) {
-              files.push({ role: item.role, path: cand, fileName: path.basename(cand), toString() { return this.path; } });
-              console.log(`[VideoGen] 📁 Yerel somut dosya eşleşti (${item.role}): ${cand}`);
+              const fileBuf = fs.readFileSync(cand);
+              const sha256 = crypto.createHash('sha256').update(fileBuf).digest('hex');
+              files.push({ role: item.role, path: cand, fileName: path.basename(cand), sha256, toString() { return this.path; } });
+              console.log(`[VideoGen] 📁 Yerel somut dosya eşleşti (${item.role}): ${cand} (SHA256: ${sha256.slice(0, 12)}...)`);
               matched = true;
               break;
             }
@@ -1139,9 +1152,9 @@ async function checkPortLoggedIn(port, tab) {
  * 1. Hesabı dener; kota sınırındaysa anında 2. hesaba, sonra 3. ve 4. hesaba devreder.
  */
 async function generateVideo(options) {
-  // Eğer kullanıcı veya sistem doğrudan Google Flow (Veo 3.1) tercih ettiyse doğrudan Flow'u çalıştır!
-  if (options.preferredEngine === 'flow' || options.engine === 'flow' || options.useFlow) {
-    console.log(`[VideoGen] 🎯 Kullanıcı tercihi doğrultusunda Google Flow (Veo 3.1) motoru doğrudan seçildi.`);
+  // Eğer kullanıcı veya sistem Google Flow (Veo 3.1) tercih ettiyse veya Gemini açıkça istenmediyse doğrudan Flow'u çalıştır!
+  if (options.preferredEngine === 'flow' || options.engine === 'flow' || options.useFlow || options.preferredEngine !== 'gemini') {
+    console.log(`[VideoGen] 🎯 Google Flow (Veo 3.1) izole motoru devrede.`);
     return await generateVideoOnFlow(options);
   }
 
@@ -1387,8 +1400,11 @@ async function generateVideoOnFlow(options = {}) {
     }
 
     if (!isolatedProjectUrl) {
-      console.warn(`[Flow Video] ⚠️ Yeni proje yönlendirmesi alınamadı, yedek proje kullanılıyor.`);
-      isolatedProjectUrl = 'https://flow.google.com/project/6b718bdf-9bf3-44c3-8b65-4c8f9110c8c5';
+      try { ws.close(); } catch (_) {}
+      try { await fetch(`http://127.0.0.1:${port}/json/close/${tab.id}`); } catch (_) {}
+      const projErr = new Error(`PROJECT_CREATION_FAILED: Google Flow üzerinde bu işe özel izole proje açılamadı (+ New project yönlendirmesi başarısız).`);
+      projErr.code = 'PROJECT_CREATION_FAILED';
+      throw projErr;
     } else {
       console.log(`[Flow Video] 🔒 İZOLE PROJE AÇILDI: ${isolatedProjectUrl} (ID: ${isolatedProjectId})`);
       if (typeof options.onProjectCreated === 'function') {
@@ -1892,18 +1908,25 @@ async function generateVideoOnFlow(options = {}) {
                 document.querySelector('video[src]') ||
                 document.querySelector('video');
       const allVideos = Array.from(document.querySelectorAll('video')).map(el => el.currentSrc || el.src || '');
+      const tiles = Array.from(document.querySelectorAll('flow-grid-tile-container, .tile, flow-tile, flow-media-tile, div[class*="tile"]'));
+      const tileHandles = tiles.map((el, idx) => {
+        const vid = el.querySelector('video');
+        return el.getAttribute('data-id') || el.id || vid?.currentSrc || (el.innerText || '').slice(0, 30) || ('idx_' + idx);
+      });
       return {
         currentSrc: v ? (v.currentSrc || v.src || '') : '',
         allSrcs: allVideos.filter(Boolean),
-        tileCount: document.querySelectorAll('.tile, flow-tile, flow-media-tile, div[class*="tile"]').length
+        tileCount: tiles.length,
+        tileHandles: tileHandles
       };
     })()`,
     returnByValue: true
   });
   const initialVideoSrc = pregenMediaInfo?.result?.value?.currentSrc || '';
   const initialKnownSrcs = new Set(pregenMediaInfo?.result?.value?.allSrcs || []);
+  const initialTileHandles = new Set(pregenMediaInfo?.result?.value?.tileHandles || []);
   const initialTileCount = pregenMediaInfo?.result?.value?.tileCount || 0;
-  console.log(`[Flow Video] 🔎 Üretim öncesi mevcut video src: ${initialVideoSrc.slice(0, 60)}... (${initialKnownSrcs.size} bilinen video, ${initialTileCount} tile)`);
+  console.log(`[Flow Video] 🔎 Üretim öncesi mevcut video src: ${initialVideoSrc.slice(0, 60)}... (${initialKnownSrcs.size} bilinen video, ${initialTileCount} tile, ${initialTileHandles.size} handle)`);
 
   // 3. Üretimi başlat butonuna tıkla (Hem DOM hem CDP)
   console.log(`[Flow Video] 🚀 Üretim başlatma butonuna tıklanıyor:`, readyState.button.rect);
@@ -1999,16 +2022,26 @@ async function generateVideoOnFlow(options = {}) {
     }
   } catch(_) {}
 
-  // 5.7 Yeni üretilen en son tile'ı seç (odakla)
+  // 5.7 Yeni üretilen izole tile'ı belirteç/handle bazında bul ve seç
   try {
     await send('Runtime.evaluate', {
       expression: `(() => {
+        const knownHandles = new Set(${JSON.stringify(Array.from(initialTileHandles))});
+        const knownSrcs = new Set(${JSON.stringify(Array.from(initialKnownSrcs))});
         const tiles = Array.from(document.querySelectorAll('flow-grid-tile-container, .tile, flow-tile, flow-media-tile, div[class*="tile"], div[class*="virtual-item"]'));
-        if (tiles.length > 0) {
-          const lastTile = tiles[tiles.length - 1];
-          lastTile.scrollIntoView({ behavior: 'instant', block: 'center' });
-          lastTile.click();
-          const videoEl = lastTile.querySelector('video');
+        
+        // Önce bu üretim sırasında oluşan yeni tile'ı handle bazında bul (DOM sırasına bağımlı değil)
+        const targetTile = tiles.find((el, idx) => {
+          const vid = el.querySelector('video');
+          const h = el.getAttribute('data-id') || el.id || vid?.currentSrc || (el.innerText || '').slice(0, 30) || ('idx_' + idx);
+          const s = vid?.currentSrc || '';
+          return (!knownHandles.has(h) && (!s || !knownSrcs.has(s)));
+        }) || tiles[tiles.length - 1];
+
+        if (targetTile) {
+          targetTile.scrollIntoView({ behavior: 'instant', block: 'center' });
+          targetTile.click();
+          const videoEl = targetTile.querySelector('video');
           if (videoEl) videoEl.click();
         }
       })()`
@@ -2296,10 +2329,6 @@ async function generateVideoOnFlow(options = {}) {
     }
   }
 
-  // İndirme bittikten sonra tab'ı kapat
-  try { ws.close(); } catch(e){}
-  try { await fetch(`http://127.0.0.1:${port}/json/close/${tab.id}`); } catch(e){}
-
   if (!capturedDirectly) {
     const candidateNames = [suggestedFilename, 'download', 'download.mp4'].filter(Boolean);
     for (const name of candidateNames) {
@@ -2351,16 +2380,37 @@ async function generateVideoOnFlow(options = {}) {
     try { fs.rmSync(jobDownloadDir, { recursive: true, force: true }); } catch (_) {}
   }
 
-    // 🛡️ SIKI İZOLASYON & DOĞRULAMA KONTROLÜ
-    // Ortak dizinden rastgele video arama mantığı tamamen kaldırıldı.
-    // Video yalnızca bu işe ait izole dizinden çıkmalı ve ffprobe doğrulamalarından geçmelidir.
-    if (!fs.existsSync(rawPath)) {
-      throw new Error(`Google Flow video dosyası bu işe ait izole dizine indirilemedi (${rawFileName}). İndirme başarısız.`);
-    }
+  // 🛡️ SIKI İZOLASYON & DOĞRULAMA KONTROLÜ
+  // Video yalnızca bu işe ait izole dizinden çıkmalı ve ffprobe doğrulamalarından geçmelidir.
+  if (!fs.existsSync(rawPath)) {
+    try { ws.close(); } catch (_) {}
+    try { await fetch(`http://127.0.0.1:${port}/json/close/${tab.id}`); } catch (_) {}
+    throw new Error(`Google Flow video dosyası bu işe ait izole dizine indirilemedi (${rawFileName}). İndirme başarısız.`);
+  }
 
-    // 🔒 FFPROBE & SHA-256 DOĞRULAMASI (Bozuk veya eksik dosyaları anında eler)
-    const verification = verifyVideoFile(rawPath);
-    console.log(`[Flow Video] 🔒 Video bütünlük doğrulaması BAŞARILI: Süre=${verification.duration}s, Boyut=${(verification.size / 1024 / 1024).toFixed(2)} MB, SHA256=${verification.sha256}`);
+  // 🔒 FFPROBE & SHA-256 DOĞRULAMASI (Bozuk veya eksik dosyaları anında eler)
+  const verification = verifyVideoFile(rawPath);
+  console.log(`[Flow Video] 🔒 Video bütünlük doğrulaması BAŞARILI: Süre=${verification.duration}s, Boyut=${(verification.size / 1024 / 1024).toFixed(2)} MB, SHA256=${verification.sha256}`);
+
+  // 💾 STATE FLUSH: Flow sekmesini kapatmadan önce final state ve URL'lerin kaydedildiğini garanti et!
+  if (typeof options.onStateFlush === 'function') {
+    try {
+      options.onStateFlush({
+        flowProjectId: isolatedProjectId,
+        flowProjectUrl: isolatedProjectUrl,
+        rawFileName,
+        duration: verification.duration,
+        sha256: verification.sha256,
+        status: 'verified'
+      });
+    } catch (flushErr) {
+      console.warn('[Flow Video] onStateFlush uyarısı:', flushErr.message);
+    }
+  }
+
+  // Doğrulama ve State Flush tamamlandıktan sonra Flow sekmesini güvenle kapat
+  try { ws.close(); } catch(e){}
+  try { await fetch(`http://127.0.0.1:${port}/json/close/${tab.id}`); } catch(e){}
 
 
   // 8.1 Otonom Nöral Türkçe Seslendirme / Natif Veo Sesi + Milisaniyelik CapCut Altyazı
@@ -2521,6 +2571,9 @@ async function generateVideoOnFlow(options = {}) {
     flowProjectUrl: isolatedProjectUrl,
     sha256: (typeof verification !== 'undefined' && verification?.sha256) ? verification.sha256 : null,
     jobId: String(jobId),
+    attemptId: options.attemptId || 'att_1',
+    workerId: options.workerId || 'worker_cdp',
+    inputAssets: (filesToUpload || []).map(f => ({ role: f.role, sha256: f.sha256, fileName: f.fileName })),
   };
 }
 
@@ -3255,7 +3308,7 @@ function getAccountPoolStatus() {
     };
 
     const remainingSec = isLimited ? Math.max(0, Math.round((info.limitedUntil - now) / 1000)) : 0;
-    const flowProjectUrl = cfgAcc.flowProjectUrl || (port === 9222 ? 'https://flow.google.com/project/6b718bdf-9bf3-44c3-8b65-4c8f9110c8c5' : null);
+    const flowProjectUrl = cfgAcc.flowProjectUrl || null;
     const flowCredits = cfgAcc.flowCredits ?? (port === 9222 ? 1020 : 1050);
     const flowInitialCredits = cfgAcc.flowInitialCredits ?? 1050;
 
@@ -3292,7 +3345,7 @@ function getAiEngineStatus() {
       port: a.port,
       accountName: a.name,
       email: a.email,
-      projectUrl: a.flowProjectUrl || (a.port === 9222 ? 'https://flow.google.com/project/6b718bdf-9bf3-44c3-8b65-4c8f9110c8c5' : null),
+      projectUrl: a.flowProjectUrl || null,
       credits: creds,
       initialCredits: initCreds,
       videosRemaining: Math.floor(creds / 15),
@@ -3336,7 +3389,7 @@ function getAiEngineStatus() {
       license: 'PRO',
       accountName: activeFlowAccounts.map(a => a.accountName).join(' + ') || primaryFlow.accountName || 'Ali Düvenci (Pro)',
       projectName: 'Çoklu Google Flow Havuzu',
-      projectUrl: primaryFlow.projectUrl || 'https://flow.google.com/project/6b718bdf-9bf3-44c3-8b65-4c8f9110c8c5',
+      projectUrl: primaryFlow.projectUrl || null,
       initialCredits: totalFlowInitialCredits,
       credits: totalFlowCredits,
       creditsPerVideo: 15,
@@ -3368,5 +3421,6 @@ module.exports = {
   updateAccountFlow,
   autoDetectFlowProject,
   syncAccountCookies,
-  updateAccountSlot
+  updateAccountSlot,
+  verifyVideoFile
 };
