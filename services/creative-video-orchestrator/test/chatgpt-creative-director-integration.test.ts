@@ -13,7 +13,7 @@ test('Integration Test: Product + Logo -> Director -> 3 Concepts -> Selection ->
     {
       asset_id: 'bofe_hero_01',
       org_id: 'tenant_bofe_real',
-      sha256: '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
+      sha256: 'fd99aabb97b39bb3d0557def0f45725d1e7917203777121e775d99d4c71f8e4c',
       role: 'hero_product',
       canonical_handle: '@HeroProduct',
       file_path: '/shared/outputs/inputs/tenant_bofe_real/bofe_sprayer.png',
@@ -29,7 +29,7 @@ test('Integration Test: Product + Logo -> Director -> 3 Concepts -> Selection ->
     {
       asset_id: 'bofe_logo_01',
       org_id: 'tenant_bofe_real',
-      sha256: '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8',
+      sha256: '0576350c4d92212bd8c219b4b095cf3bc2060302b978753549ad1d3d95c4d8e8',
       role: 'logo',
       canonical_handle: '@BrandLogo',
       file_path: '/shared/outputs/inputs/tenant_bofe_real/bofe_logo.png',

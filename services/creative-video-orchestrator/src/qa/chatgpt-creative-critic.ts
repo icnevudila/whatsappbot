@@ -79,6 +79,8 @@ export class ChatGPTCreativeCritic {
       plan.on_screen_copy?.benefit_or_proof || '',
     ].join(' ').toLowerCase()
 
+    const allSpokenText = plan.master_spoken_script || plan.voiceover_script || ''
+
     // Subtle marketing & technical performance claims that strictly require source provenance
     const subtleMarketingKeywords = [
       'yüksek verim', 'high efficiency', 'verimli',
@@ -140,8 +142,8 @@ export class ChatGPTCreativeCritic {
     }
 
     // D. Check Too Many Slogans (Heuristic: > 4 isolated exclamation sentences)
-    const sentences = allSpokenText.split(/[.!?]+/).filter(s => s.trim().length > 0)
-    const shortSlogans = sentences.filter(s => s.trim().split(/\s+/).length <= 3)
+    const sentences = (allSpokenText || '').split(/[.!?]+/).filter((s: string) => s.trim().length > 0)
+    const shortSlogans = sentences.filter((s: string) => s.trim().split(/\s+/).length <= 3)
     if (shortSlogans.length >= 4) {
       failureCodes.push('TOO_MANY_SLOGANS')
       issues.push('Metin katalog sloganları yığını gibi; doğal konuşma omurgası (voice-as-spine) eksik.')

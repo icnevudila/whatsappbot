@@ -18,7 +18,7 @@ function buildTestContext(overrides?: Partial<CreativeContext>): CreativeContext
     {
       asset_id: 'prod_bofe_hero',
       org_id: 'org_bofe',
-      sha256: '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
+      sha256: 'fd99aabb97b39bb3d0557def0f45725d1e7917203777121e775d99d4c71f8e4c',
       role: 'hero_product',
       canonical_handle: '@HeroProduct',
       file_path: '/assets/bofe_sprayer.png',
@@ -33,7 +33,7 @@ function buildTestContext(overrides?: Partial<CreativeContext>): CreativeContext
     {
       asset_id: 'logo_bofe',
       org_id: 'org_bofe',
-      sha256: '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8',
+      sha256: '0576350c4d92212bd8c219b4b095cf3bc2060302b978753549ad1d3d95c4d8e8',
       role: 'logo',
       canonical_handle: '@BrandLogo',
       file_path: '/assets/bofe_logo.png',
@@ -108,7 +108,7 @@ test('Creative Director sees real multimodal asset references with provenance', 
 
   const hero = context.asset_manifest.attachments.find(a => a.canonical_handle === '@HeroProduct')
   assert.ok(hero, '@HeroProduct must be in attachments')
-  assert.strictEqual(hero?.sha256, '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08')
+  assert.strictEqual(hero?.sha256, 'fd99aabb97b39bb3d0557def0f45725d1e7917203777121e775d99d4c71f8e4c')
   assert.strictEqual(hero?.visual_attributes?.visible_handles, true)
 })
 
@@ -270,12 +270,12 @@ test('AssetEqualityGate verifies creative_asset_sha == flow_asset_sha and fails 
     {
       asset_id: 'prod_bofe_hero',
       role: 'hero_product',
-      sha256: '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
+      sha256: 'fd99aabb97b39bb3d0557def0f45725d1e7917203777121e775d99d4c71f8e4c',
     },
     {
       asset_id: 'logo_bofe',
       role: 'logo',
-      sha256: '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8',
+      sha256: '0576350c4d92212bd8c219b4b095cf3bc2060302b978753549ad1d3d95c4d8e8',
     },
   ]
   const passCheck = AssetEqualityGate.verifyEquality(creativeAttachments, matchingFlow)
@@ -291,7 +291,7 @@ test('AssetEqualityGate verifies creative_asset_sha == flow_asset_sha and fails 
     {
       asset_id: 'logo_bofe',
       role: 'logo',
-      sha256: '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8',
+      sha256: '0576350c4d92212bd8c219b4b095cf3bc2060302b978753549ad1d3d95c4d8e8',
     },
   ]
   const failCheck = AssetEqualityGate.verifyEquality(creativeAttachments, driftedFlow)
