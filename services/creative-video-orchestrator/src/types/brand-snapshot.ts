@@ -51,6 +51,8 @@ export interface CampaignFacts {
   target_audience?: string
   approved_spoken_line?: string
   user_style_preference?: string
+  environment_preset?: string
+  motion_style?: string
   subtitles?: 'auto' | 'off'
 }
 

@@ -47,9 +47,12 @@ export function CreativeWizard({
   
   // Step 2: Campaign & Format Router
   const [adFormat, setAdFormat] = useState<AdFormatType>('AUTO')
+  const [environmentPreset, setEnvironmentPreset] = useState<'auto' | 'garden' | 'studio' | 'kitchen' | 'office' | 'workshop' | 'construction'>('auto')
+  const [motionStyle, setMotionStyle] = useState<'studio_orbit' | 'real_usage' | 'macro_detail'>('studio_orbit')
   const [offerDetails, setOfferDetails] = useState('')
   const [creativeNote, setCreativeNote] = useState('')
   const [subtitles, setSubtitles] = useState(true)
+  const [uploadingExtra, setUploadingExtra] = useState(false)
 
   // Step 3: AI Creative Plan & Continuous 0-8s Speech Timeline
   const [creativeIdea, setCreativeIdea] = useState('')
@@ -255,6 +258,8 @@ export function CreativeWizard({
           productName: activeProductName,
           productDescription: selectedProduct?.description || '',
           adFormat,
+          environmentPreset,
+          motionStyle,
           revisionType: type,
           offerDetails,
           creativeNote,
@@ -289,11 +294,18 @@ export function CreativeWizard({
         brief: creativeIdea,
         adFormat,
         userStylePreference: adFormat,
+        environmentPreset,
+        motionStyle,
         subtitles: subtitles ? 'auto' : 'off',
         promotionType,
         creativeIdea,
         speechTimeline,
         veoPrompt: veoPromptPreview,
+        metadata: {
+          ad_format: adFormat,
+          environment_preset: environmentPreset,
+          motion_style: motionStyle,
+        },
         authoritativeFacts: {
           brand_name: data.org.name || 'İşletmemiz',
           product_name: activeProductName,
@@ -776,15 +788,64 @@ export function CreativeWizard({
                         </div>
                       </div>
 
-                      {/* Ek Görseller */}
+                      {/* Ek Görseller / Referanslar Yükleme Alanı */}
                       <div className="flex items-center gap-2.5 rounded-lg border border-hairline bg-white p-2">
                         <span className="flex size-9 items-center justify-center rounded bg-[#e7f8f2] text-[11px] font-bold text-[#008069]">
-                          +{extraReferenceUrls.length}
+                          {extraReferenceUrls.length}
                         </span>
                         <div className="min-w-0 flex-1">
                           <p className="text-[11px] font-semibold text-[#111b21]">Ek Referanslar</p>
                           <p className="text-[10px] text-[#667781]">{extraReferenceUrls.length} görsel ekli</p>
                         </div>
+                      </div>
+                    </div>
+
+                    {/* Ek Görsel / Açı Yükleme Bileşeni */}
+                    <div className="rounded-lg border border-hairline bg-white p-3 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-[12px] font-semibold text-[#111b21]">Ek Ürün Açıları ve Referanslar (İsteğe bağlı)</p>
+                          <p className="text-[11px] text-[#667781]">Farklı açı, detay veya kullanım görselleri ekleyebilirsiniz (En fazla 3 adet).</p>
+                        </div>
+                        <span className="text-[11px] font-medium text-[#008069] bg-[#e7f8f2] px-2 py-0.5 rounded">
+                          {extraReferenceUrls.length}/3 ekli
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        {extraReferenceUrls.map((url, idx) => (
+                          <div key={idx} className="relative group size-12 rounded-md border border-hairline overflow-hidden bg-white">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={url} alt={`Referans ${idx + 1}`} className="h-full w-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => setExtraReferenceUrls((prev) => prev.filter((_, i) => i !== idx))}
+                              className="absolute inset-0 bg-black/60 text-white text-[11px] font-semibold opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer"
+                              title="Görseli Kaldır"
+                            >
+                              Kaldır
+                            </button>
+                          </div>
+                        ))}
+
+                        {extraReferenceUrls.length < 3 ? (
+                          <FileUploadButton
+                            accept="image/png,image/jpeg,image/webp"
+                            uploading={uploadingExtra}
+                            label="+ Ek Görsel Yükle"
+                            onFile={async (file) => {
+                              setUploadingExtra(true)
+                              const form = new FormData()
+                              form.append('file', file)
+                              const res = await uploadAssetOnly(form, 'products')
+                              setUploadingExtra(false)
+                              const newUrl = res?.publicUrl
+                              if (typeof newUrl === 'string' && newUrl) {
+                                setExtraReferenceUrls((prev) => [...prev, newUrl])
+                              }
+                            }}
+                          />
+                        ) : null}
                       </div>
                     </div>
 
@@ -858,6 +919,36 @@ export function CreativeWizard({
                         placeholder="Örn: Sabah gün ışığı kullanılsın, fabrika içi üretim anı gösterilsin"
                       />
                     </Field>
+
+                    <div className="grid gap-3 sm:grid-cols-2 pt-1">
+                      <Field label="Çekim Ortamı (Mekan)">
+                        <select
+                          value={environmentPreset}
+                          onChange={(e) => setEnvironmentPreset(e.target.value as any)}
+                          className="w-full rounded-lg border border-[#e9edef] bg-white px-3 py-2 text-[13px] text-[#111b21] focus:border-[#008069] focus:outline-none"
+                        >
+                          <option value="auto">Otomatik (Ürün ve firmaya göre en uygun ortam)</option>
+                          <option value="garden">Doğal Bahçe, Tarla ve Sera (Açık Doğa)</option>
+                          <option value="studio">Prestijli Reklam Stüdyosu (Döner Tabla & Vitrin)</option>
+                          <option value="kitchen">Restoran, Mutfak ve Kafe (Gıda ve Sunum)</option>
+                          <option value="office">Modern Ofis ve İç Mekan</option>
+                          <option value="workshop">Atölye, Fabrika ve Sanayi</option>
+                          <option value="construction">İnşaat ve Yapı Sahası</option>
+                        </select>
+                      </Field>
+
+                      <Field label="Kamera ve Fizik Tarzı">
+                        <select
+                          value={motionStyle}
+                          onChange={(e) => setMotionStyle(e.target.value as any)}
+                          className="w-full rounded-lg border border-[#e9edef] bg-white px-3 py-2 text-[13px] text-[#111b21] focus:border-[#008069] focus:outline-none"
+                        >
+                          <option value="studio_orbit">Stüdyo Vitrin & 360° Detay (Maksimum Geometri / Sıfır Bozulma)</option>
+                          <option value="real_usage">Sahada Gerçek Kullanım Anı</option>
+                          <option value="macro_detail">Yakın Çekim & Malzeme Detayı</option>
+                        </select>
+                      </Field>
+                    </div>
 
                     <label className="flex items-center gap-2 pt-1 text-[13px] font-medium text-[#111b21] cursor-pointer">
                       <input

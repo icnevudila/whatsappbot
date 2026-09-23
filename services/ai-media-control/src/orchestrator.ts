@@ -648,6 +648,8 @@ async function runCreativeVideoExecution(
       cta: job.metadata?.cta || 'Daha Fazla Bilgi Edinin',
       target_audience: 'Commercial',
       user_style_preference: job.metadata?.user_style_preference || job.metadata?.ad_format || 'AUTO',
+      environment_preset: job.metadata?.environment_preset || 'auto',
+      motion_style: job.metadata?.motion_style || 'studio_orbit',
       subtitles: job.metadata?.subtitles || 'auto',
     },
     aspect_ratio: (job.aspect_ratio || '9:16') as any,

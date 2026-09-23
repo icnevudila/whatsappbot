@@ -591,7 +591,40 @@ export class RealCreativeModelProvider implements ICreativeModelProvider {
     let productHeroAction = `${heroProduct} gerçek kullanım ortamında, kusursuz detayları ve işlevsel performansıyla sergilenir.`
     let lightingStyle = 'Doğal gün ışığı ile dengeli sıcak aydınlatma.'
 
-    if (textCorpus.match(/(tarım|bahçe|sera|ilaçlama|bağ|hasat|çiftlik|pompa|bitki|fidan|toprak|tarla|zeytin)/)) {
+    const userEnv = (snapshot.campaign as any)?.environment_preset
+    const userMotion = (snapshot.campaign as any)?.motion_style
+
+    if (userEnv === 'garden') {
+      sector = 'tarım ve bahçe'
+      environment = 'Güneşli, taze ve verimli bir meyve bahçesi, yeşil tarla ve modern sera ortamı; doğal açık hava gün ışığı ve canlı yeşil yapraklar.'
+      productHeroAction = `${heroProduct} meyve bahçesinde ve yeşil bitkiler arasında verimli ve ergonomik ilaçlama yaparken kusursuz püskürtme detaylarıyla sergilenir.`
+      lightingStyle = 'Doğal parlak gün ışığı, ferah açık hava atmosferi.'
+    } else if (userEnv === 'studio') {
+      sector = 'prestijli stüdyo'
+      environment = 'Prestijli reklam stüdyosu, yansıtıcı podyum ve döner stant; kontrollü yumuşak stüdyo ışıklandırması ve minimalist temiz arka plan.'
+      productHeroAction = `${heroProduct} stüdyo podyumu üzerinde 360 derece akıcı dönerken kusursuz yüzey kalitesi ve katı malzeme geometrisiyle sergilenir.`
+      lightingStyle = 'Dengeli profesyonel reklam stüdyosu ışığı.'
+    } else if (userEnv === 'kitchen') {
+      sector = 'gıda ve restoran'
+      environment = 'Temiz, modern ve iştah açıcı şık restoran mutfağı ve sunum alanı; sıcak ve davetkar atmosfer.'
+      productHeroAction = `${heroProduct} taze malzemeler ve ustalıkla hazırlanmış enfes sunumuyla iştah kabartan detaylarla sergilenir.`
+      lightingStyle = 'Sıcak ve iştah açıcı profesyonel yemek çekimi aydınlatması.'
+    } else if (userEnv === 'office') {
+      sector = 'ofis ve teknoloji'
+      environment = 'Çağdaş kurumsal ofis ve şık showroom iç mekanı; ferah ve aydınlık tasarım.'
+      productHeroAction = `${heroProduct} modern çalışma alanında şık duruşu ve işlevselliğiyle sergilenir.`
+      lightingStyle = 'Aydınlık ve ferah modern iç mekan ışığı.'
+    } else if (userEnv === 'workshop') {
+      sector = 'sanayi ve imalat'
+      environment = 'Yüksek standartlı atölye ve üretim tesisi; düzenli ve dinamik üretim alanı.'
+      productHeroAction = `${heroProduct} üretim sahasında sağlam yapısı ve kesintisiz performansıyla sergilenir.`
+      lightingStyle = 'Net endüstriyel aydınlatma.'
+    } else if (userEnv === 'construction') {
+      sector = 'inşaat ve yapı'
+      environment = 'Profesyonel inşaat ve yapı sahası; düzenli, güvenli ve dinamik çalışma alanı.'
+      productHeroAction = `${heroProduct} şantiye alanında yüksek dayanıklılık ve birinci sınıf malzeme kalitesiyle sergilenir.`
+      lightingStyle = 'Doğal gün ışığı ile net endüstriyel aydınlatma.'
+    } else if (textCorpus.match(/(tarım|bahçe|sera|ilaçlama|bağ|hasat|çiftlik|pompa|bitki|fidan|toprak|tarla|zeytin)/)) {
       sector = 'tarım ve bahçe'
       environment = 'Güneşli, taze ve verimli bir meyve bahçesi, yeşil tarla ve modern sera ortamı; doğal açık hava gün ışığı ve canlı yeşil yapraklar.'
       productHeroAction = `${heroProduct} meyve bahçesinde ve yeşil bitkiler arasında verimli ve ergonomik ilaçlama yaparken kusursuz püskürtme detaylarıyla sergilenir.`
@@ -613,13 +646,23 @@ export class RealCreativeModelProvider implements ICreativeModelProvider {
       lightingStyle = 'Yumuşak difüze stüdyo moda aydınlatması.'
     }
 
+    let cameraLanguage = '35mm sinematik lens, akıcı takip ve derinlikli odaklama.'
+    let motionRhythm = 'Kararlı, kendinden emin ve ticari güven aşılayan akış.'
+    if (userMotion === 'studio_orbit') {
+      cameraLanguage = 'Tripod ve mekanik dolly üzerinde sabit akıcı 360 derece dairesel dönüş, sıfır sarsıntı.'
+      motionRhythm = 'Tamamen katı ve rijit cisim geometrisi, esneme ve deformasyon olmaksızın pürüzsüz dönüş.'
+    } else if (userMotion === 'macro_detail') {
+      cameraLanguage = 'Makro sinematik lens, mekanik parçalara, tuşlara ve yüzey dokusuna yakın odaklanma.'
+      motionRhythm = 'Hassas ve yavaş ileri süzülüş, kusursuz netlik.'
+    }
+
     return {
       hook: `Dinamik ve dikkat çekici bir açılışla ${brand} kalitesi ve ${sector} sektöründeki uzmanlığı öne çıkarılır.`,
       productHeroAction,
       environment,
-      cameraLanguage: '35mm sinematik lens, akıcı takip ve derinlikli odaklama.',
+      cameraLanguage,
       lightingStyle,
-      motionRhythm: 'Kararlı, kendinden emin ve ticari güven aşılayan akış.',
+      motionRhythm,
       audioDirection: 'Otantik ortam sesleri (foley) ile desteklenen temiz ve profesyonel seslendirme.',
       closingCTAIntent: 'Kamera ürüne odaklanarak yumuşak ve kendinden emin bir şekilde yavaşlar, temiz sinematik kapanış sunulur.',
     }

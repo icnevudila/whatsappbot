@@ -22,6 +22,8 @@ export async function POST(req: NextRequest) {
       productName = 'Ürünümüz',
       productDescription = '',
       adFormat = 'AUTO' as AdFormatType,
+      environmentPreset = 'auto',
+      motionStyle = 'studio_orbit',
       revisionType = 'refresh',
       offerDetails = '',
       creativeNote = '',
@@ -148,24 +150,60 @@ export async function POST(req: NextRequest) {
       ]
     }
 
-    // 2. Veo Deterministic Prompt Generation
+    // 2. Veo Deterministic Prompt Generation with Environment & Physics Guarantees
+    let envDescription = 'Authentic commercial operational setting with natural lighting'
+    if (environmentPreset === 'garden') {
+      envDescription = 'Vibrant sunlit agricultural orchard, lush green field and greenhouse with natural daylight and fresh plant leaves'
+    } else if (environmentPreset === 'studio') {
+      envDescription = 'Prestigious commercial studio turntable showroom with sleek reflective surface, controlled dramatic softbox lighting, clean backdrop'
+    } else if (environmentPreset === 'kitchen') {
+      envDescription = 'Immaculate modern gourmet kitchen and restaurant dining display with warm inviting ambiance'
+    } else if (environmentPreset === 'office') {
+      envDescription = 'Contemporary executive corporate office and retail showroom with sleek minimalist design'
+    } else if (environmentPreset === 'workshop') {
+      envDescription = 'High-end manufacturing workshop and industrial facility with clean dynamic work floor'
+    } else if (environmentPreset === 'construction') {
+      envDescription = 'Professional architectural jobsite with organized construction area'
+    } else {
+      // Auto: detect from keywords
+      const textCorpus = `${brandName} ${productName} ${productDescription}`.toLowerCase()
+      if (textCorpus.match(/(tarım|bahçe|sera|ilaçlama|bağ|hasat|çiftlik|pompa|bitki|fidan|toprak|tarla|zeytin)/)) {
+        envDescription = 'Vibrant sunlit agricultural orchard, lush green field and greenhouse with natural daylight and fresh plant leaves'
+      } else if (textCorpus.match(/(döner|yemek|restoran|gıda|lezzet|mutfak|sos|kebap|cafe|kafe|et)/)) {
+        envDescription = 'Immaculate modern gourmet kitchen and restaurant dining display with warm inviting ambiance'
+      } else if (textCorpus.match(/(inşaat|tuğla|şantiye|beton|yapı|çimento|mimari|müteahhit)/)) {
+        envDescription = 'Professional architectural jobsite with organized construction area'
+      } else {
+        envDescription = 'Prestigious commercial studio turntable showroom with sleek reflective surface, controlled dramatic softbox lighting, clean backdrop'
+      }
+    }
+
+    let motionDescription = 'Smooth cinematic 35mm lens, steady orbiting camera move with stable geometry, shallow depth of field'
+    if (motionStyle === 'real_usage') {
+      motionDescription = 'Authentic steadycam tracking shot demonstrating realistic ergonomic operation in the natural field'
+    } else if (motionStyle === 'macro_detail') {
+      motionDescription = 'Macro close-up forward push-in highlighting mechanical textures, switches, dials, and immaculate finish'
+    }
+
     const promptLines = [
       `Photorealistic 9:16 vertical commercial television ad for ${brandName}.`,
-      `[Subject Focus]: @HeroProduct in an authentic operational commercial setting.`,
-      `[Cinematography]: 35mm lens, smooth forward dolly, commercial rim lighting, shallow depth of field.`,
+      `[Subject Focus]: @HeroProduct as a rigid solid-body commercial item.`,
+      `[Environment & Setting]: ${envDescription}.`,
+      `[Camera & Motion]: ${motionDescription}.`,
+      `[Physics Guarantee]: Rigid solid-body geometry, no morphing, no elastic bending, structurally accurate mechanical parts, realistic fluid physics, cinematic mechanical stabilization.`,
       creativeNote ? `[Director Note]: ${creativeNote}` : '',
       `[Visual Beats]:`,
       `0.0-1.8s: ${speechTimeline[0]?.corresponding_visual_beat || visualHooks.opening}`,
       `1.8-4.2s: ${speechTimeline[1]?.corresponding_visual_beat || visualHooks.demo}`,
       `4.2-6.5s: ${speechTimeline[2]?.corresponding_visual_beat || visualHooks.payoff}`,
-      `6.5-8.0s: Hero lock framing with @BrandLogo placement.`,
+      `6.5-8.0s: The camera settles into a steady, confident macro hold on @HeroProduct with clean rim lighting.`,
       ``,
       `[AUDIO TIMELINE]`,
       `Spoken language: Turkish (tr-TR).`,
       ...speechTimeline.map((s) => `${s.start_sec.toFixed(1)}-${s.end_sec.toFixed(1)}s: "${s.exact_text}"`),
       ``,
       `Speak the approved Turkish lines in the exact order. Do not translate. Do not paraphrase. Do not add dialogue.`,
-      `[Negative Constraints]: strictly no on-screen text, no typography, no words, no letters, no subtitles, no captions, no watermark, no lower thirds, no distorted branding, no cartoon textures, no blurry typography, no CGI artifact.`,
+      `[Negative Constraints]: strictly no on-screen text, no typography, no words, no letters, no subtitles, no captions, no watermark, no lower thirds, no morphing, no rubber physics, no melting, no detached floating parts, no extra limbs, no deformed hands, no cartoon animation, no amateur blur, strictly clean live-action video footage.`,
     ].filter(Boolean)
 
     const veoPrompt = promptLines.join('\n')
