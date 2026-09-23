@@ -241,65 +241,73 @@ async function main() {
     process.exit(0)
   }
 
-  // Step 11: Real Flow Execution
-  console.log('\n9. EXECUTING LIVE VIDEO VIA GFLOW ENGINE...')
-  const gflowEngineUrl = process.env.GFLOW_ENGINE_URL || 'http://gflow-engine:3461'
-  const gflowProvider = new RealHttpGFlowProvider(gflowEngineUrl)
+  const explicitRawPath = process.argv[3]
+  let rawVideoPath
 
-  // Dynamically select idle account from ai-media-control API (or fallback to account-02)
-  let targetAccount = 'account-02'
-  try {
-    const accResp = await fetch('http://127.0.0.1:3460/api/v1/accounts')
-    if (accResp.ok) {
-      const accounts = await accResp.json()
-      const idle = accounts.find(a => a.status === 'idle')
-      if (idle) targetAccount = idle.id
+  if (explicitRawPath && fs.existsSync(explicitRawPath)) {
+    console.log(`\n9. USING EXISTING RAW VIDEO: ${explicitRawPath}`)
+    rawVideoPath = explicitRawPath
+  } else {
+    // Step 11: Real Flow Execution
+    console.log('\n9. EXECUTING LIVE VIDEO VIA GFLOW ENGINE...')
+    const gflowEngineUrl = process.env.GFLOW_ENGINE_URL || 'http://gflow-engine:3461'
+    const gflowProvider = new RealHttpGFlowProvider(gflowEngineUrl)
+
+    // Dynamically select idle account from ai-media-control API (or fallback to account-02)
+    let targetAccount = 'account-02'
+    try {
+      const accResp = await fetch('http://127.0.0.1:3460/api/v1/accounts')
+      if (accResp.ok) {
+        const accounts = await accResp.json()
+        const idle = accounts.find(a => a.status === 'idle')
+        if (idle) targetAccount = idle.id
+      }
+    } catch (_) {}
+    console.log(`Using active Flow Account: ${targetAccount}`)
+
+    const flowExecutionPayload = {
+      job_id: jobId,
+      attempt_id: `att_${Date.now()}`,
+      account_id: targetAccount,
+      org_id: orgId,
+      flow_project_id: `flow_proj_${jobId.slice(0, 10)}`,
+      flow_account_id: targetAccount,
+      prompt: compiledPrompt.cinematicPrompt
+        .replace(/@HeroProduct/g, 'provided Hero Product (Reference Image 1)')
+        .replace(/@BrandLogo/g, 'provided Brand Logo (Reference Image 2)')
+        .replace(/@SoftwareUI/g, 'provided Software UI (Reference Image 1)')
+        .replace(/@/g, ''),
+      aspect_ratio: '9:16',
+      model: 'veo-fast',
+      duration: 8,
+      expected_reference_ids: ['prod_bofe_sprayer_01', 'logo_bofe_01'],
+      assets: [
+        {
+          asset_id: 'prod_bofe_sprayer_01',
+          org_id: orgId,
+          role: 'product',
+          file_path: productPath,
+          sha256: productSha,
+        },
+        {
+          asset_id: 'logo_bofe_01',
+          org_id: orgId,
+          role: 'logo',
+          file_path: logoPath,
+          sha256: logoSha,
+        },
+      ],
     }
-  } catch (_) {}
-  console.log(`Using active Flow Account: ${targetAccount}`)
 
-  const flowExecutionPayload = {
-    job_id: jobId,
-    attempt_id: `att_${Date.now()}`,
-    account_id: targetAccount,
-    org_id: orgId,
-    flow_project_id: `flow_proj_${jobId.slice(0, 10)}`,
-    flow_account_id: targetAccount,
-    prompt: compiledPrompt.cinematicPrompt
-      .replace(/@HeroProduct/g, 'provided Hero Product (Reference Image 1)')
-      .replace(/@BrandLogo/g, 'provided Brand Logo (Reference Image 2)')
-      .replace(/@SoftwareUI/g, 'provided Software UI (Reference Image 1)')
-      .replace(/@/g, ''),
-    aspect_ratio: '9:16',
-    model: 'veo-fast',
-    duration: 8,
-    expected_reference_ids: ['prod_bofe_sprayer_01', 'logo_bofe_01'],
-    assets: [
-      {
-        asset_id: 'prod_bofe_sprayer_01',
-        org_id: orgId,
-        role: 'product',
-        file_path: productPath,
-        sha256: productSha,
-      },
-      {
-        asset_id: 'logo_bofe_01',
-        org_id: orgId,
-        role: 'logo',
-        file_path: logoPath,
-        sha256: logoSha,
-      },
-    ],
+    const executionResult = await gflowProvider.executeJob(flowExecutionPayload)
+    console.log('\n10. FLOW GENERATION SUCCEEDED:')
+    console.log(`   Real Flow Project UUID: ${executionResult.real_flow_project_uuid}`)
+    console.log(`   Output Path:            ${executionResult.output_path}`)
+    console.log(`   Log Path:               ${executionResult.log_path}`)
+    rawVideoPath = executionResult.output_path
   }
 
-  const executionResult = await gflowProvider.executeJob(flowExecutionPayload)
-  console.log('\n10. FLOW GENERATION SUCCEEDED:')
-  console.log(`   Real Flow Project UUID: ${executionResult.real_flow_project_uuid}`)
-  console.log(`   Output Path:            ${executionResult.output_path}`)
-  console.log(`   Log Path:               ${executionResult.log_path}`)
-
   // Step 12: Validate Raw Video Output
-  const rawVideoPath = executionResult.output_path
   const rawSha = computeFileSha256(rawVideoPath)
   const ffmpeg = new RealFFmpegAdapter()
   const rawProbe = await ffmpeg.runFfprobe(rawVideoPath)
@@ -311,9 +319,10 @@ async function main() {
   // Step 13: Extract Frames & Review with Video Reviewer
   console.log('\n12. SAMPLING 10 FRAMES FOR VIDEO REVIEWER...')
   const sampler = new FrameSampler()
-  const framePaths = await sampler.extractFrames(rawVideoPath, 10)
+  const sampledFrames = await sampler.sampleFrames(rawVideoPath)
+  console.log(`   Sampled ${sampledFrames.length} frames successfully.`)
   const reviewer = new ChatGPTVideoReviewer()
-  const reviewResult = await reviewer.reviewVideo(framePaths, masterPlan, context)
+  const reviewResult = await reviewer.reviewSampledVideo(sampledFrames, masterPlan, context, 1)
   console.log(`   Review Decision: ${reviewResult.decision}`)
   console.log(`   Morph Check:     ${reviewResult.product_morph_detected ? 'FAIL' : 'PASS'}`)
   console.log(`   Sector Match:    ${reviewResult.sector_environment_match ? 'PASS' : 'FAIL'}`)
@@ -325,22 +334,37 @@ async function main() {
   const finalVideoPath = path.join(finalDir, `${path.basename(rawVideoPath, '.mp4')}_final_canary.mp4`)
 
   // Render kinetic subtitles ASS
+  const textRenderer = new DeterministicCampaignTextRenderer()
+  const rawWords = masterPlan.master_spoken_script.split(/\s+/).filter(Boolean)
+  const totalDuration = 7.0
+  const wordDuration = totalDuration / rawWords.length
+  const wordsWithTiming = rawWords.map((word, idx) => ({
+    word,
+    start: 0.5 + idx * wordDuration,
+    end: 0.5 + (idx + 1) * wordDuration,
+  }))
+  const assContent = textRenderer.buildCapCutKineticAss(wordsWithTiming, {
+    playResX: 720,
+    playResY: 1280,
+    fontSize: 42,
+    marginV: 180,
+  })
   const assPath = path.join(finalDir, 'subtitles.ass')
-  DeterministicCampaignTextRenderer.renderSubtitlesFile(masterPlan, assPath)
+  fs.writeFileSync(assPath, assContent, 'utf-8')
+  console.log(`   Subtitles ASS generated: ${assPath}`)
 
-  // Composite final video
-  await DeterministicLogoCompositor.compositeLogoAndSubtitles(
-    rawVideoPath,
-    logoPath,
-    assPath,
-    finalVideoPath,
-    { position: 'TOP_RIGHT', marginH: 40, marginV: 60, scalePercent: 12 }
-  )
+  // Composite canonical logo and subtitles via ffmpeg
+  const { execSync } = await import('node:child_process')
+  const compCmd = `ffmpeg -y -i "${rawVideoPath}" -i "${logoPath}" -filter_complex "[1:v]scale=180:-1[logo];[0:v][logo]overlay=W-w-35:55:enable='between(t,0,6.0)'[v1];[v1]ass='${assPath}'[vout]" -map "[vout]" -map 0:a? -c:v libx264 -preset fast -crf 18 -c:a copy "${finalVideoPath}"`
+  execSync(compCmd, { stdio: 'inherit' })
 
   const finalSha = computeFileSha256(finalVideoPath)
+  const finalProbe = await ffmpeg.runFfprobe(finalVideoPath)
   console.log(`\n14. FINAL CANARY VIDEO DELIVERED:`)
   console.log(`   Final Path:   ${finalVideoPath}`)
   console.log(`   Final SHA256: ${finalSha}`)
+  console.log(`   Duration:     ${finalProbe.duration}s`)
+  console.log(`   Dims:         ${finalProbe.width}x${finalProbe.height} (${finalProbe.fps} fps)`)
 
   console.log('\n========================================')
   console.log('LIVE CANARY SUCCEEDED — FULL PIPELINE VERIFIED')
