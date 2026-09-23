@@ -1,0 +1,360 @@
+/**
+ * OmniStudio Autonomous Orphan Tab Reaper
+ *
+ * Safe, conservative cleanup of duplicate and orphan Chrome tabs
+ * without disturbing active jobs, canonical worker tabs, or logged-in accounts.
+ */
+
+const fs = require('fs');
+const path = require('path');
+
+const ORPHAN_TAB_MIN_AGE_MS = Math.max(10000, parseInt(process.env.ORPHAN_TAB_MIN_AGE_MS || '60000', 10)); // Default 60 seconds
+const REAPER_COOLDOWN_MS = Math.max(5000, parseInt(process.env.REAPER_COOLDOWN_MS || '30000', 10)); // Default 30 seconds
+
+// Tab states
+const TAB_STATES = {
+  CANONICAL_IDLE: 'CANONICAL_IDLE',
+  ACTIVE_JOB: 'ACTIVE_JOB',
+  TRANSIENT: 'TRANSIENT',
+  ORPHAN_CANDIDATE: 'ORPHAN_CANDIDATE',
+  PROTECTED: 'PROTECTED',
+};
+
+class TabRegistry {
+  constructor() {
+    this.tabs = new Map(); // tabId -> TabInfo
+    this.workerBindings = new Map(); // workerId -> canonicalTabId
+  }
+
+  registerTab(tabId, { workerId = null, canonical = false, activeJobId = null, url = '', isProtected = false } = {}) {
+    if (!tabId) return null;
+    const now = Date.now();
+    let entry = this.tabs.get(tabId);
+    if (!entry) {
+      entry = {
+        tabId,
+        workerId,
+        canonical: !!canonical,
+        activeJobId,
+        url,
+        isProtected: !!isProtected,
+        createdAt: now,
+        lastUsedAt: now,
+        state: canonical ? TAB_STATES.CANONICAL_IDLE : (isProtected ? TAB_STATES.PROTECTED : TAB_STATES.TRANSIENT),
+      };
+      this.tabs.set(tabId, entry);
+    } else {
+      if (workerId !== null && workerId !== undefined) entry.workerId = workerId;
+      if (canonical !== undefined) entry.canonical = !!canonical;
+      if (activeJobId !== undefined) entry.activeJobId = activeJobId;
+      if (url) entry.url = url;
+      if (isProtected) entry.isProtected = true;
+      entry.lastUsedAt = now;
+      entry.state = entry.activeJobId
+        ? TAB_STATES.ACTIVE_JOB
+        : (entry.canonical ? TAB_STATES.CANONICAL_IDLE : (entry.isProtected ? TAB_STATES.PROTECTED : entry.state));
+    }
+
+    if (workerId && canonical) {
+      this.workerBindings.set(workerId, tabId);
+    }
+    return entry;
+  }
+
+  bindWorkerCanonical(workerId, tabId, url = '') {
+    if (!workerId || !tabId) return;
+    this.workerBindings.set(workerId, tabId);
+    this.registerTab(tabId, { workerId, canonical: true, url });
+  }
+
+  getWorkerCanonicalTab(workerId) {
+    if (!workerId) return null;
+    const tabId = this.workerBindings.get(workerId);
+    if (!tabId) return null;
+    return this.tabs.get(tabId) || { tabId, workerId, canonical: true };
+  }
+
+  isCanonicalForAnyWorker(tabId) {
+    if (!tabId) return false;
+    for (const canonicalTabId of this.workerBindings.values()) {
+      if (canonicalTabId === tabId) return true;
+    }
+    const entry = this.tabs.get(tabId);
+    return !!(entry && entry.canonical);
+  }
+
+  setTabJob(tabId, jobId) {
+    const entry = this.tabs.get(tabId);
+    if (entry) {
+      entry.activeJobId = jobId;
+      entry.lastUsedAt = Date.now();
+      entry.state = jobId ? TAB_STATES.ACTIVE_JOB : (entry.canonical ? TAB_STATES.CANONICAL_IDLE : TAB_STATES.TRANSIENT);
+    }
+  }
+
+  hasActiveJob(tabId) {
+    const entry = this.tabs.get(tabId);
+    return !!(entry && entry.activeJobId);
+  }
+
+  touchTab(tabId, url = '') {
+    const entry = this.tabs.get(tabId);
+    if (entry) {
+      entry.lastUsedAt = Date.now();
+      if (url) entry.url = url;
+    } else {
+      this.registerTab(tabId, { url });
+    }
+  }
+
+  removeTab(tabId) {
+    this.tabs.delete(tabId);
+    for (const [wid, tid] of this.workerBindings.entries()) {
+      if (tid === tabId) this.workerBindings.delete(wid);
+    }
+  }
+}
+
+class OrphanTabReaper {
+  constructor(options = {}) {
+    this.registry = options.registry || new TabRegistry();
+    this.minAgeMs = options.minAgeMs || ORPHAN_TAB_MIN_AGE_MS;
+    this.cooldownMs = options.cooldownMs || REAPER_COOLDOWN_MS;
+    this.lastSweepAt = 0;
+    this.fetchImpl = options.fetchImpl || globalThis.fetch;
+    this.history = [];
+  }
+
+  isProtectedSystemUrl(url) {
+    if (!url || typeof url !== 'string') return false;
+    const lower = url.toLowerCase();
+    return (
+      lower.includes('localhost:3456/monitor') ||
+      lower.includes('127.0.0.1:3456/monitor') ||
+      lower.includes('gemini.google.com/videos') ||
+      lower.includes('flow.google.com') ||
+      lower.includes('accounts.google.com/rotatecookiespage') ||
+      lower.includes('chrome://') ||
+      lower.startsWith('devtools://')
+    );
+  }
+
+  classifyTargets(targets, options = {}) {
+    const now = options.now || Date.now();
+    const callerWorkerId = options.workerId || null;
+    const isCallerBusy = options.isCallerBusy || false;
+    const activeJobTabIds = options.activeJobTabIds || new Set();
+
+    const keep = [];
+    const close = [];
+
+    if (isCallerBusy) {
+      // Rule: Never run cleanup while calling worker is busy
+      for (const t of targets) {
+        keep.push({ target: t, reason: 'WORKER_BUSY_ABORT' });
+      }
+      return { keep, close };
+    }
+
+    for (const t of targets) {
+      const tid = t.id;
+      const url = t.url || '';
+      const type = t.type || 'page';
+
+      // Record target in registry to track creation/first-seen time
+      const reg = this.registry.tabs.get(tid);
+      if (!reg) {
+        this.registry.registerTab(tid, { url });
+      } else if (url) {
+        this.registry.touchTab(tid, url);
+      }
+      const ageMs = reg ? (now - reg.createdAt) : 0;
+
+      // 1. Only 'page' targets can ever be closed
+      if (type !== 'page') {
+        keep.push({ target: t, reason: 'NON_PAGE_TARGET' });
+        continue;
+      }
+
+      // 2. Critical persistent system URLs must NEVER be closed
+      if (this.isProtectedSystemUrl(url)) {
+        keep.push({ target: t, reason: 'PROTECTED_SYSTEM_PAGE' });
+        continue;
+      }
+
+      // 3. Worker canonical tab protection (Strict Invariant: never close canonical tab for ANY worker)
+      if (this.registry.isCanonicalForAnyWorker(tid)) {
+        keep.push({ target: t, reason: 'CANONICAL_WORKER_TAB' });
+        continue;
+      }
+
+      // 4. Active job protection (Strict Invariant: never close tab running a job)
+      if (this.registry.hasActiveJob(tid) || activeJobTabIds.has(tid)) {
+        keep.push({ target: t, reason: 'ACTIVE_JOB_IN_PROGRESS' });
+        continue;
+      }
+
+      // 5. Grace period protection (Rule: newly created targets must not be reaped immediately)
+      if (ageMs < this.minAgeMs) {
+        keep.push({ target: t, reason: `GRACE_PERIOD_ACTIVE_${Math.round((this.minAgeMs - ageMs) / 1000)}s_REMAINING` });
+        continue;
+      }
+
+      // 6. Abandoned ?prompt-textarea=... query tabs (Left behind after form submit)
+      if (url.includes('chatgpt.com/?prompt-textarea=') || url.includes('prompt-textarea=')) {
+        close.push({ target: t, reason: 'ABANDONED_PROMPT_TEXTAREA_TAB', ageMs });
+        continue;
+      }
+
+      // 7. Abandoned blank/failed tabs (e.g. about:blank or error navigations)
+      if (url === 'about:blank' || url.startsWith('chrome-error://')) {
+        close.push({ target: t, reason: 'ORPHAN_BLANK_OR_ERROR_TAB', ageMs });
+        continue;
+      }
+
+      // 8. Duplicate blank chatgpt.com home tabs:
+      // If a tab is just https://chatgpt.com/ and is NOT any worker's canonical tab,
+      // and has exceeded the grace period with no active job, it is a duplicate idle tab.
+      const isChatHome = url === 'https://chatgpt.com/' || url === 'https://chatgpt.com';
+      if (isChatHome && !this.registry.isCanonicalForAnyWorker(tid)) {
+        close.push({ target: t, reason: 'DUPLICATE_IDLE_CHATGPT_HOME', ageMs });
+        continue;
+      }
+
+      // 9. Fail-safe default: When in doubt, KEEP TAB
+      keep.push({ target: t, reason: 'DEFAULT_FAILSAFE_KEEP' });
+    }
+
+    return { keep, close };
+  }
+
+  measureMemoryFast() {
+    let chromeRssKb = 0;
+    let rendererCount = 0;
+    let totalProcesses = 0;
+
+    try {
+      if (fs.existsSync('/proc')) {
+        const entries = fs.readdirSync('/proc');
+        for (const entry of entries) {
+          if (!/^\d+$/.test(entry)) continue;
+          totalProcesses++;
+          try {
+            const cmd = fs.readFileSync(`/proc/${entry}/cmdline`, 'utf8');
+            if (cmd.includes('chrome') || cmd.includes('chromium')) {
+              if (cmd.includes('--type=renderer')) rendererCount++;
+              const status = fs.readFileSync(`/proc/${entry}/status`, 'utf8');
+              const m = status.match(/VmRSS:\s+(\d+)\s+kB/);
+              if (m) chromeRssKb += parseInt(m[1], 10);
+            }
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+
+    return {
+      chrome_rss_mb: Math.round((chromeRssKb / 1024) * 100) / 100,
+      chrome_renderer_count: rendererCount,
+      total_processes: totalProcesses,
+    };
+  }
+
+  async sweep({ cdpHttpUrl = 'http://127.0.0.1:9222', workerId = null, isCallerBusy = false, reason = 'manual', force = false } = {}) {
+    const now = Date.now();
+    if (!force && now - this.lastSweepAt < this.cooldownMs) {
+      return { skipped: true, reason: 'COOLDOWN_ACTIVE' };
+    }
+    this.lastSweepAt = now;
+
+    if (isCallerBusy) {
+      return { skipped: true, reason: 'WORKER_IS_BUSY' };
+    }
+
+    const memBefore = this.measureMemoryFast();
+    let targets = [];
+    try {
+      const resp = await this.fetchImpl(`${cdpHttpUrl}/json/list`, { signal: AbortSignal.timeout(4000) });
+      if (!resp.ok) return { skipped: true, reason: 'CDP_LIST_FAILED' };
+      targets = await resp.json();
+    } catch (err) {
+      return { skipped: true, reason: `CDP_CONNECT_ERROR: ${err.message}` };
+    }
+
+    const { keep, close } = this.classifyTargets(targets, {
+      now,
+      workerId,
+      isCallerBusy,
+    });
+
+    const closed = [];
+    for (const item of close) {
+      const t = item.target;
+      try {
+        const closeResp = await this.fetchImpl(`${cdpHttpUrl}/json/close/${t.id}`, {
+          method: 'PUT',
+          signal: AbortSignal.timeout(3000),
+        });
+        if (closeResp.ok) {
+          closed.push({ id: t.id, url: t.url, reason: item.reason });
+          this.registry.removeTab(t.id);
+        }
+      } catch (err) {
+        // Safe fail: cleanup failure never stops system
+      }
+    }
+
+    // Brief settling pause before reading reclaimed memory
+    if (closed.length > 0) {
+      await new Promise(r => setTimeout(r, 1200));
+    }
+
+    const memAfter = this.measureMemoryFast();
+    const reclaimedMb = Math.max(0, Math.round((memBefore.chrome_rss_mb - memAfter.chrome_rss_mb) * 100) / 100);
+
+    const metrics = {
+      event: 'omnistudio_orphan_reaper_metric',
+      reason,
+      timestamp: now,
+      chrome_tab_count: targets.length - closed.length,
+      chrome_renderer_count: memAfter.chrome_renderer_count,
+      orphan_tabs_detected: close.length,
+      orphan_tabs_closed: closed.length,
+      chrome_rss_mb: memAfter.chrome_rss_mb,
+      memory_before_cleanup_mb: memBefore.chrome_rss_mb,
+      memory_after_cleanup_mb: memAfter.chrome_rss_mb,
+      reclaimed_memory_mb: reclaimedMb,
+      closed_details: closed,
+    };
+
+    if (closed.length > 0) {
+      console.log(`[OrphanTabReaper] 🧹 Swept ${closed.length} orphan tab(s) (${reason}). Reclaimed: ${reclaimedMb} MB. Renderers: ${memBefore.chrome_renderer_count} -> ${memAfter.chrome_renderer_count}`);
+      try {
+        console.log(JSON.stringify(metrics));
+      } catch (_) {}
+    }
+
+    this.history.push(metrics);
+    if (this.history.length > 50) this.history.shift();
+
+    return metrics;
+  }
+
+  scheduleAsyncSweep({ cdpHttpUrl = 'http://127.0.0.1:9222', workerId = null, reason = 'post_job', delayMs = 1500 } = {}) {
+    // Keep cleanup off the critical path: completely decoupled from request-response latency
+    setTimeout(async () => {
+      try {
+        await this.sweep({ cdpHttpUrl, workerId, reason });
+      } catch (err) {
+        console.warn('[OrphanTabReaper] Background sweep warning:', err.message);
+      }
+    }, delayMs).unref?.();
+  }
+}
+
+module.exports = {
+  TabRegistry,
+  OrphanTabReaper,
+  TAB_STATES,
+  ORPHAN_TAB_MIN_AGE_MS,
+  REAPER_COOLDOWN_MS,
+};

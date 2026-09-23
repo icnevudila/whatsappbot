@@ -20,8 +20,11 @@ const {
   setCompanyChat,
   renameChatToTitle
 } = require('./chat_manager.js');
+const { OrphanTabReaper } = require('./orphan_tab_reaper.js');
 
+const reaper = new OrphanTabReaper();
 let cachedTabId = null;
+
 
 function isMemorySafeForWork() {
   if (WORKER_ID === 'chatgpt-1') return true; // Ana worker her zaman çalışır
@@ -151,29 +154,45 @@ async function getTab(matchPattern) {
     const tabs = await res.json();
     const chatTabs = tabs.filter(t => t.url && t.url.includes(matchPattern));
 
-    // Eğer bu worker daha önce bir sekmeye bağlandıysa ve sekme hala açıksa onu kullan
+    // 1. Eğer bu worker'ın kayıtlı canonical sekmesi varsa ve hala açıksa onu kullan
     if (cachedTabId) {
       const existing = chatTabs.find(t => t.id === cachedTabId);
-      if (existing) return existing;
+      if (existing) {
+        reaper.registry.touchTab(cachedTabId, existing.url);
+        return existing;
+      }
     }
 
-    // Eğer bu worker için gereken sekme (ör. 2. sekme) henüz açık değilse, Chrome'da aç
-    if (chatTabs.length <= TAB_INDEX) {
-      console.log(`[CDP Worker: ${WORKER_ID}] Sekme #${TAB_INDEX + 1} açılıyor...`);
-      const newRes = await fetch(`${CDP_HTTP}/json/new?https://chatgpt.com/`, { method: 'PUT' });
-      const newTab = await newRes.json();
-      await sleep(3500);
-      cachedTabId = newTab.id;
-      return newTab;
+    // 2. Worker canonical tab eşleşmesi:
+    // Eğer TAB_INDEX sınırında bir sekme varsa ve başka bir worker'ın canonical'ı değilse sahiplen
+    const candidateTab = chatTabs[TAB_INDEX];
+    if (candidateTab && (!reaper.registry.isCanonicalForAnyWorker(candidateTab.id) || reaper.registry.getWorkerCanonicalTab(WORKER_ID)?.tabId === candidateTab.id)) {
+      cachedTabId = candidateTab.id;
+      reaper.registry.bindWorkerCanonical(WORKER_ID, candidateTab.id, candidateTab.url);
+      return candidateTab;
     }
 
-    const assigned = chatTabs[TAB_INDEX] || chatTabs[0];
-    if (assigned) cachedTabId = assigned.id;
-    return assigned;
+    // 3. Eğer chatTabs içinde henüz hiçbir worker tarafından sahiplenilmemiş sekme varsa bağla
+    const unowned = chatTabs.find(t => !reaper.registry.isCanonicalForAnyWorker(t.id));
+    if (unowned) {
+      cachedTabId = unowned.id;
+      reaper.registry.bindWorkerCanonical(WORKER_ID, unowned.id, unowned.url);
+      return unowned;
+    }
+
+    // 4. Eğer bu worker için gereken sekme (ör. 2. sekme) henüz açık değilse, Chrome'da bu worker için aç
+    console.log(`[CDP Worker: ${WORKER_ID}] Worker'a özel sekme #${TAB_INDEX + 1} açılıyor...`);
+    const newRes = await fetch(`${CDP_HTTP}/json/new?https://chatgpt.com/`, { method: 'PUT' });
+    const newTab = await newRes.json();
+    await sleep(3500);
+    cachedTabId = newTab.id;
+    reaper.registry.bindWorkerCanonical(WORKER_ID, newTab.id, newTab.url);
+    return newTab;
   } catch (err) {
     return null;
   }
 }
+
 
 let isTabLoggedIn = false;
 let lastLoginCheck = 0;
@@ -493,7 +512,17 @@ setInterval(async () => {
       }
     } catch (e) {}
   }
+  // Boşta periyodik yetim sekme taraması (kritik yoldan bağımsız, rate-limited)
+  if (!isBusy) {
+    reaper.scheduleAsyncSweep({
+      cdpHttpUrl: CDP_HTTP,
+      workerId: WORKER_ID,
+      reason: 'idle_periodic',
+      delayMs: 1500,
+    });
+  }
 }, 6 * 60 * 1000);
+
 
 // Ana Döngü
 async function workerLoop() {
@@ -503,12 +532,14 @@ async function workerLoop() {
     return;
   }
 
+  let chatgptTab = null;
   try {
     // 1. ChatGPT sekmesi var mı kontrol et
-    const chatgptTab = await getTab('chatgpt.com');
+    chatgptTab = await getTab('chatgpt.com');
     if (!chatgptTab) {
       return;
     }
+
 
     // 1.1. Oturum açık mı kontrol et (Giriş yapılmadıysa iş çekme)
     if (!isTabLoggedIn) {
@@ -523,6 +554,9 @@ async function workerLoop() {
     if (!job) return; // Boşta iş yok
 
     isBusy = true;
+    if (chatgptTab && chatgptTab.id) {
+      reaper.registry.setTabJob(chatgptTab.id, job.id);
+    }
     console.log(`\n======================================================`);
     console.log(`[CDP Worker] YENİ İŞ ALINDI: #${job.id}`);
     console.log(`[CDP Worker] İş türü: ${job.type || 'image'} | Prompt karakteri: ${(job.prompt || '').length}`);
@@ -547,9 +581,20 @@ async function workerLoop() {
   } catch (err) {
     console.error('[CDP Worker] Döngü hatası:', err.message);
   } finally {
+    if (chatgptTab && chatgptTab.id) {
+      reaper.registry.setTabJob(chatgptTab.id, null);
+    }
     isBusy = false;
+    // Off critical path: asynchronous rate-limited sweep after response delivery
+    reaper.scheduleAsyncSweep({
+      cdpHttpUrl: CDP_HTTP,
+      workerId: WORKER_ID,
+      reason: 'post_job',
+      delayMs: 2500,
+    });
   }
 }
+
 
 // ChatGPT İşini Çalıştır
 async function executeChatGPTJob(tab, job) {
