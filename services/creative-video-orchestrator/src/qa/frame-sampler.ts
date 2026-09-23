@@ -11,6 +11,12 @@ export interface SampledFrame {
   sha256?: string
   width?: number
   height?: number
+  detected_text?: string[]
+  has_floating_logo?: boolean
+  has_generated_subtitles?: boolean
+  has_generated_end_card?: boolean
+  has_non_diegetic_branding?: boolean
+  is_diegetic_product_branding_only?: boolean
 }
 
 export interface FrameSamplingOptions {
@@ -19,7 +25,8 @@ export interface FrameSamplingOptions {
 }
 
 export class FrameSampler {
-  public static DEFAULT_8S_TIMESTAMPS = [0.3, 1.0, 1.7, 2.5, 3.3, 4.2, 5.1, 6.0, 7.0, 7.7]
+  // Balanced 10-point distribution: early hook (0.3, 1.0), mid proof (1.8, 2.5, 3.3, 4.2, 5.1), late brand close & end-card (6.0, 7.0, 7.7)
+  public static DEFAULT_8S_TIMESTAMPS = [0.3, 1.0, 1.8, 2.5, 3.3, 4.2, 5.1, 6.0, 7.0, 7.7]
 
   /**
    * Extracts representative frames from an 8-second commercial MP4 for multimodal visual review.

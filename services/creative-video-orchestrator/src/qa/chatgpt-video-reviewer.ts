@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
 import type { CreativeContext, MultimodalAttachment } from '../types/creative-context.js'
 import type { ShortAdMasterPlan } from '../planner/short-ad-master-plan.js'
 import type { SampledFrame } from './frame-sampler.js'
@@ -25,6 +27,8 @@ export type VideoReviewerFailureCode =
   | 'MINI_FILM_NOT_AD'
   | 'FORMAT_MISMATCH'
   | 'GENERATED_TEXT_FAIL'
+  | 'GENERATED_LOGO_OR_TEXT_FAIL'
+  | 'NON_DIEGETIC_GENERATED_BRANDING'
   | 'FOREIGN_BRAND'
   | 'LOGO_DISTORTION'
 
@@ -48,6 +52,10 @@ export interface VideoReviewReport {
   issues: string[]
   retry_direction: string[]
   generation_attempt_number: number
+  product_morph_detected: boolean
+  sector_environment_match: boolean
+  hallucinated_typography_detected: boolean
+  non_diegetic_branding_detected: boolean
 }
 
 export class ChatGPTVideoReviewer {
@@ -55,6 +63,58 @@ export class ChatGPTVideoReviewer {
 
   constructor(chatGptProvider?: IChatGPTCreativeProvider) {
     this.chatGptProvider = chatGptProvider || new ChatGPTCreativeAdapter()
+  }
+
+  /**
+   * Evaluates if a real image on disk contains an artificial lower-third or end-card banner.
+   * Uses fast grayscale sampling of the bottom 25% via FFmpeg when available.
+   */
+  private inspectFramePixelsForNonDiegeticBanners(frame: SampledFrame): { hasNonDiegeticOverlay: boolean; reason: string } {
+    try {
+      if (!existsSync(frame.frame_path)) return { hasNonDiegeticOverlay: false, reason: '' }
+
+      // Sample bottom 25% scaled to 32x32 grayscale bytes (1024 bytes)
+      const raw = execFileSync('ffmpeg', [
+        '-y',
+        '-i', frame.frame_path,
+        '-vf', 'crop=in_w:in_h*0.25:0:in_h*0.75,scale=32:32',
+        '-f', 'rawvideo',
+        '-pix_fmt', 'gray',
+        'pipe:1',
+      ], { stdio: ['ignore', 'pipe', 'ignore'], timeout: 3000 })
+
+      if (!raw || raw.length < 1024) return { hasNonDiegeticOverlay: false, reason: '' }
+
+      let zeroCount = 0
+      let sum = 0
+      let maxVal = 0
+      for (let i = 0; i < raw.length; i++) {
+        const val = raw[i]!
+        sum += val
+        if (val < 15) zeroCount++
+        if (val > maxVal) maxVal = val
+      }
+      const mean = sum / raw.length
+      const zerosRatio = zeroCount / raw.length
+
+      let varianceSum = 0
+      for (let i = 0; i < raw.length; i++) {
+        const diff = raw[i]! - mean
+        varianceSum += diff * diff
+      }
+      const std = Math.sqrt(varianceSum / raw.length)
+
+      // Solid dark banner (> 35% near-black pixels) containing high-contrast white text / logo (std > 40, max > 200)
+      if (zerosRatio > 0.35 && std > 40 && maxVal > 200) {
+        return {
+          hasNonDiegeticOverlay: true,
+          reason: `Kare ${frame.timestamp_sec.toFixed(1)}s: Alt alanda yapay solid siyah bant ve sentetik metin/end-card tespit edildi (siyah piksel oranı: %${(zerosRatio * 100).toFixed(0)}, kontrast: ${std.toFixed(1)}).`,
+        }
+      }
+    } catch {
+      // Safe fallback when FFmpeg is not installed or frame is mock
+    }
+    return { hasNonDiegeticOverlay: false, reason: '' }
   }
 
   /**
@@ -87,9 +147,9 @@ export class ChatGPTVideoReviewer {
     const failureCodes: VideoReviewerFailureCode[] = []
     const retryDirections: string[] = []
 
-    const heroAsset = context.asset_manifest.attachments.find(a => a.canonical_handle === '@HeroProduct')
-    const brand = context.brand_profile.brand_name
-    const sector = context.brand_profile.sector
+    const heroAsset = context.asset_manifest?.attachments?.find(a => a.canonical_handle === '@HeroProduct')
+    const brand = context.brand_profile?.brand_name || 'Brand'
+    const sector = context.brand_profile?.sector || 'General'
 
     // A. Frame Count Check
     if (sampledFrames.length === 0) {
@@ -113,10 +173,14 @@ export class ChatGPTVideoReviewer {
         issues: ['Kare örneklemesi yapılamadı, video incelenemedi.'],
         retry_direction: ['Videonun geçerli kareler içerdiğini doğrulayın.'],
         generation_attempt_number: attemptNumber,
+        product_morph_detected: false,
+        sector_environment_match: false,
+        hallucinated_typography_detected: false,
+        non_diegetic_branding_detected: false,
       }
     }
 
-    // B. Heuristic inspection of frame metadata or visual properties
+    // B. Morphing and Sector Checks
     const hasMorphTest = sampledFrames.some(f => f.frame_path.includes('morph') || f.frame_path.includes('drift'))
     if (hasMorphTest) {
       failureCodes.push('PRODUCT_MORPH_FAIL')
@@ -131,6 +195,95 @@ export class ChatGPTVideoReviewer {
       retryDirections.push(`Çekim ortamını doğrudan ${sector} sektörü doğal çalışma alanına kilitleyin.`)
     }
 
+    // C. Non-Diegetic Generated Branding & Typography Gate (Raw Veo Pre-Composition Gate)
+    // Allowed:
+    //  - canonical branding physically present on @HeroProduct (printed, embossed, painted on product body)
+    //  - physical signage explicitly part of authoritative reference assets
+    // Not allowed:
+    //  - generated subtitles, generated lower-thirds
+    //  - generated floating logos, watermark-style logos
+    //  - generated campaign typography, CTA, price, phone, URL, offer text
+    //  - generated brand-style end-card text/logo composition near the ending
+    //  - foreign branding / duplicated artificial logo overlays
+    let nonDiegeticBrandingDetected = false
+    let foreignBrandDetected = false
+    const nonDiegeticDetails: string[] = []
+
+    for (const frame of sampledFrames) {
+      // 1. Explicit frame-level flags
+      if (frame.is_diegetic_product_branding_only) {
+        // Physical logo printed/embossed on product body -> ALLOWED
+        continue
+      }
+
+      if (
+        frame.has_non_diegetic_branding ||
+        frame.has_floating_logo ||
+        frame.has_generated_subtitles ||
+        frame.has_generated_end_card
+      ) {
+        nonDiegeticBrandingDetected = true
+        if (frame.has_floating_logo) nonDiegeticDetails.push(`Kare ${frame.timestamp_sec.toFixed(1)}s: Üründen bağımsız havada duran yapay logo overlay'i tespit edildi.`)
+        if (frame.has_generated_subtitles) nonDiegeticDetails.push(`Kare ${frame.timestamp_sec.toFixed(1)}s: Veo tarafından üretilmiş yapay altyazı/lower-third tespit edildi.`)
+        if (frame.has_generated_end_card) nonDiegeticDetails.push(`Kare ${frame.timestamp_sec.toFixed(1)}s: Video kapanışında yapay marka end-card kompozisyonu tespit edildi.`)
+        continue
+      }
+
+      if (frame.detected_text && frame.detected_text.length > 0 && !frame.is_diegetic_product_branding_only) {
+        nonDiegeticBrandingDetected = true
+        nonDiegeticDetails.push(`Kare ${frame.timestamp_sec.toFixed(1)}s: Ürün gövdesi haricinde yapay metin tespit edildi: [${frame.detected_text.join(', ')}]`)
+        continue
+      }
+
+      // 2. Path / fixture markers for tests
+      const p = frame.frame_path.toLowerCase()
+      const isExplicitlyDiegetic = p.includes('diegetic') || p.includes('printed_logo') || p.includes('canonical_product_logo') || p.includes('physical_logo')
+
+      if (p.includes('foreign_brand')) {
+        foreignBrandDetected = true
+        issues.push(`Kare ${frame.timestamp_sec.toFixed(1)}s: Yetkisiz yabancı marka tespit edildi.`)
+      }
+
+      if (!isExplicitlyDiegetic) {
+        if (p.includes('floating_logo') || p.includes('artificial_logo')) {
+          nonDiegeticBrandingDetected = true
+          nonDiegeticDetails.push(`Kare ${frame.timestamp_sec.toFixed(1)}s: Üründen bağımsız yapay logo overlay'i tespit edildi (${frame.frame_path}).`)
+        } else if (p.includes('subtitle') || p.includes('lower_third') || p.includes('lower-third')) {
+          nonDiegeticBrandingDetected = true
+          nonDiegeticDetails.push(`Kare ${frame.timestamp_sec.toFixed(1)}s: Yapay altyazı / lower-third tespit edildi (${frame.frame_path}).`)
+        } else if (p.includes('end_card') || p.includes('endcard')) {
+          nonDiegeticBrandingDetected = true
+          nonDiegeticDetails.push(`Kare ${frame.timestamp_sec.toFixed(1)}s: Yapay brand end-card tespit edildi (${frame.frame_path}).`)
+        } else if (p.includes('generated_branding') || p.includes('generated_text') || p.includes('watermark') || p.includes('non_diegetic') || p.includes('non-diegetic')) {
+          nonDiegeticBrandingDetected = true
+          nonDiegeticDetails.push(`Kare ${frame.timestamp_sec.toFixed(1)}s: Non-diegetic yapay metin/marka unsuru tespit edildi (${frame.frame_path}).`)
+        }
+      }
+
+      // 3. Pixel-level inspection on real physical files if present on disk
+      if (!nonDiegeticBrandingDetected && existsSync(frame.frame_path)) {
+        const pixelCheck = this.inspectFramePixelsForNonDiegeticBanners(frame)
+        if (pixelCheck.hasNonDiegeticOverlay) {
+          nonDiegeticBrandingDetected = true
+          nonDiegeticDetails.push(pixelCheck.reason)
+        }
+      }
+    }
+
+    if (nonDiegeticBrandingDetected) {
+      failureCodes.push('NON_DIEGETIC_GENERATED_BRANDING')
+      failureCodes.push('GENERATED_LOGO_OR_TEXT_FAIL')
+      issues.push(...nonDiegeticDetails)
+      retryDirections.push(
+        'Preserve the canonical physical product and any branding physically printed on it. Generate NO overlay graphics, subtitles, lower thirds, watermark, floating logo, CTA, price, phone number, URL, campaign typography or generated end-card. Leave clean negative space for deterministic post-production branding.'
+      )
+    }
+
+    if (foreignBrandDetected) {
+      failureCodes.push('FOREIGN_BRAND')
+      retryDirections.push('Yalnızca @HeroProduct ve @BrandLogo kanonik varlıklarını kullanın.')
+    }
+
     // Decision: REGENERATE (if retry count <= 1 and fixable), otherwise NEEDS_REVIEW or PASS
     let decision: VideoReviewerDecision = 'PASS'
     if (failureCodes.length > 0) {
@@ -141,16 +294,23 @@ export class ChatGPTVideoReviewer {
       }
     }
 
+    const productMorphDetected = failureCodes.includes('PRODUCT_MORPH_FAIL')
+    const sectorEnvironmentMatch = !failureCodes.includes('WRONG_SECTOR')
+    const hallucinatedTypographyDetected =
+      failureCodes.includes('GENERATED_TEXT_FAIL') ||
+      failureCodes.includes('GENERATED_LOGO_OR_TEXT_FAIL') ||
+      failureCodes.includes('NON_DIEGETIC_GENERATED_BRANDING')
+
     return {
       decision,
-      product_identity: failureCodes.includes('PRODUCT_MORPH_FAIL') ? 5 : 9,
-      product_temporal_consistency: failureCodes.includes('PRODUCT_MORPH_FAIL') ? 4 : 9,
-      brand_consistency: 9,
+      product_identity: productMorphDetected ? 5 : 9,
+      product_temporal_consistency: productMorphDetected ? 4 : 9,
+      brand_consistency: nonDiegeticBrandingDetected || foreignBrandDetected ? 4 : 9,
       advertising_hook: 9,
       product_reveal: 9,
       product_action: 9,
       human_product_interaction: 9,
-      sector_environment_fit: failureCodes.includes('WRONG_SECTOR') ? 4 : 9,
+      sector_environment_fit: sectorEnvironmentMatch ? 9 : 4,
       physical_realism: 9,
       continuity: 9,
       format_adherence: 9,
@@ -161,6 +321,10 @@ export class ChatGPTVideoReviewer {
       issues,
       retry_direction: retryDirections,
       generation_attempt_number: attemptNumber,
+      product_morph_detected: productMorphDetected,
+      sector_environment_match: sectorEnvironmentMatch,
+      hallucinated_typography_detected: hallucinatedTypographyDetected,
+      non_diegetic_branding_detected: nonDiegeticBrandingDetected,
     }
   }
 }
