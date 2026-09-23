@@ -89,12 +89,18 @@ export class VeoPromptCompiler {
       }
     }
 
+    // Material physics & motion constraints dynamically extracted from beats
+    const physicsCues = Array.from(new Set(beats.flatMap(b => b.physics_constraints || []))).filter(Boolean).join(', ')
+    const materialPhysicsDirective = physicsCues
+      ? `[MATERIAL PHYSICS & MOTION]: Ensure realistic gravity, genuine physical material textures, correct human grip, and realistic motion: ${physicsCues}.`
+      : `[MATERIAL PHYSICS & MOTION]: Ensure realistic gravity, authentic physical textures, correct ergonomics and natural human anatomy.`
+
     // Formulate structured prompt honoring professional film grammar
     const cinematicPrompt = [
       `[SUBJECT LOCK & CANONICAL REFS]: Preserve ${primaryHandles} identity, geometry, proportions, colors, surface finishes, and mechanical components exactly as shown in authoritative reference assets. Product must not recolor, morph, or redesign.`,
       `[ENVIRONMENT]: Authentic ${beats[0]?.environment || 'commercial setting'}.`,
       `[CINEMATIC SEQUENCE (0-8s)]: ${beatSequence}`,
-      `[MATERIAL PHYSICS & MOTION]: Ensure realistic gravity, natural liquid spray trajectory from the brass wand onto leaves, correct hand grip on equipment, and natural human anatomy.`,
+      materialPhysicsDirective,
       `[TIMING & CONTINUITY]: Seamless micro-story progression across 8 seconds.`,
       diegeticBrandingDirective,
       audioDirective,

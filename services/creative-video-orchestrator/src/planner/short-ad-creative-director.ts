@@ -13,6 +13,7 @@ import { AdFormatRouter, type UserStylePreference } from '../strategy/ad-format-
 import { FormatVariantSelector } from '../strategy/format-variant-selector.js'
 import { CreativeDiversityGuard, type CreativeFingerprint } from '../strategy/creative-diversity-guard.js'
 import type { SubtitleMode } from '../types/job-asset-manifest.js'
+import { globalSectorPresetRegistry } from '../strategy/sector-presets.js'
 
 export interface IShortAdCreativeDirectorProvider {
   generateMasterPlan(
@@ -106,118 +107,161 @@ export class ShortAdCreativeDirector {
     const audienceValue = this.synthesizeAudienceValue(snapshot, businessModel)
     const storyArc = 'HOOK (0-0.7s) -> REVEAL (0.7-2.2s) -> PRODUCT PROOF (2.2-4.5s) -> PAYOFF (4.5-6.2s) -> BRAND CLOSE (6.2-8.0s)'
 
+    const sectorPreset = globalSectorPresetRegistry.get(sector)
+
     // 2. Exact Timed Beats aligned with advertising grammar
     const beats: MasterPlanBeat[] = [
       {
         start: 0.0,
         end: 0.7,
         purpose: 'HOOK',
-        visual_action: businessModel === 'saas_software'
-          ? 'Bilgisayar ekranındaki harita pinlerine ve anlık analitik grafiğe hızlı dinamik odaklanma'
-          : businessModel === 'physical_product'
+        visual_action: sectorPreset.id.includes('agri')
           ? 'Aşırı makro yakın çekim: Pirinç nozülden basınçla fışkıran ilk mikronize sıvı damlacıkları ve ani hareket'
-          : 'Şantiye kolon hattında terazi ibresinin sıfırlanma anına makro odak',
-        product_action: 'Pirinç nozülden anlık yüksek basınç çıkışı',
-        actor_action: 'Tetiğe basış anı',
-        environment: businessModel === 'saas_software'
-          ? 'Modern cam cepheli ofis'
-          : businessModel === 'physical_product'
+          : sectorPreset.id.includes('construct')
+          ? 'Şantiye kolon hattında terazi ibresinin sıfırlanma anına ve killi tuğla dokusuna makro odak'
+          : sectorPreset.id.includes('soft') || sectorPreset.id.includes('saas')
+          ? 'Bilgisayar ekranındaki harita pinlerine ve anlık analitik grafiğe hızlı dinamik odaklanma'
+          : `Aşırı makro yakın çekim: ${prodName} fonksiyonel detayına ve ${sectorPreset.mandatoryProofTypes[0] || 'çalışma mekanizmasına'} odak`,
+        product_action: sectorPreset.id.includes('agri')
+          ? 'Pirinç nozülden anlık yüksek basınç çıkışı'
+          : sectorPreset.id.includes('construct')
+          ? 'Hassas oturum ve milimetrik terazi dengesi'
+          : sectorPreset.id.includes('soft')
+          ? 'Canlı veri ve arayüz akışı'
+          : `@HeroProduct ${sectorPreset.mandatoryProofTypes[0] || 'aktif durumu'}`,
+        actor_action: sectorPreset.id.includes('agri')
+          ? 'Tetiğe basış anı'
+          : sectorPreset.id.includes('construct')
+          ? 'Ustanın tuğlayı dengeli yerleştirme anı'
+          : 'Kullanıcının odaklanmış eylemi',
+        environment: sectorPreset.id.includes('agri')
           ? 'Güneş ışığında parlayan Ege zeytinliği'
-          : 'Temiz şantiye alanı',
-        camera: 'Macro cine lens, sığ alan derinliği, yüksek dinamik giriş',
-        lighting: 'Sabah güneşiyle parlayan metalik pirinç nozül',
+          : sectorPreset.id.includes('construct')
+          ? 'Modern mimari şantiye ve yapı alanı'
+          : sectorPreset.id.includes('soft')
+          ? 'Modern cam cepheli ofis'
+          : `${sectorPreset.description} alanı`,
+        camera: sectorPreset.cameraLanguage || 'Macro cine lens, sığ alan derinliği, yüksek dinamik giriş',
+        lighting: sectorPreset.lightingProfile || 'Doğal ticari aydınlatma',
         physics_constraints: [
-          'yerçekimi ve sıvı dinamiği doğal',
-          'oto yıkama veya binek araç yok',
+          'yerçekimi ve mekanik temas doğal',
+          ...sectorPreset.negativeVisuals.slice(0, 2),
           'ekranda yapay yazı yok',
         ],
         voiceover: '',
         dialogue: undefined,
-        sfx: 'Düşük frekanslı tok püskürtme patlama sesi',
-        ambience: 'Zeytin yapraklarının hafif hışırtısı',
+        sfx: sectorPreset.soundscapeDefaults[0] || 'Düşük frekanslı tok püskürtme patlama sesi',
+        ambience: sectorPreset.soundscapeDefaults[1] || 'Zeytin yapraklarının hafif hışırtısı',
       },
       {
         start: 0.7,
         end: 2.2,
         purpose: 'REVEAL',
-        visual_action: businessModel === 'saas_software'
-          ? 'Geniş açıya akıcı geçişle ofiste analitik paneli inceleyen kararlı yönetici'
-          : businessModel === 'physical_product'
+        visual_action: sectorPreset.id.includes('agri')
           ? 'Hızlı akıcı geri çekilme ile zeytin ağaçları arasında sırtında ürünle ilerleyen çiftçinin ve gövdenin net görünümü'
-          : 'Kalıp ustasının kolon hattında dengeli duruşu',
-        product_action: 'Kanonik @HeroProduct gövdesi sırtta dengeli ve net',
-        actor_action: 'Kendinden emin adımlarla ağaç sırasına yönelme',
-        environment: businessModel === 'physical_product'
+          : sectorPreset.id.includes('construct')
+          ? 'Geri çekilme ile şantiye cephesinde usta ve nizami örülmüş tuğla hattının net görünümü'
+          : sectorPreset.id.includes('soft')
+          ? 'Geniş açıya akıcı geçişle ofiste analitik paneli inceleyen kararlı yönetici'
+          : `Akıcı geri çekilme ile @HeroProduct ve kullanıcının güven veren görünümü`,
+        product_action: 'Kanonik @HeroProduct gövdesi dengeli ve net kadrajda',
+        actor_action: 'Kendinden emin adımlarla eyleme devam etme',
+        environment: sectorPreset.id.includes('agri')
           ? 'Sabah güneşiyle aydınlanan bakımlı Ege zeytinliği'
-          : 'Modern çalışma alanı',
+          : sectorPreset.id.includes('construct')
+          ? 'Temiz ve düzenli inşaat alanı'
+          : sectorPreset.id.includes('soft')
+          ? 'Modern çalışma alanı'
+          : sectorPreset.description,
         camera: '50mm cine lens, akıcı yanal takip ve net ürün odağı',
-        lighting: 'Sabah doğal güneş ışığı',
+        lighting: sectorPreset.lightingProfile,
         physics_constraints: [
-          'ergonomik askı ve sırt teması doğal',
-          'oto yıkama veya binek araç yok',
+          'ergonomik askı ve temas doğal',
+          ...sectorPreset.negativeVisuals.slice(0, 2),
           'ekranda yapay yazı yok',
         ],
         voiceover: '',
         dialogue: undefined,
         sfx: 'Düşük frekanslı tok geçiş sesi',
-        ambience: 'Doğal bahçe rüzgar fısıltısı',
+        ambience: sectorPreset.soundscapeDefaults[1] || 'Doğal bahçe rüzgar fısıltısı',
       },
       {
         start: 2.2,
         end: 4.5,
         purpose: 'PRODUCT_PROOF',
-        visual_action: businessModel === 'saas_software'
-          ? 'Laptop ekranındaki harita arayüzünde tek tıkla doğrulanmış lokasyonların onaylanması'
-          : businessModel === 'physical_product'
+        visual_action: sectorPreset.id.includes('agri')
           ? 'Çiftçinin pirinç püskürtme borusuyla zeytin yapraklarına kesintisiz ve homojen sıvı uygulaması'
-          : 'Ustanın killi cephe tuğlasını harç yatağına yerleştirmesi',
-        product_action: 'Kanonik pirinç püskürtme borusundan yapraklara kesintisiz ve dengeli sıvı püskürtme',
-        actor_action: 'Tetiğe basarak ağaç tacına yönlendirme ve net uygulama',
-        environment: businessModel === 'physical_product'
+          : sectorPreset.id.includes('construct')
+          ? 'Ustanın killi cephe tuğlasını harç yatağına milimetrik yerleştirip tokmakla sabitlemesi'
+          : sectorPreset.id.includes('soft')
+          ? 'Laptop ekranındaki harita arayüzünde tek tıkla doğrulanmış lokasyonların onaylanması'
+          : `Kullanıcının @HeroProduct ile ${sectorPreset.mandatoryProofTypes[0] || 'performans kanıtını'} sergilemesi`,
+        product_action: sectorPreset.id.includes('agri')
+          ? 'Kanonik pirinç püskürtme borusundan yapraklara kesintisiz ve dengeli sıvı püskürtme'
+          : sectorPreset.id.includes('construct')
+          ? 'Tuğlanın harçla kusursuz kenetlenmesi ve sıfır derz kayması'
+          : '@HeroProduct ile kesintisiz ve dengeli performans',
+        actor_action: 'Hassas ve yetkin kontrol ile net uygulama',
+        environment: sectorPreset.id.includes('agri')
           ? 'Zeytin ağaçları sırası boyunca doğal sabah ışığı'
-          : 'Ofis masası',
+          : sectorPreset.id.includes('construct')
+          ? 'Yapı duvar hattı boyunca doğal gün ışığı'
+          : sectorPreset.description,
         camera: '50mm cine lens, akıcı yanal takip ve net ürün odağı',
-        lighting: 'Pirinç boru ve yaprakları aydınlatan yumuşak gün ışığı',
+        lighting: sectorPreset.lightingProfile,
         physics_constraints: [
           'tutma noktaları ergonomik',
-          'hortum gövdeye tam bağlı',
-          'püskürtme yönü nozül açısıyla uyumlu',
+          ...sectorPreset.negativeVisuals.slice(0, 2),
         ],
         voiceover: '',
         dialogue: undefined,
-        sfx: 'Pompa çalışma sesi ve homojen sıvı püskürtme sesi',
-        ambience: 'Doğal bahçe ortamı',
+        sfx: sectorPreset.soundscapeDefaults[0] || 'Pompa çalışma sesi ve homojen sıvı püskürtme sesi',
+        ambience: sectorPreset.soundscapeDefaults[1] || 'Doğal bahçe ortamı',
       },
       {
         start: 4.5,
         end: 6.2,
         purpose: 'BENEFIT',
-        visual_action: businessModel === 'physical_product'
+        visual_action: sectorPreset.id.includes('agri')
           ? 'Geniş açıya açılarak ağaç tacının tam kapsandığını gören çiftçinin tatmin dolu duruşu ve güven dolu baş onayı'
-          : businessModel === 'saas_software'
-          ? 'Ekrana bakan yöneticinin güven dolu tebessümü'
-          : 'Duvar örgü hattının nizami tamamlanışı',
-        product_action: 'Omuzda sağlam ve güven veren duruş',
+          : sectorPreset.id.includes('construct')
+          ? 'Geniş açıya açılarak duvar örgü hattının nizami tamamlanışını gören ustanın tatmin dolu duruşu ve güven onayı'
+          : sectorPreset.id.includes('soft')
+          ? 'Ekrana bakan yöneticinin güven dolu tebessümü ve onay hareketi'
+          : `Geniş açıya açılarak kusursuz sonucu gören kullanıcının güven dolu tatmin duruşu`,
+        product_action: 'Sağlam ve güven veren ürün duruşu',
         actor_action: 'Sonuçtan memnun, güven dolu baş onayı',
-        environment: 'Zeytin ağaçları ve ufuk',
+        environment: sectorPreset.id.includes('agri')
+          ? 'Zeytin ağaçları ve ufuk'
+          : sectorPreset.id.includes('construct')
+          ? 'Tamamlanmış yapı hattı ve ufuk'
+          : sectorPreset.description,
         camera: '35mm geniş açıya akıcı yumuşak geri çekilme (pull-back reveal)',
-        lighting: 'Doğal gün ışığı',
+        lighting: sectorPreset.lightingProfile,
         physics_constraints: [
           'kadrajda yapay metin veya yapay logo yok',
         ],
         voiceover: '',
         dialogue: undefined,
         sfx: 'Tok kapanış tınısı',
-        ambience: 'Sakin bahçe ambiyansı',
+        ambience: sectorPreset.soundscapeDefaults[1] || 'Sakin bahçe ambiyansı',
       },
       {
         start: 6.2,
         end: 8.0,
         purpose: 'BRAND_CLOSE',
-        visual_action: 'Zeytinliğin sabah ışığı altındaki görüntüsü akıcı şekilde korunarak marka kapanış kartına zemin oluşturur',
-        product_action: 'Marka güvencesi',
-        actor_action: 'Kadraj geriye çekilirken zeytinlik atmosferi devam eder',
-        environment: 'Zeytin ağaçları ve sıcak sabah ufku',
+        visual_action: sectorPreset.id.includes('agri')
+          ? 'Zeytinliğin sabah ışığı altındaki görüntüsü akıcı şekilde korunarak marka kapanış kartına zemin oluşturur'
+          : sectorPreset.id.includes('construct')
+          ? 'Mimari yapının ışık altındaki estetik görüntüsü akıcı şekilde korunarak marka kapanış kartına zemin oluşturur'
+          : `${sectorPreset.name} atmosferi akıcı şekilde korunarak marka kapanış kartına zemin oluşturur`,
+        product_action: `${brand} kurumsal güvencesi`,
+        actor_action: 'Kadraj geriye çekilirken ortam atmosferi devam eder',
+        environment: sectorPreset.id.includes('agri')
+          ? 'Zeytin ağaçları ve sıcak sabah ufku'
+          : sectorPreset.id.includes('construct')
+          ? 'Mimari silüet ve sıcak gün batımı'
+          : `${sectorPreset.description} atmosferi`,
         camera: 'Sabit derinlikli kadraj (frame-hold background continuation)',
         lighting: 'Altın saat tonları',
         physics_constraints: [
@@ -227,91 +271,176 @@ export class ShortAdCreativeDirector {
         voiceover: '',
         dialogue: undefined,
         sfx: 'Tok kurumsal marka son sesi',
-        ambience: 'Sakin rüzgar sesi',
+        ambience: sectorPreset.soundscapeDefaults[1] || 'Sakin rüzgar sesi',
       },
     ]
 
-    // 3. Continuous Timed Speech across 0-8s (18-24 Turkish words)
-    const speechTimeline: SpeechTimelineItem[] = businessModel === 'saas_software'
-      ? [
-          {
-            start_sec: 0.0,
-            end_sec: 2.0,
-            exact_text: 'Karmaşık veri süreçlerinde hız ve netlik arayan işletmelere:',
-            speaker: 'executive',
-            delivery: 'Urgent, engaging Turkish hook delivery',
-            corresponding_visual_beat: '0.0-2.2s (HOOK + REVEAL)',
-          },
-          {
-            start_sec: 2.0,
-            end_sec: 5.0,
-            exact_text: `${brand} akıllı yönetim paneliyle tek ekranda anlık kontrol.`,
-            speaker: 'executive',
-            delivery: 'Authoritative, clear product demonstration delivery',
-            corresponding_visual_beat: '2.2-4.5s (PRODUCT_PROOF)',
-          },
-          {
-            start_sec: 5.0,
-            end_sec: 8.0,
-            exact_text: `Zamandan tasarruf, tam kontrol. ${brand} ile hemen başlayın.`,
-            speaker: 'executive',
-            delivery: 'Warm, confident closing delivery continuing into end card',
-            corresponding_visual_beat: '4.5-8.0s (PAYOFF + BRAND_CLOSE)',
-          },
-        ]
-      : businessModel === 'physical_product'
-      ? [
-          {
-            start_sec: 0.0,
-            end_sec: 2.0,
-            exact_text: 'Zorlu bahçe işlerinde güç ve hız arayanlara:',
-            speaker: 'farmer',
-            delivery: 'Urgent, engaging Turkish hook delivery',
-            corresponding_visual_beat: '0.0-2.2s (HOOK + REVEAL)',
-          },
-          {
-            start_sec: 2.0,
-            end_sec: 5.0,
-            exact_text: `${brand} şarjlı sırt pompasıyla tek tuşla güçlü ilaçlama.`,
-            speaker: 'farmer',
-            delivery: 'Authoritative, clear product demonstration delivery',
-            corresponding_visual_beat: '2.2-4.5s (PRODUCT_PROOF)',
-          },
-          {
-            start_sec: 5.0,
-            end_sec: 8.0,
-            exact_text: `Yüksek verim, kesintisiz performans. ${brand} ile keşfedin.`,
-            speaker: 'farmer',
-            delivery: 'Warm, confident closing delivery continuing into end card',
-            corresponding_visual_beat: '4.5-8.0s (PAYOFF + BRAND_CLOSE)',
-          },
-        ]
-      : [
-          {
-            start_sec: 0.0,
-            end_sec: 2.0,
-            exact_text: 'Zorlu şantiye koşullarında sağlamlık ve güven arayan ustalara:',
-            speaker: 'master_mason',
-            delivery: 'Urgent, engaging Turkish hook delivery',
-            corresponding_visual_beat: '0.0-2.2s (HOOK + REVEAL)',
-          },
-          {
-            start_sec: 2.0,
-            end_sec: 5.0,
-            exact_text: `${brand} ürünleriyle her projede kusursuz işçilik.`,
-            speaker: 'master_mason',
-            delivery: 'Authoritative, clear product demonstration delivery',
-            corresponding_visual_beat: '2.2-4.5s (PRODUCT_PROOF)',
-          },
-          {
-            start_sec: 5.0,
-            end_sec: 8.0,
-            exact_text: `Yüksek dayanıklılık, tam güvence. ${brand} ile inşa edin.`,
-            speaker: 'master_mason',
-            delivery: 'Warm, confident closing delivery continuing into end card',
-            corresponding_visual_beat: '4.5-8.0s (PAYOFF + BRAND_CLOSE)',
-          },
-        ]
+    // 3. Continuous Timed Speech across 0-8s (18-24 Turkish words, Subject-Object-Predicate)
+    let speechTimeline: SpeechTimelineItem[] = []
+
+    if (sectorPreset.id.includes('agri')) {
+      speechTimeline = [
+        {
+          start_sec: 0.0,
+          end_sec: 2.0,
+          exact_text: 'Zorlu bahçe işlerinde güç ve hız arayanlara:',
+          speaker: 'farmer',
+          delivery: 'Urgent, engaging Turkish hook delivery',
+          corresponding_visual_beat: '0.0-2.2s (HOOK + REVEAL)',
+        },
+        {
+          start_sec: 2.0,
+          end_sec: 5.0,
+          exact_text: `${brand} şarjlı sırt pompasıyla tek tuşla güçlü ilaçlama.`,
+          speaker: 'farmer',
+          delivery: 'Authoritative, clear product demonstration delivery',
+          corresponding_visual_beat: '2.2-4.5s (PRODUCT_PROOF)',
+        },
+        {
+          start_sec: 5.0,
+          end_sec: 8.0,
+          exact_text: `Yüksek verim, kesintisiz performans. ${brand} ile keşfedin.`,
+          speaker: 'farmer',
+          delivery: 'Warm, confident closing delivery continuing into end card',
+          corresponding_visual_beat: '4.5-8.0s (PAYOFF + BRAND_CLOSE)',
+        },
+      ]
+    } else if (sectorPreset.id.includes('construct')) {
+      speechTimeline = [
+        {
+          start_sec: 0.0,
+          end_sec: 2.0,
+          exact_text: 'Zorlu şantiye koşullarında sağlamlık ve güven arayan ustalara:',
+          speaker: 'master_mason',
+          delivery: 'Urgent, engaging Turkish hook delivery',
+          corresponding_visual_beat: '0.0-2.2s (HOOK + REVEAL)',
+        },
+        {
+          start_sec: 2.0,
+          end_sec: 5.0,
+          exact_text: `${brand} ürünleriyle her projede kusursuz işçilik ve güven.`,
+          speaker: 'master_mason',
+          delivery: 'Authoritative, clear product demonstration delivery',
+          corresponding_visual_beat: '2.2-4.5s (PRODUCT_PROOF)',
+        },
+        {
+          start_sec: 5.0,
+          end_sec: 8.0,
+          exact_text: `Yüksek dayanıklılık, tam güvence. ${brand} ile inşa edin.`,
+          speaker: 'master_mason',
+          delivery: 'Warm, confident closing delivery continuing into end card',
+          corresponding_visual_beat: '4.5-8.0s (PAYOFF + BRAND_CLOSE)',
+        },
+      ]
+    } else if (sectorPreset.id.includes('soft') || sectorPreset.id.includes('saas')) {
+      speechTimeline = [
+        {
+          start_sec: 0.0,
+          end_sec: 2.0,
+          exact_text: 'Karmaşık veri süreçlerinde hız ve netlik arayan işletmelere:',
+          speaker: 'executive',
+          delivery: 'Urgent, engaging Turkish hook delivery',
+          corresponding_visual_beat: '0.0-2.2s (HOOK + REVEAL)',
+        },
+        {
+          start_sec: 2.0,
+          end_sec: 5.0,
+          exact_text: `${brand} akıllı yönetim paneliyle tek ekranda anlık kontrol.`,
+          speaker: 'executive',
+          delivery: 'Authoritative, clear product demonstration delivery',
+          corresponding_visual_beat: '2.2-4.5s (PRODUCT_PROOF)',
+        },
+        {
+          start_sec: 5.0,
+          end_sec: 8.0,
+          exact_text: `Zamandan tasarruf, tam kontrol. ${brand} ile hemen başlayın.`,
+          speaker: 'executive',
+          delivery: 'Warm, confident closing delivery continuing into end card',
+          corresponding_visual_beat: '4.5-8.0s (PAYOFF + BRAND_CLOSE)',
+        },
+      ]
+    } else if (sectorPreset.id.includes('food')) {
+      speechTimeline = [
+        {
+          start_sec: 0.0,
+          end_sec: 2.0,
+          exact_text: 'Eşsiz lezzet ve taze malzemelerle hazırlanan zengin sofralara:',
+          speaker: 'chef',
+          delivery: 'Urgent, engaging Turkish hook delivery',
+          corresponding_visual_beat: '0.0-2.2s (HOOK + REVEAL)',
+        },
+        {
+          start_sec: 2.0,
+          end_sec: 5.0,
+          exact_text: `${brand} ustalarının özel tarifiyle anında enfes lezzet deneyimi.`,
+          speaker: 'chef',
+          delivery: 'Authoritative, clear product demonstration delivery',
+          corresponding_visual_beat: '2.2-4.5s (PRODUCT_PROOF)',
+        },
+        {
+          start_sec: 5.0,
+          end_sec: 8.0,
+          exact_text: `Unutulmaz tatlar, kaliteli sunum. ${brand} ile keşfedin.`,
+          speaker: 'chef',
+          delivery: 'Warm, confident closing delivery continuing into end card',
+          corresponding_visual_beat: '4.5-8.0s (PAYOFF + BRAND_CLOSE)',
+        },
+      ]
+    } else if (sectorPreset.id.includes('beauty')) {
+      speechTimeline = [
+        {
+          start_sec: 0.0,
+          end_sec: 2.0,
+          exact_text: 'Doğal ışıltı ve pürüzsüz bir cilt arayan kadınlara:',
+          speaker: 'beauty_expert',
+          delivery: 'Urgent, engaging Turkish hook delivery',
+          corresponding_visual_beat: '0.0-2.2s (HOOK + REVEAL)',
+        },
+        {
+          start_sec: 2.0,
+          end_sec: 5.0,
+          exact_text: `${brand} besleyici formülüyle cildinizde anında canlandırıcı etki.`,
+          speaker: 'beauty_expert',
+          delivery: 'Authoritative, clear product demonstration delivery',
+          corresponding_visual_beat: '2.2-4.5s (PRODUCT_PROOF)',
+        },
+        {
+          start_sec: 5.0,
+          end_sec: 8.0,
+          exact_text: `Işıltılı görünüm, doğal güzellik. ${brand} ile tanışın.`,
+          speaker: 'beauty_expert',
+          delivery: 'Warm, confident closing delivery continuing into end card',
+          corresponding_visual_beat: '4.5-8.0s (PAYOFF + BRAND_CLOSE)',
+        },
+      ]
+    } else {
+      speechTimeline = [
+        {
+          start_sec: 0.0,
+          end_sec: 2.0,
+          exact_text: 'Kalite, dayanıklılık ve üstün performanstan vazgeçmeyenlere:',
+          speaker: 'spokesperson',
+          delivery: 'Urgent, engaging Turkish hook delivery',
+          corresponding_visual_beat: '0.0-2.2s (HOOK + REVEAL)',
+        },
+        {
+          start_sec: 2.0,
+          end_sec: 5.0,
+          exact_text: `${brand} kalitesiyle her kullanımda maksimum verim ve rahatlık.`,
+          speaker: 'spokesperson',
+          delivery: 'Authoritative, clear product demonstration delivery',
+          corresponding_visual_beat: '2.2-4.5s (PRODUCT_PROOF)',
+        },
+        {
+          start_sec: 5.0,
+          end_sec: 8.0,
+          exact_text: `Güvenilir kalite, uzun ömürlü kullanım. ${brand} güvencesiyle.`,
+          speaker: 'spokesperson',
+          delivery: 'Warm, confident closing delivery continuing into end card',
+          corresponding_visual_beat: '4.5-8.0s (PAYOFF + BRAND_CLOSE)',
+        },
+      ]
+    }
 
     const fullSpokenScript = speechTimeline.map(s => s.exact_text).join(' ')
 
@@ -444,40 +573,38 @@ export class ShortAdCreativeDirector {
   }
 
   private synthesizeCreativeIdea(brand: string, sector: string, product: string, model: BusinessModel): string {
-    if (sector.includes('agriculture')) {
-      return `Ege zeytinliğinde çalışan çiftçi ve ${product} ile ilaçlama.`
+    const preset = globalSectorPresetRegistry.get(sector)
+    if (preset && preset.id !== 'generic_commercial') {
+      return `${preset.description} içinde ${brand} ve ${product} ile ${preset.motionCharacter}.`
     }
     if (model === 'saas_software') {
       return `Dijital platformda analitik veri analizi ve ${brand} arayüzü.`
     }
-    return `Kalıcı ustalık ve profesyonel yapı disiplini: ${brand}.`
+    return `Kalıcı ustalık ve profesyonel disiplin: ${brand} ile ${product}.`
   }
 
   private synthesizeHook(sector: string, model: BusinessModel): string {
-    if (sector.includes('agriculture')) {
-      return `Sabah ışığında zeytin ağaçları arasına adımlarla giren çiftçi ve tetiğe basış anı.`
+    const preset = globalSectorPresetRegistry.get(sector)
+    if (preset && preset.id !== 'generic_commercial') {
+      return `${preset.name} odaklı çarpıcı açılış: ${preset.cameraLanguage}.`
     }
     if (model === 'saas_software') {
       return `İşletme analitiğinde net ve odaklanmış kontrol.`
     }
-    return `Zorlu şantiye temposunda profesyonel ustalık.`
+    return `Profesyonel iş temposunda yüksek kalite ve güven.`
   }
 
   private synthesizeProductTruth(snapshot: BrandContextSnapshot, product: any, model: BusinessModel): string {
     if (product && product.description) {
       return `${product.name}: ${product.description}.`
     }
-    if (model === 'physical_product') {
-      return `${product?.name || snapshot.brand_name}; 16L rezervuar, pirinç püskürtme borusu ve sırt askısı bileşenlerine sahip tarım ekipmanı.`
-    }
-    return `${snapshot.brand_name} tescilli kurumsal çözüm.`
+    const preset = globalSectorPresetRegistry.get(snapshot.sector_profile)
+    return `${product?.name || snapshot.brand_name}; ${preset.mandatoryProofTypes.join(', ')} standartlarına sahip profesyonel ürün.`
   }
 
   private synthesizeAudienceValue(snapshot: BrandContextSnapshot, model: BusinessModel): string {
-    if (model === 'physical_product') {
-      return 'Bahçe bakımında şarjlı sırt pompası kullanımı.'
-    }
-    return 'Kurumsal iş süreçlerinde verimli çalışma.'
+    const preset = globalSectorPresetRegistry.get(snapshot.sector_profile)
+    return `${preset.name} alanında yüksek verim, dayanıklılık ve güvenilir sonuç.`
   }
 
   /**

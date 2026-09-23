@@ -354,6 +354,103 @@ export class CreativeQA {
       details: `Logo text/symbol corrupted (${(req.generatedLogoFidelityScore * 100).toFixed(1)}% < 85%) and surface is not trackable. Fail-closed.`,
     }
   }
+
+  /**
+   * Evaluates 8s Short Ad Creative Master Plan against Advertising Grammar V2 invariants.
+   * Enforces:
+   * - AD_GRAMMAR_FAIL: missing structure or required beats (HOOK, REVEAL, PROOF, BENEFIT/PAYOFF, BRAND_CLOSE)
+   * - WEAK_HOOK: beat 1 (0-0.7s) lacks immediate visual action or product hook
+   * - NO_CLEAR_PRODUCT_REVEAL: beat 2 lacks hero product reveal
+   * - NO_PRODUCT_PROOF: beat 3 lacks physical or functional product demonstration
+   * - MINI_FILM_NOT_AD: missing clear value proposition, CTA, or brand close
+   * - REPETITIVE_CREATIVE: fingerprint identical to recently used tenant fingerprint
+   */
+  static evaluateAdvertisingGrammarQA(req: {
+    masterPlan: import('../planner/short-ad-master-plan.js').ShortAdMasterPlan
+    recentFingerprints?: import('../strategy/creative-diversity-guard.js').CreativeFingerprint[]
+  }): {
+    passed: boolean
+    hardFailGate?:
+      | 'AD_GRAMMAR_FAIL'
+      | 'WEAK_HOOK'
+      | 'NO_CLEAR_PRODUCT_REVEAL'
+      | 'NO_PRODUCT_PROOF'
+      | 'MINI_FILM_NOT_AD'
+      | 'REPETITIVE_CREATIVE'
+    reasons: string[]
+  } {
+    const beats = req.masterPlan.beats || []
+
+    // 1. Structure check: must have 5 distinct beats covering 0-8s
+    if (beats.length < 5) {
+      return {
+        passed: false,
+        hardFailGate: 'AD_GRAMMAR_FAIL',
+        reasons: ['AD_GRAMMAR_FAIL: Master plan must specify at least 5 structured advertising beats covering 0-8s.'],
+      }
+    }
+
+    // 2. Hook check (0.0 - 0.7s)
+    const hookBeat = beats.find(b => b.purpose === 'HOOK' || b.start === 0.0)
+    if (!hookBeat || !hookBeat.visual_action || hookBeat.visual_action.trim().length < 10) {
+      return {
+        passed: false,
+        hardFailGate: 'WEAK_HOOK',
+        reasons: ['WEAK_HOOK: First beat (0.0-0.7s) must have high-impact visual action to prevent viewer scroll-away.'],
+      }
+    }
+
+    // 3. Product reveal check (0.7 - 2.2s)
+    const revealBeat = beats.find(b => b.purpose === 'REVEAL')
+    if (!revealBeat || (!revealBeat.product_action && !revealBeat.visual_action)) {
+      return {
+        passed: false,
+        hardFailGate: 'NO_CLEAR_PRODUCT_REVEAL',
+        reasons: ['NO_CLEAR_PRODUCT_REVEAL: Product must be distinctly revealed within the first 2.2 seconds.'],
+      }
+    }
+
+    // 4. Product proof check (2.2 - 4.5s)
+    const proofBeat = beats.find(b => b.purpose === 'PRODUCT_PROOF')
+    if (!proofBeat || (!proofBeat.product_action && !proofBeat.visual_action)) {
+      return {
+        passed: false,
+        hardFailGate: 'NO_PRODUCT_PROOF',
+        reasons: ['NO_PRODUCT_PROOF: Core functional product proof must be demonstrated between 2.2s and 4.5s.'],
+      }
+    }
+
+    // 5. Mini film vs Commercial Ad check: must have brand end-card and CTA
+    if (!req.masterPlan.end_card_plan || !req.masterPlan.end_card_plan.cta_text) {
+      return {
+        passed: false,
+        hardFailGate: 'MINI_FILM_NOT_AD',
+        reasons: ['MINI_FILM_NOT_AD: Video lacks deterministic CTA or brand closing card. Real commercial grammar required.'],
+      }
+    }
+
+    // 6. Anti-fatigue repetition guard
+    if (req.recentFingerprints && req.recentFingerprints.length > 0 && req.masterPlan.creative_fingerprint) {
+      const lastFp = req.recentFingerprints[req.recentFingerprints.length - 1]
+      if (
+        lastFp &&
+        lastFp.tenant_id === req.masterPlan.creative_fingerprint.tenant_id &&
+        lastFp.format_variant === req.masterPlan.creative_fingerprint.format_variant &&
+        lastFp.hook_type === req.masterPlan.creative_fingerprint.hook_type
+      ) {
+        return {
+          passed: false,
+          hardFailGate: 'REPETITIVE_CREATIVE',
+          reasons: ['REPETITIVE_CREATIVE: Generated creative fingerprint clones the immediately preceding creative variant for this tenant.'],
+        }
+      }
+    }
+
+    return {
+      passed: true,
+      reasons: [],
+    }
+  }
 }
 
 export type FinalLongVideoQAReporter = FinalLongVideoQAReport
