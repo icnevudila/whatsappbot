@@ -246,13 +246,25 @@ async function main() {
   const gflowEngineUrl = process.env.GFLOW_ENGINE_URL || 'http://gflow-engine:3461'
   const gflowProvider = new RealHttpGFlowProvider(gflowEngineUrl)
 
+  // Dynamically select idle account from ai-media-control API (or fallback to account-02)
+  let targetAccount = 'account-02'
+  try {
+    const accResp = await fetch('http://127.0.0.1:3460/api/v1/accounts')
+    if (accResp.ok) {
+      const accounts = await accResp.json()
+      const idle = accounts.find(a => a.status === 'idle')
+      if (idle) targetAccount = idle.id
+    }
+  } catch (_) {}
+  console.log(`Using active Flow Account: ${targetAccount}`)
+
   const flowExecutionPayload = {
     job_id: jobId,
     attempt_id: `att_${Date.now()}`,
-    account_id: 'account-01',
+    account_id: targetAccount,
     org_id: orgId,
     flow_project_id: `flow_proj_${jobId.slice(0, 10)}`,
-    flow_account_id: 'account-01',
+    flow_account_id: targetAccount,
     prompt: compiledPrompt.cinematicPrompt,
     aspect_ratio: '9:16',
     model: 'veo-fast',
