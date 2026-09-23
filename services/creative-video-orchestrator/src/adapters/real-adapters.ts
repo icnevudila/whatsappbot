@@ -130,8 +130,15 @@ export class RealHttpGFlowProvider implements IGFlowProvider {
         throw new Error(`[MISSING_FLOW_UUID] gflow-engine succeeded but did not return real_flow_project_uuid`)
       }
 
-      // Full Reference Gate Verification: asset_id + org_id + sha256 + role + attached_media_id
+      // Full Reference Gate Verification: asset_id + org_id + sha256 + role + attached_media_id.
+      // A provider response without this evidence is not a successful attachment.  In
+      // particular, never turn an empty list into the expected list: that would make
+      // attachment failures indistinguishable from a verified generation.
       const verifiedAssets = data.verified_assets || []
+      const expectedById = new Map((req.assets || []).map((asset: any) => [asset.asset_id, asset]))
+      if (verifiedAssets.length !== req.expected_reference_ids.length) {
+        throw new Error(`GPT_ASSET_ATTACHMENT_FAILED: expected ${req.expected_reference_ids.length} verified assets, received ${verifiedAssets.length}`)
+      }
       for (const va of verifiedAssets) {
         if (!va.asset_id || !req.expected_reference_ids.includes(va.asset_id)) {
           throw new Error(`REFERENCE_INTEGRITY_VIOLATION: Unexpected or missing asset_id ${va.asset_id}`)
@@ -144,6 +151,10 @@ export class RealHttpGFlowProvider implements IGFlowProvider {
         }
         if (!va.attached_media_id) {
           throw new Error(`REFERENCE_INTEGRITY_VIOLATION: Asset ${va.asset_id} missing confirmed attached_media_id chip`)
+        }
+        const expected = expectedById.get(va.asset_id)
+        if (!expected || !va.sha256 || String(va.sha256).toLowerCase() !== String(expected.sha256).toLowerCase()) {
+          throw new Error(`CREATIVE_ASSET_DRIFT: verified Flow asset ${va.asset_id} does not match the approved asset SHA-256`)
         }
       }
 
@@ -167,7 +178,7 @@ export class RealHttpGFlowProvider implements IGFlowProvider {
         elapsed_seconds: data.elapsed_seconds || 0,
         expected_ingredient_count: data.expected_ingredient_count ?? req.expected_reference_ids.length,
         actual_ingredient_count: data.actual_ingredient_count ?? actualAttached.length,
-        actual_attached_reference_ids: actualAttached.length > 0 ? actualAttached : req.expected_reference_ids,
+        actual_attached_reference_ids: actualAttached,
         verified_assets: verifiedAssets.map((va: any) => ({
           asset_id: va.asset_id,
           org_id: va.org_id || req.org_id,

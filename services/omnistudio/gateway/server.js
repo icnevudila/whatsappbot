@@ -16,6 +16,12 @@ const path = require('path');
 const crypto = require('crypto');
 const os = require('os');
 const { URL } = require('url');
+const { createJobMetrics, setStage, finishMetrics } = require('./runtime_metrics.js');
+const { getTenantScopeKey, getRequestKey } = require('./tenant_scope.js');
+
+const COMPLETED_JOB_TTL_MS = Math.max(0, parseInt(process.env.COMPLETED_JOB_TTL_MS || String(30 * 60 * 1000), 10));
+const FAILED_JOB_TTL_MS = Math.max(0, parseInt(process.env.FAILED_JOB_TTL_MS || String(10 * 60 * 1000), 10));
+const MAX_RETAINED_COMPLETED_JOBS = Math.max(1, parseInt(process.env.MAX_RETAINED_COMPLETED_JOBS || '200', 10));
 
 const PORT = parseInt(process.env.PORT || '3456', 10);
 const PUBLIC_HOST = process.env.PUBLIC_HOST || '167.233.201.31';
@@ -133,6 +139,8 @@ class AdvancedJobQueue {
     this.activeWorkers = new Map(); // workerId -> jobId
     this.registeredWorkers = new Map(); // workerId -> { workerId, status, lastSeen, details }
     this.waiters = new Map();
+    this.idempotencyMap = new Map();
+    this.cleanupCount = 0;
   }
 
   createJob({
@@ -150,9 +158,35 @@ class AdvancedJobQueue {
     conversationHistory = null,
     companyContext = null,
     tone = null,
+    tenantId = null,
+    requestId = null,
+    conversationId = null,
+    metrics = null,
   }) {
+    const operationType = type === 'chat_suggestions' ? 'text_reply' : 'image_generation';
+    const idempotencyKey = getRequestKey({ tenantId, requestId, operationType });
+    if (idempotencyKey) {
+      const existingId = this.idempotencyMap.get(idempotencyKey);
+      const existing = existingId && this.jobs.get(existingId);
+      if (existing) return existing;
+      this.idempotencyMap.delete(idempotencyKey);
+    }
+    this.cleanupCompletedJobs();
     const id = 'job_' + crypto.randomBytes(8).toString('hex');
+    const promptBuildStartedAt = Date.now();
     const finalPrompt = optimizePrompt ? enhancePrompt(prompt, { brandKit, size }) : prompt;
+    const createdAt = Date.now();
+    const jobMetrics = metrics || createJobMetrics({
+      operation: type === 'chat_suggestions' ? 'text_reply' : 'image_generation',
+      tenantId,
+      requestId,
+      prompt,
+      companyContext,
+      conversationHistory,
+      now: promptBuildStartedAt,
+    });
+    setStage(jobMetrics, 'request_received_ms', createdAt - promptBuildStartedAt);
+    setStage(jobMetrics, 'prompt_build_ms', createdAt - promptBuildStartedAt);
 
     const job = {
       id,
@@ -164,6 +198,11 @@ class AdvancedJobQueue {
       response_format,
       workspace,
       customer,
+      tenantId,
+      requestId,
+      conversationId,
+      scopeKey: getTenantScopeKey({ tenantId, conversationId, customer }),
+      idempotencyKey,
       incomingMessage,
       conversationHistory,
       companyContext,
@@ -180,15 +219,16 @@ class AdvancedJobQueue {
       result: null,
       error: null,
       assignedTo: null,
-      createdAt: Date.now(),
+      createdAt,
       startedAt: null,
       completedAt: null,
+      metrics: jobMetrics,
     };
 
     if (type === 'chat_suggestions') {
       this.pendingQueue = this.pendingQueue.filter((pendingId) => {
         const pj = this.jobs.get(pendingId);
-        if (pj && pj.type === 'chat_suggestions' && pj.customer === customer && pj.status === 'pending') {
+        if (pj && pj.type === 'chat_suggestions' && pj.scopeKey === job.scopeKey && pj.status === 'pending') {
           pj.status = 'failed';
           pj.error = 'Daha yeni bir sohbet açıldığı için iptal edildi';
           this.notifyWaiters(pendingId, pj);
@@ -199,6 +239,7 @@ class AdvancedJobQueue {
     }
 
     this.jobs.set(id, job);
+    if (idempotencyKey) this.idempotencyMap.set(idempotencyKey, id);
     this.pendingQueue.push(id);
     this.recalculatePositions();
     broadcastEvent('job_created', sanitizeJobForBroadcast(job));
@@ -228,7 +269,7 @@ class AdvancedJobQueue {
       const job = this.jobs.get(jobId);
       if (!job || job.status !== 'pending') return false;
       if (job.platform !== 'auto' && job.platform !== p) return false;
-      const assignedWid = this.companyWorkerMap.get(job.customer);
+      const assignedWid = this.companyWorkerMap.get(job.scopeKey);
       return assignedWid === wid;
     });
 
@@ -254,10 +295,11 @@ class AdvancedJobQueue {
     job.progress = 15;
     job.statusText = `${wid} işçisi görevi devraldı, tarayıcı hazırlanıyor...`;
     job.startedAt = Date.now();
+    setStage(job.metrics, 'queue_wait_ms', job.startedAt - job.createdAt);
     this.activeWorkers.set(wid, jobId);
 
-    if (job.customer) {
-      this.companyWorkerMap.set(job.customer, wid);
+    if (job.scopeKey) {
+      this.companyWorkerMap.set(job.scopeKey, wid);
     }
 
     broadcastEvent('job_assigned', sanitizeJobForBroadcast(job));
@@ -292,6 +334,7 @@ class AdvancedJobQueue {
       job.error = error;
       job.statusText = `Hata: ${error}`;
       job.completedAt = Date.now();
+      finishMetrics(job.metrics, { result: 'error', errorCode: 'WORKER_ERROR', now: job.completedAt });
       broadcastEvent('job_failed', sanitizeJobForBroadcast(job));
       this.notifyWaiters(jobId, job);
     } else if (job.status === 'processing') {
@@ -318,6 +361,7 @@ class AdvancedJobQueue {
     job.resultB64 = buffer.toString('base64');
     job.completedAt = Date.now();
     job.durationMs = job.completedAt - (job.startedAt || job.createdAt);
+    finishMetrics(job.metrics, { result: 'success', now: job.completedAt });
 
     if (job.assignedTo) {
       this.activeWorkers.delete(job.assignedTo);
@@ -338,6 +382,7 @@ class AdvancedJobQueue {
     job.result = resultData;
     job.completedAt = Date.now();
     job.durationMs = job.completedAt - (job.startedAt || job.createdAt);
+    finishMetrics(job.metrics, { result: 'success', now: job.completedAt });
 
     if (job.assignedTo) {
       this.activeWorkers.delete(job.assignedTo);
@@ -402,6 +447,7 @@ class AdvancedJobQueue {
   }
 
   getStats() {
+    this.cleanupCompletedJobs();
     const active = {};
     for (const [wid, jid] of this.activeWorkers.entries()) {
       active[wid] = jid;
@@ -409,11 +455,36 @@ class AdvancedJobQueue {
     return {
       pending: this.pendingQueue.length,
       activeCount: this.activeWorkers.size,
+      queued_jobs: this.pendingQueue.length,
+      active_jobs: this.activeWorkers.size,
       activeWorkers: active,
       workersStatus: this.getWorkersStatus(),
       total: this.jobs.size,
+      retainedCompletedJobs: Array.from(this.jobs.values()).filter((job) => job.status === 'completed').length,
+      retainedFailedJobs: Array.from(this.jobs.values()).filter((job) => job.status === 'failed').length,
+      cleanupCount: this.cleanupCount,
       recent: Array.from(this.jobs.values()).slice(-20).reverse(),
     };
+  }
+
+  cleanupCompletedJobs(now = Date.now()) {
+    const terminal = Array.from(this.jobs.values())
+      .filter((job) => (job.status === 'completed' || job.status === 'failed') && !this.waiters.has(job.id))
+      .sort((a, b) => (a.completedAt || 0) - (b.completedAt || 0));
+    const completed = terminal.filter((job) => job.status === 'completed');
+    const remove = new Set(terminal.filter((job) => job.status === 'failed' && now - (job.completedAt || now) >= FAILED_JOB_TTL_MS));
+    for (const job of completed) {
+      if (now - (job.completedAt || now) >= COMPLETED_JOB_TTL_MS) remove.add(job);
+    }
+    const retainedCompleted = completed.filter((job) => !remove.has(job));
+    for (const job of retainedCompleted.slice(0, Math.max(0, retainedCompleted.length - MAX_RETAINED_COMPLETED_JOBS))) remove.add(job);
+    for (const job of remove) {
+      job.resultB64 = null;
+      job.referenceImages = [];
+      this.jobs.delete(job.id);
+      if (job.idempotencyKey && this.idempotencyMap.get(job.idempotencyKey) === job.id) this.idempotencyMap.delete(job.idempotencyKey);
+      this.cleanupCount++;
+    }
   }
 }
 
@@ -824,8 +895,19 @@ const server = http.createServer(async (req, res) => {
       const referenceImages = body.referenceImages || body.images || (body.image ? [body.image] : []);
       const brandKit = body.brandKit || null;
       const asyncMode = body.async === true || parsedUrl.searchParams.get('async') === 'true';
+      const requestStartedAt = Date.now();
+      const metrics = createJobMetrics({
+        operation: 'image_generation',
+        tenantId: body.tenantId || body.tenant_id || body.orgId || body.org_id || null,
+        requestId: body.requestId || body.request_id || null,
+        prompt,
+        companyContext: body.companyContext || '',
+        conversationHistory: body.conversationHistory || '',
+        productCount: Array.isArray(body.products) ? body.products.length : 0,
+        now: requestStartedAt,
+      });
 
-      console.log(`[Gateway] Yeni iş alındı: "${prompt.slice(0, 50)}..." [Müşteri: ${customer}, Ref: ${referenceImages.length}, Kit: ${brandKit ? 'Var' : 'Yok'}]`);
+      console.log(`[Gateway] Yeni görsel işi alındı [Müşteri: ${customer}, Prompt karakteri: ${prompt.length}, Ref: ${referenceImages.length}, Kit: ${brandKit ? 'Var' : 'Yok'}]`);
 
       const job = queue.createJob({
         prompt,
@@ -837,6 +919,10 @@ const server = http.createServer(async (req, res) => {
         referenceImages,
         brandKit,
         optimizePrompt: body.optimize !== false,
+        tenantId: metrics.tenant_id,
+        requestId: metrics.request_id,
+        conversationId: body.conversationId || body.conversation_id || null,
+        metrics,
       });
 
       // Eğer async istenmişse anında job_id dön (WhatsApp botu polling yapacaksa)
@@ -1334,6 +1420,17 @@ const server = http.createServer(async (req, res) => {
       }
 
       const customer = (body.customer || 'Genel').trim();
+      const requestStartedAt = Date.now();
+      const metrics = createJobMetrics({
+        operation: 'text_reply',
+        tenantId: body.tenantId || body.tenant_id || body.orgId || body.org_id || null,
+        requestId: body.requestId || body.request_id || null,
+        prompt: incomingMessage,
+        companyContext: body.companyContext || '',
+        conversationHistory: body.conversationHistory || '',
+        productCount: Array.isArray(body.products) ? body.products.length : 0,
+        now: requestStartedAt,
+      });
       const job = queue.createJob({
         prompt: `[Mesaj Önerisi] ${incomingMessage.slice(0, 100)}`,
         customer,
@@ -1344,9 +1441,13 @@ const server = http.createServer(async (req, res) => {
         conversationHistory: body.conversationHistory || '',
         companyContext: body.companyContext || '',
         tone: body.tone || '',
+        tenantId: metrics.tenant_id,
+        requestId: metrics.request_id,
+        conversationId: body.conversationId || body.conversation_id || null,
+        metrics,
       });
 
-      console.log(`[Gateway] Yeni mesaj öneri talebi alındı: [Firma: ${customer}] "${incomingMessage.slice(0, 60)}..."`);
+      console.log(`[Gateway] Yeni mesaj öneri talebi alındı: [Firma: ${customer}, Mesaj karakteri: ${incomingMessage.length}]`);
       const finished = await queue.waitForJob(job.id, 180000);
       if (finished.status === 'completed' && finished.result) {
         return sendJson(res, 200, {
@@ -1400,6 +1501,49 @@ const server = http.createServer(async (req, res) => {
           details: finished.statusText,
         });
       }
+    }
+
+    // 1.3. Ürün ve Ortam Fiziksel Akıl Yürütme (Product Affordance): POST /v1/chat/affordance
+    if (method === 'POST' && (pathname === '/v1/chat/affordance' || pathname === '/chat/affordance')) {
+      const body = await parseJsonBody(req);
+      const brandName = (body.brandName || body.brand || '').trim();
+      const productName = (body.productName || body.product || '').trim();
+      const productDescription = (body.productDescription || body.description || '').trim();
+      const customer = (body.customer || brandName || 'Genel').trim();
+
+      const { deduceSemanticAffordance, buildAffordanceGptPrompt } = require('./product_affordance.js');
+      const fallbackAffordance = deduceSemanticAffordance({ brandName, productName, productDescription });
+
+      const gptPrompt = buildAffordanceGptPrompt({ brandName, productName, productDescription });
+      const job = queue.createJob({
+        prompt: `[Product Affordance] ${brandName} - ${productName}`,
+        customer,
+        platform: 'chatgpt',
+        optimizePrompt: false,
+        type: 'product_affordance',
+        affordancePrompt: gptPrompt,
+        fallbackResult: fallbackAffordance,
+      });
+
+      console.log(`[Gateway] Yeni Ürün Affordance Analizi: [Marka: ${brandName}, Ürün: ${productName}]`);
+      try {
+        const finished = await queue.waitForJob(job.id, 15000);
+        if (finished.status === 'completed' && finished.result && finished.result.naturalEnvironment) {
+          return sendJson(res, 200, {
+            success: true,
+            source: 'chatgpt_cdp',
+            ...finished.result
+          });
+        }
+      } catch (err) {
+        console.warn('[Gateway] Affordance ChatGPT bekleme zaman aşımı, akıllı anlamsal model devrede:', err.message);
+      }
+
+      return sendJson(res, 200, {
+        success: true,
+        source: 'semantic_engine',
+        ...fallbackAffordance
+      });
     }
 
     // 2. Durum ve İlerleme Sorgulama: GET /v1/images/status/:id

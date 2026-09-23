@@ -321,13 +321,18 @@ async function renameChatToCustomer(cdp, title) {
   }
 }
 
-async function ensureCustomerChat(cdp, customer, channel = 'media') {
+async function ensureCustomerChat(cdp, customer, channel = 'media', identity = {}) {
   const isCanary = customer === 'Sistem' || customer === 'Sistem Nöbetçisi' || channel === 'canary';
   const effectiveCustomer = isCanary ? 'Sistem' : (customer || 'Genel').trim();
   const effectiveChannel = isCanary ? 'canary' : channel;
   const expectedTitle = getExpectedChatTitle(effectiveCustomer, effectiveChannel);
 
-  const saved = getCompanyChat(effectiveCustomer, effectiveChannel);
+  const chatIdentity = isCanary ? { customer: effectiveCustomer } : {
+    customer: effectiveCustomer,
+    tenantId: identity.tenantId,
+    conversationId: identity.conversationId,
+  };
+  const saved = getCompanyChat(chatIdentity, effectiveChannel);
   let targetUrl = saved?.chatUrl || null;
 
   const urlEval = await cdp.send('Runtime.evaluate', {
@@ -462,13 +467,15 @@ async function workerLoop() {
     isBusy = true;
     console.log(`\n======================================================`);
     console.log(`[CDP Worker] YENİ İŞ ALINDI: #${job.id}`);
-    console.log(`[CDP Worker] Prompt: "${job.prompt.slice(0, 80)}..."`);
+    console.log(`[CDP Worker] İş türü: ${job.type || 'image'} | Prompt karakteri: ${(job.prompt || '').length}`);
     console.log(`======================================================`);
 
     if (job.type === 'chat_suggestions') {
       await executeChatSuggestionsJob(chatgptTab, job);
     } else if (job.type === 'extract_knowledge') {
       await executeExtractKnowledgeJob(chatgptTab, job);
+    } else if (job.type === 'product_affordance') {
+      await executeProductAffordanceJob(chatgptTab, job);
     } else {
       await executeChatGPTJob(chatgptTab, job);
     }
@@ -498,7 +505,8 @@ async function executeChatGPTJob(tab, job) {
     const isCanary = customer === 'Sistem' || customer === 'Sistem Nöbetçisi' || (job.workspace || '').includes('Canary');
     const channel = isCanary ? 'canary' : 'media';
     console.log(`[CDP Worker: ${WORKER_ID}] Firma: "${customer}" [${channel}] oturumu hazırlanıyor...`);
-    const chatInfo = await ensureCustomerChat(cdp, customer, channel);
+    const chatIdentity = { customer, tenantId: job.tenantId, conversationId: job.conversationId };
+    const chatInfo = await ensureCustomerChat(cdp, customer, channel, chatIdentity);
 
     // 1. Referans Görseller Varsa (Image-to-Image / Ürün Görseli) ChatGPT'ye Dosya Olarak Yükle
     if (Array.isArray(job.referenceImages) && job.referenceImages.length > 0) {
@@ -692,7 +700,7 @@ async function executeChatGPTJob(tab, job) {
         if (chatInfo.isNewChat) {
           await renameChatToTitle(cdp, expectedTitle);
         }
-        setCompanyChat(customer, channel, finalUrl, expectedTitle);
+        setCompanyChat(chatIdentity, channel, finalUrl, expectedTitle);
       }
     } catch (urlErr) {
       console.warn(`[CDP Worker: ${WORKER_ID}] URL kaydetme uyarısı:`, urlErr.message);
@@ -739,7 +747,8 @@ async function executeChatSuggestionsJob(tab, job) {
 
     const customer = (job.customer || 'Genel').trim();
     console.log(`[CDP Worker: ${WORKER_ID}] [Mesajlar] Firma: "${customer}" için oturum hazırlanıyor...`);
-    const chatInfo = await ensureCustomerChat(cdp, customer, 'chat');
+    const chatIdentity = { customer, tenantId: job.tenantId, conversationId: job.conversationId };
+    const chatInfo = await ensureCustomerChat(cdp, customer, 'chat', chatIdentity);
     await sleep(1500); // DOM geçmişinin tam oturmasını bekle
 
     const countEval = await cdp.send('Runtime.evaluate', {
@@ -878,7 +887,7 @@ Bu mesaja verilebilecek en kaliteli ve uygun 3 FARKLI alternatif Türkçe yanıt
       }
     } catch (parseErr) {
       console.warn(`[CDP Worker: ${WORKER_ID}] JSON ayrıştırma uyarısı:`, parseErr.message);
-      console.warn(`[CDP Worker: ${WORKER_ID}] Ayrıştırılamayan Ham Metin:`, lastText);
+      console.warn(`[CDP Worker: ${WORKER_ID}] Ayrıştırılamayan yanıt (karakter):`, lastText.length);
     }
 
     // Yedek ayrıştırıcı
@@ -956,7 +965,7 @@ Bu mesaja verilebilecek en kaliteli ve uygun 3 FARKLI alternatif Türkçe yanıt
         if (chatInfo.isNewChat) {
           await renameChatToTitle(cdp, expectedTitle);
         }
-        setCompanyChat(customer, 'chat', finalUrl, expectedTitle);
+        setCompanyChat(chatIdentity, 'chat', finalUrl, expectedTitle);
       }
     } catch (urlErr) {
       console.warn(`[CDP Worker: ${WORKER_ID}] Adlandırma uyarısı:`, urlErr.message);
@@ -986,7 +995,7 @@ async function executeExtractKnowledgeJob(tab, job) {
     const channel = hasImages ? 'media' : 'chat';
     console.log(`[CDP Worker: ${WORKER_ID}] [OCR/Bilgi Çıkarımı] Firma: "${customer}" (${channel} kanalı)...`);
 
-    await ensureCustomerChat(cdp, customer, channel);
+    await ensureCustomerChat(cdp, customer, channel, { customer, tenantId: job.tenantId, conversationId: job.conversationId });
 
     // 1. Görsel varsa ChatGPT'ye yükle (Vision OCR)
     if (hasImages) {
@@ -1157,6 +1166,80 @@ YALNIZCA aşağıdaki JSON formatında yanıt ver, markdown kod bloğu (\`\`\`js
     for (const p of tempRefPaths) {
       try { fs.unlinkSync(p); } catch (e) {}
     }
+    if (cdp) cdp.close();
+  }
+}
+
+// Ürün ve Ortam Fiziksel Akıl Yürütme İşini Çalıştır (ChatGPT Web)
+async function executeProductAffordanceJob(tab, job) {
+  let cdp = null;
+  try {
+    cdp = await createCdpSession(tab.webSocketDebuggerUrl);
+    const customer = (job.customer || 'Genel').trim();
+    console.log(`[CDP Worker: ${WORKER_ID}] [Affordance] Firma: "${customer}" için oturum hazırlanıyor...`);
+    await ensureCustomerChat(cdp, customer, 'video');
+    await sleep(1000);
+
+    const countEval = await cdp.send('Runtime.evaluate', {
+      expression: `document.querySelectorAll('[data-message-author-role="assistant"]').length`,
+      returnByValue: true
+    });
+    const initialAsstCount = countEval.result?.value || 0;
+
+    // Metni enjekte et
+    await sendPromptToChatGpt(cdp, job.affordancePrompt || job.prompt);
+
+    // Yanıtı bekle
+    let lastText = '';
+    for (let i = 0; i < 25; i++) {
+      await sleep(1000);
+      const textEval = await cdp.send('Runtime.evaluate', {
+        expression: `
+          (() => {
+            const assts = Array.from(document.querySelectorAll('[data-message-author-role="assistant"]'));
+            if (assts.length <= ${initialAsstCount}) return { hasNewMsg: false, isGenerating: true, text: '' };
+            const last = assts[assts.length - 1];
+            const text = (last.innerText || '').trim();
+            const stopBtn = document.querySelector('button[data-testid*="stop"], button[aria-label*="Stop"]');
+            return { hasNewMsg: true, isGenerating: !!stopBtn, text };
+          })()
+        `,
+        returnByValue: true
+      });
+      const res = textEval.result?.value;
+      if (res?.text) lastText = res.text;
+      if (res?.hasNewMsg && !res.isGenerating && lastText.includes('{') && lastText.includes('}')) {
+        break;
+      }
+    }
+
+    let parsed = null;
+    try {
+      let clean = lastText.trim();
+      if (clean.includes('```json')) clean = clean.split('```json')[1].split('```')[0].trim();
+      else if (clean.includes('```')) clean = clean.split('```')[1].split('```')[0].trim();
+      const s = clean.indexOf('{');
+      const e = clean.lastIndexOf('}');
+      if (s !== -1 && e !== -1) {
+        parsed = JSON.parse(clean.slice(s, e + 1));
+      }
+    } catch (_) {}
+
+    const finalResult = (parsed && parsed.naturalEnvironment) ? parsed : (job.fallbackResult || {});
+    await fetch(`${GATEWAY_URL}/job/complete-text`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jobId: job.id, result: finalResult })
+    });
+    console.log(`[CDP Worker: ${WORKER_ID}] [Affordance] İş başarıyla tamamlandı: #${job.id}`);
+  } catch (err) {
+    console.error(`[CDP Worker: ${WORKER_ID}] [Affordance] Hata:`, err.message);
+    await fetch(`${GATEWAY_URL}/job/complete-text`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jobId: job.id, result: job.fallbackResult || {} })
+    }).catch(() => {});
+  } finally {
     if (cdp) cdp.close();
   }
 }

@@ -82,6 +82,9 @@ export interface RawBrandInput {
   aspect_ratio?: AspectRatio
   requested_duration?: number
   output_type?: OutputType
+  /** Immutable user-approved prompt from CreativeRevision. Only the job worker
+   * may supply it; it is never generated from a mutable runtime fallback. */
+  approved_veo_prompt?: string
 }
 
 export interface BrandContextSnapshot {

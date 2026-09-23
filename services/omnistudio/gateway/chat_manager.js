@@ -1,7 +1,12 @@
 const fs = require('fs');
 const path = require('path');
+const { getTenantScopeKey } = require('./tenant_scope.js');
 
 const CHATS_FILE = process.env.CHATS_FILE || path.join('/data', 'company_chats.json');
+const CHAT_CACHE_MAX_ENTRIES = Math.max(1, parseInt(process.env.CHAT_CACHE_MAX_ENTRIES || '500', 10));
+const CHAT_CACHE_TTL_MS = Math.max(1000, parseInt(process.env.CHAT_CACHE_TTL_MS || String(5 * 60 * 1000), 10));
+const chatCache = new Map();
+const cacheMetrics = { hit: 0, miss: 0, diskReadMs: 0, diskWriteMs: 0 };
 
 /**
  * Müşteri ve kanal bazında standart başlık üretir:
@@ -22,15 +27,28 @@ function getExpectedChatTitle(customer, channel) {
   return `[Mesajify] ${comp} - ${channel}`;
 }
 
-function normalizeKey(customer, channel) {
-  const norm = (customer || '').trim();
+function normalizeIdentity(customerOrIdentity, channel) {
+  const identity = typeof customerOrIdentity === 'object' && customerOrIdentity !== null
+    ? customerOrIdentity
+    : { customer: customerOrIdentity };
+  const norm = (identity.customer || '').trim();
   if (channel === 'canary' || norm === 'Sistem' || norm === 'Sistem Nöbetçisi' || norm.toLowerCase().includes('canary')) {
-    return { companyKey: 'Sistem', channelKey: 'canary' };
+    return { companyKey: 'Sistem', channelKey: 'canary', displayCustomer: 'Sistem' };
   }
-  return { companyKey: norm || 'Genel', channelKey: channel };
+  const tenantId = identity.tenantId || identity.tenant_id || identity.orgId || identity.org_id;
+  return {
+    // Keep existing on-disk legacy keys readable; tenant-aware callers get an
+    // explicitly namespaced key and can never share those legacy sessions.
+    companyKey: tenantId
+      ? getTenantScopeKey({ tenantId, conversationId: identity.conversationId || identity.conversation_id, customer: norm })
+      : (norm || 'Genel'),
+    channelKey: channel,
+    displayCustomer: norm || 'Genel',
+  };
 }
 
 function loadAllCompanyChats() {
+  const startedAt = Date.now();
   try {
     if (fs.existsSync(CHATS_FILE)) {
       const parsed = JSON.parse(fs.readFileSync(CHATS_FILE, 'utf8'));
@@ -38,11 +56,14 @@ function loadAllCompanyChats() {
     }
   } catch (e) {
     console.warn('[ChatManager] Dosya okuma uyarısı:', e.message);
+  } finally {
+    cacheMetrics.diskReadMs += Date.now() - startedAt;
   }
   return {};
 }
 
 function saveAllCompanyChats(data) {
+  const startedAt = Date.now();
   try {
     const dir = path.dirname(CHATS_FILE);
     if (!fs.existsSync(dir)) {
@@ -54,35 +75,58 @@ function saveAllCompanyChats(data) {
   } catch (e) {
     console.error('[ChatManager] Dosya yazma hatası:', e.message);
   }
+  cacheMetrics.diskWriteMs += Date.now() - startedAt;
 }
 
-function getCompanyChat(customer, channel) {
-  const { companyKey, channelKey } = normalizeKey(customer, channel);
+function cacheKey(companyKey, channelKey) {
+  return `${companyKey}\u0000${channelKey}`;
+}
+
+function getCompanyChat(customerOrIdentity, channel) {
+  const { companyKey, channelKey } = normalizeIdentity(customerOrIdentity, channel);
+  const key = cacheKey(companyKey, channelKey);
+  const cached = chatCache.get(key);
+  if (cached && Date.now() - cached.cachedAt < CHAT_CACHE_TTL_MS) {
+    cacheMetrics.hit++;
+    chatCache.delete(key);
+    chatCache.set(key, cached);
+    return cached.entry;
+  }
+  cacheMetrics.miss++;
   const data = loadAllCompanyChats();
   const entry = data[companyKey]?.[channelKey];
+  if (entry && entry.chatUrl) putCache(key, entry);
   if (entry && entry.chatUrl) {
     return entry;
   }
   return null;
 }
 
-function setCompanyChat(customer, channel, chatUrl, customTitle = null) {
+function putCache(key, entry) {
+  chatCache.delete(key);
+  chatCache.set(key, { entry, cachedAt: Date.now() });
+  while (chatCache.size > CHAT_CACHE_MAX_ENTRIES) chatCache.delete(chatCache.keys().next().value);
+}
+
+function setCompanyChat(customerOrIdentity, channel, chatUrl, customTitle = null) {
   if (!chatUrl) return;
-  const { companyKey, channelKey } = normalizeKey(customer, channel);
-  const title = customTitle || getExpectedChatTitle(companyKey, channelKey);
+  const { companyKey, channelKey, displayCustomer } = normalizeIdentity(customerOrIdentity, channel);
+  const title = customTitle || getExpectedChatTitle(displayCustomer, channelKey);
   const data = loadAllCompanyChats();
 
   if (!data[companyKey] || typeof data[companyKey] !== 'object') {
     data[companyKey] = {};
   }
 
-  data[companyKey][channelKey] = {
+  const entry = {
     chatUrl,
     title,
     updatedAt: Date.now()
   };
+  data[companyKey][channelKey] = entry;
 
   saveAllCompanyChats(data);
+  putCache(cacheKey(companyKey, channelKey), entry);
   console.log(`[ChatManager] 💾 [${companyKey}] [${channelKey}] -> "${title}" kaydedildi: ${chatUrl}`);
 }
 
@@ -136,9 +180,12 @@ async function renameChatToTitle(cdp, title) {
 module.exports = {
   CHATS_FILE,
   getExpectedChatTitle,
+  normalizeIdentity,
   getCompanyChat,
   setCompanyChat,
   renameChatToTitle,
   loadAllCompanyChats,
-  saveAllCompanyChats
+  saveAllCompanyChats,
+  getChatCacheMetrics: () => ({ ...cacheMetrics, entries: chatCache.size }),
+  clearChatCache: () => chatCache.clear(),
 };

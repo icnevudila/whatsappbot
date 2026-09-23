@@ -36,6 +36,12 @@ export interface CreativeProvenanceRecord {
   qa_reports: Record<string, any>
   scene_attempts?: Record<string, SceneAttemptRecord[]> // scene_id -> list of all attempts
   attached_references?: AttachedReferenceIdentity[] // verified reference identity per asset
+  creative_director_concepts?: any[]
+  selected_concept_id?: string
+  selection_reason?: string
+  critic_report?: any
+  video_review_report?: any
+  creative_telemetry?: any[]
   created_at: string
   completed_at?: string
   verified: boolean

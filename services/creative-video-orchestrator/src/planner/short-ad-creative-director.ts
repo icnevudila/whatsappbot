@@ -14,6 +14,7 @@ import { FormatVariantSelector } from '../strategy/format-variant-selector.js'
 import { CreativeDiversityGuard, type CreativeFingerprint } from '../strategy/creative-diversity-guard.js'
 import type { SubtitleMode } from '../types/job-asset-manifest.js'
 import { globalSectorPresetRegistry } from '../strategy/sector-presets.js'
+import { productAffordanceReasoner, ProductAffordanceReasoner } from '../strategy/product-affordance-reasoner.js'
 
 export interface IShortAdCreativeDirectorProvider {
   generateMasterPlan(
@@ -38,6 +39,7 @@ export class ShortAdCreativeDirector {
   private adFormatRouter = new AdFormatRouter()
   private variantSelector = new FormatVariantSelector()
   private diversityGuard = new CreativeDiversityGuard()
+  private affordanceReasoner = productAffordanceReasoner
 
   constructor(private customProvider?: IShortAdCreativeDirectorProvider) {}
 
@@ -131,13 +133,19 @@ export class ShortAdCreativeDirector {
     const sector = snapshot.sector_profile
     const primaryProd = snapshot.products[0]
     const prodName = primaryProd?.name || `${brand} Ürünü`
+    const desc = primaryProd?.description || snapshot.brand_description || ''
+    const affordance = await this.affordanceReasoner.reasonAffordance({
+      brandName: brand,
+      productName: prodName,
+      productDescription: desc,
+    })
 
     // 1. Creative Strategy Formulation & Format Routing
     const userPref = options?.user_style_preference || snapshot.campaign?.user_style_preference || 'AUTO'
     const routing = this.adFormatRouter.routeStyleToFormat(
       userPref,
       snapshot.campaign?.objective,
-      sector,
+      affordance.detectedSector || sector,
       businessModel,
       assets
     )
@@ -641,6 +649,7 @@ export class ShortAdCreativeDirector {
         'NO GENERATED WEBSITE',
         'NO WATERMARK',
         'NO PRODUCT REDESIGN',
+        ...affordance.negativeEnvironmentConstraints,
         'no car wash or automotive elements in agriculture',
         'no distorted hands or floating fingers',
         'no disconnected pipes or floating sprays',
@@ -698,19 +707,24 @@ export class ShortAdCreativeDirector {
     const brand = facts.brand_name
     const prodName = facts.product_name
     const desc = facts.description || ''
+    const affordance = await this.affordanceReasoner.reasonAffordance({
+      brandName: brand,
+      productName: prodName,
+      productDescription: desc,
+    })
 
     const userPref = manifest.creative_request?.user_style_preference || 'AUTO'
     const routing = this.adFormatRouter.routeStyleToFormat(
       userPref,
       manifest.creative_request?.objective,
-      'agriculture',
+      affordance.detectedSector || 'agriculture',
       'physical_product',
       []
     )
     const adFormat: AdvertisingFormat = routing.ad_format
     const variantResult = this.variantSelector.selectVariant(
       adFormat,
-      'agriculture',
+      affordance.detectedSector || 'agriculture',
       'physical_product',
       options?.recent_fingerprints || [],
       manifest.org_id
@@ -976,6 +990,7 @@ export class ShortAdCreativeDirector {
         'NO GENERATED WEBSITE',
         'NO WATERMARK',
         'NO PRODUCT REDESIGN',
+        ...affordance.negativeEnvironmentConstraints,
         'no car wash or automotive elements in agriculture',
         'no distorted hands or floating fingers',
         'no disconnected pipes or floating sprays',

@@ -289,6 +289,23 @@ export function CreativeWizard({
     setSubmissionError(null)
 
     try {
+      // The server locks the exact bytes used for generation.  Hash the selected
+      // signed asset URLs in the browser so a later URL/file substitution cannot
+      // silently alter the approved CreativeRevision.
+      const sha256Of = async (url: string, label: string) => {
+        if (!url) throw new Error(`${label} seçilmedi.`)
+        const response = await fetch(url)
+        if (!response.ok) throw new Error(`${label} doğrulama için okunamadı.`)
+        const digest = await crypto.subtle.digest('SHA-256', await response.arrayBuffer())
+        return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('')
+      }
+
+      const [logoSha256, productSha256, referenceSha256] = await Promise.all([
+        sha256Of(activeLogoUrl, 'Kurumsal logo'),
+        activeProductImage ? sha256Of(activeProductImage, 'Ürün görseli') : Promise.resolve(null),
+        Promise.all(extraReferenceUrls.map((url, index) => sha256Of(url, `Ek referans ${index + 1}`))),
+      ])
+
       const payload = {
         title: `${data.org.name || 'İşletme'} - ${activeProductName} Reklamı`,
         brief: creativeIdea,
@@ -315,13 +332,15 @@ export function CreativeWizard({
         logoAsset: {
           url: activeLogoUrl,
           name: 'brand_logo.png',
+          sha256: logoSha256,
         },
         productAsset: activeProductImage
-          ? { url: activeProductImage, name: activeProductName }
+          ? { url: activeProductImage, name: activeProductName, sha256: productSha256 }
           : null,
         referenceAssets: extraReferenceUrls.map((u, i) => ({
           url: u,
           name: `ref_${i + 1}.jpg`,
+          sha256: referenceSha256[i],
         })),
       }
 

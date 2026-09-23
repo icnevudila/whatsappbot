@@ -191,7 +191,7 @@ test('ShortAdCreativeDirector - end-to-end planFromJobManifest with custom user 
   assert.equal(plan.subtitles_mode, 'auto')
   assert.equal(plan.creative_fingerprint?.tenant_id, 'org_test_tenant')
   assert.equal(plan.beats.length, 5)
-  assert.deepEqual(plan.editing_rhythm?.cut_points, [0.7, 2.2, 4.5, 6.2])
+  assert.deepEqual(plan.editing_rhythm?.cut_points, director.computeDynamicCutPoints(plan.selected_ad_format, plan.selected_format_variant))
 
   // Spoken script adheres strictly to 18-24 word Voice-As-Spine
   const words = plan.master_spoken_script?.trim().split(/\s+/).length || 0

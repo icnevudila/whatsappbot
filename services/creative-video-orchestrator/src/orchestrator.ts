@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 import { createBrandContextSnapshot, type BrandContextSnapshot, type RawBrandInput } from './types/brand-snapshot.js'
 import { ReferenceRegistry } from './types/reference-registry.js'
 import { VideoStrategyRouter, type StrategyRoutingDecision } from './strategy/video-strategy-router.js'
@@ -18,6 +19,12 @@ import type {
   ICreativeModelProvider,
   IImageGenerationProvider,
 } from './adapters/interfaces.js'
+import { ChatGPTCreativeDirectorV2, type CreativeConcept, type ConceptSelectionResult } from './planner/chatgpt-creative-director.js'
+import { ChatGPTCreativeCritic, type CreativeCriticReport } from './qa/chatgpt-creative-critic.js'
+import { ChatGPTVideoReviewer, type VideoReviewReport } from './qa/chatgpt-video-reviewer.js'
+import { FrameSampler } from './qa/frame-sampler.js'
+import { AssetEqualityGate } from './gates/asset-equality-gate.js'
+import { CreativeContextBuilder, type CreativeContext, type MultimodalAttachment } from './types/creative-context.js'
 
 export interface OrchestratorOptions {
   gflowProvider: IGFlowProvider
@@ -26,6 +33,10 @@ export interface OrchestratorOptions {
   creativeModel?: ICreativeModelProvider
   imageProvider?: IImageGenerationProvider
   accountId?: string
+  chatGptDirector?: ChatGPTCreativeDirectorV2
+  creativeCritic?: ChatGPTCreativeCritic
+  videoReviewer?: ChatGPTVideoReviewer
+  frameSampler?: FrameSampler
 }
 
 export interface OrchestrationResult {
@@ -38,6 +49,10 @@ export interface OrchestrationResult {
   provenance: CreativeProvenanceRecord
   sceneQAReports: SceneQAReport[]
   finalQAReport?: FinalLongVideoQAReport
+  criticReport?: CreativeCriticReport
+  videoReviewReport?: VideoReviewReport
+  concepts?: CreativeConcept[]
+  selectedConcept?: CreativeConcept
   verified: boolean
 }
 
@@ -48,6 +63,10 @@ export class CreativeVideoOrchestrator {
   private storyboardEngine: StoryboardEngine
   private keyframePlanner: KeyframePlanner
   private sceneCompiler: ScenePromptCompiler
+  private chatGptDirector: ChatGPTCreativeDirectorV2
+  private creativeCritic: ChatGPTCreativeCritic
+  private videoReviewer: ChatGPTVideoReviewer
+  private frameSampler: FrameSampler
 
   constructor(private options: OrchestratorOptions) {
     this.shortPlanner = new ShortVideoPlanner(options.creativeModel)
@@ -55,6 +74,23 @@ export class CreativeVideoOrchestrator {
     this.storyboardEngine = new StoryboardEngine(options.creativeModel)
     this.keyframePlanner = new KeyframePlanner(options.imageProvider)
     this.sceneCompiler = new ScenePromptCompiler(options.creativeModel)
+    this.chatGptDirector = options.chatGptDirector || new ChatGPTCreativeDirectorV2()
+    this.creativeCritic = options.creativeCritic || new ChatGPTCreativeCritic()
+    this.videoReviewer = options.videoReviewer || new ChatGPTVideoReviewer()
+    this.frameSampler = options.frameSampler || new FrameSampler()
+  }
+
+  /** Hash actual media bytes in production.  The only exception is the explicit
+   * in-memory mock provider used by unit tests, which deliberately has no file. */
+  private hashOutputFile(outputPath: string, fileSize?: number): string {
+    try {
+      return createHash('sha256').update(readFileSync(outputPath)).digest('hex')
+    } catch (error) {
+      if (outputPath.startsWith('/mock/') || outputPath.startsWith('C:\\mock\\')) {
+        return createHash('sha256').update(`mock-output:${outputPath}:${fileSize || 0}`).digest('hex')
+      }
+      throw new Error(`OUTPUT_SHA256_FAILED: cannot read generated media ${outputPath}`)
+    }
   }
 
   /**
@@ -158,7 +194,10 @@ export class CreativeVideoOrchestrator {
     const capabilities = await this.options.gflowProvider.probeCapabilities(accountId)
 
     if (strategy.strategyType === 'SHORT_VIDEO') {
-      return this.executeShortVideo(jobId, snapshot, registry, strategy, capabilities, accountId)
+      return this.executeShortVideo(
+        jobId, snapshot, registry, strategy, capabilities, accountId,
+        rawInput.approved_veo_prompt?.trim() || undefined
+      )
     } else {
       return this.executeLongVideo(jobId, snapshot, registry, strategy, capabilities, accountId)
     }
@@ -170,17 +209,18 @@ export class CreativeVideoOrchestrator {
     registry: ReferenceRegistry,
     strategy: StrategyRoutingDecision,
     capabilities: any,
-    accountId: string
+    accountId: string,
+    approvedPrompt?: string
   ): Promise<OrchestrationResult> {
     const attemptId = `att_${Date.now()}`
 
-    // Plan short video
+    // 1. Plan short video (base plan)
     const plan = await this.shortPlanner.plan(snapshot, registry, capabilities, strategy.subtype as any)
 
-    // Strict scene/project isolation: 1 scene = 1 unique flow_project_id
+    // 2. Strict scene/project isolation: 1 scene = 1 unique flow_project_id
     const flowProjectId = `flow_proj_${jobId.substring(0, 8)}_short`
 
-    // Build asset payloads
+    // 3. Build asset payloads
     const assets = plan.expectedReferenceIds
       .map(id => registry.getByAssetId(id))
       .filter((r): r is NonNullable<typeof r> => Boolean(r))
@@ -192,14 +232,105 @@ export class CreativeVideoOrchestrator {
         sha256: r.sha256,
       }))
 
-    // Execute via GFlowProvider
-    const genResponse = await this.options.gflowProvider.executeJob({
+    // 4. Build canonical Multimodal Attachments & CreativeContext
+    const attachments: MultimodalAttachment[] = registry.getAll().map(r => ({
+      asset_id: r.asset_id,
+      org_id: r.org_id,
+      sha256: r.sha256,
+      role: r.role,
+      canonical_handle: r.handle as any,
+      file_path: r.file_path || '',
+      url: r.url,
+      attached_successfully: true,
+      visual_attributes: {
+        shape: 'sağlam endüstriyel gövde formu',
+        primary_colors: snapshot.brand_palette?.primary ? [snapshot.brand_palette.primary] : undefined,
+      },
+    }))
+
+    const creativeContext = CreativeContextBuilder.build({
+      org_id: snapshot.org_id,
+      job_id: jobId,
+      brand_profile: {
+        brand_name: snapshot.brand_name,
+        sector: snapshot.sector_profile,
+        tone_of_voice: [...snapshot.tone_of_voice],
+        visual_personality: snapshot.visual_style.join(', ') || 'Profesyonel ticari video',
+        palette: snapshot.brand_palette?.primary ? [snapshot.brand_palette.primary] : ['#FFCC00'],
+        typography_preferences: snapshot.typography?.headingFont || 'Sans-serif',
+        preferred_copy_style: 'Voice-as-spine akıcı ticari anlatım',
+        preferred_visual_energy: 'Dinamik, ürün odaklı',
+        logo_usage_rules: ['Kanonik logo oranları korunmalı'],
+        visual_dos: ['Gerçek ürün fonksiyonunu göster'],
+        visual_donts: ['Yapay yazı üretme', 'Ürün deformasyonu yapma'],
+        approved_patterns: ['macro_first', 'human_action_motion'],
+        rejected_patterns: ['mini_film_not_ad', 'too_many_slogans'],
+        successful_creative_traits: ['high_product_visibility', 'voice_spine_continuity'],
+      },
+      campaign_context: {
+        selected_product_or_service: snapshot.products[0]?.name || `${snapshot.brand_name} Ürünü`,
+        campaign_objective: snapshot.campaign.objective,
+        user_style_preference: snapshot.campaign.user_style_preference || 'AUTO',
+        target_platform: 'reels_tiktok_shorts',
+        duration: snapshot.requested_duration || 8,
+        aspect_ratio: snapshot.aspect_ratio || '9:16',
+        language: snapshot.language || 'tr',
+        campaign_message: snapshot.campaign.headline,
+        verified_offer: snapshot.campaign.offer,
+        verified_price: snapshot.campaign.price,
+        verified_cta: snapshot.campaign.cta,
+        verified_phone: snapshot.campaign.phoneNumber,
+        verified_url: snapshot.campaign.website,
+        subtitle_mode: snapshot.campaign.subtitles || 'auto',
+      },
+      attachments,
+      recent_fingerprints: [],
+      verified_facts: (snapshot.verified_claims || []).map((c, i) => ({
+        claim: c,
+        source_type: 'manual_verified',
+        source_id: `fact_${i + 1}`,
+      })),
+    })
+
+    // 5. Creative Director: 3 Concepts -> Auto Selection -> Detailed Master Plan
+    const concepts = await this.chatGptDirector.generateThreeConcepts(creativeContext)
+    const selection = this.chatGptDirector.selectWinningConcept(concepts, creativeContext)
+    let masterPlan = await this.chatGptDirector.buildDetailedMasterPlan(selection.selected_concept, creativeContext)
+
+    // 6. Creative Critic pre-generation evaluation (max 1 revision allowed)
+    let criticReport = await this.creativeCritic.evaluatePlan(masterPlan, creativeContext, 0)
+    if (criticReport.decision === 'REVISE') {
+      masterPlan = await this.chatGptDirector.buildDetailedMasterPlan(selection.selected_concept, creativeContext)
+      criticReport = await this.creativeCritic.evaluatePlan(masterPlan, creativeContext, 1)
+    }
+    if (criticReport.decision === 'BLOCK') {
+      throw new Error(`CREATIVE_CRITIC_BLOCKED: ${criticReport.issues.join('; ')}`)
+    }
+
+    // 7. Asset Equality Gate (creative_asset_sha == flow_asset_sha)
+    const flowAssetProofs = assets.map(a => ({
+      asset_id: a.asset_id || '',
+      role: a.role,
+      sha256: a.sha256 || '',
+    }))
+    const equalityCheck = AssetEqualityGate.verifyEquality(attachments, flowAssetProofs)
+    if (!equalityCheck.passed) {
+      throw new Error(equalityCheck.error)
+    }
+
+    // The locked wizard revision is the source of truth whenever present. The
+    // planner remains useful for deterministic finishing and QA metadata, but
+    // must never overwrite copy or visual beats approved by the user.
+    const generationPrompt = approvedPrompt || plan.compiledPrompt
+
+    // 8. Execute via GFlowProvider
+    let genResponse = await this.options.gflowProvider.executeJob({
       job_id: jobId,
       attempt_id: attemptId,
       flow_project_id: flowProjectId,
       org_id: snapshot.org_id,
       account_id: accountId,
-      prompt: plan.compiledPrompt,
+      prompt: generationPrompt,
       aspect_ratio: snapshot.aspect_ratio,
       model: capabilities.preferredModel || 'veo-fast',
       duration: snapshot.requested_duration,
@@ -207,7 +338,7 @@ export class CreativeVideoOrchestrator {
       expected_reference_ids: plan.expectedReferenceIds,
     })
 
-    // Execution Gate (Refinement 1): Verify expected vs actual attached references
+    // Execution Gate: Verify expected vs actual attached references
     const refGate = ShortVideoPlanner.verifyReferenceExecutionGate(
       plan.expectedReferenceIds,
       genResponse.actual_attached_reference_ids
@@ -216,11 +347,11 @@ export class CreativeVideoOrchestrator {
       throw new Error(`EXECUTION_GATE_FAIL: ${refGate.error}`)
     }
 
-    // Inspect video via ffprobe
+    // Inspect video via ffprobe & compute raw SHA
     const ffprobe = await this.options.ffmpegAdapter.runFfprobe(genResponse.output_path)
-    const rawSha256 = createHash('sha256').update(genResponse.output_path + genResponse.file_size).digest('hex')
+    const rawSha256 = this.hashOutputFile(genResponse.output_path, genResponse.file_size)
 
-    // Scene QA
+    // Technical Scene QA (ffprobe, duration, dimensions)
     const sceneQAReport = CreativeQA.evaluateSceneQA(
       {
         sceneId: `scene_short_${jobId.substring(0, 6)}`,
@@ -239,14 +370,48 @@ export class CreativeVideoOrchestrator {
       throw new Error(`SCENE_QA_FAILED: ${sceneQAReport.errors.join('; ')}`)
     }
 
-    // Deterministic Finishing (Exact logo, typography, offer, price, CTA)
+    // 9. Post-generation Representative Frame Sampling & ChatGPT Video Reviewer
+    const sampledFrames = await this.frameSampler.sampleFrames(genResponse.output_path)
+    let videoReviewReport = await this.videoReviewer.reviewSampledVideo(
+      sampledFrames,
+      masterPlan,
+      creativeContext,
+      1
+    )
+
+    // Bounded auto-regeneration (Max 1 retry if reviewer returns REGENERATE)
+    if (videoReviewReport.decision === 'REGENERATE') {
+      const retryResponse = await this.options.gflowProvider.executeJob({
+        job_id: jobId,
+        attempt_id: `${attemptId}_retry`,
+        flow_project_id: `${flowProjectId}_retry`,
+        org_id: snapshot.org_id,
+        account_id: accountId,
+        prompt: generationPrompt,
+        aspect_ratio: snapshot.aspect_ratio,
+        model: capabilities.preferredModel || 'veo-fast',
+        duration: snapshot.requested_duration,
+        assets,
+        expected_reference_ids: plan.expectedReferenceIds,
+      })
+      genResponse = retryResponse
+      const retryFrames = await this.frameSampler.sampleFrames(retryResponse.output_path)
+      videoReviewReport = await this.videoReviewer.reviewSampledVideo(
+        retryFrames,
+        masterPlan,
+        creativeContext,
+        2
+      )
+    }
+
+    // 10. Deterministic Finishing (Exact logo, typography, offer, price, CTA)
     const finishedOutputPath = genResponse.output_path.replace('.mp4', '_finished.mp4')
     await this.options.ffmpegAdapter.applyDeterministicFinishing(
       genResponse.output_path,
       plan.finishingPlan,
       finishedOutputPath
     )
-    const finalSha256 = createHash('sha256').update(finishedOutputPath + 'deterministic').digest('hex')
+    const finalSha256 = this.hashOutputFile(finishedOutputPath, genResponse.file_size)
 
     const realFlowProjectId = genResponse.flow_project_id || flowProjectId
 
@@ -258,15 +423,15 @@ export class CreativeVideoOrchestrator {
       actual_flow_media_id: va.attached_media_id,
     }))
 
-    // Provenance Record
+    // Provenance Record with Full Creative Telemetry
     const provenance: CreativeProvenanceRecord = {
       job_id: jobId,
       org_id: snapshot.org_id,
       brand_snapshot_version: snapshot.brand_manifest_version,
       creative_plan_summary: `Short Video (${plan.strategy}): ${plan.hook}`,
       reference_registry_handles: registry.getAll().map(r => r.handle),
-      scene_prompts: { short_scene: plan.compiledPrompt },
-      prompt_sha256: { short_scene: createHash('sha256').update(plan.compiledPrompt).digest('hex') },
+      scene_prompts: { short_scene: generationPrompt },
+      prompt_sha256: { short_scene: createHash('sha256').update(generationPrompt).digest('hex') },
       input_asset_sha256: Object.fromEntries(registry.getAll().map(r => [r.handle, r.sha256])),
       keyframe_asset_ids: {},
       flow_project_id: realFlowProjectId,
@@ -274,7 +439,7 @@ export class CreativeVideoOrchestrator {
       scene_output_ids: { short_scene: genResponse.output_path },
       scene_sha256: { short_scene: rawSha256 },
       final_output_sha256: finalSha256,
-      qa_reports: { sceneQA: sceneQAReport },
+      qa_reports: { sceneQA: sceneQAReport, videoReview: videoReviewReport, critic: criticReport },
       scene_attempts: {
         short_scene: genResponse.attempts || [{
           attempt_number: 1,
@@ -284,6 +449,11 @@ export class CreativeVideoOrchestrator {
         }]
       },
       attached_references: attachedRefs,
+      creative_director_concepts: concepts,
+      selected_concept_id: selection.selected_concept_id,
+      selection_reason: selection.selection_reason,
+      critic_report: criticReport,
+      video_review_report: videoReviewReport,
       created_at: new Date().toISOString(),
       completed_at: new Date().toISOString(),
       verified: true,
@@ -298,6 +468,10 @@ export class CreativeVideoOrchestrator {
       durationSec: ffprobe.duration,
       provenance,
       sceneQAReports: [sceneQAReport],
+      criticReport,
+      videoReviewReport,
+      concepts,
+      selectedConcept: selection.selected_concept,
       verified: true,
     }
   }
@@ -459,7 +633,7 @@ export class CreativeVideoOrchestrator {
 
         // Scene ffprobe & QA
         const ffprobe = await this.options.ffmpegAdapter.runFfprobe(genResponse.output_path)
-        const sceneSha = createHash('sha256').update(genResponse.output_path + genResponse.file_size).digest('hex')
+        const sceneSha = this.hashOutputFile(genResponse.output_path, genResponse.file_size)
         sceneShaMap[scene.sceneId] = sceneSha
 
         const sceneQA = CreativeQA.evaluateSceneQA(

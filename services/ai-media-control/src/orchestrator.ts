@@ -21,6 +21,8 @@ import {
   RealFFmpegAdapter,
   RealCreativeModelProvider,
   RealImageGenerationProvider,
+  FactualIntegrityGate,
+  createBrandContextSnapshot,
   type RawBrandInput,
 } from '@wa/creative-video-orchestrator'
 
@@ -530,7 +532,6 @@ async function materializeTenantAsset(
   const candidateLocalPaths = [
     `/shared/outputs/${filename}`,
     `/opt/whatsappbot/services/omnistudio/docker/data/outputs/${filename}`,
-    `/shared/outputs/inputs/b359ccd3-3ec8-40fd-928e-bc6dbbd489c0/${filename}`,
   ]
   for (const lp of candidateLocalPaths) {
     if (fs.existsSync(lp)) {
@@ -582,13 +583,51 @@ async function runCreativeVideoExecution(
   startTime: number,
   assets: any[]
 ) {
+  // A generation must be backed by the exact revision approved in the wizard.
+  // Do not silently fall back to the mutable job prompt or a default CTA.
+  const revisionId = job.metadata?.creative_revision_id
+  if (!revisionId) {
+    throw new Error('CREATIVE_REVISION_REQUIRED: video generation requires an approved, locked CreativeRevision')
+  }
+  const { data: revision, error: revisionError } = await supabase
+    .from('creative_revisions')
+    .select('id, status, veo_prompt, campaign_facts, asset_sha_set')
+    .eq('id', revisionId)
+    .eq('org_id', job.org_id)
+    .single()
+  if (revisionError || !revision || revision.status !== 'LOCKED_FOR_GENERATION') {
+    throw new Error('CREATIVE_REVISION_NOT_LOCKED: the selected CreativeRevision is missing or not locked for generation')
+  }
+  if (!revision.veo_prompt || revision.veo_prompt !== job.prompt) {
+    throw new Error('CREATIVE_REVISION_DRIFT: job prompt does not exactly match the locked CreativeRevision')
+  }
+
+  const approvedAssets = new Map<string, string>(
+    (revision.asset_sha_set || []).map((asset: any) => [`${asset.role}:${String(asset.sha256).toLowerCase()}`, asset.file_path])
+  )
+  for (const asset of assets || []) {
+    const role = asset.role === 'reference' ? 'reference' : asset.role
+    const key = `${role}:${String(asset.sha256 || '').toLowerCase()}`
+    if (!approvedAssets.has(key)) {
+      throw new Error(`CREATIVE_ASSET_DRIFT: job asset ${asset.id || asset.original_filename || role} is not in the locked CreativeRevision SHA set`)
+    }
+  }
+
+  const approvedFacts = revision.campaign_facts || {}
+  if (!approvedFacts.cta || typeof approvedFacts.cta !== 'string') {
+    throw new Error('FACTUAL_INTEGRITY_FAIL: locked CreativeRevision has no authoritative CTA')
+  }
+
   // Fetch organization name
   const { data: org } = await supabase
     .from('organizations')
     .select('name')
     .eq('id', job.org_id)
     .single()
-  const orgName = org?.name || job.metadata?.brand_name || 'Commercial Brand'
+  const orgName = org?.name || approvedFacts.brand_name
+  if (!orgName) {
+    throw new Error('BRAND_CONTEXT_INVALID: organization name is required')
+  }
 
   // Materialize logo asset
   const logoAsset = (assets || []).find((a: any) => a.role === 'logo') || assets?.[0]
@@ -633,10 +672,8 @@ async function runCreativeVideoExecution(
     org_id: job.org_id,
     brand_name: orgName,
     sector_profile: job.metadata?.sector || 'commercial',
-    brand_description: `${orgName} ${job.title || ''} ${(job.metadata as any)?.authoritative_facts?.product_name || ''} commercial campaign`,
-    brand_palette: { primary: '#1B5E20', accent: '#FDD835' },
-    typography: { headingFont: 'Montserrat', primaryColor: '#FFFFFF' },
-    tone_of_voice: ['professional', 'commercial craftsmanship'],
+    brand_description: `${orgName} ${job.title || ''} ${approvedFacts.product_name || ''} commercial campaign`,
+    tone_of_voice: ['professional'],
     visual_style: [job.prompt],
     logo_asset_id: logoAsset?.id || 'asset_logo_default',
     logo_sha256: materializedLogo.sha256 || '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
@@ -644,8 +681,11 @@ async function runCreativeVideoExecution(
     products: materializedProducts,
     campaign: {
       objective: job.title || 'Brand Video',
-      offer: job.metadata?.offer || 'Standard',
-      cta: job.metadata?.cta || 'Daha Fazla Bilgi Edinin',
+      offer: approvedFacts.offer,
+      price: approvedFacts.price,
+      cta: approvedFacts.cta,
+      phoneNumber: approvedFacts.phone,
+      website: approvedFacts.url,
       target_audience: 'Commercial',
       user_style_preference: job.metadata?.user_style_preference || job.metadata?.ad_format || 'AUTO',
       environment_preset: job.metadata?.environment_preset || 'auto',
@@ -654,6 +694,17 @@ async function runCreativeVideoExecution(
     },
     aspect_ratio: (job.aspect_ratio || '9:16') as any,
     requested_duration: job.duration_seconds || 8,
+    verified_claims: Array.isArray(approvedFacts.verified_claims) ? approvedFacts.verified_claims : [],
+    unverified_facts: Array.isArray(approvedFacts.unverified_facts) ? approvedFacts.unverified_facts : [],
+    approved_veo_prompt: revision.veo_prompt,
+  }
+
+  const factualReport = FactualIntegrityGate.validateVeoPrompt(
+    job.prompt,
+    createBrandContextSnapshot(rawInput)
+  )
+  if (!factualReport.passed) {
+    throw new Error(`FACTUAL_INTEGRITY_FAIL: ${factualReport.violations.map(v => v.unverifiedValue).join(', ')}`)
   }
 
   const gflowProvider = new RealHttpGFlowProvider(gflowEngineUrl)
@@ -688,6 +739,11 @@ async function runCreativeVideoExecution(
     })
     .eq('id', attemptId)
 
+  // Save measured output facts only.  A generated file is not a visual-QA 9.5
+  // merely because the worker reached this line.
+  const finalProbe = await ffmpegAdapter.runFfprobe(result.outputFilePath)
+  const finalByteSize = fs.statSync(result.outputFilePath).size
+
   // Save Verified Output
   const { data: outRow } = await supabase.from('ai_media_outputs').insert({
     job_id: job.id,
@@ -695,15 +751,15 @@ async function runCreativeVideoExecution(
     attempt_id: attemptId,
     file_path: result.outputFilePath,
     sha256: result.finalSha256,
-    byte_size: 5242880,
-    duration_seconds: result.durationSec,
-    width: job.aspect_ratio === '16:9' ? 1280 : 720,
-    height: job.aspect_ratio === '16:9' ? 720 : 1280,
-    fps: 24,
-    vcodec: 'h264',
-    acodec: 'aac',
-    visual_qa_score: 9.5,
-    visual_qa_report: { checks: 'ALL_PASSED', provenance: result.provenance },
+    byte_size: finalByteSize,
+    duration_seconds: finalProbe.duration,
+    width: finalProbe.width,
+    height: finalProbe.height,
+    fps: finalProbe.fps,
+    vcodec: finalProbe.vcodec,
+    acodec: finalProbe.acodec,
+    visual_qa_score: null,
+    visual_qa_report: { scene_reports: result.sceneQAReports, provenance: result.provenance },
     verified: true,
     is_approved: true,
     delivered_at: new Date().toISOString(),

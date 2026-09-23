@@ -296,15 +296,27 @@ async function generatePromptWithChatGptWeb(port, options = {}) {
     const sectorInfo = detectSectorAndStyle(brand, product, brief);
 
     const gptAskPrompt = `Sen Cannes ve Kristal Elma ödüllü bir ticari reklam filmi yönetmeni ve Google Veo video prompt uzmanısın.
-Görevin: Verilen işletme verilerini kullanarak Google Veo motoruna doğrudan iletilecek, TAM BİR TELEVİZYON / REELS REKLAM FİLMİ DİNAMİZMİNDE, her seferinde YARATICI VE ÖZGÜN tek bir 9:16 Dikey Reklam Filmi Promptu oluşturmak.
+Görevin: Verilen işletme verilerini kullanarak Google Veo motoruna doğrudan iletilecek, TAM BİR TELEVİZYON / REELS REKLAM FİLMİ DİNAMİZMİNDE, her seferinde YARATICI, GERÇEKÇİ VE FİZİKSEL DÜNYAYA %100 UYGUN tek bir 9:16 Dikey Reklam Filmi Promptu oluşturmak.
+
+ÖNCELİKLİ GÖREV: ÜRÜN & ORTAM AKIL YÜRÜTMESİ (PRODUCT AFFORDANCE REASONING):
+Promptu yazmadan önce ürünün fiziksel amacını ve doğal ortamını analiz et:
+1. Ürün ("${product}") fiziksel olarak nerede çalışır?
+   - Tarım/bahçe aletiyse: Doğal ortamı GÜNEŞLİ MEYVE BAHÇESİ, ZEYTİNLİK, TARLA veya SERADIR. Asla kapalı fabrika, endüstriyel beton zemin, depo veya inşaat şantiyesi OLAMAZ!
+   - İnşaat/yapı malzemesiyse: Doğal ortamı ŞANTİYE, MİMARİ UYGULAMA veya SEVKİYAT ALANIDIR.
+   - B2B/Yazılım/Teknoloji ise: Doğal ortamı FERAH MODERN OFİS, ÇALIŞMA MASASI ve BİLGİSAYAR EKRANIDIR.
+   - Gıda/Restoran ise: Doğal ortamı ŞIK RESTORAN MASASI ve SICAK MUTFAKTIR.
+   - Sağlık/Klinik ise: Doğal ortamı STERİL, FERAH VE AYDINLIK ÖZEL KLİNİKTİR.
+2. Ürüne aykırı olan ortamları KESİNLİKLE YASAKLA:
+   - Tarım ürünü ise promptun sonuna mutlaka: "no factory, no warehouse, no concrete industrial floor, no construction hardhat, no reflective safety vest, no heavy machinery, no office cubicle" ekle.
+   - Yazılım ise promptun sonuna: "no farmland, no orchard, no mud, no construction dust" ekle.
 
 İŞLETME VE MARKA VERİLERİ:
 - Sektör / Konsept: ${sectorInfo.sector} (${sectorInfo.sceneAtmosphere})
 - Marka Adı: ${brand} (Videoda kurumsal logo ve fiziksel marka olarak yer alacaktır)
 - Kurumsal Logo Tanımı: ${logoDesc}
 - Ekli Medya ve Ürün/Logo Analizi: Firmanın orijinal kurumsal logosu (${logoDesc}) ve ürün görseli sana verilmiştir. Bu görselleri incele ve Veo promptunun içine logonun ve ürünün fiziksel görünümünü (renklerini, geometrisini, gövde yapısını) METİNSEL OLARAK DOĞRUDAN VE KUSURSUZCA YAZ.
-  * EKLİ ÜRÜNÜN FİZİKSEL FORMUNU KESİNLİKLE KORU: Eğer ürün hava delikli killi blok tuğla ise (üstünde dikdörtgen delikler, yanlarında dikey oluklu çizgiler olan kırmızı kil blok), promptunda ASLA 'masif gövdeli pres tuğla' veya 'düzgün deliksiz dikdörtgen gövde' YAZMA. Birebir 'üst yüzeyinde hava delikleri ve yanlarında dikey oluk çizgileri olan fırınlanmış kırmızı kil blok tuğla (perforated hollow core clay brick)' olarak tam fiziksel detaylarıyla betimle. Veo difüzyon modelinin deliksiz düz taş üretmesini kesinlikle engelle.
-  * EKLİ LOGO KİMLİĞİNİ HARFİYEN KORU: Şirketin kurumsal logosu (${logoDesc}) ve şirket adı ('${brand}') sahnedeki araç kapısı veya tabelada kusursuz, net ve okunaklı yer almalıdır. Uydurma geometrik şekiller, sarı üçgenler, yapay amblemler veya bozuk yazılar KESİNLİKLE EKLENMEYECEKTİR.
+  * EKLİ ÜRÜNÜN FİZİKSEL FORMUNU KESİNLİKLE KORU: Ürünün görseldeki gerçek formunu, rengini ve ayırt edici tasarımını tam fiziksel detaylarıyla betimle. Asla uydurma başka bir ürüne veya masif bloğa dönüştürme.
+  * EKLİ LOGO KİMLİĞİNİ HARFİYEN KORU: Şirketin kurumsal logosu (${logoDesc}) ve şirket adı ('${brand}') sahnedeki doğal marka yüzeyinde kusursuz, net ve okunaklı yer almalıdır. Uydurma geometrik şekiller, sarı üçgenler veya bozuk yazılar KESİNLİKLE EKLENMEYECEKTİR.
 - KESİN UYARI (VEO'YA 'EKLİ DOSYA' YAZMA YASAĞI): Veo'ya iletilecek nihai prompt metninde KESİNLİKLE 'ekli görsel', 'ektedir', 'dosyadaki görsel', 'ekli logo' gibi ifadeler YAZMA! Veo difüzyon modeli bunu görünce 'Lütfen görsel yükleyin' diyerek videoyu başlatmaz. Bunun yerine ekteki görselin neye benzediğini Veo'ya doğrudan canlı dille betimle (Örn: '${logoDesc}'; üstünde hava delikleri ve yan olukları olan kırmızı pişmiş kil blok tuğlalar). Veo'nun doğrudan video üretmeye başlamasını sağla.
 - Kurumsal Renk Paleti (KESİNLİKLE METİN OLARAK PROMPTA # HEX KODU YAZILMAYACAK): Koyu zümrüt yeşili, canlı parlak yeşil, beyaz ve siyah
 - Öne Çıkan Ürün/Hizmet: ${product}
@@ -1771,14 +1783,12 @@ async function generateVideoOnFlow(options = {}) {
   let productShapeNote = '';
   if (options.productKeyFeature) {
     productShapeNote = ` KRİTİK AYIRT EDİCİ ÖZELLİK: ${options.productKeyFeature}. Bu detay videodaki tüm ürün çekimlerinde kesinlikle net biçimde korunacaktır; aksi formlar veya uydurma malzemeler KESİNLİKLE YASAKTIR.`;
-  } else if (prodNameForDirective.toLowerCase().includes('tuğla') || prodNameForDirective.toLowerCase().includes('tugla')) {
-    productShapeNote = ' İliştirilmiş tuğla fotoğrafındaki delikli killi blok tuğla formunu, hava deliklerini ve dikey yan oluklarını kesinlikle koru; deliksiz düz tuğlaya veya masif taşa dönüştürme.';
   }
 
   const hasDetailImage = filesToUpload.some(f => f.role === 'product_detail');
   let detailDirective = '';
   if (hasDetailImage) {
-    detailDirective = `\n2. ÜRÜN DETAY AÇISI: İliştirilmiş ikinci ürün detay fotoğrafındaki karakteristik dokuyu, hava deliklerini, olukları ve teknik yüzeyi eksiksiz koru; kamera döndüğünde ürünün bu detaylarını asla kaybetme.`;
+    detailDirective = `\n2. ÜRÜN DETAY AÇISI: İliştirilmiş ikinci ürün detay fotoğrafındaki karakteristik dokuyu, fonksiyonel parçaları ve teknik yüzeyi eksiksiz koru; kamera döndüğünde ürünün bu detaylarını asla kaybetme.`;
   }
 
   let logoShapeNote = '';
@@ -1786,13 +1796,25 @@ async function generateVideoOnFlow(options = {}) {
     const { getActiveBrandKit } = require('./brand_resolver.js');
     const bk = await getActiveBrandKit(options.orgId, brandNameForDirective);
     if (bk && bk.logo_visual_description) {
-      logoShapeNote = ` Orijinal kurumsal amblem: ${bk.logo_visual_description}. Masadaki akrilik plaket veya duvardaki tabelada bu kırmızı çatı ve dikey ok amblemi kesinlikle en üstte çizilecektir; yalnızca yazı yazılıp amblem ASLA atlanmayacaktır.`;
+      logoShapeNote = ` Orijinal kurumsal amblem: ${bk.logo_visual_description}. Belirlenen marka yüzeyinde bu orijinal amblem ve kurumsal yazı eksiksiz korunacaktır.`;
     }
   } catch(_) {}
 
-  const logoTargetSurface = options.logoPlacement === 'reception_plaque'
-    ? 'ofis masa akrilik/metal isimliğinde'
-    : 'tırın/kamyonun pürüzsüz düz beyaz kasa panelinde veya fabrikanın mimari kurumsal tabelasında';
+  let logoTargetSurface = 'ürünün kendi sağlam dış gövdesinde veya mekana uygun doğal kurumsal marka yüzeyinde';
+  const textContext = `${brandNameForDirective} ${prodNameForDirective} ${options.brief || ''}`.toLowerCase();
+  if (options.logoPlacement === 'reception_plaque') {
+    logoTargetSurface = 'ofis masa akrilik/metal isimliğinde veya resepsiyon panelinde';
+  } else if (textContext.match(/(tarım|bahçe|zeytin|hasat|sera|agri|pompa|ilaçlama|çiftlik)/)) {
+    logoTargetSurface = 'bahçedeki ahşap çiftlik/hasat yönlendirme tabelasında veya ürünün kendi ergonomik gövdesinde';
+  } else if (textContext.match(/(veri|yazılım|tech|saas|platform|harita|b2b|bilişim)/)) {
+    logoTargetSurface = 'ofis masa akrilik/metal isimliğinde veya cam bölme kapısında';
+  } else if (textContext.match(/(restoran|yemek|gıda|mutfak|kafe|döner|lezzet)/)) {
+    logoTargetSurface = 'doğal ahşap servis sunum panosunda veya şef önlüğünde';
+  } else if (textContext.match(/(klinik|diş|sağlık|medikal|doktor|hastane)/)) {
+    logoTargetSurface = 'klinik resepsiyon bankosunda veya doktor önlüğünde';
+  } else if (textContext.match(/(inşaat|tuğla|sanayi|imalat|şantiye|çimento|nakliye|lojistik)/)) {
+    logoTargetSurface = 'şantiye giriş tabelasında veya tırın düz kasa panelinde';
+  }
 
   const mandatoryMediaDirective = `\n\nKESİN GÖRSEL VE MARKA TALİMATI:\n1. ÜRÜN ANA BİÇİMİ: İliştirilmiş ana ürün fotoğrafını ana ürünün görsel referansı olarak kullan. Ürünün fiziksel formunu, rengini ve ayırt edici geometrik yapısını koru.${productShapeNote}${detailDirective}\n${hasDetailImage ? '3' : '2'}. KURUMSAL LOGO: İliştirilmiş kurumsal logo dosyasını marka kimliği referansı olarak kullan. Logoyu yeniden tasarlama, sarı üçgen veya uydurma semboller ekleme.${logoShapeNote} Marka adı "${brandNameForDirective}" olarak doğru yazılsın.\n${hasDetailImage ? '4' : '3'}. SIFIR HATA DÜZ YÜZEY KURALI (ZERO-ERROR FLAT RIGID SURFACE): Model logoyu ASLA kavisli kaportaya, araç şoför kapısına (kulp ve cam eğimi logoyu bozar), araç ön panjuruna veya barete basmayacaktır. Logo yalnızca 1 kez, sıfır hata vereceği ${logoTargetSurface} yer alacaktır.`;
 

@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createHash } from 'node:crypto'
 import { requireActiveOrg, isOrgAdminRole } from '@/lib/org'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-function computeSha256(input: string): string {
-  return createHash('sha256').update(input).digest('hex')
+function isSha256(value: unknown): value is string {
+  return typeof value === 'string' && /^[a-f0-9]{64}$/i.test(value)
 }
 
 /**
@@ -93,24 +92,10 @@ export async function POST(req: NextRequest) {
     }> = []
 
     // Logo
-    let logoFilePath = logoAsset.filePath || logoAsset.url
-    let logoSha = logoAsset.sha256
-
-    // Resolve server-side path & sha for logo
-    if (logoAsset.url && logoAsset.url.includes('media-proxy')) {
-      const match = logoAsset.url.match(/file=([^&]+)/)
-      const cleanFile = match ? match[1].replace(/[^a-zA-Z0-9_\-\.]/g, '') : null
-      if (cleanFile) {
-        logoFilePath = `/shared/outputs/inputs/${org.id}/${cleanFile}`
-        if (cleanFile === 'bofe_logo.png') {
-          logoSha = '7972d493077cb4bec0393e195bc88b7599d84ff7ecbbef265e70b78718da3cf1'
-        }
-      }
-    } else if (org.id === 'b359ccd3-3ec8-40fd-928e-bc6dbbd489c0') {
-      logoFilePath = '/shared/outputs/inputs/b359ccd3-3ec8-40fd-928e-bc6dbbd489c0/bofe_logo_clean_black.png'
-      logoSha = '6c78bea0e87b8c41265734b73f6d5b606d0c3d71970963ebeaab88a5490537b1'
-    } else {
-      logoSha = logoSha || computeSha256(logoAsset.url + org.id + 'logo')
+    const logoFilePath = logoAsset.filePath || logoAsset.url
+    const logoSha = logoAsset.sha256
+    if (!isSha256(logoSha)) {
+      return NextResponse.json({ error: 'Logo için gerçek SHA-256 doğrulaması gerekli.' }, { status: 400 })
     }
 
     manifestAssets.push({
@@ -126,21 +111,10 @@ export async function POST(req: NextRequest) {
     // Product (if present)
     let productSha = ''
     if (productAsset?.url || productAsset?.filePath) {
-      let prodFilePath = productAsset.filePath || productAsset.url
-      if (productAsset.url && productAsset.url.includes('media-proxy')) {
-        const match = productAsset.url.match(/file=([^&]+)/)
-        const cleanFile = match ? match[1].replace(/[^a-zA-Z0-9_\-\.]/g, '') : null
-        if (cleanFile) {
-          prodFilePath = `/shared/outputs/inputs/${org.id}/${cleanFile}`
-          if (cleanFile === 'bofe_product.png') {
-            productSha = '3c187e83d2a2ce990c845105962f8c5a3a4b0a1d6a34778e3bc5e8474a53659f'
-          }
-        }
-      } else if (org.id === 'b359ccd3-3ec8-40fd-928e-bc6dbbd489c0') {
-        prodFilePath = '/shared/outputs/inputs/b359ccd3-3ec8-40fd-928e-bc6dbbd489c0/bofe_zeytin_hasat_montaj_thumb.jpg'
-        productSha = '189770de9a088a13a2ad1762086a97b20a5c081fbc7de5beda31dde91b7ef38e'
-      } else {
-        productSha = productAsset.sha256 || computeSha256(productAsset.url + org.id + 'hero_product')
+      const prodFilePath = productAsset.filePath || productAsset.url
+      productSha = productAsset.sha256
+      if (!isSha256(productSha)) {
+        return NextResponse.json({ error: 'Ürün görseli için gerçek SHA-256 doğrulaması gerekli.' }, { status: 400 })
       }
       manifestAssets.push({
         role: 'product',
@@ -157,7 +131,10 @@ export async function POST(req: NextRequest) {
     if (Array.isArray(referenceAssets)) {
       for (const [idx, ref] of referenceAssets.entries()) {
         if (!ref?.url) continue
-        const refSha = ref.sha256 || computeSha256(ref.url + org.id + `ref_${idx}`)
+        if (!isSha256(ref.sha256)) {
+          return NextResponse.json({ error: `Referans görseli ${idx + 1} için gerçek SHA-256 doğrulaması gerekli.` }, { status: 400 })
+        }
+        const refSha = ref.sha256
         manifestAssets.push({
           role: 'reference',
           file_path: ref.url,
@@ -216,8 +193,8 @@ export async function POST(req: NextRequest) {
           use_creative_orchestrator: true,
           creative_revision_id: revision.id,
           brand_name: org.name || authoritativeFacts?.brand_name,
-          offer: authoritativeFacts?.offer || 'Standard',
-          cta: authoritativeFacts?.cta || 'Daha Fazla Bilgi Edinin',
+          offer: authoritativeFacts?.offer || null,
+          cta: authoritativeFacts?.cta || null,
           promotion_type: promotionType,
           user_style_preference: userStylePreference || adFormat || 'AUTO',
           ad_format: adFormat || userStylePreference || 'AUTO',
