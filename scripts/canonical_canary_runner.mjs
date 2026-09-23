@@ -248,12 +248,14 @@ async function main() {
 
   const flowExecutionPayload = {
     job_id: jobId,
+    org_id: orgId,
     flow_project_id: `flow_proj_${jobId.slice(0, 10)}`,
     flow_account_id: 'account-01',
     prompt: compiledPrompt.cinematicPrompt,
     aspect_ratio: '9:16',
     model: 'veo-fast',
     duration: 8,
+    expected_reference_ids: ['prod_bofe_sprayer_01', 'logo_bofe_01'],
     assets: [
       {
         asset_id: 'prod_bofe_sprayer_01',
