@@ -248,6 +248,8 @@ async function main() {
 
   const flowExecutionPayload = {
     job_id: jobId,
+    attempt_id: `att_${Date.now()}`,
+    account_id: 'account-01',
     org_id: orgId,
     flow_project_id: `flow_proj_${jobId.slice(0, 10)}`,
     flow_account_id: 'account-01',
