@@ -165,7 +165,7 @@ export async function POST(req: NextRequest) {
       ...speechTimeline.map((s) => `${s.start_sec.toFixed(1)}-${s.end_sec.toFixed(1)}s: "${s.exact_text}"`),
       ``,
       `Speak the approved Turkish lines in the exact order. Do not translate. Do not paraphrase. Do not add dialogue.`,
-      `[Negative Constraints]: no distorted branding, no cartoon textures, no blurry typography, no CGI artifact.`,
+      `[Negative Constraints]: strictly no on-screen text, no typography, no words, no letters, no subtitles, no captions, no watermark, no lower thirds, no distorted branding, no cartoon textures, no blurry typography, no CGI artifact.`,
     ].filter(Boolean)
 
     const veoPrompt = promptLines.join('\n')

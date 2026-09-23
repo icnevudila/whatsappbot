@@ -96,7 +96,7 @@ export class ShortVideoPlanner {
       `[Cinematography]: ${camera}, ${lighting}`,
       `[Motion]: ${motion}`,
       `[Ending Action]: ${closingIntent}`,
-      `[Negative Constraints]: no distorted branding, no cartoon animation, no amateur blur, no competitor logos.`,
+      `[Negative Constraints]: strictly no on-screen text, no typography, no words, no letters, no subtitles, no captions, no watermark, no lower thirds, no distorted branding, no cartoon animation, no amateur blur, strictly clean live-action video footage.`,
     ].join(' | ')
 
     // Replace canonical handles with vision-grounded descriptors for Veo compiler

@@ -633,7 +633,7 @@ async function runCreativeVideoExecution(
     org_id: job.org_id,
     brand_name: orgName,
     sector_profile: job.metadata?.sector || 'commercial',
-    brand_description: `${orgName} commercial campaign`,
+    brand_description: `${orgName} ${job.title || ''} ${(job.metadata as any)?.authoritative_facts?.product_name || ''} commercial campaign`,
     brand_palette: { primary: '#1B5E20', accent: '#FDD835' },
     typography: { headingFont: 'Montserrat', primaryColor: '#FFFFFF' },
     tone_of_voice: ['professional', 'commercial craftsmanship'],

@@ -583,19 +583,45 @@ export class RealCreativeModelProvider implements ICreativeModelProvider {
     sectorPreset: any
   ): Promise<CreativePlanDraft> {
     const brand = snapshot.brand_name
-    const sector = snapshot.sector_profile || 'commercial'
-    const heroProduct = snapshot.products[0]?.name || 'amiral ürün'
-    const cta = snapshot.campaign.cta || 'Daha Fazla Bilgi Edinin'
+    const heroProduct = snapshot.products[0]?.name || 'ürün'
+    const textCorpus = `${brand} ${heroProduct} ${snapshot.brand_description || ''} ${snapshot.campaign?.objective || ''}`.toLowerCase()
+
+    let sector = snapshot.sector_profile || 'ticari'
+    let environment = 'Modern ve prestijli ticari sergileme ve stüdyo ortamı; dengeli aydınlatma ve temiz atmosfer.'
+    let productHeroAction = `${heroProduct} gerçek kullanım ortamında, kusursuz detayları ve işlevsel performansıyla sergilenir.`
+    let lightingStyle = 'Doğal gün ışığı ile dengeli sıcak aydınlatma.'
+
+    if (textCorpus.match(/(tarım|bahçe|sera|ilaçlama|bağ|hasat|çiftlik|pompa|bitki|fidan|toprak|tarla|zeytin)/)) {
+      sector = 'tarım ve bahçe'
+      environment = 'Güneşli, taze ve verimli bir meyve bahçesi, yeşil tarla ve modern sera ortamı; doğal açık hava gün ışığı ve canlı yeşil yapraklar.'
+      productHeroAction = `${heroProduct} meyve bahçesinde ve yeşil bitkiler arasında verimli ve ergonomik ilaçlama yaparken kusursuz püskürtme detaylarıyla sergilenir.`
+      lightingStyle = 'Doğal parlak gün ışığı, ferah açık hava atmosferi.'
+    } else if (textCorpus.match(/(döner|yemek|restoran|gıda|lezzet|mutfak|sos|kebap|cafe|kafe|et)/)) {
+      sector = 'gıda ve restoran'
+      environment = 'Temiz, modern ve iştah açıcı şık restoran mutfağı ve sunum alanı; sıcak ve davetkar atmosfer.'
+      productHeroAction = `${heroProduct} taze malzemeler ve ustalıkla hazırlanmış enfes sunumuyla iştah kabartan detaylarla sergilenir.`
+      lightingStyle = 'Sıcak ve iştah açıcı profesyonel yemek çekimi aydınlatması.'
+    } else if (textCorpus.match(/(inşaat|tuğla|şantiye|beton|yapı|çimento|mimari|müteahhit)/)) {
+      sector = 'inşaat ve yapı'
+      environment = 'Profesyonel inşaat ve yapı sahası; düzenli, güvenli ve dinamik çalışma alanı.'
+      productHeroAction = `${heroProduct} şantiye alanında yüksek dayanıklılık ve birinci sınıf malzeme kalitesiyle sergilenir.`
+      lightingStyle = 'Doğal gün ışığı ile net endüstriyel aydınlatma.'
+    } else if (textCorpus.match(/(giyim|moda|tekstil|ayakkabı|kıyafet|çanta)/)) {
+      sector = 'moda ve tekstil'
+      environment = 'Minimalist ve estetik moda stüdyosu, zarif ve çağdaş mekan tasarımı.'
+      productHeroAction = `${heroProduct} kumaş dokusu, dikiş kalitesi ve şık duruşuyla zarafetle sergilenir.`
+      lightingStyle = 'Yumuşak difüze stüdyo moda aydınlatması.'
+    }
 
     return {
       hook: `Dinamik ve dikkat çekici bir açılışla ${brand} kalitesi ve ${sector} sektöründeki uzmanlığı öne çıkarılır.`,
-      productHeroAction: `${heroProduct} gerçek kullanım ortamında, kusursuz detayları ve işlevsel performansıyla sergilenir.`,
-      environment: `Otantik ve profesyonel ticari şantiye/üretim ortamı, doğal atmosfer ve dengeli ışıklandırma.`,
-      cameraLanguage: `35mm sinematik lens, akıcı takip ve derinlikli odaklama.`,
-      lightingStyle: `Doğal gün ışığı ile dengeli sıcak endüstriyel aydınlatma.`,
-      motionRhythm: `Kararlı, kendinden emin ve ticari güven aşılayan akış.`,
-      audioDirection: `Otantik ortam sesleri (foley) ile desteklenen temiz ve profesyonel seslendirme.`,
-      closingCTAIntent: `${cta}`,
+      productHeroAction,
+      environment,
+      cameraLanguage: '35mm sinematik lens, akıcı takip ve derinlikli odaklama.',
+      lightingStyle,
+      motionRhythm: 'Kararlı, kendinden emin ve ticari güven aşılayan akış.',
+      audioDirection: 'Otantik ortam sesleri (foley) ile desteklenen temiz ve profesyonel seslendirme.',
+      closingCTAIntent: 'Kamera ürüne odaklanarak yumuşak ve kendinden emin bir şekilde yavaşlar, temiz sinematik kapanış sunulur.',
     }
   }
 
