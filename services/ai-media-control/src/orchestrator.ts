@@ -719,6 +719,9 @@ async function runCreativeVideoExecution(
         status: 'ready',
         source: 'ai',
         public_url: `/api/ai-media/outputs/${outRow.id}`,
+        payload: {
+          thumbnailUrl: `/api/ai-media/outputs/${outRow.id}?thumb=1`,
+        },
         updated_at: new Date().toISOString(),
       }, { onConflict: 'id' })
     } catch (crErr) {

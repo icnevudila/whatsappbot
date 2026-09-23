@@ -593,10 +593,11 @@ export function CreativeDetail({
             <div className="overflow-hidden rounded-[var(--radius-card)] border border-hairline bg-black shadow-lg">
               <video
                 src={getSafeMediaUrl(displayPublicUrl)}
-                poster={getSafeMediaUrl(displayThumbnailUrl)}
+                poster={getSafeMediaUrl(displayThumbnailUrl || (displayPublicUrl?.startsWith('/api/ai-media/outputs/') ? `${displayPublicUrl}?thumb=1` : undefined))}
                 controls
                 autoPlay
                 playsInline
+                preload="auto"
                 className="max-h-[640px] w-full object-contain"
               />
             </div>

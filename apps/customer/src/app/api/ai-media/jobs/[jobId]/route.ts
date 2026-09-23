@@ -188,6 +188,9 @@ export async function GET(
               status: 'ready',
               source: 'ai',
               public_url: playbackUrl,
+              payload: {
+                thumbnailUrl: `${playbackUrl}?thumb=1`,
+              },
               updated_at: new Date().toISOString(),
             }, { onConflict: 'id' })
         } catch (syncErr) {

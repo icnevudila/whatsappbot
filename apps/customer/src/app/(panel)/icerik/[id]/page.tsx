@@ -65,7 +65,9 @@ export default async function CreativeDetailPage({
     format: row.format,
     provider: provider || null,
     brief: payload?.brief ?? payload?.instruction ?? null,
-    thumbnailUrl: payload?.thumbnailUrl ?? null,
+    thumbnailUrl:
+      (typeof payload?.thumbnailUrl === 'string' && payload.thumbnailUrl) ||
+      (row.public_url?.startsWith('/api/ai-media/outputs/') ? `${row.public_url}?thumb=1` : null),
     cleanPublicUrl: payload?.cleanPublicUrl ?? null,
   }
 

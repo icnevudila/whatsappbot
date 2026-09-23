@@ -290,10 +290,12 @@ function LibraryCard({
                     src={getSafeMediaUrl(item.thumbnailUrl)}
                     alt={item.title || 'Kampanya videosu'}
                     className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    loading="lazy"
                   />
                 ) : (
                   <video
                     src={`${getSafeMediaUrl(item.publicUrl)}#t=0.5`}
+                    poster={item.publicUrl?.startsWith('/api/ai-media/outputs/') ? `${getSafeMediaUrl(item.publicUrl)}?thumb=1` : undefined}
                     preload="metadata"
                     muted
                     playsInline

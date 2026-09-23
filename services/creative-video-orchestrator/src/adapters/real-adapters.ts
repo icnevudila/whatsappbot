@@ -1,8 +1,8 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { createHash } from 'node:crypto'
-import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { existsSync, mkdirSync, writeFileSync, readFileSync, copyFileSync } from 'node:fs'
+import { dirname, join, basename } from 'node:path'
 
 import type {
   IGFlowProvider,
@@ -543,6 +543,7 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
     mkdirSync(dirname(outputPath), { recursive: true })
 
     // If a brand logo file is available, apply deterministic overlay with exact coordinates
+    let finishedSuccessfully = false
     const logoPath = finishingSpec?.brandLogoPath || finishingSpec?.officialLogoPath
     if (logoPath && existsSync(logoPath)) {
       // Overlay logo at top-right corner with 32px padding, width scaled to 160px
@@ -555,19 +556,55 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
         '-map', '0:a?',
         '-c:v', 'libx264',
         '-c:a', 'copy',
+        '-movflags', '+faststart',
         outputPath,
       ]
       try {
         await execFileAsync(this.ffmpegBin, args)
-        return outputPath
+        finishedSuccessfully = true
       } catch (err) {
         console.warn('[RealFFmpegAdapter] Logo overlay ffmpeg error, falling back to copy:', err)
       }
     }
 
-    // Direct copy fallback if no logo specified or overlay fails
-    const args = ['-y', '-i', inputVideoPath, '-c', 'copy', outputPath]
-    await execFileAsync(this.ffmpegBin, args)
+    if (!finishedSuccessfully) {
+      // Direct copy with faststart index placement at file start for instant playback
+      const args = ['-y', '-i', inputVideoPath, '-c', 'copy', '-movflags', '+faststart', outputPath]
+      await execFileAsync(this.ffmpegBin, args)
+    }
+
+    // Extract thumbnail immediately from finished video
+    const thumbPath = outputPath.replace(/\.mp4$/i, '_thumb.jpg')
+    try {
+      await execFileAsync(this.ffmpegBin, [
+        '-y',
+        '-ss', '00:00:00.800',
+        '-i', outputPath,
+        '-vframes', '1',
+        '-q:v', '2',
+        thumbPath,
+      ])
+    } catch (thumbErr) {
+      console.warn('[RealFFmpegAdapter] Thumbnail extraction warning:', thumbErr)
+    }
+
+    // Mirror to omnistudio gateway flat outputs directory for instant CDN access
+    const gatewayOutputDir = '/opt/whatsappbot/services/omnistudio/docker/data/outputs'
+    if (existsSync(gatewayOutputDir)) {
+      try {
+        const targetVideo = join(gatewayOutputDir, basename(outputPath))
+        const targetThumb = join(gatewayOutputDir, basename(thumbPath))
+        if (outputPath !== targetVideo) {
+          copyFileSync(outputPath, targetVideo)
+        }
+        if (existsSync(thumbPath) && thumbPath !== targetThumb) {
+          copyFileSync(thumbPath, targetThumb)
+        }
+      } catch (mirrorErr) {
+        // ignore mirror error in non-standard environments
+      }
+    }
+
     return outputPath
   }
 }

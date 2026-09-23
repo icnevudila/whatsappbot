@@ -548,12 +548,12 @@ export async function listLibraryCreatives({
     if (error) return { items: [], hasMore: false, error: error.message }
     const items = (data ?? []).map((row) => {
       const payload = (row.payload ?? {}) as Record<string, unknown>
-      const isVideo = row.format === 'video' || Boolean(row.public_url?.endsWith('.mp4'))
-      const thumb =
+      const isVideo = row.format === 'video' || Boolean(row.public_url?.endsWith('.mp4')) || Boolean(row.public_url?.includes('/api/ai-media/outputs/'))
+      let thumb =
         typeof payload.thumbnailUrl === 'string' && payload.thumbnailUrl
           ? payload.thumbnailUrl
           : isVideo
-            ? null
+            ? (row.public_url?.startsWith('/api/ai-media/outputs/') ? `${row.public_url}?thumb=1` : null)
             : row.public_url
       return {
         id: row.id,

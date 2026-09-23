@@ -50,43 +50,78 @@ export async function GET(
       return new NextResponse('Medya henüz kalite kontrolünden geçmedi.', { status: 422 })
     }
 
-    // 4. Resolve Upstream Video Stream URL
+    // 4. Resolve Upstream Video or Thumbnail
+    const filePath = output.file_path || ''
+    const fileName = filePath.split('/').pop() || `${output.id}.mp4`
+    const cleanFileName = fileName.replace(/[^a-zA-Z0-9_\-\.]/g, '')
+    const isThumb = req.nextUrl.searchParams.get('thumb') === '1'
+
+    // If thumbnail requested, resolve corresponding cover JPEG
+    if (isThumb) {
+      const baseName = cleanFileName.replace(/\.mp4$/i, '')
+      const thumbCandidates = [
+        `${baseName}_thumb.jpg`,
+        `${baseName.replace(/_finished$/, '')}_thumb.jpg`,
+        `${cleanFileName}.jpg`,
+      ]
+
+      for (const tName of thumbCandidates) {
+        const thumbUrl = `${GATEWAY_HOST}/outputs/${tName}`
+        try {
+          const tRes = await fetch(thumbUrl, { cache: 'force-cache' })
+          if (tRes.ok) {
+            const tHeaders = new Headers()
+            tHeaders.set('Content-Type', 'image/jpeg')
+            tHeaders.set('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800')
+            const cl = tRes.headers.get('content-length')
+            if (cl) tHeaders.set('Content-Length', cl)
+            return new NextResponse(tRes.body, { status: 200, headers: tHeaders })
+          }
+        } catch {
+          // continue fallback
+        }
+      }
+      return new NextResponse('Thumbnail bulunamadı.', { status: 404 })
+    }
+
     // If output has an authoritative storage URL (Supabase Storage signed URL or external CDN), redirect
     if (output.storage_url && output.storage_url.startsWith('https://')) {
       return NextResponse.redirect(output.storage_url)
     }
 
-    // Otherwise, fetch from VPS shared outputs storage via gateway
-    const filePath = output.file_path || ''
-    const fileName = filePath.split('/').pop() || `${output.id}.mp4`
-    const cleanFileName = fileName.replace(/[^a-zA-Z0-9_\-\.]/g, '')
-
-    // Extract org and job folder from file path if structured: /shared/outputs/<org_id>/<job_id>/...
-    let upstreamUrl = `${GATEWAY_HOST}/outputs/${cleanFileName}`
-    if (filePath.includes('/outputs/')) {
-      const relPath = filePath.split('/outputs/')[1]
-      upstreamUrl = `${GATEWAY_HOST}/outputs/${relPath}`
-    }
-
+    // Otherwise, stream from VPS gateway
     const rangeHeader = req.headers.get('range')
     const fetchHeaders: Record<string, string> = {}
     if (rangeHeader) {
       fetchHeaders['range'] = rangeHeader
     }
 
-    const upstreamRes = await fetch(upstreamUrl, {
+    // Try primary clean filename first (gateway serves flat outputs)
+    let upstreamRes = await fetch(`${GATEWAY_HOST}/outputs/${cleanFileName}`, {
       headers: fetchHeaders,
       cache: 'no-store',
     })
 
+    // If not found, try structured relative path
+    if (!upstreamRes.ok && upstreamRes.status !== 206 && filePath.includes('/outputs/')) {
+      const relPath = filePath.split('/outputs/')[1]
+      upstreamRes = await fetch(`${GATEWAY_HOST}/outputs/${relPath}`, {
+        headers: fetchHeaders,
+        cache: 'no-store',
+      })
+    }
+
+    // Fallback: job-specific subfolder
     if (!upstreamRes.ok && upstreamRes.status !== 206) {
-      // If gateway direct path 404s, try fallback by job-specific directory on gateway
       const fallbackUrl = `${GATEWAY_HOST}/outputs/${output.org_id}/${output.job_id}/${cleanFileName}`
       const fallbackRes = await fetch(fallbackUrl, { headers: fetchHeaders, cache: 'no-store' })
-      if (!fallbackRes.ok && fallbackRes.status !== 206) {
-        return new NextResponse(`Video akışı açılamadı (${upstreamRes.status})`, { status: upstreamRes.status })
+      if (fallbackRes.ok || fallbackRes.status === 206) {
+        upstreamRes = fallbackRes
       }
-      return buildStreamResponse(fallbackRes, cleanFileName)
+    }
+
+    if (!upstreamRes.ok && upstreamRes.status !== 206) {
+      return new NextResponse(`Video akışı açılamadı (${upstreamRes.status})`, { status: upstreamRes.status })
     }
 
     return buildStreamResponse(upstreamRes, cleanFileName)
