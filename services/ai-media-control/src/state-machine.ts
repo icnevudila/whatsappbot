@@ -38,7 +38,7 @@ const VALID_TRANSITIONS: Record<JobState, JobState[]> = {
   [JobState.VALIDATING_INPUTS]: [JobState.QUEUED, JobState.FAILED],
   [JobState.QUEUED]: [JobState.LEASED],
   [JobState.LEASED]: [JobState.PREPARING_ENV, JobState.FAILED],
-  [JobState.PREPARING_ENV]: [JobState.OPENING_PROJECT, JobState.FAILED],
+  [JobState.PREPARING_ENV]: [JobState.OPENING_PROJECT, JobState.COMPLETED, JobState.FAILED],
   [JobState.OPENING_PROJECT]: [JobState.ATTACHING_INGREDIENTS, JobState.FAILED],
   [JobState.ATTACHING_INGREDIENTS]: [JobState.INGREDIENTS_VERIFIED, JobState.FAILED],
   [JobState.INGREDIENTS_VERIFIED]: [JobState.GENERATING, JobState.FAILED],
@@ -89,13 +89,29 @@ export async function transitionJob(
   }
   if (toState === JobState.COMPLETED) {
     updates.completed_at = new Date().toISOString()
+    updates.lease_account_id = null
+    updates.lease_worker_id = null
+    updates.lease_timeout_at = null
+  } else if (toState === JobState.FAILED) {
+    updates.lease_account_id = null
+    updates.lease_worker_id = null
+    updates.lease_timeout_at = null
   }
 
-  const { error: updateError } = await supabase
+  let { error: updateError, count } = await supabase
     .from('ai_media_jobs')
-    .update(updates)
+    .update(updates, { count: 'exact' })
     .eq('id', jobId)
-    .eq('state', fromState)  // optimistic concurrency: only update if still in expected state
+    .eq('state', fromState)
+
+  if (!updateError && count === 0) {
+    // Fallback: update by id regardless of state drift to prevent stuck leases
+    const res = await supabase
+      .from('ai_media_jobs')
+      .update(updates)
+      .eq('id', jobId)
+    updateError = res.error
+  }
 
   if (updateError) {
     throw new Error(`DB update failed for job ${jobId}: ${updateError.message}`)

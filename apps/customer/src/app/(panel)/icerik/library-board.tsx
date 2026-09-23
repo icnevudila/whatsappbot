@@ -114,6 +114,7 @@ export function LibraryBoard({
     const waiting = items.filter(
       (item) =>
         item.source === 'ai' &&
+        item.format !== 'video' &&
         (item.status === 'pending' || item.status === 'rendering') &&
         !kicked.current.has(item.id),
     )

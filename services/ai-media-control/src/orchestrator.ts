@@ -11,8 +11,9 @@ import { supabase, gflowEngineUrl } from './index.js'
 import { JobState, transitionJob } from './state-machine.js'
 import { fetchNextJob, leaseJob } from './queue.js'
 import { validateOutput } from './validator.js'
-import { randomUUID } from 'node:crypto'
+import { randomUUID, createHash } from 'node:crypto'
 import { join } from 'node:path'
+import fs from 'node:fs'
 import {
   CreativeVideoOrchestrator,
   RealHttpGFlowProvider,
@@ -381,7 +382,7 @@ async function runJobExecution(job: any, accountId: string) {
     }
 
     // 4. Save Verified Output
-    await supabase.from('ai_media_outputs').insert({
+    const { data: outputRecord } = await supabase.from('ai_media_outputs').insert({
       job_id: job.id,
       org_id: job.org_id,
       attempt_id: attemptId,
@@ -402,7 +403,24 @@ async function runJobExecution(job: any, accountId: string) {
       verified: true,
       is_approved: true,
       delivered_at: new Date().toISOString(),
-    })
+    }).select('id').single()
+
+    if (outputRecord?.id) {
+      try {
+        await (supabase as any).from('creatives').upsert({
+          id: job.id,
+          org_id: job.org_id,
+          title: job.title || 'Kampanya Videosu',
+          format: 'video',
+          status: 'ready',
+          source: 'ai',
+          public_url: `/api/ai-media/outputs/${outputRecord.id}`,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'id' })
+      } catch (crErr) {
+        console.warn('[orchestrator] creatives upsert warning:', crErr)
+      }
+    }
 
     // 5. Update attempt
     await supabase.from('ai_media_attempts').update({
@@ -463,6 +481,100 @@ async function runJobExecution(job: any, accountId: string) {
  * Executes a job via CreativeVideoOrchestrator (BrandContextSnapshot, ReferenceRegistry,
  * ContinuityGraph DAG, Real Adapters, Deterministic Branding, and CreativeQA).
  */
+/**
+ * Universally materializes any asset (local path, proxy URL, or Supabase Storage)
+ * into the tenant-isolated /shared/outputs/inputs/{org_id} folder on the VPS,
+ * and computes the authoritative disk SHA-256 for gflow-engine.
+ */
+async function materializeTenantAsset(
+  orgId: string,
+  asset: any
+): Promise<{ filePath: string; sha256: string }> {
+  const targetDir = `/shared/outputs/inputs/${orgId}`
+  if (!fs.existsSync(targetDir)) {
+    fs.mkdirSync(targetDir, { recursive: true })
+  }
+
+  const rawPath = asset.file_path || asset.storage_url || ''
+
+  // 1. If file already exists directly on the filesystem, compute real sha and return
+  if (rawPath && fs.existsSync(rawPath) && !fs.statSync(rawPath).isDirectory()) {
+    const bytes = fs.readFileSync(rawPath)
+    const sha = createHash('sha256').update(bytes).digest('hex')
+    return { filePath: rawPath, sha256: sha }
+  }
+
+  // 2. Derive a clean filename
+  let filename = asset.original_filename || 'asset.png'
+  if (rawPath.includes('media-proxy')) {
+    const match = rawPath.match(/file=([^&]+)/)
+    if (match) filename = match[1]
+  } else if (rawPath.startsWith('http')) {
+    try {
+      const u = new URL(rawPath)
+      const p = u.pathname.split('/').pop()
+      if (p) filename = p
+    } catch {}
+  }
+  filename = filename.replace(/[^a-zA-Z0-9_\-\.]/g, '') || `asset_${Date.now()}.png`
+  const targetPath = join(targetDir, filename)
+
+  // 3. If target file already exists in tenant dir, return it
+  if (fs.existsSync(targetPath)) {
+    const bytes = fs.readFileSync(targetPath)
+    const sha = createHash('sha256').update(bytes).digest('hex')
+    return { filePath: targetPath, sha256: sha }
+  }
+
+  // 4. Try copying from local omnistudio output pool
+  const candidateLocalPaths = [
+    `/shared/outputs/${filename}`,
+    `/opt/whatsappbot/services/omnistudio/docker/data/outputs/${filename}`,
+    `/shared/outputs/inputs/b359ccd3-3ec8-40fd-928e-bc6dbbd489c0/${filename}`,
+  ]
+  for (const lp of candidateLocalPaths) {
+    if (fs.existsSync(lp)) {
+      try {
+        fs.copyFileSync(lp, targetPath)
+        const bytes = fs.readFileSync(targetPath)
+        const sha = createHash('sha256').update(bytes).digest('hex')
+        return { filePath: targetPath, sha256: sha }
+      } catch {}
+    }
+  }
+
+  // 5. Try downloading via HTTP (OmniStudio Gateway or public CDN / Supabase URL)
+  const candidateUrls: string[] = []
+  if (rawPath.startsWith('http')) {
+    candidateUrls.push(rawPath)
+  }
+  candidateUrls.push(`http://172.18.0.1:3456/outputs/${filename}`)
+  candidateUrls.push(`http://127.0.0.1:3456/outputs/${filename}`)
+  candidateUrls.push(`http://167.233.201.31:3456/outputs/${filename}`)
+
+  for (const url of candidateUrls) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(10000) })
+      if (res.ok) {
+        const ab = await res.arrayBuffer()
+        const buf = Buffer.from(ab)
+        if (buf.length > 0) {
+          fs.writeFileSync(targetPath, buf)
+          const sha = createHash('sha256').update(buf).digest('hex')
+          return { filePath: targetPath, sha256: sha }
+        }
+      }
+    } catch {}
+  }
+
+  // 6. If all fails, throw a clear descriptive error
+  throw new Error(`[MATERIALIZE_FAILED] Could not materialize asset '${filename}' for tenant '${orgId}' from source '${rawPath}'`)
+}
+
+/**
+ * Executes a job via CreativeVideoOrchestrator (BrandContextSnapshot, ReferenceRegistry,
+ * ContinuityGraph DAG, Real Adapters, Deterministic Branding, and CreativeQA).
+ */
 async function runCreativeVideoExecution(
   job: any,
   accountId: string,
@@ -478,8 +590,44 @@ async function runCreativeVideoExecution(
     .single()
   const orgName = org?.name || job.metadata?.brand_name || 'Commercial Brand'
 
+  // Materialize logo asset
   const logoAsset = (assets || []).find((a: any) => a.role === 'logo') || assets?.[0]
+  let materializedLogo = { filePath: logoAsset?.file_path, sha256: logoAsset?.sha256 }
+  if (logoAsset) {
+    try {
+      materializedLogo = await materializeTenantAsset(job.org_id, logoAsset)
+      await supabase.from('ai_media_assets').update({
+        file_path: materializedLogo.filePath,
+        sha256: materializedLogo.sha256,
+      }).eq('id', logoAsset.id)
+    } catch (e) {
+      console.warn(`[orchestrator] Logo materialization fallback:`, e)
+    }
+  }
+
+  // Materialize product assets
   const productAssets = (assets || []).filter((a: any) => a.id !== logoAsset?.id)
+  const materializedProducts: any[] = []
+  for (const [idx, p] of productAssets.entries()) {
+    let mat = { filePath: p.file_path, sha256: p.sha256 }
+    try {
+      mat = await materializeTenantAsset(job.org_id, p)
+      await supabase.from('ai_media_assets').update({
+        file_path: mat.filePath,
+        sha256: mat.sha256,
+      }).eq('id', p.id)
+    } catch (e) {
+      console.warn(`[orchestrator] Product materialization fallback:`, e)
+    }
+    materializedProducts.push({
+      product_id: p.id || `prod_${idx}`,
+      name: p.original_filename || `Ürün ${idx + 1}`,
+      description: job.prompt,
+      asset_id: p.id,
+      sha256: mat.sha256,
+      file_path: mat.filePath,
+    })
+  }
 
   const rawInput: RawBrandInput = {
     org_id: job.org_id,
@@ -491,16 +639,9 @@ async function runCreativeVideoExecution(
     tone_of_voice: ['professional', 'commercial craftsmanship'],
     visual_style: [job.prompt],
     logo_asset_id: logoAsset?.id || 'asset_logo_default',
-    logo_sha256: logoAsset?.sha256 || '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
-    logo_file_path: logoAsset?.file_path,
-    products: productAssets.map((p: any, idx: number) => ({
-      product_id: p.id || `prod_${idx}`,
-      name: p.original_filename || `Ürün ${idx + 1}`,
-      description: job.prompt,
-      asset_id: p.id,
-      sha256: p.sha256,
-      file_path: p.file_path,
-    })),
+    logo_sha256: materializedLogo.sha256 || '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
+    logo_file_path: materializedLogo.filePath,
+    products: materializedProducts,
     campaign: {
       objective: job.title || 'Brand Video',
       offer: job.metadata?.offer || 'Standard',
@@ -541,12 +682,12 @@ async function runCreativeVideoExecution(
         provenance: result.provenance,
         qa_reports: result.sceneQAReports,
         strategy: result.strategy,
-      }
+      },
     })
     .eq('id', attemptId)
 
   // Save Verified Output
-  await supabase.from('ai_media_outputs').insert({
+  const { data: outRow } = await supabase.from('ai_media_outputs').insert({
     job_id: job.id,
     org_id: job.org_id,
     attempt_id: attemptId,
@@ -564,7 +705,24 @@ async function runCreativeVideoExecution(
     verified: true,
     is_approved: true,
     delivered_at: new Date().toISOString(),
-  })
+  }).select('id').single()
+
+  if (outRow?.id) {
+    try {
+      await (supabase as any).from('creatives').upsert({
+        id: job.id,
+        org_id: job.org_id,
+        title: job.title || 'Kampanya Videosu',
+        format: 'video',
+        status: 'ready',
+        source: 'ai',
+        public_url: `/api/ai-media/outputs/${outRow.id}`,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'id' })
+    } catch (crErr) {
+      console.warn('[orchestrator] creatives upsert warning:', crErr)
+    }
+  }
 
   // Mark attempt completed
   await supabase.from('ai_media_attempts').update({
@@ -572,10 +730,18 @@ async function runCreativeVideoExecution(
     finished_at: new Date().toISOString(),
   }).eq('id', attemptId)
 
+  // Fetch current state dynamically to prevent state mismatch
+  const { data: freshJob } = await supabase
+    .from('ai_media_jobs')
+    .select('state')
+    .eq('id', job.id)
+    .single()
+  const currentState = (freshJob?.state as JobState) || JobState.PREPARING_ENV
+
   // COMPLETED transition
   await transitionJob(
     supabase, job.id, job.org_id,
-    JobState.VISUAL_QA_EVALUATING, JobState.COMPLETED,
+    currentState, JobState.COMPLETED,
     `Creative Video Orchestration completed successfully in ${Math.round((Date.now() - startTime) / 1000)}s (UUID: ${realFlowUuid})`,
     { duration_seconds: result.durationSec, sha256: result.finalSha256, real_flow_project_uuid: realFlowUuid },
     attemptId

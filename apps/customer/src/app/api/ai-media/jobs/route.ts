@@ -238,6 +238,27 @@ export async function POST(req: NextRequest) {
       .update({ job_id: job.id })
       .eq('id', revision.id)
 
+    // Sync to creatives table for Content Library (/icerik)
+    try {
+      await (supabase as any).from('creatives').insert({
+        id: job.id,
+        org_id: org.id,
+        created_by: userId,
+        title: title || `${org.name || 'İşletme'} Reklam Videosu`,
+        format: 'video',
+        status: 'rendering',
+        source: 'ai',
+        payload: {
+          job_id: job.id,
+          aspect_ratio: '9:16',
+          duration_seconds: 8,
+          creative_revision_id: revision.id,
+        },
+      })
+    } catch (crErr) {
+      console.warn('[ai-media-jobs] Warning: Failed to insert creative mirror row:', crErr)
+    }
+
     // 6. Insert Assets into ai_media_assets
     const assetRows = manifestAssets.map((a) => ({
       job_id: job.id,

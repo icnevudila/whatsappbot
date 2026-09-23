@@ -475,11 +475,11 @@ export function CreativeWizard({
               {[
                 { label: 'Reklam taslağı onaylandı', stage: 1 },
                 { label: 'Sıraya alındı', stage: 2 },
-                { label: 'Görseller hazırlanıyor', stage: 3 },
-                { label: 'Video oluşturuluyor (Veo 9:16)', stage: 4 },
-                { label: 'Kalite kontrolü ve süre doğrulaması', stage: 5 },
-                { label: 'Marka düzenlemeleri ve logo kilidi', stage: 6 },
-                { label: 'Hazır', stage: 7 },
+                { label: 'Görseller ve materyaller hazırlanıyor', stage: 3 },
+                { label: 'Reklam videosu hazırlanıyor', stage: 4 },
+                { label: 'Kalite kontrolü yapılıyor', stage: 5 },
+                { label: 'Logo ve marka kapanışı ekleniyor', stage: 6 },
+                { label: 'Yayına Hazır', stage: 7 },
               ].map((item, idx) => {
                 const isDone = jobStageIndex > item.stage
                 const isCurrent = jobStageIndex === item.stage
@@ -968,10 +968,10 @@ export function CreativeWizard({
                     </label>
                   </div>
 
-                  {/* Advanced Disclosure: Veo Prompt */}
+                  {/* Advanced Disclosure: Video Scenario */}
                   <details className="text-[12px] pt-2">
                     <summary className="cursor-pointer font-medium text-[#667781] hover:text-[#111b21]">
-                      Gelişmiş &gt; Veo Promptunu Gör / Düzenle
+                      Gelişmiş &gt; Sahne ve Kurgu Detayları (İsteğe bağlı)
                     </summary>
                     <div className="mt-2 space-y-2 rounded-lg border border-hairline bg-canvas p-3">
                       <Textarea

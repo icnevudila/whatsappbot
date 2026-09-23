@@ -30,8 +30,15 @@ export async function POST(req: NextRequest) {
       referenceUrls = [],
     } = body
 
+    // Helper for fluent, non-cluttered voiceover product naming
+    const spokenName = (() => {
+      if (!productName) return 'Ürünümüz'
+      const words = productName.trim().split(/\s+/)
+      return words.length > 4 ? words.slice(0, 4).join(' ') : productName.trim()
+    })()
+
     // 1. Dynamic Creative Concept & Hook Synthesis based on format & revision
-    let creativeIdea = `${brandName} ${productName} ticari tanıtım filmi`
+    let creativeIdea = `${brandName} ${spokenName} ticari tanıtım filmi`
     let visualHooks = {
       opening: 'Ürünün belirgin detaylarıyla dinamik makro açılışı',
       demo: 'Çalışma ortamında yüksek performans ve işlev gösterimi',
@@ -44,100 +51,100 @@ export async function POST(req: NextRequest) {
     if (adFormat === 'FAST_SALES' || adFormat === 'PERFORMANCE_DEMO' || revisionType === 'sales') {
       creativeIdea = `${brandName} ile yüksek tempolu, fayda ve verim odaklı hızlı tanıtım.`
       visualHooks = {
-        opening: 'Hızlı dolly-in ile çalışan mekanizmaya keskin odaklanma',
-        demo: 'Gerçek operasyon hızında yüksek verim gösterimi',
+        opening: 'Hızlı kamera hareketi ile ürüne keskin odaklanma',
+        demo: 'Gerçek kullanım ortamında yüksek verim gösterimi',
         payoff: 'Zaman kazandıran sağlam ve dayanıklı yapı vurgusu',
-        closing: 'Doğrudan sipariş ve iletişim çağrısı ile logo kilidi',
+        closing: 'Doğrudan sipariş ve iletişim çağrısı ile logo kapanışı',
       }
       speechTimeline = [
-        { start_sec: 0.0, end_sec: 1.8, exact_text: 'İşinizde zaman kaybetmeye son!', speaker: 'Spiker', corresponding_visual_beat: visualHooks.opening },
-        { start_sec: 1.8, end_sec: 4.2, exact_text: `${productName} ile en zorlu koşullarda bile maksimum verim sizinle.`, speaker: 'Spiker', corresponding_visual_beat: visualHooks.demo },
-        { start_sec: 4.2, end_sec: 6.5, exact_text: offerDetails ? `${offerDetails} fırsatıyla hemen tanışın.` : 'Sağlam teknoloji, kesintisiz çalışma gücü.', speaker: 'Spiker', corresponding_visual_beat: visualHooks.payoff },
-        { start_sec: 6.5, end_sec: 8.0, exact_text: `Detaylar için bize WhatsApp'tan ulaşın.`, speaker: 'Spiker', corresponding_visual_beat: visualHooks.closing },
+        { start_sec: 0.0, end_sec: 1.8, exact_text: 'İşlerinizde zaman kaybetmeye son!', speaker: 'Spiker', corresponding_visual_beat: visualHooks.opening },
+        { start_sec: 1.8, end_sec: 4.2, exact_text: `${spokenName} ile sahada maksimum güç ve kesintisiz performans sizinle.`, speaker: 'Spiker', corresponding_visual_beat: visualHooks.demo },
+        { start_sec: 4.2, end_sec: 6.5, exact_text: offerDetails ? `${offerDetails} avantajını hemen yakalayın.` : 'Üstün dayanıklılık ve yüksek çalışma verimi bir arada.', speaker: 'Spiker', corresponding_visual_beat: visualHooks.payoff },
+        { start_sec: 6.5, end_sec: 8.0, exact_text: `${brandName} ile hemen iletişime geçin.`, speaker: 'Spiker', corresponding_visual_beat: visualHooks.closing },
       ]
     } else if (adFormat === 'PRODUCT_USAGE' || adFormat === 'PRODUCT_HERO') {
-      creativeIdea = `${productName} tasarım detayları, malzeme kalitesi ve kullanım kolaylığı.`
+      creativeIdea = `${spokenName} tasarım detayları, malzeme kalitesi ve kullanım kolaylığı.`
       visualHooks = {
-        opening: 'Düşük açılı sinematik kamera hareketi ve premium ışık süzülmesi',
-        demo: 'Ergonomik kullanım ve fiziksel dayanıklılık testi',
-        payoff: 'Sektör standardı kalite ve güven hissi',
-        closing: 'Kurumsal logo ve web sitesi gösterimi',
+        opening: 'Sinematik kamera hareketi ve detay aydınlatması',
+        demo: 'Ergonomik kullanım ve fiziksel dayanıklılık',
+        payoff: 'Kalite ve güven hissi',
+        closing: 'Kurumsal logo ve iletişim bilgisi',
       }
       speechTimeline = [
-        { start_sec: 0.0, end_sec: 1.8, exact_text: 'Mükemmel işçilik, kusursuz detaylar.', speaker: 'Spiker', corresponding_visual_beat: visualHooks.opening },
-        { start_sec: 1.8, end_sec: 4.2, exact_text: `${productName}, sahadaki en büyük yardımcınız olmak için üretildi.`, speaker: 'Spiker', corresponding_visual_beat: visualHooks.demo },
-        { start_sec: 4.2, end_sec: 6.5, exact_text: 'Yüksek kalite standartları ile projeleriniz güvende.', speaker: 'Spiker', corresponding_visual_beat: visualHooks.payoff },
+        { start_sec: 0.0, end_sec: 1.8, exact_text: 'Kaliteyi ve ergonomiyi bir arada yaşayın.', speaker: 'Spiker', corresponding_visual_beat: visualHooks.opening },
+        { start_sec: 1.8, end_sec: 4.2, exact_text: `Tüm detaylarıyla ${spokenName}, işinizdeki en büyük yardımcınız.`, speaker: 'Spiker', corresponding_visual_beat: visualHooks.demo },
+        { start_sec: 4.2, end_sec: 6.5, exact_text: 'Kolay kullanım ve sağlam yapısıyla uzun yıllar yanınızda.', speaker: 'Spiker', corresponding_visual_beat: visualHooks.payoff },
         { start_sec: 6.5, end_sec: 8.0, exact_text: `${brandName} güvencesiyle hemen keşfedin.`, speaker: 'Spiker', corresponding_visual_beat: visualHooks.closing },
       ]
     } else if (adFormat === 'PROBLEM_SOLUTION') {
-      creativeIdea = `Sahadaki zorlukları ortadan kaldıran pratik ve kesin çözüm: ${productName}.`
+      creativeIdea = `Sahadaki zorlukları ortadan kaldıran pratik çözüm: ${spokenName}.`
       visualHooks = {
-        opening: 'Zorlu saha şartları ve yavaşlayan çalışma ritmi',
-        demo: 'Ürünün devreye girmesiyle anında hızlanan akış',
-        payoff: 'Kusursuz sonuç ve operatör memnuniyeti',
-        closing: 'Çözüm ortağınız kurumsal marka kapanışı',
+        opening: 'Zorlu çalışma şartları ve yavaşlayan tempo',
+        demo: 'Ürünün devreye girmesiyle hızlanan çalışma akışı',
+        payoff: 'Kolaylık ve yüksek verim',
+        closing: 'Kurumsal logo ve marka kapanışı',
       }
       speechTimeline = [
         { start_sec: 0.0, end_sec: 1.8, exact_text: 'Zorlu iş temposu sizi yavaşlatmasın.', speaker: 'Spiker', corresponding_visual_beat: visualHooks.opening },
-        { start_sec: 1.8, end_sec: 4.2, exact_text: `${productName}, işinizi kolaylaştırır ve veriminizi katlar.`, speaker: 'Spiker', corresponding_visual_beat: visualHooks.demo },
-        { start_sec: 4.2, end_sec: 6.5, exact_text: 'Zamandan ve maliyetten tasarruf edin.', speaker: 'Spiker', corresponding_visual_beat: visualHooks.payoff },
-        { start_sec: 6.5, end_sec: 8.0, exact_text: `${brandName} ile kazancınızı artırın.`, speaker: 'Spiker', corresponding_visual_beat: visualHooks.closing },
+        { start_sec: 1.8, end_sec: 4.2, exact_text: `${spokenName} ile işinizi hızlandırın, zamandan tasarruf edin.`, speaker: 'Spiker', corresponding_visual_beat: visualHooks.demo },
+        { start_sec: 4.2, end_sec: 6.5, exact_text: 'Yüksek verim ve dayanıklı gövdesiyle her an hazır.', speaker: 'Spiker', corresponding_visual_beat: visualHooks.payoff },
+        { start_sec: 6.5, end_sec: 8.0, exact_text: `${brandName} ile her zaman bir adım önde olun.`, speaker: 'Spiker', corresponding_visual_beat: visualHooks.closing },
       ]
     } else if (adFormat === 'PREMIUM' || adFormat === 'BRAND_CINEMATIC' || revisionType === 'corporate') {
       creativeIdea = `${brandName} kurumsal prestij, mühendislik gücü ve güven vizyonu.`
       visualHooks = {
-        opening: 'Geniş açı altın saat gün ışığı ve prestijli mimari/endüstriyel doku',
-        demo: 'Ürünün titizlikle monte edilişi ve kusursuz yüzey kalitesi',
-        payoff: 'Geleceğe güvenle bakan sektör liderliği',
-        closing: 'Net kurumsal amblem ve resmi web sitesi kilidi',
+        opening: 'Geniş açı altın saat ışığı ve prestijli kurumsal doku',
+        demo: 'Ürünün kusursuz yüzey kalitesi ve detayları',
+        payoff: 'Sektör standardı güvenilirlik',
+        closing: 'Kurumsal marka amblemi ve kapanış',
       }
       speechTimeline = [
-        { start_sec: 0.0, end_sec: 1.8, exact_text: 'Geleceğin standartlarını inşa ediyoruz.', speaker: 'Spiker', corresponding_visual_beat: visualHooks.opening },
-        { start_sec: 1.8, end_sec: 4.2, exact_text: `Yüksek mühendislik ve uzman işçilik ${productName} ile hayat buluyor.`, speaker: 'Spiker', corresponding_visual_beat: visualHooks.demo },
-        { start_sec: 4.2, end_sec: 6.5, exact_text: 'Sektörde güven ve sürekliliğin simgesi.', speaker: 'Spiker', corresponding_visual_beat: visualHooks.payoff },
+        { start_sec: 0.0, end_sec: 1.8, exact_text: 'Geleceğin teknolojisini bugünden yakalayın.', speaker: 'Spiker', corresponding_visual_beat: visualHooks.opening },
+        { start_sec: 1.8, end_sec: 4.2, exact_text: `Yüksek mühendislik ve kusursuz işçilik, ${spokenName} ile buluştu.`, speaker: 'Spiker', corresponding_visual_beat: visualHooks.demo },
+        { start_sec: 4.2, end_sec: 6.5, exact_text: 'Sektörde güvenin ve kalitenin simgesi.', speaker: 'Spiker', corresponding_visual_beat: visualHooks.payoff },
         { start_sec: 6.5, end_sec: 8.0, exact_text: `${brandName}, kurumsal çözüm ortağınız.`, speaker: 'Spiker', corresponding_visual_beat: visualHooks.closing },
       ]
     } else if (adFormat === 'SOCIAL_UGC' || adFormat === 'UGC_TESTIMONIAL') {
-      creativeIdea = `${productName} kullanıcı deneyimi ve sahada samimi tavsiye.`
+      creativeIdea = `${spokenName} kullanıcı deneyimi ve sahada samimi tavsiye.`
       visualHooks = {
-        opening: 'Doğal açıda doğrudan kameraya seslenen kullanıcı deneyimi',
-        demo: 'Ürünün bizzat denenmesi ve anlık rahatlama tepkisi',
+        opening: 'Doğal açıda doğrudan ürünü gösteren kullanıcı girişi',
+        demo: 'Ürünün bizzat denenmesi ve memnuniyet tepkisi',
         payoff: 'Gönül rahatlığıyla tavsiye edilen sağlam kullanım',
-        closing: 'Resmi kanal üzerinden sipariş verme çağrısı',
+        closing: 'Sipariş ve bilgi için iletişim çağrısı',
       }
       speechTimeline = [
-        { start_sec: 0.0, end_sec: 1.8, exact_text: 'Bunu denemeden karar vermeyin!', speaker: 'Spiker', corresponding_visual_beat: visualHooks.opening },
-        { start_sec: 1.8, end_sec: 4.2, exact_text: `${productName} aldığım günden beri işler çok daha hızlı ilerliyor.`, speaker: 'Spiker', corresponding_visual_beat: visualHooks.demo },
-        { start_sec: 4.2, end_sec: 6.5, exact_text: 'Hem pratik hem inanılmaz dayanıklı, kesinlikle tavsiye ediyorum.', speaker: 'Spiker', corresponding_visual_beat: visualHooks.payoff },
-        { start_sec: 6.5, end_sec: 8.0, exact_text: `${brandName} güvencesiyle siz de sipariş verin.`, speaker: 'Spiker', corresponding_visual_beat: visualHooks.closing },
+        { start_sec: 0.0, end_sec: 1.8, exact_text: 'Bu ürünü denemeden karar vermeyin!', speaker: 'Spiker', corresponding_visual_beat: visualHooks.opening },
+        { start_sec: 1.8, end_sec: 4.2, exact_text: `${spokenName} aldığımızdan beri işlerimiz çok daha hızlı ilerliyor.`, speaker: 'Spiker', corresponding_visual_beat: visualHooks.demo },
+        { start_sec: 4.2, end_sec: 6.5, exact_text: 'Hem kullanımı çok kolay hem de inanılmaz dayanıklı.', speaker: 'Spiker', corresponding_visual_beat: visualHooks.payoff },
+        { start_sec: 6.5, end_sec: 8.0, exact_text: `${brandName} kalitesiyle siz de hemen deneyin.`, speaker: 'Spiker', corresponding_visual_beat: visualHooks.closing },
       ]
     } else if (adFormat === 'OFFER' || adFormat === 'OFFER_DRIVEN') {
-      creativeIdea = `${brandName} ${productName} sınırlı süreli özel fırsat duyurusu.`
+      creativeIdea = `${brandName} ${spokenName} sınırlı süreli özel fırsat duyurusu.`
       visualHooks = {
-        opening: 'Dinamik kampanya açılışı ve doğrudan ürün odaklı giriş',
-        demo: 'Fiyat/performans avantajını kanıtlayan aktif operasyon',
-        payoff: 'Kaçırılmayacak kampanya ve sınırlı stok vurgusu',
+        opening: 'Dinamik kampanya açılışı ve doğrudan ürün girişi',
+        demo: 'Fiyat ve performans avantajını kanıtlayan operasyon',
+        payoff: 'Kaçırılmayacak kampanya ve sınırlı fırsat vurgusu',
         closing: 'Hemen sipariş ver butonu ve kurumsal iletişim',
       }
       speechTimeline = [
-        { start_sec: 0.0, end_sec: 1.8, exact_text: 'Kaçırılmayacak kampanya başladı!', speaker: 'Spiker', corresponding_visual_beat: visualHooks.opening },
-        { start_sec: 1.8, end_sec: 4.2, exact_text: `${productName} şimdi sezonun en avantajlı koşullarıyla.`, speaker: 'Spiker', corresponding_visual_beat: visualHooks.demo },
-        { start_sec: 4.2, end_sec: 6.5, exact_text: offerDetails ? `${offerDetails} avantajını hemen yakalayın.` : 'Sınırlı süre geçerli özel fiyat fırsatı.', speaker: 'Spiker', corresponding_visual_beat: visualHooks.payoff },
-        { start_sec: 6.5, end_sec: 8.0, exact_text: `${brandName} güvencesiyle hemen siparişinizi verin.`, speaker: 'Spiker', corresponding_visual_beat: visualHooks.closing },
+        { start_sec: 0.0, end_sec: 1.8, exact_text: 'Büyük kampanya fırsatı başladı!', speaker: 'Spiker', corresponding_visual_beat: visualHooks.opening },
+        { start_sec: 1.8, end_sec: 4.2, exact_text: `${spokenName}, şimdi çok özel fiyatıyla sizleri bekliyor.`, speaker: 'Spiker', corresponding_visual_beat: visualHooks.demo },
+        { start_sec: 4.2, end_sec: 6.5, exact_text: offerDetails ? `${offerDetails} avantajını hemen yakalayın.` : 'Sınırlı süre geçerli bu özel teklifi kaçırmayın.', speaker: 'Spiker', corresponding_visual_beat: visualHooks.payoff },
+        { start_sec: 6.5, end_sec: 8.0, exact_text: `${brandName} güvencesiyle hemen sipariş verin.`, speaker: 'Spiker', corresponding_visual_beat: visualHooks.closing },
       ]
     } else if (revisionType === 'short') {
       speechTimeline = [
         { start_sec: 0.0, end_sec: 2.0, exact_text: `${brandName} kalitesi sahada.`, speaker: 'Spiker', corresponding_visual_beat: visualHooks.opening },
-        { start_sec: 2.0, end_sec: 5.0, exact_text: `${productName} güçlü ve dayanıklı.`, speaker: 'Spiker', corresponding_visual_beat: visualHooks.demo },
-        { start_sec: 5.0, end_sec: 8.0, exact_text: 'Detaylar için bize yazın.', speaker: 'Spiker', corresponding_visual_beat: visualHooks.closing },
+        { start_sec: 2.0, end_sec: 5.0, exact_text: `${spokenName} ile güçlü ve kesintisiz performans.`, speaker: 'Spiker', corresponding_visual_beat: visualHooks.demo },
+        { start_sec: 5.0, end_sec: 8.0, exact_text: 'Detaylar ve sipariş için bize ulaşın.', speaker: 'Spiker', corresponding_visual_beat: visualHooks.closing },
       ]
     } else {
       // AUTO / Default
       speechTimeline = [
-        { start_sec: 0.0, end_sec: 1.8, exact_text: 'Zorlu koşullara meydan okuyan teknoloji.', speaker: 'Spiker', corresponding_visual_beat: visualHooks.opening },
-        { start_sec: 1.8, end_sec: 4.2, exact_text: `Yüksek verim ve kesintisiz güç ${productName} ile elinizin altında.`, speaker: 'Spiker', corresponding_visual_beat: visualHooks.demo },
-        { start_sec: 4.2, end_sec: 6.5, exact_text: offerDetails ? `${offerDetails} avantajıyla tanışın.` : 'Zamandan kazanın, projelerinizi güvenle tamamlayın.', speaker: 'Spiker', corresponding_visual_beat: visualHooks.payoff },
-        { start_sec: 6.5, end_sec: 8.0, exact_text: `${brandName} güvencesiyle hemen iletişime geçin.`, speaker: 'Spiker', corresponding_visual_beat: visualHooks.closing },
+        { start_sec: 0.0, end_sec: 1.8, exact_text: 'Zorlu işlerde yüksek performans zamanı.', speaker: 'Spiker', corresponding_visual_beat: visualHooks.opening },
+        { start_sec: 1.8, end_sec: 4.2, exact_text: `${spokenName} ile sahada maksimum verim ve güvenilirlik.`, speaker: 'Spiker', corresponding_visual_beat: visualHooks.demo },
+        { start_sec: 4.2, end_sec: 6.5, exact_text: offerDetails ? `${offerDetails} fırsatıyla.` : 'Zamandan kazanın, projelerinizi güvenle tamamlayın.', speaker: 'Spiker', corresponding_visual_beat: visualHooks.payoff },
+        { start_sec: 6.5, end_sec: 8.0, exact_text: `${brandName} kalitesiyle hemen iletişime geçin.`, speaker: 'Spiker', corresponding_visual_beat: visualHooks.closing },
       ]
     }
 

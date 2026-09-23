@@ -38,8 +38,8 @@ function mapEngineStateToStage(state: string): {
       return {
         stage_index: 3,
         display_state: 'GORSELLER_BAGLANIYOR',
-        display_title: 'Görseller ve Varlıklar Hazırlanıyor',
-        display_message: 'Logonuz ve ürün fotoğraflarınız Flow motoruna aktarılıyor.',
+        display_title: 'Görseller ve Materyaller Hazırlanıyor',
+        display_message: 'Logonuz ve ürün fotoğraflarınız stüdyoya aktarılıyor.',
       }
     case 'GENERATING':
     case 'POLLING_FLOW':
@@ -48,30 +48,30 @@ function mapEngineStateToStage(state: string): {
       return {
         stage_index: 4,
         display_state: 'VIDEO_OLUSTURULUYOR',
-        display_title: 'Video Oluşturuluyor (Veo 9:16)',
-        display_message: 'Sinematik sahneler ve kamera hareketleri işleniyor.',
+        display_title: 'Reklam Videosu Hazırlanıyor',
+        display_message: 'Sinematik sahneler ve kurgu işleniyor.',
       }
     case 'FFPROBE_INSPECTING':
     case 'SHA256_VERIFYING':
       return {
         stage_index: 5,
         display_state: 'KALITE_KONTROLU',
-        display_title: 'Kalite Kontrolü ve Süre Doğrulaması',
-        display_message: 'Piksel ve ses süre tutarlılığı denetleniyor.',
+        display_title: 'Kalite Kontrolü Yapılıyor',
+        display_message: 'Görsel netliği ve ses uyumu denetleniyor.',
       }
     case 'VISUAL_QA_EVALUATING':
       return {
         stage_index: 6,
         display_state: 'MARKA_DUZENLEMELERI',
-        display_title: 'Marka Düzenlemeleri ve Logo Kilidi',
-        display_message: 'Kurumsal logo ve tipografi onaylanıyor.',
+        display_title: 'Logo ve Marka Kapanışı Ekleniyor',
+        display_message: 'Kurumsal logonuz ve kapanış sahnesi kurgulanıyor.',
       }
     case 'COMPLETED':
       return {
         stage_index: 7,
         display_state: 'HAZIR',
         display_title: 'Videonuz Hazır!',
-        display_message: 'Reklam videonuz başarıyla tamamlandı.',
+        display_message: 'Reklam videonuz başarıyla tamamlandı. Aşağıdan izleyebilirsiniz.',
       }
     case 'FAILED':
       return {
@@ -173,6 +173,26 @@ export async function GET(
         outputId = output.id
         // Deliver authorized media stream endpoint
         playbackUrl = `/api/ai-media/outputs/${output.id}`
+
+        // Ensure creatives table is synced so video appears ready in Content Library
+        try {
+          const creatorId = (job.metadata as any)?.created_by_user_id || (org as any).created_by || null
+          await (supabase as any)
+            .from('creatives')
+            .upsert({
+              id: jobId,
+              org_id: org.id,
+              created_by: creatorId,
+              title: job.title || 'Kampanya Videosu',
+              format: 'video',
+              status: 'ready',
+              source: 'ai',
+              public_url: playbackUrl,
+              updated_at: new Date().toISOString(),
+            }, { onConflict: 'id' })
+        } catch (syncErr) {
+          console.warn('[ai-media-jobs] Warning: Failed to sync creative completion:', syncErr)
+        }
       }
     }
 
