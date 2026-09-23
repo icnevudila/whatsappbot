@@ -265,7 +265,11 @@ async function main() {
     org_id: orgId,
     flow_project_id: `flow_proj_${jobId.slice(0, 10)}`,
     flow_account_id: targetAccount,
-    prompt: compiledPrompt.cinematicPrompt,
+    prompt: compiledPrompt.cinematicPrompt
+      .replace(/@HeroProduct/g, 'provided Hero Product (Reference Image 1)')
+      .replace(/@BrandLogo/g, 'provided Brand Logo (Reference Image 2)')
+      .replace(/@SoftwareUI/g, 'provided Software UI (Reference Image 1)')
+      .replace(/@/g, ''),
     aspect_ratio: '9:16',
     model: 'veo-fast',
     duration: 8,

@@ -346,9 +346,22 @@ def execute_generation_job(payload: Dict[str, Any]) -> Dict[str, Any]:
                     f"Model '{model}' on account '{account_id}' does not support custom duration control (requested: {duration}s, default: 8s)"
                 )
 
+        # For video r2v, gflow-cli parses @mentions as saved character entities.
+        # Reference ingredients passed via --ref must not carry literal '@' symbols to prevent
+        # gflow-cli from failing with MentionIndexUnavailableError.
+        cli_prompt = prompt
+        if ref_args:
+            cli_prompt = (
+                cli_prompt.replace("@HeroProduct", "provided Hero Product (Reference Image 1)")
+                .replace("@BrandLogo", "provided Brand Logo (Reference Image 2)")
+                .replace("@SoftwareUI", "provided Software UI (Reference Image 1)")
+            )
+            import re
+            cli_prompt = re.sub(r"@([A-Za-z0-9_]+)", r"\1", cli_prompt)
+
         if ref_args:
             cmd.extend(ref_args)
-        cmd.append(prompt)
+        cmd.append(cli_prompt)
 
         logger.info(f"Executing gflow-cli for job {job_id} (Account: {account_id}, Expected refs: {expected_ingredient_count})")
         logger.info(f"Project UUID: {target_project}")
