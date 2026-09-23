@@ -92,13 +92,19 @@ function createWorkerTiming(job, kind) {
 }
 
 // DevTools CDP WebSocket Command Helper
-function createCdpSession(wsUrl) {
+function createCdpSession(wsUrl, connectTimeoutMs = 8000) {
   return new Promise((resolve, reject) => {
+    let connectTimer = setTimeout(() => {
+      try { ws.close(); } catch (_) {}
+      reject(new Error(`[CDP Timeout] WebSocket connection to ${wsUrl} timed out after ${connectTimeoutMs}ms`));
+    }, connectTimeoutMs);
+
     const ws = new WebSocket(wsUrl);
     let msgId = 1;
     const callbacks = new Map();
 
     ws.onopen = () => {
+      clearTimeout(connectTimer);
       resolve({
         send(method, params = {}, timeoutMs = 45000) {
           return new Promise((res, rej) => {
@@ -129,7 +135,10 @@ function createCdpSession(wsUrl) {
       });
     };
 
-    ws.onerror = (err) => reject(err);
+    ws.onerror = (err) => {
+      clearTimeout(connectTimer);
+      reject(err);
+    };
 
     ws.onmessage = (e) => {
       try {
@@ -202,8 +211,14 @@ async function checkTabLogin(tab) {
   if (tab.url.includes('/auth') || tab.url.includes('/login') || tab.url.includes('/uc/') || tab.url.includes('unauth')) {
     return false;
   }
+  // Aktif bir sohbet URL'indeysek (/c/...) kullanıcı kesinlikle oturum açmıştır
+  if (tab.url.includes('/c/')) {
+    return true;
+  }
+  let cdp = null;
   try {
-    const cdp = await createCdpSession(tab.webSocketDebuggerUrl);
+    cdp = await createCdpSession(tab.webSocketDebuggerUrl);
+    await cdp.send('Runtime.enable').catch(() => {});
     const evalRes = await cdp.send('Runtime.evaluate', {
       expression: `(() => {
         const hasLoginBtn = !!(document.querySelector('[data-testid="login-button"]') || Array.from(document.querySelectorAll('button')).some(b => b.innerText.trim().toLowerCase().includes('log in') || b.innerText.trim().toLowerCase().includes('giriş yap')));
@@ -218,17 +233,46 @@ async function checkTabLogin(tab) {
       })()`,
       returnByValue: true
     });
-    cdp.close();
     return !!evalRes.result?.value;
+  } catch (e) {
+    // Geçici CDP execution context hatasında mevcut durumu koru
+    return isTabLoggedIn;
+  } finally {
+    if (cdp) cdp.close();
+  }
+}
+
+
+async function dismissAnyModals(cdp) {
+  try {
+    const res = await cdp.send('Runtime.evaluate', {
+      expression: `(() => {
+        const dialogs = Array.from(document.querySelectorAll('[role="dialog"], [role="alertdialog"], .modal'));
+        let dismissed = false;
+        for (const d of dialogs) {
+          const btn = Array.from(d.querySelectorAll('button')).find(b => {
+            const t = (b.innerText || '').trim().toLowerCase();
+            return t.includes('got it') || t.includes('anladım') || t.includes('tamam') || t.includes('dismiss') || t.includes('stay logged out') || t.includes('close');
+          }) || d.querySelector('button[aria-label="Close"], button.btn-primary');
+          if (btn) {
+            btn.click();
+            dismissed = true;
+          }
+        }
+        return dismissed;
+      })()`,
+      returnByValue: true
+    });
+    return !!res.result?.value;
   } catch (e) {
     return false;
   }
 }
 
-
 async function waitForChatInput(cdp, maxWaitMs = 15000) {
   const start = Date.now();
   while (Date.now() - start < maxWaitMs) {
+    await dismissAnyModals(cdp);
     const check = await cdp.send('Runtime.evaluate', {
       expression: `!!(
         document.querySelector('#prompt-textarea') || 
@@ -257,16 +301,28 @@ async function injectPromptAndSend(cdp, promptText) {
   const startedAt = Date.now();
   let promptInsertedAt = null;
   try {
-    // 1. Textarea'yı temizle ve odaklan
+    // 0. Varsa engelleyici modalları temizle
+    await dismissAnyModals(cdp);
+
+    // 1. Textarea'yı temizle, odaklan ve form GET navigasyonunu önle
     await cdp.send('Runtime.evaluate', {
       expression: `(() => {
+        const form = document.querySelector('form');
+        if (form) form.onsubmit = (e) => { e.preventDefault(); return false; };
         const textarea = document.querySelector('#prompt-textarea') || 
                          document.querySelector('div[contenteditable="true"]') ||
                          document.querySelector('textarea');
         if (textarea) {
           textarea.focus();
-          document.execCommand('selectAll', false, null);
-          document.execCommand('delete', false, null);
+          try {
+            const range = document.createRange();
+            range.selectNodeContents(textarea);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+            document.execCommand('delete');
+          } catch (_) {}
+          if (textarea.innerHTML) textarea.innerHTML = '';
         }
       })()`
     });
@@ -274,30 +330,41 @@ async function injectPromptAndSend(cdp, promptText) {
     // 2. Chrome DevTools Protocol yerel Input.insertText ile metni enjekte et
     await cdp.send('Input.insertText', { text: promptText });
     promptInsertedAt = Date.now();
+    await sleep(200);
     
     // 3. Gönder butonunun render edilmesini bekle ve tıkla
     let clicked = false;
-    for (let wait = 0; wait < 20; wait++) {
+    for (let wait = 0; wait < 25; wait++) {
+      await dismissAnyModals(cdp);
       const clickRes = await cdp.send('Runtime.evaluate', {
         expression: `(() => {
           let sendBtn = document.querySelector('#composer-submit-button') ||
                         document.querySelector('button[data-testid="send-button"]') ||
+                        document.querySelector('button[data-testid="composer-speech-button"]') ||
                         document.querySelector('button[aria-label*="Send"]') ||
-                        document.querySelector('button[aria-label*="Gönder"]');
+                        document.querySelector('button[aria-label*="Gönder"]') ||
+                        document.querySelector('button.composer-submit-button-color') ||
+                        document.querySelector('.composer-submit-button-color');
           if (sendBtn && !sendBtn.disabled) {
             sendBtn.click();
-            return true;
+            const r = sendBtn.getBoundingClientRect();
+            return { clicked: true, x: r.left + r.width / 2, y: r.top + r.height / 2 };
           }
-          return false;
+          return null;
         })()`,
         returnByValue: true
       });
 
-      if (clickRes.result?.value) {
+      if (clickRes.result?.value?.clicked) {
         clicked = true;
+        const { x, y } = clickRes.result.value;
+        if (x && y) {
+          await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 }).catch(() => {});
+          await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 }).catch(() => {});
+        }
         break;
       }
-      await sleep(100);
+      await sleep(150);
     }
 
     if (!clicked) {
@@ -306,13 +373,17 @@ async function injectPromptAndSend(cdp, promptText) {
         type: 'rawKeyDown',
         windowsVirtualKeyCode: 13,
         unmodifiedText: '\r',
-        text: '\r'
+        text: '\r',
+        key: 'Enter',
+        code: 'Enter'
       });
       await cdp.send('Input.dispatchKeyEvent', {
         type: 'keyUp',
         windowsVirtualKeyCode: 13,
         unmodifiedText: '\r',
-        text: '\r'
+        text: '\r',
+        key: 'Enter',
+        code: 'Enter'
       });
       await sleep(300);
     }
@@ -448,6 +519,15 @@ async function ensureCustomerChat(cdp, customer, channel = 'media', identity = {
 // Düzenli Kalp Atışı (5s)
 setInterval(async () => {
   try {
+    if (WORKER_ID.startsWith('gemini')) {
+      fetch(`${GATEWAY_URL}/worker/heartbeat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workerId: WORKER_ID, status: 'idle', details: 'Gemini Video Worker Hazır' })
+      }).catch(() => {});
+      return;
+    }
+
     const chatgptTab = await getTab('chatgpt.com');
     if (!chatgptTab) {
       isTabLoggedIn = false;
@@ -527,6 +607,7 @@ setInterval(async () => {
 // Ana Döngü
 async function workerLoop() {
   if (isBusy) return;
+  if (WORKER_ID.startsWith('gemini')) return;
 
   if (!isMemorySafeForWork()) {
     return;

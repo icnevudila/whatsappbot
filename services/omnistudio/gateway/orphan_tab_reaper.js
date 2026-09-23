@@ -7,9 +7,17 @@
 
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 
 const ORPHAN_TAB_MIN_AGE_MS = Math.max(10000, parseInt(process.env.ORPHAN_TAB_MIN_AGE_MS || '60000', 10)); // Default 60 seconds
 const REAPER_COOLDOWN_MS = Math.max(5000, parseInt(process.env.REAPER_COOLDOWN_MS || '30000', 10)); // Default 30 seconds
+const REGISTRY_DIR = process.env.OMNISTUDIO_TAB_DIR || path.join(os.tmpdir(), 'omnistudio_tabs');
+
+try {
+  if (!fs.existsSync(REGISTRY_DIR)) {
+    fs.mkdirSync(REGISTRY_DIR, { recursive: true });
+  }
+} catch (_) {}
 
 // Tab states
 const TAB_STATES = {
@@ -21,9 +29,25 @@ const TAB_STATES = {
 };
 
 class TabRegistry {
-  constructor() {
+  constructor(registryDir = REGISTRY_DIR) {
+    this.dir = registryDir;
     this.tabs = new Map(); // tabId -> TabInfo
     this.workerBindings = new Map(); // workerId -> canonicalTabId
+    this._ensureDir();
+  }
+
+  _ensureDir() {
+    try {
+      if (!fs.existsSync(this.dir)) fs.mkdirSync(this.dir, { recursive: true });
+    } catch (_) {}
+  }
+
+  _workerFile(workerId) {
+    return path.join(this.dir, `worker_${String(workerId).replace(/[^a-zA-Z0-9_-]/g, '_')}.json`);
+  }
+
+  _jobFile(tabId) {
+    return path.join(this.dir, `job_${String(tabId).replace(/[^a-zA-Z0-9_-]/g, '_')}.json`);
   }
 
   registerTab(tabId, { workerId = null, canonical = false, activeJobId = null, url = '', isProtected = false } = {}) {
@@ -65,13 +89,29 @@ class TabRegistry {
     if (!workerId || !tabId) return;
     this.workerBindings.set(workerId, tabId);
     this.registerTab(tabId, { workerId, canonical: true, url });
+    try {
+      this._ensureDir();
+      fs.writeFileSync(this._workerFile(workerId), JSON.stringify({ workerId, tabId, url, updatedAt: Date.now() }));
+    } catch (_) {}
   }
 
   getWorkerCanonicalTab(workerId) {
     if (!workerId) return null;
     const tabId = this.workerBindings.get(workerId);
-    if (!tabId) return null;
-    return this.tabs.get(tabId) || { tabId, workerId, canonical: true };
+    if (tabId && this.tabs.has(tabId)) {
+      return this.tabs.get(tabId);
+    }
+    try {
+      const file = this._workerFile(workerId);
+      if (fs.existsSync(file)) {
+        const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+        if (data && data.tabId) {
+          this.workerBindings.set(workerId, data.tabId);
+          return this.registerTab(data.tabId, { workerId, canonical: true, url: data.url || '' });
+        }
+      }
+    } catch (_) {}
+    return null;
   }
 
   isCanonicalForAnyWorker(tabId) {
@@ -80,7 +120,20 @@ class TabRegistry {
       if (canonicalTabId === tabId) return true;
     }
     const entry = this.tabs.get(tabId);
-    return !!(entry && entry.canonical);
+    if (entry && entry.canonical) return true;
+    try {
+      this._ensureDir();
+      const files = fs.readdirSync(this.dir);
+      for (const f of files) {
+        if (f.startsWith('worker_') && f.endsWith('.json')) {
+          try {
+            const data = JSON.parse(fs.readFileSync(path.join(this.dir, f), 'utf8'));
+            if (data && data.tabId === tabId) return true;
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+    return false;
   }
 
   setTabJob(tabId, jobId) {
@@ -90,11 +143,25 @@ class TabRegistry {
       entry.lastUsedAt = Date.now();
       entry.state = jobId ? TAB_STATES.ACTIVE_JOB : (entry.canonical ? TAB_STATES.CANONICAL_IDLE : TAB_STATES.TRANSIENT);
     }
+    try {
+      this._ensureDir();
+      const jobFile = this._jobFile(tabId);
+      if (jobId) {
+        fs.writeFileSync(jobFile, JSON.stringify({ tabId, jobId, updatedAt: Date.now() }));
+      } else {
+        if (fs.existsSync(jobFile)) fs.unlinkSync(jobFile);
+      }
+    } catch (_) {}
   }
 
   hasActiveJob(tabId) {
     const entry = this.tabs.get(tabId);
-    return !!(entry && entry.activeJobId);
+    if (entry && entry.activeJobId) return true;
+    try {
+      const jobFile = this._jobFile(tabId);
+      return fs.existsSync(jobFile);
+    } catch (_) {}
+    return false;
   }
 
   touchTab(tabId, url = '') {

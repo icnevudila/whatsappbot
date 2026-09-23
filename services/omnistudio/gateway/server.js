@@ -590,6 +590,16 @@ class AdvancedJobQueue {
   }
 
   updateWorkerHeartbeat(workerId, status = 'idle', details = null) {
+    if (status === 'idle' && this.activeWorkers.has(workerId)) {
+      const staleJobId = this.activeWorkers.get(workerId);
+      this.activeWorkers.delete(workerId);
+      if (staleJobId) {
+        const j = this.jobs.get(staleJobId);
+        if (j && j.status === 'processing') {
+          this.releaseLock(staleJobId, 'Worker became idle or restarted');
+        }
+      }
+    }
     this.registeredWorkers.set(workerId, {
       workerId,
       status, // 'idle', 'busy', 'waiting_login', 'offline'
