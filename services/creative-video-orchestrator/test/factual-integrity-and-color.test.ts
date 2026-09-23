@@ -250,3 +250,116 @@ test('CreativeQA - evaluateDiegeticLogoQA handles KEEP_GENERATED_DIEGETIC_LOGO v
   assert.equal(failReport.surfaceRestoreRequired, false)
 })
 
+test('FactualIntegrityGate - deliberately injected unverified claims are strictly rejected', () => {
+  const snapshot = createBrandContextSnapshot({
+    org_id: 'org_bofe',
+    brand_name: 'Bofe Tarım',
+    sector_profile: 'agriculture_equipment',
+    logo_asset_id: 'logo_bofe',
+    logo_sha256: '0576350c4d92212bd8c219b4b095cf3bc2060302b978753549ad1d3d95c4d8e8',
+    campaign: {
+      headline: 'Bofe 16L Akülü Sırt Pompası',
+      cta: 'Bofe Güvencesiyle',
+    },
+    // No verified performance claims registered
+    verified_claims: ['16L Depo', 'Pirinç Püskürtme Ucu'],
+  })
+
+  const forbiddenClaims = [
+    'tek tuşla',
+    'yüksek verim',
+    'kesintisiz performans',
+    'yüksek dayanıklılık',
+    'tam güvence',
+    'kusursuz işçilik',
+  ]
+
+  for (const claim of forbiddenClaims) {
+    const roguePrompt = `Commercial frame showing sprayer operating with ${claim} across the field.`
+    const promptReport = FactualIntegrityGate.validateVeoPrompt(roguePrompt, snapshot)
+
+    assert.equal(promptReport.passed, false, `Expected rejection for unverified claim: "${claim}"`)
+    assert.equal(promptReport.hardFailGate, 'UNVERIFIED_CLAIM_LEAKAGE')
+    assert.ok(
+      promptReport.violations.some(v => v.unverifiedValue.toLowerCase() === claim.toLowerCase()),
+      `Violation must mention "${claim}"`
+    )
+  }
+})
+
+test('ShortAdCreativeDirector - dynamically chooses genuinely different timing structures per format and variant', () => {
+  const director = new ShortAdCreativeDirector()
+
+  const cutMacro = director.computeDynamicCutPoints('PERFORMANCE_DEMO', 'MACRO_FIRST')
+  const cutHuman = director.computeDynamicCutPoints('PERFORMANCE_DEMO', 'HUMAN_ACTION_FIRST')
+  const cutProblemSolution = director.computeDynamicCutPoints('PROBLEM_SOLUTION', 'FRUSTRATION_TO_RELIEF')
+  const cutCinematic = director.computeDynamicCutPoints('BRAND_CINEMATIC')
+  const cutSoftware = director.computeDynamicCutPoints('SOFTWARE_DEMO')
+
+  // Verify they are NOT identical fixed timelines
+  assert.notDeepEqual(cutMacro, cutHuman, 'MACRO_FIRST and HUMAN_ACTION_FIRST must have distinct cut points')
+  assert.notDeepEqual(cutMacro, cutProblemSolution, 'PERFORMANCE_DEMO and PROBLEM_SOLUTION must have distinct cut points')
+  assert.notDeepEqual(cutMacro, cutCinematic, 'PERFORMANCE_DEMO and BRAND_CINEMATIC must have distinct cut points')
+  assert.notDeepEqual(cutProblemSolution, cutSoftware, 'PROBLEM_SOLUTION and SOFTWARE_DEMO must have distinct cut points')
+
+  // Verify strictly monotonic ordering 0 < t1 < t2 < t3 < t4 < 8.0
+  for (const cuts of [cutMacro, cutHuman, cutProblemSolution, cutCinematic, cutSoftware]) {
+    assert.equal(cuts.length, 4)
+    assert.ok(cuts[0] > 0.0 && cuts[0] < cuts[1])
+    assert.ok(cuts[1] < cuts[2])
+    assert.ok(cuts[2] < cuts[3])
+    assert.ok(cuts[3] < 8.0)
+  }
+})
+
+test('FactualIntegrityGate.validateMasterPlan - verifies ShortAdCreativeDirector produces 100% verified, claim-free master plan', async () => {
+  const director = new ShortAdCreativeDirector()
+  const readyResult = createJobAssetManifest({
+    job_id: 'job_bofe_canary_01',
+    org_id: 'org_bofe',
+    authoritative_assets: {
+      brandLogo: {
+        handle: '@BrandLogo',
+        assetId: 'logo_bofe_01',
+        filePath: 'services/omnistudio/gateway/bofe_logo_official_white.png',
+        sha256: '0576350c4d92212bd8c219b4b095cf3bc2060302b978753549ad1d3d95c4d8e8',
+        mimeType: 'image/png',
+      },
+      heroProduct: {
+        handle: '@HeroProduct',
+        assetId: 'prod_bofe_01',
+        filePath: 'scratch/bofe_authoritative_product.jpg',
+        sha256: 'fd99aabb97b39bb3d0557def0f45725d1e7917203777121e775d99d4c71f8e4c',
+        mimeType: 'image/jpeg',
+      },
+    },
+    authoritative_facts: {
+      brand_name: 'Bofe',
+      product_name: 'Bofe 16L Akülü Sırt Pompası',
+      description: '16 litre kapasiteli şarjlı sırt tipi ilaçlama pompası.',
+      approved_spoken_line: 'İşinizi hızlandıran güç, şimdi yanınızda.',
+      cta: 'Bofe Güvencesiyle',
+    },
+  })
+
+  assert.equal(readyResult.status, 'READY')
+  if (readyResult.status !== 'READY') return
+
+  const plan = await director.planFromJobManifest(readyResult.manifest)
+  const snapshot = createBrandContextSnapshot({
+    org_id: 'org_bofe',
+    brand_name: 'Bofe',
+    sector_profile: 'agriculture_equipment',
+    logo_asset_id: 'logo_bofe_01',
+    logo_sha256: '0576350c4d92212bd8c219b4b095cf3bc2060302b978753549ad1d3d95c4d8e8',
+    campaign: {
+      headline: 'Bofe 16L Akülü Sırt Pompası',
+      cta: 'Bofe Güvencesiyle',
+    },
+  })
+
+  const report = FactualIntegrityGate.validateMasterPlan(plan, snapshot)
+  assert.equal(report.passed, true, `Master plan must have zero unverified claims. Violations: ${JSON.stringify(report.violations)}`)
+  assert.equal(report.violations.length, 0)
+})
+

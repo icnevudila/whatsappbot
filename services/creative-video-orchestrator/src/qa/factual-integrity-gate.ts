@@ -17,6 +17,12 @@ export interface FactualGateReport {
 }
 
 const DEFAULT_UNVERIFIED_PERFORMANCE_PATTERNS = [
+  'tek tuşla',
+  'yüksek verim',
+  'kesintisiz performans',
+  'yüksek dayanıklılık',
+  'tam güvence',
+  'kusursuz işçilik',
   'mikronize',
   'homojen sis',
   'without leaking',
@@ -168,6 +174,67 @@ export class FactualIntegrityGate {
   }
 
   /**
+   * Validates a ShortAdMasterPlan to ensure no unverified claims or facts
+   * are present in the script, on-screen copy, or beats.
+   */
+  public static validateMasterPlan(
+    plan: ShortAdMasterPlan,
+    snapshot: BrandContextSnapshot
+  ): FactualGateReport {
+    const violations: FactualGateViolation[] = []
+    const combinedTexts: { text: string; location: string }[] = [
+      { text: plan.master_spoken_script || '', location: 'master_spoken_script' },
+      { text: plan.on_screen_copy?.hook || '', location: 'on_screen_copy.hook' },
+      { text: plan.on_screen_copy?.benefit_or_proof || '', location: 'on_screen_copy.benefit_or_proof' },
+      { text: plan.on_screen_copy?.brand_or_cta || '', location: 'on_screen_copy.brand_or_cta' },
+      { text: plan.end_card_plan?.cta_text || '', location: 'end_card_plan.cta_text' },
+      { text: plan.end_card_plan?.website_or_phone || '', location: 'end_card_plan.website_or_phone' },
+    ]
+
+    for (const beat of plan.beats || []) {
+      combinedTexts.push({ text: beat.visual_action, location: `beat[${beat.purpose}].visual_action` })
+      combinedTexts.push({ text: beat.product_action, location: `beat[${beat.purpose}].product_action` })
+    }
+
+    const unverifiedList = (snapshot.unverified_facts || []).map(u => u.toLowerCase().trim())
+    const verifiedClaims = (snapshot.verified_claims || []).map(c => c.toLowerCase().trim())
+
+    for (const item of combinedTexts) {
+      const lower = item.text.toLowerCase()
+      for (const unv of unverifiedList) {
+        if (unv && lower.includes(unv)) {
+          violations.push({
+            field: item.location,
+            unverifiedValue: unv,
+            reason: `Unverified fact "${unv}" detected in ${item.location}.`,
+            hardFailCode: 'UNVERIFIED_CLAIM_LEAKAGE',
+          })
+        }
+      }
+
+      for (const pattern of DEFAULT_UNVERIFIED_PERFORMANCE_PATTERNS) {
+        if (lower.includes(pattern)) {
+          const isVerified = verifiedClaims.some(c => c.includes(pattern))
+          if (!isVerified) {
+            violations.push({
+              field: item.location,
+              unverifiedValue: pattern,
+              reason: `Unverified claim "${pattern}" detected in ${item.location}.`,
+              hardFailCode: 'UNVERIFIED_CLAIM_LEAKAGE',
+            })
+          }
+        }
+      }
+    }
+
+    return {
+      passed: violations.length === 0,
+      violations,
+      hardFailGate: violations[0]?.hardFailCode,
+    }
+  }
+
+  /**
    * Complete validation of the entire render graph:
    * MasterPlan + Veo Prompt + Compositor specs.
    */
@@ -177,10 +244,11 @@ export class FactualIntegrityGate {
     veoPrompt: string,
     compositorSpec: { lowerThird?: any; endCard?: any }
   ): FactualGateReport {
+    const planReport = this.validateMasterPlan(plan, snapshot)
     const promptReport = this.validateVeoPrompt(veoPrompt, snapshot)
     const compReport = this.validateCompositorSpec(compositorSpec, snapshot)
 
-    const allViolations = [...promptReport.violations, ...compReport.violations]
+    const allViolations = [...planReport.violations, ...promptReport.violations, ...compReport.violations]
     return {
       passed: allViolations.length === 0,
       violations: allViolations,

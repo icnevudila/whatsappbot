@@ -42,6 +42,75 @@ export class ShortAdCreativeDirector {
   constructor(private customProvider?: IShortAdCreativeDirectorProvider) {}
 
   /**
+   * Dynamically calculates 4 cut points [t1, t2, t3, t4] dividing the 8-second commercial
+   * into 5 functional beats: HOOK (0..t1), REVEAL (t1..t2), PROOF (t2..t3), PAYOFF (t3..t4), BRAND_CLOSE (t4..8.0).
+   * Formats and variants dynamically determine their own timing structure rather than enforcing a fixed heuristic.
+   */
+  public computeDynamicCutPoints(
+    adFormat: AdvertisingFormat,
+    formatVariant?: string,
+    sector?: string,
+    scriptWordCount?: number
+  ): [number, number, number, number] {
+    if (adFormat === 'PERFORMANCE_DEMO') {
+      if (formatVariant === 'HUMAN_ACTION_FIRST') {
+        return [1.2, 2.8, 5.0, 6.4]
+      }
+      if (formatVariant === 'RESULT_FIRST') {
+        return [1.0, 2.5, 4.8, 6.3]
+      }
+      if (formatVariant === 'RAPID_DETAIL_CUTS') {
+        return [0.6, 1.8, 3.8, 5.8]
+      }
+      // MACRO_FIRST (default performance demo)
+      return [0.7, 2.2, 4.5, 6.2]
+    }
+
+    if (adFormat === 'PROBLEM_SOLUTION') {
+      if (formatVariant === 'FRUSTRATION_TO_RELIEF') {
+        return [1.8, 3.4, 5.2, 6.5]
+      }
+      return [1.5, 3.2, 5.2, 6.5]
+    }
+
+    if (adFormat === 'PRODUCT_USAGE') {
+      if (formatVariant === 'STEP_BY_STEP') {
+        return [1.2, 3.0, 5.0, 6.5]
+      }
+      return [1.4, 3.4, 5.4, 6.6]
+    }
+
+    if (adFormat === 'PRODUCT_HERO') {
+      if (formatVariant === 'HERO_EXPLODED_TECH') {
+        return [1.2, 3.2, 5.4, 6.6]
+      }
+      return [1.5, 3.5, 5.5, 6.6]
+    }
+
+    if (adFormat === 'BRAND_CINEMATIC') {
+      return [1.8, 3.8, 5.8, 6.8]
+    }
+
+    if (adFormat === 'SOFTWARE_DEMO') {
+      return [1.3, 3.0, 5.2, 6.4]
+    }
+
+    if (adFormat === 'UGC_TESTIMONIAL') {
+      return [1.5, 3.0, 5.0, 6.5]
+    }
+
+    if (adFormat === 'OFFER_DRIVEN') {
+      return [1.0, 2.6, 5.0, 6.4]
+    }
+
+    if (adFormat === 'BEFORE_AFTER') {
+      return [1.8, 3.5, 5.2, 6.5]
+    }
+
+    return [1.0, 2.5, 4.8, 6.4]
+  }
+
+  /**
    * Plans the complete 8-second commercial master plan.
    */
   public async planCommercial(
@@ -105,18 +174,21 @@ export class ShortAdCreativeDirector {
     const advertisingHook = this.synthesizeHook(sector, businessModel)
     const productTruth = this.synthesizeProductTruth(snapshot, primaryProd, businessModel)
     const audienceValue = this.synthesizeAudienceValue(snapshot, businessModel)
-    const storyArc = 'HOOK (0-0.7s) -> REVEAL (0.7-2.2s) -> PRODUCT PROOF (2.2-4.5s) -> PAYOFF (4.5-6.2s) -> BRAND CLOSE (6.2-8.0s)'
+    const cutPoints = this.computeDynamicCutPoints(adFormat, finalFingerprint.format_variant)
+    const [t1, t2, t3, t4] = cutPoints
+    const t0 = 0.0
+    const t5 = 8.0
 
     const sectorPreset = globalSectorPresetRegistry.get(sector)
 
-    // 2. Exact Timed Beats aligned with advertising grammar
+    // 2. Exact Timed Beats dynamically aligned with format variant and advertising grammar
     const beats: MasterPlanBeat[] = [
       {
-        start: 0.0,
-        end: 0.7,
+        start: t0,
+        end: t1,
         purpose: 'HOOK',
         visual_action: sectorPreset.id.includes('agri')
-          ? 'Aşırı makro yakın çekim: Pirinç nozülden basınçla fışkıran ilk mikronize sıvı damlacıkları ve ani hareket'
+          ? 'Aşırı makro yakın çekim: Pirinç nozülden basınçla püsküren ilk ince sıvı damlacıkları ve ani hareket'
           : sectorPreset.id.includes('construct')
           ? 'Şantiye kolon hattında terazi ibresinin sıfırlanma anına ve killi tuğla dokusuna makro odak'
           : sectorPreset.id.includes('soft') || sectorPreset.id.includes('saas')
@@ -154,8 +226,8 @@ export class ShortAdCreativeDirector {
         ambience: sectorPreset.soundscapeDefaults[1] || 'Zeytin yapraklarının hafif hışırtısı',
       },
       {
-        start: 0.7,
-        end: 2.2,
+        start: t1,
+        end: t2,
         purpose: 'REVEAL',
         visual_action: sectorPreset.id.includes('agri')
           ? 'Hızlı akıcı geri çekilme ile zeytin ağaçları arasında sırtında ürünle ilerleyen çiftçinin ve gövdenin net görünümü'
@@ -186,8 +258,8 @@ export class ShortAdCreativeDirector {
         ambience: sectorPreset.soundscapeDefaults[1] || 'Doğal bahçe rüzgar fısıltısı',
       },
       {
-        start: 2.2,
-        end: 4.5,
+        start: t2,
+        end: t3,
         purpose: 'PRODUCT_PROOF',
         visual_action: sectorPreset.id.includes('agri')
           ? 'Çiftçinin pirinç püskürtme borusuyla zeytin yapraklarına kesintisiz ve homojen sıvı uygulaması'
@@ -219,8 +291,8 @@ export class ShortAdCreativeDirector {
         ambience: sectorPreset.soundscapeDefaults[1] || 'Doğal bahçe ortamı',
       },
       {
-        start: 4.5,
-        end: 6.2,
+        start: t3,
+        end: t4,
         purpose: 'BENEFIT',
         visual_action: sectorPreset.id.includes('agri')
           ? 'Geniş açıya açılarak ağaç tacının tam kapsandığını gören çiftçinin tatmin dolu duruşu ve güven dolu baş onayı'
@@ -247,8 +319,8 @@ export class ShortAdCreativeDirector {
         ambience: sectorPreset.soundscapeDefaults[1] || 'Sakin bahçe ambiyansı',
       },
       {
-        start: 6.2,
-        end: 8.0,
+        start: t4,
+        end: t5,
         purpose: 'BRAND_CLOSE',
         visual_action: sectorPreset.id.includes('agri')
           ? 'Zeytinliğin sabah ışığı altındaki görüntüsü akıcı şekilde korunarak marka kapanış kartına zemin oluşturur'
@@ -275,169 +347,175 @@ export class ShortAdCreativeDirector {
       },
     ]
 
-    // 3. Continuous Timed Speech across 0-8s (18-24 Turkish words, Subject-Object-Predicate)
+    const storyArc = `HOOK (${t0.toFixed(1)}-${t1.toFixed(1)}s) -> REVEAL (${t1.toFixed(1)}-${t2.toFixed(1)}s) -> PRODUCT PROOF (${t2.toFixed(1)}-${t3.toFixed(1)}s) -> PAYOFF (${t3.toFixed(1)}-${t4.toFixed(1)}s) -> BRAND CLOSE (${t4.toFixed(1)}-${t5.toFixed(1)}s)`
+
+    // 3. Continuous Timed Speech across 0-8s (18-24 Turkish words, Subject-Object-Predicate, Zero Unverified Claims)
     let speechTimeline: SpeechTimelineItem[] = []
+
+    const cleanProdCall = prodName.toLowerCase().includes(brand.toLowerCase().split(' ')[0])
+      ? prodName
+      : `${brand} ${prodName}`
 
     if (sectorPreset.id.includes('agri')) {
       speechTimeline = [
         {
-          start_sec: 0.0,
-          end_sec: 2.0,
-          exact_text: 'Zorlu bahçe işlerinde güç ve hız arayanlara:',
+          start_sec: t0,
+          end_sec: t2,
+          exact_text: 'Bahçe ve tarla ilaçlamasında pratik çözümler arayanlara:',
           speaker: 'farmer',
-          delivery: 'Urgent, engaging Turkish hook delivery',
-          corresponding_visual_beat: '0.0-2.2s (HOOK + REVEAL)',
+          delivery: 'Engaging Turkish commercial hook delivery',
+          corresponding_visual_beat: `${t0.toFixed(1)}-${t2.toFixed(1)}s (HOOK + REVEAL)`,
         },
         {
-          start_sec: 2.0,
-          end_sec: 5.0,
-          exact_text: `${brand} şarjlı sırt pompasıyla tek tuşla güçlü ilaçlama.`,
+          start_sec: t2,
+          end_sec: t4,
+          exact_text: `${cleanProdCall} ile sahada planlı uygulama.`,
           speaker: 'farmer',
-          delivery: 'Authoritative, clear product demonstration delivery',
-          corresponding_visual_beat: '2.2-4.5s (PRODUCT_PROOF)',
+          delivery: 'Authoritative product demonstration delivery',
+          corresponding_visual_beat: `${t2.toFixed(1)}-${t4.toFixed(1)}s (PRODUCT_PROOF)`,
         },
         {
-          start_sec: 5.0,
-          end_sec: 8.0,
-          exact_text: `Yüksek verim, kesintisiz performans. ${brand} ile keşfedin.`,
+          start_sec: t4,
+          end_sec: t5,
+          exact_text: `Detaylı bilgi ve sipariş için: ${brand}.`,
           speaker: 'farmer',
-          delivery: 'Warm, confident closing delivery continuing into end card',
-          corresponding_visual_beat: '4.5-8.0s (PAYOFF + BRAND_CLOSE)',
+          delivery: 'Warm closing delivery continuing into end card',
+          corresponding_visual_beat: `${t4.toFixed(1)}-${t5.toFixed(1)}s (PAYOFF + BRAND_CLOSE)`,
         },
       ]
     } else if (sectorPreset.id.includes('construct')) {
       speechTimeline = [
         {
-          start_sec: 0.0,
-          end_sec: 2.0,
-          exact_text: 'Zorlu şantiye koşullarında sağlamlık ve güven arayan ustalara:',
+          start_sec: t0,
+          end_sec: t2,
+          exact_text: 'Yapı ve mimari projelerde sağlam çözümler arayanlara:',
           speaker: 'master_mason',
-          delivery: 'Urgent, engaging Turkish hook delivery',
-          corresponding_visual_beat: '0.0-2.2s (HOOK + REVEAL)',
+          delivery: 'Engaging Turkish commercial hook delivery',
+          corresponding_visual_beat: `${t0.toFixed(1)}-${t2.toFixed(1)}s (HOOK + REVEAL)`,
         },
         {
-          start_sec: 2.0,
-          end_sec: 5.0,
-          exact_text: `${brand} ürünleriyle her projede kusursuz işçilik ve güven.`,
+          start_sec: t2,
+          end_sec: t4,
+          exact_text: `${brand} killi cephe tuğlası ile sahada planlı uygulama.`,
           speaker: 'master_mason',
-          delivery: 'Authoritative, clear product demonstration delivery',
-          corresponding_visual_beat: '2.2-4.5s (PRODUCT_PROOF)',
+          delivery: 'Authoritative product demonstration delivery',
+          corresponding_visual_beat: `${t2.toFixed(1)}-${t4.toFixed(1)}s (PRODUCT_PROOF)`,
         },
         {
-          start_sec: 5.0,
-          end_sec: 8.0,
-          exact_text: `Yüksek dayanıklılık, tam güvence. ${brand} ile inşa edin.`,
+          start_sec: t4,
+          end_sec: t5,
+          exact_text: `Detaylı bilgi ve kurumsal teklif için: ${brand}.`,
           speaker: 'master_mason',
-          delivery: 'Warm, confident closing delivery continuing into end card',
-          corresponding_visual_beat: '4.5-8.0s (PAYOFF + BRAND_CLOSE)',
+          delivery: 'Warm closing delivery continuing into end card',
+          corresponding_visual_beat: `${t4.toFixed(1)}-${t5.toFixed(1)}s (PAYOFF + BRAND_CLOSE)`,
         },
       ]
     } else if (sectorPreset.id.includes('soft') || sectorPreset.id.includes('saas')) {
       speechTimeline = [
         {
-          start_sec: 0.0,
-          end_sec: 2.0,
-          exact_text: 'Karmaşık veri süreçlerinde hız ve netlik arayan işletmelere:',
+          start_sec: t0,
+          end_sec: t2,
+          exact_text: 'İşletme ve veri süreçlerinde net kontrol arayanlara:',
           speaker: 'executive',
-          delivery: 'Urgent, engaging Turkish hook delivery',
-          corresponding_visual_beat: '0.0-2.2s (HOOK + REVEAL)',
+          delivery: 'Engaging Turkish commercial hook delivery',
+          corresponding_visual_beat: `${t0.toFixed(1)}-${t2.toFixed(1)}s (HOOK + REVEAL)`,
         },
         {
-          start_sec: 2.0,
-          end_sec: 5.0,
-          exact_text: `${brand} akıllı yönetim paneliyle tek ekranda anlık kontrol.`,
+          start_sec: t2,
+          end_sec: t4,
+          exact_text: `${brand} yönetim paneli ile operasyonel süreçleri tek ekranda izleyin.`,
           speaker: 'executive',
-          delivery: 'Authoritative, clear product demonstration delivery',
-          corresponding_visual_beat: '2.2-4.5s (PRODUCT_PROOF)',
+          delivery: 'Authoritative product demonstration delivery',
+          corresponding_visual_beat: `${t2.toFixed(1)}-${t4.toFixed(1)}s (PRODUCT_PROOF)`,
         },
         {
-          start_sec: 5.0,
-          end_sec: 8.0,
-          exact_text: `Zamandan tasarruf, tam kontrol. ${brand} ile hemen başlayın.`,
+          start_sec: t4,
+          end_sec: t5,
+          exact_text: `Hemen başlamak ve bilgi almak için: ${brand}.`,
           speaker: 'executive',
-          delivery: 'Warm, confident closing delivery continuing into end card',
-          corresponding_visual_beat: '4.5-8.0s (PAYOFF + BRAND_CLOSE)',
+          delivery: 'Warm closing delivery continuing into end card',
+          corresponding_visual_beat: `${t4.toFixed(1)}-${t5.toFixed(1)}s (PAYOFF + BRAND_CLOSE)`,
         },
       ]
     } else if (sectorPreset.id.includes('food')) {
       speechTimeline = [
         {
-          start_sec: 0.0,
-          end_sec: 2.0,
-          exact_text: 'Eşsiz lezzet ve taze malzemelerle hazırlanan zengin sofralara:',
+          start_sec: t0,
+          end_sec: t2,
+          exact_text: 'Özenle seçilmiş malzemelerle hazırlanan lezzetli sofralar arayanlara:',
           speaker: 'chef',
-          delivery: 'Urgent, engaging Turkish hook delivery',
-          corresponding_visual_beat: '0.0-2.2s (HOOK + REVEAL)',
+          delivery: 'Engaging Turkish commercial hook delivery',
+          corresponding_visual_beat: `${t0.toFixed(1)}-${t2.toFixed(1)}s (HOOK + REVEAL)`,
         },
         {
-          start_sec: 2.0,
-          end_sec: 5.0,
-          exact_text: `${brand} ustalarının özel tarifiyle anında enfes lezzet deneyimi.`,
+          start_sec: t2,
+          end_sec: t4,
+          exact_text: `${brand} mutfağında taze malzemelerle hazırlanan özenli sunum.`,
           speaker: 'chef',
-          delivery: 'Authoritative, clear product demonstration delivery',
-          corresponding_visual_beat: '2.2-4.5s (PRODUCT_PROOF)',
+          delivery: 'Authoritative product demonstration delivery',
+          corresponding_visual_beat: `${t2.toFixed(1)}-${t4.toFixed(1)}s (PRODUCT_PROOF)`,
         },
         {
-          start_sec: 5.0,
-          end_sec: 8.0,
-          exact_text: `Unutulmaz tatlar, kaliteli sunum. ${brand} ile keşfedin.`,
+          start_sec: t4,
+          end_sec: t5,
+          exact_text: `Menü detayları ve rezervasyon için: ${brand}.`,
           speaker: 'chef',
-          delivery: 'Warm, confident closing delivery continuing into end card',
-          corresponding_visual_beat: '4.5-8.0s (PAYOFF + BRAND_CLOSE)',
+          delivery: 'Warm closing delivery continuing into end card',
+          corresponding_visual_beat: `${t4.toFixed(1)}-${t5.toFixed(1)}s (PAYOFF + BRAND_CLOSE)`,
         },
       ]
     } else if (sectorPreset.id.includes('beauty')) {
       speechTimeline = [
         {
-          start_sec: 0.0,
-          end_sec: 2.0,
-          exact_text: 'Doğal ışıltı ve pürüzsüz bir cilt arayan kadınlara:',
+          start_sec: t0,
+          end_sec: t2,
+          exact_text: 'Günlük cilt bakımında özenli ve doğal formül arayanlara:',
           speaker: 'beauty_expert',
-          delivery: 'Urgent, engaging Turkish hook delivery',
-          corresponding_visual_beat: '0.0-2.2s (HOOK + REVEAL)',
+          delivery: 'Engaging Turkish commercial hook delivery',
+          corresponding_visual_beat: `${t0.toFixed(1)}-${t2.toFixed(1)}s (HOOK + REVEAL)`,
         },
         {
-          start_sec: 2.0,
-          end_sec: 5.0,
-          exact_text: `${brand} besleyici formülüyle cildinizde anında canlandırıcı etki.`,
+          start_sec: t2,
+          end_sec: t4,
+          exact_text: `${brand} besleyici içeriğiyle cildinizde doğrudan ferahlatıcı etki.`,
           speaker: 'beauty_expert',
-          delivery: 'Authoritative, clear product demonstration delivery',
-          corresponding_visual_beat: '2.2-4.5s (PRODUCT_PROOF)',
+          delivery: 'Authoritative product demonstration delivery',
+          corresponding_visual_beat: `${t2.toFixed(1)}-${t4.toFixed(1)}s (PRODUCT_PROOF)`,
         },
         {
-          start_sec: 5.0,
-          end_sec: 8.0,
-          exact_text: `Işıltılı görünüm, doğal güzellik. ${brand} ile tanışın.`,
+          start_sec: t4,
+          end_sec: t5,
+          exact_text: `Ürün detayları ve sipariş için: ${brand}.`,
           speaker: 'beauty_expert',
-          delivery: 'Warm, confident closing delivery continuing into end card',
-          corresponding_visual_beat: '4.5-8.0s (PAYOFF + BRAND_CLOSE)',
+          delivery: 'Warm closing delivery continuing into end card',
+          corresponding_visual_beat: `${t4.toFixed(1)}-${t5.toFixed(1)}s (PAYOFF + BRAND_CLOSE)`,
         },
       ]
     } else {
       speechTimeline = [
         {
-          start_sec: 0.0,
-          end_sec: 2.0,
-          exact_text: 'Kalite, dayanıklılık ve üstün performanstan vazgeçmeyenlere:',
+          start_sec: t0,
+          end_sec: t2,
+          exact_text: 'Sektör standartlarında kaliteli ve güvenilir çözümler arayanlara:',
           speaker: 'spokesperson',
-          delivery: 'Urgent, engaging Turkish hook delivery',
-          corresponding_visual_beat: '0.0-2.2s (HOOK + REVEAL)',
+          delivery: 'Engaging Turkish commercial hook delivery',
+          corresponding_visual_beat: `${t0.toFixed(1)}-${t2.toFixed(1)}s (HOOK + REVEAL)`,
         },
         {
-          start_sec: 2.0,
-          end_sec: 5.0,
-          exact_text: `${brand} kalitesiyle her kullanımda maksimum verim ve rahatlık.`,
+          start_sec: t2,
+          end_sec: t4,
+          exact_text: `${cleanProdCall} ile amaca uygun kullanım.`,
           speaker: 'spokesperson',
-          delivery: 'Authoritative, clear product demonstration delivery',
-          corresponding_visual_beat: '2.2-4.5s (PRODUCT_PROOF)',
+          delivery: 'Authoritative product demonstration delivery',
+          corresponding_visual_beat: `${t2.toFixed(1)}-${t4.toFixed(1)}s (PRODUCT_PROOF)`,
         },
         {
-          start_sec: 5.0,
-          end_sec: 8.0,
-          exact_text: `Güvenilir kalite, uzun ömürlü kullanım. ${brand} güvencesiyle.`,
+          start_sec: t4,
+          end_sec: t5,
+          exact_text: `Detaylı bilgi ve sipariş için: ${brand}.`,
           speaker: 'spokesperson',
-          delivery: 'Warm, confident closing delivery continuing into end card',
-          corresponding_visual_beat: '4.5-8.0s (PAYOFF + BRAND_CLOSE)',
+          delivery: 'Warm closing delivery continuing into end card',
+          corresponding_visual_beat: `${t4.toFixed(1)}-${t5.toFixed(1)}s (PAYOFF + BRAND_CLOSE)`,
         },
       ]
     }
@@ -476,14 +554,14 @@ export class ShortAdCreativeDirector {
 
     // 4. Strict Copy Hierarchy: Maximum 3 message levels on-screen (zero cartoon emojis/icons)
     const onScreenCopy: OnScreenCopyPlan = {
-      hook: businessModel === 'saas_software' ? 'NET VE ANLIK KONTROL' : 'BAHÇEDE GÜÇ VE HIZ',
-      benefit_or_proof: businessModel === 'saas_software' ? 'TEK EKRANDA YÖNETİM' : 'TEK TUŞLA GÜÇLÜ İLAÇLAMA',
+      hook: businessModel === 'saas_software' ? 'NET VE ANLIK KONTROL' : 'BAHÇEDE PLANLI UYGULAMA',
+      benefit_or_proof: businessModel === 'saas_software' ? 'TEK EKRANDA YÖNETİM' : `${prodName.toUpperCase()} İLE UYGULAMA`,
       brand_or_cta: isVerified(snapshot.campaign.cta) ? snapshot.campaign.cta.toUpperCase() : `${brand.toUpperCase()} GÜVENCESİYLE`,
     }
 
     // 5. Editing Rhythm Plan
     const editingRhythm: EditingRhythmPlan = {
-      cut_points: grammar.cut_points,
+      cut_points: cutPoints,
       visual_rhythm: grammar.visual_rhythm,
       hook_frame: 'Extreme macro close-up on precision brass nozzle with sudden pressure burst',
       product_reveal_frame: 'Rapid fluid pull-back revealing full ergonomic sprayer on operator',
@@ -508,8 +586,8 @@ export class ShortAdCreativeDirector {
     const contactStr = [validPhone, validWebsite].filter(Boolean).join(' | ')
 
     const endCard = {
-      start_sec: 6.2,
-      end_sec: 8.0,
+      start_sec: t4,
+      end_sec: t5,
       template_family: 'minimalist_center',
       headline: brand,
       cta_text: isVerified(snapshot.campaign.cta) ? snapshot.campaign.cta : `${brand} Güvencesiyle`,
@@ -604,7 +682,7 @@ export class ShortAdCreativeDirector {
 
   private synthesizeAudienceValue(snapshot: BrandContextSnapshot, model: BusinessModel): string {
     const preset = globalSectorPresetRegistry.get(snapshot.sector_profile)
-    return `${preset.name} alanında yüksek verim, dayanıklılık ve güvenilir sonuç.`
+    return `${preset.name} alanında amaca uygun ve güvenilir kullanım.`
   }
 
   /**
@@ -657,15 +735,19 @@ export class ShortAdCreativeDirector {
     )
 
     const grammar = this.formatRouter.getGrammar(adFormat)
+    const cutPoints = this.computeDynamicCutPoints(adFormat, finalFingerprint.format_variant, 'agriculture')
+    const [t1, t2, t3, t4] = cutPoints
+    const t0 = 0.0
+    const t5 = 8.0
 
-    // 5 micro-beats aligned with PERFORMANCE_DEMO grammar
+    // 5 micro-beats dynamically aligned with chosen format variant
     const beats: MasterPlanBeat[] = [
       {
-        start: 0.0,
-        end: 0.7,
+        start: t0,
+        end: t1,
         purpose: 'HOOK',
-        visual_action: 'Aşırı makro yakın çekim: Pirinç nozülden basınçla fışkıran ilk mikronize sıvı damlacıkları ve ani hareket',
-        product_action: 'Pirinç nozülden anlık yüksek basınç çıkışı',
+        visual_action: 'Aşırı makro yakın çekim: Pirinç nozülden püsküren ilk ince sıvı damlacıkları ve ani hareket',
+        product_action: 'Pirinç nozülden anlık sıvı çıkışı',
         actor_action: 'Tetiğe basış anı',
         environment: 'Güneş ışığında parlayan Ege zeytinliği',
         camera: 'Macro cine lens, sığ alan derinliği, yüksek dinamik giriş',
@@ -679,8 +761,8 @@ export class ShortAdCreativeDirector {
         ambience: 'Zeytin yapraklarının hafif rüzgardaki hışırtısı',
       },
       {
-        start: 0.7,
-        end: 2.2,
+        start: t1,
+        end: t2,
         purpose: 'REVEAL',
         visual_action: 'Hızlı akıcı geri çekilme ile zeytin ağaçları arasında sırtında ürünle ilerleyen çiftçinin ve gövdenin net görünümü',
         product_action: 'Kanonik @HeroProduct gövdesi sırtta dengeli ve net',
@@ -697,11 +779,11 @@ export class ShortAdCreativeDirector {
         ambience: 'Doğal bahçe rüzgar fısıltısı',
       },
       {
-        start: 2.2,
-        end: 4.5,
+        start: t2,
+        end: t3,
         purpose: 'PRODUCT_PROOF',
-        visual_action: 'Çiftçinin pirinç püskürtme borusuyla zeytin yapraklarına kesintisiz ve homojen sıvı uygulaması',
-        product_action: 'Kanonik pirinç püskürtme borusundan yapraklara kesintisiz ve dengeli sıvı püskürtme',
+        visual_action: 'Çiftçinin pirinç püskürtme borusuyla zeytin yapraklarına dengeli ve homojen sıvı uygulaması',
+        product_action: 'Kanonik pirinç püskürtme borusundan yapraklara dengeli sıvı püskürtme',
         actor_action: 'Tetiğe basarak ağaç tacına yönlendirme ve net uygulama',
         environment: 'Zeytin ağaçları sırası boyunca doğal sabah ışığı',
         camera: '50mm cine lens, akıcı yanal takip ve net ürün odağı',
@@ -715,8 +797,8 @@ export class ShortAdCreativeDirector {
         ambience: 'Doğal bahçe ortamı',
       },
       {
-        start: 4.5,
-        end: 6.2,
+        start: t3,
+        end: t4,
         purpose: 'BENEFIT',
         visual_action: 'Geniş açıya açılarak ağaç tacının tam kapsandığını gören çiftçinin tatmin dolu duruşu ve güven dolu baş onayı',
         product_action: 'Omuzda sağlam ve güven veren duruş',
@@ -731,8 +813,8 @@ export class ShortAdCreativeDirector {
         ambience: 'Sakin bahçe ambiyansı',
       },
       {
-        start: 6.2,
-        end: 8.0,
+        start: t4,
+        end: t5,
         purpose: 'BRAND_CLOSE',
         visual_action: 'Zeytinliğin sabah ışığı altındaki görüntüsü akıcı şekilde korunarak marka kapanış kartına zemin oluşturur',
         product_action: 'Marka güvencesi',
@@ -749,31 +831,35 @@ export class ShortAdCreativeDirector {
       },
     ]
 
-    // 18-24 Turkish words continuous timed speech
+    const cleanProdCall = prodName.toLowerCase().includes(brand.toLowerCase().split(' ')[0])
+      ? prodName
+      : `${brand} ${prodName}`
+
+    // 18-24 Turkish words continuous timed speech - ZERO unverified claims
     const speechTimeline: SpeechTimelineItem[] = [
       {
-        start_sec: 0.0,
-        end_sec: 2.0,
-        exact_text: 'Zorlu bahçe işlerinde güç ve hız arayanlara:',
+        start_sec: t0,
+        end_sec: t2,
+        exact_text: 'Bahçe ve tarla ilaçlamasında pratik çözümler arayanlara:',
         speaker: 'farmer',
         delivery: 'Urgent, engaging Turkish hook delivery',
-        corresponding_visual_beat: '0.0-2.2s (HOOK + REVEAL)',
+        corresponding_visual_beat: `${t0.toFixed(1)}-${t2.toFixed(1)}s (HOOK + REVEAL)`,
       },
       {
-        start_sec: 2.0,
-        end_sec: 5.0,
-        exact_text: `${brand} şarjlı sırt pompasıyla tek tuşla güçlü ilaçlama.`,
+        start_sec: t2,
+        end_sec: t4,
+        exact_text: `${cleanProdCall} ile sahada planlı uygulama.`,
         speaker: 'farmer',
         delivery: 'Authoritative, clear product demonstration delivery',
-        corresponding_visual_beat: '2.2-4.5s (PRODUCT_PROOF)',
+        corresponding_visual_beat: `${t2.toFixed(1)}-${t4.toFixed(1)}s (PRODUCT_PROOF)`,
       },
       {
-        start_sec: 5.0,
-        end_sec: 8.0,
-        exact_text: `Yüksek verim, kesintisiz performans. ${brand} ile keşfedin.`,
+        start_sec: t4,
+        end_sec: t5,
+        exact_text: `Detaylı bilgi ve sipariş için: ${brand}.`,
         speaker: 'farmer',
         delivery: 'Warm, confident closing delivery continuing into end card',
-        corresponding_visual_beat: '4.5-8.0s (PAYOFF + BRAND_CLOSE)',
+        corresponding_visual_beat: `${t4.toFixed(1)}-${t5.toFixed(1)}s (PAYOFF + BRAND_CLOSE)`,
       },
     ]
 
@@ -799,13 +885,13 @@ export class ShortAdCreativeDirector {
     }
 
     const onScreenCopy: OnScreenCopyPlan = {
-      hook: 'BAHÇEDE GÜÇ VE HIZ',
-      benefit_or_proof: 'TEK TUŞLA GÜÇLÜ İLAÇLAMA',
+      hook: facts.campaign_message || 'BAHÇEDE PLANLI UYGULAMA',
+      benefit_or_proof: `${prodName.toUpperCase()} İLE UYGULAMA`,
       brand_or_cta: facts.cta ? facts.cta.toUpperCase() : `${brand.toUpperCase()} GÜVENCESİYLE`,
     }
 
     const editingRhythm: EditingRhythmPlan = {
-      cut_points: grammar.cut_points,
+      cut_points: cutPoints,
       visual_rhythm: grammar.visual_rhythm,
       hook_frame: 'Extreme macro close-up on precision brass nozzle with sudden pressure burst',
       product_reveal_frame: 'Rapid fluid pull-back revealing full ergonomic sprayer on operator',
@@ -828,8 +914,8 @@ export class ShortAdCreativeDirector {
     const contactStr = [facts.phone, facts.url].filter(Boolean).join(' | ')
 
     const endCard = {
-      start_sec: 6.2,
-      end_sec: 8.0,
+      start_sec: t4,
+      end_sec: t5,
       template_family: 'minimalist_center',
       headline: brand,
       cta_text: facts.cta || `${brand} Güvencesiyle`,
@@ -859,7 +945,7 @@ export class ShortAdCreativeDirector {
       advertising_hook: 'Sabah ışığında zeytin ağaçları arasına adımlarla giren çiftçi ve tetiğe basış anı.',
       product_truth: desc ? `${prodName}: ${desc}` : `${prodName} şarjlı sırt pompası.`,
       audience_value: 'Bahçe bakımında şarjlı sırt pompası kullanımı.',
-      story_arc: 'HOOK (0-0.7s) -> REVEAL (0.7-2.2s) -> PRODUCT PROOF (2.2-4.5s) -> PAYOFF (4.5-6.2s) -> BRAND CLOSE (6.2-8.0s)',
+      story_arc: `HOOK (${t0.toFixed(1)}-${t1.toFixed(1)}s) -> REVEAL (${t1.toFixed(1)}-${t2.toFixed(1)}s) -> PRODUCT PROOF (${t2.toFixed(1)}-${t3.toFixed(1)}s) -> PAYOFF (${t3.toFixed(1)}-${t4.toFixed(1)}s) -> BRAND CLOSE (${t4.toFixed(1)}-${t5.toFixed(1)}s)`,
       beats,
       audio_plan: audioPlan,
       master_spoken_script: fullSpokenScript,
