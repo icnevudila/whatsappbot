@@ -129,10 +129,10 @@ export class ShortAdCreativeDirector {
       return this.customProvider.generateMasterPlan(snapshot, businessModel, assets)
     }
 
-    const brand = snapshot.brand_name
+    const brand = snapshot.brand_name || (snapshot as any).companyName || ''
     const sector = snapshot.sector_profile
-    const primaryProd = snapshot.products[0]
-    const prodName = primaryProd?.name || `${brand} Ürünü`
+    const primaryProd = snapshot.products?.[0]
+    const prodName = primaryProd?.name || `${brand || 'Marka'} Ürünü`
     const desc = primaryProd?.description || snapshot.brand_description || ''
     const affordance = await this.affordanceReasoner.reasonAffordance({
       brandName: brand,
@@ -564,7 +564,7 @@ export class ShortAdCreativeDirector {
     const onScreenCopy: OnScreenCopyPlan = {
       hook: businessModel === 'saas_software' ? 'NET VE ANLIK KONTROL' : 'BAHÇEDE PLANLI UYGULAMA',
       benefit_or_proof: businessModel === 'saas_software' ? 'TEK EKRANDA YÖNETİM' : `${prodName.toUpperCase()} İLE UYGULAMA`,
-      brand_or_cta: isVerified(snapshot.campaign.cta) ? snapshot.campaign.cta.toUpperCase() : `${brand.toUpperCase()} GÜVENCESİYLE`,
+      brand_or_cta: isVerified(snapshot.campaign?.cta) ? (snapshot.campaign?.cta || '').toUpperCase() : `${brand.toUpperCase()} GÜVENCESİYLE`,
     }
 
     // 5. Editing Rhythm Plan
@@ -582,15 +582,15 @@ export class ShortAdCreativeDirector {
       type: 'lower_third' as const,
       start_sec: 1.5,
       end_sec: 5.5,
-      text_line_1: onScreenCopy.benefit_or_proof || (isVerified(snapshot.campaign.headline) ? snapshot.campaign.headline! : prodName),
-      accent_color: snapshot.brand_palette.accent || '#00FFCC',
-      bg_color: snapshot.brand_palette.primary || '#0A2E28',
+      text_line_1: onScreenCopy.benefit_or_proof || (isVerified(snapshot.campaign?.headline) ? snapshot.campaign!.headline! : prodName),
+      accent_color: snapshot.brand_palette?.accent || '#00FFCC',
+      bg_color: snapshot.brand_palette?.primary || '#0A2E28',
       mobile_safe_zone: true,
     }
 
     // Only include phone or website if verified
-    const validPhone = isVerified(snapshot.campaign.phoneNumber) ? snapshot.campaign.phoneNumber : undefined
-    const validWebsite = isVerified(snapshot.campaign.website) ? snapshot.campaign.website : undefined
+    const validPhone = isVerified(snapshot.campaign?.phoneNumber) ? snapshot.campaign?.phoneNumber : undefined
+    const validWebsite = isVerified(snapshot.campaign?.website) ? snapshot.campaign?.website : undefined
     const contactStr = [validPhone, validWebsite].filter(Boolean).join(' | ')
 
     const endCard = {
@@ -598,10 +598,10 @@ export class ShortAdCreativeDirector {
       end_sec: t5,
       template_family: 'minimalist_center',
       headline: brand,
-      cta_text: isVerified(snapshot.campaign.cta) ? snapshot.campaign.cta : `${brand} Güvencesiyle`,
+      cta_text: isVerified(snapshot.campaign?.cta) ? snapshot.campaign!.cta : `${brand} Güvencesiyle`,
       website_or_phone: contactStr,
-      background_color: snapshot.brand_palette.primary || '#0A2E28',
-      accent_color: snapshot.brand_palette.accent || '#00A896',
+      background_color: snapshot.brand_palette?.primary || '#0A2E28',
+      accent_color: snapshot.brand_palette?.accent || '#00A896',
       visual_transition: 'background_continuation' as const,
     }
 
