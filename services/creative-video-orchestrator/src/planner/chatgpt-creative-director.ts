@@ -62,28 +62,28 @@ export class ChatGPTCreativeDirectorV2 {
 
     // Observables (shape, color, geometry) — NO unverified claims
     const primaryColor = heroAsset?.visual_attributes?.primary_colors?.[0] || 'orijinal gövde rengi'
-    const shape = heroAsset?.visual_attributes?.shape || 'sağlam gövde tasarımı'
-    const handles = heroAsset?.visual_attributes?.visible_handles ? 'ergonomik tutma noktaları' : 'kompakt yapı'
+    const shape = heroAsset?.visual_attributes?.shape || 'belirgin gövde formu'
+    const handles = heroAsset?.visual_attributes?.visible_handles ? 'üst tutma kulbu' : 'kompakt yapı'
 
-    // Concept A: RESULT_FIRST (Macro Impact & Instant Payoff)
+    // Concept A: RESULT_FIRST (Macro Impact & Observable Application First)
     const conceptA: CreativeConcept = {
       concept_id: 'concept_A_result_first',
-      title: `${brand} Sonuç Odaklı Hızlı Gösterim`,
-      one_sentence_idea: `${product} ile elde edilen net sonucu ve anlık performansı ilk saniyede gösteren dinamik reklam.`,
+      title: `${brand} Sonuç Odaklı Hızlı Tanıtım`,
+      one_sentence_idea: `${product} modelinin uygulama anını ve çalışma adımlarını ilk saniyede gösteren dinamik tanıtım.`,
       ad_format: userStyle === 'PRODUCT_USAGE' ? 'PRODUCT_USAGE' : 'PERFORMANCE_DEMO',
       format_variant: 'RESULT_FIRST',
       hook_type: 'instant_result_impact',
       story_structure: 'RESULT -> ACTION -> PRODUCT_HERO -> PAYOFF',
-      first_frame: `Aşırı makro yakın çekim: ${product} (${shape}, ${primaryColor}) ile mükemmel tamamlanmış yüzey veya anlık verimli sonuç.`,
-      product_role: 'Hızlı çözüm üreten ana güç',
-      human_role: 'Sonuçtan memnun, deneyimli kullanıcı',
+      first_frame: `Aşırı makro yakın çekim: ${product} (${shape}, ${primaryColor}) gövdesi ve nozül ucu çalışma ortamında.`,
+      product_role: 'Uygulamanın merkezindeki ana ürün',
+      human_role: 'Çalışmayı yürüten kullanıcı',
       environment: sectorPreset.description || 'Doğal çalışma sahası',
-      speech_approach: 'Net, sonuç bildiren ve güven veren doğrudan anlatım',
+      speech_approach: 'Net, doğrudan ve bilgilendirici anlatım',
       camera_energy: 'Yüksek tempolu, makrodan genişe dinamik geçiş',
       ending_family: 'product_hero_hold',
-      why_it_fits_brand: `${brand} markasının güvenilirlik ve kalite algısını ilk saniyeden pekiştirir.`,
-      why_it_fits_objective: `Hedef kitleye zaman kaybetmeden net faydayı göstererek dikkat eşiğini aşar.`,
-      difference_from_other_options: 'Kullanım aşamalarını beklemeden doğrudan elde edilen nihai başarıyı ve gücü öne çıkarır.',
+      why_it_fits_brand: `${brand} ürün tanınırlığını ilk saniyeden pekiştirir.`,
+      why_it_fits_objective: `Hedef kitleye zaman kaybetmeden ürünü göstererek dikkat eşiğini aşar.`,
+      difference_from_other_options: 'Kullanım aşamalarını beklemeden doğrudan ürünün uygulama anını öne çıkarır.',
       creative_fingerprint: {
         tenant_id: context.org_id,
         ad_format: 'PERFORMANCE_DEMO',
@@ -97,25 +97,25 @@ export class ChatGPTCreativeDirectorV2 {
       },
     }
 
-    // Concept B: HUMAN_ACTION_FIRST (Dynamic Problem Solving & Workflow)
+    // Concept B: HUMAN_ACTION_FIRST (Dynamic Workflow & Practical Application)
     const conceptB: CreativeConcept = {
       concept_id: 'concept_B_human_action',
       title: `${brand} Gerçek Kullanıcı & Eylem Akışı`,
-      one_sentence_idea: `İşin başında zorluk yaşayan kullanıcının ${product} ile rahat ve akıcı çalışma temposuna geçişi.`,
+      one_sentence_idea: `Kullanıcının ${product} ile sahada hazırlık ve çalışma adımlarını yürüttüğü akış.`,
       ad_format: userStyle === 'FAST_SALES' ? 'PERFORMANCE_DEMO' : 'PROBLEM_SOLUTION',
       format_variant: 'HUMAN_ACTION_FIRST',
       hook_type: 'human_action_motion',
-      story_structure: 'CHALLENGE -> RELIEF_ACTION -> EFFICIENCY -> BRAND_CLOSE',
-      first_frame: `Gerçek çalışma anında kullanıcının ${handles} ile ${product} üzerine elini koyup tek hareketle çalışmayı başlatması.`,
-      product_role: 'Kullanıcının işini kolaylaştıran güvenilir donanım',
-      human_role: 'Sahada aktif çalışan kararlı profesyonel',
+      story_structure: 'CHALLENGE -> ACTION -> WORKFLOW -> BRAND_CLOSE',
+      first_frame: `Gerçek çalışma anında kullanıcının ${handles} ile ${product} üzerine elini koyup çalışmayı başlatması.`,
+      product_role: 'Çalışma sürecinin merkezindeki ekipman',
+      human_role: 'Sahada aktif çalışan uygulayıcı',
       environment: sectorPreset.description || 'Doğal uygulama ortamı',
-      speech_approach: 'Dert ortaklığı kurup çözümü sakin bir tonda açıklayan ses',
+      speech_approach: 'Sakin ve doğrudan saha adımlarını aktaran ses',
       camera_energy: 'Doğal omuz kamerası ve akıcı takip',
       ending_family: 'minimalist_center',
-      why_it_fits_brand: `${brand} kullanıcı dostu ve sahada çözüm üreten yaklaşımını yansıtır.`,
-      why_it_fits_objective: `Sektörel ihtiyaca doğrudan hitap ederek profesyonellerde empati ve güven oluşturur.`,
-      difference_from_other_options: 'Ürün izole bir obje değil, insanın çalışma hayatını dönüştüren aktif bir araç olarak konumlanır.',
+      why_it_fits_brand: `${brand} pratik kullanım odaklı yaklaşımını yansıtır.`,
+      why_it_fits_objective: `Sektörel kitleye doğrudan çalışma pratiğini göstererek ilgi uyandırır.`,
+      difference_from_other_options: 'Ürünü izole bir obje olarak değil, kullanıcının çalışma akışı içinde gösterir.',
       creative_fingerprint: {
         tenant_id: context.org_id,
         ad_format: 'PROBLEM_SOLUTION',
@@ -129,25 +129,25 @@ export class ChatGPTCreativeDirectorV2 {
       },
     }
 
-    // Concept C: DETAIL_ENERGY / STEP_BY_STEP (Macro Precision & Material Craftsmanship)
+    // Concept C: DETAIL_ENERGY / STEP_BY_STEP (Macro Precision & Material Focus)
     const conceptC: CreativeConcept = {
       concept_id: 'concept_C_detail_energy',
-      title: `${brand} Malzeme ve Mekanik Hassasiyet`,
-      one_sentence_idea: `${product} gövde formunu, sağlam malzeme dokusunu ve adım adım çalışma ritmini vurgulayan premium anlatım.`,
+      title: `${brand} Malzeme ve Mekanik Detaylar`,
+      one_sentence_idea: `${product} gövde formunu, malzeme dokusunu ve adım adım çalışma adımlarını sergileyen anlatım.`,
       ad_format: userStyle === 'PREMIUM' ? 'BRAND_CINEMATIC' : 'PRODUCT_USAGE',
       format_variant: 'STEP_BY_STEP',
       hook_type: 'macro_product_detail',
       story_structure: 'DETAIL_HOOK -> STEP_PROGRESSION -> SYSTEM_HARMONY -> ELEGANT_CLOSE',
-      first_frame: `Işığın ${product} (${primaryColor}) yüzeyinde akışı ve nozül/tetik bileşenlerine sinematik ultra yakın plan.`,
-      product_role: 'Yüksek işçilik ve mühendislik standardı sergileyen merkez ürün',
-      human_role: 'Özenle ekipmanı yönlendiren titiz uygulayıcı',
+      first_frame: `Işığın ${product} (${primaryColor}) yüzeyinde akışı ve nozül bileşenlerine sinematik ultra yakın plan.`,
+      product_role: 'Malzeme ve bileşen detaylarını sergileyen merkez ürün',
+      human_role: 'Özenle ekipmanı yönlendiren uygulayıcı',
       environment: sectorPreset.description || 'Detaylı çalışma alanı',
-      speech_approach: 'Kendinden emin, net ve detayları tane tane vurgulayan ritim',
+      speech_approach: 'Net ve detayları tane tane aktaran ritim',
       camera_energy: 'Pürüzsüz sinematik ray hareketi ve derinlikli odak kayması',
       ending_family: 'split_screen_proof',
-      why_it_fits_brand: `${brand} mühendislik ve malzeme kalitesini tartışmasız biçimde ortaya koyar.`,
-      why_it_fits_objective: `Kalite ve dayanıklılık arayan kitleye üst düzey görsel tatmin ve ikna sağlar.`,
-      difference_from_other_options: 'Hızdan ziyade işin ustalığına, malzeme kalitesine ve operasyonel akıcılığa odaklanır.',
+      why_it_fits_brand: `${brand} malzeme yapısını ve formunu somut biçimde ortaya koyar.`,
+      why_it_fits_objective: `Ürünün detaylarını incelemek isteyen kitleye görsel netlik sağlar.`,
+      difference_from_other_options: 'Uygulama hızından ziyade ürünün formuna, malzeme yapısına ve detaylarına odaklanır.',
       creative_fingerprint: {
         tenant_id: context.org_id,
         ad_format: 'PRODUCT_USAGE',
@@ -265,178 +265,223 @@ export class ChatGPTCreativeDirectorV2 {
     )
     const [t1, t2, t3, t4] = cutPoints
 
-    // Build Continuous Turkish Voice-Over Script (18-24 words, no stacked slogans)
+    // Build Continuous Turkish Voice-Over Script (18-24 words, no stacked slogans, 100% factual)
     let masterVoiceOver = ''
     let speechItems: SpeechTimelineItem[] = []
 
+    // Factual extraction: Only use verified facts from context
+    const factSnippet = verifiedFacts.length > 0 ? `${verifiedFacts[0].claim} ile ` : ''
+
     if (selectedConcept.format_variant === 'RESULT_FIRST') {
-      masterVoiceOver = `${brand} ile ${product} gücünü keşfedin, yüksek verimle işinizi hızla tamamlayın ve kalitenin keyfini yaşayın.`
+      masterVoiceOver = `${brand} ile ${product} modelini yakından tanıyın. ${factSnippet}bahçenizde ilaçlama adımlarını planlayın ve detayları keşfedin.`
       speechItems = [
         {
           start_sec: 0.0,
           end_sec: t1,
-          exact_text: `${brand} ile ${product} gücünü keşfedin,`,
+          exact_text: `${brand} ile ${product} modelini yakından tanıyın.`,
           speaker: 'Spiker',
-          delivery: 'Net, tok ve dinamik ticari ton',
+          delivery: 'Sakin, açık ve doğrudan ticari seslendirme',
           corresponding_visual_beat: 'HOOK',
         },
         {
           start_sec: t1,
           end_sec: t3,
-          exact_text: 'yüksek verimle işinizi hızla tamamlayın',
+          exact_text: `${factSnippet}bahçenizde ilaçlama adımlarını planlayın`,
           speaker: 'Spiker',
-          delivery: 'Güven veren akıcı tempo',
+          delivery: 'Net ve doğal bilgilendirici tempo',
           corresponding_visual_beat: 'PRODUCT_PROOF',
         },
         {
           start_sec: t3,
           end_sec: 8.0,
-          exact_text: 've kalitenin keyfini yaşayın.',
+          exact_text: 've detayları keşfedin.',
           speaker: 'Spiker',
-          delivery: 'Kararlı ve profesyonel kapanış',
+          delivery: 'Güven veren nötr marka kapanışı',
           corresponding_visual_beat: 'BRAND_CLOSE',
         },
       ]
     } else if (selectedConcept.format_variant === 'HUMAN_ACTION_FIRST') {
-      masterVoiceOver = `Zorlu çalışma temposunda ${product} yanınızda. Tek hamlede güçlü kontrol sağlayın, işinizi kolaylaştırın.`
+      masterVoiceOver = `Bahçe ve tarla bakımında ${product}. ${factSnippet}uygulama adımlarını doğrudan sahada inceleyin ve kararınızı verin.`
       speechItems = [
         {
           start_sec: 0.0,
           end_sec: t1,
-          exact_text: `Zorlu çalışma temposunda ${product} yanınızda.`,
+          exact_text: `Bahçe ve tarla bakımında ${product}.`,
           speaker: 'Spiker',
-          delivery: 'Empatik ve sahaya hakim profesyonel ton',
+          delivery: 'Doğal saha ve kullanıcı odaklı ton',
           corresponding_visual_beat: 'HOOK',
         },
         {
           start_sec: t1,
           end_sec: t3,
-          exact_text: 'Tek hamlede güçlü kontrol sağlayın,',
+          exact_text: `${factSnippet}uygulama adımlarını doğrudan sahada inceleyin`,
           speaker: 'Spiker',
-          delivery: 'Akıcı ve net eylem anlatımı',
+          delivery: 'Akıcı ve net bilgilendirme',
           corresponding_visual_beat: 'PRODUCT_PROOF',
         },
         {
           start_sec: t3,
           end_sec: 8.0,
-          exact_text: 'işinizi kolaylaştırın.',
+          exact_text: 've kararınızı verin.',
           speaker: 'Spiker',
-          delivery: 'Güvenli ve rahatlatıcı çözüm tonu',
+          delivery: 'Net ve yönlendirici kapanış',
           corresponding_visual_beat: 'BRAND_CLOSE',
         },
       ]
     } else {
-      masterVoiceOver = `${product} ile her detayda sağlamlığı hissedin. Kesintisiz performans için doğru tercihi yapın.`
+      masterVoiceOver = `${product} gövde ve bileşenlerini yakından görün. ${factSnippet}kullanım aşamalarını adım adım takip edin.`
       speechItems = [
         {
           start_sec: 0.0,
           end_sec: t1,
-          exact_text: `${product} ile her detayda sağlamlığı hissedin.`,
+          exact_text: `${product} gövde ve bileşenlerini yakından görün.`,
           speaker: 'Spiker',
-          delivery: 'Sakin, derinlikli ve kaliteli tonlama',
+          delivery: 'Tane tane ve odaklanmış tonlama',
           corresponding_visual_beat: 'HOOK',
         },
         {
           start_sec: t1,
           end_sec: t3,
-          exact_text: 'Kesintisiz performans için',
+          exact_text: `${factSnippet}kullanım aşamalarını`,
           speaker: 'Spiker',
-          delivery: 'Tane tane ve vurgulu',
+          delivery: 'Açık ve vurgulu seslendirme',
           corresponding_visual_beat: 'PRODUCT_PROOF',
         },
         {
           start_sec: t3,
           end_sec: 8.0,
-          exact_text: 'doğru tercihi yapın.',
+          exact_text: 'adım adım takip edin.',
           speaker: 'Spiker',
-          delivery: 'Zarif ve otoriter marka kapanışı',
+          delivery: 'Zarif ve net kapanış',
           corresponding_visual_beat: 'BRAND_CLOSE',
         },
       ]
     }
 
-    // Dynamic Visual Beats (3-5 beats)
-    const beats: MasterPlanBeat[] = [
-      {
-        start: 0.0,
-        end: t1,
-        purpose: 'HOOK',
-        visual_action: selectedConcept.first_frame,
-        product_action: `@HeroProduct anlık ve belirgin şekilde kadrajda`,
-        actor_action: 'Kullanıcının odaklanmış ilk eylemi',
-        environment: selectedConcept.environment,
-        camera: 'Macro cine lens, sığ alan derinliği, dikkat çekici giriş',
-        lighting: sectorPreset.lightingProfile || 'Doğal ticari aydınlatma',
-        physics_constraints: [
-          'yerçekimi ve mekanik temas doğal',
-          ...sectorPreset.negativeVisuals.slice(0, 2),
-          'ekranda yapay yazı yok',
-        ],
-        voiceover: speechItems[0]?.exact_text || '',
-        sfx: sectorPreset.soundscapeDefaults[0] || 'Tok mekanik aktivasyon sesi',
-        ambience: sectorPreset.soundscapeDefaults[1] || 'Doğal ortam ambiyansı',
-      },
-      {
-        start: t1,
-        end: t2,
-        purpose: 'REVEAL',
-        visual_action: `Akıcı geri çekilme ile @HeroProduct bütünüyle ve kullanıcının kontrollü eylemiyle görünür`,
-        product_action: '@HeroProduct kanonik referans oranlarıyla merkezde',
-        actor_action: 'Kendinden emin eylemi sürdürme',
-        environment: selectedConcept.environment,
-        camera: 'Akıcı yatay takip ve dengeli odak',
-        lighting: sectorPreset.lightingProfile || 'Açık gün ışığı',
-        physics_constraints: ['fiziksel orantı korunmalı', 'el tutuşu doğal'],
-        voiceover: '',
-        sfx: 'Çalışma sesi',
-        ambience: 'Ortam akışı',
-      },
-      {
-        start: t2,
-        end: t3,
-        purpose: 'PRODUCT_PROOF',
-        visual_action: `@HeroProduct çalışma başarısını sergileyen dinamik kanıt anı`,
-        product_action: 'Tam işlevsel çalışma kanıtı',
-        actor_action: 'Rahat ve profesyonel kontrol',
-        environment: selectedConcept.environment,
-        camera: 'Hızlı dinamik pan ve sığ alan derinliği',
-        lighting: 'Dinamik vurgu ışığı',
-        physics_constraints: ['akışkan veya mekanik hareket gerçekçi'],
-        voiceover: speechItems[1]?.exact_text || '',
-        sfx: 'Verimli çalışma sesi',
-        ambience: 'Çalışma sahası sesleri',
-      },
-      {
-        start: t3,
-        end: t4,
-        purpose: 'PAYOFF',
-        visual_action: `İşin başarıyla tamamlandığı an, rahatlayan kullanıcı ve temiz sonuç`,
-        product_action: '@HeroProduct stabil ve güven veren konumda',
-        actor_action: 'Memnuniyet ifadesi',
-        environment: selectedConcept.environment,
-        camera: 'Genişleyen sinematik açı',
-        lighting: 'Sıcak altın saat aydınlatması',
-        physics_constraints: ['doğal postür'],
-        voiceover: '',
-        sfx: 'Rahatlama sfxi',
-        ambience: 'Genişleyen ambiyans',
-      },
-      {
-        start: t4,
-        end: 8.0,
-        purpose: 'BRAND_CLOSE',
-        visual_action: `@HeroProduct temiz açıdan merkezde, post-prodüksiyon logo ve CTA için temiz alan bırakılır`,
-        product_action: '@HeroProduct son karede net ve prestijli',
-        actor_action: 'Arka planda doğal akış',
-        environment: selectedConcept.environment,
-        camera: 'Sabit sinematik kilitlenme',
-        lighting: 'Prestijli stüdyo/gün ışığı harmanı',
-        physics_constraints: ['sıfır yapay bozulma'],
-        voiceover: speechItems[2]?.exact_text || '',
-        sfx: 'Marka kapanış zili / bas tınısı',
-        ambience: 'Sakinleşen ambiyans',
-      },
-    ]
+    // Dynamic Visual Beats: Count and structure dynamically adapted to format (not forced 5 beats)
+    let beats: MasterPlanBeat[] = []
+
+    if (selectedConcept.ad_format === 'BRAND_CINEMATIC') {
+      // 3 Beats for Cinematic / Premium
+      beats = [
+        {
+          start: 0.0,
+          end: 2.5,
+          purpose: 'HOOK',
+          visual_action: `Aşırı makro yakın plan: ${product} (${context.asset_manifest.attachments[0]?.visual_attributes?.shape || 'gövde formu'}) yüzeyinde ışık akışı.`,
+          product_action: `@HeroProduct kadrajda dengeli ve net`,
+          actor_action: 'Doğal hazırlık',
+          environment: selectedConcept.environment,
+          camera: 'Yavaş sinematik ray hareketi ve derinlikli odak',
+          lighting: sectorPreset.lightingProfile || 'Doğal ticari aydınlatma',
+          physics_constraints: ['yerçekimi ve mekanik temas doğal', 'doğal insan postürü'],
+          voiceover: speechItems[0]?.exact_text || '',
+          sfx: 'Doğal çevre sesi',
+          ambience: 'Sakin ambiyans',
+        },
+        {
+          start: 2.5,
+          end: 6.0,
+          purpose: 'PRODUCT_PROOF',
+          visual_action: `@HeroProduct ve kullanıcının kontrollü doğal çalışma anı, gerçek çevre dokusu.`,
+          product_action: '@HeroProduct kanonik referans oranlarıyla merkezde',
+          actor_action: 'Uygulama eylemini gerçekleştirme',
+          environment: selectedConcept.environment,
+          camera: 'Genişleyen stabil açı',
+          lighting: 'Doğal sabah gün ışığı',
+          physics_constraints: ['akışkan ve mekanik dinamikler gerçekçi'],
+          voiceover: speechItems[1]?.exact_text || '',
+          sfx: 'Çalışma sesi',
+          ambience: 'Ortam akışı',
+        },
+        {
+          start: 6.0,
+          end: 8.0,
+          purpose: 'BRAND_CLOSE',
+          visual_action: `@HeroProduct merkezde stabil tutulur, post-prodüksiyon marka grafikleri için temiz alan bırakılır.`,
+          product_action: '@HeroProduct son karede sabit',
+          actor_action: 'Doğal arka plan duruşu',
+          environment: selectedConcept.environment,
+          camera: 'Sabit sinematik kilitlenme',
+          lighting: 'Doğal aydınlatma',
+          physics_constraints: ['fiziksel temas doğal'],
+          voiceover: speechItems[2]?.exact_text || '',
+          sfx: 'Marka kapanış zili',
+          ambience: 'Sakinleşen ambiyans',
+        },
+      ]
+    } else {
+      // 4 Beats for Performance Demo, Problem-Solution, UGC, Offer
+      const b1_end = t1
+      const b2_end = t2
+      const b3_end = t3
+      beats = [
+        {
+          start: 0.0,
+          end: b1_end,
+          purpose: 'HOOK',
+          visual_action: selectedConcept.first_frame,
+          product_action: `@HeroProduct anlık ve belirgin şekilde kadrajda`,
+          actor_action: 'Kullanıcının odaklanmış ilk eylemi',
+          environment: selectedConcept.environment,
+          camera: 'Macro cine lens, sığ alan derinliği, dikkat çekici giriş',
+          lighting: sectorPreset.lightingProfile || 'Doğal ticari aydınlatma',
+          physics_constraints: [
+            'yerçekimi ve mekanik temas doğal',
+            'akışkan ve mekanik dinamikler gerçekçi',
+            'doğal insan postürü',
+          ],
+          voiceover: speechItems[0]?.exact_text || '',
+          sfx: sectorPreset.soundscapeDefaults[0] || 'Tok mekanik aktivasyon sesi',
+          ambience: sectorPreset.soundscapeDefaults[1] || 'Doğal ortam ambiyansı',
+        },
+        {
+          start: b1_end,
+          end: b2_end,
+          purpose: 'REVEAL',
+          visual_action: `Akıcı geri çekilme ile @HeroProduct bütünüyle ve kullanıcının kontrollü eylemiyle görünür`,
+          product_action: '@HeroProduct kanonik referans oranlarıyla merkezde',
+          actor_action: 'Kendinden emin eylemi sürdürme',
+          environment: selectedConcept.environment,
+          camera: 'Akıcı yatay takip ve dengeli odak',
+          lighting: sectorPreset.lightingProfile || 'Açık gün ışığı',
+          physics_constraints: ['fiziksel orantı korunmalı', 'el tutuşu doğal'],
+          voiceover: '',
+          sfx: 'Çalışma sesi',
+          ambience: 'Ortam akışı',
+        },
+        {
+          start: b2_end,
+          end: b3_end,
+          purpose: 'PRODUCT_PROOF',
+          visual_action: `@HeroProduct sahada gerçek bitki yaprakları üzerinde püskürtme uygulamasını sergilerken`,
+          product_action: 'Tam işlevsel çalışma kanıtı',
+          actor_action: 'Rahat ve profesyonel kontrol',
+          environment: selectedConcept.environment,
+          camera: 'Hızlı dinamik pan ve sığ alan derinliği',
+          lighting: 'Dinamik vurgu ışığı',
+          physics_constraints: ['akışkan ve mekanik dinamikler gerçekçi'],
+          voiceover: speechItems[1]?.exact_text || '',
+          sfx: 'Verimli çalışma sesi',
+          ambience: 'Çalışma sahası sesleri',
+        },
+        {
+          start: b3_end,
+          end: 8.0,
+          purpose: 'BRAND_CLOSE',
+          visual_action: `@HeroProduct temiz açıdan merkezde, post-prodüksiyon logo ve CTA için temiz alan bırakılır`,
+          product_action: '@HeroProduct son karede net ve prestijli',
+          actor_action: 'Arka planda doğal akış',
+          environment: selectedConcept.environment,
+          camera: 'Sabit sinematik kilitlenme',
+          lighting: 'Prestijli stüdyo/gün ışığı harmanı',
+          physics_constraints: ['sıfır yapay bozulma', 'doğal postür'],
+          voiceover: speechItems[2]?.exact_text || '',
+          sfx: 'Marka kapanış zili / bas tınısı',
+          ambience: 'Sakinleşen ambiyans',
+        },
+      ]
+    }
 
     const handles = context.asset_manifest.attachments.map(a => a.canonical_handle)
     const negativeConstraints = [

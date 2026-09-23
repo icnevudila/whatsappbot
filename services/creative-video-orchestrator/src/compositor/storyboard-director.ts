@@ -56,7 +56,7 @@ export class StoryboardDirector {
         : 'Active construction foundation requiring precision structural materials',
       cameraMotion: 'Dynamic push-in with shallow depth of field',
       lightingMood: 'High contrast, dramatic morning directional light',
-      negativeConstraints: ['no artificial logos', 'no floating text', 'no car wash', 'no acrylic plaques'],
+      negativeConstraints: ['no artificial logos', 'no floating text', 'no acrylic plaques'],
     }
 
     // Product Proof Frame (2.0s - 5.5s): Authentic canonical product or UI in action

@@ -31,6 +31,7 @@ function createJobMetrics({ operation, tenantId = null, requestId = null, prompt
     product_count_injected: Number.isFinite(productCount) ? productCount : 0,
     input_prompt_chars: String(prompt || '').length,
     stages: Object.fromEntries(STAGES.map((stage) => [stage, null])),
+    worker_stages: {},
   };
 }
 
@@ -56,6 +57,7 @@ function finishMetrics(metrics, { result = 'success', errorCode = null, now = Da
       input_prompt_chars: metrics.input_prompt_chars,
     },
     stages: metrics.stages,
+    worker_stages: metrics.worker_stages || {},
     total_ms: asNonNegativeMs(now - metrics.started_at_ms),
   };
   console.log(JSON.stringify(payload));

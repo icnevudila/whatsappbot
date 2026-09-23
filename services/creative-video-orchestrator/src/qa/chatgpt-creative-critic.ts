@@ -70,22 +70,43 @@ export class ChatGPTCreativeCritic {
       (context.verified_facts || []).map(f => f.claim.toLowerCase().trim())
     )
 
-    // A. Check Unsupported Factual Claims in Speech or Copy
-    const allSpokenText = (plan.master_spoken_script || '') + ' ' + (plan.voiceover_script || '')
-    const suspiciousKeywords = [
+    // A. Check Unsupported Factual and Subtle Marketing Claims in Speech, Copy, or Beats
+    const allPlanText = [
+      plan.master_spoken_script || '',
+      plan.voiceover_script || '',
+      ...plan.beats.map(b => `${b.visual_action} ${b.product_action}`),
+      plan.on_screen_copy?.hook || '',
+      plan.on_screen_copy?.benefit_or_proof || '',
+    ].join(' ').toLowerCase()
+
+    // Subtle marketing & technical performance claims that strictly require source provenance
+    const subtleMarketingKeywords = [
+      'yüksek verim', 'high efficiency', 'verimli',
+      'hızla', 'hızlı', 'faster work', 'faster',
+      'dayanıklı', 'dayanıklılık', 'durable', 'sağlam', 'sağlamlığı',
+      'ergonomik', 'ergonomic',
+      'profesyonel performans', 'professional performance', 'kesintisiz performans',
+      'yüksek kalite', 'high quality', 'kalitenin',
+      'üstün', 'superior',
+      'güçlü', 'powerful', 'gücünü',
+      'güvenilir', 'reliable',
+      'kesintisiz', 'tek tuşla', 'tek hamlede',
       'su geçirmez', 'waterproof', 'garantili', 'en ucuz', 'en iyi',
       'yüzde 100', '20 saat', 'patentli', 'en hızlı', 'bir numara',
-      'ultra dayanıklı', 'özel alaşım'
+      'ultra dayanıklı', 'özel alaşım', 'anlık verimli sonuç', 'çalışma başarısı',
     ]
 
-    for (const kw of suspiciousKeywords) {
-      if (allSpokenText.toLowerCase().includes(kw)) {
-        const isVerified = Array.from(verifiedSet).some(v => v.includes(kw))
-        if (!isVerified) {
+    for (const kw of subtleMarketingKeywords) {
+      if (allPlanText.includes(kw)) {
+        // Must have an authoritative VerifiedFact containing this claim or concept
+        const hasVerifiedSource = (context.verified_facts || []).some(
+          vf => vf.claim.toLowerCase().includes(kw) || kw.includes(vf.claim.toLowerCase())
+        )
+        if (!hasVerifiedSource) {
           unsupportedClaims.push(kw)
           failureCodes.push('UNSUPPORTED_CLAIM')
-          issues.push(`Doğrulanmamış teknik/üstünlük iddiası tespit edildi: "${kw}"`)
-          revisionInstructions.push(`"${kw}" iddiasını metinden çıkarın veya doğrulanmış bir gerçek ile değiştirin.`)
+          issues.push(`Doğrulanmamış pazarlama/performans iddiası tespit edildi: "${kw}" (yetkili kaynak provenance bulunamadı).`)
+          revisionInstructions.push(`"${kw}" ifadesini kaldırın; performans yerine doğrulanmış olgusal kullanım adımlarını veya nötr ürün bilgisini kullanın.`)
         }
       }
     }

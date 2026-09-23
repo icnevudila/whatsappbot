@@ -225,8 +225,8 @@ export class ShortAdCreativeDirector {
         lighting: sectorPreset.lightingProfile || 'Doğal ticari aydınlatma',
         physics_constraints: [
           'yerçekimi ve mekanik temas doğal',
-          ...sectorPreset.negativeVisuals.slice(0, 2),
-          'ekranda yapay yazı yok',
+          'akışkan ve mekanik dinamikler gerçekçi',
+          'doğal insan postürü',
         ],
         voiceover: '',
         dialogue: undefined,

@@ -33,7 +33,7 @@ const DEFAULT_PRESETS: Record<string, SectorPreset> = {
     motionCharacter: 'purposeful steady advancement, realistic liquid spray trajectory obeying wind physics, ergonomic operator grip, realistic hose behavior',
     soundscapeDefaults: ['natural orchard ambience', 'crisp morning breeze', 'fine pressurized mist hiss'],
     mandatoryProofTypes: ['micronized atomized mist coverage', 'rugged ergonomic field operation', 'pressure stability'],
-    negativeVisuals: ['car wash detailing', 'pressure washer lance', 'foam cannon', 'urban studio backdrop', 'floating text', 'impossible pressure physics'],
+    negativeVisuals: ['unrealistic fluid physics', 'floating machinery', 'synthetic lighting', 'urban studio backdrop', 'floating text', 'impossible pressure physics'],
   },
   agriculture_equipment: {
     id: 'agriculture_farming',
@@ -46,7 +46,7 @@ const DEFAULT_PRESETS: Record<string, SectorPreset> = {
     motionCharacter: 'purposeful steady advancement, realistic liquid spray trajectory obeying wind physics, ergonomic operator grip, realistic hose behavior',
     soundscapeDefaults: ['natural orchard ambience', 'crisp morning breeze', 'fine pressurized mist hiss'],
     mandatoryProofTypes: ['micronized atomized mist coverage', 'rugged ergonomic field operation', 'pressure stability'],
-    negativeVisuals: ['car wash detailing', 'pressure washer lance', 'foam cannon', 'urban studio backdrop', 'floating text', 'impossible pressure physics'],
+    negativeVisuals: ['unrealistic fluid physics', 'floating machinery', 'synthetic lighting', 'urban studio backdrop', 'floating text', 'impossible pressure physics'],
   },
   physical_product: {
     id: 'physical_product',

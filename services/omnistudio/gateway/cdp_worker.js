@@ -35,6 +35,30 @@ console.log(`[CDP Worker: ${WORKER_ID}] Gateway: ${GATEWAY_URL} | CDP: ${CDP_HTT
 
 let isBusy = false;
 
+function createWorkerTiming(job, kind) {
+  const startedAt = Date.now();
+  const timings = {
+    worker_acquire_ms: Math.max(0, startedAt - (job.startedAt || startedAt)),
+    tab_acquire_ms: 0,
+  };
+  return {
+    mark(name, since = startedAt) { timings[name] = Math.max(0, Date.now() - since); },
+    async flush() {
+      const total = Math.max(0, Date.now() - startedAt);
+      timings.total_worker_ms = total;
+      const providerWait = kind === 'image'
+        ? timings.generation_complete_detect_ms
+        : timings.response_complete_ms;
+      if (Number.isFinite(providerWait)) timings.provider_wait_ms = providerWait;
+      if (Number.isFinite(providerWait)) timings.infrastructure_overhead_ms = Math.max(0, total - providerWait);
+      await fetch(`${GATEWAY_URL}/job/worker-timings`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobId: job.id, timings }),
+      }).catch(() => {});
+    },
+    timings,
+  };
+}
+
 // DevTools CDP WebSocket Command Helper
 function createCdpSession(wsUrl) {
   return new Promise((resolve, reject) => {
@@ -183,6 +207,8 @@ function stripEmojis(text) {
 }
 
 async function injectPromptAndSend(cdp, promptText) {
+  const startedAt = Date.now();
+  let promptInsertedAt = null;
   try {
     // 1. Textarea'yı temizle ve odaklan
     await cdp.send('Runtime.evaluate', {
@@ -200,6 +226,7 @@ async function injectPromptAndSend(cdp, promptText) {
 
     // 2. Chrome DevTools Protocol yerel Input.insertText ile metni gerçek klavye gibi enjekte et
     await cdp.send('Input.insertText', { text: promptText });
+    promptInsertedAt = Date.now();
     
     // 3. Gönder butonunun render edilmesini bekle ve tıkla (React state güncelleme payı - döngüsel)
     let clicked = false;
@@ -244,7 +271,7 @@ async function injectPromptAndSend(cdp, promptText) {
       await sleep(1000);
     }
 
-    return { success: true };
+    return { success: true, prompt_insert_ms: promptInsertedAt - startedAt, submit_ms: Date.now() - promptInsertedAt };
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -496,9 +523,11 @@ async function workerLoop() {
 // ChatGPT İşini Çalıştır
 async function executeChatGPTJob(tab, job) {
   let cdp = null;
+  const workerTiming = createWorkerTiming(job, 'image');
   const tempRefPaths = [];
   try {
     cdp = await createCdpSession(tab.webSocketDebuggerUrl);
+    workerTiming.mark('tab_acquire_ms');
 
     // 0. Firma veya Sistem Kanaryası için belirlenmiş tekil oturumu aç
     const customer = (job.customer || 'Genel').trim();
@@ -507,6 +536,7 @@ async function executeChatGPTJob(tab, job) {
     console.log(`[CDP Worker: ${WORKER_ID}] Firma: "${customer}" [${channel}] oturumu hazırlanıyor...`);
     const chatIdentity = { customer, tenantId: job.tenantId, conversationId: job.conversationId };
     const chatInfo = await ensureCustomerChat(cdp, customer, channel, chatIdentity);
+    workerTiming.mark('tab_ready_ms');
 
     // 1. Referans Görseller Varsa (Image-to-Image / Ürün Görseli) ChatGPT'ye Dosya Olarak Yükle
     if (Array.isArray(job.referenceImages) && job.referenceImages.length > 0) {
@@ -562,6 +592,9 @@ async function executeChatGPTJob(tab, job) {
     if (!injectRes?.success) {
       throw new Error(injectRes?.error || 'Prompt kutusu bulunamadı veya gönderilemedi');
     }
+    workerTiming.timings.prompt_insert_ms = injectRes.prompt_insert_ms;
+    workerTiming.timings.submit_ms = injectRes.submit_ms;
+    const submittedAt = Date.now();
 
     console.log('[CDP Worker] Prompt gönderildi, görsel üretimi bekleniyor...');
 
@@ -635,8 +668,10 @@ async function executeChatGPTJob(tab, job) {
       });
 
       const checkResult = checkEval.result?.value;
+      if (checkResult?.isGenerating && !workerTiming.timings.generation_start_detect_ms) workerTiming.mark('generation_start_detect_ms', submittedAt);
       if (checkResult?.ready && checkResult?.foundSrc) {
         foundImgSrc = checkResult.foundSrc;
+        workerTiming.mark('generation_complete_detect_ms', submittedAt);
         console.log(`[CDP Worker] Görsel ${elapsed}. saniyede başarıyla tamamlandı ve tespit edildi!`);
         break;
       }
@@ -648,6 +683,7 @@ async function executeChatGPTJob(tab, job) {
 
     // 4. Görsel Blob'unu Sayfa Context'inden Çek
     console.log('[CDP Worker] Görsel çekiliyor ve indiriliyor...');
+    const acquireStartedAt = Date.now();
     const extractEval = await cdp.send('Runtime.evaluate', {
       expression: `
         (async () => {
@@ -665,12 +701,15 @@ async function executeChatGPTJob(tab, job) {
     });
 
     const b64Data = extractEval.result?.value?.base64;
+    workerTiming.mark('image_acquire_ms', acquireStartedAt);
     if (!b64Data) {
       throw new Error('Görsel verisi base64 olarak okunamadı');
     }
 
     const base64Content = b64Data.split(',')[1];
+    const decodeStartedAt = Date.now();
     const imageBuffer = Buffer.from(base64Content, 'base64');
+    workerTiming.mark('decode_process_ms', decodeStartedAt);
     console.log(`[CDP Worker] Görsel hazır: ${(imageBuffer.length / 1024).toFixed(1)} KB`);
 
     // 5. Gateway'e Yükle
@@ -736,20 +775,24 @@ async function executeChatGPTJob(tab, job) {
       try { fs.unlinkSync(p); } catch (e) {}
     }
     if (cdp) cdp.close();
+    await workerTiming.flush();
   }
 }
 
 // WhatsApp Yapay Zeka Mesaj Önerileri İşini Çalıştır (Kalıcı Mesajlaşma Sohbeti)
 async function executeChatSuggestionsJob(tab, job) {
   let cdp = null;
+  const workerTiming = createWorkerTiming(job, 'text');
   try {
     cdp = await createCdpSession(tab.webSocketDebuggerUrl);
+    workerTiming.mark('tab_acquire_ms');
 
     const customer = (job.customer || 'Genel').trim();
     console.log(`[CDP Worker: ${WORKER_ID}] [Mesajlar] Firma: "${customer}" için oturum hazırlanıyor...`);
     const chatIdentity = { customer, tenantId: job.tenantId, conversationId: job.conversationId };
     const chatInfo = await ensureCustomerChat(cdp, customer, 'chat', chatIdentity);
     await sleep(1500); // DOM geçmişinin tam oturmasını bekle
+    workerTiming.mark('tab_ready_ms');
 
     const countEval = await cdp.send('Runtime.evaluate', {
       expression: `document.querySelectorAll('[data-message-author-role="assistant"]').length`,
@@ -791,6 +834,9 @@ Bu mesaja verilebilecek en kaliteli ve uygun 3 FARKLI alternatif Türkçe yanıt
     if (!injectRes?.success) {
       throw new Error(injectRes?.error || 'ChatGPT input kutusu bulunamadı veya gönderilemedi');
     }
+    workerTiming.timings.prompt_insert_ms = injectRes.prompt_insert_ms;
+    workerTiming.timings.submit_ms = injectRes.submit_ms;
+    const submittedAt = Date.now();
 
     console.log(`[CDP Worker: ${WORKER_ID}] [Mesajlar] Prompt gönderildi, yanıt bekleniyor...`);
     await sleep(2000);
@@ -825,6 +871,7 @@ Bu mesaja verilebilecek en kaliteli ve uygun 3 FARKLI alternatif Türkçe yanıt
       if (!res?.hasNewMsg) {
         continue;
       }
+      if (!workerTiming.timings.first_response_signal_ms) workerTiming.mark('first_response_signal_ms', submittedAt);
 
       const currentText = (res && res.text) ? res.text : '';
       if (currentText && currentText === lastText) {
@@ -850,10 +897,12 @@ Bu mesaja verilebilecek en kaliteli ve uygun 3 FARKLI alternatif Türkçe yanıt
       } catch (err) {}
 
       if (hasValidJson) {
+        workerTiming.mark('response_complete_ms', submittedAt);
         console.log(`[CDP Worker: ${WORKER_ID}] [Mesajlar] Geçerli JSON başarıyla algılandı, döngü sonlandırılıyor.`);
         break;
       }
       if (!res.isGenerating && stableCount >= 2 && lastText.length > 50) {
+        workerTiming.mark('response_complete_ms', submittedAt);
         break;
       }
     }
@@ -863,6 +912,7 @@ Bu mesaja verilebilecek en kaliteli ve uygun 3 FARKLI alternatif Türkçe yanıt
     }
 
     // 5. JSON ayrıştırma ve emoji temizliği
+    const parseStartedAt = Date.now();
     let parsedSuggestions = [];
     try {
       let clean = lastText.trim();
@@ -908,6 +958,7 @@ Bu mesaja verilebilecek en kaliteli ve uygun 3 FARKLI alternatif Türkçe yanıt
         parsedSuggestions = extracted.slice(0, 3);
       }
     }
+    workerTiming.mark('parse_ms', parseStartedAt);
 
     if (parsedSuggestions.length === 0 && lastText.length > 30) {
       const cleanFallback = stripEmojis(lastText.replace(/[\{\}\[\]\"\'\`]/g, ' ').replace(/\s+/g, ' ').trim());
@@ -980,6 +1031,7 @@ Bu mesaja verilebilecek en kaliteli ve uygun 3 FARKLI alternatif Türkçe yanıt
     }).catch(() => {});
   } finally {
     if (cdp) cdp.close();
+    await workerTiming.flush();
   }
 }
 

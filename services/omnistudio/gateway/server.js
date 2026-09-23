@@ -321,6 +321,17 @@ class AdvancedJobQueue {
     }
   }
 
+  recordWorkerTimings(jobId, timings) {
+    const job = this.jobs.get(jobId);
+    if (!job || !timings || typeof timings !== 'object') return null;
+    const safe = {};
+    for (const [key, value] of Object.entries(timings)) {
+      if (/^[a-z_]+_ms$/.test(key) && Number.isFinite(value) && value >= 0) safe[key] = Math.round(value);
+    }
+    job.metrics.worker_stages = { ...(job.metrics.worker_stages || {}), ...safe };
+    return job.metrics.worker_stages;
+  }
+
   releaseLock(jobId, error = null) {
     const job = this.jobs.get(jobId);
     if (!job) return;
@@ -1506,9 +1517,9 @@ const server = http.createServer(async (req, res) => {
     // 1.3. Ürün ve Ortam Fiziksel Akıl Yürütme (Product Affordance): POST /v1/chat/affordance
     if (method === 'POST' && (pathname === '/v1/chat/affordance' || pathname === '/chat/affordance')) {
       const body = await parseJsonBody(req);
-      const brandName = (body.brandName || body.brand || '').trim();
-      const productName = (body.productName || body.product || '').trim();
-      const productDescription = (body.productDescription || body.description || '').trim();
+      const brandName = (body.brandName || body.brand_name || body.brand || '').trim();
+      const productName = (body.productName || body.product_name || body.product || '').trim();
+      const productDescription = (body.productDescription || body.product_description || body.description || body.industry || '').trim();
       const customer = (body.customer || brandName || 'Genel').trim();
 
       const { deduceSemanticAffordance, buildAffordanceGptPrompt } = require('./product_affordance.js');
@@ -1588,6 +1599,14 @@ const server = http.createServer(async (req, res) => {
         queue.updateProgress(body.jobId, body.progress, body.statusText);
       }
       return sendJson(res, 200, { ok: true });
+    }
+
+    // Worker: safe stage durations only; no prompt/model content is accepted here.
+    if (method === 'POST' && pathname === '/job/worker-timings') {
+      const body = await parseJsonBody(req);
+      if (!body.jobId) return sendJson(res, 400, { error: 'jobId is required' });
+      const timings = queue.recordWorkerTimings(body.jobId, body.timings);
+      return sendJson(res, timings ? 200 : 404, { ok: !!timings });
     }
 
     // 5. Worker: Kilidi Serbest Bırak / Hata Bildir (POST /job/release)
