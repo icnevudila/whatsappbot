@@ -19,7 +19,9 @@ test('Integration Test: Product + Logo -> Director -> 3 Concepts -> Selection ->
       file_path: '/shared/outputs/inputs/tenant_bofe_real/bofe_sprayer.png',
       attached_successfully: true,
       visual_attributes: {
-        shape: 'ergonomik sırt tipi sarı tank, siyah askı kayışları, pirinç nozül uzatması',
+        // Visual geometry only; ergonomic is a product-performance claim and has
+        // no authoritative fixture provenance in this integration case.
+        shape: 'sırt tipi sarı tank, siyah askı kayışları, pirinç nozül uzatması',
         primary_colors: ['#FFCC00', '#222222'],
         visible_handles: true,
         visible_controls: true,
@@ -124,6 +126,7 @@ test('Integration Test: Product + Logo -> Director -> 3 Concepts -> Selection ->
   console.log(`Is Real Ad: ${criticReport.is_real_ad}`)
   console.log(`Hook Strength: ${criticReport.hook_strength}/10, Product Visibility: ${criticReport.product_visibility}/10`)
   console.log(`Failure Codes: [${criticReport.failure_codes.join(', ')}]`)
+  console.log(`Issues:`, criticReport.issues)
 
   assert.strictEqual(criticReport.decision, 'PASS', 'Approved master plan should pass critic cleanly')
 

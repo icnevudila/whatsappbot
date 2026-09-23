@@ -47,35 +47,77 @@ function normalizeIdentity(customerOrIdentity, channel) {
   };
 }
 
+let inMemoryChats = null;
+let lastChatsMtimeMs = 0;
+let lastChatsSize = -1;
+let globalWriteQueue = Promise.resolve();
+const conversationWriteLocks = new Map();
+
+function getChatsFilePath() {
+  return process.env.CHATS_FILE || CHATS_FILE;
+}
+
 function loadAllCompanyChats() {
-  const startedAt = Date.now();
+  const filePath = getChatsFilePath();
   try {
-    if (fs.existsSync(CHATS_FILE)) {
-      const parsed = JSON.parse(fs.readFileSync(CHATS_FILE, 'utf8'));
-      if (parsed && typeof parsed === 'object') return parsed;
+    if (fs.existsSync(filePath)) {
+      const stat = fs.statSync(filePath);
+      if (inMemoryChats && stat.mtimeMs === lastChatsMtimeMs && stat.size === lastChatsSize) {
+        return inMemoryChats;
+      }
+      const startedAt = Date.now();
+      const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      cacheMetrics.diskReadMs += Date.now() - startedAt;
+      if (parsed && typeof parsed === 'object') {
+        inMemoryChats = parsed;
+        lastChatsMtimeMs = stat.mtimeMs;
+        lastChatsSize = stat.size;
+        return inMemoryChats;
+      }
+    } else {
+      inMemoryChats = {};
+      lastChatsMtimeMs = 0;
+      lastChatsSize = -1;
+      return inMemoryChats;
     }
   } catch (e) {
     console.warn('[ChatManager] Dosya okuma uyarısı:', e.message);
-  } finally {
-    cacheMetrics.diskReadMs += Date.now() - startedAt;
   }
-  return {};
+  return inMemoryChats || {};
 }
 
 function saveAllCompanyChats(data) {
   const startedAt = Date.now();
+  const filePath = getChatsFilePath();
   try {
-    const dir = path.dirname(CHATS_FILE);
+    const dir = path.dirname(filePath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    const tmp = `${CHATS_FILE}.tmp.${Date.now()}`;
+    const tmp = `${filePath}.tmp.${process.pid}.${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8');
-    fs.renameSync(tmp, CHATS_FILE);
+    fs.renameSync(tmp, filePath);
+    inMemoryChats = data;
+    try {
+      const stat = fs.statSync(filePath);
+      lastChatsMtimeMs = stat.mtimeMs;
+      lastChatsSize = stat.size;
+    } catch (_) {}
   } catch (e) {
     console.error('[ChatManager] Dosya yazma hatası:', e.message);
   }
   cacheMetrics.diskWriteMs += Date.now() - startedAt;
+}
+
+function serializeConversationWrite(scopeKey, task) {
+  const current = conversationWriteLocks.get(scopeKey) || Promise.resolve();
+  const next = current.then(task, task);
+  conversationWriteLocks.set(scopeKey, next);
+  return next.finally(() => {
+    if (conversationWriteLocks.get(scopeKey) === next) {
+      conversationWriteLocks.delete(scopeKey);
+    }
+  });
 }
 
 function cacheKey(companyKey, channelKey) {
@@ -86,11 +128,14 @@ function getCompanyChat(customerOrIdentity, channel) {
   const { companyKey, channelKey } = normalizeIdentity(customerOrIdentity, channel);
   const key = cacheKey(companyKey, channelKey);
   const cached = chatCache.get(key);
-  if (cached && Date.now() - cached.cachedAt < CHAT_CACHE_TTL_MS) {
-    cacheMetrics.hit++;
+  if (cached) {
+    if (Date.now() - cached.cachedAt < CHAT_CACHE_TTL_MS) {
+      cacheMetrics.hit++;
+      chatCache.delete(key);
+      chatCache.set(key, cached);
+      return cached.entry;
+    }
     chatCache.delete(key);
-    chatCache.set(key, cached);
-    return cached.entry;
   }
   cacheMetrics.miss++;
   const data = loadAllCompanyChats();
@@ -177,6 +222,13 @@ async function renameChatToTitle(cdp, title) {
   }
 }
 
+function clearChatCache() {
+  chatCache.clear();
+  inMemoryChats = null;
+  lastChatsMtimeMs = 0;
+  lastChatsSize = -1;
+}
+
 module.exports = {
   CHATS_FILE,
   getExpectedChatTitle,
@@ -186,6 +238,7 @@ module.exports = {
   renameChatToTitle,
   loadAllCompanyChats,
   saveAllCompanyChats,
+  serializeConversationWrite,
   getChatCacheMetrics: () => ({ ...cacheMetrics, entries: chatCache.size }),
-  clearChatCache: () => chatCache.clear(),
+  clearChatCache,
 };

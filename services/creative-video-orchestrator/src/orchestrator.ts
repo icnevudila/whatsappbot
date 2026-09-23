@@ -243,7 +243,9 @@ export class CreativeVideoOrchestrator {
       url: r.url,
       attached_successfully: true,
       visual_attributes: {
-        shape: 'sağlam endüstriyel gövde formu',
+        // Asset-derived visual description only. Durability is a performance claim
+        // and must come from a provenance-backed verified fact, never a fallback.
+        shape: 'endüstriyel gövde formu',
         primary_colors: snapshot.brand_palette?.primary ? [snapshot.brand_palette.primary] : undefined,
       },
     }))

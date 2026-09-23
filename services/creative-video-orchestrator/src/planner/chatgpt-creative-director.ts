@@ -499,8 +499,10 @@ export class ChatGPTCreativeDirectorV2 {
       selection_reason: 'Creative Director V2 selection',
       creative_idea: selectedConcept.one_sentence_idea,
       advertising_hook: selectedConcept.hook_type,
-      product_truth: `${product} gerçek kullanımda güvenilirdir.`,
-      audience_value: 'Zaman tasarrufu ve garantili iş performansı.',
+      // Keep fallback copy observable and neutral; performance claims require a
+      // matching entry in context.verified_facts before they may be generated.
+      product_truth: `${product} gerçek kullanım bağlamında gösterilir.`,
+      audience_value: 'Ürünün kullanım adımları ve detayları yakından incelenir.',
       story_arc: selectedConcept.story_structure,
       beats,
       master_spoken_script: masterVoiceOver,
