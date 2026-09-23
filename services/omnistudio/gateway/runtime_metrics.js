@@ -15,17 +15,46 @@ const STAGES = Object.freeze([
   'result_delivery_ms',
 ]);
 
+const WORKER_STAGES = Object.freeze([
+  'worker_acquire_ms',
+  'tab_acquire_ms',
+  'tab_ready_ms',
+  'prompt_insert_ms',
+  'reference_upload_ms',
+  'submit_ms',
+  'first_response_signal_ms',
+  'response_complete_ms',
+  'generation_start_detect_ms',
+  'generation_complete_detect_ms',
+  'image_acquire_ms',
+  'decode_process_ms',
+  'parse_ms',
+  'provider_wait_ms',
+  'infrastructure_overhead_ms',
+  'total_worker_ms',
+]);
+
 function asNonNegativeMs(value) {
   return Number.isFinite(value) && value >= 0 ? Math.round(value) : null;
 }
 
-function createJobMetrics({ operation, tenantId = null, requestId = null, prompt = '', companyContext = '', conversationHistory = '', productCount = 0, now = Date.now() }) {
+function createJobMetrics({
+  operation,
+  tenantId = null,
+  requestId = null,
+  prompt = '',
+  companyContext = '',
+  conversationHistory = '',
+  productCount = 0,
+  systemPromptChars = 0,
+  now = Date.now(),
+}) {
   return {
     operation,
     tenant_id: tenantId || null,
     request_id: requestId || null,
     started_at_ms: now,
-    system_prompt_chars: 0,
+    system_prompt_chars: Number.isFinite(systemPromptChars) ? systemPromptChars : 0,
     context_chars: String(companyContext || '').length,
     conversation_chars: String(conversationHistory || '').length,
     product_count_injected: Number.isFinite(productCount) ? productCount : 0,
@@ -38,6 +67,24 @@ function createJobMetrics({ operation, tenantId = null, requestId = null, prompt
 function setStage(metrics, stage, elapsedMs) {
   if (!metrics || !Object.prototype.hasOwnProperty.call(metrics.stages, stage)) return;
   metrics.stages[stage] = asNonNegativeMs(elapsedMs);
+}
+
+function setWorkerStage(metrics, stage, elapsedMs) {
+  if (!metrics || !WORKER_STAGES.includes(stage)) return;
+  const val = asNonNegativeMs(elapsedMs);
+  if (val !== null) {
+    metrics.worker_stages[stage] = val;
+  }
+}
+
+function recordWorkerStages(metrics, timings) {
+  if (!metrics || !timings || typeof timings !== 'object') return;
+  for (const [key, value] of Object.entries(timings)) {
+    if (WORKER_STAGES.includes(key)) {
+      const val = asNonNegativeMs(value);
+      if (val !== null) metrics.worker_stages[key] = val;
+    }
+  }
 }
 
 function finishMetrics(metrics, { result = 'success', errorCode = null, now = Date.now() } = {}) {
@@ -64,4 +111,12 @@ function finishMetrics(metrics, { result = 'success', errorCode = null, now = Da
   return payload;
 }
 
-module.exports = { STAGES, createJobMetrics, setStage, finishMetrics };
+module.exports = {
+  STAGES,
+  WORKER_STAGES,
+  createJobMetrics,
+  setStage,
+  setWorkerStage,
+  recordWorkerStages,
+  finishMetrics,
+};

@@ -22,6 +22,132 @@ const { getTenantScopeKey, getRequestKey } = require('./tenant_scope.js');
 const COMPLETED_JOB_TTL_MS = Math.max(0, parseInt(process.env.COMPLETED_JOB_TTL_MS || String(30 * 60 * 1000), 10));
 const FAILED_JOB_TTL_MS = Math.max(0, parseInt(process.env.FAILED_JOB_TTL_MS || String(10 * 60 * 1000), 10));
 const MAX_RETAINED_COMPLETED_JOBS = Math.max(1, parseInt(process.env.MAX_RETAINED_COMPLETED_JOBS || '200', 10));
+const MAX_RETAINED_RESULT_BYTES = Math.max(1024 * 1024, parseInt(process.env.MAX_RETAINED_RESULT_BYTES || String(50 * 1024 * 1024), 10));
+const OUTPUT_TTL_MS = Math.max(0, parseInt(process.env.OUTPUT_TTL_MS || String(24 * 60 * 60 * 1000), 10));
+
+const RETRYABLE_ERRORS = new Set(['TIMEOUT', 'SESSION_EXPIRED', 'RATE_LIMITED']);
+const NON_RETRYABLE_ERRORS = new Set([
+  'MODEL_ERROR',
+  'INVALID_RESPONSE',
+  'IMAGE_GENERATION_FAILED',
+  'INVALID_REQUEST',
+  'WORKER_ERROR'
+]);
+
+function isRetryableError(error) {
+  if (!error) return false;
+  const str = String(error).toUpperCase();
+  for (const r of RETRYABLE_ERRORS) {
+    if (str.includes(r)) return true;
+  }
+  return false;
+}
+
+let outputCleanupMetrics = {
+  output_file_count: 0,
+  output_bytes: 0,
+  cleaned_output_count: 0,
+  cleaned_output_bytes: 0,
+};
+
+function estimateJobPayloadBytes(job) {
+  if (!job) return 0;
+  let bytes = 0;
+  if (job.resultBytes) bytes += job.resultBytes;
+  else if (job.resultB64) bytes += Buffer.byteLength(job.resultB64, 'utf8');
+  if (job.result) {
+    try {
+      bytes += Buffer.byteLength(JSON.stringify(job.result), 'utf8');
+    } catch (_) {}
+  }
+  return bytes;
+}
+
+function cleanupOutputFiles(queueInstance, now = Date.now()) {
+  try {
+    if (!fs.existsSync(OUTPUT_DIR)) return outputCleanupMetrics;
+    const referencedFiles = new Set();
+    if (queueInstance && queueInstance.jobs) {
+      for (const job of queueInstance.jobs.values()) {
+        if (job.filename) referencedFiles.add(path.basename(job.filename));
+        if (job.resultUrl) {
+          const m = job.resultUrl.match(/\/outputs\/([^?#/]+)/);
+          if (m && m[1]) referencedFiles.add(m[1]);
+        }
+        if (job.crashSnapshotUrl) {
+          const m = job.crashSnapshotUrl.match(/\/outputs\/([^?#/]+)/);
+          if (m && m[1]) referencedFiles.add(m[1]);
+        }
+      }
+    }
+
+    const files = fs.readdirSync(OUTPUT_DIR);
+    let currentCount = 0;
+    let currentBytes = 0;
+
+    for (const file of files) {
+      const filePath = path.join(OUTPUT_DIR, file);
+      try {
+        const stat = fs.statSync(filePath);
+        if (!stat.isFile()) continue;
+        const isReferenced = referencedFiles.has(file);
+        const isExpired = OUTPUT_TTL_MS > 0 && (now - stat.mtimeMs >= OUTPUT_TTL_MS);
+
+        if (!isReferenced && isExpired) {
+          fs.unlinkSync(filePath);
+          outputCleanupMetrics.cleaned_output_count++;
+          outputCleanupMetrics.cleaned_output_bytes += stat.size;
+        } else {
+          currentCount++;
+          currentBytes += stat.size;
+        }
+      } catch (_) {}
+    }
+    outputCleanupMetrics.output_file_count = currentCount;
+    outputCleanupMetrics.output_bytes = currentBytes;
+  } catch (err) {
+    console.warn('[OutputCleanup] Temizleme uyarısı:', err.message);
+  }
+  return outputCleanupMetrics;
+}
+
+const staticBrandCache = new Map();
+const BRAND_CACHE_MAX = 200;
+const BRAND_CACHE_TTL_MS = 60 * 60 * 1000;
+
+function getStaticBrandContext(tenantKey) {
+  if (!tenantKey) return null;
+  const cached = staticBrandCache.get(tenantKey);
+  if (cached && Date.now() - cached.cachedAt < BRAND_CACHE_TTL_MS) {
+    return cached.data;
+  }
+  return null;
+}
+
+function setStaticBrandContext(tenantKey, data) {
+  if (!tenantKey || !data) return;
+  staticBrandCache.delete(tenantKey);
+  staticBrandCache.set(tenantKey, { data, cachedAt: Date.now() });
+  while (staticBrandCache.size > BRAND_CACHE_MAX) {
+    staticBrandCache.delete(staticBrandCache.keys().next().value);
+  }
+}
+
+function sanitizeConversationHistory(history, maxChars = 3000) {
+  if (!history || typeof history !== 'string') return '';
+  const trimmed = history.trim();
+  if (trimmed.length <= maxChars) return trimmed;
+  const lines = trimmed.split('\n');
+  let result = [];
+  let charCount = 0;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i];
+    if (charCount + line.length + 1 > maxChars && result.length > 0) break;
+    result.unshift(line);
+    charCount += line.length + 1;
+  }
+  return result.join('\n');
+}
 
 const PORT = parseInt(process.env.PORT || '3456', 10);
 const PUBLIC_HOST = process.env.PUBLIC_HOST || '167.233.201.31';
@@ -219,6 +345,10 @@ class AdvancedJobQueue {
       result: null,
       error: null,
       assignedTo: null,
+      filename: null,
+      resultBytes: 0,
+      attemptCount: 0,
+      maxAttempts: 2,
       createdAt,
       startedAt: null,
       completedAt: null,
@@ -340,14 +470,26 @@ class AdvancedJobQueue {
       this.activeWorkers.delete(job.assignedTo);
     }
 
-    if (error) {
+    const canRetry = error && isRetryableError(error) && (job.attemptCount || 0) < (job.maxAttempts || 2);
+
+    if (error && !canRetry) {
       job.status = 'failed';
       job.error = error;
       job.statusText = `Hata: ${error}`;
       job.completedAt = Date.now();
-      finishMetrics(job.metrics, { result: 'error', errorCode: 'WORKER_ERROR', now: job.completedAt });
+      finishMetrics(job.metrics, { result: 'error', errorCode: isRetryableError(error) ? 'RETRY_EXHAUSTED' : 'WORKER_ERROR', now: job.completedAt });
       broadcastEvent('job_failed', sanitizeJobForBroadcast(job));
       this.notifyWaiters(jobId, job);
+    } else if (canRetry) {
+      job.attemptCount = (job.attemptCount || 0) + 1;
+      job.status = 'pending';
+      job.assignedTo = null;
+      job.progress = 0;
+      job.statusText = `Hata sonrası yeniden deneniyor (${job.attemptCount}/${job.maxAttempts || 2}): ${error}`;
+      job.startedAt = null;
+      this.pendingQueue.unshift(jobId);
+      this.recalculatePositions();
+      broadcastEvent('job_requeued', sanitizeJobForBroadcast(job));
     } else if (job.status === 'processing') {
       job.status = 'pending';
       job.assignedTo = null;
@@ -360,16 +502,23 @@ class AdvancedJobQueue {
     }
   }
 
-  completeJob(jobId, filename, buffer) {
+  completeJob(jobId, filename, buffer, timings = null) {
     const job = this.jobs.get(jobId);
     if (!job) return null;
+
+    if (timings) {
+      this.recordWorkerTimings(jobId, timings);
+    }
 
     const publicUrl = `http://localhost:${PORT}/outputs/${filename}`;
     job.status = 'completed';
     job.progress = 100;
     job.statusText = 'Görsel başarıyla üretildi';
     job.resultUrl = publicUrl;
-    job.resultB64 = buffer.toString('base64');
+    job.filename = filename;
+    job.resultBytes = buffer ? buffer.length : 0;
+    job.resultB64 = null;
+    job.referenceImages = [];
     job.completedAt = Date.now();
     job.durationMs = job.completedAt - (job.startedAt || job.createdAt);
     finishMetrics(job.metrics, { result: 'success', now: job.completedAt });
@@ -383,14 +532,19 @@ class AdvancedJobQueue {
     return job;
   }
 
-  completeTextJob(jobId, resultData) {
+  completeTextJob(jobId, resultData, timings = null) {
     const job = this.jobs.get(jobId);
     if (!job) return null;
+
+    if (timings) {
+      this.recordWorkerTimings(jobId, timings);
+    }
 
     job.status = 'completed';
     job.progress = 100;
     job.statusText = 'Öneriler başarıyla üretildi';
     job.result = resultData;
+    job.resultBytes = resultData ? Buffer.byteLength(JSON.stringify(resultData), 'utf8') : 0;
     job.completedAt = Date.now();
     job.durationMs = job.completedAt - (job.startedAt || job.createdAt);
     finishMetrics(job.metrics, { result: 'success', now: job.completedAt });
@@ -457,6 +611,16 @@ class AdvancedJobQueue {
     return list;
   }
 
+  getRetainedResultBytes() {
+    let total = 0;
+    for (const job of this.jobs.values()) {
+      if (job.status === 'completed') {
+        total += estimateJobPayloadBytes(job);
+      }
+    }
+    return total;
+  }
+
   getStats() {
     this.cleanupCompletedJobs();
     const active = {};
@@ -473,6 +637,8 @@ class AdvancedJobQueue {
       total: this.jobs.size,
       retainedCompletedJobs: Array.from(this.jobs.values()).filter((job) => job.status === 'completed').length,
       retainedFailedJobs: Array.from(this.jobs.values()).filter((job) => job.status === 'failed').length,
+      retained_result_bytes: this.getRetainedResultBytes(),
+      output_cleanup: { ...outputCleanupMetrics },
       cleanupCount: this.cleanupCount,
       recent: Array.from(this.jobs.values()).slice(-20).reverse(),
     };
@@ -489,13 +655,25 @@ class AdvancedJobQueue {
     }
     const retainedCompleted = completed.filter((job) => !remove.has(job));
     for (const job of retainedCompleted.slice(0, Math.max(0, retainedCompleted.length - MAX_RETAINED_COMPLETED_JOBS))) remove.add(job);
+
+    let survivingCompleted = retainedCompleted.filter((job) => !remove.has(job));
+    let totalBytes = survivingCompleted.reduce((sum, j) => sum + estimateJobPayloadBytes(j), 0);
+    while (survivingCompleted.length > 0 && totalBytes > MAX_RETAINED_RESULT_BYTES) {
+      const oldest = survivingCompleted.shift();
+      remove.add(oldest);
+      totalBytes -= estimateJobPayloadBytes(oldest);
+    }
+
     for (const job of remove) {
       job.resultB64 = null;
       job.referenceImages = [];
+      job.result = null;
       this.jobs.delete(job.id);
       if (job.idempotencyKey && this.idempotencyMap.get(job.idempotencyKey) === job.id) this.idempotencyMap.delete(job.idempotencyKey);
       this.cleanupCount++;
     }
+
+    cleanupOutputFiles(this, now);
   }
 }
 
@@ -952,7 +1130,13 @@ const server = http.createServer(async (req, res) => {
       if (finishedJob.status === 'completed') {
         const item = {};
         if (response_format === 'b64_json') {
-          item.b64_json = finishedJob.resultB64;
+          const outFilename = finishedJob.filename || (finishedJob.resultUrl ? path.basename(finishedJob.resultUrl) : null);
+          const outPath = outFilename ? path.join(OUTPUT_DIR, outFilename) : null;
+          if (outPath && fs.existsSync(outPath)) {
+            item.b64_json = fs.readFileSync(outPath).toString('base64');
+          } else {
+            item.b64_json = finishedJob.resultB64 || '';
+          }
         } else {
           item.url = finishedJob.resultUrl;
         }
@@ -1431,15 +1615,31 @@ const server = http.createServer(async (req, res) => {
       }
 
       const customer = (body.customer || 'Genel').trim();
+      const tenantId = body.tenantId || body.tenant_id || body.orgId || body.org_id || null;
+      const conversationId = body.conversationId || body.conversation_id || null;
+      const sanitizedHistory = sanitizeConversationHistory(body.conversationHistory || '');
+      const tenantKey = tenantId ? `${tenantId}:${customer}` : customer;
+      let staticContext = getStaticBrandContext(tenantKey);
+      if (!staticContext && (body.tone || body.companyContext)) {
+        staticContext = {
+          tone: body.tone || 'Kurumsal, nazik ve samimi',
+          companyContext: body.companyContext || '',
+        };
+        setStaticBrandContext(tenantKey, staticContext);
+      }
+      const effectiveTone = body.tone || (staticContext ? staticContext.tone : '');
+      const effectiveContext = body.companyContext !== undefined ? body.companyContext : (staticContext ? staticContext.companyContext : '');
+
       const requestStartedAt = Date.now();
       const metrics = createJobMetrics({
         operation: 'text_reply',
-        tenantId: body.tenantId || body.tenant_id || body.orgId || body.org_id || null,
+        tenantId,
         requestId: body.requestId || body.request_id || null,
         prompt: incomingMessage,
-        companyContext: body.companyContext || '',
-        conversationHistory: body.conversationHistory || '',
+        companyContext: effectiveContext,
+        conversationHistory: sanitizedHistory,
         productCount: Array.isArray(body.products) ? body.products.length : 0,
+        systemPromptChars: 560,
         now: requestStartedAt,
       });
       const job = queue.createJob({
@@ -1449,12 +1649,12 @@ const server = http.createServer(async (req, res) => {
         optimizePrompt: false,
         type: 'chat_suggestions',
         incomingMessage,
-        conversationHistory: body.conversationHistory || '',
-        companyContext: body.companyContext || '',
-        tone: body.tone || '',
+        conversationHistory: sanitizedHistory,
+        companyContext: effectiveContext,
+        tone: effectiveTone,
         tenantId: metrics.tenant_id,
         requestId: metrics.request_id,
-        conversationId: body.conversationId || body.conversation_id || null,
+        conversationId,
         metrics,
       });
 
@@ -1644,8 +1844,13 @@ const server = http.createServer(async (req, res) => {
       fs.writeFileSync(filePath, buffer);
       console.log(`[Gateway] Görsel diske yazıldı (${(buffer.length / 1024).toFixed(1)} KB): ${filename}`);
 
+      let timings = null;
+      if (req.headers['x-worker-timings']) {
+        try { timings = JSON.parse(req.headers['x-worker-timings']); } catch (_) {}
+      }
+
       if (jobId) {
-        const completed = queue.completeJob(jobId, filename, buffer);
+        const completed = queue.completeJob(jobId, filename, buffer, timings);
         return sendJson(res, 200, { ok: true, filename, url: completed?.resultUrl });
       }
 
@@ -1655,11 +1860,11 @@ const server = http.createServer(async (req, res) => {
     // 6.1. Worker: Metin/Öneri Sonucunu Bildir (POST /job/complete-text)
     if (method === 'POST' && pathname === '/job/complete-text') {
       const body = await parseJsonBody(req);
-      const { jobId, result } = body;
+      const { jobId, result, timings } = body;
       if (!jobId) {
         return sendJson(res, 400, { error: 'jobId is required' });
       }
-      const job = queue.completeTextJob(jobId, result);
+      const job = queue.completeTextJob(jobId, result, timings);
       return sendJson(res, 200, { ok: true, job: sanitizeJobForBroadcast(job) });
     }
 

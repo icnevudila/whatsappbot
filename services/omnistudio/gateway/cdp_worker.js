@@ -40,19 +40,48 @@ function createWorkerTiming(job, kind) {
   const timings = {
     worker_acquire_ms: Math.max(0, startedAt - (job.startedAt || startedAt)),
     tab_acquire_ms: 0,
+    tab_ready_ms: 0,
+    prompt_insert_ms: 0,
+    submit_ms: 0,
+    total_worker_ms: 0,
   };
+  if (kind === 'text') {
+    timings.first_response_signal_ms = null;
+    timings.response_complete_ms = null;
+    timings.parse_ms = null;
+  } else if (kind === 'image') {
+    timings.reference_upload_ms = null;
+    timings.generation_start_detect_ms = null;
+    timings.generation_complete_detect_ms = null;
+    timings.image_acquire_ms = null;
+    timings.decode_process_ms = null;
+  }
+
   return {
-    mark(name, since = startedAt) { timings[name] = Math.max(0, Date.now() - since); },
-    async flush() {
+    mark(name, since = startedAt) {
+      timings[name] = Math.max(0, Date.now() - since);
+    },
+    finalize() {
       const total = Math.max(0, Date.now() - startedAt);
       timings.total_worker_ms = total;
       const providerWait = kind === 'image'
-        ? timings.generation_complete_detect_ms
+        ? (timings.generation_complete_detect_ms || timings.image_acquire_ms)
         : timings.response_complete_ms;
-      if (Number.isFinite(providerWait)) timings.provider_wait_ms = providerWait;
-      if (Number.isFinite(providerWait)) timings.infrastructure_overhead_ms = Math.max(0, total - providerWait);
+      if (Number.isFinite(providerWait)) {
+        timings.provider_wait_ms = providerWait;
+        timings.infrastructure_overhead_ms = Math.max(0, total - providerWait);
+      } else {
+        timings.provider_wait_ms = null;
+        timings.infrastructure_overhead_ms = total;
+      }
+      return timings;
+    },
+    async flush() {
+      const finalized = this.finalize();
       await fetch(`${GATEWAY_URL}/job/worker-timings`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobId: job.id, timings }),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId: job.id, timings: finalized }),
       }).catch(() => {});
     },
     timings,
@@ -181,7 +210,6 @@ async function checkTabLogin(tab) {
 async function waitForChatInput(cdp, maxWaitMs = 15000) {
   const start = Date.now();
   while (Date.now() - start < maxWaitMs) {
-    await sleep(600);
     const check = await cdp.send('Runtime.evaluate', {
       expression: `!!(
         document.querySelector('#prompt-textarea') || 
@@ -189,11 +217,11 @@ async function waitForChatInput(cdp, maxWaitMs = 15000) {
         document.querySelector('textarea')
       )`,
       returnByValue: true
-    });
+    }).catch(() => ({ result: { value: false } }));
     if (check.result?.value) {
-      await sleep(600);
       return true;
     }
+    await sleep(100);
   }
   return false;
 }
@@ -224,14 +252,13 @@ async function injectPromptAndSend(cdp, promptText) {
       })()`
     });
 
-    // 2. Chrome DevTools Protocol yerel Input.insertText ile metni gerçek klavye gibi enjekte et
+    // 2. Chrome DevTools Protocol yerel Input.insertText ile metni enjekte et
     await cdp.send('Input.insertText', { text: promptText });
     promptInsertedAt = Date.now();
     
-    // 3. Gönder butonunun render edilmesini bekle ve tıkla (React state güncelleme payı - döngüsel)
+    // 3. Gönder butonunun render edilmesini bekle ve tıkla
     let clicked = false;
-    for (let wait = 0; wait < 15; wait++) {
-      await sleep(400);
+    for (let wait = 0; wait < 20; wait++) {
       const clickRes = await cdp.send('Runtime.evaluate', {
         expression: `(() => {
           let sendBtn = document.querySelector('#composer-submit-button') ||
@@ -251,11 +278,11 @@ async function injectPromptAndSend(cdp, promptText) {
         clicked = true;
         break;
       }
+      await sleep(100);
     }
 
     if (!clicked) {
       console.log(`[CDP Worker: ${WORKER_ID}] Buton bulunamadı/tıklanamadı, Enter tuşu simüle ediliyor...`);
-      // Alternatif: Enter tuşu gönder
       await cdp.send('Input.dispatchKeyEvent', {
         type: 'rawKeyDown',
         windowsVirtualKeyCode: 13,
@@ -268,10 +295,14 @@ async function injectPromptAndSend(cdp, promptText) {
         unmodifiedText: '\r',
         text: '\r'
       });
-      await sleep(1000);
+      await sleep(300);
     }
 
-    return { success: true, prompt_insert_ms: promptInsertedAt - startedAt, submit_ms: Date.now() - promptInsertedAt };
+    return {
+      success: true,
+      prompt_insert_ms: Math.max(0, promptInsertedAt - startedAt),
+      submit_ms: Math.max(0, Date.now() - promptInsertedAt)
+    };
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -571,7 +602,22 @@ async function executeChatGPTJob(tab, job) {
               `
             });
             console.log('[CDP Worker] Referans görsel inputa yüklendi, thumbnail bekleniyor...');
-            await sleep(3500); // Görselin yüklenip input alanına eklenmesini bekle
+            const refUploadStart = Date.now();
+            const maxRefWait = 4000;
+            while (Date.now() - refUploadStart < maxRefWait) {
+              const hasThumb = await cdp.send('Runtime.evaluate', {
+                expression: `!!(
+                  document.querySelector('[data-testid*="thumbnail"]') ||
+                  document.querySelector('img[src^="blob:"]') ||
+                  document.querySelector('#upload-photos img') ||
+                  document.querySelector('.upload-preview')
+                )`,
+                returnByValue: true
+              }).catch(() => ({ result: { value: false } }));
+              if (hasThumb.result?.value) break;
+              await sleep(150);
+            }
+            workerTiming.mark('reference_upload_ms', refUploadStart);
           }
         } catch (uploadErr) {
           console.warn('[CDP Worker] Referans görsel yükleme uyarısı:', uploadErr.message);
@@ -579,8 +625,7 @@ async function executeChatGPTJob(tab, job) {
       }
     }
 
-    // 2. Mevcut görsel URL'lerini kaydet (Az önce yüklenen referans thumbnail'lar DAHİL)
-    // Böylece referans görseller asla üretilen yeni görsel sanılmaz!
+    // 2. Stale Image Protection: Mevcut görsel URL'lerini snapshot al (Referans thumbnail'lar DAHİL)
     const beforeEval = await cdp.send('Runtime.evaluate', {
       expression: `Array.from(document.querySelectorAll('img')).map(i => i.src).filter(Boolean)`,
       returnByValue: true
@@ -596,20 +641,16 @@ async function executeChatGPTJob(tab, job) {
     workerTiming.timings.submit_ms = injectRes.submit_ms;
     const submittedAt = Date.now();
 
-    console.log('[CDP Worker] Prompt gönderildi, görsel üretimi bekleniyor...');
+    console.log('[CDP Worker] Prompt gönderildi, adaptif görsel üretim tespiti devrede...');
 
-    // DALL-E çizimi en az 10-15 saniye sürer, ön başlatma payı
-    await sleep(8000);
-
-    // 4. Görselin üretilmesini bekle (Maks 180 saniye - ChatGPT Plus DALL-E derin çizim payı)
+    // 4. Görselin üretilmesini bekle (Stale korumalı adaptif bounded polling)
     let foundImgSrc = null;
-    const maxAttempts = 85; // 85 * 2s + 8s = ~178s
-
+    const maxAttempts = 120; // 120 * 1.5s = 180s
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      await sleep(2000);
+      await sleep(1500);
 
       // İlerlemeyi Gateway'e bildir
-      const elapsed = attempt * 2 + 8;
+      const elapsed = Math.round((Date.now() - submittedAt) / 1000);
       const progress = Math.min(96, Math.round((elapsed / 180) * 100));
       let statusText = 'Prompt gönderildi, görsel üretimi bekleniyor...';
       if (elapsed > 15) statusText = 'ChatGPT DALL-E görsel motoru çiziyor...';
@@ -714,9 +755,13 @@ async function executeChatGPTJob(tab, job) {
 
     // 5. Gateway'e Yükle
     const filename = `img_${job.id}_${Date.now()}.png`;
+    const finalTimings = workerTiming.finalize();
     const uploadRes = await fetch(`${GATEWAY_URL}/upload?jobId=${job.id}&filename=${filename}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'image/png' },
+      headers: {
+        'Content-Type': 'image/png',
+        'x-worker-timings': JSON.stringify(finalTimings),
+      },
       body: imageBuffer
     });
 
@@ -791,14 +836,30 @@ async function executeChatSuggestionsJob(tab, job) {
     console.log(`[CDP Worker: ${WORKER_ID}] [Mesajlar] Firma: "${customer}" için oturum hazırlanıyor...`);
     const chatIdentity = { customer, tenantId: job.tenantId, conversationId: job.conversationId };
     const chatInfo = await ensureCustomerChat(cdp, customer, 'chat', chatIdentity);
-    await sleep(1500); // DOM geçmişinin tam oturmasını bekle
+    if (!chatInfo.isNewChat) {
+      const waitStart = Date.now();
+      while (Date.now() - waitStart < 1500) {
+        const check = await cdp.send('Runtime.evaluate', {
+          expression: `document.querySelectorAll('[data-message-author-role]').length > 0`,
+          returnByValue: true
+        }).catch(() => ({ result: { value: false } }));
+        if (check.result?.value) break;
+        await sleep(100);
+      }
+    }
     workerTiming.mark('tab_ready_ms');
 
-    const countEval = await cdp.send('Runtime.evaluate', {
-      expression: `document.querySelectorAll('[data-message-author-role="assistant"]').length`,
+    // 1. Stale Result Protection: Submit öncesi asistan mesajlarının kesin baseline'ını al
+    const baselineEval = await cdp.send('Runtime.evaluate', {
+      expression: `(() => {
+        const assts = Array.from(document.querySelectorAll('[data-message-author-role="assistant"]'));
+        const ids = assts.map(a => a.getAttribute('data-message-id') || a.id || '').filter(Boolean);
+        const lastText = assts.length > 0 ? (assts[assts.length - 1].innerText || '').trim() : '';
+        return { count: assts.length, ids, lastText };
+      })()`,
       returnByValue: true
     });
-    const initialAsstCount = countEval.result?.value || 0;
+    const baseline = baselineEval.result?.value || { count: 0, ids: [], lastText: '' };
 
     // 2. Prompt hazırla
     const prompt = `Sen "${customer}" firmasının WhatsApp kurumsal müşteri temsilcisisin.
@@ -838,21 +899,25 @@ Bu mesaja verilebilecek en kaliteli ve uygun 3 FARKLI alternatif Türkçe yanıt
     workerTiming.timings.submit_ms = injectRes.submit_ms;
     const submittedAt = Date.now();
 
-    console.log(`[CDP Worker: ${WORKER_ID}] [Mesajlar] Prompt gönderildi, yanıt bekleniyor...`);
-    await sleep(2000);
+    console.log(`[CDP Worker: ${WORKER_ID}] [Mesajlar] Prompt gönderildi, adaptif yanıt kontrolü devrede...`);
 
-    // 4. Yeni metin yanıtının tamamlanmasını bekle (Maksimum ~60 saniye)
+    // 4. Yeni metin yanıtının tamamlanmasını bekle (Stale korumalı adaptif bounded polling)
     let lastText = '';
     let stableCount = 0;
-    const maxWait = 45; // 45 * 1.5s = ~67s
-    for (let i = 0; i < maxWait; i++) {
-      await sleep(1500);
+    let foundNewMessage = false;
+    const maxWaitTimeMs = 60000;
+    const pollStart = Date.now();
+
+    while (Date.now() - pollStart < maxWaitTimeMs) {
+      await sleep(250);
       const textEval = await cdp.send('Runtime.evaluate', {
         expression: `
           (() => {
             const assts = Array.from(document.querySelectorAll('[data-message-author-role="assistant"]'));
-            if (assts.length <= ${initialAsstCount}) {
-              return { hasNewMsg: false, isGenerating: true, text: '' };
+            if (assts.length <= ${baseline.count}) {
+              const stopBtn = document.querySelector('button[data-testid*="stop"], button[aria-label*="Stop"], button[aria-label*="durdur"], button[aria-label*="Durdur"]');
+              const isGenerating = !!stopBtn || !!document.querySelector('.result-thinking, [data-testid*="generating"], .streaming-animated-ellipsis');
+              return { hasNewMsg: false, isGenerating, text: '' };
             }
 
             const lastAsst = assts[assts.length - 1];
@@ -871,6 +936,7 @@ Bu mesaja verilebilecek en kaliteli ve uygun 3 FARKLI alternatif Türkçe yanıt
       if (!res?.hasNewMsg) {
         continue;
       }
+      foundNewMessage = true;
       if (!workerTiming.timings.first_response_signal_ms) workerTiming.mark('first_response_signal_ms', submittedAt);
 
       const currentText = (res && res.text) ? res.text : '';
@@ -901,10 +967,14 @@ Bu mesaja verilebilecek en kaliteli ve uygun 3 FARKLI alternatif Türkçe yanıt
         console.log(`[CDP Worker: ${WORKER_ID}] [Mesajlar] Geçerli JSON başarıyla algılandı, döngü sonlandırılıyor.`);
         break;
       }
-      if (!res.isGenerating && stableCount >= 2 && lastText.length > 50) {
+      if (!res.isGenerating && stableCount >= 2 && lastText.length > 30) {
         workerTiming.mark('response_complete_ms', submittedAt);
         break;
       }
+    }
+
+    if (!foundNewMessage) {
+      throw new Error('STALE_RESPONSE_DETECTED: Yeni model yanıtı üretilmedi (Fail-closed)');
     }
 
     if (!lastText || lastText.length < 15) {
@@ -995,12 +1065,14 @@ Bu mesaja verilebilecek en kaliteli ve uygun 3 FARKLI alternatif Türkçe yanıt
     console.log(`[CDP Worker: ${WORKER_ID}] [Mesajlar] ${parsedSuggestions.length} öneri başarıyla üretildi.`);
 
     // 6. Gateway'e bildir
+    const finalTimings = workerTiming.finalize();
     await fetch(`${GATEWAY_URL}/job/complete-text`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         jobId: job.id,
-        result: { suggestions: parsedSuggestions, raw: lastText }
+        result: { suggestions: parsedSuggestions, raw: lastText },
+        timings: finalTimings,
       })
     });
 
