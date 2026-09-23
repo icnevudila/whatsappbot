@@ -93,7 +93,18 @@ export async function POST(req: NextRequest) {
     // Logo
     let logoFilePath = logoAsset.filePath || logoAsset.url
     let logoSha = logoAsset.sha256
-    if (org.id === 'b359ccd3-3ec8-40fd-928e-bc6dbbd489c0') {
+
+    // Resolve server-side path & sha for logo
+    if (logoAsset.url && logoAsset.url.includes('media-proxy')) {
+      const match = logoAsset.url.match(/file=([^&]+)/)
+      const cleanFile = match ? match[1].replace(/[^a-zA-Z0-9_\-\.]/g, '') : null
+      if (cleanFile) {
+        logoFilePath = `/shared/outputs/inputs/${org.id}/${cleanFile}`
+        if (cleanFile === 'bofe_logo.png') {
+          logoSha = '7972d493077cb4bec0393e195bc88b7599d84ff7ecbbef265e70b78718da3cf1'
+        }
+      }
+    } else if (org.id === 'b359ccd3-3ec8-40fd-928e-bc6dbbd489c0') {
       logoFilePath = '/shared/outputs/inputs/b359ccd3-3ec8-40fd-928e-bc6dbbd489c0/bofe_logo_clean_black.png'
       logoSha = '6c78bea0e87b8c41265734b73f6d5b606d0c3d71970963ebeaab88a5490537b1'
     } else {
@@ -114,7 +125,16 @@ export async function POST(req: NextRequest) {
     let productSha = ''
     if (productAsset?.url || productAsset?.filePath) {
       let prodFilePath = productAsset.filePath || productAsset.url
-      if (org.id === 'b359ccd3-3ec8-40fd-928e-bc6dbbd489c0') {
+      if (productAsset.url && productAsset.url.includes('media-proxy')) {
+        const match = productAsset.url.match(/file=([^&]+)/)
+        const cleanFile = match ? match[1].replace(/[^a-zA-Z0-9_\-\.]/g, '') : null
+        if (cleanFile) {
+          prodFilePath = `/shared/outputs/inputs/${org.id}/${cleanFile}`
+          if (cleanFile === 'bofe_product.png') {
+            productSha = '3c187e83d2a2ce990c845105962f8c5a3a4b0a1d6a34778e3bc5e8474a53659f'
+          }
+        }
+      } else if (org.id === 'b359ccd3-3ec8-40fd-928e-bc6dbbd489c0') {
         prodFilePath = '/shared/outputs/inputs/b359ccd3-3ec8-40fd-928e-bc6dbbd489c0/bofe_zeytin_hasat_montaj_thumb.jpg'
         productSha = '189770de9a088a13a2ad1762086a97b20a5c081fbc7de5beda31dde91b7ef38e'
       } else {
