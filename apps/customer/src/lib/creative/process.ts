@@ -243,6 +243,9 @@ export async function processCreativeGeneration(
 
   const snapshot = asSnapshot(creative.payload)
   if (!snapshot) {
+    if (creative.format === 'video' || Boolean((creative.payload as any)?.job_id)) {
+      return { ok: true, pending: true, retryAfterSeconds: 5 }
+    }
     await supabase
       .from('creatives')
       .update({ status: 'failed', error: 'Üretim özeti eksik.' })

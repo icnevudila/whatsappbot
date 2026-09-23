@@ -30,7 +30,7 @@ export async function POST(request: Request) {
 
   const { data } = await supabase
     .from('creatives')
-    .select('id, status, source')
+    .select('id, status, source, format, payload')
     .eq('id', id)
     .eq('org_id', org.id)
     .maybeSingle()
@@ -42,16 +42,73 @@ export async function POST(request: Request) {
   if (data.status === 'ready') {
     const { data: full } = await supabase
       .from('creatives')
-      .select('public_url')
+      .select('public_url, payload')
       .eq('id', id)
       .maybeSingle()
+    const p = (full?.payload ?? {}) as Record<string, unknown>
     return NextResponse.json({
       ok: true,
       ready: true,
       skipped: true,
       publicUrl: full?.public_url || null,
-      thumbnailUrl: null,
+      thumbnailUrl: (p.thumbnailUrl as string) || (full?.public_url ? `${full.public_url}?thumb=1` : null),
     })
+  }
+
+  // Video jobs are orchestrated via ai_media_jobs; do not route to legacy snapshot processor
+  const jobId = (((data.payload as any)?.job_id || id) as string).trim()
+  if (data.format === 'video') {
+    const { data: mediaJob } = await (supabase as any)
+      .from('ai_media_jobs')
+      .select('id, state, error_message')
+      .eq('id', jobId)
+      .maybeSingle()
+
+    if (mediaJob) {
+      if (mediaJob.state === 'COMPLETED') {
+        const { data: out } = await (supabase as any)
+          .from('ai_media_outputs')
+          .select('id')
+          .eq('job_id', jobId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        const pUrl = out?.id ? `/api/ai-media/outputs/${out.id}` : null
+        const tUrl = out?.id ? `/api/ai-media/outputs/${out.id}?thumb=1` : null
+        await (supabase as any)
+          .from('creatives')
+          .update({
+            status: 'ready',
+            public_url: pUrl,
+            payload: { ...(data.payload as any), thumbnailUrl: tUrl },
+          })
+          .eq('id', id)
+
+        return NextResponse.json({
+          ok: true,
+          ready: true,
+          publicUrl: pUrl,
+          thumbnailUrl: tUrl,
+        })
+      } else if (mediaJob.state === 'FAILED') {
+        const errMsg = mediaJob.error_message || 'Video üretimi başarısız oldu.'
+        await (supabase as any)
+          .from('creatives')
+          .update({ status: 'failed', error: errMsg })
+          .eq('id', id)
+        return NextResponse.json({ error: errMsg }, { status: 502 })
+      } else {
+        return NextResponse.json(
+          {
+            ok: true,
+            pending: true,
+            retryAfterSeconds: 4,
+          },
+          { status: 202 },
+        )
+      }
+    }
   }
 
   const result = await processCreativeGeneration(id, supabase)
