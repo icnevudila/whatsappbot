@@ -35,19 +35,19 @@ async function main() {
     org_id: '4a58b0dd-0931-4901-880a-686457d15010',
     brand_name: 'Ayvazoğlu İnşaat',
     sector_profile: 'construction_materials',
-    brand_description: 'Yüksek dayanımlı kırmızı kil tuğla ve modern yapı elemanları üreticisi',
+    brand_description: 'Yüksek dayanımlı standart inşaat tuğlası ve modern yapı elemanları üreticisi',
     brand_palette: { primary: '#D32F2F', secondary: '#FF9800' },
     typography: { headingFont: 'Roboto Bold', primaryColor: '#FFFFFF' },
     tone_of_voice: ['sağlam', 'güvenilir', 'endüstriyel ustalık'],
     visual_style: [
       'Modern inşaat sahası ve şantiye alanı',
-      'doğal sabah ışığı altında kırmızı kil tuğla duvar örme ustalığı',
+      'doğal sabah ışığı altında tuğla duvar örme ustalığı',
       'harç ve tuğla temasında gerçekçi fizik ve malzeme dokusu'
     ],
     product: {
       product_id: 'prod_ayvaz_brick_01',
-      name: 'Ayvazoğlu Kırmızı Kil Tuğla',
-      description: 'Yüksek mukavemetli standart kırmızı yapı tuğlası',
+      name: 'Ayvazoğlu Tuğla',
+      description: 'Yüksek mukavemetli standart yapı tuğlası',
       file_path: '/shared/outputs/inputs/4a58b0dd-0931-4901-880a-686457d15010/ayvazoglu_canonical_brick.jpg',
     },
     logo: {
@@ -60,7 +60,7 @@ async function main() {
       user_style_preference: 'FAST_SALES',
       subtitles: 'auto',
     },
-    verified_claims: ['Standart kırmızı yapı tuğlası'],
+    verified_claims: ['Standart yapı tuğlası'],
   }
 
   // 1. Verify existence of canonical input files on disk
@@ -98,7 +98,7 @@ async function main() {
       file_path: tenant.product.file_path,
       attached_successfully: true,
       visual_attributes: {
-        shape: 'kırmızı kil tuğla, dikey delikli ve kanallı standart blok form',
+        shape: 'standart kırmızı yapı tuğlası, dikey delikli ve kanallı blok form',
         primary_colors: ['#D32F2F', '#8D6E63'],
         visible_handles: false,
         visible_controls: false,
@@ -189,7 +189,7 @@ async function main() {
     recent_fingerprints: [],
     verified_facts: [
       {
-        claim: 'Standart kırmızı yapı tuğlası',
+        claim: 'Standart yapı tuğlası',
         source_type: 'catalog',
         source_id: 'spec_ayvaz_01',
       },

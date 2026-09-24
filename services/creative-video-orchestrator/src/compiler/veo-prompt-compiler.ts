@@ -48,15 +48,16 @@ export class VeoPromptCompiler {
     const hasBrandLogo = plan.canonical_asset_handles && plan.canonical_asset_handles.includes('@BrandLogo')
     if (diegeticItem || plan.logo_strategy.includes('DIEGETIC') || hasBrandLogo) {
       const surface = diegeticItem?.surface_type || 'physical product surface'
-      diegeticBrandingDirective = `[BRANDING]: Preserve canonical identity from @BrandLogo on @HeroProduct (${surface}). Faithful proportions, zero floating watermarks.`
+      diegeticBrandingDirective = `[CANONICAL BRAND IDENTITY PRESERVATION]: Preserve the canonical brand identity from @BrandLogo on @HeroProduct (${surface}). Faithful proportions, NO INVENTED LOGO, NO FAKE LOGO.`
     }
 
     // Audio & Spoken Turkish dialogue section
     let audioDirective = ''
     if (plan.audio_plan && plan.audio_plan.speech_mode === 'native_veo_dialogue') {
       const fullSpokenScript = plan.master_spoken_script || plan.voiceover_script || plan.audio_plan.exact_spoken_lines[0]?.text || ''
-      const ambient = plan.audio_plan.ambient_audio_description || 'natural ambience'
-      audioDirective = `[AUDIO]: Turkish spoken dialogue: "${fullSpokenScript}". Confident natural delivery. Ambience: ${ambient}.`
+      const lang = plan.audio_plan.spoken_language || 'tr-TR'
+      const langTag = lang === 'tr' ? 'tr-TR' : lang
+      audioDirective = `[AUDIO]: The spoken language is Turkish (${langTag}). Exact spoken line: "${fullSpokenScript}". Continuous dialogue across entire duration: [0-8s]: "${fullSpokenScript}". Speak this sentence exactly in Turkish. Do not translate it. Do not paraphrase it.`
     }
 
     // Material physics & motion constraints dynamically extracted from beats
@@ -67,13 +68,13 @@ export class VeoPromptCompiler {
 
     // Formulate structured prompt honoring professional film grammar
     const cinematicPrompt = [
-      `[SUBJECT LOCK]: Preserve ${primaryHandles} geometry, colors, and authentic appearance exactly as in references.`,
+      `[SUBJECT LOCK]: Preserve ${primaryHandles} geometry, colors, and authentic appearance exactly as shown in authoritative reference assets.`,
       `[ENVIRONMENT]: Authentic ${beats[0]?.environment || 'commercial setting'}.`,
       `[SEQUENCE (0-8s)]: ${beatSequence}`,
       materialPhysicsDirective,
       diegeticBrandingDirective,
       audioDirective,
-      `[NEGATIVE DIRECTIVE]: Strictly NO on-screen subtitles, lower thirds, artificial typography, or floating synthetic logos. All graphical overlays are applied in post-production.`,
+      `[NEGATIVE DIRECTIVE]: NO generated on-screen text, NO visible subtitles, NO floating logo, NO INVENTED LOGO, NO FAKE LOGO. All graphics composed in post-production.`,
     ].filter(Boolean).join(' ')
 
     const negativePrompt = Array.from(

@@ -80,7 +80,7 @@ test('Fail-Closed Gate: Project reuse across different scenes triggers PROJECT_R
     products: [
       {
         product_id: 'prod_brick',
-        name: 'Kırmızı Kil Tuğla',
+        name: 'Standart Yapı Tuğlası',
         description: 'Taşıyıcı tuğla',
         asset_id: 'asset_brick',
         sha256: 'de3e1167239923f47c193128958965bf305606fba7a4a967208616f34386512c',

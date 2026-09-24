@@ -23,7 +23,7 @@ test('Acceptance Long: Ayvazoğlu İnşaat (35-40s commercial, >=4 scenes, zero 
     org_id: 'org_ayvazoglu',
     brand_name: 'Ayvazoğlu İnşaat',
     sector_profile: 'construction_materials',
-    brand_description: 'Sağlam temeller için yüksek mukavemetli kil tuğla üretimi',
+    brand_description: 'Sağlam temeller için yüksek mukavemetli tuğla üretimi',
     brand_palette: { primary: '#B71C1C', accent: '#FFC107' },
     typography: { headingFont: 'Teko', primaryColor: '#FFFFFF' },
     tone_of_voice: ['grounded', 'durable', 'authoritative'],

@@ -198,7 +198,7 @@ export class ShortAdCreativeDirector {
         visual_action: sectorPreset.id.includes('agri')
           ? 'Aşırı makro yakın çekim: Pirinç nozülden basınçla püsküren ilk ince sıvı damlacıkları ve ani hareket'
           : sectorPreset.id.includes('construct')
-          ? 'Şantiye kolon hattında terazi ibresinin sıfırlanma anına ve killi tuğla dokusuna makro odak'
+          ? 'Şantiye kolon hattında terazi ibresinin sıfırlanma anına ve tuğla dokusuna makro odak'
           : sectorPreset.id.includes('soft') || sectorPreset.id.includes('saas')
           ? 'Bilgisayar ekranındaki harita pinlerine ve anlık analitik grafiğe hızlı dinamik odaklanma'
           : `Aşırı makro yakın çekim: ${prodName} fonksiyonel detayına ve ${sectorPreset.mandatoryProofTypes[0] || 'çalışma mekanizmasına'} odak`,
@@ -272,7 +272,7 @@ export class ShortAdCreativeDirector {
         visual_action: sectorPreset.id.includes('agri')
           ? 'Çiftçinin pirinç püskürtme borusuyla zeytin yapraklarına kesintisiz ve homojen sıvı uygulaması'
           : sectorPreset.id.includes('construct')
-          ? 'Ustanın killi cephe tuğlasını harç yatağına milimetrik yerleştirip tokmakla sabitlemesi'
+          ? 'Ustanın cephe tuğlasını harç yatağına milimetrik yerleştirip tokmakla sabitlemesi'
           : sectorPreset.id.includes('soft')
           ? 'Laptop ekranındaki harita arayüzünde tek tıkla doğrulanmış lokasyonların onaylanması'
           : `Kullanıcının @HeroProduct ile ${sectorPreset.mandatoryProofTypes[0] || 'performans kanıtını'} sergilemesi`,
@@ -404,7 +404,7 @@ export class ShortAdCreativeDirector {
         {
           start_sec: t2,
           end_sec: t4,
-          exact_text: `${brand} killi cephe tuğlası ile sahada planlı uygulama.`,
+          exact_text: `${brand} tuğla ile sahada planlı uygulama.`,
           speaker: 'master_mason',
           delivery: 'Authoritative product demonstration delivery',
           corresponding_visual_beat: `${t2.toFixed(1)}-${t4.toFixed(1)}s (PRODUCT_PROOF)`,
