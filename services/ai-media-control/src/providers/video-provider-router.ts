@@ -7,6 +7,7 @@ export type VideoCapabilityState =
   | 'FEATURE_UNAVAILABLE'
   | 'TEMPORARILY_UNAVAILABLE'
   | 'AUTH_REQUIRED'
+  | 'ACCOUNT_CONFIGURATION_REQUIRED'
   | 'UNKNOWN'
 
 export type NonProviderFailureCode =
@@ -94,6 +95,7 @@ const AUTO_FALLBACK_STATES = new Set<VideoCapabilityState>([
 
 function capabilityFromError(error: unknown): VideoCapabilityState {
   const code = String((error as any)?.code || '')
+  if (code.includes('ACCOUNT_CONFIGURATION_REQUIRED') || code.includes('APPS_ACTIVITY_OFF')) return 'ACCOUNT_CONFIGURATION_REQUIRED'
   if (code.includes('NO_QUOTA') || code.includes('CREDIT_LIMIT') || code.includes('RATE_LIMIT')) return 'NO_QUOTA'
   if (code.includes('FEATURE_UNAVAILABLE') || code.includes('CAPABILITY_UNAVAILABLE')) return 'FEATURE_UNAVAILABLE'
   if (code.includes('TEMPORARILY_UNAVAILABLE') || code.includes('TIMEOUT') || code.includes('BROWSER_TARGET_CLOSED')) {

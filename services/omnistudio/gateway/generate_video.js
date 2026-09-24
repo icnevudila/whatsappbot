@@ -1258,9 +1258,14 @@ async function inspectGeminiVideoTab(port, tab) {
               const hasInput = !!input && !input.disabled && input.getAttribute('aria-disabled') !== 'true';
               const loginRequired = href.includes('accounts.google.com') || text.includes('oturum aç') || text.includes('sign in');
               const noQuota = text.includes('video üretme sınırına ulaştınız') || text.includes('video generation limit') || text.includes('video limit reached');
-              const featureUnavailable = text.includes('video is not available for your account') || text.includes('video özelliği kullanılamıyor') || text.includes('video erişiminiz yok') || text.includes('gemini apps activity is off');
+              const activityOff = text.includes('gemini apps activity is off') || 
+                                  text.includes('etkinliği kapalı') || 
+                                  text.includes('activity is off') || 
+                                  (text.includes('etkinlik') && text.includes('kapal')) || 
+                                  !!document.querySelector('[data-test-id*="activity-off"]');
+              const featureUnavailable = text.includes('video is not available for your account') || text.includes('video özelliği kullanılamıyor') || text.includes('video erişiminiz yok');
               const temporarilyUnavailable = text.includes('something went wrong') || text.includes('bir hata oluştu');
-              return { href, hasInput, loginRequired, noQuota, featureUnavailable, temporarilyUnavailable };
+              return { href, hasInput, loginRequired, noQuota, activityOff, featureUnavailable, temporarilyUnavailable };
             })()`,
             returnByValue: true,
           },
@@ -1273,6 +1278,9 @@ async function inspectGeminiVideoTab(port, tab) {
           const value = message.result?.result?.value || {};
           if (value.loginRequired) {
             return finish(cacheGeminiCapability(port, CAPABILITY_STATES.AUTH_REQUIRED, 'Gemini session requires authentication'));
+          }
+          if (value.activityOff) {
+            return finish(cacheGeminiCapability(port, CAPABILITY_STATES.ACCOUNT_CONFIGURATION_REQUIRED, 'Gemini Apps activity is disabled on this account'));
           }
           if (value.noQuota) {
             return finish(cacheGeminiCapability(port, CAPABILITY_STATES.NO_QUOTA, 'Gemini video quota-limit message is visible'));
@@ -1298,9 +1306,20 @@ async function inspectGeminiVideoTab(port, tab) {
   });
 }
 
+const PORT_CANONICAL_ACCOUNTS = {
+  9223: 'mesajify2@gmail.com',
+  9225: 'mesajify2@gmail.com',
+  9224: 'mesajify1@gmail.com',
+};
+
+function getCanonicalAccountForPort(port) {
+  return PORT_CANONICAL_ACCOUNTS[port] || `cdp-${port}`;
+}
+
 async function getGeminiVideoCapability(options = {}) {
   const force = options.force === true;
-  const accountReports = await Promise.all(CDP_PORTS.map(async (port) => {
+  const targetPorts = options.ports && options.ports.length > 0 ? options.ports : CDP_PORTS;
+  const accountReports = await Promise.all(targetPorts.map(async (port) => {
     const cached = geminiCapabilityCache.get(port);
     if (!force && cached && cached.expiresAtMs > Date.now()) {
       const { expiresAtMs, ...report } = cached;
@@ -1329,6 +1348,7 @@ async function getGeminiVideoCapability(options = {}) {
 
   const available = accountReports.find(report => report.state === CAPABILITY_STATES.AVAILABLE);
   const selected = available ||
+    accountReports.find(report => report.state === CAPABILITY_STATES.ACCOUNT_CONFIGURATION_REQUIRED) ||
     accountReports.find(report => report.state === CAPABILITY_STATES.AUTH_REQUIRED) ||
     accountReports.find(report => report.state === CAPABILITY_STATES.UNKNOWN) ||
     accountReports.find(report => report.state === CAPABILITY_STATES.NO_QUOTA) ||
@@ -1357,10 +1377,24 @@ async function generateVideo(options) {
 
   const now = Date.now();
 
-  // Havuzdaki uygun portları seç veya belirtilen portu kullan
+  // Havuzdaki uygun portları seç; aynı canonical Google hesabı tek bir kota havuzunu paylaşır
+  const canonicalLimits = new Map();
+  for (const [p, st] of Object.entries(accountPool)) {
+    if (st && st.limitedUntil && st.limitedUntil > now) {
+      const canonical = getCanonicalAccountForPort(Number(p));
+      canonicalLimits.set(canonical, st);
+    }
+  }
+
+  const seenCanonical = new Set();
   const candidatePorts = options.port ? [Number(options.port)] : CDP_PORTS.filter(p => {
+    const canonical = getCanonicalAccountForPort(p);
+    if (canonicalLimits.has(canonical)) return false;
     const st = accountPool[p];
-    return !st || !st.limitedUntil || st.limitedUntil <= now;
+    if (st && st.limitedUntil && st.limitedUntil > now) return false;
+    if (seenCanonical.has(canonical)) return false;
+    seenCanonical.add(canonical);
+    return true;
   }).sort((a, b) => (accountPool[a]?.lastUsed || 0) - (accountPool[b]?.lastUsed || 0));
 
   if (candidatePorts.length === 0) {
@@ -1424,13 +1458,19 @@ async function generateVideo(options) {
       const result = await attemptGenerateOnCdp(port, tab, { ...options, fullPrompt });
 
       if (result.isLimited) {
-        const cooldownMs = 2 * 60 * 60 * 1000; // 2 saatlik bekleme penceresi
-        accountPool[port].limitedUntil = Date.now() + cooldownMs;
-        accountPool[port].limitReason = result.reason;
-        classifiedFailures.push({ code: 'GEMINI_VIDEO_NO_QUOTA', state: CAPABILITY_STATES.NO_QUOTA });
-        cacheGeminiCapability(port, CAPABILITY_STATES.NO_QUOTA, result.reason || 'Gemini video quota limit reached');
-        console.warn(`[VideoGen Pool] ⚠️ Port ${port} kota sınırına ulaştı (${result.reason}). Havuzdaki sonraki hesaba otomatik geçiliyor...`);
-        continue; // Sonraki hesaba geç!
+        const cooldownMs = 2 * 60 * 60 * 1000;
+        const canonical = getCanonicalAccountForPort(port);
+        for (const p of CDP_PORTS) {
+          if (getCanonicalAccountForPort(p) === canonical) {
+            accountPool[p] = accountPool[p] || {};
+            accountPool[p].limitedUntil = Date.now() + cooldownMs;
+            accountPool[p].limitReason = result.reason;
+            cacheGeminiCapability(p, CAPABILITY_STATES.NO_QUOTA, result.reason || "Gemini video quota limit reached");
+          }
+        }
+        classifiedFailures.push({ code: "GEMINI_VIDEO_NO_QUOTA", state: CAPABILITY_STATES.NO_QUOTA });
+        console.warn(`[VideoGen Pool] Port ${port} (${canonical}) quota limit: ${result.reason}`);
+        continue;
       }
 
       // Başarılı!

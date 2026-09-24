@@ -81,6 +81,7 @@ function harness(options = {}) {
     id,
     provider,
     accountId: id,
+    canonicalAccountId: validators.canonicalAccountId || null,
     profileDir: `/profiles/${id}`,
     cdpPort: port,
     launchUrl: launchUrl || (provider === 'flow' ? 'https://flow.google.com/' : 'https://gemini.google.com/videos'),
@@ -689,3 +690,62 @@ test('23. REAL_FLOW_USES_SUPERVISOR: Flow external lease contract works and prev
     leaseToken: flowLease2.leaseToken,
   });
 });
+
+test('24. SAME_ACCOUNT_TWO_PROFILE_LEASE_TEST: profile 9223 and 9225 sharing same canonical Google account result in exactly ONE lease concurrently', async () => {
+  const sharedDb = new SharedDatabaseSimulator();
+  const realClock = () => Date.now();
+  sharedDb.clock = realClock;
+
+  const h = harness({ sharedDb, clock: realClock, runningPorts: [9223, 9225] });
+
+  // Register two distinct worker endpoints (port 9223 & 9225) authenticated to the SAME canonical Google account
+  h.add('gemini-9223', 9223, { canonicalAccountId: 'mesajify2@gmail.com' }, 'gemini');
+  h.add('gemini-9225', 9225, { canonicalAccountId: 'mesajify2@gmail.com' }, 'gemini');
+
+  // Verify telemetry resolves same canonical account
+  const telemetry = await h.supervisor.telemetry();
+  const w9223 = telemetry.find(t => t.worker_id === 'gemini-9223');
+  const w9225 = telemetry.find(t => t.worker_id === 'gemini-9225');
+  assert.equal(w9223.canonical_account, 'mesajify2@gmail.com');
+  assert.equal(w9225.canonical_account, 'mesajify2@gmail.com');
+
+  // 1. Worker 9225 acquires lease
+  const lease1 = await h.supervisor.acquire({
+    provider: 'gemini',
+    jobId: 'job-profile-4',
+    preferredWorkerIds: ['gemini-9225'],
+  });
+  assert.ok(lease1);
+  assert.equal(lease1.worker.id, 'gemini-9225');
+
+  // 2. Worker 9223 attempts to acquire concurrently for another job -> must be rejected because same canonical account is busy
+  let acquisitionFailed = false;
+  try {
+    await h.supervisor.acquire({
+      provider: 'gemini',
+      jobId: 'job-profile-2',
+      preferredWorkerIds: ['gemini-9223'],
+      acquireTimeoutMs: 50,
+      pollIntervalMs: 10,
+    });
+  } catch (err) {
+    acquisitionFailed = true;
+    assert.equal(err.code, 'ACCOUNT_BUSY');
+  }
+  assert.equal(acquisitionFailed, true, 'Worker on 9223 MUST be rejected when 9225 holds lease for same canonical account');
+
+  // 3. Release Worker 9225 lease
+  await lease1.release();
+
+  // 4. Now Worker 9223 can acquire for the canonical account
+  const lease2 = await h.supervisor.acquire({
+    provider: 'gemini',
+    jobId: 'job-profile-2-retry',
+    preferredWorkerIds: ['gemini-9223'],
+    acquireTimeoutMs: 100,
+  });
+  assert.ok(lease2);
+  assert.equal(lease2.worker.id, 'gemini-9223');
+  await lease2.release();
+});
+

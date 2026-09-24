@@ -6,6 +6,7 @@ const CAPABILITY_STATES = Object.freeze({
   FEATURE_UNAVAILABLE: 'FEATURE_UNAVAILABLE',
   TEMPORARILY_UNAVAILABLE: 'TEMPORARILY_UNAVAILABLE',
   AUTH_REQUIRED: 'AUTH_REQUIRED',
+  ACCOUNT_CONFIGURATION_REQUIRED: 'ACCOUNT_CONFIGURATION_REQUIRED',
   UNKNOWN: 'UNKNOWN',
 });
 
@@ -26,10 +27,13 @@ function classifyGeminiVideoError(input) {
   if (/policy|safety|unsafe|blocked content/.test(corpus)) return { code: 'POLICY_REJECTED', state: CAPABILITY_STATES.UNKNOWN };
   if (/user[_ -]?cancel/.test(corpus)) return { code: 'USER_CANCELLED', state: CAPABILITY_STATES.UNKNOWN };
   if (/factual|wrong[_ -]?product/.test(corpus)) return { code: 'FACTUAL_GATE_FAILURE', state: CAPABILITY_STATES.UNKNOWN };
+  if (/gemini apps activity is off|etkinliği kapalı|activity.*off/.test(corpus)) {
+    return { code: 'GEMINI_APPS_ACTIVITY_OFF', state: CAPABILITY_STATES.ACCOUNT_CONFIGURATION_REQUIRED };
+  }
   if (/quota|credit.*limit|video generation limit|video üretme sınır|rate[_ -]?limit/.test(corpus)) {
     return { code: 'GEMINI_VIDEO_NO_QUOTA', state: CAPABILITY_STATES.NO_QUOTA };
   }
-  if (/feature.*unavailable|not available for your account|does not support video|video.*erişiminiz yok|video.*kullanılamıyor|gemini apps activity is off/.test(corpus)) {
+  if (/feature.*unavailable|not available for your account|does not support video|video.*erişiminiz yok|video.*kullanılamıyor/.test(corpus)) {
     return { code: 'GEMINI_VIDEO_FEATURE_UNAVAILABLE', state: CAPABILITY_STATES.FEATURE_UNAVAILABLE };
   }
   if (/sign in|oturum aç|auth|required|session expired/.test(corpus)) {

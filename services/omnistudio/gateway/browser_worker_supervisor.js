@@ -78,6 +78,8 @@ class BrowserWorkerSupervisor extends EventEmitter {
       id,
       provider: config.provider,
       accountId: config.accountId,
+      canonicalAccountId: config.canonicalAccountId ? String(config.canonicalAccountId).toLowerCase().trim() : null,
+      aliases: Array.isArray(config.aliases) ? config.aliases : [],
       profileDir: config.profileDir,
       cdpPort: Number(config.cdpPort),
       launchUrl: config.launchUrl || 'about:blank',
@@ -105,6 +107,14 @@ class BrowserWorkerSupervisor extends EventEmitter {
     };
     this.workers.set(id, worker);
     return worker;
+  }
+
+  getCanonicalAccountId(worker) {
+    if (worker?.canonicalAccountId) return String(worker.canonicalAccountId).toLowerCase().trim();
+    if (worker?.accountId && worker.accountId.includes('@')) {
+      return String(worker.accountId).toLowerCase().trim();
+    }
+    return worker?.accountId || worker?.id;
   }
 
   start() {
@@ -352,7 +362,7 @@ class BrowserWorkerSupervisor extends EventEmitter {
     const preferred = Array.isArray(preferredIds) && preferredIds.length > 0 ? new Set(preferredIds) : null;
     return [...this.workers.values()]
       .filter(worker => worker.provider === provider)
-      .filter(worker => !preferred || preferred.has(worker.id) || preferred.has(worker.accountId))
+      .filter(worker => !preferred || preferred.has(worker.id) || preferred.has(worker.accountId) || preferred.has(this.getCanonicalAccountId(worker)))
       .filter(worker => !worker.currentJobId && ELIGIBLE_STATES.has(worker.state))
       .sort((a, b) => {
         if (a.readiness === READINESS_STATES.READY && b.readiness !== READINESS_STATES.READY) return -1;
@@ -382,26 +392,27 @@ class BrowserWorkerSupervisor extends EventEmitter {
 
       for (const worker of candidates) {
         if (worker.currentJobId) continue;
+        const canonicalAccount = this.getCanonicalAccountId(worker);
         const leaseToken = crypto.randomUUID();
 
-        // 1. Database-backed distributed lease acquisition
+        // 1. Database-backed distributed lease acquisition protecting (provider, canonical_account)
         const dbLease = await this.leaseStore.acquireLease({
-          provider,
-          accountId: worker.accountId,
+          provider: worker.provider.toUpperCase(),
+          accountId: canonicalAccount,
           workerId: worker.id,
           jobId,
           leaseToken,
         });
 
         if (!dbLease.acquired) {
-          failures.push({ workerId: worker.id, code: 'ACCOUNT_BUSY', message: dbLease.message || 'Account leased by another host' });
+          failures.push({ workerId: worker.id, code: 'ACCOUNT_BUSY', message: dbLease.message || `Account ${canonicalAccount} leased by another host/worker` });
           continue;
         }
 
         const hbTimer = setInterval(() => {
           this.leaseStore.heartbeatLease({
-            provider,
-            accountId: worker.accountId,
+            provider: worker.provider.toUpperCase(),
+            accountId: canonicalAccount,
             leaseToken,
           }).catch(() => {});
         }, this.leaseHeartbeatInterval);
@@ -477,7 +488,9 @@ class BrowserWorkerSupervisor extends EventEmitter {
       acquired: true,
       leaseToken,
       workerId: worker.id,
+      worker,
       accountId: worker.accountId,
+      canonicalAccountId: this.getCanonicalAccountId(worker),
       provider: worker.provider,
       cdpPort: worker.cdpPort,
       profileDir: worker.profileDir,
@@ -529,9 +542,10 @@ class BrowserWorkerSupervisor extends EventEmitter {
       clearInterval(timer);
       this.activeLeaseHeartbeats.delete(leaseToken);
     }
+    const canonicalAccount = this.getCanonicalAccountId(worker);
     await this.leaseStore.releaseLease({
-      provider: worker.provider,
-      accountId: worker.accountId,
+      provider: worker.provider.toUpperCase(),
+      accountId: canonicalAccount,
       leaseToken,
     }).catch(() => {});
   }
@@ -556,28 +570,30 @@ class BrowserWorkerSupervisor extends EventEmitter {
       ownership.last_activity = this.clock();
     }
     await this.cleanupOrphans(worker);
-    this.emit('released', { workerId: worker.id, accountId: worker.accountId, provider: worker.provider });
+    const canonicalAccount = this.getCanonicalAccountId(worker);
+    this.emit('released', { workerId: worker.id, accountId: canonicalAccount, provider: worker.provider });
     return true;
   }
 
   async acquireExternalLease({ provider, accountId, jobId, workerId = null, ttlSeconds = 60 }) {
-    const targetWorkerId = workerId || `${provider}:${accountId}`;
+    const canonicalAccount = String(accountId).toLowerCase().trim();
+    const targetWorkerId = workerId || `${provider}:${canonicalAccount}`;
     const leaseToken = crypto.randomUUID();
     const leaseRes = await this.leaseStore.acquireLease({
-      provider,
-      accountId,
+      provider: provider.toUpperCase(),
+      accountId: canonicalAccount,
       workerId: targetWorkerId,
       jobId,
       leaseToken,
       ttlSeconds,
     });
     if (!leaseRes.acquired) {
-      const error = workerError('ACCOUNT_BUSY', leaseRes.message || `Account ${accountId} is leased by another host`);
+      const error = workerError('ACCOUNT_BUSY', leaseRes.message || `Account ${canonicalAccount} is leased by another host`);
       error.currentLeaseToken = leaseRes.currentLeaseToken;
       throw error;
     }
 
-    const worker = this.workers.get(targetWorkerId) || this.workers.get(`${provider}-${accountId}`) || this.workers.get('flow-primary');
+    const worker = this.workers.get(targetWorkerId) || this.workers.get(`${provider}-${canonicalAccount}`) || this.workers.get('flow-primary');
     if (worker) {
       worker.currentJobId = jobId;
       worker.leaseToken = leaseToken;
@@ -588,8 +604,8 @@ class BrowserWorkerSupervisor extends EventEmitter {
 
     const hbTimer = setInterval(() => {
       this.leaseStore.heartbeatLease({
-        provider,
-        accountId,
+        provider: provider.toUpperCase(),
+        accountId: canonicalAccount,
         leaseToken,
         ttlSeconds,
       }).catch(() => {});
@@ -600,8 +616,8 @@ class BrowserWorkerSupervisor extends EventEmitter {
     return {
       acquired: true,
       leaseToken,
-      provider,
-      accountId,
+      provider: provider.toUpperCase(),
+      accountId: canonicalAccount,
       jobId,
       workerId: targetWorkerId,
       expiresAt: leaseRes.expiresAt,
@@ -609,19 +625,20 @@ class BrowserWorkerSupervisor extends EventEmitter {
   }
 
   async releaseExternalLease({ provider, accountId, leaseToken, outcome = {} }) {
+    const canonicalAccount = String(accountId).toLowerCase().trim();
     const timer = this.activeLeaseHeartbeats.get(leaseToken);
     if (timer) {
       clearInterval(timer);
       this.activeLeaseHeartbeats.delete(leaseToken);
     }
     await this.leaseStore.releaseLease({
-      provider,
-      accountId,
+      provider: provider.toUpperCase(),
+      accountId: canonicalAccount,
       leaseToken,
     }).catch(() => {});
 
-    const targetWorkerId = `${provider}:${accountId}`;
-    const worker = this.workers.get(targetWorkerId) || this.workers.get(`${provider}-${accountId}`) || this.workers.get('flow-primary');
+    const targetWorkerId = `${provider}:${canonicalAccount}`;
+    const worker = this.workers.get(targetWorkerId) || this.workers.get(`${provider}-${canonicalAccount}`) || this.workers.get('flow-primary');
     if (worker && worker.leaseToken === leaseToken) {
       worker.currentJobId = null;
       worker.leaseToken = null;
@@ -631,7 +648,7 @@ class BrowserWorkerSupervisor extends EventEmitter {
       if (outcome?.authRequired) worker.state = WORKER_STATES.AUTH_REQUIRED;
       if (outcome?.quotaExhausted) worker.state = WORKER_STATES.QUOTA_EXHAUSTED;
     }
-    this.emit('released', { accountId, provider, leaseToken });
+    this.emit('released', { accountId: canonicalAccount, provider, leaseToken });
     return true;
   }
 
@@ -818,6 +835,7 @@ class BrowserWorkerSupervisor extends EventEmitter {
         state: worker.state,
         readiness: worker.readiness,
         account: worker.accountId,
+        canonical_account: this.getCanonicalAccountId(worker),
         provider: worker.provider,
         current_job_id: worker.currentJobId,
         active_phase: worker.phase,

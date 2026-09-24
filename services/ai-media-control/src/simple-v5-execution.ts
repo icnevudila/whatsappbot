@@ -27,6 +27,7 @@ import {
   type RequestedVideoProvider,
   type VideoGenerationRequest,
 } from './providers/video-provider-router.js'
+import { GenerationWorkspace } from './providers/generation-workspace.js'
 
 type ProviderAsset = VideoGenerationRequest['assets'][number]
 
@@ -331,7 +332,27 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     throw new Error('FINAL_SHA_MISMATCH: independent final output hashes differ')
   }
 
+  const ws = new GenerationWorkspace({ jobId: job.id, attemptId })
+  ws.logEvent('FINISHING', 'Recording final finished video')
+  const { sha256: recordedFinalSha, size: recordedFinalSize } = ws.recordFinalVideo(finishedPath)
+  ws.logEvent('COMPLETED', `final.mp4 written (${recordedFinalSize} bytes, sha256: ${recordedFinalSha})`)
+
   const approved = review.decision === 'PASS' && !presentationNeedsReview
+  ws.writeResult({
+    job_id: job.id,
+    attempt_id: attemptId,
+    status: approved ? 'COMPLETED' : 'NEEDS_REVIEW',
+    selected_provider: generated.selectedProvider,
+    raw_mp4_path: ws.rawMp4Path(),
+    final_mp4_path: ws.finalMp4Path(),
+    raw_sha256: generated.rawOutputSha256,
+    final_sha256: recordedFinalSha,
+    duration_seconds: validation.ffprobe.duration,
+    resolution: `${validation.ffprobe.width}x${validation.ffprobe.height}`,
+    approved,
+    review_decision: review.decision,
+    completed_at: new Date().toISOString(),
+  })
   const { data: outRow } = await supabase.from('ai_media_outputs').insert({
     job_id: job.id,
     org_id: job.org_id,

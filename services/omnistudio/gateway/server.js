@@ -192,11 +192,20 @@ browserSupervisor.registerWorker({
   },
 });
 
+const GEMINI_PORT_CANONICAL_ACCOUNTS = {
+  9223: 'mesajify2@gmail.com',
+  9225: 'mesajify2@gmail.com',
+  9224: 'mesajify1@gmail.com',
+};
+
 for (const port of geminiCdpPorts) {
+  const canonicalAccount = GEMINI_PORT_CANONICAL_ACCOUNTS[port] || `gemini-${port}`;
   browserSupervisor.registerWorker({
     id: `gemini-${port}`,
     provider: 'gemini',
     accountId: `gemini-${port}`,
+    canonicalAccountId: canonicalAccount,
+    aliases: [port === 9223 ? 'gemini-9225' : (port === 9225 ? 'gemini-9223' : null)].filter(Boolean),
     profileDir: profileDirForPort(port),
     cdpPort: port,
     launchUrl: 'https://gemini.google.com/videos',
@@ -204,9 +213,13 @@ for (const port of geminiCdpPorts) {
     sessionValidator: async worker => {
       const { verifyAccount } = require('./generate_video.js');
       const report = await verifyAccount(worker.cdpPort);
-      return report.ok && report.isLoggedIn
-        ? { ok: true }
-        : { ok: false, code: 'AUTH_REQUIRED', message: report.error || 'Gemini persistent login has expired' };
+      if (report.ok && report.isLoggedIn) {
+        if (report.email) {
+          worker.canonicalAccountId = report.email.toLowerCase().trim();
+        }
+        return { ok: true };
+      }
+      return { ok: false, code: 'AUTH_REQUIRED', message: report.error || 'Gemini persistent login has expired' };
     },
     providerReadyValidator: async worker => {
       const { getGeminiVideoCapability } = require('./generate_video.js');
@@ -214,6 +227,9 @@ for (const port of geminiCdpPorts) {
       if (report.state === 'AVAILABLE') return { ok: true };
       if (report.state === 'AUTH_REQUIRED') return { ok: false, code: 'AUTH_REQUIRED', message: report.evidence };
       if (report.state === 'NO_QUOTA') return { ok: false, code: 'QUOTA_EXHAUSTED', message: report.evidence };
+      if (report.state === 'ACCOUNT_CONFIGURATION_REQUIRED') {
+        return { ok: false, code: 'ACCOUNT_CONFIGURATION_REQUIRED', message: report.evidence || 'Gemini Apps activity is disabled on this account' };
+      }
       return { ok: false, code: 'PROVIDER_NOT_READY', message: report.evidence || report.state };
     },
   });
