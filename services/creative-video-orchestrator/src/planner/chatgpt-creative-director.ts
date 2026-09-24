@@ -74,7 +74,7 @@ export class ChatGPTCreativeDirectorV2 {
       format_variant: 'RESULT_FIRST',
       hook_type: 'instant_result_impact',
       story_structure: 'RESULT -> ACTION -> PRODUCT_HERO -> PAYOFF',
-      first_frame: `Aşırı makro yakın çekim: ${product} (${shape}, ${primaryColor}) gövdesi ve nozül ucu çalışma ortamında.`,
+      first_frame: `Aşırı makro yakın çekim: ${product} (${shape}, ${primaryColor}) gövdesi ve form detayları çalışma ortamında.`,
       product_role: 'Uygulamanın merkezindeki ana ürün',
       human_role: 'Çalışmayı yürüten kullanıcı',
       environment: sectorPreset.description || 'Doğal çalışma sahası',
@@ -138,7 +138,7 @@ export class ChatGPTCreativeDirectorV2 {
       format_variant: 'STEP_BY_STEP',
       hook_type: 'macro_product_detail',
       story_structure: 'DETAIL_HOOK -> STEP_PROGRESSION -> SYSTEM_HARMONY -> ELEGANT_CLOSE',
-      first_frame: `Işığın ${product} (${primaryColor}) yüzeyinde akışı ve nozül bileşenlerine sinematik ultra yakın plan.`,
+      first_frame: `Işığın ${product} (${primaryColor}) yüzeyinde akışı ve malzeme dokusuna sinematik ultra yakın plan.`,
       product_role: 'Malzeme ve bileşen detaylarını sergileyen merkez ürün',
       human_role: 'Özenle ekipmanı yönlendiren uygulayıcı',
       environment: sectorPreset.description || 'Detaylı çalışma alanı',
@@ -271,9 +271,12 @@ export class ChatGPTCreativeDirectorV2 {
 
     // Factual extraction: Only use verified facts from context
     const factSnippet = verifiedFacts.length > 0 ? `${verifiedFacts[0].claim} ile ` : ''
+    const isAgri = sector.includes('agri')
+    const actionPhrase = isAgri ? 'bahçenizde ilaçlama adımlarını planlayın' : 'çalışma adımlarını inceleyin'
+    const domainPhrase = isAgri ? `Bahçe ve tarla bakımında ${product}.` : `Doğrudan sahada ${product}.`
 
     if (selectedConcept.format_variant === 'RESULT_FIRST') {
-      masterVoiceOver = `${brand} ile ${product} modelini yakından tanıyın. ${factSnippet}bahçenizde ilaçlama adımlarını planlayın ve detayları keşfedin.`
+      masterVoiceOver = `${brand} ile ${product} modelini yakından tanıyın. ${factSnippet}${actionPhrase} ve detayları keşfedin.`
       speechItems = [
         {
           start_sec: 0.0,
@@ -286,7 +289,7 @@ export class ChatGPTCreativeDirectorV2 {
         {
           start_sec: t1,
           end_sec: t3,
-          exact_text: `${factSnippet}bahçenizde ilaçlama adımlarını planlayın`,
+          exact_text: `${factSnippet}${actionPhrase}`,
           speaker: 'Spiker',
           delivery: 'Net ve doğal bilgilendirici tempo',
           corresponding_visual_beat: 'PRODUCT_PROOF',
@@ -301,12 +304,12 @@ export class ChatGPTCreativeDirectorV2 {
         },
       ]
     } else if (selectedConcept.format_variant === 'HUMAN_ACTION_FIRST') {
-      masterVoiceOver = `Bahçe ve tarla bakımında ${product}. ${factSnippet}uygulama adımlarını doğrudan sahada inceleyin ve kararınızı verin.`
+      masterVoiceOver = `${domainPhrase} ${factSnippet}uygulama adımlarını doğrudan sahada inceleyin ve kararınızı verin.`
       speechItems = [
         {
           start_sec: 0.0,
           end_sec: t1,
-          exact_text: `Bahçe ve tarla bakımında ${product}.`,
+          exact_text: domainPhrase,
           speaker: 'Spiker',
           delivery: 'Doğal saha ve kullanıcı odaklı ton',
           corresponding_visual_beat: 'HOOK',
@@ -454,7 +457,9 @@ export class ChatGPTCreativeDirectorV2 {
           start: b2_end,
           end: b3_end,
           purpose: 'PRODUCT_PROOF',
-          visual_action: `@HeroProduct sahada gerçek bitki yaprakları üzerinde püskürtme uygulamasını sergilerken`,
+          visual_action: isAgri
+            ? `@HeroProduct sahada gerçek bitki yaprakları üzerinde püskürtme uygulamasını sergilerken`
+            : `@HeroProduct sahada gerçek uygulama ortamında işlevini ve malzeme mukavemetini sergilerken`,
           product_action: 'Tam işlevsel çalışma kanıtı',
           actor_action: 'Rahat ve profesyonel kontrol',
           environment: selectedConcept.environment,
