@@ -418,10 +418,72 @@ class OrphanTabReaper {
   }
 }
 
+const CHATGPT_SUBMIT_MIN_INTERVAL_MS = Math.max(100, parseInt(process.env.CHATGPT_SUBMIT_MIN_INTERVAL_MS || '750', 10));
+
+async function acquireSubmitPacing(sessionKey = 'chatgpt_default', minIntervalMs = CHATGPT_SUBMIT_MIN_INTERVAL_MS, pacingDir = REGISTRY_DIR) {
+  try {
+    if (!fs.existsSync(pacingDir)) fs.mkdirSync(pacingDir, { recursive: true });
+  } catch (_) {}
+
+  const safeKey = String(sessionKey).replace(/[^a-zA-Z0-9_-]/g, '_');
+  const pacingFile = path.join(pacingDir, `submit_pacing_${safeKey}.json`);
+  const lockFile = path.join(pacingDir, `submit_pacing_${safeKey}.lock`);
+
+  const start = Date.now();
+  while (Date.now() - start < 30000) {
+    try {
+      if (fs.existsSync(lockFile)) {
+        const stat = fs.statSync(lockFile);
+        if (Date.now() - stat.mtimeMs > 3000) {
+          try { fs.unlinkSync(lockFile); } catch (_) {}
+        }
+      }
+    } catch (_) {}
+
+    let fd = null;
+    try {
+      fd = fs.openSync(lockFile, 'wx');
+      let lastSubmitAt = 0;
+      try {
+        if (fs.existsSync(pacingFile)) {
+          const content = JSON.parse(fs.readFileSync(pacingFile, 'utf8'));
+          lastSubmitAt = content.submittedAt || 0;
+        }
+      } catch (_) {}
+
+      const now = Date.now();
+      const elapsed = now - lastSubmitAt;
+      if (elapsed < minIntervalMs) {
+        const waitNeeded = minIntervalMs - elapsed;
+        const nextSubmitAt = now + waitNeeded;
+        fs.writeFileSync(pacingFile, JSON.stringify({ submittedAt: nextSubmitAt }));
+        try { fs.closeSync(fd); } catch (_) {}
+        try { fs.unlinkSync(lockFile); } catch (_) {}
+        await new Promise(r => setTimeout(r, waitNeeded));
+        return { waitedMs: waitNeeded, nextSubmitAt };
+      }
+
+      fs.writeFileSync(pacingFile, JSON.stringify({ submittedAt: now }));
+      try { fs.closeSync(fd); } catch (_) {}
+      try { fs.unlinkSync(lockFile); } catch (_) {}
+      return { waitedMs: 0, nextSubmitAt: now };
+    } catch (e) {
+      if (fd !== null) {
+        try { fs.closeSync(fd); } catch (_) {}
+      }
+      await new Promise(r => setTimeout(r, 40));
+    }
+  }
+  return { waitedMs: 0, nextSubmitAt: Date.now() };
+}
+
 module.exports = {
   TabRegistry,
   OrphanTabReaper,
   TAB_STATES,
   ORPHAN_TAB_MIN_AGE_MS,
   REAPER_COOLDOWN_MS,
+  CHATGPT_SUBMIT_MIN_INTERVAL_MS,
+  acquireSubmitPacing,
 };
+

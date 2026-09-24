@@ -20,7 +20,7 @@ const {
   setCompanyChat,
   renameChatToTitle
 } = require('./chat_manager.js');
-const { OrphanTabReaper } = require('./orphan_tab_reaper.js');
+const { OrphanTabReaper, acquireSubmitPacing } = require('./orphan_tab_reaper.js');
 
 const reaper = new OrphanTabReaper();
 let cachedTabId = null;
@@ -28,9 +28,18 @@ let cachedTabId = null;
 
 function isMemorySafeForWork() {
   if (WORKER_ID === 'chatgpt-1') return true; // Ana worker her zaman çalışır
+  try {
+    if (fs.existsSync('/proc/meminfo')) {
+      const content = fs.readFileSync('/proc/meminfo', 'utf8');
+      const match = content.match(/MemAvailable:\s+(\d+)\s+kB/);
+      if (match) {
+        const availMb = parseInt(match[1], 10) / 1024;
+        return availMb >= 250;
+      }
+    }
+  } catch (_) {}
   const freeMb = os.freemem() / (1024 * 1024);
-  // 2. worker en az 650 MB boş RAM varsa iş alır
-  return freeMb >= 650;
+  return freeMb >= 250;
 }
 
 console.log(`[CDP Worker: ${WORKER_ID}] OmniStudio Otonom Tarayıcı Motoru Başlatılıyor...`);
@@ -301,10 +310,14 @@ async function injectPromptAndSend(cdp, promptText) {
   const startedAt = Date.now();
   let promptInsertedAt = null;
   try {
-    // 0. Varsa engelleyici modalları temizle
+    // 0. Session-scoped submission pacing to avoid ChatGPT web concurrent submit rate-limits
+    const sessionKey = `chatgpt_${String(CDP_HTTP).replace(/[^0-9]/g, '') || '9222'}`;
+    await acquireSubmitPacing(sessionKey);
+
+    // 1. Varsa engelleyici modalları temizle
     await dismissAnyModals(cdp);
 
-    // 1. Textarea'yı temizle, odaklan ve form GET navigasyonunu önle
+    // 2. Textarea'yı temizle, odaklan ve form GET navigasyonunu önle
     await cdp.send('Runtime.evaluate', {
       expression: `(() => {
         const form = document.querySelector('form');

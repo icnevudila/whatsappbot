@@ -1,6 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { TabRegistry, OrphanTabReaper, TAB_STATES } = require('../orphan_tab_reaper.js');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+const { TabRegistry, OrphanTabReaper, TAB_STATES, acquireSubmitPacing } = require('../orphan_tab_reaper.js');
 
 test('TabRegistry registers and tracks worker canonical ownership', () => {
   const registry = new TabRegistry();
@@ -183,3 +186,35 @@ test('OrphanTabReaper: sweep executes PUT /json/close on candidates and emits te
   assert.equal(registry.tabs.has('tab-orphan'), false);
   assert.equal(registry.isCanonicalForAnyWorker('tab-canonical'), true);
 });
+
+test('acquireSubmitPacing: enforces session-scoped minimum interval between submissions without blind sleeps', async () => {
+  const tmpDir = path.join(os.tmpdir(), `test_pacing_${Date.now()}`);
+  const sessionKey = 'session_test_9222';
+  const minInterval = 200; // 200ms test pacing
+
+  // 1. First submission should have zero wait
+  const t0 = Date.now();
+  const first = await acquireSubmitPacing(sessionKey, minInterval, tmpDir);
+  const durFirst = Date.now() - t0;
+  assert.equal(first.waitedMs, 0);
+  assert.ok(durFirst < 100);
+
+  // 2. Immediate second submission must wait until minInterval has elapsed
+  const t1 = Date.now();
+  const second = await acquireSubmitPacing(sessionKey, minInterval, tmpDir);
+  const durSecond = Date.now() - t1;
+  assert.ok(second.waitedMs > 0);
+  assert.ok(durSecond >= 150);
+
+  // 3. Independent session key must not be blocked
+  const otherSessionKey = 'session_test_9223';
+  const t2 = Date.now();
+  const other = await acquireSubmitPacing(otherSessionKey, minInterval, tmpDir);
+  const durOther = Date.now() - t2;
+  assert.equal(other.waitedMs, 0);
+  assert.ok(durOther < 100);
+
+  // Clean up
+  try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (_) {}
+});
+
