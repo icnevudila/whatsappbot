@@ -35,7 +35,7 @@ export class VeoPromptCompiler {
 
     // Build beat-by-beat chronological camera & action sequence
     const beatSequence = beats.map((b, idx) => {
-      return `[Beat ${idx + 1} (${b.start.toFixed(1)}s-${b.end.toFixed(1)}s)]: Camera: ${b.camera}. Action: ${b.visual_action}. Product State: ${b.product_action}. Actor Action: ${b.actor_action}. Lighting: ${b.lighting}. SFX Ambience: ${b.sfx}, ${b.ambience}.`
+      return `[Beat ${idx + 1} (${b.start.toFixed(1)}s-${b.end.toFixed(1)}s)]: ${b.camera}. ${b.visual_action}.`
     }).join(' ')
 
     const primaryHandles = plan.canonical_asset_handles.length > 0
@@ -48,64 +48,32 @@ export class VeoPromptCompiler {
     const hasBrandLogo = plan.canonical_asset_handles && plan.canonical_asset_handles.includes('@BrandLogo')
     if (diegeticItem || plan.logo_strategy.includes('DIEGETIC') || hasBrandLogo) {
       const surface = diegeticItem?.surface_type || 'physical product surface'
-      diegeticBrandingDirective = `[CANONICAL BRAND IDENTITY PRESERVATION]: Preserve the canonical brand identity from @BrandLogo when it is physically present on @HeroProduct (${surface}). The physical product branding must remain faithful to the supplied reference logo in shape, spelling, and proportions. Do not create additional floating logos, watermarks, subtitles, lower thirds, or synthetic end-card graphics.`
+      diegeticBrandingDirective = `[BRANDING]: Preserve canonical identity from @BrandLogo on @HeroProduct (${surface}). Faithful proportions, zero floating watermarks.`
     }
 
     // Audio & Spoken Turkish dialogue section
     let audioDirective = ''
     if (plan.audio_plan && plan.audio_plan.speech_mode === 'native_veo_dialogue') {
-      const speechTimeline = plan.speech_timeline || plan.audio_plan.speech_timeline
       const fullSpokenScript = plan.master_spoken_script || plan.voiceover_script || plan.audio_plan.exact_spoken_lines[0]?.text || ''
-      const ambient = plan.audio_plan.ambient_audio_description || 'soft natural ambience'
-      const sfx = plan.audio_plan.sound_effects_description || 'subtle equipment operating sound'
-
-      if (speechTimeline && speechTimeline.length > 0) {
-        const timelineStr = speechTimeline.map(item => `[${item.start_sec.toFixed(1)}s-${item.end_sec.toFixed(1)}s (${item.speaker})]: "${item.exact_text}"`).join(' ')
-        audioDirective = [
-          `[AUDIO AND CONTINUOUS SPOKEN DIALOGUE (0-8s)]:`,
-          `The spoken language is Turkish (${plan.audio_plan.spoken_language}).`,
-          `Exact spoken line: "${fullSpokenScript}".`,
-          `Continuous dialogue across entire duration: ${timelineStr}.`,
-          `Speak this sentence exactly in Turkish. Do not translate it. Do not paraphrase it. Do not add any other spoken words.`,
-          `Natural Turkish commercial pronunciation, confident and continuous delivery without dead air silence.`,
-          `Ambient audio: ${ambient}.`,
-          `Sound effects: ${sfx}.`,
-        ].join(' ')
-      } else {
-        const line = plan.audio_plan.exact_spoken_lines[0]
-        const speaker = line?.speaker || 'actor'
-        const text = line?.text || ''
-        const delivery = line?.delivery_style || 'Natural Turkish pronunciation, confident commercial delivery'
-
-        audioDirective = [
-          `[AUDIO AND SPOKEN DIALOGUE]:`,
-          `The spoken language is Turkish (${plan.audio_plan.spoken_language}).`,
-          `The ${speaker} speaks naturally in Turkish, synchronized with the action.`,
-          `Exact spoken line: "${text}".`,
-          `Speak this sentence exactly in Turkish. Do not translate it. Do not paraphrase it. Do not add any other spoken words.`,
-          `${delivery}.`,
-          `Ambient audio: ${ambient}.`,
-          `Sound effects: ${sfx}.`,
-        ].join(' ')
-      }
+      const ambient = plan.audio_plan.ambient_audio_description || 'natural ambience'
+      audioDirective = `[AUDIO]: Turkish spoken dialogue: "${fullSpokenScript}". Confident natural delivery. Ambience: ${ambient}.`
     }
 
     // Material physics & motion constraints dynamically extracted from beats
-    const physicsCues = Array.from(new Set(beats.flatMap(b => b.physics_constraints || []))).filter(Boolean).join(', ')
+    const physicsCues = Array.from(new Set(beats.flatMap(b => b.physics_constraints || []))).filter(Boolean).slice(0, 3).join(', ')
     const materialPhysicsDirective = physicsCues
-      ? `[MATERIAL PHYSICS & MOTION]: Ensure realistic gravity, genuine physical material textures, correct human grip, and realistic motion: ${physicsCues}.`
-      : `[MATERIAL PHYSICS & MOTION]: Ensure realistic gravity, authentic physical textures, correct ergonomics and natural human anatomy.`
+      ? `[PHYSICS]: Natural gravity and motion: ${physicsCues}.`
+      : `[PHYSICS]: Natural gravity, genuine textures, and human ergonomics.`
 
     // Formulate structured prompt honoring professional film grammar
     const cinematicPrompt = [
-      `[SUBJECT LOCK & CANONICAL REFS]: Preserve ${primaryHandles} identity, geometry, proportions, colors, surface finishes, and mechanical components exactly as shown in authoritative reference assets. Product must not recolor, morph, or redesign.`,
+      `[SUBJECT LOCK]: Preserve ${primaryHandles} geometry, colors, and authentic appearance exactly as in references.`,
       `[ENVIRONMENT]: Authentic ${beats[0]?.environment || 'commercial setting'}.`,
-      `[CINEMATIC SEQUENCE (0-8s)]: ${beatSequence}`,
+      `[SEQUENCE (0-8s)]: ${beatSequence}`,
       materialPhysicsDirective,
-      `[TIMING & CONTINUITY]: Seamless micro-story progression across 8 seconds.`,
       diegeticBrandingDirective,
       audioDirective,
-      `[CRITICAL VISIBLE ON-SCREEN NEGATIVE DIRECTIVE]: NO visible subtitles. NO generated on-screen text. NO generated lower thirds. NO floating logo. NO generated brand end card. NO watermark. NO generated CTA. NO generated price. NO generated phone number. NO generated website URL. NO campaign typography. NO artificial logo overlays. NO INVENTED LOGO. NO FAKE LOGO. NO ALTERED LOGO. NO EXTRA BRAND MARKS. NO product redesign. Real branding physically present or printed on the canonical reference product is strictly preserved, but zero non-diegetic overlay graphics must be generated. All titles, subtitles, corner logos, and end cards are strictly composed in post-production.`,
+      `[NEGATIVE DIRECTIVE]: Strictly NO on-screen subtitles, lower thirds, artificial typography, or floating synthetic logos. All graphical overlays are applied in post-production.`,
     ].filter(Boolean).join(' ')
 
     const negativePrompt = Array.from(
