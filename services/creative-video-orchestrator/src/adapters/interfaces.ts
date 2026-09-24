@@ -30,6 +30,7 @@ export interface GenerateRequest {
   org_id: string
   account_id: string
   prompt: string
+  approved_dialogue?: string
   aspect_ratio: string
   model: string
   duration: number

@@ -88,9 +88,9 @@ export class SimpleV5BriefNormalizer {
     }
 
     const durationSeconds = snapshot.requested_duration || 8
-    const aspectRatio = (snapshot.aspect_ratio === '16:9' || snapshot.aspect_ratio === '9:16')
-      ? snapshot.aspect_ratio
-      : '16:9'
+    // SIMPLE_V5_HYBRID is an explicitly vertical short-ad mode. Never inherit a
+    // landscape request/default from CURRENT or from an older persisted draft.
+    const aspectRatio = '9:16' as const
 
     const brief: SimpleV5Brief = {
       goal: snapshot.campaign.objective || 'Ürün tanıtımı',

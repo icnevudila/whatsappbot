@@ -127,6 +127,12 @@ export async function extractQaFrames(
   }
 }
 
+export function matchesExpectedAspect(width: number, height: number, expectedAspect: string): boolean {
+  if (expectedAspect === '9:16') return height > width
+  if (expectedAspect === '16:9') return width > height
+  return false
+}
+
 /**
  * Run the complete validation pipeline on a video output.
  */
@@ -146,15 +152,8 @@ export async function validateOutput(
   const sha256 = await computeSha256(filePath)
 
   // 3. Aspect ratio check
-  let aspectRatioOk = true
-  if (expectedAspect === '9:16') {
-    // 9:16 means height > width (portrait) — accept both 720x1280 and 1080x1920
-    aspectRatioOk = ffprobe.height > ffprobe.width
-    if (!aspectRatioOk) errors.push(`Expected 9:16 portrait but got ${ffprobe.width}x${ffprobe.height}`)
-  } else if (expectedAspect === '16:9') {
-    aspectRatioOk = ffprobe.width > ffprobe.height
-    if (!aspectRatioOk) errors.push(`Expected 16:9 landscape but got ${ffprobe.width}x${ffprobe.height}`)
-  }
+  const aspectRatioOk = matchesExpectedAspect(ffprobe.width, ffprobe.height, expectedAspect)
+  if (!aspectRatioOk) errors.push(`Expected ${expectedAspect} but got ${ffprobe.width}x${ffprobe.height}`)
 
   // 4. Duration check
   const durationOk = ffprobe.duration >= expectedDurationMin && ffprobe.duration <= expectedDurationMax

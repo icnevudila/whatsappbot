@@ -4,8 +4,13 @@ import {
   ChatGPTCreativeDirectorV2,
   VeoPromptCompiler,
   SimpleV5BriefNormalizer,
-  SimpleV5PromptCompiler,
+  GeminiVideoPromptCompiler,
+  FlowVeoPromptCompiler,
 } from '../services/creative-video-orchestrator/dist/index.js'
+import {
+  buildFlowVeoProviderPayload,
+  buildGeminiNativeProviderPayload,
+} from '../services/ai-media-control/dist/providers/real-video-providers.js'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 
@@ -48,7 +53,7 @@ export async function runComparison() {
     },
     verified_claims: ['Standart yapı tuğlası'],
     requested_duration: 8,
-    aspect_ratio: '16:9',
+    aspect_ratio: '9:16',
     output_type: 'SHORT_VIDEO',
   }
 
@@ -103,7 +108,7 @@ export async function runComparison() {
       user_style_preference: snapshot.campaign.user_style_preference,
       target_platform: 'reels_tiktok_shorts',
       duration: 8,
-      aspect_ratio: '16:9',
+      aspect_ratio: '9:16',
       language: 'tr',
       verified_cta: snapshot.campaign.cta,
       subtitle_mode: 'auto',
@@ -128,7 +133,29 @@ export async function runComparison() {
   // 2. SIMPLE_V5_HYBRID PIPELINE GENERATION
   // -------------------------------------------------------------
   const { brief, shotPlan } = SimpleV5BriefNormalizer.normalize(snapshot)
-  const simpleCompiled = SimpleV5PromptCompiler.compile(brief, shotPlan)
+  const geminiCompiled = GeminiVideoPromptCompiler.compile(brief, shotPlan)
+  const flowCompiled = FlowVeoPromptCompiler.compile(brief, shotPlan)
+  const geminiPrompt = `${geminiCompiled.cinematicPrompt}\n[SHORT NEGATIVE LIST]: ${geminiCompiled.negativePrompt}`
+  const flowPrompt = `${flowCompiled.cinematicPrompt}\n[SHORT NEGATIVE LIST]: ${flowCompiled.negativePrompt}`
+  const providerRequest = {
+    jobId: 'job_simple_v5_dry_run',
+    attemptId: 'attempt_dry_run_1',
+    orgId: snapshot.org_id,
+    prompt: geminiPrompt,
+    approvedDialogue: brief.spokenScript,
+    aspectRatio: brief.aspectRatio,
+    durationSeconds: brief.durationSeconds,
+    accountId: 'DRY_RUN_FLOW_ACCOUNT_NOT_USED',
+    assets: attachments.map(asset => ({
+      asset_id: asset.asset_id,
+      org_id: asset.org_id,
+      role: asset.role === 'hero_product' ? 'product' : asset.role,
+      file_path: asset.file_path,
+      sha256: asset.sha256,
+    })),
+  }
+  const geminiProviderPayload = buildGeminiNativeProviderPayload(providerRequest)
+  const flowProviderPayload = buildFlowVeoProviderPayload({ ...providerRequest, prompt: flowPrompt })
 
   // -------------------------------------------------------------
   // 3. COMPARISON METRICS
@@ -147,14 +174,14 @@ export async function runComparison() {
 
   const simpleMetrics = {
     pipeline: 'SIMPLE_V5_HYBRID',
-    charCount: simpleCompiled.metrics.charCount,
-    instructionCount: simpleCompiled.metrics.instructionCount,
-    negativeCount: simpleCompiled.metrics.negativeCount,
-    actionCount: simpleCompiled.metrics.actionCount,
-    locationCount: simpleCompiled.metrics.locationCount,
-    voiceoverWordCount: simpleCompiled.wordCount,
-    voiceoverScript: simpleCompiled.voiceoverScript,
-    llmCallCountBeforeVeo: simpleCompiled.metrics.llmCallCountBeforeVeo,
+    charCount: geminiCompiled.metrics.charCount,
+    instructionCount: geminiCompiled.metrics.instructionCount,
+    negativeCount: geminiCompiled.metrics.negativeCount,
+    actionCount: geminiCompiled.metrics.actionCount,
+    locationCount: geminiCompiled.metrics.locationCount,
+    voiceoverWordCount: geminiCompiled.wordCount,
+    voiceoverScript: geminiCompiled.voiceoverScript,
+    llmCallCountBeforeVeo: geminiCompiled.metrics.llmCallCountBeforeVeo,
     postGenerationReviewerCalls: 1,
     maximumPostGenerationReviewerCalls: 2,
     expectedProviderRouting: 'AUTO -> GEMINI_NATIVE_VIDEO when AVAILABLE; FLOW_VEO only on NO_QUOTA, FEATURE_UNAVAILABLE, or TEMPORARILY_UNAVAILABLE',
@@ -173,7 +200,7 @@ export async function runComparison() {
     simple: {
       normalizedContext: brief,
       creativePlan: shotPlan,
-      voiceover: simpleCompiled.voiceoverScript,
+      voiceover: geminiCompiled.voiceoverScript,
     },
   }, null, 2))
 
@@ -185,9 +212,9 @@ export async function runComparison() {
   console.log('\n----------------------------------------------------------------------\n')
 
   console.log('=== [2] SIMPLE_V5_HYBRID FINAL VEO PROMPT ===')
-  console.log(simpleCompiled.cinematicPrompt)
+  console.log(geminiCompiled.cinematicPrompt)
   console.log('\n=== [2] SIMPLE_V5_HYBRID NEGATIVE PROMPT ===')
-  console.log(simpleCompiled.negativePrompt)
+  console.log(geminiCompiled.negativePrompt)
 
   console.log('\n----------------------------------------------------------------------\n')
 
@@ -264,9 +291,15 @@ export async function runComparison() {
     simpleV5Hybrid: {
       normalizedContext: brief,
       creativePlan: shotPlan,
-      exactProviderPrompt: `${simpleCompiled.cinematicPrompt}\n[SHORT NEGATIVE LIST]: ${simpleCompiled.negativePrompt}`,
-      negativePrompt: simpleCompiled.negativePrompt,
-      voiceover: simpleCompiled.voiceoverScript,
+      aspectRatio: brief.aspectRatio,
+      exactApprovedTurkishDialogue: brief.spokenScript,
+      exactGeminiProviderPrompt: geminiPrompt,
+      exactGeminiProviderPayload: geminiProviderPayload,
+      exactFlowProviderPrompt: flowPrompt,
+      exactFlowProviderPayload: flowProviderPayload,
+      ffprobeExpectedAspectRatio: brief.aspectRatio,
+      negativePrompt: geminiCompiled.negativePrompt,
+      voiceover: geminiCompiled.voiceoverScript,
       metrics: simpleMetrics,
     },
   }
@@ -274,7 +307,7 @@ export async function runComparison() {
   writeFileSync(artifactPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8')
   console.log(`\nDry-run artifact: ${artifactPath}`)
 
-  return { currentCompiled, simpleCompiled, currentMetrics, simpleMetrics, artifactPath }
+  return { currentCompiled, geminiCompiled, flowCompiled, currentMetrics, simpleMetrics, artifactPath }
 }
 
 if (process.argv[1]?.endsWith('compare_current_vs_simple_v5.mjs')) {

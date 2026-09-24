@@ -17,7 +17,7 @@ export interface SimpleV5Brief {
   spokenScript: string
   spokenWordCount: number
   verifiedFacts: string[]
-  aspectRatio: '9:16' | '16:9'
+  aspectRatio: '9:16'
   durationSeconds: number
 }
 

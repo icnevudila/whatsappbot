@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-24T17:36:06.222Z",
+  "generatedAt": "2026-09-24T17:48:14.438Z",
   "paidGenerationInvoked": false,
   "current": {
     "normalizedContext": {
@@ -48,7 +48,7 @@
         "user_style_preference": "FAST_SALES",
         "target_platform": "reels_tiktok_shorts",
         "duration": 8,
-        "aspect_ratio": "16:9",
+        "aspect_ratio": "9:16",
         "language": "tr",
         "verified_cta": "Ayvazoğlu İnşaat ile Güçlü Temeller",
         "subtitle_mode": "auto"
@@ -92,7 +92,7 @@
       ]
     },
     "creativePlan": {
-      "plan_id": "plan_job_curr_1790271366209",
+      "plan_id": "plan_job_curr_1790272094430",
       "brand_name": "Ayvazoğlu İnşaat",
       "ad_format": "PERFORMANCE_DEMO",
       "selected_ad_format": "PERFORMANCE_DEMO",
@@ -374,7 +374,7 @@
       "verifiedFacts": [
         "Standart yapı tuğlası"
       ],
-      "aspectRatio": "16:9",
+      "aspectRatio": "9:16",
       "durationSeconds": 8
     },
     "creativePlan": {
@@ -394,12 +394,85 @@
         "resolution": "Sabit son kadraj ve temiz alan"
       }
     },
-    "exactProviderPrompt": "[FORMAT]: 8s commercial video, 16:9 format.\n[SINGLE CONCEPT]: Ayvazoğlu İnşaat bünyesindeki Ayvazoğlu Tuğla ürününün referansa sadık tek bir tanıtım anı.\n[HERO PRODUCT]: Preserve @HeroProduct geometry, material texture, and colors exactly as shown in authoritative reference assets. NO INVENTED PHYSICAL BRANDING.\n[ONE LOCATION]: Otantik ticari şantiye ve yapı lojistiği sahası, doğal sabah ışığı.\n[SHOT 1 (0.0-2.2s)]: Dinamik açılış kadrajında Ayvazoğlu Tuğla, Otantik ticari şantiye ve yapı lojistiği sahası içinde net olarak tanıtılır.\n[SHOT 2 (2.2-5.8s)]: Ayvazoğlu Tuğla ürününün referanstaki biçimi korunarak tek bir gerçek kullanım anında gösterilmesi. Gerçek malzeme fiziği ve pürüzsüz çalışma akışı.\n[SHOT 3 (5.8-8.0s)]: Ayvazoğlu Tuğla sahnede merkezde, sabit ve temiz bir son kadrajda gösterilir.\n[CAMERA & PHYSICS]: sabit odak ve akıcı endüstriyel takip. Natural gravity, authentic material weight and realistic movement.\n[AUDIO]: Spoken language: Turkish (tr-TR).\nDeliver the approved dialogue naturally in Turkish.\nNo English narration.\nNo translation to English.\nSpeak the approved Turkish line exactly once.\nApproved Turkish line: \"Ayvazoğlu İnşaat, Ayvazoğlu Tuğla ürününü bu kısa tanıtımda gerçek çalışma ortamında gösteriyor.\"\nNatural ambient foley.\n[RAW TEXT POLICY]: Clean commercial footage, no on-screen text, no synthetic titles.\n[SHORT NEGATIVE LIST]: duplicate subject, duplicate product, altered product geometry, incorrect product color, warped packaging, warped logo, gibberish typography, floating graphics, holographic interface, unmotivated location change, identity drift, extra fingers, deformed hands, watermark, on-screen subtitles, English speech, English narration, carved or stamped logo on brick",
+    "aspectRatio": "9:16",
+    "exactApprovedTurkishDialogue": "Ayvazoğlu İnşaat, Ayvazoğlu Tuğla ürününü bu kısa tanıtımda gerçek çalışma ortamında gösteriyor.",
+    "exactGeminiProviderPrompt": "[FORMAT]: 8.0-second vertical commercial video, 9:16 aspect ratio.\n[SINGLE CONCEPT]: Ayvazoğlu İnşaat bünyesindeki Ayvazoğlu Tuğla ürününün referansa sadık tek bir tanıtım anı.\n[HERO PRODUCT]: Preserve @HeroProduct geometry, material texture, and colors exactly as shown in authoritative reference assets. NO INVENTED PHYSICAL BRANDING.\n[ONE LOCATION]: Otantik ticari şantiye ve yapı lojistiği sahası, doğal sabah ışığı.\n[SHOT 1 (0.0-2.2s)]: Dinamik açılış kadrajında Ayvazoğlu Tuğla, Otantik ticari şantiye ve yapı lojistiği sahası içinde net olarak tanıtılır.\n[SHOT 2 (2.2-5.8s)]: Ayvazoğlu Tuğla ürününün referanstaki biçimi korunarak tek bir gerçek kullanım anında gösterilmesi. Gerçek malzeme fiziği ve pürüzsüz çalışma akışı.\n[SHOT 3 (5.8-8.0s)]: Ayvazoğlu Tuğla sahnede merkezde, sabit ve temiz bir son kadrajda gösterilir.\n[CAMERA & PHYSICS]: sabit odak ve akıcı endüstriyel takip. Natural gravity, authentic material weight and realistic movement.\n[AUDIO]: Spoken language: Turkish (tr-TR).\nApproved dialogue: \"Ayvazoğlu İnşaat, Ayvazoğlu Tuğla ürününü bu kısa tanıtımda gerçek çalışma ortamında gösteriyor.\"\nSpeak exactly this dialogue once, naturally in Turkish.\nNo English narration.\nNo translation.\nNatural ambient foley.\n[RAW TEXT POLICY]: Clean commercial footage, no on-screen text, no synthetic titles.\n[SHORT NEGATIVE LIST]: duplicate subject, duplicate product, altered product geometry, incorrect product color, warped packaging, warped logo, gibberish typography, floating graphics, holographic interface, unmotivated location change, identity drift, extra fingers, deformed hands, watermark, on-screen subtitles, English speech, English narration, carved or stamped logo on brick",
+    "exactGeminiProviderPayload": {
+      "prompt": "[FORMAT]: 8.0-second vertical commercial video, 9:16 aspect ratio.\n[SINGLE CONCEPT]: Ayvazoğlu İnşaat bünyesindeki Ayvazoğlu Tuğla ürününün referansa sadık tek bir tanıtım anı.\n[HERO PRODUCT]: Preserve @HeroProduct geometry, material texture, and colors exactly as shown in authoritative reference assets. NO INVENTED PHYSICAL BRANDING.\n[ONE LOCATION]: Otantik ticari şantiye ve yapı lojistiği sahası, doğal sabah ışığı.\n[SHOT 1 (0.0-2.2s)]: Dinamik açılış kadrajında Ayvazoğlu Tuğla, Otantik ticari şantiye ve yapı lojistiği sahası içinde net olarak tanıtılır.\n[SHOT 2 (2.2-5.8s)]: Ayvazoğlu Tuğla ürününün referanstaki biçimi korunarak tek bir gerçek kullanım anında gösterilmesi. Gerçek malzeme fiziği ve pürüzsüz çalışma akışı.\n[SHOT 3 (5.8-8.0s)]: Ayvazoğlu Tuğla sahnede merkezde, sabit ve temiz bir son kadrajda gösterilir.\n[CAMERA & PHYSICS]: sabit odak ve akıcı endüstriyel takip. Natural gravity, authentic material weight and realistic movement.\n[AUDIO]: Spoken language: Turkish (tr-TR).\nApproved dialogue: \"Ayvazoğlu İnşaat, Ayvazoğlu Tuğla ürününü bu kısa tanıtımda gerçek çalışma ortamında gösteriyor.\"\nSpeak exactly this dialogue once, naturally in Turkish.\nNo English narration.\nNo translation.\nNatural ambient foley.\n[RAW TEXT POLICY]: Clean commercial footage, no on-screen text, no synthetic titles.\n[SHORT NEGATIVE LIST]: duplicate subject, duplicate product, altered product geometry, incorrect product color, warped packaging, warped logo, gibberish typography, floating graphics, holographic interface, unmotivated location change, identity drift, extra fingers, deformed hands, watermark, on-screen subtitles, English speech, English narration, carved or stamped logo on brick",
+      "approvedDialogue": "Ayvazoğlu İnşaat, Ayvazoğlu Tuğla ürününü bu kısa tanıtımda gerçek çalışma ortamında gösteriyor.",
+      "voiceoverText": "Ayvazoğlu İnşaat, Ayvazoğlu Tuğla ürününü bu kısa tanıtımda gerçek çalışma ortamında gösteriyor.",
+      "orgId": "4a58b0dd-0931-4901-880a-686457d15010",
+      "jobId": "job_simple_v5_dry_run",
+      "idempotencyKey": "job_simple_v5_dry_run:attempt_dry_run_1:gemini-native",
+      "preferredEngine": "gemini",
+      "engine": "gemini",
+      "disableProviderFallback": true,
+      "subtitles": false,
+      "includeOverlay": false,
+      "aspectRatio": "9:16",
+      "duration": 8,
+      "logoUrl": "/shared/outputs/inputs/4a58b0dd-0931-4901-880a-686457d15010/ayvazoglu_logo_official_transparent.png",
+      "logoSha256": "29f704f4710e4776deb91bf24a51f0f734ce8379e649b68bc28a779d9ef50cc1",
+      "productImageUrl": "/shared/outputs/inputs/4a58b0dd-0931-4901-880a-686457d15010/ayvazoglu_canonical_brick.jpg",
+      "productSha256": "ef1e48809c7f706db6f03459b2378e3cb23346a3378dd97ae92712556720f5c2",
+      "referenceImageUrls": [],
+      "assets": [
+        {
+          "asset_id": "prod_ayvaz_brick_01",
+          "org_id": "4a58b0dd-0931-4901-880a-686457d15010",
+          "role": "product",
+          "file_path": "/shared/outputs/inputs/4a58b0dd-0931-4901-880a-686457d15010/ayvazoglu_canonical_brick.jpg",
+          "sha256": "ef1e48809c7f706db6f03459b2378e3cb23346a3378dd97ae92712556720f5c2"
+        },
+        {
+          "asset_id": "logo_ayvaz_official_01",
+          "org_id": "4a58b0dd-0931-4901-880a-686457d15010",
+          "role": "logo",
+          "file_path": "/shared/outputs/inputs/4a58b0dd-0931-4901-880a-686457d15010/ayvazoglu_logo_official_transparent.png",
+          "sha256": "29f704f4710e4776deb91bf24a51f0f734ce8379e649b68bc28a779d9ef50cc1"
+        }
+      ],
+      "requireMedia": true
+    },
+    "exactFlowProviderPrompt": "[FORMAT]: 8.0-second vertical commercial video, 9:16 aspect ratio.\n[SINGLE CONCEPT]: Ayvazoğlu İnşaat bünyesindeki Ayvazoğlu Tuğla ürününün referansa sadık tek bir tanıtım anı.\n[HERO PRODUCT]: Preserve @HeroProduct geometry, material texture, and colors exactly as shown in authoritative reference assets. NO INVENTED PHYSICAL BRANDING.\n[ONE LOCATION]: Otantik ticari şantiye ve yapı lojistiği sahası, doğal sabah ışığı.\n[SHOT 1 (0.0-2.2s)]: Dinamik açılış kadrajında Ayvazoğlu Tuğla, Otantik ticari şantiye ve yapı lojistiği sahası içinde net olarak tanıtılır.\n[SHOT 2 (2.2-5.8s)]: Ayvazoğlu Tuğla ürününün referanstaki biçimi korunarak tek bir gerçek kullanım anında gösterilmesi. Gerçek malzeme fiziği ve pürüzsüz çalışma akışı.\n[SHOT 3 (5.8-8.0s)]: Ayvazoğlu Tuğla sahnede merkezde, sabit ve temiz bir son kadrajda gösterilir.\n[CAMERA & PHYSICS]: sabit odak ve akıcı endüstriyel takip. Natural gravity, authentic material weight and realistic movement.\n[AUDIO]: Spoken language: Turkish (tr-TR).\nApproved dialogue: \"Ayvazoğlu İnşaat, Ayvazoğlu Tuğla ürününü bu kısa tanıtımda gerçek çalışma ortamında gösteriyor.\"\nSpeak exactly this dialogue once, naturally in Turkish.\nNo English narration.\nNo translation.\nNatural ambient foley.\n[RAW TEXT POLICY]: Clean commercial footage, no on-screen text, no synthetic titles.\n[SHORT NEGATIVE LIST]: duplicate subject, duplicate product, altered product geometry, incorrect product color, warped packaging, warped logo, gibberish typography, floating graphics, holographic interface, unmotivated location change, identity drift, extra fingers, deformed hands, watermark, on-screen subtitles, English speech, English narration, carved or stamped logo on brick",
+    "exactFlowProviderPayload": {
+      "job_id": "job_simple_v5_dry_run",
+      "attempt_id": "attempt_dry_run_1",
+      "org_id": "4a58b0dd-0931-4901-880a-686457d15010",
+      "account_id": "DRY_RUN_FLOW_ACCOUNT_NOT_USED",
+      "flow_project_id": "flow_proj_job_simple_v5_dry_run_attempt_dry_run_1",
+      "prompt": "[FORMAT]: 8.0-second vertical commercial video, 9:16 aspect ratio.\n[SINGLE CONCEPT]: Ayvazoğlu İnşaat bünyesindeki Ayvazoğlu Tuğla ürününün referansa sadık tek bir tanıtım anı.\n[HERO PRODUCT]: Preserve @HeroProduct geometry, material texture, and colors exactly as shown in authoritative reference assets. NO INVENTED PHYSICAL BRANDING.\n[ONE LOCATION]: Otantik ticari şantiye ve yapı lojistiği sahası, doğal sabah ışığı.\n[SHOT 1 (0.0-2.2s)]: Dinamik açılış kadrajında Ayvazoğlu Tuğla, Otantik ticari şantiye ve yapı lojistiği sahası içinde net olarak tanıtılır.\n[SHOT 2 (2.2-5.8s)]: Ayvazoğlu Tuğla ürününün referanstaki biçimi korunarak tek bir gerçek kullanım anında gösterilmesi. Gerçek malzeme fiziği ve pürüzsüz çalışma akışı.\n[SHOT 3 (5.8-8.0s)]: Ayvazoğlu Tuğla sahnede merkezde, sabit ve temiz bir son kadrajda gösterilir.\n[CAMERA & PHYSICS]: sabit odak ve akıcı endüstriyel takip. Natural gravity, authentic material weight and realistic movement.\n[AUDIO]: Spoken language: Turkish (tr-TR).\nApproved dialogue: \"Ayvazoğlu İnşaat, Ayvazoğlu Tuğla ürününü bu kısa tanıtımda gerçek çalışma ortamında gösteriyor.\"\nSpeak exactly this dialogue once, naturally in Turkish.\nNo English narration.\nNo translation.\nNatural ambient foley.\n[RAW TEXT POLICY]: Clean commercial footage, no on-screen text, no synthetic titles.\n[SHORT NEGATIVE LIST]: duplicate subject, duplicate product, altered product geometry, incorrect product color, warped packaging, warped logo, gibberish typography, floating graphics, holographic interface, unmotivated location change, identity drift, extra fingers, deformed hands, watermark, on-screen subtitles, English speech, English narration, carved or stamped logo on brick",
+      "approved_dialogue": "Ayvazoğlu İnşaat, Ayvazoğlu Tuğla ürününü bu kısa tanıtımda gerçek çalışma ortamında gösteriyor.",
+      "aspect_ratio": "9:16",
+      "model": "veo-fast",
+      "duration": 8,
+      "assets": [
+        {
+          "asset_id": "prod_ayvaz_brick_01",
+          "org_id": "4a58b0dd-0931-4901-880a-686457d15010",
+          "role": "product",
+          "file_path": "/shared/outputs/inputs/4a58b0dd-0931-4901-880a-686457d15010/ayvazoglu_canonical_brick.jpg",
+          "sha256": "ef1e48809c7f706db6f03459b2378e3cb23346a3378dd97ae92712556720f5c2"
+        },
+        {
+          "asset_id": "logo_ayvaz_official_01",
+          "org_id": "4a58b0dd-0931-4901-880a-686457d15010",
+          "role": "logo",
+          "file_path": "/shared/outputs/inputs/4a58b0dd-0931-4901-880a-686457d15010/ayvazoglu_logo_official_transparent.png",
+          "sha256": "29f704f4710e4776deb91bf24a51f0f734ce8379e649b68bc28a779d9ef50cc1"
+        }
+      ],
+      "expected_reference_ids": [
+        "prod_ayvaz_brick_01",
+        "logo_ayvaz_official_01"
+      ]
+    },
+    "ffprobeExpectedAspectRatio": "9:16",
     "negativePrompt": "duplicate subject, duplicate product, altered product geometry, incorrect product color, warped packaging, warped logo, gibberish typography, floating graphics, holographic interface, unmotivated location change, identity drift, extra fingers, deformed hands, watermark, on-screen subtitles, English speech, English narration, carved or stamped logo on brick",
     "voiceover": "Ayvazoğlu İnşaat, Ayvazoğlu Tuğla ürününü bu kısa tanıtımda gerçek çalışma ortamında gösteriyor.",
     "metrics": {
       "pipeline": "SIMPLE_V5_HYBRID",
-      "charCount": 1353,
+      "charCount": 1319,
       "instructionCount": 10,
       "negativeCount": 18,
       "actionCount": 1,

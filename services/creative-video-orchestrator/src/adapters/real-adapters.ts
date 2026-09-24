@@ -56,6 +56,7 @@ export class RealHttpGFlowProvider implements IGFlowProvider {
       org_id: req.org_id,
       account_id: req.account_id || 'account-01',
       prompt: req.prompt,
+      approved_dialogue: req.approved_dialogue,
       aspect_ratio: req.aspect_ratio || '9:16',
       model: req.model || 'veo-fast',
       duration: req.duration || 8,

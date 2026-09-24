@@ -30,7 +30,7 @@ export const SIMPLE_V5_STANDARD_NEGATIVES = [
 export class SimpleV5PromptCompiler {
   public static compile(brief: SimpleV5Brief, shotPlan: SimpleV5ShotPlan): SimpleV5CompiledPrompt {
     const sections: string[] = [
-      `[FORMAT]: ${brief.durationSeconds}s commercial video, ${brief.aspectRatio} format.`,
+      `[FORMAT]: ${brief.durationSeconds.toFixed(1)}-second vertical commercial video, 9:16 aspect ratio.`,
       `[SINGLE CONCEPT]: ${brief.primaryIdea}`,
       `[HERO PRODUCT]: Preserve ${brief.heroProductHandle} geometry, material texture, and colors exactly as shown in authoritative reference assets. NO INVENTED PHYSICAL BRANDING.`,
       `[ONE LOCATION]: ${brief.location}, ${brief.lighting}.`,
@@ -39,11 +39,10 @@ export class SimpleV5PromptCompiler {
       `[SHOT 3 (${shotPlan.shot3_close.timing})]: ${shotPlan.shot3_close.description}`,
       `[CAMERA & PHYSICS]: ${brief.cameraMotion}. Natural gravity, authentic material weight and realistic movement.`,
       '[AUDIO]: Spoken language: Turkish (tr-TR).',
-      'Deliver the approved dialogue naturally in Turkish.',
+      `Approved dialogue: "${brief.spokenScript}"`,
+      'Speak exactly this dialogue once, naturally in Turkish.',
       'No English narration.',
-      'No translation to English.',
-      'Speak the approved Turkish line exactly once.',
-      `Approved Turkish line: "${brief.spokenScript}"`,
+      'No translation.',
       'Natural ambient foley.',
       `[RAW TEXT POLICY]: Clean commercial footage, no on-screen text, no synthetic titles.`,
     ]

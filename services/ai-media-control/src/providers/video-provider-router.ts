@@ -33,7 +33,8 @@ export interface VideoGenerationRequest {
   orgId: string
   prompt: string
   providerPrompts?: Partial<Record<SelectedVideoProvider, string>>
-  aspectRatio: string
+  approvedDialogue: string
+  aspectRatio: '9:16'
   durationSeconds: number
   accountId?: string
   assets: Array<{

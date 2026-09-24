@@ -45,9 +45,23 @@ test('SIMPLE_V5_HYBRID compiles one shared factual plan for Gemini and Flow', ()
   assert.equal(gemini.metrics.actionCount, 1)
   assert.equal(gemini.metrics.locationCount, 1)
   assert.equal(gemini.metrics.llmCallCountBeforeVeo, 0)
+  assert.equal(brief.aspectRatio, '9:16')
+  assert.match(gemini.cinematicPrompt, /^\[FORMAT\]: 8\.0-second vertical commercial video, 9:16 aspect ratio\./)
   assert.match(gemini.cinematicPrompt, /Spoken language: Turkish \(tr-TR\)\./)
-  assert.match(gemini.cinematicPrompt, /No translation to English\./)
-  assert.match(gemini.cinematicPrompt, /Speak the approved Turkish line exactly once\./)
+  assert.match(gemini.cinematicPrompt, /Approved dialogue: "Ayvazoğlu İnşaat yapı tuğlasını gerçek çalışma ortamında yakından ve net gösteriyor\."/)
+  assert.match(gemini.cinematicPrompt, /Speak exactly this dialogue once, naturally in Turkish\./)
+  assert.match(gemini.cinematicPrompt, /No translation\./)
+})
+
+test('SIMPLE_V5_HYBRID overrides a legacy 16:9 request with the vertical contract', () => {
+  const legacyLandscape = structuredClone(
+    fixture('Ayvazoğlu İnşaat yapı tuğlasını gerçek çalışma ortamında yakından ve net gösteriyor.')
+  ) as any
+  legacyLandscape.aspect_ratio = '16:9'
+  const { brief, shotPlan } = SimpleV5BriefNormalizer.normalize(legacyLandscape)
+  const compiled = GeminiVideoPromptCompiler.compile(brief, shotPlan)
+  assert.equal(brief.aspectRatio, '9:16')
+  assert.doesNotMatch(compiled.cinematicPrompt, /16:9/)
 })
 
 test('SIMPLE_V5_HYBRID neutral fallback invents no performance claim', () => {

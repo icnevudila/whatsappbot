@@ -216,6 +216,7 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     orgId: job.org_id,
     prompt: geminiPrompt,
     providerPrompts: { GEMINI_NATIVE_VIDEO: geminiPrompt, FLOW_VEO: flowPrompt },
+    approvedDialogue: brief.spokenScript,
     aspectRatio: brief.aspectRatio,
     durationSeconds: brief.durationSeconds,
     accountId,

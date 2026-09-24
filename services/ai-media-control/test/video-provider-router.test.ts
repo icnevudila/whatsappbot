@@ -7,12 +7,21 @@ import {
   type VideoGenerationRequest,
   type VideoProvider,
 } from '../src/providers/video-provider-router.js'
+import {
+  buildFlowVeoProviderPayload,
+  buildGeminiNativeProviderPayload,
+} from '../src/providers/real-video-providers.js'
+import { matchesExpectedAspect } from '../src/validator.js'
+
+const approvedDialogue = 'Ayvazoğlu İnşaat yapı tuğlasını gerçek çalışma ortamında yakından ve net gösteriyor.'
+const exactPrompt = `[FORMAT]: 8.0-second vertical commercial video, 9:16 aspect ratio.\n[AUDIO]: Spoken language: Turkish (tr-TR).\nApproved dialogue: "${approvedDialogue}"\nSpeak exactly this dialogue once, naturally in Turkish.\nNo English narration.\nNo translation.`
 
 const request: VideoGenerationRequest = {
   jobId: 'job-1',
   attemptId: 'attempt-1',
   orgId: 'org-1',
-  prompt: 'compact provider prompt',
+  prompt: exactPrompt,
+  approvedDialogue,
   aspectRatio: '9:16',
   durationSeconds: 8,
   assets: [],
@@ -150,4 +159,37 @@ test('provider-specific syntax is selected without changing the routing plan', a
   })
   assert.equal(seen.gemini, 'common facts; Gemini syntax')
   assert.equal(seen.flow, undefined)
+})
+
+test('real Gemini and Flow provider payloads preserve vertical format and exact locked dialogue', () => {
+  const assets = [{
+    asset_id: 'product-1',
+    org_id: 'org-1',
+    role: 'product',
+    file_path: '/locked/product.png',
+    sha256: 'c'.repeat(64),
+  }]
+  const providerRequest = { ...request, accountId: 'flow-1', assets }
+  const gemini = buildGeminiNativeProviderPayload(providerRequest)
+  const flow = buildFlowVeoProviderPayload(providerRequest)
+
+  assert.equal(gemini.aspectRatio, '9:16')
+  assert.equal(gemini.approvedDialogue, approvedDialogue)
+  assert.equal(gemini.voiceoverText, approvedDialogue)
+  assert.equal(gemini.prompt, exactPrompt)
+  assert.equal(flow.aspect_ratio, '9:16')
+  assert.equal(flow.approved_dialogue, approvedDialogue)
+  assert.equal(flow.prompt, exactPrompt)
+})
+
+test('real provider payload builders fail closed on a missing dialogue lock', () => {
+  assert.throws(
+    () => buildGeminiNativeProviderPayload({ ...request, prompt: '[FORMAT]: 8.0-second vertical commercial video, 9:16 aspect ratio.' }),
+    /exact locked approved dialogue/
+  )
+})
+
+test('SIMPLE ffprobe expectation accepts portrait output and rejects landscape output', () => {
+  assert.equal(matchesExpectedAspect(1080, 1920, request.aspectRatio), true)
+  assert.equal(matchesExpectedAspect(1920, 1080, request.aspectRatio), false)
 })

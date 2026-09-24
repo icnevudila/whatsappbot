@@ -26,6 +26,63 @@ function normalizeGatewayMediaUrl(gatewayUrl: string, mediaUrl: string): string 
   }
 }
 
+function assertSimpleProviderContract(request: VideoGenerationRequest): void {
+  if (request.aspectRatio !== '9:16') {
+    throw new ProviderRoutingError('INVALID_JOB', `SIMPLE_V5_HYBRID requires 9:16, received ${request.aspectRatio}`)
+  }
+  const exactDialogue = `Approved dialogue: "${request.approvedDialogue}"`
+  if (!request.approvedDialogue.trim() || !request.prompt.includes(exactDialogue)) {
+    throw new ProviderRoutingError('INVALID_JOB', 'Provider prompt does not contain the exact locked approved dialogue')
+  }
+}
+
+export function buildGeminiNativeProviderPayload(request: VideoGenerationRequest) {
+  assertSimpleProviderContract(request)
+  const logo = request.assets.find(asset => asset.role === 'logo')
+  const product = request.assets.find(asset => asset.role === 'product')
+  const references = request.assets.filter(asset => asset.role !== 'logo' && asset.role !== 'product')
+  return {
+    prompt: request.prompt,
+    approvedDialogue: request.approvedDialogue,
+    voiceoverText: request.approvedDialogue,
+    orgId: request.orgId,
+    jobId: request.jobId,
+    idempotencyKey: `${request.jobId}:${request.attemptId}:gemini-native`,
+    preferredEngine: 'gemini',
+    engine: 'gemini',
+    disableProviderFallback: true,
+    subtitles: false,
+    includeOverlay: false,
+    aspectRatio: request.aspectRatio,
+    duration: request.durationSeconds,
+    logoUrl: logo?.file_path || null,
+    logoSha256: logo?.sha256 || null,
+    productImageUrl: product?.file_path || null,
+    productSha256: product?.sha256 || null,
+    referenceImageUrls: references.map(asset => ({ url: asset.file_path, role: asset.role })),
+    assets: request.assets,
+    requireMedia: true,
+  }
+}
+
+export function buildFlowVeoProviderPayload(request: VideoGenerationRequest) {
+  assertSimpleProviderContract(request)
+  return {
+    job_id: request.jobId,
+    attempt_id: request.attemptId,
+    org_id: request.orgId,
+    account_id: request.accountId!,
+    flow_project_id: `flow_proj_${request.jobId}_${request.attemptId}`,
+    prompt: request.prompt,
+    approved_dialogue: request.approvedDialogue,
+    aspect_ratio: request.aspectRatio,
+    model: 'veo-fast',
+    duration: request.durationSeconds,
+    assets: request.assets,
+    expected_reference_ids: request.assets.map(asset => asset.asset_id),
+  }
+}
+
 export class OmniStudioGeminiNativeVideoProvider implements VideoProvider {
   readonly provider = 'GEMINI_NATIVE_VIDEO' as const
 
@@ -70,33 +127,11 @@ export class OmniStudioGeminiNativeVideoProvider implements VideoProvider {
   async generate(request: VideoGenerationRequest): Promise<VideoProviderResult> {
     const generationStartedAt = new Date().toISOString()
     const endpoint = `${this.gatewayUrl.replace(/\/$/, '')}/v1/videos/generations`
-    const logo = request.assets.find(asset => asset.role === 'logo')
-    const product = request.assets.find(asset => asset.role === 'product')
-    const references = request.assets.filter(asset => asset.role !== 'logo' && asset.role !== 'product')
 
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt: request.prompt,
-        orgId: request.orgId,
-        jobId: request.jobId,
-        idempotencyKey: `${request.jobId}:${request.attemptId}:gemini-native`,
-        preferredEngine: 'gemini',
-        engine: 'gemini',
-        disableProviderFallback: true,
-        subtitles: false,
-        includeOverlay: false,
-        aspectRatio: request.aspectRatio,
-        duration: request.durationSeconds,
-        logoUrl: logo?.file_path || null,
-        logoSha256: logo?.sha256 || null,
-        productImageUrl: product?.file_path || null,
-        productSha256: product?.sha256 || null,
-        referenceImageUrls: references.map(asset => ({ url: asset.file_path, role: asset.role })),
-        assets: request.assets,
-        requireMedia: true,
-      }),
+      body: JSON.stringify(buildGeminiNativeProviderPayload(request)),
       signal: AbortSignal.timeout(7 * 60_000),
     })
 
@@ -167,19 +202,7 @@ export class FlowVeoVideoProvider implements VideoProvider {
       )
     }
     const generationStartedAt = new Date().toISOString()
-    const result: any = await this.gflow.executeJob({
-      job_id: request.jobId,
-      attempt_id: request.attemptId,
-      org_id: request.orgId,
-      account_id: request.accountId,
-      flow_project_id: `flow_proj_${request.jobId}_${request.attemptId}`,
-      prompt: request.prompt,
-      aspect_ratio: request.aspectRatio,
-      model: 'veo-fast',
-      duration: request.durationSeconds,
-      assets: request.assets,
-      expected_reference_ids: request.assets.map(asset => asset.asset_id),
-    })
+    const result: any = await this.gflow.executeJob(buildFlowVeoProviderPayload(request))
 
     const bytes = statSync(result.output_path).size
     const fileBuffer = await import('node:fs').then(fsModule => fsModule.readFileSync(result.output_path))
