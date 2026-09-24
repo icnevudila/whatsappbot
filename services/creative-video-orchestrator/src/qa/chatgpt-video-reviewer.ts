@@ -15,6 +15,7 @@ export type VideoReviewerFailureCode =
   | 'PRODUCT_COLOR_DRIFT'
   | 'WRONG_SECTOR'
   | 'ENVIRONMENT_MISMATCH'
+  | 'PRODUCT_AFFORDANCE_FAIL'
   | 'OBJECT_INTERSECTION_FAIL'
   | 'IMPOSSIBLE_GRIP_FAIL'
   | 'IMPOSSIBLE_PRODUCT_OPERATION'
@@ -25,12 +26,20 @@ export type VideoReviewerFailureCode =
   | 'NO_CLEAR_PRODUCT_REVEAL'
   | 'NO_PRODUCT_PROOF'
   | 'MINI_FILM_NOT_AD'
+  | 'SOFTWARE_DEMO_MISSING'
+  | 'PRODUCT_METAPHOR_FAIL'
+  | 'FAKE_UI'
   | 'FORMAT_MISMATCH'
   | 'GENERATED_TEXT_FAIL'
   | 'GENERATED_LOGO_OR_TEXT_FAIL'
   | 'NON_DIEGETIC_GENERATED_BRANDING'
+  | 'DIEGETIC_LOGO_MISMATCH'
   | 'FOREIGN_BRAND'
+  | 'TENANT_BRAND_CONTAMINATION'
   | 'LOGO_DISTORTION'
+  | 'DUPLICATE_OUTPUT'
+  | 'NEEDS_ASSET'
+  | 'CANONICAL_LOGO_MISMATCH'
 
 export interface VideoReviewReport {
   decision: VideoReviewerDecision
@@ -81,7 +90,7 @@ export class ChatGPTVideoReviewer {
         '-f', 'rawvideo',
         '-pix_fmt', 'gray',
         'pipe:1',
-      ], { stdio: ['ignore', 'pipe', 'ignore'], timeout: 3000 })
+      ], { stdio: ['ignore', 'pipe', 'ignore'], timeout: 10000 })
 
       if (!raw || raw.length < 1024) return { hasNonDiegeticOverlay: false, reason: '' }
 
@@ -211,7 +220,14 @@ export class ChatGPTVideoReviewer {
 
     for (const frame of sampledFrames) {
       // 1. Explicit frame-level flags
-      if (frame.is_diegetic_product_branding_only) {
+      if (frame.has_diegetic_logo_mismatch) {
+        failureCodes.push('DIEGETIC_LOGO_MISMATCH')
+        failureCodes.push('LOGO_DISTORTION')
+        issues.push(`Kare ${frame.timestamp_sec.toFixed(1)}s: Ürün üzerindeki fiziksel logo deforme olmuş veya yanlış harflerle yazılmış.`)
+        retryDirections.push('Ürün üzerindeki diegetic marka logosunu @BrandLogo kanonik referansına harfiyen sadık kalarak koruyun.')
+      }
+
+      if (frame.is_diegetic_product_branding_only && !frame.has_diegetic_logo_mismatch) {
         // Physical logo printed/embossed on product body -> ALLOWED
         continue
       }
@@ -239,6 +255,12 @@ export class ChatGPTVideoReviewer {
       const p = frame.frame_path.toLowerCase()
       const isExplicitlyDiegetic = p.includes('diegetic') || p.includes('printed_logo') || p.includes('canonical_product_logo') || p.includes('physical_logo')
 
+      if (p.includes('diegetic_logo_mismatch') || p.includes('warped_product_logo') || p.includes('misspelled_logo')) {
+        failureCodes.push('DIEGETIC_LOGO_MISMATCH')
+        failureCodes.push('LOGO_DISTORTION')
+        issues.push(`Kare ${frame.timestamp_sec.toFixed(1)}s: Ürün üzerindeki fiziksel logo deforme olmuş (${frame.frame_path}).`)
+      }
+
       if (p.includes('foreign_brand')) {
         foreignBrandDetected = true
         issues.push(`Kare ${frame.timestamp_sec.toFixed(1)}s: Yetkisiz yabancı marka tespit edildi.`)
@@ -258,6 +280,42 @@ export class ChatGPTVideoReviewer {
           nonDiegeticBrandingDetected = true
           nonDiegeticDetails.push(`Kare ${frame.timestamp_sec.toFixed(1)}s: Non-diegetic yapay metin/marka unsuru tespit edildi (${frame.frame_path}).`)
         }
+      }
+
+      // Sector affordance & environment checks
+      const sectorLower = (sector || '').toLowerCase()
+      const isAgri = sectorLower.includes('agri') || sectorLower.includes('tarim') || sectorLower.includes('bahce')
+      const isConst = sectorLower.includes('const') || sectorLower.includes('insaat') || sectorLower.includes('yapi')
+      const isSaaS = sectorLower.includes('saas') || sectorLower.includes('software') || sectorLower.includes('yazilim')
+
+      if (isAgri && (p.includes('construction') || p.includes('santiye') || p.includes('concrete') || p.includes('hardhat') || p.includes('01_bofe_canary'))) {
+        failureCodes.push('WRONG_SECTOR')
+        failureCodes.push('ENVIRONMENT_MISMATCH')
+        failureCodes.push('PRODUCT_AFFORDANCE_FAIL')
+        issues.push(`Tarım ekipmanı (${brand}) şantiye/inşaat ortamında veya baretli işçiyle gösterildi.`)
+        retryDirections.push('Çekim ortamını doğrudan meyve bahçesi, sera veya tarla doğal ortamına kilitleyin.')
+      }
+
+      if (isConst && (p.includes('farmland') || p.includes('orchard') || p.includes('zeytinlik'))) {
+        failureCodes.push('WRONG_SECTOR')
+        failureCodes.push('ENVIRONMENT_MISMATCH')
+        failureCodes.push('PRODUCT_AFFORDANCE_FAIL')
+        issues.push(`İnşaat malzemesi (${brand}) tarım/bahçe ortamında gösterildi.`)
+        retryDirections.push('Çekim ortamını doğrudan mimari şantiye veya yapı alanına kilitleyin.')
+      }
+
+      if (isSaaS && (frame.has_acrylic_plaque || p.includes('plaque') || p.includes('acrylic') || p.includes('wall_sign') || p.includes('04_veriburada'))) {
+        failureCodes.push('SOFTWARE_DEMO_MISSING')
+        failureCodes.push('PRODUCT_METAPHOR_FAIL')
+        failureCodes.push('MINI_FILM_NOT_AD')
+        issues.push(`SaaS ürünü (${brand}) gerçek yazılım akışı yerine akrilik masa plaketi veya ofis tabelası olarak gösterildi.`)
+        retryDirections.push('Yazılımın gerçek arayüzünü, kullanıcı etkileşimini, veri/analiz ekranını veya iş sonucunu gösterin; masa plaketi ve tabela sahnelerinden kaçının.')
+      }
+
+      if (isSaaS && (frame.has_fake_ui || p.includes('fake_ui') || p.includes('invented_ui') || p.includes('06_veriburada'))) {
+        failureCodes.push('FAKE_UI')
+        issues.push(`SaaS ürünü için yetkisiz uydurma arayüz (sahte harita/URL) tespit edildi.`)
+        retryDirections.push('Kanonik onaylı UI varlığı mevcutsa onu kullanın; uydurma web tarayıcısı ve sahte buton çizmekten kaçının.')
       }
 
       // 3. Pixel-level inspection on real physical files if present on disk
@@ -281,6 +339,8 @@ export class ChatGPTVideoReviewer {
 
     if (foreignBrandDetected) {
       failureCodes.push('FOREIGN_BRAND')
+      failureCodes.push('WRONG_PRODUCT')
+      failureCodes.push('TENANT_BRAND_CONTAMINATION')
       retryDirections.push('Yalnızca @HeroProduct ve @BrandLogo kanonik varlıklarını kullanın.')
     }
 

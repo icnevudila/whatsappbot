@@ -17,6 +17,10 @@ export interface SampledFrame {
   has_generated_end_card?: boolean
   has_non_diegetic_branding?: boolean
   is_diegetic_product_branding_only?: boolean
+  has_diegetic_logo_mismatch?: boolean
+  has_acrylic_plaque?: boolean
+  has_fake_ui?: boolean
+  environment_detected?: string
 }
 
 export interface FrameSamplingOptions {

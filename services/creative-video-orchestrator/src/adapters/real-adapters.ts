@@ -553,10 +553,30 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
   ): Promise<string> {
     mkdirSync(dirname(outputPath), { recursive: true })
 
-    // If a brand logo file is available, apply deterministic overlay with exact coordinates
+    // Resolve authoritative canonical logo
     let finishedSuccessfully = false
-    const logoPath = finishingSpec?.brandLogoPath || finishingSpec?.officialLogoPath
-    if (logoPath && existsSync(logoPath)) {
+    const logoPath =
+      finishingSpec?.brandLogoPath ||
+      finishingSpec?.officialLogoPath ||
+      finishingSpec?.logoOverlay?.logoFilePath
+    const expectedLogoSha =
+      finishingSpec?.brandLogoSha ||
+      finishingSpec?.officialLogoSha ||
+      finishingSpec?.logoOverlay?.logoSha256
+
+    if (logoPath) {
+      if (!existsSync(logoPath)) {
+        throw new Error(`NEEDS_ASSET: Canonical logo file missing from disk: ${logoPath}`)
+      }
+      if (expectedLogoSha) {
+        const { readFileSync } = await import('node:fs')
+        const { createHash } = await import('node:crypto')
+        const actualSha = createHash('sha256').update(readFileSync(logoPath)).digest('hex')
+        if (actualSha !== expectedLogoSha) {
+          throw new Error(`CANONICAL_LOGO_MISMATCH: Logo SHA drift detected. Expected ${expectedLogoSha}, got ${actualSha}`)
+        }
+      }
+
       // Overlay logo at top-right corner with 32px padding, width scaled to 160px
       const args = [
         '-y',

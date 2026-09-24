@@ -45,9 +45,10 @@ export class VeoPromptCompiler {
     // Diegetic Branding Directive on natural physical surface
     let diegeticBrandingDirective = ''
     const diegeticItem = plan.diegetic_branding_plan && plan.diegetic_branding_plan[0]
-    if (diegeticItem || plan.logo_strategy.includes('DIEGETIC')) {
-      const surface = diegeticItem?.surface_type || 'equipment_panel'
-      diegeticBrandingDirective = `[DIEGETIC BRANDING ON NATURAL SURFACE]: Use the exact provided @BrandLogo reference on the selected natural physical surface (${surface}). Preserve the original logo artwork, typography, symbol geometry, spacing, proportions and identity. Do not redesign, rewrite, translate, stylize, abbreviate or invent the brand logo. Do not generate additional brand marks or text.`
+    const hasBrandLogo = plan.canonical_asset_handles && plan.canonical_asset_handles.includes('@BrandLogo')
+    if (diegeticItem || plan.logo_strategy.includes('DIEGETIC') || hasBrandLogo) {
+      const surface = diegeticItem?.surface_type || 'physical product surface'
+      diegeticBrandingDirective = `[CANONICAL BRAND IDENTITY PRESERVATION]: Preserve the canonical brand identity from @BrandLogo when it is physically present on @HeroProduct (${surface}). The physical product branding must remain faithful to the supplied reference logo in shape, spelling, and proportions. Do not create additional floating logos, watermarks, subtitles, lower thirds, or synthetic end-card graphics.`
     }
 
     // Audio & Spoken Turkish dialogue section
@@ -131,6 +132,13 @@ export class VeoPromptCompiler {
         'on-screen text',
         'lower thirds',
         'floating logo',
+        'floating screen logo',
+        'synthetic lower thirds',
+        'artificial on-screen graphics',
+        'deformed product typography',
+        'misspelled brand names',
+        'synthetic end-card graphics',
+        'floating watermark',
         'generated end card',
         'hallucinated logos',
         'blurry hands',

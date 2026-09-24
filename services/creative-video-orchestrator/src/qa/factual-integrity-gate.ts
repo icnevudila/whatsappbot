@@ -31,6 +31,19 @@ const DEFAULT_UNVERIFIED_PERFORMANCE_PATTERNS = [
   'damlatmayan',
   'mikro diyafram',
   'ultra yüksek basınç',
+  'güç ve hız',
+  'güç ve hız arayanlara',
+  'güçlü ilaçlama',
+  'bofe gücü',
+  'marka gücü',
+  'ergonomik sırt askısı',
+  'ergonomik',
+  'mikronize püskürtme ucu',
+  'maksimum verim',
+  'güçlü lityum-iyon batarya',
+  'kesintisiz çalışma',
+  'satışlarınızı katlayın',
+  'satışları katlayın',
 ]
 
 /**
@@ -214,7 +227,15 @@ export class FactualIntegrityGate {
 
       for (const pattern of DEFAULT_UNVERIFIED_PERFORMANCE_PATTERNS) {
         if (lower.includes(pattern)) {
-          const isVerified = verifiedClaims.some(c => c.includes(pattern))
+          // Context matters: allow technical cinematography directives
+          const isCinematography = item.location.includes('camera') || item.location.includes('lighting') || lower.includes('kamera') || lower.includes('açı')
+          if (isCinematography && (pattern === 'hızlı' || pattern === 'güçlü')) {
+            continue
+          }
+          const isVerified =
+            verifiedClaims.some(c => c.includes(pattern)) ||
+            (snapshot.campaign?.cta && snapshot.campaign.cta.toLowerCase().includes(pattern)) ||
+            (snapshot.campaign?.headline && snapshot.campaign.headline.toLowerCase().includes(pattern))
           if (!isVerified) {
             violations.push({
               field: item.location,
@@ -227,10 +248,99 @@ export class FactualIntegrityGate {
       }
     }
 
+    // Foreign brand / wrong product contamination check
+    const currentBrand = (snapshot.brand_name || '').toLowerCase()
+    const foreignBrands = ['delta mekanik', 'delta', 'bosch', 'stihl', 'dewalt', 'makita', 'caterpillar', 'komatsu']
+    for (const fb of foreignBrands) {
+      if (!currentBrand.includes(fb)) {
+        for (const item of combinedTexts) {
+          if (item.text.toLowerCase().includes(fb)) {
+            violations.push({
+              field: item.location,
+              unverifiedValue: fb,
+              reason: `Foreign brand / wrong product contamination "${fb}" detected in ${item.location} for brand "${snapshot.brand_name}".`,
+              hardFailCode: 'UNVERIFIED_CLAIM_LEAKAGE',
+            })
+          }
+        }
+      }
+    }
+
     return {
       passed: violations.length === 0,
       violations,
       hardFailGate: violations[0]?.hardFailCode,
+    }
+  }
+
+  /**
+   * Final pre-render factual copy audit immediately before deterministic text composition.
+   * Every claim-like phrase must produce provenance or be flagged.
+   */
+  public static auditFinalCopy(
+    copyItems: Array<{ text: string; location: string }>,
+    snapshot: BrandContextSnapshot
+  ): {
+    passed: boolean
+    auditedClaims: Array<{ text: string; source: string; verified_fact_id?: string; supported: boolean }>
+    violations: FactualGateViolation[]
+  } {
+    const auditedClaims: Array<{ text: string; source: string; verified_fact_id?: string; supported: boolean }> = []
+    const violations: FactualGateViolation[] = []
+    const verifiedClaims = (snapshot.verified_claims || []).map((c, i) => ({ claim: c.toLowerCase().trim(), id: `fact_${i + 1}` }))
+    const currentBrand = (snapshot.brand_name || '').toLowerCase()
+
+    for (const item of copyItems) {
+      const lower = item.text.toLowerCase()
+
+      // Foreign brand check
+      const foreignBrands = ['delta mekanik', 'delta', 'bosch', 'stihl', 'dewalt', 'makita', 'caterpillar', 'komatsu']
+      for (const fb of foreignBrands) {
+        if (!currentBrand.includes(fb) && lower.includes(fb)) {
+          violations.push({
+            field: item.location,
+            unverifiedValue: fb,
+            reason: `Foreign brand / wrong product contamination "${fb}" in final copy.`,
+            hardFailCode: 'UNVERIFIED_CLAIM_LEAKAGE',
+          })
+        }
+      }
+
+      // Performance patterns
+      for (const pattern of DEFAULT_UNVERIFIED_PERFORMANCE_PATTERNS) {
+        if (lower.includes(pattern)) {
+          const matched =
+            verifiedClaims.find(vc => vc.claim.includes(pattern)) ||
+            (snapshot.campaign?.cta && snapshot.campaign.cta.toLowerCase().includes(pattern) ? { claim: snapshot.campaign.cta, id: 'campaign_cta' } : undefined) ||
+            (snapshot.campaign?.headline && snapshot.campaign.headline.toLowerCase().includes(pattern) ? { claim: snapshot.campaign.headline, id: 'campaign_headline' } : undefined)
+          if (matched) {
+            auditedClaims.push({
+              text: pattern,
+              source: item.location,
+              verified_fact_id: matched.id,
+              supported: true,
+            })
+          } else {
+            auditedClaims.push({
+              text: pattern,
+              source: item.location,
+              supported: false,
+            })
+            violations.push({
+              field: item.location,
+              unverifiedValue: pattern,
+              reason: `Final copy contains unsupported performance claim: "${pattern}".`,
+              hardFailCode: 'UNVERIFIED_CLAIM_LEAKAGE',
+            })
+          }
+        }
+      }
+    }
+
+    return {
+      passed: violations.length === 0,
+      auditedClaims,
+      violations,
     }
   }
 

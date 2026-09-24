@@ -25,6 +25,9 @@ import { ChatGPTVideoReviewer, type VideoReviewReport } from './qa/chatgpt-video
 import { FrameSampler } from './qa/frame-sampler.js'
 import { AssetEqualityGate } from './gates/asset-equality-gate.js'
 import { CreativeContextBuilder, type CreativeContext, type MultimodalAttachment } from './types/creative-context.js'
+import { CanonicalLogoGate } from './qa/canonical-logo-gate.js'
+import { DuplicateOutputDetector } from './evaluation/duplicate-output-detector.js'
+import { FactualIntegrityGate } from './qa/factual-integrity-gate.js'
 
 export interface OrchestratorOptions {
   gflowProvider: IGFlowProvider
@@ -406,7 +409,30 @@ export class CreativeVideoOrchestrator {
       )
     }
 
-    // 10. Deterministic Finishing (Exact logo, typography, offer, price, CTA)
+    // 10. Canonical Logo Gate & Final Copy Pre-Composition Audit
+    const isMock = this.options.ffmpegAdapter?.constructor?.name === 'MockFFmpegAdapter'
+    const logoCheck = CanonicalLogoGate.verifyLogo(snapshot, registry, { isMock })
+    if (!logoCheck.passed) {
+      throw new Error(`CANONICAL_LOGO_GATE_FAIL: ${logoCheck.error}`)
+    }
+    if (logoCheck.logoPath && plan.finishingPlan?.logoOverlay) {
+      plan.finishingPlan.logoOverlay.logoFilePath = logoCheck.logoPath
+      plan.finishingPlan.logoOverlay.logoSha256 = logoCheck.logoSha256 || ''
+    }
+
+    // Pre-render final copy audit
+    const copyToAudit: Array<{ text: string; location: string }> = [
+      { text: plan.finishingPlan?.productTextOverlay?.text || '', location: 'finishingPlan.productTextOverlay' },
+      { text: plan.finishingPlan?.offerPriceOverlay?.text || '', location: 'finishingPlan.offerPriceOverlay' },
+      { text: plan.finishingPlan?.ctaOverlay?.text || '', location: 'finishingPlan.ctaOverlay' },
+      { text: plan.finishingPlan?.endCard?.ctaText || '', location: 'finishingPlan.endCard.ctaText' },
+    ]
+    const finalCopyAudit = FactualIntegrityGate.auditFinalCopy(copyToAudit, snapshot)
+    if (!finalCopyAudit.passed) {
+      throw new Error(`FINAL_COPY_GATE_FAIL: ${finalCopyAudit.violations.map(v => v.reason).join('; ')}`)
+    }
+
+    // 11. Deterministic Finishing (Exact canonical logo PNG, typography, CTA)
     const finishedOutputPath = genResponse.output_path.replace('.mp4', '_finished.mp4')
     await this.options.ffmpegAdapter.applyDeterministicFinishing(
       genResponse.output_path,
@@ -414,6 +440,16 @@ export class CreativeVideoOrchestrator {
       finishedOutputPath
     )
     const finalSha256 = this.hashOutputFile(finishedOutputPath, genResponse.file_size)
+
+    // 12. Duplicate Output Detection
+    const dupDetector = DuplicateOutputDetector.getInstance()
+    const duplicateCheck = dupDetector.recordOutput({
+      output_id: finishedOutputPath,
+      job_id: jobId,
+      raw_sha256: rawSha256,
+      final_sha256: finalSha256,
+      created_at: new Date().toISOString(),
+    })
 
     const realFlowProjectId = genResponse.flow_project_id || flowProjectId
 
