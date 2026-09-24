@@ -43,6 +43,8 @@ function workerError(code, message, worker = null) {
   return error;
 }
 
+const { DistributedLeaseStore } = require('./distributed_lease_store.js');
+
 class BrowserWorkerSupervisor extends EventEmitter {
   constructor(options = {}) {
     super();
@@ -50,6 +52,9 @@ class BrowserWorkerSupervisor extends EventEmitter {
     this.launcher = options.launcher || this._defaultLauncher.bind(this);
     this.clock = options.clock || (() => Date.now());
     this.sleep = options.sleep || sleep;
+    this.leaseStore = options.leaseStore || new DistributedLeaseStore({ clock: this.clock });
+    this.leaseHeartbeatInterval = options.leaseHeartbeatInterval ?? 20_000;
+    this.activeLeaseHeartbeats = new Map();
     this.browserStartTimeout = options.browserStartTimeout ?? numberFromEnv('BROWSER_START_TIMEOUT_MS', 45_000, 1000);
     this.providerReadyTimeout = options.providerReadyTimeout ?? numberFromEnv('PROVIDER_READY_TIMEOUT_MS', 30_000, 1000);
     this.idleBrowserTTL = options.idleBrowserTTL ?? numberFromEnv('IDLE_BROWSER_TTL_MS', 20 * 60_000, 1000);
@@ -378,6 +383,31 @@ class BrowserWorkerSupervisor extends EventEmitter {
       for (const worker of candidates) {
         if (worker.currentJobId) continue;
         const leaseToken = crypto.randomUUID();
+
+        // 1. Database-backed distributed lease acquisition
+        const dbLease = await this.leaseStore.acquireLease({
+          provider,
+          accountId: worker.accountId,
+          workerId: worker.id,
+          jobId,
+          leaseToken,
+        });
+
+        if (!dbLease.acquired) {
+          failures.push({ workerId: worker.id, code: 'ACCOUNT_BUSY', message: dbLease.message || 'Account leased by another host' });
+          continue;
+        }
+
+        const hbTimer = setInterval(() => {
+          this.leaseStore.heartbeatLease({
+            provider,
+            accountId: worker.accountId,
+            leaseToken,
+          }).catch(() => {});
+        }, this.leaseHeartbeatInterval);
+        hbTimer.unref?.();
+        this.activeLeaseHeartbeats.set(leaseToken, hbTimer);
+
         worker.currentJobId = jobId;
         worker.leaseToken = leaseToken;
         worker.executionStarted = false;
@@ -403,19 +433,27 @@ class BrowserWorkerSupervisor extends EventEmitter {
           return this._leaseHandle(worker, jobId, leaseToken);
         } catch (error) {
           failures.push({ workerId: worker.id, code: error.code || 'STARTUP_FAILED', message: error.message });
-          this._clearReservation(worker, jobId, leaseToken);
+          await this._clearReservation(worker, jobId, leaseToken);
         }
       }
 
-      // Check if any matching worker is currently busy/starting
+      // Check if any matching worker is currently busy/starting locally, or busy on another host in distributed lease store
+      const hasDistributedBusy = failures.some(f => f.code === 'ACCOUNT_BUSY');
       const busyMatches = [...this.workers.values()].filter(worker =>
         worker.provider === provider &&
         (!preferredWorkerIds || preferredWorkerIds.includes(worker.id) || preferredWorkerIds.includes(worker.accountId)) &&
         (worker.currentJobId || worker.state === WORKER_STATES.STARTING || worker.state === WORKER_STATES.BUSY)
       );
 
-      // If no candidate is free, and none are currently busy (meaning none will become free), OR deadline passed:
-      if (busyMatches.length === 0 || this.clock() >= deadline) {
+      // If no candidate is free, and none are currently busy (locally or distributed), OR deadline passed:
+      if ((busyMatches.length === 0 && !hasDistributedBusy) || this.clock() >= deadline) {
+        const busyFailure = failures.find(f => f.code === 'ACCOUNT_BUSY');
+        if (busyFailure) {
+          const error = workerError('ACCOUNT_BUSY', busyFailure.message || `Account leased by another host for ${jobId}`);
+          error.failures = failures;
+          error.retryable = true;
+          throw error;
+        }
         const error = workerError('NO_ELIGIBLE_WORKER', `No READY ${provider} worker is available`);
         error.failures = failures;
         error.retryable = true;
@@ -436,6 +474,8 @@ class BrowserWorkerSupervisor extends EventEmitter {
   _leaseHandle(worker, jobId, leaseToken) {
     let released = false;
     return {
+      acquired: true,
+      leaseToken,
       workerId: worker.id,
       accountId: worker.accountId,
       provider: worker.provider,
@@ -473,7 +513,7 @@ class BrowserWorkerSupervisor extends EventEmitter {
     return true;
   }
 
-  _clearReservation(worker, jobId, leaseToken) {
+  async _clearReservation(worker, jobId, leaseToken) {
     const reservation = this.jobReservations.get(jobId);
     if (reservation?.leaseToken === leaseToken) this.jobReservations.delete(jobId);
     if (worker.leaseToken === leaseToken) {
@@ -484,6 +524,16 @@ class BrowserWorkerSupervisor extends EventEmitter {
       worker.phase = null;
       worker.lastActivityAt = this.clock();
     }
+    const timer = this.activeLeaseHeartbeats.get(leaseToken);
+    if (timer) {
+      clearInterval(timer);
+      this.activeLeaseHeartbeats.delete(leaseToken);
+    }
+    await this.leaseStore.releaseLease({
+      provider: worker.provider,
+      accountId: worker.accountId,
+      leaseToken,
+    }).catch(() => {});
   }
 
   async release(workerId, jobId, leaseToken, outcome = {}) {
@@ -491,7 +541,7 @@ class BrowserWorkerSupervisor extends EventEmitter {
     if (!worker || worker.currentJobId !== jobId || worker.leaseToken !== leaseToken) return false;
     if (outcome?.authRequired) worker.state = WORKER_STATES.AUTH_REQUIRED;
     else if (outcome?.quotaExhausted) worker.state = WORKER_STATES.QUOTA_EXHAUSTED;
-    this._clearReservation(worker, jobId, leaseToken);
+    await this._clearReservation(worker, jobId, leaseToken);
     if ([WORKER_STATES.AUTH_REQUIRED, WORKER_STATES.QUOTA_EXHAUSTED].includes(worker.state)) {
       worker.readiness = READINESS_STATES.NOT_READY;
     }
@@ -507,6 +557,81 @@ class BrowserWorkerSupervisor extends EventEmitter {
     }
     await this.cleanupOrphans(worker);
     this.emit('released', { workerId: worker.id, accountId: worker.accountId, provider: worker.provider });
+    return true;
+  }
+
+  async acquireExternalLease({ provider, accountId, jobId, workerId = null, ttlSeconds = 60 }) {
+    const targetWorkerId = workerId || `${provider}:${accountId}`;
+    const leaseToken = crypto.randomUUID();
+    const leaseRes = await this.leaseStore.acquireLease({
+      provider,
+      accountId,
+      workerId: targetWorkerId,
+      jobId,
+      leaseToken,
+      ttlSeconds,
+    });
+    if (!leaseRes.acquired) {
+      const error = workerError('ACCOUNT_BUSY', leaseRes.message || `Account ${accountId} is leased by another host`);
+      error.currentLeaseToken = leaseRes.currentLeaseToken;
+      throw error;
+    }
+
+    const worker = this.workers.get(targetWorkerId) || this.workers.get(`${provider}-${accountId}`) || this.workers.get('flow-primary');
+    if (worker) {
+      worker.currentJobId = jobId;
+      worker.leaseToken = leaseToken;
+      worker.state = WORKER_STATES.BUSY;
+      worker.phase = 'GENERATING';
+      worker.lastActivityAt = this.clock();
+    }
+
+    const hbTimer = setInterval(() => {
+      this.leaseStore.heartbeatLease({
+        provider,
+        accountId,
+        leaseToken,
+        ttlSeconds,
+      }).catch(() => {});
+    }, Math.min(20_000, ttlSeconds * 500));
+    hbTimer.unref?.();
+    this.activeLeaseHeartbeats.set(leaseToken, hbTimer);
+
+    return {
+      acquired: true,
+      leaseToken,
+      provider,
+      accountId,
+      jobId,
+      workerId: targetWorkerId,
+      expiresAt: leaseRes.expiresAt,
+    };
+  }
+
+  async releaseExternalLease({ provider, accountId, leaseToken, outcome = {} }) {
+    const timer = this.activeLeaseHeartbeats.get(leaseToken);
+    if (timer) {
+      clearInterval(timer);
+      this.activeLeaseHeartbeats.delete(leaseToken);
+    }
+    await this.leaseStore.releaseLease({
+      provider,
+      accountId,
+      leaseToken,
+    }).catch(() => {});
+
+    const targetWorkerId = `${provider}:${accountId}`;
+    const worker = this.workers.get(targetWorkerId) || this.workers.get(`${provider}-${accountId}`) || this.workers.get('flow-primary');
+    if (worker && worker.leaseToken === leaseToken) {
+      worker.currentJobId = null;
+      worker.leaseToken = null;
+      worker.state = WORKER_STATES.IDLE;
+      worker.phase = null;
+      worker.lastActivityAt = this.clock();
+      if (outcome?.authRequired) worker.state = WORKER_STATES.AUTH_REQUIRED;
+      if (outcome?.quotaExhausted) worker.state = WORKER_STATES.QUOTA_EXHAUSTED;
+    }
+    this.emit('released', { accountId, provider, leaseToken });
     return true;
   }
 

@@ -170,7 +170,7 @@ export async function getControlPlaneSnapshot(): Promise<ControlPlaneSnapshot> {
     orgResult, jobResult, channelJobResult, creativeResult, mediaJobResult,
     mediaEventResult, attemptResult, opsEventResult, flowAccountResult,
     flowWorkerResult, channelWorkerResult, messageResult, autoReplyResult, feedResult,
-    gatewayResult, gflowHealthResult,
+    gatewayResult, browserWorkerResult, gflowHealthResult,
   ] = await Promise.all([
     optionalRows(supabase.from('organizations').select('id,name').limit(500)),
     optionalRows(supabase.from('jobs').select('*').order('created_at', { ascending: false }).limit(150)),
@@ -187,6 +187,7 @@ export async function getControlPlaneSnapshot(): Promise<ControlPlaneSnapshot> {
     optionalRows(supabase.from('auto_reply_log').select('id,org_id,account_id,phone_e164,source,reply_body,created_at').order('created_at', { ascending: false }).limit(180)),
     optionalRpc(supabase.rpc('get_canli_takip_feed')),
     optionalJson(process.env.AI_GATEWAY_URL, '/v1/ai-engine/status', 3500),
+    optionalJson(process.env.AI_GATEWAY_URL, '/v1/browser-workers', 3500),
     optionalJson(process.env.GFLOW_ENGINE_URL, '/v1/workers/health', 2500),
   ])
 
@@ -423,16 +424,87 @@ export async function getControlPlaneSnapshot(): Promise<ControlPlaneSnapshot> {
       restartCount: asNumber(row.metadata?.restart_count), actions: row.active_job_id ? ['drain'] : ['drain', 'restart'],
     })
   }
-  for (const account of accounts.filter(item => item.provider === 'GEMINI' || item.provider === 'CHATGPT')) {
+  const supervisorWorkers: any[] = browserWorkerResult.data?.workers || gateway?.browser_workers || []
+  const supervisorMap = new Map<string, any>()
+  for (const sw of supervisorWorkers) {
+    if (sw.account) supervisorMap.set(String(sw.account), sw)
+    if (sw.worker_id) supervisorMap.set(String(sw.worker_id), sw)
+    if (sw.cdp_port) supervisorMap.set(`port:${sw.cdp_port}`, sw)
+  }
+
+  for (const account of accounts.filter(item => item.provider === 'GEMINI' || item.provider === 'CHATGPT' || item.provider === 'FLOW')) {
+    const portMatch = account.id.split(':')[1]
+    const matched = supervisorMap.get(account.id) ||
+      (portMatch ? supervisorMap.get(`port:${portMatch}`) : null) ||
+      (portMatch ? supervisorMap.get(portMatch) : null) ||
+      supervisorWorkers.find((sw: any) => sw.account === account.id || sw.worker_id === account.id || String(sw.cdp_port) === portMatch)
+
+    const browserPid = matched?.browser_pid != null ? Number(matched.browser_pid) : null
+    const tabCount = matched?.tab_count != null ? Number(matched.tab_count) : null
+    const browserCount = browserPid ? 1 : 0
+    const state = matched?.state ? canonicalWorkerState(matched.state) : account.browserState
+    const activePhase = matched?.active_phase || null
+    const profile = matched?.profile_path || null
+    const cdpPort = matched?.cdp_port != null ? Number(matched.cdp_port) : (portMatch && Number(portMatch) ? Number(portMatch) : null)
+    const lastHeartbeat = asDate(matched?.last_heartbeat) || account.lastActivityAt
+    const lastActivity = asDate(matched?.last_activity) || account.lastActivityAt
+    const currentJobId = asString(matched?.current_job_id) || account.currentJobId
+
     workers.push({
-      id: `browser:${account.id}`, hostId: account.workerHost || 'omnistudio', kind: 'BROWSER',
-      state: account.browserState, online: account.browserState !== 'OFFLINE', cpuPercent: null, memoryMb: null,
-      uptimeSeconds: null, activeJobs: account.currentJobId ? 1 : 0, queueAssignments: 0,
-      browserPid: null, browserCount: null, tabCount: null, assignedAccounts: [account.id],
-      currentJobId: account.currentJobId, lastHeartbeatAt: account.lastActivityAt,
-      lastActivityAt: account.lastActivityAt, restartCount: 0,
-      actions: account.currentJobId ? ['drain'] : ['drain', 'restart_browser'],
+      id: `browser:${account.id}`,
+      hostId: account.workerHost || 'omnistudio',
+      kind: 'BROWSER',
+      state,
+      online: state !== 'OFFLINE',
+      cpuPercent: null,
+      memoryMb: null,
+      uptimeSeconds: asNumber(matched?.uptime_seconds, NaN) || null,
+      activeJobs: currentJobId ? 1 : 0,
+      queueAssignments: 0,
+      browserPid,
+      browserCount,
+      tabCount,
+      cdpPort,
+      profile,
+      activePhase,
+      assignedAccounts: [account.id],
+      currentJobId,
+      lastHeartbeatAt: lastHeartbeat,
+      lastActivityAt: lastActivity,
+      restartCount: asNumber(matched?.restart_count, 0),
+      actions: currentJobId ? ['drain'] : ['drain', 'restart_browser'],
     })
+  }
+
+  for (const sw of supervisorWorkers) {
+    const swId = `browser:${sw.worker_id}`
+    if (!workers.some(w => w.id === swId || w.assignedAccounts.includes(sw.account))) {
+      const browserPid = sw.browser_pid != null ? Number(sw.browser_pid) : null
+      workers.push({
+        id: swId,
+        hostId: 'omnistudio',
+        kind: 'BROWSER',
+        state: canonicalWorkerState(sw.state),
+        online: sw.state !== 'OFFLINE',
+        cpuPercent: null,
+        memoryMb: null,
+        uptimeSeconds: asNumber(sw.uptime_seconds, NaN) || null,
+        activeJobs: sw.current_job_id ? 1 : 0,
+        queueAssignments: 0,
+        browserPid,
+        browserCount: browserPid ? 1 : 0,
+        tabCount: sw.tab_count != null ? Number(sw.tab_count) : null,
+        cdpPort: sw.cdp_port != null ? Number(sw.cdp_port) : null,
+        profile: sw.profile_path || null,
+        activePhase: sw.active_phase || null,
+        assignedAccounts: sw.account ? [String(sw.account)] : [],
+        currentJobId: asString(sw.current_job_id),
+        lastHeartbeatAt: asDate(sw.last_heartbeat),
+        lastActivityAt: asDate(sw.last_activity),
+        restartCount: asNumber(sw.restart_count, 0),
+        actions: sw.current_job_id ? ['drain'] : ['drain', 'restart_browser'],
+      })
+    }
   }
 
   const activeJobs = jobs.filter(job => job.state === 'ACTIVE')

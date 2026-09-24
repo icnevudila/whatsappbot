@@ -115,6 +115,9 @@ export type OperationsWorker = {
   browserPid: number | null
   browserCount: number | null
   tabCount: number | null
+  cdpPort?: number | null
+  profile?: string | null
+  activePhase?: string | null
   assignedAccounts: string[]
   currentJobId: string | null
   lastHeartbeatAt: string | null

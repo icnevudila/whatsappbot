@@ -28,6 +28,12 @@ from driver import (
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("gflow-engine.server")
 
+import json
+import urllib.request
+import urllib.error
+
+SUPERVISOR_URL = os.environ.get("SUPERVISOR_URL") or os.environ.get("OMNISTUDIO_GATEWAY_URL") or "http://omnistudio-gateway:3456"
+
 # Per-account locks: each Flow account gets concurrency=1,
 # but different accounts can generate simultaneously.
 # DO NOT use a global semaphore — that would serialize all accounts.
@@ -38,6 +44,60 @@ def get_account_lock(account_id: str) -> asyncio.Semaphore:
     if account_id not in _account_locks:
         _account_locks[account_id] = asyncio.Semaphore(1)
     return _account_locks[account_id]
+
+def _request_supervisor_lease(provider: str, account_id: str, job_id: str, worker_id: Optional[str] = None, ttl_seconds: int = 120) -> Optional[str]:
+    url = f"{SUPERVISOR_URL.rstrip('/')}/v1/browser-workers/lease/acquire"
+    data = json.dumps({
+        "provider": provider,
+        "accountId": account_id,
+        "jobId": job_id,
+        "workerId": worker_id or f"{provider}:{account_id}",
+        "ttlSeconds": ttl_seconds,
+    }).encode("utf-8")
+    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            body = json.loads(resp.read().decode("utf-8"))
+            return body.get("leaseToken") or body.get("lease_token")
+    except urllib.error.HTTPError as e:
+        if e.code == 409:
+            raise FlowExecutionError("ACCOUNT_BUSY", f"Account {account_id} is leased by another host/supervisor.")
+        logger.warning(f"Supervisor lease acquire HTTP {e.code}: {e.reason}")
+    except Exception as e:
+        logger.warning(f"Could not reach supervisor at {url}: {e}")
+    return None
+
+def _ensure_supervisor_worker_ready(provider: str, account_id: str) -> bool:
+    url = f"{SUPERVISOR_URL.rstrip('/')}/v1/browser-workers/ensure-ready"
+    data = json.dumps({
+        "provider": provider,
+        "accountId": account_id,
+        "workerId": f"{provider}:{account_id}",
+    }).encode("utf-8")
+    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            return resp.status == 200
+    except Exception as e:
+        logger.debug(f"Supervisor ensure-ready check warning: {e}")
+        return False
+
+def _release_supervisor_lease(provider: str, account_id: str, lease_token: Optional[str], outcome: Optional[Dict[str, Any]] = None):
+    if not lease_token:
+        return
+    url = f"{SUPERVISOR_URL.rstrip('/')}/v1/browser-workers/lease/release"
+    data = json.dumps({
+        "provider": provider,
+        "accountId": account_id,
+        "leaseToken": lease_token,
+        "outcome": outcome or {},
+    }).encode("utf-8")
+    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            pass
+    except Exception as e:
+        logger.warning(f"Failed to release supervisor lease {lease_token}: {e}")
 
 start_time = time.time()
 
@@ -81,6 +141,7 @@ class GenerateRequest(BaseModel):
     project_id: Optional[str] = None
     is_recovery: bool = False
     assets: List[AssetPayload] = Field(default_factory=list)
+    lease_token: Optional[str] = None
 
 class GenerateResponse(BaseModel):
     job_id: str
@@ -120,8 +181,8 @@ async def health():
 
 @app.post("/v1/jobs/execute", response_model=GenerateResponse)
 async def execute_job(req: GenerateRequest):
-    """Execute a video generation job via pinned gflow-cli.
-    Concurrency=1 PER ACCOUNT — different accounts can run in parallel."""
+    """Execute a video generation job via pinned gflow-cli under BrowserWorkerSupervisor lease contract.
+    Concurrency=1 PER ACCOUNT across all hosts/processes."""
     account_lock = get_account_lock(req.account_id)
 
     if account_lock.locked():
@@ -131,6 +192,25 @@ async def execute_job(req: GenerateRequest):
         )
 
     async with account_lock:
+        loop = asyncio.get_event_loop()
+        supervisor_lease = req.lease_token
+        acquired_by_us = False
+
+        # 1. Request distributed account lease if caller did not provide one
+        if not supervisor_lease:
+            try:
+                supervisor_lease = await loop.run_in_executor(
+                    None, _request_supervisor_lease, "flow", req.account_id, req.job_id
+                )
+                acquired_by_us = bool(supervisor_lease)
+            except FlowExecutionError as e:
+                raise HTTPException(status_code=429, detail=f"Account {req.account_id} lease failed: {e.message}")
+
+        # 2. Ensure Flow browser worker READY
+        await loop.run_in_executor(
+            None, _ensure_supervisor_worker_ready, "flow", req.account_id
+        )
+
         try:
             payload = {
                 "job_id": req.job_id,
@@ -144,11 +224,12 @@ async def execute_job(req: GenerateRequest):
                 "project_id": req.project_id,
                 "is_recovery": req.is_recovery,
                 "assets": [a.model_dump() for a in req.assets],
+                "lease_token": supervisor_lease,
             }
 
-            # Run in thread pool to avoid blocking the event loop
-            loop = asyncio.get_event_loop()
+            # 3. Run existing gflow execution
             result = await loop.run_in_executor(None, execute_generation_job, payload)
+            # 4. Generation / download complete
             return GenerateResponse(**result)
 
         except FlowExecutionError as e:
@@ -172,6 +253,12 @@ async def execute_job(req: GenerateRequest):
                     "message": str(e),
                 }
             )
+        finally:
+            # 5. Release lease
+            if acquired_by_us and supervisor_lease:
+                await loop.run_in_executor(
+                    None, _release_supervisor_lease, "flow", req.account_id, supervisor_lease
+                )
 
 
 @app.get("/v1/accounts")

@@ -29,13 +29,13 @@ function classifyGeminiVideoError(input) {
   if (/quota|credit.*limit|video generation limit|video üretme sınır|rate[_ -]?limit/.test(corpus)) {
     return { code: 'GEMINI_VIDEO_NO_QUOTA', state: CAPABILITY_STATES.NO_QUOTA };
   }
-  if (/feature.*unavailable|not available for your account|does not support video|video.*erişiminiz yok|video.*kullanılamıyor/.test(corpus)) {
+  if (/feature.*unavailable|not available for your account|does not support video|video.*erişiminiz yok|video.*kullanılamıyor|gemini apps activity is off/.test(corpus)) {
     return { code: 'GEMINI_VIDEO_FEATURE_UNAVAILABLE', state: CAPABILITY_STATES.FEATURE_UNAVAILABLE };
   }
   if (/sign in|oturum aç|auth|required|session expired/.test(corpus)) {
     return { code: 'GEMINI_VIDEO_AUTH_REQUIRED', state: CAPABILITY_STATES.AUTH_REQUIRED };
   }
-  if (/timeout|time out|temporar|network|websocket|cdp_port_unavailable|targetclosed|browser.*closed|input.*yüklenemedi/.test(corpus)) {
+  if (/timeout|time out|zaman aşımı|temporar|network|websocket|cdp_port_unavailable|targetclosed|browser.*closed|input.*yüklenemedi|something went wrong/.test(corpus)) {
     return { code: 'GEMINI_VIDEO_TEMPORARILY_UNAVAILABLE', state: CAPABILITY_STATES.TEMPORARILY_UNAVAILABLE };
   }
   return { code: 'GEMINI_VIDEO_UNKNOWN', state: CAPABILITY_STATES.UNKNOWN };

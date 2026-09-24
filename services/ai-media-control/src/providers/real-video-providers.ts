@@ -191,7 +191,10 @@ export class OmniStudioGeminiNativeVideoProvider implements VideoProvider {
 export class FlowVeoVideoProvider implements VideoProvider {
   readonly provider = 'FLOW_VEO' as const
 
-  constructor(private readonly gflow: RealHttpGFlowProvider) {}
+  constructor(
+    private readonly gflow: RealHttpGFlowProvider,
+    private readonly gatewayUrl = process.env.OMNISTUDIO_GATEWAY_URL || 'http://127.0.0.1:3456'
+  ) {}
 
   async generate(request: VideoGenerationRequest): Promise<VideoProviderResult> {
     if (!request.accountId) {
@@ -201,23 +204,90 @@ export class FlowVeoVideoProvider implements VideoProvider {
         'TEMPORARILY_UNAVAILABLE'
       )
     }
-    const generationStartedAt = new Date().toISOString()
-    const result: any = await this.gflow.executeJob(buildFlowVeoProviderPayload(request))
 
-    const bytes = statSync(result.output_path).size
-    const fileBuffer = await import('node:fs').then(fsModule => fsModule.readFileSync(result.output_path))
+    // 1. Request distributed account lease
+    let leaseToken: string | null = null
+    try {
+      const leaseRes = await fetch(`${this.gatewayUrl.replace(/\/$/, '')}/v1/browser-workers/lease/acquire`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: 'flow',
+          accountId: request.accountId,
+          jobId: request.jobId,
+          workerId: `flow:${request.accountId}`,
+          ttlSeconds: 120,
+        }),
+        signal: AbortSignal.timeout(10_000),
+      })
+      if (leaseRes.status === 409) {
+        throw new ProviderRoutingError(
+          'ACCOUNT_BUSY',
+          `Flow account ${request.accountId} is leased by another host`,
+          'TEMPORARILY_UNAVAILABLE'
+        )
+      }
+      if (leaseRes.ok) {
+        const leaseData: any = await leaseRes.json()
+        leaseToken = leaseData.leaseToken || leaseData.lease_token
+      }
+    } catch (err: any) {
+      if (err instanceof ProviderRoutingError) throw err
+    }
 
-    return {
-      provider: this.provider,
-      providerAccountId: request.accountId || result.account_id || null,
-      providerAttemptId: result.attempt_id || request.attemptId,
-      providerProjectId: result.flow_project_id || result.real_flow_project_uuid || null,
-      providerMediaIds: (result.verified_assets || []).map((asset: any) => asset.attached_media_id).filter(Boolean),
-      outputPath: result.output_path,
-      rawOutputSha256: sha256(fileBuffer),
-      byteSize: bytes,
-      generationStartedAt,
-      generationCompletedAt: new Date().toISOString(),
+    try {
+      // 2. Ensure Flow browser worker READY
+      try {
+        await fetch(`${this.gatewayUrl.replace(/\/$/, '')}/v1/browser-workers/ensure-ready`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            workerId: `flow:${request.accountId}`,
+            provider: 'flow',
+            accountId: request.accountId,
+          }),
+          signal: AbortSignal.timeout(10_000),
+        })
+      } catch {}
+
+      // 3. Run existing gflow execution
+      const generationStartedAt = new Date().toISOString()
+      const payload: any = buildFlowVeoProviderPayload(request)
+      if (leaseToken) payload.lease_token = leaseToken
+      const result: any = await this.gflow.executeJob(payload)
+
+      // 4. Generation / download complete
+      const bytes = statSync(result.output_path).size
+      const fileBuffer = await import('node:fs').then(fsModule => fsModule.readFileSync(result.output_path))
+
+      return {
+        provider: this.provider,
+        providerAccountId: request.accountId || result.account_id || null,
+        providerAttemptId: result.attempt_id || request.attemptId,
+        providerProjectId: result.flow_project_id || result.real_flow_project_uuid || null,
+        providerMediaIds: (result.verified_assets || []).map((asset: any) => asset.attached_media_id).filter(Boolean),
+        outputPath: result.output_path,
+        rawOutputSha256: sha256(fileBuffer),
+        byteSize: bytes,
+        generationStartedAt,
+        generationCompletedAt: new Date().toISOString(),
+      }
+    } finally {
+      // 5. Release lease
+      if (leaseToken) {
+        try {
+          await fetch(`${this.gatewayUrl.replace(/\/$/, '')}/v1/browser-workers/lease/release`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              provider: 'flow',
+              accountId: request.accountId,
+              leaseToken,
+            }),
+            signal: AbortSignal.timeout(5_000),
+          })
+        } catch {}
+      }
     }
   }
 }

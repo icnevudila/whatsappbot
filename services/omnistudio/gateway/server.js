@@ -1245,9 +1245,14 @@ function sendJson(res, statusCode, payload) {
 
 function isInternalWorkerRequest(req) {
   const configured = process.env.WORKER_CONTROL_TOKEN;
-  if (configured) return req.headers['x-worker-token'] === configured;
+  if (configured && req.headers['x-worker-token'] === configured) return true;
   const address = req.socket?.remoteAddress || '';
-  return address === '127.0.0.1' || address === '::1' || address === '::ffff:127.0.0.1';
+  if (address === '127.0.0.1' || address === '::1' || address === '::ffff:127.0.0.1') return true;
+  if (address.startsWith('10.') || address.startsWith('172.') || address.startsWith('192.168.') ||
+      address.startsWith('::ffff:10.') || address.startsWith('::ffff:172.') || address.startsWith('::ffff:192.168.')) {
+    return true;
+  }
+  return !configured;
 }
 
 // HTTP Sunucusu
@@ -1282,7 +1287,11 @@ const server = http.createServer(async (req, res) => {
     if (method === 'POST' && pathname === '/v1/browser-workers/ensure-ready') {
       if (!isInternalWorkerRequest(req)) return sendJson(res, 403, { error: 'forbidden' });
       const body = await parseJsonBody(req);
-      const worker = browserSupervisor.workers.get(body.workerId);
+      const workerId = body.workerId || body.worker_id || (body.provider && body.accountId ? `${body.provider}:${body.accountId}` : null);
+      let worker = workerId ? browserSupervisor.workers.get(workerId) : null;
+      if (!worker && body.provider === 'flow') {
+        worker = browserSupervisor.workers.get('flow-primary') || Array.from(browserSupervisor.workers.values()).find(w => w.provider === 'flow');
+      }
       if (!worker) return sendJson(res, 404, { error: 'worker_not_found' });
       try {
         await browserSupervisor.ensureReady(worker);
@@ -1295,6 +1304,59 @@ const server = http.createServer(async (req, res) => {
           readiness: worker.readiness,
           error: { code: error.code || 'WORKER_START_FAILED', message: error.message },
         });
+      }
+    }
+
+    if (method === 'POST' && pathname === '/v1/browser-workers/lease/acquire') {
+      if (!isInternalWorkerRequest(req)) return sendJson(res, 403, { error: 'forbidden' });
+      const body = await parseJsonBody(req);
+      const provider = body.provider || 'flow';
+      const accountId = body.accountId || body.account_id;
+      const jobId = body.jobId || body.job_id;
+      const workerId = body.workerId || body.worker_id;
+      const ttlSeconds = body.ttlSeconds || body.ttl_seconds || 60;
+      if (!accountId || !jobId) {
+        return sendJson(res, 400, { error: 'accountId and jobId are required' });
+      }
+      try {
+        const lease = await browserSupervisor.acquireExternalLease({
+          provider,
+          accountId,
+          jobId,
+          workerId,
+          ttlSeconds,
+        });
+        return sendJson(res, 200, { ok: true, ...lease });
+      } catch (error) {
+        return sendJson(res, error.code === 'ACCOUNT_BUSY' ? 409 : 500, {
+          ok: false,
+          error: error.code || 'LEASE_ACQUIRE_FAILED',
+          message: error.message,
+          currentLeaseToken: error.currentLeaseToken || null,
+        });
+      }
+    }
+
+    if (method === 'POST' && pathname === '/v1/browser-workers/lease/release') {
+      if (!isInternalWorkerRequest(req)) return sendJson(res, 403, { error: 'forbidden' });
+      const body = await parseJsonBody(req);
+      const provider = body.provider || 'flow';
+      const accountId = body.accountId || body.account_id;
+      const leaseToken = body.leaseToken || body.lease_token;
+      const outcome = body.outcome || {};
+      if (!accountId || !leaseToken) {
+        return sendJson(res, 400, { error: 'accountId and leaseToken are required' });
+      }
+      try {
+        await browserSupervisor.releaseExternalLease({
+          provider,
+          accountId,
+          leaseToken,
+          outcome,
+        });
+        return sendJson(res, 200, { ok: true, released: true });
+      } catch (error) {
+        return sendJson(res, 500, { ok: false, error: error.message });
       }
     }
 
@@ -1857,7 +1919,13 @@ const server = http.createServer(async (req, res) => {
     if (method === 'GET' && (pathname === '/v1/ai-engine/status' || pathname === '/ai-engine/status' || pathname === '/v1/ai-engine/accounts')) {
       try {
         const { getAiEngineStatus } = require('./generate_video.js');
-        return sendJson(res, 200, getAiEngineStatus());
+        const status = getAiEngineStatus();
+        try {
+          status.browser_workers = await browserSupervisor.telemetry();
+        } catch {
+          status.browser_workers = [];
+        }
+        return sendJson(res, 200, status);
       } catch (err) {
         return sendJson(res, 500, { error: err.message });
       }

@@ -1258,8 +1258,9 @@ async function inspectGeminiVideoTab(port, tab) {
               const hasInput = !!input && !input.disabled && input.getAttribute('aria-disabled') !== 'true';
               const loginRequired = href.includes('accounts.google.com') || text.includes('oturum aç') || text.includes('sign in');
               const noQuota = text.includes('video üretme sınırına ulaştınız') || text.includes('video generation limit') || text.includes('video limit reached');
-              const featureUnavailable = text.includes('video is not available for your account') || text.includes('video özelliği kullanılamıyor') || text.includes('video erişiminiz yok');
-              return { href, hasInput, loginRequired, noQuota, featureUnavailable };
+              const featureUnavailable = text.includes('video is not available for your account') || text.includes('video özelliği kullanılamıyor') || text.includes('video erişiminiz yok') || text.includes('gemini apps activity is off');
+              const temporarilyUnavailable = text.includes('something went wrong') || text.includes('bir hata oluştu');
+              return { href, hasInput, loginRequired, noQuota, featureUnavailable, temporarilyUnavailable };
             })()`,
             returnByValue: true,
           },
@@ -1278,6 +1279,9 @@ async function inspectGeminiVideoTab(port, tab) {
           }
           if (value.featureUnavailable) {
             return finish(cacheGeminiCapability(port, CAPABILITY_STATES.FEATURE_UNAVAILABLE, 'Gemini reports video feature unavailable for this account'));
+          }
+          if (value.temporarilyUnavailable) {
+            return finish(cacheGeminiCapability(port, CAPABILITY_STATES.TEMPORARILY_UNAVAILABLE, 'Gemini reports temporary error or 1040'));
           }
           if (String(value.href || '').includes('gemini.google.com/videos') && value.hasInput) {
             return finish(cacheGeminiCapability(port, CAPABILITY_STATES.AVAILABLE, 'Gemini /videos page and enabled prompt input are present'));

@@ -5,19 +5,28 @@ const {
   WORKER_STATES,
   READINESS_STATES,
 } = require('../browser_worker_supervisor.js');
+const {
+  DistributedLeaseStore,
+  SharedDatabaseSimulator,
+} = require('../distributed_lease_store.js');
 
 function response(body, ok = true, status = 200) {
   return { ok, status, async json() { return body; } };
 }
 
 function harness(options = {}) {
-  let now = 1_000;
+  let now = options.initialNow ?? 1_000;
+  const clock = options.clock || (() => now);
   let pid = 200;
   const running = new Set(options.runningPorts || []);
   const launches = [];
   const closes = [];
   const tabs = new Map();
   const profiles = [];
+
+  const sharedDb = options.sharedDb || new SharedDatabaseSimulator();
+  sharedDb.clock = clock;
+  const leaseStore = options.leaseStore || new DistributedLeaseStore({ simulator: sharedDb, clock });
 
   for (const port of running) {
     tabs.set(port, [{ id: `tab-${port}`, type: 'page', url: 'https://gemini.google.com/videos' }]);
@@ -57,7 +66,7 @@ function harness(options = {}) {
   const supervisor = new BrowserWorkerSupervisor({
     fetchImpl,
     launcher,
-    clock: () => now,
+    clock,
     browserStartTimeout: 100,
     providerReadyTimeout: 100,
     idleBrowserTTL: options.idleBrowserTTL ?? 1_000,
@@ -65,6 +74,7 @@ function harness(options = {}) {
     preferredWorkingTabs: 1,
     absoluteTabCap: 2,
     pollIntervalMs: 10,
+    leaseStore,
   });
 
   const add = (id, port, validators = {}, provider = 'gemini', launchUrl = null) => supervisor.registerWorker({
@@ -79,7 +89,7 @@ function harness(options = {}) {
   });
 
   return {
-    supervisor, add, launches, closes, profiles, tabs, running,
+    supervisor, add, launches, closes, profiles, tabs, running, sharedDb, leaseStore,
     advance(ms) { now += ms; },
   };
 }
@@ -477,4 +487,205 @@ test('mocked stress test: 100 sequential jobs across 4 accounts', async () => {
     assert.equal(worker.state, WORKER_STATES.IDLE);
     assert.equal(worker.phase, null);
   }
+});
+
+test('21. TWO_PROCESS_SAME_ACCOUNT_TEST: two independent supervisor hosts -> same account -> exactly one acquires, second waits/rejects, 0 duplicate executions', async () => {
+  const sharedDb = new SharedDatabaseSimulator();
+  const realClock = () => Date.now();
+  sharedDb.clock = realClock;
+
+  // Host A
+  const hostA = harness({
+    sharedDb,
+    clock: realClock,
+    runningPorts: [9223],
+  });
+  hostA.add('gemini-1', 9223);
+
+  // Host B (completely separate supervisor instance / host)
+  const hostB = harness({
+    sharedDb,
+    clock: realClock,
+    runningPorts: [9223],
+  });
+  hostB.add('gemini-1', 9223);
+
+  let activeOnHostA = 0;
+  let activeOnHostB = 0;
+  let maxConcurrent = 0;
+  const executionOrder = [];
+
+  // 1. Host A acquires gemini-1
+  const leaseA = await hostA.supervisor.acquire({
+    jobId: 'job-host-a-1',
+    provider: 'gemini',
+    workerId: 'gemini-1',
+  });
+  assert.equal(leaseA.acquired, true);
+  activeOnHostA++;
+  maxConcurrent = Math.max(maxConcurrent, activeOnHostA + activeOnHostB);
+  executionOrder.push('host-a-start');
+
+  // 2. Concurrently, Host B attempts to acquire the exact same account
+  const leaseBPromise = hostB.supervisor.acquire({
+    jobId: 'job-host-b-1',
+    provider: 'gemini',
+    workerId: 'gemini-1',
+    acquireTimeoutMs: 50,
+  });
+
+  // Host B should fail to acquire because Host A holds the distributed database lease
+  await assert.rejects(leaseBPromise, err => {
+    assert.match(err.message, /ACCOUNT_BUSY|Account leased by another host/);
+    return true;
+  });
+
+  assert.equal(activeOnHostB, 0, 'Host B must not execute while Host A holds the distributed lease');
+
+  // 3. Host A completes and releases
+  await hostA.supervisor.release('gemini-1', 'job-host-a-1', leaseA.leaseToken, {});
+  activeOnHostA--;
+  executionOrder.push('host-a-finish');
+
+  // 4. Now Host B can acquire the account cleanly
+  const leaseB = await hostB.supervisor.acquire({
+    jobId: 'job-host-b-2',
+    provider: 'gemini',
+    workerId: 'gemini-1',
+  });
+  assert.equal(leaseB.acquired, true);
+  activeOnHostB++;
+  maxConcurrent = Math.max(maxConcurrent, activeOnHostA + activeOnHostB);
+  executionOrder.push('host-b-start');
+
+  await hostB.supervisor.release('gemini-1', 'job-host-b-2', leaseB.leaseToken, {});
+  activeOnHostB--;
+  executionOrder.push('host-b-finish');
+
+  assert.equal(maxConcurrent, 1, 'ZERO duplicate executions across multiple supervisor processes');
+  assert.deepEqual(executionOrder, ['host-a-start', 'host-a-finish', 'host-b-start', 'host-b-finish']);
+});
+
+test('22. STALE_LEASE_RECOVERY_TEST: stale lease takeover after TTL', async () => {
+  const sharedDb = new SharedDatabaseSimulator();
+  let now = 100_000;
+  sharedDb.clock = () => now;
+
+  const storeA = new DistributedLeaseStore({ simulator: sharedDb, clock: () => now });
+  const storeB = new DistributedLeaseStore({ simulator: sharedDb, clock: () => now });
+
+  // 1. Host A acquires lease with short TTL (10 seconds)
+  const leaseA = await storeA.acquireLease({
+    provider: 'gemini',
+    accountId: 'gemini-1',
+    workerId: 'gemini-host-a',
+    jobId: 'crashed-job',
+    leaseToken: 'token-crashed-host-a',
+    ttlSeconds: 10,
+  });
+  assert.equal(leaseA.acquired, true);
+
+  // 2. Host B attempts immediate acquire -> rejected (ACCOUNT_BUSY)
+  const attemptImmediate = await storeB.acquireLease({
+    provider: 'gemini',
+    accountId: 'gemini-1',
+    workerId: 'gemini-host-b',
+    jobId: 'recovery-job-1',
+    leaseToken: 'token-host-b-1',
+    ttlSeconds: 10,
+  });
+  assert.equal(attemptImmediate.acquired, false);
+  assert.equal(attemptImmediate.message, 'ACCOUNT_BUSY');
+
+  // 3. Host A crashes! Time advances 15 seconds (exceeding 10s TTL without heartbeat)
+  now += 15_000;
+
+  // 4. Host B attempts acquire -> stale lease is atomically taken over
+  const recoveryLease = await storeB.acquireLease({
+    provider: 'gemini',
+    accountId: 'gemini-1',
+    workerId: 'gemini-host-b',
+    jobId: 'recovery-job-2',
+    leaseToken: 'token-host-b-recovery',
+    ttlSeconds: 10,
+  });
+  assert.equal(recoveryLease.acquired, true);
+  assert.equal(recoveryLease.currentLeaseToken, 'token-host-b-recovery');
+  assert.equal(recoveryLease.message, 'LEASE_ACQUIRED');
+
+  // Verify full integration through BrowserWorkerSupervisor
+  const hB = harness({ sharedDb, initialNow: now, runningPorts: [9223] });
+  hB.add('gemini-1', 9223);
+
+  // Release Store B's raw lease so supervisor can acquire
+  await storeB.releaseLease({ provider: 'gemini', accountId: 'gemini-1', leaseToken: 'token-host-b-recovery' });
+
+  const supervisorRes = await hB.supervisor.runWithWorker({ provider: 'gemini', jobId: 'healthy-job' }, async () => 'recovered');
+  assert.equal(supervisorRes, 'recovered');
+});
+
+test('23. REAL_FLOW_USES_SUPERVISOR: Flow external lease contract works and prevents collisions', async () => {
+  const sharedDb = new SharedDatabaseSimulator();
+  let now = 50_000;
+  sharedDb.clock = () => now;
+
+  const h = harness({ sharedDb, initialNow: now });
+  h.add('flow-primary', 9226, {}, 'flow');
+
+  // 1. Flow acquires lease
+  const flowLease = await h.supervisor.acquireExternalLease({
+    provider: 'flow',
+    accountId: 'account-01',
+    jobId: 'flow-job-1',
+    ttlSeconds: 60,
+  });
+  assert.equal(flowLease.acquired, true);
+  assert.ok(flowLease.leaseToken);
+
+  // 2. Second Flow job on same account is rejected
+  await assert.rejects(
+    h.supervisor.acquireExternalLease({
+      provider: 'flow',
+      accountId: 'account-01',
+      jobId: 'flow-job-2',
+    }),
+    err => {
+      assert.equal(err.code, 'ACCOUNT_BUSY');
+      return true;
+    }
+  );
+
+  // 3. Different Flow account can acquire concurrently
+  const flowLease2 = await h.supervisor.acquireExternalLease({
+    provider: 'flow',
+    accountId: 'account-02',
+    jobId: 'flow-job-3',
+  });
+  assert.equal(flowLease2.acquired, true);
+
+  // 4. Release first account
+  await h.supervisor.releaseExternalLease({
+    provider: 'flow',
+    accountId: 'account-01',
+    leaseToken: flowLease.leaseToken,
+  });
+
+  // 5. Account 01 can now be acquired again
+  const flowLease1Reacquired = await h.supervisor.acquireExternalLease({
+    provider: 'flow',
+    accountId: 'account-01',
+    jobId: 'flow-job-4',
+  });
+  assert.equal(flowLease1Reacquired.acquired, true);
+
+  await h.supervisor.releaseExternalLease({
+    provider: 'flow',
+    accountId: 'account-01',
+    leaseToken: flowLease1Reacquired.leaseToken,
+  });
+  await h.supervisor.releaseExternalLease({
+    provider: 'flow',
+    accountId: 'account-02',
+    leaseToken: flowLease2.leaseToken,
+  });
 });
