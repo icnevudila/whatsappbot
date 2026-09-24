@@ -3,6 +3,7 @@ export type SelectedVideoProvider = Exclude<RequestedVideoProvider, 'AUTO'>
 
 export type VideoCapabilityState =
   | 'AVAILABLE'
+  | 'AVAILABLE_WITH_WARNING'
   | 'NO_QUOTA'
   | 'FEATURE_UNAVAILABLE'
   | 'TEMPORARILY_UNAVAILABLE'
@@ -144,7 +145,7 @@ export class VideoProviderRouter {
       ? await this.gemini.checkCapability(request)
       : { state: 'UNKNOWN' as const }
 
-    if (capability.state !== 'AVAILABLE') {
+    if (capability.state !== 'AVAILABLE' && capability.state !== 'AVAILABLE_WITH_WARNING') {
       if (requestedProvider === 'AUTO' && AUTO_FALLBACK_STATES.has(capability.state)) {
         attemptCounts.FLOW_VEO++
         const flowResult = await this.flow.generate(this.forProvider(request, 'FLOW_VEO'))
