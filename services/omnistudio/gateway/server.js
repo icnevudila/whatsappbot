@@ -263,10 +263,37 @@ class AdvancedJobQueue {
     this.jobs = new Map();
     this.pendingQueue = [];
     this.activeWorkers = new Map(); // workerId -> jobId
-    this.registeredWorkers = new Map(); // workerId -> { workerId, status, lastSeen, details }
+    this.registeredWorkers = new Map(); // workerId -> { workerId, status, lastSeen, details, sessionKey }
     this.waiters = new Map();
     this.idempotencyMap = new Map();
     this.cleanupCount = 0;
+    this.sessionLeases = new Map(); // sessionKey -> { sessionKey, activeTextJobId, activeWorkerId, acquiredAt, cooldownUntil, rateLimitCount }
+  }
+
+  getSession(sessionKey) {
+    const key = String(sessionKey || 'default');
+    if (!this.sessionLeases.has(key)) {
+      this.sessionLeases.set(key, {
+        sessionKey: key,
+        activeTextJobId: null,
+        activeWorkerId: null,
+        acquiredAt: null,
+        cooldownUntil: 0,
+        rateLimitCount: 0,
+      });
+    }
+    return this.sessionLeases.get(key);
+  }
+
+  getPendingTextCountForSession(sessionKey) {
+    let count = 0;
+    for (const jobId of this.pendingQueue) {
+      const j = this.jobs.get(jobId);
+      if (j && j.status === 'pending' && j.type === 'chat_suggestions') {
+        count++;
+      }
+    }
+    return count;
   }
 
   createJob({
@@ -353,6 +380,13 @@ class AdvancedJobQueue {
       startedAt: null,
       completedAt: null,
       metrics: jobMetrics,
+      session_queue_depth: 0,
+      session_wait_ms: null,
+      session_active_job_id: null,
+      session_rate_limit_count: 0,
+      session_cooldown_ms: 0,
+      sessionKey: null,
+      telemetry: null,
     };
 
     if (type === 'chat_suggestions') {
@@ -383,7 +417,7 @@ class AdvancedJobQueue {
     });
   }
 
-  getNextJob(workerPlatform, workerId = null) {
+  getNextJob(workerPlatform, workerId = null, workerSessionKey = null) {
     const p = workerPlatform.toLowerCase();
     const wid = workerId || p;
     if (this.activeWorkers.has(wid)) return null;
@@ -392,13 +426,45 @@ class AdvancedJobQueue {
     const reg = this.registeredWorkers.get(wid);
     if (reg && reg.status === 'waiting_login') return null;
 
+    const sKey = workerSessionKey || (reg && reg.sessionKey) || (workerId ? `worker_${workerId}` : (p === 'chatgpt' ? 'chatgpt_9222' : 'gemini_9222'));
+    const session = this.getSession(sKey);
+    const now = Date.now();
+
+    // Check if session currently has an active text job
+    let sessionHasActiveText = false;
+    if (session.activeTextJobId) {
+      const activeJob = this.jobs.get(session.activeTextJobId);
+      if (activeJob && activeJob.status === 'processing') {
+        sessionHasActiveText = true;
+      } else {
+        session.activeTextJobId = null;
+        session.activeWorkerId = null;
+        session.acquiredAt = null;
+      }
+    }
+    const sessionInCooldown = now < session.cooldownUntil;
+
     if (!this.companyWorkerMap) this.companyWorkerMap = new Map();
+
+    const isJobEligible = (job) => {
+      if (!job || job.status !== 'pending') return false;
+      if (job.platform !== 'auto' && job.platform !== p) return false;
+      if (job.type === 'chat_suggestions') {
+        if (job.sessionKey && job.sessionKey !== sKey) {
+          return false;
+        }
+        // Enforce session-scoped single flight: cannot take text job if session has active text or is cooling down
+        if (sessionHasActiveText || sessionInCooldown) {
+          return false;
+        }
+      }
+      return true;
+    };
 
     // 1. Öncelik: Bu işçiye daha önce atanmış aynı firmanın işi varsa onu al (Sticky Company Routing)
     let jobIndex = this.pendingQueue.findIndex(jobId => {
       const job = this.jobs.get(jobId);
-      if (!job || job.status !== 'pending') return false;
-      if (job.platform !== 'auto' && job.platform !== p) return false;
+      if (!isJobEligible(job)) return false;
       const assignedWid = this.companyWorkerMap.get(job.scopeKey);
       return assignedWid === wid;
     });
@@ -407,9 +473,7 @@ class AdvancedJobQueue {
     if (jobIndex === -1) {
       jobIndex = this.pendingQueue.findIndex(jobId => {
         const job = this.jobs.get(jobId);
-        if (!job || job.status !== 'pending') return false;
-        if (job.platform === 'auto' || job.platform === p) return true;
-        return false;
+        return isJobEligible(job);
       });
     }
 
@@ -427,6 +491,18 @@ class AdvancedJobQueue {
     job.startedAt = Date.now();
     setStage(job.metrics, 'queue_wait_ms', job.startedAt - job.createdAt);
     this.activeWorkers.set(wid, jobId);
+
+    if (job.type === 'chat_suggestions') {
+      session.activeTextJobId = job.id;
+      session.activeWorkerId = wid;
+      session.acquiredAt = Date.now();
+      job.sessionKey = sKey;
+      job.session_active_job_id = job.id;
+      job.session_wait_ms = Date.now() - job.createdAt;
+      job.session_queue_depth = this.getPendingTextCountForSession(sKey);
+      job.session_rate_limit_count = session.rateLimitCount || 0;
+      job.session_cooldown_ms = Math.max(0, (session.cooldownUntil || 0) - Date.now());
+    }
 
     if (job.scopeKey) {
       this.companyWorkerMap.set(job.scopeKey, wid);
@@ -470,6 +546,37 @@ class AdvancedJobQueue {
       this.activeWorkers.delete(job.assignedTo);
     }
 
+    if (job.sessionKey) {
+      const session = this.getSession(job.sessionKey);
+      if (session.activeTextJobId === jobId) {
+        session.activeTextJobId = null;
+        session.activeWorkerId = null;
+        session.acquiredAt = null;
+      }
+      if (error && (String(error).includes('WEB_SESSION_RATE_LIMITED') || String(error).toLowerCase().includes('too many requests'))) {
+        job.errorCode = 'WEB_SESSION_RATE_LIMITED';
+        session.rateLimitCount = (session.rateLimitCount || 0) + 1;
+        const cooldownMs = process.env.CHATGPT_SESSION_COOLDOWN_MS ? parseInt(process.env.CHATGPT_SESSION_COOLDOWN_MS, 10) : 15000;
+        session.cooldownUntil = Date.now() + cooldownMs;
+        job.session_rate_limit_count = session.rateLimitCount;
+        job.session_cooldown_ms = cooldownMs;
+      }
+    }
+
+    const sessionTelemetry = {
+      session_queue_depth: job.session_queue_depth ?? 0,
+      session_wait_ms: job.session_wait_ms ?? 0,
+      session_active_job_id: job.session_active_job_id ?? job.id,
+      session_rate_limit_count: job.session_rate_limit_count ?? 0,
+      session_cooldown_ms: job.session_cooldown_ms ?? 0,
+    };
+    job.telemetry = {
+      ...sessionTelemetry,
+      queue_wait_ms: job.metrics?.stages?.queue_wait_ms ?? (job.startedAt ? job.startedAt - job.createdAt : 0),
+      provider_wait_ms: job.metrics?.worker_stages?.provider_wait_ms ?? null,
+      total_ms: Date.now() - job.createdAt,
+    };
+
     const canRetry = error && isRetryableError(error) && (job.attemptCount || 0) < (job.maxAttempts || 2);
 
     if (error && !canRetry) {
@@ -477,7 +584,8 @@ class AdvancedJobQueue {
       job.error = error;
       job.statusText = `Hata: ${error}`;
       job.completedAt = Date.now();
-      finishMetrics(job.metrics, { result: 'error', errorCode: isRetryableError(error) ? 'RETRY_EXHAUSTED' : 'WORKER_ERROR', now: job.completedAt });
+      const errCode = job.errorCode || (isRetryableError(error) ? 'RETRY_EXHAUSTED' : 'WORKER_ERROR');
+      finishMetrics(job.metrics, { result: 'error', errorCode: errCode, now: job.completedAt, sessionTelemetry });
       broadcastEvent('job_failed', sanitizeJobForBroadcast(job));
       this.notifyWaiters(jobId, job);
     } else if (canRetry) {
@@ -540,6 +648,15 @@ class AdvancedJobQueue {
       this.recordWorkerTimings(jobId, timings);
     }
 
+    if (job.sessionKey) {
+      const session = this.getSession(job.sessionKey);
+      if (session.activeTextJobId === jobId) {
+        session.activeTextJobId = null;
+        session.activeWorkerId = null;
+        session.acquiredAt = null;
+      }
+    }
+
     job.status = 'completed';
     job.progress = 100;
     job.statusText = 'Öneriler başarıyla üretildi';
@@ -547,7 +664,22 @@ class AdvancedJobQueue {
     job.resultBytes = resultData ? Buffer.byteLength(JSON.stringify(resultData), 'utf8') : 0;
     job.completedAt = Date.now();
     job.durationMs = job.completedAt - (job.startedAt || job.createdAt);
-    finishMetrics(job.metrics, { result: 'success', now: job.completedAt });
+
+    const sessionTelemetry = {
+      session_queue_depth: job.session_queue_depth ?? 0,
+      session_wait_ms: job.session_wait_ms ?? (job.startedAt ? job.startedAt - job.createdAt : 0),
+      session_active_job_id: job.session_active_job_id ?? job.id,
+      session_rate_limit_count: job.session_rate_limit_count ?? 0,
+      session_cooldown_ms: job.session_cooldown_ms ?? 0,
+    };
+    job.telemetry = {
+      ...sessionTelemetry,
+      queue_wait_ms: job.metrics?.stages?.queue_wait_ms ?? (job.startedAt ? job.startedAt - job.createdAt : 0),
+      provider_wait_ms: job.metrics?.worker_stages?.provider_wait_ms ?? null,
+      total_ms: job.completedAt - job.createdAt,
+    };
+
+    finishMetrics(job.metrics, { result: 'success', now: job.completedAt, sessionTelemetry });
 
     if (job.assignedTo) {
       this.activeWorkers.delete(job.assignedTo);
@@ -571,7 +703,11 @@ class AdvancedJobQueue {
       }
       const list = this.waiters.get(jobId);
       const timer = setTimeout(() => {
-        resolve({ ...job, status: 'failed', error: 'Tarayıcı işçisi zaman aşımına uğradı (120s)' });
+        const j = this.jobs.get(jobId);
+        if (j && j.status === 'processing') {
+          this.releaseLock(jobId, `Tarayıcı işçisi zaman aşımına uğradı (${Math.round(timeoutMs / 1000)}s)`);
+        }
+        resolve({ ...job, status: 'failed', error: `Tarayıcı işçisi zaman aşımına uğradı (${Math.round(timeoutMs / 1000)}s)` });
       }, timeoutMs);
 
       list.push((updated) => {
@@ -589,7 +725,7 @@ class AdvancedJobQueue {
     }
   }
 
-  updateWorkerHeartbeat(workerId, status = 'idle', details = null) {
+  updateWorkerHeartbeat(workerId, status = 'idle', details = null, sessionKey = null) {
     if (status === 'idle' && this.activeWorkers.has(workerId)) {
       const staleJobId = this.activeWorkers.get(workerId);
       this.activeWorkers.delete(workerId);
@@ -600,10 +736,12 @@ class AdvancedJobQueue {
         }
       }
     }
+    const existing = this.registeredWorkers.get(workerId) || {};
     this.registeredWorkers.set(workerId, {
       workerId,
       status, // 'idle', 'busy', 'waiting_login', 'offline'
       details,
+      sessionKey: sessionKey || existing.sessionKey || null,
       lastSeen: Date.now(),
     });
     broadcastEvent('workers_updated', this.getWorkersStatus());
@@ -875,7 +1013,7 @@ class VideoJobQueue {
 const videoQueue = new VideoJobQueue(1);
 
 // Periyodik zombi iş temizleme (200s)
-setInterval(() => {
+const zombieInterval = setInterval(() => {
   const now = Date.now();
   for (const [wid, jobId] of queue.activeWorkers.entries()) {
     if (jobId) {
@@ -887,9 +1025,10 @@ setInterval(() => {
     }
   }
 }, 5000);
+if (zombieInterval && typeof zombieInterval.unref === 'function') zombieInterval.unref();
 
 // SSE Heartbeat (her 25 saniyede bir ping)
-setInterval(() => {
+const sseInterval = setInterval(() => {
   for (const client of sseClients) {
     try {
       client.write(': ping\n\n');
@@ -898,6 +1037,7 @@ setInterval(() => {
     }
   }
 }, 25000);
+if (sseInterval && typeof sseInterval.unref === 'function') sseInterval.unref();
 
 // ==========================================
 // 🐤 KANARYA SAĞLIK NÖBETÇİSİ (Canary Watchdog)
@@ -968,13 +1108,17 @@ async function runCanaryCheck() {
 }
 
 // İlk test sunucu açıldıktan 45 saniye sonra, ardından her 6 saatte bir otomatik çalışır
-setTimeout(() => {
-  runCanaryCheck().catch(() => {});
-}, 45000);
+if (require.main === module && process.env.NODE_ENV !== 'test') {
+  const t1 = setTimeout(() => {
+    runCanaryCheck().catch(() => {});
+  }, 45000);
+  if (t1 && typeof t1.unref === 'function') t1.unref();
 
-setInterval(() => {
-  runCanaryCheck().catch(() => {});
-}, 6 * 60 * 60 * 1000);
+  const t2 = setInterval(() => {
+    runCanaryCheck().catch(() => {});
+  }, 6 * 60 * 60 * 1000);
+  if (t2 && typeof t2.unref === 'function') t2.unref();
+}
 
 // Yardımcılar
 function parseJsonBody(req) {
@@ -1675,11 +1819,16 @@ const server = http.createServer(async (req, res) => {
           success: true,
           suggestions: finished.result.suggestions || [],
           raw: finished.result.raw || null,
+          telemetry: finished.telemetry || null,
         });
       } else {
-        return sendJson(res, 500, {
+        const isRateLimited = (finished.error || '').includes('WEB_SESSION_RATE_LIMITED') || (finished.errorCode === 'WEB_SESSION_RATE_LIMITED');
+        return sendJson(res, isRateLimited ? 429 : 500, {
+          success: false,
           error: finished.error || 'Öneri oluşturulamadı',
+          error_code: isRateLimited ? 'WEB_SESSION_RATE_LIMITED' : (finished.errorCode || 'WORKER_ERROR'),
           details: finished.statusText,
+          telemetry: finished.telemetry || null,
         });
       }
     }
@@ -1781,23 +1930,26 @@ const server = http.createServer(async (req, res) => {
         queue_position: job.status === 'pending' ? job.queuePosition : 0,
         result_url: job.resultUrl,
         error: job.error,
+        error_code: job.errorCode || null,
+        telemetry: job.telemetry || null,
       });
     }
 
-    // 3. Worker: Boştaki İşi Çek (GET /job/next?platform=chatgpt&workerId=chatgpt-1)
+    // 3. Worker: Boştaki İşi Çek (GET /job/next?platform=chatgpt&workerId=chatgpt-1&sessionKey=chatgpt_9222)
     if (method === 'GET' && pathname === '/job/next') {
       const platform = parsedUrl.searchParams.get('platform') || 'chatgpt';
       const workerId = parsedUrl.searchParams.get('workerId') || null;
-      const job = queue.getNextJob(platform, workerId);
+      const sessionKey = parsedUrl.searchParams.get('sessionKey') || null;
+      const job = queue.getNextJob(platform, workerId, sessionKey);
       return sendJson(res, 200, { job });
     }
 
     // 3.1 Worker: Kalp Atışı & Durum Bildir (POST /worker/heartbeat)
     if (method === 'POST' && pathname === '/worker/heartbeat') {
       const body = await parseJsonBody(req);
-      const { workerId, status, details } = body;
+      const { workerId, status, details, sessionKey } = body;
       if (workerId) {
-        queue.updateWorkerHeartbeat(workerId, status, details);
+        queue.updateWorkerHeartbeat(workerId, status, details, sessionKey);
       }
       return sendJson(res, 200, { ok: true });
     }
@@ -1988,13 +2140,19 @@ process.on('unhandledRejection', (reason) => {
   console.error('[Gateway UnhandledRejection]', reason);
 });
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`====================================================`);
-  console.log(`🚀 OmniStudio AI Visual Gateway (V2 Gelişmiş) Çalışıyor!`);
-  console.log(`📡 URL: http://localhost:${PORT}`);
-  console.log(`🎨 Generations: http://localhost:${PORT}/v1/images/generations`);
-  console.log(`🎬 Videos: http://localhost:${PORT}/v1/videos/generations`);
-  console.log(`🖼️ Edits/Varyasyon: http://localhost:${PORT}/v1/images/edits`);
-  console.log(`📂 Outputs: ${OUTPUT_DIR}`);
-  console.log(`====================================================`);
-});
+if (require.main === module) {
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`====================================================`);
+    console.log(`🚀 OmniStudio AI Visual Gateway (V2 Gelişmiş) Çalışıyor!`);
+    console.log(`📡 URL: http://localhost:${PORT}`);
+    console.log(`🎨 Generations: http://localhost:${PORT}/v1/images/generations`);
+    console.log(`🎬 Videos: http://localhost:${PORT}/v1/videos/generations`);
+    console.log(`🖼️ Edits/Varyasyon: http://localhost:${PORT}/v1/images/edits`);
+    console.log(`📂 Outputs: ${OUTPUT_DIR}`);
+    console.log(`====================================================`);
+  });
+}
+
+module.exports = { server, queue, AdvancedJobQueue };
+
+

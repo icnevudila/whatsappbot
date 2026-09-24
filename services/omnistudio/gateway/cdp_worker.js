@@ -20,7 +20,12 @@ const {
   setCompanyChat,
   renameChatToTitle
 } = require('./chat_manager.js');
-const { OrphanTabReaper, acquireSubmitPacing } = require('./orphan_tab_reaper.js');
+const {
+  OrphanTabReaper,
+  acquireSubmitPacing,
+  acquireSessionFlightLease,
+  releaseSessionFlightLease
+} = require('./orphan_tab_reaper.js');
 
 const reaper = new OrphanTabReaper();
 let cachedTabId = null;
@@ -44,6 +49,18 @@ function isMemorySafeForWork() {
 
 console.log(`[CDP Worker: ${WORKER_ID}] OmniStudio Otonom Tarayıcı Motoru Başlatılıyor...`);
 console.log(`[CDP Worker: ${WORKER_ID}] Gateway: ${GATEWAY_URL} | CDP: ${CDP_HTTP}`);
+
+const JS_GET_ASSISTANT_MSGS = `
+  (() => {
+    const classic = Array.from(document.querySelectorAll('[data-message-author-role="assistant"]'));
+    if (classic.length > 0) return classic;
+    const unitKeys = Array.from(document.querySelectorAll('[data-chatgpt-search-unit-key*="assistant"]'));
+    if (unitKeys.length > 0) return unitKeys;
+    const h4s = Array.from(document.querySelectorAll('[data-conversation-role="assistant"]'));
+    if (h4s.length > 0) return h4s.map(h => h.parentElement || h);
+    return [];
+  })()
+`;
 
 let isBusy = false;
 
@@ -278,6 +295,39 @@ async function dismissAnyModals(cdp) {
   }
 }
 
+async function checkRateLimitModal(cdp) {
+  try {
+    const res = await cdp.send('Runtime.evaluate', {
+      expression: `(() => {
+        const dialogs = Array.from(document.querySelectorAll('[role="dialog"], [role="alertdialog"], .modal'));
+        for (const d of dialogs) {
+          const t = (d.innerText || '').toLowerCase();
+          if (t.includes('too many requests') || t.includes('requests too quickly') || t.includes('çok hızlı istek') || t.includes('istek sınır')) {
+            const btn = Array.from(d.querySelectorAll('button')).find(b => {
+              const bt = (b.innerText || '').toLowerCase();
+              return bt.includes('got it') || bt.includes('anladım') || bt.includes('tamam') || bt.includes('dismiss');
+            });
+            if (btn) btn.click();
+            return true;
+          }
+        }
+        const alerts = Array.from(document.querySelectorAll('[role="alert"], [class*="alert"], [class*="banner"]'));
+        for (const a of alerts) {
+          const t = (a.innerText || '').toLowerCase();
+          if (t.includes('too many requests') || t.includes('requests too quickly')) {
+            return true;
+          }
+        }
+        return false;
+      })()`,
+      returnByValue: true
+    });
+    return !!res.result?.value;
+  } catch (_) {
+    return false;
+  }
+}
+
 async function waitForChatInput(cdp, maxWaitMs = 15000) {
   const start = Date.now();
   while (Date.now() - start < maxWaitMs) {
@@ -311,8 +361,12 @@ async function injectPromptAndSend(cdp, promptText) {
   let promptInsertedAt = null;
   try {
     // 0. Session-scoped submission pacing to avoid ChatGPT web concurrent submit rate-limits
-    const sessionKey = `chatgpt_${String(CDP_HTTP).replace(/[^0-9]/g, '') || '9222'}`;
+    const sessionKey = process.env.SESSION_KEY || `chatgpt_${String(CDP_HTTP).replace(/[^0-9]/g, '') || '9222'}`;
     await acquireSubmitPacing(sessionKey);
+
+    if (await checkRateLimitModal(cdp)) {
+      throw new Error('WEB_SESSION_RATE_LIMITED: ChatGPT web "Too many requests" rate-limit modal detected');
+    }
 
     // 1. Varsa engelleyici modalları temizle
     await dismissAnyModals(cdp);
@@ -348,6 +402,9 @@ async function injectPromptAndSend(cdp, promptText) {
     // 3. Gönder butonunun render edilmesini bekle ve tıkla
     let clicked = false;
     for (let wait = 0; wait < 25; wait++) {
+      if (await checkRateLimitModal(cdp)) {
+        throw new Error('WEB_SESSION_RATE_LIMITED: ChatGPT web "Too many requests" rate-limit modal detected');
+      }
       await dismissAnyModals(cdp);
       const clickRes = await cdp.send('Runtime.evaluate', {
         expression: `(() => {
@@ -575,11 +632,12 @@ setInterval(async () => {
     const details = isBusy
       ? 'Görsel üretiyor'
       : (isTabLoggedIn ? 'Oturum açık, görev bekliyor' : 'Giriş bekleniyor (Login ekranı)');
+    const sessionKey = process.env.SESSION_KEY || `chatgpt_${String(CDP_HTTP).replace(/[^0-9]/g, '') || '9222'}`;
 
     fetch(`${GATEWAY_URL}/worker/heartbeat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ workerId: WORKER_ID, status, details })
+      body: JSON.stringify({ workerId: WORKER_ID, status, details, sessionKey })
     }).catch(() => {});
   } catch (err) {}
 }, 5000);
@@ -641,7 +699,8 @@ async function workerLoop() {
     }
 
     // 2. Gateway'den sıradaki işi çek
-    const jobRes = await fetch(`${GATEWAY_URL}/job/next?platform=chatgpt&workerId=${encodeURIComponent(WORKER_ID)}`, { cache: 'no-store' });
+    const sessionKey = process.env.SESSION_KEY || `chatgpt_${String(CDP_HTTP).replace(/[^0-9]/g, '') || '9222'}`;
+    const jobRes = await fetch(`${GATEWAY_URL}/job/next?platform=chatgpt&workerId=${encodeURIComponent(WORKER_ID)}&sessionKey=${encodeURIComponent(sessionKey)}`, { cache: 'no-store' });
     if (!jobRes.ok) return;
 
     const { job } = await jobRes.json();
@@ -967,6 +1026,8 @@ async function executeChatGPTJob(tab, job) {
 async function executeChatSuggestionsJob(tab, job) {
   let cdp = null;
   const workerTiming = createWorkerTiming(job, 'text');
+  const sessionKey = process.env.SESSION_KEY || `chatgpt_${String(CDP_HTTP).replace(/[^0-9]/g, '') || '9222'}`;
+  await acquireSessionFlightLease(sessionKey, job.id);
   try {
     cdp = await createCdpSession(tab.webSocketDebuggerUrl);
     workerTiming.mark('tab_acquire_ms');
@@ -979,7 +1040,7 @@ async function executeChatSuggestionsJob(tab, job) {
       const waitStart = Date.now();
       while (Date.now() - waitStart < 1500) {
         const check = await cdp.send('Runtime.evaluate', {
-          expression: `document.querySelectorAll('[data-message-author-role]').length > 0`,
+          expression: `document.querySelectorAll('[data-message-author-role], [data-conversation-role], [data-chatgpt-search-unit-key]').length > 0`,
           returnByValue: true
         }).catch(() => ({ result: { value: false } }));
         if (check.result?.value) break;
@@ -991,8 +1052,8 @@ async function executeChatSuggestionsJob(tab, job) {
     // 1. Stale Result Protection: Submit öncesi asistan mesajlarının kesin baseline'ını al
     const baselineEval = await cdp.send('Runtime.evaluate', {
       expression: `(() => {
-        const assts = Array.from(document.querySelectorAll('[data-message-author-role="assistant"]'));
-        const ids = assts.map(a => a.getAttribute('data-message-id') || a.id || '').filter(Boolean);
+        const assts = ${JS_GET_ASSISTANT_MSGS};
+        const ids = assts.map(a => a.getAttribute('data-message-id') || a.getAttribute('data-chatgpt-search-message-ids') || a.id || '').filter(Boolean);
         const lastText = assts.length > 0 ? (assts[assts.length - 1].innerText || '').trim() : '';
         return { count: assts.length, ids, lastText };
       })()`,
@@ -1049,10 +1110,13 @@ Bu mesaja verilebilecek en kaliteli ve uygun 3 FARKLI alternatif Türkçe yanıt
 
     while (Date.now() - pollStart < maxWaitTimeMs) {
       await sleep(250);
+      if (await checkRateLimitModal(cdp)) {
+        throw new Error('WEB_SESSION_RATE_LIMITED: ChatGPT web "Too many requests" rate-limit modal detected');
+      }
       const textEval = await cdp.send('Runtime.evaluate', {
         expression: `
           (() => {
-            const assts = Array.from(document.querySelectorAll('[data-message-author-role="assistant"]'));
+            const assts = ${JS_GET_ASSISTANT_MSGS};
             if (assts.length <= ${baseline.count}) {
               const stopBtn = document.querySelector('button[data-testid*="stop"], button[aria-label*="Stop"], button[aria-label*="durdur"], button[aria-label*="Durdur"]');
               const isGenerating = !!stopBtn || !!document.querySelector('.result-thinking, [data-testid*="generating"], .streaming-animated-ellipsis');
@@ -1241,6 +1305,7 @@ Bu mesaja verilebilecek en kaliteli ve uygun 3 FARKLI alternatif Türkçe yanıt
       body: JSON.stringify({ jobId: job.id, error: err.message })
     }).catch(() => {});
   } finally {
+    releaseSessionFlightLease(sessionKey, job.id);
     if (cdp) cdp.close();
     await workerTiming.flush();
   }
@@ -1355,7 +1420,7 @@ YALNIZCA aşağıdaki JSON formatında yanıt ver, markdown kod bloğu (\`\`\`js
             const isThinking = !!document.querySelector('.result-thinking, [data-testid*="generating"], .streaming-animated-ellipsis');
             const isGenerating = !!stopBtn || isThinking;
 
-            const articles = Array.from(document.querySelectorAll('[data-message-author-role="assistant"]'));
+            const articles = ${JS_GET_ASSISTANT_MSGS};
             const lastMsg = articles.pop();
             const text = lastMsg ? (lastMsg.innerText || '').trim() : '';
             return { isGenerating, text };
@@ -1444,7 +1509,7 @@ async function executeProductAffordanceJob(tab, job) {
     await sleep(1000);
 
     const countEval = await cdp.send('Runtime.evaluate', {
-      expression: `document.querySelectorAll('[data-message-author-role="assistant"]').length`,
+      expression: `${JS_GET_ASSISTANT_MSGS}.length`,
       returnByValue: true
     });
     const initialAsstCount = countEval.result?.value || 0;
@@ -1459,7 +1524,7 @@ async function executeProductAffordanceJob(tab, job) {
       const textEval = await cdp.send('Runtime.evaluate', {
         expression: `
           (() => {
-            const assts = Array.from(document.querySelectorAll('[data-message-author-role="assistant"]'));
+            const assts = ${JS_GET_ASSISTANT_MSGS};
             if (assts.length <= ${initialAsstCount}) return { hasNewMsg: false, isGenerating: true, text: '' };
             const last = assts[assts.length - 1];
             const text = (last.innerText || '').trim();

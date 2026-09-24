@@ -477,6 +477,197 @@ async function acquireSubmitPacing(sessionKey = 'chatgpt_default', minIntervalMs
   return { waitedMs: 0, nextSubmitAt: Date.now() };
 }
 
+function _removeLeaseAndQueue(leaseFile, queueFile, lockFile, jobId) {
+  const start = Date.now();
+  while (Date.now() - start < 3000) {
+    let fd = null;
+    try {
+      if (fs.existsSync(lockFile)) {
+        const stat = fs.statSync(lockFile);
+        if (Date.now() - stat.mtimeMs > 3000) {
+          try { fs.unlinkSync(lockFile); } catch (_) {}
+        }
+      }
+      fd = fs.openSync(lockFile, 'wx');
+      if (fs.existsSync(leaseFile)) {
+        try {
+          const currentLease = JSON.parse(fs.readFileSync(leaseFile, 'utf8'));
+          if (!jobId || currentLease.activeJobId === jobId) {
+            fs.unlinkSync(leaseFile);
+          }
+        } catch (_) {
+          fs.unlinkSync(leaseFile);
+        }
+      }
+      if (fs.existsSync(queueFile)) {
+        try {
+          const queueData = JSON.parse(fs.readFileSync(queueFile, 'utf8'));
+          if (Array.isArray(queueData.waiting)) {
+            if (jobId) {
+              queueData.waiting = queueData.waiting.filter(item => (typeof item === 'object' ? item.id : item) !== jobId);
+            } else {
+              queueData.waiting.shift();
+            }
+            fs.writeFileSync(queueFile, JSON.stringify(queueData));
+          }
+        } catch (_) {}
+      }
+      try { fs.closeSync(fd); } catch (_) {}
+      try { fs.unlinkSync(lockFile); } catch (_) {}
+      return;
+    } catch (_) {
+      if (fd !== null) {
+        try { fs.closeSync(fd); } catch (_) {}
+      }
+      const waitUntil = Date.now() + 20;
+      while (Date.now() < waitUntil) {}
+    }
+  }
+
+  try {
+    if (fs.existsSync(leaseFile)) {
+      const currentLease = JSON.parse(fs.readFileSync(leaseFile, 'utf8'));
+      if (!jobId || currentLease.activeJobId === jobId) {
+        fs.unlinkSync(leaseFile);
+      }
+    }
+  } catch (_) {}
+  try {
+    if (fs.existsSync(queueFile)) {
+      const queueData = JSON.parse(fs.readFileSync(queueFile, 'utf8'));
+      if (Array.isArray(queueData.waiting)) {
+        queueData.waiting = queueData.waiting.filter(item => (typeof item === 'object' ? item.id : item) !== jobId);
+        fs.writeFileSync(queueFile, JSON.stringify(queueData));
+      }
+    }
+  } catch (_) {}
+}
+
+async function acquireSessionFlightLease(sessionKey, jobId, options = {}) {
+  const leaseDir = options.pacingDir || process.env.PACING_DIR || '/tmp/omnistudio_tabs';
+  const timeoutMs = options.timeoutMs || 120000;
+  const pollIntervalMs = options.pollIntervalMs || 50;
+  const safeKey = String(sessionKey || 'default').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const leaseFile = path.join(leaseDir, `session_lease_${safeKey}.json`);
+  const queueFile = path.join(leaseDir, `session_queue_${safeKey}.json`);
+  const lockFile = path.join(leaseDir, `session_lease_${safeKey}.lock`);
+
+  if (!fs.existsSync(leaseDir)) {
+    try { fs.mkdirSync(leaseDir, { recursive: true }); } catch (_) {}
+  }
+
+  const enqueuedAt = Date.now();
+  const start = Date.now();
+
+  while (Date.now() - start < timeoutMs) {
+    try {
+      if (fs.existsSync(lockFile)) {
+        const stat = fs.statSync(lockFile);
+        if (Date.now() - stat.mtimeMs > 5000) {
+          try { fs.unlinkSync(lockFile); } catch (_) {}
+        }
+      }
+    } catch (_) {}
+
+    let fd = null;
+    try {
+      fd = fs.openSync(lockFile, 'wx');
+
+      // 1. Maintain FIFO waiting queue
+      let queueData = { waiting: [] };
+      try {
+        if (fs.existsSync(queueFile)) {
+          queueData = JSON.parse(fs.readFileSync(queueFile, 'utf8'));
+          if (!Array.isArray(queueData.waiting)) queueData.waiting = [];
+        }
+      } catch (_) {
+        queueData = { waiting: [] };
+      }
+
+      const now = Date.now();
+      // Clean any expired entries in waiting queue (older than timeoutMs)
+      queueData.waiting = queueData.waiting.filter(item => {
+        const t = typeof item === 'object' && item !== null ? item.enqueuedAt : now;
+        return now - t < timeoutMs;
+      });
+
+      // Register this jobId in FIFO waiting queue if not present
+      const existingIdx = queueData.waiting.findIndex(item => (typeof item === 'object' ? item.id : item) === jobId);
+      if (existingIdx === -1) {
+        queueData.waiting.push({ id: jobId, enqueuedAt });
+        try { fs.writeFileSync(queueFile, JSON.stringify(queueData)); } catch (_) {}
+      }
+
+      // 2. Check current lease
+      let currentLease = null;
+      try {
+        if (fs.existsSync(leaseFile)) {
+          currentLease = JSON.parse(fs.readFileSync(leaseFile, 'utf8'));
+        }
+      } catch (_) {}
+
+      let leaseIsActive = false;
+      if (currentLease && currentLease.activeJobId && currentLease.activeJobId !== jobId) {
+        const leaseAge = now - (currentLease.acquiredAt || 0);
+        if (leaseAge < timeoutMs) {
+          leaseIsActive = true;
+        }
+      }
+
+      // 3. FIFO check: must be head of waiting queue
+      const headItem = queueData.waiting[0];
+      const headId = typeof headItem === 'object' ? headItem?.id : headItem;
+      const isHead = !headId || headId === jobId;
+
+      if (leaseIsActive || !isHead) {
+        try { fs.closeSync(fd); } catch (_) {}
+        try { fs.unlinkSync(lockFile); } catch (_) {}
+        fd = null;
+        await new Promise(r => setTimeout(r, pollIntervalMs));
+        continue;
+      }
+
+      // 4. Acquire lease
+      const acquiredAt = Date.now();
+      fs.writeFileSync(leaseFile, JSON.stringify({
+        sessionKey: safeKey,
+        activeJobId: jobId,
+        acquiredAt,
+      }));
+
+      try { fs.closeSync(fd); } catch (_) {}
+      try { fs.unlinkSync(lockFile); } catch (_) {}
+      return {
+        acquired: true,
+        sessionKey: safeKey,
+        jobId,
+        waitedMs: Date.now() - start,
+        acquiredAt,
+      };
+    } catch (e) {
+      if (fd !== null) {
+        try { fs.closeSync(fd); } catch (_) {}
+      }
+      await new Promise(r => setTimeout(r, pollIntervalMs));
+    }
+  }
+
+  // Cleanup from queue on timeout
+  _removeLeaseAndQueue(leaseFile, queueFile, lockFile, jobId);
+  throw new Error(`SESSION_LEASE_TIMEOUT: Could not acquire lease for session ${sessionKey} within ${timeoutMs}ms`);
+}
+
+function releaseSessionFlightLease(sessionKey, jobId = null, options = {}) {
+  const leaseDir = options.pacingDir || process.env.PACING_DIR || '/tmp/omnistudio_tabs';
+  const safeKey = String(sessionKey || 'default').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const leaseFile = path.join(leaseDir, `session_lease_${safeKey}.json`);
+  const queueFile = path.join(leaseDir, `session_queue_${safeKey}.json`);
+  const lockFile = path.join(leaseDir, `session_lease_${safeKey}.lock`);
+
+  _removeLeaseAndQueue(leaseFile, queueFile, lockFile, jobId);
+  return true;
+}
+
 module.exports = {
   TabRegistry,
   OrphanTabReaper,
@@ -485,5 +676,8 @@ module.exports = {
   REAPER_COOLDOWN_MS,
   CHATGPT_SUBMIT_MIN_INTERVAL_MS,
   acquireSubmitPacing,
+  acquireSessionFlightLease,
+  releaseSessionFlightLease,
 };
+
 

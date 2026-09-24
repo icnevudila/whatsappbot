@@ -87,7 +87,7 @@ function recordWorkerStages(metrics, timings) {
   }
 }
 
-function finishMetrics(metrics, { result = 'success', errorCode = null, now = Date.now() } = {}) {
+function finishMetrics(metrics, { result = 'success', errorCode = null, now = Date.now(), sessionTelemetry = null } = {}) {
   if (!metrics) return null;
   const payload = {
     event: 'omnistudio_runtime_metric',
@@ -105,6 +105,13 @@ function finishMetrics(metrics, { result = 'success', errorCode = null, now = Da
     },
     stages: metrics.stages,
     worker_stages: metrics.worker_stages || {},
+    session_telemetry: sessionTelemetry ? {
+      session_queue_depth: sessionTelemetry.session_queue_depth ?? 0,
+      session_wait_ms: sessionTelemetry.session_wait_ms ?? null,
+      session_active_job_id: sessionTelemetry.session_active_job_id ?? null,
+      session_rate_limit_count: sessionTelemetry.session_rate_limit_count ?? 0,
+      session_cooldown_ms: sessionTelemetry.session_cooldown_ms ?? 0,
+    } : undefined,
     total_ms: asNonNegativeMs(now - metrics.started_at_ms),
   };
   console.log(JSON.stringify(payload));
