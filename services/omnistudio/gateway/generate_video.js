@@ -3,8 +3,8 @@ const path = require('path');
 const os = require('os');
 const { execSync } = require('child_process');
 const crypto = require('crypto');
-const WebSocket = globalThis.WebSocket || (() => {
-  try { return require('ws'); } catch (e) { return null; }
+const WebSocket = (() => {
+  try { return require('ws'); } catch (e) { return globalThis.WebSocket; }
 })();
 const {
   CAPABILITY_STATES,
@@ -3291,30 +3291,55 @@ async function verifyAccount(port) {
     };
 
     const res = await new Promise((resolve) => {
-      const timer = setTimeout(() => { ws.close(); resolve({ ok: false, error: 'CDP timeout' }); }, 8000);
-      ws.on('open', () => {
-        ws.send(JSON.stringify({
-          id: 1,
-          method: 'Runtime.evaluate',
-          params: {
-            expression: `(${checkFn.toString()})()`,
-            returnByValue: true
-          }
-        }));
-      });
-      ws.on('message', (m) => {
-        const d = JSON.parse(m.toString());
-        if (d.id === 1) {
-          clearTimeout(timer);
-          ws.close();
-          const val = d.result?.result?.value || {};
-          resolve({ ok: true, ...val });
-        }
-      });
-      ws.on('error', (err) => {
+      let finished = false;
+      const finish = (result) => {
+        if (finished) return;
+        finished = true;
         clearTimeout(timer);
-        resolve({ ok: false, error: err.message });
-      });
+        try { ws.close(); } catch (_) {}
+        resolve(result);
+      };
+      const timer = setTimeout(() => finish({ ok: false, error: 'CDP timeout' }), 8000);
+
+      const onOpen = () => {
+        try {
+          ws.send(JSON.stringify({
+            id: 1,
+            method: 'Runtime.evaluate',
+            params: {
+              expression: `(${checkFn.toString()})()`,
+              returnByValue: true
+            }
+          }));
+        } catch (err) {
+          finish({ ok: false, error: err.message });
+        }
+      };
+
+      const onMsg = (eventData) => {
+        try {
+          const raw = typeof eventData === 'string' ? eventData : (eventData.data || eventData).toString();
+          const d = JSON.parse(raw);
+          if (d.id === 1) {
+            const val = d.result?.result?.value || {};
+            finish({ ok: true, ...val });
+          }
+        } catch (e) {
+          finish({ ok: false, error: e.message });
+        }
+      };
+
+      const onErr = (err) => finish({ ok: false, error: err?.message || 'WebSocket error' });
+
+      if (typeof ws.on === 'function') {
+        ws.on('open', onOpen);
+        ws.on('message', onMsg);
+        ws.on('error', onErr);
+      } else {
+        ws.onopen = onOpen;
+        ws.onmessage = onMsg;
+        ws.onerror = onErr;
+      }
     });
 
     if (res.ok) {
