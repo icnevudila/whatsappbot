@@ -228,7 +228,7 @@ for (const port of geminiCdpPorts) {
     providerReadyValidator: async worker => {
       const { getGeminiVideoCapability } = require('./generate_video.js');
       const report = await getGeminiVideoCapability({ force: true, ports: [worker.cdpPort] });
-      if (report.state === 'AVAILABLE') return { ok: true };
+      if (report.state === 'AVAILABLE' || report.state === 'AVAILABLE_WITH_WARNING') return { ok: true };
       if (report.state === 'AUTH_REQUIRED') return { ok: false, code: 'AUTH_REQUIRED', message: report.evidence };
       if (report.state === 'NO_QUOTA') return { ok: false, code: 'QUOTA_EXHAUSTED', message: report.evidence };
       if (report.state === 'ACCOUNT_CONFIGURATION_REQUIRED') {

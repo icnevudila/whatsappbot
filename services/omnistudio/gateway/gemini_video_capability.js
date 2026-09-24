@@ -2,6 +2,7 @@
 
 const CAPABILITY_STATES = Object.freeze({
   AVAILABLE: 'AVAILABLE',
+  AVAILABLE_WITH_WARNING: 'AVAILABLE_WITH_WARNING',
   NO_QUOTA: 'NO_QUOTA',
   FEATURE_UNAVAILABLE: 'FEATURE_UNAVAILABLE',
   TEMPORARILY_UNAVAILABLE: 'TEMPORARILY_UNAVAILABLE',
@@ -27,6 +28,9 @@ function classifyGeminiVideoError(input) {
   if (/policy|safety|unsafe|blocked content/.test(corpus)) return { code: 'POLICY_REJECTED', state: CAPABILITY_STATES.UNKNOWN };
   if (/user[_ -]?cancel/.test(corpus)) return { code: 'USER_CANCELLED', state: CAPABILITY_STATES.UNKNOWN };
   if (/factual|wrong[_ -]?product/.test(corpus)) return { code: 'FACTUAL_GATE_FAILURE', state: CAPABILITY_STATES.UNKNOWN };
+  if (/runtime_blocked|1040|activity_off_rejected|gemini_runtime_blocked/.test(corpus)) {
+    return { code: 'GEMINI_RUNTIME_BLOCKED', state: CAPABILITY_STATES.ACCOUNT_CONFIGURATION_REQUIRED };
+  }
   if (/gemini apps activity is off|etkinliği kapalı|activity.*off/.test(corpus)) {
     return { code: 'GEMINI_APPS_ACTIVITY_OFF', state: CAPABILITY_STATES.ACCOUNT_CONFIGURATION_REQUIRED };
   }

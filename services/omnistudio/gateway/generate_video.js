@@ -938,6 +938,33 @@ function attemptGenerateOnCdp(port, tab, options) {
           });
 
           const status = checkRes?.result?.value;
+
+          // Kontrol: Sağlayıcı anında 1040 veya etkinlik kapalı hatası verdi mi?
+          const rejectCheck = await sendCmd("Runtime.evaluate", {
+            expression: `
+              (function() {
+                const text = (document.body?.innerText || '').toLowerCase();
+                const has1040 = text.includes('1040') || text.includes('hata 1040') || text.includes('error 1040');
+                const hasActivityReject = (text.includes('etkinliği kapalı') || text.includes('apps activity is off')) &&
+                                          (text.includes('video oluşturulamıyor') || text.includes('cannot create video') || text.includes('etkinleştirmeniz gerekir') || text.includes('lütfen etkinleştirin'));
+                return { has1040, hasActivityReject };
+              })()
+            `,
+            returnByValue: true
+          });
+          if (rejectCheck?.result?.value?.has1040 || rejectCheck?.result?.value?.hasActivityReject) {
+            ws.close();
+            const reason = rejectCheck.result.value.has1040 ? '1040 explicit provider rejection' : 'Explicit activity-off video rejection';
+            const err = new Error(`GEMINI_RUNTIME_BLOCKED: ${reason}`);
+            err.code = 'GEMINI_RUNTIME_BLOCKED';
+            throw err;
+          }
+
+          if (status?.isSpinnerActive || status?.hasVideo) {
+            accountPool[port] = accountPool[port] || {};
+            accountPool[port].runtimeStatus = 'VERIFIED_WORKING';
+          }
+
           // Veo render tamamlandı: Yeni indir butonu veya geçerli video elementi varsa ve aktif spinner yoksa
           if (status && (status.dlCount > initialDlCount || status.hasVideo) && (!status.isSpinnerActive || status.hasVideo) && elapsed >= 20) {
             console.log(`[VideoGen Port:${port}] Yeni video başarıyla render edildi (${elapsed}s)! İndirme tetikleniyor...`);
@@ -1216,7 +1243,7 @@ async function checkPortLoggedIn(port, tab) {
   });
 }
 
-function cacheGeminiCapability(port, state, evidence) {
+function cacheGeminiCapability(port, state, evidence, extra = {}) {
   const checkedAtMs = Date.now();
   const record = {
     state,
@@ -1224,6 +1251,9 @@ function cacheGeminiCapability(port, state, evidence) {
     checked_at: new Date(checkedAtMs).toISOString(),
     expires_at: new Date(checkedAtMs + GEMINI_CAPABILITY_TTL_MS).toISOString(),
     evidence,
+    apps_activity: extra.apps_activity || (state === CAPABILITY_STATES.AVAILABLE_WITH_WARNING ? 'DISABLED' : (state === CAPABILITY_STATES.ACCOUNT_CONFIGURATION_REQUIRED ? 'DISABLED' : (state === CAPABILITY_STATES.AVAILABLE ? 'ENABLED' : 'UNKNOWN'))),
+    runtime_verification_required: extra.runtime_verification_required ?? (state === CAPABILITY_STATES.AVAILABLE_WITH_WARNING),
+    ready_for_canary: extra.ready_for_canary ?? (state === CAPABILITY_STATES.AVAILABLE || state === CAPABILITY_STATES.AVAILABLE_WITH_WARNING),
   };
   geminiCapabilityCache.set(port, { ...record, expiresAtMs: checkedAtMs + GEMINI_CAPABILITY_TTL_MS });
   return record;
@@ -1279,9 +1309,6 @@ async function inspectGeminiVideoTab(port, tab) {
           if (value.loginRequired) {
             return finish(cacheGeminiCapability(port, CAPABILITY_STATES.AUTH_REQUIRED, 'Gemini session requires authentication'));
           }
-          if (value.activityOff) {
-            return finish(cacheGeminiCapability(port, CAPABILITY_STATES.ACCOUNT_CONFIGURATION_REQUIRED, 'Gemini Apps activity is disabled on this account'));
-          }
           if (value.noQuota) {
             return finish(cacheGeminiCapability(port, CAPABILITY_STATES.NO_QUOTA, 'Gemini video quota-limit message is visible'));
           }
@@ -1292,7 +1319,23 @@ async function inspectGeminiVideoTab(port, tab) {
             return finish(cacheGeminiCapability(port, CAPABILITY_STATES.TEMPORARILY_UNAVAILABLE, 'Gemini reports temporary error or 1040'));
           }
           if (String(value.href || '').includes('gemini.google.com/videos') && value.hasInput) {
-            return finish(cacheGeminiCapability(port, CAPABILITY_STATES.AVAILABLE, 'Gemini /videos page and enabled prompt input are present'));
+            if (value.activityOff) {
+              return finish(cacheGeminiCapability(
+                port,
+                CAPABILITY_STATES.AVAILABLE_WITH_WARNING,
+                'Gemini /videos page and enabled prompt input are present; Apps activity is disabled (warning: runtime verification required)',
+                { apps_activity: 'DISABLED', runtime_verification_required: true, ready_for_canary: true }
+              ));
+            }
+            return finish(cacheGeminiCapability(
+              port,
+              CAPABILITY_STATES.AVAILABLE,
+              'Gemini /videos page and enabled prompt input are present',
+              { apps_activity: 'ENABLED', runtime_verification_required: false, ready_for_canary: true }
+            ));
+          }
+          if (value.activityOff) {
+            return finish(cacheGeminiCapability(port, CAPABILITY_STATES.ACCOUNT_CONFIGURATION_REQUIRED, 'Gemini Apps activity is disabled on this account and video input is not available'));
           }
           return finish(cacheGeminiCapability(port, CAPABILITY_STATES.UNKNOWN, 'Gemini session exists but positive video capability evidence is absent'));
         } catch (error) {
@@ -1346,7 +1389,8 @@ async function getGeminiVideoCapability(options = {}) {
     }
   }));
 
-  const available = accountReports.find(report => report.state === CAPABILITY_STATES.AVAILABLE);
+  const available = accountReports.find(report => report.state === CAPABILITY_STATES.AVAILABLE) ||
+    accountReports.find(report => report.state === CAPABILITY_STATES.AVAILABLE_WITH_WARNING);
   const selected = available ||
     accountReports.find(report => report.state === CAPABILITY_STATES.ACCOUNT_CONFIGURATION_REQUIRED) ||
     accountReports.find(report => report.state === CAPABILITY_STATES.AUTH_REQUIRED) ||
@@ -1407,9 +1451,15 @@ async function generateVideo(options) {
 
   let lastError = null;
   const classifiedFailures = [];
+  const runtimeBlockedAccounts = new Set();
 
   for (const port of candidatePorts) {
-    console.log(`[VideoGen Pool] Port ${port} üzerinden video üretimi deneniyor...`);
+    const canonical = getCanonicalAccountForPort(port);
+    if (runtimeBlockedAccounts.has(canonical)) {
+      console.warn(`[VideoGen Pool] Canonical account ${canonical} is RUNTIME_BLOCKED in this attempt, skipping.`);
+      continue;
+    }
+    console.log(`[VideoGen Pool] Port ${port} (${canonical}) üzerinden video üretimi deneniyor...`);
     try {
       const listRes = await fetch(`http://127.0.0.1:${port}/json/list`, { signal: AbortSignal.timeout(3000) });
       if (!listRes.ok) {
@@ -1459,7 +1509,6 @@ async function generateVideo(options) {
 
       if (result.isLimited) {
         const cooldownMs = 2 * 60 * 60 * 1000;
-        const canonical = getCanonicalAccountForPort(port);
         for (const p of CDP_PORTS) {
           if (getCanonicalAccountForPort(p) === canonical) {
             accountPool[p] = accountPool[p] || {};
@@ -1476,12 +1525,19 @@ async function generateVideo(options) {
       // Başarılı!
       accountPool[port].limitedUntil = 0;
       accountPool[port].limitReason = null;
+      accountPool[port].runtimeStatus = 'VERIFIED_WORKING';
       cacheGeminiCapability(port, CAPABILITY_STATES.AVAILABLE, 'Gemini Native Video generation completed successfully');
-      console.log(`[VideoGen Pool] ✅ Video üretimi başarıyla tamamlandı (Hesap Portu: ${port})!`);
+      console.log(`[VideoGen Pool] ✅ Video üretimi başarıyla tamamlandı (Hesap Portu: ${port}, Canonical: ${canonical})!`);
       return result;
 
     } catch (err) {
-      console.error(`[VideoGen Pool] Port ${port} üzerinde hata:`, err.message);
+      console.error(`[VideoGen Pool] Port ${port} (${canonical}) üzerinde hata:`, err.message);
+      if (err.code === 'GEMINI_RUNTIME_BLOCKED') {
+        runtimeBlockedAccounts.add(canonical);
+        accountPool[port] = accountPool[port] || {};
+        accountPool[port].runtimeStatus = 'RUNTIME_BLOCKED';
+        cacheGeminiCapability(port, CAPABILITY_STATES.ACCOUNT_CONFIGURATION_REQUIRED, err.message);
+      }
       const classified = classifyGeminiVideoError(err);
       classifiedFailures.push(classified);
       lastError = createGeminiVideoError(err);
