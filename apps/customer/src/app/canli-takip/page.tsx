@@ -1,7 +1,5 @@
 import type { Metadata } from 'next'
-import { checkIsAuthenticated } from './auth'
-import { LockScreen } from './lock-screen'
-import { LiveDashboard } from './live-dashboard'
+import { OperationsDashboard } from './operations-dashboard'
 
 export const metadata: Metadata = {
   title: 'Canlı Takip & Bot Operasyon Merkezi',
@@ -14,12 +12,6 @@ export const metadata: Metadata = {
 
 export const dynamic = 'force-dynamic'
 
-export default async function CanliTakipPage() {
-  const isAuth = await checkIsAuthenticated()
-
-  if (!isAuth) {
-    return <LockScreen />
-  }
-
-  return <LiveDashboard />
+export default function CanliTakipPage() {
+  return <OperationsDashboard section="overview" />
 }

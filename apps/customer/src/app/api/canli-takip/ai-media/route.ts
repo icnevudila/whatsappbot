@@ -1,11 +1,16 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { checkIsAuthenticated } from '@/app/canli-takip/auth'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || ''
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 
 export async function GET() {
   try {
+    if (!(await checkIsAuthenticated())) {
+      return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 401 })
+    }
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     // Fetch all data in parallel
