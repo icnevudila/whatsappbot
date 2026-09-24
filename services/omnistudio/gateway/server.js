@@ -193,19 +193,23 @@ browserSupervisor.registerWorker({
 });
 
 const GEMINI_PORT_CANONICAL_ACCOUNTS = {
-  9223: 'mesajify2@gmail.com',
-  9225: 'mesajify2@gmail.com',
+  9223: 'icnevudila@gmail.com',
   9224: 'mesajify1@gmail.com',
+  9225: 'mesajify2@gmail.com',
 };
 
 for (const port of geminiCdpPorts) {
   const canonicalAccount = GEMINI_PORT_CANONICAL_ACCOUNTS[port] || `gemini-${port}`;
+  const aliases = geminiCdpPorts
+    .filter(otherPort => otherPort !== port && GEMINI_PORT_CANONICAL_ACCOUNTS[otherPort] === canonicalAccount)
+    .map(otherPort => `gemini-${otherPort}`);
+
   browserSupervisor.registerWorker({
     id: `gemini-${port}`,
     provider: 'gemini',
     accountId: `gemini-${port}`,
     canonicalAccountId: canonicalAccount,
-    aliases: [port === 9223 ? 'gemini-9225' : (port === 9225 ? 'gemini-9223' : null)].filter(Boolean),
+    aliases,
     profileDir: profileDirForPort(port),
     cdpPort: port,
     launchUrl: 'https://gemini.google.com/videos',

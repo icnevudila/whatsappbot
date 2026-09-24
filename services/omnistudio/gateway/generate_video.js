@@ -1307,9 +1307,9 @@ async function inspectGeminiVideoTab(port, tab) {
 }
 
 const PORT_CANONICAL_ACCOUNTS = {
-  9223: 'mesajify2@gmail.com',
-  9225: 'mesajify2@gmail.com',
+  9223: 'icnevudila@gmail.com',
   9224: 'mesajify1@gmail.com',
+  9225: 'mesajify2@gmail.com',
 };
 
 function getCanonicalAccountForPort(port) {
