@@ -82,6 +82,7 @@ export interface RawBrandInput {
   aspect_ratio?: AspectRatio
   requested_duration?: number
   output_type?: OutputType
+  creative_engine_mode?: 'CURRENT' | 'SIMPLE_V5_HYBRID'
   /** Immutable user-approved prompt from CreativeRevision. Only the job worker
    * may supply it; it is never generated from a mutable runtime fallback. */
   approved_veo_prompt?: string
@@ -111,6 +112,7 @@ export interface BrandContextSnapshot {
   readonly aspect_ratio: AspectRatio
   readonly requested_duration: number
   readonly output_type: OutputType
+  readonly creative_engine_mode?: 'CURRENT' | 'SIMPLE_V5_HYBRID'
   readonly created_at: string
 }
 
@@ -187,6 +189,10 @@ export function createBrandContextSnapshot(input: RawBrandInput): Readonly<Brand
       website: input.campaign.website?.trim(),
       target_audience: input.campaign.target_audience?.trim(),
       approved_spoken_line: input.campaign.approved_spoken_line?.trim(),
+      user_style_preference: input.campaign.user_style_preference?.trim(),
+      environment_preset: input.campaign.environment_preset?.trim(),
+      motion_style: input.campaign.motion_style?.trim(),
+      subtitles: input.campaign.subtitles,
     },
     mandatory_elements: input.mandatory_elements ? [...input.mandatory_elements] : [],
     forbidden_elements: input.forbidden_elements ? [...input.forbidden_elements] : [],
@@ -196,6 +202,7 @@ export function createBrandContextSnapshot(input: RawBrandInput): Readonly<Brand
     aspect_ratio: input.aspect_ratio || '9:16',
     requested_duration: input.requested_duration || 8,
     output_type: input.output_type || 'AUTO',
+    creative_engine_mode: input.creative_engine_mode || 'CURRENT',
     created_at: new Date().toISOString(),
   }
 

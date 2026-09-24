@@ -593,8 +593,8 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
       try {
         await execFileAsync(this.ffmpegBin, args)
         finishedSuccessfully = true
-      } catch (err) {
-        console.warn('[RealFFmpegAdapter] Logo overlay ffmpeg error, falling back to copy:', err)
+      } catch (err: any) {
+        throw new Error(`DETERMINISTIC_LOGO_COMPOSITE_FAILED: ${err.message}`)
       }
     }
 

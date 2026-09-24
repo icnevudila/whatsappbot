@@ -57,7 +57,7 @@ export class VeoPromptCompiler {
       const fullSpokenScript = plan.master_spoken_script || plan.voiceover_script || plan.audio_plan.exact_spoken_lines[0]?.text || ''
       const lang = plan.audio_plan.spoken_language || 'tr-TR'
       const langTag = lang === 'tr' ? 'tr-TR' : lang
-      audioDirective = `[AUDIO]: The spoken language is Turkish (${langTag}). Exact spoken line: "${fullSpokenScript}". Continuous dialogue across entire duration: [0-8s]: "${fullSpokenScript}". Speak this sentence exactly in Turkish. Do not translate it. Do not paraphrase it.`
+      audioDirective = `[AUDIO]: The spoken language is Turkish (${langTag}). Exact spoken line: "${fullSpokenScript}". Continuous dialogue across entire duration: [0-8s]: "${fullSpokenScript}". Speak this sentence exactly in Turkish. Do not translate it. Do not paraphrase it. All spoken dialogue must be delivered naturally in Turkish. No English speech. No English narration. No translated dialogue.`
     }
 
     // Material physics & motion constraints dynamically extracted from beats
@@ -97,6 +97,17 @@ export class VeoPromptCompiler {
         'NO ALTERED LOGO',
         'NO EXTRA BRAND MARKS',
         'NO product redesign',
+        'NO English speech',
+        'NO English voiceover',
+        'NO English narration',
+        'NO English dialogue',
+        'English speech',
+        'English voiceover',
+        'English narration',
+        'English dialogue',
+        'invented diegetic branding',
+        'hallucinated diegetic logo',
+        'invented brand stamp',
         'visible subtitles',
         'on-screen text',
         'lower thirds',

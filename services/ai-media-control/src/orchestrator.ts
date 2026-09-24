@@ -14,6 +14,7 @@ import { validateOutput } from './validator.js'
 import { randomUUID, createHash } from 'node:crypto'
 import { join } from 'node:path'
 import fs from 'node:fs'
+import { runSimpleV5HybridExecution } from './simple-v5-execution.js'
 import {
   CreativeVideoOrchestrator,
   RealHttpGFlowProvider,
@@ -192,6 +193,7 @@ async function runJobExecution(job: any, accountId: string) {
     org_id: job.org_id,
     flow_account_id: accountId,
     status: 'running',
+    requested_provider: job.requested_provider || job.metadata?.requested_provider || 'FLOW_VEO',
     started_at: new Date().toISOString(),
   })
 
@@ -205,7 +207,9 @@ async function runJobExecution(job: any, accountId: string) {
     await transitionJob(
       supabase, job.id, job.org_id,
       JobState.LEASED, JobState.PREPARING_ENV,
-      `Preparing generation environment with Flow account ${accountId}`,
+      job.creative_engine_mode === 'SIMPLE_V5_HYBRID'
+        ? 'Preparing SIMPLE_V5_HYBRID generation environment'
+        : `Preparing generation environment with Flow account ${accountId}`,
       {}, attemptId
     )
 
@@ -635,11 +639,15 @@ async function runCreativeVideoExecution(
   if (logoAsset) {
     try {
       materializedLogo = await materializeTenantAsset(job.org_id, logoAsset)
+      if (String(materializedLogo.sha256).toLowerCase() !== String(logoAsset.sha256).toLowerCase()) {
+        throw new Error(`CREATIVE_ASSET_DRIFT: canonical logo bytes do not match locked revision SHA-256`)
+      }
       await supabase.from('ai_media_assets').update({
         file_path: materializedLogo.filePath,
         sha256: materializedLogo.sha256,
       }).eq('id', logoAsset.id)
     } catch (e) {
+      if ((job.creative_engine_mode || job.metadata?.creative_engine_mode) === 'SIMPLE_V5_HYBRID') throw e
       console.warn(`[orchestrator] Logo materialization fallback:`, e)
     }
   }
@@ -651,20 +659,29 @@ async function runCreativeVideoExecution(
     let mat = { filePath: p.file_path, sha256: p.sha256 }
     try {
       mat = await materializeTenantAsset(job.org_id, p)
+      if (String(mat.sha256).toLowerCase() !== String(p.sha256).toLowerCase()) {
+        throw new Error(`CREATIVE_ASSET_DRIFT: asset ${p.id || p.original_filename || idx} bytes do not match locked revision SHA-256`)
+      }
       await supabase.from('ai_media_assets').update({
         file_path: mat.filePath,
         sha256: mat.sha256,
       }).eq('id', p.id)
     } catch (e) {
+      if ((job.creative_engine_mode || job.metadata?.creative_engine_mode) === 'SIMPLE_V5_HYBRID') throw e
       console.warn(`[orchestrator] Product materialization fallback:`, e)
     }
     materializedProducts.push({
       product_id: p.id || `prod_${idx}`,
-      name: p.original_filename || `Ürün ${idx + 1}`,
-      description: job.prompt,
+      name: p.role === 'product'
+        ? approvedFacts.product_name || p.original_filename || `Ürün ${idx + 1}`
+        : p.original_filename || `Referans ${idx + 1}`,
+      description: p.role === 'product'
+        ? approvedFacts.product_description || approvedFacts.product_name || p.original_filename || 'Seçili ürün'
+        : 'Kilitli görsel referans',
       asset_id: p.id,
       sha256: mat.sha256,
       file_path: mat.filePath,
+      role: p.role || 'reference',
     })
   }
 
@@ -678,7 +695,15 @@ async function runCreativeVideoExecution(
     logo_asset_id: logoAsset?.id || 'asset_logo_default',
     logo_sha256: materializedLogo.sha256 || '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
     logo_file_path: materializedLogo.filePath,
-    products: materializedProducts,
+    products: materializedProducts.filter(product => product.role === 'product'),
+    reference_assets: materializedProducts
+      .filter(product => product.role !== 'product')
+      .map(product => ({
+        asset_id: product.asset_id,
+        role: product.role,
+        sha256: product.sha256,
+        file_path: product.file_path,
+      })),
     campaign: {
       objective: job.title || 'Brand Video',
       offer: approvedFacts.offer,
@@ -686,6 +711,7 @@ async function runCreativeVideoExecution(
       cta: approvedFacts.cta,
       phoneNumber: approvedFacts.phone,
       website: approvedFacts.url,
+      approved_spoken_line: approvedFacts.approved_spoken_line || approvedFacts.voiceover || approvedFacts.spoken_line,
       target_audience: 'Commercial',
       user_style_preference: job.metadata?.user_style_preference || job.metadata?.ad_format || 'AUTO',
       environment_preset: job.metadata?.environment_preset || 'auto',
@@ -694,6 +720,7 @@ async function runCreativeVideoExecution(
     },
     aspect_ratio: (job.aspect_ratio || '9:16') as any,
     requested_duration: job.duration_seconds || 8,
+    creative_engine_mode: job.creative_engine_mode || job.metadata?.creative_engine_mode || 'CURRENT',
     verified_claims: Array.isArray(approvedFacts.verified_claims) ? approvedFacts.verified_claims : [],
     unverified_facts: Array.isArray(approvedFacts.unverified_facts) ? approvedFacts.unverified_facts : [],
     approved_veo_prompt: revision.veo_prompt,
@@ -705,6 +732,37 @@ async function runCreativeVideoExecution(
   )
   if (!factualReport.passed) {
     throw new Error(`FACTUAL_INTEGRITY_FAIL: ${factualReport.violations.map(v => v.unverifiedValue).join(', ')}`)
+  }
+
+  if ((job.creative_engine_mode || job.metadata?.creative_engine_mode) === 'SIMPLE_V5_HYBRID') {
+    const providerAssets = [
+      ...(logoAsset ? [{
+        asset_id: logoAsset.id,
+        org_id: job.org_id,
+        role: 'logo',
+        file_path: materializedLogo.filePath,
+        sha256: materializedLogo.sha256,
+      }] : []),
+      ...materializedProducts.map((product, index) => ({
+        asset_id: product.asset_id,
+        org_id: job.org_id,
+        role: product.role || productAssets[index]?.role || 'reference',
+        file_path: product.file_path,
+        sha256: product.sha256,
+      })),
+    ]
+
+    await runSimpleV5HybridExecution({
+      supabase,
+      gflowEngineUrl,
+      job,
+      accountId,
+      attemptId,
+      startTime,
+      rawInput,
+      assets: providerAssets,
+    })
+    return
   }
 
   const gflowProvider = new RealHttpGFlowProvider(gflowEngineUrl)

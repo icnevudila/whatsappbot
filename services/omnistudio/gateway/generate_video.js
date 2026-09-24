@@ -6,6 +6,12 @@ const crypto = require('crypto');
 const WebSocket = globalThis.WebSocket || (() => {
   try { return require('ws'); } catch (e) { return null; }
 })();
+const {
+  CAPABILITY_STATES,
+  FALLBACK_CAPABILITY_STATES,
+  classifyGeminiVideoError,
+  createGeminiVideoError,
+} = require('./gemini_video_capability.js');
 
 /**
  * ffprobe ve SHA-256 ile indirilen video dosyasının sağlamlığını doğrular.
@@ -66,6 +72,11 @@ const CDP_PORTS = (process.env.GEMINI_CDP_PORTS || '9222,9223,9224,9225')
 // Havuzdaki 4 hesabın canlı durumunu tutar
 // port -> { limitedUntil: timestamp, lastUsed: timestamp, accountName: string, limitReason: string }
 const accountPool = {};
+const geminiCapabilityCache = new Map();
+const GEMINI_CAPABILITY_TTL_MS = Math.max(
+  15_000,
+  parseInt(process.env.GEMINI_CAPABILITY_TTL_MS || '60000', 10)
+);
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -125,6 +136,21 @@ async function enhanceVideoPrompt(options = {}) {
 async function resolveLocalMediaFiles(options = {}) {
   const files = [];
   const candidateItems = [];
+  const expectedAssets = Array.isArray(options.assets) ? options.assets : [];
+  const expectedShaFor = (role, url) => {
+    const explicit = role === 'logo' ? options.logoSha256 : role === 'product' ? options.productSha256 : null;
+    if (explicit) return String(explicit).toLowerCase();
+    const match = expectedAssets.find(asset => asset.role === role && (!url || asset.file_path === url));
+    return match?.sha256 ? String(match.sha256).toLowerCase() : null;
+  };
+  const verifyExpectedSha = (role, url, actualSha) => {
+    const expectedSha = expectedShaFor(role, url);
+    if (expectedSha && expectedSha !== String(actualSha).toLowerCase()) {
+      const err = new Error(`INVALID_ASSET: ${role} SHA-256 mismatch. Expected ${expectedSha}, got ${actualSha}`);
+      err.code = 'INVALID_ASSET';
+      throw err;
+    }
+  };
 
   // 1. Wizard veya API çağrısından gelen somut görseller (ana ürün, detay açısı ve logo)
   if (options.productImageUrl) candidateItems.push({ url: options.productImageUrl, role: 'product' });
@@ -170,6 +196,7 @@ async function resolveLocalMediaFiles(options = {}) {
         const raw = item.b64.includes(',') ? item.b64.split(',')[1] : item.b64;
         const buf = Buffer.from(raw, 'base64');
         const sha256 = crypto.createHash('sha256').update(buf).digest('hex');
+        verifyExpectedSha(item.role, item.url, sha256);
         const tmpPath = path.join(targetDir, `video_b64_${jid}_${idx}_${sha256.slice(0, 8)}.png`);
         fs.writeFileSync(tmpPath, buf);
         files.push({ role: item.role, path: tmpPath, fileName: path.basename(tmpPath), sha256, toString() { return this.path; } });
@@ -187,6 +214,7 @@ async function resolveLocalMediaFiles(options = {}) {
           if (res.ok) {
             const buf = Buffer.from(await res.arrayBuffer());
             const sha256 = crypto.createHash('sha256').update(buf).digest('hex');
+            verifyExpectedSha(item.role, item.url, sha256);
             const extMatch = strUrl.match(/\.(png|jpg|jpeg|webp)/i);
             const ext = extMatch ? extMatch[1].toLowerCase() : 'png';
             const tmpPath = path.join(targetDir, `video_media_${jid}_${idx}_${sha256.slice(0, 8)}.${ext}`);
@@ -214,6 +242,7 @@ async function resolveLocalMediaFiles(options = {}) {
             if (fs.existsSync(cand) && fs.statSync(cand).isFile()) {
               const fileBuf = fs.readFileSync(cand);
               const sha256 = crypto.createHash('sha256').update(fileBuf).digest('hex');
+              verifyExpectedSha(item.role, item.url, sha256);
               files.push({ role: item.role, path: cand, fileName: path.basename(cand), sha256, toString() { return this.path; } });
               console.log(`[VideoGen] 📁 Yerel somut dosya eşleşti (${item.role}): ${cand} (SHA256: ${sha256.slice(0, 12)}...)`);
               matched = true;
@@ -575,6 +604,7 @@ ${require('./brand_learning_store.js').buildLearningPromptBlock(brand, product, 
 }
 
 function attemptGenerateOnCdp(port, tab, options) {
+  const generationStartedAt = new Date().toISOString();
   const {
     fullPrompt,
     brandName,
@@ -1106,10 +1136,14 @@ function attemptGenerateOnCdp(port, tab, options) {
         }
 
         const cleanUrl = finalUrl.replace(/(_raw|_capcut_final|_final|_sub)?\.mp4$/, '_clean_nosub.mp4');
+        const finalVerification = verifyVideoFile(rawVideoTarget);
         resolve({
           success: true,
           isLimited: false,
           port,
+          provider: 'gemini-native-video',
+          providerAccountId: `cdp-${port}`,
+          providerAttemptId: options.attemptId || `gemini_${Date.now()}`,
           videoId,
           videoUrl: finalUrl,
           subtitledVideoUrl: finalUrl,
@@ -1118,6 +1152,13 @@ function attemptGenerateOnCdp(port, tab, options) {
           thumbnailUrl: thumbUrl,
           duration: 10,
           aspect: "9:16",
+          outputPath: rawVideoTarget,
+          rawOutputSha256: finalVerification.sha256,
+          sha256: finalVerification.sha256,
+          generationStartedAt,
+          generationCompletedAt: new Date().toISOString(),
+          jobId: options.jobId || null,
+          attemptId: options.attemptId || null,
           videoVisualValidation: options.hasVisionAnalysis ? 'analyzed' : 'not_checked',
           promptUsed: fullPrompt
         });
@@ -1175,6 +1216,130 @@ async function checkPortLoggedIn(port, tab) {
   });
 }
 
+function cacheGeminiCapability(port, state, evidence) {
+  const checkedAtMs = Date.now();
+  const record = {
+    state,
+    provider_account_id: `cdp-${port}`,
+    checked_at: new Date(checkedAtMs).toISOString(),
+    expires_at: new Date(checkedAtMs + GEMINI_CAPABILITY_TTL_MS).toISOString(),
+    evidence,
+  };
+  geminiCapabilityCache.set(port, { ...record, expiresAtMs: checkedAtMs + GEMINI_CAPABILITY_TTL_MS });
+  return record;
+}
+
+async function inspectGeminiVideoTab(port, tab) {
+  return new Promise((resolve) => {
+    let settled = false;
+    let ws;
+    const finish = (record) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try { ws?.close(); } catch (_) {}
+      resolve(record);
+    };
+    const timer = setTimeout(() => {
+      finish(cacheGeminiCapability(port, CAPABILITY_STATES.TEMPORARILY_UNAVAILABLE, 'CDP capability probe timed out'));
+    }, 5000);
+
+    try {
+      ws = new WebSocket(tab.webSocketDebuggerUrl);
+      ws.onopen = () => {
+        ws.send(JSON.stringify({
+          id: 901,
+          method: 'Runtime.evaluate',
+          params: {
+            expression: `(() => {
+              const text = (document.body?.innerText || '').toLowerCase();
+              const href = location.href || '';
+              const input = document.querySelector('div[contenteditable="true"]') || document.querySelector('rich-textarea p') || document.querySelector('textarea');
+              const hasInput = !!input && !input.disabled && input.getAttribute('aria-disabled') !== 'true';
+              const loginRequired = href.includes('accounts.google.com') || text.includes('oturum aç') || text.includes('sign in');
+              const noQuota = text.includes('video üretme sınırına ulaştınız') || text.includes('video generation limit') || text.includes('video limit reached');
+              const featureUnavailable = text.includes('video is not available for your account') || text.includes('video özelliği kullanılamıyor') || text.includes('video erişiminiz yok');
+              return { href, hasInput, loginRequired, noQuota, featureUnavailable };
+            })()`,
+            returnByValue: true,
+          },
+        }));
+      };
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          if (message.id !== 901) return;
+          const value = message.result?.result?.value || {};
+          if (value.loginRequired) {
+            return finish(cacheGeminiCapability(port, CAPABILITY_STATES.AUTH_REQUIRED, 'Gemini session requires authentication'));
+          }
+          if (value.noQuota) {
+            return finish(cacheGeminiCapability(port, CAPABILITY_STATES.NO_QUOTA, 'Gemini video quota-limit message is visible'));
+          }
+          if (value.featureUnavailable) {
+            return finish(cacheGeminiCapability(port, CAPABILITY_STATES.FEATURE_UNAVAILABLE, 'Gemini reports video feature unavailable for this account'));
+          }
+          if (String(value.href || '').includes('gemini.google.com/videos') && value.hasInput) {
+            return finish(cacheGeminiCapability(port, CAPABILITY_STATES.AVAILABLE, 'Gemini /videos page and enabled prompt input are present'));
+          }
+          return finish(cacheGeminiCapability(port, CAPABILITY_STATES.UNKNOWN, 'Gemini session exists but positive video capability evidence is absent'));
+        } catch (error) {
+          return finish(cacheGeminiCapability(port, CAPABILITY_STATES.UNKNOWN, `Capability response could not be classified: ${error.message}`));
+        }
+      };
+      ws.onerror = () => finish(cacheGeminiCapability(port, CAPABILITY_STATES.TEMPORARILY_UNAVAILABLE, 'Gemini CDP WebSocket is unavailable'));
+    } catch (error) {
+      finish(cacheGeminiCapability(port, CAPABILITY_STATES.TEMPORARILY_UNAVAILABLE, `Gemini CDP probe failed: ${error.message}`));
+    }
+  });
+}
+
+async function getGeminiVideoCapability(options = {}) {
+  const force = options.force === true;
+  const accountReports = await Promise.all(CDP_PORTS.map(async (port) => {
+    const cached = geminiCapabilityCache.get(port);
+    if (!force && cached && cached.expiresAtMs > Date.now()) {
+      const { expiresAtMs, ...report } = cached;
+      return report;
+    }
+
+    if (accountPool[port]?.limitedUntil > Date.now()) {
+      return cacheGeminiCapability(port, CAPABILITY_STATES.NO_QUOTA, accountPool[port].limitReason || 'Cached account quota limit');
+    }
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${port}/json/list`, { signal: AbortSignal.timeout(3000) });
+      if (!response.ok) {
+        return cacheGeminiCapability(port, CAPABILITY_STATES.TEMPORARILY_UNAVAILABLE, `CDP returned HTTP ${response.status}`);
+      }
+      const tabs = await response.json();
+      const tab = tabs.find(target => target.url && target.url.includes('gemini.google.com'));
+      if (!tab) {
+        return cacheGeminiCapability(port, CAPABILITY_STATES.TEMPORARILY_UNAVAILABLE, 'No Gemini tab is open for this persistent account profile');
+      }
+      return await inspectGeminiVideoTab(port, tab);
+    } catch (error) {
+      return cacheGeminiCapability(port, CAPABILITY_STATES.TEMPORARILY_UNAVAILABLE, `CDP endpoint unavailable: ${error.message}`);
+    }
+  }));
+
+  const available = accountReports.find(report => report.state === CAPABILITY_STATES.AVAILABLE);
+  const selected = available ||
+    accountReports.find(report => report.state === CAPABILITY_STATES.AUTH_REQUIRED) ||
+    accountReports.find(report => report.state === CAPABILITY_STATES.UNKNOWN) ||
+    accountReports.find(report => report.state === CAPABILITY_STATES.NO_QUOTA) ||
+    accountReports.find(report => report.state === CAPABILITY_STATES.FEATURE_UNAVAILABLE) ||
+    accountReports.find(report => report.state === CAPABILITY_STATES.TEMPORARILY_UNAVAILABLE) || {
+      state: CAPABILITY_STATES.UNKNOWN,
+      provider_account_id: null,
+      checked_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + GEMINI_CAPABILITY_TTL_MS).toISOString(),
+      evidence: 'No configured Gemini account profiles',
+    };
+
+  return { ...selected, accounts: accountReports };
+}
+
 /**
  * 4 Hesaplı Akıllı Havuz Yöneticisi (Multi-Account Rotation Pool)
  * 1. Hesabı dener; kota sınırındaysa anında 2. hesaba, sonra 3. ve 4. hesaba devreder.
@@ -1195,11 +1360,15 @@ async function generateVideo(options) {
   }).sort((a, b) => (accountPool[a]?.lastUsed || 0) - (accountPool[b]?.lastUsed || 0));
 
   if (candidatePorts.length === 0) {
+    if (options.disableProviderFallback === true) {
+      throw createGeminiVideoError({ code: 'GEMINI_VIDEO_NO_QUOTA', message: 'All authenticated Gemini video accounts are currently quota-limited.' });
+    }
     console.log(`[VideoGen Pool] ⚠️ Bağlı olan tüm Google Gemini hesapları şu an kota sınırında. Otomatik olarak Google Flow (Veo 3.1) motoruna devrediliyor...`);
     return await generateVideoOnFlow(options);
   }
 
   let lastError = null;
+  const classifiedFailures = [];
 
   for (const port of candidatePorts) {
     console.log(`[VideoGen Pool] Port ${port} üzerinden video üretimi deneniyor...`);
@@ -1207,6 +1376,7 @@ async function generateVideo(options) {
       const listRes = await fetch(`http://127.0.0.1:${port}/json/list`, { signal: AbortSignal.timeout(3000) });
       if (!listRes.ok) {
         console.warn(`[VideoGen Pool] Port ${port} HTTP yanıtı vermedi, geçiliyor.`);
+        classifiedFailures.push({ code: 'GEMINI_VIDEO_TEMPORARILY_UNAVAILABLE', state: CAPABILITY_STATES.TEMPORARILY_UNAVAILABLE });
         continue;
       }
 
@@ -1214,6 +1384,7 @@ async function generateVideo(options) {
       const tab = targets.find(t => t.url && t.url.includes("gemini.google.com"));
       if (!tab) {
         console.warn(`[VideoGen Pool] Port ${port} üzerinde açık Gemini sekmesi bulunamadı, sonraki hesaba geçiliyor.`);
+        classifiedFailures.push({ code: 'GEMINI_VIDEO_TEMPORARILY_UNAVAILABLE', state: CAPABILITY_STATES.TEMPORARILY_UNAVAILABLE });
         continue;
       }
 
@@ -1223,6 +1394,8 @@ async function generateVideo(options) {
         console.warn(`[VideoGen Pool] ⚠️ Port ${port} üzerinde Google Gemini oturumu AÇIK DEĞİL. Bu hesap atlanıyor.`);
         accountPool[port] = accountPool[port] || {};
         accountPool[port].notLoggedIn = true;
+        classifiedFailures.push({ code: 'GEMINI_VIDEO_AUTH_REQUIRED', state: CAPABILITY_STATES.AUTH_REQUIRED });
+        cacheGeminiCapability(port, CAPABILITY_STATES.AUTH_REQUIRED, 'Gemini persistent session is not authenticated');
         continue;
       }
 
@@ -1250,6 +1423,8 @@ async function generateVideo(options) {
         const cooldownMs = 2 * 60 * 60 * 1000; // 2 saatlik bekleme penceresi
         accountPool[port].limitedUntil = Date.now() + cooldownMs;
         accountPool[port].limitReason = result.reason;
+        classifiedFailures.push({ code: 'GEMINI_VIDEO_NO_QUOTA', state: CAPABILITY_STATES.NO_QUOTA });
+        cacheGeminiCapability(port, CAPABILITY_STATES.NO_QUOTA, result.reason || 'Gemini video quota limit reached');
         console.warn(`[VideoGen Pool] ⚠️ Port ${port} kota sınırına ulaştı (${result.reason}). Havuzdaki sonraki hesaba otomatik geçiliyor...`);
         continue; // Sonraki hesaba geç!
       }
@@ -1257,13 +1432,29 @@ async function generateVideo(options) {
       // Başarılı!
       accountPool[port].limitedUntil = 0;
       accountPool[port].limitReason = null;
+      cacheGeminiCapability(port, CAPABILITY_STATES.AVAILABLE, 'Gemini Native Video generation completed successfully');
       console.log(`[VideoGen Pool] ✅ Video üretimi başarıyla tamamlandı (Hesap Portu: ${port})!`);
       return result;
 
     } catch (err) {
       console.error(`[VideoGen Pool] Port ${port} üzerinde hata:`, err.message);
-      lastError = err;
+      const classified = classifyGeminiVideoError(err);
+      classifiedFailures.push(classified);
+      lastError = createGeminiVideoError(err);
+      if (options.disableProviderFallback === true && !FALLBACK_CAPABILITY_STATES.has(classified.state) && classified.state !== CAPABILITY_STATES.AUTH_REQUIRED) {
+        throw lastError;
+      }
     }
+  }
+
+  if (options.disableProviderFallback === true) {
+    const blocking = classifiedFailures.find(failure => failure.state === CAPABILITY_STATES.UNKNOWN) ||
+      classifiedFailures.find(failure => failure.state === CAPABILITY_STATES.AUTH_REQUIRED);
+    const classified = blocking || classifiedFailures[0] || { code: 'GEMINI_VIDEO_UNKNOWN', state: CAPABILITY_STATES.UNKNOWN };
+    const error = new Error(`Gemini Native Video could not start: ${classified.state}`);
+    error.code = classified.code;
+    error.capabilityState = classified.state;
+    throw error;
   }
 
   // Eğer tüm Gemini hesapları kota sınırına ulaştıysa veya hata verdiyse Google Flow (Veo 3.1) yedek motoruna otomatik geç!
@@ -3590,5 +3781,6 @@ module.exports = {
   autoDetectFlowProject,
   syncAccountCookies,
   updateAccountSlot,
+  getGeminiVideoCapability,
   verifyVideoFile
 };

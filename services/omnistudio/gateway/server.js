@@ -1416,6 +1416,8 @@ const server = http.createServer(async (req, res) => {
         const existingJob = videoQueue.findJobByIdempotencyKey(idempotencyKey);
         if (existingJob) {
           console.log(`[Gateway Video] ⚡ Idempotency Hit! [${idempotencyKey}] -> Mevcut İş [${existingJob.id}], Durum: ${existingJob.status}`);
+          const existingResult = existingJob.result || {};
+          const existingVideoUrl = existingResult.videoUrl || existingResult.outputUrl || existingResult.publicUrl || null;
           return sendJson(res, existingJob.status === 'completed' ? 200 : 202, {
             ok: true,
             job_id: existingJob.id,
@@ -1423,7 +1425,15 @@ const server = http.createServer(async (req, res) => {
             status: existingJob.status,
             queue_position: existingJob.queue_position,
             status_url: `http://localhost:${PORT}/v1/videos/status/${existingJob.id}`,
-            outputUrl: existingJob.result?.outputUrl || existingJob.result?.publicUrl || null,
+            outputUrl: existingVideoUrl,
+            videoUrl: existingVideoUrl,
+            data: existingVideoUrl ? [{ url: existingVideoUrl }] : [],
+            provider: existingResult.provider || null,
+            providerAccountId: existingResult.providerAccountId || null,
+            providerAttemptId: existingResult.providerAttemptId || null,
+            rawOutputSha256: existingResult.rawOutputSha256 || existingResult.sha256 || existingJob.sha256 || null,
+            generationStartedAt: existingResult.generationStartedAt || null,
+            generationCompletedAt: existingResult.generationCompletedAt || null,
             flowProjectId: existingJob.flowProjectId,
             flowProjectUrl: existingJob.flowProjectUrl,
             sha256: existingJob.sha256,
@@ -1442,7 +1452,7 @@ const server = http.createServer(async (req, res) => {
         logoSha256: body.logoSha256 || body.logo_sha256,
         productImageUrl: body.productImageUrl,
         productSha256: body.productSha256 || body.product_asset_sha256,
-        referenceImageUrls: body.referenceImageUrls || []
+        referenceImageUrls: (body.referenceImageUrls || []).map(ref => typeof ref === 'string' ? ref : ref?.url).filter(Boolean)
       });
 
       const job = videoQueue.createJob({
@@ -1472,8 +1482,12 @@ const server = http.createServer(async (req, res) => {
           includeBanner: Boolean(body.includeBanner),
           orgId: body.orgId || null,
           productImageUrl: body.productImageUrl || null,
+          productSha256: body.productSha256 || null,
           referenceImageUrls: body.referenceImageUrls || [],
           logoUrl: body.logoUrl || null,
+          logoSha256: body.logoSha256 || null,
+          assets: Array.isArray(body.assets) ? body.assets : [],
+          requireMedia: body.requireMedia === true,
           customer: body.customer || null,
           port: body.port || null,
           preferredEngine: body.preferredEngine || body.engine || 'flow',
@@ -1483,6 +1497,8 @@ const server = http.createServer(async (req, res) => {
           variationId: body.variationId || null,
           brief: body.brief || null,
           voiceoverText: body.voiceoverText || null,
+          subtitles: body.subtitles !== false,
+          disableProviderFallback: body.disableProviderFallback === true,
           jobId,
         };
 
@@ -1525,6 +1541,10 @@ const server = http.createServer(async (req, res) => {
             return await generateVideo(runOpts);
           } catch (browserErr) {
             console.warn(`[Gateway Video] ⚠️ Tarayıcı botu video üretiminde hata aldı: ${browserErr.message}`);
+
+            if (body.disableProviderFallback === true) {
+              throw browserErr;
+            }
 
             // Otomatik REST API Sigortası
             try {
@@ -1573,9 +1593,15 @@ const server = http.createServer(async (req, res) => {
           aspect: result.aspect,
           accountPort: result.port,
           provider: result.provider || 'veo-flow',
+          providerAccountId: result.providerAccountId || null,
+          providerAttemptId: result.providerAttemptId || null,
           flowProjectId: result.flowProjectId || null,
           flowProjectUrl: result.flowProjectUrl || null,
           sha256: result.sha256 || null,
+          rawOutputSha256: result.rawOutputSha256 || result.sha256 || null,
+          outputPath: result.outputPath || null,
+          generationStartedAt: result.generationStartedAt || null,
+          generationCompletedAt: result.generationCompletedAt || null,
           jobId: result.jobId || jobId,
           attemptId: result.attemptId || job.attemptId,
           workerId: result.workerId || job.workerId,
@@ -1597,6 +1623,22 @@ const server = http.createServer(async (req, res) => {
             code: err.code || 'video_generation_error',
             type: 'video_generation_error'
           }
+        });
+      }
+    }
+
+    // Read-only, account-scoped Gemini Native Video capability/quota probe.
+    // This endpoint never submits a generation and caches each CDP account briefly.
+    if (method === 'GET' && (pathname === '/v1/videos/capability' || pathname === '/videos/capability')) {
+      try {
+        const { getGeminiVideoCapability } = require('./generate_video.js');
+        const result = await getGeminiVideoCapability({ force: parsedUrl.searchParams.get('force') === 'true' });
+        return sendJson(res, 200, result);
+      } catch (err) {
+        return sendJson(res, 503, {
+          state: 'TEMPORARILY_UNAVAILABLE',
+          provider_account_id: null,
+          evidence: err.message,
         });
       }
     }
@@ -2154,5 +2196,3 @@ if (require.main === module) {
 }
 
 module.exports = { server, queue, AdvancedJobQueue };
-
-

@@ -214,12 +214,13 @@ test('RAW VIDEO QA: real disk fixture frame analysis (if local fixtures present)
     assert.ok(endCardReport.failure_codes.includes('NON_DIEGETIC_GENERATED_BRANDING'))
     assert.strictEqual(endCardReport.non_diegetic_branding_detected, true)
 
-    // 2. Raw frame 3.5s has only physical diegetic logo on cyan tank -> MUST PASS
+    // 2. Pixel heuristics prove only that no synthetic banner was found. Without
+    // multimodal identity evidence, a real frame must not be promoted to PASS.
     const cleanReport = await reviewer.reviewSampledVideo([
       { timestamp_sec: 3.5, frame_path: rawMidCleanPath }
     ], plan, context, 1)
 
-    assert.strictEqual(cleanReport.decision, 'PASS', 'Real raw frame with diegetic product logo must pass raw video QA')
+    assert.strictEqual(cleanReport.decision, 'NEEDS_REVIEW', 'Real raw frame without multimodal identity evidence must require review')
     assert.strictEqual(cleanReport.non_diegetic_branding_detected, false)
   }
 })

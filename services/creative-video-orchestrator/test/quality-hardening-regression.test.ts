@@ -4,6 +4,9 @@ import { writeFileSync, unlinkSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { createHash } from 'node:crypto'
 import { CanonicalLogoGate } from '../src/qa/canonical-logo-gate.js'
+import { LogoPresentationGate } from '../src/qa/logo-presentation-gate.js'
+import { AudioIntegrityGate, PreMasterAudioGate } from '../src/qa/audio-integrity-gate.js'
+import { SourceProvenanceGate } from '../src/qa/source-provenance-gate.js'
 import { DuplicateOutputDetector } from '../src/evaluation/duplicate-output-detector.js'
 import { FactualIntegrityGate } from '../src/qa/factual-integrity-gate.js'
 import { ChatGPTVideoReviewer } from '../src/qa/chatgpt-video-reviewer.js'
@@ -376,4 +379,150 @@ test('QUALITY HARDENING: DuplicateOutputDetector - identical final video SHA det
   assert.strictEqual(second.isDuplicate, true)
   assert.strictEqual(second.failureCode, 'DUPLICATE_OUTPUT')
   assert.strictEqual(second.duplicateOf, '03_Bofe_CapCut_Dinamik_Altyazili_Final.mp4')
+})
+
+test('QUALITY HARDENING: LogoPresentationGate - opaque rectangular logo fails with OPAQUE_LOGO_BOX', () => {
+  const report = LogoPresentationGate.evaluateLogoPresentation({
+    logoFilePath: 'mock_opaque_logo.png',
+    isMock: true,
+    mockIsOpaque: true,
+  })
+  assert.strictEqual(report.passed, false)
+  assert.strictEqual(report.failureCode, 'OPAQUE_LOGO_BOX')
+  assert.ok(report.issues[0]?.includes('OPAQUE_LOGO_BOX'))
+})
+
+test('QUALITY HARDENING: LogoPresentationGate - transparent canonical logo PASSES', () => {
+  const report = LogoPresentationGate.evaluateLogoPresentation({
+    logoFilePath: 'mock_transparent_logo.png',
+    isMock: true,
+    mockIsOpaque: false,
+    mockTransparentRatio: 0.88,
+  })
+  assert.strictEqual(report.passed, true)
+  assert.strictEqual(report.isOpaqueBox, false)
+})
+
+test('QUALITY HARDENING: LogoPresentationGate - oversized logo fails with OVERSIZED_LOGO', () => {
+  const report = LogoPresentationGate.evaluateLogoPresentation({
+    logoFilePath: 'mock_oversized_logo.png',
+    isMock: true,
+    mockIsOpaque: false,
+    mockIsOversized: true,
+  })
+  assert.strictEqual(report.passed, false)
+  assert.strictEqual(report.failureCode, 'OVERSIZED_LOGO')
+})
+
+test('QUALITY HARDENING: AudioIntegrityGate - English spoken audio fails with ACTUAL_AUDIO_LANGUAGE_MISMATCH', async () => {
+  const report = await AudioIntegrityGate.evaluateAudioIntegrity({
+    audioFilePath: 'mock_audio_en.mp3',
+    expectedLanguage: 'tr',
+    isMock: true,
+    mockDetectedLanguage: 'en',
+    mockTranscript: 'Aivazolo Inshod presents the finest quality red clay bricks built for excellence.',
+  })
+  assert.strictEqual(report.passed, false)
+  assert.strictEqual(report.failureCode, 'ACTUAL_AUDIO_LANGUAGE_MISMATCH')
+  assert.ok(report.issues[0]?.includes('ACTUAL_AUDIO_LANGUAGE_MISMATCH'))
+})
+
+test('QUALITY HARDENING: AudioIntegrityGate - Turkish spoken audio PASSES', async () => {
+  const report = await AudioIntegrityGate.evaluateAudioIntegrity({
+    audioFilePath: 'mock_audio_tr.mp3',
+    expectedLanguage: 'tr',
+    isMock: true,
+    mockDetectedLanguage: 'tr',
+    mockTranscript: 'Ayvazoğlu İnşaat ile güçlü temeller yükseliyor. Standart yapı tuğlası.',
+  })
+  assert.strictEqual(report.passed, true)
+  assert.strictEqual(report.detectedLanguage, 'tr')
+})
+
+test('QUALITY HARDENING: Raw Video QA - invented diegetic branding fails with INVENTED_DIEGETIC_BRANDING', async () => {
+  const reviewer = new ChatGPTVideoReviewer()
+  const director = new ChatGPTCreativeDirectorV2()
+  const context = buildTestContext()
+  const concepts = await director.generateThreeConcepts(context)
+  const plan = await director.buildDetailedMasterPlan(concepts[0]!, context)
+
+  const inventedFrames = [
+    { timestamp_sec: 2.0, frame_path: 'frame_2.0s_invented_diegetic_logo.jpg', has_invented_diegetic_branding: true },
+  ]
+
+  const report = await reviewer.reviewSampledVideo(inventedFrames, plan, context, 1)
+  assert.strictEqual(report.decision, 'REGENERATE')
+  assert.ok(report.failure_codes.includes('INVENTED_DIEGETIC_BRANDING'))
+  assert.ok(report.failure_codes.includes('RAW_VIDEO_BRANDING_MISMATCH'))
+  assert.ok(report.failure_codes.includes('OVERLAY_MASKING_FORBIDDEN'))
+})
+
+test('QUALITY HARDENING: PreMasterAudioGate - raw video with English audio fails before voiceover and mandates REGENERATE', async () => {
+  const report = await PreMasterAudioGate.evaluateRawVeoAudio({
+    rawVideoPath: 'mock_raw_veo_en.mp4',
+    expectedLanguage: 'tr',
+    isMock: true,
+    mockDetectedLanguage: 'en',
+    mockTranscript: 'Aivazolo Inshod presents the finest quality red clay bricks.',
+  })
+  assert.strictEqual(report.passed, false)
+  assert.strictEqual(report.failureCode, 'RAW_GENERATION_AUDIO_LANGUAGE_MISMATCH')
+  assert.ok(report.issues[0]?.includes('Voiceover patching is strictly forbidden'))
+})
+
+test('QUALITY HARDENING: SourceProvenanceGate - rejects post-production mask when raw audio was English', () => {
+  const audit = SourceProvenanceGate.verifyProvenance({
+    jobId: 'job_test_provenance_01',
+    rawVideoSha: 'raw_sha_123',
+    rawAudioLanguage: 'en',
+    rawAudioTranscript: 'Red clay bricks built for excellence',
+    rawDetectedBranding: 'NONE',
+    rawBrandingPassed: true,
+    rawAudioPassed: false, // Raw Veo spoke English!
+    compositorLogoSha: 'logo_sha_abc',
+    sourceLogoSha: 'logo_sha_abc',
+    voiceoverAudioSha: 'vo_sha_tr_patch', // Attempted to mask with Turkish VO
+    finalVideoSha: 'final_sha_xyz',
+  })
+  assert.strictEqual(audit.passed, false)
+  assert.strictEqual(audit.failureCode, 'RAW_GENERATION_AUDIO_LANGUAGE_MISMATCH')
+  assert.ok(audit.issues[0]?.includes('Voiceover dubbing over defective raw audio is strictly forbidden'))
+})
+
+test('QUALITY HARDENING: SourceProvenanceGate - rejects post-production overlay when raw video had invented branding', () => {
+  const audit = SourceProvenanceGate.verifyProvenance({
+    jobId: 'job_test_provenance_02',
+    rawVideoSha: 'raw_sha_456',
+    rawAudioLanguage: 'tr',
+    rawAudioTranscript: 'Ayvazoğlu İnşaat kaliteli tuğla',
+    rawDetectedBranding: 'INVENTED_LOGO_STAMP',
+    rawBrandingPassed: false, // Raw Veo stamped fake logo on brick!
+    rawAudioPassed: true,
+    compositorLogoSha: 'logo_sha_abc',
+    sourceLogoSha: 'logo_sha_abc',
+    voiceoverAudioSha: 'vo_sha_tr',
+    finalVideoSha: 'final_sha_xyz',
+  })
+  assert.strictEqual(audit.passed, false)
+  assert.strictEqual(audit.failureCode, 'RAW_VIDEO_BRANDING_MISMATCH')
+  assert.ok(audit.issues[0]?.includes('Overlay masking is strictly forbidden'))
+})
+
+test('QUALITY HARDENING: SourceProvenanceGate - authentic raw video + authentic assets PASSES with full chain', () => {
+  const audit = SourceProvenanceGate.verifyProvenance({
+    jobId: 'job_test_provenance_03',
+    rawVideoSha: 'raw_sha_789',
+    rawAudioLanguage: 'tr',
+    rawAudioTranscript: 'Ayvaz oğlu inşaat ile projelerinize sağlam temel ve üstün dayanıklılık.',
+    rawDetectedBranding: 'CANONICAL_DIEGETIC_TRUCK_LOGO',
+    rawBrandingPassed: true,
+    rawAudioPassed: true,
+    compositorLogoSha: 'logo_sha_abc',
+    sourceLogoSha: 'logo_sha_abc',
+    voiceoverAudioSha: 'vo_sha_clean',
+    finalVideoSha: 'final_sha_pass',
+  })
+  assert.strictEqual(audit.passed, true)
+  assert.strictEqual(audit.provenanceChain.raw_audio_language, 'tr')
+  assert.strictEqual(audit.provenanceChain.raw_detected_branding, 'CANONICAL_DIEGETIC_TRUCK_LOGO')
 })

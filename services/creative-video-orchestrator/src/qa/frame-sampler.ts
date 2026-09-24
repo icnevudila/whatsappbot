@@ -18,6 +18,7 @@ export interface SampledFrame {
   has_non_diegetic_branding?: boolean
   is_diegetic_product_branding_only?: boolean
   has_diegetic_logo_mismatch?: boolean
+  has_invented_diegetic_branding?: boolean
   has_acrylic_plaque?: boolean
   has_fake_ui?: boolean
   environment_detected?: string

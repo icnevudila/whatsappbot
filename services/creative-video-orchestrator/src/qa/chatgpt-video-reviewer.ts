@@ -34,9 +34,15 @@ export type VideoReviewerFailureCode =
   | 'GENERATED_LOGO_OR_TEXT_FAIL'
   | 'NON_DIEGETIC_GENERATED_BRANDING'
   | 'DIEGETIC_LOGO_MISMATCH'
+  | 'INVENTED_DIEGETIC_BRANDING'
+  | 'RAW_VIDEO_BRANDING_MISMATCH'
+  | 'OVERLAY_MASKING_FORBIDDEN'
   | 'FOREIGN_BRAND'
   | 'TENANT_BRAND_CONTAMINATION'
   | 'LOGO_DISTORTION'
+  | 'OPAQUE_LOGO_BOX'
+  | 'OVERSIZED_LOGO'
+  | 'ACTUAL_AUDIO_LANGUAGE_MISMATCH'
   | 'DUPLICATE_OUTPUT'
   | 'NEEDS_ASSET'
   | 'CANONICAL_LOGO_MISMATCH'
@@ -223,8 +229,17 @@ export class ChatGPTVideoReviewer {
       if (frame.has_diegetic_logo_mismatch) {
         failureCodes.push('DIEGETIC_LOGO_MISMATCH')
         failureCodes.push('LOGO_DISTORTION')
+        failureCodes.push('RAW_VIDEO_BRANDING_MISMATCH')
         issues.push(`Kare ${frame.timestamp_sec.toFixed(1)}s: Ürün üzerindeki fiziksel logo deforme olmuş veya yanlış harflerle yazılmış.`)
         retryDirections.push('Ürün üzerindeki diegetic marka logosunu @BrandLogo kanonik referansına harfiyen sadık kalarak koruyun.')
+      }
+
+      if (frame.has_invented_diegetic_branding) {
+        failureCodes.push('INVENTED_DIEGETIC_BRANDING')
+        failureCodes.push('RAW_VIDEO_BRANDING_MISMATCH')
+        failureCodes.push('OVERLAY_MASKING_FORBIDDEN')
+        issues.push(`Kare ${frame.timestamp_sec.toFixed(1)}s: Ürün üzerine uydurma/yetkisiz diegetic marka logosu veya damgası kazınmış. Post-prodüksiyon overlay ile maskelemek yasaktır.`)
+        retryDirections.push('Ürün yüzeyine uydurma logo veya yazı kazımayın; yalnızca referans görseldeki otantik ürünü koruyun.')
       }
 
       if (frame.is_diegetic_product_branding_only && !frame.has_diegetic_logo_mismatch) {
@@ -259,6 +274,11 @@ export class ChatGPTVideoReviewer {
         failureCodes.push('DIEGETIC_LOGO_MISMATCH')
         failureCodes.push('LOGO_DISTORTION')
         issues.push(`Kare ${frame.timestamp_sec.toFixed(1)}s: Ürün üzerindeki fiziksel logo deforme olmuş (${frame.frame_path}).`)
+      }
+
+      if (p.includes('invented_diegetic') || p.includes('invented_branding') || p.includes('hallucinated_diegetic')) {
+        failureCodes.push('INVENTED_DIEGETIC_BRANDING')
+        issues.push(`Kare ${frame.timestamp_sec.toFixed(1)}s: Ürün üzerine uydurma diegetic logo kazınmış (${frame.frame_path}).`)
       }
 
       if (p.includes('foreign_brand')) {
@@ -352,6 +372,12 @@ export class ChatGPTVideoReviewer {
       } else {
         decision = 'NEEDS_REVIEW' // Exhausted max 1 auto-regeneration
       }
+    } else if (sampledFrames.some(frame => existsSync(frame.frame_path))) {
+      // Pixel heuristics alone cannot prove product identity, foreign-brand absence,
+      // or sector correctness. If the multimodal service was unavailable, do not
+      // promote a real output to PASS merely because no filename fixture fired.
+      decision = 'NEEDS_REVIEW'
+      issues.push('Multimodal video review was unavailable; real sampled frames require human review.')
     }
 
     const productMorphDetected = failureCodes.includes('PRODUCT_MORPH_FAIL')

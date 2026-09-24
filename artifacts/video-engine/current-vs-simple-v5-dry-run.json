@@ -1,0 +1,415 @@
+{
+  "generatedAt": "2026-09-24T17:36:06.222Z",
+  "paidGenerationInvoked": false,
+  "current": {
+    "normalizedContext": {
+      "org_id": "4a58b0dd-0931-4901-880a-686457d15010",
+      "job_id": "job_current_comparison",
+      "brand_profile": {
+        "brand_name": "Ayvazoğlu İnşaat",
+        "sector": "construction_materials",
+        "tone_of_voice": [
+          "sağlam",
+          "güvenilir",
+          "endüstriyel ustalık"
+        ],
+        "visual_personality": "Modern inşaat sahası ve şantiye alanı, doğal sabah ışığı altında tuğla duvar örme ustalığı, harç ve tuğla temasında gerçekçi fizik ve malzeme dokusu",
+        "palette": [
+          "#D32F2F"
+        ],
+        "typography_preferences": "Roboto Bold",
+        "preferred_copy_style": "Voice-as-spine akıcı doğal konuşma",
+        "preferred_visual_energy": "Net, tok, sonuç odaklı",
+        "logo_usage_rules": [
+          "Kanonik logo overlay olarak yerleştirilir"
+        ],
+        "visual_dos": [
+          "İnşaat sahasında tuğla yerleştirme ve harç temasını göster"
+        ],
+        "visual_donts": [
+          "Tarla, zeytinlik, ofis masa plaketi veya sentetik AI yazıları gösterme"
+        ],
+        "approved_patterns": [
+          "macro_first",
+          "human_action_motion"
+        ],
+        "rejected_patterns": [
+          "mini_film_not_ad",
+          "acrylic_plaque"
+        ],
+        "successful_creative_traits": [
+          "high_product_visibility",
+          "voice_spine_continuity"
+        ]
+      },
+      "campaign_context": {
+        "selected_product_or_service": "Ayvazoğlu Tuğla",
+        "campaign_objective": "Müteahhit ve şantiye yöneticilerine yönelik yapı tuğlası tanıtımı",
+        "user_style_preference": "FAST_SALES",
+        "target_platform": "reels_tiktok_shorts",
+        "duration": 8,
+        "aspect_ratio": "16:9",
+        "language": "tr",
+        "verified_cta": "Ayvazoğlu İnşaat ile Güçlü Temeller",
+        "subtitle_mode": "auto"
+      },
+      "asset_manifest": {
+        "manifest_version": "2026.09",
+        "org_id": "4a58b0dd-0931-4901-880a-686457d15010",
+        "job_id": "job_current_comparison",
+        "expected_asset_count": 2,
+        "attached_asset_count": 2,
+        "attachments": [
+          {
+            "asset_id": "prod_ayvaz_brick_01",
+            "org_id": "4a58b0dd-0931-4901-880a-686457d15010",
+            "sha256": "ef1e48809c7f706db6f03459b2378e3cb23346a3378dd97ae92712556720f5c2",
+            "role": "hero_product",
+            "canonical_handle": "@HeroProduct",
+            "file_path": "/shared/outputs/inputs/4a58b0dd-0931-4901-880a-686457d15010/ayvazoglu_canonical_brick.jpg",
+            "attached_successfully": true
+          },
+          {
+            "asset_id": "logo_ayvaz_official_01",
+            "org_id": "4a58b0dd-0931-4901-880a-686457d15010",
+            "sha256": "29f704f4710e4776deb91bf24a51f0f734ce8379e649b68bc28a779d9ef50cc1",
+            "role": "logo",
+            "canonical_handle": "@BrandLogo",
+            "file_path": "/shared/outputs/inputs/4a58b0dd-0931-4901-880a-686457d15010/ayvazoglu_logo_official_transparent.png",
+            "attached_successfully": true
+          }
+        ],
+        "all_attached": true
+      },
+      "recent_fingerprints": [],
+      "user_preferences": {},
+      "verified_facts": [
+        {
+          "claim": "Standart yapı tuğlası",
+          "source_type": "catalog",
+          "source_id": "c1"
+        }
+      ]
+    },
+    "creativePlan": {
+      "plan_id": "plan_job_curr_1790271366209",
+      "brand_name": "Ayvazoğlu İnşaat",
+      "ad_format": "PERFORMANCE_DEMO",
+      "selected_ad_format": "PERFORMANCE_DEMO",
+      "selected_format_variant": "RESULT_FIRST",
+      "selection_reason": "Creative Director V2 selection",
+      "creative_idea": "Ayvazoğlu Tuğla modelinin uygulama anını ve çalışma adımlarını ilk saniyede gösteren dinamik tanıtım.",
+      "advertising_hook": "instant_result_impact",
+      "product_truth": "Ayvazoğlu Tuğla gerçek kullanım bağlamında gösterilir.",
+      "audience_value": "Ürünün kullanım adımları ve detayları yakından incelenir.",
+      "story_arc": "RESULT -> ACTION -> PRODUCT_HERO -> PAYOFF",
+      "beats": [
+        {
+          "start": 0,
+          "end": 1,
+          "purpose": "HOOK",
+          "visual_action": "Aşırı makro yakın çekim: Ayvazoğlu Tuğla (belirgin gövde formu, orijinal gövde rengi) gövdesi ve form detayları çalışma ortamında.",
+          "product_action": "@HeroProduct anlık ve belirgin şekilde kadrajda",
+          "actor_action": "Kullanıcının odaklanmış ilk eylemi",
+          "environment": "Structural integrity, raw texture, masonry durability, genuine job site scale and craftsmanship",
+          "camera": "Macro cine lens, sığ alan derinliği, dikkat çekici giriş",
+          "lighting": "high-contrast directional sun, architectural side-lighting emphasizing textures and mortar lines",
+          "physics_constraints": [
+            "yerçekimi ve mekanik temas doğal",
+            "akışkan ve mekanik dinamikler gerçekçi",
+            "doğal insan postürü"
+          ],
+          "voiceover": "Ayvazoğlu İnşaat ile Ayvazoğlu Tuğla modelini yakından tanıyın.",
+          "sfx": "active construction site atmosphere",
+          "ambience": "solid masonry contact clicks"
+        },
+        {
+          "start": 1,
+          "end": 2.5,
+          "purpose": "REVEAL",
+          "visual_action": "Akıcı geri çekilme ile @HeroProduct bütünüyle ve kullanıcının kontrollü eylemiyle görünür",
+          "product_action": "@HeroProduct kanonik referans oranlarıyla merkezde",
+          "actor_action": "Kendinden emin eylemi sürdürme",
+          "environment": "Structural integrity, raw texture, masonry durability, genuine job site scale and craftsmanship",
+          "camera": "Akıcı yatay takip ve dengeli odak",
+          "lighting": "high-contrast directional sun, architectural side-lighting emphasizing textures and mortar lines",
+          "physics_constraints": [
+            "fiziksel orantı korunmalı",
+            "el tutuşu doğal"
+          ],
+          "voiceover": "",
+          "sfx": "Çalışma sesi",
+          "ambience": "Ortam akışı"
+        },
+        {
+          "start": 2.5,
+          "end": 4.8,
+          "purpose": "PRODUCT_PROOF",
+          "visual_action": "@HeroProduct sahada gerçek uygulama ortamında işlevini ve malzeme mukavemetini sergilerken",
+          "product_action": "Tam işlevsel çalışma kanıtı",
+          "actor_action": "Rahat ve profesyonel kontrol",
+          "environment": "Structural integrity, raw texture, masonry durability, genuine job site scale and craftsmanship",
+          "camera": "Hızlı dinamik pan ve sığ alan derinliği",
+          "lighting": "Dinamik vurgu ışığı",
+          "physics_constraints": [
+            "akışkan ve mekanik dinamikler gerçekçi"
+          ],
+          "voiceover": "Standart yapı tuğlası ile çalışma adımlarını inceleyin",
+          "sfx": "Verimli çalışma sesi",
+          "ambience": "Çalışma sahası sesleri"
+        },
+        {
+          "start": 4.8,
+          "end": 8,
+          "purpose": "BRAND_CLOSE",
+          "visual_action": "@HeroProduct temiz açıdan merkezde, post-prodüksiyon logo ve CTA için temiz alan bırakılır",
+          "product_action": "@HeroProduct son karede net ve prestijli",
+          "actor_action": "Arka planda doğal akış",
+          "environment": "Structural integrity, raw texture, masonry durability, genuine job site scale and craftsmanship",
+          "camera": "Sabit sinematik kilitlenme",
+          "lighting": "Prestijli stüdyo/gün ışığı harmanı",
+          "physics_constraints": [
+            "sıfır yapay bozulma",
+            "doğal postür"
+          ],
+          "voiceover": "ve detayları keşfedin.",
+          "sfx": "Marka kapanış zili / bas tınısı",
+          "ambience": "Sakinleşen ambiyans"
+        }
+      ],
+      "master_spoken_script": "Ayvazoğlu İnşaat ile Ayvazoğlu Tuğla modelini yakından tanıyın. Standart yapı tuğlası ile çalışma adımlarını inceleyin ve detayları keşfedin.",
+      "voiceover_script": "Ayvazoğlu İnşaat ile Ayvazoğlu Tuğla modelini yakından tanıyın. Standart yapı tuğlası ile çalışma adımlarını inceleyin ve detayları keşfedin.",
+      "speech_timeline": [
+        {
+          "start_sec": 0,
+          "end_sec": 1,
+          "exact_text": "Ayvazoğlu İnşaat ile Ayvazoğlu Tuğla modelini yakından tanıyın.",
+          "speaker": "Spiker",
+          "delivery": "Sakin, açık ve doğrudan ticari seslendirme",
+          "corresponding_visual_beat": "HOOK"
+        },
+        {
+          "start_sec": 1,
+          "end_sec": 4.8,
+          "exact_text": "Standart yapı tuğlası ile çalışma adımlarını inceleyin",
+          "speaker": "Spiker",
+          "delivery": "Net ve doğal bilgilendirici tempo",
+          "corresponding_visual_beat": "PRODUCT_PROOF"
+        },
+        {
+          "start_sec": 4.8,
+          "end_sec": 8,
+          "exact_text": "ve detayları keşfedin.",
+          "speaker": "Spiker",
+          "delivery": "Güven veren nötr marka kapanışı",
+          "corresponding_visual_beat": "BRAND_CLOSE"
+        }
+      ],
+      "subtitle_plan": [
+        {
+          "start": 0,
+          "end": 1,
+          "text": "Ayvazoğlu İnşaat ile Ayvazoğlu Tuğla modelini yakından tanıyın."
+        },
+        {
+          "start": 1,
+          "end": 4.8,
+          "text": "Standart yapı tuğlası ile çalışma adımlarını inceleyin"
+        },
+        {
+          "start": 4.8,
+          "end": 8,
+          "text": "ve detayları keşfedin."
+        }
+      ],
+      "editing_rhythm": {
+        "cut_points": [
+          1,
+          2.5,
+          4.8,
+          6.3
+        ],
+        "visual_rhythm": "BUILD_PEAK_RESOLVE",
+        "hook_frame": "0.0s",
+        "product_reveal_frame": "1s",
+        "proof_frame": "2.5s",
+        "payoff_frame": "4.8s",
+        "brand_close_frame": "6.3s"
+      },
+      "audio_plan": {
+        "speech_mode": "native_veo_dialogue",
+        "spoken_language": "tr-TR",
+        "exact_spoken_lines": [
+          {
+            "start": 0,
+            "end": 1,
+            "speaker": "Spiker",
+            "text": "Ayvazoğlu İnşaat ile Ayvazoğlu Tuğla modelini yakından tanıyın.",
+            "delivery_style": "Sakin, açık ve doğrudan ticari seslendirme"
+          },
+          {
+            "start": 1,
+            "end": 4.8,
+            "speaker": "Spiker",
+            "text": "Standart yapı tuğlası ile çalışma adımlarını inceleyin",
+            "delivery_style": "Net ve doğal bilgilendirici tempo"
+          },
+          {
+            "start": 4.8,
+            "end": 8,
+            "speaker": "Spiker",
+            "text": "ve detayları keşfedin.",
+            "delivery_style": "Güven veren nötr marka kapanışı"
+          }
+        ],
+        "speech_timeline": [
+          {
+            "start_sec": 0,
+            "end_sec": 1,
+            "exact_text": "Ayvazoğlu İnşaat ile Ayvazoğlu Tuğla modelini yakından tanıyın.",
+            "speaker": "Spiker",
+            "delivery": "Sakin, açık ve doğrudan ticari seslendirme",
+            "corresponding_visual_beat": "HOOK"
+          },
+          {
+            "start_sec": 1,
+            "end_sec": 4.8,
+            "exact_text": "Standart yapı tuğlası ile çalışma adımlarını inceleyin",
+            "speaker": "Spiker",
+            "delivery": "Net ve doğal bilgilendirici tempo",
+            "corresponding_visual_beat": "PRODUCT_PROOF"
+          },
+          {
+            "start_sec": 4.8,
+            "end_sec": 8,
+            "exact_text": "ve detayları keşfedin.",
+            "speaker": "Spiker",
+            "delivery": "Güven veren nötr marka kapanışı",
+            "corresponding_visual_beat": "BRAND_CLOSE"
+          }
+        ],
+        "ambient_audio_description": "solid masonry contact clicks",
+        "sound_effects_description": "active construction site atmosphere",
+        "allow_paraphrase": false,
+        "allow_translation": false,
+        "allow_extra_dialogue": false
+      },
+      "on_screen_copy": {
+        "hook": "instant_result_impact",
+        "benefit_or_proof": "Ayvazoğlu Tuğla anlık performans",
+        "brand_or_cta": "Ayvazoğlu İnşaat ile Güçlü Temeller"
+      },
+      "logo_strategy": "GRAPHIC_OVERLAY + END_CARD",
+      "diegetic_branding_plan": [],
+      "overlay_plan": [],
+      "end_card_plan": {
+        "start_sec": 6.3,
+        "end_sec": 8,
+        "template_family": "minimalist_center",
+        "headline": "Ayvazoğlu İnşaat",
+        "cta_text": "Ayvazoğlu İnşaat ile Güçlü Temeller",
+        "website_or_phone": "",
+        "background_color": "#000000",
+        "accent_color": "#FFCC00"
+      },
+      "canonical_asset_handles": [
+        "@HeroProduct",
+        "@BrandLogo"
+      ],
+      "negative_constraints": [
+        "no generated subtitles, headlines, prices, CTA buttons, phone numbers, website URLs, invented logos, or random typography.",
+        "no impossible physical deformations, no extra limbs, no phantom tools, no floating water droplets defying gravity.",
+        "plastic toy bricks",
+        "cartoon construction",
+        "glitzy neon glow",
+        "unrealistic levitation",
+        "fake embossed typography on stone"
+      ],
+      "creative_fingerprint": {
+        "tenant_id": "4a58b0dd-0931-4901-880a-686457d15010",
+        "ad_format": "PERFORMANCE_DEMO",
+        "format_variant": "RESULT_FIRST",
+        "hook_type": "instant_result_impact",
+        "opening_visual_type": "result_macro",
+        "camera_pattern": "macro_cine_shallow_push",
+        "environment_type": "construction_materials",
+        "speech_structure": "HOOK_PROOF_PAYOFF",
+        "end_card_family": "minimalist_center"
+      },
+      "veo_generation_intent": "Ayvazoğlu Tuğla modelinin uygulama anını ve çalışma adımlarını ilk saniyede gösteren dinamik tanıtım.",
+      "subtitles_mode": "auto"
+    },
+    "exactProviderPrompt": "[SUBJECT LOCK]: Preserve @HeroProduct, @BrandLogo geometry, colors, and authentic appearance exactly as shown in authoritative reference assets. [ENVIRONMENT]: Authentic Structural integrity, raw texture, masonry durability, genuine job site scale and craftsmanship. [SEQUENCE (0-8s)]: [Beat 1 (0.0s-1.0s)]: Macro cine lens, sığ alan derinliği, dikkat çekici giriş. Aşırı makro yakın çekim: Ayvazoğlu Tuğla (belirgin gövde formu, orijinal gövde rengi) gövdesi ve form detayları çalışma ortamında.. [Beat 2 (1.0s-2.5s)]: Akıcı yatay takip ve dengeli odak. Akıcı geri çekilme ile @HeroProduct bütünüyle ve kullanıcının kontrollü eylemiyle görünür. [Beat 3 (2.5s-4.8s)]: Hızlı dinamik pan ve sığ alan derinliği. @HeroProduct sahada gerçek uygulama ortamında işlevini ve malzeme mukavemetini sergilerken. [Beat 4 (4.8s-8.0s)]: Sabit sinematik kilitlenme. @HeroProduct temiz açıdan merkezde, post-prodüksiyon logo ve CTA için temiz alan bırakılır. [PHYSICS]: Natural gravity and motion: yerçekimi ve mekanik temas doğal, akışkan ve mekanik dinamikler gerçekçi, doğal insan postürü. [CANONICAL BRAND IDENTITY PRESERVATION]: Preserve the canonical brand identity from @BrandLogo on @HeroProduct (physical product surface). Faithful proportions, NO INVENTED LOGO, NO FAKE LOGO. [AUDIO]: The spoken language is Turkish (tr-TR). Exact spoken line: \"Ayvazoğlu İnşaat ile Ayvazoğlu Tuğla modelini yakından tanıyın. Standart yapı tuğlası ile çalışma adımlarını inceleyin ve detayları keşfedin.\". Continuous dialogue across entire duration: [0-8s]: \"Ayvazoğlu İnşaat ile Ayvazoğlu Tuğla modelini yakından tanıyın. Standart yapı tuğlası ile çalışma adımlarını inceleyin ve detayları keşfedin.\". Speak this sentence exactly in Turkish. Do not translate it. Do not paraphrase it. All spoken dialogue must be delivered naturally in Turkish. No English speech. No English narration. No translated dialogue. [NEGATIVE DIRECTIVE]: NO generated on-screen text, NO visible subtitles, NO floating logo, NO INVENTED LOGO, NO FAKE LOGO. All graphics composed in post-production.",
+    "negativePrompt": "no generated subtitles, headlines, prices, CTA buttons, phone numbers, website URLs, invented logos, or random typography., no impossible physical deformations, no extra limbs, no phantom tools, no floating water droplets defying gravity., plastic toy bricks, cartoon construction, glitzy neon glow, unrealistic levitation, fake embossed typography on stone, NO visible subtitles, NO generated on-screen text, NO generated lower thirds, NO floating logo, NO generated end card, NO watermark, NO generated CTA, NO generated price, NO generated phone number, NO generated website URL, NO campaign typography, NO artificial logo overlays, NO INVENTED LOGO, NO FAKE LOGO, NO ALTERED LOGO, NO EXTRA BRAND MARKS, NO product redesign, NO English speech, NO English voiceover, NO English narration, NO English dialogue, English speech, English voiceover, English narration, English dialogue, invented diegetic branding, hallucinated diegetic logo, invented brand stamp, visible subtitles, on-screen text, lower thirds, floating logo, floating screen logo, synthetic lower thirds, artificial on-screen graphics, deformed product typography, misspelled brand names, synthetic end-card graphics, floating watermark, generated end card, hallucinated logos, blurry hands, disconnected pipes, cartoony 3d, low resolution, deformed fingers",
+    "voiceover": "Ayvazoğlu İnşaat ile Ayvazoğlu Tuğla modelini yakından tanıyın. Standart yapı tuğlası ile çalışma adımlarını inceleyin ve detayları keşfedin.",
+    "metrics": {
+      "pipeline": "CURRENT",
+      "charCount": 2052,
+      "instructionCount": 10,
+      "negativeCount": 63,
+      "actionCount": 4,
+      "locationCount": 2,
+      "voiceoverWordCount": 18,
+      "voiceoverScript": "Ayvazoğlu İnşaat ile Ayvazoğlu Tuğla modelini yakından tanıyın. Standart yapı tuğlası ile çalışma adımlarını inceleyin ve detayları keşfedin.",
+      "llmCallCountBeforeVeo": 4,
+      "postGenerationReviewerCalls": 1,
+      "maximumPostGenerationReviewerCalls": 2,
+      "expectedProviderRouting": "FLOW_VEO (existing default preserved)"
+    }
+  },
+  "simpleV5Hybrid": {
+    "normalizedContext": {
+      "goal": "Müteahhit ve şantiye yöneticilerine yönelik yapı tuğlası tanıtımı",
+      "subject": "Ayvazoğlu Tuğla",
+      "heroProductHandle": "@HeroProduct",
+      "brandName": "Ayvazoğlu İnşaat",
+      "primaryIdea": "Ayvazoğlu İnşaat bünyesindeki Ayvazoğlu Tuğla ürününün referansa sadık tek bir tanıtım anı.",
+      "primaryAction": "Ayvazoğlu Tuğla ürününün referanstaki biçimi korunarak tek bir gerçek kullanım anında gösterilmesi.",
+      "location": "Otantik ticari şantiye ve yapı lojistiği sahası",
+      "timeOfDay": "doğal gündüz",
+      "lighting": "doğal sabah ışığı",
+      "cameraMotion": "sabit odak ve akıcı endüstriyel takip",
+      "spokenScript": "Ayvazoğlu İnşaat, Ayvazoğlu Tuğla ürününü bu kısa tanıtımda gerçek çalışma ortamında gösteriyor.",
+      "spokenWordCount": 12,
+      "verifiedFacts": [
+        "Standart yapı tuğlası"
+      ],
+      "aspectRatio": "16:9",
+      "durationSeconds": 8
+    },
+    "creativePlan": {
+      "shot1_hook": {
+        "timing": "0.0-2.2s",
+        "description": "Dinamik açılış kadrajında Ayvazoğlu Tuğla, Otantik ticari şantiye ve yapı lojistiği sahası içinde net olarak tanıtılır.",
+        "framing": "Orta plan açılış ve odaklanma"
+      },
+      "shot2_proof": {
+        "timing": "2.2-5.8s",
+        "description": "Ayvazoğlu Tuğla ürününün referanstaki biçimi korunarak tek bir gerçek kullanım anında gösterilmesi. Gerçek malzeme fiziği ve pürüzsüz çalışma akışı.",
+        "action": "Ayvazoğlu Tuğla ürününün referanstaki biçimi korunarak tek bir gerçek kullanım anında gösterilmesi."
+      },
+      "shot3_close": {
+        "timing": "5.8-8.0s",
+        "description": "Ayvazoğlu Tuğla sahnede merkezde, sabit ve temiz bir son kadrajda gösterilir.",
+        "resolution": "Sabit son kadraj ve temiz alan"
+      }
+    },
+    "exactProviderPrompt": "[FORMAT]: 8s commercial video, 16:9 format.\n[SINGLE CONCEPT]: Ayvazoğlu İnşaat bünyesindeki Ayvazoğlu Tuğla ürününün referansa sadık tek bir tanıtım anı.\n[HERO PRODUCT]: Preserve @HeroProduct geometry, material texture, and colors exactly as shown in authoritative reference assets. NO INVENTED PHYSICAL BRANDING.\n[ONE LOCATION]: Otantik ticari şantiye ve yapı lojistiği sahası, doğal sabah ışığı.\n[SHOT 1 (0.0-2.2s)]: Dinamik açılış kadrajında Ayvazoğlu Tuğla, Otantik ticari şantiye ve yapı lojistiği sahası içinde net olarak tanıtılır.\n[SHOT 2 (2.2-5.8s)]: Ayvazoğlu Tuğla ürününün referanstaki biçimi korunarak tek bir gerçek kullanım anında gösterilmesi. Gerçek malzeme fiziği ve pürüzsüz çalışma akışı.\n[SHOT 3 (5.8-8.0s)]: Ayvazoğlu Tuğla sahnede merkezde, sabit ve temiz bir son kadrajda gösterilir.\n[CAMERA & PHYSICS]: sabit odak ve akıcı endüstriyel takip. Natural gravity, authentic material weight and realistic movement.\n[AUDIO]: Spoken language: Turkish (tr-TR).\nDeliver the approved dialogue naturally in Turkish.\nNo English narration.\nNo translation to English.\nSpeak the approved Turkish line exactly once.\nApproved Turkish line: \"Ayvazoğlu İnşaat, Ayvazoğlu Tuğla ürününü bu kısa tanıtımda gerçek çalışma ortamında gösteriyor.\"\nNatural ambient foley.\n[RAW TEXT POLICY]: Clean commercial footage, no on-screen text, no synthetic titles.\n[SHORT NEGATIVE LIST]: duplicate subject, duplicate product, altered product geometry, incorrect product color, warped packaging, warped logo, gibberish typography, floating graphics, holographic interface, unmotivated location change, identity drift, extra fingers, deformed hands, watermark, on-screen subtitles, English speech, English narration, carved or stamped logo on brick",
+    "negativePrompt": "duplicate subject, duplicate product, altered product geometry, incorrect product color, warped packaging, warped logo, gibberish typography, floating graphics, holographic interface, unmotivated location change, identity drift, extra fingers, deformed hands, watermark, on-screen subtitles, English speech, English narration, carved or stamped logo on brick",
+    "voiceover": "Ayvazoğlu İnşaat, Ayvazoğlu Tuğla ürününü bu kısa tanıtımda gerçek çalışma ortamında gösteriyor.",
+    "metrics": {
+      "pipeline": "SIMPLE_V5_HYBRID",
+      "charCount": 1353,
+      "instructionCount": 10,
+      "negativeCount": 18,
+      "actionCount": 1,
+      "locationCount": 1,
+      "voiceoverWordCount": 12,
+      "voiceoverScript": "Ayvazoğlu İnşaat, Ayvazoğlu Tuğla ürününü bu kısa tanıtımda gerçek çalışma ortamında gösteriyor.",
+      "llmCallCountBeforeVeo": 0,
+      "postGenerationReviewerCalls": 1,
+      "maximumPostGenerationReviewerCalls": 2,
+      "expectedProviderRouting": "AUTO -> GEMINI_NATIVE_VIDEO when AVAILABLE; FLOW_VEO only on NO_QUOTA, FEATURE_UNAVAILABLE, or TEMPORARILY_UNAVAILABLE"
+    }
+  }
+}

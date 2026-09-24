@@ -46,7 +46,26 @@ export async function POST(req: NextRequest) {
       productAsset,
       referenceAssets,
       monthlyVideoQuota = 5,
+      creativeEngineMode = 'CURRENT',
+      requestedProvider,
     } = body
+
+    const normalizedCreativeMode = String(creativeEngineMode).toUpperCase()
+    if (!['CURRENT', 'SIMPLE_V5_HYBRID'].includes(normalizedCreativeMode)) {
+      return NextResponse.json({ error: 'Geçersiz creativeEngineMode.' }, { status: 400 })
+    }
+    const normalizedRequestedProvider = String(
+      requestedProvider || (normalizedCreativeMode === 'SIMPLE_V5_HYBRID' ? 'AUTO' : 'FLOW_VEO')
+    ).toUpperCase()
+    if (!['AUTO', 'GEMINI_NATIVE_VIDEO', 'FLOW_VEO'].includes(normalizedRequestedProvider)) {
+      return NextResponse.json({ error: 'Geçersiz requestedProvider.' }, { status: 400 })
+    }
+    if (normalizedCreativeMode === 'CURRENT' && normalizedRequestedProvider !== 'FLOW_VEO') {
+      return NextResponse.json(
+        { error: 'CURRENT modu mevcut Flow davranışını korur; AUTO/Gemini yönlendirmesi SIMPLE_V5_HYBRID ile kullanılmalıdır.' },
+        { status: 400 }
+      )
+    }
 
     if (!title || !speechTimeline || !Array.isArray(speechTimeline) || speechTimeline.length === 0) {
       return NextResponse.json({ error: 'Eksik veya geçersiz reklam taslağı verisi.' }, { status: 400 })
@@ -148,13 +167,14 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. CreativeRevision DB Persistence (LOCKED_FOR_GENERATION)
+    const lockedProviderPrompt = veoPrompt || brief || ''
     const revisionPayload = {
       org_id: org.id,
       status: 'LOCKED_FOR_GENERATION',
       creative_idea: creativeIdea || title,
       selected_ad_format: adFormat || 'AUTO',
       speech_timeline: speechTimeline,
-      veo_prompt: veoPrompt || '',
+      veo_prompt: lockedProviderPrompt,
       campaign_facts: authoritativeFacts || {},
       asset_sha_set: manifestAssets.map((a) => ({
         role: a.role,
@@ -182,15 +202,19 @@ export async function POST(req: NextRequest) {
       .insert({
         org_id: org.id,
         title: title || `${org.name || 'İşletme'} Reklam Videosu`,
-        prompt: veoPrompt || brief || 'Commercial Video Ad',
+        prompt: lockedProviderPrompt || 'Commercial Video Ad',
         model: 'veo-fast',
         aspect_ratio: '9:16',
         duration_seconds: 8,
         priority: 0,
         state: 'PENDING',
+        creative_engine_mode: normalizedCreativeMode,
+        requested_provider: normalizedRequestedProvider,
         expected_ingredient_count: manifestAssets.length,
         metadata: {
           use_creative_orchestrator: true,
+          creative_engine_mode: normalizedCreativeMode,
+          requested_provider: normalizedRequestedProvider,
           creative_revision_id: revision.id,
           brand_name: org.name || authoritativeFacts?.brand_name,
           offer: authoritativeFacts?.offer || null,
@@ -234,6 +258,8 @@ export async function POST(req: NextRequest) {
           aspect_ratio: '9:16',
           duration_seconds: 8,
           creative_revision_id: revision.id,
+          creative_engine_mode: normalizedCreativeMode,
+          requested_provider: normalizedRequestedProvider,
         },
       })
     } catch (crErr) {
@@ -274,6 +300,8 @@ export async function POST(req: NextRequest) {
         expected_ingredient_count: manifestAssets.length,
         aspect_ratio: '9:16',
         duration_seconds: 8,
+        creative_engine_mode: normalizedCreativeMode,
+        requested_provider: normalizedRequestedProvider,
       },
     })
 
@@ -302,6 +330,8 @@ export async function POST(req: NextRequest) {
         job_id: job.id,
         org_id: job.org_id,
         creative_revision_id: revision.id,
+        creative_engine_mode: normalizedCreativeMode,
+        requested_provider: normalizedRequestedProvider,
         state: job.state,
       },
       { status: 201 }
