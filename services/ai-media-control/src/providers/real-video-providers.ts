@@ -113,7 +113,7 @@ export class OmniStudioGeminiNativeVideoProvider implements VideoProvider {
 
     const body: any = await response.json()
     const allowed = new Set([
-      'AVAILABLE', 'NO_QUOTA', 'FEATURE_UNAVAILABLE',
+      'AVAILABLE', 'AVAILABLE_WITH_WARNING', 'NO_QUOTA', 'FEATURE_UNAVAILABLE',
       'TEMPORARILY_UNAVAILABLE', 'AUTH_REQUIRED', 'UNKNOWN',
     ])
     return {
