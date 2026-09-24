@@ -18,6 +18,7 @@ const os = require('os');
 const { URL } = require('url');
 const { createJobMetrics, setStage, finishMetrics } = require('./runtime_metrics.js');
 const { getTenantScopeKey, getRequestKey } = require('./tenant_scope.js');
+const { BrowserWorkerSupervisor } = require('./browser_worker_supervisor.js');
 
 const COMPLETED_JOB_TTL_MS = Math.max(0, parseInt(process.env.COMPLETED_JOB_TTL_MS || String(30 * 60 * 1000), 10));
 const FAILED_JOB_TTL_MS = Math.max(0, parseInt(process.env.FAILED_JOB_TTL_MS || String(10 * 60 * 1000), 10));
@@ -157,6 +158,90 @@ const MONITOR_HTML_PATH = path.resolve(__dirname, 'monitor.html');
 if (!fs.existsSync(OUTPUT_DIR)) {
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 }
+
+const browserSupervisor = new BrowserWorkerSupervisor();
+const geminiCdpPorts = (process.env.GEMINI_CDP_PORTS || '9223,9224,9225')
+  .split(',')
+  .map(value => Number(value.trim()))
+  .filter(Number.isFinite);
+
+function profileDirForPort(port) {
+  if (port === 9222) return '/data/chromium-profile';
+  const slot = Math.max(2, port - 9221);
+  return `/data/chromium-profile-${slot}`;
+}
+
+browserSupervisor.registerWorker({
+  id: 'chatgpt-1',
+  provider: 'chatgpt',
+  accountId: process.env.CHATGPT_PRIMARY_ACCOUNT_ID || 'chatgpt-primary',
+  profileDir: '/data/chromium-profile',
+  cdpPort: 9222,
+  launchUrl: 'https://chatgpt.com/',
+  warm: process.env.CHATGPT_PRIMARY_WARM === 'true',
+  sessionValidator: async worker => {
+    try {
+      const response = await fetch(`http://127.0.0.1:${worker.cdpPort}/json/list`, { signal: AbortSignal.timeout(3000) });
+      const tabs = response.ok ? await response.json() : [];
+      return tabs.some(tab => String(tab.url || '').includes('chatgpt.com'))
+        ? { ok: true }
+        : { ok: false, code: 'AUTH_REQUIRED', message: 'ChatGPT persistent session tab is unavailable' };
+    } catch (error) {
+      return { ok: false, code: 'SESSION_VALIDATION_FAILED', message: error.message };
+    }
+  },
+});
+
+for (const port of geminiCdpPorts) {
+  browserSupervisor.registerWorker({
+    id: `gemini-${port}`,
+    provider: 'gemini',
+    accountId: `gemini-${port}`,
+    profileDir: profileDirForPort(port),
+    cdpPort: port,
+    launchUrl: 'https://gemini.google.com/videos',
+    warm: false,
+    sessionValidator: async worker => {
+      const { verifyAccount } = require('./generate_video.js');
+      const report = await verifyAccount(worker.cdpPort);
+      return report.ok && report.isLoggedIn
+        ? { ok: true }
+        : { ok: false, code: 'AUTH_REQUIRED', message: report.error || 'Gemini persistent login has expired' };
+    },
+    providerReadyValidator: async worker => {
+      const { getGeminiVideoCapability } = require('./generate_video.js');
+      const report = await getGeminiVideoCapability({ force: true, ports: [worker.cdpPort] });
+      if (report.state === 'AVAILABLE') return { ok: true };
+      if (report.state === 'AUTH_REQUIRED') return { ok: false, code: 'AUTH_REQUIRED', message: report.evidence };
+      if (report.state === 'NO_QUOTA') return { ok: false, code: 'QUOTA_EXHAUSTED', message: report.evidence };
+      return { ok: false, code: 'PROVIDER_NOT_READY', message: report.evidence || report.state };
+    },
+  });
+}
+
+browserSupervisor.registerWorker({
+  id: 'flow-primary',
+  provider: 'flow',
+  accountId: process.env.FLOW_PRIMARY_ACCOUNT_ID || 'flow-primary',
+  profileDir: process.env.FLOW_PROFILE_DIR || '/data/chromium-profile-flow',
+  cdpPort: Number(process.env.FLOW_CDP_PORT || 9226),
+  launchUrl: 'https://flow.google.com/',
+  warm: false,
+  sessionValidator: async worker => {
+    try {
+      const response = await fetch(`http://127.0.0.1:${worker.cdpPort}/json/list`, { signal: AbortSignal.timeout(3000) });
+      const tabs = response.ok ? await response.json() : [];
+      return tabs.some(tab => String(tab.url || '').includes('flow.google.com'))
+        ? { ok: true }
+        : { ok: false, code: 'AUTH_REQUIRED', message: 'Flow persistent session tab is unavailable' };
+    } catch (error) {
+      return { ok: false, code: 'SESSION_VALIDATION_FAILED', message: error.message };
+    }
+  },
+  providerReadyValidator: async () => ({ ok: true }),
+});
+
+browserSupervisor.start();
 
 // Canlı Olay Akışı (SSE - Server-Sent Events) İstemcileri
 const sseClients = new Set();
@@ -1010,7 +1095,9 @@ class VideoJobQueue {
   }
 }
 
-const videoQueue = new VideoJobQueue(1);
+// Account lanes are guarded by BrowserWorkerSupervisor. Different Gemini
+// accounts may run concurrently; each individual account remains concurrency=1.
+const videoQueue = new VideoJobQueue(Math.max(1, geminiCdpPorts.length));
 
 // Periyodik zombi iş temizleme (200s)
 const zombieInterval = setInterval(() => {
@@ -1156,6 +1243,13 @@ function sendJson(res, statusCode, payload) {
   res.end(JSON.stringify(payload));
 }
 
+function isInternalWorkerRequest(req) {
+  const configured = process.env.WORKER_CONTROL_TOKEN;
+  if (configured) return req.headers['x-worker-token'] === configured;
+  const address = req.socket?.remoteAddress || '';
+  return address === '127.0.0.1' || address === '::1' || address === '::ffff:127.0.0.1';
+}
+
 // HTTP Sunucusu
 const server = http.createServer(async (req, res) => {
   const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
@@ -1172,6 +1266,46 @@ const server = http.createServer(async (req, res) => {
   }
 
   try {
+    // Browser worker control is loopback-only unless WORKER_CONTROL_TOKEN is set.
+    if (method === 'GET' && pathname === '/v1/browser-workers') {
+      if (!isInternalWorkerRequest(req)) return sendJson(res, 403, { error: 'forbidden' });
+      return sendJson(res, 200, {
+        browserStartTimeout: browserSupervisor.browserStartTimeout,
+        providerReadyTimeout: browserSupervisor.providerReadyTimeout,
+        idleBrowserTTL: browserSupervisor.idleBrowserTTL,
+        preferredWorkingTabs: browserSupervisor.preferredWorkingTabs,
+        absoluteTabCap: browserSupervisor.absoluteTabCap,
+        workers: await browserSupervisor.telemetry(),
+      });
+    }
+
+    if (method === 'POST' && pathname === '/v1/browser-workers/ensure-ready') {
+      if (!isInternalWorkerRequest(req)) return sendJson(res, 403, { error: 'forbidden' });
+      const body = await parseJsonBody(req);
+      const worker = browserSupervisor.workers.get(body.workerId);
+      if (!worker) return sendJson(res, 404, { error: 'worker_not_found' });
+      try {
+        await browserSupervisor.ensureReady(worker);
+        return sendJson(res, 200, { ok: true, worker_id: worker.id, state: worker.state, readiness: worker.readiness });
+      } catch (error) {
+        return sendJson(res, error.code === 'AUTH_REQUIRED' ? 409 : 503, {
+          ok: false,
+          worker_id: worker.id,
+          state: worker.state,
+          readiness: worker.readiness,
+          error: { code: error.code || 'WORKER_START_FAILED', message: error.message },
+        });
+      }
+    }
+
+    if (method === 'GET' && pathname === '/worker/demand') {
+      if (!isInternalWorkerRequest(req)) return sendJson(res, 403, { error: 'forbidden' });
+      return sendJson(res, 200, {
+        pending: queue.pendingQueue.length,
+        has_work: queue.pendingQueue.length > 0,
+      });
+    }
+
     // 0. Canlı Olay Akışı (SSE): GET /events
     if (method === 'GET' && pathname === '/events') {
       res.writeHead(200, {
@@ -1466,6 +1600,12 @@ const server = http.createServer(async (req, res) => {
       const jobId = job.id;
 
       console.log(`[Gateway] Yeni Video Talebi Kuyruğa Alındı [${jobId}] (Org: ${orgId}, IdempotencyKey: ${idempotencyKey || 'yok'}, Async: ${isAsync}): "${prompt.slice(0, 55)}..." (Kuyruk: ${videoQueue.queue.length} bekliyor, ${videoQueue.activeCount} aktif)`);
+      const requestedEngine = body.preferredEngine || body.engine || 'flow';
+      if (requestedEngine === 'gemini') {
+        // Queue-aware prewarm is best-effort. Failure never consumes or fails the job;
+        // task-time acquire below retries eligible accounts and is the correctness gate.
+        browserSupervisor.prewarm('gemini', videoQueue.queue.length + 1).catch(() => {});
+      }
       try {
         const videoOptions = {
           prompt,
@@ -1539,10 +1679,33 @@ const server = http.createServer(async (req, res) => {
             return await generateVideoViaOfficialApi(runOpts);
           }
 
+          let browserLease = null;
+          let browserOutcome = {};
           try {
+            if (runOpts.preferredEngine === 'gemini' || runOpts.preferredEngine === 'flow') {
+              const videoAcquisition = await browserSupervisor.acquireVideo({
+                jobId,
+                preferredEngine: runOpts.preferredEngine,
+                preferredWorkerIds: body.accountId ? [body.accountId] : null,
+                disableProviderFallback: body.disableProviderFallback === true,
+              });
+              browserLease = videoAcquisition.lease;
+              browserLease.markExecutionStarted();
+              browserLease.setPhase('GENERATING');
+              runOpts.port = browserLease.cdpPort;
+              if (videoAcquisition.fallbackFrom) {
+                runOpts.engine = 'flow';
+                runOpts.preferredEngine = 'flow';
+              }
+            }
             const { generateVideo } = require('./generate_video.js');
             return await generateVideo(runOpts);
           } catch (browserErr) {
+            const browserCode = String(browserErr.code || browserErr.message || '');
+            browserOutcome = {
+              authRequired: browserCode.includes('AUTH') || browserCode.includes('SESSION_EXPIRED'),
+              quotaExhausted: browserCode.includes('QUOTA') || browserCode.includes('LIMIT'),
+            };
             console.warn(`[Gateway Video] ⚠️ Tarayıcı botu video üretiminde hata aldı: ${browserErr.message}`);
 
             if (body.disableProviderFallback === true) {
@@ -1560,6 +1723,10 @@ const server = http.createServer(async (req, res) => {
               console.error(`[Gateway Video Fallback Hata]`, fallbackErr);
             }
             throw browserErr;
+          } finally {
+            if (browserLease) {
+              await browserLease.release(browserOutcome);
+            }
           }
         };
 
@@ -1635,6 +1802,9 @@ const server = http.createServer(async (req, res) => {
     if (method === 'GET' && (pathname === '/v1/videos/capability' || pathname === '/videos/capability')) {
       try {
         const { getGeminiVideoCapability } = require('./generate_video.js');
+        // A cold browser is not evidence that Gemini is unavailable. Warm one
+        // eligible account before probing so Gemini retains provider priority.
+        await browserSupervisor.prewarm('gemini', 1);
         const result = await getGeminiVideoCapability({ force: parsedUrl.searchParams.get('force') === 'true' });
         return sendJson(res, 200, result);
       } catch (err) {
@@ -1995,6 +2165,9 @@ const server = http.createServer(async (req, res) => {
       const { workerId, status, details, sessionKey } = body;
       if (workerId) {
         queue.updateWorkerHeartbeat(workerId, status, details, sessionKey);
+        if (browserSupervisor.workers.has(workerId)) {
+          await browserSupervisor.heartbeat(workerId, body);
+        }
       }
       return sendJson(res, 200, { ok: true });
     }
@@ -2198,4 +2371,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { server, queue, AdvancedJobQueue };
+module.exports = { server, queue, AdvancedJobQueue, VideoJobQueue, browserSupervisor };
