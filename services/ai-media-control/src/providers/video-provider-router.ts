@@ -172,7 +172,7 @@ export class VideoProviderRouter {
       return this.complete(result, requestedProvider, capability.state, attemptCounts)
     } catch (error) {
       const classified = capabilityFromError(error)
-      if (requestedProvider === 'AUTO' && AUTO_FALLBACK_STATES.has(classified)) {
+      if (requestedProvider === 'AUTO' && (AUTO_FALLBACK_STATES.has(classified) || classified === 'ACCOUNT_CONFIGURATION_REQUIRED')) {
         attemptCounts.FLOW_VEO++
         const flowResult = await this.flow.generate(this.forProvider(request, 'FLOW_VEO'))
         return this.complete(

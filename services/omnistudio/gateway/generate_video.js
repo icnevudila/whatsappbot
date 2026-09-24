@@ -1541,7 +1541,7 @@ async function generateVideo(options) {
       const classified = classifyGeminiVideoError(err);
       classifiedFailures.push(classified);
       lastError = createGeminiVideoError(err);
-      if (options.disableProviderFallback === true && !FALLBACK_CAPABILITY_STATES.has(classified.state) && classified.state !== CAPABILITY_STATES.AUTH_REQUIRED) {
+      if (options.disableProviderFallback === true && err.code !== 'GEMINI_RUNTIME_BLOCKED' && !FALLBACK_CAPABILITY_STATES.has(classified.state) && classified.state !== CAPABILITY_STATES.AUTH_REQUIRED) {
         throw lastError;
       }
     }
