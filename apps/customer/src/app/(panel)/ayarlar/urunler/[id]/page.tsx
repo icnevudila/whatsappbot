@@ -5,6 +5,7 @@ import { requireActiveOrg, isOrgAdminRole } from '@/lib/org'
 import { SettingsPageFrame } from '../../settings-shell'
 import { DeleteProductButton } from '../delete-button'
 import { ProductForm } from '../product-form'
+import { getSafeMediaUrl } from '@/lib/media-url'
 
 export const metadata: Metadata = { title: 'Ürün' }
 export const dynamic = 'force-dynamic'
@@ -44,7 +45,10 @@ export default async function ProductDetailPage({
   if (!product) notFound()
 
   const canManage = isOrgAdminRole(org.role)
-  const images = imageRows ?? []
+  const images = (imageRows ?? []).map((img) => ({
+    id: img.id,
+    public_url: getSafeMediaUrl(img.public_url) ?? img.public_url,
+  }))
 
   return (
     <SettingsPageFrame

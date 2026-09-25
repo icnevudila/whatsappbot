@@ -5,6 +5,7 @@ import { EmptyState } from '@/components/ui'
 import { requireActiveOrg, isOrgAdminRole } from '@/lib/org'
 import { SettingsPageFrame } from '../settings-shell'
 import { ProductsBoard } from './products-board'
+import { getSafeMediaUrl } from '@/lib/media-url'
 
 export const metadata: Metadata = { title: 'Ürünlerim' }
 export const dynamic = 'force-dynamic'
@@ -40,7 +41,7 @@ export default async function ProductsPage() {
   const imagesByProduct = new Map()
   for (const image of imageRows ?? []) {
     if (!imagesByProduct.has(image.product_id)) {
-      imagesByProduct.set(image.product_id, image.public_url)
+      imagesByProduct.set(image.product_id, getSafeMediaUrl(image.public_url) ?? image.public_url)
     }
   }
 

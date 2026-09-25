@@ -78,14 +78,21 @@ async function processPendingJobs() {
         throw new Error('Prompt cannot be empty')
       }
 
-      // Check assets if required
+      // Check assets if required (with retry polling to prevent race conditions during insertion)
       if (job.expected_ingredient_count > 0) {
-        const { data: assets } = await supabase
-          .from('ai_media_assets')
-          .select('*')
-          .eq('job_id', job.id)
+        let count = 0
+        let assets = null
+        for (let attempt = 0; attempt < 7; attempt++) {
+          const res = await supabase
+            .from('ai_media_assets')
+            .select('*')
+            .eq('job_id', job.id)
+          assets = res.data
+          count = assets?.length || 0
+          if (count === job.expected_ingredient_count) break
+          await new Promise((r) => setTimeout(r, 500))
+        }
 
-        const count = assets?.length || 0
         if (count !== job.expected_ingredient_count) {
           throw new Error(`Asset count mismatch: expected ${job.expected_ingredient_count}, found ${count}`)
         }
