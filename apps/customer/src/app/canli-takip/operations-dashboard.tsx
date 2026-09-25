@@ -263,8 +263,38 @@ export function OperationsDashboard({ section }: { section: OperationsSection })
 }
 
 function AccountsGrid({ accounts, busy, onAction }: { accounts: OperationsAccount[]; busy: string | null; onAction: (action: string, id: string) => void }) {
+  const flowAccounts = accounts.filter(a => a.provider === 'FLOW')
+  const totalAvailableCredits = flowAccounts.reduce((sum, a) => sum + (a.creditBalance ?? 0), 0)
+  const totalCreditsUsedToday = flowAccounts.reduce((sum, a) => sum + (a.creditsUsedToday ?? 0), 0)
+  const totalCompletedVideos = flowAccounts.reduce((sum, a) => sum + (a.totalCompletedVideos ?? 0), 0)
+  const estimatedVideosRemaining = Math.floor(totalAvailableCredits / 10)
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
+      {/* Toplam Kredi ve Video Kota Özeti */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="rounded-[var(--radius-card)] border border-[var(--color-hairline)] bg-surface p-4 shadow-[var(--shadow-card)]">
+          <span className="text-[10px] font-bold text-ink-muted uppercase tracking-wider">Toplam Kalan Kredi</span>
+          <div className="mt-1.5 text-2xl font-black text-accent">{totalAvailableCredits} <span className="text-xs font-semibold text-ink-muted">Kredi</span></div>
+          <span className="text-[10px] text-ink-faint">Aktif Flow havuz bakiyesi</span>
+        </div>
+        <div className="rounded-[var(--radius-card)] border border-[var(--color-hairline)] bg-surface p-4 shadow-[var(--shadow-card)]">
+          <span className="text-[10px] font-bold text-ink-muted uppercase tracking-wider">Kalan Video Kapasitesi</span>
+          <div className="mt-1.5 text-2xl font-black text-ink">~{estimatedVideosRemaining} <span className="text-xs font-semibold text-ink-muted">Video</span></div>
+          <span className="text-[10px] text-ink-faint">~10 kredi / video bazında</span>
+        </div>
+        <div className="rounded-[var(--radius-card)] border border-[var(--color-hairline)] bg-surface p-4 shadow-[var(--shadow-card)]">
+          <span className="text-[10px] font-bold text-ink-muted uppercase tracking-wider">Bugün Harcanan Kredi</span>
+          <div className="mt-1.5 text-2xl font-black text-ink-soft">{totalCreditsUsedToday} <span className="text-xs font-semibold text-ink-muted">Kredi</span></div>
+          <span className="text-[10px] text-ink-faint">Son 24 saatteki üretimler</span>
+        </div>
+        <div className="rounded-[var(--radius-card)] border border-[var(--color-hairline)] bg-surface p-4 shadow-[var(--shadow-card)]">
+          <span className="text-[10px] font-bold text-ink-muted uppercase tracking-wider">Başarılı Video Üretimi</span>
+          <div className="mt-1.5 text-2xl font-black text-success">{totalCompletedVideos} <span className="text-xs font-semibold text-ink-muted">Adet</span></div>
+          <span className="text-[10px] text-ink-faint">Toplam tamamlanan işler</span>
+        </div>
+      </div>
+
       {(['GEMINI', 'FLOW', 'CHATGPT', 'WHATSAPP'] as const).map(provider => {
         const items = accounts.filter(account => account.provider === provider)
         return (
