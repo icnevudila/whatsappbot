@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireActiveOrg } from '@/lib/org'
 import type { SpeechTimelineItem, AdFormatType } from '@/app/(panel)/icerik/wizard-types'
 import { resolveProductAffordance } from '@/lib/ai/affordance'
+import { completeText } from '@/lib/ai/text'
 import { buildSafeSpokenLine, type ProductFidelityContract } from '@/lib/video-wizard-contract'
 
 export const runtime = 'nodejs'
@@ -106,14 +107,58 @@ export async function POST(req: NextRequest) {
       String(body.motionStyle || 'real_usage'),
       referenceAssets.some((asset: any) => asset?.role === 'presenter'),
     )
-    const approvedSpokenLine = buildSafeSpokenLine({
-      brandName,
-      productName,
-      adFormat,
-      verifiedClaims,
-      offer: String(body.offerDetails || '').trim(),
-      offerVerified: body.offerVerified === true,
-    })
+    const revisionType = String(body.revisionType || 'refresh')
+    const creativeNote = String(body.creativeNote || '').trim()
+
+    let approvedSpokenLine = ''
+    try {
+      const toneMap: Record<string, string> = {
+        sales: 'Satış, dönüşüm ve harekete geçirici aciliyet odaklı (fırsatı kaçırma hissi)',
+        short: 'Son derece kısa, öz, net ve vurucu',
+        corporate: 'Prestijli, kurumsal, güven veren ve kaliteli',
+        refresh: 'Dinamik, modern, enerjik ve dikkat çekici',
+      }
+      const toneDesc = toneMap[revisionType] || 'Dinamik ve profesyonel'
+
+      const systemPrompt = `Sen Türkiye'nin en iyi kreatif reklam yazarı ve metin yazarısın.
+Görevin: Bir video reklam filmi için 8 ila 14 kelimelik (asla 16 kelimeyi geçmeyen), akıcı, ticari ve etkileyici bir Türkçe seslendirme metni yazmak.
+
+ÇOK KATI KURALLAR:
+1. Kesinlikle doğal, karizmatik, Türkçe konuşma diline uygun bir reklam metni olsun.
+2. "referansına sadık", "tasarıma sadık", "geometrisi", "veo", "yapay zeka", "prompt", "canary" gibi teknik veya geliştirici kelimelerini ASLA KULLANMA.
+3. Ürünün kalitesini, faydasını veya güvenilirliğini vurgula; markanın adını cümlenin sonunda veya başında doğal şekilde geçir.
+4. Metin en fazla 1 veya 2 kısa vurucu cümleden oluşsun (ideal: 8-13 kelime).
+5. YALNIZCA konuşulacak Türkçe metni yaz. Tırnak işareti, başlık, açıklama veya çeviri ekleme.`
+
+      const userPrompt = `Marka: ${brandName}
+Ürün: ${productName}
+Ürün Açıklaması: ${productDescription || 'Belirtilmedi'}
+Reklam Formatı: ${adFormat}
+İstenen Reklam Tonu: ${toneDesc}
+Özel Vurgulanmak İstenen Not: ${creativeNote || 'Yok'}
+Doğrulanmış Ürün Bilgisi: ${verifiedClaims.join(', ') || 'Yok'}
+Varsa Kampanya / Fırsat: ${body.offerDetails || 'Yok'}`
+
+      const aiText = await completeText(systemPrompt, userPrompt)
+      const cleanText = aiText.replace(/["“”«»]/g, '').trim()
+      const wordCount = cleanText.split(/\s+/).filter(Boolean).length
+      if (wordCount >= 6 && wordCount <= 18) {
+        approvedSpokenLine = cleanText
+      }
+    } catch (e) {
+      console.warn('[draft] GPT copy generation fallback to template:', e)
+    }
+
+    if (!approvedSpokenLine) {
+      approvedSpokenLine = buildSafeSpokenLine({
+        brandName,
+        productName,
+        adFormat,
+        verifiedClaims,
+        offer: String(body.offerDetails || '').trim(),
+        offerVerified: body.offerVerified === true,
+      })
+    }
     const speechTimeline = speechFor(approvedSpokenLine)
     const negativeConstraints = [
       'no generated subtitles, headline, price, CTA, phone, URL, random typography, watermark, invented logo, foreign brand, product morphing, fake UI, or unsupported factual claim.',
