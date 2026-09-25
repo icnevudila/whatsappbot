@@ -42,11 +42,28 @@ google-chrome-stable --no-sandbox --disable-dev-shm-usage --disable-gpu \
   --start-maximized https://chatgpt.com &
 sleep 5
 
-# 5. Görsel Üretim İşçisi (chatgpt-1)
-echo "🤖 CDP Worker #1 Başlatılıyor (Worker ID: chatgpt-1)..."
-CDP_HTTP="http://127.0.0.1:9222" WORKER_ID="chatgpt-1" TAB_INDEX=0 node --experimental-websocket /app/gateway/cdp_worker.js &
+# 5. Görsel Üretim İşçisi (chatgpt-1) & Otonom Bekçi (Watchdog)
+echo "🤖 CDP Worker #1 ve Otonom Bekçi Başlatılıyor..."
 
-# Konteyneri canlı tut
 while true; do
-  sleep 3600
+  # Chrome 9222 kontrolü
+  if ! curl -s http://127.0.0.1:9222/json/version > /dev/null 2>&1; then
+    echo "⚠️ Chrome 9222 kapalı tespit edildi, yeniden başlatılıyor..."
+    rm -f "$PROFILE_DIR/Singleton*" "$PROFILE_DIR/*/Singleton*" "$PROFILE_DIR/LOCK" "$PROFILE_DIR/*/LOCK" 2>/dev/null || true
+    google-chrome-stable --no-sandbox --disable-dev-shm-usage --disable-gpu \
+      --disable-search-engine-choice-screen \
+      --user-data-dir="$PROFILE_DIR" \
+      --remote-debugging-port=9222 \
+      --start-maximized https://chatgpt.com &
+    sleep 5
+  fi
+
+  # cdp_worker.js kontrolü
+  if ! pgrep -f "cdp_worker.js" > /dev/null; then
+    echo "⚠️ cdp_worker.js çalışmıyor tespit edildi, yeniden başlatılıyor..."
+    cd /app/gateway
+    CDP_HTTP="http://127.0.0.1:9222" WORKER_ID="chatgpt-1" TAB_INDEX=0 node --experimental-websocket /app/gateway/cdp_worker.js >> /var/log/cdp_worker.log 2>&1 &
+  fi
+
+  sleep 10
 done
