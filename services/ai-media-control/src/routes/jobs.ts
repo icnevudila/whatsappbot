@@ -12,11 +12,13 @@ export const jobsRouter = Router()
 // POST /api/v1/jobs — Create new AI media job
 jobsRouter.post('/', async (req, res) => {
   try {
-    const { org_id, title, prompt, model, aspect_ratio, duration_seconds, priority, assets, campaign_id, metadata } = req.body
+    const { org_id, title, prompt, model, aspect_ratio, duration_seconds, priority, assets, campaign_id, metadata, creative_engine_mode } = req.body
 
     if (!org_id || !title || !prompt) {
       return res.status(400).json({ error: true, message: 'org_id, title, and prompt are required' })
     }
+
+    const resolvedMode = creative_engine_mode || metadata?.creative_engine_mode || 'CURRENT'
 
     const { data: job, error } = await supabase
       .from('ai_media_jobs')
@@ -30,6 +32,7 @@ jobsRouter.post('/', async (req, res) => {
         priority: priority || 0,
         campaign_id: campaign_id || null,
         expected_ingredient_count: (assets || []).length,
+        creative_engine_mode: resolvedMode,
         metadata: metadata || {},
       })
       .select()

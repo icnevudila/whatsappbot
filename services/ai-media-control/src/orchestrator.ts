@@ -647,7 +647,7 @@ async function runCreativeVideoExecution(
         sha256: materializedLogo.sha256,
       }).eq('id', logoAsset.id)
     } catch (e) {
-      if ((job.creative_engine_mode || job.metadata?.creative_engine_mode) === 'SIMPLE_V5_HYBRID') throw e
+      if (job.metadata?.creative_engine_mode === 'SIMPLE_V5_HYBRID' || job.creative_engine_mode === 'SIMPLE_V5_HYBRID') throw e
       console.warn(`[orchestrator] Logo materialization fallback:`, e)
     }
   }
@@ -667,7 +667,7 @@ async function runCreativeVideoExecution(
         sha256: mat.sha256,
       }).eq('id', p.id)
     } catch (e) {
-      if ((job.creative_engine_mode || job.metadata?.creative_engine_mode) === 'SIMPLE_V5_HYBRID') throw e
+      if (job.metadata?.creative_engine_mode === 'SIMPLE_V5_HYBRID' || job.creative_engine_mode === 'SIMPLE_V5_HYBRID') throw e
       console.warn(`[orchestrator] Product materialization fallback:`, e)
     }
     materializedProducts.push({
@@ -721,7 +721,7 @@ async function runCreativeVideoExecution(
     },
     aspect_ratio: (job.aspect_ratio || '9:16') as any,
     requested_duration: job.duration_seconds || 8,
-    creative_engine_mode: job.creative_engine_mode || job.metadata?.creative_engine_mode || 'CURRENT',
+    creative_engine_mode: (job.metadata?.creative_engine_mode === 'SIMPLE_V5_HYBRID' || job.creative_engine_mode === 'SIMPLE_V5_HYBRID') ? 'SIMPLE_V5_HYBRID' : 'CURRENT',
     verified_claims: Array.isArray(approvedFacts.verified_claims) ? approvedFacts.verified_claims : [],
     unverified_facts: Array.isArray(approvedFacts.unverified_facts) ? approvedFacts.unverified_facts : [],
     approved_veo_prompt: revision.veo_prompt,
@@ -735,7 +735,7 @@ async function runCreativeVideoExecution(
     throw new Error(`FACTUAL_INTEGRITY_FAIL: ${factualReport.violations.map(v => v.unverifiedValue).join(', ')}`)
   }
 
-  if ((job.creative_engine_mode || job.metadata?.creative_engine_mode) === 'SIMPLE_V5_HYBRID') {
+  if (job.metadata?.creative_engine_mode === 'SIMPLE_V5_HYBRID' || job.creative_engine_mode === 'SIMPLE_V5_HYBRID') {
     const providerAssets = [
       ...(logoAsset ? [{
         asset_id: logoAsset.id,
