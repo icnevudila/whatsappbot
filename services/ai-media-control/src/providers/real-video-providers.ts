@@ -138,6 +138,11 @@ export class OmniStudioGeminiNativeVideoProvider implements VideoProvider {
       aspect_ratio: request.aspectRatio,
       duration_seconds: request.durationSeconds,
       assets: request.assets,
+      fidelity_contract_applied: Boolean((request as any).fidelity_contract_applied ?? true),
+      canonical_asset_sha: (request as any).canonical_asset_sha || request.assets.find(a => a.role === 'product')?.sha256 || '',
+      product_id: (request as any).product_id || request.assets.find(a => a.role === 'product')?.asset_id || '',
+      fidelity_rule_count: (request as any).fidelity_rule_count || 0,
+      product_fidelity_contract: (request as any).product_fidelity_contract || null,
     })
 
     ws.logEvent('READY', 'Submitting generation request to OmniStudio gateway')
@@ -246,13 +251,10 @@ export class FlowVeoVideoProvider implements VideoProvider {
   ) {}
 
   async generate(request: VideoGenerationRequest): Promise<VideoProviderResult> {
-    if (!request.accountId) {
-      throw new ProviderRoutingError(
-        'FLOW_ACCOUNT_UNAVAILABLE',
-        'Flow fallback requires an explicitly leased Flow account',
-        'TEMPORARILY_UNAVAILABLE'
-      )
-    }
+    const flowAccountId = (request.accountId && !request.accountId.startsWith('gemini'))
+      ? request.accountId
+      : (process.env.FLOW_PRIMARY_ACCOUNT_ID || 'account-02')
+    const flowRequest: VideoGenerationRequest = { ...request, accountId: flowAccountId }
 
     // 1. Request distributed account lease
     let leaseToken: string | null = null
@@ -262,9 +264,9 @@ export class FlowVeoVideoProvider implements VideoProvider {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           provider: 'flow',
-          accountId: request.accountId,
-          jobId: request.jobId,
-          workerId: `flow:${request.accountId}`,
+          accountId: flowAccountId,
+          jobId: flowRequest.jobId,
+          workerId: `flow:${flowAccountId}`,
           ttlSeconds: 120,
         }),
         signal: AbortSignal.timeout(10_000),
@@ -272,7 +274,7 @@ export class FlowVeoVideoProvider implements VideoProvider {
       if (leaseRes.status === 409) {
         throw new ProviderRoutingError(
           'ACCOUNT_BUSY',
-          `Flow account ${request.accountId} is leased by another host`,
+          `Flow account ${flowAccountId} is leased by another host`,
           'TEMPORARILY_UNAVAILABLE'
         )
       }
@@ -291,34 +293,39 @@ export class FlowVeoVideoProvider implements VideoProvider {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            workerId: `flow:${request.accountId}`,
+            workerId: `flow:${flowAccountId}`,
             provider: 'flow',
-            accountId: request.accountId,
+            accountId: flowAccountId,
           }),
           signal: AbortSignal.timeout(10_000),
         })
       } catch {}
 
       // 3. Run existing gflow execution
-      const ws = new GenerationWorkspace({ jobId: request.jobId, attemptId: request.attemptId })
+      const ws = new GenerationWorkspace({ jobId: flowRequest.jobId, attemptId: flowRequest.attemptId })
       ws.logEvent('PREFLIGHT', 'Preparing Flow VEO generation')
       ws.writePrompt({
-        job_id: request.jobId,
-        attempt_id: request.attemptId,
-        prompt: request.prompt,
-        provider_prompts: request.providerPrompts,
-        approved_dialogue: request.approvedDialogue,
-        aspect_ratio: request.aspectRatio,
-        duration_seconds: request.durationSeconds,
-        assets: request.assets,
+        job_id: flowRequest.jobId,
+        attempt_id: flowRequest.attemptId,
+        prompt: flowRequest.prompt,
+        provider_prompts: flowRequest.providerPrompts,
+        approved_dialogue: flowRequest.approvedDialogue,
+        aspect_ratio: flowRequest.aspectRatio,
+        duration_seconds: flowRequest.durationSeconds,
+        assets: flowRequest.assets,
+        fidelity_contract_applied: Boolean((flowRequest as any).fidelity_contract_applied ?? true),
+        canonical_asset_sha: (flowRequest as any).canonical_asset_sha || flowRequest.assets.find(a => a.role === 'product')?.sha256 || '',
+        product_id: (flowRequest as any).product_id || flowRequest.assets.find(a => a.role === 'product')?.asset_id || '',
+        fidelity_rule_count: (flowRequest as any).fidelity_rule_count || 0,
+        product_fidelity_contract: (flowRequest as any).product_fidelity_contract || null,
       })
-      if (leaseToken) ws.logEvent('ACCOUNT_LEASED', `Leased flow account ${request.accountId}`)
+      if (leaseToken) ws.logEvent('ACCOUNT_LEASED', `Leased flow account ${flowAccountId}`)
       ws.logEvent('READY', 'Flow worker ready')
       ws.logEvent('SUBMITTED', 'Executing flow job')
       ws.logEvent('GENERATING', 'Flow rendering')
 
       const generationStartedAt = new Date().toISOString()
-      const payload: any = buildFlowVeoProviderPayload(request)
+      const payload: any = buildFlowVeoProviderPayload(flowRequest)
       if (leaseToken) payload.lease_token = leaseToken
       const result: any = await this.gflow.executeJob(payload)
 

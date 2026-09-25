@@ -19,6 +19,8 @@ const FORBIDDEN_MARKETING_FORMULAS = [
  * ONE VIDEO, ONE PRIMARY IDEA, ONE LOCATION, ONE PRIMARY ACTION, ONE HERO PRODUCT, THREE SHOTS.
  * Strictly derives copy only from verified facts and neutral observational prose.
  */
+import { resolveProductFidelityContract } from './fidelity-contract.js'
+
 export class SimpleV5BriefNormalizer {
   public static normalize(snapshot: BrandContextSnapshot): {
     brief: SimpleV5Brief
@@ -31,6 +33,7 @@ export class SimpleV5BriefNormalizer {
     }
     const productName = product.name
     const verifiedClaims = (snapshot.verified_claims || []).filter(Boolean)
+    const fidelityReport = resolveProductFidelityContract({ product })
 
     // 1. One Location & Sector Environment (Sector provides atmosphere, NEVER product action)
     const sector = (snapshot.sector_profile || '').toLowerCase()
@@ -96,6 +99,10 @@ export class SimpleV5BriefNormalizer {
       goal: snapshot.campaign.objective || 'Ürün tanıtımı',
       subject: productName,
       heroProductHandle: '@HeroProduct',
+      heroProductId: product.product_id || product.asset_id,
+      heroProductSha: product.sha256,
+      productFidelityContract: product.product_fidelity_contract,
+      fidelityReport,
       brandName,
       primaryIdea,
       primaryAction,

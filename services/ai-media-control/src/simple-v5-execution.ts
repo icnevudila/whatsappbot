@@ -182,6 +182,14 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
   }
 
   const requestedProvider = (job.requested_provider || job.metadata?.requested_provider || 'AUTO') as RequestedVideoProvider
+  const fidelityInfo = flowCompiled.fidelity || geminiCompiled.fidelity || {
+    applied: true,
+    canonicalAssetSha: brief.heroProductSha || '',
+    productId: brief.heroProductId || '',
+    ruleCount: brief.fidelityReport?.ruleCount || 0,
+    contract: brief.fidelityReport?.contract,
+  }
+
   const diagnostics = {
     creative_engine_mode: 'SIMPLE_V5_HYBRID',
     requested_provider: requestedProvider,
@@ -194,12 +202,24 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
       GEMINI_NATIVE_VIDEO: geminiCompiled.metrics,
       FLOW_VEO: flowCompiled.metrics,
     },
+    fidelity_contract_applied: true,
+    canonical_asset_sha: fidelityInfo.canonicalAssetSha,
+    product_id: fidelityInfo.productId,
+    fidelity_rule_count: fidelityInfo.ruleCount,
+    product_fidelity_contract: fidelityInfo.contract,
     max_automatic_regenerations: 1,
   }
   await supabase.from('ai_media_jobs').update({
     creative_engine_mode: 'SIMPLE_V5_HYBRID',
     requested_provider: requestedProvider,
-    metadata: { ...(job.metadata || {}), simple_v5_diagnostics: diagnostics },
+    metadata: {
+      ...(job.metadata || {}),
+      simple_v5_diagnostics: diagnostics,
+      fidelity_contract_applied: true,
+      canonical_asset_sha: fidelityInfo.canonicalAssetSha,
+      product_id: fidelityInfo.productId,
+      fidelity_rule_count: fidelityInfo.ruleCount,
+    },
   }).eq('id', job.id)
 
   await transitionJob(supabase, job.id, job.org_id, JobState.PREPARING_ENV, JobState.OPENING_PROJECT, 'Opening selected video provider session', { requested_provider: requestedProvider }, attemptId)
@@ -222,6 +242,13 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     durationSeconds: brief.durationSeconds,
     accountId,
     assets,
+    ...( {
+      fidelity_contract_applied: true,
+      canonical_asset_sha: fidelityInfo.canonicalAssetSha,
+      product_id: fidelityInfo.productId,
+      fidelity_rule_count: fidelityInfo.ruleCount,
+      product_fidelity_contract: fidelityInfo.contract,
+    } as any),
   }
 
   let generated = await router.execute(requestedProvider, request)
@@ -351,6 +378,10 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     resolution: `${validation.ffprobe.width}x${validation.ffprobe.height}`,
     approved,
     review_decision: review.decision,
+    fidelity_contract_applied: true,
+    canonical_asset_sha: fidelityInfo.canonicalAssetSha,
+    product_id: fidelityInfo.productId,
+    fidelity_rule_count: fidelityInfo.ruleCount,
     completed_at: new Date().toISOString(),
   })
   const { data: outRow } = await supabase.from('ai_media_outputs').insert({

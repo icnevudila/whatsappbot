@@ -22,13 +22,28 @@ export const SIMPLE_V5_STANDARD_NEGATIVES = [
   'carved or stamped logo on brick',
 ].join(', ')
 
+import { resolveProductFidelityContract, formatFidelityLockSection } from './fidelity-contract.js'
+
 /**
  * SimpleV5PromptCompiler.
- * Formulates a short, concrete Veo prompt following the legacy V4/V5 single-concept structure.
+ * Formulates a short, concrete Veo prompt following the legacy V4/V5 single-concept structure
+ * with non-negotiable Product Fidelity Contract enforcement.
  * Strips all internal QA jargon, provenance essays, and repeated negative walls.
  */
 export class SimpleV5PromptCompiler {
   public static compile(brief: SimpleV5Brief, shotPlan: SimpleV5ShotPlan): SimpleV5CompiledPrompt {
+    const fidelityReport = brief.fidelityReport || resolveProductFidelityContract({
+      product: {
+        name: brief.subject,
+        product_id: brief.heroProductId,
+        asset_id: brief.heroProductId,
+        sha256: brief.heroProductSha,
+        product_fidelity_contract: brief.productFidelityContract,
+      },
+    })
+
+    const fidelityLock = formatFidelityLockSection(fidelityReport.contract)
+
     const sections: string[] = [
       `[FORMAT]: ${brief.durationSeconds.toFixed(1)}-second vertical commercial video, 9:16 aspect ratio.`,
       `[SINGLE CONCEPT]: ${brief.primaryIdea}`,
@@ -37,6 +52,7 @@ export class SimpleV5PromptCompiler {
       `[SHOT 1 (${shotPlan.shot1_hook.timing})]: ${shotPlan.shot1_hook.description}`,
       `[SHOT 2 (${shotPlan.shot2_proof.timing})]: ${shotPlan.shot2_proof.description}`,
       `[SHOT 3 (${shotPlan.shot3_close.timing})]: ${shotPlan.shot3_close.description}`,
+      fidelityLock,
       `[CAMERA & PHYSICS]: ${brief.cameraMotion}. Natural gravity, authentic material weight and realistic movement.`,
       '[AUDIO]: Spoken language: Turkish (tr-TR).',
       `Approved dialogue: "${brief.spokenScript}"`,
@@ -52,9 +68,7 @@ export class SimpleV5PromptCompiler {
 
     const metrics = {
       charCount: cinematicPrompt.length,
-      // Ten provider-facing categories: format, concept, hero, location,
-      // three shots, camera/physics, audio contract, and raw-text policy.
-      instructionCount: 10,
+      instructionCount: 11, // Added [PRODUCT FIDELITY LOCK]
       negativeCount: SIMPLE_V5_STANDARD_NEGATIVES.split(', ').length,
       actionCount: 1, // Exactly 1 primary action
       locationCount: 1, // Exactly 1 location
@@ -66,6 +80,13 @@ export class SimpleV5PromptCompiler {
       negativePrompt,
       voiceoverScript: brief.spokenScript,
       wordCount: brief.spokenWordCount,
+      fidelity: {
+        applied: true,
+        canonicalAssetSha: brief.heroProductSha || '',
+        productId: brief.heroProductId || '',
+        ruleCount: fidelityReport.ruleCount,
+        contract: fidelityReport.contract,
+      },
       metrics,
     }
   }

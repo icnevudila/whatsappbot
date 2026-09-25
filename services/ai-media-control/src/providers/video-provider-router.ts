@@ -139,7 +139,15 @@ function capabilityFromError(error: unknown): VideoCapabilityState {
   }
   if (code.includes('NO_QUOTA') || code.includes('CREDIT_LIMIT') || code.includes('RATE_LIMIT')) return 'NO_QUOTA'
   if (code.includes('FEATURE_UNAVAILABLE') || code.includes('CAPABILITY_UNAVAILABLE')) return 'FEATURE_UNAVAILABLE'
-  if (code.includes('TEMPORARILY_UNAVAILABLE') || code.includes('TIMEOUT') || code.includes('BROWSER_TARGET_CLOSED')) {
+  if (
+    code.includes('TEMPORARILY_UNAVAILABLE') ||
+    code.includes('TIMEOUT') ||
+    code.includes('BROWSER_TARGET_CLOSED') ||
+    code.includes('NO_ELIGIBLE_WORKER') ||
+    message.includes('No READY') ||
+    message.includes('NO_ELIGIBLE_WORKER') ||
+    message.includes('fetch failed')
+  ) {
     return 'TEMPORARILY_UNAVAILABLE'
   }
   if (code.includes('AUTH_REQUIRED') || code.includes('SESSION_EXPIRED')) return 'AUTH_REQUIRED'
@@ -188,7 +196,7 @@ export class VideoProviderRouter {
     if (capability.state !== 'AVAILABLE' && capability.state !== 'AVAILABLE_WITH_WARNING') {
       if (requestedProvider === 'AUTO' && AUTO_FALLBACK_STATES.has(capability.state)) {
         attemptCounts.FLOW_VEO++
-        const flowResult = await this.flow.generate(this.forProvider(request, 'FLOW_VEO'))
+        const flowResult = await this.flow.generate(this.forProvider(this.forFlow(request), 'FLOW_VEO'))
         return this.complete(
           flowResult,
           requestedProvider,
@@ -265,7 +273,8 @@ export class VideoProviderRouter {
           // Whole Gemini pool is exhausted -> fallback to Flow on AUTO
           if (requestedProvider === 'AUTO') {
             attemptCounts.FLOW_VEO++
-            const flowResult = await this.flow.generate(this.forProvider(request, 'FLOW_VEO'))
+            const flowRequest = this.forProvider(this.forFlow(request), 'FLOW_VEO')
+            const flowResult = await this.flow.generate(flowRequest)
             return this.complete(
               flowResult,
               requestedProvider,
@@ -283,7 +292,8 @@ export class VideoProviderRouter {
         // Other recoverable errors in AUTO mode
         if (requestedProvider === 'AUTO' && (AUTO_FALLBACK_STATES.has(classified) || classified === 'ACCOUNT_CONFIGURATION_REQUIRED')) {
           attemptCounts.FLOW_VEO++
-          const flowResult = await this.flow.generate(this.forProvider(request, 'FLOW_VEO'))
+          const flowRequest = this.forProvider(this.forFlow(request), 'FLOW_VEO')
+          const flowResult = await this.flow.generate(flowRequest)
           return this.complete(
             flowResult,
             requestedProvider,
@@ -310,6 +320,15 @@ export class VideoProviderRouter {
     return {
       ...request,
       prompt: request.providerPrompts?.[provider] || request.prompt,
+    }
+  }
+
+  private forFlow(request: VideoGenerationRequest): VideoGenerationRequest {
+    return {
+      ...request,
+      accountId: (request.accountId && !request.accountId.startsWith('gemini'))
+        ? request.accountId
+        : (process.env.FLOW_PRIMARY_ACCOUNT_ID || 'account-02'),
     }
   }
 

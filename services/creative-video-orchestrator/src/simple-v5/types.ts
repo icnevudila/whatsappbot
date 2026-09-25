@@ -3,10 +3,16 @@ import type { MultimodalAttachment } from '../types/creative-context.js'
 
 export type CreativeEngineMode = 'CURRENT' | 'SIMPLE_V5_HYBRID'
 
+import type { ResolvedContractReport, ProductFidelityContract } from './fidelity-contract.js'
+
 export interface SimpleV5Brief {
   goal: string
   subject: string
   heroProductHandle: string
+  heroProductId?: string
+  heroProductSha?: string
+  productFidelityContract?: ProductFidelityContract
+  fidelityReport?: ResolvedContractReport
   brandName: string
   primaryIdea: string
   primaryAction: string
@@ -44,6 +50,13 @@ export interface SimpleV5CompiledPrompt {
   negativePrompt: string
   voiceoverScript: string
   wordCount: number
+  fidelity: {
+    applied: boolean
+    canonicalAssetSha: string
+    productId: string
+    ruleCount: number
+    contract: any
+  }
   metrics: {
     charCount: number
     instructionCount: number

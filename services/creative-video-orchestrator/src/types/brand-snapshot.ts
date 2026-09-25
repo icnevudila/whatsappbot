@@ -14,6 +14,14 @@ export interface Typography {
   accentColor?: string
 }
 
+export interface ProductFidelityContract {
+  must_preserve?: string[]
+  surface_rules?: string[]
+  forbidden_mutations?: string[]
+  safe_camera_rules?: string[]
+  allowed_actions?: string[]
+}
+
 export interface ProductItem {
   product_id: string
   name: string
@@ -21,6 +29,7 @@ export interface ProductItem {
   asset_id: string
   sha256: string
   file_path?: string
+  product_fidelity_contract?: ProductFidelityContract
 }
 
 export type ReferenceRole =
@@ -171,6 +180,7 @@ export function createBrandContextSnapshot(input: RawBrandInput): Readonly<Brand
       asset_id: p.asset_id.trim(),
       sha256: p.sha256.trim().toLowerCase(),
       file_path: p.file_path,
+      product_fidelity_contract: p.product_fidelity_contract,
     })),
     reference_assets: (input.reference_assets || []).map(r => ({
       asset_id: r.asset_id.trim(),
