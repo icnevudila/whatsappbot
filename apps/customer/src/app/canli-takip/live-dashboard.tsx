@@ -470,7 +470,7 @@ export function LiveDashboard() {
   const [error, setError] = useState<string | null>(null)
 
   type TabId = 'overview' | 'baileys' | 'messages' | 'quick_send' | 'campaigns' | 'queue' | 'organizations' | 'contacts' | 'data_requests' | 'ai_studio' | 'ai_media' | 'blacklist' | 'jobs'
-  const VALID_TABS: TabId[] = ['ai_studio', 'ai_media', 'baileys', 'jobs', 'overview', 'organizations', 'campaigns', 'messages', 'contacts', 'data_requests', 'blacklist', 'quick_send', 'queue']
+  const VALID_TABS: TabId[] = ['ai_studio', 'ai_media', 'baileys', 'jobs', 'overview', 'organizations']
 
   const getHashTab = (): TabId => {
     if (typeof window === 'undefined') return 'ai_studio'
@@ -1813,13 +1813,13 @@ export function LiveDashboard() {
             <span className="text-[8px] sm:text-[9px] text-ink-muted">Aktif</span>
           </div>
 
-          {/* Card 10: Lead Requests */}
+          {/* Card 10: AI Video Renders */}
           <div className="min-w-[115px] sm:min-w-0 shrink-0 sm:shrink bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 sm:p-2.5 shadow-xs flex flex-col justify-between">
-            <span className="text-[9px] sm:text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Talepler</span>
-            <div className="mt-0.5 text-sm sm:text-base font-bold text-ink">
-              {summary.pendingDataRequests}
+            <span className="text-[9px] sm:text-[10px] font-semibold text-ink-muted uppercase tracking-wider">AI Video</span>
+            <div className="mt-0.5 text-sm sm:text-base font-bold text-purple-400">
+              {(data?.ai_engine?.recentVideos?.length || 0) + (data?.creatives?.length || 0)}
             </div>
-            <span className="text-[8px] sm:text-[9px] text-ink-muted">Onay Bekleyen</span>
+            <span className="text-[8px] sm:text-[9px] text-ink-muted">Üretim / Render</span>
           </div>
         </section>
 
@@ -1856,11 +1856,6 @@ export function LiveDashboard() {
                 { id: 'jobs', label: 'Görev Kuyruğu & Hatalar', badge: data?.jobs?.length, errorBadge: (summary.failedJobs ?? 0) > 0 ? summary.failedJobs : null },
                 { id: 'overview', label: 'Operasyon Özeti', badge: (summary.failedJobs || 0) + summary.pendingJobs, errorBadge: (summary.failedJobs || 0) > 0 ? summary.failedJobs : null },
                 { id: 'organizations', label: 'Firmalar & Kotalar', badge: data?.organizations?.length },
-                { id: 'campaigns', label: 'Kampanyalar', badge: data?.campaigns?.length },
-                { id: 'messages', label: 'Mesajlar & WhatsApp', badge: (data?.messages?.length || 0) + (data?.aiSuggestions?.length || 0) },
-                { id: 'contacts', label: 'Rehber & Kişi Havuzu', badge: data?.contactLists?.length },
-                { id: 'data_requests', label: 'Veri Talepleri', badge: data?.listRequests?.length, isPending: (data?.listRequests?.filter(r => r.status === 'pending').length || 0) > 0 },
-                { id: 'blacklist', label: 'Kara Liste', badge: summary.blacklistedCount },
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -1990,11 +1985,11 @@ export function LiveDashboard() {
                       tab: 'jobs' as const,
                     },
                     {
-                      title: `${summary.todayInbound} gelen mesaj`,
-                      detail: filteredAiSuggestions.length > 0 ? `${filteredAiSuggestions.length} AI yanıt önerisi hazır.` : 'Gelenleri ve AI önerilerini mesaj masasında izle.',
-                      tone: summary.todayInbound > 0 ? 'accent' : 'neutral',
-                      action: 'Mesaj Masası',
-                      tab: 'messages' as const,
+                      title: `${data?.ai_engine?.geminiPool?.activeAccounts ?? 0}/${data?.ai_engine?.geminiPool?.totalAccounts ?? 0} AI Hesabı Aktif`,
+                      detail: (data?.ai_engine?.geminiPool?.limitedAccounts || 0) > 0 ? `${data?.ai_engine?.geminiPool?.limitedAccounts} hesap kota limitinde.` : 'Tüm AI hesap havuzu ve motorlar aktif.',
+                      tone: (data?.ai_engine?.geminiPool?.limitedAccounts || 0) > 0 ? 'warn' : 'ok',
+                      action: 'AI Havuzu',
+                      tab: 'ai_studio' as const,
                     },
                   ].map(item => (
                     <button
@@ -2055,20 +2050,10 @@ export function LiveDashboard() {
                   </div>
                 </div>
 
-                {/* Operasyon */}
+                {/* Operasyon & Altyapı */}
                 <div className="space-y-1.5">
-                  <span className="text-[9px] font-bold text-ink-muted uppercase tracking-wider">Operasyon</span>
+                  <span className="text-[9px] font-bold text-ink-muted uppercase tracking-wider">Operasyon & Altyapı</span>
                   <div className="grid grid-cols-2 gap-1.5">
-                    <button type="button" onClick={() => setActiveTab('messages')}
-                      className="rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-canvas px-3 py-2.5 text-left hover:bg-[var(--color-surface-raised)] transition group">
-                      <div className="text-[11px] font-bold text-ink">Mesajlar</div>
-                      <div className="text-[10px] text-ink-muted mt-0.5">{summary.todayInbound + summary.todayOutbound} bugün</div>
-                    </button>
-                    <button type="button" onClick={() => setActiveTab('campaigns')}
-                      className="rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-canvas px-3 py-2.5 text-left hover:bg-[var(--color-surface-raised)] transition group">
-                      <div className="text-[11px] font-bold text-ink">Kampanyalar</div>
-                      <div className="text-[10px] text-ink-muted mt-0.5">{summary.activeCampaigns} aktif</div>
-                    </button>
                     <button type="button" onClick={() => setActiveTab('jobs')}
                       className={`rounded-[var(--radius-sm)] border px-3 py-2.5 text-left transition group ${summary.pendingJobs > 0 ? 'border-warn/30 bg-warn/5 hover:bg-warn/10' : 'border-[var(--color-hairline)] bg-canvas hover:bg-[var(--color-surface-raised)]'}`}>
                       <div className="text-[11px] font-bold text-ink">Görev Kuyruğu</div>
@@ -2079,32 +2064,15 @@ export function LiveDashboard() {
                       <div className="text-[11px] font-bold text-ink">Servis & Altyapı</div>
                       <div className={`text-[10px] mt-0.5 ${worker ? 'text-ok-dim' : 'text-danger font-semibold'}`}>{worker ? `${worker.live} hat bağlı` : 'Servis kopuk'}</div>
                     </button>
-                  </div>
-                </div>
-
-                {/* Yönetim */}
-                <div className="space-y-1.5">
-                  <span className="text-[9px] font-bold text-ink-muted uppercase tracking-wider">Yönetim</span>
-                  <div className="grid grid-cols-2 gap-1.5">
                     <button type="button" onClick={() => setActiveTab('organizations')}
                       className="rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-canvas px-3 py-2.5 text-left hover:bg-[var(--color-surface-raised)] transition">
-                      <div className="text-[11px] font-bold text-ink">Firmalar</div>
-                      <div className="text-[10px] text-ink-muted mt-0.5">{summary.totalOrganizations ?? organizationsList.length} kayıtlı</div>
+                      <div className="text-[11px] font-bold text-ink">Firmalar & Kotalar</div>
+                      <div className="text-[10px] text-ink-muted mt-0.5">{summary.totalOrganizations ?? organizationsList.length} firma kayıtlı</div>
                     </button>
-                    <button type="button" onClick={() => setActiveTab('contacts')}
-                      className="rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-canvas px-3 py-2.5 text-left hover:bg-[var(--color-surface-raised)] transition">
-                      <div className="text-[11px] font-bold text-ink">Kişiler</div>
-                      <div className="text-[10px] text-ink-muted mt-0.5">{Number(summary.totalContacts).toLocaleString('tr-TR')} kişi</div>
-                    </button>
-                    <button type="button" onClick={() => setActiveTab('data_requests')}
-                      className={`rounded-[var(--radius-sm)] border px-3 py-2.5 text-left transition ${summary.pendingDataRequests > 0 ? 'border-warn/30 bg-warn/5 hover:bg-warn/10' : 'border-[var(--color-hairline)] bg-canvas hover:bg-[var(--color-surface-raised)]'}`}>
-                      <div className="text-[11px] font-bold text-ink">Veri Talepleri</div>
-                      <div className={`text-[10px] mt-0.5 ${summary.pendingDataRequests > 0 ? 'text-warn font-semibold' : 'text-ink-muted'}`}>{summary.pendingDataRequests} onay bekliyor</div>
-                    </button>
-                    <button type="button" onClick={() => setActiveTab('blacklist')}
-                      className="rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-canvas px-3 py-2.5 text-left hover:bg-[var(--color-surface-raised)] transition">
-                      <div className="text-[11px] font-bold text-ink">Kara Liste</div>
-                      <div className="text-[10px] text-ink-muted mt-0.5">{summary.blacklistedCount ?? 0} engelli</div>
+                    <button type="button" onClick={handleRunDiagnostic}
+                      className="rounded-[var(--radius-sm)] border border-ok/30 bg-ok-soft/10 px-3 py-2.5 text-left hover:bg-ok-soft/20 transition">
+                      <div className="text-[11px] font-bold text-ok-dim">Canlı Teşhis Testi</div>
+                      <div className="text-[10px] text-ink-muted mt-0.5">Soket ve hat kontrolü</div>
                     </button>
                   </div>
                 </div>
