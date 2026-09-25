@@ -25,11 +25,26 @@ else
 fi
 
 # 3. Node.js API Gateway & BrowserWorkerSupervisor Başlat (Port 3456)
-# Chrome tarayıcıları ve sekmeler İŞ GELDİKÇE BrowserWorkerSupervisor tarafından ON-DEMAND açılır!
-# Temiz başlangıç durumu: Chrome count = 0, Provider tab count = 0
 cd /app/gateway
 node server.js &
 echo "⚡ API Gateway & BrowserWorkerSupervisor Hazır: Port 3456"
+
+# 4. Google Chrome #1 Başlat (Port 9222, Ana Profil — Görsel Üretimi / ChatGPT)
+PROFILE_DIR="/data/chromium-profile"
+mkdir -p "$PROFILE_DIR"
+rm -f "$PROFILE_DIR/Singleton*" "$PROFILE_DIR/*/Singleton*" "$PROFILE_DIR/LOCK" "$PROFILE_DIR/*/LOCK" 2>/dev/null || true
+
+echo "🖥️ Google Chrome #1 Başlatılıyor (CDP Port: 9222, Profil: $PROFILE_DIR)..."
+google-chrome-stable --no-sandbox --disable-dev-shm-usage --disable-gpu \
+  --disable-search-engine-choice-screen \
+  --user-data-dir="$PROFILE_DIR" \
+  --remote-debugging-port=9222 \
+  --start-maximized https://chatgpt.com &
+sleep 5
+
+# 5. Görsel Üretim İşçisi (chatgpt-1)
+echo "🤖 CDP Worker #1 Başlatılıyor (Worker ID: chatgpt-1)..."
+CDP_HTTP="http://127.0.0.1:9222" WORKER_ID="chatgpt-1" TAB_INDEX=0 node --experimental-websocket /app/gateway/cdp_worker.js &
 
 # Konteyneri canlı tut
 while true; do
