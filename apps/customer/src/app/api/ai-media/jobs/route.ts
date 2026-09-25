@@ -435,7 +435,10 @@ export async function GET(req: NextRequest) {
     } else {
       // Find latest ongoing or completed within the last 2 hours
       const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
-      query = query.gte('created_at', twoHoursAgo).limit(1)
+      query = query
+        .gte('created_at', twoHoursAgo)
+        .not('state', 'in', '("COMPLETED","FAILED","NEEDS_REVIEW")')
+        .limit(1)
     }
 
     const { data: jobs, error } = await query

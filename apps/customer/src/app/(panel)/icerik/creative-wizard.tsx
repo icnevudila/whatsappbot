@@ -437,7 +437,7 @@ export function CreativeWizard({
       .then((data) => {
         if (data.active_job?.id) {
           const st = data.active_job.state
-          if (st !== 'COMPLETED' && st !== 'FAILED') {
+          if (st !== 'COMPLETED' && st !== 'FAILED' && st !== 'NEEDS_REVIEW') {
             setActiveJobId(data.active_job.id)
             if (typeof window !== 'undefined') {
               const url = new URL(window.location.href)

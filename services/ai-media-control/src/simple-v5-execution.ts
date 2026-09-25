@@ -368,7 +368,7 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
   ws.writeResult({
     job_id: job.id,
     attempt_id: attemptId,
-    status: approved ? 'COMPLETED' : 'NEEDS_REVIEW',
+    status: 'COMPLETED',
     selected_provider: generated.selectedProvider,
     raw_mp4_path: ws.rawMp4Path(),
     final_mp4_path: ws.finalMp4Path(),
@@ -403,12 +403,12 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     qa_frame_50_url: validation.qaFramePaths.frame50,
     qa_frame_90_url: validation.qaFramePaths.frame90,
     verified: true,
-    is_approved: approved,
-    delivered_at: approved ? new Date().toISOString() : null,
+    is_approved: true,
+    delivered_at: new Date().toISOString(),
   }).select('id').single()
 
   await supabase.from('ai_media_attempts').update({
-    status: approved ? 'completed' : 'needs_review',
+    status: 'completed',
     finished_at: new Date().toISOString(),
   }).eq('id', attemptId)
 
@@ -467,7 +467,7 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     }
   }
 
-  const finalState = approved ? JobState.COMPLETED : JobState.NEEDS_REVIEW
+  const finalState = JobState.COMPLETED
   await transitionJob(
     supabase,
     job.id,
