@@ -414,53 +414,69 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
 
   if (outRow?.id) {
     try {
+      const payloadJson = JSON.stringify({
+        job_id: job.id,
+        creative_engine_mode: 'SIMPLE_V5_HYBRID',
+        selected_provider: generated.selectedProvider,
+        review_required: !approved,
+        review_decision: review.decision,
+        thumbnailUrl: `/api/ai-media/outputs/${outRow.id}?thumb=1`,
+      })
+      const nowIso = new Date().toISOString()
+      const publicUrl = `/api/ai-media/outputs/${outRow.id}`
+      const title = job.title || 'Kampanya Videosu'
+
       if (typeof supabase.query === 'function') {
-        await supabase.query(`
-          INSERT INTO creatives (id, org_id, title, format, status, source, public_url, payload, updated_at)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-          ON CONFLICT (id) DO UPDATE SET
-            title = EXCLUDED.title,
-            format = EXCLUDED.format,
-            status = EXCLUDED.status,
-            source = EXCLUDED.source,
-            public_url = EXCLUDED.public_url,
-            payload = EXCLUDED.payload,
-            updated_at = EXCLUDED.updated_at
-        `, [
-          job.id,
-          job.org_id,
-          job.title || 'Kampanya Videosu',
-          'video',
-          'ready',
-          'ai',
-          `/api/ai-media/outputs/${outRow.id}`,
-          JSON.stringify({
-            creative_engine_mode: 'SIMPLE_V5_HYBRID',
-            selected_provider: generated.selectedProvider,
-            review_required: !approved,
-            review_decision: review.decision,
-            thumbnailUrl: `/api/ai-media/outputs/${outRow.id}?thumb=1`,
-          }),
-          new Date().toISOString(),
-        ])
+        const updateRes = await supabase.query(`
+          UPDATE creatives SET
+            title = $2,
+            format = 'video',
+            status = 'ready',
+            source = 'ai',
+            public_url = $3,
+            payload = $4::jsonb,
+            updated_at = $5
+          WHERE id = $1
+        `, [job.id, title, publicUrl, payloadJson, nowIso])
+
+        if (!updateRes?.rowCount || updateRes.rowCount === 0) {
+          const createdBy = (job.metadata as any)?.created_by_user_id || (job.metadata as any)?.created_by || null
+          await supabase.query(`
+            INSERT INTO creatives (id, org_id, created_by, title, format, status, source, public_url, payload, updated_at)
+            VALUES ($1, $2, $3, $4, 'video', 'ready', 'ai', $5, $6::jsonb, $7)
+            ON CONFLICT (id) DO UPDATE SET
+              status = 'ready',
+              public_url = EXCLUDED.public_url,
+              payload = EXCLUDED.payload,
+              updated_at = EXCLUDED.updated_at
+          `, [job.id, job.org_id, createdBy, title, publicUrl, payloadJson, nowIso])
+        }
       } else if (typeof supabase.from === 'function') {
-        await (supabase.from('creatives') as any).upsert?.({
-          id: job.id,
-          org_id: job.org_id,
-          title: job.title || 'Kampanya Videosu',
+        const { data: updated } = await (supabase.from('creatives') as any).update({
+          title,
           format: 'video',
           status: 'ready',
           source: 'ai',
-          public_url: `/api/ai-media/outputs/${outRow.id}`,
-          payload: {
-            creative_engine_mode: 'SIMPLE_V5_HYBRID',
-            selected_provider: generated.selectedProvider,
-            review_required: !approved,
-            review_decision: review.decision,
-            thumbnailUrl: `/api/ai-media/outputs/${outRow.id}?thumb=1`,
-          },
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'id' })
+          public_url: publicUrl,
+          payload: JSON.parse(payloadJson),
+          updated_at: nowIso,
+        }).eq('id', job.id).select('id')
+
+        if (!updated || updated.length === 0) {
+          const createdBy = (job.metadata as any)?.created_by_user_id || (job.metadata as any)?.created_by || null
+          await (supabase.from('creatives') as any).upsert({
+            id: job.id,
+            org_id: job.org_id,
+            created_by: createdBy,
+            title,
+            format: 'video',
+            status: 'ready',
+            source: 'ai',
+            public_url: publicUrl,
+            payload: JSON.parse(payloadJson),
+            updated_at: nowIso,
+          }, { onConflict: 'id' })
+        }
       }
     } catch (crErr) {
       console.warn('[simple-v5-execution] creatives upsert warning:', crErr)
