@@ -104,6 +104,8 @@ const AUTO_FALLBACK_STATES = new Set<VideoCapabilityState>([
   'NO_QUOTA',
   'FEATURE_UNAVAILABLE',
   'TEMPORARILY_UNAVAILABLE',
+  'AUTH_REQUIRED',
+  'ACCOUNT_CONFIGURATION_REQUIRED',
 ])
 
 function isRuntimeBlocked(error: unknown): boolean {
@@ -194,7 +196,7 @@ export class VideoProviderRouter {
       : { state: 'UNKNOWN' as const }
 
     if (capability.state !== 'AVAILABLE' && capability.state !== 'AVAILABLE_WITH_WARNING') {
-      if (requestedProvider === 'AUTO' && AUTO_FALLBACK_STATES.has(capability.state)) {
+      if (requestedProvider === 'AUTO') {
         attemptCounts.FLOW_VEO++
         const flowResult = await this.flow.generate(this.forProvider(this.forFlow(request), 'FLOW_VEO'))
         return this.complete(
