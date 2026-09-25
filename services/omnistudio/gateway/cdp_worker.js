@@ -612,6 +612,15 @@ setInterval(async () => {
       return;
     }
 
+    if (isBusy) {
+      fetch(`${GATEWAY_URL}/worker/heartbeat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workerId: WORKER_ID, status: 'busy', details: 'İşlem yapılıyor', sessionKey: SESSION_KEY })
+      }).catch(() => {});
+      return;
+    }
+
     const chatgptTab = await getTab('chatgpt.com');
     if (!chatgptTab) {
       isTabLoggedIn = false;
