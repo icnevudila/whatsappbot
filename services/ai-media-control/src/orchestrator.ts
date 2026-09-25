@@ -122,6 +122,16 @@ async function processPendingJobs() {
         JobState.FAILED,
         `Validation failed: ${err.message}`
       )
+
+      try {
+        await (supabase as any).from('creatives').update({
+          status: 'failed',
+          error: err.message,
+          updated_at: new Date().toISOString(),
+        }).eq('id', job.id)
+      } catch (crErr) {
+        console.warn('[orchestrator] creatives update to failed warning:', crErr)
+      }
     }
   }
 }
@@ -428,6 +438,10 @@ async function runJobExecution(job: any, accountId: string) {
           status: 'ready',
           source: 'ai',
           public_url: `/api/ai-media/outputs/${outputRecord.id}`,
+          payload: {
+            job_id: job.id,
+            thumbnailUrl: `/api/ai-media/outputs/${outputRecord.id}?thumb=1`,
+          },
           updated_at: new Date().toISOString(),
         }, { onConflict: 'id' })
       } catch (crErr) {

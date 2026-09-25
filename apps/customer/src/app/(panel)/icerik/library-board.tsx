@@ -114,7 +114,6 @@ export function LibraryBoard({
     const waiting = items.filter(
       (item) =>
         item.source === 'ai' &&
-        item.format !== 'video' &&
         (item.status === 'pending' || item.status === 'rendering') &&
         !kicked.current.has(item.id),
     )
@@ -129,15 +128,20 @@ export function LibraryBoard({
         .then(async (response) => {
           const json = (await response.json().catch(() => null))
           if (!response.ok) {
-            const message = json?.error ?? 'Görsel üretilemedi.'
+            const message = json?.error ?? 'İçerik üretilemedi.'
             setRenderErrors((prev) => ({ ...prev, [item.id]: message }))
+          }
+          if (response.status === 202) {
+            // Video veya görsel arka planda devam ediyor, 4 saniye sonra tekrar kontrol et
+            setTimeout(() => {
+              kicked.current.delete(item.id)
+            }, 4000)
           }
           void fetchPage(0, true)
         })
         .catch(() => {
-          // Ağ kopması veya istemci zaman aşımında kartı kırmızıya düşürme;
-          // Arka plandaki ChatGPT worker'ı üretmeye devam ediyor.
           setTimeout(() => {
+            kicked.current.delete(item.id)
             void fetchPage(0, true)
           }, 4000)
         })
