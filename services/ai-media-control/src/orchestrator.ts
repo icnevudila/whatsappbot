@@ -682,6 +682,7 @@ async function runCreativeVideoExecution(
       sha256: mat.sha256,
       file_path: mat.filePath,
       role: p.role || 'reference',
+      product_fidelity_contract: p.product_fidelity_contract || approvedFacts.product_fidelity_contract || job.metadata?.product_fidelity_contract,
     })
   }
 
