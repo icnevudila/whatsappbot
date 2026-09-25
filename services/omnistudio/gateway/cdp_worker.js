@@ -401,21 +401,25 @@ async function injectPromptAndSend(cdp, promptText) {
     
     // 3. Gönder butonunun render edilmesini bekle ve tıkla
     let clicked = false;
-    for (let wait = 0; wait < 25; wait++) {
+    for (let wait = 0; wait < 35; wait++) {
       if (await checkRateLimitModal(cdp)) {
         throw new Error('WEB_SESSION_RATE_LIMITED: ChatGPT web "Too many requests" rate-limit modal detected');
       }
       await dismissAnyModals(cdp);
       const clickRes = await cdp.send('Runtime.evaluate', {
         expression: `(() => {
-          let sendBtn = document.querySelector('#composer-submit-button') ||
+          let sendBtn = document.querySelector('button[data-testid="composer-send-button"]') ||
+                        document.querySelector('#composer-submit-button') ||
                         document.querySelector('button[data-testid="send-button"]') ||
                         document.querySelector('button[data-testid="composer-speech-button"]') ||
-                        document.querySelector('button[aria-label*="Send"]') ||
-                        document.querySelector('button[aria-label*="Gönder"]') ||
+                        document.querySelector('button[aria-label*="Send" i]') ||
+                        document.querySelector('button[aria-label*="Gönder" i]') ||
                         document.querySelector('button.composer-submit-button-color') ||
-                        document.querySelector('.composer-submit-button-color');
-          if (sendBtn && !sendBtn.disabled) {
+                        document.querySelector('.composer-submit-button-color') ||
+                        document.querySelector('form button[type="submit"]') ||
+                        document.querySelector('button:has(svg.icon-2xl)') ||
+                        document.querySelector('button:has(svg path[d*="M12 2"])');
+          if (sendBtn && !sendBtn.disabled && sendBtn.getAttribute('aria-disabled') !== 'true') {
             sendBtn.click();
             const r = sendBtn.getBoundingClientRect();
             return { clicked: true, x: r.left + r.width / 2, y: r.top + r.height / 2 };
