@@ -193,3 +193,109 @@ test('SIMPLE ffprobe expectation accepts portrait output and rejects landscape o
   assert.equal(matchesExpectedAspect(1080, 1920, request.aspectRatio), true)
   assert.equal(matchesExpectedAspect(1920, 1080, request.aspectRatio), false)
 })
+
+test('Gemini-01 runtime blocked -> Gemini-02 selected', async () => {
+  const calls = { gemini: 0, flow: 0 }
+  const attemptedAccounts: string[] = []
+
+  const gemini: VideoProvider = {
+    provider: 'GEMINI_NATIVE_VIDEO',
+    async checkCapability() {
+      return { state: 'AVAILABLE' }
+    },
+    async generate(req) {
+      calls.gemini++
+      const account = req.accountId || 'unknown'
+      attemptedAccounts.push(account)
+      if (account === 'Gemini-01') {
+        throw new ProviderRoutingError('GEMINI_RUNTIME_BLOCKED', 'Provider immediately rejected with 1040 error')
+      }
+      return {
+        provider: 'GEMINI_NATIVE_VIDEO',
+        providerAccountId: account,
+        providerAttemptId: `attempt-${account}`,
+        outputPath: `/mock/${account}.mp4`,
+        rawOutputSha256: 'a'.repeat(64),
+        byteSize: 500_000,
+        generationStartedAt: '2026-09-24T10:00:00.000Z',
+        generationCompletedAt: '2026-09-24T10:01:00.000Z',
+      }
+    },
+  }
+
+  const flow: VideoProvider = {
+    provider: 'FLOW_VEO',
+    async generate() {
+      calls.flow++
+      throw new Error('Flow should not be called when Gemini-02 succeeds')
+    },
+  }
+
+  const multiRequest: VideoGenerationRequest = {
+    ...request,
+    geminiAccountIds: ['Gemini-01', 'Gemini-02', 'Gemini-03'],
+  }
+
+  const result = await new VideoProviderRouter(gemini, flow).execute('AUTO', multiRequest)
+
+  assert.equal(result.selectedProvider, 'GEMINI_NATIVE_VIDEO')
+  assert.equal(result.providerAccountId, 'Gemini-02')
+  assert.equal(calls.gemini, 2)
+  assert.equal(calls.flow, 0)
+  assert.deepEqual(attemptedAccounts, ['Gemini-01', 'Gemini-02'])
+  assert.deepEqual(result.runtimeBlockedAccounts, ['Gemini-01'])
+  assert.deepEqual(result.accountsTried, ['Gemini-01', 'Gemini-02'])
+})
+
+test('Gemini-01/02/03 runtime blocked -> Flow selected', async () => {
+  const calls = { gemini: 0, flow: 0 }
+  const attemptedAccounts: string[] = []
+
+  const gemini: VideoProvider = {
+    provider: 'GEMINI_NATIVE_VIDEO',
+    async checkCapability() {
+      return { state: 'AVAILABLE' }
+    },
+    async generate(req) {
+      calls.gemini++
+      const account = req.accountId || 'unknown'
+      attemptedAccounts.push(account)
+      throw new ProviderRoutingError('GEMINI_RUNTIME_BLOCKED', `Explicit 1040 rejection on ${account}`)
+    },
+  }
+
+  const flow: VideoProvider = {
+    provider: 'FLOW_VEO',
+    async generate() {
+      calls.flow++
+      return {
+        provider: 'FLOW_VEO',
+        providerAccountId: 'flow-account-1',
+        providerAttemptId: 'flow-attempt-1',
+        providerProjectId: 'flow-project-1',
+        outputPath: '/mock/flow.mp4',
+        rawOutputSha256: 'b'.repeat(64),
+        byteSize: 500_000,
+        generationStartedAt: '2026-09-24T10:00:00.000Z',
+        generationCompletedAt: '2026-09-24T10:01:00.000Z',
+      }
+    },
+  }
+
+  const multiRequest: VideoGenerationRequest = {
+    ...request,
+    geminiAccountIds: ['Gemini-01', 'Gemini-02', 'Gemini-03'],
+  }
+
+  const result = await new VideoProviderRouter(gemini, flow).execute('AUTO', multiRequest)
+
+  assert.equal(result.selectedProvider, 'FLOW_VEO')
+  assert.equal(result.fallbackFrom, 'GEMINI_NATIVE_VIDEO')
+  assert.equal(result.fallbackReason, 'ACCOUNT_CONFIGURATION_REQUIRED')
+  assert.equal(calls.gemini, 3)
+  assert.equal(calls.flow, 1)
+  assert.deepEqual(attemptedAccounts, ['Gemini-01', 'Gemini-02', 'Gemini-03'])
+  assert.deepEqual(result.runtimeBlockedAccounts, ['Gemini-01', 'Gemini-02', 'Gemini-03'])
+  assert.deepEqual(result.accountsTried, ['Gemini-01', 'Gemini-02', 'Gemini-03'])
+})
+

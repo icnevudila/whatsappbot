@@ -39,6 +39,7 @@ export interface VideoGenerationRequest {
   aspectRatio: '9:16'
   durationSeconds: number
   accountId?: string
+  geminiAccountIds?: string[]
   assets: Array<{
     asset_id: string
     org_id: string
@@ -47,6 +48,15 @@ export interface VideoGenerationRequest {
     sha256: string
   }>
   preflightFailureCode?: NonProviderFailureCode
+}
+
+export interface VideoCapabilityReport {
+  state: VideoCapabilityState
+  providerAccountId?: string | null
+  checkedAt?: string
+  expiresAt?: string
+  evidence?: string
+  accounts?: string[] | Array<{ providerAccountId?: string; state?: VideoCapabilityState }>
 }
 
 export interface VideoProviderResult {
@@ -75,6 +85,8 @@ export interface ProviderRoutingResult extends VideoProviderResult {
   fallbackFrom?: SelectedVideoProvider | null
   fallbackReason?: VideoCapabilityState | null
   attemptCounts: Record<SelectedVideoProvider, number>
+  accountsTried?: string[]
+  runtimeBlockedAccounts?: string[]
 }
 
 export class ProviderRoutingError extends Error {
@@ -94,9 +106,37 @@ const AUTO_FALLBACK_STATES = new Set<VideoCapabilityState>([
   'TEMPORARILY_UNAVAILABLE',
 ])
 
+function isRuntimeBlocked(error: unknown): boolean {
+  const code = String((error as any)?.code || '')
+  const message = String((error as any)?.message || '')
+  return (
+    code === 'GEMINI_RUNTIME_BLOCKED' ||
+    code.includes('RUNTIME_BLOCKED') ||
+    message.includes('RUNTIME_BLOCKED') ||
+    code.includes('1040') ||
+    message.includes('1040') ||
+    code.includes('APPS_ACTIVITY_OFF') ||
+    message.includes('APPS_ACTIVITY_OFF') ||
+    code === 'ACCOUNT_CONFIGURATION_REQUIRED'
+  )
+}
+
 function capabilityFromError(error: unknown): VideoCapabilityState {
   const code = String((error as any)?.code || '')
-  if (code.includes('ACCOUNT_CONFIGURATION_REQUIRED') || code.includes('APPS_ACTIVITY_OFF')) return 'ACCOUNT_CONFIGURATION_REQUIRED'
+  const message = String((error as any)?.message || '')
+  if ((error as any)?.capabilityState && (error as any).capabilityState !== 'UNKNOWN') {
+    return (error as any).capabilityState
+  }
+  if (
+    code.includes('ACCOUNT_CONFIGURATION_REQUIRED') ||
+    code.includes('APPS_ACTIVITY_OFF') ||
+    code.includes('RUNTIME_BLOCKED') ||
+    message.includes('RUNTIME_BLOCKED') ||
+    code.includes('1040') ||
+    message.includes('1040')
+  ) {
+    return 'ACCOUNT_CONFIGURATION_REQUIRED'
+  }
   if (code.includes('NO_QUOTA') || code.includes('CREDIT_LIMIT') || code.includes('RATE_LIMIT')) return 'NO_QUOTA'
   if (code.includes('FEATURE_UNAVAILABLE') || code.includes('CAPABILITY_UNAVAILABLE')) return 'FEATURE_UNAVAILABLE'
   if (code.includes('TEMPORARILY_UNAVAILABLE') || code.includes('TIMEOUT') || code.includes('BROWSER_TARGET_CLOSED')) {
@@ -166,26 +206,101 @@ export class VideoProviderRouter {
       )
     }
 
-    try {
+    const rawCandidates: unknown[] = (
+      request.geminiAccountIds && request.geminiAccountIds.length > 0
+        ? request.geminiAccountIds
+        : capability.accounts && capability.accounts.length > 0
+          ? capability.accounts
+          : capability.providerAccountId
+            ? [capability.providerAccountId]
+            : request.accountId
+              ? [request.accountId]
+              : ['gemini-9223', 'gemini-9224', 'gemini-9225']
+    )
+
+    const geminiCandidates: string[] = rawCandidates
+      .map((item: any) => {
+        if (typeof item === 'string') return item
+        return item?.providerAccountId || item?.accountId || item?.id || null
+      })
+      .filter((id): id is string => Boolean(id && typeof id === 'string'))
+
+    const accountsTried: string[] = []
+    const runtimeBlockedAccounts: string[] = []
+    let lastError: unknown = null
+
+    for (let i = 0; i < geminiCandidates.length; i++) {
+      const candidateAccount = geminiCandidates[i]
+      accountsTried.push(candidateAccount)
       attemptCounts.GEMINI_NATIVE_VIDEO++
-      const result = await this.gemini.generate(this.forProvider(request, 'GEMINI_NATIVE_VIDEO'))
-      return this.complete(result, requestedProvider, capability.state, attemptCounts)
-    } catch (error) {
-      const classified = capabilityFromError(error)
-      if (requestedProvider === 'AUTO' && (AUTO_FALLBACK_STATES.has(classified) || classified === 'ACCOUNT_CONFIGURATION_REQUIRED')) {
-        attemptCounts.FLOW_VEO++
-        const flowResult = await this.flow.generate(this.forProvider(request, 'FLOW_VEO'))
-        return this.complete(
-          flowResult,
-          requestedProvider,
-          classified,
-          attemptCounts,
-          'GEMINI_NATIVE_VIDEO',
-          classified
-        )
+
+      const candidateRequest: VideoGenerationRequest = {
+        ...request,
+        accountId: candidateAccount,
       }
-      throw error
+
+      try {
+        const result = await this.gemini.generate(this.forProvider(candidateRequest, 'GEMINI_NATIVE_VIDEO'))
+        return this.complete(
+          result,
+          requestedProvider,
+          capability.state,
+          attemptCounts,
+          null,
+          null,
+          accountsTried,
+          runtimeBlockedAccounts
+        )
+      } catch (error) {
+        lastError = error
+        const classified = capabilityFromError(error)
+        const isBlocked = isRuntimeBlocked(error)
+
+        if (isBlocked) {
+          runtimeBlockedAccounts.push(candidateAccount)
+          // If more Gemini accounts are available in the pool, try the next account
+          if (i + 1 < geminiCandidates.length) {
+            continue
+          }
+          // Whole Gemini pool is exhausted -> fallback to Flow on AUTO
+          if (requestedProvider === 'AUTO') {
+            attemptCounts.FLOW_VEO++
+            const flowResult = await this.flow.generate(this.forProvider(request, 'FLOW_VEO'))
+            return this.complete(
+              flowResult,
+              requestedProvider,
+              'ACCOUNT_CONFIGURATION_REQUIRED',
+              attemptCounts,
+              'GEMINI_NATIVE_VIDEO',
+              'ACCOUNT_CONFIGURATION_REQUIRED',
+              accountsTried,
+              runtimeBlockedAccounts
+            )
+          }
+          throw error
+        }
+
+        // Other recoverable errors in AUTO mode
+        if (requestedProvider === 'AUTO' && (AUTO_FALLBACK_STATES.has(classified) || classified === 'ACCOUNT_CONFIGURATION_REQUIRED')) {
+          attemptCounts.FLOW_VEO++
+          const flowResult = await this.flow.generate(this.forProvider(request, 'FLOW_VEO'))
+          return this.complete(
+            flowResult,
+            requestedProvider,
+            classified,
+            attemptCounts,
+            'GEMINI_NATIVE_VIDEO',
+            classified,
+            accountsTried,
+            runtimeBlockedAccounts
+          )
+        }
+        throw error
+      }
     }
+
+    if (lastError) throw lastError
+    throw new ProviderRoutingError('GEMINI_VIDEO_EXHAUSTED', 'All candidate Gemini accounts exhausted')
   }
 
   private forProvider(
@@ -204,7 +319,9 @@ export class VideoProviderRouter {
     capabilityState: VideoCapabilityState,
     attemptCounts: Record<SelectedVideoProvider, number>,
     fallbackFrom: SelectedVideoProvider | null = null,
-    fallbackReason: VideoCapabilityState | null = null
+    fallbackReason: VideoCapabilityState | null = null,
+    accountsTried: string[] = [],
+    runtimeBlockedAccounts: string[] = []
   ): ProviderRoutingResult {
     return {
       ...result,
@@ -214,6 +331,8 @@ export class VideoProviderRouter {
       fallbackFrom,
       fallbackReason,
       attemptCounts: { ...attemptCounts },
+      accountsTried,
+      runtimeBlockedAccounts,
     }
   }
 }
