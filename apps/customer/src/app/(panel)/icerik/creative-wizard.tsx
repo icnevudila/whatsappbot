@@ -43,10 +43,10 @@ const WIZARD_STEPS: { id: Step; label: string }[] = [
 ]
 
 const FAST_FORMAT_OPTIONS = [
-  { id: 'FAST_SALES' as AdFormatType, icon: '🚀', label: 'Hızlı Satış & Fırsat', tag: 'Önerilen', desc: 'Dönüşüm odaklı, fırsat ve harekete geçirici aciliyet hissi.' },
-  { id: 'PRODUCT_USAGE' as AdFormatType, icon: '🎯', label: 'Ürün Kullanımı & Fayda', desc: 'Ürünün detaylarını, kalitesini ve pratik kullanımını öne çıkarır.' },
-  { id: 'AUTO' as AdFormatType, icon: '⚡', label: 'Kısa Slogan & Vurucu', desc: 'Akılda kalıcı, 6-9 kelimelik kısa ve net marka sloganı.' },
-  { id: 'PREMIUM' as AdFormatType, icon: '💎', label: 'Prestij & Kurumsal', desc: 'Seçkin, mimari güven ve sinematik marka ağırlığı.' },
+  { id: 'FAST_SALES' as AdFormatType, label: 'Hızlı Satış & Fırsat', tag: 'Önerilen', desc: 'Dönüşüm odaklı, doğrudan harekete geçiren reklam dili.' },
+  { id: 'PRODUCT_USAGE' as AdFormatType, label: 'Ürün Tanıtımı & Fayda', desc: 'Ürünün kalitesini ve pratik kullanımını öne çıkarır.' },
+  { id: 'AUTO' as AdFormatType, label: 'Kısa & Vurucu Slogan', desc: 'Akılda kalıcı, net ve dinamik marka sloganı.' },
+  { id: 'PREMIUM' as AdFormatType, label: 'Kurumsal & Prestij', desc: 'Güven veren, seçkin ve profesyonel marka ağırlığı.' },
 ]
 
 export function CreativeWizard({
@@ -423,16 +423,49 @@ export function CreativeWizard({
     }
   }
 
+  const resetToNewVideo = () => {
+    setActiveJobId(null)
+    setJobState('IDLE')
+    setStep('campaign')
+    setSubmissionError(null)
+    setJobFailureMessage(null)
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href)
+      url.searchParams.delete('job_id')
+      const cleanSearch = url.searchParams.toString()
+      window.history.replaceState({}, '', url.pathname + (cleanSearch ? `?${cleanSearch}` : ''))
+    }
+  }
+
   // Active Job Recovery on Mount (from URL or org active jobs)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search)
       if (params.get('new') === 'true') {
+        const url = new URL(window.location.href)
+        url.searchParams.delete('job_id')
+        url.searchParams.delete('new')
+        window.history.replaceState({}, '', url.pathname + (url.searchParams.toString() ? `?${url.searchParams.toString()}` : ''))
         return
       }
       const queryJobId = params.get('job_id')
       if (queryJobId) {
-        setActiveJobId(queryJobId)
+        fetch(`/api/ai-media/jobs/${queryJobId}`)
+          .then((r) => r.json())
+          .then((resData) => {
+            const vm = resData?.job
+            if (vm && vm.state === 'FAILED') {
+              // Failed jobs should never block the user on mount; clear and allow starting fresh
+              const url = new URL(window.location.href)
+              url.searchParams.delete('job_id')
+              window.history.replaceState({}, '', url.pathname + (url.searchParams.toString() ? `?${url.searchParams.toString()}` : ''))
+              return
+            }
+            setActiveJobId(queryJobId)
+          })
+          .catch(() => {
+            setActiveJobId(queryJobId)
+          })
         return
       }
     }
@@ -628,11 +661,13 @@ export function CreativeWizard({
         {jobState === 'FAILED' || jobState === 'NEEDS_REVIEW' ? (
           <div className="mx-auto max-w-xl space-y-4 p-6">
             <div className={`rounded-xl border p-4 ${jobState === 'FAILED' ? 'border-rose-200 bg-rose-50' : 'border-amber-300 bg-amber-50'}`}>
-              <p className={`text-[13px] font-bold ${jobState === 'FAILED' ? 'text-rose-800' : 'text-amber-900'}`}>
-                {jobState === 'FAILED' ? 'Video üretilemedi' : '⏳ Video İnsan İncelemesi Bekliyor'}
+              <p className={`text-[13.5px] font-bold ${jobState === 'FAILED' ? 'text-rose-800' : 'text-amber-900'}`}>
+                {jobState === 'FAILED' ? 'Video Hazırlanamadı' : 'Video İnceleme Bekliyor'}
               </p>
               <p className="mt-1 text-[12px] leading-relaxed text-[#667781]">
-                {jobFailureMessage || jobDisplayMessage || 'Çıktı otomatik kalite kapısından geçmedi.'}
+                {jobFailureMessage?.includes('Asset count') 
+                  ? 'Görsel aktarımı sırasında geçici bir senkronizasyon oluştu. Lütfen tekrar deneyin.'
+                  : (jobFailureMessage || jobDisplayMessage || 'Video üretimi tamamlanamadı.')}
               </p>
             </div>
             {/* Show the video preview even in NEEDS_REVIEW so the user can see what was produced */}
@@ -646,32 +681,17 @@ export function CreativeWizard({
                 />
               </div>
             ) : null}
-            <div className="grid gap-2 rounded-xl border border-hairline bg-[#f8fafb] p-4 text-[12px] sm:grid-cols-2">
-              <div><span className="text-[#667781]">İş ID</span><p className="font-mono font-semibold text-[#111b21] break-all">{activeJobId}</p></div>
-              <div><span className="text-[#667781]">Üretim profili</span><p className="font-semibold text-[#111b21]">{jobEvidence.creative_engine_mode || VIDEO_ENGINE_MODE}</p></div>
-              <div><span className="text-[#667781]">Seçilen sağlayıcı</span><p className="font-semibold text-[#111b21]">{jobEvidence.selected_provider || 'Seçilmedi'}</p></div>
-              <div><span className="text-[#667781]">Fallback nedeni</span><p className="font-semibold text-[#111b21]">{jobEvidence.fallback_reason || 'Yok'}</p></div>
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <Link href="/icerik" className="inline-flex items-center justify-center rounded-full bg-[#008069] px-5 py-2 text-[13px] font-semibold text-white">
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <Button
+                type="button"
+                className="!bg-[#008069] hover:!bg-[#00a884] text-white text-[13px] font-semibold h-10 px-5 rounded-full shadow-sm"
+                onClick={resetToNewVideo}
+              >
+                Yeni Video Oluştur / Formu Aç
+              </Button>
+              <Link href="/icerik" className="inline-flex items-center justify-center rounded-full border border-hairline bg-white px-5 py-2 text-[13px] font-medium text-[#111b21] hover:bg-[#f0f2f5] transition-colors">
                 İçerik Kütüphanesine Git
               </Link>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveJobId(null)
-                  setJobState('IDLE')
-                  setStep('campaign')
-                  if (typeof window !== 'undefined') {
-                    const url = new URL(window.location.href)
-                    url.searchParams.delete('job_id')
-                    window.history.pushState({}, '', url.toString())
-                  }
-                }}
-                className="text-[12.5px] font-semibold text-[#667781] hover:text-[#111b21]"
-              >
-                Ayarları gözden geçir
-              </button>
             </div>
           </div>
         ) : null}
@@ -783,8 +803,8 @@ export function CreativeWizard({
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h2 className="text-[15px] font-bold text-[#111b21]">1 — Tanıtılacak Ürünü Seçin</h2>
-                        <p className="text-[12px] text-[#667781] mt-0.5">Videonun merkezinde yer alacak ürününüz.</p>
+                        <h2 className="text-[15px] font-bold text-[#111b21]">1. Ürün Seçimi</h2>
+                        <p className="text-[12px] text-[#667781] mt-0.5">Videoda tanıtılacak ürününüzü seçin.</p>
                       </div>
                       <Button
                         type="button"
@@ -858,7 +878,7 @@ export function CreativeWizard({
                   {/* 2. Video Tarzı */}
                   <div className="space-y-3">
                     <div>
-                      <h2 className="text-[15px] font-bold text-[#111b21]">2 — Video Tarzı</h2>
+                      <h2 className="text-[15px] font-bold text-[#111b21]">2. Video Tarzı</h2>
                       <p className="text-[12px] text-[#667781] mt-0.5">Videonun görsel temposunu ve reklam dilini belirleyin.</p>
                     </div>
 
@@ -880,8 +900,8 @@ export function CreativeWizard({
                             }`}
                           >
                             <div className="flex items-center justify-between">
-                              <span className="text-[13.5px] font-bold text-[#111b21] flex items-center gap-1.5">
-                                <span>{fmt.icon}</span> {fmt.label}
+                              <span className="text-[13px] font-bold text-[#111b21]">
+                                {fmt.label}
                               </span>
                               {fmt.tag ? (
                                 <span className="rounded bg-[#008069] px-2 py-0.5 text-[10px] font-bold text-white">
@@ -896,11 +916,11 @@ export function CreativeWizard({
                     </div>
                   </div>
 
-                  {/* 3. Kampanya Notunuz / Mesajınız (Ana Odak) */}
+                  {/* 3. Kampanya Notu (Opsiyonel) */}
                   <div className="space-y-3">
                     <div>
-                      <h2 className="text-[15px] font-bold text-[#111b21]">3 — Kampanya Notunuz / Vurgulanacak Mesaj</h2>
-                      <p className="text-[12px] text-[#667781] mt-0.5">Yapay zeka seslendirme metnini bu notunuza göre özel olarak yazar.</p>
+                      <h2 className="text-[15px] font-bold text-[#111b21]">3. Kampanya Notu (Opsiyonel)</h2>
+                      <p className="text-[12px] text-[#667781] mt-0.5">Öne çıkarmak istediğiniz detayları yazın, yapay zeka metni buna göre hazırlasın.</p>
                     </div>
 
                     <Textarea
@@ -910,12 +930,12 @@ export function CreativeWizard({
                         setCreativeNote(e.target.value)
                         setDraftApproved(false)
                       }}
-                      placeholder="Örn: 5.000 adet üzeri siparişlerde şantiyeye teslim avantajı var. Ustaların güvenle tercih ettiği sağlam tuğla olduğu ve hızlı teslimat vurgulansın."
+                      placeholder="Örn: 5.000 adet üzeri siparişlerde şantiyeye teslim avantajı var. Ustaların güvendiği kalite vurgulansın."
                       className="text-[13px]"
                     />
                   </div>
 
-                  {/* 4. Dinamik Altyazı Tercihi (Checkbox) */}
+                  {/* 4. Dinamik Altyazı Tercihi */}
                   <div className="space-y-2">
                     <label className="flex items-center gap-3 p-3.5 rounded-xl border border-hairline bg-[#f8fafb] hover:bg-[#f0f2f5] cursor-pointer transition-colors">
                       <input
@@ -926,15 +946,15 @@ export function CreativeWizard({
                       />
                       <div className="flex-1">
                         <span className="text-[13px] font-bold text-[#111b21]">Videonun üzerine dinamik altyazı ekle</span>
-                        <p className="text-[11.5px] text-[#667781]">Sosyal medya (Reels / TikTok) tarzında kelime kelime senkronize hareketli altyazı.</p>
+                        <p className="text-[11.5px] text-[#667781]">Sosyal medya formatında hareketli altyazı.</p>
                       </div>
                     </label>
                   </div>
 
-                  {/* 5. Gelişmiş Ayarlar (Açılır Kapanır - İsteğe Bağlı) */}
+                  {/* 5. Gelişmiş Ayarlar */}
                   <details className="text-[12px] text-[#667781] pt-1">
                     <summary className="cursor-pointer hover:text-[#111b21] font-semibold text-[#008069]">
-                      ⚙ Gelişmiş Ayarlar (Çekim Ortamı & Kamera Hareketi)
+                      Gelişmiş Ayarlar (Ortam ve Kamera)
                     </summary>
                     <div className="mt-3 space-y-3 rounded-xl border border-hairline bg-[#f8fafb] p-3.5">
                       <div className="grid gap-3 sm:grid-cols-2">
@@ -1002,7 +1022,7 @@ export function CreativeWizard({
                   <div className="rounded-xl border border-hairline bg-surface p-4 space-y-3 shadow-2xs">
                     <div className="flex items-center justify-between">
                       <label className="text-[12.5px] font-bold text-[#111b21]">
-                        🎙️ Spikerin Seslendireceği Türkçe Reklam Metni
+                        Seslendirme Metni
                       </label>
                       <span className="rounded bg-[#e7f8f2] px-2 py-0.5 text-[11px] font-bold text-[#008069]">
                         ~8 Saniye
@@ -1035,7 +1055,7 @@ export function CreativeWizard({
 
                     <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[12px]">
                       <span className={totalWords > MAX_SPOKEN_WORDS || totalWords === 0 ? 'text-rose-700 font-semibold' : 'text-[#667781]'}>
-                        Uzunluk: <strong>{totalWords} kelime</strong> {totalWords > 0 && totalWords <= MAX_SPOKEN_WORDS ? '(İdeal akıcılıkta ✓)' : '(1-18 kelime arası olmalıdır)'}
+                        Uzunluk: <strong>{totalWords} kelime</strong> {totalWords > 0 && totalWords <= MAX_SPOKEN_WORDS ? '(İdeal akıcılıkta)' : '(1-18 kelime arası olmalıdır)'}
                       </span>
 
                       <Button
@@ -1045,7 +1065,7 @@ export function CreativeWizard({
                         disabled={isDrafting}
                         onClick={() => void generateDraft('refresh')}
                       >
-                        {isDrafting ? 'Yazılıyor…' : '🎲 Farklı Bir Metin Yazdır'}
+                        {isDrafting ? 'Yazılıyor…' : 'Farklı Bir Metin Öner'}
                       </Button>
                     </div>
                   </div>
@@ -1064,11 +1084,11 @@ export function CreativeWizard({
                       </div>
                       <div>
                         <span className="text-[#667781]">Altyazı:</span>
-                        <p className="font-semibold text-[#008069]">{subtitles ? 'Dinamik Altyazılı ✓' : 'Altyazısız'}</p>
+                        <p className="font-semibold text-[#008069]">{subtitles ? 'Dinamik Altyazılı' : 'Altyazısız'}</p>
                       </div>
                       <div>
                         <span className="text-[#667781]">Ürün Koruması:</span>
-                        <p className="font-semibold text-[#008069]">Orijinal Görünüm ✓</p>
+                        <p className="font-semibold text-[#008069]">Orijinal Görünüm</p>
                       </div>
                     </div>
                   </div>
@@ -1089,7 +1109,7 @@ export function CreativeWizard({
                     />
                     <div className="text-[12.5px] leading-snug">
                       <span className={`font-bold ${draftApproved ? 'text-[#008069]' : 'text-amber-950'}`}>
-                        {draftApproved ? '✓ Reklam seslendirme metnini onayladım' : 'Seslendirme metnini ve video kurgusunu onaylıyorum'}
+                        {draftApproved ? 'Seslendirme metnini onayladım' : 'Seslendirme metnini ve video kurgusunu onaylıyorum'}
                       </span>
                       <p className="text-[11.5px] text-[#667781] mt-0.5">
                         Yapay zeka ses motoru videoda kelimesi kelimesine bu metni seslendirecektir.
@@ -1129,7 +1149,7 @@ export function CreativeWizard({
                     className="wb-wa-submit !bg-[#008069] hover:!bg-[#00a884] text-white font-bold h-11 px-8 shadow-sm"
                     disabled={isSubmitting || !draftApproved || isDrafting || totalWords === 0 || totalWords > MAX_SPOKEN_WORDS}
                   >
-                    {isSubmitting ? 'Kuyruğa Alınıyor…' : 'ONAYLA VE VİDEOYU OLUŞTUR'}
+                    {isSubmitting ? 'Kuyruğa Alınıyor…' : 'Videoyu Oluştur'}
                   </Button>
                 )}
               </div>
