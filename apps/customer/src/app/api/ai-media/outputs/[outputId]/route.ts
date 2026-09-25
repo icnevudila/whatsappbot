@@ -4,8 +4,11 @@ import { requireActiveOrg } from '@/lib/org'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+const rawGateway = process.env.OMNISTUDIO_GATEWAY_URL || process.env.AI_GATEWAY_URL || ''
 const GATEWAY_HOST =
-  process.env.OMNISTUDIO_GATEWAY_URL || process.env.AI_GATEWAY_URL || 'http://167.233.201.31:3456'
+  rawGateway && !rawGateway.includes('127.0.0.1') && !rawGateway.includes('localhost')
+    ? rawGateway
+    : 'http://167.233.201.31:3456'
 
 /**
  * GET /api/ai-media/outputs/[outputId]
@@ -54,16 +57,24 @@ export async function GET(
     const filePath = output.file_path || ''
     const fileName = filePath.split('/').pop() || `${output.id}.mp4`
     const cleanFileName = fileName.replace(/[^a-zA-Z0-9_\-\.]/g, '')
+    const baseName = cleanFileName.replace(/\.mp4$/i, '')
     const isThumb = req.nextUrl.searchParams.get('thumb') === '1'
 
     // If thumbnail requested, resolve corresponding cover JPEG
     if (isThumb) {
-      const baseName = cleanFileName.replace(/\.mp4$/i, '')
-      const thumbCandidates = [
-        `${baseName}_thumb.jpg`,
-        `${baseName.replace(/_finished$/, '')}_thumb.jpg`,
-        `${cleanFileName}.jpg`,
-      ]
+      const thumbCandidates = Array.from(
+        new Set(
+          [
+            output.job_id ? `${output.job_id}_thumb.jpg` : null,
+            output.id ? `${output.id}_thumb.jpg` : null,
+            output.job_id ? `${output.job_id}.jpg` : null,
+            output.id ? `${output.id}.jpg` : null,
+            `${baseName}_thumb.jpg`,
+            `${baseName.replace(/_finished$/, '')}_thumb.jpg`,
+            `${cleanFileName}.jpg`,
+          ].filter(Boolean) as string[]
+        )
+      )
 
       for (const tName of thumbCandidates) {
         const thumbUrl = `${GATEWAY_HOST}/outputs/${tName}`
@@ -96,32 +107,64 @@ export async function GET(
       fetchHeaders['range'] = rangeHeader
     }
 
-    // Try primary clean filename first (gateway serves flat outputs)
-    let upstreamRes = await fetch(`${GATEWAY_HOST}/outputs/${cleanFileName}`, {
-      headers: fetchHeaders,
-      cache: 'no-store',
-    })
+    const videoCandidates = Array.from(
+      new Set(
+        [
+          cleanFileName,
+          output.job_id ? `${output.job_id}.mp4` : null,
+          output.id ? `${output.id}.mp4` : null,
+          output.job_id ? `${output.job_id}_finished.mp4` : null,
+          output.id ? `${output.id}_finished.mp4` : null,
+        ].filter(Boolean) as string[]
+      )
+    )
 
-    // If not found, try structured relative path
-    if (!upstreamRes.ok && upstreamRes.status !== 206 && filePath.includes('/outputs/')) {
-      const relPath = filePath.split('/outputs/')[1]
-      upstreamRes = await fetch(`${GATEWAY_HOST}/outputs/${relPath}`, {
-        headers: fetchHeaders,
-        cache: 'no-store',
-      })
-    }
+    let upstreamRes: Response | null = null
 
-    // Fallback: job-specific subfolder
-    if (!upstreamRes.ok && upstreamRes.status !== 206) {
-      const fallbackUrl = `${GATEWAY_HOST}/outputs/${output.org_id}/${output.job_id}/${cleanFileName}`
-      const fallbackRes = await fetch(fallbackUrl, { headers: fetchHeaders, cache: 'no-store' })
-      if (fallbackRes.ok || fallbackRes.status === 206) {
-        upstreamRes = fallbackRes
+    for (const vName of videoCandidates) {
+      const vUrl = `${GATEWAY_HOST}/outputs/${vName}`
+      try {
+        const res = await fetch(vUrl, {
+          headers: fetchHeaders,
+          cache: 'no-store',
+        })
+        if (res.ok || res.status === 206) {
+          upstreamRes = res
+          break
+        }
+      } catch {
+        // try next candidate
       }
     }
 
-    if (!upstreamRes.ok && upstreamRes.status !== 206) {
-      return new NextResponse(`Video akışı açılamadı (${upstreamRes.status})`, { status: upstreamRes.status })
+    // If not found, try structured relative path
+    if ((!upstreamRes || (!upstreamRes.ok && upstreamRes.status !== 206)) && filePath.includes('/outputs/')) {
+      const relPath = filePath.split('/outputs/')[1]
+      try {
+        const res = await fetch(`${GATEWAY_HOST}/outputs/${relPath}`, {
+          headers: fetchHeaders,
+          cache: 'no-store',
+        })
+        if (res.ok || res.status === 206) {
+          upstreamRes = res
+        }
+      } catch {}
+    }
+
+    // Fallback: job-specific subfolder
+    if (!upstreamRes || (!upstreamRes.ok && upstreamRes.status !== 206)) {
+      const fallbackUrl = `${GATEWAY_HOST}/outputs/${output.org_id}/${output.job_id}/${cleanFileName}`
+      try {
+        const fallbackRes = await fetch(fallbackUrl, { headers: fetchHeaders, cache: 'no-store' })
+        if (fallbackRes.ok || fallbackRes.status === 206) {
+          upstreamRes = fallbackRes
+        }
+      } catch {}
+    }
+
+    if (!upstreamRes || (!upstreamRes.ok && upstreamRes.status !== 206)) {
+      const status = upstreamRes ? upstreamRes.status : 502
+      return new NextResponse(`Video akışı açılamadı (${status})`, { status })
     }
 
     return buildStreamResponse(upstreamRes, cleanFileName)

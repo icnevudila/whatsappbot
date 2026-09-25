@@ -275,7 +275,10 @@ function LibraryCard({
 }) {
   const failed = Boolean(renderError) && item.status !== 'ready'
   const ready = item.status === 'ready' && Boolean(item.publicUrl)
-  const isVideo = item.format === 'video' || Boolean(item.publicUrl?.endsWith('.mp4'))
+  const isVideo =
+    item.format === 'video' ||
+    Boolean(item.publicUrl?.endsWith('.mp4')) ||
+    Boolean(item.publicUrl?.includes('/api/ai-media/outputs/'))
 
   return (
     <article className="group flex h-full flex-col overflow-visible rounded-[var(--radius-card)] border border-hairline bg-surface shadow-[var(--shadow-card)] transition-all duration-200 hover:shadow-md">

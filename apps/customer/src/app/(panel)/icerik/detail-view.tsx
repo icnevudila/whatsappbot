@@ -520,7 +520,9 @@ export function CreativeDetail({
   const isVideo =
     creative.format === 'video' ||
     Boolean(creative.publicUrl?.endsWith('.mp4')) ||
-    Boolean(displayPublicUrl?.endsWith('.mp4'))
+    Boolean(displayPublicUrl?.endsWith('.mp4')) ||
+    Boolean(creative.publicUrl?.includes('/api/ai-media/outputs/')) ||
+    Boolean(displayPublicUrl?.includes('/api/ai-media/outputs/'))
   const stages = isVideo ? VIDEO_CAMPAIGN_STAGES : DETAIL_STAGES
   const targetDuration = isVideo ? 122 : 78
 

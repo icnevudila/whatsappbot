@@ -540,6 +540,7 @@ export async function listLibraryCreatives({
       .select('id, title, public_url, status, source, generation_type, created_at, error, parent_id, format, payload')
       .eq('org_id', org.id)
       .neq('source', 'upload')
+      .neq('status', 'failed')
       .order('created_at', { ascending: sort === 'old' })
       .range(start, start + size - 1)
     const term = query.trim()

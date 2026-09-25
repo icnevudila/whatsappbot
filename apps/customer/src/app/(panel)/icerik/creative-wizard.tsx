@@ -1144,17 +1144,17 @@ export function CreativeWizard({
                   {/* Opsiyonel Kampanya Teklifi ve Not */}
                   <div className="rounded-xl border border-hairline bg-[#f8fafb] p-3.5 space-y-3">
                     <Field
-                      label="Doğrulanmış Ürün Gerçekleri"
-                      hint="Yalnız katalog, teknik föy veya işletme tarafından teyit edilmiş bilgiler; her satıra bir tane."
+                      label="Öne Çıkarılacak Ürün Özellikleri (İsteğe bağlı)"
+                      hint="Reklamda özellikle vurgulamak istediğiniz temel ürün özelliklerini yazabilirsiniz (Her satıra bir özellik)."
                     >
                       <Textarea
-                        rows={3}
+                        rows={2}
                         value={verifiedClaimsText}
                         onChange={(event) => {
                           setVerifiedClaimsText(event.target.value)
                           setDraftApproved(false)
                         }}
-                        placeholder={'Örn:\nStandart yapı tuğlasıdır\nDoğal terracotta renktedir'}
+                        placeholder={'Örn:\nDayanıklı terracotta yapı tuğlası\nIsı ve ses yalıtımı'}
                       />
                     </Field>
 
@@ -1206,15 +1206,15 @@ export function CreativeWizard({
                         </select>
                       </Field>
 
-                      <Field label="Kamera ve Fizik Tarzı">
+                      <Field label="Kamera Açısı ve Hareketi">
                         <select
                           value={motionStyle}
                           onChange={(e) => setMotionStyle(e.target.value as any)}
                           className="w-full rounded-lg border border-[#e9edef] bg-white px-3 py-2 text-[13px] text-[#111b21] focus:border-[#008069] focus:outline-none"
                         >
-                          <option value="studio_orbit">Kontrollü Vitrin & Güvenli 3/4 Açı</option>
-                          <option value="real_usage">Sahada Gerçek Kullanım Anı</option>
-                          <option value="macro_detail">Yakın Çekim & Malzeme Detayı</option>
+                          <option value="real_usage">Doğal Kullanım ve Sahne Hareketi</option>
+                          <option value="studio_orbit">Vitrin & 3/4 Açı (Şık ve Dengeli)</option>
+                          <option value="macro_detail">Yakın Çekim & Detay Odaklı</option>
                         </select>
                       </Field>
                     </div>
@@ -1232,9 +1232,9 @@ export function CreativeWizard({
                         </select>
                       </Field>
                       <div className="rounded-lg border border-[#e9edef] bg-white px-3 py-2">
-                        <p className="text-[11px] font-bold text-[#111b21]">Altyazı</p>
+                        <p className="text-[11px] font-bold text-[#111b21]">Altyazı & Marka Kapanışı</p>
                         <p className="mt-0.5 text-[11px] leading-relaxed text-[#667781]">
-                          Bu güvenli video profilinde kapalı. Sahne içine bozuk veya uydurma yazı üretilmez.
+                          Seslendirmeyle senkronize profesyonel altyazı ve marka kapanışı otomatik eklenir.
                         </p>
                       </div>
                     </div>
@@ -1249,7 +1249,7 @@ export function CreativeWizard({
                     <div>
                       <h2 className="text-[15px] font-bold text-[#111b21]">3 — Reklam Taslağı</h2>
                       <p className="text-[12px] text-[#667781] mt-0.5">
-                        Seçimleriniz ürün gerçeği ve doğrulanmış bilgilerle güvenli bir 8 saniyelik plana derlendi.
+                        Seçimlerinize göre hazırlanan seslendirme metni ve sahne akışı.
                       </p>
                     </div>
                     <span className="rounded bg-[#e7f8f2] px-2.5 py-1 text-[11px] font-bold text-[#008069] border border-[#008069]/20">
@@ -1260,8 +1260,8 @@ export function CreativeWizard({
                   {isDrafting ? (
                     <div className="rounded-xl border border-[#b7e4d5] bg-[#f1fbf7] p-4 text-center">
                       <span className="mx-auto mb-2 block size-3 animate-ping rounded-full bg-[#008069]" />
-                      <p className="text-[12.5px] font-bold text-[#006b58]">Kaynaklara bağlı taslak hazırlanıyor</p>
-                      <p className="mt-0.5 text-[11.5px] text-[#667781]">Ürün kuralları, doğrulanmış iddialar ve yaratıcı tür karşılaştırılıyor.</p>
+                      <p className="text-[12.5px] font-bold text-[#006b58]">Reklam taslağınız hazırlanıyor</p>
+                      <p className="mt-0.5 text-[11.5px] text-[#667781]">Ürün bilgileri ve kampanya detayları derleniyor...</p>
                     </div>
                   ) : null}
                   {draftError ? <Notice tone="danger">{draftError}</Notice> : null}
@@ -1302,7 +1302,7 @@ export function CreativeWizard({
                   {/* Word count pacing indicator */}
                   <div className="flex items-center justify-between text-[12px] px-1">
                     <span className={totalWords > MAX_SPOKEN_WORDS || totalWords === 0 ? 'text-rose-700 font-medium' : 'text-[#667781]'}>
-                      Toplam: <strong>{totalWords} kelime</strong> (Güvenli sınır: en fazla {MAX_SPOKEN_WORDS})
+                      Seslendirme Uzunluğu: <strong>{totalWords} kelime</strong> (~8 saniye için ideal akıcılıkta)
                     </span>
                   </div>
 
@@ -1333,7 +1333,7 @@ export function CreativeWizard({
                           {draftApproved ? '✓ Reklam taslağını onayladım' : 'Reklam taslağını inceledim ve onaylıyorum'}
                         </span>
                         <p className="text-[11.5px] text-[#667781] mt-0.5">
-                          Seslendirme metni ve sahne akışını onaylamadan son kontrol ve video üretimi aşamasına geçilemez.
+                          Seslendirme metnini onaylayarak son kontrol adımına geçebilirsiniz.
                         </p>
                       </div>
                     </label>
@@ -1342,7 +1342,7 @@ export function CreativeWizard({
                   {/* Advanced Disclosure: Video Scenario */}
                   <details className="text-[12px] pt-2">
                     <summary className="cursor-pointer font-medium text-[#667781] hover:text-[#111b21]">
-                      Gelişmiş &gt; Sahne ve Kurgu Detayları (İsteğe bağlı)
+                      Gelişmiş sahne planı (Teknik önizleme)
                     </summary>
                     <div className="mt-2 space-y-2 rounded-lg border border-hairline bg-canvas p-3">
                       <Textarea
@@ -1352,7 +1352,7 @@ export function CreativeWizard({
                         className="font-mono text-[11px]"
                       />
                       <p className="text-[10.5px] text-[#667781]">
-                        * Teknik prompt salt okunurdur. Değişiklikler yalnız yapılandırılmış ürün ve kampanya alanlarından yapılır.
+                        * Sahne planı video motoru tarafından otomatik derlenmiştir.
                       </p>
                     </div>
                   </details>
@@ -1393,27 +1393,32 @@ export function CreativeWizard({
                   <div className="rounded-xl border border-hairline bg-[#f8fafb] p-3.5">
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-[13px] font-bold text-[#111b21]">Derlenen Üretim Ayarları</p>
-                        <p className="mt-0.5 text-[11px] text-[#667781]">Arayüz seçimi ile kuyruğa yazılacak değerler birebir eşleşir.</p>
+                        <p className="text-[13px] font-bold text-[#111b21]">Video Prodüksiyon Özeti</p>
+                        <p className="mt-0.5 text-[11px] text-[#667781]">Tüm ayarlar profesyonel sosyal medya formatına göre optimize edilmiştir.</p>
                       </div>
-                      <span className="rounded-full bg-[#e7f8f2] px-2.5 py-1 text-[10px] font-bold text-[#008069]">KİLİTLİ</span>
+                      <span className="rounded-full bg-[#e7f8f2] px-2.5 py-1 text-[10px] font-bold text-[#008069]">ONAYLI</span>
                     </div>
-                    <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-[11.5px] sm:grid-cols-4">
-                      <div><dt className="text-[#667781]">Motor</dt><dd className="font-semibold text-[#111b21]">{VIDEO_ENGINE_MODE}</dd></div>
-                      <div><dt className="text-[#667781]">Sağlayıcı</dt><dd className="font-semibold text-[#111b21]">{VIDEO_REQUESTED_PROVIDER}</dd></div>
-                      <div><dt className="text-[#667781]">Çıktı</dt><dd className="font-semibold text-[#111b21]">{VIDEO_ASPECT_RATIO} · {VIDEO_DURATION_SECONDS} sn</dd></div>
-                      <div><dt className="text-[#667781]">Dil / Altyazı</dt><dd className="font-semibold text-[#111b21]">{VIDEO_LANGUAGE} · {VIDEO_SUBTITLE_MODE === 'off' ? 'Kapalı' : 'Otomatik'}</dd></div>
-                      <div><dt className="text-[#667781]">Yaratıcı tür</dt><dd className="font-semibold text-[#111b21]">{AD_FORMAT_OPTIONS.find((item) => item.id === adFormat)?.label || adFormat}</dd></div>
-                      <div><dt className="text-[#667781]">Ortam</dt><dd className="font-semibold text-[#111b21]">{environmentPreset}</dd></div>
-                      <div><dt className="text-[#667781]">Kamera</dt><dd className="font-semibold text-[#111b21]">{motionStyle}</dd></div>
-                      <div><dt className="text-[#667781]">Referans</dt><dd className="font-semibold text-[#111b21]">{referenceAssets.length + 2} kilitli varlık</dd></div>
+                    <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5 text-[11.5px] sm:grid-cols-3">
+                      <div><dt className="text-[#667781]">Format</dt><dd className="font-semibold text-[#111b21]">9:16 Dikey (Reels / TikTok / Shorts)</dd></div>
+                      <div><dt className="text-[#667781]">Süre</dt><dd className="font-semibold text-[#111b21]">{VIDEO_DURATION_SECONDS} Saniye</dd></div>
+                      <div><dt className="text-[#667781]">Seslendirme</dt><dd className="font-semibold text-[#111b21]">Türkçe (Seslendirmeli)</dd></div>
+                      <div><dt className="text-[#667781]">Reklam Tarzı</dt><dd className="font-semibold text-[#111b21]">{AD_FORMAT_OPTIONS.find((item) => item.id === adFormat)?.label || adFormat}</dd></div>
+                      <div><dt className="text-[#667781]">Çekim Ortamı</dt><dd className="font-semibold text-[#111b21]">{
+                        environmentPreset === 'auto' ? 'Otomatik Uyumlu Ortam' :
+                        environmentPreset === 'construction' ? 'İnşaat / Yapı Sahası' :
+                        environmentPreset === 'garden' ? 'Açık Doğa / Bahçe' :
+                        environmentPreset === 'studio' ? 'Prestijli Stüdyo' :
+                        environmentPreset === 'kitchen' ? 'Mutfak / Restoran' :
+                        environmentPreset === 'office' ? 'Modern Ofis' : 'Atölye / Fabrika'
+                      }</dd></div>
+                      <div><dt className="text-[#667781]">Ürün Koruması</dt><dd className="font-semibold text-[#008069]">Orijinal Görünüm Garantili</dd></div>
                     </dl>
                   </div>
 
                   <div className={`rounded-xl border p-3.5 ${blockingPreflightIssues.length ? 'border-rose-200 bg-rose-50' : 'border-[#b7e4d5] bg-[#f1fbf7]'}`}>
                     <div className="flex items-center justify-between gap-3">
                       <p className={`text-[13px] font-bold ${blockingPreflightIssues.length ? 'text-rose-800' : 'text-[#006b58]'}`}>
-                        {blockingPreflightIssues.length ? 'Üretim öncesi düzeltme gerekli' : 'Üretim öncesi kontroller hazır'}
+                        {blockingPreflightIssues.length ? 'Düzeltilmesi gereken noktalar var' : 'Tüm hazırlıklar tamamlandı'}
                       </p>
                       <span className="text-[11px] font-bold text-[#667781]">{preflightIssues.length ? `${preflightIssues.length} not` : 'Tüm kontroller geçti'}</span>
                     </div>
@@ -1427,14 +1432,14 @@ export function CreativeWizard({
                         ))}
                       </ul>
                     ) : (
-                      <p className="mt-1 text-[11.5px] text-[#667781]">Kota, ürün kimliği, varlık hash’i, fidelity ve seslendirme sınırı doğrulandı.</p>
+                      <p className="mt-1 text-[11.5px] text-[#667781]">Logonuz, ürün görseliniz ve onaylı seslendirme metniniz videoya dönüştürülmek üzere hazır.</p>
                     )}
                   </div>
 
                   {/* Kilitlenmiş Seslendirme Akışı Özeti */}
                   <div className="rounded-xl border border-hairline bg-surface p-3.5 space-y-2.5 shadow-2xs">
                     <div className="flex items-center justify-between">
-                      <p className="text-[13px] font-bold text-[#111b21]">Onaylanacak Seslendirme Akışı</p>
+                      <p className="text-[13px] font-bold text-[#111b21]">Seslendirme Metni</p>
                       <span className="rounded bg-[#e7f8f2] px-2 py-0.5 text-[10px] font-bold text-[#008069]">
                         Kilitli Metin
                       </span>
@@ -1443,7 +1448,7 @@ export function CreativeWizard({
                     <div className="space-y-1.5 text-[12.5px] text-[#111b21] bg-[#f8fafb] p-3 rounded-lg">
                       {speechTimeline.map((s, idx) => (
                         <p key={idx}>
-                          <strong className="text-[#008069]">{s.start_sec.toFixed(1)}-{s.end_sec.toFixed(1)}s:</strong>{' '}
+                          <strong className="text-[#008069]">Metin:</strong>{' '}
                           &ldquo;{s.exact_text}&rdquo;
                         </p>
                       ))}
@@ -1466,10 +1471,10 @@ export function CreativeWizard({
                       />
                       <div className="text-[12px] leading-snug">
                         <span className={`font-semibold ${transcriptConfirmed ? 'text-[#008069]' : 'text-amber-900'}`}>
-                          Seslendirme metnini ve görsel kurguyu onaylıyorum.
+                          Seslendirme metnini ve reklam kurgusunu onaylıyorum.
                         </span>
                         <p className="text-[11px] text-[#667781] mt-0.5">
-                          Yapay zeka ses motoru kelimesi kelimesine bu metni seslendirecektir.
+                          Yapay zeka ses motoru videoda kelimesi kelimesine bu metni seslendirecektir.
                         </p>
                       </div>
                     </label>
