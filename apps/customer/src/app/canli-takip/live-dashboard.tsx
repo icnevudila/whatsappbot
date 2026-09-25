@@ -470,12 +470,12 @@ export function LiveDashboard() {
   const [error, setError] = useState<string | null>(null)
 
   type TabId = 'overview' | 'baileys' | 'messages' | 'quick_send' | 'campaigns' | 'queue' | 'organizations' | 'contacts' | 'data_requests' | 'ai_studio' | 'ai_media' | 'blacklist' | 'jobs'
-  const VALID_TABS: TabId[] = ['ai_studio', 'ai_media', 'baileys', 'jobs', 'overview', 'organizations']
+  const VALID_TABS: TabId[] = ['overview', 'ai_studio', 'ai_media', 'baileys', 'jobs', 'organizations']
 
   const getHashTab = (): TabId => {
-    if (typeof window === 'undefined') return 'ai_studio'
+    if (typeof window === 'undefined') return 'overview'
     const hash = window.location.hash.replace('#', '') as TabId
-    return VALID_TABS.includes(hash) ? hash : 'ai_studio'
+    return VALID_TABS.includes(hash) ? hash : 'overview'
   }
 
   const [activeTab, setActiveTabState] = useState<TabId>(getHashTab)
@@ -530,6 +530,9 @@ export function LiveDashboard() {
   const [aiGenerating, setAiGenerating] = useState(false)
   const [aiResult, setAiResult] = useState<string | null>(null)
   const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null)
+  const [aiMediaSubTab, setAiMediaSubTab] = useState<'overview' | 'jobs' | 'accounts' | 'workers' | 'queue' | 'incidents' | 'visual_qa' | 'health'>('overview')
+  const [aiMediaJobDetail, setAiMediaJobDetail] = useState<any>(null)
+  const [showJobDrawer, setShowJobDrawer] = useState(false)
 
   // Blacklist Form
   const [blackPhone, setBlackPhone] = useState('')
@@ -1972,11 +1975,11 @@ export function LiveDashboard() {
               className="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0 w-full select-none cursor-grab active:cursor-grabbing scrollbar-thin scrollbar-thumb-[var(--color-hairline-strong)]"
             >
               {[
+                { id: 'overview', label: 'Operasyon Özeti', badge: (summary.failedJobs || 0) + summary.pendingJobs, errorBadge: (summary.failedJobs || 0) > 0 ? summary.failedJobs : null },
                 { id: 'ai_studio', label: 'AI Video Motoru & Kredi Havuzu', badge: (data?.ai_engine?.recentVideos?.length || 0) + (data?.creatives?.length || 0), isAlert: (data?.ai_engine?.geminiPool?.limitedAccounts || 0) > 0 },
                 { id: 'ai_media', label: 'Canlı Render & İş Takibi', badge: null, isAlert: false },
                 { id: 'baileys', label: 'Servis & Altyapı Durumu', badge: data?.accounts?.length, isAlert: (data?.accounts?.filter(a => a.status !== 'connected').length || 0) > 0 },
                 { id: 'jobs', label: 'Görev Kuyruğu & Hatalar', badge: data?.jobs?.length, errorBadge: (summary.failedJobs ?? 0) > 0 ? summary.failedJobs : null },
-                { id: 'overview', label: 'Operasyon Özeti', badge: (summary.failedJobs || 0) + summary.pendingJobs, errorBadge: (summary.failedJobs || 0) > 0 ? summary.failedJobs : null },
                 { id: 'organizations', label: 'Firmalar & Kotalar', badge: data?.organizations?.length },
               ].map(tab => (
                 <button
@@ -2198,6 +2201,306 @@ export function LiveDashboard() {
                     </button>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* 1. ROW: AI VİDEO MOTORU & FLOW HESAP HAVUZU KONSOLU */}
+            <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 sm:p-5 shadow-sm space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-hairline)] pb-2.5">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xs sm:text-sm font-bold text-ink">Google Flow & Veo 4'lü Hesap Havuzu</h3>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 font-bold border border-purple-500/20">
+                      Canlı Kredi Havuzu
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-ink-muted mt-0.5">
+                    Hetzner CDP port rotasyonu, Google AI Pro günlük 50 kredi bakiyeleri ve oturum durumları.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('ai_studio')}
+                    className="text-[11px] font-bold text-accent hover:underline flex items-center gap-1"
+                  >
+                    <span>Tüm AI Stüdyosunu Aç →</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 4 Port Slot Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                {[
+                  { port: 9222, defaultName: 'Ali Düvenci (1. Hesap)' },
+                  { port: 9223, defaultName: 'Ali Düvenci (2. Hesap)' },
+                  { port: 9224, defaultName: '3. Hesap Slotu' },
+                  { port: 9225, defaultName: '4. Hesap Slotu' },
+                ].map(({ port, defaultName }) => {
+                  const acc = (data?.ai_engine?.geminiPool?.accounts || []).find((a: any) => a.port === port) ||
+                              (globalAiMedia?.accounts || []).find((a: any) => a.port === port)
+                  const isReady = acc && acc.status !== 'needs_reauth' && acc.status !== 'error'
+                  const credits = acc?.credits ?? 50
+                  return (
+                    <div
+                      key={port}
+                      className="bg-canvas border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-3 space-y-2 flex flex-col justify-between"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono font-bold text-ink-muted">PORT {port}</span>
+                        <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${
+                          isReady ? 'bg-ok-soft text-ok-dim' : 'bg-warn/15 text-warn'
+                        }`}>
+                          {isReady ? 'Hazır / Boşta' : 'Giriş Gerekli'}
+                        </span>
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-ink truncate">{acc?.name || acc?.email || defaultName}</div>
+                        <div className="text-[10px] text-ink-muted truncate">{acc?.email || 'Hetzner Chrome CDP'}</div>
+                      </div>
+                      <div className="pt-2 border-t border-[var(--color-hairline)] flex items-center justify-between">
+                        <span className="text-[10px] text-ink-muted">Kalan Kredi:</span>
+                        <span className="text-xs font-mono font-bold text-purple-400">{credits} / 50</span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* 2. ROW: 2-SÜTUN (SOL: WHATSAPP HAT BAĞLANTILARI, SAĞ: GÖREV VE HATA KUYRUĞU) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+              {/* SOL: CANLI WHATSAPP HATLARI */}
+              <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 sm:p-5 shadow-sm space-y-3">
+                <div className="flex items-center justify-between border-b border-[var(--color-hairline)] pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xs sm:text-sm font-bold text-ink">Canlı WhatsApp Hatları</h3>
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-ok-soft text-ok-dim">
+                      {data?.accounts?.filter(a => a.status === 'connected').length || 0} Bağlı
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('baileys')}
+                    className="text-[11px] font-bold text-accent hover:underline"
+                  >
+                    Detaylar →
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {(data?.accounts || []).length === 0 ? (
+                    <div className="text-xs text-ink-muted py-4 text-center">Bağlı hat bulunamadı.</div>
+                  ) : (
+                    (data?.accounts || []).map(acc => (
+                      <div
+                        key={acc.id}
+                        className="bg-canvas border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2.5 flex items-center justify-between gap-2"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${
+                            acc.status === 'connected' ? 'bg-ok' : 'bg-warn animate-pulse'
+                          }`} />
+                          <div className="min-w-0">
+                            <div className="text-xs font-bold text-ink truncate">{acc.phone_e164 || acc.label || acc.id}</div>
+                            <div className="text-[10px] text-ink-muted truncate">{acc.label || acc.phone_e164}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                            acc.status === 'connected' ? 'bg-ok-soft text-ok-dim' : 'bg-warn/15 text-warn'
+                          }`}>
+                            {acc.status === 'connected' ? 'Aktif' : acc.status}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={handleReconnectAll}
+                            disabled={actionBusy}
+                            className="text-[10px] font-bold px-2 py-0.5 rounded bg-surface-raised hover:bg-canvas border border-[var(--color-hairline)] text-ink"
+                          >
+                            Yenile
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* SAĞ: GÖREV VE HATA KUYRUĞU */}
+              <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 sm:p-5 shadow-sm space-y-3">
+                <div className="flex items-center justify-between border-b border-[var(--color-hairline)] pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xs sm:text-sm font-bold text-ink">Görev Kuyruğu & Alarmlar</h3>
+                    <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded ${
+                      (summary.failedJobs || 0) > 0 ? 'bg-danger text-white' : 'bg-ok-soft text-ok-dim'
+                    }`}>
+                      {(summary.failedJobs || 0) > 0 ? `${summary.failedJobs} Hata` : 'Kuyruk Temiz'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('jobs')}
+                    className="text-[11px] font-bold text-accent hover:underline"
+                  >
+                    Kuyruğu Aç →
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {(summary.failedJobs || 0) === 0 && summary.pendingJobs === 0 ? (
+                    <div className="text-center py-6 text-ink-muted text-xs">
+                      Tüm görevler ve gönderim kuyruğu başarıyla işlendi.
+                    </div>
+                  ) : (
+                    (data?.jobs || []).slice(0, 4).map(job => (
+                      <div
+                        key={job.id}
+                        className={`p-2.5 rounded-[var(--radius-sm)] border text-xs flex items-center justify-between gap-2 ${
+                          job.status === 'failed' ? 'bg-danger/5 border-danger/25 text-danger' : 'bg-canvas border-[var(--color-hairline)] text-ink'
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <span className="font-bold truncate block">{job.type}</span>
+                          <span className="text-[10px] text-ink-muted truncate block">İş #{job.id} · {timeAgo(job.created_at)}</span>
+                        </div>
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded font-mono uppercase ${
+                          job.status === 'failed' ? 'bg-danger text-white' : 'bg-surface-raised text-ink'
+                        }`}>
+                          {job.status}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* 3. ROW: SON ÜRETİLEN AI REKLAM VİDEOLARI GALERİSİ */}
+            <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 sm:p-5 shadow-sm space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-hairline)] pb-2.5">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xs sm:text-sm font-bold text-ink">Son Üretilen AI Reklam Videoları</h3>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-accent-soft text-accent font-bold">
+                      {(data?.creatives || []).length} Video Hazır
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-ink-muted mt-0.5">
+                    Google Veo ve OmniStudio motoru tarafından fiziksel yüzey sabitlemeyle render edilen videolar.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('ai_studio')}
+                  className="text-[11px] font-bold text-accent hover:underline flex items-center gap-1"
+                >
+                  <span>Tüm Videoları & Promptları Gör →</span>
+                </button>
+              </div>
+
+              {(data?.creatives || []).length === 0 ? (
+                <div className="text-center py-6 text-ink-muted text-xs">Henüz kayıtlı video üretimi bulunmuyor.</div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {(data?.creatives || []).slice(0, 4).map((cr: any) => (
+                    <div
+                      key={cr.id}
+                      className="bg-canvas border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-3 flex flex-col justify-between space-y-2"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-purple-500/10 text-purple-400 font-mono">
+                            {cr.format === 'video' ? '9:16 Video' : 'Görsel'}
+                          </span>
+                          <span className="text-[9px] text-ink-muted">{timeAgo(cr.created_at)}</span>
+                        </div>
+                        <h4 className="text-xs font-bold text-ink line-clamp-1">{cr.title || cr.org_name || 'AI Video'}</h4>
+                        <p className="text-[10px] text-ink-muted line-clamp-2 mt-0.5">{cr.caption || cr.prompt || 'Fiziksel yüzey sabitlemeli Veo renderı.'}</p>
+                      </div>
+
+                      <div className="pt-2 border-t border-[var(--color-hairline)] flex items-center gap-1.5">
+                        {cr.public_url && (
+                          <a
+                            href={getSafeMediaUrl(cr.public_url)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex-1 py-1 text-center text-xs font-bold rounded bg-accent text-accent-ink hover:bg-accent-dim transition shadow-xs"
+                          >
+                            İzle / İndir
+                          </a>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setInspectedCreative(cr)}
+                          className="px-2 py-1 text-xs font-semibold rounded bg-surface-raised hover:bg-canvas border border-[var(--color-hairline)] text-ink"
+                        >
+                          Prompt
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 4. ROW: FİRMALAR & AYLIK KOTA DURUMU TABLOSU */}
+            <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 sm:p-5 shadow-sm space-y-3">
+              <div className="flex items-center justify-between border-b border-[var(--color-hairline)] pb-2.5">
+                <div>
+                  <h3 className="text-xs sm:text-sm font-bold text-ink">Kayıtlı Firmalar ve Kota Tüketimi</h3>
+                  <p className="text-[11px] text-ink-muted mt-0.5">İşletmelerin video kotaları ve mesaj gönderim limitleri.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('organizations')}
+                  className="text-[11px] font-bold text-accent hover:underline"
+                >
+                  Firmaları Yönet →
+                </button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs min-w-[600px]">
+                  <thead>
+                    <tr className="border-b border-[var(--color-hairline)] text-ink-muted font-semibold">
+                      <th className="pb-2">İşletme Adı</th>
+                      <th className="pb-2">Paket</th>
+                      <th className="pb-2">Video Kotası</th>
+                      <th className="pb-2">Mesaj Limiti</th>
+                      <th className="pb-2">Kayıtlı Kişi</th>
+                      <th className="pb-2 text-right">Durum</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--color-hairline)]">
+                    {organizationsList.slice(0, 5).map(org => (
+                      <tr key={org.id} className="hover:bg-surface-raised/50 transition">
+                        <td className="py-2.5 font-bold text-ink">{org.name}</td>
+                        <td className="py-2.5">
+                          <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-surface-raised border border-[var(--color-hairline)] uppercase">
+                            {org.plan || 'pro'}
+                          </span>
+                        </td>
+                        <td className="py-2.5 font-semibold text-purple-400">
+                          {org.monthly_video_quota ?? 3} Video/Ay
+                        </td>
+                        <td className="py-2.5 font-mono text-ink">
+                          {Number(org.monthly_message_quota || 0).toLocaleString('tr-TR')}
+                        </td>
+                        <td className="py-2.5 text-accent font-semibold">
+                          {Number(org.total_contacts || 0).toLocaleString('tr-TR')}
+                        </td>
+                        <td className="py-2.5 text-right">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                            org.suspended_at ? 'bg-danger/10 text-danger' : 'bg-ok-soft text-ok-dim'
+                          }`}>
+                            {org.suspended_at ? 'Askıda' : 'Aktif'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -4152,40 +4455,8 @@ export function LiveDashboard() {
 
         {/* TAB: AI GÖRSEL & VİDEO ÜRETİM MERKEZİ (BAĞIMSIZ SERVİS) */}
         {activeTab === 'ai_media' && (() => {
-          // AI Media sub-tab state
-          const [aiMediaSubTab, setAiMediaSubTab] = useState<'overview' | 'jobs' | 'accounts' | 'workers' | 'queue' | 'incidents' | 'visual_qa' | 'health'>('overview')
-          const [aiMediaData, setAiMediaData] = useState<any>(globalAiMedia)
-          const [aiMediaLoading, setAiMediaLoading] = useState(!globalAiMedia)
-          const [aiMediaJobDetail, setAiMediaJobDetail] = useState<any>(null)
-          const [showJobDrawer, setShowJobDrawer] = useState(false)
-
-          const AI_MEDIA_CONTROL_URL = '/api/canli-takip/ai-media'
-
-          const fetchAiMediaData = useCallback(async () => {
-            try {
-              const res = await fetch(AI_MEDIA_CONTROL_URL)
-              if (res.ok) {
-                const d = await res.json()
-                setAiMediaData(d)
-                setGlobalAiMedia(d)
-              }
-            } catch (e) { console.error('AI Media fetch error:', e) }
-            finally { setAiMediaLoading(false) }
-          }, [])
-
-          useEffect(() => {
-            if (globalAiMedia) {
-              setAiMediaData(globalAiMedia)
-              setAiMediaLoading(false)
-            }
-          }, [globalAiMedia])
-
-          useEffect(() => { fetchAiMediaData() }, [fetchAiMediaData])
-          useEffect(() => {
-            if (!autoRefresh || refreshIntervalSec <= 0) return
-            const iv = setInterval(fetchAiMediaData, refreshIntervalSec * 1000)
-            return () => clearInterval(iv)
-          }, [autoRefresh, refreshIntervalSec, fetchAiMediaData])
+          const aiMediaData = globalAiMedia || {}
+          const aiMediaLoading = !globalAiMedia && loading
 
           const STATE_LABELS: Record<string, { label: string; color: string }> = {
             PENDING: { label: 'Bekliyor', color: 'bg-gray-400' },
