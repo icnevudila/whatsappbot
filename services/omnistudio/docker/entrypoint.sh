@@ -59,17 +59,17 @@ while true; do
   fi
 
   # cdp_worker #1 kontrolü (Görsel ve Ağır İşler)
-  if ! pgrep -f "WORKER_ID=chatgpt-1" > /dev/null && ! ps aux | grep -v grep | grep "WORKER_ID=chatgpt-1" > /dev/null; then
+  if ! pgrep -f "cdp_worker.js.*--worker-id=chatgpt-1" > /dev/null; then
     echo "⚠️ cdp_worker chatgpt-1 başlatılıyor..."
     cd /app/gateway
-    CDP_HTTP="http://127.0.0.1:9222" WORKER_ID="chatgpt-1" TAB_INDEX=0 node --experimental-websocket /app/gateway/cdp_worker.js >> /var/log/cdp_worker_1.log 2>&1 &
+    CDP_HTTP="http://127.0.0.1:9222" node --experimental-websocket /app/gateway/cdp_worker.js --worker-id=chatgpt-1 --tab-index=0 >> /var/log/cdp_worker_1.log 2>&1 &
   fi
 
   # cdp_worker #2 kontrolü (Mesaj Yanıtları ve Hızlı Öneriler)
-  if ! pgrep -f "WORKER_ID=chatgpt-2" > /dev/null && ! ps aux | grep -v grep | grep "WORKER_ID=chatgpt-2" > /dev/null; then
+  if ! pgrep -f "cdp_worker.js.*--worker-id=chatgpt-2" > /dev/null; then
     echo "⚠️ cdp_worker chatgpt-2 başlatılıyor..."
     cd /app/gateway
-    CDP_HTTP="http://127.0.0.1:9222" WORKER_ID="chatgpt-2" TAB_INDEX=1 node --experimental-websocket /app/gateway/cdp_worker.js >> /var/log/cdp_worker_2.log 2>&1 &
+    CDP_HTTP="http://127.0.0.1:9222" node --experimental-websocket /app/gateway/cdp_worker.js --worker-id=chatgpt-2 --tab-index=1 >> /var/log/cdp_worker_2.log 2>&1 &
   fi
 
   sleep 10

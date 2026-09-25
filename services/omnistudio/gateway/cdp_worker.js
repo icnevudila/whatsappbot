@@ -10,8 +10,10 @@ const os = require('os');
 
 const GATEWAY_URL = process.env.GATEWAY_URL || 'http://127.0.0.1:3456';
 const CDP_HTTP = process.env.CDP_HTTP || 'http://127.0.0.1:9222';
-const WORKER_ID = process.env.WORKER_ID || 'chatgpt-1';
-const TAB_INDEX = parseInt(process.env.TAB_INDEX || (WORKER_ID.endsWith('2') ? '1' : '0'), 10);
+const argvWorker = process.argv.find(a => a.startsWith('--worker-id='))?.split('=')[1];
+const argvTab = process.argv.find(a => a.startsWith('--tab-index='))?.split('=')[1];
+const WORKER_ID = argvWorker || process.env.WORKER_ID || 'chatgpt-1';
+const TAB_INDEX = parseInt(argvTab || process.env.TAB_INDEX || (WORKER_ID.endsWith('2') ? '1' : '0'), 10);
 const POLL_INTERVAL_MS = 2500;
 
 const {
