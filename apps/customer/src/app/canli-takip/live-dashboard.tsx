@@ -499,6 +499,10 @@ export function LiveDashboard() {
 
   const [selectedOrg, setSelectedOrg] = useState<string>('all')
   const [autoRefresh, setAutoRefresh] = useState(true)
+  const [refreshIntervalSec, setRefreshIntervalSec] = useState<number>(3)
+  const [lastFetchedAt, setLastFetchedAt] = useState<Date>(new Date())
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [globalAiMedia, setGlobalAiMedia] = useState<any>(null)
   const [actionNotice, setActionNotice] = useState<string | null>(null)
   const [actionBusy, setActionBusy] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
@@ -666,8 +670,12 @@ export function LiveDashboard() {
   }
 
   const fetchData = useCallback(async () => {
+    setIsRefreshing(true)
     try {
-      const res = await fetch('/api/canli-takip/feed', { cache: 'no-store' })
+      const [res, aiMediaRes] = await Promise.all([
+        fetch('/api/canli-takip/feed', { cache: 'no-store' }),
+        fetch('/api/canli-takip/ai-media', { cache: 'no-store' }).catch(() => null),
+      ])
       if (!res.ok) {
         if (res.status === 401) {
           window.location.reload()
@@ -679,19 +687,30 @@ export function LiveDashboard() {
       if (!json.success) throw new Error(json.error || 'Veri çekilemedi')
       setData(json)
       setError(null)
+      setLastFetchedAt(new Date())
+
+      if (aiMediaRes && aiMediaRes.ok) {
+        try {
+          const aiJson = await aiMediaRes.json()
+          setGlobalAiMedia(aiJson)
+        } catch {
+          // Ignore json parse error
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Bağlantı hatası')
     } finally {
       setLoading(false)
+      setIsRefreshing(false)
     }
   }, [])
 
   useEffect(() => {
     fetchData()
-    if (!autoRefresh) return
-    const interval = setInterval(fetchData, 5000)
+    if (!autoRefresh || refreshIntervalSec <= 0) return
+    const interval = setInterval(fetchData, refreshIntervalSec * 1000)
     return () => clearInterval(interval)
-  }, [fetchData, autoRefresh])
+  }, [fetchData, autoRefresh, refreshIntervalSec])
 
   // Select default active account for quick send once accounts are loaded
   useEffect(() => {
@@ -1583,17 +1602,21 @@ export function LiveDashboard() {
       {/* Main Header Bar - Fully Mobile Optimized */}
       <header className="sticky top-0 z-40 bg-[var(--color-surface)]/95 backdrop-blur-md border-b border-[var(--color-hairline)] px-3 sm:px-6 py-2 sm:py-2.5">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          {/* Header Row 1 (Mobile: Logo + Status + Logout) */}
+          {/* Header Row 1 (Logo + Super Admin Badge + Mobile Status) */}
           <div className="flex items-center justify-between w-full sm:w-auto">
             <div className="flex items-center gap-2">
               <div className="p-1 rounded-[var(--radius-sm)] bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] flex items-center justify-center">
                 <LogoMark className="w-4 h-4 sm:w-5 sm:h-5 text-accent" />
               </div>
               <div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="font-bold text-xs sm:text-sm tracking-tight text-ink">{BRAND_NAME}</span>
-                  <span className="text-[9px] sm:text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded bg-surface-raised text-ink-muted border border-[var(--color-hairline)]">
-                    Operasyon
+                  <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-purple-500/15 text-purple-400 border border-purple-500/30 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+                    SUPER ADMIN
+                  </span>
+                  <span className="text-[9px] font-mono text-ink-muted hidden md:inline">
+                    {lastFetchedAt ? lastFetchedAt.toLocaleTimeString('tr-TR') : ''}
                   </span>
                 </div>
               </div>
@@ -1610,7 +1633,7 @@ export function LiveDashboard() {
                 }`}
               >
                 <span className={`w-1.5 h-1.5 rounded-full ${autoRefresh ? 'bg-ok animate-pulse' : 'bg-ink-muted'}`} />
-                <span>{autoRefresh ? 'Canlı' : 'Duraklat'}</span>
+                <span>{autoRefresh ? `${refreshIntervalSec}s` : 'Durdu'}</span>
               </button>
               <button
                 onClick={handleLogout}
@@ -1629,6 +1652,53 @@ export function LiveDashboard() {
             }}
             className="flex items-center justify-between sm:justify-end gap-1.5 overflow-x-auto pb-0.5 sm:pb-0 scrollbar-none w-full sm:w-auto"
           >
+            {/* Live Refresh Switcher */}
+            <div className="flex items-center rounded-[var(--radius-sm)] border border-[var(--color-hairline)] overflow-hidden text-[9px] font-bold shrink-0">
+              <button
+                type="button"
+                onClick={() => { setRefreshIntervalSec(3); setAutoRefresh(true); }}
+                className={`px-1.5 py-1 transition ${autoRefresh && refreshIntervalSec === 3 ? 'bg-accent text-white font-bold' : 'bg-surface text-ink-muted hover:text-ink'}`}
+                title="3 saniyede bir agresif canlı güncelle"
+              >
+                3s
+              </button>
+              <button
+                type="button"
+                onClick={() => { setRefreshIntervalSec(5); setAutoRefresh(true); }}
+                className={`px-1.5 py-1 border-l border-[var(--color-hairline)] transition ${autoRefresh && refreshIntervalSec === 5 ? 'bg-accent text-white font-bold' : 'bg-surface text-ink-muted hover:text-ink'}`}
+                title="5 saniyede bir standart canlı güncelle"
+              >
+                5s
+              </button>
+              <button
+                type="button"
+                onClick={() => { setRefreshIntervalSec(15); setAutoRefresh(true); }}
+                className={`px-1.5 py-1 border-l border-[var(--color-hairline)] transition ${autoRefresh && refreshIntervalSec === 15 ? 'bg-accent text-white font-bold' : 'bg-surface text-ink-muted hover:text-ink'}`}
+                title="15 saniyede bir düşük trafikli güncelle"
+              >
+                15s
+              </button>
+              <button
+                type="button"
+                onClick={() => setAutoRefresh(!autoRefresh)}
+                className={`px-1.5 py-1 border-l border-[var(--color-hairline)] transition ${!autoRefresh ? 'bg-amber-600 text-white font-bold' : 'bg-surface text-ink-muted hover:text-ink'}`}
+                title={autoRefresh ? 'Canlı akışı durdur' : 'Canlı akışı başlat'}
+              >
+                {autoRefresh ? 'Durdur' : 'Başlat'}
+              </button>
+            </div>
+
+            {/* Manual Refresh Button */}
+            <button
+              onClick={fetchData}
+              disabled={isRefreshing}
+              className="p-1 sm:px-2 sm:py-1 rounded-[var(--radius-sm)] text-[10px] sm:text-[11px] font-semibold bg-surface border border-[var(--color-hairline)] hover:bg-surface-raised transition flex items-center gap-1 shrink-0"
+              title="Şimdi Yenile"
+            >
+              <span className={`inline-block ${isRefreshing ? 'animate-spin text-accent' : ''}`}>↻</span>
+              <span className="hidden sm:inline">Yenile</span>
+            </button>
+
             {/* Organization Filter Selector */}
             {organizationsList.length > 0 && (
               <div className="flex items-center gap-1 bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] px-2 py-0.5 shrink-0">
@@ -1636,7 +1706,7 @@ export function LiveDashboard() {
                 <select
                   value={selectedOrg}
                   onChange={e => setSelectedOrg(e.target.value)}
-                  className="bg-transparent text-[10px] sm:text-[11px] font-semibold text-ink outline-none cursor-pointer"
+                  className="bg-transparent text-[10px] sm:text-[11px] font-semibold text-ink outline-none cursor-pointer max-w-[110px] sm:max-w-none truncate"
                 >
                   <option value="all">Tümü ({organizationsList.length})</option>
                   {organizationsList.map(o => (
@@ -1653,7 +1723,7 @@ export function LiveDashboard() {
               <button
                 onClick={handleRestartService}
                 disabled={actionBusy}
-                className="px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-semibold bg-danger/10 text-danger border border-danger/20 hover:bg-danger/15 transition disabled:opacity-50"
+                className="px-2 py-1 rounded-[var(--radius-sm)] text-[10px] sm:text-[11px] font-semibold bg-danger/10 text-danger border border-danger/20 hover:bg-danger/15 transition disabled:opacity-50"
                 title="WhatsApp gönderim servisini yeniden başlat"
               >
                 Restart
@@ -1661,7 +1731,7 @@ export function LiveDashboard() {
               <button
                 onClick={handleReconnectAll}
                 disabled={actionBusy}
-                className="px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-semibold bg-accent-soft text-accent border border-accent/20 hover:bg-accent/15 transition disabled:opacity-50"
+                className="px-2 py-1 rounded-[var(--radius-sm)] text-[10px] sm:text-[11px] font-semibold bg-accent-soft text-accent border border-accent/20 hover:bg-accent/15 transition disabled:opacity-50"
                 title="Tüm hatları senkronize et"
               >
                 Senkronize
@@ -1669,7 +1739,7 @@ export function LiveDashboard() {
               <button
                 onClick={handleClearStuckJobs}
                 disabled={actionBusy}
-                className="px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-semibold bg-surface-raised text-ink-soft border border-[var(--color-hairline)] hover:bg-canvas transition disabled:opacity-50"
+                className="px-2 py-1 rounded-[var(--radius-sm)] text-[10px] sm:text-[11px] font-semibold bg-surface-raised text-ink-soft border border-[var(--color-hairline)] hover:bg-canvas transition disabled:opacity-50"
                 title="Takılı işleri temizle"
               >
                 Temizle
@@ -1678,17 +1748,6 @@ export function LiveDashboard() {
 
             {/* Desktop-only status & logout */}
             <div className="hidden sm:flex items-center gap-1.5 pl-1.5 border-l border-[var(--color-hairline)] shrink-0">
-              <button
-                onClick={() => setAutoRefresh(!autoRefresh)}
-                className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-[var(--radius-sm)] text-[11px] font-semibold border transition ${
-                  autoRefresh
-                    ? 'bg-ok-soft text-ok-dim border-ok-dim/20'
-                    : 'bg-[var(--color-surface-raised)] text-ink-muted border-[var(--color-hairline)]'
-                }`}
-              >
-                <span className={`w-1.5 h-1.5 rounded-full ${autoRefresh ? 'bg-ok animate-pulse' : 'bg-ink-muted'}`} />
-                <span>{autoRefresh ? 'Canlı' : 'Durduruldu'}</span>
-              </button>
               <button
                 onClick={handleLogout}
                 disabled={loggingOut}
@@ -1703,7 +1762,70 @@ export function LiveDashboard() {
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-2.5 sm:p-5 space-y-3 sm:space-y-5">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-2.5 sm:p-5 space-y-3 sm:space-y-4">
+        {/* Live Active Render Alert Banner */}
+        {(() => {
+          const activeJobs = (globalAiMedia?.jobs || []).filter((j: any) =>
+            ['LEASED', 'PREPARING_ENV', 'OPENING_PROJECT', 'ATTACHING_INGREDIENTS', 'INGREDIENTS_VERIFIED', 'GENERATING', 'POLLING_FLOW', 'DOWNLOADING_MEDIA', 'MEDIA_DOWNLOADED', 'FFPROBE_INSPECTING', 'SHA256_VERIFYING', 'VISUAL_QA_EVALUATING'].includes(j.state)
+          )
+          if (activeJobs.length === 0) return null
+          const cur = activeJobs[0]
+          return (
+            <div className="bg-purple-950/40 border border-purple-500/40 rounded-[var(--radius-card)] p-3 text-purple-200 shadow-md flex items-center justify-between gap-3 animate-pulse">
+              <div className="flex items-center gap-3">
+                <span className="w-2.5 h-2.5 rounded-full bg-purple-400 animate-ping shrink-0" />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-white uppercase tracking-wider">Canlı AI Video Renderı İşleniyor</span>
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-purple-500/30 text-purple-200">
+                      {cur.state}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-purple-300/90 mt-0.5">
+                    {cur.org_name || 'İşletme'} · {cur.title || `İş #${cur.id}`}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab('ai_media')}
+                className="px-3 py-1.5 rounded-[var(--radius-sm)] text-xs font-bold bg-purple-600 text-white hover:bg-purple-500 transition shrink-0"
+              >
+                Canlı İzle →
+              </button>
+            </div>
+          )
+        })()}
+
+        {/* Live System Hata / Stuck Job Uyarı Barı */}
+        {(summary.failedJobs || 0) > 0 && (
+          <div className="bg-danger/10 border border-danger/30 rounded-[var(--radius-card)] p-3 text-danger shadow-xs flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-danger animate-pulse shrink-0" />
+              <div>
+                <span className="text-xs font-bold">Kuyrukta {summary.failedJobs} adet başarısız iş tespit edildi</span>
+                <p className="text-[11px] text-ink-muted mt-0.5">Hatalı mesaj veya video işleri incelenmeli, takılı kalan kayıtlar sıfırlanmalıdır.</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleClearStuckJobs}
+                disabled={actionBusy}
+                className="px-2.5 py-1 text-xs font-semibold rounded bg-danger text-white hover:bg-danger/80 transition disabled:opacity-50"
+              >
+                Takılı İşleri Temizle
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('jobs')}
+                className="px-2.5 py-1 text-xs font-semibold rounded border border-danger/30 text-danger hover:bg-danger/10 transition"
+              >
+                Hataları İncele →
+              </button>
+            </div>
+          </div>
+        )}
         {/* KPI Dashboard Cards Grid - Horizontally Swipeable on Mobile, 10-col on Desktop */}
         <section
           onWheel={(e) => {
@@ -4032,8 +4154,8 @@ export function LiveDashboard() {
         {activeTab === 'ai_media' && (() => {
           // AI Media sub-tab state
           const [aiMediaSubTab, setAiMediaSubTab] = useState<'overview' | 'jobs' | 'accounts' | 'workers' | 'queue' | 'incidents' | 'visual_qa' | 'health'>('overview')
-          const [aiMediaData, setAiMediaData] = useState<any>(null)
-          const [aiMediaLoading, setAiMediaLoading] = useState(true)
+          const [aiMediaData, setAiMediaData] = useState<any>(globalAiMedia)
+          const [aiMediaLoading, setAiMediaLoading] = useState(!globalAiMedia)
           const [aiMediaJobDetail, setAiMediaJobDetail] = useState<any>(null)
           const [showJobDrawer, setShowJobDrawer] = useState(false)
 
@@ -4045,17 +4167,25 @@ export function LiveDashboard() {
               if (res.ok) {
                 const d = await res.json()
                 setAiMediaData(d)
+                setGlobalAiMedia(d)
               }
             } catch (e) { console.error('AI Media fetch error:', e) }
             finally { setAiMediaLoading(false) }
           }, [])
 
+          useEffect(() => {
+            if (globalAiMedia) {
+              setAiMediaData(globalAiMedia)
+              setAiMediaLoading(false)
+            }
+          }, [globalAiMedia])
+
           useEffect(() => { fetchAiMediaData() }, [fetchAiMediaData])
           useEffect(() => {
-            if (!autoRefresh) return
-            const iv = setInterval(fetchAiMediaData, 10000)
+            if (!autoRefresh || refreshIntervalSec <= 0) return
+            const iv = setInterval(fetchAiMediaData, refreshIntervalSec * 1000)
             return () => clearInterval(iv)
-          }, [autoRefresh, fetchAiMediaData])
+          }, [autoRefresh, refreshIntervalSec, fetchAiMediaData])
 
           const STATE_LABELS: Record<string, { label: string; color: string }> = {
             PENDING: { label: 'Bekliyor', color: 'bg-gray-400' },
