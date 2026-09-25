@@ -180,8 +180,12 @@ export async function GET(
       if (output) {
         outputEvidence = output
         outputId = output.id
-        // Only approved output is directly playable in the customer surface.
-        playbackUrl = output.is_approved ? `/api/ai-media/outputs/${output.id}` : null
+        // Approved output is directly playable. NEEDS_REVIEW output is also
+        // served to the owning org so they can preview their video while it
+        // awaits human review — it is not publicly publishable until approved.
+        // We serve the URL whenever there is an output record (both COMPLETED and NEEDS_REVIEW).
+        playbackUrl = `/api/ai-media/outputs/${output.id}`
+
 
         // Ensure creatives table is synced so video appears ready in Content Library
         try {

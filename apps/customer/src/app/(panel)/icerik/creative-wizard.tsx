@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
@@ -474,7 +474,7 @@ export function CreativeWizard({
         setJobFailureMessage(vm.failure_user_message || null)
         setJobEvidence(vm)
 
-        if (vm.state === 'COMPLETED' && vm.playback_url) {
+        if ((vm.state === 'COMPLETED' || vm.state === 'NEEDS_REVIEW') && vm.playback_url) {
           setCompletedVideoUrl(vm.playback_url)
         }
       } catch (e) {
@@ -625,12 +625,23 @@ export function CreativeWizard({
           <div className="mx-auto max-w-xl space-y-4 p-6">
             <div className={`rounded-xl border p-4 ${jobState === 'FAILED' ? 'border-rose-200 bg-rose-50' : 'border-amber-300 bg-amber-50'}`}>
               <p className={`text-[13px] font-bold ${jobState === 'FAILED' ? 'text-rose-800' : 'text-amber-900'}`}>
-                {jobState === 'FAILED' ? 'Video üretilemedi' : 'Video insan incelemesi bekliyor'}
+                {jobState === 'FAILED' ? 'Video üretilemedi' : '⏳ Video İnsan İncelemesi Bekliyor'}
               </p>
               <p className="mt-1 text-[12px] leading-relaxed text-[#667781]">
                 {jobFailureMessage || jobDisplayMessage || 'Çıktı otomatik kalite kapısından geçmedi.'}
               </p>
             </div>
+            {/* Show the video preview even in NEEDS_REVIEW so the user can see what was produced */}
+            {jobState === 'NEEDS_REVIEW' && completedVideoUrl ? (
+              <div className="relative overflow-hidden rounded-xl border border-amber-300 bg-black shadow-lg aspect-[9/16] max-h-[480px] mx-auto flex items-center justify-center">
+                <video
+                  src={completedVideoUrl}
+                  controls
+                  playsInline
+                  className="h-full w-full object-contain"
+                />
+              </div>
+            ) : null}
             <div className="grid gap-2 rounded-xl border border-hairline bg-[#f8fafb] p-4 text-[12px] sm:grid-cols-2">
               <div><span className="text-[#667781]">İş ID</span><p className="font-mono font-semibold text-[#111b21] break-all">{activeJobId}</p></div>
               <div><span className="text-[#667781]">Üretim profili</span><p className="font-semibold text-[#111b21]">{jobEvidence.creative_engine_mode || VIDEO_ENGINE_MODE}</p></div>
