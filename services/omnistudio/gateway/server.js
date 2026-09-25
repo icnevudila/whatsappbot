@@ -2162,6 +2162,8 @@ const server = http.createServer(async (req, res) => {
       const text = (body.text || body.body || body.message || '').trim();
       const mediaUrl = body.mediaUrl || body.imageUrl || null;
       const customer = (body.customer || 'Genel').trim();
+      const tenantId = body.tenantId || body.tenant_id || body.orgId || body.org_id;
+      const conversationId = body.conversationId || body.conversation_id;
 
       if (!text && !mediaUrl) {
         return sendJson(res, 400, { error: 'En az bir metin veya görsel URL gereklidir' });
@@ -2170,6 +2172,8 @@ const server = http.createServer(async (req, res) => {
       const job = queue.createJob({
         prompt: `[OCR ve Ürün Çıkarımı] ${text.slice(0, 100) || '(Görsel Analizi)'}`,
         customer,
+        tenantId,
+        conversationId,
         platform: 'chatgpt',
         optimizePrompt: false,
         type: 'extract_knowledge',
@@ -2203,6 +2207,8 @@ const server = http.createServer(async (req, res) => {
       const productName = (body.productName || body.product_name || body.product || '').trim();
       const productDescription = (body.productDescription || body.product_description || body.description || body.industry || '').trim();
       const customer = (body.customer || brandName || 'Genel').trim();
+      const tenantId = body.tenantId || body.tenant_id || body.orgId || body.org_id;
+      const conversationId = body.conversationId || body.conversation_id;
 
       const { deduceSemanticAffordance, buildAffordanceGptPrompt } = require('./product_affordance.js');
       const fallbackAffordance = deduceSemanticAffordance({ brandName, productName, productDescription });
@@ -2211,6 +2217,8 @@ const server = http.createServer(async (req, res) => {
       const job = queue.createJob({
         prompt: `[Product Affordance] ${brandName} - ${productName}`,
         customer,
+        tenantId,
+        conversationId,
         platform: 'chatgpt',
         optimizePrompt: false,
         type: 'product_affordance',
@@ -2220,7 +2228,7 @@ const server = http.createServer(async (req, res) => {
 
       console.log(`[Gateway] Yeni Ürün Affordance Analizi: [Marka: ${brandName}, Ürün: ${productName}]`);
       try {
-        const finished = await queue.waitForJob(job.id, 15000);
+        const finished = await queue.waitForJob(job.id, 45000);
         if (finished.status === 'completed' && finished.result && finished.result.naturalEnvironment) {
           return sendJson(res, 200, {
             success: true,
