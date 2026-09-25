@@ -280,6 +280,12 @@ type AiEngineAccount = {
   limitReason: string | null
   flowProjectUrl?: string | null
   flowCredits?: number
+  flowInitialCredits?: number
+  dailyLimit?: number
+  dailyUsed?: number
+  dailyRemaining?: number
+  videosRemaining?: number
+  totalVideosRemaining?: number
   vncUrl: string
 }
 
@@ -323,6 +329,8 @@ type AiEngineStatus = {
     totalAccounts: number
     activeAccounts: number
     limitedAccounts: number
+    dailyCreditsTotal?: number
+    dailyCreditsRemaining?: number
     accounts: AiEngineAccount[]
     vncUrl: string
   }
@@ -337,15 +345,24 @@ type AiEngineStatus = {
     creditsPerVideo?: number
     usedVideos?: number
     videosRemaining?: number
+    dailyCreditsTotal?: number
+    dailyCreditsRemaining?: number
+    grandTotalVideosRemaining?: number
     activeFlowCount?: number
     totalAccountsCount?: number
     accounts?: Array<{
       port: number
       accountName: string
+      email?: string | null
       projectUrl: string
       credits: number
       initialCredits: number
+      flowCredits?: number
+      flowInitialCredits?: number
+      dailyLimit?: number
+      dailyRemaining?: number
       videosRemaining: number
+      totalVideosRemaining?: number
       status: 'active' | 'ready_to_link' | 'not_logged_in'
     }>
     watermark?: string
@@ -2205,68 +2222,170 @@ export function LiveDashboard() {
             </div>
 
             {/* 1. ROW: AI VİDEO MOTORU & FLOW HESAP HAVUZU KONSOLU */}
-            <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 sm:p-5 shadow-sm space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-hairline)] pb-2.5">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-xs sm:text-sm font-bold text-ink">Google Flow & Veo 4'lü Hesap Havuzu</h3>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-accent-soft text-accent font-bold border border-accent/20">
-                      Canlı Kredi Havuzu
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-ink-muted mt-0.5">
-                    Hetzner CDP port rotasyonu, Google AI Pro günlük 50 kredi bakiyeleri ve oturum durumları.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('ai_studio')}
-                    className="text-[11px] font-bold text-accent hover:underline flex items-center gap-1"
-                  >
-                    <span>Tüm AI Stüdyosunu Aç →</span>
-                  </button>
-                </div>
-              </div>
+            {/* 1. ROW: AI VİDEO MOTORU & FLOW HESAP HAVUZU KONSOLU */}
+            {(() => {
+              const googleFlow = data?.ai_engine?.googleFlow
+              const geminiPool = data?.ai_engine?.geminiPool
 
-              {/* 4 Port Slot Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-                {[
-                  { port: 9222, defaultName: 'Ali Düvenci (1. Hesap)' },
-                  { port: 9223, defaultName: 'Ali Düvenci (2. Hesap)' },
-                  { port: 9224, defaultName: '3. Hesap Slotu' },
-                  { port: 9225, defaultName: '4. Hesap Slotu' },
-                ].map(({ port, defaultName }) => {
-                  const acc = (data?.ai_engine?.geminiPool?.accounts || []).find((a: any) => a.port === port) ||
-                              (globalAiMedia?.accounts || []).find((a: any) => a.port === port)
-                  const isReady = acc && acc.status !== 'needs_reauth' && acc.status !== 'error'
-                  const credits = acc?.credits ?? 50
-                  return (
-                    <div
-                      key={port}
-                      className="bg-canvas border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-3 space-y-2 flex flex-col justify-between"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono font-bold text-ink-muted">PORT {port}</span>
-                        <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${
-                          isReady ? 'bg-ok-soft text-ok-dim' : 'bg-warn/15 text-warn'
-                        }`}>
-                          {isReady ? 'Hazır / Boşta' : 'Giriş Gerekli'}
+              const totalFlowCredits = googleFlow?.credits ?? 3105
+              const totalFlowInitial = googleFlow?.initialCredits ?? 3150
+              const totalFlowVideos = googleFlow?.videosRemaining ?? Math.floor(totalFlowCredits / 15)
+
+              const totalDailyCredits = geminiPool?.dailyCreditsRemaining ?? 200
+              const totalDailyLimit = geminiPool?.dailyCreditsTotal ?? 200
+
+              const grandTotalVideos = googleFlow?.grandTotalVideosRemaining ?? (totalFlowVideos + totalDailyCredits)
+
+              return (
+                <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 sm:p-5 shadow-sm space-y-3.5">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-hairline)] pb-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-xs sm:text-sm font-bold text-ink">Google Flow & Veo 4'lü Hesap Havuzu</h3>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-accent-soft text-accent font-bold border border-accent/20">
+                          Canlı Kredi Havuzu
+                        </span>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-ok-soft text-ok-dim font-bold">
+                          {grandTotalVideos} Adet Hazır Video Kapasitesi
                         </span>
                       </div>
-                      <div>
-                        <div className="text-xs font-bold text-ink truncate">{acc?.name || acc?.email || defaultName}</div>
-                        <div className="text-[10px] text-ink-muted truncate">{acc?.email || 'Hetzner Chrome CDP'}</div>
-                      </div>
-                      <div className="pt-2 border-t border-[var(--color-hairline)] flex items-center justify-between">
-                        <span className="text-[10px] text-ink-muted">Kalan Kredi:</span>
-                        <span className="text-xs font-mono font-bold text-accent">{credits} / 50</span>
-                      </div>
+                      <p className="text-[11px] text-ink-muted">
+                        Hetzner CDP port rotasyonu: Günlük 50'şer Gemini video kotası ve Google Flow kalıcı kredi bakiyeleri.
+                      </p>
                     </div>
-                  )
-                })}
-              </div>
-            </div>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-2.5 bg-canvas px-3 py-1.5 rounded-[var(--radius-sm)] border border-[var(--color-hairline)] text-[11px]">
+                        <div>
+                          <span className="text-ink-muted text-[9px] block font-medium">Gemini Video Kotası</span>
+                          <span className="font-bold text-ink font-mono text-xs">{totalDailyCredits} / {totalDailyLimit} Video/Gün</span>
+                        </div>
+                        <div className="w-[1px] h-6 bg-[var(--color-hairline)]" />
+                        <div>
+                          <span className="text-ink-muted text-[9px] block font-medium">Flow Kredi & Video</span>
+                          <span className="font-bold text-accent font-mono text-xs">{totalFlowVideos} Video ({totalFlowCredits.toLocaleString('tr-TR')} Kr)</span>
+                        </div>
+                        <div className="w-[1px] h-6 bg-[var(--color-hairline)]" />
+                        <div>
+                          <span className="text-ink-muted text-[9px] block font-medium">Toplam Hazır Video</span>
+                          <span className="font-bold text-ok-dim font-mono text-xs">{grandTotalVideos} Adet Video</span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('ai_studio')}
+                        className="text-[11px] font-bold text-accent hover:underline flex items-center gap-1 shrink-0"
+                      >
+                        <span>Tüm AI Stüdyosunu Aç →</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 4 Port Slot Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                    {[
+                      { port: 9222, defaultName: 'Ali Düvenci (1. Hesap)', defaultEmail: 'jeynjones@gmail.com', defaultFlowCredits: 360 },
+                      { port: 9223, defaultName: 'Ali Düvenci (2. Hesap)', defaultEmail: 'icnevudila@gmail.com', defaultFlowCredits: 1035 },
+                      { port: 9224, defaultName: 'Alo Düvenci (3. Hesap)', defaultEmail: 'mesajify1@gmail.com', defaultFlowCredits: 1035 },
+                      { port: 9225, defaultName: 'Ali Düvenci (4. Hesap)', defaultEmail: 'mesajify2@gmail.com', defaultFlowCredits: 1035 },
+                    ].map(({ port, defaultName, defaultEmail, defaultFlowCredits }) => {
+                      const flowAcc = (data?.ai_engine?.googleFlow?.accounts || []).find((a: any) => a.port === port)
+                      const geminiAcc = (data?.ai_engine?.geminiPool?.accounts || []).find((a: any) => a.port === port) ||
+                                        (globalAiMedia?.accounts || []).find((a: any) => a.port === port)
+
+                      const isReady = (geminiAcc?.isLoggedIn ?? true) && !geminiAcc?.isLimited && geminiAcc?.status !== 'needs_reauth'
+                      const isLimited = !!geminiAcc?.isLimited
+
+                      // 1. GÜNLÜK KREDİ (Gemini Veo Pro - 50 hak/gün)
+                      const dailyLimit = geminiAcc?.dailyLimit ?? 50
+                      const dailyRemaining = geminiAcc?.dailyRemaining ?? (isLimited ? 0 : 50)
+
+                      // 2. TOPLAM KREDİ (Google Flow Studio Bakiyesi)
+                      const flowCredits = flowAcc?.credits ?? geminiAcc?.flowCredits ?? defaultFlowCredits
+                      const flowInitial = flowAcc?.initialCredits ?? geminiAcc?.flowInitialCredits ?? 1050
+
+                      // 3. KALAN VİDEO HAKKI
+                      // Flow: 15 kredi = 1 Video
+                      const flowVideosRemaining = flowAcc?.videosRemaining ?? Math.floor(flowCredits / 15)
+                      // Toplam Kalan Video (Flow + Günlük)
+                      const totalVideosRemaining = flowVideosRemaining + dailyRemaining
+
+                      const accName = flowAcc?.accountName || geminiAcc?.name || defaultName
+                      const accEmail = flowAcc?.email || geminiAcc?.email || defaultEmail
+
+                      return (
+                        <div
+                          key={port}
+                          className="bg-canvas border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-3 space-y-2.5 flex flex-col justify-between hover:border-accent/30 transition shadow-2xs"
+                        >
+                          {/* Port Başlığı & Durum */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] font-mono font-bold text-ink-muted">PORT {port}</span>
+                              <span className="text-[9px] px-1 py-0.2 rounded bg-surface-raised border border-[var(--color-hairline)] text-ink-muted font-mono">CDP</span>
+                            </div>
+                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                              isLimited
+                                ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
+                                : isReady
+                                ? 'bg-ok-soft text-ok-dim border border-ok/20'
+                                : 'bg-warn/15 text-warn border border-warn/20'
+                            }`}>
+                              {isLimited ? 'Günlük Limit Dolu' : isReady ? 'Hazır / Boşta' : 'Giriş Gerekli'}
+                            </span>
+                          </div>
+
+                          {/* Hesap Bilgisi */}
+                          <div>
+                            <div className="text-xs font-bold text-ink truncate" title={accName}>{accName}</div>
+                            <div className="text-[10px] font-mono text-ink-muted truncate" title={accEmail}>{accEmail}</div>
+                          </div>
+
+                          {/* Kredi ve Video Hakkı Ayrımı */}
+                          <div className="space-y-1.5 pt-2 border-t border-[var(--color-hairline)] text-[11px]">
+                            {/* 1. Gemini Günlük Video Kotası */}
+                            <div className="flex items-center justify-between bg-surface-raised/70 px-2 py-1.5 rounded border border-[var(--color-hairline)]">
+                              <div>
+                                <span className="text-[10px] font-semibold text-ink block leading-tight">Gemini Video Kotası:</span>
+                                <span className="text-[9px] text-ink-muted">Ücretsiz Günlük Veo Pro</span>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-xs font-mono font-bold text-ink">{dailyRemaining}</span>
+                                <span className="text-[10px] font-mono text-ink-muted"> / {dailyLimit} Video</span>
+                              </div>
+                            </div>
+
+                            {/* 2. Google Flow Video Kotası */}
+                            <div className="flex items-center justify-between bg-surface-raised/70 px-2 py-1.5 rounded border border-[var(--color-hairline)]">
+                              <div>
+                                <span className="text-[10px] font-semibold text-ink block leading-tight">Flow Video Kotası:</span>
+                                <span className="text-[9px] text-ink-muted font-mono">{flowCredits.toLocaleString('tr-TR')} / {flowInitial.toLocaleString('tr-TR')} Kredi</span>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-xs font-mono font-bold text-accent">{flowVideosRemaining}</span>
+                                <span className="text-[10px] font-mono text-ink-muted"> Video</span>
+                              </div>
+                            </div>
+
+                            {/* 3. Toplam Kalan Video Hakkı */}
+                            <div className="flex items-center justify-between bg-accent-soft/25 px-2 py-1.5 rounded border border-accent/25">
+                              <div>
+                                <span className="text-[10px] font-bold text-ink block leading-tight">Toplam Video Hakkı:</span>
+                                <span className="text-[9px] text-ink-muted font-mono">{dailyRemaining} Gemini + {flowVideosRemaining} Flow</span>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-sm font-mono font-extrabold text-accent">{totalVideosRemaining}</span>
+                                <span className="text-[10px] text-ink font-semibold"> Video</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })()}
 
             {/* 2. ROW: 2-SÜTUN (SOL: WHATSAPP HAT BAĞLANTILARI, SAĞ: GÖREV VE HATA KUYRUĞU) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
@@ -3811,6 +3930,28 @@ export function LiveDashboard() {
                       </span>
                     </div>
 
+                    {/* Gemini Video Kotası İlerleme Çubuğu */}
+                    <div className="bg-canvas p-2.5 rounded-[var(--radius-sm)] border border-[var(--color-hairline)] space-y-1.5 text-[11px]">
+                      <div className="flex items-center justify-between">
+                        <span className="text-ink-muted font-medium">Toplam Gemini Video Kotası:</span>
+                        <span className="font-bold text-ink font-mono text-xs">
+                          {data?.ai_engine?.geminiPool?.dailyCreditsRemaining ?? 200} / {data?.ai_engine?.geminiPool?.dailyCreditsTotal ?? 200} Video (Bugün)
+                        </span>
+                      </div>
+                      <div className="w-full h-1.5 rounded-full bg-surface-raised overflow-hidden border border-[var(--color-hairline)]">
+                        <div
+                          className="h-full bg-ok rounded-full transition-all duration-500"
+                          style={{
+                            width: `${Math.min(100, Math.max(5, (((data?.ai_engine?.geminiPool?.dailyCreditsRemaining ?? 200) / (data?.ai_engine?.geminiPool?.dailyCreditsTotal ?? 200)) * 100)))}%`
+                          }}
+                        />
+                      </div>
+                      <div className="text-[10px] text-ink-muted flex items-center justify-between pt-0.5">
+                        <span>Maliyet: 0 Kredi (Ücretsiz Veo Pro)</span>
+                        <span className="font-medium text-ink">4 Hesap x 50 Video/Gün</span>
+                      </div>
+                    </div>
+
                     {/* Hesap Slotları Listesi */}
                     <div className="space-y-2 bg-canvas p-2.5 rounded-[var(--radius-sm)] border border-[var(--color-hairline)]">
                       {(data?.ai_engine?.geminiPool?.accounts || [
@@ -3858,6 +3999,18 @@ export function LiveDashboard() {
                                   Giriş Gerekli
                                 </span>
                               )}
+                            </div>
+                          </div>
+
+                          {/* Gemini ve Flow Video Kotaları */}
+                          <div className="grid grid-cols-2 gap-1.5 py-1 text-[10px]">
+                            <div className="bg-surface-raised/80 px-2 py-1 rounded border border-[var(--color-hairline)] flex items-center justify-between">
+                              <span className="text-ink-muted font-medium">Gemini Kotası:</span>
+                              <span className="font-mono font-bold text-ink">{acc.dailyRemaining ?? 50} / {acc.dailyLimit ?? 50} Video</span>
+                            </div>
+                            <div className="bg-surface-raised/80 px-2 py-1 rounded border border-[var(--color-hairline)] flex items-center justify-between">
+                              <span className="text-ink-muted font-medium">Flow Kalan:</span>
+                              <span className="font-mono font-bold text-accent">{acc.videosRemaining ?? Math.floor((acc.flowCredits ?? (acc.port === 9222 ? 360 : 1035)) / 15)} Video</span>
                             </div>
                           </div>
 

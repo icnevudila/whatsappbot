@@ -7,7 +7,15 @@ sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
 c = paramiko.SSHClient()
 c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-c.connect('167.233.201.31', username='root', password='WLaKevWvV9ra', timeout=120)
+import time
+for attempt in range(5):
+    try:
+        c.connect('167.233.201.31', username='root', password='WLaKevWvV9ra', timeout=30)
+        break
+    except Exception as e:
+        if attempt == 4:
+            raise e
+        time.sleep(3)
 
 # 1. git reset on host
 _, stdout_git, _ = c.exec_command('cd /opt/whatsappbot && git fetch origin && git reset --hard origin/main')

@@ -37,7 +37,7 @@ export async function GET() {
     let aiEngineStatus = null
     try {
       const aiRes = await fetch('http://167.233.201.31:3456/v1/ai-engine/status', {
-        signal: AbortSignal.timeout(2500),
+        signal: AbortSignal.timeout(4500),
         cache: 'no-store',
       })
       if (aiRes.ok) {

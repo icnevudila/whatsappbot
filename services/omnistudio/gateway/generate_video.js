@@ -3785,21 +3785,34 @@ function getAccountPoolStatus() {
     const cfgAcc = accountsMap[port] || {};
 
     const defaultNames = {
-      9222: 'Ali Düvenci (Pro - Flow & Gemini)',
-      9223: 'Ali Düvenci (2. Gemini Hesabı)',
-      9224: '3. Havuz Hesabı (Port 9224)',
-      9225: '4. Havuz Hesabı (Port 9225)',
+      9222: 'Ali Düvenci (1. Hesap)',
+      9223: 'Ali Düvenci (2. Hesap)',
+      9224: 'Alo Düvenci (3. Hesap)',
+      9225: 'Ali Düvenci (4. Hesap)',
+    };
+    const defaultEmails = {
+      9222: 'jeynjones@gmail.com',
+      9223: 'icnevudila@gmail.com',
+      9224: 'mesajify1@gmail.com',
+      9225: 'mesajify2@gmail.com',
     };
 
     const remainingSec = isLimited ? Math.max(0, Math.round((info.limitedUntil - now) / 1000)) : 0;
     const flowProjectUrl = cfgAcc.flowProjectUrl || null;
-    const flowCredits = cfgAcc.flowCredits ?? (port === 9222 ? 1020 : 1050);
+    const flowCredits = cfgAcc.flowCredits ?? (port === 9222 ? 360 : 1035);
     const flowInitialCredits = cfgAcc.flowInitialCredits ?? 1050;
+
+    // Günlük Gemini Hakları (Her hesap için 50 hak/gün)
+    const dailyLimit = 50;
+    const dailyUsed = (cfgAcc.dailyUsed && cfgAcc.dailyDate === new Date().toISOString().slice(0, 10)) ? cfgAcc.dailyUsed : 0;
+    const dailyRemaining = isLimited ? 0 : Math.max(0, dailyLimit - dailyUsed);
+    const flowVideosRemaining = Math.floor(flowCredits / 15);
+    const totalVideosRemaining = flowVideosRemaining + dailyRemaining;
 
     return {
       port,
       name: cfgAcc.name || defaultNames[port] || `Hesap (Port ${port})`,
-      email: cfgAcc.email || (port === 9222 ? 'jeynjones@gmail.com' : (port === 9223 ? 'icnevudila@gmail.com' : null)),
+      email: cfgAcc.email || defaultEmails[port] || null,
       isLoggedIn: info.notLoggedIn === false || (!!cfgAcc.email && info.notLoggedIn !== true),
       isLimited,
       secondsUntilReset: remainingSec,
@@ -3809,6 +3822,11 @@ function getAccountPoolStatus() {
       flowProjectUrl,
       flowCredits,
       flowInitialCredits,
+      dailyLimit,
+      dailyUsed,
+      dailyRemaining,
+      videosRemaining: flowVideosRemaining,
+      totalVideosRemaining,
       hasFlow: !!flowProjectUrl,
       vncUrl: `http://${PUBLIC_HOST}:6080/vnc.html`,
     };
@@ -3822,9 +3840,12 @@ function getAiEngineStatus() {
 
   // Çoklu Flow Havuzu Hesapları (Giriş yapılmış veya Flow URLsi atanmış tüm hesaplar)
   const flowAccounts = geminiAccounts.map(a => {
-    const creds = a.flowCredits ?? 1050;
+    const creds = a.flowCredits ?? (a.port === 9222 ? 360 : 1035);
     const initCreds = a.flowInitialCredits ?? 1050;
     const isFlowActive = a.isLoggedIn && !!a.flowProjectUrl;
+    const flowVideos = Math.floor(creds / 15);
+    const dailyRemaining = a.dailyRemaining ?? 50;
+    const totalVideos = flowVideos + dailyRemaining;
     return {
       port: a.port,
       accountName: a.name,
@@ -3832,7 +3853,13 @@ function getAiEngineStatus() {
       projectUrl: a.flowProjectUrl || null,
       credits: creds,
       initialCredits: initCreds,
-      videosRemaining: Math.floor(creds / 15),
+      flowCredits: creds,
+      flowInitialCredits: initCreds,
+      dailyLimit: 50,
+      dailyUsed: a.dailyUsed ?? 0,
+      dailyRemaining: dailyRemaining,
+      videosRemaining: flowVideos, // Flow kalan video hakkı
+      totalVideosRemaining: totalVideos, // Toplam video hakkı (Flow + Günlük)
       isLoggedIn: a.isLoggedIn,
       hasProjectUrl: !!a.flowProjectUrl,
       status: isFlowActive ? 'active' : (a.isLoggedIn ? 'ready_to_link' : 'not_connected')
@@ -3840,13 +3867,11 @@ function getAiEngineStatus() {
   });
 
   const activeFlowAccounts = flowAccounts.filter(a => a.status === 'active');
-  const totalFlowCredits = activeFlowAccounts.length > 0
-    ? activeFlowAccounts.reduce((sum, a) => sum + a.credits, 0)
-    : 1020;
-  const totalFlowInitialCredits = activeFlowAccounts.length > 0
-    ? activeFlowAccounts.reduce((sum, a) => sum + a.initialCredits, 0)
-    : 1050;
+  const totalFlowCredits = flowAccounts.reduce((sum, a) => sum + (a.credits || 0), 0);
+  const totalFlowInitialCredits = flowAccounts.reduce((sum, a) => sum + (a.initialCredits || 0), 0);
   const totalFlowVideosRemaining = Math.floor(totalFlowCredits / 15);
+  const totalDailyRemaining = geminiAccounts.reduce((sum, a) => sum + (a.dailyRemaining ?? 50), 0);
+  const grandTotalVideosRemaining = totalFlowVideosRemaining + totalDailyRemaining;
 
   const primaryFlow = activeFlowAccounts[0] || flowAccounts[0] || {};
 
@@ -3865,6 +3890,8 @@ function getAiEngineStatus() {
       totalAccounts: geminiAccounts.length,
       activeAccounts: geminiAccounts.filter(a => a.isLoggedIn && !a.isLimited).length,
       limitedAccounts: geminiAccounts.filter(a => a.isLimited).length,
+      dailyCreditsTotal: 200,
+      dailyCreditsRemaining: totalDailyRemaining,
       accounts: geminiAccounts,
       vncUrl: `http://${PUBLIC_HOST}:6080/vnc.html`,
     },
@@ -3878,6 +3905,9 @@ function getAiEngineStatus() {
       credits: totalFlowCredits,
       creditsPerVideo: 15,
       videosRemaining: totalFlowVideosRemaining,
+      dailyCreditsTotal: 200,
+      dailyCreditsRemaining: totalDailyRemaining,
+      grandTotalVideosRemaining: grandTotalVideosRemaining,
       activeFlowCount: activeFlowAccounts.length,
       totalAccountsCount: flowAccounts.length,
       accounts: flowAccounts,
