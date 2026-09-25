@@ -1614,8 +1614,8 @@ export function LiveDashboard() {
               <div>
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="font-bold text-xs sm:text-sm tracking-tight text-ink">{BRAND_NAME}</span>
-                  <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-purple-500/15 text-purple-400 border border-purple-500/30 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+                  <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-surface-raised text-ink border border-[var(--color-hairline)] flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-ok animate-pulse" />
                     SUPER ADMIN
                   </span>
                   <span className="text-[9px] font-mono text-ink-muted hidden md:inline">
@@ -1774,17 +1774,17 @@ export function LiveDashboard() {
           if (activeJobs.length === 0) return null
           const cur = activeJobs[0]
           return (
-            <div className="bg-purple-950/40 border border-purple-500/40 rounded-[var(--radius-card)] p-3 text-purple-200 shadow-md flex items-center justify-between gap-3 animate-pulse">
+            <div className="bg-accent-soft/40 border border-accent/40 rounded-[var(--radius-card)] p-3 text-ink shadow-sm flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <span className="w-2.5 h-2.5 rounded-full bg-purple-400 animate-ping shrink-0" />
+                <span className="w-2.5 h-2.5 rounded-full bg-accent animate-ping shrink-0" />
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-white uppercase tracking-wider">Canlı AI Video Renderı İşleniyor</span>
-                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-purple-500/30 text-purple-200">
+                    <span className="text-xs font-bold text-ink uppercase tracking-wider">Canlı AI Video Renderı İşleniyor</span>
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-accent text-accent-ink">
                       {cur.state}
                     </span>
                   </div>
-                  <p className="text-[11px] text-purple-300/90 mt-0.5">
+                  <p className="text-[11px] text-ink-muted mt-0.5">
                     {cur.org_name || 'İşletme'} · {cur.title || `İş #${cur.id}`}
                   </p>
                 </div>
@@ -1792,7 +1792,7 @@ export function LiveDashboard() {
               <button
                 type="button"
                 onClick={() => setActiveTab('ai_media')}
-                className="px-3 py-1.5 rounded-[var(--radius-sm)] text-xs font-bold bg-purple-600 text-white hover:bg-purple-500 transition shrink-0"
+                className="px-3 py-1.5 rounded-[var(--radius-sm)] text-xs font-bold bg-accent text-accent-ink hover:bg-accent-dim transition shrink-0 shadow-xs"
               >
                 Canlı İzle →
               </button>
@@ -1941,7 +1941,7 @@ export function LiveDashboard() {
           {/* Card 10: AI Video Renders */}
           <div className="min-w-[115px] sm:min-w-0 shrink-0 sm:shrink bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 sm:p-2.5 shadow-xs flex flex-col justify-between">
             <span className="text-[9px] sm:text-[10px] font-semibold text-ink-muted uppercase tracking-wider">AI Video</span>
-            <div className="mt-0.5 text-sm sm:text-base font-bold text-purple-400">
+            <div className="mt-0.5 text-sm sm:text-base font-bold text-accent">
               {(data?.ai_engine?.recentVideos?.length || 0) + (data?.creatives?.length || 0)}
             </div>
             <span className="text-[8px] sm:text-[9px] text-ink-muted">Üretim / Render</span>
@@ -2154,8 +2154,8 @@ export function LiveDashboard() {
                   <span className="text-[9px] font-bold text-ink-muted uppercase tracking-wider">AI & Video Üretimi</span>
                   <div className="grid grid-cols-2 gap-1.5">
                     <button type="button" onClick={() => setActiveTab('ai_studio')}
-                      className="rounded-[var(--radius-sm)] border border-purple-500/30 bg-purple-500/10 px-3 py-2.5 text-left hover:bg-purple-500/15 transition group">
-                      <div className="text-[11px] font-bold text-purple-400 group-hover:text-purple-300">AI Stüdyo & Krediler</div>
+                      className="rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-surface px-3 py-2.5 text-left hover:bg-surface-raised transition group">
+                      <div className="text-[11px] font-bold text-ink group-hover:text-accent">AI Stüdyo & Krediler</div>
                       <div className="text-[10px] text-ink-muted mt-0.5">Flow & Gemini havuzu</div>
                     </button>
                     <button type="button" onClick={() => setActiveTab('ai_media')}
@@ -2210,7 +2210,7 @@ export function LiveDashboard() {
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="text-xs sm:text-sm font-bold text-ink">Google Flow & Veo 4'lü Hesap Havuzu</h3>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 font-bold border border-purple-500/20">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-accent-soft text-accent font-bold border border-accent/20">
                       Canlı Kredi Havuzu
                     </span>
                   </div>
@@ -2260,7 +2260,7 @@ export function LiveDashboard() {
                       </div>
                       <div className="pt-2 border-t border-[var(--color-hairline)] flex items-center justify-between">
                         <span className="text-[10px] text-ink-muted">Kalan Kredi:</span>
-                        <span className="text-xs font-mono font-bold text-purple-400">{credits} / 50</span>
+                        <span className="text-xs font-mono font-bold text-accent">{credits} / 50</span>
                       </div>
                     </div>
                   )
@@ -2410,7 +2410,7 @@ export function LiveDashboard() {
                     >
                       <div>
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-purple-500/10 text-purple-400 font-mono">
+                          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-accent-soft text-accent font-mono">
                             {cr.format === 'video' ? '9:16 Video' : 'Görsel'}
                           </span>
                           <span className="text-[9px] text-ink-muted">{timeAgo(cr.created_at)}</span>
@@ -2481,7 +2481,7 @@ export function LiveDashboard() {
                             {org.plan || 'pro'}
                           </span>
                         </td>
-                        <td className="py-2.5 font-semibold text-purple-400">
+                        <td className="py-2.5 font-semibold text-accent">
                           {org.monthly_video_quota ?? 3} Video/Ay
                         </td>
                         <td className="py-2.5 font-mono text-ink">
@@ -2536,8 +2536,8 @@ export function LiveDashboard() {
                   <span className="text-[10px] text-ink-muted uppercase font-semibold block">Aktif Paketler</span>
                   <div className="mt-0.5 flex items-center gap-1.5 flex-wrap text-[10px] font-semibold">
                     <span className="px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-500">Ent: {organizationsList.filter(o => o.plan === 'enterprise').length}</span>
-                    <span className="px-1.5 py-0.2 rounded bg-purple-500/10 text-purple-400">Pro: {organizationsList.filter(o => o.plan === 'pro').length}</span>
-                    <span className="px-1.5 py-0.2 rounded bg-accent/10 text-accent">St: {organizationsList.filter(o => o.plan === 'starter').length}</span>
+                    <span className="px-1.5 py-0.2 rounded bg-accent/10 text-accent">Pro: {organizationsList.filter(o => o.plan === 'pro').length}</span>
+                    <span className="px-1.5 py-0.2 rounded bg-surface-raised border border-[var(--color-hairline)] text-ink-muted">St: {organizationsList.filter(o => o.plan === 'starter').length}</span>
                   </div>
                 </div>
                 <div className="bg-surface-raised/70 border border-[var(--color-hairline)] rounded p-2.5">
@@ -2602,9 +2602,9 @@ export function LiveDashboard() {
                               o.plan === 'enterprise'
                                 ? 'bg-amber-500/10 text-amber-500 border-amber-500/30'
                                 : o.plan === 'pro'
-                                ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
-                                : o.plan === 'starter'
                                 ? 'bg-accent-soft text-accent border-accent/30'
+                                : o.plan === 'starter'
+                                ? 'bg-surface-raised text-ink border-[var(--color-hairline)]'
                                 : 'bg-surface text-ink-soft border-[var(--color-hairline)]'
                             }`}
                           >
@@ -2705,9 +2705,9 @@ export function LiveDashboard() {
                                   o.plan === 'enterprise'
                                     ? 'bg-amber-500/10 text-amber-500 border-amber-500/30'
                                     : o.plan === 'pro'
-                                    ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
-                                    : o.plan === 'starter'
                                     ? 'bg-accent-soft text-accent border-accent/30'
+                                    : o.plan === 'starter'
+                                    ? 'bg-surface-raised text-ink border-[var(--color-hairline)]'
                                     : 'bg-surface text-ink-soft border-[var(--color-hairline)]'
                                 }`}
                               >
@@ -4464,8 +4464,8 @@ export function LiveDashboard() {
             QUEUED: { label: 'Kuyrukta', color: 'bg-yellow-500' },
             LEASED: { label: 'Hesaba Atandı', color: 'bg-indigo-400' },
             PREPARING_ENV: { label: 'Ortam Hazırlanıyor', color: 'bg-indigo-500' },
-            OPENING_PROJECT: { label: 'Proje Açılıyor', color: 'bg-purple-400' },
-            ATTACHING_INGREDIENTS: { label: 'Çipler Bağlanıyor', color: 'bg-purple-500' },
+            OPENING_PROJECT: { label: 'Proje Açılıyor', color: 'bg-sky-400' },
+            ATTACHING_INGREDIENTS: { label: 'Çipler Bağlanıyor', color: 'bg-sky-500' },
             INGREDIENTS_VERIFIED: { label: 'Çipler Doğrulandı', color: 'bg-teal-400' },
             GENERATING: { label: 'Üretiliyor', color: 'bg-orange-500 animate-pulse' },
             POLLING_FLOW: { label: 'Flow İzleniyor', color: 'bg-orange-400 animate-pulse' },
@@ -5766,7 +5766,7 @@ export function LiveDashboard() {
                     >
                       <div className="space-y-1">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-purple-600 text-white">
+                          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-accent text-white">
                             OTO-YANIT
                           </span>
                           <span className="font-mono text-xs font-semibold text-ink">{ar.phone_e164}</span>
@@ -6331,12 +6331,12 @@ export function LiveDashboard() {
               </div>
 
               {/* SECTION 2: CHATGPT WEB YÖNETMEN KURGUSU & SAHNE SENARYOSU */}
-              <div className="space-y-1.5 bg-canvas p-3 sm:p-4 rounded-[var(--radius-sm)] border border-purple-500/20 shadow-xs">
+              <div className="space-y-1.5 bg-canvas p-3 sm:p-4 rounded-[var(--radius-sm)] border border-[var(--color-hairline)] shadow-xs">
                 <div className="flex items-center justify-between gap-2 flex-wrap pb-1.5 border-b border-[var(--color-hairline)]">
                   <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-purple-500/10 text-purple-600 font-bold text-xs flex items-center justify-center">2</span>
+                    <span className="w-5 h-5 rounded-full bg-accent/10 text-accent font-bold text-xs flex items-center justify-center">2</span>
                     <h4 className="text-xs font-bold text-ink">ChatGPT Web Yönetmen Kurgusu & Sahne Senaryosu</h4>
-                    <span className="text-[10px] bg-purple-500/10 text-purple-600 font-mono px-1.5 py-0.5 rounded font-semibold border border-purple-500/20">
+                    <span className="text-[10px] bg-accent/10 text-accent font-mono px-1.5 py-0.5 rounded font-semibold border border-accent/20">
                       Director Prompt · {(inspectedVideo.chatGptPrompt || inspectedVideo.veoPrompt || '').length} karakter
                     </span>
                   </div>
@@ -6347,7 +6347,7 @@ export function LiveDashboard() {
                         navigator.clipboard.writeText(inspectedVideo.chatGptPrompt || inspectedVideo.veoPrompt || '')
                         showNotice('ChatGPT kurgu promptu panoya kopyalandı.')
                       }}
-                      className="text-[11px] text-purple-600 hover:underline font-semibold flex items-center gap-1"
+                      className="text-[11px] text-accent hover:underline font-semibold flex items-center gap-1"
                     >
                       <span>Promptu Kopyala</span>
                     </button>
