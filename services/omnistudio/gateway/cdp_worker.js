@@ -15,6 +15,7 @@ const argvTab = process.argv.find(a => a.startsWith('--tab-index='))?.split('=')
 const WORKER_ID = argvWorker || process.env.WORKER_ID || 'chatgpt-1';
 const TAB_INDEX = parseInt(argvTab || process.env.TAB_INDEX || (WORKER_ID.endsWith('2') ? '1' : '0'), 10);
 const POLL_INTERVAL_MS = 2500;
+const SESSION_KEY = process.env.SESSION_KEY || `chatgpt_${String(CDP_HTTP).replace(/[^0-9]/g, '') || '9222'}_${WORKER_ID}`;
 
 const {
   getExpectedChatTitle,
@@ -355,8 +356,7 @@ async function injectPromptAndSend(cdp, promptText) {
   let promptInsertedAt = null;
   try {
     // 0. Session-scoped submission pacing to avoid ChatGPT web concurrent submit rate-limits
-    const sessionKey = process.env.SESSION_KEY || `chatgpt_${String(CDP_HTTP).replace(/[^0-9]/g, '') || '9222'}`;
-    await acquireSubmitPacing(sessionKey);
+    await acquireSubmitPacing(SESSION_KEY);
 
     if (await checkRateLimitModal(cdp)) {
       throw new Error('WEB_SESSION_RATE_LIMITED: ChatGPT web "Too many requests" rate-limit modal detected');
@@ -630,12 +630,11 @@ setInterval(async () => {
     const details = isBusy
       ? 'Görsel üretiyor'
       : (isTabLoggedIn ? 'Oturum açık, görev bekliyor' : 'Giriş bekleniyor (Login ekranı)');
-    const sessionKey = process.env.SESSION_KEY || `chatgpt_${String(CDP_HTTP).replace(/[^0-9]/g, '') || '9222'}`;
 
     fetch(`${GATEWAY_URL}/worker/heartbeat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ workerId: WORKER_ID, status, details, sessionKey })
+      body: JSON.stringify({ workerId: WORKER_ID, status, details, sessionKey: SESSION_KEY })
     }).catch(() => {});
   } catch (err) {}
 }, 5000);
@@ -697,8 +696,7 @@ async function workerLoop() {
     }
 
     // 2. Gateway'den sıradaki işi çek
-    const sessionKey = process.env.SESSION_KEY || `chatgpt_${String(CDP_HTTP).replace(/[^0-9]/g, '') || '9222'}`;
-    const jobRes = await fetch(`${GATEWAY_URL}/job/next?platform=chatgpt&workerId=${encodeURIComponent(WORKER_ID)}&sessionKey=${encodeURIComponent(sessionKey)}`, { cache: 'no-store' });
+    const jobRes = await fetch(`${GATEWAY_URL}/job/next?platform=chatgpt&workerId=${encodeURIComponent(WORKER_ID)}&sessionKey=${encodeURIComponent(SESSION_KEY)}`, { cache: 'no-store' });
     if (!jobRes.ok) return;
 
     const { job } = await jobRes.json();
@@ -1024,8 +1022,7 @@ async function executeChatGPTJob(tab, job) {
 async function executeChatSuggestionsJob(tab, job) {
   let cdp = null;
   const workerTiming = createWorkerTiming(job, 'text');
-  const sessionKey = process.env.SESSION_KEY || `chatgpt_${String(CDP_HTTP).replace(/[^0-9]/g, '') || '9222'}`;
-  await acquireSessionFlightLease(sessionKey, job.id);
+  await acquireSessionFlightLease(SESSION_KEY, job.id);
   try {
     cdp = await createCdpSession(tab.webSocketDebuggerUrl);
     workerTiming.mark('tab_acquire_ms');
@@ -1303,7 +1300,7 @@ Bu mesaja verilebilecek en kaliteli ve uygun 3 FARKLI alternatif Türkçe yanıt
       body: JSON.stringify({ jobId: job.id, error: err.message })
     }).catch(() => {});
   } finally {
-    releaseSessionFlightLease(sessionKey, job.id);
+    releaseSessionFlightLease(SESSION_KEY, job.id);
     if (cdp) cdp.close();
     await workerTiming.flush();
   }

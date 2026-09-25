@@ -566,15 +566,35 @@ class AdvancedJobQueue {
       return true;
     };
 
-    // 1. Öncelik: Bu işçiye daha önce atanmış aynı firmanın işi varsa onu al (Sticky Company Routing)
-    let jobIndex = this.pendingQueue.findIndex(jobId => {
-      const job = this.jobs.get(jobId);
-      if (!isJobEligible(job)) return false;
-      const assignedWid = this.companyWorkerMap.get(job.scopeKey);
-      return assignedWid === wid;
-    });
+    // 0. Öncelik: Hızlı metin ve mesaj önerileri (chat_suggestions)
+    // chatgpt-2 öncelikle metin/öneri işlerine bakar (canlı WhatsApp sohbet akışı için)
+    let jobIndex = -1;
+    if (wid === 'chatgpt-2') {
+      jobIndex = this.pendingQueue.findIndex(jobId => {
+        const job = this.jobs.get(jobId);
+        return isJobEligible(job) && job.type === 'chat_suggestions';
+      });
+    }
 
-    // 2. Eğer bu işçiye özel firma işi yoksa, sıradaki uygun ilk işi al
+    // 1. Öncelik: Bu işçiye daha önce atanmış aynı firmanın işi varsa onu al (Sticky Company Routing)
+    if (jobIndex === -1) {
+      jobIndex = this.pendingQueue.findIndex(jobId => {
+        const job = this.jobs.get(jobId);
+        if (!isJobEligible(job)) return false;
+        const assignedWid = this.companyWorkerMap.get(job.scopeKey);
+        return assignedWid === wid;
+      });
+    }
+
+    // 2. Öncelik: chatgpt-1 görsel ve ağır işleri tercih eder
+    if (jobIndex === -1 && wid === 'chatgpt-1') {
+      jobIndex = this.pendingQueue.findIndex(jobId => {
+        const job = this.jobs.get(jobId);
+        return isJobEligible(job) && job.type !== 'chat_suggestions';
+      });
+    }
+
+    // 3. Genel Havuz: Sıradaki ilk uygun işi al
     if (jobIndex === -1) {
       jobIndex = this.pendingQueue.findIndex(jobId => {
         const job = this.jobs.get(jobId);
