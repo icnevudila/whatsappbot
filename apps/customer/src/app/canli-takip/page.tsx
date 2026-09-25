@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { OperationsDashboard } from './operations-dashboard'
+import { LiveDashboard } from './live-dashboard'
 
 export const metadata: Metadata = {
   title: 'Canlı Takip & Bot Operasyon Merkezi',
@@ -13,5 +13,6 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic'
 
 export default function CanliTakipPage() {
-  return <OperationsDashboard section="overview" />
+  return <LiveDashboard />
 }
+
