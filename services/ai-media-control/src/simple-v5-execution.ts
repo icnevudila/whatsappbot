@@ -413,17 +413,46 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
   }).eq('id', attemptId)
 
   if (outRow?.id) {
-    await supabase.from('creatives').upsert({
-      id: job.id,
-      org_id: job.org_id,
-      title: job.title || 'Kampanya Videosu',
-      format: 'video',
-      status: approved ? 'ready' : 'review',
-      source: 'ai',
-      public_url: `/api/ai-media/outputs/${outRow.id}`,
-      payload: { creative_engine_mode: 'SIMPLE_V5_HYBRID', selected_provider: generated.selectedProvider },
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'id' })
+    try {
+      if (typeof supabase.query === 'function') {
+        await supabase.query(`
+          INSERT INTO creatives (id, org_id, title, format, status, source, public_url, payload, updated_at)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          ON CONFLICT (id) DO UPDATE SET
+            title = EXCLUDED.title,
+            format = EXCLUDED.format,
+            status = EXCLUDED.status,
+            source = EXCLUDED.source,
+            public_url = EXCLUDED.public_url,
+            payload = EXCLUDED.payload,
+            updated_at = EXCLUDED.updated_at
+        `, [
+          job.id,
+          job.org_id,
+          job.title || 'Kampanya Videosu',
+          'video',
+          approved ? 'ready' : 'review',
+          'ai',
+          `/api/ai-media/outputs/${outRow.id}`,
+          JSON.stringify({ creative_engine_mode: 'SIMPLE_V5_HYBRID', selected_provider: generated.selectedProvider }),
+          new Date().toISOString(),
+        ])
+      } else if (typeof supabase.from === 'function') {
+        await (supabase.from('creatives') as any).upsert?.({
+          id: job.id,
+          org_id: job.org_id,
+          title: job.title || 'Kampanya Videosu',
+          format: 'video',
+          status: approved ? 'ready' : 'review',
+          source: 'ai',
+          public_url: `/api/ai-media/outputs/${outRow.id}`,
+          payload: { creative_engine_mode: 'SIMPLE_V5_HYBRID', selected_provider: generated.selectedProvider },
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'id' })
+      }
+    } catch (crErr) {
+      console.warn('[simple-v5-execution] creatives upsert warning:', crErr)
+    }
   }
 
   const finalState = approved ? JobState.COMPLETED : JobState.NEEDS_REVIEW
