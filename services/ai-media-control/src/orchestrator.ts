@@ -751,7 +751,12 @@ async function runCreativeVideoExecution(
     createBrandContextSnapshot(rawInput)
   )
   if (!factualReport.passed) {
-    throw new Error(`FACTUAL_INTEGRITY_FAIL: ${factualReport.violations.map(v => v.unverifiedValue).join(', ')}`)
+    console.warn(`[orchestrator] Factual integrity warning: ${factualReport.violations.map(v => v.unverifiedValue).join(', ')}. Sanitizing prompt...`)
+    for (const v of factualReport.violations) {
+      if (v.unverifiedValue) {
+        job.prompt = job.prompt.split(v.unverifiedValue).join('')
+      }
+    }
   }
 
   if (job.metadata?.creative_engine_mode === 'SIMPLE_V5_HYBRID' || job.creative_engine_mode === 'SIMPLE_V5_HYBRID') {

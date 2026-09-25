@@ -33,7 +33,7 @@ function planBeats(
     ],
     PRODUCT_USAGE: [
       `${environment} içinde ürün ve kullanım bağlamı birlikte kurulur.`,
-      `Referansta izin verilen tek doğal kullanım adımı kesintisiz gösterilir; ${camera}.`,
+      `Referansta izin verilen tek doğal kullanım adımı akıcı şekilde gösterilir; ${camera}.`,
       commonClose,
     ],
     PROBLEM_SOLUTION: [

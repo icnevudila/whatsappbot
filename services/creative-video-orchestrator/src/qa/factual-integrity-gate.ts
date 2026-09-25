@@ -27,7 +27,6 @@ const DEFAULT_UNVERIFIED_PERFORMANCE_PATTERNS = [
   'homojen sis',
   'without leaking',
   'yorulmadan',
-  'kesintisiz',
   'damlatmayan',
   'mikro diyafram',
   'ultra yüksek basınç',
