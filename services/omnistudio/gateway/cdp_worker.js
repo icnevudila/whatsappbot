@@ -190,7 +190,7 @@ async function getTab(matchPattern) {
   try {
     const res = await fetch(`${CDP_HTTP}/json/list`);
     const tabs = await res.json();
-    const chatTabs = tabs.filter(t => t.url && t.url.includes(matchPattern));
+    const chatTabs = tabs.filter(t => (t.type === 'page' || !t.type) && t.url && t.url.includes(matchPattern));
 
     // 1. Eğer bu worker'ın kayıtlı canonical sekmesi varsa ve hala açıksa onu kullan
     if (cachedTabId) {
@@ -201,22 +201,38 @@ async function getTab(matchPattern) {
       }
     }
 
-    // 2. Worker canonical tab eşleşmesi:
-    // TAB_INDEX sekmesini doğrudan bu worker'a bağla
-    const candidateTab = chatTabs[TAB_INDEX];
-    if (candidateTab) {
-      cachedTabId = candidateTab.id;
-      reaper.registry.bindWorkerCanonical(WORKER_ID, candidateTab.id, candidateTab.url);
-      return candidateTab;
+    // 2. Diğer worker'ların sahiplendiği tab ID'lerini oku
+    const otherWorkerTabIds = new Set();
+    try {
+      const regDir = process.env.OMNISTUDIO_TAB_DIR || path.join(os.tmpdir(), 'omnistudio_tabs');
+      if (fs.existsSync(regDir)) {
+        const files = fs.readdirSync(regDir);
+        for (const f of files) {
+          if (f.startsWith('worker_') && f.endsWith('.json') && !f.includes(WORKER_ID)) {
+            const data = JSON.parse(fs.readFileSync(path.join(regDir, f), 'utf8'));
+            if (data && data.tabId) otherWorkerTabIds.add(data.tabId);
+          }
+        }
+      }
+    } catch (_) {}
+
+    // 3. Başka bir worker tarafından sahiplenilmemiş açık bir ChatGPT sekmesi bul
+    const unownedTab = chatTabs.find(t => !otherWorkerTabIds.has(t.id));
+    if (unownedTab) {
+      cachedTabId = unownedTab.id;
+      reaper.registry.bindWorkerCanonical(WORKER_ID, unownedTab.id, unownedTab.url);
+      console.log(`[CDP Worker: ${WORKER_ID}] Boştaki sekme bağlandı: ${unownedTab.id}`);
+      return unownedTab;
     }
 
-    // 4. Eğer bu worker için gereken sekme (ör. 2. sekme) henüz açık değilse, Chrome'da bu worker için aç
-    console.log(`[CDP Worker: ${WORKER_ID}] Worker'a özel sekme #${TAB_INDEX + 1} açılıyor...`);
+    // 4. Eğer boştaki sekme yoksa, bu worker için yeni bir sekme aç
+    console.log(`[CDP Worker: ${WORKER_ID}] Worker için yeni sekme açılıyor...`);
     const newRes = await fetch(`${CDP_HTTP}/json/new?https://chatgpt.com/`, { method: 'PUT' });
     const newTab = await newRes.json();
     await sleep(3500);
     cachedTabId = newTab.id;
     reaper.registry.bindWorkerCanonical(WORKER_ID, newTab.id, newTab.url);
+    console.log(`[CDP Worker: ${WORKER_ID}] Yeni sekme bağlandı: ${newTab.id}`);
     return newTab;
   } catch (err) {
     return null;

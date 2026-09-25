@@ -280,10 +280,10 @@ class OrphanTabReaper {
       }
 
       // 8. Duplicate blank chatgpt.com home tabs:
-      // If a tab is just https://chatgpt.com/ and is NOT any worker's canonical tab,
-      // and has exceeded the grace period with no active job, it is a duplicate idle tab.
+      // SADECE ve SADECE sistemde 2'den fazla ChatGPT sekmesi varsa ve bu sekme hiçbir worker'a ait değilse kapat
       const isChatHome = url === 'https://chatgpt.com/' || url === 'https://chatgpt.com';
-      if (isChatHome && !this.registry.isCanonicalForAnyWorker(tid)) {
+      const totalChatTabs = targets.filter(x => (x.type === 'page' || !x.type) && x.url && x.url.includes('chatgpt.com')).length;
+      if (isChatHome && totalChatTabs > 2 && !this.registry.isCanonicalForAnyWorker(tid)) {
         close.push({ target: t, reason: 'DUPLICATE_IDLE_CHATGPT_HOME', ageMs });
         continue;
       }
