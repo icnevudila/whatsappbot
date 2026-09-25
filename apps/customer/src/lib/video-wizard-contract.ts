@@ -3,7 +3,7 @@ export const VIDEO_REQUESTED_PROVIDER = 'AUTO' as const
 export const VIDEO_ASPECT_RATIO = '9:16' as const
 export const VIDEO_DURATION_SECONDS = 8 as const
 export const VIDEO_LANGUAGE = 'tr-TR' as const
-export const VIDEO_SUBTITLE_MODE = 'off' as const
+export const VIDEO_SUBTITLE_MODE = 'auto' as const
 export const MAX_SPOKEN_WORDS = 18
 
 export type ReferenceRole = 'reference' | 'packaging' | 'environment' | 'presenter' | 'style'
@@ -74,35 +74,54 @@ export function buildSafeSpokenLine(input: {
   const product = compact(input.productName) || 'seçili ürün'
   const claim = compact(input.verifiedClaims?.[0] || '')
 
-  const candidates: Record<string, string> = {
-    FAST_SALES: claim
-      ? `${product}: ${claim}. Hemen bilgi ve sipariş için ${brand}.`
-      : `${product} kalitesiyle tanışın. Bilgi ve sipariş için ${brand}.`,
-    PRODUCT_USAGE: claim
-      ? `${product}, ${claim}. İşinizi kolaylaştıran sağlam ve pratik çözüm.`
-      : `${product}, yüksek performansı ve kalıcı dayanıklılığıyla yanınızda.`,
-    PROBLEM_SOLUTION: claim
-      ? `Sağlam ve güvenilir çözümler için ${product}: ${claim}.`
-      : `Aradığınız kalite ve kalıcı dayanıklılık: ${product} ile ${brand} güvencesi.`,
-    SOCIAL_UGC: claim
-      ? `Gerçek kaliteyi keşfedin: ${product}, ${claim}.`
-      : `Projelerinizde fark yaratan güvenilir çözüm: ${product} ile tanışın.`,
-    PREMIUM: claim
-      ? `Kusursuz kalite ve güven: ${product}. ${claim}.`
-      : `Kusursuz işçilik ve kalıcı dayanıklılık. ${product}, ${brand} güvencesiyle.`,
-    OFFER: input.offerVerified && input.offer
-      ? `${product} için özel fırsat: ${compact(input.offer)}. Detaylar ${brand}'de.`
-      : `${product} için avantajlı fırsatlar ve cazip fiyatlar ${brand}'de.`,
-    OFFER_DRIVEN: input.offerVerified && input.offer
-      ? `${product} için özel fırsat: ${compact(input.offer)}. Detaylar ${brand}'de.`
-      : `${product} için avantajlı fırsatlar ve cazip fiyatlar ${brand}'de.`,
+  const candidatePools: Record<string, string[]> = {
+    FAST_SALES: [
+      claim
+        ? `${product} ile tanışın, ${claim} avantajını hemen yakalayın. Detaylar ${brand}'de.`
+        : `Hızlı teslimat ve üstün kalite arayanlara özel: ${product}, ${brand} güvencesiyle.`,
+      `İşinizi şansa bırakmayın; ${product} ile hem zamandan hem maliyetten kazanın.`,
+      `Projelerinizde fark yaratacak ${product}, şimdi en cazip koşullarla ${brand}'de.`,
+    ],
+    PRODUCT_USAGE: [
+      claim
+        ? `Ustalık ve sağlamlık bir arada: ${product}, ${claim}.`
+        : `Zorlu şartlara tam dayanıklı ${product}, işinizi hafifleten güvenilir çözüm.`,
+      `Kolay uygulama, kusursuz performans. ${product} ile her detay kontrolünüz altında.`,
+      `Doğru malzeme fark yaratır; ${product}, yüksek performansı ve dayanıklılığıyla yanınızda.`,
+    ],
+    PROBLEM_SOLUTION: [
+      claim
+        ? `Zahmete ve gecikmeye son. ${product} ile ${claim}.`
+        : `Aradığınız sağlamlık ve güven ${brand}'de: ${product} ile sorunsuz işler.`,
+      `Beklentilerinizi aşan dayanıklılık. ${product} ile kalıcı ve sağlam çözümler.`,
+    ],
+    SOCIAL_UGC: [
+      claim
+        ? `Gerçek kaliteyi deneyimleyin: ${product}, ${claim}.`
+        : `İşini bilenlerin tercihi ${product}, ${brand} güvencesiyle yanınızda.`,
+    ],
+    PREMIUM: [
+      claim
+        ? `Kusursuz kalite ve mimari prestij: ${product}. ${claim}.`
+        : `Geleceğe değer katan sağlam yapılar için ${product}, ${brand} kalitesiyle.`,
+      `Detaylardaki kusursuz işçilik. ${product} ile güven ve estetik bir arada.`,
+    ],
+    OFFER: [
+      input.offerVerified && input.offer
+        ? `${product} için kaçırılmayacak fırsat: ${compact(input.offer)}. Detaylar ${brand}'de.`
+        : `${product} için avantajlı fiyatlar ve özel teslimat koşulları ${brand}'de.`,
+    ],
+    OFFER_DRIVEN: [
+      input.offerVerified && input.offer
+        ? `${product} için kaçırılmayacak fırsat: ${compact(input.offer)}. Detaylar ${brand}'de.`
+        : `${product} için avantajlı fiyatlar ve özel teslimat koşulları ${brand}'de.`,
+    ],
   }
 
-  const defaultCandidate = claim
-    ? `${product}, ${claim}. Sağlam ve güvenilir çözüm ${brand}'de.`
-    : `${product}, sağlam yapılar ve kaliteli çözümler için ${brand} güvencesiyle.`
+  const pool = candidatePools[input.adFormat] || candidatePools.FAST_SALES
+  const pick = pool[Math.floor(Math.random() * pool.length)] || pool[0]
 
-  return clampWords(candidates[input.adFormat] || defaultCandidate)
+  return clampWords(pick)
 }
 
 export function defaultFidelityContract(brandName: string, productName: string): ProductFidelityContract {

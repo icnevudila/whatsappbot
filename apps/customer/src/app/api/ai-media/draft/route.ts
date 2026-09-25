@@ -113,31 +113,33 @@ export async function POST(req: NextRequest) {
     let approvedSpokenLine = ''
     try {
       const toneMap: Record<string, string> = {
-        sales: 'Satış, dönüşüm ve harekete geçirici aciliyet odaklı (fırsatı kaçırma hissi)',
-        short: 'Son derece kısa, öz, net ve vurucu',
-        corporate: 'Prestijli, kurumsal, güven veren ve kaliteli',
-        refresh: 'Dinamik, modern, enerjik ve dikkat çekici',
+        sales: 'Doğrudan satış, fırsat ve kaçırılmayacak avantaj odaklı kanca (Hook)',
+        short: '6-9 kelimelik akılda kalıcı, son derece vurucu slogan tarzı',
+        corporate: 'Prestijli, seçkin, kurumsal güven ve mimari kalite hissettiren ton',
+        refresh: 'Yenilikçi, dinamik ve dikkat çeken modern reklam tonu',
+        usage: 'İşin ustasına hitap eden, sahada sağladığı kolaylığı ve sağlamlığı öne çıkaran ton',
       }
-      const toneDesc = toneMap[revisionType] || 'Dinamik ve profesyonel'
+      const toneDesc = toneMap[revisionType] || 'Dinamik, profesyonel ve etkileyici'
 
-      const systemPrompt = `Sen Türkiye'nin en iyi kreatif reklam yazarı ve metin yazarısın.
-Görevin: Bir video reklam filmi için 8 ila 14 kelimelik (asla 16 kelimeyi geçmeyen), akıcı, ticari ve etkileyici bir Türkçe seslendirme metni yazmak.
+      const systemPrompt = `Sen Türkiye'nin en seçkin reklam ajanslarında çalışan kreatif reklam yazarı ve yönetmenisin.
+Görevin: Bir video reklam filmi (Instagram Reels / TikTok / Durum) için 8 ila 14 kelimelik (kesinlikle en fazla 15 kelime), akıcı, samimi veya karizmatik bir Türkçe seslendirme repliği yazmak.
 
 ÇOK KATI KURALLAR:
-1. Kesinlikle doğal, karizmatik, Türkçe konuşma diline uygun bir reklam metni olsun.
-2. "referansına sadık", "tasarıma sadık", "geometrisi", "veo", "yapay zeka", "prompt", "canary" gibi teknik veya geliştirici kelimelerini ASLA KULLANMA.
-3. Ürünün kalitesini, faydasını veya güvenilirliğini vurgula; markanın adını cümlenin sonunda veya başında doğal şekilde geçir.
-4. Metin en fazla 1 veya 2 kısa vurucu cümleden oluşsun (ideal: 8-13 kelime).
-5. YALNIZCA konuşulacak Türkçe metni yaz. Tırnak işareti, başlık, açıklama veya çeviri ekleme.`
+1. "X kalitesiyle tanışın", "sağlam yapılar için yanınızda", "hemen sipariş verin" gibi sıkıcı, bayat, robotik kalıpları KESİNLİKLE KULLANMA.
+2. "referansına sadık", "tasarıma sadık", "geometrisi", "veo", "yapay zeka", "prompt", "canary", "reklam filmi" gibi teknik veya meta ifadeleri ASLA KULLANMA.
+3. Kullanıcının belirttiği Kampanya Notunu ve ürünün gerçek dünyadaki pratik faydasını merkeze al. Marka adını cümlenin başında veya sonunda doğal olarak zikret.
+4. Metin en fazla 1 veya 2 kısa vurucu cümleden oluşsun (hedef: 8-13 kelime). Spiker 5 saniyede nefesi yeterek akıcı ve karizmatik okuyabilmelidir.
+5. YALNIZCA konuşulacak Türkçe metni yaz. Tırnak, başlık, sahne açıklaması veya çeviri ASLA ekleme.`
 
       const userPrompt = `Marka: ${brandName}
 Ürün: ${productName}
 Ürün Açıklaması: ${productDescription || 'Belirtilmedi'}
-Reklam Formatı: ${adFormat}
-İstenen Reklam Tonu: ${toneDesc}
-Özel Vurgulanmak İstenen Not: ${creativeNote || 'Yok'}
+Video Tarzı: ${adFormat}
+Kreatif Yaklaşım: ${toneDesc}
+Kullanıcının Kampanya Notu / Vurgulanacak Mesajı: ${creativeNote || 'Belirtilmedi; ürünün dayanıklılığı ve pratik faydası öne çıksın'}
 Doğrulanmış Ürün Bilgisi: ${verifiedClaims.join(', ') || 'Yok'}
-Varsa Kampanya / Fırsat: ${body.offerDetails || 'Yok'}`
+Varsa Kampanya / Fırsat: ${body.offerDetails || 'Yok'}
+${revisionType === 'refresh' ? 'NOT: Önceki kalıplardan tamamen farklı, özgün, merak uyandıran veya doğrudan kazanca odaklanan yeni bir kanca kullan!' : ''}`
 
       const aiText = await completeText(systemPrompt, userPrompt)
       const cleanText = aiText.replace(/["“”«»]/g, '').trim()

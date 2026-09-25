@@ -87,9 +87,6 @@ export async function POST(req: NextRequest) {
       : []
     const productFidelityContract = authoritativeFacts?.product_fidelity_contract
     if (normalizedCreativeMode === 'SIMPLE_V5_HYBRID') {
-      if (subtitles !== 'off') {
-        return NextResponse.json({ error: 'SIMPLE_V5 altyazı finishing desteği hazır olmadığı için altyazı kapalı olmalıdır.' }, { status: 400 })
-      }
       if (!authoritativeFacts?.product_id) {
         return NextResponse.json({ error: 'SIMPLE_V5 üretimi için katalog ürün kimliği zorunludur.' }, { status: 400 })
       }
