@@ -29,21 +29,21 @@ cd /app/gateway
 node server.js &
 echo "⚡ API Gateway & BrowserWorkerSupervisor Hazır: Port 3456"
 
-# 4. Google Chrome #1 Başlat (Port 9222, Ana Profil — Görsel Üretimi / ChatGPT)
+# 4. Google Chrome #1 Başlat (Port 9222, Ana Profil — Çift Sekmeli ChatGPT Havuzu)
 PROFILE_DIR="/data/chromium-profile"
 mkdir -p "$PROFILE_DIR"
 rm -f "$PROFILE_DIR/Singleton*" "$PROFILE_DIR/*/Singleton*" "$PROFILE_DIR/LOCK" "$PROFILE_DIR/*/LOCK" 2>/dev/null || true
 
-echo "🖥️ Google Chrome #1 Başlatılıyor (CDP Port: 9222, Profil: $PROFILE_DIR)..."
+echo "🖥️ Google Chrome #1 Başlatılıyor (CDP Port: 9222, Profil: $PROFILE_DIR, Çift Sekme)..."
 google-chrome-stable --no-sandbox --disable-dev-shm-usage --disable-gpu \
   --disable-search-engine-choice-screen \
   --user-data-dir="$PROFILE_DIR" \
   --remote-debugging-port=9222 \
-  --start-maximized https://chatgpt.com &
-sleep 5
+  --start-maximized https://chatgpt.com https://chatgpt.com &
+sleep 6
 
-# 5. Görsel Üretim İşçisi (chatgpt-1) & Otonom Bekçi (Watchdog)
-echo "🤖 CDP Worker #1 ve Otonom Bekçi Başlatılıyor..."
+# 5. Dual Worker Havuzu (chatgpt-1: Sekme 0, chatgpt-2: Sekme 1) & Otonom Bekçi
+echo "🤖 Dual CDP Worker Havuzu ve Otonom Bekçi Başlatılıyor..."
 
 while true; do
   # Chrome 9222 kontrolü
@@ -54,15 +54,22 @@ while true; do
       --disable-search-engine-choice-screen \
       --user-data-dir="$PROFILE_DIR" \
       --remote-debugging-port=9222 \
-      --start-maximized https://chatgpt.com &
-    sleep 5
+      --start-maximized https://chatgpt.com https://chatgpt.com &
+    sleep 6
   fi
 
-  # cdp_worker.js kontrolü
-  if ! pgrep -f "cdp_worker.js" > /dev/null; then
-    echo "⚠️ cdp_worker.js çalışmıyor tespit edildi, yeniden başlatılıyor..."
+  # cdp_worker #1 kontrolü (Görsel ve Ağır İşler)
+  if ! pgrep -f "WORKER_ID=chatgpt-1" > /dev/null && ! ps aux | grep -v grep | grep "WORKER_ID=chatgpt-1" > /dev/null; then
+    echo "⚠️ cdp_worker chatgpt-1 başlatılıyor..."
     cd /app/gateway
-    CDP_HTTP="http://127.0.0.1:9222" WORKER_ID="chatgpt-1" TAB_INDEX=0 node --experimental-websocket /app/gateway/cdp_worker.js >> /var/log/cdp_worker.log 2>&1 &
+    CDP_HTTP="http://127.0.0.1:9222" WORKER_ID="chatgpt-1" TAB_INDEX=0 node --experimental-websocket /app/gateway/cdp_worker.js >> /var/log/cdp_worker_1.log 2>&1 &
+  fi
+
+  # cdp_worker #2 kontrolü (Mesaj Yanıtları ve Hızlı Öneriler)
+  if ! pgrep -f "WORKER_ID=chatgpt-2" > /dev/null && ! ps aux | grep -v grep | grep "WORKER_ID=chatgpt-2" > /dev/null; then
+    echo "⚠️ cdp_worker chatgpt-2 başlatılıyor..."
+    cd /app/gateway
+    CDP_HTTP="http://127.0.0.1:9222" WORKER_ID="chatgpt-2" TAB_INDEX=1 node --experimental-websocket /app/gateway/cdp_worker.js >> /var/log/cdp_worker_2.log 2>&1 &
   fi
 
   sleep 10
