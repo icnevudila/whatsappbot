@@ -263,7 +263,78 @@ export function OperationsDashboard({ section }: { section: OperationsSection })
 }
 
 function AccountsGrid({ accounts, busy, onAction }: { accounts: OperationsAccount[]; busy: string | null; onAction: (action: string, id: string) => void }) {
-  return <div className="space-y-5">{(['GEMINI', 'FLOW', 'CHATGPT', 'WHATSAPP'] as const).map(provider => { const items = accounts.filter(account => account.provider === provider); return <section key={provider}><div className="mb-2 flex items-center gap-2"><h2 className="text-sm font-black">{provider}</h2><span className="rounded-full bg-surface-raised px-2 py-0.5 text-[10px] font-bold text-ink-muted">{items.length}</span></div><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{items.map(account => <article key={account.id} className="rounded-[var(--radius-card)] border border-[var(--color-hairline)] bg-surface p-4 shadow-[var(--shadow-card)]"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><h3 className="truncate text-sm font-black">{account.label}</h3><div className="mt-0.5 font-mono text-[9px] text-ink-faint">{account.id}</div></div><StatusBadge value={account.health} /></div><div className="mt-3 grid grid-cols-2 gap-2 text-[10px]"><div className="rounded bg-canvas p-2"><span className="block text-ink-faint">Kimlik</span><strong>{account.authState}</strong></div><div className="rounded bg-canvas p-2"><span className="block text-ink-faint">Browser</span><strong>{account.browserState}</strong></div><div className="rounded bg-canvas p-2"><span className="block text-ink-faint">Kota</span><strong>{account.quotaState}</strong></div><div className="rounded bg-canvas p-2"><span className="block text-ink-faint">Son aktivite</span><strong>{timeAgo(account.lastActivityAt)}</strong></div></div>{account.lastError && <p className="mt-2 text-[11px] text-danger">{account.lastError}</p>}<div className="mt-3 flex flex-wrap gap-2">{account.actions.map(action => <button key={action} disabled={busy === account.id} onClick={() => onAction(action === 'clear_cooldown' ? 'clear_account_cooldown' : action === 'enable' ? 'enable_account' : 'disable_account', `${account.provider.toLowerCase()}:${account.id.replace(/^gemini:/, '')}`)} className="min-h-9 rounded-[var(--radius-sm)] border border-[var(--color-hairline)] px-3 text-[10px] font-black hover:bg-surface-raised disabled:opacity-50">{action === 'clear_cooldown' ? 'Cooldown temizle' : action === 'enable' ? 'Etkinleştir' : 'Devre dışı bırak'}</button>)}</div></article>)}{items.length === 0 && <Empty text={`${provider} hesabı bulunamadı.`} />}</div></section>})}</div>
+  return (
+    <div className="space-y-5">
+      {(['GEMINI', 'FLOW', 'CHATGPT', 'WHATSAPP'] as const).map(provider => {
+        const items = accounts.filter(account => account.provider === provider)
+        return (
+          <section key={provider}>
+            <div className="mb-2 flex items-center gap-2">
+              <h2 className="text-sm font-black">{provider}</h2>
+              <span className="rounded-full bg-surface-raised px-2 py-0.5 text-[10px] font-bold text-ink-muted">{items.length}</span>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {items.map(account => (
+                <article key={account.id} className="rounded-[var(--radius-card)] border border-[var(--color-hairline)] bg-surface p-4 shadow-[var(--shadow-card)]">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h3 className="truncate text-sm font-black">{account.label}</h3>
+                      <div className="mt-0.5 font-mono text-[9px] text-ink-faint">{account.id}</div>
+                    </div>
+                    <StatusBadge value={account.health} />
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-[10px]">
+                    <div className="rounded bg-canvas p-2">
+                      <span className="block text-ink-faint">Kimlik</span>
+                      <strong>{account.authState}</strong>
+                    </div>
+                    <div className="rounded bg-canvas p-2">
+                      <span className="block text-ink-faint">Browser / İş</span>
+                      <strong>{account.browserState}</strong>
+                    </div>
+                    <div className="rounded bg-canvas p-2">
+                      <span className="block text-ink-faint">Kalan Kredi</span>
+                      <strong className={account.creditBalance != null && account.creditBalance <= 20 ? 'text-danger font-black' : 'text-accent font-black'}>
+                        {account.creditBalance != null ? `${account.creditBalance} Kredi` : account.quotaState}
+                      </strong>
+                      {account.creditsUsedToday != null && account.creditsUsedToday > 0 ? (
+                        <span className="block text-[9px] text-ink-muted">Bugün: -{account.creditsUsedToday} kredi</span>
+                      ) : null}
+                    </div>
+                    <div className="rounded bg-canvas p-2">
+                      <span className="block text-ink-faint">Başarılı Üretim</span>
+                      <strong className="text-success font-black">{account.totalCompletedVideos ?? 0} video</strong>
+                      {account.planTier ? (
+                        <span className="block truncate text-[9px] text-ink-muted">{account.planTier}</span>
+                      ) : null}
+                    </div>
+                    <div className="col-span-2 rounded bg-canvas p-2">
+                      <span className="block text-ink-faint">Son Aktivite</span>
+                      <strong>{timeAgo(account.lastActivityAt)}</strong>
+                    </div>
+                  </div>
+                  {account.lastError && <p className="mt-2 text-[11px] text-danger">{account.lastError}</p>}
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {account.actions.map(action => (
+                      <button
+                        key={action}
+                        disabled={busy === account.id}
+                        onClick={() => onAction(action === 'clear_cooldown' ? 'clear_account_cooldown' : action === 'enable' ? 'enable_account' : 'disable_account', `${account.provider.toLowerCase()}:${account.id.replace(/^gemini:/, '')}`)}
+                        className="min-h-9 rounded-[var(--radius-sm)] border border-[var(--color-hairline)] px-3 text-[10px] font-black hover:bg-surface-raised disabled:opacity-50"
+                      >
+                        {action === 'clear_cooldown' ? 'Cooldown temizle' : action === 'enable' ? 'Etkinleştir' : 'Devre dışı bırak'}
+                      </button>
+                    ))}
+                  </div>
+                </article>
+              ))}
+              {items.length === 0 && <Empty text={`${provider} hesabı bulunamadı.`} />}
+            </div>
+          </section>
+        )
+      })}
+    </div>
+  )
 }
 
 function WorkersGrid({ workers, busy, onAction }: { workers: OperationsWorker[]; busy: string | null; onAction: (action: string, id: string) => void }) {

@@ -338,9 +338,32 @@ export async function getControlPlaneSnapshot(): Promise<ControlPlaneSnapshot> {
       actions: [],
     })
   }
+  const completedJobsByAccount = new Map<string, { total: number; today: number }>()
+  const startOfToday = new Date()
+  startOfToday.setHours(0, 0, 0, 0)
+  const startOfTodayMs = startOfToday.getTime()
+
+  for (const job of mediaJobResult.rows) {
+    if (job.state === 'COMPLETED' && job.provider_account_id) {
+      const accId = String(job.provider_account_id)
+      const current = completedJobsByAccount.get(accId) || { total: 0, today: 0 }
+      current.total += 1
+      const jobTime = job.completed_at ? new Date(job.completed_at).getTime() : 0
+      if (jobTime >= startOfTodayMs) {
+        current.today += 1
+      }
+      completedJobsByAccount.set(accId, current)
+    }
+  }
+
   for (const row of flowAccountResult.rows) {
     const authRequired = ['needs_reauth', 'blocked', 'agent_ui_blocked'].includes(row.status)
     const quota = row.status === 'rate_limited'
+    const jobStats = completedJobsByAccount.get(String(row.id)) || { total: 0, today: 0 }
+    const creditsUsedToday = jobStats.today * 10
+    const baseBalance = row.credit_balance != null ? Number(row.credit_balance) : (authRequired ? 0 : 100)
+    const currentBalance = Math.max(0, baseBalance - creditsUsedToday)
+
     accounts.push({
       id: String(row.id), provider: 'FLOW', label: row.display_name || row.email || row.id,
       workerHost: null, health: authRequired ? 'DEGRADED' : row.status === 'maintenance' ? 'OFFLINE' : 'HEALTHY',
@@ -349,6 +372,10 @@ export async function getControlPlaneSnapshot(): Promise<ControlPlaneSnapshot> {
       currentJobId: asString(row.current_job_id), lastActivityAt: asDate(row.last_heartbeat_at || row.updated_at),
       cooldownUntil: asDate(row.cooldown_until), lastError: asString(row.last_error), enabled: row.status !== 'maintenance',
       actions: row.status === 'maintenance' ? ['enable'] : [...(quota || row.status === 'cooling_down' ? ['clear_cooldown' as const] : []), 'disable'],
+      creditBalance: currentBalance,
+      creditsUsedToday,
+      totalCompletedVideos: jobStats.total,
+      planTier: 'Google AI PRO (+50 Kredi/Gün)',
     })
   }
 

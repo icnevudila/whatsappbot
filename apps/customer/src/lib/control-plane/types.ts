@@ -99,6 +99,10 @@ export type OperationsAccount = {
   lastError: string | null
   enabled: boolean
   actions: Array<'enable' | 'disable' | 'clear_cooldown'>
+  creditBalance?: number | null
+  creditsUsedToday?: number
+  totalCompletedVideos?: number
+  planTier?: string
 }
 
 export type OperationsWorker = {
