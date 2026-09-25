@@ -430,22 +430,37 @@ async function runJobExecution(job: any, accountId: string) {
 
     if (outputRecord?.id) {
       try {
-        await (supabase as any).from('creatives').upsert({
-          id: job.id,
-          org_id: job.org_id,
-          title: job.title || 'Kampanya Videosu',
-          format: 'video',
+        const updatePayload = {
           status: 'ready',
-          source: 'ai',
           public_url: `/api/ai-media/outputs/${outputRecord.id}`,
           payload: {
             job_id: job.id,
             thumbnailUrl: `/api/ai-media/outputs/${outputRecord.id}?thumb=1`,
           },
           updated_at: new Date().toISOString(),
-        }, { onConflict: 'id' })
+        }
+        const { data: updated } = await (supabase as any)
+          .from('creatives')
+          .update(updatePayload)
+          .eq('id', job.id)
+          .select('id')
+
+        if (!updated || updated.length === 0) {
+          const createdBy = (job.metadata as any)?.created_by_user_id || (job.metadata as any)?.created_by
+          if (createdBy) {
+            await (supabase as any).from('creatives').upsert({
+              id: job.id,
+              org_id: job.org_id,
+              created_by: createdBy,
+              title: job.title || 'Kampanya Videosu',
+              format: 'video',
+              source: 'ai',
+              ...updatePayload,
+            }, { onConflict: 'id' })
+          }
+        }
       } catch (crErr) {
-        console.warn('[orchestrator] creatives upsert warning:', crErr)
+        console.warn('[orchestrator] creatives update warning:', crErr)
       }
     }
 
@@ -864,21 +879,37 @@ async function runCreativeVideoExecution(
 
   if (outRow?.id) {
     try {
-      await (supabase as any).from('creatives').upsert({
-        id: job.id,
-        org_id: job.org_id,
-        title: job.title || 'Kampanya Videosu',
-        format: 'video',
+      const updatePayload = {
         status: 'ready',
-        source: 'ai',
         public_url: `/api/ai-media/outputs/${outRow.id}`,
         payload: {
+          job_id: job.id,
           thumbnailUrl: `/api/ai-media/outputs/${outRow.id}?thumb=1`,
         },
         updated_at: new Date().toISOString(),
-      }, { onConflict: 'id' })
+      }
+      const { data: updated } = await (supabase as any)
+        .from('creatives')
+        .update(updatePayload)
+        .eq('id', job.id)
+        .select('id')
+
+      if (!updated || updated.length === 0) {
+        const createdBy = (job.metadata as any)?.created_by_user_id || (job.metadata as any)?.created_by
+        if (createdBy) {
+          await (supabase as any).from('creatives').upsert({
+            id: job.id,
+            org_id: job.org_id,
+            created_by: createdBy,
+            title: job.title || 'Kampanya Videosu',
+            format: 'video',
+            source: 'ai',
+            ...updatePayload,
+          }, { onConflict: 'id' })
+        }
+      }
     } catch (crErr) {
-      console.warn('[orchestrator] creatives upsert warning:', crErr)
+      console.warn('[orchestrator] creatives update warning:', crErr)
     }
   }
 
