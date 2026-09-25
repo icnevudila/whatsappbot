@@ -777,6 +777,7 @@ async function executeChatGPTJob(tab, job) {
   const tempRefPaths = [];
   try {
     cdp = await createCdpSession(tab.webSocketDebuggerUrl);
+    await cdp.send('Page.bringToFront').catch(() => {});
     workerTiming.mark('tab_acquire_ms');
 
     // 0. Firma veya Sistem Kanaryası için belirlenmiş tekil oturumu aç
@@ -1050,6 +1051,7 @@ async function executeChatSuggestionsJob(tab, job) {
   await acquireSessionFlightLease(SESSION_KEY, job.id);
   try {
     cdp = await createCdpSession(tab.webSocketDebuggerUrl);
+    await cdp.send('Page.bringToFront').catch(() => {});
     workerTiming.mark('tab_acquire_ms');
 
     const customer = (job.customer || 'Genel').trim();
@@ -1337,13 +1339,15 @@ async function executeExtractKnowledgeJob(tab, job) {
   const tempRefPaths = [];
   try {
     cdp = await createCdpSession(tab.webSocketDebuggerUrl);
+    await cdp.send('Page.bringToFront').catch(() => {});
 
     const customer = (job.customer || 'Genel').trim();
     const hasImages = Array.isArray(job.referenceImages) && job.referenceImages.length > 0;
     const channel = hasImages ? 'media' : 'chat';
     console.log(`[CDP Worker: ${WORKER_ID}] [OCR/Bilgi Çıkarımı] Firma: "${customer}" (${channel} kanalı)...`);
 
-    await ensureCustomerChat(cdp, customer, channel, { customer, tenantId: job.tenantId, conversationId: job.conversationId });
+    const chatIdentity = { customer, tenantId: job.tenantId, conversationId: job.conversationId };
+    const chatInfo = await ensureCustomerChat(cdp, customer, channel, chatIdentity);
 
     // 1. Görsel varsa ChatGPT'ye yükle (Vision OCR)
     if (hasImages) {
@@ -1503,6 +1507,24 @@ YALNIZCA aşağıdaki JSON formatında yanıt ver, markdown kod bloğu (\`\`\`js
       })
     });
 
+    // 7. Sohbet kaydetme ve adlandırma
+    try {
+      const finalUrlEval = await cdp.send('Runtime.evaluate', {
+        expression: 'window.location.href',
+        returnByValue: true
+      });
+      const finalUrl = finalUrlEval.result?.value || '';
+      if (finalUrl.includes('/c/')) {
+        const expectedTitle = getExpectedChatTitle(customer, channel);
+        if (chatInfo && chatInfo.isNewChat) {
+          await renameChatToTitle(cdp, expectedTitle);
+        }
+        setCompanyChat(chatIdentity, channel, finalUrl, expectedTitle);
+      }
+    } catch (urlErr) {
+      console.warn(`[CDP Worker: ${WORKER_ID}] [OCR] Adlandırma uyarısı:`, urlErr.message);
+    }
+
   } catch (err) {
     console.error(`[CDP Worker] [OCR/Bilgi Çıkarımı] İş hatası (${job.id}):`, err.message);
     await fetch(`${GATEWAY_URL}/job/release`, {
@@ -1523,9 +1545,11 @@ async function executeProductAffordanceJob(tab, job) {
   let cdp = null;
   try {
     cdp = await createCdpSession(tab.webSocketDebuggerUrl);
+    await cdp.send('Page.bringToFront').catch(() => {});
     const customer = (job.customer || 'Genel').trim();
+    const chatIdentity = { customer, tenantId: job.tenantId, conversationId: job.conversationId };
     console.log(`[CDP Worker: ${WORKER_ID}] [Affordance] Firma: "${customer}" için oturum hazırlanıyor...`);
-    await ensureCustomerChat(cdp, customer, 'video');
+    const chatInfo = await ensureCustomerChat(cdp, customer, 'video', chatIdentity);
     await sleep(1000);
 
     const countEval = await cdp.send('Runtime.evaluate', {
@@ -1535,7 +1559,11 @@ async function executeProductAffordanceJob(tab, job) {
     const initialAsstCount = countEval.result?.value || 0;
 
     // Metni enjekte et
-    await sendPromptToChatGpt(cdp, job.affordancePrompt || job.prompt);
+    const affordancePrompt = job.affordancePrompt || job.prompt;
+    const injectRes = await injectPromptAndSend(cdp, affordancePrompt);
+    if (!injectRes?.success) {
+      throw new Error(injectRes?.error || 'Prompt enjekte edilemedi');
+    }
 
     // Yanıtı bekle
     let lastText = '';
@@ -1580,6 +1608,24 @@ async function executeProductAffordanceJob(tab, job) {
       body: JSON.stringify({ jobId: job.id, result: finalResult })
     });
     console.log(`[CDP Worker: ${WORKER_ID}] [Affordance] İş başarıyla tamamlandı: #${job.id}`);
+
+    // Sohbet kaydetme ve adlandırma
+    try {
+      const finalUrlEval = await cdp.send('Runtime.evaluate', {
+        expression: 'window.location.href',
+        returnByValue: true
+      });
+      const finalUrl = finalUrlEval.result?.value || '';
+      if (finalUrl.includes('/c/')) {
+        const expectedTitle = getExpectedChatTitle(customer, 'video');
+        if (chatInfo && chatInfo.isNewChat) {
+          await renameChatToTitle(cdp, expectedTitle);
+        }
+        setCompanyChat(chatIdentity, 'video', finalUrl, expectedTitle);
+      }
+    } catch (urlErr) {
+      console.warn(`[CDP Worker: ${WORKER_ID}] [Affordance] Adlandırma uyarısı:`, urlErr.message);
+    }
   } catch (err) {
     console.error(`[CDP Worker: ${WORKER_ID}] [Affordance] Hata:`, err.message);
     await fetch(`${GATEWAY_URL}/job/complete-text`, {

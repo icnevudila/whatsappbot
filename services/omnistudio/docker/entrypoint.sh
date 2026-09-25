@@ -38,6 +38,11 @@ rm -rf /tmp/omnistudio_tabs 2>/dev/null || true
 echo "🖥️ Google Chrome #1 Başlatılıyor (CDP Port: 9222, Profil: $PROFILE_DIR, Çift Sekme)..."
 google-chrome-stable --no-sandbox --disable-dev-shm-usage --disable-gpu \
   --disable-search-engine-choice-screen \
+  --disable-background-timer-throttling \
+  --disable-backgrounding-occluded-windows \
+  --disable-renderer-backgrounding \
+  --disable-features=CalculateNativeWinOcclusion,IsolateOrigins,site-per-process \
+  --disable-ipc-flooding-protection \
   --user-data-dir="$PROFILE_DIR" \
   --remote-debugging-port=9222 \
   --start-maximized https://chatgpt.com https://chatgpt.com &
@@ -53,6 +58,11 @@ while true; do
     rm -f "$PROFILE_DIR/Singleton*" "$PROFILE_DIR/*/Singleton*" "$PROFILE_DIR/LOCK" "$PROFILE_DIR/*/LOCK" 2>/dev/null || true
     google-chrome-stable --no-sandbox --disable-dev-shm-usage --disable-gpu \
       --disable-search-engine-choice-screen \
+      --disable-background-timer-throttling \
+      --disable-backgrounding-occluded-windows \
+      --disable-renderer-backgrounding \
+      --disable-features=CalculateNativeWinOcclusion,IsolateOrigins,site-per-process \
+      --disable-ipc-flooding-protection \
       --user-data-dir="$PROFILE_DIR" \
       --remote-debugging-port=9222 \
       --start-maximized https://chatgpt.com https://chatgpt.com &
