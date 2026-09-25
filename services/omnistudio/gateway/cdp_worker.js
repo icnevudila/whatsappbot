@@ -201,20 +201,12 @@ async function getTab(matchPattern) {
     }
 
     // 2. Worker canonical tab eşleşmesi:
-    // Eğer TAB_INDEX sınırında bir sekme varsa ve başka bir worker'ın canonical'ı değilse sahiplen
+    // TAB_INDEX sekmesini doğrudan bu worker'a bağla
     const candidateTab = chatTabs[TAB_INDEX];
-    if (candidateTab && (!reaper.registry.isCanonicalForAnyWorker(candidateTab.id) || reaper.registry.getWorkerCanonicalTab(WORKER_ID)?.tabId === candidateTab.id)) {
+    if (candidateTab) {
       cachedTabId = candidateTab.id;
       reaper.registry.bindWorkerCanonical(WORKER_ID, candidateTab.id, candidateTab.url);
       return candidateTab;
-    }
-
-    // 3. Eğer chatTabs içinde henüz hiçbir worker tarafından sahiplenilmemiş sekme varsa bağla
-    const unowned = chatTabs.find(t => !reaper.registry.isCanonicalForAnyWorker(t.id));
-    if (unowned) {
-      cachedTabId = unowned.id;
-      reaper.registry.bindWorkerCanonical(WORKER_ID, unowned.id, unowned.url);
-      return unowned;
     }
 
     // 4. Eğer bu worker için gereken sekme (ör. 2. sekme) henüz açık değilse, Chrome'da bu worker için aç

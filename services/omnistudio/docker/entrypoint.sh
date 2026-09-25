@@ -33,6 +33,7 @@ echo "⚡ API Gateway & BrowserWorkerSupervisor Hazır: Port 3456"
 PROFILE_DIR="/data/chromium-profile"
 mkdir -p "$PROFILE_DIR"
 rm -f "$PROFILE_DIR/Singleton*" "$PROFILE_DIR/*/Singleton*" "$PROFILE_DIR/LOCK" "$PROFILE_DIR/*/LOCK" 2>/dev/null || true
+rm -rf /tmp/omnistudio_tabs 2>/dev/null || true
 
 echo "🖥️ Google Chrome #1 Başlatılıyor (CDP Port: 9222, Profil: $PROFILE_DIR, Çift Sekme)..."
 google-chrome-stable --no-sandbox --disable-dev-shm-usage --disable-gpu \
