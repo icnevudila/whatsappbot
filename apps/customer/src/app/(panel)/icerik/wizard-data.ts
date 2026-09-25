@@ -74,12 +74,29 @@ export async function loadCreativeWizardData(): Promise<WizardBootstrap> {
         .order('created_at', { ascending: false })
         .limit(40),
       supabase.from('organizations').select('name, address, about, logo_path, monthly_video_quota').eq('id', org.id).maybeSingle(),
-      supabase
-        .from('creatives')
+      (supabase as any)
+        .from('ai_media_jobs')
         .select('id', { count: 'exact', head: true })
         .eq('org_id', org.id)
-        .eq('format', 'video')
-        .in('status', ['ready', 'processing', 'pending'])
+        .in('state', [
+          'PENDING',
+          'VALIDATING_INPUTS',
+          'QUEUED',
+          'LEASED',
+          'PREPARING_ENV',
+          'OPENING_PROJECT',
+          'ATTACHING_INGREDIENTS',
+          'INGREDIENTS_VERIFIED',
+          'GENERATING',
+          'POLLING_FLOW',
+          'DOWNLOADING_MEDIA',
+          'MEDIA_DOWNLOADED',
+          'FFPROBE_INSPECTING',
+          'SHA256_VERIFYING',
+          'VISUAL_QA_EVALUATING',
+          'COMPLETED',
+          'NEEDS_REVIEW',
+        ])
         .gte('created_at', startOfMonth.toISOString()),
     ])
 

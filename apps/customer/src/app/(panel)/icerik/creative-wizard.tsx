@@ -8,14 +8,30 @@ import { uploadAssetOnly } from './actions'
 import {
   AD_FORMAT_OPTIONS,
   type AdFormatType,
+  type JobUserViewModel,
   type PromotionType,
   type ProductCard,
   type SpeechTimelineItem,
   type WizardBootstrap,
+  type WizardReferenceAsset,
 } from './wizard-types'
 import { AddProductModal } from './add-product-modal'
 import { getSafeMediaUrl } from '@/lib/media-url'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
+import {
+  MAX_SPOKEN_WORDS,
+  VIDEO_ASPECT_RATIO,
+  VIDEO_DURATION_SECONDS,
+  VIDEO_ENGINE_MODE,
+  VIDEO_LANGUAGE,
+  VIDEO_REQUESTED_PROVIDER,
+  VIDEO_SUBTITLE_MODE,
+  defaultFidelityContract,
+  parseFactLines,
+  validateWizardPreflight,
+  type ProductFidelityContract,
+  type ReferenceRole,
+} from '@/lib/video-wizard-contract'
 
 const DRAFT_KEY_PREFIX = 'wa.customer.video-wizard.v1'
 
@@ -43,27 +59,31 @@ export function CreativeWizard({
   const [customProductImage, setCustomProductImage] = useState('')
   const [customProductDesc, setCustomProductDesc] = useState('')
   const [customLogoUrl, setCustomLogoUrl] = useState('')
-  const [extraReferenceUrls, setExtraReferenceUrls] = useState<string[]>([])
+  const [referenceAssets, setReferenceAssets] = useState<WizardReferenceAsset[]>([])
   
   // Step 2: Campaign & Format Router
   const [adFormat, setAdFormat] = useState<AdFormatType>('AUTO')
   const [environmentPreset, setEnvironmentPreset] = useState<'auto' | 'garden' | 'studio' | 'kitchen' | 'office' | 'workshop' | 'construction'>('auto')
-  const [motionStyle, setMotionStyle] = useState<'studio_orbit' | 'real_usage' | 'macro_detail'>('studio_orbit')
+  const [motionStyle, setMotionStyle] = useState<'studio_orbit' | 'real_usage' | 'macro_detail'>('real_usage')
   const [offerDetails, setOfferDetails] = useState('')
+  const [offerVerified, setOfferVerified] = useState(false)
   const [creativeNote, setCreativeNote] = useState('')
-  const [subtitles, setSubtitles] = useState(true)
+  const [subtitles] = useState(false)
+  const [verifiedClaimsText, setVerifiedClaimsText] = useState('')
+  const [fidelityContract, setFidelityContract] = useState<ProductFidelityContract>(() =>
+    defaultFidelityContract(data.org.name || '', data.products?.[0]?.name || ''),
+  )
+  const [ctaChannel, setCtaChannel] = useState<'contact' | 'whatsapp' | 'website'>(() =>
+    data.phones.length ? 'whatsapp' : data.org.websiteHint ? 'website' : 'contact',
+  )
   const [uploadingExtra, setUploadingExtra] = useState(false)
+  const [isDrafting, setIsDrafting] = useState(false)
+  const [draftError, setDraftError] = useState<string | null>(null)
 
   // Step 3: AI Creative Plan & Continuous 0-8s Speech Timeline
   const [creativeIdea, setCreativeIdea] = useState('')
-  const [speechTimeline, setSpeechTimeline] = useState<SpeechTimelineItem[]>([
-    { start_sec: 0.0, end_sec: 1.8, exact_text: '', speaker: 'Spiker', corresponding_visual_beat: 'Ürünün belirgin detaylarıyla dinamik makro açılışı' },
-    { start_sec: 1.8, end_sec: 4.2, exact_text: '', speaker: 'Spiker', corresponding_visual_beat: 'Çalışma ortamında yüksek performans ve işlev gösterimi' },
-    { start_sec: 4.2, end_sec: 6.5, exact_text: '', speaker: 'Spiker', corresponding_visual_beat: 'Kullanım kolaylığı, sağlamlık ve verimlilik vurgusu' },
-    { start_sec: 6.5, end_sec: 8.0, exact_text: '', speaker: 'Spiker', corresponding_visual_beat: 'Kurumsal logo kilidi ve harekete geçirici çağrı (CTA)' },
-  ])
+  const [speechTimeline, setSpeechTimeline] = useState<SpeechTimelineItem[]>([])
   const [veoPromptPreview, setVeoPromptPreview] = useState('')
-  const [isPromptCustomized, setIsPromptCustomized] = useState(false)
 
   // Step 4: Approval & Generation Tracking
   const [transcriptConfirmed, setTranscriptConfirmed] = useState(false)
@@ -82,6 +102,8 @@ export function CreativeWizard({
   const [queueAhead, setQueueAhead] = useState<number | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submissionError, setSubmissionError] = useState<string | null>(null)
+  const [jobFailureMessage, setJobFailureMessage] = useState<string | null>(null)
+  const [jobEvidence, setJobEvidence] = useState<Partial<JobUserViewModel>>({})
 
   // Authoritative Brand Kit & Logo Resolution
   const defaultKit = useMemo(() => data.kits.find((k) => k.isDefault) ?? data.kits[0] ?? null, [data.kits])
@@ -111,77 +133,58 @@ export function CreativeWizard({
     return selectedProduct?.name || 'Ürün'
   }, [promotionType, customProductName, selectedProduct, data.org.name])
 
-  const hasValidProduct = Boolean(
-    promotionType === 'general_brand' ? true : activeProductImage && activeProductName
-  )
+  const hasValidProduct = Boolean(activeProductImage && activeProductName)
+  const activeProductId = useMemo(() => {
+    if (promotionType === 'existing_product') return selectedProductId
+    const slug = activeProductName.toLocaleLowerCase('tr-TR').replace(/[^a-z0-9çğıöşü]+/gi, '-').replace(/^-|-$/g, '')
+    return slug ? `ad-hoc:${slug}` : ''
+  }, [activeProductName, promotionType, selectedProductId])
 
-  // Seed default speech timeline when product or brand changes
-  useEffect(() => {
-    const brandName = data.org.name || 'İşletmemiz'
-    const prodName = activeProductName
-    const ctaText = `${brandName} güvencesiyle hemen tanışın.`
-
-    setCreativeIdea(`${brandName} kalitesi ve ${prodName} kullanımını öne çıkaran 8 saniyelik dinamik reels reklamı.`)
-
-    setSpeechTimeline([
-      {
-        start_sec: 0.0,
-        end_sec: 1.8,
-        exact_text: `Zorlu koşullara meydan okuyan sağlam teknoloji.`,
-        speaker: 'Spiker',
-        corresponding_visual_beat: 'Ürünün belirgin detaylarıyla dinamik makro açılışı',
-      },
-      {
-        start_sec: 1.8,
-        end_sec: 4.2,
-        exact_text: `Yüksek dayanıklılık ve kesintisiz performans ${prodName} ile buluştu.`,
-        speaker: 'Spiker',
-        corresponding_visual_beat: 'Çalışma ortamında yüksek performans ve işlev gösterimi',
-      },
-      {
-        start_sec: 4.2,
-        end_sec: 6.5,
-        exact_text: `Zamandan kazanın, projelerinizi güvenle tamamlayın.`,
-        speaker: 'Spiker',
-        corresponding_visual_beat: 'Kullanım kolaylığı, sağlamlık ve verimlilik vurgusu',
-      },
-      {
-        start_sec: 6.5,
-        end_sec: 8.0,
-        exact_text: ctaText,
-        speaker: 'Spiker',
-        corresponding_visual_beat: 'Kurumsal logo kilidi ve harekete geçirici çağrı (CTA)',
-      },
-    ])
-  }, [activeProductName, data.org.name])
+  const verifiedClaims = useMemo(() => parseFactLines(verifiedClaimsText), [verifiedClaimsText])
+  const quotaUsed = data.org.monthlyVideoUsed ?? 0
+  const quotaLimit = data.org.monthlyVideoQuota ?? 0
+  const quotaAvailable = quotaLimit > 0 && quotaUsed < quotaLimit
+  const ctaText = useMemo(() => {
+    if (ctaChannel === 'whatsapp' && data.phones[0]?.phone) return 'WhatsApp’tan iletişime geçin'
+    if (ctaChannel === 'website' && data.org.websiteHint) return 'Web sitesinden ayrıntıları inceleyin'
+    return 'Detaylar için iletişime geçin'
+  }, [ctaChannel, data.org.websiteHint, data.phones])
 
   // Total speech word count
   const fullSpeechText = useMemo(() => speechTimeline.map((s) => s.exact_text).join(' '), [speechTimeline])
   const totalWords = useMemo(() => fullSpeechText.split(/\s+/).filter(Boolean).length, [fullSpeechText])
 
-  // Deterministic Veo Prompt Compiler
-  useEffect(() => {
-    if (isPromptCustomized) return
-    const brandName = data.org.name || 'İşletmemiz'
-    const promptLines = [
-      `Photorealistic 9:16 vertical commercial television ad for ${brandName}.`,
-      `[Subject Focus]: @HeroProduct in an authentic operational commercial setting.`,
-      `[Cinematography]: 35mm lens, smooth forward dolly, commercial rim lighting, shallow depth of field.`,
-      `[Visual Beats]:`,
-      `0.0-1.8s: ${speechTimeline[0]?.corresponding_visual_beat || 'Macro product focus'}`,
-      `1.8-4.2s: ${speechTimeline[1]?.corresponding_visual_beat || 'Operational demonstration'}`,
-      `4.2-6.5s: ${speechTimeline[2]?.corresponding_visual_beat || 'Performance payoff'}`,
-      `6.5-8.0s: Hero lock framing with @BrandLogo placement.`,
-      ``,
-      `[AUDIO TIMELINE]`,
-      `Spoken language: Turkish (tr-TR).`,
-      ...speechTimeline.map((s) => `${s.start_sec.toFixed(1)}-${s.end_sec.toFixed(1)}s: "${s.exact_text}"`),
-      ``,
-      `Speak the approved Turkish lines in the exact order. Do not translate. Do not paraphrase. Do not add dialogue.`,
-      `[Negative Constraints]: no distorted branding, no cartoon textures, no blurry typography, no CGI artifact.`,
-    ]
-    setVeoPromptPreview(promptLines.join('\n'))
-  }, [data.org.name, speechTimeline, isPromptCustomized])
+  const preflightIssues = useMemo(() => validateWizardPreflight({
+    quotaUsed,
+    quotaLimit,
+    hasLogo: hasValidLogo,
+    hasProduct: hasValidProduct,
+    promotionType,
+    productId: activeProductId,
+    spokenText: fullSpeechText,
+    verifiedClaims,
+    offer: offerDetails,
+    offerVerified,
+    adFormat,
+    fidelityContract,
+    referenceCount: referenceAssets.length,
+    referenceRoleCount: referenceAssets.filter((asset) => asset.role).length,
+  }), [
+    quotaUsed,
+    quotaLimit,
+    hasValidLogo,
+    hasValidProduct,
+    promotionType,
+    activeProductId,
+    fullSpeechText,
+    verifiedClaims,
+    offerDetails,
+    offerVerified,
+    adFormat,
+    fidelityContract,
+    referenceAssets,
+  ])
+  const blockingPreflightIssues = preflightIssues.filter((issue) => issue.severity === 'error')
 
   // Serialized form payload
   const serializedPayload = useMemo(() => {
@@ -193,10 +196,10 @@ export function CreativeWizard({
       brandKitId: defaultKit?.id ?? '',
       useLogo: hasValidLogo,
       customLogoUrl: customLogoUrl || undefined,
-      productIds: selectedProductId ? [selectedProductId] : [],
-      productExtras: selectedProductId
+      productIds: activeProductId ? [activeProductId] : [],
+      productExtras: activeProductId
         ? {
-            [selectedProductId]: {
+            [activeProductId]: {
               imageUrl: activeProductImage,
               price: '',
               oldPrice: '',
@@ -212,7 +215,7 @@ export function CreativeWizard({
       offerDetails: offerDetails || undefined,
       customVoiceover: fullSpeechText,
       voiceoverScript: fullSpeechText,
-      referenceImageUrls: extraReferenceUrls,
+      referenceImageUrls: referenceAssets.map((asset) => asset.url),
       customText: creativeNote || undefined,
       videoScenarioPrompt: veoPromptPreview,
       metadata: {
@@ -222,8 +225,14 @@ export function CreativeWizard({
         authoritative_facts: {
           brand_name: brandName,
           product_name: activeProductName,
-          offer: offerDetails || undefined,
+          product_id: activeProductId || undefined,
+          offer: offerVerified ? offerDetails || undefined : undefined,
+          verified_claims: verifiedClaims,
+          approved_spoken_line: fullSpeechText,
+          product_fidelity_contract: fidelityContract,
         },
+        creative_engine_mode: VIDEO_ENGINE_MODE,
+        requested_provider: VIDEO_REQUESTED_PROVIDER,
       },
     })
   }, [
@@ -233,22 +242,29 @@ export function CreativeWizard({
     hasValidLogo,
     customLogoUrl,
     selectedProductId,
+    activeProductId,
     activeProductImage,
     offerDetails,
     creativeNote,
     subtitles,
     adFormat,
     fullSpeechText,
-    extraReferenceUrls,
+    referenceAssets,
     veoPromptPreview,
     promotionType,
     speechTimeline,
     data.org.name,
+    offerVerified,
+    verifiedClaims,
+    fidelityContract,
   ])
 
-  // AI Quick Actions for Speech Revision via Creative Director API
-  const applyAiRevision = async (type: 'sales' | 'short' | 'corporate' | 'refresh') => {
+  // Asset-grounded draft generation. This is called before the user can approve a draft.
+  const generateDraft = async (type: 'sales' | 'short' | 'corporate' | 'refresh' = 'refresh') => {
     setDraftApproved(false)
+    setTranscriptConfirmed(false)
+    setIsDrafting(true)
+    setDraftError(null)
     try {
       const res = await fetch('/api/ai-media/draft', {
         method: 'POST',
@@ -265,25 +281,39 @@ export function CreativeWizard({
           creativeNote,
           logoUrl: activeLogoUrl,
           productImageUrl: activeProductImage,
-          referenceUrls: extraReferenceUrls,
+          productId: activeProductId,
+          verifiedClaims,
+          offerVerified,
+          productFidelityContract: fidelityContract,
+          referenceAssets,
         }),
       })
 
-      if (res.ok) {
-        const draftRes = await res.json()
-        if (draftRes.creative_idea) setCreativeIdea(draftRes.creative_idea)
-        if (draftRes.speech_timeline) setSpeechTimeline(draftRes.speech_timeline)
-        if (draftRes.veo_prompt) setVeoPromptPreview(draftRes.veo_prompt)
+      const draftRes = await res.json()
+      if (!res.ok || draftRes.error) {
+        throw new Error(draftRes.error || 'Güvenli reklam taslağı oluşturulamadı.')
       }
-    } catch (e) {
-      console.error('Failed to generate AI revision:', e)
+      if (draftRes.creative_idea) setCreativeIdea(draftRes.creative_idea)
+      if (draftRes.speech_timeline) setSpeechTimeline(draftRes.speech_timeline)
+      if (draftRes.veo_prompt) setVeoPromptPreview(draftRes.veo_prompt)
+    } catch (error: any) {
+      console.error('Failed to generate grounded draft:', error)
+      setDraftError(error?.message || 'Güvenli reklam taslağı oluşturulamadı.')
+    } finally {
+      setIsDrafting(false)
     }
   }
+
+  const applyAiRevision = (type: 'sales' | 'short' | 'corporate' | 'refresh') => generateDraft(type)
 
   // Authoritative Video Job Submission (POST /api/ai-media/jobs)
   const handleRealSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!transcriptConfirmed || !draftApproved) return
+    if (blockingPreflightIssues.length > 0) {
+      setSubmissionError(blockingPreflightIssues[0].message)
+      return
+    }
 
     setIsSubmitting(true)
     setSubmissionError(null)
@@ -303,7 +333,7 @@ export function CreativeWizard({
       const [logoSha256, productSha256, referenceSha256] = await Promise.all([
         sha256Of(activeLogoUrl, 'Kurumsal logo'),
         activeProductImage ? sha256Of(activeProductImage, 'Ürün görseli') : Promise.resolve(null),
-        Promise.all(extraReferenceUrls.map((url, index) => sha256Of(url, `Ek referans ${index + 1}`))),
+        Promise.all(referenceAssets.map((asset, index) => sha256Of(asset.url, `Ek referans ${index + 1}`))),
       ])
 
       const payload = {
@@ -313,7 +343,9 @@ export function CreativeWizard({
         userStylePreference: adFormat,
         environmentPreset,
         motionStyle,
-        subtitles: subtitles ? 'auto' : 'off',
+        subtitles: VIDEO_SUBTITLE_MODE,
+        creativeEngineMode: VIDEO_ENGINE_MODE,
+        requestedProvider: VIDEO_REQUESTED_PROVIDER,
         promotionType,
         creativeIdea,
         speechTimeline,
@@ -326,8 +358,17 @@ export function CreativeWizard({
         authoritativeFacts: {
           brand_name: data.org.name || 'İşletmemiz',
           product_name: activeProductName,
-          offer: offerDetails || undefined,
-          cta: `${data.org.name || 'İşletmemiz'} ile iletişime geçin`,
+          product_id: activeProductId,
+          product_description: selectedProduct?.description || customProductDesc || undefined,
+          offer: offerVerified ? offerDetails || undefined : undefined,
+          offer_verified: offerVerified,
+          cta: ctaText,
+          phone: ctaChannel === 'whatsapp' ? data.phones[0]?.phone : undefined,
+          url: ctaChannel === 'website' ? data.org.websiteHint : undefined,
+          approved_spoken_line: fullSpeechText,
+          verified_claims: verifiedClaims,
+          unverified_facts: [],
+          product_fidelity_contract: fidelityContract,
         },
         logoAsset: {
           url: activeLogoUrl,
@@ -335,10 +376,11 @@ export function CreativeWizard({
           sha256: logoSha256,
         },
         productAsset: activeProductImage
-          ? { url: activeProductImage, name: activeProductName, sha256: productSha256 }
+          ? { url: activeProductImage, name: activeProductName, sha256: productSha256, productId: activeProductId }
           : null,
-        referenceAssets: extraReferenceUrls.map((u, i) => ({
-          url: u,
+        referenceAssets: referenceAssets.map((asset, i) => ({
+          url: asset.url,
+          role: asset.role,
           name: `ref_${i + 1}.jpg`,
           sha256: referenceSha256[i],
         })),
@@ -419,7 +461,7 @@ export function CreativeWizard({
         const res = await fetch(`/api/ai-media/jobs/${activeJobId}`)
         if (!res.ok) return
         const resData = await res.json()
-        const vm = resData.job
+        const vm = resData.job as JobUserViewModel
         if (!vm || !isMounted) return
 
         setJobState(vm.state)
@@ -429,6 +471,8 @@ export function CreativeWizard({
         setJobDisplayMessage(vm.display_message)
         setQueueAhead(vm.queue_ahead_count ?? null)
         setEtaText(vm.eta_display_text || 'Süre tahmini oluşturuluyor...')
+        setJobFailureMessage(vm.failure_user_message || null)
+        setJobEvidence(vm)
 
         if (vm.state === 'COMPLETED' && vm.playback_url) {
           setCompletedVideoUrl(vm.playback_url)
@@ -480,6 +524,11 @@ export function CreativeWizard({
               current={step}
               onJump={(id) => {
                 if (id === 'summary' && !draftApproved) return
+                if (id === 'draft' && step === 'campaign') {
+                  setStep('draft')
+                  void generateDraft()
+                  return
+                }
                 setStep(id as Step)
               }}
               className="wb-wa-steps"
@@ -488,7 +537,7 @@ export function CreativeWizard({
         ) : null}
 
         {/* 1. WAITING / GENERATION EXPERIENCE (Realtime & Authoritative Backend State) */}
-        {jobState !== 'IDLE' && jobState !== 'COMPLETED' ? (
+        {jobState !== 'IDLE' && jobState !== 'COMPLETED' && jobState !== 'FAILED' && jobState !== 'NEEDS_REVIEW' ? (
           <div className="p-6 space-y-6">
             <div className="text-center space-y-1">
               <div className="inline-flex size-3 rounded-full bg-[#008069] mb-3 animate-ping" />
@@ -571,6 +620,47 @@ export function CreativeWizard({
           </div>
         ) : null}
 
+        {/* Terminal states are actionable; they must never look like an endless render. */}
+        {jobState === 'FAILED' || jobState === 'NEEDS_REVIEW' ? (
+          <div className="mx-auto max-w-xl space-y-4 p-6">
+            <div className={`rounded-xl border p-4 ${jobState === 'FAILED' ? 'border-rose-200 bg-rose-50' : 'border-amber-300 bg-amber-50'}`}>
+              <p className={`text-[13px] font-bold ${jobState === 'FAILED' ? 'text-rose-800' : 'text-amber-900'}`}>
+                {jobState === 'FAILED' ? 'Video üretilemedi' : 'Video insan incelemesi bekliyor'}
+              </p>
+              <p className="mt-1 text-[12px] leading-relaxed text-[#667781]">
+                {jobFailureMessage || jobDisplayMessage || 'Çıktı otomatik kalite kapısından geçmedi.'}
+              </p>
+            </div>
+            <div className="grid gap-2 rounded-xl border border-hairline bg-[#f8fafb] p-4 text-[12px] sm:grid-cols-2">
+              <div><span className="text-[#667781]">İş ID</span><p className="font-mono font-semibold text-[#111b21] break-all">{activeJobId}</p></div>
+              <div><span className="text-[#667781]">Üretim profili</span><p className="font-semibold text-[#111b21]">{jobEvidence.creative_engine_mode || VIDEO_ENGINE_MODE}</p></div>
+              <div><span className="text-[#667781]">Seçilen sağlayıcı</span><p className="font-semibold text-[#111b21]">{jobEvidence.selected_provider || 'Seçilmedi'}</p></div>
+              <div><span className="text-[#667781]">Fallback nedeni</span><p className="font-semibold text-[#111b21]">{jobEvidence.fallback_reason || 'Yok'}</p></div>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <Link href="/icerik" className="inline-flex items-center justify-center rounded-full bg-[#008069] px-5 py-2 text-[13px] font-semibold text-white">
+                İçerik Kütüphanesine Git
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveJobId(null)
+                  setJobState('IDLE')
+                  setStep('summary')
+                  if (typeof window !== 'undefined') {
+                    const url = new URL(window.location.href)
+                    url.searchParams.delete('job_id')
+                    window.history.pushState({}, '', url.toString())
+                  }
+                }}
+                className="text-[12.5px] font-semibold text-[#667781] hover:text-[#111b21]"
+              >
+                Ayarları gözden geçir
+              </button>
+            </div>
+          </div>
+        ) : null}
+
         {/* 2. COMPLETED VIDEO PLAYER SCREEN */}
         {jobState === 'COMPLETED' ? (
           <div className="p-6 space-y-5 text-center max-w-md mx-auto">
@@ -597,6 +687,22 @@ export function CreativeWizard({
                 Video akışı doğrulanıyor...
               </div>
             )}
+
+            <div className="rounded-xl border border-hairline bg-[#f8fafb] p-3.5 text-left">
+              <div className="flex items-center justify-between">
+                <p className="text-[12.5px] font-bold text-[#111b21]">Üretim Kanıtı</p>
+                <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${jobEvidence.output_verified ? 'bg-[#e7f8f2] text-[#008069]' : 'bg-amber-100 text-amber-800'}`}>
+                  {jobEvidence.output_verified ? 'DOĞRULANDI' : 'DOĞRULAMA BEKLİYOR'}
+                </span>
+              </div>
+              <dl className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+                <div><dt className="text-[#667781]">Sağlayıcı</dt><dd className="font-semibold text-[#111b21]">{jobEvidence.selected_provider || 'Bilinmiyor'}</dd></div>
+                <div><dt className="text-[#667781]">Fallback</dt><dd className="font-semibold text-[#111b21]">{jobEvidence.fallback_reason || 'Yok'}</dd></div>
+                <div><dt className="text-[#667781]">Ölçülen çıktı</dt><dd className="font-semibold text-[#111b21]">{jobEvidence.width && jobEvidence.height ? `${jobEvidence.width}×${jobEvidence.height}` : '—'} · {jobEvidence.duration_seconds ?? '—'} sn</dd></div>
+                <div><dt className="text-[#667781]">Fidelity</dt><dd className="font-semibold text-[#111b21]">{jobEvidence.fidelity_contract_applied ? `${jobEvidence.fidelity_rule_count || 0} kural uygulandı` : 'Kanıt yok'}</dd></div>
+              </dl>
+              {jobEvidence.final_sha256 ? <p className="mt-2 truncate font-mono text-[9.5px] text-[#667781]">SHA-256 {jobEvidence.final_sha256}</p> : null}
+            </div>
 
             <div className="flex flex-col gap-2 pt-2">
               <Link
@@ -628,6 +734,21 @@ export function CreativeWizard({
         {/* 3. WIZARD STEPS FORM */}
         {jobState === 'IDLE' ? (
           <form onSubmit={handleRealSubmit} className="flex flex-col">
+            <div className="px-4 pt-4 sm:px-6">
+              <div className={`flex flex-col gap-2 rounded-xl border p-3 sm:flex-row sm:items-center sm:justify-between ${quotaAvailable ? 'border-[#b7e4d5] bg-[#f1fbf7]' : 'border-rose-200 bg-rose-50'}`}>
+                <div>
+                  <p className={`text-[12.5px] font-bold ${quotaAvailable ? 'text-[#006b58]' : 'text-rose-800'}`}>
+                    {quotaAvailable ? 'Üretim kapasitesi hazır' : 'Aylık video kotası dolu'}
+                  </p>
+                  <p className="text-[11.5px] text-[#667781]">
+                    Bu ay {quotaUsed}/{quotaLimit} üretim kullanıldı. Render öncesinde sunucu tekrar doğrular.
+                  </p>
+                </div>
+                <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${quotaAvailable ? 'bg-white text-[#008069]' : 'bg-white text-rose-700'}`}>
+                  {Math.max(0, quotaLimit - quotaUsed)} hak kaldı
+                </span>
+              </div>
+            </div>
             {submissionError ? (
               <div className="px-6 pt-3">
                 <Notice tone="danger">{submissionError}</Notice>
@@ -649,19 +770,35 @@ export function CreativeWizard({
                   {/* 4 Seçenek: Mevcut Ürün / Mevcut Hizmet / Genel Marka / Yeni Ürün */}
                   <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
                     {[
-                      { id: 'existing_product', label: 'Mevcut Ürün', desc: 'Katalogdan seç' },
-                      { id: 'existing_service', label: 'Mevcut Hizmet', desc: 'Hizmet tanıtımı' },
-                      { id: 'general_brand', label: 'Genel Marka', desc: 'Kurumsal film' },
-                      { id: 'new_offering', label: 'Yeni Ürün/Hizmet', desc: 'Yeni görsel yükle' },
+                      { id: 'existing_product', label: 'Mevcut Ürün', desc: 'Katalogdan seç', disabled: false },
+                      { id: 'existing_service', label: 'Mevcut Hizmet', desc: 'Hizmet tanıtımı', disabled: false },
+                      { id: 'general_brand', label: 'Genel Marka', desc: 'Ürün kilidi gerektirir', disabled: true },
+                      { id: 'new_offering', label: 'Yeni Ürün/Hizmet', desc: 'Yeni görsel yükle', disabled: false },
                     ].map((opt) => (
                       <button
                         key={opt.id}
                         type="button"
-                        onClick={() => setPromotionType(opt.id as PromotionType)}
+                        disabled={opt.disabled}
+                        onClick={() => {
+                          if (!opt.disabled) {
+                            const nextType = opt.id as PromotionType
+                            setPromotionType(nextType)
+                            const nextName = nextType === 'existing_product'
+                              ? selectedProduct?.name || activeProductName
+                              : customProductName.trim() || 'Yeni ürün veya hizmet'
+                            setFidelityContract(defaultFidelityContract(data.org.name || '', nextName))
+                            setDraftApproved(false)
+                            setTranscriptConfirmed(false)
+                            setSpeechTimeline([])
+                            setVeoPromptPreview('')
+                          }
+                        }}
                         className={`rounded-xl border p-3 text-left transition-all cursor-pointer ${
                           promotionType === opt.id
                             ? 'border-[#008069] bg-[#e7f8f2] ring-1 ring-[#008069]'
-                            : 'border-[#e9edef] hover:border-[#008069]/40 bg-surface'
+                            : opt.disabled
+                              ? 'cursor-not-allowed border-[#e9edef] bg-[#f8fafb] opacity-55'
+                              : 'border-[#e9edef] hover:border-[#008069]/40 bg-surface'
                         }`}
                       >
                         <p className="text-[13px] font-bold text-[#111b21]">{opt.label}</p>
@@ -698,7 +835,14 @@ export function CreativeWizard({
                               <button
                                 key={p.id}
                                 type="button"
-                                onClick={() => setSelectedProductId(p.id)}
+                                onClick={() => {
+                                  setSelectedProductId(p.id)
+                                  setFidelityContract(defaultFidelityContract(data.org.name || '', p.name))
+                                  setDraftApproved(false)
+                                  setTranscriptConfirmed(false)
+                                  setSpeechTimeline([])
+                                  setVeoPromptPreview('')
+                                }}
                                 className={`flex flex-col overflow-hidden rounded-xl border text-left transition-all cursor-pointer ${
                                   isSelected
                                     ? 'border-[#008069] bg-[#e7f8f2]/40 ring-2 ring-[#008069]'
@@ -732,6 +876,11 @@ export function CreativeWizard({
                         <Input
                           value={customProductName}
                           onChange={(e) => setCustomProductName(e.target.value)}
+                          onBlur={() => {
+                            if (customProductName.trim()) {
+                              setFidelityContract(defaultFidelityContract(data.org.name || '', customProductName))
+                            }
+                          }}
                           placeholder="Örn: Bofe Zeytin Hasat Makinesi veya Hızlı Kargo Hizmeti"
                         />
                       </Field>
@@ -810,11 +959,11 @@ export function CreativeWizard({
                       {/* Ek Görseller / Referanslar Yükleme Alanı */}
                       <div className="flex items-center gap-2.5 rounded-lg border border-hairline bg-white p-2">
                         <span className="flex size-9 items-center justify-center rounded bg-[#e7f8f2] text-[11px] font-bold text-[#008069]">
-                          {extraReferenceUrls.length}
+                          {referenceAssets.length}
                         </span>
                         <div className="min-w-0 flex-1">
                           <p className="text-[11px] font-semibold text-[#111b21]">Ek Referanslar</p>
-                          <p className="text-[10px] text-[#667781]">{extraReferenceUrls.length} görsel ekli</p>
+                          <p className="text-[10px] text-[#667781]">{referenceAssets.length} görsel ekli</p>
                         </div>
                       </div>
                     </div>
@@ -827,27 +976,42 @@ export function CreativeWizard({
                           <p className="text-[11px] text-[#667781]">Farklı açı, detay veya kullanım görselleri ekleyebilirsiniz (En fazla 3 adet).</p>
                         </div>
                         <span className="text-[11px] font-medium text-[#008069] bg-[#e7f8f2] px-2 py-0.5 rounded">
-                          {extraReferenceUrls.length}/3 ekli
+                          {referenceAssets.length}/3 ekli
                         </span>
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2 pt-1">
-                        {extraReferenceUrls.map((url, idx) => (
-                          <div key={idx} className="relative group size-12 rounded-md border border-hairline overflow-hidden bg-white">
+                        {referenceAssets.map((asset, idx) => (
+                          <div key={`${asset.url}-${idx}`} className="flex items-center gap-2 rounded-lg border border-hairline bg-[#f8fafb] p-2">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={url} alt={`Referans ${idx + 1}`} className="h-full w-full object-cover" />
+                            <img src={asset.url} alt={`Referans ${idx + 1}`} className="size-11 rounded-md border border-hairline object-cover" />
+                            <select
+                              aria-label={`Referans ${idx + 1} kullanım rolü`}
+                              value={asset.role}
+                              onChange={(event) => {
+                                const role = event.target.value as ReferenceRole
+                                setReferenceAssets((prev) => prev.map((item, itemIndex) => itemIndex === idx ? { ...item, role } : item))
+                              }}
+                              className="min-w-0 flex-1 rounded-md border border-[#e9edef] bg-white px-2 py-1.5 text-[11px] text-[#111b21] focus:border-[#008069] focus:outline-none"
+                            >
+                              <option value="reference">Ek ürün açısı</option>
+                              <option value="packaging">Ambalaj</option>
+                              <option value="environment">Kullanım ortamı</option>
+                              <option value="presenter">Sunucu / UGC kişi</option>
+                              <option value="style">Yalnız stil</option>
+                            </select>
                             <button
                               type="button"
-                              onClick={() => setExtraReferenceUrls((prev) => prev.filter((_, i) => i !== idx))}
-                              className="absolute inset-0 bg-black/60 text-white text-[11px] font-semibold opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer"
-                              title="Görseli Kaldır"
+                              onClick={() => setReferenceAssets((prev) => prev.filter((_, itemIndex) => itemIndex !== idx))}
+                              className="rounded px-2 py-1 text-[11px] font-semibold text-rose-700 hover:bg-rose-50"
+                              title="Görseli kaldır"
                             >
                               Kaldır
                             </button>
                           </div>
                         ))}
 
-                        {extraReferenceUrls.length < 3 ? (
+                        {referenceAssets.length < 3 ? (
                           <FileUploadButton
                             accept="image/png,image/jpeg,image/webp"
                             uploading={uploadingExtra}
@@ -860,7 +1024,7 @@ export function CreativeWizard({
                               setUploadingExtra(false)
                               const newUrl = res?.publicUrl
                               if (typeof newUrl === 'string' && newUrl) {
-                                setExtraReferenceUrls((prev) => [...prev, newUrl])
+                                setReferenceAssets((prev) => [...prev, { url: newUrl, role: 'reference' }])
                               }
                             }}
                           />
@@ -873,11 +1037,72 @@ export function CreativeWizard({
                         <strong>Kurumsal Logo Zorunludur:</strong> Yapay zekanın uydurma logo üretmemesi için lütfen logonuzu yükleyin.
                       </Notice>
                     ) : null}
-                    {!hasValidProduct && promotionType !== 'general_brand' ? (
+                    {!hasValidProduct ? (
                       <Notice tone="danger">
                         <strong>Ürün Görseli Zorunludur:</strong> Reklam videosu için gerçek bir ürün fotoğrafı seçilmelidir.
                       </Notice>
                     ) : null}
+                  </div>
+
+                  <div className="rounded-xl border border-[#b7e4d5] bg-[#f1fbf7] p-3.5">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="text-[12.5px] font-bold text-[#006b58]">Ürün Gerçeği Kilidi</p>
+                        <p className="mt-0.5 text-[11.5px] leading-relaxed text-[#667781]">
+                          Video bu görseli ve aşağıdaki kuralları kaynak kabul eder; yeni delik, yüzey, yazı veya özellik üretemez.
+                        </p>
+                      </div>
+                      <span className="shrink-0 rounded-full border border-[#b7e4d5] bg-white px-2.5 py-1 text-[10.5px] font-bold text-[#008069]">
+                        {promotionType === 'existing_product' ? 'Katalog ürünü kilitli' : 'Bu üretime özel'}
+                      </span>
+                    </div>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                      <div className="rounded-lg border border-white bg-white/80 p-2.5">
+                        <p className="text-[10px] font-bold uppercase tracking-wide text-[#667781]">Ürün kimliği</p>
+                        <p className="mt-0.5 truncate text-[12px] font-semibold text-[#111b21]">{selectedProductId || 'Geçici ürün'}</p>
+                      </div>
+                      <div className="rounded-lg border border-white bg-white/80 p-2.5">
+                        <p className="text-[10px] font-bold uppercase tracking-wide text-[#667781]">Korunacak</p>
+                        <p className="mt-0.5 text-[12px] font-semibold text-[#111b21]">{fidelityContract.must_preserve.length} kural</p>
+                      </div>
+                      <div className="rounded-lg border border-white bg-white/80 p-2.5">
+                        <p className="text-[10px] font-bold uppercase tracking-wide text-[#667781]">Yasak dönüşüm</p>
+                        <p className="mt-0.5 text-[12px] font-semibold text-[#111b21]">{fidelityContract.forbidden_mutations.length} kural</p>
+                      </div>
+                    </div>
+                    <details className="mt-3 text-[12px]">
+                      <summary className="cursor-pointer font-semibold text-[#006b58]">Ürün koruma kurallarını incele ve düzenle</summary>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        <Field label="Mutlaka korunacaklar" hint="Her satıra bir kural">
+                          <Textarea
+                            rows={4}
+                            value={fidelityContract.must_preserve.join('\n')}
+                            onChange={(event) => setFidelityContract((current) => ({ ...current, must_preserve: parseFactLines(event.target.value) }))}
+                          />
+                        </Field>
+                        <Field label="Yasak mutasyonlar" hint="Her satıra bir kural">
+                          <Textarea
+                            rows={4}
+                            value={fidelityContract.forbidden_mutations.join('\n')}
+                            onChange={(event) => setFidelityContract((current) => ({ ...current, forbidden_mutations: parseFactLines(event.target.value) }))}
+                          />
+                        </Field>
+                        <Field label="Güvenli kamera kuralları" hint="Her satıra bir kural">
+                          <Textarea
+                            rows={3}
+                            value={fidelityContract.safe_camera_rules.join('\n')}
+                            onChange={(event) => setFidelityContract((current) => ({ ...current, safe_camera_rules: parseFactLines(event.target.value) }))}
+                          />
+                        </Field>
+                        <Field label="İzin verilen hareketler" hint="Her satıra bir kural">
+                          <Textarea
+                            rows={3}
+                            value={fidelityContract.allowed_actions.join('\n')}
+                            onChange={(event) => setFidelityContract((current) => ({ ...current, allowed_actions: parseFactLines(event.target.value) }))}
+                          />
+                        </Field>
+                      </div>
+                    </details>
                   </div>
                 </div>
               ) : null}
@@ -923,13 +1148,43 @@ export function CreativeWizard({
 
                   {/* Opsiyonel Kampanya Teklifi ve Not */}
                   <div className="rounded-xl border border-hairline bg-[#f8fafb] p-3.5 space-y-3">
+                    <Field
+                      label="Doğrulanmış Ürün Gerçekleri"
+                      hint="Yalnız katalog, teknik föy veya işletme tarafından teyit edilmiş bilgiler; her satıra bir tane."
+                    >
+                      <Textarea
+                        rows={3}
+                        value={verifiedClaimsText}
+                        onChange={(event) => {
+                          setVerifiedClaimsText(event.target.value)
+                          setDraftApproved(false)
+                        }}
+                        placeholder={'Örn:\nStandart yapı tuğlasıdır\nDoğal terracotta renktedir'}
+                      />
+                    </Field>
+
                     <Field label="Kampanya / İndirim Teklifi (İsteğe bağlı)" hint="Varsa indirim, taksit veya özel fiyat teklifinizi yazın.">
                       <Input
                         value={offerDetails}
-                        onChange={(e) => setOfferDetails(e.target.value)}
+                        onChange={(e) => {
+                          setOfferDetails(e.target.value)
+                          setOfferVerified(false)
+                          setDraftApproved(false)
+                        }}
                         placeholder="Örn: Toptan alımlarda fabrika fiyatı ve şantiyeye doğrudan teslimat"
                       />
                     </Field>
+                    {offerDetails.trim() ? (
+                      <label className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-[11.5px] text-amber-950">
+                        <input
+                          type="checkbox"
+                          checked={offerVerified}
+                          onChange={(event) => setOfferVerified(event.target.checked)}
+                          className="mt-0.5 size-4 rounded text-[#008069] focus:ring-[#008069]"
+                        />
+                        <span><strong>Bu teklif bilgisini doğruladım.</strong> Fiyat, indirim ve teslimat şartları aynen yayımlanabilir.</span>
+                      </label>
+                    ) : null}
 
                     <Field label="Özel İstek / Sahne Notu (İsteğe bağlı)">
                       <Input
@@ -962,22 +1217,32 @@ export function CreativeWizard({
                           onChange={(e) => setMotionStyle(e.target.value as any)}
                           className="w-full rounded-lg border border-[#e9edef] bg-white px-3 py-2 text-[13px] text-[#111b21] focus:border-[#008069] focus:outline-none"
                         >
-                          <option value="studio_orbit">Stüdyo Vitrin & 360° Detay (Maksimum Geometri / Sıfır Bozulma)</option>
+                          <option value="studio_orbit">Kontrollü Vitrin & Güvenli 3/4 Açı</option>
                           <option value="real_usage">Sahada Gerçek Kullanım Anı</option>
                           <option value="macro_detail">Yakın Çekim & Malzeme Detayı</option>
                         </select>
                       </Field>
                     </div>
 
-                    <label className="flex items-center gap-2 pt-1 text-[13px] font-medium text-[#111b21] cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={subtitles}
-                        onChange={(e) => setSubtitles(e.target.checked)}
-                        className="size-4 rounded text-[#008069] focus:ring-[#008069]"
-                      />
-                      <span>Videoya senkronize altyazı katmanı eklensin</span>
-                    </label>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <Field label="Harekete Geçirici Çağrı">
+                        <select
+                          value={ctaChannel}
+                          onChange={(event) => setCtaChannel(event.target.value as typeof ctaChannel)}
+                          className="w-full rounded-lg border border-[#e9edef] bg-white px-3 py-2 text-[13px] text-[#111b21] focus:border-[#008069] focus:outline-none"
+                        >
+                          <option value="contact">İletişime geçin</option>
+                          {data.phones.length ? <option value="whatsapp">WhatsApp’tan iletişime geçin</option> : null}
+                          {data.org.websiteHint ? <option value="website">Web sitesini ziyaret edin</option> : null}
+                        </select>
+                      </Field>
+                      <div className="rounded-lg border border-[#e9edef] bg-white px-3 py-2">
+                        <p className="text-[11px] font-bold text-[#111b21]">Altyazı</p>
+                        <p className="mt-0.5 text-[11px] leading-relaxed text-[#667781]">
+                          Bu güvenli video profilinde kapalı. Sahne içine bozuk veya uydurma yazı üretilmez.
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ) : null}
@@ -989,7 +1254,7 @@ export function CreativeWizard({
                     <div>
                       <h2 className="text-[15px] font-bold text-[#111b21]">3 — Reklam Taslağı</h2>
                       <p className="text-[12px] text-[#667781] mt-0.5">
-                        8 saniyelik sinematik seslendirme ve sahne akışı. Her repliği doğrudan düzenleyebilirsiniz.
+                        Seçimleriniz ürün gerçeği ve doğrulanmış bilgilerle güvenli bir 8 saniyelik plana derlendi.
                       </p>
                     </div>
                     <span className="rounded bg-[#e7f8f2] px-2.5 py-1 text-[11px] font-bold text-[#008069] border border-[#008069]/20">
@@ -997,10 +1262,19 @@ export function CreativeWizard({
                     </span>
                   </div>
 
+                  {isDrafting ? (
+                    <div className="rounded-xl border border-[#b7e4d5] bg-[#f1fbf7] p-4 text-center">
+                      <span className="mx-auto mb-2 block size-3 animate-ping rounded-full bg-[#008069]" />
+                      <p className="text-[12.5px] font-bold text-[#006b58]">Kaynaklara bağlı taslak hazırlanıyor</p>
+                      <p className="mt-0.5 text-[11.5px] text-[#667781]">Ürün kuralları, doğrulanmış iddialar ve yaratıcı tür karşılaştırılıyor.</p>
+                    </div>
+                  ) : null}
+                  {draftError ? <Notice tone="danger">{draftError}</Notice> : null}
+
                   {/* Reklam Fikri Özeti */}
                   <div className="rounded-xl border border-hairline bg-[#f8fafb] p-3">
                     <p className="text-[11px] uppercase font-bold text-[#667781] tracking-wider">Reklam Konsepti</p>
-                    <p className="text-[13px] font-semibold text-[#111b21] mt-0.5">{creativeIdea}</p>
+                    <p className="text-[13px] font-semibold text-[#111b21] mt-0.5">{creativeIdea || 'Taslak henüz oluşturulmadı.'}</p>
                   </div>
 
                   {/* Continuous 0-8 Second Speech Timeline Blocks */}
@@ -1032,26 +1306,17 @@ export function CreativeWizard({
 
                   {/* Word count pacing indicator */}
                   <div className="flex items-center justify-between text-[12px] px-1">
-                    <span className={totalWords > 22 ? 'text-amber-700 font-medium' : 'text-[#667781]'}>
-                      Toplam: <strong>{totalWords} kelime</strong> (Doğal Türkçe konuşma hızı: ~15-20 kelime)
+                    <span className={totalWords > MAX_SPOKEN_WORDS || totalWords === 0 ? 'text-rose-700 font-medium' : 'text-[#667781]'}>
+                      Toplam: <strong>{totalWords} kelime</strong> (Güvenli sınır: en fazla {MAX_SPOKEN_WORDS})
                     </span>
                   </div>
 
                   {/* Quick Revision Action Buttons */}
                   <div className="space-y-1.5 pt-1">
-                    <p className="text-[11px] font-semibold text-[#667781]">Hızlı Yenileme:</p>
+                    <p className="text-[11px] font-semibold text-[#667781]">Taslağı yeniden derle:</p>
                     <div className="flex flex-wrap gap-2">
-                      <Button type="button" variant="quiet" className="h-8 text-[12px]" onClick={() => applyAiRevision('refresh')}>
-                        Yeniden Öner
-                      </Button>
-                      <Button type="button" variant="quiet" className="h-8 text-[12px]" onClick={() => applyAiRevision('sales')}>
-                        Daha Satış Odaklı
-                      </Button>
-                      <Button type="button" variant="quiet" className="h-8 text-[12px]" onClick={() => applyAiRevision('short')}>
-                        Daha Kısa
-                      </Button>
-                      <Button type="button" variant="quiet" className="h-8 text-[12px]" onClick={() => applyAiRevision('corporate')}>
-                        Daha Kurumsal
+                      <Button type="button" variant="quiet" className="h-8 text-[12px]" disabled={isDrafting} onClick={() => applyAiRevision('refresh')}>
+                        {isDrafting ? 'Derleniyor…' : 'Seçimlerden Yeniden Oluştur'}
                       </Button>
                     </div>
                   </div>
@@ -1064,6 +1329,7 @@ export function CreativeWizard({
                       <input
                         type="checkbox"
                         checked={draftApproved}
+                        disabled={isDrafting || Boolean(draftError) || totalWords === 0 || totalWords > MAX_SPOKEN_WORDS}
                         onChange={(e) => setDraftApproved(e.target.checked)}
                         className="mt-1 size-4.5 rounded text-[#008069] focus:ring-[#008069]"
                       />
@@ -1087,14 +1353,11 @@ export function CreativeWizard({
                       <Textarea
                         rows={6}
                         value={veoPromptPreview}
-                        onChange={(e) => {
-                          setIsPromptCustomized(true)
-                          setVeoPromptPreview(e.target.value)
-                        }}
+                        readOnly
                         className="font-mono text-[11px]"
                       />
                       <p className="text-[10.5px] text-[#667781]">
-                        * Kurumsal logo ve ürün güvenlik kilitleri kullanıcı istemiyle override edilemez.
+                        * Teknik prompt salt okunurdur. Değişiklikler yalnız yapılandırılmış ürün ve kampanya alanlarından yapılır.
                       </p>
                     </div>
                   </details>
@@ -1132,6 +1395,47 @@ export function CreativeWizard({
                     </div>
                   </div>
 
+                  <div className="rounded-xl border border-hairline bg-[#f8fafb] p-3.5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[13px] font-bold text-[#111b21]">Derlenen Üretim Ayarları</p>
+                        <p className="mt-0.5 text-[11px] text-[#667781]">Arayüz seçimi ile kuyruğa yazılacak değerler birebir eşleşir.</p>
+                      </div>
+                      <span className="rounded-full bg-[#e7f8f2] px-2.5 py-1 text-[10px] font-bold text-[#008069]">KİLİTLİ</span>
+                    </div>
+                    <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-[11.5px] sm:grid-cols-4">
+                      <div><dt className="text-[#667781]">Motor</dt><dd className="font-semibold text-[#111b21]">{VIDEO_ENGINE_MODE}</dd></div>
+                      <div><dt className="text-[#667781]">Sağlayıcı</dt><dd className="font-semibold text-[#111b21]">{VIDEO_REQUESTED_PROVIDER}</dd></div>
+                      <div><dt className="text-[#667781]">Çıktı</dt><dd className="font-semibold text-[#111b21]">{VIDEO_ASPECT_RATIO} · {VIDEO_DURATION_SECONDS} sn</dd></div>
+                      <div><dt className="text-[#667781]">Dil / Altyazı</dt><dd className="font-semibold text-[#111b21]">{VIDEO_LANGUAGE} · {VIDEO_SUBTITLE_MODE === 'off' ? 'Kapalı' : 'Otomatik'}</dd></div>
+                      <div><dt className="text-[#667781]">Yaratıcı tür</dt><dd className="font-semibold text-[#111b21]">{AD_FORMAT_OPTIONS.find((item) => item.id === adFormat)?.label || adFormat}</dd></div>
+                      <div><dt className="text-[#667781]">Ortam</dt><dd className="font-semibold text-[#111b21]">{environmentPreset}</dd></div>
+                      <div><dt className="text-[#667781]">Kamera</dt><dd className="font-semibold text-[#111b21]">{motionStyle}</dd></div>
+                      <div><dt className="text-[#667781]">Referans</dt><dd className="font-semibold text-[#111b21]">{referenceAssets.length + 2} kilitli varlık</dd></div>
+                    </dl>
+                  </div>
+
+                  <div className={`rounded-xl border p-3.5 ${blockingPreflightIssues.length ? 'border-rose-200 bg-rose-50' : 'border-[#b7e4d5] bg-[#f1fbf7]'}`}>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className={`text-[13px] font-bold ${blockingPreflightIssues.length ? 'text-rose-800' : 'text-[#006b58]'}`}>
+                        {blockingPreflightIssues.length ? 'Üretim öncesi düzeltme gerekli' : 'Üretim öncesi kontroller hazır'}
+                      </p>
+                      <span className="text-[11px] font-bold text-[#667781]">{preflightIssues.length ? `${preflightIssues.length} not` : 'Tüm kontroller geçti'}</span>
+                    </div>
+                    {preflightIssues.length ? (
+                      <ul className="mt-2 space-y-1.5">
+                        {preflightIssues.map((issue) => (
+                          <li key={issue.code} className={`flex items-start gap-2 text-[11.5px] ${issue.severity === 'error' ? 'text-rose-800' : 'text-amber-800'}`}>
+                            <span aria-hidden="true">{issue.severity === 'error' ? '●' : '▲'}</span>
+                            <span>{issue.message}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-1 text-[11.5px] text-[#667781]">Kota, ürün kimliği, varlık hash’i, fidelity ve seslendirme sınırı doğrulandı.</p>
+                    )}
+                  </div>
+
                   {/* Kilitlenmiş Seslendirme Akışı Özeti */}
                   <div className="rounded-xl border border-hairline bg-surface p-3.5 space-y-2.5 shadow-2xs">
                     <div className="flex items-center justify-between">
@@ -1161,6 +1465,7 @@ export function CreativeWizard({
                       <input
                         type="checkbox"
                         checked={transcriptConfirmed}
+                        disabled={blockingPreflightIssues.length > 0}
                         onChange={(e) => setTranscriptConfirmed(e.target.checked)}
                         className="mt-0.5 size-4 rounded text-[#008069] focus:ring-[#008069]"
                       />
@@ -1198,12 +1503,15 @@ export function CreativeWizard({
                     type="button"
                     className="wb-wa-submit !bg-[#008069] text-white"
                     disabled={
-                      (step === 'what' && (!hasValidLogo || (!hasValidProduct && promotionType !== 'general_brand'))) ||
+                      (step === 'what' && (!hasValidLogo || !hasValidProduct)) ||
                       (step === 'draft' && !draftApproved)
                     }
                     onClick={() => {
                       if (step === 'what') setStep('campaign')
-                      else if (step === 'campaign') setStep('draft')
+                      else if (step === 'campaign') {
+                        setStep('draft')
+                        void generateDraft()
+                      }
                       else if (step === 'draft') {
                         if (!draftApproved) return
                         setStep('summary')
@@ -1216,7 +1524,7 @@ export function CreativeWizard({
                   <Button
                     type="submit"
                     className="wb-wa-submit !bg-[#008069] hover:!bg-[#00a884] text-white font-bold h-11 px-6 shadow-sm"
-                    disabled={isSubmitting || !transcriptConfirmed || !hasValidLogo || (!hasValidProduct && promotionType !== 'general_brand')}
+                    disabled={isSubmitting || !transcriptConfirmed || !hasValidLogo || !hasValidProduct || blockingPreflightIssues.length > 0}
                   >
                     {isSubmitting ? 'Kuyruğa Alınıyor…' : 'ONAYLA VE VİDEOYU OLUŞTUR'}
                   </Button>
@@ -1233,6 +1541,11 @@ export function CreativeWizard({
         onClose={() => setAddProductOpen(false)}
         onSuccess={(product: ProductCard) => {
           setSelectedProductId(product.id)
+          setFidelityContract(defaultFidelityContract(data.org.name || '', product.name))
+          setDraftApproved(false)
+          setTranscriptConfirmed(false)
+          setSpeechTimeline([])
+          setVeoPromptPreview('')
           setAddProductOpen(false)
         }}
       />

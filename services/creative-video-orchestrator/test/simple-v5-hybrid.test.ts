@@ -7,7 +7,10 @@ import {
   createBrandContextSnapshot,
 } from '../src/index.js'
 
-function fixture(approvedSpokenLine?: string) {
+function fixture(
+  approvedSpokenLine?: string,
+  options: { style?: string; environment?: string; motion?: string } = {},
+) {
   return createBrandContextSnapshot({
     org_id: 'org-ayvazoglu',
     brand_name: 'Ayvazoğlu İnşaat',
@@ -25,6 +28,9 @@ function fixture(approvedSpokenLine?: string) {
       objective: 'Seçili ürünü tanıt',
       cta: 'Detayları inceleyin',
       approved_spoken_line: approvedSpokenLine,
+      user_style_preference: options.style,
+      environment_preset: options.environment,
+      motion_style: options.motion,
     },
     verified_claims: ['Standart yapı tuğlası'],
     requested_duration: 8,
@@ -95,4 +101,25 @@ test('SIMPLE_V5_HYBRID requires a locked selected product/service', () => {
     campaign: { objective: 'Tanıtım', cta: 'İnceleyin' },
   })
   assert.throws(() => SimpleV5BriefNormalizer.normalize(snapshot), /SIMPLE_V5_SELECTED_PRODUCT_REQUIRED/)
+})
+
+test('SIMPLE_V5_HYBRID makes selected creative types materially different without changing timing', () => {
+  const approvedLine = 'Ayvazoğlu Tuğla gerçek çalışma ortamında referansına sadık biçimde gösteriliyor.'
+  const usage = SimpleV5BriefNormalizer.normalize(fixture(approvedLine, {
+    style: 'PRODUCT_USAGE',
+    environment: 'construction',
+    motion: 'real_usage',
+  }))
+  const premium = SimpleV5BriefNormalizer.normalize(fixture(approvedLine, {
+    style: 'PREMIUM',
+    environment: 'studio',
+    motion: 'macro_detail',
+  }))
+
+  assert.notEqual(usage.shotPlan.shot1_hook.description, premium.shotPlan.shot1_hook.description)
+  assert.notEqual(usage.shotPlan.shot2_proof.description, premium.shotPlan.shot2_proof.description)
+  assert.equal(usage.shotPlan.shot1_hook.timing, premium.shotPlan.shot1_hook.timing)
+  assert.match(usage.brief.location, /şantiye/i)
+  assert.match(premium.brief.location, /stüdyo/i)
+  assert.match(premium.brief.cameraMotion, /makro/i)
 })

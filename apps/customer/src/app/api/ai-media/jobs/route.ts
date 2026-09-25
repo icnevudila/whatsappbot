@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireActiveOrg, isOrgAdminRole } from '@/lib/org'
+import { MAX_SPOKEN_WORDS, countWords } from '@/lib/video-wizard-contract'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
       adFormat,
       userStylePreference,
       environmentPreset = 'auto',
-      motionStyle = 'studio_orbit',
+      motionStyle = 'real_usage',
       subtitles,
       promotionType,
       creativeIdea,
@@ -45,8 +46,7 @@ export async function POST(req: NextRequest) {
       logoAsset,
       productAsset,
       referenceAssets,
-      monthlyVideoQuota = 5,
-      creativeEngineMode = 'CURRENT',
+      creativeEngineMode = 'SIMPLE_V5_HYBRID',
       requestedProvider,
     } = body
 
@@ -71,19 +71,79 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Eksik veya geçersiz reklam taslağı verisi.' }, { status: 400 })
     }
 
+    const approvedSpokenLine = String(
+      authoritativeFacts?.approved_spoken_line || speechTimeline.map((item: any) => item?.exact_text || '').join(' ')
+    ).replace(/\s+/g, ' ').trim()
+    const spokenWordCount = countWords(approvedSpokenLine)
+    if (!approvedSpokenLine || spokenWordCount > MAX_SPOKEN_WORDS) {
+      return NextResponse.json(
+        { error: `Onaylı Türkçe seslendirme 1–${MAX_SPOKEN_WORDS} kelime olmalıdır (şu an ${spokenWordCount}).` },
+        { status: 400 }
+      )
+    }
+
+    const verifiedClaims = Array.isArray(authoritativeFacts?.verified_claims)
+      ? authoritativeFacts.verified_claims.map((claim: unknown) => String(claim).trim()).filter(Boolean)
+      : []
+    const productFidelityContract = authoritativeFacts?.product_fidelity_contract
+    if (normalizedCreativeMode === 'SIMPLE_V5_HYBRID') {
+      if (subtitles !== 'off') {
+        return NextResponse.json({ error: 'SIMPLE_V5 altyazı finishing desteği hazır olmadığı için altyazı kapalı olmalıdır.' }, { status: 400 })
+      }
+      if (!authoritativeFacts?.product_id) {
+        return NextResponse.json({ error: 'SIMPLE_V5 üretimi için katalog ürün kimliği zorunludur.' }, { status: 400 })
+      }
+      if (
+        !productFidelityContract ||
+        !Array.isArray(productFidelityContract.must_preserve) ||
+        productFidelityContract.must_preserve.length === 0 ||
+        !Array.isArray(productFidelityContract.forbidden_mutations) ||
+        productFidelityContract.forbidden_mutations.length === 0
+      ) {
+        return NextResponse.json({ error: 'Ürün gerçekliği sözleşmesi eksik; üretim güvenli biçimde başlatılamaz.' }, { status: 400 })
+      }
+      if (authoritativeFacts?.offer && authoritativeFacts?.offer_verified !== true) {
+        return NextResponse.json({ error: 'Teklif bilgisi doğrulanmadan videoda kullanılamaz.' }, { status: 400 })
+      }
+      if (['OFFER', 'OFFER_DRIVEN'].includes(String(adFormat).toUpperCase()) && !authoritativeFacts?.offer) {
+        return NextResponse.json({ error: 'Kampanya formatı için doğrulanmış teklif bilgisi zorunludur.' }, { status: 400 })
+      }
+    }
+
     // 1. Video Kotası Kontrolü
     const startOfMonth = new Date()
     startOfMonth.setDate(1)
     startOfMonth.setHours(0, 0, 0, 0)
 
-    const { count: videoUsedCount } = await (supabase as any)
-      .from('ai_media_jobs')
-      .select('id', { count: 'exact', head: true })
-      .eq('org_id', org.id)
-      .in('state', ['PENDING', 'VALIDATING_INPUTS', 'QUEUED', 'LEASED', 'PREPARING_ENV', 'GENERATING', 'COMPLETED'])
-      .gte('created_at', startOfMonth.toISOString())
+    const [{ count: videoUsedCount, error: quotaCountError }, { data: quotaOrg, error: quotaOrgError }] = await Promise.all([
+      (supabase as any)
+        .from('ai_media_jobs')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', org.id)
+        .in('state', [
+          'PENDING', 'VALIDATING_INPUTS', 'QUEUED', 'LEASED', 'PREPARING_ENV', 'OPENING_PROJECT',
+          'ATTACHING_INGREDIENTS', 'INGREDIENTS_VERIFIED', 'GENERATING', 'POLLING_FLOW',
+          'DOWNLOADING_MEDIA', 'MEDIA_DOWNLOADED', 'FFPROBE_INSPECTING', 'SHA256_VERIFYING',
+          'VISUAL_QA_EVALUATING', 'COMPLETED', 'NEEDS_REVIEW',
+        ])
+        .gte('created_at', startOfMonth.toISOString()),
+      (supabase as any)
+        .from('organizations')
+        .select('monthly_video_quota')
+        .eq('id', org.id)
+        .single(),
+    ])
+
+    if (quotaCountError || quotaOrgError) {
+      console.error('[ai-media-jobs] Quota lookup failed:', quotaCountError || quotaOrgError)
+      return NextResponse.json({ error: 'Video kotası doğrulanamadı; üretim güvenli biçimde başlatılmadı.' }, { status: 503 })
+    }
 
     const used = videoUsedCount ?? 0
+    const monthlyVideoQuota = Number(quotaOrg?.monthly_video_quota ?? 0)
+    if (!Number.isFinite(monthlyVideoQuota) || monthlyVideoQuota <= 0) {
+      return NextResponse.json({ error: 'İşletmenin geçerli video kotası bulunamadı.' }, { status: 503 })
+    }
     if (used >= monthlyVideoQuota) {
       return NextResponse.json(
         { error: `Aylık video üretim kotanıza (${used}/${monthlyVideoQuota}) ulaştınız.` },
@@ -95,13 +155,13 @@ export async function POST(req: NextRequest) {
     if (!logoAsset?.url) {
       return NextResponse.json({ error: 'Video üretimi için kurumsal logo zorunludur.' }, { status: 400 })
     }
-    if (promotionType !== 'general_brand' && !productAsset?.url) {
+    if (!productAsset?.url) {
       return NextResponse.json({ error: 'Video üretimi için gerçek bir ürün görseli seçilmelidir.' }, { status: 400 })
     }
 
     // 3. Asset Manifest & SHA256 Sets
     const manifestAssets: Array<{
-      role: 'logo' | 'product' | 'reference'
+      role: 'logo' | 'product' | 'reference' | 'packaging' | 'environment' | 'presenter' | 'style'
       file_path: string
       storage_url: string
       original_filename: string
@@ -154,8 +214,10 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: `Referans görseli ${idx + 1} için gerçek SHA-256 doğrulaması gerekli.` }, { status: 400 })
         }
         const refSha = ref.sha256
+        const allowedReferenceRoles = ['reference', 'packaging', 'environment', 'presenter', 'style'] as const
+        const referenceRole = allowedReferenceRoles.includes(ref.role) ? ref.role : 'reference'
         manifestAssets.push({
-          role: 'reference',
+          role: referenceRole,
           file_path: ref.url,
           storage_url: ref.url,
           original_filename: ref.name || `ref_${idx + 1}.jpg`,
@@ -175,7 +237,12 @@ export async function POST(req: NextRequest) {
       selected_ad_format: adFormat || 'AUTO',
       speech_timeline: speechTimeline,
       veo_prompt: lockedProviderPrompt,
-      campaign_facts: authoritativeFacts || {},
+      campaign_facts: {
+        ...(authoritativeFacts || {}),
+        approved_spoken_line: approvedSpokenLine,
+        verified_claims: verifiedClaims,
+        product_fidelity_contract: productFidelityContract,
+      },
       asset_sha_set: manifestAssets.map((a) => ({
         role: a.role,
         file_path: a.file_path,
@@ -226,6 +293,10 @@ export async function POST(req: NextRequest) {
           motion_style: motionStyle,
           subtitles: subtitles ? (subtitles === 'off' ? 'off' : 'auto') : 'auto',
           authoritative_facts: authoritativeFacts,
+          catalog_product_id: authoritativeFacts?.product_id || null,
+          product_fidelity_contract: productFidelityContract,
+          verified_claims: verifiedClaims,
+          language: 'tr-TR',
           created_by_user_id: userId,
         },
       })

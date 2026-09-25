@@ -59,6 +59,26 @@ export class SimpleV5BriefNormalizer {
       cameraMotion = 'net ekran hizalaması ve sabit kadraj'
     }
 
+    const requestedEnvironment = (snapshot.campaign.environment_preset || 'auto').toLowerCase()
+    const environmentOverrides: Record<string, string> = {
+      garden: 'Doğal bahçe, tarla veya sera ortamı',
+      studio: 'Sade ve kontrollü profesyonel ürün stüdyosu',
+      kitchen: 'Hijyenik profesyonel mutfak veya sunum alanı',
+      office: 'Modern ve aydınlık ofis çalışma alanı',
+      workshop: 'Gerçek atölye, fabrika veya sanayi çalışma alanı',
+      construction: 'Otantik ticari şantiye ve yapı lojistiği sahası',
+    }
+    if (environmentOverrides[requestedEnvironment]) location = environmentOverrides[requestedEnvironment]
+
+    const requestedMotion = (snapshot.campaign.motion_style || 'real_usage').toLowerCase()
+    if (requestedMotion === 'studio_orbit') {
+      cameraMotion = 'ürün formunu koruyan, tam tur atmayan güvenli 3/4 vitrin hareketi'
+    } else if (requestedMotion === 'macro_detail') {
+      cameraMotion = 'kontrollü makrodan ürünün tamamına açılan, formu okunur tutan hareket'
+    } else if (requestedMotion === 'real_usage') {
+      cameraMotion = 'gerçek kullanım adımını takip eden sabit ve yumuşak kamera'
+    }
+
     // 2. One Primary Idea & One Primary Action
     const primaryIdea = `${brandName} bünyesindeki ${productName} ürününün referansa sadık tek bir tanıtım anı.`
     // Sector hints may choose the environment, never the product's capability. Keep
@@ -117,21 +137,60 @@ export class SimpleV5BriefNormalizer {
       durationSeconds,
     }
 
-    // 4. Three Shots Layout (0.0-2.2s visual hook, 2.2-5.8s proof / real product action, 5.8-8.0s hero close)
+    const style = (snapshot.campaign.user_style_preference || 'AUTO').toUpperCase()
+    const styleDescriptions: Record<string, { hook: string; proof: string; close: string }> = {
+      FAST_SALES: {
+        hook: `İlk saniyede ${productName} üzerinde net ve hızlı ürün detayı; ${cameraMotion}.`,
+        proof: `${primaryAction} Yalnız doğrulanmış fayda varsa görsel olarak desteklenir.`,
+        close: `${productName} merkezde; temiz CTA alanı bırakılan doğrudan kapanış.`,
+      },
+      PRODUCT_USAGE: {
+        hook: `${location} içinde ürün ve kullanım bağlamını birlikte kuran açılış.`,
+        proof: `${primaryAction} Tek ve kesintisiz kullanım adımı.`,
+        close: `${productName} gerçek kullanımın doğal sonucu içinde sabitlenir.`,
+      },
+      PROBLEM_SOLUTION: {
+        hook: `Uydurma hasar veya sonuç göstermeden ${location} çalışma bağlamı kurulur.`,
+        proof: `${primaryAction} Yalnız doğrulanmış özelliklerle görsel yanıt gösterilir.`,
+        close: `${productName} çözüm iddiası eklenmeden temiz ürün kapanışında.`,
+      },
+      SOCIAL_UGC: {
+        hook: `${productName} için doğal birinci şahıs yaklaşımı; referans sunucu varsa yalnız o kullanılır.`,
+        proof: `${primaryAction} Samimi fakat iddiasız kullanım detayı.`,
+        close: `${productName} elde veya doğal ortamında okunur son kadrajda.`,
+      },
+      PREMIUM: {
+        hook: `${productName} silüeti ve gerçek malzemesi sakin ışık geçişiyle ortaya çıkar.`,
+        proof: `${primaryAction} Az hareketli, temiz ve prestijli kadraj.`,
+        close: `${productName} geniş negatif alanlı sabit hero kapanışında.`,
+      },
+      OFFER: {
+        hook: `${productName} ilk saniyede okunur kadrajda; teklif metni sahne içine üretilmez.`,
+        proof: `${primaryAction} Teklif yalnız deterministic finishing alanına ayrılır.`,
+        close: `${productName} ve boş teklif alanı bulunan temiz marka kapanışında.`,
+      },
+    }
+    const selectedStyle = styleDescriptions[style] || {
+      hook: `Dinamik açılış kadrajında ${productName}, ${location} içinde net olarak tanıtılır.`,
+      proof: `${primaryAction} Gerçek malzeme fiziği ve pürüzsüz çalışma akışı.`,
+      close: `${productName} sahnede merkezde, sabit ve temiz bir son kadrajda gösterilir.`,
+    }
+
+    // 4. Three Shots Layout; every user style keeps the same timing contract but materially changes visual grammar.
     const shotPlan: SimpleV5ShotPlan = {
       shot1_hook: {
         timing: '0.0-2.2s',
-        description: `Dinamik açılış kadrajında ${productName}, ${location} içinde net olarak tanıtılır.`,
+        description: selectedStyle.hook,
         framing: 'Orta plan açılış ve odaklanma',
       },
       shot2_proof: {
         timing: '2.2-5.8s',
-        description: `${primaryAction} Gerçek malzeme fiziği ve pürüzsüz çalışma akışı.`,
+        description: selectedStyle.proof,
         action: primaryAction,
       },
       shot3_close: {
         timing: '5.8-8.0s',
-        description: `${productName} sahnede merkezde, sabit ve temiz bir son kadrajda gösterilir.`,
+        description: selectedStyle.close,
         resolution: 'Sabit son kadraj ve temiz alan',
       },
     }

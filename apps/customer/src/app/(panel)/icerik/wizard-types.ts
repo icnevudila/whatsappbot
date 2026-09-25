@@ -1,4 +1,5 @@
 import { CREATIVE_FORMATS, VIDEO_CREATIVE_FORMAT, type ProductFieldKey } from '@/lib/creative/types'
+import type { ProductFidelityContract, ReferenceRole } from '@/lib/video-wizard-contract'
 
 export type LibraryOption = {
   id: string
@@ -24,6 +25,11 @@ export type ProductCard = {
   description: string | null
   boxContents: string | null
   images: { id: string; url: string }[]
+}
+
+export type WizardReferenceAsset = {
+  url: string
+  role: ReferenceRole
 }
 
 export type PhoneOption = {
@@ -134,7 +140,7 @@ export type CreativeRevision = {
 export type JobUserViewModel = {
   job_id: string
   org_id: string
-  state: 'PENDING' | 'QUEUED' | 'GENERATING' | 'COMPLETED' | 'FAILED'
+  state: 'PENDING' | 'QUEUED' | 'GENERATING' | 'COMPLETED' | 'NEEDS_REVIEW' | 'FAILED'
   display_state:
     | 'REKLAM_TASLAGI_HAZIRLANIYOR'
     | 'SIRAYA_ALINDI'
@@ -143,6 +149,7 @@ export type JobUserViewModel = {
     | 'KALITE_KONTROLU'
     | 'MARKA_DUZENLEMELERI'
     | 'HAZIR'
+    | 'INCELEME_GEREKIYOR'
     | 'BASARISIZ'
   display_title: string
   display_message: string
@@ -154,4 +161,20 @@ export type JobUserViewModel = {
   output_id?: string | null
   playback_url?: string | null
   failure_user_message?: string | null
+  creative_engine_mode?: 'CURRENT' | 'SIMPLE_V5_HYBRID' | null
+  requested_provider?: 'AUTO' | 'GEMINI_NATIVE_VIDEO' | 'FLOW_VEO' | null
+  selected_provider?: 'GEMINI_NATIVE_VIDEO' | 'FLOW_VEO' | null
+  capability_state?: string | null
+  fallback_from?: string | null
+  fallback_reason?: string | null
+  final_sha256?: string | null
+  duration_seconds?: number | null
+  width?: number | null
+  height?: number | null
+  output_verified?: boolean | null
+  output_approved?: boolean | null
+  fidelity_contract_applied?: boolean | null
+  fidelity_rule_count?: number | null
+  canonical_asset_sha?: string | null
+  product_fidelity_contract?: ProductFidelityContract | null
 }

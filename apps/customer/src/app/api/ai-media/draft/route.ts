@@ -2,61 +2,82 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireActiveOrg } from '@/lib/org'
 import type { SpeechTimelineItem, AdFormatType } from '@/app/(panel)/icerik/wizard-types'
 import { resolveProductAffordance } from '@/lib/ai/affordance'
+import { buildSafeSpokenLine, type ProductFidelityContract } from '@/lib/video-wizard-contract'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 type Beat = { start: number; end: number; purpose: string; visual: string }
 
-const beatCountFor = (format: AdFormatType, hasProduct: boolean) => {
-  if (format === 'SOCIAL_UGC' || format === 'UGC_TESTIMONIAL') return 4
-  if (format === 'PREMIUM' || format === 'BRAND_CINEMATIC') return 3
-  if (format === 'OFFER' || format === 'OFFER_DRIVEN') return hasProduct ? 5 : 3
-  return hasProduct ? 4 : 3
-}
-
-function planBeats(format: AdFormatType, product: string, description: string, hasProduct: boolean, affordanceEnvironment?: string): Beat[] {
-  const count = beatCountFor(format, hasProduct)
-  const weights = count === 3 ? [2.2, 3.4, 2.4] : count === 4 ? [1.5, 2.3, 2.4, 1.8] : [1.0, 1.5, 2.2, 2.0, 1.3]
-  const purposes = count === 3 ? ['HOOK', 'PRODUCT_REVEAL', 'BRAND_CLOSE']
-    : count === 4 ? ['HOOK', 'REVEAL', 'PRODUCT_PROOF', 'BRAND_CLOSE']
-    : ['HOOK', 'REVEAL', 'PRODUCT_PROOF', 'OFFER_CONTEXT', 'BRAND_CLOSE']
-  const envDesc = affordanceEnvironment || 'doğal çalışma ortamında'
-  const visualByPurpose: Record<string, string> = {
-    HOOK: hasProduct ? `@HeroProduct üzerinde gerçek malzeme ve form detayına hızlı odak; ortam: ${envDesc}.` : `Markanın gerçek ortamında (${envDesc}) dikkat çekici doğal açılış.`,
-    REVEAL: hasProduct ? `Kamera geri çekilir; @HeroProduct bütünüyle ve referans görseldeki oranlarıyla ${envDesc} içinde görünür.` : `Hizmetin gerçek çalışma bağlamı (${envDesc}) görünür.`,
-    PRODUCT_REVEAL: hasProduct ? `@HeroProduct, ${envDesc} içinde referans görseldeki gerçek görünümü korunarak gösterilir.` : `Markanın gerçek hizmet bağlamı (${envDesc}) görünür.`,
-    PRODUCT_PROOF: description ? `${envDesc} içinde ${product}: ${description}` : `${envDesc} içinde @HeroProduct; yalnız görülebilen doğal kullanım adımı gösterilir.`,
-    OFFER_CONTEXT: 'Yalnız doğrulanmış kampanya bilgisi varsa deterministic post-production katmanında gösterilecek temiz ürün kadrajı.',
-    BRAND_CLOSE: `Akışın doğal devamında temiz kadraj (${envDesc}); logo ve CTA yalnız deterministic finishing katmanında.`,
+function planBeats(
+  format: AdFormatType,
+  product: string,
+  verifiedClaims: string[],
+  environment: string,
+  motionStyle: string,
+  hasPresenterReference: boolean,
+): Beat[] {
+  const claim = verifiedClaims[0]
+  const camera = motionStyle === 'macro_detail'
+    ? 'kontrollü makrodan ürünün tamamına açılan kamera'
+    : motionStyle === 'studio_orbit'
+      ? 'tam tur atmayan güvenli 3/4 vitrin hareketi'
+      : 'gerçek kullanımı takip eden sabit ve yumuşak kamera'
+  const commonClose = `${product} merkezde sabitlenir; logo ve CTA yalnız deterministic finishing katmanında eklenir.`
+  const plans: Partial<Record<AdFormatType, [string, string, string]>> = {
+    FAST_SALES: [
+      `İlk saniyede ${product} üzerinde net form detayı; ${camera}.`,
+      claim ? `Doğrulanmış tek faydayı görsel olarak destekleyen kullanım anı: ${claim}.` : 'Yalnız görünür ürün detaylarını gösteren hızlı gerçek kullanım anı.',
+      commonClose,
+    ],
+    PRODUCT_USAGE: [
+      `${environment} içinde ürün ve kullanım bağlamı birlikte kurulur.`,
+      `Referansta izin verilen tek doğal kullanım adımı kesintisiz gösterilir; ${camera}.`,
+      commonClose,
+    ],
+    PROBLEM_SOLUTION: [
+      `Uydurma sonuç veya hasar göstermeden gerçek çalışma bağlamı kurulur: ${environment}.`,
+      `Ürün, yalnız doğrulanmış özellikleriyle tek kullanım adımında gösterilir.`,
+      commonClose,
+    ],
+    SOCIAL_UGC: [
+      hasPresenterReference ? 'Onaylı sunucu referansı doğal kadrajda ürünü tanıtır.' : 'Birinci şahıs bakışında doğal el kadrajı ürüne yaklaşır.',
+      `Samimi fakat iddiasız gerçek kullanım detayı; ürün geometrisi tamamen korunur.`,
+      commonClose,
+    ],
+    PREMIUM: [
+      `Sakin ışık geçişiyle malzeme ve silüet vurgulanır; ${camera}.`,
+      'Az hareketli, temiz yüzeyli prestij kadrajında ürün referansına birebir sadık kalır.',
+      commonClose,
+    ],
+    OFFER: [
+      `Ürün ilk saniyede okunur kadrajda görünür; teklif metni sahne içine üretilmez.`,
+      `${environment} içinde temiz ürün kanıtı; teklif yalnız finishing katmanında gösterilir.`,
+      commonClose,
+    ],
   }
-  let cursor = 0
-  return weights.map((weight, index) => {
-    const end = index === weights.length - 1 ? 8 : Math.round((cursor + weight) * 10) / 10
-    const beat = { start: cursor, end, purpose: purposes[index], visual: visualByPurpose[purposes[index]] }
-    cursor = end
-    return beat
-  })
+  const selected = plans[format] || [
+    `Referans ürüne hızlı ve net odak; ${camera}.`,
+    `${environment} içinde tek gerçek kullanım anı; yeni ürün özelliği icat edilmez.`,
+    commonClose,
+  ]
+
+  return [
+    { start: 0, end: 2.2, purpose: 'HOOK', visual: selected[0] },
+    { start: 2.2, end: 5.8, purpose: 'PRODUCT_PROOF', visual: selected[1] },
+    { start: 5.8, end: 8, purpose: 'BRAND_CLOSE', visual: selected[2] },
+  ]
 }
 
-function speechFor(beats: Beat[], brand: string, product: string, description: string): SpeechTimelineItem[] {
-  const shortProduct = product.split(/\s+/).slice(0, 4).join(' ')
-  const shortDescription = description.split(/\s+/).slice(0, 8).join(' ')
-  const lines = [
-    `${shortProduct} yakından inceleyin.`,
-    'Gerçek formu ve detayları görün.',
-    shortDescription ? `${shortProduct}: ${shortDescription}` : `${shortProduct} gerçek kullanım bağlamında gösteriliyor.`,
-    'Kampanya ayrıntılarını inceleyin.',
-    `${brand} ile detayları inceleyin.`,
-  ]
-  return beats.map((beat, index) => ({
-    start_sec: beat.start,
-    end_sec: beat.end,
-    exact_text: lines[Math.min(index, lines.length - 1)],
+function speechFor(spokenLine: string): SpeechTimelineItem[] {
+  return [{
+    start_sec: 0,
+    end_sec: 8,
+    exact_text: spokenLine,
     speaker: 'Spiker',
-    delivery: 'Doğal, açık ve sakin Türkçe anlatım',
-    corresponding_visual_beat: beat.purpose,
-  }))
+    delivery_style: 'Doğal, açık ve sakin Türkçe anlatım',
+    corresponding_visual_beat: 'Üç çekim boyunca kesintisiz onaylı anlatım',
+  }]
 }
 
 /** Asset-grounded draft. Generation remains blocked until /jobs locks approval. */
@@ -69,11 +90,31 @@ export async function POST(req: NextRequest) {
     const productDescription = String(body.productDescription || '').trim()
     const adFormat = (body.adFormat || 'AUTO') as AdFormatType
     const hasProduct = Boolean(body.productImageUrl && productName)
+    const verifiedClaims = Array.isArray(body.verifiedClaims)
+      ? body.verifiedClaims.map((claim: unknown) => String(claim).trim()).filter(Boolean)
+      : []
+    const fidelityContract = body.productFidelityContract as ProductFidelityContract | undefined
+    const referenceAssets = Array.isArray(body.referenceAssets) ? body.referenceAssets : []
     if (!brandName || !productName) return NextResponse.json({ error: 'Marka ve ürün/hizmet adı zorunludur.' }, { status: 400 })
 
     const affordance = await resolveProductAffordance(brandName, productName, productDescription)
-    const beats = planBeats(adFormat, productName, productDescription, hasProduct, affordance.naturalEnvironment)
-    const speechTimeline = speechFor(beats, brandName, productName, productDescription)
+    const beats = planBeats(
+      adFormat,
+      productName,
+      verifiedClaims,
+      body.environmentPreset === 'auto' ? affordance.naturalEnvironment : String(body.environmentPreset || affordance.naturalEnvironment),
+      String(body.motionStyle || 'real_usage'),
+      referenceAssets.some((asset: any) => asset?.role === 'presenter'),
+    )
+    const approvedSpokenLine = buildSafeSpokenLine({
+      brandName,
+      productName,
+      adFormat,
+      verifiedClaims,
+      offer: String(body.offerDetails || '').trim(),
+      offerVerified: body.offerVerified === true,
+    })
+    const speechTimeline = speechFor(approvedSpokenLine)
     const negativeConstraints = [
       'no generated subtitles, headline, price, CTA, phone, URL, random typography, watermark, invented logo, foreign brand, product morphing, fake UI, or unsupported factual claim.',
       ...affordance.negativeEnvironmentConstraints,
@@ -99,17 +140,29 @@ export async function POST(req: NextRequest) {
         product_name: productName,
         product_description: productDescription || null,
         offer: body.offerDetails || null,
+        offer_verified: body.offerVerified === true,
+        product_id: body.productId || null,
+        verified_claims: verifiedClaims,
+        approved_spoken_line: approvedSpokenLine,
+        product_fidelity_contract: fidelityContract || null,
         detected_sector: affordance.detectedSector,
         natural_environment: affordance.naturalEnvironment,
       },
       asset_sha_set: [
         ...(body.logoUrl ? [{ role: 'logo', url: body.logoUrl }] : []),
         ...(body.productImageUrl ? [{ role: 'product', url: body.productImageUrl }] : []),
-        ...((body.referenceUrls || []).map((url: string) => ({ role: 'reference', url }))),
+        ...(referenceAssets.map((asset: any) => ({ role: asset.role || 'reference', url: asset.url }))),
       ],
     }).select('id').single()
     if (error) throw error
-    return NextResponse.json({ revision_id: revision?.id || null, creative_idea: creativeIdea, visual_beats: beats, speech_timeline: speechTimeline, veo_prompt: veoPrompt })
+    return NextResponse.json({
+      revision_id: revision?.id || null,
+      creative_idea: creativeIdea,
+      visual_beats: beats,
+      speech_timeline: speechTimeline,
+      approved_spoken_line: approvedSpokenLine,
+      veo_prompt: veoPrompt,
+    })
   } catch (error: any) {
     console.error('[ai-media-draft] Error:', error)
     return NextResponse.json({ error: error?.message || 'Taslak oluşturulamadı.' }, { status: 500 })

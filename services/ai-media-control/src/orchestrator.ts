@@ -671,7 +671,9 @@ async function runCreativeVideoExecution(
       console.warn(`[orchestrator] Product materialization fallback:`, e)
     }
     materializedProducts.push({
-      product_id: p.id || `prod_${idx}`,
+      product_id: p.role === 'product'
+        ? approvedFacts.product_id || job.metadata?.catalog_product_id || p.id || `prod_${idx}`
+        : p.id || `ref_${idx}`,
       name: p.role === 'product'
         ? approvedFacts.product_name || p.original_filename || `Ürün ${idx + 1}`
         : p.original_filename || `Referans ${idx + 1}`,

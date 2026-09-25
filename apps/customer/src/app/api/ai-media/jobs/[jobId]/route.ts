@@ -73,6 +73,13 @@ function mapEngineStateToStage(state: string): {
         display_title: 'Videonuz Hazır!',
         display_message: 'Reklam videonuz başarıyla tamamlandı. Aşağıdan izleyebilirsiniz.',
       }
+    case 'NEEDS_REVIEW':
+      return {
+        stage_index: 0,
+        display_state: 'INCELEME_GEREKIYOR',
+        display_title: 'İnsan İncelemesi Gerekiyor',
+        display_message: 'Video teknik olarak üretildi ancak otomatik kalite kapısından geçmedi.',
+      }
     case 'FAILED':
       return {
         stage_index: 0,
@@ -158,11 +165,12 @@ export async function GET(
     // 4. Fetch Output if completed
     let outputId: string | null = null
     let playbackUrl: string | null = null
+    let outputEvidence: any = null
 
-    if (job.state === 'COMPLETED') {
+    if (job.state === 'COMPLETED' || job.state === 'NEEDS_REVIEW') {
       const { data: outputs } = await (supabase as any)
         .from('ai_media_outputs')
-        .select('id, file_path, storage_url, verified, is_approved')
+        .select('id, file_path, storage_url, sha256, duration_seconds, width, height, verified, is_approved, visual_qa_report')
         .eq('job_id', jobId)
         .eq('org_id', org.id)
         .order('created_at', { ascending: false })
@@ -170,9 +178,10 @@ export async function GET(
 
       const output = outputs?.[0]
       if (output) {
+        outputEvidence = output
         outputId = output.id
-        // Deliver authorized media stream endpoint
-        playbackUrl = `/api/ai-media/outputs/${output.id}`
+        // Only approved output is directly playable in the customer surface.
+        playbackUrl = output.is_approved ? `/api/ai-media/outputs/${output.id}` : null
 
         // Ensure creatives table is synced so video appears ready in Content Library
         try {
@@ -185,11 +194,12 @@ export async function GET(
               created_by: creatorId,
               title: job.title || 'Kampanya Videosu',
               format: 'video',
-              status: 'ready',
+              status: output.is_approved ? 'ready' : 'review',
               source: 'ai',
               public_url: playbackUrl,
               payload: {
-                thumbnailUrl: `${playbackUrl}?thumb=1`,
+                thumbnailUrl: playbackUrl ? `${playbackUrl}?thumb=1` : null,
+                review_required: !output.is_approved,
               },
               updated_at: new Date().toISOString(),
             }, { onConflict: 'id' })
@@ -215,7 +225,27 @@ export async function GET(
       can_leave_page: true,
       output_id: outputId,
       playback_url: playbackUrl,
-      failure_user_message: job.state === 'FAILED' ? (job.error_message || 'Video işlenirken bir hata oluştu.') : null,
+      failure_user_message: job.state === 'FAILED'
+        ? (job.error_message || 'Video işlenirken bir hata oluştu.')
+        : job.state === 'NEEDS_REVIEW'
+          ? 'Çıktı otomatik kalite kontrolünden geçmedi; yayınlanmadan önce insan incelemesi gerekiyor.'
+          : null,
+      creative_engine_mode: job.creative_engine_mode || job.metadata?.creative_engine_mode || null,
+      requested_provider: job.requested_provider || job.metadata?.requested_provider || null,
+      selected_provider: job.selected_provider || null,
+      capability_state: job.capability_state || null,
+      fallback_from: job.fallback_from || null,
+      fallback_reason: job.fallback_reason || null,
+      final_sha256: outputEvidence?.sha256 || null,
+      duration_seconds: outputEvidence?.duration_seconds == null ? null : Number(outputEvidence.duration_seconds),
+      width: outputEvidence?.width ?? null,
+      height: outputEvidence?.height ?? null,
+      output_verified: outputEvidence?.verified ?? null,
+      output_approved: outputEvidence?.is_approved ?? null,
+      fidelity_contract_applied: job.metadata?.fidelity_contract_applied ?? null,
+      fidelity_rule_count: job.metadata?.fidelity_rule_count ?? null,
+      canonical_asset_sha: job.metadata?.canonical_asset_sha ?? null,
+      product_fidelity_contract: job.metadata?.product_fidelity_contract || job.metadata?.simple_v5_diagnostics?.product_fidelity_contract || null,
     }
 
     return NextResponse.json({
