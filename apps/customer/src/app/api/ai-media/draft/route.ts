@@ -71,12 +71,12 @@ function planBeats(
 
 function speechFor(spokenLine: string): SpeechTimelineItem[] {
   return [{
-    start_sec: 0,
-    end_sec: 8,
+    start_sec: 0.5,
+    end_sec: 5.5,
     exact_text: spokenLine,
     speaker: 'Spiker',
-    delivery_style: 'Doğal, açık ve sakin Türkçe anlatım',
-    corresponding_visual_beat: 'Üç çekim boyunca kesintisiz onaylı anlatım',
+    delivery_style: 'Profesyonel, akıcı ve kurumsal Türkçe seslendirme',
+    corresponding_visual_beat: 'Ana ürün ve fayda anlatımı',
   }]
 }
 
@@ -131,7 +131,19 @@ export async function POST(req: NextRequest) {
       ...speechTimeline.map((line) => `${line.start_sec.toFixed(1)}-${line.end_sec.toFixed(1)}s: "${line.exact_text}"`),
       `[NEGATIVE CONSTRAINTS] ${negativeConstraints}`,
     ].join('\n')
-    const creativeIdea = `${productName} için ${beats.length} beat’li ${adFormat} kısa reklam planı (${affordance.detectedSector})`
+
+    const formatConceptTitles: Record<string, string> = {
+      FAST_SALES: 'Dinamik ve Satış Odaklı Reklam',
+      PRODUCT_USAGE: 'Kullanım ve Performans Tanıtımı',
+      PROBLEM_SOLUTION: 'Çözüm ve Fayda Odaklı Tanıtım',
+      PREMIUM: 'Prestijli ve Sinematik Tanıtım',
+      SOCIAL_UGC: 'Doğal ve Samimi Deneyim Paylaşımı',
+      OFFER: 'Özel Kampanya ve Fırsat Duyurusu',
+      OFFER_DRIVEN: 'Özel Kampanya ve Fırsat Duyurusu',
+      AUTO: 'Profesyonel Ürün Tanıtımı',
+    }
+    const conceptTitle = formatConceptTitles[adFormat] || 'Profesyonel Ürün Tanıtımı'
+    const creativeIdea = `${productName} — ${conceptTitle}`
     const { data: revision, error } = await (supabase as any).from('creative_revisions').insert({
       org_id: org.id, status: 'DRAFT', creative_idea: creativeIdea, selected_ad_format: adFormat,
       speech_timeline: speechTimeline, veo_prompt: veoPrompt,

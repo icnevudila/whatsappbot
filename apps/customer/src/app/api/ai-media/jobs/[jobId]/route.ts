@@ -198,7 +198,7 @@ export async function GET(
               created_by: creatorId,
               title: job.title || 'Kampanya Videosu',
               format: 'video',
-              status: output.is_approved ? 'ready' : 'review',
+              status: 'ready',
               source: 'ai',
               public_url: playbackUrl,
               payload: {

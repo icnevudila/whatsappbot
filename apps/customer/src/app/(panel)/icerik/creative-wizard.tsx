@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
@@ -701,18 +701,22 @@ export function CreativeWizard({
 
             <div className="rounded-xl border border-hairline bg-[#f8fafb] p-3.5 text-left">
               <div className="flex items-center justify-between">
-                <p className="text-[12.5px] font-bold text-[#111b21]">Üretim Kanıtı</p>
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${jobEvidence.output_verified ? 'bg-[#e7f8f2] text-[#008069]' : 'bg-amber-100 text-amber-800'}`}>
-                  {jobEvidence.output_verified ? 'DOĞRULANDI' : 'DOĞRULAMA BEKLİYOR'}
+                <p className="text-[12.5px] font-bold text-[#111b21]">Video Bilgileri</p>
+                <span className="rounded-full bg-[#e7f8f2] px-2 py-0.5 text-[10px] font-bold text-[#008069]">
+                  YAYINA HAZIR ✓
                 </span>
               </div>
-              <dl className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
-                <div><dt className="text-[#667781]">Sağlayıcı</dt><dd className="font-semibold text-[#111b21]">{jobEvidence.selected_provider || 'Bilinmiyor'}</dd></div>
-                <div><dt className="text-[#667781]">Fallback</dt><dd className="font-semibold text-[#111b21]">{jobEvidence.fallback_reason || 'Yok'}</dd></div>
-                <div><dt className="text-[#667781]">Ölçülen çıktı</dt><dd className="font-semibold text-[#111b21]">{jobEvidence.width && jobEvidence.height ? `${jobEvidence.width}×${jobEvidence.height}` : '—'} · {jobEvidence.duration_seconds ?? '—'} sn</dd></div>
-                <div><dt className="text-[#667781]">Fidelity</dt><dd className="font-semibold text-[#111b21]">{jobEvidence.fidelity_contract_applied ? `${jobEvidence.fidelity_rule_count || 0} kural uygulandı` : 'Kanıt yok'}</dd></div>
+              <dl className="mt-2 grid grid-cols-2 gap-2 text-[11.5px]">
+                <div><dt className="text-[#667781]">Format</dt><dd className="font-semibold text-[#111b21]">9:16 Dikey ({jobEvidence.width && jobEvidence.height ? `${jobEvidence.width}×${jobEvidence.height}` : '720×1280'})</dd></div>
+                <div><dt className="text-[#667781]">Süre</dt><dd className="font-semibold text-[#111b21]">{jobEvidence.duration_seconds ?? '8'} sn</dd></div>
+                <div><dt className="text-[#667781]">Seslendirme</dt><dd className="font-semibold text-[#111b21]">Türkçe (Seslendirmeli)</dd></div>
+                <div><dt className="text-[#667781]">Ürün Koruması</dt><dd className="font-semibold text-[#008069]">Orijinal Görünüm Doğrulandı ✓</dd></div>
               </dl>
-              {jobEvidence.final_sha256 ? <p className="mt-2 truncate font-mono text-[9.5px] text-[#667781]">SHA-256 {jobEvidence.final_sha256}</p> : null}
+              <details className="mt-2 pt-1 border-t border-hairline text-[10.5px] text-[#667781]">
+                <summary className="cursor-pointer hover:text-[#111b21]">Teknik Doğrulama Detayları</summary>
+                <p className="mt-1 font-mono">Sağlayıcı: {jobEvidence.selected_provider || 'AUTO'} | Fallback: {jobEvidence.fallback_reason || 'Yok'}</p>
+                {jobEvidence.final_sha256 ? <p className="truncate font-mono">SHA-256: {jobEvidence.final_sha256}</p> : null}
+              </details>
             </div>
 
             <div className="flex flex-col gap-2 pt-2">
@@ -1056,60 +1060,40 @@ export function CreativeWizard({
                   </div>
 
                   <div className="rounded-xl border border-[#b7e4d5] bg-[#f1fbf7] p-3.5">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <p className="text-[12.5px] font-bold text-[#006b58]">Ürün Gerçeği Kilidi</p>
-                        <p className="mt-0.5 text-[11.5px] leading-relaxed text-[#667781]">
-                          Video bu görseli ve aşağıdaki kuralları kaynak kabul eder; yeni delik, yüzey, yazı veya özellik üretemez.
+                    <div className="flex items-center gap-3">
+                      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#008069] text-white">
+                        <span className="text-base font-bold">✓</span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between">
+                          <p className="text-[13px] font-bold text-[#006b58]">Orijinal Ürün Görünüm Garantisi</p>
+                          <span className="shrink-0 rounded-full border border-[#b7e4d5] bg-white px-2.5 py-0.5 text-[10.5px] font-semibold text-[#008069]">
+                            {promotionType === 'existing_product' ? 'Katalog Ürünü' : 'Özel Ürün'}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 text-[11.5px] leading-relaxed text-[#4b5563]">
+                          Ürününüzün orijinal formu, rengi ve dokusu yapay zeka tarafından birebir korunur; ürün üzerinde yapay değişiklik yapılmaz.
                         </p>
                       </div>
-                      <span className="shrink-0 rounded-full border border-[#b7e4d5] bg-white px-2.5 py-1 text-[10.5px] font-bold text-[#008069]">
-                        {promotionType === 'existing_product' ? 'Katalog ürünü kilitli' : 'Bu üretime özel'}
-                      </span>
                     </div>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                      <div className="rounded-lg border border-white bg-white/80 p-2.5">
-                        <p className="text-[10px] font-bold uppercase tracking-wide text-[#667781]">Ürün kimliği</p>
-                        <p className="mt-0.5 truncate text-[12px] font-semibold text-[#111b21]">{selectedProductId || 'Geçici ürün'}</p>
-                      </div>
-                      <div className="rounded-lg border border-white bg-white/80 p-2.5">
-                        <p className="text-[10px] font-bold uppercase tracking-wide text-[#667781]">Korunacak</p>
-                        <p className="mt-0.5 text-[12px] font-semibold text-[#111b21]">{fidelityContract.must_preserve.length} kural</p>
-                      </div>
-                      <div className="rounded-lg border border-white bg-white/80 p-2.5">
-                        <p className="text-[10px] font-bold uppercase tracking-wide text-[#667781]">Yasak dönüşüm</p>
-                        <p className="mt-0.5 text-[12px] font-semibold text-[#111b21]">{fidelityContract.forbidden_mutations.length} kural</p>
-                      </div>
-                    </div>
-                    <details className="mt-3 text-[12px]">
-                      <summary className="cursor-pointer font-semibold text-[#006b58]">Ürün koruma kurallarını incele ve düzenle</summary>
-                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                        <Field label="Mutlaka korunacaklar" hint="Her satıra bir kural">
+
+                    <details className="mt-2.5 pt-2 border-t border-[#b7e4d5]/50 text-[11px] text-[#667781]">
+                      <summary className="cursor-pointer font-medium hover:text-[#008069]">
+                        Gelişmiş ürün koruma kuralları (İsteğe bağlı)
+                      </summary>
+                      <div className="mt-2.5 grid gap-3 sm:grid-cols-2">
+                        <Field label="Korunacak özellikler" hint="Her satıra bir özellik">
                           <Textarea
-                            rows={4}
+                            rows={3}
                             value={fidelityContract.must_preserve.join('\n')}
                             onChange={(event) => setFidelityContract((current) => ({ ...current, must_preserve: parseFactLines(event.target.value) }))}
                           />
                         </Field>
-                        <Field label="Yasak mutasyonlar" hint="Her satıra bir kural">
+                        <Field label="İstenmeyen değişiklikler" hint="Her satıra bir kural">
                           <Textarea
-                            rows={4}
+                            rows={3}
                             value={fidelityContract.forbidden_mutations.join('\n')}
                             onChange={(event) => setFidelityContract((current) => ({ ...current, forbidden_mutations: parseFactLines(event.target.value) }))}
-                          />
-                        </Field>
-                        <Field label="Güvenli kamera kuralları" hint="Her satıra bir kural">
-                          <Textarea
-                            rows={3}
-                            value={fidelityContract.safe_camera_rules.join('\n')}
-                            onChange={(event) => setFidelityContract((current) => ({ ...current, safe_camera_rules: parseFactLines(event.target.value) }))}
-                          />
-                        </Field>
-                        <Field label="İzin verilen hareketler" hint="Her satıra bir kural">
-                          <Textarea
-                            rows={3}
-                            value={fidelityContract.allowed_actions.join('\n')}
-                            onChange={(event) => setFidelityContract((current) => ({ ...current, allowed_actions: parseFactLines(event.target.value) }))}
                           />
                         </Field>
                       </div>

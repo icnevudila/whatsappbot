@@ -471,6 +471,16 @@ async function runJobExecution(job: any, accountId: string) {
       // fallback if direct transition failed
       await supabase.from('ai_media_jobs').update({ state: JobState.FAILED }).eq('id', job.id)
     }
+
+    try {
+      await (supabase as any).from('creatives').update({
+        status: 'failed',
+        error: err.message,
+        updated_at: new Date().toISOString(),
+      }).eq('id', job.id)
+    } catch (crErr) {
+      console.warn('[orchestrator] creatives update to failed warning:', crErr)
+    }
   } finally {
     // Release Heavy Mutex Lock
     await hostResourceGuard.releaseHeavyLock(supabase, job.id)

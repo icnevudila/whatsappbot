@@ -76,20 +76,33 @@ export function buildSafeSpokenLine(input: {
 
   const candidates: Record<string, string> = {
     FAST_SALES: claim
-      ? `${product}: ${claim}. Detaylar için ${brand} ile iletişime geçin.`
-      : `${product} ürününü yakından inceleyin. Detaylar için ${brand} ile iletişime geçin.`,
-    PRODUCT_USAGE: `${product}, gerçek kullanım ortamında referans biçimi korunarak gösteriliyor.`,
+      ? `${product}: ${claim}. Hemen bilgi ve sipariş için ${brand}.`
+      : `${product} kalitesiyle tanışın. Bilgi ve sipariş için ${brand}.`,
+    PRODUCT_USAGE: claim
+      ? `${product}, ${claim}. İşinizi kolaylaştıran sağlam ve pratik çözüm.`
+      : `${product}, yüksek performansı ve kalıcı dayanıklılığıyla yanınızda.`,
     PROBLEM_SOLUTION: claim
-      ? `${product}, gerçek kullanımda ${claim}. ${brand} ile ayrıntıları inceleyin.`
-      : `${product} gerçek kullanım adımıyla gösteriliyor. ${brand} ile ayrıntıları inceleyin.`,
-    SOCIAL_UGC: `${product} ürününü gerçek ortamında, referansına sadık biçimde birlikte inceliyoruz.`,
-    PREMIUM: `${product}, gerçek malzemesi ve formu korunarak sade bir sinematik kadrajda.`,
+      ? `Sağlam ve güvenilir çözümler için ${product}: ${claim}.`
+      : `Aradığınız kalite ve kalıcı dayanıklılık: ${product} ile ${brand} güvencesi.`,
+    SOCIAL_UGC: claim
+      ? `Gerçek kaliteyi keşfedin: ${product}, ${claim}.`
+      : `Projelerinizde fark yaratan güvenilir çözüm: ${product} ile tanışın.`,
+    PREMIUM: claim
+      ? `Kusursuz kalite ve güven: ${product}. ${claim}.`
+      : `Kusursuz işçilik ve kalıcı dayanıklılık. ${product}, ${brand} güvencesiyle.`,
     OFFER: input.offerVerified && input.offer
-      ? `${product} için ${compact(input.offer)}. Ayrıntılar ${brand} kanalında.`
-      : `${product} için doğrulanmış kampanya ayrıntılarını ${brand} kanalında inceleyin.`,
+      ? `${product} için özel fırsat: ${compact(input.offer)}. Detaylar ${brand}'de.`
+      : `${product} için avantajlı fırsatlar ve cazip fiyatlar ${brand}'de.`,
+    OFFER_DRIVEN: input.offerVerified && input.offer
+      ? `${product} için özel fırsat: ${compact(input.offer)}. Detaylar ${brand}'de.`
+      : `${product} için avantajlı fırsatlar ve cazip fiyatlar ${brand}'de.`,
   }
 
-  return clampWords(candidates[input.adFormat] || `${brand}, ${product} ürününü gerçek çalışma ortamında referansına sadık biçimde gösteriyor.`)
+  const defaultCandidate = claim
+    ? `${product}, ${claim}. Sağlam ve güvenilir çözüm ${brand}'de.`
+    : `${product}, sağlam yapılar ve kaliteli çözümler için ${brand} güvencesiyle.`
+
+  return clampWords(candidates[input.adFormat] || defaultCandidate)
 }
 
 export function defaultFidelityContract(brandName: string, productName: string): ProductFidelityContract {
@@ -131,58 +144,58 @@ export function validateWizardPreflight(input: WizardPreflightInput): WizardPref
     issues.push({
       code: 'QUOTA_EXCEEDED',
       severity: 'error',
-      message: `Aylık video kotası dolu (${input.quotaUsed}/${input.quotaLimit}). Yeni üretim başlatılamaz.`,
+      message: `Aylık video kotanız dolu (${input.quotaUsed}/${input.quotaLimit}). Yeni üretim başlatılamaz.`,
     })
   }
   if (!input.hasLogo) {
-    issues.push({ code: 'LOGO_REQUIRED', severity: 'error', message: 'Kanonik kurumsal logo eksik.' })
+    issues.push({ code: 'LOGO_REQUIRED', severity: 'error', message: 'Kurumsal logonuz eksik. Lütfen logonuzu ekleyin.' })
   }
   if (input.promotionType !== 'general_brand' && !input.hasProduct) {
-    issues.push({ code: 'PRODUCT_ASSET_REQUIRED', severity: 'error', message: 'Kanonik ürün görseli eksik.' })
+    issues.push({ code: 'PRODUCT_ASSET_REQUIRED', severity: 'error', message: 'Ürün görseli seçilmedi. Lütfen ürün görseli belirleyin.' })
   }
   if (input.promotionType === 'existing_product' && !input.productId) {
-    issues.push({ code: 'CATALOG_PRODUCT_REQUIRED', severity: 'error', message: 'Katalog ürün kimliği kilitlenemedi.' })
+    issues.push({ code: 'CATALOG_PRODUCT_REQUIRED', severity: 'error', message: 'Lütfen katalogdan bir ürün seçin.' })
   }
   if (wordCount === 0 || wordCount > MAX_SPOKEN_WORDS) {
     issues.push({
       code: 'SPEECH_LENGTH_INVALID',
       severity: 'error',
-      message: `Onaylı Türkçe seslendirme 1–${MAX_SPOKEN_WORDS} kelime olmalı; şu an ${wordCount}.`,
+      message: `Seslendirme metni 1–${MAX_SPOKEN_WORDS} kelime arasında olmalıdır (Şu an: ${wordCount} kelime).`,
     })
   }
   if ((input.adFormat === 'OFFER' || input.adFormat === 'OFFER_DRIVEN') && (!input.offer || !input.offerVerified)) {
     issues.push({
       code: 'VERIFIED_OFFER_REQUIRED',
       severity: 'error',
-      message: 'Kampanya formatı için teklif metni ve “doğrulandı” onayı gerekli.',
+      message: 'Kampanya formatı için teklif metni girilmeli ve doğrulanmalıdır.',
     })
   }
   if (!input.fidelityContract.must_preserve.length || !input.fidelityContract.forbidden_mutations.length) {
     issues.push({
       code: 'FIDELITY_CONTRACT_INCOMPLETE',
       severity: 'error',
-      message: 'Ürünün korunacak özellikleri ve yasak mutasyonları tanımlanmalı.',
+      message: 'Ürünün korunacak temel özellikleri tanımlanmalıdır.',
     })
   }
   if (input.referenceCount !== input.referenceRoleCount) {
     issues.push({
       code: 'REFERENCE_ROLE_MISSING',
       severity: 'error',
-      message: 'Her ek görsele bir kullanım rolü atanmalı.',
+      message: 'Eklenen her görsel için bir kullanım türü seçilmelidir.',
     })
   }
   if (!input.verifiedClaims.length) {
     issues.push({
       code: 'NO_VERIFIED_CLAIMS',
       severity: 'warning',
-      message: 'Doğrulanmış ürün iddiası yok; video yalnızca nötr ürün kimliği ve görünür gerçekleri kullanacak.',
+      message: 'Ek ürün özelliği belirtilmedi; tanıtımda temel ürün ve marka bilgileri kullanılacaktır.',
     })
   }
   if ((input.adFormat === 'SOCIAL_UGC' || input.adFormat === 'UGC_TESTIMONIAL') && input.referenceCount === 0) {
     issues.push({
       code: 'UGC_REFERENCE_RECOMMENDED',
       severity: 'warning',
-      message: 'Samimi anlatım için sunucu veya kullanım ortamı referansı eklemek sonucu güçlendirir.',
+      message: 'Samimi deneyim formatı için sunucu veya kullanım ortamı görseli eklemeniz tavsiye edilir.',
     })
   }
 

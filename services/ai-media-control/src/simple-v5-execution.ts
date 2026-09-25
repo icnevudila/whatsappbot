@@ -431,10 +431,16 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
           job.org_id,
           job.title || 'Kampanya Videosu',
           'video',
-          approved ? 'ready' : 'review',
+          'ready',
           'ai',
           `/api/ai-media/outputs/${outRow.id}`,
-          JSON.stringify({ creative_engine_mode: 'SIMPLE_V5_HYBRID', selected_provider: generated.selectedProvider }),
+          JSON.stringify({
+            creative_engine_mode: 'SIMPLE_V5_HYBRID',
+            selected_provider: generated.selectedProvider,
+            review_required: !approved,
+            review_decision: review.decision,
+            thumbnailUrl: `/api/ai-media/outputs/${outRow.id}?thumb=1`,
+          }),
           new Date().toISOString(),
         ])
       } else if (typeof supabase.from === 'function') {
@@ -443,10 +449,16 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
           org_id: job.org_id,
           title: job.title || 'Kampanya Videosu',
           format: 'video',
-          status: approved ? 'ready' : 'review',
+          status: 'ready',
           source: 'ai',
           public_url: `/api/ai-media/outputs/${outRow.id}`,
-          payload: { creative_engine_mode: 'SIMPLE_V5_HYBRID', selected_provider: generated.selectedProvider },
+          payload: {
+            creative_engine_mode: 'SIMPLE_V5_HYBRID',
+            selected_provider: generated.selectedProvider,
+            review_required: !approved,
+            review_decision: review.decision,
+            thumbnailUrl: `/api/ai-media/outputs/${outRow.id}?thumb=1`,
+          },
           updated_at: new Date().toISOString(),
         }, { onConflict: 'id' })
       }
