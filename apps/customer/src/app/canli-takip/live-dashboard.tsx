@@ -470,12 +470,12 @@ export function LiveDashboard() {
   const [error, setError] = useState<string | null>(null)
 
   type TabId = 'overview' | 'baileys' | 'messages' | 'quick_send' | 'campaigns' | 'queue' | 'organizations' | 'contacts' | 'data_requests' | 'ai_studio' | 'ai_media' | 'blacklist' | 'jobs'
-  const VALID_TABS: TabId[] = ['overview', 'baileys', 'messages', 'quick_send', 'campaigns', 'queue', 'organizations', 'contacts', 'data_requests', 'ai_studio', 'ai_media', 'blacklist', 'jobs']
+  const VALID_TABS: TabId[] = ['ai_studio', 'ai_media', 'baileys', 'jobs', 'overview', 'organizations', 'campaigns', 'messages', 'contacts', 'data_requests', 'blacklist', 'quick_send', 'queue']
 
   const getHashTab = (): TabId => {
-    if (typeof window === 'undefined') return 'overview'
+    if (typeof window === 'undefined') return 'ai_studio'
     const hash = window.location.hash.replace('#', '') as TabId
-    return VALID_TABS.includes(hash) ? hash : 'overview'
+    return VALID_TABS.includes(hash) ? hash : 'ai_studio'
   }
 
   const [activeTab, setActiveTabState] = useState<TabId>(getHashTab)
@@ -1850,18 +1850,16 @@ export function LiveDashboard() {
               className="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0 w-full select-none cursor-grab active:cursor-grabbing scrollbar-thin scrollbar-thumb-[var(--color-hairline-strong)]"
             >
               {[
+                { id: 'ai_studio', label: 'AI Video Motoru & Kredi Havuzu', badge: (data?.ai_engine?.recentVideos?.length || 0) + (data?.creatives?.length || 0), isAlert: (data?.ai_engine?.geminiPool?.limitedAccounts || 0) > 0 },
+                { id: 'ai_media', label: 'Canlı Render & İş Takibi', badge: null, isAlert: false },
+                { id: 'baileys', label: 'Servis & Altyapı Durumu', badge: data?.accounts?.length, isAlert: (data?.accounts?.filter(a => a.status !== 'connected').length || 0) > 0 },
+                { id: 'jobs', label: 'Görev Kuyruğu & Hatalar', badge: data?.jobs?.length, errorBadge: (summary.failedJobs ?? 0) > 0 ? summary.failedJobs : null },
                 { id: 'overview', label: 'Operasyon Özeti', badge: (summary.failedJobs || 0) + summary.pendingJobs, errorBadge: (summary.failedJobs || 0) > 0 ? summary.failedJobs : null },
-                { id: 'baileys', label: 'Servis Durumu', badge: data?.accounts?.length, isAlert: (data?.accounts?.filter(a => a.status !== 'connected').length || 0) > 0 },
-                { id: 'messages', label: 'Mesaj Yanıt Masası', badge: (data?.messages?.length || 0) + (data?.aiSuggestions?.length || 0) },
-                { id: 'quick_send', label: 'Hızlı Gönderim', badge: null },
-                { id: 'jobs', label: 'İş Kuyruğu & Hatalar', badge: data?.jobs?.length, errorBadge: (summary.failedJobs ?? 0) > 0 ? summary.failedJobs : null },
+                { id: 'organizations', label: 'Firmalar & Kotalar', badge: data?.organizations?.length },
                 { id: 'campaigns', label: 'Kampanyalar', badge: data?.campaigns?.length },
-                { id: 'queue', label: 'Gönderim Sırası', badge: summary.queuedMessages },
-                { id: 'data_requests', label: 'Veri Talepleri', badge: data?.listRequests?.length, isPending: (data?.listRequests?.filter(r => r.status === 'pending').length || 0) > 0 },
-                { id: 'organizations', label: 'Firmalar & Üyelikler', badge: data?.organizations?.length },
+                { id: 'messages', label: 'Mesajlar & WhatsApp', badge: (data?.messages?.length || 0) + (data?.aiSuggestions?.length || 0) },
                 { id: 'contacts', label: 'Rehber & Kişi Havuzu', badge: data?.contactLists?.length },
-                { id: 'ai_studio', label: 'AI Video & Görsel Motoru', badge: (data?.ai_engine?.recentVideos?.length || 0) + (data?.creatives?.length || 0), isAlert: (data?.ai_engine?.geminiPool?.limitedAccounts || 0) > 0 },
-                { id: 'ai_media', label: 'AI Görsel & Video', badge: null, isAlert: false },
+                { id: 'data_requests', label: 'Veri Talepleri', badge: data?.listRequests?.length, isPending: (data?.listRequests?.filter(r => r.status === 'pending').length || 0) > 0 },
                 { id: 'blacklist', label: 'Kara Liste', badge: summary.blacklistedCount },
               ].map(tab => (
                 <button
@@ -2033,52 +2031,52 @@ export function LiveDashboard() {
 
                 {/* AI & Video */}
                 <div className="space-y-1.5">
-                  <span className="text-[9px] font-bold text-ink-muted uppercase tracking-wider">🎬 AI & Video Üretimi</span>
+                  <span className="text-[9px] font-bold text-ink-muted uppercase tracking-wider">AI & Video Üretimi</span>
                   <div className="grid grid-cols-2 gap-1.5">
                     <button type="button" onClick={() => setActiveTab('ai_studio')}
                       className="rounded-[var(--radius-sm)] border border-purple-500/30 bg-purple-500/10 px-3 py-2.5 text-left hover:bg-purple-500/15 transition group">
-                      <div className="text-[11px] font-bold text-purple-400 group-hover:text-purple-300">🤖 AI Stüdyo</div>
-                      <div className="text-[10px] text-ink-muted mt-0.5">Video & görsel üretim</div>
+                      <div className="text-[11px] font-bold text-purple-400 group-hover:text-purple-300">AI Stüdyo & Krediler</div>
+                      <div className="text-[10px] text-ink-muted mt-0.5">Flow & Gemini havuzu</div>
                     </button>
-                    <button type="button" onClick={() => setActiveTab('quick_send')}
+                    <button type="button" onClick={() => setActiveTab('ai_media')}
                       className="rounded-[var(--radius-sm)] border border-accent/30 bg-accent-soft/30 px-3 py-2.5 text-left hover:bg-accent-soft transition group">
-                      <div className="text-[11px] font-bold text-accent">⚡ Hızlı Gönder</div>
-                      <div className="text-[10px] text-ink-muted mt-0.5">Anlık mesaj gönder</div>
+                      <div className="text-[11px] font-bold text-accent">Canlı Render Takibi</div>
+                      <div className="text-[10px] text-ink-muted mt-0.5">Render kuyruğu & QA</div>
                     </button>
                   </div>
                   {/* AI Engine Status */}
                   <div className="rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-canvas px-3 py-2 flex items-center justify-between gap-2">
-                    <span className="text-[11px] text-ink-muted">OmniStudio Motor</span>
+                    <span className="text-[11px] text-ink-muted">OmniStudio Motoru</span>
                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
                       data?.ai_engine?.status === 'online' ? 'bg-ok-soft text-ok-dim' : 'bg-danger/10 text-danger'
                     }`}>
-                      {data?.ai_engine?.status === 'online' ? '● Online' : '○ Offline'}
+                      {data?.ai_engine?.status === 'online' ? 'Online' : 'Offline'}
                     </span>
                   </div>
                 </div>
 
                 {/* Operasyon */}
                 <div className="space-y-1.5">
-                  <span className="text-[9px] font-bold text-ink-muted uppercase tracking-wider">📡 Operasyon</span>
+                  <span className="text-[9px] font-bold text-ink-muted uppercase tracking-wider">Operasyon</span>
                   <div className="grid grid-cols-2 gap-1.5">
                     <button type="button" onClick={() => setActiveTab('messages')}
                       className="rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-canvas px-3 py-2.5 text-left hover:bg-[var(--color-surface-raised)] transition group">
-                      <div className="text-[11px] font-bold text-ink">💬 Mesajlar</div>
+                      <div className="text-[11px] font-bold text-ink">Mesajlar</div>
                       <div className="text-[10px] text-ink-muted mt-0.5">{summary.todayInbound + summary.todayOutbound} bugün</div>
                     </button>
                     <button type="button" onClick={() => setActiveTab('campaigns')}
                       className="rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-canvas px-3 py-2.5 text-left hover:bg-[var(--color-surface-raised)] transition group">
-                      <div className="text-[11px] font-bold text-ink">📢 Kampanyalar</div>
+                      <div className="text-[11px] font-bold text-ink">Kampanyalar</div>
                       <div className="text-[10px] text-ink-muted mt-0.5">{summary.activeCampaigns} aktif</div>
                     </button>
-                    <button type="button" onClick={() => setActiveTab('queue')}
-                      className={`rounded-[var(--radius-sm)] border px-3 py-2.5 text-left transition group ${summary.queuedMessages > 0 ? 'border-warn/30 bg-warn/5 hover:bg-warn/10' : 'border-[var(--color-hairline)] bg-canvas hover:bg-[var(--color-surface-raised)]'}`}>
-                      <div className="text-[11px] font-bold text-ink">📋 Kuyruk</div>
-                      <div className={`text-[10px] mt-0.5 ${summary.queuedMessages > 0 ? 'text-warn font-semibold' : 'text-ink-muted'}`}>{summary.queuedMessages} bekliyor</div>
+                    <button type="button" onClick={() => setActiveTab('jobs')}
+                      className={`rounded-[var(--radius-sm)] border px-3 py-2.5 text-left transition group ${summary.pendingJobs > 0 ? 'border-warn/30 bg-warn/5 hover:bg-warn/10' : 'border-[var(--color-hairline)] bg-canvas hover:bg-[var(--color-surface-raised)]'}`}>
+                      <div className="text-[11px] font-bold text-ink">Görev Kuyruğu</div>
+                      <div className={`text-[10px] mt-0.5 ${summary.pendingJobs > 0 ? 'text-warn font-semibold' : 'text-ink-muted'}`}>{summary.pendingJobs} bekliyor</div>
                     </button>
                     <button type="button" onClick={() => setActiveTab('baileys')}
                       className="rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-canvas px-3 py-2.5 text-left hover:bg-[var(--color-surface-raised)] transition group">
-                      <div className="text-[11px] font-bold text-ink">📶 WhatsApp</div>
+                      <div className="text-[11px] font-bold text-ink">Servis & Altyapı</div>
                       <div className={`text-[10px] mt-0.5 ${worker ? 'text-ok-dim' : 'text-danger font-semibold'}`}>{worker ? `${worker.live} hat bağlı` : 'Servis kopuk'}</div>
                     </button>
                   </div>
@@ -2086,26 +2084,26 @@ export function LiveDashboard() {
 
                 {/* Yönetim */}
                 <div className="space-y-1.5">
-                  <span className="text-[9px] font-bold text-ink-muted uppercase tracking-wider">🏢 Yönetim</span>
+                  <span className="text-[9px] font-bold text-ink-muted uppercase tracking-wider">Yönetim</span>
                   <div className="grid grid-cols-2 gap-1.5">
                     <button type="button" onClick={() => setActiveTab('organizations')}
                       className="rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-canvas px-3 py-2.5 text-left hover:bg-[var(--color-surface-raised)] transition">
-                      <div className="text-[11px] font-bold text-ink">🏢 Firmalar</div>
+                      <div className="text-[11px] font-bold text-ink">Firmalar</div>
                       <div className="text-[10px] text-ink-muted mt-0.5">{summary.totalOrganizations ?? organizationsList.length} kayıtlı</div>
                     </button>
                     <button type="button" onClick={() => setActiveTab('contacts')}
                       className="rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-canvas px-3 py-2.5 text-left hover:bg-[var(--color-surface-raised)] transition">
-                      <div className="text-[11px] font-bold text-ink">👥 Kişiler</div>
+                      <div className="text-[11px] font-bold text-ink">Kişiler</div>
                       <div className="text-[10px] text-ink-muted mt-0.5">{Number(summary.totalContacts).toLocaleString('tr-TR')} kişi</div>
                     </button>
                     <button type="button" onClick={() => setActiveTab('data_requests')}
                       className={`rounded-[var(--radius-sm)] border px-3 py-2.5 text-left transition ${summary.pendingDataRequests > 0 ? 'border-warn/30 bg-warn/5 hover:bg-warn/10' : 'border-[var(--color-hairline)] bg-canvas hover:bg-[var(--color-surface-raised)]'}`}>
-                      <div className="text-[11px] font-bold text-ink">📊 Veri Talepleri</div>
+                      <div className="text-[11px] font-bold text-ink">Veri Talepleri</div>
                       <div className={`text-[10px] mt-0.5 ${summary.pendingDataRequests > 0 ? 'text-warn font-semibold' : 'text-ink-muted'}`}>{summary.pendingDataRequests} onay bekliyor</div>
                     </button>
                     <button type="button" onClick={() => setActiveTab('blacklist')}
                       className="rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-canvas px-3 py-2.5 text-left hover:bg-[var(--color-surface-raised)] transition">
-                      <div className="text-[11px] font-bold text-ink">🚫 Kara Liste</div>
+                      <div className="text-[11px] font-bold text-ink">Kara Liste</div>
                       <div className="text-[10px] text-ink-muted mt-0.5">{summary.blacklistedCount ?? 0} engelli</div>
                     </button>
                   </div>
@@ -2235,7 +2233,7 @@ export function LiveDashboard() {
                             <span className="font-bold text-ink">{Number(o.monthly_message_quota || 0).toLocaleString('tr-TR')}</span>
                           </div>
                           <div className="bg-surface/70 border border-[var(--color-hairline)] rounded p-2">
-                            <span className="block text-[10px] text-ink-muted font-semibold uppercase">🎬 Aylık Video Kotası</span>
+                            <span className="block text-[10px] text-ink-muted font-semibold uppercase">Aylık Video Kotası</span>
                             <span className="font-bold text-ink">{o.monthly_video_quota ?? 3} Video/Ay</span>
                           </div>
                           <div className="bg-surface/70 border border-[var(--color-hairline)] rounded p-2">
@@ -4364,7 +4362,7 @@ export function LiveDashboard() {
                   <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3 shadow-sm">
                     <h3 className="text-xs font-bold text-ink mb-2">Flow Incidents (Redacted, Admin-Only)</h3>
                     {incidents.length === 0 ? (
-                      <div className="text-[11px] text-ink-muted py-6 text-center">Henüz kayıtlı incident bulunmuyor. 🎉</div>
+                      <div className="text-[11px] text-ink-muted py-6 text-center">Henüz kayıtlı incident bulunmuyor.</div>
                     ) : (
                       <div className="space-y-2">
                         {incidents.map((inc: any) => (
@@ -4377,11 +4375,11 @@ export function LiveDashboard() {
                               <span className="text-[9px] font-mono text-ink-muted">{inc.created_at ? new Date(inc.created_at).toLocaleString('tr-TR') : ''}</span>
                             </div>
                             <div className="flex gap-2 text-[9px]">
-                              {inc.screenshot_path && <span className="text-accent underline cursor-pointer">📷 Ekran Görüntüsü</span>}
-                              {inc.dom_dump_path && <span className="text-accent underline cursor-pointer">🌐 DOM Dökümü</span>}
-                              {inc.har_path && <span className="text-accent underline cursor-pointer">📦 HAR (Redacted)</span>}
+                              {inc.screenshot_path && <span className="text-accent underline cursor-pointer">Ekran Görüntüsü</span>}
+                              {inc.dom_dump_path && <span className="text-accent underline cursor-pointer">DOM Dökümü</span>}
+                              {inc.har_path && <span className="text-accent underline cursor-pointer">HAR (Redacted)</span>}
                             </div>
-                            {inc.is_redacted && <div className="text-[8px] text-ink-muted mt-1 flex items-center gap-1"><span className="text-ok">🔒</span> Credential redaction uygulanmış</div>}
+                            {inc.is_redacted && <div className="text-[8px] text-ink-muted mt-1 flex items-center gap-1">Credential redaction uygulanmış</div>}
                           </div>
                         ))}
                       </div>
@@ -5916,7 +5914,7 @@ export function LiveDashboard() {
                   <div className="bg-surface p-2.5 rounded border border-[var(--color-hairline)] space-y-1">
                     <div className="flex items-center justify-between text-[11px]">
                       <span className="font-bold text-ink flex items-center gap-1">
-                        <span>🛡️ Evrensel Fiziksel Yüzey Sabitleme:</span>
+                        <span>Evrensel Fiziksel Yüzey Sabitleme:</span>
                       </span>
                       <span className="text-[10px] text-emerald-600 font-bold bg-emerald-500/10 px-1.5 py-0.2 rounded">
                         Sıfır Difüzyon Bozulması
@@ -5954,7 +5952,7 @@ export function LiveDashboard() {
                       }}
                       className="text-[11px] text-accent hover:underline font-semibold flex items-center gap-1"
                     >
-                      <span>📋 Metni Kopyala</span>
+                      <span>Metni Kopyala</span>
                     </button>
                   )}
                 </div>
@@ -5982,7 +5980,7 @@ export function LiveDashboard() {
                       }}
                       className="text-[11px] text-purple-600 hover:underline font-semibold flex items-center gap-1"
                     >
-                      <span>📋 Promptu Kopyala</span>
+                      <span>Promptu Kopyala</span>
                     </button>
                   )}
                 </div>
@@ -6022,7 +6020,7 @@ export function LiveDashboard() {
                         }}
                         className="text-[11px] text-emerald-600 hover:underline font-semibold flex items-center gap-1"
                       >
-                        <span>📋 Veo Promptunu Kopyala</span>
+                        <span>Veo Promptunu Kopyala</span>
                       </button>
                     </div>
                   )}
@@ -6788,7 +6786,7 @@ export function LiveDashboard() {
                     disabled={isUpdatingFlow}
                     className="text-[11px] font-bold px-2 py-0.5 rounded bg-accent text-accent-ink hover:bg-accent-dim flex items-center gap-1 shadow-sm transition disabled:opacity-50"
                   >
-                    <span>⚡ 1-Tıkla Otomatik Algıla & Bağla</span>
+                    <span>Otomatik Algıla & Bağla</span>
                   </button>
                 </div>
                 <input
