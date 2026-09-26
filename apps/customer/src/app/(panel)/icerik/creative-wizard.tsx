@@ -43,8 +43,8 @@ const WIZARD_STEPS: { id: Step; label: string }[] = [
 ]
 
 const FAST_FORMAT_OPTIONS = [
-  { id: 'FAST_SALES' as AdFormatType, label: 'Ürün Vitrini', tag: 'Önerilen', desc: 'Ürünün tasarımına, malzeme dokusuna ve detaylarına odaklanır.' },
-  { id: 'PRODUCT_USAGE' as AdFormatType, label: 'Sahada Uygulama', desc: 'Ürünün sahada, usta veya uzmanla gerçek kullanım anını gösterir.' },
+  { id: 'FAST_SALES' as AdFormatType, label: 'Ürün Vitrini', tag: 'Önerilen', desc: 'Sadece ürüne odaklanır; tasarım, malzeme dokusu ve estetik detayları öne çıkarır.' },
+  { id: 'PRODUCT_USAGE' as AdFormatType, label: 'Uygulama & Deneyim', desc: 'Ürünün gerçek hayatta insan veya uzmanla kullanım anını ve faydasını gösterir.' },
   { id: 'PREMIUM' as AdFormatType, label: 'Kurumsal & Prestij', desc: 'Tesis, üretim gücü ve mimari atmosferde seçkin marka duruşu.' },
   { id: 'AUTO' as AdFormatType, label: 'Dinamik & Satış Odaklı', desc: 'Hızlı tempolu, dikkat çekici ve doğrudan dönüşüm sağlayan kurgu.' },
 ]

@@ -82,7 +82,14 @@ export function buildSafeSpokenLine(input: {
   const searchScope = `${brand} ${product} ${desc} ${note}`.toLocaleLowerCase('tr-TR')
   const isBrick = searchScope.includes('tuğla') || searchScope.includes('tugla') || searchScope.includes('klinker') || searchScope.includes('inşaat') || searchScope.includes('ayvazoğlu') || searchScope.includes('ayvazoglu')
   const isSprayer = searchScope.includes('pompa') || searchScope.includes('ilaçlama') || searchScope.includes('bofe') || searchScope.includes('bahçe') || searchScope.includes('tarım')
+  const isCosmetics = /parfüm|parfum|koku|esans|ruj|krem|bakım|bakim|serum|makyaj|cilt|güzellik|guzellik|kolonya|losyon|şampuan|sampuan|kozmetik/.test(searchScope)
+  const isFashion = /giyim|elbise|tekstil|gomlek|gömlek|pantolon|ceket|ayakkabı|ayakkabi|çanta|canta|takı|taki|moda|kemer|kıyafet|kiyafet|butik/.test(searchScope)
+  const isFood = /döner|doner|kebap|burger|pizza|lahmacun|restoran|lokanta|kafe|cafe|tatlı|tatli|kahve|yemek|lezzet|mutfak|fırın|firin|şef|sef|gurme/.test(searchScope)
+  const isTech = /telefon|kulaklık|kulaklik|hoparlör|hoparlor|saat|tablet|bilgisayar|laptop|şarj|sarj|robot süpürge|cihaz|elektronik|yazılım|yazilim|veri|data/.test(searchScope)
+  const isAuto = /oto|otomobil|araç|araba|lastik|jant|motor yağı|seramik kaplama|detailing|oto yıkama/.test(searchScope)
+  const isMedical = /diş|dis|klinik|poliklinik|doktor|sağlık|saglik|medikal|implant|ortodonti|göz|goz|hekim|hastane/.test(searchScope)
 
+  // 1. Brick / Construction
   if (isBrick) {
     if (fmt === 'PRODUCT_USAGE') {
       const brickUsagePool = [
@@ -109,6 +116,7 @@ export function buildSafeSpokenLine(input: {
     return clampWords(brickHeroPool[Math.floor(Math.random() * brickHeroPool.length)])
   }
 
+  // 2. Agriculture / Sprayer
   if (isSprayer) {
     if (fmt === 'PRODUCT_USAGE') {
       const sprayUsagePool = [
@@ -132,12 +140,127 @@ export function buildSafeSpokenLine(input: {
     return clampWords(sprayHeroPool[Math.floor(Math.random() * sprayHeroPool.length)])
   }
 
-  // General Products
+  // 3. Cosmetics & Fragrance
+  if (isCosmetics) {
+    if (fmt === 'PRODUCT_USAGE') {
+      const cosmeticUsagePool = [
+        `Gün boyu süren kalıcı koku ve eşsiz bir zarafet. ${brand} ${product} ile imzanızı atın.`,
+        `Büyüleyici bir aura ve teninizde ipeksi bir dokunuş. Zarafetiyle büyüleyen ${brand}.`,
+        `Cildinize hak ettiği ışıltıyı ve bakımı kazandırın. ${brand} ${product} ile tazelenin.`,
+      ]
+      if (note) {
+        return clampWords(`Gün boyu süren kalıcı koku ve zarafet. ${note}. ${brand} ile tarzınızı tamamlayın.`)
+      }
+      return clampWords(cosmeticUsagePool[Math.floor(Math.random() * cosmeticUsagePool.length)])
+    }
+    if (fmt === 'PREMIUM') {
+      return clampWords(note ? `Lüksün ve seçkin zarafetin simgesi. ${note}. ${brand} ayrıcalığıyla.` : `Zarif esanslar ve seçkin formüller. ${brand} ${product} ile lüksü teninizde hissedin.`)
+    }
+    const cosmeticHeroPool = [
+      `Zarif şişe tasarımı ve büyüleyici koku notaları. ${brand} ${product} ile tarzınızı tamamlayın.`,
+      `Seçkin formül ve kusursuz doku. ${brand} kalitesiyle gün boyu süren büyüleyici etki.`,
+      `Zarafetin en saf hali. ${brand} ${product} ile unutulmaz bir koku imzası.`,
+    ]
+    if (note) {
+      return clampWords(`Zarif şişe tasarımı ve büyüleyici koku notaları. ${note}. ${brand} kalitesiyle.`)
+    }
+    return clampWords(cosmeticHeroPool[Math.floor(Math.random() * cosmeticHeroPool.length)])
+  }
+
+  // 4. Fashion & Apparel
+  if (isFashion) {
+    if (fmt === 'PRODUCT_USAGE') {
+      const fashionUsagePool = [
+        `Kusursuz kalıp, nefes alan kumaş ve gün boyu konfor. Tarzınıza şıklık katan ${brand} ${product}.`,
+        `Her adımda seçkin bir duruş ve modern zarafet. ${brand} ile girdiğiniz her ortamda fark yaratın.`,
+        `Özgür hareket ve tavizsiz stil. ${brand} ${product} ile şıklığınızı tamamlayın.`,
+      ]
+      if (note) {
+        return clampWords(`Kusursuz kalıp ve gün boyu konfor. ${note}. ${brand} ile tarzınızı yaratın.`)
+      }
+      return clampWords(fashionUsagePool[Math.floor(Math.random() * fashionUsagePool.length)])
+    }
+    const fashionHeroPool = [
+      `Özenle seçilmiş dokular ve milimetrik dikiş kalitesi. ${brand} ile tarzınızı yansıtın.`,
+      `Modern kesimler ve tavizsiz kumaş dokusu. ${brand} kalitesiyle stil sahibi adımlar.`,
+    ]
+    return clampWords(fashionHeroPool[Math.floor(Math.random() * fashionHeroPool.length)])
+  }
+
+  // 5. Food, Dining & Cafe
+  if (isFood) {
+    if (fmt === 'PRODUCT_USAGE') {
+      const foodUsagePool = [
+        `Taptaze malzemeler ve damağınızda iz bırakan lezzet. ${brand} ile lezzetin doruğuna ulaşın.`,
+        `Usta ellerden çıkan benzersiz tarifler ve sıcacık bir sunum. Aradığınız lezzet ${brand}'de.`,
+        `Özenle hazırlanan tatlar ve unutulmaz bir lezzet deneyimi. ${brand} sizleri bekliyor.`,
+      ]
+      if (note) {
+        return clampWords(`Taptaze malzemeler ve enfes lezzet. ${note}. ${brand} güvencesiyle.`)
+      }
+      return clampWords(foodUsagePool[Math.floor(Math.random() * foodUsagePool.length)])
+    }
+    const foodHeroPool = [
+      `Dumanı tüten taze lezzet ve enfes sunum. ${brand} ile lezzet dolu bir mola.`,
+      `Günün her anına tat katan eşsiz tarifler. ${brand} kalitesiyle lezzet şöleni.`,
+    ]
+    return clampWords(foodHeroPool[Math.floor(Math.random() * foodHeroPool.length)])
+  }
+
+  // 6. Electronics & Tech
+  if (isTech) {
+    if (fmt === 'PRODUCT_USAGE') {
+      const techUsagePool = [
+        `Ergonomik tasarım ve kesintisiz yüksek performans. ${brand} ile teknolojiyi zirvede yaşayın.`,
+        `Hızlı bağlantı, uzun pil ömrü ve zahmetsiz kullanım. Hayatınızı kolaylaştıran ${brand} kalitesi.`,
+        `Akıllı çözümler ve üstün teknoloji. ${brand} güvencesiyle daima bir adım önde olun.`,
+      ]
+      if (note) {
+        return clampWords(`Ergonomik tasarım ve kesintisiz performans. ${note}. ${brand} güvencesiyle.`)
+      }
+      return clampWords(techUsagePool[Math.floor(Math.random() * techUsagePool.length)])
+    }
+    const techHeroPool = [
+      `İnce detaylar, dayanıklı gövde ve minimalist estetik. ${brand} ile teknolojiye dokunun.`,
+      `Zarif tasarım ve güçlü donanım bir arada. ${brand} ile geleceğin teknolojisi.`,
+    ]
+    return clampWords(techHeroPool[Math.floor(Math.random() * techHeroPool.length)])
+  }
+
+  // 7. Automotive Care
+  if (isAuto) {
+    if (fmt === 'PRODUCT_USAGE') {
+      const autoUsagePool = [
+        `Aracınıza ilk günkü parlaklığı ve kusursuz korumayı kazandırın. Detailing tutkunlarının tercihi ${brand}.`,
+        `Yüksek koruma performansı ve zahmetsiz uygulama. ${brand} ${product} ile aracınız daima pırıl pırıl.`,
+      ]
+      return clampWords(autoUsagePool[Math.floor(Math.random() * autoUsagePool.length)])
+    }
+    const autoHeroPool = [
+      `Derin parlaklık ve profesyonel koruma kalkanı. ${brand} kalitesiyle aracınızın değeri korunsun.`,
+      `Üstün yüzey koruması ve göz alıcı parlaklık. ${brand} ${product} ile yollara meydan okuyun.`,
+    ]
+    return clampWords(autoHeroPool[Math.floor(Math.random() * autoHeroPool.length)])
+  }
+
+  // 8. Healthcare & Medical
+  if (isMedical) {
+    if (fmt === 'PRODUCT_USAGE') {
+      const medUsagePool = [
+        `Uzman hekim kadrosu ve son teknoloji konforlu tedavi. Sağlıklı gülüşünüz ${brand} güvencesinde.`,
+        `Konforlu klinik ortamı ve kişiye özel sağlık çözümleri. Sağlığınız ve güveniniz için ${brand}.`,
+      ]
+      return clampWords(medUsagePool[Math.floor(Math.random() * medUsagePool.length)])
+    }
+    return clampWords(`Yüksek sterilizasyon standartları ve ileri medikal teknoloji. ${brand} ile güven dolu bir sağlık deneyimi.`)
+  }
+
+  // Universal Fallback (Neutral Commercial Product)
   if (fmt === 'PRODUCT_USAGE') {
     const generalUsagePool = [
-      note ? `Sahada maksimum verim ve pratik kullanım. ${note}. ${brand} kalitesi her zaman yanınızda.` : `Sahada hız, uygulamada ustalık. İşini bilen profesyoneller her zaman ${brand} ${product} tercih eder.`,
-      `İşinizi hafifleten pratik kullanım ve yüksek verim. ${brand} ${product} ile sahada fark yaratın.`,
-      `Ustalara özel pratiklik ve tavizsiz sağlamlık. ${product}, ${brand} güvencesiyle daima yanınızda.`,
+      note ? `Kullanım kolaylığı ve üstün pratiklik. ${note}. ${brand} kalitesi her zaman yanınızda.` : `Kullanım kolaylığı, üstün dayanıklılık ve yüksek verim. ${product}, ${brand} güvencesiyle her an yanınızda.`,
+      `Hayatınızı kolaylaştıran pratik çözümler ve tavizsiz kalite. ${brand} ${product} ile farkı hissedin.`,
+      `Her detayında güven ve üstün performans. ${product}, ${brand} güvencesiyle daima yanınızda.`,
     ]
     return clampWords(generalUsagePool[Math.floor(Math.random() * generalUsagePool.length)])
   }

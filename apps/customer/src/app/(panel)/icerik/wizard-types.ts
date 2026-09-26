@@ -108,8 +108,8 @@ export type AdFormatType =
   | 'OFFER_DRIVEN'
 
 export const USER_STYLE_OPTIONS: { id: UserStylePreference; label: string; tag?: string; desc: string }[] = [
-  { id: 'FAST_SALES', label: 'Ürün Vitrini', tag: 'Önerilen', desc: 'Ürünün tasarımına, malzeme dokusuna ve detaylarına odaklanır.' },
-  { id: 'PRODUCT_USAGE', label: 'Sahada Uygulama', desc: 'Ürünün sahada, usta veya uzmanla gerçek kullanım anını gösterir.' },
+  { id: 'FAST_SALES', label: 'Ürün Vitrini', tag: 'Önerilen', desc: 'Sadece ürüne odaklanır; tasarım, malzeme dokusu ve estetik detayları öne çıkarır.' },
+  { id: 'PRODUCT_USAGE', label: 'Uygulama & Deneyim', desc: 'Ürünün gerçek hayatta insan veya uzmanla kullanım anını ve faydasını gösterir.' },
   { id: 'PREMIUM', label: 'Kurumsal & Prestij', desc: 'Tesis, üretim gücü ve mimari atmosferde seçkin marka duruşu.' },
   { id: 'AUTO', label: 'Dinamik & Satış Odaklı', desc: 'Hızlı tempolu, dikkat çekici ve doğrudan dönüşüm sağlayan kurgu.' },
   { id: 'PROBLEM_SOLUTION', label: 'Sorun → Çözüm', desc: 'Hedef kitlenin ihtiyacını tespit edip ürünü kesin çözüm olarak sunar.' },

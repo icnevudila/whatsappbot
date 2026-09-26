@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireActiveOrg } from '@/lib/org'
 import type { SpeechTimelineItem, AdFormatType } from '@/app/(panel)/icerik/wizard-types'
-import { resolveProductAffordance } from '@/lib/ai/affordance'
+import { resolveProductAffordance, type ProductAffordanceReport } from '@/lib/ai/affordance'
 import { completeText } from '@/lib/ai/text'
 import { buildSafeSpokenLine, type ProductFidelityContract } from '@/lib/video-wizard-contract'
 
@@ -19,6 +19,7 @@ function planBeats(
   hasPresenterReference: boolean,
   isBrick: boolean = false,
   isSprayer: boolean = false,
+  affordance?: ProductAffordanceReport,
 ): Beat[] {
   const claim = verifiedClaims[0]
   const camera = motionStyle === 'macro_detail'
@@ -27,6 +28,10 @@ function planBeats(
       ? 'tam tur atmayan güvenli 3/4 vitrin hareketi'
       : 'gerçek kullanımı takip eden sabit ve yumuşak kamera'
   const commonClose = `${product} merkezde sabitlenir; logo ve CTA yalnız deterministic finishing katmanında eklenir.`
+
+  const actor = affordance?.actorRole || 'Kullanıcı'
+  const action = affordance?.primaryProductAction || 'ürünün doğal kullanım adımını gerçekleştirir'
+  const env = environment || affordance?.naturalEnvironment || 'Modern ve aydınlık stüdyo ve mekan'
 
   const plans: Partial<Record<AdFormatType, [string, string, string]>> = {
     FAST_SALES: [
@@ -39,16 +44,16 @@ function planBeats(
         ? `Modern serada veya bahçede sırtında açık mavi ${product} taşıyan profesyonel bahçıvan doğal adımlarla ilerler; deponun üzerindeki "bofe" markası okunur; ${camera}.`
         : isBrick
           ? `Şantiye alanında baretli ve iş eldivenli bir inşaat ustası paletten ${product} bloğunu kavrar; tek eksenli dikey delik yapısı ve çizgili yan yüzeyi belirgindir; ${camera}.`
-          : `${environment} içinde profesyonel bir kullanıcı ${product} ile doğal çalışma ortamında kadraja girer; ${camera}.`,
+          : `${env} içinde ${actor} ${product} ile doğal ve estetik ortamında kadraja girer; ${camera}.`,
       isSprayer
         ? `Bahçıvan pirinç püskürtme borusunu tutarak bitkilerin üzerine homojen, ince su zerrecikleri püskürtür; gerçek insan elleri, anatomik beş parmak, akıcı ve doğal püskürtme hareketi.`
         : isBrick
           ? `Usta ${product} bloğunu düzgün örülmüş duvar sırasına titizlikle yerleştirir; sağlam klinker harç uyumu, gerçekçi insan elleri ve profesyonel işçilik hareketi.`
-          : `Kullanıcı ürünü elinde tutarak tek doğal kullanım adımını gerçekleştirir; anatomik beş parmaklı gerçek eller, kusursuz geometri ve akıcı hareket.`,
+          : `${actor}, ${action}; anatomik beş parmaklı gerçek eller, kusursuz ürün geometrisi ve akıcı hareket.`,
       commonClose,
     ],
     PROBLEM_SOLUTION: [
-      `Uydurma sonuç veya hasar göstermeden gerçek çalışma bağlamı kurulur: ${environment}.`,
+      `Uydurma sonuç veya hasar göstermeden gerçek çalışma bağlamı kurulur: ${env}.`,
       `Ürün, yalnız doğrulanmış özellikleriyle tek kullanım adımında gösterilir.`,
       commonClose,
     ],
@@ -57,7 +62,7 @@ function planBeats(
         ? `Doğal bahçe ortamında bir kullanıcı sırtındaki ${product} ile püskürtme yaparken memnuniyetle hafifçe kameraya döner; ${camera}.`
         : isBrick
           ? `Şantiyede usta veya mühendis ${product} bloğunu tutarak sağlamlığını ve hafifliğini gösterir; ${camera}.`
-          : (hasPresenterReference ? 'Onaylı sunucu referansı doğal kadrajda ürünü tanıtır.' : 'Birinci şahıs bakışında doğal el kadrajı ürüne yaklaşır.'),
+          : (hasPresenterReference ? 'Onaylı sunucu referansı doğal kadrajda ürünü tanıtır.' : `${actor} doğal kadrajda ürünü tanıtır.`),
       `Samimi fakat iddiasız gerçek kullanım detayı; ürün geometrisi tamamen korunur.`,
       commonClose,
     ],
@@ -153,6 +158,7 @@ export async function POST(req: NextRequest) {
       referenceAssets.some((asset: any) => asset?.role === 'presenter'),
       isBrick,
       isSprayer,
+      affordance,
     )
     const revisionType = String(body.revisionType || 'refresh')
     const creativeNote = String(body.creativeNote || '').trim()
@@ -161,22 +167,17 @@ export async function POST(req: NextRequest) {
     try {
       let styleDirectives = ''
       if (adFormat === 'PRODUCT_USAGE') {
-        styleDirectives = `VİDEO KURGUSU: "Sahada Uygulama"
-- Sahnede ürünü sahada/şantiyede/bahçede kullanan, uygulayan veya tutan gerçek bir usta/uzman yer almaktadır.
-- SESLENDİRME TONU: İşin ustasına hitap eden, sahadaki pratik faydayı, uygulama kolaylığını, dayanıklılığı veya zaman tasarrufunu öne çıkaran doğal ve güven veren bir ton.
-- MÜKEMMEL ÖRNEKLER:
-  * "Harçla kusursuz kenetlenen sağlam bloklar. İşin ustası sahada her zaman Ayvazoğlu tuğlayı seçer."
-  * "Sırtta ağırlık yapmayan ergonomik depo ve güçlü püskürtme. Bofe şarjlı pompa ile ilaçlama artık yormuyor."`
+        styleDirectives = `VİDEO KURGUSU: "Uygulama & Deneyim"
+- Sahnede ürünü doğal ortamında (${affordance.naturalEnvironment}) kullanan, uygulayan veya deneyimleyen gerçek bir ${affordance.actorRole} yer almaktadır.
+- SESLENDİRME TONU: Ürünün gerçek faydasını, fonksiyonunu, kullanım kolaylığını veya deneyimini öne çıkaran doğal ve güven veren bir ton.
+- KESİNLİKLE "işin ustası", "şantiye" gibi tabirleri inşaat sektörü dışındaki ürünlerde (parfüm, kafe, giyim, teknoloji vb.) KULLANMA. İlgili sektörün (${affordance.detectedSector}) doğasına ve prestijine uygun kelimeler seç.`
       } else if (adFormat === 'FAST_SALES') {
         styleDirectives = `VİDEO KURGUSU: "Ürün Vitrini"
 - Sahnede insan figürü veya insan eli kesinlikle yoktur. Yalnızca ürünün formuna, malzeme dokusuna, işçiliğine ve kalitesine odaklanan 35mm vitrin çekimidir.
-- SESLENDİRME TONU: Kusursuz malzeme kalitesini, üretim titizliğini ve ürünün fiziksel estetiğini vurgulayan karizmatik, premium bir reklam dili.
-- MÜKEMMEL ÖRNEKLER:
-  * "Kusursuz form ve zamana meydan okuyan dayanıklılık. Ayvazoğlu ile sağlamlığın temeli inşaatta başlar."
-  * "Hafif gövde, homojen basınç ve kesintisiz püskürtme. Bofe ile bahçenizde profesyonel ilaçlama kolaylığı."`
+- SESLENDİRME TONU: Kusursuz malzeme kalitesini, üretim titizliğini ve ürünün fiziksel estetiğini vurgulayan karizmatik, premium bir reklam dili.`
       } else if (adFormat === 'PREMIUM') {
         styleDirectives = `VİDEO KURGUSU: "Kurumsal & Prestij"
-- Tesis, fabrika veya mimari atmosferde seçkin kurumsal duruş.
+- Tesis, marka merkezi veya mimari atmosferde seçkin kurumsal duruş.
 - SESLENDİRME TONU: Ağırbaşlı, kurumsal güven, vizyon ve yüksek standartları hissettiren seçkin bir dil.`
       } else {
         styleDirectives = `VİDEO KURGUSU: "Dinamik & Satış Odaklı"
