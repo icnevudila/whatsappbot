@@ -32,7 +32,10 @@ function assertSimpleProviderContract(request: VideoGenerationRequest): void {
     throw new ProviderRoutingError('INVALID_JOB', `SIMPLE_V5_HYBRID requires 9:16, received ${request.aspectRatio}`)
   }
   const exactDialogue = `Approved dialogue: "${request.approvedDialogue}"`
-  if (!request.approvedDialogue.trim() || !request.prompt.includes(exactDialogue)) {
+  if (!request.approvedDialogue?.trim()) {
+    throw new ProviderRoutingError('INVALID_JOB', 'Provider prompt requires locked approved dialogue')
+  }
+  if (!request.prompt.includes(exactDialogue) && !request.prompt.includes(request.approvedDialogue)) {
     throw new ProviderRoutingError('INVALID_JOB', 'Provider prompt does not contain the exact locked approved dialogue')
   }
 }

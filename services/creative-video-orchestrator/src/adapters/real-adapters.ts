@@ -575,6 +575,12 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
       }
     }
 
+    const probe = await this.runFfprobe(inputVideoPath).catch(() => ({ duration: 8.0, width: 720, height: 1280, fps: 24, vcodec: 'h264', acodec: 'aac' }))
+    const duration = probe.duration && probe.duration > 0 ? probe.duration : 8.0
+    const outroStart = Math.max(0, duration - 1.8)
+    const logoStart = Math.max(0, duration - 1.5)
+    const ctaStart = Math.max(0, duration - 1.3)
+
     const subtitlesPath = finishingSpec?.subtitlesPath || finishingSpec?.assPath
     const hasSubtitles = Boolean(subtitlesPath && existsSync(subtitlesPath))
 
@@ -584,22 +590,27 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
     const filterComplexParts: string[] = []
     let currentV = '0:v'
 
-    if (hasLogo) {
-      filterComplexParts.push(`[1:v]colorkey=0xFFFFFF:0.15:0.1,scale=160:-1[logo]`)
-      filterComplexParts.push(`[${currentV}][logo]overlay=main_w-overlay_w-32:32:format=auto[v_after_logo]`)
-      currentV = 'v_after_logo'
-    }
-
     if (hasSubtitles) {
       const escapedSub = subtitlesPath.replace(/\\/g, '/').replace(/:/g, '\\:')
       filterComplexParts.push(`[${currentV}]ass='${escapedSub}'[v_after_sub]`)
       currentV = 'v_after_sub'
     }
 
+    // Video fades smoothly to pitch black for the brand outro card
+    filterComplexParts.push(`[${currentV}]fade=t=out:st=${outroStart.toFixed(2)}:d=0.5[v_faded]`)
+    currentV = 'v_faded'
+
+    if (hasLogo) {
+      // Loop static logo image and fade in smoothly centered on the black background
+      filterComplexParts.push(`[1:v]scale=360:-1,format=rgba,fade=t=in:st=${logoStart.toFixed(2)}:d=0.5:alpha=1[logo_card]`)
+      filterComplexParts.push(`[${currentV}][logo_card]overlay=(W-w)/2:(H-h)/2-70:enable='gte(t,${logoStart.toFixed(2)})':shortest=1[v_after_logo]`)
+      currentV = 'v_after_logo'
+    }
+
     if (hasCta) {
-      const cleanCta = ctaText.replace(/'/g, '').replace(/:/g, '\\:')
+      const cleanCta = ctaText.replace(/'/g, '').replace(/:/g, '\\:').replace(/[\r\n]+/g, ' ')
       filterComplexParts.push(
-        `[${currentV}]drawbox=y=ih-180:color=black@0.75:width=iw:height=70:t=fill:enable='between(t,5.5,8.0)',drawtext=text='${cleanCta}':fontcolor=white:fontsize=32:x=(w-text_w)/2:y=h-158:enable='between(t,5.5,8.0)'[v_after_cta]`
+        `[${currentV}]drawtext=text='${cleanCta}':fontcolor=0xD1D5DB:fontsize=24:x=(w-text_w)/2:y=(h/2)+90:enable='gte(t,${ctaStart.toFixed(2)})'[v_after_cta]`
       )
       currentV = 'v_after_cta'
     }
@@ -608,12 +619,14 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
       const args = [
         '-y',
         '-i', inputVideoPath,
-        ...(hasLogo ? ['-i', logoPath] : []),
+        ...(hasLogo ? ['-loop', '1', '-i', logoPath] : []),
         '-filter_complex', filterComplexParts.join(';'),
         '-map', `[${currentV}]`,
         '-map', '0:a?',
         '-c:v', 'libx264',
         '-c:a', 'copy',
+        '-t', `${duration.toFixed(2)}`,
+        '-pix_fmt', 'yuv420p',
         '-movflags', '+faststart',
         outputPath,
       ]

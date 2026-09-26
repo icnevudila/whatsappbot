@@ -7,12 +7,22 @@ export const SIMPLE_V5_STANDARD_NEGATIVES = [
   'altered product geometry',
   'holes on side surfaces',
   'perforations on multiple faces',
+  'double axis holes',
+  'perpendicular holes',
+  'holes on top and front simultaneously',
   'incorrect product color',
   'warped packaging',
   'warped logo',
   'gibberish typography',
   'misspelled company name',
   'floating graphics',
+  'floating logo',
+  'sky logo',
+  'air text',
+  'billboard in sky',
+  'synthetic logo badge',
+  'floating title text',
+  'banner in sky',
   'holographic interface',
   'unmotivated location change',
   'identity drift',
@@ -49,18 +59,32 @@ export class SimpleV5PromptCompiler {
     const sections: string[] = [
       `[FORMAT]: ${brief.durationSeconds.toFixed(1)}-second vertical commercial video, 9:16 aspect ratio.`,
       `[SINGLE CONCEPT]: ${brief.primaryIdea}`,
+      `[HERO PRODUCT SUBJECT ISOLATION]: Focus strictly and exclusively on the foreground physical product item from @HeroProduct. Completely ignore, decouple, and discard any background, floor, shelves, retail interior, or warehouse environment present in @HeroProduct reference photo. Place the product exclusively within [ONE LOCATION]: ${brief.location}.`,
       `[HERO PRODUCT]: Preserve ${brief.heroProductHandle} geometry, material texture, and colors exactly as shown in authoritative reference assets.`,
-      `[CANONICAL BRAND IDENTITY PRESERVATION]: When visible, maintain canonical brand identity from @BrandLogo in authentic colors and proportions. Primary focus remains locked on clean, authentic presentation of @HeroProduct without invented foreign logos or stray text.`,
+      `[CANONICAL BRAND IDENTITY]: ZERO FLOATING LOGOS IN SKY OR AIR. No synthetic text overlays, no floating boxes or watermark badges. Brand identity is exclusively diegetic if stamped on product packaging, or strictly deferred to clean post-production outro.`,
       `[ONE LOCATION]: ${brief.location}, ${brief.lighting}.`,
       `[CONTINUOUS CINEMATIC TAKE]: A single uninterrupted ${brief.durationSeconds.toFixed(1)}-second commercial take with seamless 35mm fluid camera movement. ${shotPlan.shot1_hook.description} ${shotPlan.shot2_proof.description} ${shotPlan.shot3_close.description} NO CUTS, NO ABRUPT HARD JUMPS, SINGLE UNBROKEN CAMERA FLOW.`,
       fidelityLock,
       `[CAMERA & PHYSICS]: ${brief.cameraMotion}. Natural gravity, authentic material weight and realistic movement.`,
-      '[AUDIO]: Pure ambient realistic environmental foley. SILENT SCENE, ZERO ON-CAMERA SPEECH, ZERO ON-SCREEN SUBTITLES, ZERO ON-SCREEN CAPTIONS.',
+      '[AUDIO]: Spoken language: Turkish (tr-TR).',
+      `Approved dialogue: "${brief.spokenScript}"`,
+      'Speak exactly this dialogue once, naturally in Turkish.',
+      'No English narration.',
+      'No translation.',
+      'Natural ambient realistic environmental foley. SILENT ON-SET CINEMATIC TAKE, ZERO ON-SCREEN SUBTITLES, ZERO ON-SCREEN CAPTIONS.',
       `[RAW TEXT POLICY]: Clean commercial footage, no on-screen text, no synthetic titles.`,
     ]
 
     const cinematicPrompt = sections.join('\n')
-    const negativePrompt = SIMPLE_V5_STANDARD_NEGATIVES
+
+    // Context-sensitive negatives for reference background leakage prevention
+    const locLower = (brief.location || '').toLowerCase()
+    const isOutdoorOrNatural = locLower.includes('bahçe') || locLower.includes('tarla') || locLower.includes('tarım') || locLower.includes('şantiye') || locLower.includes('sera') || locLower.includes('arazi') || locLower.includes('açık')
+    const backgroundLeakageNegatives = isOutdoorOrNatural
+      ? ', indoor warehouse, storage shelves, industrial metal shelving, retail store shelves, interior concrete room, indoor storage, commercial depot'
+      : ''
+
+    const negativePrompt = `${SIMPLE_V5_STANDARD_NEGATIVES}${backgroundLeakageNegatives}`
 
     const metrics = {
       charCount: cinematicPrompt.length,

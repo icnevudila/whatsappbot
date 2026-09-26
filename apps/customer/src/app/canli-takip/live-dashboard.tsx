@@ -4976,18 +4976,25 @@ export function LiveDashboard() {
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {workers.map((w: any) => (
-                        <div key={w.id} className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3 shadow-sm">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-bold text-ink">{w.id}</span>
-                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${w.status === 'online' ? 'bg-ok/20 text-ok' : 'bg-danger/20 text-danger'}`}>{w.status}</span>
+                        <div key={w.id} className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 shadow-sm space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="text-xs font-bold text-ink">{w.account_name || w.id}</span>
+                              {w.active_job_title && (
+                                <p className="text-[10px] text-accent font-semibold truncate max-w-[240px]">{w.active_job_title}</p>
+                              )}
+                            </div>
+                            <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${w.status === 'online' || w.status === 'busy' ? (w.status === 'busy' ? 'bg-amber-500/20 text-amber-500' : 'bg-ok/20 text-ok') : 'bg-danger/20 text-danger'}`}>
+                              {w.status === 'busy' ? 'Meşgul (İşliyor)' : w.status === 'online' ? 'Çevrimiçi' : w.status}
+                            </span>
                           </div>
-                          <div className="grid grid-cols-2 gap-1 text-[10px]">
-                            <div><span className="text-ink-muted">Host:</span> <span className="text-ink">{w.host}</span></div>
-                            <div><span className="text-ink-muted">PID:</span> <span className="text-ink font-mono">{w.pid || '—'}</span></div>
-                            <div><span className="text-ink-muted">CPU:</span> <span className="text-ink">{w.cpu_percent != null ? `${w.cpu_percent}%` : '—'}</span></div>
-                            <div><span className="text-ink-muted">RAM:</span> <span className="text-ink">{w.ram_percent != null ? `${w.ram_percent}%` : '—'}</span></div>
-                            <div><span className="text-ink-muted">Aktif İş:</span> <span className="text-ink font-mono text-[9px]">{w.active_job_id?.slice(0,8) || 'Boşta'}</span></div>
-                            <div><span className="text-ink-muted">Kalp Atışı:</span> <span className="text-ink font-mono">{w.heartbeat_at ? new Date(w.heartbeat_at).toLocaleTimeString('tr-TR') : '—'}</span></div>
+                          <div className="grid grid-cols-2 gap-1.5 text-[10px] pt-1.5 border-t border-[var(--color-hairline)]">
+                            <div><span className="text-ink-muted">Host:</span> <span className="text-ink font-mono text-[9px]">{w.host}</span></div>
+                            <div><span className="text-ink-muted">Aşama:</span> <span className="text-accent font-semibold font-mono text-[9px]">{w.current_phase || (w.active_job_id ? 'ÇALIŞIYOR' : 'BOŞTA')}</span></div>
+                            <div><span className="text-ink-muted">İşlemci (CPU):</span> <span className="text-ink font-semibold">{w.cpu_percent != null ? `${w.cpu_percent}%` : '—'}</span></div>
+                            <div><span className="text-ink-muted">Bellek (RAM):</span> <span className="text-ink">{w.ram_percent != null ? `${w.ram_percent}%` : '—'}</span></div>
+                            <div><span className="text-ink-muted">Aktif İş:</span> <span className="text-ink font-mono text-[9px]">{w.active_job_id ? `${w.active_job_id.slice(0,8)}...` : 'Boşta'}</span></div>
+                            <div><span className="text-ink-muted">Son Sinyal:</span> <span className="text-ink font-mono">{w.heartbeat_at ? new Date(w.heartbeat_at).toLocaleTimeString('tr-TR') : '—'}</span></div>
                           </div>
                         </div>
                       ))}
@@ -5098,10 +5105,10 @@ export function LiveDashboard() {
               {aiMediaSubTab === 'health' && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   {[
-                    { label: 'ai-media-control', status: aiMediaData ? 'Çevrimiçi' : 'Çevrimdışı', ok: !!aiMediaData },
-                    { label: 'gflow-engine', status: aiMediaData?.engine_health?.status || 'Bilinmiyor', ok: aiMediaData?.engine_health?.status === 'ok' },
-                    { label: 'Supabase DB', status: aiMediaData?.db_health || 'Bilinmiyor', ok: aiMediaData?.db_health === 'ok' },
-                    { label: 'ffmpeg/ffprobe', status: aiMediaData?.ffmpeg_health || 'Bilinmiyor', ok: aiMediaData?.ffmpeg_health === 'ok' },
+                    { label: 'AI Video Orkestratörü (ai-media-control)', status: aiMediaData ? 'Çevrimiçi' : 'Çevrimdışı', ok: !!aiMediaData },
+                    { label: 'Google Veo & Flow Motoru (gflow-engine)', status: aiMediaData?.engine_health?.status || 'Bilinmiyor', ok: aiMediaData?.engine_health?.status === 'ok' },
+                    { label: 'Supabase Veritabanı (DB)', status: aiMediaData?.db_health || 'Bilinmiyor', ok: aiMediaData?.db_health === 'ok' },
+                    { label: 'Medya İşleme Motoru (ffmpeg)', status: aiMediaData?.ffmpeg_health || 'Bilinmiyor', ok: aiMediaData?.ffmpeg_health === 'ok' },
                   ].map((h, i) => (
                     <div key={i} className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3 text-center shadow-sm">
                       <div className={`w-3 h-3 rounded-full mx-auto mb-2 ${h.ok ? 'bg-ok' : 'bg-danger animate-pulse'}`} />
@@ -5472,7 +5479,7 @@ export function LiveDashboard() {
                           <tr key={idx} className="hover:bg-surface-raised/40">
                             <td className="px-3 py-2 font-mono font-bold text-ink flex items-center gap-1.5">
                               <span className="w-1.5 h-1.5 rounded-full bg-ok" />
-                              {c.name === 'wa-service' ? 'wa-service (WhatsApp Gönderim Servisi)' : c.name === 'omnistudio-engine' ? 'omnistudio-engine (Afiş & Görsel Yapay Zekası)' : c.name}
+                              {c.name === 'gflow-engine' ? 'Google Veo & Flow Motoru (gflow-engine)' : c.name === 'wa-service' ? 'WhatsApp Mesaj & Hat Servisi (wa-service)' : c.name === 'omnistudio-engine' ? 'Kreatif Görsel Motoru (omnistudio-engine)' : c.name === 'ai-media-control' ? 'AI Video Orkestratörü (ai-media-control)' : c.name}
                             </td>
                             <td className="px-3 py-2 font-mono font-semibold text-accent">{c.cpu}</td>
                             <td className="px-3 py-2 font-mono text-ink-soft">{c.mem}</td>
