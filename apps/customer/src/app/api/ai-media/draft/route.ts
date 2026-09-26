@@ -159,30 +159,45 @@ export async function POST(req: NextRequest) {
 
     let approvedSpokenLine = ''
     try {
-      const toneMap: Record<string, string> = {
-        sales: 'Doğrudan satış, fırsat ve kaçırılmayacak avantaj odaklı kanca (Hook)',
-        short: '6-9 kelimelik akılda kalıcı, son derece vurucu slogan tarzı',
-        corporate: 'Prestijli, seçkin, kurumsal güven ve mimari kalite hissettiren ton',
-        refresh: 'Yenilikçi, dinamik ve dikkat çeken modern reklam tonu',
-        usage: 'İşin ustasına hitap eden, sahada sağladığı kolaylığı ve sağlamlığı öne çıkaran ton',
+      let styleDirectives = ''
+      if (adFormat === 'PRODUCT_USAGE') {
+        styleDirectives = `VİDEO KURGUSU: "İnsanlı Tanıtım (Usta & Saha)"
+- Sahnede ürünü sahada/şantiyede/bahçede kullanan, uygulayan veya tutan gerçek bir usta/uzman yer almaktadır.
+- SESLENDİRME TONU: İşin ustasına hitap eden, sahadaki pratik faydayı, uygulama kolaylığını, dayanıklılığı veya zaman tasarrufunu öne çıkaran doğal ve güven veren bir ton.
+- MÜKEMMEL ÖRNEKLER:
+  * "Harçla kusursuz kenetlenen sağlam bloklar. İşin ustası sahada her zaman Ayvazoğlu tuğlayı seçer."
+  * "Sırtta ağırlık yapmayan ergonomik depo ve güçlü püskürtme. Bofe şarjlı pompa ile ilaçlama artık yormuyor."`
+      } else if (adFormat === 'FAST_SALES') {
+        styleDirectives = `VİDEO KURGUSU: "Sadece Ürün (Vitrin)"
+- Sahnede insan figürü veya insan eli kesinlikle yoktur. Yalnızca ürünün formuna, malzeme dokusuna, işçiliğine ve kalitesine odaklanan 35mm vitrin çekimidir.
+- SESLENDİRME TONU: Kusursuz malzeme kalitesini, üretim titizliğini ve ürünün fiziksel estetiğini vurgulayan karizmatik, premium bir reklam dili.
+- MÜKEMMEL ÖRNEKLER:
+  * "Kusursuz form ve zamana meydan okuyan dayanıklılık. Ayvazoğlu ile sağlamlığın temeli inşaatta başlar."
+  * "Hafif gövde, homojen basınç ve kesintisiz püskürtme. Bofe ile bahçenizde profesyonel ilaçlama kolaylığı."`
+      } else if (adFormat === 'PREMIUM') {
+        styleDirectives = `VİDEO KURGUSU: "Kurumsal & Prestij"
+- Tesis, fabrika veya mimari atmosferde seçkin kurumsal duruş.
+- SESLENDİRME TONU: Ağırbaşlı, kurumsal güven, vizyon ve yüksek standartları hissettiren seçkin bir dil.`
+      } else {
+        styleDirectives = `VİDEO KURGUSU: "Dinamik & Vurucu"
+- Hızlı tempolu, dikkat çekici ve doğrudan kazanca odaklanan modern reklam dili.`
       }
-      const toneDesc = toneMap[revisionType] || 'Dinamik, profesyonel ve etkileyici'
 
-      const systemPrompt = `Sen Türkiye'nin en seçkin reklam ajanslarında çalışan kreatif reklam yazarı ve yönetmenisin.
-Görevin: Bir video reklam filmi (Instagram Reels / TikTok / Durum) için 8 ila 14 kelimelik (kesinlikle en fazla 15 kelime), akıcı, samimi veya karizmatik bir Türkçe seslendirme repliği yazmak.
+      const systemPrompt = `Sen Türkiye'nin en seçkin reklam ajanslarında ödüllü reklam filmleri yazan kıdemli bir kreatif reklam yazarı ve yönetmenisin.
+Görevin: Bir video reklam filmi (Instagram Reels / TikTok / WhatsApp Durum) için 8 ila 14 kelimelik (kesinlikle en fazla 15 kelime), akıcı, son derece doğal, vurucu ve ikna edici bir Türkçe seslendirme repliği yazmak.
 
 ÇOK KATI KURALLAR:
-1. "X kalitesiyle tanışın", "sağlam yapılar için yanınızda", "hemen sipariş verin" gibi sıkıcı, bayat, robotik kalıpları KESİNLİKLE KULLANMA.
+1. "X kalitesiyle tanışın", "siz de gelin", "hemen sipariş verin", "yanınızdayız" gibi bayat, sıkıcı ve ucuz reklam klişelerini KESİNLİKLE KULLANMA.
 2. "referansına sadık", "tasarıma sadık", "geometrisi", "veo", "yapay zeka", "prompt", "canary", "reklam filmi" gibi teknik veya meta ifadeleri ASLA KULLANMA.
-3. Kullanıcının belirttiği Kampanya Notunu ve ürünün gerçek dünyadaki pratik faydasını merkeze al. Marka adını cümlenin başında veya sonunda doğal olarak zikret.
-4. Metin en fazla 1 veya 2 kısa vurucu cümleden oluşsun (hedef: 8-13 kelime). Spiker 5 saniyede nefesi yeterek akıcı ve karizmatik okuyabilmelidir.
-5. YALNIZCA konuşulacak Türkçe metni yaz. Tırnak, başlık, sahne açıklaması veya çeviri ASLA ekleme.`
+3. Kullanıcının belirttiği Kampanya Notu'nu (varsa özel indirim, teslimat avantajı vb.) ve ürünün sahadaki pratik faydasını merkeze al.
+4. Marka adını cümlenin başında veya sonunda son derece doğal ve prestijli bir gururla zikret.
+5. Metin tam olarak 1 veya 2 kısa vurucu cümleden oluşsun (hedef: 8-13 kelime). Spiker 5 saniyede nefesi yeterek akıcı ve karizmatik okuyabilmelidir.
+6. YALNIZCA konuşulacak Türkçe seslendirme metnini yaz. Tırnak işareti, başlık, sahne açıklaması veya çeviri ASLA ekleme.`
 
       const userPrompt = `Marka: ${brandName}
 Ürün: ${productName}
 Ürün Açıklaması: ${productDescription || 'Belirtilmedi'}
-Video Tarzı: ${adFormat}
-Kreatif Yaklaşım: ${toneDesc}
+${styleDirectives}
 Kullanıcının Kampanya Notu / Vurgulanacak Mesajı: ${creativeNote || 'Belirtilmedi; ürünün dayanıklılığı ve pratik faydası öne çıksın'}
 Doğrulanmış Ürün Bilgisi: ${verifiedClaims.join(', ') || 'Yok'}
 Varsa Kampanya / Fırsat: ${body.offerDetails || 'Yok'}
@@ -206,6 +221,8 @@ ${revisionType === 'refresh' ? 'NOT: Önceki kalıplardan tamamen farklı, özg�
         verifiedClaims,
         offer: String(body.offerDetails || '').trim(),
         offerVerified: body.offerVerified === true,
+        creativeNote,
+        productDescription,
       })
     }
     const speechTimeline = speechFor(approvedSpokenLine)
@@ -262,6 +279,7 @@ ${revisionType === 'refresh' ? 'NOT: Önceki kalıplardan tamamen farklı, özg�
         brand_name: brandName,
         product_name: productName,
         product_description: productDescription || null,
+        cta: 'Detaylar için iletişime geçin',
         offer: body.offerDetails || null,
         offer_verified: body.offerVerified === true,
         product_id: body.productId || null,

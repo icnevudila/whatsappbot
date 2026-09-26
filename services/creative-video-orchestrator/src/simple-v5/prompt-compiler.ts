@@ -55,12 +55,7 @@ export class SimpleV5PromptCompiler {
       `[CONTINUOUS CINEMATIC TAKE]: A single uninterrupted ${brief.durationSeconds.toFixed(1)}-second commercial take with seamless 35mm fluid camera movement. ${shotPlan.shot1_hook.description} ${shotPlan.shot2_proof.description} ${shotPlan.shot3_close.description} NO CUTS, NO ABRUPT HARD JUMPS, SINGLE UNBROKEN CAMERA FLOW.`,
       fidelityLock,
       `[CAMERA & PHYSICS]: ${brief.cameraMotion}. Natural gravity, authentic material weight and realistic movement.`,
-      '[AUDIO]: Spoken language: Turkish (tr-TR).',
-      `Approved dialogue: "${brief.spokenScript}"`,
-      'Speak exactly this dialogue once, naturally in Turkish.',
-      'No English narration.',
-      'No translation.',
-      'Natural ambient foley.',
+      '[AUDIO]: Pure ambient realistic environmental foley. SILENT SCENE, ZERO ON-CAMERA SPEECH, ZERO ON-SCREEN SUBTITLES, ZERO ON-SCREEN CAPTIONS.',
       `[RAW TEXT POLICY]: Clean commercial footage, no on-screen text, no synthetic titles.`,
     ]
 

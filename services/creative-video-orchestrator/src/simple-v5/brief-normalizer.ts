@@ -1,16 +1,12 @@
 import type { BrandContextSnapshot } from '../types/brand-snapshot.js'
 import type { SimpleV5Brief, SimpleV5ShotPlan } from './types.js'
 
-// Disallowed marketing buzzwords unless explicitly listed in verified claims
+// Disallowed deceptive claims unless explicitly listed in verified claims
 const FORBIDDEN_MARKETING_FORMULAS = [
-  'yüksek verim',
-  'hızlı sevkiyat',
-  'satışlarınızı büyütün',
-  'güvencesiyle',
-  'kalitesiyle',
-  'lider marka',
   'en ucuz',
   'rakipsiz',
+  'lider marka',
+  'garantili kazanç',
 ]
 
 /**

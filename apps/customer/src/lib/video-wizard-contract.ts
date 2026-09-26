@@ -69,59 +69,90 @@ export function buildSafeSpokenLine(input: {
   verifiedClaims?: string[]
   offer?: string
   offerVerified?: boolean
+  creativeNote?: string
+  productDescription?: string
 }): string {
-  const brand = compact(input.brandName) || 'İşletme'
-  const product = compact(input.productName) || 'seçili ürün'
+  const brand = compact(input.brandName) || 'İşletmemiz'
+  const product = compact(input.productName) || 'ürünümüz'
   const claim = compact(input.verifiedClaims?.[0] || '')
+  const note = compact(input.creativeNote || '')
+  const desc = compact(input.productDescription || '')
+  const fmt = input.adFormat || 'FAST_SALES'
 
-  const candidatePools: Record<string, string[]> = {
-    FAST_SALES: [
-      claim
-        ? `${product} ile tanışın. ${claim} avantajını hemen yakalayın.`
-        : `Hızlı teslimat ve üstün kalite bir arada. ${product}, ${brand} güvencesiyle.`,
-      `Vakit kaybetmeden en iyisine ulaşın. ${product}, şimdi cazip koşullarla ${brand}'de.`,
-      `İşinizi ve hayatınızı kolaylaştırın. ${product} ile kaliteden ödün vermeyin.`,
-    ],
-    PRODUCT_USAGE: [
-      claim
-        ? `Üstün performans ve pratik kullanım. ${product}, ${claim}.`
-        : `Kusursuz performans ve dayanıklılık. ${product}, işinizi hafifleten güvenilir çözüm.`,
-      `Kolay kullanım ve maksimum verim. ${product} ile her detay kontrolünüz altında.`,
-      `Doğru seçim fark yaratır. ${product}, yüksek standartlarıyla her zaman yanınızda.`,
-    ],
-    PROBLEM_SOLUTION: [
-      claim
-        ? `Zahmetsiz ve garantili çözüm. ${product} ile ${claim}.`
-        : `Aradığınız güven ve yüksek kalite. ${product} ile sorunsuz deneyim.`,
-      `Beklentilerinizi aşan sonuçlar. ${product} ile kalıcı memnuniyet.`,
-    ],
-    SOCIAL_UGC: [
-      claim
-        ? `Gerçek kaliteyi deneyimleyin. ${product}, ${claim}.`
-        : `İşini bilenlerin ilk tercihi. ${product}, ${brand} güvencesiyle yanınızda.`,
-    ],
-    PREMIUM: [
-      claim
-        ? `Kusursuz işçilik ve seçkin kalite. ${product}. ${claim}.`
-        : `Zarafet ve üstün standartlar bir arada. ${product}, ${brand} kalitesiyle.`,
-      `Detaylardaki seçkin uzmanlık. ${product} ile prestij ve kalite bir arada.`,
-    ],
-    OFFER: [
-      input.offerVerified && input.offer
-        ? `Kaçırılmayacak özel fırsat. ${product} avantajlı teklifiyle ${brand}'de.`
-        : `Avantajlı koşullar ve özel fırsatlar. ${product}, şimdi ${brand}'de sizi bekliyor.`,
-    ],
-    OFFER_DRIVEN: [
-      input.offerVerified && input.offer
-        ? `Kaçırılmayacak özel fırsat. ${product} avantajlı teklifiyle ${brand}'de.`
-        : `Avantajlı koşullar ve özel fırsatlar. ${product}, şimdi ${brand}'de sizi bekliyor.`,
-    ],
+  const searchScope = `${brand} ${product} ${desc} ${note}`.toLocaleLowerCase('tr-TR')
+  const isBrick = searchScope.includes('tuğla') || searchScope.includes('tugla') || searchScope.includes('klinker') || searchScope.includes('inşaat') || searchScope.includes('ayvazoğlu') || searchScope.includes('ayvazoglu')
+  const isSprayer = searchScope.includes('pompa') || searchScope.includes('ilaçlama') || searchScope.includes('bofe') || searchScope.includes('bahçe') || searchScope.includes('tarım')
+
+  if (isBrick) {
+    if (fmt === 'PRODUCT_USAGE') {
+      const brickUsagePool = [
+        `Harçla kusursuz kenetlenen sağlam bloklar. İşin ustası sahada her zaman ${brand} tuğlayı seçer.`,
+        `Hızlı örülen dayanıklı duvarlar, tavizsiz klinker kalitesi. Ustalara sahada hız kazandıran ${brand}.`,
+        `Ustanın elinde sağlamlığa dönüşen kusursuz işçilik. ${brand} tuğla ile yapılar güvende.`,
+      ]
+      if (note) {
+        return clampWords(`Harçla kusursuz kenetlenen sağlam bloklar. ${note}. ${brand} ile sağlam yapılar.`)
+      }
+      return clampWords(brickUsagePool[Math.floor(Math.random() * brickUsagePool.length)])
+    }
+    if (fmt === 'PREMIUM') {
+      return clampWords(`Yüksek üretim standartları ve geleceğe taşınan güven. ${brand} ile sağlam yarınlar inşa ediyoruz.`)
+    }
+    const brickHeroPool = [
+      `Kusursuz form ve zamana meydan okuyan dayanıklılık. ${brand} tuğla ile sağlamlığın temeli inşaatta başlar.`,
+      `Tek eksenli dikey delik yapısı ve klinker dayanıklılığı. ${brand} ile yapılarınız daima güvende.`,
+      `Üstün klinker kalitesi ve milimetrik form. ${brand}, sağlam projelerin vazgeçilmez tercihi.`,
+    ]
+    if (note) {
+      return clampWords(`Kusursuz form ve tavizsiz klinker dayanıklılığı. ${note}. ${brand} güvencesiyle.`)
+    }
+    return clampWords(brickHeroPool[Math.floor(Math.random() * brickHeroPool.length)])
   }
 
-  const pool = candidatePools[input.adFormat] || candidatePools.FAST_SALES
-  const pick = pool[Math.floor(Math.random() * pool.length)] || pool[0]
+  if (isSprayer) {
+    if (fmt === 'PRODUCT_USAGE') {
+      const sprayUsagePool = [
+        `Sırtta ağırlık yapmayan ergonomik depo ve güçlü püskürtme. ${brand} şarjlı pompa ile ilaçlama artık yormuyor.`,
+        `Bahçede saatlerce kesintisiz çalışma. Sahada işini bilen profesyonellerin tercihi her zaman ${brand}.`,
+        `Homojen basınç ve pratik ilaçlama. Usta ellerde yüksek verim sunan ${brand} kalitesi.`,
+      ]
+      if (note) {
+        return clampWords(`Sırtta ağırlık yapmayan ergonomik depo. ${note}. ${brand} ile pratik ilaçlama.`)
+      }
+      return clampWords(sprayUsagePool[Math.floor(Math.random() * sprayUsagePool.length)])
+    }
+    const sprayHeroPool = [
+      `Hafif gövde, homojen basınç ve kesintisiz püskürtme. ${brand} ile bahçenizde profesyonel ilaçlama kolaylığı.`,
+      `Yüksek verimli akü ve tavizsiz dayanıklılık. ${brand} ilaçlama pompası ile işiniz kolaylaşsın.`,
+      `Kusursuz gövde yapısı ve tavizsiz malzeme kalitesi. ${brand} ile bahçenizde tam verim.`,
+    ]
+    if (note) {
+      return clampWords(`Hafif gövde, homojen basınç ve kesintisiz püskürtme. ${note}. ${brand} kalitesiyle.`)
+    }
+    return clampWords(sprayHeroPool[Math.floor(Math.random() * sprayHeroPool.length)])
+  }
 
-  return clampWords(pick)
+  // General Products
+  if (fmt === 'PRODUCT_USAGE') {
+    const generalUsagePool = [
+      note ? `Sahada maksimum verim ve pratik kullanım. ${note}. ${brand} kalitesi her zaman yanınızda.` : `Sahada hız, uygulamada ustalık. İşini bilen profesyoneller her zaman ${brand} ${product} tercih eder.`,
+      `İşinizi hafifleten pratik kullanım ve yüksek verim. ${brand} ${product} ile sahada fark yaratın.`,
+      `Ustalara özel pratiklik ve tavizsiz sağlamlık. ${product}, ${brand} güvencesiyle daima yanınızda.`,
+    ]
+    return clampWords(generalUsagePool[Math.floor(Math.random() * generalUsagePool.length)])
+  }
+
+  if (fmt === 'PREMIUM') {
+    return clampWords(note ? `Yüksek standartlar ve kurumsal güven. ${note}. ${brand} kalitesiyle.` : `Yüksek üretim standartları ve geleceğe taşınan vizyon. ${product}, ${brand} kurumsal prestijiyle.`)
+  }
+
+  // FAST_SALES / AUTO
+  const generalHeroPool = [
+    note ? `Kusursuz kalite ve tavizsiz işçilik. ${note}. ${brand} ${product} güvencesiyle.` : `Kusursuz detaylar ve tavizsiz malzeme kalitesi. ${brand} ${product} ile aradığınız üstün performans.`,
+    `Zamana meydan okuyan sağlamlık ve kusursuz form. ${product}, ${brand} kalitesiyle yanınızda.`,
+    `Üstün kalite standartları ve güvenilir performans. ${product} ile sağlam adımlarla ilerleyin.`,
+  ]
+  return clampWords(generalHeroPool[Math.floor(Math.random() * generalHeroPool.length)])
 }
 
 export function defaultFidelityContract(brandName: string, productName: string): ProductFidelityContract {
