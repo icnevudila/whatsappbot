@@ -34,6 +34,7 @@ export interface AlarmCounters {
 }
 
 class ResourceGuard {
+  public readonly MAX_PARALLEL_HEAVY_JOBS = parseInt(process.env.MAX_PARALLEL_HEAVY_JOBS || '3', 10)
   private cpuRollingHistory: number[] = []
   private readonly ROLLING_SAMPLE_COUNT = 4 // 4 samples * 5s ~ 20s
   private alarmCounters: AlarmCounters = {
@@ -158,22 +159,22 @@ class ResourceGuard {
       this.alarmCounters.mem_available_low++
     }
 
-    // Heavy Mutex check
+    // Heavy Mutex check across parallel slots
     let heavyLockActive = false
     let heavyLockOwner: string | null = null
 
     if (supabase) {
-      const lock = await this.getActiveHeavyLock(supabase)
-      if (lock) {
+      const activeLocks = await this.getActiveHeavyLocks(supabase)
+      if (activeLocks.length >= this.MAX_PARALLEL_HEAVY_JOBS) {
         heavyLockActive = true
-        heavyLockOwner = lock.owner_job_id
       }
+      heavyLockOwner = activeLocks.map(l => `${l.lock_id}:${l.owner_job_id}`).join(', ')
     }
 
     const reasons: string[] = []
     if (sustainedHighCpu) reasons.push(`SUSTAINED_HIGH_CPU: Rolling CPU >= 90% across ${this.cpuRollingHistory.length} samples`)
     if (memLow) reasons.push(`LOW_MEMORY: RAM ${ramPercent}% or MemAvailable ${memAvailableMb}MB < 300MB`)
-    if (heavyLockActive) reasons.push(`HEAVY_MUTEX_LOCKED: Active heavy generation in progress (Owner: ${heavyLockOwner})`)
+    if (heavyLockActive) reasons.push(`HEAVY_MUTEX_LOCKED: All ${this.MAX_PARALLEL_HEAVY_JOBS} parallel slots active (${heavyLockOwner})`)
 
     const allowedNewJob = !sustainedHighCpu && !heavyLockActive && !memLow
     const allowedNewScene = !memLow
@@ -209,30 +210,31 @@ class ResourceGuard {
     }
   }
 
-  async acquireHeavyLock(supabase: SupabaseClient, jobId: string, ttlSeconds = 600): Promise<boolean> {
+  async acquireHeavyLock(supabase: SupabaseClient, jobId: string, accountId = 'default', ttlSeconds = 600): Promise<boolean> {
     await this.ensureLockTable(supabase)
     const now = new Date()
     const expiresAt = new Date(now.getTime() + ttlSeconds * 1000).toISOString()
+    const lockKey = accountId.startsWith('lock_') ? accountId : `lock_${accountId}`
 
     try {
       // Direct PostgreSQL pooler query if available
       if ((supabase as any).query) {
         // Clean stale locks
         await (supabase as any).query(
-          `DELETE FROM ai_media_heavy_locks WHERE lock_id = 'default' AND lease_expires_at <= NOW()`
+          `DELETE FROM ai_media_heavy_locks WHERE lease_expires_at <= NOW()`
         )
         // Try insert or take over if same owner
         const res = await (supabase as any).query(
           `INSERT INTO ai_media_heavy_locks (lock_id, owner_job_id, acquired_at, lease_expires_at)
-           VALUES ('default', $1, NOW(), $2)
+           VALUES ($1, $2, NOW(), $3)
            ON CONFLICT (lock_id) DO UPDATE
            SET owner_job_id = EXCLUDED.owner_job_id,
                acquired_at = NOW(),
                lease_expires_at = EXCLUDED.lease_expires_at
            WHERE ai_media_heavy_locks.lease_expires_at <= NOW()
-              OR ai_media_heavy_locks.owner_job_id = $1
+              OR ai_media_heavy_locks.owner_job_id = $2
            RETURNING owner_job_id`,
-          [jobId, expiresAt]
+          [lockKey, jobId, expiresAt]
         )
         const acquired = res.rows && res.rows.length > 0 && res.rows[0].owner_job_id === jobId
         if (!acquired) {
@@ -245,7 +247,7 @@ class ResourceGuard {
       const { data: existing } = await supabase
         .from('ai_media_heavy_locks')
         .select('*')
-        .eq('lock_id', 'default')
+        .eq('lock_id', lockKey)
         .maybeSingle()
 
       if (existing) {
@@ -259,13 +261,13 @@ class ResourceGuard {
         await supabase
           .from('ai_media_heavy_locks')
           .update({ owner_job_id: jobId, acquired_at: now.toISOString(), lease_expires_at: expiresAt })
-          .eq('lock_id', 'default')
+          .eq('lock_id', lockKey)
         return true
       }
 
       const { error } = await supabase
         .from('ai_media_heavy_locks')
-        .insert({ lock_id: 'default', owner_job_id: jobId, acquired_at: now.toISOString(), lease_expires_at: expiresAt })
+        .insert({ lock_id: lockKey, owner_job_id: jobId, acquired_at: now.toISOString(), lease_expires_at: expiresAt })
       if (error) {
         this.alarmCounters.heavy_concurrency_blocked++
         return false
@@ -277,43 +279,61 @@ class ResourceGuard {
     }
   }
 
-  async releaseHeavyLock(supabase: SupabaseClient, jobId: string): Promise<void> {
+  async releaseHeavyLock(supabase: SupabaseClient, jobId: string, accountId?: string): Promise<void> {
     try {
+      const lockKey = accountId ? (accountId.startsWith('lock_') ? accountId : `lock_${accountId}`) : null
       if ((supabase as any).query) {
-        await (supabase as any).query(
-          `DELETE FROM ai_media_heavy_locks WHERE lock_id = 'default' AND owner_job_id = $1`,
-          [jobId]
-        )
+        if (lockKey) {
+          await (supabase as any).query(
+            `DELETE FROM ai_media_heavy_locks WHERE (lock_id = $1 AND owner_job_id = $2) OR (owner_job_id = $2)`,
+            [lockKey, jobId]
+          )
+        } else {
+          await (supabase as any).query(
+            `DELETE FROM ai_media_heavy_locks WHERE owner_job_id = $1`,
+            [jobId]
+          )
+        }
         return
       }
-      await supabase
-        .from('ai_media_heavy_locks')
-        .delete()
-        .eq('lock_id', 'default')
-        .eq('owner_job_id', jobId)
+      if (lockKey) {
+        await supabase
+          .from('ai_media_heavy_locks')
+          .delete()
+          .eq('lock_id', lockKey)
+          .eq('owner_job_id', jobId)
+      } else {
+        await supabase
+          .from('ai_media_heavy_locks')
+          .delete()
+          .eq('owner_job_id', jobId)
+      }
     } catch (e) {
       console.error('[resource-guard] Error releasing heavy lock:', e)
     }
   }
 
-  async getActiveHeavyLock(supabase: SupabaseClient): Promise<{ owner_job_id: string; lease_expires_at: string } | null> {
+  async getActiveHeavyLocks(supabase: SupabaseClient): Promise<Array<{ lock_id: string; owner_job_id: string; lease_expires_at: string }>> {
     try {
       if ((supabase as any).query) {
         const res = await (supabase as any).query(
-          `SELECT owner_job_id, lease_expires_at FROM ai_media_heavy_locks WHERE lock_id = 'default' AND lease_expires_at > NOW()`
+          `SELECT lock_id, owner_job_id, lease_expires_at FROM ai_media_heavy_locks WHERE lease_expires_at > NOW()`
         )
-        return res.rows?.[0] || null
+        return res.rows || []
       }
       const { data } = await supabase
         .from('ai_media_heavy_locks')
-        .select('owner_job_id, lease_expires_at')
-        .eq('lock_id', 'default')
+        .select('lock_id, owner_job_id, lease_expires_at')
         .gt('lease_expires_at', new Date().toISOString())
-        .maybeSingle()
-      return data || null
+      return data || []
     } catch {
-      return null
+      return []
     }
+  }
+
+  async getActiveHeavyLock(supabase: SupabaseClient): Promise<{ owner_job_id: string; lease_expires_at: string } | null> {
+    const locks = await this.getActiveHeavyLocks(supabase)
+    return locks[0] || null
   }
 }
 

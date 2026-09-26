@@ -77,44 +77,44 @@ export function buildSafeSpokenLine(input: {
   const candidatePools: Record<string, string[]> = {
     FAST_SALES: [
       claim
-        ? `${product} ile tanışın, ${claim} avantajını hemen yakalayın. Detaylar ${brand}'de.`
-        : `Hızlı teslimat ve üstün kalite arayanlara özel: ${product}, ${brand} güvencesiyle.`,
-      `İşinizi şansa bırakmayın; ${product} ile hem zamandan hem maliyetten kazanın.`,
-      `Projelerinizde fark yaratacak ${product}, şimdi en cazip koşullarla ${brand}'de.`,
+        ? `${product} ile tanışın. ${claim} avantajını hemen yakalayın.`
+        : `Hızlı teslimat ve üstün kalite bir arada. ${product}, ${brand} güvencesiyle.`,
+      `Vakit kaybetmeden en iyisine ulaşın. ${product}, şimdi cazip koşullarla ${brand}'de.`,
+      `İşinizi ve hayatınızı kolaylaştırın. ${product} ile kaliteden ödün vermeyin.`,
     ],
     PRODUCT_USAGE: [
       claim
-        ? `Ustalık ve sağlamlık bir arada: ${product}, ${claim}.`
-        : `Zorlu şartlara tam dayanıklı ${product}, işinizi hafifleten güvenilir çözüm.`,
-      `Kolay uygulama, kusursuz performans. ${product} ile her detay kontrolünüz altında.`,
-      `Doğru malzeme fark yaratır; ${product}, yüksek performansı ve dayanıklılığıyla yanınızda.`,
+        ? `Üstün performans ve pratik kullanım. ${product}, ${claim}.`
+        : `Kusursuz performans ve dayanıklılık. ${product}, işinizi hafifleten güvenilir çözüm.`,
+      `Kolay kullanım ve maksimum verim. ${product} ile her detay kontrolünüz altında.`,
+      `Doğru seçim fark yaratır. ${product}, yüksek standartlarıyla her zaman yanınızda.`,
     ],
     PROBLEM_SOLUTION: [
       claim
-        ? `Zahmete ve gecikmeye son. ${product} ile ${claim}.`
-        : `Aradığınız sağlamlık ve güven ${brand}'de: ${product} ile sorunsuz işler.`,
-      `Beklentilerinizi aşan dayanıklılık. ${product} ile kalıcı ve sağlam çözümler.`,
+        ? `Zahmetsiz ve garantili çözüm. ${product} ile ${claim}.`
+        : `Aradığınız güven ve yüksek kalite. ${product} ile sorunsuz deneyim.`,
+      `Beklentilerinizi aşan sonuçlar. ${product} ile kalıcı memnuniyet.`,
     ],
     SOCIAL_UGC: [
       claim
-        ? `Gerçek kaliteyi deneyimleyin: ${product}, ${claim}.`
-        : `İşini bilenlerin tercihi ${product}, ${brand} güvencesiyle yanınızda.`,
+        ? `Gerçek kaliteyi deneyimleyin. ${product}, ${claim}.`
+        : `İşini bilenlerin ilk tercihi. ${product}, ${brand} güvencesiyle yanınızda.`,
     ],
     PREMIUM: [
       claim
-        ? `Kusursuz kalite ve mimari prestij: ${product}. ${claim}.`
-        : `Geleceğe değer katan sağlam yapılar için ${product}, ${brand} kalitesiyle.`,
-      `Detaylardaki kusursuz işçilik. ${product} ile güven ve estetik bir arada.`,
+        ? `Kusursuz işçilik ve seçkin kalite. ${product}. ${claim}.`
+        : `Zarafet ve üstün standartlar bir arada. ${product}, ${brand} kalitesiyle.`,
+      `Detaylardaki seçkin uzmanlık. ${product} ile prestij ve kalite bir arada.`,
     ],
     OFFER: [
       input.offerVerified && input.offer
-        ? `${product} için kaçırılmayacak fırsat: ${compact(input.offer)}. Detaylar ${brand}'de.`
-        : `${product} için avantajlı fiyatlar ve özel teslimat koşulları ${brand}'de.`,
+        ? `Kaçırılmayacak özel fırsat. ${product} avantajlı teklifiyle ${brand}'de.`
+        : `Avantajlı koşullar ve özel fırsatlar. ${product}, şimdi ${brand}'de sizi bekliyor.`,
     ],
     OFFER_DRIVEN: [
       input.offerVerified && input.offer
-        ? `${product} için kaçırılmayacak fırsat: ${compact(input.offer)}. Detaylar ${brand}'de.`
-        : `${product} için avantajlı fiyatlar ve özel teslimat koşulları ${brand}'de.`,
+        ? `Kaçırılmayacak özel fırsat. ${product} avantajlı teklifiyle ${brand}'de.`
+        : `Avantajlı koşullar ve özel fırsatlar. ${product}, şimdi ${brand}'de sizi bekliyor.`,
     ],
   }
 

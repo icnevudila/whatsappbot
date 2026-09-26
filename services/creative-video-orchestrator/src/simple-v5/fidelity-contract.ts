@@ -44,17 +44,23 @@ export const AYVAZOGLU_TUGLA_FIDELITY_CONTRACT: ResolvedProductFidelityContract 
   must_preserve: [
     'rectangular clay brick silhouette',
     'terracotta red-orange color',
-    'top hollow/perforation structure',
-    'vertical ribbed side texture',
+    'single-axis perforation only (hollow grid holes exist strictly through one single axis/top face)',
+    'vertical ribbed solid side texture',
   ],
   surface_rules: [
     'openings exist only on the top face',
     'side faces remain solid vertical ribbed clay surfaces',
     'side faces contain no holes or cavities',
+    'openings and grid holes exist strictly on one single face along one single axis',
+    'perpendicular side faces must be solid ribbed clay surfaces without any holes or perforations',
+    'never generate holes on two perpendicular faces simultaneously',
+    'side faces contain no holes, no perforations, and no cavities',
   ],
   forbidden_mutations: [
+    'perforations on multiple faces',
     'side holes',
     'side perforations',
+    'front holes while top also has holes',
     'extra cavities',
     'invented openings',
     'geometry drift',
@@ -67,9 +73,11 @@ export const AYVAZOGLU_TUGLA_FIDELITY_CONTRACT: ResolvedProductFidelityContract 
     'avoid unnecessary extreme rotation',
   ],
   allowed_actions: [
-    'hero display',
     'worker picks up brick',
     'professional wall placement',
+    'hero product display on clean pedestal or architectural setting',
+    'smooth continuous studio or logistics reveal',
+    'professional craftsmanship or placement when demonstrating usage',
   ],
 })
 

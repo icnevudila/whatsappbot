@@ -2918,15 +2918,32 @@ async function generateVideoOnFlow(options = {}) {
 
       const tempOverlayOut = path.join(OUTPUT_DIR, `temp_overlay_${timestamp}.mp4`);
       let filterComplex = '';
+      const brandUpper = (brandName || '').toUpperCase().slice(0, 24);
+      const endCardStart = 5.8;
+      const endCardDuration = 8.0;
 
       if (localLogoPath && fs.existsSync(localLogoPath)) {
-        // Logo + CTA Bar
-        filterComplex = `[1:v]scale=220:-1[logo];[0:v][logo]overlay=40:80[v1];[v1]drawbox=x=40:y=1120:w=640:h=70:color=0x${secondaryColor}@0.9:t=fill,drawbox=x=40:y=1120:w=640:h=70:color=0x${accentColor}:t=3,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${ctaText}':fontcolor=white:fontsize=22:x=(w-text_w)/2:y=1143[vout]`;
+        // Logo (corner during 0.5-5.8s, centered larger during 5.8-8.0s) + CTA Bar + End Card
+        filterComplex = [
+          `[1:v]scale=200:-1[logo_corner]`,
+          `[1:v]scale=360:-1[logo_center]`,
+          `[0:v][logo_corner]overlay=40:80:enable='between(t,0.5,${endCardStart})'[v1]`,
+          `[v1]drawbox=x=40:y=1120:w=640:h=70:color=0x${secondaryColor}@0.9:t=fill,drawbox=x=40:y=1120:w=640:h=70:color=0x${accentColor}:t=3,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${ctaText}':fontcolor=white:fontsize=22:x=(w-text_w)/2:y=1143[v2]`,
+          `[v2]drawbox=x=60:y=360:w=600:h=480:color=0x000000@0.80:t=fill:enable='between(t,${endCardStart},${endCardDuration})',drawbox=x=60:y=360:w=600:h=480:color=0x${accentColor}:t=2:enable='between(t,${endCardStart},${endCardDuration})'[v3]`,
+          `[v3][logo_center]overlay=(W-w)/2:410:enable='between(t,${endCardStart},${endCardDuration})'[v4]`,
+          `[v4]drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${brandUpper}':fontcolor=white:fontsize=32:x=(w-text_w)/2:y=620:enable='between(t,${endCardStart},${endCardDuration})',drawbox=x=120:y=690:w=480:h=64:color=0x${accentColor}@0.95:t=fill:enable='between(t,${endCardStart+0.2},${endCardDuration})',drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${ctaText}':fontcolor=white:fontsize=22:x=(w-text_w)/2:y=712:enable='between(t,${endCardStart+0.2},${endCardDuration})'[vout]`
+        ].join(';');
         execSync(`ffmpeg -y -i "${rawPath}" -i "${localLogoPath}" -filter_complex "${filterComplex}" -map "[vout]" -map 0:a? -c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p -movflags +faststart -c:a copy "${tempOverlayOut}" 2>/dev/null || ffmpeg -y -i "${rawPath}" -i "${localLogoPath}" -filter_complex "${filterComplex}" -map "[vout]" -c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p -movflags +faststart "${tempOverlayOut}"`, { stdio: 'ignore' });
       } else {
-        // Marka Adı Bandı + CTA Bar
-        const brandUpper = brandName.toUpperCase().slice(0, 24);
-        filterComplex = `drawbox=x=40:y=80:w=320:h=60:color=0x000000@0.7:t=fill,drawbox=x=40:y=80:w=320:h=60:color=0x${accentColor}:t=2,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${brandUpper}':fontcolor=white:fontsize=24:x=60:y=98,drawbox=x=40:y=1120:w=640:h=70:color=0x${secondaryColor}@0.9:t=fill,drawbox=x=40:y=1120:w=640:h=70:color=0x${accentColor}:t=3,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${ctaText}':fontcolor=white:fontsize=22:x=(w-text_w)/2:y=1143`;
+        // Marka Adı Bandı + CTA Bar + Centered End Card
+        filterComplex = [
+          `drawbox=x=40:y=80:w=320:h=60:color=0x000000@0.7:t=fill:enable='between(t,0.5,${endCardStart})',drawbox=x=40:y=80:w=320:h=60:color=0x${accentColor}:t=2:enable='between(t,0.5,${endCardStart})',drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${brandUpper}':fontcolor=white:fontsize=24:x=60:y=98:enable='between(t,0.5,${endCardStart})'`,
+          `drawbox=x=40:y=1120:w=640:h=70:color=0x${secondaryColor}@0.9:t=fill,drawbox=x=40:y=1120:w=640:h=70:color=0x${accentColor}:t=3,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${ctaText}':fontcolor=white:fontsize=22:x=(w-text_w)/2:y=1143`,
+          `drawbox=x=60:y=380:w=600:h=440:color=0x000000@0.80:t=fill:enable='between(t,${endCardStart},${endCardDuration})',drawbox=x=60:y=380:w=600:h=440:color=0x${accentColor}:t=2:enable='between(t,${endCardStart},${endCardDuration})'`,
+          `drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${brandUpper}':fontcolor=white:fontsize=38:x=(w-text_w)/2:y=480:enable='between(t,${endCardStart},${endCardDuration})'`,
+          `drawbox=x=120:y=620:w=480:h=70:color=0x${accentColor}@0.95:t=fill:enable='between(t,${endCardStart+0.2},${endCardDuration})'`,
+          `drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${ctaText}':fontcolor=white:fontsize=24:x=(w-text_w)/2:y=642:enable='between(t,${endCardStart+0.2},${endCardDuration})'`
+        ].join(',');
         execSync(`ffmpeg -y -i "${rawPath}" -vf "${filterComplex}" -c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p -movflags +faststart -c:a copy "${tempOverlayOut}" 2>/dev/null || ffmpeg -y -i "${rawPath}" -vf "${filterComplex}" -c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p -movflags +faststart "${tempOverlayOut}"`, { stdio: 'ignore' });
       }
 

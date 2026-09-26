@@ -1,11 +1,12 @@
 import { createHash } from 'node:crypto'
-import { statSync, readFileSync } from 'node:fs'
+import { statSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   AudioIntegrityGate,
   CanonicalLogoGate,
   ChatGPTVideoReviewer,
   CreativeContextBuilder,
+  DeterministicCampaignTextRenderer,
   FactualIntegrityGate,
   FlowVeoPromptCompiler,
   FrameSampler,
@@ -338,10 +339,35 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     overlayMarginY: 32,
   })
   const presentationNeedsReview = !logoPresentation.passed
+  const textRenderer = new DeterministicCampaignTextRenderer()
+  const scriptWords = (brief.spokenScript || '').split(/\s+/).filter(Boolean)
+  const totalVoDuration = 5.0
+  const wordDur = totalVoDuration / Math.max(1, scriptWords.length)
+  const timedWords = scriptWords.map((w: string, idx: number) => ({
+    word: w,
+    start: 0.5 + idx * wordDur,
+    end: 0.5 + (idx + 1) * wordDur,
+  }))
+  const assContent = textRenderer.buildCapCutKineticAss(timedWords, {
+    playResX: rawProbe.width || 720,
+    playResY: rawProbe.height || 1280,
+    fontSize: 36,
+    activeColor: '&H0000D0FF&', // Construction amber / safety yellow
+    marginV: 220,
+  })
+  const assPath = generated.outputPath.replace(/\.mp4$/i, '_subtitles.ass')
+  writeFileSync(assPath, assContent, 'utf8')
+
   const finishedPath = generated.outputPath.replace(/\.mp4$/i, '_finished.mp4')
+  const ctaText = snapshot.campaign.cta || 'Hemen Bilgi Alın'
   await ffmpeg.applyDeterministicFinishing(
     generated.outputPath,
-    presentationNeedsReview ? {} : { brandLogoPath: logoCheck.logoPath, brandLogoSha: logoCheck.logoSha256 },
+    {
+      brandLogoPath: logoCheck.logoPath,
+      brandLogoSha: logoCheck.logoSha256,
+      subtitlesPath: assPath,
+      ctaBadgeText: ctaText,
+    },
     finishedPath
   )
 

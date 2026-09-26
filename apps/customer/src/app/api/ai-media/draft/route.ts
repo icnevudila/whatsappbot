@@ -71,6 +71,33 @@ function planBeats(
 }
 
 function speechFor(spokenLine: string): SpeechTimelineItem[] {
+  // If the spoken line has 2 distinct sentences or clauses (separated by '.', ';', or ':')
+  const parts = spokenLine
+    .split(/[.;:]+/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+
+  if (parts.length >= 2) {
+    return [
+      {
+        start_sec: 0.5,
+        end_sec: 3.6,
+        exact_text: `${parts[0]}.`,
+        speaker: 'Spiker',
+        delivery_style: 'Etkileyici ve dikkat çekici açılış kancası',
+        corresponding_visual_beat: 'Açılış kancası ve ürün odaklanması',
+      },
+      {
+        start_sec: 4.0,
+        end_sec: 7.2,
+        exact_text: `${parts.slice(1).join(' ')}.`,
+        speaker: 'Spiker',
+        delivery_style: 'Kararlı, kurumsal marka ve eylem kapanışı',
+        corresponding_visual_beat: 'Marka imzası ve temiz ürün kapanışı',
+      },
+    ]
+  }
+
   return [{
     start_sec: 0.5,
     end_sec: 5.5,
@@ -162,21 +189,34 @@ ${revisionType === 'refresh' ? 'NOT: Önceki kalıplardan tamamen farklı, özg�
       })
     }
     const speechTimeline = speechFor(approvedSpokenLine)
-    const negativeConstraints = [
-      'no generated subtitles, headline, price, CTA, phone, URL, random typography, watermark, invented logo, foreign brand, product morphing, fake UI, or unsupported factual claim.',
+    const isBrick = productName.toLowerCase().includes('tuğla') || productDescription.toLowerCase().includes('tuğla') || brandName.toLowerCase().includes('ayvazoğlu')
+    const isSprayer = productName.toLowerCase().includes('pompa') || productName.toLowerCase().includes('bofe') || productDescription.toLowerCase().includes('ilaçlama')
+
+    let geometryLock = 'Preserve exact product geometry, materials, and colors from canonical reference without warping or deformation.'
+    if (isBrick) {
+      geometryLock = 'CRITICAL GEOMETRY LOCK FOR CLAY BRICK: The canonical terracotta brick has single-axis perforation ONLY. Hollow grid holes exist strictly and exclusively through the two opposite end faces along one single longitudinal axis. The top face, bottom face, and both long lateral side faces are 100% solid, ribbed terracotta clay with ZERO holes, ZERO cavities, and ZERO perforations. NEVER render holes on the top surface while front also has holes. When visible, canonical manufacturer brand mark from @BrandLogo is physically stamped into the clay body.'
+    } else if (isSprayer) {
+      geometryLock = 'CRITICAL GEOMETRY LOCK FOR BOFE SPRAYER: Preserve the authoritative light blue backpack sprayer tank geometry, solid tank body, black strap attachments, pressure gauge, brass lance wand, and the canonical "bofe" brand mark physically printed across the tank body. ZERO liquid leakage, ZERO warped plastic, and ZERO fabricated floating letters.'
+    }
+
+    const strictNegatives = [
+      'floating text, text overlays, subtitles, captions, on-screen text, words on screen, burned-in typography, lower third graphics, synthetic titles, credits, floating interface, watermark, invented foreign brand names, gibberish lettering, duplicate product, warped geometry, melting, flicker, identity drift',
+      isBrick ? 'holes on side surfaces, perforations on multiple faces, side cavities, holes on top surface while front also has holes' : '',
       ...affordance.negativeEnvironmentConstraints,
-    ].join(', ')
+    ].filter(Boolean).join(', ')
 
     const veoPrompt = [
-      `Photorealistic 9:16 eight-second commercial for ${brandName}.`,
-      `Canonical visual reference: ${hasProduct ? '@HeroProduct' : 'approved service references only'}. Preserve geometry, color and packaging; never invent product details.`,
-      `[ENVIRONMENT] ${affordance.naturalEnvironment}.`,
-      '[VISUAL BEATS]',
-      ...beats.map((beat) => `${beat.start.toFixed(1)}-${beat.end.toFixed(1)}s ${beat.purpose}: ${beat.visual}`),
-      '[AUDIO TIMELINE]',
-      'Native Turkish dialogue only; speak the approved lines exactly, with no translation, paraphrase, or extra dialogue.',
-      ...speechTimeline.map((line) => `${line.start_sec.toFixed(1)}-${line.end_sec.toFixed(1)}s: "${line.exact_text}"`),
-      `[NEGATIVE CONSTRAINTS] ${negativeConstraints}`,
+      `[FORMAT]: 8.0-second vertical commercial video ad, 9:16 aspect ratio.`,
+      `[SUBJECT]: Authentic photorealistic commercial for ${brandName} featuring ${productName}.`,
+      `[CANONICAL HERO PRODUCT]: Preserve ${hasProduct ? '@HeroProduct' : 'approved service references only'} geometry, material texture, and colors exactly as shown in authoritative reference assets.`,
+      `[CANONICAL BRAND IDENTITY ON PRODUCT]: When visible, maintain canonical brand identity from @BrandLogo in authentic colors and proportions physically printed, embossed, stamped, or labeled directly on the surface of @HeroProduct (in exact authentic proportions and colors, diegetic on product body). ZERO floating artificial graphics, ZERO fake foreign logos.`,
+      `[ENVIRONMENT]: ${affordance.naturalEnvironment}.`,
+      `[CINEMATIC TAKE & BEATS]: Single unbroken 35mm fluid camera take without jump cuts:`,
+      ...beats.map((beat) => `${beat.start.toFixed(1)}-${beat.end.toFixed(1)}s (${beat.purpose}): ${beat.visual}`),
+      `[PHYSICAL CONSISTENCY & GEOMETRY LOCK]: ${geometryLock} Product keeps identical physical identity across entire take.`,
+      `[VOICEOVER AUDIO ONLY]: Spoken Turkish voiceover narration: "${approvedSpokenLine}". Off-camera voiceover audio only. ZERO ON-SCREEN SUBTITLES, ZERO ON-SCREEN CAPTIONS, ZERO FLOATING TEXT.`,
+      `[RAW DIFFUSION POLICY]: Clean commercial footage with zero floating text, zero synthetic overlays, zero burned-in titles. (Official brand logo and call to action are deterministically composited in post-production).`,
+      `[NEGATIVE CONSTRAINTS]: ${strictNegatives}`,
     ].join('\n')
 
     const formatConceptTitles: Record<string, string> = {

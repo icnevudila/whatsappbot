@@ -5,10 +5,13 @@ export const SIMPLE_V5_STANDARD_NEGATIVES = [
   'duplicate subject',
   'duplicate product',
   'altered product geometry',
+  'holes on side surfaces',
+  'perforations on multiple faces',
   'incorrect product color',
   'warped packaging',
   'warped logo',
   'gibberish typography',
+  'misspelled company name',
   'floating graphics',
   'holographic interface',
   'unmotivated location change',
@@ -19,7 +22,6 @@ export const SIMPLE_V5_STANDARD_NEGATIVES = [
   'on-screen subtitles',
   'English speech',
   'English narration',
-  'carved or stamped logo on brick',
 ].join(', ')
 
 import { resolveProductFidelityContract, formatFidelityLockSection } from './fidelity-contract.js'
@@ -47,11 +49,10 @@ export class SimpleV5PromptCompiler {
     const sections: string[] = [
       `[FORMAT]: ${brief.durationSeconds.toFixed(1)}-second vertical commercial video, 9:16 aspect ratio.`,
       `[SINGLE CONCEPT]: ${brief.primaryIdea}`,
-      `[HERO PRODUCT]: Preserve ${brief.heroProductHandle} geometry, material texture, and colors exactly as shown in authoritative reference assets. NO INVENTED PHYSICAL BRANDING.`,
+      `[HERO PRODUCT]: Preserve ${brief.heroProductHandle} geometry, material texture, and colors exactly as shown in authoritative reference assets.`,
+      `[CANONICAL BRAND IDENTITY PRESERVATION]: When visible, maintain canonical brand identity from @BrandLogo in authentic colors and proportions. Primary focus remains locked on clean, authentic presentation of @HeroProduct without invented foreign logos or stray text.`,
       `[ONE LOCATION]: ${brief.location}, ${brief.lighting}.`,
-      `[SHOT 1 (${shotPlan.shot1_hook.timing})]: ${shotPlan.shot1_hook.description}`,
-      `[SHOT 2 (${shotPlan.shot2_proof.timing})]: ${shotPlan.shot2_proof.description}`,
-      `[SHOT 3 (${shotPlan.shot3_close.timing})]: ${shotPlan.shot3_close.description}`,
+      `[CONTINUOUS CINEMATIC TAKE]: A single uninterrupted ${brief.durationSeconds.toFixed(1)}-second commercial take with seamless 35mm fluid camera movement. ${shotPlan.shot1_hook.description} ${shotPlan.shot2_proof.description} ${shotPlan.shot3_close.description} NO CUTS, NO ABRUPT HARD JUMPS, SINGLE UNBROKEN CAMERA FLOW.`,
       fidelityLock,
       `[CAMERA & PHYSICS]: ${brief.cameraMotion}. Natural gravity, authentic material weight and realistic movement.`,
       '[AUDIO]: Spoken language: Turkish (tr-TR).',

@@ -41,7 +41,7 @@ _PROFILE_COPY_IGNORES = {
     "SingletonLock", "SingletonCookie", "SingletonSocket", "LOCK",
     "Cache", "Code Cache", "GPUCache", "GrShaderCache", "ShaderCache",
     "DawnGraphiteCache", "DawnWebGPUCache", "Crashpad", "BrowserMetrics",
-    "blob_storage", "optimization_guide_model_store",
+    "blob_storage", "optimization_guide_model_store", "Safe Browsing",
 }
 
 class FlowExecutionError(Exception):
@@ -59,6 +59,29 @@ def _profile_copy_ignore(_directory: str, names: List[str]) -> set[str]:
             ignored.add(name)
     return ignored
 
+
+def _safe_copytree(src: Path, dst: Path, ignore=None):
+    dst.mkdir(parents=True, exist_ok=True)
+    try:
+        entries = [p.name for p in src.iterdir()]
+    except Exception as exc:
+        logger.warning(f"Cannot list directory {src}: {exc}")
+        return
+    ignored = set(ignore(str(src), entries)) if ignore else set()
+    for name in entries:
+        if name in ignored:
+            continue
+        item = src / name
+        target = dst / name
+        try:
+            if item.is_symlink():
+                continue
+            elif item.is_dir():
+                _safe_copytree(item, target, ignore)
+            else:
+                shutil.copy2(item, target)
+        except Exception as exc:
+            logger.warning(f"Skipping profile file {item}: {exc}")
 
 def synchronize_account_profile(
     account_id: str,
@@ -89,7 +112,7 @@ def synchronize_account_profile(
 
     with ProfileLease(target):
         try:
-            shutil.copytree(source, staging, ignore=_profile_copy_ignore, symlinks=False)
+            _safe_copytree(source, staging, ignore=_profile_copy_ignore)
             (staging / ".gflow_browser_strategy").write_text("chrome\n", encoding="utf-8")
             sanitize_chrome_profile(staging)
 
@@ -404,11 +427,27 @@ def execute_generation_job(payload: Dict[str, Any]) -> Dict[str, Any]:
                 target_project = create_new_flow_project(profile_path, project_title)
                 logger.info(f"Successfully created real Flow project UUID: {target_project}")
             except Exception as e:
-                logger.exception(f"Failed to create fresh Flow project: {e}")
-                raise FlowExecutionError(
-                    "PROJECT_CREATION_FAILED",
-                    f"Failed to create fresh Flow project: {e}"
-                )
+                logger.warning(f"Failed to create fresh Flow project: {e}. Checking catalog for existing projects on profile {account_id}...")
+                try:
+                    from gflow_cli.data.queries import list_projects
+                    from gflow_cli.cli_data import _db_path
+                    recorded = list_projects(db_path=_db_path(), profile=account_id, limit=5, offset=0)
+                    if recorded:
+                        target_project = recorded[0].project_id
+                        logger.info(f"Using fallback Flow project UUID from catalog: {target_project}")
+                    else:
+                        raise FlowExecutionError(
+                            "PROJECT_CREATION_FAILED",
+                            f"Failed to create fresh Flow project and no recorded project found: {e}"
+                        )
+                except FlowExecutionError:
+                    raise
+                except Exception as cat_err:
+                    logger.exception(f"Catalog fallback failed: {cat_err}")
+                    raise FlowExecutionError(
+                        "PROJECT_CREATION_FAILED",
+                        f"Failed to create fresh Flow project: {e}"
+                    )
 
         # Build CLI command environment
         env = os.environ.copy()

@@ -150,10 +150,14 @@ export async function GET(
 
       const currentAhead = count ?? 0
       queueAheadCount = currentAhead
-      const estimatedSecs = 90 + (currentAhead * 75)
+      // Parallel Worker Pool capacity (3 concurrent workers active)
+      const activeWorkers = 3
+      const estimatedSecs = 60 + Math.ceil((currentAhead / activeWorkers) * 90)
       const minMins = Math.max(1, Math.floor(estimatedSecs / 60))
       const maxMins = minMins + 1
-      etaDisplayText = `yaklaşık ${minMins}–${maxMins} dakika`
+      etaDisplayText = currentAhead === 0
+        ? 'İşleme alınmak üzere (~1–2 dakika)'
+        : `yaklaşık ${minMins}–${maxMins} dakika`
     } else if (['LEASED', 'PREPARING_ENV', 'OPENING_PROJECT', 'ATTACHING_INGREDIENTS', 'INGREDIENTS_VERIFIED', 'GENERATING'].includes(job.state)) {
       etaDisplayText = 'yaklaşık 1–2 dakika'
     } else if (['FFPROBE_INSPECTING', 'SHA256_VERIFYING', 'VISUAL_QA_EVALUATING'].includes(job.state)) {

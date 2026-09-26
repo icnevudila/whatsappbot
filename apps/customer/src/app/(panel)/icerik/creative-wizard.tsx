@@ -583,7 +583,23 @@ export function CreativeWizard({
                 {jobDisplayMessage || jobDisplayState} · Tahmini hazır olma: <span className="font-semibold text-[#111b21]">{etaText}</span>
               </p>
               {queueAhead && queueAhead > 0 ? (
-                <p className="text-[12px] text-amber-700 font-medium">Önünüzde {queueAhead} video işleniyor</p>
+                <div className="mt-3 p-4 bg-amber-50/90 border border-amber-200/90 rounded-xl text-left max-w-md mx-auto shadow-xs">
+                  <div className="flex items-center gap-2 text-amber-900 font-bold text-[14px]">
+                    <span className="flex size-6 items-center justify-center rounded-full bg-amber-200 text-amber-900 text-[12px] font-bold">
+                      #{queueAhead + 1}
+                    </span>
+                    <span>Kuyruktaki Sıranız: #{queueAhead + 1} ({queueAhead} video önünüzde)</span>
+                  </div>
+                  <p className="mt-1.5 text-[12px] text-amber-800 leading-relaxed">
+                    💡 <strong>Ekran başında beklemenize gerek yoktur!</strong> Bu pencereden ayrılabilir veya tarayıcınızı kapatabilirsiniz. Videonuz arka planda sırayla işlenecek ve tamamlandığında doğrudan <strong>İçerik Kütüphanenize</strong> eklenecektir.
+                  </p>
+                  <div className="mt-2.5 pt-2 border-t border-amber-200/70 flex items-center justify-between">
+                    <span className="text-[11px] font-medium text-amber-700">Tahmini Başlama: {etaText}</span>
+                    <Link href="/icerik" className="text-[12px] font-semibold text-[#008069] hover:underline">
+                      Kütüphaneye Git →
+                    </Link>
+                  </div>
+                </div>
               ) : null}
             </div>
 

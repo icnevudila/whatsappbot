@@ -69,17 +69,17 @@ test('WIZARD AD FORMATS: all 7 ad formats produce distinct visual hooks, proofs,
 
     // Verify format-specific semantics
     if (fmt === 'FAST_SALES') {
-      assert.match(shotPlan.shot1_hook.description, /hızlı ürün detayı/i)
-      assert.match(shotPlan.shot3_close.description, /temiz CTA alanı/i)
+      assert.match(shotPlan.shot1_hook.description, /Dinamik ve akıcı/i)
+      assert.match(shotPlan.shot3_close.description, /doğrudan kapanış/i)
     } else if (fmt === 'PRODUCT_USAGE') {
       assert.match(shotPlan.shot1_hook.description, /kullanım bağlamını/i)
-      assert.match(shotPlan.shot2_proof.description, /kesintisiz kullanım adımı/i)
+      assert.match(shotPlan.shot3_close.description, /doğal sonucu içinde/i)
     } else if (fmt === 'PROBLEM_SOLUTION') {
       assert.match(shotPlan.shot1_hook.description, /çalışma bağlamı kurulur/i)
       assert.match(shotPlan.shot3_close.description, /çözüm iddiası eklenmeden/i)
     } else if (fmt === 'PREMIUM') {
-      assert.match(shotPlan.shot1_hook.description, /sakin ışık geçişiyle/i)
-      assert.match(shotPlan.shot2_proof.description, /prestijli kadraj/i)
+      assert.match(shotPlan.shot1_hook.description, /sakin doğal ışık geçişiyle/i)
+      assert.match(shotPlan.shot2_proof.description, /prestijli perspektif/i)
     } else if (fmt === 'SOCIAL_UGC') {
       assert.match(shotPlan.shot1_hook.description, /birinci şahıs yaklaşımı/i)
       assert.match(shotPlan.shot2_proof.description, /samimi fakat iddiasız/i)
@@ -87,8 +87,8 @@ test('WIZARD AD FORMATS: all 7 ad formats produce distinct visual hooks, proofs,
       assert.match(shotPlan.shot1_hook.description, /okunur kadrajda/i)
       assert.match(shotPlan.shot2_proof.description, /deterministic finishing/i)
     } else if (fmt === 'AUTO') {
-      assert.match(shotPlan.shot1_hook.description, /dinamik açılış kadrajında/i)
-      assert.match(shotPlan.shot2_proof.description, /gerçek malzeme fiziği/i)
+      assert.match(shotPlan.shot1_hook.description, /Pürüzsüz 35mm sinematik/i)
+      assert.match(shotPlan.shot2_proof.description, /orbital/i)
     }
 
     results.set(fmt, {

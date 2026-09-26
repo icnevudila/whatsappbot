@@ -169,10 +169,17 @@ class PgQueryBuilder {
         const cols = Object.keys(this.insertData[0])
         const valuesClauses: string[] = []
 
+        const serializeVal = (v: any) => {
+          if (v !== null && typeof v === 'object' && !(v instanceof Date) && !Buffer.isBuffer(v)) {
+            return JSON.stringify(v)
+          }
+          return v
+        }
+
         for (const row of this.insertData) {
           const rowPlaceholders: string[] = []
           for (const col of cols) {
-            params.push(row[col])
+            params.push(serializeVal(row[col]))
             rowPlaceholders.push(`$${params.length}`)
           }
           valuesClauses.push(`(${rowPlaceholders.join(', ')})`)
@@ -184,9 +191,16 @@ class PgQueryBuilder {
       }
 
       if (this.action === 'update') {
+        const serializeVal = (v: any) => {
+          if (v !== null && typeof v === 'object' && !(v instanceof Date) && !Buffer.isBuffer(v)) {
+            return JSON.stringify(v)
+          }
+          return v
+        }
+
         const updateCols = Object.keys(this.updateData)
         const setClauses = updateCols.map(col => {
-          params.push(this.updateData[col])
+          params.push(serializeVal(this.updateData[col]))
           return `${col} = $${params.length}`
         })
 

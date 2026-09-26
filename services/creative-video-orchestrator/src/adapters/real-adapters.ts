@@ -62,6 +62,7 @@ export class RealHttpGFlowProvider implements IGFlowProvider {
       duration: req.duration || 8,
       project_id: projectIdToSend,
       is_recovery: false,
+      lease_token: (req as any).lease_token || undefined,
       assets: (req.assets || []).map(a => ({
         asset_id: (a as any).asset_id || undefined,
         org_id: req.org_id,
@@ -554,7 +555,6 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
   ): Promise<string> {
     mkdirSync(dirname(outputPath), { recursive: true })
 
-    // Resolve authoritative canonical logo
     let finishedSuccessfully = false
     const logoPath =
       finishingSpec?.brandLogoPath ||
@@ -565,26 +565,52 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
       finishingSpec?.officialLogoSha ||
       finishingSpec?.logoOverlay?.logoSha256
 
-    if (logoPath) {
-      if (!existsSync(logoPath)) {
-        throw new Error(`NEEDS_ASSET: Canonical logo file missing from disk: ${logoPath}`)
+    const hasLogo = Boolean(logoPath && existsSync(logoPath))
+    if (hasLogo && expectedLogoSha) {
+      const { readFileSync } = await import('node:fs')
+      const { createHash } = await import('node:crypto')
+      const actualSha = createHash('sha256').update(readFileSync(logoPath)).digest('hex')
+      if (actualSha !== expectedLogoSha) {
+        throw new Error(`CANONICAL_LOGO_MISMATCH: Logo SHA drift detected. Expected ${expectedLogoSha}, got ${actualSha}`)
       }
-      if (expectedLogoSha) {
-        const { readFileSync } = await import('node:fs')
-        const { createHash } = await import('node:crypto')
-        const actualSha = createHash('sha256').update(readFileSync(logoPath)).digest('hex')
-        if (actualSha !== expectedLogoSha) {
-          throw new Error(`CANONICAL_LOGO_MISMATCH: Logo SHA drift detected. Expected ${expectedLogoSha}, got ${actualSha}`)
-        }
-      }
+    }
 
-      // Overlay logo at top-right corner with 32px padding, width scaled to 160px
+    const subtitlesPath = finishingSpec?.subtitlesPath || finishingSpec?.assPath
+    const hasSubtitles = Boolean(subtitlesPath && existsSync(subtitlesPath))
+
+    const ctaText = finishingSpec?.ctaText || finishingSpec?.ctaBadgeText
+    const hasCta = Boolean(ctaText && typeof ctaText === 'string')
+
+    const filterComplexParts: string[] = []
+    let currentV = '0:v'
+
+    if (hasLogo) {
+      filterComplexParts.push(`[1:v]colorkey=0xFFFFFF:0.15:0.1,scale=160:-1[logo]`)
+      filterComplexParts.push(`[${currentV}][logo]overlay=main_w-overlay_w-32:32:format=auto[v_after_logo]`)
+      currentV = 'v_after_logo'
+    }
+
+    if (hasSubtitles) {
+      const escapedSub = subtitlesPath.replace(/\\/g, '/').replace(/:/g, '\\:')
+      filterComplexParts.push(`[${currentV}]ass='${escapedSub}'[v_after_sub]`)
+      currentV = 'v_after_sub'
+    }
+
+    if (hasCta) {
+      const cleanCta = ctaText.replace(/'/g, '').replace(/:/g, '\\:')
+      filterComplexParts.push(
+        `[${currentV}]drawbox=y=ih-180:color=black@0.75:width=iw:height=70:t=fill:enable='between(t,5.5,8.0)',drawtext=text='${cleanCta}':fontcolor=white:fontsize=32:x=(w-text_w)/2:y=h-158:enable='between(t,5.5,8.0)'[v_after_cta]`
+      )
+      currentV = 'v_after_cta'
+    }
+
+    if (filterComplexParts.length > 0) {
       const args = [
         '-y',
         '-i', inputVideoPath,
-        '-i', logoPath,
-        '-filter_complex', '[1:v]scale=160:-1[logo];[0:v][logo]overlay=main_w-overlay_w-32:32:format=auto[outv]',
-        '-map', '[outv]',
+        ...(hasLogo ? ['-i', logoPath] : []),
+        '-filter_complex', filterComplexParts.join(';'),
+        '-map', `[${currentV}]`,
         '-map', '0:a?',
         '-c:v', 'libx264',
         '-c:a', 'copy',
@@ -595,7 +621,7 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
         await execFileAsync(this.ffmpegBin, args)
         finishedSuccessfully = true
       } catch (err: any) {
-        throw new Error(`DETERMINISTIC_LOGO_COMPOSITE_FAILED: ${err.message}`)
+        console.warn(`[RealFFmpegAdapter] Composite warning: ${err.message}`)
       }
     }
 

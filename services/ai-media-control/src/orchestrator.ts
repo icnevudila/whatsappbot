@@ -149,16 +149,22 @@ async function processQueuedJobs() {
     return
   }
 
-  // Find idle Flow accounts from DB
+  // Find idle Flow accounts from DB (highest verified credit balance first)
   const { data: accounts } = await supabase
     .from('flow_accounts')
     .select('*')
     .eq('status', 'idle')
-    .order('id')
+    .order('credit_balance', { ascending: false, nullsFirst: false })
 
   if (!accounts || accounts.length === 0) return
 
   for (const account of accounts) {
+    // Re-check host capacity for each worker slot
+    const slotCheck = await hostResourceGuard.checkHostResources(supabase)
+    if (!slotCheck.allowedNewJob) {
+      break // Max parallel slots filled
+    }
+
     // Check if account has an active job leased
     const { data: activeLease } = await supabase
       .from('ai_media_jobs')
@@ -180,7 +186,7 @@ async function processQueuedJobs() {
     if (!job) break // no more queued jobs
 
     // Atomically lease job
-    const leased = await leaseJob(supabase, job.id, 'control-worker-1', account.id)
+    const leased = await leaseJob(supabase, job.id, `control-worker-${account.id}`, account.id)
     if (!leased) continue
 
     // Mark account busy
@@ -215,9 +221,9 @@ async function runJobExecution(job: any, accountId: string) {
   })
 
   try {
-    const lockAcquired = await hostResourceGuard.acquireHeavyLock(supabase, job.id)
+    const lockAcquired = await hostResourceGuard.acquireHeavyLock(supabase, job.id, accountId)
     if (!lockAcquired) {
-      throw new Error('HEAVY_MUTEX_HELD: Another heavy generation is currently holding the system lock')
+      throw new Error(`HEAVY_MUTEX_HELD: Slot for account ${accountId} or system capacity limit reached`)
     }
 
     // 1. PREPARING_ENV
@@ -533,7 +539,7 @@ async function runJobExecution(job: any, accountId: string) {
     }
   } finally {
     // Release Heavy Mutex Lock
-    await hostResourceGuard.releaseHeavyLock(supabase, job.id)
+    await hostResourceGuard.releaseHeavyLock(supabase, job.id, accountId)
 
     // Release Flow account (do not revert rate_limited/needs_reauth to idle)
     const { data: currentAcc } = await supabase

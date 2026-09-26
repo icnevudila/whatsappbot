@@ -187,6 +187,12 @@ class TenantBrandRegistry {
     for (const [registeredName, ownerOrgId] of this.activeBrandNames.entries()) {
       if (ownerOrgId === currentOrg) continue; // Kendi marka adı geçerli
 
+      // Kendi kurum adının veya marka adının bir parçasıysa (örn: Bofe vs Bofe Tarım) kontaminasyon sayma
+      const currentOrgName = (this.manifests.get(currentOrg)?.brand_name || '').toLowerCase();
+      if (currentOrgName && (currentOrgName.includes(registeredName) || registeredName.includes(currentOrgName))) {
+        continue;
+      }
+
       // Sınır kontrollü regex ile yabancı kayıtlı marka adını ara
       const escaped = registeredName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const regex = new RegExp(`(^|[^a-zA-Z0-9ığüşöçİĞÜŞÖÇ])${escaped}([^a-zA-Z0-9ığüşöçİĞÜŞÖÇ]|$)`, 'i');

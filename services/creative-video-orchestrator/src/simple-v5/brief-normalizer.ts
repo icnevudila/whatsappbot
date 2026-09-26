@@ -140,18 +140,18 @@ export class SimpleV5BriefNormalizer {
     const style = (snapshot.campaign.user_style_preference || 'AUTO').toUpperCase()
     const styleDescriptions: Record<string, { hook: string; proof: string; close: string }> = {
       FAST_SALES: {
-        hook: `İlk saniyede ${productName} üzerinde net ve hızlı ürün detayı; ${cameraMotion}.`,
-        proof: `${primaryAction} Yalnız doğrulanmış fayda varsa görsel olarak desteklenir.`,
-        close: `${productName} merkezde; temiz CTA alanı bırakılan doğrudan kapanış.`,
+        hook: `Dinamik ve akıcı kamera hareketi sevkiyata hazır ${productName} üzerinde başlar.`,
+        proof: `${location} ortamında düzenli sevkiyat ve kurumsal operasyon akışı içinde ürünün hızlı teslimat güvenini hissettiren kesintisiz akış.`,
+        close: `${productName} merkezde; yazısız, temiz ve net doğrudan kapanış kadrajı.`,
       },
       PRODUCT_USAGE: {
-        hook: `${location} içinde ürün ve kullanım bağlamını birlikte kuran açılış.`,
-        proof: `${primaryAction} Tek ve kesintisiz kullanım adımı.`,
+        hook: `${location} içinde ${productName} ve kullanım bağlamını birlikte kuran açılış.`,
+        proof: `${primaryAction}`,
         close: `${productName} gerçek kullanımın doğal sonucu içinde sabitlenir.`,
       },
       PROBLEM_SOLUTION: {
         hook: `Uydurma hasar veya sonuç göstermeden ${location} çalışma bağlamı kurulur.`,
-        proof: `${primaryAction} Yalnız doğrulanmış özelliklerle görsel yanıt gösterilir.`,
+        proof: `Ürünün dayanıklılık ve kalitesini kanıtlayan kontrollü malzeme ve işlev detayı.`,
         close: `${productName} çözüm iddiası eklenmeden temiz ürün kapanışında.`,
       },
       SOCIAL_UGC: {
@@ -160,21 +160,22 @@ export class SimpleV5BriefNormalizer {
         close: `${productName} elde veya doğal ortamında okunur son kadrajda.`,
       },
       PREMIUM: {
-        hook: `${productName} silüeti ve gerçek malzemesi sakin ışık geçişiyle ortaya çıkar.`,
-        proof: `${primaryAction} Az hareketli, temiz ve prestijli kadraj.`,
+        hook: `${productName} silüeti ve otantik malzeme kalitesi sakin doğal ışık geçişiyle ortaya çıkar.`,
+        proof: `Genişleyen prestijli perspektif ile ortamın derinliğini ve ürünün kalitesini gösteren ağırbaşlı, sarsıntısız yatay slider süzülüşü.`,
         close: `${productName} geniş negatif alanlı sabit hero kapanışında.`,
+      },
+      AUTO: {
+        hook: `Pürüzsüz 35mm sinematik kamera hareketi doğrudan ${productName} ürününün detaylarına ve otantik malzeme dokusuna odaklanır.`,
+        proof: `Kamera yavaş ve zarif bir 3/4 orbital açıyla süzülerek ürünün sağlamlığını ve kusursuz geometrisini sergiler; arkada otantik ${brandName} kurumsal varlığı doğal olarak yer alır.`,
+        close: `${productName} kadrajda kararlı, net ve heybetli bir şekilde sabitlenir; yazısız, temiz ve prestijli doğrudan kapanış kadrajı.`,
       },
       OFFER: {
         hook: `${productName} ilk saniyede okunur kadrajda; teklif metni sahne içine üretilmez.`,
-        proof: `${primaryAction} Teklif yalnız deterministic finishing alanına ayrılır.`,
+        proof: `Teklif yalnız deterministic finishing alanına ayrılır.`,
         close: `${productName} ve boş teklif alanı bulunan temiz marka kapanışında.`,
       },
     }
-    const selectedStyle = styleDescriptions[style] || {
-      hook: `Dinamik açılış kadrajında ${productName}, ${location} içinde net olarak tanıtılır.`,
-      proof: `${primaryAction} Gerçek malzeme fiziği ve pürüzsüz çalışma akışı.`,
-      close: `${productName} sahnede merkezde, sabit ve temiz bir son kadrajda gösterilir.`,
-    }
+    const selectedStyle = styleDescriptions[style] || styleDescriptions.AUTO
 
     // 4. Three Shots Layout; every user style keeps the same timing contract but materially changes visual grammar.
     const shotPlan: SimpleV5ShotPlan = {
