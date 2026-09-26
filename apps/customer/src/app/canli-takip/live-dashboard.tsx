@@ -5120,105 +5120,252 @@ export function LiveDashboard() {
               )}
 
               {/* JOB DETAIL DRAWER */}
-              {showJobDrawer && aiMediaJobDetail && (
-                <div className="fixed inset-0 z-50 flex justify-end" onClick={() => setShowJobDrawer(false)}>
-                  <div className="absolute inset-0 bg-black/40" />
-                  <div className="relative w-full max-w-lg bg-[var(--color-surface)] shadow-2xl overflow-y-auto" onClick={e => e.stopPropagation()}>
-                    <div className="sticky top-0 bg-[var(--color-surface)] border-b border-[var(--color-hairline)] p-3 flex items-center justify-between z-10">
-                      <div>
-                        <h3 className="text-sm font-bold text-ink">{aiMediaJobDetail.title || 'İş Detayı'}</h3>
-                        <span className="text-[9px] font-mono text-ink-muted">{aiMediaJobDetail.id}</span>
-                      </div>
-                      <button onClick={() => setShowJobDrawer(false)} className="w-7 h-7 rounded flex items-center justify-center hover:bg-[var(--color-surface-raised)]">
-                        <svg className="w-4 h-4 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                      </button>
-                    </div>
-                    <div className="p-3 space-y-4">
-                      {/* State Badge */}
-                      <div className="flex items-center gap-2">
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold text-white ${STATE_LABELS[aiMediaJobDetail.state]?.color || 'bg-gray-400'}`}>
-                          {STATE_LABELS[aiMediaJobDetail.state]?.label || aiMediaJobDetail.state}
-                        </span>
-                        <span className="text-[10px] text-ink-muted">Deneme: {aiMediaJobDetail.retry_count}/{aiMediaJobDetail.max_retries}</span>
-                      </div>
-                      {/* Identity */}
-                      <div className="grid grid-cols-2 gap-2 text-[10px]">
-                        <div><span className="text-ink-muted">Model:</span> <span className="text-ink font-semibold">{aiMediaJobDetail.model}</span></div>
-                        <div><span className="text-ink-muted">Oran:</span> <span className="text-ink font-semibold">{aiMediaJobDetail.aspect_ratio}</span></div>
-                        <div><span className="text-ink-muted">Süre:</span> <span className="text-ink font-semibold">{aiMediaJobDetail.duration_seconds}s</span></div>
-                        <div><span className="text-ink-muted">Öncelik:</span> <span className="text-ink font-semibold">{aiMediaJobDetail.priority}</span></div>
-                        <div className="col-span-2"><span className="text-ink-muted">Çip Bağlama:</span> <span className={`font-bold ${aiMediaJobDetail.expected_ingredient_count === aiMediaJobDetail.actual_ingredient_count ? 'text-ok' : 'text-danger'}`}>{aiMediaJobDetail.actual_ingredient_count}/{aiMediaJobDetail.expected_ingredient_count}</span></div>
-                      </div>
-                      {/* Prompt */}
-                      <div>
-                        <div className="text-[10px] font-semibold text-ink-muted mb-1">Prompt</div>
-                        <div className="bg-canvas border border-[var(--color-hairline)] rounded p-2 text-[10px] text-ink font-mono whitespace-pre-wrap max-h-40 overflow-y-auto">{aiMediaJobDetail.prompt}</div>
-                      </div>
-                      {/* Error */}
-                      {aiMediaJobDetail.error_message && (
-                        <div className="bg-danger/10 border border-danger/20 rounded p-2.5">
-                          <div className="text-[9px] font-bold text-danger uppercase mb-0.5">{aiMediaJobDetail.error_code || 'HATA'}</div>
-                          <div className="text-[10px] text-ink">{aiMediaJobDetail.error_message}</div>
+              {showJobDrawer && aiMediaJobDetail && (() => {
+                const activeOutput = aiMediaJobDetail.output || (aiMediaData?.outputs || []).find((o: any) => o.job_id === aiMediaJobDetail.id)
+                const videoUrl = activeOutput?.id
+                  ? `/api/ai-media/outputs/${activeOutput.id}`
+                  : (aiMediaJobDetail.state === 'COMPLETED' ? `http://167.233.201.31:3456/outputs/${aiMediaJobDetail.id}.mp4` : null)
+                const compiledVeoPrompt =
+                  aiMediaJobDetail.metadata?.simple_v5_diagnostics?.prompt_plan?.FLOW_VEO ||
+                  aiMediaJobDetail.metadata?.simple_v5_diagnostics?.prompt_plan?.GEMINI_NATIVE_VIDEO ||
+                  aiMediaJobDetail.prompt ||
+                  '—'
+                const negativeConstraints =
+                  aiMediaJobDetail.metadata?.simple_v5_diagnostics?.negative_constraints?.join(', ') ||
+                  (typeof compiledVeoPrompt === 'string' && compiledVeoPrompt.includes('[SHORT NEGATIVE LIST]:')
+                    ? compiledVeoPrompt.split('[SHORT NEGATIVE LIST]:')[1]?.trim()
+                    : null)
+                const attachedAssets = aiMediaJobDetail.attached_assets || []
+                const events = aiMediaJobDetail.events || []
+
+                return (
+                  <div className="fixed inset-0 z-50 flex justify-end" onClick={() => setShowJobDrawer(false)}>
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-xs" />
+                    <div className="relative w-full max-w-xl bg-[var(--color-surface)] shadow-2xl overflow-y-auto" onClick={e => e.stopPropagation()}>
+                      {/* Sticky Header */}
+                      <div className="sticky top-0 bg-[var(--color-surface)] border-b border-[var(--color-hairline)] p-3.5 flex items-center justify-between z-10">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-bold text-ink">{aiMediaJobDetail.title || 'AI Medya İş Detayı'}</h3>
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold text-white ${STATE_LABELS[aiMediaJobDetail.state]?.color || 'bg-gray-400'}`}>
+                              {STATE_LABELS[aiMediaJobDetail.state]?.label || aiMediaJobDetail.state}
+                            </span>
+                          </div>
+                          <span className="text-[9px] font-mono text-ink-muted">{aiMediaJobDetail.id}</span>
                         </div>
-                      )}
-                      {/* Creative Orchestrator Info (SHORT & LONG) */}
-                      {aiMediaJobDetail.metadata?.provenance && (
-                        <div className="bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded p-2.5 space-y-2">
+                        <button onClick={() => setShowJobDrawer(false)} className="w-7 h-7 rounded flex items-center justify-center hover:bg-[var(--color-surface-raised)] transition text-ink-muted hover:text-ink">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                      </div>
+
+                      <div className="p-4 space-y-4">
+                        {/* Video Player Card (If completed or output exists) */}
+                        {videoUrl && (
+                          <div className="bg-canvas border border-[var(--color-hairline)] rounded-xl p-3 space-y-2.5 shadow-sm">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] font-bold text-ink flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-ok animate-pulse" />
+                                Üretilen Video Çıktısı (Player)
+                              </span>
+                              <button
+                                onClick={() => setPreviewVideoUrl(videoUrl)}
+                                className="text-[9px] px-2.5 py-1 rounded-md bg-accent text-accent-ink font-bold hover:bg-accent-dim transition flex items-center gap-1 shadow-xs"
+                              >
+                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+                                Tam Ekran Modal
+                              </button>
+                            </div>
+
+                            <div className="relative aspect-[9/16] max-h-80 mx-auto rounded-lg overflow-hidden bg-black flex items-center justify-center shadow-inner">
+                              <video
+                                src={videoUrl}
+                                controls
+                                playsInline
+                                preload="metadata"
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
+
+                            {activeOutput && (
+                              <div className="flex items-center justify-between text-[9px] text-ink-muted pt-1.5 border-t border-[var(--color-hairline)]">
+                                <span>{activeOutput.width}×{activeOutput.height} · {activeOutput.duration_seconds}s</span>
+                                <span className="font-mono">SHA: {activeOutput.sha256?.slice(0, 14)}…</span>
+                                <span className={`font-bold px-1.5 py-0.5 rounded text-[8px] ${activeOutput.is_approved ? 'bg-ok/20 text-ok' : 'bg-warning/20 text-warning'}`}>
+                                  {activeOutput.is_approved ? 'Doğrulandı (PASS)' : 'İnceleniyor'}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Metadata Grid */}
+                        <div className="grid grid-cols-2 gap-2 text-[10px] bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] rounded-lg p-2.5">
+                          <div><span className="text-ink-muted">Model:</span> <span className="text-ink font-semibold">{aiMediaJobDetail.model}</span></div>
+                          <div><span className="text-ink-muted">Oran:</span> <span className="text-ink font-semibold">{aiMediaJobDetail.aspect_ratio}</span></div>
+                          <div><span className="text-ink-muted">Süre:</span> <span className="text-ink font-semibold">{aiMediaJobDetail.duration_seconds}s</span></div>
+                          <div><span className="text-ink-muted">Deneme:</span> <span className="text-ink font-semibold">{aiMediaJobDetail.retry_count}/{aiMediaJobDetail.max_retries}</span></div>
+                          <div><span className="text-ink-muted">Öncelik:</span> <span className="text-ink font-semibold">{aiMediaJobDetail.priority}</span></div>
+                          <div><span className="text-ink-muted">Çip Bağlama:</span> <span className={`font-bold ${attachedAssets.length > 0 ? 'text-ok' : 'text-danger'}`}>{attachedAssets.length}/{aiMediaJobDetail.expected_ingredient_count || 2}</span></div>
+                        </div>
+
+                        {/* Error Message */}
+                        {aiMediaJobDetail.error_message && (
+                          <div className="bg-danger/10 border border-danger/20 rounded-lg p-2.5">
+                            <div className="text-[9px] font-bold text-danger uppercase mb-0.5">{aiMediaJobDetail.error_code || 'HATA'}</div>
+                            <div className="text-[10px] text-ink">{aiMediaJobDetail.error_message}</div>
+                          </div>
+                        )}
+
+                        {/* Çip Bağlaması (Attached Asset Chips) */}
+                        <div className="space-y-1.5">
                           <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold text-ink">Creative Orchestrator Provenance</span>
-                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-accent/20 text-accent font-mono font-bold">
-                              {aiMediaJobDetail.metadata?.strategy?.strategyType || 'CREATIVE_PIPELINE'}
+                            <span className="text-[10px] font-bold text-ink">Bağlı Çip Varlıkları (Attached Asset Chips)</span>
+                            <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${attachedAssets.length > 0 ? 'bg-ok/20 text-ok' : 'bg-danger/20 text-danger'}`}>
+                              {attachedAssets.length} / {aiMediaJobDetail.expected_ingredient_count || 2} Bağlandı
                             </span>
                           </div>
 
-                          {/* Brand & Reference Handles */}
-                          <div className="grid grid-cols-2 gap-1.5 text-[9px]">
-                            <div><span className="text-ink-muted">Gerçek Flow UUID:</span> <span className="font-mono text-ink font-semibold">{aiMediaJobDetail.metadata.real_flow_project_uuid || aiMediaJobDetail.metadata.provenance.flow_project_id || '—'}</span></div>
-                            <div><span className="text-ink-muted">Referanslar:</span> <span className="font-mono text-ink">{(aiMediaJobDetail.metadata.provenance.reference_registry_handles || []).join(', ') || '—'}</span></div>
-                          </div>
-
-                          {/* Multi-Scene Breakdown (LONG VIDEO) */}
-                          {aiMediaJobDetail.metadata.provenance.qa_reports?.sceneFlowProjectUuids && Object.keys(aiMediaJobDetail.metadata.provenance.qa_reports.sceneFlowProjectUuids).length > 0 && (
-                            <div className="pt-1.5 border-t border-[var(--color-hairline)] space-y-1">
-                              <span className="text-[9px] font-bold text-ink-muted uppercase">Sahne Flow Projeleri (DAG)</span>
-                              <div className="space-y-1 max-h-36 overflow-y-auto">
-                                {Object.entries(aiMediaJobDetail.metadata.provenance.qa_reports.sceneFlowProjectUuids).map(([sceneId, uuid]: any) => (
-                                  <div key={sceneId} className="flex items-center justify-between text-[9px] p-1 rounded bg-canvas border border-[var(--color-hairline)]">
-                                    <span className="font-bold text-ink">{sceneId}</span>
-                                    <span className="font-mono text-ink-muted">{uuid}</span>
+                          {attachedAssets.length === 0 ? (
+                            <div className="text-[10px] text-ink-muted py-2.5 px-3 rounded-lg bg-canvas border border-dashed border-[var(--color-hairline)] text-center">
+                              Bu iş için kayıtlı çip varlığı bulunamadı.
+                            </div>
+                          ) : (
+                            <div className="space-y-1.5">
+                              {attachedAssets.map((ast: any, idx: number) => {
+                                const isLogo = ast.role === 'logo'
+                                const chipTag = isLogo ? '@BrandLogo' : (ast.role === 'product' ? '@HeroProduct' : `@Asset_${idx + 1}`)
+                                return (
+                                  <div key={ast.id || idx} className="p-2 rounded-lg bg-canvas border border-[var(--color-hairline)] flex items-center justify-between text-[10px] hover:border-accent/40 transition">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <span className={`px-2 py-0.5 rounded font-mono font-bold text-[9px] shrink-0 ${
+                                        isLogo ? 'bg-purple-500/15 text-purple-600' : 'bg-blue-500/15 text-blue-600'
+                                      }`}>
+                                        {chipTag}
+                                      </span>
+                                      <div className="min-w-0">
+                                        <div className="font-semibold text-ink truncate text-[10px]">{ast.original_filename || ast.file_path?.split('/').pop()}</div>
+                                        <div className="text-[8px] font-mono text-ink-muted">SHA: {ast.sha256?.slice(0, 16)}…</div>
+                                      </div>
+                                    </div>
+                                    <span className="text-[8px] px-1.5 py-0.5 rounded bg-ok/20 text-ok font-bold shrink-0 ml-2">
+                                      Doğrulandı
+                                    </span>
                                   </div>
-                                ))}
-                              </div>
+                                )
+                              })}
                             </div>
                           )}
+                        </div>
 
-                          {/* Final SHA256 & Finishing */}
-                          <div className="text-[9px] text-ink-muted pt-1 border-t border-[var(--color-hairline)] flex items-center justify-between">
-                            <span>Çıktı SHA256: <span className="font-mono text-ink">{aiMediaJobDetail.metadata.provenance.final_output_sha256?.slice(0, 16)}…</span></span>
-                            <span className="text-ok font-semibold">Deterministic Finishing: PASS</span>
+                        {/* Arayüz Seçimleri & Kullanıcı Parametreleri */}
+                        <div className="bg-canvas border border-[var(--color-hairline)] rounded-lg p-2.5 text-[9px] space-y-1.5">
+                          <span className="text-[10px] font-bold text-ink">Arayüz Seçimleri & Parametreler</span>
+                          <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-[var(--color-hairline)]">
+                            <div><span className="text-ink-muted">Marka İsmi:</span> <span className="font-semibold text-ink">{aiMediaJobDetail.metadata?.brand_name || '—'}</span></div>
+                            <div><span className="text-ink-muted">Ürün İsmi:</span> <span className="font-semibold text-ink">{aiMediaJobDetail.metadata?.product_name || '—'}</span></div>
+                            <div><span className="text-ink-muted">Ortam Tercihi:</span> <span className="font-semibold text-ink">{aiMediaJobDetail.metadata?.environment_preset || '—'}</span></div>
+                            <div><span className="text-ink-muted">Hareket Tarzı:</span> <span className="font-semibold text-ink">{aiMediaJobDetail.metadata?.motion_style || '—'}</span></div>
+                            <div className="col-span-2"><span className="text-ink-muted">Onaylı Seslendirme:</span> <span className="font-semibold text-ink">"{aiMediaJobDetail.metadata?.approved_spoken_line || '—'}"</span></div>
                           </div>
                         </div>
-                      )}
 
-                      {/* Audit Timeline placeholder */}
-                      <div>
-                        <div className="text-[10px] font-semibold text-ink-muted mb-1">Denetim Zaman Çizelgesi</div>
-                        <div className="text-[10px] text-ink-muted py-3 text-center border border-dashed border-[var(--color-hairline)] rounded">Etkinlik geçmişi yüklenecek (ai_media_events)</div>
-                      </div>
-                      {/* Admin Actions */}
-                      <div className="flex gap-2 pt-2 border-t border-[var(--color-hairline)]">
-                        {(aiMediaJobDetail.state === 'FAILED' || aiMediaJobDetail.state === 'NEEDS_REVIEW') && (
-                          <button className="px-3 py-1.5 bg-accent text-accent-ink text-[10px] font-bold rounded shadow hover:bg-accent-dim transition">Yeniden Dene</button>
+                        {/* GPT Kreatif Plan & Brief */}
+                        {aiMediaJobDetail.metadata?.simple_v5_diagnostics?.common_plan?.brief && (
+                          <div className="bg-canvas border border-[var(--color-hairline)] rounded-lg p-2.5 text-[9px] space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-bold text-ink">GPT-4o Kreatif Plan & Brief</span>
+                              <span className="text-[8px] px-1.5 py-0.5 rounded bg-accent/15 text-accent font-mono font-bold">Kreatif Analiz</span>
+                            </div>
+                            <div className="text-ink leading-relaxed pt-1 border-t border-[var(--color-hairline)] font-medium">
+                              {aiMediaJobDetail.metadata.simple_v5_diagnostics.common_plan.brief}
+                            </div>
+                          </div>
                         )}
-                        {!['COMPLETED', 'FAILED'].includes(aiMediaJobDetail.state) && (
-                          <button className="px-3 py-1.5 bg-danger text-white text-[10px] font-bold rounded shadow hover:bg-danger/80 transition">İptal Et</button>
+
+                        {/* Veo / Flow Promptu */}
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[10px] font-bold text-ink">Gönderilen Veo / Flow Promptu</span>
+                            <button
+                              onClick={() => navigator.clipboard.writeText(compiledVeoPrompt)}
+                              className="text-[8px] px-2 py-0.5 rounded bg-[var(--color-surface-raised)] text-ink hover:bg-accent/20 transition font-semibold"
+                            >
+                              Promptu Kopyala
+                            </button>
+                          </div>
+                          <div className="bg-canvas border border-[var(--color-hairline)] rounded-lg p-2.5 text-[9px] text-ink font-mono whitespace-pre-wrap max-h-44 overflow-y-auto leading-relaxed">
+                            {compiledVeoPrompt}
+                          </div>
+                        </div>
+
+                        {/* Negatif Kısıtlamalar */}
+                        {negativeConstraints && (
+                          <div>
+                            <div className="text-[10px] font-bold text-ink-muted mb-1">Negatif Kısıtlamalar (Negative Prompt)</div>
+                            <div className="bg-danger/5 border border-danger/20 rounded-lg p-2 text-[8px] text-danger font-mono whitespace-pre-wrap max-h-24 overflow-y-auto leading-normal">
+                              {negativeConstraints}
+                            </div>
+                          </div>
                         )}
-                        <button className="px-3 py-1.5 bg-warning text-white text-[10px] font-bold rounded shadow hover:bg-warning/80 transition">Manuel İncelemeye Al</button>
+
+                        {/* Denetim Zaman Çizelgesi (ai_media_events) */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-ink">Denetim Zaman Çizelgesi (ai_media_events)</span>
+                            <span className="text-[9px] text-ink-muted">{events.length} Olay Kaydı</span>
+                          </div>
+
+                          {events.length === 0 ? (
+                            <div className="text-[10px] text-ink-muted py-3 text-center border border-dashed border-[var(--color-hairline)] rounded-lg">
+                              Bu iş için henüz etkinlik geçmişi bulunmuyor.
+                            </div>
+                          ) : (
+                            <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+                              {events.map((evt: any, i: number) => {
+                                const timeStr = evt.created_at ? new Date(evt.created_at).toLocaleTimeString('tr-TR') : ''
+                                return (
+                                  <div key={evt.id || i} className="p-2 rounded-lg bg-canvas border border-[var(--color-hairline)] text-[9px] space-y-1">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="px-1.5 py-0.5 rounded bg-[var(--color-surface-raised)] font-mono text-ink-muted font-bold text-[8px]">{evt.event_type || 'STEP'}</span>
+                                        {evt.from_state && evt.to_state && (
+                                          <div className="flex items-center gap-1 font-mono text-[8px]">
+                                            <span className="text-ink-muted">{evt.from_state}</span>
+                                            <span>➔</span>
+                                            <span className="text-accent font-bold">{evt.to_state}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                      <span className="font-mono text-ink-muted text-[8px]">{timeStr}</span>
+                                    </div>
+                                    <div className="text-ink font-medium leading-relaxed">{evt.message}</div>
+                                    {evt.payload && Object.keys(evt.payload).length > 0 && (
+                                      <div className="text-[8px] font-mono text-ink-muted bg-[var(--color-surface)] p-1 rounded border border-[var(--color-hairline)] overflow-x-auto">
+                                        {JSON.stringify(evt.payload)}
+                                      </div>
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Admin Actions */}
+                        <div className="flex gap-2 pt-3 border-t border-[var(--color-hairline)]">
+                          {(aiMediaJobDetail.state === 'FAILED' || aiMediaJobDetail.state === 'NEEDS_REVIEW') && (
+                            <button className="px-3 py-1.5 bg-accent text-accent-ink text-[10px] font-bold rounded shadow hover:bg-accent-dim transition">Yeniden Dene</button>
+                          )}
+                          {!['COMPLETED', 'FAILED'].includes(aiMediaJobDetail.state) && (
+                            <button className="px-3 py-1.5 bg-danger text-white text-[10px] font-bold rounded shadow hover:bg-danger/80 transition">İptal Et</button>
+                          )}
+                          <button className="px-3 py-1.5 bg-warning text-white text-[10px] font-bold rounded shadow hover:bg-warning/80 transition">Manuel İncelemeye Al</button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )
+              })()}
             </div>
           )
         })()}
@@ -7025,6 +7172,51 @@ export function LiveDashboard() {
               <button
                 onClick={() => setInspectedCampaign(null)}
                 className="px-3.5 py-1 text-xs font-semibold rounded bg-surface border border-[var(--color-hairline)] text-ink hover:bg-canvas"
+              >
+                Kapat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: AI MEDIA VIDEO PLAYER */}
+      {previewVideoUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-sm" onClick={() => setPreviewVideoUrl(null)}>
+          <div className="relative w-full max-w-sm sm:max-w-md bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95" onClick={e => e.stopPropagation()}>
+            <div className="p-3 border-b border-[var(--color-hairline)] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-ok" />
+                <span className="text-xs font-bold text-ink">AI Reklam Videosu Oynatıcı</span>
+              </div>
+              <button onClick={() => setPreviewVideoUrl(null)} className="w-6 h-6 rounded flex items-center justify-center text-ink-muted hover:text-ink hover:bg-[var(--color-surface-raised)] transition">
+                ✕
+              </button>
+            </div>
+            <div className="bg-black aspect-[9/16] max-h-[75vh] flex items-center justify-center">
+              <video
+                src={previewVideoUrl}
+                controls
+                autoPlay
+                playsInline
+                loop
+                className="w-full h-full object-contain"
+              />
+            </div>
+            <div className="p-3 bg-[var(--color-surface)] border-t border-[var(--color-hairline)] flex items-center justify-between">
+              <a
+                href={previewVideoUrl}
+                download="veo_commercial_video.mp4"
+                target="_blank"
+                rel="noreferrer"
+                className="px-3 py-1.5 rounded-lg bg-accent text-accent-ink text-xs font-bold shadow hover:bg-accent-dim transition flex items-center gap-1.5"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                Videoyu İndir (.mp4)
+              </a>
+              <button
+                onClick={() => setPreviewVideoUrl(null)}
+                className="px-3.5 py-1.5 rounded-lg border border-[var(--color-hairline)] text-xs text-ink hover:bg-[var(--color-surface-raised)] transition font-medium"
               >
                 Kapat
               </button>

@@ -600,19 +600,39 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
     filterComplexParts.push(`[${currentV}]fade=t=out:st=${outroStart.toFixed(2)}:d=0.5[v_faded]`)
     currentV = 'v_faded'
 
+    const brandName = (finishingSpec?.outroBrandName || finishingSpec?.brandName || '').trim()
+    const slogan = (finishingSpec?.outroSlogan || finishingSpec?.slogan || '').trim()
+    const phone = (finishingSpec?.outroPhone || finishingSpec?.phone || '').trim()
+    const website = (finishingSpec?.outroWebsite || finishingSpec?.website || '').trim()
+    const rawCta = (finishingSpec?.ctaText || finishingSpec?.ctaBadgeText || '').trim()
+    const hasOutroText = Boolean(brandName || slogan || phone || website || rawCta)
+
     if (hasLogo) {
-      // Loop static logo image and fade in smoothly centered on the black background
+      // If outro text is provided, place logo slightly above center; otherwise center perfectly
+      const logoY = hasOutroText ? '(H-h)/2-95' : '(H-h)/2'
       filterComplexParts.push(`[1:v]scale=360:-1,format=rgba,fade=t=in:st=${logoStart.toFixed(2)}:d=0.5:alpha=1[logo_card]`)
-      filterComplexParts.push(`[${currentV}][logo_card]overlay=(W-w)/2:(H-h)/2-70:enable='gte(t,${logoStart.toFixed(2)})':shortest=1[v_after_logo]`)
+      filterComplexParts.push(`[${currentV}][logo_card]overlay=(W-w)/2:${logoY}:enable='gte(t,${logoStart.toFixed(2)})':shortest=1[v_after_logo]`)
       currentV = 'v_after_logo'
     }
 
-    if (hasCta) {
-      const cleanCta = ctaText.replace(/'/g, '').replace(/:/g, '\\:').replace(/[\r\n]+/g, ' ')
+    // Slogan or primary brand tagline (rendered if user specified)
+    if (slogan || rawCta || (hasOutroText && brandName)) {
+      const primaryLine = slogan || rawCta || brandName
+      const cleanPrimary = primaryLine.replace(/'/g, '').replace(/:/g, '\\:').replace(/[\r\n]+/g, ' ')
       filterComplexParts.push(
-        `[${currentV}]drawtext=text='${cleanCta}':fontcolor=0xD1D5DB:fontsize=24:x=(w-text_w)/2:y=(h/2)+90:enable='gte(t,${ctaStart.toFixed(2)})'[v_after_cta]`
+        `[${currentV}]drawtext=text='${cleanPrimary}':fontcolor=0xFFFFFF:fontsize=26:x=(w-text_w)/2:y=(h/2)+65:enable='gte(t,${ctaStart.toFixed(2)})'[v_after_primary]`
       )
-      currentV = 'v_after_cta'
+      currentV = 'v_after_primary'
+    }
+
+    // Contact info (phone number / website / CTA link)
+    if (phone || website) {
+      const contactLine = [phone, website].filter(Boolean).join('  ·  ')
+      const cleanContact = contactLine.replace(/'/g, '').replace(/:/g, '\\:').replace(/[\r\n]+/g, ' ')
+      filterComplexParts.push(
+        `[${currentV}]drawtext=text='${cleanContact}':fontcolor=0xD1D5DB:fontsize=20:x=(w-text_w)/2:y=(h/2)+110:enable='gte(t,${ctaStart.toFixed(2)})'[v_after_contact]`
+      )
+      currentV = 'v_after_contact'
     }
 
     if (filterComplexParts.length > 0) {

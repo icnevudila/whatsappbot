@@ -27,6 +27,34 @@ export async function GET() {
     const workers = rpcData?.workers || []
     const incidents = rpcData?.incidents || []
     const outputs = rpcData?.outputs || []
+    const assets = rpcData?.assets || []
+    const events = rpcData?.events || []
+
+    // Index assets by job_id
+    const assetsByJobId: Record<string, any[]> = {}
+    for (const a of assets) {
+      if (a.job_id) {
+        if (!assetsByJobId[a.job_id]) assetsByJobId[a.job_id] = []
+        assetsByJobId[a.job_id].push(a)
+      }
+    }
+
+    // Index events by job_id
+    const eventsByJobId: Record<string, any[]> = {}
+    for (const e of events) {
+      if (e.job_id) {
+        if (!eventsByJobId[e.job_id]) eventsByJobId[e.job_id] = []
+        eventsByJobId[e.job_id].push(e)
+      }
+    }
+
+    // Index outputs by job_id
+    const outputsByJobId: Record<string, any> = {}
+    for (const out of outputs) {
+      if (out.job_id && !outputsByJobId[out.job_id]) {
+        outputsByJobId[out.job_id] = out
+      }
+    }
 
     // Compute KPI overview
     const allJobs = jobs || []
@@ -43,11 +71,21 @@ export async function GET() {
     const totalFinished = allJobs.filter((j: any) => ['COMPLETED', 'FAILED', 'NEEDS_REVIEW'].includes(j.state))
     const successRate = totalFinished.length > 0 ? Math.round((allJobs.filter((j: any) => j.state === 'COMPLETED').length / totalFinished.length) * 100) : 0
 
-    // Map org names into jobs
-    const mappedJobs = allJobs.map((j: any) => ({
-      ...j,
-      org_name: j.organizations?.name || null,
-    }))
+    // Map org names, assets, events, and output into jobs
+    const mappedJobs = allJobs.map((j: any) => {
+      const jobAssets = assetsByJobId[j.id] || []
+      const jobEvents = eventsByJobId[j.id] || []
+      const jobOutput = outputsByJobId[j.id] || null
+
+      return {
+        ...j,
+        actual_ingredient_count: j.actual_ingredient_count || jobAssets.length || 0,
+        org_name: j.organizations?.name || null,
+        attached_assets: jobAssets,
+        events: jobEvents,
+        output: jobOutput,
+      }
+    })
 
     // Red Alarms (zero-tolerance counters)
     const alarms = {
@@ -115,6 +153,8 @@ export async function GET() {
       queue,
       incidents: incidents || [],
       outputs: outputs || [],
+      assets: assets || [],
+      events: events || [],
       engine_health: { status: 'ok' },
       db_health: 'ok',
       ffmpeg_health: 'ok',
