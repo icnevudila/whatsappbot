@@ -30,8 +30,8 @@ function planBeats(
 
   const plans: Partial<Record<AdFormatType, [string, string, string]>> = {
     FAST_SALES: [
-      `İlk saniyede ${product} üzerinde net form detayı; ${camera}.`,
-      claim ? `Doğrulanmış tek faydayı görsel olarak destekleyen kullanım anı: ${claim}.` : 'Yalnız görünür ürün detaylarını gösteren hızlı gerçek kullanım anı.',
+      `Sahnede insan figürü veya insan eli kesinlikle yer almaz; 35mm sinematik stüdyo/saha ışıklandırmasıyla ${product} ürününün geometrisine, dokusuna ve malzeme kalitesine odaklanan akıcı kamera çekimi; ${camera}.`,
+      claim ? `Doğrulanmış tek ürün özelliğini gösteren net detay kadrajı: ${claim}.` : `Sahnede insan figürü yoktur; ürünün form detayları, yüzey işçiliği ve estetiği net biçimde sergilenir; ${product} referansına birebir sadık kalınır.`,
       commonClose,
     ],
     PRODUCT_USAGE: [
@@ -217,8 +217,14 @@ ${revisionType === 'refresh' ? 'NOT: Önceki kalıplardan tamamen farklı, özg�
       geometryLock = 'CRITICAL GEOMETRY LOCK FOR BOFE SPRAYER: Preserve the authoritative light blue backpack sprayer tank geometry, solid tank body, black strap attachments, pressure gauge, brass lance wand, and the canonical "bofe" brand mark physically printed across the tank body. ZERO liquid leakage, ZERO warped plastic, and ZERO fabricated floating letters.'
     }
 
+    const isHumanStyle = adFormat === 'PRODUCT_USAGE' || adFormat === 'SOCIAL_UGC'
+    const formatNegatives = !isHumanStyle
+      ? 'human, person, actor, model, hands, fingers, face, body'
+      : 'extra fingers, missing fingers, deformed hands, fused fingers, distorted human anatomy, mutant limbs, duplicate head'
+
     const strictNegatives = [
-      'floating text, text overlays, subtitles, captions, on-screen text, words on screen, burned-in typography, lower third graphics, synthetic titles, credits, floating interface, watermark, invented foreign brand names, gibberish lettering, duplicate product, warped geometry, melting, flicker, identity drift, extra fingers, missing fingers, deformed hands, fused fingers, distorted human anatomy, mutant limbs',
+      'floating text, text overlays, subtitles, captions, on-screen text, words on screen, burned-in typography, lower third graphics, synthetic titles, credits, floating interface, watermark, invented foreign brand names, gibberish lettering, duplicate product, warped geometry, melting, flicker, identity drift',
+      formatNegatives,
       isBrick ? 'holes on side surfaces, perforations on multiple faces, side cavities, holes on top surface while front also has holes' : '',
       ...affordance.negativeEnvironmentConstraints,
     ].filter(Boolean).join(', ')
@@ -232,20 +238,20 @@ ${revisionType === 'refresh' ? 'NOT: Önceki kalıplardan tamamen farklı, özg�
       `[CINEMATIC TAKE & BEATS]: Single unbroken 35mm fluid camera take without jump cuts:`,
       ...beats.map((beat) => `${beat.start.toFixed(1)}-${beat.end.toFixed(1)}s (${beat.purpose}): ${beat.visual}`),
       `[PHYSICAL CONSISTENCY & GEOMETRY LOCK]: ${geometryLock} Product keeps identical physical identity across entire take.`,
-      `[VOICEOVER AUDIO ONLY]: Spoken Turkish voiceover narration: "${approvedSpokenLine}". Off-camera voiceover audio only. ZERO ON-SCREEN SUBTITLES, ZERO ON-SCREEN CAPTIONS, ZERO FLOATING TEXT.`,
+      `[AUDIO]: Pure ambient environmental sound effects only (${isBrick ? 'construction foley, mortar clink, brick placement' : isSprayer ? 'subtle garden breeze, mist spray sound' : 'natural environmental foley'}). SILENT SCENE, ZERO ON-CAMERA SPEECH, ZERO ON-SCREEN SUBTITLES, ZERO ON-SCREEN CAPTIONS. (Official Turkish voiceover is applied in post-production).`,
       `[RAW DIFFUSION POLICY]: Clean commercial footage with zero floating text, zero synthetic overlays, zero burned-in titles. (Official brand logo and call to action are deterministically composited in post-production).`,
       `[NEGATIVE CONSTRAINTS]: ${strictNegatives}`,
     ].join('\n')
 
     const formatConceptTitles: Record<string, string> = {
-      FAST_SALES: 'Dinamik ve Satış Odaklı Reklam',
-      PRODUCT_USAGE: 'Kullanım ve Performans Tanıtımı',
+      FAST_SALES: 'Sadece Ürün (Vitrin)',
+      PRODUCT_USAGE: 'İnsanlı Tanıtım (Usta & Saha)',
       PROBLEM_SOLUTION: 'Çözüm ve Fayda Odaklı Tanıtım',
-      PREMIUM: 'Prestijli ve Sinematik Tanıtım',
-      SOCIAL_UGC: 'Doğal ve Samimi Deneyim Paylaşımı',
-      OFFER: 'Özel Kampanya ve Fırsat Duyurusu',
-      OFFER_DRIVEN: 'Özel Kampanya ve Fırsat Duyurusu',
-      AUTO: 'Profesyonel Ürün Tanıtımı',
+      PREMIUM: 'Kurumsal & Prestij',
+      SOCIAL_UGC: 'Doğal Deneyim Tanıtımı',
+      OFFER: 'Fırsat & Kampanya',
+      OFFER_DRIVEN: 'Fırsat & Kampanya',
+      AUTO: 'Sadece Ürün (Vitrin)',
     }
     const conceptTitle = formatConceptTitles[adFormat] || 'Profesyonel Ürün Tanıtımı'
     const creativeIdea = `${productName} — ${conceptTitle}`

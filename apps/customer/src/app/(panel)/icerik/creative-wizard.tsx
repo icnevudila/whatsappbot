@@ -43,10 +43,10 @@ const WIZARD_STEPS: { id: Step; label: string }[] = [
 ]
 
 const FAST_FORMAT_OPTIONS = [
-  { id: 'FAST_SALES' as AdFormatType, label: 'Hızlı Satış & Fırsat', tag: 'Önerilen', desc: 'Dönüşüm odaklı, doğrudan harekete geçiren reklam dili.' },
-  { id: 'PRODUCT_USAGE' as AdFormatType, label: 'Ürün Tanıtımı & Fayda', desc: 'Ürünün kalitesini ve pratik kullanımını öne çıkarır.' },
-  { id: 'AUTO' as AdFormatType, label: 'Kısa & Vurucu Slogan', desc: 'Akılda kalıcı, net ve dinamik marka sloganı.' },
-  { id: 'PREMIUM' as AdFormatType, label: 'Kurumsal & Prestij', desc: 'Güven veren, seçkin ve profesyonel marka ağırlığı.' },
+  { id: 'FAST_SALES' as AdFormatType, label: 'Sadece Ürün (Vitrin)', tag: 'Önerilen', desc: 'İnsansız; ürünün formuna, dokusuna ve kalitesine odaklanır.' },
+  { id: 'PRODUCT_USAGE' as AdFormatType, label: 'İnsanlı Tanıtım (Usta & Saha)', desc: 'Ürünü tutan, kullanan veya uygulayan usta/uzman ile gerçek kullanım anı.' },
+  { id: 'PREMIUM' as AdFormatType, label: 'Kurumsal & Prestij', desc: 'Tesis veya şantiye sahasında seçkin marka çekimi.' },
+  { id: 'AUTO' as AdFormatType, label: 'Dinamik & Vurucu', desc: 'Hızlı tempolu, dikkat çekici ve akılda kalıcı reklam kurgusu.' },
 ]
 
 export function CreativeWizard({
@@ -67,7 +67,7 @@ export function CreativeWizard({
   const [referenceAssets, setReferenceAssets] = useState<WizardReferenceAsset[]>([])
   
   // Step 2: Campaign & Format Router
-  const [adFormat, setAdFormat] = useState<AdFormatType>('AUTO')
+  const [adFormat, setAdFormat] = useState<AdFormatType>(() => (initialFormat as AdFormatType) || 'FAST_SALES')
   const [environmentPreset, setEnvironmentPreset] = useState<'auto' | 'garden' | 'studio' | 'kitchen' | 'office' | 'workshop' | 'construction'>('auto')
   const [motionStyle, setMotionStyle] = useState<'studio_orbit' | 'real_usage' | 'macro_detail'>('real_usage')
   const [offerDetails, setOfferDetails] = useState('')
@@ -1095,8 +1095,10 @@ export function CreativeWizard({
                         <p className="font-semibold text-[#111b21] truncate">{activeProductName}</p>
                       </div>
                       <div>
-                        <span className="text-[#667781]">Format:</span>
-                        <p className="font-semibold text-[#111b21]">9:16 Dikey (8 sn)</p>
+                        <span className="text-[#667781]">Tarz:</span>
+                        <p className="font-semibold text-[#008069] truncate">
+                          {FAST_FORMAT_OPTIONS.find((f) => f.id === adFormat)?.label || 'Sadece Ürün (Vitrin)'}
+                        </p>
                       </div>
                       <div>
                         <span className="text-[#667781]">Altyazı:</span>

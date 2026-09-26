@@ -108,13 +108,12 @@ export type AdFormatType =
   | 'OFFER_DRIVEN'
 
 export const USER_STYLE_OPTIONS: { id: UserStylePreference; label: string; tag?: string; desc: string }[] = [
-  { id: 'AUTO', label: 'Otomatik — Önerilen', tag: 'Önerilen', desc: 'Sektör ve ürün yapınıza göre en uygun reklam kurgusunu yapay zeka belirler.' },
-  { id: 'FAST_SALES', label: 'Hızlı ve satış odaklı', desc: 'Doğrudan faydaya odaklanan, dinamik tempolu ve net çağrılı reklam.' },
-  { id: 'PRODUCT_USAGE', label: 'Ürün kullanımını göster', desc: 'Ürünün detaylarını, işlevini ve fiziksel performansını öne çıkaran kurgu.' },
-  { id: 'PROBLEM_SOLUTION', label: 'Sorun → Çözüm', desc: 'Hedef kitlenin yaşadığı bir problemi tespit edip ürünü kesin çözüm olarak sunar.' },
-  { id: 'PREMIUM', label: 'Premium / Sinematik', desc: 'Yüksek prestij, kurumsal güven ve sinematik görsel atmosfer.' },
-  { id: 'SOCIAL_UGC', label: 'Samimi / Konuşan kişi', desc: 'Kullanıcı deneyimi havasında, doğal ve güven veren samimi anlatım.' },
-  { id: 'OFFER', label: 'Kampanya odaklı', desc: 'Özel fiyat, indirim veya sınırlı süreli fırsatı merkeze alan duyuru.' },
+  { id: 'FAST_SALES', label: 'Sadece Ürün (Vitrin)', tag: 'Önerilen', desc: 'İnsansız; ürünün detayına, dokusuna ve malzeme kalitesine odaklanır.' },
+  { id: 'PRODUCT_USAGE', label: 'İnsanlı Tanıtım (Usta & Saha)', desc: 'Ürünü kullanan veya uygulayan uzman ile gerçek kullanım anı.' },
+  { id: 'PREMIUM', label: 'Kurumsal & Prestij', desc: 'Tesis, şantiye veya mimari atmosferde seçkin marka duruşu.' },
+  { id: 'AUTO', label: 'Dinamik & Vurucu', desc: 'Hızlı tempolu, dikkat çekici ve akılda kalıcı reklam kurgusu.' },
+  { id: 'PROBLEM_SOLUTION', label: 'Sorun → Çözüm', desc: 'Hedef kitlenin ihtiyacını tespit edip ürünü kesin çözüm olarak sunar.' },
+  { id: 'OFFER', label: 'Fırsat & Kampanya', desc: 'Özel fiyat, indirim veya sınırlı süreli fırsatı merkeze alan duyuru.' },
 ]
 
 export const AD_FORMAT_OPTIONS = USER_STYLE_OPTIONS

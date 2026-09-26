@@ -603,25 +603,31 @@ async function materializeTenantAsset(
   filename = filename.replace(/[^a-zA-Z0-9_\-\.]/g, '') || `asset_${Date.now()}.png`
   const targetPath = join(targetDir, filename)
 
-  // 3. If target file already exists in tenant dir, return it
+  // 3. If target file already exists in tenant dir and matches expected sha, return it
   if (fs.existsSync(targetPath)) {
     const bytes = fs.readFileSync(targetPath)
     const sha = createHash('sha256').update(bytes).digest('hex')
-    return { filePath: targetPath, sha256: sha }
+    if (!asset.sha256 || sha.toLowerCase() === String(asset.sha256).toLowerCase()) {
+      return { filePath: targetPath, sha256: sha }
+    }
+    // Stale cached asset detected, unlink so fresh asset can be materialized
+    try { fs.unlinkSync(targetPath) } catch {}
   }
 
   // 4. Try copying from local omnistudio output pool
   const candidateLocalPaths = [
-    `/shared/outputs/${filename}`,
     `/opt/whatsappbot/services/omnistudio/docker/data/outputs/${filename}`,
+    `/shared/outputs/${filename}`,
   ]
   for (const lp of candidateLocalPaths) {
     if (fs.existsSync(lp)) {
       try {
-        fs.copyFileSync(lp, targetPath)
-        const bytes = fs.readFileSync(targetPath)
+        const bytes = fs.readFileSync(lp)
         const sha = createHash('sha256').update(bytes).digest('hex')
-        return { filePath: targetPath, sha256: sha }
+        if (!asset.sha256 || sha.toLowerCase() === String(asset.sha256).toLowerCase()) {
+          fs.copyFileSync(lp, targetPath)
+          return { filePath: targetPath, sha256: sha }
+        }
       } catch {}
     }
   }
@@ -642,9 +648,11 @@ async function materializeTenantAsset(
         const ab = await res.arrayBuffer()
         const buf = Buffer.from(ab)
         if (buf.length > 0) {
-          fs.writeFileSync(targetPath, buf)
           const sha = createHash('sha256').update(buf).digest('hex')
-          return { filePath: targetPath, sha256: sha }
+          if (!asset.sha256 || sha.toLowerCase() === String(asset.sha256).toLowerCase()) {
+            fs.writeFileSync(targetPath, buf)
+            return { filePath: targetPath, sha256: sha }
+          }
         }
       }
     } catch {}
