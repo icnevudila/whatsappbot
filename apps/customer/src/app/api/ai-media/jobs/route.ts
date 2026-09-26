@@ -267,7 +267,7 @@ export async function POST(req: NextRequest) {
         org_id: org.id,
         title: title || `${org.name || 'İşletme'} Reklam Videosu`,
         prompt: lockedProviderPrompt || 'Commercial Video Ad',
-        model: 'veo-fast',
+        model: (body.model && body.model !== 'veo-fast' && body.model !== 'omni-lite') ? body.model : 'veo-lite',
         aspect_ratio: '9:16',
         duration_seconds: 8,
         priority: 0,

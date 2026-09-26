@@ -18,6 +18,7 @@ import logging
 import subprocess
 import hashlib
 import asyncio
+import re
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from redactor import redact_har, redact_string
@@ -33,6 +34,15 @@ UPSTREAM_CLI_PATH = Path(os.environ.get("GFLOW_CLI_PATH", "/app/upstream_gflow/g
 OUTPUTS_BASE.mkdir(parents=True, exist_ok=True)
 INCIDENTS_BASE.mkdir(parents=True, exist_ok=True)
 PROFILES_BASE.mkdir(parents=True, exist_ok=True)
+os.environ.setdefault("GFLOW_CLI_HOME", str(PROFILES_BASE))
+
+_SAFE_ACCOUNT_ID = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$")
+_PROFILE_COPY_IGNORES = {
+    "SingletonLock", "SingletonCookie", "SingletonSocket", "LOCK",
+    "Cache", "Code Cache", "GPUCache", "GrShaderCache", "ShaderCache",
+    "DawnGraphiteCache", "DawnWebGPUCache", "Crashpad", "BrowserMetrics",
+    "blob_storage", "optimization_guide_model_store",
+}
 
 class FlowExecutionError(Exception):
     def __init__(self, code: str, message: str, incident: Optional[Dict[str, Any]] = None):
@@ -40,6 +50,96 @@ class FlowExecutionError(Exception):
         self.code = code
         self.message = message
         self.incident = incident
+
+
+def _profile_copy_ignore(_directory: str, names: List[str]) -> set[str]:
+    ignored = set()
+    for name in names:
+        if name in _PROFILE_COPY_IGNORES or name.startswith("Singleton"):
+            ignored.add(name)
+    return ignored
+
+
+def synchronize_account_profile(
+    account_id: str,
+    source_profile_path: Path,
+    expected_email: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Atomically replace one generation profile from a verified Hetzner login profile.
+
+    The target is protected by gflow-cli's kernel-backed ProfileLease. The existing
+    profile stays untouched unless the staged copy proves a live Flow session and,
+    when supplied, the authenticated email matches exactly.
+    """
+    if not _SAFE_ACCOUNT_ID.fullmatch(account_id or ""):
+        raise FlowExecutionError("INVALID_ACCOUNT", "Invalid Flow account id.")
+    source = source_profile_path.resolve()
+    if not source.is_dir():
+        raise FlowExecutionError("SOURCE_PROFILE_NOT_FOUND", f"Source profile not found for {account_id}.")
+
+    target = PROFILES_BASE / f"profile_{account_id}"
+    staging = PROFILES_BASE / f".sync_{account_id}_{uuid.uuid4().hex[:10]}"
+    previous = PROFILES_BASE / f".previous_{account_id}"
+
+    try:
+        from gflow_cli.profile_lease import ProfileLease
+        from gflow_cli.auth.verification import verify_flow_profile
+    except Exception as exc:
+        raise FlowExecutionError("PROFILE_SYNC_UNAVAILABLE", f"gflow profile verifier unavailable: {type(exc).__name__}") from exc
+
+    with ProfileLease(target):
+        try:
+            shutil.copytree(source, staging, ignore=_profile_copy_ignore, symlinks=False)
+            (staging / ".gflow_browser_strategy").write_text("chrome\n", encoding="utf-8")
+            sanitize_chrome_profile(staging)
+
+            async def _verify():
+                return await verify_flow_profile(staging, source="mesajify_profile_sync")
+
+            loop = asyncio.new_event_loop()
+            try:
+                status = loop.run_until_complete(_verify())
+            finally:
+                loop.close()
+
+            actual_email = (status.user_email or "").lower().strip() or None
+            wanted_email = (expected_email or "").lower().strip() or None
+            if not status.authenticated:
+                raise FlowExecutionError("FLOW_AUTH_REQUIRED", status.detail)
+            if wanted_email and actual_email != wanted_email:
+                raise FlowExecutionError(
+                    "FLOW_ACCOUNT_MISMATCH",
+                    f"Authenticated Flow account does not match the selected slot ({account_id}).",
+                )
+
+            manifest = {
+                "account_id": account_id,
+                "email": actual_email,
+                "source": source.name,
+                "synced_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "verified": True,
+            }
+            (staging / ".mesajify_profile_sync.json").write_text(
+                json.dumps(manifest, indent=2), encoding="utf-8"
+            )
+
+            if previous.exists():
+                shutil.rmtree(previous)
+            if target.exists():
+                target.rename(previous)
+            staging.rename(target)
+
+            return {
+                "ok": True,
+                "account_id": account_id,
+                "email": actual_email,
+                "profile_path": str(target),
+                "synced_at": manifest["synced_at"],
+                "backup_path": str(previous) if previous.exists() else None,
+            }
+        finally:
+            if staging.exists():
+                shutil.rmtree(staging, ignore_errors=True)
 
 def sanitize_chrome_profile(profile_path: Path):
     """Sanitizes Chrome preferences to prevent crash bubbles and removes stale Singleton locks."""
@@ -207,7 +307,7 @@ def execute_generation_job(payload: Dict[str, Any]) -> Dict[str, Any]:
     org_id = payload.get("org_id", "unknown_org")
     prompt = payload.get("prompt", "")
     aspect_ratio = payload.get("aspect_ratio", "9:16")
-    model = payload.get("model", "veo-fast")
+    model = payload.get("model", "veo-lite")
     duration = payload.get("duration", 8)
     assets: List[Dict[str, Any]] = payload.get("assets", [])
 
@@ -456,7 +556,13 @@ def execute_generation_job(payload: Dict[str, Any]) -> Dict[str, Any]:
             error_code = "FLOW_EXECUTION_FAILED"
             if "FlowAgentUiError" in full_output or "AGENT_UI_DETECTED" in full_output:
                 error_code = "AGENT_UI_DETECTED"
-            elif "CreditLimit" in full_output:
+            elif (
+                "CreditLimit" in full_output
+                or "InsufficientCreditsError" in full_output
+                or "insufficient-credits" in full_output
+                or "Insufficient Flow credits" in full_output
+                or return_code == 37
+            ):
                 error_code = "CREDIT_LIMIT_REACHED"
             elif "ProfileLockedError" in full_output or "Profile locked" in full_output:
                 if "Target page, context or browser has been closed" in full_output or "TargetClosedError" in full_output:
@@ -500,4 +606,3 @@ def execute_generation_job(payload: Dict[str, Any]) -> Dict[str, Any]:
             "verified_assets": verified_assets,
             "verified": True
         }
-

@@ -78,7 +78,7 @@ export function buildFlowVeoProviderPayload(request: VideoGenerationRequest) {
     prompt: request.prompt,
     approved_dialogue: request.approvedDialogue,
     aspect_ratio: request.aspectRatio,
-    model: 'veo-fast',
+    model: ((request as any).model && (request as any).model !== 'veo-fast' && (request as any).model !== 'omni-lite') ? (request as any).model : 'veo-lite',
     duration: request.durationSeconds,
     assets: request.assets,
     expected_reference_ids: request.assets.map(asset => asset.asset_id),

@@ -270,7 +270,7 @@ async function runJobExecution(job: any, accountId: string) {
       account_id: accountId,
       prompt: job.prompt,
       aspect_ratio: job.aspect_ratio || '9:16',
-      model: job.model || 'veo-fast',
+      model: (job.model && job.model !== 'veo-fast' && job.model !== 'omni-lite') ? job.model : 'veo-lite',
       duration: job.duration_seconds || 8,
       assets: (assets || []).map((a: any) => ({
         asset_id: a.id,
@@ -517,15 +517,41 @@ async function runJobExecution(job: any, accountId: string) {
     } catch (crErr) {
       console.warn('[orchestrator] creatives update to failed warning:', crErr)
     }
+
+    const isCreditOrRateLimit =
+      err.message?.includes('CREDIT_LIMIT_REACHED') ||
+      err.message?.includes('return code 37') ||
+      err.message?.includes('InsufficientCreditsError') ||
+      err.message?.includes('insufficient-credits') ||
+      err.message?.includes('CreditLimit') ||
+      err.message?.includes('RATE_LIMIT')
+    if (isCreditOrRateLimit) {
+      await supabase
+        .from('flow_accounts')
+        .update({ status: 'rate_limited', current_job_id: null, updated_at: new Date().toISOString() })
+        .eq('id', accountId)
+    }
   } finally {
     // Release Heavy Mutex Lock
     await hostResourceGuard.releaseHeavyLock(supabase, job.id)
 
-    // Release Flow account
-    await supabase
+    // Release Flow account (do not revert rate_limited/needs_reauth to idle)
+    const { data: currentAcc } = await supabase
       .from('flow_accounts')
-      .update({ status: 'idle', current_job_id: null, updated_at: new Date().toISOString() })
+      .select('status')
       .eq('id', accountId)
+      .single()
+    if (currentAcc && ['rate_limited', 'needs_reauth', 'blocked', 'agent_ui_blocked'].includes(currentAcc.status)) {
+      await supabase
+        .from('flow_accounts')
+        .update({ current_job_id: null, updated_at: new Date().toISOString() })
+        .eq('id', accountId)
+    } else {
+      await supabase
+        .from('flow_accounts')
+        .update({ status: 'idle', current_job_id: null, updated_at: new Date().toISOString() })
+        .eq('id', accountId)
+    }
   }
 }
 

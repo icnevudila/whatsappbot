@@ -58,7 +58,7 @@ export class RealHttpGFlowProvider implements IGFlowProvider {
       prompt: req.prompt,
       approved_dialogue: req.approved_dialogue,
       aspect_ratio: req.aspect_ratio || '9:16',
-      model: req.model || 'veo-fast',
+      model: (req.model && req.model !== 'veo-fast' && req.model !== 'omni-lite') ? req.model : 'veo-lite',
       duration: req.duration || 8,
       project_id: projectIdToSend,
       is_recovery: false,
@@ -227,7 +227,7 @@ export class RealHttpGFlowProvider implements IGFlowProvider {
             supportsMovieScene: false,
             supportsChain: false,
             supportsStartEndFrames: false, // Sept 2026 UI does not support start/end frames
-            preferredModel: 'veo-fast',
+            preferredModel: 'veo-lite',
           }
         }
       }
@@ -244,7 +244,7 @@ export class RealHttpGFlowProvider implements IGFlowProvider {
       supportsMovieScene: false,
       supportsChain: false,
       supportsStartEndFrames: false,
-      preferredModel: 'veo-fast',
+      preferredModel: 'veo-lite',
     }
   }
 }

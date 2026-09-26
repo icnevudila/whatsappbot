@@ -495,7 +495,9 @@ export function LiveDashboard() {
     'data_requests',
     'organizations',
     'messages',
+    'quick_send',
     'campaigns',
+    'queue',
     'contacts',
     'baileys',
     'jobs',
@@ -1798,9 +1800,14 @@ export function LiveDashboard() {
       <main className="flex-1 max-w-7xl w-full mx-auto p-2.5 sm:p-5 space-y-3 sm:space-y-4">
         {/* Live Active Render Alert Banner */}
         {(() => {
-          const activeJobs = (globalAiMedia?.jobs || []).filter((j: any) =>
-            ['LEASED', 'PREPARING_ENV', 'OPENING_PROJECT', 'ATTACHING_INGREDIENTS', 'INGREDIENTS_VERIFIED', 'GENERATING', 'POLLING_FLOW', 'DOWNLOADING_MEDIA', 'MEDIA_DOWNLOADED', 'FFPROBE_INSPECTING', 'SHA256_VERIFYING', 'VISUAL_QA_EVALUATING'].includes(j.state)
-          )
+          const nowMs = Date.now()
+          const activeJobs = (globalAiMedia?.jobs || []).filter((j: any) => {
+            if (!['LEASED', 'PREPARING_ENV', 'OPENING_PROJECT', 'ATTACHING_INGREDIENTS', 'INGREDIENTS_VERIFIED', 'GENERATING', 'POLLING_FLOW', 'DOWNLOADING_MEDIA', 'MEDIA_DOWNLOADED', 'FFPROBE_INSPECTING', 'SHA256_VERIFYING', 'VISUAL_QA_EVALUATING'].includes(j.state)) {
+              return false
+            }
+            const updatedTime = j.updated_at ? new Date(j.updated_at).getTime() : (j.created_at ? new Date(j.created_at).getTime() : 0)
+            return nowMs - updatedTime < 15 * 60 * 1000
+          })
           if (activeJobs.length === 0) return null
           const cur = activeJobs[0]
           return (
@@ -2011,7 +2018,9 @@ export function LiveDashboard() {
                 { id: 'data_requests', label: 'Veri Talepleri', badge: data?.listRequests?.length, isPending: (data?.listRequests?.filter(r => r.status === 'pending').length || 0) > 0, pendingCount: data?.listRequests?.filter(r => r.status === 'pending').length || 0 },
                 { id: 'organizations', label: 'Firmalar & Kotalar', badge: data?.organizations?.length },
                 { id: 'messages', label: 'Mesajlar & WhatsApp', badge: (data?.messages?.length || 0) + (data?.aiSuggestions?.length || 0) },
+                { id: 'quick_send', label: 'Hızlı Test Gönder', badge: null },
                 { id: 'campaigns', label: 'Kampanyalar', badge: data?.campaigns?.length },
+                { id: 'queue', label: 'Gönderim Sırası', badge: data?.targets?.filter(t => t.status === 'queued')?.length || null },
                 { id: 'contacts', label: 'Rehber & Kişi Havuzu', badge: data?.contactLists?.length },
                 { id: 'baileys', label: 'WhatsApp Hatları & Altyapı', badge: data?.accounts?.length, isAlert: (data?.accounts?.filter(a => a.status !== 'connected').length || 0) > 0 },
                 { id: 'jobs', label: 'Görev Kuyruğu & Hatalar', badge: data?.jobs?.length, errorBadge: (summary.failedJobs ?? 0) > 0 ? summary.failedJobs : null },
@@ -4732,8 +4741,8 @@ export function LiveDashboard() {
             PENDING: { label: 'Bekliyor', color: 'bg-gray-400' },
             VALIDATING_INPUTS: { label: 'Girdiler Doğrulanıyor', color: 'bg-blue-400' },
             QUEUED: { label: 'Kuyrukta', color: 'bg-yellow-500' },
-            LEASED: { label: 'Hesaba Atandı', color: 'bg-indigo-400' },
-            PREPARING_ENV: { label: 'Ortam Hazırlanıyor', color: 'bg-indigo-500' },
+            LEASED: { label: 'Hesaba Atandı', color: 'bg-blue-500' },
+            PREPARING_ENV: { label: 'Ortam Hazırlanıyor', color: 'bg-sky-600' },
             OPENING_PROJECT: { label: 'Proje Açılıyor', color: 'bg-sky-400' },
             ATTACHING_INGREDIENTS: { label: 'Çipler Bağlanıyor', color: 'bg-sky-500' },
             INGREDIENTS_VERIFIED: { label: 'Çipler Doğrulandı', color: 'bg-teal-400' },

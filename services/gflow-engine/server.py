@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field
 
 from driver import (
     execute_generation_job,
+    synchronize_account_profile,
     FlowExecutionError,
     PROFILES_BASE,
     OUTPUTS_BASE,
@@ -136,7 +137,7 @@ class GenerateRequest(BaseModel):
     account_id: str = "account-01"
     prompt: str
     aspect_ratio: str = "9:16"
-    model: str = "veo-fast"
+    model: str = "veo-lite"
     duration: int = 8
     project_id: Optional[str] = None
     is_recovery: bool = False
@@ -157,6 +158,11 @@ class GenerateResponse(BaseModel):
     actual_ingredient_count: int
     verified_assets: List[Dict[str, Any]] = Field(default_factory=list)
     verified: bool
+
+
+class ProfileSyncRequest(BaseModel):
+    source_port: int
+    expected_email: Optional[str] = None
 
 
 class ErrorResponse(BaseModel):
@@ -294,6 +300,47 @@ async def refresh_account(account_id: str):
         "status": "refresh_requested",
         "message": "Session refresh will occur on next job execution.",
     }
+
+
+@app.post("/v1/accounts/{account_id}/sync-profile")
+async def sync_account_profile(account_id: str, req: ProfileSyncRequest):
+    """Import a VNC/CDP login profile into the matching Flow generation slot.
+
+    Source paths are fixed server-side; callers cannot provide arbitrary filesystem
+    paths. The existing generation profile is replaced only after live Flow auth and
+    expected-email verification succeed.
+    """
+    source_paths = {
+        9222: Path("/source-profiles/port-9222"),
+        9223: Path("/source-profiles/port-9223"),
+        9224: Path("/source-profiles/port-9224"),
+        9225: Path("/source-profiles/port-9225"),
+    }
+    source = source_paths.get(req.source_port)
+    if source is None:
+        raise HTTPException(status_code=400, detail="source_port must be between 9222 and 9225")
+
+    account_lock = get_account_lock(account_id)
+    if account_lock.locked():
+        raise HTTPException(status_code=409, detail=f"Account {account_id} is currently busy")
+
+    async with account_lock:
+        loop = asyncio.get_event_loop()
+        try:
+            result = await loop.run_in_executor(
+                None,
+                synchronize_account_profile,
+                account_id,
+                source,
+                req.expected_email,
+            )
+            return result
+        except FlowExecutionError as exc:
+            status_code = 409 if exc.code in {"PROFILE_LOCKED", "ACCOUNT_BUSY"} else 422
+            raise HTTPException(
+                status_code=status_code,
+                detail={"code": exc.code, "message": exc.message},
+            )
 
 
 @app.get("/v1/workers/health")

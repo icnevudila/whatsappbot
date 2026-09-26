@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireActiveOrg } from '@/lib/org'
+import { checkIsAuthenticated } from '@/app/canli-takip/auth'
+import { createSupabaseServiceClient } from '@/lib/supabase/service'
+import { createClient } from '@supabase/supabase-js'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -14,9 +17,9 @@ const GATEWAY_HOST =
  * GET /api/ai-media/outputs/[outputId]
  * Delivers authorized, tenant-isolated media playback stream for completed video jobs.
  * Enforces strict fail-closed security:
- * 1. Requires authenticated session and active organization.
- * 2. Invariant: output.org_id === authenticated_org.id
- * 3. Output must be marked verified === true and is_approved === true.
+ * 1. Requires authenticated session and active organization (or Super Admin session).
+ * 2. Invariant: output.org_id === authenticated_org.id (bypassed for verified Super Admin).
+ * 3. Output must be marked verified === true and is_approved === true (bypassed for Super Admin QA).
  * 4. Proxies byte-range requests (HTTP 206) for smooth scrubbing in video player.
  */
 export async function GET(
@@ -24,33 +27,75 @@ export async function GET(
   { params }: { params: Promise<{ outputId: string }> }
 ) {
   try {
-    const { org, supabase } = await requireActiveOrg()
     const { outputId } = await params
 
     if (!outputId) {
       return new NextResponse('Output ID eksik.', { status: 400 })
     }
 
+    const isCanliTakipAdmin = await checkIsAuthenticated().catch(() => false)
+    let isSuperAdmin = isCanliTakipAdmin
+    let org: any = null
+    let supabase: any = null
+
+    const activeRes = await requireActiveOrg().catch(() => null)
+    if (activeRes) {
+      org = activeRes.org
+      supabase = activeRes.supabase
+      if (activeRes.isPlatformAdmin) {
+        isSuperAdmin = true
+      }
+    }
+
+    if (!isSuperAdmin && !org) {
+      return new NextResponse('Yetkisiz: Giriş yapılmadı.', { status: 401 })
+    }
+
+    if (!supabase) {
+      const serviceClient = createSupabaseServiceClient()
+      supabase = serviceClient || createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://rnkrjmblgcdqlyslbhob.supabase.co',
+        process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_S2-QnqQVsshYjQ7PR5lOxg_pYeS9gzB'
+      )
+    }
+
     // 1. Fetch Output Record from Supabase
-    const { data: output, error } = await (supabase as any)
+    let output: any = null
+    const { data, error } = await (supabase as any)
       .from('ai_media_outputs')
       .select('id, job_id, org_id, file_path, storage_url, verified, is_approved, sha256, byte_size')
       .eq('id', outputId)
       .single()
 
-    if (error || !output) {
+    if (error || !data) {
+      const serviceClient = createSupabaseServiceClient()
+      if (serviceClient && serviceClient !== supabase) {
+        const { data: sData } = await serviceClient
+          .from('ai_media_outputs')
+          .select('id, job_id, org_id, file_path, storage_url, verified, is_approved, sha256, byte_size')
+          .eq('id', outputId)
+          .single()
+        output = sData
+      }
+    } else {
+      output = data
+    }
+
+    if (!output) {
       return new NextResponse('Medya çıktısı bulunamadı.', { status: 404 })
     }
 
-    // 2. Strict Tenant Isolation Gate (FAIL CLOSED)
-    if (output.org_id !== org.id) {
-      console.warn(`[SECURITY_ALERT] CROSS_ORG_CONTAMINATION attempt blocked: Org ${org.id} tried to access output ${output.id} belonging to org ${output.org_id}`)
-      return new NextResponse('Yetkisiz erişim: Bu medya işletmenize ait değil.', { status: 403 })
-    }
+    // 2. Strict Tenant Isolation Gate (FAIL CLOSED for normal tenants, Super Admin bypasses)
+    if (!isSuperAdmin) {
+      if (!org || output.org_id !== org.id) {
+        console.warn(`[SECURITY_ALERT] CROSS_ORG_CONTAMINATION attempt blocked: Org ${org?.id} tried to access output ${output.id} belonging to org ${output.org_id}`)
+        return new NextResponse('Yetkisiz erişim: Bu medya işletmenize ait değil.', { status: 403 })
+      }
 
-    // 3. Verification Gate
-    if (!output.verified && !output.is_approved) {
-      return new NextResponse('Medya henüz kalite kontrolünden geçmedi.', { status: 422 })
+      // 3. Verification Gate
+      if (!output.verified && !output.is_approved) {
+        return new NextResponse('Medya henüz kalite kontrolünden geçmedi.', { status: 422 })
+      }
     }
 
     // 4. Resolve Upstream Video or Thumbnail
@@ -111,6 +156,7 @@ export async function GET(
       new Set(
         [
           cleanFileName,
+          fileName,
           output.job_id ? `${output.job_id}.mp4` : null,
           output.id ? `${output.id}.mp4` : null,
           output.job_id ? `${output.job_id}_finished.mp4` : null,

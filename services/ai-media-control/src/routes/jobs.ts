@@ -26,7 +26,7 @@ jobsRouter.post('/', async (req, res) => {
         org_id,
         title,
         prompt,
-        model: model || 'veo-fast',
+        model: (model && model !== 'veo-fast' && model !== 'omni-lite') ? model : 'veo-lite',
         aspect_ratio: aspect_ratio || '9:16',
         duration_seconds: duration_seconds || 8,
         priority: priority || 0,

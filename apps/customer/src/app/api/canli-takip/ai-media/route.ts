@@ -33,7 +33,11 @@ export async function GET() {
     const now = new Date()
     const h24 = new Date(now.getTime() - 24 * 60 * 60 * 1000)
     const activeStates = ['LEASED', 'PREPARING_ENV', 'OPENING_PROJECT', 'ATTACHING_INGREDIENTS', 'INGREDIENTS_VERIFIED', 'GENERATING', 'POLLING_FLOW', 'DOWNLOADING_MEDIA', 'MEDIA_DOWNLOADED', 'FFPROBE_INSPECTING', 'SHA256_VERIFYING', 'VISUAL_QA_EVALUATING']
-    const activeJobs = allJobs.filter((j: any) => activeStates.includes(j.state))
+    const activeJobs = allJobs.filter((j: any) => {
+      if (!activeStates.includes(j.state)) return false
+      const updatedTime = j.updated_at ? new Date(j.updated_at).getTime() : (j.created_at ? new Date(j.created_at).getTime() : 0)
+      return now.getTime() - updatedTime < 15 * 60 * 1000
+    })
     const queuedJobs = allJobs.filter((j: any) => j.state === 'QUEUED')
     const completed24h = allJobs.filter((j: any) => j.state === 'COMPLETED' && j.completed_at && new Date(j.completed_at) >= h24)
     const totalFinished = allJobs.filter((j: any) => ['COMPLETED', 'FAILED', 'NEEDS_REVIEW'].includes(j.state))
