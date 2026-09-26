@@ -74,7 +74,9 @@ export async function GET() {
     // Map org names, assets, events, and output into jobs
     const mappedJobs = allJobs.map((j: any) => {
       const jobAssets = assetsByJobId[j.id] || []
-      const jobEvents = eventsByJobId[j.id] || []
+      const jobEvents = (eventsByJobId[j.id] || []).sort(
+        (a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      )
       const jobOutput = outputsByJobId[j.id] || null
 
       return {
