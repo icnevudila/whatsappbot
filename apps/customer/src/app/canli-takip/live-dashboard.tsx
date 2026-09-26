@@ -487,7 +487,20 @@ export function LiveDashboard() {
   const [error, setError] = useState<string | null>(null)
 
   type TabId = 'overview' | 'baileys' | 'messages' | 'quick_send' | 'campaigns' | 'queue' | 'organizations' | 'contacts' | 'data_requests' | 'ai_studio' | 'ai_media' | 'blacklist' | 'jobs'
-  const VALID_TABS: TabId[] = ['overview', 'ai_studio', 'ai_media', 'baileys', 'jobs', 'organizations']
+
+  const VALID_TABS: TabId[] = [
+    'overview',
+    'ai_studio',
+    'ai_media',
+    'data_requests',
+    'organizations',
+    'messages',
+    'campaigns',
+    'contacts',
+    'baileys',
+    'jobs',
+    'blacklist',
+  ]
 
   const getHashTab = (): TabId => {
     if (typeof window === 'undefined') return 'overview'
@@ -1993,11 +2006,16 @@ export function LiveDashboard() {
             >
               {[
                 { id: 'overview', label: 'Operasyon Özeti', badge: (summary.failedJobs || 0) + summary.pendingJobs, errorBadge: (summary.failedJobs || 0) > 0 ? summary.failedJobs : null },
-                { id: 'ai_studio', label: 'AI Video Motoru & Kredi Havuzu', badge: (data?.ai_engine?.recentVideos?.length || 0) + (data?.creatives?.length || 0), isAlert: (data?.ai_engine?.geminiPool?.limitedAccounts || 0) > 0 },
+                { id: 'ai_studio', label: 'AI Video Motoru & Krediler', badge: (data?.ai_engine?.recentVideos?.length || 0) + (data?.creatives?.length || 0), isAlert: (data?.ai_engine?.geminiPool?.limitedAccounts || 0) > 0 },
                 { id: 'ai_media', label: 'Canlı Render & İş Takibi', badge: null, isAlert: false },
-                { id: 'baileys', label: 'Servis & Altyapı Durumu', badge: data?.accounts?.length, isAlert: (data?.accounts?.filter(a => a.status !== 'connected').length || 0) > 0 },
-                { id: 'jobs', label: 'Görev Kuyruğu & Hatalar', badge: data?.jobs?.length, errorBadge: (summary.failedJobs ?? 0) > 0 ? summary.failedJobs : null },
+                { id: 'data_requests', label: 'Veri Talepleri', badge: data?.listRequests?.length, isPending: (data?.listRequests?.filter(r => r.status === 'pending').length || 0) > 0, pendingCount: data?.listRequests?.filter(r => r.status === 'pending').length || 0 },
                 { id: 'organizations', label: 'Firmalar & Kotalar', badge: data?.organizations?.length },
+                { id: 'messages', label: 'Mesajlar & WhatsApp', badge: (data?.messages?.length || 0) + (data?.aiSuggestions?.length || 0) },
+                { id: 'campaigns', label: 'Kampanyalar', badge: data?.campaigns?.length },
+                { id: 'contacts', label: 'Rehber & Kişi Havuzu', badge: data?.contactLists?.length },
+                { id: 'baileys', label: 'WhatsApp Hatları & Altyapı', badge: data?.accounts?.length, isAlert: (data?.accounts?.filter(a => a.status !== 'connected').length || 0) > 0 },
+                { id: 'jobs', label: 'Görev Kuyruğu & Hatalar', badge: data?.jobs?.length, errorBadge: (summary.failedJobs ?? 0) > 0 ? summary.failedJobs : null },
+                { id: 'blacklist', label: 'Kara Liste', badge: summary.blacklistedCount },
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -2016,7 +2034,12 @@ export function LiveDashboard() {
                       {tab.errorBadge} Hata
                     </span>
                   )}
-                  {tab.badge !== null && tab.badge !== undefined && tab.badge > 0 && !tab.errorBadge && (
+                  {tab.isPending && (tab.pendingCount ?? 0) > 0 && !tab.errorBadge && (
+                    <span className="text-[9px] sm:text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold bg-warn text-ink animate-pulse">
+                      {tab.pendingCount} Onay Bekliyor
+                    </span>
+                  )}
+                  {tab.badge !== null && tab.badge !== undefined && tab.badge > 0 && !tab.errorBadge && !tab.isPending && (
                     <span
                       className={`text-[9px] sm:text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
                         activeTab === tab.id
@@ -2195,24 +2218,39 @@ export function LiveDashboard() {
                 {/* Operasyon & Altyapı */}
                 <div className="space-y-1.5">
                   <span className="text-[9px] font-bold text-ink-muted uppercase tracking-wider">Operasyon & Altyapı</span>
-                  <div className="grid grid-cols-2 gap-1.5">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                     <button type="button" onClick={() => setActiveTab('jobs')}
-                      className={`rounded-[var(--radius-sm)] border px-3 py-2.5 text-left transition group ${summary.pendingJobs > 0 ? 'border-warn/30 bg-warn/5 hover:bg-warn/10' : 'border-[var(--color-hairline)] bg-canvas hover:bg-[var(--color-surface-raised)]'}`}>
+                      className={`rounded-[var(--radius-sm)] border px-3 py-2 text-left transition group ${summary.pendingJobs > 0 ? 'border-warn/30 bg-warn/5 hover:bg-warn/10' : 'border-[var(--color-hairline)] bg-canvas hover:bg-[var(--color-surface-raised)]'}`}>
                       <div className="text-[11px] font-bold text-ink">Görev Kuyruğu</div>
                       <div className={`text-[10px] mt-0.5 ${summary.pendingJobs > 0 ? 'text-warn font-semibold' : 'text-ink-muted'}`}>{summary.pendingJobs} bekliyor</div>
                     </button>
                     <button type="button" onClick={() => setActiveTab('baileys')}
-                      className="rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-canvas px-3 py-2.5 text-left hover:bg-[var(--color-surface-raised)] transition group">
+                      className="rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-canvas px-3 py-2 text-left hover:bg-[var(--color-surface-raised)] transition group">
                       <div className="text-[11px] font-bold text-ink">Servis & Altyapı</div>
                       <div className={`text-[10px] mt-0.5 ${worker ? 'text-ok-dim' : 'text-danger font-semibold'}`}>{worker ? `${worker.live} hat bağlı` : 'Servis kopuk'}</div>
                     </button>
+                    <button type="button" onClick={() => setActiveTab('data_requests')}
+                      className={`rounded-[var(--radius-sm)] border px-3 py-2 text-left transition group ${summary.pendingDataRequests > 0 ? 'border-amber-500/50 bg-amber-500/10 hover:bg-amber-500/20' : 'border-[var(--color-hairline)] bg-canvas hover:bg-[var(--color-surface-raised)]'}`}>
+                      <div className="text-[11px] font-bold text-ink flex items-center justify-between">
+                        <span>Veri Talepleri</span>
+                        {summary.pendingDataRequests > 0 && <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />}
+                      </div>
+                      <div className={`text-[10px] mt-0.5 ${summary.pendingDataRequests > 0 ? 'text-amber-500 font-bold' : 'text-ink-muted'}`}>
+                        {summary.pendingDataRequests > 0 ? `${summary.pendingDataRequests} onay bekliyor` : `${data?.listRequests?.length || 0} talep`}
+                      </div>
+                    </button>
                     <button type="button" onClick={() => setActiveTab('organizations')}
-                      className="rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-canvas px-3 py-2.5 text-left hover:bg-[var(--color-surface-raised)] transition">
+                      className="rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-canvas px-3 py-2 text-left hover:bg-[var(--color-surface-raised)] transition">
                       <div className="text-[11px] font-bold text-ink">Firmalar & Kotalar</div>
                       <div className="text-[10px] text-ink-muted mt-0.5">{summary.totalOrganizations ?? organizationsList.length} firma kayıtlı</div>
                     </button>
+                    <button type="button" onClick={() => setActiveTab('messages')}
+                      className="rounded-[var(--radius-sm)] border border-[var(--color-hairline)] bg-canvas px-3 py-2 text-left hover:bg-[var(--color-surface-raised)] transition">
+                      <div className="text-[11px] font-bold text-ink">Mesaj Masası</div>
+                      <div className="text-[10px] text-ink-muted mt-0.5">{summary.todayInbound + summary.todayOutbound} mesaj bugün</div>
+                    </button>
                     <button type="button" onClick={handleRunDiagnostic}
-                      className="rounded-[var(--radius-sm)] border border-ok/30 bg-ok-soft/10 px-3 py-2.5 text-left hover:bg-ok-soft/20 transition">
+                      className="rounded-[var(--radius-sm)] border border-ok/30 bg-ok-soft/10 px-3 py-2 text-left hover:bg-ok-soft/20 transition">
                       <div className="text-[11px] font-bold text-ok-dim">Canlı Teşhis Testi</div>
                       <div className="text-[10px] text-ink-muted mt-0.5">Soket ve hat kontrolü</div>
                     </button>
@@ -2621,6 +2659,85 @@ export function LiveDashboard() {
                   </tbody>
                 </table>
               </div>
+            </div>
+
+            {/* 5. ROW: FİRMALARDAN GELEN VERİ TALEPLERİ (LEAD İSTEKLERİ) */}
+            <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 sm:p-5 shadow-sm space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-hairline)] pb-2.5">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xs sm:text-sm font-bold text-ink">Firmalardan Gelen Veri Toplama Talepleri</h3>
+                    {(data?.listRequests?.filter(r => r.status === 'pending').length || 0) > 0 ? (
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-warn/15 text-warn font-bold border border-warn/30 animate-pulse">
+                        {data?.listRequests?.filter(r => r.status === 'pending').length} Onay Bekliyor
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-ok-soft text-ok-dim font-bold">
+                        {data?.listRequests?.length || 0} Talep
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-ink-muted mt-0.5">
+                    İşletmelerin panellerinden ilettiği müşteri ve hedef kitle veri keşif talepleri.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('data_requests')}
+                  className="text-[11px] font-bold text-accent hover:underline flex items-center gap-1"
+                >
+                  <span>Tüm Talepleri Yönet ({data?.listRequests?.length || 0}) →</span>
+                </button>
+              </div>
+
+              {(!data?.listRequests || data.listRequests.length === 0) ? (
+                <p className="text-xs text-ink-muted text-center py-6">Henüz firmalardan gelen bir veri talebi bulunmuyor.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs min-w-[650px]">
+                    <thead>
+                      <tr className="border-b border-[var(--color-hairline)] text-ink-muted font-semibold">
+                        <th className="pb-2">İşletme Adı</th>
+                        <th className="pb-2">Talep Türü</th>
+                        <th className="pb-2">Sektör / Kategori</th>
+                        <th className="pb-2">Hedef Konum</th>
+                        <th className="pb-2">İstenen Kişi</th>
+                        <th className="pb-2">Durum</th>
+                        <th className="pb-2 text-right">Tarih</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--color-hairline)]">
+                      {data.listRequests.slice(0, 5).map(r => (
+                        <tr key={r.id} className="hover:bg-surface-raised/50 transition">
+                          <td className="py-2.5 font-bold text-ink">{r.org_name || 'Genel'}</td>
+                          <td className="py-2.5">
+                            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-surface border border-[var(--color-hairline)] text-ink-soft">
+                              {r.kind}
+                            </span>
+                          </td>
+                          <td className="py-2.5 text-ink-soft">{r.category || 'Belirtilmedi'}</td>
+                          <td className="py-2.5 text-ink-muted">{r.address || 'Türkiye Geneli'}</td>
+                          <td className="py-2.5 font-mono font-semibold text-accent">
+                            {r.contact_count ? Number(r.contact_count).toLocaleString('tr-TR') : '—'}
+                          </td>
+                          <td className="py-2.5">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                              r.status === 'approved' || r.status === 'completed'
+                                ? 'bg-ok-soft text-ok-dim'
+                                : r.status === 'pending'
+                                ? 'bg-warn/15 text-warn border border-warn/30'
+                                : 'bg-surface-raised text-ink-muted'
+                            }`}>
+                              {r.status === 'pending' ? 'Onay Bekliyor' : r.status === 'approved' ? 'Onaylandı' : r.status === 'completed' ? 'Tamamlandı' : r.status}
+                            </span>
+                          </td>
+                          <td className="py-2.5 text-ink-muted text-right">{timeAgo(r.created_at)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         )}
