@@ -161,14 +161,14 @@ export async function POST(req: NextRequest) {
     try {
       let styleDirectives = ''
       if (adFormat === 'PRODUCT_USAGE') {
-        styleDirectives = `VİDEO KURGUSU: "İnsanlı Tanıtım (Usta & Saha)"
+        styleDirectives = `VİDEO KURGUSU: "Sahada Uygulama"
 - Sahnede ürünü sahada/şantiyede/bahçede kullanan, uygulayan veya tutan gerçek bir usta/uzman yer almaktadır.
 - SESLENDİRME TONU: İşin ustasına hitap eden, sahadaki pratik faydayı, uygulama kolaylığını, dayanıklılığı veya zaman tasarrufunu öne çıkaran doğal ve güven veren bir ton.
 - MÜKEMMEL ÖRNEKLER:
   * "Harçla kusursuz kenetlenen sağlam bloklar. İşin ustası sahada her zaman Ayvazoğlu tuğlayı seçer."
   * "Sırtta ağırlık yapmayan ergonomik depo ve güçlü püskürtme. Bofe şarjlı pompa ile ilaçlama artık yormuyor."`
       } else if (adFormat === 'FAST_SALES') {
-        styleDirectives = `VİDEO KURGUSU: "Sadece Ürün (Vitrin)"
+        styleDirectives = `VİDEO KURGUSU: "Ürün Vitrini"
 - Sahnede insan figürü veya insan eli kesinlikle yoktur. Yalnızca ürünün formuna, malzeme dokusuna, işçiliğine ve kalitesine odaklanan 35mm vitrin çekimidir.
 - SESLENDİRME TONU: Kusursuz malzeme kalitesini, üretim titizliğini ve ürünün fiziksel estetiğini vurgulayan karizmatik, premium bir reklam dili.
 - MÜKEMMEL ÖRNEKLER:
@@ -179,7 +179,7 @@ export async function POST(req: NextRequest) {
 - Tesis, fabrika veya mimari atmosferde seçkin kurumsal duruş.
 - SESLENDİRME TONU: Ağırbaşlı, kurumsal güven, vizyon ve yüksek standartları hissettiren seçkin bir dil.`
       } else {
-        styleDirectives = `VİDEO KURGUSU: "Dinamik & Vurucu"
+        styleDirectives = `VİDEO KURGUSU: "Dinamik & Satış Odaklı"
 - Hızlı tempolu, dikkat çekici ve doğrudan kazanca odaklanan modern reklam dili.`
       }
 
@@ -261,14 +261,14 @@ ${revisionType === 'refresh' ? 'NOT: Önceki kalıplardan tamamen farklı, özg�
     ].join('\n')
 
     const formatConceptTitles: Record<string, string> = {
-      FAST_SALES: 'Sadece Ürün (Vitrin)',
-      PRODUCT_USAGE: 'İnsanlı Tanıtım (Usta & Saha)',
+      FAST_SALES: 'Ürün Vitrini',
+      PRODUCT_USAGE: 'Sahada Uygulama',
       PROBLEM_SOLUTION: 'Çözüm ve Fayda Odaklı Tanıtım',
       PREMIUM: 'Kurumsal & Prestij',
       SOCIAL_UGC: 'Doğal Deneyim Tanıtımı',
       OFFER: 'Fırsat & Kampanya',
       OFFER_DRIVEN: 'Fırsat & Kampanya',
-      AUTO: 'Sadece Ürün (Vitrin)',
+      AUTO: 'Dinamik & Satış Odaklı Tanıtım',
     }
     const conceptTitle = formatConceptTitles[adFormat] || 'Profesyonel Ürün Tanıtımı'
     const creativeIdea = `${productName} — ${conceptTitle}`

@@ -43,10 +43,10 @@ const WIZARD_STEPS: { id: Step; label: string }[] = [
 ]
 
 const FAST_FORMAT_OPTIONS = [
-  { id: 'FAST_SALES' as AdFormatType, label: 'Sadece Ürün (Vitrin)', tag: 'Önerilen', desc: 'İnsansız; ürünün formuna, dokusuna ve kalitesine odaklanır.' },
-  { id: 'PRODUCT_USAGE' as AdFormatType, label: 'İnsanlı Tanıtım (Usta & Saha)', desc: 'Ürünü tutan, kullanan veya uygulayan usta/uzman ile gerçek kullanım anı.' },
-  { id: 'PREMIUM' as AdFormatType, label: 'Kurumsal & Prestij', desc: 'Tesis veya şantiye sahasında seçkin marka çekimi.' },
-  { id: 'AUTO' as AdFormatType, label: 'Dinamik & Vurucu', desc: 'Hızlı tempolu, dikkat çekici ve akılda kalıcı reklam kurgusu.' },
+  { id: 'FAST_SALES' as AdFormatType, label: 'Ürün Vitrini', tag: 'Önerilen', desc: 'Ürünün tasarımına, malzeme dokusuna ve detaylarına odaklanır.' },
+  { id: 'PRODUCT_USAGE' as AdFormatType, label: 'Sahada Uygulama', desc: 'Ürünün sahada, usta veya uzmanla gerçek kullanım anını gösterir.' },
+  { id: 'PREMIUM' as AdFormatType, label: 'Kurumsal & Prestij', desc: 'Tesis, üretim gücü ve mimari atmosferde seçkin marka duruşu.' },
+  { id: 'AUTO' as AdFormatType, label: 'Dinamik & Satış Odaklı', desc: 'Hızlı tempolu, dikkat çekici ve doğrudan dönüşüm sağlayan kurgu.' },
 ]
 
 export function CreativeWizard({
@@ -1097,7 +1097,7 @@ export function CreativeWizard({
                       <div>
                         <span className="text-[#667781]">Tarz:</span>
                         <p className="font-semibold text-[#008069] truncate">
-                          {FAST_FORMAT_OPTIONS.find((f) => f.id === adFormat)?.label || 'Sadece Ürün (Vitrin)'}
+                          {FAST_FORMAT_OPTIONS.find((f) => f.id === adFormat)?.label || 'Ürün Vitrini'}
                         </p>
                       </div>
                       <div>

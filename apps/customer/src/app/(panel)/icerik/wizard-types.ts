@@ -108,10 +108,10 @@ export type AdFormatType =
   | 'OFFER_DRIVEN'
 
 export const USER_STYLE_OPTIONS: { id: UserStylePreference; label: string; tag?: string; desc: string }[] = [
-  { id: 'FAST_SALES', label: 'Sadece Ürün (Vitrin)', tag: 'Önerilen', desc: 'İnsansız; ürünün detayına, dokusuna ve malzeme kalitesine odaklanır.' },
-  { id: 'PRODUCT_USAGE', label: 'İnsanlı Tanıtım (Usta & Saha)', desc: 'Ürünü kullanan veya uygulayan uzman ile gerçek kullanım anı.' },
-  { id: 'PREMIUM', label: 'Kurumsal & Prestij', desc: 'Tesis, şantiye veya mimari atmosferde seçkin marka duruşu.' },
-  { id: 'AUTO', label: 'Dinamik & Vurucu', desc: 'Hızlı tempolu, dikkat çekici ve akılda kalıcı reklam kurgusu.' },
+  { id: 'FAST_SALES', label: 'Ürün Vitrini', tag: 'Önerilen', desc: 'Ürünün tasarımına, malzeme dokusuna ve detaylarına odaklanır.' },
+  { id: 'PRODUCT_USAGE', label: 'Sahada Uygulama', desc: 'Ürünün sahada, usta veya uzmanla gerçek kullanım anını gösterir.' },
+  { id: 'PREMIUM', label: 'Kurumsal & Prestij', desc: 'Tesis, üretim gücü ve mimari atmosferde seçkin marka duruşu.' },
+  { id: 'AUTO', label: 'Dinamik & Satış Odaklı', desc: 'Hızlı tempolu, dikkat çekici ve doğrudan dönüşüm sağlayan kurgu.' },
   { id: 'PROBLEM_SOLUTION', label: 'Sorun → Çözüm', desc: 'Hedef kitlenin ihtiyacını tespit edip ürünü kesin çözüm olarak sunar.' },
   { id: 'OFFER', label: 'Fırsat & Kampanya', desc: 'Özel fiyat, indirim veya sınırlı süreli fırsatı merkeze alan duyuru.' },
 ]
