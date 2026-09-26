@@ -360,9 +360,10 @@ export async function getControlPlaneSnapshot(): Promise<ControlPlaneSnapshot> {
     const authRequired = ['needs_reauth', 'blocked', 'agent_ui_blocked'].includes(row.status)
     const quota = row.status === 'rate_limited'
     const jobStats = completedJobsByAccount.get(String(row.id)) || { total: 0, today: 0 }
-    const creditsUsedToday = jobStats.today * 10
-    const baseBalance = row.credit_balance != null ? Number(row.credit_balance) : (authRequired ? 0 : 100)
-    const currentBalance = Math.max(0, baseBalance - creditsUsedToday)
+    // Flow kredi maliyeti modele göre değişebildiği için tamamlanan iş sayısından
+    // sentetik bakiye üretme. Yalnızca gerçek hesap menüsünden doğrulanıp DB'ye
+    // yazılmış bakiyeyi göster.
+    const currentBalance = row.credit_balance != null ? Math.max(0, Number(row.credit_balance)) : null
 
     accounts.push({
       id: String(row.id), provider: 'FLOW', label: row.display_name || row.email || row.id,
@@ -373,9 +374,9 @@ export async function getControlPlaneSnapshot(): Promise<ControlPlaneSnapshot> {
       cooldownUntil: asDate(row.cooldown_until), lastError: asString(row.last_error), enabled: row.status !== 'maintenance',
       actions: row.status === 'maintenance' ? ['enable'] : [...(quota || row.status === 'cooling_down' ? ['clear_cooldown' as const] : []), 'disable'],
       creditBalance: currentBalance,
-      creditsUsedToday,
+      creditsUsedToday: null,
       totalCompletedVideos: jobStats.total,
-      planTier: 'Google AI PRO (+50 Kredi/Gün)',
+      planTier: undefined,
     })
   }
 

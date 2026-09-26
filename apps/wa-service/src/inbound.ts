@@ -79,7 +79,7 @@ export function schedulePregenerateAiSuggestions(options: {
       .catch((error) => {
         logger.debug({ err: error, orgId }, 'AI yanit onerisi onceden uretilemedi')
       })
-  }, 2500)
+  }, 600)
 
   pregenBuffers.set(bufferKey, {
     timer,

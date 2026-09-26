@@ -2945,19 +2945,23 @@ async function generateVideoOnFlow(options = {}) {
     execSync(`ffmpeg -y -ss 00:00:03 -i "${rawPath}" -frames:v 1 -update 1 "${thumbPath}"`, { stdio: 'ignore' });
   } catch(e) {}
 
-  let currentRemainingCredits = 1020;
+  let currentRemainingCredits = null;
   try {
     const cfg = loadAccountsConfig();
     cfg.accounts = cfg.accounts || {};
     if (cfg.accounts[port]) {
-      const prev = cfg.accounts[port].flowCredits || 1050;
-      cfg.accounts[port].flowCredits = Math.max(0, prev - 15);
-      currentRemainingCredits = cfg.accounts[port].flowCredits;
+      // Flow pricing can change by model/duration and migrated accounts expose the
+      // authoritative balance only in the account menu. Never invent a subtraction.
+      currentRemainingCredits = Number.isFinite(Number(cfg.accounts[port].flowCredits))
+        ? Number(cfg.accounts[port].flowCredits)
+        : null;
+      cfg.accounts[port].flowCreditSource = 'stale_after_generation';
+      cfg.accounts[port].lastFlowError = 'Yeni üretimden sonra gerçek bakiye yeniden okunmalı';
       saveAccountsConfig(cfg);
-      console.log(`[Flow Video] Port ${port} için 15 kredi düşüldü. Yeni bakiye: ${currentRemainingCredits}`);
+      console.log(`[Flow Video] Port ${port} kredi bakiyesi yeniden doğrulama bekliyor.`);
     }
   } catch (crErr) {
-    console.warn('[Flow Video] Kredi düşüm hatası:', crErr.message);
+    console.warn('[Flow Video] Kredi durum işaretleme hatası:', crErr.message);
   }
 
   // Meta JSON dosyasını kaydet (Google Flow üretimi)
@@ -2972,8 +2976,9 @@ async function generateVideoOnFlow(options = {}) {
       chatGptPrompt: options.chatGptPrompt || prompt,
       veoPrompt: prompt,
       engine: 'Google Flow Studio (Veo 3.1)',
-      engineBadge: 'Google Flow (15 Kredi)',
-      creditsCost: 15,
+      engineBadge: 'Google Flow',
+      creditsCost: null,
+      creditsCostStatus: 'unverified_until_balance_refresh',
       accountPort: port,
       aspectRatio: '9:16 (Dikey Reels / Story)',
       duration: 10,
@@ -3095,8 +3100,8 @@ function getRecentVideos() {
       let creditsCost = meta.creditsCost ?? 0;
       if (file.includes('flow') || file.includes('Brick')) {
         engine = meta.engine || 'Google Flow Studio (Veo 3.1)';
-        engineBadge = meta.engineBadge || 'Google Flow (15 Kredi)';
-        creditsCost = meta.creditsCost ?? 15;
+        engineBadge = meta.engineBadge || 'Google Flow';
+        creditsCost = meta.creditsCost ?? null;
       }
 
       // Marka & Sektör tespiti
@@ -3242,11 +3247,7 @@ function loadAccountsConfig() {
       9224: { name: '3. Havuz Hesabı (Port 9224)', email: null, enabled: true },
       9225: { name: '4. Havuz Hesabı (Port 9225)', email: null, enabled: true }
     },
-    flow: {
-      initialCredits: 1050,
-      usedVideos: 2,
-      creditsPerVideo: 15
-    }
+    flow: {}
   };
 }
 
@@ -3315,6 +3316,22 @@ async function refreshFlowAccounts(ports = null) {
     }
   }
   return results;
+}
+
+function recordFlowProfileSync(port, result = {}) {
+  const p = Number.parseInt(port, 10);
+  if (!FLOW_ACCOUNT_ID_BY_PORT[p]) throw new Error('Desteklenmeyen Flow hesap portu.');
+  const cfg = loadAccountsConfig();
+  cfg.accounts = cfg.accounts || {};
+  const previous = cfg.accounts[p] || {};
+  cfg.accounts[p] = {
+    ...previous,
+    flowProfileSynced: result.ok === true,
+    lastFlowSyncAt: result.synced_at || new Date().toISOString(),
+    lastFlowError: result.ok === true ? null : (result.error || previous.lastFlowError || 'Flow profil eşitleme başarısız'),
+  };
+  saveAccountsConfig(cfg);
+  return cfg.accounts[p];
 }
 
 async function verifyAccount(port) {
@@ -3522,7 +3539,7 @@ async function provisionAccountSlot(port, name, flowProjectUrl) {
 /**
  * Belirli bir slotun Flow Creative Studio proje linkini ve kredi ayarlarını günceller
  */
-async function updateAccountFlow(port, flowProjectUrl, flowCredits) {
+async function updateAccountFlow(port, flowProjectUrl) {
   const p = parseInt(port, 10);
   if (!p) throw new Error('Geçerli bir port numarası gereklidir.');
   const url = (flowProjectUrl || '').trim();
@@ -3534,12 +3551,6 @@ async function updateAccountFlow(port, flowProjectUrl, flowCredits) {
   cfg.accounts = cfg.accounts || {};
   cfg.accounts[p] = cfg.accounts[p] || { name: `Port ${p} Hesabı`, enabled: true };
   cfg.accounts[p].flowProjectUrl = url;
-  if (flowCredits !== undefined && flowCredits !== null) {
-    cfg.accounts[p].flowCredits = parseInt(flowCredits, 10);
-  } else if (!cfg.accounts[p].flowCredits) {
-    cfg.accounts[p].flowCredits = 1050;
-  }
-  cfg.accounts[p].flowInitialCredits = cfg.accounts[p].flowInitialCredits || 1050;
   saveAccountsConfig(cfg);
 
   // Hetzner'deki Chrome sekmesini Flow projesine yönlendir
@@ -3872,8 +3883,6 @@ function getAccountPoolStatus() {
     const dailyLimit = 50;
     const dailyUsed = (cfgAcc.dailyUsed && cfgAcc.dailyDate === new Date().toISOString().slice(0, 10)) ? cfgAcc.dailyUsed : 0;
     const dailyRemaining = isLimited ? 0 : Math.max(0, dailyLimit - dailyUsed);
-    const flowVideosRemaining = flowCredits == null ? null : Math.floor(flowCredits / 15);
-    const totalVideosRemaining = flowVideosRemaining + dailyRemaining;
 
     return {
       port,
@@ -3897,8 +3906,8 @@ function getAccountPoolStatus() {
       dailyLimit,
       dailyUsed,
       dailyRemaining,
-      videosRemaining: flowVideosRemaining,
-      totalVideosRemaining: flowVideosRemaining == null ? dailyRemaining : totalVideosRemaining,
+      videosRemaining: null,
+      totalVideosRemaining: null,
       hasFlow: !!flowProjectUrl,
       vncUrl: `http://${PUBLIC_HOST}:6080/vnc.html`,
     };
@@ -3908,16 +3917,13 @@ function getAccountPoolStatus() {
 function getAiEngineStatus() {
   const geminiAccounts = getAccountPoolStatus();
   const cfg = loadAccountsConfig();
-  const flowCfg = cfg.flow || { initialCredits: 1050, usedVideos: 2, creditsPerVideo: 15 };
 
   // Çoklu Flow Havuzu Hesapları (Giriş yapılmış veya Flow URLsi atanmış tüm hesaplar)
   const flowAccounts = geminiAccounts.map(a => {
     const creds = Number.isFinite(Number(a.flowCredits)) ? Number(a.flowCredits) : null;
     const initCreds = Number.isFinite(Number(a.flowInitialCredits)) ? Number(a.flowInitialCredits) : null;
     const isFlowActive = a.flowAuthenticated === true && a.flowProfileSynced === true;
-    const flowVideos = creds == null ? null : Math.floor(creds / 15);
     const dailyRemaining = a.dailyRemaining ?? 50;
-    const totalVideos = flowVideos == null ? dailyRemaining : flowVideos + dailyRemaining;
     return {
       port: a.port,
       accountId: a.flowAccountId,
@@ -3931,8 +3937,10 @@ function getAiEngineStatus() {
       dailyLimit: 50,
       dailyUsed: a.dailyUsed ?? 0,
       dailyRemaining: dailyRemaining,
-      videosRemaining: flowVideos, // Flow kalan video hakkı
-      totalVideosRemaining: totalVideos, // Toplam video hakkı (Flow + Günlük)
+      // Flow kredi maliyeti seçilen modele göre değişir; sabit kredi/video
+      // varsayımıyla kapasite üretme.
+      videosRemaining: null,
+      totalVideosRemaining: null,
       isLoggedIn: a.isLoggedIn,
       flowAuthenticated: a.flowAuthenticated,
       profileSynced: a.flowProfileSynced,
@@ -3955,11 +3963,7 @@ function getAiEngineStatus() {
   const totalFlowInitialCredits = knownInitialCredits.length > 0
     ? knownInitialCredits.reduce((sum, a) => sum + a.initialCredits, 0)
     : null;
-  const totalFlowVideosRemaining = totalFlowCredits == null ? null : Math.floor(totalFlowCredits / 15);
   const totalDailyRemaining = geminiAccounts.reduce((sum, a) => sum + (a.dailyRemaining ?? 50), 0);
-  const grandTotalVideosRemaining = totalFlowVideosRemaining == null
-    ? totalDailyRemaining
-    : totalFlowVideosRemaining + totalDailyRemaining;
 
   const primaryFlow = activeFlowAccounts[0] || flowAccounts[0] || {};
 
@@ -3991,11 +3995,11 @@ function getAiEngineStatus() {
       projectUrl: primaryFlow.projectUrl || null,
       initialCredits: totalFlowInitialCredits,
       credits: totalFlowCredits,
-      creditsPerVideo: 15,
-      videosRemaining: totalFlowVideosRemaining,
+      creditsPerVideo: null,
+      videosRemaining: null,
       dailyCreditsTotal: 200,
       dailyCreditsRemaining: totalDailyRemaining,
-      grandTotalVideosRemaining: grandTotalVideosRemaining,
+      grandTotalVideosRemaining: null,
       activeFlowCount: activeFlowAccounts.length,
       totalAccountsCount: flowAccounts.length,
       knownCreditAccounts: accountsWithKnownCredits.length,
@@ -4027,6 +4031,7 @@ module.exports = {
   updateAccountSlot,
   refreshFlowAccount,
   refreshFlowAccounts,
+  recordFlowProfileSync,
   getGeminiVideoCapability,
   verifyVideoFile
 };

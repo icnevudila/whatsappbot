@@ -303,7 +303,7 @@ type AiEngineRecentVideo = {
   chatGptPrompt?: string
   veoPrompt?: string
   physicalAnchoring?: string
-  creditsCost?: number
+  creditsCost?: number | null
   accountPort?: number
   aspectRatio?: string
   duration?: number | string
@@ -340,14 +340,14 @@ type AiEngineStatus = {
     accountName: string
     projectName: string
     projectUrl: string
-    initialCredits?: number
-    credits?: number
-    creditsPerVideo?: number
+    initialCredits?: number | null
+    credits?: number | null
+    creditsPerVideo?: number | null
     usedVideos?: number
-    videosRemaining?: number
+    videosRemaining?: number | null
     dailyCreditsTotal?: number
     dailyCreditsRemaining?: number
-    grandTotalVideosRemaining?: number
+    grandTotalVideosRemaining?: number | null
     activeFlowCount?: number
     totalAccountsCount?: number
     accounts?: Array<{
@@ -355,15 +355,21 @@ type AiEngineStatus = {
       accountName: string
       email?: string | null
       projectUrl: string
-      credits: number
-      initialCredits: number
-      flowCredits?: number
-      flowInitialCredits?: number
+      accountId?: string | null
+      credits: number | null
+      initialCredits: number | null
+      flowCredits?: number | null
+      flowInitialCredits?: number | null
       dailyLimit?: number
       dailyRemaining?: number
-      videosRemaining: number
+      videosRemaining: number | null
       totalVideosRemaining?: number
-      status: 'active' | 'ready_to_link' | 'not_logged_in'
+      flowAuthenticated?: boolean
+      profileSynced?: boolean
+      creditSource?: string
+      creditCheckedAt?: string | null
+      lastError?: string | null
+      status: 'active' | 'ready_to_sync' | 'ready_to_link' | 'not_connected' | 'not_logged_in'
     }>
     watermark?: string
     aspectRatio?: string
@@ -630,7 +636,6 @@ export function LiveDashboard() {
   const [showFlowModal, setShowFlowModal] = useState(false)
   const [flowModalPort, setFlowModalPort] = useState<number>(9223)
   const [flowModalUrl, setFlowModalUrl] = useState('')
-  const [flowModalCredits, setFlowModalCredits] = useState<number>(1050)
   const [isUpdatingFlow, setIsUpdatingFlow] = useState(false)
 
   const [showCookieModal, setShowCookieModal] = useState(false)
@@ -883,7 +888,6 @@ export function LiveDashboard() {
           action: 'update_flow',
           port: flowModalPort,
           flowProjectUrl: flowModalUrl,
-          flowCredits: flowModalCredits,
         }),
       })
       const json = await res.json()
@@ -925,6 +929,33 @@ export function LiveDashboard() {
       }
     } catch {
       showNotice('Sunucu ile bağlantı kurulamadı.')
+    } finally {
+      setIsUpdatingFlow(false)
+    }
+  }
+
+  const handleRefreshFlowAccounts = async (port?: number) => {
+    setIsUpdatingFlow(true)
+    try {
+      const res = await fetch('/api/canli-takip/ai-accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'refresh_flow', ...(port ? { port } : {}) }),
+      })
+      const json = await res.json()
+      const synced = Number(json.synced || 0)
+      const total = Number(json.total || (port ? 1 : 3))
+      const errors = Array.isArray(json.results)
+        ? json.results.filter((item: any) => !item.ok).map((item: any) => `:${item.port} ${item.error}`).slice(0, 2)
+        : []
+      if (synced > 0) {
+        showNotice(`${synced}/${total} Flow hesabı gerçek oturum ve krediyle eşitlendi${errors.length ? `. Kalan: ${errors.join(' • ')}` : '.'}`)
+      } else {
+        showNotice(`Flow eşitleme yapılamadı: ${errors.join(' • ') || json.error || 'Gerçek hesap verisi doğrulanamadı'}`)
+      }
+      await fetchData()
+    } catch {
+      showNotice('Flow oturum/kredi eşitlemesi sırasında sunucu bağlantısı kurulamadı.')
     } finally {
       setIsUpdatingFlow(false)
     }
@@ -2274,14 +2305,10 @@ export function LiveDashboard() {
               const googleFlow = data?.ai_engine?.googleFlow
               const geminiPool = data?.ai_engine?.geminiPool
 
-              const totalFlowCredits = googleFlow?.credits ?? 3105
-              const totalFlowInitial = googleFlow?.initialCredits ?? 3150
-              const totalFlowVideos = googleFlow?.videosRemaining ?? Math.floor(totalFlowCredits / 15)
-
+              const totalFlowCredits = googleFlow?.credits ?? null
+              const totalFlowInitial = googleFlow?.initialCredits ?? null
               const totalDailyCredits = geminiPool?.dailyCreditsRemaining ?? 200
               const totalDailyLimit = geminiPool?.dailyCreditsTotal ?? 200
-
-              const grandTotalVideos = googleFlow?.grandTotalVideosRemaining ?? (totalFlowVideos + totalDailyCredits)
 
               return (
                 <div className="bg-[var(--color-surface)] border border-[var(--color-hairline)] rounded-[var(--radius-card)] p-3.5 sm:p-5 shadow-sm space-y-3.5">
@@ -2293,7 +2320,7 @@ export function LiveDashboard() {
                           Canlı Kredi Havuzu
                         </span>
                         <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-ok-soft text-ok-dim font-bold">
-                          {grandTotalVideos} Adet Hazır Video Kapasitesi
+                          {totalFlowCredits == null ? 'Flow Kredisi Doğrulanmadı' : `${totalFlowCredits.toLocaleString('tr-TR')} Gerçek Flow Kredisi`}
                         </span>
                       </div>
                       <p className="text-[11px] text-ink-muted">
@@ -2309,13 +2336,17 @@ export function LiveDashboard() {
                         </div>
                         <div className="w-[1px] h-6 bg-[var(--color-hairline)]" />
                         <div>
-                          <span className="text-ink-muted text-[9px] block font-medium">Flow Kredi & Video</span>
-                          <span className="font-bold text-accent font-mono text-xs">{totalFlowVideos} Video ({totalFlowCredits.toLocaleString('tr-TR')} Kr)</span>
+                          <span className="text-ink-muted text-[9px] block font-medium">Flow Kredisi</span>
+                          <span className="font-bold text-accent font-mono text-xs">
+                            {totalFlowCredits == null
+                              ? 'Gerçek bakiye bekleniyor'
+                              : `${totalFlowCredits.toLocaleString('tr-TR')} Kredi`}
+                          </span>
                         </div>
                         <div className="w-[1px] h-6 bg-[var(--color-hairline)]" />
                         <div>
-                          <span className="text-ink-muted text-[9px] block font-medium">Toplam Hazır Video</span>
-                          <span className="font-bold text-ok-dim font-mono text-xs">{grandTotalVideos} Adet Video</span>
+                          <span className="text-ink-muted text-[9px] block font-medium">Kredi / Video</span>
+                          <span className="font-bold text-ok-dim font-mono text-xs">Modele göre değişir</span>
                         </div>
                       </div>
                       <button
@@ -2331,16 +2362,16 @@ export function LiveDashboard() {
                   {/* 4 Port Slot Cards */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
                     {[
-                      { port: 9222, defaultName: 'Ali Düvenci (1. Hesap)', defaultEmail: 'jeynjones@gmail.com', defaultFlowCredits: 360 },
-                      { port: 9223, defaultName: 'Ali Düvenci (2. Hesap)', defaultEmail: 'icnevudila@gmail.com', defaultFlowCredits: 1035 },
-                      { port: 9224, defaultName: 'Alo Düvenci (3. Hesap)', defaultEmail: 'mesajify1@gmail.com', defaultFlowCredits: 1035 },
-                      { port: 9225, defaultName: 'Ali Düvenci (4. Hesap)', defaultEmail: 'mesajify2@gmail.com', defaultFlowCredits: 1035 },
-                    ].map(({ port, defaultName, defaultEmail, defaultFlowCredits }) => {
+                      { port: 9222, defaultName: '1. Hesap Slotu' },
+                      { port: 9223, defaultName: '2. Hesap Slotu' },
+                      { port: 9224, defaultName: '3. Hesap Slotu' },
+                      { port: 9225, defaultName: '4. Hesap Slotu' },
+                    ].map(({ port, defaultName }) => {
                       const flowAcc = (data?.ai_engine?.googleFlow?.accounts || []).find((a: any) => a.port === port)
                       const geminiAcc = (data?.ai_engine?.geminiPool?.accounts || []).find((a: any) => a.port === port) ||
                                         (globalAiMedia?.accounts || []).find((a: any) => a.port === port)
 
-                      const isReady = (geminiAcc?.isLoggedIn ?? true) && !geminiAcc?.isLimited && geminiAcc?.status !== 'needs_reauth'
+                      const isReady = geminiAcc?.isLoggedIn === true && !geminiAcc?.isLimited && geminiAcc?.status !== 'needs_reauth'
                       const isLimited = !!geminiAcc?.isLimited
 
                       // 1. GÜNLÜK KREDİ (Gemini Veo Pro - 50 hak/gün)
@@ -2348,17 +2379,11 @@ export function LiveDashboard() {
                       const dailyRemaining = geminiAcc?.dailyRemaining ?? (isLimited ? 0 : 50)
 
                       // 2. TOPLAM KREDİ (Google Flow Studio Bakiyesi)
-                      const flowCredits = flowAcc?.credits ?? geminiAcc?.flowCredits ?? defaultFlowCredits
-                      const flowInitial = flowAcc?.initialCredits ?? geminiAcc?.flowInitialCredits ?? 1050
-
-                      // 3. KALAN VİDEO HAKKI
-                      // Flow: 15 kredi = 1 Video
-                      const flowVideosRemaining = flowAcc?.videosRemaining ?? Math.floor(flowCredits / 15)
-                      // Toplam Kalan Video (Flow + Günlük)
-                      const totalVideosRemaining = flowVideosRemaining + dailyRemaining
+                      const flowCredits = flowAcc?.credits ?? geminiAcc?.flowCredits ?? null
+                      const flowInitial = flowAcc?.initialCredits ?? geminiAcc?.flowInitialCredits ?? null
 
                       const accName = flowAcc?.accountName || geminiAcc?.name || defaultName
-                      const accEmail = flowAcc?.email || geminiAcc?.email || defaultEmail
+                      const accEmail = flowAcc?.email || geminiAcc?.email || 'Hesap doğrulanmadı'
 
                       return (
                         <div
@@ -2402,29 +2427,41 @@ export function LiveDashboard() {
                               </div>
                             </div>
 
-                            {/* 2. Google Flow Video Kotası */}
+                            {/* 2. Google Flow gerçek kredi bakiyesi */}
                             <div className="flex items-center justify-between bg-surface-raised/70 px-2 py-1.5 rounded border border-[var(--color-hairline)]">
                               <div>
-                                <span className="text-[10px] font-semibold text-ink block leading-tight">Flow Video Kotası:</span>
-                                <span className="text-[9px] text-ink-muted font-mono">{flowCredits.toLocaleString('tr-TR')} / {flowInitial.toLocaleString('tr-TR')} Kredi</span>
+                                <span className="text-[10px] font-semibold text-ink block leading-tight">Flow Kredisi:</span>
+                                <span className="text-[9px] text-ink-muted font-mono">
+                                  {flowCredits == null
+                                    ? 'Gerçek bakiye okunmadı'
+                                    : `${flowCredits.toLocaleString('tr-TR')} / ${flowInitial?.toLocaleString('tr-TR') || '—'} Kredi`}
+                                </span>
                               </div>
                               <div className="text-right">
-                                <span className="text-xs font-mono font-bold text-accent">{flowVideosRemaining}</span>
-                                <span className="text-[10px] font-mono text-ink-muted"> Video</span>
+                                <span className="text-xs font-mono font-bold text-accent">{flowCredits == null ? '—' : flowCredits.toLocaleString('tr-TR')}</span>
+                                <span className="text-[10px] font-mono text-ink-muted"> Kredi</span>
                               </div>
                             </div>
 
-                            {/* 3. Toplam Kalan Video Hakkı */}
+                            {/* 3. Kredi maliyeti model seçimine bağlıdır */}
                             <div className="flex items-center justify-between bg-accent-soft/25 px-2 py-1.5 rounded border border-accent/25">
                               <div>
-                                <span className="text-[10px] font-bold text-ink block leading-tight">Toplam Video Hakkı:</span>
-                                <span className="text-[9px] text-ink-muted font-mono">{dailyRemaining} Gemini + {flowVideosRemaining} Flow</span>
+                                <span className="text-[10px] font-bold text-ink block leading-tight">Flow Video Kapasitesi:</span>
+                                <span className="text-[9px] text-ink-muted font-mono">Sabit kredi/video hesabı kullanılmaz</span>
                               </div>
                               <div className="text-right">
-                                <span className="text-sm font-mono font-extrabold text-accent">{totalVideosRemaining}</span>
-                                <span className="text-[10px] text-ink font-semibold"> Video</span>
+                                <span className="text-[10px] font-mono font-extrabold text-accent">Modele göre değişir</span>
                               </div>
                             </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRefreshFlowAccounts(port)}
+                              disabled={isUpdatingFlow || port === 9222}
+                              className="w-full rounded border border-accent/25 bg-accent-soft/20 px-2 py-1 text-[10px] font-bold text-accent transition hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-45"
+                              title={port === 9222 ? 'Ana ChatGPT slotu Flow generation havuzuna otomatik kopyalanmaz' : 'Flow oturumunu, gerçek krediyi ve Hetzner generation profilini eşitle'}
+                            >
+                              {isUpdatingFlow ? 'Eşitleniyor…' : flowAcc?.status === 'active' ? 'Oturum & Krediyi Yenile' : 'Flow Hesabını Etkinleştir'}
+                            </button>
                           </div>
                         </div>
                       )
@@ -4002,6 +4039,17 @@ export function LiveDashboard() {
 
                   <button
                     type="button"
+                    onClick={() => handleRefreshFlowAccounts()}
+                    disabled={isUpdatingFlow}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-[11px] font-bold bg-accent text-accent-ink hover:bg-accent-dim shadow-sm transition disabled:opacity-50"
+                    title="9223-9225 Flow oturumlarını, kredilerini ve Hetzner generation profillerini eşitle"
+                  >
+                    {isUpdatingFlow && <span className="w-3 h-3 border-2 border-accent-ink border-t-transparent rounded-full animate-spin" />}
+                    <span>{isUpdatingFlow ? 'Flow Eşitleniyor…' : 'Flow Hesaplarını Eşitle'}</span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={() => setShowVncModal(true)}
                     className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-[11px] font-semibold bg-surface-raised hover:bg-canvas border border-[var(--color-hairline)] text-ink transition"
                   >
@@ -4135,8 +4183,8 @@ export function LiveDashboard() {
                               <span className="font-mono font-bold text-ink">{acc.dailyRemaining ?? 50} / {acc.dailyLimit ?? 50} Video</span>
                             </div>
                             <div className="bg-surface-raised/80 px-2 py-1 rounded border border-[var(--color-hairline)] flex items-center justify-between">
-                              <span className="text-ink-muted font-medium">Flow Kalan:</span>
-                              <span className="font-mono font-bold text-accent">{acc.videosRemaining ?? Math.floor((acc.flowCredits ?? (acc.port === 9222 ? 360 : 1035)) / 15)} Video</span>
+                              <span className="text-ink-muted font-medium">Flow Kredisi:</span>
+                              <span className="font-mono font-bold text-accent">{acc.flowCredits == null ? '—' : `${acc.flowCredits.toLocaleString('tr-TR')} Kr`}</span>
                             </div>
                           </div>
 
@@ -4159,7 +4207,6 @@ export function LiveDashboard() {
                               onClick={() => {
                                 setFlowModalPort(acc.port)
                                 setFlowModalUrl(acc.flowProjectUrl || '')
-                                setFlowModalCredits(acc.flowCredits || 1050)
                                 setShowFlowModal(true)
                               }}
                               className="text-[9px] px-1.5 py-0.5 rounded bg-accent-soft/40 hover:bg-accent-soft text-accent font-semibold transition"
@@ -4233,7 +4280,7 @@ export function LiveDashboard() {
                         </div>
                       </div>
                       <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-accent-soft text-accent">
-                        {data?.ai_engine?.googleFlow?.activeFlowCount || 1} / {data?.ai_engine?.googleFlow?.totalAccountsCount || 2} Hesap Aktif
+                        {data?.ai_engine?.googleFlow?.activeFlowCount ?? 0} / {data?.ai_engine?.googleFlow?.totalAccountsCount ?? 0} Hesap Aktif
                       </span>
                     </div>
 
@@ -4242,7 +4289,9 @@ export function LiveDashboard() {
                       <div className="flex items-center justify-between">
                         <span className="text-ink-muted font-medium">Toplam Havuz Kredisi:</span>
                         <span className="font-bold text-accent font-mono text-xs">
-                          {data?.ai_engine?.googleFlow?.credits ?? 1020} / {data?.ai_engine?.googleFlow?.initialCredits ?? 2100} Kredi
+                          {data?.ai_engine?.googleFlow?.credits == null
+                            ? 'Gerçek bakiye doğrulanmadı'
+                            : `${data.ai_engine.googleFlow.credits.toLocaleString('tr-TR')} / ${data.ai_engine.googleFlow.initialCredits?.toLocaleString('tr-TR') || '—'} Kredi`}
                         </span>
                       </div>
 
@@ -4251,21 +4300,21 @@ export function LiveDashboard() {
                         <div
                           className="h-full bg-accent rounded-full transition-all duration-500"
                           style={{
-                            width: `${Math.min(100, Math.max(5, (((data?.ai_engine?.googleFlow?.credits ?? 1020) / (data?.ai_engine?.googleFlow?.initialCredits ?? 2100)) * 100)))}%`
+                            width: `${data?.ai_engine?.googleFlow?.credits != null && data?.ai_engine?.googleFlow?.initialCredits
+                              ? Math.min(100, Math.max(0, (data.ai_engine.googleFlow.credits / data.ai_engine.googleFlow.initialCredits) * 100))
+                              : 0}%`
                           }}
                         />
                       </div>
 
                       <div className="grid grid-cols-2 gap-1.5 pt-1">
                         <div className="bg-surface-raised p-1.5 rounded border border-[var(--color-hairline)] text-center">
-                          <div className="text-[9px] text-ink-muted">Toplam Kalan Video</div>
-                          <div className="text-xs font-bold text-ink">
-                            {data?.ai_engine?.googleFlow?.videosRemaining ?? 68} Adet
-                          </div>
+                          <div className="text-[9px] text-ink-muted">Bakiye Kaynağı</div>
+                          <div className="text-xs font-bold text-ink">Canlı Flow Hesabı</div>
                         </div>
                         <div className="bg-surface-raised p-1.5 rounded border border-[var(--color-hairline)] text-center">
-                          <div className="text-[9px] text-ink-muted">Birim Maliyet</div>
-                          <div className="text-xs font-bold text-accent">15 Kr / Video</div>
+                          <div className="text-[9px] text-ink-muted">Kredi / Video</div>
+                          <div className="text-xs font-bold text-accent">Modele göre değişir</div>
                         </div>
                       </div>
 
@@ -4289,14 +4338,15 @@ export function LiveDashboard() {
                           </button>
                         </div>
 
-                        {(data?.ai_engine?.googleFlow?.accounts || [
-                          { port: 9222, accountName: 'Ali Düvenci (Pro)', projectUrl: 'https://flow.google.com/project/6b718bdf-9bf3-44c3-8b65-4c8f9110c8c5', credits: 1020, status: 'active' },
-                          { port: 9223, accountName: 'Ali Düvenci (2. Hesap)', projectUrl: '', credits: 1050, status: 'ready_to_link' }
-                        ]).map((fa: any) => (
+                        {(data?.ai_engine?.googleFlow?.accounts || []).length === 0 ? (
+                          <div className="rounded border border-dashed border-[var(--color-hairline)] p-2 text-center text-[10px] text-ink-muted">
+                            Henüz doğrulanmış Flow hesabı yok. “Flow Hesaplarını Eşitle” ile gerçek oturumları tara.
+                          </div>
+                        ) : (data?.ai_engine?.googleFlow?.accounts || []).map((fa: any) => (
                           <div key={fa.port} className="flex items-center justify-between p-1.5 rounded bg-surface-raised border border-[var(--color-hairline)] text-[10px]">
                             <div className="flex items-center gap-1.5 min-w-0">
                               <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                                fa.status === 'active' ? 'bg-ok' : fa.status === 'ready_to_link' ? 'bg-accent animate-pulse' : 'bg-ink-muted/40'
+                                fa.status === 'active' ? 'bg-ok' : ['ready_to_sync', 'ready_to_link'].includes(fa.status) ? 'bg-accent animate-pulse' : 'bg-ink-muted/40'
                               }`} />
                               <div className="truncate">
                                 <span className="font-semibold text-ink truncate">{fa.accountName}</span>
@@ -4304,54 +4354,24 @@ export function LiveDashboard() {
                               </div>
                             </div>
                             <div className="flex items-center gap-1 shrink-0">
-                              {fa.status === 'active' ? (
-                                <>
-                                  <span className="font-bold text-accent font-mono">{fa.credits} Kr</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setFlowModalPort(fa.port)
-                                      setFlowModalCredits(fa.credits || 1050)
-                                      setFlowModalUrl(fa.projectUrl || '')
-                                      setShowFlowModal(true)
-                                    }}
-                                    className="px-1.5 py-0.5 rounded bg-surface text-ink hover:bg-canvas border border-[var(--color-hairline)] font-medium text-[9px]"
-                                    title="Kredi Miktarını veya Proje URL'sini Güncelle"
-                                  >
-                                    Düzenle
-                                  </button>
-                                  <a
-                                    href={fa.projectUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="px-1.5 py-0.5 rounded bg-surface text-ink hover:bg-canvas border border-[var(--color-hairline)] font-medium"
-                                  >
-                                    Aç ↗
-                                  </a>
-                                </>
-                              ) : fa.status === 'ready_to_link' ? (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setFlowModalPort(fa.port)
-                                    setFlowModalCredits(fa.credits || 1050)
-                                    setShowFlowModal(true)
-                                  }}
-                                  className="px-2 py-0.5 rounded bg-accent text-accent-ink font-bold hover:bg-accent-dim shadow-xs transition"
+                              <span className="font-bold text-accent font-mono">{fa.credits == null ? '—' : `${fa.credits.toLocaleString('tr-TR')} Kr`}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleRefreshFlowAccounts(fa.port)}
+                                disabled={isUpdatingFlow || fa.port === 9222}
+                                className="px-1.5 py-0.5 rounded bg-surface text-ink hover:bg-canvas border border-[var(--color-hairline)] font-medium text-[9px] disabled:opacity-45"
+                              >
+                                {fa.status === 'active' ? 'Yenile' : 'Etkinleştir'}
+                              </button>
+                              {fa.projectUrl && (
+                                <a
+                                  href={fa.projectUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="px-1.5 py-0.5 rounded bg-surface text-ink hover:bg-canvas border border-[var(--color-hairline)] font-medium"
                                 >
-                                  + Proje Bağla
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setCookieModalPort(fa.port)
-                                    setShowCookieModal(true)
-                                  }}
-                                  className="px-1.5 py-0.5 rounded bg-surface border border-[var(--color-hairline)] text-ink font-medium hover:bg-canvas"
-                                >
-                                  Giriş Yap
-                                </button>
+                                  Aç ↗
+                                </a>
                               )}
                             </div>
                           </div>
@@ -4373,7 +4393,7 @@ export function LiveDashboard() {
 
                   <div className="pt-2 flex items-center gap-1.5">
                     <a
-                      href={data?.ai_engine?.googleFlow?.projectUrl || 'https://flow.google.com/project/6b718bdf-9bf3-44c3-8b65-4c8f9110c8c5'}
+                      href={data?.ai_engine?.googleFlow?.projectUrl || 'https://flow.google.com/'}
                       target="_blank"
                       rel="noreferrer"
                       className="flex-1 py-1.5 text-xs font-semibold rounded bg-surface-raised hover:bg-canvas border border-[var(--color-hairline)] text-ink flex items-center justify-center gap-1 transition"
@@ -4385,9 +4405,10 @@ export function LiveDashboard() {
                     </a>
                     <button
                       type="button"
-                      onClick={fetchData}
+                      onClick={() => handleRefreshFlowAccounts()}
+                      disabled={isUpdatingFlow}
                       className="px-2.5 py-1.5 text-xs font-semibold rounded bg-surface-raised hover:bg-canvas border border-[var(--color-hairline)] text-ink transition flex items-center justify-center"
-                      title="Kredileri Yenile"
+                      title="Gerçek Flow oturumlarını ve kredilerini yenile"
                     >
                       <svg className="w-3.5 h-3.5 text-ink-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -7449,17 +7470,8 @@ export function LiveDashboard() {
                 </p>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="font-semibold text-ink">Hesap Kredi Bakiyesi (Opsiyonel):</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="10000"
-                  value={flowModalCredits}
-                  onChange={e => setFlowModalCredits(parseInt(e.target.value, 10) || 0)}
-                  className="w-full bg-surface-raised border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 text-ink outline-none focus:border-accent font-mono text-[11px]"
-                />
-                <p className="text-[10px] text-ink-muted">Varsayılan PRO bakiye 1.050 kredidir (70 adet video).</p>
+              <div className="rounded-[var(--radius-sm)] border border-accent/20 bg-accent-soft/20 p-2.5 text-[11px] text-ink-soft">
+                Kredi elle girilmez. Hesabı etkinleştirdiğinizde bakiye Flow hesap menüsünden okunur, zaman damgasıyla kaydedilir ve yalnız doğrulanmış değer gösterilir.
               </div>
 
               <div className="bg-ok-soft/30 border border-ok/20 rounded-[var(--radius-sm)] p-2.5 text-[11px] text-ink space-y-1">

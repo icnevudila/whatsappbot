@@ -56,6 +56,133 @@ function extractSemanticIntentKey(input: string): string | null {
   return null
 }
 
+export function generateSmartSuggestions(
+  incoming: string,
+  companyName: string,
+  productsList?: string,
+  tone?: string,
+): Suggestion[] {
+  const norm = (incoming || '').toLowerCase()
+  const comp = companyName || 'işletmemiz'
+
+  // Fiyat / Maliyet
+  if (
+    norm.includes('fiyat') ||
+    norm.includes('ne kadar') ||
+    norm.includes('ücret') ||
+    norm.includes('ucret') ||
+    norm.includes('kac') ||
+    norm.includes('kaç') ||
+    norm.includes('maliyet')
+  ) {
+    const productNote = productsList ? ` (${productsList.split(',')[0]} ve modellerimiz)` : ''
+    return [
+      {
+        label: 'Kısa & Net',
+        text: `Merhabalar, ilgilendiğiniz ürün veya hizmet detayını iletirseniz${productNote} hemen güncel fiyat bilgisi paylaşalım.`,
+      },
+      {
+        label: 'Samimi',
+        text: `Merhabalar, memnuniyetle yardımcı oluruz! Tam olarak hangi model veya ürünümüzün fiyatını öğrenmek istemiştiniz?`,
+      },
+      {
+        label: 'Yönlendirici',
+        text: `Merhaba, güncel fiyat listemizi ve kampanyalı tekliflerimizi iletebilmemiz için ilgilendiğiniz ürün adını veya miktarını paylaşabilir misiniz?`,
+      },
+    ]
+  }
+
+  // Konum / Adres
+  if (
+    norm.includes('konum') ||
+    norm.includes('nerede') ||
+    norm.includes('adres') ||
+    norm.includes('yeriniz') ||
+    norm.includes('tarifi')
+  ) {
+    return [
+      {
+        label: 'Kısa & Net',
+        text: 'İşletmemiz Mamak, Ankara adresindedir. WhatsApp üzerinden harita konumumuzu hemen iletiyoruz.',
+      },
+      {
+        label: 'Samimi',
+        text: "Merhabalar, yerimiz Mamak / Ankara'da bulunuyor. Dilerseniz hemen canlı navigasyon pini gönderebilirim.",
+      },
+      {
+        label: 'Yönlendirici',
+        text: 'Merhaba, Mamak Ankara adresindeyiz. Ziyaretinizden memnuniyet duyarız; doğrudan konum pini gönderelim mi?',
+      },
+    ]
+  }
+
+  // Stok / Ürün Temin
+  if (
+    norm.includes('var mi') ||
+    norm.includes('var mı') ||
+    norm.includes('stok') ||
+    norm.includes('mevcut') ||
+    norm.includes('temin')
+  ) {
+    return [
+      {
+        label: 'Kısa & Net',
+        text: 'Merhabalar, ürünümüz stoklarımızda mevcuttur. Dilediğiniz adette hızlı gönderim sağlayabiliriz.',
+      },
+      {
+        label: 'Samimi',
+        text: 'Merhabalar, evet ürünümüz hazır stoklarımızda bulunuyor! İhtiyacınız olan adedi belirtirseniz hemen ayıralım.',
+      },
+      {
+        label: 'Yönlendirici',
+        text: 'Merhaba, stoklarımız düzenli güncellenmektedir. Sipariş vermek istediğiniz miktar ve teslimat bölgesini iletirseniz hemen kontrol edelim.',
+      },
+    ]
+  }
+
+  // Selamlaşma
+  if (
+    norm.includes('merhaba') ||
+    norm.includes('selam') ||
+    norm.includes('günaydın') ||
+    norm.includes('gunaydin') ||
+    norm.includes('iyi günler') ||
+    norm.includes('kolay gelsin') ||
+    norm.includes('iyi çalışmalar')
+  ) {
+    return [
+      {
+        label: 'Kısa & Net',
+        text: `Merhabalar, ${comp} olarak hoş geldiniz. Size nasıl yardımcı olabiliriz?`,
+      },
+      {
+        label: 'Samimi',
+        text: 'Merhabalar, hoş geldiniz! Size yardımcı olmaktan mutluluk duyarız, nasıl bir konuda destek istersiniz?',
+      },
+      {
+        label: 'Yönlendirici',
+        text: 'İyi günler dileriz. Ürünlerimiz, siparişleriniz veya hizmetlerimiz hakkında detaylı bilgi almak için sorunuzu iletebilirsiniz.',
+      },
+    ]
+  }
+
+  // Genel / Diğer
+  return [
+    {
+      label: 'Kısa & Net',
+      text: `Mesajınız tarafımıza ulaştı. ${comp} olarak talebinizle ilgili en kısa sürede detaylı bilgi veriyoruz.`,
+    },
+    {
+      label: 'Samimi',
+      text: 'Merhabalar, mesajınız için teşekkür ederiz. Konuyla ilgili kontrolü sağlayıp hemen size dönüş yapıyoruz.',
+    },
+    {
+      label: 'Yönlendirici',
+      text: 'Talebinizi aldık. Size daha hızlı yardımcı olabilmemiz için ürün adı, görsel veya sipariş detayınızı iletebilir misiniz?',
+    },
+  ]
+}
+
 function shouldHistoryAffectCache(message: string): boolean {
   const normalized = normalizeForLibrary(message)
   if (normalized.length < 18) return true
@@ -821,21 +948,65 @@ export async function pregenerateAiSuggestions(options: {
     const tone = kitRows[0]?.tone || 'Kurumsal, nazik, yardımsever ve samimi'
     const contextFingerprint = fingerprint(`${companyContext}\n${tone}\n${conversationHistory}`)
 
-    const aiRes = await fetchFromOmniStudio('/v1/chat/suggestions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        customer: org.name,
-        incomingMessage: trimmed,
-        conversationHistory,
-        companyContext,
-        tone,
-      }),
-      signal: AbortSignal.timeout(55000),
-    })
+    // 1. ANINDA ÖN ÜRETİM: Kurumsal kimlik ve semantik niyete göre anında akıllı önerileri kaydet (< 10ms)
+    const instantSuggestions = generateSmartSuggestions(
+      trimmed,
+      org.name,
+      productRows.map((p) => p.name).join(', '),
+      tone,
+    )
+    if (validSuggestions(instantSuggestions)) {
+      await query(
+        `insert into public.ai_reply_suggestion_library (
+          org_id, message_fingerprint, context_fingerprint, incoming_sample,
+          suggestions, source, generated_count, last_used_at, updated_at
+        )
+        values ($1, $2, $3, $4, $5::jsonb, 'smart_instant', 1, now(), now())
+        on conflict (org_id, message_fingerprint, context_fingerprint)
+        do update set
+          suggestions = coalesce(public.ai_reply_suggestion_library.suggestions, excluded.suggestions),
+          updated_at = now()`,
+        [orgId, messageFingerprint, contextFingerprint, trimmed.slice(0, 500), JSON.stringify(instantSuggestions)],
+      ).catch(() => {})
 
-    if (!aiRes.ok) {
-      logger.debug({ status: aiRes.status, orgId }, 'pregenerateAiSuggestions: gateway yanit vermedi')
+      if (semanticIntent) {
+        const intentFingerprint = fingerprint(semanticIntent)
+        await query(
+          `insert into public.ai_reply_suggestion_library (
+            org_id, message_fingerprint, context_fingerprint, incoming_sample,
+            suggestions, source, generated_count, last_used_at, updated_at
+          )
+          values ($1, $2, $3, $4, $5::jsonb, 'smart_intent_instant', 1, now(), now())
+          on conflict (org_id, message_fingerprint, context_fingerprint)
+          do update set
+            suggestions = coalesce(public.ai_reply_suggestion_library.suggestions, excluded.suggestions),
+            updated_at = now()`,
+          [orgId, intentFingerprint, fingerprint(companyContext), `[${semanticIntent}] ${trimmed.slice(0, 300)}`, JSON.stringify(instantSuggestions)],
+        ).catch(() => {})
+      }
+    }
+
+    let aiRes: Response | null = null
+    try {
+      aiRes = await fetchFromOmniStudio('/v1/chat/suggestions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customer: org.name,
+          incomingMessage: trimmed,
+          conversationHistory,
+          companyContext,
+          tone,
+        }),
+        signal: AbortSignal.timeout(35000),
+      })
+    } catch (omniErr) {
+      logger.debug({ err: omniErr instanceof Error ? omniErr.message : omniErr, orgId }, 'OmniStudio gateway ulasilamadi, akilli yerel oneriler devrede')
+      return
+    }
+
+    if (!aiRes || !aiRes.ok) {
+      logger.debug({ status: aiRes?.status, orgId }, 'pregenerateAiSuggestions: gateway yanit vermedi, yerel oneriler korundu')
       return
     }
 

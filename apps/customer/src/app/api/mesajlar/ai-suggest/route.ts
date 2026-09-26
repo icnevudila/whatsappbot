@@ -6,96 +6,13 @@ import { rateLimit } from '@/lib/rate-limit'
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
-type Suggestion = { label: string; text: string }
-
-function generateSmartFallbackSuggestions(incoming: string, company: string): Suggestion[] {
-  const norm = incoming.toLowerCase()
-  if (
-    norm.includes('fiyat') ||
-    norm.includes('ne kadar') ||
-    norm.includes('ücret') ||
-    norm.includes('ucret') ||
-    norm.includes('kac') ||
-    norm.includes('kaç')
-  ) {
-    return [
-      {
-        label: 'Kısa & Net',
-        text: 'Merhabalar, ilgilendiğiniz ürün veya hizmet detayını iletirseniz hemen güncel fiyat bilgisi paylaşalım.',
-      },
-      {
-        label: 'Samimi',
-        text: 'Merhabalar, memnuniyetle yardımcı oluruz. Tam olarak hangi model veya ürünümüzün fiyatını öğrenmek istemiştiniz?',
-      },
-      {
-        label: 'Yönlendirici',
-        text: 'Merhaba, güncel fiyat listemizi ve kampanyalı tekliflerimizi iletebilmemiz için ürün görseli veya adını paylaşabilir misiniz?',
-      },
-    ]
-  }
-
-  if (
-    norm.includes('konum') ||
-    norm.includes('nerede') ||
-    norm.includes('adres') ||
-    norm.includes('yeriniz') ||
-    norm.includes('tarifi')
-  ) {
-    return [
-      {
-        label: 'Kısa & Net',
-        text: 'İşletmemiz Mamak, Ankara adresindedir. WhatsApp üzerinden harita konumumuzu hemen iletiyoruz.',
-      },
-      {
-        label: 'Samimi',
-        text: 'Merhabalar, yerimiz Mamak / Ankara\'da bulunuyor. Dilerseniz hemen canlı navigasyon pini gönderebilirim.',
-      },
-      {
-        label: 'Yönlendirici',
-        text: 'Merhaba, Mamak Ankara adresindeyiz. Ziyaretinizden mutluluk duyarız; doğrudan konum pini gönderelim mi?',
-      },
-    ]
-  }
-
-  if (
-    norm.includes('merhaba') ||
-    norm.includes('selam') ||
-    norm.includes('günaydın') ||
-    norm.includes('gunaydin') ||
-    norm.includes('iyi günler') ||
-    norm.includes('kolay gelsin')
-  ) {
-    return [
-      {
-        label: 'Kısa & Net',
-        text: `Merhabalar, ${company || 'işletmemize'} hoş geldiniz. Size nasıl yardımcı olabiliriz?`,
-      },
-      {
-        label: 'Samimi',
-        text: 'Merhabalar, hoş geldiniz! Size yardımcı olmaktan memnuniyet duyarız, nasıl bir konuda destek istersiniz?',
-      },
-      {
-        label: 'Yönlendirici',
-        text: 'İyi günler dileriz. Ürünlerimiz, siparişleriniz veya hizmetlerimiz hakkında bilgi almak için sorunuzu iletebilirsiniz.',
-      },
-    ]
-  }
-
-  return [
-    {
-      label: 'Kısa & Net',
-      text: 'Mesajınız tarafımıza ulaştı. Talebinizle ilgili en kısa sürede detaylı bilgi veriyoruz.',
-    },
-    {
-      label: 'Samimi',
-      text: 'Merhabalar, mesajınız için teşekkür ederiz. Konuyla ilgili kontrolü sağlayıp hemen size dönüş yapıyoruz.',
-    },
-    {
-      label: 'Yönlendirici',
-      text: 'Talebinizi aldık. Size daha hızlı yardımcı olabilmemiz için ürün adı, görsel veya sipariş detayınızı iletebilir misiniz?',
-    },
-  ]
-}
+import {
+  generateSmartFallbackSuggestions,
+  extractSemanticIntentKey,
+  normalizeForLibrary,
+  fingerprint,
+  type Suggestion,
+} from '@/lib/ai-suggestions'
 
 function stripEmojis(text: string): string {
   if (!text) return ''
@@ -103,51 +20,6 @@ function stripEmojis(text: string): string {
     .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}]/gu, '')
     .replace(/\s+/g, ' ')
     .trim()
-}
-
-function normalizeForLibrary(input: string) {
-  return input
-    .trim()
-    .toLocaleLowerCase('tr-TR')
-    .normalize('NFKC')
-    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
-    .replace(/\s+/g, ' ')
-}
-
-function fingerprint(input: string) {
-  return createHash('sha256').update(normalizeForLibrary(input)).digest('hex')
-}
-
-function extractSemanticIntentKey(input: string): string | null {
-  const norm = normalizeForLibrary(input)
-  if (!norm) return null
-
-  // Fiyat / Maliyet sorgusu
-  if (/\b(fiyat|fiyati|fiyatlar|fiyatlari|ucret|ucreti|kac\s*tl|kac\s*para|ne\s*kadar|maliyet|tarife)\b/u.test(norm)) {
-    return 'intent:fiyat_sorgusu'
-  }
-
-  // Konum / Adres sorgusu
-  if (/\b(konum|adres|adresi|nerede|neredesiniz|yeriniz|yeriniz\s*nerede|harita|tarifi|nasil\s*gelirim)\b/u.test(norm)) {
-    return 'intent:konum_adres'
-  }
-
-  // Stok / Urun temin
-  if (/\b(var\s*mi|elinizde\s*var\s*mi|stok|stokta|stokta\s*var\s*mi|temin|mevcut\s*mu|bulunur\s*mu)\b/u.test(norm)) {
-    return 'intent:stok_temin'
-  }
-
-  // Kargo / Teslimat
-  if (/\b(kargo|kargoya|teslimat|ne\s*zaman\s*gelir|kac\s*gunde|kargom|takip)\b/u.test(norm)) {
-    return 'intent:kargo_teslimat'
-  }
-
-  // Selamlasma
-  if (/\b(merhaba|selam|selamlar|gunaydin|iyi\s*gunler|kolay\s*gelsin|iyi\s*calismalar|iyi\s*aksamlar)\b/u.test(norm)) {
-    return 'intent:selamlasma'
-  }
-
-  return null
 }
 
 function shouldHistoryAffectCache(message: string) {
@@ -405,6 +277,26 @@ export async function POST(request: Request) {
 
   // Gateway yanıt veremediğinde veya zaman aşımında akıllı yedek öneriler
   const fallbackSuggestions = generateSmartFallbackSuggestions(lastMessage, org.name)
+
+  // Gelecek aramaların anında (0ms) olması için kütüphaneye anında kaydet
+  void (supabase as any)
+    .from('ai_reply_suggestion_library')
+    .upsert(
+      {
+        org_id: org.id,
+        message_fingerprint: messageFingerprint,
+        context_fingerprint: contextFingerprint,
+        incoming_sample: lastMessage.slice(0, 500),
+        suggestions: fallbackSuggestions,
+        source: 'smart_instant',
+        generated_count: 1,
+        last_used_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'org_id,message_fingerprint,context_fingerprint' },
+    )
+    .catch(() => {})
+
   return NextResponse.json({
     success: true,
     cached: false,

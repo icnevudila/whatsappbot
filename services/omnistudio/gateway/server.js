@@ -20,6 +20,31 @@ const { createJobMetrics, setStage, finishMetrics } = require('./runtime_metrics
 const { getTenantScopeKey, getRequestKey } = require('./tenant_scope.js');
 const { BrowserWorkerSupervisor } = require('./browser_worker_supervisor.js');
 
+const FLOW_SOURCE_PROFILE_BY_PORT = Object.freeze({
+  9222: '/data/chromium-profile',
+  9223: '/data/chromium-profile-2',
+  9224: '/data/chromium-profile-3',
+  9225: '/data/chromium-profile-4',
+});
+
+async function makeFlowSourceProfileReadable(port) {
+  const root = FLOW_SOURCE_PROFILE_BY_PORT[Number(port)];
+  if (!root) throw new Error(`Port ${port} için kaynak profil yolu bulunamadı`);
+  const stack = [root];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    const stat = await fs.promises.lstat(current);
+    if (stat.isSymbolicLink()) continue;
+    if (stat.isDirectory()) {
+      await fs.promises.chmod(current, 0o755);
+      const entries = await fs.promises.readdir(current);
+      for (const entry of entries) stack.push(path.join(current, entry));
+    } else {
+      await fs.promises.chmod(current, 0o640);
+    }
+  }
+}
+
 const COMPLETED_JOB_TTL_MS = Math.max(0, parseInt(process.env.COMPLETED_JOB_TTL_MS || String(30 * 60 * 1000), 10));
 const FAILED_JOB_TTL_MS = Math.max(0, parseInt(process.env.FAILED_JOB_TTL_MS || String(10 * 60 * 1000), 10));
 const MAX_RETAINED_COMPLETED_JOBS = Math.max(1, parseInt(process.env.MAX_RETAINED_COMPLETED_JOBS || '200', 10));
@@ -2047,6 +2072,106 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 200, result);
       } catch (err) {
         return sendJson(res, 500, { error: err.message });
+      }
+    }
+
+    // 1.0.6c. Flow oturumunu, gerçek krediyi ve generation profilini tek işlemde eşitle.
+    if (method === 'POST' && (pathname === '/v1/ai-engine/accounts/refresh-flow' || pathname === '/ai-engine/accounts/refresh-flow')) {
+      try {
+        const body = await parseJsonBody(req);
+        const requestedPort = body.port == null ? null : parseInt(body.port, 10);
+        const ports = requestedPort ? [requestedPort] : [9223, 9224, 9225];
+        if (ports.some(port => ![9222, 9223, 9224, 9225].includes(port))) {
+          return sendJson(res, 400, { ok: false, error: 'port 9222-9225 aralığında olmalıdır' });
+        }
+
+        const {
+          refreshFlowAccount,
+          recordFlowProfileSync,
+        } = require('./generate_video.js');
+        const gflowEngineUrl = String(process.env.GFLOW_ENGINE_URL || '').replace(/\/$/, '');
+        const results = [];
+
+        for (const port of ports) {
+          const worker = port === 9222
+            ? browserSupervisor.workers.get('chatgpt-1')
+            : browserSupervisor.workers.get(`gemini-${port}`);
+          const item = { port, accountId: `account-${String(port - 9221).padStart(2, '0')}` };
+
+          try {
+            if (worker) {
+              try {
+                await browserSupervisor.ensureReady(worker);
+              } catch (error) {
+                // Flow inspection can still succeed when Gemini capability is unavailable.
+                const cdpReady = await browserSupervisor._isCdpReady(worker);
+                if (!cdpReady) throw error;
+              }
+            }
+
+            const snapshot = await refreshFlowAccount(port);
+            Object.assign(item, snapshot);
+            if (!snapshot.authenticated) throw new Error(snapshot.error || 'Flow oturumu doğrulanamadı');
+            if (!snapshot.email) throw new Error('Flow hesabının e-posta kimliği doğrulanamadı');
+            if (snapshot.credits == null) throw new Error('Flow kredi değeri gerçek hesap menüsünden okunamadı');
+
+            if (!gflowEngineUrl) throw new Error('GFLOW_ENGINE_URL yapılandırılmamış');
+            if (worker && port !== 9222) {
+              const stopped = await browserSupervisor.gracefulShutdown(worker, 'flow_profile_sync');
+              if (!stopped) throw new Error('Hesap şu anda meşgul; profil eşitleme ertelendi');
+            }
+
+            // Chrome runs as root in the login container and may leave 0600
+            // files. After the browser is fully stopped, grant the isolated
+            // gflow reader group access without changing profile contents.
+            await makeFlowSourceProfileReadable(port);
+
+            const syncResponse = await fetch(
+              `${gflowEngineUrl}/v1/accounts/${encodeURIComponent(snapshot.accountId)}/sync-profile`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ source_port: port, expected_email: snapshot.email }),
+                signal: AbortSignal.timeout(120_000),
+              }
+            );
+            const syncBody = await syncResponse.json().catch(() => ({}));
+            if (!syncResponse.ok || syncBody.ok !== true) {
+              const detail = syncBody?.detail?.message || syncBody?.detail || syncBody?.error || `HTTP ${syncResponse.status}`;
+              throw new Error(`Flow generation profili eşitlenemedi: ${detail}`);
+            }
+            recordFlowProfileSync(port, syncBody);
+            item.profileSynced = true;
+            item.profileSyncedAt = syncBody.synced_at;
+
+            if (worker && port !== 9222) {
+              try {
+                await browserSupervisor.ensureReady(worker);
+                item.geminiReady = worker.readiness === 'READY';
+              } catch (error) {
+                item.geminiReady = false;
+                item.geminiWarning = error.message;
+              }
+            }
+            item.ok = true;
+          } catch (error) {
+            item.ok = false;
+            item.error = error.message;
+            try { recordFlowProfileSync(port, { ok: false, error: error.message }); } catch {}
+          }
+          results.push(item);
+        }
+
+        const succeeded = results.filter(item => item.ok).length;
+        return sendJson(res, requestedPort && succeeded === 0 ? 422 : 200, {
+          ok: succeeded === results.length,
+          partial: succeeded > 0 && succeeded < results.length,
+          synced: succeeded,
+          total: results.length,
+          results,
+        });
+      } catch (err) {
+        return sendJson(res, 500, { ok: false, error: err.message });
       }
     }
 

@@ -8,7 +8,7 @@ import { replyToConversation } from './reply-actions'
 const COMPOSER_MAX_PX = 120
 const COMPOSER_MIN_PX = 42
 const FOCUS_CLASS = 'wb-composer-focus'
-type Suggestion = { label: string; text: string }
+import { generateSmartFallbackSuggestions, type Suggestion } from '@/lib/ai-suggestions'
 
 function fitComposer(el: HTMLTextAreaElement) {
   el.style.overflowY = 'hidden'
@@ -90,7 +90,12 @@ export function ReplyForm({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const recordingTimerRef = useRef<number | null>(null)
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [suggestions, setSuggestions] = useState<Suggestion[]>(() => {
+    if (lastInbound && lastInbound.trim().length > 0) {
+      return generateSmartFallbackSuggestions(lastInbound)
+    }
+    return []
+  })
   const [isSuggesting, setIsSuggesting] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(true)
   const [preparedKey, setPreparedKey] = useState<string | null>(null)
@@ -258,10 +263,14 @@ export function ReplyForm({
 
   useEffect(() => {
     if (!phone) return
-    setShowSuggestions(true)
+    if (lastInbound && lastInbound.trim().length > 0) {
+      // Mesaj değiştiğinde veya yeni mesaj geldiğinde anında akıllı önerileri göster (0ms bekleme)
+      setSuggestions(generateSmartFallbackSuggestions(lastInbound))
+      setShowSuggestions(true)
+    }
     const timer = setTimeout(() => {
       void fetchAiSuggestions({ autoOpen: true })
-    }, 200)
+    }, 150)
     return () => {
       clearTimeout(timer)
       if (abortCtrlRef.current) {
@@ -296,7 +305,11 @@ export function ReplyForm({
     abortCtrlRef.current = ctrl
 
     inFlightKey.current = key
-    setIsSuggesting(true)
+
+    // Yalnızca kullanıcı manuel 'Yenile' butonuna bastıysa veya hiç öneri yoksa yükleme çarkını göster
+    if (options?.force || suggestions.length === 0) {
+      setIsSuggesting(true)
+    }
     setShowSuggestions(true)
     try {
       const res = await fetch('/api/mesajlar/ai-suggest', {

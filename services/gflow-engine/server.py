@@ -341,6 +341,15 @@ async def sync_account_profile(account_id: str, req: ProfileSyncRequest):
                 status_code=status_code,
                 detail={"code": exc.code, "message": exc.message},
             )
+        except Exception as exc:
+            logger.exception("Profile sync failed for %s", account_id)
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "PROFILE_SYNC_COPY_FAILED",
+                    "message": f"Source profile could not be copied: {type(exc).__name__}",
+                },
+            ) from exc
 
 
 @app.get("/v1/workers/health")

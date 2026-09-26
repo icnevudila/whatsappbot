@@ -100,7 +100,7 @@ export type OperationsAccount = {
   enabled: boolean
   actions: Array<'enable' | 'disable' | 'clear_cooldown'>
   creditBalance?: number | null
-  creditsUsedToday?: number
+  creditsUsedToday?: number | null
   totalCompletedVideos?: number
   planTier?: string
 }

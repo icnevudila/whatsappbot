@@ -245,6 +245,13 @@ services:
       - gflow-egress         # outbound internet → Google Flow (no inbound)
     volumes:
       - /app/flow-profiles:/app/flow-profiles
+      # Read-only login sources from the Canlı Takip VNC/CDP slots. The engine
+      # copies and verifies a slot under an account lease before replacing a
+      # generation profile; it never runs generation directly on these mounts.
+      - ../services/omnistudio/docker/data/profile:/source-profiles/port-9222:ro
+      - ../services/omnistudio/docker/data/profile-2:/source-profiles/port-9223:ro
+      - ../services/omnistudio/docker/data/profile-3:/source-profiles/port-9224:ro
+      - ../services/omnistudio/docker/data/profile-4:/source-profiles/port-9225:ro
       - flow-outputs:/shared/outputs
       - flow-incidents:/shared/incidents
     shm_size: '1gb'
@@ -257,6 +264,7 @@ services:
       GFLOW_CLI_PATH: '/app/upstream_gflow/gflow-cli'
       GFLOW_CHROME_NO_SANDBOX: '0'
       DISPLAY: ':99'
+      SUPERVISOR_URL: 'http://omnistudio-engine:3456'
     healthcheck:
       test: ['CMD', 'curl', '-fsS', 'http://127.0.0.1:3461/health']
       interval: 30s

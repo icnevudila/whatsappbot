@@ -25,4 +25,13 @@ services:
       - PORT=3456
       - NODE_ENV=production
       - NUM_WORKERS=4 # 4 Bagimsiz ChatGPT Hesabi
+      - GFLOW_ENGINE_URL=http://gflow-engine:3461
+    networks:
+      - default
+      - gflow-internal
     shm_size: 4gb
+
+networks:
+  gflow-internal:
+    external: true
+    name: infra_gflow-internal
