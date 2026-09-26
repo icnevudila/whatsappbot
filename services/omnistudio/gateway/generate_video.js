@@ -3876,8 +3876,13 @@ function getAccountPoolStatus() {
 
     const remainingSec = isLimited ? Math.max(0, Math.round((info.limitedUntil - now) / 1000)) : 0;
     const flowProjectUrl = cfgAcc.flowProjectUrl || null;
-    const flowCredits = Number.isFinite(Number(cfgAcc.flowCredits)) ? Number(cfgAcc.flowCredits) : null;
-    const flowInitialCredits = Number.isFinite(Number(cfgAcc.flowInitialCredits)) ? Number(cfgAcc.flowInitialCredits) : null;
+    const creditVerified = cfgAcc.flowCreditSource === 'flow_account_menu' && Boolean(cfgAcc.lastFlowCheckedAt);
+    const flowCredits = creditVerified && cfgAcc.flowCredits != null && Number.isFinite(Number(cfgAcc.flowCredits))
+      ? Number(cfgAcc.flowCredits)
+      : null;
+    const flowInitialCredits = creditVerified && cfgAcc.flowInitialCredits != null && Number.isFinite(Number(cfgAcc.flowInitialCredits))
+      ? Number(cfgAcc.flowInitialCredits)
+      : null;
 
     // Günlük Gemini Hakları (Her hesap için 50 hak/gün)
     const dailyLimit = 50;
@@ -3920,8 +3925,8 @@ function getAiEngineStatus() {
 
   // Çoklu Flow Havuzu Hesapları (Giriş yapılmış veya Flow URLsi atanmış tüm hesaplar)
   const flowAccounts = geminiAccounts.map(a => {
-    const creds = Number.isFinite(Number(a.flowCredits)) ? Number(a.flowCredits) : null;
-    const initCreds = Number.isFinite(Number(a.flowInitialCredits)) ? Number(a.flowInitialCredits) : null;
+    const creds = a.flowCredits != null && Number.isFinite(Number(a.flowCredits)) ? Number(a.flowCredits) : null;
+    const initCreds = a.flowInitialCredits != null && Number.isFinite(Number(a.flowInitialCredits)) ? Number(a.flowInitialCredits) : null;
     const isFlowActive = a.flowAuthenticated === true && a.flowProfileSynced === true;
     const dailyRemaining = a.dailyRemaining ?? 50;
     return {

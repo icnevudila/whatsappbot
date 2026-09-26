@@ -759,10 +759,14 @@ class BrowserWorkerSupervisor extends EventEmitter {
     return { skipped: false, closed };
   }
 
-  async gracefulShutdown(worker, reason = 'idle_ttl') {
+  async gracefulShutdown(worker, reason = 'idle_ttl', options = {}) {
     if (typeof worker === 'string') worker = this.workers.get(worker);
     if (!worker) return false;
-    if (worker.currentJobId || ACTIVE_PHASES.has(worker.phase) || [WORKER_STATES.STARTING, WORKER_STATES.BUSY].includes(worker.state)) {
+    const allowStarting = options.allowStarting === true;
+    const activePhase = ACTIVE_PHASES.has(worker.phase) && !(allowStarting && worker.phase === 'STARTING');
+    const activeState = [WORKER_STATES.STARTING, WORKER_STATES.BUSY].includes(worker.state) &&
+      !(allowStarting && worker.state === WORKER_STATES.STARTING);
+    if (worker.currentJobId || activePhase || activeState) {
       return false;
     }
     worker.stopping = true;

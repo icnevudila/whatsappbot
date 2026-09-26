@@ -33,14 +33,25 @@ async function makeFlowSourceProfileReadable(port) {
   const stack = [root];
   while (stack.length > 0) {
     const current = stack.pop();
-    const stat = await fs.promises.lstat(current);
+    let stat;
+    try {
+      stat = await fs.promises.lstat(current);
+    } catch (error) {
+      if (error?.code === 'ENOENT') continue;
+      throw error;
+    }
     if (stat.isSymbolicLink()) continue;
-    if (stat.isDirectory()) {
-      await fs.promises.chmod(current, 0o755);
-      const entries = await fs.promises.readdir(current);
-      for (const entry of entries) stack.push(path.join(current, entry));
-    } else {
-      await fs.promises.chmod(current, 0o640);
+    try {
+      await fs.promises.chown(current, stat.uid, 1001);
+      if (stat.isDirectory()) {
+        await fs.promises.chmod(current, 0o750);
+        const entries = await fs.promises.readdir(current);
+        for (const entry of entries) stack.push(path.join(current, entry));
+      } else {
+        await fs.promises.chmod(current, 0o640);
+      }
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error;
     }
   }
 }
@@ -2117,13 +2128,17 @@ const server = http.createServer(async (req, res) => {
 
             if (!gflowEngineUrl) throw new Error('GFLOW_ENGINE_URL yapılandırılmamış');
             if (worker && port !== 9222) {
-              const stopped = await browserSupervisor.gracefulShutdown(worker, 'flow_profile_sync');
+              const stopped = await browserSupervisor.gracefulShutdown(
+                worker,
+                'flow_profile_sync',
+                { allowStarting: true },
+              );
               if (!stopped) throw new Error('Hesap şu anda meşgul; profil eşitleme ertelendi');
             }
 
             // Chrome runs as root in the login container and may leave 0600
             // files. After the browser is fully stopped, grant the isolated
-            // gflow reader group access without changing profile contents.
+            // gflow container read access without changing profile contents.
             await makeFlowSourceProfileReadable(port);
 
             const syncResponse = await fetch(

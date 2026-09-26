@@ -783,6 +783,7 @@ export function LiveDashboard() {
       if (json.success && json.ok) {
         if (json.isLoggedIn) {
           showNotice(`Port ${port} doğrulandı: ${json.accountName || json.email || 'Oturum Açık ve Aktif'}`)
+          if (port !== 9222) await handleRefreshFlowAccounts(port)
         } else {
           showNotice(`Port ${port} oturumu açık değil. Lütfen VNC üzerinden Google girişi yapın.`)
         }
@@ -811,7 +812,8 @@ export function LiveDashboard() {
           body: JSON.stringify({ action: 'verify', port: p }),
         })
       }
-      showNotice('Tüm hesap havuzu başarıyla tarandı ve güncellendi.')
+      await handleRefreshFlowAccounts()
+      showNotice('Tüm hesap havuzu doğrulandı; Flow oturumları ve gerçek krediler eşitlendi.')
       fetchData()
     } catch {
       showNotice('Tarama sırasında bağlantı hatası oluştu.')
