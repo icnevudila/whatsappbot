@@ -17,6 +17,8 @@ function planBeats(
   environment: string,
   motionStyle: string,
   hasPresenterReference: boolean,
+  isBrick: boolean = false,
+  isSprayer: boolean = false,
 ): Beat[] {
   const claim = verifiedClaims[0]
   const camera = motionStyle === 'macro_detail'
@@ -25,6 +27,7 @@ function planBeats(
       ? 'tam tur atmayan güvenli 3/4 vitrin hareketi'
       : 'gerçek kullanımı takip eden sabit ve yumuşak kamera'
   const commonClose = `${product} merkezde sabitlenir; logo ve CTA yalnız deterministic finishing katmanında eklenir.`
+
   const plans: Partial<Record<AdFormatType, [string, string, string]>> = {
     FAST_SALES: [
       `İlk saniyede ${product} üzerinde net form detayı; ${camera}.`,
@@ -32,8 +35,16 @@ function planBeats(
       commonClose,
     ],
     PRODUCT_USAGE: [
-      `${environment} içinde ürün ve kullanım bağlamı birlikte kurulur.`,
-      `Referansta izin verilen tek doğal kullanım adımı akıcı şekilde gösterilir; ${camera}.`,
+      isSprayer
+        ? `Modern serada veya bahçede sırtında açık mavi ${product} taşıyan profesyonel bahçıvan doğal adımlarla ilerler; deponun üzerindeki "bofe" markası okunur; ${camera}.`
+        : isBrick
+          ? `Şantiye alanında baretli ve iş eldivenli bir inşaat ustası paletten ${product} bloğunu kavrar; tek eksenli dikey delik yapısı ve çizgili yan yüzeyi belirgindir; ${camera}.`
+          : `${environment} içinde profesyonel bir kullanıcı ${product} ile doğal çalışma ortamında kadraja girer; ${camera}.`,
+      isSprayer
+        ? `Bahçıvan pirinç püskürtme borusunu tutarak bitkilerin üzerine homojen, ince su zerrecikleri püskürtür; gerçek insan elleri, anatomik beş parmak, akıcı ve doğal püskürtme hareketi.`
+        : isBrick
+          ? `Usta ${product} bloğunu düzgün örülmüş duvar sırasına titizlikle yerleştirir; sağlam klinker harç uyumu, gerçekçi insan elleri ve profesyonel işçilik hareketi.`
+          : `Kullanıcı ürünü elinde tutarak tek doğal kullanım adımını gerçekleştirir; anatomik beş parmaklı gerçek eller, kusursuz geometri ve akıcı hareket.`,
       commonClose,
     ],
     PROBLEM_SOLUTION: [
@@ -42,7 +53,11 @@ function planBeats(
       commonClose,
     ],
     SOCIAL_UGC: [
-      hasPresenterReference ? 'Onaylı sunucu referansı doğal kadrajda ürünü tanıtır.' : 'Birinci şahıs bakışında doğal el kadrajı ürüne yaklaşır.',
+      isSprayer
+        ? `Doğal bahçe ortamında bir kullanıcı sırtındaki ${product} ile püskürtme yaparken memnuniyetle hafifçe kameraya döner; ${camera}.`
+        : isBrick
+          ? `Şantiyede usta veya mühendis ${product} bloğunu tutarak sağlamlığını ve hafifliğini gösterir; ${camera}.`
+          : (hasPresenterReference ? 'Onaylı sunucu referansı doğal kadrajda ürünü tanıtır.' : 'Birinci şahıs bakışında doğal el kadrajı ürüne yaklaşır.'),
       `Samimi fakat iddiasız gerçek kullanım detayı; ürün geometrisi tamamen korunur.`,
       commonClose,
     ],
@@ -126,6 +141,9 @@ export async function POST(req: NextRequest) {
     if (!brandName || !productName) return NextResponse.json({ error: 'Marka ve ürün/hizmet adı zorunludur.' }, { status: 400 })
 
     const affordance = await resolveProductAffordance(brandName, productName, productDescription)
+    const isBrick = productName.toLowerCase().includes('tuğla') || productDescription.toLowerCase().includes('tuğla') || brandName.toLowerCase().includes('ayvazoğlu')
+    const isSprayer = productName.toLowerCase().includes('pompa') || productName.toLowerCase().includes('bofe') || productDescription.toLowerCase().includes('ilaçlama')
+
     const beats = planBeats(
       adFormat,
       productName,
@@ -133,6 +151,8 @@ export async function POST(req: NextRequest) {
       body.environmentPreset === 'auto' ? affordance.naturalEnvironment : String(body.environmentPreset || affordance.naturalEnvironment),
       String(body.motionStyle || 'real_usage'),
       referenceAssets.some((asset: any) => asset?.role === 'presenter'),
+      isBrick,
+      isSprayer,
     )
     const revisionType = String(body.revisionType || 'refresh')
     const creativeNote = String(body.creativeNote || '').trim()
@@ -189,8 +209,6 @@ ${revisionType === 'refresh' ? 'NOT: Önceki kalıplardan tamamen farklı, özg�
       })
     }
     const speechTimeline = speechFor(approvedSpokenLine)
-    const isBrick = productName.toLowerCase().includes('tuğla') || productDescription.toLowerCase().includes('tuğla') || brandName.toLowerCase().includes('ayvazoğlu')
-    const isSprayer = productName.toLowerCase().includes('pompa') || productName.toLowerCase().includes('bofe') || productDescription.toLowerCase().includes('ilaçlama')
 
     let geometryLock = 'Preserve exact product geometry, materials, and colors from canonical reference without warping or deformation.'
     if (isBrick) {
@@ -200,7 +218,7 @@ ${revisionType === 'refresh' ? 'NOT: Önceki kalıplardan tamamen farklı, özg�
     }
 
     const strictNegatives = [
-      'floating text, text overlays, subtitles, captions, on-screen text, words on screen, burned-in typography, lower third graphics, synthetic titles, credits, floating interface, watermark, invented foreign brand names, gibberish lettering, duplicate product, warped geometry, melting, flicker, identity drift',
+      'floating text, text overlays, subtitles, captions, on-screen text, words on screen, burned-in typography, lower third graphics, synthetic titles, credits, floating interface, watermark, invented foreign brand names, gibberish lettering, duplicate product, warped geometry, melting, flicker, identity drift, extra fingers, missing fingers, deformed hands, fused fingers, distorted human anatomy, mutant limbs',
       isBrick ? 'holes on side surfaces, perforations on multiple faces, side cavities, holes on top surface while front also has holes' : '',
       ...affordance.negativeEnvironmentConstraints,
     ].filter(Boolean).join(', ')
