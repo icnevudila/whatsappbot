@@ -608,7 +608,7 @@ class AdvancedJobQueue {
     if (wid === 'chatgpt-2') {
       jobIndex = this.pendingQueue.findIndex(jobId => {
         const job = this.jobs.get(jobId);
-        return isJobEligible(job) && job.type === 'chat_suggestions';
+        return isJobEligible(job) && (job.type === 'chat_suggestions' || job.type === 'chat_completion');
       });
     }
 
@@ -2223,7 +2223,130 @@ const server = http.createServer(async (req, res) => {
 
 
 
-    // 1.1. WhatsApp Yapay Zeka Mesaj Önerileri: POST /v1/chat/suggestions
+    // 1.0.8. Models Listesi: GET /v1/models & /models
+    if (method === 'GET' && (pathname === '/v1/models' || pathname === '/models')) {
+      return sendJson(res, 200, {
+        object: 'list',
+        data: [
+          { id: 'gpt-4o', object: 'model', created: 1715367049, owned_by: 'omnistudio' },
+          { id: 'gpt-4o-mini', object: 'model', created: 1721236049, owned_by: 'omnistudio' },
+          { id: 'chatgpt-4o', object: 'model', created: 1715367049, owned_by: 'omnistudio' },
+          { id: 'dall-e-3', object: 'model', created: 1698785189, owned_by: 'omnistudio' }
+        ]
+      });
+    }
+
+    // 1.0.9. Genel Sohbet (OpenAI Uyumlu Chat Completions): POST /v1/chat/completions & /chat/completions
+    if (method === 'POST' && (pathname === '/v1/chat/completions' || pathname === '/chat/completions')) {
+      const configuredApiKey = process.env.CHATGPT_API_KEY || 'sk-omnistudio-2026';
+      const authHeader = req.headers['authorization'] || req.headers['x-api-key'] || '';
+      const providedKey = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : authHeader.trim();
+
+      if (configuredApiKey && configuredApiKey !== 'none') {
+        if (!providedKey || providedKey !== configuredApiKey) {
+          return sendJson(res, 401, {
+            error: {
+              message: 'Yetkisiz erişim. Geçerli bir API anahtarı gereklidir (Authorization: Bearer sk-omnistudio-2026).',
+              type: 'invalid_request_error',
+              code: 'invalid_api_key'
+            }
+          });
+        }
+      }
+
+      const body = await parseJsonBody(req);
+      let promptText = '';
+      let systemPrompt = '';
+
+      if (Array.isArray(body.messages) && body.messages.length > 0) {
+        const sysMsg = body.messages.find(m => m.role === 'system');
+        if (sysMsg) systemPrompt = sysMsg.content || '';
+
+        const nonSystemMsgs = body.messages.filter(m => m.role !== 'system');
+        if (nonSystemMsgs.length === 1) {
+          promptText = nonSystemMsgs[0].content || '';
+        } else if (nonSystemMsgs.length > 1) {
+          promptText = nonSystemMsgs.map(m => `${m.role === 'user' ? 'Kullanıcı' : 'Asistan'}: ${m.content}`).join('\n\n');
+        }
+      } else {
+        promptText = (body.prompt || body.message || body.input || '').trim();
+      }
+
+      if (!promptText) {
+        return sendJson(res, 400, {
+          error: {
+            message: 'messages veya prompt alanı zorunludur.',
+            type: 'invalid_request_error'
+          }
+        });
+      }
+
+      const customer = (body.customer || body.user || 'API-Client').trim();
+      const conversationId = body.conversation_id || body.conversationId || null;
+      const requestStartedAt = Date.now();
+      const metrics = createJobMetrics({
+        operation: 'text_reply',
+        tenantId: body.tenantId || null,
+        requestId: body.requestId || null,
+        prompt: promptText,
+        companyContext: systemPrompt,
+        conversationHistory: '',
+        productCount: 0,
+        systemPromptChars: systemPrompt.length,
+        now: requestStartedAt,
+      });
+
+      const job = queue.createJob({
+        prompt: `[API Sohbet] ${promptText.slice(0, 100)}`,
+        customer,
+        platform: 'chatgpt',
+        type: 'chat_completion',
+        rawPrompt: promptText,
+        systemPrompt,
+        conversationId,
+        metrics,
+      });
+
+      console.log(`[Gateway] Yeni OpenAI Chat Completions talebi alındı: [Müşteri: ${customer}, Karakter: ${promptText.length}]`);
+      const finished = await queue.waitForJob(job.id, 120000);
+
+      if (finished.status === 'completed' && finished.result) {
+        const replyText = (finished.result.reply || finished.result.text || finished.result.raw || '').trim();
+        const createdTimestamp = Math.floor((finished.completedAt || Date.now()) / 1000);
+        return sendJson(res, 200, {
+          id: `chatcmpl-${finished.id}`,
+          object: 'chat.completion',
+          created: createdTimestamp,
+          model: body.model || 'gpt-4o',
+          choices: [
+            {
+              index: 0,
+              message: {
+                role: 'assistant',
+                content: replyText,
+              },
+              finish_reason: 'stop',
+            }
+          ],
+          usage: {
+            prompt_tokens: Math.ceil(promptText.length / 4),
+            completion_tokens: Math.ceil(replyText.length / 4),
+            total_tokens: Math.ceil((promptText.length + replyText.length) / 4),
+          },
+          reply: replyText,
+          success: true,
+        });
+      } else {
+        const isRateLimited = (finished.error || '').includes('WEB_SESSION_RATE_LIMITED');
+        return sendJson(res, isRateLimited ? 429 : 500, {
+          error: {
+            message: finished.error || 'ChatGPT yanıt üretemedi',
+            type: isRateLimited ? 'rate_limit_error' : 'server_error',
+            code: isRateLimited ? 'rate_limit_exceeded' : 'internal_error'
+          }
+        });
+      }
+    }
     if (method === 'POST' && (pathname === '/v1/chat/suggestions' || pathname === '/chat/suggestions')) {
       const body = await parseJsonBody(req);
       const incomingMessage = (body.incomingMessage || body.message || '').trim();

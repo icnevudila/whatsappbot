@@ -742,6 +742,8 @@ async function workerLoop() {
       await executeExtractKnowledgeJob(chatgptTab, job);
     } else if (job.type === 'product_affordance') {
       await executeProductAffordanceJob(chatgptTab, job);
+    } else if (job.type === 'chat_completion') {
+      await executeGenericChatJob(chatgptTab, job);
     } else {
       await executeChatGPTJob(chatgptTab, job);
     }
@@ -1321,6 +1323,164 @@ Bu mesaja verilebilecek en kaliteli ve uygun 3 FARKLI alternatif Türkçe yanıt
 
   } catch (err) {
     console.error(`[CDP Worker] [Mesajlar] İş hatası (${job.id}):`, err.message);
+    await fetch(`${GATEWAY_URL}/job/release`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jobId: job.id, error: err.message })
+    }).catch(() => {});
+  } finally {
+    releaseSessionFlightLease(SESSION_KEY, job.id);
+    if (cdp) cdp.close();
+    await workerTiming.flush();
+  }
+}
+
+// Genel OpenAI / API Chat Completions Sohbet İşini Çalıştır
+async function executeGenericChatJob(tab, job) {
+  let cdp = null;
+  const workerTiming = createWorkerTiming(job, 'text');
+  await acquireSessionFlightLease(SESSION_KEY, job.id);
+  try {
+    cdp = await createCdpSession(tab.webSocketDebuggerUrl);
+    await cdp.send('Page.bringToFront').catch(() => {});
+    workerTiming.mark('tab_acquire_ms');
+
+    const customer = (job.customer || 'API-Client').trim();
+    console.log(`[CDP Worker: ${WORKER_ID}] [Chat Completion] İstek işleniyor (Müşteri: "${customer}")...`);
+
+    const conversationChannel = job.conversationId ? `api_${String(job.conversationId).slice(0, 16)}` : 'api_chat';
+    const chatIdentity = { customer, tenantId: job.tenantId, conversationId: job.conversationId || conversationChannel };
+    const chatInfo = await ensureCustomerChat(cdp, customer, 'chat', chatIdentity);
+    if (!chatInfo.isNewChat) {
+      const waitStart = Date.now();
+      while (Date.now() - waitStart < 1500) {
+        const check = await cdp.send('Runtime.evaluate', {
+          expression: `document.querySelectorAll('[data-message-author-role], [data-conversation-role], [data-chatgpt-search-unit-key]').length > 0`,
+          returnByValue: true
+        }).catch(() => ({ result: { value: false } }));
+        if (check.result?.value) break;
+        await sleep(100);
+      }
+    }
+    workerTiming.mark('tab_ready_ms');
+
+    // 1. Submit öncesi asistan mesajlarının baseline'ını al
+    const baselineEval = await cdp.send('Runtime.evaluate', {
+      expression: `(() => {
+        const assts = ${JS_GET_ASSISTANT_MSGS};
+        const ids = assts.map(a => a.getAttribute('data-message-id') || a.getAttribute('data-chatgpt-search-message-ids') || a.id || '').filter(Boolean);
+        const lastText = assts.length > 0 ? (assts[assts.length - 1].innerText || '').trim() : '';
+        return { count: assts.length, ids, lastText };
+      })()`,
+      returnByValue: true
+    });
+    const baseline = baselineEval.result?.value || { count: 0, ids: [], lastText: '' };
+
+    // 2. Prompt hazırla
+    let finalPrompt = job.rawPrompt || job.prompt || '';
+    if (job.systemPrompt && !finalPrompt.includes(job.systemPrompt)) {
+      finalPrompt = `[Sistem Direktifi]: ${job.systemPrompt}\n\n[Kullanıcı Mesajı]:\n${finalPrompt}`;
+    }
+
+    // 3. Prompt'u ChatGPT'ye enjekte et ve gönder
+    const injectRes = await injectPromptAndSend(cdp, finalPrompt);
+    if (!injectRes?.success) {
+      throw new Error(injectRes?.error || 'ChatGPT input kutusu bulunamadı veya gönderilemedi');
+    }
+    workerTiming.timings.prompt_insert_ms = injectRes.prompt_insert_ms;
+    workerTiming.timings.submit_ms = injectRes.submit_ms;
+    const submittedAt = Date.now();
+
+    console.log(`[CDP Worker: ${WORKER_ID}] [Chat Completion] Prompt gönderildi, model yanıtı bekleniyor...`);
+
+    // 4. Yanıtın tamamlanmasını bekle
+    let lastText = '';
+    let stableCount = 0;
+    let foundNewMessage = false;
+    const maxWaitTimeMs = 90000;
+    const pollStart = Date.now();
+
+    while (Date.now() - pollStart < maxWaitTimeMs) {
+      await sleep(350);
+      if (await checkRateLimitModal(cdp)) {
+        throw new Error('WEB_SESSION_RATE_LIMITED: ChatGPT web "Too many requests" rate-limit modal detected');
+      }
+      const textEval = await cdp.send('Runtime.evaluate', {
+        expression: `
+          (() => {
+            const assts = ${JS_GET_ASSISTANT_MSGS};
+            if (assts.length <= ${baseline.count}) {
+              const stopBtn = document.querySelector('button[data-testid*="stop"], button[aria-label*="Stop"], button[aria-label*="durdur"], button[aria-label*="Durdur"]');
+              const isGenerating = !!stopBtn || !!document.querySelector('.result-thinking, [data-testid*="generating"], .streaming-animated-ellipsis');
+              return { hasNewMsg: false, isGenerating, text: '' };
+            }
+
+            const lastAsst = assts[assts.length - 1];
+            const text = (lastAsst.innerText || '').trim();
+            const stopBtn = document.querySelector('button[data-testid*="stop"], button[aria-label*="Stop"], button[aria-label*="durdur"], button[aria-label*="Durdur"]');
+            const isMsgStreaming = lastAsst ? !!lastAsst.querySelector('.streaming-animation, [data-is-streaming="true"]') : false;
+            const isGenerating = !!stopBtn || isMsgStreaming;
+
+            return { hasNewMsg: true, isGenerating, text };
+          })()
+        `,
+        returnByValue: true
+      });
+
+      const res = textEval.result?.value;
+      if (!res?.hasNewMsg) {
+        continue;
+      }
+      foundNewMessage = true;
+      if (!workerTiming.timings.first_response_signal_ms) workerTiming.mark('first_response_signal_ms', submittedAt);
+
+      const currentText = (res && res.text) ? res.text : '';
+      if (currentText && currentText === lastText) {
+        stableCount++;
+      } else {
+        stableCount = 0;
+      }
+      lastText = currentText;
+
+      if (!res.isGenerating && stableCount >= 2 && lastText.length > 0) {
+        workerTiming.mark('response_complete_ms', submittedAt);
+        break;
+      }
+    }
+
+    if (!foundNewMessage) {
+      throw new Error('STALE_RESPONSE_DETECTED: Yeni model yanıtı üretilmedi');
+    }
+
+    console.log(`[CDP Worker: ${WORKER_ID}] [Chat Completion] Yanıt başarıyla alındı (${lastText.length} karakter).`);
+
+    // 5. Gateway'e bildir
+    const finalTimings = workerTiming.finalize();
+    await fetch(`${GATEWAY_URL}/job/complete-text`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jobId: job.id,
+        result: { reply: lastText, text: lastText, raw: lastText },
+        timings: finalTimings,
+      })
+    });
+
+    // 6. Sohbeti kaydet
+    try {
+      const finalUrlEval = await cdp.send('Runtime.evaluate', {
+        expression: 'window.location.href',
+        returnByValue: true
+      });
+      const finalUrl = finalUrlEval.result?.value || '';
+      if (finalUrl.includes('/c/')) {
+        const expectedTitle = getExpectedChatTitle(customer, 'chat');
+        setCompanyChat(chatIdentity, 'chat', finalUrl, expectedTitle);
+      }
+    } catch (urlErr) {}
+
+  } catch (err) {
+    console.error(`[CDP Worker] [Chat Completion] İş hatası (${job.id}):`, err.message);
     await fetch(`${GATEWAY_URL}/job/release`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
