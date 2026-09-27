@@ -88,6 +88,7 @@ export function CreativeWizard({
   // Step 3: AI Creative Plan & Continuous 0-8s Speech Timeline
   const [creativeIdea, setCreativeIdea] = useState('')
   const [speechTimeline, setSpeechTimeline] = useState<SpeechTimelineItem[]>([])
+  const [spokenText, setSpokenText] = useState('')
   const [veoPromptPreview, setVeoPromptPreview] = useState('')
 
   // Step 4: Approval & Generation Tracking
@@ -156,7 +157,10 @@ export function CreativeWizard({
   }, [ctaChannel, data.org.websiteHint, data.phones])
 
   // Total speech word count
-  const fullSpeechText = useMemo(() => speechTimeline.map((s) => s.exact_text).join(' '), [speechTimeline])
+  const fullSpeechText = useMemo(() => {
+    if (spokenText.trim()) return spokenText.trim()
+    return speechTimeline.map((s) => s.exact_text).join(' ')
+  }, [spokenText, speechTimeline])
   const totalWords = useMemo(() => fullSpeechText.split(/\s+/).filter(Boolean).length, [fullSpeechText])
 
   const preflightIssues = useMemo(() => validateWizardPreflight({
@@ -299,13 +303,60 @@ export function CreativeWizard({
         throw new Error(draftRes.error || 'Güvenli reklam taslağı oluşturulamadı.')
       }
       if (draftRes.creative_idea) setCreativeIdea(draftRes.creative_idea)
-      if (draftRes.speech_timeline) setSpeechTimeline(draftRes.speech_timeline)
+      if (draftRes.speech_timeline) {
+        setSpeechTimeline(draftRes.speech_timeline)
+        const combined = (draftRes.speech_timeline as SpeechTimelineItem[]).map((s) => s.exact_text).join(' ')
+        setSpokenText(combined)
+      }
       if (draftRes.veo_prompt) setVeoPromptPreview(draftRes.veo_prompt)
     } catch (error: any) {
       console.error('Failed to generate grounded draft:', error)
       setDraftError(error?.message || 'Güvenli reklam taslağı oluşturulamadı.')
     } finally {
       setIsDrafting(false)
+    }
+  }
+
+  const handleSpokenTextChange = (val: string) => {
+    setSpokenText(val)
+    setDraftApproved(false)
+    setTranscriptConfirmed(false)
+    const trimmed = val.trim()
+    if (!trimmed) {
+      setSpeechTimeline([])
+      return
+    }
+    const parts = trimmed.split(/[.;:]+/).map((p) => p.trim()).filter(Boolean)
+    if (parts.length >= 2) {
+      setSpeechTimeline([
+        {
+          start_sec: 0.5,
+          end_sec: 3.6,
+          exact_text: `${parts[0]}.`,
+          speaker: 'Spiker',
+          delivery_style: 'Açılış kancası ve ürün odaklanması',
+          corresponding_visual_beat: 'Açılış kancası ve ürün odaklanması',
+        },
+        {
+          start_sec: 4.0,
+          end_sec: 7.2,
+          exact_text: `${parts.slice(1).join(' ')}.`,
+          speaker: 'Spiker',
+          delivery_style: 'Kararlı marka ve eylem kapanışı',
+          corresponding_visual_beat: 'Marka imzası ve temiz ürün kapanışı',
+        },
+      ])
+    } else {
+      setSpeechTimeline([
+        {
+          start_sec: 0.5,
+          end_sec: 6.5,
+          exact_text: trimmed,
+          speaker: 'Spiker',
+          delivery_style: 'Profesyonel, akıcı ve kurumsal Türkçe seslendirme',
+          corresponding_visual_beat: 'Ana ürün ve fayda anlatımı',
+        },
+      ])
     }
   }
 
@@ -867,6 +918,7 @@ export function CreativeWizard({
                                 setDraftApproved(false)
                                 setTranscriptConfirmed(false)
                                 setSpeechTimeline([])
+                                setSpokenText('')
                                 setVeoPromptPreview('')
                               }}
                               className={`flex flex-col overflow-hidden rounded-xl border text-left transition-all cursor-pointer ${
@@ -1055,24 +1107,8 @@ export function CreativeWizard({
 
                     <Textarea
                       rows={3}
-                      value={fullSpeechText}
-                      onChange={(e) => {
-                        const val = e.target.value
-                        if (speechTimeline.length > 0) {
-                          const updated = [...speechTimeline]
-                          updated[0].exact_text = val
-                          setSpeechTimeline(updated)
-                        } else {
-                          setSpeechTimeline([{
-                            start_sec: 0.5,
-                            end_sec: 5.5,
-                            exact_text: val,
-                            speaker: 'Spiker',
-                          }])
-                        }
-                        setDraftApproved(false)
-                        setTranscriptConfirmed(false)
-                      }}
+                      value={spokenText}
+                      onChange={(e) => handleSpokenTextChange(e.target.value)}
                       className="text-[14px] font-medium leading-relaxed"
                       placeholder="Reklam seslendirme metni..."
                     />
@@ -1194,6 +1230,7 @@ export function CreativeWizard({
           setDraftApproved(false)
           setTranscriptConfirmed(false)
           setSpeechTimeline([])
+          setSpokenText('')
           setVeoPromptPreview('')
           setAddProductOpen(false)
         }}

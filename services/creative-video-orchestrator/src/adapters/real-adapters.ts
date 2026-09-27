@@ -698,19 +698,25 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
     }
 
     // Mirror to omnistudio gateway flat outputs directory for instant CDN access
-    const gatewayOutputDir = '/opt/whatsappbot/services/omnistudio/docker/data/outputs'
-    if (existsSync(gatewayOutputDir)) {
-      try {
-        const targetVideo = join(gatewayOutputDir, basename(outputPath))
-        const targetThumb = join(gatewayOutputDir, basename(thumbPath))
-        if (outputPath !== targetVideo) {
-          copyFileSync(outputPath, targetVideo)
+    const gatewayCandidates = [
+      '/shared/gateway_outputs',
+      '/opt/whatsappbot/services/omnistudio/docker/data/outputs',
+      '/shared/outputs',
+    ]
+    for (const gDir of gatewayCandidates) {
+      if (existsSync(gDir)) {
+        try {
+          const targetVideo = join(gDir, basename(outputPath))
+          const targetThumb = join(gDir, basename(thumbPath))
+          if (outputPath !== targetVideo) {
+            copyFileSync(outputPath, targetVideo)
+          }
+          if (existsSync(thumbPath) && thumbPath !== targetThumb) {
+            copyFileSync(thumbPath, targetThumb)
+          }
+        } catch (mirrorErr) {
+          // ignore mirror error in non-standard environments
         }
-        if (existsSync(thumbPath) && thumbPath !== targetThumb) {
-          copyFileSync(thumbPath, targetThumb)
-        }
-      } catch (mirrorErr) {
-        // ignore mirror error in non-standard environments
       }
     }
 

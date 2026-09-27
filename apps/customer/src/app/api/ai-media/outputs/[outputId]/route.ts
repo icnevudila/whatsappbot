@@ -153,12 +153,12 @@ export async function GET(
     const videoCandidates = Array.from(
       new Set(
         [
+          output.job_id ? `${output.job_id}_finished.mp4` : null,
+          output.id ? `${output.id}_finished.mp4` : null,
           cleanFileName,
           fileName,
           output.job_id ? `${output.job_id}.mp4` : null,
           output.id ? `${output.id}.mp4` : null,
-          output.job_id ? `${output.job_id}_finished.mp4` : null,
-          output.id ? `${output.id}_finished.mp4` : null,
         ].filter(Boolean) as string[]
       )
     )

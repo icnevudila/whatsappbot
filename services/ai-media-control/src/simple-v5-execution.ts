@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { statSync, readFileSync, writeFileSync } from 'node:fs'
+import { statSync, readFileSync, writeFileSync, existsSync, copyFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   AudioIntegrityGate,
@@ -367,6 +367,10 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
       brandLogoSha: logoCheck.logoSha256,
       subtitlesPath: assPath,
       ctaBadgeText: ctaText,
+      outroBrandName: snapshot.brand_name,
+      outroSlogan: (snapshot.campaign as any).slogan || '',
+      outroPhone: snapshot.campaign.phoneNumber || '',
+      outroWebsite: snapshot.campaign.website || '',
     },
     finishedPath
   )
@@ -389,6 +393,33 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
   ws.logEvent('FINISHING', 'Recording final finished video')
   const { sha256: recordedFinalSha, size: recordedFinalSize } = ws.recordFinalVideo(finishedPath)
   ws.logEvent('COMPLETED', `final.mp4 written (${recordedFinalSize} bytes, sha256: ${recordedFinalSha})`)
+
+  // --- PUBLISH FINISHED MEDIA TO OMNISTUDIO GATEWAY OUTPUTS & SHARED VOLUMES ---
+  const thumbPath = finishedPath.replace(/\.mp4$/i, '_thumb.jpg')
+  const targetDirs = [
+    '/shared/gateway_outputs',
+    '/opt/whatsappbot/services/omnistudio/docker/data/outputs',
+    '/shared/outputs',
+    join('/shared/outputs', job.org_id, job.id),
+  ]
+
+  for (const dir of targetDirs) {
+    if (existsSync(dir)) {
+      try {
+        // 1. As <jobId>_finished.mp4
+        copyFileSync(finishedPath, join(dir, `${job.id}_finished.mp4`))
+        // 2. As <jobId>.mp4 (overwrite raw video with finished post-production video!)
+        copyFileSync(finishedPath, join(dir, `${job.id}.mp4`))
+        // 3. As <jobId>_thumb.jpg
+        if (existsSync(thumbPath)) {
+          copyFileSync(thumbPath, join(dir, `${job.id}_thumb.jpg`))
+          copyFileSync(thumbPath, join(dir, `${job.id}.jpg`))
+        }
+      } catch (copyErr) {
+        console.warn(`[simple-v5] Output mirroring warning for ${dir}:`, copyErr)
+      }
+    }
+  }
 
   const approved = review.decision === 'PASS' && !presentationNeedsReview
   ws.writeResult({
@@ -414,7 +445,7 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     job_id: job.id,
     org_id: job.org_id,
     attempt_id: attemptId,
-    file_path: finishedPath,
+    file_path: `/shared/outputs/${job.id}_finished.mp4`,
     sha256: finalSha,
     byte_size: statSync(finishedPath).size,
     duration_seconds: validation.ffprobe.duration,

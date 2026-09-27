@@ -83,9 +83,10 @@ export function buildSafeSpokenLine(input: {
   const isBrick = searchScope.includes('tuğla') || searchScope.includes('tugla') || searchScope.includes('klinker') || searchScope.includes('inşaat') || searchScope.includes('ayvazoğlu') || searchScope.includes('ayvazoglu')
   const isSprayer = searchScope.includes('pompa') || searchScope.includes('ilaçlama') || searchScope.includes('bofe') || searchScope.includes('bahçe') || searchScope.includes('tarım')
   const isCosmetics = /parfüm|parfum|koku|esans|ruj|krem|bakım|bakim|serum|makyaj|cilt|güzellik|guzellik|kolonya|losyon|şampuan|sampuan|kozmetik/.test(searchScope)
-  const isFashion = /giyim|elbise|tekstil|gomlek|gömlek|pantolon|ceket|ayakkabı|ayakkabi|çanta|canta|takı|taki|moda|kemer|kıyafet|kiyafet|butik/.test(searchScope)
+  const isB2BData = /veri\s*burada|veriburada|işletme|istihbarat|leads|crm|erp|dashboard|yazılım|yazilim|veri|data|b2b|bulut|cloud|saas|fintech|takip|analitik/.test(searchScope)
+  const isFashion = !isB2BData && /(?:^|[^a-zçğıöşü])(giyim|elbise|tekstil|gomlek|gömlek|pantolon|ceket|ayakkabı|ayakkabi|çanta|canta|takı|taki|moda|kemer|kıyafet|kiyafet|butik)(?:$|[^a-zçğıöşü])/.test(searchScope)
   const isFood = /döner|doner|kebap|burger|pizza|lahmacun|restoran|lokanta|kafe|cafe|tatlı|tatli|kahve|yemek|lezzet|mutfak|fırın|firin|şef|sef|gurme/.test(searchScope)
-  const isTech = /telefon|kulaklık|kulaklik|hoparlör|hoparlor|saat|tablet|bilgisayar|laptop|şarj|sarj|robot süpürge|cihaz|elektronik|yazılım|yazilim|veri|data/.test(searchScope)
+  const isTech = /telefon|kulaklık|kulaklik|hoparlör|hoparlor|saat|tablet|bilgisayar|laptop|şarj|sarj|robot süpürge|cihaz|elektronik/.test(searchScope)
   const isAuto = /oto|otomobil|araç|araba|lastik|jant|motor yağı|seramik kaplama|detailing|oto yıkama/.test(searchScope)
   const isMedical = /diş|dis|klinik|poliklinik|doktor|sağlık|saglik|medikal|implant|ortodonti|göz|goz|hekim|hastane/.test(searchScope)
 
@@ -144,7 +145,36 @@ export function buildSafeSpokenLine(input: {
     return clampWords(sprayHeroPool[Math.floor(Math.random() * sprayHeroPool.length)])
   }
 
-  // 3. Cosmetics & Fragrance
+  // 3. B2B, Data & Business Intelligence (e.g. Veri Burada)
+  if (isB2BData) {
+    if (fmt === 'PRODUCT_USAGE') {
+      const b2bUsagePool = [
+        `Yeni açılan işletmelere ilk siz ulaşın, sıcak satış fırsatlarını yakalayın. ${brand} ile potansiyel müşterileriniz hazır.`,
+        `Doğru veriye anında erişin, pazarda daima rakiplerinizden bir adım önde olun. ${brand} güvencesiyle.`,
+        `Müşteri portföyünüzü taze ve güncel verilerle büyütün. ${brand} ile hedef kitlenize ilk siz ulaşın.`,
+        `Pazara yeni giren işletmeleri ilk keşfeden siz olun. ${brand} ile satış hacminizi katlayın.`,
+      ]
+      if (note) {
+        return clampWords(`Yeni açılan işletmelere ilk siz ulaşın. ${note}. ${brand} ile satışlarınızı katlayın.`)
+      }
+      return clampWords(b2bUsagePool[Math.floor(Math.random() * b2bUsagePool.length)])
+    }
+    if (fmt === 'PREMIUM') {
+      return clampWords(note ? `İşinizi büyüten güvenilir veri altyapısı. ${note}. ${brand} ayrıcalığıyla.` : `Güvenilir kurumsal veri ve ticari istihbarat. ${brand} ile doğru zamanda doğru müşteriye ulaşın.`)
+    }
+    const b2bHeroPool = [
+      `Güncel ticari veri ve anlık işletme istihbaratı. ${brand} ile satışlarınızı hızla katlayın.`,
+      `Pazara yeni giren işletmeleri ilk keşfeden siz olun. ${brand} ile satış fırsatlarını kaçırmayın.`,
+      `Doğrulanmış müşteri verileri ve güçlü kurumsal altyapı. ${brand} ile işinizi büyütün.`,
+      `Yeni açılan işletmelerin tüm iletişim bilgileri tek tıkla elinizin altında. ${brand} güvencesiyle.`,
+    ]
+    if (note) {
+      return clampWords(`Pazardaki fırsatları anında yakalayın. ${note}. ${brand} ile daima bir adım önde olun.`)
+    }
+    return clampWords(b2bHeroPool[Math.floor(Math.random() * b2bHeroPool.length)])
+  }
+
+  // 4. Cosmetics & Fragrance
   if (isCosmetics) {
     if (fmt === 'PRODUCT_USAGE') {
       const cosmeticUsagePool = [
