@@ -91,7 +91,7 @@ export interface RawBrandInput {
   aspect_ratio?: AspectRatio
   requested_duration?: number
   output_type?: OutputType
-  creative_engine_mode?: 'CURRENT' | 'SIMPLE_V5_HYBRID'
+  creative_engine_mode?: 'CURRENT' | 'SIMPLE_V5_HYBRID' | 'LONG_FORM_VIDEO_V1'
   /** Immutable user-approved prompt from CreativeRevision. Only the job worker
    * may supply it; it is never generated from a mutable runtime fallback. */
   approved_veo_prompt?: string
@@ -121,7 +121,7 @@ export interface BrandContextSnapshot {
   readonly aspect_ratio: AspectRatio
   readonly requested_duration: number
   readonly output_type: OutputType
-  readonly creative_engine_mode?: 'CURRENT' | 'SIMPLE_V5_HYBRID'
+  readonly creative_engine_mode?: 'CURRENT' | 'SIMPLE_V5_HYBRID' | 'LONG_FORM_VIDEO_V1'
   readonly created_at: string
 }
 

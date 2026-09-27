@@ -5675,7 +5675,7 @@ export function LiveDashboard() {
                           <tr key={idx} className="hover:bg-surface-raised/40">
                             <td className="px-3 py-2 font-mono font-bold text-ink flex items-center gap-1.5">
                               <span className="w-1.5 h-1.5 rounded-full bg-ok" />
-                              {c.name === 'gflow-engine' ? 'Google Veo & Flow Motoru (gflow-engine)' : c.name === 'wa-service' ? 'WhatsApp Mesaj & Hat Servisi (wa-service)' : c.name === 'omnistudio-engine' ? 'Kreatif Görsel Motoru (omnistudio-engine)' : c.name === 'ai-media-control' ? 'AI Video Orkestratörü (ai-media-control)' : c.name}
+                              {c.name === 'gflow-engine' ? 'Mesajify · Google Flow' : c.name === 'wa-service' ? 'Mesajify · WhatsApp' : c.name === 'omnistudio-engine' ? 'Mesajify · Görsel & Post-Production' : c.name === 'ai-media-control' ? 'Mesajify · AI Video Control' : c.name === 'hetzner-caddy' ? 'Mesajify · Edge Proxy' : c.name}
                             </td>
                             <td className="px-3 py-2 font-mono font-semibold text-accent">{c.cpu}</td>
                             <td className="px-3 py-2 font-mono text-ink-soft">{c.mem}</td>

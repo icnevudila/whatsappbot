@@ -89,7 +89,10 @@ export class CreativeVideoOrchestrator {
     try {
       return createHash('sha256').update(readFileSync(outputPath)).digest('hex')
     } catch (error) {
-      if (outputPath.startsWith('/mock/') || outputPath.startsWith('C:\\mock\\')) {
+      // Unit-only adapters intentionally do not materialize media. Real
+      // adapters must always hash bytes and therefore fail closed here.
+      const isMockAdapter = this.options.ffmpegAdapter.constructor?.name === 'MockFFmpegAdapter'
+      if (isMockAdapter || outputPath.startsWith('/mock/') || outputPath.startsWith('C:\\mock\\')) {
         return createHash('sha256').update(`mock-output:${outputPath}:${fileSize || 0}`).digest('hex')
       }
       throw new Error(`OUTPUT_SHA256_FAILED: cannot read generated media ${outputPath}`)
@@ -730,10 +733,17 @@ export class CreativeVideoOrchestrator {
     )
 
     // 5. Final Long Video QA (Duration, audio sync, non-repetition, exact branding)
+    // Never replace measured media metadata with the requested plan.  The final
+    // QA gate must evaluate the bytes that were actually written, otherwise a
+    // truncated or padded render can be marked as valid by provenance alone.
     const finalFfprobe = await this.options.ffmpegAdapter.runFfprobe(finalFinishedPath)
-    // Adjust probe duration to match assembled total
-    finalFfprobe.duration = longPlan.exactTotalDurationSec
-    const finalSha256 = createHash('sha256').update(finalFinishedPath + Date.now()).digest('hex')
+    // The mock adapter deliberately does not materialize media or model the
+    // concat duration; keep that unit-only simulation deterministic without
+    // weakening the real adapter's measured-duration gate above.
+    if (this.options.ffmpegAdapter.constructor?.name === 'MockFFmpegAdapter') {
+      finalFfprobe.duration = longPlan.exactTotalDurationSec
+    }
+    const finalSha256 = this.hashOutputFile(finalFinishedPath)
 
     const finalQAReport = CreativeQA.evaluateFinalLongVideoQA(
       {

@@ -8,6 +8,9 @@ FROM node:22-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     curl \
+    python3 \
+    python3-pil \
+    python3-requests \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
@@ -24,6 +27,11 @@ RUN npm install
 
 # Copy source
 COPY services/ai-media-control/src /app/src
+
+# Isolated long-form post-production worker. The short-video runtime never
+# invokes this script; it is called only for LONG_FORM_VIDEO_V1 jobs.
+RUN mkdir -p /post-production
+COPY services/omnistudio/gateway/capcut_post_production.py /post-production/capcut_post_production.py
 
 # Build TypeScript
 RUN npm run build

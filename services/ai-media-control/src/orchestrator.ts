@@ -14,6 +14,7 @@ import { validateOutput } from './validator.js'
 import { randomUUID, createHash } from 'node:crypto'
 import { join } from 'node:path'
 import fs from 'node:fs'
+import { spawn } from 'node:child_process'
 import { runSimpleV5HybridExecution } from './simple-v5-execution.js'
 import {
   CreativeVideoOrchestrator,
@@ -29,6 +30,38 @@ import {
 
 let orchestratorRunning = false
 let pollInterval: NodeJS.Timeout | null = null
+
+async function runLongFormPostProduction(
+  scenePaths: string[],
+  outputPath: string,
+  expectedDuration: number,
+  logoPath?: string,
+): Promise<Record<string, any>> {
+  const scriptPath = process.env.MESAJIFY_POST_PRODUCTION_SCRIPT || '/post-production/capcut_post_production.py'
+  const args = [scriptPath, '--script', '', '--output', outputPath, '--duration', String(expectedDuration), '--type', 'BRAND_FILM', '--subtitle-mode', 'off']
+  for (const scenePath of scenePaths) args.push('--scene', scenePath)
+  if (logoPath) args.push('--logo', logoPath)
+
+  return await new Promise((resolve, reject) => {
+    const child = spawn(process.env.PYTHON_BIN || 'python3', args, { stdio: ['ignore', 'pipe', 'pipe'] })
+    let stdout = ''
+    let stderr = ''
+    child.stdout.on('data', chunk => { stdout += String(chunk) })
+    child.stderr.on('data', chunk => { stderr += String(chunk) })
+    child.on('error', reject)
+    child.on('close', code => {
+      if (code !== 0) {
+        reject(new Error(`LONG_FORM_POST_PRODUCTION_FAILED: ${stderr.slice(-2000)}`))
+        return
+      }
+      try {
+        resolve(JSON.parse(stdout))
+      } catch {
+        reject(new Error(`LONG_FORM_POST_PRODUCTION_INVALID_RESULT: ${stdout.slice(-1000)}`))
+      }
+    })
+  })
+}
 
 export function startOrchestrator(intervalMs: number = 5000) {
   if (orchestratorRunning) return
@@ -217,6 +250,10 @@ async function runJobExecution(job: any, accountId: string) {
     flow_account_id: accountId,
     status: 'running',
     requested_provider: job.requested_provider || job.metadata?.requested_provider || 'FLOW_VEO',
+    job_type: job.job_type || (job.creative_engine_mode === 'LONG_FORM_VIDEO_V1' ? 'LONG_FORM_VIDEO_V1' : 'SHORT_FORM_VIDEO'),
+    parent_job_id: job.parent_job_id || null,
+    scene_id: job.scene_id || null,
+    scene_index: job.scene_index || null,
     started_at: new Date().toISOString(),
   })
 
@@ -232,6 +269,8 @@ async function runJobExecution(job: any, accountId: string) {
       JobState.LEASED, JobState.PREPARING_ENV,
       job.creative_engine_mode === 'SIMPLE_V5_HYBRID'
         ? 'Preparing SIMPLE_V5_HYBRID generation environment'
+        : job.creative_engine_mode === 'LONG_FORM_VIDEO_V1'
+          ? 'Preparing isolated LONG_FORM_VIDEO_V1 scene generation environment'
         : `Preparing generation environment with Flow account ${accountId}`,
       {}, attemptId
     )
@@ -245,7 +284,9 @@ async function runJobExecution(job: any, accountId: string) {
     // Check feature flag: CREATIVE_VIDEO_ORCHESTRATOR=v1
     const useCreativeOrchestrator =
       process.env.CREATIVE_VIDEO_ORCHESTRATOR === 'v1' ||
-      job.metadata?.use_creative_orchestrator === true
+      job.metadata?.use_creative_orchestrator === true ||
+      job.creative_engine_mode === 'LONG_FORM_VIDEO_V1' ||
+      job.job_type === 'LONG_FORM_VIDEO_V1'
 
     if (useCreativeOrchestrator) {
       await runCreativeVideoExecution(job, accountId, attemptId, startTime, assets || [])
@@ -683,6 +724,14 @@ async function runCreativeVideoExecution(
   startTime: number,
   assets: any[]
 ) {
+  const isLongFormV1 = job.creative_engine_mode === 'LONG_FORM_VIDEO_V1' || job.job_type === 'LONG_FORM_VIDEO_V1'
+  if (Number(job.duration_seconds || 0) > 15 && !isLongFormV1) {
+    throw new Error('LONG_FORM_MODE_REQUIRED: durations above 15 seconds must use the isolated LONG_FORM_VIDEO_V1 product')
+  }
+  if (isLongFormV1 && ![24, 32, 40].includes(Number(job.duration_seconds))) {
+    throw new Error('LONG_FORM_DURATION_UNSUPPORTED: LONG_FORM_VIDEO_V1 supports only 24, 32, or 40 seconds')
+  }
+
   // A generation must be backed by the exact revision approved in the wizard.
   // Do not silently fall back to the mutable job prompt or a default CTA.
   const revisionId = job.metadata?.creative_revision_id
@@ -728,6 +777,15 @@ async function runCreativeVideoExecution(
   if (!orgName) {
     throw new Error('BRAND_CONTEXT_INVALID: organization name is required')
   }
+
+  // Fetch default brand kit for sector tone and context
+  const { data: brandKit } = await supabase
+    .from('brand_kits')
+    .select('name, tone')
+    .eq('org_id', job.org_id)
+    .order('is_default', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   // Materialize logo asset
   const logoAsset = (assets || []).find((a: any) => a.role === 'logo') || assets?.[0]
@@ -787,9 +845,9 @@ async function runCreativeVideoExecution(
   const rawInput: RawBrandInput = {
     org_id: job.org_id,
     brand_name: orgName,
-    sector_profile: job.metadata?.sector || 'commercial',
-    brand_description: `${orgName} ${job.title || ''} ${approvedFacts.product_name || ''} commercial campaign`,
-    tone_of_voice: ['professional'],
+    sector_profile: job.metadata?.sector || brandKit?.name || orgName || 'commercial',
+    brand_description: `${orgName} ${job.title || ''} ${approvedFacts.product_name || ''} ${brandKit?.tone || ''} commercial campaign`,
+    tone_of_voice: brandKit?.tone ? [brandKit.tone] : ['professional'],
     visual_style: [job.prompt],
     logo_asset_id: logoAsset?.id || 'asset_logo_default',
     logo_sha256: materializedLogo.sha256 || '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
@@ -819,7 +877,9 @@ async function runCreativeVideoExecution(
     },
     aspect_ratio: (job.aspect_ratio || '9:16') as any,
     requested_duration: job.duration_seconds || 8,
-    creative_engine_mode: (job.metadata?.creative_engine_mode === 'SIMPLE_V5_HYBRID' || job.creative_engine_mode === 'SIMPLE_V5_HYBRID') ? 'SIMPLE_V5_HYBRID' : 'CURRENT',
+    creative_engine_mode: job.metadata?.creative_engine_mode === 'LONG_FORM_VIDEO_V1' || job.creative_engine_mode === 'LONG_FORM_VIDEO_V1'
+      ? 'LONG_FORM_VIDEO_V1'
+      : (job.metadata?.creative_engine_mode === 'SIMPLE_V5_HYBRID' || job.creative_engine_mode === 'SIMPLE_V5_HYBRID') ? 'SIMPLE_V5_HYBRID' : 'CURRENT',
     verified_claims: Array.isArray(approvedFacts.verified_claims) ? approvedFacts.verified_claims : [],
     unverified_facts: Array.isArray(approvedFacts.unverified_facts) ? approvedFacts.unverified_facts : [],
     approved_veo_prompt: revision.veo_prompt,
@@ -886,6 +946,38 @@ async function runCreativeVideoExecution(
 
   console.log(`[orchestrator] Executing Creative Video Orchestrator for job ${job.id} on account ${accountId}`)
   const result = await orchestrator.executeCreativeJob(job.id, rawInput)
+  let outputFilePath = result.outputFilePath
+  let finalSha256 = result.finalSha256
+  let postProductionManifest: Record<string, any> | null = null
+
+  // LONG_FORM_VIDEO_V1 only: run the isolated CapCut post-production layer
+  // after every approved scene is available. Short-form jobs never enter this
+  // branch and retain their existing output path and finishing behaviour.
+  if (isLongFormV1) {
+    const scenePaths = Object.entries(result.provenance.scene_output_ids || {})
+      .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
+      .map(([, value]) => String(value))
+      .filter(Boolean)
+    if (scenePaths.length < 2) {
+      throw new Error('LONG_FORM_POST_PRODUCTION_INPUTS_MISSING: approved scene outputs are required')
+    }
+    const postOutputPath = `/shared/outputs/${job.org_id}/${job.id}/final_post_production.mp4`
+    const postResult = await runLongFormPostProduction(
+      scenePaths,
+      postOutputPath,
+      Number(job.duration_seconds),
+      materializedLogo.filePath,
+    )
+    if (postResult.status !== 'PASS' || postResult.qa_validation?.passed !== true) {
+      throw new Error(`LONG_FORM_POST_PRODUCTION_QA_FAILED: ${JSON.stringify(postResult.qa_validation || { status: postResult.status })}`)
+    }
+    outputFilePath = String(postResult.postprocessed_video || postOutputPath)
+    finalSha256 = String(postResult.provenance?.output_sha256 || '')
+    if (!/^[0-9a-f]{64}$/i.test(finalSha256)) {
+      throw new Error('LONG_FORM_POST_PRODUCTION_SHA_MISSING: final output SHA is required')
+    }
+    postProductionManifest = postResult
+  }
 
   const realFlowUuid = result.provenance.flow_project_id
   await supabase
@@ -897,22 +989,31 @@ async function runCreativeVideoExecution(
         provenance: result.provenance,
         qa_reports: result.sceneQAReports,
         strategy: result.strategy,
+        post_production: postProductionManifest,
       },
+      post_production_status: postProductionManifest ? postProductionManifest.status : null,
+      post_production_manifest: postProductionManifest || {},
     })
     .eq('id', attemptId)
 
   // Save measured output facts only.  A generated file is not a visual-QA 9.5
   // merely because the worker reached this line.
-  const finalProbe = await ffmpegAdapter.runFfprobe(result.outputFilePath)
-  const finalByteSize = fs.statSync(result.outputFilePath).size
+  const finalProbe = await ffmpegAdapter.runFfprobe(outputFilePath)
+  const finalByteSize = fs.statSync(outputFilePath).size
+  const outputVerified = Boolean(
+    result.verified &&
+    (!result.finalQAReport || result.finalQAReport.passed) &&
+    /^[0-9a-f]{64}$/i.test(finalSha256) &&
+    (!isLongFormV1 || (postProductionManifest?.status === 'PASS' && postProductionManifest?.qa_validation?.passed === true)),
+  )
 
   // Save Verified Output
   const { data: outRow } = await supabase.from('ai_media_outputs').insert({
     job_id: job.id,
     org_id: job.org_id,
     attempt_id: attemptId,
-    file_path: result.outputFilePath,
-    sha256: result.finalSha256,
+    file_path: outputFilePath,
+    sha256: finalSha256,
     byte_size: finalByteSize,
     duration_seconds: finalProbe.duration,
     width: finalProbe.width,
@@ -921,9 +1022,18 @@ async function runCreativeVideoExecution(
     vcodec: finalProbe.vcodec,
     acodec: finalProbe.acodec,
     visual_qa_score: null,
-    visual_qa_report: { scene_reports: result.sceneQAReports, provenance: result.provenance },
-    verified: true,
-    is_approved: true,
+    visual_qa_report: {
+      scene_reports: result.sceneQAReports,
+      final_qa: result.finalQAReport || null,
+      provenance: result.provenance,
+      product_type: job.job_type || (job.creative_engine_mode === 'LONG_FORM_VIDEO_V1' ? 'LONG_FORM_VIDEO_V1' : 'SHORT_FORM_VIDEO'),
+      post_production: postProductionManifest,
+    },
+    verified: outputVerified,
+    is_approved: outputVerified,
+    product_type: job.job_type || (job.creative_engine_mode === 'LONG_FORM_VIDEO_V1' ? 'LONG_FORM_VIDEO_V1' : 'SHORT_FORM_VIDEO'),
+    scene_manifest: result.provenance?.qa_reports?.sceneFlowProjectUuids ? Object.entries(result.provenance.qa_reports.sceneFlowProjectUuids).map(([scene_id, flow_project_id]) => ({ scene_id, flow_project_id })) : [],
+    post_production_manifest: postProductionManifest || {},
     delivered_at: new Date().toISOString(),
   }).select('id').single()
 
@@ -982,7 +1092,7 @@ async function runCreativeVideoExecution(
     supabase, job.id, job.org_id,
     currentState, JobState.COMPLETED,
     `Creative Video Orchestration completed successfully in ${Math.round((Date.now() - startTime) / 1000)}s (UUID: ${realFlowUuid})`,
-    { duration_seconds: result.durationSec, sha256: result.finalSha256, real_flow_project_uuid: realFlowUuid },
+    { duration_seconds: finalProbe.duration, sha256: finalSha256, real_flow_project_uuid: realFlowUuid, post_production: Boolean(postProductionManifest) },
     attemptId
   )
 

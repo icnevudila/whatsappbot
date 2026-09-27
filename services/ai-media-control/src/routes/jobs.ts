@@ -12,13 +12,27 @@ export const jobsRouter = Router()
 // POST /api/v1/jobs — Create new AI media job
 jobsRouter.post('/', async (req, res) => {
   try {
-    const { org_id, title, prompt, model, aspect_ratio, duration_seconds, priority, assets, campaign_id, metadata, creative_engine_mode } = req.body
+    const { org_id, title, prompt, model, aspect_ratio, duration_seconds, priority, assets, campaign_id, metadata, creative_engine_mode, job_type } = req.body
 
     if (!org_id || !title || !prompt) {
       return res.status(400).json({ error: true, message: 'org_id, title, and prompt are required' })
     }
 
     const resolvedMode = creative_engine_mode || metadata?.creative_engine_mode || 'CURRENT'
+    const resolvedJobType = job_type || metadata?.job_type || (resolvedMode === 'LONG_FORM_VIDEO_V1' ? 'LONG_FORM_VIDEO_V1' : 'SHORT_FORM_VIDEO')
+    if (!['SHORT_FORM_VIDEO', 'LONG_FORM_VIDEO_V1'].includes(resolvedJobType)) {
+      return res.status(400).json({ error: true, message: 'job_type must be SHORT_FORM_VIDEO or LONG_FORM_VIDEO_V1' })
+    }
+    if (resolvedJobType === 'LONG_FORM_VIDEO_V1') {
+      if (resolvedMode !== 'LONG_FORM_VIDEO_V1') {
+        return res.status(400).json({ error: true, message: 'LONG_FORM_VIDEO_V1 jobs require creative_engine_mode=LONG_FORM_VIDEO_V1' })
+      }
+      if (![24, 32, 40].includes(Number(duration_seconds))) {
+        return res.status(400).json({ error: true, message: 'LONG_FORM_VIDEO_V1 duration must be 24, 32, or 40 seconds' })
+      }
+    } else if (resolvedMode === 'LONG_FORM_VIDEO_V1') {
+      return res.status(400).json({ error: true, message: 'LONG_FORM_VIDEO_V1 must use job_type=LONG_FORM_VIDEO_V1' })
+    }
 
     const { data: job, error } = await supabase
       .from('ai_media_jobs')
@@ -33,6 +47,7 @@ jobsRouter.post('/', async (req, res) => {
         campaign_id: campaign_id || null,
         expected_ingredient_count: (assets || []).length,
         creative_engine_mode: resolvedMode,
+        job_type: resolvedJobType,
         metadata: metadata || {},
       })
       .select()
@@ -65,7 +80,7 @@ jobsRouter.post('/', async (req, res) => {
       from_state: null,
       to_state: JobState.PENDING,
       message: `Job "${title}" created`,
-      payload: { model, aspect_ratio, assets_count: (assets || []).length },
+      payload: { model, aspect_ratio, assets_count: (assets || []).length, job_type: resolvedJobType },
     })
 
     res.status(201).json(job)

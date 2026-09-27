@@ -6,6 +6,9 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: omnistudio-engine
+    labels:
+      com.mesajify.service.display_name: "Mesajify · Görsel & Post-Production"
+      com.mesajify.service.role: "media-gateway"
     restart: unless-stopped
     ports:
       - "3456:3456"   # API Gateway (OpenAI Compatible Endpoint)

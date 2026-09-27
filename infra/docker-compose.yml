@@ -42,6 +42,9 @@ services:
     <<: *wa-common
     profiles: ['solo']
     container_name: wa-service
+    labels:
+      com.mesajify.service.display_name: "Mesajify · WhatsApp"
+      com.mesajify.service.role: "whatsapp-worker"
     ports:
       - '127.0.0.1:8080:8080'
     environment:
@@ -55,6 +58,9 @@ services:
     <<: *wa-common
     profiles: ['small']
     container_name: wa-service
+    labels:
+      com.mesajify.service.display_name: "Mesajify · WhatsApp"
+      com.mesajify.service.role: "whatsapp-worker"
     mem_limit: 3.5g
     shm_size: '128mb'
     ports:
@@ -198,6 +204,9 @@ services:
       context: ..
       dockerfile: services/ai-media-control/Dockerfile
     container_name: ai-media-control
+    labels:
+      com.mesajify.service.display_name: "Mesajify · AI Video Control"
+      com.mesajify.service.role: "video-orchestrator"
     profiles: ['small', 'solo', 'scale']
     restart: unless-stopped
     ports:
@@ -238,6 +247,9 @@ services:
       context: ..
       dockerfile: services/gflow-engine/Dockerfile
     container_name: gflow-engine
+    labels:
+      com.mesajify.service.display_name: "Mesajify · Google Flow"
+      com.mesajify.service.role: "video-provider"
     profiles: ['small', 'solo', 'scale']
     restart: unless-stopped
     # NO host ports — not accessible from outside Docker
