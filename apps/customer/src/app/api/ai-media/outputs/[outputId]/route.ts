@@ -129,9 +129,7 @@ export async function GET(
             const tHeaders = new Headers()
             tHeaders.set('Content-Type', 'image/jpeg')
             tHeaders.set('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800')
-            const cl = tRes.headers.get('content-length')
-            if (cl) tHeaders.set('Content-Length', cl)
-            return new NextResponse(tRes.body, { status: 200, headers: tHeaders })
+            return NextResponse.redirect(thumbUrl, 307)
           }
         } catch {
           // continue fallback

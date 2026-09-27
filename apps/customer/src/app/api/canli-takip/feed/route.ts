@@ -48,8 +48,8 @@ export async function GET() {
             const tFile = v.thumbnailUrl ? v.thumbnailUrl.split('/').pop() : ''
             return {
               ...v,
-              videoUrl: `/api/canli-takip/media-proxy?file=${encodeURIComponent(vFile)}`,
-              thumbnailUrl: tFile ? `/api/canli-takip/media-proxy?file=${encodeURIComponent(tFile)}` : null,
+              videoUrl: `https://media.167.233.201.31.nip.io/outputs/${encodeURIComponent(vFile)}`,
+              thumbnailUrl: tFile ? `https://media.167.233.201.31.nip.io/outputs/${encodeURIComponent(tFile)}` : null,
             }
           })
         }
