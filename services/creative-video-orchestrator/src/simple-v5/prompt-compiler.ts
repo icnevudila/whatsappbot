@@ -1,6 +1,5 @@
 import type { SimpleV5Brief, SimpleV5ShotPlan, SimpleV5CompiledPrompt } from './types.js'
 
-// Compact shared negatives. Provider-specific compilers use the same factual plan.
 export const SIMPLE_V5_STANDARD_NEGATIVES = [
   'duplicate subject',
   'duplicate product',
@@ -34,15 +33,65 @@ export const SIMPLE_V5_STANDARD_NEGATIVES = [
   'watermark',
   'on-screen subtitles',
   'English speech',
-  'misspelled company name',
+  'English narration',
   'doubled letters',
   'repeated consonants',
-  'AYVAZOĞĞLU',
   'stretched typography',
-  'mangled lettering on truck',
+  'mangled lettering on vehicles',
 ].join(', ')
 
 import { resolveProductFidelityContract, formatFidelityLockSection } from './fidelity-contract.js'
+
+/**
+ * Universal Diegetic Branding Engine.
+ * Formulates sector-aware physical branding placement and character-level anti-stutter/anti-hallucination
+ * constraints for ANY Turkish or international brand name.
+ */
+export function buildUniversalDiegeticBranding(brandName: string, location: string): {
+  brandingDirective: string
+  dynamicNegatives: string[]
+} {
+  const cleanBrand = (brandName || '').trim() || 'İşletmemiz'
+  const loc = (location || '').toLowerCase()
+
+  // 1. Sector-appropriate realistic surface targeting
+  let surfaces = 'on commercial transport vehicles, worker workwear, or product packaging'
+  if (loc.includes('şantiye') || loc.includes('inşaat') || loc.includes('yapı')) {
+    surfaces = 'on commercial fleet vehicle doors, worker safety vest, or pallet packaging'
+  } else if (loc.includes('tarla') || loc.includes('bahçe') || loc.includes('tarım') || loc.includes('sera')) {
+    surfaces = 'on agricultural utility vehicles, field worker overalls, or equipment tanks'
+  } else if (loc.includes('kafe') || loc.includes('restoran') || loc.includes('mutfak') || loc.includes('fırın') || loc.includes('döner')) {
+    surfaces = 'on barista/chef aprons, storefront plaques, or takeout packaging'
+  } else if (loc.includes('klinik') || loc.includes('sağlık') || loc.includes('laboratuvar')) {
+    surfaces = 'on reception desk plaque or doctor/practitioner lab coats'
+  } else if (loc.includes('mağaza') || loc.includes('butik') || loc.includes('moda') || loc.includes('tekstil')) {
+    surfaces = 'on boutique shopping bags, garment tags, or store display signage'
+  }
+
+  // 2. Strict character-level anti-mutation directive
+  const brandingDirective = `[CANONICAL BRAND IDENTITY]: ZERO FLOATING LOGOS IN SKY OR AIR. No synthetic floating text overlays, no floating boxes or watermark badges. Apply canonical brand identity diegetically in the physical scene: authentic corporate emblem from @BrandLogo matching exact brand "${cleanBrand}". When visible ${surfaces}, render strictly as a neat, compact, centered corporate badge (preserve natural 1:1 or 2:1 aspect ratio, strictly avoiding horizontal letter stretching across large backgrounds or vehicle sides). Exactly spell "${cleanBrand}" letter-for-letter with strictly single letters, zero repeated or doubled consonants.`
+
+  // 3. Dynamic negative constraints protecting against character stutter / doubling
+  const dynamicNegatives: string[] = [
+    `misspelled ${cleanBrand}`,
+    'stretched typography',
+    'doubled letters',
+    'repeated consonants',
+    'letter stutter',
+    'mangled lettering on vehicles',
+    'scrambled brand typography',
+  ]
+
+  // Automatically detect and protect Turkish special characters (ğ, ş, ü, ö, ç, ı)
+  const turkishSpecials = ['ğ', 'Ğ', 'ş', 'Ş', 'ü', 'Ü', 'ö', 'Ö', 'ç', 'Ç', 'ı', 'İ']
+  for (const char of turkishSpecials) {
+    if (cleanBrand.includes(char)) {
+      dynamicNegatives.push(`doubled ${char}`, `repeated ${char}`)
+    }
+  }
+
+  return { brandingDirective, dynamicNegatives }
+}
 
 /**
  * SimpleV5PromptCompiler.
@@ -63,13 +112,14 @@ export class SimpleV5PromptCompiler {
     })
 
     const fidelityLock = formatFidelityLockSection(fidelityReport.contract)
+    const { brandingDirective, dynamicNegatives } = buildUniversalDiegeticBranding(brief.brandName, brief.location)
 
     const sections: string[] = [
       `[FORMAT]: ${brief.durationSeconds.toFixed(1)}-second vertical commercial video, 9:16 aspect ratio.`,
       `[SINGLE CONCEPT]: ${brief.primaryIdea}`,
       `[HERO PRODUCT SUBJECT ISOLATION]: Focus strictly and exclusively on the foreground physical product item from @HeroProduct. Completely ignore, decouple, and discard any background, floor, shelves, retail interior, or warehouse environment present in @HeroProduct reference photo. Place the product exclusively within [ONE LOCATION]: ${brief.location}.`,
       `[HERO PRODUCT]: Preserve ${brief.heroProductHandle} geometry, material texture, and colors exactly as shown in authoritative reference assets.`,
-      `[CANONICAL BRAND IDENTITY]: ZERO FLOATING LOGOS IN SKY OR AIR. No synthetic text overlays, no floating boxes or watermark badges. Apply canonical brand identity diegetically in the physical scene: authentic corporate emblem from @BrandLogo matching brand "${brief.brandName}". When visible on delivery vehicles, worker safety vest, or pallets, render as a neat, compact, centered corporate badge (proportional size, not stretched across entire trailer). Exactly spell "${brief.brandName}" letter-for-letter with strictly single letters, zero repeated or doubled consonants.`,
+      brandingDirective,
       `[ONE LOCATION]: ${brief.location}, ${brief.lighting}.`,
       `[CONTINUOUS CINEMATIC TAKE]: A single uninterrupted ${brief.durationSeconds.toFixed(1)}-second commercial take with seamless 35mm fluid camera movement. ${shotPlan.shot1_hook.description} ${shotPlan.shot2_proof.description} ${shotPlan.shot3_close.description} NO CUTS, NO ABRUPT HARD JUMPS, SINGLE UNBROKEN CAMERA FLOW.`,
       fidelityLock,
@@ -92,7 +142,7 @@ export class SimpleV5PromptCompiler {
       ? ', indoor warehouse, storage shelves, industrial metal shelving, retail store shelves, interior concrete room, indoor storage, commercial depot'
       : ''
 
-    const negativePrompt = `${SIMPLE_V5_STANDARD_NEGATIVES}${backgroundLeakageNegatives}`
+    const negativePrompt = `${SIMPLE_V5_STANDARD_NEGATIVES}${backgroundLeakageNegatives}, ${dynamicNegatives.join(', ')}`
 
     const metrics = {
       charCount: cinematicPrompt.length,
