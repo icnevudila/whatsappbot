@@ -54,6 +54,7 @@ export const AYVAZOGLU_TUGLA_FIDELITY_CONTRACT: ResolvedProductFidelityContract 
     'When the brick is placed horizontally into a wall or held by the mason, the horizontal top and bottom faces are solid grooved terracotta clay without holes',
     'Side and front visible faces are either solid grooved clay or show the single-axis holes, NEVER dual-face holes',
     'Perpendicular faces must be solid ribbed terracotta surfaces with zero perforations',
+    'REALISTIC MASONRY PHYSICS: Bricks strictly obey natural terrestrial gravity. Bricks never float in mid-air and never magically stack without hands or mortar. When a brick is placed onto a wall, a worker wearing work gloves sets it directly onto a bed of fresh wet cement mortar.',
   ],
   forbidden_mutations: [
     'perforations on multiple faces',
@@ -67,17 +68,20 @@ export const AYVAZOGLU_TUGLA_FIDELITY_CONTRACT: ResolvedProductFidelityContract 
     'changed proportions',
     'warped corners',
     'different brick type',
+    'floating bricks in mid-air',
+    'brick magically hovering or stacking without mortar',
+    'bare brick on bare brick without mortar joint',
   ],
   safe_camera_rules: [
     'prefer stable three-quarter views',
     'avoid unnecessary extreme rotation',
   ],
   allowed_actions: [
-    'worker picks up brick',
-    'professional wall placement',
-    'hero product display on clean pedestal or architectural setting',
+    'worker in work gloves picks up brick from pallet and sets it onto fresh mortar',
+    'professional masonry craftsmanship: placing brick onto mortar bed on wall',
+    'hero product display on clean pallet, transport band, or construction setting',
+    'diegetic brand identity: @BrandLogo placed clearly on worker safety vest, pallet packaging, or delivery vehicle in background',
     'smooth continuous studio or logistics reveal',
-    'professional craftsmanship or placement when demonstrating usage',
   ],
 })
 
