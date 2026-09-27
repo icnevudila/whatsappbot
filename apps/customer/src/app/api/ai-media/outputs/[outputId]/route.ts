@@ -11,7 +11,7 @@ const rawGateway = process.env.OMNISTUDIO_GATEWAY_URL || process.env.AI_GATEWAY_
 const GATEWAY_HOST =
   rawGateway && !rawGateway.includes('127.0.0.1') && !rawGateway.includes('localhost')
     ? rawGateway
-    : 'http://167.233.201.31:3456'
+    : 'https://media.167.233.201.31.nip.io'
 
 /**
  * GET /api/ai-media/outputs/[outputId]
@@ -166,16 +166,18 @@ export async function GET(
     )
 
     let upstreamRes: Response | null = null
+    let matchedUrl: string | null = null
 
     for (const vName of videoCandidates) {
       const vUrl = `${GATEWAY_HOST}/outputs/${vName}`
       try {
         const res = await fetch(vUrl, {
-          headers: fetchHeaders,
+          method: 'HEAD',
           cache: 'no-store',
         })
         if (res.ok || res.status === 206) {
           upstreamRes = res
+          matchedUrl = vUrl
           break
         }
       } catch {
@@ -184,36 +186,40 @@ export async function GET(
     }
 
     // If not found, try structured relative path
-    if ((!upstreamRes || (!upstreamRes.ok && upstreamRes.status !== 206)) && filePath.includes('/outputs/')) {
+    if (!matchedUrl && filePath.includes('/outputs/')) {
       const relPath = filePath.split('/outputs/')[1]
+      const relUrl = `${GATEWAY_HOST}/outputs/${relPath}`
       try {
-        const res = await fetch(`${GATEWAY_HOST}/outputs/${relPath}`, {
-          headers: fetchHeaders,
+        const res = await fetch(relUrl, {
+          method: 'HEAD',
           cache: 'no-store',
         })
         if (res.ok || res.status === 206) {
           upstreamRes = res
+          matchedUrl = relUrl
         }
       } catch {}
     }
 
     // Fallback: job-specific subfolder
-    if (!upstreamRes || (!upstreamRes.ok && upstreamRes.status !== 206)) {
+    if (!matchedUrl) {
       const fallbackUrl = `${GATEWAY_HOST}/outputs/${output.org_id}/${output.job_id}/${cleanFileName}`
       try {
-        const fallbackRes = await fetch(fallbackUrl, { headers: fetchHeaders, cache: 'no-store' })
+        const fallbackRes = await fetch(fallbackUrl, { method: 'HEAD', cache: 'no-store' })
         if (fallbackRes.ok || fallbackRes.status === 206) {
           upstreamRes = fallbackRes
+          matchedUrl = fallbackUrl
         }
       } catch {}
     }
 
-    if (!upstreamRes || (!upstreamRes.ok && upstreamRes.status !== 206)) {
+    if (!matchedUrl) {
       const status = upstreamRes ? upstreamRes.status : 502
       return new NextResponse(`Video akışı açılamadı (${status})`, { status })
     }
 
-    return buildStreamResponse(upstreamRes, cleanFileName)
+    // Direct redirect to Hetzner HTTPS stream (0 bytes transferred through Vercel!)
+    return NextResponse.redirect(matchedUrl, 307)
   } catch (err: any) {
     console.error('[ai-media-outputs] Stream error:', err)
     return new NextResponse('Sunucu hatası', { status: 500 })
