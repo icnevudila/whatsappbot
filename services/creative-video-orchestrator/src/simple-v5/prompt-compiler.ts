@@ -35,6 +35,9 @@ export const SIMPLE_V5_STANDARD_NEGATIVES = [
   'on-screen subtitles',
   'English speech',
   'English narration',
+  'painted text on vehicles',
+  'words on trucks',
+  'misspelled letters on truck',
 ].join(', ')
 
 import { resolveProductFidelityContract, formatFidelityLockSection } from './fidelity-contract.js'
@@ -64,7 +67,7 @@ export class SimpleV5PromptCompiler {
       `[SINGLE CONCEPT]: ${brief.primaryIdea}`,
       `[HERO PRODUCT SUBJECT ISOLATION]: Focus strictly and exclusively on the foreground physical product item from @HeroProduct. Completely ignore, decouple, and discard any background, floor, shelves, retail interior, or warehouse environment present in @HeroProduct reference photo. Place the product exclusively within [ONE LOCATION]: ${brief.location}.`,
       `[HERO PRODUCT]: Preserve ${brief.heroProductHandle} geometry, material texture, and colors exactly as shown in authoritative reference assets.`,
-      `[CANONICAL BRAND IDENTITY]: ZERO FLOATING LOGOS IN SKY OR AIR. No synthetic text overlays, no floating boxes or watermark badges. Apply canonical brand identity diegetically: clearly visible on product packaging, on logistics transport pallets, on background delivery vehicles/trucks, or on the worker's safety vest matching @BrandLogo.`,
+      `[CANONICAL BRAND IDENTITY]: ZERO FLOATING LOGOS IN SKY OR AIR. No synthetic text overlays, no floating boxes, and ZERO painted letters on background vehicles or walls. Do NOT generate written company names or typography onto trucks, pallets, or garments (prevents AI spelling artifacts). Brand identity is applied exclusively through deterministic high-res logo finishing and outro. Keep all delivery vehicles, tools, and background surfaces clean, neutral, and unbranded without written text.`,
       `[ONE LOCATION]: ${brief.location}, ${brief.lighting}.`,
       `[CONTINUOUS CINEMATIC TAKE]: A single uninterrupted ${brief.durationSeconds.toFixed(1)}-second commercial take with seamless 35mm fluid camera movement. ${shotPlan.shot1_hook.description} ${shotPlan.shot2_proof.description} ${shotPlan.shot3_close.description} NO CUTS, NO ABRUPT HARD JUMPS, SINGLE UNBROKEN CAMERA FLOW.`,
       fidelityLock,
