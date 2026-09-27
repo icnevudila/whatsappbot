@@ -49,8 +49,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     antiThrottle: true,
     isEngineActive: true,
     selectedWorkspace: 'whatsapp',
-    galleryHistory: []
+    galleryHistory: [],
+    chatgptProjectId: '',  // ChatGPT proje ID (e.g. proj_xxx) — tüm sohbetleri buraya toplar
   });
+
+  const chatgptProjectIdInput = document.getElementById('chatgptProjectIdInput');
 
   gatewayUrlInput.value = settings.gatewayUrl;
   delayRangeInput.value = settings.delaySeconds;
@@ -58,7 +61,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   preferredPlatformSelect.value = settings.preferredPlatform;
   antiThrottleCheck.checked = settings.antiThrottle;
   workspaceSelect.value = settings.selectedWorkspace;
+  if (chatgptProjectIdInput) chatgptProjectIdInput.value = settings.chatgptProjectId || '';
   updateEngineStateUI(settings.isEngineActive);
+
 
   // Sekme Değiştirme
   tabBtns.forEach(btn => {
@@ -108,6 +113,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       delaySeconds: parseInt(delayRangeInput.value, 10),
       preferredPlatform: preferredPlatformSelect.value,
       antiThrottle: antiThrottleCheck.checked,
+      chatgptProjectId: (chatgptProjectIdInput ? chatgptProjectIdInput.value.trim() : '') || '',
     };
     await chrome.storage.local.set(newSettings);
     chrome.runtime.sendMessage({ action: 'settings_updated', settings: newSettings });
@@ -115,6 +121,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(() => { saveSettingsBtn.textContent = 'Ayarları Kaydet'; }, 1500);
     pollGateway();
   });
+
 
   // Platform Sekmelerini Kontrol Et (ChatGPT & Gemini)
   async function checkTabs() {

@@ -64,6 +64,33 @@
   // 1. ChatGPT Otomasyon Motoru
   // =========================================================================
   async function runChatGPTJob(job, gatewayUrl) {
+    // ── Proje yönlendirmesi ───────────────────────────────────────────────
+    // Ayarlarda bir ChatGPT proje ID'si varsa (örn. proj_xxx), her iş
+    // projenin yeni sohbet sayfasına yönlendirilir. Böylece tüm sohbetler
+    // "Mesajify" projesi altında toplanır, dağılmaz.
+    const { chatgptProjectId = '' } = await chrome.storage.local.get({ chatgptProjectId: '' });
+
+    const currentUrl = window.location.href;
+    const isInCorrectProject = chatgptProjectId
+      ? currentUrl.includes(chatgptProjectId)
+      : true;  // Proje ID yoksa nerede olduğumuz fark etmez
+
+    if (chatgptProjectId && !isInCorrectProject) {
+      // Projenin yeni sohbet URL'sine git
+      const projectNewChatUrl = `https://chatgpt.com/g/project/${chatgptProjectId}`;
+      updateHUD('Mesajify Projesine Yonlendiriliyor...', 'busy');
+      window.location.href = projectNewChatUrl;
+      // Sayfa yüklenince content.js yeniden inject edilecek — job gateway'de duruyor
+      // Bu yüzden buradan return ediyoruz; background.js tekrar deneyecek
+      await sleep(2000);
+      throw new Error('PROJECT_REDIRECT: Proje sayfasina gidiliyor, job tekrar denenecek');
+    }
+
+    // ── URL temizliği: Zaten doğru projede ama eski sohbette olabilir ───
+    // Mevcut URL bir sohbet ID'si iceriyorsa yeni sohbet aciyor muyuz? Hayir,
+    // ChatGPT projelerinde ayni sohbete devam etmek genellikle sifir degildir.
+    // Bu sefer sadece prompt inject ediyoruz — ChatGPT zaten yeni bir turn acıyor.
+
     const beforeImages = new Set(getCurrentImageUrls());
     const promptText = job.prompt;
 
@@ -73,8 +100,8 @@
                      document.querySelector('textarea');
 
     if (!textarea) {
-      updateHUD('Hata: Prompt kutusu bulunamadı', 'error');
-      throw new Error('ChatGPT prompt textarea bulunamadı');
+      updateHUD('Hata: Prompt kutusu bulunamadi', 'error');
+      throw new Error('ChatGPT prompt textarea bulunamadi');
     }
 
     // Odaklan
@@ -95,7 +122,7 @@
     // Gönder butonuna tıkla
     const sendBtn = document.querySelector('button[data-testid="send-button"]') ||
                     document.querySelector('button[aria-label*="Send"]') ||
-                    document.querySelector('button[aria-label*="Gönder"]');
+                    document.querySelector('button[aria-label*="Gonder"]');
 
     if (sendBtn && !sendBtn.disabled) {
       sendBtn.click();
@@ -110,7 +137,7 @@
       }));
     }
 
-    updateHUD('Görsel Bekleniyor...', 'busy');
+    updateHUD('Gorsel Bekleniyor...', 'busy');
 
     // Görselin düşmesini bekle (Maks 110 saniye)
     let foundUrl = null;
@@ -133,15 +160,16 @@
     }
 
     if (!foundUrl) {
-      updateHUD('Hata: Görsel zaman aşımı', 'error');
-      throw new Error('ChatGPT görsel zaman aşımı (110s)');
+      updateHUD('Hata: Gorsel zaman asimi', 'error');
+      throw new Error('ChatGPT gorsel zaman asimi (110s)');
     }
 
-    updateHUD('Görsel Yükleniyor...', 'busy');
+    updateHUD('Gorsel Yukleniyor...', 'busy');
 
     // Blob çekip Gateway'e yükle
     return await uploadToGateway(foundUrl, job, gatewayUrl);
   }
+
 
   // =========================================================================
   // 2. Google Gemini Otomasyon Motoru
