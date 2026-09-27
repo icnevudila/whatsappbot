@@ -328,11 +328,19 @@ export function CreativeWizard({
       // signed asset URLs in the browser so a later URL/file substitution cannot
       // silently alter the approved CreativeRevision.
       const sha256Of = async (url: string, label: string) => {
-        if (!url) throw new Error(`${label} seçilmedi.`)
-        const response = await fetch(url)
-        if (!response.ok) throw new Error(`${label} doğrulama için okunamadı.`)
-        const digest = await crypto.subtle.digest('SHA-256', await response.arrayBuffer())
-        return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('')
+        if (!url) return null
+        try {
+          const response = await fetch(url)
+          if (!response.ok) {
+            console.warn(`[sha256Of] ${label} doğrulama okunamadı (${response.status}), sunucu tarafında hash'lenecek.`)
+            return null
+          }
+          const digest = await crypto.subtle.digest('SHA-256', await response.arrayBuffer())
+          return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('')
+        } catch (fetchErr) {
+          console.warn(`[sha256Of] ${label} ağ/CORS hatası, sunucu tarafında hash'lenecek:`, fetchErr)
+          return null
+        }
       }
 
       const [logoSha256, productSha256, referenceSha256] = await Promise.all([

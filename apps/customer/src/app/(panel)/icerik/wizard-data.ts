@@ -111,10 +111,15 @@ export async function loadCreativeWizardData(): Promise<WizardBootstrap> {
   const kits: BrandKitCard[] = []
   for (const kit of kitsRes.data ?? []) {
     let samplePreview: string | null = null
-    if (kit.logo_path?.startsWith('http')) samplePreview = getSafeMediaUrl(kit.logo_path) ?? kit.logo_path
-    else if (kit.logo_path) {
-      const { data } = await supabase.storage.from('brand-assets').createSignedUrl(kit.logo_path, 3600)
-      samplePreview = data?.signedUrl ?? null
+    if (kit.logo_path?.startsWith('http')) {
+      samplePreview = getSafeMediaUrl(kit.logo_path) ?? kit.logo_path
+    } else if (kit.logo_path) {
+      const { data: pubData } = supabase.storage.from('brand-assets').getPublicUrl(kit.logo_path)
+      samplePreview = pubData?.publicUrl || null
+      if (!samplePreview) {
+        const { data } = await supabase.storage.from('brand-assets').createSignedUrl(kit.logo_path, 86400)
+        samplePreview = data?.signedUrl ?? null
+      }
     }
     kits.push({
       id: kit.id,
@@ -131,12 +136,17 @@ export async function loadCreativeWizardData(): Promise<WizardBootstrap> {
     (socialsRes.data ?? []).find((row) => row.platform === 'website')?.url ?? null
 
   let logoPreview: string | null = null
-  if (orgRes.data?.logo_path?.startsWith('http')) logoPreview = getSafeMediaUrl(orgRes.data.logo_path) ?? orgRes.data.logo_path
-  else if (orgRes.data?.logo_path) {
-    const { data } = await supabase.storage
-      .from('brand-assets')
-      .createSignedUrl(orgRes.data.logo_path, 3600)
-    logoPreview = data?.signedUrl ?? null
+  if (orgRes.data?.logo_path?.startsWith('http')) {
+    logoPreview = getSafeMediaUrl(orgRes.data.logo_path) ?? orgRes.data.logo_path
+  } else if (orgRes.data?.logo_path) {
+    const { data: pubData } = supabase.storage.from('brand-assets').getPublicUrl(orgRes.data.logo_path)
+    logoPreview = pubData?.publicUrl || null
+    if (!logoPreview) {
+      const { data } = await supabase.storage
+        .from('brand-assets')
+        .createSignedUrl(orgRes.data.logo_path, 86400)
+      logoPreview = data?.signedUrl ?? null
+    }
   }
   const mappedProducts = (productsRes.data ?? []).map((product) => ({
       id: product.id,

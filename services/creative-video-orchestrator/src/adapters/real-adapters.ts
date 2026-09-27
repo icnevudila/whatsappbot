@@ -601,10 +601,28 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
     currentV = 'v_faded'
 
     const brandName = (finishingSpec?.outroBrandName || finishingSpec?.brandName || '').trim()
-    const slogan = (finishingSpec?.outroSlogan || finishingSpec?.slogan || '').trim()
+    let slogan = (finishingSpec?.outroSlogan || finishingSpec?.slogan || '').trim()
     const phone = (finishingSpec?.outroPhone || finishingSpec?.phone || '').trim()
     const website = (finishingSpec?.outroWebsite || finishingSpec?.website || '').trim()
-    const rawCta = (finishingSpec?.ctaText || finishingSpec?.ctaBadgeText || '').trim()
+    let rawCta = (finishingSpec?.ctaText || finishingSpec?.ctaBadgeText || '').trim()
+
+    // Strictly suppress amateur WhatsApp text in cinematic video outros
+    if (/whatsapp/i.test(rawCta)) {
+      rawCta = ''
+    }
+
+    // Default premium cinematic brand slogan if none specified
+    if (!slogan && !rawCta) {
+      const lower = brandName.toLowerCase()
+      if (lower.includes('ayvaz')) {
+        slogan = 'Yapınızın Sağlam Temeli'
+      } else if (lower.includes('bofe')) {
+        slogan = 'Tarımda Güç ve Verim'
+      } else if (brandName) {
+        slogan = brandName
+      }
+    }
+
     const hasOutroText = Boolean(brandName || slogan || phone || website || rawCta)
 
     if (hasLogo) {
@@ -615,7 +633,7 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
       currentV = 'v_after_logo'
     }
 
-    // Slogan or primary brand tagline (rendered if user specified)
+    // Slogan or primary brand tagline (rendered if specified or derived)
     if (slogan || rawCta || (hasOutroText && brandName)) {
       const primaryLine = slogan || rawCta || brandName
       const cleanPrimary = primaryLine.replace(/'/g, '').replace(/:/g, '\\:').replace(/[\r\n]+/g, ' ')

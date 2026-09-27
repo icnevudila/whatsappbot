@@ -2884,7 +2884,13 @@ async function generateVideoOnFlow(options = {}) {
       const brandName = (options.brandName || options.customer || brandKit?.organization_name || 'İşletme').trim();
       const accentColor = (options.accentColor || brandKit?.colors?.accent || '#acfe00').replace('#', '');
       const secondaryColor = (options.primaryColor || brandKit?.colors?.secondary || brandKit?.colors?.primary || '#026009').replace('#', '');
-      const ctaText = (options.ctaText || 'WHATSAPP İLE İLETİŞİME GEÇİN').toUpperCase().replace(/['"]/g, '');
+      let defaultSlogan = 'PRESTİJ VE GÜVEN';
+      const lowerBrand = brandName.toLowerCase();
+      if (lowerBrand.includes('ayvaz')) defaultSlogan = 'YAPINIZIN SAĞLAM TEMELİ';
+      else if (lowerBrand.includes('bofe')) defaultSlogan = 'TARIMDA GÜÇ VE VERİM';
+      else if (brandName) defaultSlogan = brandName.toUpperCase();
+      let ctaText = (options.ctaText || defaultSlogan).toUpperCase().replace(/['"]/g, '');
+      if (ctaText.includes('WHATSAPP')) ctaText = defaultSlogan;
 
       // Logo yolu çözümü (Resmi kurumsal logo önceliği)
       let logoCandidate = options.logoUrl || brandKit?.logo_path;

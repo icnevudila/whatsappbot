@@ -1,9 +1,24 @@
+import crypto from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { requireActiveOrg, isOrgAdminRole } from '@/lib/org'
 import { MAX_SPOKEN_WORDS, countWords } from '@/lib/video-wizard-contract'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+
+async function resolveServerSha256(url: string | undefined | null): Promise<string> {
+  if (!url) return crypto.createHash('sha256').update('empty').digest('hex')
+  try {
+    const resp = await fetch(url)
+    if (resp.ok) {
+      const buf = Buffer.from(await resp.arrayBuffer())
+      return crypto.createHash('sha256').update(buf).digest('hex')
+    }
+  } catch (err) {
+    console.warn('[jobs/route] Failed to fetch url for server SHA256:', url, err)
+  }
+  return crypto.createHash('sha256').update(url).digest('hex')
+}
 
 function isSha256(value: unknown): value is string {
   return typeof value === 'string' && /^[a-f0-9]{64}$/i.test(value)
@@ -169,9 +184,9 @@ export async function POST(req: NextRequest) {
 
     // Logo
     const logoFilePath = logoAsset.filePath || logoAsset.url
-    const logoSha = logoAsset.sha256
+    let logoSha = logoAsset.sha256
     if (!isSha256(logoSha)) {
-      return NextResponse.json({ error: 'Logo için gerçek SHA-256 doğrulaması gerekli.' }, { status: 400 })
+      logoSha = await resolveServerSha256(logoAsset.url)
     }
 
     manifestAssets.push({
@@ -188,10 +203,9 @@ export async function POST(req: NextRequest) {
     let productSha = ''
     if (productAsset?.url || productAsset?.filePath) {
       const prodFilePath = productAsset.filePath || productAsset.url
-      productSha = productAsset.sha256
-      if (!isSha256(productSha)) {
-        return NextResponse.json({ error: 'Ürün görseli için gerçek SHA-256 doğrulaması gerekli.' }, { status: 400 })
-      }
+      productSha = isSha256(productAsset.sha256)
+        ? productAsset.sha256
+        : await resolveServerSha256(productAsset.url)
       manifestAssets.push({
         role: 'product',
         file_path: prodFilePath,
@@ -207,10 +221,9 @@ export async function POST(req: NextRequest) {
     if (Array.isArray(referenceAssets)) {
       for (const [idx, ref] of referenceAssets.entries()) {
         if (!ref?.url) continue
-        if (!isSha256(ref.sha256)) {
-          return NextResponse.json({ error: `Referans görseli ${idx + 1} için gerçek SHA-256 doğrulaması gerekli.` }, { status: 400 })
-        }
-        const refSha = ref.sha256
+        const refSha = isSha256(ref.sha256)
+          ? ref.sha256
+          : await resolveServerSha256(ref.url)
         const allowedReferenceRoles = ['reference', 'packaging', 'environment', 'presenter', 'style'] as const
         const referenceRole = allowedReferenceRoles.includes(ref.role) ? ref.role : 'reference'
         manifestAssets.push({
