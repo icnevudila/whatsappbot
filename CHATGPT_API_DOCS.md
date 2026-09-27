@@ -91,14 +91,42 @@ Authorization: Bearer sk-omnistudio-2026
 ### Başarılı Yanıt (Response - HTTP 200)
 ```json
 {
-  "created": 1790516500,
+  "created": 1790524081,
   "data": [
     {
-      "url": "http://167.233.201.31:3456/public/outputs/dalle_image_123.png"
+      "url": "http://167.233.201.31:3456/outputs/img_job_123.png"
     }
   ]
 }
 ```
+
+---
+
+## 2.1. Referans Görsel / Logo Ekleme (Image-to-Image / Logo & Ürün)
+
+Üretilecek görsele **şirket logosu, ürün fotoğrafı veya stil referansı** ekleyebilirsiniz. İstediğiniz adette görsel gönderebilirsiniz. Hem **HTTP/HTTPS URL**'leri hem de **Base64** formatını destekler.
+
+### Desteklenen Parametreler:
+* `referenceImages`: Referans görsel URL'leri veya Base64 dizisi `["https://site.com/logo.png", "https://site.com/urun.jpg"]`
+* `logoUrl`: Doğrudan şirket logosunun linki `"https://site.com/logo.png"`
+* `productImageUrl`: Doğrudan ürün fotoğrafının linki `"https://site.com/urun.jpg"`
+* `images`: Alternatif dizi formatı `["https://..."]`
+* `image`: Tekli görsel linki veya base64
+
+### Örnek İstek (Logo ve Ürün Referanslı):
+```json
+{
+  "prompt": "Verilen logoyu sol üst köşeye yerleştir, verilen ürünün lüks bir ofis masasında modern ışıklandırmayla kurumsal reklam afişini tasarla",
+  "logoUrl": "https://siteniz.com/medya/logo.png",
+  "referenceImages": [
+    "https://siteniz.com/medya/urun_fotografi.jpg",
+    "https://siteniz.com/medya/stil_ornek.png"
+  ],
+  "size": "1024x1024"
+}
+```
+
+> **Not:** Sistem referans görselleri otomatik olarak sunucuda indirip ChatGPT'nin görsel motoruna dosya olarak ekler. ChatGPT bu görselleri referans alarak istenen prompt doğrultusunda yeni tasarımı çizer.
 
 ---
 
