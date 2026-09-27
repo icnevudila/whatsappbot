@@ -632,11 +632,15 @@ async function ensureCustomerChat(cdp, customer, channel = 'media', identity = {
     }
   }
 
-  // Yeni temiz sohbet aç (Kayıtlı URL yoksa veya geçersizse)
-  console.log(`[CDP Worker: ${WORKER_ID}] "${effectiveCustomer}" [${effectiveChannel}] için yeni sohbet açılıyor...`);
-  await cdp.send('Page.navigate', { url: 'https://chatgpt.com/' });
-  await waitForChatInput(cdp, 15000);
+  // Yeni temiz sohbet aç — Mesajify projesine yönlendir (kayıtlı URL yoksa veya geçersizse)
+  // Proje URL'sine gitmek, yeni sohbetin doğrudan "Mesajify" projesi altında açılmasını sağlar.
+  // Ana sayfaya gitmek yerine proje sayfasına gidiyoruz; böylece ortalık karışmıyor.
+  const MESAJIFY_PROJECT_URL = 'https://chatgpt.com/g/g-p-6aaf94b0ae20819180ce47c040ff4a59';
+  console.log(`[CDP Worker: ${WORKER_ID}] "${effectiveCustomer}" [${effectiveChannel}] icin Mesajify projesine yeni sohbet aciliyor...`);
+  await cdp.send('Page.navigate', { url: MESAJIFY_PROJECT_URL });
+  await waitForChatInput(cdp, 20000);
   return { isNewChat: true, chatUrl: null, title: expectedTitle };
+
 }
 
 // Düzenli Kalp Atışı (5s)
