@@ -302,7 +302,6 @@ function LibraryCard({
                 ) : (
                   <video
                     src={`${getSafeMediaUrl(item.publicUrl)}#t=0.5`}
-                    poster={item.publicUrl?.startsWith('/api/ai-media/outputs/') ? `${getSafeMediaUrl(item.publicUrl)}?thumb=1` : undefined}
                     preload="metadata"
                     muted
                     playsInline

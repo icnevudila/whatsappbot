@@ -551,10 +551,10 @@ export async function listLibraryCreatives({
       const payload = (row.payload ?? {}) as Record<string, unknown>
       const isVideo = row.format === 'video' || Boolean(row.public_url?.endsWith('.mp4')) || Boolean(row.public_url?.includes('/api/ai-media/outputs/'))
       let thumb =
-        typeof payload.thumbnailUrl === 'string' && payload.thumbnailUrl
+        typeof payload.thumbnailUrl === 'string' && payload.thumbnailUrl && !payload.thumbnailUrl.includes('?thumb=1')
           ? payload.thumbnailUrl
           : isVideo
-            ? (row.public_url?.startsWith('/api/ai-media/outputs/') ? `${row.public_url}?thumb=1` : null)
+            ? null
             : row.public_url
       return {
         id: row.id,
