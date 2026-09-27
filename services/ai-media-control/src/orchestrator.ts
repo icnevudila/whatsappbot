@@ -524,6 +524,11 @@ async function runJobExecution(job: any, accountId: string) {
       console.warn('[orchestrator] creatives update to failed warning:', crErr)
     }
 
+    const isAuthRequired =
+      err.message?.includes('FLOW_AUTH_REQUIRED') ||
+      err.message?.includes('AUTH_REQUIRED') ||
+      err.message?.includes('FlowAccountChooserError') ||
+      err.message?.includes('AuthExpiredError')
     const isCreditOrRateLimit =
       err.message?.includes('CREDIT_LIMIT_REACHED') ||
       err.message?.includes('return code 37') ||
@@ -531,7 +536,12 @@ async function runJobExecution(job: any, accountId: string) {
       err.message?.includes('insufficient-credits') ||
       err.message?.includes('CreditLimit') ||
       err.message?.includes('RATE_LIMIT')
-    if (isCreditOrRateLimit) {
+    if (isAuthRequired) {
+      await supabase
+        .from('flow_accounts')
+        .update({ status: 'needs_reauth', current_job_id: null, updated_at: new Date().toISOString() })
+        .eq('id', accountId)
+    } else if (isCreditOrRateLimit) {
       await supabase
         .from('flow_accounts')
         .update({ status: 'rate_limited', current_job_id: null, updated_at: new Date().toISOString() })

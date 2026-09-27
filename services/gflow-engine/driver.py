@@ -555,6 +555,42 @@ def execute_generation_job(payload: Dict[str, Any]) -> Dict[str, Any]:
         elapsed = time.time() - start_time
         full_output = "".join(stdout_lines)
 
+        # Authentication failures happen before reference attachment. Detect them
+        # before the ingredient invariant so account-chooser / expired-session
+        # incidents are not mislabeled as missing chips.
+        auth_markers = (
+            "FlowAccountChooserError",
+            "AuthExpiredError",
+            "flow-account-chooser",
+            "auth-expired",
+            "/signin/accountchooser",
+            "/signin/confirmidentifier",
+        )
+        if (return_code != 0 or not dest_path.exists()) and any(
+            marker in full_output for marker in auth_markers
+        ):
+            if "accountchooser" in full_output or "FlowAccountChooserError" in full_output:
+                auth_message = (
+                    "Google account chooser requires a person to select and re-authenticate "
+                    f"the recorded account for '{account_id}'."
+                )
+            else:
+                auth_message = f"The Google Flow session for '{account_id}' has expired and must be re-authenticated."
+            logger.error("FLOW_AUTH_REQUIRED: %s", auth_message)
+            incident = create_incident_bundle(
+                job_id=job_id,
+                attempt_id=attempt_id,
+                account_id=account_id,
+                error_code="FLOW_AUTH_REQUIRED",
+                error_message=auth_message,
+                raw_output=full_output,
+            )
+            raise FlowExecutionError(
+                "FLOW_AUTH_REQUIRED",
+                auth_message,
+                incident=incident,
+            )
+
         # --- GATE 3: In-flight Reference Gate Verification ---
         if expected_ingredient_count > 0:
             if not references_attached_seen or actual_ingredient_count != expected_ingredient_count:
