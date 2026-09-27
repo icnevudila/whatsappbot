@@ -779,7 +779,7 @@ class AdvancedJobQueue {
       this.recordWorkerTimings(jobId, timings);
     }
 
-    const publicUrl = `http://localhost:${PORT}/outputs/${filename}`;
+    const publicUrl = `http://${PUBLIC_HOST}:${PORT}/outputs/${filename}`;
     job.status = 'completed';
     job.progress = 100;
     job.statusText = 'Görsel başarıyla üretildi';
@@ -1546,7 +1546,7 @@ const server = http.createServer(async (req, res) => {
           job_id: job.id,
           status: 'pending',
           queue_position: job.queuePosition,
-          status_url: `http://localhost:${PORT}/v1/images/status/${job.id}`,
+          status_url: `http://${PUBLIC_HOST}:${PORT}/v1/images/status/${job.id}`,
         });
       }
 
@@ -1564,7 +1564,7 @@ const server = http.createServer(async (req, res) => {
             item.b64_json = finishedJob.resultB64 || '';
           }
         } else {
-          item.url = finishedJob.resultUrl;
+          item.url = (finishedJob.resultUrl || '').replace('localhost:3456', `${PUBLIC_HOST}:${PORT}`).replace('127.0.0.1:3456', `${PUBLIC_HOST}:${PORT}`);
         }
 
         return sendJson(res, 200, {
@@ -1696,7 +1696,7 @@ const server = http.createServer(async (req, res) => {
             idempotent: true,
             status: existingJob.status,
             queue_position: existingJob.queue_position,
-            status_url: `http://localhost:${PORT}/v1/videos/status/${existingJob.id}`,
+            status_url: `http://${PUBLIC_HOST}:${PORT}/v1/videos/status/${existingJob.id}`,
             outputUrl: existingVideoUrl,
             videoUrl: existingVideoUrl,
             data: existingVideoUrl ? [{ url: existingVideoUrl }] : [],
@@ -2614,7 +2614,7 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 200, { ok: true, filename, url: completed?.resultUrl });
       }
 
-      return sendJson(res, 200, { ok: true, filename, url: `http://localhost:${PORT}/outputs/${filename}` });
+      return sendJson(res, 200, { ok: true, filename, url: `http://${PUBLIC_HOST}:${PORT}/outputs/${filename}` });
     }
 
     // 6.1. Worker: Metin/Öneri Sonucunu Bildir (POST /job/complete-text)

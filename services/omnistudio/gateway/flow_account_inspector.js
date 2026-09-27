@@ -128,7 +128,7 @@ async function listTabs(port) {
 
 async function ensureFlowTab(port) {
   let tabs = await listTabs(port);
-  let tab = tabs.find(item => item.type === 'page' && String(item.url || '').includes('flow.google.com'));
+  let tab = tabs.find(item => item.type === 'page' && /^https:\/\/flow\.google\.com(?:\/|$)/.test(String(item.url || '')));
   if (!tab) {
     const response = await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(FLOW_URL)}`, {
       method: 'PUT',

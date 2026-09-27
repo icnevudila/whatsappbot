@@ -902,7 +902,11 @@ async function executeChatGPTJob(tab, job) {
               if (!src) continue;
 
               const alt = (img.alt || '').toLowerCase();
-              const isEstuaryOrGenerated = src.includes('backend-api/estuary') || alt.startsWith('generated image');
+              const isEstuaryOrGenerated = src.includes('backend-api/estuary') || 
+                                           src.includes('files.oaiusercontent.com') || 
+                                           alt.includes('generated image') || 
+                                           alt.includes('dall-e') ||
+                                           alt.includes('üretilen');
 
               if (!isEstuaryOrGenerated) continue;
               if (beforeList.includes(src)) continue;
@@ -915,7 +919,12 @@ async function executeChatGPTJob(tab, job) {
               // Henüz render edilmemiş veya çok küçük profil/ikon ise geç (minimum 80px)
               if (width < 80 || height < 80) continue;
 
-              // Eğer ChatGPT hala yanıt üretiyorsa çizim henüz tamamlanmamış olabilir
+              // Görsel DOM'da tamamen yüklendiyse (complete ve >=256px), ChatGPT hala metin yazsa bile beklemeden al!
+              if (img.complete && width >= 256 && height >= 256) {
+                return { ready: true, isGenerating: false, foundSrc: src };
+              }
+
+              // Eğer ChatGPT hala yanıt üretiyorsa ve görsel henüz tam boyuta ulaşmadıysa bekle
               if (isGenerating) {
                 return { ready: false, isGenerating: true, foundSrc: null };
               }
@@ -1395,6 +1404,7 @@ async function executeGenericChatJob(tab, job) {
 
     // 4. Yanıtın tamamlanmasını bekle
     let lastText = '';
+    let lastFoundImg = null;
     let stableCount = 0;
     let foundNewMessage = false;
     const maxWaitTimeMs = 90000;
@@ -1412,16 +1422,31 @@ async function executeGenericChatJob(tab, job) {
             if (assts.length <= ${baseline.count}) {
               const stopBtn = document.querySelector('button[data-testid*="stop"], button[aria-label*="Stop"], button[aria-label*="durdur"], button[aria-label*="Durdur"]');
               const isGenerating = !!stopBtn || !!document.querySelector('.result-thinking, [data-testid*="generating"], .streaming-animated-ellipsis');
-              return { hasNewMsg: false, isGenerating, text: '' };
+              return { hasNewMsg: false, isGenerating, text: '', foundImgSrc: null };
             }
 
             const lastAsst = assts[assts.length - 1];
             const text = (lastAsst.innerText || '').trim();
             const stopBtn = document.querySelector('button[data-testid*="stop"], button[aria-label*="Stop"], button[aria-label*="durdur"], button[aria-label*="Durdur"]');
             const isMsgStreaming = lastAsst ? !!lastAsst.querySelector('.streaming-animation, [data-is-streaming="true"]') : false;
-            const isGenerating = !!stopBtn || isMsgStreaming;
+            let isGenerating = !!stopBtn || isMsgStreaming;
 
-            return { hasNewMsg: true, isGenerating, text };
+            let foundImgSrc = null;
+            const imgs = Array.from(lastAsst ? lastAsst.querySelectorAll('img') : []);
+            for (const img of imgs) {
+              const src = img.src || '';
+              const alt = (img.alt || '').toLowerCase();
+              if (src.includes('backend-api/estuary') || src.includes('files.oaiusercontent.com') || alt.includes('generated') || alt.includes('dall-e') || alt.includes('üretilen')) {
+                const width = img.naturalWidth || img.width;
+                if (img.complete && width >= 200) {
+                  foundImgSrc = src;
+                  isGenerating = false;
+                  break;
+                }
+              }
+            }
+
+            return { hasNewMsg: true, isGenerating, text, foundImgSrc };
           })()
         `,
         returnByValue: true
@@ -1441,8 +1466,11 @@ async function executeGenericChatJob(tab, job) {
         stableCount = 0;
       }
       lastText = currentText;
+      if (res?.foundImgSrc) {
+        lastFoundImg = res.foundImgSrc;
+      }
 
-      if (!res.isGenerating && stableCount >= 2 && lastText.length > 0) {
+      if (!res.isGenerating && (stableCount >= 2 || lastFoundImg) && (lastText.length > 0 || lastFoundImg)) {
         workerTiming.mark('response_complete_ms', submittedAt);
         break;
       }
@@ -1450,6 +1478,52 @@ async function executeGenericChatJob(tab, job) {
 
     if (!foundNewMessage) {
       throw new Error('STALE_RESPONSE_DETECTED: Yeni model yanıtı üretilmedi');
+    }
+
+    // Eğer sohbette görsel üretildiyse indirip Gateway'e yükle ve markdown olarak metne ekle
+    if (lastFoundImg) {
+      try {
+        console.log(`[CDP Worker: ${WORKER_ID}] [Chat Completion] Yanıtta üretilen görsel tespit edildi, indiriliyor...`);
+        const imgExtractEval = await cdp.send('Runtime.evaluate', {
+          expression: `
+            (async () => {
+              const resp = await fetch(${JSON.stringify(lastFoundImg)});
+              const blob = await resp.blob();
+              return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve({ base64: reader.result, size: blob.size });
+                reader.readAsDataURL(blob);
+              });
+            })()
+          `,
+          awaitPromise: true,
+          returnByValue: true
+        });
+
+        const b64Data = imgExtractEval.result?.value?.base64;
+        if (b64Data) {
+          const base64Content = b64Data.split(',')[1];
+          const imageBuffer = Buffer.from(base64Content, 'base64');
+          const imgFilename = `chat_img_${job.id}_${Date.now()}.png`;
+          const uploadRes = await fetch(`${GATEWAY_URL}/upload?filename=${imgFilename}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'image/png' },
+            body: imageBuffer
+          });
+
+          if (uploadRes.ok) {
+            const uploadData = await uploadRes.json();
+            const imageUrl = uploadData.url;
+            console.log(`[CDP Worker: ${WORKER_ID}] [Chat Completion] Görsel yüklendi: ${imageUrl}`);
+            const markdownImg = `![Üretilen Görsel](${imageUrl})`;
+            if (!lastText.includes(imageUrl)) {
+              lastText = lastText ? `${lastText}\n\n${markdownImg}` : markdownImg;
+            }
+          }
+        }
+      } catch (imgErr) {
+        console.warn(`[CDP Worker: ${WORKER_ID}] [Chat Completion] Görsel çekme uyarısı:`, imgErr.message);
+      }
     }
 
     console.log(`[CDP Worker: ${WORKER_ID}] [Chat Completion] Yanıt başarıyla alındı (${lastText.length} karakter).`);
