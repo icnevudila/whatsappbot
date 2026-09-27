@@ -2590,21 +2590,37 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { ok: true });
     }
 
-    // 6. Worker: Görsel Yükle (POST /upload?jobId=...&filename=...)
-    if (method === 'POST' && pathname === '/upload') {
+    // 6. Görsel Yükle (POST /upload veya POST /v1/upload) - Binary ve Base64 JSON Destekli
+    if (method === 'POST' && (pathname === '/upload' || pathname === '/v1/upload')) {
       const jobId = parsedUrl.searchParams.get('jobId') || req.headers['x-job-id'];
       let filename = parsedUrl.searchParams.get('filename') || req.headers['x-filename'];
 
       if (!filename) {
         filename = `img_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.png`;
       }
-      if (!filename.endsWith('.png') && !filename.endsWith('.jpg') && !filename.endsWith('.webp')) {
+      if (!filename.endsWith('.png') && !filename.endsWith('.jpg') && !filename.endsWith('.jpeg') && !filename.endsWith('.webp')) {
         filename += '.png';
       }
 
-      const buffer = await parseRawBody(req);
+      let buffer = null;
+      const contentType = req.headers['content-type'] || '';
+
+      if (contentType.includes('application/json')) {
+        try {
+          const jsonBody = await parseJsonBody(req);
+          const b64Str = jsonBody.image || jsonBody.data || jsonBody.file || jsonBody.b64_json || jsonBody.base64 || '';
+          if (b64Str) {
+            const raw = b64Str.includes(',') ? b64Str.split(',')[1] : b64Str;
+            buffer = Buffer.from(raw, 'base64');
+          }
+          if (jsonBody.filename) filename = jsonBody.filename;
+        } catch (_) {}
+      } else {
+        buffer = await parseRawBody(req);
+      }
+
       if (!buffer || buffer.length === 0) {
-        return sendJson(res, 400, { error: 'Empty payload' });
+        return sendJson(res, 400, { error: 'Görsel verisi boş (Empty payload). Base64 JSON veya Binary gönderin.' });
       }
 
       const filePath = path.join(OUTPUT_DIR, filename);
