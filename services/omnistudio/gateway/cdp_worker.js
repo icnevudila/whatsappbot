@@ -381,8 +381,8 @@ async function injectPromptAndSend(cdp, promptText) {
     // 1. Varsa engelleyici modalları temizle
     await dismissAnyModals(cdp);
 
-    // 2. Textarea'yı temizle, odaklan ve form GET navigasyonunu önle
-    await cdp.send('Runtime.evaluate', {
+    // 2. Textarea'yı bul, tıkla, temizle ve form GET navigasyonunu önle
+    const focusRes = await cdp.send('Runtime.evaluate', {
       expression: `(() => {
         const form = document.querySelector('form');
         if (form) form.onsubmit = (e) => { e.preventDefault(); return false; };
@@ -391,6 +391,7 @@ async function injectPromptAndSend(cdp, promptText) {
                          document.querySelector('textarea');
         if (textarea) {
           textarea.focus();
+          textarea.click();
           try {
             const range = document.createRange();
             range.selectNodeContents(textarea);
@@ -399,17 +400,47 @@ async function injectPromptAndSend(cdp, promptText) {
             sel.addRange(range);
             document.execCommand('delete');
           } catch (_) {}
-          if (textarea.innerHTML) textarea.innerHTML = '';
+          if (textarea.tagName === 'TEXTAREA') {
+            textarea.value = '';
+          } else {
+            textarea.textContent = '';
+          }
+          textarea.dispatchEvent(new Event('input', { bubbles: true }));
+          const r = textarea.getBoundingClientRect();
+          return { found: true, x: r.left + r.width / 2, y: r.top + r.height / 2 };
         }
-      })()`
+        return { found: false };
+      })()`,
+      returnByValue: true
     });
 
-    // 2. Chrome DevTools Protocol yerel Input.insertText ile metni enjekte et
+    if (focusRes.result?.value?.found) {
+      const { x, y } = focusRes.result.value;
+      if (x && y) {
+        await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 }).catch(() => {});
+        await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 }).catch(() => {});
+      }
+    }
+
+    // 3. Chrome DevTools Protocol yerel Input.insertText ile metni enjekte et
     await cdp.send('Input.insertText', { text: promptText });
     promptInsertedAt = Date.now();
     await sleep(200);
+
+    // Textarea input eventlerini tetikle
+    await cdp.send('Runtime.evaluate', {
+      expression: `(() => {
+        const textarea = document.querySelector('#prompt-textarea') || 
+                         document.querySelector('div[contenteditable="true"]') ||
+                         document.querySelector('textarea');
+        if (textarea) {
+          textarea.dispatchEvent(new Event('input', { bubbles: true }));
+          textarea.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      })()`
+    });
     
-    // 3. Gönder butonunun render edilmesini bekle ve tıkla
+    // 4. Gönder butonunun render edilmesini bekle ve tıkla
     let clicked = false;
     for (let wait = 0; wait < 35; wait++) {
       if (await checkRateLimitModal(cdp)) {
@@ -421,7 +452,9 @@ async function injectPromptAndSend(cdp, promptText) {
           let sendBtn = document.querySelector('button[data-testid="composer-send-button"]') ||
                         document.querySelector('#composer-submit-button') ||
                         document.querySelector('button[data-testid="send-button"]') ||
-                        document.querySelector('button[data-testid="composer-speech-button"]') ||
+                        document.querySelector('button[aria-label="Send prompt"]') ||
+                        document.querySelector('button[aria-label="Send message"]') ||
+                        document.querySelector('button[aria-label="Prompt gönder"]') ||
                         document.querySelector('button[aria-label*="Send" i]') ||
                         document.querySelector('button[aria-label*="Gönder" i]') ||
                         document.querySelector('button.composer-submit-button-color') ||
@@ -429,7 +462,7 @@ async function injectPromptAndSend(cdp, promptText) {
                         document.querySelector('form button[type="submit"]') ||
                         document.querySelector('button:has(svg.icon-2xl)') ||
                         document.querySelector('button:has(svg path[d*="M12 2"])');
-          if (sendBtn && !sendBtn.disabled && sendBtn.getAttribute('aria-disabled') !== 'true') {
+          if (sendBtn && !sendBtn.disabled && sendBtn.getAttribute('aria-disabled') !== 'true' && !sendBtn.getAttribute('data-testid')?.includes('speech')) {
             sendBtn.click();
             const r = sendBtn.getBoundingClientRect();
             return { clicked: true, x: r.left + r.width / 2, y: r.top + r.height / 2 };
@@ -453,6 +486,12 @@ async function injectPromptAndSend(cdp, promptText) {
 
     if (!clicked) {
       console.log(`[CDP Worker: ${WORKER_ID}] Buton bulunamadı/tıklanamadı, Enter tuşu simüle ediliyor...`);
+      await cdp.send('Runtime.evaluate', {
+        expression: `(() => {
+          const textarea = document.querySelector('#prompt-textarea') || document.querySelector('div[contenteditable="true"]');
+          if (textarea) textarea.focus();
+        })()`
+      });
       await cdp.send('Input.dispatchKeyEvent', {
         type: 'rawKeyDown',
         windowsVirtualKeyCode: 13,
