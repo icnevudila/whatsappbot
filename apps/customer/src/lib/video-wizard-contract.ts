@@ -93,25 +93,29 @@ export function buildSafeSpokenLine(input: {
   if (isBrick) {
     if (fmt === 'PRODUCT_USAGE') {
       const brickUsagePool = [
-        `Harçla kusursuz kenetlenen sağlam bloklar. İşin ustası sahada her zaman ${brand} tuğlayı seçer.`,
-        `Hızlı örülen dayanıklı duvarlar, tavizsiz klinker kalitesi. Ustalara sahada hız kazandıran ${brand}.`,
-        `Ustanın elinde sağlamlığa dönüşen kusursuz işçilik. ${brand} tuğla ile yapılar güvende.`,
+        `Ustanın elinde sağlamlığa dönüşen kalite. Sahada işini bilenlerin tercihi ${brand}.`,
+        `Hızlı örülen, harçla kusursuz kenetlenen dayanıklı duvarlar. ${brand} ile şantiyeniz hız kazansın.`,
+        `Yılların tecrübesiyle üretilen sağlam bloklar. ${brand} yapılarınıza değer katar.`,
+        `Şantiyeniz için yerinde ve zamanında teslimat. ${brand} ile projeleriniz güvende.`,
       ]
       if (note) {
-        return clampWords(`Harçla kusursuz kenetlenen sağlam bloklar. ${note}. ${brand} ile sağlam yapılar.`)
+        return clampWords(`${brand} tuğla ile ${note}. Şantiyeniz için sağlam ve güvenilir çözüm.`)
       }
       return clampWords(brickUsagePool[Math.floor(Math.random() * brickUsagePool.length)])
     }
     if (fmt === 'PREMIUM') {
-      return clampWords(`Yüksek üretim standartları ve geleceğe taşınan güven. ${brand} ile sağlam yarınlar inşa ediyoruz.`)
+      return clampWords(`Sağlam yapıların güvenilir temeli. ${brand} ile geleceğe kalıcı eserler bırakın.`)
     }
     const brickHeroPool = [
-      `Kusursuz form ve zamana meydan okuyan dayanıklılık. ${brand} tuğla ile sağlamlığın temeli inşaatta başlar.`,
-      `Tek eksenli dikey delik yapısı ve klinker dayanıklılığı. ${brand} ile yapılarınız daima güvende.`,
-      `Üstün klinker kalitesi ve milimetrik form. ${brand}, sağlam projelerin vazgeçilmez tercihi.`,
+      `Sağlam yapıların güvenilir temeli. ${brand} kaliteli tuğlalarıyla projeleriniz daima güvende.`,
+      `Fabrikadan şantiyenize doğrudan toptan teslimat. ${brand} ile işiniz vaktinde, yapınız sağlam.`,
+      `Yüksek dayanıklılık ve kusursuz işçilik uyumu. ${brand}, modern inşaatların tercihi.`,
+      `Zamana meydan okuyan sağlam duvarlar için en doğru seçim: ${brand}.`,
+      `Her tuğlada üstün kalite ve güven. ${brand} ile sağlam yarınlar inşa edin.`,
+      `Şantiyeniz için hızlı tedarik ve avantajlı fiyatlar. ${brand} güvencesiyle.`,
     ]
     if (note) {
-      return clampWords(`Kusursuz form ve tavizsiz klinker dayanıklılığı. ${note}. ${brand} güvencesiyle.`)
+      return clampWords(`${brand} tuğla ile ${note}. Sağlam projelerin güvenilir tercihi.`)
     }
     return clampWords(brickHeroPool[Math.floor(Math.random() * brickHeroPool.length)])
   }
