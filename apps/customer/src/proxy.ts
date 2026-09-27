@@ -27,8 +27,8 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next({ request })
   }
 
-  // Canlı Takip gizli yönetici ekranı (kendi şifre korumasına sahiptir, arayüzde görünmez)
-  if (path.startsWith('/canli-takip') || path.startsWith('/api/canli-takip')) {
+  // Canlı Takip gizli yönetici ekranı ve AI medya akış rotaları (kendi koruma/erişim denetimlerine sahiptir)
+  if (path.startsWith('/canli-takip') || path.startsWith('/api/canli-takip') || path.startsWith('/api/ai-media/outputs/')) {
     return NextResponse.next({ request })
   }
 
