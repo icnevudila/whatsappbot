@@ -1,6 +1,7 @@
 import type { SimpleV5Brief, SimpleV5ShotPlan, SimpleV5CompiledPrompt } from './types.js'
 
 export const SIMPLE_V5_STANDARD_NEGATIVES = [
+  // ── Product geometry ──────────────────────────────────────────────────────
   'duplicate subject',
   'duplicate product',
   'altered product geometry',
@@ -12,6 +13,7 @@ export const SIMPLE_V5_STANDARD_NEGATIVES = [
   'incorrect product color',
   'warped packaging',
   'warped logo',
+  // ── Typography & branding ─────────────────────────────────────────────────
   'gibberish typography',
   'misspelled company name',
   'floating graphics',
@@ -23,21 +25,41 @@ export const SIMPLE_V5_STANDARD_NEGATIVES = [
   'floating title text',
   'banner in sky',
   'holographic interface',
-  'floating bricks',
-  'magic hovering bricks',
-  'brick on bare brick without mortar',
-  'unmotivated location change',
-  'identity drift',
-  'extra fingers',
-  'deformed hands',
-  'watermark',
-  'on-screen subtitles',
-  'English speech',
-  'English narration',
   'doubled letters',
   'repeated consonants',
   'stretched typography',
   'mangled lettering on vehicles',
+  // ── On-screen text contamination ──────────────────────────────────────────
+  'watermark',
+  'on-screen subtitles',
+  'English speech',
+  'English narration',
+  // ── Universal anatomy & limb integrity (ALL sectors) ─────────────────────
+  // These errors appear regardless of product category whenever a human is in frame.
+  'disembodied hand',
+  'floating hand without body',
+  'severed forearm entering frame edge',
+  'disembodied floating arm',
+  'disconnected limb',
+  'phantom limb',
+  'bodyless hand',
+  'extra fingers',
+  'deformed hands',
+  'six fingers',
+  'fused fingers',
+  // ── Universal tool & attachment integrity (ALL sectors) ──────────────────
+  // Veo can clone attachments regardless of the product type.
+  'duplicate tool',
+  'cloned attachment',
+  'two identical tools',
+  'duplicate nozzle',
+  'phantom hose',
+  'extra cable',
+  // ── Universal physics & object stability (ALL sectors) ────────────────────
+  'floating object in mid-air',
+  'object defying gravity',
+  'unmotivated location change',
+  'identity drift',
 ].join(', ')
 
 import { resolveProductFidelityContract, formatFidelityLockSection } from './fidelity-contract.js'
@@ -117,7 +139,8 @@ export class SimpleV5PromptCompiler {
     const sections: string[] = [
       `[FORMAT]: ${brief.durationSeconds.toFixed(1)}-second vertical commercial video, 9:16 aspect ratio.`,
       `[SINGLE CONCEPT]: ${brief.primaryIdea}`,
-      `[HERO PRODUCT SUBJECT ISOLATION]: Focus strictly and exclusively on the foreground physical product item from @HeroProduct. Completely ignore, decouple, and discard any background, floor, shelves, retail interior, or warehouse environment present in @HeroProduct reference photo. Place the product exclusively within [ONE LOCATION]: ${brief.location}.`,
+      `[HERO PRODUCT SUBJECT ISOLATION]: Focus strictly and exclusively on the foreground physical product item from @HeroProduct. Completely ignore, decouple, and discard any background, tables, office furniture, workshop desks, floor, shelves, retail interior, or warehouse depot environment present in @HeroProduct reference photo. Place the product exclusively within [ONE LOCATION]: ${brief.location}.`,
+      brief.productPresentationDirective ? `[PRODUCT PRESENTATION]: ${brief.productPresentationDirective}` : '',
       `[HERO PRODUCT]: Preserve ${brief.heroProductHandle} geometry, material texture, and colors exactly as shown in authoritative reference assets.`,
       brandingDirective,
       `[ONE LOCATION]: ${brief.location}, ${brief.lighting}.`,
@@ -131,18 +154,49 @@ export class SimpleV5PromptCompiler {
       'No translation.',
       'Natural ambient realistic environmental foley. SILENT ON-SET CINEMATIC TAKE, ZERO ON-SCREEN SUBTITLES, ZERO ON-SCREEN CAPTIONS.',
       `[RAW TEXT POLICY]: Clean commercial footage, no on-screen text, no synthetic titles.`,
-    ]
+    ].filter(Boolean)
 
     const cinematicPrompt = sections.join('\n')
 
     // Context-sensitive negatives for reference background leakage prevention
+    const domainNegs = brief.domainNegatives || []
     const locLower = (brief.location || '').toLowerCase()
-    const isOutdoorOrNatural = locLower.includes('bahçe') || locLower.includes('tarla') || locLower.includes('tarım') || locLower.includes('şantiye') || locLower.includes('sera') || locLower.includes('arazi') || locLower.includes('açık')
-    const backgroundLeakageNegatives = isOutdoorOrNatural
-      ? ', indoor warehouse, storage shelves, industrial metal shelving, retail store shelves, interior concrete room, indoor storage, commercial depot'
-      : ''
+    const isOutdoorOrNatural =
+      brief.operationalDomain === 'AGRICULTURE_NATURE' ||
+      brief.operationalDomain === 'CONSTRUCTION_STRUCTURAL' ||
+      locLower.includes('bahçe') ||
+      locLower.includes('tarla') ||
+      locLower.includes('tarım') ||
+      locLower.includes('şantiye') ||
+      locLower.includes('sera') ||
+      locLower.includes('arazi') ||
+      locLower.includes('açık')
 
-    const negativePrompt = `${SIMPLE_V5_STANDARD_NEGATIVES}${backgroundLeakageNegatives}, ${dynamicNegatives.join(', ')}`
+    const extraOutdoorNegs = isOutdoorOrNatural
+      ? [
+          'indoor warehouse',
+          'storage shelves',
+          'industrial metal shelving',
+          'retail store shelves',
+          'interior concrete room',
+          'indoor storage',
+          'commercial depot',
+          'garage workbench',
+          'ceiling pipes',
+          'fluorescent lights',
+          'indoor tabletop',
+          'office desk',
+        ]
+      : []
+
+    const combinedNegs = Array.from(new Set([
+      ...SIMPLE_V5_STANDARD_NEGATIVES.split(', ').map(s => s.trim()),
+      ...domainNegs,
+      ...extraOutdoorNegs,
+      ...dynamicNegatives,
+    ])).filter(Boolean)
+
+    const negativePrompt = combinedNegs.join(', ')
 
     const metrics = {
       charCount: cinematicPrompt.length,

@@ -555,7 +555,26 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
   ): Promise<string> {
     mkdirSync(dirname(outputPath), { recursive: true })
 
-    let finishedSuccessfully = false
+    const probe = await this.runFfprobe(inputVideoPath).catch(() => ({
+      duration: 8.0, width: 720, height: 1280, fps: 24, vcodec: 'h264', acodec: 'aac',
+    }))
+    const duration = probe.duration && probe.duration > 0 ? probe.duration : 8.0
+
+    // ── Canonical timing constants ────────────────────────────────────────────
+    // 0.0–0.5  → clean footage (no overlays)
+    // 0.5–5.5  → subtitle_layer only (VO-synced kinetic words)
+    // 5.5–6.0  → fade-to-black transition
+    // 6.0–8.0  → outro card: logo + brand name + slogan + contact + CTA
+    const SUBTITLE_WINDOW_END = 5.5
+    const FADE_START          = SUBTITLE_WINDOW_END          // 5.5s
+    const FADE_DURATION       = 0.5
+    const OUTRO_START         = FADE_START + FADE_DURATION   // 6.0s
+    const LOGO_FADE_IN        = OUTRO_START                  // 6.0s
+    const LOGO_FADE_DUR       = 0.5
+    const TEXT_START          = OUTRO_START + LOGO_FADE_DUR + 0.15  // ~6.65s
+    const VIDEO_END           = duration
+
+    // ── Logo validation ───────────────────────────────────────────────────────
     const logoPath =
       finishingSpec?.brandLogoPath ||
       finishingSpec?.officialLogoPath ||
@@ -571,97 +590,127 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
       const { createHash } = await import('node:crypto')
       const actualSha = createHash('sha256').update(readFileSync(logoPath)).digest('hex')
       if (actualSha !== expectedLogoSha) {
-        throw new Error(`CANONICAL_LOGO_MISMATCH: Logo SHA drift detected. Expected ${expectedLogoSha}, got ${actualSha}`)
+        throw new Error(`CANONICAL_LOGO_MISMATCH: Expected ${expectedLogoSha}, got ${actualSha}`)
       }
     }
 
-    const probe = await this.runFfprobe(inputVideoPath).catch(() => ({ duration: 8.0, width: 720, height: 1280, fps: 24, vcodec: 'h264', acodec: 'aac' }))
-    const duration = probe.duration && probe.duration > 0 ? probe.duration : 8.0
-    const outroStart = Math.max(0, duration - 1.8)
-    const logoStart = Math.max(0, duration - 1.5)
-    const ctaStart = Math.max(0, duration - 1.3)
-
+    // ── Resolve overlay layers ────────────────────────────────────────────────
     const subtitlesPath = finishingSpec?.subtitlesPath || finishingSpec?.assPath
-    const hasSubtitles = Boolean(subtitlesPath && existsSync(subtitlesPath))
-
-    const ctaText = finishingSpec?.ctaText || finishingSpec?.ctaBadgeText
-    const hasCta = Boolean(ctaText && typeof ctaText === 'string')
-
-    const filterComplexParts: string[] = []
-    let currentV = '0:v'
-
-    if (hasSubtitles) {
-      const escapedSub = subtitlesPath.replace(/\\/g, '/').replace(/:/g, '\\:')
-      filterComplexParts.push(`[${currentV}]ass='${escapedSub}'[v_after_sub]`)
-      currentV = 'v_after_sub'
-    }
-
-    // Video fades smoothly to pitch black for the brand outro card
-    filterComplexParts.push(`[${currentV}]fade=t=out:st=${outroStart.toFixed(2)}:d=0.5[v_faded]`)
-    currentV = 'v_faded'
+    const hasSubtitles  = Boolean(subtitlesPath && existsSync(subtitlesPath))
 
     const brandName = (finishingSpec?.outroBrandName || finishingSpec?.brandName || '').trim()
-    let slogan = (finishingSpec?.outroSlogan || finishingSpec?.slogan || '').trim()
-    const phone = (finishingSpec?.outroPhone || finishingSpec?.phone || '').trim()
-    const website = (finishingSpec?.outroWebsite || finishingSpec?.website || '').trim()
-    let rawCta = (finishingSpec?.ctaText || finishingSpec?.ctaBadgeText || '').trim()
+    const rawSlogan = (finishingSpec?.outroSlogan || finishingSpec?.slogan || '').trim()
+    const phone     = (finishingSpec?.outroPhone || finishingSpec?.phone || '').trim()
+    const website   = (finishingSpec?.outroWebsite || finishingSpec?.website || '').trim()
+    let   rawCta    = (finishingSpec?.ctaText || finishingSpec?.ctaBadgeText || '').trim()
+    if (/whatsapp/i.test(rawCta)) rawCta = ''  // Never show WhatsApp in cinematic outro
 
-    // Strictly suppress amateur WhatsApp text in cinematic video outros
-    if (/whatsapp/i.test(rawCta)) {
-      rawCta = ''
+    // Graceful slogan fallback — works for ANY brand, not hardcoded to specific firms
+    const slogan = rawSlogan || (brandName ? `${brandName} ile fark yaratın` : '')
+
+    const hasOutroContent = Boolean(brandName || slogan || phone || website || rawCta)
+
+    // ── Build FFmpeg filter_complex ───────────────────────────────────────────
+    const filterParts: string[] = []
+    const extraInputs: string[] = []
+    let cur = '0:v'
+
+    // LAYER 1 — subtitle_layer (strictly 0.5–5.5s; enforced by maxEndTimeSec in ASS)
+    if (hasSubtitles) {
+      const escapedSub = subtitlesPath.replace(/\\/g, '/').replace(/:/g, '\\:')
+      filterParts.push(`[${cur}]ass='${escapedSub}'[v_sub]`)
+      cur = 'v_sub'
     }
 
-    // Default premium cinematic brand slogan if none specified
-    if (!slogan && !rawCta) {
-      const lower = brandName.toLowerCase()
-      if (lower.includes('ayvaz')) {
-        slogan = 'Yapınızın Sağlam Temeli'
-      } else if (lower.includes('bofe')) {
-        slogan = 'Tarımda Güç ve Verim'
-      } else if (brandName) {
-        slogan = brandName
-      }
-    }
+    // Fade-to-black at FADE_START (0.5s fade → pure black at 6.0s)
+    filterParts.push(
+      `[${cur}]fade=t=out:st=${FADE_START.toFixed(2)}:d=${FADE_DURATION.toFixed(2)}[v_faded]`
+    )
+    cur = 'v_faded'
 
-    const hasOutroText = Boolean(brandName || slogan || phone || website || rawCta)
-
+    // LAYER 2 — logo_layer (centered, fade-in at 6.0s)
     if (hasLogo) {
-      // If outro text is provided, place logo slightly above center; otherwise center perfectly
-      const logoY = hasOutroText ? '(H-h)/2-95' : '(H-h)/2'
-      filterComplexParts.push(`[1:v]scale=360:-1,format=rgba,fade=t=in:st=${logoStart.toFixed(2)}:d=0.5:alpha=1[logo_card]`)
-      filterComplexParts.push(`[${currentV}][logo_card]overlay=(W-w)/2:${logoY}:enable='gte(t,${logoStart.toFixed(2)})':shortest=1[v_after_logo]`)
-      currentV = 'v_after_logo'
-    }
+      const logoIdx = 1 + extraInputs.length / 3
+      extraInputs.push('-loop', '1', '-i', logoPath)
 
-    // Slogan or primary brand tagline (rendered if specified or derived)
-    if (slogan || rawCta || (hasOutroText && brandName)) {
-      const primaryLine = slogan || rawCta || brandName
-      const cleanPrimary = primaryLine.replace(/'/g, '').replace(/:/g, '\\:').replace(/[\r\n]+/g, ' ')
-      filterComplexParts.push(
-        `[${currentV}]drawtext=text='${cleanPrimary}':fontcolor=0xFFFFFF:fontsize=26:x=(w-text_w)/2:y=(h/2)+65:enable='gte(t,${ctaStart.toFixed(2)})'[v_after_primary]`
+      // Logo sits above center when outro text is present; perfectly centered otherwise
+      const logoY = hasOutroContent ? '(H-h)/2-70' : '(H-h)/2'
+      filterParts.push(
+        `[${logoIdx}:v]scale=260:-1,format=rgba,` +
+        `fade=t=in:st=${LOGO_FADE_IN.toFixed(2)}:d=${LOGO_FADE_DUR.toFixed(2)}:alpha=1[v_logo_src]`
       )
-      currentV = 'v_after_primary'
+      filterParts.push(
+        `[${cur}][v_logo_src]overlay=(W-w)/2:${logoY}:` +
+        `enable='gte(t,${LOGO_FADE_IN.toFixed(2)})':shortest=1[v_logo]`
+      )
+      cur = 'v_logo'
     }
 
-    // Contact info (phone number / website / CTA link)
+    // LAYER 3 — brand_layer (brand name, bold white; slogan, softer grey below)
+    if (brandName) {
+      const cleanBrand = brandName.replace(/'/g, '').replace(/:/g, '\\:').replace(/[\r\n]+/g, ' ')
+      filterParts.push(
+        `[${cur}]drawtext=` +
+        `text='${cleanBrand}':fontcolor=0xFFFFFF:fontsize=32:` +
+        `x=(w-text_w)/2:y=(h/2)+60:` +
+        `enable='between(t,${TEXT_START.toFixed(2)},${VIDEO_END.toFixed(2)})'[v_brand]`
+      )
+      cur = 'v_brand'
+    }
+
+    if (slogan) {
+      const cleanSlogan = slogan.replace(/'/g, '').replace(/:/g, '\\:').replace(/[\r\n]+/g, ' ')
+      filterParts.push(
+        `[${cur}]drawtext=` +
+        `text='${cleanSlogan}':fontcolor=0xB0B8C1:fontsize=20:` +
+        `x=(w-text_w)/2:y=(h/2)+98:` +
+        `enable='between(t,${TEXT_START.toFixed(2)},${VIDEO_END.toFixed(2)})'[v_slogan]`
+      )
+      cur = 'v_slogan'
+    }
+
+    // LAYER 4 — contact_layer (phone · website; separate from CTA)
     if (phone || website) {
       const contactLine = [phone, website].filter(Boolean).join('  ·  ')
       const cleanContact = contactLine.replace(/'/g, '').replace(/:/g, '\\:').replace(/[\r\n]+/g, ' ')
-      filterComplexParts.push(
-        `[${currentV}]drawtext=text='${cleanContact}':fontcolor=0xD1D5DB:fontsize=20:x=(w-text_w)/2:y=(h/2)+110:enable='gte(t,${ctaStart.toFixed(2)})'[v_after_contact]`
+      const contactStart = TEXT_START + 0.1
+      filterParts.push(
+        `[${cur}]drawtext=` +
+        `text='${cleanContact}':fontcolor=0x7A8695:fontsize=17:` +
+        `x=(w-text_w)/2:y=(h/2)+128:` +
+        `enable='between(t,${contactStart.toFixed(2)},${VIDEO_END.toFixed(2)})'[v_contact]`
       )
-      currentV = 'v_after_contact'
+      cur = 'v_contact'
     }
 
-    if (filterComplexParts.length > 0) {
+    // LAYER 5 — cta_layer (green badge, distinct from contact)
+    if (rawCta) {
+      const cleanCta = rawCta.replace(/'/g, '').replace(/:/g, '\\:').replace(/[\r\n]+/g, ' ')
+      const ctaStart = TEXT_START + 0.15
+      filterParts.push(
+        `[${cur}]drawtext=` +
+        `text='${cleanCta}':fontcolor=0xFFFFFF:fontsize=19:` +
+        `x=(w-text_w)/2:y=(h/2)+160:` +
+        `fontbox=1:boxcolor=0x008069@0.9:boxborderw=10:` +
+        `enable='between(t,${ctaStart.toFixed(2)},${VIDEO_END.toFixed(2)})'[v_cta]`
+      )
+      cur = 'v_cta'
+    }
+
+    // ── Execute FFmpeg ────────────────────────────────────────────────────────
+    let finishedSuccessfully = false
+
+    if (filterParts.length > 0) {
       const args = [
         '-y',
         '-i', inputVideoPath,
-        ...(hasLogo ? ['-loop', '1', '-i', logoPath] : []),
-        '-filter_complex', filterComplexParts.join(';'),
-        '-map', `[${currentV}]`,
+        ...extraInputs,
+        '-filter_complex', filterParts.join(';'),
+        '-map', `[${cur}]`,
         '-map', '0:a?',
         '-c:v', 'libx264',
+        '-preset', 'fast',
+        '-crf', '18',
         '-c:a', 'copy',
         '-t', `${duration.toFixed(2)}`,
         '-pix_fmt', 'yuv420p',
@@ -671,15 +720,18 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
       try {
         await execFileAsync(this.ffmpegBin, args)
         finishedSuccessfully = true
+        console.log(`[RealFFmpegAdapter] Finishing OK: subtitle 0.5-5.5s | outro ${OUTRO_START}s-${duration.toFixed(1)}s | logo=${hasLogo} | brand="${brandName}"`)
       } catch (err: any) {
-        console.warn(`[RealFFmpegAdapter] Composite warning: ${err.message}`)
+        console.warn(`[RealFFmpegAdapter] Finishing warning: ${err.message}`)
       }
     }
 
+    // Fallback: fast copy (no overlays) if FFmpeg composite fails
     if (!finishedSuccessfully) {
-      // Direct copy with faststart index placement at file start for instant playback
-      const args = ['-y', '-i', inputVideoPath, '-c', 'copy', '-movflags', '+faststart', outputPath]
-      await execFileAsync(this.ffmpegBin, args)
+      console.warn('[RealFFmpegAdapter] Falling back to direct copy (no overlays)')
+      await execFileAsync(this.ffmpegBin, [
+        '-y', '-i', inputVideoPath, '-c', 'copy', '-movflags', '+faststart', outputPath,
+      ])
     }
 
     // Extract thumbnail immediately from finished video

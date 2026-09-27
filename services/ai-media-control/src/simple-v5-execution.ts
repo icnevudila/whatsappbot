@@ -324,6 +324,12 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
   await transitionJob(supabase, job.id, job.org_id, JobState.POLLING_FLOW, JobState.DOWNLOADING_MEDIA, 'Collecting generated MP4 from selected provider', {}, attemptId)
   await transitionJob(supabase, job.id, job.org_id, JobState.DOWNLOADING_MEDIA, JobState.MEDIA_DOWNLOADED, `Raw media saved with SHA-256 ${generated.rawOutputSha256}`, { output_path: generated.outputPath }, attemptId)
 
+  // ── Deterministic subtitle generation from APPROVED VO text (source of truth) ──
+  // We deliberately do NOT use ASR. The approved spoken script is the canonical text.
+  // Words are distributed evenly across 0.5–5.5s window (strict; never bleeds into outro).
+  const SUBTITLE_WINDOW_START = 0.5
+  const SUBTITLE_WINDOW_END   = 5.5  // Outro card begins here; subtitles MUST be gone
+
   const ffmpeg = new RealFFmpegAdapter()
   const logoCheck = CanonicalLogoGate.verifyLogo(snapshot)
   if (!logoCheck.passed || !logoCheck.logoPath || !logoCheck.logoSha256) {
@@ -332,48 +338,75 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
   const rawProbe = await ffmpeg.runFfprobe(generated.outputPath)
   const logoPresentation = LogoPresentationGate.evaluateLogoPresentation({
     logoFilePath: logoCheck.logoPath,
-    videoWidth: rawProbe.width,
-    videoHeight: rawProbe.height,
+    videoWidth:   rawProbe.width,
+    videoHeight:  rawProbe.height,
     overlayWidthPx: 160,
     overlayMarginX: 32,
     overlayMarginY: 32,
   })
   const presentationNeedsReview = !logoPresentation.passed
+
   const textRenderer = new DeterministicCampaignTextRenderer()
   const scriptWords = (brief.spokenScript || '').split(/\s+/).filter(Boolean)
-  const totalVoDuration = 5.0
-  const wordDur = totalVoDuration / Math.max(1, scriptWords.length)
+  const voiceDuration = SUBTITLE_WINDOW_END - SUBTITLE_WINDOW_START   // 5.0s
+  const wordDur = voiceDuration / Math.max(1, scriptWords.length)
   const timedWords = scriptWords.map((w: string, idx: number) => ({
     word: w,
-    start: 0.5 + idx * wordDur,
-    end: 0.5 + (idx + 1) * wordDur,
+    start: SUBTITLE_WINDOW_START + idx * wordDur,
+    end:   SUBTITLE_WINDOW_START + (idx + 1) * wordDur,
   }))
   const assContent = textRenderer.buildCapCutKineticAss(timedWords, {
-    playResX: rawProbe.width || 720,
+    playResX: rawProbe.width  || 720,
     playResY: rawProbe.height || 1280,
-    fontSize: 36,
-    activeColor: '&H0000D0FF&', // Construction amber / safety yellow
-    marginV: 220,
+    fontSize:     36,
+    activeColor:  '&H0000D0FF&',  // Amber/yellow highlight — visible on all backgrounds
+    marginV:      220,
+    maxEndTimeSec: SUBTITLE_WINDOW_END,  // Hard cap: zero subtitle bleed into outro
   })
   const assPath = generated.outputPath.replace(/\.mp4$/i, '_subtitles.ass')
   writeFileSync(assPath, assContent, 'utf8')
 
+  // ── Layered overlay manifest ─────────────────────────────────────────────────
+  // Each layer is independent and combinable. Never mix subtitle_layer with outro layers.
+  //   subtitle_layer : VO-synced kinetic words, strictly 0.5–5.5s
+  //   logo_layer     : brand logo centered on black card, 6.0–8.0s
+  //   brand_layer    : brand name + slogan text, 6.5–8.0s
+  //   contact_layer  : phone + website, 6.7–8.0s
+  //   cta_layer      : call-to-action button text, 6.7–8.0s
   const finishedPath = generated.outputPath.replace(/\.mp4$/i, '_finished.mp4')
-  const ctaText = snapshot.campaign.cta || 'Hemen Bilgi Alın'
+
+  // Resolve CTA — suppress "WhatsApp" text (handled by outro contact instead)
+  let ctaText = (snapshot.campaign.cta || '').trim()
+  if (/whatsapp/i.test(ctaText)) ctaText = ''
+
+  // Resolve slogan — fall back gracefully for any brand
+  const snapshotAny = snapshot.campaign as any
+  const outroSlogan = (snapshotAny.slogan || snapshotAny.tagline || snapshotAny.sub_headline || '').trim()
+
   await ffmpeg.applyDeterministicFinishing(
     generated.outputPath,
     {
-      brandLogoPath: logoCheck.logoPath,
-      brandLogoSha: logoCheck.logoSha256,
+      // Subtitle layer (source-of-truth: approved VO text, NOT ASR)
       subtitlesPath: assPath,
-      ctaBadgeText: ctaText,
+
+      // Logo layer
+      brandLogoPath: logoCheck.logoPath,
+      brandLogoSha:  logoCheck.logoSha256,
+
+      // Brand layer (outro card text)
       outroBrandName: snapshot.brand_name,
-      outroSlogan: (snapshot.campaign as any).slogan || '',
-      outroPhone: snapshot.campaign.phoneNumber || '',
-      outroWebsite: snapshot.campaign.website || '',
+      outroSlogan,
+
+      // Contact layer (separate from subtitles and CTA)
+      outroPhone:   snapshot.campaign.phoneNumber || '',
+      outroWebsite: snapshot.campaign.website     || '',
+
+      // CTA layer (separate overlay, never mixed with subtitles)
+      ctaBadgeText: ctaText,
     },
     finishedPath
   )
+
 
   await transitionJob(supabase, job.id, job.org_id, JobState.MEDIA_DOWNLOADED, JobState.FFPROBE_INSPECTING, 'Inspecting final video streams with ffprobe', {}, attemptId)
   await transitionJob(supabase, job.id, job.org_id, JobState.FFPROBE_INSPECTING, JobState.SHA256_VERIFYING, 'Computing final output SHA-256', {}, attemptId)
