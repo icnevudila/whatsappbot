@@ -88,6 +88,84 @@ export function buildFlowVeoProviderPayload(request: VideoGenerationRequest) {
   }
 }
 
+const FLOW_SOURCE_PORT_BY_ACCOUNT_ID: Readonly<Record<string, number>> = Object.freeze({
+  'account-01': 9222,
+  'account-02': 9223,
+  'account-03': 9224,
+  'account-04': 9225,
+})
+
+export function flowSourcePortForAccount(accountId: string): number | null {
+  return FLOW_SOURCE_PORT_BY_ACCOUNT_ID[String(accountId || '').trim().toLowerCase()] ?? null
+}
+
+export function isFlowAuthRequiredError(error: unknown): boolean {
+  const candidate = error as any
+  const signal = [
+    candidate?.code,
+    candidate?.message,
+    candidate?.cause?.code,
+    candidate?.cause?.message,
+  ].filter(Boolean).join(' ')
+  return /FLOW_AUTH_REQUIRED|AUTH_REQUIRED|FlowAccountChooserError|AuthExpiredError|accountchooser/i.test(signal)
+}
+
+type FlowExecutor = {
+  executeJob(payload: any): Promise<any>
+}
+
+type FetchLike = (input: string | URL | Request, init?: RequestInit) => Promise<Response>
+
+/**
+ * Repairs a copied generation profile from its already-authenticated source
+ * browser and retries exactly once. This intentionally never handles or stores
+ * Google credentials: a genuinely expired source session still requires a
+ * person to complete password/2FA/CAPTCHA.
+ */
+export async function executeFlowWithSessionRecovery(
+  gflow: FlowExecutor,
+  payload: any,
+  accountId: string,
+  gatewayUrl: string,
+  fetchImpl: FetchLike = fetch,
+): Promise<any> {
+  try {
+    return await gflow.executeJob(payload)
+  } catch (error) {
+    if (!isFlowAuthRequiredError(error)) throw error
+
+    const sourcePort = flowSourcePortForAccount(accountId)
+    if (sourcePort == null) {
+      throw new Error(`FLOW_AUTH_REQUIRED: no verified source profile mapping exists for ${accountId}`)
+    }
+
+    let response: Response
+    let body: any = {}
+    try {
+      response = await fetchImpl(`${gatewayUrl.replace(/\/$/, '')}/v1/ai-engine/accounts/refresh-flow`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ port: sourcePort }),
+        signal: AbortSignal.timeout(120_000),
+      })
+      body = await response.json().catch(() => ({}))
+    } catch (repairError: any) {
+      throw new Error(`FLOW_AUTH_REQUIRED: automatic profile repair could not run for ${accountId}: ${repairError.message}`)
+    }
+
+    const repaired = Array.isArray(body?.results)
+      ? body.results.find((item: any) => item?.accountId === accountId)
+      : null
+    if (!response.ok || body?.ok !== true || repaired?.ok !== true ||
+        repaired?.authenticated !== true || repaired?.profileSynced !== true) {
+      const detail = repaired?.error || body?.error || `HTTP ${response.status}`
+      throw new Error(`FLOW_AUTH_REQUIRED: automatic profile repair failed for ${accountId}: ${detail}`)
+    }
+
+    return gflow.executeJob({ ...payload, is_recovery: true })
+  }
+}
+
 export class OmniStudioGeminiNativeVideoProvider implements VideoProvider {
   readonly provider = 'GEMINI_NATIVE_VIDEO' as const
 
@@ -330,7 +408,12 @@ export class FlowVeoVideoProvider implements VideoProvider {
       const generationStartedAt = new Date().toISOString()
       const payload: any = buildFlowVeoProviderPayload(flowRequest)
       if (leaseToken) payload.lease_token = leaseToken
-      const result: any = await this.gflow.executeJob(payload)
+      const result: any = await executeFlowWithSessionRecovery(
+        this.gflow,
+        payload,
+        flowAccountId,
+        this.gatewayUrl,
+      )
 
       ws.logEvent('GENERATION_COMPLETED', 'Flow rendering finished')
       ws.logEvent('DOWNLOAD_STARTED', 'Recording raw video to attempt workspace')

@@ -26,6 +26,10 @@ services:
       - NODE_ENV=production
       - NUM_WORKERS=4 # 4 Bagimsiz ChatGPT Hesabi
       - GFLOW_ENGINE_URL=http://gflow-engine:3461
+      # Keep the canonical Gemini tab plus one Flow maintenance/session tab.
+      # A third short-lived auth/download tab may exist during re-authentication.
+      - PREFERRED_WORKING_TABS=2
+      - ABSOLUTE_TAB_CAP=3
     networks:
       - default
       - gflow-internal

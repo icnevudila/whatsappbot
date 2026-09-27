@@ -215,6 +215,7 @@ services:
       NODE_ENV: production
       PORT: '3460'
       GFLOW_ENGINE_URL: 'http://gflow-engine:3461'
+      OMNISTUDIO_GATEWAY_URL: 'http://omnistudio-engine:3456'
       SHARED_OUTPUTS_DIR: '/shared/outputs'
       SHARED_INCIDENTS_DIR: '/shared/incidents'
       CREATIVE_VIDEO_ORCHESTRATOR: 'v1'
