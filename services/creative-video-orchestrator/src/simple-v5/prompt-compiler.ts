@@ -34,10 +34,12 @@ export const SIMPLE_V5_STANDARD_NEGATIVES = [
   'watermark',
   'on-screen subtitles',
   'English speech',
-  'English narration',
-  'painted text on vehicles',
-  'words on trucks',
-  'misspelled letters on truck',
+  'misspelled company name',
+  'doubled letters',
+  'repeated consonants',
+  'AYVAZOĞĞLU',
+  'stretched typography',
+  'mangled lettering on truck',
 ].join(', ')
 
 import { resolveProductFidelityContract, formatFidelityLockSection } from './fidelity-contract.js'
@@ -67,7 +69,7 @@ export class SimpleV5PromptCompiler {
       `[SINGLE CONCEPT]: ${brief.primaryIdea}`,
       `[HERO PRODUCT SUBJECT ISOLATION]: Focus strictly and exclusively on the foreground physical product item from @HeroProduct. Completely ignore, decouple, and discard any background, floor, shelves, retail interior, or warehouse environment present in @HeroProduct reference photo. Place the product exclusively within [ONE LOCATION]: ${brief.location}.`,
       `[HERO PRODUCT]: Preserve ${brief.heroProductHandle} geometry, material texture, and colors exactly as shown in authoritative reference assets.`,
-      `[CANONICAL BRAND IDENTITY]: ZERO FLOATING LOGOS IN SKY OR AIR. No synthetic text overlays, no floating boxes, and ZERO painted letters on background vehicles or walls. Do NOT generate written company names or typography onto trucks, pallets, or garments (prevents AI spelling artifacts). Brand identity is applied exclusively through deterministic high-res logo finishing and outro. Keep all delivery vehicles, tools, and background surfaces clean, neutral, and unbranded without written text.`,
+      `[CANONICAL BRAND IDENTITY]: ZERO FLOATING LOGOS IN SKY OR AIR. No synthetic text overlays, no floating boxes or watermark badges. Apply canonical brand identity diegetically in the physical scene: authentic corporate emblem from @BrandLogo matching brand "${brief.brandName}". When visible on delivery vehicles, worker safety vest, or pallets, render as a neat, compact, centered corporate badge (proportional size, not stretched across entire trailer). Exactly spell "${brief.brandName}" letter-for-letter with strictly single letters, zero repeated or doubled consonants.`,
       `[ONE LOCATION]: ${brief.location}, ${brief.lighting}.`,
       `[CONTINUOUS CINEMATIC TAKE]: A single uninterrupted ${brief.durationSeconds.toFixed(1)}-second commercial take with seamless 35mm fluid camera movement. ${shotPlan.shot1_hook.description} ${shotPlan.shot2_proof.description} ${shotPlan.shot3_close.description} NO CUTS, NO ABRUPT HARD JUMPS, SINGLE UNBROKEN CAMERA FLOW.`,
       fidelityLock,
