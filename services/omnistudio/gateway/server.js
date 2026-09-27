@@ -2311,7 +2311,8 @@ const server = http.createServer(async (req, res) => {
       const finished = await queue.waitForJob(job.id, 120000);
 
       if (finished.status === 'completed' && finished.result) {
-        const replyText = (finished.result.reply || finished.result.text || finished.result.raw || '').trim();
+        let replyText = (finished.result.reply || finished.result.text || finished.result.raw || '').trim();
+        replyText = replyText.replace(/^(?:ChatGPT said|ChatGPT söylüyor|ChatGPT):\s*/i, '').trim();
         const createdTimestamp = Math.floor((finished.completedAt || Date.now()) / 1000);
         return sendJson(res, 200, {
           id: `chatcmpl-${finished.id}`,
