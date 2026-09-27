@@ -1506,8 +1506,15 @@ const server = http.createServer(async (req, res) => {
       const size = body.size || '1024x1024';
       const response_format = body.response_format || 'url';
       const workspace = body.workspace || 'WhatsApp Botu';
-      const customer = body.customer || 'Panel';
-      const referenceImages = body.referenceImages || body.images || (body.image ? [body.image] : []);
+      const rawRefs = [
+        ...(Array.isArray(body.referenceImages) ? body.referenceImages : (body.referenceImages ? [body.referenceImages] : [])),
+        ...(Array.isArray(body.referenceImageUrls) ? body.referenceImageUrls : (body.referenceImageUrls ? [body.referenceImageUrls] : [])),
+        ...(Array.isArray(body.images) ? body.images : (body.images ? [body.images] : [])),
+        ...(body.image ? [body.image] : []),
+        ...(body.logoUrl ? [body.logoUrl] : (body.logo ? [body.logo] : [])),
+        ...(body.productImageUrl ? [body.productImageUrl] : (body.product_image_url ? [body.product_image_url] : []))
+      ].filter(Boolean);
+      const referenceImages = rawRefs.map(r => typeof r === 'string' ? r.trim() : (r.url || r.data || r.b64_json || '')).filter(Boolean);
       const brandKit = body.brandKit || null;
       const asyncMode = body.async === true || parsedUrl.searchParams.get('async') === 'true';
       const requestStartedAt = Date.now();

@@ -821,25 +821,56 @@ async function executeChatGPTJob(tab, job) {
     await cdp.send('Page.bringToFront').catch(() => {});
     workerTiming.mark('tab_acquire_ms');
 
-    // 0. Firma veya Sistem Kanaryası için belirlenmiş tekil oturumu aç
+    // 0. Firma veya Sistem Kanaryası için oturumu aç (Bağımsız görsel istekleri daima temiz taze sayfada başlar)
     const customer = (job.customer || 'Genel').trim();
     const isCanary = customer === 'Sistem' || customer === 'Sistem Nöbetçisi' || (job.workspace || '').includes('Canary');
+    const isDedicatedChat = Boolean(job.conversationId) || isCanary;
     const channel = isCanary ? 'canary' : 'media';
-    console.log(`[CDP Worker: ${WORKER_ID}] Firma: "${customer}" [${channel}] oturumu hazırlanıyor...`);
     const chatIdentity = { customer, tenantId: job.tenantId, conversationId: job.conversationId };
-    const chatInfo = await ensureCustomerChat(cdp, customer, channel, chatIdentity);
+    let chatInfo = null;
+
+    if (isDedicatedChat) {
+      console.log(`[CDP Worker: ${WORKER_ID}] Firma: "${customer}" [${channel}] oturumu hazırlanıyor...`);
+      chatInfo = await ensureCustomerChat(cdp, customer, channel, chatIdentity);
+    } else {
+      console.log(`[CDP Worker: ${WORKER_ID}] Bağımsız görsel üretimi için taze temiz sayfa açılıyor...`);
+      await cdp.send('Page.navigate', { url: 'https://chatgpt.com/' });
+      await waitForChatInput(cdp, 15000);
+      chatInfo = { isNewChat: true, chatUrl: 'https://chatgpt.com/' };
+    }
     workerTiming.mark('tab_ready_ms');
 
-    // 1. Referans Görseller Varsa (Image-to-Image / Ürün Görseli) ChatGPT'ye Dosya Olarak Yükle
+    // 1. Referans Görseller Varsa (Image-to-Image / Logo / Ürün) ChatGPT'ye Dosya Olarak Yükle
     if (Array.isArray(job.referenceImages) && job.referenceImages.length > 0) {
-      console.log(`[CDP Worker] ${job.referenceImages.length} adet referans görsel ekleniyor...`);
+      console.log(`[CDP Worker] ${job.referenceImages.length} adet referans görsel işleniyor...`);
       for (let idx = 0; idx < job.referenceImages.length; idx++) {
         const ref = job.referenceImages[idx];
-        const b64 = typeof ref === 'string' ? ref : (ref.data || ref.b64_json || '');
-        if (b64) {
-          const raw = b64.includes(',') ? b64.split(',')[1] : b64;
-          const tmpPath = path.join('/tmp', `ref_${job.id}_${idx}.png`);
-          fs.writeFileSync(tmpPath, Buffer.from(raw, 'base64'));
+        let buffer = null;
+        let ext = 'png';
+        const rawStr = typeof ref === 'string' ? ref.trim() : (ref.url || ref.data || ref.b64_json || '');
+        if (!rawStr) continue;
+
+        if (rawStr.startsWith('http://') || rawStr.startsWith('https://')) {
+          try {
+            console.log(`[CDP Worker] Referans görsel URL'den indiriliyor: ${rawStr.slice(0, 70)}...`);
+            const fetchRes = await fetch(rawStr);
+            if (fetchRes.ok) {
+              const arrayBuf = await fetchRes.arrayBuffer();
+              buffer = Buffer.from(arrayBuf);
+              if (rawStr.includes('.jpg') || rawStr.includes('.jpeg')) ext = 'jpg';
+              else if (rawStr.includes('.webp')) ext = 'webp';
+            }
+          } catch (fErr) {
+            console.warn(`[CDP Worker] Referans görsel URL indirme uyarısı:`, fErr.message);
+          }
+        } else if (rawStr.startsWith('data:') || rawStr.length > 100) {
+          const b64Data = rawStr.includes(',') ? rawStr.split(',')[1] : rawStr;
+          buffer = Buffer.from(b64Data, 'base64');
+        }
+
+        if (buffer && buffer.length > 0) {
+          const tmpPath = path.join('/tmp', `ref_${job.id}_${idx}.${ext}`);
+          fs.writeFileSync(tmpPath, buffer);
           tempRefPaths.push(tmpPath);
         }
       }
@@ -862,9 +893,9 @@ async function executeChatGPTJob(tab, job) {
                 if (el) el.dispatchEvent(new Event('change', { bubbles: true }));
               `
             });
-            console.log('[CDP Worker] Referans görsel inputa yüklendi, thumbnail bekleniyor...');
+            console.log(`[CDP Worker] ${tempRefPaths.length} referans görsel inputa yüklendi, thumbnail bekleniyor...`);
             const refUploadStart = Date.now();
-            const maxRefWait = 4000;
+            const maxRefWait = 6000;
             while (Date.now() - refUploadStart < maxRefWait) {
               const hasThumb = await cdp.send('Runtime.evaluate', {
                 expression: `!!(
@@ -876,7 +907,7 @@ async function executeChatGPTJob(tab, job) {
                 returnByValue: true
               }).catch(() => ({ result: { value: false } }));
               if (hasThumb.result?.value) break;
-              await sleep(150);
+              await sleep(200);
             }
             workerTiming.mark('reference_upload_ms', refUploadStart);
           }
@@ -886,12 +917,18 @@ async function executeChatGPTJob(tab, job) {
       }
     }
 
-    // 2. Stale Image Protection: Mevcut görsel URL'lerini snapshot al (Referans thumbnail'lar DAHİL)
-    const beforeEval = await cdp.send('Runtime.evaluate', {
-      expression: `Array.from(document.querySelectorAll('img')).map(i => i.src).filter(Boolean)`,
+    // 2. Stale Image Protection: Submit öncesi asistan mesajı sayısını ve görsel URL'lerini al
+    const baselineEval = await cdp.send('Runtime.evaluate', {
+      expression: `(() => {
+        const assts = ${JS_GET_ASSISTANT_MSGS};
+        const imgs = Array.from(document.querySelectorAll('img')).map(i => i.src).filter(Boolean);
+        return { count: assts.length, imgs };
+      })()`,
       returnByValue: true
     });
-    const beforeImages = new Set(beforeEval.result?.value || []);
+    const baseline = baselineEval.result?.value || { count: 0, imgs: [] };
+    const beforeImages = new Set(baseline.imgs || []);
+    const baselineCount = baseline.count || 0;
 
     // 3. Prompt'u Enjekte Et
     const injectRes = await injectPromptAndSend(cdp, job.prompt);
@@ -928,13 +965,19 @@ async function executeChatGPTJob(tab, job) {
         expression: `
           (function() {
             const beforeList = ${JSON.stringify(Array.from(beforeImages))};
-            // ChatGPT üretim/düşünme durumunu kontrol et
             const stopBtn = document.querySelector('button[data-testid="stop-button"], button[aria-label*="Stop"], button[aria-label*="durdur"]');
             const isThinking = !!document.querySelector('.result-thinking, [data-testid*="generating"], .streaming-animated-ellipsis');
             const isGenerating = !!stopBtn || isThinking;
 
-            // Tüm img elementlerini tara (DALL-E estuary backend URL veya Generated image)
-            const candidateImgs = Array.from(document.querySelectorAll('img'));
+            const assts = ${JS_GET_ASSISTANT_MSGS};
+            // Eğer yeni bir asistan mesajı henüz gelmediyse eski görsellere ASLA bakma!
+            if (assts.length <= ${baselineCount}) {
+              return { ready: false, isGenerating: true, foundSrc: null };
+            }
+
+            // SADECE ve SADECE en son üretilen yeni asistan mesajının altındaki görsellere bak!
+            const lastAsst = assts[assts.length - 1];
+            const candidateImgs = Array.from(lastAsst.querySelectorAll('img'));
 
             for (const img of candidateImgs) {
               const src = img.src || '';
@@ -943,7 +986,7 @@ async function executeChatGPTJob(tab, job) {
               const alt = (img.alt || '').toLowerCase();
               const isEstuaryOrGenerated = src.includes('backend-api/estuary') || 
                                            src.includes('files.oaiusercontent.com') || 
-                                           alt.includes('generated image') || 
+                                           alt.includes('generated') || 
                                            alt.includes('dall-e') ||
                                            alt.includes('üretilen');
 
@@ -955,7 +998,6 @@ async function executeChatGPTJob(tab, job) {
 
               const width = img.naturalWidth || img.width;
               const height = img.naturalHeight || img.height;
-              // Henüz render edilmemiş veya çok küçük profil/ikon ise geç (minimum 80px)
               if (width < 80 || height < 80) continue;
 
               // Görsel DOM'da tamamen yüklendiyse (complete ve >=256px), ChatGPT hala metin yazsa bile beklemeden al!
@@ -968,7 +1010,6 @@ async function executeChatGPTJob(tab, job) {
                 return { ready: false, isGenerating: true, foundSrc: null };
               }
 
-              // Görsel hazır, tamamen yüklendi ve üretim bitti!
               return { ready: true, isGenerating: false, foundSrc: src };
             }
 
@@ -1042,22 +1083,24 @@ async function executeChatGPTJob(tab, job) {
     const uploadData = await uploadRes.json();
     console.log(`[CDP Worker] BAŞARIYLA TAMAMLANDI: ${uploadData.url}`);
 
-    // 6. Firma / Sistem Sohbet URL'sini Güncelle/Kaydet
-    try {
-      const finalUrlEval = await cdp.send('Runtime.evaluate', {
-        expression: 'window.location.href',
-        returnByValue: true
-      });
-      const finalUrl = finalUrlEval.result?.value || '';
-      if (finalUrl.includes('/c/')) {
-        const expectedTitle = getExpectedChatTitle(customer, channel);
-        if (chatInfo.isNewChat) {
-          await renameChatToTitle(cdp, expectedTitle);
+    // 6. Sadece kalıcı/özel sohbetler için Firma / Sistem Sohbet URL'sini Güncelle/Kaydet
+    if (isDedicatedChat) {
+      try {
+        const finalUrlEval = await cdp.send('Runtime.evaluate', {
+          expression: 'window.location.href',
+          returnByValue: true
+        });
+        const finalUrl = finalUrlEval.result?.value || '';
+        if (finalUrl.includes('/c/')) {
+          const expectedTitle = getExpectedChatTitle(customer, channel);
+          if (chatInfo.isNewChat) {
+            await renameChatToTitle(cdp, expectedTitle);
+          }
+          setCompanyChat(chatIdentity, channel, finalUrl, expectedTitle);
         }
-        setCompanyChat(chatIdentity, channel, finalUrl, expectedTitle);
+      } catch (urlErr) {
+        console.warn(`[CDP Worker: ${WORKER_ID}] URL kaydetme uyarısı:`, urlErr.message);
       }
-    } catch (urlErr) {
-      console.warn(`[CDP Worker: ${WORKER_ID}] URL kaydetme uyarısı:`, urlErr.message);
     }
 
   } catch (err) {
