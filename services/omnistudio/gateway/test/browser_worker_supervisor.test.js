@@ -20,6 +20,7 @@ function harness(options = {}) {
   let pid = 200;
   const running = new Set(options.runningPorts || []);
   const launches = [];
+  const restoreFlags = [];
   const closes = [];
   const tabs = new Map();
   const profiles = [];
@@ -56,6 +57,7 @@ function harness(options = {}) {
 
   const launcher = async worker => {
     launches.push(worker.id);
+    restoreFlags.push(worker.restoreLastSessionOnNextLaunch === true);
     profiles.push(worker.profileDir);
     if (options.failLaunchFor?.has(worker.id)) throw new Error('launch failed');
     running.add(worker.cdpPort);
@@ -90,7 +92,7 @@ function harness(options = {}) {
   });
 
   return {
-    supervisor, add, launches, closes, profiles, tabs, running, sharedDb, leaseStore,
+    supervisor, add, launches, restoreFlags, closes, profiles, tabs, running, sharedDb, leaseStore,
     advance(ms) { now += ms; },
   };
 }
@@ -288,6 +290,55 @@ test('10. expired auth becomes AUTH_REQUIRED and alternate account is selected',
   const selected = await h.supervisor.runWithWorker({ provider: 'gemini', jobId: 'job-auth' }, async lease => lease.workerId);
   assert.equal(selected, 'gemini-valid');
   assert.equal(expired.state, WORKER_STATES.AUTH_REQUIRED);
+});
+
+// 10b. auth expiry -> one bounded Chrome session restore retry
+test('10b. expired auth retries once with Chrome last-session restore', async () => {
+  const h = harness();
+  let validations = 0;
+  const worker = h.add('gemini-restore', 9223, {
+    sessionValidator: async () => {
+      validations++;
+      return validations === 1
+        ? { ok: false, code: 'AUTH_REQUIRED', message: 'expired' }
+        : { ok: true };
+    },
+  });
+
+  await h.supervisor.ensureReady(worker);
+
+  assert.equal(validations, 2, 'auth recovery must retry validation once');
+  assert.deepEqual(h.launches, ['gemini-restore', 'gemini-restore']);
+  assert.deepEqual(h.restoreFlags, [false, true], 'only the recovery launch uses --restore-last-session');
+  assert.equal(worker.readiness, READINESS_STATES.READY);
+  assert.equal(worker.authRestoreAttempts, 0, 'successful recovery resets the per-incident counter');
+});
+
+test('10c. persistent auth failure is bounded and remains AUTH_REQUIRED', async () => {
+  const h = harness();
+  const worker = h.add('gemini-still-expired', 9223, {
+    sessionValidator: async () => ({ ok: false, code: 'AUTH_REQUIRED', message: 'expired' }),
+  });
+
+  await assert.rejects(() => h.supervisor.ensureReady(worker), error => error.code === 'AUTH_REQUIRED');
+
+  assert.equal(h.launches.length, 2, 'must not restart the browser indefinitely');
+  assert.deepEqual(h.restoreFlags, [false, true]);
+  assert.equal(worker.state, WORKER_STATES.AUTH_REQUIRED);
+  assert.equal(worker.authRestoreAttempts, 1);
+});
+
+test('10d. non-video auth failures do not trigger video session restore', async () => {
+  const h = harness();
+  const worker = h.add('chatgpt-expired', 9222, {
+    sessionValidator: async () => ({ ok: false, code: 'AUTH_REQUIRED', message: 'expired' }),
+  }, 'chatgpt', 'https://chatgpt.com/');
+
+  await assert.rejects(() => h.supervisor.ensureReady(worker), error => error.code === 'AUTH_REQUIRED');
+
+  assert.deepEqual(h.launches, ['chatgpt-expired']);
+  assert.deepEqual(h.restoreFlags, [false]);
+  assert.equal(worker.authRestoreAttempts, 0);
 });
 
 // 11. startup failure -> alternate eligible account where appropriate

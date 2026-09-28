@@ -61,6 +61,8 @@ class BrowserWorkerSupervisor extends EventEmitter {
     this.orphanScanInterval = options.orphanScanInterval ?? numberFromEnv('ORPHAN_SCAN_INTERVAL_MS', 60_000, 1000);
     this.preferredWorkingTabs = options.preferredWorkingTabs ?? numberFromEnv('PREFERRED_WORKING_TABS', 1, 1);
     this.absoluteTabCap = options.absoluteTabCap ?? numberFromEnv('ABSOLUTE_TAB_CAP', 2, 1);
+    this.autoRestoreOnAuth = options.autoRestoreOnAuth ?? true;
+    this.authRestoreMaxAttempts = options.authRestoreMaxAttempts ?? 1;
     this.pollIntervalMs = options.pollIntervalMs ?? 25;
     this.workers = new Map();
     this.jobReservations = new Map();
@@ -100,6 +102,12 @@ class BrowserWorkerSupervisor extends EventEmitter {
       lastHeartbeatAt: now,
       crashCount: 0,
       restartCount: 0,
+      authRestoreAttempts: 0,
+      lastAuthRestoreAt: null,
+      restoreLastSessionOnNextLaunch: false,
+      autoRestoreOnAuth: config.autoRestoreOnAuth ??
+        (this.autoRestoreOnAuth && ['gemini', 'flow'].includes(config.provider)),
+      authRestoreMaxAttempts: config.authRestoreMaxAttempts ?? this.authRestoreMaxAttempts,
       lastError: null,
       startupPromise: null,
       stopping: false,
@@ -142,8 +150,13 @@ class BrowserWorkerSupervisor extends EventEmitter {
       `--user-data-dir=${worker.profileDir}`,
       `--remote-debugging-port=${worker.cdpPort}`,
       '--start-maximized',
-      worker.launchUrl,
     ];
+    // Chrome's session restore is useful after an unclean browser exit. It
+    // restores the persistent profile's last tabs without touching credentials.
+    // The flag is armed only for the bounded auth-recovery attempt below.
+    if (worker.restoreLastSessionOnNextLaunch) args.push('--restore-last-session');
+    args.push(worker.launchUrl);
+    worker.restoreLastSessionOnNextLaunch = false;
     const child = spawn(process.env.CHROME_BIN || '/usr/bin/google-chrome-stable', args, {
       detached: false,
       stdio: 'ignore',
@@ -288,6 +301,71 @@ class BrowserWorkerSupervisor extends EventEmitter {
     return tab;
   }
 
+  async _ensureReadyAttempt(worker) {
+    worker.state = WORKER_STATES.STARTING;
+    worker.readiness = READINESS_STATES.WORKER_STARTING;
+    worker.phase = 'STARTING';
+    worker.lastActivityAt = this.clock();
+    worker.lastError = null;
+    try {
+      if (!await this._isCdpReady(worker)) {
+        const child = await this.launcher(worker);
+        worker.process = child || null;
+        worker.browserPid = child?.pid || null;
+        worker.startedAt = this.clock();
+        worker.restartCount++;
+      }
+      await this._waitForCdp(worker);
+      worker.readiness = READINESS_STATES.CDP_READY;
+      await this._ensureWorkingTab(worker);
+
+      if (worker.sessionValidator) {
+        const session = await Promise.race([
+          Promise.resolve(worker.sessionValidator(worker)),
+          sleep(this.providerReadyTimeout).then(() => ({ ok: false, code: 'SESSION_VALIDATION_TIMEOUT' })),
+        ]);
+        if (!session || session.ok !== true) {
+          const code = session?.code || 'AUTH_REQUIRED';
+          worker.state = code.includes('AUTH') ? WORKER_STATES.AUTH_REQUIRED : WORKER_STATES.UNHEALTHY;
+          throw workerError(code, session?.message || `Persistent session validation failed for ${worker.id}`, worker);
+        }
+      }
+      worker.readiness = READINESS_STATES.SESSION_VALID;
+
+      if (worker.providerReadyValidator) {
+        const ready = await Promise.race([
+          Promise.resolve(worker.providerReadyValidator(worker)),
+          sleep(this.providerReadyTimeout).then(() => ({ ok: false, code: 'PROVIDER_READY_TIMEOUT' })),
+        ]);
+        if (!ready || ready.ok !== true) {
+          const code = ready?.code || 'PROVIDER_NOT_READY';
+          if (code.includes('AUTH')) worker.state = WORKER_STATES.AUTH_REQUIRED;
+          else if (code.includes('QUOTA')) worker.state = WORKER_STATES.QUOTA_EXHAUSTED;
+          else worker.state = WORKER_STATES.UNHEALTHY;
+          throw workerError(code, ready?.message || `Provider readiness failed for ${worker.id}`, worker);
+        }
+      }
+      worker.readiness = READINESS_STATES.PROVIDER_READY;
+      worker.readiness = READINESS_STATES.READY;
+      worker.state = worker.currentJobId ? WORKER_STATES.BUSY : WORKER_STATES.IDLE;
+      worker.phase = worker.currentJobId ? 'BUSY' : null;
+      worker.lastActivityAt = this.clock();
+      return worker;
+    } catch (error) {
+      worker.lastError = error.message;
+      worker.readiness = READINESS_STATES.NOT_READY;
+      if (![WORKER_STATES.AUTH_REQUIRED, WORKER_STATES.QUOTA_EXHAUSTED].includes(worker.state)) {
+        worker.state = WORKER_STATES.UNHEALTHY;
+      }
+      throw error;
+    }
+  }
+
+  _isAuthRecoveryError(error) {
+    const code = String(error?.code || '').toUpperCase();
+    return code.includes('AUTH') || code.includes('SESSION_EXPIRED');
+  }
+
   async ensureReady(worker) {
     if (typeof worker === 'string') worker = this.workers.get(worker);
     if (!worker) throw workerError('NO_ELIGIBLE_WORKER', 'Unknown worker');
@@ -295,66 +373,34 @@ class BrowserWorkerSupervisor extends EventEmitter {
     if (worker.startupPromise) return worker.startupPromise;
 
     worker.startupPromise = (async () => {
-      worker.state = WORKER_STATES.STARTING;
-      worker.readiness = READINESS_STATES.WORKER_STARTING;
-      worker.phase = 'STARTING';
-      worker.lastActivityAt = this.clock();
-      worker.lastError = null;
-      try {
-        if (!await this._isCdpReady(worker)) {
-          const child = await this.launcher(worker);
-          worker.process = child || null;
-          worker.browserPid = child?.pid || null;
-          worker.startedAt = this.clock();
-          worker.restartCount++;
-        }
-        await this._waitForCdp(worker);
-        worker.readiness = READINESS_STATES.CDP_READY;
-        await this._ensureWorkingTab(worker);
+      let restoreAttempted = false;
+      while (true) {
+        try {
+          const ready = await this._ensureReadyAttempt(worker);
+          worker.authRestoreAttempts = 0;
+          return ready;
+        } catch (error) {
+          const maxAttempts = Math.max(0, Number(worker.authRestoreMaxAttempts) || 0);
+          const canRestore = worker.autoRestoreOnAuth !== false &&
+            !restoreAttempted &&
+            this._isAuthRecoveryError(error) &&
+            worker.authRestoreAttempts < maxAttempts &&
+            !worker.currentJobId &&
+            (!ACTIVE_PHASES.has(worker.phase) || worker.phase === 'STARTING');
 
-        if (worker.sessionValidator) {
-          const session = await Promise.race([
-            Promise.resolve(worker.sessionValidator(worker)),
-            sleep(this.providerReadyTimeout).then(() => ({ ok: false, code: 'SESSION_VALIDATION_TIMEOUT' })),
-          ]);
-          if (!session || session.ok !== true) {
-            const code = session?.code || 'AUTH_REQUIRED';
-            worker.state = code.includes('AUTH') ? WORKER_STATES.AUTH_REQUIRED : WORKER_STATES.UNHEALTHY;
-            throw workerError(code, session?.message || `Persistent session validation failed for ${worker.id}`, worker);
-          }
-        }
-        worker.readiness = READINESS_STATES.SESSION_VALID;
+          if (!canRestore) throw error;
 
-        if (worker.providerReadyValidator) {
-          const ready = await Promise.race([
-            Promise.resolve(worker.providerReadyValidator(worker)),
-            sleep(this.providerReadyTimeout).then(() => ({ ok: false, code: 'PROVIDER_READY_TIMEOUT' })),
-          ]);
-          if (!ready || ready.ok !== true) {
-            const code = ready?.code || 'PROVIDER_NOT_READY';
-            if (code.includes('AUTH')) worker.state = WORKER_STATES.AUTH_REQUIRED;
-            else if (code.includes('QUOTA')) worker.state = WORKER_STATES.QUOTA_EXHAUSTED;
-            else worker.state = WORKER_STATES.UNHEALTHY;
-            throw workerError(code, ready?.message || `Provider readiness failed for ${worker.id}`, worker);
-          }
+          restoreAttempted = true;
+          worker.authRestoreAttempts += 1;
+          worker.lastAuthRestoreAt = this.clock();
+          worker.restoreLastSessionOnNextLaunch = true;
+          const stopped = await this.gracefulShutdown(worker, `auth_restore:${error.code || 'AUTH_REQUIRED'}`, { allowStarting: true });
+          if (!stopped) throw error;
         }
-        worker.readiness = READINESS_STATES.PROVIDER_READY;
-        worker.readiness = READINESS_STATES.READY;
-        worker.state = worker.currentJobId ? WORKER_STATES.BUSY : WORKER_STATES.IDLE;
-        worker.phase = worker.currentJobId ? 'BUSY' : null;
-        worker.lastActivityAt = this.clock();
-        return worker;
-      } catch (error) {
-        worker.lastError = error.message;
-        worker.readiness = READINESS_STATES.NOT_READY;
-        if (![WORKER_STATES.AUTH_REQUIRED, WORKER_STATES.QUOTA_EXHAUSTED].includes(worker.state)) {
-          worker.state = WORKER_STATES.UNHEALTHY;
-        }
-        throw error;
-      } finally {
-        worker.startupPromise = null;
       }
-    })();
+    })().finally(() => {
+      worker.startupPromise = null;
+    });
     return worker.startupPromise;
   }
 
@@ -852,6 +898,8 @@ class BrowserWorkerSupervisor extends EventEmitter {
         last_heartbeat: worker.lastHeartbeatAt ? new Date(worker.lastHeartbeatAt).toISOString() : null,
         crash_count: worker.crashCount,
         restart_count: worker.restartCount,
+        auth_restore_attempts: worker.authRestoreAttempts,
+        last_auth_restore_at: worker.lastAuthRestoreAt ? new Date(worker.lastAuthRestoreAt).toISOString() : null,
         warm_policy: worker.warm ? 'WARM' : 'ON_DEMAND',
         last_error: worker.lastError,
       });
