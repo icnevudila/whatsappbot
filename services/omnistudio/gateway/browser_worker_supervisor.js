@@ -1,6 +1,8 @@
 const { spawn } = require('child_process');
 const crypto = require('crypto');
 const EventEmitter = require('events');
+const fs = require('fs');
+const WebSocket = (() => { try { return require('ws'); } catch { return globalThis.WebSocket; } })();
 
 const WORKER_STATES = Object.freeze({
   OFFLINE: 'OFFLINE',
@@ -84,6 +86,7 @@ class BrowserWorkerSupervisor extends EventEmitter {
       canonicalAccountId: config.canonicalAccountId ? String(config.canonicalAccountId).toLowerCase().trim() : null,
       aliases: Array.isArray(config.aliases) ? config.aliases : [],
       profileDir: config.profileDir,
+      profileDirectory: config.profileDirectory || 'Default',
       cdpPort: Number(config.cdpPort),
       launchUrl: config.launchUrl || 'about:blank',
       warm: config.warm === true,
@@ -152,6 +155,9 @@ class BrowserWorkerSupervisor extends EventEmitter {
       `--remote-debugging-port=${worker.cdpPort}`,
       '--start-maximized',
     ];
+    if (['gemini', 'flow'].includes(worker.provider)) {
+      args.push(`--profile-directory=${worker.profileDirectory}`);
+    }
     // Chrome's session restore is useful after an unclean browser exit. It
     // restores the persistent profile's last tabs without touching credentials.
     // The flag is armed only for the bounded auth-recovery attempt below.
@@ -164,7 +170,9 @@ class BrowserWorkerSupervisor extends EventEmitter {
       env: { ...process.env, DISPLAY: process.env.DISPLAY || ':99' },
     });
     child.once('exit', (code, signal) => {
-      if (worker.stopping) return;
+      // A delayed exit from a stopped/replaced Chrome must never invalidate
+      // the new process or reset the bounded recovery counter.
+      if (worker.stopping || child.supervisorStopping || worker.process !== child) return;
       if (worker.autoRestoreOnAuth) {
         // An unexpected browser exit is a session-recovery incident too.
         // Arm the next launch before any caller asks for readiness.
@@ -177,6 +185,7 @@ class BrowserWorkerSupervisor extends EventEmitter {
       worker.readiness = READINESS_STATES.NOT_READY;
       worker.lastError = `Chrome exited (${code ?? 'null'}/${signal || 'none'})`;
       worker.state = worker.currentJobId ? WORKER_STATES.UNHEALTHY : WORKER_STATES.OFFLINE;
+      if (!worker.currentJobId) worker.phase = null;
     });
     return child;
   }
@@ -186,19 +195,20 @@ class BrowserWorkerSupervisor extends EventEmitter {
     // worker.process. Only target the exact CDP port and only use this path
     // for the bounded auth-restore attempt; never scan or kill all Chrome.
     if (process.platform !== 'linux') return false;
-    const pattern = `--remote-debugging-port=${worker.cdpPort}`;
-    return new Promise(resolve => {
-      const child = spawn('pkill', ['-TERM', '-f', '--', pattern], { stdio: 'ignore' });
-      const timer = setTimeout(() => {
-        try { child.kill('SIGKILL'); } catch (_) {}
-        resolve(false);
-      }, 1500);
-      child.once('error', () => { clearTimeout(timer); resolve(false); });
-      child.once('exit', code => {
-        clearTimeout(timer);
-        resolve(code === 0);
-      });
-    });
+    let terminated = false;
+    for (const pid of fs.readdirSync('/proc').filter(name => /^\d+$/.test(name))) {
+      try {
+        const args = fs.readFileSync(`/proc/${pid}/cmdline`, 'utf8').split('\0');
+        if (!/chrome|chromium/.test(args[0]) || args.some(arg => arg.startsWith('--type='))) continue;
+        if (!args.includes(`--remote-debugging-port=${worker.cdpPort}`) ||
+            !args.includes(`--user-data-dir=${worker.profileDir}`)) continue;
+        process.kill(Number(pid), 'SIGTERM');
+        terminated = true;
+      } catch (error) {
+        if (!['ENOENT', 'ESRCH'].includes(error.code)) throw error;
+      }
+    }
+    return terminated;
   }
 
   _cdpUrl(worker, path = '/json/list') {
@@ -380,6 +390,7 @@ class BrowserWorkerSupervisor extends EventEmitter {
       return worker;
     } catch (error) {
       worker.lastError = error.message;
+      if (!worker.executionStarted) worker.phase = null;
       worker.readiness = READINESS_STATES.NOT_READY;
       if (![WORKER_STATES.AUTH_REQUIRED, WORKER_STATES.QUOTA_EXHAUSTED].includes(worker.state)) {
         worker.state = WORKER_STATES.UNHEALTHY;
@@ -412,7 +423,7 @@ class BrowserWorkerSupervisor extends EventEmitter {
             !restoreAttempted &&
             this._isAuthRecoveryError(error) &&
             worker.authRestoreAttempts < maxAttempts &&
-            !worker.currentJobId &&
+            !worker.executionStarted &&
             (!ACTIVE_PHASES.has(worker.phase) || worker.phase === 'STARTING');
 
           if (!canRestore) throw error;
@@ -424,6 +435,7 @@ class BrowserWorkerSupervisor extends EventEmitter {
           const stopped = await this.gracefulShutdown(worker, `auth_restore:${error.code || 'AUTH_REQUIRED'}`, {
             allowStarting: true,
             forceExternalKill: true,
+            allowReservedStartup: true,
           });
           if (!stopped) throw error;
         }
@@ -840,15 +852,18 @@ class BrowserWorkerSupervisor extends EventEmitter {
     if (!worker) return false;
     const allowStarting = options.allowStarting === true;
     const forceExternalKill = options.forceExternalKill === true;
+    const reservedStartup = options.allowReservedStartup === true && !worker.executionStarted &&
+      !['BUSY', 'GENERATING', 'DOWNLOADING', 'VERIFYING'].includes(worker.phase);
     const activePhase = ACTIVE_PHASES.has(worker.phase) && !(allowStarting && worker.phase === 'STARTING');
     const activeState = [WORKER_STATES.STARTING, WORKER_STATES.BUSY].includes(worker.state) &&
       !(allowStarting && worker.state === WORKER_STATES.STARTING);
-    if (worker.currentJobId || activePhase || activeState) {
+    if ((worker.currentJobId && !reservedStartup) || activePhase || activeState) {
       return false;
     }
     worker.stopping = true;
     try {
       const hadTrackedProcess = Boolean(worker.process && !worker.process.killed);
+      if (worker.process) worker.process.supervisorStopping = true;
       if (await this._isCdpReady(worker)) {
         try {
           await this.fetchImpl(this._cdpUrl(worker, '/json/version'), { signal: AbortSignal.timeout(1500) });
@@ -871,6 +886,17 @@ class BrowserWorkerSupervisor extends EventEmitter {
       if (forceExternalKill && !hadTrackedProcess) {
         await this.externalBrowserTerminator(worker);
       }
+      if (['gemini', 'flow'].includes(worker.provider)) {
+        // Do not launch into a profile still locked by the previous Chrome.
+        const deadline = Date.now() + 5000;
+        while (await this._isCdpReady(worker)) {
+          if (Date.now() >= deadline) {
+            worker.lastError = 'BROWSER_STOP_TIMEOUT';
+            return false;
+          }
+          await this.sleep(50);
+        }
+      }
       worker.state = WORKER_STATES.OFFLINE;
       worker.readiness = READINESS_STATES.NOT_READY;
       worker.phase = null;
@@ -882,6 +908,9 @@ class BrowserWorkerSupervisor extends EventEmitter {
       return true;
     } finally {
       worker.stopping = false;
+      // A failed stop leaves this process owned by the worker. Its eventual
+      // exit must still be observed instead of being ignored forever.
+      if (worker.process) worker.process.supervisorStopping = false;
     }
   }
 

@@ -116,6 +116,21 @@ test('1. cold browser incoming job boots, validates and executes only after READ
 });
 
 // 2. warm browser + incoming job -> reuses browser/tab
+test('failed video browser shutdown retains process ownership and future exit tracking', async t => {
+  const h = harness();
+  const worker = h.add('gemini-stop-timeout', 9230);
+  await h.supervisor.ensureReady(worker);
+  const child = worker.process;
+  child.kill = () => {}; // Chrome ignores the graceful termination request.
+  let wallTime = 0;
+  t.mock.method(Date, 'now', () => (wallTime += 6000));
+  assert.equal(await h.supervisor.gracefulShutdown(worker), false);
+  assert.equal(worker.lastError, 'BROWSER_STOP_TIMEOUT');
+  assert.equal(worker.process, child);
+  assert.equal(child.supervisorStopping, false);
+  assert.equal(worker.stopping, false);
+});
+
 test('2. warm browser incoming job reuses browser and canonical tab', async () => {
   const h = harness({ runningPorts: [9223] });
   const worker = h.add('gemini-1', 9223);
@@ -373,6 +388,42 @@ test('10f. unexpected CDP disconnect arms restore on the next launch', async () 
   assert.deepEqual(h.launches, ['gemini-crashed']);
   assert.deepEqual(h.restoreFlags, [true], 'crash recovery must relaunch with last-session restore');
   assert.equal(worker.readiness, READINESS_STATES.READY);
+});
+
+test('auth recovery runs under an existing reservation before provider execution', async () => {
+  const h = harness();
+  let checks = 0;
+  h.add('gemini-reserved', 9225, {sessionValidator: async () => ++checks === 1
+    ? {ok:false, code:'AUTH_REQUIRED'} : {ok:true}});
+  let submissions = 0;
+  await h.supervisor.runWithWorker({provider:'gemini',jobId:'reserved-recovery'}, async lease => {
+    submissions++;
+  });
+  assert.deepEqual(h.restoreFlags,[false,true]);
+  assert.equal(submissions,1);
+  assert.equal(h.supervisor.jobReservations.size,0);
+});
+
+test('a terminal auth failure clears STARTING and does not loop on later readiness calls', async () => {
+  const h = harness();
+  const worker=h.add('gemini-blocked',9225,{sessionValidator:async()=>({ok:false,code:'AUTH_REQUIRED'})});
+  await assert.rejects(h.supervisor.ensureReady(worker));
+  const count=h.launches.length;
+  await assert.rejects(h.supervisor.ensureReady(worker));
+  assert.equal(h.launches.length,count);
+  assert.equal(worker.phase,null);
+  assert.equal(worker.state,WORKER_STATES.AUTH_REQUIRED);
+});
+
+test('reserved startup permission never shuts down provider execution', async () => {
+  const h=harness();
+  const worker=h.add('gemini-active',9225);
+  const lease=await h.supervisor.acquire({provider:'gemini',jobId:'already-submitted'});
+  lease.markExecutionStarted();
+  lease.setPhase('GENERATING');
+  assert.equal(await h.supervisor.gracefulShutdown(worker,'auth_restore',{allowStarting:true,allowReservedStartup:true,forceExternalKill:true}),false);
+  assert.equal(h.running.has(9225),true);
+  await lease.release();
 });
 
 // 11. startup failure -> alternate eligible account where appropriate

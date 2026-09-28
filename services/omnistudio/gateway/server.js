@@ -254,12 +254,15 @@ for (const port of geminiCdpPorts) {
       const { verifyAccount } = require('./generate_video.js');
       const report = await verifyAccount(worker.cdpPort);
       if (report.ok && report.isLoggedIn) {
-        if (report.email) {
+        if (GEMINI_PORT_CANONICAL_ACCOUNTS[port] && String(report.email || '').toLowerCase().trim() !== canonicalAccount) {
+          return { ok: false, code: 'ACCOUNT_MISMATCH', message: `Expected account ${canonicalAccount} was not verified` };
+        }
+        if (!GEMINI_PORT_CANONICAL_ACCOUNTS[port] && report.email) {
           worker.canonicalAccountId = report.email.toLowerCase().trim();
         }
         return { ok: true };
       }
-      return { ok: false, code: 'AUTH_REQUIRED', message: report.error || 'Gemini persistent login has expired' };
+      return { ok: false, code: report.code || 'AUTH_REQUIRED', message: report.error || 'Gemini persistent login has expired' };
     },
     providerReadyValidator: async worker => {
       const { getGeminiVideoCapability } = require('./generate_video.js');

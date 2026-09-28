@@ -3419,6 +3419,7 @@ async function verifyAccount(port) {
 
       const isLimited = body.includes("reached your limit") || body.includes("Daha sonra tekrar deneyin") || body.includes("quota exceeded");
       return {
+        signIn,
         isLoggedIn: !signIn && (!!accBtn || !!email),
         email: email,
         accountName: accountName || email || null,
@@ -3430,14 +3431,18 @@ async function verifyAccount(port) {
 
     const res = await new Promise((resolve) => {
       let finished = false;
+      let retryTimer = null;
       const finish = (result) => {
         if (finished) return;
         finished = true;
         clearTimeout(timer);
+        clearTimeout(retryTimer);
         try { ws.close(); } catch (_) {}
         resolve(result);
       };
-      const timer = setTimeout(() => finish({ ok: false, error: 'CDP timeout' }), 8000);
+      // CDP readiness precedes client-side Google account hydration. An empty
+      // page is not evidence that the persisted login has expired.
+      const timer = setTimeout(() => finish({ ok: false, error: 'Account page did not become ready' }), 12000);
 
       const onOpen = () => {
         try {
@@ -3460,6 +3465,10 @@ async function verifyAccount(port) {
           const d = JSON.parse(raw);
           if (d.id === 1) {
             const val = d.result?.result?.value || {};
+            if ((!val.isLoggedIn || !val.email) && !val.signIn && !finished) {
+              retryTimer = setTimeout(onOpen, 500);
+              return;
+            }
             finish({ ok: true, ...val });
           }
         } catch (e) {
@@ -3480,7 +3489,12 @@ async function verifyAccount(port) {
       }
     });
 
-    if (res.ok) {
+    if (res.ok && res.isLoggedIn && PORT_CANONICAL_ACCOUNTS[port] &&
+        String(res.email || '').toLowerCase().trim() !== PORT_CANONICAL_ACCOUNTS[port]) {
+      return { port, ok: false, isLoggedIn: false, code: 'ACCOUNT_MISMATCH', error: 'Expected Google account was not verified' };
+    }
+
+    if (res.ok && res.isLoggedIn) {
       const cfg = loadAccountsConfig();
       cfg.accounts = cfg.accounts || {};
       cfg.accounts[port] = {
@@ -3491,7 +3505,9 @@ async function verifyAccount(port) {
         lastVerified: new Date().toISOString()
       };
       saveAccountsConfig(cfg);
+    }
 
+    if (res.ok) {
       accountPool[port] = accountPool[port] || {};
       accountPool[port].notLoggedIn = !res.isLoggedIn;
       if (res.isLimited) {
