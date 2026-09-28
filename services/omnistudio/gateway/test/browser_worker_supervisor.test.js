@@ -361,6 +361,20 @@ test('10e. auth restore kills an orphaned CDP browser before relaunch', async ()
   assert.equal(worker.authRestoreAttempts, 1);
 });
 
+test('10f. unexpected CDP disconnect arms restore on the next launch', async () => {
+  const h = harness({ runningPorts: [9223] });
+  const worker = h.add('gemini-crashed', 9223);
+  await h.supervisor.ensureReady(worker);
+  h.running.delete(9223);
+  await h.supervisor.maintenanceTick();
+
+  await h.supervisor.ensureReady(worker);
+
+  assert.deepEqual(h.launches, ['gemini-crashed']);
+  assert.deepEqual(h.restoreFlags, [true], 'crash recovery must relaunch with last-session restore');
+  assert.equal(worker.readiness, READINESS_STATES.READY);
+});
+
 // 11. startup failure -> alternate eligible account where appropriate
 test('11. startup failure preserves provider execution and selects alternate account', async () => {
   const h = harness({ failLaunchFor: new Set(['gemini-bad']) });

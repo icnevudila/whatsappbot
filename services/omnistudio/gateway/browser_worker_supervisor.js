@@ -165,6 +165,12 @@ class BrowserWorkerSupervisor extends EventEmitter {
     });
     child.once('exit', (code, signal) => {
       if (worker.stopping) return;
+      if (worker.autoRestoreOnAuth) {
+        // An unexpected browser exit is a session-recovery incident too.
+        // Arm the next launch before any caller asks for readiness.
+        worker.restoreLastSessionOnNextLaunch = true;
+        worker.authRestoreAttempts = 0;
+      }
       worker.browserPid = null;
       worker.process = null;
       worker.crashCount++;
@@ -897,6 +903,10 @@ class BrowserWorkerSupervisor extends EventEmitter {
         }
       } else if (worker.readiness === READINESS_STATES.READY && !worker.stopping) {
         worker.crashCount++;
+        if (worker.autoRestoreOnAuth) {
+          worker.restoreLastSessionOnNextLaunch = true;
+          worker.authRestoreAttempts = 0;
+        }
         worker.state = WORKER_STATES.OFFLINE;
         worker.readiness = READINESS_STATES.NOT_READY;
         worker.browserPid = null;
