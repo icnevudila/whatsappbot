@@ -22,6 +22,7 @@ function harness(options = {}) {
   const launches = [];
   const restoreFlags = [];
   const closes = [];
+  const externalKills = [];
   const tabs = new Map();
   const profiles = [];
 
@@ -77,6 +78,7 @@ function harness(options = {}) {
     absoluteTabCap: 2,
     pollIntervalMs: 10,
     leaseStore,
+    externalBrowserTerminator: options.externalBrowserTerminator || (async () => false),
   });
 
   const add = (id, port, validators = {}, provider = 'gemini', launchUrl = null) => supervisor.registerWorker({
@@ -92,7 +94,7 @@ function harness(options = {}) {
   });
 
   return {
-    supervisor, add, launches, restoreFlags, closes, profiles, tabs, running, sharedDb, leaseStore,
+    supervisor, add, launches, restoreFlags, closes, externalKills, profiles, tabs, running, sharedDb, leaseStore,
     advance(ms) { now += ms; },
   };
 }
@@ -339,6 +341,24 @@ test('10d. non-video auth failures do not trigger video session restore', async 
   assert.deepEqual(h.launches, ['chatgpt-expired']);
   assert.deepEqual(h.restoreFlags, [false]);
   assert.equal(worker.authRestoreAttempts, 0);
+});
+
+test('10e. auth restore kills an orphaned CDP browser before relaunch', async () => {
+  const h = harness({ runningPorts: [9223], externalBrowserTerminator: async worker => {
+    h.externalKills.push(worker.cdpPort);
+    h.running.delete(worker.cdpPort);
+    return true;
+  }});
+  const worker = h.add('gemini-orphaned', 9223, {
+    sessionValidator: async () => ({ ok: false, code: 'AUTH_REQUIRED', message: 'expired' }),
+  });
+
+  await assert.rejects(() => h.supervisor.ensureReady(worker), error => error.code === 'AUTH_REQUIRED');
+
+  assert.deepEqual(h.externalKills, [9223], 'orphaned CDP browser must be terminated once');
+  assert.deepEqual(h.launches, ['gemini-orphaned'], 'the restore attempt relaunches after the external kill');
+  assert.deepEqual(h.restoreFlags, [true]);
+  assert.equal(worker.authRestoreAttempts, 1);
 });
 
 // 11. startup failure -> alternate eligible account where appropriate

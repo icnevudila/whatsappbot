@@ -50,6 +50,7 @@ class BrowserWorkerSupervisor extends EventEmitter {
     super();
     this.fetchImpl = options.fetchImpl || globalThis.fetch;
     this.launcher = options.launcher || this._defaultLauncher.bind(this);
+    this.externalBrowserTerminator = options.externalBrowserTerminator || this._defaultExternalBrowserTerminator.bind(this);
     this.clock = options.clock || (() => Date.now());
     this.sleep = options.sleep || sleep;
     this.leaseStore = options.leaseStore || new DistributedLeaseStore({ clock: this.clock });
@@ -172,6 +173,26 @@ class BrowserWorkerSupervisor extends EventEmitter {
       worker.state = worker.currentJobId ? WORKER_STATES.UNHEALTHY : WORKER_STATES.OFFLINE;
     });
     return child;
+  }
+
+  async _defaultExternalBrowserTerminator(worker) {
+    // A gateway restart can leave a Chrome process alive without preserving
+    // worker.process. Only target the exact CDP port and only use this path
+    // for the bounded auth-restore attempt; never scan or kill all Chrome.
+    if (process.platform !== 'linux') return false;
+    const pattern = `--remote-debugging-port=${worker.cdpPort}`;
+    return new Promise(resolve => {
+      const child = spawn('pkill', ['-TERM', '-f', '--', pattern], { stdio: 'ignore' });
+      const timer = setTimeout(() => {
+        try { child.kill('SIGKILL'); } catch (_) {}
+        resolve(false);
+      }, 1500);
+      child.once('error', () => { clearTimeout(timer); resolve(false); });
+      child.once('exit', code => {
+        clearTimeout(timer);
+        resolve(code === 0);
+      });
+    });
   }
 
   _cdpUrl(worker, path = '/json/list') {
@@ -394,7 +415,10 @@ class BrowserWorkerSupervisor extends EventEmitter {
           worker.authRestoreAttempts += 1;
           worker.lastAuthRestoreAt = this.clock();
           worker.restoreLastSessionOnNextLaunch = true;
-          const stopped = await this.gracefulShutdown(worker, `auth_restore:${error.code || 'AUTH_REQUIRED'}`, { allowStarting: true });
+          const stopped = await this.gracefulShutdown(worker, `auth_restore:${error.code || 'AUTH_REQUIRED'}`, {
+            allowStarting: true,
+            forceExternalKill: true,
+          });
           if (!stopped) throw error;
         }
       }
@@ -809,6 +833,7 @@ class BrowserWorkerSupervisor extends EventEmitter {
     if (typeof worker === 'string') worker = this.workers.get(worker);
     if (!worker) return false;
     const allowStarting = options.allowStarting === true;
+    const forceExternalKill = options.forceExternalKill === true;
     const activePhase = ACTIVE_PHASES.has(worker.phase) && !(allowStarting && worker.phase === 'STARTING');
     const activeState = [WORKER_STATES.STARTING, WORKER_STATES.BUSY].includes(worker.state) &&
       !(allowStarting && worker.state === WORKER_STATES.STARTING);
@@ -817,6 +842,7 @@ class BrowserWorkerSupervisor extends EventEmitter {
     }
     worker.stopping = true;
     try {
+      const hadTrackedProcess = Boolean(worker.process && !worker.process.killed);
       if (await this._isCdpReady(worker)) {
         try {
           await this.fetchImpl(this._cdpUrl(worker, '/json/version'), { signal: AbortSignal.timeout(1500) });
@@ -835,6 +861,9 @@ class BrowserWorkerSupervisor extends EventEmitter {
         } catch {
           if (worker.process && !worker.process.killed) worker.process.kill('SIGTERM');
         }
+      }
+      if (forceExternalKill && !hadTrackedProcess) {
+        await this.externalBrowserTerminator(worker);
       }
       worker.state = WORKER_STATES.OFFLINE;
       worker.readiness = READINESS_STATES.NOT_READY;
