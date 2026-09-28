@@ -39,6 +39,7 @@ export interface VideoGenerationRequest {
   aspectRatio: '9:16'
   durationSeconds: number
   accountId?: string
+  expectedAccountEmail?: string
   geminiAccountIds?: string[]
   assets: Array<{
     asset_id: string

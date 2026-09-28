@@ -3,8 +3,10 @@ const assert = require('node:assert/strict');
 
 const {
   normalizeCreditInteger,
+  normalizeEmail,
   parseEmail,
   parseFlowCredits,
+  isExpectedFlowAccount,
 } = require('../flow_account_inspector.js');
 
 test('parses Turkish Google Flow credit labels with grouping separators', () => {
@@ -31,4 +33,10 @@ test('prefers the leaf email when a parent menu node concatenates labels', () =>
     parseEmail(['Alo Düvencimesajify1@gmail.comGoogle Flow', 'mesajify1@gmail.com']),
     'mesajify1@gmail.com',
   );
+});
+
+test('requires the exact expected Flow identity instead of trusting the chooser slot', () => {
+  assert.equal(normalizeEmail('  Owner@Example.com '), 'owner@example.com');
+  assert.equal(isExpectedFlowAccount('Owner@Example.com', 'owner@example.com'), true);
+  assert.equal(isExpectedFlowAccount('other@example.com', 'owner@example.com'), false);
 });

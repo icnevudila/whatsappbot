@@ -168,6 +168,15 @@ async function reviewOnce(
 
 export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions): Promise<void> {
   const { supabase, gflowEngineUrl, job, accountId, attemptId, startTime, rawInput, assets } = options
+  const { data: flowAccount } = await supabase
+    .from('flow_accounts')
+    .select('email')
+    .eq('id', accountId)
+    .maybeSingle()
+  const expectedAccountEmail = String(flowAccount?.email || '').trim().toLowerCase() || null
+  if (!expectedAccountEmail) {
+    throw new Error(`FLOW_ACCOUNT_CONFIGURATION_REQUIRED: no canonical email is configured for ${accountId}`)
+  }
   const snapshot = createBrandContextSnapshot({ ...rawInput, creative_engine_mode: 'SIMPLE_V5_HYBRID' })
   const { brief, shotPlan } = SimpleV5BriefNormalizer.normalize(snapshot)
   const geminiCompiled = GeminiVideoPromptCompiler.compile(brief, shotPlan)
@@ -242,6 +251,7 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     aspectRatio: brief.aspectRatio,
     durationSeconds: brief.durationSeconds,
     accountId,
+    expectedAccountEmail,
     assets,
     ...( {
       fidelity_contract_applied: true,

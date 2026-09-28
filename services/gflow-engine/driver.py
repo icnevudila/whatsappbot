@@ -193,6 +193,34 @@ def sanitize_chrome_profile(profile_path: Path):
         except Exception as e:
             logger.warning(f"Could not sanitize preferences in {pref_file}: {e}")
 
+
+def verify_generation_profile_identity(profile_path: Path, expected_email: Optional[str]) -> Dict[str, Any]:
+    """Fail closed unless the isolated generation profile was synced for the
+    exact Flow account selected by the job.
+
+    The profile-sync manifest is written only after the source CDP slot has
+    been inspected and its authenticated email has matched. This prevents a
+    stale browser cookie or an account-chooser redirect from silently running a
+    paid generation under another Google account.
+    """
+    wanted = str(expected_email or '').strip().lower()
+    if not wanted:
+        return {"verified": False, "code": "ACCOUNT_CONFIGURATION_REQUIRED", "email": None}
+    manifest_path = profile_path / ".mesajify_profile_sync.json"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except Exception:
+        return {"verified": False, "code": "FLOW_PROFILE_UNVERIFIED", "email": None}
+    observed = str(manifest.get("email") or '').strip().lower() or None
+    if manifest.get("verified") is not True or observed != wanted:
+        return {
+            "verified": False,
+            "code": "FLOW_ACCOUNT_MISMATCH",
+            "email": observed,
+            "expected_email": wanted,
+        }
+    return {"verified": True, "code": None, "email": observed, "expected_email": wanted}
+
 class AccountLock:
     def __init__(self, account_id: str):
         self.account_id = account_id
@@ -327,6 +355,7 @@ def execute_generation_job(payload: Dict[str, Any]) -> Dict[str, Any]:
     job_id = payload.get("job_id", str(uuid.uuid4()))
     attempt_id = payload.get("attempt_id", str(uuid.uuid4()))
     account_id = payload.get("account_id", "account-01")
+    expected_email = payload.get("expected_email") or payload.get("expected_account_email")
     org_id = payload.get("org_id", "unknown_org")
     prompt = payload.get("prompt", "")
     aspect_ratio = payload.get("aspect_ratio", "9:16")
@@ -407,6 +436,14 @@ def execute_generation_job(payload: Dict[str, Any]) -> Dict[str, Any]:
     with AccountLock(account_id):
         profile_path = PROFILES_BASE / f"profile_{account_id}"
         sanitize_chrome_profile(profile_path)
+
+        identity = verify_generation_profile_identity(profile_path, expected_email)
+        if not identity["verified"]:
+            raise FlowExecutionError(
+                "FLOW_AUTH_REQUIRED" if identity["code"] in {"FLOW_PROFILE_UNVERIFIED", "FLOW_ACCOUNT_MISMATCH"} else identity["code"],
+                f"Generation profile for '{account_id}' is not verified for the selected Flow account "
+                f"(expected={identity.get('expected_email') or expected_email}, observed={identity.get('email') or 'none'}).",
+            )
 
         # --- GATE 2: Project Lifecycle Management ---
         target_project = payload.get("project_id")

@@ -29,6 +29,7 @@ export interface GenerateRequest {
   attempt_id: string
   org_id: string
   account_id: string
+  expected_email?: string
   prompt: string
   approved_dialogue?: string
   aspect_ratio: string

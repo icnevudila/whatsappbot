@@ -295,6 +295,16 @@ async function runJobExecution(job: any, accountId: string) {
 
     // 2. Call gflow-engine via internal HTTP
     console.log(`[orchestrator] Calling gflow-engine for job ${job.id} on account ${accountId}`)
+
+    const { data: flowAccount } = await supabase
+      .from('flow_accounts')
+      .select('email')
+      .eq('id', accountId)
+      .maybeSingle()
+    const expectedFlowEmail = String(flowAccount?.email || '').trim().toLowerCase() || null
+    if (!expectedFlowEmail) {
+      throw new Error(`FLOW_ACCOUNT_CONFIGURATION_REQUIRED: no canonical email is configured for ${accountId}`)
+    }
     
     // OPENING_PROJECT
     await transitionJob(
@@ -315,6 +325,7 @@ async function runJobExecution(job: any, accountId: string) {
       attempt_id: attemptId,
       org_id: job.org_id,
       account_id: accountId,
+      expected_email: expectedFlowEmail,
       prompt: job.prompt,
       aspect_ratio: job.aspect_ratio || '9:16',
       model: (job.model && job.model !== 'veo-fast' && job.model !== 'omni-lite') ? job.model : 'veo-lite',

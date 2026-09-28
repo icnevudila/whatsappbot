@@ -55,6 +55,7 @@ export class RealHttpGFlowProvider implements IGFlowProvider {
       attempt_id: req.attempt_id,
       org_id: req.org_id,
       account_id: req.account_id || 'account-01',
+      expected_email: req.expected_email || undefined,
       prompt: req.prompt,
       approved_dialogue: req.approved_dialogue,
       aspect_ratio: req.aspect_ratio || '9:16',

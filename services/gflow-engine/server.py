@@ -68,7 +68,7 @@ def _request_supervisor_lease(provider: str, account_id: str, job_id: str, worke
         logger.warning(f"Could not reach supervisor at {url}: {e}")
     return None
 
-def _ensure_supervisor_worker_ready(provider: str, account_id: str) -> bool:
+def _ensure_supervisor_worker_ready(provider: str, account_id: str) -> Dict[str, Any]:
     url = f"{SUPERVISOR_URL.rstrip('/')}/v1/browser-workers/ensure-ready"
     data = json.dumps({
         "provider": provider,
@@ -78,10 +78,22 @@ def _ensure_supervisor_worker_ready(provider: str, account_id: str) -> bool:
     req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
     try:
         with urllib.request.urlopen(req, timeout=5) as resp:
-            return resp.status == 200
+            body = json.loads(resp.read().decode("utf-8"))
+            return body if isinstance(body, dict) else {"ok": resp.status == 200}
+    except urllib.error.HTTPError as e:
+        try:
+            body = json.loads(e.read().decode("utf-8"))
+        except Exception:
+            body = {}
+        return {
+            "ok": False,
+            "error": body.get("error") or {},
+            "message": body.get("error", {}).get("message") if isinstance(body.get("error"), dict) else body.get("message"),
+            "status": e.code,
+        }
     except Exception as e:
         logger.debug(f"Supervisor ensure-ready check warning: {e}")
-        return False
+        return {"ok": False, "error": {"code": "SUPERVISOR_UNREACHABLE", "message": str(e)}}
 
 def _release_supervisor_lease(provider: str, account_id: str, lease_token: Optional[str], outcome: Optional[Dict[str, Any]] = None):
     if not lease_token:
@@ -135,6 +147,7 @@ class GenerateRequest(BaseModel):
     attempt_id: str
     org_id: str
     account_id: str = "account-01"
+    expected_email: Optional[str] = None
     prompt: str
     aspect_ratio: str = "9:16"
     model: str = "veo-lite"
@@ -213,9 +226,21 @@ async def execute_job(req: GenerateRequest):
                 raise HTTPException(status_code=429, detail=f"Account {req.account_id} lease failed: {e.message}")
 
         # 2. Ensure Flow browser worker READY
-        await loop.run_in_executor(
+        readiness = await loop.run_in_executor(
             None, _ensure_supervisor_worker_ready, "flow", req.account_id
         )
+        if not readiness or readiness.get("ok") is not True:
+            detail = readiness.get("error") if isinstance(readiness, dict) else None
+            code = detail.get("code") if isinstance(detail, dict) else None
+            message = (
+                (detail.get("message") if isinstance(detail, dict) else None)
+                or (readiness.get("message") if isinstance(readiness, dict) else None)
+                or "Flow worker is not ready"
+            )
+            normalized_code = code or "FLOW_WORKER_NOT_READY"
+            if "AUTH" in normalized_code.upper() or "ACCOUNT" in normalized_code.upper():
+                normalized_code = "FLOW_AUTH_REQUIRED"
+            raise FlowExecutionError(normalized_code, message or "Flow worker is not ready")
 
         try:
             payload = {
@@ -223,6 +248,7 @@ async def execute_job(req: GenerateRequest):
                 "attempt_id": req.attempt_id,
                 "org_id": req.org_id,
                 "account_id": req.account_id,
+                "expected_email": req.expected_email,
                 "prompt": req.prompt,
                 "aspect_ratio": req.aspect_ratio,
                 "model": req.model,

@@ -77,6 +77,7 @@ export function buildFlowVeoProviderPayload(request: VideoGenerationRequest) {
     attempt_id: request.attemptId,
     org_id: request.orgId,
     account_id: request.accountId!,
+    expected_email: request.expectedAccountEmail || undefined,
     flow_project_id: `flow_proj_${request.jobId}_${request.attemptId}`,
     prompt: request.prompt,
     approved_dialogue: request.approvedDialogue,

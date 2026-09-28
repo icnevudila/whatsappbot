@@ -3255,6 +3255,21 @@ const FLOW_ACCOUNT_ID_BY_PORT = Object.freeze({
   9225: 'account-04',
 });
 
+function expectedFlowEmailForPort(port, cfg = null) {
+  const p = Number.parseInt(port, 10);
+  const accountNumber = String(p - 9221).padStart(2, '0');
+  const envEmail = process.env[`FLOW_ACCOUNT_${accountNumber}_EMAIL`] ||
+    (p === 9222 ? process.env.FLOW_PRIMARY_EMAIL : '');
+  const configuredEmail = cfg?.accounts?.[p]?.email;
+  return String(envEmail || configuredEmail || '').trim().toLowerCase() || null;
+}
+
+function flowSourcePortForAccount(accountId) {
+  const needle = String(accountId || '').trim().toLowerCase();
+  return Object.entries(FLOW_ACCOUNT_ID_BY_PORT)
+    .find(([, value]) => String(value).toLowerCase() === needle)?.[0] || null;
+}
+
 function loadAccountsConfig() {
   try {
     if (fs.existsSync(CONFIG_FILE)) {
@@ -3282,16 +3297,32 @@ function saveAccountsConfig(cfg) {
   }
 }
 
-async function refreshFlowAccount(port) {
+async function refreshFlowAccount(port, options = {}) {
   const p = Number.parseInt(port, 10);
   if (!FLOW_ACCOUNT_ID_BY_PORT[p]) {
     throw new Error('Flow hesabı için desteklenmeyen port. Geçerli portlar: 9222-9225.');
   }
 
-  const snapshot = await inspectFlowAccount(p);
   const cfg = loadAccountsConfig();
   cfg.accounts = cfg.accounts || {};
   const previous = cfg.accounts[p] || {};
+  const expectedEmail = String(options.expectedEmail || expectedFlowEmailForPort(p, cfg) || '').trim().toLowerCase() || null;
+  const snapshot = await inspectFlowAccount(p, { expectedEmail });
+
+  // Never overwrite the slot's canonical identity with whatever account a
+  // redirected Google chooser happened to expose. A mismatch must stop the
+  // generation profile sync, otherwise the next job can silently run under a
+  // different Google account.
+  if (expectedEmail && (!snapshot.authenticated || snapshot.accountMatch !== true)) {
+    return {
+      ...snapshot,
+      ok: false,
+      authenticated: false,
+      expectedEmail,
+      accountId: FLOW_ACCOUNT_ID_BY_PORT[p],
+      error: snapshot.error || `FLOW_ACCOUNT_MISMATCH: expected ${expectedEmail}, observed ${snapshot.email || 'none'}`,
+    };
+  }
   const next = {
     ...previous,
     email: snapshot.email || previous.email || null,
@@ -3312,6 +3343,7 @@ async function refreshFlowAccount(port) {
   return {
     ...snapshot,
     accountId: FLOW_ACCOUNT_ID_BY_PORT[p],
+    expectedEmail,
     flowProjectUrl: next.flowProjectUrl || null,
     previousCredits: Number.isFinite(Number(previous.flowCredits)) ? Number(previous.flowCredits) : null,
   };
@@ -4059,6 +4091,8 @@ module.exports = {
   updateAccountSlot,
   refreshFlowAccount,
   refreshFlowAccounts,
+  expectedFlowEmailForPort,
+  flowSourcePortForAccount,
   recordFlowProfileSync,
   getGeminiVideoCapability,
   verifyVideoFile

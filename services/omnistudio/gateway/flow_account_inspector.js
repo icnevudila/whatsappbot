@@ -4,6 +4,16 @@ const WebSocket = (() => {
 
 const FLOW_URL = 'https://flow.google.com/';
 
+function normalizeEmail(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function isExpectedFlowAccount(observedEmail, expectedEmail) {
+  const observed = normalizeEmail(observedEmail);
+  const expected = normalizeEmail(expectedEmail);
+  return Boolean(observed && expected && observed === expected);
+}
+
 function normalizeCreditInteger(raw) {
   const digits = String(raw || '').replace(/[^0-9]/g, '');
   if (!digits) return null;
@@ -129,6 +139,13 @@ async function listTabs(port) {
 async function ensureFlowTab(port) {
   let tabs = await listTabs(port);
   let tab = tabs.find(item => item.type === 'page' && /^https:\/\/flow\.google\.com(?:\/|$)/.test(String(item.url || '')));
+  // When Google redirects a Flow session to an account chooser/login page, the
+  // same CDP target no longer has a flow.google.com URL. Reuse that target so
+  // the recovery routine can select the verified account instead of opening an
+  // unrelated second tab and losing the auth context.
+  if (!tab) {
+    tab = tabs.find(item => item.type === 'page' && /accounts\.google\.com/i.test(String(item.url || '')));
+  }
   if (!tab) {
     const response = await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(FLOW_URL)}`, {
       method: 'PUT',
@@ -141,7 +158,8 @@ async function ensureFlowTab(port) {
   return tab;
 }
 
-async function inspectFlowAccount(port) {
+async function inspectFlowAccount(port, options = {}) {
+  const expectedEmail = normalizeEmail(options.expectedEmail);
   const tab = await ensureFlowTab(port);
   const ws = await connectWebSocket(tab.webSocketDebuggerUrl);
   let nextId = 1;
@@ -154,15 +172,28 @@ async function inspectFlowAccount(port) {
       expression: 'window.location.href',
       returnByValue: true,
     });
-    if (!String(current?.result?.value || '').includes('flow.google.com')) {
+    if (!String(current?.result?.value || '').includes('flow.google.com') &&
+        !String(current?.result?.value || '').includes('accounts.google.com')) {
       await send('Page.navigate', { url: FLOW_URL });
     }
     await wait(3_500);
 
-    const result = await send('Runtime.evaluate', {
-      expression: `(() => {
+    const inspectExpression = (expectedEmail = null) => `(() => {
         const bodyText = document.body ? document.body.innerText : '';
-        const signIn = /sign in|oturum aç|iniciar sesión/i.test(bodyText) ||
+        const currentHref = String(location.href || '');
+        const onGoogleAuth = /accounts\\.google\\.com/i.test(currentHref);
+        const chooserVisible = onGoogleAuth && /choose an account|hesap seç|bir hesap seç/i.test(bodyText);
+        let accountChooserClicked = false;
+        const expectedEmail = ${JSON.stringify(normalizeEmail(expectedEmail))};
+        if (chooserVisible && expectedEmail) {
+          const candidate = Array.from(document.querySelectorAll('a,button,[role="link"],[role="button"],div'))
+            .find(node => String(node.innerText || node.getAttribute('aria-label') || '').toLowerCase().includes(expectedEmail));
+          if (candidate) {
+            candidate.click();
+            accountChooserClicked = true;
+          }
+        }
+        const signIn = onGoogleAuth || /sign in|oturum aç|iniciar sesión/i.test(bodyText) ||
           !!document.querySelector('a[href*="accounts.google.com/ServiceLogin"]');
         const projectLink = Array.from(document.querySelectorAll('a[href*="/project/"]'))
           .map(a => a.href).find(Boolean) ||
@@ -185,16 +216,57 @@ async function inspectFlowAccount(port) {
         if (accountControl) accountControl.click();
         return {
           signIn,
+          chooserVisible,
+          accountChooserClicked,
           projectLink,
-          href: location.href,
+          href: currentHref,
           title: document.title,
           controlFound: !!accountControl,
           controlLabel: accountControl ? (accountControl.getAttribute('aria-label') || accountControl.innerText || '') : ''
         };
-      })()`,
+      })()`;
+
+    let result = await send('Runtime.evaluate', {
+      expression: inspectExpression(expectedEmail),
       returnByValue: true,
     });
-    const pageState = result?.result?.value || {};
+    let pageState = result?.result?.value || {};
+    if (pageState.accountChooserClicked) {
+      await wait(4_000);
+      result = await send('Runtime.evaluate', {
+        expression: inspectExpression(expectedEmail),
+        returnByValue: true,
+      });
+      pageState = result?.result?.value || {};
+    }
+
+    // Flow can keep the browser on a valid page while its Google account menu
+    // points at another signed-in identity. Select the canonical email when it
+    // is already present in the menu; never guess from account order.
+    if (expectedEmail && pageState.signIn !== true) {
+      const selectResult = await send('Runtime.evaluate', {
+        expression: `(() => {
+          const expected = ${JSON.stringify(expectedEmail)};
+          const candidate = Array.from(document.querySelectorAll('a,button,[role="menuitem"],[role="option"],div'))
+            .find(node => {
+              const text = String(node.innerText || node.getAttribute('aria-label') || '').toLowerCase().trim();
+              return text.includes(expected) && text.length <= 180;
+            });
+          if (!candidate) return { clicked: false };
+          candidate.click();
+          return { clicked: true };
+        })()`,
+        returnByValue: true,
+      });
+      if (selectResult?.result?.value?.clicked) {
+        await wait(4_000);
+        result = await send('Runtime.evaluate', {
+          expression: inspectExpression(expectedEmail),
+          returnByValue: true,
+        });
+        pageState = result?.result?.value || {};
+      }
+    }
     await wait(pageState.controlFound ? 2_000 : 500);
 
     const menuResult = await send('Runtime.evaluate', {
@@ -212,11 +284,15 @@ async function inspectFlowAccount(port) {
     const texts = Array.isArray(menuResult?.result?.value) ? menuResult.result.value : [];
     const email = parseEmail([pageState.controlLabel, ...texts]);
     const credits = parseFlowCredits(texts);
-    const authenticated = pageState.signIn !== true && Boolean(email || pageState.controlFound);
+    const accountMatch = !expectedEmail || isExpectedFlowAccount(email, expectedEmail);
+    const authenticated = pageState.signIn !== true && Boolean(email || pageState.controlFound) &&
+      accountMatch && (!expectedEmail || Boolean(email));
 
     return {
       ok: authenticated,
       authenticated,
+      expectedEmail: expectedEmail || null,
+      accountMatch,
       port: Number(port),
       email,
       credits,
@@ -224,7 +300,11 @@ async function inspectFlowAccount(port) {
       projectUrl: pageState.projectLink || (String(pageState.href || '').includes('/project/') ? pageState.href : null),
       checkedAt: new Date().toISOString(),
       title: pageState.title || null,
-      error: authenticated ? (credits == null ? 'Flow oturumu açık ancak kredi değeri okunamadı' : null) : 'Flow oturumu doğrulanamadı',
+      error: authenticated
+        ? (credits == null ? 'Flow oturumu açık ancak kredi değeri okunamadı' : null)
+        : (expectedEmail && email && !accountMatch
+          ? `FLOW_ACCOUNT_MISMATCH: expected ${expectedEmail}, observed ${email}`
+          : 'Flow oturumu doğrulanamadı'),
     };
   } finally {
     try { ws.close(); } catch {}
@@ -233,6 +313,8 @@ async function inspectFlowAccount(port) {
 
 module.exports = {
   inspectFlowAccount,
+  normalizeEmail,
+  isExpectedFlowAccount,
   normalizeCreditInteger,
   parseEmail,
   parseFlowCredits,
