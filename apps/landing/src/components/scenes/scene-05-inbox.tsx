@@ -1,9 +1,39 @@
 'use client'
 
+import { useState } from 'react'
 import Image from 'next/image'
 import { useReveal } from '@/lib/use-reveal'
 
+const CONVERSATIONS = [
+  {
+    name: 'Ayşe Yıldız',
+    phone: '+90 532 ••• •• 78',
+    line: 'Hat 01 (Restoran Hattı)',
+    customerMsg: '"Kampanyadaki kruvasan ve kahve menünüz için bugün 14:00\'e 2 kişilik yeriniz var mı?"',
+    reply: 'Sen: "Masanız #4 rezerve edilmiştir, sizleri ağırlamaktan mutluluk duyarız."',
+    badge: 'Masa Rezerve Edildi',
+  },
+  {
+    name: 'Ahmet Yılmaz',
+    phone: '+90 542 ••• •• 12',
+    line: 'Hat 02 (E-Ticaret Hattı)',
+    customerMsg: '"NOVA Kablosuz Kulaklık lansman indiriminden faydalanmak istiyorum. Siyah model stokta var mı?"',
+    reply: 'Sen: "Evet Ahmet Bey, lansman kodunuz tanımlandı. Siparişiniz kargoya hazır."',
+    badge: 'Sipariş Alındı (2.850 TL)',
+  },
+  {
+    name: 'Burak Demir',
+    phone: '+90 552 ••• •• 45',
+    line: 'Hat 03 (Danışmanlık Hattı)',
+    customerMsg: '"Pazartesi 10:00 dijital operasyon büyüme analizi toplantısı için uygun musunuz?"',
+    reply: 'Sen: "Takvim daveti e-posta ve WhatsApp üzerinden onaylanmıştır Burak Bey."',
+    badge: 'Görüşme Onaylandı',
+  },
+]
+
 export function Scene05Inbox() {
+  const [activeConv, setActiveConv] = useState(0)
+  const current = CONVERSATIONS[activeConv]
   const headRef = useReveal<HTMLDivElement>()
   const frameRef = useReveal<HTMLDivElement>(0.1)
 
@@ -93,31 +123,56 @@ export function Scene05Inbox() {
               </div>
             </div>
 
-            {/* Floating Live Conversation Card Overlay */}
-            <div className="absolute bottom-6 left-6 z-20 max-w-sm bg-white/95 backdrop-blur-md p-4 rounded-2xl border border-hairline shadow-2xl hidden md:block animate-fade-in-up">
+            {/* Floating Live Conversation Card Overlay with Multi-Line Selector */}
+            <div className="absolute bottom-6 left-6 z-20 max-w-md bg-white/95 backdrop-blur-md p-5 rounded-2xl border border-hairline shadow-2xl hidden md:block">
+              {/* Mini Line Tabs */}
+              <div className="flex items-center gap-1.5 mb-3.5 pb-2.5 border-b border-hairline">
+                {CONVERSATIONS.map((c, idx) => (
+                  <button
+                    key={c.name}
+                    onClick={() => setActiveConv(idx)}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all ${
+                      activeConv === idx
+                        ? 'bg-ink text-white shadow-xs'
+                        : 'bg-surface text-ink-muted hover:text-ink border border-hairline'
+                    }`}
+                  >
+                    Hat {idx + 1}
+                  </button>
+                ))}
+                <span className="text-[10px] text-ink-muted ml-auto font-mono">3 Hat Canlı</span>
+              </div>
+
+              {/* Current Conversation Info */}
               <div className="flex items-center gap-2.5 pb-2.5 border-b border-hairline">
                 <div className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold text-xs font-[family-name:var(--font-jetbrains)]">
-                  01
+                  0{activeConv + 1}
                 </div>
                 <div>
                   <div className="text-xs font-semibold text-ink flex items-center gap-1.5">
-                    Ayşe Yıldız
-                    <span className="text-[10px] text-ink-muted">· +90 532 ••• •• 78</span>
+                    {current.name}
+                    <span className="text-[10px] text-ink-muted">· {current.phone}</span>
                   </div>
-                  <div className="text-[10px] text-brand font-medium">Hat 01 (İşletme Hattı) Üzerinden Geldi</div>
+                  <div className="text-[10px] text-brand font-medium">{current.line} Üzerinden Geldi</div>
                 </div>
               </div>
+
+              {/* Chat Dialogue */}
               <div className="mt-2.5 space-y-1.5">
                 <p className="text-xs text-ink bg-surface p-2 rounded-lg leading-snug">
-                  "Kampanyadaki kruvasan ve kahve menünüz için bugün 14:00'e 2 kişilik yeriniz var mı?"
+                  {current.customerMsg}
                 </p>
                 <p className="text-xs text-emerald-800 bg-emerald-50 p-2 rounded-lg leading-snug font-medium border border-emerald-100">
-                  Sen: "Masanız #4 rezerve edilmiştir, sizleri ağırlamaktan mutluluk duyarız."
+                  {current.reply}
                 </p>
               </div>
-              <div className="mt-2 pt-2 border-t border-hairline flex items-center justify-between text-[10px] text-ink-muted">
+
+              {/* Outcome Bar */}
+              <div className="mt-2.5 pt-2 border-t border-hairline flex items-center justify-between text-[10px] text-ink-muted">
                 <span className="text-emerald-600 font-semibold font-[family-name:var(--font-jetbrains)]">● Canlı Senkronize</span>
-                <span>Satışa Dönüştürüldü</span>
+                <span className="text-ink font-medium bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded border border-emerald-100 font-[family-name:var(--font-jetbrains)]">
+                  {current.badge}
+                </span>
               </div>
             </div>
 

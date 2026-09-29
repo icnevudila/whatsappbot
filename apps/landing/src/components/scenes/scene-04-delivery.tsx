@@ -9,6 +9,7 @@ export function Scene04Delivery() {
   const poolRef = useReveal<HTMLDivElement>(0.1)
   const [valProgress, setValProgress] = useState(0)
   const [stage, setStage] = useState(0)
+  const [consoleTab, setConsoleTab] = useState<'panel' | 'veo' | 'infographic'>('panel')
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -198,43 +199,107 @@ export function Scene04Delivery() {
 
         </div>
 
-        {/* Real Application Multi-Line Control Console Viewport */}
+        {/* Real Application Multi-Line Control Console Viewport with Interactive Views */}
         <div ref={poolRef} className="reveal relative mx-auto max-w-[1140px] rounded-3xl border border-hairline-strong bg-white shadow-2xl overflow-hidden">
-          {/* Browser Bar */}
-          <div className="h-11 bg-surface border-b border-hairline flex items-center justify-between px-6">
+          
+          {/* Top Browser Bar & Mode Switcher */}
+          <div className="h-14 bg-surface border-b border-hairline flex flex-wrap items-center justify-between px-4 sm:px-6 gap-2">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-black/15" />
               <div className="w-3 h-3 rounded-full bg-black/15" />
               <div className="w-3 h-3 rounded-full bg-black/15" />
+              <span className="hidden sm:inline-block text-xs font-[family-name:var(--font-jetbrains)] text-ink-muted ml-2">
+                {consoleTab === 'panel' ? 'app.mesajify.com/hesaplar' : consoleTab === 'veo' ? 'mesajify-flow-engine / veo-3.1' : 'mesajify-architecture-diagram'}
+              </span>
             </div>
-            <div className="px-4 py-1 rounded-md bg-white border border-hairline text-xs font-[family-name:var(--font-jetbrains)] text-ink-muted flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-brand" />
-              app.mesajify.com/hesaplar · Çoklu WhatsApp Hat Havuzu
+
+            {/* View Switcher Pills */}
+            <div className="inline-flex p-1 bg-white rounded-xl border border-hairline shadow-xs">
+              <button
+                onClick={() => setConsoleTab('panel')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  consoleTab === 'panel' ? 'bg-ink text-white shadow-xs' : 'text-ink-muted hover:text-ink'
+                }`}
+              >
+                Panel Ekranı
+              </button>
+              <button
+                onClick={() => setConsoleTab('veo')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                  consoleTab === 'veo' ? 'bg-brand text-white shadow-xs' : 'text-ink-muted hover:text-ink'
+                }`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                3D İletim (Veo 3.1)
+              </button>
+              <button
+                onClick={() => setConsoleTab('infographic')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  consoleTab === 'infographic' ? 'bg-ink text-white shadow-xs' : 'text-ink-muted hover:text-ink'
+                }`}
+              >
+                Mimarî İnfografik
+              </button>
             </div>
-            <span className="text-[11px] font-[family-name:var(--font-jetbrains)] text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
-              3 Hat Bağlı
+
+            <span className="text-[11px] font-[family-name:var(--font-jetbrains)] text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 hidden md:inline-block">
+              3 Hat Aktif & Senkron
             </span>
           </div>
 
-          {/* Screenshot Container */}
-          <div className="relative w-full aspect-[16/9] md:aspect-[21/10] bg-surface overflow-hidden group">
-            <Image
-              src="/landing/hesaplar.png"
-              alt="Mesajify Gerçek Çoklu Hat Yönetimi Ekranı"
-              fill
-              className="object-cover object-top"
-            />
+          {/* Media Viewport */}
+          <div className="relative w-full aspect-[16/9] md:aspect-[21/10] bg-[#050B08] overflow-hidden group">
+            {consoleTab === 'panel' && (
+              <>
+                <Image
+                  src="/landing/hesaplar.png"
+                  alt="Mesajify Gerçek Çoklu Hat Yönetimi Ekranı"
+                  fill
+                  className="object-cover object-top animate-fade-in"
+                />
+                <div className="absolute top-6 left-6 z-20 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/80 backdrop-blur-md border border-white/10 text-white shadow-lg">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                  <span className="text-xs font-semibold">QR Kod ile Anında Eşleşme</span>
+                </div>
+                <div className="absolute bottom-6 right-6 z-20 hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-xl bg-black/80 backdrop-blur-md border border-white/10 text-white shadow-lg">
+                  <span className="text-xs font-[family-name:var(--font-jetbrains)] text-brand font-medium">Rotasyon Algoritması</span>
+                  <span className="text-xs text-white/70">· Hat Başına Eşit Dağıtım</span>
+                </div>
+              </>
+            )}
 
-            {/* Live Interactive Overlays */}
-            <div className="absolute top-6 left-6 z-20 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/80 backdrop-blur-md border border-white/10 text-white shadow-lg">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-              <span className="text-xs font-semibold">QR Kod ile Anında Eşleşme</span>
-            </div>
+            {consoleTab === 'veo' && (
+              <div className="relative w-full h-full flex items-center justify-center bg-black animate-fade-in">
+                <video
+                  src="/landing/studio/pipeline-flow-veo.mp4"
+                  poster="/landing/studio/pipeline-flow-veo-poster.jpg"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="h-full max-h-full aspect-[9/16] object-contain shadow-2xl"
+                />
+                <div className="absolute top-6 left-6 z-20 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/80 backdrop-blur-md border border-white/10 text-white shadow-lg">
+                  <span className="w-2 h-2 rounded-full bg-brand" />
+                  <span className="text-xs font-medium font-[family-name:var(--font-jetbrains)]">Google Flow Veo 3.1 · 3D Fiber Optik Dağıtım</span>
+                </div>
+              </div>
+            )}
 
-            <div className="absolute bottom-6 right-6 z-20 hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-xl bg-black/80 backdrop-blur-md border border-white/10 text-white shadow-lg">
-              <span className="text-xs font-[family-name:var(--font-jetbrains)] text-brand font-medium">Rotasyon Algoritması</span>
-              <span className="text-xs text-white/70">· Hat Başına Eşit Dağıtım</span>
-            </div>
+            {consoleTab === 'infographic' && (
+              <div className="relative w-full h-full bg-[#050B08] animate-fade-in">
+                <Image
+                  src="/landing/studio/pipeline-architecture-infographic.png"
+                  alt="Mesajify Çoklu WhatsApp Altyapı İnfografiği"
+                  fill
+                  className="object-contain p-4"
+                />
+                <div className="absolute top-6 left-6 z-20 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/80 backdrop-blur-md border border-white/10 text-white shadow-lg">
+                  <span className="w-2 h-2 rounded-full bg-brand" />
+                  <span className="text-xs font-medium font-[family-name:var(--font-jetbrains)]">Mesajify 3D Mimarî İnfografiği</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Console Footer */}
