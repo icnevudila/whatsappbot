@@ -7,63 +7,67 @@ import { useReveal } from '@/lib/use-reveal'
 const sectors = [
   {
     id: 'eticaret',
-    label: 'E-Ticaret & Moda',
+    label: 'E-Ticaret & Ürün',
     badge: 'Yeni Sezon Lansmanı',
     img: '/landing/studio/nova-headphones-ad.png',
+    video: '/landing/studio/ecommerce-flow-veo.mp4',
     tag: 'E-Ticaret Kreatifi',
     title: 'NOVA Kablosuz Kulaklık',
     stats: 'Geri Dönüş: %14.2',
-    msg: 'Yeni koleksiyonumuz yayında ✨\nÜrünleri keşfetmek ve lansmana özel %20 indirimden faydalanmak için bize yazabilirsiniz.',
-    reply: 'Siyah modeli mevcut mu? Kargo ne zaman çıkar? 🤔',
-    conversion: '✓ Satış Temsilcisi Yanıtladı · Sipariş Oluşturuldu (2.850 TL)',
+    msg: 'Yeni koleksiyonumuz yayında.\nÜrünleri keşfetmek ve lansmana özel %20 indirimden faydalanmak için bize yazabilirsiniz.',
+    reply: 'Siyah modeli mevcut mu? Kargo ne zaman çıkar?',
+    conversion: 'Anında Yanıtlandı · Sipariş Oluşturuldu (2.850 TL)',
   },
   {
     id: 'restoran',
     label: 'Restoran & Fırın',
     badge: 'Günlük Taze Menü',
     img: '/landing/studio/bakery-croissant-ad.png',
+    video: '/landing/studio/restaurant-flow-veo.mp4',
     tag: 'Gastronomi & Fırın',
     title: 'Artisan Kruvasan & Kahve',
     stats: 'Rezervasyon: %28.4',
-    msg: 'Bu sabah fırından yeni çıkan sıcak kruvasanlarımız ve artisan kahvelerimiz hazır 🥐☕\nMenü ve rezervasyon için bize yazabilirsiniz.',
-    reply: 'Öğlen 12:30 için 4 kişilik yeriniz var mı? 🍽️',
-    conversion: '✓ Masa #7 Rezerve Edildi · Konum İletildi',
+    msg: 'Bu sabah fırından yeni çıkan sıcak kruvasanlarımız ve artisan kahvelerimiz hazır.\nMenü ve rezervasyon için bize yazabilirsiniz.',
+    reply: 'Öğlen 12:30 için 4 kişilik yeriniz var mı?',
+    conversion: 'Masa #7 Rezerve Edildi · Konum İletildi',
   },
   {
     id: 'otomotiv',
     label: 'Otomotiv & Servis',
     badge: 'Test Sürüşü Daveti',
     img: '/landing/studio/automotive-ad.png',
+    video: '/landing/studio/automotive-flow-veo.mp4',
     tag: 'Otomotiv Lansmanı',
     title: 'Yeni Nesil Elektrikli Seri',
     stats: 'Test Talebi: %19.1',
-    msg: 'Yeni nesil araçlarımızı showroomumuzda deneyimleyin ⚡\nModel detayları ve kişisel test sürüşü randevusu için bize yazabilirsiniz.',
+    msg: 'Yeni nesil araçlarımızı showroomumuzda deneyimleyin.\nModel detayları ve kişisel test sürüşü randevusu için bize yazabilirsiniz.',
     reply: 'Cumartesi günü test sürüşü için randevu alabilir miyim?',
-    conversion: '✓ Test Sürüşü Onaylandı · Cumartesi 14:00',
+    conversion: 'Test Sürüşü Onaylandı · Cumartesi 14:00',
   },
   {
     id: 'emlak',
     label: 'Emlak & Proje',
     badge: 'Ön Talep Portföyü',
     img: '/landing/studio/realestate-ad.png',
+    video: '/landing/studio/realestate-flow-veo.mp4',
     tag: 'Lüks Konut Portföyü',
     title: 'Panoramik Rezidans Evleri',
     stats: 'Sunum Talebi: %11.8',
-    msg: 'Şehrin en prestijli noktasında yeni projemiz satışa açıldı 🏙️\nKatalog ve özel ödeme planı detayları için bize yazabilirsiniz.',
+    msg: 'Şehrin en prestijli noktasında yeni projemiz satışa açıldı.\nKatalog ve özel ödeme planı detayları için bize yazabilirsiniz.',
     reply: '3+1 daire planlarını ve fiyat listesini gönderebilir misiniz?',
-    conversion: '✓ Dijital Katalog İletildi · Sunum Randevusu Alındı',
+    conversion: 'Dijital Katalog İletildi · Sunum Randevusu Alındı',
   },
   {
     id: 'klinik',
     label: 'Klinik & Sağlık',
     badge: 'Kontrol & Randevu',
     img: '/landing/studio/clinic-ad.png',
-    tag: 'Estetik & Diş Kliniği',
+    tag: 'Estetik & Sağlık',
     title: 'Periyodik Sağlık & Bakım',
     stats: 'Randevu Oranı: %34.0',
-    msg: 'Sonbahar dönemi kontrol randevularımız açıldı ✨\nUzman hekimlerimizden randevu almak ve detaylı bilgi için bize yazabilirsiniz.',
+    msg: 'Sonbahar dönemi kontrol randevularımız açıldı.\nMuayene ve detaylı bilgi için bize yazabilirsiniz.',
     reply: 'Haftaya çarşamba öğleden sonra uygun bir saat var mı?',
-    conversion: '✓ Randevu Oluşturuldu · Çarşamba 15:30 (Dr. Selin)',
+    conversion: 'Randevu Oluşturuldu · Çarşamba 15:30',
   },
   {
     id: 'hizmet',
@@ -73,9 +77,9 @@ const sectors = [
     tag: 'Kurumsal Danışmanlık',
     title: 'B2B Büyüme & Operasyon',
     stats: 'Görüşme Oranı: %22.5',
-    msg: 'Şirketiniz için 2026 büyüme ve dijital operasyon analizimiz hazır 📈\nDetaylı sunum ve değerlendirme toplantısı için bize yazabilirsiniz.',
+    msg: 'Şirketiniz için 2026 büyüme ve dijital operasyon analizimiz hazır.\nDetaylı sunum ve değerlendirme toplantısı için bize yazabilirsiniz.',
     reply: 'Pazartesi 10:00 online toplantı için uygun musunuz?',
-    conversion: '✓ Takvim Daveti Gönderildi · Google Meet Linki Eklendi',
+    conversion: 'Takvim Daveti Gönderildi · Görüşme Onaylandı',
   },
 ]
 
@@ -190,7 +194,7 @@ export function Scene03Sectors() {
             {/* Bottom Conversion Bar (Mesajify Real Panel Action) */}
             <div className="mt-6 pt-4 border-t border-black/10 flex items-center justify-between text-xs bg-white/80 backdrop-blur-sm p-3 rounded-xl border border-hairline">
               <span className="text-emerald-700 font-medium font-[family-name:var(--font-jetbrains)]">{data.conversion}</span>
-              <span className="text-[11px] text-ink-muted">Ortak Gelen Kutusu</span>
+              <span className="text-[11px] text-ink-muted">Gelen Kutusu (Inbox)</span>
             </div>
 
           </div>
@@ -198,25 +202,38 @@ export function Scene03Sectors() {
           {/* Right Column: Sector Campaign Visual Media with Mesajify Brand Overlay */}
           <div className="lg:col-span-5 relative w-full aspect-[9/14] rounded-3xl overflow-hidden bg-[#07100C] border border-hairline-strong shadow-xl group">
             
-            {/* Sector Media Image */}
-            <Image
-              src={data.img}
-              alt={data.title}
-              fill
-              className="object-cover transition-transform duration-700 group-hover:scale-105"
-            />
+            {/* Sector Media: Bot-Generated Veo Video or Bot-Generated Visual */}
+            {data.video ? (
+              <video
+                key={data.video}
+                src={data.video}
+                poster={data.img}
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+              />
+            ) : (
+              <Image
+                src={data.img}
+                alt={data.title}
+                fill
+                className="object-cover transition-transform duration-700 group-hover:scale-105"
+              />
+            )}
 
             {/* Top Brand Watermark Badge */}
-            <div className="absolute top-4 left-4 z-20 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/70 backdrop-blur-md border border-white/10 shadow-lg">
+            <div className="absolute top-4 left-4 z-20 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/80 backdrop-blur-md border border-white/10">
               <Image
                 src="/logos/mesajify_app_icon_corporate_squircle.png"
-                width={18}
-                height={18}
+                width={16}
+                height={16}
                 alt="Mesajify"
                 className="rounded-sm"
               />
-              <span className="text-[11px] font-[family-name:var(--font-jetbrains)] text-white font-medium">
-                Mesajify Stüdyo
+              <span className="text-[11px] font-[family-name:var(--font-jetbrains)] text-white/90 font-medium">
+                {data.video ? '9:16 Veo Video' : 'AI Kampanya Görseli'}
               </span>
             </div>
 

@@ -107,8 +107,8 @@ export function Scene01Hero() {
               <span className="text-xs text-ink-muted font-medium mt-0.5 block">Dengeli Hat Rotasyonu</span>
             </div>
             <div className="p-3 rounded-xl bg-white/70 border border-hairline">
-              <span className="text-xs font-[family-name:var(--font-jetbrains)] text-brand font-semibold block">04 · Ortak Kutu</span>
-              <span className="text-xs text-ink-muted font-medium mt-0.5 block">Tek Ekranda Yanıtlar</span>
+              <span className="text-xs font-[family-name:var(--font-jetbrains)] text-brand font-semibold block">04 · Gelen Kutusu</span>
+              <span className="text-xs text-ink-muted font-medium mt-0.5 block">Tüm Hatlar Tek Ekranda</span>
             </div>
           </div>
         </div>
@@ -222,11 +222,11 @@ export function Scene01Hero() {
                   </div>
                 </div>
 
-                {/* Live Floating Badge 4: Unified Inbox Response */}
+                {/* Live Floating Badge 4: Central Inbox Response */}
                 <div className="absolute bottom-4 right-4 z-20 hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-black/80 backdrop-blur-md border border-white/10 text-white">
                   <span className="w-2 h-2 rounded-full bg-blue-400" />
                   <div>
-                    <div className="text-[12px] font-medium leading-none">Ortak Gelen Kutusu</div>
+                    <div className="text-[12px] font-medium leading-none">Gelen Kutusu (Inbox)</div>
                     <div className="text-[10px] text-white/50 font-[family-name:var(--font-jetbrains)] mt-0.5">324 Müşteri Yanıtı</div>
                   </div>
                 </div>
@@ -250,7 +250,7 @@ export function Scene01Hero() {
                   <span>·</span>
                   <span>E.164 Temizleme</span>
                   <span>·</span>
-                  <span className="text-brand font-medium">Tek Ortak Inbox</span>
+                  <span className="text-brand font-medium">Merkezi Inbox</span>
                 </div>
               </div>
             </div>

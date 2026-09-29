@@ -14,7 +14,7 @@ export function Scene05Inbox() {
         {/* Narrative Headline */}
         <div ref={headRef} className="reveal text-center max-w-3xl mx-auto mb-16">
           <p className="font-[family-name:var(--font-jetbrains)] text-[11px] font-medium tracking-[0.12em] uppercase text-ink-muted mb-6">
-            MÜŞTERİ YANITI → ORTAK GELEN KUTUSU
+            MÜŞTERİ YANITI → MERKEZİ GELEN KUTUSU
           </p>
           <h2 className="text-[clamp(36px,5.5vw,76px)] leading-[1.04] font-[600] tracking-tight text-ink mb-6">
             Mesaj gitti.
@@ -24,7 +24,7 @@ export function Scene05Inbox() {
             <span className="text-brand">Cevap burada.</span>
           </h2>
           <p className="text-xl text-ink-muted max-w-xl mx-auto leading-relaxed">
-            Telefon aramayın. 5 ayrı WhatsApp Web sekmesi açmayın. Tüm hatlardan gelen müşteri soruları tek ekranda toplanır, ekibiniz anında satışa dönüştürür.
+            Telefon aramayın. 5 ayrı WhatsApp Web sekmesi arasında kaybolmayın. Tüm bağlı hatlarınızdan gelen müşteri soruları tek ekranda toplanır, anında yanıtlayıp satışa dönüştürürsünüz.
           </p>
         </div>
 
@@ -80,7 +80,7 @@ export function Scene05Inbox() {
               </div>
             </div>
 
-            {/* Hotspot 03: Ekip Yanıtı */}
+            {/* Hotspot 03: Hızlı Yanıt */}
             <div className="absolute top-[68%] left-[78%] group cursor-pointer z-20">
               <div className="relative flex items-center justify-center">
                 <span className="absolute w-8 h-8 rounded-full bg-brand/30 animate-ping delay-200" />
@@ -89,7 +89,7 @@ export function Scene05Inbox() {
                 </span>
               </div>
               <div className="absolute -left-28 -top-8 bg-[#07100C] text-white text-xs px-3 py-1.5 rounded-lg whitespace-nowrap opacity-90 shadow-xl border border-white/10 hidden sm:block">
-                Satış ekibiniz tek tıkla yanıtlar
+                Tek tıkla anında yanıtla
               </div>
             </div>
 
@@ -112,7 +112,7 @@ export function Scene05Inbox() {
                   "Kampanyadaki kruvasan ve kahve menünüz için bugün 14:00'e 2 kişilik yeriniz var mı?"
                 </p>
                 <p className="text-xs text-emerald-800 bg-emerald-50 p-2 rounded-lg leading-snug font-medium border border-emerald-100">
-                  Satış Temsilcisi: "Masanız #4 rezerve edilmiştir, sizleri ağırlamaktan mutluluk duyarız."
+                  Sen: "Masanız #4 rezerve edilmiştir, sizleri ağırlamaktan mutluluk duyarız."
                 </p>
               </div>
               <div className="mt-2 pt-2 border-t border-hairline flex items-center justify-between text-[10px] text-ink-muted">
@@ -130,7 +130,7 @@ export function Scene05Inbox() {
               <span className="text-sm font-medium text-ink">Canlı Senkronize WhatsApp Web Entegrasyonu</span>
             </div>
             <span className="text-xs font-[family-name:var(--font-jetbrains)] text-ink-muted">
-              Temsilci ataması · Hızlı yanıt şablonları · Satış etiketleri
+              Hızlı yanıt şablonları · Satış etiketleri · Tek ekrandan yönetim
             </span>
           </div>
 

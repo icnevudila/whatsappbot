@@ -27,7 +27,7 @@ const FAQS = [
   },
   {
     q: 'Müşteri yanıt verdiğinde ne olur?',
-    a: "Müşterinin yanıtı cep telefonuna veya WhatsApp Web'e değil, doğrudan Mesajify Ortak Gelen Kutusu'na düşer. Ekip üyeleriniz bu konuşmaları tek ekrandan yönetip satışa çevirebilir."
+    a: "Müşterinin yanıtı cep telefonuna veya WhatsApp Web'e değil, doğrudan Mesajify Gelen Kutusu'na düşer. Telefonlar arasında geçiş yapmadan tüm konuşmaları tek ekrandan yönetip satışa çevirebilirsin."
   },
   {
     q: 'İletişim almak istemeyen müşteriler ne olur?',
