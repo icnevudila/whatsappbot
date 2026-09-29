@@ -15,6 +15,7 @@
     "dev:dashboard": "npm run dev --workspace @wa/dashboard",
     "dev:admin": "npm run dev --workspace @wa/admin",
     "dev:customer": "npm run dev --workspace @wa/customer",
+    "dev:landing": "npm run dev --workspace @wa/landing",
     "dev:service": "npm run dev --workspace @wa/service",
     "dev:tg": "npm run dev --workspace @wa/tg-service",
     "dev:meta": "npm run dev --workspace @wa/meta-service",
