@@ -25,6 +25,9 @@ export interface SimpleV5Brief {
   verifiedFacts: string[]
   aspectRatio: '9:16'
   durationSeconds: number
+  operationalDomain?: string
+  domainNegatives?: string[]
+  productPresentationDirective?: string
 }
 
 export interface SimpleV5ShotPlan {
@@ -43,6 +46,36 @@ export interface SimpleV5ShotPlan {
     description: string
     resolution: string
   }
+}
+
+export interface SimpleV5ProductionPlan {
+  plan_version: 'simple-v5-production-plan.v1'
+  creative_type: string
+  product: {
+    product_id: string
+    name: string
+    canonical_asset_sha256: string
+  }
+  reference_assets: Array<{ asset_id: string; role: string; sha256: string }>
+  aspect_ratio: '9:16'
+  duration_seconds: number
+  concept: string
+  location: string
+  primary_action: string
+  camera_motion: string
+  timeline: {
+    footage_start_sec: number
+    footage_end_sec: number
+    fade_start_sec: number
+    fade_end_sec: number
+    outro_start_sec: number
+    outro_end_sec: number
+  }
+  shots: Array<{ purpose: 'HOOK' | 'PRODUCT_PROOF' | 'BRAND_CLOSE'; start_sec: number; end_sec: number; description: string }>
+  speech: { language: 'tr-TR'; text: string; start_sec: number; end_sec: number; allow_paraphrase: false }
+  subtitles: { mode: 'auto' | 'off'; start_sec: number; end_sec: number }
+  outro?: { mode: 'auto' | 'off'; start_sec: number; end_sec: number }
+  branding: { diegetic_policy: 'reference-only'; overlay_policy: 'canonical-logo-only' }
 }
 
 export interface SimpleV5CompiledPrompt {

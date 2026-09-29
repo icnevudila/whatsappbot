@@ -563,16 +563,14 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
 
     // ── Canonical timing constants ────────────────────────────────────────────
     // 0.0–0.5  → clean footage (no overlays)
-    // 0.5–5.5  → subtitle_layer only (VO-synced kinetic words)
-    // 5.5–6.0  → fade-to-black transition
-    // 6.0–8.0  → outro card: logo + brand name + slogan + contact + CTA
-    const SUBTITLE_WINDOW_END = 5.5
-    const FADE_START          = SUBTITLE_WINDOW_END          // 5.5s
-    const FADE_DURATION       = 0.5
-    const OUTRO_START         = FADE_START + FADE_DURATION   // 6.0s
-    const LOGO_FADE_IN        = OUTRO_START                  // 6.0s
-    const LOGO_FADE_DUR       = 0.5
-    const TEXT_START          = OUTRO_START + LOGO_FADE_DUR + 0.15  // ~6.65s
+    // 0.5–6.5  → subtitle_layer (VO-synced kinetic words)
+    // 6.85–8.0 → punchy agency outro card: logo + slogan + contact + clean CTA (does NOT steal video time)
+    const SUBTITLE_WINDOW_END = Math.max(5.5, duration - 1.5)
+    const FADE_START          = Math.max(6.0, duration - 1.15) // ~6.85s for 8s video
+    const FADE_DURATION       = 0.25
+    const OUTRO_START         = FADE_START
+    const LOGO_FADE_IN        = OUTRO_START
+    const LOGO_FADE_DUR       = 0.25
     const VIDEO_END           = duration
 
     // ── Logo validation ───────────────────────────────────────────────────────
@@ -604,98 +602,97 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
     const phone     = (finishingSpec?.outroPhone || finishingSpec?.phone || '').trim()
     const website   = (finishingSpec?.outroWebsite || finishingSpec?.website || '').trim()
     let   rawCta    = (finishingSpec?.ctaText || finishingSpec?.ctaBadgeText || '').trim()
-    if (/whatsapp/i.test(rawCta)) rawCta = ''  // Never show WhatsApp in cinematic outro
+    // Minimalist Luxury Outro: Do not force an artificial CTA button; let Logo + Slogan + Contact breathe
+    const showCta = Boolean(rawCta && !/whatsapp/i.test(rawCta) && finishingSpec?.forceCtaButton)
 
     // Graceful slogan fallback — works for ANY brand, not hardcoded to specific firms
-    const slogan = rawSlogan || (brandName ? `${brandName} ile fark yaratın` : '')
+    const slogan = rawSlogan || (brandName ? `${brandName} güvencesiyle` : '')
 
-    const hasOutroContent = Boolean(brandName || slogan || phone || website || rawCta)
+    const hasOutroContent = Boolean(brandName || slogan || phone || website)
 
     // ── Build FFmpeg filter_complex ───────────────────────────────────────────
     const filterParts: string[] = []
     const extraInputs: string[] = []
     let cur = '0:v'
 
-    // LAYER 1 — subtitle_layer (strictly 0.5–5.5s; enforced by maxEndTimeSec in ASS)
+    // LAYER 1 — subtitle_layer (strictly 0.5–6.5s; enforced by maxEndTimeSec in ASS)
     if (hasSubtitles) {
       const escapedSub = subtitlesPath.replace(/\\/g, '/').replace(/:/g, '\\:')
       filterParts.push(`[${cur}]ass='${escapedSub}'[v_sub]`)
       cur = 'v_sub'
     }
 
-    // Fade-to-black at FADE_START (0.5s fade → pure black at 6.0s)
-    filterParts.push(
-      `[${cur}]fade=t=out:st=${FADE_START.toFixed(2)}:d=${FADE_DURATION.toFixed(2)}[v_faded]`
-    )
-    cur = 'v_faded'
+    const enableOutro =
+      finishingSpec?.enableOutro !== false &&
+      finishingSpec?.outro !== 'off' &&
+      finishingSpec?.outro !== 'none'
 
-    // LAYER 2 — logo_layer (centered, fade-in at 6.0s)
-    if (hasLogo) {
-      const logoIdx = 1 + extraInputs.length / 3
-      extraInputs.push('-loop', '1', '-i', logoPath)
+    if (enableOutro) {
+      // Fade-to-black at FADE_START (fast 0.25s transition at ~6.85s)
+      filterParts.push(
+        `[${cur}]fade=t=out:st=${FADE_START.toFixed(2)}:d=${FADE_DURATION.toFixed(2)}[v_faded]`
+      )
+      cur = 'v_faded'
 
-      // Logo sits above center when outro text is present; perfectly centered otherwise
-      const logoY = hasOutroContent ? '(H-h)/2-70' : '(H-h)/2'
-      filterParts.push(
-        `[${logoIdx}:v]scale=260:-1,format=rgba,` +
-        `fade=t=in:st=${LOGO_FADE_IN.toFixed(2)}:d=${LOGO_FADE_DUR.toFixed(2)}:alpha=1[v_logo_src]`
-      )
-      filterParts.push(
-        `[${cur}][v_logo_src]overlay=(W-w)/2:${logoY}:` +
-        `enable='gte(t,${LOGO_FADE_IN.toFixed(2)})':shortest=1[v_logo]`
-      )
-      cur = 'v_logo'
-    }
+      // LAYER 2 — logo_layer (prominent 520x280 bounding box, kinetic ease-out upward glide at 6.85s)
+      if (hasLogo) {
+        const logoIdx = 1 + extraInputs.length / 3
+        extraInputs.push('-loop', '1', '-i', logoPath)
 
-    // LAYER 3 — brand_layer (brand name, bold white; slogan, softer grey below)
-    if (brandName) {
-      const cleanBrand = brandName.replace(/'/g, '').replace(/:/g, '\\:').replace(/[\r\n]+/g, ' ')
-      filterParts.push(
-        `[${cur}]drawtext=` +
-        `text='${cleanBrand}':fontcolor=0xFFFFFF:fontsize=32:` +
-        `x=(w-text_w)/2:y=(h/2)+60:` +
-        `enable='between(t,${TEXT_START.toFixed(2)},${VIDEO_END.toFixed(2)})'[v_brand]`
-      )
-      cur = 'v_brand'
-    }
+        filterParts.push(
+          `[${logoIdx}:v]scale=w='min(520,iw*1.25)':h=280:force_original_aspect_ratio=decrease,format=rgba,` +
+          `fade=t=in:st=${LOGO_FADE_IN.toFixed(2)}:d=${LOGO_FADE_DUR.toFixed(2)}:alpha=1[v_logo_src]`
+        )
+        filterParts.push(
+          `[${cur}][v_logo_src]overlay=(W-w)/2:'360 + (1-sin(min(1,max(0,(t-${LOGO_FADE_IN.toFixed(2)})/${LOGO_FADE_DUR.toFixed(2)}))*1.5708))*30':` +
+          `enable='gte(t,${LOGO_FADE_IN.toFixed(2)})':shortest=1[v_logo]`
+        )
+        cur = 'v_logo'
+      }
 
-    if (slogan) {
-      const cleanSlogan = slogan.replace(/'/g, '').replace(/:/g, '\\:').replace(/[\r\n]+/g, ' ')
-      filterParts.push(
-        `[${cur}]drawtext=` +
-        `text='${cleanSlogan}':fontcolor=0xB0B8C1:fontsize=20:` +
-        `x=(w-text_w)/2:y=(h/2)+98:` +
-        `enable='between(t,${TEXT_START.toFixed(2)},${VIDEO_END.toFixed(2)})'[v_slogan]`
-      )
-      cur = 'v_slogan'
-    }
+      // LAYER 3 — headline / slogan layer (bold white, elegant typography with staggered slide-in)
+      const displayHeadline = slogan || brandName
+      if (displayHeadline) {
+        const cleanHeadline = displayHeadline.replace(/'/g, '').replace(/:/g, '\\:').replace(/[\r\n]+/g, ' ')
+        const headlineStart = OUTRO_START + 0.20
+        filterParts.push(
+          `[${cur}]drawtext=` +
+          `text='${cleanHeadline}':fontcolor=0xFFFFFF:fontsize=34:` +
+          `x=(w-text_w)/2:y='720 + (1-sin(min(1,max(0,(t-${headlineStart.toFixed(2)})/0.18))*1.5708))*12':` +
+          `alpha='min(1,max(0,(t-${headlineStart.toFixed(2)})/0.18))':` +
+          `enable='gte(t,${headlineStart.toFixed(2)})'[v_headline]`
+        )
+        cur = 'v_headline'
+      }
 
-    // LAYER 4 — contact_layer (phone · website; separate from CTA)
-    if (phone || website) {
-      const contactLine = [phone, website].filter(Boolean).join('  ·  ')
-      const cleanContact = contactLine.replace(/'/g, '').replace(/:/g, '\\:').replace(/[\r\n]+/g, ' ')
-      const contactStart = TEXT_START + 0.1
-      filterParts.push(
-        `[${cur}]drawtext=` +
-        `text='${cleanContact}':fontcolor=0x7A8695:fontsize=17:` +
-        `x=(w-text_w)/2:y=(h/2)+128:` +
-        `enable='between(t,${contactStart.toFixed(2)},${VIDEO_END.toFixed(2)})'[v_contact]`
-      )
-      cur = 'v_contact'
-    }
+      // LAYER 4 — contact_layer (phone | website, clear cool slate with slide-in)
+      if (phone || website) {
+        const contactLine = [phone, website].filter(Boolean).join('   |   ')
+        const cleanContact = contactLine.replace(/'/g, '').replace(/:/g, '\\:').replace(/[\r\n]+/g, ' ')
+        const contactStart = OUTRO_START + 0.30
+        filterParts.push(
+          `[${cur}]drawtext=` +
+          `text='${cleanContact}':fontcolor=0x94A3B8:fontsize=24:` +
+          `x=(w-text_w)/2:y='790 + (1-sin(min(1,max(0,(t-${contactStart.toFixed(2)})/0.15))*1.5708))*10':` +
+          `alpha='min(1,max(0,(t-${contactStart.toFixed(2)})/0.15))':` +
+          `enable='gte(t,${contactStart.toFixed(2)})'[v_contact]`
+        )
+        cur = 'v_contact'
+      }
 
-    // LAYER 5 — cta_layer (green badge, distinct from contact)
-    if (rawCta) {
-      const cleanCta = rawCta.replace(/'/g, '').replace(/:/g, '\\:').replace(/[\r\n]+/g, ' ')
-      const ctaStart = TEXT_START + 0.15
-      filterParts.push(
-        `[${cur}]drawtext=` +
-        `text='${cleanCta}':fontcolor=0xFFFFFF:fontsize=19:` +
-        `x=(w-text_w)/2:y=(h/2)+160:` +
-        `fontbox=1:boxcolor=0x008069@0.9:boxborderw=10:` +
-        `enable='between(t,${ctaStart.toFixed(2)},${VIDEO_END.toFixed(2)})'[v_cta]`
-      )
-      cur = 'v_cta'
+      // LAYER 5 — optional subtle CTA (only if explicitly enabled, no clunky box)
+      if (showCta) {
+        const cleanCta = rawCta.replace(/'/g, '').replace(/:/g, '\\:').replace(/[\r\n]+/g, ' ')
+        const ctaStart = OUTRO_START + 0.40
+        filterParts.push(
+          `[${cur}]drawtext=` +
+          `text='${cleanCta}':fontcolor=0x94A3B8:fontsize=20:` +
+          `x=(w-text_w)/2:y='960 + (1-sin(min(1,max(0,(t-${ctaStart.toFixed(2)})/0.15))*1.5708))*10':` +
+          `alpha='min(1,max(0,(t-${ctaStart.toFixed(2)})/0.15))':` +
+          `enable='gte(t,${ctaStart.toFixed(2)})'[v_cta]`
+        )
+        cur = 'v_cta'
+      }
     }
 
     // ── Execute FFmpeg ────────────────────────────────────────────────────────

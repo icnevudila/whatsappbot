@@ -2,21 +2,20 @@
 
 import Link from 'next/link'
 import { BRAND_NAME, LogoMark, Wordmark } from '@/components/brand'
-import { useT } from '@/lib/i18n/provider'
+import { useLocale, useT } from '@/lib/i18n/provider'
 
 export function MarketingFooter() {
   const t = useT()
+  const { locale } = useLocale()
+  const en = locale === 'en'
   const year = new Date().getFullYear()
 
   const sections = [
-    { href: '/#kapasite', label: t('marketing.capacity') },
-    { href: '/#sorun', label: t('marketing.problem') },
-    { href: '/#nasil', label: t('marketing.how') },
-    { href: '/#urun', label: t('marketing.productNav') },
-    { href: '/#gun', label: t('marketing.day') },
-    { href: '/#guvenlik', label: t('marketing.security') },
-    { href: '/#fiyatlar', label: t('marketing.pricing') },
-    { href: '/#sss', label: t('marketing.faq') },
+    { href: '/#ornekler', label: en ? 'Creative studio' : 'Yaratıcı stüdyo' },
+    { href: '/#nasil', label: en ? 'Workflow' : 'Kampanya akışı' },
+    { href: '/#urun', label: en ? 'Product tour' : 'Uygulama turu' },
+    { href: '/#guvenlik', label: en ? 'Your controls' : 'Kontrol sende' },
+    { href: '/#sss', label: en ? 'Questions' : 'Sorular' },
   ]
 
   return (
@@ -24,7 +23,7 @@ export function MarketingFooter() {
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-5 py-10 sm:flex-row sm:items-start sm:justify-between">
         <div className="max-w-xs">
           <Wordmark />
-          <p className="mt-2 text-[12.5px] text-ink-muted">{t('marketing.blurb')}</p>
+          <p className="mt-2 text-[12.5px] text-ink-muted">{en ? 'From your next creative idea to the next customer conversation.' : 'Yaratıcı fikrinden bir sonraki müşteri görüşmesine.'}</p>
         </div>
 
         <div className="flex gap-12">

@@ -66,6 +66,7 @@ export function buildGeminiNativeProviderPayload(request: VideoGenerationRequest
     productSha256: product?.sha256 || null,
     referenceImageUrls: references.map(asset => ({ url: asset.file_path, role: asset.role })),
     assets: request.assets,
+    production_plan: request.productionPlan || null,
     requireMedia: true,
   }
 }
@@ -86,6 +87,7 @@ export function buildFlowVeoProviderPayload(request: VideoGenerationRequest) {
     duration: request.durationSeconds,
     assets: request.assets,
     expected_reference_ids: request.assets.map(asset => asset.asset_id),
+    production_plan: request.productionPlan || null,
   }
 }
 
@@ -225,6 +227,7 @@ export class OmniStudioGeminiNativeVideoProvider implements VideoProvider {
       product_id: (request as any).product_id || request.assets.find(a => a.role === 'product')?.asset_id || '',
       fidelity_rule_count: (request as any).fidelity_rule_count || 0,
       product_fidelity_contract: (request as any).product_fidelity_contract || null,
+      production_plan: request.productionPlan || null,
     })
 
     ws.logEvent('READY', 'Submitting generation request to OmniStudio gateway')

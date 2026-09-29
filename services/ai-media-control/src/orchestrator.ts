@@ -885,6 +885,7 @@ async function runCreativeVideoExecution(
       environment_preset: job.metadata?.environment_preset || 'auto',
       motion_style: job.metadata?.motion_style || 'studio_orbit',
       subtitles: job.metadata?.subtitles || 'auto',
+      outro: job.metadata?.outro || 'auto',
     },
     aspect_ratio: (job.aspect_ratio || '9:16') as any,
     requested_duration: job.duration_seconds || 8,

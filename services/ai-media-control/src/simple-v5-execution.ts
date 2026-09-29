@@ -16,6 +16,7 @@ import {
   RealHttpGFlowProvider,
   SimpleV5BriefNormalizer,
   SimpleV5SevereReviewer,
+  buildSimpleV5ProductionPlan,
   createBrandContextSnapshot,
   type RawBrandInput,
 } from '@wa/creative-video-orchestrator'
@@ -51,7 +52,7 @@ function sha256File(filePath: string): string {
   return createHash('sha256').update(readFileSync(filePath)).digest('hex')
 }
 
-function buildReviewInputs(job: any, snapshot: ReturnType<typeof createBrandContextSnapshot>, assets: ProviderAsset[], brief: any, shotPlan: any) {
+function buildReviewInputs(job: any, snapshot: ReturnType<typeof createBrandContextSnapshot>, assets: ProviderAsset[], brief: any, shotPlan: any, productionPlan: any) {
   const attachments = assets.map((asset, index) => ({
     asset_id: asset.asset_id,
     org_id: asset.org_id,
@@ -99,7 +100,7 @@ function buildReviewInputs(job: any, snapshot: ReturnType<typeof createBrandCont
       verified_cta: snapshot.campaign.cta,
       verified_phone: snapshot.campaign.phoneNumber,
       verified_url: snapshot.campaign.website,
-      subtitle_mode: 'off',
+      subtitle_mode: productionPlan.subtitles.mode,
     },
     attachments,
     verified_facts: (snapshot.verified_claims || []).map((claim, index) => ({
@@ -135,7 +136,7 @@ function buildReviewInputs(job: any, snapshot: ReturnType<typeof createBrandCont
     logo_strategy: 'GRAPHIC_OVERLAY',
     diegetic_branding_plan: [],
     overlay_plan: [],
-    end_card_plan: { start_sec: 8, end_sec: 8, template_family: 'none', headline: '', cta_text: '', website_or_phone: '', background_color: '#000000', accent_color: '#000000' },
+    end_card_plan: { start_sec: productionPlan.timeline.outro_start_sec, end_sec: productionPlan.timeline.outro_end_sec, template_family: 'deterministic', headline: '', cta_text: '', website_or_phone: '', background_color: '#000000', accent_color: '#000000' },
     negative_constraints: [],
     canonical_asset_handles: attachments.map(item => item.canonical_handle),
     veo_generation_intent: brief.primaryIdea,
@@ -151,7 +152,8 @@ async function reviewOnce(
   snapshot: ReturnType<typeof createBrandContextSnapshot>,
   assets: ProviderAsset[],
   brief: any,
-  shotPlan: any
+  shotPlan: any,
+  productionPlan: any
 ) {
   const frameSampler = new FrameSampler()
   const frames = await frameSampler.sampleFrames(result.outputPath, {
@@ -160,8 +162,9 @@ async function reviewOnce(
   const audioReport = await AudioIntegrityGate.evaluateRawVeoAudio({
     rawVideoPath: result.outputPath,
     expectedLanguage: 'tr',
+    expectedDialogue: brief.spokenScript,
   })
-  const { context, plan } = buildReviewInputs(job, snapshot, assets, brief, shotPlan)
+  const { context, plan } = buildReviewInputs(job, snapshot, assets, brief, shotPlan, productionPlan)
   const videoReport = await new ChatGPTVideoReviewer().reviewSampledVideo(frames, plan, context, attemptNumber)
   return SimpleV5SevereReviewer.evaluateSevereErrorsOnly({ audioReport, videoReport, sampledFrames: frames.map(frame => frame.frame_path) })
 }
@@ -179,6 +182,7 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
   }
   const snapshot = createBrandContextSnapshot({ ...rawInput, creative_engine_mode: 'SIMPLE_V5_HYBRID' })
   const { brief, shotPlan } = SimpleV5BriefNormalizer.normalize(snapshot)
+  const productionPlan = buildSimpleV5ProductionPlan(snapshot, brief, shotPlan)
   const geminiCompiled = GeminiVideoPromptCompiler.compile(brief, shotPlan)
   const flowCompiled = FlowVeoPromptCompiler.compile(brief, shotPlan)
   const geminiPrompt = providerPrompt(geminiCompiled)
@@ -218,6 +222,7 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     fidelity_rule_count: fidelityInfo.ruleCount,
     product_fidelity_contract: fidelityInfo.contract,
     max_automatic_regenerations: 1,
+    production_plan: productionPlan,
   }
   await supabase.from('ai_media_jobs').update({
     creative_engine_mode: 'SIMPLE_V5_HYBRID',
@@ -253,6 +258,7 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     accountId,
     expectedAccountEmail,
     assets,
+    productionPlan,
     ...( {
       fidelity_contract_applied: true,
       canonical_asset_sha: fidelityInfo.canonicalAssetSha,
@@ -263,7 +269,7 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
   }
 
   let generated = await router.execute(requestedProvider, request)
-  let review = await reviewOnce(generated, 1, job, snapshot, assets, brief, shotPlan)
+  let review = await reviewOnce(generated, 1, job, snapshot, assets, brief, shotPlan, productionPlan)
   const providerAttemptHistory: Array<Record<string, unknown>> = [{
     ...generated,
     combinedReview: review,
@@ -281,7 +287,7 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
         FLOW_VEO: flowPrompt + retryDirection,
       },
     })
-    review = await reviewOnce(generated, 2, job, snapshot, assets, brief, shotPlan)
+    review = await reviewOnce(generated, 2, job, snapshot, assets, brief, shotPlan, productionPlan)
     providerAttemptHistory.push({
       ...generated,
       combinedReview: review,
@@ -336,29 +342,45 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
 
   // ── Deterministic subtitle generation from APPROVED VO text (source of truth) ──
   // We deliberately do NOT use ASR. The approved spoken script is the canonical text.
-  // Words are distributed evenly across 0.5–5.5s window (strict; never bleeds into outro).
-  const SUBTITLE_WINDOW_START = 0.5
-  const SUBTITLE_WINDOW_END   = 5.5  // Outro card begins here; subtitles MUST be gone
+  const snapshotAny = snapshot.campaign as any
+  const outroEnabled =
+    (productionPlan as any)?.outro?.mode !== 'off' &&
+    snapshotAny?.outro !== 'off' &&
+    snapshotAny?.outro !== false &&
+    (job.metadata as any)?.outro !== 'off'
 
   const ffmpeg = new RealFFmpegAdapter()
-  const logoCheck = CanonicalLogoGate.verifyLogo(snapshot)
-  if (!logoCheck.passed || !logoCheck.logoPath || !logoCheck.logoSha256) {
-    throw new Error(`CANONICAL_LOGO_GATE_FAIL: ${logoCheck.error || 'canonical logo unavailable'}`)
-  }
   const rawProbe = await ffmpeg.runFfprobe(generated.outputPath)
-  const logoPresentation = LogoPresentationGate.evaluateLogoPresentation({
-    logoFilePath: logoCheck.logoPath,
-    videoWidth:   rawProbe.width,
-    videoHeight:  rawProbe.height,
-    overlayWidthPx: 160,
-    overlayMarginX: 32,
-    overlayMarginY: 32,
-  })
-  const presentationNeedsReview = !logoPresentation.passed
+
+  let logoCheck: any = null
+  let logoPresentation: any = { passed: true, skipped: true, reason: 'OUTRO_DISABLED' }
+  let presentationNeedsReview = false
+
+  if (outroEnabled) {
+    logoCheck = CanonicalLogoGate.verifyLogo(snapshot)
+    if (!logoCheck.passed || !logoCheck.logoPath || !logoCheck.logoSha256) {
+      throw new Error(`CANONICAL_LOGO_GATE_FAIL: ${logoCheck.error || 'canonical logo unavailable'}`)
+    }
+    logoPresentation = LogoPresentationGate.evaluateLogoPresentation({
+      logoFilePath: logoCheck.logoPath,
+      videoWidth:   rawProbe.width,
+      videoHeight:  rawProbe.height,
+      overlayWidthPx: 160,
+      overlayMarginX: 32,
+      overlayMarginY: 32,
+    })
+    presentationNeedsReview = !logoPresentation.passed
+  }
+
+  // Words are distributed evenly across subtitle window (strict; never bleeds into outro).
+  const SUBTITLE_WINDOW_START = 0.5
+  const SUBTITLE_WINDOW_END   = outroEnabled
+    ? 5.5
+    : Math.max(5.5, (rawProbe.duration || brief.durationSeconds || 8) - 0.5)
 
   const textRenderer = new DeterministicCampaignTextRenderer()
   const scriptWords = (brief.spokenScript || '').split(/\s+/).filter(Boolean)
-  const voiceDuration = SUBTITLE_WINDOW_END - SUBTITLE_WINDOW_START   // 5.0s
+  const voiceDuration = SUBTITLE_WINDOW_END - SUBTITLE_WINDOW_START
   const wordDur = voiceDuration / Math.max(1, scriptWords.length)
   const timedWords = scriptWords.map((w: string, idx: number) => ({
     word: w,
@@ -374,7 +396,8 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     maxEndTimeSec: SUBTITLE_WINDOW_END,  // Hard cap: zero subtitle bleed into outro
   })
   const assPath = generated.outputPath.replace(/\.mp4$/i, '_subtitles.ass')
-  writeFileSync(assPath, assContent, 'utf8')
+  const subtitlesEnabled = productionPlan.subtitles.mode === 'auto'
+  if (subtitlesEnabled) writeFileSync(assPath, assContent, 'utf8')
 
   // ── Layered overlay manifest ─────────────────────────────────────────────────
   // Each layer is independent and combinable. Never mix subtitle_layer with outro layers.
@@ -385,23 +408,41 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
   //   cta_layer      : call-to-action button text, 6.7–8.0s
   const finishedPath = generated.outputPath.replace(/\.mp4$/i, '_finished.mp4')
 
-  // Resolve CTA — suppress "WhatsApp" text (handled by outro contact instead)
-  let ctaText = (snapshot.campaign.cta || '').trim()
-  if (/whatsapp/i.test(ctaText)) ctaText = ''
+  // Resolve Outro & CTA: pull from wizard inputs if present, or generate clean, natural defaults
+  const outroWebsite = (snapshotAny.outro_website || snapshot.campaign.website || (snapshot as any).website || '').trim()
+  const outroPhone   = (snapshotAny.outro_phone || snapshot.campaign.phoneNumber || (snapshot as any).phone || '').trim()
 
-  // Resolve slogan — fall back gracefully for any brand
-  const snapshotAny = snapshot.campaign as any
-  const outroSlogan = (snapshotAny.slogan || snapshotAny.tagline || snapshotAny.sub_headline || '').trim()
+  // 1. CTA Button: Wizard explicit > Smart context-aware default
+  let ctaText = (snapshotAny.outro_cta || snapshot.campaign.cta || '').trim()
+  if (/whatsapp/i.test(ctaText)) ctaText = ''
+  if (!ctaText) {
+    if (outroWebsite) {
+      ctaText = 'Hemen İncele'
+    } else if (outroPhone) {
+      ctaText = 'Bize Ulaşın'
+    } else {
+      ctaText = 'Hemen Keşfet'
+    }
+  }
+
+  // 2. Slogan / Tagline: Wizard explicit > Simple, clean, natural Turkish copy
+  let outroSlogan = (snapshotAny.outro_slogan || snapshotAny.slogan || snapshotAny.tagline || snapshotAny.sub_headline || '').trim()
+  if (!outroSlogan && snapshot.brand_name) {
+    outroSlogan = `${snapshot.brand_name} güvencesiyle`
+  }
 
   await ffmpeg.applyDeterministicFinishing(
     generated.outputPath,
     {
+      enableOutro: outroEnabled,
+      outro: outroEnabled ? 'auto' : 'off',
+
       // Subtitle layer (source-of-truth: approved VO text, NOT ASR)
-      subtitlesPath: assPath,
+      subtitlesPath: subtitlesEnabled ? assPath : '',
 
       // Logo layer
-      brandLogoPath: logoCheck.logoPath,
-      brandLogoSha:  logoCheck.logoSha256,
+      brandLogoPath: logoCheck?.logoPath,
+      brandLogoSha:  logoCheck?.logoSha256,
 
       // Brand layer (outro card text)
       outroBrandName: snapshot.brand_name,
@@ -498,12 +539,18 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     vcodec: validation.ffprobe.vcodec,
     acodec: validation.ffprobe.acodec,
     visual_qa_score: null,
-    visual_qa_report: { combined_review: review, logo_presentation: logoPresentation, provider: providerRecord, automatic_regenerations: automaticRegenerations },
+    visual_qa_report: {
+      combined_review: review,
+      logo_presentation: logoPresentation,
+      provider: providerRecord,
+      production_plan: productionPlan,
+      automatic_regenerations: automaticRegenerations,
+    },
     qa_frame_10_url: validation.qaFramePaths.frame10,
     qa_frame_50_url: validation.qaFramePaths.frame50,
     qa_frame_90_url: validation.qaFramePaths.frame90,
     verified: true,
-    is_approved: true,
+    is_approved: approved,
     delivered_at: new Date().toISOString(),
   }).select('id').single()
 

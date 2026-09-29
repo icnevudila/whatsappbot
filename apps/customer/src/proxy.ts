@@ -16,6 +16,9 @@ const PUBLIC_PATHS = new Set([
   '/auth/confirm',
   '/robots.txt',
   '/sitemap.xml',
+  // Curated public marketing files only; private generated media stays gated.
+  '/landing/studio/restaurant.mp4',
+  '/landing/studio/product.mp4',
 ])
 
 export async function proxy(request: NextRequest) {

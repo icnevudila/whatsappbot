@@ -74,6 +74,7 @@ export function CreativeWizard({
   const [offerVerified, setOfferVerified] = useState(true)
   const [creativeNote, setCreativeNote] = useState('')
   const [subtitles, setSubtitles] = useState(true)
+  const [outro, setOutro] = useState(true)
   const [verifiedClaimsText, setVerifiedClaimsText] = useState('')
   const [fidelityContract, setFidelityContract] = useState<ProductFidelityContract>(() =>
     defaultFidelityContract(data.org.name || '', data.products?.[0]?.name || ''),
@@ -220,6 +221,7 @@ export function CreativeWizard({
         : {},
       videoSpeech: true,
       subtitles,
+      outro,
       videoPurpose: adFormat === 'OFFER_DRIVEN' ? 'kampanya' : 'tanitim',
       offerDetails: offerDetails || undefined,
       customVoiceover: fullSpeechText,
@@ -239,6 +241,8 @@ export function CreativeWizard({
           verified_claims: verifiedClaims,
           approved_spoken_line: fullSpeechText,
           product_fidelity_contract: fidelityContract,
+          subtitles: subtitles ? 'auto' : 'off',
+          outro: outro ? 'auto' : 'off',
         },
         creative_engine_mode: VIDEO_ENGINE_MODE,
         requested_provider: VIDEO_REQUESTED_PROVIDER,
@@ -256,6 +260,7 @@ export function CreativeWizard({
     offerDetails,
     creativeNote,
     subtitles,
+    outro,
     adFormat,
     fullSpeechText,
     referenceAssets,
@@ -408,6 +413,7 @@ export function CreativeWizard({
         environmentPreset,
         motionStyle,
         subtitles: subtitles ? 'auto' : 'off',
+        outro: outro ? 'auto' : 'off',
         creativeEngineMode: VIDEO_ENGINE_MODE,
         requestedProvider: VIDEO_REQUESTED_PROVIDER,
         promotionType,
@@ -418,6 +424,8 @@ export function CreativeWizard({
           ad_format: adFormat,
           environment_preset: environmentPreset,
           motion_style: motionStyle,
+          subtitles: subtitles ? 'auto' : 'off',
+          outro: outro ? 'auto' : 'off',
         },
         authoritativeFacts: {
           brand_name: data.org.name || 'İşletmemiz',
@@ -433,6 +441,8 @@ export function CreativeWizard({
           verified_claims: verifiedClaims,
           unverified_facts: [],
           product_fidelity_contract: fidelityContract,
+          subtitles: subtitles ? 'auto' : 'off',
+          outro: outro ? 'auto' : 'off',
         },
         logoAsset: {
           url: activeLogoUrl,
@@ -1011,20 +1021,52 @@ export function CreativeWizard({
                     />
                   </div>
 
-                  {/* 4. Dinamik Altyazı Tercihi */}
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-3 p-3.5 rounded-xl border border-hairline bg-[#f8fafb] hover:bg-[#f0f2f5] cursor-pointer transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={subtitles}
-                        onChange={(e) => setSubtitles(e.target.checked)}
-                        className="size-5 rounded text-[#008069] focus:ring-[#008069]"
-                      />
-                      <div className="flex-1">
-                        <span className="text-[13px] font-bold text-[#111b21]">Videonun üzerine dinamik altyazı ekle</span>
-                        <p className="text-[11.5px] text-[#667781]">Sosyal medya formatında hareketli altyazı.</p>
-                      </div>
-                    </label>
+                  {/* 4. Ekran ve Kapanış Tercihleri */}
+                  <div className="space-y-2.5">
+                    <div>
+                      <h2 className="text-[15px] font-bold text-[#111b21]">4. Ekran & Kapanış Tercihleri</h2>
+                      <p className="text-[12px] text-[#667781] mt-0.5">Altyazı ve video bitiş kartı görünümünü özelleştirin.</p>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <label className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
+                        subtitles
+                          ? 'border-[#008069] bg-[#e7f8f2]/40 ring-1 ring-[#008069]'
+                          : 'border-hairline bg-[#f8fafb] hover:bg-[#f0f2f5]'
+                      }`}>
+                        <input
+                          type="checkbox"
+                          checked={subtitles}
+                          onChange={(e) => setSubtitles(e.target.checked)}
+                          className="mt-0.5 size-4 rounded text-[#008069] focus:ring-[#008069]"
+                        />
+                        <div className="flex-1">
+                          <span className="text-[13px] font-bold text-[#111b21]">Dinamik Altyazı</span>
+                          <p className="text-[11.5px] text-[#667781] mt-0.5 leading-snug">
+                            Konuşmayla senkronize, kelime kelime vurgulanan hareketli sosyal medya altyazısı.
+                          </p>
+                        </div>
+                      </label>
+
+                      <label className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
+                        outro
+                          ? 'border-[#008069] bg-[#e7f8f2]/40 ring-1 ring-[#008069]'
+                          : 'border-hairline bg-[#f8fafb] hover:bg-[#f0f2f5]'
+                      }`}>
+                        <input
+                          type="checkbox"
+                          checked={outro}
+                          onChange={(e) => setOutro(e.target.checked)}
+                          className="mt-0.5 size-4 rounded text-[#008069] focus:ring-[#008069]"
+                        />
+                        <div className="flex-1">
+                          <span className="text-[13px] font-bold text-[#111b21]">Kapanış Kartı (Outro)</span>
+                          <p className="text-[11.5px] text-[#667781] mt-0.5 leading-snug">
+                            Videonun sonunda logo, slogan ve iletişim bilgilerini içeren kurumsal bitiş kartı.
+                          </p>
+                        </div>
+                      </label>
+                    </div>
                   </div>
 
                   {/* 5. Gelişmiş Ayarlar */}
@@ -1133,7 +1175,7 @@ export function CreativeWizard({
                   {/* Video Özeti Kartı */}
                   <div className="rounded-xl border border-hairline bg-[#f8fafb] p-3.5 space-y-2">
                     <p className="text-[12px] font-bold text-[#111b21] uppercase tracking-wider">Video Özeti</p>
-                    <div className="grid grid-cols-2 gap-2 text-[11.5px] sm:grid-cols-4">
+                    <div className="grid grid-cols-2 gap-2 text-[11.5px] sm:grid-cols-5">
                       <div>
                         <span className="text-[#667781]">Ürün:</span>
                         <p className="font-semibold text-[#111b21] truncate">{activeProductName}</p>
@@ -1147,6 +1189,10 @@ export function CreativeWizard({
                       <div>
                         <span className="text-[#667781]">Altyazı:</span>
                         <p className="font-semibold text-[#008069]">{subtitles ? 'Dinamik Altyazılı' : 'Altyazısız'}</p>
+                      </div>
+                      <div>
+                        <span className="text-[#667781]">Kapanış Kartı:</span>
+                        <p className="font-semibold text-[#008069]">{outro ? 'Logo & İletişim' : 'Yok (Düz Bitiş)'}</p>
                       </div>
                       <div>
                         <span className="text-[#667781]">Ürün Koruması:</span>

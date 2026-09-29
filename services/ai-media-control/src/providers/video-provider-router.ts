@@ -49,6 +49,7 @@ export interface VideoGenerationRequest {
     sha256: string
   }>
   preflightFailureCode?: NonProviderFailureCode
+  productionPlan?: Record<string, unknown>
 }
 
 export interface VideoCapabilityReport {

@@ -126,6 +126,14 @@ export class VeoPromptCompiler {
         'cartoony 3d',
         'low resolution',
         'deformed fingers',
+        'rubber hands',
+        'stretching fingers',
+        'morphing objects',
+        'floating physics',
+        'zero gravity',
+        'warped vehicle text',
+        'anatomical distortion',
+        'missing limbs',
       ])
     ).join(', ')
 

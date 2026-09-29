@@ -342,6 +342,7 @@ export class AudioIntegrityGate {
   public static async evaluateRawVeoAudio(req: {
     rawVideoPath: string
     expectedLanguage?: string
+    expectedDialogue?: string
     whisperUrl?: string
     isMock?: boolean
     mockDetectedLanguage?: string
@@ -350,6 +351,7 @@ export class AudioIntegrityGate {
     const report = await this.evaluateAudioIntegrity({
       videoFilePath: req.rawVideoPath,
       expectedLanguage: req.expectedLanguage || 'tr',
+      expectedDialogue: req.expectedDialogue,
       whisperUrl: req.whisperUrl,
       isMock: req.isMock,
       mockDetectedLanguage: req.mockDetectedLanguage,

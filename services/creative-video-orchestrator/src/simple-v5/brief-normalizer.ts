@@ -1,5 +1,7 @@
 import type { BrandContextSnapshot } from '../types/brand-snapshot.js'
 import type { SimpleV5Brief, SimpleV5ShotPlan } from './types.js'
+import { resolveProductFidelityContract } from './fidelity-contract.js'
+import { classifyOperationalDomain } from './domain-classifier.js'
 
 // Disallowed deceptive claims unless explicitly listed in verified claims
 const FORBIDDEN_MARKETING_FORMULAS = [
@@ -7,6 +9,8 @@ const FORBIDDEN_MARKETING_FORMULAS = [
   'rakipsiz',
   'lider marka',
   'garantili kazanç',
+  'yüksek verim',
+  'hızlı sevkiyat',
 ]
 
 /**
@@ -14,9 +18,8 @@ const FORBIDDEN_MARKETING_FORMULAS = [
  * Recovers the core legacy V4/V5 invariant:
  * ONE VIDEO, ONE PRIMARY IDEA, ONE LOCATION, ONE PRIMARY ACTION, ONE HERO PRODUCT, THREE SHOTS.
  * Strictly derives copy only from verified facts and neutral observational prose.
+ * Uses Universal Domain Classifier for authentic real-world environmental matching.
  */
-import { resolveProductFidelityContract } from './fidelity-contract.js'
-
 export class SimpleV5BriefNormalizer {
   public static normalize(snapshot: BrandContextSnapshot): {
     brief: SimpleV5Brief
@@ -31,38 +34,28 @@ export class SimpleV5BriefNormalizer {
     const verifiedClaims = (snapshot.verified_claims || []).filter(Boolean)
     const fidelityReport = resolveProductFidelityContract({ product })
 
-    // 1. One Location & Sector Environment (Sector provides atmosphere, NEVER product action)
-    const sector = (snapshot.sector_profile || '').toLowerCase()
-    let location = 'Otantik ve profesyonel ticari çalışma ortamı'
-    let lighting = 'doğal dengeli gün ışığı'
-    let cameraMotion = 'pürüzsüz 35mm sinematik takip'
+    // 1. Universal Multi-Layer Domain & Environment Classification
+    const domainProfile = classifyOperationalDomain({
+      brandName,
+      productName,
+      productDescription: product.description,
+      brandKitTone: snapshot.tone_of_voice.join(' '),
+      sectorHint: snapshot.sector_profile,
+      campaignBrief: snapshot.brand_description,
+    })
 
-    if (sector.includes('construction') || sector.includes('inşaat') || productName.toLowerCase().includes('tuğla')) {
-      location = 'Otantik ticari şantiye ve yapı lojistiği sahası'
-      lighting = 'doğal sabah ışığı'
-      cameraMotion = 'sabit odak ve akıcı endüstriyel takip'
-    } else if (sector.includes('agriculture') || sector.includes('tarım')) {
-      location = 'Otantik açık tarım arazisi ve tarla ortamı'
-      lighting = 'açık gökyüzü doğal gün ışığı'
-      cameraMotion = 'geniş açıdan detay odağına yumuşak kayma'
-    } else if (sector.includes('food') || sector.includes('gıda') || sector.includes('restaurant')) {
-      location = 'Hijyenik ve profesyonel ticari mutfak istasyonu'
-      lighting = 'sıcak ve berrak stüdyo ışığı'
-      cameraMotion = 'yakın plan makro kayma'
-    } else if (sector.includes('tech') || sector.includes('software')) {
-      location = 'Modern ve aydınlık ofis çalışma masası'
-      lighting = 'temiz difüze çalışma ortamı ışığı'
-      cameraMotion = 'net ekran hizalaması ve sabit kadraj'
-    }
+    let location = domainProfile.location
+    let lighting = domainProfile.lighting
+    let cameraMotion = domainProfile.cameraMotion
 
     const requestedEnvironment = (snapshot.campaign.environment_preset || 'auto').toLowerCase()
     const environmentOverrides: Record<string, string> = {
-      garden: 'Doğal bahçe, tarla veya sera ortamı',
+      garden: 'Güneşli, verimli açık meyve bahçesi, yeşil asma bağları ve sağlıklı doğal bitki örtüsü',
       studio: 'Sade ve kontrollü profesyonel ürün stüdyosu',
-      kitchen: 'Hijyenik profesyonel mutfak veya sunum alanı',
-      office: 'Modern ve aydınlık ofis çalışma alanı',
-      workshop: 'Gerçek atölye, fabrika veya sanayi çalışma alanı',
-      construction: 'Otantik ticari şantiye ve yapı lojistiği sahası',
+      kitchen: 'Hijyenik ve profesyonel ticari mutfak istasyonu ve taze sunum tezgâhı',
+      office: 'Modern ve aydınlık mimari ofis çalışma alanı',
+      workshop: 'Gerçek düzenli atölye veya sanayi çalışma alanı',
+      construction: 'Otantik ticari şantiye sahası, taze harçlı yapı duvarı ve nizami istifli paletler',
     }
     if (environmentOverrides[requestedEnvironment]) location = environmentOverrides[requestedEnvironment]
 
@@ -77,9 +70,10 @@ export class SimpleV5BriefNormalizer {
 
     // 2. One Primary Idea & One Primary Action
     const primaryIdea = `${brandName} bünyesindeki ${productName} ürününün referansa sadık tek bir tanıtım anı.`
-    // Sector hints may choose the environment, never the product's capability. Keep
-    // the action observational unless the locked campaign supplied an approved line.
-    const primaryAction = `${productName} ürününün referanstaki biçimi korunarak tek bir gerçek kullanım anında gösterilmesi.`
+    const verifiedAction = product.product_fidelity_contract?.allowed_actions?.find(Boolean)
+    const primaryAction = verifiedAction
+      ? `${productName} ürününün doğrulanmış kullanım adımı: ${verifiedAction}`
+      : `${productName} ürününün referanstaki biçimi korunarak tek bir sade ürün gösteriminde sergilenmesi.`
 
     // 3. Build Spoken Turkish Voiceover (Strict 10-14 words, max 18 words, zero banned formulas)
     let spokenScript = snapshot.campaign.approved_spoken_line?.trim() || ''
@@ -107,15 +101,12 @@ export class SimpleV5BriefNormalizer {
     }
 
     const durationSeconds = snapshot.requested_duration || 8
-    // SIMPLE_V5_HYBRID is an explicitly vertical short-ad mode. Never inherit a
-    // landscape request/default from CURRENT or from an older persisted draft.
-    const aspectRatio = '9:16' as const
 
     const brief: SimpleV5Brief = {
-      goal: snapshot.campaign.objective || 'Ürün tanıtımı',
+      goal: 'Commercial Video',
       subject: productName,
       heroProductHandle: '@HeroProduct',
-      heroProductId: product.product_id || product.asset_id,
+      heroProductId: product.product_id,
       heroProductSha: product.sha256,
       productFidelityContract: product.product_fidelity_contract,
       fidelityReport,
@@ -123,20 +114,28 @@ export class SimpleV5BriefNormalizer {
       primaryIdea,
       primaryAction,
       location,
-      timeOfDay: 'doğal gündüz',
+      timeOfDay: 'gündüz',
       lighting,
       cameraMotion,
       spokenScript,
       spokenWordCount: words.length,
       verifiedFacts: verifiedClaims,
-      aspectRatio,
+      aspectRatio: '9:16',
       durationSeconds,
+      operationalDomain: domainProfile.domain,
+      domainNegatives: domainProfile.isolationNegatives,
+      productPresentationDirective: domainProfile.productPresentationDirective,
     }
 
     const style = (snapshot.campaign.user_style_preference || 'AUTO').toUpperCase()
     const styleDescriptions: Record<string, { hook: string; proof: string; close: string }> = {
       FAST_SALES: {
         hook: `Dinamik ve akıcı kamera hareketi sevkiyata hazır ${productName} üzerinde başlar.`,
+        proof: `${location} içinde ${productName} hızlı ve net ürün gösterimiyle öne çıkar.`,
+        close: `${productName} merkezde; doğrudan kapanış kadrajı ve temiz CTA alanı.`,
+      },
+      DIRECT_OFFER: {
+        hook: `${location} içinde ${productName} doğrudan odak noktasında; teklif metni sahneye basılmaz.`,
         proof: `${location} ortamında düzenli sevkiyat ve kurumsal operasyon akışı içinde ürünün hızlı teslimat güvenini hissettiren kesintisiz akış.`,
         close: `${productName} merkezde; yazısız, temiz ve net doğrudan kapanış kadrajı.`,
       },
@@ -162,7 +161,7 @@ export class SimpleV5BriefNormalizer {
       },
       AUTO: {
         hook: `Pürüzsüz 35mm sinematik kamera hareketi doğrudan ${productName} ürününün detaylarına ve otantik malzeme dokusuna odaklanır.`,
-        proof: `Kamera yavaş ve zarif bir 3/4 orbital açıyla süzülerek ürünün sağlamlığını ve kusursuz geometrisini sergiler; arkada otantik ${brandName} kurumsal varlığı doğal olarak yer alır.`,
+        proof: `Kamera yavaş ve zarif bir 3/4 orbital açıyla süzülerek ürünün sağlamlığını ve kusursuz geometrisini sergiler; ${primaryAction}. Arkada otantik ${brandName} kurumsal varlığı doğal olarak yer alır.`,
         close: `${productName} kadrajda kararlı, net ve heybetli bir şekilde sabitlenir; yazısız, temiz ve prestijli doğrudan kapanış kadrajı.`,
       },
       OFFER: {
