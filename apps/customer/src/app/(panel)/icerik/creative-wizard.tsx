@@ -657,29 +657,86 @@ export function CreativeWizard({
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
   }
 
+  const formatRemaining = (totalTarget: number, elapsed: number) => {
+    const diff = totalTarget - elapsed
+    if (diff <= 5) return 'Son kontroller...'
+    const m = Math.floor(diff / 60)
+    const s = diff % 60
+    if (m === 0) return `~${s} sn`
+    return s > 0 ? `~${m} dk ${s} sn` : `~${m} dk`
+  }
+
   const currentMicroStep = useMemo(() => {
     if (jobStageIndex < 3) {
-      return 'Stüdyo Hazırlığı: Kurumsal logo ve onaylı ürün parametreleri kilitleniyor...'
+      return {
+        tag: 'Stüdyo Hazırlığı',
+        desc: 'Kurumsal kimlik, logo ve ürün parametreleri kilitleniyor...',
+      }
     }
     if (jobStageIndex === 3) {
-      return 'Görselleştirme: Marka ve ürün materyalleri yapay zeka stüdyosuna bağlanıyor...'
+      return {
+        tag: 'Kompozisyon',
+        desc: 'Ürün görselleri ve stüdyo aydınlatması bağlanıyor...',
+      }
     }
     if (jobStageIndex === 4) {
-      if (elapsedSeconds < 15) {
-        return 'Görselleştirme: Sahne parametreleri hazırlandı, Google Flow oturumu başlatılıyor...'
+      if (elapsedSeconds < 18) {
+        return {
+          tag: 'Kamera Kurulumu',
+          desc: '35mm dikey sinematik kamera açısı ve odak derinliği ayarlanıyor...',
+        }
       }
-      if (elapsedSeconds < 130) {
-        return 'Yapay Zeka Renderı: Google Flow sinematik dikey videoyu piksel piksel işliyor...'
+      if (elapsedSeconds < 38) {
+        return {
+          tag: 'Doku & Aydınlatma',
+          desc: 'Doğal ortam ışığı, ürün yansımaları ve malzeme detayları işleniyor...',
+        }
       }
-      return 'Kurgu Masası: Ham video tamamlandı, Türkçe seslendirme ve altyazı birleştiriliyor...'
+      if (elapsedSeconds < 62) {
+        return {
+          tag: 'Sinematik Akış',
+          desc: 'Kesintisiz, akıcı tek plan kamera çekimi kare kare üretiliyor...',
+        }
+      }
+      if (elapsedSeconds < 88) {
+        return {
+          tag: 'Renk & Kontrast',
+          desc: 'Profesyonel renk tonlaması ve görsel derinlik optimize ediliyor...',
+        }
+      }
+      if (elapsedSeconds < 112) {
+        return {
+          tag: 'Görsel Bütünlük',
+          desc: 'Sahne dengesi ve dikey video çerçeve geçişleri kontrol ediliyor...',
+        }
+      }
+      if (elapsedSeconds < 132) {
+        return {
+          tag: 'Kurgu Masası',
+          desc: 'Ham video çekimi tamamlandı; montaj ve ses stüdyosuna aktarılıyor...',
+        }
+      }
+      return {
+        tag: 'Ses & Altyazı',
+        desc: 'Türkçe seslendirme kaydı alınıyor ve dinamik altyazı senkronlanıyor...',
+      }
     }
     if (jobStageIndex === 5) {
-      return 'Ses & Altyazı: Türkçe yapay zeka seslendirmesi ve CapCut dinamik altyazıları senkronlanıyor...'
+      return {
+        tag: 'Ses & Altyazı',
+        desc: 'Türkçe seslendirme ve senkronize dinamik altyazılar işleniyor...',
+      }
     }
     if (jobStageIndex === 6) {
-      return 'Son Dokunuş: Marka kapanış kartı (outro) montajlanıyor ve MP4 optimize ediliyor...'
+      return {
+        tag: 'Marka Kapanışı',
+        desc: 'Kurumsal logonuz ve kapanış sahnesi (outro) montajlanıyor...',
+      }
     }
-    return 'Videonuz başarıyla hazırlandı ve oynatıcıya yükleniyor...'
+    return {
+      tag: 'Tamamlanıyor',
+      desc: 'Reklam videonuz hazırlandı, oynatıcıya yükleniyor...',
+    }
   }, [jobStageIndex, elapsedSeconds])
 
   return (
@@ -710,20 +767,20 @@ export function CreativeWizard({
           <div className="p-6 space-y-6">
             <div className="text-center space-y-3">
               <div className="inline-flex size-3.5 rounded-full bg-[#008069] mb-1 animate-ping" />
-              <h3 className="text-[18px] font-bold text-[#111b21]">{jobDisplayTitle}</h3>
+              <h3 className="text-[19px] font-bold text-[#111b21]">Reklam Videonuz Prodüksiyonda</h3>
               <p className="text-[13px] text-[#667781]">
-                {jobDisplayMessage || jobDisplayState}
+                Dikey sinematik reklam filminiz aşama aşama kurgulanıyor.
               </p>
 
               {/* Live Progress Bar & Timer */}
-              <div className="w-full max-w-md mx-auto pt-2 space-y-2">
+              <div className="w-full max-w-md mx-auto pt-1 space-y-2.5">
                 <div className="flex justify-between items-center text-[12px] font-semibold">
                   <span className="flex items-center gap-1.5 text-[#008069]">
                     <span className="size-2 rounded-full bg-[#008069] animate-pulse" />
                     Geçen Süre: {formatSeconds(elapsedSeconds)}
                   </span>
                   <span className="text-[#667781]">
-                    Tahmini: ~02:30 dk (%{progressPercent})
+                    Kalan: {formatRemaining(targetTotalSeconds, elapsedSeconds)} ({progressPercent}%)
                   </span>
                 </div>
                 <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200/70 shadow-inner">
@@ -732,9 +789,13 @@ export function CreativeWizard({
                     style={{ width: `${progressPercent}%` }}
                   />
                 </div>
-                <div className="flex items-center justify-center gap-2 text-[12.5px] font-medium text-[#008069] bg-emerald-50/80 border border-emerald-100/90 rounded-lg py-2 px-3 shadow-xs">
-                  <span className="size-1.5 rounded-full bg-[#008069] shrink-0" />
-                  <span className="truncate">{currentMicroStep}</span>
+                <div className="flex items-center gap-2 text-[12.5px] bg-emerald-50/80 border border-emerald-100/90 rounded-lg py-2.5 px-3.5 shadow-xs text-left">
+                  <span className="inline-flex items-center justify-center rounded-md bg-[#008069]/10 px-2 py-0.5 text-[11px] font-bold text-[#008069] shrink-0 uppercase tracking-wide">
+                    {currentMicroStep.tag}
+                  </span>
+                  <span className="text-[#111b21] font-medium truncate">
+                    {currentMicroStep.desc}
+                  </span>
                 </div>
               </div>
 
@@ -750,7 +811,7 @@ export function CreativeWizard({
                     💡 <strong>Ekran başında beklemenize gerek yoktur!</strong> Bu pencereden ayrılabilir veya tarayıcınızı kapatabilirsiniz. Videonuz arka planda sırayla işlenecek ve tamamlandığında doğrudan <strong>İçerik Kütüphanenize</strong> eklenecektir.
                   </p>
                   <div className="mt-2.5 pt-2 border-t border-amber-200/70 flex items-center justify-between">
-                    <span className="text-[11px] font-medium text-amber-700">Tahmini Başlama: {etaText}</span>
+                    <span className="text-[11px] font-medium text-amber-700">Tahmini Başlama: ~2–3 dakika</span>
                     <Link href="/icerik" className="text-[12px] font-semibold text-[#008069] hover:underline">
                       Kütüphaneye Git →
                     </Link>
@@ -762,13 +823,13 @@ export function CreativeWizard({
             {/* In-Card Stage Checklist */}
             <div className="rounded-xl border border-hairline bg-[#f8fafb] p-4 max-w-md mx-auto space-y-3">
               {[
-                { label: 'Reklam taslağı onaylandı', stage: 1 },
+                { label: 'Reklam kurgusu ve metin onaylandı', stage: 1 },
                 { label: 'Prodüksiyon sırasına alındı', stage: 2 },
-                { label: 'Logo ve ürün materyalleri stüdyoya aktarıldı', stage: 3 },
-                { label: 'Google Flow sinematik dikey video renderı', stage: 4 },
-                { label: 'Türkçe yapay zeka seslendirmesi & dinamik altyazı', stage: 5 },
+                { label: 'Marka logosu ve ürün materyalleri hazırlandı', stage: 3 },
+                { label: 'Sinematik dikey video çekimi ve kurgu', stage: 4 },
+                { label: 'Türkçe seslendirme ve dinamik altyazı', stage: 5 },
                 { label: 'Marka bitiş kartı (outro) montajı', stage: 6 },
-                { label: 'Yayına Hazır', stage: 7 },
+                { label: 'Reklam Videosu Yayına Hazır', stage: 7 },
               ].map((item, idx) => {
                 const isDone = jobStageIndex > item.stage
                 const isCurrent = jobStageIndex === item.stage
