@@ -1,39 +1,85 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-canvas: #0b0c0e;
-  --color-surface: #12141a;
-  --color-surface-card: #181b22;
-  --color-surface-hover: #222631;
-  --color-hairline: rgba(255, 255, 255, 0.08);
-  --color-hairline-strong: rgba(255, 255, 255, 0.16);
-
-  --color-ink: #f4f6fa;
-  --color-ink-muted: #949baa;
-  --color-ink-faint: #5e6573;
-
+  --color-canvas: #FFFFFF;
+  --color-surface: #F7F9F8;
+  --color-dark: #07100C;
+  --color-dark-surface: #0f1a14;
+  --color-hairline: rgba(10,20,15,0.08);
+  --color-hairline-strong: rgba(10,20,15,0.16);
+  --color-ink: #090B0A;
+  --color-ink-muted: #6b7280;
+  --color-ink-faint: #9ca3af;
+  --color-brand: #22c55e;
+  --color-brand-hover: #16a34a;
+  --color-brand-soft: rgba(34,197,94,0.08);
   --color-accent: #2f5bff;
-  --color-accent-hover: #3d68ff;
-  --color-accent-soft: rgba(47, 91, 255, 0.12);
-
-  --color-wa-green: #25d366;
-  --color-wa-glow: rgba(37, 211, 102, 0.2);
+  --radius-card: 20px;
+  --radius-button: 10px;
+  --radius-badge: 999px;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-enter: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --ease-exit: cubic-bezier(0.3, 0, 1, 1);
 }
 
-html {
-  scroll-behavior: smooth;
-  color-scheme: dark;
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    color-scheme: light;
+  }
+  
+  body {
+    font-family: var(--font-outfit), sans-serif;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+  }
+
+  ::selection {
+    background-color: var(--color-brand-soft);
+    color: var(--color-brand);
+  }
 }
 
-body {
-  background-color: var(--color-canvas);
-  color: var(--color-ink);
-  font-family: var(--font-outfit), sans-serif;
-  overflow-x: hidden;
-  -webkit-font-smoothing: antialiased;
-}
+@layer utilities {
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 
-::selection {
-  background-color: var(--color-accent);
-  color: #ffffff;
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .animate-fade-in-up {
+    animation: fadeInUp 0.6s var(--ease-enter) forwards;
+    opacity: 0;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.6s var(--ease-enter) forwards;
+    opacity: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-fade-in-up,
+    .animate-fade-in {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+  }
 }

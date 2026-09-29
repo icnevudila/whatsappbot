@@ -1,63 +1,70 @@
-import type { Metadata, Viewport } from 'next'
-import { JetBrains_Mono, Outfit } from 'next/font/google'
-import './globals.css'
+import type { Metadata, Viewport } from 'next';
+import { Outfit, JetBrains_Mono } from 'next/font/google';
+import './globals.css';
+import { Navbar } from '@/components/navbar';
 
 const outfit = Outfit({
+  subsets: ['latin'],
   variable: '--font-outfit',
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
-})
+});
 
-const jetbrains = JetBrains_Mono({
-  variable: '--font-jetbrains',
+const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
-  weight: ['400', '500', '600'],
-})
+  variable: '--font-jetbrains',
+});
+
+export const viewport: Viewport = {
+  themeColor: '#FFFFFF',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+};
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://mesajify.com'),
-  title: 'Mesajify — Yeni Nesil WhatsApp Kampanya & Medya Stüdyosu',
+  title: 'Mesajify — AI Reklam ve WhatsApp Kampanya Platformu',
   description:
-    'Yapay zeka destekli kreatif üretim, çoklu hat yönetimi ve akıllı gönderim motoru. Kampanyalarınızı riske atmadan, hattı koruyan hızla ölçekleyin.',
-  icons: {
-    icon: [
-      { url: '/logos/mesajify_app_icon_corporate_squircle.png', sizes: '512x512', type: 'image/png' },
-      { url: '/favicon.ico', sizes: '32x32' },
-    ],
+    'Reklam içeriğinizi oluşturun, WhatsApp kampanyalarınızı yönetin ve müşteri yanıtlarını tek panelde takip edin.',
+  alternates: {
+    canonical: 'https://mesajify.com',
   },
   openGraph: {
-    title: 'Mesajify — Yeni Nesil WhatsApp Kampanya & Medya Stüdyosu',
+    title: 'Mesajify — AI Reklam ve WhatsApp Kampanya Platformu',
     description:
-      'Yapay zeka destekli kreatif üretim, çoklu hat yönetimi ve akıllı gönderim motoru. Kampanyalarınızı riske atmadan, hattı koruyan hızla ölçekleyin.',
+      'Reklam içeriğinizi oluşturun, WhatsApp kampanyalarınızı yönetin ve müşteri yanıtlarını tek panelde takip edin.',
     url: 'https://mesajify.com',
     siteName: 'Mesajify',
+    images: [
+      {
+        url: 'https://mesajify.com/og-image.jpg',
+        width: 1200,
+        height: 630,
+      },
+    ],
     locale: 'tr_TR',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Mesajify — Yeni Nesil WhatsApp Kampanya & Medya Stüdyosu',
+    title: 'Mesajify — AI Reklam ve WhatsApp Kampanya Platformu',
     description:
-      'Yapay zeka destekli kreatif üretim, çoklu hat yönetimi ve akıllı gönderim motoru.',
+      'Reklam içeriğinizi oluşturun, WhatsApp kampanyalarınızı yönetin ve müşteri yanıtlarını tek panelde takip edin.',
+    images: ['https://mesajify.com/og-image.jpg'],
   },
-}
-
-export const viewport: Viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  themeColor: '#0b0c0e',
-}
+};
 
 export default function RootLayout({
   children,
-}: {
-  children: React.ReactNode
-}) {
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html lang="tr">
-      <body className={`${outfit.variable} ${jetbrains.variable} font-sans antialiased min-h-screen bg-canvas text-ink`}>
+      <body
+        className={`${outfit.variable} ${jetbrainsMono.variable} bg-canvas text-ink antialiased selection:bg-brand-soft selection:text-brand`}
+      >
+        <Navbar />
         {children}
       </body>
     </html>
-  )
+  );
 }
