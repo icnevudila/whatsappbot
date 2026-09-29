@@ -109,7 +109,11 @@ export function PhoneSimulator() {
           <div className={`transition-opacity duration-300 ${phase >= 3 ? 'opacity-100' : 'opacity-0 hidden'} flex flex-col gap-3 w-full`}>
             {/* Outgoing video + message */}
             <div className="bg-[#d9fdd3] p-1.5 rounded-xl rounded-tr-none max-w-[85%] shadow-sm self-end">
-               <div className="relative aspect-[4/5] w-full rounded-lg overflow-hidden bg-black mb-1">
+               <div className="relative aspect-[4/5] w-full rounded-lg overflow-hidden bg-black mb-1 group">
+                 <div className="absolute top-2 left-2 z-20 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-sm border border-white/10">
+                   <Image src="/logos/mesajify_app_icon_corporate_squircle.png" width={12} height={12} alt="Mesajify" className="rounded-[2px]" />
+                   <span className="text-[9px] font-[family-name:var(--font-jetbrains)] text-white/90">Mesajify Video</span>
+                 </div>
                  <video 
                    src="/landing/studio/product.mp4" 
                    poster="/landing/studio/product-poster.jpg"

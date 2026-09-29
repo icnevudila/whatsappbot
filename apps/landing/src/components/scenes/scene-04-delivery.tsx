@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import Image from 'next/image'
 import { useReveal } from '@/lib/use-reveal'
 
 export function Scene04Delivery() {
@@ -111,13 +112,13 @@ export function Scene04Delivery() {
             </div>
           </div>
 
-          {/* Connection flow arrow for desktop */}
+          {/* Connection flow node with Mesajify Logo */}
           <div className="lg:col-span-2 hidden lg:flex flex-col items-center justify-center text-ink-muted">
-            <div className="w-12 h-12 rounded-full bg-white border border-hairline flex items-center justify-center shadow-sm">
-              <span className="text-brand text-lg font-bold">→</span>
+            <div className="w-14 h-14 rounded-2xl bg-white border border-hairline flex items-center justify-center shadow-md p-2 hover:scale-105 transition-transform duration-300">
+              <Image src="/logos/mesajify_app_icon_corporate_squircle.png" width={36} height={36} alt="Mesajify Motor" className="rounded-lg" />
             </div>
-            <span className="text-[11px] font-[family-name:var(--font-jetbrains)] uppercase mt-3 tracking-widest text-ink-faint">
-              DAĞITIM
+            <span className="text-[11px] font-[family-name:var(--font-jetbrains)] uppercase mt-3 tracking-widest text-brand font-semibold">
+              MESAJIFY MOTOR
             </span>
           </div>
 
