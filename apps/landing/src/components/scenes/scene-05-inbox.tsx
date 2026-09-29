@@ -55,7 +55,7 @@ export function Scene05Inbox() {
             />
 
             {/* Hotspot 01: Hatlar ve Konuşmalar */}
-            <div className="absolute top-[28%] left-[18%] group cursor-pointer">
+            <div className="absolute top-[28%] left-[18%] group cursor-pointer z-20">
               <div className="relative flex items-center justify-center">
                 <span className="absolute w-8 h-8 rounded-full bg-brand/30 animate-ping" />
                 <span className="w-7 h-7 rounded-full bg-brand text-white flex items-center justify-center font-bold text-xs shadow-lg">
@@ -68,7 +68,7 @@ export function Scene05Inbox() {
             </div>
 
             {/* Hotspot 02: Müşteri Profili */}
-            <div className="absolute top-[35%] left-[54%] group cursor-pointer">
+            <div className="absolute top-[35%] left-[54%] group cursor-pointer z-20">
               <div className="relative flex items-center justify-center">
                 <span className="absolute w-8 h-8 rounded-full bg-brand/30 animate-ping delay-100" />
                 <span className="w-7 h-7 rounded-full bg-brand text-white flex items-center justify-center font-bold text-xs shadow-lg">
@@ -81,7 +81,7 @@ export function Scene05Inbox() {
             </div>
 
             {/* Hotspot 03: Ekip Yanıtı */}
-            <div className="absolute top-[68%] left-[78%] group cursor-pointer">
+            <div className="absolute top-[68%] left-[78%] group cursor-pointer z-20">
               <div className="relative flex items-center justify-center">
                 <span className="absolute w-8 h-8 rounded-full bg-brand/30 animate-ping delay-200" />
                 <span className="w-7 h-7 rounded-full bg-brand text-white flex items-center justify-center font-bold text-xs shadow-lg">
@@ -90,6 +90,34 @@ export function Scene05Inbox() {
               </div>
               <div className="absolute -left-28 -top-8 bg-[#07100C] text-white text-xs px-3 py-1.5 rounded-lg whitespace-nowrap opacity-90 shadow-xl border border-white/10 hidden sm:block">
                 Satış ekibiniz tek tıkla yanıtlar
+              </div>
+            </div>
+
+            {/* Floating Live Conversation Card Overlay */}
+            <div className="absolute bottom-6 left-6 z-20 max-w-sm bg-white/95 backdrop-blur-md p-4 rounded-2xl border border-hairline shadow-2xl hidden md:block animate-fade-in-up">
+              <div className="flex items-center gap-2.5 pb-2.5 border-b border-hairline">
+                <div className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold text-xs font-[family-name:var(--font-jetbrains)]">
+                  01
+                </div>
+                <div>
+                  <div className="text-xs font-semibold text-ink flex items-center gap-1.5">
+                    Ayşe Yıldız
+                    <span className="text-[10px] text-ink-muted">· +90 532 ••• •• 78</span>
+                  </div>
+                  <div className="text-[10px] text-brand font-medium">Hat 01 (Ana Satış) Üzerinden Geldi</div>
+                </div>
+              </div>
+              <div className="mt-2.5 space-y-1.5">
+                <p className="text-xs text-ink bg-surface p-2 rounded-lg leading-snug">
+                  "Kampanyadaki kruvasan ve kahve menünüz için bugün 14:00'e 2 kişilik yeriniz var mı?"
+                </p>
+                <p className="text-xs text-emerald-800 bg-emerald-50 p-2 rounded-lg leading-snug font-medium border border-emerald-100">
+                  ✓ Satış Temsilcisi: "Masanız #4 rezerve edilmiştir, bekliyoruz! ✨"
+                </p>
+              </div>
+              <div className="mt-2 pt-2 border-t border-hairline flex items-center justify-between text-[10px] text-ink-muted">
+                <span className="text-emerald-600 font-semibold font-[family-name:var(--font-jetbrains)]">● Canlı Senkronize</span>
+                <span>Satışa Dönüştürüldü</span>
               </div>
             </div>
 

@@ -6,6 +6,7 @@ import { useReveal } from '@/lib/use-reveal'
 
 export function Scene04Delivery() {
   const headRef = useReveal<HTMLDivElement>()
+  const poolRef = useReveal<HTMLDivElement>(0.1)
   const [valProgress, setValProgress] = useState(0)
   const [stage, setStage] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -17,7 +18,7 @@ export function Scene04Delivery() {
           setStage(1)
         }
       },
-      { threshold: 0.3 }
+      { threshold: 0.2 }
     )
     if (containerRef.current) observer.observe(containerRef.current)
     return () => observer.disconnect()
@@ -61,7 +62,7 @@ export function Scene04Delivery() {
         </div>
 
         {/* SIGNATURE MOMENT 02: Flow from Excel to Line Routing */}
-        <div className="grid lg:grid-cols-12 gap-8 items-stretch">
+        <div className="grid lg:grid-cols-12 gap-8 items-stretch mb-16">
           
           {/* Step 1: Contact Validation Engine */}
           <div className="lg:col-span-5 bg-white rounded-3xl p-8 border border-hairline shadow-sm flex flex-col justify-between">
@@ -195,6 +196,62 @@ export function Scene04Delivery() {
             </div>
           </div>
 
+        </div>
+
+        {/* Real Application Multi-Line Control Console Viewport */}
+        <div ref={poolRef} className="reveal relative mx-auto max-w-[1140px] rounded-3xl border border-hairline-strong bg-white shadow-2xl overflow-hidden">
+          {/* Browser Bar */}
+          <div className="h-11 bg-surface border-b border-hairline flex items-center justify-between px-6">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-black/15" />
+              <div className="w-3 h-3 rounded-full bg-black/15" />
+              <div className="w-3 h-3 rounded-full bg-black/15" />
+            </div>
+            <div className="px-4 py-1 rounded-md bg-white border border-hairline text-xs font-[family-name:var(--font-jetbrains)] text-ink-muted flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-brand" />
+              app.mesajify.com/hesaplar · Çoklu WhatsApp Hat Havuzu
+            </div>
+            <span className="text-[11px] font-[family-name:var(--font-jetbrains)] text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+              3 Hat Bağlı
+            </span>
+          </div>
+
+          {/* Screenshot Container */}
+          <div className="relative w-full aspect-[16/9] md:aspect-[21/10] bg-surface overflow-hidden group">
+            <Image
+              src="/landing/hesaplar.png"
+              alt="Mesajify Gerçek Çoklu Hat Yönetimi Ekranı"
+              fill
+              className="object-cover object-top"
+            />
+
+            {/* Live Interactive Overlays */}
+            <div className="absolute top-6 left-6 z-20 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/80 backdrop-blur-md border border-white/10 text-white shadow-lg">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+              <span className="text-xs font-semibold">QR Kod ile Anında Eşleşme</span>
+            </div>
+
+            <div className="absolute bottom-6 right-6 z-20 hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-xl bg-black/80 backdrop-blur-md border border-white/10 text-white shadow-lg">
+              <span className="text-xs font-[family-name:var(--font-jetbrains)] text-brand">⚡ Rotasyon Algoritması</span>
+              <span className="text-xs text-white/70">· Hat Başına Eşit Dağıtım</span>
+            </div>
+          </div>
+
+          {/* Console Footer */}
+          <div className="bg-white p-6 md:p-8 border-t border-hairline flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div>
+              <h4 className="text-lg font-[600] text-ink">Operasyonel Güvenlik ve Hat Dengesi</h4>
+              <p className="text-sm text-ink-muted mt-1 max-w-2xl leading-relaxed">
+                Her hat için ayrı bekleme süreleri ve saatlik tavan limitleri tanımlanır. Mesajify, WhatsApp Web oturumlarını canlı denetleyerek kesintisiz gönderim sağlar.
+              </p>
+            </div>
+            <a
+              href="https://app.mesajify.com/giris"
+              className="px-6 py-3 rounded-xl bg-ink text-white text-sm font-semibold hover:bg-brand transition-colors shrink-0 shadow-sm"
+            >
+              Hatlarını Bağla →
+            </a>
+          </div>
         </div>
 
       </div>

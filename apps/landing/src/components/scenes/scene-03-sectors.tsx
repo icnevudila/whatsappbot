@@ -1,44 +1,81 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { useReveal } from '@/lib/use-reveal'
 
 const sectors = [
   {
     id: 'eticaret',
-    label: 'E-Ticaret',
-    msg: 'Yeni koleksiyonumuz yayında ✨\nÜrünleri keşfetmek ve detay almak için bize yazabilirsiniz.',
-    reply: 'Siyah modeli mevcut mu?',
+    label: 'E-Ticaret & Moda',
+    badge: 'Yeni Sezon Lansmanı',
+    img: '/landing/studio/nova-headphones-ad.png',
+    tag: 'E-Ticaret Kreatifi',
+    title: 'NOVA Kablosuz Kulaklık',
+    stats: 'Geri Dönüş: %14.2',
+    msg: 'Yeni koleksiyonumuz yayında ✨\nÜrünleri keşfetmek ve lansmana özel %20 indirimden faydalanmak için bize yazabilirsiniz.',
+    reply: 'Siyah modeli mevcut mu? Kargo ne zaman çıkar? 🤔',
+    conversion: '✓ Satış Temsilcisi Yanıtladı · Sipariş Oluşturuldu (2.850 TL)',
   },
   {
     id: 'restoran',
-    label: 'Restoran',
-    msg: 'Bu akşam sofranız hazır 🍽️\nMenü ve rezervasyon için bize yazabilirsiniz.',
-    reply: '20:00 için 2 kişilik yeriniz var mı?',
+    label: 'Restoran & Fırın',
+    badge: 'Günlük Taze Menü',
+    img: '/landing/studio/bakery-croissant-ad.png',
+    tag: 'Gastronomi & Fırın',
+    title: 'Artisan Kruvasan & Kahve',
+    stats: 'Rezervasyon: %28.4',
+    msg: 'Bu sabah fırından yeni çıkan sıcak kruvasanlarımız ve artisan kahvelerimiz hazır 🥐☕\nMenü ve rezervasyon için bize yazabilirsiniz.',
+    reply: 'Öğlen 12:30 için 4 kişilik yeriniz var mı? 🍽️',
+    conversion: '✓ Masa #7 Rezerve Edildi · Konum İletildi',
   },
   {
     id: 'otomotiv',
-    label: 'Otomotiv',
-    msg: 'Yeni araçlarımızı keşfedin.\nModel ve detaylar için bize yazabilirsiniz.',
-    reply: 'Bu model hakkında bilgi alabilir miyim?',
+    label: 'Otomotiv & Servis',
+    badge: 'Test Sürüşü Daveti',
+    img: '/landing/studio/automotive-ad.png',
+    tag: 'Otomotiv Lansmanı',
+    title: 'Yeni Nesil Elektrikli Seri',
+    stats: 'Test Talebi: %19.1',
+    msg: 'Yeni nesil araçlarımızı showroomumuzda deneyimleyin ⚡\nModel detayları ve kişisel test sürüşü randevusu için bize yazabilirsiniz.',
+    reply: 'Cumartesi günü test sürüşü için randevu alabilir miyim?',
+    conversion: '✓ Test Sürüşü Onaylandı · Cumartesi 14:00',
   },
   {
     id: 'emlak',
-    label: 'Emlak',
-    msg: 'Yeni portföyümüz yayında.\nDetaylar ve görüşme için bize yazabilirsiniz.',
-    reply: 'Daireyi ne zaman görebilirim?',
+    label: 'Emlak & Proje',
+    badge: 'Ön Talep Portföyü',
+    img: '/landing/studio/realestate-ad.png',
+    tag: 'Lüks Konut Portföyü',
+    title: 'Panoramik Rezidans Evleri',
+    stats: 'Sunum Talebi: %11.8',
+    msg: 'Şehrin en prestijli noktasında yeni projemiz satışa açıldı 🏙️\nKatalog ve özel ödeme planı detayları için bize yazabilirsiniz.',
+    reply: '3+1 daire planlarını ve fiyat listesini gönderebilir misiniz?',
+    conversion: '✓ Dijital Katalog İletildi · Sunum Randevusu Alındı',
   },
   {
     id: 'klinik',
-    label: 'Klinik',
-    msg: 'Kontrol randevularımız açıldı.\nBilgi almak için bize yazabilirsiniz.',
-    reply: 'En yakın boş tarih hangisi?',
+    label: 'Klinik & Sağlık',
+    badge: 'Kontrol & Randevu',
+    img: '/landing/studio/clinic-ad.png',
+    tag: 'Estetik & Diş Kliniği',
+    title: 'Periyodik Sağlık & Bakım',
+    stats: 'Randevu Oranı: %34.0',
+    msg: 'Sonbahar dönemi kontrol randevularımız açıldı ✨\nUzman hekimlerimizden randevu almak ve detaylı bilgi için bize yazabilirsiniz.',
+    reply: 'Haftaya çarşamba öğleden sonra uygun bir saat var mı?',
+    conversion: '✓ Randevu Oluşturuldu · Çarşamba 15:30 (Dr. Selin)',
   },
   {
     id: 'hizmet',
-    label: 'Hizmet',
-    msg: 'Bu hafta için randevu saatleri açıldı.\nUygun saatleri öğrenmek için bize yazabilirsiniz.',
-    reply: 'Cumartesi uygun musunuz?',
+    label: 'Hizmet & Danışmanlık',
+    badge: 'Strateji Toplantısı',
+    img: '/landing/studio/service-ad.png',
+    tag: 'Kurumsal Danışmanlık',
+    title: 'B2B Büyüme & Operasyon',
+    stats: 'Görüşme Oranı: %22.5',
+    msg: 'Şirketiniz için 2026 büyüme ve dijital operasyon analizimiz hazır 📈\nDetaylı sunum ve değerlendirme toplantısı için bize yazabilirsiniz.',
+    reply: 'Pazartesi 10:00 online toplantı için uygun musunuz?',
+    conversion: '✓ Takvim Daveti Gönderildi · Google Meet Linki Eklendi',
   },
 ]
 
@@ -48,25 +85,33 @@ export function Scene03Sectors() {
   const data = sectors[active]
 
   return (
-    <section className="scene bg-canvas scene-pad">
+    <section className="scene bg-canvas scene-pad-lg border-t border-hairline">
       <div className="max-w-[1240px] mx-auto px-6">
-        <div ref={headRef} className="reveal mb-20">
-          <h2 className="text-[clamp(36px,5vw,72px)] leading-[1.06] font-[600] tracking-tight text-center">
+        
+        {/* Headline */}
+        <div ref={headRef} className="reveal text-center max-w-3xl mx-auto mb-16">
+          <p className="font-[family-name:var(--font-jetbrains)] text-[11px] font-medium tracking-[0.12em] uppercase text-brand font-semibold mb-6">
+            HER SEKTÖRE ÖZEL KAMPANYA AKIŞI
+          </p>
+          <h2 className="text-[clamp(36px,5vw,72px)] leading-[1.06] font-[600] tracking-tight text-ink mb-6">
             İşletmeni seç.
             <br />
             Kampanyanı gör.
           </h2>
+          <p className="text-xl text-ink-muted leading-relaxed">
+            Mesajify arayüzünden oluşturulan reklam görseli, WhatsApp toplu gönderim akışı ve gelen müşteri yanıtının satışa dönüşü tek vitrinde.
+          </p>
         </div>
 
-        {/* Sector pills */}
-        <div className="flex overflow-x-auto gap-2 justify-start md:justify-center mb-16 pb-2 scrollbar-none">
+        {/* Sector selection pills */}
+        <div className="flex overflow-x-auto gap-2 justify-start lg:justify-center mb-16 pb-2 scrollbar-none">
           {sectors.map((s, i) => (
             <button
               key={s.id}
               onClick={() => setActive(i)}
               className={`px-6 py-3 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300 ${
                 active === i
-                  ? 'bg-brand text-white shadow-lg shadow-brand/20'
+                  ? 'bg-ink text-white shadow-lg scale-105'
                   : 'bg-surface text-ink-muted hover:text-ink border border-hairline'
               }`}
             >
@@ -75,48 +120,121 @@ export function Scene03Sectors() {
           ))}
         </div>
 
-        {/* Large WhatsApp-style conversation — NOT inside a tiny card */}
-        <div className="max-w-2xl mx-auto">
-          {/* Outgoing campaign message */}
-          <div className="flex justify-end mb-4">
-            <div
-              key={`msg-${active}`}
-              className="bg-[#d9fdd3] rounded-2xl rounded-tr-sm px-6 py-4 max-w-[80%] shadow-sm"
-              style={{ animation: 'fadeInUp 0.4s var(--ease-enter)' }}
-            >
-              <p className="text-[15px] leading-relaxed text-ink whitespace-pre-line">
-                {data.msg}
-              </p>
-              <div className="flex justify-end items-center gap-1 mt-2">
-                <span className="text-[10px] text-ink-faint">10:42</span>
-                <svg width="16" height="11" viewBox="0 0 16 11" fill="none">
-                  <path d="M1 5.5L5 9.5L11 1.5" stroke="#53bdeb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M5 5.5L9 9.5L15 1.5" stroke="#53bdeb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+        {/* Two-Column Cinematic Showcase: Chat Flow (Left) + Visual Media (Right) */}
+        <div className="grid lg:grid-cols-12 gap-8 items-center max-w-5xl mx-auto">
+          
+          {/* Left Column: Realistic WhatsApp Dialogue & Conversion */}
+          <div className="lg:col-span-7 bg-[#efeae2] rounded-3xl p-6 md:p-8 border border-hairline shadow-lg flex flex-col justify-between min-h-[480px]">
+            
+            {/* Header info */}
+            <div className="flex items-center justify-between pb-4 border-b border-black/10 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-brand/20 flex items-center justify-center font-bold text-brand">
+                  💬
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-ink flex items-center gap-1.5">
+                    Mesajify İşletme Hattı
+                    <span className="w-2 h-2 rounded-full bg-brand inline-block" />
+                  </div>
+                  <div className="text-xs text-ink-muted font-[family-name:var(--font-jetbrains)]">{data.badge}</div>
+                </div>
               </div>
+              <span className="text-xs font-[family-name:var(--font-jetbrains)] text-brand font-medium bg-white px-2.5 py-1 rounded-full border border-hairline shadow-xs">
+                {data.stats}
+              </span>
             </div>
+
+            {/* Conversation Bubbles */}
+            <div className="space-y-4 my-auto">
+              
+              {/* Outgoing campaign message */}
+              <div className="flex justify-end">
+                <div
+                  key={`msg-${active}`}
+                  className="bg-[#d9fdd3] rounded-2xl rounded-tr-sm px-5 py-3.5 max-w-[85%] shadow-sm animate-fade-in-up"
+                >
+                  <p className="text-[14.5px] leading-relaxed text-ink whitespace-pre-line">
+                    {data.msg}
+                  </p>
+                  <div className="flex justify-end items-center gap-1 mt-2">
+                    <span className="text-[10px] text-ink-faint">10:42</span>
+                    <svg width="16" height="11" viewBox="0 0 16 11" fill="none">
+                      <path d="M1 5.5L5 9.5L11 1.5" stroke="#53bdeb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M5 5.5L9 9.5L15 1.5" stroke="#53bdeb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              {/* Incoming customer reply */}
+              <div className="flex justify-start">
+                <div
+                  key={`reply-${active}`}
+                  className="bg-white rounded-2xl rounded-tl-sm px-5 py-3.5 max-w-[80%] shadow-sm border border-hairline animate-fade-in-up"
+                  style={{ animationDelay: '150ms', animationFillMode: 'both' }}
+                >
+                  <p className="text-[14.5px] leading-relaxed text-ink font-medium">
+                    {data.reply}
+                  </p>
+                  <div className="flex justify-end mt-1.5">
+                    <span className="text-[10px] text-ink-faint">10:45</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Bottom Conversion Bar (Mesajify Real Panel Action) */}
+            <div className="mt-6 pt-4 border-t border-black/10 flex items-center justify-between text-xs bg-white/80 backdrop-blur-sm p-3 rounded-xl border border-hairline">
+              <span className="text-emerald-700 font-medium font-[family-name:var(--font-jetbrains)]">{data.conversion}</span>
+              <span className="text-[11px] text-ink-muted">Ortak Gelen Kutusu</span>
+            </div>
+
           </div>
 
-          {/* Incoming customer reply */}
-          <div className="flex justify-start">
-            <div
-              key={`reply-${active}`}
-              className="bg-white rounded-2xl rounded-tl-sm px-6 py-4 max-w-[70%] shadow-sm border border-hairline"
-              style={{
-                animation: 'fadeInUp 0.4s var(--ease-enter)',
-                animationDelay: '250ms',
-                animationFillMode: 'both',
-              }}
-            >
-              <p className="text-[15px] leading-relaxed text-ink">
-                {data.reply}
-              </p>
-              <div className="flex justify-end mt-2">
-                <span className="text-[10px] text-ink-faint">10:45</span>
-              </div>
+          {/* Right Column: Sector Campaign Visual Media with Mesajify Brand Overlay */}
+          <div className="lg:col-span-5 relative w-full aspect-[9/14] rounded-3xl overflow-hidden bg-[#07100C] border border-hairline-strong shadow-xl group">
+            
+            {/* Sector Media Image */}
+            <Image
+              src={data.img}
+              alt={data.title}
+              fill
+              className="object-cover transition-transform duration-700 group-hover:scale-105"
+            />
+
+            {/* Top Brand Watermark Badge */}
+            <div className="absolute top-4 left-4 z-20 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/70 backdrop-blur-md border border-white/10 shadow-lg">
+              <Image
+                src="/logos/mesajify_app_icon_corporate_squircle.png"
+                width={18}
+                height={18}
+                alt="Mesajify"
+                className="rounded-sm"
+              />
+              <span className="text-[11px] font-[family-name:var(--font-jetbrains)] text-white font-medium">
+                Mesajify Stüdyo
+              </span>
             </div>
+
+            {/* Bottom Gradient Information Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent flex flex-col justify-end p-6 z-10">
+              <span className="text-xs font-[family-name:var(--font-jetbrains)] text-brand uppercase font-semibold tracking-wider">
+                {data.tag}
+              </span>
+              <h3 className="text-xl font-bold text-white mt-1">
+                {data.title}
+              </h3>
+              <p className="text-xs text-white/60 mt-2 font-[family-name:var(--font-jetbrains)]">
+                Otomatik Altyazı · 9:16 Format · WhatsApp Toplu Dağıtıma Hazır
+              </p>
+            </div>
+
           </div>
+
         </div>
+
       </div>
     </section>
   )

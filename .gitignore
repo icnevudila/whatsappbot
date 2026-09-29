@@ -81,6 +81,9 @@ infra/*
 *.mp4
 *.txt
 *.png
+!apps/landing/public/**
+apps/landing/public/landing/_raw/
+apps/landing/public/landing/*-raw.*
 mesajify_logos/
 mesajify_doner_test.*
 doner_*
