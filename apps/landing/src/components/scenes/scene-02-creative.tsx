@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useReveal } from '@/lib/use-reveal'
 
 export function Scene02CreativeStudio() {
@@ -77,9 +78,22 @@ export function Scene02CreativeStudio() {
             </video>
           </div>
 
-          {/* Right — Coming soon */}
-          <div className="w-full md:w-[260px] aspect-[9/16] rounded-2xl bg-white/[0.03] border border-white/5 shrink-0 flex flex-col items-center justify-center opacity-40">
-            <span className="text-sm text-white/40">Yakında</span>
+          {/* Right — Newly Generated E-commerce Ad (NOVA) */}
+          <div className="w-full md:w-[260px] aspect-[9/16] rounded-2xl overflow-hidden bg-dark-surface border border-white/10 shrink-0 relative group">
+            <Image
+              src="/landing/studio/nova-headphones-ad.png"
+              alt="NOVA Kulaklık Reklam Kreatifi"
+              fill
+              className="object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-5">
+              <span className="text-[11px] font-[family-name:var(--font-jetbrains)] text-brand font-medium uppercase tracking-wider">
+                E-Ticaret Kreatifi
+              </span>
+              <span className="text-sm font-semibold text-white mt-1">
+                NOVA Kablosuz Kulaklık
+              </span>
+            </div>
           </div>
         </div>
       </div>
