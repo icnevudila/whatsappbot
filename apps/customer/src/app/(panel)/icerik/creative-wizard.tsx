@@ -111,6 +111,7 @@ export function CreativeWizard({
   const [submissionError, setSubmissionError] = useState<string | null>(null)
   const [jobFailureMessage, setJobFailureMessage] = useState<string | null>(null)
   const [jobEvidence, setJobEvidence] = useState<Partial<JobUserViewModel>>({})
+  const [elapsedSeconds, setElapsedSeconds] = useState<number>(0)
 
   // Authoritative Brand Kit & Logo Resolution
   const defaultKit = useMemo(() => data.kits.find((k) => k.isDefault) ?? data.kits[0] ?? null, [data.kits])
@@ -625,6 +626,62 @@ export function CreativeWizard({
     }
   }, [activeJobId])
 
+  useEffect(() => {
+    const isGenerating =
+      jobState !== 'IDLE' &&
+      jobState !== 'COMPLETED' &&
+      jobState !== 'FAILED' &&
+      jobState !== 'NEEDS_REVIEW'
+
+    if (!isGenerating) {
+      setElapsedSeconds(0)
+      return
+    }
+
+    const timer = setInterval(() => {
+      setElapsedSeconds((prev) => prev + 1)
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [jobState])
+
+  const targetTotalSeconds = 150
+  const progressPercent = Math.min(
+    95,
+    Math.max(5, Math.round((elapsedSeconds / targetTotalSeconds) * 100))
+  )
+
+  const formatSeconds = (sec: number) => {
+    const m = Math.floor(sec / 60)
+    const s = sec % 60
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+  }
+
+  const currentMicroStep = useMemo(() => {
+    if (jobStageIndex < 3) {
+      return 'Stüdyo Hazırlığı: Kurumsal logo ve onaylı ürün parametreleri kilitleniyor...'
+    }
+    if (jobStageIndex === 3) {
+      return 'Görselleştirme: Marka ve ürün materyalleri yapay zeka stüdyosuna bağlanıyor...'
+    }
+    if (jobStageIndex === 4) {
+      if (elapsedSeconds < 15) {
+        return 'Görselleştirme: Sahne parametreleri hazırlandı, Google Flow oturumu başlatılıyor...'
+      }
+      if (elapsedSeconds < 130) {
+        return 'Yapay Zeka Renderı: Google Flow sinematik dikey videoyu piksel piksel işliyor...'
+      }
+      return 'Kurgu Masası: Ham video tamamlandı, Türkçe seslendirme ve altyazı birleştiriliyor...'
+    }
+    if (jobStageIndex === 5) {
+      return 'Ses & Altyazı: Türkçe yapay zeka seslendirmesi ve CapCut dinamik altyazıları senkronlanıyor...'
+    }
+    if (jobStageIndex === 6) {
+      return 'Son Dokunuş: Marka kapanış kartı (outro) montajlanıyor ve MP4 optimize ediliyor...'
+    }
+    return 'Videonuz başarıyla hazırlandı ve oynatıcıya yükleniyor...'
+  }, [jobStageIndex, elapsedSeconds])
+
   return (
     <>
       <Card className="wb-wa-wizard overflow-visible">
@@ -651,12 +708,36 @@ export function CreativeWizard({
         {/* 1. WAITING / GENERATION EXPERIENCE (Realtime & Authoritative Backend State) */}
         {jobState !== 'IDLE' && jobState !== 'COMPLETED' && jobState !== 'FAILED' && jobState !== 'NEEDS_REVIEW' ? (
           <div className="p-6 space-y-6">
-            <div className="text-center space-y-1">
-              <div className="inline-flex size-3 rounded-full bg-[#008069] mb-3 animate-ping" />
-              <h3 className="text-[17px] font-bold text-[#111b21]">{jobDisplayTitle}</h3>
+            <div className="text-center space-y-3">
+              <div className="inline-flex size-3.5 rounded-full bg-[#008069] mb-1 animate-ping" />
+              <h3 className="text-[18px] font-bold text-[#111b21]">{jobDisplayTitle}</h3>
               <p className="text-[13px] text-[#667781]">
-                {jobDisplayMessage || jobDisplayState} · Tahmini hazır olma: <span className="font-semibold text-[#111b21]">{etaText}</span>
+                {jobDisplayMessage || jobDisplayState}
               </p>
+
+              {/* Live Progress Bar & Timer */}
+              <div className="w-full max-w-md mx-auto pt-2 space-y-2">
+                <div className="flex justify-between items-center text-[12px] font-semibold">
+                  <span className="flex items-center gap-1.5 text-[#008069]">
+                    <span className="size-2 rounded-full bg-[#008069] animate-pulse" />
+                    Geçen Süre: {formatSeconds(elapsedSeconds)}
+                  </span>
+                  <span className="text-[#667781]">
+                    Tahmini: ~02:30 dk (%{progressPercent})
+                  </span>
+                </div>
+                <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200/70 shadow-inner">
+                  <div
+                    className="h-full bg-gradient-to-r from-[#008069] via-[#00a884] to-[#25d366] transition-all duration-1000 ease-out rounded-full"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-center gap-2 text-[12.5px] font-medium text-[#008069] bg-emerald-50/80 border border-emerald-100/90 rounded-lg py-2 px-3 shadow-xs">
+                  <span className="size-1.5 rounded-full bg-[#008069] shrink-0" />
+                  <span className="truncate">{currentMicroStep}</span>
+                </div>
+              </div>
+
               {queueAhead && queueAhead > 0 ? (
                 <div className="mt-3 p-4 bg-amber-50/90 border border-amber-200/90 rounded-xl text-left max-w-md mx-auto shadow-xs">
                   <div className="flex items-center gap-2 text-amber-900 font-bold text-[14px]">
@@ -682,11 +763,11 @@ export function CreativeWizard({
             <div className="rounded-xl border border-hairline bg-[#f8fafb] p-4 max-w-md mx-auto space-y-3">
               {[
                 { label: 'Reklam taslağı onaylandı', stage: 1 },
-                { label: 'Sıraya alındı', stage: 2 },
-                { label: 'Görseller ve materyaller hazırlanıyor', stage: 3 },
-                { label: 'Reklam videosu hazırlanıyor', stage: 4 },
-                { label: 'Kalite kontrolü yapılıyor', stage: 5 },
-                { label: 'Logo ve marka kapanışı ekleniyor', stage: 6 },
+                { label: 'Prodüksiyon sırasına alındı', stage: 2 },
+                { label: 'Logo ve ürün materyalleri stüdyoya aktarıldı', stage: 3 },
+                { label: 'Google Flow sinematik dikey video renderı', stage: 4 },
+                { label: 'Türkçe yapay zeka seslendirmesi & dinamik altyazı', stage: 5 },
+                { label: 'Marka bitiş kartı (outro) montajı', stage: 6 },
                 { label: 'Yayına Hazır', stage: 7 },
               ].map((item, idx) => {
                 const isDone = jobStageIndex > item.stage
