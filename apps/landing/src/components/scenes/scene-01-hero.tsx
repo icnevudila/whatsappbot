@@ -7,35 +7,35 @@ export function Scene01Hero() {
         {/* Copy — ultra low density */}
         <div>
           <p
-            className="font-[family-name:var(--font-jetbrains)] text-[11px] font-medium tracking-[0.12em] uppercase text-ink-muted mb-8 animate-fade-in-up"
+            className="font-[family-name:var(--font-jetbrains)] text-[11px] font-medium tracking-[0.12em] uppercase text-brand font-semibold mb-8 animate-fade-in-up"
             style={{ animationDelay: '0ms' }}
           >
-            WhatsApp Kampanya Platformu
+            ÇOKLU WHATSAPP HAT YÖNETİMİ & TOPLU KAMPANYA PLATFORMU
           </p>
 
           <h1
-            className="text-[clamp(44px,6vw,80px)] leading-[1.04] font-[600] tracking-tight mb-6 animate-fade-in-up"
+            className="text-[clamp(42px,5.8vw,78px)] leading-[1.04] font-[600] tracking-tight mb-6 animate-fade-in-up"
             style={{ animationDelay: '120ms' }}
           >
-            Reklamını oluştur.
+            Birden fazla WhatsApp.
             <br />
-            WhatsApp'tan ulaştır.
+            Tek kampanya paneli.
           </h1>
 
           <p
-            className="text-[clamp(28px,3.5vw,48px)] leading-[1.1] font-[500] tracking-tight text-ink-muted mb-10 animate-fade-in-up"
+            className="text-[clamp(26px,3.2vw,44px)] leading-[1.1] font-[500] tracking-tight text-ink-muted mb-10 animate-fade-in-up"
             style={{ animationDelay: '220ms' }}
           >
-            Yanıtları tek yerden yönet.
+            Görselini üret. Hatlarına dağıt. Toplu ulaştır.
           </p>
 
           <p
-            className="text-lg text-ink-muted max-w-md leading-relaxed mb-12 animate-fade-in-up"
+            className="text-lg text-ink-muted max-w-lg leading-relaxed mb-12 animate-fade-in-up"
             style={{ animationDelay: '320ms' }}
           >
-            Ürün fotoğrafını veya kampanya fikrini yükle. Mesajify reklam içeriğini
-            hazırlar, kampanyanı yönetmene yardımcı olur ve müşteri yanıtlarını
-            tek panelde toplar.
+            İşletme hatlarınızı QR kod ile bağlayın. Arayüzden kampanya görselinizi ve
+            9:16 videonuzu saniyeler içinde oluşturun; Excel listenizi bağlı hatlar arasında
+            dengeli dağıtarak toplu gönderin ve tüm müşteri yanıtlarını tek ortak gelen kutusunda yönetin.
           </p>
 
           <div

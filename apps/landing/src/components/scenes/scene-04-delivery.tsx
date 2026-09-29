@@ -45,8 +45,8 @@ export function Scene04Delivery() {
         
         {/* Story Headline */}
         <div ref={headRef} className="reveal text-center max-w-3xl mx-auto mb-20">
-          <p className="font-[family-name:var(--font-jetbrains)] text-[11px] font-medium tracking-[0.12em] uppercase text-ink-muted mb-6">
-            KONTROLLÜ GÖNDERİM MOTORU
+          <p className="font-[family-name:var(--font-jetbrains)] text-[11px] font-medium tracking-[0.12em] uppercase text-brand font-semibold mb-6">
+            ÇOKLU HAT HAVUZU & TOPLU GÖNDERİM MOTORU
           </p>
           <h2 className="text-[clamp(36px,5.5vw,76px)] leading-[1.04] font-[600] tracking-tight text-ink mb-6">
             Liste hazır.
@@ -55,8 +55,8 @@ export function Scene04Delivery() {
             <br />
             Kampanya hazır.
           </h2>
-          <p className="text-xl text-ink-muted max-w-xl mx-auto leading-relaxed">
-            5 farklı araç arasında boğulmayın. Rehberinizi doğrulayın, bağlı işletme hatlarınıza akıllıca dağıtın.
+          <p className="text-xl text-ink-muted max-w-2xl mx-auto leading-relaxed">
+            Tek bir numaraya binlerce mesaj yükleyip riske girmeyin. Birden fazla bağlı WhatsApp hattınızı tek havuzda toplayın. Mesajify listenizi doğrulasın ve toplu gönderimi hatlarınız arasında zamana yayarak dengeli paylaştırsın.
           </p>
         </div>
 
