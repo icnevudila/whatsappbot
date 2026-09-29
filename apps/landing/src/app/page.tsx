@@ -1,70 +1,60 @@
-import { HeroSection } from '@/components/hero/hero-section'
-import { TruthStrip } from '@/components/truth-strip'
-import { BeforeAfter } from '@/components/before-after'
-import { CreativeEngine } from '@/components/creative-engine'
-import { CreativeStudio } from '@/components/studio/creative-studio'
-import { SectorLab } from '@/components/studio/sector-lab'
-import { DeliveryEngine } from '@/components/delivery-engine'
-import { ContactValidation } from '@/components/contact-validation'
-import { InboxSection } from '@/components/inbox-section'
-import { ProductExplorer } from '@/components/product-explorer'
-import { BentoGrid } from '@/components/bento-grid'
-import { MetricsBar } from '@/components/metrics-bar'
-import { TrustSection } from '@/components/trust-section'
-import { FaqSection } from '@/components/faq-section'
-import { FinalCta } from '@/components/final-cta'
+import { Navbar } from '@/components/navbar'
+import { Scene01Hero } from '@/components/scenes/scene-01-hero'
+import { Scene02CreativeStudio } from '@/components/scenes/scene-02-creative'
+import { Scene03Sectors } from '@/components/scenes/scene-03-sectors'
+import { Scene04Delivery } from '@/components/scenes/scene-04-delivery'
+import { Scene05Inbox } from '@/components/scenes/scene-05-inbox'
+import { Scene06Explorer } from '@/components/scenes/scene-06-explorer'
+import { Scene07Bento } from '@/components/scenes/scene-07-bento'
+import { Scene08TrustFaq } from '@/components/scenes/scene-08-trust-faq'
+import { Scene09FinalCta } from '@/components/scenes/scene-09-final-cta'
 import { Footer } from '@/components/footer'
 
 export default function Home() {
   return (
-    <main>
-      {/* Hero — "Reklamını oluştur. WhatsApp'tan ulaştır." */}
-      <HeroSection />
+    <>
+      {/* Fixed Navigation Shell */}
+      <Navbar />
 
-      {/* Product Truth Strip — Journey: Stüdyo → Kampanya → WhatsApp → Yanıt → Inbox */}
-      <TruthStrip />
+      <main className="w-full">
+        {/* 01 · HERO / PRODUCT MOVIE */}
+        <div id="urun">
+          <Scene01Hero />
+        </div>
 
-      {/* Before / After — "5 farklı araç değil. Tek kampanya sistemi." */}
-      <BeforeAfter />
+        {/* 02 · CREATIVE STUDIO STORY (Dark) */}
+        <div id="nasil-calisir">
+          <Scene02CreativeStudio />
+        </div>
 
-      {/* Creative Engine — Scroll morph: Fotoğraf → Video → WhatsApp'a hazır */}
-      <CreativeEngine />
+        {/* 03 · SECTOR PLAYGROUND (Light) */}
+        <div id="cozumler">
+          <Scene03Sectors />
+        </div>
 
-      {/* AI Creative Studio — Dark section with 3 video cards */}
-      <CreativeStudio />
+        {/* 04 · CAMPAIGN DELIVERY STORY (Soft Neutral) */}
+        <Scene04Delivery />
 
-      {/* Sector Lab — Interactive sector tabs with WhatsApp chat preview */}
-      <SectorLab />
+        {/* 05 · CUSTOMER REPLY → UNIFIED INBOX (Signature Moment) */}
+        <Scene05Inbox />
 
-      {/* Delivery Engine — Multi-line routing diagram */}
-      <DeliveryEngine />
+        {/* 06 · REAL PRODUCT EXPLORER (High Density Live Screens) */}
+        <Scene06Explorer />
 
-      {/* Contact Validation — Excel import demo animation */}
-      <ContactValidation />
+        {/* 07 · INFRASTRUCTURE BENTO (Architecture & Security) */}
+        <Scene07Bento />
 
-      {/* Unified Inbox — Real screenshot with hotspots */}
-      <InboxSection />
+        {/* 08 · TRUST + FAQ (Dark) */}
+        <div id="fiyatlandirma">
+          <Scene08TrustFaq />
+        </div>
 
-      {/* Product Explorer — Real application screenshots */}
-      <ProductExplorer />
+        {/* 09 · FINAL CTA (Near Black) */}
+        <Scene09FinalCta />
+      </main>
 
-      {/* Technical Bento Grid — 4 power features */}
-      <BentoGrid />
-
-      {/* Metrics — Product facts: 100+ Sektör, 1.000 Senaryo, etc. */}
-      <MetricsBar />
-
-      {/* Trust / Control — Dark section */}
-      <TrustSection />
-
-      {/* FAQ — Accordion with 8 questions */}
-      <FaqSection />
-
-      {/* Final CTA — "Bir fotoğraftan müşteri konuşmasına." */}
-      <FinalCta />
-
-      {/* Footer */}
+      {/* Footer Shell */}
       <Footer />
-    </main>
+    </>
   )
 }

@@ -27,7 +27,7 @@
     scroll-behavior: smooth;
     color-scheme: light;
   }
-  
+
   body {
     font-family: var(--font-outfit), sans-serif;
     overflow-x: hidden;
@@ -44,42 +44,83 @@
 }
 
 @layer utilities {
+  /* --- Cinematic scene spacing --- */
+  .scene {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .scene-pad {
+    padding-top: clamp(80px, 12vw, 160px);
+    padding-bottom: clamp(80px, 12vw, 160px);
+  }
+
+  .scene-pad-lg {
+    padding-top: clamp(120px, 16vw, 220px);
+    padding-bottom: clamp(120px, 16vw, 220px);
+  }
+
+  /* --- Reveal animation --- */
+  .reveal {
+    opacity: 0;
+    transform: translateY(32px);
+    transition:
+      opacity 0.7s var(--ease-enter),
+      transform 0.7s var(--ease-enter);
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .reveal-delay-1 { transition-delay: 100ms; }
+  .reveal-delay-2 { transition-delay: 200ms; }
+  .reveal-delay-3 { transition-delay: 300ms; }
+  .reveal-delay-4 { transition-delay: 400ms; }
+
+  /* --- Hero entrance keyframes --- */
   @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 
   @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
+    from { opacity: 0; }
+    to   { opacity: 1; }
   }
 
   .animate-fade-in-up {
-    animation: fadeInUp 0.6s var(--ease-enter) forwards;
+    animation: fadeInUp 0.7s var(--ease-enter) forwards;
     opacity: 0;
   }
 
   .animate-fade-in {
-    animation: fadeIn 0.6s var(--ease-enter) forwards;
+    animation: fadeIn 0.7s var(--ease-enter) forwards;
     opacity: 0;
   }
 
+  /* --- Phase animations for phone --- */
+  @keyframes moveDot {
+    0%   { offset-distance: 0%; opacity: 0; }
+    10%  { opacity: 1; }
+    90%  { opacity: 1; }
+    100% { offset-distance: 100%; opacity: 0; }
+  }
+
+  /* --- Reduced motion --- */
   @media (prefers-reduced-motion: reduce) {
     .animate-fade-in-up,
     .animate-fade-in {
       animation: none;
       opacity: 1;
       transform: none;
+    }
+
+    .reveal {
+      opacity: 1;
+      transform: none;
+      transition: none;
     }
   }
 }
