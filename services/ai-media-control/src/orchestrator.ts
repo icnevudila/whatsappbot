@@ -242,20 +242,35 @@ async function runJobExecution(job: any, accountId: string) {
   const attemptId = randomUUID()
   const startTime = Date.now()
 
-  // Create attempt record
-  await supabase.from('ai_media_attempts').insert({
-    id: attemptId,
-    job_id: job.id,
-    org_id: job.org_id,
-    flow_account_id: accountId,
-    status: 'running',
-    requested_provider: job.requested_provider || job.metadata?.requested_provider || 'FLOW_VEO',
-    job_type: job.job_type || (job.creative_engine_mode === 'LONG_FORM_VIDEO_V1' ? 'LONG_FORM_VIDEO_V1' : 'SHORT_FORM_VIDEO'),
-    parent_job_id: job.parent_job_id || null,
-    scene_id: job.scene_id || null,
-    scene_index: job.scene_index || null,
-    started_at: new Date().toISOString(),
-  })
+  // Create attempt record safely
+  try {
+    await supabase.from('ai_media_attempts').insert({
+      id: attemptId,
+      job_id: job.id,
+      org_id: job.org_id,
+      flow_account_id: accountId,
+      status: 'running',
+      requested_provider: job.requested_provider || job.metadata?.requested_provider || 'FLOW_VEO',
+      job_type: job.job_type || (job.creative_engine_mode === 'LONG_FORM_VIDEO_V1' ? 'LONG_FORM_VIDEO_V1' : 'SHORT_FORM_VIDEO'),
+      parent_job_id: job.parent_job_id || null,
+      scene_id: job.scene_id || null,
+      scene_index: job.scene_index || null,
+      started_at: new Date().toISOString(),
+    })
+  } catch (err: any) {
+    console.warn(`[orchestrator] Extended attempt insert failed, retrying with core fields: ${err?.message}`)
+    await supabase.from('ai_media_attempts').insert({
+      id: attemptId,
+      job_id: job.id,
+      org_id: job.org_id,
+      flow_account_id: accountId,
+      status: 'running',
+      requested_provider: job.requested_provider || job.metadata?.requested_provider || 'FLOW_VEO',
+      started_at: new Date().toISOString(),
+    }).catch((fallbackErr: any) => {
+      console.error(`[orchestrator] Core attempt insert failed:`, fallbackErr)
+    })
+  }
 
   try {
     const lockAcquired = await hostResourceGuard.acquireHeavyLock(supabase, job.id, accountId)

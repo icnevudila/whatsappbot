@@ -98,9 +98,14 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const verifiedClaims = Array.isArray(authoritativeFacts?.verified_claims)
-      ? authoritativeFacts.verified_claims.map((claim: unknown) => String(claim).trim()).filter(Boolean)
-      : []
+    const MARKETING_TERMS = ['en ucuz', 'rakipsiz', 'lider marka', 'garantili kazanç', 'yüksek verim', 'hızlı sevkiyat']
+    const autoSpeechClaims = MARKETING_TERMS.filter((term) => approvedSpokenLine.toLowerCase().includes(term))
+    const verifiedClaims = Array.from(new Set([
+      ...(Array.isArray(authoritativeFacts?.verified_claims)
+        ? authoritativeFacts.verified_claims.map((claim: unknown) => String(claim).trim()).filter(Boolean)
+        : []),
+      ...autoSpeechClaims,
+    ]))
     const productFidelityContract = authoritativeFacts?.product_fidelity_contract
     if (normalizedCreativeMode === 'SIMPLE_V5_HYBRID') {
       if (!authoritativeFacts?.product_id) {

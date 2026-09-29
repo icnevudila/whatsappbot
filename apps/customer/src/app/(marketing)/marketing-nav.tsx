@@ -4,8 +4,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { Wordmark } from '@/components/brand'
 import { LocaleSwitcher } from '@/components/locale-switcher'
-import { useLocale, useT } from '@/lib/i18n/provider'
-import { contactMailto } from '@/lib/contact'
+import { useT } from '@/lib/i18n/provider'
 
 function MenuIcon({ open }: { open: boolean }) {
   return open ? (
@@ -22,14 +21,16 @@ function MenuIcon({ open }: { open: boolean }) {
 export function MarketingNav() {
   const [open, setOpen] = useState(false)
   const t = useT()
-  const { locale } = useLocale()
-  const en = locale === 'en'
 
   const sections = [
-    { href: '/#ornekler', label: en ? 'Creative studio' : 'Yaratıcı stüdyo' },
-    { href: '/#nasil', label: en ? 'How it works' : 'Nasıl çalışır?' },
-    { href: '/#urun', label: en ? 'Inside Mesajify' : 'Uygulamayı keşfet' },
-    { href: '/#sss', label: en ? 'Questions' : 'Sorular' },
+    { href: '#kapasite', label: t('marketing.capacity') },
+    { href: '#sorun', label: t('marketing.problem') },
+    { href: '#nasil', label: t('marketing.how') },
+    { href: '#urun', label: t('marketing.productNav') },
+    { href: '#gun', label: t('marketing.day') },
+    { href: '#guvenlik', label: t('marketing.security') },
+    { href: '#fiyatlar', label: t('marketing.pricing') },
+    { href: '#sss', label: t('marketing.faq') },
   ] as const
 
   useEffect(() => {
@@ -88,7 +89,7 @@ export function MarketingNav() {
               {t('auth.signIn')}
             </Link>
             <a
-                  href={contactMailto('Mesajify ürün demosu')}
+              href="mailto:destek@filo.app?subject=Filo%20eri%C5%9Fim%20talebi"
               className="hidden h-8 items-center rounded-md bg-accent px-3 text-[12.5px] font-medium text-accent-ink transition-colors hover:bg-accent-dim sm:inline-flex"
             >
               {t('auth.contact')}
@@ -112,7 +113,6 @@ export function MarketingNav() {
           open ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
         }`}
         aria-hidden={!open}
-        inert={!open}
       >
         <button
           type="button"
@@ -167,7 +167,7 @@ export function MarketingNav() {
                 {t('auth.signIn')}
               </Link>
               <a
-                href={contactMailto('Mesajify ürün demosu')}
+                href="mailto:destek@filo.app?subject=Filo%20eri%C5%9Fim%20talebi"
                 onClick={close}
                 className="inline-flex h-10 items-center justify-center rounded-[var(--radius-sm)] bg-accent text-[13px] font-medium text-accent-ink hover:bg-accent-dim"
               >

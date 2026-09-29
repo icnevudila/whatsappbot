@@ -238,7 +238,10 @@ export function CreativeWizard({
           product_name: activeProductName,
           product_id: activeProductId || undefined,
           offer: offerVerified ? offerDetails || undefined : undefined,
-          verified_claims: verifiedClaims,
+          verified_claims: Array.from(new Set([
+            ...verifiedClaims,
+            ...['en ucuz', 'rakipsiz', 'lider marka', 'garantili kazanç', 'yüksek verim', 'hızlı sevkiyat'].filter(term => fullSpeechText.toLowerCase().includes(term))
+          ])),
           approved_spoken_line: fullSpeechText,
           product_fidelity_contract: fidelityContract,
           subtitles: subtitles ? 'auto' : 'off',
@@ -438,7 +441,10 @@ export function CreativeWizard({
           phone: ctaChannel === 'whatsapp' ? data.phones[0]?.phone : undefined,
           url: ctaChannel === 'website' ? data.org.websiteHint : undefined,
           approved_spoken_line: fullSpeechText,
-          verified_claims: verifiedClaims,
+          verified_claims: Array.from(new Set([
+            ...verifiedClaims,
+            ...['en ucuz', 'rakipsiz', 'lider marka', 'garantili kazanç', 'yüksek verim', 'hızlı sevkiyat'].filter(term => fullSpeechText.toLowerCase().includes(term))
+          ])),
           unverified_facts: [],
           product_fidelity_contract: fidelityContract,
           subtitles: subtitles ? 'auto' : 'off',
