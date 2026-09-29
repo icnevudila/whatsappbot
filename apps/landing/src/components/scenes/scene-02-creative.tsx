@@ -49,12 +49,11 @@ export function Scene02CreativeStudio() {
       {/* Part B — Cinematic video showcase (full bleed feel) */}
       <div ref={videosRef} className="reveal max-w-[1400px] mx-auto px-6 pb-24">
         <div className="flex flex-col md:flex-row items-end justify-center gap-6">
-          {/* Left — Restaurant */}
-          <div className="w-full md:w-[260px] aspect-[9/16] rounded-2xl overflow-hidden bg-dark-surface border border-white/5 shrink-0 opacity-80 hover:opacity-100 transition-opacity duration-500 relative group">
-            {/* Mesajify Brand Overlay Badge */}
-            <div className="absolute top-3 left-3 z-20 flex items-center gap-2 px-2.5 py-1 rounded-full bg-black/70 backdrop-blur-md border border-white/10 shadow-lg">
-              <Image src="/logos/mesajify_app_icon_corporate_squircle.png" width={16} height={16} alt="Mesajify" className="rounded-sm" />
-              <span className="text-[10px] font-[family-name:var(--font-jetbrains)] text-white/90 font-medium">Mesajify Flow AI</span>
+          {/* Left — Restaurant / Bakery */}
+          <div className="w-full md:w-[260px] aspect-[9/16] rounded-2xl overflow-hidden bg-dark-surface border border-white/10 shrink-0 opacity-80 hover:opacity-100 transition-opacity duration-500 relative group">
+            <div className="absolute top-3 left-3 z-20 flex items-center gap-2 px-2.5 py-1 rounded-full bg-black/80 backdrop-blur-md border border-white/10">
+              <span className="w-1.5 h-1.5 rounded-full bg-brand" />
+              <span className="text-[10px] font-[family-name:var(--font-jetbrains)] text-white/90 font-medium">Gastronomi · 9:16 Video</span>
             </div>
             <video
               autoPlay
@@ -64,45 +63,44 @@ export function Scene02CreativeStudio() {
               poster="/landing/studio/bakery-croissant-ad.png"
               className="w-full h-full object-cover"
             >
-              <source src="/landing/studio/restaurant.mp4" type="video/mp4" />
+              <source src="/landing/studio/restaurant-flow-veo.mp4" type="video/mp4" />
             </video>
           </div>
 
-          {/* Center — Product (HERO) */}
-          <div className="w-full md:w-[320px] aspect-[9/16] rounded-3xl overflow-hidden bg-dark-surface border border-white/10 shadow-2xl shadow-brand/10 shrink-0 relative z-10 group">
-            {/* Mesajify Brand Overlay Badge */}
-            <div className="absolute top-4 left-4 z-20 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/75 backdrop-blur-md border border-white/15 shadow-xl">
-              <Image src="/logos/mesajify_app_icon_corporate_squircle.png" width={18} height={18} alt="Mesajify" className="rounded-sm" />
-              <span className="text-[11px] font-[family-name:var(--font-jetbrains)] text-white font-medium">Mesajify Stüdyo</span>
+          {/* Center — Product / Brand Hero */}
+          <div className="w-full md:w-[320px] aspect-[9/16] rounded-3xl overflow-hidden bg-dark-surface border border-white/15 shadow-2xl shadow-brand/10 shrink-0 relative z-10 group">
+            <div className="absolute top-4 left-4 z-20 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/80 backdrop-blur-md border border-white/15">
+              <span className="w-2 h-2 rounded-full bg-brand" />
+              <span className="text-[11px] font-[family-name:var(--font-jetbrains)] text-white font-medium">Mesajify Stüdyo · 9:16 Tanıtım</span>
             </div>
             <video
               autoPlay
               muted
               loop
               playsInline
-              poster="/landing/studio/product-poster.jpg"
+              poster="/landing/studio/hero-flow-veo-poster.jpg"
               className="w-full h-full object-cover"
             >
-              <source src="/landing/studio/product.mp4" type="video/mp4" />
+              <source src="/landing/studio/hero-flow-veo.mp4" type="video/mp4" />
             </video>
           </div>
 
-          {/* Right — Newly Generated E-commerce Ad (NOVA) */}
-          <div className="w-full md:w-[260px] aspect-[9/16] rounded-2xl overflow-hidden bg-dark-surface border border-white/10 shrink-0 relative group">
-            <Image
-              src="/landing/studio/nova-headphones-ad.png"
-              alt="NOVA Kulaklık Reklam Kreatifi"
-              fill
-              className="object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-5">
-              <span className="text-[11px] font-[family-name:var(--font-jetbrains)] text-brand font-medium uppercase tracking-wider">
-                E-Ticaret Kreatifi
-              </span>
-              <span className="text-sm font-semibold text-white mt-1">
-                NOVA Kablosuz Kulaklık
-              </span>
+          {/* Right — Tech / E-commerce Headphones */}
+          <div className="w-full md:w-[260px] aspect-[9/16] rounded-2xl overflow-hidden bg-dark-surface border border-white/10 shrink-0 opacity-80 hover:opacity-100 transition-opacity duration-500 relative group">
+            <div className="absolute top-3 left-3 z-20 flex items-center gap-2 px-2.5 py-1 rounded-full bg-black/80 backdrop-blur-md border border-white/10">
+              <span className="w-1.5 h-1.5 rounded-full bg-brand" />
+              <span className="text-[10px] font-[family-name:var(--font-jetbrains)] text-white/90 font-medium">E-Ticaret · 9:16 Video</span>
             </div>
+            <video
+              autoPlay
+              muted
+              loop
+              playsInline
+              poster="/landing/studio/nova-headphones-ad.png"
+              className="w-full h-full object-cover"
+            >
+              <source src="/landing/studio/ecommerce-flow-veo.mp4" type="video/mp4" />
+            </video>
           </div>
         </div>
       </div>

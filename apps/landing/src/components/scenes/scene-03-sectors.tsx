@@ -129,8 +129,10 @@ export function Scene03Sectors() {
             {/* Header info */}
             <div className="flex items-center justify-between pb-4 border-b border-black/10 mb-6">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-brand/20 flex items-center justify-center font-bold text-brand">
-                  💬
+                <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
                 </div>
                 <div>
                   <div className="text-sm font-semibold text-ink flex items-center gap-1.5">

@@ -29,10 +29,10 @@ export function Scene01Hero() {
       <div className="max-w-[1280px] mx-auto px-6 w-full">
         {/* Top Copy Section */}
         <div className="text-center max-w-4xl mx-auto mb-14">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand/10 border border-brand/20 mb-8 animate-fade-in-up">
-            <span className="w-2 h-2 rounded-full bg-brand animate-pulse" />
-            <span className="font-[family-name:var(--font-jetbrains)] text-[11px] font-semibold tracking-[0.12em] uppercase text-brand">
-              ÇOKLU WHATSAPP HAT YÖNETİMİ & AI KAMPANYA PLATFORMU
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 mb-8 animate-fade-in-up">
+            <span className="w-2 h-2 rounded-full bg-brand" />
+            <span className="font-[family-name:var(--font-jetbrains)] text-[11px] font-semibold tracking-[0.1em] uppercase text-emerald-800">
+              AKILLI HAT YÖNETİMİ & WHATSAPP KAMPANYA PLATFORMU
             </span>
           </div>
 
@@ -121,26 +121,33 @@ export function Scene01Hero() {
             <div className="inline-flex p-1 bg-surface rounded-2xl border border-hairline shadow-xs">
               <button
                 onClick={() => setViewMode('video')}
-                className={`px-5 py-2.5 rounded-xl text-xs md:text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${
+                className={`px-5 py-2.5 rounded-xl text-xs md:text-sm font-semibold transition-all duration-200 flex items-center gap-2.5 ${
                   viewMode === 'video'
                     ? 'bg-ink text-white shadow-sm'
                     : 'text-ink-muted hover:text-ink'
                 }`}
               >
-                <span>🖥️</span>
-                <span>Mesajify Panel Walkthrough (Video Demo)</span>
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                  <line x1="8" y1="21" x2="16" y2="21" />
+                  <line x1="12" y1="17" x2="12" y2="21" />
+                </svg>
+                <span>Mesajify Panel Arayüzü</span>
                 <span className="hidden sm:inline-block px-1.5 py-0.5 rounded text-[10px] bg-brand text-white font-mono">CANLI</span>
               </button>
               <button
                 onClick={() => setViewMode('phone')}
-                className={`px-5 py-2.5 rounded-xl text-xs md:text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${
+                className={`px-5 py-2.5 rounded-xl text-xs md:text-sm font-semibold transition-all duration-200 flex items-center gap-2.5 ${
                   viewMode === 'phone'
                     ? 'bg-ink text-white shadow-sm'
                     : 'text-ink-muted hover:text-ink'
                 }`}
               >
-                <span>📱</span>
-                <span>Müşteri WhatsApp Deneyimi (Mobil Simülatör)</span>
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+                  <line x1="12" y1="18" x2="12.01" y2="18" />
+                </svg>
+                <span>Müşteri WhatsApp Deneyimi</span>
               </button>
             </div>
 
@@ -149,7 +156,7 @@ export function Scene01Hero() {
                 onClick={togglePlay}
                 className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-hairline bg-white text-xs font-medium text-ink-muted hover:text-ink transition-colors"
               >
-                <span>{isPlaying ? '⏸ Duraklat' : '▶ Oynat'}</span>
+                <span>{isPlaying ? 'Duraklat' : 'Oynat'}</span>
               </button>
             )}
           </div>
@@ -188,48 +195,39 @@ export function Scene01Hero() {
                   className="w-full h-full object-cover object-top"
                 />
 
-                {/* Live Floating HTML Badge 1: Connected WhatsApp Lines */}
-                <div className="absolute top-4 left-4 z-20 flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-black/75 backdrop-blur-md border border-white/15 shadow-xl text-white">
-                  <div className="relative flex items-center justify-center">
-                    <span className="w-2.5 h-2.5 rounded-full bg-brand animate-ping absolute" />
-                    <span className="w-2 h-2 rounded-full bg-brand relative" />
-                  </div>
+                {/* Live Floating Badge 1: Connected WhatsApp Lines */}
+                <div className="absolute top-4 left-4 z-20 flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-black/80 backdrop-blur-md border border-white/10 text-white">
+                  <span className="w-2 h-2 rounded-full bg-brand" />
                   <div>
-                    <div className="text-[12px] font-semibold leading-tight">3 Hat Bağlı & Dengeli</div>
-                    <div className="text-[10px] text-white/60 font-[family-name:var(--font-jetbrains)]">Hat 1 · Hat 2 · Hat 3</div>
+                    <div className="text-[12px] font-medium leading-none">3 Hat Bağlı</div>
+                    <div className="text-[10px] text-white/50 font-[family-name:var(--font-jetbrains)] mt-0.5">Rotasyon Aktif</div>
                   </div>
                 </div>
 
-                {/* Live Floating HTML Badge 2: Delivery Engine Rate */}
-                <div className="absolute top-4 right-4 z-20 flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-black/75 backdrop-blur-md border border-white/15 shadow-xl text-white">
-                  <div className="w-7 h-7 rounded-lg bg-brand/20 text-brand flex items-center justify-center font-bold text-xs font-[family-name:var(--font-jetbrains)]">
-                    ⚡
-                  </div>
+                {/* Live Floating Badge 2: Delivery Engine Rate */}
+                <div className="absolute top-4 right-4 z-20 flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-black/80 backdrop-blur-md border border-white/10 text-white">
+                  <span className="text-[11px] font-mono text-emerald-400 font-semibold">%99.4</span>
                   <div>
-                    <div className="text-[12px] font-semibold leading-tight">2.291 Gönderim</div>
-                    <div className="text-[10px] text-emerald-400 font-[family-name:var(--font-jetbrains)]">%99.4 Teslimat</div>
+                    <div className="text-[12px] font-medium leading-none">2.291 Gönderim</div>
+                    <div className="text-[10px] text-white/50 font-[family-name:var(--font-jetbrains)] mt-0.5">Teslim Edildi</div>
                   </div>
                 </div>
 
-                {/* Live Floating HTML Badge 3: AI Creative Ready */}
-                <div className="absolute bottom-4 left-4 z-20 hidden sm:flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-black/75 backdrop-blur-md border border-white/15 shadow-xl text-white">
-                  <div className="w-7 h-7 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold text-xs">
-                    🎨
-                  </div>
+                {/* Live Floating Badge 3: Creative Studio Ready */}
+                <div className="absolute bottom-4 left-4 z-20 hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-black/80 backdrop-blur-md border border-white/10 text-white">
+                  <span className="w-2 h-2 rounded-full bg-brand" />
                   <div>
-                    <div className="text-[12px] font-semibold leading-tight">AI Kreatif Stüdyosu</div>
-                    <div className="text-[10px] text-white/60 font-[family-name:var(--font-jetbrains)]">9:16 Video & Ses Hazır</div>
+                    <div className="text-[12px] font-medium leading-none">Panel İçi Stüdyo</div>
+                    <div className="text-[10px] text-white/50 font-[family-name:var(--font-jetbrains)] mt-0.5">9:16 Video & Görsel Hazır</div>
                   </div>
                 </div>
 
-                {/* Live Floating HTML Badge 4: Unified Inbox Response */}
-                <div className="absolute bottom-4 right-4 z-20 hidden sm:flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-black/75 backdrop-blur-md border border-white/15 shadow-xl text-white">
-                  <div className="w-7 h-7 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs">
-                    💬
-                  </div>
+                {/* Live Floating Badge 4: Unified Inbox Response */}
+                <div className="absolute bottom-4 right-4 z-20 hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-black/80 backdrop-blur-md border border-white/10 text-white">
+                  <span className="w-2 h-2 rounded-full bg-blue-400" />
                   <div>
-                    <div className="text-[12px] font-semibold leading-tight">Ortak Gelen Kutusu</div>
-                    <div className="text-[10px] text-white/60 font-[family-name:var(--font-jetbrains)]">324 Müşteri Yanıtı Canlı</div>
+                    <div className="text-[12px] font-medium leading-none">Ortak Gelen Kutusu</div>
+                    <div className="text-[10px] text-white/50 font-[family-name:var(--font-jetbrains)] mt-0.5">324 Müşteri Yanıtı</div>
                   </div>
                 </div>
 

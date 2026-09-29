@@ -112,7 +112,7 @@ export function Scene05Inbox() {
                   "Kampanyadaki kruvasan ve kahve menünüz için bugün 14:00'e 2 kişilik yeriniz var mı?"
                 </p>
                 <p className="text-xs text-emerald-800 bg-emerald-50 p-2 rounded-lg leading-snug font-medium border border-emerald-100">
-                  ✓ Satış Temsilcisi: "Masanız #4 rezerve edilmiştir, bekliyoruz! ✨"
+                  Satış Temsilcisi: "Masanız #4 rezerve edilmiştir, sizleri ağırlamaktan mutluluk duyarız."
                 </p>
               </div>
               <div className="mt-2 pt-2 border-t border-hairline flex items-center justify-between text-[10px] text-ink-muted">

@@ -96,13 +96,13 @@ export function Scene04Delivery() {
                   <div className="text-2xl font-[600] text-emerald-600 font-[family-name:var(--font-jetbrains)]">
                     {stage >= 2 ? '2.291' : '...'}
                   </div>
-                  <div className="text-xs text-emerald-800/80 mt-1 font-medium">Hazır & Onaylı ✓</div>
+                  <div className="text-xs text-emerald-800/80 mt-1 font-medium">Hazır & Onaylı</div>
                 </div>
                 <div className="p-4 rounded-2xl bg-amber-50/50 border border-amber-100">
                   <div className="text-2xl font-[600] text-amber-600 font-[family-name:var(--font-jetbrains)]">
                     {stage >= 2 ? '127' : '...'}
                   </div>
-                  <div className="text-xs text-amber-800/80 mt-1 font-medium">Düzeltildi ⚠️</div>
+                  <div className="text-xs text-amber-800/80 mt-1 font-medium">Düzeltildi (E.164)</div>
                 </div>
               </div>
             </div>
@@ -232,7 +232,7 @@ export function Scene04Delivery() {
             </div>
 
             <div className="absolute bottom-6 right-6 z-20 hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-xl bg-black/80 backdrop-blur-md border border-white/10 text-white shadow-lg">
-              <span className="text-xs font-[family-name:var(--font-jetbrains)] text-brand">⚡ Rotasyon Algoritması</span>
+              <span className="text-xs font-[family-name:var(--font-jetbrains)] text-brand font-medium">Rotasyon Algoritması</span>
               <span className="text-xs text-white/70">· Hat Başına Eşit Dağıtım</span>
             </div>
           </div>
