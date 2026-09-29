@@ -250,22 +250,12 @@ export function Scene04Delivery() {
           {/* Media Viewport */}
           <div className="relative w-full aspect-[16/9] md:aspect-[21/10] bg-[#050B08] overflow-hidden group">
             {consoleTab === 'panel' && (
-              <>
-                <Image
-                  src="/landing/hesaplar.png"
-                  alt="Mesajify Gerçek Çoklu Hat Yönetimi Ekranı"
-                  fill
-                  className="object-cover object-top animate-fade-in"
-                />
-                <div className="absolute top-6 left-6 z-20 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/80 backdrop-blur-md border border-white/10 text-white shadow-lg">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                  <span className="text-xs font-semibold">QR Kod ile Anında Eşleşme</span>
-                </div>
-                <div className="absolute bottom-6 right-6 z-20 hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-xl bg-black/80 backdrop-blur-md border border-white/10 text-white shadow-lg">
-                  <span className="text-xs font-[family-name:var(--font-jetbrains)] text-brand font-medium">Rotasyon Algoritması</span>
-                  <span className="text-xs text-white/70">· Hat Başına Eşit Dağıtım</span>
-                </div>
-              </>
+              <Image
+                src="/landing/hesaplar.png"
+                alt="Mesajify Gerçek Çoklu Hat Yönetimi Ekranı"
+                fill
+                className="object-cover object-top animate-fade-in"
+              />
             )}
 
             {consoleTab === 'veo' && (
@@ -279,10 +269,6 @@ export function Scene04Delivery() {
                   playsInline
                   className="h-full max-h-full aspect-[9/16] object-contain shadow-2xl"
                 />
-                <div className="absolute top-6 left-6 z-20 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/80 backdrop-blur-md border border-white/10 text-white shadow-lg">
-                  <span className="w-2 h-2 rounded-full bg-brand" />
-                  <span className="text-xs font-medium font-[family-name:var(--font-jetbrains)]">Google Flow Veo 3.1 · 3D Fiber Optik Dağıtım</span>
-                </div>
               </div>
             )}
 
@@ -294,10 +280,6 @@ export function Scene04Delivery() {
                   fill
                   className="object-contain p-4"
                 />
-                <div className="absolute top-6 left-6 z-20 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/80 backdrop-blur-md border border-white/10 text-white shadow-lg">
-                  <span className="w-2 h-2 rounded-full bg-brand" />
-                  <span className="text-xs font-medium font-[family-name:var(--font-jetbrains)]">Mesajify 3D Mimarî İnfografiği</span>
-                </div>
               </div>
             )}
           </div>

@@ -225,30 +225,16 @@ export function Scene03Sectors() {
               />
             )}
 
-            {/* Top Brand Watermark Badge */}
-            <div className="absolute top-4 left-4 z-20 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/80 backdrop-blur-md border border-white/10">
-              <Image
-                src="/logos/mesajify_app_icon_corporate_squircle.png"
-                width={16}
-                height={16}
-                alt="Mesajify"
-                className="rounded-sm"
-              />
-              <span className="text-[11px] font-[family-name:var(--font-jetbrains)] text-white/90 font-medium">
-                {data.video ? '9:16 Veo Video' : 'AI Kampanya Görseli'}
-              </span>
-            </div>
-
             {/* Bottom Gradient Information Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent flex flex-col justify-end p-6 z-10">
-              <span className="text-xs font-[family-name:var(--font-jetbrains)] text-brand uppercase font-semibold tracking-wider">
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-end p-6 z-10">
+              <span className="text-xs font-semibold text-brand tracking-wider uppercase">
                 {data.tag}
               </span>
               <h3 className="text-xl font-bold text-white mt-1">
                 {data.title}
               </h3>
-              <p className="text-xs text-white/60 mt-2 font-[family-name:var(--font-jetbrains)]">
-                Otomatik Altyazı · 9:16 Format · WhatsApp Toplu Dağıtıma Hazır
+              <p className="text-xs text-white/70 mt-1.5 leading-relaxed">
+                {data.video ? '9:16 Dikey Tanıtım Videosu · WhatsApp Toplu İletim' : 'AI Kampanya Görseli · WhatsApp Toplu İletim'}
               </p>
             </div>
 

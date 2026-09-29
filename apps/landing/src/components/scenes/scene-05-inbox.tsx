@@ -83,110 +83,87 @@ export function Scene05Inbox() {
               priority
               className="object-cover object-top"
             />
+          </div>
 
-            {/* Hotspot 01: Hatlar ve Konuşmalar */}
-            <div className="absolute top-[28%] left-[18%] group cursor-pointer z-20">
-              <div className="relative flex items-center justify-center">
-                <span className="absolute w-8 h-8 rounded-full bg-brand/30 animate-ping" />
-                <span className="w-7 h-7 rounded-full bg-brand text-white flex items-center justify-center font-bold text-xs shadow-lg">
-                  01
-                </span>
-              </div>
-              <div className="absolute left-10 top-0 bg-[#07100C] text-white text-xs px-3 py-1.5 rounded-lg whitespace-nowrap opacity-90 shadow-xl border border-white/10 hidden sm:block">
-                Tüm hatlardan gelen sohbetler
-              </div>
-            </div>
-
-            {/* Hotspot 02: Müşteri Profili */}
-            <div className="absolute top-[35%] left-[54%] group cursor-pointer z-20">
-              <div className="relative flex items-center justify-center">
-                <span className="absolute w-8 h-8 rounded-full bg-brand/30 animate-ping delay-100" />
-                <span className="w-7 h-7 rounded-full bg-brand text-white flex items-center justify-center font-bold text-xs shadow-lg">
-                  02
-                </span>
-              </div>
-              <div className="absolute left-10 top-0 bg-[#07100C] text-white text-xs px-3 py-1.5 rounded-lg whitespace-nowrap opacity-90 shadow-xl border border-white/10 hidden sm:block">
-                Hangi kampanyaya yanıt verdi?
-              </div>
-            </div>
-
-            {/* Hotspot 03: Hızlı Yanıt */}
-            <div className="absolute top-[68%] left-[78%] group cursor-pointer z-20">
-              <div className="relative flex items-center justify-center">
-                <span className="absolute w-8 h-8 rounded-full bg-brand/30 animate-ping delay-200" />
-                <span className="w-7 h-7 rounded-full bg-brand text-white flex items-center justify-center font-bold text-xs shadow-lg">
-                  03
-                </span>
-              </div>
-              <div className="absolute -left-28 -top-8 bg-[#07100C] text-white text-xs px-3 py-1.5 rounded-lg whitespace-nowrap opacity-90 shadow-xl border border-white/10 hidden sm:block">
-                Tek tıkla anında yanıtla
-              </div>
-            </div>
-
-            {/* Floating Live Conversation Card Overlay with Multi-Line Selector */}
-            <div className="absolute bottom-6 left-6 z-20 max-w-md bg-white/95 backdrop-blur-md p-5 rounded-2xl border border-hairline shadow-2xl hidden md:block">
-              {/* Mini Line Tabs */}
-              <div className="flex items-center gap-1.5 mb-3.5 pb-2.5 border-b border-hairline">
+          {/* Interactive Multi-Line Live Dialogue Drawer */}
+          <div className="bg-surface/60 border-t border-hairline p-6 md:p-8">
+            <div className="flex flex-col lg:flex-row items-stretch gap-6">
+              {/* Left: Hat Switcher Column */}
+              <div className="w-full lg:w-72 shrink-0 space-y-2">
+                <div className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-2">
+                  Bağlı Hatlar ve Gelenler
+                </div>
                 {CONVERSATIONS.map((c, idx) => (
                   <button
                     key={c.name}
                     onClick={() => setActiveConv(idx)}
-                    className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all ${
+                    className={`w-full p-3 rounded-xl border text-left transition-all flex items-center justify-between gap-3 ${
                       activeConv === idx
-                        ? 'bg-ink text-white shadow-xs'
-                        : 'bg-surface text-ink-muted hover:text-ink border border-hairline'
+                        ? 'bg-white border-brand shadow-sm ring-1 ring-brand/20'
+                        : 'bg-white/60 border-hairline hover:bg-white text-ink-muted'
                     }`}
                   >
-                    Hat {idx + 1}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
+                        activeConv === idx ? 'bg-brand text-white' : 'bg-surface text-ink-muted'
+                      }`}>
+                        0{idx + 1}
+                      </div>
+                      <div className="truncate">
+                        <div className={`text-xs font-semibold truncate ${activeConv === idx ? 'text-ink' : 'text-ink-muted'}`}>
+                          {c.line.replace(' (', ' · ').replace(')', '')}
+                        </div>
+                        <div className="text-[11px] text-ink-muted truncate">{c.name}</div>
+                      </div>
+                    </div>
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
                   </button>
                 ))}
-                <span className="text-[10px] text-ink-muted ml-auto font-mono">3 Hat Canlı</span>
               </div>
 
-              {/* Current Conversation Info */}
-              <div className="flex items-center gap-2.5 pb-2.5 border-b border-hairline">
-                <div className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold text-xs font-[family-name:var(--font-jetbrains)]">
-                  0{activeConv + 1}
-                </div>
+              {/* Right: Live Dialogue & Quick Response Card */}
+              <div className="flex-1 bg-white p-5 md:p-6 rounded-2xl border border-hairline shadow-xs flex flex-col justify-between">
                 <div>
-                  <div className="text-xs font-semibold text-ink flex items-center gap-1.5">
-                    {current.name}
-                    <span className="text-[10px] text-ink-muted">· {current.phone}</span>
+                  <div className="flex items-center justify-between pb-3 border-b border-hairline">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-brand/10 text-brand flex items-center justify-center font-bold text-sm">
+                        {current.name.charAt(0)}
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-ink flex items-center gap-2">
+                          {current.name}
+                          <span className="text-xs text-ink-muted font-normal">{current.phone}</span>
+                        </div>
+                        <div className="text-xs text-brand font-medium">{current.line}</div>
+                      </div>
+                    </div>
+                    <span className="text-xs font-semibold bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full border border-emerald-100">
+                      {current.badge}
+                    </span>
                   </div>
-                  <div className="text-[10px] text-brand font-medium">{current.line} Üzerinden Geldi</div>
+
+                  {/* Message Exchange */}
+                  <div className="mt-4 space-y-3">
+                    <div className="max-w-[85%] bg-surface p-3.5 rounded-2xl rounded-tl-sm text-xs text-ink leading-relaxed">
+                      <span className="block text-[10px] text-ink-muted mb-1">Müşteri Mesajı</span>
+                      {current.customerMsg}
+                    </div>
+                    <div className="max-w-[85%] ml-auto bg-emerald-50 text-emerald-900 border border-emerald-100 p-3.5 rounded-2xl rounded-tr-sm text-xs leading-relaxed">
+                      <span className="block text-[10px] text-emerald-700 mb-1 font-semibold">Senin Hızlı Yanıtın</span>
+                      {current.reply}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-hairline flex items-center justify-between text-xs text-ink-muted">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <span>WhatsApp Web Anlık Senkronizasyon</span>
+                  </div>
+                  <span className="font-medium text-ink">Ortalama Yanıt: &lt; 30 sn</span>
                 </div>
               </div>
-
-              {/* Chat Dialogue */}
-              <div className="mt-2.5 space-y-1.5">
-                <p className="text-xs text-ink bg-surface p-2 rounded-lg leading-snug">
-                  {current.customerMsg}
-                </p>
-                <p className="text-xs text-emerald-800 bg-emerald-50 p-2 rounded-lg leading-snug font-medium border border-emerald-100">
-                  {current.reply}
-                </p>
-              </div>
-
-              {/* Outcome Bar */}
-              <div className="mt-2.5 pt-2 border-t border-hairline flex items-center justify-between text-[10px] text-ink-muted">
-                <span className="text-emerald-600 font-semibold font-[family-name:var(--font-jetbrains)]">● Canlı Senkronize</span>
-                <span className="text-ink font-medium bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded border border-emerald-100 font-[family-name:var(--font-jetbrains)]">
-                  {current.badge}
-                </span>
-              </div>
             </div>
-
-          </div>
-
-          {/* Under-frame value bar */}
-          <div className="bg-white p-6 md:p-8 border-t border-hairline flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-3 h-3 rounded-full bg-emerald-500" />
-              <span className="text-sm font-medium text-ink">Canlı Senkronize WhatsApp Web Entegrasyonu</span>
-            </div>
-            <span className="text-xs font-[family-name:var(--font-jetbrains)] text-ink-muted">
-              Hızlı yanıt şablonları · Satış etiketleri · Tek ekrandan yönetim
-            </span>
           </div>
 
         </div>

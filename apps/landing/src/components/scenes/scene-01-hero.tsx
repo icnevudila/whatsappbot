@@ -194,47 +194,6 @@ export function Scene01Hero() {
                   playsInline
                   className="w-full h-full object-cover object-top"
                 />
-
-                {/* Live Floating Badge 1: Connected WhatsApp Lines */}
-                <div className="absolute top-4 left-4 z-20 flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-black/80 backdrop-blur-md border border-white/10 text-white">
-                  <span className="w-2 h-2 rounded-full bg-brand" />
-                  <div>
-                    <div className="text-[12px] font-medium leading-none">3 Hat Bağlı</div>
-                    <div className="text-[10px] text-white/50 font-[family-name:var(--font-jetbrains)] mt-0.5">Rotasyon Aktif</div>
-                  </div>
-                </div>
-
-                {/* Live Floating Badge 2: Delivery Engine Rate */}
-                <div className="absolute top-4 right-4 z-20 flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-black/80 backdrop-blur-md border border-white/10 text-white">
-                  <span className="text-[11px] font-mono text-emerald-400 font-semibold">%99.4</span>
-                  <div>
-                    <div className="text-[12px] font-medium leading-none">2.291 Gönderim</div>
-                    <div className="text-[10px] text-white/50 font-[family-name:var(--font-jetbrains)] mt-0.5">Teslim Edildi</div>
-                  </div>
-                </div>
-
-                {/* Live Floating Badge 3: Creative Studio Ready */}
-                <div className="absolute bottom-4 left-4 z-20 hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-black/80 backdrop-blur-md border border-white/10 text-white">
-                  <span className="w-2 h-2 rounded-full bg-brand" />
-                  <div>
-                    <div className="text-[12px] font-medium leading-none">Panel İçi Stüdyo</div>
-                    <div className="text-[10px] text-white/50 font-[family-name:var(--font-jetbrains)] mt-0.5">9:16 Video & Görsel Hazır</div>
-                  </div>
-                </div>
-
-                {/* Live Floating Badge 4: Central Inbox Response */}
-                <div className="absolute bottom-4 right-4 z-20 hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-black/80 backdrop-blur-md border border-white/10 text-white">
-                  <span className="w-2 h-2 rounded-full bg-blue-400" />
-                  <div>
-                    <div className="text-[12px] font-medium leading-none">Gelen Kutusu (Inbox)</div>
-                    <div className="text-[10px] text-white/50 font-[family-name:var(--font-jetbrains)] mt-0.5">324 Müşteri Yanıtı</div>
-                  </div>
-                </div>
-
-                {/* Mesajify Watermark in corner */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-0 group-hover:opacity-10 transition-opacity duration-300">
-                  <Image src="/logos/mesajify-logo.png" width={200} height={40} alt="Mesajify" className="brightness-200" />
-                </div>
               </div>
 
               {/* Bottom Console Status Bar */}

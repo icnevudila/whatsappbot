@@ -55,7 +55,7 @@ export function Scene08TrustFaq() {
               {['Kontrollü', 'Görünür', 'Ölçülebilir', 'Yönetilebilir'].map((badge) => (
                 <span
                   key={badge}
-                  className="px-3.5 py-1.5 rounded-full bg-white/5 text-xs font-[family-name:var(--font-jetbrains)] border border-white/10 text-white/80"
+                  className="px-3.5 py-1.5 rounded-full bg-white/5 text-xs font-medium border border-white/10 text-white/80"
                 >
                   {badge}
                 </span>

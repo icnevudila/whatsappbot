@@ -27,24 +27,6 @@ export function Scene02CreativeStudio() {
             Ajansa veya karmaşık video editörlerine gerek yok. Ürün fotoğrafınızı yükleyin; Mesajify panel içinde reklam görselinizi, 9:16 dikey tanıtım videonuzu ve Türkçe seslendirmesini toplu WhatsApp gönderimine hazır hale getirsin.
           </p>
 
-          {/* Inline creation steps — replacing old creative-engine checklist */}
-          <div className="mt-16 flex flex-wrap gap-x-3 gap-y-2 text-sm font-[family-name:var(--font-jetbrains)] text-white/30">
-            {[
-              'Ürün fotoğrafı',
-              'AI kreatif',
-              '9:16 video',
-              'Türkçe ses',
-              'Altyazı',
-              'Marka',
-              'WhatsApp\'a hazır',
-            ].map((step, i) => (
-              <span key={i} className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-brand inline-block" />
-                {step}
-                {i < 6 && <span className="text-white/15 ml-1">→</span>}
-              </span>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -52,24 +34,23 @@ export function Scene02CreativeStudio() {
       <div ref={videosRef} className="reveal max-w-[1400px] mx-auto px-6 pb-24">
         
         {/* Mode Switcher Tabs */}
-        <div className="flex justify-center mb-10">
-          <div className="inline-flex p-1 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+        <div className="flex justify-center mb-12">
+          <div className="inline-flex p-1 rounded-xl bg-white/5 border border-white/10">
             <button
               onClick={() => setStudioMode('showcase')}
-              className={`px-5 py-2 rounded-xl text-xs md:text-sm font-semibold transition-all ${
-                studioMode === 'showcase' ? 'bg-brand text-white shadow-md' : 'text-white/60 hover:text-white'
+              className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                studioMode === 'showcase' ? 'bg-brand text-white shadow-sm' : 'text-white/60 hover:text-white'
               }`}
             >
-              Canlı Video Vitrini (3 Sektör)
+              Video Vitrini
             </button>
             <button
               onClick={() => setStudioMode('process')}
-              className={`px-5 py-2 rounded-xl text-xs md:text-sm font-semibold transition-all flex items-center gap-1.5 ${
-                studioMode === 'process' ? 'bg-brand text-white shadow-md' : 'text-white/60 hover:text-white'
+              className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                studioMode === 'process' ? 'bg-brand text-white shadow-sm' : 'text-white/60 hover:text-white'
               }`}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-              Uçtan Uca Süreç (Fotoğraf → WhatsApp)
+              Fotoğraftan Kampanyaya
             </button>
           </div>
         </div>
@@ -77,11 +58,7 @@ export function Scene02CreativeStudio() {
         {studioMode === 'showcase' ? (
           <div className="flex flex-col md:flex-row items-end justify-center gap-6 animate-fade-in">
             {/* Left — Restaurant / Bakery */}
-            <div className="w-full md:w-[260px] aspect-[9/16] rounded-2xl overflow-hidden bg-dark-surface border border-white/10 shrink-0 opacity-80 hover:opacity-100 transition-opacity duration-500 relative group">
-              <div className="absolute top-3 left-3 z-20 flex items-center gap-2 px-2.5 py-1 rounded-full bg-black/80 backdrop-blur-md border border-white/10">
-                <span className="w-1.5 h-1.5 rounded-full bg-brand" />
-                <span className="text-[10px] font-[family-name:var(--font-jetbrains)] text-white/90 font-medium">Gastronomi · 9:16 Video</span>
-              </div>
+            <div className="w-full md:w-[260px] aspect-[9/16] rounded-2xl overflow-hidden bg-dark-surface border border-white/10 shrink-0 opacity-85 hover:opacity-100 transition-opacity duration-300 relative group">
               <video
                 autoPlay
                 muted
@@ -95,11 +72,7 @@ export function Scene02CreativeStudio() {
             </div>
 
             {/* Center — Product / Brand Hero */}
-            <div className="w-full md:w-[320px] aspect-[9/16] rounded-3xl overflow-hidden bg-dark-surface border border-white/15 shadow-2xl shadow-brand/10 shrink-0 relative z-10 group">
-              <div className="absolute top-4 left-4 z-20 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/80 backdrop-blur-md border border-white/15">
-                <span className="w-2 h-2 rounded-full bg-brand" />
-                <span className="text-[11px] font-[family-name:var(--font-jetbrains)] text-white font-medium">Mesajify Stüdyo · 9:16 Tanıtım</span>
-              </div>
+            <div className="w-full md:w-[320px] aspect-[9/16] rounded-3xl overflow-hidden bg-dark-surface border border-white/15 shadow-2xl shrink-0 relative z-10 group">
               <video
                 autoPlay
                 muted
@@ -113,11 +86,7 @@ export function Scene02CreativeStudio() {
             </div>
 
             {/* Right — Tech / E-commerce Headphones */}
-            <div className="w-full md:w-[260px] aspect-[9/16] rounded-2xl overflow-hidden bg-dark-surface border border-white/10 shrink-0 opacity-80 hover:opacity-100 transition-opacity duration-500 relative group">
-              <div className="absolute top-3 left-3 z-20 flex items-center gap-2 px-2.5 py-1 rounded-full bg-black/80 backdrop-blur-md border border-white/10">
-                <span className="w-1.5 h-1.5 rounded-full bg-brand" />
-                <span className="text-[10px] font-[family-name:var(--font-jetbrains)] text-white/90 font-medium">E-Ticaret · 9:16 Video</span>
-              </div>
+            <div className="w-full md:w-[260px] aspect-[9/16] rounded-2xl overflow-hidden bg-dark-surface border border-white/10 shrink-0 opacity-85 hover:opacity-100 transition-opacity duration-300 relative group">
               <video
                 autoPlay
                 muted
