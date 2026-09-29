@@ -149,7 +149,7 @@ export function Scene04Delivery() {
                       01
                     </div>
                     <div>
-                      <div className="text-sm font-semibold text-ink">Ana Satış Hattı</div>
+                      <div className="text-sm font-semibold text-ink">Ana İşletme Hattı</div>
                       <div className="text-[11px] text-ink-muted">0532 ••• •• 11</div>
                     </div>
                   </div>

@@ -66,7 +66,7 @@ export function Navbar() {
             Giriş Yap
           </a>
           <a
-            href="#"
+            href="https://app.mesajify.com/giris"
             className="text-sm font-medium bg-brand text-white px-5 py-2.5 rounded-[10px] hover:bg-brand-hover transition-colors shadow-sm"
           >
             Hemen Başla &rarr;
@@ -125,7 +125,7 @@ export function Navbar() {
               Giriş Yap
             </a>
             <a
-              href="#"
+              href="https://app.mesajify.com/giris"
               className="text-center py-4 text-lg font-medium bg-brand text-white rounded-[10px]"
             >
               Hemen Başla &rarr;

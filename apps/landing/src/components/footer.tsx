@@ -21,42 +21,39 @@ export function Footer() {
           <div>
             <h4 className="font-medium text-[#090B0A] mb-4">Ürün</h4>
             <ul className="space-y-3">
-              <li><a href="#" className="text-sm text-gray-500 hover:text-[#090B0A]">Özellikler</a></li>
-              <li><a href="#" className="text-sm text-gray-500 hover:text-[#090B0A]">Entegrasyonlar</a></li>
-              <li><a href="#" className="text-sm text-gray-500 hover:text-[#090B0A]">Fiyatlandırma</a></li>
-              <li><a href="#" className="text-sm text-gray-500 hover:text-[#090B0A]">Değişiklikler</a></li>
+              <li><a href="#urun" className="text-sm text-gray-500 hover:text-[#090B0A]">Mesajify Panel</a></li>
+              <li><a href="#nasil-calisir" className="text-sm text-gray-500 hover:text-[#090B0A]">AI Kreatif Stüdyosu</a></li>
+              <li><a href="#fiyatlandirma" className="text-sm text-gray-500 hover:text-[#090B0A]">Sıkça Sorulan Sorular</a></li>
+              <li><a href="https://app.mesajify.com/giris" className="text-sm text-gray-500 hover:text-[#090B0A]">Giriş Yap</a></li>
             </ul>
           </div>
           
           <div>
-            <h4 className="font-medium text-[#090B0A] mb-4">Çözümler</h4>
+            <h4 className="font-medium text-[#090B0A] mb-4">Sektörler</h4>
             <ul className="space-y-3">
-              <li><a href="#" className="text-sm text-gray-500 hover:text-[#090B0A]">E-ticaret</a></li>
-              <li><a href="#" className="text-sm text-gray-500 hover:text-[#090B0A]">Perakende</a></li>
-              <li><a href="#" className="text-sm text-gray-500 hover:text-[#090B0A]">Ajanslar</a></li>
+              <li><a href="#cozumler" className="text-sm text-gray-500 hover:text-[#090B0A]">E-Ticaret & Ürün</a></li>
+              <li><a href="#cozumler" className="text-sm text-gray-500 hover:text-[#090B0A]">Restoran & Fırın</a></li>
+              <li><a href="#cozumler" className="text-sm text-gray-500 hover:text-[#090B0A]">Otomotiv & Servis</a></li>
+              <li><a href="#cozumler" className="text-sm text-gray-500 hover:text-[#090B0A]">Emlak & Portföy</a></li>
             </ul>
           </div>
           
           <div>
-            <h4 className="font-medium text-[#090B0A] mb-4">Kaynaklar</h4>
+            <h4 className="font-medium text-[#090B0A] mb-4">Özellikler</h4>
             <ul className="space-y-3">
-              <li><a href="#" className="text-sm text-gray-500 hover:text-[#090B0A]">Blog</a></li>
-              <li><a href="#" className="text-sm text-gray-500 hover:text-[#090B0A]">Rehberler</a></li>
-              <li><a href="#" className="text-sm text-gray-500 hover:text-[#090B0A]">Yardım Merkezi</a></li>
+              <li><a href="#urun" className="text-sm text-gray-500 hover:text-[#090B0A]">Çoklu WhatsApp Havuzu</a></li>
+              <li><a href="#nasil-calisir" className="text-sm text-gray-500 hover:text-[#090B0A]">9:16 Video Üretimi</a></li>
+              <li><a href="#urun" className="text-sm text-gray-500 hover:text-[#090B0A]">Akıllı Hat Rotasyonu</a></li>
+              <li><a href="#urun" className="text-sm text-gray-500 hover:text-[#090B0A]">Merkezi Gelen Kutusu</a></li>
             </ul>
           </div>
           
           <div>
-            <h4 className="font-medium text-[#090B0A] mb-4">Şirket</h4>
+            <h4 className="font-medium text-[#090B0A] mb-4">Yasal</h4>
             <ul className="space-y-3">
-              <li><a href="#" className="text-sm text-gray-500 hover:text-[#090B0A]">Hakkımızda</a></li>
-              <li><a href="#" className="text-sm text-gray-500 hover:text-[#090B0A]">İletişim</a></li>
-            </ul>
-            <h4 className="font-medium text-[#090B0A] mb-4 mt-8">Yasal</h4>
-            <ul className="space-y-3">
-              <li><a href="#" className="text-sm text-gray-500 hover:text-[#090B0A]">Gizlilik</a></li>
-              <li><a href="#" className="text-sm text-gray-500 hover:text-[#090B0A]">Kullanım Koşulları</a></li>
-              <li><a href="#" className="text-sm text-gray-500 hover:text-[#090B0A]">KVKK</a></li>
+              <li><a href="https://app.mesajify.com/giris" className="text-sm text-gray-500 hover:text-[#090B0A]">Gizlilik Politikası</a></li>
+              <li><a href="https://app.mesajify.com/giris" className="text-sm text-gray-500 hover:text-[#090B0A]">Kullanım Koşulları</a></li>
+              <li><a href="https://app.mesajify.com/giris" className="text-sm text-gray-500 hover:text-[#090B0A]">KVKK Aydınlatma</a></li>
             </ul>
           </div>
         </div>

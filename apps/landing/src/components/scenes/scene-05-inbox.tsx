@@ -104,7 +104,7 @@ export function Scene05Inbox() {
                     Ayşe Yıldız
                     <span className="text-[10px] text-ink-muted">· +90 532 ••• •• 78</span>
                   </div>
-                  <div className="text-[10px] text-brand font-medium">Hat 01 (Ana Satış) Üzerinden Geldi</div>
+                  <div className="text-[10px] text-brand font-medium">Hat 01 (İşletme Hattı) Üzerinden Geldi</div>
                 </div>
               </div>
               <div className="mt-2.5 space-y-1.5">
