@@ -86,7 +86,7 @@ export function PhoneSimulator() {
              <div className="bg-white p-2 rounded-xl rounded-tl-none max-w-[85%] shadow-sm relative overflow-hidden">
                 <div className="relative aspect-square w-full rounded-lg overflow-hidden bg-gray-100">
                   <Image 
-                    src="/landing/studio/product-poster.jpg"
+                    src="/landing/studio/hero-source-product.png"
                     alt="Product source"
                     fill
                     className="object-cover"
