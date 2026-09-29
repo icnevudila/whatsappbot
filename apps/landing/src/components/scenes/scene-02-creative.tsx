@@ -57,7 +57,7 @@ export function Scene02CreativeStudio() {
               muted
               loop
               playsInline
-              poster="/landing/studio/restaurant-poster.jpg"
+              poster="/landing/studio/bakery-croissant-ad.png"
               className="w-full h-full object-cover"
             >
               <source src="/landing/studio/restaurant.mp4" type="video/mp4" />
