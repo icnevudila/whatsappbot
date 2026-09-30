@@ -95,27 +95,27 @@ export function Scene03Sectors() {
       <div className="max-w-[1240px] mx-auto px-6">
         
         {/* Headline */}
-        <div ref={headRef} className="reveal text-center max-w-3xl mx-auto mb-16">
-          <p className="font-[family-name:var(--font-jetbrains)] text-[11px] font-medium tracking-[0.12em] uppercase text-brand font-semibold mb-6">
-            HER SEKTÖRE ÖZEL KAMPANYA AKIŞI
+        <div ref={headRef} className="reveal text-center max-w-3xl mx-auto mb-10 sm:mb-16">
+          <p className="text-xs font-semibold text-brand tracking-normal uppercase mb-4 sm:mb-6">
+            Sektörel Senaryolar
           </p>
-          <h2 className="text-[clamp(36px,5vw,72px)] leading-[1.06] font-[600] tracking-tight text-ink mb-6">
+          <h2 className="text-[clamp(32px,5vw,72px)] leading-[1.06] font-[600] tracking-tight text-ink mb-4 sm:mb-6">
             İşletmeni seç.
             <br />
             Kampanyanı gör.
           </h2>
-          <p className="text-xl text-ink-muted leading-relaxed">
+          <p className="text-base sm:text-lg md:text-xl text-ink-muted leading-relaxed">
             Mesajify arayüzünden oluşturulan reklam görseli, WhatsApp toplu gönderim akışı ve gelen müşteri yanıtının satışa dönüşü tek vitrinde.
           </p>
         </div>
 
         {/* Sector selection pills */}
-        <div className="flex overflow-x-auto gap-2 justify-start lg:justify-center mb-16 pb-2 scrollbar-none">
+        <div className="flex overflow-x-auto gap-2 justify-start lg:justify-center mb-10 sm:mb-16 pb-2 scrollbar-none px-1">
           {sectors.map((s, i) => (
             <button
               key={s.id}
               onClick={() => setActive(i)}
-              className={`px-6 py-3 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300 ${
+              className={`px-4 sm:px-6 py-2 sm:py-3 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-all duration-300 ${
                 active === i
                   ? 'bg-ink text-white shadow-lg scale-105'
                   : 'bg-surface text-ink-muted hover:text-ink border border-hairline'
@@ -127,15 +127,15 @@ export function Scene03Sectors() {
         </div>
 
         {/* Two-Column Cinematic Showcase: Chat Flow (Left) + Visual Media (Right) */}
-        <div className="grid lg:grid-cols-12 gap-8 items-center max-w-5xl mx-auto">
+        <div className="grid lg:grid-cols-12 gap-6 sm:gap-8 items-center max-w-5xl mx-auto">
           
           {/* Left Column: Realistic WhatsApp Dialogue & Conversion */}
-          <div className="lg:col-span-7 bg-[#efeae2] rounded-3xl p-6 md:p-8 border border-hairline shadow-lg flex flex-col justify-between min-h-[480px]">
+          <div className="lg:col-span-7 bg-[#efeae2] rounded-3xl p-4 sm:p-6 md:p-8 border border-hairline shadow-lg flex flex-col justify-between min-h-[400px] sm:min-h-[480px]">
             
             {/* Header info */}
             <div className="flex items-center justify-between pb-4 border-b border-black/10 mb-6">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+                <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
                   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                   </svg>
@@ -145,10 +145,10 @@ export function Scene03Sectors() {
                     Mesajify İşletme Hattı
                     <span className="w-2 h-2 rounded-full bg-brand inline-block" />
                   </div>
-                  <div className="text-xs text-ink-muted font-[family-name:var(--font-jetbrains)]">{data.badge}</div>
+                  <div className="text-xs text-ink-muted font-medium">{data.badge}</div>
                 </div>
               </div>
-              <span className="text-xs font-[family-name:var(--font-jetbrains)] text-brand font-medium bg-white px-2.5 py-1 rounded-full border border-hairline shadow-xs">
+              <span className="text-xs text-brand font-semibold bg-white px-2.5 py-1 rounded-full border border-hairline shadow-xs">
                 {data.stats}
               </span>
             </div>
@@ -195,14 +195,14 @@ export function Scene03Sectors() {
 
             {/* Bottom Conversion Bar (Mesajify Real Panel Action) */}
             <div className="mt-6 pt-4 border-t border-black/10 flex items-center justify-between text-xs bg-white/80 backdrop-blur-sm p-3 rounded-xl border border-hairline">
-              <span className="text-emerald-700 font-medium font-[family-name:var(--font-jetbrains)]">{data.conversion}</span>
-              <span className="text-[11px] text-ink-muted">Gelen Kutusu (Inbox)</span>
+              <span className="text-emerald-700 font-semibold">{data.conversion}</span>
+              <span className="text-[11px] text-ink-muted">Ortak Gelen Kutusu</span>
             </div>
 
           </div>
 
           {/* Right Column: Sector Campaign Visual Media with Mesajify Brand Overlay */}
-          <div className="lg:col-span-5 relative w-full aspect-[9/14] rounded-3xl overflow-hidden bg-[#07100C] border border-hairline-strong shadow-xl group">
+          <div className="lg:col-span-5 relative w-full max-w-sm mx-auto lg:max-w-none aspect-[9/14] rounded-3xl overflow-hidden bg-[#07100C] border border-hairline-strong shadow-xl group">
             
             {/* Sector Media: Bot-Generated Veo Video or Bot-Generated Visual */}
             {data.video ? (

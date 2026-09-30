@@ -51,29 +51,29 @@ export function Scene06Explorer() {
       <div className="max-w-[1240px] mx-auto px-6">
         
         {/* Headline */}
-        <div ref={headRef} className="reveal text-center max-w-3xl mx-auto mb-16">
-          <p className="font-[family-name:var(--font-jetbrains)] text-[11px] font-medium tracking-[0.12em] uppercase text-ink-muted mb-6">
-            GERÇEK UYGULAMA DENEYİMİ
+        <div ref={headRef} className="reveal text-center max-w-3xl mx-auto mb-10 sm:mb-16">
+          <p className="text-xs font-semibold text-brand tracking-normal uppercase mb-4 sm:mb-6">
+            Uygulama Paneli
           </p>
-          <h2 className="text-[clamp(36px,5.5vw,76px)] leading-[1.04] font-[600] tracking-tight text-ink mb-6">
+          <h2 className="text-[clamp(32px,5.5vw,76px)] leading-[1.08] font-[600] tracking-tight text-ink mb-4 sm:mb-6">
             Demo değil.
             <br />
             Gerçek Mesajify.
           </h2>
-          <p className="text-xl text-ink-muted max-w-xl mx-auto leading-relaxed">
+          <p className="text-base sm:text-lg md:text-xl text-ink-muted max-w-xl mx-auto leading-relaxed">
             Hayali mockup'lar değil, bugün binlerce mesajın yönetildiği gerçek Mesajify kontrol panelini keşfedin.
           </p>
         </div>
 
         {/* Tab Pills */}
-        <div className="flex flex-wrap justify-center gap-2 mb-12">
+        <div className="flex overflow-x-auto sm:flex-wrap justify-start sm:justify-center gap-2 mb-8 sm:mb-12 pb-2 scrollbar-none px-1">
           {TABS.map((tab) => {
             const isActive = activeTab.id === tab.id
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab)}
-                className={`px-6 py-3 rounded-full text-sm font-medium transition-all duration-200 ${
+                className={`px-4 sm:px-6 py-2 sm:py-3 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-all duration-200 ${
                   isActive
                     ? 'bg-ink text-white shadow-md'
                     : 'bg-surface text-ink-muted hover:text-ink border border-hairline'
@@ -86,19 +86,19 @@ export function Scene06Explorer() {
         </div>
 
         {/* Big Browser Frame */}
-        <div className="relative mx-auto max-w-[1140px] rounded-3xl border border-hairline-strong bg-white shadow-2xl overflow-hidden">
+        <div className="relative mx-auto max-w-[1140px] rounded-2xl sm:rounded-3xl border border-hairline-strong bg-white shadow-2xl overflow-hidden">
           
           {/* Header */}
-          <div className="h-11 bg-surface border-b border-hairline flex items-center justify-between px-6">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-black/15" />
-              <div className="w-3 h-3 rounded-full bg-black/15" />
-              <div className="w-3 h-3 rounded-full bg-black/15" />
+          <div className="h-10 sm:h-11 bg-surface border-b border-hairline flex items-center justify-between px-4 sm:px-6">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-black/15" />
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-black/15" />
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-black/15" />
             </div>
-            <div className="px-4 py-1 rounded-md bg-white border border-hairline text-xs font-[family-name:var(--font-jetbrains)] text-ink-muted">
+            <div className="px-3 sm:px-4 py-0.5 sm:py-1 rounded-md bg-white border border-hairline text-[11px] sm:text-xs font-[family-name:var(--font-jetbrains)] text-ink-muted">
               app.mesajify.com/{activeTab.id}
             </div>
-            <div className="w-10" />
+            <div className="w-6 sm:w-10" />
           </div>
 
           {/* Screenshot Container */}

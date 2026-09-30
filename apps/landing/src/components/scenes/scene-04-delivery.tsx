@@ -46,30 +46,30 @@ export function Scene04Delivery() {
       <div className="max-w-[1240px] mx-auto px-6">
         
         {/* Story Headline */}
-        <div ref={headRef} className="reveal text-center max-w-3xl mx-auto mb-20">
-          <p className="font-[family-name:var(--font-jetbrains)] text-[11px] font-medium tracking-[0.12em] uppercase text-brand font-semibold mb-6">
-            ÇOKLU HAT HAVUZU & TOPLU GÖNDERİM MOTORU
+        <div ref={headRef} className="reveal text-center max-w-3xl mx-auto mb-12 sm:mb-20">
+          <p className="text-xs font-semibold text-brand tracking-normal uppercase mb-4 sm:mb-6">
+            Hat Havuzu & Dağıtım
           </p>
-          <h2 className="text-[clamp(36px,5.5vw,76px)] leading-[1.04] font-[600] tracking-tight text-ink mb-6">
+          <h2 className="text-[clamp(32px,5.5vw,76px)] leading-[1.08] font-[600] tracking-tight text-ink mb-4 sm:mb-6">
             Liste hazır.
             <br />
             Hatlar hazır.
             <br />
             Kampanya hazır.
           </h2>
-          <p className="text-xl text-ink-muted max-w-2xl mx-auto leading-relaxed">
+          <p className="text-base sm:text-lg md:text-xl text-ink-muted max-w-2xl mx-auto leading-relaxed">
             Tek bir numaraya binlerce mesaj yükleyip riske girmeyin. Birden fazla bağlı WhatsApp hattınızı tek havuzda toplayın. Mesajify listenizi doğrulasın ve toplu gönderimi hatlarınız arasında zamana yayarak dengeli paylaştırsın.
           </p>
         </div>
 
         {/* SIGNATURE MOMENT 02: Flow from Excel to Line Routing */}
-        <div className="grid lg:grid-cols-12 gap-8 items-stretch mb-16">
+        <div className="grid lg:grid-cols-12 gap-6 sm:gap-8 items-stretch mb-12 sm:mb-16">
           
           {/* Step 1: Contact Validation Engine */}
-          <div className="lg:col-span-5 bg-white rounded-3xl p-8 border border-hairline shadow-sm flex flex-col justify-between">
+          <div className="lg:col-span-5 bg-white rounded-3xl p-6 sm:p-8 border border-hairline shadow-sm flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-6">
-                <span className="text-xs font-[family-name:var(--font-jetbrains)] uppercase px-3 py-1 rounded-full bg-surface text-ink-muted border border-hairline">
+                <span className="text-xs font-semibold uppercase px-3 py-1 rounded-full bg-surface text-ink-muted border border-hairline">
                   01 · Liste Doğrulama
                 </span>
                 <span className="text-xs text-brand font-medium">Otomatik Temizleme</span>
@@ -79,7 +79,7 @@ export function Scene04Delivery() {
               
               {/* Progress bar */}
               <div className="space-y-2 mb-6">
-                <div className="flex justify-between text-xs font-[family-name:var(--font-jetbrains)] text-ink-muted">
+                <div className="flex justify-between text-xs text-ink-muted font-medium">
                   <span>2.418 Numara Taranıyor</span>
                   <span className="text-ink font-semibold">{valProgress}%</span>
                 </div>
@@ -119,16 +119,16 @@ export function Scene04Delivery() {
             <div className="w-14 h-14 rounded-2xl bg-white border border-hairline flex items-center justify-center shadow-md p-2 hover:scale-105 transition-transform duration-300">
               <Image src="/logos/mesajify_app_icon_corporate_squircle.png" width={36} height={36} alt="Mesajify Motor" className="rounded-lg" />
             </div>
-            <span className="text-[11px] font-[family-name:var(--font-jetbrains)] uppercase mt-3 tracking-widest text-brand font-semibold">
-              MESAJIFY MOTOR
+            <span className="text-xs font-semibold text-brand mt-3 uppercase tracking-wide">
+              Dağıtım Motoru
             </span>
           </div>
 
           {/* Step 2: Smart Multi-Line Balancing */}
-          <div className="lg:col-span-5 bg-white rounded-3xl p-8 border border-hairline shadow-sm flex flex-col justify-between">
+          <div className="lg:col-span-5 bg-white rounded-3xl p-6 sm:p-8 border border-hairline shadow-sm flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-6">
-                <span className="text-xs font-[family-name:var(--font-jetbrains)] uppercase px-3 py-1 rounded-full bg-surface text-ink-muted border border-hairline">
+                <span className="text-xs font-semibold uppercase px-3 py-1 rounded-full bg-surface text-ink-muted border border-hairline">
                   02 · Akıllı Hat Dağıtımı
                 </span>
                 <span className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium">
@@ -146,7 +146,7 @@ export function Scene04Delivery() {
               <div className="space-y-3">
                 <div className="p-3.5 rounded-2xl bg-surface border border-hairline flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold text-xs font-[family-name:var(--font-jetbrains)]">
+                    <div className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold text-xs">
                       01
                     </div>
                     <div>
@@ -161,7 +161,7 @@ export function Scene04Delivery() {
 
                 <div className="p-3.5 rounded-2xl bg-surface border border-hairline flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold text-xs font-[family-name:var(--font-jetbrains)]">
+                    <div className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold text-xs">
                       02
                     </div>
                     <div>
@@ -176,7 +176,7 @@ export function Scene04Delivery() {
 
                 <div className="p-3.5 rounded-2xl bg-surface border border-hairline flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold text-xs font-[family-name:var(--font-jetbrains)]">
+                    <div className="w-8 h-8 rounded-full bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold text-xs">
                       03
                     </div>
                     <div>
@@ -203,21 +203,21 @@ export function Scene04Delivery() {
         <div ref={poolRef} className="reveal relative mx-auto max-w-[1140px] rounded-3xl border border-hairline-strong bg-white shadow-2xl overflow-hidden">
           
           {/* Top Browser Bar & Mode Switcher */}
-          <div className="h-14 bg-surface border-b border-hairline flex flex-wrap items-center justify-between px-4 sm:px-6 gap-2">
+          <div className="min-h-12 py-2 sm:h-14 bg-surface border-b border-hairline flex flex-col sm:flex-row items-center justify-between px-3 sm:px-6 gap-2">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-black/15" />
               <div className="w-3 h-3 rounded-full bg-black/15" />
               <div className="w-3 h-3 rounded-full bg-black/15" />
               <span className="hidden sm:inline-block text-xs font-[family-name:var(--font-jetbrains)] text-ink-muted ml-2">
-                {consoleTab === 'panel' ? 'app.mesajify.com/hesaplar' : consoleTab === 'veo' ? 'mesajify-flow-engine / veo-3.1' : 'mesajify-architecture-diagram'}
+                app.mesajify.com/hesaplar
               </span>
             </div>
 
             {/* View Switcher Pills */}
-            <div className="inline-flex p-1 bg-white rounded-xl border border-hairline shadow-xs">
+            <div className="w-full sm:w-auto grid grid-cols-3 sm:flex p-1 bg-white rounded-xl border border-hairline shadow-xs">
               <button
                 onClick={() => setConsoleTab('panel')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold text-center transition-all ${
                   consoleTab === 'panel' ? 'bg-ink text-white shadow-xs' : 'text-ink-muted hover:text-ink'
                 }`}
               >
@@ -225,24 +225,24 @@ export function Scene04Delivery() {
               </button>
               <button
                 onClick={() => setConsoleTab('veo')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold text-center transition-all flex items-center justify-center gap-1 ${
                   consoleTab === 'veo' ? 'bg-brand text-white shadow-xs' : 'text-ink-muted hover:text-ink'
                 }`}
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                3D İletim (Veo 3.1)
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse hidden sm:inline-block" />
+                3D Dağıtım
               </button>
               <button
                 onClick={() => setConsoleTab('infographic')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold text-center transition-all ${
                   consoleTab === 'infographic' ? 'bg-ink text-white shadow-xs' : 'text-ink-muted hover:text-ink'
                 }`}
               >
-                Mimarî İnfografik
+                Altyapı Şeması
               </button>
             </div>
 
-            <span className="text-[11px] font-[family-name:var(--font-jetbrains)] text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 hidden md:inline-block">
+            <span className="text-[11px] text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 hidden md:inline-block">
               3 Hat Aktif & Senkron
             </span>
           </div>

@@ -51,13 +51,13 @@
   }
 
   .scene-pad {
-    padding-top: clamp(80px, 12vw, 160px);
-    padding-bottom: clamp(80px, 12vw, 160px);
+    padding-top: clamp(48px, 8vw, 120px);
+    padding-bottom: clamp(48px, 8vw, 120px);
   }
 
   .scene-pad-lg {
-    padding-top: clamp(120px, 16vw, 220px);
-    padding-bottom: clamp(120px, 16vw, 220px);
+    padding-top: clamp(64px, 10vw, 160px);
+    padding-bottom: clamp(64px, 10vw, 160px);
   }
 
   /* --- Reveal animation --- */

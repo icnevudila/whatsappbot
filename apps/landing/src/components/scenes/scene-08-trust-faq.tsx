@@ -49,9 +49,9 @@ export function Scene08TrustFaq() {
       <div className="max-w-[1240px] mx-auto px-6">
         
         {/* Part A: Trust & Control */}
-        <div ref={trustRef} className="reveal grid lg:grid-cols-12 gap-12 lg:gap-16 items-center mb-28">
+        <div ref={trustRef} className="reveal grid lg:grid-cols-12 gap-8 lg:gap-16 items-center mb-16 sm:mb-28">
           <div className="lg:col-span-6">
-            <div className="flex flex-wrap gap-2 mb-8">
+            <div className="flex flex-wrap gap-2 mb-6 sm:mb-8">
               {['Kontrollü', 'Görünür', 'Ölçülebilir', 'Yönetilebilir'].map((badge) => (
                 <span
                   key={badge}
@@ -62,14 +62,14 @@ export function Scene08TrustFaq() {
               ))}
             </div>
 
-            <h2 className="text-[clamp(36px,5vw,72px)] leading-[1.04] font-[600] tracking-tight mb-6">
+            <h2 className="text-[clamp(32px,5vw,72px)] leading-[1.06] font-[600] tracking-tight mb-4 sm:mb-6">
               Kontrol sizde.
             </h2>
-            <p className="text-xl text-white/50 leading-relaxed mb-10 max-w-lg">
+            <p className="text-base sm:text-lg md:text-xl text-white/50 leading-relaxed mb-8 sm:mb-10 max-w-lg">
               Gizli algoritmalar veya arka kapı hileleri yok. Kampanyanızın her adımını, her saniyesini şeffaf olarak panelinizden izleyin.
             </p>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {[
                 'Anlık Hat Durumu',
                 'İletim & Okunma Raporu',
@@ -108,33 +108,33 @@ export function Scene08TrustFaq() {
         </div>
 
         {/* Part B: FAQ Accordion */}
-        <div ref={faqRef} className="reveal pt-20 border-t border-white/10 max-w-3xl mx-auto">
-          <div className="text-center mb-16">
-            <h3 className="text-3xl md:text-5xl font-[600] tracking-tight mb-4">
+        <div ref={faqRef} className="reveal pt-12 sm:pt-20 border-t border-white/10 max-w-3xl mx-auto">
+          <div className="text-center mb-10 sm:mb-16">
+            <h3 className="text-2xl sm:text-3xl md:text-5xl font-[600] tracking-tight mb-3 sm:mb-4">
               Sıkça Sorulan Sorular
             </h3>
-            <p className="text-white/45 text-base">Aklınıza takılan soruların açık ve dürüst yanıtları.</p>
+            <p className="text-white/45 text-sm sm:text-base">Aklınıza takılan soruların açık ve dürüst yanıtları.</p>
           </div>
 
           <div className="divide-y divide-white/10">
             {FAQS.map((faq, i) => {
               const isOpen = openIdx === i
               return (
-                <div key={i} className="py-6">
+                <div key={i} className="py-5 sm:py-6">
                   <button
                     onClick={() => setOpenIdx(isOpen ? null : i)}
                     className="w-full flex items-center justify-between text-left group gap-4"
                   >
-                    <span className="text-lg font-medium text-white group-hover:text-brand transition-colors">
+                    <span className="text-base sm:text-lg font-medium text-white group-hover:text-brand transition-colors">
                       {faq.q}
                     </span>
-                    <span className={`w-8 h-8 rounded-full border border-white/10 flex items-center justify-center text-sm shrink-0 transition-transform duration-300 text-white/60 ${isOpen ? 'rotate-180 bg-white/10' : ''}`}>
+                    <span className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-white/10 flex items-center justify-center text-xs sm:text-sm shrink-0 transition-transform duration-300 text-white/60 ${isOpen ? 'rotate-180 bg-white/10' : ''}`}>
                       ↓
                     </span>
                   </button>
                   {isOpen && (
-                    <div className="mt-4 pr-12 animate-fade-in">
-                      <p className="text-white/60 text-base leading-relaxed">
+                    <div className="mt-3 sm:mt-4 pr-6 sm:pr-12 animate-fade-in">
+                      <p className="text-white/60 text-sm sm:text-base leading-relaxed">
                         {faq.a}
                       </p>
                     </div>

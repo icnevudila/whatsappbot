@@ -11,24 +11,24 @@ export function Scene07Bento() {
       <div className="max-w-[1240px] mx-auto px-6">
         
         {/* Headline */}
-        <div ref={headRef} className="reveal text-center max-w-2xl mx-auto mb-20">
-          <p className="font-[family-name:var(--font-jetbrains)] text-[11px] font-medium tracking-[0.12em] uppercase text-ink-muted mb-6">
-            MİMARİ & GÜVENLİK
+        <div ref={headRef} className="reveal text-center max-w-2xl mx-auto mb-12 sm:mb-20">
+          <p className="text-xs font-semibold text-brand tracking-normal uppercase mb-4 sm:mb-6">
+            Altyapı ve Güvenlik
           </p>
-          <h2 className="text-[clamp(36px,5vw,72px)] leading-[1.06] font-[600] tracking-tight text-ink mb-6">
+          <h2 className="text-[clamp(32px,5vw,72px)] leading-[1.06] font-[600] tracking-tight text-ink mb-4 sm:mb-6">
             Görünmeyen tarafta da güçlü.
           </h2>
-          <p className="text-xl text-ink-muted leading-relaxed">
+          <p className="text-base sm:text-lg md:text-xl text-ink-muted leading-relaxed">
             Kampanyanızın başarısı sadece mesajın içeriğine değil, arka plandaki iletim kontrolüne bağlıdır.
           </p>
         </div>
 
         {/* Bento Grid with REAL Mesajify App Screenshots */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 sm:gap-6">
           
           {/* Card 1: Akıllı Hat Yönetimi (Spans 7 cols) with REAL Screenshot */}
-          <div className="lg:col-span-7 bg-white rounded-3xl border border-hairline shadow-sm overflow-hidden flex flex-col justify-between group hover:shadow-md transition-shadow">
-            <div className="p-8 md:p-10">
+          <div className="lg:col-span-7 bg-white rounded-2xl sm:rounded-3xl border border-hairline shadow-sm overflow-hidden flex flex-col justify-between group hover:shadow-md transition-shadow">
+            <div className="p-6 sm:p-8 md:p-10">
               <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-sm mb-6 border border-emerald-100">
                 01
               </div>
@@ -51,8 +51,8 @@ export function Scene07Bento() {
           </div>
 
           {/* Card 2: Liste Doğrulama (Spans 5 cols) with REAL Screenshot */}
-          <div className="lg:col-span-5 bg-white rounded-3xl border border-hairline shadow-sm overflow-hidden flex flex-col justify-between group hover:shadow-md transition-shadow">
-            <div className="p-8 md:p-10">
+          <div className="lg:col-span-5 bg-white rounded-2xl sm:rounded-3xl border border-hairline shadow-sm overflow-hidden flex flex-col justify-between group hover:shadow-md transition-shadow">
+            <div className="p-6 sm:p-8 md:p-10">
               <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm mb-6 border border-blue-100">
                 02
               </div>
@@ -75,8 +75,8 @@ export function Scene07Bento() {
           </div>
 
           {/* Card 3: Kampanya Görünürlüğü (Spans 5 cols) with REAL Screenshot */}
-          <div className="lg:col-span-5 bg-white rounded-3xl border border-hairline shadow-sm overflow-hidden flex flex-col justify-between group hover:shadow-md transition-shadow">
-            <div className="p-8 md:p-10">
+          <div className="lg:col-span-5 bg-white rounded-2xl sm:rounded-3xl border border-hairline shadow-sm overflow-hidden flex flex-col justify-between group hover:shadow-md transition-shadow">
+            <div className="p-6 sm:p-8 md:p-10">
               <div className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-sm mb-6 border border-purple-100">
                 03
               </div>
@@ -99,8 +99,8 @@ export function Scene07Bento() {
           </div>
 
           {/* Card 4: Opt-out & Kara Liste (Spans 7 cols) with REAL Screenshot */}
-          <div className="lg:col-span-7 bg-white rounded-3xl border border-hairline shadow-sm overflow-hidden flex flex-col justify-between group hover:shadow-md transition-shadow">
-            <div className="p-8 md:p-10">
+          <div className="lg:col-span-7 bg-white rounded-2xl sm:rounded-3xl border border-hairline shadow-sm overflow-hidden flex flex-col justify-between group hover:shadow-md transition-shadow">
+            <div className="p-6 sm:p-8 md:p-10">
               <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-sm mb-6 border border-amber-100">
                 04
               </div>
