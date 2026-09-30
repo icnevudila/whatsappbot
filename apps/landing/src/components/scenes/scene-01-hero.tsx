@@ -95,8 +95,8 @@ export function Scene01Hero() {
             style={{ animationDelay: '500ms' }}
           >
             <div className="p-3 rounded-xl bg-white/70 border border-hairline">
-              <span className="text-xs font-semibold text-brand block">01 · QR Bağlantı</span>
-              <span className="text-xs text-ink-muted font-medium mt-0.5 block">Çoklu WhatsApp Havuzu</span>
+              <span className="text-xs font-semibold text-brand block">01 · İşletme Bulucu</span>
+              <span className="text-xs text-ink-muted font-medium mt-0.5 block">Harita & Sektör Taraması</span>
             </div>
             <div className="p-3 rounded-xl bg-white/70 border border-hairline">
               <span className="text-xs font-semibold text-brand block">02 · Video & Görsel</span>

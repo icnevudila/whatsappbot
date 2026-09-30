@@ -2,6 +2,7 @@ import { Navbar } from '@/components/navbar'
 import { Scene01Hero } from '@/components/scenes/scene-01-hero'
 import { Scene02CreativeStudio } from '@/components/scenes/scene-02-creative'
 import { Scene03Sectors } from '@/components/scenes/scene-03-sectors'
+import { SceneLeadScraper } from '@/components/scenes/scene-03b-lead-scraper'
 import { Scene04Delivery } from '@/components/scenes/scene-04-delivery'
 import { Scene05Inbox } from '@/components/scenes/scene-05-inbox'
 import { Scene06Explorer } from '@/components/scenes/scene-06-explorer'
@@ -31,6 +32,9 @@ export default function Home() {
         <div id="cozumler">
           <Scene03Sectors />
         </div>
+
+        {/* 03B · B2B LEAD SCRAPER & BUSINESS FINDER (Dark High Tech) */}
+        <SceneLeadScraper />
 
         {/* 04 · CAMPAIGN DELIVERY STORY (Soft Neutral) */}
         <Scene04Delivery />
