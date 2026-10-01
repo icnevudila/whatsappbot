@@ -2020,36 +2020,126 @@ async function generateVideoOnFlow(options = {}) {
       await send('Input.dispatchKeyEvent', { type: 'keyUp', windowsVirtualKeyCode: 27, key: 'Escape' });
       await sleep(500);
 
-      await send('Runtime.evaluate', {
-        expression: `(async () => {
-          const cards = Array.from(document.querySelectorAll('flow-grid-tile-container, .tile-row.virtual-item-container, flow-media-tile, div[class*="tile"]'));
+      // Strateji 1: Tile'ı bul, hover et (More options visible olur), sonra menü aç
+      const tileCoords = await send('Runtime.evaluate', {
+        expression: `(() => {
+          const cards = Array.from(document.querySelectorAll(
+            'flow-grid-tile-container, .tile-row.virtual-item-container, flow-media-tile, .upload-asset-tile, div[class*="tile-container"], div[class*="grid-tile"]'
+          ));
           const card = cards[${ci}];
-          if (!card) return false;
-          const moreBtn = card.querySelector('button[aria-label="More options"]') || 
-                          card.querySelector('button[aria-label*="seçenek"]') || 
-                          card.querySelector('button[aria-label*="options"]') || 
-                          card.querySelector('button[aria-label*="Daha"]') || 
-                          card.querySelector('button');
-          if (moreBtn) {
-            moreBtn.click();
-            await new Promise(r => setTimeout(r, 700));
-            const items = Array.from(document.querySelectorAll('.mat-mdc-menu-item, [role="menuitem"], button'));
-            const addItem = items.find(el => {
-              const t = (el.innerText || '').toLowerCase();
-              return t.includes('add to prompt') || t.includes('isteme ekle') || t.includes('prompta ekle') || t.includes('ekle');
-            });
-            if (addItem) {
-              addItem.click();
-              await new Promise(r => setTimeout(r, 800));
-              return true;
-            }
-          }
-          return false;
+          if (!card) return null;
+          const r = card.getBoundingClientRect();
+          return { x: r.left + r.width/2, y: r.top + r.height/2, w: r.width, h: r.height };
         })()`,
-        awaitPromise: true
+        returnByValue: true
       });
+
+      const coords = tileCoords?.result?.value;
+      if (coords && coords.x > 0) {
+        // Hover over tile to reveal buttons
+        await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: coords.x, y: coords.y });
+        await sleep(600);
+
+        // Strateji 1a: "Add to prompt" butonunu doğrudan ara (bazı Flow versiyonlarında hover'da çıkar)
+        const directAddResult = await send('Runtime.evaluate', {
+          expression: `(async () => {
+            const cards = Array.from(document.querySelectorAll(
+              'flow-grid-tile-container, .tile-row.virtual-item-container, flow-media-tile, .upload-asset-tile, div[class*="tile-container"], div[class*="grid-tile"]'
+            ));
+            const card = cards[${ci}];
+            if (!card) return false;
+            // Dogrudan "Add to prompt" butonunu ara
+            const allBtns = Array.from(card.querySelectorAll('button, [role="button"]'));
+            const addBtn = allBtns.find(b => {
+              const lbl = (b.getAttribute('aria-label') || b.innerText || '').toLowerCase();
+              return lbl.includes('add to prompt') || lbl.includes('prompta ekle') || lbl.includes('isteme ekle');
+            });
+            if (addBtn) { addBtn.click(); return true; }
+            return false;
+          })()`,
+          awaitPromise: true
+        });
+
+        if (directAddResult?.result?.value !== true) {
+          // Strateji 1b: More options butonunu ara ve tikla
+          const moreOptionsCoords = await send('Runtime.evaluate', {
+            expression: `(() => {
+              const cards = Array.from(document.querySelectorAll(
+                'flow-grid-tile-container, .tile-row.virtual-item-container, flow-media-tile, .upload-asset-tile, div[class*="tile-container"], div[class*="grid-tile"]'
+              ));
+              const card = cards[${ci}];
+              if (!card) return null;
+              const moreBtn = card.querySelector('button[aria-label="More options"]') ||
+                              card.querySelector('button[aria-label*="option"]') ||
+                              card.querySelector('button[aria-label*="seçenek"]') ||
+                              card.querySelector('button[aria-label*="Daha"]') ||
+                              Array.from(card.querySelectorAll('button')).find(b => {
+                                const ic = b.querySelector('mat-icon');
+                                return ic && (ic.innerText === 'more_vert' || ic.innerText === 'more_horiz');
+                              });
+              if (!moreBtn) return null;
+              const r = moreBtn.getBoundingClientRect();
+              if (r.width === 0) return null;
+              return { x: r.left + r.width/2, y: r.top + r.height/2 };
+            })()`,
+            returnByValue: true
+          });
+
+          if (moreOptionsCoords?.result?.value) {
+            const { x: mx, y: my } = moreOptionsCoords.result.value;
+            await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: mx, y: my, button: 'left', clickCount: 1 });
+            await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: mx, y: my, button: 'left', clickCount: 1 });
+            await sleep(800);
+
+            // Menüde "Add to prompt" ara
+            await send('Runtime.evaluate', {
+              expression: `(async () => {
+                const items = Array.from(document.querySelectorAll('.mat-mdc-menu-item, [role="menuitem"], .mdc-list-item'));
+                const addItem = items.find(el => {
+                  const t = (el.innerText || el.getAttribute('aria-label') || '').toLowerCase();
+                  return t.includes('add to prompt') || t.includes('isteme ekle') || t.includes('prompta ekle');
+                });
+                if (addItem) { addItem.click(); return true; }
+                // Fallback: tum menu itemlerini goster
+                console.log('[Flow] Menu items:', items.map(i => i.innerText).join(' | '));
+                return false;
+              })()`,
+              awaitPromise: true
+            });
+          } else {
+            // Strateji 1c: Tile'a sag tiklama
+            await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: coords.x, y: coords.y, button: 'right', clickCount: 1 });
+            await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: coords.x, y: coords.y, button: 'right', clickCount: 1 });
+            await sleep(700);
+            await send('Runtime.evaluate', {
+              expression: `(() => {
+                const items = Array.from(document.querySelectorAll('[role="menuitem"], .mat-mdc-menu-item, .context-menu-item'));
+                const addItem = items.find(el => {
+                  const t = (el.innerText || '').toLowerCase();
+                  return t.includes('add to prompt') || t.includes('isteme') || t.includes('prompt');
+                });
+                if (addItem) addItem.click();
+              })()`
+            });
+          }
+        }
+      } else {
+        // Strateji 2: Tile bulunamadi, tum sayfada "Add to prompt" benzeri bir sey ara
+        await send('Runtime.evaluate', {
+          expression: `(async () => {
+            const allBtns = Array.from(document.querySelectorAll('button, [role="button"]'));
+            const addBtn = allBtns.find(b => {
+              const lbl = (b.getAttribute('aria-label') || b.innerText || '').toLowerCase();
+              return lbl.includes('add to prompt') || lbl.includes('prompta ekle');
+            });
+            if (addBtn) addBtn.click();
+          })()`,
+          awaitPromise: true
+        });
+      }
       await sleep(1200);
     }
+
 
     // 5. Çiplerin durumunu doğrula
     console.log(`[Flow Video] 🔍 Prompt çipleri doğrulanıyor...`);
