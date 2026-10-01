@@ -18,7 +18,7 @@ export const mediaManifest: MediaAsset[] = [
 export function getMedia(id: string) {
   const asset = mediaManifest.find(item => item.id === id);
   if (!asset) return undefined;
-  const slotId = id === 'real-product-video' ? 'creative-bofe-master' : id.replace(/-video$/, '').replace('local-business', 'service');
+  const slotId = id === 'real-product-video' ? 'creative-master' : id.replace(/-video$/, '').replace('local-business', 'service');
   const slot = mediaSlots.find(item => item.id === slotId);
   return slot?.status === 'available' ? {...asset,path:slot.path,posterPath:slot.posterPath} : asset;
 }

@@ -75,11 +75,11 @@ export function CampaignOrchestrator() {
     <div className="ml-journey-canvas" data-step={active}>
       <svg viewBox="0 0 1200 800" preserveAspectRatio="none" className="ml-journey-path ml-desktop-path" aria-hidden="true"><path ref={pathRef} d={journey} fill="none" stroke="currentColor" strokeWidth="1.5"/><path d={journey} fill="none" stroke="#168347" strokeWidth="2" pathLength="100" strokeDasharray="100" strokeDashoffset={100-value*100}/><g transform={`translate(${point.x-14} ${point.y-14})`} className="ml-path-signal"><path d={signalPath} fill="none" stroke="#168347" strokeWidth="3" strokeLinecap="round"/></g></svg>
       <svg viewBox="0 0 360 1300" preserveAspectRatio="none" className="ml-journey-path ml-mobile-path" aria-hidden="true"><path ref={mobilePathRef} d="M180 60 C20 180 330 200 180 350 S40 520 180 625 S320 710 180 780 S30 850 180 890 S330 970 180 1040 S20 1150 180 1220" fill="none" stroke="currentColor" strokeWidth="2"/><g transform={`translate(${point.mx-14} ${point.my-14})`}><path d={signalPath} fill="none" stroke="#168347" strokeWidth="3"/></g></svg>
-      <div className={`ml-journey-source ${active===0?'is-active':''}`}><span className="ml-object-label">01 / ÜRÜN</span><img src="/landing/studio/product-source-raw.jpg" alt="Ürün fotoğrafı" loading="lazy"/></div>
+      <div className={`ml-journey-source ${active===0?'is-active':''}`}><span className="ml-object-label">01 / ÜRÜN</span><img src="/landing/studio/sources/nike_sneaker_raw.jpg" alt="Ürün fotoğrafı" loading="lazy"/></div>
       <div className={`ml-journey-creative ${active>=1?'is-active':''}`}><span className="ml-object-label">02 / KREATİF</span><GeneratedMediaSlot id="real-product-video" alt="Üründen oluşturulan reklam" active={active>=1}/></div>
       <div className={`ml-journey-contacts ${active>=2?'is-active':''}`}><span className="ml-object-label">03 / KİŞİLER</span>{['Ayşe Y.','Mehmet K.','Deniz B.'].map((name,i) => <p key={name}><i>{name[0]}</i>{name}<span>✓</span><small>05•• ••• •• {21+i*17}</small></p>)}</div>
       <div className={`ml-journey-lines ${active>=3?'is-active':''}`}><span className="ml-object-label">04 / HATLAR</span><MesajifyMark size="sm" state="active" decorative /><svg viewBox="0 0 180 55" aria-hidden="true">{[25,90,155].map(x=><path key={x} d={`M90 0 Q90 25 ${x} 50`} fill="none" stroke="currentColor"/>)}</svg><div><span>Hat 01</span><span>Hat 02</span><span>Hat 03</span></div></div>
-      <div className={`ml-journey-message ${active>=4?'is-active':''}`}><span className="ml-object-label">05 / MESAJ</span><p>Bofe ürünümüzü keşfedin. Detaylar için bize yazabilirsiniz.<small>İletildi ✓✓</small></p></div>
+      <div className={`ml-journey-message ${active>=4?'is-active':''}`}><span className="ml-object-label">05 / MESAJ</span><p>Yeni sezon ürünlerimizi keşfedin. Detaylar ve sipariş için bize yazabilirsiniz.<small>İletildi ✓✓</small></p></div>
       <div className={`ml-journey-reply ${active>=5?'is-active':''}`}><span className="ml-object-label">06 / YANIT</span><p>Fiyat nedir?</p></div>
       <div className={`ml-journey-inbox ${active>=6?'is-active':''}`}><span className="ml-object-label">07 / ORTAK GELEN KUTUSU</span><div><img src="/landing/gelenler.png" alt="Gerçek Inbox ekranı" loading="lazy"/><span className="ml-journey-highlight"/></div></div>
     </div><div className="ml-journey-scrub"><label htmlFor={controlId}>Akışı incele</label><input id={controlId} aria-label="Tanıtım yolculuğu ilerlemesi" type="range" min="0" max="100" value={Math.round(value*100)} onChange={e=>setScrub(Number(e.target.value)/100)}/><button onClick={()=>setScrub(null)}>Kaydırmaya bağla</button></div>
@@ -112,34 +112,60 @@ export function ContactValidationDemo({ onReady }: { onReady?: (ready: boolean) 
 }
 const creativeShowcaseItems = [
   {
-    source: '/landing/studio/sources/ecommerce_product.jpg',
+    id: 'sneaker',
+    icon: '👟',
+    tabLabel: 'Spor Ayakkabı',
+    title: 'Nike Air Flyknit Sneaker',
+    brandName: 'Nike Sportswear',
+    logo: '/landing/studio/sources/nike_logo.png',
+    source: '/landing/studio/sources/nike_sneaker_raw.jpg',
     video: '/landing/studio/ecommerce-flow-veo.mp4',
-    title: 'Spor Ayakkabı & E-Ticaret',
-    sourceLabel: 'Ham Ürün Çekimi'
+    sourceLabel: 'Ham Ürün Fotoğrafı + Vektör Logo',
+    videoBadge: 'NIKE AIR · 9:16 VEO REKLAM'
   },
   {
-    source: '/landing/studio/sources/restaurant_product.jpg',
+    id: 'burger',
+    icon: '🍔',
+    tabLabel: 'Gurme Burger',
+    title: 'Gourmet Smash Cheeseburger',
+    brandName: 'Burger Lab Artisan',
+    logo: '/landing/studio/sources/burger_logo.png',
+    source: '/landing/studio/sources/burger_raw.jpg',
     video: '/landing/studio/restaurant-flow-veo.mp4',
-    title: 'Gurme Burger & Menü',
-    sourceLabel: 'Restoran Fotoğrafı'
+    sourceLabel: 'Menü Çekimi + Restoran Logosu',
+    videoBadge: 'BURGER LAB · GURME MENÜ'
   },
   {
+    id: 'car',
+    icon: '🏎️',
+    tabLabel: 'Lüks Otomobil',
+    title: 'Porsche Panamera GTS',
+    brandName: 'Veloce Motors',
+    logo: '/landing/studio/sources/car_logo.png',
+    source: '/landing/studio/sources/car_raw.jpg',
+    video: '/landing/studio/automotive-flow-veo.mp4',
+    sourceLabel: 'Showroom Çekimi + Galeri Arması',
+    videoBadge: 'VELOCE · VIP TEST SÜRÜŞÜ'
+  },
+  {
+    id: 'mesajify',
+    icon: '⚡',
+    tabLabel: 'Mesajify Platform',
+    title: 'Mesajify WhatsApp Kampanyası',
+    brandName: 'Mesajify',
+    logo: '/brand/mesajify-official-logo.png',
     source: '/landing/studio/sources/smartwatch_product.jpg',
     video: '/landing/studio/hero-flow-veo.mp4',
-    title: 'Akıllı Saat & Teknoloji',
-    sourceLabel: 'Stüdyo Çekimi'
-  },
-  {
-    source: '/landing/studio/sources/automotive_product.jpg',
-    video: '/landing/studio/automotive-flow-veo.mp4',
-    title: 'Lüks Otomobil & Galeri',
-    sourceLabel: 'Showroom Görseli'
+    sourceLabel: 'Stüdyo Çekimi + Resmî Marka Logosu',
+    videoBadge: 'MESAJIFY · 9:16 AKILLI REKLAM'
   }
 ];
 
 export function CreativeTransform({ scrollDriven = false }: { scrollDriven?: boolean }) {
+  const [manualIndex, setManualIndex] = useState<number | null>(null);
   const { ref, time, cycle } = useSceneClock(10);
-  const currentItem = creativeShowcaseItems[cycle % creativeShowcaseItems.length];
+  const activeIndex = manualIndex !== null ? manualIndex : cycle % creativeShowcaseItems.length;
+  const currentItem = creativeShowcaseItems[activeIndex];
   const [scrollProgress, setScrollProgress] = useState(0);
 
   useEffect(() => {
@@ -164,21 +190,58 @@ export function CreativeTransform({ scrollDriven = false }: { scrollDriven?: boo
 
   const phase = scrollDriven ? Math.min(4, Math.floor(scrollProgress * 5)) : time < 2 ? 0 : time < 4.5 ? 1 : time < 7 ? 2 : time < 8.5 ? 3 : 4;
 
+  const processSteps = [
+    { label: 'Ham Fotoğraf & Logo Alındı', icon: '📸' },
+    { label: 'AI Arka Plan Dekupe & Maskeleme', icon: '✨' },
+    { label: '3D Sahne & Sinematik Stüdyo Işığı', icon: '🎬' },
+    { label: 'Marka Kiti & Vektör Logo Giydirme', icon: '🏷️' },
+    { label: '9:16 WhatsApp Reklam Videosu Hazır', icon: '🚀' }
+  ];
+
   return (
     <div ref={ref} className="ml-stage ml-transform" data-phase={phase} data-scroll-driven={scrollDriven}>
       <Sample>Görsel dönüşüm örneği</Sample>
-      <div className="ml-product-event ml-creative-event" key={`${cycle}-${phase}`}>
+
+      <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '8px', marginBottom: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+        {creativeShowcaseItems.map((item, idx) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => setManualIndex(idx)}
+            style={{
+              padding: '6px 14px',
+              fontSize: '12px',
+              fontWeight: 600,
+              borderRadius: '20px',
+              border: activeIndex === idx ? '1px solid #00a884' : '1px solid #dce5df',
+              background: activeIndex === idx ? '#e5f4ec' : '#fff',
+              color: activeIndex === idx ? '#168347' : '#5a6e60',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            <span>{item.icon}</span>
+            <span>{item.tabLabel}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="ml-product-event ml-creative-event" key={`${activeIndex}-${phase}`}>
         <MesajifyMark size="sm" decorative />
         <div>
           <small>{currentItem.title.toUpperCase()}</small>
           <strong>
             {
               [
-                'Ürün fotoğrafı alındı',
-                'Arka plan ayrıştırılıyor',
-                'Yapay zeka sahnesi işleniyor',
-                'Mesajify marka kiti uygulanıyor',
-                'Dikey WhatsApp reklamı hazır'
+                'Ham ürün fotoğrafı ve marka logosu alındı',
+                'Yapay zeka ile arka plan dekupe ediliyor',
+                '3D sinematik stüdyo sahnesi ve ışıklar işleniyor',
+                'Kurumsal marka kiti ve logo entegre ediliyor',
+                'Dikey WhatsApp reklam videosu yayına hazır'
               ][phase]
             }
           </strong>
@@ -187,14 +250,26 @@ export function CreativeTransform({ scrollDriven = false }: { scrollDriven?: boo
       </div>
 
       <div className="ml-transform-source">
-        <span className="ml-object-label">01 / HAM FOTOĞRAF</span>
-        <img
-          key={currentItem.source}
-          src={currentItem.source}
-          alt={currentItem.title}
-          loading="lazy"
-          style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }}
-        />
+        <span className="ml-object-label">01 / HAM ÜRÜN & LOGO</span>
+        <div style={{ position: 'relative', width: '100%', height: '270px', borderRadius: '10px', overflow: 'hidden', background: '#f0f3f1' }}>
+          <img
+            key={currentItem.source}
+            src={currentItem.source}
+            alt={currentItem.title}
+            loading="lazy"
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '12px', padding: '10px 12px', background: '#f8faf8', border: '1px solid #dce5df', borderRadius: '8px' }}>
+          <div style={{ width: '36px', height: '36px', borderRadius: '6px', background: '#fff', border: '1px solid #c9d8ce', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '3px', flexShrink: 0 }}>
+            <img src={currentItem.logo} alt={currentItem.brandName} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <strong style={{ display: 'block', fontSize: '12px', color: '#163825', fontWeight: 600 }}>{currentItem.brandName}</strong>
+            <small style={{ display: 'block', fontSize: '10px', color: '#567261', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentItem.title}</small>
+          </div>
+          <span style={{ marginLeft: 'auto', fontSize: '9px', fontWeight: 700, padding: '2px 6px', background: '#e5f4ec', color: '#168347', borderRadius: '4px', letterSpacing: '0.04em' }}>LOGO</span>
+        </div>
         <span className="ml-source-note">{currentItem.sourceLabel}</span>
       </div>
 
@@ -203,7 +278,7 @@ export function CreativeTransform({ scrollDriven = false }: { scrollDriven?: boo
           <MesajifyMark size="lg" state={phase === 4 ? 'success' : 'processing'} decorative />
           <span>Creative Studio Engine</span>
         </div>
-        <div className="ml-processing-stage">
+        <div className="ml-processing-stage" style={{ position: 'relative' }}>
           <div className="ml-cinematic-backdrop" />
           <img
             className="ml-product-cutout"
@@ -212,28 +287,40 @@ export function CreativeTransform({ scrollDriven = false }: { scrollDriven?: boo
             alt={currentItem.title}
             loading="lazy"
           />
+          <div style={{
+            position: 'absolute',
+            bottom: '12px',
+            right: '12px',
+            zIndex: 4,
+            background: 'rgba(255,255,255,0.92)',
+            backdropFilter: 'blur(6px)',
+            padding: '4px 8px',
+            borderRadius: '6px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+          }}>
+            <img src={currentItem.logo} alt="" style={{ width: '16px', height: '16px', objectFit: 'contain' }} />
+            <span style={{ fontSize: '10px', fontWeight: 600, color: '#163825' }}>Marka Kiti Eşlendi</span>
+          </div>
           <div className="ml-crop-guide"><i /><i /><i /><i /></div>
           <div className="ml-processing-sweep" />
         </div>
         <div className="ml-processing-labels">
-          {[
-            { label: 'Fotoğraf Alındı', icon: '📸' },
-            { label: 'Sahne Oluşturuluyor', icon: '✨' },
-            { label: 'Veo Video Render', icon: '🎬' },
-            { label: 'Hazır', icon: '✓' }
-          ].map((item, i) => (
-            <span key={item.label} className={phase >= i + 1 ? 'is-active' : ''}>
-              <small style={{ marginRight: '6px' }}>{item.icon}</small>
-              {item.label}
+          {processSteps.map((step, i) => (
+            <span key={step.label} className={phase >= i ? 'is-active' : ''} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>{step.icon}</span>
+              <span>{step.label}</span>
             </span>
           ))}
         </div>
       </div>
 
       <div className="ml-transform-output">
-        <span className="ml-object-label">02 / WHATSAPP’A HAZIR</span>
+        <span className="ml-object-label">02 / WHATSAPP’A HAZIR VİDEO</span>
         <div className="ml-output-frame">
-          <div className="ml-media" style={{ aspectRatio: '9/16' }}>
+          <div className="ml-media" style={{ aspectRatio: '9/16', position: 'relative', overflow: 'hidden', borderRadius: '10px' }}>
             <video
               key={currentItem.video}
               src={currentItem.video}
@@ -243,11 +330,47 @@ export function CreativeTransform({ scrollDriven = false }: { scrollDriven?: boo
               playsInline
               preload="metadata"
               aria-label="Tamamlanmış ürün reklamı"
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
+            <div style={{
+              position: 'absolute',
+              top: '12px',
+              left: '12px',
+              zIndex: 3,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '5px 10px',
+              background: 'rgba(12, 22, 16, 0.78)',
+              backdropFilter: 'blur(8px)',
+              borderRadius: '20px',
+              border: '1px solid rgba(255,255,255,0.18)'
+            }}>
+              <img src={currentItem.logo} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', borderRadius: '3px' }} />
+              <span style={{ fontSize: '11px', fontWeight: 600, color: '#fff', letterSpacing: '0.02em' }}>{currentItem.videoBadge}</span>
+            </div>
+            <div style={{
+              position: 'absolute',
+              bottom: '12px',
+              left: '12px',
+              right: '12px',
+              zIndex: 3,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '6px 10px',
+              background: 'rgba(0,0,0,0.65)',
+              backdropFilter: 'blur(6px)',
+              borderRadius: '6px',
+              fontSize: '10px',
+              color: '#e5f4ec'
+            }}>
+              <span>WhatsApp Dikey Reklam</span>
+              <strong style={{ color: '#00a884' }}>9:16 · 8 SN VEO</strong>
+            </div>
           </div>
-          <span className="ml-output-tag">9:16 · 8 SN VEO</span>
         </div>
-        <span className="ml-output-status">{phase === 4 ? 'Kreatif hazır ✓' : 'Kreatif hazırlanıyor…'}</span>
+        <span className="ml-output-status">{phase === 4 ? 'Kreatif hazır ✓ · Doğrudan WhatsApp ile gönderilebilir' : 'Kreatif hazırlanıyor…'}</span>
       </div>
     </div>
   );
