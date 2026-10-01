@@ -7,6 +7,7 @@ import { ApprovedScreenshot } from './approved-screen-gallery';
 import { InteractiveLineStory } from './interactive-line-story';
 import { sectors as sectorConfig } from '@/content/sectors';
 import { productScreens, inboxScreen } from '@/content/product-screens';
+import { IconUploadFile, IconTargetRegion, IconShieldCheck, IconAudienceGroup, IconSpreadsheet, IconCheckCircle } from './story-icons';
 
 type SignalVariant = 'travel' | 'loading' | 'success' | 'pulse';
 const signalPath = 'M9 16h14';
@@ -194,7 +195,90 @@ export function FinalJourney() {
  </div><Sample>Bofe kampanyası · örnek işleyiş · gerçek gönderim yapılmaz</Sample></div>;
 }
 export function AudiencePipeline(){
- const [mode,setMode]=useState<'upload'|'request'>('upload');const {ref,time,cycle}=useSceneClock(6,mode);const phase=time<.75?0:time<1.5?1:time<3.8?2:3;const scanned=Math.min(4,Math.max(0,Math.floor((time-1.5)/.55)));const labels=mode==='upload'?['Liste alındı','Kayıtlar kontrol ediliyor','Kitle hazırlanıyor','Kampanyaya hazır']:['Sektör ve bölge','Talep değerlendiriliyor','Liste hazırlığı','Hazırlık tamamlandı'];
- return <div ref={ref} className="ml-audience-pipeline" data-phase={phase}><div className="ml-pipeline-methods" role="group" aria-label="Kitle akışı"><button aria-pressed={mode==='upload'} onClick={()=>setMode('upload')}>Liste yükle<small>Excel / CSV</small></button><button aria-pressed={mode==='request'} onClick={()=>setMode('request')}>Liste talep et<small>Sektör / bölge</small></button></div><div className="ml-pipeline-map"><svg viewBox="0 0 480 110" aria-hidden="true"><path d="M80 55H400" stroke="#c8ded0" strokeWidth="2"/><path d="M80 55H400" stroke="#00a884" strokeWidth="5" pathLength="100" className="ml-pipeline-packet"/>{[80,240,400].map((x,i)=><circle key={x} cx={x} cy="55" r="27" fill={phase>=i?'#e4f5eb':'#fff'} stroke={phase>=i?'#75be98':'#dce5df'}/>)}</svg><span>↥<small>{mode==='upload'?'musteriler.xlsx':'Sektör / bölge'}</small></span><span>✓<small>{mode==='upload'?'Liste kontrolü':'Değerlendirme'}</small></span><span>↗<small>Kampanya kitlesi</small></span></div><div className="ml-pipeline-records" key={mode+'-'+cycle}>{[0,1,2,3].map(i=><div key={i} data-checked={scanned>i}><span className="ml-pipeline-avatar">{String(i+1).padStart(2,'0')}</span><span>Örnek kayıt {i+1}<small>{mode==='upload'?'Kendi listeniz':'Örnek talep akışı'}</small></span><b data-excluded={i===2&&scanned>i}>{scanned>i?(i===2?'Hariç tutuldu':'Hazır ✓'):'Kontrol bekliyor'}</b></div>)}</div><div className="ml-pipeline-result" key={phase+'-'+cycle}><span>{phase===3?'✓':'●'}</span><div><strong>{labels[phase]}</strong><small>{phase===3?'3 örnek kayıt kampanya listesinde':mode==='request'?'Örnek senaryo · teslim ve kapsam değerlendirmede netleşir':'Hariç tutulan kayıt kampanyaya dahil edilmez'}</small></div></div><p className="ml-pipeline-note">Örnek işleyiş · gerçek liste veya talep gönderilmez.</p></div>;
+  const [mode,setMode]=useState<'upload'|'request'>('upload');
+  const {ref,time,cycle}=useSceneClock(6,mode);
+  const phase=time<.75?0:time<1.5?1:time<3.8?2:3;
+  const scanned=Math.min(4,Math.max(0,Math.floor((time-1.5)/.55)));
+  const labels=mode==='upload'?['Liste alındı','Kayıtlar kontrol ediliyor','Kitle hazırlanıyor','Kampanyaya hazır']:['Sektör ve bölge','Talep değerlendiriliyor','Liste hazırlığı','Hazırlık tamamlandı'];
+
+  return <div ref={ref} className="ml-audience-pipeline" data-phase={phase}>
+    <div className="ml-pipeline-methods" role="group" aria-label="Kitle akışı">
+      <button aria-pressed={mode==='upload'} onClick={()=>setMode('upload')}>
+        <div className="ml-method-btn-inner">
+          <IconSpreadsheet className="ml-method-btn-icon" />
+          <div>
+            <strong>Liste yükle</strong>
+            <small>Excel / CSV</small>
+          </div>
+        </div>
+      </button>
+      <button aria-pressed={mode==='request'} onClick={()=>setMode('request')}>
+        <div className="ml-method-btn-inner">
+          <IconTargetRegion className="ml-method-btn-icon" />
+          <div>
+            <strong>Liste talep et</strong>
+            <small>Sektör / bölge</small>
+          </div>
+        </div>
+      </button>
+    </div>
+
+    <div className="ml-pipeline-map">
+      <div className="ml-pipeline-connector">
+        <div className="ml-pipeline-line-base" />
+        <div className="ml-pipeline-line-progress" style={{ width: phase === 0 ? '0%' : phase === 1 ? '50%' : '100%' }} />
+      </div>
+      <div className="ml-pipeline-steps">
+        <div className="ml-pipeline-step" data-active={phase >= 0} data-current={phase === 0}>
+          <div className="ml-pipeline-icon-circle">
+            {mode === 'upload' ? <IconUploadFile className="w-5 h-5" /> : <IconTargetRegion className="w-5 h-5" />}
+          </div>
+          <div className="ml-pipeline-label">
+            <strong>{mode === 'upload' ? 'musteriler.xlsx' : 'Sektör / bölge'}</strong>
+            <small>{mode === 'upload' ? 'Excel / CSV' : 'Hedefleme'}</small>
+          </div>
+        </div>
+
+        <div className="ml-pipeline-step" data-active={phase >= 1} data-current={phase === 1}>
+          <div className="ml-pipeline-icon-circle">
+            <IconShieldCheck className="w-5 h-5" />
+          </div>
+          <div className="ml-pipeline-label">
+            <strong>{mode === 'upload' ? 'Liste kontrolü' : 'Değerlendirme'}</strong>
+            <small>{phase >= 1 ? 'Doğrulandı' : 'Kontrol ediliyor'}</small>
+          </div>
+        </div>
+
+        <div className="ml-pipeline-step" data-active={phase >= 2} data-current={phase >= 2}>
+          <div className="ml-pipeline-icon-circle">
+            <IconAudienceGroup className="w-5 h-5" />
+          </div>
+          <div className="ml-pipeline-label">
+            <strong>Kampanya kitlesi</strong>
+            <small>{phase >= 3 ? 'Kitleye hazır' : 'Hazırlanıyor'}</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div className="ml-pipeline-records" key={mode+'-'+cycle}>
+      {[0,1,2,3].map(i=><div key={i} data-checked={scanned>i}>
+        <span className="ml-pipeline-avatar">{String(i+1).padStart(2,'0')}</span>
+        <span>Örnek kayıt {i+1}<small>{mode==='upload'?'Kendi listeniz':'Örnek talep akışı'}</small></span>
+        <b data-excluded={i===2&&scanned>i}>{scanned>i?(i===2?'Hariç tutuldu':'Hazır ✓'):'Kontrol bekliyor'}</b>
+      </div>)}
+    </div>
+
+    <div className="ml-pipeline-result" key={phase+'-'+cycle}>
+      <span className="ml-pipeline-result-icon">
+        {phase === 3 ? <IconCheckCircle className="w-5 h-5 text-[#168347]" /> : <span className="ml-result-pulse-dot" />}
+      </span>
+      <div>
+        <strong>{labels[phase]}</strong>
+        <small>{phase===3?'3 örnek kayıt kampanya listesinde':mode==='request'?'Örnek senaryo · teslim ve kapsam değerlendirmede netleşir':'Hariç tutulan kayıt kampanyaya dahil edilmez'}</small>
+      </div>
+    </div>
+    <p className="ml-pipeline-note">Örnek işleyiş · gerçek liste veya talep gönderilmez.</p>
+  </div>;
 }
 export function ProductBento() {return <div className="ml-bento"><article><h3>Kitle Yönetimi</h3><AudiencePipeline/></article><article><h3>Çoklu Hat</h3><p className="ml-pillar-caption">Bir kampanya → Hat 01 · Hat 02 · Hat 03</p><InteractiveLineStory/></article><article><h3>Ortak Gelen Kutusu</h3><InteractiveLineStory inbox/></article><article><h3>Kreatif Stüdyosu</h3><p className="ml-pillar-context">Marka + marka kiti + ürün → görsel / video</p><CreativeTransform/></article></div>;}

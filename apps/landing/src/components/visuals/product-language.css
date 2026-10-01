@@ -35,4 +35,78 @@
 .ml-final-audience>div,.ml-final-campaign>div{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #dce5df;font-size:13px}.ml-final-audience small,.ml-final-campaign small{font-size:10px;color:#168347}.ml-final-audience>strong,.ml-final-campaign>strong{font-size:14px;font-weight:500}
 .ml-svg-inbox{width:100%;min-width:0}.ml-svg-inbox svg{display:block;width:100%;height:auto;min-height:0}.ml-svg-inbox-row{opacity:0;transform:translateY(-12px);transition:opacity .28s,transform .35s}.ml-svg-inbox-row[data-arrived=true]{opacity:1;transform:translateY(0)}.ml-svg-inbox-status{font-size:10px;color:#64816c;display:flex;gap:8px;padding:12px 0 0;min-height:28px}.ml-svg-inbox-status>span{color:#00a884}.ml-campaign-scene .ml-scene-feedback-progress i{animation-duration:1.6s!important}.ml-campaign-scene[data-focus='4'] .ml-scene-feedback-progress i{animation-duration:3.2s!important}.ml-reply .ml-typing i{animation-duration:.65s}.ml-sector .ml-typing i{animation-duration:.65s}@media(prefers-reduced-motion:reduce){.ml-svg-inbox-row{transition:none}}
 .ml-reply[data-phase="4"] .ml-travel-reply,.ml-reply[data-phase="4"] .ml-reply-trail{animation-duration:.75s!important}.ml-scene-chat-reply{animation-delay:.15s;animation-duration:.3s}.ml-scene-chat-result{animation-delay:.5s;animation-duration:.3s}
-.ml-audience-pipeline{margin-top:24px;min-width:0}.ml-pipeline-methods{display:flex;gap:10px}.ml-pipeline-methods button{flex:1;min-height:60px;text-align:left;padding:12px 16px;border:1px solid #cbded2;background:#fff;border-radius:9px;font-size:13px;cursor:pointer;color:#315a42}.ml-pipeline-methods button[aria-pressed=true]{background:#e1f2e7;border-color:#168347}.ml-pipeline-methods small{display:block;font-size:10px;color:#6c8776;margin-top:5px}.ml-pipeline-methods button:focus-visible{outline:2px solid #168347;outline-offset:3px}.ml-pipeline-map{height:128px;position:relative;display:flex;justify-content:space-around;align-items:center}.ml-pipeline-map svg{position:absolute;inset:0;width:100%;height:100%}.ml-pipeline-map>span{position:relative;text-align:center;width:33%;font-size:20px;color:#168347}.ml-pipeline-map small{display:block;font-size:10px;color:#64736a;margin-top:18px}.ml-pipeline-packet{stroke-dasharray:8 92;animation:ml-pipeline-travel 1.6s linear infinite}.ml-pipeline-records{padding:5px 16px;border:1px solid #dce5df;border-radius:11px;background:#fff}.ml-pipeline-records>div{display:flex;align-items:center;gap:12px;min-height:62px;border-bottom:1px solid #e7ede8;font-size:12px;transition:background .3s}.ml-pipeline-records>div:last-child{border:0}.ml-pipeline-records>div[data-checked=true]{background:#f3faf5}.ml-pipeline-avatar{display:grid;place-items:center;width:30px;height:30px;background:#eef5f0;border-radius:50%;color:#64816c;font-size:10px;flex-shrink:0}.ml-pipeline-records small{display:block;font-size:9px;color:#7b8980;margin-top:5px}.ml-pipeline-records b{font-size:9px;font-weight:400;color:#85948a;margin-left:auto;text-align:right}.ml-pipeline-records [data-checked=true] b{color:#168347}.ml-pipeline-records b[data-excluded=true]{color:#947044}.ml-pipeline-result{display:flex;gap:12px;align-items:center;margin-top:16px;padding:15px 17px;background:#e1f2e7;border:1px solid #c4dfce;border-radius:10px;animation:ml-notice-arrive .35s both}.ml-pipeline-result>span{color:#168347}.ml-pipeline-result strong{font-size:13px;font-weight:500;color:#315a42}.ml-pipeline-result small{display:block;font-size:10px;color:#64816c;margin-top:6px;line-height:1.5}.ml-pipeline-note{font-size:9px;color:#7b8980;margin-top:12px}.ml-audience-pipeline[data-running=false] .ml-pipeline-packet{animation-play-state:paused}.ml-line-rows>div{transition:background .3s,border-color .3s,box-shadow .3s}.ml-line-rows>div[data-active=true]{background:#e4f5eb;border-color:#168347;box-shadow:0 0 0 4px #00a88408}.ml-line-rows>div[data-active=true] small{color:#168347;animation:ml-notice-arrive .3s both}.ml-line-queue>div i{animation:ml-queue-beat 1.6s ease-in-out infinite}.ml-line-queue>div i:nth-child(2n){animation-delay:.3s}.ml-line-queue>div i:nth-child(3n){animation-delay:.6s}.ml-line-operations[data-running=false] .ml-line-queue>div i{animation-play-state:paused}@keyframes ml-pipeline-travel{from{stroke-dashoffset:8}to{stroke-dashoffset:-100}}@keyframes ml-queue-beat{50%{background:#00a884;transform:translateY(-3px)}}@media(max-width:700px){.ml-pipeline-map{height:115px}.ml-pipeline-records{padding:5px 12px}.ml-pipeline-records>div{gap:8px}.ml-pipeline-methods button{padding:12px;font-size:12px}.ml-pipeline-map small{font-size:9px}}@media(prefers-reduced-motion:reduce){.ml-pipeline-packet,.ml-pipeline-result,.ml-line-rows>div small,.ml-line-queue>div i{animation:none!important}.ml-pipeline-records>div,.ml-line-rows>div{transition:none}}
+.ml-audience-pipeline{margin-top:24px;min-width:0}
+.ml-pipeline-methods{display:flex;gap:10px}
+.ml-pipeline-methods button{flex:1;min-height:64px;text-align:left;padding:12px 16px;border:1px solid #cbded2;background:#fff;border-radius:10px;font-size:13px;cursor:pointer;color:#315a42;transition:all .2s ease}
+.ml-pipeline-methods button[aria-pressed=true]{background:#e1f2e7;border-color:#168347;box-shadow:0 2px 8px rgba(22,131,71,0.08)}
+.ml-method-btn-inner{display:flex;align-items:center;gap:12px}
+.ml-method-btn-icon{width:22px;height:22px;color:#168347;flex-shrink:0}
+.ml-pipeline-methods strong{font-size:13px;font-weight:600;display:block}
+.ml-pipeline-methods small{display:block;font-size:10px;color:#6c8776;margin-top:2px}
+.ml-pipeline-methods button:focus-visible{outline:2px solid #168347;outline-offset:3px}
+
+.ml-pipeline-map{position:relative;margin:24px 0 22px;padding:8px 0}
+.ml-pipeline-connector{position:absolute;top:32px;left:15%;right:15%;height:3px;z-index:1}
+.ml-pipeline-line-base{position:absolute;inset:0;background:#dce5df;border-radius:3px}
+.ml-pipeline-line-progress{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg, #168347, #00a884);border-radius:3px;transition:width .45s cubic-bezier(0.16, 1, 0.3, 1)}
+
+.ml-pipeline-steps{display:flex;justify-content:space-between;position:relative;z-index:2}
+.ml-pipeline-step{flex:1;display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 6px}
+.ml-pipeline-icon-circle{width:48px;height:48px;border-radius:50%;background:#ffffff;border:1.5px solid #dce5df;color:#7b8980;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.03);transition:all .3s ease;position:relative}
+.ml-pipeline-step[data-active=true] .ml-pipeline-icon-circle{background:#eef7f2;border-color:#168347;color:#168347;box-shadow:0 0 0 4px rgba(22, 131, 71, 0.12)}
+.ml-pipeline-step[data-current=true] .ml-pipeline-icon-circle{animation:ml-step-pulse 2s infinite ease-in-out}
+
+.ml-pipeline-label{margin-top:10px}
+.ml-pipeline-label strong{display:block;font-size:11px;font-weight:600;color:#21382c;white-space:nowrap;line-height:1.3}
+.ml-pipeline-label small{display:block;font-size:9px;color:#64736a;margin-top:3px;white-space:nowrap}
+.ml-pipeline-step[data-active=true] .ml-pipeline-label strong{color:#168347}
+
+@keyframes ml-step-pulse{
+  0%,100%{transform:scale(1)}
+  50%{transform:scale(1.05);box-shadow:0 0 0 6px rgba(22, 131, 71, 0.18)}
+}
+
+.ml-pipeline-records{padding:5px 16px;border:1px solid #dce5df;border-radius:11px;background:#fff}
+.ml-pipeline-records>div{display:flex;align-items:center;gap:12px;min-height:62px;border-bottom:1px solid #e7ede8;font-size:12px;transition:background .3s}
+.ml-pipeline-records>div:last-child{border:0}
+.ml-pipeline-records>div[data-checked=true]{background:#f3faf5}
+.ml-pipeline-avatar{display:grid;place-items:center;width:30px;height:30px;background:#eef5f0;border-radius:50%;color:#64816c;font-size:10px;flex-shrink:0}
+.ml-pipeline-records small{display:block;font-size:9px;color:#7b8980;margin-top:5px}
+.ml-pipeline-records b{font-size:9px;font-weight:400;color:#85948a;margin-left:auto;text-align:right}
+.ml-pipeline-records [data-checked=true] b{color:#168347}
+.ml-pipeline-records b[data-excluded=true]{color:#947044}
+
+.ml-pipeline-result{display:flex;gap:12px;align-items:center;margin-top:16px;padding:15px 17px;background:#e1f2e7;border:1px solid #c4dfce;border-radius:10px;animation:ml-notice-arrive .35s both}
+.ml-pipeline-result-icon{display:flex;align-items:center;justify-content:center;width:24px;height:24px;flex-shrink:0}
+.ml-result-pulse-dot{width:10px;height:10px;border-radius:50%;background:#168347;animation:ml-step-pulse 1.4s infinite ease-in-out}
+.ml-pipeline-result strong{font-size:13px;font-weight:500;color:#315a42}
+.ml-pipeline-result small{display:block;font-size:10px;color:#64816c;margin-top:6px;line-height:1.5}
+.ml-pipeline-note{font-size:9px;color:#7b8980;margin-top:12px}
+
+.ml-line-selector-btn{display:flex;align-items:center;gap:10px}
+.ml-line-wa-icon{width:18px;height:18px;color:#168347;flex-shrink:0}
+
+.ml-line-rows>div{transition:background .3s,border-color .3s,box-shadow .3s}
+.ml-line-rows>div[data-active=true]{background:#e4f5eb;border-color:#168347;box-shadow:0 0 0 4px #00a88408}
+.ml-line-rows>div[data-active=true] small{color:#168347;animation:ml-notice-arrive .3s both}
+.ml-line-queue>div i{animation:ml-queue-beat 1.6s ease-in-out infinite}
+.ml-line-queue>div i:nth-child(2n){animation-delay:.3s}
+.ml-line-queue>div i:nth-child(3n){animation-delay:.6s}
+.ml-line-operations[data-running=false] .ml-line-queue>div i{animation-play-state:paused}
+@keyframes ml-queue-beat{50%{background:#00a884;transform:translateY(-3px)}}
+
+@media(max-width:700px){
+  .ml-pipeline-connector{left:12%;right:12%}
+  .ml-pipeline-icon-circle{width:42px;height:42px}
+  .ml-pipeline-icon-circle svg{width:16px;height:16px}
+  .ml-pipeline-label strong{font-size:10px}
+  .ml-pipeline-label small{font-size:8px}
+  .ml-pipeline-records{padding:5px 12px}
+  .ml-pipeline-records>div{gap:8px}
+  .ml-pipeline-methods button{padding:12px;font-size:12px}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .ml-pipeline-result,.ml-line-rows>div small,.ml-line-queue>div i,.ml-pipeline-icon-circle{animation:none!important}
+  .ml-pipeline-records>div,.ml-line-rows>div,.ml-pipeline-line-progress{transition:none}
+}
