@@ -213,8 +213,9 @@ export function LandingInboxStory() {
       <InfographicCard
         badge="Ortak Gelen Kutusu"
         title="Gelen Sipariş ve Mesajları Tek Merkezden Yönetin"
-        subtitle="Çoklu Operatör & Hızlı Yanıt"
+        subtitle="Çoklu Operatör & Hızlı Yanıt (Veo Dinamik Video)"
         src="/landing/infographics/04-ortak-inbox-chatgpt-16-9.png"
+        videoSrc="/landing/infographics/04-ortak-inbox-veo-i2v.mp4"
         alt="Mesajify Ortak Gelen Kutusu İnfografiği"
       />
     </Story>
@@ -233,8 +234,9 @@ export function LandingExplorerStory() {
       <InfographicCard
         badge="Ana Platform Mimarisi"
         title="Keşiften Satışa WhatsApp İletişim Akışı"
-        subtitle="Mesajify 360° Ekosistem"
+        subtitle="Mesajify 360° Ekosistem (Veo Dinamik Video)"
         src="/landing/infographics/01-ana-urun-chatgpt-16-9.png"
+        videoSrc="/landing/infographics/01-ana-urun-veo-i2v.mp4"
         alt="Mesajify Ana Platform ve Ürün Akışı İnfografiği"
       />
     </Story>
