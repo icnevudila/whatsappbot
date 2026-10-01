@@ -19,11 +19,20 @@ export type GeneratedImage = {
   provider: AiProviderId
 }
 
+export type ImageMetadata = {
+  workspace?: string
+  customer?: string
+  tenantId?: string
+  orgId?: string
+  conversationId?: string
+  requestId?: string
+}
+
 type ImageProvider = {
   id: AiProviderId
   label: string
   isConfigured: () => boolean
-  generate: (prompt: string, aspect: AspectRatio) => Promise<GeneratedImage>
+  generate: (prompt: string, aspect: AspectRatio, metadata?: ImageMetadata) => Promise<GeneratedImage>
 }
 
 function timeout(): AbortSignal {
@@ -50,17 +59,13 @@ function buildProviders(config: ResolvedAiConfig): Record<AiProviderId, ImagePro
       id: 'omnistudio',
       label: 'OmniStudio AI Engine',
       isConfigured: () => process.env.OMNISTUDIO_DISABLED !== 'true',
-      async generate(prompt, aspect) {
+      async generate(prompt, aspect, metadata) {
         const gatewayUrl = (process.env.OMNISTUDIO_GATEWAY_URL || 'http://167.233.201.31:3456').replace(/\/$/, '')
 
-        // Yoğunluk & Sağlık Kontrolü (Aynı anda onlarca kişi yaparsa doğrudan OpenAI resmi API'ye yönlendir)
-        const healthRes = await fetch(`${gatewayUrl}/health`, { signal: AbortSignal.timeout(3000) }).catch(() => null)
+        // Yoğunluk & Sağlık Kontrolü
+        const healthRes = await fetch(`${gatewayUrl}/health`, { signal: AbortSignal.timeout(5000) }).catch(() => null)
         if (!healthRes || !healthRes.ok) {
           throw new Error('OmniStudio Gateway çevrimdışı')
-        }
-        const health = await healthRes.json()
-        if (health.pending > 0) {
-          throw new Error(`OmniStudio meşgul (${health.pending} bekleyen iş) - Doğrudan resmi OpenAI API'ye aktarılıyor`)
         }
 
         const size = '1024x1024'
@@ -72,6 +77,12 @@ function buildProviders(config: ResolvedAiConfig): Record<AiProviderId, ImagePro
             prompt,
             size,
             response_format: 'b64_json',
+            workspace: metadata?.workspace || 'Ekip Paneli',
+            customer: metadata?.customer || 'Ekip',
+            tenantId: metadata?.tenantId || metadata?.orgId || null,
+            orgId: metadata?.orgId || metadata?.tenantId || null,
+            conversationId: metadata?.conversationId || null,
+            requestId: metadata?.requestId || null,
           }),
         })
 
@@ -273,6 +284,7 @@ export async function generateImage(
   prompt: string,
   aspect: AspectRatio,
   bag?: AiKeyBag | null,
+  metadata?: ImageMetadata,
 ): Promise<{ image: GeneratedImage; attempts: string[] }> {
   const registry = buildProviders(resolveAiConfig(bag))
   const attempts: string[] = []
@@ -282,7 +294,7 @@ export async function generateImage(
     if (!provider.isConfigured()) continue
 
     try {
-      const image = await provider.generate(prompt, aspect)
+      const image = await provider.generate(prompt, aspect, metadata)
       return { image, attempts }
     } catch (error) {
       attempts.push(

@@ -851,6 +851,10 @@ export async function processCreativeGeneration(
     const { image, attempts } = await generateImage(prompt, aspect, bag, refs, {
       customer: customerName,
       workspace: workspaceTitle,
+      tenantId: creative.org_id,
+      orgId: creative.org_id,
+      conversationId: creative.id,
+      requestId: `${creative.id}-${Date.now()}`,
     })
     const ext = image.mimeType.includes('jpeg') ? 'jpg' : 'png'
     const path = `${creative.org_id}/${crypto.randomUUID()}.${ext}`

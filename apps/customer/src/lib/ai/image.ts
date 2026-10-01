@@ -28,6 +28,10 @@ export type ReferenceImage = {
 export type ImageMetadata = {
   workspace?: string
   customer?: string
+  tenantId?: string
+  orgId?: string
+  conversationId?: string
+  requestId?: string
 }
 
 type ImageProvider = {
@@ -113,6 +117,10 @@ function buildProviders(config: ResolvedAiConfig): Record<AiProviderId, ImagePro
             referenceImages,
             workspace: metadata?.workspace || 'WhatsApp Botu',
             customer: metadata?.customer || 'Panel',
+            tenantId: metadata?.tenantId || metadata?.orgId || null,
+            orgId: metadata?.orgId || metadata?.tenantId || null,
+            conversationId: metadata?.conversationId || null,
+            requestId: metadata?.requestId || null,
           }),
         })
 

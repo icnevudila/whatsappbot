@@ -132,7 +132,14 @@ export async function POST(request: Request) {
     .join(' ')
 
   try {
-    const { image, attempts } = await generateImage(prompt, '1:1')
+    const { image, attempts } = await generateImage(prompt, '1:1', null, {
+      workspace: 'Ekip Paneli',
+      customer: brandName || org.name || 'Ekip',
+      tenantId: org.id,
+      orgId: org.id,
+      conversationId: `panel-${userId}-${Date.now()}`,
+      requestId: crypto.randomUUID(),
+    })
     const path = `${org.id}/${crypto.randomUUID()}.png`
 
     const { error: uploadError } = await supabase.storage.from('creatives').upload(path, image.data, {
