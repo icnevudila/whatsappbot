@@ -17,6 +17,105 @@ function Story({ eyebrow, title, description, dark = false, chapter = '', childr
   </section>
 }
 
+function InfographicCard({
+  src,
+  alt,
+  badge,
+  title,
+  subtitle,
+}: {
+  src: string
+  alt: string
+  badge: string
+  title: string
+  subtitle: string
+}) {
+  return (
+    <div
+      className="ml-infographic-card"
+      style={{
+        marginTop: '32px',
+        borderRadius: '16px',
+        border: '1px solid #e1e9e3',
+        background: '#f9fbf9',
+        padding: '16px',
+        boxShadow: '0 4px 20px rgba(0, 168, 132, 0.05)',
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '12px',
+          padding: '0 4px',
+          flexWrap: 'wrap',
+          gap: '8px',
+        }}
+      >
+        <div>
+          <span
+            style={{
+              fontSize: '11px',
+              fontWeight: 700,
+              letterSpacing: '0.06em',
+              color: '#168347',
+              textTransform: 'uppercase',
+              display: 'inline-block',
+              marginBottom: '2px',
+            }}
+          >
+            {badge}
+          </span>
+          <h4
+            style={{
+              fontSize: '15px',
+              fontWeight: 600,
+              color: '#090B0A',
+              margin: 0,
+            }}
+          >
+            {title}
+          </h4>
+        </div>
+        <span
+          style={{
+            fontSize: '11px',
+            color: '#5c6b61',
+            background: '#eaf4ee',
+            padding: '4px 10px',
+            borderRadius: '999px',
+            fontWeight: 500,
+          }}
+        >
+          {subtitle}
+        </span>
+      </div>
+      <div
+        style={{
+          borderRadius: '12px',
+          overflow: 'hidden',
+          border: '1px solid #dce5de',
+          background: '#fff',
+        }}
+      >
+        <img
+          src={src}
+          alt={alt}
+          loading="lazy"
+          style={{
+            width: '100%',
+            height: 'auto',
+            display: 'block',
+            objectFit: 'contain',
+          }}
+        />
+      </div>
+    </div>
+  )
+}
+
 export function LandingDeliveryStory() {
   const [, setReady] = useState(false)
   return (
@@ -27,6 +126,13 @@ export function LandingDeliveryStory() {
       description="Kendi listenizi yükleyin veya hedeflediğiniz bölge ve sektör için kitle talep edin. Talep edilen listenin uygunluğu, kapsamı ve hazırlanması değerlendirme sonrasında netleşir."
     >
       <AudienceWorkspace onReady={setReady} />
+      <InfographicCard
+        badge="Harita & Bölge Taraması"
+        title="Civarınızdaki İşletmeleri ve Potansiyel Müşterileri Keşfedin"
+        subtitle="Yapay Zeka Destekli Harita & Kitle Bulucu"
+        src="/landing/infographics/06-isletme-bulucu-chatgpt-16-9.png"
+        alt="Mesajify Harita ve İşletme Bulucu İnfografiği"
+      />
     </Story>
   )
 }
@@ -56,6 +162,13 @@ export function LandingCreativeStory() {
         <BrandContext />
       </div>
       <CreativeTransform />
+      <InfographicCard
+        badge="Kreatif Stüdyosu"
+        title="Dikey Reklam ve Görsel Üretim Mimarisi"
+        subtitle="Mesajify Yapay Zeka Stüdyosu"
+        src="/landing/infographics/05-kreatif-studyosu-chatgpt-4-3.png"
+        alt="Mesajify Kreatif ve Reklam Stüdyosu İnfografiği"
+      />
     </Story>
   )
 }
@@ -69,6 +182,13 @@ export function LandingInboxStory() {
       description="Fiyat, sipariş ve katalog sorularını tek ekranda takip edin. Mesajları yanıtlayın, konuşmalarınızı bir arada görün."
     >
       <ReplyToInbox />
+      <InfographicCard
+        badge="Ortak Gelen Kutusu"
+        title="Gelen Sipariş ve Mesajları Tek Merkezden Yönetin"
+        subtitle="Çoklu Operatör & Hızlı Yanıt"
+        src="/landing/infographics/04-ortak-inbox-chatgpt-16-9.png"
+        alt="Mesajify Ortak Gelen Kutusu İnfografiği"
+      />
     </Story>
   )
 }
@@ -82,6 +202,13 @@ export function LandingExplorerStory() {
       description="Listenizi hazırlayın, tanıtım mesajlarınızı yönetin ve müşteri konuşmalarını aynı panelden takip edin."
     >
       <ApprovedScreenGallery />
+      <InfographicCard
+        badge="Ana Platform Mimarisi"
+        title="Keşiften Satışa WhatsApp İletişim Akışı"
+        subtitle="Mesajify 360° Ekosistem"
+        src="/landing/infographics/01-ana-urun-chatgpt-16-9.png"
+        alt="Mesajify Ana Platform ve Ürün Akışı İnfografiği"
+      />
     </Story>
   )
 }
