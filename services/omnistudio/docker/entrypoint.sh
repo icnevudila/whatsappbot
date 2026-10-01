@@ -48,13 +48,31 @@ google-chrome-stable --no-sandbox --disable-dev-shm-usage --disable-gpu \
   --start-maximized https://chatgpt.com https://chatgpt.com &
 sleep 6
 
-# 5. Dual Worker Havuzu (chatgpt-1: Sekme 0, chatgpt-2: Sekme 1) & Otonom Bekçi
+# 5. Google Chrome #Flow Başlat (Port 9226, Flow Profili — Google Flow Video Üretimi)
+FLOW_PROFILE_DIR="/data/chromium-profile-flow"
+mkdir -p "$FLOW_PROFILE_DIR"
+rm -f "$FLOW_PROFILE_DIR/Singleton*" "$FLOW_PROFILE_DIR/LOCK" 2>/dev/null || true
+
+echo "🎬 Google Chrome #Flow Başlatılıyor (CDP Port: 9226, Profil: $FLOW_PROFILE_DIR)..."
+google-chrome-stable --no-sandbox --disable-dev-shm-usage --disable-gpu \
+  --disable-search-engine-choice-screen \
+  --disable-background-timer-throttling \
+  --disable-backgrounding-occluded-windows \
+  --disable-renderer-backgrounding \
+  --disable-features=CalculateNativeWinOcclusion,IsolateOrigins,site-per-process \
+  --disable-ipc-flooding-protection \
+  --user-data-dir="$FLOW_PROFILE_DIR" \
+  --remote-debugging-port=9226 \
+  --start-maximized https://flow.google.com/ &
+sleep 4
+
+# 6. Dual Worker Havuzu (chatgpt-1: Sekme 0, chatgpt-2: Sekme 1) & Otonom Bekçi
 echo "🤖 Dual CDP Worker Havuzu ve Otonom Bekçi Başlatılıyor..."
 
 while true; do
-  # Chrome 9222 kontrolü
-  if ! curl -s http://127.0.0.1:9222/json/version > /dev/null 2>&1; then
-    echo "⚠️ Chrome 9222 kapalı tespit edildi, yeniden başlatılıyor..."
+  # Chrome kontrolü: Port 9222 üzerinde koşan Chrome varsa asla dokunulmaz
+  if ! pgrep -f "remote-debugging-port=9222" > /dev/null; then
+    echo "⚠️ Chrome kapalı tespit edildi, yeniden başlatılıyor..."
     rm -f "$PROFILE_DIR/Singleton*" "$PROFILE_DIR/*/Singleton*" "$PROFILE_DIR/LOCK" "$PROFILE_DIR/*/LOCK" 2>/dev/null || true
     google-chrome-stable --no-sandbox --disable-dev-shm-usage --disable-gpu \
       --disable-search-engine-choice-screen \
@@ -66,7 +84,32 @@ while true; do
       --user-data-dir="$PROFILE_DIR" \
       --remote-debugging-port=9222 \
       --start-maximized https://chatgpt.com https://chatgpt.com &
+    sleep 8
+  fi
+
+  # Flow Chrome kontrolü: Port 9226
+  if ! pgrep -f "remote-debugging-port=9226" > /dev/null; then
+    echo "⚠️ Flow Chrome (9226) kapalı tespit edildi, yeniden başlatılıyor..."
+    rm -f "$FLOW_PROFILE_DIR/Singleton*" "$FLOW_PROFILE_DIR/LOCK" 2>/dev/null || true
+    google-chrome-stable --no-sandbox --disable-dev-shm-usage --disable-gpu \
+      --disable-search-engine-choice-screen \
+      --disable-background-timer-throttling \
+      --disable-backgrounding-occluded-windows \
+      --disable-renderer-backgrounding \
+      --disable-features=CalculateNativeWinOcclusion,IsolateOrigins,site-per-process \
+      --disable-ipc-flooding-protection \
+      --user-data-dir="$FLOW_PROFILE_DIR" \
+      --remote-debugging-port=9226 \
+      --start-maximized https://flow.google.com/ &
     sleep 6
+  fi
+
+  # server.js kontrolü
+  if ! pgrep -f "node server.js" > /dev/null; then
+    echo "⚠️ server.js kapalı tespit edildi, yeniden başlatılıyor..."
+    cd /app/gateway
+    node server.js >> /var/log/server.log 2>&1 &
+    sleep 3
   fi
 
   # cdp_worker #1 kontrolü (Görsel ve Ağır İşler)

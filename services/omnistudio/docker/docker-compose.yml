@@ -24,6 +24,8 @@ services:
       - ./data/profile-4:/data/chromium-profile-4
       # Uretilen gorselleri diskte tutar
       - ./data/outputs:/app/gateway/outputs
+      # Flow Chrome profili (Google Flow oturumu)
+      - ./data/profile-flow:/data/chromium-profile-flow
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
