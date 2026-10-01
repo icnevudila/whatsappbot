@@ -51,7 +51,7 @@ Görev: Aşağıda verilen ürün, kampanya veya duyuru için WhatsApp pazarlama
         companyContext: `${businessName} WhatsApp Pazarlama ve Müşteri Destek`,
         tone,
       }),
-      signal: AbortSignal.timeout(45000),
+      signal: AbortSignal.timeout(60000),
     })
 
     if (!gatewayRes.ok) {

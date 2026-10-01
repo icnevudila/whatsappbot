@@ -104,7 +104,7 @@ function buildProviders(config: ResolvedAiConfig): Record<AiProviderId, ImagePro
 
         const response = await fetch(`${gatewayUrl}/v1/images/generations`, {
           method: 'POST',
-          signal: AbortSignal.timeout(45000), // 45s: allows fallback within Vercel's 60s maxDuration
+          signal: AbortSignal.timeout(115000), // 115s: provides ample headroom for OmniStudio ChatGPT image generation
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             prompt,
