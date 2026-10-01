@@ -110,26 +110,147 @@ export function ContactValidationDemo({ onReady }: { onReady?: (ready: boolean) 
     <div className="ml-clean-list"><span className="ml-object-label">TANITIM LİSTESİ</span>{rows.filter((row,i)=>scanned>i && row[2]!=='Hariç tutuldu').map(([name,,status])=><p key={name} className={status==='Hariç tutuldu'?'is-excluded':''}><span>{status==='Hariç tutuldu'?'—':'✓'}</span>{name}<small>{status}</small></p>)}<div className="ml-clean-summary" aria-live="polite">{scanned===4?<><MesajifySignal variant="success"/><strong>Tanıtıma hazır</strong></>:<small>Kontrol edilenler burada</small>}</div></div>
   </div><button className="ml-replay" onClick={()=>setRun(run+1)}>↻ Tekrar göster</button></div>;
 }
+const creativeShowcaseItems = [
+  {
+    source: '/landing/studio/sources/ecommerce_product.jpg',
+    video: '/landing/studio/ecommerce-flow-veo.mp4',
+    title: 'Spor Ayakkabı & E-Ticaret',
+    sourceLabel: 'Ham Ürün Çekimi'
+  },
+  {
+    source: '/landing/studio/sources/restaurant_product.jpg',
+    video: '/landing/studio/restaurant-flow-veo.mp4',
+    title: 'Gurme Burger & Menü',
+    sourceLabel: 'Restoran Fotoğrafı'
+  },
+  {
+    source: '/landing/studio/sources/smartwatch_product.jpg',
+    video: '/landing/studio/hero-flow-veo.mp4',
+    title: 'Akıllı Saat & Teknoloji',
+    sourceLabel: 'Stüdyo Çekimi'
+  },
+  {
+    source: '/landing/studio/sources/automotive_product.jpg',
+    video: '/landing/studio/automotive-flow-veo.mp4',
+    title: 'Lüks Otomobil & Galeri',
+    sourceLabel: 'Showroom Görseli'
+  }
+];
+
 export function CreativeTransform({ scrollDriven = false }: { scrollDriven?: boolean }) {
-  const { ref, time } = useSceneClock(12);
+  const { ref, time, cycle } = useSceneClock(10);
+  const currentItem = creativeShowcaseItems[cycle % creativeShowcaseItems.length];
   const [scrollProgress, setScrollProgress] = useState(0);
+
   useEffect(() => {
     if (!scrollDriven) return;
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const update = () => { const node = ref.current; if (!node) return; const rect = node.getBoundingClientRect(); setScrollProgress(media.matches ? 1 : Math.max(0, Math.min(1, (innerHeight * .78 - rect.top) / (rect.height * .85)))); };
-    update(); window.addEventListener('scroll', update, {passive:true}); window.addEventListener('resize', update); media.addEventListener('change',update);
-    return () => { window.removeEventListener('scroll',update); window.removeEventListener('resize',update); media.removeEventListener('change',update); };
+    const update = () => {
+      const node = ref.current;
+      if (!node) return;
+      const rect = node.getBoundingClientRect();
+      setScrollProgress(media.matches ? 1 : Math.max(0, Math.min(1, (innerHeight * 0.78 - rect.top) / (rect.height * 0.85))));
+    };
+    update();
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    media.addEventListener('change', update);
+    return () => {
+      window.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
+      media.removeEventListener('change', update);
+    };
   }, [scrollDriven, ref]);
-  const phase = scrollDriven ? Math.min(4, Math.floor(scrollProgress * 5)) : time < 2 ? 0 : time < 5 ? 1 : time < 7.5 ? 2 : time < 10 ? 3 : 4;
-  return <div ref={ref} className="ml-stage ml-transform" data-phase={phase} data-scroll-driven={scrollDriven}>
-    <Sample>Görsel dönüşüm örneği</Sample><div className="ml-product-event ml-creative-event" key={phase}><MesajifyMark size="sm" decorative/><div><small>KREATİF STÜDYOSU</small><strong>{['Ürün fotoğrafı alındı','Sahne hazırlanıyor','Kreatif şekilleniyor','Marka uygulanıyor','Tanıtım kreatifi hazır'][phase]}</strong></div><span>{phase===4?'✓':'↗'}</span></div>
-    <div className="ml-transform-source"><span className="ml-object-label">Ürün fotoğrafı</span><img src="/landing/studio/product-source-raw.jpg" alt="Ürün ham fotoğrafı" loading="lazy"/><span className="ml-source-note">Gerçek kaynak fotoğrafı</span></div>
-    <div className="ml-transform-process"><div className="ml-engine-heading"><MesajifyMark size="lg" state={phase===4?'success':'processing'} decorative /><span>Creative Engine</span></div>
-      <div className="ml-processing-stage"><div className="ml-cinematic-backdrop"/><img className="ml-product-cutout" src="/landing/studio/product-source-raw.jpg" alt="Arka planından maskeyle ayrılan ürün" loading="lazy"/><div className="ml-crop-guide"><i/><i/><i/><i/></div><div className="ml-processing-sweep"/></div>
-      <div className="ml-processing-labels">{['Sahne hazırlanıyor','Video oluşturuluyor','Marka uygulanıyor','Hazır'].map((label,i) => <span key={label} className={phase>=i+1?'is-active':''}>{label}</span>)}</div>
+
+  const phase = scrollDriven ? Math.min(4, Math.floor(scrollProgress * 5)) : time < 2 ? 0 : time < 4.5 ? 1 : time < 7 ? 2 : time < 8.5 ? 3 : 4;
+
+  return (
+    <div ref={ref} className="ml-stage ml-transform" data-phase={phase} data-scroll-driven={scrollDriven}>
+      <Sample>Görsel dönüşüm örneği</Sample>
+      <div className="ml-product-event ml-creative-event" key={`${cycle}-${phase}`}>
+        <MesajifyMark size="sm" decorative />
+        <div>
+          <small>{currentItem.title.toUpperCase()}</small>
+          <strong>
+            {
+              [
+                'Ürün fotoğrafı alındı',
+                'Arka plan ayrıştırılıyor',
+                'Yapay zeka sahnesi işleniyor',
+                'Mesajify marka kiti uygulanıyor',
+                'Dikey WhatsApp reklamı hazır'
+              ][phase]
+            }
+          </strong>
+        </div>
+        <span>{phase === 4 ? '✓' : '↗'}</span>
+      </div>
+
+      <div className="ml-transform-source">
+        <span className="ml-object-label">01 / HAM FOTOĞRAF</span>
+        <img
+          key={currentItem.source}
+          src={currentItem.source}
+          alt={currentItem.title}
+          loading="lazy"
+          style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }}
+        />
+        <span className="ml-source-note">{currentItem.sourceLabel}</span>
+      </div>
+
+      <div className="ml-transform-process">
+        <div className="ml-engine-heading">
+          <MesajifyMark size="lg" state={phase === 4 ? 'success' : 'processing'} decorative />
+          <span>Creative Studio Engine</span>
+        </div>
+        <div className="ml-processing-stage">
+          <div className="ml-cinematic-backdrop" />
+          <img
+            className="ml-product-cutout"
+            key={currentItem.source + '-cutout'}
+            src={currentItem.source}
+            alt={currentItem.title}
+            loading="lazy"
+          />
+          <div className="ml-crop-guide"><i /><i /><i /><i /></div>
+          <div className="ml-processing-sweep" />
+        </div>
+        <div className="ml-processing-labels">
+          {[
+            { label: 'Fotoğraf Alındı', icon: '📸' },
+            { label: 'Sahne Oluşturuluyor', icon: '✨' },
+            { label: 'Veo Video Render', icon: '🎬' },
+            { label: 'Hazır', icon: '✓' }
+          ].map((item, i) => (
+            <span key={item.label} className={phase >= i + 1 ? 'is-active' : ''}>
+              <small style={{ marginRight: '6px' }}>{item.icon}</small>
+              {item.label}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="ml-transform-output">
+        <span className="ml-object-label">02 / WHATSAPP’A HAZIR</span>
+        <div className="ml-output-frame">
+          <div className="ml-media" style={{ aspectRatio: '9/16' }}>
+            <video
+              key={currentItem.video}
+              src={currentItem.video}
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="metadata"
+              aria-label="Tamamlanmış ürün reklamı"
+            />
+          </div>
+          <span className="ml-output-tag">9:16 · 8 SN VEO</span>
+        </div>
+        <span className="ml-output-status">{phase === 4 ? 'Kreatif hazır ✓' : 'Kreatif hazırlanıyor…'}</span>
+      </div>
     </div>
-    <div className="ml-transform-output"><span className="ml-object-label">02 / WHATSAPP’A HAZIR</span><div className="ml-output-frame"><GeneratedMediaSlot id="real-product-video" alt="Tamamlanmış ürün reklamı" active={phase===4}/><span className="ml-output-tag">9:16 · 8 SN</span></div><span className="ml-output-status">{phase===4?'Kreatif hazır ✓':'Kreatif hazırlanıyor'}</span></div>
-  </div>;
+  );
 }
 const inboxCampaignDemos = [
   {
