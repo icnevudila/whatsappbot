@@ -26,9 +26,13 @@
     if (span) span.textContent = `OmniStudio: ${text}`;
   }
 
-  // Sayfadaki tüm görselleri URL olarak listele
+  // Sayfadaki asistan görsellerini URL olarak listele (Kullanıcı ekleri hariç)
   function getCurrentImageUrls() {
     return Array.from(document.querySelectorAll('img'))
+      .filter(img => {
+        if (img.closest('[data-message-author-role="user"]') || img.closest('[data-testid*="upload"]') || img.closest('form')) return false;
+        return true;
+      })
       .map(img => img.src)
       .filter(Boolean);
   }

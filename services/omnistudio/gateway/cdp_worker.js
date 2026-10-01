@@ -30,7 +30,11 @@ const {
   releaseSessionFlightLease
 } = require('./orphan_tab_reaper.js');
 
+const MESAJIFY_PROJECT_ID = 'g-p-6aaf94b0ae20819180ce47c040ff4a59';
+const MESAJIFY_PROJECT_URL = `https://chatgpt.com/g/${MESAJIFY_PROJECT_ID}`;
+
 const reaper = new OrphanTabReaper();
+
 let cachedTabId = null;
 
 
@@ -136,6 +140,9 @@ function createCdpSession(wsUrl, connectTimeoutMs = 8000) {
       clearTimeout(connectTimer);
       resolve({
         send(method, params = {}, timeoutMs = 45000) {
+          if (ws.readyState !== 1) {
+            return Promise.reject(new Error(`[CDP Error] WebSocket not open (readyState: ${ws.readyState})`));
+          }
           return new Promise((res, rej) => {
             const id = msgId++;
             let timer = null;
@@ -155,7 +162,13 @@ function createCdpSession(wsUrl, connectTimeoutMs = 8000) {
                 rej(err);
               }
             });
-            ws.send(JSON.stringify({ id, method, params }));
+            try {
+              ws.send(JSON.stringify({ id, method, params }));
+            } catch (sendErr) {
+              if (timer) clearTimeout(timer);
+              callbacks.delete(id);
+              rej(sendErr);
+            }
           });
         },
         close() {
@@ -164,8 +177,20 @@ function createCdpSession(wsUrl, connectTimeoutMs = 8000) {
       });
     };
 
+    ws.onclose = (event) => {
+      clearTimeout(connectTimer);
+      for (const [id, { rej }] of callbacks.entries()) {
+        rej(new Error(`[CDP Connection Closed] WebSocket closed (${event?.code || ''})`));
+      }
+      callbacks.clear();
+    };
+
     ws.onerror = (err) => {
       clearTimeout(connectTimer);
+      for (const [id, { rej }] of callbacks.entries()) {
+        rej(err);
+      }
+      callbacks.clear();
       reject(err);
     };
 
@@ -190,39 +215,31 @@ async function getTab(matchPattern) {
   try {
     const res = await fetch(`${CDP_HTTP}/json/list`);
     const tabs = await res.json();
-    const chatTabs = tabs.filter(t => (t.type === 'page' || !t.type) && t.url && t.url.includes(matchPattern));
+    const pageTabs = tabs.filter(t => (t.type === 'page' || !t.type));
 
-    // 1. Eğer bu worker'ın kayıtlı canonical sekmesi varsa ve hala açıksa onu kullan
+    // 1. Worker'a daha önce atanmış sekme hala açıksa doğrudan onu kullan (Navigation sırasında URL değişse bile sekme kopmaz)
     if (cachedTabId) {
-      const existing = chatTabs.find(t => t.id === cachedTabId);
+      const existing = pageTabs.find(t => t.id === cachedTabId);
       if (existing) {
-        reaper.registry.touchTab(cachedTabId, existing.url);
         return existing;
       }
     }
 
-    // 2. Diğer worker'ların sahiplendiği tab ID'lerini oku
-    const otherWorkerTabIds = new Set();
-    try {
-      const regDir = process.env.OMNISTUDIO_TAB_DIR || path.join(os.tmpdir(), 'omnistudio_tabs');
-      if (fs.existsSync(regDir)) {
-        const files = fs.readdirSync(regDir);
-        for (const f of files) {
-          if (f.startsWith('worker_') && f.endsWith('.json') && !f.includes(WORKER_ID)) {
-            const data = JSON.parse(fs.readFileSync(path.join(regDir, f), 'utf8'));
-            if (data && data.tabId) otherWorkerTabIds.add(data.tabId);
-          }
-        }
-      }
-    } catch (_) {}
+    // 2. Belirtilen matchPattern'e uyan sekmeleri TAB_INDEX ile eşleştir
+    const chatTabs = pageTabs.filter(t => t.url && t.url.includes(matchPattern));
+    if (chatTabs.length > TAB_INDEX) {
+      const assignedTab = chatTabs[TAB_INDEX];
+      cachedTabId = assignedTab.id;
+      reaper.registry.bindWorkerCanonical(WORKER_ID, assignedTab.id, assignedTab.url);
+      return assignedTab;
+    }
 
-    // 3. Başka bir worker tarafından sahiplenilmemiş açık bir ChatGPT sekmesi bul
-    const unownedTab = chatTabs.find(t => !otherWorkerTabIds.has(t.id));
-    if (unownedTab) {
-      cachedTabId = unownedTab.id;
-      reaper.registry.bindWorkerCanonical(WORKER_ID, unownedTab.id, unownedTab.url);
-      console.log(`[CDP Worker: ${WORKER_ID}] Boştaki sekme bağlandı: ${unownedTab.id}`);
-      return unownedTab;
+    // 3. Genel sayfa sekmelerinden TAB_INDEX ile eşleştir
+    if (pageTabs.length > TAB_INDEX) {
+      const assignedTab = pageTabs[TAB_INDEX];
+      cachedTabId = assignedTab.id;
+      reaper.registry.bindWorkerCanonical(WORKER_ID, assignedTab.id, assignedTab.url);
+      return assignedTab;
     }
 
     // 4. Eğer boştaki sekme yoksa, bu worker için yeni bir sekme aç
@@ -295,7 +312,16 @@ async function dismissAnyModals(cdp) {
             btn.click();
             dismissed = true;
           }
+        // Auto-heal 'ChatGPT hit a snag - Try again'
+        const tryAgainBtn = Array.from(document.querySelectorAll('button')).find(b => {
+          const t = (b.innerText || '').trim().toLowerCase();
+          return t.includes('try again') || t.includes('tekrar dene') || t.includes('yeniden dene') || t.includes('reload');
+        });
+        if (tryAgainBtn) {
+          tryAgainBtn.click();
+          dismissed = true;
         }
+
         return dismissed;
       })()`,
       returnByValue: true
@@ -345,9 +371,7 @@ async function waitForChatInput(cdp, maxWaitMs = 15000) {
     await dismissAnyModals(cdp);
     const check = await cdp.send('Runtime.evaluate', {
       expression: `!!(
-        document.querySelector('#prompt-textarea') || 
-        document.querySelector('div[contenteditable="true"]') ||
-        document.querySelector('textarea')
+        document.querySelector('form [contenteditable="true"], form [role="textbox"], form textarea, #prompt-textarea, [data-composer] [contenteditable="true"]')
       )`,
       returnByValue: true
     }).catch(() => ({ result: { value: false } }));
@@ -381,31 +405,21 @@ async function injectPromptAndSend(cdp, promptText) {
     // 1. Varsa engelleyici modalları temizle
     await dismissAnyModals(cdp);
 
-    // 2. Textarea'yı bul, tıkla, temizle ve form GET navigasyonunu önle
+    // 2. Textarea'yı bul, tıkla ve temizle
     const focusRes = await cdp.send('Runtime.evaluate', {
       expression: `(() => {
-        const form = document.querySelector('form');
-        if (form) form.onsubmit = (e) => { e.preventDefault(); return false; };
-        const textarea = document.querySelector('#prompt-textarea') || 
-                         document.querySelector('div[contenteditable="true"]') ||
-                         document.querySelector('textarea');
+        const textarea = document.querySelector('form [contenteditable="true"], form [role="textbox"], form textarea, #prompt-textarea, [data-composer] [contenteditable="true"]');
         if (textarea) {
           textarea.focus();
           textarea.click();
           try {
-            const range = document.createRange();
-            range.selectNodeContents(textarea);
-            const sel = window.getSelection();
-            sel.removeAllRanges();
-            sel.addRange(range);
-            document.execCommand('delete');
+            document.execCommand('selectAll', false, null);
+            document.execCommand('delete', false, null);
           } catch (_) {}
           if (textarea.tagName === 'TEXTAREA') {
             textarea.value = '';
-          } else {
-            textarea.textContent = '';
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
           }
-          textarea.dispatchEvent(new Event('input', { bubbles: true }));
           const r = textarea.getBoundingClientRect();
           return { found: true, x: r.left + r.width / 2, y: r.top + r.height / 2 };
         }
@@ -430,9 +444,7 @@ async function injectPromptAndSend(cdp, promptText) {
     // Textarea input eventlerini tetikle
     await cdp.send('Runtime.evaluate', {
       expression: `(() => {
-        const textarea = document.querySelector('#prompt-textarea') || 
-                         document.querySelector('div[contenteditable="true"]') ||
-                         document.querySelector('textarea');
+        const textarea = document.querySelector('form [contenteditable="true"], form [role="textbox"], form textarea, #prompt-textarea, [data-composer] [contenteditable="true"]');
         if (textarea) {
           textarea.dispatchEvent(new Event('input', { bubbles: true }));
           textarea.dispatchEvent(new Event('change', { bubbles: true }));
@@ -440,75 +452,78 @@ async function injectPromptAndSend(cdp, promptText) {
       })()`
     });
     
-    // 4. Gönder butonunun render edilmesini bekle ve tıkla
-    let clicked = false;
-    for (let wait = 0; wait < 35; wait++) {
+    // 4. Gönder butonunun aktifleşmesini bekle ve gönderimi doğrula
+    let submitted = false;
+    const submitDeadline = Date.now() + 45000;
+    while (Date.now() < submitDeadline) {
       if (await checkRateLimitModal(cdp)) {
         throw new Error('WEB_SESSION_RATE_LIMITED: ChatGPT web "Too many requests" rate-limit modal detected');
       }
       await dismissAnyModals(cdp);
+
       const clickRes = await cdp.send('Runtime.evaluate', {
         expression: `(() => {
-          let sendBtn = document.querySelector('button[data-testid="composer-send-button"]') ||
-                        document.querySelector('#composer-submit-button') ||
-                        document.querySelector('button[data-testid="send-button"]') ||
-                        document.querySelector('button[aria-label="Send prompt"]') ||
-                        document.querySelector('button[aria-label="Send message"]') ||
-                        document.querySelector('button[aria-label="Prompt gönder"]') ||
-                        document.querySelector('button[aria-label*="Send" i]') ||
-                        document.querySelector('button[aria-label*="Gönder" i]') ||
-                        document.querySelector('button.composer-submit-button-color') ||
-                        document.querySelector('.composer-submit-button-color') ||
-                        document.querySelector('form button[type="submit"]') ||
-                        document.querySelector('button:has(svg.icon-2xl)') ||
-                        document.querySelector('button:has(svg path[d*="M12 2"])');
-          if (sendBtn && !sendBtn.disabled && sendBtn.getAttribute('aria-disabled') !== 'true' && !sendBtn.getAttribute('data-testid')?.includes('speech')) {
+          if (document.querySelector('button[data-testid="stop-button"], button[aria-label*="Stop"]')) {
+            return { submitted: true };
+          }
+          const textarea = document.querySelector('form [contenteditable="true"], form [role="textbox"], form textarea, #prompt-textarea, [data-composer] [contenteditable="true"]');
+          const text = textarea ? (textarea.innerText || textarea.value || '').trim() : '';
+          if (textarea && text.length === 0) {
+            return { submitted: true };
+          }
+
+          const btns = Array.from(document.querySelectorAll('button[aria-label="Send"], button.bg-composer-primary, button[data-testid*="send"], button[data-testid="composer-send-button"], #composer-submit-button, button[aria-label="Send prompt"], button[aria-label="Send message"], button[aria-label="Prompt gönder"], button[aria-label*="Send" i], button[aria-label*="Gönder" i], button.composer-submit-button-color, form button[type="submit"]'));
+          const sendBtn = btns.find(b => {
+            const r = b.getBoundingClientRect();
+            return r.width >= 20 && r.height >= 20 && !b.disabled && b.getAttribute('aria-disabled') !== 'true' && !b.getAttribute('data-testid')?.includes('speech');
+          });
+          if (sendBtn) {
+            sendBtn.focus();
             sendBtn.click();
             const r = sendBtn.getBoundingClientRect();
-            return { clicked: true, x: r.left + r.width / 2, y: r.top + r.height / 2 };
+            return { clicked: true, x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
           }
-          return null;
+          return { clicked: false, waitingForEnable: true };
         })()`,
         returnByValue: true
       });
 
-      if (clickRes.result?.value?.clicked) {
-        clicked = true;
-        const { x, y } = clickRes.result.value;
+      const res = clickRes.result?.value;
+      if (res?.submitted) {
+        submitted = true;
+        break;
+      }
+
+      if (res?.clicked) {
+        const { x, y } = res;
         if (x && y) {
           await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 }).catch(() => {});
           await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 }).catch(() => {});
         }
-        break;
+        await sleep(1000);
+        const verifyRes = await cdp.send('Runtime.evaluate', {
+          expression: `(() => {
+            if (document.querySelector('button[data-testid="stop-button"], button[aria-label*="Stop"]')) return true;
+            const textarea = document.querySelector('form [contenteditable="true"], form [role="textbox"], form textarea, #prompt-textarea, [data-composer] [contenteditable="true"]');
+            return textarea && (textarea.innerText || textarea.value || '').trim().length === 0;
+          })()`,
+          returnByValue: true
+        });
+        if (verifyRes.result?.value) {
+          submitted = true;
+          break;
+        }
+        console.log(`[CDP Worker: ${WORKER_ID}] Buton tıklandı, onay için Enter deneniyor...`);
+        await cdp.send('Input.dispatchKeyEvent', { type: 'rawKeyDown', windowsVirtualKeyCode: 13, unmodifiedText: '\r', text: '\r', key: 'Enter', code: 'Enter' }).catch(() => {});
+        await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', windowsVirtualKeyCode: 13, unmodifiedText: '\r', text: '\r', key: 'Enter', code: 'Enter' }).catch(() => {});
+        await sleep(1000);
+      } else {
+        await sleep(500);
       }
-      await sleep(150);
     }
 
-    if (!clicked) {
-      console.log(`[CDP Worker: ${WORKER_ID}] Buton bulunamadı/tıklanamadı, Enter tuşu simüle ediliyor...`);
-      await cdp.send('Runtime.evaluate', {
-        expression: `(() => {
-          const textarea = document.querySelector('#prompt-textarea') || document.querySelector('div[contenteditable="true"]');
-          if (textarea) textarea.focus();
-        })()`
-      });
-      await cdp.send('Input.dispatchKeyEvent', {
-        type: 'rawKeyDown',
-        windowsVirtualKeyCode: 13,
-        unmodifiedText: '\r',
-        text: '\r',
-        key: 'Enter',
-        code: 'Enter'
-      });
-      await cdp.send('Input.dispatchKeyEvent', {
-        type: 'keyUp',
-        windowsVirtualKeyCode: 13,
-        unmodifiedText: '\r',
-        text: '\r',
-        key: 'Enter',
-        code: 'Enter'
-      });
-      await sleep(300);
+    if (!submitted) {
+      throw new Error('Prompt kutusu gönderilemedi (butona basılamadı veya dosya yüklemesi tamamlanamadı)');
     }
 
     return {
@@ -523,7 +538,7 @@ async function injectPromptAndSend(cdp, promptText) {
 
 async function resetToFreshChat(cdp) {
   try {
-    await cdp.send('Page.navigate', { url: 'https://chatgpt.com/' });
+    await cdp.send('Page.navigate', { url: MESAJIFY_PROJECT_URL });
     await sleep(3000);
     await waitForChatInput(cdp);
   } catch (err) {
@@ -540,7 +555,7 @@ async function performMemoryRecycle(tab) {
   try {
     cdp = await createCdpSession(tab.webSocketDebuggerUrl);
     await cdp.send('Runtime.evaluate', {
-      expression: `window.location.replace('https://chatgpt.com/')`
+      expression: `window.location.replace('${MESAJIFY_PROJECT_URL}')`
     }, 15000);
     await sleep(4000);
     await waitForChatInput(cdp);
@@ -551,6 +566,7 @@ async function performMemoryRecycle(tab) {
     if (cdp) cdp.close();
   }
 }
+
 
 async function renameChatToCustomer(cdp, title) {
   if (!title) return;
@@ -635,7 +651,7 @@ async function ensureCustomerChat(cdp, customer, channel = 'media', identity = {
   // Yeni temiz sohbet aç — Mesajify projesine yönlendir (kayıtlı URL yoksa veya geçersizse)
   // Proje URL'sine gitmek, yeni sohbetin doğrudan "Mesajify" projesi altında açılmasını sağlar.
   // Ana sayfaya gitmek yerine proje sayfasına gidiyoruz; böylece ortalık karışmıyor.
-  const MESAJIFY_PROJECT_URL = 'https://chatgpt.com/g/g-p-6aaf94b0ae20819180ce47c040ff4a59';
+  const MESAJIFY_PROJECT_URL = 'https://chatgpt.com/g/g-p-6aaf94b0ae20819180ce47c040ff4a59-mesajify';
   console.log(`[CDP Worker: ${WORKER_ID}] "${effectiveCustomer}" [${effectiveChannel}] icin Mesajify projesine yeni sohbet aciliyor...`);
   await cdp.send('Page.navigate', { url: MESAJIFY_PROJECT_URL });
   await waitForChatInput(cdp, 20000);
@@ -825,23 +841,15 @@ async function executeChatGPTJob(tab, job) {
     await cdp.send('Page.bringToFront').catch(() => {});
     workerTiming.mark('tab_acquire_ms');
 
-    // 0. Firma veya Sistem Kanaryası için oturumu aç (Bağımsız görsel istekleri daima temiz taze sayfada başlar)
+    // 0. Firma için kayıtlı görsel oturumunu aç ([Mesajify] {Firma} - Medya)
     const customer = (job.customer || 'Genel').trim();
     const isCanary = customer === 'Sistem' || customer === 'Sistem Nöbetçisi' || (job.workspace || '').includes('Canary');
-    const isDedicatedChat = Boolean(job.conversationId) || isCanary;
     const channel = isCanary ? 'canary' : 'media';
     const chatIdentity = { customer, tenantId: job.tenantId, conversationId: job.conversationId };
-    let chatInfo = null;
-
-    if (isDedicatedChat) {
-      console.log(`[CDP Worker: ${WORKER_ID}] Firma: "${customer}" [${channel}] oturumu hazırlanıyor...`);
-      chatInfo = await ensureCustomerChat(cdp, customer, channel, chatIdentity);
-    } else {
-      console.log(`[CDP Worker: ${WORKER_ID}] Bağımsız görsel üretimi için taze temiz sayfa açılıyor...`);
-      await cdp.send('Page.navigate', { url: 'https://chatgpt.com/' });
-      await waitForChatInput(cdp, 15000);
-      chatInfo = { isNewChat: true, chatUrl: 'https://chatgpt.com/' };
-    }
+    const isDedicatedChat = isCanary || Boolean(customer && customer !== 'Genel');
+    
+    console.log(`[CDP Worker: ${WORKER_ID}] Firma: "${customer}" [${channel}] oturumu hazırlanıyor...`);
+    const chatInfo = await ensureCustomerChat(cdp, customer, channel, chatIdentity);
     workerTiming.mark('tab_ready_ms');
 
     // 1. Referans Görseller Varsa (Image-to-Image / Logo / Ürün) ChatGPT'ye Dosya Olarak Yükle
@@ -857,7 +865,7 @@ async function executeChatGPTJob(tab, job) {
         if (rawStr.startsWith('http://') || rawStr.startsWith('https://')) {
           try {
             console.log(`[CDP Worker] Referans görsel URL'den indiriliyor: ${rawStr.slice(0, 70)}...`);
-            const fetchRes = await fetch(rawStr);
+            const fetchRes = await fetch(rawStr, { signal: AbortSignal.timeout(15000) });
             if (fetchRes.ok) {
               const arrayBuf = await fetchRes.arrayBuffer();
               buffer = Buffer.from(arrayBuf);
@@ -881,16 +889,17 @@ async function executeChatGPTJob(tab, job) {
 
       if (tempRefPaths.length > 0) {
         try {
-          const doc = await cdp.send('DOM.getDocument', {});
+          await cdp.send('DOM.enable').catch(() => {});
+          const doc = await cdp.send('DOM.getDocument', {}, 5000);
           const fileInput = await cdp.send('DOM.querySelector', {
             nodeId: doc.root.nodeId,
             selector: '#upload-photos, #upload-media, input[type=file]'
-          });
+          }, 5000);
           if (fileInput && fileInput.nodeId) {
             await cdp.send('DOM.setFileInputFiles', {
               files: tempRefPaths,
               nodeId: fileInput.nodeId
-            });
+            }, 5000);
             await cdp.send('Runtime.evaluate', {
               expression: `
                 const el = document.querySelector('#upload-photos') || document.querySelector('#upload-media') || document.querySelector('input[type=file]');
@@ -921,17 +930,17 @@ async function executeChatGPTJob(tab, job) {
       }
     }
 
-    // 2. Stale Image Protection: Submit öncesi asistan mesajı sayısını ve görsel URL'lerini al
+    // 2. Stale Image Protection: Submit öncesi asistan mesajı sayısını ve görsel URL'lerini al (DOM içinde Set olarak tut)
     const baselineEval = await cdp.send('Runtime.evaluate', {
       expression: `(() => {
         const assts = ${JS_GET_ASSISTANT_MSGS};
-        const imgs = Array.from(document.querySelectorAll('img')).map(i => i.src).filter(Boolean);
-        return { count: assts.length, imgs };
+        window.__beforeAssistantCount = assts.length;
+        window.__beforeImages = new Set(Array.from(document.querySelectorAll('img')).map(i => i.src).filter(Boolean));
+        return { count: assts.length, imgCount: window.__beforeImages.size };
       })()`,
       returnByValue: true
-    });
-    const baseline = baselineEval.result?.value || { count: 0, imgs: [] };
-    const beforeImages = new Set(baseline.imgs || []);
+    }, 5000);
+    const baseline = baselineEval.result?.value || { count: 0, imgCount: 0 };
     const baselineCount = baseline.count || 0;
 
     // 3. Prompt'u Enjekte Et
@@ -965,70 +974,88 @@ async function executeChatGPTJob(tab, job) {
         body: JSON.stringify({ jobId: job.id, progress, statusText })
       }).catch(() => {});
 
-      const checkEval = await cdp.send('Runtime.evaluate', {
-        expression: `
-          (function() {
-            const beforeList = ${JSON.stringify(Array.from(beforeImages))};
-            const stopBtn = document.querySelector('button[data-testid="stop-button"], button[aria-label*="Stop"], button[aria-label*="durdur"]');
-            const isThinking = !!document.querySelector('.result-thinking, [data-testid*="generating"], .streaming-animated-ellipsis');
-            const isGenerating = !!stopBtn || isThinking;
+      let checkResult = null;
+      try {
+        const checkEval = await cdp.send('Runtime.evaluate', {
+          expression: `
+            (function() {
+              const beforeSet = (window.__beforeImages instanceof Set) ? window.__beforeImages : new Set();
+              const baselineCount = window.__beforeAssistantCount || ${baselineCount};
+              const elapsedSec = ${elapsed};
+              const stopBtn = document.querySelector('button[data-testid="stop-button"], button[aria-label*="Stop"], button[aria-label*="durdur"]');
+              const isThinking = !!document.querySelector('.result-thinking, [data-testid*="generating"], .streaming-animated-ellipsis');
+              const isGenerating = !!stopBtn || isThinking;
 
-            const assts = ${JS_GET_ASSISTANT_MSGS};
-            // Eğer yeni bir asistan mesajı henüz gelmediyse eski görsellere ASLA bakma!
-            if (assts.length <= ${baselineCount}) {
-              return { ready: false, isGenerating: true, foundSrc: null };
-            }
-
-            // SADECE ve SADECE en son üretilen yeni asistan mesajının altındaki görsellere bak!
-            const lastAsst = assts[assts.length - 1];
-            const candidateImgs = Array.from(lastAsst.querySelectorAll('img'));
-
-            for (const img of candidateImgs) {
-              const src = img.src || '';
-              if (!src) continue;
-
-              const alt = (img.alt || '').toLowerCase();
-              const isEstuaryOrGenerated = src.includes('backend-api/estuary') || 
-                                           src.includes('files.oaiusercontent.com') || 
-                                           alt.includes('generated') || 
-                                           alt.includes('dall-e') ||
-                                           alt.includes('üretilen');
-
-              if (!isEstuaryOrGenerated) continue;
-              if (beforeList.includes(src)) continue;
-
-              // Yüklenen referans dosyaları ref_... veya dosya uzantısıyla biter, onları asla alma
-              if (alt.startsWith('ref_') || alt.endsWith('.png') || alt.endsWith('.jpg') || alt.endsWith('.jpeg') || alt.endsWith('.webp')) continue;
-
-              const width = img.naturalWidth || img.width;
-              const height = img.naturalHeight || img.height;
-              if (width < 80 || height < 80) continue;
-
-              // Görsel DOM'da tamamen yüklendiyse (complete ve >=256px), ChatGPT hala metin yazsa bile beklemeden al!
-              if (img.complete && width >= 256 && height >= 256) {
-                return { ready: true, isGenerating: false, foundSrc: src };
+              // 1. DALL-E çizimi en az 8 saniye sürer. 8 sn öncesindeki hiçbir görsel YENİ sayılamaz.
+              if (elapsedSec < 8) {
+                return { ready: false, isGenerating: true, foundSrc: null, reason: 'WAIT_MIN_DURATION' };
               }
 
-              // Eğer ChatGPT hala yanıt üretiyorsa ve görsel henüz tam boyuta ulaşmadıysa bekle
-              if (isGenerating) {
-                return { ready: false, isGenerating: true, foundSrc: null };
+              // 2. Render edilen yeni görselleri tespit et
+              const imgs = Array.from(document.querySelectorAll('main img, article img, img')).filter(img => {
+                const src = img.src || '';
+                const alt = (img.alt || '').toLowerCase();
+                const w = img.naturalWidth || img.width || 0;
+                const h = img.naturalHeight || img.height || 0;
+                if (!src || beforeSet.has(src)) return false;
+                if (alt.startsWith('ref_') || alt.endsWith('.png') || alt.endsWith('.jpg') || alt.endsWith('.jpeg')) return false;
+
+                // Kullanıcının yüklediği logo/ürün referans görsellerini KESİNLİKLE hariç tut:
+                if (alt.includes('user attachment') || img.closest('form') || img.closest('[data-testid*="upload"]') || img.closest('[data-testid*="attachment"]') || img.closest('.attachment') || img.closest('[data-message-author-role="user"]')) return false;
+
+                // ChatGPT DALL-E üretimi tespiti:
+                const isGeneratedAlt = alt.includes('generated image') || alt.includes('dall-e');
+                const isButtonWrapped = img.parentElement?.tagName === 'BUTTON' && (w >= 400 || h >= 400);
+                const isBlobOrApi = src.startsWith('blob:') || src.includes('backend-api/estuary') || src.includes('files.oaiusercontent.com');
+
+                return (isGeneratedAlt || isButtonWrapped || isBlobOrApi) && (w >= 400 || h >= 400 || (img.complete && w >= 400));
+              });
+
+              if (imgs.length > 0) {
+                const targetImg = imgs[imgs.length - 1];
+                if (!isGenerating || (elapsedSec >= 25 && targetImg.complete)) {
+                  return { ready: true, isGenerating: false, foundSrc: targetImg.src, count: imgs.length };
+                }
               }
 
-              return { ready: true, isGenerating: false, foundSrc: src };
-            }
+              // 3. Görsel henüz yoksa ve ekranda aktif hata bannerı varsa
+              const errorToast = document.querySelector('[data-testid="error-message"], [role="alert"].text-red-500');
+              if (errorToast && !isGenerating) {
+                return { ready: false, isGenerating: false, error: 'ChatGPT hata uyarisi: ' + errorToast.innerText.slice(0, 100) };
+              }
 
-            return { ready: false, isGenerating, foundSrc: null };
-          })()
-        `,
-        returnByValue: true
-      });
+              return { ready: false, isGenerating, foundSrc: null, candidateCount: imgs.length };
+            })()
+          `,
+          returnByValue: true
+        }, 15000);
 
-      const checkResult = checkEval.result?.value;
+        if (checkEval?.exceptionDetails) {
+          console.error(`[CDP Worker: ${WORKER_ID}] Polling JS Error:`, checkEval.exceptionDetails.text, checkEval.exceptionDetails.exception?.description);
+        }
+
+        checkResult = checkEval.result?.value;
+        if (checkResult?.error) {
+          throw new Error(checkResult.error);
+        }
+      } catch (evalErr) {
+        if (evalErr.message.includes('WebSocket not open') || evalErr.message.includes('Target closed') || evalErr.message.includes('Connection closed')) {
+          console.error(`[CDP Worker: ${WORKER_ID}] WebSocket koptu:`, evalErr.message);
+          throw evalErr;
+        }
+        console.warn(`[CDP Worker: ${WORKER_ID}] Görsel durum kontrolü hafif gecikti:`, evalErr.message);
+        continue;
+      }
+
+      if (attempt % 5 === 0 || checkResult?.candidateCount > 0 || checkResult?.ready) {
+        console.log(`[CDP Worker: ${WORKER_ID}] Polling t=${elapsed}s: ready=${checkResult?.ready}, isGen=${checkResult?.isGenerating}, candidates=${checkResult?.candidateCount || 0}`);
+      }
+
       if (checkResult?.isGenerating && !workerTiming.timings.generation_start_detect_ms) workerTiming.mark('generation_start_detect_ms', submittedAt);
       if (checkResult?.ready && checkResult?.foundSrc) {
         foundImgSrc = checkResult.foundSrc;
         workerTiming.mark('generation_complete_detect_ms', submittedAt);
-        console.log(`[CDP Worker] Görsel ${elapsed}. saniyede başarıyla tamamlandı ve tespit edildi!`);
+        console.log(`[CDP Worker] Görsel ${elapsed}. saniyede başarıyla tamamlandı ve tespit edildi: ${foundImgSrc}`);
         break;
       }
     }
@@ -1097,9 +1124,7 @@ async function executeChatGPTJob(tab, job) {
         const finalUrl = finalUrlEval.result?.value || '';
         if (finalUrl.includes('/c/')) {
           const expectedTitle = getExpectedChatTitle(customer, channel);
-          if (chatInfo.isNewChat) {
-            await renameChatToTitle(cdp, expectedTitle);
-          }
+          await renameChatToTitle(cdp, expectedTitle);
           setCompanyChat(chatIdentity, channel, finalUrl, expectedTitle);
         }
       } catch (urlErr) {
@@ -1236,17 +1261,17 @@ Bu mesaja verilebilecek en kaliteli ve uygun 3 FARKLI alternatif Türkçe yanıt
         expression: `
           (() => {
             const assts = ${JS_GET_ASSISTANT_MSGS};
-            if (assts.length <= ${baseline.count}) {
-              const stopBtn = document.querySelector('button[data-testid*="stop"], button[aria-label*="Stop"], button[aria-label*="durdur"], button[aria-label*="Durdur"]');
-              const isGenerating = !!stopBtn || !!document.querySelector('.result-thinking, [data-testid*="generating"], .streaming-animated-ellipsis');
+            const baselineCount = ${baseline.count};
+            const baselineText = ${JSON.stringify(baseline.lastText || '')};
+            const lastAsst = assts.length > 0 ? assts[assts.length - 1] : null;
+            const text = lastAsst ? (lastAsst.innerText || '').trim() : '';
+            const isNewTurn = assts.length > baselineCount || (text.length > 20 && text !== baselineText);
+            const stopBtn = document.querySelector('button[data-testid*="stop"], button[aria-label*="Stop"], button[aria-label*="durdur"], button[aria-label*="Durdur"]');
+            const isGenerating = !!stopBtn || !!document.querySelector('.result-thinking, [data-testid*="generating"], .streaming-animated-ellipsis');
+
+            if (!isNewTurn) {
               return { hasNewMsg: false, isGenerating, text: '' };
             }
-
-            const lastAsst = assts[assts.length - 1];
-            const text = (lastAsst.innerText || '').trim();
-            const stopBtn = document.querySelector('button[data-testid*="stop"], button[aria-label*="Stop"], button[aria-label*="durdur"], button[aria-label*="Durdur"]');
-            const isMsgStreaming = lastAsst ? !!lastAsst.querySelector('.streaming-animation, [data-is-streaming="true"]') : false;
-            const isGenerating = !!stopBtn || isMsgStreaming;
 
             return { hasNewMsg: true, isGenerating, text };
           })()
@@ -1407,9 +1432,7 @@ Bu mesaja verilebilecek en kaliteli ve uygun 3 FARKLI alternatif Türkçe yanıt
       const finalUrl = finalUrlEval.result?.value || '';
       if (finalUrl.includes('/c/')) {
         const expectedTitle = getExpectedChatTitle(customer, 'chat');
-        if (chatInfo.isNewChat) {
-          await renameChatToTitle(cdp, expectedTitle);
-        }
+        await renameChatToTitle(cdp, expectedTitle);
         setCompanyChat(chatIdentity, 'chat', finalUrl, expectedTitle);
       }
     } catch (urlErr) {
@@ -1635,6 +1658,7 @@ async function executeGenericChatJob(tab, job) {
       const finalUrl = finalUrlEval.result?.value || '';
       if (finalUrl.includes('/c/')) {
         const expectedTitle = getExpectedChatTitle(customer, 'chat');
+        await renameChatToTitle(cdp, expectedTitle);
         setCompanyChat(chatIdentity, 'chat', finalUrl, expectedTitle);
       }
     } catch (urlErr) {}
@@ -1938,9 +1962,7 @@ async function executeProductAffordanceJob(tab, job) {
       const finalUrl = finalUrlEval.result?.value || '';
       if (finalUrl.includes('/c/')) {
         const expectedTitle = getExpectedChatTitle(customer, 'video');
-        if (chatInfo && chatInfo.isNewChat) {
-          await renameChatToTitle(cdp, expectedTitle);
-        }
+        await renameChatToTitle(cdp, expectedTitle);
         setCompanyChat(chatIdentity, 'video', finalUrl, expectedTitle);
       }
     } catch (urlErr) {
