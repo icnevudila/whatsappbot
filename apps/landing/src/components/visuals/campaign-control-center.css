@@ -37,14 +37,14 @@
 .ml-routing-title{font-weight:450;line-height:1.2}
 @media(max-width:800px){.ml-line-queue{padding:16px}.ml-operating-journey>svg{display:none}.ml-operating-top,.ml-operating-bottom{border-left:1px solid #b7cdbd;padding-left:18px}.ml-hero-lead{font-size:20px}}
 
-/* User correction: light creative surfaces, rather than near-black blocks. */
-.ml-chapter-creative{background:#edf3ee;--ml-ink:#263e2e;--ml-muted:#5d7063;--ml-line:#cfddd2}
-.ml-chapter-creative .ml-processing-labels span{color:#5d7063;opacity:.75}
+/* Clean light creative surfaces and consistent brand tones. */
+.ml-chapter-creative{background:#f6f8f5;--ml-ink:#172b1f;--ml-muted:#5c6b61;--ml-line:#d4dfd7}
+.ml-chapter-creative .ml-processing-labels span{color:#5c6b61;opacity:.75}
 .ml-chapter-creative .ml-processing-labels span.is-active{color:#168347;opacity:1}
-.ml-chapter-creative .ml-output-frame{border-color:#cfddd2}
+.ml-chapter-creative .ml-output-frame{border-color:#d4dfd7;background:#fff}
 .ml-chapter-creative .ml-transform:is([data-phase='3'],[data-phase='4']) .ml-transform-source{opacity:.85}
-.ml-chapter-bento .ml-bento>article:first-child{background:#edf3ee;color:#263e2e;--ml-ink:#263e2e;--ml-muted:#5d7063;--ml-line:#cfddd2}
-.ml-chapter-bento .ml-pillar-context{color:#5d7063}
+.ml-chapter-bento .ml-bento>article:first-child{background:#f6f8f5;color:#172b1f;--ml-ink:#172b1f;--ml-muted:#5c6b61;--ml-line:#d4dfd7}
+.ml-chapter-bento .ml-pillar-context{color:#5c6b61}
 
 /* Real media hero and consistent interactive product diagrams. */
 .ml-hero-film{border:1px solid #d7e3d9;border-radius:18px;background:#f3f7f2;overflow:hidden;margin:20px 0}

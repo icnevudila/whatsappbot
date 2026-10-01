@@ -19,12 +19,14 @@ function Story({ eyebrow, title, description, dark = false, chapter = '', childr
 
 function InfographicCard({
   src,
+  videoSrc,
   alt,
   badge,
   title,
   subtitle,
 }: {
   src: string
+  videoSrc?: string
   alt: string
   badge: string
   title: string
@@ -100,17 +102,35 @@ function InfographicCard({
           background: '#fff',
         }}
       >
-        <img
-          src={src}
-          alt={alt}
-          loading="lazy"
-          style={{
-            width: '100%',
-            height: 'auto',
-            display: 'block',
-            objectFit: 'contain',
-          }}
-        />
+        {videoSrc ? (
+          <video
+            src={videoSrc}
+            poster={src}
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="metadata"
+            style={{
+              width: '100%',
+              height: 'auto',
+              display: 'block',
+              objectFit: 'contain',
+            }}
+          />
+        ) : (
+          <img
+            src={src}
+            alt={alt}
+            loading="lazy"
+            style={{
+              width: '100%',
+              height: 'auto',
+              display: 'block',
+              objectFit: 'contain',
+            }}
+          />
+        )}
       </div>
     </div>
   )
@@ -129,8 +149,9 @@ export function LandingDeliveryStory() {
       <InfographicCard
         badge="Harita & Bölge Taraması"
         title="Civarınızdaki İşletmeleri ve Potansiyel Müşterileri Keşfedin"
-        subtitle="Yapay Zeka Destekli Harita & Kitle Bulucu"
+        subtitle="Yapay Zeka Destekli Harita & Kitle Bulucu (Veo Dinamik Video)"
         src="/landing/infographics/06-isletme-bulucu-chatgpt-16-9.png"
+        videoSrc="/landing/infographics/06-isletme-bulucu-veo-i2v.mp4"
         alt="Mesajify Harita ve İşletme Bulucu İnfografiği"
       />
     </Story>
