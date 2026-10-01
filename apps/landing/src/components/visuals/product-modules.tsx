@@ -674,6 +674,152 @@ export function AudiencePipeline(){
     <p className="ml-pipeline-note">Örnek işleyiş · gerçek liste veya talep gönderilmez.</p>
   </div>;
 }
+export function BentoCreativeTransform() {
+  const [manualIndex, setManualIndex] = useState<number | null>(null);
+  const { ref, cycle } = useSceneClock(8);
+  const activeIndex = manualIndex !== null ? manualIndex : cycle % creativeShowcaseItems.length;
+  const currentItem = creativeShowcaseItems[activeIndex];
+
+  return (
+    <div ref={ref} className="ml-bento-creative-studio">
+      <div style={{ display: 'flex', gap: '6px', marginBottom: '14px', overflowX: 'auto', paddingBottom: '2px' }}>
+        {creativeShowcaseItems.map((item, idx) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => setManualIndex(idx)}
+            style={{
+              padding: '4px 10px',
+              fontSize: '11px',
+              fontWeight: 600,
+              borderRadius: '16px',
+              border: activeIndex === idx ? '1px solid #00a884' : '1px solid #dce5df',
+              background: activeIndex === idx ? '#e5f4ec' : '#fff',
+              color: activeIndex === idx ? '#168347' : '#5a6e60',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            <span>{item.icon}</span>
+            <span>{item.tabLabel}</span>
+          </button>
+        ))}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.15fr) auto minmax(0, 1fr)', gap: '12px', alignItems: 'center' }}>
+        <div style={{ background: '#f8faf8', border: '1px solid #dce5df', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '10px', fontWeight: 700, color: '#315a42', letterSpacing: '0.04em' }}>01 / GİRDİ</span>
+            <span style={{ fontSize: '9px', fontWeight: 600, padding: '2px 6px', background: '#e2ede5', color: '#168347', borderRadius: '4px' }}>ÜRÜN + LOGO</span>
+          </div>
+
+          <div style={{ position: 'relative', width: '100%', height: '130px', borderRadius: '8px', overflow: 'hidden', background: '#eef3ef' }}>
+            <img
+              key={currentItem.source}
+              src={currentItem.source}
+              alt={currentItem.title}
+              loading="lazy"
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+            <span style={{ position: 'absolute', bottom: '6px', left: '6px', fontSize: '9px', fontWeight: 600, background: 'rgba(0,0,0,0.68)', color: '#fff', padding: '2px 6px', borderRadius: '4px' }}>
+              Ham Fotoğraf
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '-4px 0' }}>
+            <span style={{ fontSize: '13px', fontWeight: 800, color: '#00a884', background: '#fff', width: '22px', height: '22px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #dce5df', boxShadow: '0 2px 4px rgba(0,0,0,0.04)' }}>+</span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px', background: '#fff', border: '1px solid #dce5df', borderRadius: '8px' }}>
+            <div style={{ width: '26px', height: '26px', borderRadius: '4px', background: '#f4f6f4', border: '1px solid #c9d8ce', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2px', flexShrink: 0 }}>
+              <img src={currentItem.logo} alt={currentItem.brandName} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <strong style={{ display: 'block', fontSize: '11px', color: '#163825', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentItem.brandName}</strong>
+              <small style={{ display: 'block', fontSize: '9px', color: '#688272' }}>Vektör Logo</small>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+          <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#e5f4ec', border: '1px solid #a9d8c1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#168347', fontSize: '14px', fontWeight: 700, boxShadow: '0 3px 8px rgba(0,168,132,0.12)' }}>
+            =
+          </div>
+          <span style={{ fontSize: '8px', fontWeight: 700, color: '#168347', letterSpacing: '0.04em', textAlign: 'center', lineHeight: '1.2' }}>
+            AI VEO<br />RENDER
+          </span>
+        </div>
+
+        <div style={{ background: '#fff', border: '1px solid #dce5df', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '10px', fontWeight: 700, color: '#315a42', letterSpacing: '0.04em' }}>02 / ÇIKTI</span>
+            <span style={{ fontSize: '9px', fontWeight: 600, padding: '2px 6px', background: '#e5f4ec', color: '#168347', borderRadius: '4px' }}>9:16 VİDEO</span>
+          </div>
+
+          <div style={{ position: 'relative', width: '100%', height: '210px', borderRadius: '8px', overflow: 'hidden', background: '#0a140e' }}>
+            <video
+              key={currentItem.video}
+              src={currentItem.video}
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="metadata"
+              aria-label="Tamamlanmış ürün reklamı"
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+            <div style={{
+              position: 'absolute',
+              top: '8px',
+              left: '8px',
+              zIndex: 3,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '3px 8px',
+              background: 'rgba(0,0,0,0.72)',
+              backdropFilter: 'blur(6px)',
+              borderRadius: '12px',
+              border: '1px solid rgba(255,255,255,0.18)'
+            }}>
+              <img src={currentItem.logo} alt="" style={{ width: '13px', height: '13px', objectFit: 'contain' }} />
+              <span style={{ fontSize: '9px', fontWeight: 600, color: '#fff' }}>{currentItem.brandName}</span>
+            </div>
+
+            <div style={{
+              position: 'absolute',
+              bottom: '8px',
+              left: '8px',
+              right: '8px',
+              zIndex: 3,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '4px 6px',
+              background: 'rgba(0,0,0,0.65)',
+              backdropFilter: 'blur(4px)',
+              borderRadius: '4px',
+              fontSize: '8px',
+              color: '#e5f4ec'
+            }}>
+              <span>WhatsApp Reklamı</span>
+              <strong style={{ color: '#00a884' }}>9:16 Veo</strong>
+            </div>
+          </div>
+
+          <span style={{ fontSize: '10px', color: '#168347', fontWeight: 600, textAlign: 'center' }}>
+            Kreatif hazır ✓
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ProductBento() {
   return (
     <div className="ml-bento">
@@ -685,7 +831,7 @@ export function ProductBento() {
       <article>
         <h3>Kreatif Reklam Stüdyosu</h3>
         <p className="ml-pillar-context">Ürün fotoğrafından dikey WhatsApp reklamı hazırlayın.</p>
-        <CreativeTransform />
+        <BentoCreativeTransform />
       </article>
       <article>
         <h3>Ortak Gelen Kutusu</h3>
