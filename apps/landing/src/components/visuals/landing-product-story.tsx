@@ -170,8 +170,9 @@ export function LandingSectorStory() {
       <InfographicCard
         badge="Sektörel İletişim & Hat Yönetimi"
         title="Her Sektöre Uygun Doğrudan WhatsApp Tanıtımı"
-        subtitle="Akıllı Rota & Hat Dağıtımı"
+        subtitle="Akıllı Rota & Hat Dağıtımı (Veo Dinamik Video)"
         src="/landing/infographics/03-coklu-hat-chatgpt-4-3.png"
+        videoSrc="/landing/infographics/03-coklu-hat-veo-i2v.mp4"
         alt="Mesajify Sektörel WhatsApp İletişim ve Hat Dağıtım Mimarisi"
       />
     </Story>
@@ -193,8 +194,9 @@ export function LandingCreativeStory() {
       <InfographicCard
         badge="Kreatif Stüdyosu"
         title="Dikey Reklam ve Görsel Üretim Mimarisi"
-        subtitle="Mesajify Yapay Zeka Stüdyosu"
+        subtitle="Mesajify Yapay Zeka Stüdyosu (Veo Dinamik Video)"
         src="/landing/infographics/05-kreatif-studyosu-chatgpt-4-3.png"
+        videoSrc="/landing/infographics/05-kreatif-studyosu-veo-i2v.mp4"
         alt="Mesajify Kreatif ve Reklam Stüdyosu İnfografiği"
       />
     </Story>
