@@ -70,6 +70,13 @@ const CDP_PORTS = (process.env.GEMINI_CDP_PORTS || '9222,9223,9224,9225')
   .map(p => parseInt(p.trim(), 10))
   .filter(Boolean);
 
+// Flow Chrome host'ta calisiyor (container disinda)
+// FLOW_CDP_HOST=host.docker.internal, FLOW_CDP_PORT=9226 env ile erisilebilir
+const FLOW_CDP_HOST = process.env.FLOW_CDP_HOST || '127.0.0.1';
+const FLOW_CDP_PORT = parseInt(process.env.FLOW_CDP_PORT || '9226', 10);
+// Flow destekli portlar (oncelik sirasi: host 9226, sonra 9224, 9225)
+const FLOW_CDP_PORTS = [FLOW_CDP_PORT, 9224, 9225];
+
 // Havuzdaki 4 hesabın canlı durumunu tutar
 // port -> { limitedUntil: timestamp, lastUsed: timestamp, accountName: string, limitReason: string }
 const accountPool = {};
@@ -1658,50 +1665,82 @@ async function generateVideoOnFlow(options = {}) {
   let isolatedProjectId = null;
   const initialOpenUrl = isolatedProjectUrl || 'https://flow.google.com/';
 
+  // Flow Chrome deneme listesi: oncelikle FLOW_CDP_HOST (host.docker.internal:9226), sonra 127.0.0.1 fallback
   let activePort = port;
+  let activeCdpHost = '127.0.0.1';
   let newTabRes = null;
-  const tryPorts = [port, 9222, 9225, 9223, 9224].filter((v, i, a) => a.indexOf(v) === i);
-  for (const p of tryPorts) {
+  
+  // (1) Oncelikle FLOW_CDP_HOST uzerinden dene (host'taki Chrome'a erisim)
+  const flowHostCandidates = [
+    { host: FLOW_CDP_HOST, port: FLOW_CDP_PORT },
+    { host: FLOW_CDP_HOST, port: 9224 },
+    { host: FLOW_CDP_HOST, port: 9225 },
+  ];
+  for (const { host, port: p } of flowHostCandidates) {
     try {
-      const r = await fetch(`http://127.0.0.1:${p}/json/new?${encodeURIComponent(initialOpenUrl)}`, { method: 'PUT', signal: AbortSignal.timeout(3000) });
+      const r = await fetch(`http://${host}:${p}/json/new?${encodeURIComponent(initialOpenUrl)}`, { method: 'PUT', signal: AbortSignal.timeout(3000) });
       if (r.ok) {
         newTabRes = r;
         activePort = p;
+        activeCdpHost = host;
+        console.log(`[Flow Video] ✅ Flow Chrome bulundu: ${host}:${p}`);
         break;
       }
     } catch (_) {}
   }
 
+  // (2) Host Chrome bulunamazsa 127.0.0.1 uzerinden dene (legacy fallback)
   if (!newTabRes || !newTabRes.ok) {
-    // Port 9222'yi temizleyip yeniden ayağa kaldır
-    try {
-      console.warn(`[Flow Video] ⚠️ Hiçbir Chrome portu yanıt vermedi (${tryPorts.join(', ')}). Chrome #1 yeniden başlatılıyor...`);
-      execSync('rm -f /data/chromium-profile/Singleton* /data/chromium-profile/*/Singleton* /data/chromium-profile/LOCK 2>/dev/null || true');
-      execSync('DISPLAY=:99 google-chrome-stable --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-search-engine-choice-screen --user-data-dir=/data/chromium-profile --remote-debugging-port=9222 --start-maximized https://flow.google.com/ &');
-      await new Promise(r => setTimeout(r, 4500));
-      newTabRes = await fetch(`http://127.0.0.1:9222/json/new?${encodeURIComponent(initialOpenUrl)}`, { method: 'PUT', signal: AbortSignal.timeout(5000) });
-      activePort = 9222;
-    } catch (launchErr) {
-      throw new Error(`CDP_PORT_UNAVAILABLE: Chrome tarayıcısına bağlanılamadı (${tryPorts.join(', ')}): ${launchErr.message}`);
+    const tryPorts = [port, 9226, 9224, 9225, 9222].filter((v, i, a) => a.indexOf(v) === i);
+    for (const p of tryPorts) {
+      try {
+        const r = await fetch(`http://127.0.0.1:${p}/json/new?${encodeURIComponent(initialOpenUrl)}`, { method: 'PUT', signal: AbortSignal.timeout(3000) });
+        if (r.ok) {
+          newTabRes = r;
+          activePort = p;
+          activeCdpHost = '127.0.0.1';
+          break;
+        }
+      } catch (_) {}
     }
   }
 
-  console.log(`[Flow Video] 🔗 CDP Bağlantısı kuruldu (Port: ${activePort})`);
+  if (!newTabRes || !newTabRes.ok) {
+    throw new Error(`CDP_PORT_UNAVAILABLE: Flow Chrome'a baglanilamiyor. Denenen: ${FLOW_CDP_HOST}:${FLOW_CDP_PORT}, 9224, 9225. Host Chrome calistigindan emin olun.`);
+  }
+
+  console.log(`[Flow Video] 🔗 CDP Bağlantısı kuruldu (Host: ${activeCdpHost}, Port: ${activePort})`);
   const tab = await newTabRes.json();
-  const ws = new WebSocket(tab.webSocketDebuggerUrl);
+  // WebSocketDebuggerUrl'deki 127.0.0.1'i FLOW_CDP_HOST ile replace et (docker network icin)
+  const rawWsUrl = tab.webSocketDebuggerUrl || '';
+  const wsUrl = activeCdpHost !== '127.0.0.1'
+    ? rawWsUrl.replace('ws://127.0.0.1:', `ws://${activeCdpHost}:`)
+    : rawWsUrl;
+  const ws = new WebSocket(wsUrl);
+
 
   let msgId = 1;
-  function send(method, params = {}) {
+  function send(method, params = {}, timeoutMs = 45000) {
     return new Promise((resolve, reject) => {
       const id = msgId++;
+      let timer = null;
       const handler = (m) => {
-        const d = JSON.parse(m.toString());
-        if (d.id === id) {
-          ws.removeListener('message', handler);
-          if (d.error) reject(d.error);
-          else resolve(d.result);
-        }
+        try {
+          const d = JSON.parse(m.toString());
+          if (d.id === id) {
+            if (timer) clearTimeout(timer);
+            ws.removeListener('message', handler);
+            if (d.error) reject(d.error);
+            else resolve(d.result);
+          }
+        } catch (_) {}
       };
+      if (timeoutMs > 0) {
+        timer = setTimeout(() => {
+          ws.removeListener('message', handler);
+          reject(new Error(`CDP command '${method}' timed out after ${timeoutMs}ms`));
+        }, timeoutMs);
+      }
       ws.on('message', handler);
       ws.send(JSON.stringify({ id, method, params }));
     });
@@ -1787,42 +1826,38 @@ async function generateVideoOnFlow(options = {}) {
 
   // 1.1. Model seçiciyi Video (Veo) moduna ve 9:16 dikey oranına ayarla
   try {
-    const modelPillRes = await send('Runtime.evaluate', {
+    const targetAspect = options.aspectRatio === '16:9' ? '16:9' : '9:16';
+    const aspectCheck = await send('Runtime.evaluate', {
       expression: `(() => {
-        const btns = Array.from(document.querySelectorAll('button'));
-        const pill = btns.find(b => (b.innerText || '').includes('Banana') || (b.innerText || '').includes('Image') || b.getAttribute('aria-label') === 'Settings trigger');
-        if (pill && !(pill.innerText || '').toLowerCase().includes('video')) {
-          pill.click();
-          return { clicked: true };
+        const trigger = document.querySelector('button[aria-label="Settings trigger"]');
+        if (!trigger) return { found: false };
+        const text = trigger.innerText || '';
+        const needsChange = '${targetAspect}' === '9:16'
+          ? (!text.includes('crop_9_16') && !text.includes('9:16'))
+          : (!text.includes('crop_16_9') && !text.includes('16:9'));
+        if (needsChange) {
+          trigger.click();
+          return { found: true, clicked: true, currentText: text };
         }
-        return { clicked: false };
+        return { found: true, clicked: false, currentText: text };
       })()`,
       returnByValue: true
     });
 
-    if (modelPillRes?.result?.value?.clicked) {
+    if (aspectCheck?.result?.value?.clicked) {
       await sleep(1000);
       await send('Runtime.evaluate', {
         expression: `(() => {
           const items = Array.from(document.querySelectorAll('.mat-mdc-menu-item, [role="menuitem"], .cdk-overlay-pane button, span, div'));
-          const videoBtn = items.find(el => el.innerText && el.innerText.trim() === 'Video');
-          if (videoBtn) videoBtn.click();
-        })()`
-      });
-      await sleep(1000);
-
-      const targetAspect = options.aspectRatio === '16:9' ? '16:9' : '9:16';
-      await send('Runtime.evaluate', {
-        expression: `(() => {
-          const items = Array.from(document.querySelectorAll('.mat-mdc-menu-item, [role="menuitem"], .cdk-overlay-pane button, span, div'));
-          const aspBtn = items.find(el => el.innerText && (el.innerText.trim() === '${targetAspect}' || el.innerText.includes('crop_${targetAspect.replace(':', '_')}')));
+          const aspBtn = items.find(el => (el.innerText || '').includes('${targetAspect}') || (el.innerText || '').includes('crop_${targetAspect.replace(':', '_')}'));
           if (aspBtn) aspBtn.click();
         })()`
       });
-      await sleep(1000);
+      await sleep(800);
+      console.log(`[Flow Video] 📐 Video en-boy oranı '${targetAspect}' olarak seçildi.`);
     }
   } catch (mErr) {
-    console.warn('[Flow Video] Model Video seçimi uyarısı:', mErr.message);
+    console.warn('[Flow Video] Model Video/9:16 seçimi uyarısı:', mErr.message);
   }
 
   // 1.2. ProseMirror editörünü odakla
@@ -1904,6 +1939,10 @@ async function generateVideoOnFlow(options = {}) {
     const addBtnCoords = await send('Runtime.evaluate', {
       expression: `(() => {
         const btn = document.querySelector('button[aria-label="Add ingredients to the prompt box"]') ||
+                    document.querySelector('button[aria-label*="Add ingredients"]') ||
+                    document.querySelector('button[aria-label*="bileşen"]') ||
+                    document.querySelector('button[aria-label*="Bileşen"]') ||
+                    document.querySelector('button[aria-label*="ingredient"]') ||
                     Array.from(document.querySelectorAll('button')).find(b => (b.innerText || '').includes('add') || b.querySelector('mat-icon')?.innerText === 'add');
         if (!btn) return null;
         const r = btn.getBoundingClientRect();
@@ -1922,7 +1961,10 @@ async function generateVideoOnFlow(options = {}) {
     // 2. Üst menüden veya modal içinden Upload seçeneğini tetikle
     await send('Runtime.evaluate', {
       expression: `(() => {
-        const upBtn = document.querySelector('button[aria-label="Add media menu"]') || document.querySelector('.sidebar-upload-btn');
+        const upBtn = document.querySelector('button[aria-label="Add media menu"]') || 
+                      document.querySelector('button[aria-label*="medya"]') || 
+                      document.querySelector('button[aria-label*="media"]') || 
+                      document.querySelector('.sidebar-upload-btn');
         if (upBtn) upBtn.click();
       })()`
     });
@@ -1931,7 +1973,10 @@ async function generateVideoOnFlow(options = {}) {
     await send('Runtime.evaluate', {
       expression: `(() => {
         const items = Array.from(document.querySelectorAll('button, .mat-mdc-menu-item, [role="menuitem"], span'));
-        const upItem = items.find(el => (el.innerText || '').trim() === 'Upload' || (el.innerText || '').toLowerCase().includes('upload media'));
+        const upItem = items.find(el => {
+          const t = (el.innerText || '').trim().toLowerCase();
+          return t === 'upload' || t.includes('upload media') || t === 'yükle' || t.includes('medya yükle');
+        });
         if (upItem) upItem.click();
       })()`
     });
@@ -1960,7 +2005,7 @@ async function generateVideoOnFlow(options = {}) {
         const navItems = Array.from(document.querySelectorAll('mat-list-item, button, span, div[role="button"]'));
         const uploadsBtn = navItems.find(el => {
           const t = (el.innerText || '').trim().toLowerCase();
-          return t === 'uploads' || t.includes('yüklemeler') || t === 'upload';
+          return t === 'uploads' || t.includes('yüklemeler') || t === 'upload' || t.includes('yükle') || t.includes('medya');
         });
         if (uploadsBtn) uploadsBtn.click();
       })()`
@@ -1980,12 +2025,19 @@ async function generateVideoOnFlow(options = {}) {
           const cards = Array.from(document.querySelectorAll('flow-grid-tile-container, .tile-row.virtual-item-container, flow-media-tile, div[class*="tile"]'));
           const card = cards[${ci}];
           if (!card) return false;
-          const moreBtn = card.querySelector('button[aria-label="More options"]') || card.querySelector('button');
+          const moreBtn = card.querySelector('button[aria-label="More options"]') || 
+                          card.querySelector('button[aria-label*="seçenek"]') || 
+                          card.querySelector('button[aria-label*="options"]') || 
+                          card.querySelector('button[aria-label*="Daha"]') || 
+                          card.querySelector('button');
           if (moreBtn) {
             moreBtn.click();
             await new Promise(r => setTimeout(r, 700));
             const items = Array.from(document.querySelectorAll('.mat-mdc-menu-item, [role="menuitem"], button'));
-            const addItem = items.find(el => (el.innerText || '').toLowerCase().includes('add to prompt'));
+            const addItem = items.find(el => {
+              const t = (el.innerText || '').toLowerCase();
+              return t.includes('add to prompt') || t.includes('isteme ekle') || t.includes('prompta ekle') || t.includes('ekle');
+            });
             if (addItem) {
               addItem.click();
               await new Promise(r => setTimeout(r, 800));
@@ -2026,12 +2078,19 @@ async function generateVideoOnFlow(options = {}) {
             const cards = Array.from(document.querySelectorAll('flow-grid-tile-container, .tile-row.virtual-item-container, flow-media-tile, div[class*="tile"]'));
             const card = cards[${ci}];
             if (!card) return false;
-            const moreBtn = card.querySelector('button[aria-label="More options"]') || card.querySelector('button');
+            const moreBtn = card.querySelector('button[aria-label="More options"]') || 
+                            card.querySelector('button[aria-label*="seçenek"]') || 
+                            card.querySelector('button[aria-label*="options"]') || 
+                            card.querySelector('button[aria-label*="Daha"]') || 
+                            card.querySelector('button');
             if (moreBtn) {
               moreBtn.click();
               await new Promise(r => setTimeout(r, 700));
               const items = Array.from(document.querySelectorAll('.mat-mdc-menu-item, [role="menuitem"], button'));
-              const addItem = items.find(el => (el.innerText || '').toLowerCase().includes('add to prompt'));
+              const addItem = items.find(el => {
+                const t = (el.innerText || '').toLowerCase();
+                return t.includes('add to prompt') || t.includes('isteme ekle') || t.includes('prompta ekle') || t.includes('ekle');
+              });
               if (addItem) {
                 addItem.click();
                 await new Promise(r => setTimeout(r, 800));
@@ -2062,6 +2121,10 @@ async function generateVideoOnFlow(options = {}) {
     } else {
       console.log(`[Flow Video] ✅ ${attachedCount} görsel çipi prompt kutusuna %100 bağlandı.`);
     }
+
+    try {
+      await send('Page.setInterceptFileChooserDialog', { enabled: false });
+    } catch (_) {}
   }
 
   // 1.3. Açık kalmış olabilecek menü ve modalları kapat
@@ -2310,29 +2373,37 @@ async function generateVideoOnFlow(options = {}) {
   console.log(`[Flow Video] Üretim başlatıldı! Onay ve render kontrolü yapılıyor...`);
 
   // 4. Onay penceresi çıkarsa otomatik onayla
-  await sleep(4000);
-  await send('Runtime.evaluate', {
-    expression: `(() => {
-      const allEls = Array.from(document.querySelectorAll('button, .action-button, [role="button"], span.option-label'));
-      const app = allEls.find(el => (el.innerText || '').trim() === 'Always approve' || (el.innerText || '').trim() === 'Approve');
-      if (app) app.click();
-    })()`
-  });
+  await sleep(3500);
+  try {
+    await send('Runtime.evaluate', {
+      expression: `(() => {
+        const allEls = Array.from(document.querySelectorAll('button, .action-button, [role="button"], span.option-label'));
+        const app = allEls.find(el => {
+          const t = (el.innerText || '').trim();
+          return t === 'Always approve' || t === 'Approve' || t === 'Her zaman onayla' || t === 'Onayla' || t === 'Devam et' || t === 'Kabul et' || t === 'Anladım';
+        });
+        if (app) app.click();
+      })()`
+    });
+  } catch (_) {}
 
   // 5. Video renderını bekle (en fazla 380 saniye - Veo 3.1 derin render toleransı)
   let videoRenderDone = false;
   const startTime = Date.now();
-  await sleep(15000); // İlk 15 saniye yeni render oturma payı
+  await sleep(10000); // İlk 10 saniye yeni render oturma payı
 
   while (Date.now() - startTime < 380000) {
-    await sleep(6000);
+    await sleep(5000);
     const elapsed = Math.round((Date.now() - startTime) / 1000);
 
     const checkRender = await send('Runtime.evaluate', {
       expression: `(() => {
         const spinners = document.querySelectorAll('mat-spinner, [role="progressbar"], .loading, svg[class*="spin"], [aria-label*="generating" i]');
         const bodyText = (document.body.innerText || '').toLowerCase();
-        const isGenerating = spinners.length > 0 || bodyText.includes('generating') || bodyText.includes('rendering');
+        const tiles = Array.from(document.querySelectorAll('flow-grid-tile-container, .tile, flow-tile, flow-media-tile, div[class*="tile"], div[class*="virtual-item"]'));
+        const hasPercent = tiles.some(t => /\\d+%/.test(t.innerText || '')) || /\\d+%/.test(bodyText);
+        const percentMatch = (document.body.innerText || '').match(/(\\d+)%/);
+        const isGenerating = spinners.length > 0 || bodyText.includes('generating') || bodyText.includes('rendering') || hasPercent;
 
         const v = document.querySelector('flow-preview-panel video') ||
                   document.querySelector('flow-video-player video') ||
@@ -2340,12 +2411,12 @@ async function generateVideoOnFlow(options = {}) {
                   document.querySelector('video[src]') ||
                   document.querySelector('video');
         const currentSrc = v ? (v.currentSrc || v.src || '') : '';
-        const tiles = document.querySelectorAll('flow-grid-tile-container, .tile, flow-tile, flow-media-tile, div[class*="tile"], div[class*="virtual-item"]');
 
         return {
           status: isGenerating ? 'rendering' : 'ready',
           elapsed: ${elapsed},
           isGenerating,
+          percent: percentMatch ? percentMatch[1] + '%' : null,
           currentSrc,
           tileCount: tiles.length
         };
@@ -2356,13 +2427,14 @@ async function generateVideoOnFlow(options = {}) {
     const res = checkRender?.result?.value;
     const isNewVideo = (res?.currentSrc && !initialKnownSrcs.has(res.currentSrc)) || (res?.tileCount > initialTileCount);
 
-    if (res && !res.isGenerating && elapsed >= 65 && (isNewVideo || elapsed >= 90)) {
+    if (res && !res.isGenerating && elapsed >= 60 && (isNewVideo || elapsed >= 85)) {
       videoRenderDone = true;
       console.log(`[Flow Video] 🎬 Video renderı başarıyla tamamlandı (${elapsed} sn)! İndirme aşamasına geçiliyor...`);
       await sleep(2500);
       break;
     } else {
-      console.log(`[Flow Video] ⏳ Render devam ediyor (${elapsed} sn, aktif üretim: ${res?.isGenerating ?? true}, yeni video hazır mı: ${Boolean(isNewVideo)})...`);
+      const progressLabel = res?.percent ? `[İlerleme: ${res.percent}]` : `aktif üretim: ${res?.isGenerating ?? true}`;
+      console.log(`[Flow Video] ⏳ Render devam ediyor (${elapsed} sn, ${progressLabel}, yeni video hazır mı: ${Boolean(isNewVideo)})...`);
     }
   }
 
@@ -2928,27 +3000,64 @@ async function generateVideoOnFlow(options = {}) {
       const endCardStart = 5.8;
       const endCardDuration = 8.0;
 
+      // Dinamik çözünürlük tespiti (720x1280 dikey veya 1280x720 yatay)
+      let vidW = 720;
+      let vidH = 1280;
+      try {
+        const probeOut = execSync(`ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 "${rawPath}"`, { encoding: 'utf-8' }).trim();
+        const [pw, ph] = probeOut.split('x').map(Number);
+        if (pw && ph) { vidW = pw; vidH = ph; }
+      } catch (_) {}
+      console.log(`[Flow Video] 📐 Video çözünürlüğü tespit edildi: ${vidW}x${vidH}`);
+
+      const barH = Math.round(vidH * 0.065);
+      const barY = Math.round(vidH - barH - (vidH * 0.05));
+      const barW = Math.round(vidW * 0.88);
+      const barX = Math.round((vidW - barW) / 2);
+
+      const cardW = Math.round(vidW * 0.82);
+      const cardH = Math.round(vidH * 0.58);
+      const cardX = Math.round((vidW - cardW) / 2);
+      const cardY = Math.round((vidH - cardH) / 2);
+
+      const logoCenterW = Math.round(cardW * 0.55);
+      const logoCenterY = cardY + Math.round(cardH * 0.10);
+      const brandTextY = cardY + Math.round(cardH * 0.52);
+
+      const btnW = Math.round(cardW * 0.80);
+      const btnH = Math.round(cardH * 0.18);
+      const btnX = Math.round((vidW - btnW) / 2);
+      const btnY = cardY + Math.round(cardH * 0.72);
+      const btnTextY = btnY + Math.round(btnH * 0.28);
+
+      const cornerLogoW = Math.round(vidW * 0.26);
+      const cornerLogoX = Math.round(vidW * 0.05);
+      const cornerLogoY = Math.round(vidH * 0.06);
+
+      const titleFontSize = Math.max(18, Math.round(vidH * 0.028));
+      const ctaFontSize = Math.max(14, Math.round(vidH * 0.020));
+
       if (localLogoPath && fs.existsSync(localLogoPath)) {
         // Logo (corner during 0.5-5.8s, centered larger during 5.8-8.0s) + CTA Bar + End Card
         filterComplex = [
-          `[1:v]scale=200:-1[logo_corner]`,
-          `[1:v]scale=360:-1[logo_center]`,
-          `[0:v][logo_corner]overlay=40:80:enable='between(t,0.5,${endCardStart})'[v1]`,
-          `[v1]drawbox=x=40:y=1120:w=640:h=70:color=0x${secondaryColor}@0.9:t=fill,drawbox=x=40:y=1120:w=640:h=70:color=0x${accentColor}:t=3,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${ctaText}':fontcolor=white:fontsize=22:x=(w-text_w)/2:y=1143[v2]`,
-          `[v2]drawbox=x=60:y=360:w=600:h=480:color=0x000000@0.80:t=fill:enable='between(t,${endCardStart},${endCardDuration})',drawbox=x=60:y=360:w=600:h=480:color=0x${accentColor}:t=2:enable='between(t,${endCardStart},${endCardDuration})'[v3]`,
-          `[v3][logo_center]overlay=(W-w)/2:410:enable='between(t,${endCardStart},${endCardDuration})'[v4]`,
-          `[v4]drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${brandUpper}':fontcolor=white:fontsize=32:x=(w-text_w)/2:y=620:enable='between(t,${endCardStart},${endCardDuration})',drawbox=x=120:y=690:w=480:h=64:color=0x${accentColor}@0.95:t=fill:enable='between(t,${endCardStart+0.2},${endCardDuration})',drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${ctaText}':fontcolor=white:fontsize=22:x=(w-text_w)/2:y=712:enable='between(t,${endCardStart+0.2},${endCardDuration})'[vout]`
+          `[1:v]scale=${cornerLogoW}:-1[logo_corner]`,
+          `[1:v]scale=${logoCenterW}:-1[logo_center]`,
+          `[0:v][logo_corner]overlay=${cornerLogoX}:${cornerLogoY}:enable='between(t,0.5,${endCardStart})'[v1]`,
+          `[v1]drawbox=x=${barX}:y=${barY}:w=${barW}:h=${barH}:color=0x${secondaryColor}@0.9:t=fill,drawbox=x=${barX}:y=${barY}:w=${barW}:h=${barH}:color=0x${accentColor}:t=3,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${ctaText}':fontcolor=white:fontsize=${ctaFontSize}:x=(w-text_w)/2:y=${barY + Math.round(barH * 0.28)}[v2]`,
+          `[v2]drawbox=x=${cardX}:y=${cardY}:w=${cardW}:h=${cardH}:color=0x000000@0.85:t=fill:enable='between(t,${endCardStart},${endCardDuration})',drawbox=x=${cardX}:y=${cardY}:w=${cardW}:h=${cardH}:color=0x${accentColor}:t=2:enable='between(t,${endCardStart},${endCardDuration})'[v3]`,
+          `[v3][logo_center]overlay=(W-w)/2:${logoCenterY}:enable='between(t,${endCardStart},${endCardDuration})'[v4]`,
+          `[v4]drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${brandUpper}':fontcolor=white:fontsize=${titleFontSize}:x=(w-text_w)/2:y=${brandTextY}:enable='between(t,${endCardStart},${endCardDuration})',drawbox=x=${btnX}:y=${btnY}:w=${btnW}:h=${btnH}:color=0x${accentColor}@0.95:t=fill:enable='between(t,${endCardStart+0.2},${endCardDuration})',drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${ctaText}':fontcolor=white:fontsize=${ctaFontSize}:x=(w-text_w)/2:y=${btnTextY}:enable='between(t,${endCardStart+0.2},${endCardDuration})'[vout]`
         ].join(';');
         execSync(`ffmpeg -y -i "${rawPath}" -i "${localLogoPath}" -filter_complex "${filterComplex}" -map "[vout]" -map 0:a? -c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p -movflags +faststart -c:a copy "${tempOverlayOut}" 2>/dev/null || ffmpeg -y -i "${rawPath}" -i "${localLogoPath}" -filter_complex "${filterComplex}" -map "[vout]" -c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p -movflags +faststart "${tempOverlayOut}"`, { stdio: 'ignore' });
       } else {
         // Marka Adı Bandı + CTA Bar + Centered End Card
         filterComplex = [
-          `drawbox=x=40:y=80:w=320:h=60:color=0x000000@0.7:t=fill:enable='between(t,0.5,${endCardStart})',drawbox=x=40:y=80:w=320:h=60:color=0x${accentColor}:t=2:enable='between(t,0.5,${endCardStart})',drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${brandUpper}':fontcolor=white:fontsize=24:x=60:y=98:enable='between(t,0.5,${endCardStart})'`,
-          `drawbox=x=40:y=1120:w=640:h=70:color=0x${secondaryColor}@0.9:t=fill,drawbox=x=40:y=1120:w=640:h=70:color=0x${accentColor}:t=3,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${ctaText}':fontcolor=white:fontsize=22:x=(w-text_w)/2:y=1143`,
-          `drawbox=x=60:y=380:w=600:h=440:color=0x000000@0.80:t=fill:enable='between(t,${endCardStart},${endCardDuration})',drawbox=x=60:y=380:w=600:h=440:color=0x${accentColor}:t=2:enable='between(t,${endCardStart},${endCardDuration})'`,
-          `drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${brandUpper}':fontcolor=white:fontsize=38:x=(w-text_w)/2:y=480:enable='between(t,${endCardStart},${endCardDuration})'`,
-          `drawbox=x=120:y=620:w=480:h=70:color=0x${accentColor}@0.95:t=fill:enable='between(t,${endCardStart+0.2},${endCardDuration})'`,
-          `drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${ctaText}':fontcolor=white:fontsize=24:x=(w-text_w)/2:y=642:enable='between(t,${endCardStart+0.2},${endCardDuration})'`
+          `drawbox=x=${cornerLogoX}:y=${cornerLogoY}:w=${Math.round(vidW*0.4)}:h=${Math.round(vidH*0.06)}:color=0x000000@0.7:t=fill:enable='between(t,0.5,${endCardStart})',drawbox=x=${cornerLogoX}:y=${cornerLogoY}:w=${Math.round(vidW*0.4)}:h=${Math.round(vidH*0.06)}:color=0x${accentColor}:t=2:enable='between(t,0.5,${endCardStart})',drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${brandUpper}':fontcolor=white:fontsize=${ctaFontSize}:x=${cornerLogoX+15}:y=${cornerLogoY+Math.round(vidH*0.015)}:enable='between(t,0.5,${endCardStart})'`,
+          `drawbox=x=${barX}:y=${barY}:w=${barW}:h=${barH}:color=0x${secondaryColor}@0.9:t=fill,drawbox=x=${barX}:y=${barY}:w=${barW}:h=${barH}:color=0x${accentColor}:t=3,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${ctaText}':fontcolor=white:fontsize=${ctaFontSize}:x=(w-text_w)/2:y=${barY + Math.round(barH * 0.28)}`,
+          `drawbox=x=${cardX}:y=${cardY}:w=${cardW}:h=${cardH}:color=0x000000@0.85:t=fill:enable='between(t,${endCardStart},${endCardDuration})',drawbox=x=${cardX}:y=${cardY}:w=${cardW}:h=${cardH}:color=0x${accentColor}:t=2:enable='between(t,${endCardStart},${endCardDuration})'`,
+          `drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${brandUpper}':fontcolor=white:fontsize=${titleFontSize}:x=(w-text_w)/2:y=${brandTextY}:enable='between(t,${endCardStart},${endCardDuration})'`,
+          `drawbox=x=${btnX}:y=${btnY}:w=${btnW}:h=${btnH}:color=0x${accentColor}@0.95:t=fill:enable='between(t,${endCardStart+0.2},${endCardDuration})'`,
+          `drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='${ctaText}':fontcolor=white:fontsize=${ctaFontSize}:x=(w-text_w)/2:y=${btnTextY}:enable='between(t,${endCardStart+0.2},${endCardDuration})'`
         ].join(',');
         execSync(`ffmpeg -y -i "${rawPath}" -vf "${filterComplex}" -c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p -movflags +faststart -c:a copy "${tempOverlayOut}" 2>/dev/null || ffmpeg -y -i "${rawPath}" -vf "${filterComplex}" -c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p -movflags +faststart "${tempOverlayOut}"`, { stdio: 'ignore' });
       }
@@ -2957,6 +3066,9 @@ async function generateVideoOnFlow(options = {}) {
         fs.copyFileSync(tempOverlayOut, rawPath);
         try { fs.unlinkSync(tempOverlayOut); } catch(_) {}
         console.log(`[Flow Video] 🎨 Marka Kiti & CTA Overlay (${brandName}, #${accentColor}) başarıyla giydirildi.`);
+        if (globalArtifactProvenanceGate) {
+          globalArtifactProvenanceGate.recordPostprocessSha256(isolatedProjectId || rawFileName, rawPath);
+        }
       }
     } catch (overlayErr) {
       console.warn('[Flow Video] Marka overlay giydirme hatası:', overlayErr.message);

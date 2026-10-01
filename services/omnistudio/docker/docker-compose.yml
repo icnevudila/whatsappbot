@@ -24,11 +24,16 @@ services:
       - ./data/profile-4:/data/chromium-profile-4
       # Uretilen gorselleri diskte tutar
       - ./data/outputs:/app/gateway/outputs
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - PORT=3456
       - NODE_ENV=production
       - NUM_WORKERS=4 # 4 Bagimsiz ChatGPT Hesabi
       - GFLOW_ENGINE_URL=http://gflow-engine:3461
+      # Flow Chrome host'ta 9226 portunda calisiyor, container buraya erisir
+      - FLOW_CDP_HOST=host.docker.internal
+      - FLOW_CDP_PORT=9226
       # Keep the canonical Gemini tab plus one Flow maintenance/session tab.
       # A third short-lived auth/download tab may exist during re-authentication.
       - PREFERRED_WORKING_TABS=2
