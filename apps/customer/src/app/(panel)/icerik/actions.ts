@@ -359,7 +359,7 @@ export async function startCreativeGeneration(
     textDensity: (['low', 'balanced', 'detailed'].includes(String(draft.textDensity))
       ? draft.textDensity
       : 'balanced') as CreativeSnapshot['textDensity'],
-    useLogo: Boolean(orgLogoPath) && draft.useLogo === true,
+    useLogo: Boolean(orgLogoPath || kitRow?.logo_path) && draft.useLogo !== false,
     labels,
     cta: String(draft.cta ?? '').trim() || null,
     address: String(draft.address ?? '').trim() || null,
@@ -375,7 +375,7 @@ export async function startCreativeGeneration(
           tone: kitRow.tone,
           colors: asRecord(kitRow.colors),
           fonts: asRecord(kitRow.fonts),
-          logoPath: orgLogoPath,
+          logoPath: kitRow.logo_path || orgLogoPath,
         }
       : null,
     products,
