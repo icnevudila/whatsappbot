@@ -32,7 +32,7 @@ export function Scene01Hero() {
             
           </header>
           <div className="ml-hero-film-content">
-            <GeneratedMediaSlot id="real-product-video" alt="Bofe gerçek tanıtım videosu" />
+            <GeneratedMediaSlot id="real-product-video" alt="Mesajify dikey tanıtım videosu" />
             <div className="ml-hero-film-story">
               
               
