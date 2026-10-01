@@ -131,18 +131,167 @@ export function CreativeTransform({ scrollDriven = false }: { scrollDriven?: boo
     <div className="ml-transform-output"><span className="ml-object-label">02 / WHATSAPP’A HAZIR</span><div className="ml-output-frame"><GeneratedMediaSlot id="real-product-video" alt="Tamamlanmış ürün reklamı" active={phase===4}/><span className="ml-output-tag">9:16 · 8 SN</span></div><span className="ml-output-status">{phase===4?'Kreatif hazır ✓':'Kreatif hazırlanıyor'}</span></div>
   </div>;
 }
+const inboxCampaignDemos = [
+  {
+    video: '/landing/studio/ecommerce-flow-veo.mp4',
+    message: 'Yeni koleksiyonumuz yayında! Seçili ürünlerde özel lansman fırsatını keşfedin.',
+    reply: 'Farklı renk ve numaraları mevcut mu?',
+    label: 'E-Ticaret Kampanyası'
+  },
+  {
+    video: '/landing/studio/restaurant-flow-veo.mp4',
+    message: 'Özel gurme menümüz ve akşam lezzetlerimiz hazır. Rezervasyon için yazabilirsiniz.',
+    reply: 'Bu akşam için iki kişilik yeriniz var mı?',
+    label: 'Restoran Kampanyası'
+  },
+  {
+    video: '/landing/studio/automotive-flow-veo.mp4',
+    message: 'Yeni sezon otomobil modellerimizi ve avantajlı test sürüşü fırsatlarını keşfedin.',
+    reply: 'Hafta sonu test sürüşü için randevu alabilir miyim?',
+    label: 'Otomotiv Tanıtımı'
+  },
+  {
+    video: '/landing/studio/realestate-flow-veo.mp4',
+    message: 'Seçkin villa ve rezidans projelerimiz yayında. Detaylı katalog için bize ulaşın.',
+    reply: 'Kat planlarını ve fiyat listesini paylaşır mısınız?',
+    label: 'Emlak Portföyü'
+  }
+];
+
 export function ReplyToInbox() {
-  const { ref, time, cycle } = useSceneClock(6);
-  const reply=replyExamples[(cycle+2)%replyExamples.length],message=campaignExamples[cycle%campaignExamples.length];
+  const { ref, time, cycle } = useSceneClock(7);
+  const currentDemo = inboxCampaignDemos[cycle % inboxCampaignDemos.length];
+  const { message, reply, video: currentVideo } = currentDemo;
   const connectionRef = useRef<HTMLDivElement>(null);
-  useEffect(()=>{const node=connectionRef.current;if(!node)return;const observer=new ResizeObserver(()=>node.style.setProperty('--reply-gap',`${node.clientWidth}px`));observer.observe(node);return()=>observer.disconnect();},[]);
-  const phase = time < .5 ? 0 : time < 1 ? 1 : time < 1.6 ? 2 : time < 2.2 ? 3 : time < 3 ? 4 : 5;
-  return <div ref={ref} className="ml-stage ml-reply" data-phase={phase}>
-    <Sample>Örnek konuşma · Gelen Kutusu işleyişi</Sample><div className="ml-product-event ml-reply-event" key={phase}><MesajifyMark size="sm" decorative/><div><small>MESAJDAN KONUŞMAYA</small><strong>{['Tanıtım mesajı hazırlanıyor','Mesaj iletildi','Müşteri yazıyor','Yeni yanıt geldi','Yanıt Inbox’a taşınıyor','Konuşma tek panelde'][phase]}</strong></div><span>{phase===5?'✓':'↗'}</span></div>
-    <div className="ml-reply-phone"><Phone><GeneratedMediaSlot id="real-product-video" alt="Tanıtım videosu"/><p className="ml-message ml-delivered">{message}<small>{phase>=1?'İletildi ✓✓':'Gönderiliyor'}</small></p><div className="ml-typing" aria-label="Müşteri yazıyor"><i/><i/><i/></div><p className="ml-customer ml-phone-reply">{reply}</p></Phone><span className="ml-object-label">MÜŞTERİ KONUŞMASI</span></div>
-    <div ref={connectionRef} className="ml-reply-connection"><svg viewBox="0 0 200 200" preserveAspectRatio="none" aria-hidden="true"><path d="M0 145 C65 145 100 35 200 35" fill="none" stroke="currentColor" strokeWidth="1"/><path className="ml-reply-trail" d="M0 145 C65 145 100 35 200 35" pathLength="100" fill="none" stroke="#168347" strokeWidth="2"/></svg><span className="ml-travel-reply">{reply}</span></div>
-    <div className="ml-real-inbox"><div className="ml-inbox-line-sources"><span>Hat 01</span><span>Hat 02</span><span>Hat 03</span><strong>→ MESAJIFY GELEN KUTUSU</strong></div><div className="ml-browser-bar"><span>● ● ●</span>Mesajify / Gelenler<span className="ml-inbox-notice">Yeni yanıt</span></div><div className="ml-inbox-screen ml-inbox-illustration"><aside><div className="ml-inbox-example-title"><MesajifyMark size="sm" decorative/><strong>Gelen Kutusu</strong></div><span className="ml-inbox-filter">Tüm konuşmalar <small>3</small></span>{['Örnek müşteri','Tanıtım yanıtı','Ürün sorusu'].map((label,i)=><div key={label} className="ml-inbox-example-row" data-selected={i===0&&phase>=4}><span>{['A','B','C'][i]}</span><div><strong>{label}</strong><small>{i===0&&phase>=4?reply:'Konuşmayı görüntüle'}</small></div><i/></div>)}</aside><div className="ml-inbox-example-chat"><header><span>Örnek müşteri<small>WhatsApp · Hat 02</small></span><b>Atanmamış</b></header><div className="ml-inbox-example-messages"><p className="ml-inbox-outgoing">{message}<small>Tanıtım mesajı · ✓✓</small></p><p key={cycle} className="ml-inbox-incoming" data-arrived={phase>=4}>{reply}<small>Şimdi · Hat 02</small></p><span className="ml-inbox-example-notice" data-arrived={phase>=4}>✓ Yanıt konuşmaya eklendi</span></div><footer>Yanıtınızı yazın… <span>↗</span></footer></div></div></div>
-  </div>;
+
+  useEffect(() => {
+    const node = connectionRef.current;
+    if (!node) return;
+    const observer = new ResizeObserver(() => node.style.setProperty('--reply-gap', `${node.clientWidth}px`));
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  const phase = time < 0.6 ? 0 : time < 1.2 ? 1 : time < 2.0 ? 2 : time < 2.8 ? 3 : time < 4.0 ? 4 : 5;
+
+  return (
+    <div ref={ref} className="ml-stage ml-reply" data-phase={phase}>
+      <Sample>Örnek konuşma · Gelen Kutusu işleyişi</Sample>
+      <div className="ml-product-event ml-reply-event" key={`${cycle}-${phase}`}>
+        <MesajifyMark size="sm" decorative />
+        <div>
+          <small>{currentDemo.label.toUpperCase()}</small>
+          <strong>
+            {
+              [
+                'Tanıtım mesajı hazırlanıyor',
+                'Mesaj iletildi',
+                'Müşteri yazıyor',
+                'Yeni yanıt geldi',
+                'Yanıt Inbox’a taşınıyor',
+                'Konuşma tek panelde'
+              ][phase]
+            }
+          </strong>
+        </div>
+        <span>{phase === 5 ? '✓' : '↗'}</span>
+      </div>
+
+      <div className="ml-reply-phone">
+        <Phone>
+          <div className="ml-media" style={{ aspectRatio: '9/16' }}>
+            <video
+              key={currentVideo}
+              src={currentVideo}
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="metadata"
+              aria-label="Kampanya tanıtım videosu"
+            />
+          </div>
+          <p className="ml-message ml-delivered">
+            {message}
+            <small>{phase >= 1 ? 'İletildi ✓✓' : 'Gönderiliyor'}</small>
+          </p>
+          <div className="ml-typing" aria-label="Müşteri yazıyor">
+            <i /><i /><i />
+          </div>
+          <p className="ml-customer ml-phone-reply">{reply}</p>
+        </Phone>
+        <span className="ml-object-label">MÜŞTERİ KONUŞMASI</span>
+      </div>
+
+      <div ref={connectionRef} className="ml-reply-connection">
+        <svg viewBox="0 0 200 200" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0 145 C65 145 100 35 200 35" fill="none" stroke="currentColor" strokeWidth="1" />
+          <path
+            className="ml-reply-trail"
+            d="M0 145 C65 145 100 35 200 35"
+            pathLength="100"
+            fill="none"
+            stroke="#168347"
+            strokeWidth="2"
+          />
+        </svg>
+        <span className="ml-travel-reply">{reply}</span>
+      </div>
+
+      <div className="ml-real-inbox">
+        <div className="ml-inbox-line-sources">
+          <span>Hat 01</span>
+          <span>Hat 02</span>
+          <span>Hat 03</span>
+          <strong>→ MESAJIFY GELEN KUTUSU</strong>
+        </div>
+        <div className="ml-browser-bar">
+          <span>● ● ●</span>Mesajify / Gelenler<span className="ml-inbox-notice">Yeni yanıt</span>
+        </div>
+        <div className="ml-inbox-screen ml-inbox-illustration">
+          <aside>
+            <div className="ml-inbox-example-title">
+              <MesajifyMark size="sm" decorative />
+              <strong>Gelen Kutusu</strong>
+            </div>
+            <span className="ml-inbox-filter">Tüm konuşmalar <small>3</small></span>
+            {['Örnek müşteri', 'Tanıtım yanıtı', 'Ürün sorusu'].map((label, i) => (
+              <div key={label} className="ml-inbox-example-row" data-selected={i === 0 && phase >= 4}>
+                <span>{['A', 'B', 'C'][i]}</span>
+                <div>
+                  <strong>{label}</strong>
+                  <small>{i === 0 && phase >= 4 ? reply : 'Konuşmayı görüntüle'}</small>
+                </div>
+                <i />
+              </div>
+            ))}
+          </aside>
+          <div className="ml-inbox-example-chat">
+            <header>
+              <span>
+                Örnek müşteri<small>WhatsApp · Hat 02</small>
+              </span>
+              <b>Atanmamış</b>
+            </header>
+            <div className="ml-inbox-example-messages">
+              <p className="ml-inbox-outgoing">
+                {message}
+                <small>Tanıtım mesajı · ✓✓</small>
+              </p>
+              <p key={`${cycle}-${phase}`} className="ml-inbox-incoming" data-arrived={phase >= 4}>
+                {reply}
+                <small>Şimdi · Hat 02</small>
+              </p>
+              <span className="ml-inbox-example-notice" data-arrived={phase >= 4}>
+                ✓ Yanıt konuşmaya eklendi
+              </span>
+            </div>
+            <footer>Yanıtınızı yazın… <span>↗</span></footer>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 const sectors = sectorConfig.map(item=>({...item,message:item.campaignMessage,reply:item.customerReply}));
 export function SectorCampaignLab() {
