@@ -146,6 +146,13 @@ export function LandingSectorStory() {
       description="Kuaförlerden toptancılara, restoranlardan inşaat ve sağlığa: Sektörünüze özel hazırlanmış doğrudan WhatsApp mesajlarıyla potansiyel müşterilerinizin cebine ulaşın."
     >
       <SectorCampaignLab />
+      <InfographicCard
+        badge="Sektörel İletişim & Hat Yönetimi"
+        title="Her Sektöre Uygun Doğrudan WhatsApp Tanıtımı"
+        subtitle="Akıllı Rota & Hat Dağıtımı"
+        src="/landing/infographics/03-coklu-hat-chatgpt-4-3.png"
+        alt="Mesajify Sektörel WhatsApp İletişim ve Hat Dağıtım Mimarisi"
+      />
     </Story>
   )
 }
