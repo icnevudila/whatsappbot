@@ -22,16 +22,16 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'Mesajify — WhatsApp Kampanya Kontrol Merkezi',
+  title: 'Mesajify — İşletmenizi WhatsApp’tan Tanıtın',
   description:
-    'Birden fazla WhatsApp hattını bağlayın; marka ve ürününüzle kreatif hazırlayın, kitlenizi yönetin ve müşteri yanıtlarını tek panelde takip edin.',
+    'Ürününüzü, menünüzü veya hizmetinizi WhatsApp’tan duyurun. Hedef kitlenizi hazırlayın, mesajlarınızı gönderin ve gelen soruları tek panelden yanıtlayın.',
   alternates: {
     canonical: 'https://mesajify.com',
   },
   openGraph: {
-    title: 'Mesajify — WhatsApp Kampanya Kontrol Merkezi',
+    title: 'Mesajify — İşletmenizi WhatsApp’tan Tanıtın',
     description:
-      'Birden fazla WhatsApp hattını bağlayın; marka ve ürününüzle kreatif hazırlayın, kitlenizi yönetin ve müşteri yanıtlarını tek panelde takip edin.',
+      'Ürününüzü, menünüzü veya hizmetinizi WhatsApp’tan duyurun. Hedef kitlenizi hazırlayın, mesajlarınızı gönderin ve gelen soruları tek panelden yanıtlayın.',
     url: 'https://mesajify.com',
     siteName: 'Mesajify',
     images: [
@@ -46,9 +46,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Mesajify — WhatsApp Kampanya Kontrol Merkezi',
+    title: 'Mesajify — İşletmenizi WhatsApp’tan Tanıtın',
     description:
-      'Birden fazla WhatsApp hattını bağlayın; marka ve ürününüzle kreatif hazırlayın, kitlenizi yönetin ve müşteri yanıtlarını tek panelde takip edin.',
+      'Ürününüzü, menünüzü veya hizmetinizi WhatsApp’tan duyurun. Hedef kitlenizi hazırlayın, mesajlarınızı gönderin ve gelen soruları tek panelden yanıtlayın.',
     images: ['https://mesajify.com/og-image.jpg'],
   },
 };

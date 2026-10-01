@@ -19,6 +19,7 @@ const { URL } = require('url');
 const { createJobMetrics, setStage, finishMetrics } = require('./runtime_metrics.js');
 const { getTenantScopeKey, getRequestKey } = require('./tenant_scope.js');
 const { BrowserWorkerSupervisor } = require('./browser_worker_supervisor.js');
+const { loadAllCompanyChats, getExpectedChatTitle } = require('./chat_manager.js');
 
 const FLOW_SOURCE_PROFILE_BY_PORT = Object.freeze({
   9222: '/data/chromium-profile',
@@ -62,13 +63,26 @@ const MAX_RETAINED_COMPLETED_JOBS = Math.max(1, parseInt(process.env.MAX_RETAINE
 const MAX_RETAINED_RESULT_BYTES = Math.max(1024 * 1024, parseInt(process.env.MAX_RETAINED_RESULT_BYTES || String(50 * 1024 * 1024), 10));
 const OUTPUT_TTL_MS = Math.max(0, parseInt(process.env.OUTPUT_TTL_MS || String(24 * 60 * 60 * 1000), 10));
 
-const RETRYABLE_ERRORS = new Set(['TIMEOUT', 'SESSION_EXPIRED', 'RATE_LIMITED']);
+const RETRYABLE_ERRORS = new Set([
+  'TIMEOUT',
+  'SESSION_EXPIRED',
+  'RATE_LIMITED',
+  'WEBSOCKET',
+  'NOT OPEN',
+  'CLOSED',
+  'CDP ERROR',
+  'ECONNRESET',
+  'SOCKET HANG UP',
+  'TARGET CLOSED',
+  'DESTROYED',
+  'CONTEXT DESTROYED',
+  'TAB_RESTART',
+]);
 const NON_RETRYABLE_ERRORS = new Set([
   'MODEL_ERROR',
   'INVALID_RESPONSE',
   'IMAGE_GENERATION_FAILED',
   'INVALID_REQUEST',
-  'WORKER_ERROR'
 ]);
 
 function isRetryableError(error) {
@@ -282,8 +296,30 @@ browserSupervisor.registerWorker({
   id: 'flow-primary',
   provider: 'flow',
   accountId: process.env.FLOW_PRIMARY_ACCOUNT_ID || 'flow-primary',
-  profileDir: process.env.FLOW_PROFILE_DIR || '/data/chromium-profile-flow',
-  cdpPort: Number(process.env.FLOW_CDP_PORT || 9226),
+  profileDir: process.env.FLOW_PROFILE_DIR || '/data/chromium-profile-3',
+  cdpPort: Number(process.env.FLOW_CDP_PORT || 9224),
+  launchUrl: 'https://flow.google.com/',
+  warm: false,
+  sessionValidator: async worker => {
+    try {
+      const response = await fetch(`http://127.0.0.1:${worker.cdpPort}/json/list`, { signal: AbortSignal.timeout(3000) });
+      const tabs = response.ok ? await response.json() : [];
+      return tabs.some(tab => String(tab.url || '').includes('flow.google.com'))
+        ? { ok: true }
+        : { ok: false, code: 'AUTH_REQUIRED', message: 'Flow persistent session tab is unavailable' };
+    } catch (error) {
+      return { ok: false, code: 'SESSION_VALIDATION_FAILED', message: error.message };
+    }
+  },
+  providerReadyValidator: async () => ({ ok: true }),
+});
+
+browserSupervisor.registerWorker({
+  id: 'flow-secondary',
+  provider: 'flow',
+  accountId: 'flow-secondary',
+  profileDir: '/data/chromium-profile-4',
+  cdpPort: 9225,
   launchUrl: 'https://flow.google.com/',
   warm: false,
   sessionValidator: async worker => {
@@ -1509,6 +1545,7 @@ const server = http.createServer(async (req, res) => {
       const size = body.size || '1024x1024';
       const response_format = body.response_format || 'url';
       const workspace = body.workspace || 'WhatsApp Botu';
+      const customer = (body.customer || body.user || 'Genel').trim();
       const rawRefs = [
         ...(Array.isArray(body.referenceImages) ? body.referenceImages : (body.referenceImages ? [body.referenceImages] : [])),
         ...(Array.isArray(body.referenceImageUrls) ? body.referenceImageUrls : (body.referenceImageUrls ? [body.referenceImageUrls] : [])),
@@ -2243,6 +2280,268 @@ const server = http.createServer(async (req, res) => {
           { id: 'chatgpt-4o', object: 'model', created: 1715367049, owned_by: 'omnistudio' },
           { id: 'dall-e-3', object: 'model', created: 1698785189, owned_by: 'omnistudio' }
         ]
+      });
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // TEK SERVİS — Otomatik Yönlendirici: POST /v1/generate
+    // Prompt'u analiz eder → görsel mi metin mi olduğuna karar verir.
+    // Referans görsel kabul eder (URL veya base64).
+    // Çıktı: görsel ise { type:'image', url, job_id }
+    //         metin  ise { type:'text',  reply }
+    // ─────────────────────────────────────────────────────────────────────────
+    if (method === 'POST' && (pathname === '/v1/generate' || pathname === '/generate')) {
+      const body = await parseJsonBody(req);
+
+      // ── 1. Prompt ──
+      let promptText = '';
+      if (Array.isArray(body.messages) && body.messages.length > 0) {
+        const sysMsg  = body.messages.find(m => m.role === 'system');
+        const nonSys  = body.messages.filter(m => m.role !== 'system');
+        if (sysMsg) body._systemPrompt = sysMsg.content || '';
+        promptText = nonSys.length === 1
+          ? (nonSys[0].content || '')
+          : nonSys.map(m => `${m.role === 'user' ? 'Kullanıcı' : 'Asistan'}: ${m.content}`).join('\n\n');
+      } else {
+        promptText = (body.prompt || body.message || body.input || '').trim();
+      }
+
+      if (!promptText) {
+        return sendJson(res, 400, { error: { message: 'prompt veya messages alanı zorunludur.', type: 'invalid_request_error' } });
+      }
+
+      // ── 2. Referans Görseller (URL veya base64 string) ──
+      const rawRefs = [
+        ...(Array.isArray(body.referenceImages)   ? body.referenceImages   : body.referenceImages   ? [body.referenceImages]   : []),
+        ...(Array.isArray(body.referenceImageUrls) ? body.referenceImageUrls : body.referenceImageUrls ? [body.referenceImageUrls] : []),
+        ...(Array.isArray(body.images)             ? body.images             : body.images             ? [body.images]             : []),
+        ...(body.image    ? [body.image]    : []),
+        ...(body.logoUrl  ? [body.logoUrl]  : body.logo  ? [body.logo]  : []),
+        ...(body.productImageUrl ? [body.productImageUrl] : body.product_image_url ? [body.product_image_url] : []),
+      ].filter(Boolean);
+      const referenceImages = rawRefs
+        .map(r => typeof r === 'string' ? r.trim() : (r.url || r.data || r.b64_json || ''))
+        .filter(Boolean);
+
+      // ── 3. Görsel mi Metin mi? ──
+      // Açık bayrak > referans görsel var > prompt analizi
+      let mode = (body.mode || '').toLowerCase(); // 'image' | 'text' | '' (otomatik)
+
+      if (!mode) {
+        if (referenceImages.length > 0) {
+          // Referans görsel geldi → görsel üretimdir
+          mode = 'image';
+        } else {
+          // Prompt anahtar kelime analizi
+          const imgKeywords = [
+            'görsel', 'görüntü', 'resim', 'fotoğraf', 'üret', 'çiz', 'tasarla', 'oluştur',
+            'image', 'photo', 'picture', 'generate image', 'draw', 'design', 'create image',
+            'poster', 'logo', 'banner', 'reklam görseli', 'ürün fotoğrafı',
+          ];
+          const lower = promptText.toLowerCase();
+          mode = imgKeywords.some(kw => lower.includes(kw)) ? 'image' : 'text';
+        }
+      }
+
+      const customer       = (body.customer || body.user || 'Genel').trim();
+      const conversationId = body.conversation_id || body.conversationId || null;
+      const asyncMode      = body.async === true || parsedUrl.searchParams.get('async') === 'true';
+
+      console.log(`[Gateway /v1/generate] mod=${mode.toUpperCase()} | müşteri="${customer}" | ref=${referenceImages.length} | async=${asyncMode}`);
+
+      // ──────────────────────────────
+      // 3a. GÖRSEL ÜRETİMİ
+      // ──────────────────────────────
+      if (mode === 'image') {
+        const platform       = body.platform || 'auto';
+        const size           = body.size || '1024x1024';
+        const response_format = body.response_format || 'url';
+        const workspace      = body.workspace || 'WhatsApp Botu';
+        const brandKit       = body.brandKit || null;
+
+        const metrics = createJobMetrics({
+          operation: 'image_generation',
+          tenantId: body.tenantId || body.tenant_id || null,
+          requestId: body.requestId || body.request_id || null,
+          prompt: promptText,
+          companyContext: body.companyContext || '',
+          conversationHistory: '',
+          productCount: 0,
+          now: Date.now(),
+        });
+
+        const job = queue.createJob({
+          prompt: promptText,
+          size,
+          platform,
+          response_format,
+          workspace,
+          customer,
+          referenceImages,
+          brandKit,
+          optimizePrompt: body.optimize !== false,
+          tenantId: metrics.tenant_id,
+          requestId: metrics.request_id,
+          conversationId,
+          metrics,
+        });
+
+        if (asyncMode) {
+          return sendJson(res, 202, {
+            type: 'image',
+            mode: 'async',
+            job_id: job.id,
+            status: 'pending',
+            queue_position: job.queuePosition,
+            status_url: `http://${PUBLIC_HOST}:${PORT}/v1/images/status/${job.id}`,
+          });
+        }
+
+        const finished = await queue.waitForJob(job.id, 180000);
+        if (finished.status === 'completed') {
+          const imageUrl = (finished.resultUrl || '')
+            .replace('localhost:3456', `${PUBLIC_HOST}:${PORT}`)
+            .replace('127.0.0.1:3456', `${PUBLIC_HOST}:${PORT}`);
+          return sendJson(res, 200, {
+            type: 'image',
+            url: imageUrl,
+            job_id: finished.id,
+            created: Math.floor((finished.completedAt || Date.now()) / 1000),
+            // OpenAI SDK uyumlu ek alan
+            data: [{ url: imageUrl }],
+          });
+        } else {
+          return sendJson(res, 502, {
+            type: 'image',
+            error: { message: finished.error || 'Görsel üretilemedi.', type: 'server_error', job_id: finished.id },
+          });
+        }
+      }
+
+      // ──────────────────────────────
+      // 3b. METİN ÜRETİMİ
+      // ──────────────────────────────
+      const systemPrompt = body._systemPrompt || body.systemPrompt || body.system || '';
+      const metrics = createJobMetrics({
+        operation: 'text_reply',
+        tenantId: body.tenantId || null,
+        requestId: body.requestId || null,
+        prompt: promptText,
+        companyContext: systemPrompt,
+        conversationHistory: '',
+        productCount: 0,
+        systemPromptChars: systemPrompt.length,
+        now: Date.now(),
+      });
+
+      const job = queue.createJob({
+        prompt: `[API Sohbet] ${promptText.slice(0, 100)}`,
+        customer,
+        platform: 'chatgpt',
+        type: 'chat_completion',
+        rawPrompt: promptText,
+        systemPrompt,
+        conversationId,
+        metrics,
+      });
+
+      const finished = await queue.waitForJob(job.id, 120000);
+      if (finished.status === 'completed' && finished.result) {
+        let replyText = (finished.result.reply || finished.result.text || finished.result.raw || '').trim();
+        replyText = replyText.replace(/^(?:ChatGPT said|ChatGPT söylüyor|ChatGPT):\s*/i, '').trim();
+        return sendJson(res, 200, {
+          type: 'text',
+          reply: replyText,
+          // OpenAI SDK uyumlu ek alanlar
+          id: `chatcmpl-${finished.id}`,
+          object: 'chat.completion',
+          created: Math.floor((finished.completedAt || Date.now()) / 1000),
+          model: body.model || 'gpt-4o',
+          choices: [{ index: 0, message: { role: 'assistant', content: replyText }, finish_reason: 'stop' }],
+          usage: {
+            prompt_tokens: Math.ceil(promptText.length / 4),
+            completion_tokens: Math.ceil(replyText.length / 4),
+            total_tokens: Math.ceil((promptText.length + replyText.length) / 4),
+          },
+        });
+      } else {
+        const isRateLimited = (finished.error || '').includes('WEB_SESSION_RATE_LIMITED');
+        return sendJson(res, isRateLimited ? 429 : 500, {
+          type: 'text',
+          error: {
+            message: finished.error || 'ChatGPT yanıt üretemedi',
+            type: isRateLimited ? 'rate_limit_error' : 'server_error',
+          },
+        });
+      }
+    }
+
+    // 1.0.8.1. Firma ve Kanal Sohbet Listesi: GET /v1/company-chats
+    if (method === 'GET' && (pathname === '/v1/company-chats' || pathname === '/company-chats')) {
+      const chats = loadAllCompanyChats();
+      return sendJson(res, 200, {
+        project_id: 'g-p-6aaf94b0ae20819180ce47c040ff4a59',
+        project_name: 'Mesajify',
+        companies: chats,
+        summary: {
+          total_companies: Object.keys(chats).length,
+          total_chats: Object.values(chats).reduce((acc, c) => acc + (c && typeof c === 'object' ? Object.keys(c).length : 0), 0)
+        }
+      });
+    }
+
+    // 1.0.8.2. Tüm Firmaların Sohbetlerini Önden Hazırla: POST /v1/seed-chats
+    if (method === 'POST' && (pathname === '/v1/seed-chats' || pathname === '/seed-chats')) {
+      const body = await parseJsonBody(req).catch(() => ({}));
+      const targetCompanies = Array.isArray(body.companies) && body.companies.length > 0
+        ? body.companies
+        : ['Ayvazoğlu İnşaat', 'Bofe', 'Veri Burada', 'API-Client'];
+      const targetChannels = Array.isArray(body.channels) && body.channels.length > 0
+        ? body.channels
+        : ['chat', 'media', 'video'];
+
+      const chats = loadAllCompanyChats();
+      const queuedJobs = [];
+
+      for (const comp of targetCompanies) {
+        for (const ch of targetChannels) {
+          if (comp === 'API-Client' && ch !== 'chat') continue;
+          const existing = chats[comp]?.[ch];
+          if (!existing || !existing.chatUrl) {
+            const seedPrompt = ch === 'chat'
+              ? `${comp} için WhatsApp asistan sohbeti hazırlandı. Hazırım.`
+              : ch === 'video'
+              ? `${comp} için video senaryo ve hareketli reklam prompt kanalı hazırlandı. Hazırım.`
+              : `${comp} için kurumsal ürün ve pazarlama görsel tasarım kanalı hazırlandı.`;
+
+            let jobType = 'chat_completion';
+            if (ch === 'media') jobType = 'image';
+            else if (ch === 'video') jobType = 'affordance_prompt';
+            else jobType = 'chat_suggestions';
+
+            const job = queue.createJob({
+              prompt: seedPrompt,
+              customer: comp,
+              platform: 'chatgpt',
+              type: jobType,
+              rawPrompt: seedPrompt,
+              incomingMessage: seedPrompt,
+              brandName: comp,
+              productName: 'Genel Tanıtım',
+              productDescription: `${comp} kurumsal hizmetleri`,
+              isSeedJob: true
+            });
+            queuedJobs.push({ company: comp, channel: ch, jobId: job.id, status: 'queued' });
+          } else {
+            queuedJobs.push({ company: comp, channel: ch, chatUrl: existing.chatUrl, title: existing.title, status: 'already_exists' });
+          }
+        }
+      }
+
+      return sendJson(res, 200, {
+        success: true,
+        message: 'Firma sohbet ön hazırlığı işleme alındı.',
+        jobs: queuedJobs
       });
     }
 

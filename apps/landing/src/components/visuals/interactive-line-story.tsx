@@ -27,7 +27,7 @@ export function InteractiveLineStory({inbox=false}:{inbox?:boolean}) {
     </svg>
     <div className={inbox?'ml-interactive-destination':'ml-interactive-source'}>
       <MesajifyMark size="lg" decorative/>
-      <strong>{inbox?'Tek Inbox':'Bofe kampanyası'}</strong>
+      <strong>{inbox?'Tek Inbox':'Bofe tanıtımı'}</strong>
       <small>{inbox?'Ortak Gelen Kutusu':'Seçili kitle → bağlı hatlar'}</small>
     </div>
     <div className="ml-interactive-terminals">
@@ -38,13 +38,13 @@ export function InteractiveLineStory({inbox=false}:{inbox?:boolean}) {
         {inbox ? <IconChatReply className="w-4 h-4" /> : <IconSendCampaign className="w-4 h-4" />}
       </span>
       <div>
-        <small>{inbox?`HAT 0${line+1} · YENİ YANIT`:`HAT 0${line+1} · KAMPANYA MESAJI`}</small>
+        <small>{inbox?`HAT 0${line+1} · YENİ YANIT`:`HAT 0${line+1} · TANITIM MESAJI`}</small>
         <strong>{inbox?replies[line]:campaignExamples[tick%campaignExamples.length]}</strong>
         <span>{inbox?"Ortak Gelen Kutusu’na ulaştı":"Kreatif ile birlikte gönderim akışı"} <IconCheckCircle className="inline-block w-3.5 h-3.5 text-[#168347] ml-1 align-text-bottom" /></span>
       </div>
     </div>
   </div>
-  <p aria-live={automatic?"off":"polite"}>{inbox?`Hat 0${line+1} yanıtı → ortak Gelen Kutusu`:`Kampanya → Hat 0${line+1} → seçili kitle`}<small>Örnek akış · gerçek gönderim yapılmaz</small></p>
+  <p aria-live={automatic?"off":"polite"}>{inbox?`Hat 0${line+1} yanıtı → ortak Gelen Kutusu`:`Tanıtım → Hat 0${line+1} → seçili kitle`}<small>Örnek akış · gerçek gönderim yapılmaz</small></p>
   <button className="ml-route-toggle" aria-pressed={automatic} onClick={()=>setAutomatic(!automatic)}>{automatic?"Ⅱ Duraklat":"▷ Otomatik akış"}</button>
  </div>;
 }

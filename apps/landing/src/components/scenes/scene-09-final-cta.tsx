@@ -22,13 +22,13 @@ export function Scene09FinalCta() {
 
         {/* Narrative Headline */}
         <h2 className="text-[clamp(34px,5vw,64px)] leading-[1.05] font-[450] tracking-tight mb-6 sm:mb-8">
-          Kampanyanızdan
+          İşletmenizi tanıtın.
           <br />
-          <span className="text-brand">müşteri konuşmasına.</span>
+          <span className="text-brand">Konuşmayı başlatın.</span>
         </h2>
 
         <p className="text-base sm:text-lg md:text-xl text-[#64736a] mb-8 sm:mb-12 max-w-xl mx-auto leading-relaxed">
-          Kitlenizi hazırlayın, kampanyanızı bağlı WhatsApp hatlarınız üzerinden yönetin ve gelen yanıtları tek panelde takip edin.
+          Hedef kitlenizi hazırlayın, ürününüzü veya hizmetinizi WhatsApp’tan duyurun ve gelen yanıtları tek yerde takip edin.
         </p>
 
         {/* Action Buttons */}
@@ -47,7 +47,7 @@ export function Scene09FinalCta() {
           </a>
         </div>
 
-        <div className="ml-product-story ml-cta-journey" aria-label="Kitle, kampanya ve müşteri yanıtı"><FinalJourney /></div>
+        <div className="ml-product-story ml-cta-journey" aria-label="Kitle, tanıtım ve müşteri yanıtı"><FinalJourney /></div>
 
         {/* Domain signoff */}
         <p className="mt-12 sm:mt-20 text-xs text-[#64736a] tracking-[0.2em] uppercase font-medium">

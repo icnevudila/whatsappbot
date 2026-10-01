@@ -17,22 +17,72 @@ function Story({ eyebrow, title, description, dark = false, chapter = '', childr
   </section>
 }
 
-export function LandingCampaignStory() {
-  return <Story chapter="journey" eyebrow="01 / BOFE KAMPANYASI" title="Bir panel. Bütün kampanya." description="Kampanya hazırlığından bağlı WhatsApp hatlarına ve ortak Gelen Kutusu’na."><CampaignOperatingJourney /></Story>
-}
-export function LandingCreativeStory() {
-  return <Story chapter="creative" eyebrow="05 / KAMPANYANIZA KREATİF DESTEĞİ" title="Ürününüz sahneye çıksın." description="Markanızı tanımlayın, marka kitinizi ve ürününüzü ekleyin. Kampanyanız için görseller hazırlayın; video üretimini de kreatif seçenekleri arasında değerlendirin."><div className="ml-brand-context-panel"><BrandContext /></div><CreativeTransform /></Story>
-}
-export function LandingSectorStory() {
-  return <Story chapter="sector" eyebrow="06 / SEKTÖR ÖRNEKLERİ" title="Her işletmenin bir hikâyesi var." description="Farklı sektörler için reklamdan müşteri yanıtına uzanan örnekleri keşfedin."><SectorCampaignLab /></Story>
-}
 export function LandingDeliveryStory() {
-  const [ready, setReady] = useState(false)
-  return <Story chapter="delivery" eyebrow="02 / KAMPANYA HAZIRLIĞI" title="Kitle hazır. Kampanya hazır." description="Kendi listenizi yükleyin veya hizmetin sunulduğu yerlerde Mesajify’dan liste talep edin."><AudienceWorkspace onReady={setReady} /><div className="ml-chapter-bridge" data-ready={ready}><span>{ready ? 'Kampanya kitlesi → Bağlı hatlar' : 'Kitle hazırlığı → Bağlı hatlar'}</span><i>↓</i></div><h3 className="ml-routing-title">Bir kampanya. Birden fazla hat.</h3><ConnectedLineDistribution ready={ready} /></Story>
+  const [, setReady] = useState(false)
+  return (
+    <Story
+      chapter="delivery"
+      eyebrow="01 / HEDEF KİTLENİZ"
+      title="Civarınızdaki işletmelere ulaşın. Hedef kitleniz elinizin altında."
+      description="Kendi listenizi yükleyin veya hedeflediğiniz bölge ve sektör için kitle talep edin. Talep edilen listenin uygunluğu, kapsamı ve hazırlanması değerlendirme sonrasında netleşir."
+    >
+      <AudienceWorkspace onReady={setReady} />
+    </Story>
+  )
 }
+
+export function LandingSectorStory() {
+  return (
+    <Story
+      chapter="sector"
+      eyebrow="02 / SEKTÖRÜNÜZDE ÖNE ÇIKIN"
+      title="İşletmeniz ne sunuyor? Mesajınız anlatsın."
+      description="Kuaförlerden toptancılara, restoranlardan inşaat ve sağlığa: Sektörünüze özel hazırlanmış doğrudan WhatsApp mesajlarıyla potansiyel müşterilerinizin cebine ulaşın."
+    >
+      <SectorCampaignLab />
+    </Story>
+  )
+}
+
+export function LandingCreativeStory() {
+  return (
+    <Story
+      chapter="creative"
+      eyebrow="03 / KREATİF & REKLAM STÜDYOSU"
+      title="Tanıtımınıza görsel destek ekleyin."
+      description="Ürün fotoğrafınızı ve marka kitinizi kullanarak tanıtım görselleri hazırlayın. Video üretimi de ek bir kreatif seçeneği olarak yer alır."
+    >
+      <div className="ml-brand-context-panel">
+        <BrandContext />
+      </div>
+      <CreativeTransform />
+    </Story>
+  )
+}
+
 export function LandingInboxStory() {
-  return <Story chapter="reply" eyebrow="03 / ORTAK GELEN KUTUSU" title="Birden fazla hat. Tek gelen kutusu." description="Bağlı WhatsApp hatlarınıza gelen müşteri yanıtları Mesajify Gelen Kutusu’nda birleşir."><ReplyToInbox /></Story>
+  return (
+    <Story
+      chapter="reply"
+      eyebrow="04 / ORTAK GELEN KUTUSU"
+      title="Gelen soruları görün. Konuşmayı sürdürün."
+      description="Fiyat, sipariş ve katalog sorularını tek ekranda takip edin. Mesajları yanıtlayın, konuşmalarınızı bir arada görün."
+    >
+      <ReplyToInbox />
+    </Story>
+  )
 }
+
 export function LandingExplorerStory() {
-  return <Story chapter="explorer" eyebrow="04 / ÜRÜNÜ KEŞFEDİN" title="Kontrol merkezi elinizin altında." description="Konuşmadan kampanya yönetimine, aynı kontrol merkezi."><ApprovedScreenGallery /></Story>
+  return (
+    <Story
+      chapter="explorer"
+      eyebrow="05 / KONTROL MERKEZİ"
+      title="Tüm tanıtım ve müşteri süreçleriniz tek panelde."
+      description="Listenizi hazırlayın, tanıtım mesajlarınızı yönetin ve müşteri konuşmalarını aynı panelden takip edin."
+    >
+      <ApprovedScreenGallery />
+    </Story>
+  )
 }
+
