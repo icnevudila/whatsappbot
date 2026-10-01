@@ -85,9 +85,29 @@ export function buildCreativePrompt(snapshot: CreativeSnapshot): {
   if (snapshot.dateRange) extras.push(`Campaign dates: ${snapshot.dateRange}`)
   if (snapshot.customText) extras.push(`Custom line: ${snapshot.customText}`)
 
+  const rawBrandName = kit?.name || ''
+  const cleanBrandName = rawBrandName
+    .replace(/(?:brand\s*kit|marka\s*kiti|kampanya\s*kiti|whatsapp\s*kampanya\s*kiti)/gi, '')
+    .trim()
+
+  const mainProduct = snapshot.products[0]
+  const productName = mainProduct?.name || ''
+  const briefText = snapshot.brief?.trim() || ''
+
   const variation = snapshot.variationPreset
     ? VARIATION_PRESETS.find((row) => row.id === snapshot.variationPreset)?.label
     : null
+
+  // Reklam Poster Hiyerarşisi Yönergesi
+  const posterCompositionDirectives = [
+    'AUTONOMOUS COMMERCIAL AD POSTER COMPOSITION & LAYOUT:',
+    '- TOP / HEADER: Clean brand placement at top. If logo reference is provided, position the authentic corporate logo with high clarity and balanced margins.',
+    '- HEADLINE TYPOGRAPHY: Prominent, ultra-bold, condensed commercial Turkish headline typography matching the brand palette and font tone. High visual contrast against background.',
+    '- OFFER SUB-BADGE: Sleek modern rounded capsule/pill badge in brand accent color containing the core offer, discount or delivery promise. Keep it minimal and elegant (e.g. "Kapıya Teslim • Hızlı Gönderim" or "%20 İndirim • Sınırlı Stok"). NEVER paint tacky cartoon supermarket stickers or comic starbursts.',
+    '- CENTER HERO STAGING: The hero subject (physical product or service visual) must be staged in a realistic, premium, context-appropriate commercial environment with authentic materials, natural lighting, crisp reflections, and contextual atmospheric depth (e.g., sleek logistics dock for construction/wholesale, natural slate with water mist for spray/agritech, executive desk with laptop/app UI for tech/software, marble surface for food/retail).',
+    '- BOTTOM VALUE STRIP: Sleek minimal horizontal feature bar with 2-3 concise value propositions and clean icons (e.g., "[icon] HIZLI TESLİMAT  |  [icon] YÜKSEK KALİTE  |  [icon] GÜVENİLİR HİZMET").',
+    '- ZERO TACKY GRAPHICS: Strictly NO cartoon supermarket flyer stickers, NO yellow starbursts, NO fake web clickable buttons painted on image, NO comic speech bubbles.'
+  ].join('\n')
 
   const prompt = [
     'Create ONE professional commercial campaign creative for WhatsApp / social ads.',
@@ -95,11 +115,12 @@ export function buildCreativePrompt(snapshot: CreativeSnapshot): {
     `Use case: ${formatLabel(snapshot.formatId)} (${aspect}).`,
     `Visual style: ${styleLabel(snapshot.style)}. ${STYLE_HINT[snapshot.style] ?? STYLE_HINT.auto}`,
     DENSITY_HINT[snapshot.textDensity] ?? DENSITY_HINT.balanced,
+    cleanBrandName ? `Brand name: ${cleanBrandName}.` : null,
     kit?.tone ? `Brand tone of voice: ${kit.tone}` : null,
     colors ? `Follow this brand palette in backgrounds, accents and props: ${colors}.` : null,
     kit?.fonts?.heading ? `Prefer a ${kit.fonts.heading}-like heading feel.` : null,
     'Do NOT write internal labels on the image: never paint brand-kit titles, "marka kiti", "brand kit", "kampanya kiti", or similar meta text.',
-    snapshot.useLogo
+    snapshot.useLogo !== false
       ? 'STRICT LOGO FIDELITY: A real company logo image is attached as a reference. Place that exact logo cleanly without any modification, restyling, or variation. Keep its exact proportions, geometry, emblem shape, and brand colors. NEVER invent a different logo, NEVER stylize or morph the logo, and NEVER replace the logo with typed text.'
       : 'Do not invent fake logos. Do not type a brand name as a fake logo unless the advertiser brief explicitly asks for the business name as headline text.',
     snapshot.baseCreativeId
@@ -107,8 +128,9 @@ export function buildCreativePrompt(snapshot: CreativeSnapshot): {
       : null,
     snapshot.instruction ? `Revision instruction (must follow): ${snapshot.instruction}` : null,
     variation ? `Variation direction: ${variation}. Same offer, different composition.` : null,
-    `Campaign brief from the advertiser (do not add facts they did not give): ${snapshot.brief}`,
+    `Campaign brief from the advertiser: ${briefText || 'Özel Kampanya'}`,
     productBlocks.length ? `Products:\n${productBlocks.join('\n')}` : 'No specific product catalog items.',
+    posterCompositionDirectives,
     'STRICT PRODUCT FIDELITY: The real product photo is provided as a reference. You must preserve the real physical product exactly as shown: exact shape, casing, components, buttons, materials, and colors. Do NOT mutate the product, do NOT invent fantasy product variations, do NOT change the product design, and do NOT replace the product with a generic item.',
     contacts.length
       ? `Contact lines that may appear on the creative if text is used: ${contacts.join(' · ')}`
@@ -133,6 +155,12 @@ export function buildCreativePrompt(snapshot: CreativeSnapshot): {
     'no deformed product design',
     'no fantasy product variations',
     'no generic product replacement',
+    'no cartoon stickers',
+    'no yellow starburst badges',
+    'no supermarket flyer graphics',
+    'no fake clickable buttons',
+    'no fake web UI elements',
+    'no speech bubbles',
     'no unreadable micro-text',
     'no watermarks',
     'no misspelled brand names',

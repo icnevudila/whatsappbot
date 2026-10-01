@@ -86,7 +86,7 @@ function defaultDraft(data: WizardBootstrap): Draft {
     baseCreativeId: '',
     brief: '',
     brandKitId: data.kits.find((kit) => kit.isDefault)?.id ?? data.kits[0]?.id ?? '',
-    useLogo: false,
+    useLogo: Boolean(data.org.logoPreview || data.kits.some((kit) => kit.samplePreview)),
     productIds: [],
     productExtras: {},
     phoneIds: [],

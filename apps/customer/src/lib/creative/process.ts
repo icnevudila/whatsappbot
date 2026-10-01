@@ -414,10 +414,8 @@ export async function processCreativeGeneration(
 
   const refs: ReferenceImage[] = []
 
+  // 1. Kaynak görsel (Revizyon, Varyasyon veya Görselden Türet):
   if (snapshot.baseCreativeId) {
-    // Var olan bir görselden türetiliyorsa (Revizyon, Varyasyon veya Görselden Türet):
-    // Modele tek odak noktası olarak SADECE seçilen kaynak görsel verilir.
-    // Ekstra ürün fotoğrafları veya logo eklenerek modelin kafası karıştırılmaz.
     const { data: base } = await supabase
       .from('creatives')
       .select('public_url, org_id')
@@ -428,19 +426,31 @@ export async function processCreativeGeneration(
       const image = await fetchBuffer(base.public_url)
       if (image) refs.push({ ...image, role: 'base' })
     }
-  } else {
-    // Sıfırdan yeni üretim:
-    // Seçili ürünler arasından ilk ürün görseli referans olarak verilir
-    for (const product of snapshot.products) {
-      if (refs.length >= 1) break
-      if (!product.include.image || !product.imageUrl) continue
-      const image = await fetchBuffer(product.imageUrl)
+  }
+
+  // 2. Ürün görseli referansı (Varsa her zaman eklenir):
+  for (const product of snapshot.products) {
+    if (refs.filter((r) => r.role === 'product').length >= 1) break
+    if (!product.include?.image || !product.imageUrl) continue
+    const image = await fetchBuffer(product.imageUrl)
+    if (image) refs.push({ ...image, role: 'product' })
+  }
+
+  // 3. Kullanıcının yüklediği ek referans görseller (referenceImageUrls):
+  const incomingRefUrls = (snapshot as any).referenceImageUrls
+  if (Array.isArray(incomingRefUrls)) {
+    for (const refUrl of incomingRefUrls) {
+      if (refs.length >= MAX_REFS) break
+      if (!refUrl || typeof refUrl !== 'string') continue
+      const image = await fetchBuffer(refUrl)
       if (image) refs.push({ ...image, role: 'product' })
     }
   }
 
-  if (snapshot.useLogo && refs.length < MAX_REFS) {
-    let logoPath = snapshot.brandKit?.logoPath ?? null
+  // 4. Logo Referansı: İşletmenin logosu varsa ve useLogo açıkça false yapılmamışsa HER ZAMAN GİTSİN!
+  const shouldIncludeLogo = snapshot.useLogo !== false
+  if (shouldIncludeLogo && refs.length < MAX_REFS) {
+    let logoPath = (snapshot as any).customLogoUrl || snapshot.brandKit?.logoPath || null
     if (!logoPath) {
       const { data: orgLogo } = await supabase
         .from('organizations')
@@ -455,7 +465,10 @@ export async function processCreativeGeneration(
         const image = await fetchBuffer(logoPath)
         if (image) refs.push({ ...image, role: 'logo' })
       } else {
-        const { data: blob } = await supabase.storage.from('brand-assets').download(logoPath)
+        let blob = (await supabase.storage.from('brand-assets').download(logoPath)).data
+        if (!blob) {
+          blob = (await supabase.storage.from('creatives').download(logoPath)).data
+        }
         if (blob) {
           const buffer = Buffer.from(await blob.arrayBuffer())
           if (buffer.length >= 32) {
