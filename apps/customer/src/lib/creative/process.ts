@@ -429,8 +429,11 @@ export async function processCreativeGeneration(
   }
 
   // 2. Ürün görseli referansı (Varsa her zaman eklenir):
+  // BUG-FIX: Önceki limit >= 1 idi, çoklu ürün kampanyalarında sadece 1 ürün
+  // görseli gidiyordu. Şimdi logo ve base için yer bırakarak 2'ye çıkarıldı.
+  const maxProductRefs = Math.max(1, MAX_REFS - refs.length - 1) // logo için 1 slot ayır
   for (const product of snapshot.products) {
-    if (refs.filter((r) => r.role === 'product').length >= 1) break
+    if (refs.filter((r) => r.role === 'product').length >= maxProductRefs) break
     if (!product.include?.image || !product.imageUrl) continue
     const image = await fetchBuffer(product.imageUrl)
     if (image) refs.push({ ...image, role: 'product' })
@@ -690,9 +693,11 @@ export async function processCreativeGeneration(
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             async: true,
-            idempotencyKey: `${creative.org_id || 'org'}:${creative.id}:${(snapshot as any).requestKey || 'render'}`,
+            idempotencyKey: `${creative.org_id || 'org'}:${creative.id}:${Date.now()}`,
             orgId: creative.org_id,
             creativeId: creative.id,
+            scopeKey: `creative:${creative.org_id}:${creative.id}`,
+            conversationId: `video-${creative.id}-${Date.now()}`,
             prompt: videoPrompt,
             preferredEngine: 'flow',
             engine: 'flow',

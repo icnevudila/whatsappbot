@@ -151,7 +151,18 @@ export function ImageCreativeWizard({ data }: { data: WizardBootstrap }) {
         ...saved,
         brandKitId: validKitId,
         productIds: validProductIds,
-        requestKey: saved.requestKey || current.requestKey,
+        // BUG-FIX: requestKey'i localStorage'dan GERİ YÜKLEME. Her yeni
+        // üretim isteği benzersiz bir key almalı, aksi halde sunucu eski
+        // key'i DB'de bulup önceki görsele redirect yapıyor.
+        requestKey: newKey(),
+        // BUG-FIX: Eski localStorage verilerinde bu alanlar null olabilir.
+        // null.map() çağrıldığında sayfa "Bu sayfayı yükleyemedik" ile çöküyordu.
+        labels: Array.isArray(saved.labels) ? saved.labels : current.labels,
+        phoneIds: Array.isArray(saved.phoneIds) ? saved.phoneIds : current.phoneIds,
+        socialIds: Array.isArray(saved.socialIds) ? saved.socialIds : current.socialIds,
+        productExtras: (saved.productExtras && typeof saved.productExtras === 'object' && !Array.isArray(saved.productExtras))
+          ? saved.productExtras
+          : current.productExtras,
       }))
     } catch {
       /* ignore */
