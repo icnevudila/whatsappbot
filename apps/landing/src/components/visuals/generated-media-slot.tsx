@@ -26,8 +26,8 @@ export function GeneratedMediaSlot({ id, alt, aspectRatio, poster, active = true
   }, [id, active, enabled]);
   return <div className="ml-media" style={{ aspectRatio: aspectRatio || asset?.aspectRatio || '9/16' }}>
     {asset?.status === 'available' && !failed ? asset.type === 'video'
-      ? <video ref={ref} src={enabled ? asset.path : undefined} poster={poster || asset.posterPath} controls loop muted playsInline preload="none" aria-label={alt} onClick={()=>setEnabled(true)} onError={() => setFailed(true)} />
+      ? <video ref={ref} src={asset.path} poster={poster || asset.posterPath} autoPlay loop muted playsInline preload="metadata" aria-label={alt} onError={() => setFailed(true)} />
       : <img src={asset.path} alt={alt} loading="lazy" onError={() => setFailed(true)} />
-      : <><img src={posterFailed ? '/brand/mesajify-symbol.png' : poster || asset?.posterPath || '/landing/studio/product-poster.jpg'} alt={alt} loading="lazy" onError={()=>setPosterFailed(true)} /><small className="ml-pending-label">Video asset bekleniyor</small></>}
+      : <><img src={posterFailed ? '/brand/mesajify-symbol.png' : poster || asset?.posterPath || '/landing/studio/hero-flow-veo-poster.jpg'} alt={alt} loading="lazy" onError={()=>setPosterFailed(true)} /><small className="ml-pending-label">Video asset bekleniyor</small></>}
   </div>;
 }

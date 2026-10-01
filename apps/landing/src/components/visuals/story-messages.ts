@@ -1,2 +1,2 @@
 export const replyExamples=['Fiyat bilgisi alabilir miyim?','Stokta var mı?','Teslimat ne kadar sürüyor?','Ürün detaylarını paylaşır mısınız?','Nasıl sipariş verebilirim?','Farklı modeli var mı?','Kargo bilgisi alabilir miyim?','Ürünü nereden inceleyebilirim?'];
-export const campaignExamples=['Bofe ürünümüzü keşfedin.','Ürün detaylarını sizinle paylaşabiliriz.','Yeni ürünümüz hakkında bilgi almak için yazın.','Ürün seçeneklerini birlikte inceleyelim.'];
+export const campaignExamples=['Mesajify ile WhatsApp üzerinden işletmenizi tanıtın.','Bölgenizdeki potansiyel müşterilere doğrudan ulaşın.','Ürün ve hizmetlerinizi hedef kitlenize anında duyurun.','Yeni müşteri adaylarını doğrudan WhatsApp hattınıza çekin.'];

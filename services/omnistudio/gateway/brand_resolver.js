@@ -22,8 +22,22 @@ let lastFetchTime = 0;
 /**
  * Supabase'den aktif veya varsayılan Marka Kitini otomatik çeker.
  */
-async function getActiveBrandKit(orgId = null, brandHint = null) {
-  const brandLower = `${brandHint || ''}`.toLowerCase();
+async function getActiveBrandKit(orgId = null, brandHint = null, suppliedKit = null) {
+  if (suppliedKit) {
+    const kitOrg = suppliedKit.orgId || suppliedKit.org_id;
+    if (kitOrg && orgId && kitOrg !== orgId) {
+      throw Object.assign(new Error('Brand kit belongs to a different organization'), { code: 'INVALID_ASSET' });
+    }
+    return {
+      ...suppliedKit,
+      organization_name: suppliedKit.organization_name || suppliedKit.name || brandHint || 'İşletme',
+      brand_name: suppliedKit.brand_name || suppliedKit.name || brandHint || 'İşletme',
+      logo_path: suppliedKit.logo_path || suppliedKit.logoPath || suppliedKit.logoUrl || null,
+      hasExplicitLogo: Boolean(suppliedKit.logo_path || suppliedKit.logoPath || suppliedKit.logoUrl),
+    };
+  }
+  // Legacy name hints must never override an explicit tenant identity.
+  const brandLower = orgId ? '' : `${brandHint || ''}`.toLowerCase();
 
   // Bofe için özel tanımlı kurumsal marka kiti
   if (brandLower.includes('bofe') || orgId === 'afc4ff9f-67a4-4dd1-af1d-e60b38c9ccdc' || orgId === 'b359ccd3-3ec8-40fd-928e-bc6dbbd489c0' || orgId === 'af504c75-9db5-4a97-bb92-52d1a0e2de8b') {
@@ -39,7 +53,30 @@ async function getActiveBrandKit(orgId = null, brandHint = null) {
       },
       tone: 'Modern, yüksek teknolojili ve profesyonel tarım & bahçe ekipmanları. Siyah, beyaz, neon lime (#acfe00) ve koyu orman yeşili (#026009).',
       logo_path: '/outputs/bofe_logo.png',
-      product_image_path: '/outputs/bofe_product.png',
+      hasExplicitLogo: true,
+    };
+  }
+
+  // Mesajify için kurumsal marka kiti
+  if (brandLower.includes('mesajify') || orgId === '2881f690-6853-4064-8768-307463ae6255') {
+    return {
+      organization_name: 'Mesajify',
+      brand_name: 'Mesajify',
+      colors: {
+        primary: '#00a884',
+        accent: '#168347',
+        secondary: '#07100C',
+        text: '#090B0A',
+        background: '#FFFFFF',
+      },
+      fonts: {
+        heading: 'Outfit',
+        body: 'Inter',
+      },
+      tone: 'Modern, yenilikçi ve güvenilir WhatsApp Tanıtım, Reklam ve Kitle Platformu. Zümrüt yeşili (#00a884), adaçayı ve kurumsal koyu orman yeşili (#168347).',
+      logo_path: '/outputs/mesajify_logo.png',
+      logo_visual_description: "Mesajify resmi kurumsal logo amblemi: Canlı zümrüt yeşili (#00a884) squircle (yuvarlatılmış kare) zemin içerisinde beyaz çift katmanlı stilize konuşma balonu ve mesaj kuyruğu ikonu. Yanında veya altında net, modern, geometrik 'Mesajify' kurumsal tipografisi.",
+      product_visual_description: "Mesajify WhatsApp Tanıtım & Kitle Platformu: Çoklu hat yönetimi, harita tabanlı civar işletme taraması, ortak gelen kutusu ve dikey reklam üretim stüdyosu.",
       hasExplicitLogo: true,
     };
   }
@@ -76,7 +113,6 @@ async function getActiveBrandKit(orgId = null, brandHint = null) {
       },
       tone: 'Modern ve güven verici bir tasarım dili. Canlı turuncu ve nötr tonlar, net tipografi.',
       logo_path: '/outputs/ayvazoglu_logo.png',
-      product_image_path: '/outputs/ayvazoglu_brick.webp',
       logo_visual_description: "Minimalist kırmızı ince çizgili çatı piktogramı ve ortasından yukarı doğru yükselen kırmızı dikey ok sembolü. Altında siyah, net ve büyük harflerle 'AYVAZOĞLU' ve 'İ N Ş A A T'. Plaket veya tabela üzerinde bu kırmızı çatı ve dikey ok amblemi kesinlikle çizilecektir; yalnızca yazı yazıp amblem asla atlanmayacaktır.",
       product_visual_description: "Karakteristik 18 delikli pişmiş kil blok tuğla (uzunlamasına yatay dikdörtgen prizma oranında, üst yüzeyinde nizami dikdörtgen hava delikli petek oda yapısı, yan yüzeylerinde dikey oluklu çizgiler olan kırmızı-turuncu renkli yapı tuğlası). Kesinlikle kare küp, deliksiz masif taş veya düz harman tuğlası değildir; ekli görseldeki gibi uzun dikdörtgen formunda ve içi hava kanallı delikli kil blok tuğladır.",
       hasExplicitLogo: true,
@@ -106,6 +142,9 @@ async function getActiveBrandKit(orgId = null, brandHint = null) {
  */
 function getLogoVisualDescription(brandName, logoPath, hasExplicitLogo = false) {
   const lower = (brandName || '').toLowerCase();
+  if (lower.includes('mesajify')) {
+    return "Mesajify resmi amblemi: Canlı zümrüt yeşili (#00a884) squircle (yuvarlatılmış kare) zemin içerisinde beyaz çift katmanlı stilize konuşma balonu ve mesaj kuyruğu ikonu. Yanında net, modern, geometrik 'Mesajify' kurumsal tipografisi. KESİNLİKLE uydurma geometrik şekil, sarı üçgen veya yapay amblem eklenmeyecektir.";
+  }
   if (lower.includes('bofe')) {
     return "Zarif, minimalist ve modern siyah 'bofe' yazı logosu (küçük harflerle 'bofe', 'e' harfinde karakteristik açılı modern kesim). Kesinlikle uydurma geometrik üçgen, amblem veya rastgele sembol KULLANILMAYACAKTIR; yalnızca saf, estetik 'bofe' kurumsal tipografisi yer alacaktır.";
   }

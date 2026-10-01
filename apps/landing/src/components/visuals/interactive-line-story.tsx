@@ -27,7 +27,7 @@ export function InteractiveLineStory({inbox=false}:{inbox?:boolean}) {
     </svg>
     <div className={inbox?'ml-interactive-destination':'ml-interactive-source'}>
       <MesajifyMark size="lg" decorative/>
-      <strong>{inbox?'Tek Inbox':'Bofe tanıtımı'}</strong>
+      <strong>{inbox?'Tek Inbox':'Mesajify tanıtımı'}</strong>
       <small>{inbox?'Ortak Gelen Kutusu':'Seçili kitle → bağlı hatlar'}</small>
     </div>
     <div className="ml-interactive-terminals">
