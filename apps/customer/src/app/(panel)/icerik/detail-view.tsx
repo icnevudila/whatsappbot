@@ -337,7 +337,7 @@ export function CreativeDetail({
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ id: creative.id }),
-      signal: AbortSignal.timeout(25_000),
+      signal: AbortSignal.timeout(120_000),
     })
     const json = (await response.json().catch(() => null)) as {
       ok?: boolean
@@ -546,7 +546,9 @@ export function CreativeDetail({
 
   const remainingText =
     remainingSeconds <= 0
-      ? '0 sn · Video tamamlandı, yükleniyor…'
+      ? isVideo
+        ? '0 sn · Video tamamlandı, yükleniyor…'
+        : '0 sn · Görsel tamamlandı, kütüphaneye aktarılıyor…'
       : `Tahmini kalan süre: ~${remainingSeconds} sn`
 
   return (
