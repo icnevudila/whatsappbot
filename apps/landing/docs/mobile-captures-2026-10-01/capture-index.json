@@ -1,0 +1,171 @@
+{
+  "date": "2026-10-01",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "captures": [
+    {
+      "name": "01-ana-sayfa",
+      "url": "https://app.mesajify.com/ozet",
+      "title": "Ana sayfa · Mesajify",
+      "loading": false
+    },
+    {
+      "name": "03-kampanya-yeni",
+      "url": "https://app.mesajify.com/kampanyalar/yeni",
+      "title": "Yeni kampanya · Mesajify",
+      "loading": false
+    },
+    {
+      "name": "02-kampanyalar",
+      "url": "https://app.mesajify.com/kampanyalar",
+      "title": "Kampanyalar · Mesajify",
+      "loading": false
+    },
+    {
+      "name": "04-kisiler",
+      "url": "https://app.mesajify.com/kisiler",
+      "title": "Kişiler · Mesajify",
+      "loading": false
+    },
+    {
+      "name": "05-mesajlar",
+      "url": "https://app.mesajify.com/mesajlar",
+      "title": "Mesajlar · Mesajify",
+      "loading": false
+    },
+    {
+      "name": "06-icerik-kutuphanesi",
+      "url": "https://app.mesajify.com/icerik",
+      "title": "İçerik kütüphanesi · Mesajify",
+      "loading": false
+    },
+    {
+      "name": "07-gorsel-olustur",
+      "url": "https://app.mesajify.com/icerik/yeni",
+      "title": "Kampanya içeriği oluştur · Mesajify",
+      "loading": false
+    },
+    {
+      "name": "08-video-hazirlama",
+      "url": "https://app.mesajify.com/icerik/yeni?format=video",
+      "title": "Kampanya içeriği oluştur · Mesajify",
+      "loading": false
+    },
+    {
+      "name": "09-kurulum",
+      "url": "https://app.mesajify.com/kurulum",
+      "title": "Başlangıç · Mesajify",
+      "loading": false
+    },
+    {
+      "name": "10-ayarlar",
+      "url": "https://app.mesajify.com/ayarlar",
+      "title": "Ayarlar · Mesajify",
+      "loading": false
+    },
+    {
+      "name": "11-hatlar",
+      "url": "https://app.mesajify.com/ayarlar/hatlar",
+      "title": "Hatlar · Mesajify",
+      "loading": false
+    },
+    {
+      "name": "12-isletme",
+      "url": "https://app.mesajify.com/ayarlar/isletme",
+      "title": "İşletme · Mesajify",
+      "loading": false
+    },
+    {
+      "name": "13-marka",
+      "url": "https://app.mesajify.com/ayarlar/marka",
+      "title": "Marka kitleri · Mesajify",
+      "loading": false
+    },
+    {
+      "name": "14-urunler",
+      "url": "https://app.mesajify.com/ayarlar/urunler",
+      "title": "Ürünlerim · Mesajify",
+      "loading": false
+    },
+    {
+      "name": "15-profil",
+      "url": "https://app.mesajify.com/ayarlar/profil",
+      "title": "Profil · Mesajify",
+      "loading": false
+    },
+    {
+      "name": "16-otomatik-yanit",
+      "url": "https://app.mesajify.com/ayarlar/otomatik-yanit",
+      "title": "Otomatik Yanıt · Mesajify",
+      "loading": false
+    },
+    {
+      "name": "17-engellenenler",
+      "url": "https://app.mesajify.com/ayarlar/engellenenler",
+      "title": "Engellenen numaralar · Mesajify",
+      "loading": false
+    },
+    {
+      "name": "18-sosyal",
+      "url": "https://app.mesajify.com/ayarlar/sosyal",
+      "title": "Sosyal medya · Mesajify",
+      "loading": false
+    },
+    {
+      "name": "19-marka-yeni",
+      "url": "https://app.mesajify.com/ayarlar/marka/yeni",
+      "title": "Marka kiti ekle · Mesajify",
+      "loading": false
+    },
+    {
+      "name": "20-urun-yeni",
+      "url": "https://app.mesajify.com/ayarlar/urunler/yeni",
+      "title": "Ürün ekle · Mesajify",
+      "loading": false
+    },
+    {
+      "name": "21-isletme-yeni",
+      "url": "https://app.mesajify.com/ayarlar/isletme",
+      "title": "İşletme · Mesajify",
+      "loading": false
+    },
+    {
+      "name": "22-kampanya-detay",
+      "url": "https://app.mesajify.com/kampanyalar/2238efef-638d-4a5c-90eb-ccc1e30d74b0",
+      "title": "Kampanya · Tuğla test kampanya 3 · Mesajify",
+      "loading": false
+    },
+    {
+      "name": "23-kampanya-duzenleme",
+      "url": "https://app.mesajify.com/kampanyalar/2238efef-638d-4a5c-90eb-ccc1e30d74b0/duzenle",
+      "title": "Düzenle · Tuğla test kampanya 3 · Mesajify",
+      "loading": false
+    },
+    {
+      "name": "24-urun-detay",
+      "url": "https://app.mesajify.com/ayarlar/urunler/ecd51dd4-3184-4ba2-89b5-a9b046005b0c",
+      "title": "Ürün · Mesajify",
+      "loading": false
+    },
+    {
+      "name": "25-marka-detay",
+      "url": "https://app.mesajify.com/ayarlar/marka/489f335c-ea99-46e4-b8dd-b75dd68255ea",
+      "title": "Marka kiti · Mesajify",
+      "loading": false
+    },
+    {
+      "name": "26-icerik-detay",
+      "url": "https://app.mesajify.com/icerik/0ec2495e-b9e9-4e21-b09c-ce6ff80e0f5c",
+      "title": "Görsel · Mesajify",
+      "loading": false
+    },
+    {
+      "name": "27-kisi-detay",
+      "url": "https://app.mesajify.com/kisiler/693c96bc-1ebc-4467-9fcc-105980664c24",
+      "title": "Grup · WhatsApp Rehberi — 0542 821 22 05 · Mesajify",
+      "loading": false
+    }
+  ]
+}

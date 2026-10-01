@@ -1,0 +1,11 @@
+const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),ts=require('typescript'),{execFileSync}=require('node:child_process');
+const app=path.resolve(__dirname,'..'),root=path.join(app,'public');
+const cache=new Map();
+function load(name){const file=path.join(app,'src/content',name+'.ts');if(cache.has(file))return cache.get(file);const mod={exports:{}};cache.set(file,mod.exports);const code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;new Function('exports','require','module',code)(mod.exports,id=>load(id.replace('./','')),mod);return mod.exports;}
+const {mediaSlots}=load('media-slots'),{mediaManifest,getMedia}=load('media-manifest'),{productScreens,inboxScreen}=load('product-screens');
+const files=new Set(['/brand/mesajify-logo-full.png','/brand/mesajify-symbol.png','/og-image.png',...productScreens.map(s=>s.image),inboxScreen.image,'/landing/durum.png']);
+for(const asset of mediaManifest){const resolved=getMedia(asset.id);files.add(resolved.path);if(resolved.posterPath)files.add(resolved.posterPath);}
+for(const slot of mediaSlots){files.add(slot.status==='available'?slot.path:slot.fallbackPath);files.add(slot.status==='available'?slot.posterPath:slot.fallbackPosterPath);}
+const rows=[];for(const file of files){const absolute=path.join(root,file);if(!fs.existsSync(absolute))throw Error('Missing active landing asset: '+file);const bytes=fs.readFileSync(absolute);if(!bytes.length)throw Error('Empty asset: '+file);const row={file,bytes:bytes.length,sha256:crypto.createHash('sha256').update(bytes).digest('hex')};if(process.argv.includes('--metadata')&&file.endsWith('.mp4')){const probe=JSON.parse(execFileSync('ffprobe',['-v','error','-show_entries','stream=codec_name,width,height:format=duration','-of','json',absolute],{encoding:'utf8'}));row.probe=probe;if(!probe.streams?.some(s=>s.codec_name==='h264'))throw Error('No H264 video: '+file);}rows.push(row);}
+if(process.argv.includes('--metadata'))fs.writeFileSync(path.join(app,'docs/ASSET-VERIFICATION.json'),JSON.stringify({date:new Date().toISOString(),pending:mediaSlots.filter(s=>s.status==='pending').map(s=>s.id),assets:rows},null,2));
+console.log(`${rows.length} active assets verified; ${mediaSlots.filter(s=>s.status==='pending').length} final media slots pending.`);

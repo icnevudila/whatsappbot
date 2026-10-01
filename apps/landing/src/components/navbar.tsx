@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
+import { MesajifyMark } from './brand/mesajify-mark';
 import Link from 'next/link';
 
 export function Navbar() {
@@ -13,7 +13,8 @@ export function Navbar() {
       setScrolled(window.scrollY > 20);
     };
 
-    window.addEventListener('scroll', handleScroll);
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, {passive:true});
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -34,14 +35,7 @@ export function Navbar() {
     >
       <div className="max-w-[1240px] mx-auto px-6 h-20 flex items-center justify-between">
         <Link href="/" className="relative z-10 flex items-center">
-          <Image
-            src="/logos/mesajify-logo.png"
-            alt="Mesajify Logo"
-            width={130}
-            height={36}
-            className="h-9 w-auto"
-            priority
-          />
+          <MesajifyMark variant="full" size="sm" priority />
         </Link>
 
         {/* Desktop Nav */}
@@ -77,7 +71,10 @@ export function Navbar() {
         <button
           className="md:hidden relative z-10 p-2 -mr-2 text-ink"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          aria-label="Toggle Menu"
+          aria-label={mobileMenuOpen ? 'Menüyü kapat' : 'Menüyü aç'}
+          aria-expanded={mobileMenuOpen}
+          aria-controls="mobile-navigation"
+          onKeyDown={e=>{if(e.key==='Escape')setMobileMenuOpen(false)}}
         >
           <div className="w-6 h-5 flex flex-col justify-between">
             <span
@@ -100,9 +97,12 @@ export function Navbar() {
 
         {/* Mobile Menu */}
         <div
-          className={`fixed inset-0 bg-canvas z-0 transition-transform duration-500 ease-[cubic-bezier(0.05,0.7,0.1,1)] ${
+          id="mobile-navigation"
+          inert={!mobileMenuOpen}
+          onKeyDown={e=>{if(e.key==='Escape'){setMobileMenuOpen(false);document.querySelector<HTMLButtonElement>('[aria-controls="mobile-navigation"]')?.focus();}}}
+          className={`absolute top-20 left-0 right-0 bg-canvas z-0 transition-transform duration-500 ease-[cubic-bezier(0.05,0.7,0.1,1)] ${
             mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
-          } md:hidden flex flex-col pt-24 px-6 pb-6`}
+          } md:hidden flex flex-col pt-6 px-6 pb-6 border-b border-hairline shadow-lg gap-8`}
         >
           <nav className="flex flex-col gap-6 text-2xl font-semibold mb-auto">
             {navLinks.map((link) => (

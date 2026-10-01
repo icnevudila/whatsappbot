@@ -1,13 +1,14 @@
 'use client'
 
-import Image from 'next/image'
+import { FinalJourney } from '../visuals/product-modules'
+import { MesajifyMark } from '../brand/mesajify-mark'
 import { useReveal } from '@/lib/use-reveal'
 
 export function Scene09FinalCta() {
   const ctaRef = useReveal<HTMLDivElement>()
 
   return (
-    <section className="scene bg-[#050B08] text-white py-20 sm:py-36 relative overflow-hidden border-t border-white/5">
+    <section className="scene ml-final-section py-20 sm:py-28 relative overflow-hidden border-t border-[#dce5df]">
       
       {/* Background Soft Glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] bg-brand/10 rounded-full blur-[140px] pointer-events-none" />
@@ -16,24 +17,18 @@ export function Scene09FinalCta() {
         
         {/* Logo Symbol */}
         <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto mb-8 sm:mb-10 opacity-70">
-          <Image
-            src="/logos/mesajify_app_icon_corporate_squircle.png"
-            alt="Mesajify"
-            width={56}
-            height={56}
-            className="rounded-2xl"
-          />
+          <MesajifyMark variant="symbol" size="md" state="success" />
         </div>
 
         {/* Narrative Headline */}
-        <h2 className="text-[clamp(34px,6vw,84px)] leading-[1.05] font-[600] tracking-tight mb-6 sm:mb-8">
-          Bir fotoğraftan
+        <h2 className="text-[clamp(34px,5vw,64px)] leading-[1.05] font-[450] tracking-tight mb-6 sm:mb-8">
+          Kampanyanızdan
           <br />
           <span className="text-brand">müşteri konuşmasına.</span>
         </h2>
 
-        <p className="text-base sm:text-lg md:text-xl text-white/50 mb-8 sm:mb-12 max-w-xl mx-auto leading-relaxed">
-          Kampanyanızı Mesajify ile oluşturun, WhatsApp'tan güvenle ulaştırın ve tüm yanıtları tek ekrandan yönetin.
+        <p className="text-base sm:text-lg md:text-xl text-[#64736a] mb-8 sm:mb-12 max-w-xl mx-auto leading-relaxed">
+          Kitlenizi hazırlayın, kampanyanızı bağlı WhatsApp hatlarınız üzerinden yönetin ve gelen yanıtları tek panelde takip edin.
         </p>
 
         {/* Action Buttons */}
@@ -42,18 +37,20 @@ export function Scene09FinalCta() {
             href="https://app.mesajify.com/giris"
             className="w-full sm:w-auto px-8 py-4 bg-brand text-white rounded-xl font-semibold text-base hover:bg-brand-hover transition-colors shadow-lg shadow-brand/20 text-center"
           >
-            İlk Kampanyanı Oluştur →
+            Hemen Başla →
           </a>
           <a
             href="#urun"
-            className="w-full sm:w-auto px-8 py-4 bg-white/5 border border-white/10 text-white rounded-xl font-medium text-base hover:bg-white/10 transition-colors text-center"
+            className="w-full sm:w-auto px-8 py-4 bg-white border border-[#dce5df] text-[#21382c] rounded-xl font-medium text-base hover:bg-[#eef5ef] transition-colors text-center"
           >
             Örnekleri İzle
           </a>
         </div>
 
+        <div className="ml-product-story ml-cta-journey" aria-label="Kitle, kampanya ve müşteri yanıtı"><FinalJourney /></div>
+
         {/* Domain signoff */}
-        <p className="mt-12 sm:mt-20 text-xs text-white/30 tracking-[0.2em] uppercase font-medium">
+        <p className="mt-12 sm:mt-20 text-xs text-[#64736a] tracking-[0.2em] uppercase font-medium">
           mesajify.com
         </p>
 

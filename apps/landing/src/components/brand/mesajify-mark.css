@@ -1,0 +1,9 @@
+.mesajify-mark[data-state=idle][data-variant=symbol]{opacity:.82}
+.mesajify-mark[data-state=active]{animation:mesajify-activate .65s cubic-bezier(.2,.7,.2,1) both}
+.mesajify-mark[data-state=success]:before{content:'';position:absolute;inset:-10%;border:1px solid #168347;border-radius:28%;opacity:0;animation:mesajify-resolve .7s ease-out both;pointer-events:none}
+.mesajify-mark[data-state=processing]:after{content:'';position:absolute;width:12%;height:5%;border-radius:3px;background:#168347;left:0;bottom:-10%;animation:mesajify-processing 1.8s cubic-bezier(.4,0,.2,1) infinite;pointer-events:none}
+@keyframes mesajify-activate{0%,100%{transform:scale(1)}45%{transform:scale(1.025)}}
+@keyframes mesajify-resolve{0%{opacity:0;transform:scale(.95)}40%{opacity:.35}100%{opacity:0;transform:scale(1.12)}}
+@keyframes mesajify-processing{0%{opacity:0;transform:translateX(0)}20%{opacity:1}80%{opacity:1}100%{opacity:0;transform:translateX(650%)}}
+@media(prefers-reduced-motion:reduce){.mesajify-mark,.mesajify-mark:before,.mesajify-mark:after{animation:none!important;transform:none!important}}
+.ml-phone-top:before{display:none!important}.ml-phone-top .mesajify-mark{margin-right:8px}.ml-routing-core{border:0!important;border-radius:0!important;background:transparent!important}.ml-engine-heading .mesajify-mark{margin:auto}.ml-hero .ml-final>.ml-final-mark{position:absolute;right:65px;top:415px;z-index:3}.ml-journey-lines>.mesajify-mark{display:inline-flex!important}.ml-bento-inbox-destination>.mesajify-mark{margin-bottom:8px}@media(max-width:800px){.ml-hero .ml-final>.ml-final-mark{position:relative;right:auto;top:auto}}

@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import { Outfit, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
+import '@/components/brand/mesajify-mark.css';
+import { PerformanceAudit } from '@/components/performance-audit';
 import { Navbar } from '@/components/navbar';
 
 const outfit = Outfit({
@@ -17,25 +19,24 @@ export const viewport: Viewport = {
   themeColor: '#FFFFFF',
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
 };
 
 export const metadata: Metadata = {
-  title: 'Mesajify — AI Reklam ve WhatsApp Kampanya Platformu',
+  title: 'Mesajify — WhatsApp Kampanya Kontrol Merkezi',
   description:
-    'Reklam içeriğinizi oluşturun, WhatsApp kampanyalarınızı yönetin ve müşteri yanıtlarını tek panelde takip edin.',
+    'Birden fazla WhatsApp hattını bağlayın; marka ve ürününüzle kreatif hazırlayın, kitlenizi yönetin ve müşteri yanıtlarını tek panelde takip edin.',
   alternates: {
     canonical: 'https://mesajify.com',
   },
   openGraph: {
-    title: 'Mesajify — AI Reklam ve WhatsApp Kampanya Platformu',
+    title: 'Mesajify — WhatsApp Kampanya Kontrol Merkezi',
     description:
-      'Reklam içeriğinizi oluşturun, WhatsApp kampanyalarınızı yönetin ve müşteri yanıtlarını tek panelde takip edin.',
+      'Birden fazla WhatsApp hattını bağlayın; marka ve ürününüzle kreatif hazırlayın, kitlenizi yönetin ve müşteri yanıtlarını tek panelde takip edin.',
     url: 'https://mesajify.com',
     siteName: 'Mesajify',
     images: [
       {
-        url: 'https://mesajify.com/og-image.jpg',
+        url: 'https://mesajify.com/og-image.png',
         width: 1200,
         height: 630,
       },
@@ -45,9 +46,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Mesajify — AI Reklam ve WhatsApp Kampanya Platformu',
+    title: 'Mesajify — WhatsApp Kampanya Kontrol Merkezi',
     description:
-      'Reklam içeriğinizi oluşturun, WhatsApp kampanyalarınızı yönetin ve müşteri yanıtlarını tek panelde takip edin.',
+      'Birden fazla WhatsApp hattını bağlayın; marka ve ürününüzle kreatif hazırlayın, kitlenizi yönetin ve müşteri yanıtlarını tek panelde takip edin.',
     images: ['https://mesajify.com/og-image.jpg'],
   },
 };
@@ -62,6 +63,7 @@ export default function RootLayout({
       <body
         className={`${outfit.variable} ${jetbrainsMono.variable} bg-canvas text-ink antialiased selection:bg-brand-soft selection:text-brand`}
       >
+        <PerformanceAudit />
         <Navbar />
         {children}
       </body>

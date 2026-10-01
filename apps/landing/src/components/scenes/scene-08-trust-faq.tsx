@@ -6,36 +6,36 @@ import { useReveal } from '@/lib/use-reveal'
 
 const FAQS = [
   {
-    q: 'Kendi WhatsApp hattımı kullanabilir miyim?',
-    a: "Evet. Mevcut işletme numaranızı veya dilediğiniz bir SIM hattı QR kod okutarak saniyeler içinde Mesajify'a bağlayabilirsiniz."
+    "q": "Kendi WhatsApp hattımı kullanabilir miyim?",
+    "a": "Evet. WhatsApp hattınızı QR kod ile Mesajify’a bağlayabilirsiniz."
   },
   {
-    q: 'Birden fazla hat bağlayabilir miyim?',
-    a: 'Evet. Paket kapsamınıza göre birden fazla hattı aynı havuza dahil edebilir, kampanyalarınızın bu hatlar arasında otomatik dağıtılmasını sağlayabilirsiniz.'
+    "q": "Birden fazla hat bağlayabilir miyim?",
+    "a": "Evet. Paket kapsamınıza göre birden fazla bağlı hattı aynı kampanya panelinden yönetebilirsiniz."
   },
   {
-    q: 'Video hazırlamak için teknik bilgi veya ajans gerekir mi?',
-    a: 'Hayır. Sadece ürün fotoğrafınızı yüklemeniz veya kampanyanızı tek cümleyle tarif etmeniz yeterlidir. Mesajify AI stüdyosu senaryoyu, videoyu, Türkçe seslendirmeyi ve altyazıları otomatik üretir.'
+    "q": "Video hazırlamak için teknik bilgi gerekir mi?",
+    "a": "Ürün fotoğrafınızı ve kampanya fikrinizi stüdyoya ekleyerek reklam hazırlama akışını başlatabilirsiniz."
   },
   {
-    q: 'Kendi logomu ve marka renklerimi videolarda kullanabilir miyim?',
-    a: 'Evet. Marka kitinizi (logo, renk kodları, font tercihi) bir kez yüklersiniz, üretilen tüm video ve görseller kurumsal kimliğinize uygun olarak tamamlanır.'
+    "q": "Kendi logomu videolarda kullanabilir miyim?",
+    "a": "Marka logonuzu kreatif hazırlama akışına ekleyebilirsiniz."
   },
   {
-    q: 'Excel veya CSV müşteri listemi nasıl yüklerim?',
-    a: 'Bilgisayarınızdaki mevcut Excel (.xlsx) veya CSV dosyasını sürükleyip bırakmanız yeterlidir. Sistem isim, numara ve özel alanları otomatik olarak eşleştirir.'
+    "q": "Excel veya CSV listemi yükleyebilir miyim?",
+    "a": "Evet. Excel veya CSV müşteri listenizi aktarabilir, kampanyadan önce kayıtları kontrol edebilirsiniz."
   },
   {
-    q: 'Müşteri yanıt verdiğinde ne olur?',
-    a: "Müşterinin yanıtı cep telefonuna veya WhatsApp Web'e değil, doğrudan Mesajify Gelen Kutusu'na düşer. Telefonlar arasında geçiş yapmadan tüm konuşmaları tek ekrandan yönetip satışa çevirebilirsin."
+    "q": "Müşteri yanıtlarını nereden görebilirim?",
+    "a": "Bağlı hatlarınıza gelen müşteri yanıtlarını Mesajify Gelen Kutusu üzerinden takip edebilirsiniz."
   },
   {
-    q: 'İletişim almak istemeyen müşteriler ne olur?',
-    a: 'Mesajify opt-out anahtar kelimelerini otomatik tanır veya tek tıkla ilgili numarayı kara listeye alır. Sonraki hiçbir kampanyada bu kişiye tekrar mesaj gönderilmez.'
+    "q": "İletişim almak istemeyen kişiler ne olur?",
+    "a": "Bu kişileri opt-out listesine alarak sonraki kampanyaların dışında tutabilirsiniz."
   },
   {
-    q: 'WhatsApp hesabımın kapanmayacağı garanti edilebilir mi?',
-    a: 'Hayır. Hiçbir dürüst yazılım WhatsApp hesabınız için "kapanmaz" garantisi veremez. Mesajify; kampanya hacmini yönetmenize, hatlarınızı kontrollü kullanmanıza, gönderim durumlarını izlemenize ve iletişim almak istemeyen kişileri sonraki kampanyalardan çıkarmanıza yardımcı olur. WhatsApp politikalarına ve izinli pazarlama kurallarına uygun kullanım işletmenin sorumluluğundadır.'
+    "q": "WhatsApp hesabımın kapanmayacağı garanti edilebilir mi?",
+    "a": "Hayır. Hiçbir üçüncü taraf yazılım WhatsApp hesabınızın hiçbir koşulda kısıtlanmayacağını garanti edemez. Mesajify kampanya ve hat yönetimini kontrollü yürütmenize, gönderim durumlarını izlemenize ve iletişim almak istemeyen kişileri sonraki kampanyalardan çıkarmanıza yardımcı olur."
   }
 ]
 
@@ -66,15 +66,15 @@ export function Scene08TrustFaq() {
               Kontrol sizde.
             </h2>
             <p className="text-base sm:text-lg md:text-xl text-white/50 leading-relaxed mb-8 sm:mb-10 max-w-lg">
-              Gizli algoritmalar veya arka kapı hileleri yok. Kampanyanızın her adımını, her saniyesini şeffaf olarak panelinizden izleyin.
+              Hat durumlarını, kampanya ilerlemesini ve müşteri yanıtlarını aynı panelden izleyin.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {[
-                'Anlık Hat Durumu',
-                'İletim & Okunma Raporu',
-                'Otomatik Kara Liste',
-                'Gönderim Hız Limiti',
+                'Hat durumları',
+                'Gönderim raporları',
+                'Opt-out yönetimi',
+                'Kampanya kontrolleri',
               ].map((item, i) => (
                 <div key={i} className="flex items-center gap-3 text-sm text-white/80">
                   <div className="w-5 h-5 rounded-full bg-brand/20 text-brand flex items-center justify-center text-xs font-bold shrink-0">
@@ -122,23 +122,25 @@ export function Scene08TrustFaq() {
               return (
                 <div key={i} className="py-5 sm:py-6">
                   <button
+                    id={`faq-question-${i}`}
+                    aria-expanded={isOpen}
+                    aria-controls={`faq-answer-${i}`}
                     onClick={() => setOpenIdx(isOpen ? null : i)}
                     className="w-full flex items-center justify-between text-left group gap-4"
                   >
                     <span className="text-base sm:text-lg font-medium text-white group-hover:text-brand transition-colors">
                       {faq.q}
                     </span>
-                    <span className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-white/10 flex items-center justify-center text-xs sm:text-sm shrink-0 transition-transform duration-300 text-white/60 ${isOpen ? 'rotate-180 bg-white/10' : ''}`}>
+                    <span aria-hidden="true" className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-white/10 flex items-center justify-center text-xs sm:text-sm shrink-0 transition-transform duration-300 text-white/60 ${isOpen ? 'rotate-180 bg-white/10' : ''}`}>
                       ↓
                     </span>
                   </button>
-                  {isOpen && (
-                    <div className="mt-3 sm:mt-4 pr-6 sm:pr-12 animate-fade-in">
+                  
+                    <div hidden={!isOpen} id={`faq-answer-${i}`} role="region" aria-labelledby={`faq-question-${i}`} className="mt-3 sm:mt-4 pr-6 sm:pr-12 animate-fade-in">
                       <p className="text-white/60 text-sm sm:text-base leading-relaxed">
                         {faq.a}
                       </p>
                     </div>
-                  )}
                 </div>
               )
             })}
