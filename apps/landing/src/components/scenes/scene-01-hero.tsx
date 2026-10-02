@@ -6,6 +6,7 @@ import { replyExamples } from '../visuals/story-messages'
 import { useSceneClock } from '../visuals/product-modules'
 
 const heroPlaylist = [
+  '/landing/studio/mesajify-hero-loop-seamless.mp4',
   '/landing/studio/hero-flow-veo.mp4',
   '/landing/studio/ecommerce-flow-veo.mp4',
   '/landing/studio/restaurant-flow-veo.mp4',
@@ -94,9 +95,21 @@ export function Scene01Hero() {
   return (
     <section className="ml-product-story ml-hero">
       <div className="ml-hero-copy">
-        <h1>Civarınızdaki işletmelere<br />ürünlerinizi tanıtın.</h1>
-        <p className="ml-hero-lead">Menünüzü, ürünlerinizi veya hizmetinizi WhatsApp’tan duyurun.</p>
-        <p className="ml-hero-description">Kendi müşteri listenizi kullanın veya hedeflediğiniz bölge ve sektör için kitle talep edin. Tanıtım mesajınızı paylaşın; fiyat, ürün ve sipariş sorularını tek yerden yanıtlayın.</p>
+        <div className="ml-hero-eyebrow">
+          <span>DOĞRUDAN WHATSAPP İLE TANITIM VE SATIŞ</span>
+        </div>
+        <h1>
+          Civarınızdaki işletmelere<br />
+          ürünlerinizi tanıtın.<br />
+          <em>Müşteri kazanın.</em>
+        </h1>
+        <p className="ml-hero-lead">
+          Menünüzü, ürünlerinizi veya hizmetinizi WhatsApp’tan duyurun.
+        </p>
+        <p className="ml-hero-description">
+          Kendi müşteri listenizi kullanın veya hedeflediğiniz bölge ve sektör için kitle talep edin.
+          Tanıtım mesajınızı paylaşın; fiyat, ürün ve sipariş sorularını tek panelden yanıtlayın.
+        </p>
         <div className="ml-hero-actions">
           <a href="https://app.mesajify.com/giris">Hemen Başla →</a>
           <a href="#kitle">Nasıl Çalışır ↓</a>

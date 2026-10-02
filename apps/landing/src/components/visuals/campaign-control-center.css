@@ -18,7 +18,9 @@
 .ml-line-operations-surface>.ml-line-mobile-paths{display:none}@media(max-width:800px){.ml-line-operations-surface>.ml-line-mobile-paths{display:block}.ml-line-operations-surface>.ml-line-desktop-paths{display:none}}
 
 /* Cohesion pass: restrained type and stronger technical connections. */
-.ml-hero h1{font-size:clamp(42px,4.9vw,68px);font-weight:600;line-height:1.06;letter-spacing:-.04em;color:#20382a}
+.ml-hero-eyebrow{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;background:#e8f5ec;border:1px solid #bce2cb;color:#168347;font-size:11px;font-weight:600;letter-spacing:.08em;margin-bottom:22px}
+.ml-hero h1{font-size:clamp(44px,5.1vw,72px);font-weight:600;line-height:1.06;letter-spacing:-.04em;color:#111a16}
+.ml-hero h1 em{font-style:italic;color:#168347;font-weight:500;display:inline-block}
 .ml-hero-lead{font-weight:400;font-size:26px;line-height:1.35;max-width:540px}
 .ml-story-heading h2{font-weight:450;line-height:1.15;letter-spacing:-.035em}
 .ml-story-heading>p,.ml-object-label{font-weight:450;letter-spacing:.1em}
