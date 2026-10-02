@@ -113,7 +113,6 @@ export function ContactValidationDemo({ onReady }: { onReady?: (ready: boolean) 
 const creativeShowcaseItems = [
   {
     id: 'sneaker',
-    icon: <IconSneaker style={{ width: 15, height: 15 }} />,
     tabLabel: 'Spor Ayakkabı',
     title: 'Nike Air Flyknit Sneaker',
     brandName: 'Nike Sportswear',
@@ -121,11 +120,11 @@ const creativeShowcaseItems = [
     source: '/landing/studio/sources/nike_sneaker_raw.jpg',
     video: '/landing/studio/ecommerce-flow-veo.mp4',
     sourceLabel: 'Ham Ürün Fotoğrafı + Vektör Logo',
-    videoBadge: 'NIKE AIR · 9:16 VEO REKLAM'
+    ctaText: "WhatsApp'ta İncele",
+    headline: 'Yeni Sezon Spor Koleksiyonu'
   },
   {
     id: 'burger',
-    icon: <IconBurger style={{ width: 15, height: 15 }} />,
     tabLabel: 'Gurme Burger',
     title: 'Gourmet Smash Cheeseburger',
     brandName: 'Burger Lab Artisan',
@@ -133,11 +132,11 @@ const creativeShowcaseItems = [
     source: '/landing/studio/sources/burger_raw.jpg',
     video: '/landing/studio/restaurant-flow-veo.mp4',
     sourceLabel: 'Menü Çekimi + Restoran Logosu',
-    videoBadge: 'BURGER LAB · GURME MENÜ'
+    ctaText: 'WhatsApp ile Sipariş Ver',
+    headline: 'Özel Gurme Artisan Menü'
   },
   {
     id: 'car',
-    icon: <IconCar style={{ width: 15, height: 15 }} />,
     tabLabel: 'Lüks Otomobil',
     title: 'Porsche Panamera GTS',
     brandName: 'Veloce Motors',
@@ -145,11 +144,11 @@ const creativeShowcaseItems = [
     source: '/landing/studio/sources/car_raw.jpg',
     video: '/landing/studio/automotive-flow-veo.mp4',
     sourceLabel: 'Showroom Çekimi + Galeri Arması',
-    videoBadge: 'VELOCE · VIP TEST SÜRÜŞÜ'
+    ctaText: 'Test Sürüşü Randevusu Al',
+    headline: 'VIP Lansman & Test Sürüşü'
   },
   {
     id: 'mesajify',
-    icon: <IconBolt style={{ width: 15, height: 15 }} />,
     tabLabel: 'Mesajify Platform',
     title: 'Mesajify WhatsApp Kampanyası',
     brandName: 'Mesajify',
@@ -157,7 +156,8 @@ const creativeShowcaseItems = [
     source: '/landing/studio/sources/smartwatch_product.jpg',
     video: '/landing/studio/hero-flow-veo.mp4',
     sourceLabel: 'Stüdyo Çekimi + Resmî Marka Logosu',
-    videoBadge: 'MESAJIFY · 9:16 AKILLI REKLAM'
+    ctaText: 'Hemen Başla',
+    headline: 'WhatsApp ile Müşterilerine Ulaş'
   }
 ];
 
@@ -191,11 +191,11 @@ export function CreativeTransform({ scrollDriven = false }: { scrollDriven?: boo
   const phase = scrollDriven ? Math.min(4, Math.floor(scrollProgress * 5)) : time < 2 ? 0 : time < 4.5 ? 1 : time < 7 ? 2 : time < 8.5 ? 3 : 4;
 
   const processSteps = [
-    { label: 'Ham Fotoğraf & Logo Alındı', icon: <IconCamera style={{ width: 14, height: 14 }} /> },
-    { label: 'AI Arka Plan Dekupe & Maskeleme', icon: <IconMagicWand style={{ width: 14, height: 14 }} /> },
-    { label: '3D Sahne & Sinematik Stüdyo Işığı', icon: <IconFilmRoll style={{ width: 14, height: 14 }} /> },
-    { label: 'Marka Kiti & Vektör Logo Giydirme', icon: <IconBrandKit style={{ width: 14, height: 14 }} /> },
-    { label: '9:16 WhatsApp Reklam Videosu Hazır', icon: <IconRocketLaunch style={{ width: 14, height: 14 }} /> }
+    { num: '01', label: 'Ham Ürün & Vektör Logo Girişi' },
+    { num: '02', label: 'Yapay Zeka Dekupe & Sahne Ayrımı' },
+    { num: '03', label: '3D Sinematik Stüdyo Işıklandırması' },
+    { num: '04', label: 'Kurumsal Marka Kiti Entegrasyonu' },
+    { num: '05', label: 'Dikey WhatsApp Reklamı Hazır' }
   ];
 
   return (
@@ -218,14 +218,10 @@ export function CreativeTransform({ scrollDriven = false }: { scrollDriven?: boo
               color: activeIndex === idx ? '#168347' : '#5a6e60',
               cursor: 'pointer',
               transition: 'all 0.2s',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
               whiteSpace: 'nowrap'
             }}
           >
-            <span>{item.icon}</span>
-            <span>{item.tabLabel}</span>
+            {item.tabLabel}
           </button>
         ))}
       </div>
@@ -309,9 +305,10 @@ export function CreativeTransform({ scrollDriven = false }: { scrollDriven?: boo
         </div>
         <div className="ml-processing-labels">
           {processSteps.map((step, i) => (
-            <span key={step.label} className={phase >= i ? 'is-active' : ''} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span>{step.icon}</span>
-              <span>{step.label}</span>
+            <span key={step.label} className={phase >= i ? 'is-active' : ''} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <strong style={{ fontSize: '10px', fontWeight: 700, color: phase >= i ? '#168347' : '#889e90', letterSpacing: '0.05em' }}>{step.num}</strong>
+              <span style={{ flex: 1 }}>{step.label}</span>
+              {phase >= i && <span style={{ color: '#168347', fontSize: '11px', fontWeight: 700 }}>✓</span>}
             </span>
           ))}
         </div>
@@ -332,41 +329,58 @@ export function CreativeTransform({ scrollDriven = false }: { scrollDriven?: boo
               aria-label="Tamamlanmış ürün reklamı"
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
+            {/* Real Ad Header */}
             <div style={{
               position: 'absolute',
-              top: '12px',
-              left: '12px',
+              top: 0,
+              left: 0,
+              right: 0,
               zIndex: 3,
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              padding: '5px 10px',
-              background: 'rgba(12, 22, 16, 0.78)',
-              backdropFilter: 'blur(8px)',
-              borderRadius: '20px',
-              border: '1px solid rgba(255,255,255,0.18)'
+              background: 'linear-gradient(180deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 100%)',
+              padding: '12px 14px 20px',
             }}>
-              <img src={currentItem.logo} alt="" style={{ width: '18px', height: '18px', objectFit: 'contain', borderRadius: '3px' }} />
-              <span style={{ fontSize: '11px', fontWeight: 600, color: '#fff', letterSpacing: '0.02em' }}>{currentItem.videoBadge}</span>
+              <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#fff', padding: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <img src={currentItem.logo} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{currentItem.brandName}</span>
+                <span style={{ fontSize: '9px', color: 'rgba(255,255,255,0.82)' }}>Sponsorlu · WhatsApp Reklamı</span>
+              </div>
             </div>
+
+            {/* Real Ad CTA Footer */}
             <div style={{
               position: 'absolute',
-              bottom: '12px',
-              left: '12px',
-              right: '12px',
+              bottom: 0,
+              left: 0,
+              right: 0,
               zIndex: 3,
               display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '6px 10px',
-              background: 'rgba(0,0,0,0.65)',
-              backdropFilter: 'blur(6px)',
-              borderRadius: '6px',
-              fontSize: '10px',
-              color: '#e5f4ec'
+              flexDirection: 'column',
+              gap: '6px',
+              background: 'linear-gradient(0deg, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0) 100%)',
+              padding: '22px 14px 14px',
             }}>
-              <span>WhatsApp Dikey Reklam</span>
-              <strong style={{ color: '#00a884' }}>9:16 · 8 SN VEO</strong>
+              <span style={{ fontSize: '12px', fontWeight: 600, color: '#fff' }}>{currentItem.headline}</span>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                background: '#25d366',
+                color: '#fff',
+                padding: '7px 14px',
+                borderRadius: '8px',
+                fontSize: '11px',
+                fontWeight: 700,
+                boxShadow: '0 3px 10px rgba(0,0,0,0.22)'
+              }}>
+                <span>{currentItem.ctaText}</span>
+                <span style={{ fontSize: '13px' }}>→</span>
+              </div>
             </div>
           </div>
         </div>
@@ -689,7 +703,7 @@ export function BentoCreativeTransform() {
             type="button"
             onClick={() => setManualIndex(idx)}
             style={{
-              padding: '4px 10px',
+              padding: '5px 12px',
               fontSize: '11px',
               fontWeight: 600,
               borderRadius: '16px',
@@ -698,14 +712,10 @@ export function BentoCreativeTransform() {
               color: activeIndex === idx ? '#168347' : '#5a6e60',
               cursor: 'pointer',
               transition: 'all 0.2s',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
               whiteSpace: 'nowrap'
             }}
           >
-            <span>{item.icon}</span>
-            <span>{item.tabLabel}</span>
+            {item.tabLabel}
           </button>
         ))}
       </div>
@@ -731,7 +741,7 @@ export function BentoCreativeTransform() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '-4px 0' }}>
-            <span style={{ fontSize: '13px', fontWeight: 800, color: '#00a884', background: '#fff', width: '22px', height: '22px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #dce5df', boxShadow: '0 2px 4px rgba(0,0,0,0.04)' }}>+</span>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: '#00a884', background: '#fff', width: '20px', height: '20px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #dce5df' }}>+</span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px', background: '#fff', border: '1px solid #dce5df', borderRadius: '8px' }}>
@@ -746,18 +756,18 @@ export function BentoCreativeTransform() {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-          <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#e5f4ec', border: '1px solid #a9d8c1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#168347', fontSize: '14px', fontWeight: 700, boxShadow: '0 3px 8px rgba(0,168,132,0.12)' }}>
-            =
+          <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: '#e5f4ec', border: '1px solid #a9d8c1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#168347', fontSize: '12px', fontWeight: 700 }}>
+            →
           </div>
-          <span style={{ fontSize: '8px', fontWeight: 700, color: '#168347', letterSpacing: '0.04em', textAlign: 'center', lineHeight: '1.2' }}>
-            AI VEO<br />RENDER
+          <span style={{ fontSize: '8px', fontWeight: 700, color: '#168347', letterSpacing: '0.04em', textAlign: 'center' }}>
+            Stüdyo
           </span>
         </div>
 
         <div style={{ background: '#fff', border: '1px solid #dce5df', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '10px', fontWeight: 700, color: '#315a42', letterSpacing: '0.04em' }}>02 / ÇIKTI</span>
-            <span style={{ fontSize: '9px', fontWeight: 600, padding: '2px 6px', background: '#e5f4ec', color: '#168347', borderRadius: '4px' }}>9:16 VİDEO</span>
+            <span style={{ fontSize: '9px', fontWeight: 600, padding: '2px 6px', background: '#e5f4ec', color: '#168347', borderRadius: '4px' }}>ÖRNEK REKLAM</span>
           </div>
 
           <div style={{ position: 'relative', width: '100%', height: '210px', borderRadius: '8px', overflow: 'hidden', background: '#0a140e' }}>
@@ -772,42 +782,54 @@ export function BentoCreativeTransform() {
               aria-label="Tamamlanmış ürün reklamı"
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
+            {/* Real Ad Header */}
             <div style={{
               position: 'absolute',
-              top: '8px',
-              left: '8px',
+              top: 0,
+              left: 0,
+              right: 0,
               zIndex: 3,
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '3px 8px',
-              background: 'rgba(0,0,0,0.72)',
-              backdropFilter: 'blur(6px)',
-              borderRadius: '12px',
-              border: '1px solid rgba(255,255,255,0.18)'
+              padding: '8px 8px 14px',
+              background: 'linear-gradient(180deg, rgba(0,0,0,0.68) 0%, rgba(0,0,0,0) 100%)',
             }}>
-              <img src={currentItem.logo} alt="" style={{ width: '13px', height: '13px', objectFit: 'contain' }} />
+              <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#fff', padding: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <img src={currentItem.logo} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              </div>
               <span style={{ fontSize: '9px', fontWeight: 600, color: '#fff' }}>{currentItem.brandName}</span>
             </div>
 
+            {/* Real Ad CTA */}
             <div style={{
               position: 'absolute',
-              bottom: '8px',
-              left: '8px',
-              right: '8px',
+              bottom: 0,
+              left: 0,
+              right: 0,
               zIndex: 3,
               display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '4px 6px',
-              background: 'rgba(0,0,0,0.65)',
-              backdropFilter: 'blur(4px)',
-              borderRadius: '4px',
-              fontSize: '8px',
-              color: '#e5f4ec'
+              flexDirection: 'column',
+              gap: '4px',
+              padding: '16px 8px 8px',
+              background: 'linear-gradient(0deg, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0) 100%)',
             }}>
-              <span>WhatsApp Reklamı</span>
-              <strong style={{ color: '#00a884' }}>9:16 Veo</strong>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px',
+                background: '#25d366',
+                color: '#fff',
+                padding: '5px 8px',
+                borderRadius: '6px',
+                fontSize: '9px',
+                fontWeight: 700,
+                boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+              }}>
+                <span>{currentItem.ctaText}</span>
+                <span>→</span>
+              </div>
             </div>
           </div>
 

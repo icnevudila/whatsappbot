@@ -19,10 +19,14 @@ export function Scene07Bento() {
           overflow: 'hidden',
           boxShadow: '0 4px 18px rgba(0,0,0,0.04)',
         }}>
-          <img
-            src="/landing/infographics/03-coklu-hat-chatgpt-4-3.png"
-            alt="Mesajify Çoklu Hat Yönetimi İnfografiği"
-            loading="lazy"
+          <video
+            src="/landing/infographics/03-coklu-hat-veo-i2v.mp4"
+            poster="/landing/infographics/03-coklu-hat-chatgpt-4-3.png"
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="metadata"
             style={{ width: '100%', height: 'auto', display: 'block' }}
           />
         </div>
