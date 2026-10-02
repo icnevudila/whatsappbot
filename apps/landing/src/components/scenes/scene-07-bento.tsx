@@ -1,39 +1,32 @@
 'use client'
 
-import { Network, MessageSquare, BarChart3, ShieldCheck, CheckCircle2 } from 'lucide-react'
+import Image from 'next/image'
+import { Sparkles, Users, Network, MessageSquare } from 'lucide-react'
 
-const BENTO_FEATURES = [
+const INFRASTRUCTURE_MODULES = [
   {
+    step: '01',
+    icon: Sparkles,
+    title: 'Kreatif Stüdyosu',
+    description: 'Ürün fotoğrafınız saniyeler içinde WhatsApp formatında dikey video reklama dönüşür.',
+  },
+  {
+    step: '02',
+    icon: Users,
+    title: 'Doğrulanmış Kitle',
+    description: 'Rehber ve müşteri listenizdeki aktif numaralar filtrelenir, sadece gerçek alıcılara ulaşılır.',
+  },
+  {
+    step: '03',
     icon: Network,
-    badge: 'Zaman Ayarlı Dağıtım',
-    title: 'Akıllı ve Güvenli Gönderim Hızı',
-    description:
-      'Mesajlarınız doğal insan ritminde, otomatik mola aralıklarıyla zamana yayılarak güvenle iletilir. İster tek resmi numaranızla gönderin, ister işletmeniz büyüdükçe ek hatlar bağlayın.',
-    stats: 'Doğal Gönderim Hızı',
+    title: 'Güvenli Hat Altyapısı',
+    description: 'İster tek resmi numaranızla, ister arka planda yükü otomatik paylaştıran bağlı hatlarla güvenli gönderim.',
   },
   {
+    step: '04',
     icon: MessageSquare,
-    badge: 'Ortak Gelen Kutusu',
-    title: 'Tüm Müşteri Yanıtları Tek Ekranda',
-    description:
-      'WhatsApp Web sekmeleri veya telefonlar arasında kaybolmayın. Gelen tüm sipariş, randevu ve fiyat soruları tek ekranda toplanır, ekibiniz anında yanıtlar.',
-    stats: 'Hızlı Şablon & Satış',
-  },
-  {
-    icon: BarChart3,
-    badge: 'Canlı Takip',
-    title: 'Gerçek Zamanlı İletim ve Raporlama',
-    description:
-      'Hangi mesajlar iletildi, kaç müşteri geri dönüş yaptı? Kampanya performansınızı net grafiklerle anlık olarak takip edin ve satış dönüşümünüzü ölçün.',
-    stats: 'Şeffaf İstatistikler',
-  },
-  {
-    icon: ShieldCheck,
-    badge: 'Altyapı Güvencesi',
-    title: 'Doğrulanmış Kitle ve İzin Protokolü',
-    description:
-      'Kontrollü gönderim hızları, otomatik duraklatma ve kara liste yönetimiyle WhatsApp iletişiminiz her zaman güvenli kurallar çerçevesinde ilerler.',
-    stats: 'Otomatik Koruma',
+    title: 'Ortak Gelen Kutusu',
+    description: 'Gelen tüm müşteri yanıtları ve sipariş soruları tek ekranda toplanır, anında satışa dönüşür.',
   },
 ]
 
@@ -42,49 +35,56 @@ export function Scene07Bento() {
     <section className="relative w-full bg-[#f8faf8] py-20 sm:py-28 border-y border-emerald-950/10 overflow-hidden">
       <div className="relative z-10 mx-auto max-w-[1320px] px-4 sm:px-6 lg:px-8">
         {/* Section Heading */}
-        <div className="text-center max-w-3xl mx-auto mb-14 sm:mb-20">
+        <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
           <span className="text-xs sm:text-sm font-semibold tracking-wider uppercase text-emerald-800">
-            Mesajify Güçlü Altyapı
+            Platform Mimarisi
           </span>
-          <h2 className="mt-5 text-[clamp(32px,4.5vw,56px)] font-bold tracking-tight text-slate-900 leading-[1.12]">
-            Tanıtımınızın Arkasındaki <br />
-            <span className="text-emerald-700">Akıllı ve Güvenli Araçlar.</span>
+          <h2 className="mt-4 text-[clamp(30px,4.2vw,54px)] font-bold tracking-tight text-slate-900 leading-[1.12]">
+            Dört Güçlü Modül. <br />
+            <span className="text-emerald-700">Tek Bir Kusursuz Operasyon.</span>
           </h2>
           <p className="mt-4 text-base sm:text-lg text-slate-600 leading-relaxed">
-            Karmaşık teknik terimler ve kafa karıştırıcı süreçler yok. Tanıtım mesajlarınızı güvenle gönderin, gelen siparişleri kaçırmayın ve tüm süreci şeffafça izleyin.
+            Kreatif üretiminden hedef kitle doğrulamaya, arka plandaki güvenli hat altyapısından ortak gelen kutusuna kadar tüm sistem birbiriyle tam senkronize çalışır.
           </p>
         </div>
 
-        {/* Clean Bento Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
-          {BENTO_FEATURES.map((item, idx) => {
-            const Icon = item.icon
+        {/* Big Crisp Architecture Infographic Showcase */}
+        <div className="relative max-w-5xl mx-auto rounded-3xl border border-slate-200/90 bg-white p-3 sm:p-5 shadow-2xl shadow-slate-900/5 mb-10">
+          <div className="relative aspect-[16/10] sm:aspect-[16/9] w-full rounded-2xl overflow-hidden bg-slate-50 border border-slate-100">
+            <Image
+              src="/landing/infographics/01-ana-urun-chatgpt-16-9.png"
+              alt="Mesajify Platform Mimarisi ve Altyapısı"
+              fill
+              sizes="(max-width: 1280px) 100vw, 1200px"
+              className="object-cover object-center"
+              priority
+            />
+          </div>
+        </div>
+
+        {/* 4 Connected Module Descriptions */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 max-w-5xl mx-auto">
+          {INFRASTRUCTURE_MODULES.map((mod) => {
+            const Icon = mod.icon
             return (
               <div
-                key={idx}
-                className="group relative rounded-3xl border border-slate-200/80 bg-white p-7 sm:p-9 shadow-lg shadow-slate-900/5 hover:border-emerald-400/80 hover:shadow-xl hover:shadow-emerald-900/5 transition-all duration-300"
+                key={mod.step}
+                className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm hover:border-emerald-300 transition-all duration-200"
               >
-                <div className="flex items-center justify-between mb-5">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 border border-emerald-200/60 group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-300">
-                    <Icon className="h-6 w-6" />
-                  </div>
-                  <span className="text-xs font-semibold px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200/60">
-                    {item.badge}
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-xs font-bold text-emerald-700 tracking-wider">
+                    MODÜL {mod.step}
                   </span>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                    <Icon className="h-4.5 w-4.5" />
+                  </div>
                 </div>
-
-                <h3 className="text-xl font-bold text-slate-900 mb-3 group-hover:text-emerald-900 transition-colors">
-                  {item.title}
+                <h3 className="text-base font-bold text-slate-900 mb-2">
+                  {mod.title}
                 </h3>
-
-                <p className="text-sm text-slate-600 leading-relaxed mb-6">
-                  {item.description}
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                  {mod.description}
                 </p>
-
-                <div className="flex items-center gap-2 pt-4 border-t border-slate-100 text-xs font-semibold text-emerald-700">
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span>{item.stats}</span>
-                </div>
               </div>
             )
           })}
