@@ -339,7 +339,7 @@ export function CreativeTransform({ scrollDriven = false }: { scrollDriven?: boo
               </div>
             </div>
 
-            {/* Real Ad CTA Footer */}
+            {/* Real Ad Video Overlay */}
             <div style={{
               position: 'absolute',
               bottom: 0,
@@ -347,28 +347,13 @@ export function CreativeTransform({ scrollDriven = false }: { scrollDriven?: boo
               right: 0,
               zIndex: 3,
               display: 'flex',
-              flexDirection: 'column',
-              gap: '6px',
-              background: 'linear-gradient(0deg, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0) 100%)',
-              padding: '22px 14px 14px',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'linear-gradient(0deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%)',
+              padding: '24px 14px 14px',
             }}>
-              <span style={{ fontSize: '12px', fontWeight: 600, color: '#fff' }}>{currentItem.headline}</span>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                background: '#25d366',
-                color: '#fff',
-                padding: '7px 14px',
-                borderRadius: '8px',
-                fontSize: '11px',
-                fontWeight: 700,
-                boxShadow: '0 3px 10px rgba(0,0,0,0.22)'
-              }}>
-                <span>{currentItem.ctaText}</span>
-                <span style={{ fontSize: '13px' }}>→</span>
-              </div>
+              <span style={{ fontSize: '11px', fontWeight: 600, color: '#fff' }}>{currentItem.headline}</span>
+              <span style={{ fontSize: '11px', color: '#25d366', fontWeight: 700 }}>{currentItem.ctaText} →</span>
             </div>
           </div>
         </div>
@@ -712,7 +697,6 @@ export function BentoCreativeTransform() {
         <div style={{ background: '#f8faf8', border: '1px solid #dce5df', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '10px', fontWeight: 700, color: '#315a42', letterSpacing: '0.04em' }}>01 / GİRDİ</span>
-            <span style={{ fontSize: '9px', fontWeight: 600, padding: '2px 6px', background: '#e2ede5', color: '#168347', borderRadius: '4px' }}>ÜRÜN + LOGO</span>
           </div>
 
           <div style={{ position: 'relative', width: '100%', height: '130px', borderRadius: '8px', overflow: 'hidden', background: '#eef3ef' }}>
@@ -755,7 +739,6 @@ export function BentoCreativeTransform() {
         <div style={{ background: '#fff', border: '1px solid #dce5df', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '10px', fontWeight: 700, color: '#315a42', letterSpacing: '0.04em' }}>02 / ÇIKTI</span>
-            <span style={{ fontSize: '9px', fontWeight: 600, padding: '2px 6px', background: '#e5f4ec', color: '#168347', borderRadius: '4px' }}>ÖRNEK REKLAM</span>
           </div>
 
           <div style={{ position: 'relative', width: '100%', height: '210px', borderRadius: '8px', overflow: 'hidden', background: '#0a140e' }}>
@@ -789,7 +772,7 @@ export function BentoCreativeTransform() {
               <span style={{ fontSize: '9px', fontWeight: 600, color: '#fff' }}>{currentItem.brandName}</span>
             </div>
 
-            {/* Real Ad CTA */}
+            {/* Real Ad Video Overlay */}
             <div style={{
               position: 'absolute',
               bottom: 0,
@@ -797,27 +780,13 @@ export function BentoCreativeTransform() {
               right: 0,
               zIndex: 3,
               display: 'flex',
-              flexDirection: 'column',
-              gap: '4px',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'linear-gradient(0deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%)',
               padding: '16px 8px 8px',
-              background: 'linear-gradient(0deg, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0) 100%)',
             }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '4px',
-                background: '#25d366',
-                color: '#fff',
-                padding: '5px 8px',
-                borderRadius: '6px',
-                fontSize: '9px',
-                fontWeight: 700,
-                boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
-              }}>
-                <span>{currentItem.ctaText}</span>
-                <span>→</span>
-              </div>
+              <span style={{ fontSize: '9px', fontWeight: 600, color: '#fff' }}>{currentItem.headline}</span>
+              <span style={{ fontSize: '9px', color: '#25d366', fontWeight: 700 }}>{currentItem.ctaText} →</span>
             </div>
           </div>
 

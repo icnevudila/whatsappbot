@@ -1,7 +1,6 @@
 import { Scene01Hero } from '@/components/scenes/scene-01-hero'
 import { HowItWorksSimple } from '@/components/visuals/how-it-works-simple'
 import {
-  LandingDeliveryStory as Scene02LeadAndAudience,
   LandingSectorStory as Scene03Sectors,
   LandingCreativeStory as Scene04CreativeStudio,
   LandingInboxStory as Scene05Inbox,
@@ -49,12 +48,7 @@ export default function Home() {
         {/* 06 · UYGULAMA KONTROL MERKEZİ (Gerçek Panel Ekranları) */}
         <Scene06Explorer />
 
-        {/* 07 · MÜŞTERİ REHBERİ (İsteğe Bağlı Kitle & Liste Yönetimi) */}
-        <div id="rehber">
-          <Scene02LeadAndAudience />
-        </div>
-
-        {/* 08 · INFRASTRUCTURE BENTO (Teknik Altyapı, İzin Güvencesi & Çoklu Hat) */}
+        {/* 07 · INFRASTRUCTURE BENTO (Teknik Altyapı, İzin Güvencesi & Çoklu Hat) */}
         <Scene07Bento />
 
         {/* 09 · TRUST + FAQ */}
