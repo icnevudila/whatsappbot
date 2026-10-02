@@ -192,7 +192,7 @@ export function CreativeTransform({ scrollDriven = false }: { scrollDriven?: boo
 
   const processSteps = [
     { num: '01', label: 'Ham Ürün & Vektör Logo Girişi' },
-    { num: '02', label: 'Yapay Zeka Dekupe & Sahne Ayrımı' },
+    { num: '02', label: 'Otomatik Dekupe & Sahne Ayrımı' },
     { num: '03', label: '3D Sinematik Stüdyo Işıklandırması' },
     { num: '04', label: 'Kurumsal Marka Kiti Entegrasyonu' },
     { num: '05', label: 'Dikey WhatsApp Reklamı Hazır' }
@@ -234,7 +234,7 @@ export function CreativeTransform({ scrollDriven = false }: { scrollDriven?: boo
             {
               [
                 'Ham ürün fotoğrafı ve marka logosu alındı',
-                'Yapay zeka ile arka plan dekupe ediliyor',
+                'Otomatik olarak arka plan dekupe ediliyor',
                 '3D sinematik stüdyo sahnesi ve ışıklar işleniyor',
                 'Kurumsal marka kiti ve logo entegre ediliyor',
                 'Dikey WhatsApp reklam videosu yayına hazır'
