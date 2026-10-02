@@ -39,8 +39,11 @@
 
 /* Clean light creative surfaces and consistent brand tones. */
 .ml-chapter-creative{background:#f6f8f5;--ml-ink:#172b1f;--ml-muted:#5c6b61;--ml-line:#d4dfd7}
-.ml-chapter-creative .ml-processing-labels span{color:#5c6b61;opacity:.75}
-.ml-chapter-creative .ml-processing-labels span.is-active{color:#168347;opacity:1}
+.ml-chapter-creative .ml-processing-labels{display:flex;flex-direction:column;gap:10px;margin-top:24px}
+.ml-chapter-creative .ml-processing-labels span{display:inline-flex;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;border:1px solid #e1e9e3;background:#ffffff;font-size:12px;font-weight:500;color:#64748b;transition:all 0.3s ease;box-shadow:0 1px 3px rgba(0,0,0,0.02)}
+.ml-chapter-creative .ml-processing-labels span svg{flex-shrink:0;color:#94a3b8;transition:color 0.3s ease}
+.ml-chapter-creative .ml-processing-labels span.is-active{background:#f0fdf4;border-color:#86efac;color:#166534;font-weight:600;box-shadow:0 2px 8px rgba(34,197,94,0.08)}
+.ml-chapter-creative .ml-processing-labels span.is-active svg{color:#16a34a}
 .ml-chapter-creative .ml-output-frame{border-color:#d4dfd7;background:#fff}
 .ml-chapter-creative .ml-transform:is([data-phase='3'],[data-phase='4']) .ml-transform-source{opacity:.85}
 .ml-chapter-bento .ml-bento>article:first-child{background:#f6f8f5;color:#172b1f;--ml-ink:#172b1f;--ml-muted:#5c6b61;--ml-line:#d4dfd7}

@@ -7,7 +7,7 @@ import { ApprovedScreenshot } from './approved-screen-gallery';
 import { InteractiveLineStory } from './interactive-line-story';
 import { sectors as sectorConfig } from '@/content/sectors';
 import { productScreens, inboxScreen } from '@/content/product-screens';
-import { IconUploadFile, IconTargetRegion, IconShieldCheck, IconAudienceGroup, IconSpreadsheet, IconCheckCircle } from './story-icons';
+import { IconUploadFile, IconTargetRegion, IconShieldCheck, IconAudienceGroup, IconSpreadsheet, IconCheckCircle, IconCamera, IconMagicWand, IconFilmRoll, IconBrandKit, IconRocketLaunch, IconSneaker, IconBurger, IconCar, IconBolt } from './story-icons';
 
 type SignalVariant = 'travel' | 'loading' | 'success' | 'pulse';
 const signalPath = 'M9 16h14';
@@ -113,7 +113,7 @@ export function ContactValidationDemo({ onReady }: { onReady?: (ready: boolean) 
 const creativeShowcaseItems = [
   {
     id: 'sneaker',
-    icon: '👟',
+    icon: <IconSneaker style={{ width: 15, height: 15 }} />,
     tabLabel: 'Spor Ayakkabı',
     title: 'Nike Air Flyknit Sneaker',
     brandName: 'Nike Sportswear',
@@ -125,7 +125,7 @@ const creativeShowcaseItems = [
   },
   {
     id: 'burger',
-    icon: '🍔',
+    icon: <IconBurger style={{ width: 15, height: 15 }} />,
     tabLabel: 'Gurme Burger',
     title: 'Gourmet Smash Cheeseburger',
     brandName: 'Burger Lab Artisan',
@@ -137,7 +137,7 @@ const creativeShowcaseItems = [
   },
   {
     id: 'car',
-    icon: '🏎️',
+    icon: <IconCar style={{ width: 15, height: 15 }} />,
     tabLabel: 'Lüks Otomobil',
     title: 'Porsche Panamera GTS',
     brandName: 'Veloce Motors',
@@ -149,7 +149,7 @@ const creativeShowcaseItems = [
   },
   {
     id: 'mesajify',
-    icon: '⚡',
+    icon: <IconBolt style={{ width: 15, height: 15 }} />,
     tabLabel: 'Mesajify Platform',
     title: 'Mesajify WhatsApp Kampanyası',
     brandName: 'Mesajify',
@@ -191,11 +191,11 @@ export function CreativeTransform({ scrollDriven = false }: { scrollDriven?: boo
   const phase = scrollDriven ? Math.min(4, Math.floor(scrollProgress * 5)) : time < 2 ? 0 : time < 4.5 ? 1 : time < 7 ? 2 : time < 8.5 ? 3 : 4;
 
   const processSteps = [
-    { label: 'Ham Fotoğraf & Logo Alındı', icon: '📸' },
-    { label: 'AI Arka Plan Dekupe & Maskeleme', icon: '✨' },
-    { label: '3D Sahne & Sinematik Stüdyo Işığı', icon: '🎬' },
-    { label: 'Marka Kiti & Vektör Logo Giydirme', icon: '🏷️' },
-    { label: '9:16 WhatsApp Reklam Videosu Hazır', icon: '🚀' }
+    { label: 'Ham Fotoğraf & Logo Alındı', icon: <IconCamera style={{ width: 14, height: 14 }} /> },
+    { label: 'AI Arka Plan Dekupe & Maskeleme', icon: <IconMagicWand style={{ width: 14, height: 14 }} /> },
+    { label: '3D Sahne & Sinematik Stüdyo Işığı', icon: <IconFilmRoll style={{ width: 14, height: 14 }} /> },
+    { label: 'Marka Kiti & Vektör Logo Giydirme', icon: <IconBrandKit style={{ width: 14, height: 14 }} /> },
+    { label: '9:16 WhatsApp Reklam Videosu Hazır', icon: <IconRocketLaunch style={{ width: 14, height: 14 }} /> }
   ];
 
   return (
