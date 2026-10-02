@@ -1,138 +1,122 @@
 'use client'
 
-import { GeneratedMediaSlot } from '../visuals/generated-media-slot'
-import { MesajifyMark } from '../brand/mesajify-mark'
-import { replyExamples } from '../visuals/story-messages'
-import { useSceneClock } from '../visuals/product-modules'
+import { useEffect, useRef } from 'react'
 
-const heroPlaylist = [
-  '/landing/studio/hero-flow-veo.mp4',
-  '/landing/studio/ecommerce-flow-veo.mp4',
-  '/landing/studio/restaurant-flow-veo.mp4',
-  '/landing/studio/automotive-flow-veo.mp4',
-  '/landing/studio/realestate-flow-veo.mp4'
-]
+const DESKTOP_VIDEO = '/landing/studio/palmate-hero-bg.mp4'
+const MOBILE_VIDEO = '/landing/studio/palmate-hero-mobile.mp4'
+const POSTER_IMAGE = '/landing/studio/palmate-hero-poster.webp'
 
-function HeroActivity() {
-  const { ref, time, cycle } = useSceneClock(6)
-  const beat = time < 1.5 ? 0 : time < 3 ? 1 : time < 4.5 ? 2 : 3
+function HeroVideoBackground() {
+  const videoRef = useRef<HTMLVideoElement>(null)
+
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)')
+    let visible = false
+
+    const handlePlay = () => {
+      if (visible && !reduced.matches && !document.hidden) {
+        void video.play().catch(() => {})
+      } else {
+        video.pause()
+      }
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        visible = entry.isIntersecting
+        handlePlay()
+      },
+      { threshold: 0.1 }
+    )
+    observer.observe(video)
+
+    document.addEventListener('visibilitychange', handlePlay)
+    reduced.addEventListener('change', handlePlay)
+
+    return () => {
+      observer.disconnect()
+      document.removeEventListener('visibilitychange', handlePlay)
+      reduced.removeEventListener('change', handlePlay)
+      video.pause()
+    }
+  }, [])
+
   return (
-    <div ref={ref} className="ml-hero-activity" data-beat={beat}>
-      <div className="ml-hero-activity-message" key={cycle + '-' + beat}>
-        <span className="ml-activity-avatar">{beat < 2 ? 'M' : 'A'}</span>
-        <div>
-          <small>{beat < 2 ? 'ÖRNEK TANITIM' : 'ÖRNEK MÜŞTERİ YANITI'}</small>
-          <strong>
-            {
-              [
-                'Tanıtım kitlesi hazır',
-                'Tanıtım mesajı hazır',
-                replyExamples[(cycle + 4) % replyExamples.length],
-                'Yanıt ortak Gelen Kutusu’nda'
-              ][beat]
-            }
-          </strong>
-        </div>
-        <span>{beat === 3 ? '✓' : '↗'}</span>
-      </div>
-    </div>
-  )
-}
-
-function HeroBusinessFlow() {
-  const { ref, time, cycle } = useSceneClock(5)
-  const phase = time < 1 ? 0 : time < 2.2 ? 1 : 2
-  const examples = [
-    ['Restoran', 'Bugünkü menümüzü paylaşalım mı?', 'Menüyü görebilir miyim?'],
-    ['Kuaför', 'Hizmetlerimiz hakkında bilgi verelim mi?', 'Randevu alabilir miyim?'],
-    ['Toptancı', 'Ürün kataloğumuzu paylaşalım mı?', 'Kataloğunuzu gönderir misiniz?'],
-    ['Spor Giyim', 'Yeni sezon koşu serimiz hazır!', 'Siyah 42 numara var mı?']
-  ]
-  const item = examples[cycle % examples.length]
-  return (
-    <div ref={ref} className="ml-business-flow" data-phase={phase}>
-      <svg viewBox="0 0 260 112" aria-hidden="true">
-        <path d="M68 56H192" fill="none" stroke="#bdd8c7" strokeWidth="2" />
-        <path
-          d="M68 56H192"
-          fill="none"
-          stroke="#00a884"
-          strokeWidth="5"
-          pathLength="100"
-          className="ml-business-packet"
-        />
-        <rect x="8" y="20" width="64" height="72" rx="12" fill="#fff" stroke="#bdd8c7" />
-        <path
-          d="M22 49V77H58V49M18 49l6-15h32l6 15M18 49q7 10 14 0q8 10 15 0M36 77V60h12v17"
-          fill="none"
-          stroke="#168347"
-          strokeWidth="2"
-          strokeLinejoin="round"
-        />
-        <rect x="188" y="20" width="64" height="72" rx="12" fill="#e4f5eb" stroke="#90c6a6" />
-        <path
-          d="M204 39h32v25h-15l-9 8v-8h-8zM211 47h18M211 55h13"
-          fill="none"
-          stroke="#168347"
-          strokeWidth="2"
-          strokeLinejoin="round"
-        />
-      </svg>
-      <div className="ml-business-flow-labels">
-        <strong>{item[0]}</strong>
-        <strong>WhatsApp</strong>
-      </div>
-      <div key={cycle + '-' + phase} className="ml-business-flow-message">
-        <span>{phase < 2 ? '↗' : '↙'}</span>
-        <p>{phase < 2 ? item[1] : item[2]}</p>
-      </div>
+    <div className="ml-palmate-hero-media" aria-hidden="true">
+      <img
+        className="ml-palmate-hero-poster"
+        src={POSTER_IMAGE}
+        alt=""
+        loading="eager"
+        decoding="async"
+      />
+      <video
+        ref={videoRef}
+        className="ml-palmate-hero-video"
+        autoPlay
+        loop
+        muted
+        playsInline
+        preload="metadata"
+        tabIndex={-1}
+      >
+        <source src={DESKTOP_VIDEO} media="(min-width: 641px)" type="video/mp4" />
+        <source src={MOBILE_VIDEO} media="(max-width: 640px)" type="video/mp4" />
+      </video>
     </div>
   )
 }
 
 export function Scene01Hero() {
   return (
-    <section className="ml-product-story ml-hero">
-      <div className="ml-hero-copy">
-        <h1>Civarınızdaki işletmelere<br />ürünlerinizi tanıtın.</h1>
-        <p className="ml-hero-lead">Menünüzü, ürünlerinizi veya hizmetinizi WhatsApp’tan duyurun.</p>
-        <p className="ml-hero-description">Kendi müşteri listenizi kullanın veya hedeflediğiniz bölge ve sektör için kitle talep edin. Tanıtım mesajınızı paylaşın; fiyat, ürün ve sipariş sorularını tek yerden yanıtlayın.</p>
-        <div className="ml-hero-actions">
-          <a href="https://app.mesajify.com/giris">Hemen Başla →</a>
-          <a href="#kitle">Nasıl Çalışır ↓</a>
-        </div>
-        <div className="ml-hero-steps">
-          <span>Hedef kitle</span>
-          <span>Doğrudan WhatsApp Reklamı</span>
-          <span>Müşteri yanıtları</span>
-        </div>
-      </div>
-      <div className="ml-hero-visual" aria-label="Tek Mesajify panelinde kitle bulucu, kreatif reklam, WhatsApp tanıtımı ve Ortak Gelen Kutusu">
-        <div className="ml-hero-film">
-          <header>
-            <MesajifyMark variant="full" size="md" decorative />
-          </header>
-          <div className="ml-hero-film-content">
-            <GeneratedMediaSlot
-              id="real-product-video"
-              alt="Mesajify dikey tanıtım videosu"
-              playlist={heroPlaylist}
-            />
-            <div className="ml-hero-film-story">
-              <h2>Ürününüzü tanıtın.<br />Müşteri kazanın.</h2>
-              <p>Hedef işletme ve kitle</p>
-              <p>Ürününüzü tanıtan dikey reklam</p>
-              <HeroBusinessFlow />
-              <div className="ml-hero-film-inbox">
-                <MesajifyMark size="md" decorative />
-                <div>
-                  <strong>Ortak Gelen Kutusu</strong>
-                  <small>Gelen sipariş ve talepler tek panelde</small>
-                </div>
-              </div>
+    <section className="ml-palmate-hero" id="urun" aria-label="Mesajify — WhatsApp Müşteri ve Tanıtım Asistanı">
+      {/* 1:1 Palmate Video Arka Planı ve Sinematik Gradient Katmanı */}
+      <HeroVideoBackground />
+
+      {/* Ön Plan: Palmate Grid & Tipografi */}
+      <div className="ml-palmate-hero-wrap">
+        <div className="ml-palmate-hero-copy">
+          <div className="ml-palmate-hero-eyebrow">
+            <span>DOĞRUDAN WHATSAPP İLE TANITIM VE SATIŞ</span>
+          </div>
+
+          <h1>
+            Mesajify.<br />
+            Tanıtımınızı yapar.<br />
+            <em>Müşteri kazandırır.</em>
+          </h1>
+
+          <p>
+            Civarınızdaki işletmelere ürünlerinizi doğrudan WhatsApp’tan duyurun.
+            Hedef kitlenizi belirleyin, dikey reklamınızı paylaşın ve gelen siparişleri tek panelden yönetin.
+          </p>
+
+          <div className="ml-palmate-cta-row">
+            <a href="https://app.mesajify.com/giris" className="ml-palmate-pill-primary">
+              Hemen Başla →
+            </a>
+            <a href="#kitle" className="ml-palmate-link-action">
+              İş başında görün ↓
+            </a>
+          </div>
+
+          <div className="ml-palmate-hero-badges">
+            <div className="ml-palmate-badge-item">
+              <span className="ml-palmate-badge-dot" />
+              <strong>Hedef İşletme Bulucu</strong>
+            </div>
+            <div className="ml-palmate-badge-item">
+              <span className="ml-palmate-badge-dot" />
+              <strong>Yapay Zekâ Kreatif Reklam</strong>
+            </div>
+            <div className="ml-palmate-badge-item">
+              <span className="ml-palmate-badge-dot" />
+              <strong>Ortak Gelen Kutusu</strong>
             </div>
           </div>
-          <HeroActivity />
         </div>
       </div>
     </section>

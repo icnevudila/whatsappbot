@@ -54,3 +54,206 @@
 
 /* Readable body copy and white CTA labels on the official green palette. */
 a.bg-brand,button.bg-brand{background-color:#168347}.scene .text-white\/30{color:#9aaaa1}
+
+/* =========================================================================
+   PALMATE-STYLE FULLSCREEN HERO FOR MESAJIFY
+   ========================================================================= */
+.ml-palmate-hero{
+  position:relative;
+  min-height:820px;
+  padding:165px 0 90px;
+  overflow:hidden;
+  background-color:#0c1210;
+  color:#fff;
+  display:flex;
+  align-items:center;
+}
+.ml-palmate-hero-media{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  overflow:hidden;
+  z-index:1;
+}
+.ml-palmate-hero-poster,
+.ml-palmate-hero-video{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center right;
+}
+.ml-palmate-hero-media:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  /* Palmate's signature cinematic gradient: dark on left for text readability, subtle on right */
+  background:linear-gradient(90deg, rgba(12,18,16,0.96) 0%, rgba(12,18,16,0.88) 45%, rgba(12,18,16,0.4) 75%, rgba(12,18,16,0.15) 100%);
+  z-index:2;
+}
+.ml-palmate-hero-wrap{
+  position:relative;
+  z-index:10;
+  width:100%;
+  max-width:1320px;
+  margin:0 auto;
+  padding:0 32px;
+}
+.ml-palmate-hero-copy{
+  max-width:640px;
+}
+.ml-palmate-hero-eyebrow{
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  padding:7px 14px;
+  border-radius:999px;
+  background:rgba(0,168,132,0.15);
+  border:1px solid rgba(0,168,132,0.35);
+  color:#7ee7c7;
+  font-size:12px;
+  font-weight:600;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  margin-bottom:28px;
+  backdrop-filter:blur(8px);
+}
+.ml-palmate-hero-copy h1{
+  font-size:clamp(2.75rem,5.2vw,4.8rem);
+  line-height:1.06;
+  letter-spacing:-0.035em;
+  font-weight:600;
+  color:#ffffff;
+  margin:0 0 24px;
+  text-wrap:balance;
+}
+.ml-palmate-hero-copy h1 em{
+  font-style:italic;
+  color:#6ee7b7;
+  font-weight:400;
+  display:inline-block;
+}
+.ml-palmate-hero-copy>p{
+  font-size:clamp(17px,1.4vw,20px);
+  line-height:1.65;
+  color:#d1d5db;
+  max-width:540px;
+  margin:0 0 36px;
+}
+.ml-palmate-cta-row{
+  display:flex;
+  align-items:center;
+  gap:22px;
+  flex-wrap:wrap;
+  margin-bottom:44px;
+}
+.ml-palmate-pill-primary{
+  background:#168347;
+  color:#ffffff;
+  padding:18px 34px;
+  border-radius:12px;
+  font-size:16px;
+  font-weight:600;
+  text-decoration:none;
+  box-shadow:0 4px 20px rgba(22,131,71,0.4), 0 2px 0 1px #0e5b30;
+  transition:all 0.25s ease;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+}
+.ml-palmate-pill-primary:hover{
+  background:#199752;
+  transform:translateY(-2px);
+  box-shadow:0 8px 25px rgba(22,131,71,0.5), 0 2px 0 1px #0e5b30;
+}
+.ml-palmate-link-action{
+  color:#e5e7eb;
+  font-size:16px;
+  font-weight:500;
+  text-decoration:none;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:12px 16px;
+  border-radius:8px;
+  transition:all 0.2s ease;
+}
+.ml-palmate-link-action:hover{
+  color:#ffffff;
+  background:rgba(255,255,255,0.08);
+}
+.ml-palmate-hero-badges{
+  display:flex;
+  align-items:center;
+  gap:24px;
+  flex-wrap:wrap;
+  padding-top:28px;
+  border-top:1px solid rgba(255,255,255,0.12);
+}
+.ml-palmate-badge-item{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  font-size:13px;
+  color:#cbd5e1;
+}
+.ml-palmate-badge-dot{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#10b981;
+  box-shadow:0 0 8px #10b981;
+}
+
+@media(max-width:900px){
+  .ml-palmate-hero{
+    min-height:720px;
+    padding:140px 0 70px;
+  }
+  .ml-palmate-hero-media:after{
+    background:linear-gradient(90deg, rgba(12,18,16,0.96) 0%, rgba(12,18,16,0.92) 60%, rgba(12,18,16,0.7) 100%);
+  }
+  .ml-palmate-hero-poster,
+  .ml-palmate-hero-video{
+    object-position:70% center;
+  }
+}
+
+@media(max-width:640px){
+  .ml-palmate-hero{
+    min-height:620px;
+    padding:120px 0 55px;
+  }
+  .ml-palmate-hero-wrap{
+    padding:0 20px;
+  }
+  .ml-palmate-hero-media:after{
+    background:linear-gradient(180deg, rgba(12,18,16,0.85) 0%, rgba(12,18,16,0.95) 70%, rgba(12,18,16,0.98) 100%);
+  }
+  .ml-palmate-hero-copy h1{
+    font-size:clamp(2.1rem,9vw,2.75rem);
+    line-height:1.12;
+  }
+  .ml-palmate-hero-copy>p{
+    font-size:16px;
+  }
+  .ml-palmate-cta-row{
+    flex-direction:column;
+    align-items:stretch;
+    gap:14px;
+  }
+  .ml-palmate-pill-primary{
+    justify-content:center;
+    padding:16px 24px;
+  }
+  .ml-palmate-link-action{
+    justify-content:center;
+  }
+  .ml-palmate-hero-badges{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:12px;
+  }
+}
+
