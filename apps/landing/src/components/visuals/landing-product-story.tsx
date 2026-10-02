@@ -2,7 +2,7 @@
 
 import { AudienceWorkspace } from './audience-workspace'
 import { ApprovedScreenGallery } from './approved-screen-gallery'
-import { AudienceRequest, BrandContext, CampaignOperatingJourney, ConnectedLineDistribution } from './campaign-control-center'
+import { CreativePipelineInfographic } from './creative-pipeline-infographic'
 import { useState, type ReactNode } from 'react'
 import { CreativeTransform, SectorCampaignLab, ContactValidationDemo, ReplyToInbox, ProductScreenExplorer } from './product-modules'
 
@@ -23,9 +23,7 @@ export function LandingCreativeStory() {
       title="Ürün fotoğrafınızdan profesyonel dikey reklam hazırlayın."
       description="Ajansa veya karmaşık video editörlerine gerek yok. Ürün fotoğrafınızı yükleyin; saniyeler içinde etkileyici dikey reklam videonuz ve kampanya mesajınız hazır olsun."
     >
-      <div className="ml-brand-context-panel">
-        <BrandContext />
-      </div>
+      <CreativePipelineInfographic />
       <CreativeTransform />
     </Story>
   )
