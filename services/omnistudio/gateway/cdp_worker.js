@@ -7,6 +7,9 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { captureTurnBaseline, readCurrentTurn } = require('./chatgpt_turn_scope.js');
+const { readComposerAttachments } = require('./image_reference_gate.js');
+const { navigateToChat } = require('./chat_navigation.js');
 
 const GATEWAY_URL = process.env.GATEWAY_URL || 'http://127.0.0.1:3456';
 const CDP_HTTP = process.env.CDP_HTTP || 'http://127.0.0.1:9222';
@@ -301,8 +304,8 @@ async function dismissAnyModals(cdp) {
   try {
     const res = await cdp.send('Runtime.evaluate', {
       expression: `(() => {
-        const dialogs = Array.from(document.querySelectorAll('[role="dialog"], [role="alertdialog"], .modal'));
         let dismissed = false;
+        const dialogs = Array.from(document.querySelectorAll('[role="dialog"], [role="alertdialog"], .modal'));
         for (const d of dialogs) {
           const btn = Array.from(d.querySelectorAll('button')).find(b => {
             const t = (b.innerText || '').trim().toLowerCase();
@@ -312,7 +315,9 @@ async function dismissAnyModals(cdp) {
             btn.click();
             dismissed = true;
           }
-        // Auto-heal 'ChatGPT hit a snag - Try again'
+        }
+
+        // Auto-heal 'ChatGPT hit a snag - Try again' anywhere on the page
         const tryAgainBtn = Array.from(document.querySelectorAll('button')).find(b => {
           const t = (b.innerText || '').trim().toLowerCase();
           return t.includes('try again') || t.includes('tekrar dene') || t.includes('yeniden dene') || t.includes('reload');
@@ -495,11 +500,8 @@ async function injectPromptAndSend(cdp, promptText) {
       }
 
       if (res?.clicked) {
-        const { x, y } = res;
-        if (x && y) {
-          await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 }).catch(() => {});
-          await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 }).catch(() => {});
-        }
+        // sendBtn.click() above already activated the control. A second native
+        // click can hit the same control after it changes to Stop and abort the reply.
         await sleep(1000);
         const verifyRes = await cdp.send('Runtime.evaluate', {
           expression: `(() => {
@@ -513,10 +515,9 @@ async function injectPromptAndSend(cdp, promptText) {
           submitted = true;
           break;
         }
-        console.log(`[CDP Worker: ${WORKER_ID}] Buton tıklandı, onay için Enter deneniyor...`);
-        await cdp.send('Input.dispatchKeyEvent', { type: 'rawKeyDown', windowsVirtualKeyCode: 13, unmodifiedText: '\r', text: '\r', key: 'Enter', code: 'Enter' }).catch(() => {});
-        await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', windowsVirtualKeyCode: 13, unmodifiedText: '\r', text: '\r', key: 'Enter', code: 'Enter' }).catch(() => {});
-        await sleep(1000);
+        // Submission is ambiguous, not evidence that nothing was sent. Never
+        // activate again without reconciliation (especially for paid image jobs).
+        throw new Error('SUBMISSION_UNCERTAIN: Send was activated but acceptance was not confirmed');
       } else {
         await sleep(500);
       }
@@ -633,8 +634,7 @@ async function ensureCustomerChat(cdp, customer, channel = 'media', identity = {
     const isMatching = currentUrl.includes(targetChatPath);
     if (!isMatching) {
       console.log(`[CDP Worker: ${WORKER_ID}] "${effectiveCustomer}" [${effectiveChannel}] kayıtlı sohbetine geçiliyor: ${targetUrl}`);
-      await cdp.send('Page.navigate', { url: targetUrl });
-      await waitForChatInput(cdp, 15000);
+      await navigateToChat(cdp, targetUrl);
     }
 
     const afterNavEval = await cdp.send('Runtime.evaluate', {
@@ -653,8 +653,7 @@ async function ensureCustomerChat(cdp, customer, channel = 'media', identity = {
   // Ana sayfaya gitmek yerine proje sayfasına gidiyoruz; böylece ortalık karışmıyor.
   const MESAJIFY_PROJECT_URL = 'https://chatgpt.com/g/g-p-6aaf94b0ae20819180ce47c040ff4a59-mesajify';
   console.log(`[CDP Worker: ${WORKER_ID}] "${effectiveCustomer}" [${effectiveChannel}] icin Mesajify projesine yeni sohbet aciliyor...`);
-  await cdp.send('Page.navigate', { url: MESAJIFY_PROJECT_URL });
-  await waitForChatInput(cdp, 20000);
+  await navigateToChat(cdp, MESAJIFY_PROJECT_URL);
   return { isNewChat: true, chatUrl: null, title: expectedTitle };
 
 }
@@ -858,28 +857,33 @@ async function executeChatGPTJob(tab, job) {
       for (let idx = 0; idx < job.referenceImages.length; idx++) {
         const ref = job.referenceImages[idx];
         let buffer = null;
-        let ext = 'png';
+        let ext = /image\/jpe?g/.test(ref.mimeType || '') ? 'jpg' : ref.mimeType === 'image/webp' ? 'webp' : 'png';
         const rawStr = typeof ref === 'string' ? ref.trim() : (ref.url || ref.data || ref.b64_json || '');
-        if (!rawStr) continue;
+        if (!rawStr) throw new Error(`REFERENCE_ATTACHMENT_FAILED: reference ${idx + 1} is empty`);
 
         if (rawStr.startsWith('http://') || rawStr.startsWith('https://')) {
           try {
             console.log(`[CDP Worker] Referans görsel URL'den indiriliyor: ${rawStr.slice(0, 70)}...`);
             const fetchRes = await fetch(rawStr, { signal: AbortSignal.timeout(15000) });
-            if (fetchRes.ok) {
+            if (fetchRes.ok && (fetchRes.headers.get('content-type') || '').startsWith('image/')) {
               const arrayBuf = await fetchRes.arrayBuffer();
               buffer = Buffer.from(arrayBuf);
               if (rawStr.includes('.jpg') || rawStr.includes('.jpeg')) ext = 'jpg';
               else if (rawStr.includes('.webp')) ext = 'webp';
             }
           } catch (fErr) {
-            console.warn(`[CDP Worker] Referans görsel URL indirme uyarısı:`, fErr.message);
+            throw new Error(`REFERENCE_ATTACHMENT_FAILED: reference ${idx + 1} download failed: ${fErr.message}`);
           }
         } else if (rawStr.startsWith('data:') || rawStr.length > 100) {
           const b64Data = rawStr.includes(',') ? rawStr.split(',')[1] : rawStr;
           buffer = Buffer.from(b64Data, 'base64');
         }
 
+        if (!buffer || !buffer.length) throw new Error(`REFERENCE_ATTACHMENT_FAILED: reference ${idx + 1} could not be read`);
+        if (ref.sha256) {
+          const actual = require('crypto').createHash('sha256').update(buffer).digest('hex');
+          if (actual !== String(ref.sha256).toLowerCase()) throw new Error('INVALID_ASSET: reference SHA-256 mismatch');
+        }
         if (buffer && buffer.length > 0) {
           const tmpPath = path.join('/tmp', `ref_${job.id}_${idx}.${ext}`);
           fs.writeFileSync(tmpPath, buffer);
@@ -890,11 +894,22 @@ async function executeChatGPTJob(tab, job) {
       if (tempRefPaths.length > 0) {
         try {
           await cdp.send('DOM.enable').catch(() => {});
-          const doc = await cdp.send('DOM.getDocument', {}, 5000);
-          const fileInput = await cdp.send('DOM.querySelector', {
-            nodeId: doc.root.nodeId,
-            selector: '#upload-photos, #upload-media, input[type=file]'
-          }, 5000);
+          let fileInput;
+          const inputDeadline = Date.now() + 15000;
+          while (Date.now() < inputDeadline) {
+            const doc = await cdp.send('DOM.getDocument', {}, 5000);
+            fileInput = await cdp.send('DOM.querySelector', {
+              nodeId: doc.root.nodeId,
+              selector: '#upload-photos, #upload-media, input[type=file]'
+            }, 5000);
+            if (fileInput?.nodeId) break;
+            await sleep(200);
+          }
+          if (!fileInput?.nodeId) throw new Error('REFERENCE_ATTACHMENT_FAILED: file input is unavailable');
+          const beforeUpload = (await cdp.send('Runtime.evaluate', {
+            expression: `(${readComposerAttachments.toString()})()`, returnByValue: true,
+          })).result?.value;
+          if (beforeUpload?.count) throw new Error('REFERENCE_ATTACHMENT_FAILED: stale composer attachments must be cleared');
           if (fileInput && fileInput.nodeId) {
             await cdp.send('DOM.setFileInputFiles', {
               files: tempRefPaths,
@@ -908,24 +923,24 @@ async function executeChatGPTJob(tab, job) {
             });
             console.log(`[CDP Worker] ${tempRefPaths.length} referans görsel inputa yüklendi, thumbnail bekleniyor...`);
             const refUploadStart = Date.now();
-            const maxRefWait = 6000;
+            const maxRefWait = 30_000;
+            let attachmentsVerified = false;
             while (Date.now() - refUploadStart < maxRefWait) {
               const hasThumb = await cdp.send('Runtime.evaluate', {
-                expression: `!!(
-                  document.querySelector('[data-testid*="thumbnail"]') ||
-                  document.querySelector('img[src^="blob:"]') ||
-                  document.querySelector('#upload-photos img') ||
-                  document.querySelector('.upload-preview')
-                )`,
+                expression: `(${readComposerAttachments.toString()})()`,
                 returnByValue: true
               }).catch(() => ({ result: { value: false } }));
-              if (hasThumb.result?.value) break;
+              if (hasThumb.result?.value?.count === tempRefPaths.length && hasThumb.result.value.ready) {
+                attachmentsVerified = true;
+                break;
+              }
               await sleep(200);
             }
+            if (!attachmentsVerified) throw new Error('REFERENCE_ATTACHMENT_FAILED: all requested references were not confirmed in the composer');
             workerTiming.mark('reference_upload_ms', refUploadStart);
           }
         } catch (uploadErr) {
-          console.warn('[CDP Worker] Referans görsel yükleme uyarısı:', uploadErr.message);
+          throw new Error(`REFERENCE_ATTACHMENT_FAILED: ${uploadErr.message}`);
         }
       }
     }
@@ -942,6 +957,9 @@ async function executeChatGPTJob(tab, job) {
     }, 5000);
     const baseline = baselineEval.result?.value || { count: 0, imgCount: 0 };
     const baselineCount = baseline.count || 0;
+    const turnBaseline = (await cdp.send('Runtime.evaluate', {
+      expression: `(${captureTurnBaseline.toString()})()`, returnByValue: true,
+    })).result?.value;
 
     // 3. Prompt'u Enjekte Et
     const injectRes = await injectPromptAndSend(cdp, job.prompt);
@@ -968,6 +986,11 @@ async function executeChatGPTJob(tab, job) {
       if (elapsed > 45) statusText = 'Görsel ayrıntıları ve ışıklandırma işleniyor...';
       if (elapsed > 90) statusText = 'Yüksek çözünürlüklü render tamamlanmak üzere...';
 
+      // Sayfada takılma / hata / Try again modalı çıkarsa otomatik temizle ve tıkla
+      if (attempt % 2 === 0) {
+        await dismissAnyModals(cdp).catch(() => {});
+      }
+
       fetch(`${GATEWAY_URL}/job/progress`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -977,56 +1000,7 @@ async function executeChatGPTJob(tab, job) {
       let checkResult = null;
       try {
         const checkEval = await cdp.send('Runtime.evaluate', {
-          expression: `
-            (function() {
-              const beforeSet = (window.__beforeImages instanceof Set) ? window.__beforeImages : new Set();
-              const baselineCount = window.__beforeAssistantCount || ${baselineCount};
-              const elapsedSec = ${elapsed};
-              const stopBtn = document.querySelector('button[data-testid="stop-button"], button[aria-label*="Stop"], button[aria-label*="durdur"]');
-              const isThinking = !!document.querySelector('.result-thinking, [data-testid*="generating"], .streaming-animated-ellipsis');
-              const isGenerating = !!stopBtn || isThinking;
-
-              // 1. DALL-E çizimi en az 8 saniye sürer. 8 sn öncesindeki hiçbir görsel YENİ sayılamaz.
-              if (elapsedSec < 8) {
-                return { ready: false, isGenerating: true, foundSrc: null, reason: 'WAIT_MIN_DURATION' };
-              }
-
-              // 2. Render edilen yeni görselleri tespit et
-              const imgs = Array.from(document.querySelectorAll('main img, article img, img')).filter(img => {
-                const src = img.src || '';
-                const alt = (img.alt || '').toLowerCase();
-                const w = img.naturalWidth || img.width || 0;
-                const h = img.naturalHeight || img.height || 0;
-                if (!src || beforeSet.has(src)) return false;
-                if (alt.startsWith('ref_') || alt.endsWith('.png') || alt.endsWith('.jpg') || alt.endsWith('.jpeg')) return false;
-
-                // Kullanıcının yüklediği logo/ürün referans görsellerini KESİNLİKLE hariç tut:
-                if (alt.includes('user attachment') || img.closest('form') || img.closest('[data-testid*="upload"]') || img.closest('[data-testid*="attachment"]') || img.closest('.attachment') || img.closest('[data-message-author-role="user"]')) return false;
-
-                // ChatGPT DALL-E üretimi tespiti:
-                const isGeneratedAlt = alt.includes('generated image') || alt.includes('dall-e');
-                const isButtonWrapped = img.parentElement?.tagName === 'BUTTON' && (w >= 400 || h >= 400);
-                const isBlobOrApi = src.startsWith('blob:') || src.includes('backend-api/estuary') || src.includes('files.oaiusercontent.com');
-
-                return (isGeneratedAlt || isButtonWrapped || isBlobOrApi) && (w >= 400 || h >= 400 || (img.complete && w >= 400));
-              });
-
-              if (imgs.length > 0) {
-                const targetImg = imgs[imgs.length - 1];
-                if (!isGenerating || (elapsedSec >= 25 && targetImg.complete)) {
-                  return { ready: true, isGenerating: false, foundSrc: targetImg.src, count: imgs.length };
-                }
-              }
-
-              // 3. Görsel henüz yoksa ve ekranda aktif hata bannerı varsa
-              const errorToast = document.querySelector('[data-testid="error-message"], [role="alert"].text-red-500');
-              if (errorToast && !isGenerating) {
-                return { ready: false, isGenerating: false, error: 'ChatGPT hata uyarisi: ' + errorToast.innerText.slice(0, 100) };
-              }
-
-              return { ready: false, isGenerating, foundSrc: null, candidateCount: imgs.length };
-            })()
-          `,
+          expression: `(${readCurrentTurn.toString()})(${JSON.stringify(job.prompt)}, ${JSON.stringify(turnBaseline)})`,
           returnByValue: true
         }, 15000);
 
@@ -1052,8 +1026,8 @@ async function executeChatGPTJob(tab, job) {
       }
 
       if (checkResult?.isGenerating && !workerTiming.timings.generation_start_detect_ms) workerTiming.mark('generation_start_detect_ms', submittedAt);
-      if (checkResult?.ready && checkResult?.foundSrc) {
-        foundImgSrc = checkResult.foundSrc;
+      if (checkResult?.hasNewMsg && !checkResult.isGenerating && checkResult.foundImgSrc) {
+        foundImgSrc = checkResult.foundImgSrc;
         workerTiming.mark('generation_complete_detect_ms', submittedAt);
         console.log(`[CDP Worker] Görsel ${elapsed}. saniyede başarıyla tamamlandı ve tespit edildi: ${foundImgSrc}`);
         break;
@@ -1071,6 +1045,7 @@ async function executeChatGPTJob(tab, job) {
       expression: `
         (async () => {
           const resp = await fetch(${JSON.stringify(foundImgSrc)});
+          if (!resp.ok || !String(resp.headers.get('content-type') || '').startsWith('image/')) throw new Error('INVALID_IMAGE_RESPONSE');
           const blob = await resp.blob();
           return new Promise((resolve) => {
             const reader = new FileReader();
@@ -1204,6 +1179,9 @@ async function executeChatSuggestionsJob(tab, job) {
       returnByValue: true
     });
     const baseline = baselineEval.result?.value || { count: 0, ids: [], lastText: '' };
+    const turnBaseline = (await cdp.send('Runtime.evaluate', {
+      expression: `(${captureTurnBaseline.toString()})()`, returnByValue: true,
+    })).result?.value;
 
     // 2. Prompt hazırla
     const prompt = `Sen "${customer}" firmasının WhatsApp kurumsal müşteri temsilcisisin.
@@ -1258,24 +1236,7 @@ Bu mesaja verilebilecek en kaliteli ve uygun 3 FARKLI alternatif Türkçe yanıt
         throw new Error('WEB_SESSION_RATE_LIMITED: ChatGPT web "Too many requests" rate-limit modal detected');
       }
       const textEval = await cdp.send('Runtime.evaluate', {
-        expression: `
-          (() => {
-            const assts = ${JS_GET_ASSISTANT_MSGS};
-            const baselineCount = ${baseline.count};
-            const baselineText = ${JSON.stringify(baseline.lastText || '')};
-            const lastAsst = assts.length > 0 ? assts[assts.length - 1] : null;
-            const text = lastAsst ? (lastAsst.innerText || '').trim() : '';
-            const isNewTurn = assts.length > baselineCount || (text.length > 20 && text !== baselineText);
-            const stopBtn = document.querySelector('button[data-testid*="stop"], button[aria-label*="Stop"], button[aria-label*="durdur"], button[aria-label*="Durdur"]');
-            const isGenerating = !!stopBtn || !!document.querySelector('.result-thinking, [data-testid*="generating"], .streaming-animated-ellipsis');
-
-            if (!isNewTurn) {
-              return { hasNewMsg: false, isGenerating, text: '' };
-            }
-
-            return { hasNewMsg: true, isGenerating, text };
-          })()
-        `,
+        expression: `(${readCurrentTurn.toString()})(${JSON.stringify(prompt)}, ${JSON.stringify(turnBaseline)})`,
         returnByValue: true
       });
 
@@ -1493,6 +1454,9 @@ async function executeGenericChatJob(tab, job) {
       returnByValue: true
     });
     const baseline = baselineEval.result?.value || { count: 0, ids: [], lastText: '' };
+    const turnBaseline = (await cdp.send('Runtime.evaluate', {
+      expression: `(${captureTurnBaseline.toString()})()`, returnByValue: true,
+    })).result?.value;
 
     // 2. Prompt hazırla
     let finalPrompt = job.rawPrompt || job.prompt || '';
@@ -1525,39 +1489,7 @@ async function executeGenericChatJob(tab, job) {
         throw new Error('WEB_SESSION_RATE_LIMITED: ChatGPT web "Too many requests" rate-limit modal detected');
       }
       const textEval = await cdp.send('Runtime.evaluate', {
-        expression: `
-          (() => {
-            const assts = ${JS_GET_ASSISTANT_MSGS};
-            if (assts.length <= ${baseline.count}) {
-              const stopBtn = document.querySelector('button[data-testid*="stop"], button[aria-label*="Stop"], button[aria-label*="durdur"], button[aria-label*="Durdur"]');
-              const isGenerating = !!stopBtn || !!document.querySelector('.result-thinking, [data-testid*="generating"], .streaming-animated-ellipsis');
-              return { hasNewMsg: false, isGenerating, text: '', foundImgSrc: null };
-            }
-
-            const lastAsst = assts[assts.length - 1];
-            const text = (lastAsst.innerText || '').trim();
-            const stopBtn = document.querySelector('button[data-testid*="stop"], button[aria-label*="Stop"], button[aria-label*="durdur"], button[aria-label*="Durdur"]');
-            const isMsgStreaming = lastAsst ? !!lastAsst.querySelector('.streaming-animation, [data-is-streaming="true"]') : false;
-            let isGenerating = !!stopBtn || isMsgStreaming;
-
-            let foundImgSrc = null;
-            const imgs = Array.from(lastAsst ? lastAsst.querySelectorAll('img') : []);
-            for (const img of imgs) {
-              const src = img.src || '';
-              const alt = (img.alt || '').toLowerCase();
-              if (src.includes('backend-api/estuary') || src.includes('files.oaiusercontent.com') || alt.includes('generated') || alt.includes('dall-e') || alt.includes('üretilen')) {
-                const width = img.naturalWidth || img.width;
-                if (img.complete && width >= 200) {
-                  foundImgSrc = src;
-                  isGenerating = false;
-                  break;
-                }
-              }
-            }
-
-            return { hasNewMsg: true, isGenerating, text, foundImgSrc };
-          })()
-        `,
+        expression: `(${readCurrentTurn.toString()})(${JSON.stringify(finalPrompt)}, ${JSON.stringify(turnBaseline)})`,
         returnByValue: true
       });
 
