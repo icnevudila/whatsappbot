@@ -3,8 +3,9 @@
 import { AudienceWorkspace } from './audience-workspace'
 import { ApprovedScreenGallery } from './approved-screen-gallery'
 import { CreativePipelineInfographic } from './creative-pipeline-infographic'
+import { UnifiedInboxShowcase } from './unified-inbox-showcase'
 import { useState, type ReactNode } from 'react'
-import { CreativeTransform, SectorCampaignLab, ContactValidationDemo, ReplyToInbox, ProductScreenExplorer } from './product-modules'
+import { CreativeTransform, SectorCampaignLab, ContactValidationDemo, ProductScreenExplorer } from './product-modules'
 
 function Story({ eyebrow, title, description, dark = false, chapter = '', children }: { eyebrow: string; title: string; description: string; dark?: boolean; chapter?: string; children: ReactNode }) {
   return <section className={`ml-product-story ml-chapter-${chapter}${dark ? ' ml-story-dark' : ''}`}>
@@ -50,7 +51,7 @@ export function LandingInboxStory() {
       title="Gelen sipariş ve soruları tek ekrandan yönetin."
       description="Telefon aramayın, birden fazla tarayıcı sekmesi arasında kaybolmayın. Tüm bağlı hatlarınızdan gelen sipariş ve fiyat soruları tek gelen kutusunda toplanır, anında satışa dönüşür."
     >
-      <ReplyToInbox />
+      <UnifiedInboxShowcase />
     </Story>
   )
 }
