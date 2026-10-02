@@ -1,4 +1,5 @@
 import { Scene01Hero } from '@/components/scenes/scene-01-hero'
+import { HowItWorksSimple } from '@/components/visuals/how-it-works-simple'
 import {
   LandingDeliveryStory as Scene02LeadAndAudience,
   LandingSectorStory as Scene03Sectors,
@@ -25,9 +26,9 @@ export default function Home() {
           <Scene01Hero />
         </div>
 
-        {/* 02 · İŞLETME VE MÜŞTERİ BULUCU (Civarınızdaki işletmeler & Türkiye/Dünya Kitlesi) */}
-        <div id="kitle">
-          <div id="nasil-calisir"><Scene02LeadAndAudience /></div>
+        {/* 02 · NASIL ÇALIŞIR: 3 Kolay Adımda Mesajify (Basit, Anlaşılır, Karışık Olmayan Akış) */}
+        <div id="nasil-calisir">
+          <HowItWorksSimple />
         </div>
 
         {/* 03 · SEKTÖRÜNÜZDE ÖNE ÇIKIN (Kuaför, Kafe, Restoran, İnşaat, Toptan, Sağlık) */}

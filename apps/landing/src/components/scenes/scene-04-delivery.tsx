@@ -48,17 +48,15 @@ export function Scene04Delivery() {
         {/* Story Headline */}
         <div ref={headRef} className="reveal text-center max-w-3xl mx-auto mb-12 sm:mb-20">
           <p className="text-xs font-semibold text-brand tracking-normal uppercase mb-4 sm:mb-6">
-            Hat Havuzu & Dağıtım
+            Akıllı Hat Dağıtımı
           </p>
           <h2 className="text-[clamp(32px,5.5vw,76px)] leading-[1.08] font-[600] tracking-tight text-ink mb-4 sm:mb-6">
-            Liste hazır.
+            Tek bir hatta yük bindirmeyin.
             <br />
-            Hatlar hazır.
-            <br />
-            Kampanya hazır.
+            <span className="text-brand">Güvenli ve dengeli gönderim.</span>
           </h2>
           <p className="text-base sm:text-lg md:text-xl text-ink-muted max-w-2xl mx-auto leading-relaxed">
-            Tek bir numaraya binlerce mesaj yükleyip riske girmeyin. Birden fazla bağlı WhatsApp hattınızı tek havuzda toplayın. Mesajify listenizi doğrulasın ve toplu gönderimi hatlarınız arasında zamana yayarak dengeli paylaştırsın.
+            WhatsApp tanıtımlarınızı tek bir numaradan topluca göndermek yerine, bağlı hatlarınız arasında akıllıca paylaştırın. Sistem numaralarınızı otomatik korur ve mesajlarınızı müşterilerinize güvenle ulaştırır.
           </p>
         </div>
 
@@ -70,12 +68,12 @@ export function Scene04Delivery() {
             <div>
               <div className="flex items-center justify-between mb-6">
                 <span className="text-xs font-semibold uppercase px-3 py-1 rounded-full bg-surface text-ink-muted border border-hairline">
-                  01 · Liste Doğrulama
+                  01 · Rehber Doğrulama
                 </span>
-                <span className="text-xs text-brand font-medium">Otomatik Temizleme</span>
+                <span className="text-xs text-brand font-medium">Otomatik Düzenleme</span>
               </div>
-              <h3 className="text-2xl font-[600] text-ink mb-2">musteriler.xlsx</h3>
-              <p className="text-sm text-ink-muted mb-6">Excel ve CSV dosyaları anında ayrıştırılır ve biçimlendirilir.</p>
+              <h3 className="text-2xl font-[600] text-ink mb-2">Müşteri Rehberi</h3>
+              <p className="text-sm text-ink-muted mb-6">Numaralarınız otomatik kontrol edilir, hatalı veya eksik yazımlar anında düzeltilir.</p>
               
               {/* Progress bar */}
               <div className="space-y-2 mb-6">

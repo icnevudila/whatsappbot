@@ -33,25 +33,13 @@ const HERO_TABS: HeroTab[] = [
     id: 'campaign',
     label: 'Kampanya Yönetimi',
     tag: 'Akıllı Gönderim',
-    title: 'Doğrudan WhatsApp İle Hedef Kitlenize Ulaşın',
+    title: 'Doğrudan WhatsApp İle Müşterilerinize Ulaşın',
     description:
-      'Gelişmiş filtreleme ve çoklu hat dağıtımı ile mesajlarınızı müşterilerinize güvenle ve kesintisiz ulaştırın.',
+      'Tek tıkla tanıtım mesajınızı ve dikey videonuzu müşterilerinize güvenle ve kesintisiz ulaştırın.',
     badge: 'Aktif Dağıtım',
     image: '/landing/infographics/01-ana-urun-chatgpt-16-9.png',
     statLabel: 'Ortalama Açılma Oranı',
     statValue: '%94.8',
-  },
-  {
-    id: 'finder',
-    label: 'İşletme Bulucu',
-    tag: 'B2B Kitle',
-    title: 'Civarınızdaki ve Sektörünüzdeki Potansiyel Müşteriler',
-    description:
-      'İl, ilçe ve kategori bazlı doğrulanmış işletme veritabanı ile sıcak müşteri kitleleri oluşturun.',
-    badge: 'Kitle Tespiti',
-    image: '/landing/infographics/06-isletme-bulucu-chatgpt-16-9.png',
-    statLabel: 'Hedef Kitle Havuzu',
-    statValue: '250.000+',
   },
   {
     id: 'inbox',
@@ -73,9 +61,21 @@ const HERO_TABS: HeroTab[] = [
     description:
       'Saniyeler içinde dikkat çekici WhatsApp video ve dikey kreatif reklamları oluşturup yayına alın.',
     badge: 'Otomatik Üretim',
-    image: '/landing/current/creative-selected.png',
+    image: '/landing/infographics/05-kreatif-studyosu-chatgpt-4-3.png',
     statLabel: 'Tıklama & Dönüşüm',
     statValue: '3.4x Artış',
+  },
+  {
+    id: 'lines',
+    label: 'Çoklu Hat Yönetimi',
+    tag: 'Akıllı Rota',
+    title: 'Birden Fazla WhatsApp Hattı Tek Merkezde',
+    description:
+      'Yükü tek bir hatta bindirmeyin; mesajlarınızı bağlı hatlarınız arasında dengeli ve güvenli paylaştırın.',
+    badge: 'Güvenli Gönderim',
+    image: '/landing/infographics/03-coklu-hat-chatgpt-4-3.png',
+    statLabel: 'Hat Güvenliği',
+    statValue: 'Akıllı Denge',
   },
 ]
 
@@ -105,15 +105,14 @@ export function Scene01Hero() {
 
           {/* Palmate Style Hero Heading */}
           <h1 className="mt-8 max-w-5xl font-bold tracking-tight text-white [font-size:clamp(38px,5.4vw,76px)] [line-height:1.06]">
-            Civarınızdaki işletmelere tanıtın. <br />
+            WhatsApp ile müşterilerinize ulaşın. <br />
             <span className="bg-gradient-to-r from-emerald-300 via-green-400 to-teal-300 bg-clip-text text-transparent">
-              Doğrudan WhatsApp ile müşteri kazanın.
+              Satışlarınızı tek panelden katlayın.
             </span>
           </h1>
 
           <p className="mt-6 max-w-2xl text-lg sm:text-xl text-emerald-100/75 leading-relaxed font-normal">
-            Kendi müşteri listenizi yükleyin veya işletme bulucu ile hedef kitlenizi seçin.
-            Dikey video ve mesajlarınızı dağıtın, gelen siparişleri tek gelen kutusundan yönetin.
+            Ürün veya hizmetinizi tanıtan dikey video ve mesajlarınızı WhatsApp’tan gönderin. Gelen sipariş, fiyat ve randevu taleplerini tek gelen kutusundan yönetin.
           </p>
 
           {/* Action CTAs */}
@@ -126,10 +125,10 @@ export function Scene01Hero() {
               <ArrowRight className="h-5 w-5" />
             </a>
             <a
-              href="#kitle"
+              href="#nasil-calisir"
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-6 py-4 text-base font-medium text-white/90 backdrop-blur-md transition-all duration-300 hover:bg-white/10 hover:border-white/30"
             >
-              Platformu İncele
+              Nasıl Çalışır?
               <span className="text-emerald-400">↓</span>
             </a>
           </div>
@@ -138,7 +137,7 @@ export function Scene01Hero() {
           <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-xs sm:text-sm text-emerald-200/60">
             <span className="inline-flex items-center gap-2">
               <CheckCircle2 className="text-emerald-400 h-4 w-4" />
-              Doğrulanmış B2B İşletme Havuzu
+              Yapay Zeka Destekli Dikey Reklam
             </span>
             <span className="inline-flex items-center gap-2">
               <CheckCircle2 className="text-emerald-400 h-4 w-4" />
