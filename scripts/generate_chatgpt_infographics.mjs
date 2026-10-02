@@ -27,6 +27,27 @@ Four surrounding clean technical modular cards connected by sleek green circuit 
 Design style: Clean Swiss graphic design, Apple and Linear SaaS aesthetic, ultra-sharp 2D vector blueprint, crisp typography, no 3D distortion, perfectly readable labels, high-resolution UI diagram.`,
   },
   {
+    id: 'kampanya-hazirlik',
+    filename: '02-kampanya-hazirlik-chatgpt-16-9.png',
+    aspect: '1792x1024',
+    prompt: `Professional high-end SaaS web dashboard UI screenshot: 'Mesajify Kampanya ve Mesaj Hazırlığı' (WhatsApp Campaign Builder & Dynamic Message Template Studio).
+Crisp light minimalist aesthetic on soft off-white background (#F8FAFC).
+Top navigation bar has official Mesajify squircle logo with 'mesajify' text in dark slate, and step breadcrumbs: '1. Medya Seçimi  >  2. Şablon Metni  >  3. Kitle Seçimi'.
+Dashboard shows 3 clean white cards side-by-side:
+Card 1 (Left, 30% width): '1. Tanıtım Medyası'
+- A sleek vertical 9:16 video preview frame showing a luxury burger / sneaker product showcase with play badge and filename 'kampanya_tanitim_9_16.mp4'.
+- Format badge: 'WhatsApp 9:16 Video · HD'.
+Card 2 (Middle, 40% width): '2. Kişiselleştirilmiş Şablon'
+- Message composer with dynamic green tag pills: '{{Ad Soyad}}', '{{İndirim Kodu}}'.
+- WhatsApp preview bubble: 'Merhaba {{Ad Soyad}}, Hafta sonuna özel seçili ürünlerde %30 indirim fırsatınız hazır! Detaylar için yanıtlayabilirsiniz.'
+Card 3 (Right, 30% width): '3. Hedef Kitle'
+- Audience selector showing 'Rehber / Müşteri Portföyü: 12.840 Doğrulanmış Numara'.
+- Multi-line badge: '3 Bağlı WhatsApp Hattı ile Dengeli Gönderim'.
+Bottom action bar:
+- Large emerald green button: '▶ Kampanyayı Başlat' with green pulse indicator 'Hazır · Yük Dengeleme Aktif'.
+Design style: Clean 2D vector SaaS UI, emerald green (#00A884) accents, sharp legible Turkish typography, Apple, Stripe and Linear aesthetic, high-resolution.`,
+  },
+  {
     id: 'coklu-hat',
     filename: '03-coklu-hat-chatgpt-4-3.png',
     aspect: '1024x1024',
@@ -117,21 +138,14 @@ async function generate(item) {
     workspace: 'Mesajify Landing Asset Pipeline',
   }
 
-  if (logoBase64) {
-    payload.referenceImages = [
-      {
-        mimeType: 'image/png',
-        data: logoBase64,
-        role: 'logo',
-      },
-    ]
-  }
+  // Infographics use pure DALL-E prompt generation for clean crisp vector SaaS UI
+  payload.referenceImages = []
 
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
       console.log(`   İstek gönderiliyor (Deneme ${attempt}/2)...`)
       const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 120000)
+      const timeout = setTimeout(() => controller.abort(), 240000)
 
       const res = await fetch(`${GATEWAY_URL}/v1/images/generations`, {
         method: 'POST',

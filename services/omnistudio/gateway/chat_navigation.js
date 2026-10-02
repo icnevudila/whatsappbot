@@ -9,17 +9,19 @@ async function navigateToChat(cdp, url, maxWaitMs = 40000, pause = ms => new Pro
   if (navigation.errorText) throw new Error('CHAT_NAVIGATION_FAILED: '+navigation.errorText);
   const target = new URL(url);
   const targetPath = target.pathname.replace(/\/$/,'');
-  const allowedPaths = /^\/g\/g-p-[^/]+/.test(targetPath) 
-    ? [targetPath, targetPath+'/project', targetPath.split('/c/')[0]] 
+  const isGptPath = /^\/g\/g-p-[^/]+/.test(targetPath);
+  const allowedPaths = isGptPath
+    ? [targetPath, targetPath+'/project']
     : [targetPath];
-  const deadline = Date.now() + maxWaitMs;
+  const startTime = Date.now();
+  const deadline = startTime + maxWaitMs;
   while (Date.now() < deadline) {
     const state = await cdp.send('Runtime.evaluate', {
       expression: `(() => {
         const curPath = location.pathname.replace(/\\/$/,'');
         const isTarget = location.origin === ${JSON.stringify(target.origin)} && (
-          ${JSON.stringify(allowedPaths)}.some(p => curPath.startsWith(p) || p.startsWith(curPath)) ||
-          curPath.startsWith('/g/g-p-') || curPath.startsWith('/c/') || curPath === '' || curPath === '/'
+          ${JSON.stringify(allowedPaths)}.includes(curPath) ||
+          (${isGptPath} && curPath.startsWith(${JSON.stringify(targetPath)}))
         );
         const hasComposer = !!document.querySelector('#prompt-textarea, [data-composer] [contenteditable="true"], form [contenteditable="true"], form textarea');
         return {
@@ -30,7 +32,7 @@ async function navigateToChat(cdp, url, maxWaitMs = 40000, pause = ms => new Pro
       })()`, returnByValue: true,
     }, 5000).catch(() => ({}));
     const value = state.result?.value;
-    if (value?.newDocument && value.target && value.ready) return;
+    if (value?.target && value.ready && (value.newDocument || (Date.now() - startTime > 1500))) return;
     await pause(200);
   }
   throw new Error('CHAT_NAVIGATION_FAILED: target conversation was not ready');
