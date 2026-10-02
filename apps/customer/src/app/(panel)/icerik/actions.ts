@@ -7,6 +7,7 @@ import { randomBytes } from 'node:crypto'
 import { enqueueJob } from '@/lib/jobs'
 import { hasImageProvider } from '@/lib/ai/image'
 import { processCreativeGeneration } from '@/lib/creative/process'
+import { isUncertainImageFailure } from '@/lib/creative/detail-render-state'
 import {
   titleFromBrief,
   type CreativePayload,
@@ -457,17 +458,30 @@ export async function retryCreative(id: string): Promise<CreativeActionState> {
     if (!isOrgAdminRole(org.role)) return { error: 'Yetki yok.' }
     const { data } = await supabase
       .from('creatives')
-      .select('id, status, source')
+      .select('id, status, source, format, error, payload')
       .eq('id', trimmed)
       .eq('org_id', org.id)
       .maybeSingle()
     if (!data) return { error: 'Görsel bulunamadı.' }
     if (data.source !== 'ai') return { error: 'Yalnızca AI üretimleri yenilenebilir.' }
-    await supabase
+    const previousPayload = (data.payload || {}) as Record<string, unknown>
+    if (data.format !== 'video' && data.status === 'failed' && isUncertainImageFailure(data.error)) {
+      return { error: 'Önceki bağlantı/zaman aşımı üretimin iptal edildiğini kanıtlamıyor. Mevcut iş uzlaştırılmadan ikinci ücretli üretim başlatılmadı.' }
+    }
+    if (previousPayload.imageSubmissionUncertain || previousPayload.imageReconciliationRequired || previousPayload.imageDirectIntent) {
+      return { error: 'Önce mevcut üretimin sonucu doğrulanmalı; belirsiz iş için ikinci ücretli üretim başlatılmadı.' }
+    }
+    if (data.status === 'rendering' || data.status === 'pending') return { error: 'Mevcut üretim sürüyor; ikinci üretim başlatılmadı.' }
+    const { data: retried, error: retryError } = await supabase
       .from('creatives')
-      .update({ status: 'pending', error: null })
+      .update({ status: 'pending', error: null, payload: { ...((data.payload || {}) as Record<string, unknown>), imageJob: null, imageSubmitIntent: null, imageSubmissionUncertain: false, imageAttempt: randomBytes(16).toString('hex') } })
       .eq('id', trimmed)
       .eq('org_id', org.id)
+      .eq('status', data.status)
+      .select('id')
+      .maybeSingle()
+    if (retryError) return { error: retryError.message }
+    if (!retried) return { error: 'İşin durumu değişti; ikinci üretim başlatılmadı.' }
     await kickGeneration(trimmed)
     revalidateLibrary(trimmed)
     return { ok: 'Üretim yeniden başlatıldı.' }

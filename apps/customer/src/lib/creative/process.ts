@@ -1,5 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { generateImage, type ReferenceImage } from '@/lib/ai/image'
+import { DirectImageReconciliationError, generateImage, type ReferenceImage } from '@/lib/ai/image'
+import { inspectImageOutput } from '@/lib/ai/image-output'
+import { ImageJobFailedError, ImageJobPendingError, ImageJobReconciliationError, ImageSubmissionUncertainError, readImageJob } from '@/lib/ai/omnistudio-image-job'
+import { createHash } from 'node:crypto'
 import type { AiKeyBag } from '@/lib/ai/config'
 import { createSupabaseServiceClient } from '@/lib/supabase/service'
 import { buildCreativePrompt, buildVideoPrompt } from './prompt'
@@ -22,7 +25,7 @@ function asSnapshot(payload: unknown): CreativeSnapshot | null {
 
 async function fetchBuffer(url: string): Promise<ReferenceImage | null> {
   try {
-    const response = await fetch(url)
+    const response = await fetch(url, { signal: AbortSignal.timeout(15000) })
     if (!response.ok) return null
     const mime = response.headers.get('content-type') || 'image/png'
     if (!mime.startsWith('image/')) return null
@@ -234,7 +237,7 @@ export async function processCreativeGeneration(
   const { data: creative } = await supabase
     .from('creatives')
     .select(
-      'id, org_id, status, payload, format, brand_kit_id, parent_id, storage_path, public_url, created_at, updated_at',
+      'id, org_id, template, status, error, payload, format, brand_kit_id, parent_id, storage_path, public_url, created_at, updated_at',
     )
     .eq('id', creativeId)
     .maybeSingle()
@@ -255,6 +258,9 @@ export async function processCreativeGeneration(
 
   const payload = snapshot as CreativePayload
   const isVideo = creative.format === 'video' || snapshot.formatId === 'reels_video'
+  if (!isVideo && creative.status === 'failed' && !payload.imageJob && !payload.imageSubmitIntent && !payload.imageDirectIntent) {
+    return { ok: false, error: creative.error || 'Önceki üretim başarısız; takip isteği yeni ücretli üretim başlatmaz.' }
+  }
 
   if (creative.status === 'ready' && creative.public_url) {
     return {
@@ -266,8 +272,70 @@ export async function processCreativeGeneration(
     }
   }
 
+  if (!isVideo && payload.imageDirectIntent) {
+    const intent = payload.imageDirectIntent
+    try {
+      if (!intent.storagePath.startsWith(`${creative.org_id}/${creative.id}/direct-`) || !intent.requestId) throw new Error('Ham çıktı sahipliği doğrulanamadı.')
+      // Only an actually stored artifact can resume. Missing/uncertain bytes never regenerate.
+      const raw = await supabase.storage.from('creatives').download(intent.storagePath)
+      if (raw.error || !raw.data) {
+        if (creative.status === 'rendering' && Date.now() - new Date(intent.startedAt).getTime() < 180000) return { ok: true, pending: true, retryAfterSeconds: 10 }
+        throw new Error('Kalıcı ham görsel bulunamadı; sağlayıcı sonucu uzlaştırılmalı.')
+      }
+      const bytes = Buffer.from(await raw.data.arrayBuffer())
+      const measured = await inspectImageOutput(bytes)
+      const publicResult = supabase.storage.from('creatives').getPublicUrl(intent.storagePath)
+      const saved = await supabase.from('creatives').update({ status: 'ready', error: null,
+        storage_path: intent.storagePath, public_url: publicResult.data.publicUrl,
+        width: measured.width, height: measured.height,
+        payload: { ...payload, imageDirectIntent: null, imageSubmitIntent: null, imageSubmissionUncertain: false, imageReconciliationRequired: false, provider: intent.provider,
+          outputSha256: createHash('sha256').update(bytes).digest('hex') },
+      }).eq('id', creativeId).eq('org_id', creative.org_id)
+        .eq('payload->imageDirectIntent->>requestId', intent.requestId).select('id').maybeSingle()
+      if (saved.error || saved.data?.id !== creativeId) return { ok: true, pending: true, retryAfterSeconds: 10 }
+      return { ok: true, ready: true, publicUrl: publicResult.data.publicUrl }
+    } catch {
+      await supabase.from('creatives').update({ error: 'Üretim sonucu uzlaştırılmalı; ikinci ücretli üretim başlatılmadı.',
+        payload: { ...payload, imageReconciliationRequired: true },
+      }).eq('id', creativeId).eq('org_id', creative.org_id)
+        .eq('payload->imageDirectIntent->>requestId', intent.requestId)
+      return { ok: false, error: 'Üretim sonucu uzlaştırılmalı; ikinci ücretli üretim başlatılmadı.' }
+    }
+  }
+
   // Flow işi HTTP isteğinin ömründen uzundur. Job kimliği DB'de tutulur ve her
   // servis turunda yalnızca bir kez sorgulanır; uzun kuyrukta isteği açık tutmayız.
+  if (!isVideo && payload.imageJob) {
+    try {
+      const image = await readImageJob(payload.imageJob, creative.org_id)
+      if (!image) return { ok: true, pending: true, retryAfterSeconds: 5 }
+      const ext = image.mimeType === 'image/jpeg' ? 'jpg' : image.mimeType === 'image/webp' ? 'webp' : 'png'
+      // Stable storage identity: concurrent polls and upload retries reuse the same bytes, never another render.
+      const storagePath = `${creative.org_id}/${creative.id}/${payload.imageJob.id}.${ext}`
+      const upload = await supabase.storage.from('creatives').upload(storagePath, image.data, { contentType: image.mimeType, upsert: true })
+      if (upload.error) return { ok: true, pending: true, retryAfterSeconds: 10, error: upload.error.message }
+      const { data: url } = supabase.storage.from('creatives').getPublicUrl(storagePath)
+      const update = await supabase.from('creatives').update({
+        status: 'ready', error: null, storage_path: storagePath, public_url: url.publicUrl,
+        width: image.width || null, height: image.height || null,
+        payload: { ...payload, imageJob: null, provider: 'omnistudio', outputSha256: createHash('sha256').update(image.data).digest('hex'), cost: { provider: 'omnistudio', imageCount: 1 } },
+      }).eq('id', creativeId).eq('org_id', creative.org_id).eq('payload->imageJob->>id', payload.imageJob.id).select('id').maybeSingle()
+      if (update.error) return { ok: true, pending: true, retryAfterSeconds: 10, error: update.error.message }
+      if (update.data?.id !== creativeId) return { ok: true, pending: true, retryAfterSeconds: 5 }
+      return { ok: true, ready: true, publicUrl: url.publicUrl }
+    } catch (error) {
+      if (!(error instanceof ImageJobFailedError)) return { ok: true, pending: true, retryAfterSeconds: 10 }
+      const message = error.message.slice(0,400)
+      await supabase.from('creatives').update({ status: 'failed', error: message,
+        payload: error instanceof ImageJobReconciliationError
+          ? { ...payload, imageReconciliationRequired: true }
+          : { ...payload, imageTerminalFailure: { kind: 'PROVIDER_FAILED', jobId: payload.imageJob.id,
+            gatewayUrl: payload.imageJob.gatewayUrl }, imageSubmissionUncertain: false },
+      }).eq('id', creativeId).eq('org_id', creative.org_id).eq('payload->imageJob->>id', payload.imageJob.id)
+      return { ok: false, error: message }
+    }
+  }
+
   if (creative.status === 'rendering' && isVideo) {
     const flowJob = readFlowJob(payload)
     if (flowJob && !payload.pendingVideoUrl) {
@@ -381,10 +449,20 @@ export async function processCreativeGeneration(
     }
   }
 
+  if (!isVideo && creative.status === 'rendering' && (payload.imageSubmissionUncertain || payload.imageSubmitIntent)) {
+    // Recover only with the same durable idempotency key; this is not a new attempt.
+    const recoveryClaim = await supabase.from('creatives').update({ status: 'pending' })
+      .eq('id', creativeId).eq('org_id', creative.org_id).eq('status', 'rendering')
+      .eq('updated_at', creative.updated_at).select('id').maybeSingle()
+    if (!recoveryClaim.data) return { ok: true, pending: true, retryAfterSeconds: 10 }
+    return processCreativeGeneration(creativeId, supabase)
+  }
+
   const staleBefore = new Date(Date.now() - STALE_RENDER_MS).toISOString()
   if (creative.status === 'rendering') {
     const isStale = Boolean(creative.updated_at && creative.updated_at < staleBefore)
     if (!isStale) return { ok: false, busy: true, error: 'Üretim sürüyor.' }
+    if (!isVideo) return { ok: false, busy: true, error: 'Önceki görsel gönderiminin sonucu doğrulanmalı; çift üretim başlatılmadı.' }
     await supabase
       .from('creatives')
       .update({ status: 'pending', error: null })
@@ -398,7 +476,7 @@ export async function processCreativeGeneration(
     .update({ status: 'rendering', error: null })
     .eq('id', creativeId)
     .in('status', ['pending', 'failed'])
-    .select('id')
+    .select('id, updated_at')
     .maybeSingle()
 
   if (!claimed.data) {
@@ -411,7 +489,9 @@ export async function processCreativeGeneration(
     if (again?.status === 'rendering') return { ok: false, busy: true, error: 'Üretim sürüyor.' }
     return { ok: false, error: 'Üretim kilitlenemedi.' }
   }
+  let claimedUpdatedAt = claimed.data.updated_at
 
+  try {
   const refs: ReferenceImage[] = []
 
   // 1. Kaynak görsel (Revizyon, Varyasyon veya Görselden Türet):
@@ -424,35 +504,25 @@ export async function processCreativeGeneration(
       .maybeSingle()
     if (base?.public_url) {
       const image = await fetchBuffer(base.public_url)
-      if (image) refs.push({ ...image, role: 'base' })
-    }
+      if (!image) throw new Error('Kaynak görsel indirilemedi; referanssız üretim başlatılmadı.')
+      refs.push({ ...image, role: 'base' })
+    } else throw new Error('Kaynak görsel bu müşteride bulunamadı.')
   }
 
   // 2. Ürün görseli referansı (Varsa her zaman eklenir):
   // BUG-FIX: Önceki limit >= 1 idi, çoklu ürün kampanyalarında sadece 1 ürün
   // görseli gidiyordu. Şimdi logo ve base için yer bırakarak 2'ye çıkarıldı.
-  const maxProductRefs = Math.max(1, MAX_REFS - refs.length - 1) // logo için 1 slot ayır
   for (const product of snapshot.products) {
-    if (refs.filter((r) => r.role === 'product').length >= maxProductRefs) break
-    if (!product.include?.image || !product.imageUrl) continue
+    if (!product.include?.image) continue
+    if (!product.imageUrl) throw new Error(`Seçilen ürünün görseli eksik: ${product.name}`)
     const image = await fetchBuffer(product.imageUrl)
-    if (image) refs.push({ ...image, role: 'product' })
-  }
-
-  // 3. Kullanıcının yüklediği ek referans görseller (referenceImageUrls):
-  const incomingRefUrls = (snapshot as any).referenceImageUrls
-  if (Array.isArray(incomingRefUrls)) {
-    for (const refUrl of incomingRefUrls) {
-      if (refs.length >= MAX_REFS) break
-      if (!refUrl || typeof refUrl !== 'string') continue
-      const image = await fetchBuffer(refUrl)
-      if (image) refs.push({ ...image, role: 'product' })
-    }
+    if (!image) throw new Error(`Seçilen ürün görseli indirilemedi: ${product.name}`)
+    refs.push({ ...image, role: 'product' })
   }
 
   // 4. Logo Referansı: İşletmenin logosu varsa ve useLogo açıkça false yapılmamışsa HER ZAMAN GİTSİN!
   const shouldIncludeLogo = snapshot.useLogo !== false
-  if (shouldIncludeLogo && refs.length < MAX_REFS) {
+  if (shouldIncludeLogo) {
     let logoPath = (snapshot as any).customLogoUrl || snapshot.brandKit?.logoPath || null
     if (!logoPath) {
       const { data: orgLogo } = await supabase
@@ -466,7 +536,8 @@ export async function processCreativeGeneration(
     if (logoPath) {
       if (logoPath.startsWith('http')) {
         const image = await fetchBuffer(logoPath)
-        if (image) refs.push({ ...image, role: 'logo' })
+        if (!image) throw new Error('Marka logosu indirilemedi; logosuz üretim başlatılmadı.')
+        refs.push({ ...image, role: 'logo' })
       } else {
         let blob = (await supabase.storage.from('brand-assets').download(logoPath)).data
         if (!blob) {
@@ -487,12 +558,23 @@ export async function processCreativeGeneration(
         }
       }
     }
+    if (!refs.some(ref => ref.role === 'logo')) throw new Error('Seçilen marka logosu okunamadı; üretim başlatılmadı.')
   }
 
-  const { prompt } = buildCreativePrompt(snapshot)
+  // Additional references cannot silently displace a canonical product or logo.
+  for (const refUrl of snapshot.referenceImageUrls || []) {
+    const image = await fetchBuffer(refUrl)
+    if (!image) throw new Error('Ek referans görsel indirilemedi; üretim başlatılmadı.')
+    refs.push({ ...image, role: 'base' })
+  }
+  if (refs.length > MAX_REFS) throw new Error(`En fazla ${MAX_REFS} referans destekleniyor (logo ve ürün dahil). Referanslar sessizce çıkarılmadı.`)
+
+  // Only the server-created quick-send template may preserve its existing prompt.
+  // Wizard payloads cannot override their reference-led compiler.
+  const prompt = creative.template === 'ai_send' && payload.quickSendPrompt
+    ? payload.quickSendPrompt : buildCreativePrompt(snapshot).prompt
   const aspect = snapshot.aspect || formatToAspect(creative.format)
 
-  try {
     const { data: orgData } = await supabase
       .from('organizations')
       .select('name, ai_image_mode')
@@ -578,27 +660,8 @@ export async function processCreativeGeneration(
       const chosenProduct = snapshot.products?.[0]
       let productImageUrl = chosenProduct?.imageUrl || null
 
-      // Eğer seçilen ürünün görseli yoksa kütüphanedeki hazır görsellerden destek al
-      if (!productImageUrl && creative.org_id) {
-        try {
-          const { data: latestImg } = await supabase
-            .from('creatives')
-            .select('public_url')
-            .eq('org_id', creative.org_id)
-            .eq('status', 'ready')
-            .neq('format', 'video')
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle()
-          if (latestImg?.public_url) {
-            productImageUrl = latestImg.public_url
-          }
-        } catch (_) {}
-      }
-
-      // Eğer ürün görseli bulunamazsa kurumsal logoyu referans olarak kullan
       if (!productImageUrl) {
-        productImageUrl = logoUrl
+        throw new Error('Video için seçilen ürünün kanonik referans görseli eksik; başka ürün veya logo yerine kullanılmadı.')
       }
 
       productImageUrl = resolveAssetUrl(productImageUrl)
@@ -854,10 +917,44 @@ export async function processCreativeGeneration(
       tenantId: creative.org_id,
       orgId: creative.org_id,
       conversationId: creative.id,
-      requestId: `${creative.id}-${Date.now()}`,
+      requestId: payload.imageSubmitIntent?.requestId || `${creative.id}:image:${payload.imageAttempt || 'initial'}`,
+      brandKit: snapshot.brandKit,
+      enqueueOnly: true,
+      recoveringSubmission: payload.imageSubmissionUncertain === true || Boolean(payload.imageSubmitIntent),
+      submissionGatewayUrl: payload.imageSubmitIntent?.gatewayUrl,
+      onDirectSubmitting: async intent => {
+        const imageDirectIntent = { ...intent, storagePath: `${creative.org_id}/${creative.id}/direct-${createHash('sha256').update(intent.requestId + ':' + intent.provider).digest('hex')}.image`, startedAt: new Date().toISOString() }
+        const saved = await supabase.from('creatives').update({
+          payload: { ...payload, imageDirectIntent, imageReconciliationRequired: true },
+        }).eq('id', creativeId).eq('org_id', creative.org_id).eq('status', 'rendering')
+          .eq('updated_at', claimedUpdatedAt).select('id, updated_at').maybeSingle()
+        if (saved.error || saved.data?.id !== creativeId) throw new Error('Doğrudan üretim niyeti kaydedilemedi; üretim yapılmadı.')
+        payload.imageDirectIntent = imageDirectIntent
+        payload.imageReconciliationRequired = true
+        claimedUpdatedAt = saved.data.updated_at
+      },
+      onSubmitting: async intent => {
+        const imageSubmitIntent = payload.imageSubmitIntent || { ...intent, startedAt: new Date().toISOString() }
+        const saved = await supabase.from('creatives').update({
+          payload: { ...payload, imageSubmitIntent, imageSubmissionUncertain: true },
+        }).eq('id', creativeId).eq('org_id', creative.org_id).eq('status', 'rendering')
+          .eq('updated_at', claimedUpdatedAt).select('id, updated_at').maybeSingle()
+        if (saved.error || saved.data?.id !== creativeId) throw new Error('Gönderim niyeti kalıcı kaydedilemedi; üretim başlatılmadı.')
+        payload.imageSubmitIntent = imageSubmitIntent
+        payload.imageSubmissionUncertain = true
+        claimedUpdatedAt = saved.data.updated_at
+      },
+      onQueued: async imageJob => {
+        const saved = await supabase.from('creatives').update({
+          payload: { ...payload, imageJob, imageSubmissionUncertain: false, generatedPrompt: prompt, originalPrompt: snapshot.brief },
+        }).eq('id', creativeId).eq('org_id', creative.org_id).eq('status', 'rendering')
+          .eq('updated_at', claimedUpdatedAt).select('id').maybeSingle()
+        if (saved.error) throw new Error(saved.error.message)
+        if (saved.data?.id !== creativeId) throw new Error('Üretim kaydı başka işlem tarafından değiştirildi; mevcut iş korunuyor.')
+      },
     })
-    const ext = image.mimeType.includes('jpeg') ? 'jpg' : 'png'
-    const path = `${creative.org_id}/${crypto.randomUUID()}.${ext}`
+    const ext = image.mimeType.includes('jpeg') ? 'jpg' : image.mimeType.includes('webp') ? 'webp' : 'png'
+    const path = payload.imageDirectIntent?.storagePath || `${creative.org_id}/${crypto.randomUUID()}.${ext}`
     const { error: upError } = await supabase.storage.from('creatives').upload(path, image.data, {
       contentType: image.mimeType || 'image/png',
       upsert: false,
@@ -865,17 +962,12 @@ export async function processCreativeGeneration(
     if (upError) throw new Error(upError.message)
 
     const { data: publicUrl } = supabase.storage.from('creatives').getPublicUrl(path)
-    const size =
-      aspect === '16:9'
-        ? { width: 1280, height: 720 }
-        : aspect === '9:16'
-          ? { width: 1024, height: 1820 }
-          : aspect === '4:5'
-            ? { width: 1024, height: 1280 }
-            : { width: 1024, height: 1024 }
-
     const nextPayload: CreativePayload = {
       ...snapshot,
+      imageDirectIntent: null,
+      imageSubmitIntent: null,
+      imageSubmissionUncertain: false,
+      imageReconciliationRequired: false,
       originalPrompt: snapshot.brief,
       generatedPrompt: prompt,
       provider: image.provider,
@@ -883,23 +975,50 @@ export async function processCreativeGeneration(
       cost: { provider: image.provider, imageCount: 1 },
     }
 
-    const { error } = await supabase
+    const { error, data: finalized } = await supabase
       .from('creatives')
       .update({
         status: 'ready',
         error: null,
         storage_path: path,
         public_url: publicUrl.publicUrl,
-        width: size.width,
-        height: size.height,
+        width: image.width || null,
+        height: image.height || null,
         payload: nextPayload,
       })
       .eq('id', creativeId)
       .eq('org_id', creative.org_id)
+      .eq('status', 'rendering')
+      .eq('updated_at', claimedUpdatedAt)
+      .select('id').maybeSingle()
 
     if (error) throw new Error(error.message)
-    return { ok: true }
+    if (finalized?.id !== creativeId) throw new Error('Final görsel kaydı başka işlem tarafından değiştirildi; ham çıktı korunuyor.')
+    return { ok: true, ready: true, publicUrl: publicUrl.publicUrl }
   } catch (error) {
+    if (error instanceof DirectImageReconciliationError || payload.imageDirectIntent) {
+      // Intent is already durable, so even loss of this diagnostic write cannot trigger generation.
+      await supabase.from('creatives').update({ error: 'Doğrudan üretim sonucu uzlaştırılmalı; ikinci üretim yapılmadı.',
+        payload: { ...payload, imageReconciliationRequired: true },
+      }).eq('id', creativeId).eq('org_id', creative.org_id).eq('status', 'rendering')
+        .eq('updated_at', claimedUpdatedAt)
+      return { ok: false, error: 'Üretim sonucu uzlaştırılmalı; mevcut ham çıktı varsa yalnız kaydetme yeniden denenecek.' }
+    }
+    if (error instanceof ImageJobPendingError) {
+      // The same stable request key recovers the receipt even if the first persistence failed.
+      const saved = await supabase.from('creatives').update({ status: 'rendering', error: null,
+        payload: { ...payload, imageJob: error.job, imageSubmissionUncertain: false, generatedPrompt: buildCreativePrompt(snapshot).prompt },
+      }).eq('id', creativeId).eq('org_id', creative.org_id).eq('status', 'rendering')
+        .eq('updated_at', claimedUpdatedAt).select('id').maybeSingle()
+      return { ok: true, pending: true, retryAfterSeconds: saved.error ? 10 : 5 }
+    }
+    if (error instanceof ImageSubmissionUncertainError) {
+      await supabase.from('creatives').update({ status: 'rendering', error: error.message,
+        payload: { ...payload, imageSubmissionUncertain: true },
+      }).eq('id', creativeId).eq('org_id', creative.org_id).eq('status', 'rendering')
+        .eq('updated_at', claimedUpdatedAt)
+      return { ok: true, pending: true, retryAfterSeconds: 10 }
+    }
     const message = error instanceof Error ? error.message : 'Görsel üretilemedi.'
     console.error('[creative.generate]', creativeId, message)
     await supabase

@@ -12,6 +12,7 @@ import { useToast } from '@/components/toast'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { VARIATION_PRESETS } from '@/lib/creative/types'
 import { VIDEO_CAMPAIGN_STAGES } from '@/lib/creative/use-creative-progress'
+import { detailRenderState, hasConfirmedRenderResult, renderRemainingText } from '@/lib/creative/detail-render-state'
 import {
   deleteCreative,
   renameCreative,
@@ -320,9 +321,10 @@ export function CreativeDetail({
 
   const displayPublicUrl = livePublicUrl || creative.publicUrl
   const displayThumbnailUrl = liveThumbnailUrl || creative.thumbnailUrl
-  const isReady = creative.status === 'ready' || Boolean(livePublicUrl)
-  const shownError = localError || (creative.status === 'failed' ? creative.error : null)
-  const spinning = !isReady && ((running && !localError) || busyRender)
+  const renderState = detailRenderState({ status: creative.status, publicUrl: creative.publicUrl, error: creative.error, livePublicUrl, localError, busyRender })
+  const isReady = renderState.ready
+  const shownError = renderState.error
+  const spinning = renderState.spinning
 
   async function requestRender(): Promise<{
     error: string | null
@@ -360,6 +362,9 @@ export function CreativeDetail({
         progressInfo: json?.progressInfo ?? null,
       }
     }
+    if (!hasConfirmedRenderResult({ ready: json?.ready, publicUrl: json?.publicUrl })) {
+      return { error: null, pending: true, retryAfterSeconds: 5 }
+    }
     return {
       error: null,
       pending: false,
@@ -370,9 +375,10 @@ export function CreativeDetail({
   }
 
   useEffect(() => {
-    if (creative.status === 'ready') {
+    if (creative.status === 'ready' || creative.status === 'failed') {
       setBusyRender(false)
       setLocalError(null)
+      setServerProgress(null)
     }
   }, [creative.status])
 
@@ -411,7 +417,7 @@ export function CreativeDetail({
     async function pollLoop() {
       if (!isMounted) return
       if (Date.now() - startTime > MAX_WAIT_MS) {
-        setLocalError('Üretim zaman aşımına uğradı. Sayfayı yenileyip tekrar deneyebilirsiniz.')
+        setLocalError('Sonuç takibi zaman aşımına uğradı; üretimin başarısız olduğu doğrulanmadı. Sayfayı yenileyerek mevcut işi kontrol edin; yeni üretim başlatılmadı.')
         setBusyRender(false)
         return
       }
@@ -544,12 +550,11 @@ export function CreativeDetail({
     remainingSeconds = serverProgress.remainingSeconds
   }
 
-  const remainingText =
-    remainingSeconds <= 0
-      ? isVideo
-        ? '0 sn · Video tamamlandı, yükleniyor…'
-        : '0 sn · Görsel tamamlandı, kütüphaneye aktarılıyor…'
-      : `Tahmini kalan süre: ~${remainingSeconds} sn`
+  if (remainingSeconds <= 0 && !(serverProgress && isVideo)) {
+    stageLabel = 'Üretim sonucu kontrol ediliyor…'
+    stageDetail = 'Dosyanın hazır olduğu henüz doğrulanmadı'
+  }
+  const remainingText = renderRemainingText(remainingSeconds)
 
   return (
     <div className="space-y-3">
@@ -615,15 +620,15 @@ export function CreativeDetail({
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={displayPublicUrl}
+                  src={getSafeMediaUrl(displayPublicUrl)}
                   alt={creative.title ?? ''}
                   className="w-full rounded-[var(--radius-card)] object-contain"
                 />
               </button>
-              <DetailImageMenu publicUrl={displayPublicUrl} />
+              <DetailImageMenu publicUrl={getSafeMediaUrl(displayPublicUrl) || displayPublicUrl} />
               <ImageLightbox
                 open={lightboxOpen}
-                src={displayPublicUrl}
+                src={getSafeMediaUrl(displayPublicUrl) || displayPublicUrl}
                 alt={creative.title ?? ''}
                 onClose={() => setLightboxOpen(false)}
               />
@@ -747,7 +752,7 @@ export function CreativeDetail({
                 >
                   {row.publicUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={row.publicUrl} alt="" className="size-12 rounded object-cover" />
+                    <img src={getSafeMediaUrl(row.publicUrl)} alt="" className="size-12 rounded object-cover" />
                   ) : (
                     <span className="size-12 rounded bg-canvas" />
                   )}

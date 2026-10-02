@@ -10,6 +10,8 @@ import {
   type AiProviderId,
   type ResolvedAiConfig,
 } from './config'
+import { ImageJobFailedError, ImageJobPendingError, ImageSubmissionUncertainError, inlineReference, readImageJob, submitImageJob, type ImageJobReceipt } from './omnistudio-image-job'
+import { inspectImageOutput, ImageOutputInvalidError } from './image-output'
 
 export type AspectRatio = '1:1' | '4:5' | '9:16' | '16:9'
 
@@ -17,12 +19,21 @@ export type GeneratedImage = {
   data: Buffer
   mimeType: string
   provider: AiProviderId
+  width?: number
+  height?: number
 }
 
 export type ReferenceImage = {
   data: Buffer
   mimeType: string
   role?: 'product' | 'logo' | 'base'
+}
+
+export class DirectImageReconciliationError extends Error {
+  constructor(public readonly provider: AiProviderId) {
+    super(`${provider} üretim çağrısının sonucu uzlaştırılmalı; başka ücretli sağlayıcı denenmedi.`)
+    this.name = 'DirectImageReconciliationError'
+  }
 }
 
 export type ImageMetadata = {
@@ -32,6 +43,13 @@ export type ImageMetadata = {
   orgId?: string
   conversationId?: string
   requestId?: string
+  brandKit?: Record<string, unknown> | null
+  enqueueOnly?: boolean
+  recoveringSubmission?: boolean
+  submissionGatewayUrl?: string
+  onSubmitting?: (intent: { requestId: string; gatewayUrl: string }) => Promise<void>
+  onDirectSubmitting?: (intent: { requestId: string; provider: AiProviderId }) => Promise<void>
+  onQueued?: (job: ImageJobReceipt) => Promise<void>
 }
 
 type ImageProvider = {
@@ -90,7 +108,7 @@ function buildProviders(config: ResolvedAiConfig): Record<AiProviderId, ImagePro
       label: 'OmniStudio AI Engine',
       isConfigured: () => process.env.OMNISTUDIO_DISABLED !== 'true',
       async generate(prompt, aspect, references, metadata) {
-        const gatewayUrl = (process.env.OMNISTUDIO_GATEWAY_URL || 'http://167.233.201.31:3456').replace(/\/$/, '')
+        const gatewayUrl = (metadata?.submissionGatewayUrl || process.env.OMNISTUDIO_GATEWAY_URL || 'http://167.233.201.31:3456').replace(/\/$/, '')
 
         // Sağlık Kontrolü (Gateway erişilebilir mi?)
         const healthRes = await fetch(`${gatewayUrl}/health`, { signal: AbortSignal.timeout(5000) }).catch(() => null)
@@ -98,58 +116,45 @@ function buildProviders(config: ResolvedAiConfig): Record<AiProviderId, ImagePro
           throw new Error('OmniStudio Gateway çevrimdışı')
         }
 
-        const size = aspect === '16:9' ? '1536x1024' : '1024x1024'
+        const size = `${PIXELS[aspect].width}x${PIXELS[aspect].height}`
         const refs = (references ?? []).slice(0, MAX_REFERENCE_IMAGES)
-        const referenceImages = refs.map((ref) => ({
-          mimeType: ref.mimeType || 'image/png',
-          data: ref.data.toString('base64'),
-          role: ref.role || 'base',
-        }))
+        const referenceImages = refs.map(inlineReference)
 
-        const response = await fetch(`${gatewayUrl}/v1/images/generations`, {
-          method: 'POST',
-          signal: AbortSignal.timeout(115000), // 115s: provides ample headroom for OmniStudio ChatGPT image generation
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        if (metadata?.onSubmitting) {
+          if (!metadata.requestId) throw new ImageSubmissionUncertainError()
+          try { await metadata.onSubmitting({ requestId: metadata.requestId, gatewayUrl }) }
+          catch { throw new ImageSubmissionUncertainError() }
+        }
+        const job = await submitImageJob(gatewayUrl, {
             prompt,
             size,
             response_format: 'b64_json',
             referenceImages,
+            brandKit: metadata?.brandKit || null,
+            optimize: false, // The wizard has already compiled the selected brand/creative template.
             workspace: metadata?.workspace || 'WhatsApp Botu',
             customer: metadata?.customer || 'Panel',
             tenantId: metadata?.tenantId || metadata?.orgId || null,
             orgId: metadata?.orgId || metadata?.tenantId || null,
             conversationId: metadata?.conversationId || null,
             requestId: metadata?.requestId || null,
-          }),
         })
-
-        if (!response.ok) {
-          throw new Error(`OmniStudio ${response.status}: ${(await response.text()).slice(0, 200)}`)
+        // Once accepted, a timeout must NEVER fall through to another paid generator.
+        try {
+          await metadata?.onQueued?.(job)
+          if (metadata?.enqueueOnly) throw new ImageJobPendingError(job)
+          const deadline = Date.now() + 90000
+          while (Date.now() < deadline) {
+            const image = await readImageJob(job, metadata?.tenantId || metadata?.orgId)
+            if (image) return { data: image.data, mimeType: image.mimeType, provider: 'omnistudio' }
+            await new Promise(resolve => setTimeout(resolve, 2500))
+          }
+        } catch (error) {
+          if (error instanceof ImageJobPendingError || error instanceof ImageJobFailedError) throw error
+          // Even a failed observation/persistence cannot justify duplicate billing.
+          throw new ImageJobPendingError(job)
         }
-
-        const json = (await response.json()) as { data?: { b64_json?: string; url?: string }[] }
-        const item = json.data?.[0]
-        if (!item) throw new Error('OmniStudio görsel döndürmedi')
-
-        let imageBuffer: Buffer
-        if (item.b64_json) {
-          imageBuffer = Buffer.from(item.b64_json, 'base64')
-        } else if (item.url) {
-          const publicUrl = item.url
-            .replace('localhost:3456', '167.233.201.31:3456')
-            .replace('127.0.0.1:3456', '167.233.201.31:3456')
-          const imgRes = await fetch(publicUrl, { signal: AbortSignal.timeout(30000) })
-          imageBuffer = Buffer.from(await imgRes.arrayBuffer())
-        } else {
-          throw new Error('OmniStudio geçersiz veri')
-        }
-
-        return {
-          data: imageBuffer,
-          mimeType: 'image/png',
-          provider: 'omnistudio',
-        }
+        throw new ImageJobPendingError(job)
       },
     },
     gemini: {
@@ -220,6 +225,7 @@ function buildProviders(config: ResolvedAiConfig): Record<AiProviderId, ImagePro
         const model = config.openai.imageModel
         const refs = (references ?? []).slice(0, MAX_REFERENCE_IMAGES)
         const useEdit = refs.length > 0 && model.startsWith('gpt-image')
+        if (refs.length && !useEdit) throw new Error('Seçilen OpenAI modeli referans düzenleme desteklemiyor; referanslar atılmadı.')
         if (useEdit) {
           const form = new FormData()
           form.set('model', model)
@@ -345,7 +351,8 @@ function buildProviders(config: ResolvedAiConfig): Record<AiProviderId, ImagePro
 export function activeImageProviders(
   bag?: AiKeyBag | null,
 ): { id: AiProviderId; label: string }[] {
-  const registry = buildProviders(resolveAiConfig(bag))
+  const config = resolveAiConfig(bag)
+  const registry = buildProviders(config)
   return resolveImageProviderOrder(bag)
     .map((id) => registry[id])
     .filter((provider) => provider.isConfigured())
@@ -363,18 +370,42 @@ export async function generateImage(
   references?: ReferenceImage[],
   metadata?: ImageMetadata,
 ): Promise<{ image: GeneratedImage; attempts: string[] }> {
-  const registry = buildProviders(resolveAiConfig(bag))
+  if ((references?.length || 0) > MAX_REFERENCE_IMAGES) throw new Error(`En fazla ${MAX_REFERENCE_IMAGES} referans destekleniyor; seçilen görseller çıkarılmadı.`)
+  const config = resolveAiConfig(bag)
+  const registry = buildProviders(config)
   const attempts: string[] = []
   const refs = (references ?? []).slice(0, MAX_REFERENCE_IMAGES)
 
-  for (const id of resolveImageProviderOrder(bag)) {
+  const providerOrder = metadata?.recoveringSubmission ? ['omnistudio' as const] : resolveImageProviderOrder(bag)
+  for (const id of providerOrder) {
+    if (refs.length && (id === 'cloudflare' || id === 'pollinations')) {
+      attempts.push(`${id}: seçilen referansları desteklemediği için denenmedi.`)
+      continue
+    }
     const provider = registry[id]
     if (!provider.isConfigured()) continue
+    if (refs.length && id === 'openai' && !config.openai.imageModel.startsWith('gpt-image')) {
+      attempts.push('OpenAI: seçilen model referans düzenlemeyi desteklemiyor; üretim çağrısı yapılmadı.')
+      continue
+    }
 
+    let directSubmissionStarted = false
     try {
+      if (id !== 'omnistudio') {
+        // All local capability/configuration checks happen before this durable boundary.
+        if (metadata?.onDirectSubmitting) {
+          if (!metadata.requestId) throw new DirectImageReconciliationError(id)
+          await metadata.onDirectSubmitting({ requestId: metadata.requestId, provider: id }).catch(() => { throw new DirectImageReconciliationError(id) })
+        }
+        directSubmissionStarted = true
+      }
       const image = await provider.generate(prompt, aspect, refs, metadata)
-      return { image, attempts }
+      const measured = await inspectImageOutput(image.data)
+      return { image: { ...image, ...measured }, attempts }
     } catch (error) {
+      if (directSubmissionStarted || error instanceof DirectImageReconciliationError) throw new DirectImageReconciliationError(id)
+      if (error instanceof ImageJobPendingError || error instanceof ImageJobFailedError || error instanceof ImageSubmissionUncertainError || error instanceof ImageOutputInvalidError) throw error
+      if (metadata?.recoveringSubmission) throw new ImageSubmissionUncertainError()
       attempts.push(
         `${provider.label}: ${error instanceof Error ? error.message : String(error)}`,
       )
