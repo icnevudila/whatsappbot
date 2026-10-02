@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { CheckCircle2 } from 'lucide-react'
+import { CampaignPrepInfographic } from './campaign-prep-infographic'
 
 const STEP_DURATION_MS = 5000
 
@@ -172,16 +173,20 @@ export function HowItWorksSimple() {
 
             {/* Right Interactive Visual Frame */}
             <div className="lg:col-span-7">
-              <div className="relative aspect-[16/10] w-full rounded-2xl overflow-hidden border border-slate-200/90 shadow-2xl bg-slate-900">
-                <Image
-                  key={current.image}
-                  src={current.image}
-                  alt={current.title}
-                  fill
-                  className="object-cover object-top transition-all duration-500 ease-out"
-                  priority
-                />
-              </div>
+              {activeStep === 0 ? (
+                <CampaignPrepInfographic />
+              ) : (
+                <div className="relative aspect-[16/10] w-full rounded-2xl overflow-hidden border border-slate-200/90 shadow-2xl bg-slate-900">
+                  <Image
+                    key={current.image}
+                    src={current.image}
+                    alt={current.title}
+                    fill
+                    className="object-cover object-top transition-all duration-500 ease-out"
+                    priority
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>

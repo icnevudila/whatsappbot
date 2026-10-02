@@ -3,6 +3,7 @@
 import { AudienceWorkspace } from './audience-workspace'
 import { ApprovedScreenGallery } from './approved-screen-gallery'
 import { UnifiedInboxShowcase } from './unified-inbox-showcase'
+import { CleanCreativeStudio } from './clean-creative-studio'
 import { useState, type ReactNode } from 'react'
 import { CreativeTransform, SectorCampaignLab, ContactValidationDemo, ProductScreenExplorer } from './product-modules'
 
@@ -23,7 +24,7 @@ export function LandingCreativeStory() {
       title="Ürün fotoğrafınızdan profesyonel dikey reklam hazırlayın."
       description="Ajansa veya karmaşık video editörlerine gerek yok. Ürün fotoğrafınızı yükleyin; saniyeler içinde etkileyici dikey reklam videonuz ve kampanya mesajınız hazır olsun."
     >
-      <CreativeTransform />
+      <CleanCreativeStudio />
     </Story>
   )
 }
