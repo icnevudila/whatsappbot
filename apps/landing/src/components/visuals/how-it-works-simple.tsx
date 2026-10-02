@@ -21,13 +21,13 @@ const WORKFLOW_STEPS = [
   {
     step: '02',
     title: 'Mesajlarınızı Güvenle Gönderin',
-    subtitle: 'Bağlı WhatsApp hatlarınız üzerinden mesajlar zamana yayılarak müşterilerinize ulaştırılır.',
+    subtitle: 'Tek tıkla başlatın; mesajlarınız doğal aralıklarla zamana yayılarak müşterilerinize güvenle ulaştırılsın.',
     points: [
-      'WhatsApp numaranızı QR kodla sisteme bağlayın',
-      'Gönderimler hatlar arasında akıllıca paylaştırılarak güvenle ilerler',
-      'Tek bir numaraya yük bindirmeden kesintisiz iletişim sağlanır',
+      'WhatsApp numaranızı saniyeler içinde QR ile sisteme bağlayın',
+      'Doğal gönderim aralıkları ve akıllı mola algoritmasıyla güvenli iletim sağlanır',
+      'İletim, teslimat ve okunma durumlarını canlı panelden anlık olarak takip edin',
     ],
-    image: '/landing/infographics/03-coklu-hat-chatgpt-4-3.png',
+    image: '/landing/infographics/03-guvenli-gonderim-chatgpt-16-9.png',
   },
   {
     step: '03',
@@ -80,8 +80,7 @@ export function HowItWorksSimple() {
       <div className="relative z-10 mx-auto max-w-[1320px] px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-14 sm:mb-20">
-          <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 border border-emerald-200/80 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-800">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="text-xs sm:text-sm font-semibold tracking-wider uppercase text-emerald-800">
             3 Kolay Adımda Mesajify
           </span>
           <h2 className="mt-5 text-[clamp(32px,4.8vw,60px)] font-bold tracking-tight text-slate-900 leading-[1.12]">

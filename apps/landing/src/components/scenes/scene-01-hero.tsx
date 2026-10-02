@@ -67,13 +67,6 @@ export function Scene01Hero() {
     <section className="ml-product-story ml-hero">
       {/* Sol Taraf: Dinamik Dönen Başlıklar ve Değer Önerisi */}
       <div className="ml-hero-copy">
-        <div className="ml-hero-eyebrow">
-          <span className="inline-flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            DOĞRUDAN WHATSAPP İLE TANITIM VE SATIŞ
-          </span>
-        </div>
-
         <h1 className="text-slate-900">
           Civarınızdaki işletmelere<br />
           <span
@@ -135,12 +128,9 @@ export function Scene01Hero() {
         <div className="ml-hero-film">
           <header className="flex items-center justify-between">
             <MesajifyMark variant="full" size="sm" decorative />
-            <div className="flex items-center gap-2">
-              <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/60">
-                {current.sectorBadge}
-              </span>
-            </div>
+            <span className="text-xs font-medium text-slate-500">
+              {current.sectorBadge}
+            </span>
           </header>
 
           <div className="ml-hero-film-content">

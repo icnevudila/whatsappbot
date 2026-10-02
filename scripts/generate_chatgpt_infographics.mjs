@@ -48,6 +48,34 @@ Bottom action bar:
 Design style: Clean 2D vector SaaS UI, emerald green (#00A884) accents, sharp legible Turkish typography, Apple, Stripe and Linear aesthetic, high-resolution.`,
   },
   {
+    id: 'guvenli-gonderim',
+    filename: '03-guvenli-gonderim-chatgpt-16-9.png',
+    aspect: '1792x1024',
+    prompt: `Professional high-end SaaS web dashboard UI screenshot: 'Mesajify Akıllı ve Güvenli İletim' (Smart WhatsApp Campaign Dispatch & Safe Delivery Queue).
+Crisp light minimalist aesthetic on soft off-white background (#F8FAFC).
+Top navigation bar has official Mesajify squircle logo with 'mesajify' text in dark slate, and campaign status indicator: 'Kampanya Aktif · Gönderim Sürüyor'.
+Dashboard is split into 2 main panels:
+Left Panel (Campaign Progress & Delivery Safety, 45% width):
+- Header: 'Canlı Gönderim Durumu'
+- Large progress bar: '8.420 / 12.840 İletildi (%65)' with emerald green fill.
+- 3 Stat KPI Cards in a row:
+  1. 'İletildi: %99.4' with green double-check icon
+  2. 'Okundu: %84.2' with double-check icon
+  3. 'Gelen Yanıt: 142' with message bubble icon
+- Delivery Pace & Spam Protection Box:
+  * 'Doğal Gönderim Hızı: 4 sn / mesaj'
+  * 'Akıllı Mola Algoritması: Aktif'
+  * Small 'Duraklat' and 'Devam Et' control buttons
+Right Panel (Live Delivery Stream, 55% width):
+- Header: 'Son İletilen Mesajlar (Canlı Akış)'
+- 4 Clean table / feed rows of recipients:
+  1. '+90 532 891 ** **' · 'Ahmet Yılmaz' · '2 sn önce' · Green badge: '✓✓ İletildi'
+  2. '+90 544 312 ** **' · 'Zeynep Kaya' · '6 sn önce' · Blue badge: '✓✓ Okundu'
+  3. '+90 555 740 ** **' · 'Mehmet Demir' · '10 sn önce' · Emerald badge: '💬 Yanıt Geldi'
+  4. '+90 533 118 ** **' · 'Canan Şahin' · '14 sn önce' · Green badge: '✓✓ İletildi'
+Clean 2D vector UI, emerald green (#00A884) accents, sharp legible Turkish typography, Apple, Linear and Stripe SaaS style, high-resolution.`,
+  },
+  {
     id: 'coklu-hat',
     filename: '03-coklu-hat-chatgpt-4-3.png',
     aspect: '1024x1024',

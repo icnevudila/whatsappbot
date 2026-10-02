@@ -5,18 +5,18 @@ import { Network, MessageSquare, BarChart3, ShieldCheck, CheckCircle2 } from 'lu
 const BENTO_FEATURES = [
   {
     icon: Network,
-    badge: 'Akıllı Yük Dengeleme',
-    title: 'Çoklu Hat Akıllı Rota Yönetimi',
+    badge: 'Zaman Ayarlı Dağıtım',
+    title: 'Akıllı ve Güvenli Gönderim Hızı',
     description:
-      'Tek bir numaraya yük bindirmek yerine, gönderimler bağlı tüm WhatsApp hatlarınız arasında zamana yayılarak akıllıca paylaştırılır. Kesintisiz ve güvenli iletişim sağlanır.',
-    stats: 'Otomatik Hat Rotası',
+      'Mesajlarınız doğal insan ritminde, otomatik mola aralıklarıyla zamana yayılarak güvenle iletilir. İster tek resmi numaranızla gönderin, ister işletmeniz büyüdükçe ek hatlar bağlayın.',
+    stats: 'Doğal Gönderim Hızı',
   },
   {
     icon: MessageSquare,
     badge: 'Ortak Gelen Kutusu',
     title: 'Tüm Müşteri Yanıtları Tek Ekranda',
     description:
-      'WhatsApp Web sekmeleri veya telefonlar arasında kaybolmayın. Farklı hatlardan gelen tüm sipariş ve fiyat soruları tek ekranda toplanır, ekibiniz anında yanıtlar.',
+      'WhatsApp Web sekmeleri veya telefonlar arasında kaybolmayın. Gelen tüm sipariş, randevu ve fiyat soruları tek ekranda toplanır, ekibiniz anında yanıtlar.',
     stats: 'Hızlı Şablon & Satış',
   },
   {
@@ -30,9 +30,9 @@ const BENTO_FEATURES = [
   {
     icon: ShieldCheck,
     badge: 'Altyapı Güvencesi',
-    title: 'Güvenli Gönderim ve İzin Protokolü',
+    title: 'Doğrulanmış Kitle ve İzin Protokolü',
     description:
-      'Kontrollü gönderim hızları, otomatik mola aralıkları ve kara liste yönetimiyle WhatsApp iletişiminiz her zaman güvenli kurallar çerçevesinde ilerler.',
+      'Kontrollü gönderim hızları, otomatik duraklatma ve kara liste yönetimiyle WhatsApp iletişiminiz her zaman güvenli kurallar çerçevesinde ilerler.',
     stats: 'Otomatik Koruma',
   },
 ]
@@ -43,8 +43,7 @@ export function Scene07Bento() {
       <div className="relative z-10 mx-auto max-w-[1320px] px-4 sm:px-6 lg:px-8">
         {/* Section Heading */}
         <div className="text-center max-w-3xl mx-auto mb-14 sm:mb-20">
-          <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 border border-emerald-200/80 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-800">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="text-xs sm:text-sm font-semibold tracking-wider uppercase text-emerald-800">
             Mesajify Güçlü Altyapı
           </span>
           <h2 className="mt-5 text-[clamp(32px,4.5vw,56px)] font-bold tracking-tight text-slate-900 leading-[1.12]">
@@ -52,7 +51,7 @@ export function Scene07Bento() {
             <span className="text-emerald-700">Akıllı ve Güvenli Araçlar.</span>
           </h2>
           <p className="mt-4 text-base sm:text-lg text-slate-600 leading-relaxed">
-            Karmaşık teknik terimler ve kafa karıştırıcı süreçler yok. Birden fazla WhatsApp hattını aynı anda yönetin, gelen siparişleri kaçırmayın ve tüm süreci şeffafça izleyin.
+            Karmaşık teknik terimler ve kafa karıştırıcı süreçler yok. Tanıtım mesajlarınızı güvenle gönderin, gelen siparişleri kaçırmayın ve tüm süreci şeffafça izleyin.
           </p>
         </div>
 
