@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
-import { ArrowRight, CheckCircle2, Sparkles, Smartphone } from 'lucide-react'
+import { ArrowRight, CheckCircle2 } from 'lucide-react'
 
 interface CreativeItem {
   id: string
@@ -92,7 +92,7 @@ export function CleanCreativeStudio() {
               <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
                 01 / Girdi
               </span>
-              <span className="text-[11px] font-semibold text-slate-700 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+              <span className="text-xs text-slate-500 font-medium">
                 Ham Telefon Fotoğrafı
               </span>
             </div>
@@ -120,17 +120,24 @@ export function CleanCreativeStudio() {
 
           {/* Orta Kolon: Dönüşüm Köprüsü */}
           <div className="lg:col-span-2 flex flex-col items-center justify-center py-4 text-center">
-            <div className="h-12 w-12 rounded-2xl bg-emerald-50 border border-emerald-200/80 text-emerald-700 flex items-center justify-center shadow-xs mb-3">
-              <Sparkles className="h-6 w-6" />
+            <div className="relative h-16 w-16 sm:h-20 sm:w-20 rounded-2xl overflow-hidden shadow-lg shadow-emerald-900/10 mb-3 hover:scale-105 transition-transform duration-300">
+              <Image
+                src="/landing/infographics/mesajify-studio-icon.png"
+                alt="Mesajify Stüdyo"
+                fill
+                sizes="80px"
+                className="object-cover"
+                priority
+              />
             </div>
-            <span className="text-xs font-bold text-emerald-900 uppercase tracking-wider">
+            <span className="text-xs font-bold text-slate-900 tracking-wider uppercase">
               Mesajify Stüdyo
             </span>
             <span className="text-[11px] text-slate-500 mt-1 max-w-[140px] leading-tight">
               Logo, marka kiti ve mesajınız otomatik entegre edilir
             </span>
             <div className="hidden lg:flex mt-4 text-emerald-600">
-              <ArrowRight className="h-5 w-5 animate-pulse" />
+              <ArrowRight className="h-5 w-5" />
             </div>
           </div>
 
@@ -140,7 +147,7 @@ export function CleanCreativeStudio() {
               <span className="text-xs font-bold uppercase tracking-wider text-emerald-700">
                 02 / Çıktı
               </span>
-              <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200/60">
+              <span className="text-xs text-emerald-700 font-semibold">
                 9:16 Dikey WhatsApp Reklamı
               </span>
             </div>

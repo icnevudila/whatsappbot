@@ -76,6 +76,15 @@ Right Panel (Live Delivery Stream, 55% width):
 Clean 2D vector UI, emerald green (#00A884) accents, sharp legible Turkish typography, Apple, Linear and Stripe SaaS style, high-resolution.`,
   },
   {
+    id: 'studio-icon',
+    filename: 'mesajify-studio-icon.png',
+    aspect: '1024x1024',
+    prompt: `An ultra-premium Apple iOS 3D glassmorphic app icon emblem for 'Mesajify AI Stüdyo'. 
+The emblem is an elegant, polished emerald green (#00A884) rounded squircle with frosted glass bevels and subtle luminous neon edge reflections. 
+In the center is the iconic Mesajify logo symbol (a friendly curved smiling chat loop aperture, glowing with bright emerald light). 
+Floating subtly in front of a clean white studio background with soft ambient lighting, Apple Pro design aesthetic, photorealistic 3D render, octane render, 8K resolution, zero text.`,
+  },
+  {
     id: 'coklu-hat',
     filename: '03-coklu-hat-chatgpt-4-3.png',
     aspect: '1024x1024',
