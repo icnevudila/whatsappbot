@@ -33,7 +33,7 @@ export function Navbar() {
           : 'bg-transparent'
       }`}
     >
-      <div className="max-w-[1240px] mx-auto px-6 h-20 flex items-center justify-between">
+      <div className="max-w-[1380px] mx-auto px-6 h-20 flex items-center justify-between">
         <Link href="/" className="relative z-10 flex items-center">
           <MesajifyMark variant="full" size="sm" priority />
         </Link>
@@ -44,7 +44,11 @@ export function Navbar() {
             <Link
               key={link.name}
               href={link.href}
-              className="text-ink-muted hover:text-ink transition-colors"
+              className={`transition-colors ${
+                scrolled
+                  ? 'text-ink-muted hover:text-ink'
+                  : 'text-white/70 hover:text-white'
+              }`}
             >
               {link.name}
             </Link>
@@ -55,7 +59,11 @@ export function Navbar() {
         <div className="hidden md:flex items-center gap-4">
           <a
             href="https://app.mesajify.com/giris"
-            className="text-sm font-medium text-ink hover:text-ink-muted transition-colors px-4 py-2"
+            className={`text-sm font-medium transition-colors px-4 py-2 ${
+              scrolled
+                ? 'text-ink hover:text-ink-muted'
+                : 'text-white/90 hover:text-white'
+            }`}
           >
             Giriş Yap
           </a>
@@ -69,7 +77,9 @@ export function Navbar() {
 
         {/* Mobile Toggle */}
         <button
-          className="md:hidden relative z-10 p-2 -mr-2 text-ink"
+          className={`md:hidden relative z-10 p-2 -mr-2 transition-colors ${
+            scrolled ? 'text-ink' : 'text-white'
+          }`}
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           aria-label={mobileMenuOpen ? 'Menüyü kapat' : 'Menüyü aç'}
           aria-expanded={mobileMenuOpen}
