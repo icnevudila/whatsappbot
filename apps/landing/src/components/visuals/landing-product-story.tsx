@@ -1,11 +1,12 @@
 'use client'
 
-import { AudienceWorkspace } from './audience-workspace'
+import Image from 'next/image'
+import { MapPin, CheckCircle2, Filter } from 'lucide-react'
 import { ApprovedScreenGallery } from './approved-screen-gallery'
 import { UnifiedInboxShowcase } from './unified-inbox-showcase'
 import { CleanCreativeStudio } from './clean-creative-studio'
-import { useState, type ReactNode } from 'react'
-import { CreativeTransform, SectorCampaignLab, ContactValidationDemo, ProductScreenExplorer } from './product-modules'
+import { type ReactNode } from 'react'
+import { SectorCampaignLab } from './product-modules'
 
 function Story({ eyebrow, title, description, dark = false, chapter = '', children }: { eyebrow: string; title: string; description: string; dark?: boolean; chapter?: string; children: ReactNode }) {
   return <section className={`ml-product-story ml-chapter-${chapter}${dark ? ' ml-story-dark' : ''}`}>
@@ -68,17 +69,60 @@ export function LandingExplorerStory() {
   )
 }
 
-export function LandingDeliveryStory() {
-  const [, setReady] = useState(false)
+export function LandingDiscoveryStory() {
   return (
     <Story
       chapter="delivery"
-      eyebrow="05 / REHBER VE HEDEF KİTLE"
-      title="Müşteri rehberinizi bağlayın veya kitle belirleyin."
-      description="Kendi müşteri listenizi ekleyin veya hedeflediğiniz sektör için kitle talebinde bulunun. Numaralar otomatik kontrol edilir ve güvenli gönderime hazırlanır."
+      eyebrow="HEDEF KİTLE VE İŞLETME BULUCU"
+      title="Kendi listenizi yükleyin veya bölgenizdeki işletmeleri keşfedin."
+      description="Müşteri listeniz hazır değilse endişelenmeyin. İşletme Bulucu ile hedeflediğiniz şehir, ilçe ve sektördeki doğrulanmış WhatsApp işletme numaralarını filtreleyerek kampanya kitlenize dahil edin."
     >
-      <AudienceWorkspace onReady={setReady} />
+      <div className="w-full max-w-[1100px] mx-auto">
+        <div className="relative aspect-[16/10] sm:aspect-[16/9] w-full rounded-3xl overflow-hidden border border-slate-200/90 shadow-2xl bg-slate-50 mb-8">
+          <Image
+            src="/landing/infographics/06-isletme-bulucu-chatgpt-16-9.png"
+            alt="Mesajify İşletme Bulucu ve Hedef Kitle Keşfi"
+            fill
+            sizes="(max-width: 1200px) 100vw, 1100px"
+            className="object-cover object-center"
+            priority
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
+            <div className="flex items-center gap-2.5 mb-2">
+              <MapPin className="h-5 w-5 text-emerald-600 flex-shrink-0" />
+              <h4 className="text-sm font-bold text-slate-900">Bölge & Sektör Taraması</h4>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              Kadıköy, Beşiktaş veya tüm Türkiye genelinde; kafe, restoran, butik veya toptancıları konuma göre filtreleyin.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
+            <div className="flex items-center gap-2.5 mb-2">
+              <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0" />
+              <h4 className="text-sm font-bold text-slate-900">Doğrulanmış Numaralar</h4>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              Sadece aktif ve mesaj alabilen doğrulanmış WhatsApp işletmeleri listelenir; geçersiz numaralar elenir.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
+            <div className="flex items-center gap-2.5 mb-2">
+              <Filter className="h-5 w-5 text-emerald-600 flex-shrink-0" />
+              <h4 className="text-sm font-bold text-slate-900">Tek Tıkla Kampanyaya</h4>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              İster Excel listenizi içe aktarın, ister bulduğunuz işletmeleri tek tıkla kampanya hedef kitlenize ekleyin.
+            </p>
+          </div>
+        </div>
+      </div>
     </Story>
   )
 }
+
 

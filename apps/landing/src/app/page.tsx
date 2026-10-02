@@ -3,6 +3,7 @@ import { HowItWorksSimple } from '@/components/visuals/how-it-works-simple'
 import {
   LandingSectorStory as Scene03Sectors,
   LandingCreativeStory as Scene04CreativeStudio,
+  LandingDiscoveryStory as SceneDiscovery,
   LandingInboxStory as Scene05Inbox,
   LandingExplorerStory as Scene06Explorer,
 } from '@/components/visuals/landing-product-story'
@@ -40,7 +41,12 @@ export default function Home() {
           <Scene03Sectors />
         </div>
 
-        {/* 05 · ORTAK GELEN KUTUSU (Gelen Siparişler, Satış ve Yanıt Yönetimi) */}
+        {/* 05 · HEDEF KİTLE VE İŞLETME BULUCU (Kendi Listeniz veya Harita/Sektör Keşfi) */}
+        <div id="kitle">
+          <SceneDiscovery />
+        </div>
+
+        {/* 06 · ORTAK GELEN KUTUSU (Gelen Siparişler, Satış ve Yanıt Yönetimi) */}
         <div id="gelen-kutusu">
           <Scene05Inbox />
         </div>
