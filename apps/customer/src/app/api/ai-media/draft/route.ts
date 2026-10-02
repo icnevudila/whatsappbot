@@ -3,7 +3,7 @@ import { requireActiveOrg } from '@/lib/org'
 import type { SpeechTimelineItem, AdFormatType } from '@/app/(panel)/icerik/wizard-types'
 import { resolveProductAffordance, type ProductAffordanceReport } from '@/lib/ai/affordance'
 import { completeText } from '@/lib/ai/text'
-import { buildSafeSpokenLine, type ProductFidelityContract } from '@/lib/video-wizard-contract'
+import { buildSafeSpokenLine, containsShotDirections, type ProductFidelityContract } from '@/lib/video-wizard-contract'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -190,7 +190,7 @@ Görevin: Bir video reklam filmi (Instagram Reels / TikTok / WhatsApp Durum) iç
 ÇOK KATI KURALLAR:
 1. "X kalitesiyle tanışın", "siz de gelin", "hemen sipariş verin", "yanınızdayız" gibi bayat, sıkıcı ve ucuz reklam klişelerini KESİNLİKLE KULLANMA.
 2. "referansına sadık", "tasarıma sadık", "geometrisi", "veo", "yapay zeka", "prompt", "canary", "reklam filmi" gibi teknik veya meta ifadeleri ASLA KULLANMA.
-3. Kullanıcının belirttiği Kampanya Notu'nu (varsa özel indirim, teslimat avantajı vb.) ve ürünün sahadaki pratik faydasını merkeze al.
+3. Yalnız doğrulanmış ürün bilgilerini kullan. Kampanya notu görsel yönetmenlik talimatıdır; seslendirmeye kopyalama. Doğrulanmamış indirim, teslimat veya fiyat avantajı icat etme.
 4. Marka adını cümlenin başında veya sonunda son derece doğal ve prestijli bir gururla zikret.
 5. Metin tam olarak 1 veya 2 kısa vurucu cümleden oluşsun (hedef: 8-13 kelime). Spiker 5 saniyede nefesi yeterek akıcı ve karizmatik okuyabilmelidir.
 6. YALNIZCA konuşulacak Türkçe seslendirme metnini yaz. Tırnak işareti, başlık, sahne açıklaması veya çeviri ASLA ekleme.`
@@ -199,15 +199,15 @@ Görevin: Bir video reklam filmi (Instagram Reels / TikTok / WhatsApp Durum) iç
 Ürün: ${productName}
 Ürün Açıklaması: ${productDescription || 'Belirtilmedi'}
 ${styleDirectives}
-Kullanıcının Kampanya Notu / Vurgulanacak Mesajı: ${creativeNote || 'Belirtilmedi; ürünün dayanıklılığı ve pratik faydası öne çıksın'}
+Görsel Yönetmenlik Notu (SES METNİNE DAHİL ETME): ${creativeNote || 'Belirtilmedi'}
 Doğrulanmış Ürün Bilgisi: ${verifiedClaims.join(', ') || 'Yok'}
-Varsa Kampanya / Fırsat: ${body.offerDetails || 'Yok'}
+Doğrulanmış Kampanya / Fırsat: ${body.offerVerified === true ? body.offerDetails || 'Yok' : 'Yok'}
 ${revisionType === 'refresh' ? 'NOT: Önceki kalıplardan tamamen farklı, özgün, merak uyandıran veya doğrudan kazanca odaklanan yeni bir kanca kullan!' : ''}`
 
       const aiText = await completeText(systemPrompt, userPrompt)
       const cleanText = aiText.replace(/["“”«»]/g, '').trim()
       const wordCount = cleanText.split(/\s+/).filter(Boolean).length
-      if (wordCount >= 6 && wordCount <= 18) {
+      if (wordCount >= 6 && wordCount <= 18 && !containsShotDirections(cleanText)) {
         approvedSpokenLine = cleanText
       }
     } catch (e) {
