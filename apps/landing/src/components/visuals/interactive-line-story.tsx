@@ -44,7 +44,6 @@ export function InteractiveLineStory({inbox=false}:{inbox?:boolean}) {
       </div>
     </div>
   </div>
-  <p aria-live={automatic?"off":"polite"}>{inbox?`Hat 0${line+1} yanıtı → ortak Gelen Kutusu`:`Tanıtım → Hat 0${line+1} → seçili kitle`}<small>Örnek akış · gerçek gönderim yapılmaz</small></p>
-  <button className="ml-route-toggle" aria-pressed={automatic} onClick={()=>setAutomatic(!automatic)}>{automatic?"Ⅱ Duraklat":"▷ Otomatik akış"}</button>
+  <p aria-live={automatic?"off":"polite"}>{inbox?`Hat 0${line+1} yanıtı → ortak Gelen Kutusu`:`Tanıtım → Hat 0${line+1} → seçili kitle`}</p>
  </div>;
 }

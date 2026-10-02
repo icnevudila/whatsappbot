@@ -51,7 +51,7 @@ function MotionStage({ children, className = '' }: { children: ReactNode; classN
   }, []);
   return <div ref={ref} className={`ml-stage ${className}`} data-visible="false">{children}</div>;
 }
-function Sample({ children = 'Örnek akış' }: { children?: ReactNode }) { return <small className="ml-sample">{children}</small>; }
+function Sample({ children }: { children?: ReactNode }) { return null; }
 function Phone({ children }: { children: ReactNode }) { return <div className="ml-phone"><div className="ml-phone-top"><MesajifyMark size="xs" decorative />Mesajify Tanıtım</div>{children}</div>; }
 export function CampaignOrchestrator() {
   const controlId = useId();

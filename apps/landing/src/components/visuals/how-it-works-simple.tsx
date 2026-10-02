@@ -16,7 +16,6 @@ const WORKFLOW_STEPS = [
       'Müşterilerinize iletilecek net kampanya metninizi belirleyin',
       'Gönderim yapacağınız hedef kitleyi veya müşteri listenizi seçin',
     ],
-    highlight: 'Hızlı ve kolay kampanya kurulumu',
     image: '/landing/current/campaign.png',
   },
   {
@@ -28,7 +27,6 @@ const WORKFLOW_STEPS = [
       'Gönderimler hatlar arasında akıllıca paylaştırılarak güvenle ilerler',
       'Tek bir numaraya yük bindirmeden kesintisiz iletişim sağlanır',
     ],
-    highlight: 'Akıllı hat rotası ve otomatik koruma',
     image: '/landing/infographics/03-coklu-hat-chatgpt-4-3.png',
   },
   {
@@ -40,7 +38,6 @@ const WORKFLOW_STEPS = [
       'Tüm müşteri yanıtları tek gelen kutusunda anında görünür',
       'Fiyat, randevu ve siparişleri ekibinizle birlikte kolayca yönetin',
     ],
-    highlight: 'Müşteriyi bekletmeden anında satışa dönüştürün',
     image: '/landing/infographics/04-ortak-inbox-chatgpt-16-9.png',
   },
 ]
@@ -137,7 +134,6 @@ export function HowItWorksSimple() {
                   >
                     {s.step}
                   </span>
-                  <span className="text-xs font-semibold text-emerald-700">{s.highlight}</span>
                 </div>
                 <h3 className="text-lg font-bold text-slate-900 mb-2 leading-snug">
                   {s.title}
