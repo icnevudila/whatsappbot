@@ -119,7 +119,7 @@ const creativeShowcaseItems = [
     logo: '/landing/studio/sources/nike_logo.png',
     source: '/landing/studio/sources/nike_sneaker_raw.jpg',
     video: '/landing/studio/ecommerce-flow-veo.mp4',
-    sourceLabel: 'Ham Ürün Fotoğrafı + Vektör Logo',
+    sourceLabel: 'Telefonla Çekilmiş Ham Fotoğraf + Logo',
     ctaText: "WhatsApp'ta İncele",
     headline: 'Yeni Sezon Spor Koleksiyonu'
   },
@@ -131,7 +131,7 @@ const creativeShowcaseItems = [
     logo: '/landing/studio/sources/burger_logo.png',
     source: '/landing/studio/sources/burger_raw.jpg',
     video: '/landing/studio/restaurant-flow-veo.mp4',
-    sourceLabel: 'Menü Çekimi + Restoran Logosu',
+    sourceLabel: 'Tezgâh Menü Çekimi + Restoran Logosu',
     ctaText: 'WhatsApp ile Sipariş Ver',
     headline: 'Özel Gurme Artisan Menü'
   },
@@ -143,21 +143,9 @@ const creativeShowcaseItems = [
     logo: '/landing/studio/sources/car_logo.png',
     source: '/landing/studio/sources/car_raw.jpg',
     video: '/landing/studio/automotive-flow-veo.mp4',
-    sourceLabel: 'Showroom Çekimi + Galeri Arması',
+    sourceLabel: 'Showroom Çekimi + Galeri Logosu',
     ctaText: 'Test Sürüşü Randevusu Al',
     headline: 'VIP Lansman & Test Sürüşü'
-  },
-  {
-    id: 'mesajify',
-    tabLabel: 'Mesajify Platform',
-    title: 'Mesajify WhatsApp Kampanyası',
-    brandName: 'Mesajify',
-    logo: '/brand/mesajify-official-logo.png',
-    source: '/landing/studio/sources/smartwatch_product.jpg',
-    video: '/landing/studio/hero-flow-veo.mp4',
-    sourceLabel: 'Stüdyo Çekimi + Resmî Marka Logosu',
-    ctaText: 'Hemen Başla',
-    headline: 'WhatsApp ile Müşterilerine Ulaş'
   }
 ];
 
