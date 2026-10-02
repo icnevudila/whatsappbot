@@ -26,34 +26,38 @@ export default function Home() {
           <Scene01Hero />
         </div>
 
-        {/* 02 · NASIL ÇALIŞIR: 3 Kolay Adımda Mesajify (Basit, Anlaşılır, Karışık Olmayan Akış) */}
+        {/* 02 · NASIL ÇALIŞIR: 3 Kolay Adımda Mesajify (Kreatif → Dağıtım → Satış) */}
         <div id="nasil-calisir">
           <HowItWorksSimple />
         </div>
 
-        {/* 03 · SEKTÖRÜNÜZDE ÖNE ÇIKIN (Kuaför, Kafe, Restoran, İnşaat, Toptan, Sağlık) */}
-        <div id="cozumler">
-          <Scene03Sectors />
-        </div>
-
-        {/* 04 · KREATİF REKLAM STÜDYOSU (Ürün Fotoğrafından Profesyonel Dikey Reklam) */}
-        
-
-        {/* 05 · ORTAK GELEN KUTUSU (Gelen Siparişler, Katalog Talepleri, Tek Ekrandan Satış) */}
-        <div id="gelen-kutusu">
-          <Scene05Inbox />
-        </div>
-
-        {/* 06 · KONTROL MERKEZİ (Gerçek Panel Ekranları) */}
-        <Scene06Explorer />
+        {/* 03 · KREATİF REKLAM STÜDYOSU (Ürün Fotoğrafından Dikey Video Reklam) */}
         <div id="kreatif">
           <Scene04CreativeStudio />
         </div>
 
-        {/* 07 · INFRASTRUCTURE BENTO (Teknik Altyapı, İzin Güvencesi & Çoklu Hat) */}
+        {/* 04 · SEKTÖRÜNÜZDE ÖNE ÇIKIN (Kuaför, Kafe, Restoran, E-Ticaret, Sağlık) */}
+        <div id="cozumler">
+          <Scene03Sectors />
+        </div>
+
+        {/* 05 · ORTAK GELEN KUTUSU (Gelen Siparişler, Satış ve Yanıt Yönetimi) */}
+        <div id="gelen-kutusu">
+          <Scene05Inbox />
+        </div>
+
+        {/* 06 · UYGULAMA KONTROL MERKEZİ (Gerçek Panel Ekranları) */}
+        <Scene06Explorer />
+
+        {/* 07 · MÜŞTERİ REHBERİ (İsteğe Bağlı Kitle & Liste Yönetimi) */}
+        <div id="rehber">
+          <Scene02LeadAndAudience />
+        </div>
+
+        {/* 08 · INFRASTRUCTURE BENTO (Teknik Altyapı, İzin Güvencesi & Çoklu Hat) */}
         <Scene07Bento />
 
-        {/* 08 · TRUST + FAQ */}
+        {/* 09 · TRUST + FAQ */}
         <div id="fiyatlandirma">
           <Scene08TrustFaq />
         </div>

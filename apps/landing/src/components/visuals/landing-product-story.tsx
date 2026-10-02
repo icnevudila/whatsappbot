@@ -15,40 +15,13 @@ function Story({ eyebrow, title, description, dark = false, chapter = '', childr
 
 
 
-export function LandingDeliveryStory() {
-  const [, setReady] = useState(false)
-  return (
-    <Story
-      chapter="delivery"
-      eyebrow="01 / HEDEF KİTLENİZ"
-      title="Civarınızdaki işletmelere ulaşın. Hedef kitleniz elinizin altında."
-      description="Kendi listenizi yükleyin veya hedeflediğiniz bölge ve sektör için kitle talep edin. Talep edilen listenin uygunluğu, kapsamı ve hazırlanması değerlendirme sonrasında netleşir."
-    >
-      <AudienceWorkspace onReady={setReady} />
-    </Story>
-  )
-}
-
-export function LandingSectorStory() {
-  return (
-    <Story
-      chapter="sector"
-      eyebrow="02 / SEKTÖRÜNÜZDE ÖNE ÇIKIN"
-      title="İşletmeniz ne sunuyor? Mesajınız anlatsın."
-      description="Kuaförlerden toptancılara, restoranlardan inşaat ve sağlığa: Sektörünüze özel hazırlanmış doğrudan WhatsApp mesajlarıyla potansiyel müşterilerinizin cebine ulaşın."
-    >
-      <SectorCampaignLab />
-    </Story>
-  )
-}
-
 export function LandingCreativeStory() {
   return (
     <Story
       chapter="creative"
-      eyebrow="03 / KREATİF & REKLAM STÜDYOSU"
-      title="Tanıtımınıza görsel destek ekleyin."
-      description="Ürün fotoğrafınızı ve marka kitinizi kullanarak tanıtım görselleri hazırlayın. Video üretimi de ek bir kreatif seçeneği olarak yer alır."
+      eyebrow="01 / KREATİF REKLAM STÜDYOSU"
+      title="Ürün fotoğrafınızdan profesyonel dikey reklam hazırlayın."
+      description="Ajansa veya karmaşık video editörlerine gerek yok. Ürün fotoğrafınızı yükleyin; saniyeler içinde etkileyici dikey reklam videonuz ve kampanya mesajınız hazır olsun."
     >
       <div className="ml-brand-context-panel">
         <BrandContext />
@@ -58,13 +31,26 @@ export function LandingCreativeStory() {
   )
 }
 
+export function LandingSectorStory() {
+  return (
+    <Story
+      chapter="sector"
+      eyebrow="02 / SEKTÖRÜNÜZE ÖZEL KAMPANYALAR"
+      title="İşletmeniz ne sunuyor? Mesajınız anlatsın."
+      description="Kuaförlerden toptancılara, restoranlardan e-ticarete: Sektörünüze özel hazırlanmış doğrudan WhatsApp mesajlarıyla potansiyel müşterilerinizin cebine ulaşın."
+    >
+      <SectorCampaignLab />
+    </Story>
+  )
+}
+
 export function LandingInboxStory() {
   return (
     <Story
       chapter="reply"
-      eyebrow="04 / ORTAK GELEN KUTUSU"
-      title="Gelen soruları görün. Konuşmayı sürdürün."
-      description="Fiyat, sipariş ve katalog sorularını tek ekranda takip edin. Mesajları yanıtlayın, konuşmalarınızı bir arada görün."
+      eyebrow="03 / ORTAK GELEN KUTUSU"
+      title="Gelen sipariş ve soruları tek ekrandan yönetin."
+      description="Telefon aramayın, birden fazla tarayıcı sekmesi arasında kaybolmayın. Tüm bağlı hatlarınızdan gelen sipariş ve fiyat soruları tek gelen kutusunda toplanır, anında satışa dönüşür."
     >
       <ReplyToInbox />
     </Story>
@@ -75,11 +61,25 @@ export function LandingExplorerStory() {
   return (
     <Story
       chapter="explorer"
-      eyebrow="05 / KONTROL MERKEZİ"
+      eyebrow="04 / KAMPANYA KONTROL MERKEZİ"
       title="Tüm tanıtım ve müşteri süreçleriniz tek panelde."
-      description="Listenizi hazırlayın, tanıtım mesajlarınızı yönetin ve müşteri konuşmalarını aynı panelden takip edin."
+      description="Kampanyalarınızı kurun, aktif gönderimlerin durumunu izleyin ve müşteri konuşmalarını aynı merkezden yönetin."
     >
       <ApprovedScreenGallery />
+    </Story>
+  )
+}
+
+export function LandingDeliveryStory() {
+  const [, setReady] = useState(false)
+  return (
+    <Story
+      chapter="delivery"
+      eyebrow="05 / REHBER VE HEDEF KİTLE"
+      title="Müşteri rehberinizi bağlayın veya kitle belirleyin."
+      description="Kendi müşteri listenizi ekleyin veya hedeflediğiniz sektör için kitle talebinde bulunun. Numaralar otomatik kontrol edilir ve güvenli gönderime hazırlanır."
+    >
+      <AudienceWorkspace onReady={setReady} />
     </Story>
   )
 }
