@@ -4,7 +4,7 @@ import { isReadyImageSource } from '@/lib/creative/image-source'
 import { requiredImageAssets } from '@/lib/creative/required-image-assets'
 import { getSafeMediaUrl } from '@/lib/media-url'
 
-import { useActionState, useEffect, useMemo, useState } from 'react'
+import { useActionState, useEffect, useMemo, useState, useRef } from 'react'
 import Link from 'next/link'
 import { Button, Card, Field, FileUploadButton, Input, Notice, Textarea } from '@/components/ui'
 import { Icon } from '@/components/icon'
@@ -125,6 +125,9 @@ export function ImageCreativeWizard({ data }: { data: WizardBootstrap }) {
   const [step, setStep] = useState<Step>('start')
   const [draft, setDraft] = useState<Draft>(() => defaultDraft(data))
   const [labelInput, setLabelInput] = useState('')
+  const [ideaPending, setIdeaPending] = useState(false)
+  const [ideaNotice, setIdeaNotice] = useState('')
+  const ideaVersion = useRef(0)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [uploadedSourceId, setUploadedSourceId] = useState<string | null>(null)
@@ -243,6 +246,25 @@ export function ImageCreativeWizard({ data }: { data: WizardBootstrap }) {
   }
 
   const patch = (partial: Partial<Draft>) => setDraft((current) => ({ ...current, ...partial }))
+
+  async function suggestIdea(category: string) {
+    const version = ++ideaVersion.current
+    const fallback = `${data.org.name} için ${category.toLocaleLowerCase('tr-TR')} odaklı, markamızın renkleriyle sade bir tanıtım görseli hazırlayalım.`
+    setIdeaPending(true)
+    setIdeaNotice('İşletmenize uygun kısa fikir hazırlanıyor…')
+    try {
+      const response = await fetch('/api/icerik/fikir',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({category,brandKitId:draft.brandKitId,productIds:draft.productIds}),signal:AbortSignal.timeout(25000)})
+      const result = await response.json()
+      if (!response.ok || typeof result.text!=='string') throw new Error('IDEA_UNAVAILABLE')
+      if (version !== ideaVersion.current) return
+      patch({brief:result.text})
+      setIdeaNotice(result.source==='gpt' ? 'İşletmenize göre önerildi. Metni değiştirebilirsiniz.' : 'Hazır fikir eklendi. Metni değiştirebilirsiniz.')
+    } catch {
+      if (version !== ideaVersion.current) return
+      patch({brief:fallback})
+      setIdeaNotice('Hazır fikir eklendi. Metni değiştirebilirsiniz.')
+    } finally { if (version === ideaVersion.current) setIdeaPending(false) }
+  }
 
   const addProduct = (id: string) => {
     if (draft.productIds.includes(id)) return
@@ -387,7 +409,7 @@ export function ImageCreativeWizard({ data }: { data: WizardBootstrap }) {
                 name="brief-ui"
                 rows={5}
                 value={draft.brief}
-                onChange={(event) => patch({ brief: event.target.value })}
+                onChange={(event) => { ideaVersion.current++; setIdeaPending(false); setIdeaNotice(''); patch({ brief: event.target.value }) }}
                 placeholder="Hafta sonuna özel tüm kahvaltı ürünlerinde %25 indirim. Sıcak, iştah açıcı ve premium bir WhatsApp kampanya görseli istiyorum."
               />
             </Field>
@@ -397,16 +419,14 @@ export function ImageCreativeWizard({ data }: { data: WizardBootstrap }) {
                   key={chip}
                   type="button"
                   className="wb-wa-chip"
-                  onClick={() => {
-                    if (!draft.brief.includes(chip)) {
-                      patch({ brief: draft.brief ? `${draft.brief.trim()} ${chip}.` : `${chip}. ` })
-                    }
-                  }}
+                  disabled={ideaPending}
+                  onClick={() => void suggestIdea(chip)}
                 >
                   {chip}
                 </button>
               ))}
             </div>
+            {ideaNotice ? <p role="status" className="text-xs text-muted">{ideaNotice}</p> : null}
           </div>
         </Card>
       ) : null}
