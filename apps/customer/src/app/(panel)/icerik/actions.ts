@@ -26,6 +26,7 @@ import {
   type VideoScenarioOption,
   type VideoScenarioContext,
 } from '@/lib/creative/video-scenario'
+import { generateArtDirectionPlan } from '@/lib/creative/director/creative-director'
 
 export type CreativeActionState = { error?: string; ok?: string; id?: string; publicUrl?: string } | null
 
@@ -151,7 +152,13 @@ export async function startCreativeGeneration(
 
   const format = formatFromId(String(draft.formatId ?? 'wa'))
   const kitId = String(draft.brandKitId ?? '').trim() || null
-  const productIds = parseIds(draft.productIds)
+  const rawProductIds = parseIds(draft.productIds)
+  const heroProductId = String(draft.heroProductId || '').trim()
+  const productIds = heroProductId
+    ? [heroProductId]
+    : rawProductIds.length > 0
+      ? [rawProductIds[0]]
+      : []
   const phoneIds = parseIds(draft.phoneIds)
   const socialIds = parseIds(draft.socialIds)
   const baseCreativeId = String(draft.baseCreativeId ?? '').trim() || null
@@ -181,6 +188,15 @@ export async function startCreativeGeneration(
       .maybeSingle()
     kitRow = data
     if (!kitRow) return { error: 'Marka kiti bulunamadı.' }
+  } else {
+    const { data: defKit } = await supabase
+      .from('brand_kits')
+      .select('id, name, tone, colors, fonts, logo_path')
+      .eq('org_id', org.id)
+      .order('is_default', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    kitRow = defKit
   }
 
   const { data: orgRow } = await supabase
@@ -370,50 +386,83 @@ export async function startCreativeGeneration(
     hasValidBase: Boolean(baseCreativeId),
   })
   if (!imageAssetGate.ready) return { error: imageAssetGate.message || 'IMAGE_ASSETS_REQUIRED' }
-  const snapshot: CreativePayload = {
-    brief,
-    style: String(draft.style ?? 'auto'),
-    formatId: format.id,
-    aspect: format.aspect,
-    textDensity: (['low', 'balanced', 'detailed'].includes(String(draft.textDensity))
-      ? draft.textDensity
-      : 'balanced') as CreativeSnapshot['textDensity'],
-    useLogo: Boolean(orgLogoPath || kitRow?.logo_path) && draft.useLogo !== false,
-    labels,
-    cta: String(draft.cta ?? '').trim() || null,
-    address: String(draft.address ?? '').trim() || null,
-    website: String(draft.website ?? '').trim() || null,
-    dateRange: String(draft.dateRange ?? '').trim() || null,
-    customText: String(draft.customText ?? '').trim() || null,
-    phones,
-    socials,
-    brandKit: kitRow
-      ? {
-          id: kitRow.id,
-          name: kitRow.name,
-          tone: kitRow.tone,
-          colors: asRecord(kitRow.colors),
-          fonts: asRecord(kitRow.fonts),
-          logoPath: kitRow.logo_path || orgLogoPath,
-        }
-      : null,
-    products,
-    baseCreativeId,
-    instruction: String(draft.instruction ?? '').trim() || null,
-    variationPreset: String(draft.variationPreset ?? '').trim() || null,
-    videoSpeech: draft.videoSpeech !== false && draft.videoSpeech !== '0',
-    subtitles: draft.subtitles !== false && draft.subtitles !== '0' && draft.subtitles !== 'false',
-    videoScenarioPrompt: String(draft.videoScenarioPrompt ?? '').trim() || null,
-    videoScenarioTitle: String(draft.videoScenarioTitle ?? '').trim() || null,
-    customVoiceover: String(draft.customVoiceover ?? '').trim() || null,
-    voiceoverScript: String(draft.customVoiceover ?? '').trim() || null,
-    referenceImageUrls: Array.isArray(draft.referenceImageUrls)
-      ? draft.referenceImageUrls.map(String).filter((u) => u.startsWith('http')).slice(0, 5)
-      : [],
-    title,
-    requestKey: requestKey || undefined,
-    cost: { imageCount: 1 },
-  }
+    const qualityMode = (draft.qualityMode as 'STANDARD' | 'DESIGNER') || 'STANDARD'
+    let artDirectionPlan = (draft.artDirectionPlan as any) || null
+    if (!artDirectionPlan && format.format !== 'video' && qualityMode === 'DESIGNER') {
+      try {
+        artDirectionPlan = await generateArtDirectionPlan({
+          orgId: org.id,
+          brandName: kitRow?.name || org.name || 'İşletmemiz',
+          brandTone: kitRow?.tone || null,
+          productName: products[0]?.name || 'Ürün',
+          productDescription: products[0]?.description || null,
+          objective: (draft.objective as string) || 'PRODUCT_INTRO',
+          stylePreset: (draft.stylePreset as string) || 'AUTO',
+          format: format.id,
+          headline: (draft.customHeadline as string) || brief,
+          offer: products[0]?.promo || null,
+          cta: (draft.cta as string) || null,
+          campaignDetail: (draft.campaignDetail as string) || null,
+          qualityMode,
+          forcedArchetype: (draft.forcedArchetype as string) || null,
+        })
+      } catch (err) {
+        console.warn('[CreativeStudio] Art direction plan synthesis fallback:', err)
+      }
+    }
+
+    const snapshot: CreativePayload = {
+      brief,
+      style: String(draft.style ?? 'auto'),
+      formatId: format.id,
+      aspect: format.aspect,
+      textDensity: (['low', 'balanced', 'detailed'].includes(String(draft.textDensity))
+        ? draft.textDensity
+        : 'balanced') as CreativeSnapshot['textDensity'],
+      useLogo: Boolean(orgLogoPath || kitRow?.logo_path) && draft.useLogo !== false,
+      labels,
+      cta: String(draft.cta ?? '').trim() || null,
+      address: String(draft.address ?? '').trim() || null,
+      website: String(draft.website ?? '').trim() || null,
+      dateRange: String(draft.dateRange ?? '').trim() || null,
+      customText: String(draft.customText ?? '').trim() || null,
+      phones,
+      socials,
+      brandKit: kitRow
+        ? {
+            id: kitRow.id,
+            name: kitRow.name,
+            tone: kitRow.tone,
+            colors: asRecord(kitRow.colors),
+            fonts: asRecord(kitRow.fonts),
+            logoPath: kitRow.logo_path || orgLogoPath,
+          }
+        : null,
+      products,
+      baseCreativeId,
+      instruction: String(draft.instruction ?? '').trim() || null,
+      variationPreset: String(draft.variationPreset ?? '').trim() || null,
+      videoSpeech: draft.videoSpeech !== false && draft.videoSpeech !== '0',
+      subtitles: draft.subtitles !== false && draft.subtitles !== '0' && draft.subtitles !== 'false',
+      videoScenarioPrompt: String(draft.videoScenarioPrompt ?? '').trim() || null,
+      videoScenarioTitle: String(draft.videoScenarioTitle ?? '').trim() || null,
+      customVoiceover: String(draft.customVoiceover ?? '').trim() || null,
+      voiceoverScript: String(draft.customVoiceover ?? '').trim() || null,
+      referenceImageUrls: Array.isArray(draft.referenceImageUrls)
+        ? draft.referenceImageUrls.map(String).filter((u) => u.startsWith('http')).slice(0, 5)
+        : [],
+      title,
+      requestKey: requestKey || undefined,
+      cost: { imageCount: 1 },
+      creativePlan: (draft.creativePlan as any) || null,
+      customHeadline: (draft.customHeadline as string) || null,
+      customSupporting: (draft.customSupporting as string) || null,
+      heroProductId: heroProductId || (products[0]?.id as string) || null,
+      stylePreset: (draft.stylePreset as string) || null,
+      objective: (draft.objective as string) || null,
+      artDirectionPlan: artDirectionPlan || null,
+      qualityMode,
+    }
 
   const { data: inserted, error } = await supabase
     .from('creatives')

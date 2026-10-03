@@ -90,8 +90,8 @@ export function compileDeterministicV5(input: UserVideoInput): V5FinalOutputPack
 
   if (shotPlan.veoEnglishPrompt.includes('AUDIO:')) {
     shotPlan.veoEnglishPrompt = shotPlan.veoEnglishPrompt.replace(
-      /AUDIO: Professional crystal-clear Turkish voiceover: "[^"]*"/,
-      `AUDIO: Professional crystal-clear Turkish voiceover: "${finalVoClean}"`
+      /AUDIO: Professional crystal-clear Turkish[^"]*:[^"]*"[^"]*"/,
+      `AUDIO: Professional crystal-clear Turkish male commercial narrator delivers the following line EXACTLY ONCE between 0.5s and 5.5s with zero repetition, zero looping, zero echo, and zero re-entry: "${finalVoClean}"`
     )
   }
   const veoPrompt = shotPlan.veoEnglishPrompt

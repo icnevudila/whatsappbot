@@ -170,8 +170,8 @@ export function validateAndRepair(
         : `${subject} lezzeti sizleri bekliyor. Hemen sipariş verin.`
     } else if (facts.verifiedFacts.discount) {
       rewritten = brand
-        ? `${brand} ${subject}, avantajlı fiyat teklifleriyle projenizde. Hemen bilgi alın.`
-        : `${subject} avantajlı fiyat teklifleriyle projenizde hazır. Detaylar için yazın.`
+        ? `${brand} ${subject}, avantajlı fiyatlarla hazır. Hemen bilgi alın.`
+        : `${subject} avantajlı fiyatlarla projenizde hazır. Hemen bilgi alın.`
     } else if (facts.verifiedFacts.benefits.length > 0) {
       const firstClause = facts.verifiedFacts.benefits[0].split(/[,.;]/)[0].trim()
       rewritten = brand

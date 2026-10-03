@@ -133,7 +133,18 @@ export type CreativePayload = CreativeSnapshot & {
     orgId: string; creativeId: string; jobId: string | null; sha256: string; size: number;
     mimeType: string; width: number; height: number; decodedImage: boolean; storagePath: string;
     referenceReceipt: import('../ai/omnistudio-image-job').ImageReferenceReceipt | null;
+      generation_sha256?: string | null;
+    final_sha256?: string | null;
   }
+  creativePlan?: any;
+  customHeadline?: string | null;
+  customSupporting?: string | null;
+  heroProductId?: string | null;
+  stylePreset?: string | null;
+  objective?: string | null;
+  lockCopyOverlay?: boolean;
+  artDirectionPlan?: any;
+  qualityMode?: 'STANDARD' | 'DESIGNER';
   imageAttempt?: string
   imageSubmissionUncertain?: boolean
   imageSubmitIntent?: { requestId: string; gatewayUrl: string; startedAt: string } | null

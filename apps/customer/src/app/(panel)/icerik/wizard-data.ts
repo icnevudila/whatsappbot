@@ -8,7 +8,7 @@ import {
   type WizardBootstrap,
 } from './wizard-types'
 import { buildSmartBusinessVideoIdeas } from '@/lib/creative/video-scenario'
-import { getSafeMediaUrl } from '@/lib/media-url'
+import { getSafeMediaUrl, resolvePreviewUrl } from '@/lib/media-url'
 import { IMAGE_SOURCE_FORMATS, isReadyImageSource } from '@/lib/creative/image-source'
 
 export type {
@@ -105,24 +105,14 @@ export async function loadCreativeWizardData(): Promise<WizardBootstrap> {
   const imagesByProduct = new Map<string, { id: string; url: string }[]>()
   for (const row of imagesRes.data ?? []) {
     const list = imagesByProduct.get(row.product_id) ?? []
-    const safeUrl = getSafeMediaUrl(row.public_url) ?? row.public_url
+    const safeUrl = resolvePreviewUrl(row.public_url, 'creatives') ?? row.public_url
     list.push({ id: row.id, url: safeUrl })
     imagesByProduct.set(row.product_id, list)
   }
 
   const kits: BrandKitCard[] = []
   for (const kit of kitsRes.data ?? []) {
-    let samplePreview: string | null = null
-    if (kit.logo_path?.startsWith('http')) {
-      samplePreview = getSafeMediaUrl(kit.logo_path) ?? kit.logo_path
-    } else if (kit.logo_path) {
-      const { data: pubData } = supabase.storage.from('brand-assets').getPublicUrl(kit.logo_path)
-      samplePreview = pubData?.publicUrl || null
-      if (!samplePreview) {
-        const { data } = await supabase.storage.from('brand-assets').createSignedUrl(kit.logo_path, 86400)
-        samplePreview = data?.signedUrl ?? null
-      }
-    }
+    const samplePreview = resolvePreviewUrl(kit.logo_path, 'brand-assets') ?? null
     kits.push({
       id: kit.id,
       name: kit.name,
@@ -137,19 +127,9 @@ export async function loadCreativeWizardData(): Promise<WizardBootstrap> {
   const website =
     (socialsRes.data ?? []).find((row) => row.platform === 'website')?.url ?? null
 
-  let logoPreview: string | null = null
-  if (orgRes.data?.logo_path?.startsWith('http')) {
-    logoPreview = getSafeMediaUrl(orgRes.data.logo_path) ?? orgRes.data.logo_path
-  } else if (orgRes.data?.logo_path) {
-    const { data: pubData } = supabase.storage.from('brand-assets').getPublicUrl(orgRes.data.logo_path)
-    logoPreview = pubData?.publicUrl || null
-    if (!logoPreview) {
-      const { data } = await supabase.storage
-        .from('brand-assets')
-        .createSignedUrl(orgRes.data.logo_path, 86400)
-      logoPreview = data?.signedUrl ?? null
-    }
-  }
+  const orgLogoFromDb = resolvePreviewUrl(orgRes.data?.logo_path, 'brand-assets') ?? null
+  const defaultKitLogo = kits.find((k) => k.isDefault)?.samplePreview || kits[0]?.samplePreview || null
+  const logoPreview = orgLogoFromDb || defaultKitLogo || null
   const mappedProducts = (productsRes.data ?? []).map((product) => ({
       id: product.id,
       name: product.name,

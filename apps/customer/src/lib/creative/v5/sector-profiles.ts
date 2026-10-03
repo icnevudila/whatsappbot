@@ -113,7 +113,7 @@ export const BUILTIN_SECTOR_PROFILES: Record<string, CreativeEnvironmentProfile>
     defaultAffordance: 'pour_drizzle_flow',
     defaultProofMode: 'product_in_use',
     defaultPrimaryValue: 'sensory_appeal',
-    actionHookTemplate: 'Yakın planda taptaze {subject} iştah kabartan formu ve zengin dokusuyla servise hazır hale gelirken lezzet hareketi 0.3 saniyede başlar.',
+    actionHookTemplate: 'Yakın planda {subject} iştah kabartan formu ve zengin dokusuyla servise hazır hale gelirken lezzet hareketi 0.3 saniyede başlar.',
   },
 
   saas_digital: {
@@ -374,6 +374,9 @@ export function resolveCreativeEnvironmentProfile(params: {
   if (fullContext.match(/(inşaat|şantiye|tuğla|çimento|yapı malzeme|harç|briket|kiremit|yalıtım|beton|iskele)/i)) {
     return BUILTIN_SECTOR_PROFILES.construction_materials
   }
+  if (fullContext.match(/(mobilya|koltuk|masa|sandalye|yatak|dolap|dekorasyon|iç mekan|ahşap)/i)) {
+    return BUILTIN_SECTOR_PROFILES.furniture_interior
+  }
   if (fullContext.match(/(gıda|restoran|yemek|lezzet|gurme|tatlı|pasta|börek|kahve|\bçay\b|içecek|\bet\b|kebap|unlu mamul)/i)) {
     return BUILTIN_SECTOR_PROFILES.food_beverage
   }
@@ -385,9 +388,6 @@ export function resolveCreativeEnvironmentProfile(params: {
   }
   if (fullContext.match(/(kozmetik|parfüm|cilt bakım|krem|serum|makyaj|güzellik|şampuan|losyon)/i)) {
     return BUILTIN_SECTOR_PROFILES.cosmetics_personal_care
-  }
-  if (fullContext.match(/(mobilya|koltuk|masa|sandalye|yatak|dolap|dekorasyon|iç mekan|ahşap mobilya)/i)) {
-    return BUILTIN_SECTOR_PROFILES.furniture_interior
   }
   if (fullContext.match(/(otomotiv|araç|\boto\b|araba|motor|yedek parça|lastik|tamir|servis|makine|endüstriyel|hidrolik|sanayi)/i)) {
     return BUILTIN_SECTOR_PROFILES.automotive_machinery

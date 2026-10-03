@@ -1,0 +1,1140 @@
+'use client'
+
+import { useEffect, useMemo, useState, useTransition } from 'react'
+import Link from 'next/link'
+import { Button, Card, Field, Input, Notice, Textarea } from '@/components/ui'
+import { Stepper } from '@/components/stepper'
+import { Icon } from '@/components/icon'
+import { CreativeProductionVisual } from '@/components/creative-production-visual'
+import { AddProductModal } from './add-product-modal'
+import { getSafeMediaUrl, resolvePreviewUrl } from '@/lib/media-url'
+import { getSupabaseBrowserClient } from '@/lib/supabase/client'
+import { startCreativeGeneration, type CreativeActionState } from './actions'
+import {
+  CAMPAIGN_OBJECTIVES,
+  CREATIVE_STYLE_PRESETS,
+  IMAGE_FORMATS_V2,
+  VIDEO_FORMATS_V2,
+  type CampaignObjective,
+  type CreativePlanV2,
+  type CreativeStylePreset,
+  type ImageFormatV2,
+  type MediaType,
+  type StructuredCampaignCopy,
+} from '@/lib/creative/v2/types'
+import { adaptLegacyDraftToV2, mapPresetToLegacyVideoFormat } from '@/lib/creative/v2/adapter'
+import {
+  MAX_SPOKEN_WORDS,
+  VIDEO_ENGINE_MODE,
+  VIDEO_REQUESTED_PROVIDER,
+  defaultFidelityContract,
+} from '@/lib/video-wizard-contract'
+import type { JobUserViewModel, ProductCard, WizardBootstrap } from './wizard-types'
+
+const STORAGE_KEY_PREFIX = 'wa.customer.creative-studio.v2'
+
+type Step = 'product_goal' | 'creative_direction' | 'review_generate'
+
+const STUDIO_STEPS: { id: Step; label: string }[] = [
+  { id: 'product_goal', label: '1. Ürün & Hedef' },
+  { id: 'creative_direction', label: '2. Reklam Taslağı' },
+  { id: 'review_generate', label: '3. Onay & Üretim' },
+]
+
+export function CreativeStudioV2({
+  data,
+  initialMediaType = 'IMAGE',
+  initialDerivedCreativeId,
+}: {
+  data: WizardBootstrap
+  initialMediaType?: MediaType
+  initialDerivedCreativeId?: string | null
+}) {
+  const orgKey = `${STORAGE_KEY_PREFIX}.${data.org.id}`
+
+  // Step state
+  const [step, setStep] = useState<Step>('product_goal')
+
+  // Step 1: Product & Goal
+  const [mediaType, setMediaType] = useState<MediaType>(initialMediaType)
+  const [heroProductId, setHeroProductId] = useState<string>(() => data.products[0]?.id || '')
+  const [objective, setObjective] = useState<CampaignObjective>('PRODUCT_INTRO')
+  const [campaignDetail, setCampaignDetail] = useState('')
+  const [imageFormat, setImageFormat] = useState<ImageFormatV2>('SQUARE_1_1')
+  const [addProductOpen, setAddProductOpen] = useState(false)
+  const [productsList, setProductsList] = useState<ProductCard[]>(data.products)
+
+  // Step 2: Creative Direction & Copy
+  const [stylePreset, setStylePreset] = useState<CreativeStylePreset>('AUTO')
+  const [isPlanning, setIsPlanning] = useState(false)
+  const [planError, setPlanError] = useState<string | null>(null)
+  const [creativePlan, setCreativePlan] = useState<CreativePlanV2 | null>(null)
+
+  // User-edited copy/voiceover
+  const [headline, setHeadline] = useState('')
+  const [supportingLine, setSupportingLine] = useState('')
+  const [ctaText, setCtaText] = useState('Hemen İnceleyin')
+  const [spokenVoiceover, setSpokenVoiceover] = useState('')
+
+  // Structured campaign details (under Advanced)
+  const [price, setPrice] = useState('')
+  const [oldPrice, setOldPrice] = useState('')
+  const [offer, setOffer] = useState('')
+  const [dateRange, setDateRange] = useState('')
+  const [brandKitId, setBrandKitId] = useState<string>(
+    () => data.kits.find((k) => k.isDefault)?.id || data.kits[0]?.id || '',
+  )
+
+  // Quality Mode: STANDARD (default production) vs DESIGNER (art-directed)
+  const [qualityMode, setQualityMode] = useState<'STANDARD' | 'DESIGNER'>('STANDARD')
+
+  // Video Advanced Options
+  const [environmentPreset, setEnvironmentPreset] = useState('auto')
+  const [motionStyle, setMotionStyle] = useState('real_usage')
+  const [subtitles, setSubtitles] = useState(true)
+  const [outro, setOutro] = useState(true)
+
+  // Step 3: Production & Progress Tracking
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+
+  // Video-specific job state
+  const [activeJobId, setActiveJobId] = useState<string | null>(null)
+  const [jobState, setJobState] = useState<string>('IDLE')
+  const [jobDisplayState, setJobDisplayState] = useState<string>('')
+  const [jobStageIndex, setJobStageIndex] = useState<number>(1)
+  const [completedVideoUrl, setCompletedVideoUrl] = useState<string | null>(null)
+  const [jobFailureMessage, setJobFailureMessage] = useState<string | null>(null)
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
+
+  // Image-specific action state
+  const [imageState, setImageState] = useState<CreativeActionState>(null)
+  const [imagePending, setImagePending] = useState(false)
+
+  // Authoritative Logo & Product Bridge
+  const defaultKit = useMemo(
+    () => data.kits.find((k) => k.id === brandKitId) || data.kits.find((k) => k.isDefault) || data.kits[0] || null,
+    [data.kits, brandKitId],
+  )
+  const rawLogoPath = defaultKit?.samplePreview || data.org.logoPreview || ''
+  const canonicalLogoUrl = resolvePreviewUrl(rawLogoPath, 'brand-assets') || ''
+  const logoPreflightState: 'SELECTED' | 'RESOLVING' | 'READY' | 'INVALID' = !rawLogoPath
+    ? 'INVALID'
+    : (!canonicalLogoUrl ? 'INVALID' : 'READY')
+  const hasLogo = logoPreflightState === 'READY'
+
+  const selectedProduct = useMemo(
+    () => productsList.find((p) => p.id === heroProductId) || null,
+    [productsList, heroProductId],
+  )
+  const rawProductImagePath = selectedProduct?.images?.[0]?.url || ''
+  const productImageUrl = resolvePreviewUrl(rawProductImagePath, 'creatives') || ''
+  const productPreflightState: 'SELECTED' | 'RESOLVING' | 'READY' | 'INVALID' = !selectedProduct
+    ? 'SELECTED'
+    : (!rawProductImagePath ? 'INVALID' : (!productImageUrl ? 'INVALID' : 'READY'))
+  const hasProduct = productPreflightState === 'READY'
+  const allAssetsReady = hasLogo && hasProduct
+
+  // Quota status
+  const quotaUsed = data.org.monthlyVideoUsed ?? 0
+  const quotaLimit = data.org.monthlyVideoQuota ?? 3
+  const quotaAvailable = quotaLimit > 0 && quotaUsed < quotaLimit
+
+  // Voiceover word count
+  const voWords = useMemo(
+    () => spokenVoiceover.trim().split(/\s+/).filter(Boolean).length,
+    [spokenVoiceover],
+  )
+
+  // Restore draft or adapt legacy draft
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(orgKey)
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        const adapted = adaptLegacyDraftToV2(
+          parsed,
+          productsList.map((p) => p.id),
+        )
+        if (adapted.heroProductId && productsList.some((p) => p.id === adapted.heroProductId)) {
+          setHeroProductId(adapted.heroProductId)
+        }
+        setMediaType(adapted.mediaType)
+        setObjective(adapted.objective)
+        setStylePreset(adapted.stylePreset)
+        setCampaignDetail(adapted.campaignDetail)
+        if (adapted.formatId !== 'STORY_9_16') setImageFormat(adapted.formatId)
+        if (adapted.campaignCopy.price) setPrice(adapted.campaignCopy.price)
+        if (adapted.campaignCopy.oldPrice) setOldPrice(adapted.campaignCopy.oldPrice)
+        if (adapted.campaignCopy.offer) setOffer(adapted.campaignCopy.offer)
+        if (adapted.campaignCopy.dateRange) setDateRange(adapted.campaignCopy.dateRange)
+        if (adapted.customHeadline) setHeadline(adapted.customHeadline)
+        if (adapted.customSupporting) setSupportingLine(adapted.customSupporting)
+        if (adapted.customVoiceover) setSpokenVoiceover(adapted.customVoiceover)
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [orgKey, productsList])
+
+  // Save draft
+  useEffect(() => {
+    try {
+      const draft = {
+        version: 2,
+        mediaType,
+        heroProductId,
+        objective,
+        stylePreset,
+        campaignDetail,
+        formatId: mediaType === 'VIDEO' ? 'STORY_9_16' : imageFormat,
+        campaignCopy: { price, oldPrice, offer, dateRange, cta: ctaText },
+        customHeadline: headline,
+        customSupporting: supportingLine,
+        customVoiceover: spokenVoiceover,
+        brandKitId,
+        environmentPreset,
+        motionStyle,
+        subtitles,
+        outro,
+      }
+      localStorage.setItem(orgKey, JSON.stringify(draft))
+    } catch {
+      /* ignore */
+    }
+  }, [
+    orgKey,
+    mediaType,
+    heroProductId,
+    objective,
+    stylePreset,
+    campaignDetail,
+    imageFormat,
+    price,
+    oldPrice,
+    offer,
+    dateRange,
+    ctaText,
+    headline,
+    supportingLine,
+    spokenVoiceover,
+    brandKitId,
+    environmentPreset,
+    motionStyle,
+    subtitles,
+    outro,
+  ])
+
+  // Call Custom AI Planner
+  const requestCreativePlan = async (forceRefresh = false) => {
+    if (!selectedProduct) return
+    setIsPlanning(true)
+    setPlanError(null)
+
+    try {
+      const res = await fetch('/api/ai-media/plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          brandName: data.org.name || 'İşletmemiz',
+          brandTone: defaultKit?.tone || null,
+          productName: selectedProduct.name,
+          productDescription: selectedProduct.description || null,
+          objective,
+          stylePreset,
+          mediaType,
+          campaignDetail: campaignDetail || null,
+          campaignCopy: { price, oldPrice, offer, dateRange, cta: ctaText },
+        }),
+      })
+
+      const json = await res.json()
+      if (!res.ok || !json.ok || !json.plan) {
+        throw new Error(json.error || 'Yapay zeka reklam taslağını oluşturamadı.')
+      }
+
+      const plan: CreativePlanV2 = json.plan
+      setCreativePlan(plan)
+
+      if (!headline || forceRefresh) setHeadline(plan.copy.headline)
+      if (!supportingLine || forceRefresh) setSupportingLine(plan.copy.supporting_line)
+      if (!ctaText || forceRefresh) setCtaText(plan.copy.cta)
+      if (mediaType === 'VIDEO' && (!spokenVoiceover || forceRefresh) && plan.voiceover_text) {
+        setSpokenVoiceover(plan.voiceover_text)
+      }
+    } catch (err: any) {
+      console.warn('[CreativeStudioV2] Plan error:', err)
+      setPlanError(err?.message || 'Taslak hazırlanamadı. Lütfen tekrar deneyin.')
+    } finally {
+      setIsPlanning(false)
+    }
+  }
+
+  // Generate Plan on entering Step 2 if not planned yet
+  const handleGoToStep2 = () => {
+    if (!hasProduct || !hasLogo) return
+    setStep('creative_direction')
+    void requestCreativePlan(false)
+  }
+
+  // Handle Video Supabase Realtime Job Watcher
+  useEffect(() => {
+    if (!activeJobId) return
+
+    let isMounted = true
+
+    const syncStatus = async () => {
+      try {
+        const res = await fetch(`/api/ai-media/jobs/${activeJobId}`)
+        if (!res.ok) return
+        const resData = await res.json()
+        const vm = resData.job as JobUserViewModel
+        if (!vm || !isMounted) return
+
+        setJobState(vm.state)
+        setJobStageIndex(vm.stage_index)
+        setJobDisplayState(vm.display_title || vm.display_state)
+        setJobFailureMessage(vm.failure_user_message || null)
+
+        if ((vm.state === 'COMPLETED' || vm.state === 'NEEDS_REVIEW') && vm.playback_url) {
+          setCompletedVideoUrl(vm.playback_url)
+        }
+      } catch (e) {
+        console.error('Job sync error:', e)
+      }
+    }
+
+    syncStatus()
+
+    const supabase = getSupabaseBrowserClient()
+    const channel = supabase
+      .channel(`studio-watch-${activeJobId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'ai_media_jobs', filter: `id=eq.${activeJobId}` },
+        () => syncStatus(),
+      )
+      .subscribe()
+
+    const interval = setInterval(syncStatus, 3500)
+
+    return () => {
+      isMounted = false
+      clearInterval(interval)
+      void supabase.removeChannel(channel)
+    }
+  }, [activeJobId])
+
+  // Timer for production
+  useEffect(() => {
+    const isRunning =
+      (jobState !== 'IDLE' && jobState !== 'COMPLETED' && jobState !== 'FAILED' && jobState !== 'NEEDS_REVIEW') ||
+      imagePending
+
+    if (!isRunning) {
+      setElapsedSeconds(0)
+      return
+    }
+
+    const timer = setInterval(() => setElapsedSeconds((prev) => prev + 1), 1000)
+    return () => clearInterval(timer)
+  }, [jobState, imagePending])
+
+  // SUBMIT HANDLER: Image or Video
+  const handleCreateCreative = async () => {
+    if (!selectedProduct || !hasProduct || !hasLogo) return
+
+    setIsSubmitting(true)
+    setSubmitError(null)
+
+    if (mediaType === 'IMAGE') {
+      setImagePending(true)
+      try {
+        const payloadDraft = {
+          version: 2,
+          requestKey: crypto.randomUUID(),
+          generationType: initialDerivedCreativeId ? 'derived' : 'new',
+          baseCreativeId: initialDerivedCreativeId || null,
+          brief: headline
+            ? `${headline}. ${supportingLine}`
+            : `${data.org.name} için ${selectedProduct.name} reklam görseli`,
+          formatId: imageFormat,
+          style: stylePreset.toLowerCase(),
+          heroProductId: selectedProduct.id,
+          productIds: [selectedProduct.id],
+          productExtras: {
+            [selectedProduct.id]: {
+              imageUrl: productImageUrl,
+              price: price || '',
+              oldPrice: oldPrice || '',
+              promo: offer || '',
+              extra: campaignDetail || '',
+              include: { name: true, image: true, description: true, boxContents: true, price: true, promo: true },
+            },
+          },
+          useLogo: true,
+          brandKitId: defaultKit?.id || '',
+          cta: ctaText,
+          dateRange: dateRange || null,
+          customHeadline: headline,
+          customSupporting: supportingLine,
+          stylePreset,
+          objective,
+          creativePlan,
+          qualityMode,
+        }
+
+        const form = new FormData()
+        form.set('draft', JSON.stringify(payloadDraft))
+
+        const res = await startCreativeGeneration(null, form)
+        if (res?.error) {
+          throw new Error(res.error)
+        }
+      } catch (err: any) {
+        setSubmitError(err?.message || 'Görsel üretimi başlatılamadı.')
+        setImagePending(false)
+      } finally {
+        setIsSubmitting(false)
+      }
+    } else {
+      // VIDEO PIPELINE
+      if (voWords === 0 || voWords > MAX_SPOKEN_WORDS) {
+        setSubmitError(`Türkçe seslendirme metni 1–${MAX_SPOKEN_WORDS} kelime olmalıdır.`)
+        setIsSubmitting(false)
+        return
+      }
+
+      try {
+        const generationId = crypto.randomUUID()
+        const videoAdFormat = mapPresetToLegacyVideoFormat(stylePreset)
+        const fidelityContract = defaultFidelityContract(data.org.name || '', selectedProduct.name)
+
+        const videoPayload = {
+          generationId,
+          generationRevision: 1,
+          title: `${data.org.name || 'İşletme'} - ${selectedProduct.name} Reklam Filmi`,
+          brief: headline || `${data.org.name} ${selectedProduct.name} reklamı`,
+          adFormat: videoAdFormat,
+          userStylePreference: videoAdFormat,
+          environmentPreset,
+          motionStyle,
+          subtitles: subtitles ? 'auto' : 'off',
+          outro: outro ? 'auto' : 'off',
+          creativeEngineMode: VIDEO_ENGINE_MODE,
+          requestedProvider: VIDEO_REQUESTED_PROVIDER,
+          promotionType: 'existing_product',
+          creativeIdea: headline || `${selectedProduct.name} Tanıtımı`,
+          speechTimeline: [
+            {
+              start_sec: 0.5,
+              end_sec: 6.0,
+              exact_text: spokenVoiceover.trim(),
+              speaker: 'Spiker',
+              delivery_style: 'Doğal, akıcı kurumsal Türkçe seslendirme',
+            },
+          ],
+          veoPrompt: '',
+          authoritativeFacts: {
+            brand_name: data.org.name || 'İşletmemiz',
+            product_name: selectedProduct.name,
+            product_id: selectedProduct.id,
+            product_description: selectedProduct.description || undefined,
+            offer: offer || undefined,
+            offer_verified: Boolean(offer),
+            cta: ctaText || 'Detaylar için iletişime geçin',
+            approved_spoken_line: spokenVoiceover.trim(),
+            verified_claims: [selectedProduct.name],
+            unverified_facts: [],
+            product_fidelity_contract: fidelityContract,
+            subtitles: subtitles ? 'auto' : 'off',
+            outro: outro ? 'auto' : 'off',
+          },
+          logoAsset: {
+            url: canonicalLogoUrl,
+            name: 'brand_logo.png',
+          },
+          productAsset: {
+            url: productImageUrl,
+            name: selectedProduct.name,
+            productId: selectedProduct.id,
+          },
+          referenceAssets: [],
+        }
+
+        const res = await fetch('/api/ai-media/jobs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(videoPayload),
+        })
+
+        const json = await res.json()
+        if (!res.ok || json.error) {
+          throw new Error(json.error || 'Video prodüksiyonu başlatılamadı.')
+        }
+
+        setActiveJobId(json.job_id)
+        setJobState('PENDING')
+        setJobStageIndex(1)
+        setJobDisplayState('Kuyruğa Alındı')
+      } catch (err: any) {
+        setSubmitError(err?.message || 'Video başlatılamadı.')
+      } finally {
+        setIsSubmitting(false)
+      }
+    }
+  }
+
+  return (
+    <Card className="wb-wa-wizard creative-studio-wizard overflow-visible">
+      {/* Realtime Production Waiting View */}
+      {jobState !== 'IDLE' && jobState !== 'COMPLETED' && jobState !== 'FAILED' && jobState !== 'NEEDS_REVIEW' ? (
+        <div className="creative-production-shell p-6 space-y-6">
+          <CreativeProductionVisual kind="video" />
+          <div className="text-center space-y-3">
+            <div className="inline-flex size-3.5 rounded-full bg-[#008069] mb-1 animate-ping" />
+            <h3 className="text-[19px] font-bold text-[#111b21]">Reklam Videonuz Prodüksiyonda</h3>
+            <p className="text-[13px] text-[#667781]">
+              Sinematik 9:16 reklam filminiz işleniyor. Sayfada beklemeniz gerekmez, işlem tamamlandığında Kütüphanenize eklenir.
+            </p>
+            <div className="w-full max-w-md mx-auto pt-1 space-y-2">
+              <div className="flex justify-between items-center text-[12px] font-semibold text-[#008069]">
+                <span>Geçen Süre: {Math.floor(elapsedSeconds / 60)}:{(elapsedSeconds % 60).toString().padStart(2, '0')}</span>
+                <span>Aşama {jobStageIndex} / 7</span>
+              </div>
+              <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+                <div
+                  className="h-full bg-gradient-to-r from-[#008069] to-[#25d366] transition-all duration-1000 rounded-full"
+                  style={{ width: `${Math.min(95, Math.max(10, Math.round((jobStageIndex / 7) * 100)))}%` }}
+                />
+              </div>
+              <p className="text-xs font-semibold text-[#008069]">{jobDisplayState || 'İşleniyor...'}</p>
+            </div>
+          </div>
+          <div className="flex justify-center gap-3 pt-2">
+            <Link
+              href="/icerik"
+              className="inline-flex items-center gap-2 rounded-full border border-hairline bg-white px-5 py-2 text-[13px] font-medium text-[#111b21] hover:bg-[#f0f2f5]"
+            >
+              İçerik Kütüphanesine Git
+            </Link>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Video Completed Player View */}
+      {jobState === 'COMPLETED' ? (
+        <div className="p-6 space-y-5 text-center max-w-md mx-auto">
+          <div className="flex items-center justify-center gap-2 text-[#008069]">
+            <span className="flex size-8 items-center justify-center rounded-full bg-[#e7f8f2] text-[#008069] font-bold text-[16px]">
+              ✓
+            </span>
+            <h3 className="text-[18px] font-bold text-[#111b21]">Videonuz Yayına Hazır!</h3>
+          </div>
+          {completedVideoUrl ? (
+            <div className="relative overflow-hidden rounded-xl border border-hairline bg-black shadow-lg aspect-[9/16] max-h-[500px] mx-auto flex items-center justify-center">
+              <video src={completedVideoUrl} controls autoPlay loop playsInline className="h-full w-full object-contain" />
+            </div>
+          ) : null}
+          <div className="flex flex-col gap-2 pt-2">
+            <Link
+              href="/icerik"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-[#008069] px-6 py-2.5 text-[13.5px] font-semibold text-white hover:bg-[#00a884]"
+            >
+              Kütüphanede İzle
+            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveJobId(null)
+                setJobState('IDLE')
+                setStep('product_goal')
+              }}
+              className="text-[12.5px] font-medium text-[#667781] hover:text-[#111b21]"
+            >
+              Yeni Bir İçerik Oluştur
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Main Studio 3-Step Wizard View */}
+      {jobState === 'IDLE' && (
+        <div className="flex flex-col">
+          {/* Stepper Header */}
+          <div className="wb-wa-wizard-steps">
+            <Stepper
+              label="Kreatif Stüdyo Adımları"
+              steps={STUDIO_STEPS}
+              current={step}
+              onJump={(id) => {
+                if (id === 'creative_direction' && step === 'product_goal') {
+                  handleGoToStep2()
+                  return
+                }
+                setStep(id as Step)
+              }}
+              className="wb-wa-steps"
+            />
+          </div>
+
+          <div className="space-y-5 px-4 py-4 sm:px-6">
+            {submitError && <Notice tone="danger">{submitError}</Notice>}
+
+            {/* Organization & Canonical Identity Strip */}
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#b7e4d5] bg-[#f1fbf7] p-3 text-[12px]">
+              <div className="flex items-center gap-2.5">
+                {canonicalLogoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={canonicalLogoUrl}
+                    alt="Kurumsal Logo"
+                    className="size-8 rounded-md border border-emerald-200 bg-white object-contain p-0.5"
+                  />
+                ) : (
+                  <span className="flex size-8 items-center justify-center rounded-md bg-amber-100 text-amber-800 text-[10px] font-bold">
+                    Logo Yok
+                  </span>
+                )}
+                <div>
+                  <p className="font-bold text-[#006b58]">{data.org.name || 'İşletmemiz'}</p>
+                  <p className="text-[#667781] text-[11px]">
+                    {hasLogo
+                      ? 'Kurumsal logonuz ve marka kimliğiniz otomatik bağlanır'
+                      : 'Lütfen Ayarlar > Marka Kiti sayfasından logonuzu ekleyin'}
+                  </p>
+                </div>
+              </div>
+
+              {mediaType === 'VIDEO' ? (
+                <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${quotaAvailable ? 'bg-white text-[#008069]' : 'bg-white text-rose-700'}`}>
+                  Bu ay {quotaUsed}/{quotaLimit} video hakkı ({Math.max(0, quotaLimit - quotaUsed)} kaldı)
+                </span>
+              ) : (
+                <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-[#008069]">
+                  Sınırsız Görsel Üretimi
+                </span>
+              )}
+            </div>
+
+            {/* STEP 1: PRODUCT & GOAL */}
+            {step === 'product_goal' && (
+              <div className="space-y-6">
+                {/* 1. Medya Türü Seçimi */}
+                <div>
+                  <h2 className="text-[15px] font-bold text-[#111b21]">1. Medya Türü</h2>
+                  <p className="text-[12px] text-[#667781] mt-0.5">Üretmek istediğiniz içerik biçimini seçin.</p>
+                  <div className="mt-2.5 grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setMediaType('IMAGE')}
+                      className={`flex flex-col items-start rounded-xl border p-3.5 text-left transition-all ${
+                        mediaType === 'IMAGE'
+                          ? 'border-[#008069] bg-[#e7f8f2] ring-2 ring-[#008069]'
+                          : 'border-[#e9edef] hover:border-[#008069]/40 bg-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Icon name="image" className="size-4 text-[#008069]" />
+                        <span className="text-[13.5px] font-bold text-[#111b21]">Kampanya Görseli</span>
+                      </div>
+                      <p className="mt-1 text-[11.5px] text-[#667781]">Afiş, WhatsApp ve Instagram için yüksek kaliteli görsel.</p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setMediaType('VIDEO')}
+                      className={`flex flex-col items-start rounded-xl border p-3.5 text-left transition-all ${
+                        mediaType === 'VIDEO'
+                          ? 'border-[#008069] bg-[#e7f8f2] ring-2 ring-[#008069]'
+                          : 'border-[#e9edef] hover:border-[#008069]/40 bg-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Icon name="video" className="size-4 text-[#008069]" />
+                        <span className="text-[13.5px] font-bold text-[#111b21]">Kampanya Videosu</span>
+                      </div>
+                      <p className="mt-1 text-[11.5px] text-[#667781]">9:16 Sinematik Reels/Durum reklam filmi (~8 sn, Türkçe seslendirmeli).</p>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. Format / En-Boy Oranı */}
+                {mediaType === 'IMAGE' ? (
+                  <div>
+                    <h2 className="text-[15px] font-bold text-[#111b21]">2. Boyut / Format</h2>
+                    <div className="mt-2.5 grid grid-cols-3 gap-2.5">
+                      {IMAGE_FORMATS_V2.map((fmt) => (
+                        <button
+                          key={fmt.id}
+                          type="button"
+                          onClick={() => setImageFormat(fmt.id)}
+                          className={`rounded-xl border p-3 text-left transition-all ${
+                            imageFormat === fmt.id
+                              ? 'border-[#008069] bg-[#e7f8f2] ring-1 ring-[#008069]'
+                              : 'border-[#e9edef] hover:border-[#008069]/30 bg-white'
+                          }`}
+                        >
+                          <span className="block text-[13px] font-bold text-[#111b21]">{fmt.label}</span>
+                          <span className="block text-[11px] text-[#667781] mt-0.5 leading-snug">{fmt.hint}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* 3. Hero Ürün Seçimi */}
+                <div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-[15px] font-bold text-[#111b21]">3. Tanıtılacak Ürün</h2>
+                      <p className="text-[12px] text-[#667781] mt-0.5">Reklamda öne çıkarılacak tek ana (hero) ürünü seçin.</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="quiet"
+                      className="h-8 text-[12px] font-semibold text-[#008069]"
+                      onClick={() => setAddProductOpen(true)}
+                    >
+                      + Yeni Ürün Ekle
+                    </Button>
+                  </div>
+
+                  {productsList.length === 0 ? (
+                    <div className="mt-2.5 rounded-xl border border-dashed border-[#d1d7db] p-6 text-center">
+                      <p className="text-[13px] text-[#667781]">Henüz kayıtlı ürününüz yok.</p>
+                      <Button
+                        type="button"
+                        className="mt-3 !bg-[#008069] text-white text-[12.5px]"
+                        onClick={() => setAddProductOpen(true)}
+                      >
+                        + İlk Ürününüzü Ekleyin
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="mt-2.5 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      {productsList.map((p) => {
+                        const isSelected = heroProductId === p.id
+                        const img = getSafeMediaUrl(p.images?.[0]?.url || '')
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => setHeroProductId(p.id)}
+                            className={`flex flex-col overflow-hidden rounded-xl border text-left transition-all ${
+                              isSelected
+                                ? 'border-[#008069] bg-[#e7f8f2]/50 ring-2 ring-[#008069]'
+                                : 'border-[#e9edef] hover:border-[#008069]/40 bg-white'
+                            }`}
+                          >
+                            {img ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={img} alt={p.name} className="h-28 w-full object-cover" />
+                            ) : (
+                              <div className="flex h-28 w-full items-center justify-center bg-gray-100 text-xs text-gray-400">
+                                Görsel Yok
+                              </div>
+                            )}
+                            <div className="p-2.5">
+                              <div className="flex items-center justify-between">
+                                <p className="text-[12.5px] font-bold text-[#111b21] truncate">{p.name}</p>
+                                {isSelected ? <span className="text-[#008069] text-[12px] font-bold">✓</span> : null}
+                              </div>
+                              <p className="text-[11px] text-[#667781] truncate">{p.description || 'Katalog ürünü'}</p>
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* 4. Kampanya Amacı */}
+                <div>
+                  <h2 className="text-[15px] font-bold text-[#111b21]">4. Kampanya Amacı</h2>
+                  <div className="mt-2.5 grid gap-2 sm:grid-cols-2">
+                    {CAMPAIGN_OBJECTIVES.map((obj) => (
+                      <button
+                        key={obj.id}
+                        type="button"
+                        onClick={() => setObjective(obj.id)}
+                        className={`rounded-xl border p-3 text-left transition-all ${
+                          objective === obj.id
+                            ? 'border-[#008069] bg-[#e7f8f2] ring-1 ring-[#008069]'
+                            : 'border-[#e9edef] hover:border-[#008069]/30 bg-white'
+                        }`}
+                      >
+                        <span className="block text-[13px] font-bold text-[#111b21]">{obj.label}</span>
+                        <span className="block text-[11px] text-[#667781] mt-0.5 leading-snug">{obj.description}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 5. Varsa Kampanya Detayı */}
+                <div>
+                  <h2 className="text-[15px] font-bold text-[#111b21]">5. Varsa Özel Kampanya Notu (İsteğe Bağlı)</h2>
+                  <Textarea
+                    rows={2}
+                    value={campaignDetail}
+                    onChange={(e) => setCampaignDetail(e.target.value)}
+                    placeholder="Örn: 5.000 adet ve üzeri siparişlerde şantiyeye teslim avantajı veya sınırlı stok indirimi."
+                    className="mt-1.5 text-[13px]"
+                  />
+                </div>
+
+                {/* Footer Nav */}
+                <div className="flex justify-end pt-3 border-t border-hairline">
+                  <Button
+                    type="button"
+                    className="wb-wa-submit !bg-[#008069] hover:!bg-[#00a884] text-white font-bold h-11 px-7 shadow-sm"
+                    disabled={!hasProduct || !hasLogo}
+                    onClick={handleGoToStep2}
+                  >
+                    Devam Et & Reklam Taslağını Gör →
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 2: CREATIVE DIRECTION */}
+            {step === 'creative_direction' && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-[15px] font-bold text-[#111b21]">Kreatif Reklam Tarzı</h2>
+                  <p className="text-[12px] text-[#667781] mt-0.5">Yapay zekanın görsel kompozisyon ve anlatım dilini seçin.</p>
+                  <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
+                    {CREATIVE_STYLE_PRESETS.map((preset) => (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => {
+                          setStylePreset(preset.id)
+                          void requestCreativePlan(true)
+                        }}
+                        className={`rounded-xl border p-3.5 text-left transition-all ${
+                          stylePreset === preset.id
+                            ? 'border-[#008069] bg-[#e7f8f2] ring-1 ring-[#008069]'
+                            : 'border-[#e9edef] hover:border-[#008069]/30 bg-white'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-[13px] font-bold text-[#111b21]">{preset.label}</span>
+                          {preset.tag && (
+                            <span className="rounded bg-[#008069] px-2 py-0.5 text-[10px] font-bold text-white">
+                              {preset.tag}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11.5px] text-[#667781] mt-1 leading-snug">{preset.description}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Quality Mode (Designer vs Standard) */}
+                {mediaType === 'IMAGE' && (
+                  <div className="rounded-xl border border-hairline bg-surface p-3.5 flex items-center justify-between">
+                    <div>
+                      <p className="text-[13px] font-bold text-[#111b21] flex items-center gap-1.5">
+                        <span>Sanat Yönetimi Seviyesi</span>
+                        <span className="rounded bg-[#008069] text-white px-2 py-0.5 text-[10px] font-bold">
+                          {qualityMode === 'DESIGNER' ? 'Designer (Art-Directed)' : 'Standart'}
+                        </span>
+                      </p>
+                      <p className="text-[11px] text-[#667781] mt-0.5">
+                        {qualityMode === 'DESIGNER'
+                          ? 'Ajans seviyesi kompozisyon, derinlik, ışık fiziği ve 20 mimari arketip rehberliği.'
+                          : 'Hızlı ve dengeli standart görsel üretimi.'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5 bg-canvas p-1 rounded-lg border border-hairline">
+                      <button
+                        type="button"
+                        onClick={() => setQualityMode('DESIGNER')}
+                        className={`px-3 py-1 text-[11px] font-bold rounded-md transition-all ${
+                          qualityMode === 'DESIGNER'
+                            ? 'bg-[#008069] text-white shadow-2xs'
+                            : 'text-[#667781] hover:text-[#111b21]'
+                        }`}
+                      >
+                        Designer
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setQualityMode('STANDARD')}
+                        className={`px-3 py-1 text-[11px] font-bold rounded-md transition-all ${
+                          qualityMode === 'STANDARD'
+                            ? 'bg-[#008069] text-white shadow-2xs'
+                            : 'text-[#667781] hover:text-[#111b21]'
+                        }`}
+                      >
+                        Standart
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* AI Plan Review Box */}
+                <div className="rounded-xl border border-hairline bg-surface p-4 space-y-3.5 shadow-2xs">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[13px] font-bold text-[#111b21]">
+                        {mediaType === 'VIDEO' ? 'Türkçe Seslendirme Metni' : 'Reklam Başlığı ve Alt Metin'}
+                      </p>
+                      <p className="text-[11px] text-[#667781]">Yapay zeka hazırladı; dilediğiniz gibi düzenleyebilirsiniz.</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="quiet"
+                      className="h-8 text-[12px] font-semibold text-[#008069] border border-[#008069]/30 hover:bg-[#e7f8f2]"
+                      disabled={isPlanning}
+                      onClick={() => void requestCreativePlan(true)}
+                    >
+                      {isPlanning ? 'Hazırlanıyor…' : '↻ Farklı Öner'}
+                    </Button>
+                  </div>
+
+                  {planError && <Notice tone="danger">{planError}</Notice>}
+
+                  {mediaType === 'VIDEO' ? (
+                    <div className="space-y-1.5">
+                      <Textarea
+                        rows={3}
+                        value={spokenVoiceover}
+                        onChange={(e) => setSpokenVoiceover(e.target.value)}
+                        className="text-[14px] font-medium leading-relaxed"
+                        placeholder="Türkçe seslendirme metni..."
+                      />
+                      <div className="flex justify-between items-center text-[11.5px]">
+                        <span className={voWords === 0 || voWords > MAX_SPOKEN_WORDS ? 'text-rose-700 font-semibold' : 'text-[#667781]'}>
+                          Uzunluk: <strong>{voWords} kelime</strong> (Hedef: 8–14 kelime, en fazla {MAX_SPOKEN_WORDS})
+                        </span>
+                        <span className="text-[#008069] font-medium">Spiker 0.5–5.5 sn arasında okur</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5">
+                      <Field label="Ana Reklam Başlığı (Görsel üstüne basılır)">
+                        <Input
+                          value={headline}
+                          onChange={(e) => setHeadline(e.target.value)}
+                          placeholder="Örn: Ayvazoğlu Tuğla ile Sağlam Yapılar"
+                        />
+                      </Field>
+                      <Field label="Açıklayıcı Alt Metin">
+                        <Input
+                          value={supportingLine}
+                          onChange={(e) => setSupportingLine(e.target.value)}
+                          placeholder="Örn: Şantiyenize doğrudan toptan teslimat ve garantili dayanıklılık."
+                        />
+                      </Field>
+                      <Field label="Buton (CTA)">
+                        <Input
+                          value={ctaText}
+                          onChange={(e) => setCtaText(e.target.value)}
+                          placeholder="Hemen İnceleyin"
+                        />
+                      </Field>
+                    </div>
+                  )}
+                </div>
+
+                {/* Collapsed Advanced Section */}
+                <details className="text-[12px] text-[#667781]">
+                  <summary className="cursor-pointer hover:text-[#111b21] font-semibold text-[#008069]">
+                    Gelişmiş Seçenekler (Fiyat, Tarih ve Ortam)
+                  </summary>
+                  <div className="mt-3 space-y-3 rounded-xl border border-hairline bg-[#f8fafb] p-3.5">
+                    {mediaType === 'IMAGE' ? (
+                      <div className="grid gap-2 sm:grid-cols-3">
+                        <Field label="Fiyat (Varsa)">
+                          <Input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Örn: 249 TL" />
+                        </Field>
+                        <Field label="Eski Fiyat">
+                          <Input value={oldPrice} onChange={(e) => setOldPrice(e.target.value)} placeholder="Örn: 399 TL" />
+                        </Field>
+                        <Field label="Kampanya / İndirim">
+                          <Input value={offer} onChange={(e) => setOffer(e.target.value)} placeholder="Örn: %20 İndirim" />
+                        </Field>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <Field label="Çekim Ortamı">
+                            <select
+                              value={environmentPreset}
+                              onChange={(e) => setEnvironmentPreset(e.target.value)}
+                              className="w-full rounded-lg border border-[#e9edef] bg-white px-3 py-2 text-[12.5px] text-[#111b21]"
+                            >
+                              <option value="auto">Otomatik (En uygun ortam)</option>
+                              <option value="construction">İnşaat ve Yapı Sahası</option>
+                              <option value="workshop">Atölye, Fabrika ve Sanayi</option>
+                              <option value="garden">Doğal Açık Alan & Bahçe</option>
+                              <option value="studio">Prestijli Reklam Stüdyosu</option>
+                              <option value="kitchen">Mutfak, Gıda ve Kafe</option>
+                              <option value="office">Modern Ofis ve İç Mekan</option>
+                            </select>
+                          </Field>
+                          <Field label="Kamera Hareketi">
+                            <select
+                              value={motionStyle}
+                              onChange={(e) => setMotionStyle(e.target.value)}
+                              className="w-full rounded-lg border border-[#e9edef] bg-white px-3 py-2 text-[12.5px] text-[#111b21]"
+                            >
+                              <option value="real_usage">Doğal Kullanım ve Sahne Hareketi</option>
+                              <option value="studio_orbit">Vitrin & 3/4 Açı (Şık ve Dengeli)</option>
+                              <option value="macro_detail">Yakın Çekim & Detay Odaklı</option>
+                            </select>
+                          </Field>
+                        </div>
+                        <div className="flex gap-4 pt-1">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={subtitles}
+                              onChange={(e) => setSubtitles(e.target.checked)}
+                              className="rounded text-[#008069]"
+                            />
+                            <span>Dinamik Altyazı Ekle</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={outro}
+                              onChange={(e) => setOutro(e.target.checked)}
+                              className="rounded text-[#008069]"
+                            />
+                            <span>Kapanış Kartı (Outro) Ekle</span>
+                          </label>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </details>
+
+                {/* Footer Nav */}
+                <div className="flex items-center justify-between pt-3 border-t border-hairline">
+                  <Button type="button" variant="quiet" onClick={() => setStep('product_goal')}>
+                    ← Geri (Ürün & Hedef)
+                  </Button>
+                  <Button
+                    type="button"
+                    className="wb-wa-submit !bg-[#008069] hover:!bg-[#00a884] text-white font-bold h-11 px-7 shadow-sm"
+                    disabled={isPlanning || (mediaType === 'VIDEO' && (voWords === 0 || voWords > MAX_SPOKEN_WORDS))}
+                    onClick={() => setStep('review_generate')}
+                  >
+                    Önizleme & Onay →
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 3: REVIEW & GENERATE */}
+            {step === 'review_generate' && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-[15px] font-bold text-[#111b21]">Reklam Önizleme ve Onay</h2>
+                  <p className="text-[12px] text-[#667781] mt-0.5">Tüm parametreler hazırlandı. Tek tıkla üretimi başlatın.</p>
+                </div>
+
+                {/* Summary Card */}
+                <div className="rounded-xl border border-hairline bg-[#f8fafb] p-4 space-y-3">
+                  <div className="flex items-center justify-between border-b border-hairline pb-2.5">
+                    <span className="text-[12px] font-bold uppercase tracking-wider text-[#667781]">Kreatif Özeti</span>
+                    <span className="rounded-full bg-[#e7f8f2] px-2.5 py-0.5 text-[11px] font-bold text-[#008069]">
+                      {mediaType === 'VIDEO' ? '9:16 Sinematik Video' : `Görsel (${imageFormat})`}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-[12px]">
+                    <div>
+                      <span className="text-[#667781]">İşletme / Marka:</span>
+                      <p className="font-semibold text-[#111b21]">{data.org.name}</p>
+                    </div>
+                    <div>
+                      <span className="text-[#667781]">Hero Ürün:</span>
+                      <p className="font-semibold text-[#111b21]">{selectedProduct?.name}</p>
+                    </div>
+                    <div>
+                      <span className="text-[#667781]">Kreatif Tarz:</span>
+                      <p className="font-semibold text-[#008069]">
+                        {CREATIVE_STYLE_PRESETS.find((p) => p.id === stylePreset)?.label}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-[#667781]">Marka Koruması:</span>
+                      <p className="font-semibold text-[#008069]">Kanonik Logo + 1/1 Ürün (2/2 Ref Kilitli)</p>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-hairline">
+                    <span className="text-[11px] font-semibold text-[#667781] uppercase">
+                      {mediaType === 'VIDEO' ? 'Onaylanan Türkçe Seslendirme:' : 'Basılacak Başlık ve Metin:'}
+                    </span>
+                    <p className="mt-1 text-[13px] font-bold text-[#111b21] bg-white p-3 rounded-lg border border-[#e9edef]">
+                      {mediaType === 'VIDEO' ? `“${spokenVoiceover}”` : `${headline} — ${supportingLine}`}
+                    </p>
+                  </div>
+
+                  {/* Asset Preflight Health Check */}
+                  <div className="rounded-lg border border-[#e9edef] bg-white p-3 space-y-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#667781]">Asset Preflight Doğrulaması</span>
+                    <div className="grid grid-cols-2 gap-2 text-[12px]">
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-block size-2 rounded-full ${hasLogo ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                        <span className="text-[#667781]">Kurumsal Logo:</span>
+                        <span className={`font-semibold ${hasLogo ? 'text-emerald-700' : 'text-rose-700'}`}>
+                          {hasLogo ? 'HAZIR (200 OK)' : 'EKSİK'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-block size-2 rounded-full ${hasProduct ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                        <span className="text-[#667781]">Hero Ürün:</span>
+                        <span className={`font-semibold ${hasProduct ? 'text-emerald-700' : 'text-rose-700'}`}>
+                          {hasProduct ? 'HAZIR (200 OK)' : 'EKSİK'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {!allAssetsReady ? (
+                  <Notice tone="danger">
+                    Görsel veya video üretimi için işletme logosu ve seçilen ürünün kanonik referans görseli hazır olmalıdır.
+                  </Notice>
+                ) : null}
+
+                {/* Footer Nav & Submit Button */}
+                <div className="flex items-center justify-between pt-3 border-t border-hairline">
+                  <Button type="button" variant="quiet" onClick={() => setStep('creative_direction')}>
+                    ← Geri (Taslağı Düzenle)
+                  </Button>
+                  <Button
+                    type="button"
+                    className="wb-wa-submit !bg-[#008069] hover:!bg-[#00a884] text-white font-bold h-11 px-8 shadow-sm"
+                    disabled={isSubmitting || imagePending || !allAssetsReady || (mediaType === 'VIDEO' && (voWords === 0 || voWords > MAX_SPOKEN_WORDS))}
+                    onClick={handleCreateCreative}
+                  >
+                    {isSubmitting || imagePending ? 'Üretim Başlatılıyor…' : mediaType === 'VIDEO' ? 'Videoyu Oluştur' : 'Görseli Oluştur'}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Add Product Modal */}
+      <AddProductModal
+        open={addProductOpen}
+        onClose={() => setAddProductOpen(false)}
+        onSuccess={(product: ProductCard) => {
+          setProductsList((prev) => [...prev, product])
+          setHeroProductId(product.id)
+          setAddProductOpen(false)
+        }}
+      />
+    </Card>
+  )
+}

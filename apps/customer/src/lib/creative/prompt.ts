@@ -35,6 +35,7 @@ export type PromptFidelityOptions = {
     product?: boolean
     base?: boolean
   }
+  artDirectionPlan?: import('./director/creative-director').ArtDirectionPlan | null
 }
 
 /**
@@ -109,16 +110,35 @@ export function buildCreativePrompt(
     ? VARIATION_PRESETS.find((row) => row.id === snapshot.variationPreset)?.label
     : null
 
-  // Reklam Poster Hiyerarşisi Yönergesi
-  const posterCompositionDirectives = [
-    'AUTONOMOUS COMMERCIAL AD POSTER COMPOSITION & LAYOUT:',
-    '- TOP / HEADER: Clean brand placement at top. If logo reference is provided, position the authentic corporate logo with high clarity and balanced margins.',
-    '- HEADLINE TYPOGRAPHY: Prominent, ultra-bold, condensed commercial Turkish headline typography matching the brand palette and font tone. High visual contrast against background.',
-    '- OFFER SUB-BADGE: Sleek modern rounded capsule/pill badge in brand accent color containing the core offer, discount or delivery promise. Keep it minimal and elegant (e.g. "Kapıya Teslim • Hızlı Gönderim" or "%20 İndirim • Sınırlı Stok"). NEVER paint tacky cartoon supermarket stickers or comic starbursts.',
-    '- CENTER HERO STAGING: The hero subject (physical product or service visual) must be staged in a realistic, premium, context-appropriate commercial environment with authentic materials, natural lighting, crisp reflections, and contextual atmospheric depth (e.g., sleek logistics dock for construction/wholesale, natural slate with water mist for spray/agritech, executive desk with laptop/app UI for tech/software, marble surface for food/retail).',
-    '- BOTTOM VALUE STRIP: Sleek minimal horizontal feature bar with 2-3 concise value propositions and clean icons (e.g., "[icon] HIZLI TESLİMAT  |  [icon] YÜKSEK KALİTE  |  [icon] GÜVENİLİR HİZMET").',
-    '- ZERO TACKY GRAPHICS: Strictly NO cartoon supermarket flyer stickers, NO yellow starbursts, NO fake web clickable buttons painted on image, NO comic speech bubbles.'
-  ].join('\n')
+  // Reklam Poster Hiyerarşisi & Executive Art Direction Yönergesi
+  const compositionDirectives = options?.artDirectionPlan
+    ? [
+        'EXECUTIVE ART DIRECTION & DESIGNER DIRECTIVES:',
+        `- CONCEPT & ARCHETYPE: ${options.artDirectionPlan.concept_name} (Archetype: ${options.artDirectionPlan.creative_archetype}).`,
+        `- VISUAL HOOK: ${options.artDirectionPlan.visual_hook}.`,
+        `- COMPOSITION & GRID: ${options.artDirectionPlan.composition.grid}. Focal point: ${options.artDirectionPlan.composition.focal_point}. Product scale: ${options.artDirectionPlan.composition.product_scale}, positioned at ${options.artDirectionPlan.composition.product_position}.`,
+        `- DEPTH & LAYERING: ${options.artDirectionPlan.composition.depth_layers.join(' -> ')}.`,
+        `- LIGHTING & SHADOW PHYSICS: ${options.artDirectionPlan.art_direction.lighting}.`,
+        `- MATERIAL & TEXTURE REALISM: ${options.artDirectionPlan.art_direction.material_language}. Surface texture: ${options.artDirectionPlan.art_direction.texture}.`,
+        `- BACKGROUND TREATMENT & ATMOSPHERE: ${options.artDirectionPlan.art_direction.background_treatment}. Atmosphere: ${options.artDirectionPlan.art_direction.atmosphere}.`,
+        `- COLOR TREATMENT & CONTRAST: ${options.artDirectionPlan.art_direction.color_treatment}. Contrast strategy: ${options.artDirectionPlan.art_direction.contrast_strategy}.`,
+        options.artDirectionPlan.human_direction?.enabled
+          ? `- HUMAN PRESENCE & ACTION: Staged ${options.artDirectionPlan.human_direction.role} in ${options.artDirectionPlan.human_direction.wardrobe}, performing: ${options.artDirectionPlan.human_direction.interaction}. Expression: ${options.artDirectionPlan.human_direction.expression}.`
+          : null,
+        `- PRODUCT HERO FIDELITY: ${options.artDirectionPlan.product_direction.hero_behavior}. Scale: ${options.artDirectionPlan.product_direction.scale}. Shadow: ${options.artDirectionPlan.product_direction.reflection_shadow}.`,
+        `- GRAPHIC ACCENTS: Incorporate subtle ${options.artDirectionPlan.graphic_language.shapes.join(', ')} with ${options.artDirectionPlan.graphic_language.frames.join(', ')}.`,
+        `- TYPOGRAPHY DIRECTION: ${options.artDirectionPlan.typography_direction.headline_character}. Feel: ${options.artDirectionPlan.typography_direction.style_feel}.`,
+        `- STRICT ANTI-GENERIC MANDATES: ${options.artDirectionPlan.anti_generic_rules.join('; ')}.`,
+      ].filter(Boolean).join('\n')
+    : [
+        'AUTONOMOUS COMMERCIAL AD POSTER COMPOSITION & LAYOUT:',
+        '- TOP / HEADER: Clean brand placement at top. If logo reference is provided, position the authentic corporate logo with high clarity and balanced margins.',
+        '- HEADLINE TYPOGRAPHY: Prominent, ultra-bold, condensed commercial Turkish headline typography matching the brand palette and font tone. High visual contrast against background.',
+        '- OFFER SUB-BADGE: Sleek modern rounded capsule/pill badge in brand accent color containing the core offer, discount or delivery promise. Keep it minimal and elegant (e.g. "Kapıya Teslim • Hızlı Gönderim" or "%20 İndirim • Sınırlı Stok"). NEVER paint tacky cartoon supermarket stickers or comic starbursts.',
+        '- CENTER HERO STAGING: The hero subject (physical product or service visual) must be staged in a realistic, premium, context-appropriate commercial environment with authentic materials, natural lighting, crisp reflections, and contextual atmospheric depth (e.g., sleek logistics dock for construction/wholesale, natural slate with water mist for spray/agritech, executive desk with laptop/app UI for tech/software, marble surface for food/retail).',
+        '- BOTTOM VALUE STRIP: Sleek minimal horizontal feature bar with 2-3 concise value propositions and clean icons (e.g., "[icon] HIZLI TESLİMAT  |  [icon] YÜKSEK KALİTE  |  [icon] GÜVENİLİR HİZMET").',
+        '- ZERO TACKY GRAPHICS: Strictly NO cartoon supermarket flyer stickers, NO yellow starbursts, NO fake web clickable buttons painted on image, NO comic speech bubbles.'
+      ].join('\n')
 
   const prompt = [
     'Create ONE professional commercial campaign creative for WhatsApp / social ads.',
@@ -143,7 +163,7 @@ export function buildCreativePrompt(
     variation ? `Variation direction: ${variation}. Same offer, different composition.` : null,
     `Campaign brief from the advertiser: ${briefText || 'Özel Kampanya'}`,
     productBlocks.length ? `Products:\n${productBlocks.join('\n')}` : 'No specific product catalog items.',
-    posterCompositionDirectives,
+    compositionDirectives,
     options?.verifiedRefs?.product
       ? 'STRICT PRODUCT FIDELITY: The real product photo is provided as a reference. You must preserve the real physical product exactly as shown: exact shape, casing, components, buttons, materials, and colors. Do NOT mutate the product, do NOT invent fantasy product variations, do NOT change the product design, and do NOT replace the product with a generic item.'
       : 'Do not invent fantasy products. Feature the offered service or commercial offer cleanly.',
@@ -182,6 +202,7 @@ export function buildCreativePrompt(
     'no text saying marka kiti',
     'no text saying brand kit',
     'no campaign kit title overlays',
+    ...(options?.artDirectionPlan?.anti_generic_rules || []),
   ].join(', ')
 
   return { prompt, negative }

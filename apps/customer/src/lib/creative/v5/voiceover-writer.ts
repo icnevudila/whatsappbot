@@ -417,9 +417,9 @@ function rewriteVoiceoverGrammatically(
 
   if (discount) {
     if (cleanBrand) {
-      return `${cleanBrand} ${cleanSubject}, avantajlı fiyat teklifleriyle projenizde. Hemen bilgi alın.`
+      return `${cleanBrand} ${cleanSubject}, avantajlı fiyatlarla hazır. Hemen bilgi alın.`
     }
-    return `${cleanSubject} avantajlı fiyat teklifleriyle projenizde hazır. Detaylar için yazın.`
+    return `${cleanSubject} avantajlı fiyatlarla projenizde hazır. Hemen bilgi alın.`
   }
 
   if (benefits.length > 0) {

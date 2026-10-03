@@ -11,6 +11,10 @@ import { formatToAspect, type CreativePayload, type CreativeSnapshot } from './t
 import { createVideoGenerationIdentity } from './video-generation-identity'
 import { submitVideoWithIntent, VideoJobTerminalError, VideoSubmissionUncertainError } from './video-submit-job'
 import { resolveAssetSource } from './asset-source-resolver'
+import { compositeCommercialCreative } from './v2/image-compositor'
+import { buildImagePromptV2 } from './v2/image-prompt-v2'
+import { mapLegacyStyleToPreset } from './v2/adapter'
+import type { ImageFormatV2 } from './v2/types'
 
 const MAX_REFS = 4
 
@@ -646,10 +650,12 @@ export async function processCreativeGeneration(
       base: refs.some((r) => r.role === 'base'),
     }
 
-    const prompt = creative.template === 'ai_send' && payload.quickSendPrompt
-      ? payload.quickSendPrompt
-      : buildCreativePrompt(snapshot, { verifiedRefs }).prompt
-    const aspect = snapshot.aspect || formatToAspect(creative.format)
+    const targetFormatV2: ImageFormatV2 =
+      snapshot.formatId === 'story' || snapshot.formatId === 'reels_video' || snapshot.aspect === '9:16'
+        ? 'STORY_9_16'
+        : snapshot.formatId === 'portrait' || snapshot.formatId === 'feed' || snapshot.aspect === '4:5'
+          ? 'PORTRAIT_4_5'
+          : 'SQUARE_1_1'
 
     const { data: orgData } = await supabase
       .from('organizations')
@@ -663,7 +669,32 @@ export async function processCreativeGeneration(
     const customerName = (orgData as { name?: string | null })?.name || creative.org_id.slice(0, 8)
     const workspaceTitle = snapshot.brief ? `Kreatif: ${snapshot.brief.slice(0, 40)}` : 'Kreatif Sihirbazı'
 
+    // Live image quality preservation:
+    // Existing prompt behavior already produces acceptable CTA, price, promo, and text.
+    // Use buildImagePromptV2 only if deterministic locked copy overlay is requested.
+    const useLockedCopy = Boolean((payload as any).lockCopyOverlay)
+
+    const prompt = creative.template === 'ai_send' && payload.quickSendPrompt
+      ? payload.quickSendPrompt
+      : useLockedCopy
+        ? buildImagePromptV2({
+            brandName: customerName,
+            productName: snapshot.products?.[0]?.name || 'Ürün',
+            productDescription: snapshot.products?.[0]?.description,
+            stylePreset: mapLegacyStyleToPreset((payload as any).stylePreset || snapshot.style),
+            format: targetFormatV2,
+            plan: (payload as any).creativePlan,
+            hasLogoRef: verifiedRefs.logo,
+            hasProductRef: verifiedRefs.product,
+          }).prompt
+        : buildCreativePrompt(snapshot, {
+            verifiedRefs,
+            artDirectionPlan: (payload as any).qualityMode === 'DESIGNER' ? (payload as any).artDirectionPlan : null,
+          }).prompt
+    const aspect = snapshot.aspect || formatToAspect(creative.format)
+
     const isVideo = creative.format === 'video' || snapshot.formatId === 'reels_video'
+
 
     if (isVideo) {
       // 0. İşletme Bazlı Video Kotası Güvence Kontrolü
@@ -829,9 +860,13 @@ export async function processCreativeGeneration(
         const assetInputs = [ { role: 'logo', url: logoUrl }, { role: 'product', url: productImageUrl },
           ...(snapshot.referenceImageUrls || []).map(url => ({ role: 'reference', url: resolveAssetUrl(url) || url })) ]
         const assetHashes = await Promise.all(assetInputs.map(async asset => {
-          const bytes = await fetchBuffer(String(asset.url))
-          if (!bytes) throw new Error('VIDEO_ASSET_DOWNLOAD_FAILED')
-          return { role: asset.role, sha256: createHash('sha256').update(bytes.data).digest('hex') }
+          const resolved = await resolveAssetSource(asset.url, { tenantId: creative.org_id, supabase })
+          if (!resolved) {
+            if (asset.role === 'logo') throw new Error('LOGO_ASSET_DOWNLOAD_FAILED')
+            if (asset.role === 'product') throw new Error('PRODUCT_ASSET_DOWNLOAD_FAILED')
+            throw new Error('REFERENCE_ASSET_DOWNLOAD_FAILED')
+          }
+          return { role: asset.role, sha256: resolved.sha256 }
         }))
         const identity = createVideoGenerationIdentity({ orgId: creative.org_id, creativeId: creative.id,
           generationRevision: payload.generationRevision || 1, prompt: videoPrompt, assets: assetHashes,
@@ -1052,17 +1087,69 @@ export async function processCreativeGeneration(
         payload.imageJob = imageJob
       },
     })
-    const ext = image.mimeType.includes('jpeg') ? 'jpg' : image.mimeType.includes('webp') ? 'webp' : 'png'
+    const rawGenerationSha256 = createHash('sha256').update(image.data).digest('hex')
+
+    // Deterministic commercial composition: optional/fallback "locked copy" path
+    // Normal default path preserves generative model's output without regression.
+    let finalImageBytes = image.data
+    let finalWidth = image.width || 1080
+    let finalHeight = image.height || 1080
+    let finalMimeType = image.mimeType || 'image/jpeg'
+    let finalSha256 = rawGenerationSha256
+
+    if (Boolean((payload as any).lockCopyOverlay)) {
+      const logoRef = refs.find((r) => r.role === 'logo')
+      const headline = (payload as any).customHeadline || (payload as any).creativePlan?.copy?.headline || snapshot.brief || ''
+      const supporting = (payload as any).customSupporting || (payload as any).creativePlan?.copy?.supporting_line || ''
+      const cta = snapshot.cta || (payload as any).creativePlan?.copy?.cta || 'İnceleyin'
+      const price = snapshot.products?.[0]?.price || null
+      const oldPrice = snapshot.products?.[0]?.oldPrice || null
+      const offer = snapshot.products?.[0]?.promo || null
+
+      try {
+        const composited = await compositeCommercialCreative({
+          baseImageBuffer: image.data,
+          logoBuffer: logoRef?.data || null,
+          targetFormat: targetFormatV2,
+          brandPalette: {
+            primary: snapshot.brandKit?.colors?.primary || '#008069',
+            accent: snapshot.brandKit?.colors?.accent || '#00a884',
+            secondary: snapshot.brandKit?.colors?.secondary || null,
+          },
+          copy: {
+            headline,
+            supportingLine: supporting,
+            price,
+            oldPrice,
+            offer,
+            dateRange: snapshot.dateRange || null,
+            cta,
+          },
+          layout: (payload as any).creativePlan?.layout,
+        })
+
+        finalImageBytes = composited.buffer
+        finalWidth = composited.width
+        finalHeight = composited.height
+        finalMimeType = composited.mimeType
+        finalSha256 = composited.finalSha256
+      } catch (compositeError) {
+        console.warn('[CreativeProcess] Locked copy composition fallback to base image:', compositeError)
+      }
+    }
+
+
+    const ext = finalMimeType.includes('jpeg') ? 'jpg' : finalMimeType.includes('webp') ? 'webp' : 'png'
     const path = payload.imageDirectIntent?.storagePath || `${creative.org_id}/${crypto.randomUUID()}.${ext}`
-    const { error: upError } = await supabase.storage.from('creatives').upload(path, image.data, {
-      contentType: image.mimeType || 'image/png',
+    const { error: upError } = await supabase.storage.from('creatives').upload(path, finalImageBytes, {
+      contentType: finalMimeType,
       upsert: false,
     })
     if (upError) throw new Error(upError.message)
 
     const { data: storedImage, error: storageReadError } = await supabase.storage.from('creatives').download(path)
     if (storageReadError || !storedImage || storedImage.size > 32 * 1024 * 1024) throw new Error('IMAGE_STORAGE_READBACK_FAILED')
-    const storedReceipt = await verifyPersistedImageBytes(image.data, Buffer.from(await storedImage.arrayBuffer()))
+    const storedReceipt = await verifyPersistedImageBytes(finalImageBytes, Buffer.from(await storedImage.arrayBuffer()))
 
     const { data: publicUrl } = supabase.storage.from('creatives').getPublicUrl(path)
     const nextPayload: CreativePayload = {
@@ -1070,8 +1157,10 @@ export async function processCreativeGeneration(
       imageJob: payload.imageJob || null,
       imageOutputReceipt: {
         orgId: creative.org_id, creativeId, jobId: payload.imageJob?.id || null,
+        generation_sha256: rawGenerationSha256,
+        final_sha256: finalSha256,
         sha256: storedReceipt.sha256, size: storedReceipt.size,
-        mimeType: storedReceipt.mimeType, width: storedReceipt.width, height: storedReceipt.height,
+        mimeType: storedReceipt.mimeType, width: finalWidth, height: finalHeight,
         decodedImage: true, storagePath: path, referenceReceipt: image.referenceReceipt || null,
       },
       imageDirectIntent: null,
@@ -1092,8 +1181,8 @@ export async function processCreativeGeneration(
         error: null,
         storage_path: path,
         public_url: publicUrl.publicUrl,
-        width: image.width || null,
-        height: image.height || null,
+        width: finalWidth,
+        height: finalHeight,
         payload: nextPayload,
       })
       .eq('id', creativeId)

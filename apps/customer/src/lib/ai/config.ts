@@ -32,6 +32,7 @@ export type AiKeyBag = {
 }
 
 export type ResolvedAiConfig = {
+  omnistudio: { baseUrl: string; token: string }
   gemini: { apiKey: string; imageModel: string; textModel: string }
   openai: { apiKey: string; imageModel: string; textModel: string; baseUrl: string }
   cloudflare: { accountId: string; apiToken: string; imageModel: string }
@@ -55,6 +56,10 @@ function pickModel(
 
 export function resolveAiConfig(bag?: AiKeyBag | null): ResolvedAiConfig {
   return {
+    omnistudio: {
+      baseUrl: (process.env.OMNISTUDIO_GATEWAY_URL || process.env.NEXT_PUBLIC_OMNISTUDIO_URL || 'http://127.0.0.1:3456').replace(/\/+$/, ''),
+      token: process.env.OMNISTUDIO_GATEWAY_TOKEN || process.env.WORKER_CONTROL_TOKEN || 'sk-omnistudio-2026',
+    },
     gemini: {
       apiKey: (bag?.geminiApiKey?.trim() || process.env.GEMINI_API_KEY || '').trim(),
       imageModel: pickModel(
@@ -124,7 +129,7 @@ const DEFAULT_IMAGE_ORDER = readOrder(process.env.AI_IMAGE_PROVIDERS, [
   'openai',
 ])
 
-const DEFAULT_TEXT_ORDER = readOrder(process.env.AI_TEXT_PROVIDERS, ['gemini', 'openai'])
+const DEFAULT_TEXT_ORDER = readOrder(process.env.AI_TEXT_PROVIDERS, ['omnistudio', 'gemini', 'openai'])
 
 /** Tercih edilen sağlayıcıyı sıranın başına alır. */
 export function resolveImageProviderOrder(bag?: AiKeyBag | null): AiProviderId[] {
@@ -140,7 +145,7 @@ export function resolveImageProviderOrder(bag?: AiKeyBag | null): AiProviderId[]
 export function resolveTextProviderOrder(bag?: AiKeyBag | null): AiProviderId[] {
   const preferred = String(bag?.preferredTextProvider ?? 'auto').trim().toLowerCase()
   if (!preferred || preferred === 'auto') return DEFAULT_TEXT_ORDER
-  if (!(['gemini', 'openai'] as string[]).includes(preferred)) return DEFAULT_TEXT_ORDER
+  if (!(['omnistudio', 'gemini', 'openai'] as string[]).includes(preferred)) return DEFAULT_TEXT_ORDER
   const id = preferred as AiProviderId
   return [id, ...DEFAULT_TEXT_ORDER.filter((item) => item !== id)]
 }

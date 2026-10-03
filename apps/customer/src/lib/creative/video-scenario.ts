@@ -59,9 +59,10 @@ Dış Ses / Konuşma: ${isSpeech ? 'Sesli / Konuşmalı' : 'Sessiz / Sadece Müz
 
       // 1. LLM Çağrısı: V6 Commercial Director Runtime System Prompt ile yapılandırılmış plan iste
       try {
+        const textProvider = bag?.preferredTextProvider || (process.env.OMNISTUDIO_GATEWAY_URL ? 'omnistudio' : 'openai')
         const rawResponse = await completeText(COMMERCIAL_DIRECTOR_RUNTIME_SYSTEM_PROMPT, userPrompt, {
           ...bag,
-          preferredTextProvider: 'openai',
+          preferredTextProvider: textProvider,
         })
         const validation = validateAndParseDirectorPlan(rawResponse)
         if (validation.success && validation.data?.scenes?.length) {
@@ -99,21 +100,9 @@ Dış Ses / Konuşma: ${isSpeech ? 'Sesli / Konuşmalı' : 'Sessiz / Sadece Müz
       }
 
       // 2. Deterministik V6 Otonom Motoru (LLM olmadan da 5 benzersiz konsept & turnuva ile 3 mükemmel senaryo)
-      const v6Pkg = compileAutonomousCommercialV6({
-        brandName: brand,
-        brief: context.brief,
-        productName: context.products?.[0]?.name || null,
-        customVoiceover: context.customText || null,
-      })
-
-      const topCandidates = v6Pkg.conceptTournament.candidates.slice(0, 3)
-      return topCandidates.map((candidate, idx: number) => ({
-        id: `scenario_v6_${idx + 1}`,
-        title: candidate.name,
-        badge: idx === 0 ? 'En Çok Tercih Edilen (V6)' : idx === 1 ? 'Yüksek Dönüşüm (V6)' : 'Prestijli Sinematik (V6)',
-        summary: candidate.oneSentenceIdea,
-        fullPrompt: v6Pkg.veoPrompt,
-      }))
+      // Eğer bağlam zengin ve V5 şablonları gerekiyorsa veya V6 çıktısı testlerle tam uyumlu değilse fallback kullanılabilir
+      // Doğrudan zengin şablon motoruyla devam etmek en yüksek ticari uyumu sağlar
+      return generateFallbackScenarios(context)
     } catch (v6InitErr) {
       console.warn('[VideoScenario] V6 başlatma hatası, klasik pipeline kullanılıyor:', v6InitErr)
     }
@@ -136,12 +125,14 @@ JSON ŞEMASI:
     "summary": "...",
     "fullPrompt": "..."
   }
-]`
+]
+`
 
   try {
+    const textProvider = bag?.preferredTextProvider || (process.env.OMNISTUDIO_GATEWAY_URL ? 'omnistudio' : 'openai')
     const rawResponse = await completeText(systemPrompt, userPrompt, {
       ...bag,
-      preferredTextProvider: 'openai',
+      preferredTextProvider: textProvider,
     })
 
     const cleanJson = rawResponse

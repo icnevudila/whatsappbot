@@ -71,6 +71,9 @@ export type WizardBootstrap = {
 
 export function formatFromId(formatId: string): (typeof CREATIVE_FORMATS)[number] | typeof VIDEO_CREATIVE_FORMAT {
   if (formatId === 'reels_video') return VIDEO_CREATIVE_FORMAT
+  if (formatId === 'SQUARE_1_1') return CREATIVE_FORMATS.find((row) => row.id === 'wa') ?? CREATIVE_FORMATS[0]
+  if (formatId === 'STORY_9_16') return CREATIVE_FORMATS.find((row) => row.id === 'story') ?? CREATIVE_FORMATS[2]
+  if (formatId === 'PORTRAIT_4_5') return CREATIVE_FORMATS.find((row) => row.id === 'feed') ?? CREATIVE_FORMATS[3]
   return CREATIVE_FORMATS.find((row) => row.id === formatId) ?? CREATIVE_FORMATS[0]
 }
 

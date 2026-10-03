@@ -3,20 +3,25 @@ import { NextRequest, NextResponse } from 'next/server'
 import type { requireActiveOrg } from '@/lib/org'
 import { MAX_SPOKEN_WORDS, countWords } from '@/lib/video-wizard-contract'
 import { createVideoGenerationIdentity, findVideoGeneration } from '@/lib/creative/video-generation-identity'
+import { resolveAssetSource, type ResolvedAsset } from '@/lib/creative/asset-source-resolver'
 
-async function resolveServerSha256(url: string | undefined | null): Promise<string> {
-  if (!url) throw new Error('VIDEO_ASSET_URL_REQUIRED')
-  try {
-    const resp = await fetch(url, { signal: AbortSignal.timeout(15000) })
-    if (resp.ok) {
-      const buf = Buffer.from(await resp.arrayBuffer())
-      if (buf.length < 32 || !(resp.headers.get('content-type') || '').startsWith('image/')) throw new Error('VIDEO_ASSET_MEDIA_INVALID')
-      return crypto.createHash('sha256').update(buf).digest('hex')
-    }
-  } catch (err) {
-    console.warn('[jobs/route] Failed to fetch url for server SHA256:', url, err)
+async function resolveVideoAssetSource(
+  url: string | undefined | null,
+  role: 'logo' | 'product' | 'reference',
+  options: { tenantId?: string; supabase?: any },
+): Promise<ResolvedAsset> {
+  if (!url) {
+    if (role === 'logo') throw new Error('LOGO_ASSET_NOT_READY')
+    if (role === 'product') throw new Error('PRODUCT_ASSET_NOT_READY')
+    throw new Error('REFERENCE_ASSET_NOT_READY')
   }
-  throw new Error('VIDEO_ASSET_DOWNLOAD_FAILED')
+  const resolved = await resolveAssetSource(url, options)
+  if (!resolved) {
+    if (role === 'logo') throw new Error('LOGO_ASSET_DOWNLOAD_FAILED')
+    if (role === 'product') throw new Error('PRODUCT_ASSET_DOWNLOAD_FAILED')
+    throw new Error('REFERENCE_ASSET_DOWNLOAD_FAILED')
+  }
+  return resolved
 }
 
 function isSha256(value: unknown): value is string {
@@ -162,12 +167,12 @@ export async function createVideoJob(req: NextRequest, context: Awaited<ReturnTy
       return NextResponse.json({ error: 'İşletmenin geçerli video kotası bulunamadı.' }, { status: 503 })
     }
 
-    // 2. Logo & Ürün Zorunluluk Kontrolü (Genel marka haricinde)
+    // 2. Logo & Ürün Zorunluluk Kontrolü
     if (!logoAsset?.url) {
-      return NextResponse.json({ error: 'Video üretimi için kurumsal logo zorunludur.' }, { status: 400 })
+      return NextResponse.json({ error: 'LOGO_ASSET_NOT_READY' }, { status: 400 })
     }
     if (!productAsset?.url) {
-      return NextResponse.json({ error: 'Video üretimi için gerçek bir ürün görseli seçilmelidir.' }, { status: 400 })
+      return NextResponse.json({ error: 'PRODUCT_ASSET_NOT_READY' }, { status: 400 })
     }
 
     // 3. Asset Manifest & SHA256 Sets
@@ -182,34 +187,36 @@ export async function createVideoJob(req: NextRequest, context: Awaited<ReturnTy
     }> = []
 
     // Logo
+    const resolvedLogo = await resolveVideoAssetSource(logoAsset.url, 'logo', { tenantId: org.id, supabase })
     const logoFilePath = logoAsset.filePath || logoAsset.url
-    const logoSha = await resolveServerSha256(logoAsset.url)
+    const logoSha = resolvedLogo.sha256
     if (isSha256(logoAsset.sha256) && logoAsset.sha256.toLowerCase() !== logoSha) throw new Error('ASSET_HASH_MISMATCH')
 
     manifestAssets.push({
       role: 'logo',
       file_path: logoFilePath,
-      storage_url: logoAsset.url,
+      storage_url: resolvedLogo.resolvedUrl,
       original_filename: logoAsset.name || 'brand_logo.png',
       sha256: logoSha,
-      mime_type: 'image/png',
-      byte_size: logoAsset.size || 1024,
+      mime_type: resolvedLogo.mimeType,
+      byte_size: resolvedLogo.data.length,
     })
 
     // Product (if present)
     let productSha = ''
     if (productAsset?.url || productAsset?.filePath) {
       const prodFilePath = productAsset.filePath || productAsset.url
-      productSha = await resolveServerSha256(productAsset.url)
+      const resolvedProduct = await resolveVideoAssetSource(productAsset.url, 'product', { tenantId: org.id, supabase })
+      productSha = resolvedProduct.sha256
       if (isSha256(productAsset.sha256) && productAsset.sha256.toLowerCase() !== productSha) throw new Error('ASSET_HASH_MISMATCH')
       manifestAssets.push({
         role: 'product',
         file_path: prodFilePath,
-        storage_url: productAsset.url,
+        storage_url: resolvedProduct.resolvedUrl,
         original_filename: productAsset.name || 'hero_product.jpg',
         sha256: productSha,
-        mime_type: 'image/jpeg',
-        byte_size: productAsset.size || 2048,
+        mime_type: resolvedProduct.mimeType,
+        byte_size: resolvedProduct.data.length,
       })
     }
 
@@ -217,18 +224,19 @@ export async function createVideoJob(req: NextRequest, context: Awaited<ReturnTy
     if (Array.isArray(referenceAssets)) {
       for (const [idx, ref] of referenceAssets.entries()) {
         if (!ref?.url) continue
-        const refSha = await resolveServerSha256(ref.url)
+        const resolvedRef = await resolveVideoAssetSource(ref.url, 'reference', { tenantId: org.id, supabase })
+        const refSha = resolvedRef.sha256
         if (isSha256(ref.sha256) && ref.sha256.toLowerCase() !== refSha) throw new Error('ASSET_HASH_MISMATCH')
         const allowedReferenceRoles = ['reference', 'packaging', 'environment', 'presenter', 'style'] as const
         const referenceRole = allowedReferenceRoles.includes(ref.role) ? ref.role : 'reference'
         manifestAssets.push({
           role: referenceRole,
           file_path: ref.url,
-          storage_url: ref.url,
+          storage_url: resolvedRef.resolvedUrl,
           original_filename: ref.name || `ref_${idx + 1}.jpg`,
           sha256: refSha,
-          mime_type: 'image/jpeg',
-          byte_size: ref.size || 1024,
+          mime_type: resolvedRef.mimeType,
+          byte_size: resolvedRef.data.length,
         })
       }
     }

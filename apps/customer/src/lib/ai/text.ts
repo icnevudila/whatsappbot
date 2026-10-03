@@ -23,6 +23,44 @@ function timeout(): AbortSignal {
 
 function buildProviders(config: ResolvedAiConfig): Partial<Record<AiProviderId, TextProvider>> {
   return {
+    omnistudio: {
+      id: 'omnistudio',
+      label: 'Mesajify Custom AI (OmniStudio Gateway)',
+      isConfigured: () => Boolean(config.omnistudio?.baseUrl),
+      async complete(system, user) {
+        const baseUrl = config.omnistudio.baseUrl.replace(/\/+$/, '')
+        const token = config.omnistudio.token || 'sk-omnistudio-2026'
+        const response = await fetch(`${baseUrl}/v1/chat/completions`, {
+          method: 'POST',
+          signal: timeout(),
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o',
+            messages: [
+              { role: 'system', content: system },
+              { role: 'user', content: user },
+            ],
+            temperature: 0.7,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error(`OmniStudio Custom AI ${response.status}: ${(await response.text()).slice(0, 300)}`)
+        }
+
+        const json = (await response.json()) as {
+          choices?: { message?: { content?: string } }[]
+          reply?: string
+        }
+
+        const text = json.choices?.[0]?.message?.content?.trim() || json.reply?.trim()
+        if (!text) throw new Error('OmniStudio Custom AI returned empty response')
+        return text
+      },
+    },
     gemini: {
       id: 'gemini',
       label: 'Google Gemini',

@@ -2,6 +2,15 @@ import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   transpilePackages: ['@wa/shared'],
+  serverExternalPackages: ['sharp'],
+  outputFileTracingExcludes: {
+    '*': [
+      'node_modules/@img/sharp-libvips-darwin*/**',
+      'node_modules/@img/sharp-libvips-win32*/**',
+      'node_modules/@swc/core*/**',
+      'node_modules/lottie-web/**',
+    ],
+  },
   agentRules: false,
   experimental: {
     staleTimes: {
