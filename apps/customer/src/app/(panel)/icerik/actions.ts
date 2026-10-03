@@ -260,6 +260,9 @@ export async function startCreativeGeneration(
       const extra = extras[id] ?? {}
       const include = { ...DEFAULT_INCLUDE, ...(extra.include ?? {}) }
       const chosenImage = extra.imageUrl?.trim() || firstImage.get(id) || null
+      if (chosenImage && !(imageRows ?? []).some((image) => image.product_id === id && image.public_url === chosenImage)) {
+        return { error: 'CROSS_ORG_CONTAMINATION: Seçilen ürün görseli bu işletmenin ürün kaydına ait değil.' }
+      }
       products.push({
         id: product.id,
         name: product.name,
@@ -354,6 +357,13 @@ export async function startCreativeGeneration(
     if (labels.length === 0 && parentPayload.labels?.length) labels.push(...parentPayload.labels)
   }
   const title = titleFromBrief(String(draft.instruction ?? '').trim() || brief)
+  // Identical mandatory-asset gate for every business, enforced before job insertion.
+  if (draft.useLogo === false || !(kitRow?.logo_path || orgLogoPath)) {
+    return { error: 'Üretmek için işletme logosunu ekleyin ve logo kullanımını açın.' }
+  }
+  if (!products.some((product) => product.include.image && product.imageUrl) && !baseCreativeId) {
+    return { error: 'Üretmek için gerçek bir ürün veya referans görseli seçin.' }
+  }
   const snapshot: CreativePayload = {
     brief,
     style: String(draft.style ?? 'auto'),

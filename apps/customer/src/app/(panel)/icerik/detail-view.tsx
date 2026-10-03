@@ -11,7 +11,6 @@ import { useConfirm } from '@/components/confirm-dialog'
 import { useToast } from '@/components/toast'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { VARIATION_PRESETS } from '@/lib/creative/types'
-import { VIDEO_CAMPAIGN_STAGES } from '@/lib/creative/use-creative-progress'
 import { detailRenderState, hasConfirmedRenderResult, renderRemainingText } from '@/lib/creative/detail-render-state'
 import {
   deleteCreative,
@@ -529,32 +528,15 @@ export function CreativeDetail({
     Boolean(displayPublicUrl?.endsWith('.mp4')) ||
     Boolean(creative.publicUrl?.includes('/api/ai-media/outputs/')) ||
     Boolean(displayPublicUrl?.includes('/api/ai-media/outputs/'))
-  const stages = isVideo ? VIDEO_CAMPAIGN_STAGES : DETAIL_STAGES
-  const targetDuration = isVideo ? 122 : 78
-
-  let stageLabel = stages[0].label
-  let stageDetail = stages[0].detail
-  let remainingSeconds = Math.max(0, targetDuration - tick)
-
-  for (let i = stages.length - 1; i >= 0; i--) {
-    if (tick >= stages[i].at) {
-      stageLabel = stages[i].label
-      stageDetail = stages[i].detail
-      break
-    }
-  }
+  let stageLabel = 'Sunucudan üretim sonucu bekleniyor…'
+  let stageDetail = 'Çıktının hazır olduğu henüz doğrulanmadı'
 
   if (serverProgress && isVideo) {
     stageLabel = serverProgress.stageLabel
     stageDetail = serverProgress.stageDetail
-    remainingSeconds = serverProgress.remainingSeconds
   }
 
-  if (remainingSeconds <= 0 && !(serverProgress && isVideo)) {
-    stageLabel = 'Üretim sonucu kontrol ediliyor…'
-    stageDetail = 'Dosyanın hazır olduğu henüz doğrulanmadı'
-  }
-  const remainingText = renderRemainingText(remainingSeconds)
+  const remainingText = `Geçen süre: ${tick} sn`
 
   return (
     <div className="space-y-3">
