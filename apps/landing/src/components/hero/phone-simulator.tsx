@@ -63,8 +63,8 @@ export function PhoneSimulator() {
 
         {/* Chat Header */}
         <div className="bg-[#f0f2f5] px-4 py-3 flex items-center gap-3 border-b border-gray-200 z-10">
-          <div className="w-10 h-10 rounded-full bg-brand flex items-center justify-center shrink-0">
-            <Image src="/logos/mesajify_app_icon_corporate_squircle.png" width={24} height={24} alt="Mesajify" className="rounded-md" />
+          <div className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center shrink-0 p-1.5 shadow-sm">
+            <Image src="/brand/mesajify-symbol.png" width={28} height={28} alt="Mesajify" className="object-contain" />
           </div>
           <div>
             <div className="flex items-center gap-1">

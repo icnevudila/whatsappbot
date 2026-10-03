@@ -40,11 +40,13 @@ export function AuthShell({
           className="pointer-events-none absolute inset-0 bg-[rgba(47,91,255,0.08)]"
         />
         <div className="relative z-10">
-          <Link href="/" className="inline-flex items-center gap-3 text-white">
-            <span className="grid size-9 place-items-center bg-accent text-[15px] font-black text-accent-ink">
-              F
-            </span>
-            <span className="text-[18px] font-black tracking-[-0.03em]">Filo</span>
+          <Link href="/" className="inline-flex items-center gap-2.5 text-white">
+            <img
+              src="/brand/mesajify-symbol.png"
+              alt={BRAND_NAME}
+              className="size-8 object-contain"
+            />
+            <span className="text-[18px] font-bold tracking-tight text-white">{BRAND_NAME}</span>
           </Link>
           <h2 className="mt-12 max-w-[14ch] text-[clamp(28px,3.5vw,40px)] font-black leading-[1.1] tracking-[-0.035em]">
             {asideTitle}

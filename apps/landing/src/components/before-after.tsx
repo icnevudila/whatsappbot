@@ -35,8 +35,8 @@ export function BeforeAfter() {
             
             <div className="relative w-full max-w-[320px] aspect-square flex items-center justify-center">
               {/* Center Logo */}
-              <div className="w-20 h-20 bg-[#07100C] rounded-2xl flex items-center justify-center z-10 shadow-xl relative">
-                <img src="/logos/mesajify_app_icon_corporate_squircle.png" alt="Mesajify" className="w-12 h-12" />
+              <div className="w-20 h-20 bg-[#07100C] rounded-2xl flex items-center justify-center z-10 shadow-xl relative p-3">
+                <img src="/brand/mesajify-symbol.png" alt="Mesajify" className="w-full h-full object-contain" />
               </div>
 
               {/* Connecting Lines */}

@@ -11,18 +11,19 @@ export const BRAND_TAGLINE = 'Çoklu WhatsApp hattından toplu kampanya gönderi
 export function LogoMark({ className = 'size-5' }: { className?: string }) {
   return (
     <img
-      src="/logos/mesajify_app_icon_corporate_squircle.png"
+      src="/brand/mesajify-symbol.png"
       alt={BRAND_NAME}
-      className={`${className} rounded-md object-contain shadow-xs inline-block`}
+      className={`${className} object-contain inline-block`}
     />
   )
 }
 
 export function Wordmark({ className = '' }: { className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-2.5 ${className}`}>
-      <LogoMark className="size-6" />
-      <span className="text-[14px] font-bold tracking-tight text-ink">{BRAND_NAME}</span>
-    </span>
+    <img
+      src="/brand/mesajify-logo-full.png"
+      alt={BRAND_NAME}
+      className={`h-7 w-auto object-contain inline-block ${className}`}
+    />
   )
 }

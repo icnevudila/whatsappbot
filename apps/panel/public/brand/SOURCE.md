@@ -1,0 +1,1 @@
+Official raster source supplied by the user, 2026-09-30. PNG crops preserve exact RGBA pixels and transparency. No redraw, recolor, rescale, vectorization or generative editing. Full crop: x246 y120 1557x442. Symbol crop: x246 y120 490x442. Original vector not supplied.

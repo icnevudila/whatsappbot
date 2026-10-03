@@ -115,7 +115,7 @@ export function Scene04Delivery() {
           {/* Connection flow node with Mesajify Logo */}
           <div className="lg:col-span-2 hidden lg:flex flex-col items-center justify-center text-ink-muted">
             <div className="w-14 h-14 rounded-2xl bg-white border border-hairline flex items-center justify-center shadow-md p-2 hover:scale-105 transition-transform duration-300">
-              <Image src="/logos/mesajify_app_icon_corporate_squircle.png" width={36} height={36} alt="Mesajify Motor" className="rounded-lg" />
+              <Image src="/brand/mesajify-symbol.png" width={36} height={36} alt="Mesajify Motor" className="object-contain" />
             </div>
             <span className="text-xs font-semibold text-brand mt-3 uppercase tracking-wide">
               Dağıtım Motoru

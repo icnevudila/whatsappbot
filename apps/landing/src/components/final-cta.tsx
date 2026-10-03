@@ -5,12 +5,13 @@ export function FinalCta() {
     <section className="py-32 bg-[#07100C] text-white text-center relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-t from-[#22c55e]/10 to-transparent" />
       <div className="max-w-[1240px] mx-auto px-6 relative z-10">
-        <div className="w-16 h-16 mx-auto mb-8 opacity-50">
+        <div className="w-16 h-16 mx-auto mb-8 opacity-75">
           <Image 
-            src="/logos/mesajify_app_icon_corporate_squircle.png"
+            src="/brand/mesajify-symbol.png"
             alt="Mesajify"
             width={64}
             height={64}
+            className="object-contain"
           />
         </div>
         <h2 className="text-5xl md:text-7xl font-medium tracking-tight mb-8">
