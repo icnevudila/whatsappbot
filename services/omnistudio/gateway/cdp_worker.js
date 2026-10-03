@@ -12,6 +12,7 @@ const { readComposerAttachments } = require('./image_reference_gate.js');
 const { navigateToChat } = require('./chat_navigation.js');
 const { isChatGPTPage } = require('./chatgpt_tab_scope.js');
 const { assertImageScope, readImageScope } = require('./image_conversation_scope.js');
+const { validateImageSubmit } = require('./image_submit_contract.js');
 const { assertReferenceCount } = require('./image_reference_contract.js');
 
 const GATEWAY_URL = process.env.GATEWAY_URL || 'http://127.0.0.1:3456';
@@ -395,12 +396,16 @@ function stripEmojis(text) {
     .trim();
 }
 
-async function injectPromptAndSend(cdp, promptText) {
+async function injectPromptAndSend(cdp, promptText, imageGate = null) {
   const startedAt = Date.now();
   let promptInsertedAt = null;
   try {
     // 0. Session-scoped submission pacing to avoid ChatGPT web concurrent submit rate-limits
     await acquireSubmitPacing(SESSION_KEY);
+    if (imageGate) {
+      const current = await cdp.send('Runtime.evaluate', { expression: `(${readImageScope.toString()})()`, returnByValue: true });
+      assertImageScope(imageGate.scope, { ...current.result?.value, targetId: imageGate.scope.targetId });
+    }
 
     if (await checkRateLimitModal(cdp)) {
       throw new Error('WEB_SESSION_RATE_LIMITED: ChatGPT web "Too many requests" rate-limit modal detected');
@@ -467,6 +472,12 @@ async function injectPromptAndSend(cdp, promptText) {
 
       const clickRes = await cdp.send('Runtime.evaluate', {
         expression: `(() => {
+          const gate = ${JSON.stringify(imageGate)};
+          if (gate) {
+            const input = document.querySelector('#prompt-textarea, [data-composer] [contenteditable="true"], form textarea, form [contenteditable="true"]');
+            const blocked = (${validateImageSubmit.toString()})(gate, (${readImageScope.toString()})(), (${readComposerAttachments.toString()})(), input ? (input.innerText || input.value || '') : '', ${JSON.stringify(promptText)});
+            if (blocked) return { blocked };
+          }
           if (document.querySelector('button[data-testid="stop-button"], button[aria-label*="Stop"]')) {
             return { submitted: true };
           }
@@ -493,6 +504,7 @@ async function injectPromptAndSend(cdp, promptText) {
       });
 
       const res = clickRes.result?.value;
+      if (res?.blocked) throw new Error(res.blocked);
       if (res?.submitted) {
         submitted = true;
         break;
@@ -765,6 +777,7 @@ async function workerLoop() {
 
   let chatgptTab = null;
   let disposableImageTarget = null;
+  let preserveImageTarget = false;
   let claimedJob = null;
   // Claim synchronously before the first await, not after fetching a job.
   isBusy = true;
@@ -817,7 +830,8 @@ async function workerLoop() {
       reaper.registry.setTabJob(disposableImageTarget.id, job.id);
       reaper.registry.setTabJob(chatgptTab.id, null);
       chatgptTab = disposableImageTarget;
-      await executeChatGPTJob(chatgptTab, job);
+      const outcome = await executeChatGPTJob(chatgptTab, job);
+      preserveImageTarget = outcome?.preserveTarget === true;
     }
 
     completedJobCount++;
@@ -834,10 +848,10 @@ async function workerLoop() {
       body: JSON.stringify({ jobId: claimedJob.id, error: err.message }),
     }).catch(() => {});
   } finally {
-    if (disposableImageTarget?.id) {
+    if (disposableImageTarget?.id && !preserveImageTarget) {
       await fetch(`${CDP_HTTP}/json/close/${encodeURIComponent(disposableImageTarget.id)}`, { signal: AbortSignal.timeout(5000) }).catch(() => {});
     }
-    if (chatgptTab && chatgptTab.id) {
+    if (chatgptTab && chatgptTab.id && !preserveImageTarget) {
       reaper.registry.setTabJob(chatgptTab.id, null);
     }
     isBusy = false;
@@ -855,6 +869,7 @@ async function workerLoop() {
 // ChatGPT İşini Çalıştır
 async function executeChatGPTJob(tab, job) {
   let cdp = null;
+  let referenceReceiptPersisted = false;
   const workerTiming = createWorkerTiming(job, 'image');
   const tempRefPaths = [];
   try {
@@ -950,12 +965,8 @@ async function executeChatGPTJob(tab, job) {
               files: tempRefPaths,
               nodeId: fileInput.nodeId
             }, 5000);
-            await cdp.send('Runtime.evaluate', {
-              expression: `
-                const el = document.querySelector('#upload-photos') || document.querySelector('#upload-media') || document.querySelector('input[type=file]');
-                if (el) el.dispatchEvent(new Event('change', { bubbles: true }));
-              `
-            });
+            // DOM.setFileInputFiles already dispatches native input/change events.
+            // A second synthetic change can race the framework's upload/reset handler.
             console.log(`[CDP Worker] ${tempRefPaths.length} referans görsel inputa yüklendi, thumbnail bekleniyor...`);
             const refUploadStart = Date.now();
             const maxRefWait = 30_000;
@@ -972,7 +983,13 @@ async function executeChatGPTJob(tab, job) {
               }
               await sleep(200);
             }
-            if (!attachmentsVerified) throw new Error('REFERENCE_ATTACHMENT_FAILED: all requested references were not confirmed in the composer');
+            if (!attachmentsVerified) {
+              const diagnostic = await cdp.send('Runtime.evaluate', {
+                expression: `JSON.stringify({scope:(${readImageScope.toString()})(),attachments:(${readComposerAttachments.toString()})(),inputs:Array.from(document.querySelectorAll('input[type=file]')).map(el=>({id:el.id,accept:el.accept,multiple:el.multiple,disabled:el.disabled,fileCount:el.files?.length||0})),composerHtml:document.querySelector('#prompt-textarea')?.closest('form')?.outerHTML?.slice(0,8000)})`, returnByValue:true,
+              }).catch(()=>null);
+              console.log(JSON.stringify({event:'image_attachment_diagnostic',job_id:job.id,target_id:tab.id,action:'DOM.setFileInputFiles',last_successful_action:'DOM.setFileInputFiles',diagnostic:diagnostic?.result?.value||null}));
+              throw new Error('REFERENCE_ATTACHMENT_FAILED: all requested references were not confirmed in the composer');
+            }
             workerTiming.mark('reference_upload_ms', refUploadStart);
           }
         } catch (uploadErr) {
@@ -1004,11 +1021,18 @@ async function executeChatGPTJob(tab, job) {
     assertImageScope(scope, { ...currentScope.result?.value, targetId: tab.id });
     assertReferenceCount(expectedRefCount, tempRefPaths.length);
     assertReferenceCount(expectedRefCount, composerAttachmentCount);
-    console.log(JSON.stringify({ event: 'image_reference_gate', job_id: job.id, target_id: tab.id,
+    const referenceReceipt = { job_id: job.id, worker_id: WORKER_ID, target_id: tab.id,
       conversation_owner_job_id: job.id, expected_reference_count: expectedRefCount,
       resolved_reference_count: tempRefPaths.length, uploaded_reference_count: tempRefPaths.length,
-      composer_attachment_count: composerAttachmentCount, attachments_ready_at: new Date().toISOString() }));
-    const injectRes = await injectPromptAndSend(cdp, job.prompt);
+      composer_attachment_count: composerAttachmentCount, attachments_ready_at: new Date().toISOString() };
+    const receiptResponse = await fetch(`${GATEWAY_URL}/job/reference-receipt`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(referenceReceipt),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!receiptResponse.ok) throw new Error('IMAGE_REFERENCE_RECEIPT_PERSISTENCE_FAILED');
+    referenceReceiptPersisted = true;
+    console.log(JSON.stringify({ event: 'image_reference_gate', ...referenceReceipt }));
+    const injectRes = await injectPromptAndSend(cdp, job.prompt, { scope, expectedReferences: expectedRefCount });
     if (!injectRes?.success) {
       throw new Error(injectRes?.error || 'Prompt kutusu bulunamadı veya gönderilemedi');
     }
@@ -1191,6 +1215,7 @@ async function executeChatGPTJob(tab, job) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jobId: job.id, error: err.message, crashSnapshotUrl })
     }).catch(() => {});
+    return { preserveTarget: referenceReceiptPersisted && !/^(IMAGE_PROMPT_MISMATCH|REFERENCE_ATTACHMENT_FAILED|CDP_CONVERSATION_SCOPE_MISMATCH|IMAGE_REFERENCE_RECEIPT_PERSISTENCE_FAILED)/.test(err.message) };
   } finally {
     for (const p of tempRefPaths) {
       try { fs.unlinkSync(p); } catch (e) {}

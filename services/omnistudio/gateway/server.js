@@ -22,6 +22,7 @@ const { normalizeImageReferences, referenceRoleInstructions, assertReferenceCoun
 const { DurableJobStore } = require('./durable_job_store.js');
 const { VideoJobPersistence, videoRequestHash } = require('./video_job_persistence.js');
 const { typedError, isWorkerControlPath, isAuthorizedWorker, configuredLimit, readBoundedBody } = require('./gateway_request_guard.js');
+const { validateReferenceReceipt } = require('./image_reference_receipt.js');
 const { BrowserWorkerSupervisor } = require('./browser_worker_supervisor.js');
 const { loadAllCompanyChats, getExpectedChatTitle } = require('./chat_manager.js');
 
@@ -379,6 +380,7 @@ function sanitizeJobForBroadcast(job) {
     referenceImagesCount: job.referenceImagesCount || (job.referenceImages ? job.referenceImages.length : 0),
     expectedReferenceCount: job.expectedReferenceCount ?? job.referenceImagesCount ?? 0,
     referenceManifest: job.referenceManifest || [],
+    referenceReceipt: job.referenceReceipt || null,
     status: job.status,
     progress: job.progress || 0,
     statusText: job.statusText || '',
@@ -807,6 +809,17 @@ class AdvancedJobQueue {
     return job.metrics.worker_stages;
   }
 
+  recordReferenceReceipt(input) {
+    if (!this.store) throw typedError('DURABLE_JOB_STORAGE_UNAVAILABLE', 503);
+    const job = this.jobs.get(input?.job_id);
+    const receipt = validateReferenceReceipt(job, input);
+    const previous = job.referenceReceipt;
+    job.referenceReceipt = receipt;
+    try { this.persist(job); }
+    catch (error) { job.referenceReceipt = previous; throw error; }
+    return receipt;
+  }
+
   releaseLock(jobId, error = null) {
     const job = this.jobs.get(jobId);
     if (!job) return;
@@ -846,7 +859,13 @@ class AdvancedJobQueue {
       total_ms: Date.now() - job.createdAt,
     };
 
-    const canRetry = error && isRetryableError(error) && (job.attemptCount || 0) < (job.maxAttempts || 2);
+    const knownPreSubmitFailure = /^(IMAGE_PROMPT_MISMATCH|REFERENCE_ATTACHMENT_FAILED|CDP_CONVERSATION_SCOPE_MISMATCH|IMAGE_REFERENCE_RECEIPT_PERSISTENCE_FAILED)/.test(String(error || ''));
+    if (error && job.type === 'image' && job.referenceReceipt && !knownPreSubmitFailure) {
+      // Once attachments/prompt submission may have been accepted, a CDP failure
+      // is not permission to create a fresh paid provider conversation.
+      job.reconciliationRequired = true;
+    }
+    const canRetry = error && !job.referenceReceipt && isRetryableError(error) && (job.attemptCount || 0) < (job.maxAttempts || 2);
 
     if (job.reconciliationRequired && job.status === 'processing') {
       job.status = 'reconciliation_required';
@@ -895,6 +914,14 @@ class AdvancedJobQueue {
   completeJob(jobId, filename, buffer, timings = null) {
     const job = this.getJob(jobId);
     if (!job) return null;
+    if (job.status === 'completed') {
+      const hash = buffer ? crypto.createHash('sha256').update(buffer).digest('hex') : null;
+      if (hash && hash === job.resultSha256 && filename === job.filename) return job;
+      throw typedError('IMAGE_OUTPUT_IDENTITY_CONFLICT', 409);
+    }
+    if (job.type === 'image' && (job.expectedReferenceCount ?? job.referenceImagesCount ?? 0) > 0) {
+      validateReferenceReceipt(job, job.referenceReceipt);
+    }
 
     if (timings) {
       this.recordWorkerTimings(jobId, timings);
@@ -3011,6 +3038,8 @@ const server = http.createServer(async (req, res) => {
         error_code: job.errorCode || null,
         reconciliation_required: !!job.reconciliationRequired,
         result_sha256: job.resultSha256 || null,
+        expected_reference_count: job.expectedReferenceCount ?? job.referenceImagesCount ?? 0,
+        reference_receipt: job.referenceReceipt || null,
         telemetry: job.telemetry || null,
       });
     }
@@ -3052,6 +3081,12 @@ const server = http.createServer(async (req, res) => {
       if (!body.jobId) return sendJson(res, 400, { error: 'jobId is required' });
       const timings = queue.recordWorkerTimings(body.jobId, body.timings);
       return sendJson(res, timings ? 200 : 404, { ok: !!timings });
+    }
+
+    if (method === 'POST' && pathname === '/job/reference-receipt') {
+      const body = await parseJsonBody(req);
+      queue.recordReferenceReceipt(body);
+      return sendJson(res, 200, { ok: true });
     }
 
     // 5. Worker: Kilidi Serbest Bırak / Hata Bildir (POST /job/release)

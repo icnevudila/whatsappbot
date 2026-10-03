@@ -2,6 +2,7 @@ const { spawn } = require('child_process');
 const crypto = require('crypto');
 const EventEmitter = require('events');
 const fs = require('fs');
+const { TabRegistry } = require('./orphan_tab_reaper.js');
 const WebSocket = (() => { try { return require('ws'); } catch { return globalThis.WebSocket; } })();
 
 const WORKER_STATES = Object.freeze({
@@ -51,6 +52,7 @@ class BrowserWorkerSupervisor extends EventEmitter {
   constructor(options = {}) {
     super();
     this.fetchImpl = options.fetchImpl || globalThis.fetch;
+    this.tabRegistry = options.tabRegistry || new TabRegistry();
     this.launcher = options.launcher || this._defaultLauncher.bind(this);
     this.externalBrowserTerminator = options.externalBrowserTerminator || this._defaultExternalBrowserTerminator.bind(this);
     this.clock = options.clock || (() => Date.now());
@@ -127,19 +129,6 @@ class BrowserWorkerSupervisor extends EventEmitter {
       return String(worker.accountId).toLowerCase().trim();
     }
     return worker?.accountId || worker?.id;
-  }
-
-  resolveWorker({ provider, accountId = null, workerId = null }) {
-    const normalizedProvider = String(provider || '').toLowerCase();
-    const account = accountId == null ? null : String(accountId).toLowerCase().trim();
-    const matches = worker => worker.provider === normalizedProvider && (!account ||
-      [worker.accountId, this.getCanonicalAccountId(worker), ...worker.aliases]
-        .some(value => String(value).toLowerCase().trim() === account));
-    const explicit = workerId && this.workers.get(workerId);
-    if (explicit) return matches(explicit) ? explicit : null;
-    // An API worker ID may be an account alias, but never fall back to another account.
-    if (!account) return null;
-    return Array.from(this.workers.values()).find(matches) || null;
   }
 
   start() {
@@ -259,6 +248,7 @@ class BrowserWorkerSupervisor extends EventEmitter {
   }
 
   async _closeTab(worker, tabId) {
+    if (this.tabRegistry.hasActiveJob(tabId)) return false;
     try {
       await this.fetchImpl(this._cdpUrl(worker, `/json/close/${tabId}`), {
         method: 'PUT',
@@ -677,11 +667,8 @@ class BrowserWorkerSupervisor extends EventEmitter {
   }
 
   async acquireExternalLease({ provider, accountId, jobId, workerId = null, ttlSeconds = 60 }) {
-    provider = String(provider).toLowerCase();
-    const worker = this.resolveWorker({ provider, accountId, workerId });
-    if (!worker) throw workerError('WORKER_NOT_FOUND', `No ${provider} worker is registered for ${accountId}`);
-    const canonicalAccount = this.getCanonicalAccountId(worker);
-    const targetWorkerId = worker.id;
+    const canonicalAccount = String(accountId).toLowerCase().trim();
+    const targetWorkerId = workerId || `${provider}:${canonicalAccount}`;
     const leaseToken = crypto.randomUUID();
     const leaseRes = await this.leaseStore.acquireLease({
       provider: provider.toUpperCase(),
@@ -697,12 +684,12 @@ class BrowserWorkerSupervisor extends EventEmitter {
       throw error;
     }
 
+    const worker = this.workers.get(targetWorkerId) || this.workers.get(`${provider}-${canonicalAccount}`) || this.workers.get('flow-primary');
     if (worker) {
       worker.currentJobId = jobId;
       worker.leaseToken = leaseToken;
       worker.state = WORKER_STATES.BUSY;
-      worker.phase = 'STARTING';
-      worker.executionStarted = false;
+      worker.phase = 'GENERATING';
       worker.lastActivityAt = this.clock();
     }
 
@@ -729,10 +716,7 @@ class BrowserWorkerSupervisor extends EventEmitter {
   }
 
   async releaseExternalLease({ provider, accountId, leaseToken, outcome = {} }) {
-    provider = String(provider).toLowerCase();
-    const worker = this.resolveWorker({ provider, accountId });
-    if (!worker) throw workerError('WORKER_NOT_FOUND', `No ${provider} worker is registered for ${accountId}`);
-    const canonicalAccount = this.getCanonicalAccountId(worker);
+    const canonicalAccount = String(accountId).toLowerCase().trim();
     const timer = this.activeLeaseHeartbeats.get(leaseToken);
     if (timer) {
       clearInterval(timer);
@@ -744,12 +728,13 @@ class BrowserWorkerSupervisor extends EventEmitter {
       leaseToken,
     }).catch(() => {});
 
+    const targetWorkerId = `${provider}:${canonicalAccount}`;
+    const worker = this.workers.get(targetWorkerId) || this.workers.get(`${provider}-${canonicalAccount}`) || this.workers.get('flow-primary');
     if (worker && worker.leaseToken === leaseToken) {
       worker.currentJobId = null;
       worker.leaseToken = null;
       worker.state = WORKER_STATES.IDLE;
       worker.phase = null;
-      worker.executionStarted = false;
       worker.lastActivityAt = this.clock();
       if (outcome?.authRequired) worker.state = WORKER_STATES.AUTH_REQUIRED;
       if (outcome?.quotaExhausted) worker.state = WORKER_STATES.QUOTA_EXHAUSTED;
@@ -838,6 +823,7 @@ class BrowserWorkerSupervisor extends EventEmitter {
 
     const closable = tabs
       .filter(tab => tab.id !== worker.canonicalTabId)
+      .filter(tab => !this.tabRegistry.hasActiveJob(tab.id))
       .filter(tab => {
         const ownership = worker.tabOwnership.get(tab.id);
         if (ownership?.jobId) return false;
@@ -868,6 +854,11 @@ class BrowserWorkerSupervisor extends EventEmitter {
   async gracefulShutdown(worker, reason = 'idle_ttl', options = {}) {
     if (typeof worker === 'string') worker = this.workers.get(worker);
     if (!worker) return false;
+    try {
+      if ((await this._listTabs(worker)).some(tab => this.tabRegistry.hasActiveJob(tab.id))) return false;
+    } catch {
+      if (fs.readdirSync(this.tabRegistry.dir).some(name => /^job_.*\.json$/.test(name))) return false;
+    }
     const allowStarting = options.allowStarting === true;
     const forceExternalKill = options.forceExternalKill === true;
     const reservedStartup = options.allowReservedStartup === true && !worker.executionStarted &&

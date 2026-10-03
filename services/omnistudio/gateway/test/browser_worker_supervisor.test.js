@@ -219,6 +219,18 @@ test('4. two different accounts -> real parallel scheduling', async () => {
   assert.notEqual(w1, w2);
 });
 
+test('legacy disk-owned image target survives supervisor cleanup and shutdown', async t => {
+  const h = harness();
+  const worker = h.add('gemini-1', 9223);
+  await h.supervisor.ensureReady(worker);
+  h.tabs.get(9223).push({id:'legacy-image-owned',type:'page',url:'https://chatgpt.com/c/owned'});
+  h.supervisor.tabRegistry.setTabJob('legacy-image-owned','legacy-image-job');
+  t.after(()=>h.supervisor.tabRegistry.setTabJob('legacy-image-owned',null));
+  await h.supervisor.cleanupOrphans(worker,{forceCap:true});
+  assert.equal(h.closes.includes('legacy-image-owned'),false);
+  assert.equal(await h.supervisor._closeTab(worker,'legacy-image-owned'),false);
+  assert.equal(await h.supervisor.gracefulShutdown(worker,'idle_ttl'),false);
+});
 // 5. third tab -> rejected or safe orphan cleaned
 test('5. third tab -> rejected or safe orphan cleaned', async () => {
   const h = harness();
