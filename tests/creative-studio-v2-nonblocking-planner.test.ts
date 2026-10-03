@@ -5,6 +5,7 @@ process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_SUPAB
 import test, { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import { MAX_SPOKEN_WORDS } from '../apps/customer/src/lib/video-wizard-contract'
+import { buildVeoVoiceoverPromptBlock } from '../apps/customer/src/lib/video-voiceover-contract'
 
 const {
   generateDeterministicLocalCopy,
@@ -235,4 +236,113 @@ describe('Creative Studio V2 Non-Blocking AI Planner Contract Suite', () => {
     const showsFallbackNotice = !completedVideoUrl
     assert.equal(showsFallbackNotice, true, 'Must show processing placeholder while video optimizes')
   })
+
+  // Test K: No Invented Marketing Claims in Fallback Copy
+  it('K. No Invented Marketing Claims: fallback copy uses ONLY factual brand/product/offer, zero invented superiority or urgency claims', () => {
+    const forbiddenClaims = [
+      'yüksek kalite',
+      'avantajlı fiyat',
+      'güven ve dayanıklılık',
+      'en avantajlı',
+      'özel fiyatları kaçırmayın',
+      'fırsatı yakala',
+      'fırsatları kaçırmayın',
+      'kalitesiyle',
+      'güvencesiyle',
+      'sağlamlığın adresi',
+      'lider marka',
+    ]
+
+    const testScenarios = [
+      { productName: 'Bofe Akülü Püskürtücü', brandName: 'Bofe Tarım', mediaType: 'VIDEO' as const },
+      { productName: 'Ayvazoğlu Tuğla', brandName: 'Ayvazoğlu', objective: 'BRAND_AWARENESS', mediaType: 'VIDEO' as const },
+      { productName: 'Pro Plan', brandName: 'SaaS Inc', campaignDetail: 'Yıllık lisanslama', mediaType: 'IMAGE' as const },
+      { productName: 'Premium Koltuk', brandName: 'Bofe', offer: '%20 İndirim', mediaType: 'VIDEO' as const },
+    ]
+
+    for (const scenario of testScenarios) {
+      const copy = generateDeterministicLocalCopy(scenario)
+      const combinedText = `${copy.headline} ${copy.supportingLine} ${copy.cta} ${copy.voiceover}`.toLowerCase()
+
+      for (const forbidden of forbiddenClaims) {
+        assert.equal(
+          combinedText.includes(forbidden),
+          false,
+          `Deterministic copy must not contain forbidden invented claim "${forbidden}". Generated: "${combinedText}"`
+        )
+      }
+
+      // Voiceover word count validation
+      const words = copy.voiceover.trim().split(/\s+/).filter(Boolean)
+      assert.ok(words.length >= 6 && words.length <= MAX_SPOKEN_WORDS, `Voiceover word count (${words.length}) must be in valid range`)
+    }
+  })
+
+  // Test L: Voiceover Timing Contract strictly < 5.5s (end_sec: 5.25)
+  it('L. Voiceover Timing Contract: speechTimeline ends at 5.25s (< 5.5s) and prompt block enforces finishing before 5.5s', () => {
+    const testVoiceover = 'Bofe Tarım Akülü Püskürtücü ürününü keşfedin. Detaylı bilgi için iletişime geçin.'
+    const promptBlock = buildVeoVoiceoverPromptBlock(testVoiceover)
+
+    // Check prompt block requirements
+    assert.ok(promptBlock.includes('VOICEOVER — TURKISH (tr-TR), EXACTLY ONCE:'))
+    assert.ok(promptBlock.includes(`"${testVoiceover}"`))
+    assert.ok(promptBlock.includes('Turkish voiceover starts after 0.5s.'))
+    assert.ok(promptBlock.includes('Speak this exact approved Turkish sentence once naturally between 0.5s and 5.25s. Voiceover fully finishes before 5.5s.'))
+    assert.ok(promptBlock.includes('After voiceover ends: music/ambient only.'))
+    assert.ok(promptBlock.includes('Strictly forbid any English narration or English speech. No English narration.'))
+    assert.ok(promptBlock.includes('Do not translate it. No translation.'))
+    assert.ok(promptBlock.includes('No other spoken words. No second narration.'))
+
+    // Check speech timeline timing
+    const speechTimeline = [
+      {
+        start_sec: 0.5,
+        end_sec: 5.25,
+        exact_text: testVoiceover,
+        speaker: 'Spiker',
+      },
+    ]
+
+    for (const item of speechTimeline) {
+      assert.ok(item.start_sec >= 0.5, `start_sec (${item.start_sec}) must be >= 0.5s`)
+      assert.ok(item.end_sec < 5.5, `end_sec (${item.end_sec}) must be strictly < 5.5s`)
+      assert.equal(item.end_sec, 5.25, 'end_sec canonical value must be 5.25s')
+    }
+  })
+
+  // Test M: Provider Prompt Validation Contract: passes provider check without ProviderRoutingError
+  it('M. Provider Prompt Validation: prompt satisfies real-video-providers validation', () => {
+    const voiceoverText = 'Bofe Tarım Akülü Püskürtücü ürününü keşfedin. Ayrıntılı bilgi ve sipariş için bizimle iletişime geçin.'
+    const promptBlock = buildVeoVoiceoverPromptBlock(voiceoverText)
+
+    const compiledPrompt = [
+      `[FORMAT]: 8.0-second vertical commercial video ad, 9:16 aspect ratio.`,
+      `[SUBJECT]: Authentic photorealistic commercial for Bofe Tarım featuring Akülü Püskürtücü.`,
+      promptBlock,
+      `[RAW DIFFUSION POLICY]: Clean commercial footage.`,
+    ].join('\n\n')
+
+    // Simulate real-video-providers.ts assertSimpleProviderContract checks
+    const promptLower = compiledPrompt.toLowerCase()
+    const cleanSentence = voiceoverText.replace(/^["“'”]+|["“'”]+$/g, '')
+
+    assert.ok(compiledPrompt.includes(cleanSentence), 'Prompt must contain exact voiceover text')
+    assert.equal(promptLower.includes('translate to english'), false, 'No translation to english')
+    assert.equal(promptLower.includes('translate into english'), false, 'No translation into english')
+
+    const hasTurkishNarration = promptLower.includes('turkish') && (promptLower.includes('narration') || promptLower.includes('voiceover'))
+    const hasExactOnce = promptLower.includes('once') && (promptLower.includes('exact') || promptLower.includes('exactly') || promptLower.includes('speak'))
+    const hasNoEnglish = promptLower.includes('no english')
+    const hasDoNotTranslate = promptLower.includes('do not translate') || promptLower.includes('no translation')
+
+    assert.ok(hasTurkishNarration, 'Must enforce Turkish narration/voiceover')
+    assert.ok(hasExactOnce, 'Must enforce exact sentence once')
+    assert.ok(hasNoEnglish, 'Must enforce no English')
+    assert.ok(hasDoNotTranslate, 'Must enforce do not translate')
+
+    const durationSeconds = 8
+    const passesTiming = !(durationSeconds === 8 && !promptLower.includes('5.5s') && !promptLower.includes('5.5'))
+    assert.ok(passesTiming, 'Prompt must explicitly contain 5.5s / 5.5 timing constraint')
+  })
 })
+

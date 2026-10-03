@@ -4,6 +4,7 @@ import type { SpeechTimelineItem, AdFormatType } from '@/app/(panel)/icerik/wiza
 import { resolveProductAffordance, type ProductAffordanceReport } from '@/lib/ai/affordance'
 import { completeText } from '@/lib/ai/text'
 import { buildSafeSpokenLine, containsShotDirections, type ProductFidelityContract } from '@/lib/video-wizard-contract'
+import { buildVeoVoiceoverPromptBlock } from '@/lib/video-voiceover-contract'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -101,15 +102,15 @@ function speechFor(spokenLine: string): SpeechTimelineItem[] {
     return [
       {
         start_sec: 0.5,
-        end_sec: 3.6,
+        end_sec: 2.8,
         exact_text: `${parts[0]}.`,
         speaker: 'Spiker',
         delivery_style: 'Etkileyici ve dikkat çekici açılış kancası',
         corresponding_visual_beat: 'Açılış kancası ve ürün odaklanması',
       },
       {
-        start_sec: 4.0,
-        end_sec: 7.2,
+        start_sec: 3.0,
+        end_sec: 5.25,
         exact_text: `${parts.slice(1).join(' ')}.`,
         speaker: 'Spiker',
         delivery_style: 'Kararlı, kurumsal marka ve eylem kapanışı',
@@ -120,7 +121,7 @@ function speechFor(spokenLine: string): SpeechTimelineItem[] {
 
   return [{
     start_sec: 0.5,
-    end_sec: 5.5,
+    end_sec: 5.25,
     exact_text: spokenLine,
     speaker: 'Spiker',
     delivery_style: 'Profesyonel, akıcı ve kurumsal Türkçe seslendirme',
@@ -256,7 +257,7 @@ ${revisionType === 'refresh' ? 'NOT: Önceki kalıplardan tamamen farklı, özg�
       `[CINEMATIC TAKE & BEATS]: Single unbroken 35mm fluid camera take without jump cuts:`,
       ...beats.map((beat) => `${beat.start.toFixed(1)}-${beat.end.toFixed(1)}s (${beat.purpose}): ${beat.visual}`),
       `[PHYSICAL CONSISTENCY & GEOMETRY LOCK]: ${geometryLock} Product keeps identical physical identity across entire take.`,
-      `[AUDIO]: Pure ambient environmental sound effects only (${isBrick ? 'construction foley, mortar clink, brick placement' : isSprayer ? 'subtle garden breeze, mist spray sound' : 'natural environmental foley'}). SILENT SCENE, ZERO ON-CAMERA SPEECH, ZERO ON-SCREEN SUBTITLES, ZERO ON-SCREEN CAPTIONS. (Official Turkish voiceover is applied in post-production).`,
+      buildVeoVoiceoverPromptBlock(approvedSpokenLine),
       `[RAW DIFFUSION POLICY]: Clean commercial footage with zero floating text, zero synthetic overlays, zero burned-in titles. (Official brand logo and call to action are deterministically composited in post-production).`,
       `[NEGATIVE CONSTRAINTS]: ${strictNegatives}`,
     ].join('\n')

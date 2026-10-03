@@ -64,13 +64,13 @@ export function buildSimpleV5ProductionPlan(
       language: 'tr-TR',
       text: brief.spokenScript,
       start_sec: 2.2,
-      end_sec: 5.5,
+      end_sec: 5.25,
       allow_paraphrase: false,
     },
     subtitles: {
       mode: subtitleMode,
       start_sec: 0.5,
-      end_sec: 5.5,
+      end_sec: 5.25,
     },
     outro: {
       mode: outroMode,

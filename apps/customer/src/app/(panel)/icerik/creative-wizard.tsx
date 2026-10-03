@@ -340,15 +340,15 @@ export function CreativeWizard({
       setSpeechTimeline([
         {
           start_sec: 0.5,
-          end_sec: 3.6,
+          end_sec: 2.8,
           exact_text: `${parts[0]}.`,
           speaker: 'Spiker',
           delivery_style: 'Açılış kancası ve ürün odaklanması',
           corresponding_visual_beat: 'Açılış kancası ve ürün odaklanması',
         },
         {
-          start_sec: 4.0,
-          end_sec: 7.2,
+          start_sec: 3.0,
+          end_sec: 5.25,
           exact_text: `${parts.slice(1).join(' ')}.`,
           speaker: 'Spiker',
           delivery_style: 'Kararlı marka ve eylem kapanışı',
@@ -359,7 +359,7 @@ export function CreativeWizard({
       setSpeechTimeline([
         {
           start_sec: 0.5,
-          end_sec: 6.5,
+          end_sec: 5.25,
           exact_text: trimmed,
           speaker: 'Spiker',
           delivery_style: 'Profesyonel, akıcı ve kurumsal Türkçe seslendirme',

@@ -29,6 +29,7 @@ import {
   VIDEO_REQUESTED_PROVIDER,
   defaultFidelityContract,
 } from '@/lib/video-wizard-contract'
+import { buildVeoVoiceoverPromptBlock } from '@/lib/video-voiceover-contract'
 import type { JobUserViewModel, ProductCard, WizardBootstrap } from './wizard-types'
 
 const STORAGE_KEY_PREFIX = 'wa.customer.creative-studio.v2'
@@ -59,29 +60,26 @@ export function generateDeterministicLocalCopy({
   const detail = campaignDetail?.trim() || ''
   const off = offer?.trim() || ''
 
-  let headline = `${pName} ile Tanışın`
-  let supportingLine = detail || `${bName} güvencesiyle yüksek kalite ve avantajlı fiyatlar.`
-  let cta = 'Hemen İnceleyin'
+  const headline = off
+    ? `${bName} ${pName} — ${off}`
+    : detail
+      ? `${bName} ${pName} — ${detail.slice(0, 45)}`
+      : `${bName} ${pName}`
 
-  if (objective === 'SALES_OFFER' || off) {
-    headline = off ? `${off} Fırsatıyla ${pName}` : `${pName} Şimdi İndirimde`
-    supportingLine = detail || 'Sınırlı süre geçerli özel fiyatları kaçırmayın. Hemen sipariş verin.'
-    cta = 'Fırsatı Yakala'
-  } else if (objective === 'CAMPAIGN') {
-    headline = detail ? `${pName}: ${detail.slice(0, 40)}` : `${bName} Özel Kampanyası`
-    supportingLine = detail || `${pName} için sezonun en avantajlı teklifi sizleri bekliyor.`
-    cta = 'Detayları Gör'
-  } else if (objective === 'BRAND_AWARENESS') {
-    headline = `${bName} Kalitesi: ${pName}`
-    supportingLine = detail || 'Sektörde güven ve dayanıklılığın değişmeyen adresi.'
-    cta = 'Keşfedin'
-  }
+  const supportingLine = detail
+    ? `${detail}. Detaylar ve sipariş için iletişime geçin.`
+    : off
+      ? `${off} fırsatıyla. Detaylı bilgi için bizimle iletişime geçin.`
+      : `Ürünü incelemek ve ayrıntılı bilgi almak için bizimle iletişime geçin.`
 
-  // Video Voiceover: 8-14 Turkish words, strict upper bound MAX_SPOKEN_WORDS (16)
-  let voiceover = `${bName} kalitesiyle ${pName}. Şimdi keşfedin, avantajlı fiyatları kaçırmayın.`
-  if (off) {
-    voiceover = `${bName} güvencesiyle ${pName} şimdi ${off} fırsatıyla. Hemen iletişime geçin.`
-  }
+  const cta = 'Hemen İnceleyin'
+
+  // Voiceover strictly factual: 8 to 14 words, finishes well before 5.5s
+  const voiceover = off
+    ? `${bName} ${pName} ürününü ${off} fırsatıyla keşfedin. Detaylı bilgi için iletişime geçin.`
+    : detail
+      ? `${bName} ${pName} ürününü keşfedin. ${detail}. İncelemek için hemen iletişime geçin.`
+      : `${bName} ${pName} ürününü keşfedin. Ayrıntılı bilgi ve sipariş için bizimle iletişime geçin.`
 
   return {
     headline,
@@ -92,6 +90,7 @@ export function generateDeterministicLocalCopy({
 }
 
 type Step = 'product_goal' | 'creative_direction' | 'review_generate'
+
 
 const STUDIO_STEPS: { id: Step; label: string }[] = [
   { id: 'product_goal', label: '1. Ürün & Hedef' },
@@ -568,6 +567,16 @@ export function CreativeStudioV2({
         const generationId = crypto.randomUUID()
         const videoAdFormat = mapPresetToLegacyVideoFormat(stylePreset)
         const fidelityContract = defaultFidelityContract(data.org.name || '', selectedProduct.name)
+        const promptBlock = buildVeoVoiceoverPromptBlock(spokenVoiceover.trim())
+        const fullVideoPrompt = [
+          `[FORMAT]: 8.0-second vertical commercial video ad, 9:16 aspect ratio.`,
+          `[SUBJECT]: Authentic photorealistic commercial for ${data.org.name || 'İşletme'} featuring ${selectedProduct.name}.`,
+          `[CANONICAL HERO PRODUCT]: Preserve @HeroProduct geometry, material texture, and colors exactly as shown in authoritative reference assets.`,
+          `[ENVIRONMENT]: ${environmentPreset || 'Doğal ticari aydınlatma ve temiz ürün arka planı'}.`,
+          `[PHYSICAL CONSISTENCY & GEOMETRY LOCK]: Preserve exact product geometry, materials, and colors from canonical reference without warping or deformation.`,
+          promptBlock,
+          `[RAW DIFFUSION POLICY]: Clean commercial footage with zero floating text, zero synthetic overlays, zero burned-in titles.`,
+        ].join('\n\n')
 
         const videoPayload = {
           generationId,
@@ -587,13 +596,13 @@ export function CreativeStudioV2({
           speechTimeline: [
             {
               start_sec: 0.5,
-              end_sec: 6.0,
+              end_sec: 5.25,
               exact_text: spokenVoiceover.trim(),
               speaker: 'Spiker',
               delivery_style: 'Doğal, akıcı kurumsal Türkçe seslendirme',
             },
           ],
-          veoPrompt: '',
+          veoPrompt: fullVideoPrompt,
           authoritativeFacts: {
             brand_name: data.org.name || 'İşletmemiz',
             product_name: selectedProduct.name,

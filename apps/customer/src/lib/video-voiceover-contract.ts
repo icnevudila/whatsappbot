@@ -91,9 +91,14 @@ export function validateVoiceoverContract(input: VoiceoverContractInput): Voiceo
 export function buildVeoVoiceoverPromptBlock(voiceoverText: string): string {
   const clean = voiceoverText.trim().replace(/"/g, "'")
   return [
-    `AUDIO / NARRATION CONTRACT (MANDATORY P0):`,
-    `- Language: Turkish (tr-TR) only.`,
-    `- Voiceover instruction: A clear Turkish narrator speaks the following exact Turkish sentence once between 0.5s and 5.5s: "${clean}".`,
-    `- Strictly forbid any English speech, subtitles, or translation. Do not translate. Only speak this Turkish sentence.`,
+    `VOICEOVER — TURKISH (tr-TR), EXACTLY ONCE:`,
+    `"${clean}"`,
+    `- Turkish voiceover starts after 0.5s.`,
+    `- Speak this exact approved Turkish sentence once naturally between 0.5s and 5.25s. Voiceover fully finishes before 5.5s.`,
+    `- After voiceover ends: music/ambient only.`,
+    `- Strictly forbid any English narration or English speech. No English narration.`,
+    `- Do not translate it. No translation.`,
+    `- No other spoken words. No second narration.`,
   ].join('\n')
 }
+
