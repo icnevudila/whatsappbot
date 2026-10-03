@@ -78,14 +78,6 @@ export function Scene07Bento() {
                 key={mod.step}
                 className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm hover:border-emerald-300 transition-all duration-200"
               >
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs font-bold text-emerald-700 tracking-wider">
-                    MODÜL {mod.step}
-                  </span>
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
-                    <Icon className="h-4.5 w-4.5" />
-                  </div>
-                </div>
                 <h3 className="text-base font-bold text-slate-900 mb-2">
                   {mod.title}
                 </h3>
