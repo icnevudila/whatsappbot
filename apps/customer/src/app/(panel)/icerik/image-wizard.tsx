@@ -1,12 +1,15 @@
 'use client'
 
 import { isReadyImageSource } from '@/lib/creative/image-source'
+import { requiredImageAssets } from '@/lib/creative/required-image-assets'
+import { getSafeMediaUrl } from '@/lib/media-url'
 
-import { useActionState, useEffect, useMemo, useState } from 'react'
+import { useActionState, useEffect, useMemo, useState, useRef } from 'react'
 import Link from 'next/link'
 import { Button, Card, Field, FileUploadButton, Input, Notice, Textarea } from '@/components/ui'
 import { Icon } from '@/components/icon'
 import { Stepper } from '@/components/stepper'
+import { CreativeProductionVisual } from '@/components/creative-production-visual'
 import { useCreativeGenerationProgress } from '@/lib/creative/use-creative-progress'
 import {
   BRIEF_CHIPS,
@@ -17,7 +20,7 @@ import {
   TEXT_DENSITIES,
   type ProductFieldKey,
 } from '@/lib/creative/types'
-import { startCreativeGeneration, uploadLibraryImage, type CreativeActionState } from './actions'
+import { startCreativeGeneration, uploadLibraryImage, uploadProductReference, type CreativeActionState } from './actions'
 import { DEFAULT_INCLUDE, type ProductCard, type SocialOption, type WizardBootstrap } from './wizard-types'
 import { AddProductModal } from './add-product-modal'
 import { AddSocialModal } from './add-social-modal'
@@ -70,6 +73,20 @@ function newKey() {
   return crypto.randomUUID()
 }
 
+function ProductReferencePreview({ url, name }: { url?: string; name: string }) {
+  const [failed, setFailed] = useState(false)
+  useEffect(() => setFailed(false), [url])
+  const source = getSafeMediaUrl(url)
+  return (
+    <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-hairline bg-surface">
+      {source && !failed ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={source} alt={`${name} ürün referansı`} loading="lazy" className="h-full w-full object-contain" onError={() => setFailed(true)} />
+      ) : <span className="px-1 text-center text-[10px] leading-tight text-muted">Referans görseli eksik</span>}
+    </span>
+  )
+}
+
 function emptyExtra(imageUrl = ''): ProductExtra {
   return {
     imageUrl,
@@ -109,8 +126,12 @@ export function ImageCreativeWizard({ data }: { data: WizardBootstrap }) {
   const [step, setStep] = useState<Step>('start')
   const [draft, setDraft] = useState<Draft>(() => defaultDraft(data))
   const [labelInput, setLabelInput] = useState('')
+  const [ideaPending, setIdeaPending] = useState(false)
+  const [ideaNotice, setIdeaNotice] = useState('')
+  const ideaVersion = useRef(0)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [referenceUploading, setReferenceUploading] = useState<string | null>(null)
   const [uploadedSourceId, setUploadedSourceId] = useState<string | null>(null)
   const imageLibrary = data.library.filter(isReadyImageSource)
   const validBaseSource = Boolean(draft.baseCreativeId && (uploadedSourceId === draft.baseCreativeId || imageLibrary.some(item => item.id === draft.baseCreativeId)))
@@ -198,12 +219,16 @@ export function ImageCreativeWizard({ data }: { data: WizardBootstrap }) {
   const stepIndex = STEPS.findIndex((row) => row.id === step)
   const selectedKit = data.kits.find((kit) => kit.id === draft.brandKitId)
   const selectedProducts = productsList.filter((product) => draft.productIds.includes(product.id))
-  const requiredAssetsReady = draft.useLogo && Boolean(selectedKit?.samplePreview || data.org.logoPreview) && (
-    (draft.origin === 'derive' && validBaseSource) || selectedProducts.some((product) => {
-      const extra = draft.productExtras[product.id] ?? emptyExtra(product.images[0]?.url ?? '')
-      return extra.include.image && product.images.some((image) => image.url === extra.imageUrl)
-    })
-  )
+  const allProductReferencesReady = selectedProducts.every(product => {
+    const extra = { ...(draft.productExtras[product.id] ?? emptyExtra()), imageUrl: draft.productExtras[product.id]?.imageUrl || product.images[0]?.url || '' }
+    return extra.include.image && Boolean(extra.imageUrl) && extra.imageUrl !== data.org.logoPreview && !/^\/?(?:brand|logos)\//i.test(extra.imageUrl) &&
+      product.images.some(image => image.url === extra.imageUrl)
+  })
+  const requiredAssetsReady = requiredImageAssets({
+    useLogo: draft.useLogo, hasLogo: Boolean(selectedKit?.samplePreview || data.org.logoPreview),
+    hasValidBase: draft.origin === 'derive' && Boolean(validBaseSource),
+    hasProductReference: selectedProducts.length > 0 && allProductReferencesReady,
+  }).ready && allProductReferencesReady
   const payload = useMemo(
     () =>
       JSON.stringify({
@@ -226,9 +251,28 @@ export function ImageCreativeWizard({ data }: { data: WizardBootstrap }) {
 
   const patch = (partial: Partial<Draft>) => setDraft((current) => ({ ...current, ...partial }))
 
-  const addProduct = (id: string) => {
+  async function suggestIdea(category: string) {
+    const version = ++ideaVersion.current
+    const fallback = `${data.org.name} için ${category.toLocaleLowerCase('tr-TR')} odaklı, markamızın renkleriyle sade bir tanıtım görseli hazırlayalım.`
+    setIdeaPending(true)
+    setIdeaNotice('İşletmenize uygun kısa fikir hazırlanıyor…')
+    try {
+      const response = await fetch('/api/icerik/fikir',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({category,brandKitId:draft.brandKitId,productIds:draft.productIds}),signal:AbortSignal.timeout(25000)})
+      const result = await response.json()
+      if (!response.ok || typeof result.text!=='string') throw new Error('IDEA_UNAVAILABLE')
+      if (version !== ideaVersion.current) return
+      patch({brief:result.text})
+      setIdeaNotice(result.source==='gpt' ? 'İşletmenize göre önerildi. Metni değiştirebilirsiniz.' : 'Hazır fikir eklendi. Metni değiştirebilirsiniz.')
+    } catch {
+      if (version !== ideaVersion.current) return
+      patch({brief:fallback})
+      setIdeaNotice('Hazır fikir eklendi. Metni değiştirebilirsiniz.')
+    } finally { if (version === ideaVersion.current) setIdeaPending(false) }
+  }
+
+  const addProduct = (id: string, suppliedProduct?: ProductCard) => {
     if (draft.productIds.includes(id)) return
-    const product = productsList.find((row) => row.id === id)
+    const product = suppliedProduct || productsList.find((row) => row.id === id)
     patch({
       productIds: [...draft.productIds, id],
       productExtras: {
@@ -236,6 +280,22 @@ export function ImageCreativeWizard({ data }: { data: WizardBootstrap }) {
         [id]: draft.productExtras[id] ?? emptyExtra(product?.images[0]?.url ?? ''),
       },
     })
+  }
+
+  async function saveProductReference(productId: string, file: File) {
+    setReferenceUploading(productId)
+    setUploadError(null)
+    try {
+      const form = new FormData()
+      form.set('productId',productId)
+      form.set('file',file)
+      const result = await uploadProductReference(form)
+      if (!result.image) throw new Error(result.error || 'Görsel kaydedilemedi.')
+      const image = result.image
+      setProductsList(current => current.map(product => product.id === productId ? {...product,images:[image,...product.images]} : product))
+      setDraft(current => ({...current,productExtras:{...current.productExtras,[productId]:{...(current.productExtras[productId] || emptyExtra()),imageUrl:image.url,include:{...(current.productExtras[productId]?.include || DEFAULT_INCLUDE),image:true}}}}))
+    } catch (error) { setUploadError(error instanceof Error ? error.message : 'Görsel kaydedilemedi.') }
+    finally { setReferenceUploading(null) }
   }
 
   const onUpload = async (file: File) => {
@@ -263,7 +323,14 @@ export function ImageCreativeWizard({ data }: { data: WizardBootstrap }) {
 
   return (
     <>
-      <Card className="wb-wa-wizard overflow-visible">
+      <Card className="wb-wa-wizard creative-studio-wizard overflow-visible">
+        {pending ? (
+          <div className="creative-image-pending" role="status" aria-live="polite">
+            <CreativeProductionVisual kind="image" />
+            <h3 className="creative-production-heading">Görseliniz hazırlanıyor</h3>
+            <p className="creative-production-caption">Markanız ve seçtiğiniz görsellerle oluşturulan isteğiniz işleniyor. Sonuç bu işlem tamamlandığında gösterilecek.</p>
+          </div>
+        ) : null}
         <div className="wb-wa-wizard-steps">
           <Stepper
             label="Görsel adımları"
@@ -369,7 +436,7 @@ export function ImageCreativeWizard({ data }: { data: WizardBootstrap }) {
                 name="brief-ui"
                 rows={5}
                 value={draft.brief}
-                onChange={(event) => patch({ brief: event.target.value })}
+                onChange={(event) => { ideaVersion.current++; setIdeaPending(false); setIdeaNotice(''); patch({ brief: event.target.value }) }}
                 placeholder="Hafta sonuna özel tüm kahvaltı ürünlerinde %25 indirim. Sıcak, iştah açıcı ve premium bir WhatsApp kampanya görseli istiyorum."
               />
             </Field>
@@ -379,31 +446,35 @@ export function ImageCreativeWizard({ data }: { data: WizardBootstrap }) {
                   key={chip}
                   type="button"
                   className="wb-wa-chip"
-                  onClick={() => {
-                    if (!draft.brief.includes(chip)) {
-                      patch({ brief: draft.brief ? `${draft.brief.trim()} ${chip}.` : `${chip}. ` })
-                    }
-                  }}
+                  disabled={ideaPending}
+                  onClick={() => void suggestIdea(chip)}
                 >
                   {chip}
                 </button>
               ))}
             </div>
+            {ideaNotice ? <p role="status" className="text-xs text-muted">{ideaNotice}</p> : null}
           </div>
         </Card>
       ) : null}
 
       {step === 'products' ? (
         <div className="space-y-2">
-          <div className="flex flex-wrap gap-1.5">
+          <div className="grid gap-2 sm:grid-cols-2">
             {productsList.map((product) => (
               <button
                 key={product.id}
                 type="button"
-                className="wb-wa-chip"
+                aria-pressed={draft.productIds.includes(product.id)}
+                className={`flex min-w-0 items-center gap-3 rounded-[var(--radius-card)] border p-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${draft.productIds.includes(product.id) ? 'border-[#00a884] bg-[#e7f8f2]' : 'border-hairline bg-surface hover:bg-[#f7f9fa]'}`}
                 onClick={() => addProduct(product.id)}
               >
-                + {product.name}
+                <ProductReferencePreview url={draft.productExtras[product.id]?.imageUrl || product.images[0]?.url} name={product.name} />
+                <span className="min-w-0 flex-1">
+                  <span className="block break-words text-[13.5px] font-semibold">{product.name}</span>
+                  <span className="block text-xs text-muted">{product.images.length ? 'Üretime gönderilecek ürün referansı' : 'Referans görseli eksik'}</span>
+                </span>
+                <span aria-hidden="true" className="text-lg">{draft.productIds.includes(product.id) ? '✓' : '+'}</span>
               </button>
             ))}
             <button
@@ -427,13 +498,19 @@ export function ImageCreativeWizard({ data }: { data: WizardBootstrap }) {
             ) : null}
           </div>
           {selectedProducts.map((product) => {
-            const extra = draft.productExtras[product.id] ?? emptyExtra(product.images[0]?.url ?? '')
+            const extra = { ...(draft.productExtras[product.id] ?? emptyExtra()), imageUrl: draft.productExtras[product.id]?.imageUrl || product.images[0]?.url || '' }
             return (
               <details key={product.id} open className="rounded-[var(--radius-card)] border border-hairline bg-surface">
                 <summary className="cursor-pointer px-3.5 py-2.5 text-[13.5px] font-semibold">
-                  {product.name}
+                  <span className="inline-flex items-center gap-3 align-middle">
+                    <ProductReferencePreview url={extra.imageUrl} name={product.name} />
+                    <span>{product.name}</span>
+                  </span>
                 </summary>
                 <div className="space-y-2 border-t border-hairline p-3.5">
+                  <FileUploadButton label={extra.imageUrl ? 'Ürün görselini ekle / değiştir' : 'Ürün görseli ekle'} accept="image/png,image/jpeg,image/webp" uploading={referenceUploading !== null} onFile={file => void saveProductReference(product.id,file)} />
+                  <p className="text-xs text-muted">Yüklediğiniz görsel bu ürüne kaydedilir ve üretimde seçilir.</p>
+                  {uploadError ? <Notice tone="danger">{uploadError}</Notice> : null}
                   {product.images.length > 1 ? (
                     <Field label="AI’a gönderilecek ürün görseli">
                       <div className="grid grid-cols-4 gap-1.5">
@@ -930,7 +1007,7 @@ export function ImageCreativeWizard({ data }: { data: WizardBootstrap }) {
       onClose={() => setAddProductOpen(false)}
       onSuccess={(newProduct) => {
         setProductsList((prev) => [...prev, newProduct])
-        addProduct(newProduct.id)
+        addProduct(newProduct.id, newProduct)
       }}
     />
     <AddSocialModal

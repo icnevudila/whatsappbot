@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Button, Card, Field, FileUploadButton, Input, Notice, Textarea } from '@/components/ui'
 import { Stepper } from '@/components/stepper'
+import { CreativeProductionVisual } from '@/components/creative-production-visual'
 import { uploadAssetOnly } from './actions'
 import {
   AD_FORMAT_OPTIONS,
@@ -760,7 +761,7 @@ export function CreativeWizard({
 
   return (
     <>
-      <Card className="wb-wa-wizard overflow-visible">
+      <Card className="wb-wa-wizard creative-studio-wizard overflow-visible">
         {/* Wizard Stepper */}
         {jobState === 'IDLE' ? (
           <div className="wb-wa-wizard-steps">
@@ -783,7 +784,8 @@ export function CreativeWizard({
 
         {/* 1. WAITING / GENERATION EXPERIENCE (Realtime & Authoritative Backend State) */}
         {jobState !== 'IDLE' && jobState !== 'COMPLETED' && jobState !== 'FAILED' && jobState !== 'NEEDS_REVIEW' ? (
-          <div className="p-6 space-y-6">
+          <div className="creative-production-shell p-6 space-y-6">
+            <CreativeProductionVisual kind="video" />
             <div className="text-center space-y-3">
               <div className="inline-flex size-3.5 rounded-full bg-[#008069] mb-1 animate-ping" />
               <h3 className="text-[19px] font-bold text-[#111b21]">Reklam Videonuz Prodüksiyonda</h3>
@@ -840,7 +842,7 @@ export function CreativeWizard({
             </div>
 
             {/* In-Card Stage Checklist */}
-            <div className="rounded-xl border border-hairline bg-[#f8fafb] p-4 max-w-md mx-auto space-y-3">
+            <div className="creative-production-stages rounded-xl border border-hairline bg-[#f8fafb] p-4 max-w-md mx-auto space-y-3">
               {[
                 { label: 'Reklam kurgusu ve metin onaylandı', stage: 1 },
                 { label: 'Prodüksiyon sırasına alındı', stage: 2 },
@@ -874,7 +876,7 @@ export function CreativeWizard({
             </div>
 
             {/* Decoupled Notice Banner */}
-            <div className="rounded-lg border border-blue-200 bg-blue-50/70 p-3.5 text-center max-w-md mx-auto">
+            <div className="creative-production-notice rounded-lg border border-blue-200 bg-blue-50/70 p-3.5 text-center max-w-md mx-auto">
               <p className="text-[12.5px] font-medium text-blue-900 leading-relaxed">
                 ℹ <strong>Bu sayfada beklemeniz gerekmiyor.</strong>
                 <br />

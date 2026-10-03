@@ -816,11 +816,16 @@ function PairingSection({ account }: { account: AccountView }) {
   }, [account.pairing_code])
 
   const ask = () => {
+    const targetPhone = phone.trim() || (account.phone_e164 ?? '')
+    if (!targetPhone) {
+      setError('Lütfen bir telefon numarası girin.')
+      return
+    }
     setError(null)
     setWaitingCode(true)
     setMode('code')
     startTransition(async () => {
-      const result = await requestPairingCode(account.id, phone)
+      const result = await requestPairingCode(account.id, targetPhone)
       if (result?.error) {
         setError(result.error)
         setWaitingCode(false)
@@ -866,6 +871,7 @@ function PairingSection({ account }: { account: AccountView }) {
         <PairingPanel
           code={account.pairing_code}
           expiresAt={account.pairing_expires_at}
+          onRetry={ask}
         />
       ) : (
         <div className="rounded-md border border-hairline bg-canvas p-3.5">

@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { TypewriterText } from '@/components/typewriter-text'
+import { CreativeProductionVisual } from './creative-production-visual'
 
 export function CraftMark({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' | string }) {
   return (
@@ -31,6 +32,7 @@ export interface CreativeGeneratingProps {
   line?: string
   detail?: React.ReactNode
   compact?: boolean
+  kind?: 'image' | 'video'
   children?: React.ReactNode
 }
 
@@ -39,14 +41,15 @@ export function CreativeGenerating({
   line = '',
   detail = null,
   compact = false,
+  kind = 'image',
   children = null,
 }: CreativeGeneratingProps) {
   return (
-    <div className={compact ? 'wb-craft wb-craft--compact' : 'wb-craft'}>
-      <CraftMark size={compact ? 'sm' : 'md'} />
+    <div className={compact ? 'wb-craft wb-craft--compact' : 'wb-craft creative-production-detail'}>
+      {compact ? <CraftMark size="sm" /> : <CreativeProductionVisual kind={kind} />}
       {compact ? null : <p className="wb-craft-title">{title}</p>}
       <p className={compact ? 'wb-craft-line wb-craft-line--compact' : 'wb-craft-line'}>
-        <TypewriterText text={line} speed={compact ? 28 : 32} />
+        {compact ? <TypewriterText text={line} speed={28} /> : <span role="status">{line}</span>}
       </p>
       {compact || !detail ? null : <p className="wb-craft-detail">{detail}</p>}
       {children}

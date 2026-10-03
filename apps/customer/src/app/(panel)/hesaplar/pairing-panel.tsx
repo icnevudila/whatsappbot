@@ -10,9 +10,11 @@ import { useCountdown } from '@/lib/use-countdown'
 export function PairingPanel({
   code,
   expiresAt,
+  onRetry,
 }: {
   code: string
   expiresAt: string | null
+  onRetry?: () => void
 }) {
   const secondsLeft = useCountdown(expiresAt)
   const [copied, setCopied] = useState(false)
@@ -67,9 +69,20 @@ export function PairingPanel({
                   {String(secondsLeft % 60).padStart(2, '0')} sonra geçersiz olacak
                 </span>
               ) : (
-                <span className="text-danger">
-                  Kodun süresi doldu, yeniden isteyin
-                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-danger font-medium">
+                    Kodun süresi doldu.
+                  </span>
+                  {onRetry ? (
+                    <button
+                      type="button"
+                      onClick={onRetry}
+                      className="rounded bg-accent px-2.5 py-1 text-[12px] font-semibold text-accent-contrast shadow-sm transition-opacity hover:opacity-90"
+                    >
+                      Yeni kod iste
+                    </button>
+                  ) : null}
+                </div>
               )}
             </p>
           ) : null}

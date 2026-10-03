@@ -1,0 +1,35 @@
+.creative-production-visual{position:relative;width:190px;height:178px;margin:0 auto;color:#2f5bff;isolation:isolate}
+.creative-production-frame{position:absolute;width:112px;height:142px;border:1px solid #dce3f5;border-radius:16px;background:#fff;left:39px;top:18px}
+.creative-production-frame--back{transform:translate(-18px,4px) rotate(-12deg);background:#f2f5fc}
+.creative-production-frame--front{transform:rotate(5deg);overflow:hidden;animation:creative-frame-breathe 4s ease-in-out infinite}
+.creative-production-frame svg{width:100%;height:100%}
+.creative-production-scan{position:absolute;inset:22% 10% auto;height:1px;background:#2f5bff;opacity:.4;animation:creative-scan 3s ease-in-out infinite alternate}
+.creative-production-orbit{position:absolute;width:7px;height:7px;border-radius:50%;background:#2f5bff;opacity:.35}
+.creative-production-orbit--one{top:31px;right:17px}.creative-production-orbit--two{bottom:23px;left:15px;width:4px;height:4px}
+@keyframes creative-frame-breathe{50%{transform:translateY(-4px) rotate(3deg)}}
+@keyframes creative-scan{to{top:78%;opacity:.15}}
+.creative-studio-wizard{border-radius:20px!important;border-color:#e1e5eb!important;background:#fff!important}
+.creative-studio-wizard .wb-wa-wizard-steps{padding:20px 24px 16px;background:#fafbfc}
+.creative-studio-wizard .wb-wa-wizard-step-title{color:#17202b;font-size:20px;font-weight:600;margin-top:16px}
+.wb-wa-page .creative-studio-wizard .wb-wa-steps .wb-steps-label{position:static;width:auto;height:auto;margin:8px 0 0;overflow:visible;clip:auto;white-space:normal;font-size:11px;line-height:1.3;text-align:center}
+.wb-wa-page .creative-studio-wizard .wb-wa-steps .wb-steps-btn{flex-direction:column}
+.wb-wa-page .creative-studio-wizard .wb-wa-steps .wb-steps-item.is-active .wb-steps-dot{background:#2f5bff;box-shadow:0 0 0 4px #edf1ff}
+.wb-wa-page .creative-studio-wizard .wb-wa-steps .wb-steps-item.is-active:not(:last-child)::before{background:#dce3f5}
+.creative-studio-wizard .wb-wa-choice{border-radius:14px;background:#fafbfc;padding:20px;transition:border-color 250ms ease,background 250ms ease}
+.creative-studio-wizard .wb-wa-choice.is-on{border-color:#2f5bff;background:#f4f6ff}
+.creative-studio-wizard .wb-wa-wizard-foot{background:#fff;backdrop-filter:none;padding-top:16px;padding-bottom:16px}
+.creative-studio-wizard .wb-wa-submit{border-radius:10px!important;background:#17202b!important;color:white!important;box-shadow:none!important}
+.creative-production-heading{margin:0;font-size:23px;font-weight:600;letter-spacing:-.035em;color:#17202b;text-wrap:balance}
+.creative-production-caption{font-size:13px;line-height:1.7;color:#667781;max-width:360px;margin:8px auto 0;text-wrap:pretty}
+.creative-image-pending{padding:28px 20px;text-align:center;border-bottom:1px solid #e9edef;background:#fafbfc}
+.creative-production-shell{padding:24px!important;gap:20px!important}
+.creative-production-shell>.text-center>.inline-flex{display:none}
+.creative-production-shell>.text-center>h3{font-size:23px;font-weight:600;letter-spacing:-.035em;color:#17202b}
+.creative-production-stages{background:#fafbfc!important;border-radius:16px!important;padding:20px!important}
+.creative-production-notice{background:#f7f8fb!important;border-color:#e1e5eb!important;color:#17202b!important}
+.creative-production-detail .wb-craft-title{font-size:23px;font-weight:600;letter-spacing:-.035em;color:#17202b}
+.creative-production-detail .wb-craft-line{font-size:14px;line-height:1.6;color:#17202b}
+.creative-production-detail .wb-craft-detail{font-size:12px;line-height:1.7;color:#667781;max-width:420px;margin-inline:auto}
+.creative-production-shell>div:last-child{flex-wrap:wrap}
+@media(max-width:480px){.creative-studio-wizard .wb-wa-wizard-steps{padding:16px 10px}.wb-wa-page .creative-studio-wizard .wb-wa-steps .wb-steps-label{font-size:10px}.creative-production-shell{padding:20px 14px!important}.creative-production-visual{transform:scale(.9);height:160px}}
+@media(prefers-reduced-motion:reduce){.creative-production-visual *{animation:none!important}.creative-studio-wizard *{transition:none!important}.creative-production-shell .animate-ping,.creative-production-shell .animate-pulse{animation:none!important}}

@@ -1,4 +1,5 @@
 'use server'
+import sharp from 'sharp'
 
 import { after } from 'next/server'
 import { revalidatePath } from 'next/cache'
@@ -9,6 +10,7 @@ import { hasImageProvider } from '@/lib/ai/image'
 import { processCreativeGeneration } from '@/lib/creative/process'
 import { isUncertainImageFailure } from '@/lib/creative/detail-render-state'
 import { isReadyImageSource } from '@/lib/creative/image-source'
+import { requiredImageAssets } from '@/lib/creative/required-image-assets'
 import {
   titleFromBrief,
   type CreativePayload,
@@ -358,12 +360,16 @@ export async function startCreativeGeneration(
   }
   const title = titleFromBrief(String(draft.instruction ?? '').trim() || brief)
   // Identical mandatory-asset gate for every business, enforced before job insertion.
-  if (draft.useLogo === false || !(kitRow?.logo_path || orgLogoPath)) {
-    return { error: 'Üretmek için işletme logosunu ekleyin ve logo kullanımını açın.' }
+  const logoSource = String(kitRow?.logo_path || orgLogoPath || '').trim()
+  if (products.some(product => !product.include.image || !product.imageUrl || product.imageUrl.trim() === logoSource || /^\/?(?:brand|logos)\//i.test(product.imageUrl))) {
+    return { error: 'Seçilen her ürün için gerçek ürün veya arayüz görseli ekleyin. İşletme logosu ürün referansı yerine kullanılamaz.' }
   }
-  if (!products.some((product) => product.include.image && product.imageUrl) && !baseCreativeId) {
-    return { error: 'Üretmek için gerçek bir ürün veya referans görseli seçin.' }
-  }
+  const imageAssetGate = requiredImageAssets({
+    useLogo: draft.useLogo !== false, hasLogo: Boolean(kitRow?.logo_path || orgLogoPath),
+    hasProductReference: products.some((product) => product.include.image && Boolean(product.imageUrl)),
+    hasValidBase: Boolean(baseCreativeId),
+  })
+  if (!imageAssetGate.ready) return { error: imageAssetGate.message || 'IMAGE_ASSETS_REQUIRED' }
   const snapshot: CreativePayload = {
     brief,
     style: String(draft.style ?? 'auto'),
@@ -678,6 +684,35 @@ export async function uploadAssetOnly(
   }
 }
 
+/** Attach a validated reference to this tenant's existing product only. */
+export async function uploadProductReference(formData: FormData): Promise<{error?:string;image?:{id:string;url:string}}> {
+  let ctx: Awaited<ReturnType<typeof requireActiveOrg>>
+  try { ctx = await requireActiveOrg() } catch { return {error:'Oturum bulunamadı.'} }
+  const {org,supabase} = ctx
+  if (!isOrgAdminRole(org.role) || org.suspended_at) return {error:'Ürün görseli ekleme yetkiniz yok.'}
+  const productId = String(formData.get('productId') || '')
+  const {data:product} = await supabase.from('org_products').select('id').eq('id',productId).eq('org_id',org.id).maybeSingle()
+  if (!product) return {error:'Bu işletmeye ait ürün bulunamadı.'}
+  const file = collectImageFiles(formData,'file')[0]
+  if (!file) return {error:'Ürün görseli zorunludur.'}
+  const parsed = await readImageFile(file)
+  if (!('buffer' in parsed) || !parsed.buffer) return {error:parsed.error || 'Görsel okunamıyor.'}
+  try {
+    const image = sharp(parsed.buffer,{limitInputPixels:25000000,failOn:'warning'})
+    const metadata = await image.metadata()
+    if (!['png','jpeg','webp'].includes(metadata.format || '')) return {error:'PNG, JPG veya WEBP yükleyin.'}
+    await image.raw().toBuffer()
+  } catch { return {error:'Görsel bozuk veya okunamıyor.'} }
+  const id = crypto.randomUUID()
+  const storagePath = `${org.id}/products/${productId}/${id}.${parsed.ext}`
+  const {error:uploadError} = await supabase.storage.from('creatives').upload(storagePath,parsed.buffer,{contentType:parsed.mime,upsert:false})
+  if (uploadError) return {error:'Görsel yüklenemedi. Tekrar deneyin.'}
+  const {data:publicUrl} = supabase.storage.from('creatives').getPublicUrl(storagePath)
+  const {error:recordError} = await supabase.from('org_product_images').insert({id,org_id:org.id,product_id:productId,storage_path:storagePath,public_url:publicUrl.publicUrl,sort_order:0})
+  if (recordError) return {error:'Görsel ürün kaydına bağlanamadı. Tekrar deneyin.'}
+  return {image:{id,url:publicUrl.publicUrl}}
+}
+
 /** Kampanya görsel sihirbazından ayrılmadan hızlı ürün ekleme */
 export async function quickCreateProduct(
   formData: FormData,
@@ -696,6 +731,21 @@ export async function quickCreateProduct(
   const name = String(formData.get('name') ?? '').trim()
   if (!name) return { error: 'Ürün adı zorunludur.' }
 
+  const files = collectImageFiles(formData, 'images')
+  if (!files.length) return { error: 'Ürün referans görseli zorunludur.' }
+  if (files.length > 8) return { error: 'En fazla 8 ürün görseli ekleyin.' }
+  for (const file of files) {
+    const parsed = await readImageFile(file)
+    if ('error' in parsed && parsed.error) return { error: parsed.error }
+    if (!('buffer' in parsed)) return { error: 'Geçerli bir ürün görseli yükleyin.' }
+    try {
+      const decoded = sharp(parsed.buffer,{limitInputPixels:25000000,failOn:'warning'})
+      const metadata = await decoded.metadata()
+      if (!['png','jpeg','webp'].includes(metadata.format || '')) return {error:'PNG, JPG veya WEBP yükleyin.'}
+      await decoded.raw().toBuffer()
+    } catch { return {error:'Ürün görseli bozuk veya okunamıyor. Başka bir görsel yükleyin.'} }
+  }
+
   const description = String(formData.get('description') ?? '').trim()
   const boxContents = String(formData.get('box_contents') ?? '').trim()
   const productId = crypto.randomUUID()
@@ -707,12 +757,11 @@ export async function quickCreateProduct(
     name: name.slice(0, 160),
     description: description || null,
     box_contents: boxContents || null,
-    is_active: true,
+    is_active: false,
   })
 
   if (insertError) return { error: insertError.message }
 
-  const files = collectImageFiles(formData, 'images')
   const images: { id: string; url: string }[] = []
 
   for (let index = 0; index < files.length; index += 1) {
@@ -740,6 +789,10 @@ export async function quickCreateProduct(
       images.push({ id: imgId, url: publicUrl.publicUrl })
     }
   }
+
+  if (!images.length) return { error: 'Ürün görseli kaydedilemedi. Görselsiz ürün seçime açılmadı; yeniden yükleyin.' }
+  const { error: activateError } = await supabase.from('org_products').update({is_active:true}).eq('id',productId).eq('org_id',org.id)
+  if (activateError) return { error: 'Ürün kaydı tamamlanamadı. Görsel yüklemesini tekrar deneyin.' }
 
   revalidatePath('/icerik/yeni')
   revalidatePath('/ayarlar/urunler')

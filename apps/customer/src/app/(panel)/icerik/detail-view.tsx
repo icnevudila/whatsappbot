@@ -55,6 +55,7 @@ export type DetailCreative = {
   brief: string | null
   thumbnailUrl?: string | null
   cleanPublicUrl?: string | null
+  recoverableImageJob?: boolean
 }
 
 export type VersionRow = {
@@ -350,7 +351,7 @@ export function CreativeDetail({
       progressInfo?: ServerProgressInfo | null
       error?: string
     } | null
-    if (!response.ok) {
+    if (!response.ok || json?.ok === false || json?.error) {
       return { error: json?.error ?? 'Görsel üretilemedi.', pending: false }
     }
     if (json?.pending || response.status === 202) {
@@ -402,7 +403,8 @@ export function CreativeDetail({
 
   useEffect(() => {
     if (!canManage) return
-    if (creative.status !== 'pending' && creative.status !== 'rendering') return
+    const recoverableImage = creative.status === 'failed' && creative.recoverableImageJob
+    if (creative.status !== 'pending' && creative.status !== 'rendering' && !recoverableImage) return
     if (kicked.current) return
     kicked.current = true
     setBusyRender(true)
@@ -411,16 +413,10 @@ export function CreativeDetail({
     let isMounted = true
     let pollTimer: ReturnType<typeof setTimeout> | null = null
     const startTime = Date.now()
-    const MAX_WAIT_MS = 6 * 60 * 1000 // 6 minutes max
+    const SLOW_POLL_AFTER_MS = 6 * 60 * 1000
 
     async function pollLoop() {
       if (!isMounted) return
-      if (Date.now() - startTime > MAX_WAIT_MS) {
-        setLocalError('Sonuç takibi zaman aşımına uğradı; üretimin başarısız olduğu doğrulanmadı. Sayfayı yenileyerek mevcut işi kontrol edin; yeni üretim başlatılmadı.')
-        setBusyRender(false)
-        return
-      }
-
       try {
         const res = await requestRender()
         if (!isMounted) return
@@ -448,7 +444,7 @@ export function CreativeDetail({
 
         if (res.pending) {
           const delay = (res.retryAfterSeconds || 3) * 1000
-          pollTimer = setTimeout(pollLoop, Math.max(2500, delay))
+          pollTimer = setTimeout(pollLoop, Math.max(Date.now() - startTime > SLOW_POLL_AFTER_MS ? 15000 : 2500, delay))
         } else {
           setServerProgress(null)
           setLocalError(null)
@@ -458,12 +454,9 @@ export function CreativeDetail({
       } catch (err: unknown) {
         if (!isMounted) return
         console.warn('[detail-view] poll error:', err)
-        if (Date.now() - startTime < MAX_WAIT_MS) {
-          pollTimer = setTimeout(pollLoop, 4000)
-        } else {
-          setLocalError('Bağlantı hatası veya zaman aşımı.')
-          setBusyRender(false)
-        }
+        // A lost observation is not a failed production. Keep observing this job;
+        // requestRender's persisted identity prevents another provider submission.
+        pollTimer = setTimeout(pollLoop, Date.now() - startTime > SLOW_POLL_AFTER_MS ? 15000 : 4000)
       }
     }
 
@@ -473,7 +466,9 @@ export function CreativeDetail({
       isMounted = false
       if (pollTimer) clearTimeout(pollTimer)
     }
-  }, [canManage, creative.id, creative.status, router])
+  // A pending -> rendering refresh must not tear down the owning poll loop.
+  // kicked remains true after cleanup, so a status dependency silently stopped recovery.
+  }, [canManage, creative.id, router])
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient()
@@ -543,7 +538,8 @@ export function CreativeDetail({
       {spinning ? (
         <div className="wb-craft-panel">
           <CreativeGenerating
-            title={isVideo ? 'Sinematik kampanya videosu oluşuyor' : 'Tatlı bir görsel oluşuyor'}
+            kind={isVideo ? 'video' : 'image'}
+            title={isVideo ? 'Sinematik kampanya videonuz hazırlanıyor' : 'Görseliniz hazırlanıyor'}
             line={stageLabel}
             detail={`${stageDetail} · ${remainingText}`}
           >
