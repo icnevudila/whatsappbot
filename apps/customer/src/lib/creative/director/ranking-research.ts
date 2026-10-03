@@ -12,6 +12,7 @@ import sharp from 'sharp'
 import type { ArtDirectionPlan, ArtDirectorInput } from './creative-director'
 import { generateArtDirectionPlan } from './creative-director'
 import { getArchetype } from './archetypes'
+import { classifySector } from './sector-dna'
 
 export interface RankingResearchReport {
   evaluatedModels: {
@@ -91,11 +92,30 @@ export interface BestOfTwoCandidates {
 export async function generateBestOfTwoPlans(
   input: ArtDirectorInput,
 ): Promise<BestOfTwoCandidates> {
+  const sector = classifySector({
+    productName: input.productName,
+    productDescription: input.productDescription || undefined,
+    brandName: input.brandName,
+    category: input.category || undefined,
+    brief: input.campaignDetail || input.headline || undefined,
+  })
+
   // Choose two contrasting archetypes appropriate for the campaign
-  let archetypeA = 'CINEMATIC_PRODUCT_HERO'
+  let archetypeA = 'PRODUCT_COMMERCE_HERO'
   let archetypeB = 'BOLD_RETAIL'
 
-  if (input.objective === 'BRAND_AWARENESS' || input.objective === 'PREMIUM') {
+  if (sector.isPhysicalProduct) {
+    if (sector.sectorId === 'CONSTRUCTION') {
+      archetypeA = 'MATERIAL_COMMERCE_HERO'
+      archetypeB = 'PRODUCT_COMMERCE_HERO'
+    } else if (input.objective === 'REAL_USAGE') {
+      archetypeA = 'HYBRID_PRODUCT_USAGE'
+      archetypeB = 'PRODUCT_COMMERCE_HERO'
+    } else {
+      archetypeA = 'PRODUCT_COMMERCE_HERO'
+      archetypeB = 'HYBRID_PRODUCT_USAGE'
+    }
+  } else if (input.objective === 'BRAND_AWARENESS' || input.objective === 'PREMIUM') {
     archetypeA = 'EDITORIAL_LUXURY'
     archetypeB = 'STUDIO_PEDESTAL'
   } else if (input.objective === 'SALES_OFFER' || input.objective === 'CAMPAIGN') {
@@ -104,6 +124,9 @@ export async function generateBestOfTwoPlans(
   } else if (input.objective === 'REAL_USAGE') {
     archetypeA = 'REAL_WORLD_USAGE'
     archetypeB = 'ORGANIC_LIFESTYLE'
+  } else {
+    archetypeA = 'CINEMATIC_PRODUCT_HERO'
+    archetypeB = 'BOLD_RETAIL'
   }
 
   const [planA, planB] = await Promise.all([

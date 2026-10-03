@@ -11,6 +11,8 @@ export interface SectorDna {
   sectorId: string
   nameTr: string
   preferredArchetypes: string[]
+  isPhysicalProduct?: boolean
+  productDominanceRequired?: boolean
   physicalEnvironment: {
     primaryScene: string
     depthElements: string[]
@@ -34,7 +36,9 @@ export const SECTOR_DNA_REGISTRY: Record<string, SectorDna> = {
   AGRICULTURE: {
     sectorId: 'AGRICULTURE',
     nameTr: 'Tarım, Bahçe & Çiftlik',
-    preferredArchetypes: ['ORGANIC_LIFESTYLE', 'REAL_WORLD_USAGE', 'MATERIAL_TEXTURE_HERO', 'CINEMATIC_PRODUCT_HERO'],
+    isPhysicalProduct: true,
+    productDominanceRequired: true,
+    preferredArchetypes: ['PRODUCT_COMMERCE_HERO', 'HYBRID_PRODUCT_USAGE', 'MATERIAL_TEXTURE_HERO', 'ORGANIC_LIFESTYLE', 'REAL_WORLD_USAGE'],
     physicalEnvironment: {
       primaryScene: 'Lush Anatolian orchard, fertile terraced olive grove, modern greenhouse, or sunlit harvest field',
       depthElements: ['Foreground dew-covered foliage or micro water-droplets', 'Hero equipment/produce in sharp focus', 'Rich dark soil furrow lines', 'Distant rolling hills or modern greenhouse steel frames'],
@@ -48,7 +52,7 @@ export const SECTOR_DNA_REGISTRY: Record<string, SectorDna> = {
       authenticAction: 'Inspecting leaf health, adjusting precision brass nozzle, harvesting ripe produce with care',
     },
     brandPaletteMood: {
-      recommendedHarmonies: ['Olive green #556B2F', 'Sunlit ochre #DAA520', 'Terracotta #C85A32', 'Deep earth brown #3E2723'],
+      recommendedHarmonies: ['Olive green', 'Sunlit ochre', 'Terracotta', 'Deep earth brown'],
       avoidColors: ['Cold sterile hospital cyan', 'Artificial neon pink', 'Fake cyber purple'],
     },
     antiGenericDirectives: [
@@ -61,7 +65,9 @@ export const SECTOR_DNA_REGISTRY: Record<string, SectorDna> = {
   CONSTRUCTION: {
     sectorId: 'CONSTRUCTION',
     nameTr: 'İnşaat, Yapı & Mimarlık',
-    preferredArchetypes: ['ARCHITECTURAL_PRESTIGE', 'INDUSTRIAL_POWER', 'MATERIAL_TEXTURE_HERO', 'BOLD_RETAIL'],
+    isPhysicalProduct: true,
+    productDominanceRequired: true,
+    preferredArchetypes: ['MATERIAL_COMMERCE_HERO', 'PRODUCT_COMMERCE_HERO', 'ARCHITECTURAL_PRESTIGE', 'INDUSTRIAL_POWER', 'MATERIAL_TEXTURE_HERO'],
     physicalEnvironment: {
       primaryScene: 'Prestige architectural jobsite, high-end facade installation, clean precast factory, or executive showroom',
       depthElements: ['Foreground razor-sharp brick/clinker texture', 'Precision laser level guideline', 'Structural steel rebar or scaffolding grid in midground', 'Sunlit architectural skyline or tower crane silhouetted against deep sky'],
@@ -75,7 +81,7 @@ export const SECTOR_DNA_REGISTRY: Record<string, SectorDna> = {
       authenticAction: 'Checking masonry plumb line with precision spirit level, reviewing facade alignment against structural grid',
     },
     brandPaletteMood: {
-      recommendedHarmonies: ['Basalt charcoal #263238', 'Brick terracotta #B7410E', 'Safety gold #F59E0B', 'Architectural stone grey #78909C'],
+      recommendedHarmonies: ['Basalt charcoal', 'Brick terracotta', 'Safety gold', 'Architectural stone grey'],
       avoidColors: ['Pastel candy pink', 'Sleepy washed-out beige with zero contrast', 'Electric rave neon'],
     },
     antiGenericDirectives: [
