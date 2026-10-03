@@ -11,6 +11,8 @@ const { captureTurnBaseline, readCurrentTurn } = require('./chatgpt_turn_scope.j
 const { readComposerAttachments } = require('./image_reference_gate.js');
 const { navigateToChat } = require('./chat_navigation.js');
 const { isChatGPTPage } = require('./chatgpt_tab_scope.js');
+const { assertImageScope, readImageScope } = require('./image_conversation_scope.js');
+const { assertReferenceCount } = require('./image_reference_contract.js');
 
 const GATEWAY_URL = process.env.GATEWAY_URL || 'http://127.0.0.1:3456';
 const { createWorkerGatewayFetch } = require('./worker_gateway_fetch.js');
@@ -233,7 +235,7 @@ async function getTab(matchPattern) {
     }
 
     // 2. Belirtilen matchPattern'e uyan sekmeleri TAB_INDEX ile eşleştir
-    const chatTabs = pageTabs.filter(isChatGPTPage);
+    const chatTabs = pageTabs.filter(t => isChatGPTPage(t) && !reaper.registry.hasActiveJob(t.id) && !new URL(t.url).searchParams.has('mesajify_image_job_id'));
     if (chatTabs.length > TAB_INDEX) {
       const assignedTab = chatTabs[TAB_INDEX];
       cachedTabId = assignedTab.id;
@@ -762,6 +764,8 @@ async function workerLoop() {
   }
 
   let chatgptTab = null;
+  let disposableImageTarget = null;
+  let claimedJob = null;
   // Claim synchronously before the first await, not after fetching a job.
   isBusy = true;
   try {
@@ -783,6 +787,7 @@ async function workerLoop() {
 
     const { job } = await jobRes.json();
     if (!job) return; // Boşta iş yok
+    claimedJob = job;
 
     if (chatgptTab && chatgptTab.id) {
       reaper.registry.setTabJob(chatgptTab.id, job.id);
@@ -801,10 +806,22 @@ async function workerLoop() {
     } else if (job.type === 'chat_completion') {
       await executeGenericChatJob(chatgptTab, job);
     } else {
+      // Never reuse a text/canary/persistent company target for a production image.
+      const freshUrl = `https://chatgpt.com/?mesajify_image_job_id=${encodeURIComponent(job.id)}`;
+      const fresh = await fetch(`${CDP_HTTP}/json/new?${freshUrl}`, { method: 'PUT' });
+      if (!fresh.ok) throw new Error('CHATGPT_TARGET_CREATION_FAILED');
+      disposableImageTarget = await fresh.json();
+      if (!isChatGPTPage(disposableImageTarget) || !disposableImageTarget.id || !disposableImageTarget.webSocketDebuggerUrl) {
+        throw new Error('CHATGPT_TARGET_CREATION_FAILED');
+      }
+      reaper.registry.setTabJob(disposableImageTarget.id, job.id);
+      reaper.registry.setTabJob(chatgptTab.id, null);
+      chatgptTab = disposableImageTarget;
       await executeChatGPTJob(chatgptTab, job);
     }
 
     completedJobCount++;
+    claimedJob = null;
     lastJobTime = Date.now();
     if (completedJobCount % RECYCLE_JOB_THRESHOLD === 0) {
       await performMemoryRecycle(chatgptTab);
@@ -812,7 +829,14 @@ async function workerLoop() {
 
   } catch (err) {
     console.error('[CDP Worker] Döngü hatası:', err.message);
+    if (claimedJob) await fetch(`${GATEWAY_URL}/job/release`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jobId: claimedJob.id, error: err.message }),
+    }).catch(() => {});
   } finally {
+    if (disposableImageTarget?.id) {
+      await fetch(`${CDP_HTTP}/json/close/${encodeURIComponent(disposableImageTarget.id)}`, { signal: AbortSignal.timeout(5000) }).catch(() => {});
+    }
     if (chatgptTab && chatgptTab.id) {
       reaper.registry.setTabJob(chatgptTab.id, null);
     }
@@ -840,18 +864,24 @@ async function executeChatGPTJob(tab, job) {
 
     // 0. Firma için kayıtlı görsel oturumunu aç ([Mesajify] {Firma} - Medya)
     const customer = (job.customer || 'Genel').trim();
-    const isCanary = customer === 'Sistem' || customer === 'Sistem Nöbetçisi' || (job.workspace || '').includes('Canary');
-    const channel = isCanary ? 'canary' : 'media';
+    const channel = 'media';
     const chatIdentity = { customer, tenantId: job.tenantId, conversationId: job.conversationId };
-    const isDedicatedChat = isCanary || Boolean(customer && customer !== 'Genel');
+    const isDedicatedChat = false; // Image jobs cannot update persistent text/canary mappings.
     
     console.log(`[CDP Worker: ${WORKER_ID}] Firma: "${customer}" [${channel}] oturumu hazırlanıyor...`);
-    const chatInfo = await ensureCustomerChat(cdp, customer, channel, chatIdentity);
+    await navigateToChat(cdp, 'https://chatgpt.com/');
+    const ownedPage = await cdp.send('Runtime.evaluate', {
+      expression: `window.__mesajifyImageOwnerJobId = ${JSON.stringify(job.id)}; (${readImageScope.toString()})()`, returnByValue: true,
+    });
+    const scope = { jobId: job.id, targetId: tab.id, href: ownedPage.result?.value?.href };
+    assertImageScope(scope, { ...ownedPage.result?.value, targetId: tab.id });
     workerTiming.mark('tab_ready_ms');
 
     // 0.1 Pre-Flight Gate: Prompt referans istiyorsa fakat 0 referans geldiyse asla devam etme
     const promptNeedsRefs = /(?:STRICT LOGO FIDELITY|STRICT PRODUCT FIDELITY|A real company logo image is attached|The real product photo is provided|referans görsel)/i.test(job.prompt || '');
     const expectedRefCount = Array.isArray(job.referenceImages) ? job.referenceImages.length : 0;
+    assertReferenceCount(job.expectedReferenceCount ?? job.referenceImagesCount ?? expectedRefCount, expectedRefCount);
+    let composerAttachmentCount = 0;
     if (promptNeedsRefs && expectedRefCount === 0) {
       throw new Error('REFERENCE_PREFLIGHT_VIOLATION: Prompt demands reference images but job payload contains 0 references. Prompt not submitted.');
     }
@@ -936,6 +966,7 @@ async function executeChatGPTJob(tab, job) {
                 returnByValue: true
               }).catch(() => ({ result: { value: false } }));
               if (hasThumb.result?.value?.count === tempRefPaths.length && hasThumb.result.value.ready) {
+                composerAttachmentCount = hasThumb.result.value.count;
                 attachmentsVerified = true;
                 break;
               }
@@ -967,6 +998,16 @@ async function executeChatGPTJob(tab, job) {
     })).result?.value;
 
     // 3. Prompt'u Enjekte Et
+    const currentScope = await cdp.send('Runtime.evaluate', {
+      expression: `(${readImageScope.toString()})()`, returnByValue: true,
+    });
+    assertImageScope(scope, { ...currentScope.result?.value, targetId: tab.id });
+    assertReferenceCount(expectedRefCount, tempRefPaths.length);
+    assertReferenceCount(expectedRefCount, composerAttachmentCount);
+    console.log(JSON.stringify({ event: 'image_reference_gate', job_id: job.id, target_id: tab.id,
+      conversation_owner_job_id: job.id, expected_reference_count: expectedRefCount,
+      resolved_reference_count: tempRefPaths.length, uploaded_reference_count: tempRefPaths.length,
+      composer_attachment_count: composerAttachmentCount, attachments_ready_at: new Date().toISOString() }));
     const injectRes = await injectPromptAndSend(cdp, job.prompt);
     if (!injectRes?.success) {
       throw new Error(injectRes?.error || 'Prompt kutusu bulunamadı veya gönderilemedi');
@@ -985,11 +1026,8 @@ async function executeChatGPTJob(tab, job) {
 
       // İlerlemeyi Gateway'e bildir
       const elapsed = Math.round((Date.now() - submittedAt) / 1000);
-      const progress = Math.min(96, Math.round((elapsed / 180) * 100));
-      let statusText = 'Prompt gönderildi, görsel üretimi bekleniyor...';
-      if (elapsed > 15) statusText = 'ChatGPT DALL-E görsel motoru çiziyor...';
-      if (elapsed > 45) statusText = 'Görsel ayrıntıları ve ışıklandırma işleniyor...';
-      if (elapsed > 90) statusText = 'Yüksek çözünürlüklü render tamamlanmak üzere...';
+      const progress = 0; // Provider exposes no trustworthy numeric completion percentage.
+      const statusText = `Görsel sağlayıcısından sonuç bekleniyor (${elapsed} sn)`;
 
       // Sayfada takılma / hata / Try again modalı çıkarsa otomatik temizle ve tıkla
       if (attempt % 2 === 0) {

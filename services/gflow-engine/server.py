@@ -48,6 +48,11 @@ def _worker_control_request(url, data, timeout):
             or target.username or target.password):
         raise FlowExecutionError('WORKER_CONTROL_ORIGIN_INVALID', 'Worker control must use the configured supervisor origin')
     token = os.environ.get('WORKER_CONTROL_TOKEN', '')
+    if not token:
+        try:
+            token = Path(os.environ.get('WORKER_CONTROL_TOKEN_FILE', '/run/secrets/worker_control_token')).read_text().strip()
+        except OSError:
+            pass  # No credential or filesystem error is emitted; production fails closed below.
     if os.environ.get('NODE_ENV') == 'production' and not token:
         raise FlowExecutionError('WORKER_CONTROL_TOKEN_REQUIRED', 'Production worker control token is not configured')
     headers = {'Content-Type': 'application/json'}

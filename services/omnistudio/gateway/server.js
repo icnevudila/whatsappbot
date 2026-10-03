@@ -18,7 +18,7 @@ const os = require('os');
 const { URL } = require('url');
 const { createJobMetrics, setStage, finishMetrics } = require('./runtime_metrics.js');
 const { getTenantScopeKey, getRequestKey } = require('./tenant_scope.js');
-const { normalizeImageReferences, referenceRoleInstructions } = require('./image_reference_contract.js');
+const { normalizeImageReferences, referenceRoleInstructions, assertReferenceCount } = require('./image_reference_contract.js');
 const { DurableJobStore } = require('./durable_job_store.js');
 const { VideoJobPersistence, videoRequestHash } = require('./video_job_persistence.js');
 const { typedError, isWorkerControlPath, isAuthorizedWorker, configuredLimit, readBoundedBody } = require('./gateway_request_guard.js');
@@ -377,6 +377,8 @@ function sanitizeJobForBroadcast(job) {
     size: job.size,
     platform: job.platform,
     referenceImagesCount: job.referenceImagesCount || (job.referenceImages ? job.referenceImages.length : 0),
+    expectedReferenceCount: job.expectedReferenceCount ?? job.referenceImagesCount ?? 0,
+    referenceManifest: job.referenceManifest || [],
     status: job.status,
     progress: job.progress || 0,
     statusText: job.statusText || '',
@@ -534,6 +536,7 @@ class AdvancedJobQueue {
     workspace = 'WhatsApp Botu',
     customer = 'Panel',
     referenceImages = [], // URL veya Base64 dizisi (Ürün, Logo, Önceki Görsel)
+    expectedReferenceCount = referenceImages.length,
     brandKit = null,
     optimizePrompt = true,
     type = 'image',
@@ -600,6 +603,8 @@ class AdvancedJobQueue {
       companyContext,
       tone,
       referenceImagesCount: referenceImages.length,
+      expectedReferenceCount,
+      referenceManifest: referenceImages.map((ref, index) => ({ index, role: ref.role || 'reference', sha256: ref.sha256 || null })),
       referenceImages, // Referans görseller (Image-to-Image için)
       brandKit,
       status: 'pending', // 'pending' | 'processing' | 'completed' | 'failed'
@@ -1693,6 +1698,8 @@ const server = http.createServer(async (req, res) => {
         ...(body.productImageUrl ? [body.productImageUrl] : (body.product_image_url ? [body.product_image_url] : []))
       ].filter(Boolean);
       const referenceImages = normalizeImageReferences(rawRefs, body.tenantId || body.tenant_id || body.orgId || body.org_id || null);
+      const expectedReferenceCount = body.expected_reference_count ?? referenceImages.length;
+      assertReferenceCount(expectedReferenceCount, referenceImages.length);
       const brandKit = body.brandKit || null;
       const asyncMode = body.async === true || parsedUrl.searchParams.get('async') === 'true';
       const requestStartedAt = Date.now();
@@ -1717,6 +1724,7 @@ const server = http.createServer(async (req, res) => {
         workspace,
         customer,
         referenceImages,
+        expectedReferenceCount,
         brandKit,
         optimizePrompt: body.optimize !== false,
         tenantId: metrics.tenant_id,

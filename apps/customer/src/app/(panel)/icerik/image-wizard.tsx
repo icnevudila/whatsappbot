@@ -198,6 +198,12 @@ export function ImageCreativeWizard({ data }: { data: WizardBootstrap }) {
   const stepIndex = STEPS.findIndex((row) => row.id === step)
   const selectedKit = data.kits.find((kit) => kit.id === draft.brandKitId)
   const selectedProducts = productsList.filter((product) => draft.productIds.includes(product.id))
+  const requiredAssetsReady = draft.useLogo && Boolean(selectedKit?.samplePreview || data.org.logoPreview) && (
+    (draft.origin === 'derive' && validBaseSource) || selectedProducts.some((product) => {
+      const extra = draft.productExtras[product.id] ?? emptyExtra(product.images[0]?.url ?? '')
+      return extra.include.image && product.images.some((image) => image.url === extra.imageUrl)
+    })
+  )
   const payload = useMemo(
     () =>
       JSON.stringify({
@@ -272,7 +278,7 @@ export function ImageCreativeWizard({ data }: { data: WizardBootstrap }) {
       <form
         action={formAction}
         onSubmit={(event) => {
-          if (step !== 'summary' || (draft.origin === 'derive' && !validBaseSource)) event.preventDefault()
+          if (step !== 'summary' || !requiredAssetsReady || (draft.origin === 'derive' && !validBaseSource)) event.preventDefault()
         }}
         className="flex flex-col"
       >
@@ -880,7 +886,8 @@ export function ImageCreativeWizard({ data }: { data: WizardBootstrap }) {
               </p>
             ) : null}
             <p className="text-ink-muted">{draft.brief}</p>
-            <Button type="submit" className="wb-wa-submit" disabled={pending || !data.canManage || !data.imageAiEnabled || (draft.origin === 'derive' && !validBaseSource)}>
+            {!requiredAssetsReady ? <p role="alert" className="text-sm text-red-700">Görsel üretmek için logo ve ürün veya referans görseli ekleyin.</p> : null}
+            <Button type="submit" className="wb-wa-submit" disabled={pending || !data.canManage || !data.imageAiEnabled || !requiredAssetsReady || (draft.origin === 'derive' && !validBaseSource)}>
               {pending ? 'Kuyruğa alınıyor…' : 'Görseli oluştur'}
             </Button>
             {!data.canManage ? <Notice tone="warn">Üretim için yönetici gerekir.</Notice> : null}

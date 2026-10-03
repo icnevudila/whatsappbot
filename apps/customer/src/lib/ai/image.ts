@@ -130,6 +130,7 @@ function buildProviders(config: ResolvedAiConfig): Record<AiProviderId, ImagePro
             size,
             response_format: 'b64_json',
             referenceImages,
+            expected_reference_count: referenceImages.length,
             brandKit: metadata?.brandKit || null,
             optimize: false, // The wizard has already compiled the selected brand/creative template.
             workspace: metadata?.workspace || 'WhatsApp Botu',

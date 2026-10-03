@@ -100,11 +100,10 @@ export function Scene01Hero() {
   return (
     <section className="relative w-full bg-white pt-36 sm:pt-40 lg:pt-44 pb-16 lg:pb-24 overflow-hidden border-b border-slate-100">
       <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+        <div className="flex flex-col lg:grid lg:grid-cols-12 gap-8 lg:gap-12 items-center">
           
-          {/* Sol Kolon: Başlık, Açıklama ve Hızlı Başla */}
-          <div className="lg:col-span-5 flex flex-col justify-center">
-            
+          {/* 1. Üst Başlık Alanı: Mobilde 1. sırada, Masaüstünde Sol Kolonda */}
+          <div className="order-1 lg:col-span-5 flex flex-col justify-center w-full">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-xs font-semibold w-fit mb-4">
               <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
               <span>Yeni Nesil WhatsApp Büyüme Platformu</span>
@@ -121,36 +120,10 @@ export function Scene01Hero() {
               <br />
               <span className="text-slate-800 font-medium italic">Müşteri kazanın.</span>
             </h1>
-
-            <p className="mt-6 text-base sm:text-lg text-slate-700 font-medium leading-relaxed max-w-xl">
-              {current.sublead}
-            </p>
-
-            <p className="mt-3 text-sm sm:text-base text-slate-500 leading-relaxed max-w-xl">
-              Kendi müşteri listenizi kullanın veya işletme bulucu ile hedef kitlenizi oluşturun.
-              Tanıtım mesajınızı paylaşın; fiyat, ürün ve sipariş sorularını tek panelden ekipçe yanıtlayın.
-            </p>
-
-            <div className="mt-8 flex flex-wrap items-center gap-4">
-              <a
-                href="https://app.mesajify.com/giris"
-                className="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold px-6 py-3.5 rounded-xl shadow-lg shadow-emerald-700/20 transition-all text-sm sm:text-base"
-              >
-                <span>Hemen Başla</span>
-                <ArrowRight className="h-4 w-4" />
-              </a>
-              <a
-                href="#nasil-calisir"
-                className="text-sm font-semibold text-slate-700 hover:text-emerald-700 px-4 py-3.5 transition-colors"
-              >
-                Nasıl Çalışır ↓
-              </a>
-            </div>
           </div>
 
-          {/* Sağ Kolon: GENİŞ 16:9 Mesajify Veo Oynatıcısı (Smooth Cross-Fade & Croplanmamış Tam Görünüm) */}
-          <div className="lg:col-span-7 relative w-full flex items-center justify-center">
-            
+          {/* 2. Video Oynatıcı: Mobilde 2. sırada (Başlığın hemen altında!), Masaüstünde Sağ Kolonda */}
+          <div className="order-2 lg:col-span-7 lg:row-span-2 relative w-full flex items-center justify-center my-2 lg:my-0">
             {/* Ambient Blurred Video Background Glow Layer (Smooth Dissolve) */}
             <div className="absolute -inset-4 sm:-inset-8 -z-10 rounded-[40px] overflow-hidden filter blur-3xl opacity-30 scale-105 pointer-events-none transition-all duration-1000">
               {HERO_SHOWCASES.map((item, idx) => (
@@ -175,10 +148,9 @@ export function Scene01Hero() {
               ))}
             </div>
 
-            {/* Geniş SaaS Web/Dashboard Penceresi (Temiz, Alt/Üst Etiketsiz) */}
+            {/* Geniş SaaS Web/Dashboard Penceresi */}
             <div className="w-full max-w-[760px] xl:max-w-[820px] rounded-2xl sm:rounded-3xl border border-slate-200/90 bg-white shadow-2xl shadow-slate-950/10 overflow-hidden transition-all duration-300">
-              
-              {/* Browser Window Bar (Yalnızca Pencere Butonları ve Adres, Sağdaki Badge Kaldırıldı) */}
+              {/* Browser Window Bar */}
               <div className="flex items-center justify-between px-4 sm:px-6 py-3 bg-slate-50 border-b border-slate-200/80">
                 <div className="flex items-center gap-2">
                   <span className="h-2.5 w-2.5 rounded-full bg-red-400 inline-block" />
@@ -219,22 +191,48 @@ export function Scene01Hero() {
                 })}
 
                 {/* Floating Bottom Info Pill */}
-                <div className="absolute bottom-4 left-4 right-4 z-20 flex items-center justify-between pointer-events-none">
-                  <div className="bg-slate-950/80 backdrop-blur-md border border-white/10 px-3.5 py-1.5 rounded-xl flex items-center gap-2 shadow-lg">
+                <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 right-3 sm:right-4 z-20 flex items-center justify-between pointer-events-none">
+                  <div className="bg-slate-950/80 backdrop-blur-md border border-white/10 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl flex items-center gap-2 shadow-lg">
                     <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-xs font-semibold text-white">
+                    <span className="text-[11px] sm:text-xs font-semibold text-white truncate max-w-[190px] sm:max-w-none">
                       {current.featureTitle}
                     </span>
                   </div>
-                  <div className="bg-[#25d366] text-white text-xs font-bold px-3.5 py-1.5 rounded-xl shadow-lg flex items-center gap-1.5">
+                  <div className="bg-[#25d366] text-white text-[11px] sm:text-xs font-bold px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl shadow-lg flex items-center gap-1 sm:gap-1.5">
                     <span>{current.ctaText}</span>
                     <span>→</span>
                   </div>
                 </div>
               </div>
-
             </div>
+          </div>
 
+          {/* 3. Açıklama ve Butonlar Alanı: Mobilde 3. sırada (Videonun hemen altında!), Masaüstünde Sol Kolonda */}
+          <div className="order-3 lg:col-span-5 flex flex-col justify-center w-full">
+            <p className="text-base sm:text-lg text-slate-700 font-medium leading-relaxed max-w-xl">
+              {current.sublead}
+            </p>
+
+            <p className="mt-3 text-sm sm:text-base text-slate-500 leading-relaxed max-w-xl">
+              Kendi müşteri listenizi kullanın veya işletme bulucu ile hedef kitlenizi oluşturun.
+              Tanıtım mesajınızı paylaşın; fiyat, ürün ve sipariş sorularını tek panelden ekipçe yanıtlayın.
+            </p>
+
+            <div className="mt-6 sm:mt-8 flex flex-wrap items-center gap-4">
+              <a
+                href="https://app.mesajify.com/giris"
+                className="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold px-6 py-3.5 rounded-xl shadow-lg shadow-emerald-700/20 transition-all text-sm sm:text-base"
+              >
+                <span>Hemen Başla</span>
+                <ArrowRight className="h-4 w-4" />
+              </a>
+              <a
+                href="#nasil-calisir"
+                className="text-sm font-semibold text-slate-700 hover:text-emerald-700 px-4 py-3.5 transition-colors"
+              >
+                Nasıl Çalışır ↓
+              </a>
+            </div>
           </div>
 
         </div>
