@@ -16,20 +16,68 @@ const request = {
   assets: [{ asset_id: 'asset_product', org_id: 'org_1', role: 'product', file_path: '/tmp/product.png', sha256: 'a'.repeat(64) }],
 }
 
+test('duplicate, missing-tenant and wrong-role attachment proof is rejected without regeneration', async () => {
+  const originalFetch = globalThis.fetch
+  const product = { asset_id: 'asset_product', org_id: 'org_1', role: 'product', sha256: 'a'.repeat(64), attached_media_id: 'media_123' }
+  const logo = { asset_id: 'asset_logo', org_id: 'org_1', role: 'logo', sha256: 'b'.repeat(64), attached_media_id: 'media_456' }
+  const twoAssets = { ...request, expected_reference_ids: ['asset_product', 'asset_logo'], assets: [...request.assets, { ...logo, file_path: '/tmp/logo.png' }] }
+  try {
+    for (const proof of [[product, product], [{ ...product, org_id: undefined }, logo], [{ ...product, role: 'logo' }, logo]]) {
+      let calls = 0
+      globalThis.fetch = async () => { calls++; return Response.json({ real_flow_project_uuid: '8c4a79f4-8a41-4e37-b65d-1e088c79b951', verified_assets: proof, output_path: '/tmp/output.mp4' }) }
+      await assert.rejects(new RealHttpGFlowProvider('http://test.invalid').executeJob(twoAssets), /REFERENCE_INTEGRITY_VIOLATION|CROSS_ORG_CONTAMINATION/)
+      assert.equal(calls, 1)
+    }
+  } finally { globalThis.fetch = originalFetch }
+})
+
 test('RealHttpGFlowProvider fails closed when Flow omits attachment evidence', async () => {
   const originalFetch = globalThis.fetch
-  globalThis.fetch = async () => new Response(JSON.stringify({
+  let executions = 0
+  globalThis.fetch = async () => { executions++; return new Response(JSON.stringify({
     real_flow_project_uuid: '8c4a79f4-8a41-4e37-b65d-1e088c79b951',
     verified_assets: [],
     output_path: '/tmp/output.mp4',
-  }), { status: 200 })
+  }), { status: 200 }) }
 
   try {
     const provider = new RealHttpGFlowProvider('http://test.invalid')
     await assert.rejects(provider.executeJob(request), /GPT_ASSET_ATTACHMENT_FAILED/)
+    assert.equal(executions, 1, 'failed evidence after a paid generation must not regenerate')
   } finally {
     globalThis.fetch = originalFetch
   }
+})
+
+test('transport uncertainty and provider deadlines never execute a second paid attempt', async () => {
+  const originalFetch = globalThis.fetch
+  try {
+    for (const failure of ['transport', 'deadline']) {
+      let executions=0
+      globalThis.fetch=async()=>{
+        executions++
+        if(failure==='transport') throw new Error('Connection lost after acceptance')
+        return Response.json({detail:{code:'TIMEOUT',message:'provider deadline exceeded'}},{status:504})
+      }
+      await assert.rejects(new RealHttpGFlowProvider('http://test.invalid').executeJob(request))
+      assert.equal(executions,1)
+    }
+  } finally { globalThis.fetch=originalFetch }
+})
+
+test('a verified response keeps its sole project and attachment identities', async () => {
+  const originalFetch=globalThis.fetch
+  let executions=0
+  globalThis.fetch=async()=>{executions++; return Response.json({
+    real_flow_project_uuid:'8c4a79f4-8a41-4e37-b65d-1e088c79b951',
+    verified_assets:[{asset_id:'asset_product',org_id:'org_1',role:'product',sha256:'a'.repeat(64),attached_media_id:'media_123'}],
+    output_path:'/tmp/output.mp4',verified:true,
+  })}
+  try {
+    const result=await new RealHttpGFlowProvider('http://test.invalid').executeJob(request)
+    assert.equal(executions,1); assert.equal(result.flow_project_id,'8c4a79f4-8a41-4e37-b65d-1e088c79b951')
+    assert.deepEqual(result.actual_attached_reference_ids,['asset_product'])
+  } finally {globalThis.fetch=originalFetch}
 })
 
 test('RealHttpGFlowProvider rejects a Flow attachment with an asset SHA drift', async () => {

@@ -2,6 +2,7 @@ import { CREATIVE_FORMATS, VIDEO_CREATIVE_FORMAT, type ProductFieldKey } from '@
 import type { ProductFidelityContract, ReferenceRole } from '@/lib/video-wizard-contract'
 
 export type LibraryOption = {
+  format?: string
   id: string
   title: string | null
   publicUrl: string | null

@@ -3,6 +3,7 @@ import { promisify } from 'node:util'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, writeFileSync, readFileSync, copyFileSync } from 'node:fs'
 import { dirname, join, basename } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import type {
   IGFlowProvider,
@@ -83,7 +84,9 @@ export class RealHttpGFlowProvider implements IGFlowProvider {
       created_at: string
     }> = []
 
-    while (attempts < 2) {
+    // One execution per paid attempt. A timeout or failed post-generation proof
+    // cannot establish that Flow did not generate; never pay for a second clip.
+    while (attempts < 1) {
       attempts++
       const attemptCreatedAt = new Date().toISOString()
       const controller = new AbortController()
@@ -113,15 +116,11 @@ export class RealHttpGFlowProvider implements IGFlowProvider {
           attemptHistory.push({
             attempt_number: attempts,
             flow_project_id: (detail.incident?.id) || `attempt_${attempts}_failed`,
-            status: attempts < 2 ? 'RETRY' : 'FAILED',
+            status: 'FAILED',
             error: err.message,
             created_at: attemptCreatedAt,
           })
 
-          if (attempts < 2 && (msg.includes('code 9') || msg.includes('timeout') || msg.includes('deadline'))) {
-            await new Promise(r => setTimeout(r, 6000))
-            continue
-          }
           throw err
         }
 
@@ -139,14 +138,21 @@ export class RealHttpGFlowProvider implements IGFlowProvider {
       // attachment failures indistinguishable from a verified generation.
       const verifiedAssets = data.verified_assets || []
       const expectedById = new Map((req.assets || []).map((asset: any) => [asset.asset_id, asset]))
+      const seenIds = new Set<string>()
+      const seenMediaIds = new Set<string>()
+      if (new Set(req.expected_reference_ids).size !== req.expected_reference_ids.length) {
+        throw new Error('REFERENCE_INTEGRITY_VIOLATION: duplicate expected asset IDs')
+      }
       if (verifiedAssets.length !== req.expected_reference_ids.length) {
         throw new Error(`GPT_ASSET_ATTACHMENT_FAILED: expected ${req.expected_reference_ids.length} verified assets, received ${verifiedAssets.length}`)
       }
       for (const va of verifiedAssets) {
+        if (seenIds.has(va.asset_id)) throw new Error('REFERENCE_INTEGRITY_VIOLATION: duplicate verified asset ID')
+        seenIds.add(va.asset_id)
         if (!va.asset_id || !req.expected_reference_ids.includes(va.asset_id)) {
           throw new Error(`REFERENCE_INTEGRITY_VIOLATION: Unexpected or missing asset_id ${va.asset_id}`)
         }
-        if (va.org_id && va.org_id !== req.org_id) {
+        if (!va.org_id || va.org_id !== req.org_id) {
           throw new Error(`CROSS_ORG_CONTAMINATION: Asset org ${va.org_id} does not match job org ${req.org_id}`)
         }
         if (!va.role) {
@@ -156,6 +162,9 @@ export class RealHttpGFlowProvider implements IGFlowProvider {
           throw new Error(`REFERENCE_INTEGRITY_VIOLATION: Asset ${va.asset_id} missing confirmed attached_media_id chip`)
         }
         const expected = expectedById.get(va.asset_id)
+        if (seenMediaIds.has(va.attached_media_id)) throw new Error('REFERENCE_INTEGRITY_VIOLATION: duplicate attached media chip')
+        seenMediaIds.add(va.attached_media_id)
+        if (!expected || va.role !== expected.role) throw new Error('REFERENCE_INTEGRITY_VIOLATION: verified role differs from approved role')
         if (!expected || !va.sha256 || String(va.sha256).toLowerCase() !== String(expected.sha256).toLowerCase()) {
           throw new Error(`CREATIVE_ASSET_DRIFT: verified Flow asset ${va.asset_id} does not match the approved asset SHA-256`)
         }
@@ -184,7 +193,7 @@ export class RealHttpGFlowProvider implements IGFlowProvider {
         actual_attached_reference_ids: actualAttached,
         verified_assets: verifiedAssets.map((va: any) => ({
           asset_id: va.asset_id,
-          org_id: va.org_id || req.org_id,
+          org_id: va.org_id,
           sha256: va.sha256,
           role: va.role,
           attached_media_id: va.attached_media_id,
@@ -198,13 +207,12 @@ export class RealHttpGFlowProvider implements IGFlowProvider {
         attemptHistory.push({
           attempt_number: attempts,
           flow_project_id: `attempt_${attempts}_error`,
-          status: attempts < 2 ? 'RETRY' : 'FAILED',
+          status: 'FAILED',
           error: err.message,
           created_at: attemptCreatedAt,
         })
       }
-      if (attempts >= 2) throw err
-      await new Promise(r => setTimeout(r, 6000))
+      throw err
     } finally {
       clearTimeout(timeout)
     }
@@ -556,10 +564,9 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
   ): Promise<string> {
     mkdirSync(dirname(outputPath), { recursive: true })
 
-    const probe = await this.runFfprobe(inputVideoPath).catch(() => ({
-      duration: 8.0, width: 720, height: 1280, fps: 24, vcodec: 'h264', acodec: 'aac',
-    }))
-    const duration = probe.duration && probe.duration > 0 ? probe.duration : 8.0
+    const probe = await this.runFfprobe(inputVideoPath)
+    if (!Number.isFinite(probe.duration) || probe.duration <= 0) throw new Error('INVALID_RAW_VIDEO: duration could not be measured')
+    const duration = probe.duration
 
     // ── Canonical timing constants ────────────────────────────────────────────
     // 0.0–0.5  → clean footage (no overlays)
@@ -584,6 +591,7 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
       finishingSpec?.logoOverlay?.logoSha256
 
     const hasLogo = Boolean(logoPath && existsSync(logoPath))
+    if (logoPath && !hasLogo) throw new Error('OUTRO_LOGO_MISSING: supplied logo file is unavailable')
     if (hasLogo && expectedLogoSha) {
       const { readFileSync } = await import('node:fs')
       const { createHash } = await import('node:crypto')
@@ -596,6 +604,7 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
     // ── Resolve overlay layers ────────────────────────────────────────────────
     const subtitlesPath = finishingSpec?.subtitlesPath || finishingSpec?.assPath
     const hasSubtitles  = Boolean(subtitlesPath && existsSync(subtitlesPath))
+    if (subtitlesPath && !hasSubtitles) throw new Error('SUBTITLE_ASSET_MISSING: requested subtitle file is unavailable')
 
     const brandName = (finishingSpec?.outroBrandName || finishingSpec?.brandName || '').trim()
     const rawSlogan = (finishingSpec?.outroSlogan || finishingSpec?.slogan || '').trim()
@@ -634,13 +643,16 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
       )
       cur = 'v_faded'
 
-      // LAYER 2 — logo_layer (prominent 520x280 bounding box, kinetic ease-out upward glide at 6.85s)
+      // Prepare a transparent, black-card compatible derivative before rendering.
       if (hasLogo) {
+        const preparedLogoPath = outputPath.replace(/\.mp4$/i, '') + '_outro_logo.png'
+        const logoBot = fileURLToPath(new URL('../../scripts/prepare_outro_logo.py', import.meta.url))
+        await execFileAsync(process.env.PYTHON_BIN || 'python3', [logoBot, logoPath, preparedLogoPath], { timeout: 60_000 })
         const logoIdx = 1 + extraInputs.length / 3
-        extraInputs.push('-loop', '1', '-i', logoPath)
+        extraInputs.push('-loop', '1', '-i', preparedLogoPath)
 
         filterParts.push(
-          `[${logoIdx}:v]scale=w='min(520,iw*1.25)':h=280:force_original_aspect_ratio=decrease,format=rgba,` +
+          `[${logoIdx}:v]format=rgba,` +
           `fade=t=in:st=${LOGO_FADE_IN.toFixed(2)}:d=${LOGO_FADE_DUR.toFixed(2)}:alpha=1[v_logo_src]`
         )
         filterParts.push(
@@ -720,13 +732,13 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
         finishedSuccessfully = true
         console.log(`[RealFFmpegAdapter] Finishing OK: subtitle 0.5-5.5s | outro ${OUTRO_START}s-${duration.toFixed(1)}s | logo=${hasLogo} | brand="${brandName}"`)
       } catch (err: any) {
-        console.warn(`[RealFFmpegAdapter] Finishing warning: ${err.message}`)
+        throw new Error(`FINISHING_RENDER_FAILED: ${err.message}`)
       }
     }
 
-    // Fallback: fast copy (no overlays) if FFmpeg composite fails
+    // A clean copy is allowed only when the plan requested no finishing layers.
     if (!finishedSuccessfully) {
-      console.warn('[RealFFmpegAdapter] Falling back to direct copy (no overlays)')
+      if (filterParts.length > 0) throw new Error('FINISHING_RENDER_FAILED: required layers were not rendered')
       await execFileAsync(this.ffmpegBin, [
         '-y', '-i', inputVideoPath, '-c', 'copy', '-movflags', '+faststart', outputPath,
       ])
@@ -744,8 +756,9 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
         thumbPath,
       ])
     } catch (thumbErr) {
-      console.warn('[RealFFmpegAdapter] Thumbnail extraction warning:', thumbErr)
+      throw new Error(`THUMBNAIL_GENERATION_FAILED: ${thumbErr instanceof Error ? thumbErr.message : String(thumbErr)}`)
     }
+    if (!existsSync(thumbPath)) throw new Error('THUMBNAIL_GENERATION_FAILED: thumbnail file is missing')
 
     // Mirror to omnistudio gateway flat outputs directory for instant CDN access
     const gatewayCandidates = [

@@ -6,6 +6,7 @@ export type LogoPresentationFailureCode =
   | 'OVERSIZED_LOGO'
   | 'SAFE_ZONE_VIOLATION'
   | 'MISSING_LOGO_ASSET'
+  | 'LOGO_INSPECTION_FAILED'
 
 export interface LogoPresentationVerificationRequest {
   logoFilePath: string
@@ -15,6 +16,7 @@ export interface LogoPresentationVerificationRequest {
   overlayHeightPx?: number
   overlayMarginX?: number
   overlayMarginY?: number
+  presentationMode?: 'corner' | 'outro'
   isMock?: boolean
   mockIsOpaque?: boolean
   mockTransparentRatio?: number
@@ -54,8 +56,8 @@ export class LogoPresentationGate {
     const issues: string[] = []
     const videoWidth = req.videoWidth || 720
     const videoHeight = req.videoHeight || 1280
-    const overlayW = req.overlayWidthPx || 180
-    const overlayH = req.overlayHeightPx || Math.round(overlayW * 0.3)
+    let overlayW = req.overlayWidthPx || 180
+    let overlayH = req.overlayHeightPx || Math.round(overlayW * 0.3)
 
     // 1. Mock path for offline unit testing
     if (req.isMock) {
@@ -123,6 +125,13 @@ export class LogoPresentationGate {
     let isOpaqueBox = false
 
     try {
+      if (req.presentationMode === 'outro') {
+        const probe = JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0',
+          '-show_entries', 'stream=width,height', '-of', 'json', req.logoFilePath], { timeout: 10000 }).toString())
+        overlayW = Number(probe.streams?.[0]?.width)
+        overlayH = Number(probe.streams?.[0]?.height)
+        if (!(overlayW > 0 && overlayH > 0)) throw new Error('Prepared logo dimensions missing')
+      }
       // Sample logo down to 64x64 raw RGBA bytes (16384 bytes)
       const raw = execFileSync(
         'ffmpeg',
@@ -141,6 +150,7 @@ export class LogoPresentationGate {
         ],
         { maxBuffer: 1024 * 1024, timeout: 10000 }
       )
+      if (raw.length !== 64 * 64 * 4) throw new Error('Incomplete pixel inspection')
 
       let transparentCount = 0
       for (let i = 3; i < raw.length; i += 4) {
@@ -155,10 +165,10 @@ export class LogoPresentationGate {
         isOpaqueBox = true
       }
     } catch {
-      // In case FFmpeg is not installed, inspect file name hint
-      if (!req.logoFilePath.toLowerCase().includes('transparent')) {
-        isOpaqueBox = true
-      }
+      return { passed: false, failureCode: 'LOGO_INSPECTION_FAILED', transparentPixelRatio: 0,
+        minAlpha: 255, isOpaqueBox: true, isOversized: false, screenAreaCoveragePercent: 0,
+        issues: ['LOGO_INSPECTION_FAILED: actual pixels/dimensions could not be inspected.'],
+        details: 'Missing evidence is not a transparent-logo pass.' }
     }
 
     // Check sibling transparent variant
@@ -194,10 +204,12 @@ export class LogoPresentationGate {
     const maxAllowedHeightPercent = videoWidth > videoHeight ? 10.0 : 8.0
 
     let isOversized = false
-    if (coveragePercent > 6.0 || heightPercent > maxAllowedHeightPercent || overlayW > videoWidth * 0.35) {
+    const outro = req.presentationMode === 'outro'
+    const invalidOutroSize = outro && (overlayW < 520 || overlayW > videoWidth * 0.8 || overlayH > 340 || coveragePercent > 25)
+    if (invalidOutroSize || (!outro && (coveragePercent > 6.0 || heightPercent > maxAllowedHeightPercent || overlayW > videoWidth * 0.35))) {
       isOversized = true
       issues.push(
-        `OVERSIZED_LOGO: Logo overlay dimensions (${overlayW}x${overlayH}px, ${coveragePercent.toFixed(1)}% area) exceed commercial advertising ceiling (<= 6.0% screen area, <= ${maxAllowedHeightPercent.toFixed(1)}% height).`
+        `OVERSIZED_LOGO: Logo overlay dimensions (${overlayW}x${overlayH}px, ${coveragePercent.toFixed(1)}% area) violate ${outro ? 'outro policy (>=520px width, <=80% frame width, <=340px height, <=25% area)' : 'corner policy (<=6% area)'} .`
       )
       return {
         passed: false,

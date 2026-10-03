@@ -224,6 +224,7 @@ services:
       NODE_ENV: production
       PORT: '3460'
       GFLOW_ENGINE_URL: 'http://gflow-engine:3461'
+      WORKER_CONTROL_TOKEN: '${WORKER_CONTROL_TOKEN:-}'
       OMNISTUDIO_GATEWAY_URL: 'http://omnistudio-engine:3456'
       SHARED_OUTPUTS_DIR: '/shared/outputs'
       SHARED_INCIDENTS_DIR: '/shared/incidents'
@@ -278,6 +279,8 @@ services:
       GFLOW_CHROME_NO_SANDBOX: '0'
       DISPLAY: ':99'
       SUPERVISOR_URL: 'http://omnistudio-engine:3456'
+      NODE_ENV: production
+      WORKER_CONTROL_TOKEN: '${WORKER_CONTROL_TOKEN:-}'
     healthcheck:
       test: ['CMD', 'curl', '-fsS', 'http://127.0.0.1:3461/health']
       interval: 30s

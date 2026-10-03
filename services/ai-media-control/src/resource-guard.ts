@@ -258,11 +258,14 @@ class ResourceGuard {
           return false
         }
         // Update lease
-        await supabase
+        const { data: renewed, error: renewalError } = await supabase
           .from('ai_media_heavy_locks')
           .update({ owner_job_id: jobId, acquired_at: now.toISOString(), lease_expires_at: expiresAt })
           .eq('lock_id', lockKey)
-        return true
+          .eq('owner_job_id', existing.owner_job_id)
+          .eq('lease_expires_at', existing.lease_expires_at)
+          .select('owner_job_id')
+        return !renewalError && Boolean(renewed?.some(row => row.owner_job_id === jobId))
       }
 
       const { error } = await supabase
@@ -285,7 +288,7 @@ class ResourceGuard {
       if ((supabase as any).query) {
         if (lockKey) {
           await (supabase as any).query(
-            `DELETE FROM ai_media_heavy_locks WHERE (lock_id = $1 AND owner_job_id = $2) OR (owner_job_id = $2)`,
+            `DELETE FROM ai_media_heavy_locks WHERE lock_id = $1 AND owner_job_id = $2`,
             [lockKey, jobId]
           )
         } else {

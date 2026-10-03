@@ -81,7 +81,7 @@ export async function leaseJob(
   workerId: string,
   accountId: string,
 ): Promise<boolean> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('ai_media_jobs')
     .update({
       state: JobState.LEASED,
@@ -92,6 +92,7 @@ export async function leaseJob(
     })
     .eq('id', jobId)
     .eq('state', JobState.QUEUED)  // optimistic lock
+    .select('id')
 
-  return !error
+  return !error && Boolean(data?.some(row => row.id === jobId))
 }

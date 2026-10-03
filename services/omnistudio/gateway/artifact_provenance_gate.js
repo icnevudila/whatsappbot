@@ -58,7 +58,27 @@ class ArtifactProvenanceGate {
     };
 
     this.provenanceStore.set(String(record.jobId).trim(), validatedRecord);
+    if (record.flowProjectId) {
+      this.provenanceStore.set(String(record.flowProjectId).trim(), validatedRecord);
+    }
     return validatedRecord;
+  }
+
+  /**
+   * Post-processing (altyazı, ses mastering, outro/logo) sonrası yeni dosya hash'ini kriptografik zincire ekler.
+   */
+  recordPostprocessSha256(jobId, postprocessFilePathOrSha) {
+    if (!jobId) return false;
+    const key = String(jobId).trim();
+    const stored = this.provenanceStore.get(key);
+    if (!stored) return false;
+    let sha = postprocessFilePathOrSha;
+    if (typeof postprocessFilePathOrSha === 'string' && fs.existsSync(postprocessFilePathOrSha)) {
+      sha = this.computeFileSha256(postprocessFilePathOrSha);
+    }
+    stored.postprocessSha256 = sha;
+    console.log(`[Provenance Gate] 🔄 Post-process hash güncellendi [${key}]: ${sha?.slice(0, 16)}...`);
+    return true;
   }
 
   /**
@@ -83,15 +103,19 @@ class ArtifactProvenanceGate {
     }
 
     // 2. Kriptografik Yetkilendirme Zinciri Denetimi
-    const stored = this.provenanceStore.get(String(jobId).trim());
+    let stored = this.provenanceStore.get(String(jobId).trim());
     if (!stored) {
-      const err = new Error(`PROVENANCE_SECURITY_FAIL: [${jobId}] için kayıtlı bir yetkilendirme ve üretim zinciri (provenance record) bulunamadı! Yetkisiz video teslimi engellendi.`);
+      // fileName ile de kontrol et
+      stored = this.provenanceStore.get(String(fileName).trim());
+    }
+    if (!stored) {
+      const err = new Error('PROVENANCE_SECURITY_FAIL: Bu işe ait çıktı kaydı bulunamadı.');
       err.code = 'PROVENANCE_SECURITY_FAIL';
       throw err;
     }
 
     // A. Kurum (Tenant) İzolasyonu Doğrulaması
-    if (stored.orgId !== String(orgId).trim()) {
+    if (stored.orgId !== String(orgId).trim() || stored.jobId !== String(jobId).trim()) {
       const err = new Error(
         `PROVENANCE_SECURITY_FAIL: İşin kayıtlı kurum kimliği (${stored.orgId}) ile teslim alan kurum (${orgId}) uyuşmuyor! Çapraz tenant erişimi engellendi.`
       );
@@ -99,16 +123,12 @@ class ArtifactProvenanceGate {
       throw err;
     }
 
-    // B. Kriptografik İçerik Kimliği Doğrulaması (CONTENT_IDENTITY_FAIL)
-    // Eğer dosya başka bir videodan yeniden adlandırılmışsa veya enjekte edilmişse SHA-256 tutmaz!
+    // B. Kriptografik İçerik Kimliği Doğrulaması
+    // Video post-production (altyazı, ses mastering, outro) gördüyse hash doğal olarak değişir.
     const validHashes = [stored.rawVideoSha256, stored.postprocessSha256].filter(Boolean);
-    if (validHashes.length > 0 && !validHashes.includes(currentSha)) {
-      const err = new Error(
-        `CONTENT_IDENTITY_FAIL: Teslim edilmek istenen videonun SHA-256 hash'i (${currentSha}) bu işe (${jobId}) ait kayıtlı orijinal video hash'i ile eşleşmiyor! Sahte dosya enjeksiyonu tespit edildi.`
-      );
+    if (!validHashes.includes(currentSha)) {
+      const err = new Error('CONTENT_IDENTITY_FAIL: Dosya bu işin kayıtlı ham veya montaj çıktısıyla eşleşmiyor.');
       err.code = 'CONTENT_IDENTITY_FAIL';
-      err.currentSha = currentSha;
-      err.expectedHashes = validHashes;
       throw err;
     }
 

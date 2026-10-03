@@ -74,6 +74,7 @@ test('Product with custom contract -> defaults + custom rules compiled', () => {
     }],
     campaign: {
       objective: 'Cihaz tanıtımı',
+      user_style_preference: 'PRODUCT_USAGE',
       cta: 'İletişime geçin',
       approved_spoken_line: 'Smart Probe laboratuvar ortamında hassas ölçüm ve stabil sonuç sağlar.',
     },
@@ -130,8 +131,8 @@ test('Ayvazoglu brick -> "side faces contain no holes or cavities" present', () 
   assert.match(compiled.cinematicPrompt, /side faces contain no holes or cavities/)
   assert.match(compiled.cinematicPrompt, /side holes/)
   assert.match(compiled.cinematicPrompt, /side perforations/)
-  assert.match(compiled.cinematicPrompt, /worker picks up brick/)
-  assert.match(compiled.cinematicPrompt, /professional wall placement/)
+  assert.doesNotMatch(compiled.cinematicPrompt, /worker picks up brick|professional wall placement/)
+  assert.match(compiled.cinematicPrompt, /AUTHENTIC ACTION:.*sade ürün gösteriminde/)
 })
 
 test('Both Gemini and Flow prompts -> same fidelity contract included', () => {

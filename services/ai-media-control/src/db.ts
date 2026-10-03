@@ -10,6 +10,7 @@
 
 import pg from 'pg'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { sqlFilterColumn, sqlScalarOr } from './db-filter.js'
 
 const { Pool } = pg
 
@@ -78,7 +79,17 @@ class PgQueryBuilder {
   }
 
   eq(col: string, val: any) {
-    this.conditions.push({ col, op: '=', val })
+    this.conditions.push({ col: sqlFilterColumn(col), op: '=', val })
+    return this
+  }
+
+  lte(col: string, val: any) {
+    this.conditions.push({ col: sqlFilterColumn(col), op: '<=', val })
+    return this
+  }
+
+  or(expression: string) {
+    this.conditions.push({ col: '', op: 'OR', val: expression })
     return this
   }
 
@@ -134,6 +145,7 @@ class PgQueryBuilder {
 
         if (this.conditions.length > 0) {
           const whereClauses = this.conditions.map(c => {
+            if (c.op === 'OR') return sqlScalarOr(c.val, params)
             if (c.op === 'IN') {
               const inPlaceholders = c.val.map((v: any) => {
                 params.push(v)
@@ -187,7 +199,7 @@ class PgQueryBuilder {
 
         sql = `INSERT INTO ${this.table} (${cols.join(', ')}) VALUES ${valuesClauses.join(', ')} RETURNING *`
         const result = await pool.query(sql, params)
-        return { data: result.rows, error: null }
+        return { data: result.rows, error: null, count: result.rowCount || 0 }
       }
 
       if (this.action === 'update') {
@@ -208,6 +220,7 @@ class PgQueryBuilder {
 
         if (this.conditions.length > 0) {
           const whereClauses = this.conditions.map(c => {
+            if (c.op === 'OR') return sqlScalarOr(c.val, params)
             params.push(c.val)
             return `${c.col} ${c.op} $${params.length}`
           })
@@ -216,7 +229,7 @@ class PgQueryBuilder {
 
         sql += ' RETURNING *'
         const result = await pool.query(sql, params)
-        return { data: result.rows, error: null }
+        return { data: result.rows, error: null, count: result.rowCount || 0 }
       }
 
       return { data: null, error: null }

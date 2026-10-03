@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, writeFileSync, appendFileSync, readFileSync, cop
 import fs from 'node:fs'
 import path from 'node:path'
 import { createHash } from 'node:crypto'
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 
 export type GenerationLifecycleState =
   | 'PREFLIGHT'
@@ -25,6 +25,8 @@ export interface GenerationWorkspaceConfig {
   jobId: string
   attemptId: string
   baseDir?: string
+  expectedDurationSeconds?: number
+  expectedAspectRatio?: string
 }
 
 export class GenerationWorkspace {
@@ -32,10 +34,15 @@ export class GenerationWorkspace {
   readonly jobId: string
   readonly attemptId: string
   private currentState: GenerationLifecycleState = 'PREFLIGHT'
+  private expectedDurationSeconds: number
+  private expectedAspectRatio?: string
 
   constructor(config: GenerationWorkspaceConfig) {
+    if (![config.jobId, config.attemptId].every(id => /^[A-Za-z0-9_-]{1,128}$/.test(id))) throw new Error('INVALID_GENERATION_IDENTITY')
     this.jobId = config.jobId
     this.attemptId = config.attemptId
+    this.expectedDurationSeconds = config.expectedDurationSeconds ?? 8
+    this.expectedAspectRatio = config.expectedAspectRatio
     const base = config.baseDir || '/shared/jobs'
     this.dir = path.join(base, this.jobId, this.attemptId)
     fs.mkdirSync(this.dir, { recursive: true })
@@ -61,6 +68,7 @@ export class GenerationWorkspace {
   }
 
   recordRawVideo(rawFilePath: string): { sha256: string; size: number } {
+    if (!rawFilePath || !fs.existsSync(rawFilePath) || !fs.statSync(rawFilePath).isFile()) throw new Error('OUTPUT_NOT_FOUND: current provider file missing')
     const targetRawPath = path.join(this.dir, 'raw.mp4')
     if (rawFilePath !== targetRawPath && fs.existsSync(rawFilePath)) {
       fs.copyFileSync(rawFilePath, targetRawPath)
@@ -71,23 +79,30 @@ export class GenerationWorkspace {
     const stat = fs.statSync(targetRawPath)
     const buffer = fs.readFileSync(targetRawPath)
     const sha = createHash('sha256').update(buffer).digest('hex')
-    fs.writeFileSync(path.join(this.dir, 'raw.sha256'), `${sha}  raw.mp4\n`, 'utf-8')
 
     // Run ffprobe and record technical metadata
     try {
-      const probeOut = execSync(
-        `ffprobe -v error -show_entries format=duration,size,bit_rate:stream=codec_name,width,height,r_frame_rate -of json "${targetRawPath}"`,
-        { encoding: 'utf-8' }
-      )
+      const probeOut = execFileSync('ffprobe', ['-v','error','-show_entries','format=duration,size,bit_rate:stream=codec_type,codec_name,width,height,r_frame_rate','-of','json',targetRawPath],
+        { encoding: 'utf-8', timeout: 15000, maxBuffer: 1024 * 1024 })
+      const probe = JSON.parse(probeOut)
+      const video = probe.streams?.find((stream: any) => stream.codec_type === 'video')
+      const duration = Number(probe.format?.duration)
+      if (stat.size < 1024 || !video?.codec_name || !(video.width > 0 && video.height > 0) || !Number.isFinite(duration) || Math.abs(duration - this.expectedDurationSeconds) > 0.5) throw new Error('Invalid video stream, size or duration')
+      if (this.expectedAspectRatio) {
+        const [width,height] = this.expectedAspectRatio.split(':').map(Number)
+        if (!(width > 0 && height > 0) || Math.abs(video.width / video.height - width / height) > 0.03) throw new Error('Aspect ratio mismatch')
+      }
       fs.writeFileSync(path.join(this.dir, 'ffprobe.json'), probeOut, 'utf-8')
     } catch (e: any) {
       fs.writeFileSync(path.join(this.dir, 'ffprobe.json'), JSON.stringify({ error: e.message }, null, 2), 'utf-8')
+      throw new Error(`OUTPUT_MEDIA_INVALID: ${e.message}`)
     }
-
+    fs.writeFileSync(path.join(this.dir, 'raw.sha256'), `${sha}  raw.mp4\n`, 'utf-8')
     return { sha256: sha, size: stat.size }
   }
 
   recordFinalVideo(finalFilePath: string): { sha256: string; size: number } {
+    if (!finalFilePath || !fs.existsSync(finalFilePath) || !fs.statSync(finalFilePath).isFile()) throw new Error('OUTPUT_NOT_FOUND: current final file missing')
     const targetFinalPath = path.join(this.dir, 'final.mp4')
     if (finalFilePath !== targetFinalPath && fs.existsSync(finalFilePath)) {
       fs.copyFileSync(finalFilePath, targetFinalPath)

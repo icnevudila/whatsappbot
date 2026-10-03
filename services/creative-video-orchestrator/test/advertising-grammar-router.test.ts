@@ -110,7 +110,12 @@ test('DeterministicCampaignTextRenderer - builds CapCut kinetic ASS without blac
     { word: 'güç', start: 0.98, end: 1.12 },
   ]
 
-  const ass = renderer.buildCapCutKineticAss(words)
+  // This regression covers the explicitly selected legacy neon style, not the
+  // sector-aware default typography (which may intentionally use another font).
+  const ass = renderer.buildCapCutKineticAss(words, {
+    fontName: 'Arial Black', fontSize: 58, uppercase: true,
+    activeColor: '&H0026FFFF&', inactiveColor: '&H00FFFFFF&',
+  })
   assert.ok(ass.includes('[Script Info]'))
   assert.ok(ass.includes('Style: CapCutNeon,Arial Black,58'))
   assert.ok(ass.includes('{\\c&H0026FFFF&}ZORLU'))

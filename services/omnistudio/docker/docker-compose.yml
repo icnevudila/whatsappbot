@@ -31,11 +31,14 @@ services:
     environment:
       - PORT=3456
       - NODE_ENV=production
+      - WORKER_CONTROL_TOKEN=${WORKER_CONTROL_TOKEN:-}
       - NUM_WORKERS=4 # 4 Bagimsiz ChatGPT Hesabi
       - GFLOW_ENGINE_URL=http://gflow-engine:3461
-      # Flow Chrome host'ta 9226 portunda calisiyor, container buraya erisir
-      - FLOW_CDP_HOST=host.docker.internal
-      - FLOW_CDP_PORT=9226
+      # Flow uses the canonical persistent Google account inside this container.
+      - FLOW_CDP_HOST=127.0.0.1
+      - FLOW_CDP_PORT=9224
+      - FLOW_ACCOUNT_PORT=9224
+      - FLOW_PROFILE_DIR=/data/chromium-profile-3
       # Keep the canonical Gemini tab plus one Flow maintenance/session tab.
       # A third short-lived auth/download tab may exist during re-authentication.
       - PREFERRED_WORKING_TABS=2

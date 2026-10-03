@@ -10,6 +10,9 @@
 import { supabase, gflowEngineUrl } from './index.js'
 import { JobState, transitionJob } from './state-machine.js'
 import { fetchNextJob, leaseJob } from './queue.js'
+import { isSubmissionPublished, expireUnpublishedSubmissions, repairSubmissionExpiryAudits } from './submission-ready.js'
+import { createNonOverlappingTick } from './non-overlapping-tick.js'
+import { waitForHeavyCapacity, deferCapacityJob, claimCapacityPreparation } from './capacity-backpressure.js'
 import { validateOutput } from './validator.js'
 import { randomUUID, createHash } from 'node:crypto'
 import { join } from 'node:path'
@@ -30,6 +33,12 @@ import {
 
 let orchestratorRunning = false
 let pollInterval: NodeJS.Timeout | null = null
+const orchestratorTick = createNonOverlappingTick(async () => {
+  await repairSubmissionExpiryAudits(supabase)
+  await expireUnpublishedSubmissions(supabase)
+  await processPendingJobs()
+  await processQueuedJobs()
+}, error => console.error('[orchestrator] Error during tick:', error))
 
 async function runLongFormPostProduction(
   scenePaths: string[],
@@ -68,14 +77,7 @@ export function startOrchestrator(intervalMs: number = 5000) {
   orchestratorRunning = true
   console.log(`[orchestrator] Started polling every ${intervalMs}ms`)
 
-  pollInterval = setInterval(async () => {
-    try {
-      await processPendingJobs()
-      await processQueuedJobs()
-    } catch (err) {
-      console.error('[orchestrator] Error during tick:', err)
-    }
-  }, intervalMs)
+  pollInterval = setInterval(orchestratorTick, intervalMs)
 }
 
 export function stopOrchestrator() {
@@ -91,11 +93,13 @@ async function processPendingJobs() {
     .from('ai_media_jobs')
     .select('*')
     .eq('state', JobState.PENDING)
+    .or('metadata->>video_submission_ready.is.null,metadata->>video_submission_ready.eq.true')
     .limit(10)
 
   if (!pendingJobs || pendingJobs.length === 0) return
 
   for (const job of pendingJobs) {
+    if (!isSubmissionPublished(job.metadata)) continue
     try {
       await transitionJob(
         supabase,
@@ -273,22 +277,32 @@ async function runJobExecution(job: any, accountId: string) {
   }
 
   try {
-    const lockAcquired = await hostResourceGuard.acquireHeavyLock(supabase, job.id, accountId)
-    if (!lockAcquired) {
-      throw new Error(`HEAVY_MUTEX_HELD: Slot for account ${accountId} or system capacity limit reached`)
+    let capacity: 'acquired' | 'deferred' | 'lease_lost'
+    try {
+    capacity = await waitForHeavyCapacity({
+      acquire: () => hostResourceGuard.acquireHeavyLock(supabase, job.id, accountId),
+      releaseLateAcquisition: () => hostResourceGuard.releaseHeavyLock(supabase, job.id, accountId),
+      stillOwnLease: async () => {
+        const { data, error } = await supabase.from('ai_media_jobs').select('state,lease_account_id')
+          .eq('id', job.id).eq('org_id', job.org_id).maybeSingle()
+        if (error) throw new Error(`CAPACITY_LEASE_CHECK_FAILED: ${error.message}`)
+        return data?.state === JobState.LEASED && data.lease_account_id === accountId
+      },
+    })
+    if (capacity !== 'acquired') {
+      if (capacity === 'deferred') await deferCapacityJob(supabase, job, accountId)
+      await supabase.from('ai_media_attempts').update({ status: 'failed',
+        finished_at: new Date().toISOString(), error_details: `PRE_PROVIDER_${capacity.toUpperCase()}: no provider request submitted`,
+      }).eq('id', attemptId)
+      return
     }
-
-    // 1. PREPARING_ENV
-    await transitionJob(
-      supabase, job.id, job.org_id,
-      JobState.LEASED, JobState.PREPARING_ENV,
-      job.creative_engine_mode === 'SIMPLE_V5_HYBRID'
-        ? 'Preparing SIMPLE_V5_HYBRID generation environment'
-        : job.creative_engine_mode === 'LONG_FORM_VIDEO_V1'
-          ? 'Preparing isolated LONG_FORM_VIDEO_V1 scene generation environment'
-        : `Preparing generation environment with Flow account ${accountId}`,
-      {}, attemptId
-    )
+    if (!await claimCapacityPreparation(supabase, job, accountId, attemptId)) return
+    } catch (capacityError: any) {
+      // Ownership/DB uncertainty before submission must not enter broad execution
+      // failure handling, which could overwrite cancellation or a new lease.
+      console.error(`[orchestrator] Pre-provider capacity check requires reconciliation for ${job.id}:`, capacityError.message)
+      return
+    }
 
     // Fetch input assets
     const { data: assets } = await supabase
@@ -478,7 +492,7 @@ async function runJobExecution(job: any, accountId: string) {
     }
 
     // 4. Save Verified Output
-    const { data: outputRecord } = await supabase.from('ai_media_outputs').insert({
+    const { data: outputRecord, error: outputError } = await supabase.from('ai_media_outputs').insert({
       job_id: job.id,
       org_id: job.org_id,
       attempt_id: attemptId,
@@ -491,15 +505,24 @@ async function runJobExecution(job: any, accountId: string) {
       fps: validation.ffprobe.fps,
       vcodec: validation.ffprobe.vcodec,
       acodec: validation.ffprobe.acodec,
-      visual_qa_score: 9.0, // initial algorithmic score
-      visual_qa_report: { checks: validation.errors.length === 0 ? 'ALL_PASSED' : validation.errors },
+      visual_qa_score: null,
+      visual_qa_report: {
+        status: 'NEEDS_REVIEW',
+        technical_checks: validation.errors,
+        reason: 'TECHNICAL_VALIDATION_ONLY',
+        missing_evidence: ['PRODUCT_FIDELITY', 'BRAND_FIDELITY', 'PHYSICAL_ACTION', 'SPOKEN_DIALOGUE'],
+      },
       qa_frame_10_url: validation.qaFramePaths.frame10,
       qa_frame_50_url: validation.qaFramePaths.frame50,
       qa_frame_90_url: validation.qaFramePaths.frame90,
       verified: true,
-      is_approved: true,
-      delivered_at: new Date().toISOString(),
+      is_approved: false,
+      delivered_at: null,
     }).select('id').single()
+
+    if (outputError || !outputRecord?.id) {
+      throw new Error(`OUTPUT_RECEIPT_PERSISTENCE_FAILED: ${outputError?.message || 'No output receipt returned'}`)
+    }
 
     if (outputRecord?.id) {
       try {
@@ -508,6 +531,8 @@ async function runJobExecution(job: any, accountId: string) {
           public_url: `/api/ai-media/outputs/${outputRecord.id}`,
           payload: {
             job_id: job.id,
+            approvalStatus: 'NEEDS_REVIEW',
+            isApproved: false,
             thumbnailUrl: `/api/ai-media/outputs/${outputRecord.id}?thumb=1`,
           },
           updated_at: new Date().toISOString(),
@@ -543,18 +568,25 @@ async function runJobExecution(job: any, accountId: string) {
       finished_at: new Date().toISOString(),
     }).eq('id', attemptId)
 
-    // 6. COMPLETED
+    // Technical readiness alone is not a quality approval.
     await transitionJob(
       supabase, job.id, job.org_id,
-      JobState.VISUAL_QA_EVALUATING, JobState.COMPLETED,
-      `Job completed successfully in ${Math.round((Date.now() - startTime) / 1000)}s`,
+      JobState.VISUAL_QA_EVALUATING, JobState.NEEDS_REVIEW,
+      `Technical output ready; fidelity evidence required (${Math.round((Date.now() - startTime) / 1000)}s)`,
       { duration_seconds: validation.ffprobe.duration, sha256: validation.sha256 },
       attemptId
     )
 
-    console.log(`[orchestrator] Job ${job.id} marked COMPLETED successfully`)
+    console.log(`[orchestrator] Job ${job.id} requires fidelity review`)
   } catch (err: any) {
     console.error(`[orchestrator] Job ${job.id} failed:`, err.message)
+
+    if (String(err.message).includes('STATE_TRANSITION_CONFLICT')) {
+      // This attempt no longer owns the authoritative lifecycle. Do not mutate
+      // the newer job, creative, or account as a consequence of a stale result.
+      console.error('[orchestrator] Stale attempt requires reconciliation:', attemptId)
+      return
+    }
 
     await supabase.from('ai_media_attempts').update({
       status: 'failed',
@@ -576,9 +608,10 @@ async function runJobExecution(job: any, accountId: string) {
         currentState as JobState, JobState.FAILED,
         `Execution failed: ${err.message}`, {}, attemptId
       )
-    } catch {
-      // fallback if direct transition failed
-      await supabase.from('ai_media_jobs').update({ state: JobState.FAILED }).eq('id', job.id)
+    } catch (transitionError) {
+      // A lost state CAS must never overwrite a newer worker's result.
+      console.error('[orchestrator] Failure transition requires reconciliation:', transitionError)
+      return
     }
 
     try {
@@ -623,17 +656,22 @@ async function runJobExecution(job: any, accountId: string) {
       .from('flow_accounts')
       .select('status')
       .eq('id', accountId)
+      .eq('current_job_id', job.id)
       .single()
     if (currentAcc && ['rate_limited', 'needs_reauth', 'blocked', 'agent_ui_blocked'].includes(currentAcc.status)) {
       await supabase
         .from('flow_accounts')
         .update({ current_job_id: null, updated_at: new Date().toISOString() })
         .eq('id', accountId)
-    } else {
+        .eq('current_job_id', job.id)
+        .eq('status', currentAcc.status)
+    } else if (currentAcc) {
       await supabase
         .from('flow_accounts')
         .update({ status: 'idle', current_job_id: null, updated_at: new Date().toISOString() })
         .eq('id', accountId)
+        .eq('current_job_id', job.id)
+        .eq('status', currentAcc.status)
     }
   }
 }

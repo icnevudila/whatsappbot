@@ -409,7 +409,22 @@ export function CreativeWizard({
         Promise.all(referenceAssets.map((asset, index) => sha256Of(asset.url, `Ek referans ${index + 1}`))),
       ])
 
+      const generationStorageKey = `mesajify:video-generation:${data.org.id}`
+      const assetIdentityPath = (value: string) => { try { const url = new URL(value, window.location.origin); return `${url.origin}${url.pathname}` } catch { return value } }
+      const approvedDraftSignature = JSON.stringify({ activeProductId, adFormat, environmentPreset, motionStyle,
+        fullSpeechText, veoPromptPreview, subtitles, outro, promotionType, offerDetails, ctaText,
+        logoPath: assetIdentityPath(activeLogoUrl), productPath: assetIdentityPath(activeProductImage || ''),
+        referencePaths: referenceAssets.map(asset => ({ role: asset.role, path: assetIdentityPath(asset.url) })) })
+      let savedGeneration: { signature: string; generationId: string; generationRevision: number } | null = null
+      try { savedGeneration = JSON.parse(sessionStorage.getItem(generationStorageKey) || 'null') } catch { /* Invalid browser state is never a provider receipt. */ }
+      if (savedGeneration?.signature !== approvedDraftSignature) {
+        savedGeneration = { signature: approvedDraftSignature, generationId: crypto.randomUUID(), generationRevision: 1 }
+        // Persist before the network call. A lost HTTP response retains the same logical generation.
+        sessionStorage.setItem(generationStorageKey, JSON.stringify(savedGeneration))
+      }
       const payload = {
+        generationId: savedGeneration.generationId,
+        generationRevision: savedGeneration.generationRevision,
         title: `${data.org.name || 'İşletme'} - ${activeProductName} Reklamı`,
         brief: creativeIdea,
         adFormat,
@@ -500,6 +515,7 @@ export function CreativeWizard({
   }
 
   const resetToNewVideo = () => {
+    sessionStorage.removeItem(`mesajify:video-generation:${data.org.id}`)
     setActiveJobId(null)
     setJobState('IDLE')
     setStep('campaign')
@@ -648,7 +664,7 @@ export function CreativeWizard({
   const targetTotalSeconds = 150
   const progressPercent = Math.min(
     95,
-    Math.max(5, Math.round((elapsedSeconds / targetTotalSeconds) * 100))
+    Math.max(5, Math.round((jobStageIndex / 7) * 100))
   )
 
   const formatSeconds = (sec: number) => {
@@ -680,6 +696,9 @@ export function CreativeWizard({
       }
     }
     if (jobStageIndex === 4) {
+      if (jobDisplayMessage) {
+        return { tag: 'Video Üretimi', desc: jobDisplayMessage }
+      }
       if (elapsedSeconds < 18) {
         return {
           tag: 'Kamera Kurulumu',
@@ -718,7 +737,7 @@ export function CreativeWizard({
       }
       return {
         tag: 'Ses & Altyazı',
-        desc: 'Türkçe seslendirme kaydı alınıyor ve dinamik altyazı senkronlanıyor...',
+        desc: 'Sağlayıcı üretimi ve çıktı kontrolleri sürüyor; final video henüz hazır değil.',
       }
     }
     if (jobStageIndex === 5) {
@@ -737,7 +756,7 @@ export function CreativeWizard({
       tag: 'Tamamlanıyor',
       desc: 'Reklam videonuz hazırlandı, oynatıcıya yükleniyor...',
     }
-  }, [jobStageIndex, elapsedSeconds])
+  }, [jobStageIndex, elapsedSeconds, jobDisplayMessage])
 
   return (
     <>
@@ -780,7 +799,7 @@ export function CreativeWizard({
                     Geçen Süre: {formatSeconds(elapsedSeconds)}
                   </span>
                   <span className="text-[#667781]">
-                    Kalan: {formatRemaining(targetTotalSeconds, elapsedSeconds)} ({progressPercent}%)
+                    Aşama {jobStageIndex} / 7
                   </span>
                 </div>
                 <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200/70 shadow-inner">
@@ -960,14 +979,14 @@ export function CreativeWizard({
               <div className="flex items-center justify-between">
                 <p className="text-[12.5px] font-bold text-[#111b21]">Video Bilgileri</p>
                 <span className="rounded-full bg-[#e7f8f2] px-2 py-0.5 text-[10px] font-bold text-[#008069]">
-                  YAYINA HAZIR ✓
+                  {jobEvidence.output_approved === true ? 'KALİTE ONAYLI ✓' : 'İNCELEME GEREKLİ'}
                 </span>
               </div>
               <dl className="mt-2 grid grid-cols-2 gap-2 text-[11.5px]">
                 <div><dt className="text-[#667781]">Format</dt><dd className="font-semibold text-[#111b21]">9:16 Dikey ({jobEvidence.width && jobEvidence.height ? `${jobEvidence.width}×${jobEvidence.height}` : '720×1280'})</dd></div>
                 <div><dt className="text-[#667781]">Süre</dt><dd className="font-semibold text-[#111b21]">{jobEvidence.duration_seconds ?? '8'} sn</dd></div>
                 <div><dt className="text-[#667781]">Seslendirme</dt><dd className="font-semibold text-[#111b21]">Türkçe (Seslendirmeli)</dd></div>
-                <div><dt className="text-[#667781]">Ürün Koruması</dt><dd className="font-semibold text-[#008069]">Orijinal Görünüm Doğrulandı ✓</dd></div>
+                <div><dt className="text-[#667781]">Ürün Koruması</dt><dd className="font-semibold text-[#008069]">{jobEvidence.output_approved === true ? 'Kalite kontrolü onaylandı' : 'İnsan incelemesi gerekiyor'}</dd></div>
               </dl>
               <details className="mt-2 pt-1 border-t border-hairline text-[10.5px] text-[#667781]">
                 <summary className="cursor-pointer hover:text-[#111b21]">Teknik Doğrulama Detayları</summary>

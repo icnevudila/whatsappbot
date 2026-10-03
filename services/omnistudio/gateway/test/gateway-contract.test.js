@@ -37,7 +37,7 @@ async function submitText(body, result = { suggestions: [{ label: 'Kısa & Net',
 }
 
 before(async () => {
-  gateway = spawn(process.execPath, ['server.js'], {
+  gateway = spawn(process.execPath, [process.env.GATEWAY_TEST_ENTRY || 'server.js'], {
     cwd: gatewayDir,
     env: {
       ...process.env, PORT: String(port), PUBLIC_HOST: '127.0.0.1',
@@ -100,6 +100,22 @@ test('worker errors complete the synchronous text request with the existing 500 
   assert.equal(response.body.error, 'MODEL_ERROR');
 });
 
+test('image reference metadata and brand kit reach the leased worker unchanged', async () => {
+  const refs = [{ data: 'abcd', role: 'logo', mimeType: 'image/webp', sha256: 'a'.repeat(64) }, { url: 'https://example.com/product.png', role: 'product' }];
+  const kit = { name: 'Only this tenant', colors: { accent: '#123456' }, tone: 'calm' };
+  const created = await request('/v1/images/generations', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt: 'Reference transport test', tenant_id: 'tenant-refs', request_id: 'refs-1', referenceImages: refs, brandKit: kit, async: true }),
+  });
+  assert.equal(created.response.status, 202);
+  const job = await nextJob('reference-worker');
+  assert.deepEqual(job.referenceImages, refs);
+  assert.deepEqual(job.brandKit, kit);
+  assert.match(job.prompt, /Reference 1: original BRAND LOGO/);
+  assert.match(job.prompt, /Reference 2: canonical PRODUCT/);
+  await request('/job/release', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobId: job.id, error: 'Fixture complete' }) });
+});
+
 test('image generation remains an async queue contract and returns a URL after upload', async () => {
   const created = await request('/v1/images/generations?async=true', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -155,6 +171,24 @@ test('a duplicate tenant/request/operation is executed once and shares its resul
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobId: job.id, result: { suggestions: [{ label: 'Test', text: 'Tek sonuç' }], raw: '' } }),
   });
   assert.deepEqual((await first).body.suggestions, (await second).body.suggestions);
+});
+
+test('generic chat keeps the full prompt, system directive and tenant aliases', async () => {
+  const pending = request('/v1/chat/completions', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer sk-omnistudio-2026' },
+    body: JSON.stringify({ tenant_id: 'tenant-chat', request_id: 'full-chat', customer: 'Same display name', messages: [
+      { role: 'system', content: 'Use only tenant-chat product facts' },
+      { role: 'user', content: 'A full user request that must reach the worker, not a shortened display label' },
+    ] }),
+  });
+  const job = await nextJob('chat-full-worker');
+  assert.equal(job.rawPrompt, 'A full user request that must reach the worker, not a shortened display label');
+  assert.equal(job.systemPrompt, 'Use only tenant-chat product facts');
+  assert.equal(job.tenantId, 'tenant-chat');
+  assert.equal(job.requestId, 'full-chat');
+  assert.equal(job.type, 'chat_completion');
+  await request('/job/complete-text', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobId: job.id, result: { reply: 'Current turn answer' } }) });
+  assert.equal((await pending).body.choices[0].message.content, 'Current turn answer');
 });
 
 test('completed jobs expire without deleting an active response', async () => {

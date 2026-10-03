@@ -10,8 +10,11 @@ const os = require('os');
 const { captureTurnBaseline, readCurrentTurn } = require('./chatgpt_turn_scope.js');
 const { readComposerAttachments } = require('./image_reference_gate.js');
 const { navigateToChat } = require('./chat_navigation.js');
+const { isChatGPTPage } = require('./chatgpt_tab_scope.js');
 
 const GATEWAY_URL = process.env.GATEWAY_URL || 'http://127.0.0.1:3456';
+const { createWorkerGatewayFetch } = require('./worker_gateway_fetch.js');
+const fetch = createWorkerGatewayFetch(GATEWAY_URL);
 const CDP_HTTP = process.env.CDP_HTTP || 'http://127.0.0.1:9222';
 const argvWorker = process.argv.find(a => a.startsWith('--worker-id='))?.split('=')[1];
 const argvTab = process.argv.find(a => a.startsWith('--tab-index='))?.split('=')[1];
@@ -223,23 +226,16 @@ async function getTab(matchPattern) {
     // 1. Worker'a daha önce atanmış sekme hala açıksa doğrudan onu kullan (Navigation sırasında URL değişse bile sekme kopmaz)
     if (cachedTabId) {
       const existing = pageTabs.find(t => t.id === cachedTabId);
-      if (existing) {
+      if (isChatGPTPage(existing)) {
         return existing;
       }
+      cachedTabId = null;
     }
 
     // 2. Belirtilen matchPattern'e uyan sekmeleri TAB_INDEX ile eşleştir
-    const chatTabs = pageTabs.filter(t => t.url && t.url.includes(matchPattern));
+    const chatTabs = pageTabs.filter(isChatGPTPage);
     if (chatTabs.length > TAB_INDEX) {
       const assignedTab = chatTabs[TAB_INDEX];
-      cachedTabId = assignedTab.id;
-      reaper.registry.bindWorkerCanonical(WORKER_ID, assignedTab.id, assignedTab.url);
-      return assignedTab;
-    }
-
-    // 3. Genel sayfa sekmelerinden TAB_INDEX ile eşleştir
-    if (pageTabs.length > TAB_INDEX) {
-      const assignedTab = pageTabs[TAB_INDEX];
       cachedTabId = assignedTab.id;
       reaper.registry.bindWorkerCanonical(WORKER_ID, assignedTab.id, assignedTab.url);
       return assignedTab;
@@ -249,6 +245,7 @@ async function getTab(matchPattern) {
     console.log(`[CDP Worker: ${WORKER_ID}] Worker için yeni sekme açılıyor...`);
     const newRes = await fetch(`${CDP_HTTP}/json/new?https://chatgpt.com/`, { method: 'PUT' });
     const newTab = await newRes.json();
+    if (!isChatGPTPage(newTab) || !newTab.id) throw new Error('CHATGPT_TARGET_CREATION_FAILED');
     await sleep(3500);
     cachedTabId = newTab.id;
     reaper.registry.bindWorkerCanonical(WORKER_ID, newTab.id, newTab.url);
@@ -765,6 +762,8 @@ async function workerLoop() {
   }
 
   let chatgptTab = null;
+  // Claim synchronously before the first await, not after fetching a job.
+  isBusy = true;
   try {
     // 1. ChatGPT sekmesi var mı kontrol et
     chatgptTab = await getTab('chatgpt.com');
@@ -785,7 +784,6 @@ async function workerLoop() {
     const { job } = await jobRes.json();
     if (!job) return; // Boşta iş yok
 
-    isBusy = true;
     if (chatgptTab && chatgptTab.id) {
       reaper.registry.setTabJob(chatgptTab.id, job.id);
     }
@@ -850,6 +848,13 @@ async function executeChatGPTJob(tab, job) {
     console.log(`[CDP Worker: ${WORKER_ID}] Firma: "${customer}" [${channel}] oturumu hazırlanıyor...`);
     const chatInfo = await ensureCustomerChat(cdp, customer, channel, chatIdentity);
     workerTiming.mark('tab_ready_ms');
+
+    // 0.1 Pre-Flight Gate: Prompt referans istiyorsa fakat 0 referans geldiyse asla devam etme
+    const promptNeedsRefs = /(?:STRICT LOGO FIDELITY|STRICT PRODUCT FIDELITY|A real company logo image is attached|The real product photo is provided|referans görsel)/i.test(job.prompt || '');
+    const expectedRefCount = Array.isArray(job.referenceImages) ? job.referenceImages.length : 0;
+    if (promptNeedsRefs && expectedRefCount === 0) {
+      throw new Error('REFERENCE_PREFLIGHT_VIOLATION: Prompt demands reference images but job payload contains 0 references. Prompt not submitted.');
+    }
 
     // 1. Referans Görseller Varsa (Image-to-Image / Logo / Ürün) ChatGPT'ye Dosya Olarak Yükle
     if (Array.isArray(job.referenceImages) && job.referenceImages.length > 0) {
@@ -1031,6 +1036,22 @@ async function executeChatGPTJob(tab, job) {
         workerTiming.mark('generation_complete_detect_ms', submittedAt);
         console.log(`[CDP Worker] Görsel ${elapsed}. saniyede başarıyla tamamlandı ve tespit edildi: ${foundImgSrc}`);
         break;
+      }
+
+      // ChatGPT Ret / Metin Cevabı Algılayıcı (Hızlı Başarısızlık)
+      if (checkResult?.hasNewMsg && !checkResult.isGenerating && !checkResult.foundImgSrc && checkResult.text) {
+        const text = checkResult.text;
+        const isRefusal = /(?:referans|görsel|resim|fotoğraf|image|photo|file).*(?:yükle|ekle|sağla|upload|attach|provide|göremiyorum|bulunamadı)/i.test(text) ||
+          /(?:lütfen|lutfen|please).*(?:referans|görsel|resim|fotoğraf|image|photo)/i.test(text) ||
+          /(?:yüklemeniz|eklemeniz) gerekmektedir/i.test(text);
+
+        if (isRefusal) {
+          throw new Error(`REFERENCE_ATTACHMENT_NOT_VISIBLE_TO_MODEL: ChatGPT responded with refusal text instead of generating image: "${text.slice(0, 160)}"`);
+        }
+
+        if (elapsed > 20 && text.length > 30) {
+          throw new Error(`MODEL_TEXT_RESPONSE_WITHOUT_IMAGE: ChatGPT produced text response without image generation: "${text.slice(0, 160)}"`);
+        }
       }
     }
 

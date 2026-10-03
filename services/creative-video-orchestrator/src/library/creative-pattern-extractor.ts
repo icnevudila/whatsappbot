@@ -60,6 +60,8 @@ export class CreativePatternExtractor {
     spokenScript: string
     durationSeconds?: number
     aspectRatio?: '9:16' | '16:9' | '1:1'
+    creativeStyle?: string
+    verifiedAction?: string
   }): ExtractedCreativePlan {
     const {
       brandName,
@@ -73,20 +75,22 @@ export class CreativePatternExtractor {
 
     const archetype = this.resolveArchetype(sector, productName, productDescription)
     const isBrick = isAyvazogluBrick({ name: productName, description: productDescription })
+    const usageStyle = ['PRODUCT_USAGE', 'SOCIAL_UGC'].includes((options.creativeStyle || '').toUpperCase())
+    const supportedUsage = usageStyle && Boolean(options.verifiedAction?.trim())
 
     // Build Timecoded Beats
     const beats = archetype.beats.map((beatSpec) => ({
       timing: beatSpec.timing,
       purpose: beatSpec.purpose,
-      description: beatSpec.actionTemplate(productName, sector, brandName)
+      description: supportedUsage
+        ? `Same product and unchanged location throughout. Only this verified action: ${options.verifiedAction}. Continue one slow camera push-in; no additional action or scene transition.`
+        : `The same ${productName} rests motionless on one physically supporting surface in one unchanged location and lighting. Continue one slow, short camera push-in. No handling, installation, spraying, new operator or transformation.`
     }))
 
     // Build Specific Physics Guard
-    let physicsGuard = archetype.physicsGuard(productName)
+    let physicsGuard = `Preserve the canonical ${productName} silhouette, material, color, visible attachments and geometry without inventing product capabilities.`
     if (isBrick) {
       physicsGuard = `CRITICAL GEOMETRY LOCK FOR CLAY BRICK: The canonical terracotta brick has single-axis perforation ONLY. Hollow grid holes exist strictly and exclusively through the two opposite end faces along one single longitudinal axis. The top face, bottom face, and both long lateral side faces are 100% solid, ribbed terracotta clay with ZERO holes, ZERO cavities, and ZERO perforations. NEVER render holes on the top surface while front also has holes.`
-    } else if (productName.toLowerCase().includes('pompa') || productName.toLowerCase().includes('bofe')) {
-      physicsGuard = `CRITICAL GEOMETRY LOCK FOR BOFE SPRAYER: Preserve the authoritative light blue backpack sprayer tank geometry, solid tank body, black strap attachments, pressure gauge, and brass lance wand. ZERO liquid leakage, ZERO warped plastic, and ZERO fabricated floating letters.`
     }
 
     // Assemble the complete high-craft prompt (inspired by awesome-ad-video-prompts & Gen V)
@@ -99,12 +103,12 @@ export class CreativePatternExtractor {
       `2-5s (Sensory Proof): ${beats[1].description}`,
       `5-8s (Brand Lock): ${beats[2].description}`,
       `[PHYSICAL CONSISTENCY & GEOMETRY LOCK]: ${physicsGuard} Product keeps identical geometry, silhouette, surface texture, and branding across entire video without deformation, drift, melting, or flicker.`,
-      `[VOICEOVER AUDIO ONLY]: Spoken Turkish narration: "${spokenScript}". Spoken as natural off-camera voiceover only. ZERO ON-SCREEN SUBTITLES, ZERO ON-SCREEN CAPTIONS, ZERO FLOATING TEXT. Natural ambient audio foley: ${archetype.impliedFoley}.`,
-      `[RAW DIFFUSION POLICY]: Clean commercial footage with zero on-screen text, zero artificial logos, zero burned-in titles. (Official brand logo and call to action are deterministically composited in post-production).`
+      `[VOICEOVER AUDIO ONLY]: Spoken Turkish narration: "${spokenScript}". Spoken as natural off-camera voiceover only. ZERO ON-SCREEN SUBTITLES, ZERO ON-SCREEN CAPTIONS, ZERO FLOATING TEXT. Subtle ambient room or outdoor tone only; no invented operation sounds.`,
+      `[RAW DIFFUSION POLICY]: Preserve branding already physically visible on the canonical reference; never stamp or invent new branding. Clean commercial footage with zero generated text, zero artificial logos, zero burned-in titles. Official brand logo and call to action are deterministically composited in post-production.`
     ]
 
     const cinematicPrompt = promptSections.join('\n')
-    const negativePrompt = archetype.defaultNegativePrompt
+    const negativePrompt = STRICT_ZERO_TEXT_NEGATIVES.split(', ').filter(term => term !== 'logos' && term !== 'labels').join(', ')
 
     return {
       archetypeId: archetype.id,
@@ -114,7 +118,7 @@ export class CreativePatternExtractor {
       timecodedBeats: beats,
       physicsGuardClause: physicsGuard,
       voiceoverScript: spokenScript,
-      impliedFoley: archetype.impliedFoley
+      impliedFoley: 'Subtle ambient room or outdoor tone only'
     }
   }
 }

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
+import { execFileSync } from 'node:child_process'
 import { GenerationWorkspace } from '../src/providers/generation-workspace.js'
 
 describe('GenerationWorkspace', () => {
@@ -53,7 +54,7 @@ describe('GenerationWorkspace', () => {
 
     // 4. Create dummy raw video & record
     const dummyVideo = path.join(tmpBase, 'source.mp4')
-    fs.writeFileSync(dummyVideo, Buffer.alloc(1024, 0x41))
+    execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=c=black:s=90x160:r=24','-t','8','-c:v','libx264','-pix_fmt','yuv420p',dummyVideo],{timeout:15000})
     const { sha256 } = ws.recordRawVideo(dummyVideo)
 
     assert.equal(fs.existsSync(path.join(ws.dir, 'raw.mp4')), true)
@@ -65,5 +66,21 @@ describe('GenerationWorkspace', () => {
     ws.writeResult({ status: 'COMPLETED', sha256 })
     const resultData = JSON.parse(fs.readFileSync(path.join(ws.dir, 'result.json'), 'utf-8'))
     assert.equal(resultData.status, 'COMPLETED')
+  })
+  test('missing current source cannot reuse a stale raw or final file', () => {
+    const ws = new GenerationWorkspace({jobId:'job',attemptId:'attempt',baseDir:tmpBase})
+    fs.writeFileSync(ws.rawMp4Path(), Buffer.alloc(4096))
+    fs.writeFileSync(ws.finalMp4Path(), Buffer.alloc(4096))
+    assert.throws(()=>ws.recordRawVideo(path.join(tmpBase,'missing.mp4')),/OUTPUT_NOT_FOUND/)
+    assert.throws(()=>ws.recordFinalVideo(path.join(tmpBase,'missing.mp4')),/OUTPUT_NOT_FOUND/)
+  })
+  test('corrupt bytes never receive a success SHA receipt', () => {
+    const ws = new GenerationWorkspace({jobId:'job',attemptId:'attempt',baseDir:tmpBase})
+    const file = path.join(tmpBase,'corrupt.mp4'); fs.writeFileSync(file, Buffer.alloc(4096, 0x41))
+    assert.throws(()=>ws.recordRawVideo(file),/OUTPUT_MEDIA_INVALID/)
+    assert.equal(fs.existsSync(path.join(ws.dir,'raw.sha256')),false)
+  })
+  test('job and attempt traversal is rejected before workspace creation', () => {
+    assert.throws(()=>new GenerationWorkspace({jobId:'../other',attemptId:'attempt',baseDir:tmpBase}),/INVALID_GENERATION_IDENTITY/)
   })
 })

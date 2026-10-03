@@ -2,6 +2,14 @@ import { existsSync, readFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import http from 'node:http'
 
+/** ASR spacing/diacritics can vary; omitted, extra or reordered speech cannot. */
+export function dialogueMatches(expected: string, actual: string): boolean {
+  const normalize = (value: string) => value.toLocaleLowerCase('tr-TR').normalize('NFKD')
+    .replace(/\p{M}/gu, '').replace(/ı/g, 'i').replace(/[^\p{L}\p{N}]/gu, '')
+  const wanted = normalize(expected)
+  return wanted.length > 0 && wanted === normalize(actual)
+}
+
 export interface AudioIntegrityRequest {
   audioFilePath?: string
   videoFilePath?: string
@@ -140,6 +148,11 @@ export class AudioIntegrityGate {
         }
       }
 
+      if (req.expectedDialogue && !dialogueMatches(req.expectedDialogue, mockTranscript)) {
+        return { passed: false, failureCode: 'SPOKEN_DIALOGUE_FAIL', transcript: mockTranscript,
+          issues: ['Actual transcript does not match the complete approved dialogue.'],
+          details: 'Missing, additional or reordered speech requires review.' }
+      }
       return {
         passed: true,
         detectedLanguage: 'tr',
@@ -300,13 +313,7 @@ export class AudioIntegrityGate {
 
     // 6. Dialogue alignment check if expectedDialogue provided
     if (req.expectedDialogue) {
-      const cleanExpected = req.expectedDialogue.toLowerCase().replace(/[^a-z0-9ğüşıöç\s]/gi, '')
-      const cleanActual = transcript.toLowerCase().replace(/[^a-z0-9ğüşıöç\s]/gi, '')
-      const expectedWords = cleanExpected.split(/\s+/).filter(w => w.length > 3)
-      const matchedWords = expectedWords.filter(w => cleanActual.includes(w))
-      const matchRatio = expectedWords.length > 0 ? matchedWords.length / expectedWords.length : 1.0
-
-      if (matchRatio < 0.25) {
+      if (!dialogueMatches(req.expectedDialogue, transcript)) {
         return {
           passed: false,
           failureCode: 'SPOKEN_DIALOGUE_FAIL',
@@ -315,7 +322,7 @@ export class AudioIntegrityGate {
           transcript,
           audioDurationSec: whisperRes.duration || audioDuration,
           issues: [
-            `SPOKEN_DIALOGUE_FAIL: Spoken audio transcript deviates significantly from approved script. Matched ${(matchRatio * 100).toFixed(0)}% of key words.`,
+            'SPOKEN_DIALOGUE_FAIL: Complete approved dialogue was not confirmed; missing, additional or reordered speech requires review.',
           ],
           details: `Expected script: "${req.expectedDialogue}" vs Actual transcript: "${transcript}"`,
         }
@@ -361,7 +368,7 @@ export class AudioIntegrityGate {
     // If raw video has no speech at all (ambient audio / foley only), it is NOT a foreign language violation!
     // A violation ONLY occurs if actual spoken dialogue was detected in a foreign language (e.g. English speech).
     const hasSpokenDialogue = Boolean(report.transcript && report.transcript.trim().length > 3)
-    if (!report.passed && !hasSpokenDialogue && report.failureCode === 'ACTUAL_AUDIO_LANGUAGE_MISMATCH') {
+    if (!req.expectedDialogue && !report.passed && !hasSpokenDialogue && report.failureCode === 'ACTUAL_AUDIO_LANGUAGE_MISMATCH') {
       return {
         ...report,
         passed: true,
@@ -370,7 +377,7 @@ export class AudioIntegrityGate {
       }
     }
 
-    if (!report.passed) {
+    if (!report.passed && hasSpokenDialogue && report.failureCode === 'ACTUAL_AUDIO_LANGUAGE_MISMATCH') {
       return {
         ...report,
         failureCode: 'RAW_GENERATION_AUDIO_LANGUAGE_MISMATCH',

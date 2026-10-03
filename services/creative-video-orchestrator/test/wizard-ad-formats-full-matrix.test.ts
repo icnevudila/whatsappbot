@@ -14,6 +14,7 @@ function buildSnapshot(options: {
   productName?: string
   spokenLine?: string
   verifiedClaims?: string[]
+  allowedAction?: string
 } = {}) {
   const pName = options.productName || 'Ayvazoğlu Tuğla'
   return createBrandContextSnapshot({
@@ -28,6 +29,7 @@ function buildSnapshot(options: {
       description: 'Standart fırınlanmış terracotta yapı tuğlası',
       asset_id: 'prod-asset-1',
       sha256: 'b'.repeat(64),
+      product_fidelity_contract: options.allowedAction ? { allowed_actions: [options.allowedAction] } : undefined,
     }],
     campaign: {
       objective: 'Ürün tanıtımı ve satış',
@@ -69,17 +71,17 @@ test('WIZARD AD FORMATS: all 7 ad formats produce distinct visual hooks, proofs,
 
     // Verify format-specific semantics
     if (fmt === 'FAST_SALES') {
-      assert.match(shotPlan.shot1_hook.description, /Dinamik ve akıcı/i)
+      assert.match(shotPlan.shot1_hook.description, /sabit destek yüzeyindeki/i)
       assert.match(shotPlan.shot3_close.description, /doğrudan kapanış/i)
     } else if (fmt === 'PRODUCT_USAGE') {
       assert.match(shotPlan.shot1_hook.description, /kullanım bağlamını/i)
-      assert.match(shotPlan.shot3_close.description, /doğal sonucu içinde/i)
+      assert.match(shotPlan.shot3_close.description, /aynı ortam ve yüzeyde/i)
     } else if (fmt === 'PROBLEM_SOLUTION') {
       assert.match(shotPlan.shot1_hook.description, /çalışma bağlamı kurulur/i)
       assert.match(shotPlan.shot3_close.description, /çözüm iddiası eklenmeden/i)
     } else if (fmt === 'PREMIUM') {
-      assert.match(shotPlan.shot1_hook.description, /sakin doğal ışık geçişiyle/i)
-      assert.match(shotPlan.shot2_proof.description, /prestijli perspektif/i)
+      assert.match(shotPlan.shot1_hook.description, /sabit dengeli ışık ve geniş negatif alan/i)
+      assert.match(shotPlan.shot2_proof.description, /tek kamera hareketi devam eder/i)
     } else if (fmt === 'SOCIAL_UGC') {
       assert.match(shotPlan.shot1_hook.description, /birinci şahıs yaklaşımı/i)
       assert.match(shotPlan.shot2_proof.description, /samimi fakat iddiasız/i)
@@ -88,7 +90,7 @@ test('WIZARD AD FORMATS: all 7 ad formats produce distinct visual hooks, proofs,
       assert.match(shotPlan.shot2_proof.description, /deterministic finishing/i)
     } else if (fmt === 'AUTO') {
       assert.match(shotPlan.shot1_hook.description, /Pürüzsüz 35mm sinematik/i)
-      assert.match(shotPlan.shot2_proof.description, /orbital/i)
+      assert.match(shotPlan.shot2_proof.description, /tek kamera hareketi devam eder/i)
     }
 
     results.set(fmt, {
@@ -115,7 +117,7 @@ test('WIZARD MOTION STYLES: all motion styles produce distinct camera instructio
   const results = new Map<string, string>()
 
   for (const motion of motions) {
-    const snapshot = buildSnapshot({ motion })
+    const snapshot = buildSnapshot({ motion, style: 'PRODUCT_USAGE', allowedAction: 'ürün tek doğrulanmış adımda yüzeye yerleştirilir' })
     const { brief, shotPlan } = SimpleV5BriefNormalizer.normalize(snapshot)
     const compiled = FlowVeoPromptCompiler.compile(brief, shotPlan)
 

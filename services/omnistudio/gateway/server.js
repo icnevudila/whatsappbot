@@ -18,8 +18,25 @@ const os = require('os');
 const { URL } = require('url');
 const { createJobMetrics, setStage, finishMetrics } = require('./runtime_metrics.js');
 const { getTenantScopeKey, getRequestKey } = require('./tenant_scope.js');
+const { normalizeImageReferences, referenceRoleInstructions } = require('./image_reference_contract.js');
+const { DurableJobStore } = require('./durable_job_store.js');
+const { VideoJobPersistence, videoRequestHash } = require('./video_job_persistence.js');
+const { typedError, isWorkerControlPath, isAuthorizedWorker, configuredLimit, readBoundedBody } = require('./gateway_request_guard.js');
 const { BrowserWorkerSupervisor } = require('./browser_worker_supervisor.js');
 const { loadAllCompanyChats, getExpectedChatTitle } = require('./chat_manager.js');
+
+if (!process.env.WORKER_CONTROL_TOKEN) {
+  try {
+    const tokenFile = path.join(__dirname, '.worker_control_token');
+    if (fs.existsSync(tokenFile)) {
+      process.env.WORKER_CONTROL_TOKEN = fs.readFileSync(tokenFile, 'utf8').trim();
+    }
+  } catch {}
+}
+
+if (require.main === module && process.env.NODE_ENV === 'production' && !process.env.WORKER_CONTROL_TOKEN) {
+  throw typedError('WORKER_CONTROL_TOKEN_REQUIRED', 503);
+}
 
 const FLOW_SOURCE_PROFILE_BY_PORT = Object.freeze({
   9222: '/data/chromium-profile',
@@ -295,18 +312,20 @@ for (const port of geminiCdpPorts) {
 browserSupervisor.registerWorker({
   id: 'flow-primary',
   provider: 'flow',
+  aliases: ['account-01', 'account-03'],
   accountId: process.env.FLOW_PRIMARY_ACCOUNT_ID || 'flow-primary',
-  profileDir: process.env.FLOW_PROFILE_DIR || '/data/chromium-profile-3',
-  cdpPort: Number(process.env.FLOW_CDP_PORT || 9224),
+  canonicalAccountId: GEMINI_PORT_CANONICAL_ACCOUNTS[Number(process.env.FLOW_ACCOUNT_PORT || 9224)],
+  profileDir: profileDirForPort(Number(process.env.FLOW_ACCOUNT_PORT || 9224)),
+  cdpPort: Number(process.env.FLOW_ACCOUNT_PORT || 9224),
   launchUrl: 'https://flow.google.com/',
   warm: false,
   sessionValidator: async worker => {
     try {
-      const response = await fetch(`http://127.0.0.1:${worker.cdpPort}/json/list`, { signal: AbortSignal.timeout(3000) });
-      const tabs = response.ok ? await response.json() : [];
-      return tabs.some(tab => String(tab.url || '').includes('flow.google.com'))
+      const { inspectFlowAccount } = require('./flow_account_inspector.js');
+      const report = await inspectFlowAccount(worker.cdpPort, { expectedEmail: worker.canonicalAccountId });
+      return report.authenticated && report.accountMatch === true
         ? { ok: true }
-        : { ok: false, code: 'AUTH_REQUIRED', message: 'Flow persistent session tab is unavailable' };
+        : { ok: false, code: 'AUTH_REQUIRED', message: report.error || 'Flow account identity was not verified' };
     } catch (error) {
       return { ok: false, code: 'SESSION_VALIDATION_FAILED', message: error.message };
     }
@@ -317,18 +336,20 @@ browserSupervisor.registerWorker({
 browserSupervisor.registerWorker({
   id: 'flow-secondary',
   provider: 'flow',
+  aliases: ['account-02', 'account-04'],
   accountId: 'flow-secondary',
+  canonicalAccountId: GEMINI_PORT_CANONICAL_ACCOUNTS[9225],
   profileDir: '/data/chromium-profile-4',
   cdpPort: 9225,
   launchUrl: 'https://flow.google.com/',
   warm: false,
   sessionValidator: async worker => {
     try {
-      const response = await fetch(`http://127.0.0.1:${worker.cdpPort}/json/list`, { signal: AbortSignal.timeout(3000) });
-      const tabs = response.ok ? await response.json() : [];
-      return tabs.some(tab => String(tab.url || '').includes('flow.google.com'))
+      const { inspectFlowAccount } = require('./flow_account_inspector.js');
+      const report = await inspectFlowAccount(worker.cdpPort, { expectedEmail: worker.canonicalAccountId });
+      return report.authenticated && report.accountMatch === true
         ? { ok: true }
-        : { ok: false, code: 'AUTH_REQUIRED', message: 'Flow persistent session tab is unavailable' };
+        : { ok: false, code: 'AUTH_REQUIRED', message: report.error || 'Flow account identity was not verified' };
     } catch (error) {
       return { ok: false, code: 'SESSION_VALIDATION_FAILED', message: error.message };
     }
@@ -439,7 +460,7 @@ function recordAuditEvent(eventData) {
 
 // Gelişmiş Kuyruk Yöneticisi
 class AdvancedJobQueue {
-  constructor() {
+  constructor(store = null) {
     this.jobs = new Map();
     this.pendingQueue = [];
     this.activeWorkers = new Map(); // workerId -> jobId
@@ -448,6 +469,35 @@ class AdvancedJobQueue {
     this.idempotencyMap = new Map();
     this.cleanupCount = 0;
     this.sessionLeases = new Map(); // sessionKey -> { sessionKey, activeTextJobId, activeWorkerId, acquiredAt, cooldownUntil, rateLimitCount }
+    this.store = store;
+    this.storageError = null;
+    if (store) {
+      for (const job of store.load()) {
+        this.jobs.set(job.id, job);
+        if (job.idempotencyKey) this.idempotencyMap.set(job.idempotencyKey, job.id);
+        if (job.status === 'pending') this.pendingQueue.push(job.id);
+        if (job.status === 'processing') {
+          // The provider may still be producing. Never enqueue a second paid attempt.
+          job.reconciliationRequired = true;
+          if (job.assignedTo) this.activeWorkers.set(job.assignedTo, job.id);
+        }
+      }
+      this.recalculatePositions();
+    }
+  }
+
+  persist(job) {
+    if (!this.store) return;
+    try {
+      this.store.save(job);
+    } catch (error) {
+      this.storageError = error;
+      throw new Error('DURABLE_JOB_STORAGE_UNAVAILABLE');
+    }
+  }
+
+  getJob(jobId) {
+    return this.jobs.get(jobId) || this.store?.read(jobId);
   }
 
   getSession(sessionKey) {
@@ -487,6 +537,10 @@ class AdvancedJobQueue {
     brandKit = null,
     optimizePrompt = true,
     type = 'image',
+    rawPrompt = null,
+    systemPrompt = null,
+    affordancePrompt = null,
+    fallbackResult = null,
     incomingMessage = null,
     conversationHistory = null,
     companyContext = null,
@@ -496,18 +550,19 @@ class AdvancedJobQueue {
     conversationId = null,
     metrics = null,
   }) {
-    const operationType = type === 'chat_suggestions' ? 'text_reply' : 'image_generation';
+    const operationType = type;
+    if (this.storageError) throw new Error('DURABLE_JOB_STORAGE_UNAVAILABLE');
     const idempotencyKey = getRequestKey({ tenantId, requestId, operationType });
     if (idempotencyKey) {
       const existingId = this.idempotencyMap.get(idempotencyKey);
-      const existing = existingId && this.jobs.get(existingId);
+      const existing = existingId && this.getJob(existingId);
       if (existing) return existing;
       this.idempotencyMap.delete(idempotencyKey);
     }
     this.cleanupCompletedJobs();
     const id = 'job_' + crypto.randomBytes(8).toString('hex');
     const promptBuildStartedAt = Date.now();
-    const finalPrompt = optimizePrompt ? enhancePrompt(prompt, { brandKit, size }) : prompt;
+    const finalPrompt = (optimizePrompt ? enhancePrompt(prompt, { brandKit, size }) : prompt) + referenceRoleInstructions(referenceImages);
     const createdAt = Date.now();
     const jobMetrics = metrics || createJobMetrics({
       operation: type === 'chat_suggestions' ? 'text_reply' : 'image_generation',
@@ -525,6 +580,10 @@ class AdvancedJobQueue {
       id,
       type,
       originalPrompt: prompt,
+      rawPrompt,
+      systemPrompt,
+      affordancePrompt,
+      fallbackResult,
       prompt: finalPrompt,
       size,
       platform: platform.toLowerCase(),
@@ -575,6 +634,8 @@ class AdvancedJobQueue {
         if (pj && pj.type === 'chat_suggestions' && pj.scopeKey === job.scopeKey && pj.status === 'pending') {
           pj.status = 'failed';
           pj.error = 'Daha yeni bir sohbet açıldığı için iptal edildi';
+          pj.completedAt = Date.now();
+          this.persist(pj);
           this.notifyWaiters(pendingId, pj);
           return false;
         }
@@ -582,6 +643,7 @@ class AdvancedJobQueue {
       });
     }
 
+    this.persist(job);
     this.jobs.set(id, job);
     if (idempotencyKey) this.idempotencyMap.set(idempotencyKey, id);
     this.pendingQueue.push(id);
@@ -598,6 +660,7 @@ class AdvancedJobQueue {
   }
 
   getNextJob(workerPlatform, workerId = null, workerSessionKey = null) {
+    if (this.storageError) throw new Error('DURABLE_JOB_STORAGE_UNAVAILABLE');
     const p = workerPlatform.toLowerCase();
     const wid = workerId || p;
     if (this.activeWorkers.has(wid)) return null;
@@ -708,6 +771,7 @@ class AdvancedJobQueue {
       this.companyWorkerMap.set(job.scopeKey, wid);
     }
 
+    this.persist(job);
     broadcastEvent('job_assigned', sanitizeJobForBroadcast(job));
     return job;
   }
@@ -779,11 +843,22 @@ class AdvancedJobQueue {
 
     const canRetry = error && isRetryableError(error) && (job.attemptCount || 0) < (job.maxAttempts || 2);
 
+    if (job.reconciliationRequired && job.status === 'processing') {
+      job.status = 'reconciliation_required';
+      job.errorCode = 'PROVIDER_RESULT_UNCERTAIN';
+      job.error = error || 'Gateway restarted during provider execution';
+      job.statusText = 'Önceki üretimin sonucu kontrol ediliyor; çift üretim başlatılmadı.';
+      this.persist(job);
+      this.notifyWaiters(jobId, job);
+      return;
+    }
+
     if (error && !canRetry) {
       job.status = 'failed';
       job.error = error;
       job.statusText = `Hata: ${error}`;
       job.completedAt = Date.now();
+      this.persist(job);
       const errCode = job.errorCode || (isRetryableError(error) ? 'RETRY_EXHAUSTED' : 'WORKER_ERROR');
       finishMetrics(job.metrics, { result: 'error', errorCode: errCode, now: job.completedAt, sessionTelemetry });
       broadcastEvent('job_failed', sanitizeJobForBroadcast(job));
@@ -797,6 +872,7 @@ class AdvancedJobQueue {
       job.startedAt = null;
       this.pendingQueue.unshift(jobId);
       this.recalculatePositions();
+      this.persist(job);
       broadcastEvent('job_requeued', sanitizeJobForBroadcast(job));
     } else if (job.status === 'processing') {
       job.status = 'pending';
@@ -806,12 +882,13 @@ class AdvancedJobQueue {
       job.startedAt = null;
       this.pendingQueue.unshift(jobId);
       this.recalculatePositions();
+      this.persist(job);
       broadcastEvent('job_requeued', sanitizeJobForBroadcast(job));
     }
   }
 
   completeJob(jobId, filename, buffer, timings = null) {
-    const job = this.jobs.get(jobId);
+    const job = this.getJob(jobId);
     if (!job) return null;
 
     if (timings) {
@@ -829,7 +906,10 @@ class AdvancedJobQueue {
     job.referenceImages = [];
     job.completedAt = Date.now();
     job.durationMs = job.completedAt - (job.startedAt || job.createdAt);
+    job.reconciliationRequired = false;
+    job.resultSha256 = buffer ? crypto.createHash('sha256').update(buffer).digest('hex') : null;
     finishMetrics(job.metrics, { result: 'success', now: job.completedAt });
+    this.persist(job);
 
     if (job.assignedTo) {
       this.activeWorkers.delete(job.assignedTo);
@@ -841,7 +921,7 @@ class AdvancedJobQueue {
   }
 
   completeTextJob(jobId, resultData, timings = null) {
-    const job = this.jobs.get(jobId);
+    const job = this.getJob(jobId);
     if (!job) return null;
 
     if (timings) {
@@ -880,6 +960,8 @@ class AdvancedJobQueue {
     };
 
     finishMetrics(job.metrics, { result: 'success', now: job.completedAt, sessionTelemetry });
+    job.reconciliationRequired = false;
+    this.persist(job);
 
     if (job.assignedTo) {
       this.activeWorkers.delete(job.assignedTo);
@@ -892,9 +974,9 @@ class AdvancedJobQueue {
 
   waitForJob(jobId, timeoutMs = 120000) {
     return new Promise((resolve) => {
-      const job = this.jobs.get(jobId);
+      const job = this.getJob(jobId);
       if (!job) return resolve({ error: 'Job not found' });
-      if (job.status === 'completed' || job.status === 'failed') {
+      if (job.status === 'completed' || job.status === 'failed' || job.status === 'reconciliation_required') {
         return resolve(job);
       }
 
@@ -903,17 +985,17 @@ class AdvancedJobQueue {
       }
       const list = this.waiters.get(jobId);
       const timer = setTimeout(() => {
-        const j = this.jobs.get(jobId);
-        if (j && j.status === 'processing') {
-          this.releaseLock(jobId, `Tarayıcı işçisi zaman aşımına uğradı (${Math.round(timeoutMs / 1000)}s)`);
-        }
-        resolve({ ...job, status: 'failed', error: `Tarayıcı işçisi zaman aşımına uğradı (${Math.round(timeoutMs / 1000)}s)` });
+        const index = list.indexOf(onFinished);
+        if (index >= 0) list.splice(index,1);
+        if (!list.length) this.waiters.delete(jobId);
+        resolve({ ...job, observationTimedOut: true });
       }, timeoutMs);
 
-      list.push((updated) => {
+      const onFinished = (updated) => {
         clearTimeout(timer);
         resolve(updated);
-      });
+      };
+      list.push(onFinished);
     });
   }
 
@@ -1017,7 +1099,7 @@ class AdvancedJobQueue {
       job.referenceImages = [];
       job.result = null;
       this.jobs.delete(job.id);
-      if (job.idempotencyKey && this.idempotencyMap.get(job.idempotencyKey) === job.id) this.idempotencyMap.delete(job.idempotencyKey);
+      if (!this.store && job.idempotencyKey && this.idempotencyMap.get(job.idempotencyKey) === job.id) this.idempotencyMap.delete(job.idempotencyKey);
       this.cleanupCount++;
     }
 
@@ -1025,21 +1107,56 @@ class AdvancedJobQueue {
   }
 }
 
-const queue = new AdvancedJobQueue();
+const queue = new AdvancedJobQueue(
+  require.main === module && process.env.NODE_ENV === 'production'
+    ? new DurableJobStore(process.env.JOB_STATE_DIR || path.join(__dirname, '.queue-state'))
+    : null
+);
 
 class VideoJobQueue {
-  constructor(maxConcurrent = 1) {
+  constructor(maxConcurrent = 1, store = null) {
     this.maxConcurrent = maxConcurrent;
     this.activeCount = 0;
     this.queue = [];
     this.jobs = new Map();
     this.idempotencyMap = new Map(); // idempotencyKey -> jobId
+    this.store = store;
+    this.storageError = null;
+    if (store) {
+      for (const job of store.load()) {
+        if (job.status === 'queued' || job.status === 'processing') {
+          job.providerSubmissionState = job.status === 'queued' ? 'NOT_SUBMITTED' : 'UNCERTAIN';
+          job.status = 'reconciliation_required';
+          job.reconciliationRequired = true;
+          job.errorCode = 'SUBMISSION_UNCERTAIN';
+          job.error = 'Gateway restarted; reconcile this exact logical job before any provider submission';
+          store.save(job);
+        }
+        this.jobs.set(job.id, job);
+        if (job.idempotencyKey) {
+          const previous = this.idempotencyMap.get(job.idempotencyKey);
+          if (previous && previous !== job.id) throw typedError('VIDEO_IDEMPOTENCY_STATE_CONFLICT', 503);
+          this.idempotencyMap.set(job.idempotencyKey, job.id);
+        }
+      }
+    }
+  }
+
+  persist(job) {
+    if (this.storageError) throw typedError('VIDEO_DURABLE_STORAGE_UNAVAILABLE', 503);
+    try { if (this.store) this.store.save(job); }
+    catch (error) {
+      this.storageError = error;
+      throw typedError('VIDEO_DURABLE_STORAGE_UNAVAILABLE', 503);
+    }
   }
 
   // Durum endpoint'i uzun kuyruktaki bir işi bulmak zorunda. Eski uygulama
   // Map'teki "ilk" kaydı, halen queued/processing olsa bile siliyordu; panel
   // 404 gördüğü için Flow çıktısı DB'ye hiç yazılamıyordu.
   pruneFinishedJobs(maxHistory = 150) {
+    // Without a durable receipt, deleting history would delete generation identity.
+    if (!this.store) return;
     if (this.jobs.size <= maxHistory) return;
 
     const finished = [...this.jobs.entries()]
@@ -1049,37 +1166,37 @@ class VideoJobQueue {
     for (const [id] of finished) {
       if (this.jobs.size <= maxHistory) break;
       const j = this.jobs.get(id);
-      if (j && j.idempotencyKey) {
-        this.idempotencyMap.delete(j.idempotencyKey);
-      }
       this.jobs.delete(id);
     }
   }
 
   findJobByIdempotencyKey(key) {
+    if (this.storageError) throw typedError('VIDEO_DURABLE_STORAGE_UNAVAILABLE', 503);
     if (!key) return null;
     const normKey = String(key).trim();
     const jobId = this.idempotencyMap.get(normKey);
     if (!jobId) return null;
-    const job = this.jobs.get(jobId);
+    const job = this.jobs.get(jobId) || this.store?.read(jobId);
     if (!job) {
-      this.idempotencyMap.delete(normKey);
-      return null;
+      throw typedError('VIDEO_DURABLE_RECEIPT_MISSING', 503);
     }
-    // Eğer iş başarısız olmuşsa (failed), kullanıcının tekrar denemesine izin ver (retry)
-    if (job.status === 'failed') {
-      return null;
-    }
-    // Eğer iş tamamlanmışsa ve üzerinden 20 dakika geçmişse yeni üretime izin ver
-    if (job.status === 'completed' && Date.now() - (job.completedAt || 0) > 20 * 60 * 1000) {
-      return null;
-    }
+    this.jobs.set(jobId, job);
     return this.getJob(jobId);
   }
 
   createJob(meta = {}) {
+    if (this.storageError) throw typedError('VIDEO_DURABLE_STORAGE_UNAVAILABLE', 503);
     const id = meta.jobId || ('vjob_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7));
+    if (typeof id !== 'string' || !/^[a-zA-Z0-9_-]{1,160}$/.test(id)) throw typedError('INVALID_VIDEO_JOB_ID', 400);
     const idempotencyKey = meta.idempotencyKey ? String(meta.idempotencyKey).trim() : null;
+    const existing = idempotencyKey && this.findJobByIdempotencyKey(idempotencyKey);
+    if (existing) {
+      if (existing.orgId !== (meta.orgId || null) || (meta.requestHash && existing.requestHash !== meta.requestHash)) {
+        throw typedError('VIDEO_IDEMPOTENCY_CONFLICT', 409);
+      }
+      return existing;
+    }
+    if (this.jobs.has(id) || this.store?.read(id)) throw typedError('VIDEO_JOB_ID_CONFLICT', 409);
     const job = {
       id,
       idempotencyKey,
@@ -1088,6 +1205,10 @@ class VideoJobQueue {
       workerId: null,
       orgId: meta.orgId || null,
       brandName: meta.brandName || null,
+      requestHash: meta.requestHash || null,
+      generationRevision: meta.generationRevision ?? 0,
+      providerSubmissionState: 'NOT_SUBMITTED',
+      reconciliationRequired: false,
       status: 'queued',
       enqueuedAt: Date.now(),
       startedAt: null,
@@ -1100,6 +1221,7 @@ class VideoJobQueue {
       error: null,
       errorCode: null,
     };
+    this.persist(job); // Acceptance receipt precedes queue admission and provider work.
     this.jobs.set(id, job);
     if (idempotencyKey) {
       this.idempotencyMap.set(idempotencyKey, id);
@@ -1109,7 +1231,8 @@ class VideoJobQueue {
   }
 
   getJob(id) {
-    const job = this.jobs.get(id);
+    if (this.storageError) throw typedError('VIDEO_DURABLE_STORAGE_UNAVAILABLE', 503);
+    const job = this.jobs.get(id) || this.store?.read(id);
     if (!job) return null;
     let position = 0;
     if (job.status === 'queued') {
@@ -1131,6 +1254,11 @@ class VideoJobQueue {
     }
 
     return new Promise((resolve, reject) => {
+      const admitted = this.jobs.get(id);
+      if (admitted.status !== 'queued' || this.queue.some(item => item.jobId === id)) {
+        reject(typedError('DUPLICATE_SUBMISSION_PREVENTED', 409));
+        return;
+      }
       this.queue.push({
         jobId: id,
         taskFn,
@@ -1143,6 +1271,9 @@ class VideoJobQueue {
             j.flowProjectUrl = val?.flowProjectUrl || j.flowProjectUrl || null;
             j.sha256 = val?.sha256 || j.sha256 || null;
             j.result = val;
+            j.providerSubmissionState = 'COMPLETED';
+            j.reconciliationRequired = false;
+            try { this.persist(j); } catch (error) { reject(error); return; }
           }
           resolve(val);
         },
@@ -1153,6 +1284,12 @@ class VideoJobQueue {
             j.completedAt = Date.now();
             j.error = err?.message || String(err);
             j.errorCode = err?.code || 'VIDEO_GENERATION_FAILED';
+            // After execution starts, an error does not prove no provider submission.
+            if (j.providerSubmissionState !== 'NOT_SUBMITTED') {
+              j.providerSubmissionState = 'UNCERTAIN';
+              j.reconciliationRequired = true;
+            }
+            try { this.persist(j); } catch (error) { reject(error); return; }
           }
           reject(err);
         },
@@ -1172,20 +1309,22 @@ class VideoJobQueue {
     const waitSeconds = Math.round((Date.now() - item.enqueuedAt) / 1000);
     const job = this.jobs.get(item.jobId);
 
-    // ✨ attempt_id ve worker_id claim anında dinamik olarak atanır
-    if (job) {
+    try {
+      // Persist the attempt/submit intent before invoking any provider-capable callback.
+      if (job) {
       job.status = 'processing';
       job.startedAt = Date.now();
       job.attemptCount = (job.attemptCount || 0) + 1;
       job.attemptId = `${job.id}_att${job.attemptCount}`;
       job.workerId = `worker_${os.hostname().slice(0, 8)}_cdp_${Date.now().toString(36)}`;
-    }
+      job.providerSubmissionState = 'SUBMIT_INTENT_PERSISTED';
+        this.persist(job);
+      }
 
     if (waitSeconds > 1) {
       console.log(`[VideoQueue] ⏳ Sıradaki video görevi işleme alınıyor [${item.jobId}] (Attempt: ${job?.attemptId}, Worker: ${job?.workerId}, Kuyruk bekleme: ${waitSeconds}s, Kuyrukta bekleyen: ${this.queue.length})`);
     }
 
-    try {
       const result = await item.taskFn({
         attemptId: job?.attemptId,
         workerId: job?.workerId,
@@ -1212,15 +1351,18 @@ class VideoJobQueue {
 
 // Account lanes are guarded by BrowserWorkerSupervisor. Different Gemini
 // accounts may run concurrently; each individual account remains concurrency=1.
-const videoQueue = new VideoJobQueue(Math.max(1, geminiCdpPorts.length));
+const videoQueue = new VideoJobQueue(Math.max(1, geminiCdpPorts.length),
+  require.main === module && process.env.NODE_ENV === 'production'
+    ? new VideoJobPersistence(process.env.VIDEO_JOB_STATE_DIR || path.join(process.env.JOB_STATE_DIR || path.join(__dirname, '.queue-state'), 'video'))
+    : null);
 
 // Periyodik zombi iş temizleme (200s)
 const zombieInterval = setInterval(() => {
   const now = Date.now();
   for (const [wid, jobId] of queue.activeWorkers.entries()) {
     if (jobId) {
-      const job = queue.jobs.get(jobId);
-      if (job && now - job.startedAt > 200000) {
+      const job = queue.getJob(jobId);
+      if (job && now - job.startedAt > 200000 && now - (queue.registeredWorkers.get(wid)?.lastSeen || 0) > 30000) {
         console.warn(`[Gateway] Zaman aşımı: ${wid} üzerindeki ${jobId} işi serbest bırakılıyor.`);
         queue.releaseLock(jobId, 'Browser worker timeout (200s)');
       }
@@ -1257,7 +1399,7 @@ async function runCanaryCheck() {
   const workers = stats.workersStatus || {};
   const anyWorkerIdle = Object.values(workers).some(w => w.status === 'idle');
 
-  if (!anyWorkerIdle) {
+  if (!anyWorkerIdle || stats.activeCount || stats.pending || videoQueue.getStats().active) {
     console.log('[Canary] Boşta çalışan işçi yok, kanarya testi erteleniyor.');
     return;
   }
@@ -1265,7 +1407,7 @@ async function runCanaryCheck() {
   console.log('[Canary] 🐤 Otomatik Kanarya Sağlık Testi Başlatılıyor...');
   const start = Date.now();
   const job = queue.createJob({
-    prompt: 'Canary test minimal vector red circle emblem',
+    prompt: 'Create exactly one image: a minimal vector red circle emblem on a white background. No text, no written response.',
     size: '1024x1024',
     platform: 'auto',
     workspace: 'Canary Watchdog',
@@ -1276,7 +1418,7 @@ async function runCanaryCheck() {
   });
 
   try {
-    const finished = await queue.waitForJob(job.id, 95000);
+    const finished = await queue.waitForJob(job.id, 210000);
     const dur = Date.now() - start;
     if (finished.status === 'completed') {
       canaryStatus = {
@@ -1323,29 +1465,15 @@ if (require.main === module && process.env.NODE_ENV !== 'test') {
 }
 
 // Yardımcılar
-function parseJsonBody(req) {
-  return new Promise((resolve, reject) => {
-    let data = '';
-    req.on('data', chunk => { data += chunk; });
-    req.on('end', () => {
-      if (!data) return resolve({});
-      try {
-        resolve(JSON.parse(data));
-      } catch (err) {
-        reject(new Error('Invalid JSON'));
-      }
-    });
-    req.on('error', reject);
-  });
+async function parseJsonBody(req) {
+  const data = await readBoundedBody(req, configuredLimit(process.env.JSON_BODY_MAX_BYTES, 16 * 1024 * 1024));
+  if (!data.length) return {};
+  try { return JSON.parse(data.toString('utf8')); }
+  catch (_) { throw typedError('INVALID_JSON', 400, 'Invalid JSON'); }
 }
 
 function parseRawBody(req) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    req.on('data', chunk => chunks.push(chunk));
-    req.on('end', () => resolve(Buffer.concat(chunks)));
-    req.on('error', reject);
-  });
+  return readBoundedBody(req, configuredLimit(process.env.RAW_UPLOAD_MAX_BYTES, 32 * 1024 * 1024));
 }
 
 function sendJson(res, statusCode, payload) {
@@ -1359,15 +1487,7 @@ function sendJson(res, statusCode, payload) {
 }
 
 function isInternalWorkerRequest(req) {
-  const configured = process.env.WORKER_CONTROL_TOKEN;
-  if (configured && req.headers['x-worker-token'] === configured) return true;
-  const address = req.socket?.remoteAddress || '';
-  if (address === '127.0.0.1' || address === '::1' || address === '::ffff:127.0.0.1') return true;
-  if (address.startsWith('10.') || address.startsWith('172.') || address.startsWith('192.168.') ||
-      address.startsWith('::ffff:10.') || address.startsWith('::ffff:172.') || address.startsWith('::ffff:192.168.')) {
-    return true;
-  }
-  return !configured;
+  return isAuthorizedWorker(req);
 }
 
 // HTTP Sunucusu
@@ -1386,6 +1506,23 @@ const server = http.createServer(async (req, res) => {
   }
 
   try {
+    if (isWorkerControlPath(pathname) && !isInternalWorkerRequest(req)) {
+      return sendJson(res, 403, { error: 'WORKER_UNAUTHORIZED', error_code: 'WORKER_UNAUTHORIZED' });
+    }
+    if (method === 'GET' && pathname === '/v1/videos/reconcile') {
+      const key = parsedUrl.searchParams.get('idempotency_key');
+      const org = parsedUrl.searchParams.get('org_id');
+      if (!key || !org) return sendJson(res, 400, { error: 'idempotency_key and org_id are required' });
+      const job = videoQueue.findJobByIdempotencyKey(key);
+      if (!job) return sendJson(res, 404, { error: 'VIDEO_JOB_NOT_FOUND', authoritative: !!videoQueue.store });
+      if (job.orgId !== org) return sendJson(res, 409, { error: 'VIDEO_IDEMPOTENCY_CONFLICT' });
+      return sendJson(res, 200, {
+        job_id: job.id, org_id: job.orgId, status: job.status, request_hash: job.requestHash,
+        reconciliation_required: job.reconciliationRequired, provider_submission_state: job.providerSubmissionState,
+        flowProjectId: job.flowProjectId, attemptId: job.attemptId, sha256: job.sha256,
+        result: job.result, error_code: job.errorCode, authoritative: !!videoQueue.store,
+      });
+    }
     // Browser worker control is loopback-only unless WORKER_CONTROL_TOKEN is set.
     if (method === 'GET' && pathname === '/v1/browser-workers') {
       if (!isInternalWorkerRequest(req)) return sendJson(res, 403, { error: 'forbidden' });
@@ -1403,10 +1540,11 @@ const server = http.createServer(async (req, res) => {
       if (!isInternalWorkerRequest(req)) return sendJson(res, 403, { error: 'forbidden' });
       const body = await parseJsonBody(req);
       const workerId = body.workerId || body.worker_id || (body.provider && body.accountId ? `${body.provider}:${body.accountId}` : null);
-      let worker = workerId ? browserSupervisor.workers.get(workerId) : null;
-      if (!worker && body.provider === 'flow') {
-        worker = browserSupervisor.workers.get('flow-primary') || Array.from(browserSupervisor.workers.values()).find(w => w.provider === 'flow');
-      }
+      const worker = browserSupervisor.resolveWorker({
+        provider: body.provider || browserSupervisor.workers.get(workerId)?.provider,
+        accountId: body.accountId || body.account_id,
+        workerId,
+      });
       if (!worker) return sendJson(res, 404, { error: 'worker_not_found' });
       try {
         await browserSupervisor.ensureReady(worker);
@@ -1554,7 +1692,7 @@ const server = http.createServer(async (req, res) => {
         ...(body.logoUrl ? [body.logoUrl] : (body.logo ? [body.logo] : [])),
         ...(body.productImageUrl ? [body.productImageUrl] : (body.product_image_url ? [body.product_image_url] : []))
       ].filter(Boolean);
-      const referenceImages = rawRefs.map(r => typeof r === 'string' ? r.trim() : (r.url || r.data || r.b64_json || '')).filter(Boolean);
+      const referenceImages = normalizeImageReferences(rawRefs, body.tenantId || body.tenant_id || body.orgId || body.org_id || null);
       const brandKit = body.brandKit || null;
       const asyncMode = body.async === true || parsedUrl.searchParams.get('async') === 'true';
       const requestStartedAt = Date.now();
@@ -1599,6 +1737,10 @@ const server = http.createServer(async (req, res) => {
 
       // Senkron bekleme modu (OpenAI SDK ile birebir uyumlu, ChatGPT 2dk çizim payı)
       const finishedJob = await queue.waitForJob(job.id, 180000);
+
+      if (finishedJob.status === 'pending' || finishedJob.status === 'processing') {
+        return sendJson(res, 202, { job_id:job.id, status:finishedJob.status, status_url:`http://${PUBLIC_HOST}:${PORT}/v1/images/status/${job.id}` });
+      }
 
       if (finishedJob.status === 'completed') {
         const item = {};
@@ -1730,18 +1872,25 @@ const server = http.createServer(async (req, res) => {
 
       // 1.3. Idempotency Check & Değişmez İş Enstantanesi (Immutable Job Snapshot)
       const idempotencyKey = body.idempotencyKey || body.idempotency_key || req.headers['idempotency-key'] || req.headers['x-idempotency-key'] || null;
+      const requestHash = videoRequestHash(body, orgId);
 
       if (idempotencyKey) {
         const existingJob = videoQueue.findJobByIdempotencyKey(idempotencyKey);
         if (existingJob) {
+          if (existingJob.orgId !== orgId || existingJob.requestHash !== requestHash) {
+            return sendJson(res, 409, { error: 'VIDEO_IDEMPOTENCY_CONFLICT' });
+          }
           console.log(`[Gateway Video] ⚡ Idempotency Hit! [${idempotencyKey}] -> Mevcut İş [${existingJob.id}], Durum: ${existingJob.status}`);
           const existingResult = existingJob.result || {};
           const existingVideoUrl = existingResult.videoUrl || existingResult.outputUrl || existingResult.publicUrl || null;
           return sendJson(res, existingJob.status === 'completed' ? 200 : 202, {
-            ok: true,
+            ok: existingJob.status !== 'failed' && !existingJob.reconciliationRequired,
             job_id: existingJob.id,
             idempotent: true,
             status: existingJob.status,
+            error_code: existingJob.errorCode,
+            reconciliation_required: !!existingJob.reconciliationRequired,
+            provider_submission_state: existingJob.providerSubmissionState,
             queue_position: existingJob.queue_position,
             status_url: `http://${PUBLIC_HOST}:${PORT}/v1/videos/status/${existingJob.id}`,
             outputUrl: existingVideoUrl,
@@ -1777,6 +1926,8 @@ const server = http.createServer(async (req, res) => {
       const job = videoQueue.createJob({
         jobId: initialJobId,
         idempotencyKey,
+        requestHash,
+        generationRevision: body.generationRevision ?? body.generation_revision ?? 0,
         orgId,
         brandName,
         productName: body.productName,
@@ -1794,6 +1945,7 @@ const server = http.createServer(async (req, res) => {
       try {
         const videoOptions = {
           prompt,
+          brandKit: body.brandKit || null,
           brandName: body.brandName || body.brandKit?.name || null,
           productName: body.productName || body.product?.name || null,
           subTitle: body.subTitle || null,
@@ -1805,7 +1957,7 @@ const server = http.createServer(async (req, res) => {
           includeOverlay: Boolean(body.includeOverlay),
           includeLogo: Boolean(body.includeLogo),
           includeBanner: Boolean(body.includeBanner),
-          orgId: body.orgId || null,
+          orgId,
           productImageUrl: body.productImageUrl || null,
           productSha256: body.productSha256 || null,
           referenceImageUrls: body.referenceImageUrls || [],
@@ -1841,6 +1993,10 @@ const server = http.createServer(async (req, res) => {
                 j.flowProjectId = flowProjectId;
                 j.flowProjectUrl = flowProjectUrl;
                 j.sha256 = sha256;
+                j.rawOutputPath = rawFileName || j.rawOutputPath || null;
+                j.lastProgressAt = Date.now();
+                if (flowProjectId) j.providerSubmissionState = 'PROVIDER_RUNNING';
+                videoQueue.persist(j);
               }
               try {
                 fs.writeFileSync(path.join(OUTPUT_DIR, `job_${jobId}_state.json`), JSON.stringify({
@@ -2319,9 +2475,7 @@ const server = http.createServer(async (req, res) => {
         ...(body.logoUrl  ? [body.logoUrl]  : body.logo  ? [body.logo]  : []),
         ...(body.productImageUrl ? [body.productImageUrl] : body.product_image_url ? [body.product_image_url] : []),
       ].filter(Boolean);
-      const referenceImages = rawRefs
-        .map(r => typeof r === 'string' ? r.trim() : (r.url || r.data || r.b64_json || ''))
-        .filter(Boolean);
+      const referenceImages = normalizeImageReferences(rawRefs, body.tenantId || body.tenant_id || body.orgId || body.org_id || null);
 
       // ── 3. Görsel mi Metin mi? ──
       // Açık bayrak > referans görsel var > prompt analizi
@@ -2398,6 +2552,9 @@ const server = http.createServer(async (req, res) => {
         }
 
         const finished = await queue.waitForJob(job.id, 180000);
+        if (finished.status === 'pending' || finished.status === 'processing') {
+          return sendJson(res, 202, { job_id:job.id, status:finished.status, status_url:`http://${PUBLIC_HOST}:${PORT}/v1/images/status/${job.id}` });
+        }
         if (finished.status === 'completed') {
           const imageUrl = (finished.resultUrl || '')
             .replace('localhost:3456', `${PUBLIC_HOST}:${PORT}`)
@@ -2424,8 +2581,8 @@ const server = http.createServer(async (req, res) => {
       const systemPrompt = body._systemPrompt || body.systemPrompt || body.system || '';
       const metrics = createJobMetrics({
         operation: 'text_reply',
-        tenantId: body.tenantId || null,
-        requestId: body.requestId || null,
+        tenantId: body.tenantId || body.tenant_id || body.orgId || body.org_id || null,
+        requestId: body.requestId || body.request_id || null,
         prompt: promptText,
         companyContext: systemPrompt,
         conversationHistory: '',
@@ -2441,6 +2598,9 @@ const server = http.createServer(async (req, res) => {
         type: 'chat_completion',
         rawPrompt: promptText,
         systemPrompt,
+        tenantId: metrics.tenant_id,
+        requestId: metrics.request_id,
+        optimizePrompt: false,
         conversationId,
         metrics,
       });
@@ -2595,8 +2755,8 @@ const server = http.createServer(async (req, res) => {
       const requestStartedAt = Date.now();
       const metrics = createJobMetrics({
         operation: 'text_reply',
-        tenantId: body.tenantId || null,
-        requestId: body.requestId || null,
+        tenantId: body.tenantId || body.tenant_id || body.orgId || body.org_id || null,
+        requestId: body.requestId || body.request_id || null,
         prompt: promptText,
         companyContext: systemPrompt,
         conversationHistory: '',
@@ -2612,6 +2772,9 @@ const server = http.createServer(async (req, res) => {
         type: 'chat_completion',
         rawPrompt: promptText,
         systemPrompt,
+        tenantId: metrics.tenant_id,
+        requestId: metrics.request_id,
+        optimizePrompt: false,
         conversationId,
         metrics,
       });
@@ -2823,18 +2986,23 @@ const server = http.createServer(async (req, res) => {
     // 2. Durum ve İlerleme Sorgulama: GET /v1/images/status/:id
     if (method === 'GET' && pathname.startsWith('/v1/images/status/')) {
       const jobId = pathname.replace('/v1/images/status/', '');
-      const job = queue.jobs.get(jobId);
+      const job = queue.getJob(jobId);
       if (!job) {
         return sendJson(res, 404, { error: 'Job not found' });
       }
+      const requestedTenant = parsedUrl.searchParams.get('tenant_id');
+      if (requestedTenant && requestedTenant !== job.tenantId) return sendJson(res,404,{error:'Job not found'});
       return sendJson(res, 200, {
         id: job.id,
         status: job.status,
         progress: job.progress,
         queue_position: job.status === 'pending' ? job.queuePosition : 0,
         result_url: job.resultUrl,
+        ...(job.type === 'chat_suggestions' || job.type === 'chat_completion' ? { result: job.result } : {}),
         error: job.error,
         error_code: job.errorCode || null,
+        reconciliation_required: !!job.reconciliationRequired,
+        result_sha256: job.resultSha256 || null,
         telemetry: job.telemetry || null,
       });
     }
@@ -2916,7 +3084,7 @@ const server = http.createServer(async (req, res) => {
             buffer = Buffer.from(raw, 'base64');
           }
           if (jsonBody.filename) filename = jsonBody.filename;
-        } catch (_) {}
+        } catch (error) { if (error?.statusCode) throw error; }
       } else {
         buffer = await parseRawBody(req);
       }
@@ -2925,6 +3093,9 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 400, { error: 'Görsel verisi boş (Empty payload). Base64 JSON veya Binary gönderin.' });
       }
 
+      if (typeof filename !== 'string' || !filename || filename !== path.basename(filename) || /[\\/\x00]/.test(filename) || filename === '..') {
+        throw typedError('INVALID_OUTPUT_FILENAME', 400);
+      }
       const filePath = path.join(OUTPUT_DIR, filename);
       fs.writeFileSync(filePath, buffer);
       console.log(`[Gateway] Görsel diske yazıldı (${(buffer.length / 1024).toFixed(1)} KB): ${filename}`);
@@ -3048,7 +3219,11 @@ const server = http.createServer(async (req, res) => {
     sendJson(res, 404, { error: 'Not Found' });
   } catch (err) {
     console.error('[Gateway Hata]', err);
-    sendJson(res, 500, { error: err.message });
+    if (err.statusCode === 413) {
+      res.setHeader('Connection', 'close');
+      res.once('finish', () => req.socket?.destroy());
+    }
+    sendJson(res, err.statusCode || 500, { error: err.message, ...(err.code ? { error_code: err.code } : {}) });
   }
 });
 
@@ -3076,4 +3251,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { server, queue, AdvancedJobQueue, VideoJobQueue, browserSupervisor };
+module.exports = { server, queue, videoQueue, AdvancedJobQueue, VideoJobQueue, browserSupervisor };

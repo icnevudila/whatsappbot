@@ -4,11 +4,30 @@ import test from 'node:test'
 import {
   MAX_SPOKEN_WORDS,
   buildSafeSpokenLine,
+  containsShotDirections,
   countWords,
   defaultFidelityContract,
   parseFactLines,
   validateWizardPreflight,
 } from './video-wizard-contract'
+
+test('visual directions never enter generated spoken fallback across formats', () => {
+  for (const adFormat of ['FAST_SALES', 'PRODUCT_USAGE', 'PREMIUM']) {
+    const line = buildSafeSpokenLine({brandName:'Ayvazoğlu',productName:'Tuğla',adFormat,
+      creativeNote:'20 deliği koru, tek sahne, kamera sabit; preserve exact holes.'})
+    assert.equal(containsShotDirections(line), false)
+    assert.doesNotMatch(line, /20|preserve|tek sahne/)
+  }
+  assert.equal(containsShotDirections('Yirmi deliği koru ve kamerayı tek sahnede sabit tut.'), true)
+})
+
+test('verified descriptive claim is spoken without inventing an offer from creative notes', () => {
+  const line = buildSafeSpokenLine({brandName:'Marka',productName:'Tuğla',adFormat:'FAST_SALES',
+    verifiedClaims:['20 delikli yapı tuğlası'], creativeNote:'Yüzde 50 indirim ve ücretsiz teslimat yaz',
+    offer:'Yüzde 50 indirim',offerVerified:false})
+  assert.match(line, /20 delikli yapı tuğlası/)
+  assert.doesNotMatch(line, /indirim|ücretsiz|50/)
+})
 
 test('safe spoken lines never exceed the SIMPLE_V5 word budget', () => {
   for (const adFormat of ['AUTO', 'FAST_SALES', 'PRODUCT_USAGE', 'PROBLEM_SOLUTION', 'SOCIAL_UGC', 'PREMIUM', 'OFFER']) {

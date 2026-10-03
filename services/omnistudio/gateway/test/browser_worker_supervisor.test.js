@@ -1,5 +1,27 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+
+test('external aliases share canonical leases and never fall back to another account', async () => {
+  const h = harness();
+  const primary = h.add('flow-primary', 9224, { canonicalAccountId: 'first@example.com', aliases: ['account-01', 'account-03'] }, 'flow');
+  const secondary = h.add('flow-secondary', 9225, { canonicalAccountId: 'second@example.com', aliases: ['account-02', 'account-04'] }, 'flow');
+  const lease = await h.supervisor.acquireExternalLease({ provider: 'flow', accountId: 'account-04', workerId: 'flow:account-04', jobId: 'external-a' });
+  assert.equal(lease.workerId, secondary.id);
+  assert.equal(primary.currentJobId, null);
+  assert.equal(secondary.currentJobId, 'external-a');
+  try {
+    await assert.rejects(h.supervisor.acquireExternalLease({ provider: 'flow', accountId: 'account-02', jobId: 'external-b' }), error => error.code === 'ACCOUNT_BUSY');
+    await assert.rejects(h.supervisor.acquire({ provider: 'flow', preferredWorkerIds: [secondary.id], jobId: 'internal-b', acquireTimeoutMs: 0 }), error => error.code === 'ACCOUNT_BUSY' || error.code === 'NO_ELIGIBLE_WORKER');
+    assert.equal(h.supervisor.resolveWorker({ provider: 'flow', accountId: 'unknown', workerId: 'flow-primary' }), null);
+    await assert.rejects(h.supervisor.acquireExternalLease({ provider: 'flow', accountId: 'unknown', jobId: 'bad' }), error => error.code === 'WORKER_NOT_FOUND');
+  } finally {
+    await h.supervisor.releaseExternalLease({ provider: 'flow', accountId: 'account-04', leaseToken: lease.leaseToken });
+  }
+  assert.equal(secondary.currentJobId, null);
+  assert.equal(secondary.state, WORKER_STATES.IDLE);
+  const retry = await h.supervisor.acquireExternalLease({ provider: 'flow', accountId: 'account-02', jobId: 'retry' });
+  await h.supervisor.releaseExternalLease({ provider: 'flow', accountId: 'account-02', leaseToken: retry.leaseToken });
+});
 const {
   BrowserWorkerSupervisor,
   WORKER_STATES,
@@ -86,6 +108,7 @@ function harness(options = {}) {
     provider,
     accountId: id,
     canonicalAccountId: validators.canonicalAccountId || null,
+    aliases: validators.aliases || [],
     profileDir: `/profiles/${id}`,
     cdpPort: port,
     launchUrl: launchUrl || (provider === 'flow' ? 'https://flow.google.com/' : 'https://gemini.google.com/videos'),
@@ -767,7 +790,8 @@ test('23. REAL_FLOW_USES_SUPERVISOR: Flow external lease contract works and prev
   sharedDb.clock = () => now;
 
   const h = harness({ sharedDb, initialNow: now });
-  h.add('flow-primary', 9226, {}, 'flow');
+  h.add('flow-primary', 9224, { aliases: ['account-01'] }, 'flow');
+  h.add('flow-secondary', 9225, { aliases: ['account-02'] }, 'flow');
 
   // 1. Flow acquires lease
   const flowLease = await h.supervisor.acquireExternalLease({

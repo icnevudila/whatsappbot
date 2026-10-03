@@ -30,9 +30,9 @@ export class SimpleV5SevereReviewer {
     // 1. Audio Language Check (Must be authentic Turkish, English speech strictly forbidden)
     if (input.audioReport && !input.audioReport.passed) {
       if (
-        input.audioReport.failureCode === 'ACTUAL_AUDIO_LANGUAGE_MISMATCH' ||
-        input.audioReport.failureCode === 'RAW_GENERATION_AUDIO_LANGUAGE_MISMATCH' ||
-        input.audioReport.detectedLanguage?.toLowerCase() === 'en'
+        Boolean(input.audioReport.transcript?.trim()) &&
+        (input.audioReport.failureCode === 'ACTUAL_AUDIO_LANGUAGE_MISMATCH' ||
+          input.audioReport.failureCode === 'RAW_GENERATION_AUDIO_LANGUAGE_MISMATCH')
       ) {
         severeCodes.push('RAW_GENERATION_AUDIO_LANGUAGE_MISMATCH')
         issues.push(
@@ -90,7 +90,7 @@ export class SimpleV5SevereReviewer {
       !input.videoReport ||
       input.videoReport.decision === 'NEEDS_REVIEW' ||
       !input.audioReport ||
-      (!input.audioReport.passed && input.audioReport.failureCode !== 'RAW_GENERATION_AUDIO_LANGUAGE_MISMATCH')
+      !input.audioReport.passed
     const decision: 'PASS' | 'NEEDS_REVIEW' | 'REGENERATE' = isSevere
       ? 'REGENERATE'
       : evidenceUnavailable

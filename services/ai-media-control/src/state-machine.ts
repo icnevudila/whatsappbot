@@ -92,30 +92,23 @@ export async function transitionJob(
     updates.lease_account_id = null
     updates.lease_worker_id = null
     updates.lease_timeout_at = null
-  } else if (toState === JobState.FAILED) {
+  } else if (toState === JobState.FAILED || toState === JobState.NEEDS_REVIEW) {
     updates.lease_account_id = null
     updates.lease_worker_id = null
     updates.lease_timeout_at = null
   }
 
-  let { error: updateError, count } = await supabase
+  const { error: updateError, count } = await supabase
     .from('ai_media_jobs')
     .update(updates, { count: 'exact' })
     .eq('id', jobId)
+    .eq('org_id', orgId)
     .eq('state', fromState)
-
-  if (!updateError && count === 0) {
-    // Fallback: update by id regardless of state drift to prevent stuck leases
-    const res = await supabase
-      .from('ai_media_jobs')
-      .update(updates)
-      .eq('id', jobId)
-    updateError = res.error
-  }
 
   if (updateError) {
     throw new Error(`DB update failed for job ${jobId}: ${updateError.message}`)
   }
+  if (count !== 1) throw new Error(`STATE_TRANSITION_CONFLICT: Expected one owned ${fromState} job, matched ${count ?? 'unknown'}`)
 
   // 3. Append audit event (append-only, never modified)
   const { error: eventError } = await supabase

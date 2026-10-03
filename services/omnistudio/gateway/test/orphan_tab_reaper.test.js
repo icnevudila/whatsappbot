@@ -92,17 +92,19 @@ test('OrphanTabReaper: Duplicate idle ChatGPT tabs older than grace period are r
   const registry = new TabRegistry();
   const now = Date.now();
   registry.bindWorkerCanonical('chatgpt-1', 'tab-canonical', 'https://chatgpt.com/');
+  registry.bindWorkerCanonical('chatgpt-2', 'tab-canonical-2', 'https://chatgpt.com/');
   registry.registerTab('tab-duplicate', { url: 'https://chatgpt.com/' });
 
   const reaper = new OrphanTabReaper({ registry, minAgeMs: 60000 });
   const targets = [
     { id: 'tab-canonical', type: 'page', url: 'https://chatgpt.com/' },
+    { id: 'tab-canonical-2', type: 'page', url: 'https://chatgpt.com/' },
     { id: 'tab-duplicate', type: 'page', url: 'https://chatgpt.com/' },
   ];
 
   // Evaluate after 70s (> grace period)
   const { keep, close } = reaper.classifyTargets(targets, { now: now + 70000 });
-  assert.equal(keep.length, 1);
+  assert.equal(keep.length, 2);
   assert.equal(keep[0].target.id, 'tab-canonical');
 
   assert.equal(close.length, 1);

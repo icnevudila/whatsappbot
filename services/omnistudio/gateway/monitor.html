@@ -166,6 +166,24 @@
     </div>
   </div>
 
+  <!-- Mesajify Firma & Sohbet Masası -->
+  <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 8px; padding: 14px 16px; margin-bottom: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--card-border); padding-bottom: 8px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 16px;">📁</span>
+        <span style="font-size: 14px; font-weight: 700; color: #60a5fa;">Mesajify Projesi - Firma & Sohbet Masası</span>
+        <span class="badge badge-online" id="chatsSummaryBadge">0 Firma / 0 Kanal</span>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn" style="background: rgba(59, 130, 246, 0.2); color: #93c5fd; border-color: #3b82f6;" onclick="seedAllChats()">⚡ Tüm Firmaları Önden Hazırla</button>
+        <button class="btn" onclick="fetchCompanyChats()">Yenile</button>
+      </div>
+    </div>
+    <div id="companyChatsTable" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px;">
+      <div style="color: var(--text-muted); font-size: 12px;">Sohbetler yükleniyor...</div>
+    </div>
+  </div>
+
   <div class="layout-grid">
     <div class="panel">
       <div class="panel-header">
@@ -463,9 +481,59 @@
       jobs.forEach(j => {
         if (j.status === 'processing') hasActive = true;
       });
-      if (hasActive) renderPipeline();
-    }, 1000);
+    async function fetchCompanyChats() {
+      try {
+        const res = await fetch('/v1/company-chats');
+        const data = await res.json();
+        const container = document.getElementById('companyChatsTable');
+        const summaryBadge = document.getElementById('chatsSummaryBadge');
+        if (!data.companies || Object.keys(data.companies).length === 0) {
+          container.innerHTML = '<div style="color: #64748b; font-size: 12px;">Henüz kayıtlı firma sohbeti bulunmuyor.</div>';
+          return;
+        }
+        summaryBadge.innerText = `${data.summary.total_companies} Firma / ${data.summary.total_chats} Kanal`;
+        let html = '';
+        for (const [comp, channels] of Object.entries(data.companies)) {
+          html += `
+            <div style="background: #172033; border: 1px solid #28354f; border-radius: 6px; padding: 10px;">
+              <div style="font-weight: 700; color: #93c5fd; font-size: 13px; margin-bottom: 6px; display: flex; justify-content: space-between;">
+                <span>🏢 ${comp}</span>
+                <span style="font-size: 10px; color: #64748b;">${Object.keys(channels).length} kanal</span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 5px;">
+          `;
+          for (const [ch, info] of Object.entries(channels)) {
+            const chIcon = ch === 'media' ? '🎨 Medya' : (ch === 'video' ? '🎬 Video' : '💬 Mesajlar');
+            html += `
+              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; background: rgba(0,0,0,0.25); padding: 4px 8px; border-radius: 4px;">
+                <span style="color: #cbd5e1;">${chIcon}</span>
+                <a href="${info.chatUrl}" target="_blank" style="color: #38bdf8; text-decoration: none; font-weight: 500;" title="${info.title}">ChatGPT'de Aç ↗</a>
+              </div>
+            `;
+          }
+          html += `</div></div>`;
+        }
+        container.innerHTML = html;
+      } catch (err) {
+        console.warn('fetchCompanyChats error:', err);
+      }
+    }
 
+    async function seedAllChats() {
+      if (!confirm('Tüm kayıtlı firmalar (Ayvazoğlu, Bofe, Veri Burada vb.) için eksik tüm kanallar (Medya, Mesajlar, Video) Mesajify projesinde önden açılıp hazır edilsin mi?')) return;
+      try {
+        addLog('SISTEM', 'Firma sohbetleri önden hazırlama (seed) başlatıldı...');
+        const res = await fetch('/v1/seed-chats', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+        const data = await res.json();
+        alert(`Ön hazırlık kuyruğa alındı: ${data.jobs?.length || 0} işlem kontrol edildi.`);
+        setTimeout(fetchCompanyChats, 3000);
+      } catch (err) {
+        alert('Hata: ' + err.message);
+      }
+    }
+
+    fetchCompanyChats();
+    setInterval(fetchCompanyChats, 20000);
     connectSse();
   </script>
 </body>

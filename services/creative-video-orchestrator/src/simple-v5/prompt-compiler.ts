@@ -91,7 +91,7 @@ export function buildUniversalDiegeticBranding(brandName: string, location: stri
   }
 
   // 2. Strict character-level anti-mutation directive
-  const brandingDirective = `[CANONICAL BRAND IDENTITY]: ZERO FLOATING LOGOS IN SKY OR AIR. No synthetic floating text overlays, no floating boxes or watermark badges. Apply canonical brand identity diegetically in the physical scene: authentic corporate emblem from @BrandLogo matching exact brand "${cleanBrand}". When visible ${surfaces}, render strictly as a neat, compact, centered corporate badge (preserve natural 1:1 or 2:1 aspect ratio, strictly avoiding horizontal letter stretching across large backgrounds or vehicle sides). Exactly spell "${cleanBrand}" letter-for-letter with strictly single letters, zero repeated or doubled consonants.`
+  const brandingDirective = `[CANONICAL BRAND IDENTITY]: Preserve only branding already physically visible on @HeroProduct, without changing its lettering, shape or placement. Do not stamp, print, engrave or invent new branding on the product, packaging, vehicles, clothing or environment. @BrandLogo is reserved for deterministic post-production for "${cleanBrand}"; never generate it in the raw scene. ZERO FLOATING LOGOS, ZERO synthetic text overlays or watermark badges.`
 
   // 3. Dynamic negative constraints protecting against character stutter / doubling
   const dynamicNegatives: string[] = [
@@ -133,7 +133,21 @@ export class SimpleV5PromptCompiler {
       },
     })
 
-    const fidelityLock = formatFidelityLockSection(fidelityReport.contract)
+    // Fidelity owns product identity/geometry, not a second scene script. The
+    // resolved sector contract contains example actions/environments which are
+    // not selected production decisions and must never be emitted as orders.
+    const sceneSpecificRule = /mortar|worker|mason(?:ry craftsmanship| wearing)|pallet|building bond|natural building application|active real-world application|outdoor nature immersion|authentic foley|warehouse|depot floor|storage shelves|ergonomic usage/i
+    const fidelityLock = formatFidelityLockSection({
+      ...fidelityReport.contract,
+      must_preserve: fidelityReport.contract.must_preserve.filter(rule => !sceneSpecificRule.test(rule)),
+      surface_rules: [
+        ...fidelityReport.contract.surface_rules.filter(rule => !sceneSpecificRule.test(rule)),
+        'Preserve the reference product orientation and every visible structural detail; obey gravity on the selected support surface',
+      ],
+      forbidden_mutations: fidelityReport.contract.forbidden_mutations.filter(rule => !sceneSpecificRule.test(rule)),
+      safe_camera_rules: [brief.cameraMotion, 'Do not expose unsupported unseen geometry or change the selected location'],
+      allowed_actions: [brief.primaryAction],
+    })
     const { brandingDirective, dynamicNegatives } = buildUniversalDiegeticBranding(brief.brandName, brief.location)
 
     const sections: string[] = [
@@ -144,7 +158,7 @@ export class SimpleV5PromptCompiler {
       `[HERO PRODUCT]: Preserve ${brief.heroProductHandle} geometry, material texture, and colors exactly as shown in authoritative reference assets.`,
       brandingDirective,
       `[ONE LOCATION]: ${brief.location}, ${brief.lighting}.`,
-      `[CONTINUOUS CINEMATIC TAKE]: A single uninterrupted ${brief.durationSeconds.toFixed(1)}-second commercial take with seamless 35mm fluid camera movement. ${shotPlan.shot1_hook.description} ${shotPlan.shot2_proof.description} ${shotPlan.shot3_close.description} NO CUTS, NO ABRUPT HARD JUMPS, SINGLE UNBROKEN CAMERA FLOW.`,
+      `[CONTINUOUS CINEMATIC TAKE]: A single uninterrupted ${brief.durationSeconds.toFixed(1)}-second commercial take. The three beats are phases of the SAME take, not separate scenes. Use only this camera movement: ${brief.cameraMotion}. ${shotPlan.shot1_hook.description} ${shotPlan.shot2_proof.description} ${shotPlan.shot3_close.description} NO CUTS, NO ABRUPT HARD JUMPS, NO LOCATION OR SUPPORT-SURFACE CHANGE.`,
       fidelityLock,
       `[CAMERA & PHYSICS]: ${brief.cameraMotion}. Natural gravity, authentic material weight and realistic movement.`,
       '[AUDIO]: Spoken language: Turkish (tr-TR).',
@@ -152,7 +166,7 @@ export class SimpleV5PromptCompiler {
       'Speak exactly this dialogue once, naturally in Turkish.',
       'No English narration.',
       'No translation.',
-      'Natural ambient realistic environmental foley. SILENT ON-SET CINEMATIC TAKE, ZERO ON-SCREEN SUBTITLES, ZERO ON-SCREEN CAPTIONS.',
+      'Subtle natural environmental ambience only. No ambient conversations or additional speech; the exact approved Turkish voiceover above is the only speech. ZERO ON-SCREEN SUBTITLES, ZERO ON-SCREEN CAPTIONS.',
       `[RAW TEXT POLICY]: Clean commercial footage, no on-screen text, no synthetic titles.`,
     ].filter(Boolean)
 
@@ -162,8 +176,6 @@ export class SimpleV5PromptCompiler {
     const domainNegs = brief.domainNegatives || []
     const locLower = (brief.location || '').toLowerCase()
     const isOutdoorOrNatural =
-      brief.operationalDomain === 'AGRICULTURE_NATURE' ||
-      brief.operationalDomain === 'CONSTRUCTION_STRUCTURAL' ||
       locLower.includes('bahçe') ||
       locLower.includes('tarla') ||
       locLower.includes('tarım') ||

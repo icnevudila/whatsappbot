@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button, Field, Input, Notice, Select } from '@/components/ui'
 
 const STYLES = [
@@ -55,6 +55,39 @@ export function AiImage({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [busyTick, setBusyTick] = useState(0)
+  const pendingRequest = useRef<{ requestId: string; requestScope: string; brief: string; style: string; brandKitId: string | null; brand?: string } | null>(null)
+  const [hasPendingRequest, setHasPendingRequest] = useState(false)
+  const [requestScope, setRequestScope] = useState<string | null>(null)
+  const [canStartNew, setCanStartNew] = useState(false)
+  const requestStorageKey = requestScope ? `mesajify:quick-image:${requestScope}` : null
+  useEffect(() => {
+    let mounted = true
+    fetch('/api/gorsel-uret', { cache: 'no-store' }).then(async response => {
+      const value = await response.json()
+      if (!response.ok || typeof value.requestScope !== 'string') throw new Error('Üretim oturumu doğrulanamadı.')
+      if (mounted) setRequestScope(value.requestScope)
+    }).catch(() => { if (mounted) setError('Üretim oturumu doğrulanamadı. Sayfayı yenileyin; üretim başlatılmadı.') })
+    return () => { mounted = false }
+  }, [])
+  useEffect(() => {
+    if (!requestStorageKey) return
+    pendingRequest.current = null
+    setHasPendingRequest(false)
+    try {
+      const stored = sessionStorage.getItem(requestStorageKey)
+      if (stored) {
+        const value = JSON.parse(stored)
+        if (typeof value.requestId === 'string' && typeof value.brief === 'string' && value.requestScope === requestScope) {
+          pendingRequest.current = value
+          setHasPendingRequest(true)
+          setBrief(value.brief)
+          setStyle(typeof value.style === 'string' ? value.style : 'duyuru')
+          setBrandKitId(typeof value.brandKitId === 'string' ? value.brandKitId : '')
+        }
+      }
+    } catch { /* Keep the same identity in memory if session storage is unavailable. */ }
+    setCanStartNew(false)
+  }, [requestStorageKey])
 
   useEffect(() => {
     if (!busy) { setBusyTick(0); return }
@@ -65,26 +98,56 @@ export function AiImage({
   const selectedKit = brandKits.find((kit) => kit.id === brandKitId)
 
   const generate = async () => {
+    if (!requestStorageKey || !requestScope) return
+    setCanStartNew(false)
     setBusy(true)
     setError(null)
 
     try {
-      const response = await fetch('/api/gorsel-uret', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          brief,
-          style,
-          brandKitId: brandKitId || null,
-          brand: brandKitId ? undefined : brand,
-        }),
-      })
+      // Org/account switching can preserve this client component. Verify its
+      // scope before reusing a locally restored production identity.
+      const scopeResponse = await fetch('/api/gorsel-uret', { cache: 'no-store' })
+      const scope = await scopeResponse.json()
+      if (!scopeResponse.ok || typeof scope.requestScope !== 'string') throw new Error('Üretim oturumu doğrulanamadı.')
+      if (scope.requestScope !== requestScope) {
+        setRequestScope(scope.requestScope)
+        return
+      }
+      if (!pendingRequest.current) {
+        pendingRequest.current = { requestId: crypto.randomUUID(), requestScope, brief, style,
+          brandKitId: brandKitId || null, brand: brandKitId ? undefined : brand }
+        setHasPendingRequest(true)
+        try { sessionStorage.setItem(requestStorageKey, JSON.stringify(pendingRequest.current)) } catch { /* Identity is retained in memory. */ }
+      }
+      const frozenRequest = pendingRequest.current
+      const deadline = Date.now() + 10 * 60_000
+      while (Date.now() < deadline) {
+        const response = await fetch('/api/gorsel-uret', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(frozenRequest),
+          signal: AbortSignal.timeout(Math.min(180_000, deadline - Date.now())),
+        })
 
-      const json = (await response.json()) as { url?: string; error?: string }
-      if (!response.ok) throw new Error(json.error ?? `Hata ${response.status}`)
-      if (!json.url) throw new Error('Görsel URL dönmedi.')
+        const json = (await response.json()) as { url?: string; error?: string; pending?: boolean; creativeId?: string; retryAfterSeconds?: number; canRetryNew?: boolean }
+        if (!response.ok) {
+          setCanStartNew(json.canRetryNew === true)
+          throw new Error(json.error ?? `Hata ${response.status}`)
+        }
+        if (response.status === 202 && json.pending && json.creativeId === frozenRequest.requestId) {
+          await new Promise(resolve => setTimeout(resolve, Math.max(3, Math.min(30, json.retryAfterSeconds || 5)) * 1000))
+          continue
+        }
+        if (!json.url) throw new Error('Görsel URL dönmedi.')
 
-      setPreview(json.url)
+        setPreview(json.url)
+        pendingRequest.current = null
+        setHasPendingRequest(false)
+        setCanStartNew(false)
+        try { sessionStorage.removeItem(requestStorageKey) } catch { /* Never automatically start another production. */ }
+        return
+      }
+      throw new Error('Sonuç takibi beklenenden uzun sürdü. Mevcut işi kontrol edin; ikinci üretim başlatılmadı.')
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Görsel üretilemedi.')
     } finally {
@@ -137,6 +200,7 @@ export function AiImage({
         >
           <Select
             value={brandKitId}
+            disabled={busy || hasPendingRequest}
             onChange={(event) => setBrandKitId(event.target.value)}
           >
             {brandKits.map((kit) => (
@@ -160,6 +224,7 @@ export function AiImage({
       >
         <Input
           value={brief}
+          disabled={busy || hasPendingRequest}
           onChange={(event) => setBrief(event.target.value)}
           placeholder="Kış montu, %30 indirim, sıcak mağaza vitrini"
         />
@@ -168,7 +233,7 @@ export function AiImage({
       <div className="flex flex-wrap items-end gap-3">
         <div className="min-w-[140px]">
           <Field label="Stil">
-            <Select value={style} onChange={(event) => setStyle(event.target.value)}>
+            <Select value={style} disabled={busy || hasPendingRequest} onChange={(event) => setStyle(event.target.value)}>
               {STYLES.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -181,9 +246,9 @@ export function AiImage({
         <Button
           type="button"
           onClick={() => void generate()}
-          disabled={busy || brief.trim().length < 8}
+          disabled={busy || !requestScope || brief.trim().length < 8}
         >
-          {busy ? 'Üretiliyor…' : preview ? 'Tekrar üret' : 'Üret'}
+          {busy ? 'Mevcut iş takip ediliyor…' : hasPendingRequest ? 'Mevcut işi kontrol et' : preview ? 'Tekrar üret' : 'Üret'}
         </Button>
       </div>
 
@@ -194,6 +259,15 @@ export function AiImage({
       ) : null}
 
       {error ? <Notice tone="danger">{error}</Notice> : null}
+      {canStartNew && !busy ? (
+        <Button type="button" onClick={() => {
+          pendingRequest.current = null
+          setHasPendingRequest(false)
+          setCanStartNew(false)
+          setError(null)
+          if (requestStorageKey) { try { sessionStorage.removeItem(requestStorageKey) } catch { /* Explicit reset only after server proof. */ } }
+        }}>Yeni bir üretim hazırla</Button>
+      ) : null}
 
       {preview ? (
         <div className="space-y-2">
@@ -217,12 +291,12 @@ export function AiImage({
               Bunu kullan
             </Button>
             <Button type="button" onClick={() => void generate()} disabled={busy}>
-              Başka bir tane
+              {hasPendingRequest ? 'Mevcut işi kontrol et' : 'Başka bir tane'}
             </Button>
           </div>
 
           <p className="text-[11.5px] leading-relaxed text-ink-faint">
-            Üretim 10–40 sn sürebilir. OpenAI kotası biterse diğer sağlayıcılar denenir.
+            Süre sağlayıcı ve kuyruğa göre değişir. Bağlantı kesilirse aynı iş takip edilir; belirsiz sonuç için ikinci üretim başlatılmaz.
           </p>
         </div>
       ) : null}

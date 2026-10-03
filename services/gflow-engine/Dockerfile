@@ -38,8 +38,10 @@ RUN git clone --depth 1 --branch v0.79.1 \
     https://github.com/ffroliva/gflow-cli.git /app/upstream_gflow/gflow-cli \
     && pip install --no-cache-dir -e /app/upstream_gflow/gflow-cli
 
-# Copy central launch configuration
+# Copy central launch configuration and verify build-time import
 COPY services/gflow-engine/sitecustomize.py /usr/local/lib/python3.11/site-packages/sitecustomize.py
+COPY services/gflow-engine/sitecustomize.py /app/sitecustomize.py
+RUN python3 -c "import sitecustomize; print('BUILD VERIFIED: sitecustomize loaded patch version:', sitecustomize.MESAJIFY_GFLOW_PATCH_VERSION)"
 
 # Copy engine source
 COPY services/gflow-engine/server.py /app/server.py

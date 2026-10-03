@@ -166,7 +166,7 @@ async function reviewOnce(
   })
   const { context, plan } = buildReviewInputs(job, snapshot, assets, brief, shotPlan, productionPlan)
   const videoReport = await new ChatGPTVideoReviewer().reviewSampledVideo(frames, plan, context, attemptNumber)
-  return SimpleV5SevereReviewer.evaluateSevereErrorsOnly({ audioReport, videoReport, sampledFrames: frames.map(frame => frame.frame_path) })
+  return { ...SimpleV5SevereReviewer.evaluateSevereErrorsOnly({ audioReport, videoReport, sampledFrames: frames.map(frame => frame.frame_path) }), audio_report: audioReport }
 }
 
 export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions): Promise<void> {
@@ -361,15 +361,6 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     if (!logoCheck.passed || !logoCheck.logoPath || !logoCheck.logoSha256) {
       throw new Error(`CANONICAL_LOGO_GATE_FAIL: ${logoCheck.error || 'canonical logo unavailable'}`)
     }
-    logoPresentation = LogoPresentationGate.evaluateLogoPresentation({
-      logoFilePath: logoCheck.logoPath,
-      videoWidth:   rawProbe.width,
-      videoHeight:  rawProbe.height,
-      overlayWidthPx: 160,
-      overlayMarginX: 32,
-      overlayMarginY: 32,
-    })
-    presentationNeedsReview = !logoPresentation.passed
   }
 
   // Words are distributed evenly across subtitle window (strict; never bleeds into outro).
@@ -457,7 +448,15 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     },
     finishedPath
   )
-
+  if (outroEnabled) {
+    const preparedLogoPath = finishedPath.replace(/\.mp4$/i, '_outro_logo.png')
+    logoPresentation = { ...LogoPresentationGate.evaluateLogoPresentation({
+      logoFilePath: preparedLogoPath, videoWidth: rawProbe.width, videoHeight: rawProbe.height,
+      presentationMode: 'outro',
+    }), canonical_source_sha256: logoCheck.logoSha256,
+      prepared_logo_sha256: existsSync(preparedLogoPath) ? sha256File(preparedLogoPath) : null }
+    presentationNeedsReview = !logoPresentation.passed
+  }
 
   await transitionJob(supabase, job.id, job.org_id, JobState.MEDIA_DOWNLOADED, JobState.FFPROBE_INSPECTING, 'Inspecting final video streams with ffprobe', {}, attemptId)
   await transitionJob(supabase, job.id, job.org_id, JobState.FFPROBE_INSPECTING, JobState.SHA256_VERIFYING, 'Computing final output SHA-256', {}, attemptId)
@@ -509,7 +508,7 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
   ws.writeResult({
     job_id: job.id,
     attempt_id: attemptId,
-    status: 'COMPLETED',
+    status: approved ? 'COMPLETED' : 'NEEDS_REVIEW',
     selected_provider: generated.selectedProvider,
     raw_mp4_path: ws.rawMp4Path(),
     final_mp4_path: ws.finalMp4Path(),
@@ -630,7 +629,7 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     }
   }
 
-  const finalState = JobState.COMPLETED
+  const finalState = approved ? JobState.COMPLETED : JobState.NEEDS_REVIEW
   await transitionJob(
     supabase,
     job.id,

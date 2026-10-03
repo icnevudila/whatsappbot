@@ -9,6 +9,7 @@ import {
 } from './wizard-types'
 import { buildSmartBusinessVideoIdeas } from '@/lib/creative/video-scenario'
 import { getSafeMediaUrl } from '@/lib/media-url'
+import { IMAGE_SOURCE_FORMATS, isReadyImageSource } from '@/lib/creative/image-source'
 
 export type {
   BrandKitCard,
@@ -67,9 +68,10 @@ export async function loadCreativeWizardData(): Promise<WizardBootstrap> {
         .order('created_at', { ascending: false }),
       supabase
         .from('creatives')
-        .select('id, title, public_url, status, created_at')
+        .select('id, title, public_url, storage_path, format, status, created_at')
         .eq('org_id', org.id)
         .eq('status', 'ready')
+        .in('format', IMAGE_SOURCE_FORMATS)
         .not('public_url', 'is', null)
         .order('created_at', { ascending: false })
         .limit(40),
@@ -187,7 +189,8 @@ export async function loadCreativeWizardData(): Promise<WizardBootstrap> {
         label: row.label,
         url: row.url,
       })),
-      library: (libraryRes.data ?? []).map((row) => ({
+      library: (libraryRes.data ?? []).filter(isReadyImageSource).map((row) => ({
+        format: row.format,
         id: row.id,
         title: row.title,
         publicUrl: getSafeMediaUrl(row.public_url) ?? row.public_url,

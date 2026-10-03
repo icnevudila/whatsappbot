@@ -17,8 +17,13 @@ const cacheMetrics = { hit: 0, miss: 0, diskReadMs: 0, diskWriteMs: 0 };
  */
 function getExpectedChatTitle(customer, channel) {
   const norm = (customer || '').trim();
-  if (channel === 'canary' || norm === 'Sistem' || norm === 'Sistem Nöbetçisi' || norm.toLowerCase().includes('canary')) {
-    return '[Sistem] Canary Watchdog';
+  const isSystemCanary = (norm === 'Sistem' || norm === 'Sistem Nöbetçisi') && channel === 'canary';
+  if (isSystemCanary) {
+    return '[Canary] Sistem Nöbetçisi';
+  }
+  if (norm.startsWith('API-') || norm === 'API-Client' || String(channel).startsWith('api_')) {
+    const apiTarget = norm.replace(/^API-(?:Client)?/i, '').trim() || 'İstemci';
+    return `[API] ${apiTarget}`;
   }
   const comp = norm || 'Genel';
   if (channel === 'media') return `[Mesajify] ${comp} - Medya`;
@@ -27,12 +32,14 @@ function getExpectedChatTitle(customer, channel) {
   return `[Mesajify] ${comp} - ${channel}`;
 }
 
+
 function normalizeIdentity(customerOrIdentity, channel) {
   const identity = typeof customerOrIdentity === 'object' && customerOrIdentity !== null
     ? customerOrIdentity
     : { customer: customerOrIdentity };
   const norm = (identity.customer || '').trim();
-  if (channel === 'canary' || norm === 'Sistem' || norm === 'Sistem Nöbetçisi' || norm.toLowerCase().includes('canary')) {
+  const isSystemCanary = (norm === 'Sistem' || norm === 'Sistem Nöbetçisi') && channel === 'canary';
+  if (isSystemCanary) {
     return { companyKey: 'Sistem', channelKey: 'canary', displayCustomer: 'Sistem' };
   }
   const tenantId = identity.tenantId || identity.tenant_id || identity.orgId || identity.org_id;
@@ -158,6 +165,18 @@ function setCompanyChat(customerOrIdentity, channel, chatUrl, customTitle = null
   const { companyKey, channelKey, displayCustomer } = normalizeIdentity(customerOrIdentity, channel);
   const title = customTitle || getExpectedChatTitle(displayCustomer, channelKey);
   const data = loadAllCompanyChats();
+
+  // Cross-tenant collision guard: Ensure chatUrl does not belong to another company
+  for (const [otherComp, channels] of Object.entries(data)) {
+    if (otherComp !== companyKey && typeof channels === 'object') {
+      for (const [ch, entry] of Object.entries(channels)) {
+        if (entry && entry.chatUrl === chatUrl) {
+          console.warn(`[ChatManager] 🛑 GÜVENLİK ENGELİ: ${chatUrl} zaten '${otherComp}' [${ch}] tarafından kullanılıyor! '${companyKey}' için atanması reddedildi.`);
+          return;
+        }
+      }
+    }
+  }
 
   if (!data[companyKey] || typeof data[companyKey] !== 'object') {
     data[companyKey] = {};

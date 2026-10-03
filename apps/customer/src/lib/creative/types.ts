@@ -123,6 +123,18 @@ export type CreativeSnapshot = {
 }
 
 export type CreativePayload = CreativeSnapshot & {
+  generationRevision?: number
+  videoSubmitIntent?: import('./video-submit-job').VideoSubmitIntent | null
+  videoSubmissionUncertain?: boolean
+  quickSendPrompt?: string
+  quickSendIdentity?: string
+  imageJob?: { id: string; gatewayUrl: string; queuedAt: string } | null
+  imageAttempt?: string
+  imageSubmissionUncertain?: boolean
+  imageSubmitIntent?: { requestId: string; gatewayUrl: string; startedAt: string } | null
+  imageDirectIntent?: { requestId: string; provider: string; storagePath: string; startedAt: string } | null
+  imageReconciliationRequired?: boolean
+  imageTerminalFailure?: { kind: 'PROVIDER_FAILED'; jobId: string; gatewayUrl: string }
   title?: string
   requestKey?: string
   generatedPrompt?: string | null

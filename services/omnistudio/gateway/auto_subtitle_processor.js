@@ -49,6 +49,25 @@ function extractOrGenerateScript(options = {}) {
     return quoteMatch[1].trim();
   }
 
+  // 2.5. Bilinen ana markalar için deterministik kurumsal seslendirme
+  const lowerBrand = brand.toLowerCase();
+  if (lowerBrand.includes('bofe')) {
+    const act1 = `Bofe ile bahçenizde ve tarlanızda maksimum verim.`;
+    const act2 = `Akülü sırt pompası ile kesintisiz ve zahmetsiz ilaçlama.`;
+    const act3 = `Hemen sipariş verin.`;
+    return `${act1} ${act2} ${act3}`;
+  } else if (lowerBrand.includes('ayvaz')) {
+    const act1 = `Ayvazoğlu ile projelerinize sağlam temel ve üstün dayanıklılık.`;
+    const act2 = `Fabrikadan doğrudan şantiyenize hızlı teslimat.`;
+    const act3 = `Bizimle iletişime geçin.`;
+    return `${act1} ${act2} ${act3}`;
+  } else if (lowerBrand.includes('veri')) {
+    const act1 = `Veri Burada ile yeni kurulan şirketleri ilk siz keşfedin.`;
+    const act2 = `Potansiyel müşterilerinize ilk siz ulaşın, satışlarınızı büyütün.`;
+    const act3 = `Hemen deneyin.`;
+    return `${act1} ${act2} ${act3}`;
+  }
+
   // 3. Hafıza Bankasından Sektöre Özel 3 Perdeli Altın Replik Üret
   const sector = detectSector(brand, product, allText);
   let act1 = `${brand} ile kaliteyi ve güveni keşfedin.`;

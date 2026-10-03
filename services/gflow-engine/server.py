@@ -32,8 +32,29 @@ logger = logging.getLogger("gflow-engine.server")
 import json
 import urllib.request
 import urllib.error
+from urllib.parse import urlsplit
 
 SUPERVISOR_URL = os.environ.get("SUPERVISOR_URL") or os.environ.get("OMNISTUDIO_GATEWAY_URL") or "http://omnistudio-gateway:3456"
+
+class _NoWorkerRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise urllib.error.HTTPError(req.full_url, code, 'Worker control redirects forbidden', headers, fp)
+
+def _worker_control_request(url, data, timeout):
+    configured = urlsplit(SUPERVISOR_URL)
+    target = urlsplit(url)
+    if (configured.scheme not in {'http', 'https'} or not configured.hostname or configured.username or configured.password
+            or (target.scheme, target.hostname, target.port) != (configured.scheme, configured.hostname, configured.port)
+            or target.username or target.password):
+        raise FlowExecutionError('WORKER_CONTROL_ORIGIN_INVALID', 'Worker control must use the configured supervisor origin')
+    token = os.environ.get('WORKER_CONTROL_TOKEN', '')
+    if os.environ.get('NODE_ENV') == 'production' and not token:
+        raise FlowExecutionError('WORKER_CONTROL_TOKEN_REQUIRED', 'Production worker control token is not configured')
+    headers = {'Content-Type': 'application/json'}
+    if token:
+        headers['X-Worker-Token'] = token
+    req = urllib.request.Request(url, data=data, headers=headers, method='POST')
+    return urllib.request.build_opener(_NoWorkerRedirect()).open(req, timeout=timeout)
 
 # Per-account locks: each Flow account gets concurrency=1,
 # but different accounts can generate simultaneously.
@@ -55,18 +76,19 @@ def _request_supervisor_lease(provider: str, account_id: str, job_id: str, worke
         "workerId": worker_id or f"{provider}:{account_id}",
         "ttlSeconds": ttl_seconds,
     }).encode("utf-8")
-    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
     try:
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with _worker_control_request(url, data, 5) as resp:
             body = json.loads(resp.read().decode("utf-8"))
             return body.get("leaseToken") or body.get("lease_token")
     except urllib.error.HTTPError as e:
         if e.code == 409:
             raise FlowExecutionError("ACCOUNT_BUSY", f"Account {account_id} is leased by another host/supervisor.")
         logger.warning(f"Supervisor lease acquire HTTP {e.code}: {e.reason}")
-    except Exception as e:
-        logger.warning(f"Could not reach supervisor at {url}: {e}")
-    return None
+    except FlowExecutionError:
+        raise
+    except Exception:
+        logger.warning("Could not reach supervisor worker control")
+    raise FlowExecutionError("SUPERVISOR_UNREACHABLE", "A verified account lease could not be acquired; generation was not started.")
 
 def _ensure_supervisor_worker_ready(provider: str, account_id: str) -> Dict[str, Any]:
     url = f"{SUPERVISOR_URL.rstrip('/')}/v1/browser-workers/ensure-ready"
@@ -75,9 +97,8 @@ def _ensure_supervisor_worker_ready(provider: str, account_id: str) -> Dict[str,
         "accountId": account_id,
         "workerId": f"{provider}:{account_id}",
     }).encode("utf-8")
-    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
     try:
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with _worker_control_request(url, data, 100) as resp:
             body = json.loads(resp.read().decode("utf-8"))
             return body if isinstance(body, dict) else {"ok": resp.status == 200}
     except urllib.error.HTTPError as e:
@@ -91,9 +112,10 @@ def _ensure_supervisor_worker_ready(provider: str, account_id: str) -> Dict[str,
             "message": body.get("error", {}).get("message") if isinstance(body.get("error"), dict) else body.get("message"),
             "status": e.code,
         }
-    except Exception as e:
-        logger.debug(f"Supervisor ensure-ready check warning: {e}")
-        return {"ok": False, "error": {"code": "SUPERVISOR_UNREACHABLE", "message": str(e)}}
+    except FlowExecutionError:
+        raise
+    except Exception:
+        return {"ok": False, "error": {"code": "SUPERVISOR_UNREACHABLE", "message": "Supervisor worker control unavailable"}}
 
 def _release_supervisor_lease(provider: str, account_id: str, lease_token: Optional[str], outcome: Optional[Dict[str, Any]] = None):
     if not lease_token:
@@ -105,12 +127,11 @@ def _release_supervisor_lease(provider: str, account_id: str, lease_token: Optio
         "leaseToken": lease_token,
         "outcome": outcome or {},
     }).encode("utf-8")
-    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
     try:
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with _worker_control_request(url, data, 5) as resp:
             pass
     except Exception as e:
-        logger.warning(f"Failed to release supervisor lease {lease_token}: {e}")
+        logger.warning("Failed to release supervisor lease; reconciliation required")
 
 start_time = time.time()
 
@@ -187,11 +208,18 @@ class ErrorResponse(BaseModel):
 
 # --- Endpoints ---
 
+try:
+    import sitecustomize
+    PATCH_VERSION = getattr(sitecustomize, "MESAJIFY_GFLOW_PATCH_VERSION", "none")
+except Exception:
+    PATCH_VERSION = "none"
+
 @app.get("/health")
 async def health():
     return {
         "status": "ok",
         "service": "gflow-engine",
+        "patch_version": PATCH_VERSION,
         "uptime_seconds": round(time.time() - start_time, 1),
         "profiles_dir": str(PROFILES_BASE),
         "outputs_dir": str(OUTPUTS_BASE),
@@ -225,24 +253,25 @@ async def execute_job(req: GenerateRequest):
             except FlowExecutionError as e:
                 raise HTTPException(status_code=429, detail=f"Account {req.account_id} lease failed: {e.message}")
 
-        # 2. Ensure Flow browser worker READY
-        readiness = await loop.run_in_executor(
-            None, _ensure_supervisor_worker_ready, "flow", req.account_id
-        )
-        if not readiness or readiness.get("ok") is not True:
-            detail = readiness.get("error") if isinstance(readiness, dict) else None
-            code = detail.get("code") if isinstance(detail, dict) else None
-            message = (
-                (detail.get("message") if isinstance(detail, dict) else None)
-                or (readiness.get("message") if isinstance(readiness, dict) else None)
-                or "Flow worker is not ready"
-            )
-            normalized_code = code or "FLOW_WORKER_NOT_READY"
-            if "AUTH" in normalized_code.upper() or "ACCOUNT" in normalized_code.upper():
-                normalized_code = "FLOW_AUTH_REQUIRED"
-            raise FlowExecutionError(normalized_code, message or "Flow worker is not ready")
-
         try:
+            # Readiness belongs inside the lease's try/finally: startup/auth errors
+            # must release the account too, not just generation errors.
+            readiness = await loop.run_in_executor(
+                None, _ensure_supervisor_worker_ready, "flow", req.account_id
+            )
+            if not readiness or readiness.get("ok") is not True:
+                detail = readiness.get("error") if isinstance(readiness, dict) else None
+                code = detail.get("code") if isinstance(detail, dict) else None
+                message = (
+                    (detail.get("message") if isinstance(detail, dict) else None)
+                    or (readiness.get("message") if isinstance(readiness, dict) else None)
+                    or "Flow worker is not ready"
+                )
+                normalized_code = code or "FLOW_WORKER_NOT_READY"
+                if "AUTH" in normalized_code.upper() or "ACCOUNT" in normalized_code.upper():
+                    normalized_code = "FLOW_AUTH_REQUIRED"
+                raise FlowExecutionError(normalized_code, message)
+
             payload = {
                 "job_id": req.job_id,
                 "attempt_id": req.attempt_id,

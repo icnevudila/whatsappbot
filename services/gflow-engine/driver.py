@@ -19,9 +19,13 @@ import subprocess
 import hashlib
 import asyncio
 import re
+from contextlib import closing
+import math
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from redactor import redact_har, redact_string
+from process_bounds import OwnedFileLock, bounded_lines
+from invocation_identity import InvocationIdentity, IdentityConflict, IdentityHeld
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("gflow-engine.driver")
@@ -37,6 +41,20 @@ PROFILES_BASE.mkdir(parents=True, exist_ok=True)
 os.environ.setdefault("GFLOW_CLI_HOME", str(PROFILES_BASE))
 
 _SAFE_ACCOUNT_ID = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$")
+
+def compile_reference_prompt(prompt: str, assets: List[Dict[str, Any]]) -> str:
+    """Reference numbers follow actual CLI upload order, never a presumed order."""
+    indices = {role: next((i + 1 for i, a in enumerate(assets) if a.get('role') == role), None)
+               for role in ('product', 'logo', 'reference')}
+    handles = {'@HeroProduct': ('Hero Product', indices['product']),
+               '@BrandLogo': ('Brand Logo', indices['logo']),
+               '@SoftwareUI': ('Software UI', indices['product'] or indices['reference'])}
+    for handle, (label, index) in handles.items():
+        if handle in prompt:
+            if index is None:
+                raise FlowExecutionError('INGREDIENT_ATTACHMENT_FAILED', f'{handle} has no matching reference role')
+            prompt = prompt.replace(handle, f'provided {label} (Reference Image {index})')
+    return re.sub(r'@([A-Za-z0-9_]+)', r'\1', prompt)
 _PROFILE_COPY_IGNORES = {
     "SingletonLock", "SingletonCookie", "SingletonSocket", "LOCK",
     "Cache", "Code Cache", "GPUCache", "GrShaderCache", "ShaderCache",
@@ -228,42 +246,24 @@ class AccountLock:
         self.profile_dir.mkdir(parents=True, exist_ok=True)
         self.lock_file = self.profile_dir / "account_operation.lock"
         self._acquired = False
+        self._owner_lock = OwnedFileLock(self.lock_file)
 
     def acquire(self, timeout_sec: int = 120):
-        start = time.time()
-        while time.time() - start < timeout_sec:
-            if not self.lock_file.exists():
-                try:
-                    with open(self.lock_file, "w") as f:
-                        f.write(str(os.getpid()))
-                    self._acquired = True
-                    sanitize_chrome_profile(self.profile_dir)
-                    return True
-                except Exception:
-                    pass
-            else:
-                # Check if holding PID is still alive
-                try:
-                    with open(self.lock_file, "r") as f:
-                        pid = int(f.read().strip())
-                    os.kill(pid, 0)
-                except (OSError, ValueError):
-                    logger.warning(f"Removing stale lock file for {self.account_id}")
-                    try:
-                        self.lock_file.unlink()
-                    except Exception:
-                        pass
-                    continue
-            time.sleep(1)
-        raise FlowExecutionError("ACCOUNT_BUSY", f"Account {self.account_id} is currently locked by another job.")
+        try:
+            self._owner_lock.acquire(timeout_sec)
+        except TimeoutError:
+            raise FlowExecutionError("ACCOUNT_BUSY", f"Account {self.account_id} is currently locked by another job.")
+        self._acquired = True
+        try:
+            sanitize_chrome_profile(self.profile_dir)
+        except BaseException:
+            self.release()
+            raise
+        return True
 
     def release(self):
-        if self._acquired and self.lock_file.exists():
-            try:
-                self.lock_file.unlink()
-            except Exception:
-                pass
-            self._acquired = False
+        self._owner_lock.release()
+        self._acquired = False
 
     def __enter__(self):
         self.acquire()
@@ -271,6 +271,23 @@ class AccountLock:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.release()
+
+
+def bounded_cli_lines(proc, timeout_sec=900):
+    try:
+        yield from bounded_lines(proc, timeout=timeout_sec)
+    except TimeoutError as error:
+        raise FlowExecutionError('FLOW_INVOCATION_UNCERTAIN', str(error)) from error
+
+
+def hard_timeout_seconds():
+    try:
+        value = float(os.environ.get('GFLOW_HARD_TIMEOUT_SEC', '900'))
+        if not math.isfinite(value) or not 0 < value <= 1800:
+            raise ValueError('outside finite (0,1800] seconds')
+        return value
+    except ValueError as error:
+        raise FlowExecutionError('FLOW_TIMEOUT_CONFIG_INVALID', 'GFLOW_HARD_TIMEOUT_SEC must be finite, positive and at most 1800 seconds') from error
 
 def create_incident_bundle(
     job_id: str,
@@ -364,6 +381,7 @@ def execute_generation_job(payload: Dict[str, Any]) -> Dict[str, Any]:
     assets: List[Dict[str, Any]] = payload.get("assets", [])
 
     expected_ingredient_count = len(assets)
+    invocation_timeout = hard_timeout_seconds()
 
     # Output directory: /shared/outputs/<org_id>/<job_id>/<attempt_id>/
     job_output_dir = OUTPUTS_BASE / org_id / job_id / attempt_id
@@ -423,7 +441,19 @@ def execute_generation_job(payload: Dict[str, Any]) -> Dict[str, Any]:
                 f"Invalid asset role '{a_role}' for asset {a_id}"
             )
 
-        ref_args.extend(["--ref", str(f_path)])
+        # Preserve the runtime's PNG normalization, but never reuse a companion
+        # made from older bytes at the same source filename.
+        ref_file_to_pass = str(f_path)
+        if Path(f_path).suffix.lower() not in ('.png', '.jpg', '.jpeg'):
+            companion_png = Path(f_path).with_name(f'{Path(f_path).stem}_{computed_sha[:16]}.png')
+            if not companion_png.exists() or companion_png.stat().st_size == 0:
+                try:
+                    subprocess.run(['ffmpeg', '-y', '-i', str(f_path), str(companion_png)],
+                                   check=True, capture_output=True, timeout=15)
+                except Exception as error:
+                    raise FlowExecutionError('INGREDIENT_ATTACHMENT_FAILED', f'Image normalization failed: {error}')
+            ref_file_to_pass = str(companion_png)
+        ref_args.extend(["--ref", ref_file_to_pass])
         verified_assets.append({
             "asset_id": a_id,
             "org_id": org_id,
@@ -449,6 +479,16 @@ def execute_generation_job(payload: Dict[str, Any]) -> Dict[str, Any]:
         target_project = payload.get("project_id")
         is_recovery = payload.get("is_recovery", False)
 
+        identity_store = InvocationIdentity(PROFILES_BASE / 'invocations.sqlite3')
+        try:
+            identity_store.reserve(job_id,org_id,attempt_id,account_id,target_project,is_recovery)
+        except IdentityConflict as error:
+            identity_store.close()
+            raise FlowExecutionError('PROJECT_REUSE_VIOLATION',str(error)) from error
+        except IdentityHeld as error:
+            identity_store.close()
+            raise FlowExecutionError('FLOW_INVOCATION_UNCERTAIN',str(error)) from error
+
         if target_project:
             if not is_recovery:
                 logger.error(f"PROJECT_REUSE_VIOLATION: Reuse of project {target_project} forbidden for new job {job_id}")
@@ -462,29 +502,16 @@ def execute_generation_job(payload: Dict[str, Any]) -> Dict[str, Any]:
             logger.info(f"Creating fresh Flow project '{project_title}' on profile {account_id}...")
             try:
                 target_project = create_new_flow_project(profile_path, project_title)
+                try:
+                    identity_store.bind_project(job_id,target_project)
+                    identity_store.close()
+                except IdentityConflict as error:
+                    raise FlowExecutionError('PROJECT_REUSE_VIOLATION',str(error)) from error
                 logger.info(f"Successfully created real Flow project UUID: {target_project}")
             except Exception as e:
-                logger.warning(f"Failed to create fresh Flow project: {e}. Checking catalog for existing projects on profile {account_id}...")
-                try:
-                    from gflow_cli.data.queries import list_projects
-                    from gflow_cli.cli_data import _db_path
-                    recorded = list_projects(db_path=_db_path(), profile=account_id, limit=5, offset=0)
-                    if recorded:
-                        target_project = recorded[0].project_id
-                        logger.info(f"Using fallback Flow project UUID from catalog: {target_project}")
-                    else:
-                        raise FlowExecutionError(
-                            "PROJECT_CREATION_FAILED",
-                            f"Failed to create fresh Flow project and no recorded project found: {e}"
-                        )
-                except FlowExecutionError:
-                    raise
-                except Exception as cat_err:
-                    logger.exception(f"Catalog fallback failed: {cat_err}")
-                    raise FlowExecutionError(
-                        "PROJECT_CREATION_FAILED",
-                        f"Failed to create fresh Flow project: {e}"
-                    )
+                identity_store.close()
+                if isinstance(e,FlowExecutionError): raise
+                raise FlowExecutionError("PROJECT_CREATION_FAILED", f"Failed to create fresh Flow project: {e}") from e
 
         # Build CLI command environment
         env = os.environ.copy()
@@ -527,13 +554,7 @@ def execute_generation_job(payload: Dict[str, Any]) -> Dict[str, Any]:
         # gflow-cli from failing with MentionIndexUnavailableError.
         cli_prompt = prompt
         if ref_args:
-            cli_prompt = (
-                cli_prompt.replace("@HeroProduct", "provided Hero Product (Reference Image 1)")
-                .replace("@BrandLogo", "provided Brand Logo (Reference Image 2)")
-                .replace("@SoftwareUI", "provided Software UI (Reference Image 1)")
-            )
-            import re
-            cli_prompt = re.sub(r"@([A-Za-z0-9_]+)", r"\1", cli_prompt)
+            cli_prompt = compile_reference_prompt(cli_prompt, verified_assets)
 
         if ref_args:
             cmd.extend(ref_args)
@@ -544,25 +565,37 @@ def execute_generation_job(payload: Dict[str, Any]) -> Dict[str, Any]:
         logger.info(f"CLI Command: {' '.join(cmd)}")
         start_time = time.time()
 
-        proc = subprocess.Popen(
+        log_file = open(log_file_path, "w", encoding="utf-8")
+        try:
+            identity_store = InvocationIdentity(PROFILES_BASE / 'invocations.sqlite3')
+            try:
+                identity_store.mark_submitting(job_id)
+            finally:
+                identity_store.close()
+            proc = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
-            env=env
-        )
+            env=env,
+            start_new_session=True,
+            )
+        except BaseException:
+            log_file.close()
+            raise
 
         stdout_lines = []
         actual_ingredient_count = 0
         references_attached_seen = False
 
-        with open(log_file_path, "w", encoding="utf-8") as log_file:
-            while True:
-                line = proc.stdout.readline()
-                if not line and proc.poll() is not None:
-                    break
+        with log_file, closing(bounded_cli_lines(proc, invocation_timeout)) as output_lines:
+            for line in output_lines:
                 if line:
                     stdout_lines.append(line)
+                    # Preserve recent incident/auth evidence without retaining
+                    # unlimited child output in worker memory.
+                    if len(stdout_lines) > 256:
+                        del stdout_lines[0]
                     log_file.write(line)
                     log_file.flush()
 

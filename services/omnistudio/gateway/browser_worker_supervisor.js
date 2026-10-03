@@ -129,6 +129,19 @@ class BrowserWorkerSupervisor extends EventEmitter {
     return worker?.accountId || worker?.id;
   }
 
+  resolveWorker({ provider, accountId = null, workerId = null }) {
+    const normalizedProvider = String(provider || '').toLowerCase();
+    const account = accountId == null ? null : String(accountId).toLowerCase().trim();
+    const matches = worker => worker.provider === normalizedProvider && (!account ||
+      [worker.accountId, this.getCanonicalAccountId(worker), ...worker.aliases]
+        .some(value => String(value).toLowerCase().trim() === account));
+    const explicit = workerId && this.workers.get(workerId);
+    if (explicit) return matches(explicit) ? explicit : null;
+    // An API worker ID may be an account alias, but never fall back to another account.
+    if (!account) return null;
+    return Array.from(this.workers.values()).find(matches) || null;
+  }
+
   start() {
     if (this.timer) return;
     this.timer = setInterval(() => {
@@ -664,8 +677,11 @@ class BrowserWorkerSupervisor extends EventEmitter {
   }
 
   async acquireExternalLease({ provider, accountId, jobId, workerId = null, ttlSeconds = 60 }) {
-    const canonicalAccount = String(accountId).toLowerCase().trim();
-    const targetWorkerId = workerId || `${provider}:${canonicalAccount}`;
+    provider = String(provider).toLowerCase();
+    const worker = this.resolveWorker({ provider, accountId, workerId });
+    if (!worker) throw workerError('WORKER_NOT_FOUND', `No ${provider} worker is registered for ${accountId}`);
+    const canonicalAccount = this.getCanonicalAccountId(worker);
+    const targetWorkerId = worker.id;
     const leaseToken = crypto.randomUUID();
     const leaseRes = await this.leaseStore.acquireLease({
       provider: provider.toUpperCase(),
@@ -681,12 +697,12 @@ class BrowserWorkerSupervisor extends EventEmitter {
       throw error;
     }
 
-    const worker = this.workers.get(targetWorkerId) || this.workers.get(`${provider}-${canonicalAccount}`) || this.workers.get('flow-primary');
     if (worker) {
       worker.currentJobId = jobId;
       worker.leaseToken = leaseToken;
       worker.state = WORKER_STATES.BUSY;
-      worker.phase = 'GENERATING';
+      worker.phase = 'STARTING';
+      worker.executionStarted = false;
       worker.lastActivityAt = this.clock();
     }
 
@@ -713,7 +729,10 @@ class BrowserWorkerSupervisor extends EventEmitter {
   }
 
   async releaseExternalLease({ provider, accountId, leaseToken, outcome = {} }) {
-    const canonicalAccount = String(accountId).toLowerCase().trim();
+    provider = String(provider).toLowerCase();
+    const worker = this.resolveWorker({ provider, accountId });
+    if (!worker) throw workerError('WORKER_NOT_FOUND', `No ${provider} worker is registered for ${accountId}`);
+    const canonicalAccount = this.getCanonicalAccountId(worker);
     const timer = this.activeLeaseHeartbeats.get(leaseToken);
     if (timer) {
       clearInterval(timer);
@@ -725,13 +744,12 @@ class BrowserWorkerSupervisor extends EventEmitter {
       leaseToken,
     }).catch(() => {});
 
-    const targetWorkerId = `${provider}:${canonicalAccount}`;
-    const worker = this.workers.get(targetWorkerId) || this.workers.get(`${provider}-${canonicalAccount}`) || this.workers.get('flow-primary');
     if (worker && worker.leaseToken === leaseToken) {
       worker.currentJobId = null;
       worker.leaseToken = null;
       worker.state = WORKER_STATES.IDLE;
       worker.phase = null;
+      worker.executionStarted = false;
       worker.lastActivityAt = this.clock();
       if (outcome?.authRequired) worker.state = WORKER_STATES.AUTH_REQUIRED;
       if (outcome?.quotaExhausted) worker.state = WORKER_STATES.QUOTA_EXHAUSTED;

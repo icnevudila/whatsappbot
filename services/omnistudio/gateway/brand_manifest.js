@@ -18,7 +18,7 @@ class TenantBrandRegistry {
     this.assetsById = new Map();    // asset_id -> AssetRecord
     this.assetsByHash = new Map();  // sha256 -> AssetRecord
     this.assetsByUrl = new Map();   // url/path -> AssetRecord
-    this.activeBrandNames = new Map(); // normalized_name -> org_id (çapraz marka kontrolü için dinamik indeks)
+    this.activeBrandNames = new Map(); // normalized_name -> Set<org_id> (çapraz marka kontrolü için dinamik indeks)
   }
 
   /**
@@ -55,11 +55,14 @@ class TenantBrandRegistry {
 
     this.manifests.set(orgId, record);
 
-    // Dinamik tenant marka indeksi: Tüm aktif marka adlarını org_id ile haritalar
+    // Dinamik tenant marka indeksi: Her marka adına birden fazla org_id eklenebilir (Set)
     for (const name of allowedNames) {
       const norm = name.toLowerCase().trim();
       if (norm.length >= 3) {
-        this.activeBrandNames.set(norm, orgId);
+        if (!this.activeBrandNames.has(norm)) {
+          this.activeBrandNames.set(norm, new Set());
+        }
+        this.activeBrandNames.get(norm).add(orgId);
       }
     }
 
@@ -184,8 +187,9 @@ class TenantBrandRegistry {
     const currentOrg = String(jobOrgId).trim();
     const normPrompt = prompt.toLowerCase();
 
-    for (const [registeredName, ownerOrgId] of this.activeBrandNames.entries()) {
-      if (ownerOrgId === currentOrg) continue; // Kendi marka adı geçerli
+    for (const [registeredName, ownerOrgIds] of this.activeBrandNames.entries()) {
+      // ownerOrgIds artık bir Set - eğer currentOrg bu sette varsa kendi markası
+      if (ownerOrgIds.has(currentOrg)) continue;
 
       // Kendi kurum adının veya marka adının bir parçasıysa (örn: Bofe vs Bofe Tarım) kontaminasyon sayma
       const currentOrgName = (this.manifests.get(currentOrg)?.brand_name || '').toLowerCase();
@@ -198,11 +202,12 @@ class TenantBrandRegistry {
       const regex = new RegExp(`(^|[^a-zA-Z0-9ığüşöçİĞÜŞÖÇ])${escaped}([^a-zA-Z0-9ığüşöçİĞÜŞÖÇ]|$)`, 'i');
 
       if (regex.test(normPrompt)) {
-        const err = new Error(`PROMPT_ORG_MISMATCH: Talebe ait prompt metninde başka bir kuruma (${ownerOrgId}) ait kayıtlı marka adı "${registeredName}" tespit edildi. Çapraz marka prompt kontaminasyonu engellendi.`);
+        const foreignOrgs = [...ownerOrgIds].join(', ');
+        const err = new Error(`PROMPT_ORG_MISMATCH: Talebe ait prompt metninde başka bir kuruma (${foreignOrgs}) ait kayıtlı marka adı "${registeredName}" tespit edildi. Çapraz marka prompt kontaminasyonu engellendi.`);
         err.code = 'PROMPT_ORG_MISMATCH';
         err.statusCode = 400;
         err.offending_brand = registeredName;
-        err.foreign_org = ownerOrgId;
+        err.foreign_org = foreignOrgs;
         throw err;
       }
     }
@@ -262,12 +267,24 @@ const brandRegistry = new TenantBrandRegistry();
 function initializeTenantRegistry(outputDir = '/app/gateway/outputs') {
   try {
     // 1. Örnek Kurumlar (Veritabanından dinamik gelir, burada sıfır hata için başlangıç kaydı yapılır)
+    // Bofe Tarım - GERÇEK tenant (b359ccd3)
+    brandRegistry.registerManifest({
+      org_id: 'b359ccd3-3ec8-40fd-928e-bc6dbbd489c0',
+      brand_name: 'Bofe Tarım',
+      allowed_brand_names: ['Bofe', 'Bofe Tarım', 'Bofe Tarim', 'Bofe Kimya', 'Bofe Professional'],
+      sector: 'agriculture_equipment',
+      products: ['İlaç Pompası', 'Akülü sırt ilaçlama pompası', 'Delta Mekanik ilaçlama pompası'],
+      brand_palette: ['#000000', '#acfe00', '#026009', '#ffffff'],
+      tone: ['modern', 'professional', 'technical']
+    });
+
+    // Eski/alternatif Bofe tenant (afc4ff9f) - artık kullanılmıyor ama çakışma engellemek için eklendi
     brandRegistry.registerManifest({
       org_id: 'afc4ff9f-67a4-4dd1-af1d-e60b38c9ccdc',
-      brand_name: 'Bofe',
-      allowed_brand_names: ['Bofe', 'Bofe Kimya', 'Bofe Professional'],
+      brand_name: 'Bofe Alt',
+      allowed_brand_names: ['Bofe', 'Bofe Kimya', 'Bofe Professional', 'Bofe Alt'],
       sector: 'agriculture_equipment',
-      products: ['Akülü sırt ilaçlama pompası', 'Köpük sabun', 'Oto şampuanı', 'Lavabo açıcı'],
+      products: ['Akülü sırt ilaçlama pompası'],
       brand_palette: ['#000000', '#acfe00', '#026009'],
       tone: ['modern', 'professional', 'technical']
     });

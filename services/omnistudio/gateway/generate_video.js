@@ -182,7 +182,7 @@ async function resolveLocalMediaFiles(options = {}) {
   // 3. Kullanıcı yüklemediyse veya eksikse, kayıtlı kurumsal Marka Kitinden çek
   if (!options.productImageUrl || !options.logoUrl) {
     try {
-      const bk = options.brandKit || await getActiveBrandKit(options.orgId, options.brandName || options.customer);
+      const bk = await getActiveBrandKit(options.orgId, options.brandName || options.customer, options.brandKit);
       if (bk) {
         if (!options.logoUrl && bk.logo_path) candidateItems.push({ url: bk.logo_path, role: 'logo' });
         if (!options.productImageUrl && bk.product_image_path) candidateItems.push({ url: bk.product_image_path, role: 'product' });
@@ -288,7 +288,7 @@ async function resolveLocalMediaFiles(options = {}) {
  */
 async function generatePromptWithChatGptWeb(port, options = {}) {
   const { prompt, brandName, productName, customer, orgId, productImageUrl, logoUrl } = options;
-  const brandKit = await getActiveBrandKit(orgId, brandName || customer);
+  const brandKit = await getActiveBrandKit(orgId, brandName || customer, options.brandKit);
   const company = customer || brandName || brandKit.organization_name || brandKit.brand_name || 'İşletme';
   const logoDesc = getLogoVisualDescription(company, brandKit.logo_path, brandKit.hasExplicitLogo);
   const colors = brandKit.colors || { primary: '#111827', accent: '#2563eb' };
@@ -1117,7 +1117,7 @@ function attemptGenerateOnCdp(port, tab, options) {
         if (options.includeOverlay) {
           try {
             const campaignVideoTarget = path.join(OUTPUT_DIR, `${videoId}_campaign.mp4`);
-            const brandKit = await getActiveBrandKit(options.orgId, options.brandName || options.customer);
+            const brandKit = await getActiveBrandKit(options.orgId, options.brandName || options.customer, options.brandKit);
             const brandUpper = (options.brandName || options.customer || brandKit?.organization_name || 'BOFE').toUpperCase();
             const accentColor = (options.accentColor || brandKit?.colors?.accent || '#acfe00').replace('#', '');
             const secondaryColor = (brandKit?.colors?.secondary || '#026009').replace('#', '');
@@ -1665,49 +1665,14 @@ async function generateVideoOnFlow(options = {}) {
   let isolatedProjectId = null;
   const initialOpenUrl = isolatedProjectUrl || 'https://flow.google.com/';
 
-  // Flow Chrome deneme listesi: oncelikle FLOW_CDP_HOST (host.docker.internal:9226), sonra 127.0.0.1 fallback
-  let activePort = port;
-  let activeCdpHost = '127.0.0.1';
-  let newTabRes = null;
-  
-  // (1) Oncelikle FLOW_CDP_HOST uzerinden dene (host'taki Chrome'a erisim)
-  const flowHostCandidates = [
-    { host: FLOW_CDP_HOST, port: FLOW_CDP_PORT },
-    { host: FLOW_CDP_HOST, port: 9224 },
-    { host: FLOW_CDP_HOST, port: 9225 },
-  ];
-  for (const { host, port: p } of flowHostCandidates) {
-    try {
-      const r = await fetch(`http://${host}:${p}/json/new?${encodeURIComponent(initialOpenUrl)}`, { method: 'PUT', signal: AbortSignal.timeout(3000) });
-      if (r.ok) {
-        newTabRes = r;
-        activePort = p;
-        activeCdpHost = host;
-        console.log(`[Flow Video] ✅ Flow Chrome bulundu: ${host}:${p}`);
-        break;
-      }
-    } catch (_) {}
-  }
-
-  // (2) Host Chrome bulunamazsa 127.0.0.1 uzerinden dene (legacy fallback)
-  if (!newTabRes || !newTabRes.ok) {
-    const tryPorts = [port, 9226, 9224, 9225, 9222].filter((v, i, a) => a.indexOf(v) === i);
-    for (const p of tryPorts) {
-      try {
-        const r = await fetch(`http://127.0.0.1:${p}/json/new?${encodeURIComponent(initialOpenUrl)}`, { method: 'PUT', signal: AbortSignal.timeout(3000) });
-        if (r.ok) {
-          newTabRes = r;
-          activePort = p;
-          activeCdpHost = '127.0.0.1';
-          break;
-        }
-      } catch (_) {}
-    }
-  }
-
-  if (!newTabRes || !newTabRes.ok) {
-    throw new Error(`CDP_PORT_UNAVAILABLE: Flow Chrome'a baglanilamiyor. Denenen: ${FLOW_CDP_HOST}:${FLOW_CDP_PORT}, 9224, 9225. Host Chrome calistigindan emin olun.`);
-  }
+  // The supervisor has already leased this account. Never silently switch ports.
+  const activePort = Number(port);
+  const activeCdpHost = options.cdpHost || '127.0.0.1';
+  const newTabRes = await fetch(
+    `http://${activeCdpHost}:${activePort}/json/new?${encodeURIComponent(initialOpenUrl)}`,
+    { method: 'PUT', signal: AbortSignal.timeout(5000) }
+  );
+  if (!newTabRes.ok) throw new Error(`CDP_PORT_UNAVAILABLE: Leased Flow account ${activePort} is unavailable.`);
 
   console.log(`[Flow Video] 🔗 CDP Bağlantısı kuruldu (Host: ${activeCdpHost}, Port: ${activePort})`);
   const tab = await newTabRes.json();
@@ -2204,13 +2169,11 @@ async function generateVideoOnFlow(options = {}) {
       attachedCount = retryChipsCheck?.result?.value?.count || 0;
     }
 
-    if (attachedCount === 0) {
-      console.warn(`[Flow Video] ℹ️ Görsel çipi iliştirilemedi, zengin sinematik sahne promptu ile doğrudan üretime devam ediliyor.`);
-    } else if (attachedCount < attachCount) {
-      console.warn(`[Flow Video] ⚠️ ${attachedCount}/${attachCount} görsel çipi iliştirildi. Model mevcut çip ile üretime devam ediyor.`);
-    } else {
-      console.log(`[Flow Video] ✅ ${attachedCount} görsel çipi prompt kutusuna %100 bağlandı.`);
+    if (attachedCount !== attachCount) {
+      try { ws.close(); } catch (_) {}
+      throw new Error(`REFERENCE_ATTACHMENT_FAILED: ${attachedCount}/${attachCount} required references are attached; generation was not submitted.`);
     }
+    console.log(`[Flow Video] Verified ${attachedCount} reference chips before submission.`);
 
     try {
       await send('Page.setInterceptFileChooserDialog', { enabled: false });
@@ -2239,7 +2202,7 @@ async function generateVideoOnFlow(options = {}) {
   let logoShapeNote = '';
   try {
     const { getActiveBrandKit } = require('./brand_resolver.js');
-    const bk = await getActiveBrandKit(options.orgId, brandNameForDirective);
+    const bk = await getActiveBrandKit(options.orgId, brandNameForDirective, options.brandKit);
     if (bk && bk.logo_visual_description) {
       logoShapeNote = ` Orijinal kurumsal amblem: ${bk.logo_visual_description}. Belirlenen marka yüzeyinde bu orijinal amblem ve kurumsal yazı eksiksiz korunacaktır.`;
     }
@@ -2994,6 +2957,7 @@ async function generateVideoOnFlow(options = {}) {
             veoPrompt: prompt
           }
         });
+        globalArtifactProvenanceGate.recordPostprocessSha256(isolatedProjectId || rawFileName, rawPath);
       }
     } catch (flowSubErr) {
       console.warn('[Flow Video] Flow altyazı/seslendirme giydirme hatası:', flowSubErr.message);
@@ -3019,6 +2983,7 @@ async function generateVideoOnFlow(options = {}) {
           masterAudioLoudness(rawPath, masteredTemp, 'social_media');
           if (fs.existsSync(masteredTemp) && fs.statSync(masteredTemp).size > 10000) {
             fs.copyFileSync(masteredTemp, rawPath);
+            globalArtifactProvenanceGate.recordPostprocessSha256(isolatedProjectId || rawFileName, rawPath);
             try { fs.unlinkSync(masteredTemp); } catch (_) {}
             console.log(`[Flow Video] 🎚️ EBU R128 (-14 LUFS) mastering başarıyla uygulandı.`);
           }
@@ -3042,7 +3007,7 @@ async function generateVideoOnFlow(options = {}) {
 
   if (options.includeOverlay === true && fs.existsSync(rawPath)) {
     try {
-      const brandKit = await getActiveBrandKit(options.orgId, options.brandName || options.customer);
+      const brandKit = await getActiveBrandKit(options.orgId, options.brandName || options.customer, options.brandKit);
       const brandName = (options.brandName || options.customer || brandKit?.organization_name || 'İşletme').trim();
       const accentColor = (options.accentColor || brandKit?.colors?.accent || '#acfe00').replace('#', '');
       const secondaryColor = (options.primaryColor || brandKit?.colors?.secondary || brandKit?.colors?.primary || '#026009').replace('#', '');

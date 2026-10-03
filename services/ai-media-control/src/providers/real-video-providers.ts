@@ -10,6 +10,7 @@ import {
   type VideoProviderResult,
 } from './video-provider-router.js'
 import { GenerationWorkspace } from './generation-workspace.js'
+import { supervisorAuth } from './supervisor-auth.js'
 
 function sha256(bytes: Buffer): string {
   return createHash('sha256').update(bytes).digest('hex')
@@ -66,7 +67,7 @@ export function buildGeminiNativeProviderPayload(request: VideoGenerationRequest
     productSha256: product?.sha256 || null,
     referenceImageUrls: references.map(asset => ({ url: asset.file_path, role: asset.role })),
     assets: request.assets,
-    production_plan: request.productionPlan || null,
+    production_plan: (request as any).productionPlan || null,
     requireMedia: true,
   }
 }
@@ -78,7 +79,7 @@ export function buildFlowVeoProviderPayload(request: VideoGenerationRequest) {
     attempt_id: request.attemptId,
     org_id: request.orgId,
     account_id: request.accountId!,
-    expected_email: request.expectedAccountEmail || undefined,
+    expected_email: (request as any).expectedAccountEmail || undefined,
     flow_project_id: `flow_proj_${request.jobId}_${request.attemptId}`,
     prompt: request.prompt,
     approved_dialogue: request.approvedDialogue,
@@ -87,7 +88,7 @@ export function buildFlowVeoProviderPayload(request: VideoGenerationRequest) {
     duration: request.durationSeconds,
     assets: request.assets,
     expected_reference_ids: request.assets.map(asset => asset.asset_id),
-    production_plan: request.productionPlan || null,
+    production_plan: (request as any).productionPlan || null,
   }
 }
 
@@ -211,7 +212,7 @@ export class OmniStudioGeminiNativeVideoProvider implements VideoProvider {
   }
 
   async generate(request: VideoGenerationRequest): Promise<VideoProviderResult> {
-    const ws = new GenerationWorkspace({ jobId: request.jobId, attemptId: request.attemptId })
+    const ws = new GenerationWorkspace({ jobId: request.jobId, attemptId: request.attemptId, expectedDurationSeconds: request.durationSeconds, expectedAspectRatio: request.aspectRatio })
     ws.logEvent('PREFLIGHT', 'Checking prerequisites and initializing attempt workspace')
     ws.writePrompt({
       job_id: request.jobId,
@@ -227,7 +228,7 @@ export class OmniStudioGeminiNativeVideoProvider implements VideoProvider {
       product_id: (request as any).product_id || request.assets.find(a => a.role === 'product')?.asset_id || '',
       fidelity_rule_count: (request as any).fidelity_rule_count || 0,
       product_fidelity_contract: (request as any).product_fidelity_contract || null,
-      production_plan: request.productionPlan || null,
+      production_plan: (request as any).productionPlan || null,
     })
 
     ws.logEvent('READY', 'Submitting generation request to OmniStudio gateway')
@@ -336,58 +337,83 @@ export class FlowVeoVideoProvider implements VideoProvider {
   ) {}
 
   async generate(request: VideoGenerationRequest): Promise<VideoProviderResult> {
-    const flowAccountId = (request.accountId && !request.accountId.startsWith('gemini'))
+    const selectedAccount = (request.accountId && !request.accountId.startsWith('gemini'))
       ? request.accountId
-      : (process.env.FLOW_PRIMARY_ACCOUNT_ID || 'account-02')
-    const flowRequest: VideoGenerationRequest = { ...request, accountId: flowAccountId }
+      : (process.env.FLOW_PRIMARY_ACCOUNT_ID || 'account-04')
+    // Only generation profiles synced from the verified Flow source slots are candidates.
+    const requestedAccount = ({ 'account-01': 'account-03', 'account-02': 'account-04' } as Record<string, string>)[selectedAccount] || selectedAccount
 
-    // 1. Request distributed account lease
+    // 1. Request distributed account lease with multi-account fallback
+    const candidateAccounts = [
+      requestedAccount,
+      'account-03',
+      'account-04',
+    ].filter((acc, idx, arr) => arr.indexOf(acc) === idx)
+
+    let flowAccountId = requestedAccount
+    let flowAccountEmail = request.expectedAccountEmail
     let leaseToken: string | null = null
-    try {
-      const leaseRes = await fetch(`${this.gatewayUrl.replace(/\/$/, '')}/v1/browser-workers/lease/acquire`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          provider: 'flow',
-          accountId: flowAccountId,
-          jobId: flowRequest.jobId,
-          workerId: `flow:${flowAccountId}`,
-          ttlSeconds: 120,
-        }),
-        signal: AbortSignal.timeout(10_000),
-      })
-      if (leaseRes.status === 409) {
-        throw new ProviderRoutingError(
-          'ACCOUNT_BUSY',
-          `Flow account ${flowAccountId} is leased by another host`,
-          'TEMPORARILY_UNAVAILABLE'
-        )
+
+    for (const candAcc of candidateAccounts) {
+      try {
+        const leaseRes = await fetch(`${this.gatewayUrl.replace(/\/$/, '')}/v1/browser-workers/lease/acquire`, {
+          method: 'POST',
+          ...supervisorAuth(),
+          body: JSON.stringify({
+            provider: 'flow',
+            accountId: candAcc,
+            jobId: request.jobId,
+            workerId: `flow:${candAcc}`,
+            ttlSeconds: 120,
+          }),
+          signal: AbortSignal.timeout(10_000),
+        })
+        if (leaseRes.ok) {
+          const leaseData: any = await leaseRes.json()
+          leaseToken = leaseData.leaseToken || leaseData.lease_token
+          flowAccountId = candAcc
+          flowAccountEmail = String(leaseData.accountId || '').includes('@') ? leaseData.accountId : flowAccountEmail
+          break
+        }
+      } catch (err: any) {
+        // Try next candidate account
       }
-      if (leaseRes.ok) {
-        const leaseData: any = await leaseRes.json()
-        leaseToken = leaseData.leaseToken || leaseData.lease_token
-      }
-    } catch (err: any) {
-      if (err instanceof ProviderRoutingError) throw err
     }
+
+    if (!leaseToken) {
+      throw new ProviderRoutingError(
+        'ACCOUNT_BUSY',
+        `Tüm Flow hesapları meşgul veya kilitli, lütfen 1 dakika sonra tekrar deneyin.`,
+        'TEMPORARILY_UNAVAILABLE'
+      )
+    }
+
+    const flowRequest: VideoGenerationRequest = { ...request, accountId: flowAccountId, expectedAccountEmail: flowAccountEmail }
 
     try {
       // 2. Ensure Flow browser worker READY
-      try {
-        await fetch(`${this.gatewayUrl.replace(/\/$/, '')}/v1/browser-workers/ensure-ready`, {
+      {
+        const readinessResponse = await fetch(`${this.gatewayUrl.replace(/\/$/, '')}/v1/browser-workers/ensure-ready`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          ...supervisorAuth(),
           body: JSON.stringify({
             workerId: `flow:${flowAccountId}`,
             provider: 'flow',
             accountId: flowAccountId,
           }),
-          signal: AbortSignal.timeout(10_000),
+          signal: AbortSignal.timeout(100_000),
         })
-      } catch {}
+        const readiness: any = await readinessResponse.json().catch(() => ({}))
+        if (!readinessResponse.ok || readiness.ok !== true) {
+          throw new ProviderRoutingError(
+            readiness.error?.code || 'FLOW_WORKER_NOT_READY',
+            readiness.error?.message || `Flow readiness failed: HTTP ${readinessResponse.status}`
+          )
+        }
+      }
 
       // 3. Run existing gflow execution
-      const ws = new GenerationWorkspace({ jobId: flowRequest.jobId, attemptId: flowRequest.attemptId })
+      const ws = new GenerationWorkspace({ jobId: flowRequest.jobId, attemptId: flowRequest.attemptId, expectedDurationSeconds: flowRequest.durationSeconds, expectedAspectRatio: flowRequest.aspectRatio })
       ws.logEvent('PREFLIGHT', 'Preparing Flow VEO generation')
       ws.writePrompt({
         job_id: flowRequest.jobId,
@@ -429,7 +455,7 @@ export class FlowVeoVideoProvider implements VideoProvider {
       ws.logEvent('VERIFIED', `raw.mp4 verified: ${actualSha256}`)
       ws.writeProvider({
         provider: this.provider,
-        provider_account_id: request.accountId || result.account_id || null,
+        provider_account_id: flowAccountId,
         provider_attempt_id: result.attempt_id || request.attemptId,
         provider_project_id: result.flow_project_id || result.real_flow_project_uuid || null,
         status: 'VERIFIED',
@@ -442,7 +468,7 @@ export class FlowVeoVideoProvider implements VideoProvider {
 
       return {
         provider: this.provider,
-        providerAccountId: request.accountId || result.account_id || null,
+        providerAccountId: flowAccountId,
         providerAttemptId: result.attempt_id || request.attemptId,
         providerProjectId: result.flow_project_id || result.real_flow_project_uuid || null,
         providerMediaIds: (result.verified_assets || []).map((asset: any) => asset.attached_media_id).filter(Boolean),
@@ -458,10 +484,10 @@ export class FlowVeoVideoProvider implements VideoProvider {
         try {
           await fetch(`${this.gatewayUrl.replace(/\/$/, '')}/v1/browser-workers/lease/release`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            ...supervisorAuth(),
             body: JSON.stringify({
               provider: 'flow',
-              accountId: request.accountId,
+              accountId: flowAccountId,
               leaseToken,
             }),
             signal: AbortSignal.timeout(5_000),

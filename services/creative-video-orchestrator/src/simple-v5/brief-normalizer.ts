@@ -55,23 +55,41 @@ export class SimpleV5BriefNormalizer {
       kitchen: 'Hijyenik ve profesyonel ticari mutfak istasyonu ve taze sunum tezgâhı',
       office: 'Modern ve aydınlık mimari ofis çalışma alanı',
       workshop: 'Gerçek düzenli atölye veya sanayi çalışma alanı',
-      construction: 'Otantik ticari şantiye sahası, taze harçlı yapı duvarı ve nizami istifli paletler',
+      construction: 'Otantik ticari şantiye sahasında tek sabit ürün sergileme yüzeyi',
     }
-    if (environmentOverrides[requestedEnvironment]) location = environmentOverrides[requestedEnvironment]
+    if (environmentOverrides[requestedEnvironment]) {
+      location = environmentOverrides[requestedEnvironment]
+      const environmentLighting: Record<string, string> = {
+        studio: 'çekim boyunca değişmeyen yumuşak kontrollü stüdyo ana ışığı ve dengeli dolgu ışığı',
+        garden: 'çekim boyunca değişmeyen doğal bahçe gün ışığı',
+        kitchen: 'çekim boyunca değişmeyen hijyenik mutfak aydınlatması ve yumuşak dolgu ışığı',
+        office: 'çekim boyunca değişmeyen dengeli ofis aydınlatması',
+        workshop: 'çekim boyunca değişmeyen kontrollü atölye aydınlatması',
+        construction: 'çekim boyunca değişmeyen doğal açık saha gün ışığı',
+      }
+      lighting = environmentLighting[requestedEnvironment]
+    }
 
-    const requestedMotion = (snapshot.campaign.motion_style || 'real_usage').toLowerCase()
+    const style = (snapshot.campaign.user_style_preference || 'AUTO').toUpperCase()
+    const usageStyle = style === 'PRODUCT_USAGE' || style === 'SOCIAL_UGC'
+    const verifiedAction = product.product_fidelity_contract?.allowed_actions?.find(Boolean)
+    if (!environmentOverrides[requestedEnvironment] && domainProfile.domain === 'CONSTRUCTION_STRUCTURAL') {
+      location = 'Otantik ticari şantiye sahasında tek sabit ürün sergileme yüzeyi'
+    }
+    const requestedMotion = (snapshot.campaign.motion_style || 'studio_orbit').toLowerCase()
     if (requestedMotion === 'studio_orbit') {
       cameraMotion = 'ürün formunu koruyan, tam tur atmayan güvenli 3/4 vitrin hareketi'
     } else if (requestedMotion === 'macro_detail') {
       cameraMotion = 'kontrollü makrodan ürünün tamamına açılan, formu okunur tutan hareket'
-    } else if (requestedMotion === 'real_usage') {
+    } else if (requestedMotion === 'real_usage' && usageStyle && verifiedAction) {
       cameraMotion = 'gerçek kullanım adımını takip eden sabit ve yumuşak kamera'
+    } else {
+      cameraMotion = 'tek yönde yavaş, kısa mesafeli ve sarsıntısız kamera yaklaşımı; ürün ve yüzey sabit'
     }
 
     // 2. One Primary Idea & One Primary Action
     const primaryIdea = `${brandName} bünyesindeki ${productName} ürününün referansa sadık tek bir tanıtım anı.`
-    const verifiedAction = product.product_fidelity_contract?.allowed_actions?.find(Boolean)
-    const primaryAction = verifiedAction
+    const primaryAction = usageStyle && verifiedAction
       ? `${productName} ürününün doğrulanmış kullanım adımı: ${verifiedAction}`
       : `${productName} ürününün referanstaki biçimi korunarak tek bir sade ürün gösteriminde sergilenmesi.`
 
@@ -123,45 +141,49 @@ export class SimpleV5BriefNormalizer {
       aspectRatio: '9:16',
       durationSeconds,
       operationalDomain: domainProfile.domain,
-      domainNegatives: domainProfile.isolationNegatives,
-      productPresentationDirective: domainProfile.productPresentationDirective,
+      // User-selected environment wins over sector-derived background prohibitions.
+      domainNegatives: environmentOverrides[requestedEnvironment]
+        ? domainProfile.isolationNegatives.filter(term => !/indoor|warehouse|shelv|interior|ceiling|fluorescent|office|room|depot|workbench|carpet|store|furniture/i.test(term))
+        : domainProfile.isolationNegatives,
+      productPresentationDirective: usageStyle && verifiedAction
+        ? `Tek doğrulanmış eylem: ${verifiedAction}. Aynı ürün, aynı ortam ve kesintisiz tek çekim; gerekirse anatomik olarak tutarlı bir operatör kullanılır.`
+        : 'Ürün tek bir gerçek destek yüzeyinde sabit durur. Yüzey, yerleşim, arka plan ve ışık çekim boyunca değişmez. Ürün duvara, başka ürüne veya kullanım sahnesine dönüşmez; insan, el, taşıma, montaj ve püskürtme eklenmez.',
     }
 
-    const style = (snapshot.campaign.user_style_preference || 'AUTO').toUpperCase()
     const styleDescriptions: Record<string, { hook: string; proof: string; close: string }> = {
       FAST_SALES: {
-        hook: `Dinamik ve akıcı kamera hareketi sevkiyata hazır ${productName} üzerinde başlar.`,
-        proof: `${location} içinde ${productName} hızlı ve net ürün gösterimiyle öne çıkar.`,
+        hook: `${location} içinde sabit destek yüzeyindeki ${productName} ilk kareden itibaren tamamıyla okunur.`,
+        proof: `Seçilen tek kamera hareketi sürer; ${productName} ve destek yüzeyi hareket etmeden gerçek malzeme detayı okunur.`,
         close: `${productName} merkezde; doğrudan kapanış kadrajı ve temiz CTA alanı.`,
       },
       DIRECT_OFFER: {
         hook: `${location} içinde ${productName} doğrudan odak noktasında; teklif metni sahneye basılmaz.`,
-        proof: `${location} ortamında düzenli sevkiyat ve kurumsal operasyon akışı içinde ürünün hızlı teslimat güvenini hissettiren kesintisiz akış.`,
+        proof: `Aynı yüzeyde sabit ${productName} ve değişmeyen arka plan; yeni sevkiyat veya kullanım eylemi eklenmez.`,
         close: `${productName} merkezde; yazısız, temiz ve net doğrudan kapanış kadrajı.`,
       },
       PRODUCT_USAGE: {
         hook: `${location} içinde ${productName} ve kullanım bağlamını birlikte kuran açılış.`,
         proof: `${primaryAction}`,
-        close: `${productName} gerçek kullanımın doğal sonucu içinde sabitlenir.`,
+        close: `${productName} aynı ortam ve yüzeyde okunur kapanışta kalır.`,
       },
       PROBLEM_SOLUTION: {
         hook: `Uydurma hasar veya sonuç göstermeden ${location} çalışma bağlamı kurulur.`,
-        proof: `Ürünün dayanıklılık ve kalitesini kanıtlayan kontrollü malzeme ve işlev detayı.`,
+        proof: `Dayanıklılık veya sonuç iddiası üretmeden aynı sabit ürünün referansta görünen malzeme ve işlev detayına odaklanılır.`,
         close: `${productName} çözüm iddiası eklenmeden temiz ürün kapanışında.`,
       },
       SOCIAL_UGC: {
         hook: `${productName} için doğal birinci şahıs yaklaşımı; referans sunucu varsa yalnız o kullanılır.`,
         proof: `${primaryAction} Samimi fakat iddiasız kullanım detayı.`,
-        close: `${productName} elde veya doğal ortamında okunur son kadrajda.`,
+        close: `${productName} aynı doğal ortamında okunur son kadrajda.`,
       },
       PREMIUM: {
-        hook: `${productName} silüeti ve otantik malzeme kalitesi sakin doğal ışık geçişiyle ortaya çıkar.`,
-        proof: `Genişleyen prestijli perspektif ile ortamın derinliğini ve ürünün kalitesini gösteren ağırbaşlı, sarsıntısız yatay slider süzülüşü.`,
+        hook: `${productName} silüeti ve referansta görünen malzeme dokusu sabit dengeli ışık ve geniş negatif alanla okunur.`,
+        proof: `Başlangıçtaki tek kamera hareketi devam eder; sabit ürünün otantik yüzey dokusu ve ortam derinliği sakin kadrajda okunur.`,
         close: `${productName} geniş negatif alanlı sabit hero kapanışında.`,
       },
       AUTO: {
         hook: `Pürüzsüz 35mm sinematik kamera hareketi doğrudan ${productName} ürününün detaylarına ve otantik malzeme dokusuna odaklanır.`,
-        proof: `Kamera yavaş ve zarif bir 3/4 orbital açıyla süzülerek ürünün sağlamlığını ve kusursuz geometrisini sergiler; ${primaryAction}. Arkada otantik ${brandName} kurumsal varlığı doğal olarak yer alır.`,
+        proof: `Başlangıçtaki tek kamera hareketi devam eder; ${primaryAction}. Arka plan, ürün ve destek yüzeyi değişmez.`,
         close: `${productName} kadrajda kararlı, net ve heybetli bir şekilde sabitlenir; yazısız, temiz ve prestijli doğrudan kapanış kadrajı.`,
       },
       OFFER: {

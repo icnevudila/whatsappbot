@@ -1,5 +1,7 @@
 'use client'
 
+import { isReadyImageSource } from '@/lib/creative/image-source'
+
 import { useActionState, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Button, Card, Field, FileUploadButton, Input, Notice, Textarea } from '@/components/ui'
@@ -109,6 +111,9 @@ export function ImageCreativeWizard({ data }: { data: WizardBootstrap }) {
   const [labelInput, setLabelInput] = useState('')
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [uploadedSourceId, setUploadedSourceId] = useState<string | null>(null)
+  const imageLibrary = data.library.filter(isReadyImageSource)
+  const validBaseSource = Boolean(draft.baseCreativeId && (uploadedSourceId === draft.baseCreativeId || imageLibrary.some(item => item.id === draft.baseCreativeId)))
   const [showPhones, setShowPhones] = useState(false)
   const [showSocials, setShowSocials] = useState(false)
   const [showMore, setShowMore] = useState(false)
@@ -238,6 +243,11 @@ export function ImageCreativeWizard({ data }: { data: WizardBootstrap }) {
       setUploadError(result?.error ?? 'Yükleme başarısız.')
       return
     }
+    if (!isReadyImageSource({format:'square',status:'ready',publicUrl:result.publicUrl})) {
+      setUploadError('Yüklenen kaynak kullanılabilir bir görsel olarak doğrulanamadı.')
+      return
+    }
+    setUploadedSourceId(result.id)
     patch({ origin: 'derive', baseCreativeId: result.id })
   }
 
@@ -262,7 +272,7 @@ export function ImageCreativeWizard({ data }: { data: WizardBootstrap }) {
       <form
         action={formAction}
         onSubmit={(event) => {
-          if (step !== 'summary') event.preventDefault()
+          if (step !== 'summary' || (draft.origin === 'derive' && !validBaseSource)) event.preventDefault()
         }}
         className="flex flex-col"
       >
@@ -317,9 +327,9 @@ export function ImageCreativeWizard({ data }: { data: WizardBootstrap }) {
             />
             {uploadError ? <Notice tone="danger">{uploadError}</Notice> : null}
             </div>
-            {data.library.length > 0 ? (
+            {imageLibrary.length > 0 ? (
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                {data.library.map((item) => (
+                {imageLibrary.map((item) => (
                   <button
                     key={item.id}
                     type="button"
@@ -338,7 +348,7 @@ export function ImageCreativeWizard({ data }: { data: WizardBootstrap }) {
             ) : (
               <p className="text-[12.5px] text-ink-muted">Kütüphanede henüz görsel yok — yükleyebilirsiniz.</p>
             )}
-            <Button type="button" className="wb-wa-submit" disabled={!draft.baseCreativeId} onClick={() => go('brief')}>
+            <Button type="button" className="wb-wa-submit" disabled={!validBaseSource} onClick={() => go('brief')}>
               Devam
             </Button>
           </div>
@@ -870,7 +880,7 @@ export function ImageCreativeWizard({ data }: { data: WizardBootstrap }) {
               </p>
             ) : null}
             <p className="text-ink-muted">{draft.brief}</p>
-            <Button type="submit" className="wb-wa-submit" disabled={pending || !data.canManage || !data.imageAiEnabled}>
+            <Button type="submit" className="wb-wa-submit" disabled={pending || !data.canManage || !data.imageAiEnabled || (draft.origin === 'derive' && !validBaseSource)}>
               {pending ? 'Kuyruğa alınıyor…' : 'Görseli oluştur'}
             </Button>
             {!data.canManage ? <Notice tone="warn">Üretim için yönetici gerekir.</Notice> : null}

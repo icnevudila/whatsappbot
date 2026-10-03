@@ -29,10 +29,21 @@ function styleLabel(styleId: string): string {
   return CREATIVE_STYLES.find((row) => row.id === styleId)?.label ?? styleId
 }
 
+export type PromptFidelityOptions = {
+  verifiedRefs?: {
+    logo?: boolean
+    product?: boolean
+    base?: boolean
+  }
+}
+
 /**
  * Structured brief → image-model prompt. UI içinde prompt birleştirilmez.
  */
-export function buildCreativePrompt(snapshot: CreativeSnapshot): {
+export function buildCreativePrompt(
+  snapshot: CreativeSnapshot,
+  options?: PromptFidelityOptions,
+): {
   prompt: string
   negative: string
 } {
@@ -120,10 +131,12 @@ export function buildCreativePrompt(snapshot: CreativeSnapshot): {
     colors ? `Follow this brand palette in backgrounds, accents and props: ${colors}.` : null,
     kit?.fonts?.heading ? `Prefer a ${kit.fonts.heading}-like heading feel.` : null,
     'Do NOT write internal labels on the image: never paint brand-kit titles, "marka kiti", "brand kit", "kampanya kiti", or similar meta text.',
-    snapshot.useLogo !== false
+    options?.verifiedRefs?.logo
       ? 'STRICT LOGO FIDELITY: A real company logo image is attached as a reference. Place that exact logo cleanly without any modification, restyling, or variation. Keep its exact proportions, geometry, emblem shape, and brand colors. NEVER invent a different logo, NEVER stylize or morph the logo, and NEVER replace the logo with typed text.'
-      : 'Do not invent fake logos. Do not type a brand name as a fake logo unless the advertiser brief explicitly asks for the business name as headline text.',
-    snapshot.baseCreativeId
+      : snapshot.useLogo !== false
+        ? 'Clean brand identity. If no authentic logo file is attached, do NOT invent a fictional logo.'
+        : 'Do not invent fake logos. Do not type a brand name as a fake logo unless the advertiser brief explicitly asks for the business name as headline text.',
+    options?.verifiedRefs?.base
       ? 'A base/reference campaign image is attached. Keep the exact same product and brand identity; apply the requested change.'
       : null,
     snapshot.instruction ? `Revision instruction (must follow): ${snapshot.instruction}` : null,
@@ -131,7 +144,9 @@ export function buildCreativePrompt(snapshot: CreativeSnapshot): {
     `Campaign brief from the advertiser: ${briefText || 'Özel Kampanya'}`,
     productBlocks.length ? `Products:\n${productBlocks.join('\n')}` : 'No specific product catalog items.',
     posterCompositionDirectives,
-    'STRICT PRODUCT FIDELITY: The real product photo is provided as a reference. You must preserve the real physical product exactly as shown: exact shape, casing, components, buttons, materials, and colors. Do NOT mutate the product, do NOT invent fantasy product variations, do NOT change the product design, and do NOT replace the product with a generic item.',
+    options?.verifiedRefs?.product
+      ? 'STRICT PRODUCT FIDELITY: The real product photo is provided as a reference. You must preserve the real physical product exactly as shown: exact shape, casing, components, buttons, materials, and colors. Do NOT mutate the product, do NOT invent fantasy product variations, do NOT change the product design, and do NOT replace the product with a generic item.'
+      : 'Do not invent fantasy products. Feature the offered service or commercial offer cleanly.',
     contacts.length
       ? `Contact lines that may appear on the creative if text is used: ${contacts.join(' · ')}`
       : null,

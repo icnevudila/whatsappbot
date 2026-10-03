@@ -41,6 +41,12 @@ export type WizardPreflightIssue = {
 
 const compact = (value: string) => value.replace(/\s+/g, ' ').trim()
 
+/** Draft-only filter: never apply this to an explicitly approved user script. */
+export function containsShotDirections(value: string): boolean {
+  const text = value.toLocaleLowerCase('tr-TR')
+  return /kamera|kadraj|sahne|çekim|cekim|geometri|referans|prompt|veo|logo.*(?:ekle|bas|yerleştir)|(?:koru|korun|değiştirme|degistirme)|single.?scene|preserv|shot|camera|no hands|negatif/.test(text)
+}
+
 export function parseFactLines(value: string): string[] {
   return Array.from(
     new Set(
@@ -74,10 +80,13 @@ export function buildSafeSpokenLine(input: {
 }): string {
   const brand = compact(input.brandName) || 'İşletmemiz'
   const product = compact(input.productName) || 'ürünümüz'
-  const claim = compact(input.verifiedClaims?.[0] || '')
-  const note = compact(input.creativeNote || '')
+  const claim = compact(input.verifiedClaims?.find(value => !containsShotDirections(value)) || '')
+  // Creative notes belong to the visual brief, not to spoken fallback copy.
+  const note = ''
   const desc = compact(input.productDescription || '')
   const fmt = input.adFormat || 'FAST_SALES'
+
+  if (claim) return clampWords(`${brand} ${product}. ${claim}. Ayrıntılar için bize ulaşın.`)
 
   const searchScope = `${brand} ${product} ${desc} ${note}`.toLocaleLowerCase('tr-TR')
   const isBrick = searchScope.includes('tuğla') || searchScope.includes('tugla') || searchScope.includes('klinker') || searchScope.includes('inşaat') || searchScope.includes('ayvazoğlu') || searchScope.includes('ayvazoglu')

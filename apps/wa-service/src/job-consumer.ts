@@ -11,6 +11,7 @@ import { resolveWabaMessageSend } from './waba-config.js'
 import { checkOrgSendGate, orgSendGateMessage } from './org-send-gate.js'
 import { findActiveLidForPhone, findPhoneForLid } from './lid-routing.js'
 import { prepareVoiceNote } from './audio-converter.js'
+import { runCreativeRenderCallback } from './creative-render-callback.js'
 
 const log = logger.child({ scope: 'jobs' })
 
@@ -974,6 +975,7 @@ async function handle(job: JobRow): Promise<unknown> {
       const payload = job.payload as JobPayloadMap['creative.render']
       const creativeId = String(payload.creative_id ?? '').trim()
       if (!creativeId) throw new NonRetryableJobError('creative_id eksik.')
+      if (!job.org_id) throw new NonRetryableJobError('creative.render müşteri kimliği eksik.')
 
       // Kreatif kaydını oku — flowJob bilgisi ve mevcut durumu lazım.
       const [creative] = await query<{
@@ -983,8 +985,8 @@ async function handle(job: JobRow): Promise<unknown> {
         public_url: string | null
         payload: Record<string, unknown> | null
       }>(
-        `SELECT id, status, format, public_url, payload FROM creatives WHERE id = $1`,
-        [creativeId],
+        `SELECT id, status, format, public_url, payload FROM creatives WHERE id = $1 AND org_id = $2`,
+        [creativeId, job.org_id],
       )
       if (!creative) throw new NonRetryableJobError('Kreatif kaydi bulunamadi.')
 
@@ -1004,13 +1006,20 @@ async function handle(job: JobRow): Promise<unknown> {
       ).replace(/\/$/, '')
 
       if (!flowJobId) {
-        // flowJob yoksa — muhtemelen henüz Gateway'e gönderilmedi veya görsel üretimi.
-        // Vercel panel tarafı /api/icerik/render ile üretimi kendi yürütür.
-        return {
-          creative_id: creativeId,
-          skipped: true,
-          reason: 'flowJob yok; üretim panel tarafindan yurutulecek.',
+        // Missing flowJob is not completion. Start/resume the durable image or
+        // video workflow even when no customer browser has opened the creative.
+        const token = payload.callback_token || process.env.JOB_INTERNAL_SECRET?.trim()
+        if (!token) throw new NonRetryableJobError('Creative render callback authorization is unavailable.')
+        let result
+        try {
+          result = await runCreativeRenderCallback({ creativeId, jobId:job.id, token,
+            appUrl:process.env.CUSTOMER_APP_URL || 'https://app.mesajify.com' })
+        } catch (error) {
+          throw new JobDeferredError('Render endpoint geçici olarak erişilemiyor; aynı iş korunuyor.',15)
         }
+        if (result.state === 'pending') throw new JobDeferredError('Kreatif üretimi sürüyor; aynı iş tekrar sorgulanacak.',15)
+        if (result.state === 'failed') throw new NonRetryableJobError(result.error || 'Kreatif üretimi başarısız.')
+        return { creative_id: creativeId, rendered:true }
       }
 
       // Gateway'den video durumunu kontrol et
