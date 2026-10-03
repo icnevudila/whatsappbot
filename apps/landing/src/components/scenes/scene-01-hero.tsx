@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { MesajifyMark } from '../brand/mesajify-mark'
-import { CheckCircle2, ArrowRight, MessageSquare, Compass, Send, ShieldCheck, Monitor } from 'lucide-react'
+import { CheckCircle2, ArrowRight, MessageSquare, Compass, Send, LayoutDashboard, Monitor } from 'lucide-react'
 
 interface HeroShowcase {
   id: string
@@ -20,56 +20,56 @@ interface HeroShowcase {
 
 const HERO_SHOWCASES: HeroShowcase[] = [
   {
+    id: 'dashboard',
+    video: '/landing/studio/hero-gen-dashboard.mp4',
+    poster: '/landing/studio/hero-gen-dashboard.png',
+    categoryBadge: 'KONTROL PANELİ',
+    headlineLead: 'Tek panelden',
+    headlineDynamic: 'tüm WhatsApp tanıtımlarınızı canlı yönetin',
+    sublead: '48.000+ müşteriye doğrudan ulaşın; bağlı hatlarınızı, iletim oranlarınızı ve canlı kampanya sürecini tek merkezden takip edin.',
+    featureTitle: 'Mesajify Canlı Gösterge Paneli',
+    featureTag: '%99.4 Başarılı İletim',
+    ctaText: 'Paneli Keşfet',
+    icon: LayoutDashboard,
+  },
+  {
     id: 'inbox',
-    video: '/landing/infographics/04-ortak-inbox-veo-i2v.mp4',
-    poster: '/landing/studio/hero-wide-inbox.jpg',
+    video: '/landing/studio/hero-gen-inbox.mp4',
+    poster: '/landing/studio/hero-gen-inbox.png',
     categoryBadge: 'ORTAK GELEN KUTUSU',
     headlineLead: 'WhatsApp üzerinden',
     headlineDynamic: 'gelen müşteri taleplerini anında yanıtlayın',
-    sublead: 'Kampanyanızdan dönen sipariş, fiyat ve randevu sorularını tek panelden ekipçe anında satışa dönüştürün.',
-    featureTitle: 'Ortak Gelen Kutusu & Satış Yönetimi',
-    featureTag: 'Canlı Müşteri Yanıtları',
+    sublead: 'Kampanyanızdan dönen sipariş, toptan fiyat ve randevu sorularını tek panelden ekipçe anında satışa dönüştürün.',
+    featureTitle: 'Ortak Gelen Kutusu & Hızlı Satış',
+    featureTag: '12 Yeni Müşteri Yanıtı',
     ctaText: 'Gelen Kutusu Demo',
     icon: MessageSquare,
   },
   {
-    id: 'campaign',
-    video: '/landing/studio/hero-kampanya-hazirlik-16-9.mp4',
-    poster: '/landing/studio/hero-wide-kampanya.jpg',
-    categoryBadge: 'KAMPANYA STÜDYOSU',
-    headlineLead: 'Müşteri kitlenize',
-    headlineDynamic: 'tek tıkla kampanya oluşturup iletin',
-    sublead: 'Fotoğrafınızı yükleyin, dikey tanıtım videonuz ve şablonunuz hazır olsun; binlerce alıcıya tek tıkla güvenle ulaştırın.',
-    featureTitle: 'Kampanya ve Mesaj Hazırlığı',
-    featureTag: 'Tek Tıkla Gönderim',
-    ctaText: 'Kampanyayı Başlat',
-    icon: Send,
-  },
-  {
     id: 'discovery',
-    video: '/landing/infographics/06-isletme-bulucu-veo-i2v.mp4',
-    poster: '/landing/studio/hero-wide-bulucu.jpg',
+    video: '/landing/studio/hero-gen-discovery.mp4',
+    poster: '/landing/studio/hero-gen-discovery.png',
     categoryBadge: 'İŞLETME BULUCU',
     headlineLead: 'Hedef pazarınızda',
     headlineDynamic: 'bölgenizdeki işletmeleri haritadan keşfedin',
-    sublead: 'Şehir, ilçe ve sektör filtreleriyle doğrulanmış WhatsApp işletme numaralarını bulun, listenize tek tıkla ekleyin.',
-    featureTitle: 'İşletme Bulucu & Harita Keşfi',
+    sublead: 'Şehir, ilçe ve sektör filtreleriyle Kadıköy, Beşiktaş veya tüm Türkiye genelindeki doğrulanmış WhatsApp işletmelerini bulun, kitleye ekleyin.',
+    featureTitle: 'İşletme Bulucu & Harita Radarı',
     featureTag: '1.420 Doğrulanmış Firma',
     ctaText: 'Kitlenizi Keşfedin',
     icon: Compass,
   },
   {
-    id: 'command-center',
-    video: '/landing/studio/mesajify-hero-loop-seamless.mp4',
-    poster: '/landing/studio/hero-wide-mesajify-seamless.jpg',
-    categoryBadge: 'KONTROL MERKEZİ',
-    headlineLead: 'Doğal hızda',
-    headlineDynamic: 'kesintisiz güvenli iletim sağlayın',
-    sublead: 'Akıllı bekleme aralıkları, yük dengeleme ve güvenli altyapı ile tanıtımlarınız kesintisiz olarak iletilir.',
-    featureTitle: 'Mesajify Canlı İletim Hattı',
-    featureTag: 'Yük Dengeleme Aktif',
-    ctaText: 'Canlı Paneli Gör',
-    icon: ShieldCheck,
+    id: 'studio',
+    video: '/landing/studio/hero-gen-studio.mp4',
+    poster: '/landing/studio/hero-gen-studio.png',
+    categoryBadge: 'KAMPANYA STÜDYOSU',
+    headlineLead: 'Müşteri kitlenize',
+    headlineDynamic: 'tek tıkla kişiselleştirilmiş kampanya iletin',
+    sublead: 'Dikey tanıtım videonuzu ekleyin, dinamik isim değişkenli şablonunuzu belirleyin ve binlerce alıcıya tek tıkla güvenle ulaştırın.',
+    featureTitle: 'Kampanya & Şablon Stüdyosu',
+    featureTag: '3.850 Doğrulanmış Alıcı',
+    ctaText: 'Kampanyayı Başlat',
+    icon: Send,
   },
 ]
 
@@ -135,7 +135,7 @@ export function Scene01Hero() {
               </a>
             </div>
 
-            {/* Mesajify Uygulama Yetenekleri Butonları */}
+            {/* Mesajify Uygulama Ekranları Butonları */}
             <div className="mt-8 pt-6 border-t border-slate-200/80">
               <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-3">
                 Mesajify Uygulama Ekranları
