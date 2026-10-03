@@ -36,7 +36,7 @@ const HERO_SHOWCASES: HeroShowcase[] = [
     sublead: 'Kampanyanızdan dönen sipariş, toptan fiyat ve randevu sorularını tek panelden ekipçe anında satışa dönüştürün.',
     featureTitle: 'Ortak Gelen Kutusu & Hızlı Satış',
     featureTag: '18 Yeni Müşteri Yanıtı',
-    ctaText: 'Gelen Kutusu Demo',
+    ctaText: 'Gelen Kutusunu İncele',
   },
   {
     id: 'discovery',
@@ -66,7 +66,7 @@ const HERO_SHOWCASES: HeroShowcase[] = [
     categoryBadge: 'ÇOKLU HAT DAĞITICI',
     headlineLead: 'Yükü paylaştırın',
     headlineDynamic: 'bağlı hatlarınızla güvenli ve dengeli iletin',
-    sublead: 'Tek bir hatta yük bindirmeden, akıllı dağıtıcıyla Hat 01, Hat 02 ve Hat 03 arasında eşit paylaştırarak sıfır spam riskiyle gönderim yapın.',
+    sublead: 'Tek bir hatta yük bindirmeden, akıllı dağıtıcıyla Hat 01, Hat 02 ve Hat 03 arasında eşit paylaştırarak kontrollü gönderim yapın.',
     featureTitle: 'Akıllı Dağıtıcı & Hat Yük Dengeleme',
     featureTag: '3 Hat Dengeli İletim',
     ctaText: 'Hatları İncele',
