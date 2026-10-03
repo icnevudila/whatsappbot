@@ -104,10 +104,6 @@ export function Scene01Hero() {
           
           {/* 1. Üst Başlık Alanı: Mobilde 1. sırada, Masaüstünde Sol Kolonda */}
           <div className="order-1 lg:col-span-5 flex flex-col justify-center w-full">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-xs font-semibold w-fit mb-4">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Yeni Nesil WhatsApp Büyüme Platformu</span>
-            </div>
 
             <h1 className="text-3xl sm:text-4xl lg:text-[44px] xl:text-[48px] font-bold text-slate-900 tracking-tight leading-[1.12]">
               {current.headlineLead}<br />
