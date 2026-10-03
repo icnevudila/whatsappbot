@@ -140,10 +140,24 @@ export type CreativeRevision = {
   veo_prompt_draft?: string
 }
 
+import type {
+  ProductionStageKey,
+  EtaConfidence,
+  ProgressMode,
+} from '@/lib/creative/production-progress/progress-types'
+
 export type JobUserViewModel = {
   job_id: string
   org_id: string
   state: 'PENDING' | 'QUEUED' | 'GENERATING' | 'COMPLETED' | 'NEEDS_REVIEW' | 'FAILED'
+  raw_state?: string
+  stage_key?: ProductionStageKey
+  stage_count?: number
+  stage_started_at?: string | null
+  job_started_at?: string | null
+  elapsed_total_seconds?: number
+  stage_elapsed_seconds?: number
+  detail_hint?: string | null
   display_state:
     | 'REKLAM_TASLAGI_HAZIRLANIYOR'
     | 'SIRAYA_ALINDI'
@@ -158,7 +172,11 @@ export type JobUserViewModel = {
   display_message: string
   stage_index: number
   queue_ahead_count?: number | null
+  eta_min_seconds?: number | null
+  eta_max_seconds?: number | null
   eta_display_text?: string | null
+  eta_confidence?: EtaConfidence
+  progress_mode?: ProgressMode
   can_cancel: boolean
   can_leave_page: boolean
   output_id?: string | null
@@ -181,3 +199,4 @@ export type JobUserViewModel = {
   canonical_asset_sha?: string | null
   product_fidelity_contract?: ProductFidelityContract | null
 }
+

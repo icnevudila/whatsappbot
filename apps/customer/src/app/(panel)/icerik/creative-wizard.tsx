@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Button, Card, Field, FileUploadButton, Input, Notice, Textarea } from '@/components/ui'
 import { Stepper } from '@/components/stepper'
-import { CreativeProductionVisual } from '@/components/creative-production-visual'
+import { ProductionProgress } from '@/components/production-progress/production-progress'
 import { uploadAssetOnly } from './actions'
 import {
   AD_FORMAT_OPTIONS,
@@ -100,8 +100,8 @@ export function CreativeWizard({
 
   // Waiting & Delivery Experience State (Real Service Integration)
   const [activeJobId, setActiveJobId] = useState<string | null>(null)
-  const [jobState, setJobState] = useState<string>('IDLE')
-  const [jobDisplayState, setJobDisplayState] = useState<string>('Reklam taslağı onaylandı')
+  const [jobState, setJobState] = useState<JobUserViewModel['state'] | 'IDLE'>('IDLE')
+  const [jobDisplayState, setJobDisplayState] = useState<JobUserViewModel['display_state']>('REKLAM_TASLAGI_HAZIRLANIYOR')
   const [jobDisplayTitle, setJobDisplayTitle] = useState<string>('Reklamınız Hazırlanıyor')
   const [jobDisplayMessage, setJobDisplayMessage] = useState<string>('İşlem devam ediyor.')
   const [jobStageIndex, setJobStageIndex] = useState<number>(1)
@@ -112,7 +112,6 @@ export function CreativeWizard({
   const [submissionError, setSubmissionError] = useState<string | null>(null)
   const [jobFailureMessage, setJobFailureMessage] = useState<string | null>(null)
   const [jobEvidence, setJobEvidence] = useState<Partial<JobUserViewModel>>({})
-  const [elapsedSeconds, setElapsedSeconds] = useState<number>(0)
 
   // Authoritative Brand Kit & Logo Resolution
   const defaultKit = useMemo(() => data.kits.find((k) => k.isDefault) ?? data.kits[0] ?? null, [data.kits])
@@ -643,121 +642,54 @@ export function CreativeWizard({
     }
   }, [activeJobId])
 
-  useEffect(() => {
-    const isGenerating =
-      jobState !== 'IDLE' &&
-      jobState !== 'COMPLETED' &&
-      jobState !== 'FAILED' &&
-      jobState !== 'NEEDS_REVIEW'
 
-    if (!isGenerating) {
-      setElapsedSeconds(0)
-      return
+
+  const activeViewModel: JobUserViewModel = useMemo(() => {
+    if (jobEvidence && jobEvidence.job_id) {
+      return jobEvidence as JobUserViewModel
     }
+    const safeState = (['PENDING', 'QUEUED', 'GENERATING', 'COMPLETED', 'NEEDS_REVIEW', 'FAILED'].includes(jobState)
+      ? jobState
+      : 'PENDING') as JobUserViewModel['state']
 
-    const timer = setInterval(() => {
-      setElapsedSeconds((prev) => prev + 1)
-    }, 1000)
-
-    return () => clearInterval(timer)
-  }, [jobState])
-
-  const targetTotalSeconds = 150
-  const progressPercent = Math.min(
-    95,
-    Math.max(5, Math.round((jobStageIndex / 7) * 100))
-  )
-
-  const formatSeconds = (sec: number) => {
-    const m = Math.floor(sec / 60)
-    const s = sec % 60
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-  }
-
-  const formatRemaining = (totalTarget: number, elapsed: number) => {
-    const diff = totalTarget - elapsed
-    if (diff <= 5) return 'Son kontroller...'
-    const m = Math.floor(diff / 60)
-    const s = diff % 60
-    if (m === 0) return `~${s} sn`
-    return s > 0 ? `~${m} dk ${s} sn` : `~${m} dk`
-  }
-
-  const currentMicroStep = useMemo(() => {
-    if (jobStageIndex < 3) {
-      return {
-        tag: 'Stüdyo Hazırlığı',
-        desc: 'Kurumsal kimlik, logo ve ürün parametreleri kilitleniyor...',
-      }
-    }
-    if (jobStageIndex === 3) {
-      return {
-        tag: 'Kompozisyon',
-        desc: 'Ürün görselleri ve stüdyo aydınlatması bağlanıyor...',
-      }
-    }
-    if (jobStageIndex === 4) {
-      if (jobDisplayMessage) {
-        return { tag: 'Video Üretimi', desc: jobDisplayMessage }
-      }
-      if (elapsedSeconds < 18) {
-        return {
-          tag: 'Kamera Kurulumu',
-          desc: '35mm dikey sinematik kamera açısı ve odak derinliği ayarlanıyor...',
-        }
-      }
-      if (elapsedSeconds < 38) {
-        return {
-          tag: 'Doku & Aydınlatma',
-          desc: 'Doğal ortam ışığı, ürün yansımaları ve malzeme detayları işleniyor...',
-        }
-      }
-      if (elapsedSeconds < 62) {
-        return {
-          tag: 'Sinematik Akış',
-          desc: 'Kesintisiz, akıcı tek plan kamera çekimi kare kare üretiliyor...',
-        }
-      }
-      if (elapsedSeconds < 88) {
-        return {
-          tag: 'Renk & Kontrast',
-          desc: 'Profesyonel renk tonlaması ve görsel derinlik optimize ediliyor...',
-        }
-      }
-      if (elapsedSeconds < 112) {
-        return {
-          tag: 'Görsel Bütünlük',
-          desc: 'Sahne dengesi ve dikey video çerçeve geçişleri kontrol ediliyor...',
-        }
-      }
-      if (elapsedSeconds < 132) {
-        return {
-          tag: 'Kurgu Masası',
-          desc: 'Ham video çekimi tamamlandı; montaj ve ses stüdyosuna aktarılıyor...',
-        }
-      }
-      return {
-        tag: 'Ses & Altyazı',
-        desc: 'Sağlayıcı üretimi ve çıktı kontrolleri sürüyor; final video henüz hazır değil.',
-      }
-    }
-    if (jobStageIndex === 5) {
-      return {
-        tag: 'Ses & Altyazı',
-        desc: 'Türkçe seslendirme ve senkronize dinamik altyazılar işleniyor...',
-      }
-    }
-    if (jobStageIndex === 6) {
-      return {
-        tag: 'Marka Kapanışı',
-        desc: 'Kurumsal logonuz ve kapanış sahnesi (outro) montajlanıyor...',
-      }
-    }
     return {
-      tag: 'Tamamlanıyor',
-      desc: 'Reklam videonuz hazırlandı, oynatıcıya yükleniyor...',
+      job_id: activeJobId || '',
+      org_id: '',
+      state: safeState,
+      raw_state: jobState,
+      stage_key: 'REQUEST_ACCEPTED',
+      stage_index: jobStageIndex,
+      stage_count: 7,
+      display_state: jobDisplayState,
+      display_title: jobDisplayTitle || 'Reklam Videonuz Prodüksiyonda',
+      display_message: jobDisplayMessage || 'Dikey sinematik reklam filminiz aşama aşama kurgulanıyor.',
+      queue_ahead_count: queueAhead,
+      eta_display_text: etaText,
+      can_cancel: ['PENDING', 'QUEUED'].includes(jobState),
+      can_leave_page: true,
     }
-  }, [jobStageIndex, elapsedSeconds, jobDisplayMessage])
+  }, [
+    jobEvidence,
+    activeJobId,
+    jobState,
+    jobStageIndex,
+    jobDisplayState,
+    jobDisplayTitle,
+    jobDisplayMessage,
+    queueAhead,
+    etaText,
+  ])
+
+  const handleCancelOrResetJob = () => {
+    setActiveJobId(null)
+    setJobState('IDLE')
+    setStep('campaign')
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href)
+      url.searchParams.delete('job_id')
+      window.history.pushState({}, '', url.toString())
+    }
+  }
 
   return (
     <>
@@ -784,130 +716,13 @@ export function CreativeWizard({
 
         {/* 1. WAITING / GENERATION EXPERIENCE (Realtime & Authoritative Backend State) */}
         {jobState !== 'IDLE' && jobState !== 'COMPLETED' && jobState !== 'FAILED' && jobState !== 'NEEDS_REVIEW' ? (
-          <div className="creative-production-shell p-6 space-y-6">
-            <CreativeProductionVisual kind="video" />
-            <div className="text-center space-y-3">
-              <div className="inline-flex size-3.5 rounded-full bg-[#008069] mb-1 animate-ping" />
-              <h3 className="text-[19px] font-bold text-[#111b21]">Reklam Videonuz Prodüksiyonda</h3>
-              <p className="text-[13px] text-[#667781]">
-                Dikey sinematik reklam filminiz aşama aşama kurgulanıyor.
-              </p>
-
-              {/* Live Progress Bar & Timer */}
-              <div className="w-full max-w-md mx-auto pt-1 space-y-2.5">
-                <div className="flex justify-between items-center text-[12px] font-semibold">
-                  <span className="flex items-center gap-1.5 text-[#008069]">
-                    <span className="size-2 rounded-full bg-[#008069] animate-pulse" />
-                    Geçen Süre: {formatSeconds(elapsedSeconds)}
-                  </span>
-                  <span className="text-[#667781]">
-                    Aşama {jobStageIndex} / 7
-                  </span>
-                </div>
-                <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200/70 shadow-inner">
-                  <div
-                    className="h-full bg-gradient-to-r from-[#008069] via-[#00a884] to-[#25d366] transition-all duration-1000 ease-out rounded-full"
-                    style={{ width: `${progressPercent}%` }}
-                  />
-                </div>
-                <div className="flex items-center gap-2 text-[12.5px] bg-emerald-50/80 border border-emerald-100/90 rounded-lg py-2.5 px-3.5 shadow-xs text-left">
-                  <span className="inline-flex items-center justify-center rounded-md bg-[#008069]/10 px-2 py-0.5 text-[11px] font-bold text-[#008069] shrink-0 uppercase tracking-wide">
-                    {currentMicroStep.tag}
-                  </span>
-                  <span className="text-[#111b21] font-medium truncate">
-                    {currentMicroStep.desc}
-                  </span>
-                </div>
-              </div>
-
-              {queueAhead && queueAhead > 0 ? (
-                <div className="mt-3 p-4 bg-amber-50/90 border border-amber-200/90 rounded-xl text-left max-w-md mx-auto shadow-xs">
-                  <div className="flex items-center gap-2 text-amber-900 font-bold text-[14px]">
-                    <span className="flex size-6 items-center justify-center rounded-full bg-amber-200 text-amber-900 text-[12px] font-bold">
-                      #{queueAhead + 1}
-                    </span>
-                    <span>Kuyruktaki Sıranız: #{queueAhead + 1} ({queueAhead} video önünüzde)</span>
-                  </div>
-                  <p className="mt-1.5 text-[12px] text-amber-800 leading-relaxed">
-                    💡 <strong>Ekran başında beklemenize gerek yoktur!</strong> Bu pencereden ayrılabilir veya tarayıcınızı kapatabilirsiniz. Videonuz arka planda sırayla işlenecek ve tamamlandığında doğrudan <strong>İçerik Kütüphanenize</strong> eklenecektir.
-                  </p>
-                  <div className="mt-2.5 pt-2 border-t border-amber-200/70 flex items-center justify-between">
-                    <span className="text-[11px] font-medium text-amber-700">Tahmini Başlama: ~2–3 dakika</span>
-                    <Link href="/icerik" className="text-[12px] font-semibold text-[#008069] hover:underline">
-                      Kütüphaneye Git →
-                    </Link>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-
-            {/* In-Card Stage Checklist */}
-            <div className="creative-production-stages rounded-xl border border-hairline bg-[#f8fafb] p-4 max-w-md mx-auto space-y-3">
-              {[
-                { label: 'Reklam kurgusu ve metin onaylandı', stage: 1 },
-                { label: 'Prodüksiyon sırasına alındı', stage: 2 },
-                { label: 'Marka logosu ve ürün materyalleri hazırlandı', stage: 3 },
-                { label: 'Sinematik dikey video çekimi ve kurgu', stage: 4 },
-                { label: 'Türkçe seslendirme ve dinamik altyazı', stage: 5 },
-                { label: 'Marka bitiş kartı (outro) montajı', stage: 6 },
-                { label: 'Reklam Videosu Yayına Hazır', stage: 7 },
-              ].map((item, idx) => {
-                const isDone = jobStageIndex > item.stage
-                const isCurrent = jobStageIndex === item.stage
-                return (
-                  <div key={idx} className="flex items-center gap-3 text-[13px]">
-                    {isDone ? (
-                      <span className="flex size-5 items-center justify-center rounded-full bg-[#008069] text-white text-[11px] font-bold">
-                        ✓
-                      </span>
-                    ) : isCurrent ? (
-                      <span className="flex size-5 items-center justify-center rounded-full border-2 border-[#008069] bg-white">
-                        <span className="size-2 rounded-full bg-[#008069] animate-ping" />
-                      </span>
-                    ) : (
-                      <span className="size-5 rounded-full border border-[#d1d7db] bg-white" />
-                    )}
-                    <span className={isDone ? 'font-medium text-[#111b21]' : isCurrent ? 'font-bold text-[#008069]' : 'text-[#667781]'}>
-                      {item.label}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-
-            {/* Decoupled Notice Banner */}
-            <div className="creative-production-notice rounded-lg border border-blue-200 bg-blue-50/70 p-3.5 text-center max-w-md mx-auto">
-              <p className="text-[12.5px] font-medium text-blue-900 leading-relaxed">
-                ℹ <strong>Bu sayfada beklemeniz gerekmiyor.</strong>
-                <br />
-                Video arka planda hazırlanmaya devam edecek. Dilediğiniz zaman Medya kütüphanesinden izleyebilirsiniz.
-              </p>
-            </div>
-
-            <div className="flex justify-center items-center gap-3 pt-2">
-              <Link
-                href="/icerik"
-                className="inline-flex items-center gap-2 rounded-full border border-hairline bg-white px-5 py-2 text-[13px] font-medium text-[#111b21] hover:bg-[#f0f2f5] transition-colors"
-              >
-                İçerik Kütüphanesine Git
-              </Link>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveJobId(null)
-                  setJobState('IDLE')
-                  setStep('campaign')
-                  if (typeof window !== 'undefined') {
-                    const url = new URL(window.location.href)
-                    url.searchParams.delete('job_id')
-                    window.history.pushState({}, '', url.toString())
-                  }
-                }}
-                className="text-[12.5px] font-medium text-[#667781] hover:text-[#111b21] transition-colors"
-              >
-                Yeni Taslak Oluştur
-              </button>
-            </div>
+          <div className="p-4 sm:p-6">
+            <ProductionProgress
+              viewModel={activeViewModel}
+              kind="video"
+              onCancel={handleCancelOrResetJob}
+              onNavigateLibrary={() => {}}
+            />
           </div>
         ) : null}
 
