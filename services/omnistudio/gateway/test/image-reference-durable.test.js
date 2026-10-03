@@ -45,4 +45,8 @@ test('CDP disconnect after reference receipt never requeues a paid image',t=>{
   assert.equal(job.reconciliationRequired,true);
   assert.equal(job.attemptCount,0);
   assert.equal(queue.getNextJob('chatgpt','worker-b'),null);
+  const recovery=queue.getNextJob('chatgpt','worker-a');
+  assert.equal(recovery.id,job.id);
+  assert.equal(recovery.resumeImage,true);
+  assert.equal(recovery.referenceReceipt.target_id,'target-a');
 });

@@ -14,6 +14,7 @@ const { isChatGPTPage } = require('./chatgpt_tab_scope.js');
 const { assertImageScope, readImageScope } = require('./image_conversation_scope.js');
 const { validateImageSubmit } = require('./image_submit_contract.js');
 const { assertReferenceCount } = require('./image_reference_contract.js');
+const { observeOwnedImage } = require('./image_observation_recovery.js');
 
 const GATEWAY_URL = process.env.GATEWAY_URL || 'http://127.0.0.1:3456';
 const { createWorkerGatewayFetch } = require('./worker_gateway_fetch.js');
@@ -818,6 +819,24 @@ async function workerLoop() {
       await executeProductAffordanceJob(chatgptTab, job);
     } else if (job.type === 'chat_completion') {
       await executeGenericChatJob(chatgptTab, job);
+    } else if (job.resumeImage) {
+      const response = await fetch(`${CDP_HTTP}/json/list`);
+      const targets = await response.json();
+      const target = targets.find(item => item.id === job.referenceReceipt?.target_id && isChatGPTPage(item));
+      if (!target) throw new Error('IMAGE_OBSERVATION_TARGET_MISSING');
+      reaper.registry.setTabJob(chatgptTab.id, null);
+      chatgptTab = target;
+      preserveImageTarget = true;
+      const connection = await createCdpSession(target.webSocketDebuggerUrl);
+      const result = await observeOwnedImage({ job, tab: target, cdp: connection, fetchImpl: fetch,
+        gatewayUrl: GATEWAY_URL, sleep });
+      if (result.completed) {
+        preserveImageTarget = false;
+        disposableImageTarget = target;
+      } else {
+        await fetch(`${GATEWAY_URL}/job/release`, {method:'POST',headers:{'content-type':'application/json'},
+          body:JSON.stringify({jobId:job.id,error:'IMAGE_OBSERVATION_PENDING'})});
+      }
     } else {
       // Never reuse a text/canary/persistent company target for a production image.
       const freshUrl = `https://chatgpt.com/?mesajify_image_job_id=${encodeURIComponent(job.id)}`;
@@ -985,7 +1004,7 @@ async function executeChatGPTJob(tab, job) {
             }
             if (!attachmentsVerified) {
               const diagnostic = await cdp.send('Runtime.evaluate', {
-                expression: `JSON.stringify({scope:(${readImageScope.toString()})(),attachments:(${readComposerAttachments.toString()})(),inputs:Array.from(document.querySelectorAll('input[type=file]')).map(el=>({id:el.id,accept:el.accept,multiple:el.multiple,disabled:el.disabled,fileCount:el.files?.length||0})),composerHtml:document.querySelector('#prompt-textarea')?.closest('form')?.outerHTML?.slice(0,8000)})`, returnByValue:true,
+                expression: `JSON.stringify({scope:(${readImageScope.toString()})(),attachments:(${readComposerAttachments.toString()})(),inputs:Array.from(document.querySelectorAll('input[type=file]')).map(el=>({id:el.id,accept:el.accept,multiple:el.multiple,disabled:el.disabled,fileCount:el.files?.length||0})),composer:((el)=>({present:!!el,tag:el?.tagName,editable:el?.isContentEditable,visible:!!el?.getClientRects().length}))(document.querySelector('#prompt-textarea'))})`, returnByValue:true,
               }).catch(()=>null);
               console.log(JSON.stringify({event:'image_attachment_diagnostic',job_id:job.id,target_id:tab.id,action:'DOM.setFileInputFiles',last_successful_action:'DOM.setFileInputFiles',diagnostic:diagnostic?.result?.value||null}));
               throw new Error('REFERENCE_ATTACHMENT_FAILED: all requested references were not confirmed in the composer');

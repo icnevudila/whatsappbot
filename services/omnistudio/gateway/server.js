@@ -483,7 +483,10 @@ class AdvancedJobQueue {
         if (job.status === 'processing') {
           // The provider may still be producing. Never enqueue a second paid attempt.
           job.reconciliationRequired = true;
-          if (job.assignedTo) this.activeWorkers.set(job.assignedTo, job.id);
+          if (job.type === 'image' && job.referenceReceipt) {
+            job.status = 'reconciliation_required';
+            this.persist(job);
+          } else if (job.assignedTo) this.activeWorkers.set(job.assignedTo, job.id);
         }
       }
       this.recalculatePositions();
@@ -675,6 +678,21 @@ class AdvancedJobQueue {
     // Eğer işçi henüz giriş yapmadıysa (login ekranındaysa) iş atama
     const reg = this.registeredWorkers.get(wid);
     if (reg && reg.status === 'waiting_login') return null;
+
+    // Resume the owned provider target, never a new generation, after a timeout.
+    const observation = Array.from(this.jobs.values()).find(job => job.type === 'image' &&
+      job.status === 'reconciliation_required' && job.referenceReceipt?.worker_id === wid &&
+      (job.imageObservationAttempts || 0) < 3 && Date.now() - job.createdAt < 30 * 60 * 1000);
+    if (observation) {
+      observation.status = 'processing';
+      observation.assignedTo = wid;
+      observation.resumeImage = true;
+      observation.imageObservationAttempts = (observation.imageObservationAttempts || 0) + 1;
+      observation.statusText = 'Aynı üretimin sonucu kontrol ediliyor; yeni üretim başlatılmadı.';
+      this.activeWorkers.set(wid, observation.id);
+      this.persist(observation);
+      return observation;
+    }
 
     const sKey = workerSessionKey || (reg && reg.sessionKey) || (workerId ? `worker_${workerId}` : (p === 'chatgpt' ? 'chatgpt_9222' : 'gemini_9222'));
     const session = this.getSession(sKey);
@@ -940,6 +958,8 @@ class AdvancedJobQueue {
     job.durationMs = job.completedAt - (job.startedAt || job.createdAt);
     job.reconciliationRequired = false;
     job.resultSha256 = buffer ? crypto.createHash('sha256').update(buffer).digest('hex') : null;
+    job.error = null;
+    job.errorCode = null;
     finishMetrics(job.metrics, { result: 'success', now: job.completedAt });
     this.persist(job);
 
