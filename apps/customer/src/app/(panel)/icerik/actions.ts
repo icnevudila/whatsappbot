@@ -1,4 +1,5 @@
 'use server'
+import sharp from 'sharp'
 
 import { after } from 'next/server'
 import { revalidatePath } from 'next/cache'
@@ -359,6 +360,10 @@ export async function startCreativeGeneration(
   }
   const title = titleFromBrief(String(draft.instruction ?? '').trim() || brief)
   // Identical mandatory-asset gate for every business, enforced before job insertion.
+  const logoSource = String(kitRow?.logo_path || orgLogoPath || '').trim()
+  if (products.some(product => !product.include.image || !product.imageUrl || product.imageUrl.trim() === logoSource)) {
+    return { error: 'Seçilen her ürün için gerçek ürün veya arayüz görseli ekleyin. İşletme logosu ürün referansı yerine kullanılamaz.' }
+  }
   const imageAssetGate = requiredImageAssets({
     useLogo: draft.useLogo !== false, hasLogo: Boolean(kitRow?.logo_path || orgLogoPath),
     hasProductReference: products.some((product) => product.include.image && Boolean(product.imageUrl)),
@@ -699,10 +704,17 @@ export async function quickCreateProduct(
 
   const files = collectImageFiles(formData, 'images')
   if (!files.length) return { error: 'Ürün referans görseli zorunludur.' }
+  if (files.length > 8) return { error: 'En fazla 8 ürün görseli ekleyin.' }
   for (const file of files) {
     const parsed = await readImageFile(file)
     if ('error' in parsed && parsed.error) return { error: parsed.error }
     if (!('buffer' in parsed)) return { error: 'Geçerli bir ürün görseli yükleyin.' }
+    try {
+      const decoded = sharp(parsed.buffer,{limitInputPixels:25000000,failOn:'warning'})
+      const metadata = await decoded.metadata()
+      if (!['png','jpeg','webp'].includes(metadata.format || '')) return {error:'PNG, JPG veya WEBP yükleyin.'}
+      await decoded.raw().toBuffer()
+    } catch { return {error:'Ürün görseli bozuk veya okunamıyor. Başka bir görsel yükleyin.'} }
   }
 
   const description = String(formData.get('description') ?? '').trim()

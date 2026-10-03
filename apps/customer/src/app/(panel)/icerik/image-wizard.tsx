@@ -217,14 +217,16 @@ export function ImageCreativeWizard({ data }: { data: WizardBootstrap }) {
   const stepIndex = STEPS.findIndex((row) => row.id === step)
   const selectedKit = data.kits.find((kit) => kit.id === draft.brandKitId)
   const selectedProducts = productsList.filter((product) => draft.productIds.includes(product.id))
+  const allProductReferencesReady = selectedProducts.every(product => {
+    const extra = draft.productExtras[product.id] ?? emptyExtra(product.images[0]?.url ?? '')
+    return extra.include.image && Boolean(extra.imageUrl) && extra.imageUrl !== data.org.logoPreview &&
+      product.images.some(image => image.url === extra.imageUrl)
+  })
   const requiredAssetsReady = requiredImageAssets({
     useLogo: draft.useLogo, hasLogo: Boolean(selectedKit?.samplePreview || data.org.logoPreview),
     hasValidBase: draft.origin === 'derive' && Boolean(validBaseSource),
-    hasProductReference: selectedProducts.some((product) => {
-      const extra = draft.productExtras[product.id] ?? emptyExtra(product.images[0]?.url ?? '')
-      return extra.include.image && product.images.some((image) => image.url === extra.imageUrl)
-    }),
-  }).ready
+    hasProductReference: selectedProducts.length > 0 && allProductReferencesReady,
+  }).ready && allProductReferencesReady
   const payload = useMemo(
     () =>
       JSON.stringify({
