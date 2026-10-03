@@ -65,6 +65,7 @@ export function AddProductModal({
       setError('Ürün adı gereklidir.')
       return
     }
+    if (!selectedFile) { setError('Ürün referans görseli zorunludur.'); return }
 
     setError(null)
     const formData = new FormData()
@@ -216,7 +217,7 @@ export function AddProductModal({
             <Button
               type="submit"
               variant="accent"
-              disabled={pending || !name.trim()}
+              disabled={pending || !name.trim() || !selectedFile}
             >
               {pending ? 'Ekleniyor…' : 'Kaydet ve Seç'}
             </Button>

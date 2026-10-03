@@ -697,6 +697,14 @@ export async function quickCreateProduct(
   const name = String(formData.get('name') ?? '').trim()
   if (!name) return { error: 'Ürün adı zorunludur.' }
 
+  const files = collectImageFiles(formData, 'images')
+  if (!files.length) return { error: 'Ürün referans görseli zorunludur.' }
+  for (const file of files) {
+    const parsed = await readImageFile(file)
+    if ('error' in parsed && parsed.error) return { error: parsed.error }
+    if (!('buffer' in parsed)) return { error: 'Geçerli bir ürün görseli yükleyin.' }
+  }
+
   const description = String(formData.get('description') ?? '').trim()
   const boxContents = String(formData.get('box_contents') ?? '').trim()
   const productId = crypto.randomUUID()
@@ -708,12 +716,11 @@ export async function quickCreateProduct(
     name: name.slice(0, 160),
     description: description || null,
     box_contents: boxContents || null,
-    is_active: true,
+    is_active: false,
   })
 
   if (insertError) return { error: insertError.message }
 
-  const files = collectImageFiles(formData, 'images')
   const images: { id: string; url: string }[] = []
 
   for (let index = 0; index < files.length; index += 1) {
@@ -741,6 +748,10 @@ export async function quickCreateProduct(
       images.push({ id: imgId, url: publicUrl.publicUrl })
     }
   }
+
+  if (!images.length) return { error: 'Ürün görseli kaydedilemedi. Görselsiz ürün seçime açılmadı; yeniden yükleyin.' }
+  const { error: activateError } = await supabase.from('org_products').update({is_active:true}).eq('id',productId).eq('org_id',org.id)
+  if (activateError) return { error: 'Ürün kaydı tamamlanamadı. Görsel yüklemesini tekrar deneyin.' }
 
   revalidatePath('/icerik/yeni')
   revalidatePath('/ayarlar/urunler')
