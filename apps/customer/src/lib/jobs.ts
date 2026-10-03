@@ -21,9 +21,14 @@ export async function enqueueJob<T extends JobType>(options: {
   accountId?: string
   campaignId?: string
   priority?: number
+  authContext?: {
+    userId: string
+    org: { id: string; suspended_at?: string | null; role?: string }
+    supabase: any
+  }
 }): Promise<{ id: string | null; error: string | null }> {
   try {
-    const { userId, org, supabase } = await requireActiveOrg()
+    const { userId, org, supabase } = options.authContext || (await requireActiveOrg())
 
     if (org.suspended_at) {
       return {

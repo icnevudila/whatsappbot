@@ -26,7 +26,10 @@ import {
   type VideoScenarioOption,
   type VideoScenarioContext,
 } from '@/lib/creative/video-scenario'
-import { generateArtDirectionPlan } from '@/lib/creative/director/creative-director'
+import {
+  generateArtDirectionPlan,
+  resolveArtDirectionPlanAtSubmission,
+} from '@/lib/creative/director/creative-director'
 
 export type CreativeActionState = { error?: string; ok?: string; id?: string; publicUrl?: string } | null
 
@@ -57,7 +60,14 @@ function parseIds(raw: unknown): string[] {
   return []
 }
 
-async function kickGeneration(creativeId: string) {
+async function kickGeneration(
+  creativeId: string,
+  authContext?: {
+    userId: string
+    org: { id: string; suspended_at?: string | null; role?: string }
+    supabase: any
+  },
+) {
   // Tek sahip: kalıcı jobs kuyruğu. Aynı kaydı hem after() hem servis
   // çalıştırdığında biri Flow'u beklerken diğeri "busy" görüp denemelerini
   // tüketebiliyordu; uzun kuyruklarda kayıt rendering durumunda kalıyordu.
@@ -70,6 +80,7 @@ async function kickGeneration(creativeId: string) {
       callback_token: randomBytes(32).toString('base64url'),
     },
     priority: 40,
+    authContext,
   })
   if (queued.error) {
     console.error('[creative.kick.job]', creativeId, queued.error)
@@ -103,6 +114,7 @@ export async function startCreativeGeneration(
   _previous: CreativeActionState,
   formData: FormData,
 ): Promise<CreativeActionState> {
+  const t0 = Date.now()
   const raw = String(formData.get('draft') ?? '')
   let draft: Record<string, unknown>
   try {
@@ -114,6 +126,7 @@ export async function startCreativeGeneration(
   const requestKey = String(draft.requestKey ?? '').trim()
   let brief = String(draft.brief ?? '').trim()
 
+  const tAuthStart = Date.now()
   let userId: string
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
   let supabase: Awaited<ReturnType<typeof requireActiveOrg>>['supabase']
@@ -122,6 +135,7 @@ export async function startCreativeGeneration(
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
   }
+  const authMs = Date.now() - tAuthStart
 
   if (!isOrgAdminRole(org.role)) {
     return { error: 'Görsel üretmek için yönetici olmalısınız.' }
@@ -131,25 +145,7 @@ export async function startCreativeGeneration(
     return { error: 'Görsel üretimi kapalı. Sunucuda sağlayıcı anahtarı yok.' }
   }
 
-  if (requestKey) {
-    const { data: existing } = await supabase
-      .from('creatives')
-      .select('id, status')
-      .eq('org_id', org.id)
-      .contains('payload', { requestKey })
-      .in('status', ['pending', 'rendering', 'ready'])
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    if (existing?.id) {
-      if (existing.status === 'pending' || existing.status === 'rendering') {
-        await kickGeneration(existing.id)
-      }
-      revalidateLibrary(existing.id)
-      redirect(`/icerik/${existing.id}`)
-    }
-  }
-
+  const authContext = { userId, org, supabase }
   const format = formatFromId(String(draft.formatId ?? 'wa'))
   const kitId = String(draft.brandKitId ?? '').trim() || null
   const rawProductIds = parseIds(draft.productIds)
@@ -171,6 +167,120 @@ export async function startCreativeGeneration(
         ? 'derived'
         : 'new'
 
+  const startOfMonth = new Date()
+  startOfMonth.setDate(1)
+  startOfMonth.setHours(0, 0, 0, 0)
+
+  // PARALLEL READS: Collapse all independent DB lookups into a single Promise.all
+  const tParallelStart = Date.now()
+  const [
+    existingRes,
+    kitRes,
+    orgRowRes,
+    baseRes,
+    parentRes,
+    productRowsRes,
+    imageRowsRes,
+    phonesRes,
+    socialsRes,
+    videoCountRes,
+  ] = await Promise.all([
+    requestKey
+      ? supabase
+          .from('creatives')
+          .select('id, status')
+          .eq('org_id', org.id)
+          .contains('payload', { requestKey })
+          .in('status', ['pending', 'rendering', 'ready'])
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    kitId && kitId !== 'none'
+      ? supabase
+          .from('brand_kits')
+          .select('id, name, tone, colors, fonts, logo_path')
+          .eq('org_id', org.id)
+          .eq('id', kitId)
+          .maybeSingle()
+      : supabase
+          .from('brand_kits')
+          .select('id, name, tone, colors, fonts, logo_path')
+          .eq('org_id', org.id)
+          .order('is_default', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+    supabase
+      .from('organizations')
+      .select('logo_path, monthly_video_quota')
+      .eq('id', org.id)
+      .maybeSingle(),
+    baseCreativeId
+      ? supabase
+          .from('creatives')
+          .select('id, format, status, public_url, storage_path')
+          .eq('id', baseCreativeId)
+          .eq('org_id', org.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    parentId
+      ? supabase
+          .from('creatives')
+          .select('id, payload')
+          .eq('id', parentId)
+          .eq('org_id', org.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    productIds.length > 0
+      ? supabase
+          .from('org_products')
+          .select('id, name, description, box_contents')
+          .eq('org_id', org.id)
+          .in('id', productIds)
+      : Promise.resolve({ data: [], error: null }),
+    productIds.length > 0
+      ? supabase
+          .from('org_product_images')
+          .select('product_id, public_url, sort_order')
+          .eq('org_id', org.id)
+          .in('product_id', productIds)
+          .order('sort_order', { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
+    phoneIds.length > 0
+      ? supabase
+          .from('accounts')
+          .select('id, label, phone_e164')
+          .eq('org_id', org.id)
+          .in('id', phoneIds)
+      : Promise.resolve({ data: [], error: null }),
+    socialIds.length > 0
+      ? supabase
+          .from('org_social_accounts')
+          .select('id, platform, label, url')
+          .eq('org_id', org.id)
+          .in('id', socialIds)
+      : Promise.resolve({ data: [], error: null }),
+    format.format === 'video'
+      ? supabase
+          .from('creatives')
+          .select('id', { count: 'exact', head: true })
+          .eq('org_id', org.id)
+          .eq('format', 'video')
+          .in('status', ['ready', 'processing', 'pending'])
+          .gte('created_at', startOfMonth.toISOString())
+      : Promise.resolve({ count: 0, error: null }),
+  ])
+  const parallelReadsMs = Date.now() - tParallelStart
+
+  const existing = existingRes.data
+  if (existing?.id) {
+    if (existing.status === 'pending' || existing.status === 'rendering') {
+      await kickGeneration(existing.id, authContext)
+    }
+    revalidateLibrary(existing.id)
+    redirect(`/icerik/${existing.id}`)
+  }
+
   let kitRow: {
     id: string
     name: string
@@ -178,53 +288,23 @@ export async function startCreativeGeneration(
     colors: unknown
     fonts: unknown
     logo_path: string | null
-  } | null = null
-  if (kitId && kitId !== 'none') {
-    const { data } = await supabase
-      .from('brand_kits')
-      .select('id, name, tone, colors, fonts, logo_path')
-      .eq('org_id', org.id)
-      .eq('id', kitId)
-      .maybeSingle()
-    kitRow = data
-    if (!kitRow) return { error: 'Marka kiti bulunamadı.' }
-  } else {
-    const { data: defKit } = await supabase
-      .from('brand_kits')
-      .select('id, name, tone, colors, fonts, logo_path')
-      .eq('org_id', org.id)
-      .order('is_default', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    kitRow = defKit
+  } | null = kitRes.data
+  if (kitId && kitId !== 'none' && !kitRow) {
+    return { error: 'Marka kiti bulunamadı.' }
   }
 
-  const { data: orgRow } = await supabase
-    .from('organizations')
-    .select('logo_path')
-    .eq('id', org.id)
-    .maybeSingle()
+  const orgRow = orgRowRes.data
   const orgLogoPath = orgRow?.logo_path ?? null
 
   if (baseCreativeId) {
-    const { data: base } = await supabase
-      .from('creatives')
-      .select('id, format, status, public_url, storage_path')
-      .eq('id', baseCreativeId)
-      .eq('org_id', org.id)
-      .maybeSingle()
+    const base = baseRes.data
     if (!base) return { error: 'Kaynak görsel bu işletmeye ait değil.' }
     if (!isReadyImageSource(base)) return { error: 'Kaynak hazır bir görsel olmalı; video veya tamamlanmamış çıktı kullanılamaz.' }
   }
 
   let parentPayload: CreativePayload | null = null
   if (parentId) {
-    const { data: parent } = await supabase
-      .from('creatives')
-      .select('id, payload')
-      .eq('id', parentId)
-      .eq('org_id', org.id)
-      .maybeSingle()
+    const parent = parentRes.data
     if (!parent) return { error: 'Üst görsel bulunamadı.' }
     parentPayload = parent.payload as CreativePayload
     if (brief.length < 8 && parentPayload?.brief) brief = parentPayload.brief.trim()
@@ -254,31 +334,22 @@ export async function startCreativeGeneration(
 
   const products: CreativeSnapshot['products'] = []
   if (productIds.length > 0) {
-    const { data: productRows } = await supabase
-      .from('org_products')
-      .select('id, name, description, box_contents')
-      .eq('org_id', org.id)
-      .in('id', productIds)
-    const { data: imageRows } = await supabase
-      .from('org_product_images')
-      .select('product_id, public_url, sort_order')
-      .eq('org_id', org.id)
-      .in('product_id', productIds)
-      .order('sort_order', { ascending: true })
+    const productRows = productRowsRes.data ?? []
+    const imageRows = imageRowsRes.data ?? []
 
     const firstImage = new Map<string, string>()
-    for (const image of imageRows ?? []) {
+    for (const image of imageRows) {
       if (!firstImage.has(image.product_id)) firstImage.set(image.product_id, image.public_url)
     }
 
-    const byId = new Map((productRows ?? []).map((row) => [row.id, row]))
+    const byId = new Map(productRows.map((row) => [row.id, row]))
     for (const id of productIds) {
       const product = byId.get(id)
       if (!product) continue
       const extra = extras[id] ?? {}
       const include = { ...DEFAULT_INCLUDE, ...(extra.include ?? {}) }
       const chosenImage = extra.imageUrl?.trim() || firstImage.get(id) || null
-      if (chosenImage && !(imageRows ?? []).some((image) => image.product_id === id && image.public_url === chosenImage)) {
+      if (chosenImage && !imageRows.some((image) => image.product_id === id && image.public_url === chosenImage)) {
         return { error: 'CROSS_ORG_CONTAMINATION: Seçilen ürün görseli bu işletmenin ürün kaydına ait değil.' }
       }
       products.push({
@@ -297,55 +368,21 @@ export async function startCreativeGeneration(
   }
 
   const phones: CreativeSnapshot['phones'] = []
-  if (phoneIds.length > 0) {
-    const { data } = await supabase
-      .from('accounts')
-      .select('id, label, phone_e164')
-      .eq('org_id', org.id)
-      .in('id', phoneIds)
-    for (const row of data ?? []) {
-      if (!row.phone_e164) continue
-      phones.push({ id: row.id, label: row.label, phone: row.phone_e164 })
-    }
+  for (const row of phonesRes.data ?? []) {
+    if (!row.phone_e164) continue
+    phones.push({ id: row.id, label: row.label, phone: row.phone_e164 })
   }
 
   const socials: CreativeSnapshot['socials'] = []
-  if (socialIds.length > 0) {
-    const { data } = await supabase
-      .from('org_social_accounts')
-      .select('id, platform, label, url')
-      .eq('org_id', org.id)
-      .in('id', socialIds)
-    for (const row of data ?? []) {
-      socials.push({ id: row.id, platform: row.platform, label: row.label, url: row.url })
-    }
+  for (const row of socialsRes.data ?? []) {
+    socials.push({ id: row.id, platform: row.platform, label: row.label, url: row.url })
   }
 
   if (brief.length < 8) return { error: 'Görselde ne anlatmak istediğinizi bir cümleyle yazın.' }
 
   if (format.format === 'video') {
-    // 0. İşletme Bazlı Aylık Video Kotası Kontrolü
-    const { data: orgData } = await supabase
-      .from('organizations')
-      .select('monthly_video_quota')
-      .eq('id', org.id)
-      .maybeSingle()
-
-    const videoQuota = orgData?.monthly_video_quota ?? 5
-
-    const startOfMonth = new Date()
-    startOfMonth.setDate(1)
-    startOfMonth.setHours(0, 0, 0, 0)
-
-    const { count: videoUsedCount } = await supabase
-      .from('creatives')
-      .select('id', { count: 'exact', head: true })
-      .eq('org_id', org.id)
-      .eq('format', 'video')
-      .in('status', ['ready', 'processing', 'pending'])
-      .gte('created_at', startOfMonth.toISOString())
-
-    const used = videoUsedCount ?? 0
+    const videoQuota = orgRow?.monthly_video_quota ?? 5
+    const used = videoCountRes.count ?? 0
     if (used >= videoQuota) {
       return {
         error: `Bu ayki video üretim kotanıza (${used}/${videoQuota}) ulaştınız. Limit artırımı için lütfen platform yöneticinizle iletişime geçin.`,
@@ -367,6 +404,7 @@ export async function startCreativeGeneration(
     }
   }
 
+  const tValidationStart = Date.now()
   const labels = parseIds(draft.labels).map((label) => label.slice(0, 48)).slice(0, 8)
   if (parentPayload) {
     if (products.length === 0 && parentPayload.products?.length) products.push(...parentPayload.products)
@@ -375,7 +413,6 @@ export async function startCreativeGeneration(
     if (labels.length === 0 && parentPayload.labels?.length) labels.push(...parentPayload.labels)
   }
   const title = titleFromBrief(String(draft.instruction ?? '').trim() || brief)
-  // Identical mandatory-asset gate for every business, enforced before job insertion.
   const logoSource = String(kitRow?.logo_path || orgLogoPath || '').trim()
   if (products.some(product => !product.include.image || !product.imageUrl || product.imageUrl.trim() === logoSource || /^\/?(?:brand|logos)\//i.test(product.imageUrl))) {
     return { error: 'Seçilen her ürün için gerçek ürün veya arayüz görseli ekleyin. İşletme logosu ürün referansı yerine kullanılamaz.' }
@@ -386,83 +423,102 @@ export async function startCreativeGeneration(
     hasValidBase: Boolean(baseCreativeId),
   })
   if (!imageAssetGate.ready) return { error: imageAssetGate.message || 'IMAGE_ASSETS_REQUIRED' }
-    const qualityMode = (draft.qualityMode as 'STANDARD' | 'DESIGNER') || 'STANDARD'
-    let artDirectionPlan = (draft.artDirectionPlan as any) || null
-    if (!artDirectionPlan && format.format !== 'video' && qualityMode === 'DESIGNER') {
-      try {
-        artDirectionPlan = await generateArtDirectionPlan({
-          orgId: org.id,
-          brandName: kitRow?.name || org.name || 'İşletmemiz',
-          brandTone: kitRow?.tone || null,
-          productName: products[0]?.name || 'Ürün',
-          productDescription: products[0]?.description || null,
-          objective: (draft.objective as string) || 'PRODUCT_INTRO',
-          stylePreset: (draft.stylePreset as string) || 'AUTO',
-          format: format.id,
-          headline: (draft.customHeadline as string) || brief,
-          offer: products[0]?.promo || null,
-          cta: (draft.cta as string) || null,
-          campaignDetail: (draft.campaignDetail as string) || null,
-          qualityMode,
-          forcedArchetype: (draft.forcedArchetype as string) || null,
-        })
-      } catch (err) {
-        console.warn('[CreativeStudio] Art direction plan synthesis fallback:', err)
-      }
-    }
+  const assetValidationMs = Date.now() - tValidationStart
 
-    const snapshot: CreativePayload = {
-      brief,
-      style: String(draft.style ?? 'auto'),
-      formatId: format.id,
-      aspect: format.aspect,
-      textDensity: (['low', 'balanced', 'detailed'].includes(String(draft.textDensity))
-        ? draft.textDensity
-        : 'balanced') as CreativeSnapshot['textDensity'],
-      useLogo: Boolean(orgLogoPath || kitRow?.logo_path) && draft.useLogo !== false,
-      labels,
-      cta: String(draft.cta ?? '').trim() || null,
-      address: String(draft.address ?? '').trim() || null,
-      website: String(draft.website ?? '').trim() || null,
-      dateRange: String(draft.dateRange ?? '').trim() || null,
-      customText: String(draft.customText ?? '').trim() || null,
-      phones,
-      socials,
-      brandKit: kitRow
-        ? {
-            id: kitRow.id,
-            name: kitRow.name,
-            tone: kitRow.tone,
-            colors: asRecord(kitRow.colors),
-            fonts: asRecord(kitRow.fonts),
-            logoPath: kitRow.logo_path || orgLogoPath,
-          }
-        : null,
-      products,
-      baseCreativeId,
-      instruction: String(draft.instruction ?? '').trim() || null,
-      variationPreset: String(draft.variationPreset ?? '').trim() || null,
-      videoSpeech: draft.videoSpeech !== false && draft.videoSpeech !== '0',
-      subtitles: draft.subtitles !== false && draft.subtitles !== '0' && draft.subtitles !== 'false',
-      videoScenarioPrompt: String(draft.videoScenarioPrompt ?? '').trim() || null,
-      videoScenarioTitle: String(draft.videoScenarioTitle ?? '').trim() || null,
-      customVoiceover: String(draft.customVoiceover ?? '').trim() || null,
-      voiceoverScript: String(draft.customVoiceover ?? '').trim() || null,
-      referenceImageUrls: Array.isArray(draft.referenceImageUrls)
-        ? draft.referenceImageUrls.map(String).filter((u) => u.startsWith('http')).slice(0, 5)
-        : [],
-      title,
-      requestKey: requestKey || undefined,
-      cost: { imageCount: 1 },
-      creativePlan: (draft.creativePlan as any) || null,
-      customHeadline: (draft.customHeadline as string) || null,
-      customSupporting: (draft.customSupporting as string) || null,
-      heroProductId: heroProductId || (products[0]?.id as string) || null,
-      stylePreset: (draft.stylePreset as string) || null,
-      objective: (draft.objective as string) || null,
-      artDirectionPlan: artDirectionPlan || null,
-      qualityMode,
-    }
+  const qualityMode = (draft.qualityMode as 'STANDARD' | 'DESIGNER') || 'STANDARD'
+  let artDirectionPlan = (draft.artDirectionPlan as any) || null
+  let artDirectionSource: 'AI_PRECOMPUTED' | 'DETERMINISTIC_FALLBACK' | 'STANDARD_NOT_REQUIRED' = 'STANDARD_NOT_REQUIRED'
+
+  // Non-blocking art direction resolution: precomputed AI plan or immediate deterministic Designer fallback
+  if (format.format !== 'video' && qualityMode === 'DESIGNER') {
+    const resolved = resolveArtDirectionPlanAtSubmission({
+      input: {
+        orgId: org.id,
+        brandName: kitRow?.name || org.name || 'İşletmemiz',
+        brandTone: kitRow?.tone || null,
+        productName: products[0]?.name || 'Ürün',
+        productDescription: products[0]?.description || null,
+        objective: (draft.objective as string) || 'PRODUCT_INTRO',
+        stylePreset: (draft.stylePreset as string) || 'AUTO',
+        format: format.id,
+        headline: (draft.customHeadline as string) || brief,
+        offer: products[0]?.promo || null,
+        cta: (draft.cta as string) || null,
+        campaignDetail: (draft.campaignDetail as string) || null,
+        qualityMode,
+        forcedArchetype: (draft.forcedArchetype as string) || null,
+      },
+      precomputedPlan: artDirectionPlan,
+    })
+    artDirectionPlan = resolved.plan
+    artDirectionSource = resolved.source
+  }
+
+  const tInsertStart = Date.now()
+  const snapshot: CreativePayload = {
+    brief,
+    style: String(draft.style ?? 'auto'),
+    formatId: format.id,
+    aspect: format.aspect,
+    textDensity: (['low', 'balanced', 'detailed'].includes(String(draft.textDensity))
+      ? draft.textDensity
+      : 'balanced') as CreativeSnapshot['textDensity'],
+    useLogo: Boolean(orgLogoPath || kitRow?.logo_path) && draft.useLogo !== false,
+    labels,
+    cta: String(draft.cta ?? '').trim() || null,
+    address: String(draft.address ?? '').trim() || null,
+    website: String(draft.website ?? '').trim() || null,
+    dateRange: String(draft.dateRange ?? '').trim() || null,
+    customText: String(draft.customText ?? '').trim() || null,
+    phones,
+    socials,
+    brandKit: kitRow
+      ? {
+          id: kitRow.id,
+          name: kitRow.name,
+          tone: kitRow.tone,
+          colors: asRecord(kitRow.colors),
+          fonts: asRecord(kitRow.fonts),
+          logoPath: kitRow.logo_path || orgLogoPath,
+        }
+      : null,
+    products,
+    baseCreativeId,
+    instruction: String(draft.instruction ?? '').trim() || null,
+    variationPreset: String(draft.variationPreset ?? '').trim() || null,
+    videoSpeech: draft.videoSpeech !== false && draft.videoSpeech !== '0',
+    subtitles: draft.subtitles !== false && draft.subtitles !== '0' && draft.subtitles !== 'false',
+    videoScenarioPrompt: String(draft.videoScenarioPrompt ?? '').trim() || null,
+    videoScenarioTitle: String(draft.videoScenarioTitle ?? '').trim() || null,
+    customVoiceover: String(draft.customVoiceover ?? '').trim() || null,
+    voiceoverScript: String(draft.customVoiceover ?? '').trim() || null,
+    referenceImageUrls: Array.isArray(draft.referenceImageUrls)
+      ? draft.referenceImageUrls.map(String).filter((u) => u.startsWith('http')).slice(0, 5)
+      : [],
+    title,
+    requestKey: requestKey || undefined,
+    cost: { imageCount: 1 },
+    creativePlan: (draft.creativePlan as any) || null,
+    customHeadline: (draft.customHeadline as string) || null,
+    customSupporting: (draft.customSupporting as string) || null,
+    heroProductId: heroProductId || (products[0]?.id as string) || null,
+    stylePreset: (draft.stylePreset as string) || null,
+    objective: (draft.objective as string) || null,
+    artDirectionPlan: artDirectionPlan || null,
+    art_direction_source: artDirectionSource,
+    submissionMetrics: {
+      submit_total_ms: 0,
+      auth_ms: authMs,
+      idempotency_lookup_ms: parallelReadsMs,
+      parallel_reads_ms: parallelReadsMs,
+      asset_validation_ms: assetValidationMs,
+      creative_insert_ms: 0,
+      enqueue_ms: 0,
+      redirect_ready_ms: 0,
+      art_direction_source: artDirectionSource,
+    },
+    qualityMode,
+  }
 
   const { data: inserted, error } = await supabase
     .from('creatives')
@@ -483,6 +539,7 @@ export async function startCreativeGeneration(
     .single()
 
   if (error || !inserted) return { error: error?.message ?? 'Kayıt açılamadı.' }
+  const creativeInsertMs = Date.now() - tInsertStart
 
   if (products.length > 0) {
     const knowledgeRows = products
@@ -508,11 +565,28 @@ export async function startCreativeGeneration(
         }
       })
     if (knowledgeRows.length > 0) {
-      void (supabase as any).from('reply_product_knowledge').insert(knowledgeRows)
+      after(async () => {
+        try {
+          await (supabase as any).from('reply_product_knowledge').insert(knowledgeRows)
+        } catch (err) {
+          console.warn('[creative.knowledge.insert]', err)
+        }
+      })
     }
   }
 
-  await kickGeneration(inserted.id)
+  const tEnqueueStart = Date.now()
+  await kickGeneration(inserted.id, authContext)
+  const enqueueMs = Date.now() - tEnqueueStart
+
+  const finalTotalMs = Date.now() - t0
+  if (snapshot.submissionMetrics) {
+    snapshot.submissionMetrics.creative_insert_ms = creativeInsertMs
+    snapshot.submissionMetrics.enqueue_ms = enqueueMs
+    snapshot.submissionMetrics.submit_total_ms = finalTotalMs
+    snapshot.submissionMetrics.redirect_ready_ms = finalTotalMs
+  }
+
   revalidateLibrary(inserted.id)
   redirect(`/icerik/${inserted.id}`)
 }
