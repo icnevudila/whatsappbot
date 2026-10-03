@@ -72,6 +72,16 @@ export interface ArtDirectionPlan {
     do_not_modify: string[]
   }
 
+  product_dominance?: {
+    priority: 'PRIMARY'
+    target_visual_share: '40-55%'
+    full_silhouette_preferred: boolean
+    human_role: 'NONE' | 'SECONDARY' | 'SUPPORTING'
+    context_role: 'SUPPORTING' | 'BACKGROUND'
+    occlusion_policy: 'MINIMAL'
+    standalone_hero_preferred: boolean
+  }
+
   anti_generic_rules: string[]
   sector_dna: {
     sectorId: string
@@ -126,17 +136,30 @@ export async function generateArtDirectionPlan(
   // Select Archetype respecting Creative Memory
   let archetypeId = input.forcedArchetype
   if (!archetypeId) {
-    // If style preset maps closely:
-    if (input.stylePreset === 'PRODUCT_HERO') {
-      archetypeId = selectFreshArchetype(input.orgId, ['CINEMATIC_PRODUCT_HERO', 'STUDIO_PEDESTAL', 'MATERIAL_TEXTURE_HERO'])
-    } else if (input.stylePreset === 'REAL_USAGE') {
-      archetypeId = selectFreshArchetype(input.orgId, ['REAL_WORLD_USAGE', 'ORGANIC_LIFESTYLE', 'INDUSTRIAL_POWER'])
-    } else if (input.stylePreset === 'PREMIUM') {
-      archetypeId = selectFreshArchetype(input.orgId, ['EDITORIAL_LUXURY', 'PREMIUM_MONOCHROME', 'ARCHITECTURAL_PRESTIGE'])
-    } else if (input.stylePreset === 'DYNAMIC_OFFER') {
-      archetypeId = selectFreshArchetype(input.orgId, ['BOLD_RETAIL', 'MAXIMALIST_PROMO', 'HIGH_ENERGY_PERFORMANCE', 'SOCIAL_FIRST_BOLD'])
+    if (sector.isPhysicalProduct) {
+      // Physical products MUST prioritize product/material dominance over lifestyle/cinematic sprawl
+      if (input.stylePreset === 'REAL_USAGE') {
+        archetypeId = selectFreshArchetype(input.orgId, ['HYBRID_PRODUCT_USAGE', 'PRODUCT_COMMERCE_HERO'])
+      } else if (input.stylePreset === 'PREMIUM' && sector.sectorId === 'CONSTRUCTION') {
+        archetypeId = selectFreshArchetype(input.orgId, ['MATERIAL_COMMERCE_HERO', 'PRODUCT_COMMERCE_HERO', 'ARCHITECTURAL_PRESTIGE'])
+      } else if (sector.sectorId === 'CONSTRUCTION') {
+        archetypeId = selectFreshArchetype(input.orgId, ['MATERIAL_COMMERCE_HERO', 'PRODUCT_COMMERCE_HERO', 'MATERIAL_TEXTURE_HERO'])
+      } else {
+        archetypeId = selectFreshArchetype(input.orgId, ['PRODUCT_COMMERCE_HERO', 'MATERIAL_TEXTURE_HERO', 'HYBRID_PRODUCT_USAGE'])
+      }
     } else {
-      archetypeId = selectFreshArchetype(input.orgId, sector.preferredArchetypes)
+      // If style preset maps closely:
+      if (input.stylePreset === 'PRODUCT_HERO') {
+        archetypeId = selectFreshArchetype(input.orgId, ['CINEMATIC_PRODUCT_HERO', 'STUDIO_PEDESTAL', 'MATERIAL_TEXTURE_HERO'])
+      } else if (input.stylePreset === 'REAL_USAGE') {
+        archetypeId = selectFreshArchetype(input.orgId, ['REAL_WORLD_USAGE', 'ORGANIC_LIFESTYLE', 'INDUSTRIAL_POWER'])
+      } else if (input.stylePreset === 'PREMIUM') {
+        archetypeId = selectFreshArchetype(input.orgId, ['EDITORIAL_LUXURY', 'PREMIUM_MONOCHROME', 'ARCHITECTURAL_PRESTIGE'])
+      } else if (input.stylePreset === 'DYNAMIC_OFFER') {
+        archetypeId = selectFreshArchetype(input.orgId, ['BOLD_RETAIL', 'MAXIMALIST_PROMO', 'HIGH_ENERGY_PERFORMANCE', 'SOCIAL_FIRST_BOLD'])
+      } else {
+        archetypeId = selectFreshArchetype(input.orgId, sector.preferredArchetypes)
+      }
     }
   }
 
@@ -151,6 +174,17 @@ export async function generateArtDirectionPlan(
       archetype,
     })
     if (aiPlan) {
+      if (sector.isPhysicalProduct && !aiPlan.product_dominance) {
+        aiPlan.product_dominance = {
+          priority: 'PRIMARY',
+          target_visual_share: '40-55%',
+          full_silhouette_preferred: true,
+          human_role: aiPlan.human_direction?.enabled ? 'SUPPORTING' : 'NONE',
+          context_role: 'BACKGROUND',
+          occlusion_policy: 'MINIMAL',
+          standalone_hero_preferred: true,
+        }
+      }
       recordCreativeMemory({
         orgId: input.orgId,
         archetype: aiPlan.creative_archetype,
@@ -261,6 +295,18 @@ function buildDeterministicPlan(
       do_not_modify: ['Original product proportions', 'Authentic casing color', 'Component geometry', 'Manufacturer markings'],
     },
 
+    product_dominance: sector.isPhysicalProduct
+      ? {
+          priority: 'PRIMARY',
+          target_visual_share: '40-55%',
+          full_silhouette_preferred: true,
+          human_role: isHumanLikely ? 'SUPPORTING' : 'NONE',
+          context_role: 'BACKGROUND',
+          occlusion_policy: 'MINIMAL',
+          standalone_hero_preferred: true,
+        }
+      : undefined,
+
     anti_generic_rules: [
       ...ANTI_GENERIC_STANDARD_RULES,
       ...archetype.antiGenericRules,
@@ -326,3 +372,68 @@ async function requestAiArtDirection(params: {
 
   return parsed
 }
+
+/**
+ * Resolves the ArtDirectionPlan synchronously at the exact moment of submission.
+ * Guaranteed to complete in <1ms without network calls.
+ * If precomputed AI plan is available, freezes and uses it (AI_PRECOMPUTED).
+ * Otherwise creates a high-fidelity deterministic Designer plan (DETERMINISTIC_FALLBACK).
+ */
+export function resolveArtDirectionPlanAtSubmission({
+  input,
+  precomputedPlan,
+}: {
+  input: ArtDirectorInput
+  precomputedPlan?: ArtDirectionPlan | null
+}): { plan: ArtDirectionPlan; source: 'AI_PRECOMPUTED' | 'DETERMINISTIC_FALLBACK' } {
+  if (
+    precomputedPlan &&
+    typeof precomputedPlan === 'object' &&
+    Boolean(precomputedPlan.concept_name) &&
+    Boolean(precomputedPlan.composition) &&
+    Boolean(precomputedPlan.art_direction)
+  ) {
+    return { plan: precomputedPlan, source: 'AI_PRECOMPUTED' }
+  }
+
+  const sector = classifySector({
+    productName: input.productName,
+    productDescription: input.productDescription || undefined,
+    brandName: input.brandName,
+    category: input.category || undefined,
+    brief: input.campaignDetail || input.headline || undefined,
+  })
+
+  let archetypeId = input.forcedArchetype
+  if (!archetypeId) {
+    if (sector.isPhysicalProduct) {
+      if (input.stylePreset === 'REAL_USAGE') {
+        archetypeId = selectFreshArchetype(input.orgId, ['HYBRID_PRODUCT_USAGE', 'PRODUCT_COMMERCE_HERO'])
+      } else if (input.stylePreset === 'PREMIUM' && sector.sectorId === 'CONSTRUCTION') {
+        archetypeId = selectFreshArchetype(input.orgId, ['MATERIAL_COMMERCE_HERO', 'PRODUCT_COMMERCE_HERO', 'ARCHITECTURAL_PRESTIGE'])
+      } else if (sector.sectorId === 'CONSTRUCTION') {
+        archetypeId = selectFreshArchetype(input.orgId, ['MATERIAL_COMMERCE_HERO', 'PRODUCT_COMMERCE_HERO', 'MATERIAL_TEXTURE_HERO'])
+      } else {
+        archetypeId = selectFreshArchetype(input.orgId, ['PRODUCT_COMMERCE_HERO', 'MATERIAL_TEXTURE_HERO', 'HYBRID_PRODUCT_USAGE'])
+      }
+    } else {
+      if (input.stylePreset === 'PRODUCT_HERO') {
+        archetypeId = selectFreshArchetype(input.orgId, ['CINEMATIC_PRODUCT_HERO', 'STUDIO_PEDESTAL', 'MATERIAL_TEXTURE_HERO'])
+      } else if (input.stylePreset === 'REAL_USAGE') {
+        archetypeId = selectFreshArchetype(input.orgId, ['REAL_WORLD_USAGE', 'ORGANIC_LIFESTYLE', 'INDUSTRIAL_POWER'])
+      } else if (input.stylePreset === 'PREMIUM') {
+        archetypeId = selectFreshArchetype(input.orgId, ['EDITORIAL_LUXURY', 'PREMIUM_MONOCHROME', 'ARCHITECTURAL_PRESTIGE'])
+      } else if (input.stylePreset === 'DYNAMIC_OFFER') {
+        archetypeId = selectFreshArchetype(input.orgId, ['BOLD_RETAIL', 'MAXIMALIST_PROMO', 'HIGH_ENERGY_PERFORMANCE', 'SOCIAL_FIRST_BOLD'])
+      } else {
+        archetypeId = selectFreshArchetype(input.orgId, sector.preferredArchetypes)
+      }
+    }
+  }
+
+  const archetype = getArchetype(archetypeId)
+  const plan = buildDeterministicPlan(input, sector, archetype)
+
+  return { plan, source: 'DETERMINISTIC_FALLBACK' }
+}
+

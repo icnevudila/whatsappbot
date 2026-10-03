@@ -142,8 +142,19 @@ export type CreativePayload = CreativeSnapshot & {
   heroProductId?: string | null;
   stylePreset?: string | null;
   objective?: string | null;
-  lockCopyOverlay?: boolean;
   artDirectionPlan?: any;
+  art_direction_source?: 'AI_PRECOMPUTED' | 'DETERMINISTIC_FALLBACK' | 'STANDARD_NOT_REQUIRED' | null;
+  submissionMetrics?: {
+    submit_total_ms: number;
+    auth_ms: number;
+    idempotency_lookup_ms?: number;
+    parallel_reads_ms: number;
+    asset_validation_ms: number;
+    creative_insert_ms: number;
+    enqueue_ms: number;
+    redirect_ready_ms: number;
+    art_direction_source: string;
+  } | null;
   qualityMode?: 'STANDARD' | 'DESIGNER';
   imageAttempt?: string
   imageSubmissionUncertain?: boolean
