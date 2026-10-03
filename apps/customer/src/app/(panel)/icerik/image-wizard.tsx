@@ -1,6 +1,7 @@
 'use client'
 
 import { isReadyImageSource } from '@/lib/creative/image-source'
+import { requiredImageAssets } from '@/lib/creative/required-image-assets'
 
 import { useActionState, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
@@ -198,12 +199,14 @@ export function ImageCreativeWizard({ data }: { data: WizardBootstrap }) {
   const stepIndex = STEPS.findIndex((row) => row.id === step)
   const selectedKit = data.kits.find((kit) => kit.id === draft.brandKitId)
   const selectedProducts = productsList.filter((product) => draft.productIds.includes(product.id))
-  const requiredAssetsReady = draft.useLogo && Boolean(selectedKit?.samplePreview || data.org.logoPreview) && (
-    (draft.origin === 'derive' && validBaseSource) || selectedProducts.some((product) => {
+  const requiredAssetsReady = requiredImageAssets({
+    useLogo: draft.useLogo, hasLogo: Boolean(selectedKit?.samplePreview || data.org.logoPreview),
+    hasValidBase: draft.origin === 'derive' && Boolean(validBaseSource),
+    hasProductReference: selectedProducts.some((product) => {
       const extra = draft.productExtras[product.id] ?? emptyExtra(product.images[0]?.url ?? '')
       return extra.include.image && product.images.some((image) => image.url === extra.imageUrl)
-    })
-  )
+    }),
+  }).ready
   const payload = useMemo(
     () =>
       JSON.stringify({

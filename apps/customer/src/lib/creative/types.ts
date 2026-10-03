@@ -128,7 +128,12 @@ export type CreativePayload = CreativeSnapshot & {
   videoSubmissionUncertain?: boolean
   quickSendPrompt?: string
   quickSendIdentity?: string
-  imageJob?: { id: string; gatewayUrl: string; queuedAt: string } | null
+  imageJob?: import('../ai/omnistudio-image-job').ImageJobReceipt | null
+  imageOutputReceipt?: {
+    orgId: string; creativeId: string; jobId: string | null; sha256: string; size: number;
+    mimeType: string; width: number; height: number; decodedImage: boolean; storagePath: string;
+    referenceReceipt: import('../ai/omnistudio-image-job').ImageReferenceReceipt | null;
+  }
   imageAttempt?: string
   imageSubmissionUncertain?: boolean
   imageSubmitIntent?: { requestId: string; gatewayUrl: string; startedAt: string } | null

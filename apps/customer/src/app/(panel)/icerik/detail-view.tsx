@@ -350,7 +350,7 @@ export function CreativeDetail({
       progressInfo?: ServerProgressInfo | null
       error?: string
     } | null
-    if (!response.ok) {
+    if (!response.ok || json?.ok === false || json?.error) {
       return { error: json?.error ?? 'Görsel üretilemedi.', pending: false }
     }
     if (json?.pending || response.status === 202) {
@@ -473,7 +473,9 @@ export function CreativeDetail({
       isMounted = false
       if (pollTimer) clearTimeout(pollTimer)
     }
-  }, [canManage, creative.id, creative.status, router])
+  // A pending -> rendering refresh must not tear down the owning poll loop.
+  // kicked remains true after cleanup, so a status dependency silently stopped recovery.
+  }, [canManage, creative.id, router])
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient()
