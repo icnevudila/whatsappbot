@@ -1,13 +1,11 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { MesajifyMark } from '../brand/mesajify-mark'
-import { CheckCircle2, ArrowRight, MessageSquare, Compass, Send, LayoutDashboard, Monitor, Network, Sparkles } from 'lucide-react'
+import { ArrowRight, Monitor } from 'lucide-react'
 
 interface HeroShowcase {
   id: string
   video: string
-  poster: string
   categoryBadge: string
   headlineLead: string
   headlineDynamic: string
@@ -15,14 +13,12 @@ interface HeroShowcase {
   featureTitle: string
   featureTag: string
   ctaText: string
-  icon: typeof Send
 }
 
 const HERO_SHOWCASES: HeroShowcase[] = [
   {
     id: 'ecosystem',
     video: '/landing/infographics/01-ana-urun-veo-i2v.mp4',
-    poster: '/landing/infographics/01-ana-urun-chatgpt-16-9.png',
     categoryBadge: 'KONTROL PANELİ',
     headlineLead: 'Tek merkezden',
     headlineDynamic: 'tüm WhatsApp ekosisteminizi canlı yönetin',
@@ -30,12 +26,10 @@ const HERO_SHOWCASES: HeroShowcase[] = [
     featureTitle: 'Mesajify Entegre Ekosistem Mimarisi',
     featureTag: '%99.4 Başarılı İletim',
     ctaText: 'Ekosistemi İncele',
-    icon: LayoutDashboard,
   },
   {
     id: 'inbox',
     video: '/landing/infographics/04-ortak-inbox-veo-i2v.mp4',
-    poster: '/landing/infographics/04-ortak-inbox-chatgpt-16-9.png',
     categoryBadge: 'ORTAK GELEN KUTUSU',
     headlineLead: 'WhatsApp üzerinden',
     headlineDynamic: 'gelen müşteri ve sipariş taleplerini anında yanıtlayın',
@@ -43,12 +37,10 @@ const HERO_SHOWCASES: HeroShowcase[] = [
     featureTitle: 'Ortak Gelen Kutusu & Hızlı Satış',
     featureTag: '18 Yeni Müşteri Yanıtı',
     ctaText: 'Gelen Kutusu Demo',
-    icon: MessageSquare,
   },
   {
     id: 'discovery',
     video: '/landing/infographics/06-isletme-bulucu-veo-i2v.mp4',
-    poster: '/landing/infographics/06-isletme-bulucu-chatgpt-16-9.png',
     categoryBadge: 'İŞLETME BULUCU',
     headlineLead: 'Hedef pazarınızda',
     headlineDynamic: 'bölgenizdeki işletmeleri haritadan keşfedin',
@@ -56,12 +48,10 @@ const HERO_SHOWCASES: HeroShowcase[] = [
     featureTitle: 'İşletme Bulucu & Harita Radarı',
     featureTag: '1.420 Doğrulanmış Firma',
     ctaText: 'Kitlenizi Keşfedin',
-    icon: Compass,
   },
   {
     id: 'studio',
     video: '/landing/infographics/05-kreatif-studyosu-veo-i2v.mp4',
-    poster: '/landing/infographics/05-kreatif-studyosu-chatgpt-4-3.png',
     categoryBadge: 'KREATİF STÜDYOSU',
     headlineLead: 'Ürün fotoğrafınızdan',
     headlineDynamic: 'saniyeler içinde hazır dikey reklam üretin',
@@ -69,12 +59,10 @@ const HERO_SHOWCASES: HeroShowcase[] = [
     featureTitle: 'Ham Ürün → AI Reklam Dönüşümü',
     featureTag: 'Saniyeler İçinde Hazır',
     ctaText: 'Stüdyoyu Başlat',
-    icon: Sparkles,
   },
   {
     id: 'multiline',
     video: '/landing/infographics/03-coklu-hat-veo-i2v.mp4',
-    poster: '/landing/infographics/03-coklu-hat-chatgpt-4-3.png',
     categoryBadge: 'ÇOKLU HAT DAĞITICI',
     headlineLead: 'Yükü paylaştırın',
     headlineDynamic: 'bağlı hatlarınızla güvenli ve dengeli iletin',
@@ -82,13 +70,12 @@ const HERO_SHOWCASES: HeroShowcase[] = [
     featureTitle: 'Akıllı Dağıtıcı & Hat Yük Dengeleme',
     featureTag: '3 Hat Dengeli İletim',
     ctaText: 'Hatları İncele',
-    icon: Network,
   },
 ]
 
 export function Scene01Hero() {
   const [currentIndex, setCurrentIndex] = useState(0)
-  const videoRef = useRef<HTMLVideoElement>(null)
+  const videoRefs = useRef<(HTMLVideoElement | null)[]>([])
 
   const current = HERO_SHOWCASES[currentIndex]
 
@@ -96,13 +83,14 @@ export function Scene01Hero() {
     setCurrentIndex((prev) => (prev + 1) % HERO_SHOWCASES.length)
   }
 
-  // Video değiştiğinde sıfırlayıp oynat
+  // Video değiştiğinde sıradaki videoyu başlat
   useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.defaultMuted = true
-      videoRef.current.muted = true
-      videoRef.current.currentTime = 0
-      const playPromise = videoRef.current.play()
+    const activeVideo = videoRefs.current[currentIndex]
+    if (activeVideo) {
+      activeVideo.defaultMuted = true
+      activeVideo.muted = true
+      activeVideo.currentTime = 0
+      const playPromise = activeVideo.play()
       if (playPromise !== undefined) {
         playPromise.catch(() => {})
       }
@@ -114,7 +102,7 @@ export function Scene01Hero() {
       <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
           
-          {/* Sol Kolon: Başlık, Açıklama ve Hızlı Başla (5 Kolon) */}
+          {/* Sol Kolon: Başlık, Açıklama ve Hızlı Başla */}
           <div className="lg:col-span-5 flex flex-col justify-center">
             
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-xs font-semibold w-fit mb-4">
@@ -158,110 +146,80 @@ export function Scene01Hero() {
                 Nasıl Çalışır ↓
               </a>
             </div>
-
-            {/* Mesajify Uygulama Ekranları Butonları */}
-            <div className="mt-8 pt-6 border-t border-slate-200/80">
-              <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-3">
-                Mesajify Platform Modülleri (Canlı Akış)
-              </span>
-              <div className="flex flex-wrap items-center gap-2">
-                {HERO_SHOWCASES.map((item, idx) => {
-                  const isActive = idx === currentIndex
-                  const IconComp = item.icon
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => setCurrentIndex(idx)}
-                      className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer ${
-                        isActive
-                          ? 'bg-emerald-700 text-white shadow-sm ring-2 ring-emerald-500/25'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80 hover:text-slate-900'
-                      }`}
-                    >
-                      <IconComp className={`h-3.5 w-3.5 ${isActive ? 'text-white' : 'text-slate-500'}`} />
-                      <span>{item.categoryBadge}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-
-            <div className="mt-6 flex items-center gap-4 text-xs text-slate-500">
-              <span>Hedef Kitle</span>
-              <span>→</span>
-              <span>Tanıtım Gönderimi</span>
-              <span>→</span>
-              <span>Ortak Gelen Kutusu Satış</span>
-            </div>
           </div>
 
-          {/* Sağ Kolon: GENİŞ 16:9 Mesajify Veo İnfografik Oynatıcısı (7 Kolon) */}
+          {/* Sağ Kolon: GENİŞ 16:9 Mesajify Veo Oynatıcısı (Smooth Cross-Fade & Croplanmamış Tam Görünüm) */}
           <div className="lg:col-span-7 relative w-full flex items-center justify-center">
-            {/* Ambient Blurred Video Background Glow Layer */}
-            <div className="absolute -inset-4 sm:-inset-8 -z-10 rounded-[40px] overflow-hidden filter blur-3xl opacity-35 scale-105 pointer-events-none transition-all duration-700">
-              <video
-                ref={(el) => {
-                  if (el) {
-                    el.muted = true
-                    el.defaultMuted = true
-                  }
-                }}
-                key={`ambient-${current.video}`}
-                src={current.video}
-                autoPlay
-                muted
-                loop
-                playsInline
-                preload="auto"
-                className="w-full h-full object-cover"
-              />
+            
+            {/* Ambient Blurred Video Background Glow Layer (Smooth Dissolve) */}
+            <div className="absolute -inset-4 sm:-inset-8 -z-10 rounded-[40px] overflow-hidden filter blur-3xl opacity-30 scale-105 pointer-events-none transition-all duration-1000">
+              {HERO_SHOWCASES.map((item, idx) => (
+                <video
+                  key={`ambient-${item.id}`}
+                  ref={(el) => {
+                    if (el) {
+                      el.muted = true
+                      el.defaultMuted = true
+                    }
+                  }}
+                  src={item.video}
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  preload="auto"
+                  className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${
+                    idx === currentIndex ? 'opacity-100' : 'opacity-0'
+                  }`}
+                />
+              ))}
             </div>
 
-            {/* Geniş SaaS Web/Dashboard Penceresi */}
+            {/* Geniş SaaS Web/Dashboard Penceresi (Temiz, Alt/Üst Etiketsiz) */}
             <div className="w-full max-w-[760px] xl:max-w-[820px] rounded-2xl sm:rounded-3xl border border-slate-200/90 bg-white shadow-2xl shadow-slate-950/10 overflow-hidden transition-all duration-300">
-              {/* Browser Window Bar */}
+              
+              {/* Browser Window Bar (Yalnızca Pencere Butonları ve Adres, Sağdaki Badge Kaldırıldı) */}
               <div className="flex items-center justify-between px-4 sm:px-6 py-3 bg-slate-50 border-b border-slate-200/80">
                 <div className="flex items-center gap-2">
                   <span className="h-2.5 w-2.5 rounded-full bg-red-400 inline-block" />
                   <span className="h-2.5 w-2.5 rounded-full bg-amber-400 inline-block" />
                   <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 inline-block" />
-                  <div className="ml-3 hidden sm:flex items-center gap-1.5 bg-white border border-slate-200/80 rounded-md px-2.5 py-0.5 text-[11px] font-mono text-slate-500">
+                  <div className="ml-3 flex items-center gap-1.5 bg-white border border-slate-200/80 rounded-md px-2.5 py-0.5 text-[11px] font-mono text-slate-500">
                     <Monitor className="h-3 w-3 text-slate-400" />
                     <span>app.mesajify.com</span>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 rounded-full">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    {current.categoryBadge}
-                  </span>
-                </div>
               </div>
 
-              {/* 16:9 Geniş Uygulama Videosu Oynatıcısı (Sıralı Loop) */}
-              <div className="relative aspect-[16/9] w-full bg-slate-950 overflow-hidden">
-                <video
-                  ref={(el) => {
-                    if (el) {
-                      el.muted = true
-                      el.defaultMuted = true
-                      videoRef.current = el
-                    }
-                  }}
-                  key={current.video}
-                  src={current.video}
-                  autoPlay
-                  muted
-                  playsInline
-                  preload="auto"
-                  onEnded={handleVideoEnded}
-                  className="w-full h-full object-cover"
-                />
+              {/* 16:9 Geniş Uygulama Videosu (object-contain ile ASLA croplanmaz, 1000ms Cross-Fade) */}
+              <div className="relative aspect-[16/9] w-full bg-[#050B08] overflow-hidden">
+                {HERO_SHOWCASES.map((item, idx) => {
+                  const isActive = idx === currentIndex
+                  return (
+                    <video
+                      key={item.id}
+                      ref={(el) => {
+                        if (el) {
+                          el.muted = true
+                          el.defaultMuted = true
+                          videoRefs.current[idx] = el
+                        }
+                      }}
+                      src={item.video}
+                      autoPlay
+                      muted
+                      playsInline
+                      preload="auto"
+                      onEnded={isActive ? handleVideoEnded : undefined}
+                      className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-1000 ease-in-out ${
+                        isActive ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
+                      }`}
+                    />
+                  )
+                })}
 
                 {/* Floating Bottom Info Pill */}
-                <div className="absolute bottom-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none">
+                <div className="absolute bottom-4 left-4 right-4 z-20 flex items-center justify-between pointer-events-none">
                   <div className="bg-slate-950/80 backdrop-blur-md border border-white/10 px-3.5 py-1.5 rounded-xl flex items-center gap-2 shadow-lg">
                     <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
                     <span className="text-xs font-semibold text-white">
@@ -275,30 +233,6 @@ export function Scene01Hero() {
                 </div>
               </div>
 
-              {/* Pencere Alt Bilgi Çubuğu */}
-              <div className="flex items-center justify-between px-5 py-3 bg-white border-t border-slate-100">
-                <div className="flex items-center gap-2 text-slate-600 text-xs">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-600 flex-shrink-0" />
-                  <span>Doğrudan WhatsApp İletişimi · Sıfır Spam Riski</span>
-                </div>
-                
-                {/* 5'li Gösterge Noktaları */}
-                <div className="flex items-center gap-1.5">
-                  {HERO_SHOWCASES.map((_, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setCurrentIndex(idx)}
-                      className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
-                        idx === currentIndex ? 'w-5 bg-emerald-600' : 'w-2 bg-slate-200 hover:bg-slate-300'
-                      }`}
-                      aria-label={`Slide ${idx + 1}`}
-                    />
-                  ))}
-                  <span className="ml-2 text-[11px] font-mono text-slate-400 font-semibold">
-                    {currentIndex + 1} / {HERO_SHOWCASES.length}
-                  </span>
-                </div>
-              </div>
             </div>
 
           </div>
