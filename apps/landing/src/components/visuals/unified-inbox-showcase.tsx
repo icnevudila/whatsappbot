@@ -62,13 +62,16 @@ export function UnifiedInboxShowcase() {
         </div>
 
         {/* High-Resolution Clean Interface Preview */}
-        <div className="relative aspect-[16/10] w-full bg-slate-100">
-          <Image
-            src="/landing/infographics/04-ortak-inbox-chatgpt-16-9.png"
-            alt="Mesajify Ortak Gelen Kutusu Paneli"
-            fill
-            className="object-cover object-top"
-            priority
+        <div className="relative aspect-[16/10] w-full bg-slate-950 overflow-hidden">
+          <video
+            src="/landing/infographics/04-ortak-inbox-veo-i2v.mp4"
+            poster="/landing/infographics/04-ortak-inbox-chatgpt-16-9.png"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            className="w-full h-full object-cover object-top"
           />
         </div>
       </div>

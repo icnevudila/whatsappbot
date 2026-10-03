@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { MesajifyMark } from '../brand/mesajify-mark'
-import { CheckCircle2, ArrowRight, MessageSquare, Compass, Send, LayoutDashboard, Monitor } from 'lucide-react'
+import { CheckCircle2, ArrowRight, MessageSquare, Compass, Send, LayoutDashboard, Monitor, Network, Sparkles } from 'lucide-react'
 
 interface HeroShowcase {
   id: string
@@ -20,35 +20,35 @@ interface HeroShowcase {
 
 const HERO_SHOWCASES: HeroShowcase[] = [
   {
-    id: 'dashboard',
-    video: '/landing/studio/hero-gen-dashboard.mp4',
-    poster: '/landing/studio/hero-gen-dashboard.png',
+    id: 'ecosystem',
+    video: '/landing/infographics/01-ana-urun-veo-i2v.mp4',
+    poster: '/landing/infographics/01-ana-urun-chatgpt-16-9.png',
     categoryBadge: 'KONTROL PANELİ',
-    headlineLead: 'Tek panelden',
-    headlineDynamic: 'tüm WhatsApp tanıtımlarınızı canlı yönetin',
-    sublead: '48.000+ müşteriye doğrudan ulaşın; bağlı hatlarınızı, iletim oranlarınızı ve canlı kampanya sürecini tek merkezden takip edin.',
-    featureTitle: 'Mesajify Canlı Gösterge Paneli',
+    headlineLead: 'Tek merkezden',
+    headlineDynamic: 'tüm WhatsApp ekosisteminizi canlı yönetin',
+    sublead: 'Kreatif üretiminden hat dağıtımına, hedef kitle taramasından gelen kutusuna kadar tüm platform modülleri tam senkronize çalışır.',
+    featureTitle: 'Mesajify Entegre Ekosistem Mimarisi',
     featureTag: '%99.4 Başarılı İletim',
-    ctaText: 'Paneli Keşfet',
+    ctaText: 'Ekosistemi İncele',
     icon: LayoutDashboard,
   },
   {
     id: 'inbox',
-    video: '/landing/studio/hero-gen-inbox.mp4',
-    poster: '/landing/studio/hero-gen-inbox.png',
+    video: '/landing/infographics/04-ortak-inbox-veo-i2v.mp4',
+    poster: '/landing/infographics/04-ortak-inbox-chatgpt-16-9.png',
     categoryBadge: 'ORTAK GELEN KUTUSU',
     headlineLead: 'WhatsApp üzerinden',
-    headlineDynamic: 'gelen müşteri taleplerini anında yanıtlayın',
+    headlineDynamic: 'gelen müşteri ve sipariş taleplerini anında yanıtlayın',
     sublead: 'Kampanyanızdan dönen sipariş, toptan fiyat ve randevu sorularını tek panelden ekipçe anında satışa dönüştürün.',
     featureTitle: 'Ortak Gelen Kutusu & Hızlı Satış',
-    featureTag: '12 Yeni Müşteri Yanıtı',
+    featureTag: '18 Yeni Müşteri Yanıtı',
     ctaText: 'Gelen Kutusu Demo',
     icon: MessageSquare,
   },
   {
     id: 'discovery',
-    video: '/landing/studio/hero-gen-discovery.mp4',
-    poster: '/landing/studio/hero-gen-discovery.png',
+    video: '/landing/infographics/06-isletme-bulucu-veo-i2v.mp4',
+    poster: '/landing/infographics/06-isletme-bulucu-chatgpt-16-9.png',
     categoryBadge: 'İŞLETME BULUCU',
     headlineLead: 'Hedef pazarınızda',
     headlineDynamic: 'bölgenizdeki işletmeleri haritadan keşfedin',
@@ -60,16 +60,29 @@ const HERO_SHOWCASES: HeroShowcase[] = [
   },
   {
     id: 'studio',
-    video: '/landing/studio/hero-gen-studio.mp4',
-    poster: '/landing/studio/hero-gen-studio.png',
-    categoryBadge: 'KAMPANYA STÜDYOSU',
-    headlineLead: 'Müşteri kitlenize',
-    headlineDynamic: 'tek tıkla kişiselleştirilmiş kampanya iletin',
-    sublead: 'Dikey tanıtım videonuzu ekleyin, dinamik isim değişkenli şablonunuzu belirleyin ve binlerce alıcıya tek tıkla güvenle ulaştırın.',
-    featureTitle: 'Kampanya & Şablon Stüdyosu',
-    featureTag: '3.850 Doğrulanmış Alıcı',
-    ctaText: 'Kampanyayı Başlat',
-    icon: Send,
+    video: '/landing/infographics/05-kreatif-studyosu-veo-i2v.mp4',
+    poster: '/landing/infographics/05-kreatif-studyosu-chatgpt-4-3.png',
+    categoryBadge: 'KREATİF STÜDYOSU',
+    headlineLead: 'Ürün fotoğrafınızdan',
+    headlineDynamic: 'saniyeler içinde hazır dikey reklam üretin',
+    sublead: 'Ham ürün görselinizi yükleyin; yapay zeka WhatsApp formatında profesyonel dikey tanıtım görseline ve videosuna dönüştürsün.',
+    featureTitle: 'Ham Ürün → AI Reklam Dönüşümü',
+    featureTag: 'Saniyeler İçinde Hazır',
+    ctaText: 'Stüdyoyu Başlat',
+    icon: Sparkles,
+  },
+  {
+    id: 'multiline',
+    video: '/landing/infographics/03-coklu-hat-veo-i2v.mp4',
+    poster: '/landing/infographics/03-coklu-hat-chatgpt-4-3.png',
+    categoryBadge: 'ÇOKLU HAT DAĞITICI',
+    headlineLead: 'Yükü paylaştırın',
+    headlineDynamic: 'bağlı hatlarınızla güvenli ve dengeli iletin',
+    sublead: 'Tek bir hatta yük bindirmeden, akıllı dağıtıcıyla Hat 01, Hat 02 ve Hat 03 arasında eşit paylaştırarak sıfır spam riskiyle gönderim yapın.',
+    featureTitle: 'Akıllı Dağıtıcı & Hat Yük Dengeleme',
+    featureTag: '3 Hat Dengeli İletim',
+    ctaText: 'Hatları İncele',
+    icon: Network,
   },
 ]
 
@@ -98,6 +111,12 @@ export function Scene01Hero() {
           
           {/* Sol Kolon: Başlık, Açıklama ve Hızlı Başla (5 Kolon) */}
           <div className="lg:col-span-5 flex flex-col justify-center">
+            
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-xs font-semibold w-fit mb-4">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Yeni Nesil WhatsApp Büyüme Platformu</span>
+            </div>
+
             <h1 className="text-3xl sm:text-4xl lg:text-[44px] xl:text-[48px] font-bold text-slate-900 tracking-tight leading-[1.12]">
               {current.headlineLead}<br />
               <span
@@ -138,7 +157,7 @@ export function Scene01Hero() {
             {/* Mesajify Uygulama Ekranları Butonları */}
             <div className="mt-8 pt-6 border-t border-slate-200/80">
               <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-3">
-                Mesajify Uygulama Ekranları
+                Mesajify Platform Modülleri (Canlı Akış)
               </span>
               <div className="flex flex-wrap items-center gap-2">
                 {HERO_SHOWCASES.map((item, idx) => {
@@ -172,7 +191,7 @@ export function Scene01Hero() {
             </div>
           </div>
 
-          {/* Sağ Kolon: BAYA GENİŞ 16:9 Mesajify Uygulama Ekranı (7 Kolon) */}
+          {/* Sağ Kolon: GENİŞ 16:9 Mesajify Veo İnfografik Oynatıcısı (7 Kolon) */}
           <div className="lg:col-span-7 relative w-full flex items-center justify-center">
             {/* Ambient Blurred Video Background Glow Layer */}
             <div className="absolute -inset-4 sm:-inset-8 -z-10 rounded-[40px] overflow-hidden filter blur-3xl opacity-35 scale-105 pointer-events-none transition-all duration-700">
@@ -202,13 +221,14 @@ export function Scene01Hero() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 rounded-full">
+                  <span className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 rounded-full">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                     {current.categoryBadge}
                   </span>
                 </div>
               </div>
 
-              {/* 16:9 Geniş Uygulama Videosu Oynatıcısı */}
+              {/* 16:9 Geniş Uygulama Videosu Oynatıcısı (Sıralı Loop) */}
               <div className="relative aspect-[16/9] w-full bg-slate-950 overflow-hidden">
                 <video
                   ref={videoRef}
@@ -244,9 +264,23 @@ export function Scene01Hero() {
                   <CheckCircle2 className="h-4 w-4 text-emerald-600 flex-shrink-0" />
                   <span>Doğrudan WhatsApp İletişimi · Sıfır Spam Riski</span>
                 </div>
-                <span className="text-[11px] font-mono text-slate-400 font-semibold">
-                  {currentIndex + 1} / {HERO_SHOWCASES.length}
-                </span>
+                
+                {/* 5'li Gösterge Noktaları */}
+                <div className="flex items-center gap-1.5">
+                  {HERO_SHOWCASES.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setCurrentIndex(idx)}
+                      className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
+                        idx === currentIndex ? 'w-5 bg-emerald-600' : 'w-2 bg-slate-200 hover:bg-slate-300'
+                      }`}
+                      aria-label={`Slide ${idx + 1}`}
+                    />
+                  ))}
+                  <span className="ml-2 text-[11px] font-mono text-slate-400 font-semibold">
+                    {currentIndex + 1} / {HERO_SHOWCASES.length}
+                  </span>
+                </div>
               </div>
             </div>
 

@@ -74,14 +74,17 @@ export function Scene05Inbox() {
             <div className="w-6 sm:w-10" />
           </div>
 
-          {/* Real Application Screenshot */}
-          <div className="relative w-full aspect-[16/10] bg-surface">
-            <Image
-              src="/landing/gelenler.png"
-              alt="Mesajify Ortak Gelen Kutusu Gerçek Ekran Görüntüsü"
-              fill
-              priority
-              className="object-cover object-top"
+          {/* Real Application Live Veo Video */}
+          <div className="relative w-full aspect-[16/10] bg-slate-950 overflow-hidden">
+            <video
+              src="/landing/infographics/04-ortak-inbox-veo-i2v.mp4"
+              poster="/landing/infographics/04-ortak-inbox-chatgpt-16-9.png"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              className="w-full h-full object-cover object-top"
             />
           </div>
 

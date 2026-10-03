@@ -78,14 +78,16 @@ export function LandingDiscoveryStory() {
       description="Müşteri listeniz hazır değilse endişelenmeyin. İşletme Bulucu ile hedeflediğiniz şehir, ilçe ve sektördeki doğrulanmış WhatsApp işletme numaralarını filtreleyerek kampanya kitlenize dahil edin."
     >
       <div className="w-full max-w-[1100px] mx-auto">
-        <div className="relative aspect-[16/10] sm:aspect-[16/9] w-full rounded-3xl overflow-hidden border border-slate-200/90 shadow-2xl bg-slate-50 mb-8">
-          <Image
-            src="/landing/infographics/06-isletme-bulucu-chatgpt-16-9.png"
-            alt="Mesajify İşletme Bulucu ve Hedef Kitle Keşfi"
-            fill
-            sizes="(max-width: 1200px) 100vw, 1100px"
-            className="object-cover object-center"
-            priority
+        <div className="relative aspect-[16/10] sm:aspect-[16/9] w-full rounded-3xl overflow-hidden border border-slate-200/90 shadow-2xl bg-slate-950 mb-8">
+          <video
+            src="/landing/infographics/06-isletme-bulucu-veo-i2v.mp4"
+            poster="/landing/infographics/06-isletme-bulucu-chatgpt-16-9.png"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            className="w-full h-full object-cover object-center"
           />
         </div>
 
