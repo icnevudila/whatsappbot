@@ -190,19 +190,6 @@ export function Scene01Hero() {
                   )
                 })}
 
-                {/* Floating Bottom Info Pill */}
-                <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 right-3 sm:right-4 z-20 flex items-center justify-between pointer-events-none">
-                  <div className="bg-slate-950/80 backdrop-blur-md border border-white/10 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl flex items-center gap-2 shadow-lg">
-                    <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-[11px] sm:text-xs font-semibold text-white truncate max-w-[190px] sm:max-w-none">
-                      {current.featureTitle}
-                    </span>
-                  </div>
-                  <div className="bg-[#25d366] text-white text-[11px] sm:text-xs font-bold px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl shadow-lg flex items-center gap-1 sm:gap-1.5">
-                    <span>{current.ctaText}</span>
-                    <span>→</span>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
