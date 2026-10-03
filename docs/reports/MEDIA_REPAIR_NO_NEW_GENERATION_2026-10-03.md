@@ -23,9 +23,13 @@ Existing creative is now `ready`, error null, decoded PNG 1254 × 1254, 1,612,32
 - External Flow leases now use the resolved canonical account/worker and never silently fall back to `flow-primary`.
 - Reserved Flow lease is STARTING, not GENERATING; session restoration remains possible before execution begins.
 
-First observation deployment backup `/opt/whatsappbot/infra/image-receipt-backup-1791037741`; follow-up backup `/opt/whatsappbot/infra/image-receipt-backup-1791038325`. Exact-file backups, source drift checks, idle gateway/video checks, deployed hash read-back and process health were used. Only gateway/worker Node processes reloaded; Chrome/container not restarted. The first recovery deployment had one explicitly fenced controller-terminal reconciliation creative, not unknown general in-flight jobs.
+First observation deployment backup `/opt/whatsappbot/infra/image-receipt-backup-1791037741`; follow-up backups `/opt/whatsappbot/infra/image-receipt-backup-1791038325` and `/opt/whatsappbot/infra/image-receipt-backup-1791038594`. Exact-file backups, source drift checks, idle gateway/video checks, deployed hash read-back and process health were used. Only gateway/worker Node processes reloaded; Chrome/container not restarted. The first recovery deployment had one explicitly fenced controller-terminal reconciliation creative, not unknown general in-flight jobs.
+
+Latest live gateway file hashes: server `b3cb4900714d1cc1908cb02f9451380283bcbaa344a00f52421e7f0e3f5f21aa`; worker `3cd2a10c598ecedb01834cd40d90da24966d9ffdf6606095172db4477b158638`; narrow supervisor `c98408ae4c05a87ad8d80c093327ea9d536425e5e57e0f23954448058c99623f`; observer `7eff5c4893a8cef61109aeff685ae6703c8b5b4c984676615a230d29949e1c62`.
 
 Customer production deployment `dpl_FC2pYQTPPBAjN3bvaenxoaxFvWvt`, commit `3178abe3b0d7eda495e88794a800f87d2984716f`, READY on app.mesajify.com. Follow-up polling-only delta is tracked on the same branch.
+
+Follow-up customer commit `c89e69c7a268c5ca31cb8ea448ebb922a45616b5`, production deployment `dpl_9pBZz2yEZaSFsikjfhX3tRprAvVX`, confirmed READY with app.mesajify.com alias. Runtime branch `codex/image-runtime-safety-20261003`, source commit `707c6b731a38c5a4ebd54b284f0439a0d9984e4d` captures the deployed narrow supervisor (not the unrelated full local supervisor draft). Main remains `5e15ba57e47c3505a47a101ce683910358a11bc3`.
 
 ## Not claimed complete
 
