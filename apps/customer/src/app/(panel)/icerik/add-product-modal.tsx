@@ -125,7 +125,15 @@ export function AddProductModal({
           Görsel sihirbazında kullanılmak üzere ürün bilgisi ekleyin.
         </p>
 
-        <form onSubmit={submit} className="mt-4 space-y-3">
+        <form onSubmit={submit} className="mt-4 space-y-3" onPaste={(event) => {
+          if (pending) return
+          const image = Array.from(event.clipboardData.files).find(file => ['image/png','image/jpeg','image/webp'].includes(file.type))
+          if (!image) return
+          event.preventDefault()
+          if (image.size > 5 * 1024 * 1024) { setError('Görsel en fazla 5 MB olabilir.'); return }
+          setError(null)
+          setSelectedFile(image)
+        }}>
           <Field label="Ürün adı" hint="Zorunlu">
             <Input
               value={name}
@@ -153,7 +161,7 @@ export function AddProductModal({
             />
           </Field>
 
-          <Field label="Ürün görseli" hint="PNG, JPG veya WEBP (en fazla 5 MB)">
+          <Field label="Ürün görseli" hint="PNG, JPG veya WEBP (en fazla 5 MB). Kopyalanmış ekran görüntüsünü buraya yapıştırabilirsiniz.">
             {filePreview ? (
               <div className="flex items-center gap-3 rounded-md border border-hairline bg-canvas p-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
