@@ -350,7 +350,7 @@ export function CreativeDetail({
       progressInfo?: ServerProgressInfo | null
       error?: string
     } | null
-    if (!response.ok) {
+    if (!response.ok || json?.ok === false || json?.error) {
       return { error: json?.error ?? 'Görsel üretilemedi.', pending: false }
     }
     if (json?.pending || response.status === 202) {

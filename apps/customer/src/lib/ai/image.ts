@@ -21,6 +21,7 @@ export type GeneratedImage = {
   provider: AiProviderId
   width?: number
   height?: number
+  referenceReceipt?: import('./omnistudio-image-job').ImageReferenceReceipt | null
 }
 
 export type ReferenceImage = {
@@ -37,6 +38,7 @@ export class DirectImageReconciliationError extends Error {
 }
 
 export type ImageMetadata = {
+  expectedReferenceCount?: number
   workspace?: string
   customer?: string
   tenantId?: string
@@ -146,8 +148,8 @@ function buildProviders(config: ResolvedAiConfig): Record<AiProviderId, ImagePro
           if (metadata?.enqueueOnly) throw new ImageJobPendingError(job)
           const deadline = Date.now() + 90000
           while (Date.now() < deadline) {
-            const image = await readImageJob(job, metadata?.tenantId || metadata?.orgId)
-            if (image) return { data: image.data, mimeType: image.mimeType, provider: 'omnistudio' }
+            const image = await readImageJob(job, metadata?.tenantId || metadata?.orgId, refs.length)
+            if (image) return { ...image, provider: 'omnistudio' }
             await new Promise(resolve => setTimeout(resolve, 2500))
           }
         } catch (error) {
@@ -371,6 +373,9 @@ export async function generateImage(
   references?: ReferenceImage[],
   metadata?: ImageMetadata,
 ): Promise<{ image: GeneratedImage; attempts: string[] }> {
+  if (metadata?.expectedReferenceCount !== undefined && (!Number.isSafeInteger(metadata.expectedReferenceCount) || metadata.expectedReferenceCount < 1 || metadata.expectedReferenceCount !== (references?.length || 0))) {
+    throw new Error('REFERENCE_PREFLIGHT_MISMATCH: Beklenen referanslar eksik; hiçbir sağlayıcıya istek gönderilmedi.')
+  }
   if ((references?.length || 0) > MAX_REFERENCE_IMAGES) throw new Error(`En fazla ${MAX_REFERENCE_IMAGES} referans destekleniyor; seçilen görseller çıkarılmadı.`)
   const config = resolveAiConfig(bag)
   const registry = buildProviders(config)

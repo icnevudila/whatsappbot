@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { DirectImageReconciliationError, generateImage, type ReferenceImage } from '@/lib/ai/image'
 import { inspectImageOutput } from '@/lib/ai/image-output'
+import { verifyPersistedImageBytes } from '@/lib/ai/image-storage-contract'
 import { ImageJobFailedError, ImageJobPendingError, ImageJobReconciliationError, ImageSubmissionUncertainError, readImageJob } from '@/lib/ai/omnistudio-image-job'
 import { createHash } from 'node:crypto'
 import type { AiKeyBag } from '@/lib/ai/config'
@@ -355,12 +356,18 @@ export async function processCreativeGeneration(
       const storagePath = `${creative.org_id}/${creative.id}/${payload.imageJob.id}.${ext}`
       const upload = await supabase.storage.from('creatives').upload(storagePath, image.data, { contentType: image.mimeType, upsert: true })
       if (upload.error) return { ok: true, pending: true, retryAfterSeconds: 10, error: upload.error.message }
+      const readback = await supabase.storage.from('creatives').download(storagePath)
+      if (readback.error || !readback.data || readback.data.size > 32 * 1024 * 1024) return { ok: true, pending: true, retryAfterSeconds: 10 }
+      const storedReceipt = await verifyPersistedImageBytes(image.data, Buffer.from(await readback.data.arrayBuffer()))
       const { data: url } = supabase.storage.from('creatives').getPublicUrl(storagePath)
       const update = await supabase.from('creatives').update({
         status: 'ready', error: null, storage_path: storagePath, public_url: url.publicUrl,
         width: image.width || null, height: image.height || null,
-        payload: { ...payload, imageJob: null, provider: 'omnistudio', outputSha256: createHash('sha256').update(image.data).digest('hex'), cost: { provider: 'omnistudio', imageCount: 1 } },
-      }).eq('id', creativeId).eq('org_id', creative.org_id).eq('payload->imageJob->>id', payload.imageJob.id).select('id').maybeSingle()
+        payload: { ...payload, imageJob: null, provider: 'omnistudio', outputSha256: storedReceipt.sha256,
+          imageOutputReceipt: {orgId:creative.org_id,creativeId,jobId:payload.imageJob.id,sha256:storedReceipt.sha256,size:storedReceipt.size,
+            mimeType:storedReceipt.mimeType,width:storedReceipt.width,height:storedReceipt.height,decodedImage:true,storagePath,
+            referenceReceipt:image.referenceReceipt || null}, cost: { provider: 'omnistudio', imageCount: 1 } },
+      }).eq('id', creativeId).eq('org_id', creative.org_id).eq('status','rendering').eq('payload->imageJob->>id', payload.imageJob.id).select('id').maybeSingle()
       if (update.error) return { ok: true, pending: true, retryAfterSeconds: 10, error: update.error.message }
       if (update.data?.id !== creativeId) return { ok: true, pending: true, retryAfterSeconds: 5 }
       return { ok: true, ready: true, publicUrl: url.publicUrl }
@@ -990,6 +997,7 @@ export async function processCreativeGeneration(
     }
 
     const { image, attempts } = await generateImage(prompt, aspect, bag, refs, {
+      expectedReferenceCount: expected_reference_count,
       customer: customerName,
       workspace: workspaceTitle,
       tenantId: creative.org_id,
@@ -1026,9 +1034,11 @@ export async function processCreativeGeneration(
         const saved = await supabase.from('creatives').update({
           payload: { ...payload, imageJob, imageSubmissionUncertain: false, generatedPrompt: prompt, originalPrompt: snapshot.brief },
         }).eq('id', creativeId).eq('org_id', creative.org_id).eq('status', 'rendering')
-          .eq('updated_at', claimedUpdatedAt).select('id').maybeSingle()
+          .eq('updated_at', claimedUpdatedAt).select('id,updated_at').maybeSingle()
         if (saved.error) throw new Error(saved.error.message)
         if (saved.data?.id !== creativeId) throw new Error('Üretim kaydı başka işlem tarafından değiştirildi; mevcut iş korunuyor.')
+        claimedUpdatedAt = saved.data.updated_at
+        payload.imageJob = imageJob
       },
     })
     const ext = image.mimeType.includes('jpeg') ? 'jpg' : image.mimeType.includes('webp') ? 'webp' : 'png'
@@ -1039,9 +1049,20 @@ export async function processCreativeGeneration(
     })
     if (upError) throw new Error(upError.message)
 
+    const { data: storedImage, error: storageReadError } = await supabase.storage.from('creatives').download(path)
+    if (storageReadError || !storedImage || storedImage.size > 32 * 1024 * 1024) throw new Error('IMAGE_STORAGE_READBACK_FAILED')
+    const storedReceipt = await verifyPersistedImageBytes(image.data, Buffer.from(await storedImage.arrayBuffer()))
+
     const { data: publicUrl } = supabase.storage.from('creatives').getPublicUrl(path)
     const nextPayload: CreativePayload = {
       ...snapshot,
+      imageJob: payload.imageJob || null,
+      imageOutputReceipt: {
+        orgId: creative.org_id, creativeId, jobId: payload.imageJob?.id || null,
+        sha256: storedReceipt.sha256, size: storedReceipt.size,
+        mimeType: storedReceipt.mimeType, width: storedReceipt.width, height: storedReceipt.height,
+        decodedImage: true, storagePath: path, referenceReceipt: image.referenceReceipt || null,
+      },
       imageDirectIntent: null,
       imageSubmitIntent: null,
       imageSubmissionUncertain: false,

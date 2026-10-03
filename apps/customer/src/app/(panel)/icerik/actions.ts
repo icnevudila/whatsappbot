@@ -9,6 +9,7 @@ import { hasImageProvider } from '@/lib/ai/image'
 import { processCreativeGeneration } from '@/lib/creative/process'
 import { isUncertainImageFailure } from '@/lib/creative/detail-render-state'
 import { isReadyImageSource } from '@/lib/creative/image-source'
+import { requiredImageAssets } from '@/lib/creative/required-image-assets'
 import {
   titleFromBrief,
   type CreativePayload,
@@ -358,12 +359,12 @@ export async function startCreativeGeneration(
   }
   const title = titleFromBrief(String(draft.instruction ?? '').trim() || brief)
   // Identical mandatory-asset gate for every business, enforced before job insertion.
-  if (draft.useLogo === false || !(kitRow?.logo_path || orgLogoPath)) {
-    return { error: 'Üretmek için işletme logosunu ekleyin ve logo kullanımını açın.' }
-  }
-  if (!products.some((product) => product.include.image && product.imageUrl) && !baseCreativeId) {
-    return { error: 'Üretmek için gerçek bir ürün veya referans görseli seçin.' }
-  }
+  const imageAssetGate = requiredImageAssets({
+    useLogo: draft.useLogo !== false, hasLogo: Boolean(kitRow?.logo_path || orgLogoPath),
+    hasProductReference: products.some((product) => product.include.image && Boolean(product.imageUrl)),
+    hasValidBase: Boolean(baseCreativeId),
+  })
+  if (!imageAssetGate.ready) return { error: imageAssetGate.message || 'IMAGE_ASSETS_REQUIRED' }
   const snapshot: CreativePayload = {
     brief,
     style: String(draft.style ?? 'auto'),
