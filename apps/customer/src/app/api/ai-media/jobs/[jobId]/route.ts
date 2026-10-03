@@ -1,99 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireActiveOrg } from '@/lib/org'
 import type { JobUserViewModel } from '@/app/(panel)/icerik/wizard-types'
+import { mapEngineStateToStage } from '@/lib/creative/production-progress/stage-mapper'
+import { calculateAuthoritativeEta } from '@/lib/creative/production-progress/eta-calculator'
+import type { ProductionStageKey } from '@/lib/creative/production-progress/progress-types'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-/**
- * Maps raw backend states to user-facing stages and friendly titles
- */
-function mapEngineStateToStage(state: string): {
-  stage_index: number
-  display_state: JobUserViewModel['display_state']
-  display_title: string
-  display_message: string
-} {
-  switch (state) {
-    case 'PENDING':
-    case 'VALIDATING_INPUTS':
-      return {
-        stage_index: 1,
-        display_state: 'REKLAM_TASLAGI_HAZIRLANIYOR',
-        display_title: 'Reklam Taslağı Doğrulanıyor',
-        display_message: 'Kurumsal kimlik ve onaylı metin kilitlendi.',
-      }
+function toLegacyDisplayState(key: ProductionStageKey): JobUserViewModel['display_state'] {
+  switch (key) {
+    case 'REQUEST_ACCEPTED':
+      return 'REKLAM_TASLAGI_HAZIRLANIYOR'
     case 'QUEUED':
-      return {
-        stage_index: 2,
-        display_state: 'SIRAYA_ALINDI',
-        display_title: 'Video Sıraya Alındı',
-        display_message: 'Prodüksiyon sırası bekleniyor.',
-      }
-    case 'LEASED':
-    case 'PREPARING_ENV':
-    case 'OPENING_PROJECT':
-    case 'ATTACHING_INGREDIENTS':
-    case 'INGREDIENTS_VERIFIED':
-      return {
-        stage_index: 3,
-        display_state: 'GORSELLER_BAGLANIYOR',
-        display_title: 'Görseller ve Materyaller Hazırlanıyor',
-        display_message: 'Logonuz ve ürün fotoğraflarınız stüdyoya aktarılıyor.',
-      }
+      return 'SIRAYA_ALINDI'
+    case 'ASSETS_PREPARING':
+      return 'GORSELLER_BAGLANIYOR'
     case 'GENERATING':
-    case 'POLLING_FLOW':
-    case 'DOWNLOADING_MEDIA':
-    case 'MEDIA_DOWNLOADED':
-      return {
-        stage_index: 4,
-        display_state: 'VIDEO_OLUSTURULUYOR',
-        display_title: 'Reklam Videosu Hazırlanıyor',
-        display_message: 'Sinematik sahneler ve kurgu işleniyor.',
-      }
-    case 'FFPROBE_INSPECTING':
-    case 'SHA256_VERIFYING':
-      return {
-        stage_index: 5,
-        display_state: 'KALITE_KONTROLU',
-        display_title: 'Kalite Kontrolü Yapılıyor',
-        display_message: 'Görsel netliği ve ses uyumu denetleniyor.',
-      }
-    case 'VISUAL_QA_EVALUATING':
-      return {
-        stage_index: 6,
-        display_state: 'MARKA_DUZENLEMELERI',
-        display_title: 'Logo ve Marka Kapanışı Ekleniyor',
-        display_message: 'Kurumsal logonuz ve kapanış sahnesi kurgulanıyor.',
-      }
-    case 'COMPLETED':
-      return {
-        stage_index: 7,
-        display_state: 'HAZIR',
-        display_title: 'Videonuz Hazır!',
-        display_message: 'Reklam videonuz başarıyla tamamlandı. Aşağıdan izleyebilirsiniz.',
-      }
+      return 'VIDEO_OLUSTURULUYOR'
+    case 'MEDIA_PROCESSING':
+      return 'VIDEO_OLUSTURULUYOR'
+    case 'QUALITY_CHECK':
+      return 'KALITE_KONTROLU'
+    case 'READY':
+      return 'HAZIR'
     case 'NEEDS_REVIEW':
-      return {
-        stage_index: 0,
-        display_state: 'INCELEME_GEREKIYOR',
-        display_title: 'İnsan İncelemesi Gerekiyor',
-        display_message: 'Video teknik olarak üretildi ancak otomatik kalite kapısından geçmedi.',
-      }
+      return 'INCELEME_GEREKIYOR'
     case 'FAILED':
-      return {
-        stage_index: 0,
-        display_state: 'BASARISIZ',
-        display_title: 'Üretim Başarısız Oldu',
-        display_message: 'Video üretilirken bir hata oluştu.',
-      }
+      return 'BASARISIZ'
     default:
-      return {
-        stage_index: 2,
-        display_state: 'SIRAYA_ALINDI',
-        display_title: 'İşleniyor',
-        display_message: 'İşlem devam ediyor.',
-      }
+      return 'SIRAYA_ALINDI'
   }
 }
 
@@ -137,34 +73,100 @@ export async function GET(
       .eq('job_id', jobId)
       .order('created_at', { ascending: true })
 
-    // 3. Queue & ETA Calculations
+    // Authoritative Timing Calculation
+    const now = Date.now()
+    const jobStartedAt = job.created_at || null
+    const jobStartTime = jobStartedAt ? new Date(jobStartedAt).getTime() : now
+    const elapsedTotalSeconds = Math.max(0, Math.floor((now - jobStartTime) / 1000))
+
+    // Find when current stage or state started from events
+    let stageStartedAt: string | null = job.updated_at || jobStartedAt
+    if (events && events.length > 0) {
+      for (let i = events.length - 1; i >= 0; i--) {
+        const ev = events[i]
+        if (ev.to_state === job.state && ev.created_at) {
+          stageStartedAt = ev.created_at
+          break
+        }
+      }
+    }
+    const stageStartTime = stageStartedAt ? new Date(stageStartedAt).getTime() : now
+    const stageElapsedSeconds = Math.max(0, Math.floor((now - stageStartTime) / 1000))
+
+    // 3. Queue & Capacity Calculations
     let queueAheadCount: number | null = null
-    let etaDisplayText: string | null = null
 
     if (job.state === 'QUEUED' || job.state === 'PENDING') {
       const { count } = await (supabase as any)
         .from('ai_media_jobs')
         .select('id', { count: 'exact', head: true })
-        .in('state', ['QUEUED', 'LEASED'])
+        .in('state', ['QUEUED', 'LEASED', 'PREPARING_ENV', 'OPENING_PROJECT', 'ATTACHING_INGREDIENTS', 'INGREDIENTS_VERIFIED', 'GENERATING'])
         .lt('created_at', job.created_at)
 
-      const currentAhead = count ?? 0
-      queueAheadCount = currentAhead
-      // Parallel Worker Pool capacity (3 concurrent workers active)
-      const activeWorkers = 3
-      const estimatedSecs = 60 + Math.ceil((currentAhead / activeWorkers) * 90)
-      const minMins = Math.max(1, Math.floor(estimatedSecs / 60))
-      const maxMins = minMins + 1
-      etaDisplayText = currentAhead === 0
-        ? 'İşleme alınmak üzere (~1–2 dakika)'
-        : `yaklaşık ${minMins}–${maxMins} dakika`
-    } else if (['LEASED', 'PREPARING_ENV', 'OPENING_PROJECT', 'ATTACHING_INGREDIENTS', 'INGREDIENTS_VERIFIED', 'GENERATING'].includes(job.state)) {
-      etaDisplayText = 'yaklaşık 1–2 dakika'
-    } else if (['FFPROBE_INSPECTING', 'SHA256_VERIFYING', 'VISUAL_QA_EVALUATING'].includes(job.state)) {
-      etaDisplayText = 'yaklaşık 30 saniye'
-    } else if (job.state === 'COMPLETED') {
-      etaDisplayText = 'Tamamlandı'
+      queueAheadCount = count ?? 0
     }
+
+    // Dynamically discover worker concurrency (never hardcoded to 3)
+    let dynamicCapacity = 1
+    try {
+      const { count: activeExecutingCount } = await (supabase as any)
+        .from('ai_media_jobs')
+        .select('id', { count: 'exact', head: true })
+        .in('state', [
+          'LEASED',
+          'PREPARING_ENV',
+          'OPENING_PROJECT',
+          'ATTACHING_INGREDIENTS',
+          'INGREDIENTS_VERIFIED',
+          'GENERATING',
+          'POLLING_FLOW',
+          'DOWNLOADING_MEDIA',
+          'MEDIA_DOWNLOADED',
+          'FFPROBE_INSPECTING',
+          'SHA256_VERIFYING',
+          'VISUAL_QA_EVALUATING',
+        ])
+
+      dynamicCapacity = Math.max(1, activeExecutingCount || 1)
+    } catch {
+      dynamicCapacity = 1
+    }
+
+    // Historical duration sampling for data-driven ETA
+    let historicalDurationsSeconds: number[] = []
+    try {
+      const { data: recentCompleted } = await (supabase as any)
+        .from('ai_media_jobs')
+        .select('created_at, updated_at')
+        .eq('state', 'COMPLETED')
+        .order('updated_at', { ascending: false })
+        .limit(30)
+
+      if (recentCompleted && recentCompleted.length > 0) {
+        historicalDurationsSeconds = recentCompleted
+          .map((j: any) => {
+            const start = new Date(j.created_at).getTime()
+            const end = new Date(j.updated_at).getTime()
+            return (end - start) / 1000
+          })
+          .filter((d: number) => Number.isFinite(d) && d > 10 && d < 1800)
+      }
+    } catch (histErr) {
+      console.warn('[ai-media-jobs] Warning fetching job duration history:', histErr)
+    }
+
+    // Map Engine State to Canonical Stage
+    const stageMapping = mapEngineStateToStage(job.state)
+
+    // Calculate Authoritative ETA
+    const etaResult = calculateAuthoritativeEta({
+      historicalDurationsSeconds,
+      activeWorkerCapacity: dynamicCapacity,
+      queueAheadCount,
+      currentStageIndex: stageMapping.stage_index,
+      elapsedTotalSeconds,
+      isTerminal: stageMapping.is_terminal,
+    })
 
     // 4. Fetch Output if completed
     let outputId: string | null = null
@@ -187,9 +189,7 @@ export async function GET(
         // Approved output is directly playable. NEEDS_REVIEW output is also
         // served to the owning org so they can preview their video while it
         // awaits human review — it is not publicly publishable until approved.
-        // We serve the URL whenever there is an output record (both COMPLETED and NEEDS_REVIEW).
         playbackUrl = `/api/ai-media/outputs/${output.id}`
-
 
         // Ensure creatives table is synced so video appears ready in Content Library
         try {
@@ -217,18 +217,30 @@ export async function GET(
       }
     }
 
-    const { stage_index, display_state, display_title, display_message } = mapEngineStateToStage(job.state)
+    const legacyDisplayState = toLegacyDisplayState(stageMapping.stage_key)
 
     const viewModel: JobUserViewModel = {
       job_id: job.id,
       org_id: job.org_id,
       state: job.state,
-      display_state,
-      display_title,
-      display_message,
-      stage_index,
+      raw_state: job.state,
+      stage_key: stageMapping.stage_key,
+      stage_count: stageMapping.stage_count,
+      stage_index: stageMapping.stage_index,
+      stage_started_at: stageStartedAt,
+      job_started_at: jobStartedAt,
+      elapsed_total_seconds: elapsedTotalSeconds,
+      stage_elapsed_seconds: stageElapsedSeconds,
+      detail_hint: stageMapping.detail_hint,
+      display_state: legacyDisplayState,
+      display_title: stageMapping.display_title,
+      display_message: stageMapping.display_message,
       queue_ahead_count: queueAheadCount,
-      eta_display_text: etaDisplayText,
+      eta_min_seconds: etaResult.eta_min_seconds,
+      eta_max_seconds: etaResult.eta_max_seconds,
+      eta_display_text: etaResult.eta_display_text,
+      eta_confidence: etaResult.eta_confidence,
+      progress_mode: stageMapping.progress_mode,
       can_cancel: ['PENDING', 'QUEUED'].includes(job.state),
       can_leave_page: true,
       output_id: outputId,
