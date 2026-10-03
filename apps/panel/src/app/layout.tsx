@@ -25,6 +25,15 @@ export const metadata: Metadata = {
   },
   description:
     'Kendi WhatsApp hatlarınızı bağlayın, kişi listenizi yükleyin, hattı yakmayan hızda toplu kampanya gönderin.',
+  icons: {
+    icon: [
+      { url: '/icon.png?v=mesajify2', sizes: '512x512', type: 'image/png' },
+      { url: '/favicon.ico?v=mesajify2', sizes: '32x32' },
+    ],
+    apple: [
+      { url: '/apple-icon.png?v=mesajify2', sizes: '512x512', type: 'image/png' },
+    ],
+  },
   openGraph: {
     title: `${BRAND_NAME} — ${BRAND_TAGLINE}`,
     description:

@@ -23,7 +23,15 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: 'Mesajify',
-  icons: { icon: '/favicon.ico?v=mesajify-symbol' },
+  icons: {
+    icon: [
+      { url: '/icon.png?v=mesajify2', sizes: '512x512', type: 'image/png' },
+      { url: '/favicon.ico?v=mesajify2', sizes: '32x32' },
+    ],
+    apple: [
+      { url: '/apple-icon.png?v=mesajify2', sizes: '512x512', type: 'image/png' },
+    ],
+  },
   description:
     'Ürününüzü, menünüzü veya hizmetinizi WhatsApp’tan duyurun. Hedef kitlenizi hazırlayın, mesajlarınızı gönderin ve gelen soruları tek panelden yanıtlayın.',
   alternates: {

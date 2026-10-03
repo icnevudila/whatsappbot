@@ -26,11 +26,11 @@ export const metadata: Metadata = {
   description: 'Kendi hatlarınızı bağlayın, kişi listenizi yükleyin, hattı koruyan hızda toplu kampanya gönderin. Numara doğrulama, ısındırma ve otomatik durdurma dahil.',
   icons: {
     icon: [
-      { url: '/icon.png', sizes: '512x512', type: 'image/png' },
-      { url: '/favicon.ico', sizes: '32x32' },
+      { url: '/icon.png?v=mesajify2', sizes: '512x512', type: 'image/png' },
+      { url: '/favicon.ico?v=mesajify2', sizes: '32x32' },
     ],
     apple: [
-      { url: '/apple-icon.png', sizes: '512x512', type: 'image/png' },
+      { url: '/apple-icon.png?v=mesajify2', sizes: '512x512', type: 'image/png' },
     ],
   },
   openGraph: {
