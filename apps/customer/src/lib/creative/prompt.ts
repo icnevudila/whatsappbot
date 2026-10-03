@@ -38,6 +38,50 @@ export type PromptFidelityOptions = {
   artDirectionPlan?: import('./director/creative-director').ArtDirectionPlan | null
 }
 
+export function describeColor(colorStr: string): string {
+  if (!colorStr) return ''
+  if (!colorStr.includes('#')) return colorStr
+
+  return colorStr.replace(/#([0-9a-fA-F]{3,8})\b/g, (_match, hex) => {
+    let h = hex.toLowerCase()
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]
+    const num = parseInt(h.slice(0, 6), 16)
+    if (isNaN(num)) return ''
+    const r = (num >> 16) & 255
+    const g = (num >> 8) & 255
+    const b = num & 255
+
+    const max = Math.max(r, g, b)
+    const min = Math.min(r, g, b)
+    const delta = max - min
+
+    if (max < 30) return 'deep rich black'
+    if (min > 230) return 'clean crisp white'
+    if (delta < 25) {
+      if (max < 100) return 'dark slate charcoal'
+      if (max < 180) return 'neutral architectural gray'
+      return 'soft off-white'
+    }
+
+    if (r > g && r > b) {
+      if (g > 150 && b < 100) return 'warm amber gold'
+      if (g > 80 && b < 80) return 'brick terracotta / warm rust'
+      if (b > 120) return 'vibrant magenta / rose'
+      return 'rich crimson / red'
+    } else if (g > r && g > b) {
+      if (r > 150) return 'electric lime / chartreuse'
+      if (b > 100) return 'fresh mint / emerald'
+      if (r < 80 && g < 120) return 'deep forest green'
+      return 'vivid vibrant green'
+    } else {
+      if (r > 120) return 'electric indigo / violet'
+      if (g > 150) return 'optic cyan / bright turquoise'
+      if (r < 60 && g < 100) return 'deep navy blue'
+      return 'rich royal cobalt blue'
+    }
+  })
+}
+
 /**
  * Structured brief → image-model prompt. UI içinde prompt birleştirilmez.
  */
@@ -56,7 +100,7 @@ export function buildCreativePrompt(
   const colors = kit?.colors
     ? Object.entries(kit.colors)
         .filter(([, value]) => typeof value === 'string' && value)
-        .map(([key, value]) => `${key} ${value}`)
+        .map(([key, value]) => `${key}: ${describeColor(String(value))}`)
         .join(', ')
     : null
 
@@ -117,17 +161,20 @@ export function buildCreativePrompt(
         `- CONCEPT & ARCHETYPE: ${options.artDirectionPlan.concept_name} (Archetype: ${options.artDirectionPlan.creative_archetype}).`,
         `- VISUAL HOOK: ${options.artDirectionPlan.visual_hook}.`,
         `- COMPOSITION & GRID: ${options.artDirectionPlan.composition.grid}. Focal point: ${options.artDirectionPlan.composition.focal_point}. Product scale: ${options.artDirectionPlan.composition.product_scale}, positioned at ${options.artDirectionPlan.composition.product_position}.`,
+        options.artDirectionPlan.product_dominance
+          ? `- PRODUCT/MATERIAL DOMINANCE MANDATE: Undisputed commercial hero. Target visual share: ${options.artDirectionPlan.product_dominance.target_visual_share}. Full silhouette preserved without cropping or occlusion. Human presence is strictly ${options.artDirectionPlan.product_dominance.human_role} and environment is ${options.artDirectionPlan.product_dominance.context_role}. Do NOT let human models, nature, or lifestyle elements overpower the hero product.`
+          : null,
         `- DEPTH & LAYERING: ${options.artDirectionPlan.composition.depth_layers.join(' -> ')}.`,
         `- LIGHTING & SHADOW PHYSICS: ${options.artDirectionPlan.art_direction.lighting}.`,
         `- MATERIAL & TEXTURE REALISM: ${options.artDirectionPlan.art_direction.material_language}. Surface texture: ${options.artDirectionPlan.art_direction.texture}.`,
         `- BACKGROUND TREATMENT & ATMOSPHERE: ${options.artDirectionPlan.art_direction.background_treatment}. Atmosphere: ${options.artDirectionPlan.art_direction.atmosphere}.`,
         `- COLOR TREATMENT & CONTRAST: ${options.artDirectionPlan.art_direction.color_treatment}. Contrast strategy: ${options.artDirectionPlan.art_direction.contrast_strategy}.`,
         options.artDirectionPlan.human_direction?.enabled
-          ? `- HUMAN PRESENCE & ACTION: Staged ${options.artDirectionPlan.human_direction.role} in ${options.artDirectionPlan.human_direction.wardrobe}, performing: ${options.artDirectionPlan.human_direction.interaction}. Expression: ${options.artDirectionPlan.human_direction.expression}.`
+          ? `- HUMAN PRESENCE & ACTION: Staged ${options.artDirectionPlan.human_direction.role} in ${options.artDirectionPlan.human_direction.wardrobe}, performing: ${options.artDirectionPlan.human_direction.interaction}. Expression: ${options.artDirectionPlan.human_direction.expression}. (Must remain secondary supporting role to the hero product).`
           : null,
         `- PRODUCT HERO FIDELITY: ${options.artDirectionPlan.product_direction.hero_behavior}. Scale: ${options.artDirectionPlan.product_direction.scale}. Shadow: ${options.artDirectionPlan.product_direction.reflection_shadow}.`,
         `- GRAPHIC ACCENTS: Incorporate subtle ${options.artDirectionPlan.graphic_language.shapes.join(', ')} with ${options.artDirectionPlan.graphic_language.frames.join(', ')}.`,
-        `- TYPOGRAPHY DIRECTION: ${options.artDirectionPlan.typography_direction.headline_character}. Feel: ${options.artDirectionPlan.typography_direction.style_feel}.`,
+        `- TYPOGRAPHY DIRECTION: ${options.artDirectionPlan.typography_direction.headline_character}. Feel: ${options.artDirectionPlan.typography_direction.style_feel}. Keep commercial headline, offer badge, and CTA prominent and readable on mobile.`,
         `- STRICT ANTI-GENERIC MANDATES: ${options.artDirectionPlan.anti_generic_rules.join('; ')}.`,
       ].filter(Boolean).join('\n')
     : [
@@ -190,6 +237,9 @@ export function buildCreativePrompt(
     'no deformed product design',
     'no fantasy product variations',
     'no generic product replacement',
+    'no lifestyle-dominated framing where background or person overpowers the product',
+    'no tiny product in distant background',
+    'no human model stealing focus from the hero product',
     'no cartoon stickers',
     'no yellow starburst badges',
     'no supermarket flyer graphics',
