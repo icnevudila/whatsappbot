@@ -2,6 +2,7 @@
 
 import { isReadyImageSource } from '@/lib/creative/image-source'
 import { requiredImageAssets } from '@/lib/creative/required-image-assets'
+import { getSafeMediaUrl } from '@/lib/media-url'
 
 import { useActionState, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
@@ -69,6 +70,20 @@ type Draft = {
 
 function newKey() {
   return crypto.randomUUID()
+}
+
+function ProductReferencePreview({ url, name }: { url?: string; name: string }) {
+  const [failed, setFailed] = useState(false)
+  useEffect(() => setFailed(false), [url])
+  const source = getSafeMediaUrl(url)
+  return (
+    <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-hairline bg-surface">
+      {source && !failed ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={source} alt={`${name} ürün referansı`} loading="lazy" className="h-full w-full object-contain" onError={() => setFailed(true)} />
+      ) : <span className="px-1 text-center text-[10px] leading-tight text-muted">Referans görseli eksik</span>}
+    </span>
+  )
 }
 
 function emptyExtra(imageUrl = ''): ProductExtra {
@@ -398,15 +413,21 @@ export function ImageCreativeWizard({ data }: { data: WizardBootstrap }) {
 
       {step === 'products' ? (
         <div className="space-y-2">
-          <div className="flex flex-wrap gap-1.5">
+          <div className="grid gap-2 sm:grid-cols-2">
             {productsList.map((product) => (
               <button
                 key={product.id}
                 type="button"
-                className="wb-wa-chip"
+                aria-pressed={draft.productIds.includes(product.id)}
+                className={`flex min-w-0 items-center gap-3 rounded-[var(--radius-card)] border p-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${draft.productIds.includes(product.id) ? 'border-[#00a884] bg-[#e7f8f2]' : 'border-hairline bg-surface hover:bg-[#f7f9fa]'}`}
                 onClick={() => addProduct(product.id)}
               >
-                + {product.name}
+                <ProductReferencePreview url={draft.productExtras[product.id]?.imageUrl || product.images[0]?.url} name={product.name} />
+                <span className="min-w-0 flex-1">
+                  <span className="block break-words text-[13.5px] font-semibold">{product.name}</span>
+                  <span className="block text-xs text-muted">{product.images.length ? 'Üretime gönderilecek ürün referansı' : 'Referans görseli eksik'}</span>
+                </span>
+                <span aria-hidden="true" className="text-lg">{draft.productIds.includes(product.id) ? '✓' : '+'}</span>
               </button>
             ))}
             <button
@@ -434,7 +455,10 @@ export function ImageCreativeWizard({ data }: { data: WizardBootstrap }) {
             return (
               <details key={product.id} open className="rounded-[var(--radius-card)] border border-hairline bg-surface">
                 <summary className="cursor-pointer px-3.5 py-2.5 text-[13.5px] font-semibold">
-                  {product.name}
+                  <span className="inline-flex items-center gap-3 align-middle">
+                    <ProductReferencePreview url={extra.imageUrl} name={product.name} />
+                    <span>{product.name}</span>
+                  </span>
                 </summary>
                 <div className="space-y-2 border-t border-hairline p-3.5">
                   {product.images.length > 1 ? (
