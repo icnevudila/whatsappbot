@@ -273,12 +273,18 @@ export function Scene04Delivery() {
             {consoleTab === 'infographic' && (
               <div className="relative w-full h-full bg-[#050B08] animate-fade-in flex items-center justify-center">
                 <video
+                  ref={(el) => {
+                    if (el) {
+                      el.muted = true
+                      el.defaultMuted = true
+                    }
+                  }}
                   src="/landing/infographics/03-coklu-hat-veo-i2v.mp4"
-                  poster="/landing/infographics/03-coklu-hat-chatgpt-4-3.png"
                   autoPlay
                   loop
                   muted
                   playsInline
+                  preload="auto"
                   className="w-full h-full object-contain p-2"
                 />
               </div>

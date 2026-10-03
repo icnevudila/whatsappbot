@@ -52,13 +52,18 @@ export function Scene07Bento() {
         <div className="relative max-w-5xl mx-auto rounded-3xl border border-slate-200/90 bg-white p-3 sm:p-5 shadow-2xl shadow-slate-900/5 mb-10">
           <div className="relative aspect-[16/10] sm:aspect-[16/9] w-full rounded-2xl overflow-hidden bg-slate-950 border border-slate-100 shadow-inner">
             <video
+              ref={(el) => {
+                if (el) {
+                  el.muted = true
+                  el.defaultMuted = true
+                }
+              }}
               src="/landing/infographics/01-ana-urun-veo-i2v.mp4"
-              poster="/landing/infographics/01-ana-urun-chatgpt-16-9.png"
               autoPlay
               muted
               loop
               playsInline
-              preload="metadata"
+              preload="auto"
               className="w-full h-full object-cover"
             />
           </div>

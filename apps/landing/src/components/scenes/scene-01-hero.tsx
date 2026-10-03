@@ -99,8 +99,13 @@ export function Scene01Hero() {
   // Video değiştiğinde sıfırlayıp oynat
   useEffect(() => {
     if (videoRef.current) {
+      videoRef.current.defaultMuted = true
+      videoRef.current.muted = true
       videoRef.current.currentTime = 0
-      videoRef.current.play().catch(() => {})
+      const playPromise = videoRef.current.play()
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {})
+      }
     }
   }, [currentIndex])
 
@@ -196,12 +201,19 @@ export function Scene01Hero() {
             {/* Ambient Blurred Video Background Glow Layer */}
             <div className="absolute -inset-4 sm:-inset-8 -z-10 rounded-[40px] overflow-hidden filter blur-3xl opacity-35 scale-105 pointer-events-none transition-all duration-700">
               <video
+                ref={(el) => {
+                  if (el) {
+                    el.muted = true
+                    el.defaultMuted = true
+                  }
+                }}
                 key={`ambient-${current.video}`}
                 src={current.video}
                 autoPlay
                 muted
                 loop
                 playsInline
+                preload="auto"
                 className="w-full h-full object-cover"
               />
             </div>
@@ -231,14 +243,19 @@ export function Scene01Hero() {
               {/* 16:9 Geniş Uygulama Videosu Oynatıcısı (Sıralı Loop) */}
               <div className="relative aspect-[16/9] w-full bg-slate-950 overflow-hidden">
                 <video
-                  ref={videoRef}
+                  ref={(el) => {
+                    if (el) {
+                      el.muted = true
+                      el.defaultMuted = true
+                      videoRef.current = el
+                    }
+                  }}
                   key={current.video}
                   src={current.video}
-                  poster={current.poster}
                   autoPlay
                   muted
                   playsInline
-                  preload="metadata"
+                  preload="auto"
                   onEnded={handleVideoEnded}
                   className="w-full h-full object-cover"
                 />

@@ -64,13 +64,18 @@ export function UnifiedInboxShowcase() {
         {/* High-Resolution Clean Interface Preview */}
         <div className="relative aspect-[16/10] w-full bg-slate-950 overflow-hidden">
           <video
+            ref={(el) => {
+              if (el) {
+                el.muted = true
+                el.defaultMuted = true
+              }
+            }}
             src="/landing/infographics/04-ortak-inbox-veo-i2v.mp4"
-            poster="/landing/infographics/04-ortak-inbox-chatgpt-16-9.png"
             autoPlay
             muted
             loop
             playsInline
-            preload="metadata"
+            preload="auto"
             className="w-full h-full object-cover object-top"
           />
         </div>
