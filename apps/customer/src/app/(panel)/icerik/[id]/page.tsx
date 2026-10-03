@@ -69,6 +69,7 @@ export default async function CreativeDetailPage({
       (typeof payload?.thumbnailUrl === 'string' && payload.thumbnailUrl) ||
       (row.public_url?.startsWith('/api/ai-media/outputs/') ? `${row.public_url}?thumb=1` : null),
     cleanPublicUrl: payload?.cleanPublicUrl ?? null,
+    recoverableImageJob: Boolean(payload?.imageJob && payload?.imageReconciliationRequired),
   }
 
   let rootId = row.id

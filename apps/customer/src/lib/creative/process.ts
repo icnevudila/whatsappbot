@@ -367,11 +367,17 @@ export async function processCreativeGeneration(
           imageOutputReceipt: {orgId:creative.org_id,creativeId,jobId:payload.imageJob.id,sha256:storedReceipt.sha256,size:storedReceipt.size,
             mimeType:storedReceipt.mimeType,width:storedReceipt.width,height:storedReceipt.height,decodedImage:true,storagePath,
             referenceReceipt:image.referenceReceipt || null}, cost: { provider: 'omnistudio', imageCount: 1 } },
-      }).eq('id', creativeId).eq('org_id', creative.org_id).eq('status','rendering').eq('payload->imageJob->>id', payload.imageJob.id).select('id').maybeSingle()
+      }).eq('id', creativeId).eq('org_id', creative.org_id).in('status',['rendering','failed']).eq('payload->imageJob->>id', payload.imageJob.id).select('id').maybeSingle()
       if (update.error) return { ok: true, pending: true, retryAfterSeconds: 10, error: update.error.message }
       if (update.data?.id !== creativeId) return { ok: true, pending: true, retryAfterSeconds: 5 }
       return { ok: true, ready: true, publicUrl: url.publicUrl }
     } catch (error) {
+      if (error instanceof ImageJobReconciliationError) {
+        await supabase.from('creatives').update({ status: 'rendering', error: null,
+          payload: { ...payload, imageReconciliationRequired: true },
+        }).eq('id', creativeId).eq('org_id', creative.org_id).eq('payload->imageJob->>id', payload.imageJob.id)
+        return { ok: true, pending: true, retryAfterSeconds: 10 }
+      }
       if (!(error instanceof ImageJobFailedError)) return { ok: true, pending: true, retryAfterSeconds: 10 }
       const message = error.message.slice(0,400)
       await supabase.from('creatives').update({ status: 'failed', error: message,

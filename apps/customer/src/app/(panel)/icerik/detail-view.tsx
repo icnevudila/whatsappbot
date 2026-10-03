@@ -55,6 +55,7 @@ export type DetailCreative = {
   brief: string | null
   thumbnailUrl?: string | null
   cleanPublicUrl?: string | null
+  recoverableImageJob?: boolean
 }
 
 export type VersionRow = {
@@ -402,7 +403,8 @@ export function CreativeDetail({
 
   useEffect(() => {
     if (!canManage) return
-    if (creative.status !== 'pending' && creative.status !== 'rendering') return
+    const recoverableImage = creative.status === 'failed' && creative.recoverableImageJob
+    if (creative.status !== 'pending' && creative.status !== 'rendering' && !recoverableImage) return
     if (kicked.current) return
     kicked.current = true
     setBusyRender(true)
