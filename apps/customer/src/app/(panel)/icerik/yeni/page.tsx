@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic'
 export default async function NewCreativePage({
   searchParams,
 }: {
-  searchParams?: Promise<{ format?: string; mode?: string; derived_from?: string }>
+  searchParams?: Promise<{ format?: string; mode?: string; derived_from?: string; job_id?: string }>
 }) {
   try {
     await requireActiveOrg()
@@ -40,6 +40,7 @@ export default async function NewCreativePage({
         data={data}
         initialMediaType={isVideo ? 'VIDEO' : 'IMAGE'}
         initialDerivedCreativeId={resolvedParams.derived_from || null}
+        initialJobId={resolvedParams.job_id || null}
       />
     </div>
   )

@@ -6,7 +6,6 @@ import type { JobUserViewModel } from '@/app/(panel)/icerik/wizard-types'
 import { ProductionStageAnimation } from './production-stage-animation'
 import { ProductionEta } from './production-eta'
 import { ProductionStageList } from './production-stage-list'
-import './production-progress.css'
 
 export interface ProductionProgressProps {
   viewModel: JobUserViewModel

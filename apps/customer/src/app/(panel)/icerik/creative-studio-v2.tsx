@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { Button, Card, Field, Input, Notice, Textarea } from '@/components/ui'
 import { Stepper } from '@/components/stepper'
 import { Icon } from '@/components/icon'
-import { CreativeProductionVisual } from '@/components/creative-production-visual'
+import { ProductionProgress } from '@/components/production-progress/production-progress'
 import { AddProductModal } from './add-product-modal'
 import { getSafeMediaUrl, resolvePreviewUrl } from '@/lib/media-url'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
@@ -32,6 +32,64 @@ import {
 import type { JobUserViewModel, ProductCard, WizardBootstrap } from './wizard-types'
 
 const STORAGE_KEY_PREFIX = 'wa.customer.creative-studio.v2'
+export const AI_PLANNER_TIMEOUT_MS = 5000
+
+export function generateDeterministicLocalCopy({
+  productName,
+  brandName,
+  objective,
+  campaignDetail,
+  offer,
+  mediaType,
+}: {
+  productName: string
+  brandName: string
+  objective?: string
+  campaignDetail?: string
+  offer?: string
+  mediaType: 'IMAGE' | 'VIDEO'
+}): {
+  headline: string
+  supportingLine: string
+  cta: string
+  voiceover: string
+} {
+  const pName = productName.trim() || 'Ürünümüz'
+  const bName = brandName.trim() || 'İşletmemiz'
+  const detail = campaignDetail?.trim() || ''
+  const off = offer?.trim() || ''
+
+  let headline = `${pName} ile Tanışın`
+  let supportingLine = detail || `${bName} güvencesiyle yüksek kalite ve avantajlı fiyatlar.`
+  let cta = 'Hemen İnceleyin'
+
+  if (objective === 'SALES_OFFER' || off) {
+    headline = off ? `${off} Fırsatıyla ${pName}` : `${pName} Şimdi İndirimde`
+    supportingLine = detail || 'Sınırlı süre geçerli özel fiyatları kaçırmayın. Hemen sipariş verin.'
+    cta = 'Fırsatı Yakala'
+  } else if (objective === 'CAMPAIGN') {
+    headline = detail ? `${pName}: ${detail.slice(0, 40)}` : `${bName} Özel Kampanyası`
+    supportingLine = detail || `${pName} için sezonun en avantajlı teklifi sizleri bekliyor.`
+    cta = 'Detayları Gör'
+  } else if (objective === 'BRAND_AWARENESS') {
+    headline = `${bName} Kalitesi: ${pName}`
+    supportingLine = detail || 'Sektörde güven ve dayanıklılığın değişmeyen adresi.'
+    cta = 'Keşfedin'
+  }
+
+  // Video Voiceover: 8-14 Turkish words, strict upper bound MAX_SPOKEN_WORDS (16)
+  let voiceover = `${bName} kalitesiyle ${pName}. Şimdi keşfedin, avantajlı fiyatları kaçırmayın.`
+  if (off) {
+    voiceover = `${bName} güvencesiyle ${pName} şimdi ${off} fırsatıyla. Hemen iletişime geçin.`
+  }
+
+  return {
+    headline,
+    supportingLine,
+    cta,
+    voiceover,
+  }
+}
 
 type Step = 'product_goal' | 'creative_direction' | 'review_generate'
 
@@ -45,10 +103,12 @@ export function CreativeStudioV2({
   data,
   initialMediaType = 'IMAGE',
   initialDerivedCreativeId,
+  initialJobId,
 }: {
   data: WizardBootstrap
   initialMediaType?: MediaType
   initialDerivedCreativeId?: string | null
+  initialJobId?: string | null
 }) {
   const orgKey = `${STORAGE_KEY_PREFIX}.${data.org.id}`
 
@@ -76,6 +136,15 @@ export function CreativeStudioV2({
   const [ctaText, setCtaText] = useState('Hemen İnceleyin')
   const [spokenVoiceover, setSpokenVoiceover] = useState('')
 
+  // Independent dirty tracking to prevent late AI responses from overwriting user edits
+  const [headlineDirty, setHeadlineDirty] = useState(false)
+  const [supportingLineDirty, setSupportingLineDirty] = useState(false)
+  const [ctaDirty, setCtaDirty] = useState(false)
+  const [voiceoverDirty, setVoiceoverDirty] = useState(false)
+
+  // Active AbortController ref to cancel obsolete in-flight requests (e.g. style change)
+  const activePlanControllerRef = useRef<AbortController | null>(null)
+
   // Structured campaign details (under Advanced)
   const [price, setPrice] = useState('')
   const [oldPrice, setOldPrice] = useState('')
@@ -99,13 +168,62 @@ export function CreativeStudioV2({
   const [submitError, setSubmitError] = useState<string | null>(null)
 
   // Video-specific job state
-  const [activeJobId, setActiveJobId] = useState<string | null>(null)
-  const [jobState, setJobState] = useState<string>('IDLE')
-  const [jobDisplayState, setJobDisplayState] = useState<string>('')
-  const [jobStageIndex, setJobStageIndex] = useState<number>(1)
+  const [activeJobId, setActiveJobId] = useState<string | null>(initialJobId || null)
+  const [jobState, setJobState] = useState<JobUserViewModel['state'] | 'IDLE'>('IDLE')
+  const [jobViewModel, setJobViewModel] = useState<JobUserViewModel | null>(null)
   const [completedVideoUrl, setCompletedVideoUrl] = useState<string | null>(null)
   const [jobFailureMessage, setJobFailureMessage] = useState<string | null>(null)
-  const [elapsedSeconds, setElapsedSeconds] = useState(0)
+
+  // URL searchParams sync for direct navigation or reload
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const urlJobId = params.get('job_id')
+    if (urlJobId && !activeJobId) {
+      setActiveJobId(urlJobId)
+    }
+  }, [activeJobId])
+
+  // Authoritative active view model
+  const activeViewModel: JobUserViewModel = useMemo(() => {
+    if (jobViewModel && jobViewModel.job_id) {
+      return jobViewModel
+    }
+    const safeState = (['PENDING', 'QUEUED', 'GENERATING', 'COMPLETED', 'NEEDS_REVIEW', 'FAILED'].includes(jobState)
+      ? jobState
+      : 'PENDING') as JobUserViewModel['state']
+
+    return {
+      job_id: activeJobId || '',
+      org_id: data.org.id || '',
+      state: safeState,
+      raw_state: jobState,
+      stage_key: 'REQUEST_ACCEPTED',
+      stage_index: 1,
+      stage_count: 7,
+      display_state: 'REKLAM_TASLAGI_HAZIRLANIYOR',
+      display_title: 'Reklam Videonuz Prodüksiyonda',
+      display_message: 'Dikey sinematik reklam filminiz aşama aşama kurgulanıyor.',
+      queue_ahead_count: null,
+      eta_display_text: 'Süre tahmini oluşturuluyor...',
+      can_cancel: ['PENDING', 'QUEUED'].includes(jobState),
+      can_leave_page: true,
+    }
+  }, [jobViewModel, activeJobId, jobState, data.org.id])
+
+  const handleResetToNew = () => {
+    setActiveJobId(null)
+    setJobViewModel(null)
+    setJobState('IDLE')
+    setCompletedVideoUrl(null)
+    setJobFailureMessage(null)
+    setStep('product_goal')
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href)
+      url.searchParams.delete('job_id')
+      window.history.pushState({}, '', url.toString())
+    }
+  }
 
   // Image-specific action state
   const [imageState, setImageState] = useState<CreativeActionState>(null)
@@ -225,16 +343,30 @@ export function CreativeStudioV2({
     outro,
   ])
 
-  // Call Custom AI Planner
+  // Call Custom AI Planner (non-blocking, advisory with 5s timeout)
   const requestCreativePlan = async (forceRefresh = false) => {
     if (!selectedProduct) return
+
+    // Cancel any previous in-flight planner request
+    if (activePlanControllerRef.current) {
+      activePlanControllerRef.current.abort()
+    }
+    const controller = new AbortController()
+    activePlanControllerRef.current = controller
+
     setIsPlanning(true)
     setPlanError(null)
+
+    // Hard client-side timeout: 5 seconds maximum
+    const timeoutId = setTimeout(() => {
+      controller.abort()
+    }, AI_PLANNER_TIMEOUT_MS)
 
     try {
       const res = await fetch('/api/ai-media/plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           brandName: data.org.name || 'İşletmemiz',
           brandTone: defaultKit?.tone || null,
@@ -256,23 +388,61 @@ export function CreativeStudioV2({
       const plan: CreativePlanV2 = json.plan
       setCreativePlan(plan)
 
-      if (!headline || forceRefresh) setHeadline(plan.copy.headline)
-      if (!supportingLine || forceRefresh) setSupportingLine(plan.copy.supporting_line)
-      if (!ctaText || forceRefresh) setCtaText(plan.copy.cta)
-      if (mediaType === 'VIDEO' && (!spokenVoiceover || forceRefresh) && plan.voiceover_text) {
+      // NEVER OVERWRITE USER EDITS: Only update untouched fields unless user explicitly clicked "Farklı Öner"
+      if (forceRefresh || !headlineDirty) {
+        setHeadline(plan.copy.headline)
+        if (forceRefresh) setHeadlineDirty(false)
+      }
+      if (forceRefresh || !supportingLineDirty) {
+        setSupportingLine(plan.copy.supporting_line)
+        if (forceRefresh) setSupportingLineDirty(false)
+      }
+      if (forceRefresh || !ctaDirty) {
+        setCtaText(plan.copy.cta)
+        if (forceRefresh) setCtaDirty(false)
+      }
+      if (mediaType === 'VIDEO' && (forceRefresh || !voiceoverDirty) && plan.voiceover_text) {
         setSpokenVoiceover(plan.voiceover_text)
+        if (forceRefresh) setVoiceoverDirty(false)
       }
     } catch (err: any) {
-      console.warn('[CreativeStudioV2] Plan error:', err)
-      setPlanError(err?.message || 'Taslak hazırlanamadı. Lütfen tekrar deneyin.')
+      if (err?.name === 'AbortError' || controller.signal.aborted) {
+        console.warn('[CreativeStudioV2] Plan request timed out or cancelled (>5s budget)')
+        setPlanError('AI_TIMEOUT')
+      } else {
+        console.warn('[CreativeStudioV2] Plan error:', err)
+        setPlanError(err?.message || 'AI_ERROR')
+      }
     } finally {
-      setIsPlanning(false)
+      clearTimeout(timeoutId)
+      if (activePlanControllerRef.current === controller) {
+        activePlanControllerRef.current = null
+        setIsPlanning(false)
+      }
     }
   }
 
   // Generate Plan on entering Step 2 if not planned yet
   const handleGoToStep2 = () => {
     if (!hasProduct || !hasLogo) return
+
+    // Immediately provide deterministic local copy if fields are empty
+    const local = generateDeterministicLocalCopy({
+      productName: selectedProduct?.name || 'Ürünümüz',
+      brandName: data.org.name || 'İşletmemiz',
+      objective,
+      campaignDetail,
+      offer,
+      mediaType,
+    })
+
+    if (!headline && !headlineDirty) setHeadline(local.headline)
+    if (!supportingLine && !supportingLineDirty) setSupportingLine(local.supportingLine)
+    if (!ctaText && !ctaDirty) setCtaText(local.cta)
+    if (mediaType === 'VIDEO' && !spokenVoiceover && !voiceoverDirty) {
+      setSpokenVoiceover(local.voiceover)
+    }
+
     setStep('creative_direction')
     void requestCreativePlan(false)
   }
@@ -291,9 +461,8 @@ export function CreativeStudioV2({
         const vm = resData.job as JobUserViewModel
         if (!vm || !isMounted) return
 
+        setJobViewModel(vm)
         setJobState(vm.state)
-        setJobStageIndex(vm.stage_index)
-        setJobDisplayState(vm.display_title || vm.display_state)
         setJobFailureMessage(vm.failure_user_message || null)
 
         if ((vm.state === 'COMPLETED' || vm.state === 'NEEDS_REVIEW') && vm.playback_url) {
@@ -314,6 +483,11 @@ export function CreativeStudioV2({
         { event: 'UPDATE', schema: 'public', table: 'ai_media_jobs', filter: `id=eq.${activeJobId}` },
         () => syncStatus(),
       )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'ai_media_events', filter: `job_id=eq.${activeJobId}` },
+        () => syncStatus(),
+      )
       .subscribe()
 
     const interval = setInterval(syncStatus, 3500)
@@ -324,21 +498,6 @@ export function CreativeStudioV2({
       void supabase.removeChannel(channel)
     }
   }, [activeJobId])
-
-  // Timer for production
-  useEffect(() => {
-    const isRunning =
-      (jobState !== 'IDLE' && jobState !== 'COMPLETED' && jobState !== 'FAILED' && jobState !== 'NEEDS_REVIEW') ||
-      imagePending
-
-    if (!isRunning) {
-      setElapsedSeconds(0)
-      return
-    }
-
-    const timer = setInterval(() => setElapsedSeconds((prev) => prev + 1), 1000)
-    return () => clearInterval(timer)
-  }, [jobState, imagePending])
 
   // SUBMIT HANDLER: Image or Video
   const handleCreateCreative = async () => {
@@ -475,8 +634,11 @@ export function CreativeStudioV2({
 
         setActiveJobId(json.job_id)
         setJobState('PENDING')
-        setJobStageIndex(1)
-        setJobDisplayState('Kuyruğa Alındı')
+        if (typeof window !== 'undefined') {
+          const url = new URL(window.location.href)
+          url.searchParams.set('job_id', json.job_id)
+          window.history.pushState({}, '', url.toString())
+        }
       } catch (err: any) {
         setSubmitError(err?.message || 'Video başlatılamadı.')
       } finally {
@@ -487,34 +649,63 @@ export function CreativeStudioV2({
 
   return (
     <Card className="wb-wa-wizard creative-studio-wizard overflow-visible">
-      {/* Realtime Production Waiting View */}
+      {/* 1. Realtime Production Waiting View (Authoritative ProductionProgress V2) */}
       {jobState !== 'IDLE' && jobState !== 'COMPLETED' && jobState !== 'FAILED' && jobState !== 'NEEDS_REVIEW' ? (
-        <div className="creative-production-shell p-6 space-y-6">
-          <CreativeProductionVisual kind="video" />
-          <div className="text-center space-y-3">
-            <div className="inline-flex size-3.5 rounded-full bg-[#008069] mb-1 animate-ping" />
-            <h3 className="text-[19px] font-bold text-[#111b21]">Reklam Videonuz Prodüksiyonda</h3>
-            <p className="text-[13px] text-[#667781]">
-              Sinematik 9:16 reklam filminiz işleniyor. Sayfada beklemeniz gerekmez, işlem tamamlandığında Kütüphanenize eklenir.
+        <div className="p-4 sm:p-6">
+          <ProductionProgress
+            viewModel={activeViewModel}
+            kind="video"
+            onCancel={handleResetToNew}
+            onNavigateLibrary={() => {}}
+          />
+        </div>
+      ) : null}
+
+      {/* 2. Terminal Failure or Review States (Never blank white screen!) */}
+      {jobState === 'FAILED' || jobState === 'NEEDS_REVIEW' ? (
+        <div className="mx-auto max-w-xl space-y-4 p-6">
+          <div
+            className={`rounded-xl border p-4 ${
+              jobState === 'FAILED' ? 'border-rose-200 bg-rose-50' : 'border-amber-300 bg-amber-50'
+            }`}
+          >
+            <p className={`text-[13.5px] font-bold ${jobState === 'FAILED' ? 'text-rose-800' : 'text-amber-900'}`}>
+              {jobState === 'FAILED' ? 'Video Hazırlanamadı' : 'Video İnceleme Bekliyor'}
             </p>
-            <div className="w-full max-w-md mx-auto pt-1 space-y-2">
-              <div className="flex justify-between items-center text-[12px] font-semibold text-[#008069]">
-                <span>Geçen Süre: {Math.floor(elapsedSeconds / 60)}:{(elapsedSeconds % 60).toString().padStart(2, '0')}</span>
-                <span>Aşama {jobStageIndex} / 7</span>
-              </div>
-              <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200">
-                <div
-                  className="h-full bg-gradient-to-r from-[#008069] to-[#25d366] transition-all duration-1000 rounded-full"
-                  style={{ width: `${Math.min(95, Math.max(10, Math.round((jobStageIndex / 7) * 100)))}%` }}
-                />
-              </div>
-              <p className="text-xs font-semibold text-[#008069]">{jobDisplayState || 'İşleniyor...'}</p>
-            </div>
+            <p className="mt-1 text-[12px] leading-relaxed text-[#667781]">
+              {jobFailureMessage?.includes('Asset count')
+                ? 'Görsel aktarımı sırasında geçici bir senkronizasyon oluştu. Lütfen tekrar deneyin.'
+                : jobFailureMessage ||
+                  activeViewModel.display_message ||
+                  (jobState === 'FAILED'
+                    ? 'Video üretimi tamamlanamadı. Lütfen parametreleri kontrol edip tekrar deneyin.'
+                    : 'Videonuz üretildi ancak otomatik kalite kontrolü inceleme gerektiriyor.')}
+            </p>
           </div>
-          <div className="flex justify-center gap-3 pt-2">
+
+          {/* Show the video preview even in NEEDS_REVIEW if playback URL exists */}
+          {jobState === 'NEEDS_REVIEW' && completedVideoUrl ? (
+            <div className="relative overflow-hidden rounded-xl border border-amber-300 bg-black shadow-lg aspect-[9/16] max-h-[480px] mx-auto flex items-center justify-center">
+              <video
+                src={completedVideoUrl}
+                controls
+                playsInline
+                className="h-full w-full object-contain"
+              />
+            </div>
+          ) : null}
+
+          <div className="flex flex-wrap items-center gap-3 pt-2">
+            <Button
+              type="button"
+              className="!bg-[#008069] hover:!bg-[#00a884] text-white text-[13px] font-semibold h-10 px-5 rounded-full shadow-sm"
+              onClick={handleResetToNew}
+            >
+              Yeni Video Oluştur / Tekrar Dene
+            </Button>
             <Link
               href="/icerik"
-              className="inline-flex items-center gap-2 rounded-full border border-hairline bg-white px-5 py-2 text-[13px] font-medium text-[#111b21] hover:bg-[#f0f2f5]"
+              className="inline-flex items-center justify-center rounded-full border border-hairline bg-white px-5 py-2 text-[13px] font-medium text-[#111b21] hover:bg-[#f0f2f5] transition-colors"
             >
               İçerik Kütüphanesine Git
             </Link>
@@ -522,7 +713,7 @@ export function CreativeStudioV2({
         </div>
       ) : null}
 
-      {/* Video Completed Player View */}
+      {/* 3. Video Completed Player View */}
       {jobState === 'COMPLETED' ? (
         <div className="p-6 space-y-5 text-center max-w-md mx-auto">
           <div className="flex items-center justify-center gap-2 text-[#008069]">
@@ -535,7 +726,13 @@ export function CreativeStudioV2({
             <div className="relative overflow-hidden rounded-xl border border-hairline bg-black shadow-lg aspect-[9/16] max-h-[500px] mx-auto flex items-center justify-center">
               <video src={completedVideoUrl} controls autoPlay loop playsInline className="h-full w-full object-contain" />
             </div>
-          ) : null}
+          ) : (
+            <div className="rounded-xl border border-dashed border-[#b7e4d5] bg-[#f1fbf7] p-8 text-center space-y-2">
+              <div className="inline-flex size-3.5 rounded-full bg-[#008069] animate-ping" />
+              <p className="text-[13px] font-semibold text-[#006b58]">Videonuz işlendi, önizleme hazırlanıyor...</p>
+              <p className="text-[11.5px] text-[#667781]">Medya dosyası optimize ediliyor, birkaç saniye içinde açılacaktır.</p>
+            </div>
+          )}
           <div className="flex flex-col gap-2 pt-2">
             <Link
               href="/icerik"
@@ -545,11 +742,7 @@ export function CreativeStudioV2({
             </Link>
             <button
               type="button"
-              onClick={() => {
-                setActiveJobId(null)
-                setJobState('IDLE')
-                setStep('product_goal')
-              }}
+              onClick={handleResetToNew}
               className="text-[12.5px] font-medium text-[#667781] hover:text-[#111b21]"
             >
               Yeni Bir İçerik Oluştur
@@ -810,7 +1003,7 @@ export function CreativeStudioV2({
                         type="button"
                         onClick={() => {
                           setStylePreset(preset.id)
-                          void requestCreativePlan(true)
+                          void requestCreativePlan(false)
                         }}
                         className={`rounded-xl border p-3.5 text-left transition-all ${
                           stylePreset === preset.id
@@ -882,7 +1075,20 @@ export function CreativeStudioV2({
                       <p className="text-[13px] font-bold text-[#111b21]">
                         {mediaType === 'VIDEO' ? 'Türkçe Seslendirme Metni' : 'Reklam Başlığı ve Alt Metin'}
                       </p>
-                      <p className="text-[11px] text-[#667781]">Yapay zeka hazırladı; dilediğiniz gibi düzenleyebilirsiniz.</p>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <p className="text-[11px] text-[#667781]">Yapay zeka hazırladı; dilediğiniz gibi düzenleyebilirsiniz.</p>
+                        {isPlanning && (
+                          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#008069]">
+                            <span className="size-1.5 rounded-full bg-[#008069] animate-pulse" />
+                            AI önerisi hazırlanıyor…
+                          </span>
+                        )}
+                        {!isPlanning && planError === 'AI_TIMEOUT' && (
+                          <span className="text-[11px] text-amber-700 font-medium">
+                            AI yanıt veremedi (varsayılan taslak aktif).
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <Button
                       type="button"
@@ -891,18 +1097,29 @@ export function CreativeStudioV2({
                       disabled={isPlanning}
                       onClick={() => void requestCreativePlan(true)}
                     >
-                      {isPlanning ? 'Hazırlanıyor…' : '↻ Farklı Öner'}
+                      {isPlanning
+                        ? 'Hazırlanıyor…'
+                        : planError === 'AI_TIMEOUT'
+                          ? '↻ AI önerisini tekrar dene'
+                          : '↻ Farklı Öner'}
                     </Button>
                   </div>
 
-                  {planError && <Notice tone="danger">{planError}</Notice>}
+                  {planError && planError !== 'AI_TIMEOUT' && (
+                    <Notice tone="warn">
+                      Özel AI önerisi şu an oluşturulamadı, standart taslak ile devam edebilirsiniz.
+                    </Notice>
+                  )}
 
                   {mediaType === 'VIDEO' ? (
                     <div className="space-y-1.5">
                       <Textarea
                         rows={3}
                         value={spokenVoiceover}
-                        onChange={(e) => setSpokenVoiceover(e.target.value)}
+                        onChange={(e) => {
+                          setSpokenVoiceover(e.target.value)
+                          setVoiceoverDirty(true)
+                        }}
                         className="text-[14px] font-medium leading-relaxed"
                         placeholder="Türkçe seslendirme metni..."
                       />
@@ -918,21 +1135,30 @@ export function CreativeStudioV2({
                       <Field label="Ana Reklam Başlığı (Görsel üstüne basılır)">
                         <Input
                           value={headline}
-                          onChange={(e) => setHeadline(e.target.value)}
+                          onChange={(e) => {
+                            setHeadline(e.target.value)
+                            setHeadlineDirty(true)
+                          }}
                           placeholder="Örn: Ayvazoğlu Tuğla ile Sağlam Yapılar"
                         />
                       </Field>
                       <Field label="Açıklayıcı Alt Metin">
                         <Input
                           value={supportingLine}
-                          onChange={(e) => setSupportingLine(e.target.value)}
+                          onChange={(e) => {
+                            setSupportingLine(e.target.value)
+                            setSupportingLineDirty(true)
+                          }}
                           placeholder="Örn: Şantiyenize doğrudan toptan teslimat ve garantili dayanıklılık."
                         />
                       </Field>
                       <Field label="Buton (CTA)">
                         <Input
                           value={ctaText}
-                          onChange={(e) => setCtaText(e.target.value)}
+                          onChange={(e) => {
+                            setCtaText(e.target.value)
+                            setCtaDirty(true)
+                          }}
                           placeholder="Hemen İnceleyin"
                         />
                       </Field>
@@ -1021,7 +1247,7 @@ export function CreativeStudioV2({
                   <Button
                     type="button"
                     className="wb-wa-submit !bg-[#008069] hover:!bg-[#00a884] text-white font-bold h-11 px-7 shadow-sm"
-                    disabled={isPlanning || (mediaType === 'VIDEO' && (voWords === 0 || voWords > MAX_SPOKEN_WORDS))}
+                    disabled={mediaType === 'VIDEO' && (voWords === 0 || voWords > MAX_SPOKEN_WORDS)}
                     onClick={() => setStep('review_generate')}
                   >
                     Önizleme & Onay →

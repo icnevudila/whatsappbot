@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import '../components/production-progress/production-progress.css';
 
 /*
   Filo product shell — Pilot workbench layout + Cobalt Filo brand.
