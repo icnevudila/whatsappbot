@@ -21,6 +21,8 @@ import { collectImageFiles, readImageFile } from '@/app/(panel)/ayarlar/upload-i
 import { isOrgAdminRole, requireActiveOrg } from '@/lib/org'
 import { DEFAULT_INCLUDE, formatFromId, type ProductCard, type SocialOption } from './wizard-types'
 import { LIBRARY_PAGE_SIZE, type LibraryCreativeRow } from './library-shared'
+import { loadVideoLibraryState } from '@/lib/creative/video-library-state'
+import { createSupabaseServiceClient } from '@/lib/supabase/service'
 import {
   generateVideoScenarios,
   type VideoScenarioOption,
@@ -702,6 +704,7 @@ export async function listLibraryCreatives({
     if (term) request = request.ilike('title', `%${term}%`)
     const { data, error } = await request
     if (error) return { items: [], hasMore: false, error: error.message }
+    const videoStates = await loadVideoLibraryState(createSupabaseServiceClient() || supabase, org.id, data ?? [])
     const items = (data ?? []).map((row) => {
       const payload = (row.payload ?? {}) as Record<string, unknown>
       const isVideo = row.format === 'video' || Boolean(row.public_url?.endsWith('.mp4')) || Boolean(row.public_url?.includes('/api/ai-media/outputs/'))
@@ -717,7 +720,8 @@ export async function listLibraryCreatives({
         publicUrl: row.public_url,
         thumbnailUrl: thumb,
         format: row.format,
-        status: row.status,
+        status: videoStates.get(row.id)?.status || row.status,
+        durationSeconds: videoStates.get(row.id)?.durationSeconds ?? null,
         source: row.source,
         generationType: row.generation_type,
         createdAt: row.created_at,

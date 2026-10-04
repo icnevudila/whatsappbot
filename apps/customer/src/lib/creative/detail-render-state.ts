@@ -3,12 +3,13 @@ export function detailRenderState(input: {
   error?: string | null; localError?: string | null; busyRender: boolean
 }) {
   const failed = input.status === 'failed'
-  const ready = !failed && Boolean(input.livePublicUrl || (input.status === 'ready' && input.publicUrl))
+  const awaitingReview = input.status === 'needs_review'
+  const ready = !failed && !awaitingReview && Boolean(input.livePublicUrl || (input.status === 'ready' && input.publicUrl))
   const running = input.status === 'pending' || input.status === 'rendering'
   return {
     ready,
     // Authoritative failure wins over stale local state, even before effects flush.
-    spinning: !failed && !ready && !input.localError && (running || input.busyRender),
+    spinning: !failed && !awaitingReview && !ready && !input.localError && (running || input.busyRender),
     error: failed ? input.error || input.localError || 'Üretim başarısız oldu.' : input.localError || null,
   }
 }

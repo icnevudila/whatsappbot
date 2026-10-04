@@ -375,7 +375,7 @@ export function CreativeDetail({
   }
 
   useEffect(() => {
-    if (creative.status === 'ready' || creative.status === 'failed') {
+    if (creative.status === 'ready' || creative.status === 'failed' || creative.status === 'needs_review') {
       setBusyRender(false)
       setLocalError(null)
       setServerProgress(null)
@@ -574,6 +574,14 @@ export function CreativeDetail({
         </Notice>
       ) : null}
 
+      {creative.status === 'needs_review' ? (
+        <Notice tone="warn">
+          <p className="text-[13.5px] font-semibold">Video inceleme bekliyor</p>
+          <p className="mt-1 text-[13px]">Video üretildi ancak kalite kontrolü henüz onaylamadı. Onay tamamlanmadan kampanyada kullanılamaz.</p>
+          <Link href={`/icerik/yeni?job_id=${creative.id}`} className="mt-3 inline-block text-[13px] font-semibold underline">Üretim sonucunu görüntüle</Link>
+        </Notice>
+      ) : null}
+
       {displayPublicUrl && isReady ? (
         <div className="relative overflow-visible">
           {isVideo ? (
@@ -639,7 +647,7 @@ export function CreativeDetail({
       ) : null}
 
       <p className="text-[12.5px] text-ink-muted">
-        {new Date(creative.createdAt).toLocaleString('tr-TR')} · {creative.format}
+        {new Date(creative.createdAt).toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })} · {creative.format}
         {creative.provider ? ` · ${creative.provider}` : ''}
         {creative.generationType ? ` · ${creative.generationType}` : ''}
       </p>

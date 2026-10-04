@@ -6,6 +6,7 @@ export type LibraryCreativeRow = {
   publicUrl: string | null
   thumbnailUrl?: string | null
   format?: string | null
+  durationSeconds?: number | null
   status: string
   source: string
   generationType: string

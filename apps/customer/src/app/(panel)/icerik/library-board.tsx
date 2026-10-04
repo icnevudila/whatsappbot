@@ -1,4 +1,5 @@
 'use client'
+import { videoDurationLabel } from '@/lib/creative/video-library-state'
 
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
@@ -315,7 +316,7 @@ function LibraryCard({
                 </div>
                 <span className="absolute bottom-2 right-2 flex items-center gap-1 rounded bg-black/80 px-2 py-0.5 text-[10.5px] font-semibold tracking-wide text-white shadow-sm">
                   <Icon name="video" className="size-3 text-white" />
-                  0:10
+                  {videoDurationLabel(item.durationSeconds)}
                 </span>
               </div>
             ) : (
@@ -449,6 +450,7 @@ function statusLabel(status: string) {
   if (status === 'pending') return 'Sırada'
   if (status === 'rendering') return 'Üretiliyor'
   if (status === 'failed') return 'Hata'
+  if (status === 'needs_review') return 'İnceleme bekliyor'
   return status
 }
 
@@ -478,7 +480,13 @@ function GeneratingFrame({ status, error }: { status: string; error: string | nu
   }, [])
   return (
     <div className="aspect-[4/5] w-full">
-      {status === 'failed' ? (
+      {status === 'needs_review' ? (
+        <div className="flex h-full flex-col items-center justify-center bg-canvas px-4 text-center">
+          <Icon name="video" className="mb-3 size-7 text-ink-muted" />
+          <p className="text-[13px] font-semibold text-ink">Video inceleme bekliyor</p>
+          <p className="mt-2 text-[12.5px] text-ink-muted">Kalite kontrolü tamamlanmadan kullanılamaz.</p>
+        </div>
+      ) : status === 'failed' ? (
         <div className="flex h-full flex-col items-center justify-center bg-canvas px-3 text-center">
           <p className="text-[12.5px] text-danger">{error || 'Görsel oluşturulamadı'}</p>
         </div>

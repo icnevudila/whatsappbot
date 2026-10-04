@@ -4,6 +4,8 @@ import { PageHeader } from '@/components/ui'
 import { isOrgAdminRole, requireActiveOrg } from '@/lib/org'
 import { CreativeDetail, CreativeMoreMenu, CreativeTitleEdit, type DetailCreative, type VersionRow } from '../detail-view'
 import type { CreativePayload } from '@/lib/creative/types'
+import { loadVideoLibraryState } from '@/lib/creative/video-library-state'
+import { createSupabaseServiceClient } from '@/lib/supabase/service'
 
 export const metadata: Metadata = { title: 'Görsel' }
 export const dynamic = 'force-dynamic'
@@ -36,6 +38,7 @@ export default async function CreativeDetailPage({
     .maybeSingle()
 
   if (!row) notFound()
+  const videoState = (await loadVideoLibraryState(createSupabaseServiceClient() || supabase, org.id, [row])).get(row.id)
 
   const kit = row.brand_kits as { name: string } | { name: string }[] | null
   const brandName = Array.isArray(kit) ? kit[0]?.name : kit?.name
@@ -55,7 +58,7 @@ export default async function CreativeDetailPage({
     id: row.id,
     title: displayTitle,
     publicUrl: row.public_url,
-    status: row.status,
+    status: videoState?.status || row.status,
     source: row.source,
     generationType: row.generation_type,
     createdAt: row.created_at,
