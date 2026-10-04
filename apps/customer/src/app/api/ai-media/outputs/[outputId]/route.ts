@@ -3,7 +3,7 @@ import { requireActiveOrg } from '@/lib/org'
 import { checkIsAuthenticated } from '@/app/canli-takip/auth'
 import { createSupabaseServiceClient } from '@/lib/supabase/service'
 import { createClient } from '@supabase/supabase-js'
-import { isApprovedVideoOutput } from '@/lib/creative/video-output-approval'
+import { isApprovedVideoOutput, isReviewVideoOutput } from '@/lib/creative/video-output-approval'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -20,7 +20,7 @@ const GATEWAY_HOST =
  * Enforces strict fail-closed security:
  * 1. Requires authenticated session and active organization (or Super Admin session).
  * 2. Invariant: output.org_id === authenticated_org.id (bypassed for verified Super Admin).
- * 3. Output must be marked verified === true and is_approved === true (bypassed for Super Admin QA).
+ * 3. Publication requires approval; explicit private preview requires a validated owned NEEDS_REVIEW job.
  * 4. Proxies byte-range requests (HTTP 206) for smooth scrubbing in video player.
  */
 export async function GET(
@@ -86,6 +86,13 @@ export async function GET(
       return new NextResponse('Medya çıktısı bulunamadı.', { status: 404 })
     }
 
+    let reviewPreview = false
+    if (req.nextUrl.searchParams.get('preview') === '1' && org && output.org_id === org.id) {
+      const { data: reviewJob } = await (createSupabaseServiceClient() || supabase)
+        .from('ai_media_jobs').select('id,org_id,state').eq('id', output.job_id).eq('org_id', org.id).single()
+      reviewPreview = isReviewVideoOutput(output, reviewJob, org.id)
+    }
+
     // 2. Strict Tenant Isolation Gate (FAIL CLOSED for normal tenants, Super Admin bypasses)
     if (!isSuperAdmin) {
       if (!org || output.org_id !== org.id) {
@@ -94,7 +101,7 @@ export async function GET(
       }
 
       // 3. Verification Gate
-      if (!isApprovedVideoOutput(output)) {
+      if (!isApprovedVideoOutput(output) && !reviewPreview) {
         return new NextResponse('Medya henüz kalite kontrolünden geçmedi.', { status: 422 })
       }
     }
@@ -130,6 +137,11 @@ export async function GET(
             const tHeaders = new Headers()
             tHeaders.set('Content-Type', 'image/jpeg')
             tHeaders.set('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800')
+            if (reviewPreview) {
+              const image = await fetch(thumbUrl, { cache: 'no-store' })
+              if (image.ok) return buildStreamResponse(image, tName, true)
+              continue
+            }
             return NextResponse.redirect(thumbUrl, 307)
           }
         } catch {
@@ -141,6 +153,12 @@ export async function GET(
 
     // If output has an authoritative storage URL (Supabase Storage signed URL or external CDN), redirect
     if (output.storage_url && output.storage_url.startsWith('https://')) {
+      if (reviewPreview) {
+        const headers = req.headers.get('range') ? { range: req.headers.get('range')! } : undefined
+        const media = await fetch(output.storage_url, { headers, cache: 'no-store' })
+        if (!media.ok) return new NextResponse('Önizleme açılamadı.', { status: 502 })
+        return buildStreamResponse(media, cleanFileName, true)
+      }
       return NextResponse.redirect(output.storage_url)
     }
 
@@ -217,7 +235,12 @@ export async function GET(
       return new NextResponse(`Video akışı açılamadı (${status})`, { status })
     }
 
-    // Direct redirect to Hetzner HTTPS stream (0 bytes transferred through Vercel!)
+    if (reviewPreview) {
+      const media = await fetch(matchedUrl, { headers: fetchHeaders, cache: 'no-store' })
+      if (!media.ok) return new NextResponse('Önizleme açılamadı.', { status: 502 })
+      return buildStreamResponse(media, cleanFileName, true)
+    }
+    // Approved media retains the existing playback route.
     return NextResponse.redirect(matchedUrl, 307)
   } catch (err: any) {
     console.error('[ai-media-outputs] Stream error:', err)
@@ -225,7 +248,7 @@ export async function GET(
   }
 }
 
-function buildStreamResponse(upstreamRes: Response, fileName: string): NextResponse {
+function buildStreamResponse(upstreamRes: Response, fileName: string, reviewPreview = false): NextResponse {
   const resHeaders = new Headers()
   const contentType =
     upstreamRes.headers.get('content-type') ||
@@ -240,7 +263,8 @@ function buildStreamResponse(upstreamRes: Response, fileName: string): NextRespo
   if (contentRange) resHeaders.set('Content-Range', contentRange)
 
   resHeaders.set('Accept-Ranges', 'bytes')
-  resHeaders.set('Cache-Control', 'private, max-age=3600')
+  resHeaders.set('Cache-Control', reviewPreview ? 'private, no-store' : 'private, max-age=3600')
+  if (reviewPreview) resHeaders.set('X-Media-Review-Required', 'true')
 
   return new NextResponse(upstreamRes.body, {
     status: upstreamRes.status === 206 ? 206 : 200,

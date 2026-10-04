@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { videoFailureUserMessage } from '@/lib/creative/job-failure-message'
 import { requireActiveOrg } from '@/lib/org'
+import { createSupabaseServiceClient } from '@/lib/supabase/service'
+import { isApprovedVideoOutput, isReviewVideoOutput } from '@/lib/creative/video-output-approval'
 import type { JobUserViewModel } from '@/app/(panel)/icerik/wizard-types'
 import { mapEngineStateToStage } from '@/lib/creative/production-progress/stage-mapper'
 import { calculateAuthoritativeEta } from '@/lib/creative/production-progress/eta-calculator'
@@ -175,9 +177,9 @@ export async function GET(
     let outputEvidence: any = null
 
     if (job.state === 'COMPLETED' || job.state === 'NEEDS_REVIEW') {
-      const { data: outputs } = await (supabase as any)
+      const { data: outputs } = await (createSupabaseServiceClient() || supabase as any)
         .from('ai_media_outputs')
-        .select('id, file_path, storage_url, sha256, duration_seconds, width, height, verified, is_approved, visual_qa_report')
+        .select('id, org_id, job_id, file_path, storage_url, sha256, duration_seconds, width, height, verified, is_approved, visual_qa_report')
         .eq('job_id', jobId)
         .eq('org_id', org.id)
         .order('created_at', { ascending: false })
@@ -187,10 +189,8 @@ export async function GET(
       if (output) {
         outputEvidence = output
         outputId = output.id
-        // Approved output is directly playable. NEEDS_REVIEW output is also
-        // served to the owning org so they can preview their video while it
-        // awaits human review — it is not publicly publishable until approved.
-        playbackUrl = `/api/ai-media/outputs/${output.id}`
+        playbackUrl = isApprovedVideoOutput(output) ? `/api/ai-media/outputs/${output.id}`
+          : isReviewVideoOutput(output, job, org.id) ? `/api/ai-media/outputs/${output.id}?preview=1` : null
 
         // Ensure creatives table is synced so video appears ready in Content Library
         try {
@@ -207,7 +207,7 @@ export async function GET(
               source: 'ai',
               public_url: playbackUrl,
               payload: {
-                thumbnailUrl: playbackUrl ? `${playbackUrl}?thumb=1` : null,
+                thumbnailUrl: playbackUrl ? `${playbackUrl}${playbackUrl.includes('?') ? '&' : '?'}thumb=1` : null,
                 review_required: !output.is_approved,
               },
               updated_at: new Date().toISOString(),
