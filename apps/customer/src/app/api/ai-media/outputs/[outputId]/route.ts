@@ -88,9 +88,16 @@ export async function GET(
 
     let reviewPreview = false
     if (req.nextUrl.searchParams.get('preview') === '1' && org && output.org_id === org.id) {
-      const { data: reviewJob } = await (createSupabaseServiceClient() || supabase)
+      // Use the authenticated client: a service helper can fall back to an
+      // anonymous publishable key, which cannot read this tenant's job.
+      const { data: reviewJob, error: reviewJobError } = await supabase
         .from('ai_media_jobs').select('id,org_id,state').eq('id', output.job_id).eq('org_id', org.id).single()
       reviewPreview = isReviewVideoOutput(output, reviewJob, org.id)
+      if (!reviewPreview) console.warn('[ai-media-outputs] Review preview rejected', {
+        output_id: output.id, job_id: output.job_id, lookup_error: reviewJobError?.code || null,
+        job_state: reviewJob?.state || null, owned_job: reviewJob?.org_id === org.id,
+        verified: output.verified, approved: output.is_approved, has_sha: typeof output.sha256 === 'string' && /^[a-f0-9]{64}$/i.test(output.sha256),
+      })
     }
 
     // 2. Strict Tenant Isolation Gate (FAIL CLOSED for normal tenants, Super Admin bypasses)
