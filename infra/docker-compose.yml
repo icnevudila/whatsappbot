@@ -218,6 +218,8 @@ services:
       # Shared volumes — same named volumes as gflow-engine for ffprobe/SHA/QA
       - flow-outputs:/shared/outputs
       - flow-incidents:/shared/incidents
+      # Raw checkpoints must survive worker replacement as well as final outputs.
+      - ai-media-workspaces:/shared/jobs
     env_file:
       - ../apps/wa-service/.env
     environment:
@@ -305,6 +307,8 @@ networks:
     # No host port binding on gflow-engine → no inbound exposure
 
 volumes:
+  ai-media-workspaces:
+    driver: local
   flow-outputs:
     driver: local
   flow-incidents:

@@ -37,7 +37,7 @@ COPY services/omnistudio/gateway/capcut_post_production.py /post-production/capc
 RUN npm run build
 
 # Create shared mount directories
-RUN mkdir -p /shared/outputs /shared/incidents
+RUN mkdir -p /shared/outputs /shared/incidents /shared/jobs
 
 # Environment
 ENV NODE_ENV=production \
