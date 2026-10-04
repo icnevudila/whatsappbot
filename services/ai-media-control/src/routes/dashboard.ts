@@ -5,7 +5,7 @@
 import { Router } from 'express'
 import { supabase } from '../index.js'
 
-export const dashboardRouter = Router()
+export const dashboardRouter: Router = Router()
 
 // GET /api/v1/dashboard/overview
 dashboardRouter.get('/overview', async (_req, res) => {

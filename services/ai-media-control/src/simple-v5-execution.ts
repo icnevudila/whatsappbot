@@ -31,6 +31,9 @@ import {
 } from './providers/video-provider-router.js'
 import { GenerationWorkspace } from './providers/generation-workspace.js'
 import { loadFinishingCheckpoint } from './finishing-checkpoint.js'
+import { assertSimpleV5ReferencePair } from './simple-v5-reference-pair.js'
+import { runHistoricalVideoDirector } from './historical-video-director.js'
+import { createHistoricalExecutionContract } from './historical-execution-contract.js'
 
 type ProviderAsset = VideoGenerationRequest['assets'][number]
 
@@ -182,13 +185,17 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
   if (!expectedAccountEmail) {
     throw new Error(`FLOW_ACCOUNT_CONFIGURATION_REQUIRED: no canonical email is configured for ${accountId}`)
   }
-  const snapshot = createBrandContextSnapshot({ ...rawInput, creative_engine_mode: 'SIMPLE_V5_HYBRID' })
-  const { brief, shotPlan } = SimpleV5BriefNormalizer.normalize(snapshot)
-  const productionPlan = buildSimpleV5ProductionPlan(snapshot, brief, shotPlan)
-  const geminiCompiled = GeminiVideoPromptCompiler.compile(brief, shotPlan)
-  const flowCompiled = FlowVeoPromptCompiler.compile(brief, shotPlan)
-  const geminiPrompt = providerPrompt(geminiCompiled)
-  const flowPrompt = providerPrompt(flowCompiled)
+  assertSimpleV5ReferencePair(rawInput.org_id, assets)
+  const directed = await runHistoricalVideoDirector({
+    rawInput,
+    assets,
+    jobId: job.id,
+    attemptId,
+  })
+  const historicalContract = createHistoricalExecutionContract(rawInput, directed)
+  const { snapshot, brief, shotPlan, productionPlan, providerPrompt: historicalPrompt } = historicalContract
+  const geminiPrompt = historicalPrompt
+  const flowPrompt = historicalPrompt
 
   for (const exactPrompt of [geminiPrompt, flowPrompt]) {
     const factual = FactualIntegrityGate.validateVeoPrompt(exactPrompt, snapshot)
@@ -198,7 +205,7 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
   }
 
   const requestedProvider = (job.requested_provider || job.metadata?.requested_provider || 'AUTO') as RequestedVideoProvider
-  const fidelityInfo = flowCompiled.fidelity || geminiCompiled.fidelity || {
+  const fidelityInfo = {
     applied: true,
     canonicalAssetSha: brief.heroProductSha || '',
     productId: brief.heroProductId || '',
@@ -208,6 +215,7 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
 
   const diagnostics = {
     creative_engine_mode: 'SIMPLE_V5_HYBRID',
+    historical_contract: historicalContract.diagnostics,
     requested_provider: requestedProvider,
     common_plan: { brief, shotPlan },
     exact_provider_prompts: {
@@ -215,8 +223,8 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
       FLOW_VEO: flowPrompt,
     },
     prompt_metrics: {
-      GEMINI_NATIVE_VIDEO: geminiCompiled.metrics,
-      FLOW_VEO: flowCompiled.metrics,
+      GEMINI_NATIVE_VIDEO: { characterCount: geminiPrompt.length, wordCount: geminiPrompt.split(/\s+/).length },
+      FLOW_VEO: { characterCount: flowPrompt.length, wordCount: flowPrompt.split(/\s+/).length },
     },
     fidelity_contract_applied: true,
     canonical_asset_sha: fidelityInfo.canonicalAssetSha,
@@ -399,25 +407,28 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     ? 5.25
     : Math.max(5.5, (rawProbe.duration || brief.durationSeconds || 8) - 0.5)
 
-  const textRenderer = new DeterministicCampaignTextRenderer()
-  const scriptWords = (brief.spokenScript || '').split(/\s+/).filter(Boolean)
-  const voiceDuration = SUBTITLE_WINDOW_END - SUBTITLE_WINDOW_START
-  const wordDur = voiceDuration / Math.max(1, scriptWords.length)
-  const timedWords = scriptWords.map((w: string, idx: number) => ({
-    word: w,
-    start: SUBTITLE_WINDOW_START + idx * wordDur,
-    end:   SUBTITLE_WINDOW_START + (idx + 1) * wordDur,
-  }))
-  const assContent = textRenderer.buildCapCutKineticAss(timedWords, {
-    playResX: rawProbe.width  || 720,
-    playResY: rawProbe.height || 1280,
-    fontSize:     36,
-    activeColor:  '&H0000D0FF&',  // Amber/yellow highlight — visible on all backgrounds
-    marginV:      220,
-    maxEndTimeSec: SUBTITLE_WINDOW_END,  // Hard cap: zero subtitle bleed into outro
-  })
+  let assContent = ''
+  if (productionPlan.subtitles.mode === 'auto' && brief.spokenScript) {
+    const textRenderer = new DeterministicCampaignTextRenderer()
+    const scriptWords = (brief.spokenScript || '').split(/\s+/).filter(Boolean)
+    const voiceDuration = SUBTITLE_WINDOW_END - SUBTITLE_WINDOW_START
+    const wordDur = voiceDuration / Math.max(1, scriptWords.length)
+    const timedWords = scriptWords.map((w: string, idx: number) => ({
+      word: w,
+      start: SUBTITLE_WINDOW_START + idx * wordDur,
+      end:   SUBTITLE_WINDOW_START + (idx + 1) * wordDur,
+    }))
+    assContent = textRenderer.buildCapCutKineticAss(timedWords, {
+      sector: rawInput.sector_profile || 'tarım',
+      playResX: rawProbe.width  || 720,
+      playResY: rawProbe.height || 1280,
+      maxEndTimeSec: SUBTITLE_WINDOW_END,  // Hard cap: zero subtitle bleed into outro
+    })
+  } else if (historicalContract?.assContent) {
+    assContent = historicalContract.assContent
+  }
   const assPath = generated.outputPath.replace(/\.mp4$/i, '_subtitles.ass')
-  const subtitlesEnabled = productionPlan.subtitles.mode === 'auto'
+  const subtitlesEnabled = productionPlan.subtitles.mode === 'auto' || Boolean(historicalContract?.assContent)
   if (subtitlesEnabled) writeFileSync(assPath, assContent, 'utf8')
 
   // ── Layered overlay manifest ─────────────────────────────────────────────────

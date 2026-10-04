@@ -7,7 +7,7 @@ import { Router } from 'express'
 import { supabase, gflowEngineUrl } from '../index.js'
 import { JobState, transitionJob } from '../state-machine.js'
 
-export const jobsRouter = Router()
+export const jobsRouter: Router = Router()
 
 // POST /api/v1/jobs — Create new AI media job
 jobsRouter.post('/', async (req, res) => {

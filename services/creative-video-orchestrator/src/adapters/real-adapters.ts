@@ -568,18 +568,25 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
     const probe = await this.runFfprobe(inputVideoPath)
     if (!Number.isFinite(probe.duration) || probe.duration <= 0) throw new Error('INVALID_RAW_VIDEO: duration could not be measured')
     const duration = probe.duration
+    const enableOutro =
+      finishingSpec?.enableOutro !== false &&
+      finishingSpec?.outro !== 'off' &&
+      finishingSpec?.outro !== 'none'
 
     // ── Canonical timing constants ────────────────────────────────────────────
-    // 0.0–0.5  → clean footage (no overlays)
-    // 0.5–6.5  → subtitle_layer (VO-synced kinetic words)
-    // 6.85–8.0 → punchy agency outro card: logo + slogan + contact + clean CTA (does NOT steal video time)
-    const SUBTITLE_WINDOW_END = Math.max(5.5, duration - 1.5)
-    const FADE_START          = Math.max(6.0, duration - 1.15) // ~6.85s for 8s video
-    const FADE_DURATION       = 0.25
-    const OUTRO_START         = FADE_START
-    const LOGO_FADE_IN        = OUTRO_START
+    // When extendOutro is enabled, the full raw video footage plays completely uncut (0.0s to duration),
+    // and an additional +2.0s black outro card is appended (duration to duration + 2.0s) so video is never stolen.
+    const extendOutro = finishingSpec?.extendOutro ?? true
+    const outroExtensionSec = (enableOutro && extendOutro) ? 2.0 : 0.0
+    const finalDuration = duration + outroExtensionSec
+
+    const SUBTITLE_WINDOW_END = Math.max(5.5, duration - 0.5)
+    const FADE_START          = (enableOutro && extendOutro) ? (duration - 0.20) : Math.max(6.0, duration - 1.15)
+    const FADE_DURATION       = (enableOutro && extendOutro) ? 0.20 : 0.25
+    const OUTRO_START         = (enableOutro && extendOutro) ? duration : FADE_START
+    const LOGO_FADE_IN        = (enableOutro && extendOutro) ? (duration + 0.05) : OUTRO_START
     const LOGO_FADE_DUR       = 0.25
-    const VIDEO_END           = duration
+    const VIDEO_END           = finalDuration
 
     // ── Logo validation ───────────────────────────────────────────────────────
     const logoPath =
@@ -632,23 +639,25 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
       cur = 'v_sub'
     }
 
-    const enableOutro =
-      finishingSpec?.enableOutro !== false &&
-      finishingSpec?.outro !== 'off' &&
-      finishingSpec?.outro !== 'none'
-
     if (enableOutro) {
-      // Fade-to-black at FADE_START (fast 0.25s transition at ~6.85s)
-      filterParts.push(
-        `[${cur}]fade=t=out:st=${FADE_START.toFixed(2)}:d=${FADE_DURATION.toFixed(2)}[v_faded]`
-      )
-      cur = 'v_faded'
+      if (extendOutro) {
+        filterParts.push(`[${cur}]tpad=stop_mode=add:stop_duration=${outroExtensionSec.toFixed(2)}:color=black[v_pad]`)
+        cur = 'v_pad'
+        filterParts.push(`[${cur}]fade=t=out:st=${FADE_START.toFixed(2)}:d=${FADE_DURATION.toFixed(2)}[v_faded]`)
+        cur = 'v_faded'
+      } else {
+        filterParts.push(
+          `[${cur}]fade=t=out:st=${FADE_START.toFixed(2)}:d=${FADE_DURATION.toFixed(2)}[v_faded]`
+        )
+        cur = 'v_faded'
+      }
 
       // Prepare a transparent, black-card compatible derivative before rendering.
       if (hasLogo) {
         const preparedLogoPath = outputPath.replace(/\.mp4$/i, '') + '_outro_logo.png'
         const logoBot = fileURLToPath(new URL('../../scripts/prepare_outro_logo.py', import.meta.url))
-        await execFileAsync(process.env.PYTHON_BIN || 'python3', [logoBot, logoPath, preparedLogoPath], { timeout: 60_000 })
+        const pythonBin = process.env.PYTHON_BIN || (process.platform === 'win32' ? 'py' : 'python3')
+        await execFileAsync(pythonBin, [logoBot, logoPath, preparedLogoPath], { timeout: 60_000 })
         const logoIdx = 1 + extraInputs.length / 3
         extraInputs.push('-loop', '1', '-i', preparedLogoPath)
 
@@ -723,7 +732,7 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
         '-preset', 'fast',
         '-crf', '18',
         '-c:a', 'copy',
-        '-t', `${duration.toFixed(2)}`,
+        '-t', `${finalDuration.toFixed(2)}`,
         '-pix_fmt', 'yuv420p',
         '-movflags', '+faststart',
         outputPath,

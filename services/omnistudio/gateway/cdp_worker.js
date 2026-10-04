@@ -804,6 +804,15 @@ async function workerLoop() {
     } else if (job.type === 'product_affordance') {
       await executeProductAffordanceJob(chatgptTab, job);
     } else if (job.type === 'chat_completion') {
+      if (job.historicalDirector === true) {
+        const fresh = await fetch(`${CDP_HTTP}/json/new?https://chatgpt.com/?historical_director_job_id=${encodeURIComponent(job.id)}`, { method: 'PUT' });
+        if (!fresh.ok) throw new Error('CHATGPT_DIRECTOR_TARGET_CREATION_FAILED');
+        disposableImageTarget = await fresh.json();
+        if (!isChatGPTPage(disposableImageTarget) || !disposableImageTarget.id || !disposableImageTarget.webSocketDebuggerUrl) throw new Error('CHATGPT_DIRECTOR_TARGET_CREATION_FAILED');
+        reaper.registry.setTabJob(disposableImageTarget.id, job.id);
+        reaper.registry.setTabJob(chatgptTab.id, null);
+        chatgptTab = disposableImageTarget;
+      }
       await executeGenericChatJob(chatgptTab, job);
     } else {
       // Never reuse a text/canary/persistent company target for a production image.
@@ -1476,6 +1485,9 @@ Bu mesaja verilebilecek en kaliteli ve uygun 3 FARKLI alternatif Türkçe yanıt
 // Genel OpenAI / API Chat Completions Sohbet İşini Çalıştır
 async function executeGenericChatJob(tab, job) {
   let cdp = null;
+  const directorPaths = [];
+  let visionReceipt = null;
+  const isHistoricalDirector = job.historicalDirector === true;
   const workerTiming = createWorkerTiming(job, 'text');
   await acquireSessionFlightLease(SESSION_KEY, job.id);
   try {
@@ -1488,7 +1500,12 @@ async function executeGenericChatJob(tab, job) {
 
     const conversationChannel = job.conversationId ? `api_${String(job.conversationId).slice(0, 16)}` : 'api_chat';
     const chatIdentity = { customer, tenantId: job.tenantId, conversationId: job.conversationId || conversationChannel };
-    const chatInfo = await ensureCustomerChat(cdp, customer, 'chat', chatIdentity);
+    let chatInfo;
+    if (isHistoricalDirector) {
+      await navigateToChat(cdp, 'https://chatgpt.com/');
+      chatInfo = { isNewChat: true };
+      visionReceipt = await require('./historical_video_director_attachments.js').attachHistoricalDirectorReferences(cdp, job, directorPaths, sleep);
+    } else chatInfo = await ensureCustomerChat(cdp, customer, 'chat', chatIdentity);
     if (!chatInfo.isNewChat) {
       const waitStart = Date.now();
       while (Date.now() - waitStart < 1500) {
@@ -1539,6 +1556,7 @@ async function executeGenericChatJob(tab, job) {
     let lastFoundImg = null;
     let stableCount = 0;
     let foundNewMessage = false;
+    let directorResponseComplete = false;
     const maxWaitTimeMs = 90000;
     const pollStart = Date.now();
 
@@ -1571,6 +1589,7 @@ async function executeGenericChatJob(tab, job) {
       }
 
       if (!res.isGenerating && (stableCount >= 2 || lastFoundImg) && (lastText.length > 0 || lastFoundImg)) {
+        directorResponseComplete = true;
         workerTiming.mark('response_complete_ms', submittedAt);
         break;
       }
@@ -1579,6 +1598,7 @@ async function executeGenericChatJob(tab, job) {
     if (!foundNewMessage) {
       throw new Error('STALE_RESPONSE_DETECTED: Yeni model yanıtı üretilmedi');
     }
+    if (isHistoricalDirector && (!directorResponseComplete || lastFoundImg)) throw new Error('HISTORICAL_DIRECTOR_RESPONSE_INCOMPLETE');
 
     // Eğer sohbette görsel üretildiyse indirip Gateway'e yükle ve markdown olarak metne ekle
     if (lastFoundImg) {
@@ -1635,7 +1655,7 @@ async function executeGenericChatJob(tab, job) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         jobId: job.id,
-        result: { reply: lastText, text: lastText, raw: lastText },
+        result: { reply: lastText, text: lastText, raw: lastText, ...(visionReceipt ? { vision_receipt: visionReceipt } : {}) },
         timings: finalTimings,
       })
     });
@@ -1647,7 +1667,7 @@ async function executeGenericChatJob(tab, job) {
         returnByValue: true
       });
       const finalUrl = finalUrlEval.result?.value || '';
-      if (finalUrl.includes('/c/')) {
+      if (!isHistoricalDirector && finalUrl.includes('/c/')) {
         const expectedTitle = getExpectedChatTitle(customer, 'chat');
         await renameChatToTitle(cdp, expectedTitle);
         setCompanyChat(chatIdentity, 'chat', finalUrl, expectedTitle);
@@ -1662,6 +1682,7 @@ async function executeGenericChatJob(tab, job) {
       body: JSON.stringify({ jobId: job.id, error: err.message })
     }).catch(() => {});
   } finally {
+    for (const temporary of directorPaths) { try { fs.unlinkSync(temporary); } catch {} }
     releaseSessionFlightLease(SESSION_KEY, job.id);
     if (cdp) cdp.close();
     await workerTiming.flush();

@@ -5,7 +5,7 @@
 import { Router } from 'express'
 import { supabase } from '../index.js'
 
-export const accountsRouter = Router()
+export const accountsRouter: Router = Router()
 
 // GET /api/v1/accounts
 accountsRouter.get('/', async (_req, res) => {

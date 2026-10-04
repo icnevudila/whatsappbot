@@ -9,26 +9,33 @@ def prepare(source, destination):
     image = Image.open(source).convert('RGBA')
     image.thumbnail((2048, 2048))
     width, height = image.size
-    pixels = image.load()
-    seen = set()
-    queue = deque()
-    def background(x, y):
-        r, g, b, a = pixels[x, y]
-        return a < 16 or (min(r, g, b) >= 230 and max(r, g, b) - min(r, g, b) <= 20)
-    for x in range(width):
-        queue.extend(((x, 0), (x, height - 1)))
-    for y in range(height):
-        queue.extend(((0, y), (width - 1, y)))
-    while queue:
-        x, y = queue.popleft()
-        if (x, y) in seen or not background(x, y):
-            continue
-        seen.add((x, y))
-        r, g, b, _ = pixels[x, y]
-        pixels[x, y] = (r, g, b, 0)
-        for nx, ny in ((x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)):
-            if 0 <= nx < width and 0 <= ny < height:
-                queue.append((nx, ny))
+    # If image already has a transparent background, do not flood-fill
+    # Flood-filling white pixels from borders would eat into white/light letters that touch edges!
+    transparent_count = sum(a < 50 for *_, a in image.getdata())
+    is_already_transparent = transparent_count >= (width * height * 0.05)
+
+    if not is_already_transparent:
+        pixels = image.load()
+        seen = set()
+        queue = deque()
+        def background(x, y):
+            r, g, b, a = pixels[x, y]
+            return a < 16 or (min(r, g, b) >= 230 and max(r, g, b) - min(r, g, b) <= 20)
+        for x in range(width):
+            queue.extend(((x, 0), (x, height - 1)))
+        for y in range(height):
+            queue.extend(((0, y), (width - 1, y)))
+        while queue:
+            x, y = queue.popleft()
+            if (x, y) in seen or not background(x, y):
+                continue
+            seen.add((x, y))
+            r, g, b, _ = pixels[x, y]
+            pixels[x, y] = (r, g, b, 0)
+            for nx, ny in ((x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)):
+                if 0 <= nx < width and 0 <= ny < height:
+                    queue.append((nx, ny))
+
     if sum(a < 50 for *_, a in image.getdata()) < width * height * .05:
         raise ValueError('OUTRO_LOGO_OPAQUE: no safe transparent background; require a transparent logo')
     bounds = image.getchannel('A').getbbox()

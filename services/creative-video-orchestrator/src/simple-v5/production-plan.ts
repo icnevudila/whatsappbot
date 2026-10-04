@@ -63,7 +63,7 @@ export function buildSimpleV5ProductionPlan(
     speech: {
       language: 'tr-TR',
       text: brief.spokenScript,
-      start_sec: 2.2,
+      start_sec: 0.5,
       end_sec: 5.25,
       allow_paraphrase: false,
     },

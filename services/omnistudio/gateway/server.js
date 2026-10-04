@@ -552,6 +552,10 @@ class AdvancedJobQueue {
     requestId = null,
     conversationId = null,
     metrics = null,
+    historicalDirector = false,
+    historicalCreativeJobId = null,
+    historicalAttemptId = null,
+    historicalDirectorRequestHash = null,
   }) {
     const operationType = type;
     if (this.storageError) throw new Error('DURABLE_JOB_STORAGE_UNAVAILABLE');
@@ -582,6 +586,10 @@ class AdvancedJobQueue {
     const job = {
       id,
       type,
+      historicalDirector,
+      historicalCreativeJobId,
+      historicalAttemptId,
+      historicalDirectorRequestHash,
       originalPrompt: prompt,
       rawPrompt,
       systemPrompt,
@@ -1513,6 +1521,35 @@ const server = http.createServer(async (req, res) => {
   try {
     if (isWorkerControlPath(pathname) && !isInternalWorkerRequest(req)) {
       return sendJson(res, 403, { error: 'WORKER_UNAUTHORIZED', error_code: 'WORKER_UNAUTHORIZED' });
+    }
+    if (method === 'POST' && pathname === '/v1/chat/historical-video-director') {
+      if (!isInternalWorkerRequest(req)) return sendJson(res, 403, { error: 'WORKER_UNAUTHORIZED' });
+      const { validateHistoricalDirectorInput, assertHistoricalDirectorReceipt } = require('./historical_video_director_contract.js');
+      const body = await parseJsonBody(req);
+      let references;
+      try { references = validateHistoricalDirectorInput(body); }
+      catch (error) { return sendJson(res, 400, { error: error.message }); }
+      const requestHash = crypto.createHash('sha256').update(JSON.stringify({ org_id: body.org_id, job_id: body.job_id, attempt_id: body.attempt_id, prompt: body.prompt, references: references.map(r => ({ asset_id: r.asset_id, role: r.role, sha256: r.sha256 })) })).digest('hex');
+      const job = queue.createJob({
+        type: 'chat_completion', platform: 'chatgpt', historicalDirector: true,
+        historicalCreativeJobId: body.job_id, historicalAttemptId: body.attempt_id,
+        historicalDirectorRequestHash: requestHash,
+        customer: body.brand_name || body.org_id, tenantId: body.org_id,
+        requestId: `historical-director:${body.job_id}:${body.attempt_id}`,
+        conversationId: `historical-director:${body.job_id}:${body.attempt_id}`,
+        prompt: '[Historical video visual director]', rawPrompt: body.prompt,
+        referenceImages: references, expectedReferenceCount: 2,
+        referenceImagesCount: 2, optimizePrompt: false,
+      });
+      if (job.historicalDirectorRequestHash !== requestHash) return sendJson(res, 409, { error: 'HISTORICAL_DIRECTOR_IDEMPOTENCY_CONFLICT' });
+      const finished = await queue.waitForJob(job.id, 180000);
+      if (finished.status !== 'completed') return sendJson(res, 502, { error: finished.error || 'HISTORICAL_DIRECTOR_NOT_COMPLETED', gateway_job_id: job.id });
+      const result = finished.result;
+      const prompt = (result?.reply || result?.text || '').trim();
+      if (prompt.length < 200 || prompt.length > 40000) return sendJson(res, 502, { error: 'HISTORICAL_DIRECTOR_OUTPUT_INVALID' });
+      try { assertHistoricalDirectorReceipt(result?.vision_receipt, references, body.org_id); }
+      catch (error) { return sendJson(res, 502, { error: error.message }); }
+      return sendJson(res, 200, { prompt, gateway_job_id: job.id, vision_receipt: result.vision_receipt });
     }
     if (method === 'GET' && pathname === '/v1/videos/reconcile') {
       const key = parsedUrl.searchParams.get('idempotency_key');

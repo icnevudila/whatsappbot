@@ -5,7 +5,7 @@
 import { Router } from 'express'
 import { supabase } from '../index.js'
 
-export const incidentsRouter = Router()
+export const incidentsRouter: Router = Router()
 
 // GET /api/v1/incidents — List all incidents (admin-only)
 incidentsRouter.get('/', async (req, res) => {

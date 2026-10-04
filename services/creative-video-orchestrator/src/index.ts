@@ -51,3 +51,7 @@ export * from './library/index.js'
 export * from './orchestrator.js'
 
 export type { ProviderProgressEvent } from './adapters/provider-progress.js'
+export { compileHistoricalV5, HISTORICAL_VIDEO_CREATIVE_TREE } from './historical-v5/compiler.js'
+export { buildHistoricalDirectorPrompt } from './historical-v5/director-prompt.js'
+export { finalizeHistoricalProviderPrompt } from './historical-v5/provider-prompt.js'
+export { buildCommercialTypographyAss } from './historical-v5/core/overlay-compiler.js'
