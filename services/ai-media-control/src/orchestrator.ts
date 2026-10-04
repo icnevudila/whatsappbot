@@ -38,7 +38,7 @@ const orchestratorTick = createNonOverlappingTick(async () => {
   await expireUnpublishedSubmissions(supabase)
   await processPendingJobs()
   await processQueuedJobs()
-}, error => console.error('[orchestrator] Error during tick:', error))
+}, (error: any) => console.error('[orchestrator] Error during tick:', error))
 
 async function runLongFormPostProduction(
   scenePaths: string[],
