@@ -31,7 +31,7 @@ export async function fetchNextJob(supabase: SupabaseClient): Promise<QueuedJob 
     JobState.LEASED, JobState.PREPARING_ENV, JobState.OPENING_PROJECT,
     JobState.ATTACHING_INGREDIENTS, JobState.INGREDIENTS_VERIFIED,
     JobState.GENERATING, JobState.POLLING_FLOW, JobState.DOWNLOADING_MEDIA,
-    JobState.MEDIA_DOWNLOADED, JobState.FFPROBE_INSPECTING,
+    JobState.MEDIA_DOWNLOADED, JobState.MEDIA_PROCESSING, JobState.QUALITY_CHECK, JobState.FFPROBE_INSPECTING,
     JobState.SHA256_VERIFYING, JobState.VISUAL_QA_EVALUATING,
   ]
 
@@ -81,18 +81,8 @@ export async function leaseJob(
   workerId: string,
   accountId: string,
 ): Promise<boolean> {
-  const { data, error } = await supabase
-    .from('ai_media_jobs')
-    .update({
-      state: JobState.LEASED,
-      lease_worker_id: workerId,
-      lease_account_id: accountId,
-      lease_timeout_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(), // 10 min timeout
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', jobId)
-    .eq('state', JobState.QUEUED)  // optimistic lock
-    .select('id')
-
-  return !error && Boolean(data?.some(row => row.id === jobId))
+  const { data, error } = await supabase.rpc('studio_lease_job', {
+    p_job_id: jobId, p_worker_id: workerId, p_account_id: accountId,
+  })
+  return !error && data === true
 }

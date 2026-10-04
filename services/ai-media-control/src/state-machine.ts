@@ -1,5 +1,5 @@
 /**
- * AI Media Control — Canonical 18-State Machine
+ * AI Media Control — Canonical Production State Machine
  * 
  * SINGLE SOURCE OF TRUTH for all job state transitions.
  * Every state change MUST go through transitionJob() to guarantee
@@ -21,6 +21,8 @@ export enum JobState {
   POLLING_FLOW = 'POLLING_FLOW',
   DOWNLOADING_MEDIA = 'DOWNLOADING_MEDIA',
   MEDIA_DOWNLOADED = 'MEDIA_DOWNLOADED',
+  MEDIA_PROCESSING = 'MEDIA_PROCESSING',
+  QUALITY_CHECK = 'QUALITY_CHECK',
   FFPROBE_INSPECTING = 'FFPROBE_INSPECTING',
   SHA256_VERIFYING = 'SHA256_VERIFYING',
   VISUAL_QA_EVALUATING = 'VISUAL_QA_EVALUATING',
@@ -45,10 +47,12 @@ const VALID_TRANSITIONS: Record<JobState, JobState[]> = {
   [JobState.GENERATING]: [JobState.POLLING_FLOW, JobState.FAILED],
   [JobState.POLLING_FLOW]: [JobState.DOWNLOADING_MEDIA, JobState.FAILED],
   [JobState.DOWNLOADING_MEDIA]: [JobState.MEDIA_DOWNLOADED, JobState.FAILED],
-  [JobState.MEDIA_DOWNLOADED]: [JobState.FFPROBE_INSPECTING, JobState.FAILED],
+  [JobState.MEDIA_DOWNLOADED]: [JobState.MEDIA_PROCESSING, JobState.FFPROBE_INSPECTING, JobState.FAILED],
+  [JobState.MEDIA_PROCESSING]: [JobState.FFPROBE_INSPECTING, JobState.QUALITY_CHECK, JobState.FAILED],
+  [JobState.QUALITY_CHECK]: [JobState.COMPLETED, JobState.NEEDS_REVIEW, JobState.FAILED],
   [JobState.FFPROBE_INSPECTING]: [JobState.SHA256_VERIFYING, JobState.FAILED],
   [JobState.SHA256_VERIFYING]: [JobState.VISUAL_QA_EVALUATING, JobState.FAILED],
-  [JobState.VISUAL_QA_EVALUATING]: [JobState.COMPLETED, JobState.NEEDS_REVIEW, JobState.FAILED],
+  [JobState.VISUAL_QA_EVALUATING]: [JobState.QUALITY_CHECK, JobState.COMPLETED, JobState.NEEDS_REVIEW, JobState.FAILED],
   [JobState.COMPLETED]: [],  // terminal
   [JobState.NEEDS_REVIEW]: [JobState.QUEUED, JobState.FAILED],  // retry or fail
   [JobState.FAILED]: [JobState.QUEUED],  // retry
@@ -82,50 +86,10 @@ export async function transitionJob(
     )
   }
 
-  // 2. Update job state
-  const updates: Record<string, unknown> = {
-    state: toState,
-    updated_at: new Date().toISOString(),
-  }
-  if (toState === JobState.COMPLETED) {
-    updates.completed_at = new Date().toISOString()
-    updates.lease_account_id = null
-    updates.lease_worker_id = null
-    updates.lease_timeout_at = null
-  } else if (toState === JobState.FAILED || toState === JobState.NEEDS_REVIEW) {
-    updates.lease_account_id = null
-    updates.lease_worker_id = null
-    updates.lease_timeout_at = null
-  }
-
-  const { error: updateError, count } = await supabase
-    .from('ai_media_jobs')
-    .update(updates, { count: 'exact' })
-    .eq('id', jobId)
-    .eq('org_id', orgId)
-    .eq('state', fromState)
-
-  if (updateError) {
-    throw new Error(`DB update failed for job ${jobId}: ${updateError.message}`)
-  }
-  if (count !== 1) throw new Error(`STATE_TRANSITION_CONFLICT: Expected one owned ${fromState} job, matched ${count ?? 'unknown'}`)
-
-  // 3. Append audit event (append-only, never modified)
-  const { error: eventError } = await supabase
-    .from('ai_media_events')
-    .insert({
-      job_id: jobId,
-      org_id: orgId,
-      attempt_id: attemptId || null,
-      event_type: 'STATE_TRANSITION',
-      from_state: fromState,
-      to_state: toState,
-      message,
-      payload,
-    })
-
-  if (eventError) {
-    console.error(`Failed to insert audit event for job ${jobId}:`, eventError)
-    // Don't throw — state was already updated. Log and continue.
-  }
+  const { data, error } = await supabase.rpc('studio_transition_job', {
+    p_job_id: jobId, p_org_id: orgId, p_from: fromState, p_to: toState,
+    p_message: message, p_payload: payload, p_attempt_id: attemptId || null,
+  })
+  if (error) throw new Error(`STATE_AUDIT_TRANSACTION_FAILED: ${error.message}`)
+  if (data !== true) throw new Error('STATE_TRANSITION_CONFLICT: Expected one owned job in the source state')
 }

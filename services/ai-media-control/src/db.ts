@@ -260,6 +260,22 @@ export const db = {
     }
     throw new Error('Database client not initialized')
   },
+  async rpc(name: string, args: Record<string, unknown>) {
+    const signatures: Record<string, string[]> = {
+      studio_lease_job: ['p_job_id', 'p_worker_id', 'p_account_id'],
+      studio_prepare_job: ['p_job_id', 'p_org_id', 'p_account_id', 'p_attempt_id'],
+      studio_transition_job: ['p_job_id', 'p_org_id', 'p_from', 'p_to', 'p_message', 'p_payload', 'p_attempt_id'],
+    }
+    const keys = signatures[name]
+    if (!keys || Object.keys(args).some(key => !keys.includes(key))) throw new Error('Unsupported database procedure')
+    if (!pool && supabaseClient) return supabaseClient.rpc(name, args)
+    if (!pool) throw new Error('Database client not initialized')
+    try {
+      const values = keys.map(key => key === 'p_payload' ? JSON.stringify(args[key]) : args[key])
+      const result = await pool.query(`SELECT public.${name}(${keys.map((_, index) => '$' + (index + 1)).join(',')}) AS result`, values)
+      return { data: result.rows[0]?.result, error: null }
+    } catch (error: any) { return { data: null, error } }
+  },
   async query(sql: string, params?: any[]) {
     if (!pool) throw new Error('PostgreSQL pool not initialized')
     return pool.query(sql, params)

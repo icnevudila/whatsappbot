@@ -164,6 +164,7 @@ async function reviewOnce(
     rawVideoPath: result.outputPath,
     expectedLanguage: 'tr',
     expectedDialogue: brief.spokenScript,
+    speechWindow: { startSec: 0.5, endBeforeSec: 5.5 },
   })
   const { context, plan } = buildReviewInputs(job, snapshot, assets, brief, shotPlan, productionPlan)
   const videoReport = await new ChatGPTVideoReviewer().reviewSampledVideo(frames, plan, context, attemptNumber)
@@ -239,12 +240,27 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
   }).eq('id', job.id)
 
   const checkpoint = await loadFinishingCheckpoint(supabase, job, brief, assets)
-  if (!checkpoint) {
-  await transitionJob(supabase, job.id, job.org_id, JobState.PREPARING_ENV, JobState.OPENING_PROJECT, 'Opening selected video provider session', { requested_provider: requestedProvider }, attemptId)
-  await transitionJob(supabase, job.id, job.org_id, JobState.OPENING_PROJECT, JobState.ATTACHING_INGREDIENTS, `Preparing ${assets.length} locked canonical assets`, {}, attemptId)
-  await transitionJob(supabase, job.id, job.org_id, JobState.ATTACHING_INGREDIENTS, JobState.INGREDIENTS_VERIFIED, `Verified ${assets.length} locked canonical asset references`, {}, attemptId)
-  await transitionJob(supabase, job.id, job.org_id, JobState.INGREDIENTS_VERIFIED, JobState.GENERATING, 'Generating one SIMPLE_V5_HYBRID video from the common creative plan', {}, attemptId)
-
+  let providerStage = JobState.PREPARING_ENV
+  const onProgress: NonNullable<VideoGenerationRequest['onProgress']> = async event => {
+    // Automatic regeneration stays in GENERATING; its physical evidence is still saved.
+    if (providerStage === JobState.GENERATING) return
+    const next = event.stage as JobState
+    if (next === JobState.INGREDIENTS_VERIFIED) {
+      const verified = event.verified_assets || []
+      const media = new Set<string>()
+      const identities = new Set<string>()
+      if (verified.length !== assets.length) throw new Error('PHYSICAL_REFERENCE_COUNT_MISMATCH')
+      for (const actual of verified) {
+        const expected = assets.find(asset => asset.asset_id === actual.asset_id)
+        if (identities.has(actual.asset_id) || !expected || actual.org_id !== job.org_id || actual.role !== expected.role || actual.sha256 !== expected.sha256 || !actual.attached_media_id || media.has(actual.attached_media_id)) throw new Error('PHYSICAL_REFERENCE_IDENTITY_MISMATCH')
+        media.add(actual.attached_media_id)
+        identities.add(actual.asset_id)
+      }
+      const { error, count } = await supabase.from('ai_media_jobs').update({ actual_ingredient_count: verified.length }, { count: 'exact' }).eq('id', job.id).eq('org_id', job.org_id).eq('state', providerStage)
+      if (error || count !== 1) throw new Error('PHYSICAL_REFERENCE_PERSISTENCE_FAILED')
+    }
+    await transitionJob(supabase, job.id, job.org_id, providerStage, next, `Flow observed ${next}`, { ...event }, attemptId)
+    providerStage = next
   }
 
   const router = new VideoProviderRouter(
@@ -252,6 +268,7 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     new FlowVeoVideoProvider(new RealHttpGFlowProvider(gflowEngineUrl))
   )
   const request: VideoGenerationRequest = {
+    onProgress,
     jobId: job.id,
     attemptId,
     orgId: job.org_id,
@@ -361,6 +378,7 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     snapshotAny?.outro !== false &&
     (job.metadata as any)?.outro !== 'off'
 
+  await transitionJob(supabase, job.id, job.org_id, JobState.MEDIA_DOWNLOADED, JobState.MEDIA_PROCESSING, 'Processing verified raw media into the final output', {}, attemptId)
   const ffmpeg = new RealFFmpegAdapter()
   const rawProbe = await ffmpeg.runFfprobe(generated.outputPath)
 
@@ -467,9 +485,10 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     presentationNeedsReview = !logoPresentation.passed
   }
 
-  await transitionJob(supabase, job.id, job.org_id, JobState.MEDIA_DOWNLOADED, JobState.FFPROBE_INSPECTING, 'Inspecting final video streams with ffprobe', {}, attemptId)
+  await transitionJob(supabase, job.id, job.org_id, JobState.MEDIA_PROCESSING, JobState.FFPROBE_INSPECTING, 'Inspecting final video streams with ffprobe', {}, attemptId)
   await transitionJob(supabase, job.id, job.org_id, JobState.FFPROBE_INSPECTING, JobState.SHA256_VERIFYING, 'Computing final output SHA-256', {}, attemptId)
   await transitionJob(supabase, job.id, job.org_id, JobState.SHA256_VERIFYING, JobState.VISUAL_QA_EVALUATING, 'Recording combined severe-error review and duration-aware QA frames', {}, attemptId)
+  await transitionJob(supabase, job.id, job.org_id, JobState.VISUAL_QA_EVALUATING, JobState.QUALITY_CHECK, 'Checking final output against the approved production plan', {}, attemptId)
 
   const qaDir = join('/shared/outputs', job.org_id, job.id, attemptId, 'qa')
   const validation = await validateOutput(finishedPath, brief.aspectRatio, 3, 15, qaDir)
@@ -645,7 +664,7 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     supabase,
     job.id,
     job.org_id,
-    JobState.VISUAL_QA_EVALUATING,
+    JobState.QUALITY_CHECK,
     finalState,
     approved
       ? `SIMPLE_V5_HYBRID completed in ${Math.round((Date.now() - startTime) / 1000)}s`

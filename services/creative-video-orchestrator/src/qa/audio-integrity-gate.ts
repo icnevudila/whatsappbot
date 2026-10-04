@@ -10,6 +10,29 @@ export function dialogueMatches(expected: string, actual: string): boolean {
   return wanted.length > 0 && wanted === normalize(actual)
 }
 
+export interface SpeechWord { word: string; start: number; end: number }
+export interface SpeechWindow { startSec: number; endBeforeSec: number }
+
+/** Timing evidence must cover the whole approved transcript, with ordered finite times. */
+export function verifySpeechWindow(transcript: string, words: SpeechWord[] | undefined, window: SpeechWindow): Pick<AudioIntegrityReport, 'passed' | 'failureCode' | 'issues' | 'details' | 'speechStartSec' | 'speechEndSec' | 'words'> {
+  const unavailable = () => ({ passed: false, failureCode: 'AUDIO_VERIFICATION_UNAVAILABLE' as const,
+    issues: ['Complete word timing evidence is unavailable.'], details: 'Cannot prove the approved speech window.' })
+  if (!Number.isFinite(window.startSec) || !Number.isFinite(window.endBeforeSec) || window.startSec < 0 || window.endBeforeSec <= window.startSec || !Array.isArray(words) || !words.length) return unavailable()
+  let previousEnd = -1
+  for (const word of words) {
+    if (!word || typeof word.word !== 'string' || !word.word.trim() || !Number.isFinite(word.start) || !Number.isFinite(word.end) || word.start < 0 || word.end <= word.start || word.start < previousEnd) return unavailable()
+    previousEnd = word.end
+  }
+  if (!dialogueMatches(transcript, words.map(word => word.word).join(' '))) return unavailable()
+  const speechStartSec = words[0].start
+  const speechEndSec = words[words.length - 1].end
+  const evidence = { speechStartSec, speechEndSec, words }
+  if (speechStartSec < window.startSec || speechEndSec >= window.endBeforeSec) return { ...evidence,
+    passed: false, failureCode: 'VOICEOVER_TIMING_FAIL', issues: ['Actual speech falls outside the required voiceover window.'],
+    details: `Speech starts at ${speechStartSec}s and ends at ${speechEndSec}s; required start >= ${window.startSec}s and end < ${window.endBeforeSec}s.` }
+  return { ...evidence, passed: true, issues: [], details: 'Complete spoken transcript has verified word timing inside the required window.' }
+}
+
 export interface AudioIntegrityRequest {
   audioFilePath?: string
   videoFilePath?: string
@@ -19,6 +42,8 @@ export interface AudioIntegrityRequest {
   isMock?: boolean
   mockDetectedLanguage?: string
   mockTranscript?: string
+  speechWindow?: SpeechWindow
+  mockWords?: SpeechWord[]
 }
 
 export type AudioIntegrityFailureCode =
@@ -30,6 +55,7 @@ export type AudioIntegrityFailureCode =
   | 'FOREIGN_AUDIO_LEAKAGE'
   | 'SILENT_AUDIO_TRACK'
   | 'AUDIO_VERIFICATION_UNAVAILABLE'
+  | 'VOICEOVER_TIMING_FAIL'
 
 export interface AudioIntegrityReport {
   passed: boolean
@@ -37,6 +63,9 @@ export interface AudioIntegrityReport {
   detectedLanguage?: string
   languageConfidence?: number
   transcript?: string
+  speechStartSec?: number
+  speechEndSec?: number
+  words?: SpeechWord[]
   audioDurationSec?: number
   issues: string[]
   details: string
@@ -56,12 +85,13 @@ export class AudioIntegrityGate {
    */
   private static async callWhisper(
     base64Audio: string,
-    whisperUrl: string
-  ): Promise<{ text: string; language: string; language_probability?: number; duration?: number }> {
+    whisperUrl: string,
+    wordTimestamps: boolean
+  ): Promise<{ text: string; language: string; language_probability?: number; duration?: number; words?: SpeechWord[] }> {
     return new Promise((resolve, reject) => {
       try {
         const parsed = new URL(whisperUrl)
-        const payload = JSON.stringify({ audio_base64: base64Audio })
+        const payload = JSON.stringify({ audio_base64: base64Audio, word_timestamps: wordTimestamps })
         const req = http.request(
           {
             hostname: parsed.hostname,
@@ -81,6 +111,7 @@ export class AudioIntegrityGate {
             })
             res.on('end', () => {
               try {
+                if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) return reject(new Error(`Whisper HTTP ${res.statusCode}`))
                 const parsedRes = JSON.parse(data)
                 if (parsedRes.success === false) {
                   return reject(new Error(parsedRes.error || 'Whisper transcription failed'))
@@ -153,6 +184,8 @@ export class AudioIntegrityGate {
           issues: ['Actual transcript does not match the complete approved dialogue.'],
           details: 'Missing, additional or reordered speech requires review.' }
       }
+      const timing = req.speechWindow ? verifySpeechWindow(mockTranscript, req.mockWords, req.speechWindow) : undefined
+      if (timing && !timing.passed) return { ...timing, transcript: mockTranscript }
       return {
         passed: true,
         detectedLanguage: 'tr',
@@ -161,6 +194,7 @@ export class AudioIntegrityGate {
         audioDurationSec: 8.0,
         issues: [],
         details: 'Mock audio passed Turkish language verification.',
+        ...(timing || {}),
       }
     }
 
@@ -251,9 +285,9 @@ export class AudioIntegrityGate {
     const b64 = audioBuffer.toString('base64')
     const whisperUrl = req.whisperUrl || AudioIntegrityGate.defaultWhisperUrl
 
-    let whisperRes: { text: string; language: string; language_probability?: number; duration?: number }
+    let whisperRes: { text: string; language: string; language_probability?: number; duration?: number; words?: SpeechWord[] }
     try {
-      whisperRes = await AudioIntegrityGate.callWhisper(b64, whisperUrl)
+      whisperRes = await AudioIntegrityGate.callWhisper(b64, whisperUrl, Boolean(req.speechWindow))
     } catch (err: any) {
       // In offline mode where Hetzner whisper is unreachable, check deterministic transcript if provided or fail closed
       return {
@@ -329,6 +363,8 @@ export class AudioIntegrityGate {
       }
     }
 
+    const timing = req.speechWindow ? verifySpeechWindow(transcript, whisperRes.words, req.speechWindow) : undefined
+    if (timing && !timing.passed) return { ...timing, transcript, detectedLanguage: detectedLang, languageConfidence: confidence }
     return {
       passed: true,
       detectedLanguage: detectedLang,
@@ -337,6 +373,7 @@ export class AudioIntegrityGate {
       audioDurationSec: whisperRes.duration || audioDuration,
       issues: [],
       details: `Spoken dialogue verified as authentic ${detectedLang.toUpperCase()} (ASR: "${transcript}").`,
+      ...(timing || {}),
     }
   }
 
@@ -354,6 +391,8 @@ export class AudioIntegrityGate {
     isMock?: boolean
     mockDetectedLanguage?: string
     mockTranscript?: string
+  speechWindow?: SpeechWindow
+  mockWords?: SpeechWord[]
   }): Promise<AudioIntegrityReport> {
     const report = await this.evaluateAudioIntegrity({
       videoFilePath: req.rawVideoPath,
@@ -363,12 +402,14 @@ export class AudioIntegrityGate {
       isMock: req.isMock,
       mockDetectedLanguage: req.mockDetectedLanguage,
       mockTranscript: req.mockTranscript,
+      speechWindow: req.speechWindow,
+      mockWords: req.mockWords,
     })
 
     // If raw video has no speech at all (ambient audio / foley only), it is NOT a foreign language violation!
     // A violation ONLY occurs if actual spoken dialogue was detected in a foreign language (e.g. English speech).
     const hasSpokenDialogue = Boolean(report.transcript && report.transcript.trim().length > 3)
-    if (!req.expectedDialogue && !report.passed && !hasSpokenDialogue && report.failureCode === 'ACTUAL_AUDIO_LANGUAGE_MISMATCH') {
+    if (!req.speechWindow && !req.expectedDialogue && !report.passed && !hasSpokenDialogue && report.failureCode === 'ACTUAL_AUDIO_LANGUAGE_MISMATCH') {
       return {
         ...report,
         passed: true,

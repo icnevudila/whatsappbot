@@ -1,28 +1,30 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { JobState, transitionJob } from '../src/state-machine.js'
-function fixture(count: number | undefined) {
+import { leaseJob } from '../src/queue.js'
+function fixture(data: boolean | null, error: any = null) {
   const operations: any[] = []
-  return {operations,db:{from(table: string) {
-    const op: any = {table,filters:[]}; operations.push(op)
-    const chain: any = {update(value: any){op.update=value;return chain},
-      eq(key: string,value: any){op.filters.push([key,value]);return chain},
-      insert(value: any){op.insert=value;return Promise.resolve({error:null})},
-      then(resolve: any,reject: any){return Promise.resolve({error:null,count}).then(resolve,reject)}}
-    return chain
-  }}}
+  return { operations, db: { async rpc(name: string, args: any) { operations.push({name,args}); return {data,error} } } }
 }
-test('state transition never removes tenant/state CAS after zero or unknown match',async()=>{
-  for(const count of [0,undefined]) {
-    const f=fixture(count)
-    await assert.rejects(transitionJob(f.db as any,'job','org',JobState.PENDING,JobState.NEEDS_REVIEW,'fixture'),/STATE_TRANSITION_CONFLICT/)
-    assert.equal(f.operations.length,1)
-    assert.deepEqual(f.operations[0].filters,[['id','job'],['org_id','org'],['state','PENDING']])
-  }
+test('state transition rejects a lost CAS and never falls back to unscoped update', async () => {
+  const f = fixture(false)
+  await assert.rejects(transitionJob(f.db as any, 'job', 'org', JobState.PENDING, JobState.NEEDS_REVIEW, 'fixture'), /STATE_TRANSITION_CONFLICT/)
+  assert.equal(f.operations.length, 1)
+  assert.equal(f.operations[0].args.p_org_id, 'org')
+  assert.equal(f.operations[0].args.p_from, 'PENDING')
 })
-test('owned transition clears review lease and emits audit only after matched update',async()=>{
-  const f=fixture(1)
-  await transitionJob(f.db as any,'job','org',JobState.PENDING,JobState.NEEDS_REVIEW,'fixture')
-  assert.equal(f.operations[0].update.lease_account_id,null)
-  assert.equal(f.operations[1].table,'ai_media_events')
+test('state and audit failure stops worker advancement', async () => {
+  const f = fixture(null, {message:'audit unavailable'})
+  await assert.rejects(transitionJob(f.db as any, 'job','org',JobState.PENDING,JobState.NEEDS_REVIEW,'fixture'), /STATE_AUDIT_TRANSACTION_FAILED/)
+})
+test('owned transition includes its attempt and physical evidence in atomic call', async () => {
+  const f = fixture(true)
+  await transitionJob(f.db as any,'job','org',JobState.ATTACHING_INGREDIENTS,JobState.INGREDIENTS_VERIFIED,'fixture',{physical:2},'attempt')
+  assert.equal(f.operations[0].args.p_attempt_id,'attempt')
+  assert.deepEqual(f.operations[0].args.p_payload,{physical:2})
+})
+test('only a committed lease with audit can start processing', async () => {
+  for (const value of [false,null]) assert.equal(await leaseJob(fixture(value).db as any,'job','worker','account'),false)
+  assert.equal(await leaseJob(fixture(true).db as any,'job','worker','account'),true)
+  assert.equal(await leaseJob(fixture(null,{message:'audit failed'}).db as any,'job','worker','account'),false)
 })

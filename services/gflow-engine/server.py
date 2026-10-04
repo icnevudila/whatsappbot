@@ -17,6 +17,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
+from progress_journal import read_progress
+
 from driver import (
     execute_generation_job,
     synchronize_account_profile,
@@ -450,6 +452,13 @@ async def workers_health():
             "busy_accounts": [aid for aid, lock in _account_locks.items() if lock.locked()],
         }
 
+
+@app.get("/v1/jobs/{job_id}/attempts/{attempt_id}/progress")
+async def generation_progress(job_id: str, attempt_id: str, org_id: str):
+    try:
+        return {"events": read_progress(OUTPUTS_BASE, org_id, job_id, attempt_id)}
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid progress identity")
 
 if __name__ == "__main__":
     import uvicorn

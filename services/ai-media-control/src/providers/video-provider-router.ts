@@ -1,3 +1,4 @@
+import type { ProviderProgressEvent } from '@wa/creative-video-orchestrator'
 export type RequestedVideoProvider = 'AUTO' | 'GEMINI_NATIVE_VIDEO' | 'FLOW_VEO'
 export type SelectedVideoProvider = Exclude<RequestedVideoProvider, 'AUTO'>
 
@@ -30,6 +31,7 @@ export interface VideoCapabilityReport {
 }
 
 export interface VideoGenerationRequest {
+  onProgress?: (event: ProviderProgressEvent) => Promise<void>
   jobId: string
   attemptId: string
   orgId: string

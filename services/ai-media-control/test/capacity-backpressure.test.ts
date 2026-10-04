@@ -53,8 +53,8 @@ test('defer cannot overwrite generating/completed/other-account jobs after CAS l
 })
 
 test('lease claim requires matched row, not merely absence of DB error', async () => {
-  assert.equal(await leaseJob(mockDb([]).db as any, 'job', 'worker', 'account'), false)
-  assert.equal(await leaseJob(mockDb([{ id: 'job' }]).db as any, 'job', 'worker', 'account'), true)
+  assert.equal(await leaseJob({ rpc: async () => ({data:false,error:null}) } as any, 'job', 'worker', 'account'), false)
+  assert.equal(await leaseJob({ rpc: async () => ({data:true,error:null}) } as any, 'job', 'worker', 'account'), true)
 })
 
 test('a hung ownership check is bounded by the operation timeout and never calls provider capacity', async () => {
@@ -79,17 +79,15 @@ test('defer DB failure leaves authoritative job untouched and emits no false cap
   assert.equal(operations.length, 1)
 })
 
-test('preparation CAS rejects an ownership change during capacity acquisition without a fallback', async () => {
-  const { db, operations } = mockDb([])
-  assert.equal(await claimCapacityPreparation(db, { id: 'job', org_id: 'org' }, 'account', 'attempt'), false)
-  assert.equal(operations.length, 1)
-  assert.equal(operations[0].update.state, 'PREPARING_ENV')
-  assert.deepEqual(operations[0].filters, [['id','job'], ['org_id','org'], ['state','LEASED'], ['lease_account_id','account']])
+test('preparation CAS rejects account ownership loss with no fallback', async () => {
+  const calls: any[] = []
+  const db = { async rpc(name: string, args: any) { calls.push({name,args}); return {data:false,error:null} } }
+  assert.equal(await claimCapacityPreparation(db, {id:'job',org_id:'org'}, 'account','attempt'),false)
+  assert.equal(calls.length,1)
+  assert.deepEqual(calls[0],{name:'studio_prepare_job',args:{p_job_id:'job',p_org_id:'org',p_account_id:'account',p_attempt_id:'attempt'}})
 })
-
-test('preparation commits only an owned matched lease and records the pre-provider boundary', async () => {
-  const { db, operations } = mockDb([{ id: 'job' }])
-  assert.equal(await claimCapacityPreparation(db, { id: 'job', org_id: 'org' }, 'account', 'attempt'), true)
-  assert.equal(operations[1].insert.to_state, 'PREPARING_ENV')
-  assert.equal(operations[1].insert.payload.provider_submitted, false)
+test('preparation cannot proceed after audit transaction failure', async () => {
+  const db = { async rpc() { return {data:null,error:{message:'audit failed'}} } }
+  await assert.rejects(claimCapacityPreparation(db, {id:'job',org_id:'org'},'account','attempt'), /CAPACITY_PREPARATION_DB_ERROR/)
+  assert.equal(await claimCapacityPreparation({rpc:async()=>({data:true,error:null})},{id:'job',org_id:'org'},'account','attempt'),true)
 })

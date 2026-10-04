@@ -139,7 +139,7 @@ export async function createVideoJob(req: NextRequest, context: Awaited<ReturnTy
         .in('state', [
           'PENDING', 'VALIDATING_INPUTS', 'QUEUED', 'LEASED', 'PREPARING_ENV', 'OPENING_PROJECT',
           'ATTACHING_INGREDIENTS', 'INGREDIENTS_VERIFIED', 'GENERATING', 'POLLING_FLOW',
-          'DOWNLOADING_MEDIA', 'MEDIA_DOWNLOADED', 'FFPROBE_INSPECTING', 'SHA256_VERIFYING',
+          'DOWNLOADING_MEDIA', 'MEDIA_DOWNLOADED','MEDIA_PROCESSING','QUALITY_CHECK', 'FFPROBE_INSPECTING', 'SHA256_VERIFYING',
           'VISUAL_QA_EVALUATING', 'COMPLETED', 'NEEDS_REVIEW',
         ])
         .gte('created_at', startOfMonth.toISOString()),

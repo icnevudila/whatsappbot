@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional
 from redactor import redact_har, redact_string
 from process_bounds import OwnedFileLock, bounded_lines
+from progress_journal import ProgressJournal
 from invocation_identity import InvocationIdentity, IdentityConflict, IdentityHeld
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -380,6 +381,7 @@ def execute_generation_job(payload: Dict[str, Any]) -> Dict[str, Any]:
     duration = payload.get("duration", 8)
     assets: List[Dict[str, Any]] = payload.get("assets", [])
 
+    progress = ProgressJournal(OUTPUTS_BASE, org_id, job_id, attempt_id)
     expected_ingredient_count = len(assets)
     invocation_timeout = hard_timeout_seconds()
 
@@ -489,6 +491,7 @@ def execute_generation_job(payload: Dict[str, Any]) -> Dict[str, Any]:
             identity_store.close()
             raise FlowExecutionError('FLOW_INVOCATION_UNCERTAIN',str(error)) from error
 
+        progress.emit("OPENING_PROJECT")
         if target_project:
             if not is_recovery:
                 logger.error(f"PROJECT_REUSE_VIOLATION: Reuse of project {target_project} forbidden for new job {job_id}")
@@ -513,6 +516,7 @@ def execute_generation_job(payload: Dict[str, Any]) -> Dict[str, Any]:
                 if isinstance(e,FlowExecutionError): raise
                 raise FlowExecutionError("PROJECT_CREATION_FAILED", f"Failed to create fresh Flow project: {e}") from e
 
+        progress.emit("ATTACHING_INGREDIENTS", flow_project_id=target_project)
         # Build CLI command environment
         env = os.environ.copy()
         env["PYTHONUNBUFFERED"] = "1"
@@ -600,6 +604,8 @@ def execute_generation_job(payload: Dict[str, Any]) -> Dict[str, Any]:
                     log_file.flush()
 
                     clean_line = line.strip()
+                    if "mesajify.generation_started" in clean_line and "INGREDIENTS_VERIFIED" in progress.seen:
+                        progress.emit("GENERATING", flow_project_id=target_project)
                     # Inspect for migrated.references_attached event
                     if "migrated.references_attached" in clean_line:
                         try:
@@ -611,6 +617,8 @@ def execute_generation_job(payload: Dict[str, Any]) -> Dict[str, Any]:
                             for idx, mid in enumerate(media_ids):
                                 if idx < len(verified_assets):
                                     verified_assets[idx]["attached_media_id"] = mid
+                            if actual_ingredient_count == expected_ingredient_count and len(set(media_ids)) == expected_ingredient_count and all(media_ids):
+                                progress.emit("INGREDIENTS_VERIFIED", flow_project_id=target_project, verified_assets=verified_assets)
                         except Exception:
                             # Fallback text parsing if not pure JSON
                             if "count" in clean_line:

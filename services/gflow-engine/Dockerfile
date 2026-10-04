@@ -46,6 +46,9 @@ RUN python3 -c "import sitecustomize; print('BUILD VERIFIED: sitecustomize loade
 # Copy engine source
 COPY services/gflow-engine/server.py /app/server.py
 COPY services/gflow-engine/driver.py /app/driver.py
+COPY services/gflow-engine/progress_journal.py /app/progress_journal.py
+COPY services/gflow-engine/process_bounds.py /app/process_bounds.py
+COPY services/gflow-engine/invocation_identity.py /app/invocation_identity.py
 COPY services/gflow-engine/redactor.py /app/redactor.py
 
 # Create dedicated non-root gflow user (uid: 1001, gid: 1001)

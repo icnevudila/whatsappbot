@@ -49,3 +49,5 @@ export * from './evaluation/duplicate-output-detector.js'
 export * from './simple-v5/index.js'
 export * from './library/index.js'
 export * from './orchestrator.js'
+
+export type { ProviderProgressEvent } from './adapters/provider-progress.js'

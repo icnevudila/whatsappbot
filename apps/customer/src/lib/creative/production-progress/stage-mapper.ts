@@ -87,6 +87,7 @@ export function mapEngineStateToStage(rawState: string | null | undefined): Mapp
     }
 
     case 'DOWNLOADING_MEDIA':
+    case 'MEDIA_PROCESSING':
     case 'MEDIA_DOWNLOADED': {
       const stage = CANONICAL_VIDEO_STAGES[4]
       return {
@@ -103,6 +104,7 @@ export function mapEngineStateToStage(rawState: string | null | undefined): Mapp
 
     case 'FFPROBE_INSPECTING':
     case 'SHA256_VERIFYING':
+    case 'QUALITY_CHECK':
     case 'VISUAL_QA_EVALUATING': {
       // VISUAL_QA_EVALUATING is strictly quality inspection, NEVER outro branding
       const stage = CANONICAL_VIDEO_STAGES[5]

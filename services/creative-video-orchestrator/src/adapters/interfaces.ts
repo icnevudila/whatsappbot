@@ -1,3 +1,4 @@
+import type { ProviderProgressEvent } from './provider-progress.js'
 import type { BrandContextSnapshot } from '../types/brand-snapshot.js'
 import type { ReferenceRegistry } from '../types/reference-registry.js'
 
@@ -36,6 +37,7 @@ export interface GenerateRequest {
   model: string
   duration: number
   assets: AssetPayload[]
+  onProgress?: (event: ProviderProgressEvent) => Promise<void>
   expected_reference_ids: string[]
 }
 

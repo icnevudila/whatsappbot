@@ -53,18 +53,11 @@ export async function deferCapacityJob(db: any, job: { id: string; org_id: strin
   return true
 }
 
-/** Commit the pre-provider boundary without transitionJob's permissive fallback. */
+/** Commit ownership, preparation and audit as one database transaction. */
 export async function claimCapacityPreparation(db: any, job: { id: string; org_id: string }, accountId: string, attemptId: string): Promise<boolean> {
-  const { data, error } = await db.from('ai_media_jobs').update({
-    state: 'PREPARING_ENV', updated_at: new Date().toISOString(),
-  }).eq('id', job.id).eq('org_id', job.org_id).eq('state', 'LEASED')
-    .eq('lease_account_id', accountId).select('id')
-  if (error) throw new Error(`CAPACITY_PREPARATION_DB_ERROR: ${error.message}`)
-  if (!data?.some((row: any) => row.id === job.id)) return false
-  await db.from('ai_media_events').insert({ job_id: job.id, org_id: job.org_id,
-    event_type: 'STATE_TRANSITION', from_state: 'LEASED', to_state: 'PREPARING_ENV', attempt_id: attemptId,
-    message: 'Üretim kapasitesi ve iş sahipliği doğrulandı; sağlayıcı hazırlığı başlıyor.',
-    payload: { provider_submitted: false },
+  const { data, error } = await db.rpc('studio_prepare_job', {
+    p_job_id: job.id, p_org_id: job.org_id, p_account_id: accountId, p_attempt_id: attemptId,
   })
-  return true
+  if (error) throw new Error(`CAPACITY_PREPARATION_DB_ERROR: ${error.message}`)
+  return data === true
 }

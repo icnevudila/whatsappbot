@@ -1,3 +1,4 @@
+import { executeWithProgress } from './provider-progress.js'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { createHash } from 'node:crypto'
@@ -93,12 +94,12 @@ export class RealHttpGFlowProvider implements IGFlowProvider {
       const timeout = setTimeout(() => controller.abort(), 360000) // 6 min timeout for video generation
 
       try {
-        const resp = await fetch(endpoint, {
+        const resp = await executeWithProgress(() => fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
           signal: controller.signal,
-        })
+        }), `${this.baseUrl}/v1/jobs/${encodeURIComponent(req.job_id)}/attempts/${encodeURIComponent(req.attempt_id)}/progress?org_id=${encodeURIComponent(req.org_id)}`, req, req.onProgress)
         clearTimeout(timeout)
 
         if (!resp.ok) {

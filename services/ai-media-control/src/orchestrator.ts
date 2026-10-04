@@ -211,7 +211,7 @@ async function processQueuedJobs() {
         JobState.LEASED, JobState.PREPARING_ENV, JobState.OPENING_PROJECT,
         JobState.ATTACHING_INGREDIENTS, JobState.INGREDIENTS_VERIFIED,
         JobState.GENERATING, JobState.POLLING_FLOW, JobState.DOWNLOADING_MEDIA,
-        JobState.MEDIA_DOWNLOADED, JobState.FFPROBE_INSPECTING,
+        JobState.MEDIA_DOWNLOADED, JobState.MEDIA_PROCESSING, JobState.QUALITY_CHECK, JobState.FFPROBE_INSPECTING,
         JobState.SHA256_VERIFYING, JobState.VISUAL_QA_EVALUATING,
       ])
       .limit(1)

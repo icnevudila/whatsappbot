@@ -33,11 +33,15 @@ function assertSimpleProviderContract(request: VideoGenerationRequest): void {
     throw new ProviderRoutingError('INVALID_JOB', `SIMPLE_V5_HYBRID requires 9:16, received ${request.aspectRatio}`)
   }
   const exactDialogue = `Approved dialogue: "${request.approvedDialogue}"`
-  if (!request.approvedDialogue?.trim()) {
-    throw new ProviderRoutingError('INVALID_JOB', 'Provider prompt requires locked approved dialogue')
+  const englishWords = request.approvedDialogue?.toLowerCase().match(/\b(?:your|with|the|best|make|our|for|built|excellence)\b/g) || []
+  if (englishWords.length >= 3 || /(?:^|\n)\s*translate\s+(?:it\s+)?(?:to|into)\s+english/i.test(request.prompt)) {
+    throw new ProviderRoutingError('TURKISH_VOICEOVER_REQUIRED', 'English narration or a translation instruction conflicts with the Turkish speech contract')
+  }
+  if (!request.approvedDialogue?.trim() || /^(?:todo|placeholder|\[?turkish voiceover\]?)$/i.test(request.approvedDialogue.trim())) {
+    throw new ProviderRoutingError('VOICEOVER_REQUIRED', 'Provider prompt requires locked approved dialogue')
   }
   if (!request.prompt.includes(exactDialogue) && !request.prompt.includes(request.approvedDialogue)) {
-    throw new ProviderRoutingError('INVALID_JOB', 'Provider prompt does not contain the exact locked approved dialogue')
+    throw new ProviderRoutingError('TURKISH_VOICEOVER_REQUIRED', 'Provider prompt does not contain the exact locked approved dialogue')
   }
 }
 
@@ -83,10 +87,13 @@ export function buildFlowVeoProviderPayload(request: VideoGenerationRequest) {
     flow_project_id: `flow_proj_${request.jobId}_${request.attemptId}`,
     prompt: request.prompt,
     approved_dialogue: request.approvedDialogue,
+    voiceover_language: 'tr-TR',
+    voiceover_text: request.approvedDialogue,
     aspect_ratio: request.aspectRatio,
     model: ((request as any).model && (request as any).model !== 'veo-fast' && (request as any).model !== 'omni-lite') ? (request as any).model : 'veo-lite',
     duration: request.durationSeconds,
     assets: request.assets,
+    onProgress: request.onProgress,
     expected_reference_ids: request.assets.map(asset => asset.asset_id),
     production_plan: (request as any).productionPlan || null,
   }
@@ -177,7 +184,8 @@ export class OmniStudioGeminiNativeVideoProvider implements VideoProvider {
     private readonly gatewayUrl = process.env.OMNISTUDIO_GATEWAY_URL || 'http://host.docker.internal:3456'
   ) {}
 
-  async checkCapability(): Promise<VideoCapabilityReport> {
+  async checkCapability(request?: VideoGenerationRequest): Promise<VideoCapabilityReport> {
+    if (request?.onProgress) return { state: 'FEATURE_UNAVAILABLE', evidence: 'This gateway does not provide physical-reference stage evidence required by this production job.' }
     let response: Response
     try {
       response = await fetch(`${this.gatewayUrl.replace(/\/$/, '')}/v1/videos/capability`, {
