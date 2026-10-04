@@ -36,16 +36,40 @@ export type PromptFidelityOptions = {
     base?: boolean
   }
   artDirectionPlan?: import('./director/creative-director').ArtDirectionPlan | null
+  mode?: 'LEGACY_SIMPLE' | 'OVER_DIRECTED_DESIGNER'
 }
 
 export function describeColor(colorStr: string): string {
   if (!colorStr) return ''
   if (!colorStr.includes('#')) return colorStr
 
+  const exactMap: Record<string, string> = {
+    '008069': 'official deep emerald WhatsApp green',
+    '25d366': 'vibrant bright WhatsApp green',
+    '00a884': 'luminous teal emerald',
+    '026009': 'deep agricultural forest green',
+    '2d5a27': 'deep olive / hunter green',
+    'b4fe00': 'electric chartreuse / lime accent',
+    '8fbc8f': 'soft sage green',
+    'a82218': 'deep brick terracotta / warm architectural rust',
+    'b7410e': 'warm terracotta rust',
+    'd32f2f': 'vivid architectural crimson red',
+    '263238': 'dark graphite slate / architectural charcoal',
+    '212121': 'dark architectural charcoal black',
+    '111b21': 'deep midnight teal-slate',
+    '0b141a': 'deep obsidian night slate',
+    'ffffff': 'clean crisp white',
+    '111111': 'deep rich black',
+    '121212': 'deep architectural black',
+  }
+
   return colorStr.replace(/#([0-9a-fA-F]{3,8})\b/g, (_match, hex) => {
     let h = hex.toLowerCase()
     if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]
-    const num = parseInt(h.slice(0, 6), 16)
+    const short6 = h.slice(0, 6)
+    if (exactMap[short6]) return exactMap[short6]
+
+    const num = parseInt(short6, 16)
     if (isNaN(num)) return ''
     const r = (num >> 16) & 255
     const g = (num >> 8) & 255
@@ -83,9 +107,123 @@ export function describeColor(colorStr: string): string {
 }
 
 /**
- * Structured brief → image-model prompt. UI içinde prompt birleştirilmez.
+ * P0 LEGACY_SIMPLE PROMPT PHILOSOPHY:
+ *
+ * Simple user intent + verified product + verified logo + brand kit context + concise creative request.
+ * Lets ChatGPT / OmniStudio perform the actual art direction naturally without micromanaging
+ * zones, coordinates, percentages, badges, or predefined template grids.
  */
-export function buildCreativePrompt(
+export function buildLegacySimpleCreativePrompt(
+  snapshot: CreativeSnapshot,
+  options?: PromptFidelityOptions,
+): {
+  prompt: string
+  negative: string
+} {
+  const aspect =
+    snapshot.formatId === 'reels_video'
+      ? '9:16'
+      : CREATIVE_FORMATS.find((row) => row.id === snapshot.formatId)?.aspect ?? snapshot.aspect
+  const kit = snapshot.brandKit
+  const cleanBrandName = kit?.name
+    ? kit.name.replace(/(?:brand\s*kit|marka\s*kiti|kampanya\s*kiti|whatsapp\s*kampanya\s*kiti)/gi, '').trim()
+    : null
+
+  const colors = kit?.colors
+    ? Object.entries(kit.colors)
+        .filter(([, value]) => typeof value === 'string' && value)
+        .map(([key, value]) => `${key} ${describeColor(String(value))}`)
+        .join(', ')
+    : null
+
+  const productBlocks = snapshot.products.map((product, index) => {
+    const bits: string[] = [`Product ${index + 1}`]
+    if (product.include?.name !== false && product.name) bits.push(`name: ${product.name}`)
+    if (product.include?.description !== false && product.description) bits.push(`description: ${product.description}`)
+    if (product.include?.boxContents && product.boxContents) {
+      bits.push(`box contents: ${product.boxContents}`)
+    }
+    if (product.include?.price && (product.price || product.oldPrice)) {
+      bits.push(
+        `price: ${product.price || '—'} ${product.oldPrice ? `(was ${product.oldPrice})` : ''}`.trim(),
+      )
+    }
+    if (product.include?.promo && product.promo) bits.push(`offer: ${product.promo}`)
+    if (product.extra) bits.push(`extra: ${product.extra}`)
+    return bits.join('. ')
+  })
+
+  const contacts: string[] = []
+  for (const phone of snapshot.phones || []) {
+    contacts.push(`Phone/WhatsApp: ${phone.phone}${phone.label ? ` (${phone.label})` : ''}`)
+  }
+  for (const social of snapshot.socials || []) {
+    const handle = social.label || social.url
+    contacts.push(`${social.platform}: ${handle}`)
+  }
+  if (snapshot.website) contacts.push(`Website: ${snapshot.website}`)
+  if (snapshot.address) contacts.push(`Address: ${snapshot.address}`)
+
+  const extras: string[] = []
+  if (snapshot.labels && snapshot.labels.length) extras.push(`Badges/labels to feature: ${snapshot.labels.join(', ')}`)
+  if (snapshot.cta) extras.push(`CTA: ${snapshot.cta}`)
+  if (snapshot.dateRange) extras.push(`Campaign dates: ${snapshot.dateRange}`)
+  if (snapshot.customText) extras.push(`Custom line: ${snapshot.customText}`)
+
+  const variation = snapshot.variationPreset
+    ? VARIATION_PRESETS.find((row) => row.id === snapshot.variationPreset)?.label
+    : null
+
+  const referenceInstruction =
+    'Authentic product and company logo references are attached. Use the real product and logo faithfully. Do not redesign, replace or invent either.'
+
+  const prompt = [
+    'Create ONE professional commercial campaign creative for WhatsApp / social ads.',
+    'Turkish audience. High quality, sharp, mobile-first, no watermarks, no stock-photo logos.',
+    `Use case: ${formatLabel(snapshot.formatId)} (${aspect}).`,
+    `Visual style: ${styleLabel(snapshot.style)}. ${STYLE_HINT[snapshot.style] ?? STYLE_HINT.auto}`,
+    DENSITY_HINT[snapshot.textDensity] ?? DENSITY_HINT.balanced,
+    cleanBrandName ? `Brand name: ${cleanBrandName}.` : null,
+    kit?.tone ? `Brand tone of voice: ${kit.tone}` : null,
+    colors ? `Follow this brand palette in backgrounds, accents and props: ${colors}.` : null,
+    kit?.fonts?.heading ? `Prefer a ${kit.fonts.heading}-like heading feel.` : null,
+    cleanBrandName
+      ? `Include brand name "${cleanBrandName}" cleanly. Do not distort it.`
+      : 'Do not invent fake logos.',
+    referenceInstruction,
+    snapshot.baseCreativeId
+      ? 'A base/reference campaign image is attached. Keep the same product and brand identity; apply the requested change.'
+      : null,
+    snapshot.instruction ? `Revision instruction (must follow): ${snapshot.instruction}` : null,
+    variation ? `Variation direction: ${variation}. Same offer, different composition.` : null,
+    `Campaign brief from the advertiser (do not add facts they did not give): ${snapshot.brief}`,
+    productBlocks.length ? `Products:\n${productBlocks.join('\n')}` : 'No specific product catalog items.',
+    contacts.length
+      ? `Contact lines that may appear on the creative if text is used: ${contacts.join(' · ')}`
+      : null,
+    extras.length ? extras.join(' ') : null,
+    'Do not invent prices, discounts, slogans, dates, product names or brand claims that are not in this brief.',
+    'Do not replace products with different products. Preserve packaging and product shape from reference photos.',
+    'Clean visual hierarchy. One focal offer. Not cluttered. Readable on a phone screen.',
+  ]
+    .filter(Boolean)
+    .join('\n')
+
+  const negative = [
+    'no extra products that were not listed',
+    'no fake logos',
+    'no unreadable micro-text',
+    'no watermarks',
+    'no misspelled brand names',
+  ].join(', ')
+
+  return { prompt, negative }
+}
+
+/**
+ * Preserved Over-Directed Prompt Builder (Kept behind code boundaries for A/B testing and recovery).
+ */
+export function buildOverDirectedCreativePrompt(
   snapshot: CreativeSnapshot,
   options?: PromptFidelityOptions,
 ): {
@@ -146,8 +284,6 @@ export function buildCreativePrompt(
     .replace(/(?:brand\s*kit|marka\s*kiti|kampanya\s*kiti|whatsapp\s*kampanya\s*kiti)/gi, '')
     .trim()
 
-  const mainProduct = snapshot.products[0]
-  const productName = mainProduct?.name || ''
   const briefText = snapshot.brief?.trim() || ''
 
   const variation = snapshot.variationPreset
@@ -158,6 +294,34 @@ export function buildCreativePrompt(
   const compositionDirectives = options?.artDirectionPlan
     ? [
         'EXECUTIVE ART DIRECTION & DESIGNER DIRECTIVES:',
+        'COMMERCIAL CAMPAIGN POSTER ARCHITECTURE (4-ZONE READING FLOW):',
+        '- ZONE 1 (HEADER & BRAND AUTHORITY): Top-aligned brand header featuring the authentic corporate logo with generous breathing room and pristine background contrast.',
+        '- ZONE 2 (HERO PRODUCT/MATERIAL/INTERFACE STAGING): The hero subject is the undisputed commercial anchor occupying 45-55% visual share. True-to-life physical materials, crisp ambient occlusion contact shadows, and realistic lighting. Contextual scene elements remain strictly supportive in the background.',
+        '- ZONE 3 (COMMERCIAL TYPOGRAPHY & VALUE STACK): Prominent, ultra-bold commercial Turkish headline in brand font personality. Core offer/pricing displayed in a modern rounded capsule/pill badge in brand accent color.',
+        '- ZONE 4 (CONVERSION CALL-TO-ACTION): Sleek, high-clickability CTA pill button in brand accent color with clean text and directional arrow glyph (e.g. "Hemen Sipariş Ver →", "Kataloğu İndir →", "Ücretsiz Başla →").',
+        options.artDirectionPlan.brand_dna
+          ? [
+              `- AUTHORITATIVE BRAND DNA MANDATES (SUPERCEDES ARCHETYPE DEFAULTS):`,
+              `  * Brand Identity: ${options.artDirectionPlan.brand_dna.brand_name} (Authentic Tone: ${options.artDirectionPlan.brand_dna.tone}).`,
+              `  * Palette Authority: ${options.artDirectionPlan.brand_dna.palette.naturalLanguageDescription}. All background treatment, lighting accents, UI highlights, and CTA button MUST strictly derive from this brand palette. Archetype colors must NEVER override the brand palette.`,
+              `  * Typography Authority: ${options.artDirectionPlan.brand_dna.typography.personality}`,
+              `  * Visual Restraint & Tone: ${options.artDirectionPlan.brand_dna.visual_personality}`,
+              `  * Background Integration: ${options.artDirectionPlan.brand_dna.background_preference}`,
+              `  * Accent & CTA Discipline: ${options.artDirectionPlan.brand_dna.accent_usage}`,
+              `  * Logo Rule: ${options.artDirectionPlan.brand_dna.logo_rules.placement}. 100% geometric and color fidelity. Never redraw or morph.`,
+            ].join('\n')
+          : null,
+        options.artDirectionPlan.commercial_grammar
+          ? [
+              `- COMMERCIAL POSTER GRAMMAR (${options.artDirectionPlan.commercial_grammar.id}):`,
+              `  * Layout Reading Path: ${options.artDirectionPlan.commercial_grammar.layoutHierarchy.spatialReadingPath}`,
+              `  * Hero Staging Area: ${options.artDirectionPlan.commercial_grammar.layoutHierarchy.heroProductArea}`,
+              `  * Headline & Offer Hierarchy: ${options.artDirectionPlan.commercial_grammar.layoutHierarchy.headlineScaleAndPosition} | ${options.artDirectionPlan.commercial_grammar.layoutHierarchy.offerBlockStructure}`,
+              `  * Action CTA Placement: ${options.artDirectionPlan.commercial_grammar.layoutHierarchy.ctaPlacement}`,
+              `  * Priority Rule: COMMERCIAL_GRAMMAR controls layout hierarchy only. BRAND_KIT controls visual identity and ALWAYS has higher priority than layout grammar.`,
+              ...options.artDirectionPlan.commercial_grammar.compositionDirectives.map((d) => `  * ${d}`),
+            ].join('\n')
+          : null,
         `- CONCEPT & ARCHETYPE: ${options.artDirectionPlan.concept_name} (Archetype: ${options.artDirectionPlan.creative_archetype}).`,
         `- VISUAL HOOK: ${options.artDirectionPlan.visual_hook}.`,
         `- COMPOSITION & GRID: ${options.artDirectionPlan.composition.grid}. Focal point: ${options.artDirectionPlan.composition.focal_point}. Product scale: ${options.artDirectionPlan.composition.product_scale}, positioned at ${options.artDirectionPlan.composition.product_position}.`,
@@ -218,6 +382,7 @@ export function buildCreativePrompt(
       ? `Contact lines that may appear on the creative if text is used: ${contacts.join(' · ')}`
       : null,
     extras.length ? extras.join(' ') : null,
+    'CLAIM VERIFICATION & BADGE RESTRICTION: Absolutely DO NOT invent or paint unverified trust badges, warranty seals, leader claims, or reseller stamps (e.g. "Orijinal Ürün", "Yetkili Satıcı", "50 Yıl Garanti", "Lider Marka", "100% Güvenli", or arbitrary discount badges) unless that exact text appears in the verified Badges/Labels list above. If no badges are explicitly listed, do not invent any.',
     'Do not invent prices, discounts, slogans, dates, product names or brand claims that are not in this brief.',
     'Do not replace products with different products. Preserve packaging and product shape from reference photos with 100% fidelity.',
     'Clean visual hierarchy. One focal offer. Not cluttered. Readable on a phone screen.',
@@ -252,10 +417,46 @@ export function buildCreativePrompt(
     'no text saying marka kiti',
     'no text saying brand kit',
     'no campaign kit title overlays',
+    'no invented trust badges',
+    'no unverified warranty claims',
+    'no fake certification stamps',
+    'no invented reseller badges',
+    'no fake Orijinal Ürün',
+    'no fake Yetkili Satıcı',
+    'no fake Garanti stamps',
+    'no arbitrary discounts',
+    'no arbitrary claims',
+    'no generic template layout',
+    'no stock clipart graphics',
+    'no random floating geometric shapes or 3D spheres',
+    'no tacky gradient banners',
+    'no distorted Turkish typography',
+    'no muddy vignette corners',
+    ...(options?.artDirectionPlan?.commercial_grammar?.negativeLayoutRules || []),
     ...(options?.artDirectionPlan?.anti_generic_rules || []),
   ].join(', ')
 
   return { prompt, negative }
+}
+
+/**
+ * Structured brief → image-model prompt.
+ *
+ * P0 POLICY: By default, uses the clean LEGACY_SIMPLE prompt structure.
+ * Only if options?.mode === 'OVER_DIRECTED_DESIGNER' is explicitly passed will it inject
+ * the verbose composition directives.
+ */
+export function buildCreativePrompt(
+  snapshot: CreativeSnapshot,
+  options?: PromptFidelityOptions,
+): {
+  prompt: string
+  negative: string
+} {
+  if (options?.mode === 'OVER_DIRECTED_DESIGNER') {
+    return buildOverDirectedCreativePrompt(snapshot, options)
+  }
+  return buildLegacySimpleCreativePrompt(snapshot, options)
 }
 
 const VIDEO_STYLE_MOODS: Record<string, string> = {

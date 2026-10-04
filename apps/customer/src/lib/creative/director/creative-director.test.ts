@@ -9,6 +9,7 @@ import {
   selectFreshArchetype,
 } from './creative-memory'
 import { generateArtDirectionPlan } from './creative-director'
+import { COMMERCIAL_POSTER_GRAMMARS, inferCommercialGrammar } from './commercial-poster-grammar'
 import { buildDesignerGraphicSvg } from './designer-graphic-layer'
 import {
   evaluateImageAdvisory,
@@ -18,9 +19,9 @@ import {
 import { buildCreativePrompt } from '../prompt'
 import type { CreativeSnapshot } from '../types'
 
-test('1. Creative Archetypes Library contains exactly 20 curated commercial archetypes with real grammar', () => {
+test('1. Creative Archetypes Library contains exactly 23 curated commercial archetypes with real grammar', () => {
   const ids = listArchetypeIds()
-  assert.equal(ids.length, 20)
+  assert.equal(ids.length, 23)
 
   const mandatoryArchetypes = [
     'EDITORIAL_LUXURY',
@@ -43,6 +44,9 @@ test('1. Creative Archetypes Library contains exactly 20 curated commercial arch
     'MAXIMALIST_PROMO',
     'CLEAN_CORPORATE',
     'SOCIAL_FIRST_BOLD',
+    'PRODUCT_COMMERCE_HERO',
+    'HYBRID_PRODUCT_USAGE',
+    'MATERIAL_COMMERCE_HERO',
   ]
 
   for (const id of mandatoryArchetypes) {
@@ -147,6 +151,9 @@ test('4. Art Direction Plan contains full designer-grade specifications and reje
   assert.ok(plan.typography_direction.headline_character)
   assert.ok(plan.product_direction.do_not_modify.length > 0)
   assert.ok(plan.anti_generic_rules.length >= 5)
+  assert.ok(plan.brand_dna)
+  assert.ok(plan.brand_dna.palette.naturalLanguageDescription)
+  assert.ok(plan.brand_dna.typography.personality)
 
   // Must reject centered product + blank background cliché
   const rulesText = plan.anti_generic_rules.join(' ')
@@ -157,6 +164,9 @@ test('5. Prompt Enhancer enriches buildCreativePrompt while preserving 100% of w
   const plan = await generateArtDirectionPlan({
     orgId: 'org-ayvaz-test',
     brandName: 'Ayvazoğlu İnşaat',
+    brandTone: 'Mimari prestij, kurumsal ciddiyet',
+    brandColors: { primary: '#A82218', accent: '#263238' },
+    brandFonts: { heading: 'Outfit' },
     productName: 'Dekoratif Cephe Tuğlası',
     objective: 'BRAND_AWARENESS',
     stylePreset: 'PREMIUM',
@@ -205,10 +215,14 @@ test('5. Prompt Enhancer enriches buildCreativePrompt while preserving 100% of w
   const promptResult = buildCreativePrompt(snapshot, {
     verifiedRefs: { logo: true, product: true },
     artDirectionPlan: plan,
+    mode: 'OVER_DIRECTED_DESIGNER',
   })
 
-  // 1. Art-directed directives are injected
+  // 1. Art-directed directives and Authoritative Brand DNA are injected
   assert.match(promptResult.prompt, /EXECUTIVE ART DIRECTION & DESIGNER DIRECTIVES/i)
+  assert.match(promptResult.prompt, /AUTHORITATIVE BRAND DNA MANDATES/i)
+  assert.match(promptResult.prompt, /CLAIM VERIFICATION & BADGE RESTRICTION/i)
+  assert.match(promptResult.negative, /no invented trust badges/i)
   assert.match(promptResult.prompt, new RegExp(plan.creative_archetype, 'i'))
 
   // 2. Working fields are completely preserved
@@ -303,3 +317,221 @@ test('8. Lightweight visual advisory evaluator benchmarks sharpness and contrast
   assert.ok(duration < 1500, `Evaluator must be lightweight and fast (<1500ms), took ${duration}ms`)
   assert.ok(PREFERENCE_RANKING_RESEARCH.evaluatedModels.length >= 3)
 })
+
+test('9. Commercial Poster Grammar V1 contains all 6 layout grammars with generic auto-routing', () => {
+  const grammarKeys = Object.keys(COMMERCIAL_POSTER_GRAMMARS)
+  assert.equal(grammarKeys.length, 6)
+  assert.ok(COMMERCIAL_POSTER_GRAMMARS.PRODUCT_SALES_POSTER)
+  assert.ok(COMMERCIAL_POSTER_GRAMMARS.PREMIUM_PRODUCT_HERO)
+  assert.ok(COMMERCIAL_POSTER_GRAMMARS.RETAIL_BROCHURE)
+  assert.ok(COMMERCIAL_POSTER_GRAMMARS.MATERIAL_COMMERCE)
+  assert.ok(COMMERCIAL_POSTER_GRAMMARS.DIGITAL_PRODUCT_HERO)
+  assert.ok(COMMERCIAL_POSTER_GRAMMARS.FOOD_COMMERCE)
+
+  // Generic Auto-Routing without any hardcoded company names:
+  // 1. Food:
+  const foodGrammar = inferCommercialGrammar({
+    productName: 'Hatay Usulü Tavuk Dürüm',
+    productDescription: 'Özel soslu lavaş dürüm ve ayran',
+  })
+  assert.equal(foodGrammar.id, 'FOOD_COMMERCE')
+
+  // 2. Building Material:
+  const matGrammar = inferCommercialGrammar({
+    productName: 'Klinker Cephe Tuğlası',
+    productDescription: 'Yüksek mukavemetli dış cephe tuğlası',
+  })
+  assert.equal(matGrammar.id, 'MATERIAL_COMMERCE')
+
+  // 3. SaaS / Digital Interface:
+  const saasGrammar = inferCommercialGrammar({
+    productName: 'Bulut WhatsApp API ve Panel',
+    productDescription: 'Müşteri temsilcisi çalışma alanı ve otomasyon',
+  })
+  assert.equal(saasGrammar.id, 'DIGITAL_PRODUCT_HERO')
+
+  // 4. Physical Equipment:
+  const equipGrammar = inferCommercialGrammar({
+    productName: 'Akülü İlaçlama Pompası 16L',
+    productDescription: 'Yüksek basınçlı bahçe ve tarla ilaçlama makinesi',
+  })
+  assert.equal(equipGrammar.id, 'PRODUCT_SALES_POSTER')
+
+  // 5. Retail / High-Promo:
+  const retailGrammar = inferCommercialGrammar({
+    productName: 'Toptan İndirim Sepeti',
+    stylePreset: 'DYNAMIC_OFFER',
+  })
+  assert.equal(retailGrammar.id, 'RETAIL_BROCHURE')
+
+  // 6. Premium Goods:
+  const luxuryGrammar = inferCommercialGrammar({
+    productName: 'El Yapımı Masif Ceviz Yemek Masası',
+    stylePreset: 'PREMIUM',
+  })
+  assert.equal(luxuryGrammar.id, 'PREMIUM_PRODUCT_HERO')
+})
+
+test('10. Commercial Grammar controls layout hierarchy while Brand Kit strictly controls visual identity', async () => {
+  const plan = await generateArtDirectionPlan({
+    orgId: 'org-food-test',
+    brandName: 'Usta Döner',
+    brandTone: 'Samimi lezzet, hızlı servis, doyurucu menü',
+    brandColors: {
+      primary: '#DC2626',
+      accent: '#F59E0B',
+      background: '#1C1917',
+      text: '#FEF3C7',
+    },
+    brandFonts: { heading: 'Montserrat', body: 'Inter' },
+    productName: 'Hatay Usulü Tavuk Dürüm',
+    productDescription: '2 Dürüm + Ayran özel menü',
+    objective: 'SALES_OFFER',
+  })
+
+  assert.ok(plan.commercial_grammar)
+  assert.equal(plan.commercial_grammar.id, 'FOOD_COMMERCE')
+
+  const snapshot: CreativeSnapshot = {
+    brief: 'Doyurucu Hatay Usulü Dürüm Fırsatı',
+    style: 'dynamic_offer',
+    formatId: 'wa',
+    aspect: '1:1',
+    textDensity: 'balanced',
+    useLogo: true,
+    labels: [],
+    cta: 'Sipariş Ver',
+    address: null,
+    website: 'www.ustadoner.com',
+    dateRange: 'Bugüne Özel',
+    customText: null,
+    phones: [{ id: 'p1', label: 'Sipariş', phone: '+90 212 000 0000' }],
+    socials: [],
+    brandKit: {
+      id: 'kit-döner',
+      name: 'Usta Döner',
+      tone: 'Samimi lezzet, hızlı servis',
+      colors: { primary: '#DC2626', accent: '#F59E0B', background: '#1C1917', text: '#FEF3C7' },
+      fonts: { heading: 'Montserrat' },
+      logoPath: null,
+    },
+    products: [
+      {
+        id: 'p-1',
+        name: 'Hatay Usulü Tavuk Dürüm',
+        description: 'Özel sarımsaklı mayonez ve soslu dürüm',
+        boxContents: null,
+        imageUrl: null,
+        price: '320 TL',
+        oldPrice: '400 TL',
+        promo: '2 Dürüm + Ayran Kampanyası',
+        extra: null,
+        include: { name: true, description: true, price: true, promo: true, image: false, boxContents: false },
+      },
+    ],
+    baseCreativeId: null,
+  }
+
+  const promptResult = buildCreativePrompt(snapshot, {
+    artDirectionPlan: plan,
+    mode: 'OVER_DIRECTED_DESIGNER',
+  })
+
+  // 1. Commercial Grammar injected
+  assert.match(promptResult.prompt, /COMMERCIAL POSTER GRAMMAR \(FOOD_COMMERCE\)/i)
+  assert.match(promptResult.prompt, /Layout Reading Path/i)
+  assert.match(promptResult.prompt, /Hero Staging Area/i)
+
+  // 2. Brand Kit has higher priority for visual identity
+  assert.match(promptResult.prompt, /AUTHORITATIVE BRAND DNA MANDATES/i)
+  assert.match(promptResult.prompt, /Primary=rich crimson \/ red/i)
+  assert.match(promptResult.prompt, /Accent=warm amber gold/i)
+
+  // 3. Exact verified claims only, zero unverified trust badges
+  assert.match(promptResult.prompt, /320 TL/i)
+  assert.match(promptResult.prompt, /2 Dürüm \+ Ayran Kampanyası/i)
+  assert.match(promptResult.prompt, /CLAIM VERIFICATION & BADGE RESTRICTION/i)
+  assert.match(promptResult.negative, /no invented trust badges/i)
+  assert.match(promptResult.negative, /no chef or human model dominating the creative instead of the food/i)
+})
+
+test('11. Legacy Simple prompt philosophy produces clean, short, factual prompt without micromanaging composition', () => {
+  const snapshot: CreativeSnapshot = {
+    brief: 'Bahçenizde yüksek verim için profesyonel ilaçlama çözümü',
+    style: 'product_hero',
+    formatId: 'wa',
+    aspect: '1:1',
+    textDensity: 'balanced',
+    useLogo: true,
+    labels: [],
+    cta: 'Hemen Sipariş Ver',
+    address: null,
+    website: 'www.bofetarim.com',
+    dateRange: 'Ekim 2026',
+    customText: null,
+    phones: [{ id: 'p1', label: 'WhatsApp', phone: '+90 850 000 0000' }],
+    socials: [],
+    brandKit: {
+      id: 'kit-bofe',
+      name: 'Bofe Tarım',
+      tone: 'Güvenilir, kurumsal, tarımsal uzman',
+      colors: {
+        primary: '#026009',
+        accent: '#B4FE00',
+        secondary: '#1E3F1A',
+        background: '#026009',
+        text: '#FFFFFF',
+      },
+      fonts: { heading: 'Outfit' },
+      logoPath: 'logos/bofe.png',
+    },
+    products: [
+      {
+        id: 'p-1',
+        name: '16L Akülü Sırt Tipi İlaçlama Pompası',
+        description: 'Geniş meyve bahçeleri, zeytinlikler ve seralar için 8 bar yüksek basınçlı akülü ilaçlama makinesi',
+        boxContents: null,
+        imageUrl: 'https://example.com/bofe.jpg',
+        price: '1.450 TL',
+        oldPrice: '1.850 TL',
+        promo: 'Lansmana Özel %22 İndirim',
+        extra: null,
+        include: { name: true, description: true, price: true, promo: true, image: true, boxContents: false },
+      },
+    ],
+    baseCreativeId: null,
+  }
+
+  // By default, buildCreativePrompt uses LEGACY_SIMPLE prompt philosophy
+  const promptResult = buildCreativePrompt(snapshot, {
+    verifiedRefs: { logo: true, product: true },
+  })
+
+  // 1. Core factual context present
+  assert.match(promptResult.prompt, /Campaign brief from the advertiser.*Bahçenizde yüksek verim için profesyonel ilaçlama çözümü/i)
+  assert.match(promptResult.prompt, /Brand name: Bofe Tarım/i)
+  assert.match(promptResult.prompt, /Brand tone of voice: Güvenilir, kurumsal, tarımsal uzman/i)
+  assert.match(promptResult.prompt, /deep agricultural forest green/i)
+  assert.match(promptResult.prompt, /electric chartreuse \/ lime accent/i)
+  assert.match(promptResult.prompt, /Prefer a Outfit-like heading feel/i)
+  assert.match(promptResult.prompt, /16L Akülü Sırt Tipi İlaçlama Pompası/i)
+  assert.match(promptResult.prompt, /1.450 TL/i)
+  assert.match(promptResult.prompt, /\(was 1.850 TL\)/i)
+  assert.match(promptResult.prompt, /offer: Lansmana Özel %22 İndirim/i)
+  assert.match(promptResult.prompt, /CTA: Hemen Sipariş Ver/i)
+
+  // 2. Attached reference instruction present
+  assert.match(promptResult.prompt, /Authentic product and company logo references are attached/i)
+
+  // 3. Factual safety and absence of invented facts
+  assert.match(promptResult.prompt, /Do not invent prices, discounts, slogans, dates, product names or brand claims/i)
+
+  // 4. Over-directing micromanagement is strictly absent
+  assert.doesNotMatch(promptResult.prompt, /COMMERCIAL CAMPAIGN POSTER ARCHITECTURE/i)
+  assert.doesNotMatch(promptResult.prompt, /ZONE 1/i)
+  assert.doesNotMatch(promptResult.prompt, /ZONE 2/i)
+  assert.doesNotMatch(promptResult.prompt, /hero subject is the undisputed commercial anchor occupying 45-55%/i)
+  assert.doesNotMatch(promptResult.prompt, /AUTONOMOUS COMMERCIAL AD POSTER/i)
+  assert.doesNotMatch(promptResult.prompt, /BOTTOM VALUE STRIP/i)
+})
+

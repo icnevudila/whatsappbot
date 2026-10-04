@@ -25,7 +25,18 @@ interface BrandTestSpec {
   stylePreset: string
   formatId: string
   aspect: '1:1' | '4:5' | '9:16'
-  brandColors: { primary: string; accent: string }
+  brandColors: {
+    primary: string
+    accent: string
+    secondary?: string
+    background?: string
+    text?: string
+  }
+  brandFonts: {
+    heading: string
+    body: string
+  }
+  brandTone: string
   brief: string
   logoPath: string
   productImageUrl: string
@@ -45,7 +56,15 @@ const BRANDS: BrandTestSpec[] = [
     stylePreset: 'PRODUCT_HERO',
     formatId: 'wa',
     aspect: '1:1',
-    brandColors: { primary: '#2D5A27', accent: '#8FBC8F' },
+    brandColors: {
+      primary: '#026009',
+      accent: '#B4FE00',
+      secondary: '#1E3F1A',
+      background: '#026009',
+      text: '#FFFFFF',
+    },
+    brandFonts: { heading: 'Outfit', body: 'Inter' },
+    brandTone: 'Güvenilir, kurumsal, tarımsal uzman',
     brief: 'Bahçenizde yüksek verim için profesyonel ilaçlama çözümü',
     logoPath: 'logos/bofe-tarim-logo.png',
     productImageUrl: 'https://storage.mesajify.com/products/bofe-pompa.jpg',
@@ -54,7 +73,7 @@ const BRANDS: BrandTestSpec[] = [
     brandName: 'Ayvazoğlu İnşaat',
     orgId: 'org-ayvaz-prod',
     productName: 'Klinker Dış Cephe Kaplama Tuğlası',
-    productDescription: 'Yüksek fırınlanmış doğal klinker mimari cephe tuğlası. Dona, neme ve UV ışınlarına karşı 50 yıl garantili dayanıklılık.',
+    productDescription: 'Yüksek fırınlanmış doğal klinker mimari cephe tuğlası. Dona, neme ve UV ışınlarına karşı dayanıklı.',
     price: '480 TL/m²',
     oldPrice: '560 TL/m²',
     promo: 'Proje Bazlı Toptan İndirim',
@@ -63,7 +82,15 @@ const BRANDS: BrandTestSpec[] = [
     stylePreset: 'PREMIUM',
     formatId: 'feed',
     aspect: '4:5',
-    brandColors: { primary: '#B7410E', accent: '#263238' },
+    brandColors: {
+      primary: '#A82218',
+      accent: '#D32F2F',
+      secondary: '#263238',
+      background: '#121212',
+      text: '#FFFFFF',
+    },
+    brandFonts: { heading: 'Modern Grotesque', body: 'Inter' },
+    brandTone: 'Mimari prestij, kurumsal ciddiyet, mühendislik kalitesi',
     brief: 'Modern mimaride sağlamlık ve zamansız klinker estetiği',
     logoPath: 'logos/ayvazoglu-logo.png',
     productImageUrl: 'https://storage.mesajify.com/products/ayvaz-tugla.jpg',
@@ -81,7 +108,15 @@ const BRANDS: BrandTestSpec[] = [
     stylePreset: 'DYNAMIC_OFFER',
     formatId: 'story',
     aspect: '9:16',
-    brandColors: { primary: '#008069', accent: '#00a884' },
+    brandColors: {
+      primary: '#008069',
+      accent: '#25D366',
+      secondary: '#0B141A',
+      background: '#111B21',
+      text: '#FFFFFF',
+    },
+    brandFonts: { heading: 'Inter', body: 'Inter' },
+    brandTone: 'Yenilikçi SaaS, güvenilir teknoloji, net ve doğrudan',
     brief: 'Tüm müşteri iletişimini ve satışları tek ekrandan yönetin',
     logoPath: 'logos/mesajify-official-logo.png',
     productImageUrl: 'https://storage.mesajify.com/products/mesajify-dashboard.png',
@@ -99,7 +134,7 @@ export async function runDesignerAcceptanceBenchmark() {
       aspect: spec.aspect,
       textDensity: 'balanced',
       useLogo: true,
-      labels: ['Orijinal Ürün', 'Yetkili Satıcı'],
+      labels: [],
       cta: spec.cta,
       address: null,
       website: `www.${spec.brandName.toLowerCase().replace(/[^a-z]/g, '')}.com`,
@@ -110,9 +145,9 @@ export async function runDesignerAcceptanceBenchmark() {
       brandKit: {
         id: `kit-${spec.orgId}`,
         name: `${spec.brandName} Brand Kit`,
-        tone: 'Profesyonel kurumsal',
+        tone: spec.brandTone,
         colors: spec.brandColors,
-        fonts: { heading: 'Inter' },
+        fonts: spec.brandFonts,
         logoPath: spec.logoPath,
       },
       products: [
@@ -138,10 +173,14 @@ export async function runDesignerAcceptanceBenchmark() {
       artDirectionPlan: null,
     })
 
-    // 2. DESIGNER MODE (Creative Director Layer)
+    // 2. DESIGNER MODE (Creative Director Layer with Authoritative Brand Kit)
     const artDirectionPlan = await generateArtDirectionPlan({
       orgId: spec.orgId,
       brandName: spec.brandName,
+      brandTone: spec.brandTone,
+      brandColors: spec.brandColors,
+      brandFonts: spec.brandFonts,
+      brandLogoPath: spec.logoPath,
       productName: spec.productName,
       productDescription: spec.productDescription,
       objective: spec.objective,

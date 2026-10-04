@@ -41,6 +41,7 @@ before(async () => {
     cwd: gatewayDir,
     env: {
       ...process.env, PORT: String(port), PUBLIC_HOST: '127.0.0.1',
+      CHATGPT_API_KEY: 'test-gateway-key',
       COMPLETED_JOB_TTL_MS: '10', FAILED_JOB_TTL_MS: '10', MAX_RETAINED_COMPLETED_JOBS: '3',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -175,7 +176,7 @@ test('a duplicate tenant/request/operation is executed once and shares its resul
 
 test('generic chat keeps the full prompt, system directive and tenant aliases', async () => {
   const pending = request('/v1/chat/completions', {
-    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer sk-omnistudio-2026' },
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-gateway-key' },
     body: JSON.stringify({ tenant_id: 'tenant-chat', request_id: 'full-chat', customer: 'Same display name', messages: [
       { role: 'system', content: 'Use only tenant-chat product facts' },
       { role: 'user', content: 'A full user request that must reach the worker, not a shortened display label' },

@@ -1461,7 +1461,9 @@ Bu mesaja verilebilecek en kaliteli ve uygun 3 FARKLI alternatif Türkçe yanıt
       const finalUrl = finalUrlEval.result?.value || '';
       if (finalUrl.includes('/c/')) {
         const expectedTitle = getExpectedChatTitle(customer, 'chat');
-        await renameChatToTitle(cdp, expectedTitle);
+        if (chatInfo.isNewChat) {
+          await renameChatToTitle(cdp, expectedTitle);
+        }
         setCompanyChat(chatIdentity, 'chat', finalUrl, expectedTitle);
       }
     } catch (urlErr) {
@@ -1669,7 +1671,9 @@ async function executeGenericChatJob(tab, job) {
       const finalUrl = finalUrlEval.result?.value || '';
       if (!isHistoricalDirector && finalUrl.includes('/c/')) {
         const expectedTitle = getExpectedChatTitle(customer, 'chat');
-        await renameChatToTitle(cdp, expectedTitle);
+        if (chatInfo.isNewChat) {
+          await renameChatToTitle(cdp, expectedTitle);
+        }
         setCompanyChat(chatIdentity, 'chat', finalUrl, expectedTitle);
       }
     } catch (urlErr) {}

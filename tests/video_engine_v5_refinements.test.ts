@@ -329,8 +329,8 @@ test('11. 100% voiceover text synchronization across voiceover, Veo AUDIO direct
 
   const voText = pkg.voiceover.text
   const subtitleSource = pkg.overlayPlan.subtitles.sourceText
-  const veoAudioDirectiveMatch = pkg.veoPrompt.match(/AUDIO: Professional crystal-clear Turkish voiceover: "(.*?)"/)
-  const shotPlanAudioMatch = pkg.shotPlan.veoEnglishPrompt.match(/AUDIO: Professional crystal-clear Turkish voiceover: "(.*?)"/)
+  const veoAudioDirectiveMatch = pkg.veoPrompt.match(/AUDIO: Professional crystal-clear Turkish.*?:\s*"(.*?)"/)
+  const shotPlanAudioMatch = pkg.shotPlan.veoEnglishPrompt.match(/AUDIO: Professional crystal-clear Turkish.*?:\s*"(.*?)"/)
 
   assert.ok(veoAudioDirectiveMatch, 'veoPrompt missing AUDIO directive')
   assert.ok(shotPlanAudioMatch, 'shotPlan.veoEnglishPrompt missing AUDIO directive')

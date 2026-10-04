@@ -29,7 +29,10 @@ function buildProviders(config: ResolvedAiConfig): Partial<Record<AiProviderId, 
       isConfigured: () => Boolean(config.omnistudio?.baseUrl),
       async complete(system, user) {
         const baseUrl = config.omnistudio.baseUrl.replace(/\/+$/, '')
-        const token = config.omnistudio.token || 'sk-omnistudio-2026'
+        const token = config.omnistudio.token
+        if (!token) {
+          throw new Error('CHATGPT_API_KEY_MISSING: OmniStudio API anahtarı (OMNISTUDIO_GATEWAY_TOKEN) yapılandırılmamış.')
+        }
         const response = await fetch(`${baseUrl}/v1/chat/completions`, {
           method: 'POST',
           signal: timeout(),

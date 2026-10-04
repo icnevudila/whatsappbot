@@ -12,7 +12,7 @@ function getTenantScopeKey({ tenantId = null, orgId = null, conversationId = nul
   const displayCustomer = clean(customer) || 'Genel';
   if (!tenant) return `legacy:customer:${displayCustomer}`;
   return conversation
-    ? `tenant:${tenant}:conversation:${conversation}`
+    ? `tenant:${tenant}:company:${displayCustomer}:conversation:${conversation}`
     : `tenant:${tenant}:customer:${displayCustomer}`;
 }
 

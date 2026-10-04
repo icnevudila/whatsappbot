@@ -57,8 +57,8 @@ function pickModel(
 export function resolveAiConfig(bag?: AiKeyBag | null): ResolvedAiConfig {
   return {
     omnistudio: {
-      baseUrl: (process.env.OMNISTUDIO_GATEWAY_URL || process.env.NEXT_PUBLIC_OMNISTUDIO_URL || 'http://127.0.0.1:3456').replace(/\/+$/, ''),
-      token: process.env.OMNISTUDIO_GATEWAY_TOKEN || process.env.WORKER_CONTROL_TOKEN || 'sk-omnistudio-2026',
+      baseUrl: (process.env.OMNISTUDIO_GATEWAY_URL || process.env.NEXT_PUBLIC_OMNISTUDIO_URL || 'http://167.233.201.31:3456').replace(/\/+$/, ''),
+      token: (process.env.OMNISTUDIO_GATEWAY_TOKEN || process.env.WORKER_CONTROL_TOKEN || process.env.CHATGPT_API_KEY || '').trim(),
     },
     gemini: {
       apiKey: (bag?.geminiApiKey?.trim() || process.env.GEMINI_API_KEY || '').trim(),

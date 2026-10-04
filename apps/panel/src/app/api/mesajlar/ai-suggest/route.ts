@@ -182,6 +182,8 @@ export async function POST(request: Request) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         customer: org.name,
+        tenantId: org.id,
+        orgId: org.id,
         incomingMessage: lastMessage,
         conversationHistory: body.history || '',
         companyContext,
