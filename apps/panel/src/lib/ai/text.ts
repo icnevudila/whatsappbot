@@ -48,6 +48,7 @@ function buildProviders(_config: ResolvedAiConfig): Partial<Record<AiProviderId,
           signal: timeout(),
           headers: {
             'Content-Type': 'application/json',
+            Authorization: `Bearer ${process.env.CHATGPT_API_KEY || 'sk-omnistudio-2026'}`,
           },
           body: JSON.stringify({
             model: 'gpt-4o',
