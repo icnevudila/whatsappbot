@@ -9,7 +9,7 @@ Bu API, Hetzner sunucunuzda çalışan yerel ChatGPT ve DALL-E servisiniz üzeri
 | Parametre | Değer |
 | :--- | :--- |
 | **Base URL** | `http://167.233.201.31:3456/v1` |
-| **API Key (Bearer Token)** | `sk-omnistudio-2026` |
+| **API Key (Bearer Token)** | `<YOUR_OMNISTUDIO_API_KEY>` |
 | **Desteklenen Modeller** | `gpt-4o`, `gpt-4o-mini`, `chatgpt-4o`, `dall-e-3` |
 
 ---
@@ -24,7 +24,7 @@ Resmi OpenAI formatıyla birebir uyumludur.
 ### Headerlar
 ```http
 Content-Type: application/json
-Authorization: Bearer sk-omnistudio-2026
+Authorization: Bearer <YOUR_OMNISTUDIO_API_KEY>
 ```
 
 ### İstek Gövdesi (Body)
@@ -77,7 +77,7 @@ Authorization: Bearer sk-omnistudio-2026
 ### Headerlar
 ```http
 Content-Type: application/json
-Authorization: Bearer sk-omnistudio-2026
+Authorization: Bearer <YOUR_OMNISTUDIO_API_KEY>
 ```
 
 ### İstek Gövdesi (Body)
@@ -138,7 +138,7 @@ import OpenAI from "openai";
 
 const client = new OpenAI({
   baseURL: "http://167.233.201.31:3456/v1",
-  apiKey: "sk-omnistudio-2026",
+  apiKey: "<YOUR_OMNISTUDIO_API_KEY>",
 });
 
 async function main() {
@@ -171,7 +171,7 @@ from openai import OpenAI
 
 client = OpenAI(
     base_url="http://167.233.201.31:3456/v1",
-    api_key="sk-omnistudio-2026"
+    api_key="<YOUR_OMNISTUDIO_API_KEY>"
 )
 
 # 1. Metin Sohbeti
@@ -198,7 +198,7 @@ print("Görsel:", image.data[0].url)
 # Sohbet İsteği:
 curl -X POST http://167.233.201.31:3456/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer sk-omnistudio-2026" \
+  -H "Authorization: Bearer <YOUR_OMNISTUDIO_API_KEY>" \
   -d '{
     "model": "gpt-4o",
     "messages": [{"role": "user", "content": "Merhaba!"}]
@@ -212,7 +212,7 @@ curl -X POST http://167.233.201.31:3456/v1/chat/completions \
 Eğer arkadaşınız **Chatbox, NextChat, LibreChat, TypingMind veya n8n** gibi hazır bir AI arayüzü kullanıyorsa:
 1. Uygulama ayarlarında **Model Sağlayıcısı (Provider)** olarak **OpenAI** seçin.
 2. **API Host / Base URL** kutusuna: `http://167.233.201.31:3456/v1` yazın.
-3. **API Key** kutusuna: `sk-omnistudio-2026` yazın.
+3. **API Key** kutusuna: `<YOUR_OMNISTUDIO_API_KEY>` yazın.
 4. Model adı olarak `gpt-4o` seçin.
 
 Tüm sistem anında bağlanacak ve çalışmaya başlayacaktır!

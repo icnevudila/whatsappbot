@@ -43,12 +43,17 @@ function buildProviders(_config: ResolvedAiConfig): Partial<Record<AiProviderId,
         const conversationId = metadata?.conversationId || null
         const requestId = metadata?.requestId || null
 
+        const token = process.env.CHATGPT_API_KEY
+        if (!token) {
+          throw new Error('CHATGPT_API_KEY_MISSING: OmniStudio API anahtarı (CHATGPT_API_KEY) tanımlı değil.')
+        }
+
         const response = await fetch(`${gatewayUrl}/v1/chat/completions`, {
           method: 'POST',
           signal: timeout(),
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${process.env.CHATGPT_API_KEY || 'sk-omnistudio-2026'}`,
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             model: 'gpt-4o',

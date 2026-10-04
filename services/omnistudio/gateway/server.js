@@ -2715,7 +2715,7 @@ const server = http.createServer(async (req, res) => {
 
     // 1.0.9. Genel Sohbet (OpenAI Uyumlu Chat Completions): POST /v1/chat/completions & /chat/completions
     if (method === 'POST' && (pathname === '/v1/chat/completions' || pathname === '/chat/completions')) {
-      const configuredApiKey = process.env.CHATGPT_API_KEY || 'sk-omnistudio-2026';
+      const configuredApiKey = process.env.CHATGPT_API_KEY;
       const authHeader = req.headers['authorization'] || req.headers['x-api-key'] || '';
       const providedKey = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : authHeader.trim();
 
@@ -2723,12 +2723,20 @@ const server = http.createServer(async (req, res) => {
         if (!providedKey || providedKey !== configuredApiKey) {
           return sendJson(res, 401, {
             error: {
-              message: 'Yetkisiz erişim. Geçerli bir API anahtarı gereklidir (Authorization: Bearer sk-omnistudio-2026).',
+              message: 'Yetkisiz erişim. Geçerli bir API anahtarı gereklidir.',
               type: 'invalid_request_error',
               code: 'invalid_api_key'
             }
           });
         }
+      } else if (!configuredApiKey) {
+        return sendJson(res, 500, {
+          error: {
+            message: 'Sunucu yapılandırma hatası: CHATGPT_API_KEY tanımlanmamış.',
+            type: 'server_error',
+            code: 'missing_api_key_config'
+          }
+        });
       }
 
       const body = await parseJsonBody(req);
