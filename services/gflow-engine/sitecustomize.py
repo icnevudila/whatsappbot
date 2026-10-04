@@ -224,12 +224,11 @@ try:
         def _resilient_generation_record(rpcid, payload):
             try:
                 rec = _orig_generation_record(rpcid, payload)
-                # Check if upstream parser swapped workflow and media IDs on as29s
-                if rpcid == "as29s" and rec is not None:
-                    # In as29s, rec[0] was media_id and rec[2] was workflow_id
-                    swapped = _parse_modern_flow_record(payload)
-                    if swapped is not None:
-                        return swapped
+                # A successfully parsed CAE record uses workflow/project/media order.
+                # Reversing it makes submit_and_observe discard the completed result
+                # because its workflow no longer matches the submitted generation.
+                # The modern media/project/workflow envelope is only a fallback when
+                # upstream rejects the shape; never reinterpret a valid CAE record.
                 return rec
             except be.WireFormatError as exc:
                 # 1. Try modern flow record parser (as29s without 'CAE')

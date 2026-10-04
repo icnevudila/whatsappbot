@@ -614,8 +614,8 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
     // Minimalist Luxury Outro: Do not force an artificial CTA button; let Logo + Slogan + Contact breathe
     const showCta = Boolean(rawCta && !/whatsapp/i.test(rawCta) && finishingSpec?.forceCtaButton)
 
-    // Graceful slogan fallback — works for ANY brand, not hardcoded to specific firms
-    const slogan = rawSlogan || (brandName ? `${brandName} güvencesiyle` : '')
+    // Only display a supplied slogan; brand presence does not establish a guarantee.
+    const slogan = rawSlogan
 
     const hasOutroContent = Boolean(brandName || slogan || phone || website)
 

@@ -5,6 +5,7 @@ import { MAX_SPOKEN_WORDS, countWords } from '@/lib/video-wizard-contract'
 import { createVideoGenerationIdentity, findVideoGeneration } from '@/lib/creative/video-generation-identity'
 import { resolveAssetSource, type ResolvedAsset } from '@/lib/creative/asset-source-resolver'
 import { requireDistinctVideoProduct, videoAssetTransportSource } from './video-asset-manifest'
+import { loadVideoCatalogReferences, VideoCatalogError } from './video-catalog-references'
 
 async function resolveVideoAssetSource(
   url: string | undefined | null,
@@ -103,14 +104,6 @@ export async function createVideoJob(req: NextRequest, context: Awaited<ReturnTy
       )
     }
 
-    const MARKETING_TERMS = ['en ucuz', 'rakipsiz', 'lider marka', 'garantili kazanç', 'yüksek verim', 'hızlı sevkiyat']
-    const autoSpeechClaims = MARKETING_TERMS.filter((term) => approvedSpokenLine.toLowerCase().includes(term))
-    const verifiedClaims = Array.from(new Set([
-      ...(Array.isArray(authoritativeFacts?.verified_claims)
-        ? authoritativeFacts.verified_claims.map((claim: unknown) => String(claim).trim()).filter(Boolean)
-        : []),
-      ...autoSpeechClaims,
-    ]))
     const productFidelityContract = authoritativeFacts?.product_fidelity_contract
     if (normalizedCreativeMode === 'SIMPLE_V5_HYBRID') {
       if (!authoritativeFacts?.product_id) {
@@ -176,6 +169,24 @@ export async function createVideoJob(req: NextRequest, context: Awaited<ReturnTy
       return NextResponse.json({ error: 'PRODUCT_ASSET_NOT_READY' }, { status: 400 })
     }
 
+    const canonical = await loadVideoCatalogReferences(supabase, org.id, {
+      productId: String(authoritativeFacts?.product_id || productAsset.productId || ''),
+      logoUrl: logoAsset.url,
+      productUrl: productAsset.url,
+    })
+    if ((authoritativeFacts?.product_name && authoritativeFacts.product_name !== canonical.product.name) ||
+        (authoritativeFacts?.brand_name && authoritativeFacts.brand_name !== org.name)) {
+      throw new VideoCatalogError('PRODUCT_FACTS_CHANGED', 'Ürün veya marka bilgisi değişmiş. Sayfayı yenileyip tekrar seçin.', 409)
+    }
+    // Writing a marketing claim in a voiceover is not evidence that it is true.
+    const verifiedClaims = [canonical.product.name]
+    if (authoritativeFacts) {
+      authoritativeFacts.brand_name = org.name
+      authoritativeFacts.product_name = canonical.product.name
+      authoritativeFacts.product_description = canonical.product.description || undefined
+      authoritativeFacts.verified_claims = verifiedClaims
+    }
+
     // 3. Asset Manifest & SHA256 Sets
     const manifestAssets: Array<{
       role: 'logo' | 'product' | 'reference' | 'packaging' | 'environment' | 'presenter' | 'style'
@@ -188,7 +199,7 @@ export async function createVideoJob(req: NextRequest, context: Awaited<ReturnTy
     }> = []
 
     // Logo
-    const resolvedLogo = await resolveVideoAssetSource(logoAsset.url, 'logo', { tenantId: org.id, supabase })
+    const resolvedLogo = await resolveVideoAssetSource(canonical.logoUrl, 'logo', { tenantId: org.id, supabase })
     const appOrigin = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://app.mesajify.com'
     const logoFilePath = videoAssetTransportSource(resolvedLogo, appOrigin)
     const logoSha = resolvedLogo.sha256
@@ -207,7 +218,7 @@ export async function createVideoJob(req: NextRequest, context: Awaited<ReturnTy
     // Product (if present)
     let productSha = ''
     if (productAsset?.url || productAsset?.filePath) {
-      const resolvedProduct = await resolveVideoAssetSource(productAsset.url, 'product', { tenantId: org.id, supabase })
+      const resolvedProduct = await resolveVideoAssetSource(canonical.productUrl, 'product', { tenantId: org.id, supabase })
       requireDistinctVideoProduct(resolvedLogo, resolvedProduct)
       const prodFilePath = videoAssetTransportSource(resolvedProduct, appOrigin)
       productSha = resolvedProduct.sha256
@@ -476,6 +487,9 @@ export async function createVideoJob(req: NextRequest, context: Awaited<ReturnTy
       { status: 201 }
     )
   } catch (error: any) {
+    if (error instanceof VideoCatalogError) {
+      return NextResponse.json({ error: error.message, code: error.code }, { status: error.status })
+    }
     console.error('[ai-media-jobs] Unexpected error:', error)
     const message = String(error?.message || 'Beklenmedik bir hata oluştu.')
     const invalidProduct = message.startsWith('PRODUCT_REFERENCE_IS_LOGO')

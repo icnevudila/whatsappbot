@@ -3,6 +3,7 @@ import { requireActiveOrg } from '@/lib/org'
 import { checkIsAuthenticated } from '@/app/canli-takip/auth'
 import { createSupabaseServiceClient } from '@/lib/supabase/service'
 import { createClient } from '@supabase/supabase-js'
+import { isApprovedVideoOutput } from '@/lib/creative/video-output-approval'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -93,7 +94,7 @@ export async function GET(
       }
 
       // 3. Verification Gate
-      if (!output.verified && !output.is_approved) {
+      if (!isApprovedVideoOutput(output)) {
         return new NextResponse('Medya henüz kalite kontrolünden geçmedi.', { status: 422 })
       }
     }

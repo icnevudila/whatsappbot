@@ -10,12 +10,15 @@ test('real video POST rejects identical logo/product pixels without persisting a
   let mutations = 0
   const supabase = { from(table: string) {
     const query: any = {
-      select() { return this }, eq() { return this }, in() { return this }, gte() { return this },
+      select() { return this }, eq() { return this }, in() { return this }, gte() { return this }, order() { return this }, limit() { return this },
       single() { return Promise.resolve({ data: { monthly_video_quota: 100 }, error: null }) },
+      maybeSingle() { return Promise.resolve({data: table === 'org_products' ? {id:'product-fixture',name:'Fixture ürün',description:null}
+        : table === 'org_product_images' ? {public_url:'https://fixture.invalid/product.png'}
+        : table === 'organizations' ? {logo_path:'https://fixture.invalid/logo.png'} : null, error:null}) },
       insert() { mutations++; throw new Error('Unexpected persistence before asset validation') },
       then(resolve: any) { return Promise.resolve({ count: 0, data: [], error: null }).then(resolve) },
     }
-    assert.ok(['organizations', 'ai_media_jobs'].includes(table), 'Only quota reads may precede asset validation')
+    assert.ok(['organizations', 'ai_media_jobs', 'org_products', 'org_product_images', 'brand_kits'].includes(table), 'Only quota/catalog reads may precede asset validation')
     return query
   }}
   globalThis.fetch = async () => new Response(bytes, {headers:{'content-type':'image/png'}})

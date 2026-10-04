@@ -30,6 +30,7 @@ import {
   type VideoGenerationRequest,
 } from './providers/video-provider-router.js'
 import { GenerationWorkspace } from './providers/generation-workspace.js'
+import { loadFinishingCheckpoint } from './finishing-checkpoint.js'
 
 type ProviderAsset = VideoGenerationRequest['assets'][number]
 
@@ -126,7 +127,7 @@ function buildReviewInputs(job: any, snapshot: ReturnType<typeof createBrandCont
     audio_plan: {
       spoken_language: 'tr-TR',
       speech_mode: 'native_veo_dialogue',
-      exact_spoken_lines: [{ start: 2.2, end: 7.2, speaker: 'narrator', text: brief.spokenScript }],
+      exact_spoken_lines: [{ start: 0.5, end: 5.25, speaker: 'narrator', text: brief.spokenScript }],
       allow_paraphrase: false,
       allow_translation: false,
       allow_extra_dialogue: false,
@@ -237,10 +238,14 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     },
   }).eq('id', job.id)
 
+  const checkpoint = await loadFinishingCheckpoint(supabase, job, brief, assets)
+  if (!checkpoint) {
   await transitionJob(supabase, job.id, job.org_id, JobState.PREPARING_ENV, JobState.OPENING_PROJECT, 'Opening selected video provider session', { requested_provider: requestedProvider }, attemptId)
   await transitionJob(supabase, job.id, job.org_id, JobState.OPENING_PROJECT, JobState.ATTACHING_INGREDIENTS, `Preparing ${assets.length} locked canonical assets`, {}, attemptId)
   await transitionJob(supabase, job.id, job.org_id, JobState.ATTACHING_INGREDIENTS, JobState.INGREDIENTS_VERIFIED, `Verified ${assets.length} locked canonical asset references`, {}, attemptId)
   await transitionJob(supabase, job.id, job.org_id, JobState.INGREDIENTS_VERIFIED, JobState.GENERATING, 'Generating one SIMPLE_V5_HYBRID video from the common creative plan', {}, attemptId)
+
+  }
 
   const router = new VideoProviderRouter(
     new OmniStudioGeminiNativeVideoProvider(),
@@ -268,14 +273,14 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     } as any),
   }
 
-  let generated = await router.execute(requestedProvider, request)
+  let generated = checkpoint?.generated || await router.execute(requestedProvider, request)
   let review = await reviewOnce(generated, 1, job, snapshot, assets, brief, shotPlan, productionPlan)
-  const providerAttemptHistory: Array<Record<string, unknown>> = [{
+  const providerAttemptHistory: Array<Record<string, unknown>> = checkpoint ? [...checkpoint.history] : [{
     ...generated,
     combinedReview: review,
   }]
-  let automaticRegenerations = 0
-  if (review.decision === 'REGENERATE') {
+  let automaticRegenerations = checkpoint?.automaticRegenerations || 0
+  if (!checkpoint && review.decision === 'REGENERATE') {
     automaticRegenerations = 1
     const retryDirection = `\n[SEVERE RETRY ONLY]: Correct these failures without changing facts or the approved speech: ${review.severeFailureCodes.join(', ')}.`
     generated = await router.execute(requestedProvider, {
@@ -323,6 +328,8 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
       provider_attempt_history: providerAttemptHistory,
       automatic_regenerations: automaticRegenerations,
       combined_review: review,
+      finishing_checkpoint_assets: assets.map(asset => ({ role: asset.role, sha256: asset.sha256 })),
+      resumed_from_attempt_id: checkpoint?.sourceAttemptId || null,
     },
   }).eq('id', attemptId)
   await supabase.from('ai_media_jobs').update({
@@ -336,9 +343,14 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     generation_completed_at: providerRecord.generation_completed_at,
   }).eq('id', job.id)
 
+  if (checkpoint) {
+    await transitionJob(supabase, job.id, job.org_id, JobState.PREPARING_ENV, JobState.MEDIA_DOWNLOADED, 'Resuming verified raw media without a provider submission', { source_attempt_id: checkpoint.sourceAttemptId, raw_output_sha256: generated.rawOutputSha256 }, attemptId)
+  } else {
   await transitionJob(supabase, job.id, job.org_id, JobState.GENERATING, JobState.POLLING_FLOW, `${generated.selectedProvider} generation completed; collecting provider output`, { selected_provider: generated.selectedProvider }, attemptId)
   await transitionJob(supabase, job.id, job.org_id, JobState.POLLING_FLOW, JobState.DOWNLOADING_MEDIA, 'Collecting generated MP4 from selected provider', {}, attemptId)
   await transitionJob(supabase, job.id, job.org_id, JobState.DOWNLOADING_MEDIA, JobState.MEDIA_DOWNLOADED, `Raw media saved with SHA-256 ${generated.rawOutputSha256}`, { output_path: generated.outputPath }, attemptId)
+
+  }
 
   // ── Deterministic subtitle generation from APPROVED VO text (source of truth) ──
   // We deliberately do NOT use ASR. The approved spoken script is the canonical text.
@@ -366,7 +378,7 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
   // Words are distributed evenly across subtitle window (strict; never bleeds into outro).
   const SUBTITLE_WINDOW_START = 0.5
   const SUBTITLE_WINDOW_END   = outroEnabled
-    ? 5.5
+    ? 5.25
     : Math.max(5.5, (rawProbe.duration || brief.durationSeconds || 8) - 0.5)
 
   const textRenderer = new DeterministicCampaignTextRenderer()
@@ -418,9 +430,6 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
 
   // 2. Slogan / Tagline: Wizard explicit > Simple, clean, natural Turkish copy
   let outroSlogan = (snapshotAny.outro_slogan || snapshotAny.slogan || snapshotAny.tagline || snapshotAny.sub_headline || '').trim()
-  if (!outroSlogan && snapshot.brand_name) {
-    outroSlogan = `${snapshot.brand_name} güvencesiyle`
-  }
 
   await ffmpeg.applyDeterministicFinishing(
     generated.outputPath,
@@ -540,6 +549,8 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     visual_qa_score: null,
     visual_qa_report: {
       combined_review: review,
+      finishing_checkpoint_assets: assets.map(asset => ({ role: asset.role, sha256: asset.sha256 })),
+      resumed_from_attempt_id: checkpoint?.sourceAttemptId || null,
       logo_presentation: logoPresentation,
       provider: providerRecord,
       production_plan: productionPlan,
