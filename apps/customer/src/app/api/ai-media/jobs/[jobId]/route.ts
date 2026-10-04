@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { videoFailureUserMessage } from '@/lib/creative/job-failure-message'
 import { requireActiveOrg } from '@/lib/org'
 import type { JobUserViewModel } from '@/app/(panel)/icerik/wizard-types'
 import { mapEngineStateToStage } from '@/lib/creative/production-progress/stage-mapper'
@@ -246,7 +247,7 @@ export async function GET(
       output_id: outputId,
       playback_url: playbackUrl,
       failure_user_message: job.state === 'FAILED'
-        ? (job.error_message || 'Video işlenirken bir hata oluştu.')
+        ? videoFailureUserMessage(job.error_message)
         : job.state === 'NEEDS_REVIEW'
           ? 'Çıktı otomatik kalite kontrolünden geçmedi; yayınlanmadan önce insan incelemesi gerekiyor.'
           : null,

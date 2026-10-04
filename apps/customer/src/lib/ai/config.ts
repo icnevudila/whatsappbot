@@ -111,43 +111,16 @@ export function resolveAiConfig(bag?: AiKeyBag | null): ResolvedAiConfig {
 /** Env-only (geriye uyumluluk). */
 export const aiConfig = resolveAiConfig()
 
-function readOrder(raw: string | undefined, fallback: AiProviderId[]): AiProviderId[] {
-  if (!raw) return fallback
+// Commercial production never silently spends on a paid external fallback.
+const DEFAULT_IMAGE_ORDER: AiProviderId[] = ['omnistudio']
+const DEFAULT_TEXT_ORDER: AiProviderId[] = ['omnistudio']
 
-  const known = new Set<string>(['omnistudio', 'gemini', 'openai', 'cloudflare', 'pollinations'])
-  const parsed = raw
-    .split(',')
-    .map((part) => part.trim().toLowerCase())
-    .filter((part): part is AiProviderId => known.has(part))
-
-  return parsed.length > 0 ? parsed : fallback
+export function resolveImageProviderOrder(_bag?: AiKeyBag | null): AiProviderId[] {
+  return [...DEFAULT_IMAGE_ORDER]
 }
 
-const DEFAULT_IMAGE_ORDER = readOrder(process.env.AI_IMAGE_PROVIDERS, [
-  'omnistudio',
-  'gemini',
-  'openai',
-])
-
-const DEFAULT_TEXT_ORDER = readOrder(process.env.AI_TEXT_PROVIDERS, ['omnistudio', 'gemini', 'openai'])
-
-/** Tercih edilen sağlayıcıyı sıranın başına alır. */
-export function resolveImageProviderOrder(bag?: AiKeyBag | null): AiProviderId[] {
-  const preferred = String(bag?.preferredImageProvider ?? 'auto').trim().toLowerCase()
-  if (!preferred || preferred === 'auto') return DEFAULT_IMAGE_ORDER
-  if (!(['omnistudio', 'gemini', 'openai', 'cloudflare', 'pollinations'] as string[]).includes(preferred)) {
-    return DEFAULT_IMAGE_ORDER
-  }
-  const id = preferred as AiProviderId
-  return [id, ...DEFAULT_IMAGE_ORDER.filter((item) => item !== id)]
-}
-
-export function resolveTextProviderOrder(bag?: AiKeyBag | null): AiProviderId[] {
-  const preferred = String(bag?.preferredTextProvider ?? 'auto').trim().toLowerCase()
-  if (!preferred || preferred === 'auto') return DEFAULT_TEXT_ORDER
-  if (!(['omnistudio', 'gemini', 'openai'] as string[]).includes(preferred)) return DEFAULT_TEXT_ORDER
-  const id = preferred as AiProviderId
-  return [id, ...DEFAULT_TEXT_ORDER.filter((item) => item !== id)]
+export function resolveTextProviderOrder(_bag?: AiKeyBag | null): AiProviderId[] {
+  return [...DEFAULT_TEXT_ORDER]
 }
 
 /** @deprecated Tercihli sıra için resolveImageProviderOrder kullanın. */

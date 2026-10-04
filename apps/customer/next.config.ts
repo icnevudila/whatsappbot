@@ -1,6 +1,7 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
+  ...(process.env.STUDIO_BUILD_ROOT ? { turbopack: { root: process.env.STUDIO_BUILD_ROOT } } : {}),
   transpilePackages: ['@wa/shared'],
   serverExternalPackages: ['sharp'],
   outputFileTracingExcludes: {

@@ -30,10 +30,12 @@ import {
   defaultFidelityContract,
 } from '@/lib/video-wizard-contract'
 import { buildVeoVoiceoverPromptBlock } from '@/lib/video-voiceover-contract'
+import { videoFailureUserMessage } from '@/lib/creative/job-failure-message'
 import type { JobUserViewModel, ProductCard, WizardBootstrap } from './wizard-types'
 
 const STORAGE_KEY_PREFIX = 'wa.customer.creative-studio.v2'
 export const AI_PLANNER_TIMEOUT_MS = 5000
+export const VIDEO_PLANNER_TIMEOUT_MS = 3000
 
 export function generateDeterministicLocalCopy({
   productName,
@@ -143,6 +145,25 @@ export function CreativeStudioV2({
 
   // Active AbortController ref to cancel obsolete in-flight requests (e.g. style change)
   const activePlanControllerRef = useRef<AbortController | null>(null)
+  const copyEditsRef = useRef({ headline: 0, supporting: 0, cta: 0, voiceover: 0 })
+  const copyDirtyRef = useRef({ headline: false, supporting: false, cta: false, voiceover: false })
+
+  const resetProductCopy = () => {
+    activePlanControllerRef.current?.abort()
+    activePlanControllerRef.current = null
+    setIsPlanning(false)
+    setCreativePlan(null)
+    setPlanError(null)
+    setHeadline('')
+    setSupportingLine('')
+    setCtaText('Hemen İnceleyin')
+    setSpokenVoiceover('')
+    setHeadlineDirty(false)
+    setSupportingLineDirty(false)
+    setCtaDirty(false)
+    setVoiceoverDirty(false)
+    copyDirtyRef.current = { headline: false, supporting: false, cta: false, voiceover: false }
+  }
 
   // Structured campaign details (under Advanced)
   const [price, setPrice] = useState('')
@@ -343,7 +364,7 @@ export function CreativeStudioV2({
   ])
 
   // Call Custom AI Planner (non-blocking, advisory with 5s timeout)
-  const requestCreativePlan = async (forceRefresh = false) => {
+  const requestCreativePlan = async (forceRefresh = false, requestedStyle = stylePreset) => {
     if (!selectedProduct) return
 
     // Cancel any previous in-flight planner request
@@ -352,6 +373,7 @@ export function CreativeStudioV2({
     }
     const controller = new AbortController()
     activePlanControllerRef.current = controller
+    const editsAtRequest = { ...copyEditsRef.current }
 
     setIsPlanning(true)
     setPlanError(null)
@@ -359,7 +381,7 @@ export function CreativeStudioV2({
     // Hard client-side timeout: 5 seconds maximum
     const timeoutId = setTimeout(() => {
       controller.abort()
-    }, AI_PLANNER_TIMEOUT_MS)
+    }, mediaType === 'VIDEO' ? VIDEO_PLANNER_TIMEOUT_MS : AI_PLANNER_TIMEOUT_MS)
 
     try {
       const res = await fetch('/api/ai-media/plan', {
@@ -372,7 +394,7 @@ export function CreativeStudioV2({
           productName: selectedProduct.name,
           productDescription: selectedProduct.description || null,
           objective,
-          stylePreset,
+          stylePreset: requestedStyle,
           mediaType,
           campaignDetail: campaignDetail || null,
           campaignCopy: { price, oldPrice, offer, dateRange, cta: ctaText },
@@ -385,26 +407,32 @@ export function CreativeStudioV2({
       }
 
       const plan: CreativePlanV2 = json.plan
+      if (controller.signal.aborted || activePlanControllerRef.current !== controller) return
       setCreativePlan(plan)
 
       // NEVER OVERWRITE USER EDITS: Only update untouched fields unless user explicitly clicked "Farklı Öner"
-      if (forceRefresh || !headlineDirty) {
+      if (copyEditsRef.current.headline === editsAtRequest.headline && (forceRefresh || !copyDirtyRef.current.headline)) {
         setHeadline(plan.copy.headline)
+        if (forceRefresh) copyDirtyRef.current.headline = false
         if (forceRefresh) setHeadlineDirty(false)
       }
-      if (forceRefresh || !supportingLineDirty) {
+      if (copyEditsRef.current.supporting === editsAtRequest.supporting && (forceRefresh || !copyDirtyRef.current.supporting)) {
         setSupportingLine(plan.copy.supporting_line)
+        if (forceRefresh) copyDirtyRef.current.supporting = false
         if (forceRefresh) setSupportingLineDirty(false)
       }
-      if (forceRefresh || !ctaDirty) {
+      if (copyEditsRef.current.cta === editsAtRequest.cta && (forceRefresh || !copyDirtyRef.current.cta)) {
         setCtaText(plan.copy.cta)
+        if (forceRefresh) copyDirtyRef.current.cta = false
         if (forceRefresh) setCtaDirty(false)
       }
-      if (mediaType === 'VIDEO' && (forceRefresh || !voiceoverDirty) && plan.voiceover_text) {
+      if (mediaType === 'VIDEO' && copyEditsRef.current.voiceover === editsAtRequest.voiceover && (forceRefresh || !copyDirtyRef.current.voiceover) && plan.voiceover_text) {
         setSpokenVoiceover(plan.voiceover_text)
+        if (forceRefresh) copyDirtyRef.current.voiceover = false
         if (forceRefresh) setVoiceoverDirty(false)
       }
     } catch (err: any) {
+      if (activePlanControllerRef.current !== controller) return
       if (err?.name === 'AbortError' || controller.signal.aborted) {
         console.warn('[CreativeStudioV2] Plan request timed out or cancelled (>5s budget)')
         setPlanError('AI_TIMEOUT')
@@ -682,14 +710,11 @@ export function CreativeStudioV2({
               {jobState === 'FAILED' ? 'Video Hazırlanamadı' : 'Video İnceleme Bekliyor'}
             </p>
             <p className="mt-1 text-[12px] leading-relaxed text-[#667781]">
-              {jobFailureMessage?.includes('Asset count')
-                ? 'Görsel aktarımı sırasında geçici bir senkronizasyon oluştu. Lütfen tekrar deneyin.'
-                : jobFailureMessage ||
-                  activeViewModel.display_message ||
-                  (jobState === 'FAILED'
-                    ? 'Video üretimi tamamlanamadı. Lütfen parametreleri kontrol edip tekrar deneyin.'
-                    : 'Videonuz üretildi ancak otomatik kalite kontrolü inceleme gerektiriyor.')}
+              {jobState === 'FAILED'
+                ? videoFailureUserMessage(jobFailureMessage)
+                : 'Videonuz üretildi ancak otomatik kalite kontrolü inceleme gerektiriyor.'}
             </p>
+            <p className="mt-2 break-all text-[11px] text-[#667781]">İş kimliği: {activeJobId}</p>
           </div>
 
           {/* Show the video preview even in NEEDS_REVIEW if playback URL exists */}
@@ -727,9 +752,9 @@ export function CreativeStudioV2({
         <div className="p-6 space-y-5 text-center max-w-md mx-auto">
           <div className="flex items-center justify-center gap-2 text-[#008069]">
             <span className="flex size-8 items-center justify-center rounded-full bg-[#e7f8f2] text-[#008069] font-bold text-[16px]">
-              ✓
+              {completedVideoUrl ? '✓' : '…'}
             </span>
-            <h3 className="text-[18px] font-bold text-[#111b21]">Videonuz Yayına Hazır!</h3>
+            <h3 className="text-[18px] font-bold text-[#111b21]">{completedVideoUrl ? 'Videonuz Yayına Hazır!' : 'Videonuzun Önizlemesi Hazırlanıyor'}</h3>
           </div>
           {completedVideoUrl ? (
             <div className="relative overflow-hidden rounded-xl border border-hairline bg-black shadow-lg aspect-[9/16] max-h-[500px] mx-auto flex items-center justify-center">
@@ -922,7 +947,10 @@ export function CreativeStudioV2({
                           <button
                             key={p.id}
                             type="button"
-                            onClick={() => setHeroProductId(p.id)}
+                            onClick={() => {
+                              if (p.id !== heroProductId) resetProductCopy()
+                              setHeroProductId(p.id)
+                            }}
                             className={`flex flex-col overflow-hidden rounded-xl border text-left transition-all ${
                               isSelected
                                 ? 'border-[#008069] bg-[#e7f8f2]/50 ring-2 ring-[#008069]'
@@ -1012,7 +1040,7 @@ export function CreativeStudioV2({
                         type="button"
                         onClick={() => {
                           setStylePreset(preset.id)
-                          void requestCreativePlan(false)
+                          void requestCreativePlan(false, preset.id)
                         }}
                         className={`rounded-xl border p-3.5 text-left transition-all ${
                           stylePreset === preset.id
@@ -1126,6 +1154,8 @@ export function CreativeStudioV2({
                         rows={3}
                         value={spokenVoiceover}
                         onChange={(e) => {
+                            copyEditsRef.current.voiceover += 1
+                            copyDirtyRef.current.voiceover = true
                           setSpokenVoiceover(e.target.value)
                           setVoiceoverDirty(true)
                         }}
@@ -1145,6 +1175,8 @@ export function CreativeStudioV2({
                         <Input
                           value={headline}
                           onChange={(e) => {
+                              copyEditsRef.current.headline += 1
+                              copyDirtyRef.current.headline = true
                             setHeadline(e.target.value)
                             setHeadlineDirty(true)
                           }}
@@ -1155,6 +1187,8 @@ export function CreativeStudioV2({
                         <Input
                           value={supportingLine}
                           onChange={(e) => {
+                              copyEditsRef.current.supporting += 1
+                              copyDirtyRef.current.supporting = true
                             setSupportingLine(e.target.value)
                             setSupportingLineDirty(true)
                           }}
@@ -1165,6 +1199,8 @@ export function CreativeStudioV2({
                         <Input
                           value={ctaText}
                           onChange={(e) => {
+                              copyEditsRef.current.cta += 1
+                              copyDirtyRef.current.cta = true
                             setCtaText(e.target.value)
                             setCtaDirty(true)
                           }}
@@ -1320,14 +1356,14 @@ export function CreativeStudioV2({
                         <span className={`inline-block size-2 rounded-full ${hasLogo ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                         <span className="text-[#667781]">Kurumsal Logo:</span>
                         <span className={`font-semibold ${hasLogo ? 'text-emerald-700' : 'text-rose-700'}`}>
-                          {hasLogo ? 'HAZIR (200 OK)' : 'EKSİK'}
+                          {hasLogo ? 'REFERANS SEÇİLİ' : 'EKSİK'}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className={`inline-block size-2 rounded-full ${hasProduct ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                         <span className="text-[#667781]">Hero Ürün:</span>
                         <span className={`font-semibold ${hasProduct ? 'text-emerald-700' : 'text-rose-700'}`}>
-                          {hasProduct ? 'HAZIR (200 OK)' : 'EKSİK'}
+                          {hasProduct ? 'REFERANS SEÇİLİ' : 'EKSİK'}
                         </span>
                       </div>
                     </div>
@@ -1365,6 +1401,7 @@ export function CreativeStudioV2({
         open={addProductOpen}
         onClose={() => setAddProductOpen(false)}
         onSuccess={(product: ProductCard) => {
+          resetProductCopy()
           setProductsList((prev) => [...prev, product])
           setHeroProductId(product.id)
           setAddProductOpen(false)

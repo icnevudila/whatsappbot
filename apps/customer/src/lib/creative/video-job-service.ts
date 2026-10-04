@@ -4,6 +4,7 @@ import type { requireActiveOrg } from '@/lib/org'
 import { MAX_SPOKEN_WORDS, countWords } from '@/lib/video-wizard-contract'
 import { createVideoGenerationIdentity, findVideoGeneration } from '@/lib/creative/video-generation-identity'
 import { resolveAssetSource, type ResolvedAsset } from '@/lib/creative/asset-source-resolver'
+import { requireDistinctVideoProduct, videoAssetTransportSource } from './video-asset-manifest'
 
 async function resolveVideoAssetSource(
   url: string | undefined | null,
@@ -188,7 +189,8 @@ export async function createVideoJob(req: NextRequest, context: Awaited<ReturnTy
 
     // Logo
     const resolvedLogo = await resolveVideoAssetSource(logoAsset.url, 'logo', { tenantId: org.id, supabase })
-    const logoFilePath = logoAsset.filePath || logoAsset.url
+    const appOrigin = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://app.mesajify.com'
+    const logoFilePath = videoAssetTransportSource(resolvedLogo, appOrigin)
     const logoSha = resolvedLogo.sha256
     if (isSha256(logoAsset.sha256) && logoAsset.sha256.toLowerCase() !== logoSha) throw new Error('ASSET_HASH_MISMATCH')
 
@@ -205,8 +207,9 @@ export async function createVideoJob(req: NextRequest, context: Awaited<ReturnTy
     // Product (if present)
     let productSha = ''
     if (productAsset?.url || productAsset?.filePath) {
-      const prodFilePath = productAsset.filePath || productAsset.url
       const resolvedProduct = await resolveVideoAssetSource(productAsset.url, 'product', { tenantId: org.id, supabase })
+      requireDistinctVideoProduct(resolvedLogo, resolvedProduct)
+      const prodFilePath = videoAssetTransportSource(resolvedProduct, appOrigin)
       productSha = resolvedProduct.sha256
       if (isSha256(productAsset.sha256) && productAsset.sha256.toLowerCase() !== productSha) throw new Error('ASSET_HASH_MISMATCH')
       manifestAssets.push({
@@ -231,7 +234,7 @@ export async function createVideoJob(req: NextRequest, context: Awaited<ReturnTy
         const referenceRole = allowedReferenceRoles.includes(ref.role) ? ref.role : 'reference'
         manifestAssets.push({
           role: referenceRole,
-          file_path: ref.url,
+          file_path: videoAssetTransportSource(resolvedRef, appOrigin),
           storage_url: resolvedRef.resolvedUrl,
           original_filename: ref.name || `ref_${idx + 1}.jpg`,
           sha256: refSha,
@@ -474,7 +477,10 @@ export async function createVideoJob(req: NextRequest, context: Awaited<ReturnTy
     )
   } catch (error: any) {
     console.error('[ai-media-jobs] Unexpected error:', error)
-    return NextResponse.json({ error: error?.message || 'Beklenmedik bir hata oluştu.' }, { status: error?.message === 'VIDEO_GENERATION_IDENTITY_CONFLICT' ? 409 : 500 })
+    const message = String(error?.message || 'Beklenmedik bir hata oluştu.')
+    const invalidProduct = message.startsWith('PRODUCT_REFERENCE_IS_LOGO')
+    return NextResponse.json({ error: message, ...(invalidProduct ? { code: 'PRODUCT_REFERENCE_IS_LOGO' } : {}) },
+      { status: invalidProduct ? 400 : message === 'VIDEO_GENERATION_IDENTITY_CONFLICT' ? 409 : 500 })
   }
 }
 
