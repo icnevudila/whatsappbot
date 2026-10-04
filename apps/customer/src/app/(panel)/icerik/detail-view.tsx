@@ -56,6 +56,7 @@ export type DetailCreative = {
   thumbnailUrl?: string | null
   cleanPublicUrl?: string | null
   recoverableImageJob?: boolean
+  campaignMessage?: string | null
 }
 
 export type VersionRow = {
@@ -309,6 +310,7 @@ export function CreativeDetail({
 
   const [reviseOpen, setReviseOpen] = useState(Boolean(openRevise))
   const [lightboxOpen, setLightboxOpen] = useState(false)
+  const toast = useToast()
   const [tick, setTick] = useState(0)
   const [pending, startTransition] = useTransition()
   const running = creative.status === 'pending' || creative.status === 'rendering'
@@ -623,6 +625,33 @@ export function CreativeDetail({
         </div>
       ) : null}
 
+      {creative.campaignMessage ? (
+        <div className="rounded-[var(--radius-card)] border border-[#b7e4d5] bg-[#f1fbf7] p-4 text-[13px] text-[#111b21] space-y-2.5 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <span className="font-bold text-[#006b58] flex items-center gap-1.5">
+              <Icon name="campaign" className="size-4 text-[#00a884]" />
+              Yapay Zeka WhatsApp Kampanya Metni
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                if (creative.campaignMessage) {
+                  void navigator.clipboard.writeText(creative.campaignMessage)
+                  toast('Kampanya metni panoya kopyalandı.', 'success')
+                }
+              }}
+              className="text-[12px] font-semibold text-[#008069] hover:underline flex items-center gap-1"
+            >
+              <Icon name="copy" className="size-3.5" />
+              Metni Kopyala
+            </button>
+          </div>
+          <div className="whitespace-pre-wrap font-sans leading-relaxed text-[#111b21] bg-white p-3 rounded-lg border border-[#d1ebd9]">
+            {creative.campaignMessage}
+          </div>
+        </div>
+      ) : null}
+
       {displayPublicUrl && isReady ? (
         <div className={`grid gap-2 ${canManage ? 'grid-cols-2' : ''}`}>
           {canManage ? (
@@ -637,7 +666,7 @@ export function CreativeDetail({
             </Button>
           ) : null}
           <AccentLink
-            href={`/kampanyalar/yeni?gorsel=${encodeURIComponent(displayPublicUrl)}`}
+            href={`/kampanyalar/yeni?gorsel=${encodeURIComponent(displayPublicUrl)}${creative.campaignMessage ? `&mesaj=${encodeURIComponent(creative.campaignMessage)}` : ''}`}
             className="w-full !rounded-full !border-0 !bg-[#00a884] !text-white !shadow-none hover:!bg-[#008069]"
           >
             <Icon name="campaign" className="size-4" />

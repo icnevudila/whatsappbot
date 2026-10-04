@@ -16,7 +16,10 @@ import {
   type CreativePayload,
   type CreativeSnapshot,
   type ProductFieldKey,
+  type TemplateFamily,
 } from '@/lib/creative/types'
+import { deriveVerifiedCampaignData } from '@/lib/creative/prompt'
+import { generateCampaignWhatsAppMessage } from '@/lib/ai/campaign-message'
 import { collectImageFiles, readImageFile } from '@/app/(panel)/ayarlar/upload-image'
 import { isOrgAdminRole, requireActiveOrg } from '@/lib/org'
 import { DEFAULT_INCLUDE, formatFromId, type ProductCard, type SocialOption } from './wizard-types'
@@ -520,6 +523,20 @@ export async function startCreativeGeneration(
       art_direction_source: artDirectionSource,
     },
     qualityMode,
+    templateFamily: (draft.templateFamily as TemplateFamily) || null,
+    sector: String(draft.sector ?? '').trim() || null,
+    deliveryInfo: String(draft.deliveryInfo ?? '').trim() || null,
+    stockInfo: String(draft.stockInfo ?? '').trim() || null,
+    urgencyInfo: String(draft.urgencyInfo ?? '').trim() || null,
+    primaryBenefits: parseIds(draft.primaryBenefits),
+  }
+
+  // Generate accompanying WhatsApp campaign message pairing
+  try {
+    const verifiedData = deriveVerifiedCampaignData(snapshot)
+    snapshot.campaignMessage = generateCampaignWhatsAppMessage(verifiedData)
+  } catch (msgErr) {
+    console.warn('[startCreativeGeneration] campaignMessage generation skipped:', msgErr)
   }
 
   const { data: inserted, error } = await supabase

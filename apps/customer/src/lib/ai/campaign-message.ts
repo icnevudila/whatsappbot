@@ -139,3 +139,67 @@ export function cleanAiMessage(text: string): string {
     .replace(/^(işte (mesajınız|metniniz)[:\s]*)/i, '')
     .trim()
 }
+
+export function generateCampaignWhatsAppMessage(verified: import('../creative/prompt').VerifiedCampaignData): string {
+  const parts: string[] = []
+
+  // 1. Header with brand and campaign headline
+  const brandTitle = verified.brandName && verified.brandName !== 'İşletmemiz' ? verified.brandName : ''
+  if (brandTitle && verified.headline) {
+    parts.push(`📢 *${brandTitle} — ${verified.headline}*`)
+  } else if (verified.headline) {
+    parts.push(`📢 *${verified.headline}*`)
+  } else if (brandTitle) {
+    parts.push(`📢 *${brandTitle} Kampanyası*`)
+  }
+
+  // 2. Offer & Price highlight
+  const offerLines: string[] = []
+  if (verified.offer) {
+    offerLines.push(`• *Fırsat:* ${verified.offer}`)
+  }
+  if (verified.price) {
+    offerLines.push(`• *Fiyat:* ${verified.price}${verified.oldPrice ? ` _(Önceki: ${verified.oldPrice})_` : ''}`)
+  }
+  if (verified.discount && !verified.offer?.includes(verified.discount)) {
+    offerLines.push(`• *İndirim:* ${verified.discount}`)
+  }
+  if (verified.deliveryFact) {
+    offerLines.push(`• *Teslimat:* ${verified.deliveryFact}`)
+  }
+  if (verified.stockFact) {
+    offerLines.push(`• *Stok:* ${verified.stockFact}`)
+  }
+  if (verified.urgencyFact) {
+    offerLines.push(`• *Geçerlilik:* ${verified.urgencyFact}`)
+  }
+  if (verified.primaryBenefits.length) {
+    for (const b of verified.primaryBenefits) {
+      if (!offerLines.some((l) => l.includes(b))) {
+        offerLines.push(`• ${b}`)
+      }
+    }
+  }
+
+  if (offerLines.length) {
+    parts.push(`✨ *Kampanya Detayları:*\n${offerLines.join('\n')}`)
+  }
+
+  // 3. CTA & Contact
+  const ctaLine = verified.cta ? `👉 ${verified.cta}` : '👉 Detaylı bilgi ve sipariş için bize hemen yazabilirsiniz.'
+  parts.push(ctaLine)
+
+  const contactList: string[] = []
+  if (verified.contactLines.length) {
+    contactList.push(`📞 ${verified.contactLines[0]}`)
+  }
+  if (verified.website) {
+    contactList.push(`🌐 ${verified.website}`)
+  }
+  if (contactList.length) {
+    parts.push(contactList.join(' · '))
+  }
+
+  return parts.join('\n\n')
+}
+

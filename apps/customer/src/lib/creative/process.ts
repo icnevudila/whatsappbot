@@ -6,7 +6,8 @@ import { ImageJobFailedError, ImageJobPendingError, ImageJobReconciliationError,
 import { createHash } from 'node:crypto'
 import type { AiKeyBag } from '@/lib/ai/config'
 import { createSupabaseServiceClient } from '@/lib/supabase/service'
-import { buildCreativePrompt, buildVideoPrompt } from './prompt'
+import { buildCreativePrompt, buildVideoPrompt, deriveVerifiedCampaignData } from './prompt'
+import { generateCampaignWhatsAppMessage } from '@/lib/ai/campaign-message'
 import { formatToAspect, type CreativePayload, type CreativeSnapshot } from './types'
 import { createVideoGenerationIdentity } from './video-generation-identity'
 import { submitVideoWithIntent, VideoJobTerminalError, VideoSubmissionUncertainError } from './video-submit-job'
@@ -368,6 +369,7 @@ export async function processCreativeGeneration(
         status: 'ready', error: null, storage_path: storagePath, public_url: url.publicUrl,
         width: image.width || null, height: image.height || null,
         payload: { ...payload, imageJob: null, provider: 'omnistudio', outputSha256: storedReceipt.sha256,
+          campaignMessage: payload.campaignMessage || (asSnapshot(payload) ? generateCampaignWhatsAppMessage(deriveVerifiedCampaignData(asSnapshot(payload)!)) : null),
           imageOutputReceipt: {orgId:creative.org_id,creativeId,jobId:payload.imageJob.id,sha256:storedReceipt.sha256,size:storedReceipt.size,
             mimeType:storedReceipt.mimeType,width:storedReceipt.width,height:storedReceipt.height,decodedImage:true,storagePath,
             referenceReceipt:image.referenceReceipt || null}, cost: { provider: 'omnistudio', imageCount: 1 } },
@@ -1172,6 +1174,8 @@ export async function processCreativeGeneration(
       provider: image.provider,
       attempts: attempts.length ? attempts : null,
       cost: { provider: image.provider, imageCount: 1 },
+      campaignMessage:
+        snapshot.campaignMessage || generateCampaignWhatsAppMessage(deriveVerifiedCampaignData(snapshot)),
     }
 
     const { error, data: finalized } = await supabase

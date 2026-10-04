@@ -14,6 +14,53 @@ export const VIDEO_CREATIVE_FORMAT = {
   hint: '10sn sinematik video (9:16)',
 } as const
 
+export type TemplateFamily =
+  | 'CAMPAIGN_POSTER'
+  | 'PRODUCT_SHOWCASE'
+  | 'FOOD_OFFER_POSTER'
+  | 'ELEGANT_RETAIL'
+  | 'SAAS_PROMO_CARD'
+
+export const TEMPLATE_FAMILIES: {
+  id: TemplateFamily
+  label: string
+  tag?: string
+  description: string
+  hint: string
+}[] = [
+  {
+    id: 'CAMPAIGN_POSTER',
+    label: 'Kampanya Afişi',
+    tag: 'Önerilen',
+    description: 'Fiziksel ürünler için yüksek dönüşümlü, teklif ve indirim odaklı afiş.',
+    hint: 'Dominant product, bold headline, offer/discount badge, price hierarchy, mobile-readable direct-response ad.',
+  },
+  {
+    id: 'PRODUCT_SHOWCASE',
+    label: 'Ürün Vitrini',
+    description: 'Ürünün estetik detaylarını, malzeme dokusunu ve kalitesini öne çıkaran net vitrin.',
+    hint: 'Clean breathing room, product visually dominant, restrained sales copy, pristine commercial staging.',
+  },
+  {
+    id: 'FOOD_OFFER_POSTER',
+    label: 'Yemek Fırsatı',
+    description: 'Restoran ve gıda işletmeleri için iştah açıcı, menü ve fiyat vurgulu lezzet afişi.',
+    hint: 'Appetizing culinary hero, delicious warm presentation, clear menu/pricing emphasis, strong sales call-to-action.',
+  },
+  {
+    id: 'ELEGANT_RETAIL',
+    label: 'Zarif Kampanya',
+    description: 'Çiçekçilik, butik, hediye ve özel tasarım işletmeleri için estetik ve zarif sunum.',
+    hint: 'Flowers/gifts/boutique commercial appeal, softer harmonious typography, graceful layout, sales-oriented yet refined.',
+  },
+  {
+    id: 'SAAS_PROMO_CARD',
+    label: 'Uygulama / SaaS Tanıtımı',
+    description: 'Dijital ürünler, yazılım, web servisi veya mobil uygulama için modern arayüz kartı.',
+    hint: 'Modern app/dashboard UI hero, clear benefit headline, trial/pricing details, sleek tech-commercial structure.',
+  },
+]
+
 export const CREATIVE_STYLES = [
   { id: 'auto', label: 'Otomatik' },
   { id: 'modern', label: 'Modern' },
@@ -26,11 +73,15 @@ export const CREATIVE_STYLES = [
   { id: 'food', label: 'Yiyecek / iştah açıcı' },
 ] as const
 
-export const TEXT_DENSITIES = [
-  { id: 'low', label: 'Az' },
-  { id: 'balanced', label: 'Dengeli' },
-  { id: 'detailed', label: 'Detaylı' },
-] as const
+export const TEXT_DENSITIES: {
+  id: 'low' | 'balanced' | 'detailed'
+  label: string
+  description: string
+}[] = [
+  { id: 'low', label: 'Sade', description: 'Az metin, sadece ana başlık ve ürün.' },
+  { id: 'balanced', label: 'Dengeli', description: 'Başlık, teklif ve fiyat; dengeli ve okunabilir.' },
+  { id: 'detailed', label: 'Yoğun Kampanya', description: 'Başlık, indirim, fiyat ve teslimat/iletişim bilgisi.' },
+]
 
 export const BRIEF_CHIPS = [
   'İndirim kampanyası',
@@ -120,6 +171,13 @@ export type CreativeSnapshot = {
   customVoiceover?: string | null
   voiceoverScript?: string | null
   referenceImageUrls?: string[] | null
+  templateFamily?: TemplateFamily | null
+  sector?: string | null
+  deliveryInfo?: string | null
+  stockInfo?: string | null
+  urgencyInfo?: string | null
+  primaryBenefits?: string[] | null
+  campaignMessage?: string | null
 }
 
 export type CreativePayload = CreativeSnapshot & {

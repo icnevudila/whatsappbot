@@ -1,5 +1,5 @@
-import type { CreativeSnapshot } from './types'
-import { CREATIVE_FORMATS, CREATIVE_STYLES, VARIATION_PRESETS } from './types'
+import type { CreativeSnapshot, TemplateFamily } from './types'
+import { CREATIVE_FORMATS, CREATIVE_STYLES, TEMPLATE_FAMILIES, VARIATION_PRESETS } from './types'
 
 const STYLE_HINT: Record<string, string> = {
   auto: 'Choose the most suitable commercial look from the brief, products and brand (do not invent a sector).',
@@ -106,6 +106,197 @@ export function describeColor(colorStr: string): string {
   })
 }
 
+export type VerifiedCampaignData = {
+  brandName: string
+  sector?: string | null
+  templateFamily: TemplateFamily
+  headline: string
+  offer?: string | null
+  price?: string | null
+  oldPrice?: string | null
+  discount?: string | null
+  quantityTiers?: string | null
+  primaryBenefits: string[]
+  deliveryFact?: string | null
+  stockFact?: string | null
+  urgencyFact?: string | null
+  cta?: string | null
+  contactLines: string[]
+  website?: string | null
+  campaignDate?: string | null
+  productRef: boolean
+  logoRef: boolean
+}
+
+export function deriveVerifiedCampaignData(
+  snapshot: CreativeSnapshot,
+  options?: PromptFidelityOptions,
+): VerifiedCampaignData {
+  const kit = snapshot.brandKit
+  const brandName = (
+    kit?.name
+      ? kit.name.replace(/(?:brand\s*kit|marka\s*kiti|kampanya\s*kiti|whatsapp\s*kampanya\s*kiti)/gi, '').trim()
+      : 'İşletmemiz'
+  ) || 'İşletmemiz'
+
+  const sector = snapshot.sector?.trim() || null
+
+  let templateFamily: TemplateFamily = 'CAMPAIGN_POSTER'
+  if (snapshot.templateFamily && TEMPLATE_FAMILIES.some((t) => t.id === snapshot.templateFamily)) {
+    templateFamily = snapshot.templateFamily
+  } else if (snapshot.style === 'food') {
+    templateFamily = 'FOOD_OFFER_POSTER'
+  } else if (snapshot.style === 'luxury') {
+    templateFamily = 'ELEGANT_RETAIL'
+  } else if (snapshot.style === 'minimal' || snapshot.style === 'modern') {
+    templateFamily = 'PRODUCT_SHOWCASE'
+  } else if (
+    snapshot.style === 'corporate' &&
+    (sector?.toLowerCase().includes('yazılım') ||
+      sector?.toLowerCase().includes('saas') ||
+      sector?.toLowerCase().includes('teknoloji'))
+  ) {
+    templateFamily = 'SAAS_PROMO_CARD'
+  }
+
+  const hero = snapshot.products?.[0]
+  const headline = (
+    snapshot.customText ||
+    snapshot.brief ||
+    hero?.name ||
+    'Özel Kampanya'
+  ).trim()
+
+  const price = hero?.price?.trim() || null
+  const oldPrice = hero?.oldPrice?.trim() || null
+  const offer = hero?.promo?.trim() || null
+
+  let discount: string | null = null
+  if (offer && /%\s*\d+|\d+\s*%/i.test(offer)) {
+    const match = offer.match(/%\s*\d+|\d+\s*%/i)
+    if (match) discount = match[0].replace(/\s+/g, '')
+  }
+
+  const quantityTiers = hero?.boxContents?.trim() || hero?.extra?.trim() || null
+
+  const primaryBenefits: string[] = []
+  if (Array.isArray(snapshot.primaryBenefits)) {
+    for (const b of snapshot.primaryBenefits) {
+      if (b?.trim() && !primaryBenefits.includes(b.trim())) primaryBenefits.push(b.trim())
+    }
+  }
+  if (Array.isArray(snapshot.labels)) {
+    for (const l of snapshot.labels) {
+      if (l?.trim() && !primaryBenefits.includes(l.trim())) primaryBenefits.push(l.trim())
+    }
+  }
+
+  const deliveryFact = snapshot.deliveryInfo?.trim() || null
+  const stockFact = snapshot.stockInfo?.trim() || null
+  const urgencyFact = snapshot.urgencyInfo?.trim() || null
+  const cta = snapshot.cta?.trim() || null
+
+  const contactLines: string[] = []
+  for (const phone of snapshot.phones || []) {
+    contactLines.push(`${phone.phone}${phone.label ? ` (${phone.label})` : ''}`)
+  }
+  for (const social of snapshot.socials || []) {
+    const handle = social.label || social.url
+    contactLines.push(`${social.platform}: ${handle}`)
+  }
+  const website = snapshot.website?.trim() || null
+  const campaignDate = snapshot.dateRange?.trim() || null
+
+  const productRef = Boolean(
+    options?.verifiedRefs?.product ?? (hero?.imageUrl && hero?.include?.image !== false),
+  )
+  const logoRef = Boolean(
+    options?.verifiedRefs?.logo ??
+      (snapshot.useLogo !== false && (kit?.logoPath || (snapshot as any).customLogoUrl)),
+  )
+
+  return {
+    brandName,
+    sector,
+    templateFamily,
+    headline,
+    offer,
+    price,
+    oldPrice,
+    discount,
+    quantityTiers,
+    primaryBenefits,
+    deliveryFact,
+    stockFact,
+    urgencyFact,
+    cta,
+    contactLines,
+    website,
+    campaignDate,
+    productRef,
+    logoRef,
+  }
+}
+
+const TEMPLATE_FAMILY_INSTRUCTIONS: Record<TemplateFamily, string> = {
+  CAMPAIGN_POSTER: [
+    'Design mode: High-impact commercial campaign visual tailored custom-designed for this brand and sector.',
+    '- The physical product is the undisputed hero, occupying 60-70% visual share and physically integrated into the environment with authentic perspective, natural lighting, and realistic contact shadows (NEVER look like a flat cut-out pasted onto graphics).',
+    '- High-contrast Turkish commercial headline with clear mobile readability, styled appropriately for the brand personality.',
+    '- Clear commercial hierarchy: select only the strongest 2 to 4 commercial anchors (such as headline, price/offer hierarchy, and one concise benefit or CTA). Do NOT clutter with repetitive badge packs or generic footer strips.',
+    '- Avoid repeated Canva template skeletons: allow composition to emerge naturally from product geometry and sector (e.g., dynamic diagonal, large product crop breaking the frame, environmental embedding, or elegant editorial framing).',
+    '- Clean, authentic corporate logo placement integrated naturally into the composition.',
+  ].join('\n'),
+
+  PRODUCT_SHOWCASE: [
+    'Design mode: Clean commercial product showcase.',
+    '- Generous breathing room with pristine commercial studio lighting.',
+    '- The physical product is the central hero, showcasing authentic materials, textures, and clean reflections.',
+    '- Restrained, elegant sales typography with subtle branding.',
+    '- Focus on craftsmanship, design quality, and authentic physical identity.',
+  ].join('\n'),
+
+  FOOD_OFFER_POSTER: [
+    'Design mode: Appetizing culinary campaign poster.',
+    '- Mouth-watering, fresh food hero staging with warm, delicious lighting and glistening textures.',
+    '- Clear menu item title, appetizing food presentation, and prominent offer/price badge.',
+    '- High contrast, mobile-first sales appeal designed to drive direct WhatsApp orders.',
+  ].join('\n'),
+
+  ELEGANT_RETAIL: [
+    'Design mode: Boutique retail campaign visual.',
+    '- Soft, harmonious commercial lighting with graceful composition.',
+    '- The product or floral arrangement is front and center with refined aesthetic balance.',
+    '- Elegant commercial typography suitable for gifts, flowers, or boutique fashion.',
+  ].join('\n'),
+
+  SAAS_PROMO_CARD: [
+    'Design mode: Modern tech-commercial promo visual.',
+    '- Clean digital product staging featuring a sleek modern dashboard, app interface, or software card.',
+    '- Crisp digital typography highlighting key product benefits, core feature badge, and clear call-to-action.',
+  ].join('\n'),
+}
+
+function getSectorArtDirectionHint(sector?: string | null, brief?: string | null): string | null {
+  const text = `${sector || ''} ${brief || ''}`.toLowerCase()
+  if (/tarım|bahçe|çiftlik|ilaçlama|gübre|tohum|sprayer|tarim/i.test(text)) {
+    return 'Sector art direction (Tarım & Bahçe): The product is physically integrated into a real orchard, field, or foliage setting with natural morning daylight and realistic ground shadows. High-contrast agricultural campaign energy. Avoid generic neon supermarket flyer modules or repetitive badge strips.'
+  }
+  if (/inşaat|yapı|tuğla|klinker|çimento|şantiye|mimari|insaat/i.test(text)) {
+    return 'Sector art direction (İnşaat & Yapı Malzemeleri): Grounded in authentic construction-site materiality—natural daylight, wooden pallets, raw concrete, and authentic masonry texture. Solid architectural typography; avoid generic red discount-flyer compositions.'
+  }
+  if (/döner|restoran|yiyecek|gıda|lezzet|menü|kebap|food|doner/i.test(text)) {
+    return 'Sector art direction (Restoran & Gıda): Mouth-watering food photography must dominate the scene (70%+ visual share) with warm ambient light, rich textures, and appetizing freshness. Typography must support appetite; do NOT bury or cover the food under heavy graphic boxes or badge packs.'
+  }
+  if (/çiçek|lale|buket|gül|butik|hediye|flora/i.test(text)) {
+    return 'Sector art direction (Çiçekçilik & Butik): Editorial boutique aesthetic with organic composition, soft natural daylight, refined typography, and generous breathing room. Graceful and premium; avoid supermarket discount flyer graphics.'
+  }
+  if (/sanayi|endüstri|rulman|çelik|makine|yedek parça|vortex|bearing|sanayi/i.test(text)) {
+    return 'Sector art direction (Ağır Sanayi & Endüstri): Precision engineering aesthetic highlighting metallic product detail, brushed steel reflections, and realistic workshop or factory environment. Crisp technical typography and engineering clarity; avoid simply recoloring a generic template.'
+  }
+  return null
+}
+
 /**
  * P0 LEGACY_SIMPLE PROMPT PHILOSOPHY:
  *
@@ -120,14 +311,12 @@ export function buildLegacySimpleCreativePrompt(
   prompt: string
   negative: string
 } {
+  const verified = deriveVerifiedCampaignData(snapshot, options)
   const aspect =
     snapshot.formatId === 'reels_video'
       ? '9:16'
       : CREATIVE_FORMATS.find((row) => row.id === snapshot.formatId)?.aspect ?? snapshot.aspect
   const kit = snapshot.brandKit
-  const cleanBrandName = kit?.name
-    ? kit.name.replace(/(?:brand\s*kit|marka\s*kiti|kampanya\s*kiti|whatsapp\s*kampanya\s*kiti)/gi, '').trim()
-    : null
 
   const colors = kit?.colors
     ? Object.entries(kit.colors)
@@ -153,55 +342,67 @@ export function buildLegacySimpleCreativePrompt(
     return bits.join('. ')
   })
 
-  const contacts: string[] = []
-  for (const phone of snapshot.phones || []) {
-    contacts.push(`Phone/WhatsApp: ${phone.phone}${phone.label ? ` (${phone.label})` : ''}`)
-  }
-  for (const social of snapshot.socials || []) {
-    const handle = social.label || social.url
-    contacts.push(`${social.platform}: ${handle}`)
-  }
-  if (snapshot.website) contacts.push(`Website: ${snapshot.website}`)
-  if (snapshot.address) contacts.push(`Address: ${snapshot.address}`)
+  const templateInstruction = TEMPLATE_FAMILY_INSTRUCTIONS[verified.templateFamily] ?? TEMPLATE_FAMILY_INSTRUCTIONS.CAMPAIGN_POSTER
 
-  const extras: string[] = []
-  if (snapshot.labels && snapshot.labels.length) extras.push(`Badges/labels to feature: ${snapshot.labels.join(', ')}`)
-  if (snapshot.cta) extras.push(`CTA: ${snapshot.cta}`)
-  if (snapshot.dateRange) extras.push(`Campaign dates: ${snapshot.dateRange}`)
-  if (snapshot.customText) extras.push(`Custom line: ${snapshot.customText}`)
+  // Proven historical reference phrasing from d350985
+  const logoInstruction = verified.logoRef
+    ? 'A real brand logo image is attached. Place it as a small clean logo. Do NOT redraw, restyle or invent a new logo. Do not distort it.'
+    : 'Do not invent fake logos.'
+
+  const productInstruction = verified.productRef
+    ? 'A product photo is attached as a reference. Keep the real product identity.'
+    : 'Do not invent fantasy products.'
 
   const variation = snapshot.variationPreset
     ? VARIATION_PRESETS.find((row) => row.id === snapshot.variationPreset)?.label
     : null
 
-  const referenceInstruction =
-    'Authentic product and company logo references are attached. Use the real product and logo faithfully. Do not redesign, replace or invent either.'
+  const sectorArtDirection = getSectorArtDirectionHint(verified.sector, snapshot.brief)
+
+  // Selective commercial elements (Pick 2 to 4 strongest anchors based on campaign focus):
+  const commercialLines: string[] = []
+  if (verified.headline) commercialLines.push(`Campaign headline: "${verified.headline}"`)
+  if (verified.price) {
+    const discountPart = verified.discount ? ` · Discount: ${verified.discount}` : ''
+    commercialLines.push(
+      `Price hierarchy: ${verified.price}${verified.oldPrice ? ` (was ${verified.oldPrice})` : ''}${discountPart}`,
+    )
+  } else if (verified.offer) {
+    commercialLines.push(`Offer: ${verified.offer}`)
+  }
+  if (verified.primaryBenefits.length) {
+    commercialLines.push(`Key verified selling point: ${verified.primaryBenefits.slice(0, 2).join(' · ')}`)
+  }
+  if (verified.deliveryFact) {
+    commercialLines.push(`Delivery promise: ${verified.deliveryFact}`)
+  }
+  if (verified.cta || verified.contactLines.length) {
+    commercialLines.push(`Order cue: ${verified.cta || 'Sipariş Ver'}${verified.contactLines[0] ? ` · ${verified.contactLines[0]}` : ''}`)
+  }
 
   const prompt = [
     'Create ONE professional commercial campaign creative for WhatsApp / social ads.',
     'Turkish audience. High quality, sharp, mobile-first, no watermarks, no stock-photo logos.',
     `Use case: ${formatLabel(snapshot.formatId)} (${aspect}).`,
-    `Visual style: ${styleLabel(snapshot.style)}. ${STYLE_HINT[snapshot.style] ?? STYLE_HINT.auto}`,
+    templateInstruction,
+    sectorArtDirection,
     DENSITY_HINT[snapshot.textDensity] ?? DENSITY_HINT.balanced,
-    cleanBrandName ? `Brand name: ${cleanBrandName}.` : null,
+    verified.brandName ? `Brand name: ${verified.brandName}.` : null,
+    verified.sector ? `Sector: ${verified.sector}.` : null,
     kit?.tone ? `Brand tone of voice: ${kit.tone}` : null,
     colors ? `Follow this brand palette in backgrounds, accents and props: ${colors}.` : null,
     kit?.fonts?.heading ? `Prefer a ${kit.fonts.heading}-like heading feel.` : null,
-    cleanBrandName
-      ? `Include brand name "${cleanBrandName}" cleanly. Do not distort it.`
-      : 'Do not invent fake logos.',
-    referenceInstruction,
+    logoInstruction,
+    productInstruction,
     snapshot.baseCreativeId
       ? 'A base/reference campaign image is attached. Keep the same product and brand identity; apply the requested change.'
       : null,
     snapshot.instruction ? `Revision instruction (must follow): ${snapshot.instruction}` : null,
     variation ? `Variation direction: ${variation}. Same offer, different composition.` : null,
-    `Campaign brief from the advertiser (do not add facts they did not give): ${snapshot.brief}`,
+    `Campaign brief from the advertiser: ${snapshot.brief}`,
     productBlocks.length ? `Products:\n${productBlocks.join('\n')}` : 'No specific product catalog items.',
-    contacts.length
-      ? `Contact lines that may appear on the creative if text is used: ${contacts.join(' · ')}`
-      : null,
-    extras.length ? extras.join(' ') : null,
+    commercialLines.length ? `Verified commercial facts:\n${commercialLines.join('\n')}` : null,
+    'Commercial composition mandate: Feature only the 2 to 4 strongest commercial anchors above. Avoid repetitive circular discount stickers, 3-icon rows, boxed price cards, and bottom footer bars all together. Avoid a generic Canva template skeleton; let the layout emerge naturally from the product geometry, photography, and brand character.',
     'Do not invent prices, discounts, slogans, dates, product names or brand claims that are not in this brief.',
     'Do not replace products with different products. Preserve packaging and product shape from reference photos.',
     'Clean visual hierarchy. One focal offer. Not cluttered. Readable on a phone screen.',
@@ -210,11 +411,30 @@ export function buildLegacySimpleCreativePrompt(
     .join('\n')
 
   const negative = [
+    'no generic Canva template look',
+    'no repeated flyer layout',
+    'no cut-out product pasted on graphic background',
+    'no fake 3-icon benefit row',
+    'no supermarket sticker pack',
+    'no cookie-cutter poster skeleton',
+    'no generic boxed price cards',
     'no extra products that were not listed',
     'no fake logos',
+    'no distorted logo',
+    'no modified logo',
+    'no redesigned brand logo',
     'no unreadable micro-text',
     'no watermarks',
     'no misspelled brand names',
+    'no cartoon stickers',
+    'no starburst badges',
+    'no supermarket flyer clipart',
+    'no fake clickable web buttons',
+    'no tiny product in distant background',
+    'no generic minimalist empty poster',
+    'no cinematic lifestyle drift away from the product',
+    'no invented trust badges',
+    'no unverified warranty claims',
   ].join(', ')
 
   return { prompt, negative }

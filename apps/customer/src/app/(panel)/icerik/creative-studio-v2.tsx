@@ -22,6 +22,11 @@ import {
   type MediaType,
   type StructuredCampaignCopy,
 } from '@/lib/creative/v2/types'
+import {
+  TEMPLATE_FAMILIES,
+  TEXT_DENSITIES,
+  type TemplateFamily,
+} from '@/lib/creative/types'
 import { adaptLegacyDraftToV2, mapPresetToLegacyVideoFormat } from '@/lib/creative/v2/adapter'
 import {
   MAX_SPOKEN_WORDS,
@@ -173,6 +178,12 @@ export function CreativeStudioV2({
   const [brandKitId, setBrandKitId] = useState<string>(
     () => data.kits.find((k) => k.isDefault)?.id || data.kits[0]?.id || '',
   )
+
+  // Template Family & Commercial Data (Phase 2 & Phase 3)
+  const [templateFamily, setTemplateFamily] = useState<TemplateFamily>('CAMPAIGN_POSTER')
+  const [textDensity, setTextDensity] = useState<'low' | 'balanced' | 'detailed'>('balanced')
+  const [sector, setSector] = useState('')
+  const [deliveryInfo, setDeliveryInfo] = useState('')
 
   // Quality Mode: STANDARD (default production) vs DESIGNER (art-directed)
   const [qualityMode, setQualityMode] = useState<'STANDARD' | 'DESIGNER'>('STANDARD')
@@ -568,6 +579,10 @@ export function CreativeStudioV2({
           objective,
           creativePlan,
           qualityMode,
+          templateFamily,
+          textDensity,
+          sector: sector.trim() || undefined,
+          deliveryInfo: deliveryInfo.trim() || undefined,
         }
 
         const form = new FormData()
@@ -1030,37 +1045,92 @@ export function CreativeStudioV2({
             {/* STEP 2: CREATIVE DIRECTION */}
             {step === 'creative_direction' && (
               <div className="space-y-6">
-                <div>
-                  <h2 className="text-[15px] font-bold text-[#111b21]">Kreatif Reklam Tarzı</h2>
-                  <p className="text-[12px] text-[#667781] mt-0.5">Yapay zekanın görsel kompozisyon ve anlatım dilini seçin.</p>
-                  <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
-                    {CREATIVE_STYLE_PRESETS.map((preset) => (
-                      <button
-                        key={preset.id}
-                        type="button"
-                        onClick={() => {
-                          setStylePreset(preset.id)
-                          void requestCreativePlan(false, preset.id)
-                        }}
-                        className={`rounded-xl border p-3.5 text-left transition-all ${
-                          stylePreset === preset.id
-                            ? 'border-[#008069] bg-[#e7f8f2] ring-1 ring-[#008069]'
-                            : 'border-[#e9edef] hover:border-[#008069]/30 bg-white'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-[13px] font-bold text-[#111b21]">{preset.label}</span>
-                          {preset.tag && (
-                            <span className="rounded bg-[#008069] px-2 py-0.5 text-[10px] font-bold text-white">
-                              {preset.tag}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[11.5px] text-[#667781] mt-1 leading-snug">{preset.description}</p>
-                      </button>
-                    ))}
+                {mediaType === 'IMAGE' ? (
+                  <div className="space-y-4">
+                    <div>
+                      <h2 className="text-[15px] font-bold text-[#111b21]">Görsel Türü</h2>
+                      <p className="text-[12px] text-[#667781] mt-0.5">İşletmenize ve kampanya hedefinize en uygun görsel düzenini seçin.</p>
+                      <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
+                        {TEMPLATE_FAMILIES.map((fam) => (
+                          <button
+                            key={fam.id}
+                            type="button"
+                            onClick={() => setTemplateFamily(fam.id)}
+                            className={`rounded-xl border p-3.5 text-left transition-all ${
+                              templateFamily === fam.id
+                                ? 'border-[#008069] bg-[#e7f8f2] ring-1 ring-[#008069]'
+                                : 'border-[#e9edef] hover:border-[#008069]/30 bg-white'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-[13px] font-bold text-[#111b21]">{fam.label}</span>
+                              {fam.tag && (
+                                <span className="rounded bg-[#008069] px-2 py-0.5 text-[10px] font-bold text-white">
+                                  {fam.tag}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11.5px] text-[#667781] mt-1 leading-snug">{fam.description}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-hairline bg-surface p-3.5">
+                      <p className="text-[13px] font-bold text-[#111b21]">Metin Yoğunluğu</p>
+                      <p className="text-[11px] text-[#667781] mt-0.5">Görsel üstündeki metin miktarını belirleyin.</p>
+                      <div className="mt-2 grid grid-cols-3 gap-2">
+                        {TEXT_DENSITIES.map((d) => (
+                          <button
+                            key={d.id}
+                            type="button"
+                            onClick={() => setTextDensity(d.id)}
+                            className={`rounded-lg border px-3 py-2 text-center transition-all ${
+                              textDensity === d.id
+                                ? 'border-[#008069] bg-[#e7f8f2] text-[#008069] font-bold ring-1 ring-[#008069]'
+                                : 'border-[#e9edef] bg-white text-[#111b21] hover:border-[#008069]/30'
+                            }`}
+                          >
+                            <span className="block text-[12.5px] font-semibold">{d.label}</span>
+                            <span className="block text-[10.5px] text-[#667781] mt-0.5">{d.description}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div>
+                    <h2 className="text-[15px] font-bold text-[#111b21]">Kreatif Reklam Tarzı</h2>
+                    <p className="text-[12px] text-[#667781] mt-0.5">Yapay zekanın görsel kompozisyon ve anlatım dilini seçin.</p>
+                    <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
+                      {CREATIVE_STYLE_PRESETS.map((preset) => (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => {
+                            setStylePreset(preset.id)
+                            void requestCreativePlan(false, preset.id)
+                          }}
+                          className={`rounded-xl border p-3.5 text-left transition-all ${
+                            stylePreset === preset.id
+                              ? 'border-[#008069] bg-[#e7f8f2] ring-1 ring-[#008069]'
+                              : 'border-[#e9edef] hover:border-[#008069]/30 bg-white'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[13px] font-bold text-[#111b21]">{preset.label}</span>
+                            {preset.tag && (
+                              <span className="rounded bg-[#008069] px-2 py-0.5 text-[10px] font-bold text-white">
+                                {preset.tag}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11.5px] text-[#667781] mt-1 leading-snug">{preset.description}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Quality Mode (Designer vs Standard) */}
                 {mediaType === 'IMAGE' && (
@@ -1218,16 +1288,26 @@ export function CreativeStudioV2({
                   </summary>
                   <div className="mt-3 space-y-3 rounded-xl border border-hairline bg-[#f8fafb] p-3.5">
                     {mediaType === 'IMAGE' ? (
-                      <div className="grid gap-2 sm:grid-cols-3">
-                        <Field label="Fiyat (Varsa)">
-                          <Input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Örn: 249 TL" />
-                        </Field>
-                        <Field label="Eski Fiyat">
-                          <Input value={oldPrice} onChange={(e) => setOldPrice(e.target.value)} placeholder="Örn: 399 TL" />
-                        </Field>
-                        <Field label="Kampanya / İndirim">
-                          <Input value={offer} onChange={(e) => setOffer(e.target.value)} placeholder="Örn: %20 İndirim" />
-                        </Field>
+                      <div className="space-y-2.5">
+                        <div className="grid gap-2 sm:grid-cols-3">
+                          <Field label="Fiyat (Varsa)">
+                            <Input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Örn: 249 TL" />
+                          </Field>
+                          <Field label="Eski Fiyat (Opsiyonel)">
+                            <Input value={oldPrice} onChange={(e) => setOldPrice(e.target.value)} placeholder="Örn: 399 TL" />
+                          </Field>
+                          <Field label="Kampanya / İndirim">
+                            <Input value={offer} onChange={(e) => setOffer(e.target.value)} placeholder="Örn: %20 İndirim" />
+                          </Field>
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <Field label="Teslimat / Fayda Bilgileri">
+                            <Input value={deliveryInfo} onChange={(e) => setDeliveryInfo(e.target.value)} placeholder="Örn: 3 gün içinde teslimat · Şantiyeye teslim" />
+                          </Field>
+                          <Field label="Sektör (İsteğe Bağlı)">
+                            <Input value={sector} onChange={(e) => setSector(e.target.value)} placeholder="Örn: İnşaat, Tarım, Gıda, Çiçekçilik" />
+                          </Field>
+                        </div>
                       </div>
                     ) : (
                       <div className="space-y-3">
