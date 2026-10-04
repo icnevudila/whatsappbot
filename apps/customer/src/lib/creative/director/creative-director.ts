@@ -8,12 +8,43 @@
 import { getArchetype, listArchetypeIds, type ArchetypeGrammar } from './archetypes'
 import { classifySector, type SectorDna } from './sector-dna'
 import { recordCreativeMemory, selectFreshArchetype } from './creative-memory'
-import { completeText } from '@/lib/ai/text'
+import { completeText } from '../../ai/text'
+import { describeColor } from '../prompt'
+import { inferCommercialGrammar, type CommercialGrammarDefinition } from './commercial-poster-grammar'
+
+export interface BrandDnaPlan {
+  brand_name: string
+  tone: string
+  palette: {
+    primary?: string
+    secondary?: string
+    accent?: string
+    text?: string
+    background?: string
+    naturalLanguageDescription: string
+  }
+  typography: {
+    headingFont?: string
+    bodyFont?: string
+    personality: string
+  }
+  logo_rules: {
+    placement: string
+    fidelity: 'STRICT_CANONICAL_PRESERVE'
+    allow_redraw: false
+  }
+  visual_personality: string
+  background_preference: string
+  accent_usage: string
+}
 
 export interface ArtDirectionPlan {
   concept_name: string
   creative_archetype: string
   visual_hook: string
+
+  brand_dna: BrandDnaPlan
+  commercial_grammar?: CommercialGrammarDefinition
 
   composition: {
     grid: string
@@ -93,7 +124,21 @@ export interface ArtDirectorInput {
   orgId: string
   brandName?: string
   brandTone?: string | null
-  brandColors?: { primary?: string; accent?: string; secondary?: string } | null
+  brandColors?: {
+    primary?: string
+    secondary?: string
+    accent?: string
+    text?: string
+    background?: string
+    [key: string]: string | undefined
+  } | null
+  brandFonts?: {
+    heading?: string
+    body?: string
+    [key: string]: string | undefined
+  } | null
+  brandLogoPath?: string | null
+  brandInstructions?: string | null
   productName: string
   productDescription?: string | null
   category?: string | null
@@ -220,18 +265,101 @@ export async function generateArtDirectionPlan(
   return plan
 }
 
+export function buildBrandDna(
+  input: ArtDirectorInput,
+  archetype: ArchetypeGrammar,
+  sector: SectorDna,
+): BrandDnaPlan {
+  const brandName = input.brandName?.trim() || 'İşletme'
+  const tone = input.brandTone?.trim() || 'Profesyonel kurumsal'
+
+  const primaryHex = input.brandColors?.primary || '#111111'
+  const secondaryHex = input.brandColors?.secondary || '#4b5563'
+  const accentHex = input.brandColors?.accent || '#2563eb'
+  const textHex = input.brandColors?.text || '#ffffff'
+  const bgHex = input.brandColors?.background || '#0f172a'
+
+  const primaryDesc = describeColor(primaryHex) || 'corporate core tone'
+  const secondaryDesc = describeColor(secondaryHex) || 'supporting neutral'
+  const accentDesc = describeColor(accentHex) || 'focal accent'
+  const textDesc = describeColor(textHex) || 'high-contrast text'
+  const bgDesc = describeColor(bgHex) || 'grounded dark tone'
+
+  const naturalLanguageDescription = [
+    `Authoritative Brand Palette: Primary=${primaryDesc}`,
+    input.brandColors?.secondary ? `Secondary=${secondaryDesc}` : null,
+    input.brandColors?.accent ? `Accent=${accentDesc}` : null,
+    input.brandColors?.background ? `Background Tone=${bgDesc}` : null,
+    input.brandColors?.text ? `Typography Contrast=${textDesc}` : null,
+  ].filter(Boolean).join(', ')
+
+  const headingFont = input.brandFonts?.heading || 'Inter'
+  const bodyFont = input.brandFonts?.body || 'Inter'
+
+  const isCorporateRestrained = /kurumsal|mimari|mühendis|ciddi|prestij|güvenilir|resmi|professional/i.test(tone)
+
+  const typographyPersonality = `${headingFont}-inspired commercial hierarchy. Authoritative weight, clean kerning, disciplined geometric proportion, mobile-first legibility.`
+
+  const visualPersonality = isCorporateRestrained
+    ? `Disciplined, high-trust, engineered clarity reflecting ${tone}. Restrained lighting, authentic materials, strictly no frivolous glow or unmotivated visual noise.`
+    : `Dynamic, high-impact commercial authority reflecting ${tone}. Sharp contrast, focused energy, conversion-driven visual hierarchy.`
+
+  const backgroundPreference = `Deeply anchored in ${bgDesc} and ${secondaryDesc} tones integrated seamlessly with authentic ${sector.physicalEnvironment.primaryScene}.`
+
+  const accentUsage = `Reserve ${accentDesc} strictly for high-priority visual anchors: CTA pill button, offer badge highlight, and subtle architectural/lighting rim accents.`
+
+  return {
+    brand_name: brandName,
+    tone,
+    palette: {
+      primary: primaryHex,
+      secondary: secondaryHex,
+      accent: accentHex,
+      text: textHex,
+      background: bgHex,
+      naturalLanguageDescription,
+    },
+    typography: {
+      headingFont,
+      bodyFont,
+      personality: typographyPersonality,
+    },
+    logo_rules: {
+      placement: 'Dominant top header or top corner with generous protective margins and pristine contrast',
+      fidelity: 'STRICT_CANONICAL_PRESERVE',
+      allow_redraw: false,
+    },
+    visual_personality: visualPersonality,
+    background_preference: backgroundPreference,
+    accent_usage: accentUsage,
+  }
+}
+
 function buildDeterministicPlan(
   input: ArtDirectorInput,
   sector: SectorDna,
   archetype: ArchetypeGrammar,
 ): ArtDirectionPlan {
   const brandName = input.brandName || 'Markamız'
+  const brand_dna = buildBrandDna(input, archetype, sector)
+  const commercial_grammar = inferCommercialGrammar({
+    productName: input.productName,
+    productDescription: input.productDescription,
+    category: input.category,
+    sectorId: sector.sectorId,
+    objective: input.objective,
+    stylePreset: input.stylePreset,
+  })
   const isHumanLikely = archetype.id === 'REAL_WORLD_USAGE' || archetype.id === 'ORGANIC_LIFESTYLE' || archetype.id === 'EDITORIAL_LUXURY' || archetype.id === 'SOCIAL_FIRST_BOLD'
+  const isCorporateRestrained = /kurumsal|mimari|mühendis|ciddi|prestij|güvenilir|resmi|professional/i.test(brand_dna.tone)
 
   return {
     concept_name: `${brandName} ${archetype.name} Campaign`,
     creative_archetype: archetype.id,
     visual_hook: `${input.productName}, ${sector.physicalEnvironment.primaryScene} içerisinde ${archetype.composition.focalPoint}`,
+
+    brand_dna,
+    commercial_grammar,
 
     composition: {
       grid: archetype.composition.grid,
@@ -253,8 +381,8 @@ function buildDeterministicPlan(
       visual_language: `${archetype.artDirection.visualLanguage}. Sector authenticity: ${sector.physicalEnvironment.primaryScene}.`,
       material_language: `${archetype.artDirection.materialLanguage}, ${sector.physicalEnvironment.materialTextures.join(', ')}.`,
       lighting: `${archetype.artDirection.lighting}. Physics: ${sector.physicalEnvironment.lightingPhysics}.`,
-      background_treatment: `${sector.physicalEnvironment.primaryScene} with ${archetype.artDirection.backgroundTreatment}.`,
-      color_treatment: archetype.artDirection.colorTreatment,
+      background_treatment: `${brand_dna.background_preference} with ${archetype.artDirection.backgroundTreatment}.`,
+      color_treatment: `${brand_dna.palette.naturalLanguageDescription}. Archetype contrast strategy: ${archetype.artDirection.contrastStrategy}. ARCHETYPE MUST NOT OVERRIDE BRAND PALETTE.`,
       contrast_strategy: archetype.artDirection.contrastStrategy,
       texture: `${archetype.artDirection.texture}, ${sector.physicalEnvironment.materialTextures[0] || 'tactile surface realism'}.`,
       atmosphere: `${archetype.artDirection.atmosphere}. Atmospheric accents: ${sector.physicalEnvironment.atmosphericEffects.join(', ')}.`,
@@ -265,17 +393,17 @@ function buildDeterministicPlan(
       frames: archetype.graphicLanguage.frames,
       lines: archetype.graphicLanguage.lines,
       panels: archetype.graphicLanguage.panels,
-      glow: archetype.graphicLanguage.glow,
+      glow: isCorporateRestrained ? 'Restrained, natural light bloom only, no synthetic neon glow' : archetype.graphicLanguage.glow,
       grain: archetype.graphicLanguage.grain,
       decorative_motifs: archetype.graphicLanguage.decorativeMotifs,
     },
 
     typography_direction: {
-      headline_character: archetype.typographyDirection.headlineCharacter,
+      headline_character: `${brand_dna.typography.personality} - ${archetype.typographyDirection.headlineCharacter}`,
       hierarchy: archetype.typographyDirection.hierarchy,
       alignment: archetype.typographyDirection.alignment,
       density: archetype.typographyDirection.density,
-      style_feel: archetype.typographyDirection.styleFeel,
+      style_feel: `${brand_dna.typography.headingFont}-like typography feel with ${archetype.typographyDirection.styleFeel}`,
     },
 
     human_direction: {
@@ -309,6 +437,9 @@ function buildDeterministicPlan(
 
     anti_generic_rules: [
       ...ANTI_GENERIC_STANDARD_RULES,
+      'Never replace or override the authoritative Brand Kit palette with random generic archetype colors',
+      'Never redraw, recolor, stylize, or invent a fake brand logo mark',
+      'Never invent unverified trust badges, guarantee claims, or reseller seals (e.g. Orijinal Ürün, Yetkili Satıcı, 50 Yıl Garanti)',
       ...archetype.antiGenericRules,
       ...sector.antiGenericDirectives,
     ],
@@ -353,7 +484,14 @@ async function requestAiArtDirection(params: {
 
   const system =
     'You are an Executive Commercial Art Director. Return strictly valid raw JSON representing the ArtDirectionPlan.'
-  const rawText = await completeText(system, prompt)
+  let rawText: string | null = null
+  try {
+    const aiPromise = completeText(system, prompt)
+    const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 2500))
+    rawText = await Promise.race([aiPromise, timeoutPromise])
+  } catch {
+    return null
+  }
 
   if (!rawText) return null
 
@@ -362,6 +500,10 @@ async function requestAiArtDirection(params: {
 
   if (!parsed.concept_name || !parsed.composition || !parsed.art_direction) {
     return null
+  }
+
+  if (!parsed.brand_dna) {
+    parsed.brand_dna = buildBrandDna(params.input, params.archetype, params.sector)
   }
 
   // Ensure sector DNA is attached

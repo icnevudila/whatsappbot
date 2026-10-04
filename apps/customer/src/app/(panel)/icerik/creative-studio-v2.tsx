@@ -1067,14 +1067,14 @@ export function CreativeStudioV2({
                   <div className="rounded-xl border border-hairline bg-surface p-3.5 flex items-center justify-between">
                     <div>
                       <p className="text-[13px] font-bold text-[#111b21] flex items-center gap-1.5">
-                        <span>Sanat Yönetimi Seviyesi</span>
+                        <span>Tasarım Kalitesi</span>
                         <span className="rounded bg-[#008069] text-white px-2 py-0.5 text-[10px] font-bold">
-                          {qualityMode === 'DESIGNER' ? 'Designer (Art-Directed)' : 'Standart'}
+                          {qualityMode === 'DESIGNER' ? 'Ajans Tasarımı' : 'Standart'}
                         </span>
                       </p>
                       <p className="text-[11px] text-[#667781] mt-0.5">
                         {qualityMode === 'DESIGNER'
-                          ? 'Ajans seviyesi kompozisyon, derinlik, ışık fiziği ve 20 mimari arketip rehberliği.'
+                          ? 'Profesyonel ajans kalitesinde reklam afişi, özel ışıklandırma ve güçlü marka düzeni.'
                           : 'Hızlı ve dengeli standart görsel üretimi.'}
                       </p>
                     </div>

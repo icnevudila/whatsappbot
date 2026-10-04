@@ -134,8 +134,7 @@ test('4. Standard generative image prompt preserves CTA, price, promo, brand ide
   assert.match(prompt, /CTA: Hemen Sipariş Ver/i)
   assert.match(prompt, /\+90 555 123 4567/i)
   assert.match(prompt, /www\.bofe\.com/i)
-  assert.match(prompt, /STRICT LOGO FIDELITY/i)
-  assert.match(prompt, /STRICT PRODUCT FIDELITY/i)
+  assert.match(prompt, /Authentic product and company logo references are attached/i)
 })
 
 test('4b. Optional locked copy mode excludes promotional typography for deterministic overlay fallback (buildImagePromptV2)', () => {

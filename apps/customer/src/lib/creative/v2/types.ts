@@ -8,11 +8,11 @@ export type CampaignObjective =
   | 'CAMPAIGN'
 
 export const CAMPAIGN_OBJECTIVES: { id: CampaignObjective; label: string; description: string }[] = [
-  { id: 'PRODUCT_INTRO', label: 'Ürün Tanıtımı', description: 'Ürünün temel özellikleri, malzeme kalitesi ve kullanım faydası' },
-  { id: 'SALES_OFFER', label: 'Satış & Fırsat', description: 'Dönemsel indirim, özel fiyat veya toptan avantaj odaklı duyuru' },
-  { id: 'NEW_PRODUCT', label: 'Yeni Ürün Duyurusu', description: 'Pazara yeni çıkan inovasyon veya yeni sezon lansmanı' },
-  { id: 'BRAND_AWARENESS', label: 'Marka Prestiji', description: 'Kurumsal güç, üretim kapasitesi ve sektördeki güvenilir duruş' },
-  { id: 'CAMPAIGN', label: 'Dönemsel Kampanya', description: 'Sezonluk veya sınırlı süreli özel kampanya kurgusu' },
+  { id: 'PRODUCT_INTRO', label: 'Ürünü Tanıt', description: 'Ürününüzün özelliklerini ve kalitesini doğrudan gösterin.' },
+  { id: 'SALES_OFFER', label: 'Satış Yap', description: 'Özel fiyat ve teklifle müşteriyi hemen satın almaya yönlendirin.' },
+  { id: 'CAMPAIGN', label: 'Kampanya Duyur', description: 'Dönemsel indirim veya sınırlı süreli avantaj paylaşın.' },
+  { id: 'BRAND_AWARENESS', label: 'Markanı Tanıt', description: 'İşletmenizin kurumsal gücünü ve güvenilirliğini vurgulayın.' },
+  { id: 'NEW_PRODUCT', label: 'Yeni Ürün', description: 'Menünüze veya vitrininize yeni eklenen ürünü tanıtın.' },
 ]
 
 export type CreativeStylePreset =
@@ -32,37 +32,37 @@ export const CREATIVE_STYLE_PRESETS: {
 }[] = [
   {
     id: 'AUTO',
-    label: 'Akıllı Seçim (Otomatik)',
+    label: 'Akıllı Seçim',
     tag: 'Önerilen',
-    description: 'Yapay zeka ürünün sektörüne ve hedef kitleye en uygun ticari dili belirler.',
+    description: 'Yapay zeka ürününüze en uygun reklam düzenini otomatik seçer.',
     imageStyleHint: 'Balanced commercial advertising lighting, pristine product staging, high visual appeal.',
     videoFormatHint: 'AUTO',
   },
   {
     id: 'PRODUCT_HERO',
-    label: 'Ürün Vitrini (Hero)',
-    description: 'Sadece ürüne odaklanır; malzeme dokusu, renkler ve detaylar ön plandadır.',
+    label: 'Ürün Vitrini',
+    description: 'Ürünü net ışık ve canlı detaylarla sahnenin ana odak noktası yapar.',
     imageStyleHint: 'Ultra-clean commercial studio product photography, pristine reflections, 35mm macro sharpness.',
     videoFormatHint: 'FAST_SALES',
   },
   {
     id: 'REAL_USAGE',
-    label: 'Saha & Gerçek Kullanım',
-    description: 'Ürünün gerçek hayatta doğal ortamında kullanım anını ve işlevini gösterir.',
+    label: 'Gerçek Kullanım',
+    description: 'Ürünün doğal ortamında kullanım anını ve sahadaki faydasını gösterir.',
     imageStyleHint: 'Authentic commercial in-context product usage, realistic environment, natural lighting.',
     videoFormatHint: 'PRODUCT_USAGE',
   },
   {
     id: 'PREMIUM',
     label: 'Kurumsal & Prestij',
-    description: 'Tesis, mimari estetik veya seçkin stüdyoda ağırbaşlı marka duruşu.',
+    description: 'Ağırbaşlı ışık ve seçkin tasarım ile güçlü bir marka duruşu sağlar.',
     imageStyleHint: 'High-end luxury commercial lighting, architectural depth, elegant restrained palette.',
     videoFormatHint: 'PREMIUM',
   },
   {
     id: 'DYNAMIC_OFFER',
-    label: 'Dinamik & Fırsat Odaklı',
-    description: 'Hızlı tempolu, dikkat çekici ve doğrudan dönüşüm sağlayan kampanya dili.',
+    label: 'Fırsat Odaklı',
+    description: 'Fiyatı ve teklifi öne çıkararak hızlı geri dönüş hedefler.',
     imageStyleHint: 'Dynamic high-contrast commercial layout, punchy lighting, bold focal subject.',
     videoFormatHint: 'FAST_SALES',
   },
