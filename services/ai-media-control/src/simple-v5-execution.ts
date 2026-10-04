@@ -401,11 +401,9 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     }
   }
 
-  // Words are distributed evenly across subtitle window (strict; never bleeds into outro).
+  // Words are distributed evenly across subtitle window (strict; never bleeds into outro or hero close).
   const SUBTITLE_WINDOW_START = 0.5
-  const SUBTITLE_WINDOW_END   = outroEnabled
-    ? 5.25
-    : Math.max(5.5, (rawProbe.duration || brief.durationSeconds || 8) - 0.5)
+  const SUBTITLE_WINDOW_END   = 5.25
 
   let assContent = ''
   if (productionPlan.subtitles.mode === 'auto' && brief.spokenScript) {

@@ -619,8 +619,8 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
     const phone     = (finishingSpec?.outroPhone || finishingSpec?.phone || '').trim()
     const website   = (finishingSpec?.outroWebsite || finishingSpec?.website || '').trim()
     let   rawCta    = (finishingSpec?.ctaText || finishingSpec?.ctaBadgeText || '').trim()
-    // Minimalist Luxury Outro: Do not force an artificial CTA button; let Logo + Slogan + Contact breathe
-    const showCta = Boolean(rawCta && !/whatsapp/i.test(rawCta) && finishingSpec?.forceCtaButton)
+    // Minimalist Luxury Outro: Display verified CTA button cleanly below logo and copy
+    const showCta = Boolean(rawCta && !/whatsapp/i.test(rawCta))
 
     // Only display a supplied slogan; brand presence does not establish a guarantee.
     const slogan = rawSlogan
@@ -632,7 +632,7 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
     const extraInputs: string[] = []
     let cur = '0:v'
 
-    // LAYER 1 — subtitle_layer (strictly 0.5–6.5s; enforced by maxEndTimeSec in ASS)
+    // LAYER 1 — subtitle_layer (strictly 0.5–5.5s; enforced by maxEndTimeSec in ASS)
     if (hasSubtitles) {
       const escapedSub = subtitlesPath.replace(/\\/g, '/').replace(/:/g, '\\:')
       filterParts.push(`[${cur}]ass='${escapedSub}'[v_sub]`)
@@ -672,44 +672,57 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
         cur = 'v_logo'
       }
 
-      // LAYER 3 — headline / slogan layer (bold white, elegant typography with staggered slide-in)
-      const displayHeadline = slogan || brandName
-      if (displayHeadline) {
-        const cleanHeadline = displayHeadline.replace(/'/g, '').replace(/:/g, '\\:').replace(/[\r\n]+/g, ' ')
-        const headlineStart = OUTRO_START + 0.20
+      // LAYER 3 — brand name layer (bold white, elegant typography with staggered slide-in)
+      if (brandName) {
+        const cleanBrand = brandName.replace(/'/g, '').replace(/:/g, '\\:').replace(/[\r\n]+/g, ' ')
+        const brandStart = OUTRO_START + 0.20
         filterParts.push(
           `[${cur}]drawtext=` +
-          `text='${cleanHeadline}':fontcolor=0xFFFFFF:fontsize=34:` +
-          `x=(w-text_w)/2:y='720 + (1-sin(min(1,max(0,(t-${headlineStart.toFixed(2)})/0.18))*1.5708))*12':` +
-          `alpha='min(1,max(0,(t-${headlineStart.toFixed(2)})/0.18))':` +
-          `enable='gte(t,${headlineStart.toFixed(2)})'[v_headline]`
+          `text='${cleanBrand}':fontcolor=0xFFFFFF:fontsize=36:` +
+          `x=(w-text_w)/2:y='680 + (1-sin(min(1,max(0,(t-${brandStart.toFixed(2)})/0.18))*1.5708))*12':` +
+          `alpha='min(1,max(0,(t-${brandStart.toFixed(2)})/0.18))':` +
+          `enable='gte(t,${brandStart.toFixed(2)})'[v_brand]`
         )
-        cur = 'v_headline'
+        cur = 'v_brand'
       }
 
-      // LAYER 4 — contact_layer (phone | website, clear cool slate with slide-in)
+      // LAYER 4 — optional verified slogan / product subhead
+      if (slogan) {
+        const cleanSlogan = slogan.replace(/'/g, '').replace(/:/g, '\\:').replace(/[\r\n]+/g, ' ')
+        const sloganStart = OUTRO_START + 0.28
+        filterParts.push(
+          `[${cur}]drawtext=` +
+          `text='${cleanSlogan}':fontcolor=0xCBD5E1:fontsize=24:` +
+          `x=(w-text_w)/2:y='735 + (1-sin(min(1,max(0,(t-${sloganStart.toFixed(2)})/0.18))*1.5708))*10':` +
+          `alpha='min(1,max(0,(t-${sloganStart.toFixed(2)})/0.18))':` +
+          `enable='gte(t,${sloganStart.toFixed(2)})'[v_slogan]`
+        )
+        cur = 'v_slogan'
+      }
+
+      // LAYER 5 — contact_layer (phone | website, clear cool slate with slide-in)
       if (phone || website) {
         const contactLine = [phone, website].filter(Boolean).join('   |   ')
         const cleanContact = contactLine.replace(/'/g, '').replace(/:/g, '\\:').replace(/[\r\n]+/g, ' ')
-        const contactStart = OUTRO_START + 0.30
+        const contactStart = OUTRO_START + 0.35
         filterParts.push(
           `[${cur}]drawtext=` +
-          `text='${cleanContact}':fontcolor=0x94A3B8:fontsize=24:` +
-          `x=(w-text_w)/2:y='790 + (1-sin(min(1,max(0,(t-${contactStart.toFixed(2)})/0.15))*1.5708))*10':` +
+          `text='${cleanContact}':fontcolor=0x94A3B8:fontsize=22:` +
+          `x=(w-text_w)/2:y='795 + (1-sin(min(1,max(0,(t-${contactStart.toFixed(2)})/0.15))*1.5708))*10':` +
           `alpha='min(1,max(0,(t-${contactStart.toFixed(2)})/0.15))':` +
           `enable='gte(t,${contactStart.toFixed(2)})'[v_contact]`
         )
         cur = 'v_contact'
       }
 
-      // LAYER 5 — optional subtle CTA (only if explicitly enabled, no clunky box)
+      // LAYER 6 — verified CTA button text
       if (showCta) {
         const cleanCta = rawCta.replace(/'/g, '').replace(/:/g, '\\:').replace(/[\r\n]+/g, ' ')
-        const ctaStart = OUTRO_START + 0.40
+        const ctaStart = OUTRO_START + 0.42
         filterParts.push(
           `[${cur}]drawtext=` +
-          `text='${cleanCta}':fontcolor=0x94A3B8:fontsize=20:` +
-          `x=(w-text_w)/2:y='960 + (1-sin(min(1,max(0,(t-${ctaStart.toFixed(2)})/0.15))*1.5708))*10':` +
+          `text='${cleanCta}':fontcolor=0xFFD700:fontsize=26:` +
+          `x=(w-text_w)/2:y='870 + (1-sin(min(1,max(0,(t-${ctaStart.toFixed(2)})/0.15))*1.5708))*10':` +
           `alpha='min(1,max(0,(t-${ctaStart.toFixed(2)})/0.15))':` +
           `enable='gte(t,${ctaStart.toFixed(2)})'[v_cta]`
         )
