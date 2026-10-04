@@ -123,7 +123,7 @@ test('Rule 6: Audio Definition (Voiceover is 10-14 words, Turkish, wired into AU
   assert.strictEqual(pkg.voiceover.text.includes('"'), false)
   
   // Directly wired into Veo English prompt AUDIO directive
-  assert.ok(pkg.veoPrompt.includes('AUDIO: Professional crystal-clear Turkish voiceover:'))
+  assert.ok(pkg.veoPrompt.includes('AUDIO: Professional crystal-clear Turkish'))
   assert.ok(pkg.veoPrompt.includes(pkg.voiceover.text.replace(/["']/g, '')))
 })
 

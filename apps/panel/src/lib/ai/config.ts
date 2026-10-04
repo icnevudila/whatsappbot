@@ -118,29 +118,17 @@ function readOrder(raw: string | undefined, fallback: AiProviderId[]): AiProvide
   return parsed.length > 0 ? parsed : fallback
 }
 
-const DEFAULT_IMAGE_ORDER = readOrder(process.env.AI_IMAGE_PROVIDERS, [
-  'omnistudio',
-])
+const DEFAULT_IMAGE_ORDER: AiProviderId[] = ['omnistudio']
 
-const DEFAULT_TEXT_ORDER = readOrder(process.env.AI_TEXT_PROVIDERS, ['gemini', 'openai'])
+const DEFAULT_TEXT_ORDER: AiProviderId[] = ['omnistudio']
 
-/** Tercih edilen sağlayıcıyı sıranın başına alır. */
-export function resolveImageProviderOrder(bag?: AiKeyBag | null): AiProviderId[] {
-  const preferred = String(bag?.preferredImageProvider ?? 'auto').trim().toLowerCase()
-  if (!preferred || preferred === 'auto') return DEFAULT_IMAGE_ORDER
-  if (!(['omnistudio', 'gemini', 'openai', 'cloudflare', 'pollinations'] as string[]).includes(preferred)) {
-    return DEFAULT_IMAGE_ORDER
-  }
-  const id = preferred as AiProviderId
-  return [id, ...DEFAULT_IMAGE_ORDER.filter((item) => item !== id)]
+/** Tercih edilen sağlayıcıyı sıranın başına alır (Üretimde sadece OmniStudio). */
+export function resolveImageProviderOrder(_bag?: AiKeyBag | null): AiProviderId[] {
+  return ['omnistudio']
 }
 
-export function resolveTextProviderOrder(bag?: AiKeyBag | null): AiProviderId[] {
-  const preferred = String(bag?.preferredTextProvider ?? 'auto').trim().toLowerCase()
-  if (!preferred || preferred === 'auto') return DEFAULT_TEXT_ORDER
-  if (!(['gemini', 'openai'] as string[]).includes(preferred)) return DEFAULT_TEXT_ORDER
-  const id = preferred as AiProviderId
-  return [id, ...DEFAULT_TEXT_ORDER.filter((item) => item !== id)]
+export function resolveTextProviderOrder(_bag?: AiKeyBag | null): AiProviderId[] {
+  return ['omnistudio']
 }
 
 /** @deprecated Tercihli sıra için resolveImageProviderOrder kullanın. */

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { LocaleSwitcher } from '@/components/locale-switcher'
-import { LogoMark, Wordmark } from './brand'
+import { LogoMark, Wordmark, BRAND_NAME } from './brand'
 
 /**
  * Pilot auth split: graphite aside + paper form.

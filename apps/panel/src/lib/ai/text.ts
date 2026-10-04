@@ -10,83 +10,62 @@ import {
   type ResolvedAiConfig,
 } from './config'
 
+export type TextMetadata = {
+  customer?: string
+  tenantId?: string
+  orgId?: string
+  conversationId?: string
+  requestId?: string
+}
+
 type TextProvider = {
   id: AiProviderId
   label: string
   isConfigured: () => boolean
-  complete: (system: string, user: string) => Promise<string>
+  complete: (system: string, user: string, metadata?: TextMetadata) => Promise<string>
 }
 
 function timeout(): AbortSignal {
   return AbortSignal.timeout(AI_TIMEOUT_MS)
 }
 
-function buildProviders(config: ResolvedAiConfig): Partial<Record<AiProviderId, TextProvider>> {
+function buildProviders(_config: ResolvedAiConfig): Partial<Record<AiProviderId, TextProvider>> {
   return {
-    gemini: {
-      id: 'gemini',
-      label: 'Google Gemini',
-      isConfigured: () => Boolean(config.gemini.apiKey),
-      async complete(system, user) {
-        const model = config.gemini.textModel
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-          {
-            method: 'POST',
-            signal: timeout(),
-            headers: {
-              'Content-Type': 'application/json',
-              'x-goog-api-key': config.gemini.apiKey,
-            },
-            body: JSON.stringify({
-              systemInstruction: { parts: [{ text: system }] },
-              contents: [{ role: 'user', parts: [{ text: user }] }],
-              generationConfig: { temperature: 0.8, maxOutputTokens: 800 },
-            }),
-          },
-        )
+    omnistudio: {
+      id: 'omnistudio',
+      label: 'OmniStudio AI Engine',
+      isConfigured: () => process.env.OMNISTUDIO_DISABLED !== 'true',
+      async complete(system, user, metadata) {
+        const gatewayUrl = (process.env.OMNISTUDIO_GATEWAY_URL || 'http://167.233.201.31:3456').replace(/\/$/, '')
+        const customer = metadata?.customer || 'Mesajify'
+        const tenantId = metadata?.tenantId || metadata?.orgId || null
+        const orgId = metadata?.orgId || metadata?.tenantId || null
+        const conversationId = metadata?.conversationId || null
+        const requestId = metadata?.requestId || null
 
-        if (!response.ok) {
-          throw new Error(`Gemini ${response.status}: ${(await response.text()).slice(0, 300)}`)
-        }
-
-        const json = (await response.json()) as {
-          candidates?: { content?: { parts?: { text?: string }[] } }[]
-        }
-
-        const text = (json.candidates?.[0]?.content?.parts ?? [])
-          .map((part) => part.text ?? '')
-          .join('')
-          .trim()
-
-        if (!text) throw new Error('Gemini metin dondurmedi')
-        return text
-      },
-    },
-    openai: {
-      id: 'openai',
-      label: 'OpenAI',
-      isConfigured: () => Boolean(config.openai.apiKey),
-      async complete(system, user) {
-        const response = await fetch(`${config.openai.baseUrl}/chat/completions`, {
+        const response = await fetch(`${gatewayUrl}/v1/chat/completions`, {
           method: 'POST',
           signal: timeout(),
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${config.openai.apiKey}`,
           },
           body: JSON.stringify({
-            model: config.openai.textModel,
+            model: 'gpt-4o',
             messages: [
               { role: 'system', content: system },
               { role: 'user', content: user },
             ],
-            temperature: 0.8,
+            customer,
+            company: customer,
+            tenantId,
+            orgId,
+            conversationId,
+            requestId,
           }),
         })
 
         if (!response.ok) {
-          throw new Error(`OpenAI ${response.status}: ${(await response.text()).slice(0, 300)}`)
+          throw new Error(`OmniStudio ${response.status}: ${(await response.text()).slice(0, 300)}`)
         }
 
         const json = (await response.json()) as {
@@ -94,8 +73,24 @@ function buildProviders(config: ResolvedAiConfig): Partial<Record<AiProviderId, 
         }
 
         const text = json.choices?.[0]?.message?.content?.trim()
-        if (!text) throw new Error('OpenAI metin dondurmedi')
+        if (!text) throw new Error('OmniStudio metin döndürmedi')
         return text
+      },
+    },
+    gemini: {
+      id: 'gemini',
+      label: 'Google Gemini',
+      isConfigured: () => false,
+      async complete() {
+        throw new Error('Gemini API devre dışı bırakıldı (Yalnızca OmniStudio desteklenir).')
+      },
+    },
+    openai: {
+      id: 'openai',
+      label: 'OpenAI',
+      isConfigured: () => false,
+      async complete() {
+        throw new Error('OpenAI API devre dışı bırakıldı (Yalnızca OmniStudio desteklenir).')
       },
     },
   }
@@ -119,6 +114,7 @@ export async function completeText(
   system: string,
   user: string,
   bag?: AiKeyBag | null,
+  metadata?: TextMetadata,
 ): Promise<string> {
   const registry = buildProviders(resolveAiConfig(bag))
   const attempts: string[] = []
@@ -128,7 +124,7 @@ export async function completeText(
     if (!provider?.isConfigured()) continue
 
     try {
-      return await provider.complete(system, user)
+      return await provider.complete(system, user, metadata)
     } catch (error) {
       attempts.push(
         `${provider.label}: ${error instanceof Error ? error.message : String(error)}`,
@@ -139,6 +135,6 @@ export async function completeText(
   throw new Error(
     attempts.length > 0
       ? `Hiçbir metin sağlayıcı sonuç vermedi. ${attempts.join(' | ')}`
-      : 'Metin üretimi için OpenAI veya Gemini anahtarı gerekir (Ayarlar veya sunucu env).',
+      : 'Metin üretimi için OmniStudio servisi yapılandırılmalıdır.',
   )
 }

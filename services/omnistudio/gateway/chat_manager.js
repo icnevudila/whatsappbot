@@ -17,13 +17,8 @@ const cacheMetrics = { hit: 0, miss: 0, diskReadMs: 0, diskWriteMs: 0 };
  */
 function getExpectedChatTitle(customer, channel) {
   const norm = (customer || '').trim();
-  const isSystemCanary = (norm === 'Sistem' || norm === 'Sistem Nöbetçisi') && channel === 'canary';
-  if (isSystemCanary) {
-    return '[Canary] Sistem Nöbetçisi';
-  }
-  if (norm.startsWith('API-') || norm === 'API-Client' || String(channel).startsWith('api_')) {
-    const apiTarget = norm.replace(/^API-(?:Client)?/i, '').trim() || 'İstemci';
-    return `[API] ${apiTarget}`;
+  if (channel === 'canary' || norm === 'Sistem' || norm === 'Sistem Nöbetçisi' || norm.toLowerCase().includes('canary')) {
+    return '[Sistem] Canary Watchdog';
   }
   const comp = norm || 'Genel';
   if (channel === 'media') return `[Mesajify] ${comp} - Medya`;
@@ -38,8 +33,7 @@ function normalizeIdentity(customerOrIdentity, channel) {
     ? customerOrIdentity
     : { customer: customerOrIdentity };
   const norm = (identity.customer || '').trim();
-  const isSystemCanary = (norm === 'Sistem' || norm === 'Sistem Nöbetçisi') && channel === 'canary';
-  if (isSystemCanary) {
+  if (channel === 'canary' || norm === 'Sistem' || norm === 'Sistem Nöbetçisi' || norm.toLowerCase().includes('canary')) {
     return { companyKey: 'Sistem', channelKey: 'canary', displayCustomer: 'Sistem' };
   }
   const tenantId = identity.tenantId || identity.tenant_id || identity.orgId || identity.org_id;

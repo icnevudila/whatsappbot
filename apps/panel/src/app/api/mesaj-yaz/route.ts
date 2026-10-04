@@ -84,7 +84,12 @@ export async function POST(request: Request) {
     .join('\n')
 
   try {
-    const text = await completeText(SYSTEM, prompt)
+    const text = await completeText(SYSTEM, prompt, null, {
+      customer: brand || org.name,
+      tenantId: org.id,
+      orgId: org.id,
+      requestId: `panel_mesaj_${Date.now()}`,
+    })
     const cleaned = text.replace(/^["'`\s]+|["'`\s]+$/g, '')
     return NextResponse.json({ text: cleaned })
   } catch (error) {

@@ -117,150 +117,33 @@ function buildProviders(config: ResolvedAiConfig): Record<AiProviderId, ImagePro
     gemini: {
       id: 'gemini',
       label: 'Google Gemini',
-      isConfigured: () => Boolean(config.gemini.apiKey),
-      async generate(prompt, aspect) {
-        const model = config.gemini.imageModel
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-          {
-            method: 'POST',
-            signal: timeout(),
-            headers: {
-              'Content-Type': 'application/json',
-              'x-goog-api-key': config.gemini.apiKey,
-            },
-            body: JSON.stringify({
-              contents: [{ role: 'user', parts: [{ text: prompt }] }],
-              generationConfig: {
-                responseModalities: ['TEXT', 'IMAGE'],
-                imageConfig: { aspectRatio: aspect },
-              },
-            }),
-          },
-        )
-
-        if (!response.ok) {
-          throw new Error(`Gemini ${response.status}: ${(await response.text()).slice(0, 300)}`)
-        }
-
-        const json = (await response.json()) as {
-          candidates?: {
-            content?: { parts?: { inlineData?: { mimeType?: string; data?: string } }[] }
-          }[]
-        }
-
-        const parts = json.candidates?.[0]?.content?.parts ?? []
-        const images = parts
-          .map((part) => part.inlineData)
-          .filter((inline): inline is { mimeType?: string; data: string } =>
-            Boolean(inline?.data),
-          )
-          .sort((a, b) => b.data.length - a.data.length)
-
-        const best = images[0]
-        if (!best) throw new Error('Gemini gorsel dondurmedi')
-
-        return {
-          data: Buffer.from(best.data, 'base64'),
-          mimeType: best.mimeType ?? 'image/png',
-          provider: 'gemini',
-        }
+      isConfigured: () => false,
+      async generate() {
+        throw new Error('Gemini API devre dışı bırakıldı (Yalnızca OmniStudio desteklenir).')
       },
     },
     openai: {
       id: 'openai',
       label: 'OpenAI',
-      isConfigured: () => Boolean(config.openai.apiKey),
-      async generate(prompt, aspect) {
-        const size = aspect === '1:1' ? '1024x1024' : '1024x1536'
-        const response = await fetch(`${config.openai.baseUrl}/images/generations`, {
-          method: 'POST',
-          signal: timeout(),
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${config.openai.apiKey}`,
-          },
-          body: JSON.stringify({
-            model: config.openai.imageModel,
-            prompt,
-            size,
-            quality: openaiQuality(),
-          }),
-        })
-
-        if (!response.ok) {
-          throw new Error(`OpenAI ${response.status}: ${(await response.text()).slice(0, 300)}`)
-        }
-
-        const json = (await response.json()) as { data?: { b64_json?: string }[] }
-        const b64 = json.data?.[0]?.b64_json
-        if (!b64) throw new Error('OpenAI gorsel dondurmedi')
-
-        return { data: Buffer.from(b64, 'base64'), mimeType: 'image/png', provider: 'openai' }
+      isConfigured: () => false,
+      async generate() {
+        throw new Error('OpenAI API devre dışı bırakıldı (Yalnızca OmniStudio desteklenir).')
       },
     },
     cloudflare: {
       id: 'cloudflare',
       label: 'Cloudflare Workers AI',
-      isConfigured: () => Boolean(config.cloudflare.accountId && config.cloudflare.apiToken),
-      async generate(prompt) {
-        const { accountId, apiToken, imageModel } = config.cloudflare
-        const response = await fetch(
-          `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${imageModel}`,
-          {
-            method: 'POST',
-            signal: timeout(),
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${apiToken}`,
-            },
-            body: JSON.stringify({ prompt }),
-          },
-        )
-
-        if (!response.ok) {
-          throw new Error(
-            `Cloudflare ${response.status}: ${(await response.text()).slice(0, 300)}`,
-          )
-        }
-
-        const json = (await response.json()) as { result?: { image?: string } }
-        const b64 = json.result?.image
-        if (!b64) throw new Error('Cloudflare gorsel dondurmedi')
-
-        return {
-          data: Buffer.from(b64, 'base64'),
-          mimeType: 'image/jpeg',
-          provider: 'cloudflare',
-        }
+      isConfigured: () => false,
+      async generate() {
+        throw new Error('Cloudflare AI devre dışı bırakıldı (Yalnızca OmniStudio desteklenir).')
       },
     },
     pollinations: {
       id: 'pollinations',
       label: 'Pollinations',
-      isConfigured: () => true,
-      async generate(prompt, aspect) {
-        const { width, height } = PIXELS[aspect]
-        const params = new URLSearchParams({
-          width: String(width),
-          height: String(height),
-          seed: String(Math.floor(Math.random() * 1e6)),
-          model: 'flux',
-          nologo: 'true',
-        })
-
-        const response = await fetch(
-          `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?${params}`,
-          { signal: timeout(), cache: 'no-store' },
-        )
-
-        if (!response.ok) throw new Error(`Pollinations ${response.status}`)
-
-        return {
-          data: Buffer.from(await response.arrayBuffer()),
-          mimeType: response.headers.get('content-type') ?? 'image/jpeg',
-          provider: 'pollinations',
-        }
+      isConfigured: () => false,
+      async generate() {
+        throw new Error('Pollinations devre dışı bırakıldı (Yalnızca OmniStudio desteklenir).')
       },
     },
   }
