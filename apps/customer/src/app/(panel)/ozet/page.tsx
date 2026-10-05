@@ -10,6 +10,7 @@ import {
 } from '@/components/ui'
 import { requireActiveOrg } from '@/lib/org'
 import { getSetupProgress } from '@/lib/setup-progress'
+import { readHiddenSetupOrgs } from '@/lib/setup-guide-cookie'
 import { SetupGuideCard } from '../setup-banner'
 import { ScheduledStatusPill } from '@/components/schedule-status'
 import { formatRemainingTr, formatScheduleAt } from '@/lib/schedule-remaining'
@@ -62,8 +63,9 @@ export default async function CustomerHomePage() {
   const since7 = startOfIstanbulDay(shiftYmd(today, -6)).toISOString()
   const sinceToday = startOfIstanbulDay(today).toISOString()
 
-  const [setup, rest] = await Promise.all([
+  const [setup, hiddenSetupOrgs, rest] = await Promise.all([
     getSetupProgress(org.id),
+    readHiddenSetupOrgs(),
     Promise.all([
       supabase
         .from('contact_lists')
@@ -163,7 +165,7 @@ export default async function CustomerHomePage() {
 
       <HomeQuickActions />
 
-      {setup.showSetup ? (
+      {setup.showSetup && !hiddenSetupOrgs.includes(org.id) ? (
         <div className="px-0 pt-1">
           <SetupGuideCard progress={setup} />
         </div>

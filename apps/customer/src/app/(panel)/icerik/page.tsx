@@ -1,7 +1,4 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { PageHeader } from '@/components/ui'
-import { Icon } from '@/components/icon'
 import { requireActiveOrg, isOrgAdminRole } from '@/lib/org'
 import { listLibraryCreatives } from './actions'
 import { LibraryBoard } from './library-board'
@@ -27,22 +24,6 @@ export default async function CreativeLibraryPage() {
 
   return (
     <div className="wb-wa-page">
-      <PageHeader
-        title="İçerik kütüphanesi"
-        description="Kampanya görselleri ve videoları üretin, revize edin, tekrar kullanın."
-        action={
-          <div className="flex items-center gap-2">
-            <Link href="/icerik/yeni?format=video" className="wb-wa-text-btn border-[#00a884] text-[#00a884] hover:bg-[#e7f8f2]">
-              <Icon name="video" className="size-4 text-[#00a884]" />
-              Kampanya videosu oluştur
-            </Link>
-            <Link href="/icerik/yeni" className="wb-wa-text-btn">
-              <Icon name="sparkles" className="size-4" />
-              Görsel üret
-            </Link>
-          </div>
-        }
-      />
       <LibraryBoard
         orgId={org.id}
         initial={first.items}

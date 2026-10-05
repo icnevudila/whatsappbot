@@ -1,6 +1,9 @@
 'use client'
 
+import { useState } from 'react'
 import { AccentLink, Card, QuietLink } from '@/components/ui'
+import { Icon } from '@/components/icon'
+import { dismissSetupGuide } from './setup-actions'
 import type { getSetupProgress } from '@/lib/setup-progress'
 
 type Progress = Awaited<ReturnType<typeof getSetupProgress>>
@@ -54,8 +57,9 @@ export function SetupGuideCard({
   const current = steps.find((s) => s.current) ?? null
   const doneCount = steps.filter((s) => s.done).length
   const allGuideDone = doneCount === steps.length
+  const [hidden, setHidden] = useState(false)
 
-  if (allGuideDone && variant === 'card') return null
+  if (variant === 'card' && (allGuideDone || hidden)) return null
 
   return (
     <Card className={variant === 'page' ? 'border-accent/25' : 'mb-3 border-accent/20'}>
@@ -74,7 +78,23 @@ export function SetupGuideCard({
                 : `${doneCount}/2 bitti · Sıradaki: ${current?.title ?? '—'}`}
             </p>
           </div>
-          {variant === 'card' ? <QuietLink href="/kurulum">Tüm adımlar</QuietLink> : null}
+          {variant === 'card' ? (
+            <div className="flex shrink-0 items-center gap-1">
+              <QuietLink href="/kurulum">Tüm adımlar</QuietLink>
+              <button
+                type="button"
+                className="wb-wa-icon-btn !h-9 !w-9"
+                aria-label="Başlangıç kartını gizle"
+                title="Gizle"
+                onClick={() => {
+                  setHidden(true)
+                  void dismissSetupGuide()
+                }}
+              >
+                <Icon name="close" className="size-4" />
+              </button>
+            </div>
+          ) : null}
         </div>
 
         <div

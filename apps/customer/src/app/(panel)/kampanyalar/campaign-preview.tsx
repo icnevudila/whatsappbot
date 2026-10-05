@@ -3,10 +3,9 @@
 import { useEffect, useId, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Icon } from '@/components/icon'
-import { WaPreview } from './campaign-wizard-ui'
 
 export function CampaignPreviewButton({
-  name,
+  name: _name,
   body,
   mediaUrl,
   className,
@@ -37,7 +36,6 @@ export function CampaignPreviewButton({
       </button>
       {open ? (
         <CampaignPreviewModal
-          name={name}
           body={body}
           mediaUrl={mediaUrl}
           onClose={() => setOpen(false)}
@@ -48,12 +46,10 @@ export function CampaignPreviewButton({
 }
 
 function CampaignPreviewModal({
-  name,
   body,
   mediaUrl,
   onClose,
 }: {
-  name: string
   body: string | null
   mediaUrl: string | null
   onClose: () => void
@@ -84,28 +80,41 @@ function CampaignPreviewModal({
     <div className="wb-modal-root" role="presentation">
       <button type="button" className="wb-modal-backdrop" aria-label="Kapat" onClick={onClose} />
       <div
-        className="wb-modal-panel wb-wa-modal max-h-[min(92dvh,44rem)] overflow-y-auto"
+        className="wb-modal-panel wb-wa-modal wb-camp-preview-modal"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
       >
-        <div className="mb-3 flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 id={titleId} className="wb-modal-title">
-              Kampanya önizleme
-            </h2>
-            <p className="wb-modal-desc truncate">{name}</p>
-          </div>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 id={titleId} className="wb-modal-title">
+            Kampanya önizleme
+          </h2>
           <button type="button" aria-label="Kapat" onClick={onClose} className="wb-wa-icon-btn">
             <Icon name="close" className="size-4" />
           </button>
         </div>
 
-        <div className="flex justify-center">
-          <WaPreview body={body ?? ''} mediaUrl={mediaUrl} />
-        </div>
+        <CompactWaPreview body={body ?? ''} mediaUrl={mediaUrl} />
       </div>
     </div>,
     document.body,
+  )
+}
+
+function CompactWaPreview({ body, mediaUrl }: { body: string; mediaUrl: string | null }) {
+  const preview = body.replaceAll('{{ad}}', 'Ahmet').replaceAll('{{name}}', 'Ahmet')
+  return (
+    <div className="wb-wa-bubble-preview">
+      <div className="wb-wa-phone-bubble">
+        {mediaUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={mediaUrl} alt="" className="wb-wa-phone-media" />
+        ) : null}
+        <div className="wb-wa-phone-text">
+          <p>{preview || <span style={{ color: 'rgba(0,0,0,0.4)' }}>Mesaj yazılmadı</span>}</p>
+          <p className="wb-wa-phone-time">12:04</p>
+        </div>
+      </div>
+    </div>
   )
 }

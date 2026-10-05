@@ -1,6 +1,7 @@
 ﻿import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import type { ReactNode } from 'react'
 import {
   Meter,
   Notice,
@@ -25,6 +26,18 @@ import { CampaignPreviewButton } from './campaign-preview'
 export const metadata: Metadata = { title: 'Kampanyalar' }
 export const dynamic = 'force-dynamic'
 
+const FILTER_STATUSES = {
+  devam: ['running', 'paused'],
+  bekleyen: ['draft', 'scheduled'],
+  tamamlanan: ['completed', 'stopped', 'failed'],
+} as const
+
+function parseCampaignFilter(raw: string | string[] | undefined) {
+  const value = Array.isArray(raw) ? raw[0] : raw
+  if (value === 'tum' || value === 'bekleyen' || value === 'tamamlanan') return value
+  return 'devam' as const
+}
+
 function meterTone(
   status: string,
   failedCount: number,
@@ -35,22 +48,11 @@ function meterTone(
   return 'accent'
 }
 
-function statusDot(status: string): string {
-  switch (status) {
-    case 'running':
-      return '#00a884'
-    case 'completed':
-      return '#25d366'
-    case 'failed':
-    case 'stopped':
-      return '#e53935'
-    case 'paused':
-    case 'scheduled':
-      return '#f5c26b'
-    case 'draft':
-    default:
-      return '#8696a0'
-  }
+function campaignDotClass(status: string) {
+  if (status === 'running') return 'wb-camp-dot is-running'
+  if (status === 'completed') return 'wb-camp-dot is-done'
+  if (status === 'failed' || status === 'stopped') return 'wb-camp-dot is-error'
+  return 'wb-camp-dot is-waiting'
 }
 
 function campaignWhen(campaign: {
@@ -91,12 +93,46 @@ function campaignWhen(campaign: {
   return { primary: ago || '', secondary: null }
 }
 
+function SegmentLink({
+  href,
+  active,
+  children,
+}: {
+  href: string
+  active: boolean
+  children: ReactNode
+}) {
+  return (
+    <Link href={href} className={`wb-wa-chip${active ? ' is-active' : ''}`}>
+      {children}
+    </Link>
+  )
+}
+
+function campaignFilterHref(
+  filter: 'tum' | 'devam' | 'bekleyen' | 'tamamlanan',
+  hazir?: string,
+) {
+  return buildPageHref('/kampanyalar', 1, {
+    hazir,
+    durum: filter,
+  })
+}
+
+function emptyFilterMessage(filter: 'tum' | 'devam' | 'bekleyen' | 'tamamlanan') {
+  if (filter === 'devam') return 'Devam eden kampanya yok.'
+  if (filter === 'bekleyen') return 'Bekleyen kampanya yok.'
+  if (filter === 'tamamlanan') return 'Tamamlanan kampanya yok.'
+  return 'Henüz kampanya yok.'
+}
+
 export default async function CampaignsPage({
   searchParams,
 }: {
   searchParams: Promise<{
     hazir?: string | string[]
     sayfa?: string | string[]
+    durum?: string | string[]
   }>
 }) {
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
@@ -112,14 +148,27 @@ export default async function CampaignsPage({
 
   const params = await searchParams
   const justReady = (Array.isArray(params.hazir) ? params.hazir[0] : params.hazir) === '1'
+  const filter = parseCampaignFilter(params.durum)
+  const statusIn = filter === 'tum' ? null : FILTER_STATUSES[filter]
   const pageSize = PAGE_SIZES.campaigns
   const requestedPage = parsePage(params.sayfa)
+  const hazirQs = justReady ? '1' : undefined
 
-  const [campaignsCountResult, listsResult, connectedResult] = await Promise.all([
-    supabase
-      .from('campaigns')
-      .select('id', { count: 'exact', head: true })
-      .eq('org_id', org.id),
+  const campaignsCountQuery = supabase
+    .from('campaigns')
+    .select('id', { count: 'exact', head: true })
+    .eq('org_id', org.id)
+  const filteredCountQuery = statusIn
+    ? supabase
+        .from('campaigns')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', org.id)
+        .in('status', [...statusIn])
+    : null
+
+  const [allCountResult, filteredCountResult, listsResult, connectedResult] = await Promise.all([
+    campaignsCountQuery,
+    filteredCountQuery,
     supabase
       .from('contact_lists')
       .select('id', { count: 'exact', head: true })
@@ -134,12 +183,13 @@ export default async function CampaignsPage({
       .eq('is_locked', false),
   ])
 
-  const campaignTotal = campaignsCountResult.count ?? 0
+  const allTotal = allCountResult.count ?? 0
+  const campaignTotal = statusIn ? filteredCountResult?.count ?? 0 : allTotal
   const pages = totalPages(campaignTotal, pageSize)
   const page = clampPage(requestedPage, pages)
   const { from, to } = rangeForPage(page, pageSize)
 
-  const { data: campaignRows } = await supabase
+  let campaignsQuery = supabase
     .from('campaigns')
     .select(
       'id, name, status, body, media_url, total_targets, sent_count, failed_count, skipped_count, created_at, updated_at, scheduled_at',
@@ -147,18 +197,37 @@ export default async function CampaignsPage({
     .eq('org_id', org.id)
     .order('created_at', { ascending: false })
     .range(from, to)
+  if (statusIn) campaignsQuery = campaignsQuery.in('status', [...statusIn])
 
+  const { data: campaignRows } = await campaignsQuery
   const campaigns = campaignRows ?? []
+
+  const completedIds = campaigns.filter((campaign) => campaign.status === 'completed').map((campaign) => campaign.id)
+  const readByCampaign: Record<string, number> = {}
+  if (completedIds.length > 0) {
+    const readResults = await Promise.all(
+      completedIds.map(async (id) => {
+        const { count } = await supabase
+          .from('campaign_targets')
+          .select('id', { count: 'exact', head: true })
+          .eq('campaign_id', id)
+          .eq('org_id', org.id)
+          .eq('status', 'read')
+        return [id, count ?? 0] as const
+      }),
+    )
+    for (const [id, count] of readResults) readByCampaign[id] = count
+  }
+
   const listCount = listsResult.count ?? 0
   const connectedCount = connectedResult.count ?? 0
-  const hazirQs = justReady ? '1' : undefined
 
   const emptyHint =
     listCount === 0
-      ? 'Önce bir kişi grubu ekleyin, sonra buradan gönderin.'
+      ? 'Önce kişi grubu ekle'
       : connectedCount === 0
-        ? 'Önce bir hat bağlayın, sonra buradan gönderin.'
-        : 'Mesaj yazın, grup ve hat seçin, gönderin.'
+        ? 'Önce hat bağla'
+        : 'Mesaj, grup ve hat seç'
 
   return (
     <div className="wb-wa-page">
@@ -177,8 +246,8 @@ export default async function CampaignsPage({
           <span className="wb-camp-action-copy">
             <span className="wb-camp-action-title">Yeni kampanya</span>
             <span className="wb-camp-action-desc">
-              {campaignTotal === 0
-                ? 'Mesaj yazın, grup ve hat seçin'
+              {allTotal === 0
+                ? 'Mesaj, grup ve hat seç'
                 : emptyHint}
             </span>
           </span>
@@ -188,14 +257,37 @@ export default async function CampaignsPage({
             <Icon name="image" className="size-5" />
           </span>
           <span className="wb-camp-action-copy">
-            <span className="wb-camp-action-title">İçerik kütüphanesi</span>
-            <span className="wb-camp-action-desc">Görselleri yönetin ve kullanın</span>
+            <span className="wb-camp-action-title">İçerik</span>
+            <span className="wb-camp-action-desc">Görsel ve video üret</span>
           </span>
         </Link>
       </section>
 
+      {allTotal > 0 ? (
+        <div className="wb-wa-toolbar">
+          <div className="wb-wa-seg">
+            <SegmentLink href={campaignFilterHref('devam', hazirQs)} active={filter === 'devam'}>
+              Devam eden
+            </SegmentLink>
+            <SegmentLink href={campaignFilterHref('bekleyen', hazirQs)} active={filter === 'bekleyen'}>
+              Bekleyen
+            </SegmentLink>
+            <SegmentLink href={campaignFilterHref('tamamlanan', hazirQs)} active={filter === 'tamamlanan'}>
+              Tamamlanan
+            </SegmentLink>
+            <SegmentLink href={campaignFilterHref('tum', hazirQs)} active={filter === 'tum'}>
+              Tümü
+            </SegmentLink>
+          </div>
+        </div>
+      ) : null}
+
       <div className="space-y-2 px-0">
-        {campaignTotal === 0 ? null : (
+        {allTotal === 0 ? null : campaignTotal === 0 ? (
+          <p className="px-4 py-8 text-center text-[13.5px] text-[#667781]">
+            {emptyFilterMessage(filter)}
+          </p>
+        ) : (
           <ul className="wb-inbox-list">
             {campaigns.map((campaign, index) => {
               const done = campaign.sent_count + campaign.failed_count + campaign.skipped_count
@@ -203,6 +295,7 @@ export default async function CampaignsPage({
               const scheduledAt = campaign.status === 'scheduled' ? campaign.scheduled_at : null
               const when = campaignWhen(campaign)
               const pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0
+              const readCount = readByCampaign[campaign.id] ?? 0
               return (
                 <li
                   key={campaign.id}
@@ -212,43 +305,49 @@ export default async function CampaignsPage({
                   <div className="wb-camp-row">
                     <Link href={`/kampanyalar/${campaign.id}`} className="wb-camp-row-body">
                       <span
-                        className="wb-camp-dot"
-                        style={{ background: statusDot(campaign.status) }}
+                        className={campaignDotClass(campaign.status)}
                         aria-hidden
                       />
                       <span className="wb-camp-main">
                         <span className="wb-camp-name">{campaign.name}</span>
                         <span className="wb-camp-meta">
                           <span>{when.primary}</span>
+                          {campaign.status === 'completed' ? (
+                            <span>
+                              {campaign.sent_count.toLocaleString('tr-TR')} kişiye gönderildi - {readCount.toLocaleString('tr-TR')} kişi okudu
+                            </span>
+                          ) : null}
                           {when.secondary ? <span>· {when.secondary}</span> : null}
                           {campaign.failed_count > 0 ? (
                             <span className="wb-camp-fail">{campaign.failed_count} hata</span>
                           ) : null}
                         </span>
-                        <span className="wb-camp-progress">
-                          <Meter
-                            value={done}
-                            max={Math.max(1, total)}
-                            tone={meterTone(campaign.status, campaign.failed_count)}
-                          />
-                          <span className="wb-camp-count">
-                            {done}/{total || '—'}
-                            {total > 0 ? ` · %${pct}` : ''}
+                        {campaign.status === 'running' ? (
+                          <span className="wb-camp-progress">
+                            <Meter
+                              value={done}
+                              max={Math.max(1, total)}
+                              tone={meterTone(campaign.status, campaign.failed_count)}
+                            />
+                            <span className="wb-camp-count">
+                              {done}/{total || '—'}
+                              {total > 0 ? ` · %${pct}` : ''}
+                            </span>
                           </span>
-                        </span>
+                        ) : null}
                       </span>
                     </Link>
                     <span className="wb-camp-top-end">
-                      {scheduledAt ? (
-                        <ScheduledStatusPill at={scheduledAt} />
-                      ) : (
-                        <StatusPill status={campaign.status} />
-                      )}
                       <CampaignPreviewButton
                         name={campaign.name}
                         body={campaign.body}
                         mediaUrl={campaign.media_url}
                       />
+                      {scheduledAt ? (
+                        <ScheduledStatusPill at={scheduledAt} />
+                      ) : (
+                        <StatusPill status={campaign.status} />
+                      )}
                     </span>
                     <Link
                       href={`/kampanyalar/${campaign.id}`}
@@ -270,7 +369,12 @@ export default async function CampaignsPage({
             page={page}
             totalPages={pages}
             label={`${campaignTotal} kayıt`}
-            hrefForPage={(p) => buildPageHref('/kampanyalar', p, { hazir: hazirQs })}
+            hrefForPage={(p) =>
+              buildPageHref('/kampanyalar', p, {
+                hazir: hazirQs,
+                durum: filter,
+              })
+            }
           />
         )}
       </div>

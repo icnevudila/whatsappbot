@@ -587,7 +587,7 @@ export function MessagesBoard({
         <PageHeader
           title={title}
           action={
-            <div className="flex shrink-0 items-center">
+            <div className="flex shrink-0 items-center gap-2">
               <button
                 type="button"
                 aria-label="Filtre"
@@ -812,7 +812,7 @@ export function MessagesBoard({
                     <button
                       type="button"
                       aria-label="Tüm sohbetler"
-                      className="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-ink hover:bg-white/70 lg:hidden"
+                      className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-[#e9edef] bg-white text-[#54656f] shadow-[0_1px_1px_rgba(11,20,26,0.04)] hover:border-[#d1d7db] hover:bg-white hover:text-[#111b21] lg:hidden"
                       onClick={closeChat}
                     >
                       <Icon name="back" className="size-4" />

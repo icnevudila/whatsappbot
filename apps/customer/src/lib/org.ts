@@ -48,18 +48,35 @@ export function resolveIsPlatformAdmin(options: {
   return false
 }
 
-async function membershipExists(
+type OrgRow = Record<string, unknown> & {
+  id: string
+  name: string
+  slug: string
+  plan: string
+  accounts_quota: number
+  monthly_message_quota: number
+}
+
+type Membership = { role: string; org: OrgRow }
+
+function toMembership(row: { role: string; organizations: unknown } | null): Membership | null {
+  const org = row?.organizations as OrgRow | null | undefined
+  if (!row || !org) return null
+  return { role: row.role, org }
+}
+
+async function loadMembership(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   userId: string,
   orgId: string,
-): Promise<boolean> {
+): Promise<Membership | null> {
   const { data } = await supabase
     .from('organization_members')
-    .select('org_id')
+    .select('role, organizations(*)')
     .eq('org_id', orgId)
     .eq('user_id', userId)
     .maybeSingle()
-  return Boolean(data)
+  return toMembership(data as { role: string; organizations: unknown } | null)
 }
 
 export const requireActiveOrg = cache(async (): Promise<{
@@ -73,61 +90,46 @@ export const requireActiveOrg = cache(async (): Promise<{
   const { supabase, userId, email, jwtPlatformAdmin } = await getAuthIdentity()
   if (!userId) throw new Error('Oturum bulunamadı.')
 
-  const [{ data: profile }, cookieOrgId] = await Promise.all([
+  const cookieOrgId = await readActiveOrgCookie()
+  const [{ data: profile }, cookieMembership] = await Promise.all([
     supabase
       .from('profiles')
       .select('active_org_id, is_platform_admin, email, onboarded_at, onboarding_step')
       .eq('id', userId)
       .maybeSingle(),
-    readActiveOrgCookie(),
+    cookieOrgId ? loadMembership(supabase, userId, cookieOrgId) : Promise.resolve(null),
   ])
 
-  let orgId: string | null = null
+  let membership = cookieMembership
 
-  if (cookieOrgId && (await membershipExists(supabase, userId, cookieOrgId))) {
-    orgId = cookieOrgId
-  } else if (
-    profile?.active_org_id &&
-    (await membershipExists(supabase, userId, profile.active_org_id))
-  ) {
+  if (!membership && profile?.active_org_id && profile.active_org_id !== cookieOrgId) {
     // Cookie yoksa profil yedek; cookie yazma Server Component'te yasak — switchOrg yazar.
-    orgId = profile.active_org_id
+    membership = await loadMembership(supabase, userId, profile.active_org_id)
   }
 
-  if (!orgId) {
-    const { data: membership } = await supabase
+  if (!membership) {
+    const { data: first } = await supabase
       .from('organization_members')
-      .select('org_id, role')
+      .select('role, organizations(*)')
       .eq('user_id', userId)
       .order('created_at', { ascending: true })
       .limit(1)
       .maybeSingle()
 
-    orgId = membership?.org_id ?? null
+    membership = toMembership(first as { role: string; organizations: unknown } | null)
 
-    if (orgId && !profile?.active_org_id) {
-      await supabase.from('profiles').update({ active_org_id: orgId }).eq('id', userId)
+    if (membership && !profile?.active_org_id) {
+      await supabase.from('profiles').update({ active_org_id: membership.org.id }).eq('id', userId)
     }
   }
 
   // Self-provision: create_organization RPC (max 3 owner org). Yoksa /erisim-yok.
-  if (!orgId) {
+  if (!membership) {
     throw new Error('NO_ORGANIZATION')
   }
 
-  const [{ data: org, error: orgError }, { data: member }] = await Promise.all([
-    supabase.from('organizations').select('*').eq('id', orgId).single(),
-    supabase
-      .from('organization_members')
-      .select('role')
-      .eq('org_id', orgId)
-      .eq('user_id', userId)
-      .maybeSingle(),
-  ])
-
-  if (orgError || !org || !member) {
-    throw new Error(orgError?.message ?? 'İşletme erişimi yok.')
-  }
+  const { org, role } = membership
+  const member = { role }
 
   const resolvedEmail = email ?? profile?.email ?? null
 

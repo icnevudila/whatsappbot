@@ -3,13 +3,13 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Icon, iconForHref } from '@/components/icon'
-import { prefetchSettingsRoutes } from './ayarlar/settings-prefetch'
+import { warmRoute } from './route-warmup'
 
 const ITEMS = [
   { href: '/ozet', label: 'Ana sayfa' },
   { href: '/kampanyalar', label: 'Kampanyalar' },
-  { href: '/kisiler', label: 'Kişiler' },
   { href: '/mesajlar', label: 'Mesajlar' },
+  { href: '/kisiler', label: 'Kişiler' },
   { href: '/ayarlar', label: 'Ayarlar' },
 ] as const
 
@@ -26,38 +26,18 @@ export function Nav({
 }) {
   const pathname = usePathname()
   const router = useRouter()
-
-  if (variant === 'tabbar') {
-    return (
-      <nav className="wb-tabbar" aria-label="Müşteri menüsü">
-        {ITEMS.map((item) => {
-          const active = isActive(pathname, item.href)
-          const warmSettings = item.href === '/ayarlar' ? () => prefetchSettingsRoutes(router) : undefined
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              prefetch={false}
-              aria-current={active ? 'page' : undefined}
-              onClick={onNavigate}
-              onMouseEnter={warmSettings}
-              onFocus={warmSettings}
-              className={`wb-tabbar-link${active ? ' is-active' : ''}`}
-            >
-              <Icon name={iconForHref(item.href)} className="wb-tabbar-icon size-5" />
-              <span className="wb-tabbar-label">{item.label}</span>
-            </Link>
-          )
-        })}
-      </nav>
-    )
-  }
+  const linkClass = variant === 'tabbar' ? 'wb-tabbar-link' : 'wb-rail-link'
+  const iconClass = variant === 'tabbar' ? 'wb-tabbar-icon size-5' : 'wb-rail-link-icon size-[16px]'
+  const labelClass = variant === 'tabbar' ? 'wb-tabbar-label' : 'wb-rail-link-label'
 
   return (
-    <nav className="flex flex-col gap-px" aria-label="Müşteri menüsü">
+    <nav
+      className={variant === 'tabbar' ? 'wb-tabbar' : 'flex flex-col gap-px'}
+      aria-label="Müşteri menüsü"
+    >
       {ITEMS.map((item) => {
         const active = isActive(pathname, item.href)
-        const warmSettings = item.href === '/ayarlar' ? () => prefetchSettingsRoutes(router) : undefined
+        const warm = active ? undefined : () => warmRoute(router, item.href)
         return (
           <Link
             key={item.href}
@@ -65,12 +45,13 @@ export function Nav({
             prefetch={false}
             aria-current={active ? 'page' : undefined}
             onClick={onNavigate}
-            onMouseEnter={warmSettings}
-            onFocus={warmSettings}
-            className={`wb-rail-link${active ? ' is-active' : ''}`}
+            onMouseEnter={warm}
+            onFocus={warm}
+            onTouchStart={warm}
+            className={`${linkClass}${active ? ' is-active' : ''}`}
           >
-            <Icon name={iconForHref(item.href)} className="wb-rail-link-icon size-[16px]" />
-            <span className="wb-rail-link-label">{item.label}</span>
+            <Icon name={iconForHref(item.href)} className={iconClass} />
+            <span className={labelClass}>{item.label}</span>
           </Link>
         )
       })}

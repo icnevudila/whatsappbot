@@ -4,7 +4,7 @@ import { videoDurationLabel } from '@/lib/creative/video-library-state'
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { EmptyState, Input, Select } from '@/components/ui'
+import { EmptyState, Input, PageHeader } from '@/components/ui'
 import { Icon } from '@/components/icon'
 import { useConfirm } from '@/components/confirm-dialog'
 import { useToast } from '@/components/toast'
@@ -36,7 +36,10 @@ export function LibraryBoard({
 }) {
   const [items, setItems] = useState(initial)
   const [hasMore, setHasMore] = useState(initialHasMore)
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const searchRef = useRef<HTMLInputElement>(null)
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [sort, setSort] = useState<'new' | 'old'>('new')
   const [loading, setLoading] = useState(false)
@@ -57,6 +60,11 @@ export function LibraryBoard({
     const timer = window.setTimeout(() => setDebouncedQuery(query.trim()), 280)
     return () => window.clearTimeout(timer)
   }, [query])
+
+  useEffect(() => {
+    if (!searchOpen) return
+    searchRef.current?.focus()
+  }, [searchOpen])
 
   const fetchPage = useCallback(
     async (offset: number, replace = false) => {
@@ -175,93 +183,149 @@ export function LibraryBoard({
     return () => observer.disconnect()
   }, [fetchPage, hasMore, items.length])
 
-  if (items.length === 0 && !loading && !debouncedQuery) {
-    return (
-      <div className="rounded-[var(--radius-card)] border border-hairline bg-surface">
-        <EmptyState
-          tone="brand"
-          title="İlk kampanya görselini oluştur"
-          description="Markanıza ve ürünlerinize uygun kampanya görsellerini AI ile hazırlayın. Üretim arka planda devam eder."
-          action={
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <Link href="/icerik/yeni?format=video" className="wb-wa-submit">
-                <Icon name="video" className="size-4" />
-                Kampanya videosu oluştur
-              </Link>
-              <Link href="/icerik/yeni" className="wb-wa-text-btn">
-                <Icon name="sparkles" className="size-4" />
-                Görsel üret
-              </Link>
-            </div>
-          }
-        />
-      </div>
-    )
-  }
+  const emptyLibrary = items.length === 0 && !loading && !debouncedQuery
+  const toolsOpen = filtersOpen || searchOpen
 
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-[minmax(0,1fr)_7.75rem] gap-2">
-        <Input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Başlık ara"
-          aria-label="Görsel ara"
-        />
-        <Select
-          value={sort}
-          onChange={(event) => setSort(event.target.value === 'old' ? 'old' : 'new')}
-          aria-label="Sıralama"
-        >
-          <option value="new">En yeni</option>
-          <option value="old">En eski</option>
-        </Select>
+    <>
+      <PageHeader
+        title="İçerik kütüphanesi"
+        backHref="/kampanyalar"
+        backLabel="Kampanyalar"
+        action={
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              className="wb-wa-icon-btn relative"
+              aria-label="Filtre"
+              aria-expanded={filtersOpen}
+              title="Filtre"
+              onClick={() => {
+                setFiltersOpen((value) => !value)
+                setSearchOpen(false)
+              }}
+            >
+              <Icon name="tune" className="size-5" />
+              {sort !== 'new' ? <span className="wb-wa-icon-dot" aria-hidden /> : null}
+            </button>
+            <button
+              type="button"
+              className="wb-wa-icon-btn relative"
+              aria-label="Ara"
+              aria-expanded={searchOpen}
+              title="Ara"
+              onClick={() => {
+                setSearchOpen((value) => !value)
+                setFiltersOpen(false)
+              }}
+            >
+              <Icon name="search" className="size-5" />
+              {query.trim() ? <span className="wb-wa-icon-dot" aria-hidden /> : null}
+            </button>
+          </div>
+        }
+      />
+
+      <div className="wb-library-cta">
+        <Link href="/icerik/yeni?format=video" className="wb-library-cta-btn is-primary">
+          <Icon name="video" className="size-5" />
+          + Video
+        </Link>
+        <Link href="/icerik/yeni" className="wb-library-cta-btn">
+          <Icon name="image" className="size-5" />
+          + Görsel
+        </Link>
       </div>
 
-      {items.length === 0 ? (
-        <p className="rounded-md border border-hairline bg-surface px-4 py-8 text-center text-[13px] text-ink-muted">
-          Bu aramaya uyan görsel yok.
-        </p>
-      ) : (
-        <ul className="grid grid-cols-2 items-stretch gap-2 lg:grid-cols-3">
-          {items.map((item) => (
-            <li key={item.id} className="h-full">
-              <LibraryCard
-                item={item}
-                canManage={canManage}
-                pending={pending}
-                renderError={renderErrors[item.id]}
-                onDelete={() => {
-                  void (async () => {
-                    const ok = await confirm({
-                      title: 'Görseli sil',
-                      description: 'Kütüphaneden kaldırılır. Kampanyadaki kopyalar durur.',
-                      confirmLabel: 'Sil',
-                      tone: 'danger',
-                    })
-                    if (!ok) return
-                    startTransition(() => {
-                      void deleteCreative(item.id).then((result) => {
-                        if (result?.error) toast(result.error, 'danger')
-                        else {
-                          setItems((current) => current.filter((row) => row.id !== item.id))
-                          router.refresh()
-                        }
-                      })
-                    })
-                  })()
-                }}
-              />
-            </li>
-          ))}
-        </ul>
-      )}
+      <div className={`wb-library-tools${toolsOpen ? ' is-open' : ''}`} inert={!toolsOpen}>
+        <div className="wb-library-tools-inner">
+          {filtersOpen ? (
+            <div className="wb-wa-seg" role="group" aria-label="Sıralama">
+              <button
+                type="button"
+                className={`wb-wa-chip${sort === 'new' ? ' is-active' : ''}`}
+                onClick={() => setSort('new')}
+              >
+                En yeni
+              </button>
+              <button
+                type="button"
+                className={`wb-wa-chip${sort === 'old' ? ' is-active' : ''}`}
+                onClick={() => setSort('old')}
+              >
+                En eski
+              </button>
+            </div>
+          ) : null}
+          {searchOpen ? (
+            <Input
+              ref={searchRef}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Başlık ara"
+              aria-label="Görsel ara"
+              className="wb-wa-search"
+            />
+          ) : null}
+        </div>
+      </div>
 
-      <div ref={sentinelRef} className="h-8" />
-      {loading ? (
-        <p className="pb-2 text-center text-[12.5px] text-ink-faint">Yükleniyor…</p>
-      ) : null}
-    </div>
+      {emptyLibrary ? (
+        <div className="rounded-[var(--radius-card)] border border-hairline bg-surface">
+          <EmptyState
+            tone="brand"
+            title="İlk kampanya görselini oluştur"
+            description="Markanıza ve ürünlerinize uygun kampanya görsellerini AI ile hazırlayın. Üretim arka planda devam eder."
+          />
+        </div>
+      ) : (
+        <div className="space-y-3 px-0">
+          {items.length === 0 ? (
+            <p className="rounded-md border border-hairline bg-surface px-4 py-8 text-center text-[13px] text-ink-muted">
+              Bu aramaya uyan görsel yok.
+            </p>
+          ) : (
+            <ul className="grid grid-cols-2 items-stretch gap-2 lg:grid-cols-3">
+              {items.map((item) => (
+                <li key={item.id} className="h-full">
+                  <LibraryCard
+                    item={item}
+                    canManage={canManage}
+                    pending={pending}
+                    renderError={renderErrors[item.id]}
+                    onDelete={() => {
+                      void (async () => {
+                        const ok = await confirm({
+                          title: 'Görseli sil',
+                          description: 'Kütüphaneden kaldırılır. Kampanyadaki kopyalar durur.',
+                          confirmLabel: 'Sil',
+                          tone: 'danger',
+                        })
+                        if (!ok) return
+                        startTransition(() => {
+                          void deleteCreative(item.id).then((result) => {
+                            if (result?.error) toast(result.error, 'danger')
+                            else {
+                              setItems((current) => current.filter((row) => row.id !== item.id))
+                              router.refresh()
+                            }
+                          })
+                        })
+                      })()
+                    }}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div ref={sentinelRef} className="h-8" />
+          {loading ? (
+            <p className="pb-2 text-center text-[12.5px] text-ink-faint">Yükleniyor…</p>
+          ) : null}
+        </div>
+      )}
+    </>
   )
 }
 
@@ -342,7 +406,9 @@ function LibraryCard({
         <p className="line-clamp-2 h-[calc(1.375em*2)] overflow-hidden text-[13px] font-semibold leading-snug text-ink">
           {item.title || 'Kampanya görseli'}
         </p>
-        <p className="mt-auto pt-0.5 text-[11.5px] text-ink-faint">{formatRelative(item.createdAt)}</p>
+        <p className="mt-auto pt-0.5 text-[11.5px] text-ink-faint" suppressHydrationWarning>
+          {formatRelative(item.createdAt)}
+        </p>
       </Link>
     </article>
   )

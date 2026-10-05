@@ -2,29 +2,21 @@
 
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
-import { SETTINGS_PREFETCH_HREFS } from './sections'
-
-const PRIMARY_SETTINGS_ROUTES = ['/ayarlar', '/ayarlar/isletme', '/ayarlar/profil']
-
-export function prefetchSettingsRoutes(router: { prefetch: (href: string) => void }) {
-  PRIMARY_SETTINGS_ROUTES.forEach((href, index) => {
-    window.setTimeout(() => {
-      void router.prefetch(href)
-    }, index * 100)
-  })
-}
+import { warmRoutesInBackground } from '../route-warmup'
+import { SETTINGS_SECTIONS } from './sections'
 
 export function SettingsPrefetch() {
   const router = useRouter()
 
-  useEffect(() => {
-    // Ayarlar sayfasındayken diğer sekmeleri hafifçe önbelleğe al
-    SETTINGS_PREFETCH_HREFS.forEach((href, index) => {
-      window.setTimeout(() => {
-        void router.prefetch(href)
-      }, 500 + index * 120)
-    })
-  }, [router])
+  useEffect(
+    () =>
+      warmRoutesInBackground(
+        router,
+        SETTINGS_SECTIONS.map((section) => section.href),
+        { delayMs: 400 },
+      ),
+    [router],
+  )
 
   return null
 }

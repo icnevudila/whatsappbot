@@ -81,8 +81,3 @@ export const SETTINGS_SECTIONS: {
     group: 'İş',
   },
 ]
-
-export const SETTINGS_PREFETCH_HREFS = [
-  '/ayarlar',
-  ...SETTINGS_SECTIONS.map((section) => section.href),
-]

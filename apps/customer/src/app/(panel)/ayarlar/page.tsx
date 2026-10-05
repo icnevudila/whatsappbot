@@ -19,6 +19,7 @@ export default async function SettingsHubPage({
 }: {
   searchParams: Promise<{ billing?: string | string[] }>
 }) {
+  const orgsPromise = listUserOrgs()
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
   let email: string | null
   try {
@@ -30,7 +31,7 @@ export default async function SettingsHubPage({
     redirect('/giris')
   }
 
-  const orgs = await listUserOrgs()
+  const orgs = await orgsPromise
 
   const params = await searchParams
   const billingRaw = params.billing
@@ -74,7 +75,7 @@ export default async function SettingsHubPage({
             <p className="wb-wa-set-label">{group}</p>
             <div className="wb-wa-set-card">
               {items.map((section) => (
-                <Link key={section.href} href={section.href} prefetch className="wb-wa-set-row">
+                <Link key={section.href} href={section.href} prefetch={false} className="wb-wa-set-row">
                   <span className="wb-wa-set-icon" style={{ background: section.color }} aria-hidden>
                     <Icon name={section.icon} className="size-5" />
                   </span>

@@ -719,8 +719,8 @@ export function PageHeader({
   backLabel?: string
 }) {
   return (
-    <header className="wb-page-head flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-      <div className="flex min-w-0 w-full sm:w-auto flex-1 items-start gap-2.5">
+    <header className="wb-page-head">
+      <div className="flex min-w-0 flex-1 items-start gap-2.5">
         {backHref ? (
           <Link
             href={backHref}
@@ -743,7 +743,7 @@ export function PageHeader({
         </div>
       </div>
       {action ? (
-        <div className="flex w-full sm:w-auto shrink-0 flex-wrap items-center justify-start sm:justify-end gap-2">
+        <div className="ml-auto flex shrink-0 items-center justify-end gap-2">
           {action}
         </div>
       ) : null}

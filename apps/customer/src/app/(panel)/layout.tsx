@@ -11,6 +11,7 @@ import { Nav } from './nav'
 import { OrgSwitcher } from './org-switcher'
 import { MobileChrome } from './mobile-chrome'
 import { QuickAdd } from './quick-add'
+import { TabWarmup } from './route-warmup'
 
 export default async function CustomerLayout({ children }: { children: React.ReactNode }) {
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
@@ -38,6 +39,7 @@ export default async function CustomerLayout({ children }: { children: React.Rea
   return (
     <FeedbackProviders>
       <MessageLiveToast orgId={org.id} />
+      <TabWarmup />
       <div className="flex h-dvh overflow-hidden bg-canvas">
         <Suspense fallback={null}>
           <RouteProgress />
