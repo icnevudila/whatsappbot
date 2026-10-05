@@ -204,6 +204,7 @@ export function createBrandContextSnapshot(input: RawBrandInput): Readonly<Brand
       environment_preset: input.campaign.environment_preset?.trim(),
       motion_style: input.campaign.motion_style?.trim(),
       subtitles: input.campaign.subtitles,
+      outro: input.campaign.outro,
     },
     mandatory_elements: input.mandatory_elements ? [...input.mandatory_elements] : [],
     forbidden_elements: input.forbidden_elements ? [...input.forbidden_elements] : [],

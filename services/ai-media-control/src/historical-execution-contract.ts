@@ -9,6 +9,10 @@ export function createHistoricalExecutionContract(rawInput: RawBrandInput, direc
   if (!product) throw new Error('HISTORICAL_HERO_PRODUCT_REQUIRED')
   const legacy = directed.historical
   const shots = legacy.shotPlan.shots
+  // Historical choices describe the eight-second provider footage. Finishing
+  // follows the customer's separate outro setting and appends its own two seconds.
+  const outroMode = snapshot.campaign.outro === 'off' ? 'off' : 'auto'
+  const finalEnd = outroMode === 'off' ? 8 : 10
   const brief: SimpleV5Brief = {
     goal: snapshot.campaign.objective, subject: product.name, heroProductHandle: '@HeroProduct',
     heroProductId: product.product_id, heroProductSha: product.sha256, brandName: snapshot.brand_name,
@@ -29,11 +33,11 @@ export function createHistoricalExecutionContract(rawInput: RawBrandInput, direc
     reference_assets: [{ asset_id: product.asset_id, role: 'product', sha256: product.sha256 }, { asset_id: snapshot.logo_asset_id, role: 'logo', sha256: snapshot.logo_sha256 }],
     aspect_ratio: '9:16', duration_seconds: 8, concept: brief.primaryIdea, location: brief.location,
     primary_action: brief.primaryAction, camera_motion: brief.cameraMotion,
-    timeline: { footage_start_sec: 0, footage_end_sec: 8, fade_start_sec: 8, fade_end_sec: 8, outro_start_sec: 8, outro_end_sec: 8 },
+    timeline: { footage_start_sec: 0, footage_end_sec: 8, fade_start_sec: 8, fade_end_sec: 8, outro_start_sec: 8, outro_end_sec: finalEnd },
     shots: shots.map((s,index)=>({ purpose: (['HOOK','PRODUCT_PROOF','BRAND_CLOSE'] as const)[index], start_sec: s.timing.from, end_sec: s.timing.to, description: s.subjectAction })),
     speech: { language: 'tr-TR', text: brief.spokenScript, start_sec: 0.5, end_sec: 5.25, allow_paraphrase: false },
     subtitles: { mode: 'auto', start_sec: 0.5, end_sec: 5.25 },
-    outro: { mode: 'off', start_sec: 8, end_sec: 8 },
+    outro: { mode: outroMode, start_sec: 8, end_sec: finalEnd },
     branding: { diegetic_policy: 'reference-only', overlay_policy: 'canonical-logo-only' },
   }
   return { snapshot, brief, shotPlan, productionPlan, providerPrompt: directed.providerPrompt,
