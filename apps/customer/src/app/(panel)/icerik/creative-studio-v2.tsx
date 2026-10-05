@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Button, Card, Field, Input, Notice, Textarea } from '@/components/ui'
 import { Stepper } from '@/components/stepper'
 import { Icon } from '@/components/icon'
@@ -41,8 +42,8 @@ import { videoFailureUserMessage } from '@/lib/creative/job-failure-message'
 import type { JobUserViewModel, ProductCard, WizardBootstrap } from './wizard-types'
 
 const STORAGE_KEY_PREFIX = 'wa.customer.creative-studio.v2'
-export const AI_PLANNER_TIMEOUT_MS = 5000
-export const VIDEO_PLANNER_TIMEOUT_MS = 3000
+export const AI_PLANNER_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_AI_PLANNER_TIMEOUT_MS) || 35000
+export const VIDEO_PLANNER_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_VIDEO_PLANNER_TIMEOUT_MS) || 35000
 
 export function generateDeterministicLocalCopy({
   productName,
@@ -118,6 +119,7 @@ export function CreativeStudioV2({
   initialDerivedCreativeId?: string | null
   initialJobId?: string | null
 }) {
+  const router = useRouter()
   const orgKey = `${STORAGE_KEY_PREFIX}.${data.org.id}`
   const restoredDraftKeyRef = useRef<string | null>(null)
   const submissionLockRef = useRef(false)
@@ -158,6 +160,9 @@ export function CreativeStudioV2({
   const [supportingLine, setSupportingLine] = useState('')
   const [ctaText, setCtaText] = useState('Hemen İnceleyin')
   const [spokenVoiceover, setSpokenVoiceover] = useState('')
+
+  // Copy source tracking
+  const [copySource, setCopySource] = useState<'AI' | 'DETERMINISTIC_FALLBACK' | 'USER_EDITED'>('DETERMINISTIC_FALLBACK')
 
   // Independent dirty tracking to prevent late AI responses from overwriting user edits
   const [headlineDirty, setHeadlineDirty] = useState(false)
@@ -466,6 +471,7 @@ export function CreativeStudioV2({
       const plan: CreativePlanV2 = json.plan
       if (controller.signal.aborted || activePlanControllerRef.current !== controller) return
       setCreativePlan(plan)
+      setCopySource('AI')
 
       // NEVER OVERWRITE USER EDITS: Only update untouched fields unless user explicitly clicked "Farklı Öner"
       if (copyEditsRef.current.headline === editsAtRequest.headline && (forceRefresh || !copyDirtyRef.current.headline)) {
@@ -643,6 +649,10 @@ export function CreativeStudioV2({
         const res = await startCreativeGeneration(null, form)
         if (res?.error) {
           throw new Error(res.error)
+        }
+        if (res?.id) {
+          router.push(`/icerik/${res.id}`)
+          return
         }
       } catch (err: unknown) {
         setSubmitError(err instanceof Error ? err.message : 'Görsel üretimi başlatılamadı.')
@@ -1250,16 +1260,27 @@ export function CreativeStudioV2({
                         {mediaType === 'VIDEO' ? 'Türkçe Seslendirme Metni' : 'Reklam Başlığı ve Alt Metin'}
                       </p>
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        <p className="text-[11px] text-[#667781]">Yapay zeka hazırladı; dilediğiniz gibi düzenleyebilirsiniz.</p>
-                        {isPlanning && (
+                        {isPlanning ? (
                           <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#008069]">
                             <span className="size-1.5 rounded-full bg-[#008069] animate-pulse" />
-                            AI önerisi hazırlanıyor…
+                            Reklam metni hazırlanıyor…
+                          </span>
+                        ) : copySource === 'AI' ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#008069]">
+                            ✓ AI tarafından hazırlandı
+                          </span>
+                        ) : copySource === 'USER_EDITED' ? (
+                          <span className="text-[11px] text-[#667781] font-medium">
+                            Kullanıcı tarafından düzenlendi
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-amber-700 font-medium">
+                            Standart taslak metin aktif
                           </span>
                         )}
-                        {!isPlanning && planError === 'AI_TIMEOUT' && (
+                        {!isPlanning && planError === 'AI_TIMEOUT' && copySource !== 'AI' && (
                           <span className="text-[11px] text-amber-700 font-medium">
-                            AI yanıt veremedi (varsayılan taslak aktif).
+                            (AI zaman aşımı)
                           </span>
                         )}
                       </div>
@@ -1316,6 +1337,7 @@ export function CreativeStudioV2({
                               copyDirtyRef.current.headline = true
                             setHeadline(e.target.value)
                             setHeadlineDirty(true)
+                            setCopySource('USER_EDITED')
                           }}
                           placeholder="Örn: Ayvazoğlu Tuğla ile Sağlam Yapılar"
                         />
@@ -1328,6 +1350,7 @@ export function CreativeStudioV2({
                               copyDirtyRef.current.supporting = true
                             setSupportingLine(e.target.value)
                             setSupportingLineDirty(true)
+                            setCopySource('USER_EDITED')
                           }}
                           placeholder="Örn: Şantiyenize doğrudan toptan teslimat ve garantili dayanıklılık."
                         />
@@ -1340,6 +1363,7 @@ export function CreativeStudioV2({
                               copyDirtyRef.current.cta = true
                             setCtaText(e.target.value)
                             setCtaDirty(true)
+                            setCopySource('USER_EDITED')
                           }}
                           placeholder="Hemen İnceleyin"
                         />

@@ -624,7 +624,7 @@ export async function startCreativeGeneration(
   }
 
   revalidateLibrary(inserted.id)
-  redirect(`/icerik/${inserted.id}`)
+  return { id: inserted.id, ok: 'Görsel üretimi başlatıldı.' }
 }
 
 export async function retryCreative(id: string): Promise<CreativeActionState> {

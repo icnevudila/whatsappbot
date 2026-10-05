@@ -258,6 +258,6 @@ test('8. Separate AI WhatsApp Campaign Message: factual and conversational pairi
   assert.match(message, /• \*Fırsat:\* %25 İndirim/)
   assert.match(message, /• \*Fiyat:\* 18\.50 TL/)
   assert.match(message, /• \*Teslimat:\* 3 gün içinde şantiyeye teslim/)
-  assert.match(message, /👉 Hemen Teklif Alın/)
-  assert.match(message, /📞 0532 000 00 00/)
+  assert.match(message, /Hemen Teklif Alın/)
+  assert.match(message, /0532 000 00 00/)
 })

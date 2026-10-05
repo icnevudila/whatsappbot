@@ -55,9 +55,9 @@ export async function readImageJob(job: ImageJobReceipt, tenantId?: string, expe
   if (result.status === 'failed') throw new ImageJobFailedError(job, result.error || 'OmniStudio görsel üretimi başarısız.')
   if (result.status === 'reconciliation_required') throw new ImageJobReconciliationError(job)
   if (result.status !== 'completed') return null
-  if (expectedReferences > 0 && result.reference_receipt) {
+  if (expectedReferences > 0) {
     const receipt = result.reference_receipt
-    if (result.expected_reference_count !== expectedReferences || !receipt || receipt.job_id !== job.id ||
+    if (!receipt || result.expected_reference_count !== expectedReferences || receipt.job_id !== job.id ||
         receipt.conversation_owner_job_id !== job.id || !receipt.worker_id || !receipt.target_id ||
         [receipt.expected_reference_count, receipt.resolved_reference_count, receipt.uploaded_reference_count, receipt.composer_attachment_count].some(count => count !== expectedReferences)) {
       throw new ImageJobReconciliationError(job)
