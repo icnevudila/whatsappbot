@@ -640,7 +640,7 @@ export function CreativeDetail({
           <div className="flex items-center justify-between">
             <span className="font-bold text-[#006b58] flex items-center gap-1.5">
               <Icon name="campaign" className="size-4 text-[#00a884]" />
-              Yapay Zeka WhatsApp Kampanya Metni
+              Kampanya Metni
             </span>
             <button
               type="button"

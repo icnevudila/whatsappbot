@@ -45,10 +45,9 @@ export default async function CreativeDetailPage({
   const payload = row.payload as CreativePayload
   const storedTitle = row.title?.trim() || ''
   const briefTitle = payload?.brief?.replace(/\s+/g, ' ').trim() || ''
-  const displayTitle =
-    storedTitle.endsWith('…') && briefTitle.length > storedTitle.length - 1
-      ? briefTitle.slice(0, 180)
-      : storedTitle || briefTitle || 'Kampanya görseli'
+  const rawTitle = storedTitle || briefTitle || 'Kampanya görseli'
+  const firstSentence = rawTitle.split(/[\n\r.]+/)[0]?.trim() || rawTitle
+  const displayTitle = firstSentence.length > 70 ? `${firstSentence.slice(0, 67)}…` : firstSentence
   const provider =
     payload && typeof payload === 'object' && 'provider' in payload
       ? String(payload.provider ?? '')
