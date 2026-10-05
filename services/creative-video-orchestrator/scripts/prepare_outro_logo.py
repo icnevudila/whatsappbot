@@ -45,18 +45,14 @@ def prepare(source, destination):
     # A neutral black wordmark needs a light variant on the black card.
     image.putdata([(245, 245, 245, a) if max(r, g, b) < 70 and max(r, g, b)-min(r, g, b) < 15 else (r, g, b, a)
                    for r, g, b, a in image.getdata()])
-    # Fit cleanly within max 520px width and max 280px height
-    aspect = image.width / max(1, image.height)
-    if aspect >= (520 / 280):
-        new_w = 520
-        new_h = max(1, round(520 / aspect))
-    else:
-        new_h = 260
-        new_w = max(1, round(260 * aspect))
-        if new_w > 520:
-            new_w = 520
-            new_h = max(1, round(520 / aspect))
-    image = image.resize((new_w, new_h), Image.Resampling.LANCZOS)
+    # Match the outro presentation gate while preserving the logo's proportions.
+    # Tall marks use transparent side padding, never stretched artwork.
+    scale = min(520 / image.width, 320 / image.height)
+    new_w = max(1, round(image.width * scale))
+    new_h = max(1, round(image.height * scale))
+    resized = image.resize((new_w, new_h), Image.Resampling.LANCZOS)
+    image = Image.new('RGBA', (520, new_h), (0, 0, 0, 0))
+    image.alpha_composite(resized, ((520 - new_w) // 2, 0))
     Path(destination).parent.mkdir(parents=True, exist_ok=True)
     image.save(destination, 'PNG')
 
