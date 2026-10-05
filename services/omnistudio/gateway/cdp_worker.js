@@ -943,48 +943,103 @@ async function executeChatGPTJob(tab, job) {
       if (tempRefPaths.length > 0) {
         try {
           await cdp.send('DOM.enable').catch(() => {});
+
+          // Stale attachments check & auto-clean
+          const cleanComposerAttachments = async () => {
+            return await cdp.send('Runtime.evaluate', {
+              expression: `(() => {
+                const btns = Array.from(document.querySelectorAll('button')).filter(b => {
+                  const label = b.getAttribute('aria-label') || '';
+                  return label.startsWith('Remove') || label.startsWith('Kaldır') || label.startsWith('Delete') || label.startsWith('Sil');
+                });
+                btns.forEach(b => b.click());
+                return btns.length;
+              })()`,
+              returnByValue: true
+            }).catch(() => ({ result: { value: 0 } }));
+          };
+
+          const beforeUpload = (await cdp.send('Runtime.evaluate', {
+            expression: `(${readComposerAttachments.toString()})()`, returnByValue: true,
+          })).result?.value;
+
+          if (beforeUpload?.count) {
+            console.log(`[CDP Worker] Stale composer attachments (${beforeUpload.count}) tespit edildi, temizleniyor...`);
+            await cleanComposerAttachments();
+            await sleep(800);
+            const recheck = (await cdp.send('Runtime.evaluate', {
+              expression: `(${readComposerAttachments.toString()})()`, returnByValue: true,
+            })).result?.value;
+            if (recheck?.count) {
+              await cleanComposerAttachments();
+              await sleep(1000);
+            }
+          }
+
           let fileInput;
           const inputDeadline = Date.now() + 15000;
           while (Date.now() < inputDeadline) {
             const doc = await cdp.send('DOM.getDocument', {}, 5000);
             fileInput = await cdp.send('DOM.querySelector', {
               nodeId: doc.root.nodeId,
-              selector: '#upload-photos, #upload-media, input[type=file]'
-            }, 5000);
+              selector: 'input[type="file"][accept*="image"], input[type="file"]'
+            }, 5000).catch(() => null);
             if (fileInput?.nodeId) break;
             await sleep(200);
           }
           if (!fileInput?.nodeId) throw new Error('REFERENCE_ATTACHMENT_FAILED: file input is unavailable');
-          const beforeUpload = (await cdp.send('Runtime.evaluate', {
-            expression: `(${readComposerAttachments.toString()})()`, returnByValue: true,
-          })).result?.value;
-          if (beforeUpload?.count) throw new Error('REFERENCE_ATTACHMENT_FAILED: stale composer attachments must be cleared');
+
+          const dispatchFileEvents = async () => {
+            await cdp.send('Runtime.evaluate', {
+              expression: `(() => {
+                const el = document.querySelector('input[type="file"][accept*="image"]') || document.querySelector('input[type="file"]');
+                if (el) {
+                  el.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+                  el.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+                }
+              })()`
+            });
+          };
+
           if (fileInput && fileInput.nodeId) {
             await cdp.send('DOM.setFileInputFiles', {
               files: tempRefPaths,
               nodeId: fileInput.nodeId
             }, 5000);
-            await cdp.send('Runtime.evaluate', {
-              expression: `
-                const el = document.querySelector('#upload-photos') || document.querySelector('#upload-media') || document.querySelector('input[type=file]');
-                if (el) el.dispatchEvent(new Event('change', { bubbles: true }));
-              `
-            });
+            await dispatchFileEvents();
             console.log(`[CDP Worker] ${tempRefPaths.length} referans görsel inputa yüklendi, thumbnail bekleniyor...`);
             const refUploadStart = Date.now();
-            const maxRefWait = 30_000;
+            const maxRefWait = 60_000;
             let attachmentsVerified = false;
+            let retriedDispatch = false;
+
             while (Date.now() - refUploadStart < maxRefWait) {
               const hasThumb = await cdp.send('Runtime.evaluate', {
                 expression: `(${readComposerAttachments.toString()})()`,
                 returnByValue: true
               }).catch(() => ({ result: { value: false } }));
-              if (hasThumb.result?.value?.count === tempRefPaths.length && hasThumb.result.value.ready) {
-                composerAttachmentCount = hasThumb.result.value.count;
+
+              const res = hasThumb.result?.value;
+              if (res && res.count === tempRefPaths.length && res.ready) {
+                composerAttachmentCount = res.count;
                 attachmentsVerified = true;
                 break;
               }
-              await sleep(200);
+
+              // 12s geçtiğinde ve hala 0 attachment algılandıysa dosya seçimini bir kez yeniden tetikle
+              if (!retriedDispatch && Date.now() - refUploadStart > 12_000 && (!res || res.count === 0)) {
+                console.log('[CDP Worker] 12s geçti, 0 attachment görüldü. setFileInputFiles yeniden tetikleniyor...');
+                retriedDispatch = true;
+                try {
+                  await cdp.send('DOM.setFileInputFiles', {
+                    files: tempRefPaths,
+                    nodeId: fileInput.nodeId
+                  }, 5000);
+                  await dispatchFileEvents();
+                } catch (_) {}
+              }
+
+              await sleep(250);
             }
             if (!attachmentsVerified) throw new Error('REFERENCE_ATTACHMENT_FAILED: all requested references were not confirmed in the composer');
             workerTiming.mark('reference_upload_ms', refUploadStart);
@@ -1222,6 +1277,19 @@ async function executeChatGPTJob(tab, job) {
     }).catch(() => {});
     return { reconciliationRequired: submissionActivated };
   } finally {
+    try {
+      if (cdp) {
+        await cdp.send('Runtime.evaluate', {
+          expression: `(() => {
+            const btns = Array.from(document.querySelectorAll('button')).filter(b => {
+              const label = b.getAttribute('aria-label') || '';
+              return label.startsWith('Remove') || label.startsWith('Kaldır') || label.startsWith('Delete') || label.startsWith('Sil');
+            });
+            btns.forEach(b => b.click());
+          })()`
+        }).catch(() => {});
+      }
+    } catch (_) {}
     for (const p of tempRefPaths) {
       try { fs.unlinkSync(p); } catch (e) {}
     }
