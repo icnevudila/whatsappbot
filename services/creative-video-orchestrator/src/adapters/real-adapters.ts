@@ -672,8 +672,8 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
         cur = 'v_logo'
       }
 
-      // LAYER 3 — brand name layer (bold white, elegant typography with staggered slide-in)
-      if (brandName) {
+      // LAYER 3 — brand name layer (only render as text if customer has NO logo, to prevent duplicate brand text)
+      if (brandName && !hasLogo) {
         const cleanBrand = brandName.replace(/'/g, '').replace(/:/g, '\\:').replace(/[\r\n]+/g, ' ')
         const brandStart = OUTRO_START + 0.20
         filterParts.push(
