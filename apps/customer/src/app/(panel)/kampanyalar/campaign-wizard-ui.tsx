@@ -542,8 +542,15 @@ export function AiRewriteBar({
 
   return (
     <div className="space-y-2">
+      {creativeId ? (
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" disabled={busy || !currentMessage.trim()} onClick={() => void run('sales_focused')}>Daha satış odaklı yap</Button>
+          <Button type="button" disabled={busy || !currentMessage.trim()} onClick={() => void run('shorten')}>Kısalt</Button>
+          <Button type="button" disabled={busy || !currentMessage.trim()} onClick={() => void run('friendly')}>Daha samimi yap</Button>
+        </div>
+      ) : null}
       <div className="relative" ref={menuRef}>
-        <Button type="button" disabled={!currentMessage.trim()} onClick={() => setOpen((value) => !value)}>
+        <Button type="button" disabled={busy || !currentMessage.trim()} onClick={() => setOpen((value) => !value)}>
           <Icon name="tune" className="size-3.5" />
           AI ile İyileştir
         </Button>
