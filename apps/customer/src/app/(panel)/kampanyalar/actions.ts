@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { enqueueJob } from '@/lib/jobs'
 import { requireActiveOrg } from '@/lib/org'
+import { loadCampaignCreativeHandoff } from './wizard-data'
 import {
   validateAbSettings,
   validateCampaignSettings,
@@ -31,6 +32,7 @@ export async function createCampaign(
   const body = String(formData.get('body') ?? '').trim()
   const bodyB = String(formData.get('body_b') ?? '').trim()
   const mediaUrl = String(formData.get('media_url') ?? '').trim()
+  const creativeId = String(formData.get('creative_id') ?? '').trim()
   const messageTypeRaw = String(formData.get('message_type') ?? '').trim()
   const messageType =
     mediaUrl && (messageTypeRaw === 'video' || messageTypeRaw === 'image')
@@ -78,6 +80,13 @@ export async function createCampaign(
     return { error: error instanceof Error ? error.message : 'Oturum bulunamadı.' }
   }
 
+  if (creativeId) {
+    const creative = await loadCampaignCreativeHandoff(org.id, creativeId)
+    if (!creative || creative.mediaUrl !== mediaUrl || creative.messageType !== messageType) {
+      return { error: 'Seçilen içerik doğrulanamadı. Kütüphaneden yeniden seçin.' }
+    }
+  }
+
   const [lists, accounts] = await Promise.all([
     supabase.from('contact_lists').select('id').eq('org_id', org.id).in('id', listIds),
     supabase
@@ -114,6 +123,7 @@ export async function createCampaign(
       body_b: abPercent > 0 ? bodyB || null : null,
       ab_percent: abPercent > 0 ? abPercent : 0,
       media_url: mediaUrl || null,
+      creative_id: creativeId || null,
       message_type: messageType,
       source_list_ids: listIds,
       min_delay_seconds: minDelay,
@@ -262,6 +272,7 @@ export async function updateCampaign(
 ): Promise<CampaignState> {
   const campaignId = String(formData.get('campaign_id') ?? '').trim()
   if (!campaignId) return { error: 'Kampanya bulunamadı.' }
+  const creativeId = String(formData.get('creative_id') ?? '').trim()
 
   const name = String(formData.get('name') ?? '').trim()
   const body = String(formData.get('body') ?? '').trim()
@@ -317,6 +328,12 @@ export async function updateCampaign(
     .maybeSingle()
 
   if (loadError || !existing) return { error: 'Kampanya bulunamadı.' }
+  if (creativeId) {
+    const creative = await loadCampaignCreativeHandoff(org.id, creativeId)
+    if (!creative || creative.mediaUrl !== mediaUrl || creative.messageType !== messageType) {
+      return { error: 'Seçilen içerik doğrulanamadı. Kütüphaneden yeniden seçin.' }
+    }
+  }
   if (!EDITABLE_STATUSES.has(existing.status)) {
     return { error: 'Bu durumda kampanya düzenlenemez (tamamlanmış).' }
   }
@@ -363,6 +380,7 @@ export async function updateCampaign(
     body_b: string | null
     ab_percent: number
     media_url: string | null
+    creative_id: string | null
     message_type: string
     source_list_ids: string[]
     min_delay_seconds: number
@@ -376,6 +394,7 @@ export async function updateCampaign(
     body_b: abPercent > 0 ? bodyB || null : null,
     ab_percent: abPercent > 0 ? abPercent : 0,
     media_url: mediaUrl || null,
+    creative_id: creativeId || null,
     message_type: messageType,
     source_list_ids: listIds,
     min_delay_seconds: minDelay,
@@ -485,13 +504,19 @@ export async function duplicateCampaign(
   const { data: source, error: loadError } = await supabase
     .from('campaigns')
     .select(
-      'name, body, body_b, ab_percent, media_url, message_type, source_list_ids, min_delay_seconds, max_delay_seconds, daily_cap_per_account',
+      'name, body, body_b, ab_percent, media_url, creative_id, message_type, source_list_ids, min_delay_seconds, max_delay_seconds, daily_cap_per_account',
     )
     .eq('id', campaignId)
     .eq('org_id', org.id)
     .maybeSingle()
 
   if (loadError || !source) return { error: 'Kampanya bulunamadı.' }
+  if (source.creative_id) {
+    const creative = await loadCampaignCreativeHandoff(org.id, source.creative_id)
+    if (!creative || creative.mediaUrl !== source.media_url || creative.messageType !== source.message_type) {
+      return { error: 'Kaynak kampanyanın içeriği doğrulanamadı. İçeriği yeniden seçip kaydedin.' }
+    }
+  }
 
   const { data: sourceAccounts } = await supabase
     .from('campaign_accounts')
@@ -512,6 +537,7 @@ export async function duplicateCampaign(
       body_b: source.body_b,
       ab_percent: source.ab_percent ?? 0,
       media_url: source.media_url,
+      creative_id: source.creative_id,
       message_type: source.message_type,
       source_list_ids: source.source_list_ids ?? [],
       min_delay_seconds: source.min_delay_seconds,

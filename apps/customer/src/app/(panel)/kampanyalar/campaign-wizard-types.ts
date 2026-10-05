@@ -31,6 +31,9 @@ export type AccountOption = {
 export type CreativeOption = {
   id: string
   url: string
+  messageType?: 'image' | 'video'
+  title?: string
+  thumbnailUrl?: string
 }
 
 export type WizardCampaign = {

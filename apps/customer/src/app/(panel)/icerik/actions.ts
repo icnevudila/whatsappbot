@@ -10,6 +10,7 @@ import { hasImageProvider } from '@/lib/ai/image'
 import { processCreativeGeneration } from '@/lib/creative/process'
 import { isUncertainImageFailure } from '@/lib/creative/detail-render-state'
 import { isReadyImageSource } from '@/lib/creative/image-source'
+import { inheritVariationContext } from '@/lib/creative/variation-context'
 import { requiredImageAssets } from '@/lib/creative/required-image-assets'
 import {
   titleFromBrief,
@@ -127,6 +128,9 @@ export async function startCreativeGeneration(
   } catch {
     return { error: 'Form okunamadı. Sayfayı yenileyip tekrar deneyin.' }
   }
+  if (!draft || typeof draft !== 'object' || Array.isArray(draft)) {
+    return { error: 'Form okunamadı. Sayfayı yenileyip tekrar deneyin.' }
+  }
 
   const requestKey = String(draft.requestKey ?? '').trim()
   let brief = String(draft.brief ?? '').trim()
@@ -217,7 +221,7 @@ export async function startCreativeGeneration(
           .maybeSingle(),
     supabase
       .from('organizations')
-      .select('logo_path, monthly_video_quota')
+      .select('name, about, logo_path, monthly_video_quota')
       .eq('id', org.id)
       .maybeSingle(),
     baseCreativeId
@@ -286,6 +290,13 @@ export async function startCreativeGeneration(
     redirect(`/icerik/${existing.id}`)
   }
 
+  if ([kitRes, orgRowRes, productRowsRes, imageRowsRes, phonesRes, socialsRes].some(result => result.error)) {
+    return { error: 'Katalog ve firma bilgileri doğrulanamadı. Tekrar deneyin.' }
+  }
+  if (productIds.some(id => !(productRowsRes.data ?? []).some(product => product.id === id))) {
+    return { error: 'Seçili ürün bu işletmeye ait değil. Ürünü yeniden seçin.' }
+  }
+
   let kitRow: {
     id: string
     name: string
@@ -311,7 +322,11 @@ export async function startCreativeGeneration(
   if (parentId) {
     const parent = parentRes.data
     if (!parent) return { error: 'Üst görsel bulunamadı.' }
+    if (!parent.payload || typeof parent.payload !== 'object' || Array.isArray(parent.payload)) {
+      return { error: 'Kaynak görselin üretim bilgileri okunamadı.' }
+    }
     parentPayload = parent.payload as CreativePayload
+    draft = inheritVariationContext(draft, parentPayload)
     if (brief.length < 8 && parentPayload?.brief) brief = parentPayload.brief.trim()
     if (parentPayload?.brandKit && !kitId) {
       kitRow = {
@@ -465,6 +480,8 @@ export async function startCreativeGeneration(
     style: String(draft.style ?? 'auto'),
     formatId: format.id,
     aspect: format.aspect,
+    companyName: orgRow?.name || org.name,
+    companyAbout: orgRow?.about || null,
     textDensity: (['low', 'balanced', 'detailed'].includes(String(draft.textDensity))
       ? draft.textDensity
       : 'balanced') as CreativeSnapshot['textDensity'],

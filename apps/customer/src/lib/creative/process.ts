@@ -382,7 +382,12 @@ export async function processCreativeGeneration(
         await supabase.from('creatives').update({ status: 'rendering', error: null,
           payload: { ...payload, imageReconciliationRequired: true },
         }).eq('id', creativeId).eq('org_id', creative.org_id).eq('payload->imageJob->>id', payload.imageJob.id)
-        return { ok: true, pending: true, retryAfterSeconds: 10 }
+        return { ok: true, pending: true, retryAfterSeconds: 10, progressInfo: {
+          elapsedSeconds: Math.max(0, Math.floor((Date.now() - Date.parse(payload.imageJob.queuedAt)) / 1000)) || 0,
+          remainingSeconds: 0, progressPercent: 0, stage: 'reconciliation',
+          stageLabel: 'Önceki üretimin sonucu doğrulanamadı',
+          stageDetail: 'Çift üretim başlatılmadı. Mevcut sağlayıcı işi kontrol edilmeli.',
+        } }
       }
       if (!(error instanceof ImageJobFailedError)) return { ok: true, pending: true, retryAfterSeconds: 10 }
       const message = error.message.slice(0,400)

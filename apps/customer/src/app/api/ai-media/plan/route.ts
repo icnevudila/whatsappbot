@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
     }
 
     const plan = await generateCreativePlan({
+      tenantId: org.id,
       brandName,
       brandTone: body.brandTone || null,
       productName,

@@ -55,6 +55,7 @@ export default async function CreativeDetailPage({
       : ''
 
   const creative: DetailCreative = {
+    submissionRequestKey: typeof payload?.requestKey === 'string' ? payload.requestKey : null,
     id: row.id,
     title: displayTitle,
     publicUrl: row.public_url,
@@ -62,6 +63,7 @@ export default async function CreativeDetailPage({
     source: row.source,
     generationType: row.generation_type,
     createdAt: row.created_at,
+    productionStartedAt: typeof payload?.imageJob?.queuedAt === 'string' ? payload.imageJob.queuedAt : row.created_at,
     error: row.error,
     parentId: row.parent_id,
     brandName: brandName ?? null,

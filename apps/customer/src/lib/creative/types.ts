@@ -134,6 +134,8 @@ export type CreativeSnapshotProduct = {
 }
 
 export type CreativeSnapshot = {
+  companyName?: string | null
+  companyAbout?: string | null
   brief: string
   style: string
   formatId: string

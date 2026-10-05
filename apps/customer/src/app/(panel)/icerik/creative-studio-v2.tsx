@@ -28,6 +28,8 @@ import {
   type TemplateFamily,
 } from '@/lib/creative/types'
 import { adaptLegacyDraftToV2, mapPresetToLegacyVideoFormat } from '@/lib/creative/v2/adapter'
+import { resolveSubmissionIdentity } from '@/lib/creative/submission-identity'
+import { ownsStudioDraft } from '@/lib/creative/draft-ownership'
 import {
   MAX_SPOKEN_WORDS,
   VIDEO_ENGINE_MODE,
@@ -117,9 +119,24 @@ export function CreativeStudioV2({
   initialJobId?: string | null
 }) {
   const orgKey = `${STORAGE_KEY_PREFIX}.${data.org.id}`
+  const restoredDraftKeyRef = useRef<string | null>(null)
+  const submissionLockRef = useRef(false)
+  const submissionIdentityRef = useRef<{ fingerprint: string; id: string } | null>(null)
+  const stableSubmissionId = (payload: Record<string, unknown>, kind: 'image' | 'video') => {
+    let storage: Storage | null = null
+    try { storage = window.localStorage } catch { /* use the retained in-memory identity */ }
+    const record = resolveSubmissionIdentity({
+      fingerprint: JSON.stringify({ kind, ...payload }), storageKey: `${orgKey}.submission.${kind}`,
+      storage, previous: submissionIdentityRef.current, createId: () => crypto.randomUUID(),
+    })
+    submissionIdentityRef.current = record
+    return record.id
+  }
 
   // Step state
   const [step, setStep] = useState<Step>('product_goal')
+  const [draftRestoreWarning, setDraftRestoreWarning] = useState<string | null>(null)
+  const [draftHydrated, setDraftHydrated] = useState(false)
 
   // Step 1: Product & Goal
   const [mediaType, setMediaType] = useState<MediaType>(initialMediaType)
@@ -192,7 +209,7 @@ export function CreativeStudioV2({
   const [environmentPreset, setEnvironmentPreset] = useState('auto')
   const [motionStyle, setMotionStyle] = useState('real_usage')
   const [subtitles, setSubtitles] = useState(true)
-  const [outro, setOutro] = useState(true)
+  const outro = true
 
   // Step 3: Production & Progress Tracking
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -200,20 +217,12 @@ export function CreativeStudioV2({
 
   // Video-specific job state
   const [activeJobId, setActiveJobId] = useState<string | null>(initialJobId || null)
-  const [jobState, setJobState] = useState<JobUserViewModel['state'] | 'IDLE'>('IDLE')
+  const [jobState, setJobState] = useState<JobUserViewModel['state'] | 'IDLE'>(initialJobId ? 'PENDING' : 'IDLE')
   const [jobViewModel, setJobViewModel] = useState<JobUserViewModel | null>(null)
   const [completedVideoUrl, setCompletedVideoUrl] = useState<string | null>(null)
   const [jobFailureMessage, setJobFailureMessage] = useState<string | null>(null)
 
-  // URL searchParams sync for direct navigation or reload
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const params = new URLSearchParams(window.location.search)
-    const urlJobId = params.get('job_id')
-    if (urlJobId && !activeJobId) {
-      setActiveJobId(urlJobId)
-    }
-  }, [activeJobId])
+  // The server supplies initialJobId on navigation and reload.
 
   // Authoritative active view model
   const activeViewModel: JobUserViewModel = useMemo(() => {
@@ -237,7 +246,7 @@ export function CreativeStudioV2({
       display_message: 'Dikey sinematik reklam filminiz aşama aşama kurgulanıyor.',
       queue_ahead_count: null,
       eta_display_text: 'Süre tahmini oluşturuluyor...',
-      can_cancel: ['PENDING', 'QUEUED'].includes(jobState),
+      can_cancel: false,
       can_leave_page: true,
     }
   }, [jobViewModel, activeJobId, jobState, data.org.id])
@@ -297,10 +306,18 @@ export function CreativeStudioV2({
 
   // Restore draft or adapt legacy draft
   useEffect(() => {
+    if (restoredDraftKeyRef.current === orgKey) return
+    const hydrationFrame = requestAnimationFrame(() => {
+    restoredDraftKeyRef.current = orgKey
     try {
       const raw = localStorage.getItem(orgKey)
       if (raw) {
         const parsed = JSON.parse(raw)
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return
+        if (!ownsStudioDraft(parsed, data.org.id, productsList.map(product => product.id))) {
+          setDraftRestoreWarning('Eski taslağın işletme ve ürün bilgileri doğrulanamadı. Lütfen reklam metnini yeniden hazırlayın.')
+          return
+        }
         const adapted = adaptLegacyDraftToV2(
           parsed,
           productsList.map((p) => p.id),
@@ -317,20 +334,45 @@ export function CreativeStudioV2({
         if (adapted.campaignCopy.oldPrice) setOldPrice(adapted.campaignCopy.oldPrice)
         if (adapted.campaignCopy.offer) setOffer(adapted.campaignCopy.offer)
         if (adapted.campaignCopy.dateRange) setDateRange(adapted.campaignCopy.dateRange)
+        if (adapted.campaignCopy.cta) setCtaText(adapted.campaignCopy.cta)
+        if (data.kits.some(kit => kit.id === adapted.advanced.brandKitId)) setBrandKitId(adapted.advanced.brandKitId!)
+        if (typeof adapted.advanced.environmentPreset === 'string') setEnvironmentPreset(adapted.advanced.environmentPreset)
+        if (typeof adapted.advanced.motionStyle === 'string') setMotionStyle(adapted.advanced.motionStyle)
+        setSubtitles(adapted.advanced.subtitles !== false)
+        if (parsed.qualityMode === 'STANDARD' || parsed.qualityMode === 'DESIGNER') setQualityMode(parsed.qualityMode)
+        if (TEMPLATE_FAMILIES.some(family => family.id === parsed.templateFamily)) setTemplateFamily(parsed.templateFamily)
+        if (['low', 'balanced', 'detailed'].includes(parsed.textDensity)) setTextDensity(parsed.textDensity)
+        if (typeof parsed.sector === 'string') setSector(parsed.sector)
+        if (typeof parsed.deliveryInfo === 'string') setDeliveryInfo(parsed.deliveryInfo)
         if (adapted.customHeadline) setHeadline(adapted.customHeadline)
         if (adapted.customSupporting) setSupportingLine(adapted.customSupporting)
         if (adapted.customVoiceover) setSpokenVoiceover(adapted.customVoiceover)
+        const restoredCopy = {
+          headline: Boolean(adapted.customHeadline), supporting: Boolean(adapted.customSupporting),
+          cta: Boolean(adapted.campaignCopy.cta), voiceover: Boolean(adapted.customVoiceover),
+        }
+        copyDirtyRef.current = restoredCopy
+        setHeadlineDirty(restoredCopy.headline)
+        setSupportingLineDirty(restoredCopy.supporting)
+        setCtaDirty(restoredCopy.cta)
+        setVoiceoverDirty(restoredCopy.voiceover)
       }
     } catch {
       /* ignore */
+    } finally {
+      setDraftHydrated(true)
     }
-  }, [orgKey, productsList])
+    })
+    return () => cancelAnimationFrame(hydrationFrame)
+  }, [orgKey, productsList, data.kits, data.org.id])
 
   // Save draft
   useEffect(() => {
+    if (!draftHydrated) return
     try {
       const draft = {
         version: 2,
+        orgId: data.org.id,
         mediaType,
         heroProductId,
         objective,
@@ -346,13 +388,16 @@ export function CreativeStudioV2({
         motionStyle,
         subtitles,
         outro,
+        qualityMode, templateFamily, textDensity, sector, deliveryInfo,
       }
       localStorage.setItem(orgKey, JSON.stringify(draft))
     } catch {
       /* ignore */
     }
   }, [
+    draftHydrated,
     orgKey,
+    data.org.id,
     mediaType,
     heroProductId,
     objective,
@@ -372,6 +417,7 @@ export function CreativeStudioV2({
     motionStyle,
     subtitles,
     outro,
+    qualityMode, templateFamily, textDensity, sector, deliveryInfo,
   ])
 
   // Call Custom AI Planner (non-blocking, advisory with 5s timeout)
@@ -442,14 +488,14 @@ export function CreativeStudioV2({
         if (forceRefresh) copyDirtyRef.current.voiceover = false
         if (forceRefresh) setVoiceoverDirty(false)
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (activePlanControllerRef.current !== controller) return
-      if (err?.name === 'AbortError' || controller.signal.aborted) {
+      if ((err instanceof Error && err.name === 'AbortError') || controller.signal.aborted) {
         console.warn('[CreativeStudioV2] Plan request timed out or cancelled (>5s budget)')
         setPlanError('AI_TIMEOUT')
       } else {
         console.warn('[CreativeStudioV2] Plan error:', err)
-        setPlanError(err?.message || 'AI_ERROR')
+        setPlanError(err instanceof Error ? err.message : 'AI_ERROR')
       }
     } finally {
       clearTimeout(timeoutId)
@@ -539,7 +585,8 @@ export function CreativeStudioV2({
 
   // SUBMIT HANDLER: Image or Video
   const handleCreateCreative = async () => {
-    if (!selectedProduct || !hasProduct || !hasLogo) return
+    if (submissionLockRef.current || !selectedProduct || !hasProduct || !hasLogo) return
+    submissionLockRef.current = true
 
     setIsSubmitting(true)
     setSubmitError(null)
@@ -549,7 +596,7 @@ export function CreativeStudioV2({
       try {
         const payloadDraft = {
           version: 2,
-          requestKey: crypto.randomUUID(),
+          requestKey: '',
           generationType: initialDerivedCreativeId ? 'derived' : 'new',
           baseCreativeId: initialDerivedCreativeId || null,
           brief: headline
@@ -569,6 +616,10 @@ export function CreativeStudioV2({
               include: { name: true, image: true, description: true, boxContents: true, price: true, promo: true },
             },
           },
+          phoneIds: data.phones.map(contact => contact.id),
+          socialIds: data.socials.map(contact => contact.id),
+          address: data.org.address,
+          website: data.org.websiteHint,
           useLogo: true,
           brandKitId: defaultKit?.id || '',
           cta: ctaText,
@@ -586,16 +637,18 @@ export function CreativeStudioV2({
         }
 
         const form = new FormData()
+        payloadDraft.requestKey = stableSubmissionId(payloadDraft, 'image')
         form.set('draft', JSON.stringify(payloadDraft))
 
         const res = await startCreativeGeneration(null, form)
         if (res?.error) {
           throw new Error(res.error)
         }
-      } catch (err: any) {
-        setSubmitError(err?.message || 'Görsel üretimi başlatılamadı.')
+      } catch (err: unknown) {
+        setSubmitError(err instanceof Error ? err.message : 'Görsel üretimi başlatılamadı.')
         setImagePending(false)
       } finally {
+        submissionLockRef.current = false
         setIsSubmitting(false)
       }
     } else {
@@ -603,11 +656,12 @@ export function CreativeStudioV2({
       if (voWords === 0 || voWords > MAX_SPOKEN_WORDS) {
         setSubmitError(`Türkçe seslendirme metni 1–${MAX_SPOKEN_WORDS} kelime olmalıdır.`)
         setIsSubmitting(false)
+        submissionLockRef.current = false
         return
       }
 
       try {
-        const generationId = crypto.randomUUID()
+        const generationId = ''
         const videoAdFormat = mapPresetToLegacyVideoFormat(stylePreset)
         const fidelityContract = defaultFidelityContract(data.org.name || '', selectedProduct.name)
         const promptBlock = buildVeoVoiceoverPromptBlock(spokenVoiceover.trim())
@@ -634,6 +688,11 @@ export function CreativeStudioV2({
           outro: outro ? 'auto' : 'off',
           creativeEngineMode: VIDEO_ENGINE_MODE,
           requestedProvider: VIDEO_REQUESTED_PROVIDER,
+          brandKitId: defaultKit?.id || '',
+          campaignContext: {
+            price, oldPrice, offer, dateRange, deliveryInfo, sector, headline, supportingLine,
+            campaignDetail, objective, stylePreset, templateFamily, textDensity,
+          },
           promotionType: 'existing_product',
           creativeIdea: headline || `${selectedProduct.name} Tanıtımı`,
           speechTimeline: [
@@ -653,6 +712,10 @@ export function CreativeStudioV2({
             product_description: selectedProduct.description || undefined,
             offer: offer || undefined,
             offer_verified: Boolean(offer),
+            price: price || undefined,
+            old_price: oldPrice || undefined,
+            campaign_date: dateRange || undefined,
+            delivery: deliveryInfo || undefined,
             cta: ctaText || 'Detaylar için iletişime geçin',
             approved_spoken_line: spokenVoiceover.trim(),
             verified_claims: [selectedProduct.name],
@@ -673,6 +736,7 @@ export function CreativeStudioV2({
           referenceAssets: [],
         }
 
+        videoPayload.generationId = stableSubmissionId(videoPayload, 'video')
         const res = await fetch('/api/ai-media/jobs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -685,15 +749,18 @@ export function CreativeStudioV2({
         }
 
         setActiveJobId(json.job_id)
+        submissionIdentityRef.current = null
+        try { localStorage.removeItem(`${orgKey}.submission.video`) } catch { /* backend acceptance already confirmed */ }
         setJobState('PENDING')
         if (typeof window !== 'undefined') {
           const url = new URL(window.location.href)
           url.searchParams.set('job_id', json.job_id)
           window.history.pushState({}, '', url.toString())
         }
-      } catch (err: any) {
-        setSubmitError(err?.message || 'Video başlatılamadı.')
+      } catch (err: unknown) {
+        setSubmitError(err instanceof Error ? err.message : 'Video başlatılamadı.')
       } finally {
+        submissionLockRef.current = false
         setIsSubmitting(false)
       }
     }
@@ -701,13 +768,13 @@ export function CreativeStudioV2({
 
   return (
     <Card className="wb-wa-wizard creative-studio-wizard overflow-visible">
+      {draftRestoreWarning ? <Notice tone="warn">{draftRestoreWarning}</Notice> : null}
       {/* 1. Realtime Production Waiting View (Authoritative ProductionProgress V2) */}
       {jobState !== 'IDLE' && jobState !== 'COMPLETED' && jobState !== 'FAILED' && jobState !== 'NEEDS_REVIEW' ? (
         <div className="p-4 sm:p-6">
           <ProductionProgress
             viewModel={activeViewModel}
             kind="video"
-            onCancel={handleResetToNew}
             onNavigateLibrary={() => {}}
           />
         </div>
@@ -896,7 +963,7 @@ export function CreativeStudioV2({
                         <Icon name="video" className="size-4 text-[#008069]" />
                         <span className="text-[13.5px] font-bold text-[#111b21]">Kampanya Videosu</span>
                       </div>
-                      <p className="mt-1 text-[11.5px] text-[#667781]">9:16 Sinematik Reels/Durum reklam filmi (~8 sn, Türkçe seslendirmeli).</p>
+                      <p className="mt-1 text-[11.5px] text-[#667781]">9:16 sinematik Reels/Durum reklam filmi (10 sn, Türkçe seslendirmeli ve markalı kapanış).</p>
                     </button>
                   </div>
                 </div>
@@ -1353,10 +1420,10 @@ export function CreativeStudioV2({
                             <input
                               type="checkbox"
                               checked={outro}
-                              onChange={(e) => setOutro(e.target.checked)}
+                              disabled
                               className="rounded text-[#008069]"
                             />
-                            <span>Kapanış Kartı (Outro) Ekle</span>
+                            <span>2 saniyelik markalı kapanış dahildir</span>
                           </label>
                         </div>
                       </div>

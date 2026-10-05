@@ -1,8 +1,9 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { videoFailureUserMessage } from '@/lib/creative/job-failure-message'
 import { requireActiveOrg } from '@/lib/org'
 import { createSupabaseServiceClient } from '@/lib/supabase/service'
-import { isApprovedVideoOutput, isReviewVideoOutput } from '@/lib/creative/video-output-approval'
+import { isApprovedFinalVideoOutput, isReviewVideoOutput } from '@/lib/creative/video-output-approval'
 import type { JobUserViewModel } from '@/app/(panel)/icerik/wizard-types'
 import { mapEngineStateToStage } from '@/lib/creative/production-progress/stage-mapper'
 import { calculateAuthoritativeEta } from '@/lib/creative/production-progress/eta-calculator'
@@ -96,57 +97,29 @@ export async function GET(
     const stageStartTime = stageStartedAt ? new Date(stageStartedAt).getTime() : now
     const stageElapsedSeconds = Math.max(0, Math.floor((now - stageStartTime) / 1000))
 
-    // 3. Queue & Capacity Calculations
-    let queueAheadCount: number | null = null
-
-    if (job.state === 'QUEUED' || job.state === 'PENDING') {
-      const { count } = await (supabase as any)
-        .from('ai_media_jobs')
-        .select('id', { count: 'exact', head: true })
-        .in('state', ['QUEUED', 'LEASED', 'PREPARING_ENV', 'OPENING_PROJECT', 'ATTACHING_INGREDIENTS', 'INGREDIENTS_VERIFIED', 'GENERATING'])
-        .lt('created_at', job.created_at)
-
-      queueAheadCount = count ?? 0
-    }
-
-    // Dynamically discover worker concurrency (never hardcoded to 3)
-    let dynamicCapacity = 1
-    try {
-      const { count: activeExecutingCount } = await (supabase as any)
-        .from('ai_media_jobs')
-        .select('id', { count: 'exact', head: true })
-        .in('state', [
-          'LEASED',
-          'PREPARING_ENV',
-          'OPENING_PROJECT',
-          'ATTACHING_INGREDIENTS',
-          'INGREDIENTS_VERIFIED',
-          'GENERATING',
-          'POLLING_FLOW',
-          'DOWNLOADING_MEDIA',
-          'MEDIA_DOWNLOADED',
-          'FFPROBE_INSPECTING',
-          'SHA256_VERIFYING',
-          'VISUAL_QA_EVALUATING',
-        ])
-
-      dynamicCapacity = Math.max(1, activeExecutingCount || 1)
-    } catch {
-      dynamicCapacity = 1
-    }
+    // Active-job count is not worker capacity; tenant rows do not prove global queue order.
+    const queueAheadCount: number | null = null
+    const dynamicCapacity = 0
 
     // Historical duration sampling for data-driven ETA
     let historicalDurationsSeconds: number[] = []
     try {
       const { data: recentCompleted } = await (supabase as any)
         .from('ai_media_jobs')
-        .select('created_at, updated_at')
+        .select('id, created_at, updated_at')
+        .eq('org_id', org.id)
+        .eq('creative_engine_mode', job.creative_engine_mode)
         .eq('state', 'COMPLETED')
         .order('updated_at', { ascending: false })
         .limit(30)
 
       if (recentCompleted && recentCompleted.length > 0) {
-        historicalDurationsSeconds = recentCompleted
+        const approvedOutputs = await ((createSupabaseServiceClient() || supabase) as SupabaseClient)
+          .from('ai_media_outputs').select('job_id,verified,is_approved,duration_seconds,width,height,product_type')
+          .eq('org_id', org.id).in('job_id', recentCompleted.map((item: {id:string}) => item.id))
+        const approvedIds = new Set((approvedOutputs.error ? [] : approvedOutputs.data || [])
+          .filter(isApprovedFinalVideoOutput).map((item: {job_id:string}) => item.job_id))
+        historicalDurationsSeconds = recentCompleted.filter((item: {id:string}) => approvedIds.has(item.id))
           .map((j: any) => {
             const start = new Date(j.created_at).getTime()
             const end = new Date(j.updated_at).getTime()
@@ -159,10 +132,10 @@ export async function GET(
     }
 
     // Map Engine State to Canonical Stage
-    const stageMapping = mapEngineStateToStage(job.state)
+    let stageMapping = mapEngineStateToStage(job.state)
 
     // Calculate Authoritative ETA
-    const etaResult = calculateAuthoritativeEta({
+    let etaResult = calculateAuthoritativeEta({
       historicalDurationsSeconds,
       activeWorkerCapacity: dynamicCapacity,
       queueAheadCount,
@@ -179,7 +152,7 @@ export async function GET(
     if (job.state === 'COMPLETED' || job.state === 'NEEDS_REVIEW') {
       const { data: outputs } = await (createSupabaseServiceClient() || supabase as any)
         .from('ai_media_outputs')
-        .select('id, org_id, job_id, file_path, storage_url, sha256, duration_seconds, width, height, verified, is_approved, visual_qa_report')
+        .select('id, org_id, job_id, file_path, storage_url, sha256, duration_seconds, width, height, product_type, verified, is_approved, visual_qa_report')
         .eq('job_id', jobId)
         .eq('org_id', org.id)
         .order('created_at', { ascending: false })
@@ -189,33 +162,19 @@ export async function GET(
       if (output) {
         outputEvidence = output
         outputId = output.id
-        playbackUrl = isApprovedVideoOutput(output) ? `/api/ai-media/outputs/${output.id}`
+        playbackUrl = isApprovedFinalVideoOutput(output) ? `/api/ai-media/outputs/${output.id}`
           : isReviewVideoOutput(output, job, org.id) ? `/api/ai-media/outputs/${output.id}?preview=1` : null
 
-        // Ensure creatives table is synced so video appears ready in Content Library
-        try {
-          const creatorId = (job.metadata as any)?.created_by_user_id || (org as any).created_by || null
-          await (supabase as any)
-            .from('creatives')
-            .upsert({
-              id: jobId,
-              org_id: org.id,
-              created_by: creatorId,
-              title: job.title || 'Kampanya Videosu',
-              format: 'video',
-              status: 'ready',
-              source: 'ai',
-              public_url: playbackUrl,
-              payload: {
-                thumbnailUrl: playbackUrl ? `${playbackUrl}${playbackUrl.includes('?') ? '&' : '?'}thumb=1` : null,
-                review_required: !output.is_approved,
-              },
-              updated_at: new Date().toISOString(),
-            }, { onConflict: 'id' })
-        } catch (syncErr) {
-          console.warn('[ai-media-jobs] Warning: Failed to sync creative completion:', syncErr)
-        }
+
       }
+    }
+
+    // Publication readiness derives from persisted artifact evidence, never job completion alone.
+    const displayState = job.state === 'COMPLETED' && !playbackUrl ? 'NEEDS_REVIEW' : job.state
+    if (displayState !== job.state) {
+      stageMapping = mapEngineStateToStage(displayState)
+      etaResult = calculateAuthoritativeEta({ historicalDurationsSeconds, activeWorkerCapacity: dynamicCapacity,
+        queueAheadCount, currentStageIndex: stageMapping.stage_index, elapsedTotalSeconds, isTerminal: true })
     }
 
     const legacyDisplayState = toLegacyDisplayState(stageMapping.stage_key)
@@ -223,7 +182,7 @@ export async function GET(
     const viewModel: JobUserViewModel = {
       job_id: job.id,
       org_id: job.org_id,
-      state: job.state,
+      state: displayState,
       raw_state: job.state,
       stage_key: stageMapping.stage_key,
       stage_count: stageMapping.stage_count,
@@ -242,14 +201,14 @@ export async function GET(
       eta_display_text: etaResult.eta_display_text,
       eta_confidence: etaResult.eta_confidence,
       progress_mode: stageMapping.progress_mode,
-      can_cancel: ['PENDING', 'QUEUED'].includes(job.state),
+      can_cancel: false,
       can_leave_page: true,
       output_id: outputId,
       playback_url: playbackUrl,
       failure_user_message: job.state === 'FAILED'
         ? videoFailureUserMessage(job.error_message)
-        : job.state === 'NEEDS_REVIEW'
-          ? 'Çıktı otomatik kalite kontrolünden geçmedi; yayınlanmadan önce insan incelemesi gerekiyor.'
+        : displayState === 'NEEDS_REVIEW'
+          ? 'Son video veya yayın onayı doğrulanamadı; çıktı yayınlanmadan önce inceleme gerekiyor.'
           : null,
       creative_engine_mode: job.creative_engine_mode || job.metadata?.creative_engine_mode || null,
       requested_provider: job.requested_provider || job.metadata?.requested_provider || null,
@@ -262,7 +221,7 @@ export async function GET(
       width: outputEvidence?.width ?? null,
       height: outputEvidence?.height ?? null,
       output_verified: outputEvidence?.verified ?? null,
-      output_approved: outputEvidence?.is_approved ?? null,
+      output_approved: outputEvidence ? isApprovedFinalVideoOutput(outputEvidence) : null,
       fidelity_contract_applied: job.metadata?.fidelity_contract_applied ?? null,
       fidelity_rule_count: job.metadata?.fidelity_rule_count ?? null,
       canonical_asset_sha: job.metadata?.canonical_asset_sha ?? null,

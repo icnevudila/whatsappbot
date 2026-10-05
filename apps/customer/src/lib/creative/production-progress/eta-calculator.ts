@@ -28,7 +28,10 @@ export function calculateAuthoritativeEta({
   elapsedTotalSeconds,
   isTerminal = false,
 }: EtaCalculationInput): EtaCalculationResult {
-  if (isTerminal || currentStageIndex === 7) {
+  if (isTerminal && currentStageIndex !== 7) {
+    return { eta_min_seconds:null, eta_max_seconds:null, eta_display_text:null, eta_confidence:'LOW' }
+  }
+  if (currentStageIndex === 7) {
     return {
       eta_min_seconds: 0,
       eta_max_seconds: 0,
@@ -76,6 +79,10 @@ export function calculateAuthoritativeEta({
 
   const confidence: EtaConfidence = sampleCount >= 15 ? 'HIGH' : 'MEDIUM'
 
+  if (currentStageIndex <= 2 && (!Number.isFinite(activeWorkerCapacity) || activeWorkerCapacity <= 0 || queueAheadCount === null)) {
+    return { eta_min_seconds:null, eta_max_seconds:null,
+      eta_display_text:currentStageIndex === 1 ? 'Doğrulanıyor…' : 'Kuyruk sırası ve süre henüz doğrulanmadı', eta_confidence:'LOW' }
+  }
   if (currentStageIndex <= 2) {
     // Queued or preparing
     const queueBatches = Math.ceil(ahead / capacity)
@@ -100,45 +107,14 @@ export function calculateAuthoritativeEta({
     }
   }
 
-  if (currentStageIndex === 6) {
-    return {
-      eta_min_seconds: 10,
-      eta_max_seconds: 30,
-      eta_display_text: 'Son kontroller yapılıyor',
-      eta_confidence: confidence,
-    }
+  // Measured total duration minus observed elapsed time, without invented stage proportions.
+  if (elapsedTotalSeconds >= p80) {
+    return {eta_min_seconds:null,eta_max_seconds:null,
+      eta_display_text:'Üretim geçmiş örneklerden uzun sürüyor; sağlayıcı sonucu bekleniyor',eta_confidence:'LOW'}
   }
-
-  // Active production stages (3, 4, 5)
-  // Stage proportion estimates based on empirical engine distribution
-  // Stage 3 (Assets): ~10%
-  // Stage 4 (Generating): ~70%
-  // Stage 5 (Media Processing): ~15%
-  // Stage 6 (Quality Check): ~5%
-  let remainingFactor = 0.5
-  if (currentStageIndex === 3) remainingFactor = 0.85
-  if (currentStageIndex === 4) remainingFactor = 0.60
-  if (currentStageIndex === 5) remainingFactor = 0.20
-
-  const estRemainingMin = Math.max(15, Math.round(p50 * remainingFactor))
-  const estRemainingMax = Math.max(25, Math.round(p80 * remainingFactor))
-
-  const minMins = Math.max(1, Math.floor(estRemainingMin / 60))
-  const maxMins = Math.max(minMins, Math.ceil(estRemainingMax / 60))
-
-  let displayText: string
-  if (minMins >= 1) {
-    displayText = minMins === maxMins
-      ? `yaklaşık ${minMins} dakika kaldı`
-      : `yaklaşık ${minMins}–${maxMins} dakika kaldı`
-  } else {
-    displayText = `yaklaşık 1 dakika kaldı`
-  }
-
-  return {
-    eta_min_seconds: estRemainingMin,
-    eta_max_seconds: estRemainingMax,
-    eta_display_text: displayText,
-    eta_confidence: confidence,
-  }
+  const remainingMin = Math.max(0, Math.round(p50 - elapsedTotalSeconds))
+  const remainingMax = Math.max(remainingMin, Math.round(p80 - elapsedTotalSeconds))
+  return {eta_min_seconds:remainingMin,eta_max_seconds:remainingMax,
+    eta_display_text:remainingMax < 60 ? 'Geçmiş üretim sürelerine göre bir dakikadan az' :
+      'Geçmiş üretim sürelerine göre yaklaşık ' + Math.ceil(remainingMax / 60) + ' dakika', eta_confidence:confidence}
 }

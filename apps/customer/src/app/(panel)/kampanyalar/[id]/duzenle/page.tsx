@@ -4,7 +4,7 @@ import { Suspense } from 'react'
 import { PageHeader } from '@/components/ui'
 import { requireActiveOrg } from '@/lib/org'
 import { CampaignWizard } from '../../campaign-wizard'
-import { loadCampaignWizardData } from '../../wizard-data'
+import { loadCampaignWizardData, loadCampaignCreativeHandoff } from '../../wizard-data'
 import { parseWizardStep } from '../../campaign-wizard-types'
 
 export const dynamic = 'force-dynamic'
@@ -53,7 +53,7 @@ export default async function EditCampaignPage({
     supabase
       .from('campaigns')
       .select(
-        'id, name, status, body, body_b, ab_percent, media_url, message_type, source_list_ids, min_delay_seconds, max_delay_seconds, daily_cap_per_account, scheduled_at',
+        'id, name, status, body, body_b, ab_percent, media_url, creative_id, message_type, source_list_ids, min_delay_seconds, max_delay_seconds, daily_cap_per_account, scheduled_at',
       )
       .eq('id', id)
       .eq('org_id', org.id)
@@ -68,6 +68,9 @@ export default async function EditCampaignPage({
 
   if (!campaignResult.data) notFound()
   const campaign = campaignResult.data
+  const resolvedCreative = campaign.creative_id ? await loadCampaignCreativeHandoff(org.id, campaign.creative_id) : null
+  const initialCreative = resolvedCreative?.mediaUrl === campaign.media_url && resolvedCreative.messageType === campaign.message_type
+    ? resolvedCreative : undefined
 
   return (
     <div className="wb-wa-page">
@@ -80,6 +83,7 @@ export default async function EditCampaignPage({
       <Suspense>
         <CampaignWizard
           mode="edit"
+          initialCreative={initialCreative}
           orgId={org.id}
           initialStep={parseWizardStep(raw)}
           campaign={{

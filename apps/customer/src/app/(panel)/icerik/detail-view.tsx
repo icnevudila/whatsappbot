@@ -40,6 +40,7 @@ import { getSafeMediaUrl } from '@/lib/media-url'
 export { getSafeMediaUrl }
 
 export type DetailCreative = {
+  submissionRequestKey?: string | null
   id: string
   title: string | null
   publicUrl: string | null
@@ -47,6 +48,7 @@ export type DetailCreative = {
   source: string
   generationType: string
   createdAt: string
+  productionStartedAt?: string | null
   error: string | null
   parentId: string | null
   brandName: string | null
@@ -299,6 +301,14 @@ export function CreativeDetail({
 }) {
   const router = useRouter()
   const [instruction, setInstruction] = useState('')
+  useEffect(() => {
+    if (!creative.submissionRequestKey) return
+    try {
+      const key = `wa.customer.creative-studio.v2.${orgId}.submission.image`
+      const saved = JSON.parse(localStorage.getItem(key) || 'null')
+      if (saved?.id === creative.submissionRequestKey) localStorage.removeItem(key)
+    } catch { /* persisted creative proves acceptance even when storage is unavailable */ }
+  }, [creative.submissionRequestKey, orgId])
   type ServerProgressInfo = {
     elapsedSeconds: number
     remainingSeconds: number
@@ -390,7 +400,7 @@ export function CreativeDetail({
       return
     }
     const timer = setInterval(() => {
-      setTick((value) => value + 1)
+      setTick(Math.max(0, Math.floor((Date.now() - Date.parse(creative.productionStartedAt || creative.createdAt)) / 1000)) || 0)
       setServerProgress((prev) => {
         if (!prev) return null
         return {
@@ -401,7 +411,7 @@ export function CreativeDetail({
       })
     }, 1000)
     return () => clearInterval(timer)
-  }, [spinning])
+  }, [spinning, creative.productionStartedAt, creative.createdAt])
 
   useEffect(() => {
     if (!canManage) return
@@ -528,7 +538,7 @@ export function CreativeDetail({
   let stageLabel = 'Sunucudan üretim sonucu bekleniyor…'
   let stageDetail = 'Çıktının hazır olduğu henüz doğrulanmadı'
 
-  if (serverProgress && isVideo) {
+  if (serverProgress && (isVideo || serverProgress.stage === 'reconciliation')) {
     stageLabel = serverProgress.stageLabel
     stageDetail = serverProgress.stageDetail
   }
@@ -666,7 +676,7 @@ export function CreativeDetail({
             </Button>
           ) : null}
           <AccentLink
-            href={`/kampanyalar/yeni?gorsel=${encodeURIComponent(displayPublicUrl)}${creative.campaignMessage ? `&mesaj=${encodeURIComponent(creative.campaignMessage)}` : ''}`}
+            href={`/kampanyalar/yeni?creative_id=${encodeURIComponent(creative.id)}`}
             className="w-full !rounded-full !border-0 !bg-[#00a884] !text-white !shadow-none hover:!bg-[#008069]"
           >
             <Icon name="campaign" className="size-4" />
