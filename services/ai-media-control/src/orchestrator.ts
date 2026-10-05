@@ -843,13 +843,14 @@ async function runCreativeVideoExecution(
   }
 
   // Fetch default brand kit for sector tone and context
-  const { data: brandKit } = await supabase
+  const brandKitQuery = supabase
     .from('brand_kits')
     .select('name, tone')
     .eq('org_id', job.org_id)
-    .order('is_default', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+  const { data: brandKit, error: brandKitError } = await (job.metadata?.brand_kit_id
+    ? brandKitQuery.eq('id', job.metadata.brand_kit_id)
+    : brandKitQuery.order('is_default', { ascending: false }).limit(1)).maybeSingle()
+  if (brandKitError || (job.metadata?.brand_kit_id && !brandKit)) throw new Error('BRAND_KIT_CONTEXT_UNAVAILABLE')
 
   // Materialize logo asset
   const logoAsset = (assets || []).find((a: any) => a.role === 'logo') || assets?.[0]
