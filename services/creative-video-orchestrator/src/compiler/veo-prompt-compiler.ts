@@ -131,9 +131,13 @@ export class VeoPromptCompiler {
         'morphing objects',
         'floating physics',
         'zero gravity',
-        'warped vehicle text',
         'anatomical distortion',
         'missing limbs',
+        'backwards facing head',
+        'head twisted 180 degrees',
+        'reversed torso',
+        'anatomically impossible head rotation',
+        'unnatural neck twist',
       ])
     ).join(', ')
 
