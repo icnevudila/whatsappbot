@@ -854,6 +854,9 @@ class AdvancedJobQueue {
       total_ms: Date.now() - job.createdAt,
     };
 
+    if (job.type === 'image' && error && String(error).includes('SUBMISSION_UNCERTAIN')) {
+      job.reconciliationRequired = true;
+    }
     const canRetry = error && isRetryableError(error) && (job.attemptCount || 0) < (job.maxAttempts || 2);
 
     if (job.reconciliationRequired && job.status === 'processing') {
@@ -3102,8 +3105,12 @@ const server = http.createServer(async (req, res) => {
     // 5. Worker: Kilidi Serbest Bırak / Hata Bildir (POST /job/release)
     if (method === 'POST' && pathname === '/job/release') {
       const body = await parseJsonBody(req);
-      const { jobId, error, crashSnapshotUrl } = body;
+      const { jobId, error, crashSnapshotUrl, reconciliationTargetId } = body;
       if (jobId) {
+        if (reconciliationTargetId && typeof reconciliationTargetId === 'string') {
+          const ownedJob = queue.jobs.get(jobId);
+          if (ownedJob?.type === 'image') ownedJob.reconciliationTargetId = reconciliationTargetId;
+        }
         queue.releaseLock(jobId, error);
         if (crashSnapshotUrl) {
           const j = queue.jobs.get(jobId);
