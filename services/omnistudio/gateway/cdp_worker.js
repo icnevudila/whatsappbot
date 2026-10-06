@@ -870,6 +870,7 @@ async function executeChatGPTJob(tab, job) {
   const workerTiming = createWorkerTiming(job, 'image');
   let submissionActivated = false;
   let observationReconnects = 0;
+  let referenceReceipt = null;
   const tempRefPaths = [];
   try {
     cdp = await createCdpSession(tab.webSocketDebuggerUrl);
@@ -1073,10 +1074,18 @@ async function executeChatGPTJob(tab, job) {
     assertImageScope(scope, { ...currentScope.result?.value, targetId: tab.id });
     assertReferenceCount(expectedRefCount, tempRefPaths.length);
     assertReferenceCount(expectedRefCount, composerAttachmentCount);
-    console.log(JSON.stringify({ event: 'image_reference_gate', job_id: job.id, target_id: tab.id,
-      conversation_owner_job_id: job.id, expected_reference_count: expectedRefCount,
-      resolved_reference_count: tempRefPaths.length, uploaded_reference_count: tempRefPaths.length,
-      composer_attachment_count: composerAttachmentCount, attachments_ready_at: new Date().toISOString() }));
+    referenceReceipt = {
+      job_id: job.id,
+      worker_id: WORKER_ID,
+      target_id: tab.id,
+      conversation_owner_job_id: job.id,
+      expected_reference_count: expectedRefCount,
+      resolved_reference_count: tempRefPaths.length,
+      uploaded_reference_count: tempRefPaths.length,
+      composer_attachment_count: composerAttachmentCount,
+      attachments_ready_at: new Date().toISOString()
+    };
+    console.log(JSON.stringify({ event: 'image_reference_gate', ...referenceReceipt }));
     submissionActivated = true; // Any error after this point may hide an accepted paid submission.
     const injectRes = await injectPromptAndSend(cdp, job.prompt);
     if (!injectRes?.success) {
@@ -1133,7 +1142,7 @@ async function executeChatGPTJob(tab, job) {
             cdp.close();
             cdp = await reconnectImageObservation({ targetId: tab.id,
               listTargets: async () => {
-                const response = await fetch(`${CDP_HTTP}/json/list`, { signal: AbortSignal.timeout(8000) });
+                const response = await globalThis.fetch(`${CDP_HTTP}/json/list`, { signal: AbortSignal.timeout(8000) });
                 if (!response.ok) throw new Error('IMAGE_OBSERVATION_TARGET_LIST_FAILED');
                 return response.json();
               }, connect: createCdpSession });
@@ -1151,7 +1160,7 @@ async function executeChatGPTJob(tab, job) {
       }
 
       if (checkResult?.isGenerating && !workerTiming.timings.generation_start_detect_ms) workerTiming.mark('generation_start_detect_ms', submittedAt);
-      if (checkResult?.hasNewMsg && !checkResult.isGenerating && checkResult.foundImgSrc) {
+      if (checkResult?.foundImgSrc && ((checkResult?.hasNewMsg && !checkResult.isGenerating) || checkResult?.ready)) {
         foundImgSrc = checkResult.foundImgSrc;
         workerTiming.mark('generation_complete_detect_ms', submittedAt);
         console.log(`[CDP Worker] Görsel ${elapsed}. saniyede başarıyla tamamlandı ve tespit edildi: ${foundImgSrc}`);
@@ -1214,12 +1223,16 @@ async function executeChatGPTJob(tab, job) {
     // 5. Gateway'e Yükle
     const filename = `img_${job.id}_${Date.now()}.png`;
     const finalTimings = workerTiming.finalize();
+    const uploadHeaders = {
+      'Content-Type': 'image/png',
+      'x-worker-timings': JSON.stringify(finalTimings),
+    };
+    if (referenceReceipt) {
+      uploadHeaders['x-reference-receipt'] = JSON.stringify(referenceReceipt);
+    }
     const uploadRes = await fetch(`${GATEWAY_URL}/upload?jobId=${job.id}&filename=${filename}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'image/png',
-        'x-worker-timings': JSON.stringify(finalTimings),
-      },
+      headers: uploadHeaders,
       body: imageBuffer
     });
 
