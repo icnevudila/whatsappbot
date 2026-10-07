@@ -30,15 +30,18 @@ Following strict production reliability and empirical verification guidelines, t
 - **User Edit Protection:** Verified in browser that editing the headline locks the field and ignores subsequent late AI callbacks.
 - **Client Routing:** Verified elimination of `NEXT_REDIRECT` crashes via `router.push('/icerik/:id')`.
 
-### 3.2 Video Commercial Pipeline — [STATUS: BLOCKED]
+### 3.2 Video Commercial Pipeline — [STATUS: FAIL]
 - **Blocker ID:** `BLK-01`
-- **Root Cause:** Both Google Flow accounts in `flow_accounts` (`account-03`, `account-04`) fail generation with `return code 1` (`[FLOW_EXECUTION_FAILED]`). The Google Labs / Flow SSO session has expired and requires a human operator to log in via a headed browser session.
-- **Policy Compliance:** Because fresh video production cannot be executed end-to-end on the current live stack without operator session renewal, this pipeline is truthfully marked **BLOCKED**.
+- **Root Cause:** Hetzner Google Flow account session (`account-03`, `mesajify1@gmail.com`) was refreshed and authenticated (`credits: 688`, project `fa7611a7-045b-45fd-b1b5-213d273f81b7`). Fresh job `2c443840-ea5f-47d5-bbc6-52a20fdbf8b5` executed with 2/2 references (`org-logo.jpg`, `tuğla 2`). During Veo generation, the upstream Google provider returned `status 4` (`migrated host reported status 4`, model refusal).
+- **Status:** **FAIL (UPSTREAM VEO STATUS 4 REFUSAL)**. Pipeline infrastructure, account auth, and 2/2 reference wiring are functional; upstream Veo prompt rejection prevents final master completion.
 
-### 3.3 WhatsApp Service & Messaging — [STATUS: BLOCKED]
-- **Blocker ID:** `BLK-02`
-- **Root Cause:** Hetzner container `wa-service` is healthy and maintains an active session for `Mesajify Ana Hat` (`cc1717e9`). However, no dedicated, safe test recipient phone number has been provided by the user. Under production safety rules, the agent is strictly prohibited from sending test messages to real customer contacts.
-- **Status:** Real message dispatch is truthfully marked **BLOCKED** until a safe recipient is designated.
+### 3.3 WhatsApp Service & Messaging — [STATUS: PASS]
+- **Empirical Proof:** Test sent to explicitly approved safe test recipient (`+905428212205`):
+  1. **Text Message:** Job ID `430` → WA message ID `3EB09E8385A5A1223A76ED` → Log ID `4537` (Status: `read`).
+  2. **Image Message:** Job ID `431` → WA message ID `3EB0EF52DF179FAF54299A` → Log ID `4540` (Status: `sent`).
+  3. **Video Message:** Job ID `432` → WA message ID `3EB04EA0806829A06B4E15` → Log ID `4541` (Status: `read`).
+- **Restart Recovery:** Executed `docker restart wa-service`. Container recovered within 30s, reconnected session `Mesajify Ana Hat` (`cc1717e9`), and resumed idle polling with 0 dropped jobs.
+- **Status:** **PASS**.
 
 ### 3.4 Customer Application Routes & Mobile Responsiveness — [STATUS: PASS]
 - **Route Matrix:** Authenticated browser testing verified `/ozet`, `/hatlar`, `/kisiler`, `/mesajlar`, `/kampanyalar`, and `/ayarlar`.

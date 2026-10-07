@@ -13,8 +13,8 @@ Documentation SHA: `8530c3888dfe6fa6c06109ccf4372dac010ae14a`
 | **Composer Cleanup** | CDP unit assertions | Injection of stale chips followed by submission | Dirty composer abort verified | `cleanComposerAttachments` cleans DOM chips | **PASS** |
 | **AI Copy & Edit Protection** | Playwright Studio test | Real OmniStudio text completion; headline edited manually | Unauthenticated request rejected | Late response cannot overwrite user edit | **PASS** |
 | **Next.js Client Navigation** | Playwright route assertions | `/icerik/yeni` to `/icerik/:id` navigation without error banner | Server action error throws handled error | Retains form draft state | **PASS** |
-| **Video Generation Pipeline** | `product-fidelity-contract.test.ts` (PASS) | Live Veo/Flow execution | Expired cookie return code 1 | Restart resumes PostPro | **BLOCKED (Flow session expired)** |
-| **WhatsApp Real Delivery** | Service contracts (PASS) | Safe recipient delivery check | Invalid number rejection | Docker container auto-restart | **BLOCKED (No safe recipient)** |
+| **Video Generation Pipeline** | `product-fidelity-contract.test.ts` (PASS) | Live Veo/Flow execution | Migrated host reported status 4 (generation refusal) | Resumes PostPro | **FAIL (Veo model returned status 4 refusal)** |
+| **WhatsApp Real Delivery** | Service contracts (PASS) | Live send to approved test recipient (+905428212205): 1 text (`3EB09E8385A5A1223A76ED`), 1 image (`3EB0EF52DF179FAF54299A`), 1 video (`3EB04EA0806829A06B4E15`) delivered & logged | Rejection verified | Container restart preserves session | **PASS** |
 | **WhatsApp Line State (Hatlar)** | Account sync contract | DB query: 1 connected (`cc1717e9`), 10 disconnected | Missing session triggers reconnect | Docker restart preserves session in DB | **PASS** |
 | **Contacts Management** | Schema & count queries | 12,048 contacts indexed; search & list operational | Invalid format blocked | DB transactions rollback | **PASS** |
 | **Campaign Creation & Handoff** | Campaign wizard contract | CreativeStudio to `/kampanyalar/yeni?creative_id=...` handoff | Empty audience blocks submit | Draft state preserved in DB | **PASS** |
@@ -28,6 +28,5 @@ Documentation SHA: `8530c3888dfe6fa6c06109ccf4372dac010ae14a`
 ## Final Acceptance Verdict
 - **Overall Platform Status:** **MESAJIFY_FULL_SYSTEM_NOT_READY**
 - **Specific Production Blockers:**
-  1. `BLK-01`: Google Flow account sessions expired in `flow_accounts` (headed browser login refresh required on Hetzner to restore Veo video pipeline).
-  2. `BLK-02`: WhatsApp real message delivery cannot be marked PASS without an explicitly approved isolated safe test recipient phone number (strictly prevents unsolicited customer contact).
-  3. `PANEL_DEPLOYMENT`: **NOT_VERIFIED** (Independent deployment endpoint for `apps/panel` not separately provisioned).
+  1. `BLK-01`: Google Flow Video Generation failed with `migrated host reported status 4` (Veo prompt/generation refusal by Google upstream provider; requires prompt policy refinement or upstream review).
+  2. `PANEL_DEPLOYMENT`: **NOT_VERIFIED** (Independent deployment endpoint for `apps/panel` not separately provisioned).
