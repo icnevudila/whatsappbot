@@ -10,10 +10,11 @@ Auditor Role: **Final System Auditor & Production Reliability Engineer**
 | Component / Boundary | Git SHA / Deployed Revision | Verification Method | Status |
 | :--- | :--- | :--- | :--- |
 | **PRODUCTION_CODE_SHA** | `79dfba99144445a134d49639cb0de02213034df9` | Git rev-parse on `codex/final-production-integration` | **PASS** |
-| **AUDIT_DOCUMENTATION_SHA** | `418ff58efbfd8bf36f0412e4a4659fabf4c45250` | Git log on `docs/audit` commit | **PASS** |
-| **CUSTOMER_DEPLOYED_SHA** | `418ff58efbfd8bf36f0412e4a4659fabf4c45250` | Vercel GitHub status check (`whatsappbot-customer`) | **PASS** |
-| **PANEL_DEPLOYED_SHA** | Local Dev / Vercel Edge | Integrated in repo codebase | **PASS** |
-| **ADMIN_DEPLOYED_SHA** | `418ff58efbfd8bf36f0412e4a4659fabf4c45250` | Vercel status check (`whatsappbot-admin`) | **FAIL (Missing NEXT_PUBLIC_SUPABASE_URL build env)** |
+| **AUDIT_DOCUMENTATION_SHA** | `8530c3888dfe6fa6c06109ccf4372dac010ae14a` | Git log on `docs/audit` commit | **PASS** |
+| **CUSTOMER_DEPLOYED_SHA** | `3d470898e1e0178c6360ba5f0b9e9e6098eb0843` | Vercel deployment `whatsappbot-customer` | **PASS** |
+| **PANEL_DEPLOYED_SHA** | NOT_VERIFIED | Integrated in monorepo, independent deployment URL not verified | **NOT_VERIFIED** |
+| **ADMIN_DEPLOYED_SHA** | `3d470898e1e0178c6360ba5f0b9e9e6098eb0843` | Vercel deployment `whatsappbot-admin` (Resolved build env crash) | **PASS** |
+| **LANDING_DEPLOYED_SHA** | `3d470898e1e0178c6360ba5f0b9e9e6098eb0843` | Vercel deployment `mesajify-landing` | **PASS** |
 | **HETZNER_GATEWAY_REVISION** | Synced to `79dfba9` | Container `omnistudio-engine` deployed & verified | **PASS** |
 | **WA_SERVICE_REVISION** | Container `wa-service:local` (Uptime: 3+ days) | Docker healthcheck HTTP 200, db: true, tracked: 1 | **PASS** |
 | **VIDEO_SERVICE_REVISION** | Containers `ai-media-control` & `gflow-engine` | Port 3460 HTTP 200, Patch `2026.10.03.1` | **PASS (Daemon Healthy)** |

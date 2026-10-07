@@ -11,10 +11,11 @@ Following strict production reliability and empirical verification guidelines, t
 
 ## 2. Separate Release Identifiers
 - **PRODUCTION_CODE_SHA:** `79dfba99144445a134d49639cb0de02213034df9` (Active fixes on branch `codex/final-production-integration`)
-- **AUDIT_DOCUMENTATION_SHA:** `418ff58efbfd8bf36f0412e4a4659fabf4c45250` (Pushed to remote origin)
-- **CUSTOMER_DEPLOYED_SHA:** `418ff58efbfd8bf36f0412e4a4659fabf4c45250` (Vercel deployment completed successfully)
-- **PANEL_DEPLOYED_SHA:** Shared monorepo codebase
-- **ADMIN_DEPLOYED_SHA:** `418ff58efbfd8bf36f0412e4a4659fabf4c45250` (Vercel deployment **FAILED** due to missing env var)
+- **AUDIT_DOCUMENTATION_SHA:** `8530c3888dfe6fa6c06109ccf4372dac010ae14a` (Pushed to remote origin)
+- **CUSTOMER_DEPLOYED_SHA:** `3d470898e1e0178c6360ba5f0b9e9e6098eb0843` (Vercel deployment completed successfully)
+- **PANEL_DEPLOYED_SHA:** NOT_VERIFIED (Independent deployment endpoint for `apps/panel` not separately provisioned)
+- **ADMIN_DEPLOYED_SHA:** `3d470898e1e0178c6360ba5f0b9e9e6098eb0843` (Vercel deployment completed successfully following static analysis fallback fix)
+- **LANDING_DEPLOYED_SHA:** `3d470898e1e0178c6360ba5f0b9e9e6098eb0843` (Vercel deployment completed successfully)
 - **HETZNER_GATEWAY_REVISION:** Synced with commit `79dfba9` in `omnistudio-engine` container
 - **WA_SERVICE_REVISION:** Docker container `wa-service:local` (Uptime > 3 days, Healthy)
 - **VIDEO_SERVICE_REVISION:** Container `ai-media-control` & `gflow-engine` (Patch `2026.10.03.1`)
@@ -47,15 +48,15 @@ Following strict production reliability and empirical verification guidelines, t
 ### 3.5 Multi-Tenant Data Isolation — [STATUS: PASS]
 - **Empirical Queries:** Tested cross-tenant access between Tenant A (`Bofe`, `afc4ff9f-...`) and Tenant B (`Mesajify`, `2881f690-...`). Queries confirmed 0 leaks across `creatives`, `campaigns`, `contacts`, and `accounts`.
 
-### 3.6 Vercel Deployments — [STATUS: FAIL]
-- `whatsappbot-customer`: **PASS** (Deployment completed)
-- `mesajify-landing`: **PASS** (Deployment completed)
-- `whatsappbot-admin`: **FAIL** (Vercel deployment failed during build because `NEXT_PUBLIC_SUPABASE_URL` is missing from the Vercel project environment configuration).
+### 3.6 Vercel Deployments — [STATUS: PASS (Active Production Apps)]
+- `whatsappbot-customer`: **PASS** (Deployment `ANj4qYPcC5XcTjSZqLoNyb37JMmQ` SUCCESS on commit `3d47089`)
+- `mesajify-landing`: **PASS** (Deployment `VRuuTyhxPdLLtfQCqXtBtTUPvJGb` SUCCESS on commit `3d47089`)
+- `whatsappbot-admin`: **PASS** (Deployment `DZ32GGq4FprF8bWyx8kAYEvVRoeJ` SUCCESS on commit `3d47089` following build phase env fallback)
+- `whatsappbot`: **NOT_APPLICABLE** (Legacy root repo deployment superseded by monorepo app deployments)
 
 ---
 
 ## 4. Path to Production Readiness
-To transition the platform to `MESAJIFY_FULL_SYSTEM_PRODUCTION_READY`, the following three actions are required:
+To transition the platform to `MESAJIFY_FULL_SYSTEM_PRODUCTION_READY`, the following actions are required:
 1. **Google Flow Operator Login:** Run headed browser profile sync on Hetzner to renew `flow.google.com` session cookies for `account-03`.
 2. **Safe WhatsApp Recipient:** Provide one verified test WhatsApp phone number to perform a live text, image, and video transmission test.
-3. **Vercel Admin Environment:** Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` to the `whatsappbot-admin` Vercel project settings.
