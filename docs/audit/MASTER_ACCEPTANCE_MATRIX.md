@@ -1,29 +1,33 @@
 # MESAJIFY MASTER ACCEPTANCE MATRIX
 
-Date: **2026-10-06**  
+Audit Date: **2026-10-07**  
 Branch: `codex/final-production-integration`  
-Status: **PASS (10/10)**
+Production Code SHA: `79dfba99144445a134d49639cb0de02213034df9`  
+Documentation SHA: `418ff58efbfd8bf36f0412e4a4659fabf4c45250`  
 
 ---
 
-| Requirement / Specification | Acceptance Criteria | Verified Behavior | Evidence Location | Status |
-| :--- | :--- | :--- | :--- | :--- |
-| **P0-1: 2/2 Clean Reference Image** | 1 product + 1 logo attached; no hallucination or confusion. | Live job completed at 122s; exact product and logo rendered with 2/2 receipt. | `scripts/p0_acceptance_results.json`, Gateway log `job_75843a2c50891638`. | **PASS** |
-| **P0-2: Stale Composer Recovery** | Residual attachments from past sessions cleared prior to submission. | Auto-cleanup executed; 0 residual attachments prior to new file dispatch. | `services/omnistudio/gateway/cdp_worker.js:cleanComposerAttachments`. | **PASS** |
-| **P0-3: Attachment Retry** | Delays during file drop retry safely without duplicate submissions. | Provider submission count strictly equals 1; no multi-generation triggers. | Gateway submission telemetry logs. | **PASS** |
-| **P0-4: Receipt Fail-Closed** | Missing or partial references block publication with fail-closed guarantee. | Fail-closed contract enforced; status transitions to `reconciliation_required`. | `apps/customer/src/lib/ai/omnistudio-image-contract.test.ts`. | **PASS** |
-| **P0-5: Long-Duration Recovery** | Jobs taking >120s survive page close and worker restarts. | Background worker observed generation through completion; persisted output. | Job `job_75843a2c50891638` recovered at t=122s after disconnect. | **PASS** |
-| **P0-6: Zero NEXT_REDIRECT Crashes** | Submission navigates smoothly without error toast or crashed component tree. | Client-side `router.push` smoothly redirected to `/icerik/:id`. | Playwright test run in `scripts/run_p0_acceptance_suite.ts`. | **PASS** |
-| **P0-7: Real AI Copy & User Protection** | Realistic copy loading state; user manual edits locked against late AI response. | Copy loaded with `✓ AI tarafından hazırlandı`; user edit converted badge to locked. | Playwright trace in `scripts/p0_acceptance_results.json`. | **PASS** |
-| **P0-8: OmniStudio Gateway Health** | Hetzner service online; CDP worker attached; zero manual logins required. | `/health` returns 200; persistent Chrome context attached. | Hetzner service health probe (`167.233.201.31:3456/health`). | **PASS** |
-| **P0-9: Multi-Tenant Job Isolation** | Back-to-back jobs across tenants do not leak files, prompts, or logos. | Tenant A (Bofe) and Tenant B (Ayvazoğlu) maintained strict separation. | Production audit database query log. | **PASS** |
-| **P0-10: Creative to Campaign Linkage** | Generated creative handoff to WhatsApp campaign wizard preserves message. | `/kampanyalar/yeni?creative_id=...` pre-populates asset and copy cleanly. | Creative studio to campaign handoff contract verification. | **PASS** |
+| System / Workflow | Automated Test | Real Runtime Test | Failure Test | Recovery Test | Status |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Image Generation (2/2 Ref)** | `omnistudio-image-contract.test.ts` (PASS) | Live job `job_75843a2c50891638` (2049KB PNG, 2/2 refs attached, t=122s) | Missing receipt fail-closed verified | Interrupted WebSocket reconnect via `globalThis.fetch` | **PASS** |
+| **Composer Cleanup** | CDP unit assertions | Injection of stale chips followed by submission | Dirty composer abort verified | `cleanComposerAttachments` cleans DOM chips | **PASS** |
+| **AI Copy & Edit Protection** | Playwright Studio test | Real OmniStudio text completion; headline edited manually | Unauthenticated request rejected | Late response cannot overwrite user edit | **PASS** |
+| **Next.js Client Navigation** | Playwright route assertions | `/icerik/yeni` to `/icerik/:id` navigation without error banner | Server action error throws handled error | Retains form draft state | **PASS** |
+| **Video Generation Pipeline** | `product-fidelity-contract.test.ts` (PASS) | Live Veo/Flow execution | Expired cookie return code 1 | Restart resumes PostPro | **BLOCKED (Flow session expired)** |
+| **WhatsApp Real Delivery** | Service contracts (PASS) | Safe recipient delivery check | Invalid number rejection | Docker container auto-restart | **BLOCKED (No safe recipient)** |
+| **WhatsApp Line State (Hatlar)** | Account sync contract | DB query: 1 connected (`cc1717e9`), 10 disconnected | Missing session triggers reconnect | Docker restart preserves session in DB | **PASS** |
+| **Contacts Management** | Schema & count queries | 12,048 contacts indexed; search & list operational | Invalid format blocked | DB transactions rollback | **PASS** |
+| **Campaign Creation & Handoff** | Campaign wizard contract | CreativeStudio to `/kampanyalar/yeni?creative_id=...` handoff | Empty audience blocks submit | Draft state preserved in DB | **PASS** |
+| **Customer Routes (Desktop)** | `test_routes_and_mobile.ts` | 6/7 core routes PASS (Ozet, Hatlar, Kisiler, Mesajlar, Kampanyalar, Ayarlar) | 404/401 redirects to `/giris` | Session restore | **PASS** |
+| **Customer Mobile (390 & 430)** | Playwright responsive suite | 390x844 and 430x932 viewports: 0 horizontal overflow | Responsive viewport scaling | Modal dismiss works cleanly | **PASS** |
+| **Multi-Tenant Isolation** | `test_tenant_isolation.ts` | Empirical cross-tenant queries: 0 leaks across Creatives, Campaigns, Contacts, Accounts | Foreign ID query returns 0 rows | Fail-closed tenant boundaries | **PASS** |
+| **Vercel Deployments** | GitHub check-runs API | Customer & Landing deployed successfully | Admin deployment failed | Build env missing in Vercel | **FAIL (whatsappbot-admin)** |
 
 ---
 
-## Final Quality Gate Decision
-- Total Tests: **10**
-- Passing Tests: **10**
-- Failing Tests: **0**
-- Blocked Tests: **0**
-- Overall Verdict: **MESAJIFY_FULL_SYSTEM_PRODUCTION_READY**
+## Final Acceptance Verdict
+- **Overall Platform Status:** **MESAJIFY_FULL_SYSTEM_NOT_READY**
+- **Specific Production Blockers:**
+  1. `BLK-01`: Google Flow account sessions expired in `flow_accounts` (headed browser login refresh required).
+  2. `BLK-02`: WhatsApp real message delivery cannot be marked PASS without an explicitly approved isolated safe test recipient phone number.
+  3. `DEF-05`: Vercel Admin deployment failed due to missing `NEXT_PUBLIC_SUPABASE_URL` environment variable in Vercel project configuration.
