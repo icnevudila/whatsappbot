@@ -1,0 +1,15 @@
+{
+  "name": "@wa/video-physics-qa",
+  "version": "0.1.0",
+  "description": "Mesajify Isolated Video Physics, Motion Continuity & Creative QA Tool (Shadow Mode Only)",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "tsx --test test/*.test.ts"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}
