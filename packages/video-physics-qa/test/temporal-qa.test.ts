@@ -21,7 +21,7 @@ test('TemporalVisualQAEngine: returns NOT_VERIFIED on missing or corrupt video f
 
 test('TemporalVisualQAEngine: evaluates real Ayvazoğlu video with honest transition anomaly', () => {
   const engine = new TemporalVisualQAEngine()
-  const realVideoPath = 'C:/Users/TP2/Desktop/mesajify_ciktilar/ayvazoglu_video_8s_raw.mp4'
+  const realVideoPath = process.env.MESAJIFY_AYVAZOGLU_RAW_PATH || 'C:/Users/TP2/Desktop/mesajify_ciktilar/ayvazoglu_video_8s_raw.mp4'
 
   if (!existsSync(realVideoPath)) {
     throw new Error(`CRITICAL_TEST_FAILURE: Required fixture missing: ${realVideoPath}`)

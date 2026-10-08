@@ -68,3 +68,54 @@ export interface VideoQAReport {
     requires_human_review: boolean
   }
 }
+
+export type CapabilityStatus = 'AVAILABLE' | 'CAPABILITY_UNAVAILABLE'
+
+export interface PhysicalSupportReasoning {
+  evaluated: boolean
+  capability_status: CapabilityStatus
+  target_question: string
+  primary_actor?: string
+  moved_object?: string
+  apparent_support_surface?: string
+  contact_relationship?: string
+  structural_viability?: 'PLAUSIBLE' | 'IMPOSSIBLE_OR_PRECARIOUS' | 'UNVERIFIABLE'
+  grounding_evidence?: string
+  temporal_continuation?: string
+  limitations: string[]
+}
+
+export interface ConsecutiveFrameInspection {
+  timestamp: number
+  frame_label: string
+  dominant_entities: string[]
+  support_base_state: string
+  motion_state: 'DESCENDING' | 'RESTING' | 'DISCONTINUOUS' | 'STATIC' | 'UNKNOWN'
+  contact_description: string
+}
+
+export interface VisualPhysicsReviewReport {
+  video_path: string
+  job_id: string
+  sampling_rate_fps: number
+  frames_analyzed: number
+  vlm_capability_status: CapabilityStatus
+  overall_decision: QADecision
+  failure_reason?: string
+  physical_support_reasoning: PhysicalSupportReasoning
+  frame_sequence: ConsecutiveFrameInspection[]
+  unseen_dataset_scenario?: string
+}
+
+export interface ContrastiveScenarioItem {
+  id: string
+  title: string
+  video_path: string
+  human_label: QADecision
+  human_rationale: string
+  temporal_decision: QADecision
+  visual_physics_decision: QADecision
+  physical_support_viable: boolean | 'UNVERIFIABLE'
+  false_positive_risk: string
+  false_negative_risk: string
+}

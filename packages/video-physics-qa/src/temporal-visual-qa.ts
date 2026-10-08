@@ -150,11 +150,18 @@ export class TemporalVisualQAEngine {
     const warningCount = findings.filter(f => f.severity === 'WARNING').length
     const criticalCount = findings.filter(f => f.severity === 'CRITICAL').length
 
-    let decision: 'PASS' | 'NEEDS_REVIEW' | 'FAIL' = 'PASS'
+    // Truthful Decision Policy:
+    // 1. Critical errors -> FAIL
+    // 2. Warnings (gradual blend / dissolve anomaly) -> NEEDS_REVIEW
+    // 3. Clean transitions (PASS), but physics unverified -> overall creative QA is NOT_VERIFIED
+    let decision: import('./types.js').QADecision = 'NOT_VERIFIED'
     if (criticalCount > 0) {
       decision = 'FAIL'
     } else if (warningCount > 0) {
       decision = 'NEEDS_REVIEW'
+    } else {
+      // Scene transition passed, but physical support/causality unverified
+      decision = 'NOT_VERIFIED'
     }
 
     return {
@@ -244,17 +251,18 @@ export class TemporalVisualQAEngine {
         '-f', 'null', '-'
       ], { timeout: 20000, encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 })
 
-      if (res.status !== 0 && (!res.stdout || res.stdout.length === 0)) {
+      // Fail-closed on ANY non-zero exit code
+      if (res.status !== 0) {
         return {
           success: false,
-          error: res.stderr || 'ffmpeg scene filter failed',
+          error: res.stderr || `ffmpeg exited with non-zero exit code (${res.status})`,
           transitions: []
         }
       }
 
       const out = res.stdout || ''
       const lines = out.split(/\r?\n/)
-      const transitions: Array<{ timestamp: number; score: number; isSlowBlendOrDissolve: boolean; confidence: number }> = []
+      const rawTransitions: Array<{ timestamp: number; score: number }> = []
 
       let currentPtsTime = 0.0
       for (const line of lines) {
@@ -266,16 +274,38 @@ export class TemporalVisualQAEngine {
           const match = line.match(/lavfi\.scene_score=([0-9.]+)/)
           if (match) {
             const score = parseFloat(match[1])
-            const isSlowBlend = score < 0.20
-            transitions.push({
-              timestamp: currentPtsTime,
-              score,
-              isSlowBlendOrDissolve: isSlowBlend,
-              confidence: isSlowBlend ? 0.85 : 0.95
-            })
+            rawTransitions.push({ timestamp: currentPtsTime, score })
           }
         }
       }
+
+      // Group transitions to avoid false-positive ghosting on isolated single-frame score
+      const transitions: Array<{ timestamp: number; score: number; isSlowBlendOrDissolve: boolean; confidence: number }> = []
+      for (let i = 0; i < rawTransitions.length; i++) {
+        const curr = rawTransitions[i]
+        const prev = rawTransitions[i - 1]
+        const next = rawTransitions[i + 1]
+
+        const hasNeighborInWindow =
+          (prev && Math.abs(curr.timestamp - prev.timestamp) <= 0.4) ||
+          (next && Math.abs(curr.timestamp - next.timestamp) <= 0.4)
+
+        const isLowMid = curr.score >= 0.04 && curr.score < 0.20
+        const isSlowBlend = isLowMid && Boolean(hasNeighborInWindow)
+
+        // Drop isolated single-frame low-mid spikes as transient motion/lighting jitter
+        if (isLowMid && !hasNeighborInWindow) {
+          continue
+        }
+
+        transitions.push({
+          timestamp: curr.timestamp,
+          score: curr.score,
+          isSlowBlendOrDissolve: isSlowBlend,
+          confidence: isSlowBlend ? 0.85 : 0.95
+        })
+      }
+
       return { success: true, transitions }
     } catch (err: any) {
       return { success: false, error: err.message, transitions: [] }
