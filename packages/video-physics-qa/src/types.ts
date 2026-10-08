@@ -1,10 +1,11 @@
 export type QACategory =
+  | 'SCENE_TRANSITION'
+  | 'CAMERA_CONTINUITY'
   | 'PHYSICAL_SUPPORT'
   | 'OBJECT_INTERSECTION'
   | 'OBJECT_PERMANENCE'
   | 'SCALE_CONSISTENCY'
   | 'ACTION_CAUSALITY'
-  | 'CAMERA_CONTINUITY'
   | 'PRODUCT_FIDELITY'
   | 'BRAND_FIDELITY'
   | 'MOTION_REALISM'
@@ -52,10 +53,11 @@ export interface VideoQAReport {
   reviewer_version: string
   evaluated_at: string
   decision: QADecision
+  failure_reason?: string
   categories: {
     [key in QACategory]?: {
       decision: QADecision
-      score: number // 0 - 100
+      score: number | null // null when NOT_VERIFIED
       issues: string[]
     }
   }

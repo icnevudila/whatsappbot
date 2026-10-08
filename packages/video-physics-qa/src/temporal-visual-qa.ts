@@ -11,13 +11,14 @@ export interface VideoQAEvaluationOptions {
 }
 
 export class TemporalVisualQAEngine {
-  private version = '1.0.0-shadow'
+  private version = '1.1.0-truthful-shadow'
 
   public evaluateVideo(options: VideoQAEvaluationOptions): VideoQAReport {
     const findings: QAFinding[] = []
     const evaluatedAt = new Date().toISOString()
 
-    if (!existsSync(options.videoPath)) {
+    // 1. File existence validation
+    if (!options.videoPath || !existsSync(options.videoPath)) {
       return {
         job_id: options.jobId,
         attempt_id: options.attemptId,
@@ -25,13 +26,22 @@ export class TemporalVisualQAEngine {
         reviewer_version: this.version,
         evaluated_at: evaluatedAt,
         decision: 'NOT_VERIFIED',
+        failure_reason: `VIDEO_FILE_NOT_FOUND: Video file not accessible at path: ${options.videoPath}`,
+        categories: {
+          SCENE_TRANSITION: { decision: 'NOT_VERIFIED', score: null, issues: ['File missing'] },
+          CAMERA_CONTINUITY: { decision: 'NOT_VERIFIED', score: null, issues: ['File missing'] },
+          PHYSICAL_SUPPORT: { decision: 'NOT_VERIFIED', score: null, issues: ['File missing'] },
+          ACTION_CAUSALITY: { decision: 'NOT_VERIFIED', score: null, issues: ['File missing'] },
+          PRODUCT_FIDELITY: { decision: 'NOT_VERIFIED', score: null, issues: ['File missing'] },
+          BRAND_FIDELITY: { decision: 'NOT_VERIFIED', score: null, issues: ['File missing'] }
+        },
         findings: [{
-          category: 'MOTION_REALISM',
+          category: 'SCENE_TRANSITION',
           severity: 'CRITICAL',
           confidence: 1.0,
           timestamp_start: 0,
           timestamp_end: 0,
-          evidence: `Video file not accessible at path: ${options.videoPath}`
+          evidence: `File not found on filesystem: ${options.videoPath}`
         }],
         summary: {
           critical_errors: 1,
@@ -41,44 +51,104 @@ export class TemporalVisualQAEngine {
       }
     }
 
-    // 1. Inspect real video duration via ffprobe
-    const duration = this.getVideoDuration(options.videoPath)
-
-    // 2. Real FFmpeg Scene Transition & Dissolve Analysis (empirically calculated from frames)
-    const sceneTransitions = this.detectSceneTransitions(options.videoPath)
-
-    // Analyze transitions
-    for (const transition of sceneTransitions) {
-      if (transition.timestamp > 0.5 && transition.isSlowBlendOrDissolve) {
-        findings.push({
-          category: 'CAMERA_CONTINUITY',
-          severity: 'WARNING',
-          confidence: transition.confidence,
-          timestamp_start: Math.max(0, transition.timestamp - 0.2),
-          timestamp_end: transition.timestamp + 0.2,
-          evidence: `Empirical FFmpeg frame analysis detected multi-frame dissolve/ghosting transition at ${transition.timestamp.toFixed(2)}s (scene delta score: ${transition.score.toFixed(3)}).`,
-          suggested_correction: 'Use clean hard cinematic cut or maintain single unbroken continuous take.'
-        })
+    // 2. ffprobe integrity & duration validation
+    const probeResult = this.probeVideo(options.videoPath)
+    if (!probeResult.valid) {
+      return {
+        job_id: options.jobId,
+        attempt_id: options.attemptId,
+        raw_sha256: options.rawSha256,
+        reviewer_version: this.version,
+        evaluated_at: evaluatedAt,
+        decision: 'NOT_VERIFIED',
+        failure_reason: `FFPROBE_ANALYSIS_FAILED: ${probeResult.error || 'Video container damaged or unreadable'}`,
+        categories: {
+          SCENE_TRANSITION: { decision: 'NOT_VERIFIED', score: null, issues: [probeResult.error || 'Corrupt media'] },
+          CAMERA_CONTINUITY: { decision: 'NOT_VERIFIED', score: null, issues: [probeResult.error || 'Corrupt media'] },
+          PHYSICAL_SUPPORT: { decision: 'NOT_VERIFIED', score: null, issues: ['Unanalyzable video'] },
+          ACTION_CAUSALITY: { decision: 'NOT_VERIFIED', score: null, issues: ['Unanalyzable video'] },
+          PRODUCT_FIDELITY: { decision: 'NOT_VERIFIED', score: null, issues: ['Unanalyzable video'] },
+          BRAND_FIDELITY: { decision: 'NOT_VERIFIED', score: null, issues: ['Unanalyzable video'] }
+        },
+        findings: [{
+          category: 'SCENE_TRANSITION',
+          severity: 'CRITICAL',
+          confidence: 1.0,
+          timestamp_start: 0,
+          timestamp_end: 0,
+          evidence: `ffprobe failed: ${probeResult.error}`
+        }],
+        summary: {
+          critical_errors: 1,
+          warning_count: 0,
+          requires_human_review: true,
+        }
       }
     }
 
-    // Mid-video cut narrative interruption check
-    const midCut = sceneTransitions.find(t => t.timestamp >= 3.0 && t.timestamp <= 5.5)
-    if (midCut) {
-      findings.push({
-        category: 'ACTION_CAUSALITY',
-        severity: 'WARNING',
-        confidence: 0.85,
-        timestamp_start: Math.max(0, midCut.timestamp - 0.2),
-        timestamp_end: midCut.timestamp + 0.2,
-        evidence: `Mid-video scene transition at ${midCut.timestamp.toFixed(2)}s cuts narrative flow midway through commercial execution. Requires human review to verify object permanence across cut.`,
-        suggested_correction: 'Ensure primary subject identity and motion continuity are grounded across cut.'
-      })
+    const duration = probeResult.duration
+
+    // 3. Empirical FFmpeg Scene Transition Analysis (Calculated strictly from pixel delta metadata)
+    const transitionResult = this.detectSceneTransitions(options.videoPath)
+    if (!transitionResult.success) {
+      return {
+        job_id: options.jobId,
+        attempt_id: options.attemptId,
+        raw_sha256: options.rawSha256,
+        reviewer_version: this.version,
+        evaluated_at: evaluatedAt,
+        decision: 'NOT_VERIFIED',
+        failure_reason: `FFMPEG_TRANSITION_DETECTION_FAILED: ${transitionResult.error}`,
+        categories: {
+          SCENE_TRANSITION: { decision: 'NOT_VERIFIED', score: null, issues: [transitionResult.error || 'FFmpeg failed'] },
+          CAMERA_CONTINUITY: { decision: 'NOT_VERIFIED', score: null, issues: ['Not analyzed'] },
+          PHYSICAL_SUPPORT: { decision: 'NOT_VERIFIED', score: null, issues: ['Requires 3D/VLM vision model'] },
+          ACTION_CAUSALITY: { decision: 'NOT_VERIFIED', score: null, issues: ['Requires 3D/VLM vision model'] },
+          PRODUCT_FIDELITY: { decision: 'NOT_VERIFIED', score: null, issues: ['Requires reference feature embedding'] },
+          BRAND_FIDELITY: { decision: 'NOT_VERIFIED', score: null, issues: ['Requires logo OCR / embedding'] }
+        },
+        findings: [{
+          category: 'SCENE_TRANSITION',
+          severity: 'CRITICAL',
+          confidence: 1.0,
+          timestamp_start: 0,
+          timestamp_end: 0,
+          evidence: `FFmpeg execution error: ${transitionResult.error}`
+        }],
+        summary: {
+          critical_errors: 1,
+          warning_count: 0,
+          requires_human_review: true,
+        }
+      }
     }
 
-    // Calculate Final Decision
-    const criticalCount = findings.filter(f => f.severity === 'CRITICAL').length
+    const transitions = transitionResult.transitions
+
+    // 4. Truthful Evaluation of Scene Transitions:
+    // - Clean cuts (score >= 0.20): Normal, motivated cinematic cuts are completely valid (PASS / INFO).
+    // - Subtle gradual blend (0.04 <= score < 0.20 across sequential frames): Flagged cautiously as POSSIBLE_TRANSITION_ANOMALY (NEEDS_REVIEW).
+    // - Never claim definitive physical law violation purely from scene scores!
+    let slowBlendCount = 0
+    for (const transition of transitions) {
+      if (transition.timestamp > 0.5) {
+        if (transition.isSlowBlendOrDissolve) {
+          slowBlendCount++
+          findings.push({
+            category: 'SCENE_TRANSITION',
+            severity: 'WARNING',
+            confidence: transition.confidence,
+            timestamp_start: Math.max(0, Number((transition.timestamp - 0.2).toFixed(2))),
+            timestamp_end: Number((transition.timestamp + 0.2).toFixed(2)),
+            evidence: `POSSIBLE_TRANSITION_ANOMALY: Multi-frame gradual dissolve/ghosting pattern detected at ${transition.timestamp.toFixed(2)}s (scene delta score: ${transition.score.toFixed(3)}). Insufficient evidence for definitive physics violation; flagged for human review.`,
+            suggested_correction: 'Review transition frame blend; use deliberate hard cut or continuous take if ghosting is visually distracting.'
+          })
+        }
+      }
+    }
+
     const warningCount = findings.filter(f => f.severity === 'WARNING').length
+    const criticalCount = findings.filter(f => f.severity === 'CRITICAL').length
 
     let decision: 'PASS' | 'NEEDS_REVIEW' | 'FAIL' = 'PASS'
     if (criticalCount > 0) {
@@ -95,30 +165,38 @@ export class TemporalVisualQAEngine {
       evaluated_at: evaluatedAt,
       decision,
       categories: {
-        PHYSICAL_SUPPORT: {
-          decision: findings.some(f => f.category === 'PHYSICAL_SUPPORT') ? 'NEEDS_REVIEW' : 'PASS',
-          score: findings.some(f => f.category === 'PHYSICAL_SUPPORT') ? 50 : 95,
-          issues: findings.filter(f => f.category === 'PHYSICAL_SUPPORT').map(f => f.evidence)
+        // SCENE_TRANSITION is genuinely measured via FFmpeg scene filter
+        SCENE_TRANSITION: {
+          decision: slowBlendCount > 0 ? 'NEEDS_REVIEW' : 'PASS',
+          score: slowBlendCount > 0 ? 70 : 100,
+          issues: findings.filter(f => f.category === 'SCENE_TRANSITION').map(f => f.evidence)
         },
+        // CAMERA_CONTINUITY: Only measured in terms of cut stability
         CAMERA_CONTINUITY: {
-          decision: findings.some(f => f.category === 'CAMERA_CONTINUITY') ? 'NEEDS_REVIEW' : 'PASS',
-          score: findings.some(f => f.category === 'CAMERA_CONTINUITY') ? 60 : 95,
+          decision: slowBlendCount > 0 ? 'NEEDS_REVIEW' : 'PASS',
+          score: slowBlendCount > 0 ? 75 : 95,
           issues: findings.filter(f => f.category === 'CAMERA_CONTINUITY').map(f => f.evidence)
         },
+        // Categories that require Visual AI (VLM) / 3D tracking are truthfully marked NOT_VERIFIED
+        PHYSICAL_SUPPORT: {
+          decision: 'NOT_VERIFIED',
+          score: null,
+          issues: ['Requires multi-frame VLM vision reasoning; 2D pixel delta alone cannot verify structural load capacity.']
+        },
         ACTION_CAUSALITY: {
-          decision: findings.some(f => f.category === 'ACTION_CAUSALITY') ? 'NEEDS_REVIEW' : 'PASS',
-          score: findings.some(f => f.category === 'ACTION_CAUSALITY') ? 65 : 95,
-          issues: findings.filter(f => f.category === 'ACTION_CAUSALITY').map(f => f.evidence)
+          decision: 'NOT_VERIFIED',
+          score: null,
+          issues: ['Requires semantic action segmentation to distinguish motivated cinematic cut from narrative break.']
         },
         PRODUCT_FIDELITY: {
-          decision: 'PASS',
-          score: 95,
-          issues: []
+          decision: 'NOT_VERIFIED',
+          score: null,
+          issues: ['Requires feature embedding comparison with reference asset.']
         },
         BRAND_FIDELITY: {
-          decision: 'PASS',
-          score: 95,
-          issues: []
+          decision: 'NOT_VERIFIED',
+          score: null,
+          issues: ['Requires diegetic logo presence OCR and vector matching.']
         }
       },
       findings,
@@ -130,7 +208,7 @@ export class TemporalVisualQAEngine {
     }
   }
 
-  private getVideoDuration(path: string): number {
+  private probeVideo(path: string): { valid: boolean; duration: number; error?: string } {
     try {
       const res = spawnSync('ffprobe', [
         '-v', 'error',
@@ -138,19 +216,41 @@ export class TemporalVisualQAEngine {
         '-of', 'default=noprint_wrappers=1:nokey=1',
         path
       ], { timeout: 10000, encoding: 'utf-8' })
-      return parseFloat((res.stdout || '').trim()) || 8.0
-    } catch {
-      return 8.0
+
+      if (res.status !== 0) {
+        return { valid: false, duration: 0, error: res.stderr || 'ffprobe exited with non-zero status' }
+      }
+
+      const dur = parseFloat((res.stdout || '').trim())
+      if (!Number.isFinite(dur) || dur <= 0) {
+        return { valid: false, duration: 0, error: 'ffprobe reported zero or non-finite duration' }
+      }
+
+      return { valid: true, duration: dur }
+    } catch (err: any) {
+      return { valid: false, duration: 0, error: err.message || 'ffprobe execution failed' }
     }
   }
 
-  private detectSceneTransitions(path: string): Array<{ timestamp: number; score: number; isSlowBlendOrDissolve: boolean; confidence: number }> {
+  private detectSceneTransitions(path: string): {
+    success: boolean
+    error?: string
+    transitions: Array<{ timestamp: number; score: number; isSlowBlendOrDissolve: boolean; confidence: number }>
+  } {
     try {
       const res = spawnSync('ffmpeg', [
         '-i', path,
         '-vf', 'select=gt(scene\\,0.04),metadata=print:file=-',
         '-f', 'null', '-'
       ], { timeout: 20000, encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 })
+
+      if (res.status !== 0 && (!res.stdout || res.stdout.length === 0)) {
+        return {
+          success: false,
+          error: res.stderr || 'ffmpeg scene filter failed',
+          transitions: []
+        }
+      }
 
       const out = res.stdout || ''
       const lines = out.split(/\r?\n/)
@@ -171,14 +271,14 @@ export class TemporalVisualQAEngine {
               timestamp: currentPtsTime,
               score,
               isSlowBlendOrDissolve: isSlowBlend,
-              confidence: isSlowBlend ? 0.88 : 0.95
+              confidence: isSlowBlend ? 0.85 : 0.95
             })
           }
         }
       }
-      return transitions
-    } catch {
-      return []
+      return { success: true, transitions }
+    } catch (err: any) {
+      return { success: false, error: err.message, transitions: [] }
     }
   }
 }
