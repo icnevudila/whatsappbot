@@ -69,42 +69,31 @@ export interface VideoQAReport {
   }
 }
 
-export type CapabilityStatus = 'AVAILABLE' | 'CAPABILITY_UNAVAILABLE'
+export type CapabilityStatus = 'UNAVAILABLE'
+export type AutomatedPhysicsStatus = 'NOT_IMPLEMENTED'
 
-export interface PhysicalSupportReasoning {
-  evaluated: boolean
-  capability_status: CapabilityStatus
+export interface ManualHumanAuditRecord {
   target_question: string
-  primary_actor?: string
-  moved_object?: string
-  apparent_support_surface?: string
-  contact_relationship?: string
-  structural_viability?: 'PLAUSIBLE' | 'IMPOSSIBLE_OR_PRECARIOUS' | 'UNVERIFIABLE'
-  grounding_evidence?: string
-  temporal_continuation?: string
-  limitations: string[]
-}
-
-export interface ConsecutiveFrameInspection {
-  timestamp: number
-  frame_label: string
-  dominant_entities: string[]
-  support_base_state: string
-  motion_state: 'DESCENDING' | 'RESTING' | 'DISCONTINUOUS' | 'STATIC' | 'UNKNOWN'
-  contact_description: string
+  primary_actor: string
+  moved_object: string
+  apparent_support_surface: string
+  contact_relationship: string
+  structural_viability: 'IMPOSSIBLE_OR_PRECARIOUS'
+  grounding_evidence: string
+  temporal_continuation: string
+  audited_by: 'human_director'
 }
 
 export interface VisualPhysicsReviewReport {
   video_path: string
   job_id: string
-  sampling_rate_fps: number
-  frames_analyzed: number
-  vlm_capability_status: CapabilityStatus
-  overall_decision: QADecision
+  automated_physics_qa: AutomatedPhysicsStatus
+  vlm_capability: CapabilityStatus
+  frames_semantically_analyzed: 0
+  overall_decision: 'NOT_VERIFIED'
   failure_reason?: string
-  physical_support_reasoning: PhysicalSupportReasoning
-  frame_sequence: ConsecutiveFrameInspection[]
-  unseen_dataset_scenario?: string
+  limitations: string[]
+  manual_reference_audit?: ManualHumanAuditRecord
 }
 
 export interface ContrastiveScenarioItem {
@@ -114,8 +103,7 @@ export interface ContrastiveScenarioItem {
   human_label: QADecision
   human_rationale: string
   temporal_decision: QADecision
-  visual_physics_decision: QADecision
-  physical_support_viable: boolean | 'UNVERIFIABLE'
+  automated_physics_decision: AutomatedPhysicsStatus
   false_positive_risk: string
   false_negative_risk: string
 }
