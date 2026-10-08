@@ -1,6 +1,5 @@
-import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync } from 'node:fs'
-import { join } from 'node:path'
+import { spawnSync } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import type { VideoQAReport, QAFinding } from './types.js'
 
 export interface VideoQAEvaluationOptions {
@@ -9,9 +8,6 @@ export interface VideoQAEvaluationOptions {
   rawSha256: string
   videoPath: string
   tempDir?: string
-  expectedBrand?: string
-  expectedSubject?: string
-  spokenDialogue?: string
 }
 
 export class TemporalVisualQAEngine {
@@ -45,58 +41,48 @@ export class TemporalVisualQAEngine {
       }
     }
 
-    // Inspect video via ffprobe
+    // 1. Inspect real video duration via ffprobe
     const duration = this.getVideoDuration(options.videoPath)
 
-    // Extract temporal key frames across timeline (0s, 1.5s, 3.8s, 4.0s, 7.5s etc.)
-    const sampleTimes = [0.5, 1.5, 2.5, 3.5, 3.8, 4.0, 5.5, 7.0]
+    // 2. Real FFmpeg Scene Transition & Dissolve Analysis (empirically calculated from frames)
+    const sceneTransitions = this.detectSceneTransitions(options.videoPath)
 
-    // Sample scene luminance / contrast diff between 3.8s and 4.0s to check for ghosting / jump cuts
-    const transitionCheck = this.detectSceneCutAnomalies(options.videoPath, 3.5, 4.2)
-    if (transitionCheck.anomalyDetected) {
-      findings.push({
-        category: 'CAMERA_CONTINUITY',
-        severity: transitionCheck.severity,
-        confidence: transitionCheck.confidence,
-        timestamp_start: 3.8,
-        timestamp_end: 4.1,
-        evidence: transitionCheck.evidence,
-        suggested_correction: 'Align camera vectors or motivate cut with completed actor physical movement.'
-      })
+    // Analyze transitions
+    for (const transition of sceneTransitions) {
+      if (transition.timestamp > 0.5 && transition.isSlowBlendOrDissolve) {
+        findings.push({
+          category: 'CAMERA_CONTINUITY',
+          severity: 'WARNING',
+          confidence: transition.confidence,
+          timestamp_start: Math.max(0, transition.timestamp - 0.2),
+          timestamp_end: transition.timestamp + 0.2,
+          evidence: `Empirical FFmpeg frame analysis detected multi-frame dissolve/ghosting transition at ${transition.timestamp.toFixed(2)}s (scene delta score: ${transition.score.toFixed(3)}).`,
+          suggested_correction: 'Use clean hard cinematic cut or maintain single unbroken continuous take.'
+        })
+      }
     }
 
-    // Physics & Support Analysis (Domain-aware temporal relationship)
-    if (options.expectedSubject && options.expectedSubject.toLowerCase().includes('tuğla')) {
-      // Evaluation on Ayvazoğlu physical action contract
-      findings.push({
-        category: 'PHYSICAL_SUPPORT',
-        severity: 'CRITICAL',
-        confidence: 0.95,
-        timestamp_start: 1.0,
-        timestamp_end: 3.8,
-        evidence: 'Temporal frames (1.0s - 3.8s) exhibit 800kg+ pallet lowered onto a single isolated hollow brick without compressive failure or load distribution.',
-        suggested_correction: 'Forklift should transport pallet onto ground staging or uniform flat stack.'
-      })
-
+    // Mid-video cut narrative interruption check
+    const midCut = sceneTransitions.find(t => t.timestamp >= 3.0 && t.timestamp <= 5.5)
+    if (midCut) {
       findings.push({
         category: 'ACTION_CAUSALITY',
-        severity: 'CRITICAL',
-        confidence: 0.92,
-        timestamp_start: 3.8,
-        timestamp_end: 4.2,
-        evidence: 'Forklift payload placement action is abruptly abandoned without ground contact, cutting instantly to an unrelated studio display table.',
-        suggested_correction: 'Complete delivery action smoothly before cutting, or maintain unbroken tracking glide.'
+        severity: 'WARNING',
+        confidence: 0.85,
+        timestamp_start: Math.max(0, midCut.timestamp - 0.2),
+        timestamp_end: midCut.timestamp + 0.2,
+        evidence: `Mid-video scene transition at ${midCut.timestamp.toFixed(2)}s cuts narrative flow midway through commercial execution. Requires human review to verify object permanence across cut.`,
+        suggested_correction: 'Ensure primary subject identity and motion continuity are grounded across cut.'
       })
     }
 
-    // Calculate decision
+    // Calculate Final Decision
     const criticalCount = findings.filter(f => f.severity === 'CRITICAL').length
     const warningCount = findings.filter(f => f.severity === 'WARNING').length
-    let decision: 'PASS' | 'NEEDS_REVIEW' | 'FAIL' = 'PASS'
 
+    let decision: 'PASS' | 'NEEDS_REVIEW' | 'FAIL' = 'PASS'
     if (criticalCount > 0) {
-      // In shadow mode, we tag as NEEDS_REVIEW or FAIL according to confidence
-      decision = criticalCount >= 2 ? 'FAIL' : 'NEEDS_REVIEW'
+      decision = 'FAIL'
     } else if (warningCount > 0) {
       decision = 'NEEDS_REVIEW'
     }
@@ -110,18 +96,18 @@ export class TemporalVisualQAEngine {
       decision,
       categories: {
         PHYSICAL_SUPPORT: {
-          decision: findings.some(f => f.category === 'PHYSICAL_SUPPORT' && f.severity === 'CRITICAL') ? 'FAIL' : 'PASS',
-          score: findings.some(f => f.category === 'PHYSICAL_SUPPORT') ? 20 : 95,
+          decision: findings.some(f => f.category === 'PHYSICAL_SUPPORT') ? 'NEEDS_REVIEW' : 'PASS',
+          score: findings.some(f => f.category === 'PHYSICAL_SUPPORT') ? 50 : 95,
           issues: findings.filter(f => f.category === 'PHYSICAL_SUPPORT').map(f => f.evidence)
         },
         CAMERA_CONTINUITY: {
           decision: findings.some(f => f.category === 'CAMERA_CONTINUITY') ? 'NEEDS_REVIEW' : 'PASS',
-          score: findings.some(f => f.category === 'CAMERA_CONTINUITY') ? 45 : 95,
+          score: findings.some(f => f.category === 'CAMERA_CONTINUITY') ? 60 : 95,
           issues: findings.filter(f => f.category === 'CAMERA_CONTINUITY').map(f => f.evidence)
         },
         ACTION_CAUSALITY: {
-          decision: findings.some(f => f.category === 'ACTION_CAUSALITY' && f.severity === 'CRITICAL') ? 'FAIL' : 'PASS',
-          score: findings.some(f => f.category === 'ACTION_CAUSALITY') ? 30 : 95,
+          decision: findings.some(f => f.category === 'ACTION_CAUSALITY') ? 'NEEDS_REVIEW' : 'PASS',
+          score: findings.some(f => f.category === 'ACTION_CAUSALITY') ? 65 : 95,
           issues: findings.filter(f => f.category === 'ACTION_CAUSALITY').map(f => f.evidence)
         },
         PRODUCT_FIDELITY: {
@@ -131,7 +117,7 @@ export class TemporalVisualQAEngine {
         },
         BRAND_FIDELITY: {
           decision: 'PASS',
-          score: 90,
+          score: 95,
           issues: []
         }
       },
@@ -146,24 +132,53 @@ export class TemporalVisualQAEngine {
 
   private getVideoDuration(path: string): number {
     try {
-      const out = execFileSync('ffprobe', [
+      const res = spawnSync('ffprobe', [
         '-v', 'error',
         '-show_entries', 'format=duration',
         '-of', 'default=noprint_wrappers=1:nokey=1',
         path
-      ], { timeout: 10000 })
-      return parseFloat(out.toString().trim()) || 8.0
+      ], { timeout: 10000, encoding: 'utf-8' })
+      return parseFloat((res.stdout || '').trim()) || 8.0
     } catch {
       return 8.0
     }
   }
 
-  private detectSceneCutAnomalies(path: string, t1: number, t2: number): { anomalyDetected: boolean; severity: 'INFO' | 'WARNING' | 'CRITICAL'; confidence: number; evidence: string } {
-    return {
-      anomalyDetected: true,
-      severity: 'WARNING',
-      confidence: 0.88,
-      evidence: `Semi-transparent blend / unmotivated scene transition detected between ${t1}s and ${t2}s.`
+  private detectSceneTransitions(path: string): Array<{ timestamp: number; score: number; isSlowBlendOrDissolve: boolean; confidence: number }> {
+    try {
+      const res = spawnSync('ffmpeg', [
+        '-i', path,
+        '-vf', 'select=gt(scene\\,0.04),metadata=print:file=-',
+        '-f', 'null', '-'
+      ], { timeout: 20000, encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 })
+
+      const out = res.stdout || ''
+      const lines = out.split(/\r?\n/)
+      const transitions: Array<{ timestamp: number; score: number; isSlowBlendOrDissolve: boolean; confidence: number }> = []
+
+      let currentPtsTime = 0.0
+      for (const line of lines) {
+        if (line.includes('pts_time:')) {
+          const match = line.match(/pts_time:([0-9.]+)/)
+          if (match) currentPtsTime = parseFloat(match[1])
+        }
+        if (line.includes('lavfi.scene_score=')) {
+          const match = line.match(/lavfi\.scene_score=([0-9.]+)/)
+          if (match) {
+            const score = parseFloat(match[1])
+            const isSlowBlend = score < 0.20
+            transitions.push({
+              timestamp: currentPtsTime,
+              score,
+              isSlowBlendOrDissolve: isSlowBlend,
+              confidence: isSlowBlend ? 0.88 : 0.95
+            })
+          }
+        }
+      }
+      return transitions
+    } catch {
+      return []
     }
   }
 }
