@@ -670,8 +670,63 @@ export function CreativeDetail({
               Metni Kopyala
             </button>
           </div>
-          <div className="whitespace-pre-wrap font-sans leading-relaxed text-[#111b21] bg-white p-3 rounded-lg border border-[#d1ebd9]">
-            {creative.campaignMessage}
+          <div className="font-sans leading-relaxed text-[#111b21] bg-white p-3.5 rounded-lg border border-[#d1ebd9] space-y-1">
+            {creative.campaignMessage.split('\n').map((line, idx) => {
+              const trimmed = line.trim()
+              if (!trimmed) return <div key={idx} className="h-1.5" />
+              // Main header: *Title*
+              if (trimmed.startsWith('*') && trimmed.endsWith('*') && !trimmed.slice(1, -1).includes('*')) {
+                return (
+                  <div key={idx} className="font-bold text-[14px] text-[#006b58] pb-0.5">
+                    {trimmed.slice(1, -1)}
+                  </div>
+                )
+              }
+              // Bullet item: • *Label:* Value
+              if (trimmed.startsWith('•')) {
+                const rest = trimmed.slice(1).trim()
+                const labelMatch = rest.match(/^\*([^*]+):\*\s*(.*)$/)
+                if (labelMatch) {
+                  const [, label, value] = labelMatch
+                  const parts = value.split(/(_[^_]+_)/g)
+                  return (
+                    <div key={idx} className="flex items-start gap-2 py-0.5 text-[13px]">
+                      <span className="text-[#00a884] font-bold select-none">•</span>
+                      <div>
+                        <span className="font-semibold text-[#111b21]">{label}: </span>
+                        <span className="text-[#3b4a54]">
+                          {parts.map((p, pIdx) => {
+                            if (p.startsWith('_') && p.endsWith('_')) {
+                              return <span key={pIdx} className="text-[#667781] text-[12px] italic"> ({p.slice(1, -1).replace(/^\((.*)\)$/, '$1')})</span>
+                            }
+                            return p
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                }
+                return (
+                  <div key={idx} className="flex items-start gap-2 py-0.5 text-[13px] text-[#3b4a54]">
+                    <span className="text-[#00a884] font-bold select-none">•</span>
+                    <span>{rest}</span>
+                  </div>
+                )
+              }
+              // Subheading: *Kampanya Detayları:*
+              if (trimmed.startsWith('*') && trimmed.endsWith('*')) {
+                return (
+                  <div key={idx} className="font-semibold text-[13px] text-[#006b58] pt-1.5">
+                    {trimmed.slice(1, -1)}
+                  </div>
+                )
+              }
+              return (
+                <div key={idx} className="text-[13px] text-[#3b4a54]">
+                  {trimmed}
+                </div>
+              )
+            })}
           </div>
         </div>
       ) : null}

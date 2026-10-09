@@ -141,6 +141,34 @@ export function cleanAiMessage(text: string): string {
     .trim()
 }
 
+export function formatPriceText(raw: string | null | undefined): string {
+  if (!raw) return ''
+  const trimmed = String(raw).trim()
+  if (!trimmed) return ''
+
+  // If already contains currency symbol or code, return clean single-spaced
+  if (/(tl|₺|\$|€|usd|eur)/i.test(trimmed)) {
+    return trimmed.replace(/\s+/g, ' ')
+  }
+
+  const numOnly = trimmed.replace(/\s+/g, '')
+  // Decimal price (e.g. "18.50" or "18,50")
+  if (/^\d+[.,]\d+$/.test(numOnly)) {
+    return `${trimmed} TL`
+  }
+
+  // Integer price with thousands formatting (e.g. "1900" -> "1.900 TL", "500" -> "500 TL")
+  if (/^\d+$/.test(numOnly)) {
+    const num = Number(numOnly)
+    if (!Number.isNaN(num) && num >= 1000) {
+      return `${num.toLocaleString('tr-TR')} TL`
+    }
+    return `${numOnly} TL`
+  }
+
+  return `${trimmed} TL`
+}
+
 export function generateCampaignWhatsAppMessage(verified: import('../creative/prompt').VerifiedCampaignData): string {
   const parts: string[] = []
 
@@ -160,13 +188,26 @@ export function generateCampaignWhatsAppMessage(verified: import('../creative/pr
     offerLines.push(`• *Fırsat:* ${verified.offer}`)
   }
   if (verified.price) {
-    offerLines.push(`• *Fiyat:* ${verified.price}${verified.oldPrice ? ` _(Önceki: ${verified.oldPrice})_` : ''}`)
+    const formattedPrice = formatPriceText(verified.price)
+    const formattedOldPrice = verified.oldPrice ? formatPriceText(verified.oldPrice) : null
+    const oldPricePart = formattedOldPrice ? ` _(Önceki: ${formattedOldPrice})_` : ''
+    offerLines.push(`• *Fiyat:* ${formattedPrice}${oldPricePart}`)
   }
   if (verified.discount && !verified.offer?.includes(verified.discount)) {
     offerLines.push(`• *İndirim:* ${verified.discount}`)
   }
   if (verified.deliveryFact) {
-    offerLines.push(`• *Teslimat:* ${verified.deliveryFact}`)
+    const fact = verified.deliveryFact.trim()
+    const lower = fact.toLowerCase()
+    let label = 'Teslimat'
+    if (lower.includes('taksit') || lower.includes('kredi kart') || lower.includes('kart') || lower.includes('peşin') || lower.includes('havale') || lower.includes('ödeme')) {
+      label = 'Ödeme/Taksit'
+    } else if (lower.includes('teslim') || lower.includes('kargo') || lower.includes('sevkiyat') || lower.includes('nakliye') || lower.includes('şantiye') || lower.includes('adrese')) {
+      label = 'Teslimat'
+    } else {
+      label = 'Avantaj'
+    }
+    offerLines.push(`• *${label}:* ${fact}`)
   }
   if (verified.stockFact) {
     offerLines.push(`• *Stok:* ${verified.stockFact}`)
