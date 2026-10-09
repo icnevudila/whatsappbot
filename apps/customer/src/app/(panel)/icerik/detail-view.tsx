@@ -17,6 +17,7 @@ import {
   renameCreative,
   retryCreative,
   startCreativeGeneration,
+  approveReviewedImage,
 } from './actions'
 
 const DETAIL_STAGES = [
@@ -40,6 +41,9 @@ import { getSafeMediaUrl } from '@/lib/media-url'
 export { getSafeMediaUrl }
 
 export type DetailCreative = {
+  imageReviewRequired?: boolean
+  imageReconciliationRequired?: boolean
+  submissionRequestKey?: string | null
   id: string
   title: string | null
   publicUrl: string | null
@@ -47,6 +51,7 @@ export type DetailCreative = {
   source: string
   generationType: string
   createdAt: string
+  productionStartedAt?: string | null
   error: string | null
   parentId: string | null
   brandName: string | null
@@ -299,6 +304,14 @@ export function CreativeDetail({
 }) {
   const router = useRouter()
   const [instruction, setInstruction] = useState('')
+  useEffect(() => {
+    if (!creative.submissionRequestKey) return
+    try {
+      const key = `wa.customer.creative-studio.v2.${orgId}.submission.image`
+      const saved = JSON.parse(localStorage.getItem(key) || 'null')
+      if (saved?.id === creative.submissionRequestKey) localStorage.removeItem(key)
+    } catch { /* persisted creative proves acceptance even when storage is unavailable */ }
+  }, [creative.submissionRequestKey, orgId])
   type ServerProgressInfo = {
     elapsedSeconds: number
     remainingSeconds: number
@@ -347,6 +360,7 @@ export function CreativeDetail({
       ok?: boolean
       pending?: boolean
       ready?: boolean
+      needsReview?: boolean
       publicUrl?: string | null
       thumbnailUrl?: string | null
       retryAfterSeconds?: number
@@ -364,6 +378,7 @@ export function CreativeDetail({
         progressInfo: json?.progressInfo ?? null,
       }
     }
+    if (json?.needsReview) return { error: null, pending: false, publicUrl: json.publicUrl }
     if (!hasConfirmedRenderResult({ ready: json?.ready, publicUrl: json?.publicUrl })) {
       return { error: null, pending: true, retryAfterSeconds: 5 }
     }
@@ -390,7 +405,7 @@ export function CreativeDetail({
       return
     }
     const timer = setInterval(() => {
-      setTick((value) => value + 1)
+      setTick(Math.max(0, Math.floor((Date.now() - Date.parse(creative.productionStartedAt || creative.createdAt)) / 1000)) || 0)
       setServerProgress((prev) => {
         if (!prev) return null
         return {
@@ -401,7 +416,7 @@ export function CreativeDetail({
       })
     }, 1000)
     return () => clearInterval(timer)
-  }, [spinning])
+  }, [spinning, creative.productionStartedAt, creative.createdAt])
 
   useEffect(() => {
     if (!canManage) return
@@ -445,6 +460,12 @@ export function CreativeDetail({
         }
 
         if (res.pending) {
+          if (!isVideo && Date.now() - startTime > 5 * 60 * 1000) {
+            setBusyRender(false)
+            setLocalError('Görsel üretimi durumu doğrulanamıyor, işlem inceleniyor. Çift ücretlendirme yapılmadı.')
+            router.refresh()
+            return
+          }
           const delay = (res.retryAfterSeconds || 3) * 1000
           pollTimer = setTimeout(pollLoop, Math.max(Date.now() - startTime > SLOW_POLL_AFTER_MS ? 15000 : 2500, delay))
         } else {
@@ -456,8 +477,12 @@ export function CreativeDetail({
       } catch (err: unknown) {
         if (!isMounted) return
         console.warn('[detail-view] poll error:', err)
-        // A lost observation is not a failed production. Keep observing this job;
-        // requestRender's persisted identity prevents another provider submission.
+        if (!isVideo && Date.now() - startTime > 5 * 60 * 1000) {
+          setBusyRender(false)
+          setLocalError('Görsel üretimi durumu doğrulanamıyor, işlem inceleniyor. Çift ücretlendirme yapılmadı.')
+          router.refresh()
+          return
+        }
         pollTimer = setTimeout(pollLoop, Date.now() - startTime > SLOW_POLL_AFTER_MS ? 15000 : 4000)
       }
     }
@@ -528,7 +553,7 @@ export function CreativeDetail({
   let stageLabel = 'Sunucudan üretim sonucu bekleniyor…'
   let stageDetail = 'Çıktının hazır olduğu henüz doğrulanmadı'
 
-  if (serverProgress && isVideo) {
+  if (serverProgress && (isVideo || serverProgress.stage === 'reconciliation')) {
     stageLabel = serverProgress.stageLabel
     stageDetail = serverProgress.stageDetail
   }
@@ -561,7 +586,7 @@ export function CreativeDetail({
         <Notice tone="danger">
           <p className="text-[13.5px] font-semibold">Görsel oluşturulamadı</p>
           <p className="mt-1 whitespace-pre-wrap break-words text-[13px]">{shownError}</p>
-          {canManage ? (
+          {canManage && !creative.imageReconciliationRequired ? (
             <Button
               type="button"
               variant="accent"
@@ -578,13 +603,23 @@ export function CreativeDetail({
 
       {creative.status === 'needs_review' ? (
         <Notice tone="warn">
-          <p className="text-[13.5px] font-semibold">Video inceleme bekliyor</p>
-          <p className="mt-1 text-[13px]">Video üretildi ancak kalite kontrolü henüz onaylamadı. Onay tamamlanmadan kampanyada kullanılamaz.</p>
-          <Link href={`/icerik/yeni?job_id=${creative.id}`} className="mt-3 inline-block text-[13px] font-semibold underline">Üretim sonucunu görüntüle</Link>
+          <p className="text-[13.5px] font-semibold">{isVideo ? 'Video' : 'Görsel'} inceleme bekliyor</p>
+          <p className="mt-1 text-[13px]">Dosya oluşturuldu. Gerçek ürün, logo, metin ve ticari bilgilerin doğruluğu onaylanmadan kampanyada kullanılamaz.</p>
+          {isVideo && <Link href={`/icerik/yeni?job_id=${creative.id}`} className="mt-3 inline-block text-[13px] font-semibold underline">Üretim sonucunu görüntüle</Link>}
+          {!isVideo && creative.imageReviewRequired && canManage && <form className="mt-3 space-y-2" action={async (form) => {
+            form.set('id',creative.id)
+            const result = await approveReviewedImage(form)
+            if (result?.error) toast(result.error,'danger')
+            else router.refresh()
+          }}>
+            <label className="block"><input type="checkbox" name="identity" required /> Gerçek ürünü, logoyu ve marka renklerini görselde kontrol ettim.</label>
+            <label className="block"><input type="checkbox" name="commerce" required /> Fiyat, teklif, başlık ve çağrı doğru; uydurma iddia yok.</label>
+            <Button type="submit">İnceledim, kampanyada kullanımını onayla</Button>
+          </form>}
         </Notice>
       ) : null}
 
-      {displayPublicUrl && isReady ? (
+      {displayPublicUrl && (isReady || (!isVideo && creative.status === 'needs_review')) ? (
         <div className="relative overflow-visible">
           {isVideo ? (
             <div className="overflow-hidden rounded-[var(--radius-card)] border border-hairline bg-black shadow-lg">
@@ -630,7 +665,7 @@ export function CreativeDetail({
           <div className="flex items-center justify-between">
             <span className="font-bold text-[#006b58] flex items-center gap-1.5">
               <Icon name="campaign" className="size-4 text-[#00a884]" />
-              Yapay Zeka WhatsApp Kampanya Metni
+              Kampanya Metni
             </span>
             <button
               type="button"
@@ -646,8 +681,74 @@ export function CreativeDetail({
               Metni Kopyala
             </button>
           </div>
-          <div className="whitespace-pre-wrap font-sans leading-relaxed text-[#111b21] bg-white p-3 rounded-lg border border-[#d1ebd9]">
-            {creative.campaignMessage}
+          <div className="font-sans leading-relaxed text-[#111b21] bg-white p-3.5 rounded-lg border border-[#d1ebd9] space-y-1">
+            {creative.campaignMessage.split('\n').map((line, idx) => {
+              const trimmed = line.trim()
+              if (!trimmed) return <div key={idx} className="h-1.5" />
+              // Main header: *Title*
+              if (trimmed.startsWith('*') && trimmed.endsWith('*') && !trimmed.slice(1, -1).includes('*')) {
+                return (
+                  <div key={idx} className="font-bold text-[14px] text-[#006b58] pb-0.5">
+                    {trimmed.slice(1, -1)}
+                  </div>
+                )
+              }
+              // Bullet item: • *Label:* Value
+              if (trimmed.startsWith('•')) {
+                const rest = trimmed.slice(1).trim()
+                const labelMatch = rest.match(/^\*([^*]+):\*\s*(.*)$/)
+                if (labelMatch) {
+                  let [, label, value] = labelMatch
+                  if (label === 'Teslimat' && /taksit|kredi\s*kart|kart|peşin|havale|ödeme/i.test(value)) {
+                    label = 'Ödeme/Taksit'
+                  }
+                  if (label === 'Fiyat') {
+                    value = value.replace(/(?:^|\s)(\d+)(?=\s*(?:_|\(|$))/g, (match, digits) => {
+                      const num = Number(digits)
+                      return ` ${num >= 1000 ? num.toLocaleString('tr-TR') : digits} TL`
+                    }).replace(/\s+/g, ' ').trim()
+                  }
+                  const parts = value.split(/(_[^_]+_|\([^\)]+\))/g)
+                  return (
+                    <div key={idx} className="flex items-start gap-2 py-0.5 text-[13px]">
+                      <span className="text-[#00a884] font-bold select-none">•</span>
+                      <div>
+                        <span className="font-semibold text-[#111b21]">{label}: </span>
+                        <span className="text-[#3b4a54]">
+                          {parts.map((p, pIdx) => {
+                            const trimmedPart = p.trim()
+                            if ((trimmedPart.startsWith('_') && trimmedPart.endsWith('_')) || (trimmedPart.startsWith('(') && trimmedPart.endsWith(')'))) {
+                              const inner = trimmedPart.replace(/[_()]/g, '').trim()
+                              return <span key={pIdx} className="text-[#667781] text-[12px] italic"> ({inner})</span>
+                            }
+                            return p
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                }
+                return (
+                  <div key={idx} className="flex items-start gap-2 py-0.5 text-[13px] text-[#3b4a54]">
+                    <span className="text-[#00a884] font-bold select-none">•</span>
+                    <span>{rest}</span>
+                  </div>
+                )
+              }
+              // Subheading: *Kampanya Detayları:*
+              if (trimmed.startsWith('*') && trimmed.endsWith('*')) {
+                return (
+                  <div key={idx} className="font-semibold text-[13px] text-[#006b58] pt-1.5">
+                    {trimmed.slice(1, -1)}
+                  </div>
+                )
+              }
+              return (
+                <div key={idx} className="text-[13px] text-[#3b4a54]">
+                  {trimmed}
+                </div>
+              )
+            })}
           </div>
         </div>
       ) : null}
@@ -666,7 +767,7 @@ export function CreativeDetail({
             </Button>
           ) : null}
           <AccentLink
-            href={`/kampanyalar/yeni?gorsel=${encodeURIComponent(displayPublicUrl)}${creative.campaignMessage ? `&mesaj=${encodeURIComponent(creative.campaignMessage)}` : ''}`}
+            href={`/kampanyalar/yeni?creative_id=${encodeURIComponent(creative.id)}`}
             className="w-full !rounded-full !border-0 !bg-[#00a884] !text-white !shadow-none hover:!bg-[#008069]"
           >
             <Icon name="campaign" className="size-4" />

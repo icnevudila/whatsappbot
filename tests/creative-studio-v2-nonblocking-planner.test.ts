@@ -1,6 +1,7 @@
 process.env.NEXT_PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://rnkrjmblgcdqlyslbhob.supabase.co'
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'mock-anon-key'
 process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 'mock-publishable-key'
+process.env.NEXT_PUBLIC_AI_PLANNER_TIMEOUT_MS = process.env.NEXT_PUBLIC_AI_PLANNER_TIMEOUT_MS || '500'
 
 import test, { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
@@ -56,7 +57,7 @@ describe('Creative Studio V2 Non-Blocking AI Planner Contract Suite', () => {
     // Simulate slow network request
     const simulateSlowAi = async () => {
       return new Promise<void>((resolve, reject) => {
-        const slowTimer = setTimeout(resolve, 20_000)
+        const slowTimer = setTimeout(resolve, 2_000)
         controller.signal.addEventListener('abort', () => {
           clearTimeout(slowTimer)
           const err = new Error('AbortError')

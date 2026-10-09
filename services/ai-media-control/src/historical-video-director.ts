@@ -34,6 +34,7 @@ export async function runHistoricalVideoDirector(input: {
   const logoAsset = assets.find(a => a.role === 'logo')!
   if (hero.asset_id !== productAsset.asset_id || hero.sha256 !== productAsset.sha256 || rawInput.logo_asset_id !== logoAsset.asset_id || rawInput.logo_sha256 !== logoAsset.sha256) throw new Error('HISTORICAL_CREATIVE_SNAPSHOT_REFERENCE_MISMATCH')
   const historical = compileHistoricalV5({
+    creativeDirectorVersion: process.env.CREATIVE_DIRECTOR_VERSION === 'V3' ? 'V3' : undefined,
     brandName: rawInput.brand_name, about: rawInput.brand_description, sectorHint: rawInput.sector_profile,
     brief: rawInput.campaign.objective, ctaText: rawInput.campaign.cta,
     products: [{ name: hero.name, description: hero.description, imageUrl: '@HeroProduct', price: rawInput.campaign.price, promo: rawInput.campaign.offer }],
@@ -41,7 +42,9 @@ export async function runHistoricalVideoDirector(input: {
     brandKit: { name: rawInput.brand_name, colors: rawInput.brand_palette, fonts: { heading: rawInput.typography?.headingFont }, logoUrl: '@BrandLogo' },
     videoSpeech: true,
   }, dialogue)
-  const basePrompt = buildHistoricalDirectorPrompt({
+  const basePrompt = process.env.CREATIVE_DIRECTOR_VERSION === 'V3'
+    ? `Act as a cinematic director. Inspect the attached canonical product and logo. Refine light and framing only within the following single-action contract. Preserve the PHYSICAL ACTION CONTRACT literally, one continuous take and three pacing beats, actor/product identity and support. Do not add lifting, loading, scene cuts, invented functions, dialogue or campaign facts. Return only the final English provider prompt:\n${historical.veoPrompt}`
+    : buildHistoricalDirectorPrompt({
     brandName: rawInput.brand_name, productName: hero.name, compiledPrompt: historical.veoPrompt,
     logoVisualDescription: 'Ayrı yüklenen kanonik marka logosunu görsel olarak incele; kimliği bu dosyadan belirle.',
     sector: rawInput.sector_profile, sceneAtmosphere: historical.shotPlan.singleLocation,
@@ -62,6 +65,16 @@ export async function runHistoricalVideoDirector(input: {
     if (!receipt || receipt.org_id !== rawInput.org_id || receipt.composer_attachment_count !== 2 || receipt.uploaded_reference_count !== 2 || !Array.isArray(receipt.references) || receipt.references.length !== 2) throw new Error('HISTORICAL_DIRECTOR_PHYSICAL_ATTACHMENTS_UNVERIFIED')
     for (const ref of references) if (receipt.references.filter((r:any)=>r.role===ref.role && r.asset_id===ref.asset_id && r.sha256===ref.sha256).length!==1) throw new Error('HISTORICAL_DIRECTOR_PHYSICAL_REFERENCE_MISMATCH')
     if (typeof result.prompt !== 'string' || result.prompt.length < 200) throw new Error('HISTORICAL_DIRECTOR_EMPTY_PROMPT')
+    if (process.env.CREATIVE_DIRECTOR_VERSION === 'V3') {
+      const contractLine = historical.veoPrompt.split('\n').find(line => line.startsWith('PHYSICAL ACTION CONTRACT:'))
+      // The canonical contract contains negative constraints such as "no forklift".
+      // Preserve that exact contract instead of rejecting its forbidden-action words.
+      if (!contractLine || !result.prompt.split('\n').includes(contractLine))
+        throw new Error('V3_DIRECTOR_PHYSICAL_CONTRACT_CHANGED')
+      const direction = (result.prompt as string).split('\n').filter(line => line !== contractLine).join('\n')
+      if (/three_cut|hard cut|(?:uses?|drives?|operates?)\s+(?:a\s+)?forklift|loading pallets/i.test(direction))
+        throw new Error('V3_DIRECTOR_PHYSICAL_CONTRACT_CHANGED')
+    }
     const providerPrompt = finalizeHistoricalProviderPrompt(result.prompt, dialogue)
     return { historical, rewrittenPrompt: result.prompt, providerPrompt, gatewayJobId: result.gateway_job_id, visionReceipt: receipt, fallbackUsed: false }
   } catch (err: any) {

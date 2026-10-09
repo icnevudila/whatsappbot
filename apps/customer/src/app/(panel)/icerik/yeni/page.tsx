@@ -37,6 +37,7 @@ export default async function NewCreativePage({
       />
 
       <CreativeStudioV2
+        key={`${data.org.id}.${resolvedParams.job_id || 'new'}.${resolvedParams.derived_from || ''}`}
         data={data}
         initialMediaType={isVideo ? 'VIDEO' : 'IMAGE'}
         initialDerivedCreativeId={resolvedParams.derived_from || null}

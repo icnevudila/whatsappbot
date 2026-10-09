@@ -15,6 +15,7 @@ import { resolveAssetSource } from './asset-source-resolver'
 import { compositeCommercialCreative } from './v2/image-compositor'
 import { buildImagePromptV2 } from './v2/image-prompt-v2'
 import { mapLegacyStyleToPreset } from './v2/adapter'
+import { imagePublicationStatus } from './image-review'
 import type { ImageFormatV2 } from './v2/types'
 
 const MAX_REFS = 4
@@ -228,6 +229,7 @@ export async function processCreativeGeneration(
   busy?: boolean
   pending?: boolean
   ready?: boolean
+  needsReview?: boolean
   publicUrl?: string | null
   thumbnailUrl?: string | null
   retryAfterSeconds?: number
@@ -269,6 +271,10 @@ export async function processCreativeGeneration(
   const isVideo = creative.format === 'video' || snapshot.formatId === 'reels_video'
   if (!isVideo && creative.status === 'failed' && !payload.imageJob && !payload.imageSubmitIntent && !payload.imageDirectIntent) {
     return { ok: false, error: creative.error || 'Önceki üretim başarısız; takip isteği yeni ücretli üretim başlatmaz.' }
+  }
+
+  if (!isVideo && creative.status === 'needs_review' && creative.public_url) {
+    return { ok: true, skipped: true, ready: false, needsReview: true, publicUrl: creative.public_url }
   }
 
   if (creative.status === 'ready' && creative.public_url) {
@@ -366,9 +372,9 @@ export async function processCreativeGeneration(
       const storedReceipt = await verifyPersistedImageBytes(image.data, Buffer.from(await readback.data.arrayBuffer()))
       const { data: url } = supabase.storage.from('creatives').getPublicUrl(storagePath)
       const update = await supabase.from('creatives').update({
-        status: 'ready', error: null, storage_path: storagePath, public_url: url.publicUrl,
+        status: imagePublicationStatus(payload), error: null, storage_path: storagePath, public_url: url.publicUrl,
         width: image.width || null, height: image.height || null,
-        payload: { ...payload, imageJob: null, provider: 'omnistudio', outputSha256: storedReceipt.sha256,
+        payload: { ...payload, lastImageJob: payload.imageJob, imageJob: null, provider: 'omnistudio', outputSha256: storedReceipt.sha256,
           campaignMessage: payload.campaignMessage || (asSnapshot(payload) ? generateCampaignWhatsAppMessage(deriveVerifiedCampaignData(asSnapshot(payload)!)) : null),
           imageOutputReceipt: {orgId:creative.org_id,creativeId,jobId:payload.imageJob.id,sha256:storedReceipt.sha256,size:storedReceipt.size,
             mimeType:storedReceipt.mimeType,width:storedReceipt.width,height:storedReceipt.height,decodedImage:true,storagePath,
@@ -376,23 +382,68 @@ export async function processCreativeGeneration(
       }).eq('id', creativeId).eq('org_id', creative.org_id).in('status',['rendering','failed']).eq('payload->imageJob->>id', payload.imageJob.id).select('id').maybeSingle()
       if (update.error) return { ok: true, pending: true, retryAfterSeconds: 10, error: update.error.message }
       if (update.data?.id !== creativeId) return { ok: true, pending: true, retryAfterSeconds: 5 }
-      return { ok: true, ready: true, publicUrl: url.publicUrl }
+      return { ok: true, ready: imagePublicationStatus(payload) === 'ready', needsReview: imagePublicationStatus(payload) === 'needs_review', publicUrl: url.publicUrl }
     } catch (error) {
       if (error instanceof ImageJobReconciliationError) {
-        await supabase.from('creatives').update({ status: 'rendering', error: null,
-          payload: { ...payload, imageReconciliationRequired: true },
-        }).eq('id', creativeId).eq('org_id', creative.org_id).eq('payload->imageJob->>id', payload.imageJob.id)
-        return { ok: true, pending: true, retryAfterSeconds: 10 }
+        const reconciliationMsg = 'Üretim durumu doğrulanamıyor, işlem inceleniyor. Çift ücretli üretim başlatılmadı.'
+        await supabase.from('creatives').update({
+          status: 'failed',
+          error: reconciliationMsg,
+          payload: {
+            ...payload,
+            imageReconciliationRequired: true,
+            lastImageJob: payload.imageJob,
+            imageTerminalFailure: { kind: 'RECONCILIATION_REQUIRED', jobId: payload.imageJob.id, gatewayUrl: payload.imageJob.gatewayUrl, queuedAt: payload.imageJob.queuedAt, error: reconciliationMsg },
+            imageJob: null,
+          },
+        }).eq('id', creativeId).eq('org_id', creative.org_id)
+        return {
+          ok: false,
+          pending: false,
+          error: reconciliationMsg,
+          progressInfo: {
+            elapsedSeconds: Math.max(0, Math.floor((Date.now() - Date.parse(payload.imageJob.queuedAt)) / 1000)) || 0,
+            remainingSeconds: 0,
+            progressPercent: 0,
+            stage: 'reconciliation',
+            stageLabel: 'Üretim durumu doğrulanamıyor',
+            stageDetail: 'İşlem inceleniyor. Çift üretim başlatılmadı; mevcut iş kontrol edilmeli.',
+          },
+        }
       }
-      if (!(error instanceof ImageJobFailedError)) return { ok: true, pending: true, retryAfterSeconds: 10 }
-      const message = error.message.slice(0,400)
-      await supabase.from('creatives').update({ status: 'failed', error: message,
-        payload: error instanceof ImageJobReconciliationError
-          ? { ...payload, imageReconciliationRequired: true }
-          : { ...payload, imageTerminalFailure: { kind: 'PROVIDER_FAILED', jobId: payload.imageJob.id,
-            gatewayUrl: payload.imageJob.gatewayUrl }, imageSubmissionUncertain: false },
-      }).eq('id', creativeId).eq('org_id', creative.org_id).eq('payload->imageJob->>id', payload.imageJob.id)
-      return { ok: false, error: message }
+      if (error instanceof ImageJobFailedError) {
+        const message = error.message.slice(0, 400)
+        await supabase.from('creatives').update({
+          status: 'failed',
+          error: message,
+          payload: {
+            ...payload,
+            lastImageJob: payload.imageJob,
+            imageTerminalFailure: { kind: 'PROVIDER_FAILED', jobId: payload.imageJob.id, gatewayUrl: payload.imageJob.gatewayUrl, error: message },
+            imageSubmissionUncertain: false,
+            imageJob: null,
+          },
+        }).eq('id', creativeId).eq('org_id', creative.org_id)
+        return { ok: false, error: message }
+      }
+      const queuedMs = Date.parse(payload.imageJob.queuedAt) || 0
+      const elapsedMs = queuedMs > 0 ? Date.now() - queuedMs : 0
+      if (elapsedMs > 5 * 60 * 1000) {
+        const timeoutMsg = 'Görsel üretimi zaman aşımına uğradı (5 dakika). Sonuç doğrulanamadı; işlem inceleniyor.'
+        await supabase.from('creatives').update({
+          status: 'failed',
+          error: timeoutMsg,
+          payload: {
+            ...payload,
+            imageReconciliationRequired: true,
+            lastImageJob: payload.imageJob,
+            imageTerminalFailure: { kind: 'TIMEOUT_RECONCILIATION_REQUIRED', jobId: payload.imageJob.id, gatewayUrl: payload.imageJob.gatewayUrl, queuedAt: payload.imageJob.queuedAt, error: timeoutMsg },
+            imageJob: null,
+          },
+        }).eq('id', creativeId).eq('org_id', creative.org_id)
+        return { ok: false, pending: false, error: timeoutMsg }
+      }
+      return { ok: true, pending: true, retryAfterSeconds: 5 }
     }
   }
 
@@ -665,7 +716,8 @@ export async function processCreativeGeneration(
       .eq('id', creative.org_id)
       .maybeSingle()
 
-    const preferred = (orgData as { ai_image_mode?: string | null })?.ai_image_mode === 'fast' ? 'openai' : 'omnistudio'
+    const preferred = payload.creativeDirectorVersion === 'V3' ? 'omnistudio'
+      : (orgData as { ai_image_mode?: string | null })?.ai_image_mode === 'fast' ? 'openai' : 'omnistudio'
     const bag: AiKeyBag = { preferredImageProvider: preferred }
 
     const customerName = (orgData as { name?: string | null })?.name || creative.org_id.slice(0, 8)
@@ -692,6 +744,7 @@ export async function processCreativeGeneration(
         : buildCreativePrompt(snapshot, {
             verifiedRefs,
             artDirectionPlan: (payload as any).qualityMode === 'DESIGNER' ? (payload as any).artDirectionPlan : null,
+            mode: payload.creativeDirectorVersion === 'V3' && (payload as any).qualityMode === 'DESIGNER' ? 'V3' : undefined,
           }).prompt
     const aspect = snapshot.aspect || formatToAspect(creative.format)
 
@@ -1181,7 +1234,7 @@ export async function processCreativeGeneration(
     const { error, data: finalized } = await supabase
       .from('creatives')
       .update({
-        status: 'ready',
+        status: imagePublicationStatus(snapshot),
         error: null,
         storage_path: path,
         public_url: publicUrl.publicUrl,
@@ -1197,7 +1250,7 @@ export async function processCreativeGeneration(
 
     if (error) throw new Error(error.message)
     if (finalized?.id !== creativeId) throw new Error('Final görsel kaydı başka işlem tarafından değiştirildi; ham çıktı korunuyor.')
-    return { ok: true, ready: true, publicUrl: publicUrl.publicUrl }
+    return { ok: true, ready: imagePublicationStatus(snapshot) === 'ready', needsReview: imagePublicationStatus(snapshot) === 'needs_review', publicUrl: publicUrl.publicUrl }
   } catch (error) {
     if (isVideo && error instanceof VideoJobTerminalError) {
       const message = `${error.code}: ${error.message}`.slice(0, 400)

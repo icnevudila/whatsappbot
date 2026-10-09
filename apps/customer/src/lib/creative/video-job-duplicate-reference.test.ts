@@ -18,7 +18,7 @@ test('real video POST rejects identical logo/product pixels without persisting a
       insert() { mutations++; throw new Error('Unexpected persistence before asset validation') },
       then(resolve: any) { return Promise.resolve({ count: 0, data: [], error: null }).then(resolve) },
     }
-    assert.ok(['organizations', 'ai_media_jobs', 'org_products', 'org_product_images', 'brand_kits'].includes(table), 'Only quota/catalog reads may precede asset validation')
+    assert.ok(['organizations', 'ai_media_jobs', 'org_products', 'org_product_images', 'brand_kits', 'accounts', 'org_social_accounts'].includes(table), 'Only quota/catalog/contact reads may precede asset validation')
     return query
   }}
   globalThis.fetch = async () => new Response(bytes, {headers:{'content-type':'image/png'}})

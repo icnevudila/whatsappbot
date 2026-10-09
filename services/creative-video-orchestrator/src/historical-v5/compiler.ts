@@ -4,6 +4,7 @@ import { selectCreativeStrategy } from './core/strategy-selector.js'
 import { selectHook } from './core/hook-selector.js'
 import { writeVoiceover, estimateSpeechDuration } from './core/voiceover-writer.js'
 import { planShots } from './core/shot-planner.js'
+import { applyPhysicalActionContract } from './core/physical-action-contract.js'
 import { compileOverlay, buildCommercialTypographyAss } from './core/overlay-compiler.js'
 import { validateAndRepair } from './core/validator.js'
 import type { UserVideoInput } from './core/schemas.js'
@@ -26,6 +27,7 @@ export function compileHistoricalV5(input: UserVideoInput, approvedDialogue: str
   const validation = validateAndRepair(facts, classification, hookPlan, shotPlan, voiceover, overlayPlan)
   voiceover = validation.repairedVoiceover || voiceover
   shotPlan = validation.repairedShotPlan || shotPlan
+  if (input.creativeDirectorVersion === 'V3') shotPlan = applyPhysicalActionContract(input, shotPlan)
   const speech = `AUDIO: Professional crystal-clear native Turkish male commercial narrator speaks EXACTLY ONCE. No speech before 0.5s. Start at 0.5s, target completion 5.25s, last spoken word strictly before 5.5s: ${JSON.stringify(dialogue)}. No paraphrase, translation, English narration, repetition, looping, echo or voice re-entry. After narration, only the original scene ambience, foley and commercial music continue to 8.0s.`
   const veoPrompt = shotPlan.veoEnglishPrompt.replace(/^AUDIO:.*$/m, speech)
   if (!veoPrompt.includes(speech)) throw new Error('HISTORICAL_V5_AUDIO_DIRECTIVE_MISSING')

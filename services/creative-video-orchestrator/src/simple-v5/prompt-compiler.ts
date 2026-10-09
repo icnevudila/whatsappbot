@@ -47,6 +47,11 @@ export const SIMPLE_V5_STANDARD_NEGATIVES = [
   'deformed hands',
   'six fingers',
   'fused fingers',
+  'backwards facing head',
+  'head twisted 180 degrees',
+  'reversed torso',
+  'anatomically impossible head rotation',
+  'unnatural neck twist',
   // ── Universal tool & attachment integrity (ALL sectors) ──────────────────
   // Veo can clone attachments regardless of the product type.
   'duplicate tool',

@@ -1,7 +1,12 @@
 import type { CreativeSnapshot, TemplateFamily } from './types'
+import { buildCreativePromptV3 } from './director/brief-v3'
 import { CREATIVE_FORMATS, CREATIVE_STYLES, TEMPLATE_FAMILIES, VARIATION_PRESETS } from './types'
+import { formatPriceText } from '../ai/campaign-message'
 
 const STYLE_HINT: Record<string, string> = {
+  product_hero: 'Modern, clean commercial design with clear type hierarchy and generous spacing around the authentic product.',
+  real_usage: 'Warm, approachable commercial atmosphere and natural human context where appropriate; preserve exact product identity and factual claims.',
+  dynamic_offer: 'Bold, energetic commercial hierarchy and high contrast; emphasize the supplied offer without inventing discount claims.',
   auto: 'Choose the most suitable commercial look from the brief, products and brand (do not invent a sector).',
   modern: 'Modern, clean commercial design, contemporary type hierarchy, generous spacing.',
   premium: 'Premium, refined, high-end campaign look, restrained palette, quality materials.',
@@ -13,11 +18,38 @@ const STYLE_HINT: Record<string, string> = {
   food: 'Appetizing food photography mood, warm light, steam/freshness if relevant, no fake ingredients.',
 }
 
-const DENSITY_HINT: Record<string, string> = {
-  low: 'Very little on-image text: at most a short headline. No paragraphs, no tiny disclaimers.',
-  balanced: 'Limited on-image text: headline + one short offer line. No long body copy. Keep mobile-readable.',
-  detailed:
-    'More campaign text is allowed (headline, offer, one contact line) but still sparse. Never fill the image with paragraphs.',
+export function getTextDensityDirective(
+  density: 'low' | 'balanced' | 'detailed' | string = 'balanced',
+  isSalesOffer: boolean = false,
+): string {
+  if (isSalesOffer) {
+    switch (density) {
+      case 'low':
+        return 'Text density guidance (Sales Campaign / Focused): Feature the mandatory commercial core (Headline, Price/Discount, CTA) with zero secondary clutter or body copy. Clean mobile readability.'
+      case 'detailed':
+        return 'Text density guidance (Sales Campaign / Comprehensive): Display the mandatory commercial core (Headline, Price/Discount, CTA) plus concise supporting details (such as a key benefit or delivery fact). Strictly avoid paragraphs or crowded disclaimers.'
+      case 'balanced':
+      default:
+        return 'Text density guidance (Sales Campaign / Balanced): Display the mandatory commercial core (Headline, Price/Discount, CTA) with clear visual hierarchy. Secondary copy, paragraphs, and repetitive disclaimers are restricted to keep mobile readability clean.'
+    }
+  }
+
+  // Non-sales / BRAND_SHOWCASE mode
+  switch (density) {
+    case 'low':
+      return 'Text density guidance (Brand Showcase / Minimal): At most a short headline or brand statement. No paragraphs, no price tags, no fine print.'
+    case 'detailed':
+      return 'Text density guidance (Brand Showcase / Detailed): Brand headline, core value proposition, and brand mark. Keep composition airy and artistic; never clutter with body paragraphs or promotional badges.'
+    case 'balanced':
+    default:
+      return 'Text density guidance (Brand Showcase / Balanced): Clean brand headline and optional short slogan. No commercial pricing clutter, no paragraphs; prioritize pure visual impact.'
+  }
+}
+
+export const DENSITY_HINT: Record<string, string> = {
+  low: 'Text density guidance: At most a short headline. No paragraphs, no tiny disclaimers.',
+  balanced: 'Text density guidance: Headline and core campaign message. No long body copy. Keep mobile-readable.',
+  detailed: 'Text density guidance: Headline, core offer, and concise contact details. Never fill the image with paragraphs.',
 }
 
 function formatLabel(formatId: string): string {
@@ -36,7 +68,7 @@ export type PromptFidelityOptions = {
     base?: boolean
   }
   artDirectionPlan?: import('./director/creative-director').ArtDirectionPlan | null
-  mode?: 'LEGACY_SIMPLE' | 'OVER_DIRECTED_DESIGNER'
+  mode?: 'LEGACY_SIMPLE' | 'OVER_DIRECTED_DESIGNER' | 'V3'
 }
 
 export function describeColor(colorStr: string): string {
@@ -134,20 +166,57 @@ export function deriveVerifiedCampaignData(
 ): VerifiedCampaignData {
   const kit = snapshot.brandKit
   const brandName = (
-    kit?.name
+    snapshot.companyName || snapshot.brandName || (kit?.name
       ? kit.name.replace(/(?:brand\s*kit|marka\s*kiti|kampanya\s*kiti|whatsapp\s*kampanya\s*kiti)/gi, '').trim()
-      : 'İşletmemiz'
+      : 'İşletmemiz')
   ) || 'İşletmemiz'
 
   const sector = snapshot.sector?.trim() || null
+  const hero = snapshot.products?.[0]
+  const price = hero?.price?.trim() || null
+  const oldPrice = hero?.oldPrice?.trim() || null
+  const offer = hero?.promo?.trim() || null
+
+  const isBrandOnly = snapshot.objective === 'BRAND_AWARENESS' || snapshot.objective === 'BRAND_SHOWCASE'
+  const isSalesOffer = !isBrandOnly && (
+    snapshot.objective === 'SALES_OFFER' ||
+    snapshot.objective === 'CAMPAIGN' ||
+    Boolean(price || offer)
+  )
+
+  const isEquipmentOrHeavyIndustry = /tarım|çiftlik|bahçe|ekipman|makine|inşaat|yapı|sanayi|endüstri|rulman|pompa|sprayer|agriculture|harç|çimento|tuğla/i.test(
+    `${sector || ''} ${snapshot.brief || ''} ${hero?.name || ''}`
+  )
 
   let templateFamily: TemplateFamily = 'CAMPAIGN_POSTER'
-  if (snapshot.templateFamily && TEMPLATE_FAMILIES.some((t) => t.id === snapshot.templateFamily)) {
-    templateFamily = snapshot.templateFamily
+  const requestedFamily = snapshot.templateFamily && TEMPLATE_FAMILIES.some((t) => t.id === snapshot.templateFamily)
+    ? snapshot.templateFamily
+    : null
+
+  if (isSalesOffer) {
+    // Sales offer requires high-conversion promotional hierarchy.
+    // Inappropriate boutique retail or minimal showcase should not override sales campaign poster.
+    if (requestedFamily === 'FOOD_OFFER_POSTER' || snapshot.style === 'food') {
+      templateFamily = 'FOOD_OFFER_POSTER'
+    } else if (
+      requestedFamily === 'SAAS_PROMO_CARD' ||
+      (sector?.toLowerCase().includes('yazılım') ||
+        sector?.toLowerCase().includes('saas') ||
+        sector?.toLowerCase().includes('teknoloji'))
+    ) {
+      templateFamily = 'SAAS_PROMO_CARD'
+    } else {
+      templateFamily = 'CAMPAIGN_POSTER'
+    }
+  } else if (isEquipmentOrHeavyIndustry && requestedFamily === 'ELEGANT_RETAIL') {
+    // Incompatible: heavy equipment / agriculture cannot be boutique retail
+    templateFamily = 'CAMPAIGN_POSTER'
+  } else if (requestedFamily) {
+    templateFamily = requestedFamily
   } else if (snapshot.style === 'food') {
     templateFamily = 'FOOD_OFFER_POSTER'
   } else if (snapshot.style === 'luxury') {
-    templateFamily = 'ELEGANT_RETAIL'
+    templateFamily = isEquipmentOrHeavyIndustry ? 'PRODUCT_SHOWCASE' : 'ELEGANT_RETAIL'
   } else if (snapshot.style === 'minimal' || snapshot.style === 'modern') {
     templateFamily = 'PRODUCT_SHOWCASE'
   } else if (
@@ -159,17 +228,13 @@ export function deriveVerifiedCampaignData(
     templateFamily = 'SAAS_PROMO_CARD'
   }
 
-  const hero = snapshot.products?.[0]
   const headline = (
+    snapshot.customHeadline ||
     snapshot.customText ||
     snapshot.brief ||
     hero?.name ||
     'Özel Kampanya'
   ).trim()
-
-  const price = hero?.price?.trim() || null
-  const oldPrice = hero?.oldPrice?.trim() || null
-  const offer = hero?.promo?.trim() || null
 
   let discount: string | null = null
   if (offer && /%\s*\d+|\d+\s*%/i.test(offer)) {
@@ -180,6 +245,9 @@ export function deriveVerifiedCampaignData(
   const quantityTiers = hero?.boxContents?.trim() || hero?.extra?.trim() || null
 
   const primaryBenefits: string[] = []
+  if (snapshot.customSupporting?.trim()) {
+    primaryBenefits.push(snapshot.customSupporting.trim())
+  }
   if (Array.isArray(snapshot.primaryBenefits)) {
     for (const b of snapshot.primaryBenefits) {
       if (b?.trim() && !primaryBenefits.includes(b.trim())) primaryBenefits.push(b.trim())
@@ -242,10 +310,10 @@ const TEMPLATE_FAMILY_INSTRUCTIONS: Record<TemplateFamily, string> = {
   CAMPAIGN_POSTER: [
     'Design mode: High-impact commercial campaign visual tailored custom-designed for this brand and sector.',
     '- The physical product is the undisputed hero, occupying 60-70% visual share and physically integrated into the environment with authentic perspective, natural lighting, and realistic contact shadows (NEVER look like a flat cut-out pasted onto graphics).',
+    '- Authentic corporate logo placed with pristine clarity and clean contrast margins.',
     '- High-contrast Turkish commercial headline with clear mobile readability, styled appropriately for the brand personality.',
-    '- Clear commercial hierarchy: select only the strongest 2 to 4 commercial anchors (such as headline, price/offer hierarchy, and one concise benefit or CTA). Do NOT clutter with repetitive badge packs or generic footer strips.',
+    '- Uncompromising commercial sales core: Headline, verified Price/Offer, and CTA are mandatory conversion drivers and must always be displayed. Optional extra badges or secondary details must be kept to an absolute minimum (at most 1 concise selling point). Do NOT clutter with repetitive badge packs, fake guarantee seals, or generic footer strips.',
     '- Avoid repeated Canva template skeletons: allow composition to emerge naturally from product geometry and sector (e.g., dynamic diagonal, large product crop breaking the frame, environmental embedding, or elegant editorial framing).',
-    '- Clean, authentic corporate logo placement integrated naturally into the composition.',
   ].join('\n'),
 
   PRODUCT_SHOWCASE: [
@@ -264,10 +332,10 @@ const TEMPLATE_FAMILY_INSTRUCTIONS: Record<TemplateFamily, string> = {
   ].join('\n'),
 
   ELEGANT_RETAIL: [
-    'Design mode: Boutique retail campaign visual.',
-    '- Soft, harmonious commercial lighting with graceful composition.',
-    '- The product or floral arrangement is front and center with refined aesthetic balance.',
-    '- Elegant commercial typography suitable for gifts, flowers, or boutique fashion.',
+    'Design mode: Refined boutique retail campaign visual.',
+    '- Soft, harmonious commercial lighting with graceful composition and editorial balance.',
+    '- The featured product is front and center with refined aesthetic craftsmanship and generous negative space.',
+    '- Elegant, sophisticated commercial typography tailored to boutique and premium retail presentations.',
   ].join('\n'),
 
   SAAS_PROMO_CARD: [
@@ -304,6 +372,64 @@ function getSectorArtDirectionHint(sector?: string | null, brief?: string | null
  * Lets ChatGPT / OmniStudio perform the actual art direction naturally without micromanaging
  * zones, coordinates, percentages, badges, or predefined template grids.
  */
+function formatBrandKitDirectives(
+  brandName: string | null | undefined,
+  sector: string | null | undefined,
+  kit: CreativeSnapshot['brandKit'] | null | undefined,
+): string[] {
+  const lines: string[] = []
+  if (brandName) lines.push(`Brand name: ${brandName}.`)
+  if (sector) lines.push(`Sector: ${sector}.`)
+  if (kit?.tone) lines.push(`Brand tone of voice: ${kit.tone}`)
+
+  if (kit?.colors) {
+    const p = kit.colors.primary ? describeColor(kit.colors.primary) : null
+    const a = kit.colors.accent ? describeColor(kit.colors.accent) : null
+    const s = kit.colors.secondary ? describeColor(kit.colors.secondary) : null
+    const b = kit.colors.background ? describeColor(kit.colors.background) : null
+    const t = kit.colors.text ? describeColor(kit.colors.text) : null
+
+    lines.push('MANDATORY BRAND KIT DISCIPLINE & COLOR ROLES:')
+    if (p) {
+      lines.push(
+        `- Primary Brand Color (${p}): Main headline typography, authoritative brand marks, and key visual structures.`,
+      )
+    }
+    if (a) {
+      lines.push(
+        `- Accent Color (${a}): Reserved strictly for high-impact commercial conversion drivers: promotional price tag/highlight, discount badge, and the Call-to-Action (CTA).`,
+      )
+    }
+    if (s) {
+      lines.push(
+        `- Secondary Color (${s}): Supportive graphical accents, compositional framing, subtle dividers, and depth layers.`,
+      )
+    }
+    if (b) {
+      lines.push(
+        `- Background Tone (${b}): Ambient negative space and framing, ensuring clean contrast behind text.`,
+      )
+    }
+    if (t) {
+      lines.push(
+        `- Text Contrast Color (${t}): High-contrast readable body copy and technical specs. Ensure maximum legibility; never create unreadable low-contrast text.`,
+      )
+    }
+
+    lines.push(
+      '- PHYSICAL PRODUCT COLOR IMMUNITY: DO NOT recolor or repaint the authentic physical product casing/materials from the attached reference photo. The brand color palette applies exclusively to typography, price/discount highlights, CTA styling, and scene graphic composition — never alter the physical product colors.',
+    )
+  }
+
+  if (kit?.fonts?.heading) {
+    lines.push(
+      `TYPOGRAPHY: Authoritative commercial typography matching ${kit.fonts.heading} character. Bold, crisp kerning, mobile-first legibility.`,
+    )
+  }
+
+  return lines
+}
+
 export function buildLegacySimpleCreativePrompt(
   snapshot: CreativeSnapshot,
   options?: PromptFidelityOptions,
@@ -317,13 +443,6 @@ export function buildLegacySimpleCreativePrompt(
       ? '9:16'
       : CREATIVE_FORMATS.find((row) => row.id === snapshot.formatId)?.aspect ?? snapshot.aspect
   const kit = snapshot.brandKit
-
-  const colors = kit?.colors
-    ? Object.entries(kit.colors)
-        .filter(([, value]) => typeof value === 'string' && value)
-        .map(([key, value]) => `${key} ${describeColor(String(value))}`)
-        .join(', ')
-    : null
 
   const productBlocks = snapshot.products.map((product, index) => {
     const bits: string[] = [`Product ${index + 1}`]
@@ -344,14 +463,18 @@ export function buildLegacySimpleCreativePrompt(
 
   const templateInstruction = TEMPLATE_FAMILY_INSTRUCTIONS[verified.templateFamily] ?? TEMPLATE_FAMILY_INSTRUCTIONS.CAMPAIGN_POSTER
 
-  // Proven historical reference phrasing from d350985
-  const logoInstruction = verified.logoRef
-    ? 'A real brand logo image is attached. Place it as a small clean logo. Do NOT redraw, restyle or invent a new logo. Do not distort it.'
-    : 'Do not invent fake logos.'
-
-  const productInstruction = verified.productRef
-    ? 'A product photo is attached as a reference. Keep the real product identity.'
-    : 'Do not invent fantasy products.'
+  // Proven historical reference phrasing (matches preflight contract)
+  const refInstruction = [
+    (verified.logoRef && verified.productRef)
+      ? 'Authentic product and company logo references are attached.'
+      : null,
+    verified.logoRef
+      ? 'STRICT LOGO FIDELITY: A real company logo image is attached as a reference. Place that exact logo cleanly without any modification, restyling, or variation. Keep its exact proportions, geometry, emblem shape, and brand colors. NEVER invent a different logo, NEVER stylize or morph the logo, and NEVER replace the logo with typed text.'
+      : 'Do not invent fake logos.',
+    verified.productRef
+      ? 'STRICT PRODUCT FIDELITY: The real product photo is provided as a reference. You must preserve the real physical product exactly as shown: exact shape, casing, components, buttons, materials, and colors. Do NOT mutate the product, do NOT invent fantasy product variations, do NOT change the product design, and do NOT replace the product with a generic item.'
+      : 'Do not invent fantasy products.',
+  ].filter(Boolean).join('\n')
 
   const variation = snapshot.variationPreset
     ? VARIATION_PRESETS.find((row) => row.id === snapshot.variationPreset)?.label
@@ -359,26 +482,95 @@ export function buildLegacySimpleCreativePrompt(
 
   const sectorArtDirection = getSectorArtDirectionHint(verified.sector, snapshot.brief)
 
-  // Selective commercial elements (Pick 2 to 4 strongest anchors based on campaign focus):
-  const commercialLines: string[] = []
-  if (verified.headline) commercialLines.push(`Campaign headline: "${verified.headline}"`)
-  if (verified.price) {
-    const discountPart = verified.discount ? ` · Discount: ${verified.discount}` : ''
-    commercialLines.push(
-      `Price hierarchy: ${verified.price}${verified.oldPrice ? ` (was ${verified.oldPrice})` : ''}${discountPart}`,
-    )
-  } else if (verified.offer) {
-    commercialLines.push(`Offer: ${verified.offer}`)
+  const isBrandOnly = snapshot.objective === 'BRAND_AWARENESS' || snapshot.objective === 'BRAND_SHOWCASE'
+  const isSalesOffer = !isBrandOnly && (
+    snapshot.objective === 'SALES_OFFER' ||
+    snapshot.objective === 'CAMPAIGN' ||
+    Boolean(verified.price || verified.offer)
+  )
+
+  // MANDATORY CORE:
+  // In sales and promotional campaigns, Headline, Price/Offer, and CTA are non-negotiable core pillars.
+  // In brand showcase, price and discount are NOT mandatory.
+  const commercialCoreLines: string[] = []
+  if (verified.headline) {
+    commercialCoreLines.push(`- Mandatory Headline: "${verified.headline}"`)
   }
+  if (isSalesOffer) {
+    if (verified.price) {
+      const priceFormatted = formatPriceText(verified.price)
+      const oldPriceFormatted = verified.oldPrice ? formatPriceText(verified.oldPrice) : null
+      const discountPart = verified.discount ? ` · Discount: ${verified.discount}` : ''
+      commercialCoreLines.push(
+        `- Mandatory Campaign Price & Offer: ${priceFormatted}${oldPriceFormatted ? ` (was ${oldPriceFormatted})` : ''}${discountPart}`,
+      )
+    } else if (verified.offer) {
+      commercialCoreLines.push(`- Mandatory Campaign Offer: ${verified.offer}`)
+    }
+  }
+  if (verified.cta) {
+    commercialCoreLines.push(`- Mandatory Call-to-Action (CTA): ${verified.cta}`)
+  }
+
+  // OPTIONAL SUPPORTING SIGNALS (At most 1-2 concise facts, only if verified):
+  const supportingLines: string[] = []
   if (verified.primaryBenefits.length) {
-    commercialLines.push(`Key verified selling point: ${verified.primaryBenefits.slice(0, 2).join(' · ')}`)
+    supportingLines.push(`Key verified selling point: ${verified.primaryBenefits.slice(0, 2).join(' · ')}`)
   }
   if (verified.deliveryFact) {
-    commercialLines.push(`Delivery promise: ${verified.deliveryFact}`)
+    const fact = verified.deliveryFact.trim()
+    const lower = fact.toLowerCase()
+    let termLabel = 'Delivery terms'
+    if (lower.includes('taksit') || lower.includes('kredi kart') || lower.includes('kart') || lower.includes('peşin') || lower.includes('havale') || lower.includes('ödeme')) {
+      termLabel = 'Payment / Installment terms'
+    } else if (lower.includes('teslim') || lower.includes('kargo') || lower.includes('sevkiyat') || lower.includes('nakliye') || lower.includes('şantiye') || lower.includes('adrese')) {
+      termLabel = 'Delivery terms'
+    } else {
+      termLabel = 'Key benefit'
+    }
+    supportingLines.push(`${termLabel}: ${fact}`)
   }
-  if (verified.cta || verified.contactLines.length) {
-    commercialLines.push(`Order cue: ${verified.cta || 'Sipariş Ver'}${verified.contactLines[0] ? ` · ${verified.contactLines[0]}` : ''}`)
+  if (verified.contactLines.length) {
+    supportingLines.push(`Phone/WhatsApp: ${verified.contactLines.join(' · ')}`)
   }
+  if (snapshot.website) {
+    supportingLines.push(`Website: ${snapshot.website}`)
+  }
+
+  const commercialContract = isSalesOffer
+    ? [
+        'COMMERCIAL CAMPAIGN MANDATE & COMPOSITION CONTRACT:',
+        '1. NON-NEGOTIABLE CORE: The Headline, Price/Offer, and CTA are mandatory commercial pillars — they MUST appear legibly on the final creative and must not be omitted.',
+        '2. BESPOKE AGENCY ART DIRECTION (ANTI-CANVA): Integrate the price and CTA naturally with bespoke agency art direction using the Brand Accent color. Avoid generic supermarket flyer stickers, avoid 3-badge vertical/horizontal icon stacks, and avoid bottom footer contact bars. Let the composition emerge dynamically from the product geometry and brand palette.',
+        '3. NO HALLUCINATIONS: Do not invent unverified warranty claims, fake guarantee seals, unverified technical certifications, or fabricated dates/specs.',
+      ].join('\n')
+    : [
+        'BRAND SHOWCASE MANDATE & COMPOSITION CONTRACT:',
+        '1. BRAND & PRODUCT HERO: The Brand identity and featured product are the central focus. Showcase quality, craftsmanship, and authentic aesthetics without promotional pricing clutter.',
+        '2. BESPOKE AGENCY ART DIRECTION: Elegant, spacious visual composition using the Brand palette. Avoid generic templates, badge stacks, and flyer stickers.',
+        '3. NO HALLUCINATIONS: Do not invent unverified claims or fake certifications.',
+      ].join('\n')
+
+  const brandKitLines = formatBrandKitDirectives(verified.brandName, verified.sector, kit)
+
+  const designerDirectives = options?.artDirectionPlan
+    ? [
+        'EXECUTIVE ART DIRECTION & DESIGNER DIRECTIVES:',
+        `- CONCEPT & ARCHETYPE: ${options.artDirectionPlan.concept_name} (Archetype: ${options.artDirectionPlan.creative_archetype}).`,
+        `- VISUAL HOOK: ${options.artDirectionPlan.visual_hook}.`,
+        `- LIGHTING & SHADOW PHYSICS: ${options.artDirectionPlan.art_direction.lighting}.`,
+        `- MATERIAL & TEXTURE REALISM: ${options.artDirectionPlan.art_direction.material_language}. Surface texture: ${options.artDirectionPlan.art_direction.texture}.`,
+        `- ATMOSPHERE & BACKGROUND: ${options.artDirectionPlan.art_direction.background_treatment}. Atmosphere: ${options.artDirectionPlan.art_direction.atmosphere}.`,
+        `- COLOR TREATMENT & CONTRAST: ${options.artDirectionPlan.art_direction.color_treatment}. Contrast strategy: ${options.artDirectionPlan.art_direction.contrast_strategy}.`,
+        options.artDirectionPlan.brand_dna
+          ? [
+              `- AUTHORITATIVE BRAND DNA: ${options.artDirectionPlan.brand_dna.brand_name} (${options.artDirectionPlan.brand_dna.tone}). Visual personality: ${options.artDirectionPlan.brand_dna.visual_personality}. Background: ${options.artDirectionPlan.brand_dna.background_preference}.`,
+              options.artDirectionPlan.brand_dna.accent_usage ? `- ACCENT & CTA DISCIPLINE: ${options.artDirectionPlan.brand_dna.accent_usage}` : null,
+            ].filter(Boolean).join('\n')
+          : null,
+        `- ANTI-GENERIC MANDATES: ${options.artDirectionPlan.anti_generic_rules.slice(0, 5).join('; ')}.`,
+      ].filter(Boolean).join('\n')
+    : null
 
   const prompt = [
     'Create ONE professional commercial campaign creative for WhatsApp / social ads.',
@@ -386,14 +578,10 @@ export function buildLegacySimpleCreativePrompt(
     `Use case: ${formatLabel(snapshot.formatId)} (${aspect}).`,
     templateInstruction,
     sectorArtDirection,
-    DENSITY_HINT[snapshot.textDensity] ?? DENSITY_HINT.balanced,
-    verified.brandName ? `Brand name: ${verified.brandName}.` : null,
-    verified.sector ? `Sector: ${verified.sector}.` : null,
-    kit?.tone ? `Brand tone of voice: ${kit.tone}` : null,
-    colors ? `Follow this brand palette in backgrounds, accents and props: ${colors}.` : null,
-    kit?.fonts?.heading ? `Prefer a ${kit.fonts.heading}-like heading feel.` : null,
-    logoInstruction,
-    productInstruction,
+    designerDirectives,
+    getTextDensityDirective(snapshot.textDensity, isSalesOffer),
+    brandKitLines.length ? brandKitLines.join('\n') : null,
+    refInstruction,
     snapshot.baseCreativeId
       ? 'A base/reference campaign image is attached. Keep the same product and brand identity; apply the requested change.'
       : null,
@@ -401,10 +589,12 @@ export function buildLegacySimpleCreativePrompt(
     variation ? `Variation direction: ${variation}. Same offer, different composition.` : null,
     `Campaign brief from the advertiser: ${snapshot.brief}`,
     productBlocks.length ? `Products:\n${productBlocks.join('\n')}` : 'No specific product catalog items.',
-    commercialLines.length ? `Verified commercial facts:\n${commercialLines.join('\n')}` : null,
-    'Commercial composition mandate: Feature only the 2 to 4 strongest commercial anchors above. Avoid repetitive circular discount stickers, 3-icon rows, boxed price cards, and bottom footer bars all together. Avoid a generic Canva template skeleton; let the layout emerge naturally from the product geometry, photography, and brand character.',
+    commercialCoreLines.length
+      ? `${isSalesOffer ? 'Verified Commercial Core (Mandatory on Visual):' : 'Verified Brand Core (Mandatory on Visual):'}\n${commercialCoreLines.join('\n')}`
+      : null,
+    supportingLines.length ? `Supporting Details:\n${supportingLines.join('\n')}` : null,
+    commercialContract,
     'Do not invent prices, discounts, slogans, dates, product names or brand claims that are not in this brief.',
-    'Do not replace products with different products. Preserve packaging and product shape from reference photos.',
     'Clean visual hierarchy. One focal offer. Not cluttered. Readable on a phone screen.',
   ]
     .filter(Boolean)
@@ -414,16 +604,19 @@ export function buildLegacySimpleCreativePrompt(
     'no generic Canva template look',
     'no repeated flyer layout',
     'no cut-out product pasted on graphic background',
-    'no fake 3-icon benefit row',
+    'no fake 3-badge benefit stack',
     'no supermarket sticker pack',
     'no cookie-cutter poster skeleton',
     'no generic boxed price cards',
+    'no unverified warranty claims or fake guarantee seals',
+    'no bottom footer contact ribbons',
     'no extra products that were not listed',
     'no fake logos',
     'no distorted logo',
     'no modified logo',
     'no redesigned brand logo',
-    'no unreadable micro-text',
+    'no recolored physical product casing',
+    'no illegible typography',
     'no watermarks',
     'no misspelled brand names',
     'no cartoon stickers',
@@ -433,8 +626,8 @@ export function buildLegacySimpleCreativePrompt(
     'no tiny product in distant background',
     'no generic minimalist empty poster',
     'no cinematic lifestyle drift away from the product',
-    'no invented trust badges',
-    'no unverified warranty claims',
+    ...(options?.artDirectionPlan?.commercial_grammar?.negativeLayoutRules || []),
+    ...(options?.artDirectionPlan?.anti_generic_rules || []),
   ].join(', ')
 
   return { prompt, negative }
@@ -576,7 +769,13 @@ export function buildOverDirectedCreativePrompt(
     'Turkish audience. High quality, sharp, mobile-first, no watermarks, no stock-photo logos.',
     `Use case: ${formatLabel(snapshot.formatId)} (${aspect}).`,
     `Visual style: ${styleLabel(snapshot.style)}. ${STYLE_HINT[snapshot.style] ?? STYLE_HINT.auto}`,
-    DENSITY_HINT[snapshot.textDensity] ?? DENSITY_HINT.balanced,
+    getTextDensityDirective(
+      snapshot.textDensity,
+      !(snapshot.objective === 'BRAND_AWARENESS' || snapshot.objective === 'BRAND_SHOWCASE') &&
+        (snapshot.objective === 'SALES_OFFER' ||
+          snapshot.objective === 'CAMPAIGN' ||
+          Boolean(snapshot.products?.[0]?.price || snapshot.products?.[0]?.promo)),
+    ),
     cleanBrandName ? `Brand name: ${cleanBrandName}.` : null,
     kit?.tone ? `Brand tone of voice: ${kit.tone}` : null,
     colors ? `Follow this brand palette in backgrounds, accents and props: ${colors}.` : null,
@@ -673,6 +872,7 @@ export function buildCreativePrompt(
   prompt: string
   negative: string
 } {
+  if (options?.mode === 'V3') return buildCreativePromptV3(snapshot)
   if (options?.mode === 'OVER_DIRECTED_DESIGNER') {
     return buildOverDirectedCreativePrompt(snapshot, options)
   }

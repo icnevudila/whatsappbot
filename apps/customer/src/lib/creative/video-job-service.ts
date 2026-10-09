@@ -6,6 +6,8 @@ import { createVideoGenerationIdentity, findVideoGeneration } from '@/lib/creati
 import { resolveAssetSource, type ResolvedAsset } from '@/lib/creative/asset-source-resolver'
 import { requireDistinctVideoProduct, videoAssetTransportSource } from './video-asset-manifest'
 import { loadVideoCatalogReferences, VideoCatalogError } from './video-catalog-references'
+import { buildVideoCampaignSnapshot } from './video-campaign-snapshot'
+import { campaignFactsError } from './campaign-facts'
 
 async function resolveVideoAssetSource(
   url: string | undefined | null,
@@ -73,6 +75,14 @@ export async function createVideoJob(req: NextRequest, context: Awaited<ReturnTy
     } = body
 
     const normalizedCreativeMode = String(creativeEngineMode).toUpperCase()
+    const campaign = body.campaignContext || {}
+    const factsError = campaignFactsError({ objective: campaign.objective,
+      headline: campaign.headline || brief, cta: authoritativeFacts?.cta,
+      price: campaign.price, oldPrice: campaign.oldPrice, offer: campaign.offer || authoritativeFacts?.offer })
+    if (factsError) return NextResponse.json({ error: factsError }, { status: 422 })
+    if (outro === 'off' || outro === false) {
+      return NextResponse.json({ error: 'Son müşteri videosu 8 saniye kaynak ve 2 saniye markalı kapanış içerir. Kapanış kapatılamaz.' }, { status: 422 })
+    }
     if (!['CURRENT', 'SIMPLE_V5_HYBRID'].includes(normalizedCreativeMode)) {
       return NextResponse.json({ error: 'Geçersiz creativeEngineMode.' }, { status: 400 })
     }
@@ -173,6 +183,7 @@ export async function createVideoJob(req: NextRequest, context: Awaited<ReturnTy
       productId: String(authoritativeFacts?.product_id || productAsset.productId || ''),
       logoUrl: logoAsset.url,
       productUrl: productAsset.url,
+      brandKitId: typeof body.brandKitId === 'string' ? body.brandKitId : undefined,
     })
     if ((authoritativeFacts?.product_name && authoritativeFacts.product_name !== canonical.product.name) ||
         (authoritativeFacts?.brand_name && authoritativeFacts.brand_name !== org.name)) {
@@ -186,6 +197,17 @@ export async function createVideoJob(req: NextRequest, context: Awaited<ReturnTy
       authoritativeFacts.product_description = canonical.product.description || undefined
       authoritativeFacts.verified_claims = verifiedClaims
     }
+    const [phonesResult, socialsResult] = await Promise.all([
+      supabase.from('accounts').select('id, label, phone_e164').eq('org_id', org.id),
+      supabase.from('org_social_accounts').select('id, platform, label, url').eq('org_id', org.id),
+    ])
+    if (phonesResult.error || socialsResult.error) throw new VideoCatalogError('CAMPAIGN_CONTEXT_LOOKUP_FAILED', 'Firma iletişim bilgileri doğrulanamadı.', 503)
+    const campaignSnapshot = buildVideoCampaignSnapshot({
+      context: body.campaignContext || {}, brief, cta: authoritativeFacts?.cta, offer: authoritativeFacts?.offer,
+      voiceover: approvedSpokenLine, canonical,
+      phones: (phonesResult.data || []).filter(row => row.phone_e164).map(row => ({ id: row.id, label: row.label, phone: row.phone_e164! })),
+      socials: socialsResult.data || [],
+    })
 
     // 3. Asset Manifest & SHA256 Sets
     const manifestAssets: Array<{
@@ -266,7 +288,7 @@ export async function createVideoJob(req: NextRequest, context: Awaited<ReturnTy
       assets: manifestAssets.map(asset => ({ role: asset.role, sha256: asset.sha256 })),
       model: body.model || 'veo-lite', aspectRatio: '9:16', duration: 8, mode: normalizedCreativeMode,
       approvedDialogue: approvedSpokenLine,
-      options: { adFormat, userStylePreference, environmentPreset, motionStyle, subtitles, outro,
+      options: { campaignSnapshot, adFormat, userStylePreference, environmentPreset, motionStyle, subtitles, outro,
         promotionType, requestedProvider: normalizedRequestedProvider, authoritativeFacts },
     })
     const existing = await findVideoGeneration(supabase, org.id, identity)
@@ -338,6 +360,8 @@ export async function createVideoJob(req: NextRequest, context: Awaited<ReturnTy
           video_submission_ready: false,
           video_submission_deadline_at: new Date(Date.now() + 120000).toISOString(),
           generation_id: generationId,
+          campaign_snapshot: campaignSnapshot,
+          brand_kit_id: canonical.kit?.id || null,
           generation_revision: body.generationRevision ?? 1,
           generation_request_hash: identity.requestHash,
           generation_idempotency_key: identity.idempotencyKey,
@@ -391,6 +415,7 @@ export async function createVideoJob(req: NextRequest, context: Awaited<ReturnTy
         status: 'rendering',
         source: 'ai',
         payload: {
+          ...campaignSnapshot,
           job_id: job.id,
           aspect_ratio: '9:16',
           duration_seconds: 8,

@@ -75,7 +75,7 @@ export function CreativeWizard({
   const [offerVerified, setOfferVerified] = useState(true)
   const [creativeNote, setCreativeNote] = useState('')
   const [subtitles, setSubtitles] = useState(true)
-  const [outro, setOutro] = useState(true)
+  const outro = true
   const [verifiedClaimsText, setVerifiedClaimsText] = useState('')
   const [fidelityContract, setFidelityContract] = useState<ProductFidelityContract>(() =>
     defaultFidelityContract(data.org.name || '', data.products?.[0]?.name || ''),
@@ -1040,13 +1040,13 @@ export function CreativeWizard({
                         <input
                           type="checkbox"
                           checked={outro}
-                          onChange={(e) => setOutro(e.target.checked)}
+                          disabled
                           className="mt-0.5 size-4 rounded text-[#008069] focus:ring-[#008069]"
                         />
                         <div className="flex-1">
                           <span className="text-[13px] font-bold text-[#111b21]">Kapanış Kartı (Outro)</span>
                           <p className="text-[11.5px] text-[#667781] mt-0.5 leading-snug">
-                            Videonun sonunda logo, slogan ve iletişim bilgilerini içeren kurumsal bitiş kartı.
+                            10 saniyelik son videoya doğrulanmış logo ve CTA içeren 2 saniyelik markalı kapanış dahildir.
                           </p>
                         </div>
                       </label>
@@ -1127,7 +1127,7 @@ export function CreativeWizard({
                         Seslendirme Metni
                       </label>
                       <span className="rounded bg-[#e7f8f2] px-2 py-0.5 text-[11px] font-bold text-[#008069]">
-                        ~8 Saniye
+                        10 Saniye
                       </span>
                     </div>
 

@@ -2,6 +2,7 @@ const { spawn } = require('child_process');
 const crypto = require('crypto');
 const EventEmitter = require('events');
 const fs = require('fs');
+const { TabRegistry } = require('./orphan_tab_reaper.js');
 const WebSocket = (() => { try { return require('ws'); } catch { return globalThis.WebSocket; } })();
 
 const WORKER_STATES = Object.freeze({
@@ -50,6 +51,7 @@ const { DistributedLeaseStore } = require('./distributed_lease_store.js');
 class BrowserWorkerSupervisor extends EventEmitter {
   constructor(options = {}) {
     super();
+    this.tabRegistry = options.tabRegistry || new TabRegistry();
     this.fetchImpl = options.fetchImpl || globalThis.fetch;
     this.launcher = options.launcher || this._defaultLauncher.bind(this);
     this.externalBrowserTerminator = options.externalBrowserTerminator || this._defaultExternalBrowserTerminator.bind(this);
@@ -838,6 +840,7 @@ class BrowserWorkerSupervisor extends EventEmitter {
 
     const closable = tabs
       .filter(tab => tab.id !== worker.canonicalTabId)
+      .filter(tab => !this.tabRegistry.hasActiveJob(tab.id) && !this.tabRegistry.isCanonicalForAnyWorker(tab.id))
       .filter(tab => {
         const ownership = worker.tabOwnership.get(tab.id);
         if (ownership?.jobId) return false;

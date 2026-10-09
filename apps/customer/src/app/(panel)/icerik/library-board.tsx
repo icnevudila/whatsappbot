@@ -450,7 +450,7 @@ function ItemMenu({
     items.push({
       key: 'use',
       label: 'Kampanyada kullan',
-      href: `/kampanyalar/yeni?gorsel=${encodeURIComponent(item.publicUrl)}`,
+      href: `/kampanyalar/yeni?creative_id=${encodeURIComponent(item.id)}`,
     })
     items.push({ key: 'revise', label: 'Revize et', href: `/icerik/${item.id}?revize=1` })
     items.push({ key: 'vary', label: 'Varyasyon', href: `/icerik/${item.id}` })

@@ -4,6 +4,31 @@ import { e164ToMaskedTr } from '@/lib/onboarding'
 import { hasImageProvider } from '@/lib/ai/image'
 import { hasTextProvider } from '@/lib/ai/text'
 import type { AccountOption, CreativeOption, ListOption } from './campaign-wizard-types'
+import { campaignBriefFromSnapshot, type CampaignCreativeHandoff } from '@/lib/creative/campaign-handoff'
+import type { CreativePayload } from '@/lib/creative/types'
+import { loadVideoLibraryState } from '@/lib/creative/video-library-state'
+import { isImageReviewApproved } from '@/lib/creative/image-review'
+
+export async function loadCampaignCreativeHandoff(orgId: string, creativeId: string): Promise<CampaignCreativeHandoff | null> {
+  if (!/^[a-f0-9-]{36}$/i.test(creativeId)) return null
+  const supabase = await createSupabaseServerClient()
+  const { data: row, error } = await supabase.from('creatives')
+    .select('id, title, status, public_url, format, payload')
+    .eq('org_id', orgId).eq('id', creativeId).maybeSingle()
+  if (error || !row || row.status !== 'ready' || !row.public_url) return null
+  const videoState = (await loadVideoLibraryState(supabase, orgId, [row])).get(row.id)
+  if (videoState && videoState.status !== 'ready') return null
+  const payload = (row.payload ?? {}) as Partial<CreativePayload>
+  if (!videoState && row.format !== 'video' && !isImageReviewApproved(payload)) return null
+  return {
+    creativeId: row.id,
+    mediaUrl: row.public_url,
+    messageType: row.format === 'video' || videoState ? 'video' : 'image',
+    name: row.title || 'Kampanya',
+    body: payload.campaignMessage || '',
+    brief: campaignBriefFromSnapshot(payload),
+  }
+}
 
 export async function loadCampaignWizardData(orgId: string) {
   const supabase = await createSupabaseServerClient()
@@ -27,7 +52,7 @@ export async function loadCampaignWizardData(orgId: string) {
       .order('created_at'),
     supabase
       .from('creatives')
-      .select('id, public_url')
+      .select('id, title, status, public_url, format, payload')
       .eq('org_id', orgId)
       .eq('status', 'ready')
       .not('public_url', 'is', null)
@@ -62,9 +87,13 @@ export async function loadCampaignWizardData(orgId: string) {
   const defaultKit =
     (brandResult.data ?? []).find((kit) => kit.is_default) ?? (brandResult.data ?? [])[0]
 
+  const videoStates = await loadVideoLibraryState(supabase, orgId, creativesResult.data ?? [])
   const creatives: CreativeOption[] = (creativesResult.data ?? [])
-    .filter((row) => row.public_url)
-    .map((row) => ({ id: row.id, url: row.public_url as string }))
+    .filter((row) => row.public_url && (!videoStates.has(row.id) || videoStates.get(row.id)?.status === 'ready') &&
+      (row.format === 'video' || videoStates.has(row.id) || isImageReviewApproved(row.payload)))
+    .map((row) => ({ id: row.id, url: row.public_url as string, title:row.title || 'Kreatif',
+      messageType:row.format === 'video' || videoStates.has(row.id) ? 'video' : 'image',
+      thumbnailUrl:videoStates.has(row.id) ? row.public_url + '?thumb=1' : row.public_url as string }))
 
   return {
     lists,

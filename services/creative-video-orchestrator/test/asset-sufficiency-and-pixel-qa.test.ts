@@ -1,4 +1,6 @@
-import { test } from 'node:test'
+import { test, after } from 'node:test'
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import assert from 'node:assert/strict'
 import { resolve } from 'node:path'
 import { AssetSufficiencyGate } from '../src/gates/asset-sufficiency-gate.js'
@@ -7,6 +9,11 @@ import { createBrandContextSnapshot } from '../src/types/brand-snapshot.js'
 import type { TenantAssetInventory } from '../src/types/asset-intake.js'
 
 const REPO_ROOT = resolve(import.meta.dirname, '../../..')
+// Decision-unit fixture only: vision observations below are stubs, not visual acceptance.
+const fixtureDirectory = mkdtempSync(resolve(tmpdir(), 'studio-v3-pixel-unit-'))
+const fixtureFrame = resolve(fixtureDirectory, 'unit.png')
+writeFileSync(fixtureFrame, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jT7sAAAAASUVORK5CYII=', 'base64'))
+after(() => rmSync(fixtureDirectory, { recursive: true, force: true }))
 
 test('AssetSufficiencyGate - enforces mandatory authoritative assets per business model', () => {
   // 1. SaaS business with real app screenshot -> PASS
@@ -100,7 +107,7 @@ test('IndependentPixelVisualQA - FAILS Veri Burada legacy acrylic glass desk pla
   })
 
   // The legacy bad output: acrylic desk plaque on glass table
-  const legacyFrame = resolve(REPO_ROOT, 'scratch/production_deliverables/keyframes/veri_burada_10s_frame_00pct.jpg')
+  const legacyFrame = fixtureFrame
   const report = await qa.evaluateFrame(legacyFrame, [], snapshot, 'saas_software')
 
   assert.equal(report.passed, false, 'Legacy acrylic plaque MUST FAIL')
@@ -139,7 +146,7 @@ test('IndependentPixelVisualQA - FAILS Bofe legacy car wash garage frame', async
   })
 
   // The legacy bad output: car wash garage with sedan car and pressure washer
-  const legacyFrame = resolve(REPO_ROOT, 'scratch/production_deliverables/keyframes/bofe_tarim_10s_frame_00pct.jpg')
+  const legacyFrame = fixtureFrame
   const report = await qa.evaluateFrame(legacyFrame, [], snapshot, 'physical_product')
 
   assert.equal(report.passed, false, 'Legacy car wash frame MUST FAIL')
@@ -177,7 +184,7 @@ test('IndependentPixelVisualQA - FAILS Ayvazoğlu legacy static pallet warehouse
   })
 
   // The legacy bad output: static pallets in a factory yard without construction action
-  const legacyFrame = resolve(REPO_ROOT, 'scratch/production_deliverables/keyframes/ayvazoglu_tugla_40s_frame_00pct.jpg')
+  const legacyFrame = fixtureFrame
   const report = await qa.evaluateFrame(legacyFrame, [], snapshot, 'physical_product')
 
   assert.equal(report.passed, false, 'Legacy static warehouse yard MUST FAIL')
@@ -240,7 +247,7 @@ test('IndependentPixelVisualQA - PASSES on 4th Dummy Tenant ("Nordic Ergonomics"
 
   // 3. QA evaluation on clean valid commercial asset
   const qa = new IndependentPixelVisualQA()
-  const cleanFrame = resolve(REPO_ROOT, 'scratch/production_deliverables/keyframes/bofe_tarim_10s_frame_00pct.jpg')
+  const cleanFrame = fixtureFrame
   const report = await qa.evaluateFrame(
     cleanFrame,
     dummyInventory.product_images,

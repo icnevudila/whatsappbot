@@ -47,6 +47,7 @@
     "pack:whatsapp-service": "node whatsapp-service/scripts/pack-from-monorepo.mjs"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "tsx": "^4.23.13"
   }
 }

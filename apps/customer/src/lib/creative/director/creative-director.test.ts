@@ -513,15 +513,16 @@ test('11. Legacy Simple prompt philosophy produces clean, short, factual prompt 
   assert.match(promptResult.prompt, /Brand tone of voice: Güvenilir, kurumsal, tarımsal uzman/i)
   assert.match(promptResult.prompt, /deep agricultural forest green/i)
   assert.match(promptResult.prompt, /electric chartreuse \/ lime accent/i)
-  assert.match(promptResult.prompt, /Prefer a Outfit-like heading feel/i)
+  assert.match(promptResult.prompt, /TYPOGRAPHY:.*Outfit/i)
   assert.match(promptResult.prompt, /16L Akülü Sırt Tipi İlaçlama Pompası/i)
   assert.match(promptResult.prompt, /1.450 TL/i)
   assert.match(promptResult.prompt, /\(was 1.850 TL\)/i)
   assert.match(promptResult.prompt, /offer: Lansmana Özel %22 İndirim/i)
-  assert.match(promptResult.prompt, /CTA: Hemen Sipariş Ver/i)
+  assert.match(promptResult.prompt, /Call-to-Action \(CTA\): Hemen Sipariş Ver/i)
 
   // 2. Attached reference instruction present
-  assert.match(promptResult.prompt, /Authentic product and company logo references are attached/i)
+  assert.match(promptResult.prompt, /STRICT LOGO FIDELITY/)
+  assert.match(promptResult.prompt, /STRICT PRODUCT FIDELITY/)
 
   // 3. Factual safety and absence of invented facts
   assert.match(promptResult.prompt, /Do not invent prices, discounts, slogans, dates, product names or brand claims/i)

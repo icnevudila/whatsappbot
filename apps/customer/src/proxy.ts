@@ -24,6 +24,9 @@ const PUBLIC_PATHS = new Set([
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })
   const path = request.nextUrl.pathname
+  // Contains explicit synthetic UI fixtures only, never tenant/auth data.
+  if (process.env.NODE_ENV === 'development' && process.env.STUDIO_V3_UI_FIXTURE === '1' && path === '/dev/studio-v3')
+    return response
 
   // Worker Bearer secret ile gelir; oturum yok.
   if (path.startsWith('/api/internal/') || path.startsWith('/api/push/notify')) {

@@ -137,7 +137,36 @@ export function cleanAiMessage(text: string): string {
   return text
     .replace(/^["'`]+|["'`]+$/g, '')
     .replace(/^(işte (mesajınız|metniniz)[:\s]*)/i, '')
+    .replace(/^(?:WhatsApp\s+)?Kampanya\s+(?:Mesajı|Metni)\s*:?\s*\r?\n+/i, '')
     .trim()
+}
+
+export function formatPriceText(raw: string | null | undefined): string {
+  if (!raw) return ''
+  const trimmed = String(raw).trim()
+  if (!trimmed) return ''
+
+  // If already contains currency symbol or code, return clean single-spaced
+  if (/(tl|₺|\$|€|usd|eur)/i.test(trimmed)) {
+    return trimmed.replace(/\s+/g, ' ')
+  }
+
+  const numOnly = trimmed.replace(/\s+/g, '')
+  // Decimal price (e.g. "18.50" or "18,50")
+  if (/^\d+[.,]\d+$/.test(numOnly)) {
+    return `${trimmed} TL`
+  }
+
+  // Integer price with thousands formatting (e.g. "1900" -> "1.900 TL", "500" -> "500 TL")
+  if (/^\d+$/.test(numOnly)) {
+    const num = Number(numOnly)
+    if (!Number.isNaN(num) && num >= 1000) {
+      return `${num.toLocaleString('tr-TR')} TL`
+    }
+    return `${numOnly} TL`
+  }
+
+  return `${trimmed} TL`
 }
 
 export function generateCampaignWhatsAppMessage(verified: import('../creative/prompt').VerifiedCampaignData): string {
@@ -146,11 +175,11 @@ export function generateCampaignWhatsAppMessage(verified: import('../creative/pr
   // 1. Header with brand and campaign headline
   const brandTitle = verified.brandName && verified.brandName !== 'İşletmemiz' ? verified.brandName : ''
   if (brandTitle && verified.headline) {
-    parts.push(`📢 *${brandTitle} — ${verified.headline}*`)
+    parts.push(`*${brandTitle} — ${verified.headline}*`)
   } else if (verified.headline) {
-    parts.push(`📢 *${verified.headline}*`)
+    parts.push(`*${verified.headline}*`)
   } else if (brandTitle) {
-    parts.push(`📢 *${brandTitle} Kampanyası*`)
+    parts.push(`*${brandTitle} Kampanyası*`)
   }
 
   // 2. Offer & Price highlight
@@ -159,13 +188,26 @@ export function generateCampaignWhatsAppMessage(verified: import('../creative/pr
     offerLines.push(`• *Fırsat:* ${verified.offer}`)
   }
   if (verified.price) {
-    offerLines.push(`• *Fiyat:* ${verified.price}${verified.oldPrice ? ` _(Önceki: ${verified.oldPrice})_` : ''}`)
+    const formattedPrice = formatPriceText(verified.price)
+    const formattedOldPrice = verified.oldPrice ? formatPriceText(verified.oldPrice) : null
+    const oldPricePart = formattedOldPrice ? ` _(Önceki: ${formattedOldPrice})_` : ''
+    offerLines.push(`• *Fiyat:* ${formattedPrice}${oldPricePart}`)
   }
   if (verified.discount && !verified.offer?.includes(verified.discount)) {
     offerLines.push(`• *İndirim:* ${verified.discount}`)
   }
   if (verified.deliveryFact) {
-    offerLines.push(`• *Teslimat:* ${verified.deliveryFact}`)
+    const fact = verified.deliveryFact.trim()
+    const lower = fact.toLowerCase()
+    let label = 'Teslimat'
+    if (lower.includes('taksit') || lower.includes('kredi kart') || lower.includes('kart') || lower.includes('peşin') || lower.includes('havale') || lower.includes('ödeme')) {
+      label = 'Ödeme/Taksit'
+    } else if (lower.includes('teslim') || lower.includes('kargo') || lower.includes('sevkiyat') || lower.includes('nakliye') || lower.includes('şantiye') || lower.includes('adrese')) {
+      label = 'Teslimat'
+    } else {
+      label = 'Avantaj'
+    }
+    offerLines.push(`• *${label}:* ${fact}`)
   }
   if (verified.stockFact) {
     offerLines.push(`• *Stok:* ${verified.stockFact}`)
@@ -182,19 +224,19 @@ export function generateCampaignWhatsAppMessage(verified: import('../creative/pr
   }
 
   if (offerLines.length) {
-    parts.push(`✨ *Kampanya Detayları:*\n${offerLines.join('\n')}`)
+    parts.push(`*Kampanya Detayları:*\n${offerLines.join('\n')}`)
   }
 
   // 3. CTA & Contact
-  const ctaLine = verified.cta ? `👉 ${verified.cta}` : '👉 Detaylı bilgi ve sipariş için bize hemen yazabilirsiniz.'
+  const ctaLine = verified.cta ? `${verified.cta}` : 'Detaylı bilgi ve sipariş için bize hemen yazabilirsiniz.'
   parts.push(ctaLine)
 
   const contactList: string[] = []
   if (verified.contactLines.length) {
-    contactList.push(`📞 ${verified.contactLines[0]}`)
+    contactList.push(`${verified.contactLines[0]}`)
   }
   if (verified.website) {
-    contactList.push(`🌐 ${verified.website}`)
+    contactList.push(`${verified.website}`)
   }
   if (contactList.length) {
     parts.push(contactList.join(' · '))

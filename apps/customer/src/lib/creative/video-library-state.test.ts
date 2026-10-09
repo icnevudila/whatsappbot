@@ -7,7 +7,7 @@ test('library replaces stale ready with owned output approval and actual duratio
   const outputId = 'a55d1687-1924-42dd-a721-000ba5efbaad'
   const rows = [{ id: 'creative', status: 'ready', public_url: `/api/ai-media/outputs/${outputId}` }]
   const filters: any[] = []
-  let output: any = { id: outputId, org_id: 'owned', verified: true, is_approved: false, duration_seconds: '8.00' }
+  let output: any = { id: outputId, org_id: 'owned', verified: true, is_approved: false, duration_seconds: '8.00', width: 720, height: 1280 }
   let error: any = null
   const query: any = { select() { return this }, eq(...args: any[]) { filters.push(args); return this },
     async in() { return { data: [output], error } } }
@@ -15,6 +15,8 @@ test('library replaces stale ready with owned output approval and actual duratio
   assert.deepEqual((await loadVideoLibraryState(db, 'owned', rows)).get('creative'), { status: 'needs_review', durationSeconds: 8 })
   assert.ok(filters.some(item => item[0] === 'org_id' && item[1] === 'owned'))
   output.is_approved = true
+  assert.equal((await loadVideoLibraryState(db, 'owned', rows)).get('creative')?.status, 'needs_review', 'approved raw source is not a final master')
+  output.duration_seconds = '10.00'
   assert.equal((await loadVideoLibraryState(db, 'owned', rows)).get('creative')?.status, 'ready')
   output.org_id = 'foreign'
   assert.deepEqual((await loadVideoLibraryState(db, 'owned', rows)).get('creative'), { status: 'needs_review', durationSeconds: null })

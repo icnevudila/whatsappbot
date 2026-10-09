@@ -134,6 +134,10 @@ export type CreativeSnapshotProduct = {
 }
 
 export type CreativeSnapshot = {
+  creativeDirectorVersion?: 'V3'
+  brandName?: string | null
+  companyName?: string | null
+  companyAbout?: string | null
   brief: string
   style: string
   formatId: string
@@ -178,6 +182,10 @@ export type CreativeSnapshot = {
   urgencyInfo?: string | null
   primaryBenefits?: string[] | null
   campaignMessage?: string | null
+  customHeadline?: string | null
+  customSupporting?: string | null
+  objective?: string | null
+  stylePreset?: string | null
 }
 
 export type CreativePayload = CreativeSnapshot & {
@@ -219,7 +227,8 @@ export type CreativePayload = CreativeSnapshot & {
   imageSubmitIntent?: { requestId: string; gatewayUrl: string; startedAt: string } | null
   imageDirectIntent?: { requestId: string; provider: string; storagePath: string; startedAt: string } | null
   imageReconciliationRequired?: boolean
-  imageTerminalFailure?: { kind: 'PROVIDER_FAILED'; jobId: string; gatewayUrl: string }
+  lastImageJob?: import('../ai/omnistudio-image-job').ImageJobReceipt | null
+  imageTerminalFailure?: { kind: string; jobId?: string | null; gatewayUrl?: string | null; error?: string; queuedAt?: string } | null
   title?: string
   requestKey?: string
   generatedPrompt?: string | null

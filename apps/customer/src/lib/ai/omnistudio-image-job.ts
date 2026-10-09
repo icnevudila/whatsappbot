@@ -49,25 +49,38 @@ export type ImageReferenceReceipt = {
 }
 export async function readImageJob(job: ImageJobReceipt, tenantId?: string, expectedReferences = job.expectedReferenceCount ?? 0): Promise<{ data: Buffer; mimeType: string; width: number; height: number; referenceReceipt: ImageReferenceReceipt | null } | null> {
   const query = tenantId ? `?tenant_id=${encodeURIComponent(tenantId)}` : ''
-  const response = await fetch(`${job.gatewayUrl}/v1/images/status/${encodeURIComponent(job.id)}${query}`, { signal: AbortSignal.timeout(10000), cache: 'no-store' })
-  if (!response.ok) throw new ImageJobPendingError(job) // Lost observation is not proof that production failed.
-  const result = await response.json() as { status?: string; result_url?: string; result_sha256?: string; error?: string; expected_reference_count?: number; reference_receipt?: ImageReferenceReceipt }
+  const response = await fetch(`${job.gatewayUrl}/v1/images/status/${encodeURIComponent(job.id)}${query}`, { signal: AbortSignal.timeout(10000), cache: 'no-store' }).catch(() => {
+    throw new ImageJobPendingError(job) // Transient network error
+  })
+  if (response.status === 401 || response.status === 403) {
+    throw new ImageJobFailedError(job, 'OMNISTUDIO_AUTH_FAILED: Gateway kimlik doğrulama veya yetkilendirme hatası (401/403).')
+  }
+  if (response.status === 404) {
+    throw new ImageJobReconciliationError(job) // Job not found on gateway; requires reconciliation
+  }
+  if (!response.ok) {
+    if (response.status === 429) {
+      throw new ImageJobPendingError(job) // Transient rate limit
+    }
+    throw new ImageJobReconciliationError(job)
+  }
+  const result = await response.json().catch(() => { throw new ImageJobReconciliationError(job) }) as { status?: string; result_url?: string; result_sha256?: string; error?: string; expected_reference_count?: number; reference_receipt?: ImageReferenceReceipt }
   if (result.status === 'failed') throw new ImageJobFailedError(job, result.error || 'OmniStudio görsel üretimi başarısız.')
-  if (result.status === 'reconciliation_required') throw new ImageJobReconciliationError(job)
+  if (result.status === 'reconciliation_required' || result.status === 'worker_offline') throw new ImageJobReconciliationError(job)
   if (result.status !== 'completed') return null
-  if (expectedReferences > 0 && result.reference_receipt) {
+  if (expectedReferences > 0) {
     const receipt = result.reference_receipt
-    if (result.expected_reference_count !== expectedReferences || !receipt || receipt.job_id !== job.id ||
+    if (!receipt || result.expected_reference_count !== expectedReferences || receipt.job_id !== job.id ||
         receipt.conversation_owner_job_id !== job.id || !receipt.worker_id || !receipt.target_id ||
         [receipt.expected_reference_count, receipt.resolved_reference_count, receipt.uploaded_reference_count, receipt.composer_attachment_count].some(count => count !== expectedReferences)) {
       throw new ImageJobReconciliationError(job)
     }
   }
   if (!/^[a-f0-9]{64}$/i.test(result.result_sha256 || '')) throw new ImageJobReconciliationError(job)
-  if (!result.result_url) throw new Error('OmniStudio tamamlandı ancak çıktı URL eksik.')
-  const output = await fetch(result.result_url, { signal: AbortSignal.timeout(30000) })
+  if (!result.result_url) throw new ImageJobReconciliationError(job)
+  const output = await fetch(result.result_url, { signal: AbortSignal.timeout(30000) }).catch(() => { throw new ImageJobReconciliationError(job) })
   const mimeType = output.headers.get('content-type')?.split(';')[0] || ''
-  if (!output.ok || !mimeType.startsWith('image/')) throw new ImageJobPendingError(job)
+  if (!output.ok || !mimeType.startsWith('image/')) throw new ImageJobReconciliationError(job)
   if (Number(output.headers.get('content-length') || 0) > 32 * 1024 * 1024 || !output.body) throw new ImageJobPendingError(job)
   const reader = output.body.getReader()
   const chunks: Buffer[] = []

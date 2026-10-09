@@ -147,6 +147,7 @@ export interface HookCandidate {
 
 // Raw User Input Interface
 export interface UserVideoInput {
+  creativeDirectorVersion?: 'V3'
   brandName?: string | null
   about?: string | null
   sectorHint?: string | null

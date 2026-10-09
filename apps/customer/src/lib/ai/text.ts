@@ -10,11 +10,13 @@ import {
   type ResolvedAiConfig,
 } from './config'
 
+export type TextMetadata = { customer?: string; tenantId?: string; conversationId?: string; requestId?: string }
+
 type TextProvider = {
   id: AiProviderId
   label: string
   isConfigured: () => boolean
-  complete: (system: string, user: string) => Promise<string>
+  complete: (system: string, user: string, metadata?: TextMetadata) => Promise<string>
 }
 
 function timeout(): AbortSignal {
@@ -27,7 +29,7 @@ function buildProviders(config: ResolvedAiConfig): Partial<Record<AiProviderId, 
       id: 'omnistudio',
       label: 'Mesajify Custom AI (OmniStudio Gateway)',
       isConfigured: () => Boolean(config.omnistudio?.baseUrl),
-      async complete(system, user) {
+      async complete(system, user, metadata) {
         const baseUrl = config.omnistudio.baseUrl.replace(/\/+$/, '')
         const token = config.omnistudio.token
         if (!token) {
@@ -47,6 +49,11 @@ function buildProviders(config: ResolvedAiConfig): Partial<Record<AiProviderId, 
               { role: 'user', content: user },
             ],
             temperature: 0.7,
+            customer: metadata?.customer,
+            tenant_id: metadata?.tenantId,
+            org_id: metadata?.tenantId,
+            conversation_id: metadata?.conversationId,
+            request_id: metadata?.requestId,
           }),
         })
 
@@ -160,6 +167,7 @@ export async function completeText(
   system: string,
   user: string,
   bag?: AiKeyBag | null,
+  metadata?: TextMetadata,
 ): Promise<string> {
   const registry = buildProviders(resolveAiConfig(bag))
   const attempts: string[] = []
@@ -169,7 +177,7 @@ export async function completeText(
     if (!provider?.isConfigured()) continue
 
     try {
-      return await provider.complete(system, user)
+      return await provider.complete(system, user, metadata)
     } catch (error) {
       attempts.push(
         `${provider.label}: ${error instanceof Error ? error.message : String(error)}`,
@@ -180,6 +188,6 @@ export async function completeText(
   throw new Error(
     attempts.length > 0
       ? `Hiçbir metin sağlayıcı sonuç vermedi. ${attempts.join(' | ')}`
-      : 'Metin üretimi için OpenAI veya Gemini anahtarı gerekir (Ayarlar veya sunucu env).',
+      : 'Metin üretimi için OmniStudio servisi yapılandırılmalıdır.',
   )
 }

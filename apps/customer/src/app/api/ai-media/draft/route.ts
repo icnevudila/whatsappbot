@@ -205,7 +205,7 @@ Doğrulanmış Ürün Bilgisi: ${verifiedClaims.join(', ') || 'Yok'}
 Doğrulanmış Kampanya / Fırsat: ${body.offerVerified === true ? body.offerDetails || 'Yok' : 'Yok'}
 ${revisionType === 'refresh' ? 'NOT: Önceki kalıplardan tamamen farklı, özgün, merak uyandıran veya doğrudan kazanca odaklanan yeni bir kanca kullan!' : ''}`
 
-      const aiText = await completeText(systemPrompt, userPrompt)
+      const aiText = await completeText(systemPrompt, userPrompt, null, {tenantId:org.id,customer:org.name,conversationId:'video-draft'})
       const cleanText = aiText.replace(/["“”«»]/g, '').trim()
       const wordCount = cleanText.split(/\s+/).filter(Boolean).length
       if (wordCount >= 6 && wordCount <= 18 && !containsShotDirections(cleanText)) {

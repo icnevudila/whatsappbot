@@ -854,6 +854,9 @@ class AdvancedJobQueue {
       total_ms: Date.now() - job.createdAt,
     };
 
+    if (job.type === 'image' && error && String(error).includes('SUBMISSION_UNCERTAIN')) {
+      job.reconciliationRequired = true;
+    }
     const canRetry = error && isRetryableError(error) && (job.attemptCount || 0) < (job.maxAttempts || 2);
 
     if (job.reconciliationRequired && job.status === 'processing') {
@@ -900,12 +903,16 @@ class AdvancedJobQueue {
     }
   }
 
-  completeJob(jobId, filename, buffer, timings = null) {
+  completeJob(jobId, filename, buffer, timings = null, referenceReceipt = null) {
     const job = this.getJob(jobId);
     if (!job) return null;
 
     if (timings) {
       this.recordWorkerTimings(jobId, timings);
+    }
+
+    if (referenceReceipt) {
+      job.referenceReceipt = referenceReceipt;
     }
 
     const publicUrl = `http://${PUBLIC_HOST}:${PORT}/outputs/${filename}`;
@@ -3056,6 +3063,8 @@ const server = http.createServer(async (req, res) => {
         error_code: job.errorCode || null,
         reconciliation_required: !!job.reconciliationRequired,
         result_sha256: job.resultSha256 || null,
+        expected_reference_count: job.expectedReferenceCount ?? job.referenceImagesCount ?? 0,
+        reference_receipt: job.referenceReceipt || null,
         telemetry: job.telemetry || null,
       });
     }
@@ -3102,8 +3111,12 @@ const server = http.createServer(async (req, res) => {
     // 5. Worker: Kilidi Serbest Bırak / Hata Bildir (POST /job/release)
     if (method === 'POST' && pathname === '/job/release') {
       const body = await parseJsonBody(req);
-      const { jobId, error, crashSnapshotUrl } = body;
+      const { jobId, error, crashSnapshotUrl, reconciliationTargetId } = body;
       if (jobId) {
+        if (reconciliationTargetId && typeof reconciliationTargetId === 'string') {
+          const ownedJob = queue.jobs.get(jobId);
+          if (ownedJob?.type === 'image') ownedJob.reconciliationTargetId = reconciliationTargetId;
+        }
         queue.releaseLock(jobId, error);
         if (crashSnapshotUrl) {
           const j = queue.jobs.get(jobId);
@@ -3158,8 +3171,13 @@ const server = http.createServer(async (req, res) => {
         try { timings = JSON.parse(req.headers['x-worker-timings']); } catch (_) {}
       }
 
+      let referenceReceipt = null;
+      if (req.headers['x-reference-receipt']) {
+        try { referenceReceipt = JSON.parse(req.headers['x-reference-receipt']); } catch (_) {}
+      }
+
       if (jobId) {
-        const completed = queue.completeJob(jobId, filename, buffer, timings);
+        const completed = queue.completeJob(jobId, filename, buffer, timings, referenceReceipt);
         return sendJson(res, 200, { ok: true, filename, url: completed?.resultUrl });
       }
 

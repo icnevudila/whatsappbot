@@ -192,6 +192,24 @@ test('generic chat keeps the full prompt, system directive and tenant aliases', 
   assert.equal((await pending).body.choices[0].message.content, 'Current turn answer');
 });
 
+test('image disconnect after submit intent holds the exact job instead of retrying a paid generation', async () => {
+  const created = await request('/v1/images/generations?async=true', {
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({prompt:'Neutral image recovery fixture',async:true,tenant_id:'image-recovery-tenant',request_id:'image-recovery-1'}),
+  });
+  const job=await nextJob('image-recovery-worker');
+  assert.equal(job.id,created.body.job_id);
+  await request('/job/release', {method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({jobId:job.id,error:'SUBMISSION_UNCERTAIN: CDP Timeout after submission',reconciliationTargetId:'owned-target-1'})});
+  const state=await request('/v1/images/status/'+job.id+'?tenant_id=image-recovery-tenant');
+  assert.equal(state.body.status,'reconciliation_required');
+  assert.equal(state.body.reconciliation_required,true);
+  assert.equal((await request('/job/next?platform=chatgpt&workerId=image-recovery-worker-2')).body.job,null);
+  const repeated=await request('/v1/images/generations?async=true', {method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({prompt:'Neutral image recovery fixture',async:true,tenant_id:'image-recovery-tenant',request_id:'image-recovery-1'})});
+  assert.equal(repeated.body.job_id,job.id);
+});
+
 test('completed jobs expire without deleting an active response', async () => {
   const created = await request('/v1/images/generations?async=true', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: 'Retention test', async: true }),

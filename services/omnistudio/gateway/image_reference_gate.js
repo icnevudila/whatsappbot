@@ -6,7 +6,8 @@ function readComposerAttachments() {
   const images = Array.from(composer.querySelectorAll('img')).filter(img =>
     /^(blob:|data:)|oaiusercontent|\/files\/|estuary/i.test(img.src || '') &&
     img.complete && img.naturalWidth > 0);
-  const busy = !!composer.querySelector('[role="progressbar"], [aria-busy="true"], [data-testid*="loading"]');
+  const busy = Array.from(composer.querySelectorAll('[role="progressbar"], [aria-busy="true"], [data-testid*="attachment-loading"], [data-testid*="file-uploading"], .animate-spin'))
+    .some(el => el.offsetParent !== null || (window.getComputedStyle(el).display !== 'none' && window.getComputedStyle(el).visibility !== 'hidden'));
   return { count: images.length, ready: !busy };
 }
 
