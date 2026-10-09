@@ -71,12 +71,11 @@ export function UnifiedInboxShowcase() {
               }
             }}
             src="/landing/infographics/04-ortak-inbox-veo-i2v.mp4"
-            poster="/landing/infographics/04-ortak-inbox-veo-i2v-poster.webp"
             autoPlay
             muted
             loop
             playsInline
-            preload="metadata"
+            preload="auto"
             className="w-full h-full object-cover object-top"
           />
         </div>

@@ -59,12 +59,11 @@ export function Scene07Bento() {
                 }
               }}
               src="/landing/infographics/01-ana-urun-veo-i2v.mp4"
-              poster="/landing/infographics/01-ana-urun-veo-i2v-poster.webp"
               autoPlay
               muted
               loop
               playsInline
-              preload="metadata"
+              preload="auto"
               className="w-full h-full object-cover"
             />
           </div>
