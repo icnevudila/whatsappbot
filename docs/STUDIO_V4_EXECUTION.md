@@ -1,0 +1,79 @@
+# Mesajify V4 — execution ledger
+
+## Scope and authorization
+
+V4 supersedes the V3 execution plan, retaining all earlier customer requirements: image/video variations, actual Browser Use tests, creative_id campaign handoff with selected media and generated campaign copy, and Use / More sales-focused / Shorten / Friendlier / Regenerate copy controls. Source video remains 8 seconds, followed by subtitles and a 2-second outro for approximately 10 seconds final.
+
+User authorization updated 2026-10-09: "onay falan isteme ... herşeyi düzelt ve test et" explicitly authorizes necessary real paid acceptance and production release without asking again. Run free checks first, then bounded real acceptance using verified canonical records; reconcile unknown outcomes before retrying. Initial acceptance order: Bofe image, Ayvazoğlu image, Usta Döner image, Bofe video, Ayvazoğlu video. Preserve other work and frozen media. Credential changes requiring secure user entry remain a user operation.
+
+## Sprint 1 — baseline and source map (in progress)
+
+Read-only server snapshot (2026-10-09): checkout 5556310def2d851158668f4b71bdf635fc6d1fae. Running images: ai-media-control `outro-logo-1fc79bf`, gflow-engine `integration-diagnostics-9f74b72`, OmniStudio `docker-omnistudio-worker`, WhatsApp `wa-service:local`. Source checkout SHA does not establish each running image's source SHA. WhatsApp /ready reported DB available, one live session, zero pending/stale claims and four successful recorded jobs. This is health evidence, not our acceptance generation/delivery evidence. Flow /health reported patch 2026.10.03.1. AI /health is liveness only.
+
+Single runtime resource sample: OmniStudio 19.11% CPU / 2.102GiB RAM; Flow 0.13% / 117.7MiB; AI control 0.18% / 38.93MiB; WhatsApp 0.20% / 44.4MiB. Disk 49G used of 75G, 24G available, 68%. These are observations, not before/after optimization gains or scale guarantees. Never reinterpret configured 50-session capacity as measured capacity.
+
+Remote references re-fetched on 2026-10-09:
+
+| Reference | SHA |
+|---|---|
+| origin/main | eae97581b8515d179587ca319f90dde7908a5b68 |
+| final-production-integration | 1cdf40d1bf4457f7edf1e35b8cf21e4f1f49f950 |
+| candidate/creative-studio-wizard-v2 | 2410fe700830b573ee9ae155b4751640e9537814 |
+| experiment/video-physics-qa-isolated | 9b2e19e4b34dc56df6310c16a5e571319219ef03 |
+| isolated candidate merge HEAD before V4 edits | a5310ce5f93a86603f4ab0e320523646df03611d |
+
+Vercel read-only inspection: app.mesajify.com deployment dpl_9QdKy8eCvdTh4iQRPwMPbLkuTFpE is READY at eae97581b8515d179587ca319f90dde7908a5b68. READY is deployment evidence, not customer journey acceptance. Main changes since the candidate base cc96038 affect landing components/assets only. No production mutation performed.
+
+| Chain | Source entry points | Verified boundary / remaining proof |
+|---|---|---|
+| Image | customer icerik/actions.ts → creative/process.ts → creative/prompt.ts → services/omnistudio/gateway | Source and focused tests inspected; fresh provider/storage acceptance absent |
+| Video | creative/video-job-service.ts → ai-media-control/routes/jobs.ts → historical-video-director.ts → creative-video-orchestrator/historical-v5 → gflow-engine → PostPro | Legacy engine preserved; fresh V4 RAW/FINAL and customer acceptance pending authorization |
+| Campaign | customer kampanyalar wizard/actions → wa-service campaign-runner.ts/job-consumer.ts → session.sendMessage | Real recipient delivery and final-only handoff still require controlled proof |
+| Billing | customer api/billing/checkout, webhook, status, portal | Stripe source exists; checkout rejects missing configuration; live subscription/payment NOT_VERIFIED |
+| Queue | customer lib/jobs.ts; wa-service job-consumer.ts → wa.claim_jobs | Candidate atomic index tested in embedded PostgreSQL; production migration not applied |
+| Operations | ai-media-control/index.ts /health and telemetry routes | /health is process liveness only, not dependency readiness; readiness/security exposure audit pending |
+
+Root workspace includes apps/* and packages/*, not services/*. Service build/install checks must run in the service directory. Root installation alone did not provide ai-media-control's Express/local orchestrator dependency. Service-local npm ci completed; build rerun pending.
+
+## Candidate findings and fixes carried from V3
+
+Fresh authenticated production Browser Use: Ayvazoğlu /icerik/yeni selected canonical Tuğla. Draft UI showed fallback after AI failure; browser warning explicitly reports `Plan request timed out or cancelled (>5s budget)`. Production is still the old 5-second client budget, whereas the merged candidate uses 35 seconds. No fresh image/video submission occurred in this check. Remember the earlier 35-second correction applied to candidate, not current main. Retest deployed candidate before claiming this runtime issue resolved.
+
+- SELECT then INSERT render deduplication was not atomic. Candidate partial unique index plus duplicate reconciliation added. Twelve concurrent PostgreSQL inserts yielded one success and eleven actual 23505 conflicts; different tenants remain independent. This is embedded PostgreSQL proof, not production worker load proof.
+- Turkish price parsing and discount consistency now validate before image/video submissions; sales requires supplied price or offer and CTA.
+- Planner canonical product is loaded within the active tenant; fallback copy is labelled deterministic rather than AI.
+- V3 images publish needs_review, preserving final bytes and requiring explicit customer review with tenant, SHA, MIME and storage readback checks. Processing an existing review image now returns it without generation.
+- Video V3 opt-in preserves the exact physical action contract, allowing negative forbidden-action words in that contract. No automated physical analysis is implemented.
+- Five visual styles now have actual prompt directives instead of silently falling back to auto.
+
+## Evidence classification
+
+Security finding: an existing local SSH helper in the original checkout contains a plaintext server credential. The value is excluded from this ledger and candidate changes. Tracking/exposure scope and rotation closure require investigation; SECURITY_RELEASE_GATE_CLOSED cannot pass on deletion alone. Do not reuse or publish that credential.
+
+Additional checks: WhatsApp service 54/54 tests PASS; admin/panel/WhatsApp TypeScript checks PASS; both gflow-engine Python test directories total 10/10 PASS. Global workspace TypeScript audit in progress. Candidate logical commits: queue 5c99aa4, physical video contract 5769e2b.
+
+2026-10-09 follow-up checks: customer optimized production build PASS; customer focused regressions rerun 65/65 PASS; ai-media-control build PASS and 69/69 tests PASS; four selected OmniStudio gateway suites 14/14 PASS; gflow-engine tests/ Python suite 7/7 PASS. These are local free checks, not live provider acceptance. The latest queue error propagation change is awaiting its typecheck completion. No deployment yet.
+
+- Customer focused regressions: 65/65 passed before the latest review/style updates; rerun required.
+- V3 targeted tests: 5/5 passed, including embedded PostgreSQL uniqueness and receipt review gates.
+- Video orchestrator: 143/143 passed. Pixel decision tests use explicitly synthetic PNG and stub observations. Their names/outputs are not real visual acceptance evidence.
+- Customer typecheck passed before the latest format-label edit; rerun required.
+- Browser Use candidate fixture: supplied headline, CTA, price, previous price, discount and date reached review. Values persisted after step navigation and an HMR reset; authenticated refresh/recovery is not established by this fixture.
+- 390×844 and 430×932 candidate review had no horizontal overflow (document widths 380 and 420). Screenshots in docs/evidence/studio-v3-2026-10-09. Fixture is not a real customer or generation test.
+- VISUAL_QA=NOT_VERIFIED; AUTOMATED_PHYSICS_QA=NOT_IMPLEMENTED.
+- Credential rotation closure, live capacity, delivery, backup restoration and commercial readiness remain NOT_VERIFIED. No production-ready claim.
+
+## Remaining ordered work
+
+Latest user additions: inspect every service; explicitly prove Flow and Gemini reference chips, correct account/model/format, complete generation and downloaded-file identity. Prove ChatGPT image references and the entire Wizard-to-provider campaign/format contract. Provider payload unit tests and source inspection alone cannot satisfy these requirements. No untested item receives PASS.
+
+1. Complete architecture/runtime inventory and safe baseline measurements across customer/admin/panel/landing, billing/quota, workers and storage.
+2. Reliability/security: durable recovery, tenant boundaries, provider identity chain, queue leases, credential incident closure evidence.
+3. Authenticated Wizard E2E including late responses, missing references, refresh, double-click and failures.
+4. Image commercial brief contradictions, exact prompt/source/SHA provenance and durable tenant creative history.
+5. Video physical plan, VO, RAW/FINAL and PostPro contracts.
+6. Measure before/change/after performance; avoid invented p50/p95 or paid provider load.
+7. Library/campaign/WhatsApp integration and operational monitoring.
+8. Free regression, failure injection, database/worker/storage integration and 10–300 target load tests with explicitly mock providers.
+9. Five separate approved live acceptance runs only after free gates pass.
+10. Modular commits, clean candidate, rollback proof, 21 independent V4 QA statuses and release approval plan.
