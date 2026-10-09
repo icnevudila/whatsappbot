@@ -305,10 +305,10 @@ const TEMPLATE_FAMILY_INSTRUCTIONS: Record<TemplateFamily, string> = {
   CAMPAIGN_POSTER: [
     'Design mode: High-impact commercial campaign visual tailored custom-designed for this brand and sector.',
     '- The physical product is the undisputed hero, occupying 60-70% visual share and physically integrated into the environment with authentic perspective, natural lighting, and realistic contact shadows (NEVER look like a flat cut-out pasted onto graphics).',
+    '- Authentic corporate logo placed with pristine clarity and clean contrast margins.',
     '- High-contrast Turkish commercial headline with clear mobile readability, styled appropriately for the brand personality.',
-    '- Clear commercial hierarchy: select only the strongest 2 to 4 commercial anchors (such as headline, price/offer hierarchy, and one concise benefit or CTA). Do NOT clutter with repetitive badge packs or generic footer strips.',
+    '- Uncompromising commercial sales core: Headline, verified Price/Offer, and CTA are mandatory conversion drivers and must always be displayed. Optional extra badges or secondary details must be kept to an absolute minimum (at most 1 concise selling point). Do NOT clutter with repetitive badge packs, fake guarantee seals, or generic footer strips.',
     '- Avoid repeated Canva template skeletons: allow composition to emerge naturally from product geometry and sector (e.g., dynamic diagonal, large product crop breaking the frame, environmental embedding, or elegant editorial framing).',
-    '- Clean, authentic corporate logo placement integrated naturally into the composition.',
   ].join('\n'),
 
   PRODUCT_SHOWCASE: [
