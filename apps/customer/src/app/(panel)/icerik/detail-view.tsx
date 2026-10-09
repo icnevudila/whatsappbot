@@ -42,6 +42,7 @@ export { getSafeMediaUrl }
 
 export type DetailCreative = {
   imageReviewRequired?: boolean
+  imageReconciliationRequired?: boolean
   submissionRequestKey?: string | null
   id: string
   title: string | null
@@ -459,6 +460,12 @@ export function CreativeDetail({
         }
 
         if (res.pending) {
+          if (!isVideo && Date.now() - startTime > 5 * 60 * 1000) {
+            setBusyRender(false)
+            setLocalError('Görsel üretimi durumu doğrulanamıyor, işlem inceleniyor. Çift ücretlendirme yapılmadı.')
+            router.refresh()
+            return
+          }
           const delay = (res.retryAfterSeconds || 3) * 1000
           pollTimer = setTimeout(pollLoop, Math.max(Date.now() - startTime > SLOW_POLL_AFTER_MS ? 15000 : 2500, delay))
         } else {
@@ -470,8 +477,12 @@ export function CreativeDetail({
       } catch (err: unknown) {
         if (!isMounted) return
         console.warn('[detail-view] poll error:', err)
-        // A lost observation is not a failed production. Keep observing this job;
-        // requestRender's persisted identity prevents another provider submission.
+        if (!isVideo && Date.now() - startTime > 5 * 60 * 1000) {
+          setBusyRender(false)
+          setLocalError('Görsel üretimi durumu doğrulanamıyor, işlem inceleniyor. Çift ücretlendirme yapılmadı.')
+          router.refresh()
+          return
+        }
         pollTimer = setTimeout(pollLoop, Date.now() - startTime > SLOW_POLL_AFTER_MS ? 15000 : 4000)
       }
     }
@@ -575,7 +586,7 @@ export function CreativeDetail({
         <Notice tone="danger">
           <p className="text-[13.5px] font-semibold">Görsel oluşturulamadı</p>
           <p className="mt-1 whitespace-pre-wrap break-words text-[13px]">{shownError}</p>
-          {canManage ? (
+          {canManage && !creative.imageReconciliationRequired ? (
             <Button
               type="button"
               variant="accent"
@@ -687,8 +698,17 @@ export function CreativeDetail({
                 const rest = trimmed.slice(1).trim()
                 const labelMatch = rest.match(/^\*([^*]+):\*\s*(.*)$/)
                 if (labelMatch) {
-                  const [, label, value] = labelMatch
-                  const parts = value.split(/(_[^_]+_)/g)
+                  let [, label, value] = labelMatch
+                  if (label === 'Teslimat' && /taksit|kredi\s*kart|kart|peşin|havale|ödeme/i.test(value)) {
+                    label = 'Ödeme/Taksit'
+                  }
+                  if (label === 'Fiyat') {
+                    value = value.replace(/(?:^|\s)(\d+)(?=\s*(?:_|\(|$))/g, (match, digits) => {
+                      const num = Number(digits)
+                      return ` ${num >= 1000 ? num.toLocaleString('tr-TR') : digits} TL`
+                    }).replace(/\s+/g, ' ').trim()
+                  }
+                  const parts = value.split(/(_[^_]+_|\([^\)]+\))/g)
                   return (
                     <div key={idx} className="flex items-start gap-2 py-0.5 text-[13px]">
                       <span className="text-[#00a884] font-bold select-none">•</span>
@@ -696,8 +716,10 @@ export function CreativeDetail({
                         <span className="font-semibold text-[#111b21]">{label}: </span>
                         <span className="text-[#3b4a54]">
                           {parts.map((p, pIdx) => {
-                            if (p.startsWith('_') && p.endsWith('_')) {
-                              return <span key={pIdx} className="text-[#667781] text-[12px] italic"> ({p.slice(1, -1).replace(/^\((.*)\)$/, '$1')})</span>
+                            const trimmedPart = p.trim()
+                            if ((trimmedPart.startsWith('_') && trimmedPart.endsWith('_')) || (trimmedPart.startsWith('(') && trimmedPart.endsWith(')'))) {
+                              const inner = trimmedPart.replace(/[_()]/g, '').trim()
+                              return <span key={pIdx} className="text-[#667781] text-[12px] italic"> ({inner})</span>
                             }
                             return p
                           })}

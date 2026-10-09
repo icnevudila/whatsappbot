@@ -13,14 +13,16 @@ test('same-name different tenant has isolated chat manager and scope keys', () =
   const tenant1 = { tenantId: 'tenant-alpha', customer: 'Lüks Mobilya', conversationId: 'c1' };
   const tenant2 = { tenantId: 'tenant-beta', customer: 'Lüks Mobilya', conversationId: 'c2' };
 
-  chatManager.setCompanyChat(tenant1, 'chat', 'https://chatgpt.com/c/alpha-session');
-  chatManager.setCompanyChat(tenant2, 'chat', 'https://chatgpt.com/c/beta-session');
+  const url1 = `https://chatgpt.com/c/alpha-session-${Date.now()}`;
+  const url2 = `https://chatgpt.com/c/beta-session-${Date.now()}`;
+  chatManager.setCompanyChat(tenant1, 'chat', url1);
+  chatManager.setCompanyChat(tenant2, 'chat', url2);
 
   const chat1 = chatManager.getCompanyChat(tenant1, 'chat');
   const chat2 = chatManager.getCompanyChat(tenant2, 'chat');
 
-  assert.equal(chat1.chatUrl, 'https://chatgpt.com/c/alpha-session');
-  assert.equal(chat2.chatUrl, 'https://chatgpt.com/c/beta-session');
+  assert.equal(chat1.chatUrl, url1);
+  assert.equal(chat2.chatUrl, url2);
   assert.notEqual(chat1.chatUrl, chat2.chatUrl);
 });
 
@@ -45,16 +47,17 @@ test('concurrent same-tenant messages write serialization prevents data loss', a
 
 test('cache eviction: expired TTL is evicted and LRU respects capacity limit', () => {
   const tempIdentity = { tenantId: 'tenant-evict', customer: 'Customer', conversationId: 'c' };
-  chatManager.setCompanyChat(tempIdentity, 'chat', 'https://chatgpt.com/c/cached');
+  const cachedUrl = `https://chatgpt.com/c/cached-${Date.now()}`;
+  chatManager.setCompanyChat(tempIdentity, 'chat', cachedUrl);
 
   const firstHit = chatManager.getCompanyChat(tempIdentity, 'chat');
-  assert.equal(firstHit.chatUrl, 'https://chatgpt.com/c/cached');
+  assert.equal(firstHit.chatUrl, cachedUrl);
 
   // Clear cache to verify fresh lookup
   chatManager.clearChatCache();
   const metricsBefore = chatManager.getChatCacheMetrics().miss;
   const afterClear = chatManager.getCompanyChat(tempIdentity, 'chat');
-  assert.equal(afterClear.chatUrl, 'https://chatgpt.com/c/cached');
+  assert.equal(afterClear.chatUrl, cachedUrl);
   assert.equal(chatManager.getChatCacheMetrics().miss, metricsBefore + 1);
 });
 
