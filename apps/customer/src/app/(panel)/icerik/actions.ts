@@ -4,7 +4,12 @@ import sharp from 'sharp'
 import { after } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { randomBytes } from 'node:crypto'
+import { randomBytes, createHash } from 'node:crypto'
+
+export function uuidFromRequestKey(orgId: string, requestKey: string): string {
+  const hash = createHash('sha256').update(`creative:${orgId}:${requestKey}`).digest('hex')
+  return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-5${hash.slice(13, 16)}-a${hash.slice(17, 20)}-${hash.slice(20, 32)}`
+}
 import { enqueueJob } from '@/lib/jobs'
 import { hasImageProvider } from '@/lib/ai/image'
 import { processCreativeGeneration } from '@/lib/creative/process'
@@ -287,7 +292,7 @@ export async function startCreativeGeneration(
       await kickGeneration(existing.id, authContext)
     }
     revalidateLibrary(existing.id)
-    redirect(`/icerik/${existing.id}`)
+    return { id: existing.id, ok: 'Görsel üretimi devam ediyor.' }
   }
 
   if ([kitRes, orgRowRes, productRowsRes, imageRowsRes, phonesRes, socialsRes].some(result => result.error)) {
@@ -556,9 +561,14 @@ export async function startCreativeGeneration(
     console.warn('[startCreativeGeneration] campaignMessage generation skipped:', msgErr)
   }
 
+  const deterministicCreativeId = requestKey
+    ? uuidFromRequestKey(org.id, requestKey)
+    : undefined
+
   const { data: inserted, error } = await supabase
     .from('creatives')
     .insert({
+      ...(deterministicCreativeId ? { id: deterministicCreativeId } : {}),
       org_id: org.id,
       created_by: userId,
       brand_kit_id: kitRow?.id ?? null,
@@ -574,7 +584,21 @@ export async function startCreativeGeneration(
     .select('id')
     .single()
 
-  if (error || !inserted) return { error: error?.message ?? 'Kayıt açılamadı.' }
+  if (error) {
+    if (
+      deterministicCreativeId &&
+      (error.code === '23505' ||
+        error.message?.includes('duplicate key') ||
+        error.message?.includes('creatives_pkey'))
+    ) {
+      // ATOMIC RACE RESOLUTION: A parallel request already inserted this job.
+      // Revalidate and return the existing id without triggering a duplicate kick.
+      revalidateLibrary(deterministicCreativeId)
+      return { id: deterministicCreativeId, ok: 'Görsel üretimi devam ediyor.' }
+    }
+    return { error: error.message ?? 'Kayıt açılamadı.' }
+  }
+  if (!inserted) return { error: 'Kayıt açılamadı.' }
   const creativeInsertMs = Date.now() - tInsertStart
 
   if (products.length > 0) {

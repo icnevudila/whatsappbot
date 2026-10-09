@@ -74,6 +74,23 @@ export async function enqueueJob<T extends JobType>(options: {
         return { id: null, error: 'İşlem bu çalışma alanına ait bir kayıt için yapılmalı.' }
       }
     }
+    if (options.type === 'creative.render') {
+      const creativeId = (options.payload as any)?.creative_id
+      if (creativeId) {
+        const { data: existingJob } = await supabase
+          .from('jobs')
+          .select('id')
+          .eq('org_id', org.id)
+          .eq('type', 'creative.render')
+          .contains('payload', { creative_id: creativeId })
+          .in('status', ['pending', 'claimed', 'running'])
+          .limit(1)
+          .maybeSingle()
+        if (existingJob?.id != null) {
+          return { id: String(existingJob.id), error: null }
+        }
+      }
+    }
 
     const { data, error } = await supabase
       .from('jobs')

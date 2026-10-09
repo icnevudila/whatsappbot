@@ -344,14 +344,18 @@ export function buildLegacySimpleCreativePrompt(
 
   const templateInstruction = TEMPLATE_FAMILY_INSTRUCTIONS[verified.templateFamily] ?? TEMPLATE_FAMILY_INSTRUCTIONS.CAMPAIGN_POSTER
 
-  // Proven historical reference phrasing from d350985
-  const logoInstruction = verified.logoRef
-    ? 'A real brand logo image is attached. Place it as a small clean logo. Do NOT redraw, restyle or invent a new logo. Do not distort it.'
-    : 'Do not invent fake logos.'
-
-  const productInstruction = verified.productRef
-    ? 'A product photo is attached as a reference. Keep the real product identity.'
-    : 'Do not invent fantasy products.'
+  // Proven historical reference phrasing
+  const refInstruction = [
+    (verified.logoRef && verified.productRef)
+      ? 'Authentic product and company logo references are attached.'
+      : null,
+    verified.logoRef
+      ? 'A real brand logo image is attached. Place it as a small clean logo. Do NOT redraw, restyle or invent a new logo. Do not distort it.'
+      : 'Do not invent fake logos.',
+    verified.productRef
+      ? 'A product photo is attached as a reference. Keep the real product identity.'
+      : 'Do not invent fantasy products.',
+  ].filter(Boolean).join('\n')
 
   const variation = snapshot.variationPreset
     ? VARIATION_PRESETS.find((row) => row.id === snapshot.variationPreset)?.label
@@ -376,9 +380,31 @@ export function buildLegacySimpleCreativePrompt(
   if (verified.deliveryFact) {
     commercialLines.push(`Delivery promise: ${verified.deliveryFact}`)
   }
-  if (verified.cta || verified.contactLines.length) {
-    commercialLines.push(`Order cue: ${verified.cta || 'Sipariş Ver'}${verified.contactLines[0] ? ` · ${verified.contactLines[0]}` : ''}`)
+  if (verified.cta) {
+    commercialLines.push(`CTA: ${verified.cta}`)
   }
+  if (verified.contactLines.length) {
+    commercialLines.push(`Phone/WhatsApp: ${verified.contactLines.join(' · ')}`)
+  }
+  if (snapshot.website) {
+    commercialLines.push(`Website: ${snapshot.website}`)
+  }
+
+  const designerDirectives = options?.artDirectionPlan
+    ? [
+        'EXECUTIVE ART DIRECTION & DESIGNER DIRECTIVES:',
+        `- CONCEPT & ARCHETYPE: ${options.artDirectionPlan.concept_name} (Archetype: ${options.artDirectionPlan.creative_archetype}).`,
+        `- VISUAL HOOK: ${options.artDirectionPlan.visual_hook}.`,
+        `- LIGHTING & SHADOW PHYSICS: ${options.artDirectionPlan.art_direction.lighting}.`,
+        `- MATERIAL & TEXTURE REALISM: ${options.artDirectionPlan.art_direction.material_language}. Surface texture: ${options.artDirectionPlan.art_direction.texture}.`,
+        `- ATMOSPHERE & BACKGROUND: ${options.artDirectionPlan.art_direction.background_treatment}. Atmosphere: ${options.artDirectionPlan.art_direction.atmosphere}.`,
+        `- COLOR TREATMENT & CONTRAST: ${options.artDirectionPlan.art_direction.color_treatment}. Contrast strategy: ${options.artDirectionPlan.art_direction.contrast_strategy}.`,
+        options.artDirectionPlan.brand_dna
+          ? `- AUTHORITATIVE BRAND DNA: ${options.artDirectionPlan.brand_dna.brand_name} (${options.artDirectionPlan.brand_dna.tone}). Visual personality: ${options.artDirectionPlan.brand_dna.visual_personality}. Background: ${options.artDirectionPlan.brand_dna.background_preference}.`
+          : null,
+        `- ANTI-GENERIC MANDATES: ${options.artDirectionPlan.anti_generic_rules.slice(0, 5).join('; ')}.`,
+      ].filter(Boolean).join('\n')
+    : null
 
   const prompt = [
     'Create ONE professional commercial campaign creative for WhatsApp / social ads.',
@@ -386,14 +412,14 @@ export function buildLegacySimpleCreativePrompt(
     `Use case: ${formatLabel(snapshot.formatId)} (${aspect}).`,
     templateInstruction,
     sectorArtDirection,
+    designerDirectives,
     DENSITY_HINT[snapshot.textDensity] ?? DENSITY_HINT.balanced,
     verified.brandName ? `Brand name: ${verified.brandName}.` : null,
     verified.sector ? `Sector: ${verified.sector}.` : null,
     kit?.tone ? `Brand tone of voice: ${kit.tone}` : null,
     colors ? `Follow this brand palette in backgrounds, accents and props: ${colors}.` : null,
     kit?.fonts?.heading ? `Prefer a ${kit.fonts.heading}-like heading feel.` : null,
-    logoInstruction,
-    productInstruction,
+    refInstruction,
     snapshot.baseCreativeId
       ? 'A base/reference campaign image is attached. Keep the same product and brand identity; apply the requested change.'
       : null,
@@ -435,6 +461,8 @@ export function buildLegacySimpleCreativePrompt(
     'no cinematic lifestyle drift away from the product',
     'no invented trust badges',
     'no unverified warranty claims',
+    ...(options?.artDirectionPlan?.commercial_grammar?.negativeLayoutRules || []),
+    ...(options?.artDirectionPlan?.anti_generic_rules || []),
   ].join(', ')
 
   return { prompt, negative }
