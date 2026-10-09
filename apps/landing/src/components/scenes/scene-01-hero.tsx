@@ -6,6 +6,7 @@ import { ArrowRight, Monitor } from 'lucide-react'
 interface HeroShowcase {
   id: string
   video: string
+  poster: string
   categoryBadge: string
   headlineLead: string
   headlineDynamic: string
@@ -19,6 +20,7 @@ const HERO_SHOWCASES: HeroShowcase[] = [
   {
     id: 'ecosystem',
     video: '/landing/infographics/01-ana-urun-veo-i2v.mp4',
+    poster: '/landing/infographics/01-ana-urun-veo-i2v-poster.webp',
     categoryBadge: 'KONTROL PANELİ',
     headlineLead: 'Tek merkezden',
     headlineDynamic: 'tüm WhatsApp ekosisteminizi canlı yönetin',
@@ -30,6 +32,7 @@ const HERO_SHOWCASES: HeroShowcase[] = [
   {
     id: 'inbox',
     video: '/landing/infographics/04-ortak-inbox-veo-i2v.mp4',
+    poster: '/landing/infographics/04-ortak-inbox-veo-i2v-poster.webp',
     categoryBadge: 'ORTAK GELEN KUTUSU',
     headlineLead: 'WhatsApp üzerinden',
     headlineDynamic: 'gelen müşteri ve sipariş taleplerini anında yanıtlayın',
@@ -41,6 +44,7 @@ const HERO_SHOWCASES: HeroShowcase[] = [
   {
     id: 'discovery',
     video: '/landing/infographics/06-isletme-bulucu-veo-i2v.mp4',
+    poster: '/landing/infographics/06-isletme-bulucu-veo-i2v-poster.webp',
     categoryBadge: 'İŞLETME BULUCU',
     headlineLead: 'Hedef pazarınızda',
     headlineDynamic: 'bölgenizdeki işletmeleri haritadan keşfedin',
@@ -52,6 +56,7 @@ const HERO_SHOWCASES: HeroShowcase[] = [
   {
     id: 'studio',
     video: '/landing/infographics/05-kreatif-studyosu-veo-i2v.mp4',
+    poster: '/landing/infographics/05-kreatif-studyosu-veo-i2v-poster.webp',
     categoryBadge: 'KREATİF STÜDYOSU',
     headlineLead: 'Ürün fotoğrafınızdan',
     headlineDynamic: 'saniyeler içinde hazır dikey reklam üretin',
@@ -63,6 +68,7 @@ const HERO_SHOWCASES: HeroShowcase[] = [
   {
     id: 'multiline',
     video: '/landing/infographics/03-coklu-hat-veo-i2v.mp4',
+    poster: '/landing/infographics/03-coklu-hat-veo-i2v-poster.webp',
     categoryBadge: 'ÇOKLU HAT DAĞITICI',
     headlineLead: 'Yükü paylaştırın',
     headlineDynamic: 'bağlı hatlarınızla güvenli ve dengeli iletin',
@@ -120,23 +126,14 @@ export function Scene01Hero() {
 
           {/* 2. Video Oynatıcı: Mobilde 2. sırada (Başlığın hemen altında!), Masaüstünde Sağ Kolonda */}
           <div className="order-2 lg:col-span-7 lg:row-span-2 relative w-full flex items-center justify-center my-2 lg:my-0">
-            {/* Ambient Blurred Video Background Glow Layer (Smooth Dissolve) */}
-            <div className="absolute -inset-4 sm:-inset-8 -z-10 rounded-[40px] overflow-hidden filter blur-3xl opacity-30 scale-105 pointer-events-none transition-all duration-1000">
+            {/* Ambient Blurred Poster Background Glow Layer */}
+            <div className="absolute -inset-4 sm:-inset-8 -z-10 rounded-[40px] overflow-hidden filter blur-3xl opacity-35 scale-105 pointer-events-none transition-all duration-1000">
               {HERO_SHOWCASES.map((item, idx) => (
-                <video
+                <img
                   key={`ambient-${item.id}`}
-                  ref={(el) => {
-                    if (el) {
-                      el.muted = true
-                      el.defaultMuted = true
-                    }
-                  }}
-                  src={item.video}
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  preload="auto"
+                  src={item.poster}
+                  alt=""
+                  aria-hidden="true"
                   className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${
                     idx === currentIndex ? 'opacity-100' : 'opacity-0'
                   }`}
@@ -163,6 +160,7 @@ export function Scene01Hero() {
               <div className="relative aspect-[16/9] w-full bg-[#050B08] overflow-hidden">
                 {HERO_SHOWCASES.map((item, idx) => {
                   const isActive = idx === currentIndex
+                  const isNext = idx === (currentIndex + 1) % HERO_SHOWCASES.length
                   return (
                     <video
                       key={item.id}
@@ -174,10 +172,11 @@ export function Scene01Hero() {
                         }
                       }}
                       src={item.video}
-                      autoPlay
+                      poster={item.poster}
+                      autoPlay={isActive}
                       muted
                       playsInline
-                      preload="auto"
+                      preload={isActive ? 'auto' : isNext ? 'metadata' : 'none'}
                       onEnded={isActive ? handleVideoEnded : undefined}
                       className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-1000 ease-in-out ${
                         isActive ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'

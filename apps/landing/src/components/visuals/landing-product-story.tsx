@@ -87,11 +87,12 @@ export function LandingDiscoveryStory() {
               }
             }}
             src="/landing/infographics/06-isletme-bulucu-veo-i2v.mp4"
+            poster="/landing/infographics/06-isletme-bulucu-veo-i2v-poster.webp"
             autoPlay
             muted
             loop
             playsInline
-            preload="auto"
+            preload="metadata"
             className="w-full h-full object-cover object-center"
           />
         </div>
