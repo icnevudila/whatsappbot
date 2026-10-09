@@ -387,25 +387,52 @@ export async function processCreativeGeneration(
       return { ok: true, ready: imagePublicationStatus(payload) === 'ready', needsReview: imagePublicationStatus(payload) === 'needs_review', publicUrl: url.publicUrl }
     } catch (error) {
       if (error instanceof ImageJobReconciliationError) {
-        await supabase.from('creatives').update({ status: 'rendering', error: null,
-          payload: { ...payload, imageReconciliationRequired: true },
+        const reconciliationMsg = 'Üretim durumu doğrulanamıyor, işlem inceleniyor. Çift ücretli üretim başlatılmadı.'
+        await supabase.from('creatives').update({
+          status: 'failed',
+          error: reconciliationMsg,
+          payload: { ...payload, imageReconciliationRequired: true, imageJob: null },
         }).eq('id', creativeId).eq('org_id', creative.org_id).eq('payload->imageJob->>id', payload.imageJob.id)
-        return { ok: true, pending: true, retryAfterSeconds: 10, progressInfo: {
-          elapsedSeconds: Math.max(0, Math.floor((Date.now() - Date.parse(payload.imageJob.queuedAt)) / 1000)) || 0,
-          remainingSeconds: 0, progressPercent: 0, stage: 'reconciliation',
-          stageLabel: 'Önceki üretimin sonucu doğrulanamadı',
-          stageDetail: 'Çift üretim başlatılmadı. Mevcut sağlayıcı işi kontrol edilmeli.',
-        } }
+        return {
+          ok: false,
+          pending: false,
+          error: reconciliationMsg,
+          progressInfo: {
+            elapsedSeconds: Math.max(0, Math.floor((Date.now() - Date.parse(payload.imageJob.queuedAt)) / 1000)) || 0,
+            remainingSeconds: 0,
+            progressPercent: 0,
+            stage: 'reconciliation',
+            stageLabel: 'Üretim durumu doğrulanamıyor',
+            stageDetail: 'İşlem inceleniyor. Çift üretim başlatılmadı; mevcut iş kontrol edilmeli.',
+          },
+        }
       }
-      if (!(error instanceof ImageJobFailedError) && !(error instanceof ImageOutputInvalidError)) return { ok: true, pending: true, retryAfterSeconds: 10 }
-      const message = error.message.slice(0,400)
-      await supabase.from('creatives').update({ status: 'failed', error: message,
-        payload: error instanceof ImageJobReconciliationError
-          ? { ...payload, imageReconciliationRequired: true }
-          : { ...payload, imageTerminalFailure: { kind: error instanceof ImageOutputInvalidError ? 'OUTPUT_INVALID' : 'PROVIDER_FAILED', jobId: payload.imageJob.id,
-            gatewayUrl: payload.imageJob.gatewayUrl }, imageSubmissionUncertain: false },
-      }).eq('id', creativeId).eq('org_id', creative.org_id).eq('payload->imageJob->>id', payload.imageJob.id)
-      return { ok: false, error: message }
+      if (error instanceof ImageJobFailedError || error instanceof ImageOutputInvalidError) {
+        const message = error.message.slice(0, 400)
+        await supabase.from('creatives').update({
+          status: 'failed',
+          error: message,
+          payload: {
+            ...payload,
+            imageTerminalFailure: { kind: error instanceof ImageOutputInvalidError ? 'OUTPUT_INVALID' : 'PROVIDER_FAILED', jobId: payload.imageJob.id, gatewayUrl: payload.imageJob.gatewayUrl },
+            imageSubmissionUncertain: false,
+            imageJob: null,
+          },
+        }).eq('id', creativeId).eq('org_id', creative.org_id).eq('payload->imageJob->>id', payload.imageJob.id)
+        return { ok: false, error: message }
+      }
+      const queuedMs = Date.parse(payload.imageJob.queuedAt) || 0
+      const elapsedMs = queuedMs > 0 ? Date.now() - queuedMs : 0
+      if (elapsedMs > 5 * 60 * 1000) {
+        const timeoutMsg = 'Görsel üretimi zaman aşımına uğradı (5 dakika). Sonuç doğrulanamadı; işlem inceleniyor.'
+        await supabase.from('creatives').update({
+          status: 'failed',
+          error: timeoutMsg,
+          payload: { ...payload, imageReconciliationRequired: true, imageJob: null },
+        }).eq('id', creativeId).eq('org_id', creative.org_id).eq('payload->imageJob->>id', payload.imageJob.id)
+        return { ok: false, pending: false, error: timeoutMsg }
+      }
+      return { ok: true, pending: true, retryAfterSeconds: 5 }
     }
   }
 

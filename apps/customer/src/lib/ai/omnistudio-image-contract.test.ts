@@ -46,5 +46,17 @@ test('provider receipt and real output contract remain bound to the exact image 
         await assert.rejects(readImageJob({...job,expectedReferenceCount},'tenant-a'),ImageJobReconciliationError)
       assert.equal(calls,0)
     })
+    await t.test('401/403 auth errors throw terminal ImageJobFailedError, never ImageJobPendingError',async()=>{
+      globalThis.fetch = async () => new Response('Unauthorized', { status: 401 })
+      await assert.rejects(readImageJob(job, 'tenant-a'), (err: any) => err.name === 'ImageJobFailedError' && err.message.includes('401/403'))
+      globalThis.fetch = async () => new Response('Forbidden', { status: 403 })
+      await assert.rejects(readImageJob(job, 'tenant-a'), (err: any) => err.name === 'ImageJobFailedError' && err.message.includes('401/403'))
+    })
+    await t.test('404 missing job and 500 server error throw ImageJobReconciliationError, never ImageJobPendingError',async()=>{
+      globalThis.fetch = async () => new Response('Not Found', { status: 404 })
+      await assert.rejects(readImageJob(job, 'tenant-a'), ImageJobReconciliationError)
+      globalThis.fetch = async () => new Response('Server Error', { status: 500 })
+      await assert.rejects(readImageJob(job, 'tenant-a'), ImageJobReconciliationError)
+    })
   } finally {globalThis.fetch=original}
 })

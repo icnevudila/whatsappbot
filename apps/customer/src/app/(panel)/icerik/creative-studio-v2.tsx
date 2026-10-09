@@ -1521,12 +1521,19 @@ export function CreativeStudioV2({
 
                   {/* Asset Preflight Health Check */}
                   <dl className="grid gap-2 rounded-lg border bg-white p-3 text-sm sm:grid-cols-2">
-                    {price && <div><dt>Fiyat</dt><dd className="font-semibold">{price}</dd></div>}
-                    {oldPrice && <div><dt>Eski fiyat</dt><dd>{oldPrice}</dd></div>}
-                    {offer && <div><dt>Teklif / indirim</dt><dd>{offer}</dd></div>}
-                    <div><dt>Çağrı</dt><dd className="font-semibold">{ctaText}</dd></div>
-                    {dateRange && <div><dt>Kampanya tarihi</dt><dd>{dateRange}</dd></div>}
-                    {deliveryInfo && <div><dt>Teslimat</dt><dd>{deliveryInfo}</dd></div>}
+                    {price && <div><dt className="text-xs text-[#667781]">Fiyat</dt><dd className="font-semibold">{/(\d+)/.test(price) && !/(tl|₺|\$|€)/i.test(price) ? `${price} TL` : price}</dd></div>}
+                    {oldPrice && <div><dt className="text-xs text-[#667781]">Eski fiyat</dt><dd className="line-through text-[#667781]">{/(\d+)/.test(oldPrice) && !/(tl|₺|\$|€)/i.test(oldPrice) ? `${oldPrice} TL` : oldPrice}</dd></div>}
+                    {offer && <div><dt className="text-xs text-[#667781]">Teklif / indirim</dt><dd>{offer}</dd></div>}
+                    <div><dt className="text-xs text-[#667781]">Çağrı</dt><dd className="font-semibold">{ctaText}</dd></div>
+                    {dateRange && <div><dt className="text-xs text-[#667781]">Kampanya tarihi</dt><dd>{dateRange}</dd></div>}
+                    {deliveryInfo && (
+                      <div>
+                        <dt className="text-xs text-[#667781]">
+                          {/taksit|kredi\s*kart|kart|peşin|havale|ödeme/i.test(deliveryInfo) ? 'Ödeme / Taksit' : 'Teslimat'}
+                        </dt>
+                        <dd>{deliveryInfo}</dd>
+                      </div>
+                    )}
                   </dl>
                   <div className="rounded-lg border border-[#e9edef] bg-white p-3 space-y-2">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-[#667781]">Logo ve Ürün Kontrolü</span>
