@@ -8,3 +8,15 @@ export function canReviewImage(input: { orgId: string; creativeId: string; recei
     r.storagePath === input.storagePath && String(input.storagePath || '').startsWith(`${input.orgId}/`) &&
     ['image/png','image/jpeg','image/webp'].includes(r.mimeType)
 }
+
+/** Ready status alone cannot substitute for the explicit review of V3 bytes. */
+export function isImageReviewApproved(payload: any): boolean {
+  if (payload?.creativeDirectorVersion !== 'V3') return true
+  const review = payload.imageHumanReview
+  const receipt = payload.imageOutputReceipt
+  return !!review && review.source === 'CUSTOMER_EXPLICIT_REVIEW' &&
+    review.identityConfirmed === true && review.commerceConfirmed === true &&
+    typeof review.reviewerId === 'string' && review.reviewerId.length > 0 &&
+    Number.isFinite(Date.parse(review.reviewedAt)) && receipt?.decodedImage === true &&
+    /^[a-f0-9]{64}$/i.test(receipt.sha256 || '') && review.sha256 === receipt.sha256
+}

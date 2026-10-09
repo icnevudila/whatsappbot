@@ -48,6 +48,10 @@ Fresh authenticated production Browser Use: Ayvazoğlu /icerik/yeni selected can
 
 ## Evidence classification
 
+All 29 root-workspace TypeScript checks passed. Channel suites passed 131 tests across 21 groups; contract/mock tests are not live external-channel delivery proof. Candidate pushed at 02debeec20e60264698dad0eb4dc4a142aec7e9a; Vercel preview dpl_CPNELC5eNF4FfbmBGa64snNbVwHT is QUEUED, not live acceptance. Main production remains unchanged by this agent.
+
+Read-only production database preflight via the running AI-control PostgreSQL client returned zero duplicate active creative.render groups. Unique index remains candidate-only; preflight is not evidence it has been applied. Runtime resource usage varies substantially with other active work; do not restart/replace shared workers during that work.
+
 Security finding: an existing local SSH helper in the original checkout contains a plaintext server credential. The value is excluded from this ledger and candidate changes. Tracking/exposure scope and rotation closure require investigation; SECURITY_RELEASE_GATE_CLOSED cannot pass on deletion alone. Do not reuse or publish that credential.
 
 Additional checks: WhatsApp service 54/54 tests PASS; admin/panel/WhatsApp TypeScript checks PASS; both gflow-engine Python test directories total 10/10 PASS. Global workspace TypeScript audit in progress. Candidate logical commits: queue 5c99aa4, physical video contract 5769e2b.

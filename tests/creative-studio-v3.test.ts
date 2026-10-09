@@ -6,7 +6,7 @@ import { campaignFactsError, parseCampaignMoney } from '../apps/customer/src/lib
 import { buildCreativePromptV3 } from '../apps/customer/src/lib/creative/director/brief-v3'
 import { compileHistoricalV5 } from '../services/creative-video-orchestrator/src/historical-v5/compiler'
 import type { CreativeSnapshot } from '../apps/customer/src/lib/creative/types'
-import { canReviewImage, imagePublicationStatus } from '../apps/customer/src/lib/creative/image-review'
+import { canReviewImage, imagePublicationStatus, isImageReviewApproved } from '../apps/customer/src/lib/creative/image-review'
 
 test('V3 images require explicit review with tenant-owned decoded receipt; legacy publication unchanged', () => {
   assert.equal(imagePublicationStatus({creativeDirectorVersion:'V3'}),'needs_review')
@@ -18,6 +18,11 @@ test('V3 images require explicit review with tenant-owned decoded receipt; legac
   assert.equal(canReviewImage({...input,receipt:{...receipt,decodedImage:false}}),false)
   assert.equal(canReviewImage({...input,receipt:{...receipt,sha256:'unknown'}}),false)
   assert.equal(canReviewImage({...input,storagePath:'org-b/image.png'}),false)
+  const payload = {creativeDirectorVersion:'V3',imageOutputReceipt:receipt,imageHumanReview:{source:'CUSTOMER_EXPLICIT_REVIEW',identityConfirmed:true,commerceConfirmed:true,reviewerId:'user-a',reviewedAt:'2026-10-09T18:00:00Z',sha256:receipt.sha256}}
+  assert.equal(isImageReviewApproved(payload),true)
+  assert.equal(isImageReviewApproved({...payload,imageHumanReview:null}),false)
+  assert.equal(isImageReviewApproved({...payload,imageHumanReview:{...payload.imageHumanReview,sha256:'b'.repeat(64)}}),false)
+  assert.equal(isImageReviewApproved({...payload,imageHumanReview:{...payload.imageHumanReview,commerceConfirmed:false}}),false)
 })
 
 test('Turkish money and discount validation fail closed before either provider', () => {
