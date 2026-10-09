@@ -227,7 +227,8 @@ export type CreativePayload = CreativeSnapshot & {
   imageSubmitIntent?: { requestId: string; gatewayUrl: string; startedAt: string } | null
   imageDirectIntent?: { requestId: string; provider: string; storagePath: string; startedAt: string } | null
   imageReconciliationRequired?: boolean
-  imageTerminalFailure?: { kind: 'PROVIDER_FAILED'; jobId: string; gatewayUrl: string }
+  lastImageJob?: import('../ai/omnistudio-image-job').ImageJobReceipt | null
+  imageTerminalFailure?: { kind: string; jobId?: string | null; gatewayUrl?: string | null; error?: string; queuedAt?: string } | null
   title?: string
   requestKey?: string
   generatedPrompt?: string | null

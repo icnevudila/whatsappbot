@@ -374,7 +374,7 @@ export async function processCreativeGeneration(
       const update = await supabase.from('creatives').update({
         status: imagePublicationStatus(payload), error: null, storage_path: storagePath, public_url: url.publicUrl,
         width: image.width || null, height: image.height || null,
-        payload: { ...payload, imageJob: null, provider: 'omnistudio', outputSha256: storedReceipt.sha256,
+        payload: { ...payload, lastImageJob: payload.imageJob, imageJob: null, provider: 'omnistudio', outputSha256: storedReceipt.sha256,
           campaignMessage: payload.campaignMessage || (asSnapshot(payload) ? generateCampaignWhatsAppMessage(deriveVerifiedCampaignData(asSnapshot(payload)!)) : null),
           imageOutputReceipt: {orgId:creative.org_id,creativeId,jobId:payload.imageJob.id,sha256:storedReceipt.sha256,size:storedReceipt.size,
             mimeType:storedReceipt.mimeType,width:storedReceipt.width,height:storedReceipt.height,decodedImage:true,storagePath,
@@ -389,7 +389,13 @@ export async function processCreativeGeneration(
         await supabase.from('creatives').update({
           status: 'failed',
           error: reconciliationMsg,
-          payload: { ...payload, imageReconciliationRequired: true, imageJob: null },
+          payload: {
+            ...payload,
+            imageReconciliationRequired: true,
+            lastImageJob: payload.imageJob,
+            imageTerminalFailure: { kind: 'RECONCILIATION_REQUIRED', jobId: payload.imageJob.id, gatewayUrl: payload.imageJob.gatewayUrl, queuedAt: payload.imageJob.queuedAt, error: reconciliationMsg },
+            imageJob: null,
+          },
         }).eq('id', creativeId).eq('org_id', creative.org_id)
         return {
           ok: false,
@@ -412,7 +418,8 @@ export async function processCreativeGeneration(
           error: message,
           payload: {
             ...payload,
-            imageTerminalFailure: { kind: 'PROVIDER_FAILED', jobId: payload.imageJob.id, gatewayUrl: payload.imageJob.gatewayUrl },
+            lastImageJob: payload.imageJob,
+            imageTerminalFailure: { kind: 'PROVIDER_FAILED', jobId: payload.imageJob.id, gatewayUrl: payload.imageJob.gatewayUrl, error: message },
             imageSubmissionUncertain: false,
             imageJob: null,
           },
@@ -426,7 +433,13 @@ export async function processCreativeGeneration(
         await supabase.from('creatives').update({
           status: 'failed',
           error: timeoutMsg,
-          payload: { ...payload, imageReconciliationRequired: true, imageJob: null },
+          payload: {
+            ...payload,
+            imageReconciliationRequired: true,
+            lastImageJob: payload.imageJob,
+            imageTerminalFailure: { kind: 'TIMEOUT_RECONCILIATION_REQUIRED', jobId: payload.imageJob.id, gatewayUrl: payload.imageJob.gatewayUrl, queuedAt: payload.imageJob.queuedAt, error: timeoutMsg },
+            imageJob: null,
+          },
         }).eq('id', creativeId).eq('org_id', creative.org_id)
         return { ok: false, pending: false, error: timeoutMsg }
       }
