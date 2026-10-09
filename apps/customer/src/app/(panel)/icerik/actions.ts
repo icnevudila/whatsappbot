@@ -287,7 +287,7 @@ export async function startCreativeGeneration(
       await kickGeneration(existing.id, authContext)
     }
     revalidateLibrary(existing.id)
-    redirect(`/icerik/${existing.id}`)
+    return { id: existing.id, ok: 'Görsel üretimi devam ediyor.' }
   }
 
   if ([kitRes, orgRowRes, productRowsRes, imageRowsRes, phonesRes, socialsRes].some(result => result.error)) {
