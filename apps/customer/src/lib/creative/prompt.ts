@@ -1,6 +1,7 @@
 import type { CreativeSnapshot, TemplateFamily } from './types'
 import { buildCreativePromptV3 } from './director/brief-v3'
 import { CREATIVE_FORMATS, CREATIVE_STYLES, TEMPLATE_FAMILIES, VARIATION_PRESETS } from './types'
+import { formatPriceText } from '../ai/campaign-message'
 
 const STYLE_HINT: Record<string, string> = {
   product_hero: 'Modern, clean commercial design with clear type hierarchy and generous spacing around the authentic product.',
@@ -497,9 +498,11 @@ export function buildLegacySimpleCreativePrompt(
   }
   if (isSalesOffer) {
     if (verified.price) {
+      const priceFormatted = formatPriceText(verified.price)
+      const oldPriceFormatted = verified.oldPrice ? formatPriceText(verified.oldPrice) : null
       const discountPart = verified.discount ? ` · Discount: ${verified.discount}` : ''
       commercialCoreLines.push(
-        `- Mandatory Campaign Price & Offer: ${verified.price}${verified.oldPrice ? ` (was ${verified.oldPrice})` : ''}${discountPart}`,
+        `- Mandatory Campaign Price & Offer: ${priceFormatted}${oldPriceFormatted ? ` (was ${oldPriceFormatted})` : ''}${discountPart}`,
       )
     } else if (verified.offer) {
       commercialCoreLines.push(`- Mandatory Campaign Offer: ${verified.offer}`)
@@ -515,7 +518,17 @@ export function buildLegacySimpleCreativePrompt(
     supportingLines.push(`Key verified selling point: ${verified.primaryBenefits.slice(0, 2).join(' · ')}`)
   }
   if (verified.deliveryFact) {
-    supportingLines.push(`Delivery terms: ${verified.deliveryFact}`)
+    const fact = verified.deliveryFact.trim()
+    const lower = fact.toLowerCase()
+    let termLabel = 'Delivery terms'
+    if (lower.includes('taksit') || lower.includes('kredi kart') || lower.includes('kart') || lower.includes('peşin') || lower.includes('havale') || lower.includes('ödeme')) {
+      termLabel = 'Payment / Installment terms'
+    } else if (lower.includes('teslim') || lower.includes('kargo') || lower.includes('sevkiyat') || lower.includes('nakliye') || lower.includes('şantiye') || lower.includes('adrese')) {
+      termLabel = 'Delivery terms'
+    } else {
+      termLabel = 'Key benefit'
+    }
+    supportingLines.push(`${termLabel}: ${fact}`)
   }
   if (verified.contactLines.length) {
     supportingLines.push(`Phone/WhatsApp: ${verified.contactLines.join(' · ')}`)
