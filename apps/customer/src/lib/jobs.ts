@@ -1,5 +1,6 @@
 import type { JobPayloadMap, JobType } from '@wa/shared'
 import { requireActiveOrg } from '@/lib/org'
+import { enqueueCreativeRender } from '@/lib/creative/enqueue-render'
 
 /** Kota / askı kapısı — gönderim ve kampanya başlat/devam. */
 const SEND_GATED = new Set<JobType>([
@@ -77,19 +78,12 @@ export async function enqueueJob<T extends JobType>(options: {
     if (options.type === 'creative.render') {
       const creativeId = (options.payload as any)?.creative_id
       if (creativeId) {
-        const { data: existingJob } = await supabase
-          .from('jobs')
-          .select('id')
-          .eq('org_id', org.id)
-          .eq('type', 'creative.render')
-          .contains('payload', { creative_id: creativeId })
-          .in('status', ['pending', 'claimed', 'running'])
-          .limit(1)
-          .maybeSingle()
-        if (existingJob?.id != null) {
-          return { id: String(existingJob.id), error: null }
-        }
+        return enqueueCreativeRender(supabase, {
+          orgId: org.id, userId, creativeId, payload: options.payload,
+          priority: options.priority ?? 100,
+        })
       }
+      return { id: null, error: 'Üretim kaydı zorunludur.' }
     }
 
     const { data, error } = await supabase
