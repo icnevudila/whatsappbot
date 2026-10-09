@@ -1,0 +1,4 @@
+Source: https://github.com/n3r4zzurr0/svg-spinners
+Commit: abfa05c49acf005b8b1e0ef8eb25a67a7057eb20
+License: MIT; LICENSE included. SVG files unmodified.
+
