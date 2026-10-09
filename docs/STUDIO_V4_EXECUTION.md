@@ -48,6 +48,8 @@ Fresh authenticated production Browser Use: Ayvazoğlu /icerik/yeni selected can
 
 ## Evidence classification
 
+Extended embedded PostgreSQL queue test: 10, 50, 100 and 300 independent tenant groups submitted the same creative twice per tenant. Each stage accepted exactly one row per tenant, rejected the duplicate with actual 23505, and left zero duplicate active groups. Full targeted suite remains 5/5 PASS. This verifies database uniqueness at these counts, not distributed connections, real worker throughput, Flow account capacity or customer load guarantees.
+
 All 29 root-workspace TypeScript checks passed. Channel suites passed 131 tests across 21 groups; contract/mock tests are not live external-channel delivery proof. Candidate pushed at 02debeec20e60264698dad0eb4dc4a142aec7e9a; Vercel preview dpl_CPNELC5eNF4FfbmBGa64snNbVwHT is QUEUED, not live acceptance. Main production remains unchanged by this agent.
 
 Read-only production database preflight via the running AI-control PostgreSQL client returned zero duplicate active creative.render groups. Unique index remains candidate-only; preflight is not evidence it has been applied. Runtime resource usage varies substantially with other active work; do not restart/replace shared workers during that work.

@@ -90,5 +90,14 @@ test('real embedded PostgreSQL: concurrent render INSERTs, tenant isolation and 
     await insert(orgA)
     await assert.rejects(insert(orgA),(e:any)=>e.code==='23505')
     assert.equal((await db.query("select * from jobs where status='pending' and org_id=$1",[orgA])).rows.length,1)
+    // Queue constraints at target tenant counts; no worker/provider capacity claim.
+    for (const tenantCount of [10,50,100,300]) {
+      const orgs=Array.from({length:tenantCount},(_,i)=>`00000000-0000-4000-8000-${String(tenantCount*1000+i).padStart(12,'0')}`)
+      const results=await Promise.allSettled(orgs.flatMap(org=>[insert(org),insert(org)]))
+      assert.equal(results.filter(r=>r.status==='fulfilled').length,tenantCount)
+      assert.equal(results.filter(r=>r.status==='rejected' && (r.reason as any).code==='23505').length,tenantCount)
+      const duplicates=await db.query("select org_id from jobs where status='pending' group by org_id,payload->>'creative_id' having count(*)>1")
+      assert.equal(duplicates.rows.length,0)
+    }
   } finally { await db.close() }
 })
