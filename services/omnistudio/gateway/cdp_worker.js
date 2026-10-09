@@ -1013,6 +1013,7 @@ async function executeChatGPTJob(tab, job) {
             const maxRefWait = 60_000;
             let attachmentsVerified = false;
             let retriedDispatch = false;
+            let lastAttachmentObservation = null;
 
             while (Date.now() - refUploadStart < maxRefWait) {
               const hasThumb = await cdp.send('Runtime.evaluate', {
@@ -1021,6 +1022,9 @@ async function executeChatGPTJob(tab, job) {
               }).catch(() => ({ result: { value: false } }));
 
               const res = hasThumb.result?.value;
+              lastAttachmentObservation = res && typeof res === 'object'
+                ? { count: res.count, ready: res.ready }
+                : null;
               if (res && res.count === tempRefPaths.length && res.ready) {
                 composerAttachmentCount = res.count;
                 attachmentsVerified = true;
@@ -1042,7 +1046,20 @@ async function executeChatGPTJob(tab, job) {
 
               await sleep(250);
             }
-            if (!attachmentsVerified) throw new Error('REFERENCE_ATTACHMENT_FAILED: all requested references were not confirmed in the composer');
+            if (!attachmentsVerified) {
+              // Count only the current composer, never infer success from uploaded files or history.
+              console.error(JSON.stringify({
+                event: 'image_reference_attachment_timeout',
+                job_id: job.id || job.jobId,
+                worker_id: WORKER_ID,
+                expected_reference_count: tempRefPaths.length,
+                observed_attachment_count: lastAttachmentObservation?.count ?? null,
+                observed_attachments_ready: lastAttachmentObservation?.ready ?? null,
+                redispatched: retriedDispatch,
+                elapsed_ms: Date.now() - refUploadStart,
+              }));
+              throw new Error('REFERENCE_ATTACHMENT_FAILED: all requested references were not confirmed in the composer');
+            }
             workerTiming.mark('reference_upload_ms', refUploadStart);
           }
         } catch (uploadErr) {
