@@ -83,3 +83,5 @@ Latest user additions: inspect every service; explicitly prove Flow and Gemini r
 8. Free regression, failure injection, database/worker/storage integration and 10–300 target load tests with explicitly mock providers.
 9. Five separate approved live acceptance runs only after free gates pass.
 10. Modular commits, clean candidate, rollback proof, 21 independent V4 QA statuses and release approval plan.
+
+2026-10-09 20:07 UTC heartbeat: candidate preview at SHA 67c4b456f307321dd876c35b294ba8d3209b8a17 is READY (dpl_5Mh15w9DNgpn6zABpJ6CfLdipC2r). Actual Browser Use navigation to its /icerik/yeni redirects to Vercel login because deployment protection requires an authenticated Vercel session. No protection setting was weakened and no bypass was attempted. Candidate authenticated Wizard acceptance remains NOT_VERIFIED; READY does not resolve the production planner timeout. User Vercel sign-in is needed for this browser acceptance path. Independent source/regression work remains available. Latest local queue test commit f349dbe has not been pushed; main production has not been promoted.
