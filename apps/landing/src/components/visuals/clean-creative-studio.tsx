@@ -121,10 +121,9 @@ export function CleanCreativeStudio() {
     return () => clearInterval(timer)
   }, [isPaused, activeIndex])
 
-  // Video değişiminde yeniden başlat
+  // Video değişiminde oynatmayı garantile
   useEffect(() => {
     if (videoRef.current) {
-      videoRef.current.currentTime = 0
       videoRef.current.play().catch(() => {})
     }
   }, [activeIndex])
@@ -240,18 +239,28 @@ export function CleanCreativeStudio() {
             </div>
 
             <div className="relative aspect-[9/16] w-full max-w-[340px] mx-auto rounded-2xl overflow-hidden border border-slate-900 bg-black shadow-2xl">
-              <video
-                ref={videoRef}
-                key={current.video}
-                src={current.video}
-                poster={current.poster}
-                autoPlay
-                loop
-                muted
-                playsInline
-                preload="metadata"
-                className="w-full h-full object-cover"
-              />
+              {CREATIVE_ITEMS.map((item, idx) => {
+                const isActive = idx === activeIndex
+                return (
+                  <video
+                    key={item.id}
+                    ref={(el) => {
+                      if (isActive && el) {
+                        videoRef.current = el
+                      }
+                    }}
+                    src={item.video}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    preload="auto"
+                    className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ease-in-out ${
+                      isActive ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
+                    }`}
+                  />
+                )
+              })}
 
               {/* Video Header Branding Overlay */}
               <div className="absolute top-0 left-0 right-0 z-10 p-3.5 bg-gradient-to-b from-black/80 via-black/40 to-transparent flex items-center justify-between">
