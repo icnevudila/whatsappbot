@@ -180,6 +180,8 @@ export type CreativeSnapshot = {
   urgencyInfo?: string | null
   primaryBenefits?: string[] | null
   campaignMessage?: string | null
+  customHeadline?: string | null
+  customSupporting?: string | null
 }
 
 export type CreativePayload = CreativeSnapshot & {
