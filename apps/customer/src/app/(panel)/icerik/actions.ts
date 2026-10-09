@@ -698,7 +698,7 @@ export async function retryCreative(id: string): Promise<CreativeActionState> {
     }
     const { data: retried, error: retryError } = await supabase
       .from('creatives')
-      .update({ status: 'pending', error: null, payload: { ...((data.payload || {}) as Record<string, unknown>), imageJob: null, imageSubmitIntent: null, imageSubmissionUncertain: false, imageAttempt: randomBytes(16).toString('hex') } })
+      .update({ status: 'pending', error: null, payload: { ...((data.payload || {}) as Record<string, unknown>), imageJob: null, imageSubmitIntent: null, imageSubmissionUncertain: false, imageAttempt: randomBytes(16).toString('hex'), imageAttemptStartedAt: new Date().toISOString() } })
       .eq('id', trimmed)
       .eq('org_id', org.id)
       .eq('status', data.status)

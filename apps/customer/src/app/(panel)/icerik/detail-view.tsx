@@ -417,10 +417,10 @@ export function CreativeDetail({
     return () => clearInterval(timer)
   }, [spinning, creative.productionStartedAt, creative.createdAt])
 
+  const shouldObserveRender = creative.status === 'pending' || creative.status === 'rendering' ||
+    Boolean(creative.status === 'failed' && creative.recoverableImageJob)
   useEffect(() => {
-    if (!canManage) return
-    const recoverableImage = creative.status === 'failed' && creative.recoverableImageJob
-    if (creative.status !== 'pending' && creative.status !== 'rendering' && !recoverableImage) return
+    if (!canManage || !shouldObserveRender) return
     if (kicked.current) return
     kicked.current = true
     setBusyRender(true)
@@ -484,7 +484,7 @@ export function CreativeDetail({
     }
   // A pending -> rendering refresh must not tear down the owning poll loop.
   // kicked remains true after cleanup, so a status dependency silently stopped recovery.
-  }, [canManage, creative.id, router])
+  }, [canManage, creative.id, router, shouldObserveRender])
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient()

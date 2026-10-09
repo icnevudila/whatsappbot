@@ -63,7 +63,8 @@ export default async function CreativeDetailPage({
     source: row.source,
     generationType: row.generation_type,
     createdAt: row.created_at,
-    productionStartedAt: typeof payload?.imageJob?.queuedAt === 'string' ? payload.imageJob.queuedAt : row.created_at,
+    productionStartedAt: typeof payload?.imageJob?.queuedAt === 'string' ? payload.imageJob.queuedAt
+      : typeof payload?.imageAttemptStartedAt === 'string' ? payload.imageAttemptStartedAt : row.created_at,
     error: row.error,
     parentId: row.parent_id,
     brandName: brandName ?? null,
