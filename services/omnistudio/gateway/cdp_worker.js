@@ -1151,17 +1151,41 @@ async function executeChatGPTJob(tab, job) {
       } catch (evalErr) {
         if (evalErr.message.includes('WebSocket not open') || evalErr.message.includes('Target closed') || evalErr.message.includes('Connection closed')) {
           console.error(`[CDP Worker: ${WORKER_ID}] WebSocket koptu:`, evalErr.message);
-          if (submissionActivated && observationReconnects < 2) {
+          if (submissionActivated && observationReconnects < 5) {
             observationReconnects++;
-            cdp.close();
-            cdp = await reconnectImageObservation({ targetId: tab.id,
-              listTargets: async () => {
-                const response = await globalThis.fetch(`${CDP_HTTP}/json/list`, { signal: AbortSignal.timeout(8000) });
-                if (!response.ok) throw new Error('IMAGE_OBSERVATION_TARGET_LIST_FAILED');
-                return response.json();
-              }, connect: createCdpSession });
-            console.log(`[CDP Worker: ${WORKER_ID}] Observation reconnected for job ${job.id}, target ${tab.id}; submission not repeated.`);
-            continue;
+            try {
+              cdp.close();
+            } catch (_) {}
+            await sleep(1000);
+            try {
+              cdp = await reconnectImageObservation({
+                targetId: tab.id,
+                listTargets: async () => {
+                  const http = require('http');
+                  return new Promise((res, rej) => {
+                    const req = http.get(`${CDP_HTTP}/json/list`, { timeout: 8000 }, (resp) => {
+                      let raw = '';
+                      resp.on('data', chunk => { raw += chunk; });
+                      resp.on('end', () => {
+                        try { res(JSON.parse(raw)); } catch (e) { rej(e); }
+                      });
+                    });
+                    req.on('error', rej);
+                    req.on('timeout', () => { req.destroy(); rej(new Error('CDP_TARGET_LIST_TIMEOUT')); });
+                  });
+                },
+                connect: createCdpSession
+              });
+              console.log(`[CDP Worker: ${WORKER_ID}] Observation reconnected (attempt ${observationReconnects}) for job ${job.id}, target ${tab.id}; submission not repeated.`);
+              continue;
+            } catch (reconErr) {
+              console.error(`[CDP Worker: ${WORKER_ID}] Observation reconnect attempt ${observationReconnects} failed:`, reconErr.message);
+              if (observationReconnects < 5) {
+                await sleep(1500);
+                continue;
+              }
+              throw reconErr;
+            }
           }
           throw evalErr;
         }

@@ -12,7 +12,8 @@ function readCurrentTurn(prompt, baseline) {
   const before = new Set(baseline?.userKeys || []);
   const users = Array.from(document.querySelectorAll('[data-message-author-role="user"], [data-chatgpt-search-unit-key$=":user"]'));
   const userKey = u => u.getAttribute('data-message-id') || u.getAttribute('data-chatgpt-search-message-ids') || u.getAttribute('data-chatgpt-search-unit-key') || u.id || u.innerText;
-  const user = users.filter(u => !before.has(userKey(u)) && expected && normalize(u.innerText).includes(expected)).pop();
+  const expectedPrefix = expected ? expected.slice(0, 60) : '';
+  const user = users.filter(u => !before.has(userKey(u)) && (!expectedPrefix || normalize(u.innerText).includes(expectedPrefix))).pop();
   if (!user) return { ready: false, candidateCount: 0, hasNewMsg: false, text: '', foundImgSrc: null, isGenerating: true };
   let assistants = Array.from(document.querySelectorAll('[data-message-author-role="assistant"]'));
   if (!assistants.length) assistants = Array.from(document.querySelectorAll('[data-chatgpt-search-unit-key$=":assistant"]'));
