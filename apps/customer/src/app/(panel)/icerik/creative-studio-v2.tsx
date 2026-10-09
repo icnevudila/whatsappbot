@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Button, Card, Field, Input, Notice, Textarea } from '@/components/ui'
 import { Stepper } from '@/components/stepper'
 import { Icon } from '@/components/icon'
@@ -28,6 +29,8 @@ import {
   type TemplateFamily,
 } from '@/lib/creative/types'
 import { adaptLegacyDraftToV2, mapPresetToLegacyVideoFormat } from '@/lib/creative/v2/adapter'
+import { resolveSubmissionIdentity } from '@/lib/creative/submission-identity'
+import { ownsStudioDraft } from '@/lib/creative/draft-ownership'
 import {
   MAX_SPOKEN_WORDS,
   VIDEO_ENGINE_MODE,
@@ -39,70 +42,19 @@ import { videoFailureUserMessage } from '@/lib/creative/job-failure-message'
 import type { JobUserViewModel, ProductCard, WizardBootstrap } from './wizard-types'
 
 const STORAGE_KEY_PREFIX = 'wa.customer.creative-studio.v2'
-export const AI_PLANNER_TIMEOUT_MS = 5000
-export const VIDEO_PLANNER_TIMEOUT_MS = 3000
+export const AI_PLANNER_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_AI_PLANNER_TIMEOUT_MS) || 35000
+export const VIDEO_PLANNER_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_VIDEO_PLANNER_TIMEOUT_MS) || 35000
 
-export function generateDeterministicLocalCopy({
-  productName,
-  brandName,
-  objective,
-  campaignDetail,
-  offer,
-  mediaType,
-}: {
-  productName: string
-  brandName: string
-  objective?: string
-  campaignDetail?: string
-  offer?: string
-  mediaType: 'IMAGE' | 'VIDEO'
-}): {
-  headline: string
-  supportingLine: string
-  cta: string
-  voiceover: string
-} {
-  const pName = productName.trim() || 'Ürünümüz'
-  const bName = brandName.trim() || 'İşletmemiz'
-  const detail = campaignDetail?.trim() || ''
-  const off = offer?.trim() || ''
-
-  const headline = off
-    ? `${bName} ${pName} — ${off}`
-    : detail
-      ? `${bName} ${pName} — ${detail.slice(0, 45)}`
-      : `${bName} ${pName}`
-
-  const supportingLine = detail
-    ? `${detail}. Detaylar ve sipariş için iletişime geçin.`
-    : off
-      ? `${off} fırsatıyla. Detaylı bilgi için bizimle iletişime geçin.`
-      : `Ürünü incelemek ve ayrıntılı bilgi almak için bizimle iletişime geçin.`
-
-  const cta = 'Hemen İnceleyin'
-
-  // Voiceover strictly factual: 8 to 14 words, finishes well before 5.5s
-  const voiceover = off
-    ? `${bName} ${pName} ürününü ${off} fırsatıyla keşfedin. Detaylı bilgi için iletişime geçin.`
-    : detail
-      ? `${bName} ${pName} ürününü keşfedin. ${detail}. İncelemek için hemen iletişime geçin.`
-      : `${bName} ${pName} ürününü keşfedin. Ayrıntılı bilgi ve sipariş için bizimle iletişime geçin.`
-
-  return {
-    headline,
-    supportingLine,
-    cta,
-    voiceover,
-  }
-}
+export { generateDeterministicLocalCopy } from '@/lib/creative/v2/copy-generator'
+import { generateDeterministicLocalCopy } from '@/lib/creative/v2/copy-generator'
 
 type Step = 'product_goal' | 'creative_direction' | 'review_generate'
 
 
 const STUDIO_STEPS: { id: Step; label: string }[] = [
-  { id: 'product_goal', label: '1. Ürün & Hedef' },
-  { id: 'creative_direction', label: '2. Reklam Taslağı' },
-  { id: 'review_generate', label: '3. Onay & Üretim' },
+  { id: 'product_goal', label: '1. İşletme ve Ürün' },
+  { id: 'creative_direction', label: '2. Görsel & Reklam Metni' },
+  { id: 'review_generate', label: '3. Son Kontrol & Üretim' },
 ]
 
 export function CreativeStudioV2({
@@ -116,10 +68,26 @@ export function CreativeStudioV2({
   initialDerivedCreativeId?: string | null
   initialJobId?: string | null
 }) {
+  const router = useRouter()
   const orgKey = `${STORAGE_KEY_PREFIX}.${data.org.id}`
+  const restoredDraftKeyRef = useRef<string | null>(null)
+  const submissionLockRef = useRef(false)
+  const submissionIdentityRef = useRef<{ fingerprint: string; id: string } | null>(null)
+  const stableSubmissionId = (payload: Record<string, unknown>, kind: 'image' | 'video') => {
+    let storage: Storage | null = null
+    try { storage = window.localStorage } catch { /* use the retained in-memory identity */ }
+    const record = resolveSubmissionIdentity({
+      fingerprint: JSON.stringify({ kind, ...payload }), storageKey: `${orgKey}.submission.${kind}`,
+      storage, previous: submissionIdentityRef.current, createId: () => crypto.randomUUID(),
+    })
+    submissionIdentityRef.current = record
+    return record.id
+  }
 
   // Step state
   const [step, setStep] = useState<Step>('product_goal')
+  const [draftRestoreWarning, setDraftRestoreWarning] = useState<string | null>(null)
+  const [draftHydrated, setDraftHydrated] = useState(false)
 
   // Step 1: Product & Goal
   const [mediaType, setMediaType] = useState<MediaType>(initialMediaType)
@@ -141,6 +109,9 @@ export function CreativeStudioV2({
   const [supportingLine, setSupportingLine] = useState('')
   const [ctaText, setCtaText] = useState('Hemen İnceleyin')
   const [spokenVoiceover, setSpokenVoiceover] = useState('')
+
+  // Copy source tracking
+  const [copySource, setCopySource] = useState<'AI' | 'DETERMINISTIC_FALLBACK' | 'USER_EDITED'>('DETERMINISTIC_FALLBACK')
 
   // Independent dirty tracking to prevent late AI responses from overwriting user edits
   const [headlineDirty, setHeadlineDirty] = useState(false)
@@ -192,7 +163,7 @@ export function CreativeStudioV2({
   const [environmentPreset, setEnvironmentPreset] = useState('auto')
   const [motionStyle, setMotionStyle] = useState('real_usage')
   const [subtitles, setSubtitles] = useState(true)
-  const [outro, setOutro] = useState(true)
+  const outro = true
 
   // Step 3: Production & Progress Tracking
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -200,20 +171,12 @@ export function CreativeStudioV2({
 
   // Video-specific job state
   const [activeJobId, setActiveJobId] = useState<string | null>(initialJobId || null)
-  const [jobState, setJobState] = useState<JobUserViewModel['state'] | 'IDLE'>('IDLE')
+  const [jobState, setJobState] = useState<JobUserViewModel['state'] | 'IDLE'>(initialJobId ? 'PENDING' : 'IDLE')
   const [jobViewModel, setJobViewModel] = useState<JobUserViewModel | null>(null)
   const [completedVideoUrl, setCompletedVideoUrl] = useState<string | null>(null)
   const [jobFailureMessage, setJobFailureMessage] = useState<string | null>(null)
 
-  // URL searchParams sync for direct navigation or reload
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const params = new URLSearchParams(window.location.search)
-    const urlJobId = params.get('job_id')
-    if (urlJobId && !activeJobId) {
-      setActiveJobId(urlJobId)
-    }
-  }, [activeJobId])
+  // The server supplies initialJobId on navigation and reload.
 
   // Authoritative active view model
   const activeViewModel: JobUserViewModel = useMemo(() => {
@@ -237,7 +200,7 @@ export function CreativeStudioV2({
       display_message: 'Dikey sinematik reklam filminiz aşama aşama kurgulanıyor.',
       queue_ahead_count: null,
       eta_display_text: 'Süre tahmini oluşturuluyor...',
-      can_cancel: ['PENDING', 'QUEUED'].includes(jobState),
+      can_cancel: false,
       can_leave_page: true,
     }
   }, [jobViewModel, activeJobId, jobState, data.org.id])
@@ -297,10 +260,18 @@ export function CreativeStudioV2({
 
   // Restore draft or adapt legacy draft
   useEffect(() => {
+    if (restoredDraftKeyRef.current === orgKey) return
+    const hydrationFrame = requestAnimationFrame(() => {
+    restoredDraftKeyRef.current = orgKey
     try {
       const raw = localStorage.getItem(orgKey)
       if (raw) {
         const parsed = JSON.parse(raw)
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return
+        if (!ownsStudioDraft(parsed, data.org.id, productsList.map(product => product.id))) {
+          setDraftRestoreWarning('Eski taslağın işletme ve ürün bilgileri doğrulanamadı. Lütfen reklam metnini yeniden hazırlayın.')
+          return
+        }
         const adapted = adaptLegacyDraftToV2(
           parsed,
           productsList.map((p) => p.id),
@@ -317,20 +288,45 @@ export function CreativeStudioV2({
         if (adapted.campaignCopy.oldPrice) setOldPrice(adapted.campaignCopy.oldPrice)
         if (adapted.campaignCopy.offer) setOffer(adapted.campaignCopy.offer)
         if (adapted.campaignCopy.dateRange) setDateRange(adapted.campaignCopy.dateRange)
+        if (adapted.campaignCopy.cta) setCtaText(adapted.campaignCopy.cta)
+        if (data.kits.some(kit => kit.id === adapted.advanced.brandKitId)) setBrandKitId(adapted.advanced.brandKitId!)
+        if (typeof adapted.advanced.environmentPreset === 'string') setEnvironmentPreset(adapted.advanced.environmentPreset)
+        if (typeof adapted.advanced.motionStyle === 'string') setMotionStyle(adapted.advanced.motionStyle)
+        setSubtitles(adapted.advanced.subtitles !== false)
+        if (parsed.qualityMode === 'STANDARD' || parsed.qualityMode === 'DESIGNER') setQualityMode(parsed.qualityMode)
+        if (TEMPLATE_FAMILIES.some(family => family.id === parsed.templateFamily)) setTemplateFamily(parsed.templateFamily)
+        if (['low', 'balanced', 'detailed'].includes(parsed.textDensity)) setTextDensity(parsed.textDensity)
+        if (typeof parsed.sector === 'string') setSector(parsed.sector)
+        if (typeof parsed.deliveryInfo === 'string') setDeliveryInfo(parsed.deliveryInfo)
         if (adapted.customHeadline) setHeadline(adapted.customHeadline)
         if (adapted.customSupporting) setSupportingLine(adapted.customSupporting)
         if (adapted.customVoiceover) setSpokenVoiceover(adapted.customVoiceover)
+        const restoredCopy = {
+          headline: Boolean(adapted.customHeadline), supporting: Boolean(adapted.customSupporting),
+          cta: Boolean(adapted.campaignCopy.cta), voiceover: Boolean(adapted.customVoiceover),
+        }
+        copyDirtyRef.current = restoredCopy
+        setHeadlineDirty(restoredCopy.headline)
+        setSupportingLineDirty(restoredCopy.supporting)
+        setCtaDirty(restoredCopy.cta)
+        setVoiceoverDirty(restoredCopy.voiceover)
       }
     } catch {
       /* ignore */
+    } finally {
+      setDraftHydrated(true)
     }
-  }, [orgKey, productsList])
+    })
+    return () => cancelAnimationFrame(hydrationFrame)
+  }, [orgKey, productsList, data.kits, data.org.id])
 
   // Save draft
   useEffect(() => {
+    if (!draftHydrated) return
     try {
       const draft = {
         version: 2,
+        orgId: data.org.id,
         mediaType,
         heroProductId,
         objective,
@@ -346,13 +342,16 @@ export function CreativeStudioV2({
         motionStyle,
         subtitles,
         outro,
+        qualityMode, templateFamily, textDensity, sector, deliveryInfo,
       }
       localStorage.setItem(orgKey, JSON.stringify(draft))
     } catch {
       /* ignore */
     }
   }, [
+    draftHydrated,
     orgKey,
+    data.org.id,
     mediaType,
     heroProductId,
     objective,
@@ -372,6 +371,7 @@ export function CreativeStudioV2({
     motionStyle,
     subtitles,
     outro,
+    qualityMode, templateFamily, textDensity, sector, deliveryInfo,
   ])
 
   // Call Custom AI Planner (non-blocking, advisory with 5s timeout)
@@ -420,6 +420,7 @@ export function CreativeStudioV2({
       const plan: CreativePlanV2 = json.plan
       if (controller.signal.aborted || activePlanControllerRef.current !== controller) return
       setCreativePlan(plan)
+      setCopySource('AI')
 
       // NEVER OVERWRITE USER EDITS: Only update untouched fields unless user explicitly clicked "Farklı Öner"
       if (copyEditsRef.current.headline === editsAtRequest.headline && (forceRefresh || !copyDirtyRef.current.headline)) {
@@ -442,14 +443,14 @@ export function CreativeStudioV2({
         if (forceRefresh) copyDirtyRef.current.voiceover = false
         if (forceRefresh) setVoiceoverDirty(false)
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (activePlanControllerRef.current !== controller) return
-      if (err?.name === 'AbortError' || controller.signal.aborted) {
+      if ((err instanceof Error && err.name === 'AbortError') || controller.signal.aborted) {
         console.warn('[CreativeStudioV2] Plan request timed out or cancelled (>5s budget)')
         setPlanError('AI_TIMEOUT')
       } else {
         console.warn('[CreativeStudioV2] Plan error:', err)
-        setPlanError(err?.message || 'AI_ERROR')
+        setPlanError(err instanceof Error ? err.message : 'AI_ERROR')
       }
     } finally {
       clearTimeout(timeoutId)
@@ -539,7 +540,8 @@ export function CreativeStudioV2({
 
   // SUBMIT HANDLER: Image or Video
   const handleCreateCreative = async () => {
-    if (!selectedProduct || !hasProduct || !hasLogo) return
+    if (submissionLockRef.current || !selectedProduct || !hasProduct || !hasLogo) return
+    submissionLockRef.current = true
 
     setIsSubmitting(true)
     setSubmitError(null)
@@ -549,7 +551,7 @@ export function CreativeStudioV2({
       try {
         const payloadDraft = {
           version: 2,
-          requestKey: crypto.randomUUID(),
+          requestKey: '',
           generationType: initialDerivedCreativeId ? 'derived' : 'new',
           baseCreativeId: initialDerivedCreativeId || null,
           brief: headline
@@ -569,6 +571,10 @@ export function CreativeStudioV2({
               include: { name: true, image: true, description: true, boxContents: true, price: true, promo: true },
             },
           },
+          phoneIds: data.phones.map(contact => contact.id),
+          socialIds: data.socials.map(contact => contact.id),
+          address: data.org.address,
+          website: data.org.websiteHint,
           useLogo: true,
           brandKitId: defaultKit?.id || '',
           cta: ctaText,
@@ -586,16 +592,22 @@ export function CreativeStudioV2({
         }
 
         const form = new FormData()
+        payloadDraft.requestKey = stableSubmissionId(payloadDraft, 'image')
         form.set('draft', JSON.stringify(payloadDraft))
 
         const res = await startCreativeGeneration(null, form)
         if (res?.error) {
           throw new Error(res.error)
         }
-      } catch (err: any) {
-        setSubmitError(err?.message || 'Görsel üretimi başlatılamadı.')
+        if (res?.id) {
+          router.push(`/icerik/${res.id}`)
+          return
+        }
+      } catch (err: unknown) {
+        setSubmitError(err instanceof Error ? err.message : 'Görsel üretimi başlatılamadı.')
         setImagePending(false)
       } finally {
+        submissionLockRef.current = false
         setIsSubmitting(false)
       }
     } else {
@@ -603,11 +615,12 @@ export function CreativeStudioV2({
       if (voWords === 0 || voWords > MAX_SPOKEN_WORDS) {
         setSubmitError(`Türkçe seslendirme metni 1–${MAX_SPOKEN_WORDS} kelime olmalıdır.`)
         setIsSubmitting(false)
+        submissionLockRef.current = false
         return
       }
 
       try {
-        const generationId = crypto.randomUUID()
+        const generationId = ''
         const videoAdFormat = mapPresetToLegacyVideoFormat(stylePreset)
         const fidelityContract = defaultFidelityContract(data.org.name || '', selectedProduct.name)
         const promptBlock = buildVeoVoiceoverPromptBlock(spokenVoiceover.trim())
@@ -634,6 +647,11 @@ export function CreativeStudioV2({
           outro: outro ? 'auto' : 'off',
           creativeEngineMode: VIDEO_ENGINE_MODE,
           requestedProvider: VIDEO_REQUESTED_PROVIDER,
+          brandKitId: defaultKit?.id || '',
+          campaignContext: {
+            price, oldPrice, offer, dateRange, deliveryInfo, sector, headline, supportingLine,
+            campaignDetail, objective, stylePreset, templateFamily, textDensity,
+          },
           promotionType: 'existing_product',
           creativeIdea: headline || `${selectedProduct.name} Tanıtımı`,
           speechTimeline: [
@@ -653,6 +671,10 @@ export function CreativeStudioV2({
             product_description: selectedProduct.description || undefined,
             offer: offer || undefined,
             offer_verified: Boolean(offer),
+            price: price || undefined,
+            old_price: oldPrice || undefined,
+            campaign_date: dateRange || undefined,
+            delivery: deliveryInfo || undefined,
             cta: ctaText || 'Detaylar için iletişime geçin',
             approved_spoken_line: spokenVoiceover.trim(),
             verified_claims: [selectedProduct.name],
@@ -673,6 +695,7 @@ export function CreativeStudioV2({
           referenceAssets: [],
         }
 
+        videoPayload.generationId = stableSubmissionId(videoPayload, 'video')
         const res = await fetch('/api/ai-media/jobs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -685,15 +708,18 @@ export function CreativeStudioV2({
         }
 
         setActiveJobId(json.job_id)
+        submissionIdentityRef.current = null
+        try { localStorage.removeItem(`${orgKey}.submission.video`) } catch { /* backend acceptance already confirmed */ }
         setJobState('PENDING')
         if (typeof window !== 'undefined') {
           const url = new URL(window.location.href)
           url.searchParams.set('job_id', json.job_id)
           window.history.pushState({}, '', url.toString())
         }
-      } catch (err: any) {
-        setSubmitError(err?.message || 'Video başlatılamadı.')
+      } catch (err: unknown) {
+        setSubmitError(err instanceof Error ? err.message : 'Video başlatılamadı.')
       } finally {
+        submissionLockRef.current = false
         setIsSubmitting(false)
       }
     }
@@ -701,13 +727,13 @@ export function CreativeStudioV2({
 
   return (
     <Card className="wb-wa-wizard creative-studio-wizard overflow-visible">
+      {draftRestoreWarning ? <Notice tone="warn">{draftRestoreWarning}</Notice> : null}
       {/* 1. Realtime Production Waiting View (Authoritative ProductionProgress V2) */}
       {jobState !== 'IDLE' && jobState !== 'COMPLETED' && jobState !== 'FAILED' && jobState !== 'NEEDS_REVIEW' ? (
         <div className="p-4 sm:p-6">
           <ProductionProgress
             viewModel={activeViewModel}
             kind="video"
-            onCancel={handleResetToNew}
             onNavigateLibrary={() => {}}
           />
         </div>
@@ -896,7 +922,7 @@ export function CreativeStudioV2({
                         <Icon name="video" className="size-4 text-[#008069]" />
                         <span className="text-[13.5px] font-bold text-[#111b21]">Kampanya Videosu</span>
                       </div>
-                      <p className="mt-1 text-[11.5px] text-[#667781]">9:16 Sinematik Reels/Durum reklam filmi (~8 sn, Türkçe seslendirmeli).</p>
+                      <p className="mt-1 text-[11.5px] text-[#667781]">9:16 sinematik Reels/Durum reklam filmi (10 sn, Türkçe seslendirmeli ve markalı kapanış).</p>
                     </button>
                   </div>
                 </div>
@@ -930,7 +956,7 @@ export function CreativeStudioV2({
                   <div className="flex items-center justify-between">
                     <div>
                       <h2 className="text-[15px] font-bold text-[#111b21]">3. Tanıtılacak Ürün</h2>
-                      <p className="text-[12px] text-[#667781] mt-0.5">Reklamda öne çıkarılacak tek ana (hero) ürünü seçin.</p>
+                      <p className="text-[12px] text-[#667781] mt-0.5">Reklamda öne çıkarılacak ana ürünü seçin.</p>
                     </div>
                     <Button
                       type="button"
@@ -1036,7 +1062,7 @@ export function CreativeStudioV2({
                     disabled={!hasProduct || !hasLogo}
                     onClick={handleGoToStep2}
                   >
-                    Devam Et & Reklam Taslağını Gör →
+                    Devam Et (Görsel ve Reklam Metni) →
                   </Button>
                 </div>
               </div>
@@ -1077,14 +1103,18 @@ export function CreativeStudioV2({
                     </div>
 
                     <div className="rounded-xl border border-hairline bg-surface p-3.5">
-                      <p className="text-[13px] font-bold text-[#111b21]">Metin Yoğunluğu</p>
+                      <p className="text-[13px] font-bold text-[#111b21]">Görselde Ne Kadar Yazı Olsun?</p>
                       <p className="text-[11px] text-[#667781] mt-0.5">Görsel üstündeki metin miktarını belirleyin.</p>
                       <div className="mt-2 grid grid-cols-3 gap-2">
-                        {TEXT_DENSITIES.map((d) => (
+                        {[
+                          { id: 'low', label: 'Az Metin', description: 'Sadece güçlü bir başlık, sade ve görsel odaklı.' },
+                          { id: 'balanced', label: 'Dengeli', description: 'Başlık ve kısa kampanya mesajı (önerilen).' },
+                          { id: 'detailed', label: 'Kampanya Odaklı', description: 'Fiyat, kampanya detayı ve sipariş bilgisi.' },
+                        ].map((d) => (
                           <button
                             key={d.id}
                             type="button"
-                            onClick={() => setTextDensity(d.id)}
+                            onClick={() => setTextDensity(d.id as any)}
                             className={`rounded-lg border px-3 py-2 text-center transition-all ${
                               textDensity === d.id
                                 ? 'border-[#008069] bg-[#e7f8f2] text-[#008069] font-bold ring-1 ring-[#008069]'
@@ -1100,7 +1130,7 @@ export function CreativeStudioV2({
                   </div>
                 ) : (
                   <div>
-                    <h2 className="text-[15px] font-bold text-[#111b21]">Kreatif Reklam Tarzı</h2>
+                    <h2 className="text-[15px] font-bold text-[#111b21]">Görsel Stili</h2>
                     <p className="text-[12px] text-[#667781] mt-0.5">Yapay zekanın görsel kompozisyon ve anlatım dilini seçin.</p>
                     <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
                       {CREATIVE_STYLE_PRESETS.map((preset) => (
@@ -1132,14 +1162,14 @@ export function CreativeStudioV2({
                   </div>
                 )}
 
-                {/* Quality Mode (Designer vs Standard) */}
+                {/* Quality Mode (Özel Tasarım vs Hızlı Tasarım) */}
                 {mediaType === 'IMAGE' && (
                   <div className="rounded-xl border border-hairline bg-surface p-3.5 flex items-center justify-between">
                     <div>
                       <p className="text-[13px] font-bold text-[#111b21] flex items-center gap-1.5">
-                        <span>Tasarım Kalitesi</span>
+                        <span>Tasarım Seçimi</span>
                         <span className="rounded bg-[#008069] text-white px-2 py-0.5 text-[10px] font-bold">
-                          {qualityMode === 'DESIGNER' ? 'Ajans Tasarımı' : 'Standart'}
+                          {qualityMode === 'DESIGNER' ? 'Özel Tasarım' : 'Hızlı Tasarım'}
                         </span>
                       </p>
                       <p className="text-[11px] text-[#667781] mt-0.5">
@@ -1158,7 +1188,7 @@ export function CreativeStudioV2({
                             : 'text-[#667781] hover:text-[#111b21]'
                         }`}
                       >
-                        Designer
+                        Özel Tasarım
                       </button>
                       <button
                         type="button"
@@ -1169,7 +1199,7 @@ export function CreativeStudioV2({
                             : 'text-[#667781] hover:text-[#111b21]'
                         }`}
                       >
-                        Standart
+                        Hızlı Tasarım
                       </button>
                     </div>
                   </div>
@@ -1180,19 +1210,30 @@ export function CreativeStudioV2({
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-[13px] font-bold text-[#111b21]">
-                        {mediaType === 'VIDEO' ? 'Türkçe Seslendirme Metni' : 'Reklam Başlığı ve Alt Metin'}
+                        {mediaType === 'VIDEO' ? 'Türkçe Seslendirme Metni' : 'Reklam Metinleri'}
                       </p>
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        <p className="text-[11px] text-[#667781]">Yapay zeka hazırladı; dilediğiniz gibi düzenleyebilirsiniz.</p>
-                        {isPlanning && (
+                        {isPlanning ? (
                           <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#008069]">
                             <span className="size-1.5 rounded-full bg-[#008069] animate-pulse" />
-                            AI önerisi hazırlanıyor…
+                            Size uygun reklam metni hazırlanıyor…
+                          </span>
+                        ) : copySource === 'AI' ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#008069]">
+                            ✓ Size özel reklam metni hazırlandı
+                          </span>
+                        ) : copySource === 'USER_EDITED' ? (
+                          <span className="text-[11px] text-[#667781] font-medium">
+                            Kendi metniniz geçerli
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-amber-700 font-medium">
+                            Otomatik taslak metin hazır
                           </span>
                         )}
-                        {!isPlanning && planError === 'AI_TIMEOUT' && (
+                        {!isPlanning && planError === 'AI_TIMEOUT' && copySource !== 'AI' && (
                           <span className="text-[11px] text-amber-700 font-medium">
-                            AI yanıt veremedi (varsayılan taslak aktif).
+                            (AI zaman aşımı)
                           </span>
                         )}
                       </div>
@@ -1241,7 +1282,7 @@ export function CreativeStudioV2({
                     </div>
                   ) : (
                     <div className="space-y-2.5">
-                      <Field label="Ana Reklam Başlığı (Görsel üstüne basılır)">
+                      <Field label="Ana Başlık">
                         <Input
                           value={headline}
                           onChange={(e) => {
@@ -1249,11 +1290,12 @@ export function CreativeStudioV2({
                               copyDirtyRef.current.headline = true
                             setHeadline(e.target.value)
                             setHeadlineDirty(true)
+                            setCopySource('USER_EDITED')
                           }}
                           placeholder="Örn: Ayvazoğlu Tuğla ile Sağlam Yapılar"
                         />
                       </Field>
-                      <Field label="Açıklayıcı Alt Metin">
+                      <Field label="Kısa Açıklama">
                         <Input
                           value={supportingLine}
                           onChange={(e) => {
@@ -1261,11 +1303,12 @@ export function CreativeStudioV2({
                               copyDirtyRef.current.supporting = true
                             setSupportingLine(e.target.value)
                             setSupportingLineDirty(true)
+                            setCopySource('USER_EDITED')
                           }}
                           placeholder="Örn: Şantiyenize doğrudan toptan teslimat ve garantili dayanıklılık."
                         />
                       </Field>
-                      <Field label="Buton (CTA)">
+                      <Field label="Buton Yazısı">
                         <Input
                           value={ctaText}
                           onChange={(e) => {
@@ -1273,6 +1316,7 @@ export function CreativeStudioV2({
                               copyDirtyRef.current.cta = true
                             setCtaText(e.target.value)
                             setCtaDirty(true)
+                            setCopySource('USER_EDITED')
                           }}
                           placeholder="Hemen İnceleyin"
                         />
@@ -1281,93 +1325,129 @@ export function CreativeStudioV2({
                   )}
                 </div>
 
-                {/* Collapsed Advanced Section */}
-                <details className="text-[12px] text-[#667781]">
-                  <summary className="cursor-pointer hover:text-[#111b21] font-semibold text-[#008069]">
-                    Gelişmiş Seçenekler (Fiyat, Tarih ve Ortam)
-                  </summary>
-                  <div className="mt-3 space-y-3 rounded-xl border border-hairline bg-[#f8fafb] p-3.5">
-                    {mediaType === 'IMAGE' ? (
-                      <div className="space-y-2.5">
-                        <div className="grid gap-2 sm:grid-cols-3">
-                          <Field label="Fiyat (Varsa)">
-                            <Input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Örn: 249 TL" />
-                          </Field>
-                          <Field label="Eski Fiyat (Opsiyonel)">
-                            <Input value={oldPrice} onChange={(e) => setOldPrice(e.target.value)} placeholder="Örn: 399 TL" />
-                          </Field>
-                          <Field label="Kampanya / İndirim">
-                            <Input value={offer} onChange={(e) => setOffer(e.target.value)} placeholder="Örn: %20 İndirim" />
-                          </Field>
-                        </div>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          <Field label="Teslimat / Fayda Bilgileri">
-                            <Input value={deliveryInfo} onChange={(e) => setDeliveryInfo(e.target.value)} placeholder="Örn: 3 gün içinde teslimat · Şantiyeye teslim" />
-                          </Field>
-                          <Field label="Sektör (İsteğe Bağlı)">
-                            <Input value={sector} onChange={(e) => setSector(e.target.value)} placeholder="Örn: İnşaat, Tarım, Gıda, Çiçekçilik" />
-                          </Field>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          <Field label="Çekim Ortamı">
-                            <select
-                              value={environmentPreset}
-                              onChange={(e) => setEnvironmentPreset(e.target.value)}
-                              className="w-full rounded-lg border border-[#e9edef] bg-white px-3 py-2 text-[12.5px] text-[#111b21]"
-                            >
-                              <option value="auto">Otomatik (En uygun ortam)</option>
-                              <option value="construction">İnşaat ve Yapı Sahası</option>
-                              <option value="workshop">Atölye, Fabrika ve Sanayi</option>
-                              <option value="garden">Doğal Açık Alan & Bahçe</option>
-                              <option value="studio">Prestijli Reklam Stüdyosu</option>
-                              <option value="kitchen">Mutfak, Gıda ve Kafe</option>
-                              <option value="office">Modern Ofis ve İç Mekan</option>
-                            </select>
-                          </Field>
-                          <Field label="Kamera Hareketi">
-                            <select
-                              value={motionStyle}
-                              onChange={(e) => setMotionStyle(e.target.value)}
-                              className="w-full rounded-lg border border-[#e9edef] bg-white px-3 py-2 text-[12.5px] text-[#111b21]"
-                            >
-                              <option value="real_usage">Doğal Kullanım ve Sahne Hareketi</option>
-                              <option value="studio_orbit">Vitrin & 3/4 Açı (Şık ve Dengeli)</option>
-                              <option value="macro_detail">Yakın Çekim & Detay Odaklı</option>
-                            </select>
-                          </Field>
-                        </div>
-                        <div className="flex gap-4 pt-1">
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={subtitles}
-                              onChange={(e) => setSubtitles(e.target.checked)}
-                              className="rounded text-[#008069]"
-                            />
-                            <span>Dinamik Altyazı Ekle</span>
-                          </label>
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={outro}
-                              onChange={(e) => setOutro(e.target.checked)}
-                              className="rounded text-[#008069]"
-                            />
-                            <span>Kapanış Kartı (Outro) Ekle</span>
-                          </label>
-                        </div>
-                      </div>
-                    )}
+                {/* Fiyat & Kampanya Teklifi (Satış ve Kampanya Odaklı - Doğrudan Erişilebilir) */}
+                {mediaType === 'IMAGE' && (
+                  <div className="rounded-xl border border-hairline bg-surface p-3.5 space-y-2.5 shadow-2xs">
+                    <div>
+                      <p className="text-[13px] font-bold text-[#111b21] flex items-center gap-1.5">
+                        <span>Fiyat & Kampanya Teklifi</span>
+                        {(objective === 'SALES_OFFER' || objective === 'CAMPAIGN') ? (
+                          <span className="rounded bg-[#e7f8f2] text-[#008069] px-2 py-0.5 text-[10px] font-bold">
+                            Satış Kampanyası İçin Önerilir
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-[#667781] font-normal">(İsteğe Bağlı)</span>
+                        )}
+                      </p>
+                      <p className="text-[11px] text-[#667781] mt-0.5">
+                        Görselde yer almasını istediğiniz fiyat veya indirim oranını yazın (boş bırakılırsa eklenmez).
+                      </p>
+                    </div>
+                    <div className="grid gap-2.5 sm:grid-cols-3">
+                      <Field label="Kampanya Fiyatı">
+                        <Input
+                          value={price}
+                          onChange={(e) => setPrice(e.target.value)}
+                          placeholder="Örn: 249 TL veya 450 TL/m²"
+                        />
+                      </Field>
+                      <Field label="Eski Fiyat (Üstü Çizili)">
+                        <Input
+                          value={oldPrice}
+                          onChange={(e) => setOldPrice(e.target.value)}
+                          placeholder="Örn: 320 TL veya 550 TL/m²"
+                        />
+                      </Field>
+                      <Field label="İndirim / Özel Teklif">
+                        <Input
+                          value={offer}
+                          onChange={(e) => setOffer(e.target.value)}
+                          placeholder="Örn: %20 İndirim veya 5 Palet Üstü"
+                        />
+                      </Field>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2 pt-1">
+                      <Field label="Teslimat / Fayda Bilgisi (İsteğe Bağlı)">
+                        <Input
+                          value={deliveryInfo}
+                          onChange={(e) => setDeliveryInfo(e.target.value)}
+                          placeholder="Örn: Şantiyeye teslim veya 3 gün içinde kargo"
+                        />
+                      </Field>
+                      <Field label="Sektör (İsteğe Bağlı)">
+                        <Input
+                          value={sector}
+                          onChange={(e) => setSector(e.target.value)}
+                          placeholder="Örn: İnşaat, Tarım, Gıda, Çiçekçilik"
+                        />
+                      </Field>
+                    </div>
                   </div>
-                </details>
+                )}
+
+                {/* Video Gelişmiş Seçenekleri */}
+                {mediaType === 'VIDEO' && (
+                  <details className="text-[12px] text-[#667781]">
+                    <summary className="cursor-pointer hover:text-[#111b21] font-semibold text-[#008069]">
+                      Video Çekim ve Ortam Seçenekleri
+                    </summary>
+                    <div className="mt-3 space-y-3 rounded-xl border border-hairline bg-[#f8fafb] p-3.5">
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <Field label="Çekim Ortamı">
+                          <select
+                            value={environmentPreset}
+                            onChange={(e) => setEnvironmentPreset(e.target.value)}
+                            className="w-full rounded-lg border border-[#e9edef] bg-white px-3 py-2 text-[12.5px] text-[#111b21]"
+                          >
+                            <option value="auto">Otomatik (En uygun ortam)</option>
+                            <option value="construction">İnşaat ve Yapı Sahası</option>
+                            <option value="workshop">Atölye, Fabrika ve Sanayi</option>
+                            <option value="garden">Doğal Açık Alan & Bahçe</option>
+                            <option value="studio">Prestijli Reklam Stüdyosu</option>
+                            <option value="kitchen">Mutfak, Gıda ve Kafe</option>
+                            <option value="office">Modern Ofis ve İç Mekan</option>
+                          </select>
+                        </Field>
+                        <Field label="Kamera Hareketi">
+                          <select
+                            value={motionStyle}
+                            onChange={(e) => setMotionStyle(e.target.value)}
+                            className="w-full rounded-lg border border-[#e9edef] bg-white px-3 py-2 text-[12.5px] text-[#111b21]"
+                          >
+                            <option value="real_usage">Doğal Kullanım ve Sahne Hareketi</option>
+                            <option value="studio_orbit">Vitrin & 3/4 Açı (Şık ve Dengeli)</option>
+                            <option value="macro_detail">Yakın Çekim & Detay Odaklı</option>
+                          </select>
+                        </Field>
+                      </div>
+                      <div className="flex gap-4 pt-1">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={subtitles}
+                            onChange={(e) => setSubtitles(e.target.checked)}
+                            className="rounded text-[#008069]"
+                          />
+                          <span>Dinamik Altyazı Ekle</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={outro}
+                            disabled
+                            className="rounded text-[#008069]"
+                          />
+                          <span>2 saniyelik markalı kapanış dahildir</span>
+                        </label>
+                      </div>
+                    </div>
+                  </details>
+                )}
 
                 {/* Footer Nav */}
                 <div className="flex items-center justify-between pt-3 border-t border-hairline">
                   <Button type="button" variant="quiet" onClick={() => setStep('product_goal')}>
-                    ← Geri (Ürün & Hedef)
+                    ← Geri (İşletme ve Ürün)
                   </Button>
                   <Button
                     type="button"
@@ -1375,7 +1455,7 @@ export function CreativeStudioV2({
                     disabled={mediaType === 'VIDEO' && (voWords === 0 || voWords > MAX_SPOKEN_WORDS)}
                     onClick={() => setStep('review_generate')}
                   >
-                    Önizleme & Onay →
+                    Son Kontrol →
                   </Button>
                 </div>
               </div>
@@ -1385,14 +1465,14 @@ export function CreativeStudioV2({
             {step === 'review_generate' && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-[15px] font-bold text-[#111b21]">Reklam Önizleme ve Onay</h2>
-                  <p className="text-[12px] text-[#667781] mt-0.5">Tüm parametreler hazırlandı. Tek tıkla üretimi başlatın.</p>
+                  <h2 className="text-[15px] font-bold text-[#111b21]">Son Kontrol ve Üretim</h2>
+                  <p className="text-[12px] text-[#667781] mt-0.5">Tüm bilgiler hazırlandı. Tek tıkla reklamınızı üretin.</p>
                 </div>
 
                 {/* Summary Card */}
                 <div className="rounded-xl border border-hairline bg-[#f8fafb] p-4 space-y-3">
                   <div className="flex items-center justify-between border-b border-hairline pb-2.5">
-                    <span className="text-[12px] font-bold uppercase tracking-wider text-[#667781]">Kreatif Özeti</span>
+                    <span className="text-[12px] font-bold uppercase tracking-wider text-[#667781]">Reklam Özeti</span>
                     <span className="rounded-full bg-[#e7f8f2] px-2.5 py-0.5 text-[11px] font-bold text-[#008069]">
                       {mediaType === 'VIDEO' ? '9:16 Sinematik Video' : `Görsel (${imageFormat})`}
                     </span>
@@ -1430,20 +1510,20 @@ export function CreativeStudioV2({
 
                   {/* Asset Preflight Health Check */}
                   <div className="rounded-lg border border-[#e9edef] bg-white p-3 space-y-2">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#667781]">Asset Preflight Doğrulaması</span>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#667781]">Logo ve Ürün Kontrolü</span>
                     <div className="grid grid-cols-2 gap-2 text-[12px]">
                       <div className="flex items-center gap-2">
                         <span className={`inline-block size-2 rounded-full ${hasLogo ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                         <span className="text-[#667781]">Kurumsal Logo:</span>
                         <span className={`font-semibold ${hasLogo ? 'text-emerald-700' : 'text-rose-700'}`}>
-                          {hasLogo ? 'REFERANS SEÇİLİ' : 'EKSİK'}
+                          {hasLogo ? '✓ Bağlandı' : 'Eksik'}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className={`inline-block size-2 rounded-full ${hasProduct ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                         <span className="text-[#667781]">Hero Ürün:</span>
                         <span className={`font-semibold ${hasProduct ? 'text-emerald-700' : 'text-rose-700'}`}>
-                          {hasProduct ? 'REFERANS SEÇİLİ' : 'EKSİK'}
+                          {hasProduct ? '✓ Seçildi' : 'Eksik'}
                         </span>
                       </div>
                     </div>
@@ -1459,7 +1539,7 @@ export function CreativeStudioV2({
                 {/* Footer Nav & Submit Button */}
                 <div className="flex items-center justify-between pt-3 border-t border-hairline">
                   <Button type="button" variant="quiet" onClick={() => setStep('creative_direction')}>
-                    ← Geri (Taslağı Düzenle)
+                    ← Geri (Görsel ve Metin)
                   </Button>
                   <Button
                     type="button"
@@ -1467,7 +1547,7 @@ export function CreativeStudioV2({
                     disabled={isSubmitting || imagePending || !allAssetsReady || (mediaType === 'VIDEO' && (voWords === 0 || voWords > MAX_SPOKEN_WORDS))}
                     onClick={handleCreateCreative}
                   >
-                    {isSubmitting || imagePending ? 'Üretim Başlatılıyor…' : mediaType === 'VIDEO' ? 'Videoyu Oluştur' : 'Görseli Oluştur'}
+                    {isSubmitting || imagePending ? 'Üretim Başlatılıyor…' : mediaType === 'VIDEO' ? 'Reklam Videomu Oluştur' : 'Reklam Görselimi Oluştur'}
                   </Button>
                 </div>
               </div>

@@ -165,7 +165,9 @@ export function adaptLegacyDraftToV2(
   // Objective mapping
   let objective: CampaignObjective = 'PRODUCT_INTRO'
   const rawObj = String(raw.objective || raw.adFormat || raw.campaign_objective || '').toUpperCase()
-  if (rawObj.includes('OFFER') || rawObj.includes('SALES')) {
+  if (rawObj === 'CAMPAIGN') {
+    objective = 'CAMPAIGN'
+  } else if (rawObj.includes('OFFER') || rawObj.includes('SALES')) {
     objective = 'SALES_OFFER'
   } else if (rawObj.includes('NEW') || rawObj.includes('LAUNCH') || rawObj.includes('YENI')) {
     objective = 'NEW_PRODUCT'
@@ -177,15 +179,21 @@ export function adaptLegacyDraftToV2(
     (raw.stylePreset as string) || (raw.adFormat as string) || (raw.style as string) || (raw.visual_style as string),
   )
 
-  const legacyExtras = (raw.productExtras as Record<string, any>) || {}
-  const firstExtra = heroProductId ? legacyExtras[heroProductId] || {} : {}
+  const legacyExtras = raw.productExtras && typeof raw.productExtras === 'object' && !Array.isArray(raw.productExtras)
+    ? raw.productExtras as Record<string, unknown> : {}
+  const selectedExtra = heroProductId ? legacyExtras[heroProductId] : null
+  const firstExtra = selectedExtra && typeof selectedExtra === 'object' && !Array.isArray(selectedExtra)
+    ? selectedExtra as Record<string, unknown> : {}
 
+  const savedCopy = raw.campaignCopy && typeof raw.campaignCopy === 'object' && !Array.isArray(raw.campaignCopy)
+    ? raw.campaignCopy as Record<string, unknown> : {}
+  const copyString = (value: unknown): string | null => typeof value === 'string' ? value : null
   const campaignCopy: StructuredCampaignCopy = {
-    price: (raw.price as string) || firstExtra.price || null,
-    oldPrice: (raw.oldPrice as string) || firstExtra.oldPrice || null,
-    offer: (raw.offer as string) || firstExtra.promo || (raw.offerDetails as string) || null,
-    dateRange: (raw.dateRange as string) || null,
-    cta: (raw.cta as string) || null,
+    price: copyString(savedCopy.price) ?? copyString(raw.price) ?? copyString(firstExtra.price),
+    oldPrice: copyString(savedCopy.oldPrice) ?? copyString(raw.oldPrice) ?? copyString(firstExtra.oldPrice),
+    offer: copyString(savedCopy.offer) ?? copyString(raw.offer) ?? copyString(firstExtra.promo) ?? copyString(raw.offerDetails),
+    dateRange: copyString(savedCopy.dateRange) ?? copyString(raw.dateRange),
+    cta: copyString(savedCopy.cta) ?? copyString(raw.cta),
   }
 
   const rawFormat = (raw.formatId || raw.format) as string

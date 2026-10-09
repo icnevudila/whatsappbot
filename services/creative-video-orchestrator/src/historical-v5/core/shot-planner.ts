@@ -9,20 +9,14 @@ import type {
 } from './schemas.js'
 
 export const V5_STANDARD_NEGATIVES = [
-  'fake logos',
   'additional brands',
-  'misspelled brand name',
   'distorted logo',
   'altered lettering',
   'promotional captions',
   'price tags',
   'subtitles',
   'additional logos',
-  'invented brand names',
-  'generated captions',
-  'promotional badges',
   'extra products',
-  'invented accessories',
   'altered packaging',
   'distorted labels',
   'product deformation',
@@ -32,16 +26,11 @@ export const V5_STANDARD_NEGATIVES = [
   'incorrect product color',
   'warped packaging',
   'warped logo',
-  'gibberish typography',
   'floating graphics',
-  'holographic interface',
   'unmotivated location change',
   'identity drift',
-  'extra fingers',
-  'deformed hands',
-  'unsafe product use',
   'watermark',
-  'fake phone numbers, fake URLs, discount badges, graphic overlays, lower thirds, floating banners, text cards',
+  'graphic overlays, lower thirds, floating banners, text cards',
   'cartoon, 3D animation look, cgi render, uncanny valley',
   'blurry artifacts, low quality, pixelated, amateur video, choppy jumps, abrupt view shifts, jerky camera',
 ].join(', ')
@@ -152,7 +141,7 @@ export function planShots(
   } else if (isManualPressureSprayer) {
     shot1Action = `The gardener or operator carries the ${subject} by its top ergonomic handle alongside garden beds, with the shoulder strap slung comfortably over one shoulder, holding the lightweight spray lance ready at side. No spraying yet.`
   } else if (isBrickOrMasonry) {
-    shot1Action = `A skilled construction professional examines and handles the clean textured ${subject}, highlighting its structural durability and clean manufactured edges at 0.3 seconds.`
+    shot1Action = `The authentic terracotta ${subject} is showcased in clean hero presentation on an organized pallet at the active construction site, with clear focus on its precise geometry and structural durability.`
   } else if (isCosmeticOrSkincare) {
     shot1Action = `In front of the bright morning mirror, the user holds the elegant ${subject}, gently unsealing or inspecting the glass dropper bottle with delicate fingertips. No application yet.`
   } else if (ontology.offerType === 'food_or_consumable') {
@@ -167,11 +156,11 @@ export function planShots(
     role: 'visual_hook',
     framing: isContinuous
       ? 'Continuous take: wide-medium framing initiating the continuous slow forward push-in route'
-      : 'Front 3/4 low-angle tracking commercial framing facing the subject',
+      : (isBrickOrMasonry ? 'Eye-level 3/4 commercial macro glide framing the hero product' : 'Front 3/4 low-angle tracking commercial framing facing the subject'),
     subjectAction: shot1Action,
     cameraMotion: isContinuous
       ? 'The camera begins a single unbroken slow forward push-in route gliding smoothly toward the active subject'
-      : 'Front low-angle camera moving backward ahead of the subject walking forward toward camera, establishing the real environment and human subject before functional action begins.',
+      : (isBrickOrMasonry ? 'Smooth commercial tracking camera gliding along the crisp edges of the hero product in the morning sun.' : 'Front low-angle camera moving backward ahead of the subject walking forward toward camera, establishing the real environment and human subject before functional action begins.'),
     lightingAndPhysics: 'Natural daylight with soft specular highlights, shallow depth of field (f/1.8)',
   }
 

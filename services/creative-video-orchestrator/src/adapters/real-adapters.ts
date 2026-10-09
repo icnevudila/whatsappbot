@@ -672,8 +672,8 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
         cur = 'v_logo'
       }
 
-      // LAYER 3 — brand name layer (bold white, elegant typography with staggered slide-in)
-      if (brandName) {
+      // LAYER 3 — brand name layer (only render as text if customer has NO logo, to prevent duplicate brand text)
+      if (brandName && !hasLogo) {
         const cleanBrand = brandName.replace(/'/g, '').replace(/:/g, '\\:').replace(/[\r\n]+/g, ' ')
         const brandStart = OUTRO_START + 0.20
         filterParts.push(
@@ -715,19 +715,8 @@ export class RealFFmpegAdapter implements IFFmpegAdapter {
         cur = 'v_contact'
       }
 
-      // LAYER 6 — verified CTA button text
-      if (showCta) {
-        const cleanCta = rawCta.replace(/'/g, '').replace(/:/g, '\\:').replace(/[\r\n]+/g, ' ')
-        const ctaStart = OUTRO_START + 0.42
-        filterParts.push(
-          `[${cur}]drawtext=` +
-          `text='${cleanCta}':fontcolor=0xFFD700:fontsize=26:` +
-          `x=(w-text_w)/2:y='870 + (1-sin(min(1,max(0,(t-${ctaStart.toFixed(2)})/0.15))*1.5708))*10':` +
-          `alpha='min(1,max(0,(t-${ctaStart.toFixed(2)})/0.15))':` +
-          `enable='gte(t,${ctaStart.toFixed(2)})'[v_cta]`
-        )
-        cur = 'v_cta'
-      }
+      // Minimalist Luxury Outro: clean brand logo, typography and verified contacts.
+      // Unstyled raw CTA badges are excluded to keep a prestigious, non-cluttered commercial close.
     }
 
     // ── Execute FFmpeg ────────────────────────────────────────────────────────

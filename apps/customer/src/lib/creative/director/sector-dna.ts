@@ -42,7 +42,7 @@ export const SECTOR_DNA_REGISTRY: Record<string, SectorDna> = {
     physicalEnvironment: {
       primaryScene: 'Lush Anatolian orchard, fertile terraced olive grove, modern greenhouse, or sunlit harvest field',
       depthElements: ['Foreground dew-covered foliage or micro water-droplets', 'Hero equipment/produce in sharp focus', 'Rich dark soil furrow lines', 'Distant rolling hills or modern greenhouse steel frames'],
-      materialTextures: ['Textured red terracotta clay', 'Rich loam soil grains', 'Virgin cold-pressed olive oil sheen', 'Brushed brass/steel sprayer nozzles', 'Sun-cured wood grain'],
+      materialTextures: ['Rich agricultural loam soil', 'Natural sunlit orchard foliage', 'Sun-cured weathered timber', 'Organic earth and field textures'],
       lightingPhysics: 'Warm low-angle sun with authentic micro-droplet scattering (Tyndall effect) and golden rim highlights on leaves and machinery',
       atmosphericEffects: ['Fine atomized water spray / mist from nozzle', 'Morning sun vapor rising from warm moist earth', 'Airborne pollen or gentle dust motes in sunbeams'],
     },

@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { persistedVideoUrl, verifiedVideoResponse } from '@/lib/creative/video-delivery'
 import { requireActiveOrg } from '@/lib/org'
 import { checkIsAuthenticated } from '@/app/canli-takip/auth'
 import { createSupabaseServiceClient } from '@/lib/supabase/service'
 import { createClient } from '@supabase/supabase-js'
-import { isApprovedVideoOutput, isReviewVideoOutput } from '@/lib/creative/video-output-approval'
+import { isApprovedFinalVideoOutput, isReviewVideoOutput } from '@/lib/creative/video-output-approval'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -64,7 +65,7 @@ export async function GET(
     let output: any = null
     const { data, error } = await (supabase as any)
       .from('ai_media_outputs')
-      .select('id, job_id, org_id, file_path, storage_url, verified, is_approved, sha256, byte_size')
+      .select('id, job_id, org_id, file_path, storage_url, verified, is_approved, sha256, byte_size, duration_seconds, width, height, product_type')
       .eq('id', outputId)
       .single()
 
@@ -73,7 +74,7 @@ export async function GET(
       if (serviceClient && serviceClient !== supabase) {
         const { data: sData } = await serviceClient
           .from('ai_media_outputs')
-          .select('id, job_id, org_id, file_path, storage_url, verified, is_approved, sha256, byte_size')
+          .select('id, job_id, org_id, file_path, storage_url, verified, is_approved, sha256, byte_size, duration_seconds, width, height, product_type')
           .eq('id', outputId)
           .single()
         output = sData
@@ -108,7 +109,7 @@ export async function GET(
       }
 
       // 3. Verification Gate
-      if (!isApprovedVideoOutput(output) && !reviewPreview) {
+      if (!isApprovedFinalVideoOutput(output) && !reviewPreview) {
         return new NextResponse('Medya henüz kalite kontrolünden geçmedi.', { status: 422 })
       }
     }
@@ -158,97 +159,15 @@ export async function GET(
       return new NextResponse('Thumbnail bulunamadı.', { status: 404 })
     }
 
-    // If output has an authoritative storage URL (Supabase Storage signed URL or external CDN), redirect
-    if (output.storage_url && output.storage_url.startsWith('https://')) {
-      if (reviewPreview) {
-        const headers = req.headers.get('range') ? { range: req.headers.get('range')! } : undefined
-        const media = await fetch(output.storage_url, { headers, cache: 'no-store' })
-        if (!media.ok) return new NextResponse('Önizleme açılamadı.', { status: 502 })
-        return buildStreamResponse(media, cleanFileName, true)
-      }
-      return NextResponse.redirect(output.storage_url)
-    }
-
-    // Otherwise, stream from VPS gateway
-    const rangeHeader = req.headers.get('range')
-    const fetchHeaders: Record<string, string> = {}
-    if (rangeHeader) {
-      fetchHeaders['range'] = rangeHeader
-    }
-
-    const videoCandidates = Array.from(
-      new Set(
-        [
-          output.job_id ? `${output.job_id}_finished.mp4` : null,
-          output.id ? `${output.id}_finished.mp4` : null,
-          cleanFileName,
-          fileName,
-          output.job_id ? `${output.job_id}.mp4` : null,
-          output.id ? `${output.id}.mp4` : null,
-        ].filter(Boolean) as string[]
-      )
-    )
-
-    let upstreamRes: Response | null = null
-    let matchedUrl: string | null = null
-
-    for (const vName of videoCandidates) {
-      const vUrl = `${GATEWAY_HOST}/outputs/${vName}`
-      try {
-        const res = await fetch(vUrl, {
-          method: 'HEAD',
-          cache: 'no-store',
-        })
-        if (res.ok || res.status === 206) {
-          upstreamRes = res
-          matchedUrl = vUrl
-          break
-        }
-      } catch {
-        // try next candidate
-      }
-    }
-
-    // If not found, try structured relative path
-    if (!matchedUrl && filePath.includes('/outputs/')) {
-      const relPath = filePath.split('/outputs/')[1]
-      const relUrl = `${GATEWAY_HOST}/outputs/${relPath}`
-      try {
-        const res = await fetch(relUrl, {
-          method: 'HEAD',
-          cache: 'no-store',
-        })
-        if (res.ok || res.status === 206) {
-          upstreamRes = res
-          matchedUrl = relUrl
-        }
-      } catch {}
-    }
-
-    // Fallback: job-specific subfolder
-    if (!matchedUrl) {
-      const fallbackUrl = `${GATEWAY_HOST}/outputs/${output.org_id}/${output.job_id}/${cleanFileName}`
-      try {
-        const fallbackRes = await fetch(fallbackUrl, { method: 'HEAD', cache: 'no-store' })
-        if (fallbackRes.ok || fallbackRes.status === 206) {
-          upstreamRes = fallbackRes
-          matchedUrl = fallbackUrl
-        }
-      } catch {}
-    }
-
-    if (!matchedUrl) {
-      const status = upstreamRes ? upstreamRes.status : 502
-      return new NextResponse(`Video akışı açılamadı (${status})`, { status })
-    }
-
-    if (reviewPreview) {
-      const media = await fetch(matchedUrl, { headers: fetchHeaders, cache: 'no-store' })
-      if (!media.ok) return new NextResponse('Önizleme açılamadı.', { status: 502 })
-      return buildStreamResponse(media, cleanFileName, true)
-    }
-    // Approved media retains the existing playback route.
-    return NextResponse.redirect(matchedUrl, 307)
+    const mediaUrl = typeof output.storage_url === 'string' && output.storage_url.startsWith('https://')
+      ? output.storage_url : persistedVideoUrl(filePath, GATEWAY_HOST)
+    if (!mediaUrl) return new NextResponse('Kayıtlı video dosyası bulunamadı.', { status: 502 })
+    const media = await fetch(mediaUrl, { cache: 'no-store', signal: AbortSignal.timeout(30000) })
+    if (!media.ok) return new NextResponse('Kayıtlı video açılamadı.', { status: 502 })
+    const bytes = new Uint8Array(await media.arrayBuffer())
+    const delivered = verifiedVideoResponse(bytes, output, req.headers.get('range'))
+    if (reviewPreview) delivered.headers.set('X-Media-Review-Required', 'true')
+    return delivered
   } catch (err: any) {
     console.error('[ai-media-outputs] Stream error:', err)
     return new NextResponse('Sunucu hatası', { status: 500 })

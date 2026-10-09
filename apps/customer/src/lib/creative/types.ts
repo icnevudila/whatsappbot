@@ -134,6 +134,8 @@ export type CreativeSnapshotProduct = {
 }
 
 export type CreativeSnapshot = {
+  companyName?: string | null
+  companyAbout?: string | null
   brief: string
   style: string
   formatId: string
@@ -178,6 +180,10 @@ export type CreativeSnapshot = {
   urgencyInfo?: string | null
   primaryBenefits?: string[] | null
   campaignMessage?: string | null
+  customHeadline?: string | null
+  customSupporting?: string | null
+  objective?: string | null
+  stylePreset?: string | null
 }
 
 export type CreativePayload = CreativeSnapshot & {

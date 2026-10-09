@@ -13,6 +13,7 @@ const { navigateToChat } = require('./chat_navigation.js');
 const { isChatGPTPage } = require('./chatgpt_tab_scope.js');
 const { assertImageScope, readImageScope } = require('./image_conversation_scope.js');
 const { assertReferenceCount } = require('./image_reference_contract.js');
+const { reconnectImageObservation } = require('./image_observation_reconnect.js');
 
 const GATEWAY_URL = process.env.GATEWAY_URL || 'http://127.0.0.1:3456';
 const { createWorkerGatewayFetch } = require('./worker_gateway_fetch.js');
@@ -765,6 +766,7 @@ async function workerLoop() {
 
   let chatgptTab = null;
   let disposableImageTarget = null;
+  let retainImageTarget = false;
   let claimedJob = null;
   // Claim synchronously before the first await, not after fetching a job.
   isBusy = true;
@@ -826,13 +828,14 @@ async function workerLoop() {
       reaper.registry.setTabJob(disposableImageTarget.id, job.id);
       reaper.registry.setTabJob(chatgptTab.id, null);
       chatgptTab = disposableImageTarget;
-      await executeChatGPTJob(chatgptTab, job);
+      const imageResult = await executeChatGPTJob(chatgptTab, job);
+      retainImageTarget = imageResult?.reconciliationRequired === true;
     }
 
     completedJobCount++;
     claimedJob = null;
     lastJobTime = Date.now();
-    if (completedJobCount % RECYCLE_JOB_THRESHOLD === 0) {
+    if (!retainImageTarget && completedJobCount % RECYCLE_JOB_THRESHOLD === 0) {
       await performMemoryRecycle(chatgptTab);
     }
 
@@ -843,10 +846,10 @@ async function workerLoop() {
       body: JSON.stringify({ jobId: claimedJob.id, error: err.message }),
     }).catch(() => {});
   } finally {
-    if (disposableImageTarget?.id) {
+    if (!retainImageTarget && disposableImageTarget?.id) {
       await fetch(`${CDP_HTTP}/json/close/${encodeURIComponent(disposableImageTarget.id)}`, { signal: AbortSignal.timeout(5000) }).catch(() => {});
     }
-    if (chatgptTab && chatgptTab.id) {
+    if (!retainImageTarget && chatgptTab && chatgptTab.id) {
       reaper.registry.setTabJob(chatgptTab.id, null);
     }
     isBusy = false;
@@ -865,6 +868,9 @@ async function workerLoop() {
 async function executeChatGPTJob(tab, job) {
   let cdp = null;
   const workerTiming = createWorkerTiming(job, 'image');
+  let submissionActivated = false;
+  let observationReconnects = 0;
+  let referenceReceipt = null;
   const tempRefPaths = [];
   try {
     cdp = await createCdpSession(tab.webSocketDebuggerUrl);
@@ -938,48 +944,103 @@ async function executeChatGPTJob(tab, job) {
       if (tempRefPaths.length > 0) {
         try {
           await cdp.send('DOM.enable').catch(() => {});
+
+          // Stale attachments check & auto-clean
+          const cleanComposerAttachments = async () => {
+            return await cdp.send('Runtime.evaluate', {
+              expression: `(() => {
+                const btns = Array.from(document.querySelectorAll('button')).filter(b => {
+                  const label = b.getAttribute('aria-label') || '';
+                  return label.startsWith('Remove') || label.startsWith('Kaldır') || label.startsWith('Delete') || label.startsWith('Sil');
+                });
+                btns.forEach(b => b.click());
+                return btns.length;
+              })()`,
+              returnByValue: true
+            }).catch(() => ({ result: { value: 0 } }));
+          };
+
+          const beforeUpload = (await cdp.send('Runtime.evaluate', {
+            expression: `(${readComposerAttachments.toString()})()`, returnByValue: true,
+          })).result?.value;
+
+          if (beforeUpload?.count) {
+            console.log(`[CDP Worker] Stale composer attachments (${beforeUpload.count}) tespit edildi, temizleniyor...`);
+            await cleanComposerAttachments();
+            await sleep(800);
+            const recheck = (await cdp.send('Runtime.evaluate', {
+              expression: `(${readComposerAttachments.toString()})()`, returnByValue: true,
+            })).result?.value;
+            if (recheck?.count) {
+              await cleanComposerAttachments();
+              await sleep(1000);
+            }
+          }
+
           let fileInput;
           const inputDeadline = Date.now() + 15000;
           while (Date.now() < inputDeadline) {
             const doc = await cdp.send('DOM.getDocument', {}, 5000);
             fileInput = await cdp.send('DOM.querySelector', {
               nodeId: doc.root.nodeId,
-              selector: '#upload-photos, #upload-media, input[type=file]'
-            }, 5000);
+              selector: 'input[type="file"][accept*="image"], input[type="file"]'
+            }, 5000).catch(() => null);
             if (fileInput?.nodeId) break;
             await sleep(200);
           }
           if (!fileInput?.nodeId) throw new Error('REFERENCE_ATTACHMENT_FAILED: file input is unavailable');
-          const beforeUpload = (await cdp.send('Runtime.evaluate', {
-            expression: `(${readComposerAttachments.toString()})()`, returnByValue: true,
-          })).result?.value;
-          if (beforeUpload?.count) throw new Error('REFERENCE_ATTACHMENT_FAILED: stale composer attachments must be cleared');
+
+          const dispatchFileEvents = async () => {
+            await cdp.send('Runtime.evaluate', {
+              expression: `(() => {
+                const el = document.querySelector('input[type="file"][accept*="image"]') || document.querySelector('input[type="file"]');
+                if (el) {
+                  el.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+                  el.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+                }
+              })()`
+            });
+          };
+
           if (fileInput && fileInput.nodeId) {
             await cdp.send('DOM.setFileInputFiles', {
               files: tempRefPaths,
               nodeId: fileInput.nodeId
             }, 5000);
-            await cdp.send('Runtime.evaluate', {
-              expression: `
-                const el = document.querySelector('#upload-photos') || document.querySelector('#upload-media') || document.querySelector('input[type=file]');
-                if (el) el.dispatchEvent(new Event('change', { bubbles: true }));
-              `
-            });
+            await dispatchFileEvents();
             console.log(`[CDP Worker] ${tempRefPaths.length} referans görsel inputa yüklendi, thumbnail bekleniyor...`);
             const refUploadStart = Date.now();
-            const maxRefWait = 30_000;
+            const maxRefWait = 60_000;
             let attachmentsVerified = false;
+            let retriedDispatch = false;
+
             while (Date.now() - refUploadStart < maxRefWait) {
               const hasThumb = await cdp.send('Runtime.evaluate', {
                 expression: `(${readComposerAttachments.toString()})()`,
                 returnByValue: true
               }).catch(() => ({ result: { value: false } }));
-              if (hasThumb.result?.value?.count === tempRefPaths.length && hasThumb.result.value.ready) {
-                composerAttachmentCount = hasThumb.result.value.count;
+
+              const res = hasThumb.result?.value;
+              if (res && res.count === tempRefPaths.length && res.ready) {
+                composerAttachmentCount = res.count;
                 attachmentsVerified = true;
                 break;
               }
-              await sleep(200);
+
+              // 12s geçtiğinde ve hala 0 attachment algılandıysa dosya seçimini bir kez yeniden tetikle
+              if (!retriedDispatch && Date.now() - refUploadStart > 12_000 && (!res || res.count === 0)) {
+                console.log('[CDP Worker] 12s geçti, 0 attachment görüldü. setFileInputFiles yeniden tetikleniyor...');
+                retriedDispatch = true;
+                try {
+                  await cdp.send('DOM.setFileInputFiles', {
+                    files: tempRefPaths,
+                    nodeId: fileInput.nodeId
+                  }, 5000);
+                  await dispatchFileEvents();
+                } catch (_) {}
+              }
+
+              await sleep(250);
             }
             if (!attachmentsVerified) throw new Error('REFERENCE_ATTACHMENT_FAILED: all requested references were not confirmed in the composer');
             workerTiming.mark('reference_upload_ms', refUploadStart);
@@ -1013,10 +1074,19 @@ async function executeChatGPTJob(tab, job) {
     assertImageScope(scope, { ...currentScope.result?.value, targetId: tab.id });
     assertReferenceCount(expectedRefCount, tempRefPaths.length);
     assertReferenceCount(expectedRefCount, composerAttachmentCount);
-    console.log(JSON.stringify({ event: 'image_reference_gate', job_id: job.id, target_id: tab.id,
-      conversation_owner_job_id: job.id, expected_reference_count: expectedRefCount,
-      resolved_reference_count: tempRefPaths.length, uploaded_reference_count: tempRefPaths.length,
-      composer_attachment_count: composerAttachmentCount, attachments_ready_at: new Date().toISOString() }));
+    referenceReceipt = {
+      job_id: job.id,
+      worker_id: WORKER_ID,
+      target_id: tab.id,
+      conversation_owner_job_id: job.id,
+      expected_reference_count: expectedRefCount,
+      resolved_reference_count: tempRefPaths.length,
+      uploaded_reference_count: tempRefPaths.length,
+      composer_attachment_count: composerAttachmentCount,
+      attachments_ready_at: new Date().toISOString()
+    };
+    console.log(JSON.stringify({ event: 'image_reference_gate', ...referenceReceipt }));
+    submissionActivated = true; // Any error after this point may hide an accepted paid submission.
     const injectRes = await injectPromptAndSend(cdp, job.prompt);
     if (!injectRes?.success) {
       throw new Error(injectRes?.error || 'Prompt kutusu bulunamadı veya gönderilemedi');
@@ -1067,6 +1137,18 @@ async function executeChatGPTJob(tab, job) {
       } catch (evalErr) {
         if (evalErr.message.includes('WebSocket not open') || evalErr.message.includes('Target closed') || evalErr.message.includes('Connection closed')) {
           console.error(`[CDP Worker: ${WORKER_ID}] WebSocket koptu:`, evalErr.message);
+          if (submissionActivated && observationReconnects < 2) {
+            observationReconnects++;
+            cdp.close();
+            cdp = await reconnectImageObservation({ targetId: tab.id,
+              listTargets: async () => {
+                const response = await globalThis.fetch(`${CDP_HTTP}/json/list`, { signal: AbortSignal.timeout(8000) });
+                if (!response.ok) throw new Error('IMAGE_OBSERVATION_TARGET_LIST_FAILED');
+                return response.json();
+              }, connect: createCdpSession });
+            console.log(`[CDP Worker: ${WORKER_ID}] Observation reconnected for job ${job.id}, target ${tab.id}; submission not repeated.`);
+            continue;
+          }
           throw evalErr;
         }
         console.warn(`[CDP Worker: ${WORKER_ID}] Görsel durum kontrolü hafif gecikti:`, evalErr.message);
@@ -1078,7 +1160,7 @@ async function executeChatGPTJob(tab, job) {
       }
 
       if (checkResult?.isGenerating && !workerTiming.timings.generation_start_detect_ms) workerTiming.mark('generation_start_detect_ms', submittedAt);
-      if (checkResult?.hasNewMsg && !checkResult.isGenerating && checkResult.foundImgSrc) {
+      if (checkResult?.foundImgSrc && ((checkResult?.hasNewMsg && !checkResult.isGenerating) || checkResult?.ready)) {
         foundImgSrc = checkResult.foundImgSrc;
         workerTiming.mark('generation_complete_detect_ms', submittedAt);
         console.log(`[CDP Worker] Görsel ${elapsed}. saniyede başarıyla tamamlandı ve tespit edildi: ${foundImgSrc}`);
@@ -1141,12 +1223,16 @@ async function executeChatGPTJob(tab, job) {
     // 5. Gateway'e Yükle
     const filename = `img_${job.id}_${Date.now()}.png`;
     const finalTimings = workerTiming.finalize();
+    const uploadHeaders = {
+      'Content-Type': 'image/png',
+      'x-worker-timings': JSON.stringify(finalTimings),
+    };
+    if (referenceReceipt) {
+      uploadHeaders['x-reference-receipt'] = JSON.stringify(referenceReceipt);
+    }
     const uploadRes = await fetch(`${GATEWAY_URL}/upload?jobId=${job.id}&filename=${filename}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'image/png',
-        'x-worker-timings': JSON.stringify(finalTimings),
-      },
+      headers: uploadHeaders,
       body: imageBuffer
     });
 
@@ -1198,9 +1284,25 @@ async function executeChatGPTJob(tab, job) {
     await fetch(`${GATEWAY_URL}/job/release`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jobId: job.id, error: err.message, crashSnapshotUrl })
+      body: JSON.stringify({ jobId: job.id,
+        error: submissionActivated ? 'SUBMISSION_UNCERTAIN: ' + err.message : err.message,
+        reconciliationTargetId: submissionActivated ? tab.id : null, crashSnapshotUrl })
     }).catch(() => {});
+    return { reconciliationRequired: submissionActivated };
   } finally {
+    try {
+      if (cdp) {
+        await cdp.send('Runtime.evaluate', {
+          expression: `(() => {
+            const btns = Array.from(document.querySelectorAll('button')).filter(b => {
+              const label = b.getAttribute('aria-label') || '';
+              return label.startsWith('Remove') || label.startsWith('Kaldır') || label.startsWith('Delete') || label.startsWith('Sil');
+            });
+            btns.forEach(b => b.click());
+          })()`
+        }).catch(() => {});
+      }
+    } catch (_) {}
     for (const p of tempRefPaths) {
       try { fs.unlinkSync(p); } catch (e) {}
     }

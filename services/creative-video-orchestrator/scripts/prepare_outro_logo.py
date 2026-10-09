@@ -9,54 +9,53 @@ def prepare(source, destination):
     image = Image.open(source).convert('RGBA')
     image.thumbnail((2048, 2048))
     width, height = image.size
-    # If image already has a transparent background, do not flood-fill
-    # Flood-filling white pixels from borders would eat into white/light letters that touch edges!
+    # If image already has a transparent background, respect it
     transparent_count = sum(a < 50 for *_, a in image.getdata())
     is_already_transparent = transparent_count >= (width * height * 0.05)
 
     if not is_already_transparent:
-        pixels = image.load()
-        seen = set()
-        queue = deque()
-        def background(x, y):
-            r, g, b, a = pixels[x, y]
-            return a < 16 or (min(r, g, b) >= 230 and max(r, g, b) - min(r, g, b) <= 20)
-        for x in range(width):
-            queue.extend(((x, 0), (x, height - 1)))
-        for y in range(height):
-            queue.extend(((0, y), (width - 1, y)))
-        while queue:
-            x, y = queue.popleft()
-            if (x, y) in seen or not background(x, y):
+        # Smooth alpha matting from white background
+        pixels = list(image.getdata())
+        new_pixels = []
+        for r, g, b, a in pixels:
+            # Measure whiteness (minimum RGB channel intensity)
+            whiteness = min(r, g, b)
+            # Alpha gradient: 255 at dark, 0 at pure white (>245)
+            alpha = max(0, min(255, int((255 - whiteness - 10) * 255 / 235))) if whiteness >= 10 else 255
+            if alpha == 0:
+                new_pixels.append((0, 0, 0, 0))
                 continue
-            seen.add((x, y))
-            r, g, b, _ = pixels[x, y]
-            pixels[x, y] = (r, g, b, 0)
-            for nx, ny in ((x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)):
-                if 0 <= nx < width and 0 <= ny < height:
-                    queue.append((nx, ny))
+            
+            # Detect colored elements (like red emblem) vs neutral dark typography
+            max_c = max(r, g, b)
+            min_c = min(r, g, b)
+            is_colored = (max_c - min_c) > 35
+            
+            if is_colored:
+                # Un-mix white background: C_pure = (C - 255*(1 - a))/a
+                a_float = max(alpha / 255.0, 0.01)
+                pur_r = max(0, min(255, int((r - 255.0 * (1.0 - a_float)) / a_float)))
+                pur_g = max(0, min(255, int((g - 255.0 * (1.0 - a_float)) / a_float)))
+                pur_b = max(0, min(255, int((b - 255.0 * (1.0 - a_float)) / a_float)))
+                new_pixels.append((pur_r, pur_g, pur_b, alpha))
+            else:
+                # Monochrome/dark text turns into clean, crisp white on dark outro
+                new_pixels.append((255, 255, 255, alpha))
+        image.putdata(new_pixels)
 
-    if sum(a < 50 for *_, a in image.getdata()) < width * height * .05:
-        raise ValueError('OUTRO_LOGO_OPAQUE: no safe transparent background; require a transparent logo')
     bounds = image.getchannel('A').getbbox()
     if not bounds:
         raise ValueError('OUTRO_LOGO_EMPTY: no visible logo remains')
     image = image.crop(bounds)
-    # A neutral black wordmark needs a light variant on the black card.
-    image.putdata([(245, 245, 245, a) if max(r, g, b) < 70 and max(r, g, b)-min(r, g, b) < 15 else (r, g, b, a)
-                   for r, g, b, a in image.getdata()])
-    # Fit cleanly within max 520px width and max 280px height
-    aspect = image.width / max(1, image.height)
-    if aspect >= (520 / 280):
-        new_w = 520
-        new_h = max(1, round(520 / aspect))
-    else:
-        new_h = 260
-        new_w = max(1, round(260 * aspect))
-        if new_w > 520:
-            new_w = 520
-            new_h = max(1, round(520 / aspect))
-    image = image.resize((new_w, new_h), Image.Resampling.LANCZOS)
+
+    # Match the outro presentation gate while preserving the logo's proportions.
+    # Scaled onto a transparent 520px-wide canvas with crisp antialiasing.
+    scale = min(520 / image.width, 320 / image.height)
+    new_w = max(1, round(image.width * scale))
+    new_h = max(1, round(image.height * scale))
+    resized = image.resize((new_w, new_h), Image.Resampling.LANCZOS)
+    image = Image.new('RGBA', (520, new_h), (0, 0, 0, 0))
+    image.alpha_composite(resized, ((520 - new_w) // 2, 0))
     Path(destination).parent.mkdir(parents=True, exist_ok=True)
     image.save(destination, 'PNG')
 

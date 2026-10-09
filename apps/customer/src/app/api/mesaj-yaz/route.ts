@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { randomUUID } from 'node:crypto'
 import { completeText, hasTextProvider } from '@/lib/ai/text'
 import {
   buildGeneratePrompt,
@@ -10,6 +11,7 @@ import {
 } from '@/lib/ai/campaign-message'
 import { rateLimit } from '@/lib/rate-limit'
 import { requireActiveOrg } from '@/lib/org'
+import { loadCampaignCreativeHandoff } from '@/app/(panel)/kampanyalar/wizard-data'
 
 export const runtime = 'nodejs'
 
@@ -67,7 +69,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          'Metin üretimi kapalı. Sunucu ortamında OpenAI veya Gemini anahtarı tanımlı değil.',
+          'Metin üretimi kapalı. OmniStudio metin sağlayıcısı yapılandırılmamış.',
       },
       { status: 503 },
     )
@@ -80,6 +82,7 @@ export async function POST(request: Request) {
     tone?: string
     currentMessage?: string
     action?: string
+    creativeId?: string
   }
   try {
     body = await request.json()
@@ -88,7 +91,12 @@ export async function POST(request: Request) {
   }
 
   const mode = body.mode === 'rewrite' ? 'rewrite' : 'generate'
-  const brief = String(body.brief ?? '').trim()
+  const creativeId = String(body.creativeId ?? '').trim()
+  const creative = creativeId ? await loadCampaignCreativeHandoff(org.id, creativeId) : null
+  if (creativeId && !creative) {
+    return NextResponse.json({ error: 'İçerik bulunamadı veya kampanyada kullanıma hazır değil.' }, { status: 404 })
+  }
+  const brief = creative?.brief || String(body.brief ?? '').trim()
   const currentMessage = String(body.currentMessage ?? '').trim()
   const tone = String(body.tone ?? '').trim()
   const actionRaw = String(body.action ?? '').trim()
@@ -116,7 +124,9 @@ export async function POST(request: Request) {
       : buildGeneratePrompt({ brief, tone, business })
 
   try {
-    const text = await completeText(CAMPAIGN_GENERATE_SYSTEM, prompt)
+    const text = await completeText(CAMPAIGN_GENERATE_SYSTEM, prompt, null, {
+      tenantId: org.id, customer: org.name, conversationId: creativeId ? 'campaign:' + creativeId : 'campaign', requestId: randomUUID(),
+    })
     return NextResponse.json({ text: cleanAiMessage(text) })
   } catch (error) {
     return NextResponse.json(

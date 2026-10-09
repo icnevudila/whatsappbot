@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { useActionState, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useSyncBusy } from '@/components/busy'
 import { useConfirm } from '@/components/confirm-dialog'
@@ -8,6 +8,7 @@ import { useToast } from '@/components/toast'
 import { Button, Card, Field, Input, Notice, Textarea } from '@/components/ui'
 import { Icon } from '@/components/icon'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
+import type { CampaignCreativeHandoff } from '@/lib/creative/campaign-handoff'
 import { countUniqueRecipients, createCampaign, duplicateCampaign, updateCampaign, type CampaignState } from './actions'
 import {
   AiRewriteBar,
@@ -34,6 +35,7 @@ import {
 const DRAFT_PREFIX = 'wa.customer.campaign-wizard.v1'
 
 type DraftShape = {
+  aiMessageGenerated?: boolean
   step?: string
   name: string
   body: string
@@ -45,16 +47,22 @@ type DraftShape = {
   scheduledAt: string
 }
 
-function draftKey(orgId: string) {
-  return `${DRAFT_PREFIX}.${orgId}`
+function draftKey(orgId: string, creativeId?: string) {
+  return `${DRAFT_PREFIX}.${orgId}${creativeId ? `.${creativeId}` : ''}`
 }
 
-function readDraft(orgId: string) {
+function readDraft(orgId: string, creativeId?: string) {
   try {
     const raw =
-      localStorage.getItem(draftKey(orgId)) ?? localStorage.getItem(DRAFT_PREFIX)
+      localStorage.getItem(draftKey(orgId, creativeId))
     if (!raw) return null
-    return JSON.parse(raw) as DraftShape
+    const value = JSON.parse(raw) as Partial<DraftShape> | null
+    if (!value || typeof value !== 'object' ||
+      !['name','body','mediaUrl','messageType','scheduledAt'].every(key => typeof value[key as keyof DraftShape] === 'string') ||
+      !Array.isArray(value.lists) || !value.lists.every(id => typeof id === 'string') ||
+      !Array.isArray(value.accounts) || !value.accounts.every(id => typeof id === 'string') ||
+      !['draft','schedule','now'].includes(value.startMode || '')) return null
+    return value as DraftShape
   } catch {
     return null
   }
@@ -66,18 +74,35 @@ function typeFromMime(mime: string): 'image' | 'video' | null {
   return null
 }
 
-export function CampaignWizard({
-  mode,
-  campaign,
-  initialStep,
-  initialMediaUrl,
-  ...shared
-}: WizardSharedProps & {
+type CampaignWizardProps = WizardSharedProps & {
   mode: 'create' | 'edit'
   campaign?: WizardCampaign
   initialStep?: string
   initialMediaUrl?: string
-}) {
+  initialCreative?: CampaignCreativeHandoff
+}
+
+const subscribeHydration = () => () => {}
+const browserReady = () => true
+const serverReady = () => false
+
+/** Mount the editable draft after hydration so storage is an initializer, not a state-resetting effect. */
+export function CampaignWizard(props: CampaignWizardProps) {
+  const hydrated = useSyncExternalStore(subscribeHydration, browserReady, serverReady)
+  if (!hydrated) return <Card><p className="p-5" role="status">Kampanya hazırlanıyor…</p></Card>
+  const saved = props.mode === 'create' ? readDraft(props.orgId, props.initialCreative?.creativeId) : null
+  return <CampaignWizardForm key={`${props.orgId}.${props.campaign?.id || props.initialCreative?.creativeId || 'new'}`} {...props} saved={saved} />
+}
+
+function CampaignWizardForm({
+  mode,
+  campaign,
+  initialStep,
+  initialMediaUrl,
+  initialCreative,
+  saved,
+  ...shared
+}: CampaignWizardProps & { saved: DraftShape | null }) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -85,38 +110,45 @@ export function CampaignWizard({
   const confirm = useConfirm()
   const action = mode === 'create' ? createCampaign : updateCampaign
   const [state, formAction, pending] = useActionState<CampaignState, FormData>(action, null)
-  const [step, setStep] = useState<WizardStepId>(() => parseWizardStep(initialStep ?? searchParams.get('adim')))
-  const [name, setName] = useState(campaign?.name ?? '')
-  const [body, setBody] = useState(campaign?.body ?? '')
-  const [mediaUrl, setMediaUrl] = useState(campaign?.media_url ?? initialMediaUrl ?? '')
+  const [selectedStep, setStep] = useState<WizardStepId>(() => parseWizardStep(
+    searchParams.get('adim') || (initialStep !== 'kampanya' ? initialStep : null) || saved?.step || 'kampanya',
+  ))
+  const step = searchParams.get('adim') ? parseWizardStep(searchParams.get('adim')) : selectedStep
+  const [name, setName] = useState(campaign?.name ?? saved?.name ?? initialCreative?.name ?? '')
+  const [body, setBody] = useState(campaign?.body ?? saved?.body ?? initialCreative?.body ?? '')
+  const [aiMessageGenerated, setAiMessageGenerated] = useState(saved?.aiMessageGenerated === true)
+  const [aiMessagePending, setAiMessagePending] = useState(false)
+  const [aiMessageError, setAiMessageError] = useState<string | null>(null)
+  const autoMessageStarted = useRef(false)
+  const messageRequest = useRef<AbortController | null>(null)
+  const [mediaUrl, setMediaUrl] = useState(campaign?.media_url ?? initialMediaUrl ?? saved?.mediaUrl ?? initialCreative?.mediaUrl ?? '')
   const [messageType, setMessageType] = useState(
-    campaign?.message_type || (initialMediaUrl ? 'image' : 'text'),
+    campaign?.message_type || (initialMediaUrl ? 'image' : saved?.messageType) || initialCreative?.messageType || 'text',
   )
-  const [selectedLists, setSelectedLists] = useState<string[]>(campaign?.source_list_ids ?? [])
-  const [selectedAccounts, setSelectedAccounts] = useState<string[]>(campaign?.account_ids ?? [])
+  const [listSelection, setSelectedLists] = useState<string[]>(campaign?.source_list_ids ?? saved?.lists ?? [])
+  const [accountSelection, setSelectedAccounts] = useState<string[]>(campaign?.account_ids ?? saved?.accounts ?? [])
   const [startMode, setStartMode] = useState<'draft' | 'schedule' | 'now'>(() => {
-    if (!campaign) return 'draft'
+    if (!campaign) return saved?.startMode ?? 'draft'
     if (campaign.status === 'scheduled') return 'schedule'
     // Eski bug: scheduled_at yazılıp status draft kalmış olabilir
     if (campaign.status === 'draft' && campaign.scheduled_at) return 'schedule'
     return 'draft'
   })
   const [scheduledAt, setScheduledAt] = useState(
-    () => toDatetimeLocal(campaign?.scheduled_at) || defaultScheduleLocal(),
+    () => toDatetimeLocal(campaign?.scheduled_at) || saved?.scheduledAt || defaultScheduleLocal(),
   )
   const [hint, setHint] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [aiOpen, setAiOpen] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
-  const [uniqueCount, setUniqueCount] = useState<number | null>(null)
+  const [recipientCount, setRecipientCount] = useState<{ key: string; count: number | null } | null>(null)
   const [counting, setCounting] = useState(false)
   const [dirty, setDirty] = useState(false)
-  const [ready, setReady] = useState(mode !== 'create')
+  const ready = true
   const formRef = useRef<HTMLFormElement>(null)
   const sendArmedRef = useRef(false)
   const allowSubmitRef = useRef(false)
-  const restored = useRef(false)
   const [countPending, startCount] = useTransition()
 
   const structureLocked = campaign?.status === 'running'
@@ -126,6 +158,11 @@ export function CampaignWizard({
     () => shared.accounts.filter((item) => !item.disabled),
     [shared.accounts],
   )
+  const selectedLists = useMemo(() => listSelection.filter(id => shared.lists.some(list => list.id === id)), [listSelection, shared.lists])
+  const selectedAccounts = useMemo(() => enabledAccounts.length === 1 ? [enabledAccounts[0].id]
+    : accountSelection.filter(id => enabledAccounts.some(account => account.id === id)), [accountSelection, enabledAccounts])
+  const recipientKey = selectedLists.slice().sort().join(',')
+  const uniqueCount = selectedLists.length === 0 ? 0 : recipientCount?.key === recipientKey ? recipientCount.count : null
   const submitListIds = useMemo(
     () => selectedLists.filter((id) => shared.lists.some((list) => list.id === id)),
     [selectedLists, shared.lists],
@@ -138,71 +175,48 @@ export function CampaignWizard({
     [enabledAccounts, selectedAccounts],
   )
 
+  const selectedCreativeId = initialCreative?.mediaUrl === mediaUrl && initialCreative.messageType === messageType
+    ? initialCreative.creativeId : shared.creatives.find(item => item.url === mediaUrl && (item.messageType || 'image') === messageType)?.id
+
   useSyncBusy(pending, 'Kampanya kaydediliyor…')
   useSyncBusy(uploading, 'Görsel yükleniyor…')
 
-  useEffect(() => {
-    if (mode !== 'create' || restored.current) return
-    restored.current = true
-    const urlStep = searchParams.get('adim')
+  const generateCreativeMessage = useCallback(async () => {
+    if (!selectedCreativeId) return
+    messageRequest.current?.abort()
+    const controller = new AbortController()
+    messageRequest.current = controller
+    setAiMessagePending(true)
+    setAiMessageError(null)
     try {
-      const saved = readDraft(shared.orgId)
-      if (saved) {
-        setName(saved.name ?? '')
-        setBody(saved.body ?? '')
-        if (initialMediaUrl) {
-          setMediaUrl(initialMediaUrl)
-          setMessageType('image')
-        } else {
-          setMediaUrl(saved.mediaUrl ?? '')
-          setMessageType(saved.messageType || 'text')
-        }
-        setSelectedLists(
-          (Array.isArray(saved.lists) ? saved.lists : []).filter((id) =>
-            shared.lists.some((list) => list.id === id),
-          ),
-        )
-        setSelectedAccounts(
-          (Array.isArray(saved.accounts) ? saved.accounts : []).filter((id) =>
-            shared.accounts.some((account) => account.id === id && !account.disabled),
-          ),
-        )
-        setStartMode(saved.startMode ?? 'draft')
-        setScheduledAt(saved.scheduledAt || defaultScheduleLocal())
-      }
-      const fromUrl = urlStep ? parseWizardStep(urlStep) : null
-      const fromInitial = initialStep && initialStep !== 'kampanya' ? parseWizardStep(initialStep) : null
-      const fromSaved = saved?.step ? parseWizardStep(saved.step) : null
-      const next = fromUrl || fromInitial || fromSaved || 'kampanya'
-      setStep(next)
-      if (!urlStep && next !== 'kampanya') {
-        const params = new URLSearchParams(searchParams.toString())
-        params.set('adim', next)
-        router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-      }
-    } catch {
-      /* ignore */
+      const response = await fetch('/api/mesaj-yaz', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: controller.signal,
+        body: JSON.stringify({ mode: 'generate', creativeId: selectedCreativeId }),
+      })
+      const result = await response.json() as { text?: string; error?: string }
+      if (!response.ok || !result.text?.trim()) throw new Error(result.error || 'Kampanya mesajı hazırlanamadı.')
+      if (controller.signal.aborted) return
+      setBody(result.text)
+      setAiMessageGenerated(true)
+    } catch (error) {
+      if (!controller.signal.aborted) setAiMessageError(error instanceof Error ? error.message : 'Kampanya mesajı hazırlanamadı.')
+    } finally {
+      if (messageRequest.current === controller) setAiMessagePending(false)
     }
-    setReady(true)
-  }, [mode, initialMediaUrl, initialStep, pathname, router, searchParams, shared.orgId, shared.lists, shared.accounts])
+  }, [selectedCreativeId])
+
+  useEffect(() => () => { messageRequest.current?.abort() }, [mediaUrl, messageType])
 
   useEffect(() => {
-    if (mode === 'create' && !ready) return
-    const validLists = new Set(shared.lists.map((list) => list.id))
-    setSelectedLists((current) => {
-      const next = current.filter((id) => validLists.has(id))
-      return next.length === current.length ? current : next
-    })
-    const validAccounts = new Set(enabledAccounts.map((account) => account.id))
-    setSelectedAccounts((current) => {
-      const next = current.filter((id) => validAccounts.has(id))
-      return next.length === current.length ? current : next
-    })
-  }, [mode, ready, shared.lists, enabledAccounts])
+    if (mode !== 'create' || !ready || !initialCreative || aiMessageGenerated || autoMessageStarted.current) return
+    autoMessageStarted.current = true
+    void generateCreativeMessage()
+  }, [mode, ready, initialCreative, aiMessageGenerated, generateCreativeMessage])
 
   useEffect(() => {
     if (mode !== 'create' || !ready) return
     const payload: DraftShape = {
+      aiMessageGenerated,
       step,
       name,
       body,
@@ -213,42 +227,28 @@ export function CampaignWizard({
       startMode,
       scheduledAt,
     }
-    localStorage.setItem(draftKey(shared.orgId), JSON.stringify(payload))
-  }, [mode, ready, step, name, body, mediaUrl, messageType, selectedLists, selectedAccounts, startMode, scheduledAt, shared.orgId])
-
-  useEffect(() => {
-    if (mode === 'create' && !ready) return
-    if (enabledAccounts.length !== 1) return
-    const only = enabledAccounts[0].id
-    setSelectedAccounts((current) => (current.length === 1 && current[0] === only ? current : [only]))
-  }, [enabledAccounts, mode, ready])
+    try { localStorage.setItem(draftKey(shared.orgId, initialCreative?.creativeId), JSON.stringify(payload)) } catch { /* The editable in-memory draft remains usable. */ }
+  }, [mode, ready, step, name, body, mediaUrl, messageType, selectedLists, selectedAccounts, startMode, scheduledAt, shared.orgId, initialCreative?.creativeId, aiMessageGenerated])
 
   useEffect(() => {
     const onLeave = (event: BeforeUnloadEvent) => {
-      if (!dirty || pending) return
+      if (!dirty || pending || state?.ok) return
       event.preventDefault()
       event.returnValue = ''
     }
     window.addEventListener('beforeunload', onLeave)
     return () => window.removeEventListener('beforeunload', onLeave)
-  }, [dirty, pending])
+  }, [dirty, pending, state?.ok])
 
   useEffect(() => {
     if (state?.error) {
-      setFormError(state.error)
       toast(state.error, 'danger')
     }
     if (state?.ok) {
       toast(state.ok, 'success')
-      setDirty(false)
-      if (mode === 'create') localStorage.removeItem(draftKey(shared.orgId))
+      if (mode === 'create') { try { localStorage.removeItem(draftKey(shared.orgId, initialCreative?.creativeId)) } catch { /* Storage may be unavailable. */ } }
     }
-  }, [state?.error, state?.ok, toast, mode, shared.orgId])
-
-  useEffect(() => {
-    const fromUrl = searchParams.get('adim')
-    if (fromUrl) setStep(parseWizardStep(fromUrl))
-  }, [searchParams])
+  }, [state?.error, state?.ok, toast, mode, shared.orgId, initialCreative?.creativeId])
 
   const go = (next: WizardStepId) => {
     setHint(null)
@@ -260,24 +260,25 @@ export function CampaignWizard({
   }
 
   useEffect(() => {
-    if (selectedLists.length === 0) {
-      setUniqueCount(0)
-      return
-    }
+    if (selectedLists.length === 0) return
+    let cancelled = false
     const handle = window.setTimeout(() => {
       startCount(async () => {
         setCounting(true)
         const result = await countUniqueRecipients(selectedLists)
-        setUniqueCount(result.count)
-        setCounting(false)
+        if (!cancelled) {
+          setRecipientCount({ key: recipientKey, count: result.count })
+          setCounting(false)
+        }
       })
     }, 250)
-    return () => window.clearTimeout(handle)
-  }, [selectedLists])
+    return () => { cancelled = true; window.clearTimeout(handle) }
+  }, [selectedLists, recipientKey])
 
   const mark = () => setDirty(true)
 
   const validateStep = (id: WizardStepId): string | null => {
+    if (id === 'mesaj' && aiMessagePending) return 'AI kampanya mesajı hazırlanıyor. Tamamlanmasını bekleyin.'
     if (id === 'kampanya' && !name.trim()) return 'Kampanyaya bir ad verin.'
     if (id === 'alicilar') {
       if (shared.lists.length === 0) return 'Önce Kişiler’den bir grup oluşturun.'
@@ -366,7 +367,7 @@ export function CampaignWizard({
     if (startMode === 'now') return 'Hemen Gönder'
     if (startMode === 'schedule') return 'Planla'
     return 'Taslağı Kaydet'
-  }, [pending, mode, campaign?.status, startMode, uniqueCount])
+  }, [pending, mode, campaign?.status, startMode])
 
   const [copyPending, startCopy] = useTransition()
 
@@ -378,7 +379,7 @@ export function CampaignWizard({
           <p className="text-[13.5px] text-ink-muted">
             Gönderilmiş kampanya değiştirilmez. Aynı içeriği yeni bir taslak olarak kopyalayabilirsiniz.
           </p>
-          <WaPreview body={campaign.body ?? ''} mediaUrl={campaign.media_url} />
+          <WaPreview body={campaign.body ?? ''} mediaUrl={campaign.media_url} messageType={campaign.message_type} />
           <Button
             type="button"
             variant="accent"
@@ -434,8 +435,6 @@ export function CampaignWizard({
             setHint(error)
             return
           }
-          if (mode === 'create') localStorage.removeItem(draftKey(shared.orgId))
-          setDirty(false)
           if (startMode === 'now' && !sendArmedRef.current) {
             event.preventDefault()
             allowSubmitRef.current = false
@@ -459,6 +458,7 @@ export function CampaignWizard({
       >
         {campaign ? <input type="hidden" name="campaign_id" value={campaign.id} /> : null}
         <input type="hidden" name="media_url" value={mediaUrl} />
+        <input type="hidden" name="creative_id" value={selectedCreativeId || ''} />
         <input type="hidden" name="message_type" value={mediaUrl ? messageType : 'text'} />
         <input type="hidden" name="min_delay" value={campaign?.min_delay_seconds ?? 8} />
         <input type="hidden" name="max_delay" value={campaign?.max_delay_seconds ?? 25} />
@@ -536,15 +536,16 @@ export function CampaignWizard({
               <MediaPicker
                 orgId={shared.orgId}
                 mediaUrl={mediaUrl}
+                messageType={messageType}
                 creatives={shared.creatives}
                 imageAiEnabled={shared.imageAiEnabled}
                 brandName={shared.brandName}
                 brandKits={shared.brandKits}
                 uploading={uploading}
                 onUpload={(file) => void upload(file)}
-                onSelect={(url) => {
+                onSelect={(url, type) => {
                   setMediaUrl(url)
-                  setMessageType('image')
+                  setMessageType(type || 'image')
                   mark()
                 }}
                 onClear={() => {
@@ -575,6 +576,7 @@ export function CampaignWizard({
               </div>
               <Textarea
                 name="body"
+                disabled={aiMessagePending}
                 rows={8}
                 value={body}
                 onChange={(event) => {
@@ -583,9 +585,20 @@ export function CampaignWizard({
                 }}
                 placeholder="Merhaba {{ad}}, bu ay mağazamızda özel bir indirim var."
               />
-              {body.trim() && shared.aiEnabled ? (
+              {selectedCreativeId ? (
+                <div className="space-y-2">
+                  {aiMessagePending ? <p role="status">AI kampanya mesajı doğrulanmış ürün bilgileriyle hazırlanıyor…</p> : null}
+                  {aiMessageError ? <Notice tone="danger">{aiMessageError}</Notice> : null}
+                  <Button type="button" disabled={aiMessagePending || !body.trim()} onClick={goNext}>Kullan</Button>
+                  <Button type="button" disabled={aiMessagePending} onClick={() => void generateCreativeMessage()}>
+                    {aiMessageError ? 'Tekrar dene' : 'Tekrar oluştur'}
+                  </Button>
+                </div>
+              ) : null}
+              {body.trim() && shared.aiEnabled && !aiMessagePending ? (
                 <AiRewriteBar
                   currentMessage={body}
+                  creativeId={selectedCreativeId}
                   onApply={(text) => {
                     setBody(text)
                     mark()
@@ -650,7 +663,7 @@ export function CampaignWizard({
                 ]}
               />
               <div className="flex justify-center">
-                <WaPreview body={body} mediaUrl={mediaUrl || null} />
+                <WaPreview body={body} mediaUrl={mediaUrl || null} messageType={messageType} />
               </div>
             </div>
           ) : null}
@@ -683,7 +696,7 @@ export function CampaignWizard({
         </div>
 
         <div className="wb-wa-wizard-foot sticky bottom-0 z-[1] space-y-2.5 px-4 py-3 sm:px-5">
-          {formError ? <Notice tone="danger">{formError}</Notice> : null}
+          {formError || state?.error ? <Notice tone="danger">{formError || state?.error}</Notice> : null}
           {hint ? <Notice tone="warn">{hint}</Notice> : null}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Button type="button" className="wb-wa-text-btn" disabled={pending || stepIndex === 0} onClick={goBack}>

@@ -137,6 +137,7 @@ export function cleanAiMessage(text: string): string {
   return text
     .replace(/^["'`]+|["'`]+$/g, '')
     .replace(/^(işte (mesajınız|metniniz)[:\s]*)/i, '')
+    .replace(/^(?:WhatsApp\s+)?Kampanya\s+(?:Mesajı|Metni)\s*:?\s*\r?\n+/i, '')
     .trim()
 }
 
@@ -146,11 +147,11 @@ export function generateCampaignWhatsAppMessage(verified: import('../creative/pr
   // 1. Header with brand and campaign headline
   const brandTitle = verified.brandName && verified.brandName !== 'İşletmemiz' ? verified.brandName : ''
   if (brandTitle && verified.headline) {
-    parts.push(`📢 *${brandTitle} — ${verified.headline}*`)
+    parts.push(`*${brandTitle} — ${verified.headline}*`)
   } else if (verified.headline) {
-    parts.push(`📢 *${verified.headline}*`)
+    parts.push(`*${verified.headline}*`)
   } else if (brandTitle) {
-    parts.push(`📢 *${brandTitle} Kampanyası*`)
+    parts.push(`*${brandTitle} Kampanyası*`)
   }
 
   // 2. Offer & Price highlight
@@ -182,19 +183,19 @@ export function generateCampaignWhatsAppMessage(verified: import('../creative/pr
   }
 
   if (offerLines.length) {
-    parts.push(`✨ *Kampanya Detayları:*\n${offerLines.join('\n')}`)
+    parts.push(`*Kampanya Detayları:*\n${offerLines.join('\n')}`)
   }
 
   // 3. CTA & Contact
-  const ctaLine = verified.cta ? `👉 ${verified.cta}` : '👉 Detaylı bilgi ve sipariş için bize hemen yazabilirsiniz.'
+  const ctaLine = verified.cta ? `${verified.cta}` : 'Detaylı bilgi ve sipariş için bize hemen yazabilirsiniz.'
   parts.push(ctaLine)
 
   const contactList: string[] = []
   if (verified.contactLines.length) {
-    contactList.push(`📞 ${verified.contactLines[0]}`)
+    contactList.push(`${verified.contactLines[0]}`)
   }
   if (verified.website) {
-    contactList.push(`🌐 ${verified.website}`)
+    contactList.push(`${verified.website}`)
   }
   if (contactList.length) {
     parts.push(contactList.join(' · '))

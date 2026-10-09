@@ -50,6 +50,7 @@ COPY services/gflow-engine/progress_journal.py /app/progress_journal.py
 COPY services/gflow-engine/process_bounds.py /app/process_bounds.py
 COPY services/gflow-engine/invocation_identity.py /app/invocation_identity.py
 COPY services/gflow-engine/redactor.py /app/redactor.py
+COPY services/gflow-engine/provider_failure_diagnostics.py /app/provider_failure_diagnostics.py
 
 # Create dedicated non-root gflow user (uid: 1001, gid: 1001)
 RUN groupadd -g 1001 gflow && \

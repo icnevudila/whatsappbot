@@ -8,6 +8,7 @@ import {
 } from './types'
 
 export type PlannerInput = {
+  tenantId?: string
   brandName: string
   brandTone?: string | null
   productName: string
@@ -34,25 +35,25 @@ export function buildDeterministicFallbackPlan(input: PlannerInput): CreativePla
   const isVideo = input.mediaType === 'VIDEO'
 
   let headline = `${brand} ile ${product}`
-  let supporting = detail || 'İşletmeniz için yüksek kalite, üstün dayanıklılık ve güvenilir çözüm.'
+  let supporting = detail || 'Ürünü inceleyin ve ayrıntılı bilgi almak için bize ulaşın.'
   let cta = 'Hemen İnceleyin'
 
   if (input.objective === 'SALES_OFFER') {
-    headline = `${product} Şimdi Avantajlı Fiyatla`
-    supporting = detail || 'Sınırlı süreye özel kampanya fırsatını kaçırmayın.'
-    cta = 'Fırsatı Yakalayın'
+    headline = `${product} için Bilgi Alın`
+    supporting = detail || 'Fiyat ve sipariş bilgisi için bizimle iletişime geçin.'
+    cta = 'Bilgi Alın'
   } else if (input.objective === 'NEW_PRODUCT') {
     headline = `Yeni: ${product}`
-    supporting = detail || 'Yenilikçi teknoloji ve üstün tasarım şimdi satışta.'
+    supporting = detail || 'Ürünle ilgili ayrıntıları keşfedin.'
     cta = 'Keşfet'
   } else if (input.objective === 'BRAND_AWARENESS') {
-    headline = `${brand} Güvencesiyle ${product}`
-    supporting = detail || 'Yılların tecrübesi, tavizsiz kalite ve profesyonel hizmet.'
+    headline = `${brand} — ${product}`
+    supporting = detail || 'Markamız ve ürünümüz hakkında bilgi almak için bize ulaşın.'
     cta = 'Detaylı Bilgi Alın'
   }
 
   const voiceover = isVideo
-    ? `${brand} ${product} ile işinizi kolaylaştırın, kalite ve güveni hemen yaşayın.`
+    ? `${brand} ${product}. Ayrıntılı bilgi almak için bize ulaşın.`
     : undefined
 
   return {
@@ -142,7 +143,7 @@ Varsa Kampanya Detayı / Not: ${input.campaignDetail || 'Yok'}
 Varsa Fiyat / İndirim: ${input.campaignCopy?.price || ''} ${input.campaignCopy?.offer || ''}`
 
   try {
-    const rawAiResponse = await completeText(systemPrompt, userPrompt)
+    const rawAiResponse = await completeText(systemPrompt, userPrompt, null, {tenantId:input.tenantId,customer:input.brandName,conversationId:'creative-plan'})
     const jsonMatch = rawAiResponse.match(/\{[\s\S]*\}/)
     if (!jsonMatch) return fallback
 
@@ -193,13 +194,13 @@ Varsa Fiyat / İndirim: ${input.campaignCopy?.price || ''} ${input.campaignCopy?
       },
       layout: {
         text_safe_zone: ['top_third', 'bottom_third', 'side_margin'].includes(parsed.layout?.text_safe_zone as string)
-          ? (parsed.layout?.text_safe_zone as any)
+          ? (parsed.layout?.text_safe_zone as CreativePlanV2['layout']['text_safe_zone'])
           : fallback.layout.text_safe_zone,
         logo_position: ['top_left', 'top_right', 'top_center'].includes(parsed.layout?.logo_position as string)
-          ? (parsed.layout?.logo_position as any)
+          ? (parsed.layout?.logo_position as CreativePlanV2['layout']['logo_position'])
           : fallback.layout.logo_position,
         product_safe_zone: ['center', 'bottom_two_thirds'].includes(parsed.layout?.product_safe_zone as string)
-          ? (parsed.layout?.product_safe_zone as any)
+          ? (parsed.layout?.product_safe_zone as CreativePlanV2['layout']['product_safe_zone'])
           : fallback.layout.product_safe_zone,
       },
       negative_constraints: Array.isArray(parsed.negative_constraints) && parsed.negative_constraints.length

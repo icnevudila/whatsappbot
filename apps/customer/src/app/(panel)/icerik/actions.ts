@@ -4,12 +4,18 @@ import sharp from 'sharp'
 import { after } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { randomBytes } from 'node:crypto'
+import { randomBytes, createHash } from 'node:crypto'
+
+function uuidFromRequestKey(orgId: string, requestKey: string): string {
+  const hash = createHash('sha256').update(`creative:${orgId}:${requestKey}`).digest('hex')
+  return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-5${hash.slice(13, 16)}-a${hash.slice(17, 20)}-${hash.slice(20, 32)}`
+}
 import { enqueueJob } from '@/lib/jobs'
 import { hasImageProvider } from '@/lib/ai/image'
 import { processCreativeGeneration } from '@/lib/creative/process'
 import { isUncertainImageFailure } from '@/lib/creative/detail-render-state'
 import { isReadyImageSource } from '@/lib/creative/image-source'
+import { inheritVariationContext } from '@/lib/creative/variation-context'
 import { requiredImageAssets } from '@/lib/creative/required-image-assets'
 import {
   titleFromBrief,
@@ -127,6 +133,9 @@ export async function startCreativeGeneration(
   } catch {
     return { error: 'Form okunamadı. Sayfayı yenileyip tekrar deneyin.' }
   }
+  if (!draft || typeof draft !== 'object' || Array.isArray(draft)) {
+    return { error: 'Form okunamadı. Sayfayı yenileyip tekrar deneyin.' }
+  }
 
   const requestKey = String(draft.requestKey ?? '').trim()
   let brief = String(draft.brief ?? '').trim()
@@ -217,7 +226,7 @@ export async function startCreativeGeneration(
           .maybeSingle(),
     supabase
       .from('organizations')
-      .select('logo_path, monthly_video_quota')
+      .select('name, about, logo_path, monthly_video_quota')
       .eq('id', org.id)
       .maybeSingle(),
     baseCreativeId
@@ -283,7 +292,14 @@ export async function startCreativeGeneration(
       await kickGeneration(existing.id, authContext)
     }
     revalidateLibrary(existing.id)
-    redirect(`/icerik/${existing.id}`)
+    return { id: existing.id, ok: 'Görsel üretimi devam ediyor.' }
+  }
+
+  if ([kitRes, orgRowRes, productRowsRes, imageRowsRes, phonesRes, socialsRes].some(result => result.error)) {
+    return { error: 'Katalog ve firma bilgileri doğrulanamadı. Tekrar deneyin.' }
+  }
+  if (productIds.some(id => !(productRowsRes.data ?? []).some(product => product.id === id))) {
+    return { error: 'Seçili ürün bu işletmeye ait değil. Ürünü yeniden seçin.' }
   }
 
   let kitRow: {
@@ -311,7 +327,11 @@ export async function startCreativeGeneration(
   if (parentId) {
     const parent = parentRes.data
     if (!parent) return { error: 'Üst görsel bulunamadı.' }
+    if (!parent.payload || typeof parent.payload !== 'object' || Array.isArray(parent.payload)) {
+      return { error: 'Kaynak görselin üretim bilgileri okunamadı.' }
+    }
     parentPayload = parent.payload as CreativePayload
+    draft = inheritVariationContext(draft, parentPayload)
     if (brief.length < 8 && parentPayload?.brief) brief = parentPayload.brief.trim()
     if (parentPayload?.brandKit && !kitId) {
       kitRow = {
@@ -465,6 +485,8 @@ export async function startCreativeGeneration(
     style: String(draft.style ?? 'auto'),
     formatId: format.id,
     aspect: format.aspect,
+    companyName: orgRow?.name || org.name,
+    companyAbout: orgRow?.about || null,
     textDensity: (['low', 'balanced', 'detailed'].includes(String(draft.textDensity))
       ? draft.textDensity
       : 'balanced') as CreativeSnapshot['textDensity'],
@@ -539,9 +561,14 @@ export async function startCreativeGeneration(
     console.warn('[startCreativeGeneration] campaignMessage generation skipped:', msgErr)
   }
 
+  const deterministicCreativeId = requestKey
+    ? uuidFromRequestKey(org.id, requestKey)
+    : undefined
+
   const { data: inserted, error } = await supabase
     .from('creatives')
     .insert({
+      ...(deterministicCreativeId ? { id: deterministicCreativeId } : {}),
       org_id: org.id,
       created_by: userId,
       brand_kit_id: kitRow?.id ?? null,
@@ -557,7 +584,21 @@ export async function startCreativeGeneration(
     .select('id')
     .single()
 
-  if (error || !inserted) return { error: error?.message ?? 'Kayıt açılamadı.' }
+  if (error) {
+    if (
+      deterministicCreativeId &&
+      (error.code === '23505' ||
+        error.message?.includes('duplicate key') ||
+        error.message?.includes('creatives_pkey'))
+    ) {
+      // ATOMIC RACE RESOLUTION: A parallel request already inserted this job.
+      // Revalidate and return the existing id without triggering a duplicate kick.
+      revalidateLibrary(deterministicCreativeId)
+      return { id: deterministicCreativeId, ok: 'Görsel üretimi devam ediyor.' }
+    }
+    return { error: error.message ?? 'Kayıt açılamadı.' }
+  }
+  if (!inserted) return { error: 'Kayıt açılamadı.' }
   const creativeInsertMs = Date.now() - tInsertStart
 
   if (products.length > 0) {
@@ -607,7 +648,7 @@ export async function startCreativeGeneration(
   }
 
   revalidateLibrary(inserted.id)
-  redirect(`/icerik/${inserted.id}`)
+  return { id: inserted.id, ok: 'Görsel üretimi başlatıldı.' }
 }
 
 export async function retryCreative(id: string): Promise<CreativeActionState> {

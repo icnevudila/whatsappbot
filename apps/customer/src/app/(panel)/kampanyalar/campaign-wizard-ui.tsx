@@ -179,7 +179,7 @@ export function SenderPicker({
   )
 }
 
-export function WaPreview({ body, mediaUrl }: { body: string; mediaUrl: string | null }) {
+export function WaPreview({ body, mediaUrl, messageType }: { body: string; mediaUrl: string | null; messageType?: string }) {
   const preview = body.replaceAll('{{ad}}', 'Ahmet').replaceAll('{{name}}', 'Ahmet')
   return (
     <div className="wb-wa-phone" style={{ width: 'min(100%, 320px)' }}>
@@ -194,7 +194,7 @@ export function WaPreview({ body, mediaUrl }: { body: string; mediaUrl: string |
         </div>
         <div className="wb-wa-phone-thread">
           <div className="wb-wa-phone-bubble">
-            {mediaUrl ? (
+            {mediaUrl && messageType === 'video' ? <video src={mediaUrl} controls playsInline preload="metadata" className="wb-wa-phone-media" /> : mediaUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={mediaUrl} alt="" className="wb-wa-phone-media" />
             ) : null}
@@ -216,6 +216,7 @@ export function WaPreview({ body, mediaUrl }: { body: string; mediaUrl: string |
 export function MediaPicker({
   orgId,
   mediaUrl,
+  messageType,
   creatives,
   imageAiEnabled,
   brandName,
@@ -227,13 +228,14 @@ export function MediaPicker({
 }: {
   orgId: string
   mediaUrl: string
+  messageType?: string
   creatives: CreativeOption[]
   imageAiEnabled: boolean
   brandName?: string
   brandKits: { id: string; name: string; isDefault: boolean }[]
   uploading: boolean
   onUpload: (file: File) => void
-  onSelect: (url: string) => void
+  onSelect: (url: string, messageType?: 'image' | 'video') => void
   onClear: () => void
 }) {
   const [libraryOpen, setLibraryOpen] = useState(false)
@@ -246,8 +248,10 @@ export function MediaPicker({
       {mediaUrl ? (
         <div className="space-y-2">
           <div className="overflow-hidden rounded-md border border-hairline bg-canvas">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={mediaUrl} alt="" className="block w-full max-h-[min(70dvh,32rem)] object-contain" />
+            {messageType === 'video' ? <video src={mediaUrl} controls playsInline preload="metadata" className="block w-full max-h-[min(70dvh,32rem)] object-contain" /> : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={mediaUrl} alt="Seçili kampanya görseli" className="block w-full max-h-[min(70dvh,32rem)] object-contain" />
+            )}
           </div>
           <div className="flex flex-wrap gap-2">
             <Button type="button" onClick={() => setLibraryOpen(true)}>
@@ -269,7 +273,7 @@ export function MediaPicker({
             onFile={onUpload}
           />
           <Button type="button" onClick={() => setLibraryOpen(true)}>
-            Görsel kütüphanesinden seç
+            Görsel / video kütüphanesinden seç
           </Button>
         </div>
       )}
@@ -283,8 +287,8 @@ export function MediaPicker({
         <LibraryModal
           creatives={creatives}
           onClose={() => setLibraryOpen(false)}
-          onSelect={(url) => {
-            onSelect(url)
+          onSelect={(url, type) => {
+            onSelect(url, type)
             setLibraryOpen(false)
           }}
           onUpload={onUpload}
@@ -304,7 +308,7 @@ function LibraryModal({
 }: {
   creatives: CreativeOption[]
   onClose: () => void
-  onSelect: (url: string) => void
+  onSelect: (url: string, messageType?: 'image' | 'video') => void
   onUpload: (file: File) => void
   uploading: boolean
 }) {
@@ -322,9 +326,9 @@ function LibraryModal({
       <button type="button" className="wb-modal-backdrop" aria-label="Kapat" onClick={onClose} />
       <div className="wb-modal-panel wb-modal-panel--wide" role="dialog" aria-labelledby={titleId}>
         <h2 id={titleId} className="wb-modal-title">
-          Görsel kütüphanesi
+          Görsel / video kütüphanesi
         </h2>
-        <p className="wb-modal-desc">Hazır bir görsel seçin veya yeni yükleyin.</p>
+        <p className="wb-modal-desc">Onaylı bir görsel veya final video seçin.</p>
         <div className="mt-3">
           <FileUploadButton
             accept="image/png,image/jpeg,image/webp,image/*"
@@ -342,10 +346,11 @@ function LibraryModal({
                 key={item.id}
                 type="button"
                 className="overflow-hidden rounded-md border border-hairline"
-                onClick={() => onSelect(item.url)}
+                onClick={() => onSelect(item.url, item.messageType)}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={item.url} alt="" className="aspect-square w-full object-cover" />
+                <img src={item.thumbnailUrl || item.url} alt={item.title || 'Kampanya içeriği'} className="aspect-square w-full object-cover" />
+                {item.messageType === 'video' ? <span className="block p-1 text-xs">Video</span> : null}
               </button>
             ))}
           </div>
@@ -360,35 +365,31 @@ function LibraryModal({
   )
 }
 
-export function AiWriteModal({
-  open,
-  onClose,
-  defaultTone,
-  initialBrief,
-  onApply,
-}: {
+type AiWriteModalProps = {
   open: boolean
   onClose: () => void
   defaultTone?: string
   initialBrief?: string
   onApply: (text: string) => void
-}) {
+}
+
+export function AiWriteModal(props: AiWriteModalProps) {
+  return props.open ? <AiWriteModalForm {...props} /> : null
+}
+
+function AiWriteModalForm({
+  open,
+  onClose,
+  defaultTone,
+  initialBrief,
+  onApply,
+}: AiWriteModalProps) {
   const titleId = useId()
-  const [brief, setBrief] = useState('')
+  const [brief, setBrief] = useState(initialBrief?.trim() ?? '')
   const [tone, setTone] = useState(defaultTone && CAMPAIGN_TONES.some((t) => t.value === defaultTone) ? defaultTone : 'samimi')
   const [draft, setDraft] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!open) {
-      setDraft(null)
-      setError(null)
-      setBusy(false)
-      return
-    }
-    setBrief(initialBrief?.trim() ?? '')
-  }, [open, initialBrief])
 
   const write = async () => {
     setBusy(true)
@@ -493,9 +494,11 @@ export function AiWriteModal({
 
 export function AiRewriteBar({
   currentMessage,
+  creativeId,
   onApply,
 }: {
   currentMessage: string
+  creativeId?: string
   onApply: (text: string) => void
 }) {
   const [open, setOpen] = useState(false)
@@ -525,7 +528,7 @@ export function AiRewriteBar({
       const response = await fetch('/api/mesaj-yaz', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'rewrite', currentMessage, action: next }),
+        body: JSON.stringify({ mode: 'rewrite', currentMessage, action: next, creativeId }),
       })
       const json = (await response.json()) as { text?: string; error?: string }
       if (!response.ok) throw new Error(json.error ?? 'İyileştirme başarısız.')
@@ -539,8 +542,15 @@ export function AiRewriteBar({
 
   return (
     <div className="space-y-2">
+      {creativeId ? (
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" disabled={busy || !currentMessage.trim()} onClick={() => void run('sales_focused')}>Daha satış odaklı yap</Button>
+          <Button type="button" disabled={busy || !currentMessage.trim()} onClick={() => void run('shorten')}>Kısalt</Button>
+          <Button type="button" disabled={busy || !currentMessage.trim()} onClick={() => void run('friendly')}>Daha samimi yap</Button>
+        </div>
+      ) : null}
       <div className="relative" ref={menuRef}>
-        <Button type="button" disabled={!currentMessage.trim()} onClick={() => setOpen((value) => !value)}>
+        <Button type="button" disabled={busy || !currentMessage.trim()} onClick={() => setOpen((value) => !value)}>
           <Icon name="tune" className="size-3.5" />
           AI ile İyileştir
         </Button>

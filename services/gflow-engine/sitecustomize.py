@@ -273,7 +273,9 @@ try:
             try:
                 sys.stderr.write('{"event":"mesajify.generation_started"}\n')
                 sys.stderr.flush()
-                return await _orig_submit_and_observe(self, page, *args, **kwargs)
+                record = await _orig_submit_and_observe(self, page, *args, **kwargs)
+                from provider_failure_diagnostics import observe_terminal_failure
+                return await observe_terminal_failure(page, record)
             finally:
                 stop_event.set()
                 watcher_task.cancel()

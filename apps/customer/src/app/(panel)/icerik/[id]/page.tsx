@@ -45,16 +45,16 @@ export default async function CreativeDetailPage({
   const payload = row.payload as CreativePayload
   const storedTitle = row.title?.trim() || ''
   const briefTitle = payload?.brief?.replace(/\s+/g, ' ').trim() || ''
-  const displayTitle =
-    storedTitle.endsWith('…') && briefTitle.length > storedTitle.length - 1
-      ? briefTitle.slice(0, 180)
-      : storedTitle || briefTitle || 'Kampanya görseli'
+  const rawTitle = storedTitle || briefTitle || 'Kampanya görseli'
+  const firstSentence = rawTitle.split(/[\n\r.]+/)[0]?.trim() || rawTitle
+  const displayTitle = firstSentence.length > 70 ? `${firstSentence.slice(0, 67)}…` : firstSentence
   const provider =
     payload && typeof payload === 'object' && 'provider' in payload
       ? String(payload.provider ?? '')
       : ''
 
   const creative: DetailCreative = {
+    submissionRequestKey: typeof payload?.requestKey === 'string' ? payload.requestKey : null,
     id: row.id,
     title: displayTitle,
     publicUrl: row.public_url,
@@ -62,6 +62,7 @@ export default async function CreativeDetailPage({
     source: row.source,
     generationType: row.generation_type,
     createdAt: row.created_at,
+    productionStartedAt: typeof payload?.imageJob?.queuedAt === 'string' ? payload.imageJob.queuedAt : row.created_at,
     error: row.error,
     parentId: row.parent_id,
     brandName: brandName ?? null,
