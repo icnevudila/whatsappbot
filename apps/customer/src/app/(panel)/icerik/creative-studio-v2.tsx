@@ -1325,88 +1325,124 @@ export function CreativeStudioV2({
                   )}
                 </div>
 
-                {/* Collapsed Advanced Section */}
-                <details className="text-[12px] text-[#667781]">
-                  <summary className="cursor-pointer hover:text-[#111b21] font-semibold text-[#008069]">
-                    Gelişmiş Seçenekler (Fiyat, Tarih ve Ortam)
-                  </summary>
-                  <div className="mt-3 space-y-3 rounded-xl border border-hairline bg-[#f8fafb] p-3.5">
-                    {mediaType === 'IMAGE' ? (
-                      <div className="space-y-2.5">
-                        <div className="grid gap-2 sm:grid-cols-3">
-                          <Field label="Fiyat (Varsa)">
-                            <Input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Örn: 249 TL" />
-                          </Field>
-                          <Field label="Eski Fiyat (Opsiyonel)">
-                            <Input value={oldPrice} onChange={(e) => setOldPrice(e.target.value)} placeholder="Örn: 399 TL" />
-                          </Field>
-                          <Field label="Kampanya / İndirim">
-                            <Input value={offer} onChange={(e) => setOffer(e.target.value)} placeholder="Örn: %20 İndirim" />
-                          </Field>
-                        </div>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          <Field label="Teslimat / Fayda Bilgileri">
-                            <Input value={deliveryInfo} onChange={(e) => setDeliveryInfo(e.target.value)} placeholder="Örn: 3 gün içinde teslimat · Şantiyeye teslim" />
-                          </Field>
-                          <Field label="Sektör (İsteğe Bağlı)">
-                            <Input value={sector} onChange={(e) => setSector(e.target.value)} placeholder="Örn: İnşaat, Tarım, Gıda, Çiçekçilik" />
-                          </Field>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          <Field label="Çekim Ortamı">
-                            <select
-                              value={environmentPreset}
-                              onChange={(e) => setEnvironmentPreset(e.target.value)}
-                              className="w-full rounded-lg border border-[#e9edef] bg-white px-3 py-2 text-[12.5px] text-[#111b21]"
-                            >
-                              <option value="auto">Otomatik (En uygun ortam)</option>
-                              <option value="construction">İnşaat ve Yapı Sahası</option>
-                              <option value="workshop">Atölye, Fabrika ve Sanayi</option>
-                              <option value="garden">Doğal Açık Alan & Bahçe</option>
-                              <option value="studio">Prestijli Reklam Stüdyosu</option>
-                              <option value="kitchen">Mutfak, Gıda ve Kafe</option>
-                              <option value="office">Modern Ofis ve İç Mekan</option>
-                            </select>
-                          </Field>
-                          <Field label="Kamera Hareketi">
-                            <select
-                              value={motionStyle}
-                              onChange={(e) => setMotionStyle(e.target.value)}
-                              className="w-full rounded-lg border border-[#e9edef] bg-white px-3 py-2 text-[12.5px] text-[#111b21]"
-                            >
-                              <option value="real_usage">Doğal Kullanım ve Sahne Hareketi</option>
-                              <option value="studio_orbit">Vitrin & 3/4 Açı (Şık ve Dengeli)</option>
-                              <option value="macro_detail">Yakın Çekim & Detay Odaklı</option>
-                            </select>
-                          </Field>
-                        </div>
-                        <div className="flex gap-4 pt-1">
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={subtitles}
-                              onChange={(e) => setSubtitles(e.target.checked)}
-                              className="rounded text-[#008069]"
-                            />
-                            <span>Dinamik Altyazı Ekle</span>
-                          </label>
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={outro}
-                              disabled
-                              className="rounded text-[#008069]"
-                            />
-                            <span>2 saniyelik markalı kapanış dahildir</span>
-                          </label>
-                        </div>
-                      </div>
-                    )}
+                {/* Fiyat & Kampanya Teklifi (Satış ve Kampanya Odaklı - Doğrudan Erişilebilir) */}
+                {mediaType === 'IMAGE' && (
+                  <div className="rounded-xl border border-hairline bg-surface p-3.5 space-y-2.5 shadow-2xs">
+                    <div>
+                      <p className="text-[13px] font-bold text-[#111b21] flex items-center gap-1.5">
+                        <span>Fiyat & Kampanya Teklifi</span>
+                        {(objective === 'SALES_OFFER' || objective === 'CAMPAIGN') ? (
+                          <span className="rounded bg-[#e7f8f2] text-[#008069] px-2 py-0.5 text-[10px] font-bold">
+                            Satış Kampanyası İçin Önerilir
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-[#667781] font-normal">(İsteğe Bağlı)</span>
+                        )}
+                      </p>
+                      <p className="text-[11px] text-[#667781] mt-0.5">
+                        Görselde yer almasını istediğiniz fiyat veya indirim oranını yazın (boş bırakılırsa eklenmez).
+                      </p>
+                    </div>
+                    <div className="grid gap-2.5 sm:grid-cols-3">
+                      <Field label="Kampanya Fiyatı">
+                        <Input
+                          value={price}
+                          onChange={(e) => setPrice(e.target.value)}
+                          placeholder="Örn: 249 TL veya 450 TL/m²"
+                        />
+                      </Field>
+                      <Field label="Eski Fiyat (Üstü Çizili)">
+                        <Input
+                          value={oldPrice}
+                          onChange={(e) => setOldPrice(e.target.value)}
+                          placeholder="Örn: 320 TL veya 550 TL/m²"
+                        />
+                      </Field>
+                      <Field label="İndirim / Özel Teklif">
+                        <Input
+                          value={offer}
+                          onChange={(e) => setOffer(e.target.value)}
+                          placeholder="Örn: %20 İndirim veya 5 Palet Üstü"
+                        />
+                      </Field>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2 pt-1">
+                      <Field label="Teslimat / Fayda Bilgisi (İsteğe Bağlı)">
+                        <Input
+                          value={deliveryInfo}
+                          onChange={(e) => setDeliveryInfo(e.target.value)}
+                          placeholder="Örn: Şantiyeye teslim veya 3 gün içinde kargo"
+                        />
+                      </Field>
+                      <Field label="Sektör (İsteğe Bağlı)">
+                        <Input
+                          value={sector}
+                          onChange={(e) => setSector(e.target.value)}
+                          placeholder="Örn: İnşaat, Tarım, Gıda, Çiçekçilik"
+                        />
+                      </Field>
+                    </div>
                   </div>
-                </details>
+                )}
+
+                {/* Video Gelişmiş Seçenekleri */}
+                {mediaType === 'VIDEO' && (
+                  <details className="text-[12px] text-[#667781]">
+                    <summary className="cursor-pointer hover:text-[#111b21] font-semibold text-[#008069]">
+                      Video Çekim ve Ortam Seçenekleri
+                    </summary>
+                    <div className="mt-3 space-y-3 rounded-xl border border-hairline bg-[#f8fafb] p-3.5">
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <Field label="Çekim Ortamı">
+                          <select
+                            value={environmentPreset}
+                            onChange={(e) => setEnvironmentPreset(e.target.value)}
+                            className="w-full rounded-lg border border-[#e9edef] bg-white px-3 py-2 text-[12.5px] text-[#111b21]"
+                          >
+                            <option value="auto">Otomatik (En uygun ortam)</option>
+                            <option value="construction">İnşaat ve Yapı Sahası</option>
+                            <option value="workshop">Atölye, Fabrika ve Sanayi</option>
+                            <option value="garden">Doğal Açık Alan & Bahçe</option>
+                            <option value="studio">Prestijli Reklam Stüdyosu</option>
+                            <option value="kitchen">Mutfak, Gıda ve Kafe</option>
+                            <option value="office">Modern Ofis ve İç Mekan</option>
+                          </select>
+                        </Field>
+                        <Field label="Kamera Hareketi">
+                          <select
+                            value={motionStyle}
+                            onChange={(e) => setMotionStyle(e.target.value)}
+                            className="w-full rounded-lg border border-[#e9edef] bg-white px-3 py-2 text-[12.5px] text-[#111b21]"
+                          >
+                            <option value="real_usage">Doğal Kullanım ve Sahne Hareketi</option>
+                            <option value="studio_orbit">Vitrin & 3/4 Açı (Şık ve Dengeli)</option>
+                            <option value="macro_detail">Yakın Çekim & Detay Odaklı</option>
+                          </select>
+                        </Field>
+                      </div>
+                      <div className="flex gap-4 pt-1">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={subtitles}
+                            onChange={(e) => setSubtitles(e.target.checked)}
+                            className="rounded text-[#008069]"
+                          />
+                          <span>Dinamik Altyazı Ekle</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={outro}
+                            disabled
+                            className="rounded text-[#008069]"
+                          />
+                          <span>2 saniyelik markalı kapanış dahildir</span>
+                        </label>
+                      </div>
+                    </div>
+                  </details>
+                )}
 
                 {/* Footer Nav */}
                 <div className="flex items-center justify-between pt-3 border-t border-hairline">

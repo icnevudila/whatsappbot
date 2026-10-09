@@ -1,8 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { generateDeterministicLocalCopy } from '@/lib/creative/v2/copy-generator'
-import { buildCreativePrompt } from '@/lib/creative/prompt'
-import type { CreativeSnapshot } from '@/lib/creative/types'
+import { generateDeterministicLocalCopy } from './copy-generator'
+import { buildCreativePrompt } from '../prompt'
+import type { CreativeSnapshot } from '../types'
 import { buildDeterministicFallbackPlan } from './ai-planner'
 
 test('1. Deterministic local copy generates clean, commercial Turkish text without technical jargon', () => {
