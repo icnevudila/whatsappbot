@@ -6,7 +6,6 @@ import {
   LandingCreativeStory as Scene04CreativeStudio,
   LandingDiscoveryStory as SceneDiscovery,
   LandingInboxStory as Scene05Inbox,
-  LandingExplorerStory as Scene06Explorer,
 } from '@/components/visuals/landing-product-story'
 import { Scene07Bento } from '@/components/scenes/scene-07-bento'
 import { Scene08TrustFaq } from '@/components/scenes/scene-08-trust-faq'
@@ -70,10 +69,6 @@ export default function Home() {
           </div>
         </ScrollReveal>
 
-        {/* 8. UYGULAMA KONTROL MERKEZİ */}
-        <ScrollReveal>
-          <Scene06Explorer />
-        </ScrollReveal>
 
         {/* 9. TRUST + FAQ */}
         <ScrollReveal>
