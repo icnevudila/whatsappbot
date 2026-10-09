@@ -9,6 +9,7 @@ const path = require('path');
 const os = require('os');
 const { captureTurnBaseline, readCurrentTurn } = require('./chatgpt_turn_scope.js');
 const { readComposerAttachments } = require('./image_reference_gate.js');
+const { findImageUploadInput } = require('./image_upload_input.js');
 const { navigateToChat } = require('./chat_navigation.js');
 const { isChatGPTPage } = require('./chatgpt_tab_scope.js');
 const { assertImageScope, readImageScope } = require('./image_conversation_scope.js');
@@ -949,7 +950,10 @@ async function executeChatGPTJob(tab, job) {
           const cleanComposerAttachments = async () => {
             return await cdp.send('Runtime.evaluate', {
               expression: `(() => {
-                const btns = Array.from(document.querySelectorAll('button')).filter(b => {
+                const editor = document.querySelector('#prompt-textarea, [data-composer] [contenteditable="true"], form textarea, form [contenteditable="true"], .ProseMirror, [role="textbox"][contenteditable="true"]');
+                const composer = editor?.closest('form, [data-composer], [data-testid="composer"], [class*="ComposerLayoutRoot"]');
+                if (!composer) return 0;
+                const btns = Array.from(composer.querySelectorAll('button')).filter(b => {
                   const label = b.getAttribute('aria-label') || '';
                   return label.startsWith('Remove') || label.startsWith('Kaldır') || label.startsWith('Delete') || label.startsWith('Sil');
                 });
@@ -981,33 +985,26 @@ async function executeChatGPTJob(tab, job) {
           const inputDeadline = Date.now() + 15000;
           while (Date.now() < inputDeadline) {
             const doc = await cdp.send('DOM.getDocument', {}, 5000);
-            fileInput = await cdp.send('DOM.querySelector', {
-              nodeId: doc.root.nodeId,
-              selector: 'input[type="file"][accept*="image"], input[type="file"]'
+            const selected = (await cdp.send('Runtime.evaluate', {
+              expression: `(${findImageUploadInput.toString()})(${tempRefPaths.length})`, returnByValue: true,
+            }, 5000)).result?.value;
+            const nodes = await cdp.send('DOM.querySelectorAll', {
+              nodeId: doc.root.nodeId, selector: 'input[type="file"]',
             }, 5000).catch(() => null);
+            fileInput = selected && Number.isInteger(selected.index)
+              ? { nodeId: nodes?.nodeIds?.[selected.index] } : null;
             if (fileInput?.nodeId) break;
             await sleep(200);
           }
           if (!fileInput?.nodeId) throw new Error('REFERENCE_ATTACHMENT_FAILED: file input is unavailable');
 
-          const dispatchFileEvents = async () => {
-            await cdp.send('Runtime.evaluate', {
-              expression: `(() => {
-                const el = document.querySelector('input[type="file"][accept*="image"]') || document.querySelector('input[type="file"]');
-                if (el) {
-                  el.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
-                  el.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
-                }
-              })()`
-            });
-          };
 
           if (fileInput && fileInput.nodeId) {
             await cdp.send('DOM.setFileInputFiles', {
               files: tempRefPaths,
               nodeId: fileInput.nodeId
             }, 5000);
-            await dispatchFileEvents();
+            // DOM.setFileInputFiles dispatches the native selection events.
             console.log(`[CDP Worker] ${tempRefPaths.length} referans görsel inputa yüklendi, thumbnail bekleniyor...`);
             const refUploadStart = Date.now();
             const maxRefWait = 60_000;
@@ -1040,7 +1037,7 @@ async function executeChatGPTJob(tab, job) {
                     files: tempRefPaths,
                     nodeId: fileInput.nodeId
                   }, 5000);
-                  await dispatchFileEvents();
+                  // DOM.setFileInputFiles dispatches the native selection events.
                 } catch (_) {}
               }
 
