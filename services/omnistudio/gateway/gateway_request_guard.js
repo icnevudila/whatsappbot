@@ -15,7 +15,15 @@ function isWorkerControlPath(pathname) {
 }
 
 function isAuthorizedWorker(req, env = process.env) {
-  const secret = String(env.WORKER_CONTROL_TOKEN || '');
+  let secret = String(env.WORKER_CONTROL_TOKEN || '');
+  if (!secret) {
+    try {
+      const tokenFile = require('node:path').join(__dirname, '.worker_control_token');
+      if (require('node:fs').existsSync(tokenFile)) {
+        secret = require('node:fs').readFileSync(tokenFile, 'utf8').trim();
+      }
+    } catch {}
+  }
   if (secret) {
     const supplied = req.headers?.['x-worker-token'];
     if (typeof supplied !== 'string') return false;
