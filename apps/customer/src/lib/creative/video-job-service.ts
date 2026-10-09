@@ -7,6 +7,7 @@ import { resolveAssetSource, type ResolvedAsset } from '@/lib/creative/asset-sou
 import { requireDistinctVideoProduct, videoAssetTransportSource } from './video-asset-manifest'
 import { loadVideoCatalogReferences, VideoCatalogError } from './video-catalog-references'
 import { buildVideoCampaignSnapshot } from './video-campaign-snapshot'
+import { campaignFactsError } from './campaign-facts'
 
 async function resolveVideoAssetSource(
   url: string | undefined | null,
@@ -74,6 +75,11 @@ export async function createVideoJob(req: NextRequest, context: Awaited<ReturnTy
     } = body
 
     const normalizedCreativeMode = String(creativeEngineMode).toUpperCase()
+    const campaign = body.campaignContext || {}
+    const factsError = campaignFactsError({ objective: campaign.objective,
+      headline: campaign.headline || brief, cta: authoritativeFacts?.cta,
+      price: campaign.price, oldPrice: campaign.oldPrice, offer: campaign.offer || authoritativeFacts?.offer })
+    if (factsError) return NextResponse.json({ error: factsError }, { status: 422 })
     if (outro === 'off' || outro === false) {
       return NextResponse.json({ error: 'Son müşteri videosu 8 saniye kaynak ve 2 saniye markalı kapanış içerir. Kapanış kapatılamaz.' }, { status: 422 })
     }

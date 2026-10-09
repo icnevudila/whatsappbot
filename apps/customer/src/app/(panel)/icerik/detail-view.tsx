@@ -17,6 +17,7 @@ import {
   renameCreative,
   retryCreative,
   startCreativeGeneration,
+  approveReviewedImage,
 } from './actions'
 
 const DETAIL_STAGES = [
@@ -40,6 +41,7 @@ import { getSafeMediaUrl } from '@/lib/media-url'
 export { getSafeMediaUrl }
 
 export type DetailCreative = {
+  imageReviewRequired?: boolean
   submissionRequestKey?: string | null
   id: string
   title: string | null
@@ -357,6 +359,7 @@ export function CreativeDetail({
       ok?: boolean
       pending?: boolean
       ready?: boolean
+      needsReview?: boolean
       publicUrl?: string | null
       thumbnailUrl?: string | null
       retryAfterSeconds?: number
@@ -374,6 +377,7 @@ export function CreativeDetail({
         progressInfo: json?.progressInfo ?? null,
       }
     }
+    if (json?.needsReview) return { error: null, pending: false, publicUrl: json.publicUrl }
     if (!hasConfirmedRenderResult({ ready: json?.ready, publicUrl: json?.publicUrl })) {
       return { error: null, pending: true, retryAfterSeconds: 5 }
     }
@@ -588,13 +592,23 @@ export function CreativeDetail({
 
       {creative.status === 'needs_review' ? (
         <Notice tone="warn">
-          <p className="text-[13.5px] font-semibold">Video inceleme bekliyor</p>
-          <p className="mt-1 text-[13px]">Video üretildi ancak kalite kontrolü henüz onaylamadı. Onay tamamlanmadan kampanyada kullanılamaz.</p>
-          <Link href={`/icerik/yeni?job_id=${creative.id}`} className="mt-3 inline-block text-[13px] font-semibold underline">Üretim sonucunu görüntüle</Link>
+          <p className="text-[13.5px] font-semibold">{isVideo ? 'Video' : 'Görsel'} inceleme bekliyor</p>
+          <p className="mt-1 text-[13px]">Dosya oluşturuldu. Gerçek ürün, logo, metin ve ticari bilgilerin doğruluğu onaylanmadan kampanyada kullanılamaz.</p>
+          {isVideo && <Link href={`/icerik/yeni?job_id=${creative.id}`} className="mt-3 inline-block text-[13px] font-semibold underline">Üretim sonucunu görüntüle</Link>}
+          {!isVideo && creative.imageReviewRequired && canManage && <form className="mt-3 space-y-2" action={async (form) => {
+            form.set('id',creative.id)
+            const result = await approveReviewedImage(form)
+            if (result?.error) toast(result.error,'danger')
+            else router.refresh()
+          }}>
+            <label className="block"><input type="checkbox" name="identity" required /> Gerçek ürünü, logoyu ve marka renklerini görselde kontrol ettim.</label>
+            <label className="block"><input type="checkbox" name="commerce" required /> Fiyat, teklif, başlık ve çağrı doğru; uydurma iddia yok.</label>
+            <Button type="submit">İnceledim, kampanyada kullanımını onayla</Button>
+          </form>}
         </Notice>
       ) : null}
 
-      {displayPublicUrl && isReady ? (
+      {displayPublicUrl && (isReady || (!isVideo && creative.status === 'needs_review')) ? (
         <div className="relative overflow-visible">
           {isVideo ? (
             <div className="overflow-hidden rounded-[var(--radius-card)] border border-hairline bg-black shadow-lg">

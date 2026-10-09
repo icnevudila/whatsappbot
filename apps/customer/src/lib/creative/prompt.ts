@@ -1,7 +1,11 @@
 import type { CreativeSnapshot, TemplateFamily } from './types'
+import { buildCreativePromptV3 } from './director/brief-v3'
 import { CREATIVE_FORMATS, CREATIVE_STYLES, TEMPLATE_FAMILIES, VARIATION_PRESETS } from './types'
 
 const STYLE_HINT: Record<string, string> = {
+  product_hero: 'Modern, clean commercial design with clear type hierarchy and generous spacing around the authentic product.',
+  real_usage: 'Warm, approachable commercial atmosphere and natural human context where appropriate; preserve exact product identity and factual claims.',
+  dynamic_offer: 'Bold, energetic commercial hierarchy and high contrast; emphasize the supplied offer without inventing discount claims.',
   auto: 'Choose the most suitable commercial look from the brief, products and brand (do not invent a sector).',
   modern: 'Modern, clean commercial design, contemporary type hierarchy, generous spacing.',
   premium: 'Premium, refined, high-end campaign look, restrained palette, quality materials.',
@@ -63,7 +67,7 @@ export type PromptFidelityOptions = {
     base?: boolean
   }
   artDirectionPlan?: import('./director/creative-director').ArtDirectionPlan | null
-  mode?: 'LEGACY_SIMPLE' | 'OVER_DIRECTED_DESIGNER'
+  mode?: 'LEGACY_SIMPLE' | 'OVER_DIRECTED_DESIGNER' | 'V3'
 }
 
 export function describeColor(colorStr: string): string {
@@ -161,9 +165,9 @@ export function deriveVerifiedCampaignData(
 ): VerifiedCampaignData {
   const kit = snapshot.brandKit
   const brandName = (
-    kit?.name
+    snapshot.companyName || snapshot.brandName || (kit?.name
       ? kit.name.replace(/(?:brand\s*kit|marka\s*kiti|kampanya\s*kiti|whatsapp\s*kampanya\s*kiti)/gi, '').trim()
-      : 'İşletmemiz'
+      : 'İşletmemiz')
   ) || 'İşletmemiz'
 
   const sector = snapshot.sector?.trim() || null
@@ -577,6 +581,7 @@ export function buildLegacySimpleCreativePrompt(
       : null,
     supportingLines.length ? `Supporting Details:\n${supportingLines.join('\n')}` : null,
     commercialContract,
+    'Do not invent prices, discounts, slogans, dates, product names or brand claims that are not in this brief.',
     'Clean visual hierarchy. One focal offer. Not cluttered. Readable on a phone screen.',
   ]
     .filter(Boolean)
@@ -854,6 +859,7 @@ export function buildCreativePrompt(
   prompt: string
   negative: string
 } {
+  if (options?.mode === 'V3') return buildCreativePromptV3(snapshot)
   if (options?.mode === 'OVER_DIRECTED_DESIGNER') {
     return buildOverDirectedCreativePrompt(snapshot, options)
   }

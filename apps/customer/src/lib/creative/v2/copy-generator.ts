@@ -18,8 +18,10 @@ export function generateDeterministicLocalCopy({
   cta: string
   voiceover: string
 } {
-  const pName = productName.trim() || 'Ürünümüz'
   const bName = brandName.trim() || 'İşletmemiz'
+  const rawProduct = productName.trim() || 'Ürünümüz'
+  const pName = rawProduct.toLocaleLowerCase('tr').startsWith(`${bName.toLocaleLowerCase('tr')} `)
+    ? rawProduct.slice(bName.length).trim() : rawProduct
   const detail = campaignDetail?.trim() || ''
   const off = offer?.trim() || ''
 
@@ -37,12 +39,12 @@ export function generateDeterministicLocalCopy({
 
   const cta = 'Hemen İnceleyin'
 
-  // Voiceover strictly factual: 8 to 14 words, finishes well before 5.5s
-  const voiceover = off
-    ? `${bName} ${pName} ürününü ${off} fırsatıyla keşfedin. Detaylı bilgi için iletişime geçin.`
-    : detail
-      ? `${bName} ${pName} ürününü keşfedin. ${detail}. İncelemek için hemen iletişime geçin.`
-      : `${bName} ${pName} ürününü keşfedin. Ayrıntılı bilgi ve sipariş için bizimle iletişime geçin.`
+  // Do not squeeze arbitrary catalog/offer text into the speech window.
+  // The exact full product and offer remain in the campaign, not truncated claims.
+  const shortSubject = pName.split(/\s+/).length <= 4 ? pName : 'ürününü'
+  const line = `${bName} ${shortSubject} için bilgi ve sipariş almak üzere bize yazın.`
+  const voiceover = line.split(/\s+/).length <= 14
+    ? line : 'Ürünümüzü yakından incelemek, bilgi ve sipariş almak için bize yazın.'
 
   return {
     headline,

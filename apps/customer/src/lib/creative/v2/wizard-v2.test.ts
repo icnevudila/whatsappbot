@@ -91,13 +91,13 @@ test('3. Prompt Compiler integrates Hero Product (60-70%), brand DNA, and commer
   assert.match(prompt, /450 TL\/m²/i)
   assert.match(prompt, /was 550 TL\/m²/i)
   assert.match(prompt, /%18 İndirim/i)
-  assert.match(prompt, /CTA: Hemen Teklif Alın/i)
+  assert.match(prompt, /Call-to-Action \(CTA\): Hemen Teklif Alın/i)
   assert.match(prompt, /0532 111 22 33/i)
   assert.match(prompt, /www\.ayvazoglu\.com/i)
 
   // Anti-Canva template negative constraints
   assert.match(negative, /no generic Canva template look/i)
-  assert.match(negative, /no fake 3-icon benefit row/i)
+  assert.match(negative, /no fake 3-badge benefit stack/i)
   assert.match(negative, /no supermarket sticker pack/i)
   assert.match(negative, /no fake clickable web buttons/i)
 })
@@ -204,13 +204,13 @@ test('6. Text density modes correctly direct text budget in generated prompts', 
   }
 
   const lowPrompt = buildCreativePrompt({ ...baseSnap, textDensity: 'low' }).prompt
-  assert.match(lowPrompt, /Very little on-image text/i)
+  assert.match(lowPrompt, /At most a short headline or brand statement/i)
 
   const balancedPrompt = buildCreativePrompt({ ...baseSnap, textDensity: 'balanced' }).prompt
-  assert.match(balancedPrompt, /Limited on-image text/i)
+  assert.match(balancedPrompt, /Clean brand headline and optional short slogan/i)
 
   const detailedPrompt = buildCreativePrompt({ ...baseSnap, textDensity: 'detailed' }).prompt
-  assert.match(detailedPrompt, /More campaign text is allowed/i)
+  assert.match(detailedPrompt, /Brand headline, core value proposition, and brand mark/i)
 })
 
 test('7. Brand palette hex values are translated into rich natural language colors without raw hex leaks', () => {
@@ -279,7 +279,9 @@ test('8. Template family instructions direct commercial layouts without Canva bo
     ...baseSnap,
     templateFamily: 'ELEGANT_RETAIL',
   } as any).prompt
-  assert.match(retailPrompt, /Boutique retail campaign visual/i)
+  // Industrial equipment must reject a boutique family, even when explicitly requested.
+  assert.doesNotMatch(retailPrompt, /Boutique retail campaign visual/i)
+  assert.match(retailPrompt, /High-impact commercial campaign visual/i)
 })
 
 test('9. Dirty tracking contract: user edits strictly preserve custom text over automated defaults', () => {
@@ -329,6 +331,6 @@ test('10. 2/2 Reference Contract: Logo and Product reference instructions presen
 
   const { prompt } = buildCreativePrompt(snapWithRefs, { verifiedRefs: { logo: true, product: true } })
   assert.match(prompt, /Authentic product and company logo references are attached/i)
-  assert.match(prompt, /A real brand logo image is attached/i)
-  assert.match(prompt, /A product photo is attached as a reference/i)
+  assert.match(prompt, /A real company logo image is attached/i)
+  assert.match(prompt, /The real product photo is provided as a reference/i)
 })

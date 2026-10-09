@@ -30,6 +30,7 @@ import {
 } from '@/lib/creative/types'
 import { adaptLegacyDraftToV2, mapPresetToLegacyVideoFormat } from '@/lib/creative/v2/adapter'
 import { resolveSubmissionIdentity } from '@/lib/creative/submission-identity'
+import { campaignFactsError } from '@/lib/creative/campaign-facts'
 import { ownsStudioDraft } from '@/lib/creative/draft-ownership'
 import {
   MAX_SPOKEN_WORDS,
@@ -52,9 +53,9 @@ type Step = 'product_goal' | 'creative_direction' | 'review_generate'
 
 
 const STUDIO_STEPS: { id: Step; label: string }[] = [
-  { id: 'product_goal', label: '1. İşletme ve Ürün' },
-  { id: 'creative_direction', label: '2. Görsel & Reklam Metni' },
-  { id: 'review_generate', label: '3. Son Kontrol & Üretim' },
+  { id: 'product_goal', label: '1. Ne Tanıtmak İstiyorsunuz?' },
+  { id: 'creative_direction', label: '2. Reklamınız Nasıl Görünsün?' },
+  { id: 'review_generate', label: '3. Son Kontrol ve Üretim' },
 ]
 
 export function CreativeStudioV2({
@@ -62,7 +63,9 @@ export function CreativeStudioV2({
   initialMediaType = 'IMAGE',
   initialDerivedCreativeId,
   initialJobId,
+  previewOnly = false,
 }: {
+  previewOnly?: boolean
   data: WizardBootstrap
   initialMediaType?: MediaType
   initialDerivedCreativeId?: string | null
@@ -376,6 +379,7 @@ export function CreativeStudioV2({
 
   // Call Custom AI Planner (non-blocking, advisory with 5s timeout)
   const requestCreativePlan = async (forceRefresh = false, requestedStyle = stylePreset) => {
+    if (previewOnly) return
     if (!selectedProduct) return
 
     // Cancel any previous in-flight planner request
@@ -403,6 +407,7 @@ export function CreativeStudioV2({
           brandName: data.org.name || 'İşletmemiz',
           brandTone: defaultKit?.tone || null,
           productName: selectedProduct.name,
+          productId: selectedProduct.id,
           productDescription: selectedProduct.description || null,
           objective,
           stylePreset: requestedStyle,
@@ -420,7 +425,7 @@ export function CreativeStudioV2({
       const plan: CreativePlanV2 = json.plan
       if (controller.signal.aborted || activePlanControllerRef.current !== controller) return
       setCreativePlan(plan)
-      setCopySource('AI')
+      setCopySource(plan.source === 'AI' ? 'AI' : 'DETERMINISTIC_FALLBACK')
 
       // NEVER OVERWRITE USER EDITS: Only update untouched fields unless user explicitly clicked "Farklı Öner"
       if (copyEditsRef.current.headline === editsAtRequest.headline && (forceRefresh || !copyDirtyRef.current.headline)) {
@@ -540,7 +545,10 @@ export function CreativeStudioV2({
 
   // SUBMIT HANDLER: Image or Video
   const handleCreateCreative = async () => {
+    if (previewOnly) { setSubmitError('Yerel arayüz testinde üretim ve kayıt işlemleri kapalıdır.'); return }
     if (submissionLockRef.current || !selectedProduct || !hasProduct || !hasLogo) return
+    const factsError = campaignFactsError({ objective, headline, cta: ctaText, price, oldPrice, offer })
+    if (factsError) { setSubmitError(factsError); return }
     submissionLockRef.current = true
 
     setIsSubmitting(true)
@@ -1077,13 +1085,13 @@ export function CreativeStudioV2({
                       <h2 className="text-[15px] font-bold text-[#111b21]">Görsel Türü</h2>
                       <p className="text-[12px] text-[#667781] mt-0.5">İşletmenize ve kampanya hedefinize en uygun görsel düzenini seçin.</p>
                       <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
-                        {TEMPLATE_FAMILIES.map((fam) => (
+                        {CREATIVE_STYLE_PRESETS.map((fam) => (
                           <button
                             key={fam.id}
                             type="button"
-                            onClick={() => setTemplateFamily(fam.id)}
+                            onClick={() => setStylePreset(fam.id)}
                             className={`rounded-xl border p-3.5 text-left transition-all ${
-                              templateFamily === fam.id
+                              stylePreset === fam.id
                                 ? 'border-[#008069] bg-[#e7f8f2] ring-1 ring-[#008069]'
                                 : 'border-[#e9edef] hover:border-[#008069]/30 bg-white'
                             }`}
@@ -1107,7 +1115,7 @@ export function CreativeStudioV2({
                       <p className="text-[11px] text-[#667781] mt-0.5">Görsel üstündeki metin miktarını belirleyin.</p>
                       <div className="mt-2 grid grid-cols-3 gap-2">
                         {[
-                          { id: 'low', label: 'Az Metin', description: 'Sadece güçlü bir başlık, sade ve görsel odaklı.' },
+                          { id: 'low', label: 'Az Yazı', description: 'Kısa başlık; satış reklamında fiyat veya teklif ve çağrı korunur.' },
                           { id: 'balanced', label: 'Dengeli', description: 'Başlık ve kısa kampanya mesajı (önerilen).' },
                           { id: 'detailed', label: 'Kampanya Odaklı', description: 'Fiyat, kampanya detayı ve sipariş bilgisi.' },
                         ].map((d) => (
@@ -1169,13 +1177,13 @@ export function CreativeStudioV2({
                       <p className="text-[13px] font-bold text-[#111b21] flex items-center gap-1.5">
                         <span>Tasarım Seçimi</span>
                         <span className="rounded bg-[#008069] text-white px-2 py-0.5 text-[10px] font-bold">
-                          {qualityMode === 'DESIGNER' ? 'Özel Tasarım' : 'Hızlı Tasarım'}
+                          {qualityMode === 'DESIGNER' ? 'Özel Tasarım' : 'Sade Tasarım'}
                         </span>
                       </p>
                       <p className="text-[11px] text-[#667781] mt-0.5">
                         {qualityMode === 'DESIGNER'
-                          ? 'Profesyonel ajans kalitesinde reklam afişi, özel ışıklandırma ve güçlü marka düzeni.'
-                          : 'Hızlı ve dengeli standart görsel üretimi.'}
+                          ? 'Ürüne ve sektöre göre ek kompozisyon planı hazırlanır. Aynı görsel sağlayıcısı kullanılır; kalite ve süre garanti edilmez.'
+                          : 'Mevcut sade reklam yönergeleri kullanılır. Aynı görsel sağlayıcısı ve tek üretim; süre veya kredi avantajı garanti edilmez.'}
                       </p>
                     </div>
                     <div className="flex items-center gap-1.5 bg-canvas p-1 rounded-lg border border-hairline">
@@ -1199,7 +1207,7 @@ export function CreativeStudioV2({
                             : 'text-[#667781] hover:text-[#111b21]'
                         }`}
                       >
-                        Hızlı Tasarım
+                        Sade Tasarım
                       </button>
                     </div>
                   </div>
@@ -1333,14 +1341,14 @@ export function CreativeStudioV2({
                         <span>Fiyat & Kampanya Teklifi</span>
                         {(objective === 'SALES_OFFER' || objective === 'CAMPAIGN') ? (
                           <span className="rounded bg-[#e7f8f2] text-[#008069] px-2 py-0.5 text-[10px] font-bold">
-                            Satış Kampanyası İçin Önerilir
+                            Fiyat veya teklif zorunlu
                           </span>
                         ) : (
                           <span className="text-[11px] text-[#667781] font-normal">(İsteğe Bağlı)</span>
                         )}
                       </p>
                       <p className="text-[11px] text-[#667781] mt-0.5">
-                        Görselde yer almasını istediğiniz fiyat veya indirim oranını yazın (boş bırakılırsa eklenmez).
+                        Doğruladığınız fiyatı veya teklifi yazın. Satış reklamında ikisinden en az biri bulunmalı; diğer amaçlarda isteğe bağlıdır.
                       </p>
                     </div>
                     <div className="grid gap-2.5 sm:grid-cols-3">
@@ -1380,6 +1388,9 @@ export function CreativeStudioV2({
                           onChange={(e) => setSector(e.target.value)}
                           placeholder="Örn: İnşaat, Tarım, Gıda, Çiçekçilik"
                         />
+                      </Field>
+                      <Field label="Kampanya Tarihi (İsteğe Bağlı)">
+                        <Input value={dateRange} onChange={(e) => setDateRange(e.target.value)} placeholder="Örn: 10–20 Ekim 2026" />
                       </Field>
                     </div>
                   </div>
@@ -1474,7 +1485,7 @@ export function CreativeStudioV2({
                   <div className="flex items-center justify-between border-b border-hairline pb-2.5">
                     <span className="text-[12px] font-bold uppercase tracking-wider text-[#667781]">Reklam Özeti</span>
                     <span className="rounded-full bg-[#e7f8f2] px-2.5 py-0.5 text-[11px] font-bold text-[#008069]">
-                      {mediaType === 'VIDEO' ? '9:16 Sinematik Video' : `Görsel (${imageFormat})`}
+                      {mediaType === 'VIDEO' ? '9:16 Sinematik Video' : ({ SQUARE_1_1: 'Kare Görsel · 1:1', STORY_9_16: 'Hikâye · 9:16', PORTRAIT_4_5: 'Gönderi · 4:5' }[imageFormat] || 'Kampanya Görseli')}
                     </span>
                   </div>
 
@@ -1484,11 +1495,11 @@ export function CreativeStudioV2({
                       <p className="font-semibold text-[#111b21]">{data.org.name}</p>
                     </div>
                     <div>
-                      <span className="text-[#667781]">Hero Ürün:</span>
+                      <span className="text-[#667781]">Ürün:</span>
                       <p className="font-semibold text-[#111b21]">{selectedProduct?.name}</p>
                     </div>
                     <div>
-                      <span className="text-[#667781]">Kreatif Tarz:</span>
+                      <span className="text-[#667781]">Reklam Tarzı:</span>
                       <p className="font-semibold text-[#008069]">
                         {CREATIVE_STYLE_PRESETS.find((p) => p.id === stylePreset)?.label}
                       </p>
@@ -1509,6 +1520,14 @@ export function CreativeStudioV2({
                   </div>
 
                   {/* Asset Preflight Health Check */}
+                  <dl className="grid gap-2 rounded-lg border bg-white p-3 text-sm sm:grid-cols-2">
+                    {price && <div><dt>Fiyat</dt><dd className="font-semibold">{price}</dd></div>}
+                    {oldPrice && <div><dt>Eski fiyat</dt><dd>{oldPrice}</dd></div>}
+                    {offer && <div><dt>Teklif / indirim</dt><dd>{offer}</dd></div>}
+                    <div><dt>Çağrı</dt><dd className="font-semibold">{ctaText}</dd></div>
+                    {dateRange && <div><dt>Kampanya tarihi</dt><dd>{dateRange}</dd></div>}
+                    {deliveryInfo && <div><dt>Teslimat</dt><dd>{deliveryInfo}</dd></div>}
+                  </dl>
                   <div className="rounded-lg border border-[#e9edef] bg-white p-3 space-y-2">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-[#667781]">Logo ve Ürün Kontrolü</span>
                     <div className="grid grid-cols-2 gap-2 text-[12px]">
@@ -1521,7 +1540,7 @@ export function CreativeStudioV2({
                       </div>
                       <div className="flex items-center gap-2">
                         <span className={`inline-block size-2 rounded-full ${hasProduct ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                        <span className="text-[#667781]">Hero Ürün:</span>
+                        <span className="text-[#667781]">Ürün:</span>
                         <span className={`font-semibold ${hasProduct ? 'text-emerald-700' : 'text-rose-700'}`}>
                           {hasProduct ? '✓ Seçildi' : 'Eksik'}
                         </span>

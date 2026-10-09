@@ -54,6 +54,7 @@ export default async function CreativeDetailPage({
       : ''
 
   const creative: DetailCreative = {
+    imageReviewRequired: payload?.creativeDirectorVersion === 'V3' && row.format !== 'video',
     submissionRequestKey: typeof payload?.requestKey === 'string' ? payload.requestKey : null,
     id: row.id,
     title: displayTitle,

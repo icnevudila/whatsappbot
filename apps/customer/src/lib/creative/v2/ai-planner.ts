@@ -57,6 +57,7 @@ export function buildDeterministicFallbackPlan(input: PlannerInput): CreativePla
     : undefined
 
   return {
+    source: 'DETERMINISTIC_FALLBACK',
     objective: input.objective,
     creative_style: input.stylePreset,
     scene: {
@@ -171,6 +172,7 @@ Varsa Fiyat / İndirim: ${input.campaignCopy?.price || ''} ${input.campaignCopy?
     }
 
     return {
+      source: 'AI',
       objective: input.objective,
       creative_style: input.stylePreset,
       scene: {

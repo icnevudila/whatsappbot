@@ -11,6 +11,8 @@ function uuidFromRequestKey(orgId: string, requestKey: string): string {
   return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-5${hash.slice(13, 16)}-a${hash.slice(17, 20)}-${hash.slice(20, 32)}`
 }
 import { enqueueJob } from '@/lib/jobs'
+import { campaignFactsError, parseCampaignMoney } from '@/lib/creative/campaign-facts'
+import { canReviewImage } from '@/lib/creative/image-review'
 import { hasImageProvider } from '@/lib/ai/image'
 import { processCreativeGeneration } from '@/lib/creative/process'
 import { isUncertainImageFailure } from '@/lib/creative/detail-render-state'
@@ -95,6 +97,7 @@ async function kickGeneration(
   })
   if (queued.error) {
     console.error('[creative.kick.job]', creativeId, queued.error)
+    return queued.error
   }
 
   // Yerel geliştirmede worker ile uygulama aynı sırrı paylaşmıyorsa worker iç
@@ -119,6 +122,7 @@ async function kickGeneration(
       console.warn('[creative.kick.local] Flow takibi süre sınırına ulaştı:', creativeId)
     })
   }
+  return null
 }
 
 export async function startCreativeGeneration(
@@ -289,7 +293,8 @@ export async function startCreativeGeneration(
   const existing = existingRes.data
   if (existing?.id) {
     if (existing.status === 'pending' || existing.status === 'rendering') {
-      await kickGeneration(existing.id, authContext)
+      const queueError = await kickGeneration(existing.id, authContext)
+      if (queueError) return { error: queueError }
     }
     revalidateLibrary(existing.id)
     return { id: existing.id, ok: 'Görsel üretimi devam ediyor.' }
@@ -553,6 +558,15 @@ export async function startCreativeGeneration(
     primaryBenefits: parseIds(draft.primaryBenefits),
   }
 
+  const factsError = campaignFactsError({ objective: snapshot.objective,
+    headline: snapshot.customHeadline || snapshot.brief, cta: snapshot.cta,
+    price: snapshot.products?.[0]?.price, oldPrice: snapshot.products?.[0]?.oldPrice,
+    offer: snapshot.products?.[0]?.promo })
+  if (factsError) return { error: factsError }
+
+  snapshot.brandName = org.name
+  if (process.env.CREATIVE_DIRECTOR_VERSION === 'V3') snapshot.creativeDirectorVersion = 'V3'
+
   // Generate accompanying WhatsApp campaign message pairing
   try {
     const verifiedData = deriveVerifiedCampaignData(snapshot)
@@ -591,10 +605,18 @@ export async function startCreativeGeneration(
         error.message?.includes('duplicate key') ||
         error.message?.includes('creatives_pkey'))
     ) {
-      // ATOMIC RACE RESOLUTION: A parallel request already inserted this job.
-      // Revalidate and return the existing id without triggering a duplicate kick.
+      const { data: existing, error: existingError } = await supabase.from('creatives')
+        .select('id, status, payload').eq('org_id', org.id).eq('id', deterministicCreativeId).maybeSingle()
+      if (existingError || !existing || (existing.payload as any)?.requestKey !== requestKey)
+        return { error: 'Mevcut üretim kimliği doğrulanamadı; yeni üretim başlatılmadı.' }
+      // Also recover a crash between creative INSERT and queue INSERT. The
+      // database index allows exactly one active queue row under concurrency.
+      if (existing.status === 'pending') {
+        const queueError = await kickGeneration(existing.id, authContext)
+        if (queueError) return { error: queueError }
+      }
       revalidateLibrary(deterministicCreativeId)
-      return { id: deterministicCreativeId, ok: 'Görsel üretimi devam ediyor.' }
+      return { id: deterministicCreativeId, ok: 'Mevcut üretim kaydı açıldı.' }
     }
     return { error: error.message ?? 'Kayıt açılamadı.' }
   }
@@ -606,7 +628,7 @@ export async function startCreativeGeneration(
       .filter((p) => Boolean(p.name?.trim()))
       .map((p) => {
         const rawText = `${p.name}${p.price ? ` - Fiyat: ${p.price}` : ''}${p.promo ? ` (${p.promo})` : ''}${p.description ? ` - ${p.description}` : ''}`
-        const numPrice = p.price ? Number(p.price.replace(/[^\d.,]/g, '').replace(',', '.')) : null
+        const numPrice = parseCampaignMoney(p.price)
         return {
           org_id: org.id,
           source: 'campaign',
@@ -636,7 +658,8 @@ export async function startCreativeGeneration(
   }
 
   const tEnqueueStart = Date.now()
-  await kickGeneration(inserted.id, authContext)
+  const queueError = await kickGeneration(inserted.id, authContext)
+  if (queueError) return { error: queueError }
   const enqueueMs = Date.now() - tEnqueueStart
 
   const finalTotalMs = Date.now() - t0
@@ -665,6 +688,7 @@ export async function retryCreative(id: string): Promise<CreativeActionState> {
       .maybeSingle()
     if (!data) return { error: 'Görsel bulunamadı.' }
     if (data.source !== 'ai') return { error: 'Yalnızca AI üretimleri yenilenebilir.' }
+    if (data.status !== 'failed') return { error: 'Bu üretim korunuyor. Yeni bir tasarım için ayrı bir üretim oluşturun.' }
     const previousPayload = (data.payload || {}) as Record<string, unknown>
     if (data.format !== 'video' && data.status === 'failed' && isUncertainImageFailure(data.error)) {
       return { error: 'Önceki bağlantı/zaman aşımı üretimin iptal edildiğini kanıtlamıyor. Mevcut iş uzlaştırılmadan ikinci ücretli üretim başlatılmadı.' }
@@ -672,7 +696,6 @@ export async function retryCreative(id: string): Promise<CreativeActionState> {
     if (previousPayload.imageSubmissionUncertain || previousPayload.imageReconciliationRequired || previousPayload.imageDirectIntent) {
       return { error: 'Önce mevcut üretimin sonucu doğrulanmalı; belirsiz iş için ikinci ücretli üretim başlatılmadı.' }
     }
-    if (data.status === 'rendering' || data.status === 'pending') return { error: 'Mevcut üretim sürüyor; ikinci üretim başlatılmadı.' }
     const { data: retried, error: retryError } = await supabase
       .from('creatives')
       .update({ status: 'pending', error: null, payload: { ...((data.payload || {}) as Record<string, unknown>), imageJob: null, imageSubmitIntent: null, imageSubmissionUncertain: false, imageAttempt: randomBytes(16).toString('hex') } })
@@ -683,12 +706,38 @@ export async function retryCreative(id: string): Promise<CreativeActionState> {
       .maybeSingle()
     if (retryError) return { error: retryError.message }
     if (!retried) return { error: 'İşin durumu değişti; ikinci üretim başlatılmadı.' }
-    await kickGeneration(trimmed)
+    const queueError = await kickGeneration(trimmed)
+    if (queueError) return { error: queueError }
     revalidateLibrary(trimmed)
     return { ok: 'Üretim yeniden başlatıldı.' }
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Oturum yok.' }
   }
+}
+
+export async function approveReviewedImage(formData: FormData): Promise<CreativeActionState> {
+  if (formData.get('identity') !== 'on' || formData.get('commerce') !== 'on')
+    return {error:'Ürün/marka ve ticari bilgileri görselde kontrol ettiğinizi doğrulayın.'}
+  const {org,userId,supabase}=await requireActiveOrg()
+  if (!isOrgAdminRole(org.role)) return {error:'Onay yetkiniz yok.'}
+  const id=String(formData.get('id') || '')
+  const {data:row,error:readError}=await supabase.from('creatives').select('id,format,status,payload,storage_path,updated_at')
+    .eq('org_id',org.id).eq('id',id).maybeSingle()
+  const payload=row?.payload as CreativePayload | undefined
+  if (readError || !row || row.format==='video' || row.status!=='needs_review' || payload?.creativeDirectorVersion!=='V3' ||
+    !canReviewImage({orgId:org.id,creativeId:id,receipt:payload.imageOutputReceipt,storagePath:row.storage_path}))
+    return {error:'Görsel sahipliği ve teknik dosya kanıtı doğrulanamadı.'}
+  const {data:stored,error:storageError}=await supabase.storage.from('creatives').download(row.storage_path!)
+  if (storageError || !stored || stored.size!==payload.imageOutputReceipt!.size ||
+    createHash('sha256').update(Buffer.from(await stored.arrayBuffer())).digest('hex')!==payload.imageOutputReceipt!.sha256)
+    return {error:'İncelenen görsel dosyası kayıtlı kanıtla uyuşmuyor.'}
+  const {data:approved,error}=await supabase.from('creatives').update({status:'ready',payload:{...payload,
+    imageHumanReview:{reviewerId:userId,reviewedAt:new Date().toISOString(),sha256:payload.imageOutputReceipt!.sha256,
+      identityConfirmed:true,commerceConfirmed:true,source:'CUSTOMER_EXPLICIT_REVIEW'}} as never})
+    .eq('org_id',org.id).eq('id',id).eq('status','needs_review').eq('updated_at',row.updated_at).select('id').maybeSingle()
+  if (error || !approved) return {error:'Kayıt değişti; yeniden inceleyin.'}
+  revalidateLibrary(id)
+  return {ok:'Görsel inceleme onayınız kaydedildi.'}
 }
 
 export async function renameCreative(formData: FormData): Promise<CreativeActionState> {

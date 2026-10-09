@@ -32,7 +32,7 @@ export const CREATIVE_STYLE_PRESETS: {
 }[] = [
   {
     id: 'AUTO',
-    label: 'Akıllı Seçim',
+    label: 'Bana En Uygununu Seç',
     tag: 'Önerilen',
     description: 'Yapay zeka ürününüze en uygun reklam düzenini otomatik seçer.',
     imageStyleHint: 'Balanced commercial advertising lighting, pristine product staging, high visual appeal.',
@@ -40,28 +40,28 @@ export const CREATIVE_STYLE_PRESETS: {
   },
   {
     id: 'PRODUCT_HERO',
-    label: 'Ürün Vitrini',
+    label: 'Modern ve Temiz',
     description: 'Ürünü net ışık ve canlı detaylarla sahnenin ana odak noktası yapar.',
     imageStyleHint: 'Ultra-clean commercial studio product photography, pristine reflections, 35mm macro sharpness.',
     videoFormatHint: 'FAST_SALES',
   },
   {
     id: 'REAL_USAGE',
-    label: 'Gerçek Kullanım',
+    label: 'Sıcak ve Samimi',
     description: 'Ürünün doğal ortamında kullanım anını ve sahadaki faydasını gösterir.',
     imageStyleHint: 'Authentic commercial in-context product usage, realistic environment, natural lighting.',
     videoFormatHint: 'PRODUCT_USAGE',
   },
   {
     id: 'PREMIUM',
-    label: 'Kurumsal & Prestij',
+    label: 'Şık ve Premium',
     description: 'Ağırbaşlı ışık ve seçkin tasarım ile güçlü bir marka duruşu sağlar.',
     imageStyleHint: 'High-end luxury commercial lighting, architectural depth, elegant restrained palette.',
     videoFormatHint: 'PREMIUM',
   },
   {
     id: 'DYNAMIC_OFFER',
-    label: 'Fırsat Odaklı',
+    label: 'Çarpıcı ve Dikkat Çekici',
     description: 'Fiyatı ve teklifi öne çıkararak hızlı geri dönüş hedefler.',
     imageStyleHint: 'Dynamic high-contrast commercial layout, punchy lighting, bold focal subject.',
     videoFormatHint: 'FAST_SALES',
@@ -78,9 +78,9 @@ export const IMAGE_FORMATS_V2: {
   height: number
   hint: string
 }[] = [
-  { id: 'SQUARE_1_1', label: 'Kare 1:1', aspect: '1:1', width: 1080, height: 1080, hint: 'WhatsApp kataloğu, Instagram gönderisi' },
-  { id: 'STORY_9_16', label: 'Story / Reels 9:16', aspect: '9:16', width: 1080, height: 1920, hint: 'WhatsApp Durum, Instagram Story' },
-  { id: 'PORTRAIT_4_5', label: 'Dikey Post 4:5', aspect: '4:5', width: 1080, height: 1350, hint: 'Sosyal medya akışında en geniş dikey afiş' },
+  { id: 'SQUARE_1_1', label: 'WhatsApp Kare Reklam', aspect: '1:1', width: 1080, height: 1080, hint: 'Kare 1:1 · WhatsApp ve Instagram kare gönderi' },
+  { id: 'STORY_9_16', label: 'Instagram Hikâyesi', aspect: '9:16', width: 1080, height: 1920, hint: 'Dikey 9:16 · WhatsApp Durum için de uygun' },
+  { id: 'PORTRAIT_4_5', label: 'Instagram Gönderisi', aspect: '4:5', width: 1080, height: 1350, hint: 'Dikey akış 4:5' },
 ]
 
 export type VideoFormatV2 = 'STORY_9_16'
@@ -94,10 +94,11 @@ export const VIDEO_FORMATS_V2: {
   durationSeconds: number
   hint: string
 }[] = [
-  { id: 'STORY_9_16', label: 'Reels / Durum 9:16', aspect: '9:16', width: 720, height: 1280, durationSeconds: 8, hint: '9:16 Dikey sinematik reels reklamı (~8 sn)' },
+  { id: 'STORY_9_16', label: 'Dikey Reklam Videosu', aspect: '9:16', width: 720, height: 1280, durationSeconds: 8, hint: '8 saniye çekim + 2 saniye marka kapanışı = 10 saniye final' },
 ]
 
 export type CreativePlanV2 = {
+  source?: 'AI' | 'DETERMINISTIC_FALLBACK'
   objective: CampaignObjective
   creative_style: CreativeStylePreset
   scene: {
