@@ -182,6 +182,8 @@ export type CreativeSnapshot = {
   campaignMessage?: string | null
   customHeadline?: string | null
   customSupporting?: string | null
+  objective?: string | null
+  stylePreset?: string | null
 }
 
 export type CreativePayload = CreativeSnapshot & {

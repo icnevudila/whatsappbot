@@ -365,4 +365,250 @@ describe('Brand Kit + Sales Campaign Fidelity Suite (EK P0)', () => {
     assert.ok(res.negative.includes('no unverified warranty claims or fake guarantee seals'), 'Negative prompt must forbid unverified claims');
     assert.ok(res.negative.includes('no fake 3-badge benefit stack'), 'Negative prompt must forbid 3-badge stack');
   });
+
+  // Test 5: Real Bofe Snapshot Regression (P0-1, P0-2, P0-3, P0-4, P0-5)
+  it('5. Real Bofe snapshot regression: template family override, text density consistency, no floral or terracotta pollution', () => {
+    // Exact snapshot structure from database row a57f4563-2f3a-5510-ab14-b484aa1462d3
+    const realBofeSnapshot: CreativeSnapshot = {
+      brief: 'Bofe 16L Akülü Pompa — Sezona Özel %22 İndirim. Aynı Gün Ücretsiz Kargo',
+      aspect: '1:1',
+      formatId: 'wa',
+      style: 'auto',
+      objective: 'SALES_OFFER',
+      sector: 'Tarım & Bahçe',
+      templateFamily: 'ELEGANT_RETAIL', // Saved in DB as ELEGANT_RETAIL
+      textDensity: 'balanced',
+      cta: 'Hemen İnceleyin',
+      useLogo: true,
+      labels: [],
+      phones: [{ id: '1', phone: '+905304542816', label: 'Bofe' }],
+      socials: [],
+      brandKit: {
+        id: 'cd4ce662-eede-48a0-ba71-80433a61a842',
+        name: 'Bofe',
+        tone: 'Modern, yüksek teknolojili ve profesyonel tarım & çevre sağlığı ekipmanları. Güven veren, dinamik ve net bir dil.',
+        fonts: { heading: 'Inter', body: 'Inter' },
+        colors: {
+          primary: '#000000',
+          secondary: '#026009',
+          accent: '#acfe00',
+          background: '#ffffff',
+          text: '#000000',
+        },
+        logoPath: 'http://167.233.201.31:3456/outputs/bofe_logo.png',
+      },
+      products: [
+        {
+          id: 'b68d4eb9-7cc0-491e-9ece-84b8c01068b1',
+          name: 'Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası',
+          description: 'Geniş 16L açık mavi depo haznesi, güçlü lityum-iyon batarya, ayarlanabilir pirinç nozullu paslanmaz çelik teleskopik ilaçlama borusu, ergonomik sırt askısı ve entegre basınç göstergesi. Bahçe, sera ve tarım arazilerinde yüksek basınçlı mikronize püskürtme sağlar.',
+          price: '1.450 TL',
+          oldPrice: '1.850 TL',
+          promo: '%22 İndirim',
+          include: { name: true, image: true, price: true, promo: true, boxContents: true, description: true },
+          imageUrl: 'http://167.233.201.31:3456/outputs/bofe_real_product.jpg',
+          boxContents: '1x Bofe 16L Şarjlı Sırt Pompası, 1x Paslanmaz Çelik Teleskopik Uzatma Borusu, 1x Çok Amaçlı Pirinç Nozul Seti, 1x Hızlı Şarj Cihazı, 1x Ergonomik Sırt Askı Kemeri, 1x Yedek Conta & O-Ring Kiti',
+          extra: 'Sera ve bahçe kullanımına uygun yüksek basınçlı lityum bataryalı model.',
+        },
+      ],
+      customHeadline: 'Bofe 16L Akülü Pompa — Sezona Özel %22 İndirim',
+      customSupporting: 'Aynı Gün Ücretsiz Kargo',
+      deliveryInfo: 'Aynı Gün Ücretsiz Kargo',
+      stockInfo: null,
+      urgencyInfo: null,
+      primaryBenefits: [],
+      baseCreativeId: null,
+      instruction: null,
+      variationPreset: null,
+      companyName: 'Bofe',
+      subtitles: true,
+      videoSpeech: true,
+      cost: { imageCount: 1 },
+      title: 'Bofe WhatsApp Kampanyası',
+      requestKey: 'real-bofe-regression-key',
+      companyAbout: 'Tarım ve Bahçe Ekipmanları',
+      website: null,
+      dateRange: null,
+      customText: null,
+      creativePlan: null as any,
+      campaignMessage: null as any,
+      customVoiceover: null,
+      videoScenarioTitle: null,
+      videoScenarioPrompt: null,
+      voiceoverScript: null,
+      referenceImageUrls: [],
+    };
+
+    const verifiedRefs = { logo: true, product: true, base: false };
+
+    // Standard mode check
+    const stdRes = buildCreativePrompt(realBofeSnapshot, { verifiedRefs, artDirectionPlan: null });
+    const stdPrompt = stdRes.prompt;
+
+    // P0-1: Correct design family override to CAMPAIGN_POSTER, zero floral directives
+    assert.ok(
+      stdPrompt.includes('Design mode: High-impact commercial campaign visual tailored custom-designed for this brand and sector.'),
+      'P0-1: Agricultural sales offer must route to CAMPAIGN_POSTER, not boutique retail',
+    );
+    assert.ok(!stdPrompt.includes('floral arrangement'), 'P0-1: Must NOT mention floral arrangement');
+    assert.ok(!stdPrompt.includes('gifts, flowers'), 'P0-1: Must NOT mention gifts, flowers');
+    assert.ok(!stdPrompt.includes('Boutique retail'), 'P0-1: Must NOT classify agricultural equipment as boutique retail');
+
+    // P0-2: Text density harmony
+    assert.ok(
+      stdPrompt.includes('Text density guidance (Sales Campaign / Balanced)'),
+      'P0-2: Must use sales-aware text density directive',
+    );
+    assert.ok(
+      !stdPrompt.includes('Limited on-image text: headline + one short offer line'),
+      'P0-2: Must NOT have contradictory limited text constraint',
+    );
+    assert.ok(
+      stdPrompt.includes('Verified Commercial Core (Mandatory on Visual):'),
+      'P0-2: Mandatory commercial core must be explicitly present',
+    );
+    assert.ok(
+      stdPrompt.includes('- Mandatory Headline: "Bofe 16L Akülü Pompa — Sezona Özel %22 İndirim"'),
+      'P0-5: Custom headline must be preserved',
+    );
+    assert.ok(
+      stdPrompt.includes('- Mandatory Campaign Price & Offer: 1.450 TL (was 1.850 TL) · Discount: %22'),
+      'P0-2: Price, was price, and discount must be present',
+    );
+    assert.ok(
+      stdPrompt.includes('- Mandatory Call-to-Action (CTA): Hemen İnceleyin'),
+      'P0-5: CTA must be preserved',
+    );
+    assert.ok(
+      stdPrompt.includes('Key verified selling point: Aynı Gün Ücretsiz Kargo'),
+      'P0-5: Custom supporting text must be preserved in selling points',
+    );
+
+    // Designer mode check
+    const artPlan = resolveArtDirectionPlanAtSubmission({
+      input: {
+        orgId: realBofeSnapshot.brandKit!.id,
+        brandName: realBofeSnapshot.brandKit!.name,
+        brandTone: realBofeSnapshot.brandKit!.tone,
+        brandColors: realBofeSnapshot.brandKit!.colors as any,
+        brandFonts: realBofeSnapshot.brandKit!.fonts as any,
+        productName: realBofeSnapshot.products[0].name,
+        productDescription: realBofeSnapshot.products[0].description,
+        objective: realBofeSnapshot.objective,
+        stylePreset: 'AUTO',
+        format: '1:1',
+        headline: realBofeSnapshot.customHeadline,
+        offer: realBofeSnapshot.products[0].promo,
+        cta: realBofeSnapshot.cta,
+      },
+    }).plan;
+
+    const desRes = buildCreativePrompt(realBofeSnapshot, { verifiedRefs, artDirectionPlan: artPlan });
+    const desPrompt = desRes.prompt;
+
+    // P0-3: Sector material contamination check
+    assert.ok(
+      !desPrompt.includes('Textured red terracotta clay'),
+      'P0-3: Pump material must NOT be contaminated with red terracotta clay',
+    );
+    assert.ok(
+      !desPrompt.includes('Virgin cold-pressed olive oil sheen'),
+      'P0-3: Pump material must NOT be contaminated with olive oil sheen',
+    );
+    assert.ok(
+      desPrompt.includes('Authentic product casing realism, preserving exact reference product manufacturing materials'),
+      'P0-3: Product casing realism must be preserved without alteration',
+    );
+  });
+
+  // Test 6: BRAND_SHOWCASE mode check (P0-2 Non-Sales)
+  it('6. BRAND_SHOWCASE mode: Price and discount are NOT mandatory, pure brand visual focus', () => {
+    const brandShowcaseSnapshot: CreativeSnapshot = {
+      brief: 'Bofe Tarım Marka Prestij Tanıtımı',
+      aspect: '1:1',
+      formatId: 'wa',
+      style: 'modern',
+      objective: 'BRAND_SHOWCASE',
+      sector: 'Tarım & Bahçe',
+      templateFamily: 'PRODUCT_SHOWCASE',
+      textDensity: 'balanced',
+      cta: 'Daha Fazla Bilgi Al',
+      useLogo: true,
+      labels: [],
+      phones: [{ id: '1', phone: '+905304542816', label: 'Bofe' }],
+      socials: [],
+      brandKit: {
+        id: 'cd4ce662-eede-48a0-ba71-80433a61a842',
+        name: 'Bofe',
+        tone: 'Profesyonel ve güvenilir.',
+        fonts: { heading: 'Inter', body: 'Inter' },
+        colors: {
+          primary: '#000000',
+          secondary: '#026009',
+          accent: '#acfe00',
+          background: '#ffffff',
+          text: '#000000',
+        },
+        logoPath: 'http://167.233.201.31:3456/outputs/bofe_logo.png',
+      },
+      products: [
+        {
+          id: 'b68d4eb9-7cc0-491e-9ece-84b8c01068b1',
+          name: 'Bofe 16L Şarjlı Sırt Pompası',
+          description: 'Profesyonel tarım ekipmanı.',
+          price: '1.450 TL',
+          oldPrice: '1.850 TL',
+          promo: '%22 İndirim',
+          include: { name: true, image: true, price: true, promo: true, boxContents: false, description: true },
+          imageUrl: 'http://167.233.201.31:3456/outputs/bofe_real_product.jpg',
+        },
+      ],
+      customHeadline: 'Geleceğin Tarım Teknolojileri',
+      customSupporting: null,
+      deliveryInfo: null,
+      stockInfo: null,
+      urgencyInfo: null,
+      primaryBenefits: ['Ergonomik Tasarım'],
+      baseCreativeId: null,
+      instruction: null,
+      variationPreset: null,
+      companyName: 'Bofe',
+      subtitles: true,
+      videoSpeech: true,
+      cost: { imageCount: 1 },
+      title: 'Bofe Marka Tanıtımı',
+      requestKey: 'bofe-brand-showcase-key',
+      companyAbout: 'Tarım Teknolojileri',
+      website: null,
+      dateRange: null,
+      customText: null,
+      creativePlan: null as any,
+      campaignMessage: null as any,
+      customVoiceover: null,
+      videoScenarioTitle: null,
+      videoScenarioPrompt: null,
+      voiceoverScript: null,
+      referenceImageUrls: [],
+    };
+
+    const res = buildCreativePrompt(brandShowcaseSnapshot);
+    const prompt = res.prompt;
+
+    assert.ok(
+      prompt.includes('Text density guidance (Brand Showcase / Balanced)'),
+      'Must use Brand Showcase text density guidance',
+    );
+    assert.ok(
+      !prompt.includes('- Mandatory Campaign Price & Offer'),
+      'BRAND_SHOWCASE must NOT mandate price or discount',
+    );
+    assert.ok(
+      prompt.includes('Verified Brand Core (Mandatory on Visual):'),
+      'Must label verified core as Brand Core',
+    );
+    assert.ok(
+      prompt.includes('BRAND SHOWCASE MANDATE & COMPOSITION CONTRACT:'),
+      'Must use Brand Showcase contract',
+    );
+  });
 });

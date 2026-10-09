@@ -379,12 +379,12 @@ function buildDeterministicPlan(
 
     art_direction: {
       visual_language: `${archetype.artDirection.visualLanguage}. Sector authenticity: ${sector.physicalEnvironment.primaryScene}.`,
-      material_language: `${archetype.artDirection.materialLanguage}, ${sector.physicalEnvironment.materialTextures.join(', ')}.`,
+      material_language: `${archetype.artDirection.materialLanguage}. Authentic product casing realism, preserving exact reference product manufacturing materials and casing details without alteration.`,
       lighting: `${archetype.artDirection.lighting}. Physics: ${sector.physicalEnvironment.lightingPhysics}.`,
-      background_treatment: `${brand_dna.background_preference} with ${archetype.artDirection.backgroundTreatment}.`,
+      background_treatment: `${brand_dna.background_preference} with ${archetype.artDirection.backgroundTreatment}. Environmental surroundings and ground textures: ${sector.physicalEnvironment.materialTextures.join(', ')}.`,
       color_treatment: `${brand_dna.palette.naturalLanguageDescription}. Archetype contrast strategy: ${archetype.artDirection.contrastStrategy}. ARCHETYPE MUST NOT OVERRIDE BRAND PALETTE.`,
       contrast_strategy: archetype.artDirection.contrastStrategy,
-      texture: `${archetype.artDirection.texture}, ${sector.physicalEnvironment.materialTextures[0] || 'tactile surface realism'}.`,
+      texture: archetype.artDirection.texture,
       atmosphere: `${archetype.artDirection.atmosphere}. Atmospheric accents: ${sector.physicalEnvironment.atmosphericEffects.join(', ')}.`,
     },
 
