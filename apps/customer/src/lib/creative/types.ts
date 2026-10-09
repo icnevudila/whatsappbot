@@ -223,6 +223,7 @@ export type CreativePayload = CreativeSnapshot & {
   } | null;
   qualityMode?: 'STANDARD' | 'DESIGNER';
   imageAttempt?: string
+  imageAttemptStartedAt?: string
   imageSubmissionUncertain?: boolean
   imageSubmitIntent?: { requestId: string; gatewayUrl: string; startedAt: string } | null
   imageDirectIntent?: { requestId: string; provider: string; storagePath: string; startedAt: string } | null
