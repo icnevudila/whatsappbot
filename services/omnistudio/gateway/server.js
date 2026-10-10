@@ -2888,6 +2888,30 @@ const server = http.createServer(async (req, res) => {
       }
     }
     if (method === 'POST' && (pathname === '/v1/chat/suggestions' || pathname === '/chat/suggestions')) {
+      const configuredApiKey = process.env.CHATGPT_API_KEY;
+      const authHeader = req.headers['authorization'] || req.headers['x-api-key'] || '';
+      const providedKey = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : authHeader.trim();
+
+      if (configuredApiKey && configuredApiKey !== 'none') {
+        if (!providedKey || providedKey !== configuredApiKey) {
+          return sendJson(res, 401, {
+            error: {
+              message: 'Yetkisiz erişim. Geçerli bir API anahtarı gereklidir.',
+              type: 'invalid_request_error',
+              code: 'invalid_api_key'
+            }
+          });
+        }
+      } else if (!configuredApiKey) {
+        return sendJson(res, 500, {
+          error: {
+            message: 'Sunucu yapılandırma hatası: CHATGPT_API_KEY tanımlanmamış.',
+            type: 'server_error',
+            code: 'missing_api_key_config'
+          }
+        });
+      }
+
       const body = await parseJsonBody(req);
       const incomingMessage = (body.incomingMessage || body.message || '').trim();
       if (!incomingMessage) {

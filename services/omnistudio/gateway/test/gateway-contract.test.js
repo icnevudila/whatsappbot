@@ -27,11 +27,11 @@ async function nextJob(workerId) {
 
 async function submitText(body, result = { suggestions: [{ label: 'Kısa & Net', text: 'Test yanıtı' }], raw: '{"suggestions":[]}' }) {
   const pendingResponse = request('/v1/chat/suggestions', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-gateway-key' }, body: JSON.stringify(body),
   });
   const job = await nextJob(`text-${Math.random()}`);
   await request('/job/complete-text', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobId: job.id, result }),
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-gateway-key' }, body: JSON.stringify({ jobId: job.id, result }),
   });
   return { job, response: await pendingResponse };
 }
@@ -90,11 +90,11 @@ test('missing company context is accepted and remains empty', async () => {
 
 test('worker errors complete the synchronous text request with the existing 500 contract', async () => {
   const pendingResponse = request('/v1/chat/suggestions', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ customer: 'Hata', incomingMessage: 'Merhaba' }),
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-gateway-key' }, body: JSON.stringify({ customer: 'Hata', incomingMessage: 'Merhaba' }),
   });
   const job = await nextJob('text-error');
   await request('/job/release', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobId: job.id, error: 'MODEL_ERROR' }),
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-gateway-key' }, body: JSON.stringify({ jobId: job.id, error: 'MODEL_ERROR' }),
   });
   const response = await pendingResponse;
   assert.equal(response.response.status, 500);
@@ -105,7 +105,7 @@ test('image reference metadata and brand kit reach the leased worker unchanged',
   const refs = [{ data: 'abcd', role: 'logo', mimeType: 'image/webp', sha256: 'a'.repeat(64) }, { url: 'https://example.com/product.png', role: 'product' }];
   const kit = { name: 'Only this tenant', colors: { accent: '#123456' }, tone: 'calm' };
   const created = await request('/v1/images/generations', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-gateway-key' },
     body: JSON.stringify({ prompt: 'Reference transport test', tenant_id: 'tenant-refs', request_id: 'refs-1', referenceImages: refs, brandKit: kit, async: true }),
   });
   assert.equal(created.response.status, 202);
@@ -114,12 +114,12 @@ test('image reference metadata and brand kit reach the leased worker unchanged',
   assert.deepEqual(job.brandKit, kit);
   assert.match(job.prompt, /Reference 1: original BRAND LOGO/);
   assert.match(job.prompt, /Reference 2: canonical PRODUCT/);
-  await request('/job/release', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobId: job.id, error: 'Fixture complete' }) });
+  await request('/job/release', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-gateway-key' }, body: JSON.stringify({ jobId: job.id, error: 'Fixture complete' }) });
 });
 
 test('image generation remains an async queue contract and returns a URL after upload', async () => {
   const created = await request('/v1/images/generations?async=true', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-gateway-key' },
     body: JSON.stringify({ prompt: 'Kırmızı sandalye', tenant_id: 'tenant-image', request_id: 'image-1', async: true }),
   });
   assert.equal(created.response.status, 202);
@@ -143,18 +143,18 @@ test('malformed worker text result preserves the existing pass-through response 
 
 test('same customer display name from different tenants cannot cancel each other', async () => {
   const first = request('/v1/chat/suggestions', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-gateway-key' },
     body: JSON.stringify({ tenant_id: 'tenant-a', conversation_id: 'conv-a', customer: 'Ahmet', incomingMessage: 'A mesajı' }),
   });
   const second = request('/v1/chat/suggestions', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-gateway-key' },
     body: JSON.stringify({ tenant_id: 'tenant-b', conversation_id: 'conv-b', customer: 'Ahmet', incomingMessage: 'B mesajı' }),
   });
   const firstJob = await nextJob('tenant-a-worker');
   const secondJob = await nextJob('tenant-b-worker');
   assert.notEqual(firstJob.scopeKey, secondJob.scopeKey);
   await Promise.all([firstJob, secondJob].map((job) => request('/job/complete-text', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-gateway-key' },
     body: JSON.stringify({ jobId: job.id, result: { suggestions: [{ label: 'Test', text: job.incomingMessage }], raw: '' } }),
   })));
   assert.equal((await first).response.status, 200);
@@ -163,13 +163,13 @@ test('same customer display name from different tenants cannot cancel each other
 
 test('a duplicate tenant/request/operation is executed once and shares its result', async () => {
   const body = { tenant_id: 'tenant-a', request_id: 'same-request', customer: 'Ahmet', incomingMessage: 'Tek sefer üret' };
-  const first = request('/v1/chat/suggestions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  const second = request('/v1/chat/suggestions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const first = request('/v1/chat/suggestions', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-gateway-key' }, body: JSON.stringify(body) });
+  const second = request('/v1/chat/suggestions', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-gateway-key' }, body: JSON.stringify(body) });
   const job = await nextJob('idempotency-worker');
   const noDuplicate = await request('/job/next?platform=chatgpt&workerId=idempotency-worker-2');
   assert.equal(noDuplicate.body.job, null);
   await request('/job/complete-text', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobId: job.id, result: { suggestions: [{ label: 'Test', text: 'Tek sonuç' }], raw: '' } }),
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-gateway-key' }, body: JSON.stringify({ jobId: job.id, result: { suggestions: [{ label: 'Test', text: 'Tek sonuç' }], raw: '' } }),
   });
   assert.deepEqual((await first).body.suggestions, (await second).body.suggestions);
 });
@@ -188,7 +188,7 @@ test('generic chat keeps the full prompt, system directive and tenant aliases', 
   assert.equal(job.tenantId, 'tenant-chat');
   assert.equal(job.requestId, 'full-chat');
   assert.equal(job.type, 'chat_completion');
-  await request('/job/complete-text', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobId: job.id, result: { reply: 'Current turn answer' } }) });
+  await request('/job/complete-text', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-gateway-key' }, body: JSON.stringify({ jobId: job.id, result: { reply: 'Current turn answer' } }) });
   assert.equal((await pending).body.choices[0].message.content, 'Current turn answer');
 });
 
@@ -212,15 +212,26 @@ test('image disconnect after submit intent holds the exact job instead of retryi
 
 test('completed jobs expire without deleting an active response', async () => {
   const created = await request('/v1/images/generations?async=true', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: 'Retention test', async: true }),
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-gateway-key' }, body: JSON.stringify({ prompt: 'Retention test', async: true }),
   });
   const job = await nextJob('retention-worker');
   await request(`/upload?jobId=${job.id}&filename=retention-test.png`, { method: 'POST', headers: { 'Content-Type': 'image/png' }, body: Buffer.from([1, 2, 3]) });
   assert.equal((await request(`/v1/images/status/${job.id}`)).response.status, 200);
   await new Promise((resolve) => setTimeout(resolve, 20));
   await request('/v1/images/generations?async=true', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: 'Cleanup trigger', async: true }),
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-gateway-key' }, body: JSON.stringify({ prompt: 'Cleanup trigger', async: true }),
   });
   assert.equal((await request(`/v1/images/status/${job.id}`)).response.status, 404);
   assert.equal(created.body.status, 'pending');
+});
+
+
+test('suggestions reject missing or wrong credentials before input validation', async () => {
+  for (const endpoint of ['/v1/chat/suggestions', '/chat/suggestions']) {
+    for (const token of ['', 'Bearer wrong-key']) {
+      const {response, body} = await request(endpoint, {method:'POST', headers:{'Content-Type':'application/json', Authorization:token}, body:'{}'});
+      assert.equal(response.status,401);
+      assert.equal(body.error.code,'invalid_api_key');
+    }
+  }
 });
