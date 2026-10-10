@@ -609,6 +609,8 @@ export function buildLegacySimpleCreativePrompt(
     'no cookie-cutter poster skeleton',
     'no generic boxed price cards',
     'no unverified warranty claims or fake guarantee seals',
+    'no unverified delivery claims or fake shipping icons (e.g. no fake Aynı Gün Kargo or Ücretsiz Kargo unless explicitly stated)',
+    'no missing space between price number and currency (always format as 500 TL, never 500TL)',
     'no bottom footer contact ribbons',
     'no extra products that were not listed',
     'no fake logos',

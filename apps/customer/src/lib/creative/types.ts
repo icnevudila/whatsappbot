@@ -221,7 +221,7 @@ export type CreativePayload = CreativeSnapshot & {
     redirect_ready_ms: number;
     art_direction_source: string;
   } | null;
-  qualityMode?: 'STANDARD' | 'DESIGNER';
+  qualityMode?: 'AUTO_PROFESSIONAL' | 'STANDARD' | 'DESIGNER';
   imageAttempt?: string
   imageAttemptStartedAt?: string
   imageSubmissionUncertain?: boolean

@@ -740,6 +740,71 @@ export async function approveReviewedImage(formData: FormData): Promise<Creative
   return {ok:'Görsel inceleme onayınız kaydedildi.'}
 }
 
+export async function approveReviewedVideo(formData: FormData): Promise<CreativeActionState> {
+  if (formData.get('identity') !== 'on' || formData.get('commerce') !== 'on')
+    return { error: 'Ürün/marka ve ticari bilgileri videoda kontrol ettiğinizi doğrulayın.' }
+  const { org, userId, supabase } = await requireActiveOrg()
+  if (!isOrgAdminRole(org.role)) return { error: 'Onay yetkiniz yok.' }
+  const id = String(formData.get('id') || '').trim()
+  if (!id) return { error: 'Geçersiz video ID.' }
+
+  const { data: row, error: readError } = await supabase
+    .from('creatives')
+    .select('id, format, status, public_url, payload, updated_at')
+    .eq('org_id', org.id)
+    .eq('id', id)
+    .maybeSingle()
+
+  if (readError || !row || row.status !== 'needs_review')
+    return { error: 'Video kaydı bulunamadı veya onay durumunda değil.' }
+
+  const serviceClient = createSupabaseServiceClient() || supabase
+  const outputId = libraryVideoOutputId(row.public_url)
+  if (outputId) {
+    const { data: out } = await (serviceClient as any)
+      .from('ai_media_outputs')
+      .select('id, org_id, verified, sha256')
+      .eq('id', outputId)
+      .eq('org_id', org.id)
+      .maybeSingle()
+
+    if (out && out.verified) {
+      await (serviceClient as any)
+        .from('ai_media_outputs')
+        .update({ is_approved: true })
+        .eq('id', outputId)
+        .eq('org_id', org.id)
+    }
+  }
+
+  const payload = (row.payload ?? {}) as Record<string, unknown>
+  const { data: approved, error } = await supabase
+    .from('creatives')
+    .update({
+      status: 'ready',
+      payload: {
+        ...payload,
+        videoHumanReview: {
+          reviewerId: userId,
+          reviewedAt: new Date().toISOString(),
+          identityConfirmed: true,
+          commerceConfirmed: true,
+          source: 'CUSTOMER_EXPLICIT_REVIEW',
+        },
+      },
+    })
+    .eq('org_id', org.id)
+    .eq('id', id)
+    .eq('status', 'needs_review')
+    .eq('updated_at', row.updated_at)
+    .select('id')
+    .maybeSingle()
+
+  if (error || !approved) return { error: 'Kayıt değişti; yeniden deneyin.' }
+  revalidateLibrary(id)
+  return { ok: 'Video inceleme onayınız kaydedildi.' }
+}
+
 export async function renameCreative(formData: FormData): Promise<CreativeActionState> {
   const id = String(formData.get('id') ?? '').trim()
   const title = String(formData.get('title') ?? '').trim().slice(0, 180)
@@ -816,10 +881,10 @@ export async function listLibraryCreatives({
       const payload = (row.payload ?? {}) as Record<string, unknown>
       const isVideo = row.format === 'video' || Boolean(row.public_url?.endsWith('.mp4')) || Boolean(row.public_url?.includes('/api/ai-media/outputs/'))
       let thumb =
-        typeof payload.thumbnailUrl === 'string' && payload.thumbnailUrl && !payload.thumbnailUrl.includes('?thumb=1')
+        typeof payload.thumbnailUrl === 'string' && payload.thumbnailUrl
           ? payload.thumbnailUrl
           : isVideo
-            ? null
+            ? (row.public_url ? `${row.public_url}${row.public_url.includes('?') ? '&' : '?'}thumb=1` : null)
             : row.public_url
       return {
         id: row.id,
