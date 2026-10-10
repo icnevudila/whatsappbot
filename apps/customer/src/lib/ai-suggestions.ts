@@ -1,5 +1,3 @@
-import { createHash } from 'node:crypto'
-
 export type Suggestion = { label: string; text: string }
 
 export function normalizeForLibrary(input: string): string {
@@ -9,10 +7,6 @@ export function normalizeForLibrary(input: string): string {
     .normalize('NFKC')
     .replace(/[^\p{L}\p{N}\s]/gu, ' ')
     .replace(/\s+/g, ' ')
-}
-
-export function fingerprint(input: string): string {
-  return createHash('sha256').update(normalizeForLibrary(input)).digest('hex')
 }
 
 export function extractSemanticIntentKey(input: string): string | null {
