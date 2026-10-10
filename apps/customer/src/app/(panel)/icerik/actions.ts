@@ -32,7 +32,7 @@ import { collectImageFiles, readImageFile } from '@/app/(panel)/ayarlar/upload-i
 import { isOrgAdminRole, requireActiveOrg } from '@/lib/org'
 import { DEFAULT_INCLUDE, formatFromId, type ProductCard, type SocialOption } from './wizard-types'
 import { LIBRARY_PAGE_SIZE, type LibraryCreativeRow } from './library-shared'
-import { loadVideoLibraryState } from '@/lib/creative/video-library-state'
+import { libraryVideoOutputId, loadVideoLibraryState } from '@/lib/creative/video-library-state'
 import { createSupabaseServiceClient } from '@/lib/supabase/service'
 import {
   generateVideoScenarios,
@@ -869,7 +869,8 @@ export async function listLibraryCreatives({
       .select('id, title, public_url, status, source, generation_type, created_at, error, parent_id, format, payload')
       .eq('org_id', org.id)
       .neq('source', 'upload')
-      .neq('status', 'failed')
+      .eq('status', 'ready')
+      .not('public_url', 'is', null)
       .order('created_at', { ascending: sort === 'old' })
       .range(start, start + size - 1)
     const term = query.trim()
@@ -877,37 +878,77 @@ export async function listLibraryCreatives({
     const { data, error } = await request
     if (error) return { items: [], hasMore: false, error: error.message }
     const videoStates = await loadVideoLibraryState(createSupabaseServiceClient() || supabase, org.id, data ?? [])
-    const items = (data ?? []).map((row) => {
-      const payload = (row.payload ?? {}) as Record<string, unknown>
-      const isVideo = row.format === 'video' || Boolean(row.public_url?.endsWith('.mp4')) || Boolean(row.public_url?.includes('/api/ai-media/outputs/'))
-      let thumb =
-        typeof payload.thumbnailUrl === 'string' && payload.thumbnailUrl
-          ? payload.thumbnailUrl
-          : isVideo
-            ? (row.public_url ? `${row.public_url}${row.public_url.includes('?') ? '&' : '?'}thumb=1` : null)
-            : row.public_url
-      return {
-        id: row.id,
-        title: row.title,
-        publicUrl: row.public_url,
-        thumbnailUrl: thumb,
-        format: row.format,
-        status: videoStates.get(row.id)?.status || row.status,
-        durationSeconds: videoStates.get(row.id)?.durationSeconds ?? null,
-        source: row.source,
-        generationType: row.generation_type,
-        createdAt: row.created_at,
-        error: row.error,
-        parentId: row.parent_id,
-      }
-    })
-    return { items, hasMore: items.length === size }
+    const items = (data ?? [])
+      .filter((row) => {
+        if (!row.public_url) return false
+        const isVideo = row.format === 'video' || Boolean(row.public_url?.endsWith('.mp4')) || Boolean(row.public_url?.includes('/api/ai-media/outputs/'))
+        if (isVideo) {
+          const vState = videoStates.get(row.id)
+          if (vState && vState.status !== 'ready') return false
+        }
+        return true
+      })
+      .map((row) => {
+        const payload = (row.payload ?? {}) as Record<string, unknown>
+        const isVideo = row.format === 'video' || Boolean(row.public_url?.endsWith('.mp4')) || Boolean(row.public_url?.includes('/api/ai-media/outputs/'))
+        let thumb =
+          typeof payload.thumbnailUrl === 'string' && payload.thumbnailUrl
+            ? payload.thumbnailUrl
+            : isVideo
+              ? (row.public_url ? `${row.public_url}${row.public_url.includes('?') ? '&' : '?'}thumb=1` : null)
+              : row.public_url
+        return {
+          id: row.id,
+          title: row.title,
+          publicUrl: row.public_url,
+          thumbnailUrl: thumb,
+          format: row.format,
+          status: 'ready',
+          durationSeconds: videoStates.get(row.id)?.durationSeconds ?? null,
+          source: row.source,
+          generationType: row.generation_type,
+          createdAt: row.created_at,
+          error: null,
+          parentId: row.parent_id,
+        }
+      })
+    return { items, hasMore: (data ?? []).length === size }
   } catch (error) {
     return {
       items: [],
       hasMore: false,
       error: error instanceof Error ? error.message : 'Oturum yok.',
     }
+  }
+}
+
+export async function getActiveGeneratingCreative(): Promise<{
+  id: string
+  title: string
+  status: string
+  format: string
+  createdAt: string
+} | null> {
+  try {
+    const { org, supabase } = await requireActiveOrg()
+    const { data } = await supabase
+      .from('creatives')
+      .select('id, title, status, format, created_at')
+      .eq('org_id', org.id)
+      .in('status', ['pending', 'rendering'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (!data) return null
+    return {
+      id: data.id,
+      title: data.title || 'Yeni reklam üretimi',
+      status: data.status,
+      format: data.format,
+      createdAt: data.created_at,
+    }
+  } catch {
+    return null
   }
 }
 
