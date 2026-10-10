@@ -228,7 +228,7 @@ export type CreativePayload = CreativeSnapshot & {
   imageSubmitIntent?: { requestId: string; gatewayUrl: string; startedAt: string } | null
   imageDirectIntent?: { requestId: string; provider: string; storagePath: string; startedAt: string } | null
   imageReconciliationRequired?: boolean
-  imageTerminalFailure?: { kind: 'PROVIDER_FAILED'; jobId: string; gatewayUrl: string }
+  imageTerminalFailure?: { kind: 'PROVIDER_FAILED' | 'OUTPUT_INVALID'; jobId: string; gatewayUrl: string }
   title?: string
   requestKey?: string
   generatedPrompt?: string | null

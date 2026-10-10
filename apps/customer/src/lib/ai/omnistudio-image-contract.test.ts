@@ -29,6 +29,12 @@ test('provider receipt and real output contract remain bound to the exact image 
       globalThis.fetch = async input=>String(input).includes('/status/') ? Response.json(result) : new Response(bytes,{headers:{'content-type':'image/png','content-length':String(33*1024*1024)}})
       await assert.rejects(readImageJob(job,'tenant-a'),ImageJobPendingError)
     })
+    await t.test('completed provider job without output URL requires reconciliation and never resubmits',async()=>{
+      let calls=0
+      globalThis.fetch=async()=>{calls++;return Response.json({...result,result_url:null})}
+      await assert.rejects(readImageJob(job,'tenant-a'),ImageJobReconciliationError)
+      assert.equal(calls,1)
+    })
     await t.test('malformed independent expected count performs zero provider submits',async()=>{
       let calls=0;globalThis.fetch=async()=>{calls++;throw new Error('unexpected request')}
       await assert.rejects(submitImageJob(job.gatewayUrl,{expected_reference_count:'2'}),/REFERENCE_ATTACHMENT_FAILED/)

@@ -64,7 +64,7 @@ export async function readImageJob(job: ImageJobReceipt, tenantId?: string, expe
     }
   }
   if (!/^[a-f0-9]{64}$/i.test(result.result_sha256 || '')) throw new ImageJobReconciliationError(job)
-  if (!result.result_url) throw new Error('OmniStudio tamamlandı ancak çıktı URL eksik.')
+  if (!result.result_url) throw new ImageJobReconciliationError(job)
   const output = await fetch(result.result_url, { signal: AbortSignal.timeout(30000) })
   const mimeType = output.headers.get('content-type')?.split(';')[0] || ''
   if (!output.ok || !mimeType.startsWith('image/')) throw new ImageJobPendingError(job)

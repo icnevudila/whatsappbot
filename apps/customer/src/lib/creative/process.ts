@@ -402,7 +402,7 @@ export async function processCreativeGeneration(
       await supabase.from('creatives').update({ status: 'failed', error: message,
         payload: error instanceof ImageJobReconciliationError
           ? { ...payload, imageReconciliationRequired: true }
-          : { ...payload, imageTerminalFailure: { kind: 'PROVIDER_FAILED', jobId: payload.imageJob.id,
+          : { ...payload, imageTerminalFailure: { kind: error instanceof ImageOutputInvalidError ? 'OUTPUT_INVALID' : 'PROVIDER_FAILED', jobId: payload.imageJob.id,
             gatewayUrl: payload.imageJob.gatewayUrl }, imageSubmissionUncertain: false },
       }).eq('id', creativeId).eq('org_id', creative.org_id).eq('payload->imageJob->>id', payload.imageJob.id)
       return { ok: false, error: message }
