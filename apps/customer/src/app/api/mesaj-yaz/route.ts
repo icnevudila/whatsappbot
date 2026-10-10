@@ -124,8 +124,9 @@ export async function POST(request: Request) {
       : buildGeneratePrompt({ brief, tone, business })
 
   try {
+    const requestId = randomUUID()
     const text = await completeText(CAMPAIGN_GENERATE_SYSTEM, prompt, null, {
-      tenantId: org.id, customer: org.name, conversationId: creativeId ? 'campaign:' + creativeId : 'campaign', requestId: randomUUID(),
+      tenantId: org.id, customer: org.name, conversationId: creativeId ? 'campaign:' + creativeId : 'campaign:' + requestId, requestId,
     })
     return NextResponse.json({ text: cleanAiMessage(text) })
   } catch (error) {
