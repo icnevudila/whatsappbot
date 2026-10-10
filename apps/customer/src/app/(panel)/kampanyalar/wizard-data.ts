@@ -93,7 +93,7 @@ export async function loadCampaignWizardData(orgId: string) {
       (row.format === 'video' || videoStates.has(row.id) || isImageReviewApproved(row.payload)))
     .map((row) => ({ id: row.id, url: row.public_url as string, title:row.title || 'Kreatif',
       messageType:row.format === 'video' || videoStates.has(row.id) ? 'video' : 'image',
-      thumbnailUrl:videoStates.has(row.id) ? row.public_url + '?thumb=1' : row.public_url as string }))
+      thumbnailUrl:videoStates.has(row.id) ? undefined : row.public_url as string }))
 
   return {
     lists,

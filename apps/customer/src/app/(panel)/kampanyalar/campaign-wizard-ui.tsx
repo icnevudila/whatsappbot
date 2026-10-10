@@ -349,7 +349,11 @@ function LibraryModal({
                 onClick={() => onSelect(item.url, item.messageType)}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={item.thumbnailUrl || item.url} alt={item.title || 'Kampanya içeriği'} className="aspect-square w-full object-cover" />
+                {item.messageType === 'video' ? (
+                  <video src={item.url} muted playsInline preload="metadata" aria-label={item.title || 'Kampanya videosu'} className="aspect-square w-full object-cover" />
+                ) : (
+                  <img src={item.thumbnailUrl || item.url} alt={item.title || 'Kampanya içeriği'} className="aspect-square w-full object-cover" />
+                )}
                 {item.messageType === 'video' ? <span className="block p-1 text-xs">Video</span> : null}
               </button>
             ))}
