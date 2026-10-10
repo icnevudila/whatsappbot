@@ -27,6 +27,7 @@ Results below are separate evidence layers; overlapping suites must not be added
 | Atomic review gate | atomic-review.tap | 10 pass; PGlite |
 | Global Flow RLS migrations | flow-rls.tap | 1 pass; PGlite |
 | Library receipt eligibility | library-eligibility.tap | 3 pass |
+| Final review/RLS/library/animation regression | delivery-regression.tap | 15 pass, 0 fail; overlaps the individual suites |
 | Public animation allowlist | public-animations.tap | 1 pass |
 | Gateway full retest | gateway-final.tap | 109 pass, 1 fail; hydrated identity timing |
 | Gateway isolated identity retest | gateway-account-retest.tap | 4 pass; does not erase full-run failure |
@@ -106,6 +107,9 @@ INP was not measured. No deployed-production or before/after throughput claim. T
 4. Restricted paid/provider and production scenarios remain untested. Canonical brand quality, full wizard formats/chips and campaign actions are not certified.
 5. Historical migrations were repaired locally; production migration-history compatibility has not been exercised. Production writes are forbidden in this task.
 6. No credential rotation or production readiness declaration is inferred from local fixtures.
+7. The final local production server emitted `The destination stream closed early` during browser route navigation/teardown. Browser pageerror/HTTP listeners were clean, but server-console cleanliness is not certified; this is retained as an unresolved diagnostic rather than omitted from the result.
+
+Delivery verification: fixes/evidence commit `612f47b`; execution logs commit `bd6f244f430ecc3ff4c0285baabe5eb92ab91e19` was pushed and independently matched with `git ls-remote origin refs/heads/test/mesajify-full-e2e-v1`. This report follow-up is an additional integration-branch commit. Both owned local Next servers were stopped after tests. Source feature branches, main and production remain untouched.
 
 ## H — Readiness
 
