@@ -1,0 +1,1 @@
+[{"mobile":false,"cache":"cold","requests":2,"lcp":1492,"cls":0,"errors":[]},{"mobile":false,"cache":"warm","requests":2,"lcp":456,"cls":0,"errors":[]},{"mobile":true,"cache":"cold","requests":2,"lcp":2552,"cls":0,"errors":[]},{"mobile":true,"cache":"warm","requests":2,"lcp":976,"cls":0,"errors":[]}]

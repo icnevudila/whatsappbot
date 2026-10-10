@@ -1,0 +1,126 @@
+▲ Next.js 16.3.4 (webpack)
+✓ Running next.config.ts took 121ms
+- Experiments (use with caution):
+  · serverActions
+  · staleTimes
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 75s
+  Running TypeScript ...
+  Finished TypeScript in 22.2s ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/62) ...
+  Generating static pages using 7 workers (15/62) 
+  Generating static pages using 7 workers (30/62) 
+  Generating static pages using 7 workers (46/62) 
+✓ Generating static pages using 7 workers (62/62) in 11.2s
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /api/ai-media/draft
+├ ƒ /api/ai-media/jobs
+├ ƒ /api/ai-media/jobs/[jobId]
+├ ƒ /api/ai-media/outputs/[outputId]
+├ ƒ /api/ai-media/plan
+├ ƒ /api/billing/checkout
+├ ƒ /api/billing/portal
+├ ƒ /api/billing/status
+├ ƒ /api/billing/webhook
+├ ƒ /api/canli-takip/account-action
+├ ƒ /api/canli-takip/ai-accounts
+├ ƒ /api/canli-takip/ai-generate
+├ ƒ /api/canli-takip/ai-media
+├ ƒ /api/canli-takip/blacklist
+├ ƒ /api/canli-takip/campaign-action
+├ ƒ /api/canli-takip/campaign-targets
+├ ƒ /api/canli-takip/clear-jobs
+├ ƒ /api/canli-takip/contacts
+├ ƒ /api/canli-takip/control-plane
+├ ƒ /api/canli-takip/control-plane/actions
+├ ƒ /api/canli-takip/control-plane/events
+├ ƒ /api/canli-takip/create-request
+├ ƒ /api/canli-takip/diagnostic
+├ ƒ /api/canli-takip/feed
+├ ƒ /api/canli-takip/login
+├ ƒ /api/canli-takip/logout
+├ ƒ /api/canli-takip/media-proxy
+├ ƒ /api/canli-takip/org-action
+├ ƒ /api/canli-takip/reconnect
+├ ƒ /api/canli-takip/restart-service
+├ ƒ /api/canli-takip/send-message
+├ ƒ /api/canli-takip/update-request
+├ ƒ /api/canli-takip/upload-media
+├ ƒ /api/gorsel-uret
+├ ƒ /api/icerik/fikir
+├ ƒ /api/icerik/render
+├ ƒ /api/internal/creative-render
+├ ƒ /api/mesaj-yaz
+├ ƒ /api/mesajlar/ai-suggest
+├ ƒ /api/mesajlar/cache
+├ ƒ /api/mesajlar/thread
+├ ƒ /api/mesajlar/upload
+├ ƒ /api/push/notify
+├ ƒ /api/push/register
+├ ƒ /api/transcribe-audio
+├ ƒ /api/v1/jobs
+├ ○ /apple-icon.png
+├ ƒ /auth/callback
+├ ƒ /auth/confirm
+├ ƒ /ayarlar
+├ ƒ /ayarlar/engellenenler
+├ ƒ /ayarlar/hatlar
+├ ƒ /ayarlar/isletme
+├ ƒ /ayarlar/isletme/yeni
+├ ƒ /ayarlar/marka
+├ ƒ /ayarlar/marka/[id]
+├ ƒ /ayarlar/marka/yeni
+├ ƒ /ayarlar/otomatik-yanit
+├ ƒ /ayarlar/profil
+├ ƒ /ayarlar/sosyal
+├ ƒ /ayarlar/sss
+├ ƒ /ayarlar/urunler
+├ ƒ /ayarlar/urunler/[id]
+├ ƒ /ayarlar/urunler/yeni
+├ ƒ /canli-takip
+├ ƒ /canli-takip/botlar
+├ ƒ /canli-takip/hesaplar
+├ ƒ /canli-takip/isler
+├ ƒ /canli-takip/legacy
+├ ƒ /canli-takip/mesajlar
+├ ƒ /canli-takip/uyarilar
+├ ƒ /canli-takip/workers
+├ ƒ /davet/[token]
+├ ƒ /dev/studio-v3
+├ ƒ /erisim-yok
+├ ƒ /giris
+├ ƒ /hesaplar
+├ ƒ /hizli-gonderim
+├ ƒ /icerik
+├ ƒ /icerik/[id]
+├ ƒ /icerik/yeni
+├ ○ /icon.png
+├ ƒ /kampanyalar
+├ ƒ /kampanyalar/[id]
+├ ƒ /kampanyalar/[id]/duzenle
+├ ƒ /kampanyalar/yeni
+├ ƒ /kara-liste
+├ ƒ /kisiler
+├ ƒ /kisiler/[id]
+├ ƒ /kosullar
+├ ƒ /kurulum
+├ ƒ /kvkk
+├ ƒ /mesajlar
+├ ○ /opengraph-image.png
+├ ƒ /ozet
+├ ƒ /sifre-yenile
+└ ƒ /sifremi-unuttum
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
