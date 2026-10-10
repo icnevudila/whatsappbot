@@ -32,6 +32,7 @@ services:
       - PORT=3456
       - NODE_ENV=production
       - WORKER_CONTROL_TOKEN=${WORKER_CONTROL_TOKEN:-}
+      - CHATGPT_API_KEY=${CHATGPT_API_KEY:-}
       - NUM_WORKERS=4 # 4 Bagimsiz ChatGPT Hesabi
       - GFLOW_ENGINE_URL=http://gflow-engine:3461
       # Flow uses the canonical persistent Google account inside this container.

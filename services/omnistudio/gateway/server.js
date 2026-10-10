@@ -25,6 +25,13 @@ const { typedError, isWorkerControlPath, isAuthorizedWorker, configuredLimit, re
 const { BrowserWorkerSupervisor } = require('./browser_worker_supervisor.js');
 const { loadAllCompanyChats, getExpectedChatTitle } = require('./chat_manager.js');
 
+if (!process.env.CHATGPT_API_KEY) {
+  try {
+    const apiKeyFile = path.join(__dirname, '.chatgpt_api_key');
+    if (fs.existsSync(apiKeyFile)) process.env.CHATGPT_API_KEY = fs.readFileSync(apiKeyFile, 'utf8').trim();
+  } catch {}
+}
+
 if (!process.env.WORKER_CONTROL_TOKEN) {
   try {
     const tokenFile = path.join(__dirname, '.worker_control_token');

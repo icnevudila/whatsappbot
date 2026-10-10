@@ -5,6 +5,8 @@ node_modules/
 # Ortam degiskenleri
 # Repo public. Buraya sizan bir secret key butun veritabanina erisim demektir.
 .env
+.chatgpt_api_key
+.worker_control_token
 .env.*
 !.env.example
 
