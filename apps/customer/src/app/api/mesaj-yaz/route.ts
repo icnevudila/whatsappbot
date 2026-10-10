@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { randomUUID } from 'node:crypto'
 import { completeText, hasTextProvider } from '@/lib/ai/text'
 import {
   buildGeneratePrompt,
@@ -116,7 +117,13 @@ export async function POST(request: Request) {
       : buildGeneratePrompt({ brief, tone, business })
 
   try {
-    const text = await completeText(CAMPAIGN_GENERATE_SYSTEM, prompt)
+    const requestId = randomUUID()
+    const text = await completeText(CAMPAIGN_GENERATE_SYSTEM, prompt, null, {
+      tenantId: org.id,
+      customer: org.name,
+      conversationId: `campaign:${requestId}`,
+      requestId,
+    })
     return NextResponse.json({ text: cleanAiMessage(text) })
   } catch (error) {
     return NextResponse.json(
