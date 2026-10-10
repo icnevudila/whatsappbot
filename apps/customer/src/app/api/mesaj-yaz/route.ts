@@ -138,7 +138,9 @@ export async function POST(request: Request) {
       sourceText: sourceForIntegrity,
       outputText: cleaned,
       strictPriceCheck: true,
+      requireBrandName: mode === 'generate',
       businessName: business.name ?? undefined,
+      businessPhone: business.phone ?? undefined,
     })
 
     if (!integrityCheck.valid) {

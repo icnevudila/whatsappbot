@@ -288,7 +288,9 @@ export function verifyCommercialIntegrity(input: {
   outputText: string
   strictPriceCheck?: boolean
   strictContactCheck?: boolean
+  requireBrandName?: boolean
   businessName?: string | null
+  businessPhone?: string | null
   productName?: string | null
 }): IntegrityCheckResult {
   const source = input.sourceText.toLocaleLowerCase('tr-TR')
@@ -385,21 +387,35 @@ export function verifyCommercialIntegrity(input: {
     }
   }
 
-  // 6. Marka adı kontrolü (eğer business context verildiyse)
+  // 6. Marka adı kontrolü:
+  // - Generate modunda (requireBrandName=true) veya kaynakta marka adı varsa çıktıda korunması beklenir.
+  // - Ancak rewrite/imla düzeltmede kaynakta marka adı hiç yoksa gereksiz 422 oluşmasını engeller.
   if (input.businessName) {
     const bName = input.businessName.trim().toLocaleLowerCase('tr-TR')
-    if (bName.length > 2 && !output.includes(bName)) {
-      drifts.push(`İşletme / marka adı metinde yer almıyor: "${input.businessName}"`)
+    const brandTokens = bName.split(/\s+/).filter((t) => t.length >= 3 && !['ticaret', 'ltd', 'şti', 'aş'].includes(t))
+    const sourceHasBrand = source.includes(bName) || brandTokens.some((t) => source.includes(t))
+    const shouldCheckBrand = input.requireBrandName ?? sourceHasBrand
+    if (shouldCheckBrand) {
+      const outputHasBrand = output.includes(bName) || brandTokens.some((t) => output.includes(t))
+      if (!outputHasBrand) {
+        drifts.push(`İşletme / marka adı metinde yer almıyor: "${input.businessName}"`)
+      }
     }
   }
 
   // 7. Telefon numarası kontrolü (Sahte / uydurma telefon numarası engeli)
+  // Kaynak metindeki telefonlar veya işletmenin kayıtlı resmi telefonu (businessPhone) geçerli kabul edilir.
   const phonePattern = /(?:\+?90\s*)?(?:0\s*)?5\d{2}[\s.-]?\d{3}[\s.-]?\d{2}[\s.-]?\d{2}/g
   const sourcePhones = (input.sourceText.match(phonePattern) || []).map((p) => p.replace(/[^\d]/g, ''))
   const outputPhones = (input.outputText.match(phonePattern) || []).map((p) => p.replace(/[^\d]/g, ''))
+  const validPhones = [...sourcePhones]
+  if (input.businessPhone) {
+    const bp = input.businessPhone.replace(/[^\d]/g, '')
+    if (bp.length >= 7) validPhones.push(bp)
+  }
 
   for (const op of outputPhones) {
-    const matched = sourcePhones.some((sp) => sp.endsWith(op.slice(-7)) || op.endsWith(sp.slice(-7)))
+    const matched = validPhones.some((vp) => vp.endsWith(op.slice(-7)) || op.endsWith(vp.slice(-7)))
     if (!matched) {
       hallucinatedTerms.push(`Uydurma telefon numarası: ${op}`)
       drifts.push(`Orijinalde bulunmayan sahte iletişim numarası eklendi`)
@@ -408,7 +424,7 @@ export function verifyCommercialIntegrity(input: {
 
   if (input.strictContactCheck && sourcePhones.length > 0) {
     for (const sp of sourcePhones) {
-      const matched = outputPhones.some((op) => op.endsWith(sp.slice(-7)) || sp.endsWith(op.slice(-7)))
+      const matched = outputPhones.some((op) => op.endsWith(sp.slice(-7)) || sp.endsWith(sp.slice(-7)))
       if (!matched) {
         drifts.push(`Orijinal iletişim / telefon numarası kayboldu`)
       }
