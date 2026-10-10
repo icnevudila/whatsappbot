@@ -1,0 +1,92 @@
+[
+  {
+    "path": "apps/customer/public/animations/svg-spinners/12-dots-scale-rotate.svg",
+    "bytes": 1693,
+    "sha256": "ee966e3d950e4e1bad6395bd1077656c83e7f2ac0bade3a701f21efcefa7ee8e"
+  },
+  {
+    "path": "apps/customer/public/animations/svg-spinners/3-dots-fade.svg",
+    "bytes": 482,
+    "sha256": "89451abe5ae5681e0119428f21a7f230b7d8fc747a939c98740ad8a46d3918fe"
+  },
+  {
+    "path": "apps/customer/public/animations/svg-spinners/bars-scale.svg",
+    "bytes": 895,
+    "sha256": "b87fdff67e5df18203c981acca8beafd1574e2b51b100f79253cb57e513e1663"
+  },
+  {
+    "path": "apps/customer/public/animations/svg-spinners/blocks-scale.svg",
+    "bytes": 1182,
+    "sha256": "c81e526b717eb84b4901a4ec029d396cf796b3d16b0c8d015fbc2f2f0eed07c7"
+  },
+  {
+    "path": "apps/customer/public/animations/svg-spinners/blocks-shuffle-3.svg",
+    "bytes": 646,
+    "sha256": "8415cfea3cb784e9cced5a25bb043f93d6afdac07e82a681f3669b6a60744e78"
+  },
+  {
+    "path": "apps/customer/public/animations/svg-spinners/blocks-wave.svg",
+    "bytes": 2457,
+    "sha256": "a11e96ec26bf50d3eb959c444c735bac446d09ab8f2e4ab7d93974d21aeaf3b3"
+  },
+  {
+    "path": "apps/customer/public/animations/svg-spinners/clock.svg",
+    "bytes": 565,
+    "sha256": "1af6ecfa7aa6f0c9c23dd7161648aac9ea5fcadc48eadccf60a5d063ee5aeb99"
+  },
+  {
+    "path": "apps/customer/public/animations/svg-spinners/pulse-rings-2.svg",
+    "bytes": 657,
+    "sha256": "076a42f422675a25b26445776fbb4b2de83f58d7690b7e27b84c7c613b9c234a"
+  },
+  {
+    "path": "apps/customer/public/animations/studio-icons/circle-alert.svg",
+    "bytes": 332,
+    "sha256": "ce3e98b7a03b78c0071131df42466e4e1ff5187fccad30e739ec9ce951cf685a"
+  },
+  {
+    "path": "apps/customer/public/animations/studio-icons/circle-check.svg",
+    "bytes": 278,
+    "sha256": "9711e045a5999f8a3b0782eb88e09b04e0559bc7b379dcc0a4ae645223e10345"
+  },
+  {
+    "path": "apps/customer/public/animations/studio-icons/circle-x.svg",
+    "bytes": 293,
+    "sha256": "bcd8788901e6f29e1b231a81ba5e707d083d06cb4848a28f29407fab4f8e0b64"
+  },
+  {
+    "path": "apps/customer/public/animations/studio-icons/clapperboard.svg",
+    "bytes": 429,
+    "sha256": "e4d78946cda7812f13c431c68b6d4d0077a92217c7f468667a203f237e247d7e"
+  },
+  {
+    "path": "apps/customer/public/animations/studio-icons/clipboard-check.svg",
+    "bytes": 383,
+    "sha256": "e2bac86a6b24caa0d7d0dcc2719ec6b7870ec5eef2d21afae498d8cb5eefda96"
+  },
+  {
+    "path": "apps/customer/public/animations/studio-icons/clock-3.svg",
+    "bytes": 269,
+    "sha256": "0e097d0b66278965fb53bc14900575d95f5c21b9cca932028bbb33294b56c9e2"
+  },
+  {
+    "path": "apps/customer/public/animations/studio-icons/image.svg",
+    "bytes": 358,
+    "sha256": "619c9db58c879dce6250376ba67d9c9102ca6dbb3b1efb9294c9f180e22273a5"
+  },
+  {
+    "path": "apps/customer/public/animations/studio-icons/images.svg",
+    "bytes": 445,
+    "sha256": "f853679adfac703296d71cf0a55945af93144927bc50c9ce72eac809300aad8c"
+  },
+  {
+    "path": "apps/customer/public/animations/studio-icons/scan-line.svg",
+    "bytes": 390,
+    "sha256": "d17ec0ebae568a92e18e18968bb85658fec088bc3d97b92b729df6f7f9c4848e"
+  },
+  {
+    "path": "apps/customer/public/animations/studio-icons/sliders-horizontal.svg",
+    "bytes": 422,
+    "sha256": "e43a00e5eb684e6cbb61083bed2528d7a3fa5f265693eb2b5f314cd432aa65f4"
+  }
+]

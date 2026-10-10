@@ -1,3 +1,20 @@
+/* Stage motion shares the content-library SVG family. */
+.studio-stage-visual { display:flex; flex-direction:column; align-items:center; gap:18px; margin:0 auto; }
+.studio-stage-tile { position:relative; width:144px; height:144px; display:grid; place-items:center; border-radius:32px; border:1px solid #dbe4ff; background:#f5f7ff; color:#2f5bff; animation:studio-stage-enter 400ms cubic-bezier(.05,.7,.1,1) both; }
+.studio-stage-motion { width:64px; height:64px; filter:invert(32%) sepia(91%) saturate(3148%) hue-rotate(220deg) brightness(101%) contrast(101%); }
+.studio-stage-icon { display:inline-block; flex-shrink:0; width:22px; height:22px; background:currentColor; mask-repeat:no-repeat; mask-position:center; mask-size:contain; -webkit-mask-repeat:no-repeat; -webkit-mask-position:center; -webkit-mask-size:contain; }
+.studio-stage-badge { position:absolute; right:-7px; bottom:-7px; width:42px; height:42px; display:grid; place-items:center; border:1px solid #dbe4ff; border-radius:14px; background:white; box-shadow:0 4px 12px #2f5bff0c; }
+.studio-stage-static { display:none; width:56px; height:56px; }
+.studio-stage-terminal { width:56px; height:56px; }
+.studio-stage-caption { font-size:11px; font-weight:600; letter-spacing:.02em; color:#6b7280; }
+.studio-stage-tile.is-failed { background:#fff5f5; border-color:#fecaca; color:#dc2626; }
+.studio-stage-tile.is-review { background:#fffbeb; border-color:#fde68a; color:#b45309; }
+.mesajify-prod-stage-icon-wrap .studio-stage-icon { width:19px; height:19px; }
+.mesajify-prod-stage-icon-wrap .is-current { color:#2f5bff; }
+.mesajify-prod-stage-icon-wrap .is-done { color:#0d9488; }
+.mesajify-prod-stage-icon-wrap .is-pending { color:#a1a1aa; }
+@keyframes studio-stage-enter { from { opacity:0; transform:translateY(6px) scale(.98); } to { opacity:1; transform:none; } }
+@media(prefers-reduced-motion:reduce) { .studio-stage-tile { animation:none; } .studio-stage-motion { display:none; } .studio-stage-static { display:inline-block; } .studio-stage-badge { display:none; } }
 /* Mesajify Realtime Creative Production Experience V2 */
 /* Design tokens aligned with Mesajify Design System */
 

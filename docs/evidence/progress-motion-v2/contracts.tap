@@ -1,0 +1,64 @@
+TAP version 13
+# Subtest: decorative animation access uses a finite allowlist, not extension or directory bypass
+ok 1 - decorative animation access uses a finite allowlist, not extension or directory bypass
+  ---
+  duration_ms: 6.6674
+  type: 'test'
+  ...
+# Subtest: Production Progress Authority: Canonical 7-Stage Engine State Mapping
+ok 2 - Production Progress Authority: Canonical 7-Stage Engine State Mapping
+  ---
+  duration_ms: 20.0666
+  type: 'test'
+  ...
+# Subtest: Production Progress Authority: VISUAL_QA_EVALUATING is strictly QA, NEVER outro branding
+ok 3 - Production Progress Authority: VISUAL_QA_EVALUATING is strictly QA, NEVER outro branding
+  ---
+  duration_ms: 0.8598
+  type: 'test'
+  ...
+# Subtest: Production Progress Authority: Terminal Failure & Review Mapping
+ok 4 - Production Progress Authority: Terminal Failure & Review Mapping
+  ---
+  duration_ms: 1.1076
+  type: 'test'
+  ...
+# Subtest: Production Progress Authority: Elapsed time alone NEVER mutates authoritative stage
+ok 5 - Production Progress Authority: Elapsed time alone NEVER mutates authoritative stage
+  ---
+  duration_ms: 0.7128
+  type: 'test'
+  ...
+# Subtest: Production Progress Authority: Data-Driven ETA with Insufficient History yields LOW confidence
+ok 6 - Production Progress Authority: Data-Driven ETA with Insufficient History yields LOW confidence
+  ---
+  duration_ms: 10.8657
+  type: 'test'
+  ...
+# Subtest: Production Progress Authority: Data-Driven ETA with Adequate History yields Medium/High Confidence
+ok 7 - Production Progress Authority: Data-Driven ETA with Adequate History yields Medium/High Confidence
+  ---
+  duration_ms: 0.8088
+  type: 'test'
+  ...
+# Subtest: Production Progress Authority: Completed state always yields 0 remaining ETA
+ok 8 - Production Progress Authority: Completed state always yields 0 remaining ETA
+  ---
+  duration_ms: 0.7227
+  type: 'test'
+  ...
+# Subtest: Production Progress Authority: Worker Capacity Concurrency scaling
+ok 9 - Production Progress Authority: Worker Capacity Concurrency scaling
+  ---
+  duration_ms: 1.5884
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5119.7628

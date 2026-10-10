@@ -1,0 +1,38 @@
+[
+  {
+    "kind": "image",
+    "width": 1440,
+    "distinctAnimations": 6,
+    "icons": 9,
+    "reducedMotion": true,
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "kind": "image",
+    "width": 390,
+    "distinctAnimations": 6,
+    "icons": 9,
+    "reducedMotion": true,
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "kind": "video",
+    "width": 1440,
+    "distinctAnimations": 6,
+    "icons": 9,
+    "reducedMotion": true,
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "kind": "video",
+    "width": 390,
+    "distinctAnimations": 6,
+    "icons": 9,
+    "reducedMotion": true,
+    "overflow": false,
+    "errors": []
+  }
+]

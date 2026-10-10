@@ -11,6 +11,11 @@ export const dynamic = 'force-dynamic'
 export default async function StudioUiFixture({searchParams}:{searchParams:Promise<Record<string,string|undefined>>}) {
   if (process.env.NODE_ENV !== 'development' || process.env.STUDIO_V3_UI_FIXTURE !== '1') notFound()
   const params = await searchParams
+  if (params.view === 'motion') {
+    const stages = ['REQUEST_ACCEPTED','QUEUED','ASSETS_PREPARING','GENERATING','MEDIA_PROCESSING','QUALITY_CHECK','READY','NEEDS_REVIEW','FAILED'] as const
+    const kind = params.kind === 'image' ? 'image' : 'video'
+    return <main className="mx-auto max-w-5xl p-6"><h1 className="mb-6 text-lg font-semibold">Yerel progress tasarım önizlemesi — gerçek üretim değil</h1><div className="grid grid-cols-1 gap-8 sm:grid-cols-3">{stages.map((stage,index) => <section key={stage} className="rounded-2xl border p-5"><p className="mb-6 text-xs text-gray-500">{index+1}. {stage}</p><ProductionStageAnimation kind={kind} stageKey={stage} stageIndex={index+1} /></section>)}</div></main>
+  }
   if (params.view === 'animations') {
     const assets = ['image/product-upload','image/image-scan','image/creative-design','image/image-render','image/image-success','video/storyboard','video/reference-attach','video/camera-motion','video/video-render','video/timeline-edit','video/video-success','shared/loading','shared/warning']
     return <main className="p-4"><h1>YEREL ANİMASYON FIXTURE — gerçek üretim değildir</h1><div className="grid grid-cols-2 gap-4 sm:grid-cols-4">{assets.map(asset => <section key={asset}><h2>{asset}</h2><ProductionStageAnimation stageKey="GENERATING" stageIndex={4} lottieSrc={`/animations/${asset}.json`} /></section>)}</div></main>

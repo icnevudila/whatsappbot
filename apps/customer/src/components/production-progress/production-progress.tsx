@@ -32,7 +32,7 @@ export function ProductionProgress({
     <div className={`mesajify-prod-container ${className}`}>
       {/* 1. Stage Animation Visual */}
       <ProductionStageAnimation
-        stageKey={viewModel.stage_key}
+        stageKey={isFailed ? 'FAILED' : isNeedsReview ? 'NEEDS_REVIEW' : !isCompleted && viewModel.stage_key === 'READY' ? 'QUALITY_CHECK' : viewModel.stage_key}
         stageIndex={viewModel.stage_index}
         kind={kind}
       />
@@ -76,6 +76,7 @@ export function ProductionProgress({
       {/* 5. Authoritative Stage Checklist */}
       {!isFailed && !isNeedsReview ? (
         <ProductionStageList
+          kind={kind}
           currentStageIndex={viewModel.stage_index}
           displayMessage={viewModel.display_message}
           detailHint={viewModel.detail_hint}
