@@ -554,13 +554,13 @@ export function CreativeDetail({
   let stageLabel = 'Sunucudan üretim sonucu bekleniyor…'
   let stageDetail = 'Çıktının hazır olduğu henüz doğrulanmadı'
 
-  if (serverProgress && (isVideo || serverProgress.stage === 'reconciliation')) {
+  if (serverProgress && ['queued', 'reconciliation'].includes(serverProgress.stage)) {
     stageLabel = serverProgress.stageLabel
     stageDetail = serverProgress.stageDetail
   }
 
   const remainingText = `Geçen süre: ${tick} sn`
-  const imageStageIndex = tick < 8 ? 1 : tick < 20 ? 2 : tick < 40 ? 3 : 4
+  const productionStage = serverProgress?.stage === 'reconciliation' ? 'NEEDS_REVIEW' : creative.status === 'pending' || serverProgress?.stage === 'queued' ? 'QUEUED' : 'GENERATING'
 
   return (
     <div className="space-y-3">
@@ -568,7 +568,7 @@ export function CreativeDetail({
         <div className="wb-craft-panel">
           <CreativeGenerating
             kind={isVideo ? 'video' : 'image'}
-            stageIndex={isVideo ? undefined : imageStageIndex}
+            stageKey={productionStage}
             title={isVideo ? 'Sinematik kampanya videonuz hazırlanıyor' : 'Görseliniz hazırlanıyor'}
             line={stageLabel}
             detail={`${stageDetail} · ${remainingText}`}

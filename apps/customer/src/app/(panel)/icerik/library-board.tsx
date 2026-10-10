@@ -16,13 +16,6 @@ import { getSafeMediaUrl } from './detail-view'
 
 export type LibraryItem = LibraryCreativeRow
 
-const STAGES = [
-  'Markanızı analiz ediyoruz…',
-  'Ürünleri kompozisyona yerleştiriyoruz…',
-  'Kampanya tasarımınız hazırlanıyor…',
-  'Son dokunuşlar yapılıyor…',
-]
-
 export function LibraryBoard({
   orgId,
   initial,
@@ -347,7 +340,7 @@ function LibraryCard({
               <img src={getSafeMediaUrl(item.publicUrl) ?? undefined} alt="" className="aspect-[4/5] w-full bg-canvas object-cover" />
             )
           ) : (
-            <GeneratingFrame status={failed ? 'failed' : item.status} error={renderError ?? item.error} />
+            <GeneratingFrame kind={isVideo ? 'video' : 'image'} status={failed ? 'failed' : item.status} error={renderError ?? item.error} />
           )}
         </Link>
         {item.status !== 'ready' ? (
@@ -497,12 +490,7 @@ function formatRelative(iso: string) {
   return `${year} yıl önce`
 }
 
-function GeneratingFrame({ status, error }: { status: string; error: string | null }) {
-  const [tick, setTick] = useState(0)
-  useEffect(() => {
-    const timer = setInterval(() => setTick((value) => value + 1), 2800)
-    return () => clearInterval(timer)
-  }, [])
+function GeneratingFrame({ status, error, kind }: { status: string; error: string | null; kind: 'image' | 'video' }) {
   return (
     <div className="aspect-[4/5] w-full">
       {status === 'needs_review' ? (
@@ -516,7 +504,7 @@ function GeneratingFrame({ status, error }: { status: string; error: string | nu
           <p className="text-[12.5px] text-danger">{error || 'Görsel oluşturulamadı'}</p>
         </div>
       ) : (
-        <CreativeGenerating compact line={STAGES[tick % STAGES.length] ?? ''} />
+        <CreativeGenerating compact kind={kind} stageKey={status === 'pending' ? 'QUEUED' : 'GENERATING'} line={status === 'pending' ? 'Üretim sırası bekleniyor…' : 'Üretim sonucu bekleniyor…'} />
       )}
     </div>
   )

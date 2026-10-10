@@ -52,3 +52,13 @@ Regenerate retestjob_a9c23b5ac6135eb9 returned SUBMISSION_UNCERTAIN: STALE_RESPO
 
 User requested faster completion due remaining quota. No additional paid batch launched. Full readiness remains NOT_PROVEN; all open items above remain in scope.
 
+
+## Continued full-scope checkpoint
+
+Production e8f14a0427b20259197fcc24b3e336c915480dac deployed READY as dpl_VgmC4ie6M9v8MQLWMbGPSx1gFvR7 with app.mesajify.com alias; source branch test/mesajify-full-e2e-v1, main unchanged. Atomic video review RPC was absent, then installed from the tested migration with transactional/advisory-lock guard; verification true. Existing media/rows were not modified. Public creative bucket remains an open security issue.
+
+New image058e20fd-b88c-5159-ab45-beb68e858f6c survived customer page reload and library navigation. New creative_id handoff retained the1254px image and prepared210char AI message. Kullan reached sender step; selected Ayvazoglu sender is disconnected, so actual message delivery is not PASS. Regenerate job19e741239c1365dc is reconciliation_required (acceptance unknown); no retry. Video planner64adedd0b4b4c17f completed in42895ms including19096ms session wait, but old browser UI timed out. No claim that planner latency is fully fixed.
+
+Candidate fixes: explicit image/video route overrides saved draft media type; component remount key includes requested media. Compact library uses licensed stage assets and actual pending/rendering status instead of rotating fabricated stages; detail no longer infers stage from elapsed seconds. Stage-index supplied visual now reaches stage renderer. TypeScript and configured webpack customer production build PASS. Default Turbopack local build failed because worktree node_modules symlink points outside its filesystem root; webpack build passed. These candidate fixes still require deployment and fresh live regression.
+
+One fresh real9:16 Ayvazoglu/Tugla video submitted once with verified2/2 canonical references and factual14word voiceover. Browser shows assets preparing; final/source duration, audio, playback and outro remain pending, not PASS. Screenshot live-video-started.png. Full services/variants/security scope remains open.

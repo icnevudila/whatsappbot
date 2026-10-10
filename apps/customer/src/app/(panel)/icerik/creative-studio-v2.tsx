@@ -282,7 +282,8 @@ export function CreativeStudioV2({
         if (adapted.heroProductId && productsList.some((p) => p.id === adapted.heroProductId)) {
           setHeroProductId(adapted.heroProductId)
         }
-        setMediaType(adapted.mediaType)
+        // The opened image/video route owns media type; a saved draft must not flip it after hydration.
+        setMediaType(initialMediaType)
         setObjective(adapted.objective)
         setStylePreset(adapted.stylePreset)
         setCampaignDetail(adapted.campaignDetail)
@@ -321,7 +322,7 @@ export function CreativeStudioV2({
     }
     })
     return () => cancelAnimationFrame(hydrationFrame)
-  }, [orgKey, productsList, data.kits, data.org.id])
+  }, [orgKey, productsList, data.kits, data.org.id, initialMediaType])
 
   // Save draft
   useEffect(() => {

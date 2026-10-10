@@ -3,6 +3,8 @@
 import React from 'react'
 import { TypewriterText } from '@/components/typewriter-text'
 import { CreativeProductionVisual } from './creative-production-visual'
+import { StudioStageVisual } from './production-progress/studio-stage-visual'
+import type { ProductionStageKey } from '@/lib/creative/production-progress/progress-types'
 
 export function CraftMark({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' | string }) {
   return (
@@ -33,7 +35,7 @@ export interface CreativeGeneratingProps {
   detail?: React.ReactNode
   compact?: boolean
   kind?: 'image' | 'video'
-  stageKey?: any
+  stageKey?: ProductionStageKey
   stageIndex?: number
   lottieSrc?: string | null
   children?: React.ReactNode
@@ -53,7 +55,7 @@ export function CreativeGenerating({
   return (
     <div className={compact ? 'wb-craft wb-craft--compact' : 'wb-craft creative-production-detail'}>
       {compact ? (
-        <CraftMark size="sm" />
+        <StudioStageVisual kind={kind} stageKey={stageKey} stageIndex={stageIndex} />
       ) : (
         <CreativeProductionVisual
           kind={kind}
