@@ -10,9 +10,9 @@ import {
   generateSmartFallbackSuggestions,
   extractSemanticIntentKey,
   normalizeForLibrary,
-  fingerprint,
   type Suggestion,
 } from '@/lib/ai-suggestions'
+import { fingerprint } from '@/lib/ai-suggestion-fingerprint'
 
 function stripEmojis(text: string): string {
   if (!text) return ''
