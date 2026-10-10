@@ -51,41 +51,58 @@ export type BusinessContext = {
   tone?: string | null
 }
 
-export const CAMPAIGN_GENERATE_SYSTEM = `Sen Türkiye'de WhatsApp üzerinden müşterilere mesaj gönderen işletmeler için kampanya metni yazarsın.
+export const CAMPAIGN_TONE_INSTRUCTIONS: Record<CampaignTone, string> = {
+  samimi: 'Sıcak, içten, samimi ve dostane sohbet tonu. Resmiyetten uzak, yapmacıksız, güven veren bir yakınlık kur; müşteriye doğrudan "siz/biz" samimiyetiyle hitap et.',
+  profesyonel: 'Kurumsal, ölçülü, net ve iş ciddiyeti taşıyan ton. Ürün avantajını, lojistik, kalite veya ticari şartları berrak ve saygın bir Türkçeyle aktar.',
+  eglenceli: 'Tebessüm ettiren, sempatik, zekice hazırlanmış neşeli bir ton. Ciddiyetsizleşmeden, zeki bir WhatsApp sohbet ritmiyle markaya sempati kazandır.',
+  enerjik: 'Tempolu, dinamik, ritmik ve harekete geçirici dil. Kısa ve güçlü fiillerle, canlı bir tempoda fırsatın heyecanını hissettir.',
+  satis: 'Doğrudan fayda, somut teklif ve net eylem çağrısı (CTA) odaklı ikna edici satış dili. "Müşteri ne kazanır? Fiyat avantajı ne?" sorularını doğrudan yanıtla.',
+}
 
-Kurallar:
-- Türkçe, doğal ve WhatsApp'a uygun yaz.
-- Gereksiz uzun yazma. Kısa, okunabilir paragraflar kullan.
-- İlk cümlede mesajın amacını belli et.
-- Gereksiz emoji kullanma; en fazla birkaç tane.
-- Kullanıcının vermediği fiyat, tarih, indirim, stok, ürün veya kampanya şartı uydurma.
-- İşletmenin marka tonunu koru; verdiği önemli bilgileri kaybetme.
-- Spam gibi görünen aşırı satış dilinden kaçın.
-- Gerektiğinde güçlü fakat rahatsız edici olmayan bir çağrı ekle.
-- Yalnızca kullanılacak mesaj metnini döndür.
-- Açıklama, analiz veya "İşte mesajınız" gibi girişler yazma.`
+export const CAMPAIGN_GENERATE_SYSTEM = `Sen Türkiye'nin en iyi kreatif reklam ajanslarında çalışan uzman bir WhatsApp Reklam Metni Yazarısın.
+
+Görevin:
+İşletmenin sunduğu ürünün gerçek değerini, kullanım faydasını ve kampanya teklifini anlayan; sektöre ve kitleye özel, yüksek yaratıcılıkta, ikna edici ve özgün Türkçe WhatsApp kampanya mesajları yazmaktır.
+
+Yaratıcı Reklam İlkeleri:
+1. Sektörel Dil:
+   - Tarım/Makine: Pratik kullanım rahatlığı, dayanıklılık, iş gücü tasarrufu ve gerçek teknik ölçüler.
+   - İnşaat/Malzeme: Yapı güvenliği, doğrudan fabrika/şantiye teslimi, tır bazlı avantaj, kurumsal tedarik.
+   - B2B Yazılım/SaaS: Müşteri iletişimi, operasyonel hız, çoklu hat yönetimi, somut iş verimliliği.
+   - Gıda/Restoran: İştah açıcı lezzet, taze malzeme, hızlı sipariş ve nefis sunum vurgusu.
+2. Sıfır Klişe:
+   - "Kaliteyle tanışın", "siz de gelin", "en doğru adres", "kaçırılmayacak fırsat" gibi içi boş kalıpları ve aynı cümlenin farklı marka adıyla tekrarını KESİNLİKLE kullanma.
+   - Her mesajın açılışı doğrudan konuya, faydaya veya dikkat çekici bir kancaya (hook) dayanmalıdır.
+3. Ticari Bilgi Koruma:
+   - Kullanıcının girdiği fiyatları, eski fiyatları, indirim oranlarını, telefon ve adres bilgilerini harfiyen koru.
+   - Kullanıcının vermediği fiyat, son gün/saat tarihi, sahte stok adedi, doğrulanmamış garanti veya sertifika UYDURMA.
+4. WhatsApp Formatı:
+   - Okuması kolay, nefes alan kısa paragraflar (1-3 satır) kullan.
+   - Aşırı emoji kirliliği yapma; amaca uygun 1-3 kaliteli emoji yeterlidir.
+   - Mesajın sonunda net, yönlendirici ve tek bir eylem çağrısı (CTA) yer almalıdır.
+   - Yalnızca doğrudan gönderilecek mesaj metnini döndür. Giriş, başlık etiketi veya analiz yazma.`
 
 const REWRITE_HINT: Record<RewriteAction, string> = {
-  improve: 'Daha akıcı ve net yaz; anlamı koru.',
-  shorten: 'Ana kampanya bilgisini kaybetmeden kısalt.',
-  expand: 'Aynı bilgileri koruyarak biraz daha detaylı yaz. Yeni iddia uydurma.',
-  attention_grabbing: 'İlk cümleyi daha dikkat çekici yap; abartma ve yalan ekleme.',
-  sales_focused: 'Satışa yönlendir ama rahatsız edici olma.',
-  friendly: 'Daha samimi ve sıcak bir ton kullan.',
-  professional: 'Daha profesyonel ve sade bir ton kullan.',
-  fix_grammar: 'Yalnızca yazım, imla ve noktalama düzelt. Anlamı, fiyatı, tarihi ve şartları değiştirme.',
-  original: 'Daha özgün bir anlatım kullan; aynı bilgileri koru.',
-  fun: 'Biraz daha eğlenceli yaz; ciddiyetsizleşme.',
-  energetic: 'Daha enerjik yaz; bağırma veya aşırı ünlem kullanma.',
-  simplify: 'Daha sade ve anlaşılır yaz.',
-  urgency: 'Aciliyet hissi ekle; kullanıcı vermediyse son tarih uydurma.',
-  fomo: 'Kaçırma hissi ekle; stok veya kontenjan uydurma.',
-  cta: 'Net bir çağrı ekle (yazın, gelin, bakın gibi).',
-  first_line: 'Yalnızca ilk cümleyi güçlendir; geri kalanı mümkün olduğunca koru.',
-  more_emoji: 'Birkaç uygun emoji ekle; abartma.',
-  less_emoji: 'Emojileri azalt; anlamı koru.',
-  remove_emoji: 'Tüm emojileri kaldır; metni koru.',
-  whatsapp: 'WhatsApp sohbetine uygun kısa satırlara böl.',
+  improve: 'Mesajın akıcılığını artır, anlatımı güçlendir, faydayı ve satış açısını netleştir. Ticari bilgileri harfiyen koru.',
+  shorten: 'Gereksiz dolgu kelimeleri at, doğrudan öze gir; ana kampanya, ürün ve fiyat bilgisini eksiksiz tutarak mesajı belirgin şekilde kısalt.',
+  expand: 'Mevcut bilgileri koruyarak ürünün pratik faydasını ve kullanım değerini biraz daha detaylandır. Asla yeni iddia, fiyat veya tarih uydurma.',
+  attention_grabbing: 'İlk cümleyi durdurucu, merak uyandıran veya doğrudan ana faydayı vurgulayan güçlü bir reklam manşetine dönüştür.',
+  sales_focused: 'Değer önerisini ve satın alma gerekçesini öne çıkar; doğrudan satışa ve siparişe yönlendir.',
+  friendly: 'Resmiyeti kır, sıcak bir selamla başla, müşteriyle yüz yüze sohbet ediyormuş gibi samimi ve içten yaz.',
+  professional: 'Dili kurumsallaştır, saygın, ölçülü ve resmi iş ciddiyeti taşıyan berrak bir tona kavuştur.',
+  fix_grammar: 'YALNIZCA yazım hatalarını, imla ve noktalama işaretlerini düzelt. Anlamı, cümle kurgusunu, fiyatı, tarihi ve şartları KESİNLİKLE değiştirme.',
+  original: 'Kalıplaşmış reklam ezberlerini kır; mesajı taze, yaratıcı ve alışılagelmişin dışında özgün bir anlatımla yeniden yaz.',
+  fun: 'Mesajı tebessüm ettirecek sempatik, zekice ve neşeli bir üslupla yeniden kurgula; ciddiyetsizleşme.',
+  energetic: 'Cümleleri dinamikleştir, tempolu ve ritmik bir dille harekete geçirici enerji kat.',
+  simplify: 'Karmaşık ifadeleri temizle, mesajı herkesin bir bakışta anlayacağı duru ve sade bir anlatıma kavuştur.',
+  urgency: 'Fırsatın değerini öne çıkararak adım atma hissi ver; kullanıcı belirtmediyse sahte son tarih veya saat uydurma.',
+  fomo: 'Fırsatı kaçırma hissini nezaketle hissettir; asılsız stok veya kontenjan icat etme.',
+  cta: 'Mesajın sonundaki eylem çağrısını son derece net, güçlü ve tek bir adıma odaklı hale getir.',
+  first_line: 'Yalnızca ilk cümleyi güçlü bir açılış kancasına dönüştür; mesajın geri kalan gövdesini mümkün olduğunca koru.',
+  more_emoji: 'Metnin ritmini ve görsel çekiciliğini destekleyen 3-4 uygun emoji ekle; abartma.',
+  less_emoji: 'Emojileri en aza indir (en fazla 1 adet bırak); metnin doğrudan içeriğini öne çıkar.',
+  remove_emoji: 'Metindeki TÜM emojileri tamamen kaldır; yalnızca temiz metin bırak.',
+  whatsapp: 'WhatsApp sohbet balonuna tam oturacak şekilde paragrafları 1-2 satırlık bloklara böl, okunabilirliği artır.',
 }
 
 export function buildGeneratePrompt(input: {
@@ -93,12 +110,15 @@ export function buildGeneratePrompt(input: {
   tone?: string
   business: BusinessContext
 }): string {
+  const toneInstruction = input.tone && input.tone in CAMPAIGN_TONE_INSTRUCTIONS
+    ? CAMPAIGN_TONE_INSTRUCTIONS[input.tone as CampaignTone]
+    : null
+
   return [
-    `Kampanya özeti (kullanıcının verdiği bilgiler; uydurma):`,
-    input.brief.trim(),
-    input.tone ? `İstenen ton: ${input.tone}` : null,
+    `Kampanya Özeti (kullanıcının verdiği doğrulanmış bilgiler; uydurma ekleme):\n${input.brief.trim()}`,
+    toneInstruction ? `İstenen Yazım Tonu ve Tarzı:\n${toneInstruction}` : null,
     formatBusiness(input.business),
-    'Yalnızca mesaj metnini yaz.',
+    'Yalnızca kullanılacak nihai WhatsApp mesaj metnini yaz.',
   ]
     .filter(Boolean)
     .join('\n\n')
@@ -110,11 +130,16 @@ export function buildRewritePrompt(input: {
   brief?: string
   business: BusinessContext
 }): string {
+  const isGrammarOrFormat = ['fix_grammar', 'remove_emoji', 'less_emoji', 'shorten'].includes(input.action)
+
   return [
-    `İşlem: ${REWRITE_HINT[input.action]}`,
-    input.brief?.trim() ? `Kampanya bağlamı: ${input.brief.trim()}` : null,
+    `İşlem Talimatı: ${REWRITE_HINT[input.action]}`,
+    'ÖNEMLİ KURAL: Yalnızca mevcut mesajı temel alarak işlemi uygula. Mevcut mesajda bulunmayan zaman (ör. "bu hafta sonu"), ek ürün özelliği (ör. "organik") veya uydurma şartları mesaja KESİNLİKLE ekleme.',
+    !isGrammarOrFormat && input.brief?.trim()
+      ? `Referans kampanya konusu (yalnızca terim doğruluğu kontrolü içindir; metne buradan bağımsız yeni detay taşıma):\n${input.brief.trim()}`
+      : null,
     formatBusiness(input.business),
-    `Mevcut mesaj:\n${input.currentMessage.trim()}`,
+    `Mevcut Mesaj:\n${input.currentMessage.trim()}`,
     'Yalnızca yeni mesaj metnini döndür. Açıklama yazma.',
   ]
     .filter(Boolean)
@@ -130,7 +155,7 @@ function formatBusiness(business: BusinessContext): string | null {
     business.phone ? `Telefon: ${business.phone}` : null,
   ].filter(Boolean)
   if (lines.length === 0) return null
-  return `İşletme bilgileri (yalnızca kampanya için anlamlıysa kullan, zorla sıkıştırma):\n${lines.join('\n')}`
+  return `İşletme Bilgileri (yalnızca kampanya için anlamlıysa kullan, zorlama yapma):\n${lines.join('\n')}`
 }
 
 export function cleanAiMessage(text: string): string {
@@ -243,5 +268,77 @@ export function generateCampaignWhatsAppMessage(verified: import('../creative/pr
   }
 
   return parts.join('\n\n')
+}
+
+export type IntegrityCheckResult = {
+  valid: boolean
+  drifts: string[]
+  preservedPrices: string[]
+  missingPrices: string[]
+  hallucinatedTerms: string[]
+}
+
+/**
+ * Ticari bilgi koruma ve halüsinasyon kontrolü:
+ * Orijinal brief/mesajda bulunan fiyat, indirim, telefon gibi ticari verilerin çıktıda korunup korunmadığını,
+ * ve çıktıda orijinalde olmayan uydurma tarih/yüzde olup olmadığını denetler.
+ */
+export function verifyCommercialIntegrity(input: {
+  sourceText: string
+  outputText: string
+  strictPriceCheck?: boolean
+}): IntegrityCheckResult {
+  const source = input.sourceText.toLocaleLowerCase('tr-TR')
+  const output = input.outputText.toLocaleLowerCase('tr-TR')
+  const drifts: string[] = []
+  const missingPrices: string[] = []
+  const preservedPrices: string[] = []
+  const hallucinatedTerms: string[] = []
+
+  // 1. Fiyat koruma kontrolü (ör. "1.850 TL", "2450 TL", "2.450")
+  const priceRegex = /(\b\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{1,2})?\s*(?:tl|₺)\b)/gi
+  const sourcePrices = (input.sourceText.match(priceRegex) || []).map((p) => p.trim())
+
+  for (const price of sourcePrices) {
+    const cleanNum = price.replace(/[^\d]/g, '')
+    if (output.includes(cleanNum) || output.includes(price.toLocaleLowerCase('tr-TR'))) {
+      preservedPrices.push(price)
+    } else {
+      missingPrices.push(price)
+    }
+  }
+
+  if (input.strictPriceCheck && missingPrices.length > 0) {
+    drifts.push(`Orijinal fiyattan kayıp tespit edildi: ${missingPrices.join(', ')}`)
+  }
+
+  // 2. Yüzde indirim kontrolü (ör. "%25", "%50")
+  const pctRegex = /(%\s*\d{1,2}|\b\d{1,2}\s*%\b)/g
+  const sourcePcts = (source.match(pctRegex) || []).map((p) => p.replace(/\s+/g, ''))
+  const outputPcts = (output.match(pctRegex) || []).map((p) => p.replace(/\s+/g, ''))
+
+  for (const outPct of outputPcts) {
+    if (!sourcePcts.includes(outPct)) {
+      hallucinatedTerms.push(`Uydurma indirim oranı: ${outPct}`)
+      drifts.push(`Orijinalde bulunmayan indirim oranı üretildi: ${outPct}`)
+    }
+  }
+
+  // 3. Uydurma tarih ve gün kontrolü
+  const timeKeywords = ['bu hafta sonu', 'pazar gününe kadar', 'bu gece yarısı', 'son 24 saat', 'yalnızca bugün']
+  for (const kw of timeKeywords) {
+    if (output.includes(kw) && !source.includes(kw)) {
+      hallucinatedTerms.push(`Uydurma zaman kısıtı: "${kw}"`)
+      drifts.push(`Orijinalde olmayan zaman kısıtı eklendi: "${kw}"`)
+    }
+  }
+
+  return {
+    valid: drifts.length === 0,
+    drifts,
+    preservedPrices,
+    missingPrices,
+    hallucinatedTerms,
+  }
 }
 

@@ -1,0 +1,155 @@
+[
+  {
+    "testType": "BOFE_CATALOG_GENERATE",
+    "brand": "Bofe Tarım",
+    "product": "Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L",
+    "tone": "samimi",
+    "inputBrief": "Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L stoklarımızda. Bahçe ve tarla ilaçlaması için güçlü akü, ayarlanabilir nozul. 2.450 TL yerine 1.850 TL özel tanıtım fiyatı.",
+    "status": 200,
+    "gatewayId": "chatcmpl-job_aa922fb8382b15e0",
+    "durationMs": 13410,
+    "output": "🌿 Bofe Tarım’dan bahçe ve tarla işleriyle uğraşanlara özel güzel bir fırsat!\n\nBofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L stoklarımızda!\n\n✅ Güçlü akü\n✅ Ayarlanabilir nozul\n✅ 16 litre depo kapasitesi\n\n💥 2.450 TL yerine sadece 1.850 TL!\n\nBahçe ve tarla ilaçlama işlerinizi kolaylaştıracak bu fırsatı değerlendirmek için bize yazabilirsiniz.\n\n📍 Demirci Mahallesi, Nilüfer / Bursa\n📞 0542 821 22 05\n\nBofe Tarım – Toprağınıza değer katar!"
+  },
+  {
+    "testType": "BOFE_CATALOG_GENERATE",
+    "brand": "Bofe Tarım",
+    "product": "Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L",
+    "tone": "profesyonel",
+    "inputBrief": "Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L stoklarımızda. Bahçe ve tarla ilaçlaması için güçlü akü, ayarlanabilir nozul. 2.450 TL yerine 1.850 TL özel tanıtım fiyatı.",
+    "status": 500,
+    "durationMs": 3274,
+    "output": ""
+  },
+  {
+    "testType": "BOFE_CATALOG_GENERATE",
+    "brand": "Bofe Tarım",
+    "product": "Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L",
+    "tone": "satis",
+    "inputBrief": "Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L stoklarımızda. Bahçe ve tarla ilaçlaması için güçlü akü, ayarlanabilir nozul. 2.450 TL yerine 1.850 TL özel tanıtım fiyatı.",
+    "status": 200,
+    "gatewayId": "chatcmpl-job_9d46cebeffd1b6d8",
+    "durationMs": 20272,
+    "output": "🌿 Bofe Tarım’dan Kaçırılmayacak Tanıtım Fırsatı!\n\nBahçe ve tarla ilaçlama işleriniz için Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L özel fiyatıyla stoklarımızda!\n\n✅ Güçlü akü\n✅ Ayarlanabilir nozul\n✅ 16 litre depo kapasitesi\n\n💥 2.450 TL yerine sadece 1.850 TL!\n\n600 TL avantajla ihtiyaç duyduğunuz ilaçlama pompasına sahip olun!\n\n📞 Sipariş vermek ve detaylı bilgi almak için bize hemen ulaşın: 0542 821 22 05\n\n📍 Demirci Mahallesi, Nilüfer / Bursa\n\nBofe Tarım – Tarımsal ihtiyaçlarınızda yanınızdayız!"
+  },
+  {
+    "testType": "BOFE_CATALOG_REWRITE",
+    "brand": "Bofe Tarım",
+    "product": "Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L",
+    "action": "improve",
+    "baseMessage": "Değerli üreticimiz, Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L stoklarımızda! Güçlü aküsü ve ayarlanabilir nozuluyla tarla işlerinizi kolaylaştırın. Tanıtıma özel 2.450 TL yerine 1.850 TL.",
+    "status": 200,
+    "gatewayId": "chatcmpl-job_10e7602aa3afecd2",
+    "durationMs": 7938,
+    "output": "Değerli üreticimiz, Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L stoklarımızda!\n\nGüçlü aküsü ve ayarlanabilir nozuluyla tarla işlerinizi kolaylaştırın.\n\n🌿 Tanıtıma özel 2.450 TL yerine sadece 1.850 TL!\n\nDetaylı bilgi ve sipariş için bize ulaşabilirsiniz.\n\n📞 Bofe Tarım: 0542 821 22 05"
+  },
+  {
+    "testType": "BOFE_CATALOG_REWRITE",
+    "brand": "Bofe Tarım",
+    "product": "Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L",
+    "action": "shorten",
+    "baseMessage": "Değerli üreticimiz, Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L stoklarımızda! Güçlü aküsü ve ayarlanabilir nozuluyla tarla işlerinizi kolaylaştırın. Tanıtıma özel 2.450 TL yerine 1.850 TL.",
+    "status": 200,
+    "gatewayId": "chatcmpl-job_f3dd4d44da942a6d",
+    "durationMs": 6763,
+    "output": "Değerli üreticimiz, Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L stoklarımızda!\n\nGüçlü akü ve ayarlanabilir nozul avantajıyla 2.450 TL yerine tanıtıma özel 1.850 TL!\n\n📞 Bofe Tarım: 0542 821 22 05"
+  },
+  {
+    "testType": "BOFE_CATALOG_REWRITE",
+    "brand": "Bofe Tarım",
+    "product": "Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L",
+    "action": "sales_focused",
+    "baseMessage": "Değerli üreticimiz, Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L stoklarımızda! Güçlü aküsü ve ayarlanabilir nozuluyla tarla işlerinizi kolaylaştırın. Tanıtıma özel 2.450 TL yerine 1.850 TL.",
+    "status": 200,
+    "gatewayId": "chatcmpl-job_9b5cbb5d3aae5608",
+    "durationMs": 6595,
+    "output": "Değerli üreticimiz, 🌿 Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L stoklarımızda!\n\nGüçlü aküsü ve ayarlanabilir nozuluyla tarla işlerinizi kolaylaştırın.\n\n💥 Tanıtıma özel 2.450 TL yerine sadece 1.850 TL!\n\nBu avantajlı fiyattan yararlanmak için siparişinizi oluşturabilir, detaylı bilgi almak için bize ulaşabilirsiniz.\n\n📞 Bofe Tarım: 0542 821 22 05"
+  },
+  {
+    "testType": "BOFE_CATALOG_REWRITE",
+    "brand": "Bofe Tarım",
+    "product": "Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L",
+    "action": "urgency",
+    "baseMessage": "Değerli üreticimiz, Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L stoklarımızda! Güçlü aküsü ve ayarlanabilir nozuluyla tarla işlerinizi kolaylaştırın. Tanıtıma özel 2.450 TL yerine 1.850 TL.",
+    "status": 200,
+    "gatewayId": "chatcmpl-job_6c6f838c58da29d9",
+    "durationMs": 12481,
+    "output": "🌿 Değerli üreticimiz, Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L stoklarımızda!\n\nGüçlü aküsü ve ayarlanabilir nozuluyla tarla işlerinizi kolaylaştırın.\n\n💥 Tanıtıma özel 2.450 TL yerine sadece 1.850 TL!\n\nBu avantajlı fiyatı kaçırmamak için siparişinizi geciktirmeyin!\n\n📞 Bofe Tarım: 0542 821 22 05"
+  },
+  {
+    "testType": "BOFE_CATALOG_REWRITE",
+    "brand": "Bofe Tarım",
+    "product": "Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L",
+    "action": "whatsapp",
+    "baseMessage": "Değerli üreticimiz, Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L stoklarımızda! Güçlü aküsü ve ayarlanabilir nozuluyla tarla işlerinizi kolaylaştırın. Tanıtıma özel 2.450 TL yerine 1.850 TL.",
+    "status": 200,
+    "durationMs": 32981,
+    "output": "Değerli üreticimiz, 🌿\n\nBofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L stoklarımızda!\n\n✅ Güçlü akü\n✅ Ayarlanabilir nozul\n\nTarla işlerinizi kolaylaştırın!\n\n💥 Tanıtıma özel fiyat:\n\n2.450 TL yerine 1.850 TL!\n\n📞 Bofe Tarım\n0542 821 22 05",
+    "gatewayId": "chatcmpl-job_792f9b494997e755"
+  },
+  {
+    "testType": "AYVAZOGLU_CATALOG_GENERATE",
+    "brand": "Ayvazoğlu İnşaat",
+    "product": "13.5 Standart Tuğla (Toptan Fabrika Çıkışlı)",
+    "tone": "profesyonel",
+    "inputBrief": "Ayvazoğlu İnşaat fabrikadan toptan 13.5 standart tuğla satışımız devam ediyor. Şantiye teslimi tır bazında siparişlerde net iskonto. Projeleriniz için doğrudan üreticiden tedarik avantajı.",
+    "status": 200,
+    "gatewayId": "chatcmpl-job_ce2e3f007ceb134c",
+    "durationMs": 14676,
+    "output": "Ayvazoğlu İnşaat Kampanya Mesajı\n\nAyvazoğlu İnşaat’ta fabrikadan toptan 13,5 standart tuğla satışımız devam ediyor.\n\nŞantiye teslimi, tır bazında siparişlerde net iskonto avantajı sunuyoruz.\n\nProjeleriniz için doğrudan üreticiden güvenilir ve avantajlı tedarik imkânı.\n\nDetaylı bilgi ve sipariş için:\n+90 462 325 10 20\n\nAyvazoğlu İnşaat\nOrganize Sanayi Bölgesi, Trabzon"
+  },
+  {
+    "testType": "AYVAZOGLU_CATALOG_GENERATE",
+    "brand": "Ayvazoğlu İnşaat",
+    "product": "13.5 Standart Tuğla (Toptan Fabrika Çıkışlı)",
+    "tone": "satis",
+    "inputBrief": "Ayvazoğlu İnşaat fabrikadan toptan 13.5 standart tuğla satışımız devam ediyor. Şantiye teslimi tır bazında siparişlerde net iskonto. Projeleriniz için doğrudan üreticiden tedarik avantajı.",
+    "status": 200,
+    "gatewayId": "chatcmpl-job_f2eec3b312ec7cf5",
+    "durationMs": 10927,
+    "output": "Writing\n\n🧱 13,5 Standart Tuğlada Fabrikadan Toptan Satış Avantajı!\n\nAyvazoğlu İnşaat olarak toptan tuğla satışlarımız devam ediyor.\n\n✅ Doğrudan üreticiden tedarik\n✅ Şantiye teslimi\n✅ Tır bazında siparişlerde net iskonto\n\nProjelerinizde avantajlı tedarik fırsatından yararlanın!\n\nFiyat teklifi almak ve sipariş oluşturmak için bizimle iletişime geçin.\n\n📞 +90 462 325 10 20\n\nAyvazoğlu İnşaat\n📍 Organize Sanayi Bölgesi, Trabzon"
+  },
+  {
+    "testType": "AYVAZOGLU_CATALOG_REWRITE",
+    "brand": "Ayvazoğlu İnşaat",
+    "product": "13.5 Standart Tuğla (Toptan Fabrika Çıkışlı)",
+    "action": "shorten",
+    "baseMessage": "Sayın şantiye yetkilisi, Ayvazoğlu İnşaat olarak fabrikadan toptan 13.5 tuğla satışımız devam etmektedir. Tır bazlı şantiye teslimlerinde özel iskontolarımız için arayınız: +90 462 325 10 20.",
+    "status": 200,
+    "durationMs": 12226,
+    "output": "Writing\n\n🧱 Ayvazoğlu İnşaat olarak fabrikadan toptan 13,5 tuğla satışımız devam ediyor.\n\nTır bazlı şantiye teslimlerinde özel iskonto fırsatı!\n\n📞 Fiyat teklifi için arayın: +90 462 325 10 20",
+    "gatewayId": "chatcmpl-job_8942d2ac0fe2f5be"
+  },
+  {
+    "testType": "AYVAZOGLU_CATALOG_REWRITE",
+    "brand": "Ayvazoğlu İnşaat",
+    "product": "13.5 Standart Tuğla (Toptan Fabrika Çıkışlı)",
+    "action": "sales_focused",
+    "baseMessage": "Sayın şantiye yetkilisi, Ayvazoğlu İnşaat olarak fabrikadan toptan 13.5 tuğla satışımız devam etmektedir. Tır bazlı şantiye teslimlerinde özel iskontolarımız için arayınız: +90 462 325 10 20.",
+    "status": 200,
+    "gatewayId": "chatcmpl-job_fbdacc97d89f2fa3",
+    "durationMs": 12135,
+    "output": "Writing\n\nSayın Şantiye Yetkilisi,\n\n🧱 Ayvazoğlu İnşaat olarak fabrikadan toptan 13,5 standart tuğla satışlarımız devam ediyor.\n\nTır bazlı, şantiye teslimi siparişlerinizde özel iskonto avantajlarımızdan yararlanabilirsiniz.\n\nProjeleriniz için doğrudan üreticiden avantajlı fiyat teklifi almak üzere bizimle iletişime geçin.\n\n📞 +90 462 325 10 20\n\nAyvazoğlu İnşaat"
+  },
+  {
+    "testType": "AYVAZOGLU_CATALOG_REWRITE",
+    "brand": "Ayvazoğlu İnşaat",
+    "product": "13.5 Standart Tuğla (Toptan Fabrika Çıkışlı)",
+    "action": "cta",
+    "baseMessage": "Sayın şantiye yetkilisi, Ayvazoğlu İnşaat olarak fabrikadan toptan 13.5 tuğla satışımız devam etmektedir. Tır bazlı şantiye teslimlerinde özel iskontolarımız için arayınız: +90 462 325 10 20.",
+    "status": 200,
+    "gatewayId": "chatcmpl-job_34816fe1e6163746",
+    "durationMs": 6004,
+    "output": "Writing\n\nSayın Şantiye Yetkilisi,\n\n🧱 Ayvazoğlu İnşaat olarak fabrikadan toptan 13,5 standart tuğla satışlarımız devam ediyor.\n\nTır bazlı, şantiye teslimi siparişlerinizde özel iskonto avantajlarımızdan yararlanın.\n\n📞 Hemen arayın, projenize özel fiyat teklifinizi alın!\n\n+90 462 325 10 20\n\nAyvazoğlu İnşaat"
+  },
+  {
+    "testType": "AYVAZOGLU_CATALOG_REWRITE",
+    "brand": "Ayvazoğlu İnşaat",
+    "product": "13.5 Standart Tuğla (Toptan Fabrika Çıkışlı)",
+    "action": "whatsapp",
+    "baseMessage": "Sayın şantiye yetkilisi, Ayvazoğlu İnşaat olarak fabrikadan toptan 13.5 tuğla satışımız devam etmektedir. Tır bazlı şantiye teslimlerinde özel iskontolarımız için arayınız: +90 462 325 10 20.",
+    "status": 200,
+    "gatewayId": "chatcmpl-job_c99f3dfd54245e3d",
+    "durationMs": 29535,
+    "output": "Writing\n\nSayın Şantiye Yetkilisi,\n\nAyvazoğlu İnşaat olarak fabrikadan toptan 13,5 tuğla satışımız devam etmektedir.\n\n🧱 Tır bazlı, şantiye teslimi siparişlerinizde özel iskonto avantajları sunuyoruz.\n\nDetaylı bilgi ve fiyat teklifi için bizi arayın.\n\n📞 +90 462 325 10 20\n\nAyvazoğlu İnşaat"
+  }
+]

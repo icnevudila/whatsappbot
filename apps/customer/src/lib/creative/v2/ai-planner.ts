@@ -100,10 +100,12 @@ export async function generateCreativePlan(input: PlannerInput): Promise<Creativ
 Görevin: Verilen marka, ürün ve kampanya hedefi için YALNIZCA geçerli bir JSON nesnesi döndürmektir.
 Başka hiçbir giriş, markdown açıklaması veya metin yazma; doğrudan { ile başlayıp } ile biten JSON çıktısı ver.
 
-DİL KURALI:
-- Bütün kullanıcıya yönelik metinler (headline, supporting_line, cta, voiceover_text) %100 DOĞAL, AKICI, PROFESYONEL TÜRKÇE olmalıdır.
+DİL VE KALİTE KURALI:
+- Bütün kullanıcıya yönelik metinler (headline, supporting_line, cta, voiceover_text) %100 DOĞAL, AKICI, SEKTÖRE ÖZEL PROFESYONEL TÜRKÇE olmalıdır.
 - Kesinlikle İngilizce başlık veya slogan yazma.
-- Klişe ve bayat reklam sözleri ("kaliteyle tanışın", "siz de gelin", "hemen alın") KULLANMA.
+- Klişe ve bayat reklam sözleri ("kaliteyle tanışın", "siz de gelin", "hemen alın", "${input.brandName} ile ${input.productName}") KESİNLİKLE KULLANMA.
+- Reklam başlığı ürünün somut avantajına, kullanım rahatlığına veya teklifine odaklanmalı; sıradan şirket ismi tekrarı olmamalıdır.
+- Fiyat, indirim veya süre bilgisi verilmişse alt metinde bunu harfiyen koru; verilmemişse asılsız rakam uydurma.
 
 JSON ŞEMASI:
 {
@@ -120,9 +122,9 @@ JSON ŞEMASI:
     "background": "Arka plan detayları"
   },
   "copy": {
-    "headline": "Vurucu, dikkat çekici 3-6 kelimelik Türkçe reklam başlığı",
+    "headline": "Vurucu, dikkat çekici 3-6 kelimelik özgün Türkçe reklam başlığı",
     "supporting_line": "Fayda veya teklifi anlatan 8-15 kelimelik net Türkçe alt metin",
-    "cta": "Harekete geçirici 2-3 kelimelik Türkçe buton metni"
+    "cta": "Harekete geçirici 2-3 kelimelik net Türkçe buton metni"
   },
   "layout": {
     "text_safe_zone": "top_third | bottom_third | side_margin",
@@ -133,6 +135,14 @@ JSON ŞEMASI:
   "voiceover_text": "${input.mediaType === 'VIDEO' ? '8 ila 14 kelimelik, spikerin tek nefeste okuyabileceği, doğal ve karizmatik Türkçe seslendirme cümlesi' : ''}"
 }`
 
+  const copyDetails = [
+    input.campaignCopy?.price ? `Fiyat: ${input.campaignCopy.price}` : null,
+    input.campaignCopy?.oldPrice ? `Eski Fiyat: ${input.campaignCopy.oldPrice}` : null,
+    input.campaignCopy?.offer ? `Teklif/İndirim: ${input.campaignCopy.offer}` : null,
+    input.campaignCopy?.dateRange ? `Geçerlilik: ${input.campaignCopy.dateRange}` : null,
+    input.campaignCopy?.cta ? `Tercih Edilen CTA: ${input.campaignCopy.cta}` : null,
+  ].filter(Boolean).join(' | ')
+
   const userPrompt = `Marka: ${input.brandName}
 Marka Tonu: ${input.brandTone || 'Güvenilir ve profesyonel'}
 Ürün: ${input.productName}
@@ -141,7 +151,7 @@ Kampanya Amacı: ${DEFAULT_OBJECTIVE_TITLES[input.objective]} (${input.objective
 Kreatif Stil: ${input.stylePreset}
 Medya Türü: ${input.mediaType}
 Varsa Kampanya Detayı / Not: ${input.campaignDetail || 'Yok'}
-Varsa Fiyat / İndirim: ${input.campaignCopy?.price || ''} ${input.campaignCopy?.offer || ''}`
+Varsa Ticari Bilgiler: ${copyDetails || 'Belirtilmedi'}`
 
   try {
     const rawAiResponse = await completeText(systemPrompt, userPrompt, null, {tenantId:input.tenantId,customer:input.brandName,conversationId:'creative-plan'})
