@@ -159,8 +159,8 @@ export function CreativeStudioV2({
   const [sector, setSector] = useState('')
   const [deliveryInfo, setDeliveryInfo] = useState('')
 
-  // Quality Mode: STANDARD (default production) vs DESIGNER (art-directed)
-  const [qualityMode, setQualityMode] = useState<'STANDARD' | 'DESIGNER'>('STANDARD')
+  // Quality Mode: Internal AUTO_PROFESSIONAL policy (backward-compatible with STANDARD / DESIGNER drafts)
+  const [qualityMode, setQualityMode] = useState<'AUTO_PROFESSIONAL' | 'STANDARD' | 'DESIGNER'>('AUTO_PROFESSIONAL')
 
   // Video Advanced Options
   const [environmentPreset, setEnvironmentPreset] = useState('auto')
@@ -1170,48 +1170,7 @@ export function CreativeStudioV2({
                   </div>
                 )}
 
-                {/* Quality Mode (Özel Tasarım vs Hızlı Tasarım) */}
-                {mediaType === 'IMAGE' && (
-                  <div className="rounded-xl border border-hairline bg-surface p-3.5 flex items-center justify-between">
-                    <div>
-                      <p className="text-[13px] font-bold text-[#111b21] flex items-center gap-1.5">
-                        <span>Tasarım Seçimi</span>
-                        <span className="rounded bg-[#008069] text-white px-2 py-0.5 text-[10px] font-bold">
-                          {qualityMode === 'DESIGNER' ? 'Özel Tasarım' : 'Sade Tasarım'}
-                        </span>
-                      </p>
-                      <p className="text-[11px] text-[#667781] mt-0.5">
-                        {qualityMode === 'DESIGNER'
-                          ? 'Ürüne ve sektöre göre ek kompozisyon planı hazırlanır. Aynı görsel sağlayıcısı kullanılır; kalite ve süre garanti edilmez.'
-                          : 'Mevcut sade reklam yönergeleri kullanılır. Aynı görsel sağlayıcısı ve tek üretim; süre veya kredi avantajı garanti edilmez.'}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1.5 bg-canvas p-1 rounded-lg border border-hairline">
-                      <button
-                        type="button"
-                        onClick={() => setQualityMode('DESIGNER')}
-                        className={`px-3 py-1 text-[11px] font-bold rounded-md transition-all ${
-                          qualityMode === 'DESIGNER'
-                            ? 'bg-[#008069] text-white shadow-2xs'
-                            : 'text-[#667781] hover:text-[#111b21]'
-                        }`}
-                      >
-                        Özel Tasarım
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setQualityMode('STANDARD')}
-                        className={`px-3 py-1 text-[11px] font-bold rounded-md transition-all ${
-                          qualityMode === 'STANDARD'
-                            ? 'bg-[#008069] text-white shadow-2xs'
-                            : 'text-[#667781] hover:text-[#111b21]'
-                        }`}
-                      >
-                        Sade Tasarım
-                      </button>
-                    </div>
-                  </div>
-                )}
+
 
                 {/* AI Plan Review Box */}
                 <div className="rounded-xl border border-hairline bg-surface p-4 space-y-3.5 shadow-2xs">

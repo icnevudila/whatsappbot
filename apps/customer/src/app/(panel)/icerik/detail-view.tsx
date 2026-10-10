@@ -18,6 +18,7 @@ import {
   retryCreative,
   startCreativeGeneration,
   approveReviewedImage,
+  approveReviewedVideo,
 } from './actions'
 
 const DETAIL_STAGES = [
@@ -605,7 +606,18 @@ export function CreativeDetail({
         <Notice tone="warn">
           <p className="text-[13.5px] font-semibold">{isVideo ? 'Video' : 'Görsel'} inceleme bekliyor</p>
           <p className="mt-1 text-[13px]">Dosya oluşturuldu. Gerçek ürün, logo, metin ve ticari bilgilerin doğruluğu onaylanmadan kampanyada kullanılamaz.</p>
-          {isVideo && <Link href={`/icerik/yeni?job_id=${creative.id}`} className="mt-3 inline-block text-[13px] font-semibold underline">Üretim sonucunu görüntüle</Link>}
+          {isVideo && canManage ? (
+            <form className="mt-3 space-y-2" action={async (form) => {
+              form.set('id', creative.id)
+              const result = await approveReviewedVideo(form)
+              if (result?.error) toast(result.error, 'danger')
+              else router.refresh()
+            }}>
+              <label className="block"><input type="checkbox" name="identity" required /> Gerçek ürünü, logoyu ve marka kimliğini videoda kontrol ettim.</label>
+              <label className="block"><input type="checkbox" name="commerce" required /> Metin, fiyat ve sesli senaryo doğru; uydurma iddia yok.</label>
+              <Button type="submit">İnceledim, videonun kampanyada kullanımını onayla</Button>
+            </form>
+          ) : null}
           {!isVideo && creative.imageReviewRequired && canManage && <form className="mt-3 space-y-2" action={async (form) => {
             form.set('id',creative.id)
             const result = await approveReviewedImage(form)
@@ -619,7 +631,7 @@ export function CreativeDetail({
         </Notice>
       ) : null}
 
-      {displayPublicUrl && (isReady || (!isVideo && creative.status === 'needs_review')) ? (
+      {displayPublicUrl && (isReady || creative.status === 'needs_review') ? (
         <div className="relative overflow-visible">
           {isVideo ? (
             <div className="overflow-hidden rounded-[var(--radius-card)] border border-hairline bg-black shadow-lg">

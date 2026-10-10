@@ -612,7 +612,30 @@ export async function processCreativeGeneration(
   try {
     const refs: ReferenceImage[] = []
 
-    // 0. Beklenen referansların tespiti (Pre-flight Gate Kontratı)
+    // 0. Marka Kiti güvencesi: Eğer snapshot.brandKit eksikse veya ID ile referans verildiyse DB'den yükle
+    if (!snapshot.brandKit || !snapshot.brandKit.colors) {
+      const kitId = (snapshot as any).brandKitId || creative.brand_kit_id
+      let dbKitQuery = supabase.from('brand_kits').select('id, name, tone, colors, fonts, logo_path, is_default').eq('org_id', creative.org_id)
+      if (kitId) {
+        dbKitQuery = dbKitQuery.eq('id', kitId)
+      } else {
+        dbKitQuery = dbKitQuery.order('is_default', { ascending: false }).limit(1)
+      }
+      const { data: dbKits } = await dbKitQuery
+      const foundKit = dbKits && dbKits.length > 0 ? dbKits[0] : null
+      if (foundKit) {
+        snapshot.brandKit = {
+          id: foundKit.id,
+          name: foundKit.name || 'Brand Kit',
+          tone: foundKit.tone || null,
+          colors: foundKit.colors || {},
+          fonts: foundKit.fonts || {},
+          logoPath: foundKit.logo_path || null,
+        }
+      }
+    }
+
+    // Beklenen referansların tespiti (Pre-flight Gate Kontratı)
     const expectedBase = Boolean(snapshot.baseCreativeId)
     const expectedProducts = snapshot.products.filter((p) => Boolean(p.include?.image && p.imageUrl))
     const shouldIncludeLogo = snapshot.useLogo !== false
