@@ -343,7 +343,9 @@ function LibraryCard({
   onDelete: () => void
 }) {
   const failed = Boolean(renderError) && item.status !== 'ready'
-  const ready = (item.status === 'ready' || (item.status === 'needs_review' && Boolean(item.thumbnailUrl || item.publicUrl))) && Boolean(item.publicUrl || item.thumbnailUrl)
+  const ready =
+    (item.status === 'ready' || (item.status === 'needs_review' && Boolean(item.thumbnailUrl || item.publicUrl))) &&
+    Boolean(item.publicUrl || item.thumbnailUrl)
   const isVideo =
     item.format === 'video' ||
     Boolean(item.publicUrl?.endsWith('.mp4')) ||
