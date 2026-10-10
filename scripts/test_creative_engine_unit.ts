@@ -71,6 +71,24 @@ function runUnitTests() {
   assert(check2.hallucinatedTerms.some(t => t.includes('%50')), 'Flags unverified %50 discount')
   assert(check2.hallucinatedTerms.some(t => t.includes('bu hafta sonu')), 'Flags unverified "bu hafta sonu" timeframe')
 
+  // Test 6: verifyCommercialIntegrity flags fake warranty promises
+  const fakeWarrantyOutput = 'Bofe 16L Akülü Sırt Pompası 1.850 TL ve ömür boyu garanti ile sizlerle!'
+  const check3 = verifyCommercialIntegrity({
+    sourceText: cleanSource,
+    outputText: fakeWarrantyOutput,
+  })
+  assert(check3.valid === false, 'Integrity check fails on fake lifetime warranty claim')
+  assert(check3.hallucinatedTerms.some(t => t.includes('ömür boyu garanti')), 'Flags hallucinated warranty claim')
+
+  // Test 7: verifyCommercialIntegrity flags fake technical specs and product name leaks
+  const fakeSpecsOutput = 'Bofe 16L Akülü Sırt Pompası ve yanında organik zeytinyağı sadece 1.850 TL!'
+  const check4 = verifyCommercialIntegrity({
+    sourceText: cleanSource,
+    outputText: fakeSpecsOutput,
+  })
+  assert(check4.valid === false, 'Integrity check fails on hallucinated unrelated product "organik zeytinyağı"')
+  assert(check4.hallucinatedTerms.some(t => t.includes('organik zeytinyağı')), 'Flags hallucinated product leak')
+
   console.log(`\nUnit Test Results: ${passed} PASS, ${failed} FAIL\n`)
   if (failed > 0) process.exit(1)
 }

@@ -325,11 +325,29 @@ export function verifyCommercialIntegrity(input: {
   }
 
   // 3. Uydurma tarih ve gün kontrolü
-  const timeKeywords = ['bu hafta sonu', 'pazar gününe kadar', 'bu gece yarısı', 'son 24 saat', 'yalnızca bugün']
+  const timeKeywords = ['bu hafta sonu', 'pazar gününe kadar', 'bu gece yarısı', 'son 24 saat', 'yalnızca bugün', 'yılbaşına kadar', '3 gün boyunca']
   for (const kw of timeKeywords) {
     if (output.includes(kw) && !source.includes(kw)) {
       hallucinatedTerms.push(`Uydurma zaman kısıtı: "${kw}"`)
       drifts.push(`Orijinalde olmayan zaman kısıtı eklendi: "${kw}"`)
+    }
+  }
+
+  // 4. Uydurma garanti kontrolü (ör. "10 yıl garanti", "ömür boyu garanti", "para iade garantisi")
+  const warrantyKeywords = ['ömür boyu garanti', '10 yıl garanti', '5 yıl garanti', 'koşulsuz para iade', 'değişim garantisi']
+  for (const w of warrantyKeywords) {
+    if (output.includes(w) && !source.includes(w)) {
+      hallucinatedTerms.push(`Uydurma garanti taahhüdü: "${w}"`)
+      drifts.push(`Orijinalde olmayan garanti vaadi eklendi: "${w}"`)
+    }
+  }
+
+  // 5. Uydurma teknik özellik / alakasız ürün adı sızıntısı (ör. "zeytinyağı", "organik bal", "titanyum gövde")
+  const hallucinatedProducts = ['organik zeytinyağı', 'zeytinyağı', 'organik bal', 'titanyum gövde', 'akıllı sensör']
+  for (const hp of hallucinatedProducts) {
+    if (output.includes(hp) && !source.includes(hp)) {
+      hallucinatedTerms.push(`Alakasız ürün / sahte teknik özellik: "${hp}"`)
+      drifts.push(`Orijinalde bulunmayan ürün özelliği veya ürün adı sızdı: "${hp}"`)
     }
   }
 

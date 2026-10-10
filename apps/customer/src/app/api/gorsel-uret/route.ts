@@ -151,10 +151,42 @@ export async function POST(request: Request) {
     const logoResult = await supabase.from('organizations').select('logo_path').eq('id', org.id).maybeSingle()
     if (logoResult.error) throw new Error('İşletme logosu doğrulanamadı; üretim başlatılmadı.')
     const logoPath = kit?.logo_path || logoResult.data?.logo_path || null
+
+    // Marka logosu ve gerçek ürün varlığı zorunluluğu:
+    // Eğer işletmenin marka kiti veya logosu yoksa, rastgele kurumsal olmayan görsel üretimi engellenir.
+    if (!logoPath) {
+      return NextResponse.json(
+        { error: 'İşletme veya marka kiti logosu tanımlanmamış. Profesyonel reklam görseli için lütfen önce işletme logosu veya marka kiti ekleyin.', canRetryNew: false },
+        { status: 422 }
+      )
+    }
+
+    // Gerçek ürün görseli / kanonik referans kontrolü:
+    // Eğer brief ürün bazlıysa veya işletmenin kayıtlı ürünleri varsa, kanonik ürün referansının tespiti:
+    const { data: orgProducts } = await supabase
+      .from('org_products')
+      .select('id, name, image_url')
+      .eq('org_id', org.id)
+      .eq('is_active', true)
+
+    let matchedProducts: CreativePayload['products'] = []
+    if (orgProducts && orgProducts.length > 0) {
+      // Brief içindeki kelimelerle eşleşen aktif ürün var mı?
+      const lowerBrief = brief.toLocaleLowerCase('tr-TR')
+      const matched = orgProducts.find(p => lowerBrief.includes(p.name.toLocaleLowerCase('tr-TR'))) || orgProducts[0]
+      if (matched && matched.image_url) {
+        matchedProducts.push({
+          name: matched.name,
+          imageUrl: matched.image_url,
+          include: { image: true, name: true, price: false },
+        })
+      }
+    }
+
     const payload: CreativePayload = {
       brief, style: styleKey, formatId: 'square', aspect: '1:1', textDensity: 'low', useLogo: Boolean(logoPath),
       labels: [], cta: null, address: null, website: null, dateRange: null, customText: null,
-      phones: [], socials: [], products: [], baseCreativeId: null,
+      phones: [], socials: [], products: matchedProducts, baseCreativeId: null,
       brandKit: kit ? { id: kit.id, name: kit.name, tone: kit.tone, colors, fonts: {}, logoPath } : null,
       quickSendPrompt: prompt, quickSendIdentity: identity,
       ...(logoPath && !kit ? { customLogoUrl: logoPath } : {}),
