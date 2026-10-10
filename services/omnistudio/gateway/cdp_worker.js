@@ -1607,6 +1607,7 @@ Bu mesaja verilebilecek en kaliteli ve uygun 3 FARKLI alternatif Türkçe yanıt
 // Genel OpenAI / API Chat Completions Sohbet İşini Çalıştır
 async function executeGenericChatJob(tab, job) {
   let cdp = null;
+  let submissionMayHaveStarted = false;
   const directorPaths = [];
   let visionReceipt = null;
   const isHistoricalDirector = job.historicalDirector === true;
@@ -1687,6 +1688,7 @@ async function executeGenericChatJob(tab, job) {
     }
 
     // 3. Prompt'u ChatGPT'ye enjekte et ve gönder
+    submissionMayHaveStarted = true;
     const injectRes = await injectPromptAndSend(cdp, finalPrompt);
     if (!injectRes?.success) {
       throw new Error(injectRes?.error || 'ChatGPT input kutusu bulunamadı veya gönderilemedi');
@@ -1823,11 +1825,13 @@ async function executeGenericChatJob(tab, job) {
     } catch (urlErr) {}
 
   } catch (err) {
-    console.error(`[CDP Worker] [Chat Completion] İş hatası (${job.id}):`, err.message);
+    const releaseError = submissionMayHaveStarted && !String(err.message).includes('SUBMISSION_UNCERTAIN')
+      ? 'SUBMISSION_UNCERTAIN: ' + err.message : err.message;
+    console.error(`[CDP Worker] [Chat Completion] İş hatası (${job.id}):`, releaseError);
     await fetch(`${GATEWAY_URL}/job/release`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jobId: job.id, error: err.message })
+      body: JSON.stringify({ jobId: job.id, error: releaseError })
     }).catch(() => {});
   } finally {
     for (const temporary of directorPaths) { try { fs.unlinkSync(temporary); } catch {} }

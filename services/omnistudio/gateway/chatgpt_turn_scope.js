@@ -2,17 +2,24 @@
 
 // These functions also run verbatim in the provider page. Keep them self-contained.
 function captureTurnBaseline() {
-  const users = Array.from(document.querySelectorAll('[data-message-author-role="user"], [data-chatgpt-search-unit-key$=":user"], [class*="group/user-message"]'));
+  const selector = '[data-message-author-role="user"], [data-chatgpt-search-unit-key$=":user"], [class*="group/user-message"]';
+  const users = Array.from(document.querySelectorAll(selector)).filter(u => !u.parentElement?.closest(selector));
   return { userKeys: users.map(u => u.getAttribute('data-message-id') || u.getAttribute('data-chatgpt-search-message-ids') || u.getAttribute('data-chatgpt-search-unit-key') || u.id || u.innerText) };
 }
 
 function readCurrentTurn(prompt, baseline) {
   const normalize = value => String(value || '').replace(/\s+/g, ' ').trim();
   const expected = normalize(prompt);
-  const before = new Set(baseline?.userKeys || []);
-  const users = Array.from(document.querySelectorAll('[data-message-author-role="user"], [data-chatgpt-search-unit-key$=":user"], [class*="group/user-message"]'));
+  const before = new Map();
+  for (const key of baseline?.userKeys || []) before.set(key, (before.get(key) || 0) + 1);
+  const selector = '[data-message-author-role="user"], [data-chatgpt-search-unit-key$=":user"], [class*="group/user-message"]';
+  const users = Array.from(document.querySelectorAll(selector)).filter(u => !u.parentElement?.closest(selector));
   const userKey = u => u.getAttribute('data-message-id') || u.getAttribute('data-chatgpt-search-message-ids') || u.getAttribute('data-chatgpt-search-unit-key') || u.id || u.innerText;
-  const user = users.filter(u => !before.has(userKey(u)) && expected && normalize(u.innerText).includes(expected)).pop();
+  const seen = new Map();
+  const user = users.filter(u => {
+    const key = userKey(u); const occurrence = (seen.get(key) || 0) + 1; seen.set(key, occurrence);
+    return occurrence > (before.get(key) || 0) && expected && normalize(u.innerText).includes(expected);
+  }).pop();
   if (!user) return { ready: false, candidateCount: 0, hasNewMsg: false, text: '', foundImgSrc: null, isGenerating: true };
   let assistants = Array.from(document.querySelectorAll('[data-message-author-role="assistant"]'));
   if (!assistants.length) assistants = Array.from(document.querySelectorAll('[data-chatgpt-search-unit-key$=":assistant"]'));

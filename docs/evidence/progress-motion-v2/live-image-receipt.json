@@ -1,0 +1,2 @@
+{"id":"job_ea64b65e43ad581f","status":"completed","error":null,"reconciliation":false,"sha256":"0b891467697155f9a24915403eb5a3fdc3b5ca651806e7c4994facb1c3eb7249","expectedReferences":2,"receipt":{"job_id":"job_ea64b65e43ad581f","worker_id":"chatgpt-1","target_id":"820113A8875908BEB55715768736C532","conversation_owner_job_id":"job_ea64b65e43ad581f","expected_reference_count":2,"resolved_reference_count":2,"uploaded_reference_count":2,"composer_attachment_count":2,"attachments_ready_at":"2026-10-10T15:43:29.792Z"},"telemetry":null}
+

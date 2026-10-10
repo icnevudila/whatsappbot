@@ -210,6 +210,20 @@ test('image disconnect after submit intent holds the exact job instead of retryi
   assert.equal(repeated.body.job_id,job.id);
 });
 
+test('uncertain text submission never automatically starts a second provider turn', async () => {
+  const pending = request('/v1/chat/completions', {method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer test-gateway-key'},
+    body:JSON.stringify({messages:[{role:'user',content:'Text uncertain fixture'}],tenant_id:'text-uncertain-tenant',request_id:'text-uncertain-1'})});
+  const job = await nextJob('text-uncertain-worker');
+  assert.equal(job.type,'chat_completion');
+  await request('/job/release',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({jobId:job.id,error:'SUBMISSION_UNCERTAIN: WebSocket not open'})});
+  const terminal=await pending;
+  assert.equal(terminal.response.status,500);
+  const state=await request('/v1/images/status/'+job.id);
+  assert.equal(state.body.status,'reconciliation_required');
+  assert.equal((await request('/job/next?platform=chatgpt&workerId=text-uncertain-worker-2')).body.job,null);
+});
+
 test('completed jobs expire without deleting an active response', async () => {
   const created = await request('/v1/images/generations?async=true', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: 'Retention test', async: true }),
@@ -224,3 +238,4 @@ test('completed jobs expire without deleting an active response', async () => {
   assert.equal((await request(`/v1/images/status/${job.id}`)).response.status, 404);
   assert.equal(created.body.status, 'pending');
 });
+

@@ -861,7 +861,7 @@ class AdvancedJobQueue {
       total_ms: Date.now() - job.createdAt,
     };
 
-    if (job.type === 'image' && error && String(error).includes('SUBMISSION_UNCERTAIN')) {
+    if (error && String(error).includes('SUBMISSION_UNCERTAIN')) {
       job.reconciliationRequired = true;
     }
     const canRetry = error && isRetryableError(error) && (job.attemptCount || 0) < (job.maxAttempts || 2);

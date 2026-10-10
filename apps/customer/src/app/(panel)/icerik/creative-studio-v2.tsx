@@ -43,8 +43,8 @@ import { videoFailureUserMessage } from '@/lib/creative/job-failure-message'
 import type { JobUserViewModel, ProductCard, WizardBootstrap } from './wizard-types'
 
 const STORAGE_KEY_PREFIX = 'wa.customer.creative-studio.v2'
-export const AI_PLANNER_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_AI_PLANNER_TIMEOUT_MS) || 35000
-export const VIDEO_PLANNER_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_VIDEO_PLANNER_TIMEOUT_MS) || 35000
+export const AI_PLANNER_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_AI_PLANNER_TIMEOUT_MS) || 105000
+export const VIDEO_PLANNER_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_VIDEO_PLANNER_TIMEOUT_MS) || 105000
 
 export { generateDeterministicLocalCopy } from '@/lib/creative/v2/copy-generator'
 import { generateDeterministicLocalCopy } from '@/lib/creative/v2/copy-generator'
@@ -377,7 +377,7 @@ export function CreativeStudioV2({
     qualityMode, templateFamily, textDensity, sector, deliveryInfo,
   ])
 
-  // Call Custom AI Planner (non-blocking, advisory with 5s timeout)
+  // Advisory planning remains editable while the browser provider completes its turn.
   const requestCreativePlan = async (forceRefresh = false, requestedStyle = stylePreset) => {
     if (previewOnly) return
     if (!selectedProduct) return
@@ -393,7 +393,7 @@ export function CreativeStudioV2({
     setIsPlanning(true)
     setPlanError(null)
 
-    // Hard client-side timeout: 5 seconds maximum
+    // Match the browser provider budget; a short UI cutoff abandons valid work.
     const timeoutId = setTimeout(() => {
       controller.abort()
     }, mediaType === 'VIDEO' ? VIDEO_PLANNER_TIMEOUT_MS : AI_PLANNER_TIMEOUT_MS)
@@ -451,7 +451,7 @@ export function CreativeStudioV2({
     } catch (err: unknown) {
       if (activePlanControllerRef.current !== controller) return
       if ((err instanceof Error && err.name === 'AbortError') || controller.signal.aborted) {
-        console.warn('[CreativeStudioV2] Plan request timed out or cancelled (>5s budget)')
+        console.warn('[CreativeStudioV2] Plan request timed out or cancelled')
         setPlanError('AI_TIMEOUT')
       } else {
         console.warn('[CreativeStudioV2] Plan error:', err)
