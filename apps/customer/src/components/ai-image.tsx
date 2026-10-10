@@ -16,6 +16,12 @@ export type BrandKitOption = {
   isDefault: boolean
 }
 
+export type ProductOption = {
+  id: string
+  name: string
+  imageUrl?: string | null
+}
+
 function pickDefaultKitId(kits: BrandKitOption[]): string {
   return kits.find((kit) => kit.isDefault)?.id ?? kits[0]?.id ?? ''
 }
@@ -38,11 +44,13 @@ const LOADING_MESSAGES = [
 export function AiImage({
   enabled,
   brandKits = [],
+  products = [],
   brand,
   onApply,
 }: {
   enabled: boolean
   brandKits?: BrandKitOption[]
+  products?: ProductOption[]
   /** Kit yoksa yedek marka adı. */
   brand?: string
   onApply: (url: string) => void
@@ -51,11 +59,12 @@ export function AiImage({
   const [brief, setBrief] = useState('')
   const [style, setStyle] = useState<string>('duyuru')
   const [brandKitId, setBrandKitId] = useState(() => pickDefaultKitId(brandKits))
+  const [productId, setProductId] = useState<string>(() => products[0]?.id ?? '')
   const [preview, setPreview] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [busyTick, setBusyTick] = useState(0)
-  const pendingRequest = useRef<{ requestId: string; requestScope: string; brief: string; style: string; brandKitId: string | null; brand?: string } | null>(null)
+  const pendingRequest = useRef<{ requestId: string; requestScope: string; brief: string; style: string; brandKitId: string | null; productId?: string | null; brand?: string } | null>(null)
   const [hasPendingRequest, setHasPendingRequest] = useState(false)
   const [requestScope, setRequestScope] = useState<string | null>(null)
   const [canStartNew, setCanStartNew] = useState(false)
@@ -115,7 +124,7 @@ export function AiImage({
       }
       if (!pendingRequest.current) {
         pendingRequest.current = { requestId: crypto.randomUUID(), requestScope, brief, style,
-          brandKitId: brandKitId || null, brand: brandKitId ? undefined : brand }
+          brandKitId: brandKitId || null, productId: productId || null, brand: brandKitId ? undefined : brand }
         setHasPendingRequest(true)
         try { sessionStorage.setItem(requestStorageKey, JSON.stringify(pendingRequest.current)) } catch { /* Identity is retained in memory. */ }
       }
@@ -217,6 +226,25 @@ export function AiImage({
           {brand ? ` · şimdilik “${brand}” adı kullanılıyor` : null}
         </p>
       )}
+
+      {products.length > 0 ? (
+        <Field
+          label="Katalog Ürünü (Zorunlu)"
+          hint="Görselde kullanılacak kanonik ürün referansı."
+        >
+          <Select
+            value={productId}
+            disabled={busy || hasPendingRequest}
+            onChange={(event) => setProductId(event.target.value)}
+          >
+            {products.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      ) : null}
 
       <Field
         label="Ne çizilsin?"

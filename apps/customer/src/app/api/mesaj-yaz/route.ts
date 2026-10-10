@@ -7,6 +7,7 @@ import {
   CAMPAIGN_GENERATE_SYSTEM,
   cleanAiMessage,
   isRewriteAction,
+  verifyCommercialIntegrity,
   type BusinessContext,
 } from '@/lib/ai/campaign-message'
 import { rateLimit } from '@/lib/rate-limit'
@@ -128,7 +129,35 @@ export async function POST(request: Request) {
     const text = await completeText(CAMPAIGN_GENERATE_SYSTEM, prompt, null, {
       tenantId: org.id, customer: org.name, conversationId: creativeId ? 'campaign:' + creativeId : 'campaign:' + requestId, requestId,
     })
-    return NextResponse.json({ text: cleanAiMessage(text) })
+    const cleaned = cleanAiMessage(text)
+
+    // Ticari Bütünlük ve Halüsinasyon Denetimi (Gatekeeper):
+    // Kullanıcının sağladığı kaynak metin (generate modunda brief, rewrite modunda currentMessage)
+    const sourceForIntegrity = mode === 'rewrite' ? currentMessage : brief
+    const integrityCheck = verifyCommercialIntegrity({
+      sourceText: sourceForIntegrity,
+      outputText: cleaned,
+      strictPriceCheck: true,
+      businessName: business.name ?? undefined,
+    })
+
+    if (!integrityCheck.valid) {
+      console.warn('[campaign.ai.integrity_failed]', {
+        orgId: org.id,
+        mode,
+        drifts: integrityCheck.drifts,
+        hallucinations: integrityCheck.hallucinatedTerms,
+      })
+      return NextResponse.json(
+        {
+          error: `Üretilen reklam metninde ticari tutarsızlık veya bilgi kayması tespit edildi (${integrityCheck.drifts[0]}). Lütfen tekrar deneyin.`,
+          drifts: integrityCheck.drifts,
+        },
+        { status: 422 }
+      )
+    }
+
+    return NextResponse.json({ text: cleaned, integrity: integrityCheck })
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Metin üretilemedi.' },

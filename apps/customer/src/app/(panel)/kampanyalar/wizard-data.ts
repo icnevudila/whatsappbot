@@ -32,7 +32,7 @@ export async function loadCampaignCreativeHandoff(orgId: string, creativeId: str
 
 export async function loadCampaignWizardData(orgId: string) {
   const supabase = await createSupabaseServerClient()
-  const [listsResult, accountsResult, brandResult, creativesResult] = await Promise.all([
+  const [listsResult, accountsResult, brandResult, creativesResult, productsResult, productImagesResult] = await Promise.all([
     supabase
       .from('contact_lists')
       .select('id, name, contact_count')
@@ -58,6 +58,17 @@ export async function loadCampaignWizardData(orgId: string) {
       .not('public_url', 'is', null)
       .order('created_at', { ascending: false })
       .limit(24),
+    supabase
+      .from('org_products')
+      .select('id, name')
+      .eq('org_id', orgId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('org_product_images')
+      .select('product_id, public_url, sort_order')
+      .eq('org_id', orgId)
+      .order('sort_order', { ascending: true }),
   ])
 
   const lists: ListOption[] = (listsResult.data ?? []).map((list) => ({
@@ -95,11 +106,25 @@ export async function loadCampaignWizardData(orgId: string) {
       messageType:row.format === 'video' || videoStates.has(row.id) ? 'video' : 'image',
       thumbnailUrl:videoStates.has(row.id) ? undefined : row.public_url as string }))
 
+  const firstImageMap = new Map<string, string>()
+  for (const img of productImagesResult.data ?? []) {
+    if (img.product_id && img.public_url && !firstImageMap.has(img.product_id)) {
+      firstImageMap.set(img.product_id, img.public_url)
+    }
+  }
+
+  const products = (productsResult.data ?? []).map((p) => ({
+    id: p.id,
+    name: p.name,
+    imageUrl: firstImageMap.get(p.id) || null,
+  }))
+
   return {
     lists,
     accounts,
     creatives,
     brandKits,
+    products,
     brandName: defaultKit?.name ?? undefined,
     brandTone: defaultKit?.tone ?? undefined,
     aiEnabled: hasTextProvider(),

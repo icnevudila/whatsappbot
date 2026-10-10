@@ -80,14 +80,65 @@ function runUnitTests() {
   assert(check3.valid === false, 'Integrity check fails on fake lifetime warranty claim')
   assert(check3.hallucinatedTerms.some(t => t.includes('ömür boyu garanti')), 'Flags hallucinated warranty claim')
 
-  // Test 7: verifyCommercialIntegrity flags fake technical specs and product name leaks
-  const fakeSpecsOutput = 'Bofe 16L Akülü Sırt Pompası ve yanında organik zeytinyağı sadece 1.850 TL!'
-  const check4 = verifyCommercialIntegrity({
+  // Test 8: Price Mutation (1.850 TL -> 11.850 TL) MUST FAIL (Substring matching prevention)
+  const priceMutatedOutput = 'Bofe 16L Akülü Sırt Pompası 2.450 TL yerine 11.850 TL özel fiyatla stokta.'
+  const check5 = verifyCommercialIntegrity({
     sourceText: cleanSource,
-    outputText: fakeSpecsOutput,
+    outputText: priceMutatedOutput,
+    strictPriceCheck: true,
   })
-  assert(check4.valid === false, 'Integrity check fails on hallucinated unrelated product "organik zeytinyağı"')
-  assert(check4.hallucinatedTerms.some(t => t.includes('organik zeytinyağı')), 'Flags hallucinated product leak')
+  assert(check5.valid === false, 'Integrity check strictly FAILS when price is mutated from 1.850 TL to 11.850 TL')
+  assert(check5.missingPrices.some(p => p.includes('1.850')), 'Flags missing original 1.850 TL price')
+  assert(check5.hallucinatedTerms.some(t => t.includes('11.850')), 'Flags hallucinated 11.850 TL price')
+
+  // Test 9: Price Disappearance / Total wipeout MUST FAIL
+  const noPriceOutput = 'Bofe 16L Akülü Sırt Pompası muhteşem indirimlerle stokta!'
+  const check6 = verifyCommercialIntegrity({
+    sourceText: cleanSource,
+    outputText: noPriceOutput,
+    strictPriceCheck: true,
+  })
+  assert(check6.valid === false, 'Integrity check strictly FAILS when both prices are wiped out')
+  assert(check6.missingPrices.length === 2, 'Detects both missing prices')
+
+  // Test 10: Fake Timeframe & Fake Delivery promise MUST FAIL
+  const fakeDeliveryOutput = 'Bofe 16L Akülü Sırt Pompası 2.450 TL yerine 1.850 TL. Yalnızca bugün sipariş verenlere aynı gün kapınızda!'
+  const check7 = verifyCommercialIntegrity({
+    sourceText: cleanSource,
+    outputText: fakeDeliveryOutput,
+    strictPriceCheck: true,
+  })
+  assert(check7.valid === false, 'Integrity check FAILS on hallucinated "yalnızca bugün" timeframe')
+  assert(check7.hallucinatedTerms.some(t => t.includes('yalnızca bugün')), 'Flags fake timeframe promise')
+  assert(check7.hallucinatedTerms.some(t => t.includes('aynı gün kapınızda')), 'Flags fake delivery promise')
+
+  // Test 11: Brand Name Missing MUST FAIL
+  const checkBrand = verifyCommercialIntegrity({
+    sourceText: cleanSource,
+    outputText: '16L Akülü Sırt Pompası 2.450 TL yerine 1.850 TL.',
+    businessName: 'Bofe Tarım',
+  })
+  assert(checkBrand.valid === false, 'Integrity check FAILS when business brand name is omitted')
+  assert(checkBrand.drifts.some(d => d.includes('Bofe Tarım')), 'Flags missing business name')
+
+  // Test 12: Fake / Hallucinated Phone Number MUST FAIL
+  const fakePhoneOutput = 'Bofe 16L Akülü Sırt Pompası 2.450 TL yerine 1.850 TL. İletişim: 0532 999 88 77'
+  const checkPhone = verifyCommercialIntegrity({
+    sourceText: cleanSource,
+    outputText: fakePhoneOutput,
+  })
+  assert(checkPhone.valid === false, 'Integrity check FAILS on fake hallucinated phone number')
+  assert(checkPhone.drifts.some(d => d.includes('sahte iletişim')), 'Flags fake phone number')
+
+  // Test 13: Preserved Phone with strictContactCheck PASS
+  const preservedPhoneOutput = 'Bofe 16L Akülü Sırt Pompası 2.450 TL yerine 1.850 TL. İletişim: 0542 821 22 05'
+  const checkPhonePass = verifyCommercialIntegrity({
+    sourceText: cleanSource,
+    outputText: preservedPhoneOutput,
+    strictContactCheck: true,
+    businessName: 'Bofe',
+  })
+  assert(checkPhonePass.valid === true, 'Integrity check PASSES with preserved phone and brand name')
 
   console.log(`\nUnit Test Results: ${passed} PASS, ${failed} FAIL\n`)
   if (failed > 0) process.exit(1)

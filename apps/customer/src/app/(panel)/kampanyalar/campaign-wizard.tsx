@@ -541,6 +541,7 @@ function CampaignWizardForm({
                 imageAiEnabled={shared.imageAiEnabled}
                 brandName={shared.brandName}
                 brandKits={shared.brandKits}
+                products={shared.products}
                 uploading={uploading}
                 onUpload={(file) => void upload(file)}
                 onSelect={(url, type) => {

@@ -221,6 +221,7 @@ export function MediaPicker({
   imageAiEnabled,
   brandName,
   brandKits,
+  products = [],
   uploading,
   onUpload,
   onSelect,
@@ -233,6 +234,7 @@ export function MediaPicker({
   imageAiEnabled: boolean
   brandName?: string
   brandKits: { id: string; name: string; isDefault: boolean }[]
+  products?: { id: string; name: string; imageUrl?: string | null }[]
   uploading: boolean
   onUpload: (file: File) => void
   onSelect: (url: string, messageType?: 'image' | 'video') => void
@@ -281,6 +283,7 @@ export function MediaPicker({
         enabled={imageAiEnabled}
         brand={brandName}
         brandKits={brandKits}
+        products={products}
         onApply={(url) => onSelect(url)}
       />
       {libraryOpen ? (

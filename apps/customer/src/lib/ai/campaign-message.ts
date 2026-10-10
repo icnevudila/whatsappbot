@@ -287,6 +287,9 @@ export function verifyCommercialIntegrity(input: {
   sourceText: string
   outputText: string
   strictPriceCheck?: boolean
+  strictContactCheck?: boolean
+  businessName?: string | null
+  productName?: string | null
 }): IntegrityCheckResult {
   const source = input.sourceText.toLocaleLowerCase('tr-TR')
   const output = input.outputText.toLocaleLowerCase('tr-TR')
@@ -295,16 +298,56 @@ export function verifyCommercialIntegrity(input: {
   const preservedPrices: string[] = []
   const hallucinatedTerms: string[] = []
 
-  // 1. Fiyat koruma kontrolü (ör. "1.850 TL", "2450 TL", "2.450")
-  const priceRegex = /(\b\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{1,2})?\s*(?:tl|₺)\b)/gi
-  const sourcePrices = (input.sourceText.match(priceRegex) || []).map((p) => p.trim())
+  // 1. Fiyat koruma ve tam sayısal karşılaştırma kontrolü (ör. "1.850 TL", "2.450 TL", "195 TL", "165 TL")
+  // Regex: Rakamlardan önce veya sonra ek rakam olmamalı (boundary check: (?<!\d)...(?!\d))
+  function extractNumericAmounts(text: string): { original: string; numericValue: number }[] {
+    const results: { original: string; numericValue: number }[] = []
+    const pricePattern = /(?:^|[^\d])(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{1,2})?|\d+)\s*(?:tl|₺)(?=[^\d]|$)/gi
+    let match: RegExpExecArray | null
+    while ((match = pricePattern.exec(text)) !== null) {
+      const full = match[0].trim()
+      const rawNum = match[1]
+      // Sayısal değeri ayrıştır (1.850 -> 1850, 18,50 -> 18.5)
+      let normalized = rawNum.replace(/\s+/g, '')
+      if (normalized.includes('.') && normalized.includes(',')) {
+        // örn. 1.850,50
+        normalized = normalized.replace(/\./g, '').replace(',', '.')
+      } else if (normalized.includes('.') && normalized.split('.').pop()?.length === 3) {
+        // Binlik ayracı: 1.850 -> 1850
+        normalized = normalized.replace(/\./g, '')
+      } else if (normalized.includes(',') && normalized.split(',').pop()?.length === 3) {
+        // Binlik ayracı: 1,850 -> 1850
+        normalized = normalized.replace(/,/g, '')
+      } else if (normalized.includes(',')) {
+        // Kuruş ayracı: 18,50 -> 18.50
+        normalized = normalized.replace(',', '.')
+      }
+      const val = parseFloat(normalized)
+      if (!isNaN(val)) {
+        results.push({ original: full, numericValue: val })
+      }
+    }
+    return results
+  }
 
-  for (const price of sourcePrices) {
-    const cleanNum = price.replace(/[^\d]/g, '')
-    if (output.includes(cleanNum) || output.includes(price.toLocaleLowerCase('tr-TR'))) {
-      preservedPrices.push(price)
+  const sourcePrices = extractNumericAmounts(input.sourceText)
+  const outputPrices = extractNumericAmounts(input.outputText)
+
+  for (const sp of sourcePrices) {
+    const matched = outputPrices.some((op) => op.numericValue === sp.numericValue)
+    if (matched) {
+      preservedPrices.push(sp.original)
     } else {
-      missingPrices.push(price)
+      missingPrices.push(sp.original)
+    }
+  }
+
+  // Çıktıda kaynakta hiç olmayan uydurma para değerleri var mı? (örn. 11.850 TL çıktığında)
+  for (const op of outputPrices) {
+    const fromSource = sourcePrices.some((sp) => sp.numericValue === op.numericValue)
+    if (!fromSource) {
+      hallucinatedTerms.push(`Uydurma/değiştirilmiş fiyat: "${op.original}"`)
+      drifts.push(`Orijinal briefte yer almayan fiyat değeri üretildi: "${op.original}"`)
     }
   }
 
@@ -337,17 +380,47 @@ export function verifyCommercialIntegrity(input: {
   const warrantyKeywords = ['ömür boyu garanti', '10 yıl garanti', '5 yıl garanti', 'koşulsuz para iade', 'değişim garantisi']
   for (const w of warrantyKeywords) {
     if (output.includes(w) && !source.includes(w)) {
-      hallucinatedTerms.push(`Uydurma garanti taahhüdü: "${w}"`)
-      drifts.push(`Orijinalde olmayan garanti vaadi eklendi: "${w}"`)
+      hallucinatedTerms.push(`Uydurma garanti vaadi: "${w}"`)
+      drifts.push(`Orijinalde bulunmayan garanti vaadi eklendi: "${w}"`)
     }
   }
 
-  // 5. Uydurma teknik özellik / alakasız ürün adı sızıntısı (ör. "zeytinyağı", "organik bal", "titanyum gövde")
-  const hallucinatedProducts = ['organik zeytinyağı', 'zeytinyağı', 'organik bal', 'titanyum gövde', 'akıllı sensör']
-  for (const hp of hallucinatedProducts) {
-    if (output.includes(hp) && !source.includes(hp)) {
-      hallucinatedTerms.push(`Alakasız ürün / sahte teknik özellik: "${hp}"`)
-      drifts.push(`Orijinalde bulunmayan ürün özelliği veya ürün adı sızdı: "${hp}"`)
+  // 6. Marka adı kontrolü (eğer business context verildiyse)
+  if (input.businessName) {
+    const bName = input.businessName.trim().toLocaleLowerCase('tr-TR')
+    if (bName.length > 2 && !output.includes(bName)) {
+      drifts.push(`İşletme / marka adı metinde yer almıyor: "${input.businessName}"`)
+    }
+  }
+
+  // 7. Telefon numarası kontrolü (Sahte / uydurma telefon numarası engeli)
+  const phonePattern = /(?:\+?90\s*)?(?:0\s*)?5\d{2}[\s.-]?\d{3}[\s.-]?\d{2}[\s.-]?\d{2}/g
+  const sourcePhones = (input.sourceText.match(phonePattern) || []).map((p) => p.replace(/[^\d]/g, ''))
+  const outputPhones = (input.outputText.match(phonePattern) || []).map((p) => p.replace(/[^\d]/g, ''))
+
+  for (const op of outputPhones) {
+    const matched = sourcePhones.some((sp) => sp.endsWith(op.slice(-7)) || op.endsWith(sp.slice(-7)))
+    if (!matched) {
+      hallucinatedTerms.push(`Uydurma telefon numarası: ${op}`)
+      drifts.push(`Orijinalde bulunmayan sahte iletişim numarası eklendi`)
+    }
+  }
+
+  if (input.strictContactCheck && sourcePhones.length > 0) {
+    for (const sp of sourcePhones) {
+      const matched = outputPhones.some((op) => op.endsWith(sp.slice(-7)) || sp.endsWith(op.slice(-7)))
+      if (!matched) {
+        drifts.push(`Orijinal iletişim / telefon numarası kayboldu`)
+      }
+    }
+  }
+
+  // 8. Uydurma teslimat ve sahte sevkiyat vaatleri (ör. "aynı gün teslimat", "ücretsiz jet kargo", "kapıda ödeme")
+  const deliveryKeywords = ['aynı gün kapınızda', 'aynı gün teslimat', 'jet teslimat', 'ücretsiz kurye', 'anında kargoda']
+  for (const dk of deliveryKeywords) {
+    if (output.includes(dk) && !source.includes(dk)) {
+      hallucinatedTerms.push(`Uydurma teslimat vaadi: "${dk}"`)
+      drifts.push(`Orijinalde bulunmayan teslimat vaadi eklendi: "${dk}"`)
     }
   }
 
