@@ -71,6 +71,36 @@ Additional checks: WhatsApp service 54/54 tests PASS; admin/panel/WhatsApp TypeS
 
 ## Remaining ordered work
 
+### V4 acceptance matrix — checkpoint 2026-10-10 (not a final report)
+
+These statuses cover the full requested release scope. Local tests and READY previews do not qualify a whole production gate as PASS. Evidence details and job IDs appear in the chronological follow-ups below.
+
+| Required gate | Status | Evidence / remaining acceptance |
+|---|---|---|
+| FRONTEND_STABLE | NEEDS_REVIEW | Local build/typecheck passed; full authenticated route and failure matrix incomplete. |
+| WIZARD_UX_READY | NEEDS_REVIEW | Real sales-facts validation and selected format tested; all fields/refresh/mobile variants incomplete. |
+| IMAGE_PIPELINE_READY | NEEDS_REVIEW | One Ayvazoğlu retry displayed persistent output; all provider/reference/format variants incomplete. |
+| IMAGE_COMMERCIAL_QUALITY_ACCEPTED | NOT_VERIFIED | Visible factual copy is insufficient for all canonical brands and quality criteria. |
+| VIDEO_PIPELINE_READY | NOT_VERIFIED | Prior 8s/10s evidence does not accept current V4 changes or both required brands. |
+| VIDEO_CINEMATIC_QUALITY_ACCEPTED | NOT_VERIFIED | Real continuity, physics, speech and subtitle evaluation incomplete. |
+| BRAND_KIT_FIDELITY | NEEDS_REVIEW | Ayvazoğlu logo visible; all brands, colors, fonts and exact reference fidelity incomplete. |
+| PRODUCT_AND_LOGO_FIDELITY | NEEDS_REVIEW | Actual first upload failed; subsequent output visible; independent chip/receipt proof incomplete. |
+| CAMPAIGN_DATA_FIDELITY | NEEDS_REVIEW | Real selected-media handoff passed narrowly; AI message failed on old preview, repaired preview untested. |
+| IDEMPOTENCY_READY | NEEDS_REVIEW | Embedded PostgreSQL uniqueness tests passed; distributed production race acceptance missing. |
+| QUEUE_RECOVERY_READY | NEEDS_REVIEW | Candidate recovery regressions passed; production interruption/restart acceptance missing. |
+| TENANT_ISOLATION_VERIFIED | NEEDS_REVIEW | Contract tests passed; full live cross-tenant negative matrix incomplete. |
+| CUSTOMER_LIBRARY_READY | NEEDS_REVIEW | One real output opened and handed off; all edit/review/download/video paths incomplete. |
+| WHATSAPP_DELIVERY_READY | NOT_VERIFIED | Service health and unit tests do not establish real media delivery. |
+| PERFORMANCE_TARGETS_MET | NOT_VERIFIED | Single resource snapshots; no measured before/after latency distribution. |
+| SCALING_TESTS_VERIFIED | NOT_VERIFIED | 10–300 tenant DB tests are not measured provider/worker capacity. |
+| COST_CONTROLS_READY | NEEDS_REVIEW | No blind retry policy tested locally; live quota/accounting acceptance incomplete. |
+| SECURITY_RELEASE_GATE_CLOSED | FAIL | Known plaintext credential incident lacks rotation/invalidation closure evidence. |
+| ROLLBACK_TESTED | NOT_VERIFIED | Scoped worker backup exists; actual restore validation incomplete. |
+| PILOT_READY | NOT_VERIFIED | Required live acceptance and critical release gates incomplete. |
+| FULL_COMMERCIAL_READY | NOT_VERIFIED | Full V4 acceptance incomplete. |
+
+Current candidate source 4e08a24 preview dpl_E43Jx2XWN45dE5jp6bugnGMZ1bXS is READY. This matrix does not promote it to production or override frozen media approvals.
+
 Latest user additions: inspect every service; explicitly prove Flow and Gemini reference chips, correct account/model/format, complete generation and downloaded-file identity. Prove ChatGPT image references and the entire Wizard-to-provider campaign/format contract. Provider payload unit tests and source inspection alone cannot satisfy these requirements. No untested item receives PASS.
 
 1. Complete architecture/runtime inventory and safe baseline measurements across customer/admin/panel/landing, billing/quota, workers and storage.
@@ -133,3 +163,5 @@ Latest customer optimized production build completed successfully including Type
 2026-10-10 00:40 UTC heartbeat: found image format gate absent in direct decode, queued result publication and stored direct-result recovery. Added requested aspect validation based on measured dimensions (1 percent raster rounding tolerance); square/portrait/landscape mismatch now fails instead of publishing ready. Queued validation errors use terminal failure handling rather than endless polling; no new provider submit. Existing 1122x1402 versus 4:5 rounding remains accepted. Regression suites 12/12 PASS with explicitly synthetic decoded images and stub provider receipts; customer TypeScript PASS. Candidate-only until deployment and real runtime test; frozen completed creative unchanged. Current preview login remains pending.
 
 2026-10-10 00:55 UTC heartbeat: candidate d494d8c preview dpl_AFYbee7XTXXAwC22F6Fpp8fkz4oK READY; live format acceptance still untested. Found generic missing-output-URL exception in readImageJob: completed provider result would remain indefinitely pending through generic process catch. Changed it to ImageJobReconciliationError, preserving job identity and blocking a second paid production. Regression confirms one status fetch and zero submission/output requests; provider-contract 6/6 PASS (stub). Added OUTPUT_INVALID terminal classification so an actual completed but wrong-aspect artifact is not mislabeled PROVIDER_FAILED. Customer TypeScript PASS. Existing login state unchanged; no new paid generation or user creative mutation.
+
+2026-10-10 01:25 UTC heartbeat: queued-image read previously defaulted absent expectedReferenceCount to zero, allowing legacy/incomplete metadata to bypass required reference receipt validation. Removed that inference; missing/negative/noninteger/nonfinite/over-limit counts now require reconciliation before any provider query/download, without new generation. Explicit valid zero remains supported for genuine zero-reference requests; newly submitted jobs persist their independent count. Regression 7/7 PASS (stub provider, zero network calls for malformed metadata); customer TypeScript PASS. Frozen completed creatives return before this recovery gate. Live cross-brand/reference acceptance remains NOT_VERIFIED; preview customer login unchanged.

@@ -40,5 +40,11 @@ test('provider receipt and real output contract remain bound to the exact image 
       await assert.rejects(submitImageJob(job.gatewayUrl,{expected_reference_count:'2'}),/REFERENCE_ATTACHMENT_FAILED/)
       assert.equal(calls,0)
     })
+    await t.test('unknown or corrupted persisted reference count cannot bypass receipt validation',async()=>{
+      let calls=0;globalThis.fetch=async()=>{calls++;throw new Error('unexpected request')}
+      for(const expectedReferenceCount of [undefined,-1,NaN,1.5,5])
+        await assert.rejects(readImageJob({...job,expectedReferenceCount},'tenant-a'),ImageJobReconciliationError)
+      assert.equal(calls,0)
+    })
   } finally {globalThis.fetch=original}
 })

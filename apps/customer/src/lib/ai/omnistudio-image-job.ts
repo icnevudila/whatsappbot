@@ -47,7 +47,11 @@ export type ImageReferenceReceipt = {
   expected_reference_count: number; resolved_reference_count: number; uploaded_reference_count: number;
   composer_attachment_count: number; attachments_ready_at: string;
 }
-export async function readImageJob(job: ImageJobReceipt, tenantId?: string, expectedReferences = job.expectedReferenceCount ?? 0): Promise<{ data: Buffer; mimeType: string; width: number; height: number; referenceReceipt: ImageReferenceReceipt | null } | null> {
+export async function readImageJob(job: ImageJobReceipt, tenantId?: string, expectedReferences = job.expectedReferenceCount): Promise<{ data: Buffer; mimeType: string; width: number; height: number; referenceReceipt: ImageReferenceReceipt | null } | null> {
+  // Missing legacy metadata is unknown, never proof that no references were requested.
+  if (typeof expectedReferences !== 'number' || !Number.isSafeInteger(expectedReferences) || expectedReferences < 0 || expectedReferences > 4) {
+    throw new ImageJobReconciliationError(job)
+  }
   const query = tenantId ? `?tenant_id=${encodeURIComponent(tenantId)}` : ''
   const response = await fetch(`${job.gatewayUrl}/v1/images/status/${encodeURIComponent(job.id)}${query}`, { signal: AbortSignal.timeout(10000), cache: 'no-store' })
   if (!response.ok) throw new ImageJobPendingError(job) // Lost observation is not proof that production failed.
