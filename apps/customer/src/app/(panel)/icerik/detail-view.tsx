@@ -16,6 +16,7 @@ import {
   deleteCreative,
   renameCreative,
   retryCreative,
+  reconcileCreative,
   startCreativeGeneration,
   approveReviewedImage,
   approveReviewedVideo,
@@ -589,15 +590,28 @@ export function CreativeDetail({
         <Notice tone="danger">
           <p className="text-[13.5px] font-semibold">Görsel oluşturulamadı</p>
           <p className="mt-1 whitespace-pre-wrap break-words text-[13px]">{shownError}</p>
-          {canManage && !creative.imageReconciliationRequired ? (
+          {canManage ? (
             <Button
               type="button"
               variant="accent"
               className="wb-wa-submit mt-3"
               disabled={pending || busyRender}
-              onClick={retryNow}
+              onClick={async () => {
+                if (creative.imageReconciliationRequired) {
+                  setBusyRender(true)
+                  const res = await reconcileCreative(creative.id)
+                  if (res?.error) toast(res.error, 'danger')
+                  else {
+                    toast('Üretim durumu doğrulandı. Yeniden deneniyor...', 'success')
+                    await retryNow()
+                  }
+                  setBusyRender(false)
+                } else {
+                  await retryNow()
+                }
+              }}
             >
-              Tekrar dene
+              {creative.imageReconciliationRequired ? 'Durumu Doğrula ve Tekrar Dene' : 'Tekrar dene'}
             </Button>
           ) : null}
           <QuietLibrary />

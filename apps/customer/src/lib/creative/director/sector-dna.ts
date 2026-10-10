@@ -281,6 +281,16 @@ export const SECTOR_DNA_REGISTRY: Record<string, SectorDna> = {
   },
 }
 
+// Static precompiled regexes for sub-millisecond sector classification
+const AGRI_REGEX = /tarım|bahçe|çiftlik|pompa|ilaçlama|gübre|tohum|fide|hasat|zeytin|sera|traktör|toprak|sulama|ziraat|bağ|bostan|meyve|sebze|organik/
+const CONST_REGEX = /inşaat|yapı|tuğla|klinker|beton|çimento|mimarlık|cephe|şantiye|demir|çelik|seramik|fayans|mermer|boya|çatı|yalıtım|harç|taş/
+const SAAS_REGEX = /yazılım|app|uygulama|saas|bulut|cloud|crm|erp|dashboard|api|veritabanı|ai|yapay zeka|otomasyon|b2b|dijital|analitik|platform|kod/
+const FOOD_REGEX = /döner|kebap|burger|pizza|restoran|kafe|cafe|lokanta|yemek|tatlı|kahve|lahmacun|fırın|lezzet|gurme|şef|makarna|ızgara|paket servis|menü/
+const HEALTH_REGEX = /diş|klinik|poliklinik|doktor|hastane|sağlık|medikal|implant|ortodonti|estetik|dermatoloji|tedavi|eczane|hekim|hasta|göz|saç ekim/
+const FASHION_REGEX = /giyim|elbise|butik|tekstil|ayakkabı|çanta|moda|pantolon|gömlek|ceket|mont|kıyafet|takı|aksesuar|deri|butik/
+const AUTO_REGEX = /otomobil|araç|araba|lastik|jant|motor|oto|servis|detailing|kargo|lojistik|nakliye|filo|yedek parça|yağ|bakım/
+const COSMETICS_REGEX = /kozmetik|parfüm|krem|serum|bakım|makyaj|ruj|cilt|güzellik|kolonya|losyon|şampuan|maske|esans/
+
 /**
  * Automatically classifies business sector using product name, description,
  * campaign brief, and brand context without hardcoding company names.
@@ -302,77 +312,14 @@ export function classifySector(input: {
     .join(' ')
     .toLowerCase()
 
-  // Agriculture keywords
-  if (
-    /tarım|bahçe|çiftlik|pompa|ilaçlama|gübre|tohum|fide|hasat|zeytin|sera|traktör|toprak|sulama|ziraat|bağ|bostan|meyve|sebze|organik/.test(
-      text,
-    )
-  ) {
-    return SECTOR_DNA_REGISTRY.AGRICULTURE
-  }
-
-  // Construction keywords
-  if (
-    /inşaat|yapı|tuğla|klinker|beton|çimento|mimarlık|cephe|şantiye|demir|çelik|seramik|fayans|mermer|boya|çatı|yalıtım|harç|taş/.test(
-      text,
-    )
-  ) {
-    return SECTOR_DNA_REGISTRY.CONSTRUCTION
-  }
-
-  // Tech / SaaS keywords
-  if (
-    /yazılım|app|uygulama|saas|bulut|cloud|crm|erp|dashboard|api|veritabanı|ai|yapay zeka|otomasyon|b2b|dijital|analitik|platform|kod/.test(
-      text,
-    )
-  ) {
-    return SECTOR_DNA_REGISTRY.TECH_SAAS
-  }
-
-  // Food / Restaurant keywords
-  if (
-    /döner|kebap|burger|pizza|restoran|kafe|cafe|lokanta|yemek|tatlı|kahve|lahmacun|fırın|lezzet|gurme|şef|makarna|ızgara|paket servis|menü/.test(
-      text,
-    )
-  ) {
-    return SECTOR_DNA_REGISTRY.FOOD_BEVERAGE
-  }
-
-  // Health / Clinical keywords
-  if (
-    /diş|klinik|poliklinik|doktor|hastane|sağlık|medikal|implant|ortodonti|estetik|dermatoloji|tedavi|eczane|hekim|hasta|göz|saç ekim/.test(
-      text,
-    )
-  ) {
-    return SECTOR_DNA_REGISTRY.HEALTH_CLINICAL
-  }
-
-  // Fashion / Apparel keywords
-  if (
-    /giyim|elbise|butik|tekstil|ayakkabı|çanta|moda|pantolon|gömlek|ceket|mont|kıyafet|takı|aksesuar|deri|butik/.test(
-      text,
-    )
-  ) {
-    return SECTOR_DNA_REGISTRY.FASHION_RETAIL
-  }
-
-  // Automotive / Logistics keywords
-  if (
-    /otomobil|araç|araba|lastik|jant|motor|oto|servis|detailing|kargo|lojistik|nakliye|filo|yedek parça|yağ|bakım/.test(
-      text,
-    )
-  ) {
-    return SECTOR_DNA_REGISTRY.AUTOMOTIVE_LOGISTICS
-  }
-
-  // Cosmetics / Beauty keywords
-  if (
-    /kozmetik|parfüm|krem|serum|bakım|makyaj|ruj|cilt|güzellik|kolonya|losyon|şampuan|maske|esans/.test(
-      text,
-    )
-  ) {
-    return SECTOR_DNA_REGISTRY.BEAUTY_COSMETICS
-  }
+  if (AGRI_REGEX.test(text)) return SECTOR_DNA_REGISTRY.AGRICULTURE
+  if (CONST_REGEX.test(text)) return SECTOR_DNA_REGISTRY.CONSTRUCTION
+  if (SAAS_REGEX.test(text)) return SECTOR_DNA_REGISTRY.TECH_SAAS
+  if (FOOD_REGEX.test(text)) return SECTOR_DNA_REGISTRY.FOOD_BEVERAGE
+  if (HEALTH_REGEX.test(text)) return SECTOR_DNA_REGISTRY.HEALTH_CLINICAL
+  if (FASHION_REGEX.test(text)) return SECTOR_DNA_REGISTRY.FASHION_RETAIL
+  if (AUTO_REGEX.test(text)) return SECTOR_DNA_REGISTRY.AUTOMOTIVE_LOGISTICS
+  if (COSMETICS_REGEX.test(text)) return SECTOR_DNA_REGISTRY.BEAUTY_COSMETICS
 
   return SECTOR_DNA_REGISTRY.GENERAL_COMMERCIAL
 }

@@ -3050,9 +3050,9 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
-    // 2. Durum ve İlerleme Sorgulama: GET /v1/images/status/:id
-    if (method === 'GET' && pathname.startsWith('/v1/images/status/')) {
-      const jobId = pathname.replace('/v1/images/status/', '');
+    // 2. Durum ve İlerleme Sorgulama: GET /v1/images/status/:id, /v1/jobs/:id, /jobs/:id
+    if (method === 'GET' && (pathname.startsWith('/v1/images/status/') || pathname.startsWith('/v1/jobs/') || pathname.startsWith('/jobs/'))) {
+      const jobId = pathname.replace('/v1/images/status/', '').replace('/v1/jobs/', '').replace('/jobs/', '');
       const job = queue.getJob(jobId);
       if (!job) {
         return sendJson(res, 404, { error: 'Job not found' });

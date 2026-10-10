@@ -718,6 +718,69 @@ export async function retryCreative(id: string): Promise<CreativeActionState> {
   }
 }
 
+export async function reconcileCreative(id: string): Promise<CreativeActionState> {
+  const trimmed = id.trim()
+  if (!trimmed) return { error: 'Kayıt yok.' }
+  try {
+    const { org, supabase } = await requireActiveOrg()
+    if (!isOrgAdminRole(org.role)) return { error: 'Yetki yok.' }
+    const { data } = await supabase
+      .from('creatives')
+      .select('id, status, source, format, error, payload')
+      .eq('id', trimmed)
+      .eq('org_id', org.id)
+      .maybeSingle()
+    if (!data) return { error: 'Görsel bulunamadı.' }
+    const payload = (data.payload || {}) as Record<string, unknown>
+    const lastJob = (payload.lastImageJob || payload.imageJob) as { id: string; gatewayUrl: string } | undefined
+
+    if (lastJob?.id && lastJob?.gatewayUrl) {
+      try {
+        const gwRes = await fetch(`${lastJob.gatewayUrl.replace(/\/$/, '')}/jobs/${lastJob.id}`, {
+          signal: AbortSignal.timeout(6000),
+        })
+        if (gwRes.ok) {
+          const gwJson = await gwRes.json()
+          if (gwJson.status === 'completed' && gwJson.result_url) {
+            const processRes = await processCreativeGeneration(trimmed, supabase)
+            if (processRes.ready || processRes.needsReview) {
+              revalidateLibrary(trimmed)
+              return { ok: 'Üretim tamamlanmış olarak kurtarıldı.' }
+            }
+          }
+        }
+      } catch {
+        // Gateway poll timeout or offline
+      }
+    }
+
+    const updatedPayload = {
+      ...payload,
+      imageJob: null,
+      imageSubmitIntent: null,
+      imageSubmissionUncertain: false,
+      imageReconciliationRequired: false,
+      imageDirectIntent: null,
+      imageTerminalFailure: null,
+    }
+
+    await supabase
+      .from('creatives')
+      .update({
+        status: 'failed',
+        error: 'Önceki sağlayıcı yanıt vermedi. Güvenli şekilde tekrar deneyebilirsiniz.',
+        payload: updatedPayload,
+      })
+      .eq('id', trimmed)
+      .eq('org_id', org.id)
+
+    revalidateLibrary(trimmed)
+    return { ok: 'Üretim durumu doğrulandı. Tekrar deneyebilirsiniz.' }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum yok.' }
+  }
+}
+
 export async function approveReviewedImage(formData: FormData): Promise<CreativeActionState> {
   if (formData.get('identity') !== 'on' || formData.get('commerce') !== 'on')
     return {error:'Ürün/marka ve ticari bilgileri görselde kontrol ettiğinizi doğrulayın.'}

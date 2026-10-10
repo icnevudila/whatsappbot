@@ -224,3 +224,17 @@ test('completed jobs expire without deleting an active response', async () => {
   assert.equal((await request(`/v1/images/status/${job.id}`)).response.status, 404);
   assert.equal(created.body.status, 'pending');
 });
+
+test('/jobs/:id and /v1/jobs/:id aliases return identical job status', async () => {
+  const created = await request('/v1/images/generations?async=true', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: 'Job alias test', async: true }),
+  });
+  const byStandard = await request(`/v1/images/status/${created.body.job_id}`);
+  const byShort = await request(`/jobs/${created.body.job_id}`);
+  const byV1 = await request(`/v1/jobs/${created.body.job_id}`);
+  assert.equal(byShort.response.status, 200);
+  assert.equal(byV1.response.status, 200);
+  assert.equal(byShort.body.id, created.body.job_id);
+  assert.equal(byShort.body.status, byStandard.body.status);
+  assert.equal(byV1.body.id, created.body.job_id);
+});
