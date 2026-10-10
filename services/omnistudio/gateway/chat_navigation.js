@@ -15,6 +15,8 @@ async function navigateToChat(cdp, url, maxWaitMs = 40000, pause = ms => new Pro
     : [targetPath];
   const startTime = Date.now();
   const deadline = startTime + maxWaitMs;
+  let lastState = null;
+  let observationFailures = 0;
   while (Date.now() < deadline) {
     const state = await cdp.send('Runtime.evaluate', {
       expression: `(() => {
@@ -30,12 +32,22 @@ async function navigateToChat(cdp, url, maxWaitMs = 40000, pause = ms => new Pro
           ready: document.readyState !== 'loading' && hasComposer
         };
       })()`, returnByValue: true,
-    }, 5000).catch(() => ({}));
+    }, 5000).catch(() => { observationFailures++; return {}; });
     const value = state.result?.value;
+    if (value) lastState = value;
     if (value?.target && value.ready && (value.newDocument || (Date.now() - startTime > 1500))) return;
     await pause(200);
   }
-  throw new Error('CHAT_NAVIGATION_FAILED: target conversation was not ready');
+  // Boolean diagnostics distinguish redirects, loading and missing composer
+  // without exposing conversation URLs, tenant data or page contents.
+  const diagnostics = {
+    observed: !!lastState,
+    targetMatched: lastState?.target === true,
+    composerReady: lastState?.ready === true,
+    documentReplaced: lastState?.newDocument === true,
+    observationFailures,
+  };
+  throw new Error('CHAT_NAVIGATION_FAILED: target conversation was not ready; ' + JSON.stringify(diagnostics));
 }
 
 module.exports = { navigateToChat };
