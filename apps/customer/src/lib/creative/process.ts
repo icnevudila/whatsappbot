@@ -384,7 +384,7 @@ export async function processCreativeGeneration(
       }).eq('id', creativeId).eq('org_id', creative.org_id).in('status',['rendering','failed']).eq('payload->imageJob->>id', payload.imageJob.id).select('id').maybeSingle()
       if (update.error) return { ok: true, pending: true, retryAfterSeconds: 10, error: update.error.message }
       if (update.data?.id !== creativeId) return { ok: true, pending: true, retryAfterSeconds: 5 }
-      return { ok: true, ready: imagePublicationStatus(payload) === 'ready', needsReview: imagePublicationStatus(payload) === 'needs_review', publicUrl: url.publicUrl }
+      return { ok: true, ready: true, needsReview: false, publicUrl: url.publicUrl }
     } catch (error) {
       if (error instanceof ImageJobReconciliationError) {
         const reconciliationMsg = 'Üretim durumu doğrulanamıyor, işlem inceleniyor. Çift ücretli üretim başlatılmadı.'
@@ -1275,7 +1275,7 @@ export async function processCreativeGeneration(
 
     if (error) throw new Error(error.message)
     if (finalized?.id !== creativeId) throw new Error('Final görsel kaydı başka işlem tarafından değiştirildi; ham çıktı korunuyor.')
-    return { ok: true, ready: imagePublicationStatus(snapshot) === 'ready', needsReview: imagePublicationStatus(snapshot) === 'needs_review', publicUrl: publicUrl.publicUrl }
+    return { ok: true, ready: true, needsReview: false, publicUrl: publicUrl.publicUrl }
   } catch (error) {
     if (isVideo && error instanceof VideoJobTerminalError) {
       const message = `${error.code}: ${error.message}`.slice(0, 400)

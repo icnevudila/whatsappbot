@@ -849,8 +849,7 @@ export async function listLibraryCreatives({
       .select('id, org_id, storage_path, title, public_url, status, source, generation_type, created_at, error, parent_id, format, payload')
       .eq('org_id', org.id)
       .neq('source', 'upload')
-      .eq('status', 'ready')
-      .not('public_url', 'is', null)
+      .in('status', ['pending', 'rendering', 'ready', 'needs_review', 'failed'])
       .order('created_at', { ascending: sort === 'old' })
       .order('id', { ascending: sort === 'old' })
       .range(start, start + size - 1)
@@ -860,7 +859,6 @@ export async function listLibraryCreatives({
     if (error) return { items: [], hasMore: false, error: error.message }
     const videoStates = await loadVideoLibraryState(createSupabaseServiceClient() || supabase, org.id, data ?? [])
     const items = (data ?? [])
-      .filter(row => isLibraryCreativeEligible(row, org.id, videoStates.get(row.id)))
       .map((row) => {
         const payload = (row.payload ?? {}) as Record<string, unknown>
         const isVideo = row.format === 'video' || Boolean(row.public_url?.endsWith('.mp4')) || Boolean(row.public_url?.includes('/api/ai-media/outputs/'))
@@ -876,12 +874,12 @@ export async function listLibraryCreatives({
           publicUrl: row.public_url,
           thumbnailUrl: thumb,
           format: row.format,
-          status: 'ready',
+          status: ['ready', 'needs_review'].includes(row.status) ? (isLibraryCreativeEligible(row, org.id, videoStates.get(row.id)) ? 'ready' : 'needs_review') : row.status,
           durationSeconds: videoStates.get(row.id)?.durationSeconds ?? null,
           source: row.source,
           generationType: row.generation_type,
           createdAt: row.created_at,
-          error: null,
+          error: row.error,
           parentId: row.parent_id,
         }
       })

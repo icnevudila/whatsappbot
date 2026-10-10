@@ -4,6 +4,7 @@ import { PageHeader } from '@/components/ui'
 import { isOrgAdminRole, requireActiveOrg } from '@/lib/org'
 import { CreativeDetail, CreativeMoreMenu, CreativeTitleEdit, type DetailCreative, type VersionRow } from '../detail-view'
 import type { CreativePayload } from '@/lib/creative/types'
+import { isLibraryCreativeEligible } from '@/lib/creative/library-eligibility'
 import { loadVideoLibraryState } from '@/lib/creative/video-library-state'
 import { createSupabaseServiceClient } from '@/lib/supabase/service'
 
@@ -31,7 +32,7 @@ export default async function CreativeDetailPage({
   const { data: row } = await supabase
     .from('creatives')
     .select(
-      'id, title, public_url, status, source, generation_type, created_at, error, parent_id, format, payload, brand_kits(name)',
+      'id, org_id, storage_path, title, public_url, status, source, generation_type, created_at, error, parent_id, format, payload, brand_kits(name)',
     )
     .eq('org_id', org.id)
     .eq('id', id)
@@ -54,12 +55,12 @@ export default async function CreativeDetailPage({
       : ''
 
   const creative: DetailCreative = {
-    imageReviewRequired: payload?.creativeDirectorVersion === 'V3' && row.format !== 'video',
+    imageReviewRequired: false,
     submissionRequestKey: typeof payload?.requestKey === 'string' ? payload.requestKey : null,
     id: row.id,
     title: displayTitle,
     publicUrl: row.public_url,
-    status: videoState?.status || row.status,
+    status: videoState?.status || (['ready', 'needs_review'].includes(row.status) && isLibraryCreativeEligible(row, org.id) ? 'ready' : row.status),
     source: row.source,
     generationType: row.generation_type,
     createdAt: row.created_at,

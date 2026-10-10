@@ -19,7 +19,7 @@ export async function loadVideoLibraryState(db: any, orgId: string, rows: Creati
   for (const { row, outputId } of mapped) {
     const output = !result.error && result.data?.find((item: any) => item.id === outputId && item.org_id === orgId)
     const duration = Number(output?.duration_seconds)
-    states.set(row.id, { status: output && isApprovedFinalVideoOutput(output) ? row.status : 'needs_review',
+    states.set(row.id, { status: output && isApprovedFinalVideoOutput(output) ? 'ready' : 'needs_review',
       durationSeconds: Number.isFinite(duration) && duration > 0 ? duration : null })
   }
   return states

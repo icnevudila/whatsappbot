@@ -15,7 +15,8 @@
     "@wa/creative-video-orchestrator": "file:../creative-video-orchestrator",
     "express": "^4.21.0",
     "pg": "^8.23.0",
-    "tsx": "^4.19.0"
+    "tsx": "^4.19.0",
+    "whatsappbot": "file:../.."
   },
   "devDependencies": {
     "@types/express": "^5",

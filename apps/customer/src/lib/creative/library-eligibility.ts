@@ -1,7 +1,7 @@
 import { canReviewImage, isImageReviewApproved } from './image-review'
 
 export function isLibraryCreativeEligible(row: any, orgId: string, videoState?: {status: string}): boolean {
-  if (row.org_id !== orgId || row.status !== 'ready' || !row.public_url || !row.public_url.trim() || row.source === 'upload') return false
+  if (row.org_id !== orgId || !['ready', 'needs_review'].includes(row.status) || !row.public_url || !row.public_url.trim() || row.source === 'upload') return false
   const video = row.format === 'video' || /\.mp4(?:[?#]|$)/i.test(row.public_url) || row.public_url.includes('/api/ai-media/outputs/')
   if (video) return videoState?.status === 'ready'
   const payload = row.payload || {}

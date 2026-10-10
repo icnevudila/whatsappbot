@@ -294,7 +294,7 @@ function LibraryCard({
 }) {
   const failed = Boolean(renderError) && item.status !== 'ready'
   const ready =
-    (item.status === 'ready' || (item.status === 'needs_review' && Boolean(item.thumbnailUrl || item.publicUrl))) &&
+    item.status === 'ready' &&
     Boolean(item.publicUrl || item.thumbnailUrl)
   const isVideo =
     item.format === 'video' ||

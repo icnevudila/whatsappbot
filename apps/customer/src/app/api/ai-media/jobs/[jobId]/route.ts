@@ -170,7 +170,8 @@ export async function GET(
     }
 
     // Publication readiness derives from persisted artifact evidence, never job completion alone.
-    const displayState = job.state === 'COMPLETED' && !playbackUrl ? 'NEEDS_REVIEW' : job.state
+    const technicallyReady = outputEvidence && isApprovedFinalVideoOutput(outputEvidence)
+    const displayState = technicallyReady && ['COMPLETED', 'NEEDS_REVIEW'].includes(job.state) ? 'COMPLETED' : job.state === 'COMPLETED' && !playbackUrl ? 'NEEDS_REVIEW' : job.state
     if (displayState !== job.state) {
       stageMapping = mapEngineStateToStage(displayState)
       etaResult = calculateAuthoritativeEta({ historicalDurationsSeconds, activeWorkerCapacity: dynamicCapacity,

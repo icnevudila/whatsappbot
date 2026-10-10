@@ -550,7 +550,9 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     }
   }
 
-  const approved = review.decision === 'PASS' && !presentationNeedsReview
+  // Editorial reports are advisory under the customer publication policy.
+  // Validation, final-master duration, reference and independent hash gates above remain mandatory.
+  const approved = validation.verified === true
   ws.writeResult({
     job_id: job.id,
     attempt_id: attemptId,

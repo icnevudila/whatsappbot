@@ -18,6 +18,9 @@ test('library replaces stale ready with owned output approval and actual duratio
   assert.equal((await loadVideoLibraryState(db, 'owned', rows)).get('creative')?.status, 'needs_review', 'approved raw source is not a final master')
   output.duration_seconds = '10.00'
   assert.equal((await loadVideoLibraryState(db, 'owned', rows)).get('creative')?.status, 'ready')
+  output.is_approved = false
+  rows[0].status = 'needs_review'
+  assert.equal((await loadVideoLibraryState(db, 'owned', rows)).get('creative')?.status, 'ready')
   output.org_id = 'foreign'
   assert.deepEqual((await loadVideoLibraryState(db, 'owned', rows)).get('creative'), { status: 'needs_review', durationSeconds: null })
   error = { message: 'unavailable' }
