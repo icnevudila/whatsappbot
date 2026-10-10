@@ -56,6 +56,12 @@ test('campaign text forwards tenant and creative conversation identity to the ga
     assert.equal(output,'Doğrulanmış kampanya metni')
     assert.deepEqual(captured && {tenant:captured['tenant_id'],org:captured['org_id'],customer:captured['customer'],conversation:captured['conversation_id'],request:captured['request_id']},
       {tenant:'tenant-a',org:'tenant-a',customer:'Alt marka',conversation:'campaign:creative-a',request:'request-a'})
+    await completeText('Use verified facts', 'Başka ürün', null, {
+      tenantId: 'tenant-b', customer: 'Alt marka', conversationId: 'campaign:request-b', requestId: 'request-b',
+    })
+    assert.deepEqual(captured && { tenant: captured['tenant_id'], org: captured['org_id'], conversation: captured['conversation_id'], request: captured['request_id'] }, {
+      tenant: 'tenant-b', org: 'tenant-b', conversation: 'campaign:request-b', request: 'request-b',
+    })
   } finally {
     globalThis.fetch=originalFetch
     if (originalToken === undefined) delete process.env.OMNISTUDIO_GATEWAY_TOKEN
