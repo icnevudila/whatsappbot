@@ -560,6 +560,7 @@ export function CreativeDetail({
   }
 
   const remainingText = `Geçen süre: ${tick} sn`
+  const imageStageIndex = tick < 8 ? 1 : tick < 20 ? 2 : tick < 40 ? 3 : 4
 
   return (
     <div className="space-y-3">
@@ -567,6 +568,7 @@ export function CreativeDetail({
         <div className="wb-craft-panel">
           <CreativeGenerating
             kind={isVideo ? 'video' : 'image'}
+            stageIndex={isVideo ? undefined : imageStageIndex}
             title={isVideo ? 'Sinematik kampanya videonuz hazırlanıyor' : 'Görseliniz hazırlanıyor'}
             line={stageLabel}
             detail={`${stageDetail} · ${remainingText}`}

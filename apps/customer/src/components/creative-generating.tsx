@@ -33,6 +33,9 @@ export interface CreativeGeneratingProps {
   detail?: React.ReactNode
   compact?: boolean
   kind?: 'image' | 'video'
+  stageKey?: any
+  stageIndex?: number
+  lottieSrc?: string | null
   children?: React.ReactNode
 }
 
@@ -42,11 +45,23 @@ export function CreativeGenerating({
   detail = null,
   compact = false,
   kind = 'image',
+  stageKey,
+  stageIndex,
+  lottieSrc,
   children = null,
 }: CreativeGeneratingProps) {
   return (
     <div className={compact ? 'wb-craft wb-craft--compact' : 'wb-craft creative-production-detail'}>
-      {compact ? <CraftMark size="sm" /> : <CreativeProductionVisual kind={kind} />}
+      {compact ? (
+        <CraftMark size="sm" />
+      ) : (
+        <CreativeProductionVisual
+          kind={kind}
+          stageKey={stageKey}
+          stageIndex={stageIndex}
+          lottieSrc={lottieSrc}
+        />
+      )}
       {compact ? null : <p className="wb-craft-title">{title}</p>}
       <p className={compact ? 'wb-craft-line wb-craft-line--compact' : 'wb-craft-line'}>
         {compact ? <TypewriterText text={line} speed={28} /> : <span role="status">{line}</span>}

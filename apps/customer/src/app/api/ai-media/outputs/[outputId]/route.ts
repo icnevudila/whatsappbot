@@ -138,22 +138,19 @@ export async function GET(
       )
 
       for (const tName of thumbCandidates) {
-        const thumbUrl = `${GATEWAY_HOST}/outputs/${tName}`
-        try {
-          const tRes = await fetch(thumbUrl, { cache: 'force-cache' })
-          if (tRes.ok) {
-            const tHeaders = new Headers()
-            tHeaders.set('Content-Type', 'image/jpeg')
-            tHeaders.set('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800')
-            if (reviewPreview) {
+        const hosts = Array.from(new Set([GATEWAY_HOST, 'http://167.233.201.31:3456', 'https://media.167.233.201.31.nip.io'].filter(Boolean)))
+        for (const host of hosts) {
+          const thumbUrl = `${host}/outputs/${tName}`
+          try {
+            const tRes = await fetch(thumbUrl, { cache: 'force-cache' })
+            if (tRes.ok) {
               const image = await fetch(thumbUrl, { cache: 'no-store' })
-              if (image.ok) return buildStreamResponse(image, tName, true)
-              continue
+              if (image.ok) return buildStreamResponse(image, tName, reviewPreview)
+              return NextResponse.redirect(thumbUrl, 307)
             }
-            return NextResponse.redirect(thumbUrl, 307)
+          } catch {
+            // continue fallback
           }
-        } catch {
-          // continue fallback
         }
       }
       return new NextResponse('Thumbnail bulunamadı.', { status: 404 })
