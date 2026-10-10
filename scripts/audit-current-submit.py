@@ -17,7 +17,7 @@ try:
         if not re.fullmatch(r'/var/log/(?:server|cdp_worker_[12])\.log',path):continue
         _,out,err=client.exec_command('docker exec omnistudio-engine tail -n 150 '+path,timeout=20)
         for line in out.read().decode(errors='replace').splitlines():
-            if any(x in line for x in ['SUBMISSION_UNCERTAIN','accepted','YENİ İŞ','jobId','Send was','completed','CHAT_NAVIGATION_FAILED']):
+            if any(x in line for x in ['SUBMISSION_UNCERTAIN','accepted','YENİ İŞ','jobId','Send was','completed','CHAT_NAVIGATION_FAILED','WebSocket','CDP Error','Başlatılıyor','Bağlandı']):
                 line=re.sub(r'https?://\S+','[URL]',line)
                 records.append({'file':path,'event':line[:400]})
     print(json.dumps(records,ensure_ascii=True))

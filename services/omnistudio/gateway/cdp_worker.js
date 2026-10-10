@@ -227,6 +227,7 @@ async function getTab(matchPattern) {
     const res = await fetch(`${CDP_HTTP}/json/list`);
     const tabs = await res.json();
     const pageTabs = tabs.filter(t => (t.type === 'page' || !t.type));
+    if (!cachedTabId) cachedTabId = reaper.registry.getWorkerCanonicalTab(WORKER_ID)?.tabId || null;
 
     // 1. Worker'a daha önce atanmış sekme hala açıksa doğrudan onu kullan (Navigation sırasında URL değişse bile sekme kopmaz)
     if (cachedTabId) {
@@ -238,7 +239,7 @@ async function getTab(matchPattern) {
     }
 
     // 2. Belirtilen matchPattern'e uyan sekmeleri TAB_INDEX ile eşleştir
-    const chatTabs = pageTabs.filter(t => isChatGPTPage(t) && !reaper.registry.hasActiveJob(t.id) && !new URL(t.url).searchParams.has('mesajify_image_job_id'));
+    const chatTabs = pageTabs.filter(t => isChatGPTPage(t) && !reaper.registry.isCanonicalForAnyWorker(t.id) && !reaper.registry.hasActiveJob(t.id) && !new URL(t.url).searchParams.has('mesajify_image_job_id'));
     if (chatTabs.length > TAB_INDEX) {
       const assignedTab = chatTabs[TAB_INDEX];
       cachedTabId = assignedTab.id;
@@ -1626,7 +1627,31 @@ async function executeGenericChatJob(tab, job) {
       await navigateToChat(cdp, 'https://chatgpt.com/');
       chatInfo = { isNewChat: true };
       visionReceipt = await require('./historical_video_director_attachments.js').attachHistoricalDirectorReferences(cdp, job, directorPaths, sleep);
-    } else chatInfo = await ensureCustomerChat(cdp, customer, 'chat', chatIdentity);
+    } else {
+      try {
+        chatInfo = await ensureCustomerChat(cdp, customer, 'chat', chatIdentity);
+      } catch (error) {
+        if (error.message !== 'CHAT_NAVIGATION_TRANSPORT_LOST') throw error;
+        // No prompt has been inserted/submitted. Prefer the same target; if it
+        // vanished, acquire this worker's canonical target and recheck identity.
+        cdp.close();
+        try {
+          cdp = await reconnectImageObservation({ targetId: tab.id,
+            listTargets: async () => {
+              const response = await fetch(`${CDP_HTTP}/json/list`, { signal: AbortSignal.timeout(8000) });
+              if (!response.ok) throw new Error('CHAT_NAVIGATION_TARGET_LIST_FAILED');
+              return response.json();
+            }, connect: createCdpSession });
+        } catch (reconnectError) {
+          if (reconnectError.message !== 'IMAGE_OBSERVATION_TARGET_LOST') throw reconnectError;
+          const replacement = await getTab('chatgpt.com');
+          if (!replacement || !isChatGPTPage(replacement)) throw new Error('CHAT_NAVIGATION_TARGET_LOST');
+          tab = replacement;
+          cdp = await createCdpSession(tab.webSocketDebuggerUrl);
+        }
+        chatInfo = await ensureCustomerChat(cdp, customer, 'chat', chatIdentity);
+      }
+    }
     if (!chatInfo.isNewChat) {
       const waitStart = Date.now();
       while (Date.now() - waitStart < 1500) {

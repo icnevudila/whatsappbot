@@ -33,3 +33,14 @@ test('matching URL without composer remains blocked', async () => {
     'https://chatgpt.com/c/test-conversation', 30,
     () => new Promise(resolve => setTimeout(resolve, 35))), /"composerReady":false/);
 });
+
+test('closed transport exits immediately instead of polling stale target state', async () => {
+  let observations = 0;
+  const cdp = {send: async (method) => {
+    if (method === 'Page.navigate') return {};
+    if (++observations === 1) return {};
+    throw new Error('[CDP Error] WebSocket not open (readyState:3)');
+  }};
+  await assert.rejects(navigateToChat(cdp,'https://chatgpt.com/c/private',40000),/CHAT_NAVIGATION_TRANSPORT_LOST/);
+  assert.equal(observations,2);
+});

@@ -32,7 +32,15 @@ async function navigateToChat(cdp, url, maxWaitMs = 40000, pause = ms => new Pro
           ready: document.readyState !== 'loading' && hasComposer
         };
       })()`, returnByValue: true,
-    }, 5000).catch(() => { observationFailures++; return {}; });
+    }, 5000).catch(error => {
+      observationFailures++;
+      if (/WebSocket not open|WebSocket closed|CDP Connection Closed|Target closed|Connection closed/i.test(error?.message || '')) {
+        // A dead transport cannot become healthy by polling it191 times.
+        // Surface a typed pre-submission error; never infer readiness from stale state.
+        throw new Error('CHAT_NAVIGATION_TRANSPORT_LOST');
+      }
+      return {};
+    });
     const value = state.result?.value;
     if (value) lastState = value;
     if (value?.target && value.ready && (value.newDocument || (Date.now() - startTime > 1500))) return;
