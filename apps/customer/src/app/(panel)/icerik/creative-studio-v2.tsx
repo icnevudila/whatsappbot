@@ -1465,7 +1465,7 @@ export function CreativeStudioV2({
                     </div>
                     <div>
                       <span className="text-[#667781]">Marka Koruması:</span>
-                      <p className="font-semibold text-[#008069]">Kanonik Logo + 1/1 Ürün (2/2 Ref Kilitli)</p>
+                      <p className="font-semibold text-[#008069]">Logo ve ürün seçildi; üretimde referanslar doğrulanacak</p>
                     </div>
                   </div>
 
@@ -1501,7 +1501,7 @@ export function CreativeStudioV2({
                         <span className={`inline-block size-2 rounded-full ${hasLogo ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                         <span className="text-[#667781]">Kurumsal Logo:</span>
                         <span className={`font-semibold ${hasLogo ? 'text-emerald-700' : 'text-rose-700'}`}>
-                          {hasLogo ? '✓ Bağlandı' : 'Eksik'}
+                          {hasLogo ? '✓ Seçildi' : 'Eksik'}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">

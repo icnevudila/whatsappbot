@@ -28,6 +28,7 @@ export default async function CreativeLibraryPage() {
         orgId={org.id}
         initial={first.items}
         initialHasMore={first.hasMore}
+        initialNextOffset={first.nextOffset}
         canManage={isOrgAdminRole(org.role)}
       />
     </div>

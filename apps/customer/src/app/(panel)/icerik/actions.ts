@@ -12,6 +12,7 @@ function uuidFromRequestKey(orgId: string, requestKey: string): string {
 }
 import { enqueueJob } from '@/lib/jobs'
 import { campaignFactsError, parseCampaignMoney } from '@/lib/creative/campaign-facts'
+import { isLibraryCreativeEligible } from '@/lib/creative/library-eligibility'
 import { canReviewImage } from '@/lib/creative/image-review'
 import { hasImageProvider } from '@/lib/ai/image'
 import { processCreativeGeneration } from '@/lib/creative/process'
@@ -32,6 +33,7 @@ import { collectImageFiles, readImageFile } from '@/app/(panel)/ayarlar/upload-i
 import { isOrgAdminRole, requireActiveOrg } from '@/lib/org'
 import { DEFAULT_INCLUDE, formatFromId, type ProductCard, type SocialOption } from './wizard-types'
 import { LIBRARY_PAGE_SIZE, type LibraryCreativeRow } from './library-shared'
+import { isApprovedFinalVideoOutput, isReviewVideoOutput } from '@/lib/creative/video-output-approval'
 import { libraryVideoOutputId, loadVideoLibraryState } from '@/lib/creative/video-library-state'
 import { createSupabaseServiceClient } from '@/lib/supabase/service'
 import {
@@ -319,6 +321,7 @@ export async function startCreativeGeneration(
     return { error: 'Marka kiti bulunamadı.' }
   }
 
+  if (!kitRow) return { error: 'Üretimden önce işletmenize ait marka kitini oluşturun.' }
   const orgRow = orgRowRes.data
   const orgLogoPath = orgRow?.logo_path ?? null
 
@@ -760,47 +763,24 @@ export async function approveReviewedVideo(formData: FormData): Promise<Creative
 
   const serviceClient = createSupabaseServiceClient() || supabase
   const outputId = libraryVideoOutputId(row.public_url)
-  if (outputId) {
-    const { data: out } = await (serviceClient as any)
-      .from('ai_media_outputs')
-      .select('id, org_id, verified, sha256')
-      .eq('id', outputId)
-      .eq('org_id', org.id)
-      .maybeSingle()
+  if (row.format !== 'video' || !outputId) return { error: 'Doğrulanabilir video çıktısı bulunamadı.' }
+  const { data: out, error: outputError } = await (serviceClient as any)
+    .from('ai_media_outputs')
+    .select('id,job_id,org_id,verified,is_approved,sha256,storage_url,file_path,duration_seconds,width,height,product_type')
+    .eq('id', outputId).eq('org_id', org.id).maybeSingle()
+  if (outputError || !out) return { error: 'Video çıktısı doğrulanamadı.' }
+  const { data: job, error: jobError } = await (serviceClient as any)
+    .from('ai_media_jobs').select('id,org_id,state')
+    .eq('id', out.job_id).eq('org_id', org.id).maybeSingle()
+  if (jobError || !isReviewVideoOutput(out, job, org.id) ||
+      !isApprovedFinalVideoOutput({ ...out, is_approved: true }) ||
+      !(out.storage_url || out.file_path)) return { error: 'Video kalite ve iş kimliği doğrulamasından geçmedi.' }
 
-    if (out && out.verified) {
-      await (serviceClient as any)
-        .from('ai_media_outputs')
-        .update({ is_approved: true })
-        .eq('id', outputId)
-        .eq('org_id', org.id)
-    }
-  }
-
-  const payload = (row.payload ?? {}) as Record<string, unknown>
-  const { data: approved, error } = await supabase
-    .from('creatives')
-    .update({
-      status: 'ready',
-      payload: {
-        ...payload,
-        videoHumanReview: {
-          reviewerId: userId,
-          reviewedAt: new Date().toISOString(),
-          identityConfirmed: true,
-          commerceConfirmed: true,
-          source: 'CUSTOMER_EXPLICIT_REVIEW',
-        },
-      },
-    })
-    .eq('org_id', org.id)
-    .eq('id', id)
-    .eq('status', 'needs_review')
-    .eq('updated_at', row.updated_at)
-    .select('id')
-    .maybeSingle()
-
-  if (error || !approved) return { error: 'Kayıt değişti; yeniden deneyin.' }
+  const { data: approved, error: approvalError } = await (serviceClient as any).rpc('approve_creative_video_review', {
+    p_org: org.id, p_creative: id, p_output: outputId, p_sha: out.sha256,
+    p_updated: row.updated_at, p_reviewer: userId,
+  })
+  if (approvalError || approved !== true) return { error: 'Onay kaydedilemedi veya kayıt değişti; yeniden inceleyin.' }
   revalidateLibrary(id)
   return { ok: 'Video inceleme onayınız kaydedildi.' }
 }
@@ -859,19 +839,20 @@ export async function listLibraryCreatives({
   sort?: 'new' | 'old'
   offset?: number
   limit?: number
-}): Promise<{ items: LibraryCreativeRow[]; hasMore: boolean; error?: string }> {
+}): Promise<{ items: LibraryCreativeRow[]; hasMore: boolean; nextOffset?: number; error?: string }> {
   try {
     const { org, supabase } = await requireActiveOrg()
     const start = Math.max(0, offset)
     const size = Math.min(120, Math.max(1, limit))
     let request = supabase
       .from('creatives')
-      .select('id, title, public_url, status, source, generation_type, created_at, error, parent_id, format, payload')
+      .select('id, org_id, storage_path, title, public_url, status, source, generation_type, created_at, error, parent_id, format, payload')
       .eq('org_id', org.id)
       .neq('source', 'upload')
       .eq('status', 'ready')
       .not('public_url', 'is', null)
       .order('created_at', { ascending: sort === 'old' })
+      .order('id', { ascending: sort === 'old' })
       .range(start, start + size - 1)
     const term = query.trim()
     if (term) request = request.ilike('title', `%${term}%`)
@@ -879,15 +860,7 @@ export async function listLibraryCreatives({
     if (error) return { items: [], hasMore: false, error: error.message }
     const videoStates = await loadVideoLibraryState(createSupabaseServiceClient() || supabase, org.id, data ?? [])
     const items = (data ?? [])
-      .filter((row) => {
-        if (!row.public_url) return false
-        const isVideo = row.format === 'video' || Boolean(row.public_url?.endsWith('.mp4')) || Boolean(row.public_url?.includes('/api/ai-media/outputs/'))
-        if (isVideo) {
-          const vState = videoStates.get(row.id)
-          if (vState && vState.status !== 'ready') return false
-        }
-        return true
-      })
+      .filter(row => isLibraryCreativeEligible(row, org.id, videoStates.get(row.id)))
       .map((row) => {
         const payload = (row.payload ?? {}) as Record<string, unknown>
         const isVideo = row.format === 'video' || Boolean(row.public_url?.endsWith('.mp4')) || Boolean(row.public_url?.includes('/api/ai-media/outputs/'))
@@ -912,7 +885,7 @@ export async function listLibraryCreatives({
           parentId: row.parent_id,
         }
       })
-    return { items, hasMore: (data ?? []).length === size }
+    return { items, hasMore: (data ?? []).length === size, nextOffset: start + (data ?? []).length }
   } catch (error) {
     return {
       items: [],

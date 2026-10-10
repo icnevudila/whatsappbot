@@ -40,8 +40,10 @@ export const LazyVideo = memo(function LazyVideo({
   const containerRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const [isInView, setIsInView] = useState(priority)
+  const [visible, setVisible] = useState(priority)
+  const [pageVisible, setPageVisible] = useState(true)
   const [isLoaded, setIsLoaded] = useState(false)
-  const [reducedMotion, setReducedMotion] = useState(false)
+  const [reducedMotion, setReducedMotion] = useState(true)
   const [isSaveData, setIsSaveData] = useState(false)
 
   // Detect Data Saver and prefers-reduced-motion
@@ -75,6 +77,7 @@ export const LazyVideo = memo(function LazyVideo({
 
     const observer = new IntersectionObserver(
       ([entry]) => {
+        setVisible(entry.isIntersecting)
         if (entry.isIntersecting) {
           setIsInView(true)
           if (videoRef.current && autoPlay && !reducedMotion && !isSaveData) {
@@ -97,9 +100,10 @@ export const LazyVideo = memo(function LazyVideo({
   // Playback control when visible
   useEffect(() => {
     const video = videoRef.current
-    if (!video || !isInView) return
+    if (!video) return
+    if (!visible || !pageVisible || reducedMotion || isSaveData) { video.pause(); return }
 
-    if (autoPlay && !reducedMotion && !isSaveData) {
+    if (autoPlay) {
       video.defaultMuted = true
       video.muted = true
       const playPromise = video.play()
@@ -107,7 +111,14 @@ export const LazyVideo = memo(function LazyVideo({
         playPromise.catch(() => {})
       }
     }
-  }, [isInView, autoPlay, reducedMotion, isSaveData, src])
+  }, [isInView, visible, pageVisible, autoPlay, reducedMotion, isSaveData, src])
+
+  useEffect(() => {
+    const update = () => setPageVisible(document.visibilityState === 'visible')
+    update(); document.addEventListener('visibilitychange', update)
+    return () => document.removeEventListener('visibilitychange', update)
+  }, [])
+  useEffect(() => { setIsLoaded(false) }, [src])
 
   const handleVideoLoaded = () => {
     setIsLoaded(true)
@@ -140,12 +151,12 @@ export const LazyVideo = memo(function LazyVideo({
       )}
 
       {/* Video tag attaches source only when approaching viewport */}
-      {isInView && !reducedMotion && (
+      {isInView && !reducedMotion && !isSaveData && (
         <video
           ref={videoRef}
           src={src}
           poster={poster}
-          autoPlay={autoPlay && !isSaveData}
+          autoPlay={autoPlay && visible && pageVisible}
           loop={loop}
           muted={muted}
           playsInline={playsInline}

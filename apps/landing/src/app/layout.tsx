@@ -8,6 +8,7 @@ import { Navbar } from '@/components/navbar';
 const outfit = Outfit({
   subsets: ['latin'],
   variable: '--font-outfit',
+  display: 'optional',
 });
 
 const jetbrainsMono = JetBrains_Mono({

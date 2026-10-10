@@ -27,10 +27,12 @@ export function LibraryBoard({
   orgId,
   initial,
   initialHasMore,
+  initialNextOffset,
   canManage,
 }: {
   orgId: string
   initial: LibraryItem[]
+  initialNextOffset?: number
   initialHasMore: boolean
   canManage: boolean
 }) {
@@ -47,12 +49,12 @@ export function LibraryBoard({
   const confirm = useConfirm()
   const router = useRouter()
   const [pending, startTransition] = useTransition()
-  const kicked = useRef<Set<string>>(new Set())
-  const [renderErrors, setRenderErrors] = useState<Record<string, string>>({})
   const sentinelRef = useRef<HTMLDivElement>(null)
   const loadingMore = useRef(false)
   const requestId = useRef(0)
-  const skipFirstQuery = useRef(true)
+  const previousQuery = useRef({ query: '', sort: 'new' })
+  const nextOffset = useRef(initialNextOffset ?? initial.length)
+  const [pageCursor, setPageCursor] = useState(initialNextOffset ?? initial.length)
   const loadedCount = useRef(initial.length)
   loadedCount.current = items.length
 
@@ -83,20 +85,19 @@ export function LibraryBoard({
       })
       if (id !== requestId.current) return
       if (result.error) toast(result.error, 'danger')
+      nextOffset.current = result.nextOffset ?? offset + result.items.length
+      setPageCursor(nextOffset.current)
+      loadingMore.current = false
       setItems((current) => (replace ? result.items : [...current, ...result.items]))
       setHasMore(result.hasMore)
       setLoading(false)
-      loadingMore.current = false
     },
     [debouncedQuery, sort, toast],
   )
 
   useEffect(() => {
-    if (skipFirstQuery.current && !debouncedQuery && sort === 'new') {
-      skipFirstQuery.current = false
-      return
-    }
-    skipFirstQuery.current = false
+    if (previousQuery.current.query === debouncedQuery && previousQuery.current.sort === sort) return
+    previousQuery.current = { query: debouncedQuery, sort }
     loadedCount.current = LIBRARY_PAGE_SIZE
     void fetchPage(0, true)
   }, [debouncedQuery, sort, fetchPage])
@@ -119,71 +120,28 @@ export function LibraryBoard({
   }, [orgId, fetchPage])
 
   useEffect(() => {
-    if (!canManage) return
-    const waiting = items.filter(
-      (item) =>
-        item.source === 'ai' &&
-        (item.status === 'pending' || item.status === 'rendering') &&
-        !kicked.current.has(item.id),
-    )
-    for (const item of waiting.slice(0, 4)) {
-      kicked.current.add(item.id)
-      void fetch('/api/icerik/render', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ id: item.id }),
-        signal: AbortSignal.timeout(120_000),
-      })
-        .then(async (response) => {
-          const json = (await response.json().catch(() => null))
-          if (!response.ok) {
-            const message = json?.error ?? 'İçerik üretilemedi.'
-            setRenderErrors((prev) => ({ ...prev, [item.id]: message }))
-          }
-          if (response.status === 202) {
-            // Video veya görsel arka planda devam ediyor, 4 saniye sonra tekrar kontrol et
-            setTimeout(() => {
-              kicked.current.delete(item.id)
-            }, 4000)
-          }
-          void fetchPage(0, true)
-        })
-        .catch(() => {
-          setTimeout(() => {
-            kicked.current.delete(item.id)
-            void fetchPage(0, true)
-          }, 4000)
-        })
+    // An entirely filtered page has no cards to scroll through. Continue using
+    // the raw cursor instead of waiting for a viewport intersection.
+    if (items.length === 0 && hasMore && !loading && !loadingMore.current) {
+      void fetchPage(nextOffset.current, false)
     }
-  }, [canManage, items, fetchPage])
-
-  // Arka planda bekleyen veya çizilen işler varsa periyodik olarak listeyi tazele
-  useEffect(() => {
-    const hasActiveJobs = items.some(
-      (item) => item.source === 'ai' && (item.status === 'pending' || item.status === 'rendering')
-    )
-    if (!hasActiveJobs) return
-    const pollTimer = setInterval(() => {
-      void fetchPage(0, true)
-    }, 5000)
-    return () => clearInterval(pollTimer)
-  }, [items, fetchPage])
+  }, [fetchPage, hasMore, items.length, loading, pageCursor])
 
   useEffect(() => {
     const el = sentinelRef.current
-    if (!el || !hasMore) return
+    if (!el || !hasMore || loading) return
     const observer = new IntersectionObserver(
       (entries) => {
         if (!entries[0]?.isIntersecting || loadingMore.current) return
-        void fetchPage(items.length, false)
+        void fetchPage(nextOffset.current, false)
       },
       { rootMargin: '240px' },
     )
     observer.observe(el)
     return () => observer.disconnect()
-  }, [fetchPage, hasMore, items.length])
+  }, [fetchPage, hasMore, items.length, loading, pageCursor])
 
-  const emptyLibrary = items.length === 0 && !loading && !debouncedQuery
+  const emptyLibrary = items.length === 0 && !loading && !debouncedQuery && !hasMore
   const toolsOpen = filtersOpen || searchOpen
 
   return (
@@ -282,7 +240,7 @@ export function LibraryBoard({
         <div className="space-y-3 px-0">
           {items.length === 0 ? (
             <p className="rounded-md border border-hairline bg-surface px-4 py-8 text-center text-[13px] text-ink-muted">
-              Bu aramaya uyan görsel yok.
+              {loading || hasMore ? 'Hazır içerikler kontrol ediliyor…' : 'Bu aramaya uyan görsel yok.'}
             </p>
           ) : (
             <ul className="grid grid-cols-2 items-stretch gap-2 lg:grid-cols-3">
@@ -292,7 +250,6 @@ export function LibraryBoard({
                     item={item}
                     canManage={canManage}
                     pending={pending}
-                    renderError={renderErrors[item.id]}
                     onDelete={() => {
                       void (async () => {
                         const ok = await confirm({

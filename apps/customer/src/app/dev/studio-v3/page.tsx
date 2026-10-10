@@ -1,3 +1,6 @@
+import { ProductionStageAnimation } from '@/components/production-progress/production-stage-animation'
+import { ProductionProgress } from '@/components/production-progress/production-progress'
+import { mapEngineStateToStage } from '@/lib/creative/production-progress/stage-mapper'
 import { notFound } from 'next/navigation'
 import { CreativeStudioV2 } from '@/app/(panel)/icerik/creative-studio-v2'
 import { FeedbackProviders } from '@/components/feedback-providers'
@@ -8,6 +11,16 @@ export const dynamic = 'force-dynamic'
 export default async function StudioUiFixture({searchParams}:{searchParams:Promise<Record<string,string|undefined>>}) {
   if (process.env.NODE_ENV !== 'development' || process.env.STUDIO_V3_UI_FIXTURE !== '1') notFound()
   const params = await searchParams
+  if (params.view === 'animations') {
+    const assets = ['image/product-upload','image/image-scan','image/creative-design','image/image-render','image/image-success','video/storyboard','video/reference-attach','video/camera-motion','video/video-render','video/timeline-edit','video/video-success','shared/loading','shared/warning']
+    return <main className="p-4"><h1>YEREL ANİMASYON FIXTURE — gerçek üretim değildir</h1><div className="grid grid-cols-2 gap-4 sm:grid-cols-4">{assets.map(asset => <section key={asset}><h2>{asset}</h2><ProductionStageAnimation stageKey="GENERATING" stageIndex={4} lottieSrc={`/animations/${asset}.json`} /></section>)}</div></main>
+  }
+  if (params.view === 'progress') {
+    const rawState = params.state || 'VISUAL_QA_EVALUATING'
+    const stage = mapEngineStateToStage(rawState)
+    const state = stage.stage_key === 'READY' ? 'COMPLETED' : stage.stage_key === 'FAILED' ? 'FAILED' : stage.stage_key === 'NEEDS_REVIEW' ? 'NEEDS_REVIEW' : 'GENERATING'
+    return <main className="p-4"><h1>YEREL PROGRESS FIXTURE — gerçek üretim değildir</h1><ProductionProgress viewModel={{job_id:'fixture-job',org_id:'fixture-org',state,...stage,display_state:'KALITE_KONTROLU',can_cancel:false,can_leave_page:true}} /></main>
+  }
   const image = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="white"/><text x="30" y="100" fill="black">QA FIXTURE</text></svg>')
   const data: WizardBootstrap = {
     org:{id:'00000000-0000-4000-8000-000000000099',name:'Bağımsız Arayüz Test İşletmesi',address:null,about:null,websiteHint:null,

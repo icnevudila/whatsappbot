@@ -5,7 +5,7 @@ alter table public.organizations
 comment on column public.organizations.monthly_video_quota is
   'İşletmenin aylık üretebileceği yapay zeka video sayısı kotası. Admin panelinden yönetici tarafından belirlenir.';
 
-do \$\$
+do $$
 begin
   if not exists (
     select 1 from pg_constraint
@@ -16,4 +16,4 @@ begin
       add constraint organizations_monthly_video_quota_non_negative
       check (monthly_video_quota >= 0);
   end if;
-end \$\$;
+end $$;

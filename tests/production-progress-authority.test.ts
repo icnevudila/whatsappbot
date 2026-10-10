@@ -134,7 +134,9 @@ test('Production Progress Authority: Data-Driven ETA with Adequate History yield
   assert.equal(result.eta_confidence, 'MEDIUM')
   assert.ok(result.eta_min_seconds !== null && result.eta_min_seconds > 0)
   assert.ok(result.eta_max_seconds !== null && result.eta_max_seconds >= result.eta_min_seconds)
-  assert.ok(result.eta_display_text?.includes('dakika kaldı'))
+  assert.equal(result.eta_min_seconds, 75)
+  assert.equal(result.eta_max_seconds, 90)
+  assert.ok(result.eta_display_text?.includes('Geçmiş üretim sürelerine göre'))
 })
 
 test('Production Progress Authority: Completed state always yields 0 remaining ETA', () => {

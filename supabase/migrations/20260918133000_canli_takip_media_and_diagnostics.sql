@@ -14,7 +14,7 @@ CREATE OR REPLACE FUNCTION public.admin_send_message(
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'public'
-AS $
+AS $$
 DECLARE
   v_org_id uuid;
   v_created_by uuid;
@@ -89,7 +89,7 @@ BEGIN
     'message', 'Mesaj aninda gonderim kuyruguna alindi (Oncelik: 1)'
   );
 END;
-$;
+$$;
 
 -- 2. get_canli_takip_feed fonksiyonunu m.error ve gelistirilmis limitlerle guncelle
 CREATE OR REPLACE FUNCTION public.get_canli_takip_feed()
@@ -97,7 +97,7 @@ CREATE OR REPLACE FUNCTION public.get_canli_takip_feed()
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'public'
-AS $
+AS $$
 DECLARE
   v_today_iso timestamptz := date_trunc('day', now());
   v_accounts jsonb;
@@ -410,4 +410,4 @@ BEGIN
     'timestamp', now()
   );
 END;
-$;
+$$;

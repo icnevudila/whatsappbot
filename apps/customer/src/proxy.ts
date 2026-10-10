@@ -1,3 +1,4 @@
+import { isPublicAnimationPath } from '@/lib/public-animation-path'
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { getFastSessionClaims } from '@/lib/supabase/fast-jwt'
@@ -24,6 +25,7 @@ const PUBLIC_PATHS = new Set([
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })
   const path = request.nextUrl.pathname
+  if (isPublicAnimationPath(path)) return response
   // Contains explicit synthetic UI fixtures only, never tenant/auth data.
   if (process.env.NODE_ENV === 'development' && process.env.STUDIO_V3_UI_FIXTURE === '1' && path === '/dev/studio-v3')
     return response

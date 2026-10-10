@@ -1,0 +1,68 @@
+[
+  {
+    "label": "a",
+    "login": "PASS: actual local Supabase authentication",
+    "orgId": "1db7249d-f848-45ed-8dbb-00724018dfbb",
+    "steps": [
+      {
+        "route": "/ozet",
+        "url": "http://localhost:3019/ozet",
+        "text": "Ana sayfa\nKampanyalar\nMesajlar\nKişiler\nAyarlar\n\nQA Fixture A — not a customer\n\nMüşteri paneli\n\nQA Fixture A — not a customer\n\nGünün özeti\n\n+ Kampanya\n+ Görsel\n+ Kişi\n+ Grup\n\nBAŞLANGIÇ\n\n2 adımda gönderime hazır ol\n\n0/2 bitti · Sıradaki: WhatsApp hattını bağla\n\nTüm adımlar\n1\n\nWhatsApp hattını bağla\n\nTelefondaki WhatsApp → Bağlı cihazlar → QR veya kod ile bağla. Durum “Bağlı” olmalı.\n\nHatlar’a git →\n2\n\nKişi grubu ekle\n\nExcel yükle, yapıştır veya WhatsApp rehberinden çek. Kampanyada bu grubu seçeceksin.\n\nÖnce önceki adımı bitir\n\nHAT\n0\nQR ile bağla\nKİŞİLER\n0\n0 grup\nBUGÜN\n0\nGiden\n7 GÜN\n0\nGiden toplam\nGönderimler\nBugün\nDün\n7 gün\n\nToplam — giden\n\n4 Paz\n—\n5 Pzt\n—\n6 Sal\n—\n7 Çar\n—\n8 Per\n—\n9 Cum\n—\n10 Cmt\n—\n\nSon 7 günde giden mesaj yok.\n\nSon kampanyalar\n\nSon gönderimleri izleyin\n\nTümü\n\nHenüz kampanya yok\n\nÖnce bir hat bağlayın, sonra buradan gönderin.",
+        "overflow": false
+      },
+      {
+        "route": "/ayarlar",
+        "url": "http://localhost:3019/ayarlar",
+        "text": "Ana sayfa\nKampanyalar\nMesajlar\nKişiler\nAyarlar\n\nQA Fixture A — not a customer\n\nMüşteri paneli\n\nAyarlar\n\nBölüm seçin\n\nİşletme\n\nQF\nQA Fixture A — not a customer\nAktif işletme\n\nHesap\n\nİşletme\nPaket, işletmeler, ad ve ekip\n›\nProfil\nAd, firma ve oturum\n›\nHatlar\nWhatsApp hatlarını bağla ve yönet\n›\n\nGizlilik\n\nEngellenen numaralar\nKampanyaya gitmeyen numaralar\n›\n\nİş\n\nMarka kitleri\nListele, ekle, düzenle ve sil\n›\nSosyal medya\nHesap ekle, güncelle, sil\n›\nÜrünlerim\nKatalog, görseller ve kutu içeriği\n›\nSık sorulan sorular\nİşletme soru-cevapları (AI yanıt için)\n›\nOtomatik Yanıt\nÖnerilen cevaplar ve yapay zeka yanıtlama\n›\n\nOturum\n\nÇıkış\nmesajify-e2e-a@example.test · Hatların bağlı kalır, gönderimler durmaz.",
+        "overflow": false
+      },
+      {
+        "route": "/icerik",
+        "url": "http://localhost:3019/icerik",
+        "text": "Ana sayfa\nKampanyalar\nMesajlar\nKişiler\nAyarlar\n\nQA Fixture A — not a customer\n\nMüşteri paneli\n\nİçerik kütüphanesi\n+ Video\n+ Görsel\n\nQA A VERIFIED FIXTURE 25\n\n31 dk önce",
+        "overflow": false
+      },
+      {
+        "route": "/icerik/yeni",
+        "url": "http://localhost:3019/icerik/yeni",
+        "text": "Ana sayfa\nKampanyalar\nMesajlar\nKişiler\nAyarlar\n\nQA Fixture A — not a customer\n\nMüşteri paneli\n\nCreative Studio\n\nMarkanız ve ürünleriniz için tek tıkla profesyonel afiş, sosyal medya postu veya sinematik video üretin.\n\n1\n1. Ne Tanıtmak İstiyorsunuz?\n2\n2. Reklamınız Nasıl Görünsün?\n3\n3. Son Kontrol ve Üretim\n\nQA Fixture A — not a customer\n\nKurumsal logonuz ve marka kimliğiniz otomatik bağlanır\n\nSınırsız Görsel Üretimi\n1. Medya Türü\n\nÜretmek istediğiniz içerik biçimini seçin.\n\nKampanya Görseli\n\nAfiş, WhatsApp ve Instagram için yüksek kaliteli görsel.\n\nKampanya Videosu\n\n9:16 sinematik Reels/Durum reklam filmi (10 sn, Türkçe seslendirmeli ve markalı kapanış).\n\n2. Boyut / Format\nWhatsApp Kare Reklam\nKare 1:1 · WhatsApp ve Instagram kare gönderi\nInstagram Hikâyesi\nDikey 9:16 · WhatsApp Durum için de uygun\nInstagram Gönderisi\nDikey akış 4:5\n3. Tanıtılacak Ürün\n\nReklamda öne çıkarılacak ana ürünü seçin.\n\n+ Yeni Ürün Ekle\n\nQA Fixture A Product\n\n✓\n\nSynthetic local test material, not a customer product\n\n4. Kampanya Amacı\nÜrünü Tanıt\nÜrününüzün özelliklerini ve kalitesini doğrudan gösterin.\nSatış Yap\nÖzel fiyat ve teklifle müşteriyi hemen satın almaya yönlendirin.\nKampanya Duyur\nDönemsel indirim veya sınırlı süreli avantaj paylaşın.\nMarkanı Tanıt\nİşletmenizin kurumsal gücünü ve güvenilirliğini vurgulayın.\nYeni Ürün\nMenünüze veya vitrininize yeni eklenen ürünü tanıtın.\n5. Varsa Özel Kampanya Notu (İsteğe Bağlı)\nDevam Et (Görsel ve Reklam Metni) →",
+        "overflow": false
+      }
+    ],
+    "errors": [],
+    "failed": []
+  },
+  {
+    "label": "b",
+    "login": "PASS: actual local Supabase authentication",
+    "orgId": "d76aad2b-0323-4f0d-8779-8423fa1c160f",
+    "steps": [
+      {
+        "route": "/ozet",
+        "url": "http://localhost:3019/ozet",
+        "text": "Ana sayfa\nKampanyalar\nMesajlar\nKişiler\nAyarlar\n\nQA Fixture B — not a customer\n\nMüşteri paneli\n\nQA Fixture B — not a customer\n\nGünün özeti\n\n+ Kampanya\n+ Görsel\n+ Kişi\n+ Grup\n\nBAŞLANGIÇ\n\n2 adımda gönderime hazır ol\n\n0/2 bitti · Sıradaki: WhatsApp hattını bağla\n\nTüm adımlar\n1\n\nWhatsApp hattını bağla\n\nTelefondaki WhatsApp → Bağlı cihazlar → QR veya kod ile bağla. Durum “Bağlı” olmalı.\n\nHatlar’a git →\n2\n\nKişi grubu ekle\n\nExcel yükle, yapıştır veya WhatsApp rehberinden çek. Kampanyada bu grubu seçeceksin.\n\nÖnce önceki adımı bitir\n\nHAT\n0\nQR ile bağla\nKİŞİLER\n0\n0 grup\nBUGÜN\n0\nGiden\n7 GÜN\n0\nGiden toplam\nGönderimler\nBugün\nDün\n7 gün\n\nToplam — giden\n\n4 Paz\n—\n5 Pzt\n—\n6 Sal\n—\n7 Çar\n—\n8 Per\n—\n9 Cum\n—\n10 Cmt\n—\n\nSon 7 günde giden mesaj yok.\n\nSon kampanyalar\n\nSon gönderimleri izleyin\n\nTümü\n\nHenüz kampanya yok\n\nÖnce bir hat bağlayın, sonra buradan gönderin.",
+        "overflow": false
+      },
+      {
+        "route": "/ayarlar",
+        "url": "http://localhost:3019/ayarlar",
+        "text": "Ana sayfa\nKampanyalar\nMesajlar\nKişiler\nAyarlar\n\nQA Fixture B — not a customer\n\nMüşteri paneli\n\nAyarlar\n\nBölüm seçin\n\nİşletme\n\nQF\nQA Fixture B — not a customer\nAktif işletme\n\nHesap\n\nİşletme\nPaket, işletmeler, ad ve ekip\n›\nProfil\nAd, firma ve oturum\n›\nHatlar\nWhatsApp hatlarını bağla ve yönet\n›\n\nGizlilik\n\nEngellenen numaralar\nKampanyaya gitmeyen numaralar\n›\n\nİş\n\nMarka kitleri\nListele, ekle, düzenle ve sil\n›\nSosyal medya\nHesap ekle, güncelle, sil\n›\nÜrünlerim\nKatalog, görseller ve kutu içeriği\n›\nSık sorulan sorular\nİşletme soru-cevapları (AI yanıt için)\n›\nOtomatik Yanıt\nÖnerilen cevaplar ve yapay zeka yanıtlama\n›\n\nOturum\n\nÇıkış\nmesajify-e2e-b@example.test · Hatların bağlı kalır, gönderimler durmaz.",
+        "overflow": false
+      },
+      {
+        "route": "/icerik",
+        "url": "http://localhost:3019/icerik",
+        "text": "Ana sayfa\nKampanyalar\nMesajlar\nKişiler\nAyarlar\n\nQA Fixture B — not a customer\n\nMüşteri paneli\n\nİçerik kütüphanesi\n+ Video\n+ Görsel\n\nQA B VERIFIED FIXTURE 25\n\n31 dk önce",
+        "overflow": false
+      },
+      {
+        "route": "/icerik/yeni",
+        "url": "http://localhost:3019/icerik/yeni",
+        "text": "Ana sayfa\nKampanyalar\nMesajlar\nKişiler\nAyarlar\n\nQA Fixture B — not a customer\n\nMüşteri paneli\n\nCreative Studio\n\nMarkanız ve ürünleriniz için tek tıkla profesyonel afiş, sosyal medya postu veya sinematik video üretin.\n\n1\n1. Ne Tanıtmak İstiyorsunuz?\n2\n2. Reklamınız Nasıl Görünsün?\n3\n3. Son Kontrol ve Üretim\n\nQA Fixture B — not a customer\n\nKurumsal logonuz ve marka kimliğiniz otomatik bağlanır\n\nSınırsız Görsel Üretimi\n1. Medya Türü\n\nÜretmek istediğiniz içerik biçimini seçin.\n\nKampanya Görseli\n\nAfiş, WhatsApp ve Instagram için yüksek kaliteli görsel.\n\nKampanya Videosu\n\n9:16 sinematik Reels/Durum reklam filmi (10 sn, Türkçe seslendirmeli ve markalı kapanış).\n\n2. Boyut / Format\nWhatsApp Kare Reklam\nKare 1:1 · WhatsApp ve Instagram kare gönderi\nInstagram Hikâyesi\nDikey 9:16 · WhatsApp Durum için de uygun\nInstagram Gönderisi\nDikey akış 4:5\n3. Tanıtılacak Ürün\n\nReklamda öne çıkarılacak ana ürünü seçin.\n\n+ Yeni Ürün Ekle\n\nQA Fixture B Product\n\n✓\n\nSynthetic local test material, not a customer product\n\n4. Kampanya Amacı\nÜrünü Tanıt\nÜrününüzün özelliklerini ve kalitesini doğrudan gösterin.\nSatış Yap\nÖzel fiyat ve teklifle müşteriyi hemen satın almaya yönlendirin.\nKampanya Duyur\nDönemsel indirim veya sınırlı süreli avantaj paylaşın.\nMarkanı Tanıt\nİşletmenizin kurumsal gücünü ve güvenilirliğini vurgulayın.\nYeni Ürün\nMenünüze veya vitrininize yeni eklenen ürünü tanıtın.\n5. Varsa Özel Kampanya Notu (İsteğe Bağlı)\nDevam Et (Görsel ve Reklam Metni) →",
+        "overflow": false
+      }
+    ],
+    "errors": [],
+    "failed": []
+  }
+]

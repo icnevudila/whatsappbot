@@ -1,0 +1,623 @@
+[
+  {
+    "path": "apps\\landing\\public\\landing\\infographics\\01-ana-urun-veo-i2v.mp4",
+    "bytes": 2042423,
+    "sha256": "4c783760d5bbf314bc9d66e19aa76ef558e67e63d78d3d672d45d92c4e9a2377",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 1280,
+          "height": 720,
+          "pix_fmt": "yuv420p"
+        }
+      ],
+      "format": {
+        "duration": "8.000000"
+      }
+    }
+  },
+  {
+    "path": "apps\\landing\\public\\landing\\infographics\\03-coklu-hat-veo-i2v.mp4",
+    "bytes": 1442928,
+    "sha256": "054e4f8ee1596f8200ec443d79d6a254721fe54d30a89e0e9f17fc3cd637a1a9",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 1280,
+          "height": 720,
+          "pix_fmt": "yuv420p"
+        }
+      ],
+      "format": {
+        "duration": "8.000000"
+      }
+    }
+  },
+  {
+    "path": "apps\\landing\\public\\landing\\infographics\\04-ortak-inbox-veo-i2v.mp4",
+    "bytes": 1667050,
+    "sha256": "7310349a468f0888ddd9925caac49facdfbf302ecc7f06a0d83d68560aa58669",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 1280,
+          "height": 720,
+          "pix_fmt": "yuv420p"
+        }
+      ],
+      "format": {
+        "duration": "8.000000"
+      }
+    }
+  },
+  {
+    "path": "apps\\landing\\public\\landing\\infographics\\05-kreatif-studyosu-veo-i2v.mp4",
+    "bytes": 2079796,
+    "sha256": "e153015ad630757d9f027d3861ec253aeed3a8e88fbbe2198a03dd6b89c9cf84",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 1280,
+          "height": 720,
+          "pix_fmt": "yuv420p"
+        }
+      ],
+      "format": {
+        "duration": "8.000000"
+      }
+    }
+  },
+  {
+    "path": "apps\\landing\\public\\landing\\infographics\\06-isletme-bulucu-veo-i2v.mp4",
+    "bytes": 1261333,
+    "sha256": "47c9a990bda8af3f8e9e17df67d80bac70204a25e93f527ea853c5f4d87694f4",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 1280,
+          "height": 720,
+          "pix_fmt": "yuv420p"
+        }
+      ],
+      "format": {
+        "duration": "8.000000"
+      }
+    }
+  },
+  {
+    "path": "apps\\landing\\public\\landing\\studio\\automotive-flow-veo.mp4",
+    "bytes": 1357505,
+    "sha256": "a8934f3f0fad96319b221029dea16eeaf859da3489d84ada8f777dd815759198",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 720,
+          "height": 1280,
+          "pix_fmt": "yuv420p"
+        }
+      ],
+      "format": {
+        "duration": "8.000000"
+      }
+    }
+  },
+  {
+    "path": "apps\\landing\\public\\landing\\studio\\clinic-flow-veo.mp4",
+    "bytes": 620233,
+    "sha256": "4694a5e46fd837b89ad2060db7084223e0deb0346ec3c3d51ee7bc5475dc8412",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 720,
+          "height": 1280,
+          "pix_fmt": "yuv420p"
+        }
+      ],
+      "format": {
+        "duration": "8.000000"
+      }
+    }
+  },
+  {
+    "path": "apps\\landing\\public\\landing\\studio\\ecommerce-flow-veo.mp4",
+    "bytes": 1646061,
+    "sha256": "7f9093d5199dee51bf77bd976e78e8fb71311fbcb85770155fe84a0c69c39097",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 720,
+          "height": 1280,
+          "pix_fmt": "yuv420p"
+        }
+      ],
+      "format": {
+        "duration": "8.000000"
+      }
+    }
+  },
+  {
+    "path": "apps\\landing\\public\\landing\\studio\\hero-flow-veo.mp4",
+    "bytes": 1733353,
+    "sha256": "9ef0eb5a349f3cff9ea9958f653ec34f79ca3a64d0907fc3dfc9a10e2aafc918",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 720,
+          "height": 1280,
+          "pix_fmt": "yuv420p"
+        }
+      ],
+      "format": {
+        "duration": "8.000000"
+      }
+    }
+  },
+  {
+    "path": "apps\\landing\\public\\landing\\studio\\hero-gen-dashboard.mp4",
+    "bytes": 665297,
+    "sha256": "7eb86d448792d0df486836c657dd44a536e1d7e2f2174a7a63b20ffc4bd758ce",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 1280,
+          "height": 720,
+          "pix_fmt": "yuv420p"
+        }
+      ],
+      "format": {
+        "duration": "8.000000"
+      }
+    }
+  },
+  {
+    "path": "apps\\landing\\public\\landing\\studio\\hero-gen-discovery.mp4",
+    "bytes": 914329,
+    "sha256": "2748e9bb89b54a5bf706974bd251c6604a40c8db0d327f4a8847f033ecfda02a",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 1280,
+          "height": 720,
+          "pix_fmt": "yuv420p"
+        }
+      ],
+      "format": {
+        "duration": "8.000000"
+      }
+    }
+  },
+  {
+    "path": "apps\\landing\\public\\landing\\studio\\hero-gen-inbox.mp4",
+    "bytes": 710283,
+    "sha256": "a4dfc3efc14a9c1a71e48ecce5651b1809619c228e78cafda81ba90e126aa636",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 1280,
+          "height": 720,
+          "pix_fmt": "yuv420p"
+        }
+      ],
+      "format": {
+        "duration": "8.000000"
+      }
+    }
+  },
+  {
+    "path": "apps\\landing\\public\\landing\\studio\\hero-gen-studio.mp4",
+    "bytes": 806854,
+    "sha256": "bd1677aa8a9ad8c9b09316fb3972a0c525314ac4b33c707a1dd590255d779d23",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 1280,
+          "height": 720,
+          "pix_fmt": "yuv420p"
+        }
+      ],
+      "format": {
+        "duration": "8.000000"
+      }
+    }
+  },
+  {
+    "path": "apps\\landing\\public\\landing\\studio\\hero-isletme-bulucu-flow.mp4",
+    "bytes": 827956,
+    "sha256": "2919fb31a0786e98d5376797d445f897d9d78eb8df9275290f33034fde0f690d",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 720,
+          "height": 1280,
+          "pix_fmt": "yuv420p"
+        }
+      ],
+      "format": {
+        "duration": "8.000000"
+      }
+    }
+  },
+  {
+    "path": "apps\\landing\\public\\landing\\studio\\hero-kampanya-hazirlik-16-9.mp4",
+    "bytes": 788402,
+    "sha256": "057f5a0b8c586ac1166398e3ec9bd24a7eede9cbd2351c09a3b807f8eb628de5",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 1280,
+          "height": 720,
+          "pix_fmt": "yuv420p"
+        }
+      ],
+      "format": {
+        "duration": "8.000000"
+      }
+    }
+  },
+  {
+    "path": "apps\\landing\\public\\landing\\studio\\hero-lifestyle-business.mp4",
+    "bytes": 2195449,
+    "sha256": "e8d927a77e09e249700668c9a97bd23a98c3c06735868f761c5e140510c97bf7",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 1920,
+          "height": 1080,
+          "pix_fmt": "yuvj420p"
+        }
+      ],
+      "format": {
+        "duration": "7.000000"
+      }
+    }
+  },
+  {
+    "path": "apps\\landing\\public\\landing\\studio\\hero-lifestyle-customer.mp4",
+    "bytes": 1946755,
+    "sha256": "9c4383b1032c7757b71f20c7730c5097e47e0946f9f3f6cb54e7710100a4e701",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 1920,
+          "height": 1080,
+          "pix_fmt": "yuvj420p"
+        }
+      ],
+      "format": {
+        "duration": "7.000000"
+      }
+    }
+  },
+  {
+    "path": "apps\\landing\\public\\landing\\studio\\hero-lifestyle-discovery.mp4",
+    "bytes": 2307237,
+    "sha256": "96e27bf8183189324738648b699ead04d1cead6a0e289434942e8ff8062a571c",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 1920,
+          "height": 1080,
+          "pix_fmt": "yuvj420p"
+        }
+      ],
+      "format": {
+        "duration": "7.000000"
+      }
+    }
+  },
+  {
+    "path": "apps\\landing\\public\\landing\\studio\\hero-lifestyle-studio.mp4",
+    "bytes": 2042319,
+    "sha256": "727ca89248292bc3c4622e507eb0be4d6fb22e949689d2f8d8d69a4419a74e9e",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 1920,
+          "height": 1080,
+          "pix_fmt": "yuvj420p"
+        }
+      ],
+      "format": {
+        "duration": "7.000000"
+      }
+    }
+  },
+  {
+    "path": "apps\\landing\\public\\landing\\studio\\hero-loop-master.mp4",
+    "bytes": 17209050,
+    "sha256": "8d23feb00e0dc2c746ac584ceb79a9e20cdf21a44b766d9a815f1b82e599db8b",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 720,
+          "height": 1280,
+          "pix_fmt": "yuv420p"
+        },
+        {
+          "codec_name": "aac",
+          "codec_type": "audio"
+        }
+      ],
+      "format": {
+        "duration": "40.213000"
+      }
+    }
+  },
+  {
+    "path": "apps\\landing\\public\\landing\\studio\\mesajify-campaign-hologram.mp4",
+    "bytes": 3118406,
+    "sha256": "f8a57aabde09c41aa57e8e64535b0966aaf6e742861a8e6ae331c8f0ee3efec0",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 720,
+          "height": 1280,
+          "pix_fmt": "yuv420p"
+        },
+        {
+          "codec_name": "aac",
+          "codec_type": "audio"
+        }
+      ],
+      "format": {
+        "duration": "8.125000"
+      }
+    }
+  },
+  {
+    "path": "apps\\landing\\public\\landing\\studio\\mesajify-hero-loop-seamless.mp4",
+    "bytes": 4721839,
+    "sha256": "73215f58a8c448e276cb0a5da966894a2b7b7db8d7be145b2db8e0ef200de5a3",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 1280,
+          "height": 720,
+          "pix_fmt": "yuv420p"
+        }
+      ],
+      "format": {
+        "duration": "16.000000"
+      }
+    }
+  },
+  {
+    "path": "apps\\landing\\public\\landing\\studio\\mesajify-hero-loop-veo.mp4",
+    "bytes": 1762205,
+    "sha256": "a4294990ac8a803571ae4904c6d82fa4231aa8d8c32116b83dd7503bd1527c55",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 1280,
+          "height": 720,
+          "pix_fmt": "yuv420p"
+        },
+        {
+          "codec_name": "aac",
+          "codec_type": "audio"
+        }
+      ],
+      "format": {
+        "duration": "8.000000"
+      }
+    }
+  },
+  {
+    "path": "apps\\landing\\public\\landing\\studio\\pipeline-flow-veo.mp4",
+    "bytes": 3299262,
+    "sha256": "7be8c81f67a4e2b0058a9a20e15a00d75ce4584285cd36806c05ed022a59b295",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 720,
+          "height": 1280,
+          "pix_fmt": "yuv420p"
+        }
+      ],
+      "format": {
+        "duration": "8.000000"
+      }
+    }
+  },
+  {
+    "path": "apps\\landing\\public\\landing\\studio\\product.mp4",
+    "bytes": 1801471,
+    "sha256": "05d308bee7dad43b5e65001851ef0a0619d3e2d9db9ff1f8950f40bc37cb938d",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 540,
+          "height": 960,
+          "pix_fmt": "yuv420p"
+        }
+      ],
+      "format": {
+        "duration": "8.000000"
+      }
+    }
+  },
+  {
+    "path": "apps\\landing\\public\\landing\\studio\\realestate-flow-veo.mp4",
+    "bytes": 1251298,
+    "sha256": "eee3d3d20f952cf51bb19092d209a52334dfbbb9225795ba69ba7707564b091e",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 720,
+          "height": 1280,
+          "pix_fmt": "yuv420p"
+        }
+      ],
+      "format": {
+        "duration": "8.000000"
+      }
+    }
+  },
+  {
+    "path": "apps\\landing\\public\\landing\\studio\\restaurant-flow-veo.mp4",
+    "bytes": 946586,
+    "sha256": "521232d008d4a7a7fbe4c8d709c1bd82102a6bd5ebb34f645d2c54cd9c82b414",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 720,
+          "height": 1280,
+          "pix_fmt": "yuv420p"
+        }
+      ],
+      "format": {
+        "duration": "8.000000"
+      }
+    }
+  },
+  {
+    "path": "apps\\landing\\public\\landing\\studio\\restaurant.mp4",
+    "bytes": 749062,
+    "sha256": "97e2176c977cc8f8dc3f2363a06d13d31655032e8e5b76ff4242685161a8442c",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 540,
+          "height": 960,
+          "pix_fmt": "yuv420p"
+        }
+      ],
+      "format": {
+        "duration": "8.000000"
+      }
+    }
+  },
+  {
+    "path": "apps\\landing\\public\\landing\\studio\\service-flow-veo.mp4",
+    "bytes": 721735,
+    "sha256": "8fca4eba7db0ca89c4f26771cf565c24f1eece79186eada9f60404843d577f36",
+    "probe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 720,
+          "height": 1280,
+          "pix_fmt": "yuv420p"
+        }
+      ],
+      "format": {
+        "duration": "8.000000"
+      }
+    }
+  }
+]

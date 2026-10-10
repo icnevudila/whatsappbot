@@ -24,7 +24,7 @@ export function ProductionProgress({
 }: ProductionProgressProps) {
   const queueAhead = viewModel.queue_ahead_count ?? 0
   const isQueued = queueAhead > 0 || viewModel.state === 'QUEUED'
-  const isCompleted = viewModel.state === 'COMPLETED' || viewModel.stage_index === 7
+  const isCompleted = viewModel.state === 'COMPLETED' && viewModel.stage_key === 'READY'
   const isFailed = viewModel.state === 'FAILED'
   const isNeedsReview = viewModel.state === 'NEEDS_REVIEW'
 

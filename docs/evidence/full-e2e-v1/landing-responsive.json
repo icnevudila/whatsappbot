@@ -1,0 +1,37 @@
+[
+  {
+    "brokenImages": 0,
+    "height": 900,
+    "heroVideos": 2,
+    "scrollWidth": 1425,
+    "width": 1440
+  },
+  {
+    "brokenImages": 0,
+    "height": 768,
+    "heroVideos": 2,
+    "scrollWidth": 1351,
+    "width": 1366
+  },
+  {
+    "brokenImages": 0,
+    "height": 844,
+    "heroVideos": 2,
+    "scrollWidth": 375,
+    "width": 390
+  },
+  {
+    "brokenImages": 0,
+    "height": 915,
+    "heroVideos": 2,
+    "scrollWidth": 397,
+    "width": 412
+  },
+  {
+    "brokenImages": 0,
+    "height": 800,
+    "heroVideos": 2,
+    "scrollWidth": 345,
+    "width": 360
+  }
+]

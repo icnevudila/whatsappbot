@@ -83,14 +83,37 @@ export function Scene01Hero() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [prevIndex, setPrevIndex] = useState<number | null>(null)
   const [preloadNext, setPreloadNext] = useState(false)
+  const [allowMotion, setAllowMotion] = useState(false)
+  const [pageVisible, setPageVisible] = useState(true)
+  const [inView, setInView] = useState(true)
+  const heroRef = useRef<HTMLElement | null>(null)
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([])
 
   const current = HERO_SHOWCASES[currentIndex]
 
   const handleVideoEnded = () => {
+    setPreloadNext(false)
     setPrevIndex(currentIndex)
     setCurrentIndex((prev) => (prev + 1) % HERO_SHOWCASES.length)
   }
+
+  useEffect(() => {
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const update = () => setAllowMotion(!query.matches && !(navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData)
+    const visibility = () => setPageVisible(document.visibilityState === 'visible')
+    update(); visibility()
+    query.addEventListener('change', update)
+    document.addEventListener('visibilitychange', visibility)
+    return () => { query.removeEventListener('change', update); document.removeEventListener('visibilitychange', visibility) }
+  }, [])
+
+  useEffect(() => {
+    const element = heroRef.current
+    if (!element) return
+    const observer = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting))
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
 
   // Clear previous video after 1000ms crossfade
   useEffect(() => {
@@ -105,10 +128,14 @@ export function Scene01Hero() {
   // Video değiştiğinde sıradaki videoyu başlat
   useEffect(() => {
     const activeVideo = videoRefs.current[currentIndex]
+    videoRefs.current.forEach((video, index) => {
+      if (video && (index !== currentIndex || !allowMotion || !pageVisible || !inView)) video.pause()
+    })
+    if (!allowMotion || !pageVisible || !inView) return
     if (activeVideo) {
       activeVideo.defaultMuted = true
       activeVideo.muted = true
-      activeVideo.currentTime = 0
+      // Resume the current clip when returning to the visible page.
       const playPromise = activeVideo.play()
       if (playPromise !== undefined) {
         playPromise.catch(() => {})
@@ -120,10 +147,10 @@ export function Scene01Hero() {
       setPreloadNext(true)
     }, 1500)
     return () => clearTimeout(preloadTimer)
-  }, [currentIndex])
+  }, [currentIndex, allowMotion, pageVisible, inView])
 
   return (
-    <section className="relative w-full bg-white pt-36 sm:pt-40 lg:pt-44 pb-16 lg:pb-24 overflow-hidden border-b border-slate-100">
+    <section ref={heroRef} className="relative w-full bg-white pt-36 sm:pt-40 lg:pt-44 pb-16 lg:pb-24 overflow-hidden border-b border-slate-100">
       <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col lg:grid lg:grid-cols-12 gap-8 lg:gap-12 items-center">
           
@@ -181,7 +208,7 @@ export function Scene01Hero() {
                   const isActive = idx === currentIndex
                   const isPrev = idx === prevIndex
                   const isNext = idx === (currentIndex + 1) % HERO_SHOWCASES.length
-                  const shouldRenderVideo = isActive || isPrev || (isNext && preloadNext)
+                  const shouldRenderVideo = allowMotion && (isActive || isPrev || (isNext && preloadNext && prevIndex === null))
 
                   return (
                     <div
@@ -209,11 +236,12 @@ export function Scene01Hero() {
                             if (el) {
                               el.muted = true
                               el.defaultMuted = true
-                              videoRefs.current[idx] = el
                             }
+                            videoRefs.current[idx] = el
                           }}
                           src={item.video}
-                          autoPlay={isActive}
+                          poster={item.poster}
+                          autoPlay={isActive && pageVisible && inView}
                           muted
                           playsInline
                           preload={isActive ? 'auto' : 'metadata'}
