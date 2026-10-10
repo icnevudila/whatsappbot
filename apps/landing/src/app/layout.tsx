@@ -69,6 +69,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="tr">
+      <head>
+        <link
+          rel="preload"
+          as="image"
+          href="/landing/infographics/01-ana-urun-veo-i2v-poster.webp"
+          type="image/webp"
+          fetchPriority="high"
+        />
+      </head>
       <body
         className={`${outfit.variable} ${jetbrainsMono.variable} bg-canvas text-ink antialiased selection:bg-brand-soft selection:text-brand`}
       >

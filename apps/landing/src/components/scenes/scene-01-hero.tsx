@@ -6,6 +6,7 @@ import { ArrowRight, Monitor } from 'lucide-react'
 interface HeroShowcase {
   id: string
   video: string
+  poster: string
   categoryBadge: string
   headlineLead: string
   headlineDynamic: string
@@ -19,6 +20,7 @@ const HERO_SHOWCASES: HeroShowcase[] = [
   {
     id: 'ecosystem',
     video: '/landing/infographics/01-ana-urun-veo-i2v.mp4',
+    poster: '/landing/infographics/01-ana-urun-veo-i2v-poster.webp',
     categoryBadge: 'KONTROL PANELİ',
     headlineLead: 'Tek merkezden',
     headlineDynamic: 'tüm WhatsApp ekosisteminizi canlı yönetin',
@@ -30,6 +32,7 @@ const HERO_SHOWCASES: HeroShowcase[] = [
   {
     id: 'inbox',
     video: '/landing/infographics/04-ortak-inbox-veo-i2v.mp4',
+    poster: '/landing/infographics/04-ortak-inbox-veo-i2v-poster.webp',
     categoryBadge: 'ORTAK GELEN KUTUSU',
     headlineLead: 'WhatsApp üzerinden',
     headlineDynamic: 'gelen müşteri ve sipariş taleplerini anında yanıtlayın',
@@ -41,6 +44,7 @@ const HERO_SHOWCASES: HeroShowcase[] = [
   {
     id: 'discovery',
     video: '/landing/infographics/06-isletme-bulucu-veo-i2v.mp4',
+    poster: '/landing/infographics/06-isletme-bulucu-veo-i2v-poster.webp',
     categoryBadge: 'İŞLETME BULUCU',
     headlineLead: 'Hedef pazarınızda',
     headlineDynamic: 'bölgenizdeki işletmeleri haritadan keşfedin',
@@ -52,6 +56,7 @@ const HERO_SHOWCASES: HeroShowcase[] = [
   {
     id: 'studio',
     video: '/landing/infographics/05-kreatif-studyosu-veo-i2v.mp4',
+    poster: '/landing/infographics/05-kreatif-studyosu-veo-i2v-poster.webp',
     categoryBadge: 'KREATİF STÜDYOSU',
     headlineLead: 'Ürün fotoğrafınızdan',
     headlineDynamic: 'saniyeler içinde hazır dikey reklam üretin',
@@ -63,6 +68,7 @@ const HERO_SHOWCASES: HeroShowcase[] = [
   {
     id: 'multiline',
     video: '/landing/infographics/03-coklu-hat-veo-i2v.mp4',
+    poster: '/landing/infographics/03-coklu-hat-veo-i2v-poster.webp',
     categoryBadge: 'ÇOKLU HAT DAĞITICI',
     headlineLead: 'Yükü paylaştırın',
     headlineDynamic: 'bağlı hatlarınızla güvenli ve dengeli iletin',
@@ -75,13 +81,26 @@ const HERO_SHOWCASES: HeroShowcase[] = [
 
 export function Scene01Hero() {
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [prevIndex, setPrevIndex] = useState<number | null>(null)
+  const [preloadNext, setPreloadNext] = useState(false)
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([])
 
   const current = HERO_SHOWCASES[currentIndex]
 
   const handleVideoEnded = () => {
+    setPrevIndex(currentIndex)
     setCurrentIndex((prev) => (prev + 1) % HERO_SHOWCASES.length)
   }
+
+  // Clear previous video after 1000ms crossfade
+  useEffect(() => {
+    if (prevIndex !== null) {
+      const timer = setTimeout(() => {
+        setPrevIndex(null)
+      }, 1050)
+      return () => clearTimeout(timer)
+    }
+  }, [prevIndex])
 
   // Video değiştiğinde sıradaki videoyu başlat
   useEffect(() => {
@@ -95,6 +114,12 @@ export function Scene01Hero() {
         playPromise.catch(() => {})
       }
     }
+
+    // Delay preloading the next video slightly to give the active video priority
+    const preloadTimer = setTimeout(() => {
+      setPreloadNext(true)
+    }, 1500)
+    return () => clearTimeout(preloadTimer)
   }, [currentIndex])
 
   return (
@@ -123,20 +148,11 @@ export function Scene01Hero() {
             {/* Ambient Blurred Video Background Glow Layer (Smooth Dissolve) */}
             <div className="absolute -inset-4 sm:-inset-8 -z-10 rounded-[40px] overflow-hidden filter blur-3xl opacity-30 scale-105 pointer-events-none transition-all duration-1000">
               {HERO_SHOWCASES.map((item, idx) => (
-                <video
+                <img
                   key={`ambient-${item.id}`}
-                  ref={(el) => {
-                    if (el) {
-                      el.muted = true
-                      el.defaultMuted = true
-                    }
-                  }}
-                  src={item.video}
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  preload="auto"
+                  src={item.poster}
+                  alt=""
+                  aria-hidden="true"
                   className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${
                     idx === currentIndex ? 'opacity-100' : 'opacity-0'
                   }`}
@@ -163,26 +179,49 @@ export function Scene01Hero() {
               <div className="relative aspect-[16/9] w-full bg-[#050B08] overflow-hidden">
                 {HERO_SHOWCASES.map((item, idx) => {
                   const isActive = idx === currentIndex
+                  const isPrev = idx === prevIndex
+                  const isNext = idx === (currentIndex + 1) % HERO_SHOWCASES.length
+                  const shouldRenderVideo = isActive || isPrev || (isNext && preloadNext)
+
                   return (
-                    <video
+                    <div
                       key={item.id}
-                      ref={(el) => {
-                        if (el) {
-                          el.muted = true
-                          el.defaultMuted = true
-                          videoRefs.current[idx] = el
-                        }
-                      }}
-                      src={item.video}
-                      autoPlay
-                      muted
-                      playsInline
-                      preload="auto"
-                      onEnded={isActive ? handleVideoEnded : undefined}
-                      className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-1000 ease-in-out ${
-                        isActive ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
+                      className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out ${
+                        isActive
+                          ? 'opacity-100 z-10'
+                          : isPrev
+                            ? 'opacity-0 z-0 pointer-events-none'
+                            : 'opacity-0 z-0 pointer-events-none'
                       }`}
-                    />
+                    >
+                      {/* High-fidelity poster placeholder */}
+                      <img
+                        src={item.poster}
+                        alt=""
+                        aria-hidden="true"
+                        className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+                        loading={idx === 0 ? 'eager' : 'lazy'}
+                        fetchPriority={idx === 0 ? 'high' : 'auto'}
+                      />
+                      {shouldRenderVideo && (
+                        <video
+                          ref={(el) => {
+                            if (el) {
+                              el.muted = true
+                              el.defaultMuted = true
+                              videoRefs.current[idx] = el
+                            }
+                          }}
+                          src={item.video}
+                          autoPlay={isActive}
+                          muted
+                          playsInline
+                          preload={isActive ? 'auto' : 'metadata'}
+                          onEnded={isActive ? handleVideoEnded : undefined}
+                          className="absolute inset-0 w-full h-full object-contain"
+                        />
+                      )}
+                    </div>
                   )
                 })}
 

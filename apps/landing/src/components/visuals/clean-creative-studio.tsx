@@ -103,38 +103,75 @@ const ROTATION_INTERVAL_MS = 4500
 
 export function CleanCreativeStudio() {
   const [activeIndex, setActiveIndex] = useState(0)
+  const [prevIndex, setPrevIndex] = useState<number | null>(null)
+  const [isInView, setIsInView] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const [progressKey, setProgressKey] = useState(0)
+  const containerRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
 
   const current = CREATIVE_ITEMS[activeIndex]
 
-  // Otomatik sektör rotasyonu
+  // Viewport intersection detection
   useEffect(() => {
-    if (isPaused) return
+    const target = containerRef.current
+    if (!target) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsInView(entry.isIntersecting)
+        if (!entry.isIntersecting && videoRef.current && !videoRef.current.paused) {
+          videoRef.current.pause()
+        }
+      },
+      { rootMargin: '250px', threshold: 0.05 }
+    )
+
+    observer.observe(target)
+    return () => observer.disconnect()
+  }, [])
+
+  // Otomatik sektör rotasyonu (yalnızca görünürken ve duraklatılmamışken)
+  useEffect(() => {
+    if (isPaused || !isInView) return
 
     const timer = setInterval(() => {
+      setPrevIndex(activeIndex)
       setActiveIndex((prev) => (prev + 1) % CREATIVE_ITEMS.length)
       setProgressKey((k) => k + 1)
     }, ROTATION_INTERVAL_MS)
 
     return () => clearInterval(timer)
-  }, [isPaused, activeIndex])
+  }, [isPaused, isInView, activeIndex])
 
-  // Video değişiminde oynatmayı garantile
+  // Clear previous video after 350ms transition
   useEffect(() => {
-    if (videoRef.current) {
+    if (prevIndex !== null) {
+      const timer = setTimeout(() => {
+        setPrevIndex(null)
+      }, 350)
+      return () => clearTimeout(timer)
+    }
+  }, [prevIndex])
+
+  // Video değişiminde ve görünür olduğunda oynatmayı garantile
+  useEffect(() => {
+    if (isInView && videoRef.current) {
       videoRef.current.play().catch(() => {})
     }
-  }, [activeIndex])
+  }, [activeIndex, isInView])
 
   const handleSelect = (idx: number) => {
-    setActiveIndex(idx)
-    setProgressKey((k) => k + 1)
+    if (idx !== activeIndex) {
+      setPrevIndex(activeIndex)
+      setActiveIndex(idx)
+      setProgressKey((k) => k + 1)
+    }
   }
 
   return (
     <div
+      ref={containerRef}
       className="w-full max-w-[1240px] mx-auto space-y-8"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
@@ -241,24 +278,40 @@ export function CleanCreativeStudio() {
             <div className="relative aspect-[9/16] w-full max-w-[340px] mx-auto rounded-2xl overflow-hidden border border-slate-900 bg-black shadow-2xl">
               {CREATIVE_ITEMS.map((item, idx) => {
                 const isActive = idx === activeIndex
+                const isPrev = idx === prevIndex
+                const shouldMount = isInView && (isActive || isPrev)
+
                 return (
-                  <video
+                  <div
                     key={item.id}
-                    ref={(el) => {
-                      if (isActive && el) {
-                        videoRef.current = el
-                      }
-                    }}
-                    src={item.video}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    preload="auto"
-                    className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ease-in-out ${
+                    className={`absolute inset-0 w-full h-full transition-opacity duration-300 ease-in-out ${
                       isActive ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
                     }`}
-                  />
+                  >
+                    {/* High-fidelity poster placeholder */}
+                    <img
+                      src={item.poster}
+                      alt={item.title}
+                      aria-hidden="true"
+                      className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                    />
+                    {shouldMount && (
+                      <video
+                        ref={(el) => {
+                          if (isActive && el) {
+                            videoRef.current = el
+                          }
+                        }}
+                        src={item.video}
+                        autoPlay={isActive}
+                        loop
+                        muted
+                        playsInline
+                        preload={isActive ? 'auto' : 'none'}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                    )}
+                  </div>
                 )
               })}
 

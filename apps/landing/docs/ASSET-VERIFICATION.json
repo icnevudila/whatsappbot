@@ -1,7 +1,6 @@
 {
-  "date": "2026-10-01T08:24:43.704Z",
+  "date": "2026-10-10T08:00:00.467Z",
   "pending": [
-    "creative-bofe-master",
     "sector-ecommerce",
     "sector-restaurant",
     "sector-automotive",
@@ -26,14 +25,14 @@
       "sha256": "e77bbbb4faf90aec5cb048419b7118ec5d395047f62d8d07b13cb2dbf271afe5"
     },
     {
-      "file": "/landing/current/campaign.png",
-      "bytes": 37596,
-      "sha256": "02236323571298474f4dbb137c432de8d225acd1c6e416f6cc95a8194af753cf"
+      "file": "/landing/current/campaign-mobile.png",
+      "bytes": 19911,
+      "sha256": "8570031cf5f54feaf97d37782f8801467dfc466f2c657ae3bb7f4339b89712a9"
     },
     {
-      "file": "/landing/current/creative-start.png",
-      "bytes": 47506,
-      "sha256": "9ef2362b673b79438aae80c83a1c99ff8117d79e072c88aea364b3acbc9dccb2"
+      "file": "/landing/current/creative-mobile.png",
+      "bytes": 11088,
+      "sha256": "1e3d9be80d9ee2ed44e0c27d67930a6c7736a9ff91529160512b8e6dfeb080f9"
     },
     {
       "file": "/landing/kisiler.png",
@@ -61,36 +60,17 @@
       "sha256": "9f8f6da91d9b7fef111e084a11771164f3174a900dea9db1d7f277bf76c0b0da"
     },
     {
-      "file": "/landing/current/product-preview.mp4",
-      "bytes": 110367,
-      "sha256": "53137b454a009836ad24f017ae990e0c7e36f10e43669748d23bdfa63e74213b",
+      "file": "/landing/studio/ecommerce-flow-veo.mp4",
+      "bytes": 1646061,
+      "sha256": "7f9093d5199dee51bf77bd976e78e8fb71311fbcb85770155fe84a0c69c39097",
       "probe": {
         "programs": [],
         "stream_groups": [],
         "streams": [
           {
             "codec_name": "h264",
-            "width": 1574,
-            "height": 884
-          }
-        ],
-        "format": {
-          "duration": "10.000000"
-        }
-      }
-    },
-    {
-      "file": "/landing/studio/product.mp4",
-      "bytes": 1801471,
-      "sha256": "f69e3fdebed9c3e9c9f05e35e8de8043e656919b2e956eb8da294ee8b3c721b1",
-      "probe": {
-        "programs": [],
-        "stream_groups": [],
-        "streams": [
-          {
-            "codec_name": "h264",
-            "width": 540,
-            "height": 960
+            "width": 720,
+            "height": 1280
           }
         ],
         "format": {
@@ -99,14 +79,14 @@
       }
     },
     {
-      "file": "/landing/studio/product-poster.jpg",
-      "bytes": 73314,
-      "sha256": "9ea8cb7442a935b344533b89d438ff6bf76a2622693789fd34f310612d0f97b1"
+      "file": "/landing/studio/ecommerce-flow-veo-poster.jpg",
+      "bytes": 33080,
+      "sha256": "6287b95ce4e37fd724b8070e26ac3ea0f01505caa61ae6962b83eb30d05b2e81"
     },
     {
       "file": "/landing/studio/restaurant.mp4",
       "bytes": 749062,
-      "sha256": "bf9b55ef7a7733de91ed0da9ffbff153d83250d69613859a210c969e01fbd7e0",
+      "sha256": "97e2176c977cc8f8dc3f2363a06d13d31655032e8e5b76ff4242685161a8442c",
       "probe": {
         "programs": [],
         "stream_groups": [],
@@ -128,36 +108,9 @@
       "sha256": "c6fdc0524796b5f6e891526a006761b1ac15dc7ff9081d28b86976e3fc4602dd"
     },
     {
-      "file": "/landing/studio/ecommerce-flow-veo.mp4",
-      "bytes": 1801130,
-      "sha256": "080907fc6b97fbde3740246defa5428c11ff40f92585e8a6aca667d0c5189858",
-      "probe": {
-        "programs": [],
-        "stream_groups": [],
-        "streams": [
-          {
-            "codec_name": "h264",
-            "width": 720,
-            "height": 1280
-          },
-          {
-            "codec_name": "aac"
-          }
-        ],
-        "format": {
-          "duration": "8.000000"
-        }
-      }
-    },
-    {
-      "file": "/landing/studio/ecommerce-flow-veo-poster.jpg",
-      "bytes": 33080,
-      "sha256": "6287b95ce4e37fd724b8070e26ac3ea0f01505caa61ae6962b83eb30d05b2e81"
-    },
-    {
       "file": "/landing/studio/automotive-flow-veo.mp4",
-      "bytes": 1713930,
-      "sha256": "df969e1c86d72ba469ca2fb433a29bbbfc18cf281ab2dd9686ac176b68c28d1a",
+      "bytes": 1357505,
+      "sha256": "a8934f3f0fad96319b221029dea16eeaf859da3489d84ada8f777dd815759198",
       "probe": {
         "programs": [],
         "stream_groups": [],
@@ -166,9 +119,6 @@
             "codec_name": "h264",
             "width": 720,
             "height": 1280
-          },
-          {
-            "codec_name": "aac"
           }
         ],
         "format": {
@@ -183,8 +133,8 @@
     },
     {
       "file": "/landing/studio/realestate-flow-veo.mp4",
-      "bytes": 4112688,
-      "sha256": "3e27b387ca68bbff15d93557971af4a8b3a135abc55956c07c63c759a40b26c6",
+      "bytes": 1251298,
+      "sha256": "eee3d3d20f952cf51bb19092d209a52334dfbbb9225795ba69ba7707564b091e",
       "probe": {
         "programs": [],
         "stream_groups": [],
@@ -193,9 +143,6 @@
             "codec_name": "h264",
             "width": 720,
             "height": 1280
-          },
-          {
-            "codec_name": "aac"
           }
         ],
         "format": {
@@ -210,8 +157,8 @@
     },
     {
       "file": "/landing/studio/clinic-flow-veo.mp4",
-      "bytes": 1617047,
-      "sha256": "151015e1bd1decc83eaf4eb6cea685f2fc66bbf0fa0ce82adc1411deba80e829",
+      "bytes": 620233,
+      "sha256": "4694a5e46fd837b89ad2060db7084223e0deb0346ec3c3d51ee7bc5475dc8412",
       "probe": {
         "programs": [],
         "stream_groups": [],
@@ -220,9 +167,6 @@
             "codec_name": "h264",
             "width": 720,
             "height": 1280
-          },
-          {
-            "codec_name": "aac"
           }
         ],
         "format": {
@@ -237,8 +181,8 @@
     },
     {
       "file": "/landing/studio/service-flow-veo.mp4",
-      "bytes": 1772776,
-      "sha256": "0977d2094299dfd8915c177477747b42b948ba37d72455c9764274bdbf656dbb",
+      "bytes": 721735,
+      "sha256": "8fca4eba7db0ca89c4f26771cf565c24f1eece79186eada9f60404843d577f36",
       "probe": {
         "programs": [],
         "stream_groups": [],
@@ -247,9 +191,6 @@
             "codec_name": "h264",
             "width": 720,
             "height": 1280
-          },
-          {
-            "codec_name": "aac"
           }
         ],
         "format": {
@@ -264,8 +205,8 @@
     },
     {
       "file": "/landing/studio/restaurant-flow-veo.mp4",
-      "bytes": 3006530,
-      "sha256": "546b5be7a4c79aec8d3f4b9baf84e8b72c4502d8db4a33c74f1dbb9eabd6af75",
+      "bytes": 946586,
+      "sha256": "521232d008d4a7a7fbe4c8d709c1bd82102a6bd5ebb34f645d2c54cd9c82b414",
       "probe": {
         "programs": [],
         "stream_groups": [],
@@ -274,9 +215,6 @@
             "codec_name": "h264",
             "width": 720,
             "height": 1280
-          },
-          {
-            "codec_name": "aac"
           }
         ],
         "format": {
@@ -290,9 +228,9 @@
       "sha256": "1d499f5a54717dde3d45731f5e3b84c788f03a46b02ae399bcfa174a94570422"
     },
     {
-      "file": "/landing/studio/product-source-raw.jpg",
-      "bytes": 25829,
-      "sha256": "fe259cb982aec2e0c38f998aa98280b13f84bbcd2174ea33890840e4e9ecbea5"
+      "file": "/brand/mesajify-official-logo.png",
+      "bytes": 108767,
+      "sha256": "f07c2efdcb16f9a3e4efc6a3104a7c399da5b27e56557046d09ac45653ca27a5"
     }
   ]
 }

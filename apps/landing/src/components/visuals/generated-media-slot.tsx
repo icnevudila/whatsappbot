@@ -83,14 +83,14 @@ export function GeneratedMediaSlot({
         <video
           ref={ref}
           key={currentSrc}
-          src={currentSrc}
+          src={enabled ? currentSrc : undefined}
           poster={poster || asset?.posterPath}
-          autoPlay
+          autoPlay={enabled}
           loop={!playlist || playlist.length <= 1}
           onEnded={handleEnded}
           muted
           playsInline
-          preload="metadata"
+          preload={enabled ? 'auto' : 'none'}
           aria-label={alt}
           onError={() => setFailed(true)}
         />

@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import { MessageSquare, Users, Zap, ShieldCheck } from 'lucide-react'
+import { LazyVideo } from './lazy-video'
 
 export function UnifiedInboxShowcase() {
   const highlights = [
@@ -63,19 +64,10 @@ export function UnifiedInboxShowcase() {
 
         {/* High-Resolution Clean Interface Preview */}
         <div className="relative aspect-[16/10] w-full bg-slate-950 overflow-hidden">
-          <video
-            ref={(el) => {
-              if (el) {
-                el.muted = true
-                el.defaultMuted = true
-              }
-            }}
+          <LazyVideo
             src="/landing/infographics/04-ortak-inbox-veo-i2v.mp4"
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
+            poster="/landing/infographics/04-ortak-inbox-veo-i2v-poster.webp"
+            alt="Mesajify Ortak Gelen Kutusu"
             className="w-full h-full object-cover object-top"
           />
         </div>
