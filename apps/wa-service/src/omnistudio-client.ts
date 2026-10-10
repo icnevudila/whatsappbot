@@ -30,13 +30,18 @@ export async function fetchFromOmniStudio(
   init: RequestInit,
 ): Promise<Response> {
   const cleanPath = endpointPath.startsWith('/') ? endpointPath : `/${endpointPath}`
+  const headers = new Headers(init.headers)
+  const token = process.env.OMNISTUDIO_GATEWAY_TOKEN || process.env.CHATGPT_API_KEY
+  if (token && !headers.has('Authorization') && /^\/(?:v1\/)?chat\/(?:suggestions|completions)$/.test(cleanPath)) {
+    headers.set('Authorization', `Bearer ${token}`)
+  }
   const candidates = getCandidateBaseUrls()
   let lastError: unknown = null
 
   for (const baseUrl of candidates) {
     try {
       const url = `${baseUrl}${cleanPath}`
-      const response = await fetch(url, init)
+      const response = await fetch(url, { ...init, headers })
       cachedWorkingBaseUrl = baseUrl
       return response
     } catch (err) {

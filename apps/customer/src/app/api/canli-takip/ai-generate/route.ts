@@ -44,7 +44,10 @@ Görev: Aşağıda verilen ürün, kampanya veya duyuru için WhatsApp pazarlama
     const gatewayUrl = (process.env.OMNISTUDIO_GATEWAY_URL || 'http://167.233.201.31:3456').replace(/\/$/, '')
     const gatewayRes = await fetch(`${gatewayUrl}/v1/chat/suggestions`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...((process.env.OMNISTUDIO_GATEWAY_TOKEN || process.env.CHATGPT_API_KEY) ? { Authorization: `Bearer ${process.env.OMNISTUDIO_GATEWAY_TOKEN || process.env.CHATGPT_API_KEY}` } : {}),
+      },
       body: JSON.stringify({
         customer: businessName,
         incomingMessage: prompt,

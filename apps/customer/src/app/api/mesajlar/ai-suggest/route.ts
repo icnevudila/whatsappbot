@@ -204,7 +204,10 @@ export async function POST(request: Request) {
     const requestId = randomUUID()
     const gatewayRes = await fetch(`${gatewayUrl}/v1/chat/suggestions`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...((process.env.OMNISTUDIO_GATEWAY_TOKEN || process.env.CHATGPT_API_KEY) ? { Authorization: `Bearer ${process.env.OMNISTUDIO_GATEWAY_TOKEN || process.env.CHATGPT_API_KEY}` } : {}),
+      },
       body: JSON.stringify({
         customer: org.name,
         tenant_id: org.id,
