@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { DirectImageReconciliationError, generateImage, type ReferenceImage } from '@/lib/ai/image'
-import { inspectImageOutput } from '@/lib/ai/image-output'
+import { inspectImageOutput, assertImageAspect, ImageOutputInvalidError } from '@/lib/ai/image-output'
 import { verifyPersistedImageBytes } from '@/lib/ai/image-storage-contract'
 import { ImageJobFailedError, ImageJobPendingError, ImageJobReconciliationError, ImageSubmissionUncertainError, readImageJob } from '@/lib/ai/omnistudio-image-job'
 import { createHash } from 'node:crypto'
@@ -337,6 +337,7 @@ export async function processCreativeGeneration(
       }
       const bytes = Buffer.from(await raw.data.arrayBuffer())
       const measured = await inspectImageOutput(bytes)
+      assertImageAspect(measured.width, measured.height, asSnapshot(payload)?.aspect || formatToAspect(creative.format))
       const publicResult = supabase.storage.from('creatives').getPublicUrl(intent.storagePath)
       const saved = await supabase.from('creatives').update({ status: 'ready', error: null,
         storage_path: intent.storagePath, public_url: publicResult.data.publicUrl,
@@ -362,6 +363,7 @@ export async function processCreativeGeneration(
     try {
       const image = await readImageJob(payload.imageJob, creative.org_id)
       if (!image) return { ok: true, pending: true, retryAfterSeconds: 5 }
+      assertImageAspect(image.width, image.height, asSnapshot(payload)?.aspect || formatToAspect(creative.format))
       const ext = image.mimeType === 'image/jpeg' ? 'jpg' : image.mimeType === 'image/webp' ? 'webp' : 'png'
       // Stable storage identity: concurrent polls and upload retries reuse the same bytes, never another render.
       const storagePath = `${creative.org_id}/${creative.id}/${payload.imageJob.id}.${ext}`
@@ -395,7 +397,7 @@ export async function processCreativeGeneration(
           stageDetail: 'Çift üretim başlatılmadı. Mevcut sağlayıcı işi kontrol edilmeli.',
         } }
       }
-      if (!(error instanceof ImageJobFailedError)) return { ok: true, pending: true, retryAfterSeconds: 10 }
+      if (!(error instanceof ImageJobFailedError) && !(error instanceof ImageOutputInvalidError)) return { ok: true, pending: true, retryAfterSeconds: 10 }
       const message = error.message.slice(0,400)
       await supabase.from('creatives').update({ status: 'failed', error: message,
         payload: error instanceof ImageJobReconciliationError

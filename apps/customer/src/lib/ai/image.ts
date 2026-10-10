@@ -11,7 +11,7 @@ import {
   type ResolvedAiConfig,
 } from './config'
 import { ImageJobFailedError, ImageJobPendingError, ImageSubmissionUncertainError, inlineReference, readImageJob, submitImageJob, type ImageJobReceipt } from './omnistudio-image-job'
-import { inspectImageOutput, ImageOutputInvalidError } from './image-output'
+import { inspectImageOutput, ImageOutputInvalidError, assertImageAspect } from './image-output'
 
 export type AspectRatio = '1:1' | '4:5' | '9:16' | '16:9'
 
@@ -407,6 +407,7 @@ export async function generateImage(
       }
       const image = await provider.generate(prompt, aspect, refs, metadata)
       const measured = await inspectImageOutput(image.data)
+      assertImageAspect(measured.width, measured.height, aspect)
       return { image: { ...image, ...measured }, attempts }
     } catch (error) {
       if (directSubmissionStarted || error instanceof DirectImageReconciliationError) throw new DirectImageReconciliationError(id)

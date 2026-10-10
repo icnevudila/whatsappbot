@@ -8,6 +8,17 @@ export class ImageOutputInvalidError extends Error {
   }
 }
 
+/** Allow raster rounding, but never publish a different requested orientation/ratio. */
+export function assertImageAspect(width: number, height: number, aspect: string | undefined) {
+  if (!aspect) return
+  const ratios: Record<string, number> = { '1:1': 1, '4:5': 4 / 5, '9:16': 9 / 16, '16:9': 16 / 9 }
+  const expected = ratios[aspect]
+  if (!expected || !Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0 ||
+      Math.abs(width / height / expected - 1) > 0.01) {
+    throw new ImageOutputInvalidError('IMAGE_ASPECT_MISMATCH: Üretilen görsel seçilen en-boy oranıyla uyuşmuyor.')
+  }
+}
+
 export async function inspectImageOutput(data: Buffer) {
   if (data.length < 32 || data.length > 32 * 1024 * 1024) {
     throw new ImageOutputInvalidError('Görsel dosyası boş veya güvenli boyut sınırını aşıyor.')
