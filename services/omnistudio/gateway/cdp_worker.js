@@ -34,6 +34,10 @@ const {
   renameChatToTitle
 } = require('./chat_manager.js');
 const {
+  getCompanyProject,
+  ensureCompanyProject
+} = require('./company_project_manager.js');
+const {
   OrphanTabReaper,
   acquireSubmitPacing,
   acquireSessionFlightLease,
@@ -649,14 +653,24 @@ async function ensureCustomerChat(cdp, customer, channel = 'media', identity = {
     }
   }
 
-  // Yeni temiz sohbet aç — Mesajify projesine yönlendir (kayıtlı URL yoksa veya geçersizse)
-  // Proje URL'sine gitmek, yeni sohbetin doğrudan "Mesajify" projesi altında açılmasını sağlar.
-  // Ana sayfaya gitmek yerine proje sayfasına gidiyoruz; böylece ortalık karışmıyor.
-  const MESAJIFY_PROJECT_URL = 'https://chatgpt.com/g/g-p-6aaf94b0ae20819180ce47c040ff4a59-mesajify';
-  console.log(`[CDP Worker: ${WORKER_ID}] "${effectiveCustomer}" [${effectiveChannel}] icin Mesajify projesine yeni sohbet aciliyor...`);
-  await navigateToChat(cdp, MESAJIFY_PROJECT_URL);
-  return { isNewChat: true, chatUrl: null, title: expectedTitle };
+  // Yeni temiz sohbet aç — İşletmenin ChatGPT projesine yönlendir (kayıtlı URL yoksa veya geçersizse)
+  // Fail-safe: İşletme projesi bulunamazsa veya oluşturulamazsa stabil Mesajify projesine dönülür.
+  let destinationProjectUrl = 'https://chatgpt.com/g/g-p-6aaf94b0ae20819180ce47c040ff4a59-mesajify';
+  if (!isCanary) {
+    try {
+      const companyProj = await ensureCompanyProject(cdp, chatIdentity, effectiveCustomer);
+      if (companyProj?.projectUrl) {
+        destinationProjectUrl = companyProj.projectUrl;
+        console.log(`[CDP Worker: ${WORKER_ID}] "${effectiveCustomer}" [${effectiveChannel}] özel ChatGPT projesine yönlendiriliyor: ${destinationProjectUrl}`);
+      }
+    } catch (projErr) {
+      console.warn(`[CDP Worker: ${WORKER_ID}] Firma proje yönlendirme uyarısı (fallback devreye giriyor):`, projErr.message);
+    }
+  }
 
+  console.log(`[CDP Worker: ${WORKER_ID}] "${effectiveCustomer}" [${effectiveChannel}] icin projeye yeni sohbet aciliyor: ${destinationProjectUrl}`);
+  await navigateToChat(cdp, destinationProjectUrl);
+  return { isNewChat: true, chatUrl: null, title: expectedTitle };
 }
 
 // Düzenli Kalp Atışı (5s)
@@ -878,14 +892,27 @@ async function executeChatGPTJob(tab, job) {
     await cdp.send('Page.bringToFront').catch(() => {});
     workerTiming.mark('tab_acquire_ms');
 
-    // 0. Firma için kayıtlı görsel oturumunu aç ([Mesajify] {Firma} - Medya)
+    // 0. Firma için ChatGPT proje oturumunu aç ([Mesajify] {Firma})
     const customer = (job.customer || 'Genel').trim();
     const channel = 'media';
     const chatIdentity = { customer, tenantId: job.tenantId, conversationId: job.conversationId };
     const isDedicatedChat = false; // Image jobs cannot update persistent text/canary mappings.
     
     console.log(`[CDP Worker: ${WORKER_ID}] Firma: "${customer}" [${channel}] oturumu hazırlanıyor...`);
-    await navigateToChat(cdp, 'https://chatgpt.com/');
+
+    let targetInitialUrl = 'https://chatgpt.com/';
+    try {
+      const companyProj = await ensureCompanyProject(cdp, chatIdentity, customer);
+      if (companyProj?.projectUrl) {
+        targetInitialUrl = companyProj.projectUrl;
+        console.log(`[CDP Worker: ${WORKER_ID}] Görsel işi firmanın ChatGPT projesine yönlendiriliyor: ${targetInitialUrl}`);
+      }
+    } catch (projErr) {
+      console.warn(`[CDP Worker: ${WORKER_ID}] Proje yönlendirme uyarısı (kök URL'ye dönülüyor):`, projErr.message);
+      targetInitialUrl = 'https://chatgpt.com/';
+    }
+
+    await navigateToChat(cdp, targetInitialUrl);
     const ownedPage = await cdp.send('Runtime.evaluate', {
       expression: `window.__mesajifyImageOwnerJobId = ${JSON.stringify(job.id)}; (${readImageScope.toString()})()`, returnByValue: true,
     });
@@ -1272,6 +1299,15 @@ async function executeChatGPTJob(tab, job) {
         }
       } catch (urlErr) {
         console.warn(`[CDP Worker: ${WORKER_ID}] URL kaydetme uyarısı:`, urlErr.message);
+      }
+    } else {
+      // Görsel işleri için izole sohbet adlandırması: [Mesajify] {Firma} — Görsel — {kısa_job_id}
+      try {
+        const shortJobId = String(job.id || '').replace(/^job_/, '').slice(0, 8);
+        const imageChatTitle = `[Mesajify] ${customer} — Görsel — ${shortJobId}`;
+        await renameChatToTitle(cdp, imageChatTitle);
+      } catch (renameErr) {
+        console.warn(`[CDP Worker: ${WORKER_ID}] Görsel sohbet başlığı güncelleme uyarısı:`, renameErr.message);
       }
     }
 

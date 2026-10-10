@@ -2,7 +2,7 @@
 function assertImageScope(expected, actual) {
   if (!expected?.jobId || !expected?.targetId || actual?.jobId !== expected.jobId ||
       actual?.targetId !== expected.targetId || actual?.href !== expected.href ||
-      !/^https:\/\/chatgpt\.com\/?(?:\?.*)?$/.test(actual.href || '') || actual.userCount !== 0) {
+      !/^https:\/\/chatgpt\.com\/(?:$|\?|g\/g-p-[a-f0-9]+[^/]*(?:\/project)?(?:\?|$))/.test(actual.href || '') || actual.userCount !== 0) {
     throw new Error('CDP_CONVERSATION_SCOPE_MISMATCH');
   }
   return true;
