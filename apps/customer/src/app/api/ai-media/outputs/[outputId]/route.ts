@@ -145,7 +145,7 @@ export async function GET(
             const tRes = await fetch(thumbUrl, { cache: 'force-cache' })
             if (tRes.ok) {
               const image = await fetch(thumbUrl, { cache: 'no-store' })
-              if (image.ok) return buildStreamResponse(image, tName, reviewPreview)
+              if (image.ok) return await buildStreamResponse(image, tName, reviewPreview)
               return NextResponse.redirect(thumbUrl, 307)
             }
           } catch {
@@ -171,23 +171,33 @@ export async function GET(
   }
 }
 
-function buildStreamResponse(upstreamRes: Response, fileName: string, reviewPreview = false): NextResponse {
+async function buildStreamResponse(upstreamRes: Response, fileName: string, reviewPreview = false): Promise<NextResponse> {
   const resHeaders = new Headers()
   const contentType =
     upstreamRes.headers.get('content-type') ||
     (fileName.endsWith('.mp4') ? 'video/mp4' : 'application/octet-stream')
 
   resHeaders.set('Content-Type', contentType)
+  resHeaders.set('Accept-Ranges', 'bytes')
+  resHeaders.set('Cache-Control', reviewPreview ? 'private, no-store' : 'private, max-age=3600')
+  if (reviewPreview) resHeaders.set('X-Media-Review-Required', 'true')
+
+  // Buffer static images and thumbnails to prevent destination stream closed early on client teardown
+  if (!fileName.endsWith('.mp4') || upstreamRes.status !== 206) {
+    const arrayBuffer = await upstreamRes.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+    resHeaders.set('Content-Length', buffer.length.toString())
+    return new NextResponse(buffer, {
+      status: 200,
+      headers: resHeaders,
+    })
+  }
 
   const contentLength = upstreamRes.headers.get('content-length')
   if (contentLength) resHeaders.set('Content-Length', contentLength)
 
   const contentRange = upstreamRes.headers.get('content-range')
   if (contentRange) resHeaders.set('Content-Range', contentRange)
-
-  resHeaders.set('Accept-Ranges', 'bytes')
-  resHeaders.set('Cache-Control', reviewPreview ? 'private, no-store' : 'private, max-age=3600')
-  if (reviewPreview) resHeaders.set('X-Media-Review-Required', 'true')
 
   return new NextResponse(upstreamRes.body, {
     status: upstreamRes.status === 206 ? 206 : 200,

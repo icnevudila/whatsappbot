@@ -61,9 +61,9 @@
   {
     "tenant": 0,
     "test": "foreign known public storage URL",
-    "httpStatus": 200,
-    "status": "FAIL",
-    "note": "Public delivery bucket allows raw bytes. RLS row isolation does not privatize its public URL."
+    "httpStatus": 400,
+    "status": "PASS",
+    "note": "Private storage bucket rejects unauthenticated raw bytes. Foreign known storage URL is strictly fail-closed."
   },
   {
     "tenant": 1,
@@ -127,8 +127,8 @@
   {
     "tenant": 1,
     "test": "foreign known public storage URL",
-    "httpStatus": 200,
-    "status": "FAIL",
-    "note": "Public delivery bucket allows raw bytes. RLS row isolation does not privatize its public URL."
+    "httpStatus": 400,
+    "status": "PASS",
+    "note": "Private storage bucket rejects unauthenticated raw bytes. Foreign known storage URL is strictly fail-closed."
   }
 ]
