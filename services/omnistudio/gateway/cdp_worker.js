@@ -8,6 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { captureTurnBaseline, readCurrentTurn } = require('./chatgpt_turn_scope.js');
+const { observePromptAcceptance, waitForPromptAcceptance } = require('./prompt_acceptance.js');
 const { readComposerAttachments } = require('./image_reference_gate.js');
 const { findImageUploadInput } = require('./image_upload_input.js');
 const { navigateToChat } = require('./chat_navigation.js');
@@ -459,6 +460,10 @@ async function injectPromptAndSend(cdp, promptText) {
     });
     
     // 4. Gönder butonunun aktifleşmesini bekle ve gönderimi doğrula
+    const acceptanceBaseline = (await cdp.send('Runtime.evaluate', {
+      expression: `(${captureTurnBaseline.toString()})()`, returnByValue: true,
+    })).result?.value;
+    if (!acceptanceBaseline) throw new Error('SUBMISSION_PRECHECK_FAILED: missing turn baseline');
     let submitted = false;
     const submitDeadline = Date.now() + 45000;
     while (Date.now() < submitDeadline) {
@@ -470,12 +475,12 @@ async function injectPromptAndSend(cdp, promptText) {
       const clickRes = await cdp.send('Runtime.evaluate', {
         expression: `(() => {
           if (document.querySelector('button[data-testid="stop-button"], button[aria-label*="Stop"]')) {
-            return { submitted: true };
+            return { clicked: false, existingGeneration: true };
           }
           const textarea = document.querySelector('form [contenteditable="true"], form [role="textbox"], form textarea, #prompt-textarea, [data-composer] [contenteditable="true"]');
           const text = textarea ? (textarea.innerText || textarea.value || '').trim() : '';
           if (textarea && text.length === 0) {
-            return { submitted: true };
+            return { clicked: false, emptyComposer: true };
           }
 
           const btns = Array.from(document.querySelectorAll('button[aria-label="Send"], button.bg-composer-primary, button[data-testid*="send"], button[data-testid="composer-send-button"], #composer-submit-button, button[aria-label="Send prompt"], button[aria-label="Send message"], button[aria-label="Prompt gönder"], button[aria-label*="Send" i], button[aria-label*="Gönder" i], button.composer-submit-button-color, form button[type="submit"]'));
@@ -503,16 +508,14 @@ async function injectPromptAndSend(cdp, promptText) {
       if (res?.clicked) {
         // sendBtn.click() above already activated the control. A second native
         // click can hit the same control after it changes to Stop and abort the reply.
-        await sleep(1000);
-        const verifyRes = await cdp.send('Runtime.evaluate', {
-          expression: `(() => {
-            if (document.querySelector('button[data-testid="stop-button"], button[aria-label*="Stop"]')) return true;
-            const textarea = document.querySelector('form [contenteditable="true"], form [role="textbox"], form textarea, #prompt-textarea, [data-composer] [contenteditable="true"]');
-            return textarea && (textarea.innerText || textarea.value || '').trim().length === 0;
-          })()`,
-          returnByValue: true
+        const accepted = await waitForPromptAcceptance(async () => {
+          const receipt = await cdp.send('Runtime.evaluate', {
+            expression: `(${observePromptAcceptance.toString()})(${JSON.stringify(promptText)}, ${JSON.stringify(acceptanceBaseline)})`,
+            returnByValue: true,
+          });
+          return receipt.result?.value === true;
         });
-        if (verifyRes.result?.value) {
+        if (accepted) {
           submitted = true;
           break;
         }
