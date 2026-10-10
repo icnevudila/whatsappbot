@@ -137,6 +137,7 @@ export function cleanAiMessage(text: string): string {
   return text
     .replace(/^["'`]+|["'`]+$/g, '')
     .replace(/^(işte (mesajınız|metniniz)[:\s]*)/i, '')
+    .replace(/^(?:(?:Samimi|Profesyonel|Satış\s+Odaklı|Kısa|Detaylı)\s+)?(?:WhatsApp\s+)?Kampanya\s+(?:Mesajı|Metni)\s*:?\s*\r?\n+/i, '')
     .trim()
 }
 

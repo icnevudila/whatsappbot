@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { requireActiveOrg } from '@/lib/org'
 import { rateLimit } from '@/lib/rate-limit'
@@ -201,11 +201,16 @@ export async function POST(request: Request) {
 
   try {
     const timeoutMs = body.force ? 35000 : 7000
+    const requestId = randomUUID()
     const gatewayRes = await fetch(`${gatewayUrl}/v1/chat/suggestions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         customer: org.name,
+        tenant_id: org.id,
+        org_id: org.id,
+        conversation_id: `suggestion:${requestId}`,
+        request_id: requestId,
         incomingMessage: lastMessage,
         conversationHistory: body.history || '',
         companyContext,
