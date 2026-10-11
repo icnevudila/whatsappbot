@@ -1,0 +1,81 @@
+{
+  "master": "374c0381d8bd309ccb275e3712533784cc9a044e",
+  "sales": "0f7af781f3dd72471ce8ab8ee0cd68dbc5a2203a",
+  "V1": "NO_GO",
+  "V2": "NO_GO_BEFORE_PAYMENT_ACTIVATION",
+  "deferredPaymentFindings": [
+    "BILL-01",
+    "BILL-02",
+    "BILL-03",
+    "BILL-04"
+  ],
+  "gates": [
+    {
+      "id": "V1-OFF-01",
+      "severity": "P1",
+      "status": "FAIL_IN_PINNED_CODE",
+      "title": "Checkout/Portal are credential-gated, not V1-disabled",
+      "source": [
+        "[apps/customer/src/app/api/billing/checkout/route.ts:28](https://github.com/icnevudila/whatsappbot/blob/374c0381d8bd309ccb275e3712533784cc9a044e/apps/customer/src/app/api/billing/checkout/route.ts#L28)",
+        "[apps/customer/src/app/api/billing/portal/route.ts:19](https://github.com/icnevudila/whatsappbot/blob/374c0381d8bd309ccb275e3712533784cc9a044e/apps/customer/src/app/api/billing/portal/route.ts#L19)",
+        "[apps/customer/src/lib/stripe-cancel.ts:8](https://github.com/icnevudila/whatsappbot/blob/374c0381d8bd309ccb275e3712533784cc9a044e/apps/customer/src/lib/stripe-cancel.ts#L8)"
+      ],
+      "proof": "Absent keys yield 503 with zero network calls. Retained synthetic keys cause two captured Stripe calls even with manual-mode negative canary. No real call was made. Separate static inventory also finds the organization-deletion subscription cancellation helper gated only by STRIPE_SECRET_KEY; that helper was not runtime-tested and no organization was deleted.",
+      "owner": "Master + Image Fix",
+      "fix": "One server-authoritative billing policy defaults to manual/off; payment routes return disabled before parsing/payment/provider work even if credentials remain. Apply policy to the subscription cancellation helper and define legacy-subscription handling explicitly. Test direct URL/API access, not just hidden buttons."
+    },
+    {
+      "id": "V1-OFF-02",
+      "severity": "P1",
+      "status": "FAIL_IN_PINNED_CODE",
+      "title": "Webhook can still automatically change packages when configured",
+      "source": [
+        "[apps/customer/src/app/api/billing/webhook/route.ts:77](https://github.com/icnevudila/whatsappbot/blob/0f7af781f3dd72471ce8ab8ee0cd68dbc5a2203a/apps/customer/src/app/api/billing/webhook/route.ts#L77)",
+        "[apps/customer/src/app/api/billing/webhook/route.ts:158](https://github.com/icnevudila/whatsappbot/blob/0f7af781f3dd72471ce8ab8ee0cd68dbc5a2203a/apps/customer/src/app/api/billing/webhook/route.ts#L158)"
+      ],
+      "proof": "Absent webhook secret returns 503 before DB. With valid synthetic signature and keys, actual POST calls entitlement RPC with p_is_upgrade=true despite manual-mode canary.",
+      "owner": "Image Fix",
+      "fix": "In V1 the webhook must cause no entitlement/subscription/quota/suspension write; disable before DB effects. Define safe ack/rejection behavior and record ignored deliveries without upgrades. Gate legacy Stripe RPC invocation paths as well."
+    },
+    {
+      "id": "V1-UI-01",
+      "severity": "P1",
+      "status": "FAIL_IN_PINNED_CODE",
+      "title": "Payment success UI remains query-driven",
+      "source": [
+        "[apps/customer/src/app/(panel)/ayarlar/page.tsx:49](https://github.com/icnevudila/whatsappbot/blob/374c0381d8bd309ccb275e3712533784cc9a044e/apps/customer/src/app/(panel)/ayarlar/page.tsx#L49)"
+      ],
+      "proof": "Actual settings component emits payment-success message solely from billing=ok, with no payment receipt or release policy check.",
+      "owner": "Master",
+      "fix": "Hide/disable payment entry points, portal and payment success/cancel UI in V1. Expose manual account/plan support text. In V2 success must rely on authoritative receipt; URL query is not payment evidence."
+    },
+    {
+      "id": "V1-ENT-01",
+      "severity": "P1",
+      "status": "AUDIT_DURABILITY_UNVERIFIED",
+      "title": "Manual package changes need attributable audit history",
+      "source": [
+        "[supabase/migrations/20260905150000_jobs_cancel_admin_org.sql:30](https://github.com/icnevudila/whatsappbot/blob/374c0381d8bd309ccb275e3712533784cc9a044e/supabase/migrations/20260905150000_jobs_cancel_admin_org.sql#L30)",
+        "[apps/admin/src/lib/platform.ts:7](https://github.com/icnevudila/whatsappbot/blob/374c0381d8bd309ccb275e3712533784cc9a044e/apps/admin/src/lib/platform.ts#L7)",
+        "[supabase/migrations/20260905150000_jobs_cancel_admin_org.sql:16](https://github.com/icnevudila/whatsappbot/blob/374c0381d8bd309ccb275e3712533784cc9a044e/supabase/migrations/20260905150000_jobs_cancel_admin_org.sql#L16)"
+      ],
+      "proof": "Actual platform identity ignores user_metadata. Actual SQL denies non-admin and permits fixture-admin. Provided action/function writes plan/quota, but no before/after/actor/reason audit insert is present; external/deployed audit trigger is unverified.",
+      "owner": "Admin/backend owner",
+      "fix": "Use verified platform-admin identity and server-controlled values; atomically record actor, org, before/after quotas/plan, reason, timestamp, correlation ID and authorization result. Prove non-admin, cross-tenant and replay behavior."
+    },
+    {
+      "id": "V1-ENT-02",
+      "severity": "P1",
+      "status": "FAIL_MIGRATION_CONTRACT",
+      "title": "Manual quota action and migration RPC signatures disagree",
+      "source": [
+        "[apps/admin/src/app/org-actions.ts:67](https://github.com/icnevudila/whatsappbot/blob/374c0381d8bd309ccb275e3712533784cc9a044e/apps/admin/src/app/org-actions.ts#L67)",
+        "[supabase/migrations/20260905150000_jobs_cancel_admin_org.sql:16](https://github.com/icnevudila/whatsappbot/blob/374c0381d8bd309ccb275e3712533784cc9a044e/supabase/migrations/20260905150000_jobs_cancel_admin_org.sql#L16)"
+      ],
+      "proof": "Actual action sends p_monthly_video_quota; sole checked-in admin_update_organization definition has four parameters. Embedded PostgreSQL reports function does not exist when called with the action arguments. Deployed schema may differ and was not inspected.",
+      "owner": "Admin/backend owner",
+      "fix": "Deliver reviewed additive migration for the exact RPC contract, preserve privilege/admin checks and add atomic audit. Test migration upgrade and actual action -> PostgREST -> PG path before pilot."
+    }
+  ],
+  "testEvidence": "v1-launch-tests.tap"
+}

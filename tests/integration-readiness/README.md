@@ -33,6 +33,17 @@ Because Sales advanced during this audit, rerunning the original `snapshot.cjs` 
 
 The TypeScript contract is a proposal only, with disabled-by-default and non-executable markers. It is not wired to production.
 
+V1 launch-scope verification executes actual frozen Checkout/Portal/status/webhook routes, the settings component and the manual admin action/SQL. It blocks external I/O, uses synthetic keys and preserves historical evidence. Run the separate suite against the reviewed Sales follow-up:
+
+```powershell
+$env:AUDIT_SALES_SHA = '0f7af781f3dd72471ce8ab8ee0cd68dbc5a2203a'
+node --test v1-launch.test.cjs
+Remove-Item Env:AUDIT_SALES_SHA
+node v1-report.cjs
+```
+
+`MESAJIFY_BILLING_MODE=manual` in this fixture is a negative canary, not an implemented runtime flag. The reports require an actual server-side disable policy even with retained keys. They do not claim production is disabled. V1 report generation reads the separate committed `v1-launch-tests.tap`; keep outputs separate from core evidence.
+
 The shared repository pre-commit hook requires `scripts/check_secrets.js`, which is not present on the frozen main baseline used for this audit. Commit this delivery with its own checked-in scanner hook without editing shared hook configuration:
 
 ```powershell

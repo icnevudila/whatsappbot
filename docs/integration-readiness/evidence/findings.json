@@ -13,7 +13,18 @@
       "BILL-04",
       "DB-01"
     ],
-    "decision": "NO_GO_NON_BILLING_BLOCKERS"
+    "decision": {
+      "V1": "NO_GO",
+      "V2": "NO_GO_BEFORE_PAYMENT_ACTIVATION"
+    },
+    "v1MandatoryControls": [
+      "Stripe Checkout/Portal disabled independently of retained credentials",
+      "Webhook cannot mutate entitlements",
+      "Payment UI disabled",
+      "Server-side authorized and auditable manual entitlements",
+      "Admin/tenant/private-media controls",
+      "Wizard E2E and operational recovery"
+    ]
   },
   "findings": [
     {

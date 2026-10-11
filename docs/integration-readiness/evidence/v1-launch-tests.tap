@@ -1,0 +1,58 @@
+TAP version 13
+# Subtest: Actual Checkout/Portal/status are disabled only when Stripe environment keys are absent
+ok 1 - Actual Checkout/Portal/status are disabled only when Stripe environment keys are absent
+  ---
+  duration_ms: 983.7673
+  type: 'test'
+  ...
+# Subtest: REPRODUCTION V1-OFF-01: retained synthetic keys allow actual Checkout/Portal despite manual-mode canary
+ok 2 - REPRODUCTION V1-OFF-01: retained synthetic keys allow actual Checkout/Portal despite manual-mode canary
+  ---
+  duration_ms: 522.9754
+  type: 'test'
+  ...
+# Subtest: Actual webhook with absent webhook secret returns 503 before database/provider access
+ok 3 - Actual webhook with absent webhook secret returns 503 before database/provider access
+  ---
+  duration_ms: 252.4476
+  type: 'test'
+  ...
+# Subtest: REPRODUCTION V1-OFF-02: configured actual webhook still calls automatic entitlement RPC in manual-mode canary
+ok 4 - REPRODUCTION V1-OFF-02: configured actual webhook still calls automatic entitlement RPC in manual-mode canary
+  ---
+  duration_ms: 270.8379
+  type: 'test'
+  ...
+# Subtest: REPRODUCTION V1-UI-01: actual settings component displays payment success solely from URL query
+ok 5 - REPRODUCTION V1-UI-01: actual settings component displays payment success solely from URL query
+  ---
+  duration_ms: 98.8268
+  type: 'test'
+  ...
+# Subtest: Actual admin identity gate ignores user-editable metadata
+ok 6 - Actual admin identity gate ignores user-editable metadata
+  ---
+  duration_ms: 73.9871
+  type: 'test'
+  ...
+# Subtest: Actual manual entitlement SQL rejects non-admin; permits admin, but has no function-level audit write
+ok 7 - Actual manual entitlement SQL rejects non-admin; permits admin, but has no function-level audit write
+  ---
+  duration_ms: 3477.5199
+  type: 'test'
+  ...
+# Subtest: REPRODUCTION V1-ENT-02: actual admin action sends video quota argument absent from migration RPC signature
+ok 8 - REPRODUCTION V1-ENT-02: actual admin action sends video quota argument absent from migration RPC signature
+  ---
+  duration_ms: 2527.8376
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 8826.5185

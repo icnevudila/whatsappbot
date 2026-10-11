@@ -2,9 +2,9 @@
 
 > Independent frozen-snapshot audit. No main merge, production deployment, paid AI generation, real payment, WhatsApp send, credential rotation or customer DB access. Active worktrees were not edited. Fresh browser/customer E2E: **BLOCKED**.
 
-## Initial launch scope — user clarification
+## Separate release scopes — V1 and V2
 
-Stripe subscriptions are **not part of the initial product release**. Stripe billing defects, the Stripe ledger/RLS finding and Stripe migration delivery dependency are deferred integration work, **not launch or pilot blockers**. Their historical evidence remains valid. No billing code was changed or enabled. The remaining NO-GO rests on media authorization/playback, tenant/admin security and missing independent customer-journey/recovery evidence.
+**V1: NO-GO** for a controlled, Stripe-free pilot until its mandatory controls are proven. **V2: NO-GO before payment activation**, with BILL-01/02/03/04 retained in the payment backlog. Historical billing defects are not V1 payment-feature blockers; safely disabling Checkout/Portal, webhook entitlement effects and payment UI is nevertheless a V1 requirement. Actual pinned code lacks a release-specific disable gate: missing keys disable calls, retained synthetic keys re-enable them. Manual entitlements have server-side admin checks, but durable change audit is unverified and the action/migration RPC signature mismatch is reproduced. Existing admin/tenant/private-media, Gateway compatibility, Wizard E2E and recovery blockers remain mandatory. No production configuration or deployed disable state was inspected or changed. See [V1 decision](V1_INDEPENDENT_GO_NO_GO.md), [V2 backlog](V2_STRIPE_BACKLOG_GO_NO_GO.md), [disable/manual-entitlement review](V1_BILLING_DISABLED_AND_MANUAL_ENTITLEMENTS.md).
 
 | Role | Remote branch | Frozen SHA |
 |---|---|---|

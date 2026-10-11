@@ -2,7 +2,11 @@
 
 Decision: **NO-GO**. Initial snapshots and later Sales correction are separate; each report contains both the original evidence and the follow-up boundary.
 
-User clarification: the initial product does not use Stripe subscriptions. Billing findings and Stripe migration work are deferred, not launch/pilot blockers. The remaining NO-GO concerns media delivery, tenant/admin security and missing independent customer-journey evidence.
+**V1: NO-GO** for a Stripe-free controlled pilot. **V2: NO-GO before payment activation.** BILL-01/02/03/04 are V2 backlog items; V1 must still prove Checkout/Portal/webhook/payment UI safely disabled and manual entitlements server-authorized and auditable. Targeted tests found missing release-disable gates and a manual quota RPC mismatch. Existing media, tenant/admin, Wizard E2E and recovery requirements remain.
+
+- [V1 independent decision](V1_INDEPENDENT_GO_NO_GO.md)
+- [V1 disable and manual-entitlement verification](V1_BILLING_DISABLED_AND_MANUAL_ENTITLEMENTS.md)
+- [V2 payment backlog and decision](V2_STRIPE_BACKLOG_GO_NO_GO.md)
 
 - [Independent code audit](INDEPENDENT_CODE_AUDIT.md)
 - [Three branch compatibility](THREE_BRANCH_COMPATIBILITY.md)
@@ -16,4 +20,4 @@ User clarification: the initial product does not use Stripe subscriptions. Billi
 - [Final decision](FINAL_INDEPENDENT_GO_NO_GO.md)
 - [Runnable isolated tools](../../tests/integration-readiness/README.md)
 
-20 passing independent checks and one explicit blocked browser test per snapshot do not mean product approval. Defect reproductions are designed to pass when a defect exists. No production runtime or real customer data was used.
+20 passing core checks and one explicit blocked browser test per snapshot, plus 8 passing V1 audit checks, do not mean product approval. Defect reproductions are designed to pass when a defect exists. No production runtime or real customer data was used.
