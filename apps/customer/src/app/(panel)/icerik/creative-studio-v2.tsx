@@ -928,8 +928,8 @@ export function CreativeStudioV2({
                 <fieldset>
                   <legend className="text-[15px] font-bold text-[#111b21]">Tanıtım biçimi</legend>
                   <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
-                    {([{id:'offering',label:'Ürün / Hizmet Tanıtımı',detail:'Gerçek ürün fotoğrafı, arayüz ekranı veya hizmet/çalışma görseliyle tanıtım.'},
-                      {id:'brand',label:'Marka Tanıtımı',detail:'Yalnız işletme logosu ve doğrulanmış marka bilgileriyle tanıtım. Ürün eklemeniz gerekmez.'}] as const).map(mode => (
+                    {([{id:'offering',label:'Ürün / Hizmet Tanıtımı',detail:'Katalogdaki ürününüzü veya hizmetinizi öne çıkarın.'},
+                      {id:'brand',label:'Marka Tanıtımı',detail:'Yalnızca logonuz ve işletme bilgilerinizle tanıtım yapın.'}] as const).map(mode => (
                       <button type="button" key={mode.id} aria-pressed={promotionMode === mode.id}
                         className={`rounded-xl border p-3.5 text-left ${promotionMode === mode.id ? 'border-[#008069] bg-[#e7f8f2] ring-1 ring-[#008069]' : 'border-[#e9edef] bg-white'}`}
                         onClick={() => {
@@ -950,7 +950,7 @@ export function CreativeStudioV2({
                 {/* 1. Medya Türü Seçimi */}
                 <div>
                   <h2 className="text-[15px] font-bold text-[#111b21]">1. Medya Türü</h2>
-                  <p className="text-[12px] text-[#667781] mt-0.5">Üretmek istediğiniz içerik biçimini seçin.</p>
+                  <p className="text-[12px] text-[#667781] mt-0.5">Üretmek istediğiniz içerik türünü seçin.</p>
                   <div className="mt-2.5 grid grid-cols-2 gap-3">
                     <button
                       type="button"
@@ -965,7 +965,7 @@ export function CreativeStudioV2({
                         <Icon name="image" className="size-4 text-[#008069]" />
                         <span className="text-[13.5px] font-bold text-[#111b21]">Kampanya Görseli</span>
                       </div>
-                      <p className="mt-1 text-[11.5px] text-[#667781]">Afiş, WhatsApp ve Instagram için yüksek kaliteli görsel.</p>
+                      <p className="mt-1 text-[11.5px] text-[#667781]">Sosyal medya ve WhatsApp için kaliteli reklam görseli.</p>
                     </button>
 
                     <button
@@ -981,7 +981,7 @@ export function CreativeStudioV2({
                         <Icon name="video" className="size-4 text-[#008069]" />
                         <span className="text-[13.5px] font-bold text-[#111b21]">Kampanya Videosu</span>
                       </div>
-                      <p className="mt-1 text-[11.5px] text-[#667781]">9:16 sinematik Reels/Durum reklam filmi (10 sn, Türkçe seslendirmeli ve markalı kapanış).</p>
+                      <p className="mt-1 text-[11.5px] text-[#667781]">Reels ve WhatsApp Durum için 10 sn seslendirmeli video.</p>
                     </button>
                   </div>
                 </div>
@@ -1015,15 +1015,15 @@ export function CreativeStudioV2({
                   <Field label="Ne tanıtıyorsunuz?">
                     <select aria-label="Tanıtılan ürün veya hizmet türü" value={offeringKind} onChange={event => setOfferingKind(parseOfferingKind(event.target.value))}
                       className="mb-3 w-full rounded-lg border border-hairline bg-white p-2 text-sm">
-                      <option value="physical">Fiziksel ürün — gerçek ürün fotoğrafı</option>
-                      <option value="software">Yazılım — gerçek arayüz ekran görüntüsü</option>
-                      <option value="service">Hizmet — hizmet, mekân veya çalışma görseli</option>
+                      <option value="physical">Fiziksel ürün</option>
+                      <option value="software">Yazılım veya uygulama</option>
+                      <option value="service">Hizmet veya işletme alanı</option>
                     </select>
                   </Field>
                   <div className="flex items-center justify-between">
                     <div>
                       <h2 className="text-[15px] font-bold text-[#111b21]">3. Tanıtılacak Ürün / Hizmet</h2>
-                      <p className="text-[12px] text-[#667781] mt-0.5">{offeringKind === 'software' ? 'Gerçek arayüz ekran görüntüsü olan yazılımınızı seçin.' : offeringKind === 'service' ? 'Hizmetin, mekânın veya çalışmanın gerçek görselini seçin.' : 'Gerçek ürün fotoğrafı olan ürünü seçin. Logo ürün fotoğrafı yerine kullanılamaz.'}</p>
+                      <p className="text-[12px] text-[#667781] mt-0.5">{offeringKind === 'software' ? 'Tanıtmak istediğiniz ekran görüntüsünü seçin.' : offeringKind === 'service' ? 'Hizmetinizi veya mekânınızı gösteren görseli seçin.' : 'Tanıtmak istediğiniz ürün fotoğrafını seçin.'}</p>
                     </div>
                     <Button
                       type="button"
@@ -1179,13 +1179,13 @@ export function CreativeStudioV2({
                     </div>
 
                     <div className="rounded-xl border border-hairline bg-surface p-3.5">
-                      <p className="text-[13px] font-bold text-[#111b21]">Görselde Ne Kadar Yazı Olsun?</p>
-                      <p className="text-[11px] text-[#667781] mt-0.5">Görsel üstündeki metin miktarını belirleyin.</p>
+                      <p className="text-[13px] font-bold text-[#111b21]">Yazı Yoğunluğu</p>
+                      <p className="text-[11px] text-[#667781] mt-0.5">Görselin üzerinde yer alacak metin miktarını seçin.</p>
                       <div className="mt-2 grid grid-cols-3 gap-2">
                         {[
-                          { id: 'low', label: 'Az Yazı', description: 'Kısa başlık; satış reklamında fiyat veya teklif ve çağrı korunur.' },
-                          { id: 'balanced', label: 'Dengeli', description: 'Başlık ve kısa kampanya mesajı (önerilen).' },
-                          { id: 'detailed', label: 'Kampanya Odaklı', description: 'Fiyat, kampanya detayı ve sipariş bilgisi.' },
+                          { id: 'low', label: 'Sade', description: 'Kısa başlık ve buton' },
+                          { id: 'balanced', label: 'Dengeli', description: 'Başlık ve kampanya mesajı (önerilen)' },
+                          { id: 'detailed', label: 'Detaylı', description: 'Fiyat, kampanya ve sipariş bilgisi' },
                         ].map((d) => (
                           <button
                             key={d.id}

@@ -486,6 +486,14 @@ export function CreativeDetail({
       }
     }
 
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isMounted && shouldObserveRender) {
+        if (pollTimer) clearTimeout(pollTimer)
+        void pollLoop()
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
+
     queueMicrotask(() => {
       if (!isMounted) return
       kicked.current = true
@@ -496,6 +504,7 @@ export function CreativeDetail({
       isMounted = false
       kicked.current = false
       if (pollTimer) clearTimeout(pollTimer)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
     }
   // A pending -> rendering refresh must not tear down the owning poll loop.
   // Cleanup releases ownership so a replay can resume the same job.
