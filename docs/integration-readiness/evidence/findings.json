@@ -1,0 +1,169 @@
+{
+  "snapshot": {
+    "master": "374c0381d8bd309ccb275e3712533784cc9a044e",
+    "sales": "17b8eb765b408784a7ac11ed4ef3974c7281cc0f",
+    "research": "73a0fd730c41c2f843794eb05d9762168215b088"
+  },
+  "findings": [
+    {
+      "id": "SEC-01",
+      "severity": "P0",
+      "owner": "Master + security owner",
+      "title": "Admin cookie can be derived from shipped defaults when required secrets are absent",
+      "evidence": "[apps/customer/src/app/canli-takip/auth.ts:4](https://github.com/icnevudila/whatsappbot/blob/374c0381d8bd309ccb275e3712533784cc9a044e/apps/customer/src/app/canli-takip/auth.ts#L4); [apps/customer/src/app/api/ai-media/outputs/[outputId]/route.ts:39](https://github.com/icnevudila/whatsappbot/blob/374c0381d8bd309ccb275e3712533784cc9a044e/apps/customer/src/app/api/ai-media/outputs/%5BoutputId%5D/route.ts#L39)",
+      "scope": "Actual auth module accepted its deterministic default token in the empty-environment fixture. The media route treats this separate cookie as super-admin and may use a service client. Production configuration was NOT inspected; deployed exploitability is conditional, not claimed.",
+      "fix": "Require server-only admin secrets at startup, remove default credentials, require verified platform-admin session for cross-tenant service access; fail closed when configuration is missing.",
+      "retest": "Unset either/both secrets: startup/auth must deny; forge default-derived cookie: preview/download remain 401/403; valid tenant A cannot read tenant B."
+    },
+    {
+      "id": "MEDIA-01",
+      "severity": "P1",
+      "owner": "Master + Image Fix",
+      "title": "Unsigned Master upstream video request is incompatible with signed-only Gateway",
+      "evidence": "[apps/customer/src/app/api/ai-media/outputs/[outputId]/route.ts:162](https://github.com/icnevudila/whatsappbot/blob/374c0381d8bd309ccb275e3712533784cc9a044e/apps/customer/src/app/api/ai-media/outputs/%5BoutputId%5D/route.ts#L162); [services/omnistudio/gateway/public_output_access.js:203](https://github.com/icnevudila/whatsappbot/blob/17b8eb765b408784a7ac11ed4ef3974c7281cc0f/services/omnistudio/gateway/public_output_access.js#L203)",
+      "scope": "Actual Master GET and actual Sales verifier: owned approved fixture returns 502 after upstream 401. Next/auth/database transports are isolated doubles; no deployed browser run.",
+      "fix": "Authorize the server-to-server fetch after owned-output checks; use scoped signing or a server-only token, preserve Range semantics and avoid exposing master token.",
+      "retest": "Approved and owned review preview, thumbnail, library and full download succeed against hardened Gateway; cross-tenant and expired access deny."
+    },
+    {
+      "id": "MEDIA-02",
+      "severity": "P1",
+      "owner": "Master",
+      "title": "Media normalization discards signed query; private bucket still resolves as public",
+      "evidence": "[apps/customer/src/lib/media-url.ts:24](https://github.com/icnevudila/whatsappbot/blob/374c0381d8bd309ccb275e3712533784cc9a044e/apps/customer/src/lib/media-url.ts#L24); [apps/customer/src/lib/media-url.ts:66](https://github.com/icnevudila/whatsappbot/blob/374c0381d8bd309ccb275e3712533784cc9a044e/apps/customer/src/lib/media-url.ts#L66); [supabase/migrations/20261010150000_private_creatives_storage.sql:4](https://github.com/icnevudila/whatsappbot/blob/374c0381d8bd309ccb275e3712533784cc9a044e/supabase/migrations/20261010150000_private_creatives_storage.sql#L4)",
+      "scope": "Actual media-url module strips sig/exp/tid from signed Gateway URL. Actual resolver emits a public creatives URL although migration makes bucket private.",
+      "fix": "Use owned application media IDs and authenticated proxy/signed storage delivery; preserve validated signature parameters without trusting arbitrary hosts. Inventory/backfill legacy public_url values before migration.",
+      "retest": "Signed URL survives normalization; fresh and historical images render in private bucket; expired links renew only after tenant authorization."
+    },
+    {
+      "id": "BILL-01",
+      "severity": "P1",
+      "owner": "Image Fix",
+      "title": "Old subscription deletion bypasses subscription mismatch guard",
+      "evidence": "[apps/customer/src/app/api/billing/webhook/route.ts:155](https://github.com/icnevudila/whatsappbot/blob/17b8eb765b408784a7ac11ed4ef3974c7281cc0f/apps/customer/src/app/api/billing/webhook/route.ts#L155); [supabase/migrations/20261011123000_stripe_webhook_atomic_ledger.sql:108](https://github.com/icnevudila/whatsappbot/blob/17b8eb765b408784a7ac11ed4ef3974c7281cc0f/supabase/migrations/20261011123000_stripe_webhook_atomic_ledger.sql#L108)",
+      "scope": "Actual POST + actual PL/pgSQL: tenant on sub_current downgraded to free by deletion of sub_obsolete. Existing other-bot SQL test passes sub_OLD directly and misses route nulling.",
+      "fix": "Pass event subscription ID even on deletion; clear local ID inside the atomic decision only after matching current subscription.",
+      "retest": "Run signed obsolete deletion and incomplete_expired update through actual POST; current plan/subscription unchanged; valid current deletion downgrades."
+    },
+    {
+      "id": "BILL-02",
+      "severity": "P1",
+      "owner": "Image Fix",
+      "title": "invoice.payment_failed with invoice status open does not suspend",
+      "evidence": "[apps/customer/src/app/api/billing/webhook/route.ts:144](https://github.com/icnevudila/whatsappbot/blob/17b8eb765b408784a7ac11ed4ef3974c7281cc0f/apps/customer/src/app/api/billing/webhook/route.ts#L144); [supabase/migrations/20261011123000_stripe_webhook_atomic_ledger.sql:129](https://github.com/icnevudila/whatsappbot/blob/17b8eb765b408784a7ac11ed4ef3974c7281cc0f/supabase/migrations/20261011123000_stripe_webhook_atomic_ledger.sql#L129)",
+      "scope": "Actual signed invoice failure with status=open returned 200/applied but suspended_at stayed null.",
+      "fix": "Normalize event type separately from invoice lifecycle status, then apply delinquency policy using authoritative subscription state.",
+      "retest": "invoice.payment_failed open/draft variants suspend according to policy; payment recovery clears only Stripe-owned suspension; manual/security suspension persists."
+    },
+    {
+      "id": "BILL-03",
+      "severity": "P1",
+      "owner": "Image Fix",
+      "title": "Paid invoice can downgrade plan and replace current subscription with an obsolete one",
+      "evidence": "[apps/customer/src/app/api/billing/webhook/route.ts:132](https://github.com/icnevudila/whatsappbot/blob/17b8eb765b408784a7ac11ed4ef3974c7281cc0f/apps/customer/src/app/api/billing/webhook/route.ts#L132); [apps/customer/src/lib/stripe-prices.ts:17](https://github.com/icnevudila/whatsappbot/blob/17b8eb765b408784a7ac11ed4ef3974c7281cc0f/apps/customer/src/lib/stripe-prices.ts#L17); [supabase/migrations/20261011123000_stripe_webhook_atomic_ledger.sql:109](https://github.com/icnevudila/whatsappbot/blob/17b8eb765b408784a7ac11ed4ef3974c7281cc0f/supabase/migrations/20261011123000_stripe_webhook_atomic_ledger.sql#L109)",
+      "scope": "Actual paid invoice without subscription-level plan metadata changed pro to starter. An obsolete paid invoice replaced sub_current with sub_obsolete; mismatch guard only covers selected negative statuses.",
+      "fix": "Resolve invoice subscription using the pinned Stripe API schema; load authoritative current plan/subscription instead of guessing starter. Enforce identity on all subscription-affecting events.",
+      "retest": "Metadata-free current paid invoice retains pro; obsolete invoice success/failure/deletion has no entitlement effect; test invoice parent.subscription_details for supported API version."
+    },
+    {
+      "id": "BILL-04",
+      "severity": "P1",
+      "owner": "Image Fix",
+      "title": "Unpaid completed Checkout is treated as active entitlement",
+      "evidence": "[apps/customer/src/app/api/billing/webhook/route.ts:117](https://github.com/icnevudila/whatsappbot/blob/17b8eb765b408784a7ac11ed4ef3974c7281cc0f/apps/customer/src/app/api/billing/webhook/route.ts#L117)",
+      "scope": "Actual POST with status=complete/payment_status=unpaid cleared prior Stripe suspension. Payment status is absent from modeled object.",
+      "fix": "Gate activation on supported payment/subscription entitlement policy, including asynchronous payment results; completion alone is insufficient for a paid plan.",
+      "retest": "Unpaid asynchronous Checkout cannot unsuspend; paid/no_payment_required approved trial paths behave according to explicit policy."
+    },
+    {
+      "id": "MEDIA-03",
+      "severity": "P1",
+      "owner": "Image Fix",
+      "title": "Private signed media is publicly cacheable beyond signature lifetime",
+      "evidence": "[services/omnistudio/gateway/server.js:3307](https://github.com/icnevudila/whatsappbot/blob/17b8eb765b408784a7ac11ed4ef3974c7281cc0f/services/omnistudio/gateway/server.js#L3307)",
+      "scope": "Exact Gateway media handler over loopback HTTP returned public one-day caching for signed private fixture. No CDN/cache leakage was attempted; potential expiry bypass through shared-cache reuse.",
+      "fix": "Emit private,no-store for protected content, or define a reviewed cache strategy bound to authorization/expiry; keep public assets separate.",
+      "retest": "Private image/video full/range/HEAD responses have protected cache policy; expiry/revocation deny with shared cache present in isolated staging."
+    },
+    {
+      "id": "MEDIA-04",
+      "severity": "P1",
+      "owner": "Image Fix",
+      "title": "Gateway byte-range parser accepts out-of-bounds ranges",
+      "evidence": "[services/omnistudio/gateway/server.js:3287](https://github.com/icnevudila/whatsappbot/blob/17b8eb765b408784a7ac11ed4ef3974c7281cc0f/services/omnistudio/gateway/server.js#L3287)",
+      "scope": "Exact handler returned 206 for HEAD bytes=999-1000 on a 21-byte fixture; should return 416. Parser also lacks suffix/multiple/malformed handling; GET error/crash consequences not claimed without isolated process evidence.",
+      "fix": "Validate unit, finite integer bounds, suffix/open ranges; clamp end; return 416 with bytes */size; handle read-stream errors.",
+      "retest": "Valid range bytes match; suffix ranges work; invalid/multiple/oversized ranges cannot terminate process or hang client."
+    },
+    {
+      "id": "SEC-02",
+      "severity": "P1",
+      "owner": "Image Fix",
+      "title": "Gateway bearer secret is compared case-insensitively",
+      "evidence": "[services/omnistudio/gateway/public_output_access.js:125](https://github.com/icnevudila/whatsappbot/blob/17b8eb765b408784a7ac11ed4ef3974c7281cc0f/services/omnistudio/gateway/public_output_access.js#L125)",
+      "scope": "Actual verifier accepted the randomly generated master token with all letter case changed. Bearer scheme may be case-insensitive; credential bytes must not be.",
+      "fix": "Parse scheme separately, compare exact credential bytes with constant-time digests.",
+      "retest": "Bearer scheme casing accepted, token casing change denied; empty/unconfigured token denied."
+    },
+    {
+      "id": "QA-01",
+      "severity": "P1",
+      "owner": "Master",
+      "title": "60/60 mixes static checks, weak browser checks and assertion-free callbacks",
+      "evidence": "[scripts/master_60_acceptance_runner.mjs:344](https://github.com/icnevudila/whatsappbot/blob/374c0381d8bd309ccb275e3712533784cc9a044e/scripts/master_60_acceptance_runner.mjs#L344); [scripts/master_60_acceptance_runner.mjs:523](https://github.com/icnevudila/whatsappbot/blob/374c0381d8bd309ccb275e3712533784cc9a044e/scripts/master_60_acceptance_runner.mjs#L523); [scripts/master_60_acceptance_runner.mjs:640](https://github.com/icnevudila/whatsappbot/blob/374c0381d8bd309ccb275e3712533784cc9a044e/scripts/master_60_acceptance_runner.mjs#L640)",
+      "scope": "All 60 callbacks classified independently. 34 browser-oriented checks, 7 unit, 11 static, 8 unverified. Categories describe mechanism, not 34 independently verified passes.",
+      "fix": "Expose evidence class and required assertions per acceptance item. Fail on empty optional branches; record deployment/source identity and network/DB receipts.",
+      "retest": "Pending-job F5, two tabs, actual DB draft save/reopen, signed media tenant negatives and mobile controls must run in seeded isolated stack."
+    },
+    {
+      "id": "SEC-03",
+      "severity": "P1",
+      "owner": "Master + Image Fix",
+      "title": "Secret scanner bypasses flagged lines and treats Git failure as success",
+      "evidence": "[scripts/check_secrets.js:15](https://github.com/icnevudila/whatsappbot/blob/374c0381d8bd309ccb275e3712533784cc9a044e/scripts/check_secrets.js#L15); [scripts/check_secrets.js:48](https://github.com/icnevudila/whatsappbot/blob/374c0381d8bd309ccb275e3712533784cc9a044e/scripts/check_secrets.js#L48)",
+      "scope": "Actual scanner in VM ignored synthetic Bearer credential when same line referenced process.env, and returned zero on Git read failure. No actual credentials printed.",
+      "fix": "Never skip a whole line due to marker text; use scoped placeholder handling and fail closed on scanner/Git errors. Validate scanner using synthetic canaries.",
+      "retest": "Mixed env/secret line, comments, nested docs, malformed Git context, deleted files and full delivery staged diff; report scope explicitly."
+    },
+    {
+      "id": "DB-01",
+      "severity": "P1",
+      "owner": "Image Fix",
+      "title": "Stripe ledger has no explicit RLS or tenant read policy",
+      "evidence": "[supabase/migrations/20261011123000_stripe_webhook_atomic_ledger.sql:9](https://github.com/icnevudila/whatsappbot/blob/17b8eb765b408784a7ac11ed4ef3974c7281cc0f/supabase/migrations/20261011123000_stripe_webhook_atomic_ledger.sql#L9)",
+      "scope": "Actual migration yields relrowsecurity=false. Repository default-privilege lockdown revokes anon/auth table privileges, so public access is NOT demonstrated. Risk depends on actual migration creator/default ACL drift.",
+      "fix": "Enable RLS, revoke anon/auth explicitly, keep server-only ledger unless tenant policy is required; verify actual role grants and function ownership.",
+      "retest": "Anon/auth cross-tenant select/insert/update/delete denied; only service role applies atomic events; catalog assertions on clean migration stack."
+    },
+    {
+      "id": "OPS-01",
+      "severity": "P1",
+      "owner": "Image Fix + infrastructure",
+      "title": "Independent customer capacity and recovery remain unmeasured",
+      "evidence": "[apps/wa-service/src/env.ts:80](https://github.com/icnevudila/whatsappbot/blob/17b8eb765b408784a7ac11ed4ef3974c7281cc0f/apps/wa-service/src/env.ts#L80); [apps/wa-service/src/db.ts:19](https://github.com/icnevudila/whatsappbot/blob/17b8eb765b408784a7ac11ed4ef3974c7281cc0f/apps/wa-service/src/db.ts#L19)",
+      "scope": "Source defaults are configuration, not verified simultaneous businesses. Existing load report distinguishes request-thread load and synthetic queue jobs; its WA health timeouts are historical, no current rerun.",
+      "fix": "Measure 3-5 seeded tenants across real app/queue/worker/storage, with providers stubbed; establish pool budget, eligible browser count, admission/backpressure and restore recovery.",
+      "retest": "Collect p95 latency, connection use, queue oldest age, RAM, retry/dedup, health under load and crash recovery before pilot."
+    },
+    {
+      "id": "DNA-01",
+      "severity": "P2",
+      "owner": "Video Engine + Master",
+      "title": "Enabled Creative DNA adapter declares transformation but only enriches metadata",
+      "evidence": "[apps/customer/src/lib/creative/v2/creative-dna-adapter.ts:68](https://github.com/icnevudila/whatsappbot/blob/374c0381d8bd309ccb275e3712533784cc9a044e/apps/customer/src/lib/creative/v2/creative-dna-adapter.ts#L68); [docs/research/IMPLEMENTATION_PROPOSAL.md:55](https://github.com/icnevudila/whatsappbot/blob/73a0fd730c41c2f843794eb05d9762168215b088/docs/research/IMPLEMENTATION_PROPOSAL.md#L55)",
+      "scope": "Actual enabled adapter adds version/bridge-ready markers; no three strategies, nine hooks or owned-asset validation. Research TypeScript remains documentation.",
+      "fix": "Keep flag off; agree versioned schema, validation, selection persistence and asset/claim constraints before executable integration. Remove misleading ready marker until contract satisfied.",
+      "retest": "3x3 cardinality, selected-hook membership, tenant asset ownership, verified claims, product/logo SHA, mode separation and rollback flag."
+    },
+    {
+      "id": "OPS-02",
+      "severity": "P2",
+      "owner": "Image Fix",
+      "title": "Postgres TLS certificate verification defaults off",
+      "evidence": "[apps/wa-service/src/db.ts:13](https://github.com/icnevudila/whatsappbot/blob/17b8eb765b408784a7ac11ed4ef3974c7281cc0f/apps/wa-service/src/db.ts#L13)",
+      "scope": "Static code default permits unverified server certificate; production env not inspected.",
+      "fix": "Require certificate verification and documented CA in production; development exception explicit.",
+      "retest": "Valid CA connects; invalid/self-signed unexpected certificate fails; readiness reports failure without secret leakage."
+    }
+  ]
+}

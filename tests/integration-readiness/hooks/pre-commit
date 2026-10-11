@@ -1,0 +1,3 @@
+#!/bin/sh
+# Independent delivery hook; no shared repository hook/config modification.
+exec node tests/integration-readiness/secret-scan.cjs

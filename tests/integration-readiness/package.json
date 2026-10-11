@@ -1,0 +1,14 @@
+{
+  "name": "mesajify-independent-audit",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "snapshot": "node snapshot.cjs",
+    "test": "node --test audit.test.cjs",
+    "scan": "node secret-scan.cjs"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "typescript": "5.9.3"
+  }
+}

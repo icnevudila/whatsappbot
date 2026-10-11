@@ -1,0 +1,137 @@
+TAP version 13
+# Subtest: Gateway actual verifier denies anonymous private media and tenant-header spoofing
+ok 1 - Gateway actual verifier denies anonymous private media and tenant-header spoofing
+  ---
+  duration_ms: 145.1749
+  type: 'test'
+  ...
+# Subtest: Gateway actual verifier denies invalid HMAC, expiry, unknown owner and cross-tenant signed access
+ok 2 - Gateway actual verifier denies invalid HMAC, expiry, unknown owner and cross-tenant signed access
+  ---
+  duration_ms: 140.5083
+  type: 'test'
+  ...
+# Subtest: Gateway owner sidecar survives a fresh module instance
+ok 3 - Gateway owner sidecar survives a fresh module instance
+  ---
+  duration_ms: 264.0521
+  type: 'test'
+  ...
+# Subtest: REPRODUCTION: Gateway admin bearer token comparison incorrectly ignores credential case
+ok 4 - REPRODUCTION: Gateway admin bearer token comparison incorrectly ignores credential case
+  ---
+  duration_ms: 115.0398
+  type: 'test'
+  ...
+# Subtest: Gateway missing signing secret fails closed and production loopback is not trusted
+ok 5 - Gateway missing signing secret fails closed and production loopback is not trusted
+  ---
+  duration_ms: 237.9241
+  type: 'test'
+  ...
+# Subtest: Actual Stripe POST + embedded PostgreSQL reject invalid signature; replay is idempotent; past_due suspends
+ok 6 - Actual Stripe POST + embedded PostgreSQL reject invalid signature; replay is idempotent; past_due suspends
+  ---
+  duration_ms: 8250.5834
+  type: 'test'
+  ...
+# Subtest: Actual Stripe POST + embedded PostgreSQL preserve newer state and manual suspension
+ok 7 - Actual Stripe POST + embedded PostgreSQL preserve newer state and manual suspension
+  ---
+  duration_ms: 4550.2394
+  type: 'test'
+  ...
+# Subtest: REPRODUCTION: actual Stripe route nulls obsolete deletion subscription ID and downgrades active tenant
+ok 8 - REPRODUCTION: actual Stripe route nulls obsolete deletion subscription ID and downgrades active tenant
+  ---
+  duration_ms: 2926.4763
+  type: 'test'
+  ...
+# Subtest: Actual invoice.payment_failed status open: frozen snapshot suspension expectation
+ok 9 - Actual invoice.payment_failed status open: frozen snapshot suspension expectation
+  ---
+  duration_ms: 2727.1709
+  type: 'test'
+  ...
+# Subtest: REPRODUCTION: paid invoice without subscription metadata changes pro to starter; obsolete paid invoice replaces current subscription
+ok 10 - REPRODUCTION: paid invoice without subscription metadata changes pro to starter; obsolete paid invoice replaces current subscription
+  ---
+  duration_ms: 2811.2003
+  type: 'test'
+  ...
+# Subtest: REPRODUCTION: checkout completed but unpaid is activated
+ok 11 - REPRODUCTION: checkout completed but unpaid is activated
+  ---
+  duration_ms: 5091.4878
+  type: 'test'
+  ...
+# Subtest: Stripe migration RPC is service-role only; ledger lacks RLS (grant-dependent risk)
+ok 12 - Stripe migration RPC is service-role only; ledger lacks RLS (grant-dependent risk)
+  ---
+  duration_ms: 4700.8752
+  type: 'test'
+  ...
+# [stripe-webhook] atomic apply failed function public.apply_stripe_subscription_atomic(unknown, timestamp with time zone, unknown, uuid, unknown, integer, integer, unknown, unknown, unknown, boolean, boolean) does not exist
+# Subtest: Actual Stripe route fails closed when atomic migration unavailable
+ok 13 - Actual Stripe route fails closed when atomic migration unavailable
+  ---
+  duration_ms: 4015.999
+  type: 'test'
+  ...
+# Subtest: REPRODUCTION: deterministic admin cookie is accepted when both server secrets absent
+ok 14 - REPRODUCTION: deterministic admin cookie is accepted when both server secrets absent
+  ---
+  duration_ms: 327.8284
+  type: 'test'
+  ...
+# Subtest: REPRODUCTION: Master secret scanner skips secret-bearing lines containing process.env and exits clean on Git failure
+ok 15 - REPRODUCTION: Master secret scanner skips secret-bearing lines containing process.env and exits clean on Git failure
+  ---
+  duration_ms: 100.0506
+  type: 'test'
+  ...
+# Subtest: REPRODUCTION: media-url normalization strips signed Gateway query and emits public URL for private creatives
+ok 16 - REPRODUCTION: media-url normalization strips signed Gateway query and emits public URL for private creatives
+  ---
+  duration_ms: 233.4025
+  type: 'test'
+  ...
+# Subtest: Actual Master video delivery validates identity, supports bounded/suffix ranges and 416
+ok 17 - Actual Master video delivery validates identity, supports bounded/suffix ranges and 416
+  ---
+  duration_ms: 164.1155
+  type: 'test'
+  ...
+# Subtest: REPRODUCTION: actual Master preview GET receives 502 against signed-only Gateway authorization
+ok 18 - REPRODUCTION: actual Master preview GET receives 502 against signed-only Gateway authorization
+  ---
+  duration_ms: 407.1921
+  type: 'test'
+  ...
+# Subtest: Creative DNA defaults off; current enabled adapter adds metadata without strategy or hook transformation
+ok 19 - Creative DNA defaults off; current enabled adapter adds metadata without strategy or hook transformation
+  ---
+  duration_ms: 109.7057
+  type: 'test'
+  ...
+# Subtest: Isolated HTTP runs exact Gateway media handler: signed range works; unsigned denied; unsafe cache and range reproduced
+ok 20 - Isolated HTTP runs exact Gateway media handler: signed range works; unsigned denied; unsafe cache and range reproduced
+  ---
+  duration_ms: 417.6628
+  type: 'test'
+  ...
+# Subtest: BLOCKED: independent full browser journey, two-tab paid-job recovery and fresh mobile playback
+ok 21 - BLOCKED: independent full browser journey, two-tab paid-job recovery and fresh mobile playback # SKIP No isolated seeded application/auth/storage/worker stack. Existing real-tenant runners prohibited.
+  ---
+  duration_ms: 1.7844
+  type: 'test'
+  ...
+1..21
+# tests 21
+# suites 0
+# pass 20
+# fail 0
+# cancelled 0
+# skipped 1
+# todo 0
+# duration_ms 38732.0159

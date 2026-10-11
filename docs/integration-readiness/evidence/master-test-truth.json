@@ -1,0 +1,627 @@
+{
+  "sha": "374c0381d8bd309ccb275e3712533784cc9a044e",
+  "runId": "run_1791722041981_b2d286",
+  "reportedPassed": 60,
+  "counts": {
+    "REAL_BROWSER_E2E": 34,
+    "UNVERIFIED": 8,
+    "UNIT_TEST": 7,
+    "STATIC_CODE_CHECK": 11
+  },
+  "rows": [
+    {
+      "id": "A01",
+      "name": "Kullanıcı Oturum Açma (Login E2E)",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 171,
+      "lineEnd": 180,
+      "note": "Limited browser assertion; historical result, not independently rerun.",
+      "artifacts": [
+        "A01_login_success.png"
+      ]
+    },
+    {
+      "id": "A02",
+      "name": "İşletme Seçimi ve SwitchOrg Cookie Senkronizasyonu",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 187,
+      "lineEnd": 194,
+      "note": "Checks select value; does not assert cookie synchronization.",
+      "artifacts": []
+    },
+    {
+      "id": "A03",
+      "name": "Oturum Kalıcılığı (Yeni Sekme / Reload)",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 196,
+      "lineEnd": 201,
+      "note": "Reload only; no second tab or isolated session.",
+      "artifacts": []
+    },
+    {
+      "id": "A04",
+      "name": "Yetkisiz Rota Yönlendirmesi (/giris?devam=...)",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 203,
+      "lineEnd": 209,
+      "note": "Limited browser assertion; historical result, not independently rerun.",
+      "artifacts": []
+    },
+    {
+      "id": "A05",
+      "name": "Kreatif Stüdyo (/icerik/yeni) Sayfa Yüklenmesi",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 214,
+      "lineEnd": 217,
+      "note": "Limited browser assertion; historical result, not independently rerun.",
+      "artifacts": []
+    },
+    {
+      "id": "A06",
+      "name": "Logo Varlık Ön Koşul Denetimi",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 219,
+      "lineEnd": 224,
+      "note": "Existing logo label can pass; missing-logo rejection not exercised.",
+      "artifacts": []
+    },
+    {
+      "id": "A07",
+      "name": "Katalog Ürün Ön Koşul Denetimi",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 226,
+      "lineEnd": 229,
+      "note": "Product heading only; invalid/missing reference rejection not exercised.",
+      "artifacts": []
+    },
+    {
+      "id": "A08",
+      "name": "Adım 1 Eyleme Geçirilebilir Yönlendirme (Actionable UX)",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 231,
+      "lineEnd": 239,
+      "note": "Button existence only; no disabled/precondition assertions.",
+      "artifacts": []
+    },
+    {
+      "id": "A09",
+      "name": "Görsel Format Seçimi (1:1, 4:5, 9:16)",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 241,
+      "lineEnd": 244,
+      "note": "Any matching button suffices; all aspect ratios not selected.",
+      "artifacts": []
+    },
+    {
+      "id": "A10",
+      "name": "Video Format Seçimi (9:16 Sinematik Dikey)",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 246,
+      "lineEnd": 249,
+      "note": "Tab existence only; no generated 9:16 output.",
+      "artifacts": []
+    },
+    {
+      "id": "A11",
+      "name": "Deterministik Yerel Metin Taslağı (Fallback)",
+      "reported": "PASS",
+      "category": "UNVERIFIED",
+      "lineStart": 254,
+      "lineEnd": 261,
+      "note": "Optional branch can do nothing; no fallback assertion.",
+      "artifacts": []
+    },
+    {
+      "id": "A12",
+      "name": "AI Yanıt Gecikmesinde Kullanıcı Metin Kilidi (headlineDirty)",
+      "reported": "PASS",
+      "category": "UNVERIFIED",
+      "lineStart": 263,
+      "lineEnd": 269,
+      "note": "Optional input fill; no delayed AI race or retained-value assertion.",
+      "artifacts": []
+    },
+    {
+      "id": "A13",
+      "name": "Boş AI Yanıtı Reddi (Blank Output Gatekeeper)",
+      "reported": "PASS",
+      "category": "UNIT_TEST",
+      "lineStart": 271,
+      "lineEnd": 276,
+      "note": "Limited browser assertion; historical result, not independently rerun.",
+      "artifacts": []
+    },
+    {
+      "id": "A14",
+      "name": "AI Başlık ve Etiket Temizleme (cleanAiMessage)",
+      "reported": "PASS",
+      "category": "UNIT_TEST",
+      "lineStart": 278,
+      "lineEnd": 282,
+      "note": "Limited browser assertion; historical result, not independently rerun.",
+      "artifacts": []
+    },
+    {
+      "id": "A15",
+      "name": "Fiyat Koruma (Strict Price Preservation)",
+      "reported": "PASS",
+      "category": "UNIT_TEST",
+      "lineStart": 284,
+      "lineEnd": 291,
+      "note": "Limited browser assertion; historical result, not independently rerun.",
+      "artifacts": []
+    },
+    {
+      "id": "A16",
+      "name": "Fiyat Kayması Engeli (Price Drift Detection)",
+      "reported": "PASS",
+      "category": "UNIT_TEST",
+      "lineStart": 293,
+      "lineEnd": 300,
+      "note": "Limited browser assertion; historical result, not independently rerun.",
+      "artifacts": []
+    },
+    {
+      "id": "A17",
+      "name": "Türkçe Büyük/Küçük Harf (İ/i Unicode Case-Folding)",
+      "reported": "PASS",
+      "category": "UNIT_TEST",
+      "lineStart": 302,
+      "lineEnd": 306,
+      "note": "Limited browser assertion; historical result, not independently rerun.",
+      "artifacts": []
+    },
+    {
+      "id": "A18",
+      "name": "5 Ton Rewrite Desteği (Samimi, Profesyonel, Eğlenceli, vb.)",
+      "reported": "PASS",
+      "category": "UNIT_TEST",
+      "lineStart": 308,
+      "lineEnd": 312,
+      "note": "Tone registry length and two action names; no five actual rewrites.",
+      "artifacts": []
+    },
+    {
+      "id": "A19",
+      "name": "Tekil Uçuş Kilidi (Single-Flight Duplicate Submit Protection)",
+      "reported": "PASS",
+      "category": "STATIC_CODE_CHECK",
+      "lineStart": 317,
+      "lineEnd": 321,
+      "note": "Checks a local ref assignment; no two-tab/server duplicate test.",
+      "artifacts": []
+    },
+    {
+      "id": "A20",
+      "name": "Idempotency RequestKey Üretimi",
+      "reported": "PASS",
+      "category": "STATIC_CODE_CHECK",
+      "lineStart": 323,
+      "lineEnd": 326,
+      "note": "Checks stableSubmissionId substring; no persisted unique job count.",
+      "artifacts": []
+    },
+    {
+      "id": "A21",
+      "name": "Video Üretim Kotası Gösterimi",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 328,
+      "lineEnd": 337,
+      "note": "Quota text presence only; no quota enforcement.",
+      "artifacts": []
+    },
+    {
+      "id": "A22",
+      "name": "Arka Planda Devam Et Butonu",
+      "reported": "PASS",
+      "category": "STATIC_CODE_CHECK",
+      "lineStart": 339,
+      "lineEnd": 342,
+      "note": "Limited browser assertion; historical result, not independently rerun.",
+      "artifacts": []
+    },
+    {
+      "id": "A23",
+      "name": "F5 İlerleme Kurtarma (Progress Recovery)",
+      "reported": "PASS",
+      "category": "STATIC_CODE_CHECK",
+      "lineStart": 344,
+      "lineEnd": 348,
+      "note": "shouldObserveRender substring; no pending-job F5 replay.",
+      "artifacts": []
+    },
+    {
+      "id": "A24",
+      "name": "Sıfır Sahte ETA / Sayaç Güvencesi",
+      "reported": "PASS",
+      "category": "STATIC_CODE_CHECK",
+      "lineStart": 350,
+      "lineEnd": 353,
+      "note": "Rejects conjunction of Math.random and ETA; not actual timing truth.",
+      "artifacts": []
+    },
+    {
+      "id": "A25",
+      "name": "HTML5 Video DOM Render Doğrulaması",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 358,
+      "lineEnd": 366,
+      "note": "Limited browser assertion; historical result, not independently rerun.",
+      "artifacts": []
+    },
+    {
+      "id": "A26",
+      "name": "HTTP 206 Partial Content Range Akışı",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 368,
+      "lineEnd": 376,
+      "note": "206 only; no exact bytes, Content-Range validity or expiry.",
+      "artifacts": []
+    },
+    {
+      "id": "A27",
+      "name": "Video Play() Tetiklemesi ve readyState=4",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 378,
+      "lineEnd": 386,
+      "note": "Limited browser assertion; historical result, not independently rerun.",
+      "artifacts": []
+    },
+    {
+      "id": "A28",
+      "name": "Video 2. Saniye Kanca Sahnesi (Hook)",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 388,
+      "lineEnd": 393,
+      "note": "Limited browser assertion; historical result, not independently rerun.",
+      "artifacts": []
+    },
+    {
+      "id": "A29",
+      "name": "Video 5. Saniye Duraklatma (Pause)",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 395,
+      "lineEnd": 402,
+      "note": "Limited browser assertion; historical result, not independently rerun.",
+      "artifacts": []
+    },
+    {
+      "id": "A30",
+      "name": "Video 7.5 Saniye Hızlı Arama (Range Scrub / Seek)",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 404,
+      "lineEnd": 413,
+      "note": "Limited browser assertion; historical result, not independently rerun.",
+      "artifacts": []
+    },
+    {
+      "id": "A31",
+      "name": "Video 9. Saniye Markalı Kapanış Outro",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 415,
+      "lineEnd": 427,
+      "note": "Frame time plus screenshot; no original-logo/outro quality assertion.",
+      "artifacts": [
+        "A31_video_outro.png"
+      ]
+    },
+    {
+      "id": "A32",
+      "name": "Video 10. Saniye Tamamlanma (Ended Event)",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 429,
+      "lineEnd": 434,
+      "note": "Limited browser assertion; historical result, not independently rerun.",
+      "artifacts": []
+    },
+    {
+      "id": "A33",
+      "name": "Video Doğrudan İndirme Erişimi",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 436,
+      "lineEnd": 443,
+      "note": "Fetch source and content-length; not browser download action.",
+      "artifacts": []
+    },
+    {
+      "id": "A34",
+      "name": "Kütüphane (/icerik) Kart Listelemesi",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 448,
+      "lineEnd": 453,
+      "note": "Limited browser assertion; historical result, not independently rerun.",
+      "artifacts": []
+    },
+    {
+      "id": "A35",
+      "name": "İnceleme Bekleyen Medya Rozeti (Needs Review)",
+      "reported": "PASS",
+      "category": "UNVERIFIED",
+      "lineStart": 455,
+      "lineEnd": 460,
+      "note": "Logs badge count with no expectation.",
+      "artifacts": []
+    },
+    {
+      "id": "A36",
+      "name": "Kalite Kusuru İşareti (Partial Voiceover Fragment)",
+      "reported": "PASS",
+      "category": "STATIC_CODE_CHECK",
+      "lineStart": 462,
+      "lineEnd": 466,
+      "note": "Documentation phrase only; not media quality validation.",
+      "artifacts": []
+    },
+    {
+      "id": "A37",
+      "name": "Kütüphaneden \"Kampanyada Kullan\" Yönlendirmesi",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 470,
+      "lineEnd": 482,
+      "note": "Limited browser assertion; historical result, not independently rerun.",
+      "artifacts": []
+    },
+    {
+      "id": "A38",
+      "name": "Handoff Sonrası URL Sorgu Temizleme (replaceState)",
+      "reported": "PASS",
+      "category": "UNVERIFIED",
+      "lineStart": 484,
+      "lineEnd": 488,
+      "note": "Logs URL; no clean URL or creative_id preservation assertion.",
+      "artifacts": []
+    },
+    {
+      "id": "A39",
+      "name": "Kampanya Metin Editörü Düzenlenebilirliği",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 490,
+      "lineEnd": 499,
+      "note": "Limited browser assertion; historical result, not independently rerun.",
+      "artifacts": []
+    },
+    {
+      "id": "A40",
+      "name": "F5 Sonrası Benzersiz Sentinel Metin Kalıcılığı",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 501,
+      "lineEnd": 510,
+      "note": "Exact local browser text survives reload; database draft save not invoked.",
+      "artifacts": []
+    },
+    {
+      "id": "A41",
+      "name": "Kampanya Hedef Kitle Seçimi",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 512,
+      "lineEnd": 516,
+      "note": "Limited browser assertion; historical result, not independently rerun.",
+      "artifacts": []
+    },
+    {
+      "id": "A42",
+      "name": "Kampanya Hat Seçimi",
+      "reported": "PASS",
+      "category": "STATIC_CODE_CHECK",
+      "lineStart": 518,
+      "lineEnd": 521,
+      "note": "Limited browser assertion; historical result, not independently rerun.",
+      "artifacts": []
+    },
+    {
+      "id": "A43",
+      "name": "Kampanya Taslak Kaydı",
+      "reported": "PASS",
+      "category": "STATIC_CODE_CHECK",
+      "lineStart": 523,
+      "lineEnd": 526,
+      "note": "Action name substring; database insert/read-back not executed.",
+      "artifacts": []
+    },
+    {
+      "id": "A44",
+      "name": "UI İşletme Değişimi (Ayvazoğlu -> Bofe Tarım)",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 531,
+      "lineEnd": 553,
+      "note": "Manually repairs cookie if switch failed, masking synchronization defects.",
+      "artifacts": []
+    },
+    {
+      "id": "A45",
+      "name": "Bofe Kütüphanesinde Sıfır Çapraz Sızıntı",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 555,
+      "lineEnd": 564,
+      "note": "Brand-word scan can miss arbitrary cross-tenant media.",
+      "artifacts": []
+    },
+    {
+      "id": "A46",
+      "name": "Bofe Oturumunda Ayvazoğlu Varlığına 404 Blokajı",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 566,
+      "lineEnd": 572,
+      "note": "UI 404 check; direct preview/download/blob negative API tests absent.",
+      "artifacts": []
+    },
+    {
+      "id": "A47",
+      "name": "Mesajify İşletmesine Geçiş ve Varlık Ayrımı",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 574,
+      "lineEnd": 580,
+      "note": "Limited browser assertion; historical result, not independently rerun.",
+      "artifacts": []
+    },
+    {
+      "id": "A48",
+      "name": "Desktop 1440x900 Sıfır Yatay Kaydırma & Tam Etkileşim",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 588,
+      "lineEnd": 609,
+      "note": "Overflow check on library only; swallowed article timeout; not full mobile journey.",
+      "artifacts": [
+        "A48_vp_desktop_1440.png"
+      ]
+    },
+    {
+      "id": "A49",
+      "name": "Tablet 768x1024 Sıfır Yatay Kaydırma & Tam Etkileşim",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 588,
+      "lineEnd": 609,
+      "note": "Overflow check on library only; swallowed article timeout; not full mobile journey.",
+      "artifacts": [
+        "A49_vp_tablet_768.png"
+      ]
+    },
+    {
+      "id": "A50",
+      "name": "Mobile 430x932 Sıfır Yatay Kaydırma & Tam Etkileşim",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 588,
+      "lineEnd": 609,
+      "note": "Overflow check on library only; swallowed article timeout; not full mobile journey.",
+      "artifacts": [
+        "A50_vp_mobile_430.png"
+      ]
+    },
+    {
+      "id": "A51",
+      "name": "Mobile 390x844 Sıfır Yatay Kaydırma & Tam Etkileşim",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 588,
+      "lineEnd": 609,
+      "note": "Overflow check on library only; swallowed article timeout; not full mobile journey.",
+      "artifacts": [
+        "A51_vp_mobile_390.png"
+      ]
+    },
+    {
+      "id": "A52",
+      "name": "Mobile 375x812 Sıfır Yatay Kaydırma & Tam Etkileşim",
+      "reported": "PASS",
+      "category": "REAL_BROWSER_E2E",
+      "lineStart": 588,
+      "lineEnd": 609,
+      "note": "Overflow check on library only; swallowed article timeout; not full mobile journey.",
+      "artifacts": [
+        "A52_vp_mobile_375.png"
+      ]
+    },
+    {
+      "id": "A53",
+      "name": "Mobil Navigasyon Buton Dokunmatik Alanları (Min 44px)",
+      "reported": "PASS",
+      "category": "UNVERIFIED",
+      "lineStart": 612,
+      "lineEnd": 619,
+      "note": "Original desktop page, 40px not 44px; empty selector set passes.",
+      "artifacts": []
+    },
+    {
+      "id": "A54",
+      "name": "Modal Kapatma ve Odak Yönetimi",
+      "reported": "PASS",
+      "category": "STATIC_CODE_CHECK",
+      "lineStart": 621,
+      "lineEnd": 625,
+      "note": "Limited browser assertion; historical result, not independently rerun.",
+      "artifacts": []
+    },
+    {
+      "id": "A55",
+      "name": "Creative DNA Bayrak Kontrolü (Varsayılan Kapalı)",
+      "reported": "PASS",
+      "category": "UNIT_TEST",
+      "lineStart": 630,
+      "lineEnd": 633,
+      "note": "Limited browser assertion; historical result, not independently rerun.",
+      "artifacts": []
+    },
+    {
+      "id": "A56",
+      "name": "Sıfır Kaçak Harici API (OmniStudio Gateway Tek Kaynak)",
+      "reported": "PASS",
+      "category": "STATIC_CODE_CHECK",
+      "lineStart": 635,
+      "lineEnd": 638,
+      "note": "Limited browser assertion; historical result, not independently rerun.",
+      "artifacts": []
+    },
+    {
+      "id": "A57",
+      "name": "Sır ve Parola Sızıntı Taraması (Secret Scan)",
+      "reported": "PASS",
+      "category": "STATIC_CODE_CHECK",
+      "lineStart": 640,
+      "lineEnd": 644,
+      "note": "Reads scanner and checks process.exit(1); scanner never executed.",
+      "artifacts": []
+    },
+    {
+      "id": "A58",
+      "name": "Sıfır Yetkisiz Canlı WhatsApp Gönderimi",
+      "reported": "PASS",
+      "category": "UNVERIFIED",
+      "lineStart": 646,
+      "lineEnd": 650,
+      "note": "Reads source and logs; no send spy/network deny.",
+      "artifacts": []
+    },
+    {
+      "id": "A59",
+      "name": "Sıfır Yetkisiz Canlı Stripe Çekimi",
+      "reported": "PASS",
+      "category": "UNVERIFIED",
+      "lineStart": 652,
+      "lineEnd": 655,
+      "note": "Log only; no payment/network evidence.",
+      "artifacts": []
+    },
+    {
+      "id": "A60",
+      "name": "Sıfır Ücretli Yeni AI Üretimi (Varlık Tasarrufu)",
+      "reported": "PASS",
+      "category": "UNVERIFIED",
+      "lineStart": 657,
+      "lineEnd": 660,
+      "note": "Log only; no paid-provider/network evidence.",
+      "artifacts": []
+    }
+  ]
+}

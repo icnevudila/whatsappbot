@@ -1,0 +1,25 @@
+{
+  "capturedAt": "2026-10-11T17:02:46.755Z",
+  "previous": "17b8eb765b408784a7ac11ed4ef3974c7281cc0f",
+  "current": "0f7af781f3dd72471ce8ab8ee0cd68dbc5a2203a",
+  "changed": [
+    "apps/customer/src/app/api/billing/webhook/route.ts",
+    "docs/sales-readiness/IMAGE_FIX_FINAL_INTEGRATION_HANDOFF.md",
+    "supabase/migrations/20261011123000_stripe_webhook_atomic_ledger.sql",
+    "tests/stripe_real_postgres_webhook.test.js"
+  ],
+  "pairs": [
+    {
+      "a": "master",
+      "b": "sales-follow-up",
+      "status": "CLEAN_TEXT_MERGE",
+      "raw": "2431a7fb77eb737841e50a1b9a0c814a5920a5e4\n"
+    },
+    {
+      "a": "research",
+      "b": "sales-follow-up",
+      "status": "CLEAN_TEXT_MERGE",
+      "raw": "bd37eb647bd6f0f467fcfa3cfed7ce931792279c\n"
+    }
+  ]
+}
