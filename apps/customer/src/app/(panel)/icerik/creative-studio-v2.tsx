@@ -43,8 +43,8 @@ import { videoFailureUserMessage } from '@/lib/creative/job-failure-message'
 import type { JobUserViewModel, ProductCard, WizardBootstrap } from './wizard-types'
 
 const STORAGE_KEY_PREFIX = 'wa.customer.creative-studio.v2'
-export const AI_PLANNER_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_AI_PLANNER_TIMEOUT_MS) || 35000
-export const VIDEO_PLANNER_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_VIDEO_PLANNER_TIMEOUT_MS) || 35000
+export const AI_PLANNER_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_AI_PLANNER_TIMEOUT_MS) || 125000
+export const VIDEO_PLANNER_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_VIDEO_PLANNER_TIMEOUT_MS) || 125000
 
 export { generateDeterministicLocalCopy } from '@/lib/creative/v2/copy-generator'
 import { generateDeterministicLocalCopy } from '@/lib/creative/v2/copy-generator'
@@ -377,7 +377,7 @@ export function CreativeStudioV2({
     qualityMode, templateFamily, textDensity, sector, deliveryInfo,
   ])
 
-  // Call Custom AI Planner (non-blocking, advisory with 5s timeout)
+  // Keep the editor usable while the planner completes its bounded request.
   const requestCreativePlan = async (forceRefresh = false, requestedStyle = stylePreset) => {
     if (previewOnly) return
     if (!selectedProduct) return
@@ -393,7 +393,7 @@ export function CreativeStudioV2({
     setIsPlanning(true)
     setPlanError(null)
 
-    // Hard client-side timeout: 5 seconds maximum
+    // Allow the server's 110s provider deadline plus request/response overhead.
     const timeoutId = setTimeout(() => {
       controller.abort()
     }, mediaType === 'VIDEO' ? VIDEO_PLANNER_TIMEOUT_MS : AI_PLANNER_TIMEOUT_MS)
@@ -451,7 +451,7 @@ export function CreativeStudioV2({
     } catch (err: unknown) {
       if (activePlanControllerRef.current !== controller) return
       if ((err instanceof Error && err.name === 'AbortError') || controller.signal.aborted) {
-        console.warn('[CreativeStudioV2] Plan request timed out or cancelled (>5s budget)')
+        console.warn('[CreativeStudioV2] Plan request timed out or cancelled')
         setPlanError('AI_TIMEOUT')
       } else {
         console.warn('[CreativeStudioV2] Plan error:', err)
@@ -496,10 +496,15 @@ export function CreativeStudioV2({
     if (!activeJobId) return
 
     let isMounted = true
+    let syncing = false
+    let terminal = false
+    const controller = new AbortController()
 
     const syncStatus = async () => {
+      if (!isMounted || syncing || terminal) return
+      syncing = true
       try {
-        const res = await fetch(`/api/ai-media/jobs/${activeJobId}`)
+        const res = await fetch(`/api/ai-media/jobs/${activeJobId}`, { signal: controller.signal })
         if (!res.ok) return
         const resData = await res.json()
         const vm = resData.job as JobUserViewModel
@@ -508,12 +513,15 @@ export function CreativeStudioV2({
         setJobViewModel(vm)
         setJobState(vm.state)
         setJobFailureMessage(vm.failure_user_message || null)
+        terminal = vm.state === 'COMPLETED' || vm.state === 'NEEDS_REVIEW' || vm.state === 'FAILED'
 
         if ((vm.state === 'COMPLETED' || vm.state === 'NEEDS_REVIEW') && vm.playback_url) {
           setCompletedVideoUrl(vm.playback_url)
         }
       } catch (e) {
-        console.error('Job sync error:', e)
+        if (!controller.signal.aborted) console.error('Job sync error:', e)
+      } finally {
+        syncing = false
       }
     }
 
@@ -538,6 +546,7 @@ export function CreativeStudioV2({
 
     return () => {
       isMounted = false
+      controller.abort()
       clearInterval(interval)
       void supabase.removeChannel(channel)
     }

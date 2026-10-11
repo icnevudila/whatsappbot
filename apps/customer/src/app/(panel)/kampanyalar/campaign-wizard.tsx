@@ -209,8 +209,15 @@ function CampaignWizardForm({
 
   useEffect(() => {
     if (mode !== 'create' || !ready || !initialCreative || aiMessageGenerated || autoMessageStarted.current) return
-    autoMessageStarted.current = true
-    void generateCreativeMessage()
+    // Strict Mode replays mount effects. Do not mark an aborted replay as a
+    // completed start or leave the handoff with only its initial draft text.
+    let disposed = false
+    queueMicrotask(() => {
+      if (disposed || autoMessageStarted.current) return
+      autoMessageStarted.current = true
+      void generateCreativeMessage()
+    })
+    return () => { disposed = true }
   }, [mode, ready, initialCreative, aiMessageGenerated, generateCreativeMessage])
 
   useEffect(() => {
@@ -256,7 +263,9 @@ function CampaignWizardForm({
     setStep(next)
     const params = new URLSearchParams(searchParams.toString())
     params.set('adim', next)
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+    // Step changes only affect this form. Keep the URL resumable without
+    // reloading tenant data and interrupting in-flight editor state.
+    window.history.replaceState(null, '', `${pathname}?${params.toString()}`)
   }
 
   useEffect(() => {

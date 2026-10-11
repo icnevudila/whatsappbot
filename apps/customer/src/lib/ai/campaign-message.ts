@@ -158,8 +158,12 @@ function formatBusiness(business: BusinessContext): string | null {
   return `İşletme Bilgileri (yalnızca kampanya için anlamlıysa kullan, zorlama yapma):\n${lines.join('\n')}`
 }
 
-export function cleanAiMessage(text: string): string {
-  return text
+export function cleanAiMessage(text: string, businessName?: string | null): string {
+  const brand = businessName?.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const withoutBrandHeading = brand
+    ? text.replace(new RegExp(`^${brand}\\s+(?:WhatsApp\\s+)?Kampanya\\s+(?:Mesajı|Metni)\\s*:?\\s*\\r?\\n+`, 'i'), '')
+    : text
+  return withoutBrandHeading
     .replace(/^["'`]+|["'`]+$/g, '')
     .replace(/^(işte (mesajınız|metniniz)[:\s]*)/i, '')
     .replace(/^(?:(?:Samimi|Profesyonel|Satış\s+Odaklı|Kısa|Detaylı)\s+)?(?:WhatsApp\s+)?Kampanya\s+(?:Mesajı|Metni)\s*:?\s*\r?\n+/i, '')
@@ -299,6 +303,10 @@ export function verifyCommercialIntegrity(input: {
   const missingPrices: string[] = []
   const preservedPrices: string[] = []
   const hallucinatedTerms: string[] = []
+
+  if (!input.outputText.trim()) {
+    drifts.push('Üretilen kampanya metni boş.')
+  }
 
   // 1. Fiyat koruma ve tam sayısal karşılaştırma kontrolü (ör. "1.850 TL", "2.450 TL", "195 TL", "165 TL")
   // Regex: Rakamlardan önce veya sonra ek rakam olmamalı (boundary check: (?<!\d)...(?!\d))

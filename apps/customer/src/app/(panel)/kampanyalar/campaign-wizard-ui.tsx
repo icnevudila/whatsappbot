@@ -408,8 +408,8 @@ function AiWriteModalForm({
         body: JSON.stringify({ mode: 'generate', brief, tone }),
       })
       const json = (await response.json()) as { text?: string; error?: string }
-      if (!response.ok) throw new Error(json.error ?? 'Metin üretilemedi.')
-      setDraft(json.text ?? '')
+      if (!response.ok || !json.text?.trim()) throw new Error(json.error ?? 'Metin üretilemedi.')
+      setDraft(json.text.trim())
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Metin üretilemedi.')
     } finally {
@@ -538,8 +538,8 @@ export function AiRewriteBar({
         body: JSON.stringify({ mode: 'rewrite', currentMessage, action: next, creativeId }),
       })
       const json = (await response.json()) as { text?: string; error?: string }
-      if (!response.ok) throw new Error(json.error ?? 'İyileştirme başarısız.')
-      setSuggestion(json.text ?? '')
+      if (!response.ok || !json.text?.trim()) throw new Error(json.error ?? 'İyileştirme metni üretilemedi.')
+      setSuggestion(json.text.trim())
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'İyileştirme başarısız.')
     } finally {

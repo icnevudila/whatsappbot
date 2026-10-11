@@ -425,7 +425,6 @@ export function CreativeDetail({
   useEffect(() => {
     if (!canManage || !shouldObserveRender) return
     if (kicked.current) return
-    kicked.current = true
     setBusyRender(true)
     setLocalError(null)
 
@@ -489,14 +488,19 @@ export function CreativeDetail({
       }
     }
 
-    void pollLoop()
+    queueMicrotask(() => {
+      if (!isMounted) return
+      kicked.current = true
+      void pollLoop()
+    })
 
     return () => {
       isMounted = false
+      kicked.current = false
       if (pollTimer) clearTimeout(pollTimer)
     }
   // A pending -> rendering refresh must not tear down the owning poll loop.
-  // kicked remains true after cleanup, so a status dependency silently stopped recovery.
+  // Cleanup releases ownership so a replay can resume the same job.
   }, [canManage, creative.id, router, shouldObserveRender])
 
   useEffect(() => {
@@ -517,10 +521,10 @@ export function CreativeDetail({
   // Realtime yayını kapalı/gecikmiş olsa dahi Flow sonucu DB'ye yazıldığında
   // ekran kendini yeniler; kullanıcı manuel yenilemeye bağlı kalmaz.
   useEffect(() => {
-    if (!running) return
+    if (!running || (canManage && shouldObserveRender)) return
     const timer = window.setInterval(() => router.refresh(), 5_000)
     return () => window.clearInterval(timer)
-  }, [running, router])
+  }, [running, canManage, shouldObserveRender, router])
 
   const spawn = (draft: Record<string, unknown>) => {
     const form = new FormData()

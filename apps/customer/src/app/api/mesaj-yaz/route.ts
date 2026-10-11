@@ -129,7 +129,7 @@ export async function POST(request: Request) {
     const text = await completeText(CAMPAIGN_GENERATE_SYSTEM, prompt, null, {
       tenantId: org.id, customer: org.name, conversationId: creativeId ? 'campaign:' + creativeId : 'campaign:' + requestId, requestId,
     })
-    const cleaned = cleanAiMessage(text)
+    const cleaned = cleanAiMessage(text, business.name)
 
     // Ticari Bütünlük ve Halüsinasyon Denetimi (Gatekeeper):
     // Kullanıcının sağladığı kaynak metin (generate modunda brief, rewrite modunda currentMessage)

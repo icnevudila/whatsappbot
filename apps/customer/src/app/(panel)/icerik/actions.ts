@@ -912,7 +912,7 @@ export async function listLibraryCreatives({
       .select('id, org_id, storage_path, title, public_url, status, source, generation_type, created_at, error, parent_id, format, payload')
       .eq('org_id', org.id)
       .neq('source', 'upload')
-      .eq('status', 'ready')
+      .in('status', ['ready', 'needs_review'])
       .not('public_url', 'is', null)
       .order('created_at', { ascending: sort === 'old' })
       .order('id', { ascending: sort === 'old' })
@@ -927,19 +927,24 @@ export async function listLibraryCreatives({
       .map((row) => {
         const payload = (row.payload ?? {}) as Record<string, unknown>
         const isVideo = row.format === 'video' || Boolean(row.public_url?.endsWith('.mp4')) || Boolean(row.public_url?.includes('/api/ai-media/outputs/'))
+        const isReview = (videoStates.get(row.id)?.status || row.status) === 'needs_review'
+        const rawUrl = row.public_url || ''
+        const effectivePublicUrl = isVideo && isReview && rawUrl && !rawUrl.includes('preview=')
+          ? `${rawUrl}${rawUrl.includes('?') ? '&' : '?'}preview=1`
+          : row.public_url
         let thumb =
           typeof payload.thumbnailUrl === 'string' && payload.thumbnailUrl
             ? payload.thumbnailUrl
             : isVideo
-              ? (row.public_url ? `${row.public_url}${row.public_url.includes('?') ? '&' : '?'}thumb=1` : null)
-              : row.public_url
+              ? (effectivePublicUrl ? `${effectivePublicUrl}${effectivePublicUrl.includes('?') ? '&' : '?'}thumb=1` : null)
+              : effectivePublicUrl
         return {
           id: row.id,
           title: row.title,
-          publicUrl: row.public_url,
+          publicUrl: effectivePublicUrl,
           thumbnailUrl: thumb,
           format: row.format,
-          status: 'ready',
+          status: isVideo ? (videoStates.get(row.id)?.status || row.status) : row.status,
           durationSeconds: videoStates.get(row.id)?.durationSeconds ?? null,
           source: row.source,
           generationType: row.generation_type,
